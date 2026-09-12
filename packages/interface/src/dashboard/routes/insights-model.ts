@@ -14,7 +14,8 @@ import { usePolling } from '../lib/use-polling';
  * token hashes, object keys, and artifact paths out of these responses.
  */
 
-export type PrescanStatus = 'complete' | 'blocked-by-robots' | 'homepage-unreachable';
+export type PrescanStatus =
+  'complete' | 'blocked-by-robots' | 'homepage-unreachable' | 'homepage-interstitial-unresolved';
 
 export type PrescanPageRole = 'homepage' | 'booking' | 'content';
 

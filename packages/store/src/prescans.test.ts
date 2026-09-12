@@ -465,6 +465,7 @@ describe.skipIf(!mongoAvailable)('prescans', () => {
       complete: 1,
       'blocked-by-robots': 1,
       'homepage-unreachable': 1,
+      'homepage-interstitial-unresolved': 0,
     });
     expect(summary.byEvidenceStatus).toEqual({ complete: 0, incomplete: 0, missing: 3 });
   });

@@ -211,6 +211,7 @@ export async function getPrescanSummary(
     complete: 0,
     'blocked-by-robots': 0,
     'homepage-unreachable': 0,
+    'homepage-interstitial-unresolved': 0,
   };
   let total = 0;
   for (const row of rows) {

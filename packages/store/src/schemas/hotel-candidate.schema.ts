@@ -98,7 +98,12 @@ const prescanStateSchema = new Schema(
     status: {
       type: String,
       required: true,
-      enum: ['complete', 'blocked-by-robots', 'homepage-unreachable'],
+      enum: [
+        'complete',
+        'blocked-by-robots',
+        'homepage-unreachable',
+        'homepage-interstitial-unresolved',
+      ],
     },
     prescannedAt: { type: Date, required: true },
   },

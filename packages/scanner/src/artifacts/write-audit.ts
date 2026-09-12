@@ -40,7 +40,7 @@ import {
 } from '@odysseus/core';
 import { getArtifactsRoot } from '../config.js';
 import type { CrawlResult } from '../crawl.js';
-import { normalizePageUrl } from '../links.js';
+import { isRedirectInterstitial } from '../redirect-interstitial.js';
 import type { PageScanResult } from '../scan-page.js';
 import type { NormalizePageInput } from '@odysseus/core';
 import { buildAuditDir, buildPageDir } from './paths.js';
@@ -468,12 +468,6 @@ function buildSiteSignals(
  *  off-origin landing normalizes to undefined, which still compares
  *  unequal to the requested URL's own normalization, so it is correctly
  *  treated as a redirect away rather than silently ignored. */
-function isRedirectInterstitial(requestedUrl: string, renderedLandedUrl: string): boolean {
-  const requested = normalizePageUrl(requestedUrl, requestedUrl);
-  const landed = normalizePageUrl(renderedLandedUrl, requestedUrl);
-  return requested !== landed;
-}
-
 export async function writeAuditArtifacts(
   input: WriteAuditArtifactsInput,
 ): Promise<WriteAuditArtifactsResult> {

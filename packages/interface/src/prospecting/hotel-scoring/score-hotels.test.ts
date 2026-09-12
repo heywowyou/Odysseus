@@ -296,6 +296,7 @@ describe('scoreHotels', () => {
       wouldScore: 2,
       alreadyScored: 1,
       prescanMissing: 0,
+      prescanIncomplete: 0,
     });
     expect(report.reconciles).toBe(true);
   });
@@ -327,6 +328,66 @@ describe('scoreHotels', () => {
     expect(report.scored).toBe(1);
     expect(report.reconciles).toBe(true);
     expect(recorded).toHaveLength(1);
+  });
+
+  // Issue #202: 1924 HOTEL's prescan pointer carried a real prescanId, so
+  // the prescan-missing gate above never caught it - the prescan existed,
+  // it just measured a redirect interstitial rather than the hotel's own
+  // site. A candidate whose pointer says the prescan did not reach
+  // 'complete' must be skipped here too, not scored on whatever it left
+  // behind.
+  it('skips a candidate whose prescan pointer is not complete, without fetching the prescan', async () => {
+    const { store, recorded } = stubStore({
+      candidates: [
+        candidate('1', {
+          prescan: {
+            prescanId: 'prescan-1',
+            prescanVersion: 'pv2',
+            status: 'homepage-interstitial-unresolved',
+            prescannedAt: new Date(),
+          },
+        }),
+        candidate('2'),
+      ],
+    });
+    const getPrescan = vi.fn(store.getPrescan);
+    store.getPrescan = getPrescan;
+
+    const report = await scoreHotels({ ...baseOptions, store });
+
+    expect(report.skipped['prescan-incomplete']).toBe(1);
+    expect(report.scored).toBe(1);
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]?.candidateId).toBe('2');
+    expect(getPrescan).not.toHaveBeenCalledWith('prescan-1');
+    expect(report.reconciles).toBe(true);
+  });
+
+  it('reports a dry-run population with an incomplete prescan as its own count', async () => {
+    const { store } = stubStore({
+      candidates: [
+        candidate('1', {
+          prescan: {
+            prescanId: 'prescan-1',
+            prescanVersion: 'pv2',
+            status: 'blocked-by-robots',
+            prescannedAt: new Date(),
+          },
+        }),
+        candidate('2'),
+      ],
+    });
+
+    const report = await scoreHotels({ ...baseOptions, store, dryRun: true });
+
+    expect(report.plan).toEqual({
+      candidatesConsidered: 2,
+      wouldScore: 1,
+      alreadyScored: 0,
+      prescanMissing: 0,
+      prescanIncomplete: 1,
+    });
+    expect(report.reconciles).toBe(true);
   });
 
   it('stops at the limit', async () => {

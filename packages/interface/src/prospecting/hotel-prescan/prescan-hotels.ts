@@ -133,7 +133,12 @@ export interface HotelPrescanPlan {
 }
 
 function emptyStatuses(): Record<HotelPrescanStatus, number> {
-  return { complete: 0, 'blocked-by-robots': 0, 'homepage-unreachable': 0 };
+  return {
+    complete: 0,
+    'blocked-by-robots': 0,
+    'homepage-unreachable': 0,
+    'homepage-interstitial-unresolved': 0,
+  };
 }
 
 function emptyEvidenceStatuses(): Record<HotelEvidenceStatus | 'missing', number> {

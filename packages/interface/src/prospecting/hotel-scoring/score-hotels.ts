@@ -82,7 +82,7 @@ export interface ScoreHotelsOptions {
   onProgress?: (scored: number) => void;
 }
 
-export type HotelScoreSkipReason = 'prescan-missing' | 'already-scored';
+export type HotelScoreSkipReason = 'prescan-missing' | 'prescan-incomplete' | 'already-scored';
 
 export interface ScoreHotelsReport {
   resolutionVersion: string;
@@ -110,6 +110,11 @@ export interface ScoreHotelsPlan {
   wouldScore: number;
   alreadyScored: number;
   prescanMissing: number;
+  /** Issue #202: a candidate whose latest prescan did not finish - blocked
+   *  by robots, an unreachable homepage, or an unresolved redirect
+   *  interstitial - is counted here rather than scored on whatever
+   *  incomplete measurement it left behind. */
+  prescanIncomplete: number;
 }
 
 function bandLabel(total: number): string {
@@ -184,6 +189,7 @@ export async function scoreHotels(options: ScoreHotelsOptions): Promise<ScoreHot
   const abilityBands: Record<string, number> = {};
   const skipped: Record<HotelScoreSkipReason, number> = {
     'prescan-missing': 0,
+    'prescan-incomplete': 0,
     'already-scored': 0,
   };
   const plan: ScoreHotelsPlan = {
@@ -191,6 +197,7 @@ export async function scoreHotels(options: ScoreHotelsOptions): Promise<ScoreHot
     wouldScore: 0,
     alreadyScored: 0,
     prescanMissing: 0,
+    prescanIncomplete: 0,
   };
   let candidatesConsidered = 0;
   let scored = 0;
@@ -239,6 +246,20 @@ export async function scoreHotels(options: ScoreHotelsOptions): Promise<ScoreHot
       if (prescanId === undefined) {
         if (options.dryRun) plan.prescanMissing += 1;
         else skipped['prescan-missing'] += 1;
+        continue;
+      }
+
+      // Issue #202: the candidate pointer already carries the prescan's own
+      // status, recorded at prescan time. A prescan that did not reach
+      // 'complete' - blocked by robots, an unreachable homepage, or a
+      // redirect interstitial that never resolved to real content - left
+      // no measurement that is safely the hotel's own, and must not be
+      // scored as if it were. This is the fix for 1924 HOTEL: a hotel
+      // whose "prescan" was actually an interstitial page is skipped here
+      // instead of scored on it.
+      if (candidate.prescan?.status !== 'complete') {
+        if (options.dryRun) plan.prescanIncomplete += 1;
+        else skipped['prescan-incomplete'] += 1;
         continue;
       }
 
@@ -291,7 +312,8 @@ export async function scoreHotels(options: ScoreHotelsOptions): Promise<ScoreHot
     if (page.length < pageSize) break;
   }
 
-  const accountedFor = scored + skipped['already-scored'] + skipped['prescan-missing'];
+  const accountedFor =
+    scored + skipped['already-scored'] + skipped['prescan-missing'] + skipped['prescan-incomplete'];
 
   return {
     resolutionVersion: options.resolutionVersion,
@@ -307,7 +329,8 @@ export async function scoreHotels(options: ScoreHotelsOptions): Promise<ScoreHot
     brokennessBands,
     abilityBands,
     reconciles: options.dryRun
-      ? plan.wouldScore + plan.alreadyScored + plan.prescanMissing === candidatesConsidered
+      ? plan.wouldScore + plan.alreadyScored + plan.prescanMissing + plan.prescanIncomplete ===
+        candidatesConsidered
       : accountedFor === candidatesConsidered,
     ...(options.dryRun ? { plan } : {}),
   };

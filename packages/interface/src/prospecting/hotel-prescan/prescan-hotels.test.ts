@@ -202,6 +202,7 @@ describe('prescanHotels', () => {
       complete: 0,
       'blocked-by-robots': 0,
       'homepage-unreachable': 0,
+      'homepage-interstitial-unresolved': 0,
     });
     expect(report.byEvidenceStatus).toEqual({ complete: 0, incomplete: 0, missing: 0 });
     expect(report.plan).toEqual({
@@ -256,8 +257,13 @@ describe('prescanHotels', () => {
   });
 
   it('counts every prescan status separately', async () => {
-    const store = fakeStore([candidate('a'), candidate('b'), candidate('c')]);
-    const statuses = ['complete', 'blocked-by-robots', 'homepage-unreachable'] as const;
+    const store = fakeStore([candidate('a'), candidate('b'), candidate('c'), candidate('d')]);
+    const statuses = [
+      'complete',
+      'blocked-by-robots',
+      'homepage-unreachable',
+      'homepage-interstitial-unresolved',
+    ] as const;
     let index = 0;
     const prescan = vi.fn(async () => measurement({ status: statuses[index++]! }));
 
@@ -266,6 +272,7 @@ describe('prescanHotels', () => {
       complete: 1,
       'blocked-by-robots': 1,
       'homepage-unreachable': 1,
+      'homepage-interstitial-unresolved': 1,
     });
   });
 

@@ -69,7 +69,12 @@ const prescanSchema = new Schema<PrescanDocument>(
     status: {
       type: String,
       required: true,
-      enum: ['complete', 'blocked-by-robots', 'homepage-unreachable'],
+      enum: [
+        'complete',
+        'blocked-by-robots',
+        'homepage-unreachable',
+        'homepage-interstitial-unresolved',
+      ],
     },
     // Pages and absences are Mixed for the reason hotel-qualification.schema
     // gives about reasons and notes: the authority for these shapes is the

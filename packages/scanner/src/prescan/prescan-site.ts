@@ -50,6 +50,8 @@ import {
   getRenderSettleTimeoutMs,
 } from '../config.js';
 import { fetchRobotsRules, isAllowedByRobots, type RobotsRules } from '../robots.js';
+import { isSameSiteHostname } from '../links.js';
+import { isRedirectInterstitial } from '../redirect-interstitial.js';
 import { renderDiff } from '../render-diff.js';
 import { runAxe, type AxeResults } from '../axe.js';
 import {
@@ -82,7 +84,13 @@ export type PrescanStatus =
   | 'blocked-by-robots'
   /** The homepage could not be loaded at all. Every other failure is
    *  per-page and leaves a partial, still-useful result. */
-  | 'homepage-unreachable';
+  | 'homepage-unreachable'
+  /** Issue #202: the homepage settled on a redirect interstitial (see
+   *  `isRedirectInterstitial`) and following it did not reach real site
+   *  content - the landed page was off the hotel's own site, failed to
+   *  load, or was itself an interstitial. Never carries pages measured
+   *  from the interstitial itself. */
+  | 'homepage-interstitial-unresolved';
 
 /** Only what a prescan needs from axe: counts by impact and the rule ids,
  *  not the full node lists. The full audit's normalize layer is what turns
@@ -226,6 +234,11 @@ interface LoadedPageOutcome {
   facts: HotelEvidenceFact[];
   failureCapture: CapturedFailureCandidate | null;
   headMetadata: HeadMetadataExtraction | null;
+  /** The URL render-diff actually settled on after JavaScript ran, kept
+   *  only in-flight (never persisted on PrescanPageResult) so prescanSite
+   *  can detect a redirect interstitial the same way write-audit.ts does.
+   *  Absent when the navigation itself failed or was skipped by robots. */
+  renderedLandedUrl?: string;
 }
 
 function isBookingCallToAction(
@@ -462,6 +475,7 @@ async function prescanOnePage(
       facts,
       failureCapture,
       headMetadata,
+      renderedLandedUrl: diff.renderedLandedUrl,
     };
   } catch (error) {
     return {
@@ -575,7 +589,7 @@ export async function prescanSite(
     index: 1,
     total: 1,
   });
-  const homepage = await prescanOnePage('homepage', startUrl, robots, {
+  let homepage = await prescanOnePage('homepage', startUrl, robots, {
     ...pageOptions,
     collectAnchors: true,
   });
@@ -584,7 +598,77 @@ export async function prescanSite(
     return finalizeEarly('homepage-unreachable', [homepage]);
   }
 
-  const selection: PrescanPageSelection = selectPrescanPages(startUrl, homepage.anchors);
+  let effectiveStartUrl = startUrl;
+
+  // Issue #202: the homepage may have settled on a redirect interstitial
+  // rather than the site itself - the same signal write-audit.ts's
+  // isRedirectInterstitial flags for a full audit, checked here with the
+  // same function because both pipelines call the same renderDiff against
+  // the same URL and must reach the same verdict. Scoring the
+  // interstitial's own content as the hotel's is exactly the defect that
+  // produced 1924 HOTEL's invalid score: a page reading "access is
+  // temporarily restricted" is not evidence of anything the hotel
+  // controls, worth pursuing a second navigation to avoid.
+  if (
+    homepage.renderedLandedUrl !== undefined &&
+    isRedirectInterstitial(effectiveStartUrl, homepage.renderedLandedUrl)
+  ) {
+    const landedUrl = homepage.renderedLandedUrl;
+    const landedHostname = (() => {
+      try {
+        return new URL(landedUrl).hostname;
+      } catch {
+        return undefined;
+      }
+    })();
+    const sameSite =
+      landedHostname !== undefined &&
+      isSameSiteHostname(new URL(startUrl).hostname, landedHostname);
+
+    if (!sameSite) {
+      // Off the hotel's own site (or not a navigable URL at all): there is
+      // nothing here that is safely this hotel's content, so the prescan
+      // ends without scoring any of it, the same fail-closed shape as
+      // blocked-by-robots and homepage-unreachable.
+      return finalizeEarly('homepage-interstitial-unresolved', [homepage]);
+    }
+
+    const landedOrigin = new URL(landedUrl).origin;
+    // A different host has its own robots.txt; reusing the apex's would be
+    // exactly the politeness gap non-negotiable rule 5 exists to close.
+    const landedRobots =
+      landedOrigin === origin ? robots : await fetchRobotsRules(landedOrigin, userAgent, timeoutMs);
+    if (!isAllowedByRobots(landedRobots, new URL(landedUrl).pathname)) {
+      return finalizeEarly('blocked-by-robots', [homepage]);
+    }
+
+    // The delay applies between this pass and the next exactly as it does
+    // between any two pages - a second navigation is still a second
+    // request to the same effective site.
+    await sleep(effectiveDelayMs);
+
+    const resolvedHomepage = await prescanOnePage('homepage', landedUrl, landedRobots, {
+      ...pageOptions,
+      collectAnchors: true,
+    });
+
+    const resolvedIsAlsoInterstitial =
+      resolvedHomepage.renderedLandedUrl !== undefined &&
+      isRedirectInterstitial(landedUrl, resolvedHomepage.renderedLandedUrl);
+
+    if (resolvedHomepage.result.error !== undefined || resolvedIsAlsoInterstitial) {
+      // One follow is the whole of the discipline, the same one-hop shape
+      // the booking-redirect budget uses to avoid an open-ended chase: a
+      // hotel that needs more than one hop to reach real content is not
+      // one a quick check can respond for either way.
+      return finalizeEarly('homepage-interstitial-unresolved', [homepage, resolvedHomepage]);
+    }
+
+    homepage = resolvedHomepage;
+    effectiveStartUrl = landedUrl;
+  }
+
+  const selection: PrescanPageSelection = selectPrescanPages(effectiveStartUrl, homepage.anchors);
   const furtherPages = selection.selected.filter((page) => page.role !== 'homepage');
   const outcomes: LoadedPageOutcome[] = [homepage];
 
@@ -623,7 +707,7 @@ export async function prescanSite(
         },
       ];
     }),
-    startUrl,
+    effectiveStartUrl,
   );
   for (const candidate of geoCandidates) {
     const outcome = outcomes.find((page) => page.result.url === candidate.pageUrl) ?? homepage;

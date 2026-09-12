@@ -15,7 +15,19 @@
  * pipeline it was separated from.
  */
 
-export type HotelPrescanStatus = 'complete' | 'blocked-by-robots' | 'homepage-unreachable';
+export type HotelPrescanStatus =
+  | 'complete'
+  | 'blocked-by-robots'
+  | 'homepage-unreachable'
+  /** Issue #202's follow-on finding: the homepage rendered a redirect
+   *  interstitial (the same signal write-audit.ts's `isRedirectInterstitial`
+   *  detects for a full audit), and following it did not reach real site
+   *  content - either it landed off the hotel's own site, or the landed
+   *  page failed to load or was itself an interstitial. Never carries
+   *  measured facts: the alternative to this status is scoring whatever the
+   *  interstitial showed as if it were the hotel's own page, which is what
+   *  produced 1924 HÔTEL's invalid score. */
+  | 'homepage-interstitial-unresolved';
 
 export type HotelPrescanPageRole = 'homepage' | 'booking' | 'content';
 

@@ -111,7 +111,7 @@ export function waveRefusalSentence(
  *  added, so nothing was scored. */
 export interface WaveScoringOutcome {
   outcome: 'scored' | 'already-scored' | 'skipped';
-  reason?: 'not-in-scoring-population' | 'prescan-missing' | 'error';
+  reason?: 'not-in-scoring-population' | 'prescan-missing' | 'prescan-incomplete' | 'error';
 }
 
 export interface WaveMutationResult {

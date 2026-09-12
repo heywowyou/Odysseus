@@ -11,7 +11,10 @@ import { scoreHotelOnDemand } from './score-on-demand.js';
 // helper, so its whole job is mapping one bounded scoring run onto the
 // three outcomes those actions can state.
 
-function candidate(id: string): HotelCandidateDocument {
+function candidate(
+  id: string,
+  overrides: Partial<HotelCandidateDocument> = {},
+): HotelCandidateDocument {
   return {
     candidateId: id,
     resolutionVersion: 'rv1',
@@ -38,6 +41,7 @@ function candidate(id: string): HotelCandidateDocument {
     createdAt: new Date(),
     updatedAt: new Date(),
     expiresAt: new Date(Date.now() + 86_400_000),
+    ...overrides,
   } as unknown as HotelCandidateDocument;
 }
 
@@ -150,6 +154,28 @@ describe('scoreHotelOnDemand (issue #199)', () => {
     });
     const outcome = await scoreHotelOnDemand(store, 'hotel-cand-1.fr', versions);
     expect(outcome).toEqual({ outcome: 'skipped', reason: 'prescan-missing' });
+    expect(recorded).toHaveLength(0);
+  });
+
+  // Issue #202: 1924 HOTEL's own case - a real prescan pointer, but the
+  // prescan itself never reached real site content. This must not read as
+  // "already scored" or "not in the scoring population"; it is its own
+  // distinct, correctly-named outcome.
+  it('skips with prescan-incomplete when the pointer names an unresolved interstitial', async () => {
+    const { store, recorded } = stubStore({
+      candidates: [
+        candidate('cand-1', {
+          prescan: {
+            prescanId: 'prescan-cand-1',
+            prescanVersion: 'pv2',
+            status: 'homepage-interstitial-unresolved',
+            prescannedAt: new Date(),
+          },
+        }),
+      ],
+    });
+    const outcome = await scoreHotelOnDemand(store, 'hotel-cand-1.fr', versions);
+    expect(outcome).toEqual({ outcome: 'skipped', reason: 'prescan-incomplete' });
     expect(recorded).toHaveLength(0);
   });
 

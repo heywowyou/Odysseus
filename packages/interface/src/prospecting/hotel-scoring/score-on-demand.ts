@@ -27,7 +27,7 @@ export type ScoreOnDemandOutcome =
   | { outcome: 'already-scored' }
   | {
       outcome: 'skipped';
-      reason: 'not-in-scoring-population' | 'prescan-missing' | 'error';
+      reason: 'not-in-scoring-population' | 'prescan-missing' | 'prescan-incomplete' | 'error';
       /** The store fault's message when the reason is 'error'. */
       errorMessage?: string;
     };
@@ -69,6 +69,13 @@ export async function scoreHotelOnDemand(
   if (report.skipped['already-scored'] > 0) return { outcome: 'already-scored' };
   if (report.skipped['prescan-missing'] > 0) {
     return { outcome: 'skipped', reason: 'prescan-missing' };
+  }
+  // Issue #202: the prescan exists but did not reach 'complete' - blocked
+  // by robots, an unreachable homepage, or a redirect interstitial that
+  // never resolved. Distinct from 'not-in-scoring-population', which means
+  // the hotel itself is not eligible; this means the measurement is.
+  if (report.skipped['prescan-incomplete'] > 0) {
+    return { outcome: 'skipped', reason: 'prescan-incomplete' };
   }
   return { outcome: 'skipped', reason: 'not-in-scoring-population' };
 }

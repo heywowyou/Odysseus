@@ -35,6 +35,7 @@ const STATUS_TONES: Record<PrescanStatus, BadgeTone> = {
   complete: 'accent',
   'blocked-by-robots': 'serious',
   'homepage-unreachable': 'critical',
+  'homepage-interstitial-unresolved': 'critical',
 };
 
 const SEVERITY_TONES: Record<Severity, BadgeTone> = {
