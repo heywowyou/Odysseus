@@ -1,10 +1,15 @@
 # Audit rehearsal notes
 
-Running log for the `audit-rehearsal` skill (`.claude/skills/audit-rehearsal/SKILL.md`):
-one real, previously-unscanned hotel audited and read as its owner/GM would
-read it, before it ever reaches a real client. Cumulative across runs so a
-nit that keeps recurring across different hotels is visible as a pattern,
-not just a one-off complaint.
+Running log for the `scan-report-audit` skill (formerly
+`audit-rehearsal`; `.agents/skills/scan-report-audit/SKILL.md`): one
+real, previously-unscanned hotel audited and read as its owner/GM would
+read it, before it ever reaches a real client. Cumulative across runs so
+a nit that keeps recurring across different hotels is visible as a
+pattern, not just a one-off complaint.
+
+Each entry's critique is written before the log is re-read (a real owner
+has no memory of the previous hotel's report); reconciliation against
+earlier entries happens afterward and marks recurrences explicitly.
 
 This is not the system of record for defects — genuine defects found during
 a rehearsal are filed as GitHub issues per `docs/agents/issue-tracker.md`
@@ -18,9 +23,12 @@ Each entry:
 
 - URL: <url>
 - Audit ID: <auditId>
+- Outcome: <COMPLETE / PARTIAL / BLOCKED, plus what completed if partial>
 - Verdict: <one or two sentence summary of the critique's verdict>
 - Top concerns: <one or two lines, if any stood out beyond what became an issue>
 - Nits: <list, or "none">
+- Reconciliation: <which findings recurred, with the earlier date; which
+  previously filed issues did not reproduce this run, or "first entry">
 - Issues filed: <#N, #N, or "none">
 ```
 

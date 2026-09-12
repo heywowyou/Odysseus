@@ -801,11 +801,12 @@ facts no host listing has (audit-rehearsal) and for routing.
   report, they never auto-fix. Never run `/impeccable init` without the
   operator present: it interviews them to write `PRODUCT.md`/`DESIGN.md`,
   not something to fabricate.
-- **audit-rehearsal** — asked to "dogfood a hotel" or "run an audit
-  rehearsal": audits a real, not-yet-scanned catalogue hotel end to end,
-  then critiques the bilingual report in character as the hotel's
-  owner/GM before a real client ever sees it. Genuine defects become
-  GitHub issues; cosmetic nits go to
+- **scan-report-audit** (formerly audit-rehearsal) — asked to "dogfood a
+  hotel," "run an audit rehearsal," "audit the reports," or "find
+  defects in the reports": audits a real, not-yet-scanned catalogue
+  hotel end to end, then critiques the bilingual report in character as
+  the hotel's owner/GM before a real client ever sees it. Genuine
+  defects become GitHub issues; cosmetic nits go to
   `docs/report/audit-rehearsal-notes.md`. Scoped to the paid full-audit
   report only, not the outreach preview or dashboard.
 

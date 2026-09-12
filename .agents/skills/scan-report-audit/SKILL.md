@@ -1,9 +1,9 @@
 ---
-name: audit-rehearsal
-description: Run a full live audit against a real, not-yet-scanned hotel from the catalogue, generate the bilingual report, and critique it in character as the hotel's owner/GM to surface defects before a real client sees them. Use when the user asks to "dogfood a hotel," "run an audit rehearsal," or otherwise QA the report pipeline against a real site.
+name: scan-report-audit
+description: Run a full live audit against a real, not-yet-scanned hotel from the catalogue, generate the bilingual report, and critique it in character as the hotel's owner/GM to surface report defects before a real client sees them. Use when the user asks to "dogfood a hotel," "run an audit rehearsal," "audit the reports," "find defects in the reports," or otherwise QA the report pipeline against a real site. Runs repeat across hotels; the cumulative log at docs/report/audit-rehearsal-notes.md is what turns a recurring nit into a visible pattern.
 ---
 
-# Audit rehearsal
+# Scan report audit
 
 A repeatable QA pass: pick a real hotel we have not audited yet, run the
 audit end to end exactly as a paying client would receive it, then read the
@@ -22,6 +22,22 @@ has looked for yet.
 The paid full-audit report only (crawl, scan, normalize, analyze, PDF).
 The outreach preview (9c) and the operator dashboard are separate surfaces
 with their own QA needs and are out of scope here.
+
+## Host adaptation
+
+- Read the PDFs yourself, in the main thread, and write the critique
+  there too. Never delegate the read or the owner/GM critique to a
+  subagent: the persona must see every page of both documents in one
+  context, or the cross-page and cross-language defects this skill
+  exists for fall between the splits.
+- Use whatever PDF tooling your host provides. The `Read` tool takes a
+  PDF in windows of at most 20 pages; some hosts also carry document or
+  pdf skills, or shell converters that render pages to images.
+  Everything else here (dashboard API calls, issue filing) is plain
+  `curl` and `gh` and works on any host.
+- If your host cannot read rendered PDFs at all, stop and report
+  BLOCKED-NO-PDF-READ instead of critiquing the underlying JSON and
+  calling it a rehearsal.
 
 ## Environment: run the scan on the VPS, not the local machine
 
@@ -111,7 +127,11 @@ through the mongodb-readonly MCP server.
 
 **Stop and show your pick before scanning.** State the hotel's name, URL,
 SIREN, and why it was eligible, and wait for a go-ahead. This is the one
-veto point before a multi-hour run is sunk into it.
+veto point before a multi-hour run is sunk into it. The go-ahead you
+receive here is also the operator's current, explicit permission for this
+named site that AGENTS.md requires before any live third-party scan:
+record it (date, hotel, operator) in a session-log stream section for
+this rehearsal before submitting the job.
 
 ### 2. Scan
 
@@ -273,6 +293,13 @@ stay comparable across runs:
 5. **Verdict** — in one paragraph, would they pay for this, recommend it,
    or feel talked down to / misled? Be honest and specific, not diplomatic.
 
+Write this critique before re-reading any earlier entry in
+`docs/report/audit-rehearsal-notes.md`. A real owner has no memory of
+what the last hotel's report got wrong, and anchoring on the log first is
+how new defects get missed while old ones get re-found on cue.
+Reconciliation against the log is step 5's second half, not part of the
+read.
+
 ### 5. Triage the findings
 
 Split what the critique surfaced into two buckets:
@@ -290,6 +317,28 @@ where one already exists, add the new evidence to it as a comment instead.
 anything cosmetic that isn't actually wrong) — these do not become
 issues. They go in the log instead (step 6).
 
+Rank each defect P1, P2, or P3 so filing order and triage urgency are
+explicit:
+
+- P1: a client-facing fact, number, or legal claim that is wrong or
+  contradicts another part of the same report.
+- P2: a visible production defect that states no falsehood (clipped
+  heading, broken layout, an internal placeholder leaking to the
+  client).
+- P3: quality degradation without error (tone, typography, spacing).
+
+Then reconcile against the log, now that the critique is committed to
+paper:
+
+- Mark every defect and nit NEW or RECURRENCE, citing the earlier
+  entry's date. A nit that has now appeared on three different hotels
+  is a pattern, not a one-off: file it as an issue citing every
+  occurrence instead of logging it a fourth time.
+- For each previously filed open issue whose symptom would show in this
+  report, note whether it still reproduces. Where it plainly does not,
+  comment on the issue with this run's evidence ("not seen in
+  `<hostname>`, `<date>`") rather than staying silent.
+
 **Show all drafted issues together and wait for approval before filing
 anything.** Nothing gets created on GitHub without a go-ahead — batch the
 review rather than confirming one at a time.
@@ -301,9 +350,15 @@ the template there if this is the first run) with:
 
 - date, hostname, URL, `auditId`, and the `artifacts/<host>/<timestamp>/`
   path, which is the way back to the data behind the entry
+- the run outcome: COMPLETE (both PDFs read and critiqued), PARTIAL
+  (the pipeline broke part way: log what completed, file the blocking
+  defect, but no owner verdict), or BLOCKED (hotel discarded before or
+  during the scan; no defect unless the failure is the tool's)
 - any hotel discarded before this one (blocked by robots.txt, unreachable),
   so a picking rule that keeps landing on dead sites is visible as a pattern
 - any nits found (the cosmetic bucket from step 5)
+- the reconciliation: which findings recurred (with the earlier entry's
+  date), and which previously filed issues did not reproduce this run
 - a short summary of the critique: the verdict paragraph, plus the top
   one or two concerns from earlier sections — not the full write-up
   verbatim, so the log stays skimmable
@@ -326,4 +381,7 @@ and `fixtures/audits.json`, never by committing the directory as it stands
 
 There is no hard stop for the overall practice. Track it loosely via the
 log; treat several consecutive clean runs across visibly different hotels
-as an informal signal of readiness, not a number to hit.
+as an informal signal of readiness, not a number to hit. When a run ends
+with zero defects and zero recurring nits, say so explicitly in the log
+and to the operator ("rehearsal-clean report"); that statement is the
+thing this signal counts.
