@@ -73,8 +73,10 @@ export {
   getAuditManualFields,
   setAuditManualFields,
   prefillAuditManualFields,
+  replaceDetectedManualFields,
+  linkAuditToHotelByDomain,
 } from './audits.js';
-export type { AuditRuntimeFields } from './audits.js';
+export type { AuditRuntimeFields, AuditHotelLinkResult } from './audits.js';
 
 // Plan 019: report preparation and exact-ID writing selection. All writes
 // go through these service functions; handlers never issue raw updates.

@@ -45,11 +45,21 @@ import {
   summarizeAuditCoverage,
   type AuditCoverageSummary,
 } from '@odysseus/core';
-import { persistAudit, prefillAuditManualFields } from '@odysseus/store';
+import {
+  getHotelQualification,
+  linkAuditToHotelByDomain,
+  persistAudit,
+  prefillAuditManualFields,
+  replaceDetectedManualFields,
+  type HotelCandidateDocument,
+} from '@odysseus/store';
 import { runObligationStage } from './obligation-stage.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { syncAuditDirToBucket } from '../artifacts/sync-audit-artifacts.js';
 import { logger } from '../logger.js';
+import { formatHotelName } from '../outreach/hotel-name.js';
+import { CURRENT_QUALIFICATION_VERSION } from '../prospecting/hotel-qualification/qualify-hotels.js';
+import { lookupOperatorProfile } from '../sirene/sirene-cache.js';
 
 export interface RunAuditStageOptions {
   maxPages?: number;
@@ -117,6 +127,110 @@ export interface AuditStageResult {
   prunedPageDirCount: number;
   coverageSummary: AuditCoverageSummary;
   obligationAssessment: ObligationAssessment;
+}
+
+// Plan 045 slice 1.5: hotels only, deliberately narrower than
+// reference-stats/sector.ts's detectSector (which also matches 56.xx,
+// restauration, for a different purpose - report citation selection,
+// trade-off 15). A restaurant's registry name is not evidence that this
+// audit's site belongs to a hotel, and trade-off 23 already keeps
+// restaurants out of the hotel campaign for a separate legal reason -
+// this cover-name gate should not quietly treat them as good evidence
+// either. Kept local rather than exported: nothing outside this cover-
+// prefill logic needs it.
+const HOTEL_ONLY_NAF_PREFIX = '55.';
+
+function isHotelOnlyNaf(naf: string | undefined): boolean {
+  return naf !== undefined && naf.trim().toUpperCase().startsWith(HOTEL_ONLY_NAF_PREFIX);
+}
+
+/** The raw NAF code behind `obligationAssessment.registrySnapshot`, for
+ *  the same NAF-55 gate `isHotelOnlyNaf` applies to the catalogue path.
+ *  Deliberately not read off `registrySnapshot` itself: that object omits
+ *  the raw NAF by design (see ObligationAssessment's own doc comment,
+ *  "a deliberate data-minimisation choice"), storing only the coarse
+ *  `sector` derived from it. Re-resolving the SIREN obligation-stage.ts
+ *  already looked up is a second read, not a second external call: the
+ *  Sirene cache it already populated absorbs the cost, the same
+ *  precedent analysis-stage.ts's own fallback SIREN lookup relies on. */
+async function resolveRegistrySnapshotNaf(
+  connection: Connection,
+  obligationAssessment: ObligationAssessment,
+  manualSiren: string | undefined,
+  extractedSiren: string | undefined,
+): Promise<string | undefined> {
+  if (!obligationAssessment.registrySnapshot) return undefined;
+  const siren = obligationAssessment.sirenSource === 'manual' ? manualSiren : extractedSiren;
+  if (!siren) return undefined;
+  const lookup = await lookupOperatorProfile(connection, siren);
+  return lookup.status === 'found' ? lookup.profile.naf.value : undefined;
+}
+
+/** Plan 045 slice 1.5: what to prefill `nomCommercial`/`raisonSociale`
+ *  with, computed once so `runAuditStage` only has to spread the result
+ *  into `prefillAuditManualFields` (which itself never overwrites a
+ *  field already set, detected or operator).
+ *
+ *  A linked audit's catalogue name is always better than the scan's own
+ *  guess (item 3 of plan 045's context: "Site Officiel", a raw nav-link
+ *  fragment, are real production values `siteSignals.siteName` has
+ *  produced), so `nomCommercial` prefers it whenever the audit is linked.
+ *  `raisonSociale` prefers the qualification pass's own Sirene join,
+ *  which already knows this candidate's NAF, over a fresh registry
+ *  lookup; either source is gated on the same hotel-only NAF check so a
+ *  denomination belonging to the site's web host (item 3's "O2SWITCH")
+ *  or another non-hotel company never becomes the printed raison
+ *  sociale.
+ *
+ *  Exported for backfill-audit-hotel-links.ts, which reuses it unchanged
+ *  against an already-persisted audit: passing an `obligationAssessment`
+ *  with no `registrySnapshot` (nothing that stage has stored on the audit
+ *  document) simply skips the registry-fallback half below, so the
+ *  backfill still improves nomCommercial/raisonSociale from the linked
+ *  candidate's own catalogue name and Sirene join. */
+export async function resolveCoverPrefill(
+  connection: Connection,
+  candidate: HotelCandidateDocument | null,
+  obligationAssessment: ObligationAssessment,
+  manualSiren: string | undefined,
+  extractedSiren: string | undefined,
+): Promise<{ nomCommercial?: string; raisonSociale?: string }> {
+  let raisonSociale: string | undefined;
+
+  if (candidate) {
+    const qualification = await getHotelQualification(
+      connection,
+      CURRENT_QUALIFICATION_VERSION,
+      candidate.candidateId,
+    );
+    const sireneJoin = qualification?.sireneJoin;
+    if (
+      sireneJoin?.status === 'matched' &&
+      isHotelOnlyNaf(sireneJoin.naf) &&
+      sireneJoin.denomination !== undefined
+    ) {
+      raisonSociale = normalizeRegistryDisplayName(sireneJoin.denomination);
+    }
+  }
+
+  if (raisonSociale === undefined && obligationAssessment.registrySnapshot) {
+    const naf = await resolveRegistrySnapshotNaf(
+      connection,
+      obligationAssessment,
+      manualSiren,
+      extractedSiren,
+    );
+    if (isHotelOnlyNaf(naf)) {
+      raisonSociale = normalizeRegistryDisplayName(
+        obligationAssessment.registrySnapshot.denomination,
+      );
+    }
+  }
+
+  return {
+    ...(candidate ? { nomCommercial: formatHotelName(candidate.name) } : {}),
+    ...(raisonSociale !== undefined ? { raisonSociale } : {}),
+  };
 }
 
 /** Derives pruneScreenshots' page list from the manifest it already
@@ -321,6 +435,17 @@ export async function runAuditStage(
 
     await persistAudit(connection, manifest, findings);
 
+    // Plan 045 slice 1.4: resolves (and, on a fresh match, stores) the
+    // catalogue hotel this audit's own site belongs to. Must run after
+    // persistAudit above, since it reads the audit document it just
+    // wrote. Never overwrites an existing outreach/hotelLink association
+    // - see linkAuditToHotelByDomain's own doc comment.
+    const { candidate: linkedCandidate } = await linkAuditToHotelByDomain(
+      connection,
+      artifacts.auditId,
+      manifest.siteUrl,
+    );
+
     // Plan 002 (issue #132): no checkpoint deletion here. The checkpoint
     // must survive until the JOB reaches its terminal state, because a
     // crash in the analysis or report stages of the same job re-runs this
@@ -343,31 +468,43 @@ export async function runAuditStage(
     );
 
     // 2026-08-22, La Corniche report review: the audit doc must exist
-    // before this (persistAudit upserts by auditId above), and
-    // fill-if-absent never overwrites a manual field an operator already
-    // entered - see prefillAuditManualFields's own doc comment. Reuses
-    // obligationAssessment's already-resolved registrySnapshot rather
-    // than a second Sirene lookup; siteSignals.siteName is populated by
-    // writeAuditArtifacts (write-audit.ts's deriveSiteName) from the
-    // homepage's own head metadata, since Sirene frequently has no
-    // commercial/brand name on file at all.
-    const normalisedRaisonSociale =
-      obligationAssessment.registrySnapshot?.denomination !== undefined
-        ? normalizeRegistryDisplayName(obligationAssessment.registrySnapshot.denomination)
-        : undefined;
-
+    // before this (persistAudit upserts by auditId above). siren is a
+    // plain fill-if-absent, per prefillAuditManualFields's own doc
+    // comment: it never overwrites a manual field an operator already
+    // entered, detected or not, and there is only one detector for it.
     await prefillAuditManualFields(connection, artifacts.auditId, {
-      ...(artifacts.manifest.siteSignals?.siteName !== undefined
-        ? { nomCommercial: artifacts.manifest.siteSignals.siteName }
-        : {}),
-      // A2 (2026-08-24): normalised for display only. The legal-exposure
-      // section keeps reading registrySnapshot.denomination byte-exact,
-      // because its own copy claims the name is reproduced as Sirene
-      // holds it - see normalizeRegistryDisplayName's doc comment for
-      // why the two surfaces deliberately differ.
-      ...(normalisedRaisonSociale !== undefined ? { raisonSociale: normalisedRaisonSociale } : {}),
       ...(artifacts.manifest.siteSignals?.siren !== undefined
         ? { siren: artifacts.manifest.siteSignals.siren }
+        : {}),
+    });
+
+    // Plan 045 slice 1.5: nomCommercial/raisonSociale get the better of
+    // two sources. siteSignals.siteName (writeAuditArtifacts's own
+    // deriveSiteName, off the homepage's head metadata) and
+    // registrySnapshot.denomination (Sirene, via obligation-stage.ts) are
+    // the audit's own guesses and can be junk - a nav-link fragment, or
+    // the site's web host's own registered name (plan 045's context: "Site
+    // Officiel", "O2SWITCH"). A linked audit's catalogue name and its
+    // qualification pass's own Sirene join are better evidence, gated to
+    // hotels only so a non-hotel denomination is never printed as the
+    // client's raison sociale. Unlike the siren fill-if-absent above,
+    // this uses replaceDetectedManualFields: it may overwrite an already-
+    // detected value with the better one (that is the whole point for an
+    // existing stuck audit relinked by the plan 045 backfill), but never
+    // an operator-confirmed one.
+    const coverPrefill = await resolveCoverPrefill(
+      connection,
+      linkedCandidate,
+      obligationAssessment,
+      options.manualSiren,
+      artifacts.manifest.siteSignals?.siren,
+    );
+    const preferredNomCommercial =
+      coverPrefill.nomCommercial ?? artifacts.manifest.siteSignals?.siteName;
+    await replaceDetectedManualFields(connection, artifacts.auditId, {
+      ...(preferredNomCommercial !== undefined ? { nomCommercial: preferredNomCommercial } : {}),
+      ...(coverPrefill.raisonSociale !== undefined
+        ? { raisonSociale: coverPrefill.raisonSociale }
         : {}),
     });
 

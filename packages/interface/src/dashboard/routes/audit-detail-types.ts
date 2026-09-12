@@ -157,6 +157,15 @@ export interface AuditOutreachStatusResponse {
   hasLiveV2Preview: boolean;
 }
 
+/** Plan 045 slice 1.4: the hotel this audit is about, from either
+ *  association an audit can carry (prospecting provenance, or a plain
+ *  domain link) - see AuditHotelLink's own doc comment in @odysseus/core.
+ *  Null when the audit's site never matched a catalogue candidate. */
+export interface AuditHotelResponse {
+  candidateId: string;
+  name: string;
+}
+
 /** The whole GET /api/audits/:auditId body. */
 export interface AuditDetailResponse {
   auditId: string;
@@ -181,6 +190,10 @@ export interface AuditDetailResponse {
    *  The server always sends it; optional here so an older cached page
    *  tolerates a payload from before the field existed. */
   outreach?: AuditOutreachStatusResponse;
+  /** Plan 045 slice 1.4: the hotel this audit is about. The server
+   *  always sends it; optional here for the same stale-cached-page
+   *  tolerance as `outreach` above. */
+  hotel?: AuditHotelResponse | null;
   /** The scan's original signal, before a possible operator correction. */
   detectedTransactionalFlow?: boolean;
   /** Issue #90: the failed pipeline run behind this audit, when there was

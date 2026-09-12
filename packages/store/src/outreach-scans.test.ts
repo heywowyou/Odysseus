@@ -2,6 +2,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { FINDINGS_SCHEMA_VERSION, type AuditManifest, type HotelCandidate } from '@odysseus/core';
 import { persistAudit } from './persist-audit.js';
+import { createAuditModel } from './schemas/audit.schema.js';
 import { createJobModel } from './schemas/job.schema.js';
 import { createHotelScoreCohortModel } from './schemas/score-cohort.schema.js';
 import { addSuppressionEntry } from './suppression.js';
@@ -590,6 +591,38 @@ describe('listOutreachAudits (plan 042 slice 2)', () => {
     async () => {
       const { candidate } = await seedSelectedCandidate('no-audits.fr');
       expect(await listOutreachAudits(connection!, candidate.candidateId)).toEqual([]);
+    },
+  );
+
+  it.skipIf(!mongoAvailable)(
+    'also matches hotelLink.candidateId (plan 045 slice 1.4), for an ordinary audit domain-linked to the hotel rather than authorized as prospecting evidence',
+    async () => {
+      const { candidate } = await seedSelectedCandidate('hotel-link-picker.fr');
+      const auditId = randomUUID();
+      await seedOutreachAudit({
+        candidateId: candidate.candidateId,
+        auditId,
+        siteUrl: 'https://hotel-link-picker.fr/',
+      });
+      // Replace the outreach stamp with a plain hotelLink, so this
+      // exercises the picker's hotelLink match specifically, not
+      // outreach's own (already covered above).
+      await createAuditModel(connection!).updateOne(
+        { auditId },
+        {
+          $unset: { outreach: '' },
+          $set: {
+            hotelLink: {
+              candidateId: candidate.candidateId,
+              matchedOn: 'own-registrable-domain',
+              linkedAt: new Date(),
+            },
+          },
+        },
+      );
+
+      const audits = await listOutreachAudits(connection!, candidate.candidateId);
+      expect(audits.map((audit) => audit.auditId)).toEqual([auditId]);
     },
   );
 });

@@ -16,6 +16,7 @@ vi.mock('@odysseus/store', () => ({
   getAudit: vi.fn(),
   getAuditRuntimeFields: vi.fn(),
   getFindingsForAudit: vi.fn(async () => []),
+  getHotelCandidate: vi.fn(async () => null),
   getLatestReport: vi.fn(async () => null),
   getLatestReportApproval: vi.fn(async () => null),
   getSeverityRollup: vi.fn(async () => ({})),

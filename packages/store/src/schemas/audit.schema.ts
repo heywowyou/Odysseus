@@ -9,7 +9,12 @@
  */
 
 import { Schema, type Connection, type Model } from 'mongoose';
-import type { AuditManifest, AuditManualFields, ReportPreparation } from '@odysseus/core';
+import type {
+  AuditHotelLink,
+  AuditManifest,
+  AuditManualFields,
+  ReportPreparation,
+} from '@odysseus/core';
 
 export interface AuditDocumentFields extends Omit<
   AuditManifest,
@@ -30,6 +35,12 @@ export interface AuditDocumentFields extends Omit<
    *  first saves preparation input. All writes go through the store
    *  service functions; handlers never issue raw updates. */
   reportPreparation?: ReportPreparation;
+  /** Plan 045 slice 1.4: store-only audit-to-hotel-candidate pointer. See
+   *  AuditHotelLink's own doc comment in @odysseus/core for why this is
+   *  never the immutable `outreach` stamp. Absent until
+   *  linkAuditToHotelByDomain resolves a match, or forever on an audit
+   *  whose site never matches a catalogue candidate's own domain. */
+  hotelLink?: AuditHotelLink;
 }
 
 export type AuditDocument = AuditDocumentFields;
@@ -567,6 +578,19 @@ const reportPreparationSchema = new Schema(
   { _id: false },
 );
 
+// Plan 045 slice 1.4: mirrors AuditHotelLink. DB-only, like manualFields
+// and reportPreparation below - Mongoose would otherwise silently strip
+// an undeclared top-level path (issue #173's lesson, why every sub-schema
+// above exists at all).
+const hotelLinkSchema = new Schema(
+  {
+    candidateId: { type: String, required: true },
+    matchedOn: { type: String, required: true, enum: ['own-registrable-domain'] },
+    linkedAt: { type: Date, required: true },
+  },
+  { _id: false },
+);
+
 // Exported for schemas/audit.schema.test.ts's AuditManifest-vs-paths diff
 // guard; the rest of the package keeps going through createAuditModel.
 export const auditSchema = new Schema<AuditDocument>(
@@ -591,6 +615,7 @@ export const auditSchema = new Schema<AuditDocument>(
     benchmarkPercentile: { type: benchmarkPercentileSchema },
     manualFields: { type: manualFieldsSchema },
     reportPreparation: { type: reportPreparationSchema },
+    hotelLink: { type: hotelLinkSchema },
   },
   { collection: 'audits' },
 );

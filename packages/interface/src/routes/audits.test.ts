@@ -9,6 +9,7 @@ vi.mock('@odysseus/store', () => ({
   getAudit: vi.fn(),
   getAuditRuntimeFields: vi.fn(),
   getFindingsForAudit: vi.fn(),
+  getHotelCandidate: vi.fn(),
   getSeverityRollup: vi.fn(),
   getLatestReport: vi.fn(),
   getLatestReportApproval: vi.fn(),
@@ -51,6 +52,7 @@ import {
   getAudit,
   getAuditRuntimeFields,
   getFindingsForAudit,
+  getHotelCandidate,
   getLatestReport,
   getLatestReportApproval,
   approvalMatchesReportPair,
@@ -413,6 +415,49 @@ describe('GET /api/audits/:auditId', () => {
 
     const body = JSON.parse(res.body ?? '{}');
     expect(body.reportLanguages).toEqual([]);
+  });
+
+  it('returns hotel null for an audit with no outreach or hotelLink association', async () => {
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1');
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    const body = JSON.parse(res.body ?? '{}');
+    expect(body.hotel).toBeNull();
+    expect(getHotelCandidate).not.toHaveBeenCalled();
+  });
+
+  it('resolves hotel from hotelLink.candidateId when the audit carries no outreach', async () => {
+    vi.mocked(getAudit).mockResolvedValue({
+      auditId: 'audit-1',
+      siteUrl: 'https://example.com/',
+      startedAt: new Date('2026-08-08T10:00:00.000Z'),
+      finishedAt: new Date('2026-08-08T10:05:00.000Z'),
+      findingsProvenance,
+      crawl: { visitedCount: 5 },
+      pages: [],
+      hotelLink: {
+        candidateId: 'cand-1',
+        matchedOn: 'own-registrable-domain',
+        linkedAt: new Date('2026-09-01T00:00:00.000Z'),
+      },
+    } as never);
+    vi.mocked(getHotelCandidate).mockResolvedValue({
+      candidateId: 'cand-1',
+      name: 'HOTEL EXAMPLE',
+    } as never);
+
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1');
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    const body = JSON.parse(res.body ?? '{}');
+    expect(body.hotel).toEqual({ candidateId: 'cand-1', name: 'HOTEL EXAMPLE' });
+    expect(getHotelCandidate).toHaveBeenCalledWith(fakeConnection, 'cand-1');
   });
 
   it('marks matching reports fresh and mismatched reports stale', async () => {

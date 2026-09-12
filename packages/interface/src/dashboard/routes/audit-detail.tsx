@@ -177,30 +177,30 @@ export function AuditDetailPage(): JSX.Element {
   }
 
   const publisherIdentificationFinding = findPublisherIdentificationFinding(data.findings);
-  const candidateId = data.outreach?.candidateId ?? null;
+  const hotel = data.hotel ?? null;
 
   return (
     <article className={PAGE_WIDTH.surface}>
       <PageHeader
-        eyebrow={
-          // Plan 040 slice 1 finding: the audit page carried no link back to
-          // the prospect it was run for, though the payload already names
-          // it. A real hotel name in this breadcrumb waits for the hub
-          // (slice 4); this closes the missing-link gap now with what the
-          // page already has.
-          candidateId !== null ? (
-            <span className="inline-flex items-center gap-1.5">
-              <Link to={`/prospects/${candidateId}`} className="transition-colors hover:text-ink">
-                {strings.nav.prospects}
-              </Link>
-              <span aria-hidden="true">›</span>
-              {strings.common.typeLabels.fullAudit}
-            </span>
+        eyebrow={strings.common.typeLabels.fullAudit}
+        // Plan 045 slice 1.4: the audit page's title links back to the
+        // hotel it is about whenever one is known, with the hostname
+        // demoted to the secondary identifier line - replacing the
+        // plan 040 breadcrumb, which could only link to "Prospects" and
+        // never named the hotel itself.
+        title={
+          hotel !== null ? (
+            <Link
+              to={`/prospects/${hotel.candidateId}`}
+              className="transition-colors hover:text-ink"
+            >
+              {hotel.name}
+            </Link>
           ) : (
-            strings.common.typeLabels.fullAudit
+            hostnameOf(data.siteUrl)
           )
         }
-        title={hostnameOf(data.siteUrl)}
+        subject={hotel !== null ? hostnameOf(data.siteUrl) : undefined}
         meta={
           <div className="flex flex-col gap-4">
             <dl className="flex flex-wrap items-baseline gap-x-6 gap-y-1 text-sm">
@@ -256,7 +256,7 @@ export function AuditDetailPage(): JSX.Element {
           onBusy={setIsBusy}
           refresh={refresh}
         />
-        <AuditPreviewNote auditId={data.auditId} candidateId={candidateId} />
+        <AuditPreviewNote auditId={data.auditId} candidateId={data.outreach?.candidateId ?? null} />
       </div>
     </article>
   );

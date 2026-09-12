@@ -40,8 +40,15 @@ vi.mock('@odysseus/core', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@odysseus/core')>()),
   normalizeAudit: vi.fn(),
 }));
-vi.mock('@odysseus/store', () => ({ persistAudit: vi.fn(), prefillAuditManualFields: vi.fn() }));
+vi.mock('@odysseus/store', () => ({
+  persistAudit: vi.fn(),
+  prefillAuditManualFields: vi.fn(),
+  replaceDetectedManualFields: vi.fn(),
+  linkAuditToHotelByDomain: vi.fn(),
+  getHotelQualification: vi.fn(),
+}));
 vi.mock('./obligation-stage.js', () => ({ runObligationStage: vi.fn() }));
+vi.mock('../sirene/sirene-cache.js', () => ({ lookupOperatorProfile: vi.fn() }));
 
 import {
   buildAuditDir,
@@ -55,9 +62,16 @@ import {
   writeManifestFile,
 } from '@odysseus/scanner';
 import { buildFindingsProvenance, normalizeAudit } from '@odysseus/core';
-import { persistAudit, prefillAuditManualFields } from '@odysseus/store';
+import {
+  getHotelQualification,
+  linkAuditToHotelByDomain,
+  persistAudit,
+  prefillAuditManualFields,
+  replaceDetectedManualFields,
+} from '@odysseus/store';
 import { runObligationStage } from './obligation-stage.js';
-import { runAuditStage } from './audit-stage.js';
+import { lookupOperatorProfile } from '../sirene/sirene-cache.js';
+import { resolveCoverPrefill, runAuditStage } from './audit-stage.js';
 
 const browserClose = vi.fn();
 const fakeBrowser = { close: browserClose } as never;
@@ -113,6 +127,13 @@ beforeEach(() => {
   vi.mocked(pruneScreenshots).mockResolvedValue({ prunedPageDirs: ['about-def456'] } as never);
   vi.mocked(persistAudit).mockResolvedValue(undefined);
   vi.mocked(runObligationStage).mockResolvedValue({ status: 'undetermined', basis: [] });
+  // Plan 045 slice 1.4/1.5 defaults: no hotel match, no qualification join,
+  // no Sirene NAF. Individual tests override to exercise the cover-prefill
+  // precedence and its NAF gate.
+  vi.mocked(linkAuditToHotelByDomain).mockResolvedValue({ candidate: null });
+  vi.mocked(getHotelQualification).mockResolvedValue(null);
+  vi.mocked(replaceDetectedManualFields).mockResolvedValue({});
+  vi.mocked(lookupOperatorProfile).mockResolvedValue({ status: 'not-found', siren: '' } as never);
 });
 
 describe('runAuditStage', () => {
@@ -393,11 +414,12 @@ describe('runAuditStage', () => {
     });
   });
 
-  // 2026-08-22, La Corniche report review: nomCommercial/raisonSociale/
-  // siren feed prefillAuditManualFields from manifest.siteSignals and
-  // the already-resolved obligationAssessment.registrySnapshot - no
-  // second Sirene lookup, and only the fields actually present are sent.
-  it('calls prefillAuditManualFields with siteName/registrySnapshot-derived candidates after persistAudit', async () => {
+  // 2026-08-22, La Corniche report review, updated by plan 045 slice 1.5:
+  // siren still feeds prefillAuditManualFields straight from
+  // manifest.siteSignals; nomCommercial/raisonSociale now go through
+  // replaceDetectedManualFields, falling back to siteSignals.siteName and
+  // a NAF-gated registrySnapshot when the audit has no linked hotel.
+  it('calls prefillAuditManualFields with siren, and replaceDetectedManualFields with siteName/NAF-gated registrySnapshot candidates', async () => {
     vi.mocked(writeAuditArtifacts).mockResolvedValue({
       auditId: 'audit-123',
       auditDir: '/artifacts/example.com/2026-08-04T00-00-00Z',
@@ -415,6 +437,7 @@ describe('runAuditStage', () => {
     vi.mocked(runObligationStage).mockResolvedValue({
       status: 'in_scope',
       basis: [],
+      sirenSource: 'extracted',
       registrySnapshot: {
         denomination: '(O! DE LA DUNE',
         effectifBandLabel: '100 à 199 salariés',
@@ -422,26 +445,34 @@ describe('runAuditStage', () => {
         source: 'sirene-api',
       },
     } as never);
+    vi.mocked(lookupOperatorProfile).mockResolvedValue({
+      status: 'found',
+      profile: { naf: { value: '55.10Z' } },
+    } as never);
 
     await runAuditStage('https://example.com/', {}, fakeConnection);
 
+    expect(prefillAuditManualFields).toHaveBeenCalledWith(fakeConnection, 'audit-123', {
+      siren: '732829320',
+    });
     // A2 (2026-08-24): Sirene returns "(O! DE LA DUNE" with an unbalanced
     // opening parenthesis, which reached a real report cover verbatim.
     // The prefilled display name is normalised; the legal-exposure
     // section keeps reading registrySnapshot.denomination byte-exact,
     // because its own copy claims the name is reproduced as the registry
     // holds it.
-    expect(prefillAuditManualFields).toHaveBeenCalledWith(fakeConnection, 'audit-123', {
+    expect(replaceDetectedManualFields).toHaveBeenCalledWith(fakeConnection, 'audit-123', {
       nomCommercial: 'La Co(o)rniche',
       raisonSociale: 'O! DE LA DUNE',
-      siren: '732829320',
     });
+    expect(lookupOperatorProfile).toHaveBeenCalledWith(fakeConnection, '732829320');
   });
 
   it('omits a candidate field entirely when its source is absent, rather than passing undefined', async () => {
     await runAuditStage('https://example.com/', {}, fakeConnection);
 
     expect(prefillAuditManualFields).toHaveBeenCalledWith(fakeConnection, 'audit-123', {});
+    expect(replaceDetectedManualFields).toHaveBeenCalledWith(fakeConnection, 'audit-123', {});
   });
 
   it('closes the browser even if scanSite throws', async () => {
@@ -544,5 +575,98 @@ describe('runAuditStage', () => {
     const scanOptions = vi.mocked(scanSite).mock.calls[0]?.[1];
     expect(scanOptions).not.toHaveProperty('checkpointContext');
     expect(scanOptions).not.toHaveProperty('onResumeDecision');
+  });
+});
+
+// Plan 045 slice 1.5: precedence between the linked candidate's own
+// catalogue name/qualification join and the audit's own detected sources,
+// and the NAF-55 gate that keeps a non-hotel denomination (a web host's
+// own registered name, item 3 of plan 045's context) from ever becoming
+// the printed raison sociale.
+describe('resolveCoverPrefill', () => {
+  it('prefers a linked candidate: catalogue name for nomCommercial, its qualification Sirene join for raisonSociale, when the join is a hotel', async () => {
+    vi.mocked(getHotelQualification).mockResolvedValue({
+      sireneJoin: {
+        status: 'matched',
+        naf: '55.10Z',
+        denomination: 'HÔTEL EXEMPLE (HÔTEL EXEMPLE)',
+      },
+    } as never);
+
+    const result = await resolveCoverPrefill(
+      fakeConnection,
+      { candidateId: 'cand-1', name: 'HÔTEL EXEMPLE' } as never,
+      { status: 'undetermined', basis: [] },
+      undefined,
+      undefined,
+    );
+
+    expect(getHotelQualification).toHaveBeenCalledWith(fakeConnection, 'v3', 'cand-1');
+    expect(result).toEqual({ nomCommercial: 'Hôtel Exemple', raisonSociale: 'HÔTEL EXEMPLE' });
+    // The candidate path never needs a fresh Sirene lookup.
+    expect(lookupOperatorProfile).not.toHaveBeenCalled();
+  });
+
+  it('rejects a non-hotel NAF on the qualification join, and falls back to a NAF-gated registrySnapshot', async () => {
+    vi.mocked(getHotelQualification).mockResolvedValue({
+      // A web-hosting company's own SIREN, reached through the site's
+      // mentions-légales page - exactly item 3's "O2SWITCH" defect.
+      sireneJoin: { status: 'matched', naf: '63.11Z', denomination: 'O2SWITCH' },
+    } as never);
+    vi.mocked(lookupOperatorProfile).mockResolvedValue({
+      status: 'found',
+      profile: { naf: { value: '55.10Z' } },
+    } as never);
+
+    const result = await resolveCoverPrefill(
+      fakeConnection,
+      { candidateId: 'cand-1', name: 'HÔTEL EXEMPLE' } as never,
+      {
+        status: 'undetermined',
+        basis: [],
+        sirenSource: 'extracted',
+        registrySnapshot: {
+          denomination: 'REAL HOTEL COMPANY NAME',
+          effectifBandLabel: null,
+          retrievedAt: new Date(),
+          source: 'sirene-api',
+        },
+      } as never,
+      undefined,
+      '552032534',
+    );
+
+    expect(result).toEqual({
+      nomCommercial: 'Hôtel Exemple',
+      raisonSociale: 'REAL HOTEL COMPANY NAME',
+    });
+  });
+
+  it('rejects a non-hotel NAF on the registrySnapshot fallback too, for an unlinked audit, and prefills nothing', async () => {
+    vi.mocked(lookupOperatorProfile).mockResolvedValue({
+      status: 'found',
+      profile: { naf: { value: '63.11Z' } },
+    } as never);
+
+    const result = await resolveCoverPrefill(
+      fakeConnection,
+      null,
+      {
+        status: 'undetermined',
+        basis: [],
+        sirenSource: 'extracted',
+        registrySnapshot: {
+          denomination: 'O2SWITCH',
+          effectifBandLabel: null,
+          retrievedAt: new Date(),
+          source: 'sirene-api',
+        },
+      } as never,
+      undefined,
+      '732829320',
+    );
+
+    expect(result).toEqual({});
+    expect(getHotelQualification).not.toHaveBeenCalled();
   });
 });
