@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@odysseus/store', () => ({
+  addWaveRosterEntry: vi.fn(),
   listOperatorProspects: vi.fn(),
   getOperatorProspect: vi.fn(),
   getProspectQualificationHistory: vi.fn(),
@@ -15,6 +16,9 @@ vi.mock('@odysseus/store', () => ({
   listOutreachAudits: vi.fn(),
   getSeverityRollup: vi.fn(),
   getSelectionVerdict: vi.fn(),
+  listRecentScoreCohorts: vi.fn(),
+  listWaveRoster: vi.fn(),
+  revokeWaveRosterEntry: vi.fn(),
 }));
 
 vi.mock('../outreach/draft-runtime.js', () => ({
@@ -31,6 +35,7 @@ vi.mock('../outreach/publish-preview.js', () => ({
 }));
 
 import {
+  addWaveRosterEntry,
   createJob,
   findOutreachThreadByCandidate,
   getOperatorProspect,
@@ -41,12 +46,16 @@ import {
   getSelectionVerdict,
   getSeverityRollup,
   listOperatorProspects,
+  listRecentScoreCohorts,
+  listWaveRoster,
   planOutreachFullScan,
   recordHotelCandidateReview,
+  revokeWaveRosterEntry,
 } from '@odysseus/store';
 import { createFollowUpForCandidate, createTouchOneDraft } from '../outreach/draft-runtime.js';
 import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
 import { revokePreviewsForDomain } from '../outreach/publish-preview.js';
+import { CURRENT_SCORING_VERSION } from '@odysseus/core';
 import { Router } from '../router.js';
 import { registerProspectRoutes } from './prospects.js';
 
@@ -190,6 +199,8 @@ beforeEach(() => {
     runningJobId: null,
   } as never);
   vi.mocked(listOutreachAudits).mockResolvedValue([] as never);
+  vi.mocked(listRecentScoreCohorts).mockResolvedValue([] as never);
+  vi.mocked(listWaveRoster).mockResolvedValue([] as never);
   vi.mocked(getSeverityRollup).mockResolvedValue({
     critical: 0,
     serious: 0,
@@ -801,5 +812,131 @@ describe('POST /api/prospects/:candidateId/preview/revoke (issue #97)', () => {
 
     expect(res.statusCode).toBe(503);
     expect(revokePreviewsForDomain).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/prospects/:candidateId/wave (plan 043 slice 1)', () => {
+  it('adds through the store helper with the dashboard actor', async () => {
+    vi.mocked(addWaveRosterEntry).mockResolvedValue({
+      added: true,
+      entryId: 'entry-1',
+      candidateId: 'cand-1',
+      domain: 'hotel-exemple.fr',
+    } as never);
+    const res = await handle('/api/prospects/cand-1/wave', {
+      method: 'POST',
+      body: { wave: 'wave-1' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(addWaveRosterEntry).toHaveBeenCalledWith(fakeConnection, {
+      wave: 'wave-1',
+      candidateId: 'cand-1',
+      scoringVersion: CURRENT_SCORING_VERSION,
+      actor: 'dashboard',
+    });
+    expect(JSON.parse(res.body ?? '{}')).toEqual({
+      added: true,
+      wave: 'wave-1',
+      candidateId: 'cand-1',
+      domain: 'hotel-exemple.fr',
+    });
+  });
+
+  it('answers a typed refusal as a 200 body', async () => {
+    vi.mocked(addWaveRosterEntry).mockResolvedValue({
+      added: false,
+      refused: 'already-on-roster',
+    } as never);
+    const res = await handle('/api/prospects/cand-1/wave', {
+      method: 'POST',
+      body: { wave: 'wave-1' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body ?? '{}')).toEqual({ added: false, refusal: 'already-on-roster' });
+  });
+
+  it('rejects a blank or control-character wave name', async () => {
+    const blank = await handle('/api/prospects/cand-1/wave', {
+      method: 'POST',
+      body: { wave: '   ' },
+    });
+    expect(blank.statusCode).toBe(400);
+
+    const control = await handle('/api/prospects/cand-1/wave', {
+      method: 'POST',
+      body: { wave: 'wave\n1' },
+    });
+    expect(control.statusCode).toBe(400);
+  });
+
+  it('revokes through the store helper and answers refusals the same way', async () => {
+    vi.mocked(revokeWaveRosterEntry).mockResolvedValue({
+      revoked: true,
+      entryId: 'entry-1',
+      candidateId: 'cand-1',
+    } as never);
+    const res = await handle('/api/prospects/cand-1/wave/remove', {
+      method: 'POST',
+      body: { wave: 'wave-1' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(revokeWaveRosterEntry).toHaveBeenCalledWith(fakeConnection, {
+      wave: 'wave-1',
+      candidateId: 'cand-1',
+      actor: 'dashboard',
+    });
+    expect(JSON.parse(res.body ?? '{}')).toEqual({
+      revoked: true,
+      wave: 'wave-1',
+      candidateId: 'cand-1',
+    });
+
+    vi.mocked(revokeWaveRosterEntry).mockResolvedValue({
+      revoked: false,
+      refused: 'not-on-roster',
+    } as never);
+    const refused = await handle('/api/prospects/cand-1/wave/remove', {
+      method: 'POST',
+      body: { wave: 'wave-1' },
+    });
+    expect(refused.statusCode).toBe(200);
+    expect(JSON.parse(refused.body ?? '{}')).toEqual({ revoked: false, refusal: 'not-on-roster' });
+  });
+});
+
+describe('GET /api/selection (plan 043 slice 1)', () => {
+  it('composes the recent cohorts and the active roster', async () => {
+    vi.mocked(listRecentScoreCohorts).mockResolvedValue([
+      {
+        cohortId: 'cohort-1',
+        scoringVersion: 'hotel-outreach-v1',
+        approved: true,
+        computedAt: new Date('2026-09-08T00:00:00.000Z'),
+        populationSize: 42,
+        selectedCount: 6,
+        abilityCutoff: 60,
+        brokennessCutoff: 40,
+      },
+    ] as never);
+    vi.mocked(listWaveRoster).mockResolvedValue([
+      {
+        entryId: 'entry-1',
+        wave: 'wave-1',
+        candidateId: 'cand-7',
+        domain: 'hotel-extra.fr',
+        scoringVersion: 'hotel-outreach-v1',
+        actor: 'dashboard',
+        state: 'active',
+        decidedAt: new Date('2026-09-09T00:00:00.000Z'),
+      },
+    ] as never);
+    const res = await handle('/api/selection');
+    expect(res.statusCode).toBe(200);
+    expect(listWaveRoster).toHaveBeenCalledWith(fakeConnection, {});
+    const body = JSON.parse(res.body ?? '{}');
+    expect(body.cohorts).toHaveLength(1);
+    expect(body.cohorts[0]).toMatchObject({ cohortId: 'cohort-1', selectedCount: 6 });
+    expect(body.roster).toHaveLength(1);
+    expect(body.roster[0]).toMatchObject({ wave: 'wave-1', domain: 'hotel-extra.fr' });
   });
 });

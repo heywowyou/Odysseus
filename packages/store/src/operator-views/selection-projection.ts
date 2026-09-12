@@ -30,6 +30,12 @@ export interface SelectionMember {
   source: SelectionSource;
   /** The rank the authorizing record gives, when it gives one. */
   rank: number | null;
+  /** Plan 043: the roster entry's own provenance, present only when the
+   *  authorizing source is a wave roster entry - the hub's remove control
+   *  names the wave and shows who decided, so the record stays honest. */
+  wave?: string;
+  decidedAt?: Date;
+  actor?: string;
 }
 
 /** The newest approved cohort's own facts, which are what the list's
@@ -71,6 +77,10 @@ export interface SelectionVerdict {
   source: SelectionSource | null;
   rank: number | null;
   cohort: SelectionCohortFacts | null;
+  /** Present only when the source is a wave roster entry. */
+  wave?: string;
+  decidedAt?: Date;
+  actor?: string;
 }
 
 /** The hub's single-candidate question, built from the same projection the
@@ -88,6 +98,9 @@ export async function getSelectionVerdict(
     source: member?.source ?? null,
     rank: member?.rank ?? null,
     cohort: projection.cohort,
+    ...(member?.source === 'wave-roster'
+      ? { wave: member.wave, decidedAt: member.decidedAt, actor: member.actor }
+      : {}),
   };
 }
 
@@ -119,8 +132,10 @@ export async function getSelectionProjection(connection: Connection): Promise<Se
     createWaveRosterEntryModel(connection)
       .find({ state: 'active' })
       .sort({ decidedAt: -1 })
-      .select({ _id: 0, candidateId: 1, rank: 1 })
-      .lean<Pick<WaveRosterEntryDocument, 'candidateId' | 'rank'>[]>(),
+      .select({ _id: 0, candidateId: 1, rank: 1, wave: 1, decidedAt: 1, actor: 1 })
+      .lean<
+        Pick<WaveRosterEntryDocument, 'candidateId' | 'rank' | 'wave' | 'decidedAt' | 'actor'>[]
+      >(),
   ]);
 
   // Newest first, so the first cohort naming a candidate as selected is the
@@ -149,7 +164,10 @@ export async function getSelectionProjection(connection: Connection): Promise<Se
     members.set(entry.candidateId, {
       candidateId: entry.candidateId,
       source: 'wave-roster',
-      rank: entry.rank,
+      rank: entry.rank ?? null,
+      wave: entry.wave,
+      decidedAt: entry.decidedAt,
+      actor: entry.actor,
     });
   }
 

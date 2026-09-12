@@ -227,6 +227,7 @@ export {
   diffHotelScoreVersions,
   recordScoreCohort,
   getLatestScoreCohort,
+  listRecentScoreCohorts,
 } from './scores.js';
 export type {
   RecordHotelScoreInput,

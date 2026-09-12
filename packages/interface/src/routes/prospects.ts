@@ -1,4 +1,5 @@
 import type { Connection } from 'mongoose';
+import { CURRENT_SCORING_VERSION } from '@odysseus/core';
 import type {
   HotelCampaignEligibility,
   HotelCandidateReviewState,
@@ -7,6 +8,7 @@ import type {
   HotelQualificationOutcome,
 } from '@odysseus/core';
 import {
+  addWaveRosterEntry,
   createJob,
   findOutreachThreadByCandidate,
   getOperatorProspect,
@@ -17,8 +19,11 @@ import {
   getSelectionVerdict,
   getSeverityRollup,
   listOperatorProspects,
+  listRecentScoreCohorts,
+  listWaveRoster,
   planOutreachFullScan,
   recordHotelCandidateReview,
+  revokeWaveRosterEntry,
 } from '@odysseus/store';
 import type { ListOperatorProspectsOptions, OperatorProspectQueue } from '@odysseus/store';
 import { createFollowUpForCandidate, createTouchOneDraft } from '../outreach/draft-runtime.js';
@@ -217,6 +222,36 @@ const REVIEW_ACTOR = 'dashboard';
  *  confirm dialogs carry no free-text field, so the stored reason names the
  *  surface rather than inventing an explanation. */
 const REVIEW_REASON_FALLBACK = 'dashboard-review';
+
+/** Plan 043: the same rule as REVIEW_ACTOR, for the wave roster - the
+ *  console records itself as the deciding actor, and the CLI's
+ *  `prospect wave add --actor` stays the path for attributed decisions. */
+const WAVE_ACTOR = 'dashboard';
+
+const WAVE_NAME_MAX_LENGTH = 60;
+
+interface WaveBody {
+  wave: string;
+}
+
+function parseWaveBody(raw: unknown): WaveBody {
+  if (raw === null || typeof raw !== 'object') {
+    throw new ProspectRequestError('request body must be a JSON object');
+  }
+  const record = raw as Record<string, unknown>;
+  const wave = record['wave'];
+  if (typeof wave !== 'string') {
+    throw new ProspectRequestError('wave must be a string');
+  }
+  const trimmed = wave.trim();
+  if (trimmed === '' || trimmed.length > WAVE_NAME_MAX_LENGTH) {
+    throw new ProspectRequestError(`wave must be between 1 and ${WAVE_NAME_MAX_LENGTH} characters`);
+  }
+  if (/[\x00-\x1f\x7f]/.test(trimmed)) {
+    throw new ProspectRequestError('wave must not contain control characters');
+  }
+  return { wave: trimmed };
+}
 
 const REASON_MAX_LENGTH = 500;
 
@@ -526,5 +561,79 @@ export function registerProspectRoutes(
       reason: DASHBOARD_REVOKE_REASON,
     });
     sendJson(res, 200, { revoked: result.revoked, alreadyRevoked: result.alreadyRevoked });
+  });
+
+  // Plan 043 slice 1: the wave roster's mutations, through the same store
+  // helpers the CLI's `prospect wave add/remove` use. Typed refusals answer
+  // as 200 bodies so the dashboard can render a sentence per reason.
+  router.post('/api/prospects/:candidateId/wave', async ({ req, res, params }) => {
+    const candidateId = params['candidateId']!;
+    if (!isPlausibleCandidateId(candidateId)) {
+      sendError(res, 400, 'candidateId must be a non-empty string without control characters');
+      return;
+    }
+    const body = await readJsonBodyOrRespond(req, res);
+    if (body === jsonBodyNotRead) return;
+    let parsed: WaveBody;
+    try {
+      parsed = parseWaveBody(body);
+    } catch (error) {
+      sendError(res, 400, error instanceof Error ? error.message : 'invalid wave body');
+      return;
+    }
+    const result = await addWaveRosterEntry(connection, {
+      wave: parsed.wave,
+      candidateId,
+      scoringVersion: CURRENT_SCORING_VERSION,
+      actor: WAVE_ACTOR,
+    });
+    if (!result.added) {
+      sendJson(res, 200, { added: false, refusal: result.refused });
+      return;
+    }
+    sendJson(res, 200, {
+      added: true,
+      wave: parsed.wave,
+      candidateId: result.candidateId,
+      domain: result.domain,
+    });
+  });
+
+  router.post('/api/prospects/:candidateId/wave/remove', async ({ req, res, params }) => {
+    const candidateId = params['candidateId']!;
+    if (!isPlausibleCandidateId(candidateId)) {
+      sendError(res, 400, 'candidateId must be a non-empty string without control characters');
+      return;
+    }
+    const body = await readJsonBodyOrRespond(req, res);
+    if (body === jsonBodyNotRead) return;
+    let parsed: WaveBody;
+    try {
+      parsed = parseWaveBody(body);
+    } catch (error) {
+      sendError(res, 400, error instanceof Error ? error.message : 'invalid wave body');
+      return;
+    }
+    const result = await revokeWaveRosterEntry(connection, {
+      wave: parsed.wave,
+      candidateId,
+      actor: WAVE_ACTOR,
+    });
+    if (!result.revoked) {
+      sendJson(res, 200, { revoked: false, refusal: result.refused });
+      return;
+    }
+    sendJson(res, 200, { revoked: true, wave: parsed.wave, candidateId: result.candidateId });
+  });
+
+  // Plan 043 slice 1: the selection record, read-only. The cohort facts are
+  // the formula's own output (insert-only documents); the roster is the
+  // operator's ledger. Neither is mutated here.
+  router.get('/api/selection', async ({ res }) => {
+    const [cohorts, roster] = await Promise.all([
+      listRecentScoreCohorts(connection),
+      listWaveRoster(connection, {}),
+    ]);
+    sendJson(res, 200, { cohorts, roster });
   });
 }

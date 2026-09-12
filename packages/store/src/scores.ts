@@ -327,3 +327,29 @@ export async function getLatestScoreCohort(
     .sort({ computedAt: -1 })
     .lean<HotelScoreCohortDocument>();
 }
+
+/** Plan 043 slice 1: the recent cohorts, newest first, for the dashboard's
+ *  read-only selection overview. The same lean field set the selection
+ *  projection reads - never the member arrays, which a page has no reason
+ *  to download. */
+export async function listRecentScoreCohorts(
+  connection: Connection,
+  limit = 5,
+): Promise<HotelScoreCohortDocument[]> {
+  return createHotelScoreCohortModel(connection)
+    .find({})
+    .sort({ computedAt: -1 })
+    .limit(limit)
+    .select({
+      _id: 0,
+      cohortId: 1,
+      scoringVersion: 1,
+      approved: 1,
+      computedAt: 1,
+      populationSize: 1,
+      selectedCount: 1,
+      abilityCutoff: 1,
+      brokennessCutoff: 1,
+    })
+    .lean<HotelScoreCohortDocument[]>();
+}
