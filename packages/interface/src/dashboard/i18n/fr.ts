@@ -598,6 +598,8 @@ export const fr: DashboardStrings = {
     openSite: 'Ouvrir le site dans un nouvel onglet',
     outreachScanQueued: 'Audit de prospection en file d’attente.',
     outreachScanRefused: 'L’analyse n’a pas pu être lancée.',
+    quickCheckQueued: 'La vérification rapide est en file d’attente.',
+    quickCheckRefused: 'La vérification rapide n’a pas pu être lancée.',
     sourcesHeading: 'Sources',
     sources: {
       field: 'Champ',
@@ -798,6 +800,9 @@ export const fr: DashboardStrings = {
     notScoredHeading: 'Pas encore scoré',
     notScoredBody:
       'Cet hôtel est dans la sélection mais n’a aucun score à la version de scoring courante. Un hôtel reçoit son score dès qu’il a un préscan et une qualification à jour ; pour un hôtel ajouté à la main, lancez d’abord ces passages.',
+    notScoredBodyWithAction:
+      'Cet hôtel est dans la sélection mais n’a aucun score à la version de scoring courante. Lancez une vérification rapide ci-dessous pour lui donner son premier préscan, ce qui déclenche son score.',
+    runQuickCheckAction: 'Lancer une vérification rapide',
   },
   evidence: {
     title: 'Preuves',

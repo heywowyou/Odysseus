@@ -214,6 +214,7 @@ export function ProspectDetailPage(): JSX.Element {
 
   const [pendingAction, setPendingAction] = useState<ReviewAction | null>(null);
   const [scanStarting, setScanStarting] = useState(false);
+  const [prescanStarting, setPrescanStarting] = useState(false);
   const [isOutreachBusy, setIsOutreachBusy] = useState(false);
   /** The one-time token of a publish made on this visit. Held only in
    *  page memory so the first-email call can hand it back; it never
@@ -274,6 +275,34 @@ export function ProspectDetailPage(): JSX.Element {
       toast.error(strings.prospectDetail.outreachScanRefused);
     } finally {
       setScanStarting(false);
+    }
+  };
+
+  // Issue #201: the hub's own "Run quick check" action, the dashboard
+  // counterpart of `odysseus prospect prescan run --domain <domain>`. The
+  // job's own completion runs the on-demand scoring pass (issue #199), so
+  // this single click is what used to take two CLI commands with no
+  // dashboard hint of either.
+  const runQuickCheck = async (): Promise<void> => {
+    if (candidateId === undefined || prescanStarting) return;
+    setPrescanStarting(true);
+    try {
+      const result = await postEmpty<{ started: boolean; jobId?: string; refusal?: string }>(
+        `/api/prospects/${encodedId}/prescan`,
+      );
+      if (result.started && result.jobId !== undefined) {
+        toast.success(strings.prospectDetail.quickCheckQueued);
+        navigate(`/scans/${result.jobId}`);
+        return;
+      }
+      toast.error(strings.prospectDetail.quickCheckRefused);
+      refresh();
+    } catch (caught) {
+      toast.error(strings.prospectDetail.quickCheckRefused, {
+        description: caught instanceof Error ? caught.message : undefined,
+      });
+    } finally {
+      setPrescanStarting(false);
     }
   };
 
@@ -510,7 +539,16 @@ export function ProspectDetailPage(): JSX.Element {
       case 'fiche':
         return <HubFicheSection detail={data} onRequestReview={setPendingAction} />;
       case 'quick-check':
-        return <HubQuickCheckSection candidateId={data.candidateId} detail={data} />;
+        return (
+          <HubQuickCheckSection
+            candidateId={data.candidateId}
+            detail={data}
+            onRunQuickCheck={() => {
+              void runQuickCheck();
+            }}
+            isQuickCheckBusy={prescanStarting}
+          />
+        );
       case 'audit':
         return (
           <HubAuditSection

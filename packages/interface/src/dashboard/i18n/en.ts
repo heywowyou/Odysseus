@@ -589,6 +589,8 @@ export const en: DashboardStrings = {
     openSite: 'Open the site in a new tab',
     outreachScanQueued: 'The prospecting audit is queued.',
     outreachScanRefused: 'The scan could not be started.',
+    quickCheckQueued: 'The quick check is queued.',
+    quickCheckRefused: 'The quick check could not be started.',
     sourcesHeading: 'Sources',
     sources: {
       field: 'Field',
@@ -785,6 +787,9 @@ export const en: DashboardStrings = {
     notScoredHeading: 'Not scored yet',
     notScoredBody:
       'This hotel is in the selection but holds no score at the current scoring version. A hotel gets its score once it has a current prescan and qualification; run those passes first for a hotel added by hand.',
+    notScoredBodyWithAction:
+      'This hotel is in the selection but holds no score at the current scoring version. Run a quick check below to give it its first prescan, which starts its score.',
+    runQuickCheckAction: 'Run quick check',
   },
   evidence: {
     title: 'Evidence',

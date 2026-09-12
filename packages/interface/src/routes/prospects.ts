@@ -35,6 +35,7 @@ import { createMongoOutreachPreviewStore } from '../outreach/mongo-outreach-prev
 import { revokePreviewsForDomain } from '../outreach/publish-preview.js';
 import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-hotels.js';
 import { CURRENT_QUALIFICATION_VERSION } from '../prospecting/hotel-qualification/qualify-hotels.js';
+import { CURRENT_RESOLUTION_VERSION } from '../prospecting/hotel-identity/resolve-hotels.js';
 import { scoreHotelOnDemandForConnection } from '../prospecting/hotel-scoring/score-on-demand.js';
 import type { JobQueue } from '../queue/job-queue.js';
 import type { Router } from '../router.js';
@@ -597,6 +598,46 @@ export function registerProspectRoutes(
       domain: result.domain,
       scoring,
     });
+  });
+
+  // Issue #201: a per-hotel "Run quick check" action, the dashboard's own
+  // path to the CLI's `odysseus prospect prescan run --domain <domain>`.
+  // Resolves the domain from the candidate record rather than taking one
+  // from the client, the same rule as the outreach full-scan and full-audit
+  // actions above. Scores nobody itself: the job's own completion runs the
+  // same on-demand scoring pass the wave-add action uses, so one click ends
+  // with a score instead of leaving a second CLI command for the operator
+  // to remember.
+  router.post('/api/prospects/:candidateId/prescan', async ({ res, params }) => {
+    const candidateId = params['candidateId']!;
+    if (!isPlausibleCandidateId(candidateId)) {
+      sendError(res, 400, 'candidateId must be a non-empty string without control characters');
+      return;
+    }
+    const candidate = await getHotelCandidate(connection, candidateId);
+    if (candidate === null) {
+      sendError(res, 404, 'prospect not found');
+      return;
+    }
+    const domain = candidate.ownRegistrableDomain;
+    if (domain === undefined || domain === null || domain === '') {
+      sendJson(res, 200, { started: false, refusal: 'no-own-domain' });
+      return;
+    }
+    const job = await createJob(connection, {
+      type: 'hotel-prescan',
+      options: {
+        resolutionVersion: CURRENT_RESOLUTION_VERSION,
+        qualificationVersion: CURRENT_QUALIFICATION_VERSION,
+        prescanVersion: CURRENT_PRESCAN_VERSION,
+        domain,
+        maxPages: 1,
+        concurrency: 1,
+        rescan: false,
+      },
+    });
+    queue?.notify();
+    sendJson(res, 201, { started: true, jobId: job.jobId });
   });
 
   /** Plan 044's paid-audit gate, factored out of the POST action so the

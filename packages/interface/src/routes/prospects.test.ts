@@ -67,6 +67,9 @@ import { createConfiguredPreviewPublisher } from '../outreach/configured-preview
 import { revokePreviewsForDomain } from '../outreach/publish-preview.js';
 import { scoreHotelOnDemandForConnection } from '../prospecting/hotel-scoring/score-on-demand.js';
 import { CURRENT_SCORING_VERSION } from '@odysseus/core';
+import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-hotels.js';
+import { CURRENT_QUALIFICATION_VERSION } from '../prospecting/hotel-qualification/qualify-hotels.js';
+import { CURRENT_RESOLUTION_VERSION } from '../prospecting/hotel-identity/resolve-hotels.js';
 import { Router } from '../router.js';
 import { registerProspectRoutes } from './prospects.js';
 
@@ -1023,5 +1026,53 @@ describe('POST /api/prospects/:candidateId/full-audit (plan 044)', () => {
     vi.mocked(getHotelCandidate).mockResolvedValue(null as never);
     const unknown = await handle('/api/prospects/cand-unknown/full-audit', { method: 'POST' });
     expect(unknown.statusCode).toBe(404);
+  });
+});
+
+describe('POST /api/prospects/:candidateId/prescan (issue #201)', () => {
+  it('mints a domain-scoped hotel-prescan job for a hand-added hotel', async () => {
+    vi.mocked(getHotelCandidate).mockResolvedValue({
+      candidateId: 'cand-1',
+      ownRegistrableDomain: 'hotel-exemple.fr',
+    } as never);
+    const res = await handle('/api/prospects/cand-1/prescan', { method: 'POST' });
+    expect(res.statusCode).toBe(201);
+    expect(createJob).toHaveBeenCalledWith(fakeConnection, {
+      type: 'hotel-prescan',
+      options: {
+        resolutionVersion: CURRENT_RESOLUTION_VERSION,
+        qualificationVersion: CURRENT_QUALIFICATION_VERSION,
+        prescanVersion: CURRENT_PRESCAN_VERSION,
+        domain: 'hotel-exemple.fr',
+        maxPages: 1,
+        concurrency: 1,
+        rescan: false,
+      },
+    });
+    expect(JSON.parse(res.body ?? '{}')).toEqual({ started: true, jobId: 'job-new-1' });
+  });
+
+  it('refuses a candidate with no own domain and 404s an unknown candidate', async () => {
+    vi.mocked(getHotelCandidate).mockResolvedValue({
+      candidateId: 'cand-1',
+      ownRegistrableDomain: null,
+    } as never);
+    const noDomain = await handle('/api/prospects/cand-1/prescan', { method: 'POST' });
+    expect(noDomain.statusCode).toBe(200);
+    expect(JSON.parse(noDomain.body ?? '{}')).toEqual({
+      started: false,
+      refusal: 'no-own-domain',
+    });
+    expect(createJob).not.toHaveBeenCalled();
+
+    vi.mocked(getHotelCandidate).mockResolvedValue(null as never);
+    const unknown = await handle('/api/prospects/cand-unknown/prescan', { method: 'POST' });
+    expect(unknown.statusCode).toBe(404);
+  });
+
+  it('rejects an implausible candidate id before touching the store', async () => {
+    const res = await handle(`/api/prospects/${'x'.repeat(201)}/prescan`, { method: 'POST' });
+    expect(res.statusCode).toBe(400);
+    expect(getHotelCandidate).not.toHaveBeenCalled();
   });
 });

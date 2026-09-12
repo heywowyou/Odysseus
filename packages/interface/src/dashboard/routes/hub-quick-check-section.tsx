@@ -49,13 +49,36 @@ const SCORE_SIDES = ['brokenness', 'ability'] as const;
 
 /** Issue #199: a selected hotel without a score states that plainly, in
  *  place of the score breakdown, instead of leaving the section silent
- *  (which reads as "no problems"). */
-function NotScoredNotice(): JSX.Element {
+ *  (which reads as "no problems"). Issue #201: when there is no prescan at
+ *  all yet, the notice also offers the one-click remedy instead of only
+ *  describing it - the CLI two-step round-trip that left the gap stays
+ *  available, but is no longer the only path. */
+function NotScoredNotice(props: {
+  onRunQuickCheck: (() => void) | undefined;
+  isQuickCheckBusy: boolean;
+}): JSX.Element {
   const { strings } = useI18n();
   return (
     <div className="rounded-lg border border-line bg-raised p-4">
       <p className="text-sm font-medium text-ink">{strings.score.notScoredHeading}</p>
-      <p className="mt-1 text-sm text-ink-soft">{strings.score.notScoredBody}</p>
+      <p className="mt-1 text-sm text-ink-soft">
+        {props.onRunQuickCheck !== undefined
+          ? strings.score.notScoredBodyWithAction
+          : strings.score.notScoredBody}
+      </p>
+      {props.onRunQuickCheck !== undefined ? (
+        <div className="mt-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            isLoading={props.isQuickCheckBusy}
+            disabled={props.isQuickCheckBusy}
+            onClick={props.onRunQuickCheck}
+          >
+            {strings.score.runQuickCheckAction}
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -114,8 +137,15 @@ function EvidenceAssetFigure(props: {
 export function HubQuickCheckSection(props: {
   candidateId: string;
   detail: ProspectDetailResponse;
+  /** Issue #201: the page's own handler for the per-hotel quick-check
+   *  action. Optional so a caller that has nothing to run (there is none
+   *  in this codebase; kept optional for test convenience) still compiles;
+   *  this section decides whether to actually render the button, from
+   *  prescan being null, not from this prop alone. */
+  onRunQuickCheck?: () => void;
+  isQuickCheckBusy?: boolean;
 }): JSX.Element {
-  const { candidateId, detail } = props;
+  const { candidateId, detail, onRunQuickCheck, isQuickCheckBusy = false } = props;
   const { strings, language } = useI18n();
   const [showMetrics, setShowMetrics] = useState(false);
   const [showDiff, setShowDiff] = useState(false);
@@ -152,7 +182,12 @@ export function HubQuickCheckSection(props: {
       <Card title={strings.hub.steps['quick-check']}>
         <div className="flex flex-col gap-4">
           <EmptyState title={strings.hub.quickCheck.empty} />
-          {detail.selectionVerdict?.inSelection === true ? <NotScoredNotice /> : null}
+          {detail.selectionVerdict?.inSelection === true ? (
+            <NotScoredNotice
+              onRunQuickCheck={onRunQuickCheck}
+              isQuickCheckBusy={isQuickCheckBusy}
+            />
+          ) : null}
         </div>
       </Card>
     );
@@ -403,7 +438,10 @@ export function HubQuickCheckSection(props: {
         ) : null}
 
         {score === null && detail.selectionVerdict?.inSelection === true ? (
-          <NotScoredNotice />
+          <NotScoredNotice
+            onRunQuickCheck={prescan === null ? onRunQuickCheck : undefined}
+            isQuickCheckBusy={isQuickCheckBusy}
+          />
         ) : null}
 
         {evidence !== null ? (

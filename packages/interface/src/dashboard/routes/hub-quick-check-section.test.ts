@@ -50,13 +50,20 @@ describe('HubQuickCheckSection not-scored notice (issue #199)', () => {
     document.body.innerHTML = '';
   });
 
-  async function renderSection(response: ProspectDetailResponse): Promise<void> {
+  async function renderSection(
+    response: ProspectDetailResponse,
+    extraProps: { onRunQuickCheck?: () => void; isQuickCheckBusy?: boolean } = {},
+  ): Promise<void> {
     await act(async () => {
       root!.render(
         createElement(
           I18nProvider,
           null,
-          createElement(HubQuickCheckSection, { candidateId: 'cand-1', detail: response }),
+          createElement(HubQuickCheckSection, {
+            candidateId: 'cand-1',
+            detail: response,
+            ...extraProps,
+          }),
         ),
       );
     });
@@ -86,5 +93,81 @@ describe('HubQuickCheckSection not-scored notice (issue #199)', () => {
   it('shows no notice when the hotel is not in the selection', async () => {
     await renderSection(detail({ inSelection: false }));
     expect(container!.textContent).not.toContain('Pas encore scoré');
+  });
+});
+
+describe('HubQuickCheckSection quick-check action (issue #201)', () => {
+  let root: Root | undefined;
+  let container: HTMLDivElement | undefined;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+  });
+
+  afterEach(async () => {
+    await act(async () => {
+      root?.unmount();
+    });
+    container?.remove();
+    document.body.innerHTML = '';
+  });
+
+  async function renderSection(
+    response: ProspectDetailResponse,
+    extraProps: { onRunQuickCheck?: () => void; isQuickCheckBusy?: boolean } = {},
+  ): Promise<void> {
+    await act(async () => {
+      root!.render(
+        createElement(
+          I18nProvider,
+          null,
+          createElement(HubQuickCheckSection, {
+            candidateId: 'cand-1',
+            detail: response,
+            ...extraProps,
+          }),
+        ),
+      );
+    });
+  }
+
+  it('offers the one-click remedy when there is no prescan and a handler is wired', async () => {
+    await renderSection(detail({}), { onRunQuickCheck: () => {} });
+    expect(container!.textContent).toContain('Lancer une vérification rapide');
+  });
+
+  it('runs the handler when the operator clicks the action', async () => {
+    let calls = 0;
+    await renderSection(detail({}), { onRunQuickCheck: () => (calls += 1) });
+    const button = container!.querySelector('button');
+    expect(button).not.toBeNull();
+    await act(async () => {
+      button!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(calls).toBe(1);
+  });
+
+  it('withholds the action when no handler is wired, describing the manual passes instead', async () => {
+    await renderSection(detail({}));
+    expect(container!.textContent).not.toContain('Lancer une vérification rapide');
+    expect(container!.textContent).toContain('lancez d’abord ces passages');
+  });
+
+  it('withholds the action once a prescan already exists, since re-running it would not help', async () => {
+    await renderSection(
+      detail({
+        prescan: {
+          status: 'complete',
+          prescanVersion: 'pv2',
+          startedAt: '2026-09-12T00:00:00.000Z',
+          pages: [],
+          absentRoles: [],
+        } as unknown as NonNullable<ProspectDetailResponse['prescan']>,
+      }),
+      { onRunQuickCheck: () => {} },
+    );
+    expect(container!.textContent).not.toContain('Lancer une vérification rapide');
   });
 });

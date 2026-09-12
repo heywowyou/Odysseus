@@ -627,6 +627,8 @@ export interface DashboardStrings {
     openSite: string;
     outreachScanQueued: string;
     outreachScanRefused: string;
+    quickCheckQueued: string;
+    quickCheckRefused: string;
     sourcesHeading: string;
     sources: {
       field: string;
@@ -853,6 +855,10 @@ export interface DashboardStrings {
      *  before its first scan). */
     notScoredHeading: string;
     notScoredBody: string;
+    /** Issue #201: shown instead of notScoredBody when the hub can offer
+     *  the quick-check action directly (no prescan at all yet). */
+    notScoredBodyWithAction: string;
+    runQuickCheckAction: string;
   };
   evidence: {
     title: string;

@@ -41,6 +41,7 @@ import {
   prescanHotels,
   type HotelPrescanReport,
 } from '../../prospecting/hotel-prescan/prescan-hotels.js';
+import { scoreHotelOnDemandForConnection } from '../../prospecting/hotel-scoring/score-on-demand.js';
 import { JobCancelledError } from '../cancellation.js';
 import type { PipelineContext } from '../job-queue.js';
 
@@ -230,5 +231,18 @@ export async function runHotelPrescanJob(job: JobDocument, ctx: PipelineContext)
         `${report.byEvidenceStatus.incomplete} evidence-incomplete, ${report.failures} failed`,
     },
   });
+
+  // Issue #201: a domain-scoped run (the dashboard's per-hotel quick check,
+  // or the CLI's own `--domain`) is exactly the one-hotel case the wave-add
+  // action already scores on demand (issue #199). Running the same bounded
+  // pass here closes the gap the issue reported: a wave-added hotel with no
+  // prescan yet used to have no way to ever pick up a score, because
+  // nothing ever retried after the prescan it was waiting on finally ran.
+  // A population-wide batch (no domain) stays untouched by this and keeps
+  // going through the operator's own `prospect score run`.
+  if (options.domain !== undefined) {
+    await scoreHotelOnDemandForConnection(connection, options.domain);
+  }
+
   await completeJob(connection, job.jobId);
 }
