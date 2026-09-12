@@ -102,6 +102,37 @@ question mechanism, after the constraints below were put to them.
 
 ## Slice 1: The pipeline strip becomes a tab bar
 
+**Landed 2026-09-12 by ZCode** (commit `0607cf5`), on main, after the
+operator ordered the plan's branch (`origin/claude/magical-edison-0mft3j`)
+fast-forward-merged into main. Verified per the checklist below: hub-model
+unit tests (hubTabs hides Rapport client unsold, shows it sold, carries no
+campaign state on it), the token regression render test (publish, switch
+away, switch back, one-time link still shown), the pre-existing deep-link
+tests adapted behaviour (anchor maps to a tab, then one scroll), and the
+hub's axe suites at zero violations.
+
+Implementation notes and deviations:
+
+- The plan's verification command `pnpm --filter @odysseus/interface test`
+  has no script to run; the repo's equivalent is
+  `pnpm exec vitest run packages/interface` from the root (run per slice;
+  the only red there is the pre-existing `app-routes.test.ts` `outils`
+  gap documented in the session log before this plan started).
+- `isSold` (slice 3's pure derivation) landed with slice 1, not slice 3:
+  hubTabs takes the sold signal, so the page needed it for the wiring, and
+  its won/quoted/reply-positive/empty unit tests all landed there too.
+  Slice 3 added nothing to the predicate.
+- The tab bar renders no state word on the Rapport client tab (not a
+  campaign stage, per the plan's second interpretation note); hubTabs
+  emits it with `state: 'todo'` so `HubStep` stays uniform, and the render
+  suppresses the label.
+- Deep links to `#hub-report` only scroll: they never auto-switch to the
+  paid tab, because whether that tab is visible is the sold signal's
+  decision (plus the manual reveal), not the link's. Every other hub
+  anchor switches the tab and then scrolls once the panel exists.
+- The roving-focus tab widget is hand-rolled (~40 lines) exactly as the
+  plan requires; `@radix-ui/react-tabs` was not added.
+
 **Goal**: the hub renders one stage at a time, switched by the strip, with no
 content change to any section and no page remount.
 
@@ -149,6 +180,38 @@ content change to any section and no page remount.
 
 ## Slice 2: The Audit tab shows the audit, not a link to it
 
+**Landed 2026-09-12 by ZCode** (commit `edfbdcd`). Store:
+`listOutreachAudits` (packages/store/src/outreach-scans.ts) returns every
+audit carrying the candidate's outreach provenance, newest first, joined to
+the creating job's `type` through the job row's single `auditId` field
+(what `completeJob` writes); a missing or expired job row yields
+`jobType: null` rather than a guess, and an empty list, never null, for a
+candidate with no audits - covered by two new tests in the Mongo-backed
+`outreach-scans.test.ts` (22/22 green with `pnpm test:store:up` up).
+`GET /api/prospects/:candidateId` exposes the list as `outreachAudits`, the
+additive sibling of the untouched singular `outreachAudit`; the route
+suite's payload shape guard gained exactly one key. The hub section feeds
+the audit page's own `FindingsCard`, `PublisherIdentificationAlert`, and
+`FailureCard` from the audit's own endpoint (no reimplementation), with a
+`SegmentedControl` picker up to three choices and a `Select` beyond,
+labelled "date · audit kind", defaulting to the newest; "Ouvrir l'audit"
+stays as the standalone-view link with the plan's description sentence
+beside it. The hub render tests mirror audit-detail-render.test.ts's
+expectations (reviewed FR titles over raw detector titles, row expansion,
+the publisher alert), and axe runs clean on the hub with findings rendered
+and one expanded.
+
+Implementation notes:
+
+- The severity badges read the fetched audit detail's rollup, falling back
+  to the singular field's totals (the same numbers for the newest audit)
+  only until the fetch lands - older audits get real totals from their own
+  payload instead of wrong ones from the newest.
+- The audit picker's choice list and selection moved to `hub-model.ts`
+  (`auditChoices`, `selectedAuditId`) in this slice's commit so slice 3
+  could lift the selection to the page; within slice 2 itself the section
+  still owned it.
+
 **Goal**: the findings and the audit's own state render inside the hub, with a
 picker when the hotel has more than one audit.
 
@@ -190,6 +253,27 @@ picker when the hotel has more than one audit.
 
 ## Slice 3: The Rapport client tab
 
+**Landed 2026-09-12 by ZCode** (commit `9463dda`). `HubReportSection` wraps
+the audit page's `AuditReportStepper` unchanged - same `onBusy`/`refresh`
+wiring, polling the audit detail every five seconds only while a stepper
+write is in flight, a pure relocation - and the audit page keeps the
+stepper always visible, with the comment the plan ordered so a later reader
+does not "fix" the inconsistency. The reveal ("Produire un rapport quand
+même" / "Produce a report anyway") is a one-line link under the Audit tab,
+sets page view state only, and resets on reload. Render tests cover tab
+absent unsold, present after a `won` outcome, and present after the manual
+reveal; axe runs clean with the Rapport client tab active.
+
+Implementation note:
+
+- Which audit the stepper renders had to leave `HubAuditSection`: the two
+  tabs render in place of each other, so the Audit tab's internal state
+  could not be read while the report panel was up. The selection lifted to
+  the page (`pickedAuditId` + `selectedAuditId` in hub-model.ts, default
+  newest) and both sections now take it as a prop; the pure helpers carry
+  unit tests. The plan's "the audit selected in the Audit tab" is thereby
+  exact.
+
 **Goal**: the five-step chain moves out of the prospecting path and appears
 only when it means something.
 
@@ -226,6 +310,35 @@ only when it means something.
   ordering. It must be a pure relocation of an existing component.
 
 ## Slice 4: The audits list points at the hotel
+
+**Landed 2026-09-12 by ZCode** (commit `2f6bb14`). `listJobs`' projection
+gained `'options.outreachCandidateId'` (the one store change; additive on
+the summary type), and `GET /api/scans` resolves the distinct candidates in
+one batched `getHotelCandidatesByIds` read, emitting
+`outreachCandidateId` plus `outreachCandidateName` when the candidate
+still resolves. The audits list shows the name under the site, linked to
+`/prospects/:candidateId`, with the row's own link unchanged (the row
+keeps opening the audit); a job without an outreach candidate carries
+neither field and renders exactly as before. The IA doc's destiny row now
+says it landed, with the date. Route tests cover the named job and the
+bare one; a render test asserts both links' targets; the `/audits` axe
+case stays clean.
+
+## Whole-plan landing state (2026-09-12)
+
+- Commits, in slice order: `0607cf5`, `edfbdcd`, `9463dda`, `2f6bb14`,
+  all on main, none pushed (no operator order to push).
+- No STOP condition occurred: no locked contract touched, the one-time
+  token survived every tab switch (regression test plus the token never
+  leaving page state), no npm dependency added, no route removed or
+  renamed, and the sold signal needed no new stored field.
+- `pnpm exec vitest run packages/interface`: 1306 passed, the single
+  failure the pre-existing `app-routes.test.ts` `outils` gap that predates
+  this plan. Store `outreach-scans.test.ts`: 22/22 with the test Mongo up.
+- The whole-plan manual operator pass on the deployed dashboard (six
+  visible tabs in both languages, publish, switch, return, first email
+  accepted) remains open - it is the operator's acceptance gate and needs
+  a deploy order plus real data.
 
 **Goal**: close the gap the approved IA already named and never landed.
 
