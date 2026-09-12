@@ -15,7 +15,7 @@ import {
 import { Skeleton } from '../components/ui/skeleton';
 import { useI18n } from '../i18n/provider';
 import { vocabularyLabel } from '../lib/vocabulary';
-import { fetchJson, sendJson } from '../lib/api';
+import { fetchJson, postEmpty, sendJson } from '../lib/api';
 import { formatDateTime } from '../lib/format';
 import { canGenerateFollowUp } from './prospects-model';
 import type { ProspectDetailResponse } from './prospects-model';
@@ -47,6 +47,21 @@ export function HubEmailsSection(props: {
 }): JSX.Element {
   const { thread, isBusy, onFirstEmail, onFollowUp, refresh } = props;
   const { strings, language } = useI18n();
+  const [isMarkingReviewed, setIsMarkingReviewed] = useState(false);
+
+  // Issue #186: recording an outcome does not clear the reply's
+  // needsReview flag (only reconcile-mailbox's own sync does), so this is
+  // the dashboard's only caller of the review endpoint that exists
+  // specifically to clear it.
+  const markReviewed = async (threadId: string): Promise<void> => {
+    setIsMarkingReviewed(true);
+    try {
+      await postEmpty(`/api/outreach/replies/${encodeURIComponent(threadId)}/review`);
+      refresh();
+    } finally {
+      setIsMarkingReviewed(false);
+    }
+  };
 
   const createdDrafts = thread?.drafts.filter((draft) => draft.status === 'created') ?? [];
   const canStartFirstEmail =
@@ -77,9 +92,22 @@ export function HubEmailsSection(props: {
       ) : null}
 
       {thread?.needsReview != null ? (
-        <p className="mt-3 text-sm text-ink-soft" role="status">
-          {strings.hub.emails.needsReviewNotice}
-        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <p className="text-sm text-ink-soft" role="status">
+            {strings.hub.emails.needsReviewNotice}
+          </p>
+          <Button
+            variant="secondary"
+            size="sm"
+            isLoading={isMarkingReviewed}
+            disabled={isMarkingReviewed}
+            onClick={() => {
+              void markReviewed(thread.threadId);
+            }}
+          >
+            {strings.hub.emails.markReviewed}
+          </Button>
+        </div>
       ) : null}
 
       {createdDrafts.length === 0 ? (

@@ -4,12 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@odysseus/store', () => ({
   getHotelCandidate: vi.fn(),
-  getProspectPrescanView: vi.fn(),
-  getProspectScoreView: vi.fn(),
   getProspectScoreDiffView: vi.fn(),
-  getProspectEvidenceView: vi.fn(),
   getProspectEvidenceAssetSource: vi.fn(),
-  getProspectPreviewView: vi.fn(),
 }));
 
 vi.mock('@odysseus/scanner', () => ({
@@ -31,15 +27,8 @@ import { createHash } from 'node:crypto';
 import {
   getHotelCandidate,
   getProspectEvidenceAssetSource,
-  getProspectEvidenceView,
-  getProspectPreviewView,
-  getProspectPrescanView,
   getProspectScoreDiffView,
-  getProspectScoreView,
   type OperatorEvidenceAssetSource,
-  type OperatorEvidenceView,
-  type OperatorPreviewView,
-  type OperatorPrescanView,
   type OperatorScoreDiffView,
   type OperatorScoreView,
 } from '@odysseus/store';
@@ -68,41 +57,6 @@ function fakeRes(): ServerResponse & { statusCode: number; body: string | undefi
 }
 
 const fakeConnection = {} as never;
-
-const prescanView: OperatorPrescanView = {
-  prescanId: 'prescan-1',
-  name: 'Hotel Exemple',
-  commune: 'GRENOBLE',
-  postcode: '38000',
-  prescanVersion: 'v3',
-  status: 'complete',
-  domain: 'hotel-exemple.fr',
-  startedAt: new Date('2026-08-29T10:00:00.000Z'),
-  durationMs: 41_000,
-  robotsTxtFound: true,
-  absentRoles: [],
-  evidenceStatus: 'complete',
-  pages: [
-    {
-      role: 'homepage',
-      httpStatus: 200,
-      missingPercent: 2.5,
-      rawTextLength: 9_000,
-      renderedTextLength: 9_500,
-      consoleErrorCount: 0,
-      axe: {
-        violationCount: 1,
-        byImpact: { critical: 0, serious: 1, moderate: 0, minor: 0 },
-        affectedElementCount: 2,
-        ruleIds: ['color-contrast'],
-      },
-      metrics: null,
-      bookingEvidenceKinds: ['booking-form'],
-      skippedByRobots: false,
-      durationMs: 12_000,
-    },
-  ],
-};
 
 const scoreView: OperatorScoreView = {
   scoreId: 'score-1',
@@ -135,46 +89,6 @@ const diffView: OperatorScoreDiffView = {
   abilityDelta: 0,
 };
 
-const evidenceView: OperatorEvidenceView = {
-  prescanId: 'prescan-1',
-  name: 'Hotel Exemple',
-  commune: 'GRENOBLE',
-  postcode: '38000',
-  evidenceStatus: 'complete',
-  renderComparison: {
-    state: 'captured',
-    pageRole: 'homepage',
-    selectionReason: 'material-render-gap',
-    byteSize: 204_800,
-    width: 1280,
-    height: 720,
-    altText: {
-      fr: 'Comparaison du site brut et du site rendu.',
-      en: 'Raw and rendered site comparison.',
-    },
-  },
-  specificFailure: { state: 'omitted', reason: 'no-eligible-failure' },
-  summaries: [],
-};
-
-const previewView: OperatorPreviewView = {
-  previewId: 'preview-1',
-  name: 'Hotel Exemple',
-  commune: 'GRENOBLE',
-  postcode: '38000',
-  domain: 'hotel-exemple.fr',
-  language: 'fr',
-  status: 'live',
-  publishedAt: new Date('2026-08-29T12:00:00.000Z'),
-  publicExpiresAt: new Date('2026-09-28T12:00:00.000Z'),
-  revokedAt: null,
-  revokedReason: null,
-  prescanVersion: 'v3',
-  evidenceVersion: '1',
-  previewContentVersion: 'v1',
-  sourceKind: 'prescan',
-};
-
 const assetSource: OperatorEvidenceAssetSource = {
   prescanId: 'prescan-1',
   domain: 'hotel-exemple.fr',
@@ -191,11 +105,7 @@ beforeEach(() => {
   vi.mocked(getHotelCandidate).mockResolvedValue({ candidateId: 'cand-1' } as never);
   vi.mocked(getProspectEvidenceAssetSource).mockResolvedValue(assetSource);
   vi.mocked(resolveArtifactFile).mockResolvedValue(Buffer.from('png-bytes', 'utf-8'));
-  vi.mocked(getProspectPrescanView).mockResolvedValue(prescanView);
-  vi.mocked(getProspectScoreView).mockResolvedValue(scoreView);
   vi.mocked(getProspectScoreDiffView).mockResolvedValue(diffView);
-  vi.mocked(getProspectEvidenceView).mockResolvedValue(evidenceView);
-  vi.mocked(getProspectPreviewView).mockResolvedValue(previewView);
 });
 
 async function handle(url: string): Promise<{
@@ -208,54 +118,6 @@ async function handle(url: string): Promise<{
   await router.handle(fakeReq(url), res);
   return { statusCode: res.statusCode, body: res.body };
 }
-
-describe('GET /api/prospects/:candidateId/prescan', () => {
-  it('returns the store prescan projection unchanged', async () => {
-    const { statusCode, body } = await handle('/api/prospects/cand-1/prescan');
-    expect(statusCode).toBe(200);
-    expect(JSON.parse(body ?? '{}')).toEqual({
-      ...prescanView,
-      startedAt: prescanView.startedAt.toISOString(),
-    });
-    expect(getProspectPrescanView).toHaveBeenCalledWith(fakeConnection, 'cand-1');
-  });
-
-  it('returns 404 when the candidate has no prescan', async () => {
-    vi.mocked(getProspectPrescanView).mockResolvedValue(null);
-    const { statusCode } = await handle('/api/prospects/cand-1/prescan');
-    expect(statusCode).toBe(404);
-  });
-
-  it('rejects a malformed candidateId with 400', async () => {
-    const { statusCode } = await handle('/api/prospects/%00/prescan');
-    expect(statusCode).toBe(400);
-  });
-});
-
-describe('GET /api/prospects/:candidateId/score', () => {
-  it('returns the store score projection with its breakdown', async () => {
-    const { statusCode, body } = await handle('/api/prospects/cand-1/score');
-    expect(statusCode).toBe(200);
-    const parsed = JSON.parse(body ?? '{}') as {
-      brokenness: { total: number };
-      ability: { total: number };
-      scoringVersion: string;
-    };
-    expect(parsed.brokenness.total).toBe(scoreView.brokenness.total);
-    expect(parsed.ability.total).toBe(scoreView.ability.total);
-    expect(parsed.scoringVersion).toBe('hotel-outreach-v1');
-    expect(parsed).toEqual({
-      ...scoreView,
-      computedAt: scoreView.computedAt.toISOString(),
-    });
-  });
-
-  it('returns 404 when the candidate has no score', async () => {
-    vi.mocked(getProspectScoreView).mockResolvedValue(null);
-    const { statusCode } = await handle('/api/prospects/cand-1/score');
-    expect(statusCode).toBe(404);
-  });
-});
 
 describe('GET /api/prospects/:candidateId/score/diff', () => {
   it('diffs the two requested versions', async () => {
@@ -282,20 +144,6 @@ describe('GET /api/prospects/:candidateId/score/diff', () => {
     const { statusCode } = await handle('/api/prospects/nope/score/diff?from=v1&to=v2');
     expect(statusCode).toBe(404);
     expect(getProspectScoreDiffView).not.toHaveBeenCalled();
-  });
-});
-
-describe('GET /api/prospects/:candidateId/evidence', () => {
-  it('returns the two evidence assets as the store projects them', async () => {
-    const { statusCode, body } = await handle('/api/prospects/cand-1/evidence');
-    expect(statusCode).toBe(200);
-    expect(JSON.parse(body ?? '{}')).toEqual(evidenceView);
-  });
-
-  it('returns 404 when no evidence exists', async () => {
-    vi.mocked(getProspectEvidenceView).mockResolvedValue(null);
-    const { statusCode } = await handle('/api/prospects/cand-1/evidence');
-    expect(statusCode).toBe(404);
   });
 });
 
@@ -348,33 +196,9 @@ describe('GET /api/prospects/:candidateId/evidence/assets/:slot (issue #92)', ()
   });
 });
 
-describe('GET /api/prospects/:candidateId/preview', () => {
-  it('returns preview status and dates', async () => {
-    const { statusCode, body } = await handle('/api/prospects/cand-1/preview');
-    expect(statusCode).toBe(200);
-    expect(JSON.parse(body ?? '{}')).toEqual({
-      ...previewView,
-      publishedAt: previewView.publishedAt.toISOString(),
-      publicExpiresAt: previewView.publicExpiresAt.toISOString(),
-    });
-  });
-
-  it('returns 404 when no preview exists', async () => {
-    vi.mocked(getProspectPreviewView).mockResolvedValue(null);
-    const { statusCode } = await handle('/api/prospects/cand-1/preview');
-    expect(statusCode).toBe(404);
-  });
-});
-
 describe('response leak scan', () => {
   it('never carries preview token hashes or object keys in any body', async () => {
-    const urls = [
-      '/api/prospects/cand-1/prescan',
-      '/api/prospects/cand-1/score',
-      '/api/prospects/cand-1/score/diff?from=v1&to=v2',
-      '/api/prospects/cand-1/evidence',
-      '/api/prospects/cand-1/preview',
-    ];
+    const urls = ['/api/prospects/cand-1/score/diff?from=v1&to=v2'];
     for (const url of urls) {
       const { body } = await handle(url);
       expect(body, url).toBeDefined();

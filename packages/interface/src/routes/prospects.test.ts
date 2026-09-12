@@ -349,8 +349,9 @@ describe('GET /api/prospects/:candidateId', () => {
     const res = await handle('/api/prospects/cand-1');
     const body = JSON.parse(res.body ?? '{}') as Record<string, unknown>;
     // The route may add qualificationHistory, outreachScan, the audit
-    // summary, the running-scan id, the selection verdict, and the plan
-    // 042 audit list, and nothing else.
+    // summary, the running-scan id, the selection verdict, the plan 042
+    // audit list, and the paid full-audit gate (issue #182), and nothing
+    // else.
     expect(Object.keys(body).sort()).toEqual(
       [
         ...Object.keys(makeDetail()),
@@ -360,6 +361,7 @@ describe('GET /api/prospects/:candidateId', () => {
         'outreachScanJobId',
         'selectionVerdict',
         'outreachAudits',
+        'fullAudit',
       ].sort(),
     );
     const serialized = res.body ?? '';
@@ -633,28 +635,6 @@ describe('POST /api/prospects/:candidateId/review', () => {
     });
     expect(res.statusCode).toBe(415);
     expect(recordHotelCandidateReview).not.toHaveBeenCalled();
-  });
-});
-
-describe('GET /api/prospects/:candidateId/outreach', () => {
-  it('returns thread: null when the candidate has no thread yet', async () => {
-    vi.mocked(findOutreachThreadByCandidate).mockResolvedValue(null);
-    const res = await handle('/api/prospects/cand-1/outreach');
-    expect(res.statusCode).toBe(200);
-    expect(JSON.parse(res.body ?? '{}')).toEqual({ thread: null });
-  });
-
-  it('returns the thread summary when one exists', async () => {
-    vi.mocked(findOutreachThreadByCandidate).mockResolvedValue({
-      threadId: 'thread-1',
-      state: 'e1-sent',
-      currentTouch: 1,
-    } as never);
-    const res = await handle('/api/prospects/cand-1/outreach');
-    expect(res.statusCode).toBe(200);
-    expect(JSON.parse(res.body ?? '{}')).toEqual({
-      thread: { threadId: 'thread-1', state: 'e1-sent', currentTouch: 1 },
-    });
   });
 });
 

@@ -434,6 +434,12 @@ export interface ProspectDetailResponse {
   outreachAudits?: { auditId: string; startedAt: string; jobType: string | null }[];
   /** The queued-or-running outreach full scan for this candidate, if any. */
   outreachScanJobId?: string | null;
+  /** Issue #182: whether the paid full-audit button may start a scan now,
+   *  computed server-side by the same gate the POST action itself checks
+   *  (`planFullAudit`), so the hub can show the refusal as page text
+   *  before the confirm dialog opens rather than only after. Optional for
+   *  the same fixture tolerance as outreachScan. */
+  fullAudit?: { canStart: boolean; refusal?: string };
   /** Plan 041 slice B1: the same selection projection the list uses, so
    *  the hub's "why can't I scan this" copy can never disagree with the
    *  list's wave column about who is in play. Optional for the same

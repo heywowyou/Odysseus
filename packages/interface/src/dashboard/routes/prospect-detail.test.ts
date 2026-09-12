@@ -373,9 +373,9 @@ describe('ProspectDetailPage tabs (plan 042 slice 1)', () => {
     // No recorded `won` outcome: the tab is absent entirely.
     expect(buttonWithText('Rapport client')).toBeUndefined();
 
-    // The Audit tab carries the one-line reveal; it is view state only.
-    await clickButton('Audit');
-    await clickButton('Produire un rapport quand même');
+    // The reveal sits with the pipeline strip it affects (issue #185); it
+    // is view state only.
+    await clickButton('Afficher la chaîne de rapport manuellement');
     expect(buttonWithText('Rapport client')).toBeDefined();
     await clickButton('Rapport client');
     expect(document.getElementById('hub-report')).not.toBeNull();

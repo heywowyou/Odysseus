@@ -230,6 +230,10 @@ export interface DashboardStrings {
      *  persisted, so the operator opens the audit instead of re-scanning.
      *  The link label reuses goToAuditLink. */
     failedRescanHint: string;
+    /** Issue #187: links a coverage-gate failure to the crawl delay / scan
+     *  concurrency fields on /scans/new that its own message names as the
+     *  remedy. */
+    coverageGateFieldsLink: string;
   };
   auditDetail: {
     title: string;
@@ -532,6 +536,10 @@ export interface DashboardStrings {
     /** Shown when a prospect action fails. */
     actionError: string;
     provenanceLabel: string;
+    /** Issue #183: the fiche's provenance line shows this instead of the raw
+     *  `dashboard-review` fallback constant the backend stores when a
+     *  dashboard decision carries no free-text reason. */
+    provenanceReasonFallback: string;
     notFound: string;
     backToProspects: string;
   };
@@ -780,6 +788,9 @@ export interface DashboardStrings {
        *  (approved IA vocabulary: no raw provider code on screen). */
       providerDraft: string;
       needsReviewNotice: string;
+      /** Issue #186: clears the reply's needs-review flag; recording an
+       *  outcome does not do this on its own. */
+      markReviewed: string;
       noPendingDraft: string;
     };
     outcome: {
@@ -792,6 +803,11 @@ export interface DashboardStrings {
       optOutConfirmBody: string;
       optOutDone: string;
       actionError: string;
+      /** Issue #184: the Résultat tab's empty state before a thread exists,
+       *  replacing the generic "no outcome" line with the actual reason and
+       *  a link to where the operator would start one. */
+      noThreadYet: string;
+      goToEmails: string;
     };
   };
   /** Stage groups the hub sections render directly. The retired

@@ -198,7 +198,16 @@ export function HubFicheSection(props: {
           <span className="font-medium text-ink-soft">{strings.operator.provenanceLabel}</span>
           {' · '}
           {detail.review.actor ?? ''}
-          {detail.review.reason !== null ? ` · ${detail.review.reason}` : ''}
+          {detail.review.reason !== null
+            ? ` · ${
+                // Issue #183: 'dashboard-review' is the backend's own internal
+                // fallback constant (REVIEW_REASON_FALLBACK), not a
+                // meaningful note - show a real sentence instead.
+                detail.review.reason === 'dashboard-review'
+                  ? strings.operator.provenanceReasonFallback
+                  : detail.review.reason
+              }`
+            : ''}
           {detail.review.decidedAt !== null
             ? ` · ${formatDateTime(detail.review.decidedAt, language)}`
             : ''}

@@ -53,20 +53,24 @@ export function HubAuditSection(props: {
   /** The audit this tab renders, chosen in the page. */
   auditId: string | null;
   onPickAudit: (auditId: string) => void;
-  /** True while the Rapport client tab is not visible (not sold, not
-   *  revealed): the reveal link shows at the bottom of this section. */
-  showReportReveal: boolean;
-  onRevealReport: () => void;
   /** Plan 044: the paid deliverable scan's launch, owned by the page
    *  (it navigates to the new job on success). */
   onLaunchFullAudit?: () => void;
 }): JSX.Element {
-  const { detail, auditId, onPickAudit, showReportReveal, onRevealReport, onLaunchFullAudit } =
-    props;
+  const { detail, auditId, onPickAudit, onLaunchFullAudit } = props;
   const { strings, language } = useI18n();
 
   const choices = auditChoices(detail);
   const selected = choices.find((choice) => choice.auditId === auditId) ?? choices[0] ?? null;
+
+  // Issue #182: the same refusal the confirm dialog would surface only
+  // after the operator clicks through, shown as page text beforehand.
+  const fullAuditRefusal =
+    detail.fullAudit !== undefined && !detail.fullAudit.canStart && detail.fullAudit.refusal
+      ? (strings.hub.audit.launchRefusals[
+          detail.fullAudit.refusal as keyof typeof strings.hub.audit.launchRefusals
+        ] ?? strings.hub.scanRefusedLabel)
+      : undefined;
 
   const auditState = useApi<AuditDetailResponse>(
     selected === null ? null : `/api/audits/${encodeURIComponent(selected.auditId)}`,
@@ -165,12 +169,22 @@ export function HubAuditSection(props: {
               {strings.hub.audit.openAudit}
             </Link>
             {onLaunchFullAudit !== undefined ? (
-              <Button variant="secondary" size="sm" onClick={onLaunchFullAudit}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onLaunchFullAudit}
+                disabled={fullAuditRefusal !== undefined}
+              >
                 {strings.hub.audit.launchFullAudit}
               </Button>
             ) : null}
             <span className="text-xs text-ink-muted">{strings.hub.audit.standaloneHint}</span>
           </div>
+          {fullAuditRefusal !== undefined ? (
+            <p className="text-sm text-ink-soft" role="note">
+              {fullAuditRefusal}
+            </p>
+          ) : null}
 
           {auditState.error !== undefined && auditData === undefined ? (
             <p className="text-sm text-ink-soft">{strings.common.requestFailed}</p>
@@ -204,18 +218,6 @@ export function HubAuditSection(props: {
         </div>
       ) : detail.outreachScanJobId == null ? (
         <p className="text-sm text-ink-muted">{strings.hub.audit.empty}</p>
-      ) : null}
-
-      {showReportReveal ? (
-        <div className="mt-4 border-t border-line pt-4">
-          <button
-            type="button"
-            className="text-sm text-ink-soft underline underline-offset-2 hover:text-ink"
-            onClick={onRevealReport}
-          >
-            {strings.hub.report.reveal}
-          </button>
-        </div>
       ) : null}
     </Card>
   );

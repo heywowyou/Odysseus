@@ -22,6 +22,16 @@ export function isKnownPhase(phase: string): phase is ProgressPhase {
   return (PHASE_KEYS as readonly string[]).includes(phase);
 }
 
+/** Issue #187: the coverage gate's own failure text
+ *  (packages/core/src/crawl-coverage-gate.ts) names the crawl delay and
+ *  scan concurrency fields on /scans/new as the remedy, with no link to
+ *  them; this detects that specific message by its stable phrasing so the
+ *  failure card can add one. Detection only, never a rewrite of the
+ *  message itself. */
+export function isCoverageGateFailure(error: string | undefined): boolean {
+  return error !== undefined && error.includes('crawl delay and scan concurrency');
+}
+
 /** Current phase as operator copy; an unknown phase falls back to its raw
  *  value so the status line never goes blank. */
 export function currentPhaseLabel(phase: string, labels: ProgressPhaseLabels): string {

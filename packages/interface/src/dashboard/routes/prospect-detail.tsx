@@ -511,8 +511,6 @@ export function ProspectDetailPage(): JSX.Element {
             detail={data}
             auditId={auditId}
             onPickAudit={setPickedAuditId}
-            showReportReveal={!sold && !reportRevealed}
-            onRevealReport={() => setReportRevealed(true)}
             onLaunchFullAudit={() => setIsFullAuditOpen(true)}
           />
         );
@@ -546,7 +544,12 @@ export function ProspectDetailPage(): JSX.Element {
         );
       case 'outcome':
         return (
-          <HubOutcomeSection thread={data.thread} outcomes={data.outcomes} refresh={refresh} />
+          <HubOutcomeSection
+            thread={data.thread}
+            outcomes={data.outcomes}
+            refresh={refresh}
+            onGoToEmails={() => setActiveTab('emails')}
+          />
         );
     }
   };
@@ -709,6 +712,21 @@ export function ProspectDetailPage(): JSX.Element {
           <Button variant="secondary" size="sm" onClick={() => setWaveDialog('add')}>
             {strings.hub.wave.addAction}
           </Button>
+        </div>
+      ) : null}
+
+      {/* Issue #185: this is a decision about the sale gate on the Rapport
+          client tab, not about this audit's findings - it sits with the
+          pipeline strip it affects, not buried past the findings table. */}
+      {!sold && !reportRevealed ? (
+        <div className="mb-4">
+          <button
+            type="button"
+            className="text-sm text-ink-soft underline underline-offset-2 hover:text-ink"
+            onClick={() => setReportRevealed(true)}
+          >
+            {strings.hub.report.reveal}
+          </button>
         </div>
       ) : null}
 

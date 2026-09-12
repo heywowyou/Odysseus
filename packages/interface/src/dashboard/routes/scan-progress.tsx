@@ -28,6 +28,7 @@ import {
   formatEta,
   hasCoverage,
   hasStagedAnalysisProgress,
+  isCoverageGateFailure,
   isTerminal,
   lighthouseProgress,
   scanProgress,
@@ -446,6 +447,17 @@ function FailedCard({ job }: { job: ScanJobDetail }): JSX.Element {
   return (
     <Card title={strings.progress.failedHeading} className="border-danger/40">
       {job.error !== undefined ? <p className="text-sm text-ink-soft">{job.error}</p> : null}
+      {/* Issue #187: the coverage gate's failure text names the crawl delay
+          and scan concurrency fields as the remedy but had no link to
+          them; this is the direct link. */}
+      {isCoverageGateFailure(job.error) ? (
+        <Link
+          to="/scans/new#new-scan-delay-ms"
+          className="mt-2 inline-block text-sm text-accent-bright underline underline-offset-2"
+        >
+          {strings.progress.coverageGateFieldsLink}
+        </Link>
+      ) : null}
       {/* Issue #90: a failed job whose audit was persisted failed after the
           crawl, so the fix lives on the audit page; say so instead of
           leaving the re-scan reflex as the only visible path. */}

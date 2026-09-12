@@ -51,8 +51,11 @@ export function HubOutcomeSection(props: {
   thread: ProspectDetailResponse['thread'];
   outcomes: ProspectDetailResponse['outcomes'];
   refresh: () => void;
+  /** Issue #184: lets the empty state (no thread yet) send the operator to
+   *  the Emails tab, where a thread actually starts. */
+  onGoToEmails: () => void;
 }): JSX.Element {
-  const { thread, outcomes, refresh } = props;
+  const { thread, outcomes, refresh, onGoToEmails } = props;
   const { strings, language } = useI18n();
 
   const [outcome, setOutcome] = useState<FormOutcome | ''>('');
@@ -128,7 +131,20 @@ export function HubOutcomeSection(props: {
       ) : null}
 
       {outcomes.rows.length === 0 ? (
-        <p className="mt-3 text-sm text-ink-muted">{strings.prospectDetail.outcomeNone}</p>
+        thread === null ? (
+          <p className="mt-3 text-sm text-ink-muted">
+            {strings.hub.outcome.noThreadYet}{' '}
+            <button
+              type="button"
+              className="text-accent-bright underline-offset-2 hover:underline"
+              onClick={onGoToEmails}
+            >
+              {strings.hub.outcome.goToEmails}
+            </button>
+          </p>
+        ) : (
+          <p className="mt-3 text-sm text-ink-muted">{strings.prospectDetail.outcomeNone}</p>
+        )
       ) : (
         <ul className="mt-3 flex flex-col gap-1">
           {outcomes.rows.map((event) => (

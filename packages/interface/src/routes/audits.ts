@@ -20,7 +20,6 @@ import {
   getAudit,
   getAuditRuntimeFields,
   getFindingsForAudit,
-  getHotelCandidate,
   getLatestReport,
   getLatestReportApproval,
   getSeverityRollup,
@@ -48,15 +47,13 @@ import {
 } from '@odysseus/report';
 import { getPreviewPublicBaseUrl } from '../config.js';
 import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
-import { createMongoOutreachPreviewStore } from '../outreach/mongo-outreach-preview-store.js';
 import { createMongoOutreachPreviewStoreV2 } from '../outreach/mongo-outreach-preview-store-v2.js';
-import { previewLinks, revokePreviewsForDomain } from '../outreach/publish-preview.js';
+import { previewLinks } from '../outreach/publish-preview.js';
 import {
   buildOutreachPreviewSummaryV2,
   publishPreviewV2,
   type PublishPreviewV2Refusal,
 } from '../outreach/publish-preview-v2.js';
-import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-hotels.js';
 import { CURRENT_QUALIFICATION_VERSION } from '../prospecting/hotel-qualification/qualify-hotels.js';
 import type { Router } from '../router.js';
 import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
@@ -921,43 +918,5 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       return;
     }
     sendJson(res, 200, { published: false, refusal: result.refusal });
-  });
-
-  // Withdrawal goes through the same domain-wide revoke as the CLI and the
-  // prospect page (v1 store adapter on purpose: it lists and revokes across
-  // v1 and v2 rows), so a published link can never outlive this action.
-  // The domain never comes from the client: the candidate's own registrable
-  // domain when the audit is candidate-linked, the audit host otherwise.
-  router.post('/api/audits/:auditId/outreach-preview/revoke', async ({ res, params }) => {
-    const auditId = params['auditId']!;
-    const audit = await getAudit(connection, auditId);
-    if (!audit) {
-      sendError(res, 404, 'audit not found');
-      return;
-    }
-    const candidateId = audit.outreach?.candidateId;
-    let domain = new URL(audit.siteUrl).hostname;
-    if (candidateId !== undefined) {
-      const candidate = await getHotelCandidate(connection, candidateId);
-      const ownDomain = candidate?.ownRegistrableDomain;
-      if (ownDomain !== undefined && ownDomain !== '') domain = ownDomain;
-    }
-    let publisher;
-    try {
-      publisher = createConfiguredPreviewPublisher();
-    } catch {
-      sendError(res, 503, 'the preview bucket is not configured on this machine');
-      return;
-    }
-    const result = await revokePreviewsForDomain({
-      store: createMongoOutreachPreviewStore(connection, {
-        prescanVersion: CURRENT_PRESCAN_VERSION,
-        qualificationVersion: CURRENT_QUALIFICATION_VERSION,
-      }),
-      publisher,
-      domain,
-      reason: 'operator-revoke',
-    });
-    sendJson(res, 200, { revoked: result.revoked, alreadyRevoked: result.alreadyRevoked });
   });
 }

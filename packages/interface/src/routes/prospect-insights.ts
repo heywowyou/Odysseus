@@ -4,11 +4,7 @@ import type { Connection } from 'mongoose';
 import {
   getHotelCandidate,
   getProspectEvidenceAssetSource,
-  getProspectEvidenceView,
-  getProspectPreviewView,
-  getProspectPrescanView,
   getProspectScoreDiffView,
-  getProspectScoreView,
 } from '@odysseus/store';
 import { buildArtifactBucketKey, getPrescansRoot } from '@odysseus/scanner';
 import type { Router } from '../router.js';
@@ -17,8 +13,12 @@ import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-
 import { resolveArtifactFile } from '../artifacts/resolve-artifact.js';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
 
-/** Plan 013 slice 3 owns this module: prescan, score, evidence, and preview
- *  inspection views. Routes here must call operator-views store helpers,
+/** Plan 013 slice 3 owns this module: the score-diff and evidence-asset
+ *  sub-resources not embedded in the composed prospect detail payload
+ *  (issue #189 removed the four sibling views that were - prescan, score,
+ *  evidence, preview - once the hub started reading them off
+ *  GET /api/prospects/:candidateId directly). Routes here must call
+ *  operator-views store helpers,
  *  never query Mongoose models directly, and every response body is the
  *  store view unchanged: the projections already exclude token hashes,
  *  object keys, artifact paths, and address material, and this boundary
@@ -55,34 +55,6 @@ export function registerProspectInsightRoutes(router: Router, connection: Connec
   // never pay a per-request cost for constructing one, and both readers
   // below share the same fallback behaviour.
   const artifactStore: ArtifactStore | undefined = createConfiguredArtifactStore();
-  router.get('/api/prospects/:candidateId/prescan', async ({ res, params }) => {
-    const candidateId = requireCandidateId(params);
-    if (candidateId === null) {
-      sendError(res, 400, 'candidateId must be a non-empty identifier');
-      return;
-    }
-    const view = await getProspectPrescanView(connection, candidateId);
-    if (view === null) {
-      sendError(res, 404, 'no prescan found for this candidate');
-      return;
-    }
-    sendJson(res, 200, view);
-  });
-
-  router.get('/api/prospects/:candidateId/score', async ({ res, params }) => {
-    const candidateId = requireCandidateId(params);
-    if (candidateId === null) {
-      sendError(res, 400, 'candidateId must be a non-empty identifier');
-      return;
-    }
-    const view = await getProspectScoreView(connection, candidateId);
-    if (view === null) {
-      sendError(res, 404, 'no score found for this candidate');
-      return;
-    }
-    sendJson(res, 200, view);
-  });
-
   router.get('/api/prospects/:candidateId/score/diff', async ({ res, params, query }) => {
     const candidateId = requireCandidateId(params);
     if (candidateId === null) {
@@ -112,20 +84,6 @@ export function registerProspectInsightRoutes(router: Router, connection: Connec
     }
     const diff = await getProspectScoreDiffView(connection, candidateId, fromVersion, toVersion);
     sendJson(res, 200, diff);
-  });
-
-  router.get('/api/prospects/:candidateId/evidence', async ({ res, params }) => {
-    const candidateId = requireCandidateId(params);
-    if (candidateId === null) {
-      sendError(res, 400, 'candidateId must be a non-empty identifier');
-      return;
-    }
-    const view = await getProspectEvidenceView(connection, candidateId);
-    if (view === null) {
-      sendError(res, 404, 'no evidence found for this candidate');
-      return;
-    }
-    sendJson(res, 200, view);
   });
 
   // Issue #92: the two evidence screenshots themselves. The JSON view above
@@ -170,22 +128,5 @@ export function registerProspectInsightRoutes(router: Router, connection: Connec
     res.setHeader('x-content-type-options', 'nosniff');
     res.setHeader('cache-control', 'private, no-store');
     res.end(png);
-  });
-
-  router.get('/api/prospects/:candidateId/preview', async ({ res, params }) => {
-    const candidateId = requireCandidateId(params);
-    if (candidateId === null) {
-      sendError(res, 400, 'candidateId must be a non-empty identifier');
-      return;
-    }
-    const view = await getProspectPreviewView(connection, candidateId);
-    if (view === null) {
-      sendError(res, 404, 'no preview found for this candidate');
-      return;
-    }
-    // Status and dates only. The public link is a bearer URL built from a
-    // raw token that publication returned exactly once and never stored, so
-    // the operator surface cannot reconstruct it and must not guess at it.
-    sendJson(res, 200, view);
   });
 }

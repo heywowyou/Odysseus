@@ -19,6 +19,7 @@ const EMAIL_LABELS: DashboardStrings['hub']['emails'] = {
   firstEmailName: 'Premier email',
   providerDraft: 'Dans Gmail',
   needsReviewNotice: '',
+  markReviewed: '',
   noPendingDraft: '',
 };
 

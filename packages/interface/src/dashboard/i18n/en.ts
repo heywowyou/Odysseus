@@ -205,6 +205,7 @@ export const en: DashboardStrings = {
     cancelledNote: 'This scan was stopped at the operator’s request.',
     failedRescanHint:
       'The site has already been crawled and analysed. Open the audit to fix the cause and regenerate the report; a new scan is not needed.',
+    coverageGateFieldsLink: 'Adjust the crawl delay and scan concurrency on a new audit',
   },
   auditDetail: {
     title: 'Audit detail',
@@ -339,6 +340,23 @@ export const en: DashboardStrings = {
         'preview-expired': 'The published link expired: reissue a link from this audit.',
         'preview-wrong-audit':
           'The published link belongs to another audit: reissue a link from this audit.',
+        'no-usable-contact': 'No usable contact email was found for this hotel.',
+        'evidence-incomplete': 'The evidence needed to write this email isn’t complete yet.',
+        'evidence-schema-outdated':
+          'The stored evidence format is out of date: run a new analysis for this hotel.',
+        'prescan-expired': 'The preliminary scan expired: run a new one before drafting an email.',
+        'no-distinct-second-observation':
+          'Only one usable finding was found; the email needs two distinct ones.',
+        'observation-not-in-allowlist':
+          'None of the recorded findings are ones the email is allowed to mention.',
+        'thread-closed': 'This hotel’s outreach thread is already closed.',
+        'draft-already-live': 'A draft already exists for this hotel.',
+        'suppressed-before-generation': 'This domain is on the do-not-contact list.',
+        'suppressed-before-provider':
+          'This domain was added to the do-not-contact list before sending; nothing was sent.',
+        'assembly-refused': 'The email couldn’t be assembled from the available evidence.',
+        'provider-draft-unrecorded':
+          'Sending to the provider couldn’t be confirmed; check manually before retrying.',
       },
       renderError: 'Could not render the preview.',
       publishAction: 'Publish preview',
@@ -487,6 +505,7 @@ export const en: DashboardStrings = {
       'The prospect leaves the campaign. The rejection reason is recorded and shown in the interface.',
     actionError: 'The action failed. Try again.',
     provenanceLabel: 'Data source',
+    provenanceReasonFallback: 'decision made from the dashboard',
     notFound: 'Not found.',
     backToProspects: 'Back to prospects',
   },
@@ -671,13 +690,14 @@ export const en: DashboardStrings = {
       launchRefusals: {
         'no-own-domain': 'No website of its own is attached to this hotel.',
         'already-in-flight': 'A scan of this site is already running.',
-        'no-cohort': 'No selection recorded yet: run a selection (score select) first.',
+        'no-cohort':
+          'No selection recorded yet: a selection must first be computed outside the dashboard.',
       },
     },
     report: {
       description:
         'The production chain of the sold client report: prepare, write, choose, produce, approve.',
-      reveal: 'Produce a report anyway',
+      reveal: 'Reveal the report chain manually',
     },
     wave: {
       addAction: 'Add to a wave',
@@ -697,7 +717,7 @@ export const en: DashboardStrings = {
       refusals: {
         'already-on-roster': 'This hotel is already on the wave as an active entry.',
         'no-cohort':
-          'No selection has been computed yet: run a selection (score select) first, then authorize by hand.',
+          'No selection has been computed yet: a selection must first be computed outside the dashboard, then authorize by hand.',
         'no-own-domain': 'No website of its own is attached to this hotel.',
         'domain-unknown': 'This hotel no longer exists in the catalogue.',
         'candidate-unknown': 'This hotel no longer exists in the catalogue.',
@@ -709,6 +729,7 @@ export const en: DashboardStrings = {
       followUpName: 'Follow-up {n}',
       providerDraft: 'In Gmail',
       needsReviewNotice: 'A reply arrived and waits for your review.',
+      markReviewed: 'Mark as reviewed',
       noPendingDraft: 'No draft is waiting for review.',
     },
     outcome: {
@@ -722,6 +743,8 @@ export const en: DashboardStrings = {
         'The address joins the do-not-contact list, every live preview of this hotel is withdrawn immediately, and the conversation is closed. This cannot be undone.',
       optOutDone: 'Hotel opted out.',
       actionError: 'The action failed. Try again.',
+      noThreadYet: 'No email sent yet.',
+      goToEmails: 'Go to the Emails tab',
     },
   },
   prescan: {

@@ -216,7 +216,7 @@ function RepliesQueue(): JSX.Element {
       key={reply.threadId}
       to={`/prospects/${encodeURIComponent(reply.candidateId)}#hub-outcome`}
       {...hotelPrimary(reply.hotelName, reply.candidateId)}
-      secondary={`${reply.domain} · ${reply.reviewReason} · ${formatRelativeTime(
+      secondary={`${reply.domain} · ${strings.hub.emails.needsReviewNotice} · ${formatRelativeTime(
         reply.reviewDetectedAt,
         strings.common.relativeTime,
       )}`}
@@ -283,7 +283,7 @@ function AuditsQueue(): JSX.Element {
           summary.siteUrl !== undefined ? hostnameOf(summary.siteUrl) : strings.common.unknownSite
         }
         primaryIdent={false}
-        secondary={`${summary.jobId} · ${formatRelativeTime(
+        secondary={`${summary.outreachCandidateName ?? summary.jobId} · ${formatRelativeTime(
           summary.createdAt,
           strings.common.relativeTime,
         )}`}

@@ -179,8 +179,6 @@ describe('HubAuditSection findings and picker (plan 042 slice 2)', () => {
                   auditId = picked;
                   void render();
                 },
-                showReportReveal: false,
-                onRevealReport: () => {},
               }),
             ),
           ),

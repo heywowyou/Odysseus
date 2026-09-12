@@ -322,21 +322,21 @@ export function ProspectsPage(): JSX.Element {
                       strings.labels.contact,
                       row.contactState,
                       strings.common.vocabularyFallback,
-                    )}
+                    ) || '-'}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-xs text-ink-soft">
                     {vocabularyLabel(
                       strings.labels.thread,
                       row.threadState,
                       strings.common.vocabularyFallback,
-                    )}
+                    ) || '-'}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-xs text-ink-soft">
                     {vocabularyLabel(
                       strings.labels.outcome,
                       row.outcome,
                       strings.common.vocabularyFallback,
-                    )}
+                    ) || '-'}
                   </TableCell>
                   <TableCell className="text-right">
                     <ChevronRight className="ml-auto size-4 text-ink-muted" aria-hidden="true" />

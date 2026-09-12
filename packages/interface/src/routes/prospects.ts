@@ -354,12 +354,24 @@ export function registerProspectRoutes(
     // the hub's "why can't I scan this" copy and the list's wave column
     // can never disagree about who is in play.
     const selectionVerdict = await getSelectionVerdict(connection, candidateId);
+    // Issue #182: the paid full-audit button's refusal, computed the same
+    // way the POST action itself gates, so the hub can show it as page
+    // text before the confirm dialog opens instead of only after.
+    const fullAuditCandidate = await getHotelCandidate(connection, candidateId);
+    const fullAuditPlan =
+      fullAuditCandidate === null ? null : await planFullAudit(fullAuditCandidate);
     sendJson(res, 200, {
       ...detail,
       qualificationHistory,
       outreachScan:
         'refused' in plan ? { canStart: false, refusal: plan.refused } : { canStart: true },
       outreachScanJobId: auditStatus.runningJobId,
+      fullAudit:
+        fullAuditPlan === null
+          ? { canStart: false, refusal: 'no-own-domain' }
+          : fullAuditPlan.canStart
+            ? { canStart: true }
+            : { canStart: false, refusal: fullAuditPlan.refusal },
       outreachAudit:
         auditStatus.audit === null || severityRollup === null
           ? null
@@ -441,29 +453,6 @@ export function registerProspectRoutes(
     });
     queue?.notify();
     sendJson(res, 201, { started: true, jobId: job.jobId });
-  });
-
-  // Milestone 9c plan 030. The dashboard's Outreach sub-page reads this to
-  // decide which action it can offer: nothing yet (first draft), due for a
-  // follow-up, or an existing thread with no action available.
-  router.get('/api/prospects/:candidateId/outreach', async ({ res, params }) => {
-    const candidateId = params['candidateId']!;
-    if (!isPlausibleCandidateId(candidateId)) {
-      sendError(res, 400, 'candidateId must be a non-empty string without control characters');
-      return;
-    }
-    const thread = await findOutreachThreadByCandidate(connection, candidateId);
-    if (thread === null) {
-      sendJson(res, 200, { thread: null });
-      return;
-    }
-    sendJson(res, 200, {
-      thread: {
-        threadId: thread.threadId,
-        state: thread.state,
-        currentTouch: thread.currentTouch,
-      },
-    });
   });
 
   // Single-candidate, single-touch action: one LLM call, one preview
@@ -602,6 +591,28 @@ export function registerProspectRoutes(
     });
   });
 
+  /** Plan 044's paid-audit gate, factored out of the POST action so the
+   *  GET detail composition can show the same refusal as page text before
+   *  the operator opens the confirm dialog (issue #182), rather than a
+   *  second check that could drift from the real one. Never creates a job:
+   *  callers that intend to start the scan still do that themselves. */
+  async function planFullAudit(
+    candidate: NonNullable<Awaited<ReturnType<typeof getHotelCandidate>>>,
+  ): Promise<
+    { canStart: true; domain: string; cohortId: string } | { canStart: false; refusal: string }
+  > {
+    const domain = candidate.ownRegistrableDomain;
+    if (!domain) return { canStart: false, refusal: 'no-own-domain' };
+    const inFlight = await findActiveScanJobForHost(
+      connection,
+      new URL(`https://${domain}`).hostname,
+    );
+    if (inFlight !== null) return { canStart: false, refusal: 'already-in-flight' };
+    const cohort = await getLatestScoreCohort(connection, CURRENT_SCORING_VERSION);
+    if (cohort === null) return { canStart: false, refusal: 'no-cohort' };
+    return { canStart: true, domain, cohortId: cohort.cohortId };
+  }
+
   router.post('/api/prospects/:candidateId/wave/remove', async ({ req, res, params }) => {
     const candidateId = params['candidateId']!;
     if (!isPlausibleCandidateId(candidateId)) {
@@ -646,30 +657,17 @@ export function registerProspectRoutes(
       sendError(res, 404, 'prospect not found');
       return;
     }
-    const domain = candidate.ownRegistrableDomain;
-    if (!domain) {
-      sendJson(res, 200, { started: false, refusal: 'no-own-domain' });
-      return;
-    }
-    const inFlight = await findActiveScanJobForHost(
-      connection,
-      new URL(`https://${domain}`).hostname,
-    );
-    if (inFlight !== null) {
-      sendJson(res, 200, { started: false, refusal: 'already-in-flight' });
-      return;
-    }
-    const cohort = await getLatestScoreCohort(connection, CURRENT_SCORING_VERSION);
-    if (cohort === null) {
-      sendJson(res, 200, { started: false, refusal: 'no-cohort' });
+    const plan = await planFullAudit(candidate);
+    if (!plan.canStart) {
+      sendJson(res, 200, { started: false, refusal: plan.refusal });
       return;
     }
     const job = await createJob(connection, {
       type: 'full-audit',
-      siteUrl: `https://${domain}`,
+      siteUrl: `https://${plan.domain}`,
       options: {
         outreachCandidateId: candidateId,
-        outreachCohortId: cohort.cohortId,
+        outreachCohortId: plan.cohortId,
         outreachScoringVersion: CURRENT_SCORING_VERSION,
         outreachAuthorizedBy: 'paid',
       },

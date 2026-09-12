@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
@@ -41,6 +41,20 @@ export function NewScanPage() {
   }));
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Issue #187: a scan-failure card can link straight here to the crawl
+  // delay / scan concurrency fields (e.g. #new-scan-delay-ms); since they
+  // only exist in the DOM once the advanced section is open, a plain hash
+  // link would otherwise land on the page with nothing to scroll to.
+  useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (hash === '') return;
+    setAdvancedOpen(true);
+    const frame = requestAnimationFrame(() => {
+      document.getElementById(hash)?.scrollIntoView({ block: 'center' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   const isFullAudit = form.type === 'full-audit';
   const sirenError = validateSiren(form.siren, copy.sirenInvalidError);

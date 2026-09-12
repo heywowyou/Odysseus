@@ -1,7 +1,6 @@
 import { Readable } from 'node:stream';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-hotels.js';
 import { CURRENT_QUALIFICATION_VERSION } from '../prospecting/hotel-qualification/qualify-hotels.js';
 
 vi.mock('@odysseus/store', () => ({
@@ -17,7 +16,6 @@ vi.mock('@odysseus/store', () => ({
   getAudit: vi.fn(),
   getAuditRuntimeFields: vi.fn(),
   getFindingsForAudit: vi.fn(async () => []),
-  getHotelCandidate: vi.fn(async () => null),
   getLatestReport: vi.fn(async () => null),
   getLatestReportApproval: vi.fn(async () => null),
   getSeverityRollup: vi.fn(async () => ({})),
@@ -51,16 +49,11 @@ vi.mock('../outreach/publish-preview.js', () => ({
     privacy: 'https://www.example.com/confidentialite-prospection',
     optOut: 'https://www.example.com/desinscription',
   })),
-  revokePreviewsForDomain: vi.fn(),
 }));
 
 vi.mock('../outreach/publish-preview-v2.js', () => ({
   buildOutreachPreviewSummaryV2: vi.fn(),
   publishPreviewV2: vi.fn(),
-}));
-
-vi.mock('../outreach/mongo-outreach-preview-store.js', () => ({
-  createMongoOutreachPreviewStore: vi.fn(),
 }));
 
 vi.mock('../outreach/mongo-outreach-preview-store-v2.js', () => ({
@@ -73,15 +66,12 @@ vi.mock('../outreach/configured-preview-publisher.js', () => ({
 
 import { generateOutreachPreviewHtmlV2, generateOutreachPreviewPdf } from '@odysseus/report';
 import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
-import { createMongoOutreachPreviewStore } from '../outreach/mongo-outreach-preview-store.js';
 import { createMongoOutreachPreviewStoreV2 } from '../outreach/mongo-outreach-preview-store-v2.js';
 import { buildOutreachPreviewSummaryV2, publishPreviewV2 } from '../outreach/publish-preview-v2.js';
-import { revokePreviewsForDomain } from '../outreach/publish-preview.js';
 import {
   findLatestLiveV2PreviewForCandidate,
   getAudit,
   getFindingsForAudit,
-  getHotelCandidate,
   resolveOutreachAuditForCandidate,
   resolveSelectedAnalysisPairForAudit,
 } from '@odysseus/store';
@@ -413,69 +403,6 @@ describe('POST /api/audits/:auditId/outreach-preview/publish', () => {
     const res = await call('POST', '/api/audits/audit-1/outreach-preview/publish');
     expect(res.statusCode).toBe(503);
     expect(publishPreviewV2).not.toHaveBeenCalled();
-  });
-});
-
-describe('POST /api/audits/:auditId/outreach-preview/revoke', () => {
-  it('answers 404 for an unknown audit', async () => {
-    vi.mocked(getAudit).mockResolvedValueOnce(null as never);
-    const res = await call('POST', '/api/audits/audit-1/outreach-preview/revoke');
-    expect(res.statusCode).toBe(404);
-  });
-
-  it('revokes the candidate own domain and passes the counters through', async () => {
-    vi.mocked(getAudit).mockResolvedValueOnce(
-      auditFixture({ candidateId: 'candidate-1', cohortId: 'c1', scoringVersion: 'v1' }) as never,
-    );
-    vi.mocked(getHotelCandidate).mockResolvedValueOnce({
-      candidateId: 'candidate-1',
-      ownRegistrableDomain: 'hotel-exemple.fr',
-    } as never);
-    vi.mocked(createConfiguredPreviewPublisher).mockReturnValueOnce({} as never);
-    vi.mocked(revokePreviewsForDomain).mockResolvedValueOnce({ revoked: 2, alreadyRevoked: 1 });
-
-    const res = await call('POST', '/api/audits/audit-1/outreach-preview/revoke');
-
-    expect(res.statusCode).toBe(200);
-    expect(JSON.parse(res.body as string)).toEqual({ revoked: 2, alreadyRevoked: 1 });
-    expect(revokePreviewsForDomain).toHaveBeenCalledWith(
-      expect.objectContaining({ domain: 'hotel-exemple.fr', reason: 'operator-revoke' }),
-    );
-    // Revocation deliberately goes through the v1 store adapter, which
-    // lists live rows across v1 and v2 content versions.
-    expect(createMongoOutreachPreviewStore).toHaveBeenCalledWith(fakeConnection, {
-      prescanVersion: CURRENT_PRESCAN_VERSION,
-      qualificationVersion: CURRENT_QUALIFICATION_VERSION,
-    });
-  });
-
-  it('falls back to the audit host for a non-candidate audit', async () => {
-    vi.mocked(createConfiguredPreviewPublisher).mockReturnValueOnce({} as never);
-    vi.mocked(revokePreviewsForDomain).mockResolvedValueOnce({ revoked: 0, alreadyRevoked: 0 });
-
-    const res = await call('POST', '/api/audits/audit-1/outreach-preview/revoke');
-
-    expect(res.statusCode).toBe(200);
-    expect(getHotelCandidate).not.toHaveBeenCalled();
-    expect(revokePreviewsForDomain).toHaveBeenCalledWith(
-      expect.objectContaining({ domain: 'hotel-exemple.fr' }),
-    );
-  });
-
-  it('falls back to the audit host when the candidate has no own domain', async () => {
-    vi.mocked(getAudit).mockResolvedValueOnce(
-      auditFixture({ candidateId: 'candidate-1', cohortId: 'c1', scoringVersion: 'v1' }) as never,
-    );
-    vi.mocked(getHotelCandidate).mockResolvedValueOnce({ candidateId: 'candidate-1' } as never);
-    vi.mocked(createConfiguredPreviewPublisher).mockReturnValueOnce({} as never);
-    vi.mocked(revokePreviewsForDomain).mockResolvedValueOnce({ revoked: 0, alreadyRevoked: 0 });
-
-    const res = await call('POST', '/api/audits/audit-1/outreach-preview/revoke');
-
-    expect(res.statusCode).toBe(200);
-    expect(revokePreviewsForDomain).toHaveBeenCalledWith(
-      expect.objectContaining({ domain: 'hotel-exemple.fr' }),
-    );
   });
 });
 

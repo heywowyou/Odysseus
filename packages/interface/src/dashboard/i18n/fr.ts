@@ -206,6 +206,7 @@ export const fr: DashboardStrings = {
     cancelledNote: 'Ce scan a été arrêté à la demande de l’opérateur.',
     failedRescanHint:
       'Le site a déjà été exploré et analysé. Ouvrez l’audit pour corriger la cause puis régénérer le rapport : inutile de relancer un scan.',
+    coverageGateFieldsLink: 'Régler le délai et la concurrence du scan sur un nouvel audit',
   },
   auditDetail: {
     title: 'Détail de l’audit',
@@ -341,6 +342,26 @@ export const fr: DashboardStrings = {
         'preview-expired': 'Le lien publié a expiré : réémettez un lien depuis cet audit.',
         'preview-wrong-audit':
           'Le lien publié correspond à un autre audit : réémettez un lien depuis cet audit.',
+        'no-usable-contact':
+          'Aucune adresse de contact utilisable n’a été trouvée pour cet établissement.',
+        'evidence-incomplete':
+          'Les preuves nécessaires pour rédiger cet email ne sont pas complètes.',
+        'evidence-schema-outdated':
+          'Le format des preuves enregistrées est obsolète : relancez une analyse pour cet établissement.',
+        'prescan-expired':
+          'L’analyse préliminaire a expiré : relancez-en une avant de rédiger un email.',
+        'no-distinct-second-observation':
+          'Un seul constat exploitable a été trouvé ; l’email en nécessite deux distincts.',
+        'observation-not-in-allowlist':
+          'Aucun des constats enregistrés ne fait partie de ceux que l’email peut citer.',
+        'thread-closed': 'Le fil de prospection de cet établissement est déjà clos.',
+        'draft-already-live': 'Un brouillon existe déjà pour cet établissement.',
+        'suppressed-before-generation': 'Ce domaine figure sur la liste à ne pas contacter.',
+        'suppressed-before-provider':
+          'Ce domaine a été ajouté à la liste à ne pas contacter avant l’envoi ; rien n’a été transmis.',
+        'assembly-refused': 'L’email n’a pas pu être composé à partir des preuves disponibles.',
+        'provider-draft-unrecorded':
+          'L’envoi au fournisseur n’a pas pu être confirmé ; vérifiez manuellement avant de réessayer.',
       },
       renderError: 'Impossible de générer l’aperçu.',
       publishAction: 'Publier l’aperçu',
@@ -493,6 +514,7 @@ export const fr: DashboardStrings = {
       'Le prospect quitte la campagne. Le motif du rejet est enregistré et affiché dans l’interface.',
     actionError: 'L’action a échoué. Réessayez.',
     provenanceLabel: 'Origine des données',
+    provenanceReasonFallback: 'décision prise depuis le tableau de bord',
     notFound: 'Introuvable.',
     backToProspects: 'Retour aux prospects',
   },
@@ -678,13 +700,14 @@ export const fr: DashboardStrings = {
       launchRefusals: {
         'no-own-domain': "Aucun site propre n'est rattaché à cet hôtel.",
         'already-in-flight': 'Un scan de ce site est déjà en cours.',
-        'no-cohort': "Aucune sélection enregistrée : lancez d'abord une sélection (score select).",
+        'no-cohort':
+          "Aucune sélection enregistrée : une sélection doit d'abord être calculée en dehors du tableau de bord.",
       },
     },
     report: {
       description:
         'La chaîne de production du rapport vendu : préparer, rédiger, choisir, produire, approuver.',
-      reveal: 'Produire un rapport quand même',
+      reveal: 'Afficher la chaîne de rapport manuellement',
     },
     wave: {
       addAction: 'Ajouter à une vague',
@@ -704,7 +727,7 @@ export const fr: DashboardStrings = {
       refusals: {
         'already-on-roster': "Cet hôtel est déjà sur la vague d'un actif.",
         'no-cohort':
-          "Aucune sélection n'a encore été calculée : lancez d'abord une sélection (score select) avant d'autoriser à la main.",
+          "Aucune sélection n'a encore été calculée : une sélection doit d'abord être calculée en dehors du tableau de bord, avant d'autoriser à la main.",
         'no-own-domain': "Aucun site propre n'est rattaché à cet hôtel.",
         'domain-unknown': "Cet hôtel n'existe plus dans le catalogue.",
         'candidate-unknown': "Cet hôtel n'existe plus dans le catalogue.",
@@ -716,6 +739,7 @@ export const fr: DashboardStrings = {
       followUpName: 'Relance {n}',
       providerDraft: 'Dans Gmail',
       needsReviewNotice: 'Une réponse est arrivée et attend votre relecture.',
+      markReviewed: 'Marquer comme relue',
       noPendingDraft: 'Aucun brouillon en attente de relecture.',
     },
     outcome: {
@@ -729,6 +753,8 @@ export const fr: DashboardStrings = {
         "L'adresse rejoint la liste de ne pas contacter, chaque aperçu en ligne de cet hôtel est retiré immédiatement, et la conversation est fermée. Cette action est définitive.",
       optOutDone: 'Hôtel retiré des contacts.',
       actionError: "L'action a échoué. Essayez à nouveau.",
+      noThreadYet: "Aucun email envoyé pour l'instant.",
+      goToEmails: 'Aller à l’onglet Emails',
     },
   },
   prescan: {
