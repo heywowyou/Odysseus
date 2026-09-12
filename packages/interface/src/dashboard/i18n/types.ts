@@ -571,6 +571,7 @@ export interface DashboardStrings {
       outcome: string;
       /** Plan 041 slice B1: the wave column, membership only. */
       selection: string;
+      actions: string;
     };
     /** Plan 041 slice B1's wave column cell text and its info tip. `rank`
      *  interpolates the selection rank when the record carries one. */
@@ -582,6 +583,29 @@ export interface DashboardStrings {
     /** {selected}/{scored}/{total} counts above the list, so the
      *  catalogue's size is stated rather than discovered by paging. */
     selectionCountLine: string;
+    /** Plan 043 slice 3: the row-level wave add and the read-only
+     *  selection overview (the formula's cohorts and the active roster). */
+    addRowAction: string;
+    selectionOverview: {
+      show: string;
+      hide: string;
+      cohortsTitle: string;
+      cohortsEmpty: string;
+      rosterTitle: string;
+      rosterEmpty: string;
+      columns: {
+        version: string;
+        kind: string;
+        date: string;
+        population: string;
+        selected: string;
+        cutoffs: string;
+        wave: string;
+        hotel: string;
+        actor: string;
+      };
+      kind: Record<'selected' | 'calibration', string>;
+    };
     filterEmpty: string;
   };
   prospectDetail: {
@@ -710,6 +734,37 @@ export interface DashboardStrings {
       description: string;
       /** The Audit tab's one-line link that reveals the tab early. */
       reveal: string;
+    };
+    /** Plan 043: the wave roster's controls - the add/remove mutations on
+     *  the hub and the list, their dialog copy, and one sentence per typed
+     *  refusal the store can answer. */
+    wave: {
+      addAction: string;
+      removeAction: string;
+      dialogTitleAdd: string;
+      dialogTitleRemove: string;
+      /** {hotelName} is never inside these: the dialog shows the name as
+       *  its own line above the body. */
+      dialogBodyAdd: string;
+      dialogBodyRemove: string;
+      waveLabel: string;
+      confirmAdd: string;
+      confirmRemove: string;
+      /** {wave} is the wave name the operator confirmed. */
+      addedToast: string;
+      removedToast: string;
+      /** The Fiche line for a roster-sourced hotel: {wave}, {date},
+       *  {actor}. */
+      rosterLine: string;
+      refusals: Record<
+        | 'already-on-roster'
+        | 'no-cohort'
+        | 'no-own-domain'
+        | 'domain-unknown'
+        | 'candidate-unknown'
+        | 'not-on-roster',
+        string
+      >;
     };
     emails: {
       /** {n} is the follow-up number: Relance 1, Relance 2. */

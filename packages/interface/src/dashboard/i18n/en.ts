@@ -526,6 +526,7 @@ export const en: DashboardStrings = {
       thread: 'Emails',
       outcome: 'Outcome',
       selection: 'Wave',
+      actions: 'Actions',
     },
     selectionValues: {
       inSelectionWithRank: 'In selection (rank {rank})',
@@ -533,6 +534,30 @@ export const en: DashboardStrings = {
       notInSelection: 'Not in selection',
     },
     selectionCountLine: '{selected} in selection, {scored} scored, {total} in catalogue',
+    addRowAction: '+ Wave',
+    selectionOverview: {
+      show: 'View selection',
+      hide: 'Hide selection',
+      cohortsTitle: 'Recent selections',
+      cohortsEmpty: 'No selection recorded yet: the formula has not been run.',
+      rosterTitle: 'Active waves',
+      rosterEmpty: 'No active wave entries.',
+      columns: {
+        version: 'Version',
+        kind: 'Kind',
+        date: 'Date',
+        population: 'Population',
+        selected: 'Selected',
+        cutoffs: 'Cutoffs',
+        wave: 'Wave',
+        hotel: 'Hotel',
+        actor: 'Decided by',
+      },
+      kind: {
+        selected: 'Selected',
+        calibration: 'Calibration',
+      },
+    },
     filterEmpty: 'No prospects match these filters.',
   },
   prospectDetail: {
@@ -643,6 +668,31 @@ export const en: DashboardStrings = {
       description:
         'The production chain of the sold client report: prepare, write, choose, produce, approve.',
       reveal: 'Produce a report anyway',
+    },
+    wave: {
+      addAction: 'Add to a wave',
+      removeAction: 'Remove from the wave',
+      dialogTitleAdd: 'Add to a wave',
+      dialogTitleRemove: 'Remove from the wave',
+      dialogBodyAdd:
+        'The hotel will be authorized for a prospecting audit in this wave, beside the formula selection. The decision stays revocable at any time.',
+      dialogBodyRemove:
+        'The hotel will no longer be authorized by this wave. The formula selection, if it covers the hotel, stays in force.',
+      waveLabel: 'Wave',
+      confirmAdd: 'Add',
+      confirmRemove: 'Remove',
+      addedToast: 'Hotel added to wave {wave}.',
+      removedToast: 'Hotel removed from wave {wave}.',
+      rosterLine: 'Added to wave {wave} on {date} (by {actor}).',
+      refusals: {
+        'already-on-roster': 'This hotel is already on the wave as an active entry.',
+        'no-cohort':
+          'No selection has been computed yet: run a selection (score select) first, then authorize by hand.',
+        'no-own-domain': 'No website of its own is attached to this hotel.',
+        'domain-unknown': 'This hotel no longer exists in the catalogue.',
+        'candidate-unknown': 'This hotel no longer exists in the catalogue.',
+        'not-on-roster': 'This hotel is not on that wave.',
+      },
     },
     emails: {
       firstEmailName: 'First email',

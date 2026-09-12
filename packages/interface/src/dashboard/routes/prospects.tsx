@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { JSX } from 'react';
+import { toast } from 'sonner';
 import { Building2, ChevronRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { PAGE_WIDTH, PageHeader } from '../components/page-header';
@@ -24,9 +25,12 @@ import {
 import { useI18n } from '../i18n/provider';
 import type { DashboardStrings } from '../i18n/types';
 import { fetchJson } from '../lib/api';
+import { useApi } from '../lib/use-api';
+import { formatDateTime } from '../lib/format';
 import { useDebouncedValue } from '../lib/use-debounced-value';
 import { usePolling } from '../lib/use-polling';
 import { vocabularyLabel } from '../lib/vocabulary';
+import { WaveDialog, mutateWaveRoster, waveRefusalSentence } from './wave-dialog';
 import {
   GROUP_STATUS_VALUES,
   IDENTITY_STATUS_VALUES,
@@ -55,6 +59,7 @@ import type {
   ProspectQueue,
   ProspectRow,
   SelectionFilter,
+  SelectionOverviewResponse,
 } from './prospects-model';
 
 // Plan 040 poll policy: lists refresh every 10s (usePolling also pauses
@@ -104,7 +109,7 @@ function HeaderWithTip(props: {
 }
 
 export function ProspectsPage(): JSX.Element {
-  const { strings } = useI18n();
+  const { strings, language } = useI18n();
   const navigate = useNavigate();
   const [filters, setFilters] = useState<ProspectFilterState>(createEmptyFilters);
   const [requestedOffset, setRequestedOffset] = useState(0);
@@ -130,6 +135,29 @@ export function ProspectsPage(): JSX.Element {
     { key: buildProspectsPath(filters, requestedOffset) },
   );
   const data = page.data;
+
+  // Plan 043 slice 3: the wave add for one row, and the read-only
+  // selection overview. Both use the same routes the hub uses; the
+  // overview only fetches while open.
+  const [waveRow, setWaveRow] = useState<ProspectRow | null>(null);
+  const [isOverviewOpen, setIsOverviewOpen] = useState(false);
+  const overview = useApi<SelectionOverviewResponse>(isOverviewOpen ? '/api/selection' : null);
+
+  const submitWave = async (row: ProspectRow, wave: string): Promise<void> => {
+    try {
+      const refusal = await mutateWaveRoster(row.candidateId, wave, 'add');
+      if (refusal !== undefined) {
+        toast.error(waveRefusalSentence(refusal, strings) ?? strings.operator.actionError);
+        return;
+      }
+      toast.success(strings.hub.wave.addedToast.replace('{wave}', wave));
+      page.refresh();
+    } catch (caught) {
+      toast.error(strings.operator.actionError, {
+        description: caught instanceof Error ? caught.message : undefined,
+      });
+    }
+  };
 
   // A filter change can shrink the total below the current offset; the
   // clamped value is what the table shows and what the next poll requests,
@@ -217,7 +245,9 @@ export function ProspectsPage(): JSX.Element {
                 <TableHeaderCell>{strings.prospects.columns.contact}</TableHeaderCell>
                 <TableHeaderCell>{strings.prospects.columns.thread}</TableHeaderCell>
                 <TableHeaderCell>{strings.prospects.columns.outcome}</TableHeaderCell>
-                <TableHeaderCell className="w-10">{null}</TableHeaderCell>
+                <TableHeaderCell className="w-10">
+                  <span className="sr-only">{strings.prospects.columns.actions}</span>
+                </TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -239,6 +269,19 @@ export function ProspectsPage(): JSX.Element {
                     <Badge tone={selectionBadgeTone(row.inSelection)}>
                       {selectionLabel(row, strings)}
                     </Badge>
+                    {!row.inSelection ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="ml-2"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setWaveRow(row);
+                        }}
+                      >
+                        {strings.prospects.addRowAction}
+                      </Button>
+                    ) : null}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-xs text-ink-soft">
                     {vocabularyLabel(
@@ -362,6 +405,134 @@ export function ProspectsPage(): JSX.Element {
           <span className="text-xs text-ink-muted">
             {selectionCountLine(strings, data.selection, data.selectedCount, data.catalogueTotal)}
           </span>
+        ) : null}
+      </div>
+
+      {/* Plan 043 slice 3: the selection record, read-only. The cohorts are
+          the formula's insert-only documents; the roster is the operator's
+          own ledger. Nothing here mutates. */}
+      <div className="mb-4">
+        <Button
+          variant="secondary"
+          size="sm"
+          aria-expanded={isOverviewOpen}
+          onClick={() => setIsOverviewOpen(!isOverviewOpen)}
+        >
+          {isOverviewOpen
+            ? strings.prospects.selectionOverview.hide
+            : strings.prospects.selectionOverview.show}
+        </Button>
+        {isOverviewOpen ? (
+          <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <Card>
+              <h2 className="text-sm font-semibold text-ink">
+                {strings.prospects.selectionOverview.cohortsTitle}
+              </h2>
+              {overview.data === undefined ? (
+                <p className="mt-2 text-sm text-ink-muted">{strings.common.loading}</p>
+              ) : overview.data.cohorts.length === 0 ? (
+                <p className="mt-2 text-sm text-ink-muted">
+                  {strings.prospects.selectionOverview.cohortsEmpty}
+                </p>
+              ) : (
+                <div className="mt-3 overflow-x-auto">
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableHeaderCell>
+                          {strings.prospects.selectionOverview.columns.version}
+                        </TableHeaderCell>
+                        <TableHeaderCell>
+                          {strings.prospects.selectionOverview.columns.kind}
+                        </TableHeaderCell>
+                        <TableHeaderCell>
+                          {strings.prospects.selectionOverview.columns.date}
+                        </TableHeaderCell>
+                        <TableHeaderCell>
+                          {strings.prospects.selectionOverview.columns.population}
+                        </TableHeaderCell>
+                        <TableHeaderCell>
+                          {strings.prospects.selectionOverview.columns.selected}
+                        </TableHeaderCell>
+                        <TableHeaderCell>
+                          {strings.prospects.selectionOverview.columns.cutoffs}
+                        </TableHeaderCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {overview.data.cohorts.map((cohort) => (
+                        <TableRow key={cohort.cohortId}>
+                          <TableCell className="whitespace-nowrap text-xs">
+                            {cohort.scoringVersion}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap text-xs">
+                            {cohort.approved
+                              ? strings.prospects.selectionOverview.kind.selected
+                              : strings.prospects.selectionOverview.kind.calibration}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap text-xs">
+                            {formatDateTime(cohort.computedAt, language)}
+                          </TableCell>
+                          <TableCell className="numeric text-xs">{cohort.populationSize}</TableCell>
+                          <TableCell className="numeric text-xs">{cohort.selectedCount}</TableCell>
+                          <TableCell className="numeric text-xs">
+                            {cohort.abilityCutoff ?? '-'} / {cohort.brokennessCutoff ?? '-'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </Card>
+            <Card>
+              <h2 className="text-sm font-semibold text-ink">
+                {strings.prospects.selectionOverview.rosterTitle}
+              </h2>
+              {overview.data === undefined ? (
+                <p className="mt-2 text-sm text-ink-muted">{strings.common.loading}</p>
+              ) : overview.data.roster.length === 0 ? (
+                <p className="mt-2 text-sm text-ink-muted">
+                  {strings.prospects.selectionOverview.rosterEmpty}
+                </p>
+              ) : (
+                <div className="mt-3 overflow-x-auto">
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableHeaderCell>
+                          {strings.prospects.selectionOverview.columns.wave}
+                        </TableHeaderCell>
+                        <TableHeaderCell>
+                          {strings.prospects.selectionOverview.columns.hotel}
+                        </TableHeaderCell>
+                        <TableHeaderCell>
+                          {strings.prospects.selectionOverview.columns.actor}
+                        </TableHeaderCell>
+                        <TableHeaderCell>
+                          {strings.prospects.selectionOverview.columns.date}
+                        </TableHeaderCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {overview.data.roster.map((entry) => (
+                        <TableRow key={entry.entryId}>
+                          <TableCell className="whitespace-nowrap text-xs">{entry.wave}</TableCell>
+                          <TableCell className="whitespace-nowrap text-xs">
+                            {entry.domain}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap text-xs">{entry.actor}</TableCell>
+                          <TableCell className="whitespace-nowrap text-xs">
+                            {formatDateTime(entry.decidedAt, language)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </Card>
+          </div>
         ) : null}
       </div>
 
@@ -491,6 +662,20 @@ export function ProspectsPage(): JSX.Element {
       </Card>
 
       {body}
+      <WaveDialog
+        open={waveRow !== null}
+        onOpenChange={(open) => {
+          if (!open) setWaveRow(null);
+        }}
+        mode="add"
+        candidateId={waveRow?.candidateId ?? null}
+        hotelName={waveRow?.name ?? null}
+        onSubmit={(candidateId, wave) => {
+          const row = waveRow;
+          if (row === null) return Promise.resolve();
+          return submitWave(row, wave);
+        }}
+      />
     </article>
   );
 }

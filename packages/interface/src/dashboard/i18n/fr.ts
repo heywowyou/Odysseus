@@ -532,6 +532,7 @@ export const fr: DashboardStrings = {
       thread: 'Emails',
       outcome: 'Résultat',
       selection: 'Vague',
+      actions: 'Actions',
     },
     selectionValues: {
       inSelectionWithRank: 'Dans la sélection (rang {rank})',
@@ -539,6 +540,30 @@ export const fr: DashboardStrings = {
       notInSelection: 'Hors sélection',
     },
     selectionCountLine: '{selected} dans la sélection, {scored} scorés, {total} au catalogue',
+    addRowAction: '+ Vague',
+    selectionOverview: {
+      show: 'Voir la sélection',
+      hide: 'Masquer la sélection',
+      cohortsTitle: 'Dernières sélections',
+      cohortsEmpty: "Aucune sélection enregistrée : la formule n'a pas encore été lancée.",
+      rosterTitle: 'Vagues actives',
+      rosterEmpty: 'Aucune entrée de vague active.',
+      columns: {
+        version: 'Version',
+        kind: 'Type',
+        date: 'Date',
+        population: 'Population',
+        selected: 'Retenus',
+        cutoffs: 'Seuils',
+        wave: 'Vague',
+        hotel: 'Hôtel',
+        actor: 'Décidé par',
+      },
+      kind: {
+        selected: 'Retenue',
+        calibration: 'Calibrage',
+      },
+    },
     filterEmpty: 'Aucun prospect ne correspond à ces filtres.',
   },
   prospectDetail: {
@@ -650,6 +675,31 @@ export const fr: DashboardStrings = {
       description:
         'La chaîne de production du rapport vendu : préparer, rédiger, choisir, produire, approuver.',
       reveal: 'Produire un rapport quand même',
+    },
+    wave: {
+      addAction: 'Ajouter à une vague',
+      removeAction: 'Retirer de la vague',
+      dialogTitleAdd: 'Ajouter à une vague',
+      dialogTitleRemove: 'Retirer de la vague',
+      dialogBodyAdd:
+        "L'hôtel sera autorisé pour un audit de prospection dans cette vague, en plus de la sélection de la formule. La décision reste révocable à tout moment.",
+      dialogBodyRemove:
+        "L'hôtel ne sera plus autorisé par cette vague. La sélection de la formule, si elle le concerne, reste en vigueur.",
+      waveLabel: 'Vague',
+      confirmAdd: 'Ajouter',
+      confirmRemove: 'Retirer',
+      addedToast: 'Hôtel ajouté à la vague {wave}.',
+      removedToast: 'Hôtel retiré de la vague {wave}.',
+      rosterLine: 'Ajouté à la vague {wave} le {date} (par {actor}).',
+      refusals: {
+        'already-on-roster': "Cet hôtel est déjà sur la vague d'un actif.",
+        'no-cohort':
+          "Aucune sélection n'a encore été calculée : lancez d'abord une sélection (score select) avant d'autoriser à la main.",
+        'no-own-domain': "Aucun site propre n'est rattaché à cet hôtel.",
+        'domain-unknown': "Cet hôtel n'existe plus dans le catalogue.",
+        'candidate-unknown': "Cet hôtel n'existe plus dans le catalogue.",
+        'not-on-roster': "Cet hôtel n'est pas sur cette vague.",
+      },
     },
     emails: {
       firstEmailName: 'Premier email',

@@ -292,6 +292,17 @@ describe('ProspectDetailPage tabs (plan 042 slice 1)', () => {
     fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes('/report-preparation')) return notFoundResponse();
+      if (url.endsWith('/wave')) {
+        return jsonResponse({
+          added: true,
+          wave: 'wave-1',
+          candidateId: 'candidate-1',
+          domain: 'hotel-exemple.fr',
+        });
+      }
+      if (url.endsWith('/wave/remove')) {
+        return jsonResponse({ revoked: true, wave: 'wave-1', candidateId: 'candidate-1' });
+      }
       if (url.includes('/outreach-preview/publish')) {
         return jsonResponse({
           published: true,
@@ -415,5 +426,112 @@ describe('ProspectDetailPage tabs (plan 042 slice 1)', () => {
     expect(buttonWithText('Rapport client')).toBeDefined();
     await clickButton('Rapport client');
     expect(document.getElementById('hub-report')).not.toBeNull();
+  });
+});
+
+describe('ProspectDetailPage wave roster (plan 043)', () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+      if (method === 'POST' && url.endsWith('/wave')) {
+        return jsonResponse({
+          added: true,
+          wave: 'wave-1',
+          candidateId: 'candidate-1',
+          domain: 'hotel-exemple.fr',
+        });
+      }
+      if (method === 'POST' && url.endsWith('/wave/remove')) {
+        return jsonResponse({ revoked: true, wave: 'wave-1', candidateId: 'candidate-1' });
+      }
+      return jsonResponse(detailWithContact(null));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+  });
+
+  it('offers the wave add on a not-selected refusal and posts the confirmed wave', async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+      if (method === 'POST' && url.endsWith('/wave')) {
+        return jsonResponse({ added: true, wave: 'wave-1' });
+      }
+      return jsonResponse({
+        ...detailWithContact(null),
+        outreachScan: { canStart: false, refusal: 'not-selected' },
+      });
+    });
+    await renderDetail();
+    await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
+    await pause();
+
+    const add = buttonWithText('Ajouter à une vague');
+    expect(add).toBeDefined();
+    await clickButton('Ajouter à une vague');
+    await clickButton('Ajouter', document.querySelector('[role="dialog"]') ?? undefined);
+    await pause();
+    const waveCall = fetchMock.mock.calls.find(
+      (call) => String(call[0]).endsWith('/wave') && (call[1] as RequestInit).method === 'POST',
+    );
+    expect(waveCall).toBeDefined();
+    expect(JSON.parse(String((waveCall?.[1] as RequestInit).body))).toEqual({ wave: 'wave-1' });
+  });
+
+  it('offers no wave add for refusals a roster entry cannot cure', async () => {
+    fetchMock.mockImplementation(async () =>
+      jsonResponse({
+        ...detailWithContact(null),
+        outreachScan: { canStart: false, refusal: 'suppressed' },
+      }),
+    );
+    await renderDetail();
+    await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
+    await pause();
+    expect(buttonWithText('Ajouter à une vague')).toBeUndefined();
+  });
+
+  it('shows the roster line with its remove for a wave-roster source', async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+      if (method === 'POST' && url.endsWith('/wave/remove')) {
+        return jsonResponse({ revoked: true, wave: 'wave-1' });
+      }
+      return jsonResponse({
+        ...detailWithContact(null),
+        outreachScan: { canStart: false },
+        selectionVerdict: {
+          inSelection: true,
+          source: 'wave-roster',
+          rank: null,
+          cohort: null,
+          wave: 'wave-1',
+          decidedAt: '2026-09-12T00:00:00.000Z',
+          actor: 'dashboard',
+        },
+      });
+    });
+    await renderDetail();
+    await waitFor(() => (pageText().includes('Ajouté à la vague wave-1') ? true : undefined));
+    await pause();
+
+    await clickButton('Retirer de la vague');
+    await clickButton('Retirer', document.querySelector('[role="dialog"]') ?? undefined);
+    await pause();
+    const removeCall = fetchMock.mock.calls.find(
+      (call) =>
+        String(call[0]).endsWith('/wave/remove') && (call[1] as RequestInit).method === 'POST',
+    );
+    expect(removeCall).toBeDefined();
+    expect(JSON.parse(String((removeCall?.[1] as RequestInit).body))).toEqual({ wave: 'wave-1' });
   });
 });

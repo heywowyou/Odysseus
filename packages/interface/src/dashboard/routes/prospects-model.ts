@@ -443,7 +443,38 @@ export interface ProspectDetailResponse {
     source: 'cohort' | 'wave-roster' | null;
     rank: number | null;
     cohort: SelectionCohortFactsResponse | null;
+    /** Plan 043: the roster entry's provenance, present only when the
+     *  authorizing source is a wave roster entry. */
+    wave?: string;
+    decidedAt?: string;
+    actor?: string;
   };
+}
+
+/** Plan 043 slice 3: the selection record behind GET /api/selection - the
+ *  formula's recent cohorts and the operator's active roster entries, both
+ *  read-only on this page. */
+export interface SelectionOverviewResponse {
+  cohorts: {
+    cohortId: string;
+    scoringVersion: string;
+    approved: boolean;
+    computedAt: string;
+    populationSize: number;
+    selectedCount: number;
+    abilityCutoff: number | null;
+    brokennessCutoff: number | null;
+  }[];
+  roster: {
+    entryId: string;
+    wave: string;
+    candidateId: string;
+    domain: string;
+    rank: number | null;
+    scoringVersion: string;
+    actor: string;
+    decidedAt: string;
+  }[];
 }
 
 /** Body of POST /api/prospects/:candidateId/review. The reason stays out:

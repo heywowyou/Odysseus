@@ -245,6 +245,87 @@ describe('operator page accessibility (plan 013 step 5, extended plan 022 step 6
     root.unmount();
   });
 
+  it('prospects list selection overview has no axe violations while open', async () => {
+    // Plan 043 slice 3: the read-only selection record (recent cohorts and
+    // the active roster) inside the list page, rows present so the scanned
+    // DOM is the populated table.
+    stubRoutes({
+      '/api/selection': {
+        cohorts: [
+          {
+            cohortId: 'cohort-1',
+            scoringVersion: 'hotel-outreach-v1',
+            approved: true,
+            computedAt: '2026-09-08T00:00:00.000Z',
+            populationSize: 42,
+            selectedCount: 6,
+            abilityCutoff: 60,
+            brokennessCutoff: 40,
+          },
+        ],
+        roster: [
+          {
+            entryId: 'entry-1',
+            wave: 'wave-1',
+            candidateId: 'cand-7',
+            domain: 'hotel-extra.fr',
+            rank: null,
+            scoringVersion: 'hotel-outreach-v1',
+            actor: 'dashboard',
+            decidedAt: '2026-09-09T00:00:00.000Z',
+          },
+        ],
+      },
+      '/api/prospects?': {
+        rows: [
+          {
+            candidateId: 'cand-1',
+            name: 'Hôtel Exemple',
+            commune: 'Grenoble',
+            postcode: '38000',
+            starRating: null,
+            identityStatus: 'resolved',
+            groupStatus: 'independent',
+            campaignEligibility: 'eligible',
+            reviewState: 'not-required',
+            qualificationOutcome: 'qualified',
+            qualificationReasons: [],
+            prescanStatus: null,
+            scoringVersion: null,
+            brokennessTotal: null,
+            abilityTotal: null,
+            worthy: null,
+            contactState: null,
+            threadState: null,
+            outcome: null,
+            inSelection: false,
+            selectionSource: null,
+            selectionRank: null,
+          },
+        ],
+        total: 1,
+        limit: 25,
+        offset: 0,
+        selection: null,
+        selectedCount: 0,
+        catalogueTotal: 1,
+      },
+    });
+    const { container, root } = await renderPage(createElement(ProspectsPage));
+    await settle(container, 'Hôtel Exemple');
+    const toggle = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Voir la sélection',
+    );
+    expect(toggle).toBeDefined();
+    await act(async () => {
+      toggle?.click();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+    await settle(container, 'Dernières sélections');
+    await expectNoAxeViolations(container);
+    root.unmount();
+  });
+
   it('prospects list has no axe violations in its empty state', async () => {
     const { container, root } = await renderPage(createElement(ProspectsPage));
     await settle(container, 'Aucun prospect ne correspond à ces filtres.');

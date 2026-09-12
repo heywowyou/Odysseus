@@ -10,6 +10,7 @@ import { ConfirmDialog } from '../components/ui/dialog';
 import { EmptyState } from '../components/ui/empty-state';
 import { Skeleton } from '../components/ui/skeleton';
 import { useI18n } from '../i18n/provider';
+import { formatDateTime } from '../lib/format';
 import { vocabularyLabel } from '../lib/vocabulary';
 import { ApiError, fetchJson, postEmpty, sendJson } from '../lib/api';
 import { usePolling } from '../lib/use-polling';
@@ -40,6 +41,7 @@ import type {
   ProspectReviewRequest,
   ProspectReviewResponse,
 } from './prospects-model';
+import { WaveDialog, mutateWaveRoster, waveRefusalSentence } from './wave-dialog';
 import { HubFicheSection } from './hub-fiche-section';
 import { HubQuickCheckSection } from './hub-quick-check-section';
 import { HubAuditSection } from './hub-audit-section';
@@ -223,6 +225,9 @@ export function ProspectDetailPage(): JSX.Element {
    *  without a recorded `won` outcome. Both view state; nothing stored. */
   const [pickedAuditId, setPickedAuditId] = useState<string | null>(null);
   const [reportRevealed, setReportRevealed] = useState(false);
+  /** Plan 043: the open wave-roster dialog, if any. The mutation itself is
+   *  shared with the prospects list via wave-dialog.tsx. */
+  const [waveDialog, setWaveDialog] = useState<'add' | 'remove' | null>(null);
 
   // Plan 040 slice 7: the a-traiter rows and the audit page's preview note
   // deep-link into a hub section (/prospects/:id#hub-emails and friends).
@@ -383,6 +388,31 @@ export function ProspectDetailPage(): JSX.Element {
       toast.error(strings.outreachThread.actionError);
     } finally {
       setIsOutreachBusy(false);
+    }
+  };
+
+  const submitWave = async (
+    mode: 'add' | 'remove',
+    waveCandidateId: string,
+    wave: string,
+  ): Promise<void> => {
+    try {
+      const refusal = await mutateWaveRoster(waveCandidateId, wave, mode);
+      if (refusal !== undefined) {
+        toast.error(waveRefusalSentence(refusal, strings) ?? strings.operator.actionError);
+        return;
+      }
+      toast.success(
+        (mode === 'add' ? strings.hub.wave.addedToast : strings.hub.wave.removedToast).replace(
+          '{wave}',
+          wave,
+        ),
+      );
+      refresh();
+    } catch (caught) {
+      toast.error(strings.operator.actionError, {
+        description: caught instanceof Error ? caught.message : undefined,
+      });
     }
   };
 
@@ -622,6 +652,37 @@ export function ProspectDetailPage(): JSX.Element {
         </div>
       ) : null}
 
+      {/* Plan 043: a roster-sourced hotel names its wave and can leave it;
+          the record the line quotes is the roster entry itself, carried on
+          the selection verdict. */}
+      {data.selectionVerdict?.source === 'wave-roster' ? (
+        <div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-ink-soft">
+          <span>
+            {strings.hub.wave.rosterLine
+              .replace('{wave}', data.selectionVerdict.wave ?? '-')
+              .replace(
+                '{date}',
+                data.selectionVerdict.decidedAt !== undefined
+                  ? formatDateTime(data.selectionVerdict.decidedAt, language)
+                  : '-',
+              )
+              .replace('{actor}', data.selectionVerdict.actor ?? '-')}
+          </span>
+          <Button variant="secondary" size="sm" onClick={() => setWaveDialog('remove')}>
+            {strings.hub.wave.removeAction}
+          </Button>
+        </div>
+      ) : null}
+
+      {action.kind === 'scan-refused' &&
+      (action.refusal === 'not-selected' || action.refusal === 'cohort-not-approved') ? (
+        <div className="mb-4">
+          <Button variant="secondary" size="sm" onClick={() => setWaveDialog('add')}>
+            {strings.hub.wave.addAction}
+          </Button>
+        </div>
+      ) : null}
+
       <PipelineStrip steps={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
       {/* One panel at a time (plan 042 slice 1): the ids stay the anchors
@@ -636,6 +697,17 @@ export function ProspectDetailPage(): JSX.Element {
       >
         {sectionFor(activeTab)}
       </div>
+
+      <WaveDialog
+        open={waveDialog !== null}
+        onOpenChange={(open) => {
+          if (!open) setWaveDialog(null);
+        }}
+        mode={waveDialog ?? 'add'}
+        candidateId={candidateId ?? null}
+        hotelName={data.name}
+        onSubmit={(waveCandidateId, wave) => submitWave(waveDialog ?? 'add', waveCandidateId, wave)}
+      />
 
       <ConfirmDialog
         open={pendingAction !== null}
