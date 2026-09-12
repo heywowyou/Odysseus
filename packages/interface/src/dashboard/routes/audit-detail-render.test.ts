@@ -113,6 +113,40 @@ const emptyAudit = {
   manualFields: null,
 };
 
+/** A minimal report-preparation view (plan 019 contract): nothing filled
+ *  in, no warnings, no writing candidate. Tests override one field at a
+ *  time. */
+function preparationView(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  const previewLanguage = (language: string): Record<string, unknown> => ({
+    language,
+    coverQuestion: { value: 'Question de couverture', source: 'fallback' },
+    hook: { family: 'family', value: 'value', evidenceUnavailable: true },
+    stakeholders: [],
+    journeys: [],
+  });
+  return {
+    preparation: {
+      context: {},
+      stakeholders: {},
+      journeyDecisions: [],
+      turnover: { useReplacement: false },
+      updatedAt: '2026-09-01T10:00:00.000Z',
+    },
+    preview: {
+      fr: previewLanguage('fr'),
+      en: previewLanguage('en'),
+      warnings: [],
+      warningDigest: 'digest-1',
+      excludedJourneys: [],
+      turnover: { status: 'omitted', reason: 'missing-turnover' },
+    },
+    suggestions: [],
+    acknowledgementCurrent: true,
+    regenerationInFlight: false,
+    ...overrides,
+  };
+}
+
 describe('audits list report-stage failure display (issue #90)', () => {
   beforeEach(() => {
     stubRoutes({});
@@ -159,7 +193,7 @@ describe('audit detail report-stage failure card (issue #90)', () => {
     document.body.innerHTML = '';
   });
 
-  it('surfaces the stored reason, the job link, and the inline regenerate path', async () => {
+  it('surfaces the stored reason and links the identity gate to the hotel fields', async () => {
     stubRoutes({
       '/api/audits/audit-1/report-preparation': null,
       '/api/audits/audit-1': {
@@ -184,14 +218,22 @@ describe('audit detail report-stage failure card (issue #90)', () => {
     expect(container.querySelector('a[href="/scans/job-1"]')?.textContent).toContain(
       'Voir le détail du scan',
     );
+    // Plan 040 slice 5: the card carries no regenerate button; the
+    // identity gate links to the hotel-fields form inside the stepper.
+    const fieldsLink = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Aller aux champs à confirmer',
+    );
+    expect(fieldsLink).toBeDefined();
+    expect(container.querySelector('#audit-hotel-fields')).not.toBeNull();
+    expect(container.textContent).not.toContain('Régénérer les PDF');
     root.unmount();
   });
 
-  it('points a scanned audit at Prepare report instead of a regenerate that always 409s', async () => {
+  it('points a scanned audit at the writing step instead of a regenerate that always 409s', async () => {
     // hautsdesancerre.com case: the job failed inside the fr writing pass,
     // before any analysis was stored. Regenerating the report cannot
-    // succeed, so the card must route the operator to the writing
-    // regeneration instead.
+    // succeed, so the card must route the operator to the stepper's
+    // writing step, the only action that creates a pair.
     stubRoutes({
       '/api/audits/audit-1/report-preparation': null,
       '/api/audits/audit-1': {
@@ -207,17 +249,17 @@ describe('audit detail report-stage failure card (issue #90)', () => {
     const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
     await settle(container, 'Le rapport n’a pas pu être généré');
     expect(container.textContent).toContain('aucune analyse bilingue n’a encore été enregistrée');
-    const prepareButton = [...container.querySelectorAll('button')].find(
-      (button) => button.textContent === 'Aller à Préparer le rapport',
+    const redactLink = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Aller à Rédiger le rapport',
     );
-    expect(prepareButton).toBeDefined();
-    expect(container.querySelector('#audit-prepare-report')).not.toBeNull();
-    // The only remaining report-regenerate button is the page header's;
-    // the failure card no longer offers one that cannot succeed.
-    const regenerateButtons = [...container.querySelectorAll('button')].filter(
-      (button) => button.textContent === 'Régénérer le rapport',
+    expect(redactLink).toBeDefined();
+    expect(container.querySelector('#audit-step-redact')).not.toBeNull();
+    // No report-regenerate button exists anywhere on the page: the header
+    // lost its buttons, and the locked production step renders none.
+    const regenerateButtons = [...container.querySelectorAll('button')].filter((button) =>
+      ['Régénérer le rapport', 'Régénérer les PDF'].includes(button.textContent ?? ''),
     );
-    expect(regenerateButtons).toHaveLength(1);
+    expect(regenerateButtons).toHaveLength(0);
     root.unmount();
   });
 
@@ -232,7 +274,7 @@ describe('audit detail report-stage failure card (issue #90)', () => {
     root.unmount();
   });
 
-  it('confirms the unchanged detected identity fields that blocked report generation', async () => {
+  it('confirms the unchanged detected identity fields through the step 1 save', async () => {
     const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
       if (url.includes('report-preparation')) return notFoundResponse();
@@ -256,13 +298,16 @@ describe('audit detail report-stage failure card (issue #90)', () => {
     });
     vi.stubGlobal('fetch', fetchSpy);
     const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
-    await settle(container, 'Confirmer les champs détectés');
-    const confirmButton = [...container.querySelectorAll('button')].find(
-      (button) => button.textContent === 'Confirmer les champs détectés',
+    // Plan 040 slice 5: one Enregistrer button for the whole Prepare step;
+    // it detects the awaiting confirmation itself and rides the detected
+    // identity fields along on the PATCH.
+    await settle(container, 'Enregistrer les choix');
+    const saveButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Enregistrer les choix',
     );
-    expect(confirmButton).toBeDefined();
+    expect(saveButton).toBeDefined();
     await act(async () => {
-      confirmButton?.click();
+      saveButton?.click();
       await new Promise((resolve) => setTimeout(resolve, 10));
     });
     const patchCall = fetchSpy.mock.calls.find(([input]) => {
@@ -346,11 +391,20 @@ describe('static fallback analysis notice (issue #162)', () => {
     document.body.innerHTML = '';
   });
 
+  // The reports list renders inside the production step, which unlocks
+  // from a stored pair: the fixture carries the report languages the
+  // fallback gate wrote.
+  const analysedAudit = {
+    ...emptyAudit,
+    lifecycle: 'analysed',
+    reportLanguages: ['fr', 'en'],
+  };
+
   it('shows the fallback notice on the reports card when the pair is a static fallback', async () => {
     stubRoutes({
       '/api/audits/audit-1/report-preparation': null,
       '/api/audits/audit-1': {
-        ...emptyAudit,
+        ...analysedAudit,
         analysisIsStaticFallback: true,
       },
     });
@@ -366,7 +420,7 @@ describe('static fallback analysis notice (issue #162)', () => {
     stubRoutes({
       '/api/audits/audit-1/report-preparation': null,
       '/api/audits/audit-1': {
-        ...emptyAudit,
+        ...analysedAudit,
         analysisIsStaticFallback: false,
       },
     });
@@ -408,8 +462,9 @@ describe('reports card PDF availability (issue #91)', () => {
     const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
     await settle(container, 'PDF non disponible ici');
     expect(container.querySelector('a[href="/api/audits/audit-1/report/fr/preview"]')).toBeNull();
-    // The row keeps an actionable path: regenerate from this machine.
-    expect(container.textContent).toContain('Régénérer le rapport');
+    // The row keeps an actionable path: the production step's single
+    // regenerate button above the list.
+    expect(container.textContent).toContain('Régénérer les PDF');
     root.unmount();
   });
 
@@ -469,13 +524,13 @@ describe('reports card PDF availability (issue #91)', () => {
   });
 });
 
-describe('outreach preview card on the audit page (plan 037 slice 5)', () => {
+describe('preview note on the audit page (plan 040 slice 5)', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     document.body.innerHTML = '';
   });
 
-  it('offers publication, revocation, PDF, and the scorecard for a candidate-linked audit', async () => {
+  it('points a prospect-linked audit at the hub instead of offering publication', async () => {
     stubRoutes({
       '/api/audits/audit-1/report-preparation': null,
       '/api/audits/audit-1': {
@@ -484,32 +539,22 @@ describe('outreach preview card on the audit page (plan 037 slice 5)', () => {
       },
     });
     const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
-    await settle(container, 'Aperçu de prospection');
-    expect(container.textContent).toContain('Consulter, publier ou retirer la synthèse');
-    expect(
-      [...container.querySelectorAll('button')].some((button) =>
-        button.textContent?.includes('Publier l’aperçu'),
-      ),
-    ).toBe(true);
-    expect(
-      [...container.querySelectorAll('button')].some((button) =>
-        button.textContent?.includes('Télécharger le PDF'),
-      ),
-    ).toBe(true);
-    // Nothing is published and no token is held in this session, so both
-    // the draft and the takedown start out unavailable.
-    const draft = [...container.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('Créer le premier brouillon'),
-    );
-    expect(draft?.disabled).toBe(true);
-    const revoke = [...container.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('Retirer l’aperçu'),
-    );
-    expect(revoke?.disabled).toBe(true);
+    await settle(container, 'Aperçu géré depuis la fiche du prospect');
+    const link = container.querySelector('a[href="/prospects/candidate-1#hub-preview"]');
+    expect(link?.textContent).toContain('Aperçu géré depuis la fiche du prospect');
+    // Slice 4 moved publication, takedown, and the first draft to the
+    // hub; none of them may reappear here.
+    for (const label of ['Publier l’aperçu', 'Retirer l’aperçu', 'Créer le premier brouillon']) {
+      expect(
+        [...container.querySelectorAll('button')].some((button) =>
+          button.textContent?.includes(label),
+        ),
+      ).toBe(false);
+    }
     root.unmount();
   });
 
-  it('renders no publication actions for an audit with no outreach provenance', async () => {
+  it('keeps the two read-only preview actions for an audit with no prospect', async () => {
     stubRoutes({
       '/api/audits/audit-1/report-preparation': null,
       '/api/audits/audit-1': {
@@ -521,12 +566,111 @@ describe('outreach preview card on the audit page (plan 037 slice 5)', () => {
     await settle(container, 'Aperçu de prospection');
     expect(
       [...container.querySelectorAll('button')].some((button) =>
+        button.textContent?.includes('Afficher la synthèse'),
+      ),
+    ).toBe(true);
+    expect(
+      [...container.querySelectorAll('button')].some((button) =>
+        button.textContent?.includes('Télécharger le PDF'),
+      ),
+    ).toBe(true);
+    expect(
+      [...container.querySelectorAll('button')].some((button) =>
         button.textContent?.includes('Publier l’aperçu'),
       ),
     ).toBe(false);
+    root.unmount();
+  });
+});
+
+describe('client-report stepper (plan 040 slice 5)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+  });
+
+  const analysedAudit = {
+    ...emptyAudit,
+    lifecycle: 'analysed',
+    reportLanguages: ['fr', 'en'],
+  };
+
+  it('renders the five steps with one save on the prepare step', async () => {
+    stubRoutes({
+      '/api/audits/audit-1/report-preparation': preparationView(),
+      '/api/audits/audit-1': analysedAudit,
+    });
+    const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
+    await settle(container, 'Rapport client');
+    for (const stepTitle of [
+      'Préparer',
+      'Rédiger',
+      'Choisir la version',
+      'Produire les PDF',
+      'Approuver pour livraison',
+    ]) {
+      expect(container.textContent).toContain(stepTitle);
+    }
+    // Step 1 hosts both forms behind one Enregistrer button.
     expect(
-      [...container.querySelectorAll('button')].some((button) =>
-        button.textContent?.includes('Afficher la synthèse'),
+      [...container.querySelectorAll('button')].filter(
+        (button) => button.textContent === 'Enregistrer les choix',
+      ),
+    ).toHaveLength(1);
+    expect(container.textContent).toContain('Informations sur l’hôtel');
+    expect(container.querySelector('#audit-hotel-fields')).not.toBeNull();
+    // Step 2 is active: its rewrite button is on.
+    expect(
+      [...container.querySelectorAll('button')].some(
+        (button) => button.textContent === 'Réécrire le rapport',
+      ),
+    ).toBe(true);
+    // A stored pair unlocks production even though no writing was chosen.
+    expect(
+      [...container.querySelectorAll('button')].some(
+        (button) => button.textContent === 'Régénérer les PDF',
+      ),
+    ).toBe(true);
+    // Delivery approval stays locked until the pair is fresh.
+    expect(
+      [...container.querySelectorAll('button')].some(
+        (button) => button.textContent === 'Approuver les deux rapports',
+      ),
+    ).toBe(false);
+    root.unmount();
+  });
+
+  it('offers the candidate previews and approval on the choice step when a writing is ready', async () => {
+    stubRoutes({
+      '/api/audits/audit-1/report-preparation': preparationView({
+        preparation: {
+          context: {},
+          stakeholders: {},
+          journeyDecisions: [],
+          turnover: { useReplacement: false },
+          updatedAt: '2026-09-01T10:00:00.000Z',
+          writingSelection: {
+            candidate: {
+              status: 'ready',
+              pair: { frAnalysisId: 'fr-12345678', enAnalysisId: 'en-12345678' },
+              createdAt: '2026-09-01T10:10:00.000Z',
+            },
+          },
+        },
+      }),
+      '/api/audits/audit-1': analysedAudit,
+    });
+    const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
+    await settle(container, 'Approuver cette version');
+    expect(container.textContent).toContain('Nouvelle version prête à être relue');
+    expect(
+      container.querySelector(
+        'a[href="/api/audits/audit-1/report-preparation/candidate/fr/preview"]',
+      ),
+    ).not.toBeNull();
+    expect(
+      [...container.querySelectorAll('button')].some(
+        (button) => button.textContent === 'Approuver cette version',
       ),
     ).toBe(true);
     root.unmount();
