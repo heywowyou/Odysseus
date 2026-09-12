@@ -1,5 +1,11 @@
 import type { DashboardStrings } from '../i18n/types';
 import type { BadgeTone } from '../components/ui/badge';
+import type {
+  EvidenceResponse,
+  PrescanResponse,
+  PreviewResponse,
+  ScoreResponse,
+} from './insights-model';
 
 /**
  * Pure model for the prospect list and detail pages: everything the route
@@ -281,6 +287,14 @@ export interface ProspectDetailResponse {
     limit: number;
     offset: number;
   };
+  /** The composed operator views cross the boundary inside the same
+   *  payload (the route spreads the store detail); the hub renders its
+   *  Contrôle rapide and Aperçu sections from them instead of fetching
+   *  the per-stage endpoints again. Same shapes as insights-model.ts. */
+  prescan: PrescanResponse | null;
+  score: ScoreResponse | null;
+  evidence: EvidenceResponse | null;
+  preview: PreviewResponse | null;
   contact: {
     contactId: string;
     contactVersion: string;
@@ -292,13 +306,37 @@ export interface ProspectDetailResponse {
     sourceKind: string | null;
     validatedAt: string;
   } | null;
+  /** The store's full thread view: besides the state the old page showed,
+   *  it carries the draft attempts (ids and review outcomes), the provider
+   *  send timestamps, the reply-review flag, and the current outcome, all
+   *  metadata only. */
   thread: {
     threadId: string;
-    state: string;
+    candidateId: string;
+    domain: string;
+    language: 'fr' | 'en';
+    languageSource: string;
     currentTouch: number;
+    state: string;
     stateEnteredAt: string;
     stateReason: string | null;
+    touches: { touch: number; sentAt: string; detectedAt: string }[];
     lastSyncedAt: string | null;
+    needsReview: { reason: string; detectedAt: string } | null;
+    currentOutcome: { outcome: string; lostReason: string | null; recordedAt: string } | null;
+    drafts: {
+      draftId: string;
+      touch: number;
+      language: 'fr' | 'en';
+      status: 'created' | 'deleted' | 'failed';
+      touch1EvidenceSlot: string | null;
+      failureReason: string | null;
+      hasProviderDraft: boolean;
+      createdAt: string;
+      deletedAt: string | null;
+      reviewOutcome: 'approved' | 'skipped' | null;
+      reviewedAt: string | null;
+    }[];
   } | null;
   outcomes: {
     rows: {
@@ -318,24 +356,17 @@ export interface ProspectDetailResponse {
    *  purpose: a cached or fixture payload may predate the field, and the
    *  button simply does not render then. */
   outreachScan?: { canStart: boolean; refusal?: string };
-  // prescan, evidence, score, and preview also cross the boundary; they
-  // render on their own routes, which this page only links to.
-}
-
-/** Sibling pages of one prospect; the detail page links to them instead of
- *  duplicating their sections. */
-export function prospectSubPages(candidateId: string): {
-  key: 'prescan' | 'score' | 'evidence' | 'preview' | 'outreach';
-  path: string;
-}[] {
-  const encoded = encodeURIComponent(candidateId);
-  return [
-    { key: 'prescan', path: `/prospects/${encoded}/prescan` },
-    { key: 'score', path: `/prospects/${encoded}/score` },
-    { key: 'evidence', path: `/prospects/${encoded}/evidence` },
-    { key: 'preview', path: `/prospects/${encoded}/preview` },
-    { key: 'outreach', path: `/prospects/${encoded}/outreach` },
-  ];
+  /** Plan 040 slice 4: the candidate's latest outreach audit, identity and
+   *  severity totals only. The report lifecycle stays on
+   *  GET /api/audits/:auditId, which the hub's Audit section calls when
+   *  it needs it. Optional for the same fixture tolerance as outreachScan. */
+  outreachAudit?: {
+    auditId: string;
+    startedAt: string;
+    severityRollup: { critical: number; serious: number; moderate: number; minor: number };
+  } | null;
+  /** The queued-or-running outreach full scan for this candidate, if any. */
+  outreachScanJobId?: string | null;
 }
 
 /** Body of POST /api/prospects/:candidateId/review. The reason stays out:
@@ -354,11 +385,6 @@ export interface ProspectReviewResponse {
 // ---------------------------------------------------------------------------
 // Outreach thread (prospects-scoped: single-candidate draft generation)
 // ---------------------------------------------------------------------------
-
-/** Body of GET /api/prospects/:candidateId/outreach. */
-export interface OutreachThreadResponse {
-  thread: { threadId: string; state: string; currentTouch: number } | null;
-}
 
 /** Shared response shape of both draft-generation actions
  *  (POST .../outreach/draft and .../outreach/follow-up): a refusal is a

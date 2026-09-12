@@ -290,12 +290,14 @@ export type {
 // queue runner cannot drift apart.
 export { planOutreachFullScan, resolveOutreachAuditForCandidate } from './outreach-scans.js';
 export { findActiveOutreachFullScanJob, findActiveScanJobForHost } from './outreach-scans.js';
+export { getOutreachAuditStatus } from './outreach-scans.js';
 export type {
   OutreachFullScanPlan,
   OutreachFullScanStartRefusal,
   OutreachFullScanVersionInputs,
   OutreachAuditRefusal,
   OutreachAuditResolution,
+  OutreachAuditStatus,
 } from './outreach-scans.js';
 
 // Milestone 9c plans 011 and 012: outreach threads and draft attempts.

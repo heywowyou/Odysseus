@@ -604,6 +604,90 @@ export interface DashboardStrings {
       groupId: string;
     };
   };
+  /** Plan 040 slice 4: the hotel hub. The pipeline strip, the one primary
+   *  action, and the few strings its six sections need beyond the stage
+   *  groups they reuse (prescan, score, evidence, preview, outreachThread,
+   *  drafts, outcomes, labels). */
+  hub: {
+    /** Accessible name of the pipeline strip. */
+    pipelineLabel: string;
+    steps: Record<'fiche' | 'quick-check' | 'audit' | 'preview' | 'emails' | 'outcome', string>;
+    stepStates: Record<'done' | 'active' | 'todo' | 'blocked', string>;
+    /** The header's one primary action, chosen by state (review and the
+     *  terminal refusal excepted: review reuses operator.accept, a refusal
+     *  is a sentence, not a button). */
+    primary: {
+      startScan: string;
+      seeProgress: string;
+      publish: string;
+      createFirstEmail: string;
+      reviewDraft: string;
+      prepareFollowUp: string;
+      recordOutcome: string;
+    };
+    /** Where the primary button would sit when the scan stage refused:
+     *  one plain sentence per typed reason, untranslated codes never
+     *  shown. */
+    scanRefusedLabel: string;
+    scanRefusals: Record<
+      | 'candidate-unknown'
+      | 'no-own-domain'
+      | 'not-selected'
+      | 'cohort-not-approved'
+      | 'not-qualified'
+      | 'qualification-not-current'
+      | 'domain-mismatch'
+      | 'suppressed'
+      | 'already-in-flight',
+      string
+    >;
+    fiche: {
+      starsLabel: string;
+      roomsLabel: string;
+      capacityLabel: string;
+      /** Disclosure holding the internal identifiers and version codes. */
+      technicalDetails: string;
+      hideTechnicalDetails: string;
+      /** Re-opens the accept/reject decision after it was recorded. */
+      changeDecision: string;
+    };
+    quickCheck: {
+      empty: string;
+      metricsDisclosure: string;
+      hideMetrics: string;
+      metricsColumns: {
+        page: string;
+        lcp: string;
+        cls: string;
+        blocking: string;
+        requests: string;
+      };
+    };
+    audit: {
+      empty: string;
+      running: string;
+      openAudit: string;
+      stageLabel: string;
+    };
+    emails: {
+      /** {n} is the follow-up number: Relance 1, Relance 2. */
+      followUpName: string;
+      firstEmailName: string;
+      needsReviewNotice: string;
+      noPendingDraft: string;
+    };
+    outcome: {
+      formHeading: string;
+      outcomeLabel: string;
+      lostReasonLabel: string;
+      submit: string;
+      recorded: string;
+      optOutConfirmTitle: string;
+      optOutConfirmBody: string;
+      optOutDone: string;
+      actionError: string;
+    };
+  };
   prescan: {
     title: string;
     description: string;

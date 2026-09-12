@@ -9,7 +9,6 @@ import {
   isIdentityStatusValue,
   isQualificationValue,
   locationLabel,
-  prospectSubPages,
   qualificationBadgeTone,
   reviewBadgeTone,
   totalPages,
@@ -138,22 +137,6 @@ describe('filter value guards', () => {
     expect(isQualificationValue('')).toBe(true);
     expect(isQualificationValue('not-evaluated')).toBe(true);
     expect(isQualificationValue('banana')).toBe(false);
-  });
-});
-
-describe('prospectSubPages', () => {
-  it('links the five sibling pages of a candidate', () => {
-    expect(prospectSubPages('cand-1').map((page) => page.path)).toEqual([
-      '/prospects/cand-1/prescan',
-      '/prospects/cand-1/score',
-      '/prospects/cand-1/evidence',
-      '/prospects/cand-1/preview',
-      '/prospects/cand-1/outreach',
-    ]);
-  });
-
-  it('encodes the candidate id into the paths', () => {
-    expect(prospectSubPages('a/b').every((page) => !page.path.includes('a/b'))).toBe(true);
   });
 });
 

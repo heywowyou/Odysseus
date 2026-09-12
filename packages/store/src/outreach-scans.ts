@@ -133,6 +133,36 @@ export async function findActiveOutreachFullScanJob(
     .lean<JobDocument>();
 }
 
+/** The hub's audit facts for one candidate (plan 040 slice 4): the latest
+ *  stored audit's identity, plus the id of a scan still in flight. This is
+ *  a summary, not the fail-closed preview gate: a summary may legitimately
+ *  show an audit that preview publication would refuse, the severity
+ *  totals are joined by the caller (getSeverityRollup, one indexed
+ *  aggregate), and the report lifecycle stays on the audit's own endpoint
+ *  where it is already computed. */
+export interface OutreachAuditStatus {
+  audit: { auditId: string; startedAt: Date } | null;
+  runningJobId: string | null;
+}
+
+export async function getOutreachAuditStatus(
+  connection: Connection,
+  candidateId: string,
+): Promise<OutreachAuditStatus> {
+  const AuditModel = createAuditModel(connection);
+  const [audit, activeJob] = await Promise.all([
+    AuditModel.findOne({ 'outreach.candidateId': candidateId })
+      .sort({ startedAt: -1 })
+      .select({ auditId: 1, startedAt: 1 })
+      .lean<{ auditId: string; startedAt: Date } | null>(),
+    findActiveOutreachFullScanJob(connection, candidateId),
+  ]);
+  return {
+    audit: audit === null ? null : { auditId: audit.auditId, startedAt: audit.startedAt },
+    runningJobId: activeJob?.jobId ?? null,
+  };
+}
+
 /** Any queued-or-running browser scan of one hostname, so the route can
  *  refuse an outreach scan that would duplicate a full audit already in
  *  flight against the same site. */

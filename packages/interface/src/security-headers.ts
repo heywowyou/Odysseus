@@ -1,10 +1,10 @@
 import type { ServerResponse } from 'node:http';
 
 /** CSP for the SPA shell HTML. style-src allows inline styles because the
- *  sandboxed srcDoc preview iframe (dashboard/routes/preview.tsx) inherits
- *  this policy and the outreach preview HTML embeds an inline <style> block
- *  (report/outreach-preview/render-html.ts). img-src allows data: for the
- *  shell's data: favicon. */
+ *  sandboxed srcDoc preview iframe (dashboard/routes/hub-preview-section.tsx)
+ *  inherits this policy and the outreach preview HTML embeds an inline
+ *  <style> block (report/outreach-preview/render-html.ts). img-src allows
+ *  data: for the shell's data: favicon. */
 export const SPA_CONTENT_SECURITY_POLICY =
   "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
   "img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; " +

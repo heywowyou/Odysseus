@@ -47,6 +47,25 @@
   while the tab is hidden and list pages share a 10-second interval. The
   detail-page conditional 5-second-while-busy half of the poll policy is
   deferred to slice 5, which restructures the audit page anyway.
+- **Slice 4 landed 2026-09-12**: the hub at `/prospects/:candidateId`
+  (header with one state-driven primary action per the approved ladder, a
+  six-step pipeline strip, and the Fiche / Contrôle rapide / Audit /
+  Aperçu / Emails / Résultat sections); the five single-purpose subpages
+  (`/prescan`, `/score`, `/evidence`, `/preview`, `/outreach`) retire as
+  redirects; the "Lancer un audit" trap button is gone and a scan refusal
+  is explained in plain words where the button would sit; the outcome form
+  (existing `POST /api/outreach/threads/:threadId/outcome`) and the opt-out
+  action with its own confirmation text live in the Résultat section.
+  Additive API: `GET /api/prospects/:id` now carries `outreachAudit`
+  (latest audit id, startedAt, severity totals via the indexed rollup
+  aggregate) and `outreachScanJobId`; the hub's Audit section reads the
+  report lifecycle from the existing `GET /api/audits/:auditId`. The hub
+  polls every 5 s only while a scan it started is running (the deferred
+  half of the slice 3 poll policy). The IA's additive drafts `candidateId`
+  filter was deliberately not built: the composed thread view the detail
+  already carries includes each draft's id and review outcome, so the
+  Emails section needs no second list call; the hotel-name half of that
+  item stays with slice 6.
 
 ## Why this matters
 

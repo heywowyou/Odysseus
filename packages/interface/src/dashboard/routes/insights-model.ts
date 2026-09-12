@@ -152,13 +152,6 @@ export interface PreviewResponse {
   sourceKind: 'prescan' | 'full-audit';
 }
 
-/** Issue #97: result of the revoke action over every live preview of the
- *  hotel's domain. */
-export interface PreviewRevokeResponse {
-  revoked: number;
-  alreadyRevoked: number;
-}
-
 // ---------------------------------------------------------------------------
 // Shared header identity
 // ---------------------------------------------------------------------------

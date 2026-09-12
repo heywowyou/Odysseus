@@ -6,7 +6,8 @@ import { createRoot } from 'react-dom/client';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '../i18n/provider';
-import { ProspectDetailPage, websiteHref } from './prospect-detail';
+import { ProspectDetailPage } from './prospect-detail';
+import { websiteHref } from './hub-fiche-section';
 import type { ProspectDetailResponse } from './prospects-model';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -65,6 +66,10 @@ function detailWithContact(contact: ProspectDetailResponse['contact']): Prospect
     sourceRefs: [],
     qualification: null,
     qualificationHistory: { rows: [], total: 0, limit: 10, offset: 0 },
+    prescan: null,
+    score: null,
+    evidence: null,
+    preview: null,
     contact,
     thread: null,
     outcomes: { rows: [], total: 0, limit: 10, offset: 0 },
@@ -98,12 +103,10 @@ async function renderDetail(): Promise<void> {
   });
 }
 
-/** The Contact card's own section element, found by its h2 title. */
-function contactCard(): HTMLElement | undefined {
-  const heading = [...document.querySelectorAll('h2')].find(
-    (node) => node.textContent === 'Contact',
-  );
-  return heading?.closest('section') ?? undefined;
+/** The hub's whole text: the contact rows render inside the Fiche
+ *  section since the hub merged the former per-topic cards. */
+function pageText(): string {
+  return document.body.textContent ?? '';
 }
 
 describe('websiteHref', () => {
@@ -162,10 +165,10 @@ describe('ProspectDetailPage contact section (issue #95)', () => {
 
   it('renders labelled operator copy instead of raw field names', async () => {
     await renderDetail();
-    await waitFor(() => (contactCard() !== undefined ? true : undefined));
+    await waitFor(() => (pageText().includes('Décision') ? true : undefined));
     await pause();
 
-    const text = contactCard()?.textContent ?? '';
+    const text = pageText();
     expect(text).toContain('Décision');
     expect(text).toContain('Inutilisable');
     expect(text).toContain('Motif');
@@ -178,9 +181,9 @@ describe('ProspectDetailPage contact section (issue #95)', () => {
 
   it('omits the source row when the contact carries no source kind', async () => {
     await renderDetail();
-    await waitFor(() => (contactCard() !== undefined ? true : undefined));
+    await waitFor(() => (pageText().includes('Décision') ? true : undefined));
     await pause();
 
-    expect(contactCard()?.textContent ?? '').not.toContain('Source');
+    expect(pageText()).not.toContain('Source');
   });
 });

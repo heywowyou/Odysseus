@@ -1,22 +1,27 @@
-import { Navigate, Route, Routes } from 'react-router';
+import { Navigate, Route, Routes, useParams } from 'react-router';
+import type { JSX } from 'react';
 import { AppShell } from './app/shell';
 import { AuditDetailPage } from './routes/audit-detail';
 import { AuditsPage } from './routes/audits';
 import { DraftsPage } from './routes/drafts';
-import { EvidencePage } from './routes/evidence';
 import { LoginPage } from './routes/login';
 import { NewScanPage } from './routes/new-scan';
 import { OutcomesPage } from './routes/outcomes';
-import { OutreachThreadPage } from './routes/outreach-thread';
-import { PrescanPage } from './routes/prescan';
-import { PreviewPage } from './routes/preview';
 import { ProspectDetailPage } from './routes/prospect-detail';
 import { ProspectsPage } from './routes/prospects';
 import { RepliesPage } from './routes/replies';
 import { ScanProgressPage } from './routes/scan-progress';
-import { ScorePage } from './routes/score';
 import { SuppressionsPage } from './routes/suppressions';
 import { OutreachIndexPage } from './routes/outreach-index';
+
+/** Plan 040 slice 4: the five single-purpose prospect subpages retired
+ *  into the hub. Old links and bookmarks keep working: each subpage URL
+ *  lands on the same hub page whose sections absorbed it
+ *  (docs/product/dashboard-ia.md, page destiny table). */
+function ProspectSubpageRedirect(): JSX.Element {
+  const { candidateId } = useParams<{ candidateId: string }>();
+  return <Navigate to={`/prospects/${candidateId ?? ''}`} replace />;
+}
 
 export function App() {
   return (
@@ -32,11 +37,11 @@ export function App() {
         <Route path="scans/:jobId" element={<ScanProgressPage />} />
         <Route path="prospects" element={<ProspectsPage />} />
         <Route path="prospects/:candidateId" element={<ProspectDetailPage />} />
-        <Route path="prospects/:candidateId/prescan" element={<PrescanPage />} />
-        <Route path="prospects/:candidateId/score" element={<ScorePage />} />
-        <Route path="prospects/:candidateId/evidence" element={<EvidencePage />} />
-        <Route path="prospects/:candidateId/preview" element={<PreviewPage />} />
-        <Route path="prospects/:candidateId/outreach" element={<OutreachThreadPage />} />
+        <Route path="prospects/:candidateId/prescan" element={<ProspectSubpageRedirect />} />
+        <Route path="prospects/:candidateId/score" element={<ProspectSubpageRedirect />} />
+        <Route path="prospects/:candidateId/evidence" element={<ProspectSubpageRedirect />} />
+        <Route path="prospects/:candidateId/preview" element={<ProspectSubpageRedirect />} />
+        <Route path="prospects/:candidateId/outreach" element={<ProspectSubpageRedirect />} />
         <Route path="outreach" element={<OutreachIndexPage />} />
         <Route path="outreach/drafts" element={<DraftsPage />} />
         <Route path="outreach/replies" element={<RepliesPage />} />

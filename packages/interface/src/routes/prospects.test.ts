@@ -11,6 +11,8 @@ vi.mock('@odysseus/store', () => ({
   getProspectPreviewView: vi.fn(),
   planOutreachFullScan: vi.fn(),
   createJob: vi.fn(),
+  getOutreachAuditStatus: vi.fn(),
+  getSeverityRollup: vi.fn(),
 }));
 
 vi.mock('../outreach/draft-runtime.js', () => ({
@@ -30,8 +32,10 @@ import {
   createJob,
   findOutreachThreadByCandidate,
   getOperatorProspect,
+  getOutreachAuditStatus,
   getProspectPreviewView,
   getProspectQualificationHistory,
+  getSeverityRollup,
   listOperatorProspects,
   planOutreachFullScan,
   recordHotelCandidateReview,
@@ -177,6 +181,16 @@ beforeEach(() => {
   } as never);
   vi.mocked(planOutreachFullScan).mockResolvedValue({ refused: 'not-selected' } as never);
   vi.mocked(createJob).mockResolvedValue({ jobId: 'job-new-1' } as never);
+  vi.mocked(getOutreachAuditStatus).mockResolvedValue({
+    audit: null,
+    runningJobId: null,
+  } as never);
+  vi.mocked(getSeverityRollup).mockResolvedValue({
+    critical: 0,
+    serious: 0,
+    moderate: 0,
+    minor: 0,
+  } as never);
 });
 
 async function handle(url: string, options: FakeReqOptions = {}) {
@@ -285,10 +299,16 @@ describe('GET /api/prospects/:candidateId', () => {
   it('never carries contact-address, message-body, or hash fields', async () => {
     const res = await handle('/api/prospects/cand-1');
     const body = JSON.parse(res.body ?? '{}') as Record<string, unknown>;
-    // The route may add qualificationHistory and outreachScan and nothing
-    // else.
+    // The route may add qualificationHistory, outreachScan, the audit
+    // summary, and the running-scan id, and nothing else.
     expect(Object.keys(body).sort()).toEqual(
-      [...Object.keys(makeDetail()), 'qualificationHistory', 'outreachScan'].sort(),
+      [
+        ...Object.keys(makeDetail()),
+        'qualificationHistory',
+        'outreachScan',
+        'outreachAudit',
+        'outreachScanJobId',
+      ].sort(),
     );
     const serialized = res.body ?? '';
     for (const forbidden of [
@@ -317,6 +337,42 @@ describe('GET /api/prospects/:candidateId', () => {
     expect(planOutreachFullScan).toHaveBeenCalledWith(fakeConnection, 'cand-1', {
       qualificationVersion: 'v3',
     });
+  });
+
+  it('joins severity totals onto the latest outreach audit and carries the running job id', async () => {
+    vi.mocked(getOutreachAuditStatus).mockResolvedValue({
+      audit: { auditId: 'audit-1', startedAt: new Date('2026-09-01T00:00:00.000Z') },
+      runningJobId: 'job-running-1',
+    } as never);
+    vi.mocked(getSeverityRollup).mockResolvedValue({
+      critical: 1,
+      serious: 2,
+      moderate: 3,
+      minor: 4,
+    } as never);
+    const res = await handle('/api/prospects/cand-1');
+    expect(res.statusCode).toBe(200);
+    expect(getSeverityRollup).toHaveBeenCalledWith(fakeConnection, 'audit-1');
+    const body = JSON.parse(res.body ?? '{}');
+    expect(body.outreachAudit).toEqual({
+      auditId: 'audit-1',
+      startedAt: '2026-09-01T00:00:00.000Z',
+      severityRollup: { critical: 1, serious: 2, moderate: 3, minor: 4 },
+    });
+    expect(body.outreachScanJobId).toBe('job-running-1');
+  });
+
+  it('answers a null audit summary without reading severity counts', async () => {
+    vi.mocked(getOutreachAuditStatus).mockResolvedValue({
+      audit: null,
+      runningJobId: 'job-queued-1',
+    } as never);
+    const res = await handle('/api/prospects/cand-1');
+    expect(res.statusCode).toBe(200);
+    expect(getSeverityRollup).not.toHaveBeenCalled();
+    const body = JSON.parse(res.body ?? '{}');
+    expect(body.outreachAudit).toBeNull();
+    expect(body.outreachScanJobId).toBe('job-queued-1');
   });
 });
 

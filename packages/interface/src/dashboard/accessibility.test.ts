@@ -10,18 +10,14 @@ import { I18nProvider } from './i18n/provider';
 import { AuditDetailPage } from './routes/audit-detail';
 import { AuditsPage } from './routes/audits';
 import { DraftsPage } from './routes/drafts';
-import { EvidencePage } from './routes/evidence';
 import { LoginPage } from './routes/login';
 import { NewScanPage } from './routes/new-scan';
 import { OutreachIndexPage } from './routes/outreach-index';
 import { OutcomesPage } from './routes/outcomes';
-import { PrescanPage } from './routes/prescan';
-import { PreviewPage } from './routes/preview';
 import { ProspectDetailPage } from './routes/prospect-detail';
 import { ProspectsPage } from './routes/prospects';
 import { RepliesPage } from './routes/replies';
 import { ScanProgressPage } from './routes/scan-progress';
-import { ScorePage } from './routes/score';
 import { SuppressionsPage } from './routes/suppressions';
 
 /** Plan 013 step 5, extended by plan 022 step 6: axe must report zero
@@ -281,9 +277,16 @@ describe('operator page accessibility (plan 013 step 5, extended plan 022 step 6
         sourceRefs: [],
         qualification: null,
         qualificationHistory: { rows: [], total: 0, limit: 50, offset: 0 },
+        prescan: null,
+        score: null,
+        evidence: null,
+        preview: null,
         contact: null,
         thread: null,
         outcomes: { rows: [], total: 0, limit: 50, offset: 0 },
+        outreachScan: { canStart: false, refusal: 'not-selected' },
+        outreachAudit: null,
+        outreachScanJobId: null,
       },
     });
     const { container, root } = await renderPage(createElement(ProspectDetailPage), {
@@ -295,102 +298,192 @@ describe('operator page accessibility (plan 013 step 5, extended plan 022 step 6
     root.unmount();
   });
 
-  it('prescan page has no axe violations with no captured pages', async () => {
+  it('hotel hub has no axe violations with every pipeline stage populated', async () => {
     stubRoutes({
-      '/api/prospects/cand-1/prescan': {
-        prescanId: 'prescan-1',
-        prescanVersion: 'v1',
-        status: 'complete',
-        domain: 'exemple.fr',
-        startedAt: '2026-09-01T09:00:00.000Z',
-        durationMs: 4200,
-        robotsTxtFound: true,
-        absentRoles: [],
-        evidenceStatus: 'complete',
-        pages: [],
+      '/api/audits/audit-1/report-preparation': null,
+      '/api/audits/audit-1': {
+        auditId: 'audit-1',
+        lifecycle: 'rendered',
       },
-    });
-    const { container, root } = await renderPage(createElement(PrescanPage), {
-      path: '/prospects/cand-1/prescan',
-      pattern: 'prospects/:candidateId/prescan',
-    });
-    await settle(container, 'Contrôle rapide');
-    await expectNoAxeViolations(container);
-    root.unmount();
-  });
-
-  it('score page has no axe violations with an empty breakdown', async () => {
-    stubRoutes({
-      '/api/prospects/cand-1/score/diff': {
+      '/api/prospects/cand-1': {
         candidateId: 'cand-1',
-        fromVersion: 'v1',
-        toVersion: 'v1',
-        from: null,
-        to: null,
-        brokennessDelta: null,
-        abilityDelta: null,
+        resolutionVersion: 'v1',
+        identityKey: 'key-1',
+        identityStatus: 'resolved',
+        matchedOn: null,
+        siret: null,
+        siren: null,
+        name: 'Hôtel du Quai Exemple',
+        commune: 'Grenoble',
+        postcode: '38000',
+        starRating: 3,
+        roomCount: 42,
+        capacity: 90,
+        campaignEligibility: 'eligible',
+        groupStatus: 'independent',
+        groupDomain: null,
+        groupSize: null,
+        ownRegistrableDomain: 'exemple.fr',
+        domainProvenance: 'declared',
+        declaredRegistrableDomain: 'exemple.fr',
+        reviewState: 'not-required',
+        review: { queuedReason: null, actor: null, reason: null, decidedAt: null },
+        qualificationOutcome: 'qualified',
+        prescanStatus: 'complete',
+        websites: [
+          {
+            raw: 'https://exemple.fr',
+            kind: 'own-domain',
+            hostname: 'exemple.fr',
+            registrableDomain: 'exemple.fr',
+            unusableReason: null,
+          },
+        ],
+        conflicts: [],
+        sourceRefs: [],
+        qualification: {
+          qualificationId: 'q-1',
+          qualificationVersion: 'v3',
+          domain: 'exemple.fr',
+          outcome: 'qualified',
+          reasons: ['three-stars-or-more'],
+          notes: [],
+          sireneStatus: 'active',
+          effectifBandCode: '12',
+          evaluatedAt: '2026-08-01T00:00:00.000Z',
+        },
+        qualificationHistory: { rows: [], total: 0, limit: 10, offset: 0 },
+        prescan: {
+          prescanId: 'prescan-1',
+          name: 'Hôtel du Quai Exemple',
+          commune: 'Grenoble',
+          postcode: '38000',
+          prescanVersion: 'v3',
+          status: 'complete',
+          domain: 'exemple.fr',
+          startedAt: '2026-09-01T09:00:00.000Z',
+          durationMs: 4200,
+          robotsTxtFound: true,
+          absentRoles: [],
+          evidenceStatus: 'complete',
+          pages: [
+            {
+              role: 'homepage',
+              httpStatus: 200,
+              missingPercent: 0,
+              rawTextLength: 500,
+              renderedTextLength: 900,
+              consoleErrorCount: 0,
+              axe: {
+                violationCount: 2,
+                byImpact: { critical: 0, serious: 1, moderate: 1, minor: 0 },
+                affectedElementCount: 3,
+                ruleIds: ['color-contrast'],
+              },
+              metrics: {
+                largestContentfulPaintMs: 2100,
+                cumulativeLayoutShift: 0.02,
+                longTaskCount: 1,
+                mainThreadBlockingMs: 220,
+                requestCount: 24,
+                transferBytes: 480000,
+                thirdPartyRequestCount: 2,
+                sizeUnavailableCount: 0,
+                observationWindowMs: 8000,
+              },
+              bookingEvidenceKinds: ['checkout-form'],
+              skippedByRobots: false,
+              durationMs: 1400,
+            },
+          ],
+        },
+        score: {
+          scoreId: 'score-1',
+          candidateId: 'cand-1',
+          name: 'Hôtel du Quai Exemple',
+          commune: 'Grenoble',
+          postcode: '38000',
+          scoringVersion: 'hotel-outreach-v1',
+          prescanId: 'prescan-1',
+          computedAt: '2026-09-01T09:05:00.000Z',
+          worthy: true,
+          evidenceComplete: true,
+          brokenness: { total: 4, components: [] },
+          ability: { total: 12, components: [] },
+        },
+        evidence: {
+          prescanId: 'prescan-1',
+          name: 'Hôtel du Quai Exemple',
+          commune: 'Grenoble',
+          postcode: '38000',
+          evidenceStatus: 'incomplete',
+          renderComparison: { state: 'omitted', reason: 'homepage-unreachable' },
+          specificFailure: { state: 'omitted', reason: 'no-failure-evidence' },
+          summaries: [],
+        },
+        preview: {
+          previewId: 'preview-1',
+          name: 'Hôtel du Quai Exemple',
+          commune: 'Grenoble',
+          postcode: '38000',
+          domain: 'exemple.fr',
+          language: 'fr',
+          status: 'live',
+          publishedAt: '2026-09-01T09:00:00.000Z',
+          publicExpiresAt: '2099-01-01T00:00:00.000Z',
+          revokedAt: null,
+          revokedReason: null,
+          prescanVersion: null,
+          evidenceVersion: null,
+          previewContentVersion: 'v2',
+          sourceKind: 'full-audit',
+        },
+        contact: null,
+        thread: {
+          threadId: 'thread-1',
+          candidateId: 'cand-1',
+          domain: 'exemple.fr',
+          language: 'fr',
+          languageSource: 'operator',
+          currentTouch: 1,
+          state: 'e1-drafted',
+          stateEnteredAt: '2026-09-02T08:00:00.000Z',
+          stateReason: null,
+          touches: [],
+          lastSyncedAt: null,
+          needsReview: null,
+          currentOutcome: null,
+          drafts: [
+            {
+              draftId: 'draft-1',
+              touch: 1,
+              language: 'fr',
+              status: 'created',
+              touch1EvidenceSlot: null,
+              failureReason: null,
+              hasProviderDraft: true,
+              createdAt: '2026-09-02T08:00:00.000Z',
+              deletedAt: null,
+              reviewOutcome: null,
+              reviewedAt: null,
+            },
+          ],
+        },
+        outcomes: { rows: [], total: 0, limit: 10, offset: 0 },
+        outreachScan: { canStart: false, refusal: 'already-in-flight' },
+        outreachAudit: {
+          auditId: 'audit-1',
+          startedAt: '2026-09-01T10:00:00.000Z',
+          severityRollup: { critical: 0, serious: 1, moderate: 2, minor: 3 },
+        },
+        outreachScanJobId: null,
       },
-      '/api/prospects/cand-1/score': {
-        scoreId: 'score-1',
-        candidateId: 'cand-1',
-        scoringVersion: 'v1',
-        prescanId: 'prescan-1',
-        computedAt: '2026-09-01T09:05:00.000Z',
-        worthy: true,
-        evidenceComplete: true,
-        brokenness: { total: 0, components: [] },
-        ability: { total: 0, components: [] },
-      },
     });
-    const { container, root } = await renderPage(createElement(ScorePage), {
-      path: '/prospects/cand-1/score',
-      pattern: 'prospects/:candidateId/score',
+    const { container, root } = await renderPage(createElement(ProspectDetailPage), {
+      path: '/prospects/cand-1',
+      pattern: 'prospects/:candidateId',
     });
-    await settle(container, 'Décomposition');
-    await expectNoAxeViolations(container);
-    root.unmount();
-  });
-
-  it('evidence page has no axe violations with omitted assets', async () => {
-    stubRoutes({
-      '/api/prospects/cand-1/evidence': {
-        prescanId: 'prescan-1',
-        evidenceStatus: 'incomplete',
-        renderComparison: { state: 'omitted', reason: 'homepage-unreachable' },
-        specificFailure: { state: 'omitted', reason: 'no-failure-evidence' },
-        summaries: [],
-      },
-    });
-    const { container, root } = await renderPage(createElement(EvidencePage), {
-      path: '/prospects/cand-1/evidence',
-      pattern: 'prospects/:candidateId/evidence',
-    });
-    await settle(container, 'Preuves');
-    await expectNoAxeViolations(container);
-    root.unmount();
-  });
-
-  it('preview page has no axe violations while the preview is live', async () => {
-    stubRoutes({
-      '/api/prospects/cand-1/preview': {
-        previewId: 'preview-1',
-        domain: 'exemple.fr',
-        language: 'fr',
-        status: 'live',
-        publishedAt: '2026-09-01T09:00:00.000Z',
-        publicExpiresAt: '2099-01-01T00:00:00.000Z',
-        revokedAt: null,
-        revokedReason: null,
-        prescanVersion: 'v1',
-        evidenceVersion: 'v1',
-        previewContentVersion: 'v1',
-      },
-    });
-    const { container, root } = await renderPage(createElement(PreviewPage), {
-      path: '/prospects/cand-1/preview',
-      pattern: 'prospects/:candidateId/preview',
-    });
-    await settle(container, 'Aperçu');
+    await settle(container, 'Hôtel du Quai Exemple');
     await expectNoAxeViolations(container);
     root.unmount();
   });

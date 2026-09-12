@@ -10,8 +10,10 @@ import {
   createJob,
   findOutreachThreadByCandidate,
   getOperatorProspect,
+  getOutreachAuditStatus,
   getProspectPreviewView,
   getProspectQualificationHistory,
+  getSeverityRollup,
   listOperatorProspects,
   planOutreachFullScan,
   recordHotelCandidateReview,
@@ -287,11 +289,25 @@ export function registerProspectRoutes(
     const plan = await planOutreachFullScan(connection, candidateId, {
       qualificationVersion: CURRENT_QUALIFICATION_VERSION,
     });
+    // Plan 040 slice 4: the hub's Audit section reads the candidate's
+    // latest outreach audit identity and severity totals here, and the id
+    // of a scan still in flight. The report lifecycle stays on
+    // GET /api/audits/:auditId, which computes it from the stored pair.
+    const auditStatus = await getOutreachAuditStatus(connection, candidateId);
+    const severityRollup =
+      auditStatus.audit === null
+        ? null
+        : await getSeverityRollup(connection, auditStatus.audit.auditId);
     sendJson(res, 200, {
       ...detail,
       qualificationHistory,
       outreachScan:
         'refused' in plan ? { canStart: false, refusal: plan.refused } : { canStart: true },
+      outreachScanJobId: auditStatus.runningJobId,
+      outreachAudit:
+        auditStatus.audit === null || severityRollup === null
+          ? null
+          : { ...auditStatus.audit, severityRollup },
     });
   });
 
