@@ -9,9 +9,12 @@
 ## Status
 
 - **Priority**: P3 for Part A; P2 for Part B
-- **Effort**: TBD, set at the end of Slice 1
-- **Risk**: LOW at Slice 1 (research and a written proposal only, no code
-  change); revisit once Slice 1 picks a shape
+- **Effort**: M for Part A Slice 2 (combined fix snippets + scorecard, one
+  slice per the operator's build-order pick 2026-09-12)
+- **Risk**: LOW at Slice 1 (done, research only). MEDIUM at Slice 2: touches
+  the report's design system (trade-off 9) and the outreach preview's
+  narrow contract (trade-off 42), though the operator's picks below keep
+  the preview change additive rather than a widen.
 - **Depends on**: 039 (design tokens, if the scorecard renders inside the
   report or preview) and possibly 040 (dashboard IA, if it renders there
   instead); Slice 1 resolves which
@@ -97,6 +100,244 @@ main tradeoff for each, and stop. Bring the document to the operator for a
 direction pick before Slice 2 is written. Slice 2 onward, including binding
 decisions, effort/risk sizing, and STOP conditions, are written after that
 pick, not before.
+
+**Done 2026-09-12 by Claude Code.**
+`docs/product/fix-snippets-and-scorecard-brainstorm.md` written; operator
+direction pick recorded there and carried into Slice 2 below.
+
+## Slice 2: fix snippets and the scorecard (combined)
+
+**Landed 2026-09-12 by Claude Code.** All checklist items below are done.
+The own-counts grade band question (originally framed as "calibrate
+against real scan data, which this machine does not have") was resolved
+differently, per the operator's direction mid-implementation ("can't we
+just use the score system we already have?"): instead of inventing and
+empirically calibrating a new normalized severity index, `grade.ts`'s
+`computeSeverityGrade` anchors its A/B/D/F cutoffs directly on the exact
+numbers the two already-reviewed cost gates use
+(`isAuditFallbackEligible`/`isProspectingWorthy`,
+`packages/core/src/cost-gating/brokenness.ts`, trade-off 23/38). This
+needed no real-scan data at all: those thresholds were already approved
+policy before this grade existed. See "Design direction" and the
+Verification section below for the reasoning and the regression-guard
+tests that keep the two from drifting apart. The comparative grade
+(`computeComparativeGrade`, report-only, benchmark-percentile path) still
+has un-anchored band cutoffs - lower stakes, since it only fires once
+milestone 10's benchmark cohort exists, which it does not yet.
+
+Operator picks, 2026-09-12, via the interactive question mechanism (asked
+twice: once on the two features generally, once specifically on the
+outreach preview's stricter no-statistics rule once that tension surfaced
+mid-design):
+
+1. Content-dependent rules get a fill-in-the-blank snippet (the correct
+   markup shape with a blank for the client's own wording); fixed-shape
+   rules keep a ready-to-paste snippet, ancestry: the brainstorm's fix
+   snippet questions (a) to (d).
+2. The scorecard shows a letter grade, always paired with a fixed,
+   non-removable disclaimer sentence ("mesure les constats des scanners,
+   pas la conformite legale" / "measures scanner findings, not legal
+   compliance"). Never rendered without that sentence. This is the
+   operator's call against the brainstorm's "never a letter grade"
+   recommendation; the disclaimer is the agreed mitigation for
+   non-negotiable rule 6.
+3. It renders on both the report cover/metadata sheet and the outreach
+   preview, not staged.
+4. **The report's grade may use the benchmark percentile comparison; the
+   outreach preview's grade may not.** Surfaced mid-design: the percentile
+   ("scores worse than X% of comparable sites") is a comparative
+   statistic, and trade-off 42/16 forbid the outreach preview from
+   carrying statistics or comparisons to other sites. The operator picked
+   "own counts only, no comparison" for the preview specifically, which
+   stays inside the existing rule with no amendment. The report is not
+   bound by that rule, so its grade uses the percentile when one exists.
+   Two grade sources therefore exist by design, not by oversight:
+   - **Report**: percentile-based grade when `hasBenchmarkPercentile` is
+     true (packages/core/src/benchmark/percentile.ts); the own-counts
+     fallback below when the cohort is too small.
+   - **Outreach preview**: always the own-counts fallback, never the
+     percentile, regardless of cohort size.
+
+### Design direction
+
+**Fix snippets**
+
+- Add an optional `snippet` alongside each rule ID's existing FR/EN
+  remediation prose in `packages/report/src/template/remediation/`
+  (`index.ts`, `en.ts`, `fr.ts`) rather than a parallel table, per the
+  brainstorm's recommendation (b): one file, one per-rule-ID key, reuses
+  trade-off 71's existing coverage-enforcement mechanism.
+- `snippet` shape: `{ kind: 'fixed' | 'fill-in-blank' | 'not-applicable'; template: string }`.
+  `fixed` templates may reference `${selector}`/`${resourceUrl}` etc.,
+  substituted by one new pure interpolation helper reading only
+  `FindingElement`'s existing fields (`packages/core/src/types/findings.ts`,
+  read-only, no contract change), HTML-escaped before substitution.
+  `fill-in-blank` templates render the correct shape with a literal blank
+  marker (e.g. `<votre description ici>` / `<your description here>`) and
+  are never interpolated with the finding's own captured content (the
+  brainstorm's reasoning: substituting an already-bad value into a
+  "write better copy" template adds noise, not help). `not-applicable`
+  covers rules whose fix is site-wide/structural and cannot localize to
+  one element (crawl budget, redirect chains, third-party inventory).
+- Extend the existing source-derived coverage test
+  (`remediation.test.ts`) so every reachable rule ID has an explicit
+  `snippet.kind`, not just prose. This is the open question (3)
+  recommendation from the brainstorm, adopted: enforce the marker, not a
+  populated snippet body for every rule.
+- Render at the two existing sites only (`rendered-priorities.ts`,
+  `remaining-work.ts`), report only. Not the dashboard, not the preview
+  (the brainstorm's (d) recommendation, not contradicted by any operator
+  pick).
+- Classifying each of the ~172 reachable rule IDs into fixed/fill-in-
+  blank/not-applicable, and writing the FR/EN template text, is the bulk
+  of this slice's content work, not its engineering work.
+
+**Scorecard**
+
+- New pure function in `packages/report` (next to `statistics.ts`, same
+  package that already owns both the PDF report template and the
+  outreach preview renderer, so no new package boundary is crossed):
+  `computeSeverityGrade(severityCounts): { grade, reason }` as the
+  own-counts fallback, and
+  `computeComparativeGrade(percentileResult): { grade, percentile }` for
+  the report's percentile path. Both are presentation-layer mappings over
+  numbers already computed elsewhere (`computeStatistics`,
+  `computeSiteBenchmarkPercentile`); neither calls a cost gate at runtime
+  (trade-off 38 stays untouched - a grading formula has no business
+  depending on functions whose contract is "should the LLM be called").
+- Own-counts fallback formula (revised mid-implementation, per the
+  operator's direction - see the Slice 2 landing note above): rather than
+  an invented severity index normalized by page count, requiring
+  empirical calibration this machine had no data for,
+  `computeSeverityGrade` bands directly on the exact cutoff numbers the
+  two already-reviewed cost gates use: 0 critical/0 serious/moderate
+  under 5 is `isAuditFallbackEligible`'s own definition of "clean enough"
+  (grade A); critical at least 1, or serious at least 2, is
+  `isProspectingWorthy`'s own definition of "clearly broken" (grade F).
+  The two bands in between (a lone serious finding graded D; a clean site
+  at or above the moderate-volume cutoff graded B) are exhaustively
+  derived from the same two gates' thresholds, not separately invented.
+  No per-page normalization, matching the fact that neither existing gate
+  normalizes by page count either. `grade.test.ts` cross-checks both
+  gates directly (calling the real `isAuditFallbackEligible`/
+  `isProspectingWorthy` functions against synthetic findings) so future
+  drift between the grade and the gates fails a test, not silently.
+- Percentile-based grade (report only): a direct banding of
+  `BenchmarkPercentileResult`'s percentile (e.g. top-band "A" at or above
+  the 80th percentile, down to "F" below the 20th) - lower-stakes to fix
+  now since a percentile is already a 0-100 comparative scale, unlike the
+  own-counts index.
+- Render sites: report cover/metadata sheet (beside the existing
+  low/medium/high risk badge, visually and conceptually separated from
+  it per the brainstorm's rule-1 finding: the grade is deterministic, the
+  risk badge is `overallRisk`, LLM-generated - never merge or restyle
+  them to look like one signal) and the outreach preview v2 template
+  (`packages/report/src/outreach-preview/render-html-v2.ts`), replacing
+  or supplementing the four flat severity-total tiles with the own-counts
+  grade plus its disclaimer sentence. The preview's Zod contract
+  (`packages/core/src/types/outreach-preview.ts`) is unchanged: the grade
+  is computed at render time from `severityTotals`, already in the
+  contract, not a new field on it - the operator's pick keeps this
+  additive rather than a trade-off 42 widen.
+- The disclaimer sentence is not optional copy: bake it into the same
+  render function that draws the grade, so there is no code path that
+  renders one without the other.
+
+### Implementation checklist
+
+- [x] Classified all 195 remediation-table rule IDs (the 172 reachable axe/
+      Lighthouse/custom rules plus 23 legacy/renamed ones already in the
+      table): 59 fixed, 45 fill-in-blank, 91 not-applicable. Wrote FR/EN
+      snippet templates for the 104 with one
+      (`packages/report/src/template/remediation/fr.ts`/`en.ts`).
+- [x] `snippet` field added to the remediation copy source
+      (`RemediationEntry` in the new `snippet.ts`, restructuring
+      `REMEDIATION_FR`/`REMEDIATION_EN` from `Record<string, string>` to
+      `Record<string, RemediationEntry>`); coverage enforced by the type
+      system (`snippet` is non-optional) plus `remediation.test.ts`
+      runtime checks (recognized kind, non-empty template, FR/EN kind
+      agreement).
+- [x] Interpolation helper (`interpolateSnippet` in
+      `remediation/index.ts`), plain substitution only (escaping happens
+      once at the render site, avoiding double-encoding), unit tested via
+      `rendered-priorities.test.ts`'s new fix-snippet describe block.
+- [x] Rendered at `rendered-priorities.ts`/`sections/themes.ts` and
+      `sections/remaining-work.ts`, through one shared
+      `render-fix-snippet.ts` so the two markup/escaping paths cannot
+      drift.
+- [x] `computeSeverityGrade` and `computeComparativeGrade` in
+      `packages/report/src/template/grade.ts`, unit tested
+      (`grade.test.ts`, 9 tests including two cross-checks against the
+      real `isAuditFallbackEligible`/`isProspectingWorthy` gate
+      functions). `computeSeverityGrade`'s bands are anchored on those
+      gates' own reviewed thresholds (see Design direction above); no
+      real-scan calibration was needed.
+- [x] Report cover/metadata sheet renders the grade
+      (`sections/metadata-sheet.ts`'s `renderScorecard`), its own field
+      beside `renderRiskBadge`, always with the disclaimer sentence
+      (`render-scorecard.ts`'s `renderScorecardGrade` makes a bare grade
+      unrepresentable).
+- [x] Outreach preview v2 renders the own-counts grade
+      (`render-html-v2.ts`'s `renderTotals`) with the same mandatory
+      disclaimer sentence; `OutreachPreviewSummary`'s Zod schema
+      unchanged, computed at render time from the existing
+      `severityTotals` field.
+- [x] FR/EN together throughout (`strings/fr.ts`/`en.ts` for the report,
+      `strings-v2.ts` for the preview); existing parity tests
+      (`strings-v2-parity.test.ts`, `remediation.test.ts`'s key-set
+      check) cover the new fields structurally.
+- [x] Narrowest suites (802 report tests, all green) then full `pnpm run
+      check` (docs, format, lint, typecheck, `audit:code`) and `pnpm run
+      test` (3986 passed, 3 pre-existing failures unrelated to this slice
+      - see Verification below).
+
+### Verification
+
+- `pnpm exec vitest run packages/report`: 808 tests, all passing (76
+  files). Includes `grade.test.ts` (9 tests: 5 direct grade/reason
+  cases plus 2 comparative-grade cases plus 2 cross-checks against the
+  real cost gates), `remediation.test.ts`'s new snippet describe block
+  (3), `rendered-priorities.test.ts`'s new fix-snippet describe block
+  (3), `remaining-work.test.ts` +2, `render-html-v2.test.ts` +2 (one
+  rewritten to expect grade F on the base fixture, which has a critical
+  finding - it graded A under the original page-normalized formula this
+  slice replaced).
+- `pnpm --filter @odysseus/report run typecheck`: clean.
+- `pnpm run check` (docs, prettier, eslint, typecheck both projects,
+  `audit:code`): fully clean.
+- `pnpm run test` (full repo): pre-existing failures only
+  (`app-routes.test.ts`, `findings-provenance.test.ts`,
+  `fixture-freshness.test.ts`), verified via `git stash` against the
+  pre-slice `c0f7d8d` HEAD (identical failures, identical values,
+  present before this slice touched anything).
+- One mechanical, out-of-scope fix bundled in to keep `audit:code` green:
+  `packages/store/src/outreach-scans.ts`'s
+  `OutreachFullScanAuthorizationFacts` was an unused export left by Part
+  B's commit (`c0f7d8d`), traced with `fallow dead-code --trace` (used
+  only within its own file) and un-exported. No behavior change.
+
+### Slice 2 STOP conditions
+
+- Any attempt to make the outreach preview's grade use the benchmark
+  percentile, or otherwise import a comparison to other sites into that
+  document. That is a trade-off 42/16 widen the operator explicitly
+  declined; if a future need arises, it returns to the operator as its
+  own decision, not an implementation shortcut here.
+- Any attempt to blend the deterministic grade with `overallRisk` into
+  one badge, or to derive the grade from `overallRisk` at all.
+- Any attempt to have `computeSeverityGrade` call
+  `isAuditFallbackEligible`/`isProspectingWorthy` at runtime rather than
+  only sharing their reviewed cutoff numbers. Trade-off 38 forbids
+  reusing the shipped cost gates outside their own decision; the grade
+  formula anchors on their numbers as a documented, tested coincidence,
+  not a dependency.
+- `computeComparativeGrade`'s percentile bands used against a real
+  client's report before at least a sanity check once milestone 10's
+  benchmark cohort exists - those bands remain un-anchored on anything
+  (no existing reviewed threshold covers a 0-100 comparative scale).
+  Lower stakes than the own-counts bands, which this slice resolved.
+- Locked contracts (`findings.ts`, `severity.ts`, `llm-output.ts`,
+  `outreach-preview.ts`'s Zod schema) touched. Stop and ask.
 
 ## Part B: the prospects table shows what the operator can act on
 

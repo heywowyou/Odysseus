@@ -13,6 +13,8 @@ import { LEVEL_COLOR } from '../design-tokens.js';
 import { computeStatistics } from '../statistics.js';
 import { hasMeasuredCoreWebVitals } from './core-web-vitals-table.js';
 import { buildCoverageDisclosure } from '../coverage-disclosure.js';
+import { computeComparativeGrade, computeSeverityGrade } from '../grade.js';
+import { renderScorecardGrade } from '../render-scorecard.js';
 
 /** Stable DOM id of the metadata sheet. The reference template
  *  (report.reference.html) leaves this section without an id, so a stable,
@@ -88,6 +90,31 @@ function renderRiskBadge(
   `;
 }
 
+/** Plan 041 Part A: a deterministic letter grade, always paired with its
+ *  disclaimer sentence (render-scorecard.ts enforces this by construction).
+ *  Deliberately its own field, visually distinct from renderRiskBadge above
+ *  it: the risk badge is `overallRisk`, an LLM judgement call
+ *  (llm-output.ts); this grade is computed purely from scanner findings, so
+ *  the two must never be merged or restyled to look like one signal.
+ *
+ *  Uses the benchmark percentile when this audit has been compared against
+ *  a frozen cohort (manifest.benchmarkPercentile, milestone 10); otherwise
+ *  falls back to the own-counts severity grade, the same source the
+ *  outreach preview always uses (that document's stricter no-statistics
+ *  rule, trade-off 42/16, forbids it from ever using the percentile). */
+function renderScorecard(
+  strings: ReportStrings,
+  findings: readonly Finding[],
+  manifest: AuditManifest,
+): string {
+  const outcome = manifest.benchmarkPercentile;
+  const grade =
+    outcome?.kind === 'scored'
+      ? computeComparativeGrade(outcome).grade
+      : computeSeverityGrade(computeStatistics(findings, manifest)).grade;
+  return renderScorecardGrade(grade, strings.metadata.scorecardDisclaimer);
+}
+
 /** The second physical page, between the cover and the table of contents
  *  (plan 018 step 4), ported from report.reference.html's METADATA SHEET
  *  section: audit identity and scope as a plain fact grid (site, date,
@@ -152,7 +179,10 @@ export function renderMetadataSheet(
     </div>
     <div style="margin-top:auto">
       <div class="hr"></div>
-      ${field(strings.metadata.riskSmallLabel, renderRiskBadge(strings, analysis, findings, manifest))}
+      <div style="display:flex;gap:var(--space-8);align-items:flex-start">
+        ${field(strings.metadata.riskSmallLabel, renderRiskBadge(strings, analysis, findings, manifest))}
+        ${field(strings.metadata.scorecardLabel, renderScorecard(strings, findings, manifest))}
+      </div>
     </div>
     <div style="min-height:60mm"></div>
   `,

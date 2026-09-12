@@ -264,6 +264,12 @@ export interface ReportStrings {
     findingRefsTemplate: string;
     /** Fixed note under the heading, stating what this section is not. */
     scopeNote: string;
+    /** Plan 041 Part A: label above a rule's deterministic fix snippet,
+     *  shown only when one exists for that rule. */
+    fixSnippetLabel: string;
+    /** Shown beside a fill-in-blank snippet, whose blank the client must
+     *  complete themselves rather than paste as-is. */
+    fixSnippetFillInBlankNote: string;
   };
   /** The minimal cover (plan 018 step 4): kicker, commercial-name headline,
    *  the generic decision question, the report-type line, the audit date and
@@ -345,6 +351,16 @@ export interface ReportStrings {
      *  to print, since none exists in how the level is actually decided
      *  (the structure pass's own model judgment, structure-prompt.ts). */
     riskScaleBasisNote: string;
+    /** Plan 041 Part A: the deterministic grade shown beside the risk
+     *  badge, never merged with it (the risk badge is an LLM judgement
+     *  call, `overallRisk`; this grade is computed purely from scanner
+     *  findings). */
+    scorecardLabel: string;
+    /** Mandatory sentence shown with every grade, never omitted
+     *  (render-scorecard.ts enforces this by construction): the operator's
+     *  chosen mitigation for showing a grade at all without overstating
+     *  legal exposure (non-negotiable rule 6). */
+    scorecardDisclaimer: string;
     criticalFindingSingular: string;
     criticalFindingPlural: string;
     seriousFindingSingular: string;
@@ -646,6 +662,12 @@ export interface ReportStrings {
      *  about it. */
     recommendedActionsLabel: string;
     reviewedRemediationLabel: string;
+    /** Plan 041 Part A: label above a priority rule's deterministic fix
+     *  snippet, shown only when one exists for that rule. */
+    fixSnippetLabel: string;
+    /** Shown beside a fill-in-blank snippet, whose blank the client must
+     *  complete themselves rather than paste as-is. */
+    fixSnippetFillInBlankNote: string;
     /** Template: {firstParty}, {thirdParty}, {verifyIntent}. */
     ownershipCountsTemplate: string;
     effortImpactLevels: { low: string; medium: string; high: string };

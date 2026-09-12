@@ -30,6 +30,7 @@ import {
 } from '../html-utils.js';
 import { CATEGORY, LEVEL_COLOR, SEVERITY } from '../design-tokens.js';
 import { renderReferenceStatNote } from '../reference-stat-note.js';
+import { renderFixSnippet } from '../remediation/render-fix-snippet.js';
 import { detectFindingVendor, isThirdPartyFinding } from '../third-party-attribution.js';
 import { sectionTitle } from '../section-registry.js';
 import {
@@ -503,7 +504,12 @@ function renderTheme(
       ? `<div style="margin-top:4px">
           <div style="font-size:11px;opacity:0.6;text-transform:uppercase;letter-spacing:0.02em;margin-bottom:4px">${escapeHtml(t.reviewedRemediationLabel)}</div>
           <ul style="margin:0;padding-left:1.2em;font-size:12.5px;opacity:0.9">
-            ${priority.remediations.map((item) => `<li><span class="mono">${escapeHtml(item.ruleId)}</span>: ${escapeHtml(item.text)}</li>`).join('')}
+            ${priority.remediations
+              .map(
+                (item) =>
+                  `<li><span class="mono">${escapeHtml(item.ruleId)}</span>: ${escapeHtml(item.text)}${renderFixSnippet(item.snippet, t)}</li>`,
+              )
+              .join('')}
           </ul>
         </div>`
       : '';

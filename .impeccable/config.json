@@ -29,6 +29,24 @@
         ],
         "createdAt": "2026-09-11T13:36:41.815Z",
         "reason": "agent triage: the outreach preview is a standalone fenced document with its own type (trade-offs 42/43), not the site's type ramp"
+      },
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "packages/report/src/template/remediation/fr.ts"
+        ],
+        "createdAt": "2026-09-12T04:01:59.327Z",
+        "reason": "source file: TS string literal example markup for a fix-snippet template, not a rendered image"
+      },
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "packages/report/src/template/remediation/en.ts"
+        ],
+        "createdAt": "2026-09-12T04:02:10.734Z",
+        "reason": "source file: TS string literal example markup for a fix-snippet template, not a rendered image"
       }
     ]
   }

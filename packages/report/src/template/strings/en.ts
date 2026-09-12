@@ -164,6 +164,8 @@ export const en: ReportStrings = {
     findingRefsTemplate: 'Findings: {findingIds}',
     scopeNote:
       'The actions given describe the correction the detected rule calls for. They do not replace the judgment of whoever will work on the site.',
+    fixSnippetLabel: 'Suggested fix',
+    fixSnippetFillInBlankNote: 'Fill in with your own content.',
   },
   cover: {
     kicker: 'Odysseus · Digital audit',
@@ -204,6 +206,8 @@ export const en: ReportStrings = {
     // level is decided.
     riskScaleBasisNote:
       'This level reflects a holistic assessment of the severity and reach of findings across the site, not a single numeric threshold.',
+    scorecardLabel: 'Findings grade',
+    scorecardDisclaimer: 'This grade measures scanner findings, not legal compliance.',
     criticalFindingSingular: 'critical finding',
     criticalFindingPlural: 'critical findings',
     seriousFindingSingular: 'serious finding',
@@ -337,6 +341,8 @@ export const en: ReportStrings = {
     quickWinBadgeLabel: 'Quick win',
     recommendedActionsLabel: 'Recommended actions',
     reviewedRemediationLabel: 'Reviewed technical remediation',
+    fixSnippetLabel: 'Suggested fix',
+    fixSnippetFillInBlankNote: 'Fill in with your own content.',
     ownershipCountsTemplate:
       'Ownership: {firstParty} to fix directly, {thirdParty} to pass on, {verifyIntent} to verify by intent.',
     effortImpactLevels: { low: 'Low', medium: 'Medium', high: 'High' },

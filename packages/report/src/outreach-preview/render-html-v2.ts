@@ -21,6 +21,8 @@ import {
   type OutreachPreviewSummary,
 } from '@odysseus/core';
 import { escapeHtml, fillTemplate, formatDate } from '../template/html-utils.js';
+import { computeSeverityGrade } from '../template/grade.js';
+import { renderScorecardGrade } from '../template/render-scorecard.js';
 import { OUTREACH_PREVIEW_STYLES_V2 } from './styles-v2.js';
 import { outreachPreviewStringsV2, type OutreachPreviewStringsV2 } from './strings-v2.js';
 import { assertOutreachPreviewHtml } from './preview-lint.js';
@@ -45,6 +47,10 @@ function renderTotals(input: OutreachPreviewSummary, s: OutreachPreviewStringsV2
     (severity) =>
       `<div class="tile severity-${severity}"><div class="value">${input.severityTotals[severity]}</div><div class="key">${escapeHtml(s.severity[severity])}</div></div>`,
   );
+  // Plan 041 Part A: own-counts grade only, never the benchmark percentile
+  // (trade-off 42/16 forbid a comparison to other sites in this document -
+  // the operator's own pick, made once this tension surfaced mid-design).
+  const { grade } = computeSeverityGrade(input.severityTotals);
   return [
     '<section>',
     `<h2>${escapeHtml(s.totalsHeading)}</h2>`,
@@ -54,6 +60,7 @@ function renderTotals(input: OutreachPreviewSummary, s: OutreachPreviewStringsV2
     '</div>',
     `<h2 class="mt">${escapeHtml(s.severityHeading)}</h2>`,
     `<div class="tiles four">${severities.join('')}</div>`,
+    renderScorecardGrade(grade, s.scorecardDisclaimer, s.scorecardLabel),
     '</section>',
   ].join('');
 }

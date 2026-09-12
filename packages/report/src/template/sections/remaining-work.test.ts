@@ -92,4 +92,28 @@ describe('renderRemainingWork against the real small-site.test scan', () => {
       expect(html).toContain(severityLabels[severity]);
     }
   });
+
+  it('plan 041 Part A: shows a fixed snippet, escaped, for a rule classified fixed', async () => {
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('fr');
+
+    // meta-viewport is classified `fixed` with a language-neutral template
+    // (no {{selector}}/{{resourceUrl}} placeholders), so its rendered form
+    // is stable regardless of which element this fixture happens to carry.
+    const html = renderRemainingWork(getStrings('fr'), 6, 'fr', analysis, findings);
+    expect(html).toContain('Correctif type');
+    expect(html).toContain(
+      '&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;',
+    );
+  });
+
+  it('plan 041 Part A: shows a fill-in-blank note for a rule classified fill-in-blank', async () => {
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('fr');
+
+    // meta-description is classified fill-in-blank; its template's blank
+    // must never be filled with the finding's own captured content.
+    const html = renderRemainingWork(getStrings('fr'), 6, 'fr', analysis, findings);
+    expect(html).toContain('À compléter avec votre propre contenu.');
+  });
 });

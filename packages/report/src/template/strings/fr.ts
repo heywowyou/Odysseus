@@ -185,6 +185,8 @@ export const fr: ReportStrings = {
     findingRefsTemplate: 'Constats : {findingIds}',
     scopeNote:
       "Les actions indiqu\u00e9es d\u00e9crivent la correction attendue par la r\u00e8gle d\u00e9tect\u00e9e. Elles ne remplacent pas l'appr\u00e9ciation de la personne qui interviendra sur le site.",
+    fixSnippetLabel: 'Correctif type',
+    fixSnippetFillInBlankNote: '\u00c0 compl\u00e9ter avec votre propre contenu.',
   },
   cover: {
     kicker: 'Odysseus · Audit numérique',
@@ -226,6 +228,8 @@ export const fr: ReportStrings = {
     // level is decided.
     riskScaleBasisNote:
       "Ce niveau reflète une évaluation d'ensemble de la gravité et de la portée des constats sur le site, pas un seuil numérique unique.",
+    scorecardLabel: 'Note de constats',
+    scorecardDisclaimer: 'Cette note mesure les constats des scanners, pas la conformité légale.',
     criticalFindingSingular: 'constat critique',
     criticalFindingPlural: 'constats critiques',
     seriousFindingSingular: 'constat sérieux',
@@ -399,6 +403,8 @@ export const fr: ReportStrings = {
     quickWinBadgeLabel: 'Gain rapide',
     recommendedActionsLabel: 'Actions recommandées',
     reviewedRemediationLabel: 'Remédiation technique vérifiée',
+    fixSnippetLabel: 'Correctif type',
+    fixSnippetFillInBlankNote: 'À compléter avec votre propre contenu.',
     ownershipCountsTemplate:
       'Responsabilité : {firstParty} à corriger directement, {thirdParty} à transmettre à un tiers, {verifyIntent} à vérifier selon le contexte.',
     effortImpactLevels: { low: 'Faible', medium: 'Moyen', high: 'Élevé' },

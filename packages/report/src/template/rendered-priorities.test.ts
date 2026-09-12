@@ -443,3 +443,75 @@ describe('plan 018 step 6: deterministic priority evidence', () => {
     );
   });
 });
+
+// Plan 041 Part A, Slice 2: a priority's remediations carry the rule's
+// deterministic fix snippet, interpolated against a representative element
+// for a `fixed` kind, rendered as-is for `fill-in-blank`, and absent for
+// `not-applicable` (color-contrast, buildFinding's default ruleId).
+describe('plan 041 Part A: fix snippets on priority remediations', () => {
+  const manifest = { pages: [] } as never;
+
+  it('interpolates a fixed snippet against the priority’s own representative element', () => {
+    const findings = [
+      buildFinding({
+        findingId: 'f001',
+        ruleId: 'duplicate-id-aria',
+        elements: [
+          {
+            pageUrl: 'https://example.com/',
+            selector: '#dup-id',
+            snippet: '<div id="dup-id">',
+          },
+        ],
+      }),
+    ];
+    const themes = [buildTheme(['f001'])];
+
+    const priorities = buildRenderedPriorities(themes, findings, manifest, 'en');
+    const remediation = priorities[0]!.remediations.find(
+      (item) => item.ruleId === 'duplicate-id-aria',
+    );
+
+    expect(remediation?.snippet).toEqual({
+      kind: 'fixed',
+      rendered: 'Make this id unique on the page (#dup-id is duplicated).',
+    });
+  });
+
+  it('renders a fill-in-blank snippet unchanged, never interpolated with captured content', () => {
+    const findings = [
+      buildFinding({
+        findingId: 'f001',
+        ruleId: 'image-alt',
+        elements: [
+          {
+            pageUrl: 'https://example.com/',
+            selector: 'img.hero',
+            snippet: '<img src="hero.jpg">',
+          },
+        ],
+      }),
+    ];
+    const themes = [buildTheme(['f001'])];
+
+    const priorities = buildRenderedPriorities(themes, findings, manifest, 'en');
+    const remediation = priorities[0]!.remediations.find((item) => item.ruleId === 'image-alt');
+
+    expect(remediation?.snippet).toEqual({
+      kind: 'fill-in-blank',
+      rendered: 'alt="<what the image shows>"',
+    });
+  });
+
+  it('omits a snippet entirely for a not-applicable rule', () => {
+    const findings = [buildFinding({ findingId: 'f001', ruleId: 'color-contrast' })];
+    const themes = [buildTheme(['f001'])];
+
+    const priorities = buildRenderedPriorities(themes, findings, manifest, 'en');
+    const remediation = priorities[0]!.remediations.find(
+      (item) => item.ruleId === 'color-contrast',
+    );
+
+    expect(remediation?.snippet).toBeUndefined();
+  });
+});

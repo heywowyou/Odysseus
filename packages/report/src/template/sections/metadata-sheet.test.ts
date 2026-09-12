@@ -67,6 +67,7 @@ describe('renderMetadataSheet field order and presence', () => {
       escapeHtml(fr.metadata.pagesScannedLabel),
       escapeHtml(fr.metadata.wcagReferentialLabel),
       escapeHtml(fr.metadata.riskSmallLabel),
+      escapeHtml(fr.metadata.scorecardLabel),
     ]);
     // The site URL, the audit date and the visited-page count are real
     // values from the manifest, never empty labels.
@@ -113,6 +114,7 @@ describe('renderMetadataSheet field order and presence', () => {
       escapeHtml(fr.metadata.wcagReferentialLabel),
       escapeHtml(fr.metadata.legalNameLabel),
       escapeHtml(fr.metadata.riskSmallLabel),
+      escapeHtml(fr.metadata.scorecardLabel),
     ]);
   });
 
@@ -127,6 +129,7 @@ describe('renderMetadataSheet field order and presence', () => {
       escapeHtml(en.metadata.pagesScannedLabel),
       escapeHtml(en.metadata.wcagReferentialLabel),
       escapeHtml(en.metadata.riskSmallLabel),
+      escapeHtml(en.metadata.scorecardLabel),
     ]);
     // Issue #51: no report-language row in English either.
     expect(html).not.toContain('Report language');

@@ -7,7 +7,7 @@ import {
   type Theme,
 } from '@odysseus/core';
 import { buildMissingPercentIndex, classifyDiversion } from '@odysseus/llm';
-import { remediationFor } from './remediation/index.js';
+import { interpolateSnippet, remediationFor, snippetFor } from './remediation/index.js';
 import { resolveFindingDisplayLabel } from './rule-translations.js';
 import { isThirdPartyFinding } from './third-party-attribution.js';
 
@@ -18,6 +18,13 @@ export type PriorityOwnership = 'first-party-action' | 'third-party-escalation' 
 export interface PriorityRemediation {
   ruleId: string;
   text: string;
+  /** Plan 041 Part A: the rule's deterministic fix snippet, when one exists
+   *  and is not classified `not-applicable`. `fixed` templates are already
+   *  interpolated against this priority's own representative finding
+   *  element; `fill-in-blank` templates are rendered as-is, since
+   *  substituting the finding's own captured content into a blank meant for
+   *  the client's own words would add noise, not help. */
+  snippet?: { kind: 'fixed' | 'fill-in-blank'; rendered: string };
 }
 
 /** Plan 018 step 6: the deterministic evidence one priority is built from,
@@ -302,7 +309,18 @@ export function buildRenderedPriorities(
     const remediations = ruleIds
       .map((ruleId) => {
         const text = remediationFor(ruleId, language);
-        return text === undefined ? undefined : { ruleId, text };
+        if (text === undefined) return undefined;
+        const fixSnippet = snippetFor(ruleId, language);
+        if (fixSnippet === undefined || fixSnippet.kind === 'not-applicable') {
+          return { ruleId, text };
+        }
+        const representativeElement = priorityFindings.find((finding) => finding.ruleId === ruleId)
+          ?.elements[0];
+        const rendered =
+          fixSnippet.kind === 'fixed'
+            ? interpolateSnippet(fixSnippet, representativeElement ?? {})
+            : fixSnippet.template;
+        return { ruleId, text, snippet: { kind: fixSnippet.kind, rendered } };
       })
       .filter((item): item is PriorityRemediation => item !== undefined);
     return {

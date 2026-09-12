@@ -1,4 +1,10 @@
-import type { Finding, FindingCategory, ReportLanguage, Severity } from '@odysseus/core';
+import type {
+  Finding,
+  FindingCategory,
+  FindingElement,
+  ReportLanguage,
+  Severity,
+} from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import {
@@ -13,7 +19,8 @@ import {
 import { sectionTitle } from '../section-registry.js';
 import { CATEGORY, CATEGORY_ORDER, SEVERITY } from '../design-tokens.js';
 import { RULE_TRANSLATIONS_FR } from '../rule-translations.js';
-import { remediationFor } from '../remediation/index.js';
+import { interpolateSnippet, remediationFor, snippetFor } from '../remediation/index.js';
+import { renderFixSnippet } from '../remediation/render-fix-snippet.js';
 import { accessibilityStatementGuidance } from '../accessibility-statement-guidance.js';
 import { selectRenderedThemes } from './themes.js';
 import type { RenderedPriority } from '../rendered-priorities.js';
@@ -57,6 +64,10 @@ interface RuleBlock {
   findingIds: string[];
   occurrences: number;
   pages: number;
+  /** Plan 041 Part A: the first element recorded on this rule's first
+   *  finding, if any, used to interpolate a `fixed` fix snippet. Undefined
+   *  for a site-wide rule whose findings carry no elements. */
+  representativeElement: FindingElement | undefined;
 }
 
 /** Findings that no rendered priority accounts for.
@@ -97,6 +108,7 @@ function groupByRule(findings: readonly Finding[], language: ReportLanguage): Ru
           'minor',
         ),
         findingIds: group.map((f) => f.findingId),
+        representativeElement: first.elements[0],
         occurrences: group.reduce((sum, f) => sum + f.occurrences, 0),
         pages: new Set(group.flatMap((f) => f.pageUrls)).size,
       };
@@ -131,6 +143,26 @@ function renderRuleBlock(
       ? ''
       : `<p style="font-size:13px;margin-top:4px;max-width:70ch">${escapeHtml(remediation)}</p>`;
 
+  // Plan 041 Part A: same snippet computation as rendered-priorities.ts,
+  // duplicated rather than shared because the two callers start from
+  // different shapes (a RuleBlock here, a Finding list there) and the
+  // computation itself is a few lines; renderFixSnippet is the part that
+  // must not drift, and it is shared.
+  const fixSnippet = snippetFor(block.ruleId, language);
+  const snippetBlock =
+    fixSnippet === undefined || fixSnippet.kind === 'not-applicable'
+      ? ''
+      : renderFixSnippet(
+          {
+            kind: fixSnippet.kind,
+            rendered:
+              fixSnippet.kind === 'fixed'
+                ? interpolateSnippet(fixSnippet, block.representativeElement ?? {})
+                : fixSnippet.template,
+          },
+          strings.remainingWork,
+        );
+
   // block.severity was already computed (worst-of-group) for sort order
   // but never shown, so every remaining item looked equally urgent
   // regardless of its real severity - reusing the same badge colours
@@ -155,6 +187,7 @@ function renderRuleBlock(
       <div style="font-size:13.5px;font-weight:500">${escapeHtml(block.title)}${severityBadge}</div>
       <div class="text-muted" style="font-size:11px;margin-top:2px">${escapeHtml(counts)}</div>
       ${actionLine}
+      ${snippetBlock}
       <div class="text-muted" style="font-size:11px;margin-top:4px">${refs}</div>
     </div>
   `;

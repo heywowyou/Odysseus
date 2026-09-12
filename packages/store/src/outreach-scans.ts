@@ -116,7 +116,7 @@ export async function planOutreachFullScan(
   };
 }
 
-export interface OutreachFullScanAuthorizationFacts {
+interface OutreachFullScanAuthorizationFacts {
   authorizedBy: OutreachFullScanAuthorization;
   cohortId: string;
   scoringVersion: string;

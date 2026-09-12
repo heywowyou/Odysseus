@@ -129,6 +129,30 @@ describe('generateOutreachPreviewHtmlV2', () => {
     }
   });
 
+  it('plan 041 Part A: shows an own-counts grade with its mandatory disclaimer', () => {
+    // The base fixture has a critical finding, which is F under
+    // computeSeverityGrade (matching isProspectingWorthy's own cutoff).
+    const html = generateOutreachPreviewHtmlV2(summary());
+    expect(html).toContain('Note de constats');
+    expect(html).toContain('>F</span>');
+    expect(html).toContain(
+      'Cette note mesure les constats des scanners, pas la conformité légale.',
+    );
+  });
+
+  it('plan 041 Part A: grades a clean site A, still with its disclaimer', () => {
+    const html = generateOutreachPreviewHtmlV2(
+      summary({
+        distinctFindingCount: 3,
+        severityTotals: { critical: 0, serious: 0, moderate: 3, minor: 0 },
+      }),
+    );
+    expect(html).toContain('>A</span>');
+    expect(html).toContain(
+      'Cette note mesure les constats des scanners, pas la conformité légale.',
+    );
+  });
+
   it('is deterministic: the same input renders the same bytes', () => {
     expect(generateOutreachPreviewHtmlV2(summary())).toBe(generateOutreachPreviewHtmlV2(summary()));
   });

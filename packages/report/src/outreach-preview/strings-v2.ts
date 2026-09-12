@@ -28,6 +28,14 @@ export interface OutreachPreviewStringsV2 {
   affectedPages: string;
   severityHeading: string;
   severity: { critical: string; serious: string; moderate: string; minor: string };
+  /** Plan 041 Part A: the deterministic own-counts grade shown beside the
+   *  severity tiles, never the benchmark-percentile grade (trade-off 42/16
+   *  forbid a comparison to other sites in this document). */
+  scorecardLabel: string;
+  /** Mandatory sentence shown with every grade, never omitted: the
+   *  operator's chosen mitigation for showing a grade at all without
+   *  overstating legal exposure (non-negotiable rule 6). */
+  scorecardDisclaimer: string;
   category: {
     accessibility: string;
     seo: string;
@@ -92,6 +100,8 @@ const OUTREACH_PREVIEW_STRINGS_V2_FR: OutreachPreviewStringsV2 = {
     moderate: 'Modérée',
     minor: 'Mineure',
   },
+  scorecardLabel: 'Note de constats',
+  scorecardDisclaimer: 'Cette note mesure les constats des scanners, pas la conformité légale.',
   category: {
     accessibility: 'Accessibilité',
     seo: 'Référencement',
@@ -173,6 +183,8 @@ const OUTREACH_PREVIEW_STRINGS_V2_EN: OutreachPreviewStringsV2 = {
     moderate: 'Moderate',
     minor: 'Minor',
   },
+  scorecardLabel: 'Findings grade',
+  scorecardDisclaimer: 'This grade measures scanner findings, not legal compliance.',
   category: {
     accessibility: 'Accessibility',
     seo: 'Search',

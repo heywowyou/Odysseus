@@ -109,8 +109,8 @@ describe('remediation copy', () => {
 
   it('uses no em or en dashes, per the house style rule', () => {
     for (const table of [REMEDIATION_FR, REMEDIATION_EN]) {
-      for (const [ruleId, text] of Object.entries(table)) {
-        expect(text, ruleId).not.toMatch(/[–—]/);
+      for (const [ruleId, entry] of Object.entries(table)) {
+        expect(entry.text, ruleId).not.toMatch(/[–—]/);
       }
     }
   });
@@ -119,10 +119,50 @@ describe('remediation copy', () => {
     // Every line must say something; a one-word or fragment entry would
     // pass the coverage test above while telling the reader nothing.
     for (const table of [REMEDIATION_FR, REMEDIATION_EN]) {
-      for (const [ruleId, text] of Object.entries(table)) {
-        expect(text.length, ruleId).toBeGreaterThan(30);
-        expect(text.trim().endsWith('.'), ruleId).toBe(true);
+      for (const [ruleId, entry] of Object.entries(table)) {
+        expect(entry.text.length, ruleId).toBeGreaterThan(30);
+        expect(entry.text.trim().endsWith('.'), ruleId).toBe(true);
       }
     }
+  });
+
+  /**
+   * Plan 041 Part A, Slice 2: every remediation entry also carries a fix
+   * snippet classification. RemediationEntry.snippet is a non-optional
+   * field, so the type system already forbids an entry without one; these
+   * tests catch the weaker failure modes the compiler cannot: an empty or
+   * whitespace-only template, or a snippet accidentally left `undefined` at
+   * runtime by a bug outside the literal object (defensive, since the two
+   * source files are large hand-maintained literals).
+   */
+  describe('fix snippet classification', () => {
+    it('gives every entry a snippet of a recognized kind', () => {
+      for (const table of [REMEDIATION_FR, REMEDIATION_EN]) {
+        for (const [ruleId, entry] of Object.entries(table)) {
+          expect(entry.snippet, ruleId).toBeDefined();
+          expect(['fixed', 'fill-in-blank', 'not-applicable']).toContain(entry.snippet.kind);
+        }
+      }
+    });
+
+    it('gives every fixed or fill-in-blank snippet a non-empty template', () => {
+      for (const table of [REMEDIATION_FR, REMEDIATION_EN]) {
+        for (const [ruleId, entry] of Object.entries(table)) {
+          if (entry.snippet.kind === 'not-applicable') continue;
+          expect(entry.snippet.template.trim().length, ruleId).toBeGreaterThan(0);
+        }
+      }
+    });
+
+    it('agrees on snippet kind between French and English for every rule', () => {
+      // The classification (fixed vs fill-in-blank vs not-applicable) is a
+      // fact about the rule, not a translation choice, so it must not drift
+      // between the two language tables.
+      for (const ruleId of Object.keys(REMEDIATION_FR)) {
+        expect(REMEDIATION_EN[ruleId]?.snippet.kind, ruleId).toBe(
+          REMEDIATION_FR[ruleId]?.snippet.kind,
+        );
+      }
+    });
   });
 });
