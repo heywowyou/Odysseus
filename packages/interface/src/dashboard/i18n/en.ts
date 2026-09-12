@@ -510,6 +510,11 @@ export const en: DashboardStrings = {
       qualification: 'Qualification',
       all: 'All',
     },
+    selectionFilter: {
+      label: 'Selection',
+      selected: 'In selection',
+      all: 'Whole catalogue',
+    },
     columns: {
       name: 'Hotel',
       city: 'City',
@@ -520,7 +525,14 @@ export const en: DashboardStrings = {
       contact: 'Contact',
       thread: 'Emails',
       outcome: 'Outcome',
+      selection: 'Wave',
     },
+    selectionValues: {
+      inSelectionWithRank: 'In selection (rank {rank})',
+      inSelectionNoRank: 'In selection',
+      notInSelection: 'Not in selection',
+    },
+    selectionCountLine: '{selected} in selection, {scored} scored, {total} in catalogue',
     filterEmpty: 'No prospects match these filters.',
   },
   prospectDetail: {
@@ -592,6 +604,11 @@ export const en: DashboardStrings = {
       'domain-mismatch': 'This site changed hands; the selection no longer matches this hotel.',
       suppressed: 'This hotel is on the do-not-contact list.',
       'already-in-flight': 'An audit is already running for this hotel.',
+    },
+    selectionVerdict: {
+      belowCutoff:
+        'Ability score {ability} (cutoff {abilityCutoff}), brokenness score {brokenness} (cutoff {brokennessCutoff}), selection of {date}.',
+      notScored: 'Not scored yet.',
     },
     fiche: {
       starsLabel: 'Stars',

@@ -1,3 +1,6 @@
+import { formatDateTime } from '../lib/format';
+import type { DashboardLanguage } from '../i18n/types';
+import type { DashboardStrings } from '../i18n/types';
 import { previewState } from './insights-model';
 import { canGenerateFollowUp } from './prospects-model';
 import type { ProspectDetailResponse } from './prospects-model';
@@ -193,6 +196,31 @@ export function hubPrimaryAction(detail: ProspectDetailResponse, now: number): H
   }
 
   return { kind: 'none' };
+}
+
+/** Plan 041 slice B1: the factual "why" shown beside a 'not-selected'
+ *  refusal, read from the same selection verdict the list's wave column
+ *  uses. Null for every other refusal, and null when the verdict itself is
+ *  absent (a cached or fixture payload predating the field) - the refusal
+ *  sentence alone still explains enough. */
+export function selectionVerdictSentence(
+  detail: ProspectDetailResponse,
+  strings: DashboardStrings,
+  language: DashboardLanguage,
+): string | null {
+  if (detail.outreachScan?.refusal !== 'not-selected') return null;
+  const verdict = detail.selectionVerdict;
+  if (verdict === undefined || verdict.cohort === null) return null;
+
+  const score = detail.score;
+  if (score === null) return strings.hub.selectionVerdict.notScored;
+
+  return strings.hub.selectionVerdict.belowCutoff
+    .replace('{ability}', String(score.ability.total))
+    .replace('{abilityCutoff}', String(verdict.cohort.abilityCutoff ?? '-'))
+    .replace('{brokenness}', String(score.brokenness.total))
+    .replace('{brokennessCutoff}', String(verdict.cohort.brokennessCutoff ?? '-'))
+    .replace('{date}', formatDateTime(verdict.cohort.computedAt, language));
 }
 
 /** Narrow slice of GET /api/audits/:auditId the hub's Audit section reads

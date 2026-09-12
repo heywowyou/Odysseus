@@ -11,6 +11,9 @@ import { createOutreachThreadModel } from '../schemas/outreach-thread.schema.js'
 import { createOutreachDraftModel } from '../schemas/outreach-draft.schema.js';
 import { createOutreachOutcomeModel } from '../schemas/outreach-outcome.schema.js';
 import { createOutreachPreviewModel } from '../schemas/outreach-preview.schema.js';
+import { createHotelScoreCohortModel } from '../schemas/score-cohort.schema.js';
+import { createWaveRosterEntryModel } from '../schemas/wave-roster.schema.js';
+import { addWaveRosterEntry } from '../wave-roster.js';
 import { listOperatorProspects, type OperatorProspectQueue } from './prospect-list.js';
 import {
   candidateInput,
@@ -39,6 +42,8 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
     await createOutreachDraftModel(connection).deleteMany({});
     await createOutreachOutcomeModel(connection).deleteMany({});
     await createOutreachPreviewModel(connection).deleteMany({});
+    await createHotelScoreCohortModel(connection).deleteMany({});
+    await createWaveRosterEntryModel(connection).deleteMany({});
   });
 
   describe('listOperatorProspects', () => {
@@ -320,6 +325,192 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
       });
       expect(page.total).toBe(1);
       expect(page.rows.map((row) => row.candidateId)).toEqual([parked.candidateId]);
+    });
+
+    it('stamps inSelection from an approved cohort, and reports the page facts', async () => {
+      if (!connection) return;
+      const selected = candidateInput();
+      const notSelected = candidateInput();
+      await upsertHotelCandidates(connection!, [selected, notSelected]);
+
+      await createHotelScoreCohortModel(connection!).create({
+        cohortId: 'cohort-b1',
+        scoringVersion: SCORING_VERSION,
+        selectionRuleVersion: 'half-ability-decile-brokenness-v1',
+        approved: true,
+        populationSize: 2,
+        abilityCutoff: 60,
+        brokennessCutoff: 40,
+        selectedCount: 1,
+        members: [
+          {
+            candidateId: selected.candidateId,
+            scoreId: 'score-1',
+            rank: 1,
+            state: 'selected',
+            reason: 'top-brokenness-decile',
+          },
+        ],
+        notSelectedByReason: { 'below-ability-cutoff': 1 },
+        computedAt: new Date('2026-09-08T00:00:00.000Z'),
+        createdAt: new Date('2026-09-08T00:00:00.000Z'),
+        expiresAt: new Date(Date.now() + 86_400_000),
+      });
+
+      const page = await listOperatorProspects(connection!, {
+        resolutionVersion: RESOLUTION_VERSION,
+      });
+      const byId = new Map(page.rows.map((row) => [row.candidateId, row]));
+      expect(byId.get(selected.candidateId)).toMatchObject({
+        inSelection: true,
+        selectionSource: 'cohort',
+        selectionRank: 1,
+      });
+      expect(byId.get(notSelected.candidateId)).toMatchObject({
+        inSelection: false,
+        selectionSource: null,
+        selectionRank: null,
+      });
+      expect(page.selection).toMatchObject({
+        cohortId: 'cohort-b1',
+        populationSize: 2,
+        selectedCount: 1,
+        abilityCutoff: 60,
+        brokennessCutoff: 40,
+      });
+      expect(page.selectedCount).toBe(1);
+    });
+
+    it('a hotel selected only in an unapproved cohort is not in selection until it is also on the roster', async () => {
+      if (!connection) return;
+      const candidate = candidateInput();
+      await upsertHotelCandidates(connection!, [candidate]);
+      await createHotelScoreCohortModel(connection!).create({
+        cohortId: 'cohort-unapproved',
+        scoringVersion: SCORING_VERSION,
+        selectionRuleVersion: 'half-ability-decile-brokenness-v1',
+        approved: false,
+        populationSize: 1,
+        abilityCutoff: null,
+        brokennessCutoff: null,
+        selectedCount: 1,
+        members: [
+          {
+            candidateId: candidate.candidateId,
+            scoreId: 'score-1',
+            rank: 1,
+            state: 'selected',
+            reason: 'top-brokenness-decile',
+          },
+        ],
+        notSelectedByReason: {},
+        computedAt: new Date(),
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 86_400_000),
+      });
+
+      const beforeRoster = await listOperatorProspects(connection!, {
+        resolutionVersion: RESOLUTION_VERSION,
+        inSelection: true,
+      });
+      expect(beforeRoster.rows).toEqual([]);
+
+      await addWaveRosterEntry(connection!, {
+        wave: 'wave-1',
+        candidateId: candidate.candidateId,
+        rank: 8,
+        scoringVersion: SCORING_VERSION,
+        actor: 'operator',
+      });
+
+      const afterRoster = await listOperatorProspects(connection!, {
+        resolutionVersion: RESOLUTION_VERSION,
+        inSelection: true,
+      });
+      expect(afterRoster.rows.map((row) => row.candidateId)).toEqual([candidate.candidateId]);
+      expect(afterRoster.rows[0]).toMatchObject({
+        selectionSource: 'wave-roster',
+        selectionRank: 8,
+      });
+    });
+
+    it('the inSelection filter narrows to exactly the selected set, in either direction', async () => {
+      if (!connection) return;
+      const selected = candidateInput();
+      const other = candidateInput();
+      await upsertHotelCandidates(connection!, [selected, other]);
+      await createHotelScoreCohortModel(connection!).create({
+        cohortId: 'cohort-filter',
+        scoringVersion: SCORING_VERSION,
+        selectionRuleVersion: 'half-ability-decile-brokenness-v1',
+        approved: true,
+        populationSize: 2,
+        abilityCutoff: null,
+        brokennessCutoff: null,
+        selectedCount: 1,
+        members: [
+          {
+            candidateId: selected.candidateId,
+            scoreId: 'score-1',
+            rank: 1,
+            state: 'selected',
+            reason: 'top-brokenness-decile',
+          },
+        ],
+        notSelectedByReason: {},
+        computedAt: new Date(),
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 86_400_000),
+      });
+
+      const onlySelected = await listOperatorProspects(connection!, {
+        resolutionVersion: RESOLUTION_VERSION,
+        inSelection: true,
+      });
+      expect(onlySelected.rows.map((row) => row.candidateId)).toEqual([selected.candidateId]);
+
+      const onlyRest = await listOperatorProspects(connection!, {
+        resolutionVersion: RESOLUTION_VERSION,
+        inSelection: false,
+      });
+      expect(onlyRest.rows.map((row) => row.candidateId)).toEqual([other.candidateId]);
+    });
+
+    it('catalogueTotal states the whole catalogue size, ignoring the selection filter', async () => {
+      if (!connection) return;
+      const selected = candidateInput();
+      const other = candidateInput();
+      await upsertHotelCandidates(connection!, [selected, other]);
+      await createHotelScoreCohortModel(connection!).create({
+        cohortId: 'cohort-catalogue-total',
+        scoringVersion: SCORING_VERSION,
+        selectionRuleVersion: 'half-ability-decile-brokenness-v1',
+        approved: true,
+        populationSize: 2,
+        abilityCutoff: null,
+        brokennessCutoff: null,
+        selectedCount: 1,
+        members: [
+          {
+            candidateId: selected.candidateId,
+            scoreId: 'score-1',
+            rank: 1,
+            state: 'selected',
+            reason: 'top-brokenness-decile',
+          },
+        ],
+        notSelectedByReason: {},
+        computedAt: new Date(),
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 86_400_000),
+      });
+
+      const filtered = await listOperatorProspects(connection!, {
+        resolutionVersion: RESOLUTION_VERSION,
+        inSelection: true,
+      });
+      expect(filtered.total).toBe(1);
+      expect(filtered.catalogueTotal).toBe(2);
     });
   });
 });

@@ -34,9 +34,21 @@ export type { OperatorViewPage, OperatorViewPageOptions } from './operator-views
 export { listOperatorProspects } from './operator-views/prospect-list.js';
 export type {
   ListOperatorProspectsOptions,
+  OperatorProspectListPage,
   OperatorProspectQueue,
   OperatorProspectRow,
 } from './operator-views/prospect-list.js';
+export {
+  getSelectionProjection,
+  getSelectionVerdict,
+} from './operator-views/selection-projection.js';
+export type {
+  SelectionCohortFacts,
+  SelectionMember,
+  SelectionProjection,
+  SelectionSource,
+  SelectionVerdict,
+} from './operator-views/selection-projection.js';
 export { getProspectSourceConflicts } from './operator-views/source-conflicts.js';
 export type {
   OperatorSourceConflictRow,

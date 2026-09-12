@@ -552,6 +552,13 @@ export interface DashboardStrings {
       qualification: string;
       all: string;
     };
+    /** Plan 041 slice B1: the toggle between the actionable wave (the
+     *  default) and the whole catalogue. */
+    selectionFilter: {
+      label: string;
+      selected: string;
+      all: string;
+    };
     columns: {
       name: string;
       city: string;
@@ -562,7 +569,19 @@ export interface DashboardStrings {
       contact: string;
       thread: string;
       outcome: string;
+      /** Plan 041 slice B1: the wave column, membership only. */
+      selection: string;
     };
+    /** Plan 041 slice B1's wave column cell text and its info tip. `rank`
+     *  interpolates the selection rank when the record carries one. */
+    selectionValues: {
+      inSelectionWithRank: string;
+      inSelectionNoRank: string;
+      notInSelection: string;
+    };
+    /** {selected}/{scored}/{total} counts above the list, so the
+     *  catalogue's size is stated rather than discovered by paging. */
+    selectionCountLine: string;
     filterEmpty: string;
   };
   prospectDetail: {
@@ -638,6 +657,18 @@ export interface DashboardStrings {
       | 'already-in-flight',
       string
     >;
+    /** Plan 041 slice B1: the factual "why" shown beside a 'not-selected'
+     *  refusal, read from the same selection verdict the list's wave
+     *  column uses. Never a client-specific conclusion, only the recorded
+     *  criteria and numbers. */
+    selectionVerdict: {
+      /** {ability}, {abilityCutoff}, {brokenness}, {brokennessCutoff},
+       *  {date}: this hotel's own score against the newest cohort's
+       *  cutoffs. */
+      belowCutoff: string;
+      /** No score exists yet for this hotel. */
+      notScored: string;
+    };
     fiche: {
       starsLabel: string;
       roomsLabel: string;

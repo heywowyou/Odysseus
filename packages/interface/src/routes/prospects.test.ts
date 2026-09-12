@@ -13,6 +13,7 @@ vi.mock('@odysseus/store', () => ({
   createJob: vi.fn(),
   getOutreachAuditStatus: vi.fn(),
   getSeverityRollup: vi.fn(),
+  getSelectionVerdict: vi.fn(),
 }));
 
 vi.mock('../outreach/draft-runtime.js', () => ({
@@ -35,6 +36,7 @@ import {
   getOutreachAuditStatus,
   getProspectPreviewView,
   getProspectQualificationHistory,
+  getSelectionVerdict,
   getSeverityRollup,
   listOperatorProspects,
   planOutreachFullScan,
@@ -191,6 +193,12 @@ beforeEach(() => {
     moderate: 0,
     minor: 0,
   } as never);
+  vi.mocked(getSelectionVerdict).mockResolvedValue({
+    inSelection: false,
+    source: null,
+    rank: null,
+    cohort: null,
+  } as never);
 });
 
 async function handle(url: string, options: FakeReqOptions = {}) {
@@ -283,6 +291,24 @@ describe('GET /api/prospects/:candidateId', () => {
     expect(body.qualificationHistory).toEqual({ rows: [], total: 0, limit: 10, offset: 0 });
   });
 
+  it('carries the selection verdict computed by the store projection', async () => {
+    vi.mocked(getSelectionVerdict).mockResolvedValue({
+      inSelection: false,
+      source: null,
+      rank: null,
+      cohort: null,
+    });
+    const res = await handle('/api/prospects/cand-1');
+    const body = JSON.parse(res.body ?? '{}');
+    expect(getSelectionVerdict).toHaveBeenCalledWith(fakeConnection, 'cand-1');
+    expect(body.selectionVerdict).toEqual({
+      inSelection: false,
+      source: null,
+      rank: null,
+      cohort: null,
+    });
+  });
+
   it('returns 404 for an unknown candidateId', async () => {
     vi.mocked(getOperatorProspect).mockResolvedValue(null as never);
     const res = await handle('/api/prospects/missing');
@@ -300,7 +326,8 @@ describe('GET /api/prospects/:candidateId', () => {
     const res = await handle('/api/prospects/cand-1');
     const body = JSON.parse(res.body ?? '{}') as Record<string, unknown>;
     // The route may add qualificationHistory, outreachScan, the audit
-    // summary, and the running-scan id, and nothing else.
+    // summary, the running-scan id, and the selection verdict, and nothing
+    // else.
     expect(Object.keys(body).sort()).toEqual(
       [
         ...Object.keys(makeDetail()),
@@ -308,6 +335,7 @@ describe('GET /api/prospects/:candidateId', () => {
         'outreachScan',
         'outreachAudit',
         'outreachScanJobId',
+        'selectionVerdict',
       ].sort(),
     );
     const serialized = res.body ?? '';
@@ -330,6 +358,7 @@ describe('GET /api/prospects/:candidateId', () => {
       domain: 'hotel-exemple.fr',
       cohortId: 'co-1',
       scoringVersion: 'hotel-outreach-v1',
+      authorizedBy: 'cohort',
     });
     const res = await handle('/api/prospects/cand-1');
     const body = JSON.parse(res.body ?? '{}');
@@ -383,6 +412,7 @@ describe('POST /api/prospects/:candidateId/outreach/full-scan', () => {
       domain: 'hotel-exemple.fr',
       cohortId: 'co-1',
       scoringVersion: 'hotel-outreach-v1',
+      authorizedBy: 'cohort',
     });
     const res = await handle('/api/prospects/cand-1/outreach/full-scan', {
       method: 'POST',
@@ -398,6 +428,7 @@ describe('POST /api/prospects/:candidateId/outreach/full-scan', () => {
         outreachCandidateId: 'cand-1',
         outreachCohortId: 'co-1',
         outreachScoringVersion: 'hotel-outreach-v1',
+        outreachAuthorizedBy: 'cohort',
       },
     });
   });

@@ -45,6 +45,8 @@ import {
   locationLabel,
   qualificationBadgeTone,
   reviewBadgeTone,
+  selectionBadgeTone,
+  selectionCountLine,
   totalPages,
 } from './prospects-model';
 import type {
@@ -52,6 +54,7 @@ import type {
   ProspectListResponse,
   ProspectQueue,
   ProspectRow,
+  SelectionFilter,
 } from './prospects-model';
 
 // Plan 040 poll policy: lists refresh every 10s (usePolling also pauses
@@ -64,6 +67,18 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 function reviewLabel(reviewState: string, strings: DashboardStrings): string {
   return vocabularyLabel(strings.labels.review, reviewState, strings.common.vocabularyFallback);
+}
+
+/** The wave column's cell text (plan 041 slice B1): membership only, never
+ *  "can be scanned now" - the hub carries the full typed verdict. */
+function selectionLabel(row: ProspectRow, strings: DashboardStrings): string {
+  if (!row.inSelection) return strings.prospects.selectionValues.notInSelection;
+  return row.selectionRank === null
+    ? strings.prospects.selectionValues.inSelectionNoRank
+    : strings.prospects.selectionValues.inSelectionWithRank.replace(
+        '{rank}',
+        String(row.selectionRank),
+      );
 }
 
 function detailTarget(row: ProspectRow): string {
@@ -137,6 +152,14 @@ export function ProspectsPage(): JSX.Element {
     [strings],
   );
 
+  const selectionOptions = useMemo(
+    () => [
+      { value: 'selected' as const, label: strings.prospects.selectionFilter.selected },
+      { value: 'all' as const, label: strings.prospects.selectionFilter.all },
+    ],
+    [strings],
+  );
+
   let body: JSX.Element;
   if (data === undefined && page.error !== undefined) {
     body = (
@@ -172,6 +195,7 @@ export function ProspectsPage(): JSX.Element {
               <TableRow>
                 <TableHeaderCell className="w-56">{strings.prospects.columns.name}</TableHeaderCell>
                 <TableHeaderCell className="w-44">{strings.prospects.columns.city}</TableHeaderCell>
+                <TableHeaderCell>{strings.prospects.columns.selection}</TableHeaderCell>
                 <TableHeaderCell>{strings.prospects.columns.identity}</TableHeaderCell>
                 <TableHeaderCell>{strings.prospects.columns.group}</TableHeaderCell>
                 <HeaderWithTip
@@ -211,6 +235,11 @@ export function ProspectsPage(): JSX.Element {
                     </Link>
                   </TableCell>
                   <TableCell className="whitespace-nowrap">{locationLabel(row)}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <Badge tone={selectionBadgeTone(row.inSelection)}>
+                      {selectionLabel(row, strings)}
+                    </Badge>
+                  </TableCell>
                   <TableCell className="whitespace-nowrap text-xs text-ink-soft">
                     {vocabularyLabel(
                       strings.labels.identity,
@@ -318,6 +347,22 @@ export function ProspectsPage(): JSX.Element {
           options={queueOptions}
           ariaLabel={strings.prospects.queueLabel}
         />
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <SegmentedControl
+          value={filters.selection}
+          onValueChange={(selection) =>
+            applyFilters({ ...filters, selection: selection as SelectionFilter })
+          }
+          options={selectionOptions}
+          ariaLabel={strings.prospects.selectionFilter.label}
+        />
+        {data !== undefined ? (
+          <span className="text-xs text-ink-muted">
+            {selectionCountLine(strings, data.selection, data.selectedCount, data.catalogueTotal)}
+          </span>
+        ) : null}
       </div>
 
       <Card className="mb-4">

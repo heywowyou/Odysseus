@@ -24,6 +24,8 @@ import { createHotelContactModel } from '../schemas/hotel-contact.schema.js';
 import { createOutreachThreadModel } from '../schemas/outreach-thread.schema.js';
 import { createOutreachOutcomeModel } from '../schemas/outreach-outcome.schema.js';
 import { pageBounds, type OperatorViewPage, type OperatorViewPageOptions } from './shared.js';
+import { getSelectionProjection } from './selection-projection.js';
+import type { SelectionCohortFacts, SelectionSource } from './selection-projection.js';
 
 /** The operator queues, each a named filter over the candidate catalogue.
  *  `join-review` is the manual identity review queue (candidates still
@@ -45,6 +47,10 @@ export interface ListOperatorProspectsOptions extends OperatorViewPageOptions {
   /** Free-text search over the list's visible identity fields (name,
    *  commune, postcode) plus the candidate id. Blank means off. */
   search?: string;
+  /** Plan 041 slice B1: true keeps only the hotels a record puts in the
+   *  current wave, false keeps only the rest. Absent means the whole
+   *  catalogue, which is what every existing caller gets. */
+  inSelection?: boolean;
 }
 
 /** One row per fold family: the base letter plus its accented variants.
@@ -83,6 +89,19 @@ function buildProspectSearchPattern(search: string): RegExp {
   return new RegExp(source, 'i');
 }
 
+export interface OperatorProspectListPage extends OperatorViewPage<OperatorProspectRow> {
+  /** The newest approved cohort's own facts, so the list's copy can quote
+   *  the population size and cutoffs without a second request. Null when
+   *  no cohort has ever been approved. */
+  selection: SelectionCohortFacts | null;
+  selectedCount: number;
+  /** The whole catalogue's size at this resolution generation, ignoring
+   *  every filter including this page's own `total` (which is filtered).
+   *  Plan 041 slice B1: the count line states this so a filtered list
+   *  never hides how large the catalogue actually is. */
+  catalogueTotal: number;
+}
+
 export interface OperatorProspectRow {
   candidateId: string;
   name: string;
@@ -103,6 +122,12 @@ export interface OperatorProspectRow {
   contactState: HotelContactState | null;
   threadState: OutreachThreadState | null;
   outcome: OutreachOutcome | null;
+  /** Plan 041 slice B1: whether a record puts this hotel in the current
+   *  wave. Membership, not permission - the scan gate still decides, and
+   *  suppression never flips this flag. */
+  inSelection: boolean;
+  selectionSource: SelectionSource | null;
+  selectionRank: number | null;
 }
 
 interface ProspectCandidateRowDoc {
@@ -141,7 +166,10 @@ const PROSPECT_ROW_PROJECTION: Record<string, number> = {
   'prescan.status': 1,
 };
 
-function buildProspectFilter(options: ListOperatorProspectsOptions): Record<string, unknown> {
+function buildProspectFilter(
+  options: ListOperatorProspectsOptions,
+  selectionCandidateIds?: string[],
+): Record<string, unknown> {
   const constraints: Record<string, unknown>[] = [];
   if (options.resolutionVersion !== undefined) {
     constraints.push({ resolutionVersion: options.resolutionVersion });
@@ -170,6 +198,13 @@ function buildProspectFilter(options: ListOperatorProspectsOptions): Record<stri
         { candidateId: pattern },
       ],
     });
+  }
+  if (options.inSelection !== undefined && selectionCandidateIds !== undefined) {
+    constraints.push(
+      options.inSelection
+        ? { candidateId: { $in: selectionCandidateIds } }
+        : { candidateId: { $nin: selectionCandidateIds } },
+    );
   }
   switch (options.queue) {
     case 'join-review':
@@ -324,13 +359,25 @@ async function threadStatesForCandidates(
 export async function listOperatorProspects(
   connection: Connection,
   options: ListOperatorProspectsOptions,
-): Promise<OperatorViewPage<OperatorProspectRow>> {
+): Promise<OperatorProspectListPage> {
   const CandidateModel = createHotelCandidateModel(connection);
   const { limit, offset, skip } = pageBounds(options);
-  const filter = buildProspectFilter(options);
 
-  const [total, candidates] = await Promise.all([
+  // Computed unconditionally: even a request with no selection filter needs
+  // it to stamp the per-row inSelection fact and the page-level cohort
+  // facts. The cohort collection is small and TTL-bounded (a handful of
+  // documents), so this stays one cheap read added to the page's fan-out.
+  const selection = await getSelectionProjection(connection);
+  const filter = buildProspectFilter(options, [...selection.members.keys()]);
+  // The whole catalogue's size at this resolution generation, ignoring
+  // every UI filter including the selection one: the list's count line
+  // states this number so it is never merely discovered by paging.
+  const catalogueFilter =
+    options.resolutionVersion === undefined ? {} : { resolutionVersion: options.resolutionVersion };
+
+  const [total, catalogueTotal, candidates] = await Promise.all([
     CandidateModel.countDocuments(filter),
+    CandidateModel.countDocuments(catalogueFilter),
     CandidateModel.find(filter)
       // candidateId is unique, so the name tiebreaker makes offset windows
       // exact even when two establishments share a name.
@@ -363,8 +410,12 @@ export async function listOperatorProspects(
   const rows: OperatorProspectRow[] = candidates.map((row) => {
     const score = scoresByCandidate.get(row.candidateId);
     const outcomePointer = threadStates.outcomePointers.get(row.candidateId);
+    const selectionMember = selection.members.get(row.candidateId);
     return {
       candidateId: row.candidateId,
+      inSelection: selectionMember !== undefined,
+      selectionSource: selectionMember?.source ?? null,
+      selectionRank: selectionMember?.rank ?? null,
       name: row.name,
       commune: row.commune ?? null,
       postcode: row.postcode ?? null,
@@ -391,5 +442,13 @@ export async function listOperatorProspects(
     };
   });
 
-  return { rows, total, limit, offset };
+  return {
+    rows,
+    total,
+    limit,
+    offset,
+    selection: selection.cohort,
+    selectedCount: selection.members.size,
+    catalogueTotal,
+  };
 }

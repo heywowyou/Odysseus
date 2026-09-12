@@ -75,6 +75,7 @@ describe('runOutreachFullScanJob', () => {
       domain: 'example.com',
       cohortId: 'cohort-1',
       scoringVersion: 'hotel-outreach-v1',
+      authorizedBy: 'cohort',
     });
     vi.mocked(ensureJobRunIdentity).mockResolvedValue({
       startedAt: new Date('2026-09-11T00:00:00.000Z'),
@@ -100,6 +101,7 @@ describe('runOutreachFullScanJob', () => {
       candidateId: 'candidate-1',
       cohortId: 'cohort-1',
       scoringVersion: 'hotel-outreach-v1',
+      authorizedBy: 'cohort',
     });
     expect(completeJob).toHaveBeenCalledWith(fakeConnection, 'job-1', { auditId: 'audit-1' });
     expect(deleteCrawlCheckpoint).toHaveBeenCalledWith('/artifacts/example.com/dir');
@@ -126,6 +128,7 @@ describe('runOutreachFullScanJob', () => {
       domain: 'renamed.example',
       cohortId: 'cohort-1',
       scoringVersion: 'hotel-outreach-v1',
+      authorizedBy: 'cohort',
     });
 
     await runOutreachFullScanJob(fakeJob(), fakeContext());

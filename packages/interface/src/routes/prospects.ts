@@ -13,6 +13,7 @@ import {
   getOutreachAuditStatus,
   getProspectPreviewView,
   getProspectQualificationHistory,
+  getSelectionVerdict,
   getSeverityRollup,
   listOperatorProspects,
   planOutreachFullScan,
@@ -177,6 +178,14 @@ function parseListQuery(query: URLSearchParams): ListOperatorProspectsOptions {
     }
   }
 
+  const rawInSelection = query.get('inSelection');
+  if (rawInSelection !== null) {
+    if (rawInSelection !== 'true' && rawInSelection !== 'false') {
+      throw new ProspectRequestError('inSelection must be "true" or "false"');
+    }
+    options.inSelection = rawInSelection === 'true';
+  }
+
   const rawLimit = query.get('limit');
   if (rawLimit !== null) options.limit = requirePageValue(rawLimit, 'limit', 1);
   const rawOffset = query.get('offset');
@@ -298,6 +307,10 @@ export function registerProspectRoutes(
       auditStatus.audit === null
         ? null
         : await getSeverityRollup(connection, auditStatus.audit.auditId);
+    // Plan 041 slice B1: the same read-only projection the list uses, so
+    // the hub's "why can't I scan this" copy and the list's wave column
+    // can never disagree about who is in play.
+    const selectionVerdict = await getSelectionVerdict(connection, candidateId);
     sendJson(res, 200, {
       ...detail,
       qualificationHistory,
@@ -308,6 +321,7 @@ export function registerProspectRoutes(
         auditStatus.audit === null || severityRollup === null
           ? null
           : { ...auditStatus.audit, severityRollup },
+      selectionVerdict,
     });
   });
 
@@ -378,6 +392,7 @@ export function registerProspectRoutes(
         outreachCandidateId: plan.candidateId,
         outreachCohortId: plan.cohortId,
         outreachScoringVersion: plan.scoringVersion,
+        outreachAuthorizedBy: plan.authorizedBy,
       },
     });
     queue?.notify();

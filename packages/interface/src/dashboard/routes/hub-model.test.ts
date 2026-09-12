@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { HUB_STEP_ANCHORS, HUB_STEP_KEYS, hubPrimaryAction, pipelineSteps } from './hub-model';
+import { fr } from '../i18n/fr';
+import { formatDateTime } from '../lib/format';
+import {
+  HUB_STEP_ANCHORS,
+  HUB_STEP_KEYS,
+  hubPrimaryAction,
+  pipelineSteps,
+  selectionVerdictSentence,
+} from './hub-model';
 import type { ProspectDetailResponse } from './prospects-model';
 
 /** A hub payload at the very start of the pipeline: known identity, no
@@ -321,5 +329,63 @@ describe('hubPrimaryAction', () => {
       preview: LIVE_PREVIEW,
     });
     expect(hubPrimaryAction(settled, NOW)).toEqual({ kind: 'none' });
+  });
+});
+
+describe('selectionVerdictSentence', () => {
+  const cohort = {
+    cohortId: 'cohort-1',
+    scoringVersion: 'hotel-outreach-v1',
+    computedAt: '2026-09-08T00:00:00.000Z',
+    populationSize: 42,
+    selectedCount: 6,
+    abilityCutoff: 60,
+    brokennessCutoff: 40,
+  };
+
+  it('is silent for any refusal other than not-selected', () => {
+    const detail = makeDetail({
+      outreachScan: { canStart: false, refusal: 'suppressed' },
+      selectionVerdict: { inSelection: false, source: null, rank: null, cohort },
+    });
+    expect(selectionVerdictSentence(detail, fr, 'fr')).toBeNull();
+  });
+
+  it('is silent when the verdict is absent (a payload predating the field)', () => {
+    const detail = makeDetail({ outreachScan: { canStart: false, refusal: 'not-selected' } });
+    expect(selectionVerdictSentence(detail, fr, 'fr')).toBeNull();
+  });
+
+  it('names the funnel-stage fact for an unscored hotel', () => {
+    const detail = makeDetail({
+      outreachScan: { canStart: false, refusal: 'not-selected' },
+      selectionVerdict: { inSelection: false, source: null, rank: null, cohort },
+      score: null,
+    });
+    expect(selectionVerdictSentence(detail, fr, 'fr')).toBe(fr.hub.selectionVerdict.notScored);
+  });
+
+  it('quotes the score against the recorded cutoffs for a scored non-member', () => {
+    const detail = makeDetail({
+      outreachScan: { canStart: false, refusal: 'not-selected' },
+      selectionVerdict: { inSelection: false, source: null, rank: null, cohort },
+      score: {
+        scoreId: 'score-1',
+        candidateId: 'cand-1',
+        name: 'Hôtel Exemple',
+        commune: 'Grenoble',
+        postcode: '38000',
+        scoringVersion: 'hotel-outreach-v1',
+        prescanId: 'prescan-1',
+        computedAt: '2026-09-01T00:00:00.000Z',
+        worthy: true,
+        evidenceComplete: true,
+        brokenness: { total: 12, components: [] },
+        ability: { total: 45, components: [] },
+      },
+    });
+    expect(selectionVerdictSentence(detail, fr, 'fr')).toBe(
+      `Score de capacité 45 (seuil 60), score de casse 12 (seuil 40), sélection du ${formatDateTime(cohort.computedAt, 'fr')}.`,
+    );
   });
 });

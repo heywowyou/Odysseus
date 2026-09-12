@@ -81,7 +81,17 @@ describe('prospects search box', () => {
   let fetchMock: FetchMock;
 
   beforeEach(() => {
-    fetchMock = vi.fn(async () => jsonResponse({ rows: [], total: 0, limit: 25, offset: 0 }));
+    fetchMock = vi.fn(async () =>
+      jsonResponse({
+        rows: [],
+        total: 0,
+        limit: 25,
+        offset: 0,
+        selection: null,
+        selectedCount: 0,
+        catalogueTotal: 0,
+      }),
+    );
     vi.stubGlobal('fetch', fetchMock);
   });
 
@@ -101,7 +111,7 @@ describe('prospects search box', () => {
     await pause(100);
     await typeSearch('Hôtel');
     const searchRequest = await waitForRequest(fetchMock, 'q=');
-    expect(searchRequest).toBe('/api/prospects?q=H%C3%B4tel&limit=25');
+    expect(searchRequest).toBe('/api/prospects?inSelection=true&q=H%C3%B4tel&limit=25');
     expect(requestedUrls(fetchMock).filter((url) => url.includes('q='))).toHaveLength(1);
 
     root.unmount();

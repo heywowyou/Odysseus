@@ -61,7 +61,15 @@ function withProviders(
 }
 
 function emptyPage(): unknown {
-  return { rows: [], total: 0, limit: 50, offset: 0 };
+  return {
+    rows: [],
+    total: 0,
+    limit: 50,
+    offset: 0,
+    selection: null,
+    selectedCount: 0,
+    catalogueTotal: 0,
+  };
 }
 
 function jsonResponse(body: unknown): Response {

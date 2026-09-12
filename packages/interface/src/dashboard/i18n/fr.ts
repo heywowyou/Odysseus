@@ -516,6 +516,11 @@ export const fr: DashboardStrings = {
       qualification: 'Qualification',
       all: 'Tous',
     },
+    selectionFilter: {
+      label: 'Sélection',
+      selected: 'Dans la sélection',
+      all: 'Tout le catalogue',
+    },
     columns: {
       name: 'Hôtel',
       city: 'Ville',
@@ -526,7 +531,14 @@ export const fr: DashboardStrings = {
       contact: 'Contact',
       thread: 'Emails',
       outcome: 'Résultat',
+      selection: 'Vague',
     },
+    selectionValues: {
+      inSelectionWithRank: 'Dans la sélection (rang {rank})',
+      inSelectionNoRank: 'Dans la sélection',
+      notInSelection: 'Hors sélection',
+    },
+    selectionCountLine: '{selected} dans la sélection, {scored} scorés, {total} au catalogue',
     filterEmpty: 'Aucun prospect ne correspond à ces filtres.',
   },
   prospectDetail: {
@@ -599,6 +611,11 @@ export const fr: DashboardStrings = {
         'Ce site a changé de propriétaire ; la sélection ne correspond plus à cet hôtel.',
       suppressed: 'Cet hôtel est sur la liste de ne pas contacter.',
       'already-in-flight': 'Une analyse est déjà en cours pour cet hôtel.',
+    },
+    selectionVerdict: {
+      belowCutoff:
+        'Score de capacité {ability} (seuil {abilityCutoff}), score de casse {brokenness} (seuil {brokennessCutoff}), sélection du {date}.',
+      notScored: 'Pas encore scoré.',
     },
     fiche: {
       starsLabel: 'Étoiles',

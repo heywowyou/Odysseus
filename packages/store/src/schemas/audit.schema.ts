@@ -264,6 +264,8 @@ const outreachContextSchema = new Schema(
     candidateId: { type: String, required: true },
     cohortId: { type: String, required: true },
     scoringVersion: { type: String, required: true },
+    // Plan 041 slice B2: which record authorized this scan.
+    authorizedBy: { type: String, required: true, enum: ['cohort', 'wave-roster'] },
   },
   { _id: false },
 );

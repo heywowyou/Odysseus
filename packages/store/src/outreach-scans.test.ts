@@ -12,6 +12,7 @@ import {
   planOutreachFullScan,
   resolveOutreachAuditForCandidate,
 } from './outreach-scans.js';
+import { addWaveRosterEntry } from './wave-roster.js';
 import { probeMongoAvailability } from './test-support.js';
 
 const { available: mongoAvailable, connection } = await probeMongoAvailability();
@@ -74,10 +75,11 @@ async function seedCohort(input: {
   approved?: boolean;
   state?: 'selected' | 'calibration';
   computedAt?: Date;
+  scoringVersion?: string;
 }): Promise<void> {
   await createHotelScoreCohortModel(connection!).create({
     cohortId: input.cohortId,
-    scoringVersion: 'hotel-outreach-v1',
+    scoringVersion: input.scoringVersion ?? 'hotel-outreach-v1',
     selectionRuleVersion: 'half-ability-decile-brokenness-v1',
     approved: input.approved ?? true,
     populationSize: 1,
@@ -171,6 +173,7 @@ async function seedOutreachAudit(input: {
       candidateId: input.candidateId,
       cohortId: `cohort-${randomUUID()}`,
       scoringVersion: 'hotel-outreach-v1',
+      authorizedBy: 'cohort',
     },
   };
   await persistAudit(connection!, manifest, []);
@@ -268,6 +271,64 @@ describe.skipIf(!mongoAvailable)('planOutreachFullScan', () => {
     expect(await planOutreachFullScan(connection!, unapproved.candidateId, VERSIONS)).toEqual({
       refused: 'cohort-not-approved',
     });
+  });
+
+  it('authorizes a candidate no cohort selects, via the wave roster', async () => {
+    const candidate = qualifiedCandidate('roster-only.fr');
+    await upsertHotelCandidates(connection!, [candidate]);
+    // A unique scoring version isolates this test's "latest cohort at this
+    // version" lookup from every other test in this file recording a
+    // cohort under the shared 'hotel-outreach-v1' constant.
+    const scoringVersion = `sv-${randomUUID()}`;
+    // Provenance only: the roster entry needs a cohort to record as the
+    // selection run the decision was taken against, even though this
+    // candidate is not one of its members.
+    const provenanceCohortId = `cohort-${randomUUID()}`;
+    await seedCohort({ cohortId: provenanceCohortId, candidateId: randomUUID(), scoringVersion });
+
+    await addWaveRosterEntry(connection!, {
+      wave: 'wave-1',
+      candidateId: candidate.candidateId,
+      rank: 8,
+      scoringVersion,
+      actor: 'operator',
+    });
+
+    const plan = await planOutreachFullScan(connection!, candidate.candidateId, VERSIONS);
+    expect(plan).toMatchObject({
+      candidateId: candidate.candidateId,
+      domain: 'roster-only.fr',
+      cohortId: provenanceCohortId,
+      scoringVersion,
+      authorizedBy: 'wave-roster',
+    });
+  });
+
+  it('the wave roster authorizes even when the candidate is also selected in an unapproved cohort', async () => {
+    const candidate = qualifiedCandidate('roster-and-unapproved.fr');
+    await upsertHotelCandidates(connection!, [candidate]);
+    const scoringVersion = `sv-${randomUUID()}`;
+    await seedCohort({
+      cohortId: `cohort-${randomUUID()}`,
+      candidateId: candidate.candidateId,
+      approved: false,
+      scoringVersion,
+    });
+    await addWaveRosterEntry(connection!, {
+      wave: 'wave-1',
+      candidateId: candidate.candidateId,
+      scoringVersion,
+      actor: 'operator',
+    });
+
+    const plan = await planOutreachFullScan(connection!, candidate.candidateId, VERSIONS);
+    expect(plan).toMatchObject({ authorizedBy: 'wave-roster' });
+  });
+
+  it('a cohort-selected, approved candidate is authorized by the cohort, not the roster', async () => {
+    const { candidate, cohortId } = await seedSelectedCandidate('cohort-wins.fr');
+    const plan = await planOutreachFullScan(connection!, candidate.candidateId, VERSIONS);
+    expect(plan).toMatchObject({ cohortId, authorizedBy: 'cohort' });
   });
 
   it('refuses a stale qualification generation', async () => {

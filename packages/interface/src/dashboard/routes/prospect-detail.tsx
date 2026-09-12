@@ -13,7 +13,12 @@ import { useI18n } from '../i18n/provider';
 import { vocabularyLabel } from '../lib/vocabulary';
 import { ApiError, fetchJson, postEmpty, sendJson } from '../lib/api';
 import { usePolling } from '../lib/use-polling';
-import { HUB_STEP_ANCHORS, hubPrimaryAction, pipelineSteps } from './hub-model';
+import {
+  HUB_STEP_ANCHORS,
+  hubPrimaryAction,
+  pipelineSteps,
+  selectionVerdictSentence,
+} from './hub-model';
 import type { HubStep } from './hub-model';
 import {
   isPreviewUnavailableDraftRefusal,
@@ -448,6 +453,8 @@ export function ProspectDetailPage(): JSX.Element {
       ? (strings.hub.scanRefusals[action.refusal as keyof typeof strings.hub.scanRefusals] ??
         strings.hub.scanRefusedLabel)
       : null;
+  const selectionSentence =
+    action.kind === 'scan-refused' ? selectionVerdictSentence(data, strings, language) : null;
 
   return (
     <article>
@@ -481,6 +488,7 @@ export function ProspectDetailPage(): JSX.Element {
         >
           <span className="font-medium text-ink">{strings.hub.scanRefusedLabel}</span>{' '}
           {refusalSentence}
+          {selectionSentence !== null ? <> {selectionSentence}</> : null}
         </p>
       ) : null}
       {action.kind === 'review' ? (

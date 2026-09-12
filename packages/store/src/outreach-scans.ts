@@ -25,7 +25,8 @@ import {
   getLatestHotelCandidateByOwnRegistrableDomain,
 } from './hotel-candidates.js';
 import { isSuppressed } from './suppression.js';
-import { assessCrawlCoverage } from '@odysseus/core';
+import { findActiveWaveRosterEntry } from './wave-roster.js';
+import { assessCrawlCoverage, type OutreachAuthorizationSource } from '@odysseus/core';
 
 export type OutreachFullScanStartRefusal =
   | 'candidate-unknown'
@@ -38,14 +39,24 @@ export type OutreachFullScanStartRefusal =
   | 'suppressed'
   | 'already-in-flight';
 
+/** Which record authorized this scan: the selection rule's own cohort, or
+ *  the operator's wave roster (plan 041 slice B2). The formula proposes and
+ *  the operator disposes, and a stored scan says which of the two it was.
+ *  Re-exported from core so the audit's own outreach context and this
+ *  plan's verdict never drift into two enums of the same two values. */
+export type OutreachFullScanAuthorization = OutreachAuthorizationSource;
+
 /** The facts a validated start needs, and exactly what the job options
  *  snapshot persists. No field here is optional: a scan without its cohort
- *  provenance is not creatable. */
+ *  provenance is not creatable. A roster-authorized scan carries the cohort
+ *  the operator's decision was taken against, which is why the roster entry
+ *  stores one. */
 export interface OutreachFullScanPlan {
   candidateId: string;
   domain: string;
   cohortId: string;
   scoringVersion: string;
+  authorizedBy: OutreachFullScanAuthorization;
 }
 
 export interface OutreachFullScanVersionInputs {
@@ -71,21 +82,8 @@ export async function planOutreachFullScan(
   const domain = candidate.ownRegistrableDomain;
   if (domain === undefined || domain === '') return { refused: 'no-own-domain' };
 
-  // Authorization reads the candidate's own newest selected membership, not
-  // the newest cohort document: later waves must never silently de-authorize
-  // a hotel the operator selected and has not suppressed. The members index
-  // ('members.candidateId') answers this without a collection scan.
-  const CohortModel = createHotelScoreCohortModel(connection);
-  const cohort = await CohortModel.findOne({
-    'members.candidateId': candidateId,
-    'members.state': 'selected',
-  })
-    .sort({ computedAt: -1 })
-    .lean();
-  if (cohort === null) return { refused: 'not-selected' };
-  const member = cohort.members.find((entry) => entry.candidateId === candidateId);
-  if (member === undefined || member.state !== 'selected') return { refused: 'not-selected' };
-  if (!cohort.approved) return { refused: 'cohort-not-approved' };
+  const authorization = await authorizeOutreachFullScan(connection, candidateId);
+  if ('refused' in authorization) return authorization;
 
   const qualification = candidate.qualification;
   if (qualification === undefined || qualification.outcome !== 'qualified') {
@@ -109,7 +107,77 @@ export async function planOutreachFullScan(
     return { refused: 'already-in-flight' };
   }
 
-  return { candidateId, domain, cohortId: cohort.cohortId, scoringVersion: cohort.scoringVersion };
+  return {
+    candidateId,
+    domain,
+    cohortId: authorization.cohortId,
+    scoringVersion: authorization.scoringVersion,
+    authorizedBy: authorization.authorizedBy,
+  };
+}
+
+export interface OutreachFullScanAuthorizationFacts {
+  authorizedBy: OutreachFullScanAuthorization;
+  cohortId: string;
+  scoringVersion: string;
+  /** The rank the authorizing record gives this hotel, when it gives one. */
+  rank: number | null;
+}
+
+/**
+ * Whether a record authorizes working this hotel at all, and which one.
+ *
+ * Two sources, checked in that order. Cohort membership reads the
+ * candidate's own newest selected membership, not the newest cohort
+ * document: later waves must never silently de-authorize a hotel the
+ * operator selected and has not suppressed. The members index
+ * ('members.candidateId') answers this without a collection scan.
+ *
+ * The wave roster is consulted only when cohort membership does not
+ * authorize, which is what makes it additive: it can open a hotel the rule
+ * ranked below the cut, and can never close one the rule selected. The
+ * checks that protect the site being scanned (qualification currency,
+ * current domain ownership, suppression) run after this either way, so the
+ * roster widens who may be worked, never what politeness allows.
+ */
+async function authorizeOutreachFullScan(
+  connection: Connection,
+  candidateId: string,
+): Promise<OutreachFullScanAuthorizationFacts | { refused: OutreachFullScanStartRefusal }> {
+  const CohortModel = createHotelScoreCohortModel(connection);
+  const cohort = await CohortModel.findOne({
+    'members.candidateId': candidateId,
+    'members.state': 'selected',
+  })
+    .sort({ computedAt: -1 })
+    .lean();
+  const member = cohort?.members.find((entry) => entry.candidateId === candidateId);
+  if (cohort !== null && member !== undefined && member.state === 'selected' && cohort.approved) {
+    return {
+      authorizedBy: 'cohort',
+      cohortId: cohort.cohortId,
+      scoringVersion: cohort.scoringVersion,
+      rank: member.rank,
+    };
+  }
+
+  const rosterEntry = await findActiveWaveRosterEntry(connection, candidateId);
+  if (rosterEntry !== null) {
+    return {
+      authorizedBy: 'wave-roster',
+      cohortId: rosterEntry.cohortId,
+      scoringVersion: rosterEntry.scoringVersion,
+      rank: rosterEntry.rank,
+    };
+  }
+
+  // No roster entry, so the cohort's own answer is the refusal: "selected
+  // but the selection is not approved yet" is a different operator situation
+  // from "not selected".
+  if (cohort !== null && member !== undefined && member.state === 'selected' && !cohort.approved) {
+    return { refused: 'cohort-not-approved' };
+  }
+  return { refused: 'not-selected' };
 }
 
 /** The queued-or-running outreach full scan for one candidate, if any. Two

@@ -46,6 +46,13 @@ export const QUEUE_LABEL_KEYS: Record<
   groups: 'groups',
 };
 
+/** Plan 041 slice B1: 'selected' shows only the hotels a record puts in the
+ *  current wave (the default), 'all' lifts the filter back to the whole
+ *  catalogue. There is deliberately no third "hors sélection" option here:
+ *  that inversion is answered per-hotel by the hub's verdict copy, not by a
+ *  list-wide filter. */
+export type SelectionFilter = 'selected' | 'all';
+
 export type IdentityStatusFilter = '' | 'resolved' | 'needs-review' | 'ambiguous' | 'unmatched';
 export type GroupStatusFilter = '' | 'independent' | 'group-member' | 'vendor-hosted' | 'unknown';
 export type ReviewStateFilter = '' | 'not-required' | 'pending' | 'accepted' | 'rejected';
@@ -96,6 +103,7 @@ export function isQualificationValue(value: string): value is QualificationFilte
  *  `search` is the free-text box and travels as the API's `q` param. */
 export interface ProspectFilterState {
   queue: ProspectQueue;
+  selection: SelectionFilter;
   identityStatus: IdentityStatusFilter;
   groupStatus: GroupStatusFilter;
   reviewState: ReviewStateFilter;
@@ -103,9 +111,12 @@ export interface ProspectFilterState {
   search: string;
 }
 
+/** The list opens on the actionable set (plan 041 slice B1's design
+ *  direction): 'selected' is the default, not 'all'. */
 export function createEmptyFilters(): ProspectFilterState {
   return {
     queue: 'all',
+    selection: 'selected',
     identityStatus: '',
     groupStatus: '',
     reviewState: '',
@@ -123,6 +134,7 @@ export const PROSPECT_PAGE_SIZE = 25;
 export function buildProspectsPath(filters: ProspectFilterState, offset: number): string {
   const params = new URLSearchParams();
   if (filters.queue !== 'all') params.set('queue', filters.queue);
+  if (filters.selection === 'selected') params.set('inSelection', 'true');
   if (filters.identityStatus !== '') params.set('identityStatus', filters.identityStatus);
   if (filters.groupStatus !== '') params.set('groupStatus', filters.groupStatus);
   if (filters.reviewState !== '') params.set('reviewState', filters.reviewState);
@@ -176,6 +188,25 @@ export interface ProspectRow {
   contactState: string | null;
   threadState: string | null;
   outcome: string | null;
+  /** Plan 041 slice B1: whether a record puts this hotel in the current
+   *  wave. Membership, not permission - a member can still be refused at
+   *  scan time; the hub carries that full verdict. */
+  inSelection: boolean;
+  selectionSource: 'cohort' | 'wave-roster' | null;
+  selectionRank: number | null;
+}
+
+/** The newest approved cohort's own facts, echoed on the list page so its
+ *  count line can quote the population size and cutoffs without a second
+ *  request. Null when no cohort has ever been approved. */
+export interface SelectionCohortFactsResponse {
+  cohortId: string;
+  scoringVersion: string;
+  computedAt: string;
+  populationSize: number;
+  selectedCount: number;
+  abilityCutoff: number | null;
+  brokennessCutoff: number | null;
 }
 
 export interface ProspectListResponse {
@@ -183,6 +214,9 @@ export interface ProspectListResponse {
   total: number;
   limit: number;
   offset: number;
+  selection: SelectionCohortFactsResponse | null;
+  selectedCount: number;
+  catalogueTotal: number;
 }
 
 /** City column text: commune and postcode together, either alone, or empty
@@ -196,6 +230,33 @@ export function locationLabel(row: ProspectRow): string {
 
 /** Review state tone: a pending decision is the queue's work item, an
  *  accepted one its good end, a rejected one settled history. */
+/** The wave column's tone: membership is the actionable state here, unlike
+ *  the qualification badge (plan 041 slice B3's own concern, not this
+ *  one) - a member is the good end, a non-member neutral rather than bad,
+ *  since most of the catalogue is simply not in this wave yet. */
+export function selectionBadgeTone(inSelection: boolean): BadgeTone {
+  return inSelection ? 'minor' : 'neutral';
+}
+
+/** The catalogue-size count line above the list: how many are in the
+ *  current wave, how many were scored and ranked (the cohort's own
+ *  population, a proxy for "scored" that needs no second aggregate), and
+ *  how many exist in total. Null cohort facts (no cohort ever approved)
+ *  render as a dash rather than a false zero. */
+export function selectionCountLine(
+  strings: DashboardStrings,
+  selection: SelectionCohortFactsResponse | null,
+  selectedCount: number,
+  total: number,
+): string {
+  const scored =
+    selection == null ? strings.common.vocabularyFallback : String(selection.populationSize);
+  return strings.prospects.selectionCountLine
+    .replace('{selected}', String(selectedCount))
+    .replace('{scored}', scored)
+    .replace('{total}', String(total));
+}
+
 export function reviewBadgeTone(reviewState: string): BadgeTone {
   switch (reviewState) {
     case 'pending':
@@ -367,6 +428,16 @@ export interface ProspectDetailResponse {
   } | null;
   /** The queued-or-running outreach full scan for this candidate, if any. */
   outreachScanJobId?: string | null;
+  /** Plan 041 slice B1: the same selection projection the list uses, so
+   *  the hub's "why can't I scan this" copy can never disagree with the
+   *  list's wave column about who is in play. Optional for the same
+   *  fixture tolerance as outreachScan. */
+  selectionVerdict?: {
+    inSelection: boolean;
+    source: 'cohort' | 'wave-roster' | null;
+    rank: number | null;
+    cohort: SelectionCohortFactsResponse | null;
+  };
 }
 
 /** Body of POST /api/prospects/:candidateId/review. The reason stays out:

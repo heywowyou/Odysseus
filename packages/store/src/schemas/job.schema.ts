@@ -122,6 +122,9 @@ export interface JobOptionsSnapshot {
   outreachCandidateId?: string;
   outreachCohortId?: string;
   outreachScoringVersion?: string;
+  /** Plan 041 slice B2: which record authorized this scan, 'cohort' or
+   *  'wave-roster'. */
+  outreachAuthorizedBy?: string;
 }
 
 export interface JobProgressCrawl {
@@ -297,6 +300,7 @@ const jobOptionsSchema = new Schema(
     outreachCandidateId: { type: String },
     outreachCohortId: { type: String },
     outreachScoringVersion: { type: String },
+    outreachAuthorizedBy: { type: String },
   },
   { _id: false },
 );

@@ -292,6 +292,7 @@ export { planOutreachFullScan, resolveOutreachAuditForCandidate } from './outrea
 export { findActiveOutreachFullScanJob, findActiveScanJobForHost } from './outreach-scans.js';
 export { getOutreachAuditStatus } from './outreach-scans.js';
 export type {
+  OutreachFullScanAuthorization,
   OutreachFullScanPlan,
   OutreachFullScanStartRefusal,
   OutreachFullScanVersionInputs,
@@ -299,6 +300,29 @@ export type {
   OutreachAuditResolution,
   OutreachAuditStatus,
 } from './outreach-scans.js';
+
+// Plan 041 slice B2: the operator's wave roster, a second authorization
+// source beside cohort membership. addWaveRosterEntry/revokeWaveRosterEntry
+// back the CLI's `prospect wave add/remove`; findActiveWaveRosterEntry is
+// what outreach-scans.ts reads.
+export {
+  addWaveRosterEntry,
+  findActiveWaveRosterEntry,
+  listWaveRoster,
+  revokeWaveRosterEntry,
+} from './wave-roster.js';
+export type {
+  AddWaveRosterEntryInput,
+  AddWaveRosterEntryRefusal,
+  AddWaveRosterEntryResult,
+  ListWaveRosterOptions,
+  RevokeWaveRosterEntryInput,
+  RevokeWaveRosterEntryResult,
+} from './wave-roster.js';
+export type {
+  WaveRosterEntryDocument,
+  WaveRosterEntryState,
+} from './schemas/wave-roster.schema.js';
 
 // Milestone 9c plans 011 and 012: outreach threads and draft attempts.
 export { OUTREACH_THREAD_STATES } from './schemas/outreach-thread.schema.js';
@@ -388,6 +412,8 @@ export {
   getProspectScoreView,
   getProspectSourceConflicts,
   getProspectThreadView,
+  getSelectionProjection,
+  getSelectionVerdict,
   getVendorFingerprintAggregate,
   listOperatorProspects,
   listOutreachReviewDrafts,
@@ -402,6 +428,12 @@ export type {
   GetProspectPrescanViewOptions,
   GetProspectScoreViewOptions,
   ListOperatorProspectsOptions,
+  OperatorProspectListPage,
+  SelectionCohortFacts,
+  SelectionMember,
+  SelectionProjection,
+  SelectionSource,
+  SelectionVerdict,
   OperatorContactView,
   OperatorDraftView,
   OperatorEvidenceAssetView,

@@ -304,6 +304,12 @@ export interface PrivacySecurityCoverage {
   cookieConsent: 'completed' | 'unavailable';
 }
 
+/** Plan 041 slice B2: which record authorized a candidate-linked outreach
+ *  full scan. `cohort` is the selection rule's own record; `wave-roster` is
+ *  the operator's own additive list, used only when the rule's cohorts do
+ *  not authorize the candidate. */
+export type OutreachAuthorizationSource = 'cohort' | 'wave-roster';
+
 /** Plan 037: prospecting provenance stamped on one candidate-linked
  *  outreach full scan. Presence marks the audit as selected-prospect
  *  evidence, decided when the job was created and re-validated when the
@@ -314,6 +320,7 @@ export interface AuditOutreachContext {
   candidateId: string;
   cohortId: string;
   scoringVersion: string;
+  authorizedBy: OutreachAuthorizationSource;
 }
 
 export interface AuditManifest {

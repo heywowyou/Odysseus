@@ -25,6 +25,7 @@ import { registerContactsCommand } from './prospect/contacts.js';
 import { registerPreviewCommand } from './prospect/preview.js';
 import { registerDraftCommand } from './prospect/draft.js';
 import { registerOutreachCommand } from './prospect/outreach.js';
+import { registerWaveCommand } from './prospect/wave.js';
 
 export function registerProspectCommand(program: Command): void {
   const prospect = program
@@ -43,4 +44,5 @@ export function registerProspectCommand(program: Command): void {
   registerPreviewCommand(prospect);
   registerDraftCommand(prospect);
   registerOutreachCommand(prospect);
+  registerWaveCommand(prospect);
 }

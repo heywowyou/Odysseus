@@ -85,6 +85,7 @@ export async function runOutreachFullScanJob(
           candidateId: plan.candidateId,
           cohortId: plan.cohortId,
           scoringVersion: plan.scoringVersion,
+          authorizedBy: plan.authorizedBy,
         },
       },
       connection,

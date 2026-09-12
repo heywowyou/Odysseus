@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { fr } from '../i18n/fr';
 import {
   PROSPECT_PAGE_SIZE,
   buildProspectsPath,
@@ -11,9 +12,15 @@ import {
   locationLabel,
   qualificationBadgeTone,
   reviewBadgeTone,
+  selectionBadgeTone,
+  selectionCountLine,
   totalPages,
 } from './prospects-model';
-import type { ProspectFilterState, ProspectRow } from './prospects-model';
+import type {
+  ProspectFilterState,
+  ProspectRow,
+  SelectionCohortFactsResponse,
+} from './prospects-model';
 
 function makeRow(overrides: Partial<ProspectRow> = {}): ProspectRow {
   return {
@@ -36,18 +43,24 @@ function makeRow(overrides: Partial<ProspectRow> = {}): ProspectRow {
     contactState: 'found',
     threadState: 'e1-sent',
     outcome: null,
+    inSelection: false,
+    selectionSource: null,
+    selectionRank: null,
     ...overrides,
   };
 }
 
 describe('buildProspectsPath', () => {
-  it('returns the bare path with only the page size when nothing is filtered', () => {
-    expect(buildProspectsPath(createEmptyFilters(), 0)).toBe('/api/prospects?limit=25');
+  it('defaults to the selection filter, with only the page size otherwise', () => {
+    expect(buildProspectsPath(createEmptyFilters(), 0)).toBe(
+      '/api/prospects?inSelection=true&limit=25',
+    );
   });
 
   it('encodes the queue and every active filter under their API names', () => {
     const filters: ProspectFilterState = {
       queue: 'join-review',
+      selection: 'all',
       identityStatus: 'needs-review',
       groupStatus: '',
       reviewState: 'pending',
@@ -61,6 +74,11 @@ describe('buildProspectsPath', () => {
     );
   });
 
+  it('omits inSelection once the operator switches the filter to the whole catalogue', () => {
+    const path = buildProspectsPath({ ...createEmptyFilters(), selection: 'all' }, 0);
+    expect(path).not.toContain('inSelection');
+  });
+
   it('omits the offset on the first page', () => {
     const path = buildProspectsPath({ ...createEmptyFilters(), queue: 'parked' }, 0);
     expect(path).not.toContain('offset');
@@ -68,7 +86,7 @@ describe('buildProspectsPath', () => {
 
   it('sends the search as q when it has content and trims surrounding whitespace', () => {
     const path = buildProspectsPath({ ...createEmptyFilters(), search: '  Hôtel Belvédère ' }, 0);
-    expect(path).toBe('/api/prospects?q=H%C3%B4tel+Belv%C3%A9d%C3%A8re&limit=25');
+    expect(path).toBe('/api/prospects?inSelection=true&q=H%C3%B4tel+Belv%C3%A9d%C3%A8re&limit=25');
   });
 
   it('omits q for a blank or whitespace-only search', () => {
@@ -126,6 +144,35 @@ describe('badge tones', () => {
     expect(qualificationBadgeTone('not-evaluated')).toBe('accent');
     expect(qualificationBadgeTone('rejected')).toBe('neutral');
     expect(qualificationBadgeTone('group-routed')).toBe('neutral');
+  });
+
+  it('marks selection membership as the good end, absence as neutral rather than bad', () => {
+    expect(selectionBadgeTone(true)).toBe('minor');
+    expect(selectionBadgeTone(false)).toBe('neutral');
+  });
+});
+
+describe('selectionCountLine', () => {
+  const cohort: SelectionCohortFactsResponse = {
+    cohortId: 'cohort-1',
+    scoringVersion: 'hotel-outreach-v1',
+    computedAt: '2026-09-08T00:00:00.000Z',
+    populationSize: 42,
+    selectedCount: 6,
+    abilityCutoff: 60,
+    brokennessCutoff: 40,
+  };
+
+  it('interpolates the selected, scored, and total counts', () => {
+    expect(selectionCountLine(fr, cohort, 10, 9765)).toBe(
+      '10 dans la sélection, 42 scorés, 9765 au catalogue',
+    );
+  });
+
+  it('falls back to the vocabulary placeholder when no cohort has ever been approved', () => {
+    expect(selectionCountLine(fr, null, 0, 9765)).toBe(
+      `0 dans la sélection, ${fr.common.vocabularyFallback} scorés, 9765 au catalogue`,
+    );
   });
 });
 
