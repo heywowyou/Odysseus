@@ -36,6 +36,7 @@ import {
 import { buildArtifactBucketKey, buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import {
   classifyReportFreshness,
+  findUnconfirmedIdentityFields,
   generateOutreachPreviewHtmlV2,
   generateOutreachPreviewPdf,
   OUTREACH_PROOF_CARD_COPY,
@@ -57,7 +58,7 @@ import type { Router } from '../router.js';
 import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
 import { lookupOperatorProfile } from '../sirene/sirene-cache.js';
 import { pdfDigestOf } from '../pipeline/pdf-digest.js';
-import { makeReportReady } from '../pipeline/make-report-ready.js';
+import { findingsAreStale, makeReportReady } from '../pipeline/make-report-ready.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { resolveArtifactFile } from '../artifacts/resolve-artifact.js';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
@@ -467,6 +468,14 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       reportLanguages,
       reports,
       lifecycle,
+      // Plan 045 slice 1.2: reachability facts the produce step needs that
+      // it previously had to infer from an approved candidate or existing
+      // report rows, neither of which an audit like Belleval (confirmed
+      // fields, both analyses, zero reports) had. findingsStale reuses the
+      // exact schema-version/fingerprint comparison makeReportReady acts
+      // on, against findings already fetched above (no extra I/O).
+      analysisPair: selectedPair.kind,
+      findingsStale: findingsAreStale(audit.findingsProvenance, findings),
       analysisIsStaticFallback,
       approval: approved ? approval : null,
       manualFields: audit.manualFields,
@@ -587,6 +596,64 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       sendJson(res, 200, { manualFields });
     } catch (error) {
       sendError(res, 400, error instanceof Error ? error.message : 'could not save manual fields');
+    }
+  });
+
+  // Plan 045 slice 1.3: the inline Confirm button next to a detected
+  // identity field (the stepper's first step, and NeedsInputCard on the
+  // progress page) stamps that one field as operator-confirmed, then, once
+  // no detected identity field remains, tries to get the reports the rest
+  // of the way to disk itself - the operator's whole reason for confirming
+  // was to unblock the PDF, not to separately go find a produce button.
+  // Never invents a patch for a field with no detected value: the confirm
+  // button never renders for one, and a mismatched field name is a 400,
+  // not a silent no-op.
+  router.post('/api/audits/:auditId/manual-fields/confirm', async ({ req, res, params }) => {
+    const auditId = params['auditId']!;
+    const audit = await getAuditRuntimeFields(connection, auditId);
+    if (!audit) {
+      sendError(res, 404, 'audit not found');
+      return;
+    }
+
+    const body = await readJsonBodyOrRespond(req, res);
+    if (body === jsonBodyNotRead) return;
+    if (body === null || typeof body !== 'object') {
+      sendError(res, 400, 'request body must be a JSON object');
+      return;
+    }
+    const record = body as Record<string, unknown>;
+    const field = record['field'];
+    const value = record['value'];
+    if (field !== 'nomCommercial' && field !== 'raisonSociale') {
+      sendError(res, 400, 'field must be "nomCommercial" or "raisonSociale"');
+      return;
+    }
+    if (typeof value !== 'string' || value.trim() === '') {
+      sendError(res, 400, 'value must be a non-empty string');
+      return;
+    }
+
+    const manualFields = await setAuditManualFields(connection, auditId, {
+      [field]: { value: value.trim(), provenance: 'operator' },
+    });
+
+    if (findUnconfirmedIdentityFields(manualFields).length > 0) {
+      // The other identity field is still a detected, unconfirmed guess:
+      // no point attempting makeReportReady, which would only refuse with
+      // the same identity-unconfirmed refusal this route already knows about.
+      sendJson(res, 200, { manualFields, pdfs: 'waiting-other-field' });
+      return;
+    }
+
+    try {
+      const outcome = await makeReportReady(connection, auditId, artifactStore);
+      sendJson(res, 200, {
+        manualFields,
+        pdfs: outcome.kind === 'ready' ? 'generated' : outcome.refusal,
+      });
+    } catch (error) {
+      sendError(res, 409, error instanceof Error ? error.message : 'could not regenerate reports');
     }
   });
 

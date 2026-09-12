@@ -20,6 +20,8 @@ import { canStop } from '../lib/job-actions';
 import { cn } from '../lib/cn';
 import { usePolling } from '../lib/use-polling';
 import { hostnameOf } from './audit-detail-model';
+import { IdentityConfirmField } from './identity-confirm-field';
+import type { IdentityField } from './identity-confirm-field';
 import {
   contentScanProgress,
   coverageSegments,
@@ -143,7 +145,7 @@ export function ScanProgressPage(): JSX.Element {
         </Card>
       );
   } else {
-    body = <JobView job={job} />;
+    body = <JobView job={job} refresh={refresh} />;
   }
 
   return (
@@ -251,7 +253,7 @@ function PhaseRow(props: {
 /** Live view of one job document. The phase line mirrors the old page's
  *  phase status text for full audits; for prospecting the spinner card
  *  carries the phase copy instead, so the label never shows twice. */
-function JobView({ job }: { job: ScanJobDetail }): JSX.Element {
+function JobView({ job, refresh }: { job: ScanJobDetail; refresh: () => void }): JSX.Element {
   const terminal = isTerminal(job.status);
   const prospecting = job.type === 'prospecting' || job.type === 'hotel-prescan';
   return (
@@ -259,13 +261,21 @@ function JobView({ job }: { job: ScanJobDetail }): JSX.Element {
       {prospecting ? (
         <ProspectingView job={job} terminal={terminal} />
       ) : (
-        <FullAuditView job={job} terminal={terminal} />
+        <FullAuditView job={job} terminal={terminal} refresh={refresh} />
       )}
     </div>
   );
 }
 
-function FullAuditView({ job, terminal }: { job: ScanJobDetail; terminal: boolean }): JSX.Element {
+function FullAuditView({
+  job,
+  terminal,
+  refresh,
+}: {
+  job: ScanJobDetail;
+  terminal: boolean;
+  refresh: () => void;
+}): JSX.Element {
   const { strings } = useI18n();
   // The old page swaps the phase bars for the result card once terminal;
   // cancelled keeps its own quiet card so a stopped job never reads as
@@ -273,7 +283,7 @@ function FullAuditView({ job, terminal }: { job: ScanJobDetail; terminal: boolea
   if (terminal) {
     if (job.status === 'failed') return <FailedCard job={job} />;
     if (job.status === 'cancelled') return <CancelledCard />;
-    if (job.status === 'needs-input') return <NeedsInputCard job={job} />;
+    if (job.status === 'needs-input') return <NeedsInputCard job={job} refresh={refresh} />;
     return <CompleteCard job={job} />;
   }
 
@@ -498,13 +508,39 @@ function needsInputFieldLabel(
 /** Issue #73: the pipeline finished and stopped deliberately on the D8
  *  identity-confirmation gate, not a crash - its own card, amber rather
  *  than the danger styling FailedCard uses, listing exactly which fields
- *  are awaited and linking to where they get confirmed. */
-function NeedsInputCard({ job }: { job: ScanJobDetail }): JSX.Element {
+ *  are awaited. Plan 045 slice 1.3: each awaited field confirms inline
+ *  here instead of only linking away to the audit page - confirming the
+ *  last one triggers the PDFs automatically, so refresh() re-polls the job
+ *  and picks up its resulting status. */
+function NeedsInputCard({
+  job,
+  refresh,
+}: {
+  job: ScanJobDetail;
+  refresh: () => void;
+}): JSX.Element {
   const { strings } = useI18n();
+  const auditId = job.auditId;
+  const identityFields = (job.needsInputFields ?? []).filter(
+    (entry): entry is { field: IdentityField; value: string } =>
+      entry.field === 'nomCommercial' || entry.field === 'raisonSociale',
+  );
   return (
     <Card title={strings.progress.needsInputHeading} className="border-sev-moderate/40">
       <p className="text-sm text-ink-soft">{strings.progress.needsInputNote}</p>
-      {job.needsInputFields !== undefined && job.needsInputFields.length > 0 ? (
+      {auditId !== undefined && identityFields.length > 0 ? (
+        <div className="mt-3 flex flex-col gap-3">
+          {identityFields.map((entry) => (
+            <IdentityConfirmField
+              key={entry.field}
+              auditId={auditId}
+              field={entry.field}
+              detectedValue={entry.value}
+              onConfirmed={refresh}
+            />
+          ))}
+        </div>
+      ) : job.needsInputFields !== undefined && job.needsInputFields.length > 0 ? (
         <ul className="mt-3 flex flex-col gap-1 text-sm text-ink-soft">
           {job.needsInputFields.map((entry) => (
             <li key={entry.field}>

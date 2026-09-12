@@ -27,16 +27,11 @@ import {
 } from './audit-detail-model';
 import type {
   ManualFieldKey,
-  ManualFieldsPatch,
   ManualFieldValues,
   SectorChoice,
   TextManualFieldKey,
 } from './audit-detail-model';
-import type {
-  AuditFailureResponse,
-  ManualFieldsResponse,
-  SirenPreviewResponse,
-} from './audit-detail-types';
+import type { ManualFieldsResponse, SirenPreviewResponse } from './audit-detail-types';
 
 interface TextFieldDef {
   key: TextManualFieldKey;
@@ -77,24 +72,17 @@ export interface HotelFieldsFormHandle {
    *  correct afterwards (saved, or nothing had changed). Validation and
    *  request errors are surfaced inside (field error, toast), so the
    *  caller owes only the one success toast for the whole step. */
-  save: (options?: { confirmDetected?: boolean }) => Promise<boolean>;
-  /** True while the stored detected identity fields still await an
-   *  operator confirmation the save can carry. */
-  hasDetectedConfirmation: () => boolean;
+  save: () => Promise<boolean>;
 }
 
 interface HotelFieldsFormProps {
   auditId: string;
   manualFields: ManualFieldsResponse | null;
   detectedTransactionalFlow: boolean | undefined;
-  awaitingIdentityFields: AuditFailureResponse['needsInputFields'];
 }
 
 export const HotelFieldsForm = forwardRef<HotelFieldsFormHandle, HotelFieldsFormProps>(
-  function HotelFieldsForm(
-    { auditId, manualFields, detectedTransactionalFlow, awaitingIdentityFields },
-    ref,
-  ): JSX.Element {
+  function HotelFieldsForm({ auditId, manualFields, detectedTransactionalFlow }, ref): JSX.Element {
     const { strings } = useI18n();
     const baseline = useMemo(() => manualFieldValuesFromResponse(manualFields), [manualFields]);
     const [values, setValues] = useState<ManualFieldValues>(baseline);
@@ -198,18 +186,7 @@ export const HotelFieldsForm = forwardRef<HotelFieldsFormHandle, HotelFieldsForm
       }
     };
 
-    const detectedIdentityPatch = (): ManualFieldsPatch => {
-      const patch: ManualFieldsPatch = {};
-      for (const awaiting of awaitingIdentityFields ?? []) {
-        if (awaiting.field !== 'nomCommercial' && awaiting.field !== 'raisonSociale') continue;
-        if (manualFields?.[awaiting.field]?.provenance !== 'detected') continue;
-        const value = values[awaiting.field].trim();
-        if (value !== '') patch[awaiting.field] = value;
-      }
-      return patch;
-    };
-
-    const save = async (options: { confirmDetected?: boolean } = {}): Promise<boolean> => {
+    const save = async (): Promise<boolean> => {
       const patch = buildManualFieldsPatch(values, baseline);
       const siren = patch['siren'];
       if (siren !== undefined && !isValidSiren(siren)) {
@@ -232,7 +209,6 @@ export const HotelFieldsForm = forwardRef<HotelFieldsFormHandle, HotelFieldsForm
           : {};
       const requestPatch = {
         ...patch,
-        ...(options.confirmDetected === true ? detectedIdentityPatch() : {}),
         ...transactionalFlowPatch,
       };
       if (Object.keys(requestPatch).length === 0) {
@@ -260,10 +236,7 @@ export const HotelFieldsForm = forwardRef<HotelFieldsFormHandle, HotelFieldsForm
       }
     };
 
-    useImperativeHandle(ref, () => ({
-      save,
-      hasDetectedConfirmation: () => Object.keys(detectedIdentityPatch()).length > 0,
-    }));
+    useImperativeHandle(ref, () => ({ save }));
 
     const renderTextField = (def: TextFieldDef): JSX.Element => (
       <div key={def.key}>

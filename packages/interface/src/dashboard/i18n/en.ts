@@ -253,6 +253,10 @@ export const en: DashboardStrings = {
     raisonSocialeLabel: 'Legal name',
     detectedFieldHint: 'Detected automatically, to be confirmed.',
     nomCommercialLabel: 'Trading name',
+    identityConfirmButton: 'Confirm',
+    identityConfirmedGeneratedMessage: 'Confirmed; the PDFs are being produced.',
+    identityConfirmedWaitingMessage:
+      'Confirmed; waiting on the other field to be confirmed before producing the PDFs.',
     recipientNameLabel: 'Prepared for',
     sectorLabel: 'Sector',
     sectorAutoOption: 'Detected automatically',
@@ -387,6 +391,9 @@ export const en: DashboardStrings = {
       stepTodo: 'To do',
       unavailable: 'Preparation is not available for this audit.',
       produceButton: 'Regenerate the PDFs',
+      produceButtonRefreshFirst: 'Refresh findings then regenerate the PDFs',
+      produceRefreshFirstHint:
+        'This audit’s findings are out of date; they will be refreshed before the PDFs are produced.',
     },
   },
   prepareReport: {

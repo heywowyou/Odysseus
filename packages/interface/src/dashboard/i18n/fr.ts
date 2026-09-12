@@ -254,6 +254,10 @@ export const fr: DashboardStrings = {
     raisonSocialeLabel: 'Dénomination sociale',
     detectedFieldHint: 'Détecté automatiquement, à confirmer.',
     nomCommercialLabel: 'Nom commercial',
+    identityConfirmButton: 'Confirmer',
+    identityConfirmedGeneratedMessage: 'Confirmé ; les PDF sont produits.',
+    identityConfirmedWaitingMessage:
+      'Confirmé ; en attente de la confirmation de l’autre champ avant de produire les PDF.',
     recipientNameLabel: 'Préparé pour',
     sectorLabel: 'Secteur',
     sectorAutoOption: 'Détecté automatiquement',
@@ -392,6 +396,9 @@ export const fr: DashboardStrings = {
       stepTodo: 'À faire',
       unavailable: 'La préparation n’est pas disponible pour cet audit.',
       produceButton: 'Régénérer les PDF',
+      produceButtonRefreshFirst: 'Actualiser les constats puis régénérer les PDF',
+      produceRefreshFirstHint:
+        'Les constats de cet audit ne sont plus à jour ; ils seront actualisés avant que les PDF ne soient produits.',
     },
   },
   prepareReport: {

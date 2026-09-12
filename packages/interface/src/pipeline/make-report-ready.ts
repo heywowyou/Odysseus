@@ -19,7 +19,7 @@
  */
 
 import type { Connection } from 'mongoose';
-import { buildFindingsProvenance, type AuditManifest, type Finding } from '@odysseus/core';
+import { buildFindingsProvenance, type FindingsProvenance, type Finding } from '@odysseus/core';
 import {
   getAuditManualFields,
   getAuditRuntimeFields,
@@ -54,15 +54,23 @@ export type MakeReportReadyOutcome =
   | { kind: 'ready'; reports: AllReportsStageResult[]; findingsWereRefreshed: boolean }
   | { kind: 'refused'; refusal: MakeReportReadyRefusal };
 
-/** True when the manifest's stamped provenance was computed under a
- *  different normalization fingerprint or schema version than the current
- *  code produces from the same findings.json - the fail-closed check
- *  report-stage.ts and analysis-stage.ts already apply at render time,
- *  read here ahead of time so this function can act on it instead of
- *  merely refusing. */
-function findingsAreStale(manifest: AuditManifest, findings: Finding[]): boolean {
+/** True when a stamped provenance was computed under a different
+ *  normalization fingerprint or schema version than the current code
+ *  produces from the same findings - the fail-closed check report-stage.ts
+ *  and analysis-stage.ts already apply at render time, read here ahead of
+ *  time so this function can act on it instead of merely refusing.
+ *
+ *  Takes the stamped provenance directly (not a manifest) so a caller that
+ *  already has one in hand - the audit row's own `findingsProvenance`
+ *  field, kept in sync by backfillAuditRow, for the dashboard's detail
+ *  route - never pays for a manifest.json read just to answer this
+ *  question. The one caller inside this file that only has a manifest
+ *  passes `manifest.findingsProvenance`. */
+export function findingsAreStale(
+  stamped: FindingsProvenance | undefined,
+  findings: Finding[],
+): boolean {
   const current = buildFindingsProvenance(findings);
-  const stamped = manifest.findingsProvenance;
   return (
     stamped === undefined ||
     stamped.findingsSchemaVersion !== current.findingsSchemaVersion ||
@@ -165,7 +173,7 @@ export async function makeReportReady(
       audit.startedAt,
       artifactStore,
     );
-    if (findingsAreStale(manifest, findings)) {
+    if (findingsAreStale(manifest.findingsProvenance, findings)) {
       await renormalizeAudit(auditDir, artifactStore);
       await backfillAuditRow(auditDir, connection);
       await syncAuditDirToBucket(artifactStore, auditDir, hostname, audit.startedAt);
