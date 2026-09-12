@@ -203,7 +203,7 @@
   "notes": "Aucun contexte spécifique sur les objectifs commerciaux ou le public cible du site n’a été fourni. Les priorités indiquées dans ce rapport reflètent uniquement la gravité des problèmes détectés, sans tenir compte des éventuelles priorités stratégiques de votre entreprise. Nous vous recommandons de croiser ces recommandations avec vos objectifs business pour affiner les actions à mener en priorité.",
   "findingsProvenance": {
     "findingsSchemaVersion": 1,
-    "normalizationFingerprint": "641924990b96eb15",
+    "normalizationFingerprint": "09d5e8d4d9d6033f",
     "findingsDigest": "sha256:89272af65c331a67473cd477450ac42eb6b57c5c78f81aac9476a05050f0b6d8"
   },
   "analysisId": "5e40960b-9f52-496c-8989-b46c6c6c4f51"
