@@ -4485,3 +4485,56 @@ in exactly two deliberate places is a design choice this project keeps
 making consistently, not the generic decorative eyebrow the detector rule
 exists to catch. No code change. Closes issue #192 and moves it to
 Resolved in `docs/product/public-website-audit.md`.
+
+### 86. Sending domain separation did not happen as specified; the operator accepted a shared-reputation alias and MailReach for warmup (2026-09-12)
+
+`docs/rules/outreach-rules.md` section 10 and plan 014's launch gates
+required an approved sending mailbox separate from `odysseusaudit.com`, on
+the reasoning that a domain carrying the marketing site and preview links
+should not share reputation with cold volume. The intended fix was
+`contact@odysseusaudit.fr` as a distinct Workspace account.
+
+Confirmed by the operator directly in Workspace admin, 2026-09-12:
+`contact@odysseusaudit.fr` is an alias on the same underlying Google
+Workspace inbox as `contact@odysseusaudit.com`, not a second mailbox. The
+separation never happened as specified. The operator's ruling is to accept
+this rather than reprovision: `.fr` and `.com` share one reputation, and the
+`.fr` alias is judged an acceptable identity for prospect-facing addresses
+(trade-off 82) even though it buys no reputation isolation. This is a
+deliberate, documented trade-off, not an oversight to fix later.
+
+**Warmup tool.** MailReach, connecting over SMTP/IMAP plus Gmail
+domain-wide delegation. Warmup started 2026-09-12 on
+`contact@odysseusaudit.com`; the `.fr` alias inherits the same warmup
+because it is the same inbox. Not yet reported complete; runbook gate I
+stays open until it is.
+
+**Scoped org-policy exception.** MailReach's domain-wide delegation needs a
+service account key, which the org's default policy
+(`iam.managed.disableServiceAccountKeyCreation`) blocks. Rather than lift
+that policy org-wide, a new, dedicated GCP project ("Odysseus Outreach")
+was created solely for this integration, and the key-creation restriction
+was overridden at the project level only; the org-wide default is
+unchanged everywhere else. A service account in that project
+(delegation client ID `109319686726400251298`) was granted a JSON key,
+and its client ID was authorized for domain-wide delegation in Workspace
+Admin under Security > API Controls > Domain-wide Delegation, scoped to
+`contact@odysseusaudit.com`. The delegated Gmail API scope was reported by
+the operator as full Gmail access; the exact scope string was not
+confirmed at the time of this entry.
+**TODO: confirm and record the exact delegated scope string** (for
+example `https://mail.google.com/` versus a narrower Gmail scope) from the
+Workspace Admin delegation record.
+
+This is a separate access path from the plan 011 Gmail adapter's Internal
+OAuth client and refresh token (trade-off 56): MailReach authenticates as
+its own service account for warmup traffic only and has no access to
+drafting. Do not conflate the two when reasoning about what can send mail.
+
+No secret value (the service account's JSON key) is recorded here or
+anywhere in this repository, matching existing `.env`-only secret handling.
+
+**Open item.** Whether MailReach has a signed data processing agreement
+has not been checked. This project documents processor and data-residency
+status explicitly for Mistral elsewhere; MailReach's status is currently
+unverified. Flagged here, not resolved.

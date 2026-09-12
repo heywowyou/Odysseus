@@ -386,6 +386,15 @@ rather than silently drafting nowhere. What has to exist first:
    prospect-facing surface (drafts, the v2 preview, the whole public site)
    names `.fr`; the paid report keeps `.com`. Warmup completion is still what
    closes runbook gate I, not this change.
+
+   **Alias fact confirmed, 2026-09-12.** `contact@odysseusaudit.fr` is a
+   Google Workspace alias on the same inbox as `contact@odysseusaudit.com`,
+   verified directly in Workspace admin, not a second mailbox. This means
+   the "two approved mailboxes" and "sending domain separation" framing
+   below did not happen as originally specified: `.fr` and `.com` share one
+   underlying mailbox and therefore one sender reputation. The operator has
+   accepted this as a deliberate trade-off rather than reopening
+   provisioning. Reasoning: trade-off 86.
 2. **An OAuth client of user type Internal.** This is the load-bearing
    setting. An External client left in Testing is issued refresh tokens that
    expire after seven days, and moving it out of Testing means Google
@@ -400,6 +409,18 @@ rather than silently drafting nowhere. What has to exist first:
 5. **A monitored reply address.** Every draft invites a reply, and section 7's
    opt-out promise cannot be kept by a mailbox nobody reads.
 6. **Mailbox warmup**, two to three weeks before volume, per section 8.
+   **Status, confirmed 2026-09-12.** Warmup is running via MailReach
+   (SMTP/IMAP plus Gmail domain-wide delegation), started 2026-09-12 on
+   `contact@odysseusaudit.com`; the `.fr` alias inherits the same
+   reputation since it is the same inbox. Not yet reported complete.
+
+MailReach's domain-wide delegation is a separate Gmail API access path from
+item 2's Internal OAuth client: MailReach authenticates as a service account
+in its own GCP project ("Odysseus Outreach"), authorized in Workspace Admin
+under Security > API Controls > Domain-wide Delegation for that service
+account's client ID (`109319686726400251298`), and uses it only for warmup
+traffic, never for drafting. The plan 011 Gmail adapter and its refresh
+token are unaffected. Reasoning and the granted scope: trade-off 86.
 
 No secret value belongs in this repository. The four variables are read from
 the environment and are never printed by any command, including on failure.

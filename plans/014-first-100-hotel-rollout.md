@@ -110,8 +110,11 @@ Record pass/fail and evidence owner for:
 - preview 200/410/revoke/noindex/robots and privacy-safe log behavior
 - privacy, opt-out, bot, identity, postal/SIRET, and legitimate-interest review
 - role-address-only and permanent suppression tests
-- sending domain separation, two approved mailboxes if used, SPF, DKIM, DMARC,
-  monitored replies, real signatures, and completed warmup schedule
+- SPF, DKIM, DMARC, monitored replies, real signatures, and completed warmup
+  schedule; sending domain separation did not happen as originally specified
+  (`.fr` is a Workspace alias on the same inbox as `.com`, an accepted
+  trade-off, not two mailboxes); see `docs/rules/outreach-rules.md` section
+  10 and trade-off 86
 - Gmail adapter static proof of no send capability
 - legal-copy gate: approved deterministic block or explicit argument-A-only
   rollout decision reconciled in canonical docs

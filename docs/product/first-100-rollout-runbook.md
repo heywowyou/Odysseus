@@ -63,7 +63,7 @@ Carry-forward notes from the reconciliation:
 | F | Preview 200/410/revoke/noindex/robots, privacy-safe logs | PASS | Suite covers publish, expiry, revoke, and log behavior. Live probe 2026-09-08 against `www.odysseusaudit.com`: robots.txt `Disallow: /apercu/`; unknown token returns 404 with `x-robots-tag: noindex, nofollow, noarchive`, `cache-control: private, no-store`, `referrer-policy: no-referrer`, CSP `default-src 'none'`. |
 | G | Privacy, opt-out, bot, identity, postal/SIRET, legitimate-interest review | PASS | Pages are live (`confidentialite-prospection`, `desinscription`, `bot`, `offre`). Review pass completed by the second reviewer, reported by the operator 2026-09-10. |
 | H | Role-address-only and permanent suppression tests | PASS | Suite green 2026-09-08: allowlist and MX tests for role addresses, suppression-gate tests on both draft paths. |
-| I | Sending domain separation, SPF/DKIM/DMARC, monitored replies, warmup complete | OPEN (warmup in progress) | Decision recorded 2026-09-08: provision `odysseusaudit.fr` now and size the first wave to warmup state, a reduced pilot at first, reaching the full 20 to 30 daily volume only after warmup completes. Operator reports warmup phase 1 under way: low daily volume to known mailboxes with limited back-and-forth exchanges, the standard warmup pattern. Sender switched 2026-09-11: `ODYSSEUS_MAILBOX_SENDER_ADDRESS` is `contact@odysseusaudit.fr`, and drafting refuses any other value (trade-off 82). Gate closes on evidence: SPF, DKIM and DMARC verified on `.fr`, warmup complete (not just begun), and `ODYSSEUS_MAILBOX_SENDER_ADDRESS` repointed before the first real send. Owner: operator provisioning; agent verifies and records. |
+| I | SPF/DKIM/DMARC, monitored replies, warmup complete | OPEN (warmup in progress) | Sending domain separation did not happen as originally specified: confirmed 2026-09-12 that `contact@odysseusaudit.fr` is a Workspace alias on the same inbox as `contact@odysseusaudit.com`, not a second mailbox, so `.fr` and `.com` share one reputation. Accepted by the operator as a deliberate trade-off (trade-off 86), not reopened as a provisioning gap. Warmup is running via MailReach (SMTP/IMAP plus Gmail domain-wide delegation), started 2026-09-12 on `contact@odysseusaudit.com`; the `.fr` alias inherits the same warmup. Sender switched 2026-09-11: `ODYSSEUS_MAILBOX_SENDER_ADDRESS` is `contact@odysseusaudit.fr`, and drafting refuses any other value (trade-off 82). Gate closes on evidence: SPF, DKIM and DMARC verified, warmup reported complete (not just begun). Owner: operator provisioning; agent verifies and records. |
 | J | Gmail adapter static proof of no send capability | PASS | Frozen endpoint table and scope list re-read 2026-09-08; forbidden-capability assertion in `mailbox-draft-adapter.test.ts`. |
 | K | Date no earlier than 2026-09-15, no competing blackout | PASS | No send is possible before 2026-09-15 under any path. Operator confirmed 2026-09-08 no competing blackout is anticipated; reconfirm at actual scheduling if the date slips. |
 | L | Legal-copy gate: approved deterministic block, or argument-A-only, reconciled in canonical docs | PASS | Ruled 2026-09-08: `obligation-basis.md` governs; hotels at `secondary` status may receive the deterministic argument-B facts block from the first send, superseding the trade-offs 9c note's primary-status requirement; the stale e-commerce sentence in `obligation-basis.md` is amended accordingly. Second human reviewer named and disclosure/argument-B review completed, reported by the operator 2026-09-10. |
@@ -73,9 +73,10 @@ ruling recorded in the decision log below before the pilot starts.
 
 ## Remaining operator items
 
-1. Provision `odysseusaudit.fr` (mailbox, SPF/DKIM/DMARC) and begin warmup;
-   the wave-timing decision is taken, the execution is operator-side
-   (gate I).
+1. Confirm SPF/DKIM/DMARC verified and let MailReach warmup on
+   `contact@odysseusaudit.com` run to completion (the `.fr` alias shares its
+   reputation, trade-off 86); the wave-timing decision is taken, the
+   execution is operator-side (gate I).
 2. Name the second human reviewer for disclosures and argument-B copy, and
    schedule the privacy and legitimate-interest review pass with them
    (gates L and G): **done, reported by the operator 2026-09-10.**

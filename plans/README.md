@@ -621,6 +621,18 @@ Each kind of work has exactly one home:
   the 60 floor, and the second succeeded only via the retry feedback path,
   so run-level failure remains possible. Plan 011 is `DONE`; #14 tracks the
   reliability gap for the real campaign.
+  **Update 2026-09-12.** Two facts reconciled after setup work done outside
+  Claude Code. `contact@odysseusaudit.fr` is confirmed a Google Workspace
+  alias on the same inbox as `contact@odysseusaudit.com`, not a second
+  mailbox, so the sending-domain-separation preflight item did not happen as
+  originally specified; the operator accepted the shared reputation as a
+  deliberate trade-off. Mailbox warmup is running via MailReach (SMTP/IMAP
+  plus Gmail domain-wide delegation), started 2026-09-12 on
+  `contact@odysseusaudit.com`, through a service account in a new,
+  dedicated GCP project ("Odysseus Outreach") with a project-scoped
+  override of `iam.managed.disableServiceAccountKeyCreation` (org-wide
+  default unchanged elsewhere). Reasoning, scope, and an open DPA question:
+  trade-off 86.
 
 ## Verification baseline
 
