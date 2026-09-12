@@ -85,6 +85,28 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
     await completeJob(connection!, job.jobId);
   });
 
+  // Issue #202: Mongoose defaults an unset array-typed path to [], so a
+  // domain-scoped prescan job (which deliberately carries no candidate list)
+  // persisted one anyway. The runner read it back, scoped its query to
+  // `candidateId: { $in: [] }`, matched nothing, and completed in under a
+  // second reporting "0 hotels prescanned, 0 failed" with no error. The
+  // distinction this asserts is between an absent scope and an empty one.
+  it('leaves an unset prescan candidate scope absent rather than storing an empty list', async () => {
+    const job = await createJob(connection!, {
+      type: 'hotel-prescan',
+      options: {
+        resolutionVersion: 'rv1',
+        qualificationVersion: 'qv1',
+        prescanVersion: 'pv1',
+        domain: 'hotel.example',
+        maxPages: 1,
+      },
+    });
+
+    expect((await getJob(connection!, job.jobId))?.options.prescanCandidateIds).toBeUndefined();
+    await completeJob(connection!, job.jobId);
+  });
+
   it('claims the oldest queued job atomically and marks it running', async () => {
     const first = await createJob(connection!, {
       type: 'full-audit',

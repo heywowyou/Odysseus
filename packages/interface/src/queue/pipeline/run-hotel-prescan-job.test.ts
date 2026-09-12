@@ -129,6 +129,39 @@ describe('hotel prescan cancellation', () => {
       ),
     ).rejects.toThrow('has no persisted candidate scope');
   });
+
+  // Issue #202: the schema used to persist an unset array path as [], and a
+  // limit-bound batch that read one back scoped itself to nothing and
+  // reported success. Refusing is the conservative half of that fix: the
+  // alternative reading, "no ids means every candidate", is the scope drift
+  // trade-off 75 already warns about.
+  it('refuses a limit-bound job whose persisted candidate scope is an empty list', async () => {
+    const ctx: PipelineContext = {
+      connection: {} as never,
+      originLock: {} as never,
+      cancellation: new CancellationRegistry(),
+    };
+
+    await expect(
+      runHotelPrescanJob(
+        {
+          jobId: 'empty-scope-job',
+          type: 'hotel-prescan',
+          status: 'running',
+          phase: 'prescanning',
+          options: {
+            resolutionVersion: 'rv1',
+            qualificationVersion: 'qv1',
+            maxPages: 10,
+            prescanCandidateIds: [],
+          },
+          createdAt: new Date(),
+          progress: {},
+        } as never,
+        ctx,
+      ),
+    ).rejects.toThrow('has no persisted candidate scope');
+  });
 });
 
 describe('toStoredPages', () => {

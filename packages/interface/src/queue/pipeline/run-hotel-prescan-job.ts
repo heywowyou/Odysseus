@@ -88,6 +88,21 @@ export async function persistPrescanWithArtifactCleanup(
   }
 }
 
+/** An empty stored candidate list is the absence of a scope, not a scope of
+ *  zero hotels. Mongoose used to persist an unset array path as `[]`
+ *  (issue #202), and `candidateId: { $in: [] }` matches nothing, so a
+ *  domain-scoped job read its own missing field back as "prescan no hotels"
+ *  and completed in under a second reporting success with no error. The
+ *  schema no longer writes `[]`, but jobs stored before that fix still carry
+ *  one, and the failure mode is silent either way. Reading it here keeps the
+ *  two cases honest: a domain-scoped job falls back to its domain, and a
+ *  limit-bound batch with no surviving list hits the refusal below rather
+ *  than quietly widening to the whole population.
+ */
+function persistedCandidateScope(ids: readonly string[] | undefined): string[] | undefined {
+  return ids === undefined || ids.length === 0 ? undefined : [...ids];
+}
+
 export async function runHotelPrescanJob(job: JobDocument, ctx: PipelineContext): Promise<void> {
   const { connection, originLock } = ctx;
   const options = job.options;
@@ -104,10 +119,11 @@ export async function runHotelPrescanJob(job: JobDocument, ctx: PipelineContext)
     );
   }
   const prescanVersion = options.prescanVersion ?? CURRENT_PRESCAN_VERSION;
+  const prescanCandidateIds = persistedCandidateScope(options.prescanCandidateIds);
   if (
     options.domain === undefined &&
     options.maxPages !== undefined &&
-    options.prescanCandidateIds === undefined
+    prescanCandidateIds === undefined
   ) {
     throw new Error(
       `odysseus interface: hotel-prescan job ${job.jobId} has no persisted candidate scope; ` +
@@ -193,9 +209,7 @@ export async function runHotelPrescanJob(job: JobDocument, ctx: PipelineContext)
       prescanVersion,
       ...(options.maxPages !== undefined ? { limit: options.maxPages } : {}),
       ...(options.domain !== undefined ? { domain: options.domain } : {}),
-      ...(options.prescanCandidateIds === undefined
-        ? {}
-        : { candidateIds: options.prescanCandidateIds }),
+      ...(prescanCandidateIds === undefined ? {} : { candidateIds: prescanCandidateIds }),
       concurrency: options.concurrency ?? PROSPECTING_JOB_CONCURRENCY,
       rescan: options.rescan ?? false,
       dryRun: false,
