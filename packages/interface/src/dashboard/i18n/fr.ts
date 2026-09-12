@@ -8,6 +8,12 @@ export const fr: DashboardStrings = {
     outreach: 'À traiter',
     results: 'Résultats',
   },
+  tools: {
+    navLabel: 'Outils',
+    title: 'Outils',
+    description:
+      'Suivis externes conservés hors du tableau de bord. Chaque lien ouvre une page privée.',
+  },
   shell: {
     tagline: 'Tableau de bord opérateur',
     groupMeasure: 'Mesure',

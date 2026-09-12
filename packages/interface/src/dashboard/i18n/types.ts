@@ -14,6 +14,12 @@ export interface DashboardStrings {
     /** Sidebar label for /resultats. */
     results: string;
   };
+  /** Footer link and page for /outils, plan 040 slice 8. */
+  tools: {
+    navLabel: string;
+    title: string;
+    description: string;
+  };
   shell: {
     tagline: string;
     /** Sidebar group headings. The navigation is grouped by the two halves of

@@ -17,6 +17,7 @@ import { ProspectDetailPage } from './routes/prospect-detail';
 import { ProspectsPage } from './routes/prospects';
 import { ScanProgressPage } from './routes/scan-progress';
 import { SuppressionsPage } from './routes/suppressions';
+import { ToolsPage } from './routes/tools';
 
 /** Plan 013 step 5, extended by plan 022 step 6: axe must report zero
  *  violations on every dashboard route. The pages render through the real
@@ -584,6 +585,12 @@ describe('operator page accessibility (plan 013 step 5, extended plan 022 step 6
   it('suppression lookup form has no axe violations', async () => {
     const { container, root } = await renderPage(createElement(SuppressionsPage));
     await settle(container, 'Vérifier');
+    await expectNoAxeViolations(container);
+    root.unmount();
+  });
+
+  it('tools page has no axe violations', async () => {
+    const { container, root } = await renderPage(createElement(ToolsPage));
     await expectNoAxeViolations(container);
     root.unmount();
   });

@@ -11,6 +11,7 @@ import { ProspectDetailPage } from './routes/prospect-detail';
 import { ProspectsPage } from './routes/prospects';
 import { ScanProgressPage } from './routes/scan-progress';
 import { SuppressionsPage } from './routes/suppressions';
+import { ToolsPage } from './routes/tools';
 
 /** Plan 040 slice 4: the five single-purpose prospect subpages retired
  *  into the hub. Old links and bookmarks keep working: each subpage URL
@@ -49,6 +50,9 @@ export function App() {
         <Route path="a-traiter" element={<ATraiterPage />} />
         <Route path="resultats" element={<OutcomesPage />} />
         <Route path="ne-pas-contacter" element={<SuppressionsPage />} />
+        {/* Plan 040 slice 8: links to standalone claude.ai tools kept
+            outside the dashboard (see routes/tools.tsx for why). */}
+        <Route path="outils" element={<ToolsPage />} />
         <Route path="outreach" element={<Navigate to="/a-traiter" replace />} />
         <Route path="outreach/drafts" element={<Navigate to="/a-traiter" replace />} />
         <Route path="outreach/replies" element={<Navigate to="/a-traiter" replace />} />

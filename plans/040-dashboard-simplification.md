@@ -254,38 +254,30 @@ confusing. Facts from the 2026-09-11 audit sweep:
 - Rename operator-facing labels to the proposal's plain-language FR and EN
   vocabulary; i18n parity tests updated; UI vocabulary only, no API renames.
 
-### Slices 8+: Artifact-derived features (PLACEHOLDER, owner: Claude Code)
+### Slice 8: Tools links page (landed 2026-09-12)
 
-> **Instruction to Claude Code.** You created the six operator artifacts
-> below in your own session, so you can read them back there; ZCode cannot
-> reach them (they sit behind the claude.ai login) and never receives their
-> contents. Their IDs:
->
-> - `6e911287-69be-4a6b-bd4b-56d1be1f4dc8` (the email warm-up kit)
-> - `f647f63c-c4cf-4a4c-8d0a-651c09bc0473`
-> - `75aaf0ad-0e1a-4178-85f9-ca0fa70b51c0`
-> - `6fb93cee-c929-4c1f-9830-67764ffea852`
-> - `b823775b-40f3-4d2b-8ec5-fba2c974aa0e`
-> - `336eb25d-7067-4403-87bb-d75ec2a42e2f`
->
-> Read them from your own session, decide with the operator which ones still
-> matter, and replace this placeholder with concrete feature slices, one per
-> retained kit. Each slice must state: the dashboard feature in one sentence,
-> where it lives in the approved IA, its data source (kit content transcribed
-> into code-owned bilingual constants, operator-approved wording only), and
-> its constraints. Every slice must respect:
->
-> - trade-offs 82 and 83 (no model writes outreach; template wording changes
->   need operator approval);
-> - `plans/README.md` "Explicitly deferred": no automatic send, warm-up
->   automation, or volume ramping; a warm-up kit may only become an
->   informational surface (for example warm-up status feeding runbook gate I)
->   unless the operator explicitly reopens that scope;
-> - FR and EN from the start; no new dependencies; features land only after
->   slices 3 through 7 are done.
->
-> Present the filled slices to the operator for approval (interactive
-> question) before any implementation.
+Claude Code read the six operator artifacts named in the original
+placeholder (a warm-up email kit, a domain warm-up timeline, the First-100
+rollout tracker, the project roadmap, the audit-rehearsal defect tracker,
+and a paid-delivery phase tracker) and found none of them were an
+outreach-dashboard feature in the sense this slice originally imagined:
+the warm-up kit and timeline cover Gate I, already closed 11 Sep; the
+roadmap and rehearsal tracker are project-management and QA tooling, not
+campaign UI; only First-100 Rollout and Paid Audit Delivery track
+recurring operator state, and even those live behind a private claude.ai
+share link the dashboard has no way to read or write.
+
+Presented this to the operator, who asked for the simplest version: one
+page in the dashboard linking out to all six, not six features rebuilt as
+code. Landed as `/outils` (footer link, `Wrench` icon, next to "Vérifier
+une adresse"): a static, bilingual list of the six artifact URLs with a
+one-line label and description each, sourced from operator-approved copy
+written into `routes/tools.tsx`, opening in a new tab. No fetch, no new
+dependency, no data duplicated from the artifacts. i18n parity and an axe
+check cover the new page; `pnpm --filter @odysseus/interface run
+typecheck` and the full dashboard vitest suite (274 tests) are green.
+
+Plan 040 is done: slices 1 through 8 have all landed.
 
 ## STOP conditions
 

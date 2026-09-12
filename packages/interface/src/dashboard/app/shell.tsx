@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Building2, ClipboardCheck, ListChecks, Mail, Menu, ShieldCheck, X } from 'lucide-react';
+import {
+  Building2,
+  ClipboardCheck,
+  ListChecks,
+  Mail,
+  Menu,
+  ShieldCheck,
+  Wrench,
+  X,
+} from 'lucide-react';
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { Brand } from './brand';
 import { LanguageSwitcher } from './language-switcher';
@@ -105,10 +114,17 @@ export function AppShell() {
     <div className="mt-auto border-t border-line p-4">
       <NavLink
         to="/ne-pas-contacter"
-        className="mb-3 flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-raised hover:text-ink"
+        className="mb-1 flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-raised hover:text-ink"
       >
         <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />
         {strings.shell.checkAddress}
+      </NavLink>
+      <NavLink
+        to="/outils"
+        className="mb-3 flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-raised hover:text-ink"
+      >
+        <Wrench className="size-4 shrink-0" aria-hidden="true" />
+        {strings.tools.navLabel}
       </NavLink>
       <LanguageSwitcher />
     </div>

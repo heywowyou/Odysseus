@@ -8,6 +8,11 @@ export const en: DashboardStrings = {
     outreach: 'To do',
     results: 'Results',
   },
+  tools: {
+    navLabel: 'Tools',
+    title: 'Tools',
+    description: 'External trackers kept outside the dashboard. Each link opens a private page.',
+  },
   shell: {
     tagline: 'Operator dashboard',
     groupMeasure: 'Measurement',
