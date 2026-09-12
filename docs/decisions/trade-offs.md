@@ -4461,3 +4461,27 @@ carry it); a real hotel name there waits for the hub (slice 4).
 approval gate like the report's (trade-off 44). This is a live tool the
 operator reads directly; DESIGN.md's dashboard section is updated in the
 same change rather than left to drift, per plan 040 binding decision 3.
+
+### 85. The site's kicker-above-heading pattern stays; impeccable's general ban does not apply to it (operator decision, 2026-09-12, issue #192)
+
+Impeccable's craft-floor treats `kicker-above-heading` (a tiny tracked
+uppercase label sitting as its own block directly above a heading) as an
+absolute ban. `packages/site` keeps two long-standing uses that read as
+that pattern: the dossier card's "Rapport Odysseus" / "Odysseus report"
+stamp (`lib/dossier.tsx`) beside its title, and the bordered "Portée du
+diagnostic" / "Scope of the diagnostic" statement label above the hero
+lede on the home and offer pages. The 2026-09-11T03-18-45Z critique flagged
+the conflict for an explicit ruling rather than resolving it either way,
+and DESIGN.md's own "Site Label" note (already recording that the 24
+literal kicker-above-heading instances found 2026-09-11 were removed)
+left these two ambiguous, since neither sits directly above an `<h1>`-`<h6>`
+element the way the removed ones did.
+
+**Ruling: kept, as this site's nameplate identity, not reopened as a
+defect.** Same reasoning as the report's own exemption above ("the
+`kicker-above-heading` ban is consciously not applied to the report's
+numbered h6 eyebrow"): a brand-specific instrument-nameplate treatment used
+in exactly two deliberate places is a design choice this project keeps
+making consistently, not the generic decorative eyebrow the detector rule
+exists to catch. No code change. Closes issue #192 and moves it to
+Resolved in `docs/product/public-website-audit.md`.
