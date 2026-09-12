@@ -10,7 +10,10 @@ import type {
 import {
   addWaveRosterEntry,
   createJob,
+  findActiveScanJobForHost,
   findOutreachThreadByCandidate,
+  getHotelCandidate,
+  getLatestScoreCohort,
   getOperatorProspect,
   getOutreachAuditStatus,
   listOutreachAudits,
@@ -624,6 +627,55 @@ export function registerProspectRoutes(
       return;
     }
     sendJson(res, 200, { revoked: true, wave: parsed.wave, candidateId: result.candidateId });
+  });
+
+  // Plan 044: the paid deliverable scan, launched from the hotel. Unlike
+  // the outreach scan there is no selection or qualification gate - it is
+  // the operator's own billable decision - but one browser scan per
+  // hostname at a time still applies, and the stamp records the candidate
+  // link plus the selection run beside which the audit was launched
+  // (context, not a membership claim, the same rule as the wave roster).
+  router.post('/api/prospects/:candidateId/full-audit', async ({ res, params }) => {
+    const candidateId = params['candidateId']!;
+    if (!isPlausibleCandidateId(candidateId)) {
+      sendError(res, 400, 'candidateId must be a non-empty string without control characters');
+      return;
+    }
+    const candidate = await getHotelCandidate(connection, candidateId);
+    if (candidate === null) {
+      sendError(res, 404, 'prospect not found');
+      return;
+    }
+    const domain = candidate.ownRegistrableDomain;
+    if (!domain) {
+      sendJson(res, 200, { started: false, refusal: 'no-own-domain' });
+      return;
+    }
+    const inFlight = await findActiveScanJobForHost(
+      connection,
+      new URL(`https://${domain}`).hostname,
+    );
+    if (inFlight !== null) {
+      sendJson(res, 200, { started: false, refusal: 'already-in-flight' });
+      return;
+    }
+    const cohort = await getLatestScoreCohort(connection, CURRENT_SCORING_VERSION);
+    if (cohort === null) {
+      sendJson(res, 200, { started: false, refusal: 'no-cohort' });
+      return;
+    }
+    const job = await createJob(connection, {
+      type: 'full-audit',
+      siteUrl: `https://${domain}`,
+      options: {
+        outreachCandidateId: candidateId,
+        outreachCohortId: cohort.cohortId,
+        outreachScoringVersion: CURRENT_SCORING_VERSION,
+        outreachAuthorizedBy: 'paid',
+      },
+    });
+    queue?.notify();
+    sendJson(res, 201, { started: true, jobId: job.jobId });
   });
 
   // Plan 043 slice 1: the selection record, read-only. The cohort facts are

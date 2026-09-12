@@ -211,6 +211,37 @@ describe('runFullAuditJob', () => {
     );
   });
 
+  it('stamps the candidate link into the audit stage when the job carries one (plan 044)', async () => {
+    const job = fakeJob({
+      options: {
+        outreachCandidateId: 'candidate-1',
+        outreachCohortId: 'cohort-1',
+        outreachScoringVersion: 'hotel-outreach-v1',
+        outreachAuthorizedBy: 'paid',
+      },
+    });
+    await runFullAuditJob(job, ctx);
+
+    expect(runAuditStage).toHaveBeenCalledWith(
+      'https://example.com/',
+      expect.objectContaining({
+        outreachContext: {
+          candidateId: 'candidate-1',
+          cohortId: 'cohort-1',
+          scoringVersion: 'hotel-outreach-v1',
+          authorizedBy: 'paid',
+        },
+      }),
+      fakeConnection,
+    );
+  });
+
+  it('fails loudly on an incomplete candidate link', async () => {
+    const job = fakeJob({ options: { outreachCandidateId: 'candidate-1' } });
+    await expect(runFullAuditJob(job, ctx)).rejects.toThrow(/incomplete candidate link/);
+    expect(runAuditStage).not.toHaveBeenCalled();
+  });
+
   // Plan 035 (issue #124): one identity per job, minted once, reused by
   // every orphan re-claim, and handed to the audit stage so the audit
   // directory is stable across re-claims.

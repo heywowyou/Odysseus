@@ -4,6 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@odysseus/store', () => ({
   addWaveRosterEntry: vi.fn(),
+  findActiveScanJobForHost: vi.fn(),
+  getHotelCandidate: vi.fn(),
+  getLatestScoreCohort: vi.fn(),
   listOperatorProspects: vi.fn(),
   getOperatorProspect: vi.fn(),
   getProspectQualificationHistory: vi.fn(),
@@ -37,7 +40,10 @@ vi.mock('../outreach/publish-preview.js', () => ({
 import {
   addWaveRosterEntry,
   createJob,
+  findActiveScanJobForHost,
   findOutreachThreadByCandidate,
+  getHotelCandidate,
+  getLatestScoreCohort,
   getOperatorProspect,
   getOutreachAuditStatus,
   listOutreachAudits,
@@ -200,6 +206,9 @@ beforeEach(() => {
   } as never);
   vi.mocked(listOutreachAudits).mockResolvedValue([] as never);
   vi.mocked(listRecentScoreCohorts).mockResolvedValue([] as never);
+  vi.mocked(findActiveScanJobForHost).mockResolvedValue(null as never);
+  vi.mocked(getHotelCandidate).mockResolvedValue(null as never);
+  vi.mocked(getLatestScoreCohort).mockResolvedValue(null as never);
   vi.mocked(listWaveRoster).mockResolvedValue([] as never);
   vi.mocked(getSeverityRollup).mockResolvedValue({
     critical: 0,
@@ -938,5 +947,62 @@ describe('GET /api/selection (plan 043 slice 1)', () => {
     expect(body.cohorts[0]).toMatchObject({ cohortId: 'cohort-1', selectedCount: 6 });
     expect(body.roster).toHaveLength(1);
     expect(body.roster[0]).toMatchObject({ wave: 'wave-1', domain: 'hotel-extra.fr' });
+  });
+});
+
+describe('POST /api/prospects/:candidateId/full-audit (plan 044)', () => {
+  it('mints a paid full-audit job carrying the candidate link and selection context', async () => {
+    vi.mocked(getHotelCandidate).mockResolvedValue({
+      candidateId: 'cand-1',
+      ownRegistrableDomain: 'hotel-exemple.fr',
+    } as never);
+    vi.mocked(getLatestScoreCohort).mockResolvedValue({
+      cohortId: 'cohort-1',
+      scoringVersion: 'hotel-outreach-v1',
+    } as never);
+    const res = await handle('/api/prospects/cand-1/full-audit', { method: 'POST' });
+    expect(res.statusCode).toBe(201);
+    expect(createJob).toHaveBeenCalledWith(fakeConnection, {
+      type: 'full-audit',
+      siteUrl: 'https://hotel-exemple.fr',
+      options: {
+        outreachCandidateId: 'cand-1',
+        outreachCohortId: 'cohort-1',
+        outreachScoringVersion: 'hotel-outreach-v1',
+        outreachAuthorizedBy: 'paid',
+      },
+    });
+    expect(JSON.parse(res.body ?? '{}')).toEqual({ started: true, jobId: 'job-new-1' });
+  });
+
+  it('answers the typed refusals as 200 bodies and unknown candidates as 404', async () => {
+    vi.mocked(getHotelCandidate).mockResolvedValue({
+      candidateId: 'cand-1',
+      ownRegistrableDomain: null,
+    } as never);
+    const noDomain = await handle('/api/prospects/cand-1/full-audit', { method: 'POST' });
+    expect(noDomain.statusCode).toBe(200);
+    expect(JSON.parse(noDomain.body ?? '{}')).toEqual({ started: false, refusal: 'no-own-domain' });
+
+    vi.mocked(getHotelCandidate).mockResolvedValue({
+      candidateId: 'cand-1',
+      ownRegistrableDomain: 'hotel-exemple.fr',
+    } as never);
+    vi.mocked(findActiveScanJobForHost).mockResolvedValue({ jobId: 'job-running' } as never);
+    const inFlight = await handle('/api/prospects/cand-1/full-audit', { method: 'POST' });
+    expect(JSON.parse(inFlight.body ?? '{}')).toEqual({
+      started: false,
+      refusal: 'already-in-flight',
+    });
+    expect(createJob).not.toHaveBeenCalled();
+
+    vi.mocked(findActiveScanJobForHost).mockResolvedValue(null as never);
+    vi.mocked(getLatestScoreCohort).mockResolvedValue(null as never);
+    const noCohort = await handle('/api/prospects/cand-1/full-audit', { method: 'POST' });
+    expect(JSON.parse(noCohort.body ?? '{}')).toEqual({ started: false, refusal: 'no-cohort' });
+
+    vi.mocked(getHotelCandidate).mockResolvedValue(null as never);
+    const unknown = await handle('/api/prospects/cand-unknown/full-audit', { method: 'POST' });
+    expect(unknown.statusCode).toBe(404);
   });
 });

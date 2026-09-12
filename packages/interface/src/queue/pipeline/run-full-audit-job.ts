@@ -16,7 +16,12 @@ import {
   updateJobProgress,
   type JobDocument,
 } from '@odysseus/store';
-import { buildFindingsProvenance, type SiteSignalOverrides } from '@odysseus/core';
+import {
+  buildFindingsProvenance,
+  type AuditOutreachContext,
+  type OutreachAuthorizationSource,
+  type SiteSignalOverrides,
+} from '@odysseus/core';
 import { deleteCrawlCheckpoint, deleteCrawlStateFile } from '@odysseus/scanner';
 import { hasMeasuredCoreWebVitals } from '@odysseus/report';
 import { pauseBetweenLanguagePasses } from '@odysseus/llm';
@@ -58,6 +63,36 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
           }
         : undefined;
 
+    // Plan 044: a full audit launched from a hotel hub carries the
+    // candidate's link, so the audit shows in that hotel's picker and the
+    // breadcrumb leads back. The stamp answers "why does this audit exist
+    // for this candidate": `paid` is the operator's own deliverable
+    // decision made at launch, so unlike the prospecting scan there is
+    // nothing to re-validate at claim time - the options snapshot
+    // persisted at creation is the provenance.
+    let outreachContext: AuditOutreachContext | undefined;
+    if (job.options.outreachCandidateId !== undefined) {
+      const { outreachCohortId, outreachScoringVersion, outreachAuthorizedBy } = job.options;
+      const source: OutreachAuthorizationSource | undefined = (
+        ['cohort', 'wave-roster', 'paid'] as const
+      ).find((value) => value === outreachAuthorizedBy);
+      if (
+        outreachCohortId === undefined ||
+        outreachScoringVersion === undefined ||
+        source === undefined
+      ) {
+        throw new Error(
+          `odysseus interface: full-audit job ${job.jobId} carries an incomplete candidate link`,
+        );
+      }
+      outreachContext = {
+        candidateId: job.options.outreachCandidateId,
+        cohortId: outreachCohortId,
+        scoringVersion: outreachScoringVersion,
+        authorizedBy: source,
+      };
+    }
+
     const auditResult = await runAuditStage(
       url,
       {
@@ -69,6 +104,7 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
           : {}),
         ...(job.options.siren !== undefined ? { manualSiren: job.options.siren } : {}),
         ...(siteSignalOverrides !== undefined ? { siteSignalOverrides } : {}),
+        ...(outreachContext !== undefined ? { outreachContext } : {}),
         ...(job.options.seeds !== undefined ? { seeds: job.options.seeds } : {}),
         ...(job.options.exclusions !== undefined ? { exclusions: job.options.exclusions } : {}),
         ...(job.options.bookingEngineUrl !== undefined
