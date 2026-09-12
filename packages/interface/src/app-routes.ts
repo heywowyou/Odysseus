@@ -15,4 +15,5 @@ export const APP_ROUTE_PREFIXES = [
   'a-traiter',
   'resultats',
   'ne-pas-contacter',
+  'outils',
 ] as const;
