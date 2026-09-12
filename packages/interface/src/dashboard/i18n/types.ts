@@ -703,6 +703,14 @@ export interface DashboardStrings {
       pickerLabel: string;
       standaloneHint: string;
     };
+    /** Plan 042 slice 3: the paid report chain's tab, visible once the
+     *  hotel is sold (outcome `won`) or revealed manually from the Audit
+     *  tab - view state only, nothing stored. */
+    report: {
+      description: string;
+      /** The Audit tab's one-line link that reveals the tab early. */
+      reveal: string;
+    };
     emails: {
       /** {n} is the follow-up number: Relance 1, Relance 2. */
       followUpName: string;

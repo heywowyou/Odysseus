@@ -4,10 +4,12 @@ import { formatDateTime } from '../lib/format';
 import {
   HUB_STEP_ANCHORS,
   HUB_STEP_KEYS,
+  auditChoices,
   hubPrimaryAction,
   hubTabs,
   isSold,
   pipelineSteps,
+  selectedAuditId,
   selectionVerdictSentence,
 } from './hub-model';
 import type { ProspectDetailResponse } from './prospects-model';
@@ -305,6 +307,21 @@ describe('hubTabs', () => {
     const tabs = hubTabs(steps, true);
     const report = tabs.find((step) => step.key === 'report');
     expect(report).toEqual({ key: 'report', state: 'todo', date: null });
+  });
+});
+
+describe('selectedAuditId (plan 042 slice 3)', () => {
+  it('defaults to the newest audit and honours the pick', () => {
+    const detail = makeDetail({
+      outreachAudits: [
+        { auditId: 'audit-2', startedAt: '2026-09-10T00:00:00.000Z', jobType: null },
+        { auditId: 'audit-1', startedAt: '2026-09-01T00:00:00.000Z', jobType: null },
+      ],
+    });
+    const choices = auditChoices(detail);
+    expect(selectedAuditId(choices, null)).toBe('audit-2');
+    expect(selectedAuditId(choices, 'audit-1')).toBe('audit-1');
+    expect(selectedAuditId([], null)).toBeNull();
   });
 });
 

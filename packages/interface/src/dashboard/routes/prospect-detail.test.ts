@@ -231,6 +231,20 @@ describe('ProspectDetailPage section deep links (plan 040 slice 7)', () => {
   });
 });
 
+function notFoundResponse(): Response {
+  return {
+    ok: false,
+    status: 404,
+    json: async () => ({ error: 'not found' }),
+  } as unknown as Response;
+}
+
+function buttonWithText(label: string): HTMLButtonElement | undefined {
+  return [...document.querySelectorAll('button')].find((button) =>
+    button.textContent?.includes(label),
+  );
+}
+
 async function clickButton(label: string, root?: ParentNode): Promise<void> {
   const scope = root ?? document;
   const button = await waitFor(() =>
@@ -257,8 +271,27 @@ describe('ProspectDetailPage tabs (plan 042 slice 1)', () => {
 
   beforeEach(() => {
     fetchMock.mockReset();
+    const auditDetailFixture = {
+      auditId: 'audit-1',
+      siteUrl: 'https://exemple.fr',
+      startedAt: '2026-09-01T10:00:00.000Z',
+      finishedAt: '2026-09-01T10:20:00.000Z',
+      pagesVisited: 12,
+      lifecycle: 'rendered',
+      severityRollup: { critical: 1, serious: 0, moderate: 2, minor: 3 },
+      findings: [],
+      ruleCopy: {},
+      reportLanguages: [],
+      reports: [
+        { language: 'fr', status: 'unverified', pdfAvailable: false },
+        { language: 'en', status: 'unverified', pdfAvailable: false },
+      ],
+      approval: null,
+      manualFields: null,
+    };
     fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);
+      if (url.includes('/report-preparation')) return notFoundResponse();
       if (url.includes('/outreach-preview/publish')) {
         return jsonResponse({
           published: true,
@@ -267,6 +300,7 @@ describe('ProspectDetailPage tabs (plan 042 slice 1)', () => {
           publicExpiresAt: '2099-01-01T00:00:00.000Z',
         });
       }
+      if (url.endsWith('/api/audits/audit-1')) return jsonResponse(auditDetailFixture);
       return jsonResponse(detailWithAudit());
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -315,5 +349,71 @@ describe('ProspectDetailPage tabs (plan 042 slice 1)', () => {
     expect(pageText()).not.toContain('Conservez ce lien maintenant');
     await clickButton('Aperçu');
     expect(pageText()).toContain('Conservez ce lien maintenant');
+  });
+
+  it('hides Rapport client until sold, and reveals it on demand', async () => {
+    await renderDetail();
+    await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
+    await pause();
+
+    // No recorded `won` outcome: the tab is absent entirely.
+    expect(buttonWithText('Rapport client')).toBeUndefined();
+
+    // The Audit tab carries the one-line reveal; it is view state only.
+    await clickButton('Audit');
+    await clickButton('Produire un rapport quand même');
+    expect(buttonWithText('Rapport client')).toBeDefined();
+    await clickButton('Rapport client');
+    expect(document.getElementById('hub-report')).not.toBeNull();
+  });
+
+  it('shows Rapport client without a reveal once a won outcome is recorded', async () => {
+    const auditDetailFixture = {
+      auditId: 'audit-1',
+      siteUrl: 'https://exemple.fr',
+      startedAt: '2026-09-01T10:00:00.000Z',
+      finishedAt: '2026-09-01T10:20:00.000Z',
+      pagesVisited: 12,
+      lifecycle: 'rendered',
+      severityRollup: { critical: 1, serious: 0, moderate: 2, minor: 3 },
+      findings: [],
+      ruleCopy: {},
+      reportLanguages: [],
+      reports: [
+        { language: 'fr', status: 'unverified', pdfAvailable: false },
+        { language: 'en', status: 'unverified', pdfAvailable: false },
+      ],
+      approval: null,
+      manualFields: null,
+    };
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/report-preparation')) return notFoundResponse();
+      if (url.endsWith('/api/audits/audit-1')) return jsonResponse(auditDetailFixture);
+      return jsonResponse({
+        ...detailWithAudit(),
+        outcomes: {
+          rows: [
+            {
+              outcomeId: 'o-1',
+              outcome: 'won',
+              lostReason: null,
+              actor: 'operator',
+              recordedAt: '2026-09-05T08:00:00.000Z',
+            },
+          ],
+          total: 1,
+          limit: 10,
+          offset: 0,
+        },
+      });
+    });
+    await renderDetail();
+    await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
+    await pause();
+
+    expect(buttonWithText('Rapport client')).toBeDefined();
+    await clickButton('Rapport client');
+    expect(document.getElementById('hub-report')).not.toBeNull();
   });
 });

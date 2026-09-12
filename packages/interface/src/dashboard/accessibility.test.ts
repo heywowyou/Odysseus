@@ -595,7 +595,7 @@ describe('operator page accessibility (plan 013 step 5, extended plan 022 step 6
     // Switch to the Audit tab.
     const auditTab = [...container.querySelectorAll('[role="tab"]')].find((tab) =>
       tab.textContent?.includes('Audit'),
-    );
+    ) as HTMLElement | undefined;
     expect(auditTab).toBeDefined();
     await act(async () => {
       auditTab?.click();
@@ -613,6 +613,107 @@ describe('operator page accessibility (plan 013 step 5, extended plan 022 step 6
       await new Promise((resolve) => setTimeout(resolve, 10));
     });
     await settle(container, 'Ajoutez un texte visible dans chaque bouton.');
+    await expectNoAxeViolations(container);
+    root.unmount();
+  });
+
+  it('hotel hub Rapport client tab has no axe violations while active', async () => {
+    // Plan 042 slice 3: the paid report chain relocated into the hub,
+    // visible here through the sold path (a recorded won outcome).
+    stubRoutes({
+      '/api/audits/audit-1/report-preparation': null,
+      '/api/audits/audit-1': {
+        auditId: 'audit-1',
+        siteUrl: 'https://exemple.fr',
+        startedAt: '2026-09-01T10:00:00.000Z',
+        finishedAt: '2026-09-01T10:20:00.000Z',
+        pagesVisited: 12,
+        lifecycle: 'rendered',
+        severityRollup: { critical: 0, serious: 0, moderate: 0, minor: 0 },
+        findings: [],
+        ruleCopy: {},
+        reportLanguages: [],
+        reports: [
+          { language: 'fr', status: 'unverified', pdfAvailable: false },
+          { language: 'en', status: 'unverified', pdfAvailable: false },
+        ],
+        approval: null,
+        manualFields: null,
+      },
+      '/api/prospects/cand-1': {
+        candidateId: 'cand-1',
+        resolutionVersion: 'v1',
+        identityKey: 'key-1',
+        identityStatus: 'resolved',
+        matchedOn: null,
+        siret: null,
+        siren: null,
+        name: 'Hôtel Exemple',
+        commune: 'Grenoble',
+        postcode: '38000',
+        starRating: 3,
+        roomCount: 42,
+        capacity: 90,
+        campaignEligibility: 'eligible',
+        groupStatus: 'independent',
+        groupDomain: null,
+        groupSize: null,
+        ownRegistrableDomain: 'exemple.fr',
+        domainProvenance: 'declared',
+        declaredRegistrableDomain: 'exemple.fr',
+        reviewState: 'not-required',
+        review: { queuedReason: null, actor: null, reason: null, decidedAt: null },
+        qualificationOutcome: 'qualified',
+        prescanStatus: null,
+        websites: [],
+        conflicts: [],
+        sourceRefs: [],
+        qualification: null,
+        qualificationHistory: { rows: [], total: 0, limit: 10, offset: 0 },
+        prescan: null,
+        score: null,
+        evidence: null,
+        preview: null,
+        contact: null,
+        thread: null,
+        outcomes: {
+          rows: [
+            {
+              outcomeId: 'o-1',
+              outcome: 'won',
+              lostReason: null,
+              actor: 'operator',
+              recordedAt: '2026-09-05T08:00:00.000Z',
+            },
+          ],
+          total: 1,
+          limit: 10,
+          offset: 0,
+        },
+        outreachScan: { canStart: false, refusal: 'not-selected' },
+        outreachAudit: {
+          auditId: 'audit-1',
+          startedAt: '2026-09-01T10:00:00.000Z',
+          severityRollup: { critical: 0, serious: 0, moderate: 0, minor: 0 },
+        },
+        outreachScanJobId: null,
+      },
+    });
+    const { container, root } = await renderPage(createElement(ProspectDetailPage), {
+      path: '/prospects/cand-1',
+      pattern: 'prospects/:candidateId',
+    });
+    await settle(container, 'Hôtel Exemple');
+    const reportTab = [...container.querySelectorAll('[role="tab"]')].find((tab) =>
+      tab.textContent?.includes('Rapport client'),
+    ) as HTMLElement | undefined;
+    expect(reportTab).toBeDefined();
+    await act(async () => {
+      reportTab?.click();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+    // The tab panel's own description proves the section mounted.
+    await settle(container, 'La chaîne de production du rapport vendu');
     await expectNoAxeViolations(container);
     root.unmount();
   });

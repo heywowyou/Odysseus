@@ -15,6 +15,7 @@ import { findPublisherIdentificationFinding, isReportStageFailure } from './audi
 import { FailureCard } from './audit-reports-section';
 import { FindingsCard, PublisherIdentificationAlert } from './audit-findings-section';
 import type { AuditDetailResponse } from './audit-detail-types';
+import { auditChoices, type HubAuditChoice } from './hub-model';
 import type { ProspectDetailResponse } from './prospects-model';
 
 type SeverityKey = 'critical' | 'serious' | 'moderate' | 'minor';
@@ -27,23 +28,6 @@ const SEVERITY_TONES: Record<SeverityKey, BadgeTone> = {
 };
 
 const SEVERITY_KEYS: readonly SeverityKey[] = ['critical', 'serious', 'moderate', 'minor'];
-
-/** One picker entry: an audit identity plus the creating job's type, or
- *  the tolerance fallback derived from the singular detail field. */
-interface HubAuditChoice {
-  auditId: string;
-  startedAt: string;
-  jobType: string | null;
-}
-
-function auditChoices(detail: ProspectDetailResponse): HubAuditChoice[] {
-  if (detail.outreachAudits !== undefined) return detail.outreachAudits;
-  // A cached or fixture payload may predate the list field.
-  const newest = detail.outreachAudit;
-  return newest == null
-    ? []
-    : [{ auditId: newest.auditId, startedAt: newest.startedAt, jobType: null }];
-}
 
 function jobTypeLabel(
   jobType: string | null,
@@ -59,15 +43,26 @@ function jobTypeLabel(
  *  renders - the very components (FindingsCard, the publisher alert, the
  *  report-stage failure card), fed from the audit's own endpoint - under
  *  the severity badges and stage line the section always showed. A picker
- *  appears once the hotel has more than one audit, newest first. */
-export function HubAuditSection(props: { detail: ProspectDetailResponse }): JSX.Element {
-  const { detail } = props;
+ *  appears once the hotel has more than one audit, newest first; which
+ *  audit is open lives in the page so the Rapport client tab shows the
+ *  same one. Until the hotel is sold, a one-line link reveals the paid
+ *  chain's tab anyway (plan 042 slice 3) - view state only, nothing
+ *  stored. */
+export function HubAuditSection(props: {
+  detail: ProspectDetailResponse;
+  /** The audit this tab renders, chosen in the page. */
+  auditId: string | null;
+  onPickAudit: (auditId: string) => void;
+  /** True while the Rapport client tab is not visible (not sold, not
+   *  revealed): the reveal link shows at the bottom of this section. */
+  showReportReveal: boolean;
+  onRevealReport: () => void;
+}): JSX.Element {
+  const { detail, auditId, onPickAudit, showReportReveal, onRevealReport } = props;
   const { strings, language } = useI18n();
 
   const choices = auditChoices(detail);
-  // Default to the newest audit; the selection is view state only.
-  const [pickedAuditId, setPickedAuditId] = useState<string | null>(null);
-  const selected = choices.find((choice) => choice.auditId === pickedAuditId) ?? choices[0] ?? null;
+  const selected = choices.find((choice) => choice.auditId === auditId) ?? choices[0] ?? null;
 
   const auditState = useApi<AuditDetailResponse>(
     selected === null ? null : `/api/audits/${encodeURIComponent(selected.auditId)}`,
@@ -111,7 +106,7 @@ export function HubAuditSection(props: { detail: ProspectDetailResponse }): JSX.
           aria-label={strings.hub.audit.pickerLabel}
           value={selected?.auditId ?? ''}
           onChange={(event) => {
-            setPickedAuditId(event.target.value);
+            onPickAudit(event.target.value);
           }}
         >
           {choices.map((choice) => (
@@ -125,7 +120,7 @@ export function HubAuditSection(props: { detail: ProspectDetailResponse }): JSX.
           <SegmentedControl
             ariaLabel={strings.hub.audit.pickerLabel}
             value={selected?.auditId ?? ''}
-            onValueChange={setPickedAuditId}
+            onValueChange={onPickAudit}
             options={choices.map((choice) => ({
               value: choice.auditId,
               label: pickerLabel(choice),
@@ -200,6 +195,18 @@ export function HubAuditSection(props: { detail: ProspectDetailResponse }): JSX.
         </div>
       ) : detail.outreachScanJobId == null ? (
         <p className="text-sm text-ink-muted">{strings.hub.audit.empty}</p>
+      ) : null}
+
+      {showReportReveal ? (
+        <div className="mt-4 border-t border-line pt-4">
+          <button
+            type="button"
+            className="text-sm text-ink-soft underline underline-offset-2 hover:text-ink"
+            onClick={onRevealReport}
+          >
+            {strings.hub.report.reveal}
+          </button>
+        </div>
       ) : null}
     </Card>
   );

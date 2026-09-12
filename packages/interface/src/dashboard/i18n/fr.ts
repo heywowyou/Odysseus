@@ -646,6 +646,11 @@ export const fr: DashboardStrings = {
       standaloneHint:
         "Vue autonome : la page d'audit complète reste disponible, sans rien refaire ici.",
     },
+    report: {
+      description:
+        'La chaîne de production du rapport vendu : préparer, rédiger, choisir, produire, approuver.',
+      reveal: 'Produire un rapport quand même',
+    },
     emails: {
       firstEmailName: 'Premier email',
       followUpName: 'Relance {n}',

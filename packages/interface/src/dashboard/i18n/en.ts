@@ -639,6 +639,11 @@ export const en: DashboardStrings = {
       standaloneHint:
         'Standalone view: the full audit page remains available; nothing here duplicates it.',
     },
+    report: {
+      description:
+        'The production chain of the sold client report: prepare, write, choose, produce, approve.',
+      reveal: 'Produce a report anyway',
+    },
     emails: {
       firstEmailName: 'First email',
       followUpName: 'Follow-up {n}',

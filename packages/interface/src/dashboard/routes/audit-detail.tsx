@@ -244,6 +244,12 @@ export function AuditDetailPage(): JSX.Element {
           expandedFindingId={expandedFindingId}
           onExpandedFindingChange={setExpandedFindingId}
         />
+        {/* Plan 042 slice 3: the stepper stays always visible here, even
+            though the hub shows it only once the hotel is sold. A
+            standalone audit (started from /scans/new, or a paying client
+            who was never a prospect) has no outcome to read, so hiding
+            the paid chain behind "sold" on this page would make it
+            unreachable for exactly the clients it exists for. */}
         <AuditReportStepper
           auditId={data.auditId}
           detail={data}

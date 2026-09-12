@@ -160,15 +160,34 @@ describe('HubAuditSection findings and picker (plan 042 slice 2)', () => {
     container = document.createElement('div');
     document.body.appendChild(container);
     root = createRoot(container);
-    await act(async () => {
-      root.render(
-        createElement(
-          I18nProvider,
-          null,
-          createElement(MemoryRouter, null, createElement(HubAuditSection, { detail })),
-        ),
-      );
-    });
+    // The chosen audit lives in the page; the harness replays that
+    // ownership with one mutable variable and a rerender on pick.
+    let auditId: string | null = null;
+    const render = async (): Promise<void> => {
+      await act(async () => {
+        root.render(
+          createElement(
+            I18nProvider,
+            null,
+            createElement(
+              MemoryRouter,
+              null,
+              createElement(HubAuditSection, {
+                detail,
+                auditId,
+                onPickAudit: (picked: string) => {
+                  auditId = picked;
+                  void render();
+                },
+                showReportReveal: false,
+                onRevealReport: () => {},
+              }),
+            ),
+          ),
+        );
+      });
+    };
+    await render();
     await pause();
   }
 
@@ -317,7 +336,9 @@ describe('HubAuditSection findings and picker (plan 042 slice 2)', () => {
 
     // Radix ToggleGroup items expose role="radio"; the second one is the
     // older audit (the list is newest first).
-    const older = await waitFor(() => container.querySelectorAll('[role="radio"]')[1]);
+    const older = await waitFor(
+      () => container.querySelectorAll('[role="radio"]')[1] as HTMLElement | undefined,
+    );
     await act(async () => {
       older?.click();
       await new Promise((resolve) => setTimeout(resolve, 10));

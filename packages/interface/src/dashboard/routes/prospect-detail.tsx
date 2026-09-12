@@ -16,10 +16,12 @@ import { usePolling } from '../lib/use-polling';
 import {
   HUB_STEP_ANCHORS,
   HUB_STEP_KEYS,
+  auditChoices,
   hubPrimaryAction,
   hubTabs,
   isSold,
   pipelineSteps,
+  selectedAuditId,
   selectionVerdictSentence,
 } from './hub-model';
 import type { HubStep, HubStepKey } from './hub-model';
@@ -41,6 +43,7 @@ import type {
 import { HubFicheSection } from './hub-fiche-section';
 import { HubQuickCheckSection } from './hub-quick-check-section';
 import { HubAuditSection } from './hub-audit-section';
+import { HubReportSection } from './hub-report-section';
 import { HubPreviewSection } from './hub-preview-section';
 import { HubEmailsSection } from './hub-emails-section';
 import { HubOutcomeSection } from './hub-outcome-section';
@@ -129,7 +132,9 @@ function PipelineStrip(props: {
     else if (event.key === 'End') next = steps.length - 1;
     else return;
     event.preventDefault();
-    activate(steps[next].key);
+    const step = steps[next];
+    if (step === undefined) return;
+    activate(step.key);
   };
 
   return (
@@ -213,6 +218,11 @@ export function ProspectDetailPage(): JSX.Element {
    *  It lives in the page, above every section component, so a tab switch
    *  never remounts the page and never voids sessionToken. */
   const [activeTab, setActiveTab] = useState<HubStepKey>('fiche');
+  /** Which audit the Audit and Rapport client tabs render (default: the
+   *  newest), and whether the operator revealed the paid chain's tab
+   *  without a recorded `won` outcome. Both view state; nothing stored. */
+  const [pickedAuditId, setPickedAuditId] = useState<string | null>(null);
+  const [reportRevealed, setReportRevealed] = useState(false);
 
   // Plan 040 slice 7: the a-traiter rows and the audit page's preview note
   // deep-link into a hub section (/prospects/:id#hub-emails and friends).
@@ -426,8 +436,10 @@ export function ProspectDetailPage(): JSX.Element {
   const now = Date.now();
   const action = hubPrimaryAction(data, now);
   const steps = pipelineSteps(data, now);
-  const tabs = hubTabs(steps, isSold(data));
-  const auditId = data.outreachAudit?.auditId ?? null;
+  const sold = isSold(data);
+  const tabs = hubTabs(steps, sold || reportRevealed);
+  const choices = auditChoices(data);
+  const auditId = selectedAuditId(choices, pickedAuditId);
 
   const sectionFor = (key: HubStepKey): JSX.Element | null => {
     switch (key) {
@@ -436,10 +448,17 @@ export function ProspectDetailPage(): JSX.Element {
       case 'quick-check':
         return <HubQuickCheckSection candidateId={data.candidateId} detail={data} />;
       case 'audit':
-        return <HubAuditSection detail={data} />;
-      // Plan 042 slice 3 renders the paid report chain here.
+        return (
+          <HubAuditSection
+            detail={data}
+            auditId={auditId}
+            onPickAudit={setPickedAuditId}
+            showReportReveal={!sold && !reportRevealed}
+            onRevealReport={() => setReportRevealed(true)}
+          />
+        );
       case 'report':
-        return null;
+        return <HubReportSection auditId={auditId} />;
       case 'preview':
         return (
           <HubPreviewSection

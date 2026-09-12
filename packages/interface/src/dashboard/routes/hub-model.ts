@@ -159,6 +159,31 @@ export function hubTabs(steps: HubStep[], sold: boolean): HubStep[] {
   return [...steps.slice(0, auditIndex + 1), report, ...steps.slice(auditIndex + 1)];
 }
 
+/** One Audit tab picker entry (plan 042 slice 2): an audit identity plus
+ *  the creating job's type, or the tolerance fallback derived from the
+ *  singular detail field. */
+export interface HubAuditChoice {
+  auditId: string;
+  startedAt: string;
+  jobType: string | null;
+}
+
+export function auditChoices(detail: ProspectDetailResponse): HubAuditChoice[] {
+  if (detail.outreachAudits !== undefined) return detail.outreachAudits;
+  // A cached or fixture payload may predate the list field.
+  const newest = detail.outreachAudit;
+  return newest == null
+    ? []
+    : [{ auditId: newest.auditId, startedAt: newest.startedAt, jobType: null }];
+}
+
+/** Which audit the Audit and Rapport client tabs render (plan 042 slice
+ *  3): the picked one, defaulting to the newest. The choice lives in the
+ *  page so the two tabs can never disagree about which audit is open. */
+export function selectedAuditId(choices: HubAuditChoice[], picked: string | null): string | null {
+  return (choices.find((choice) => choice.auditId === picked) ?? choices[0])?.auditId ?? null;
+}
+
 export type HubPrimaryAction =
   | { kind: 'review' }
   | { kind: 'start-scan' }
