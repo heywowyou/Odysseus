@@ -318,7 +318,28 @@ export interface DashboardStrings {
     failureHintAnalysisStage: string;
     failureJobLink: string;
     failureScrollToFields: string;
-    failureScrollToPrepare: string;
+    /** Plan 040 slice 5: the failure card no longer regenerates itself, it
+     *  links to the stepper step to redo, so there is one regenerate
+     *  affordance per cause on the page. */
+    failureScrollToRedact: string;
+    failureScrollToProduce: string;
+    /** Plan 040 slice 5: an audit linked to a prospect manages its preview
+     *  from the hotel hub; this one line points there. */
+    previewManagedFromProspect: string;
+    /** Plan 040 slice 5: the client-report stepper, one button per step,
+     *  each step unlocked by the previous one. */
+    stepper: {
+      heading: string;
+      description: string;
+      steps: Record<'prepare' | 'redact' | 'choose' | 'produce' | 'approve', string>;
+      stepDone: string;
+      stepTodo: string;
+      /** Step 1's preparation half when the report-preparation view cannot
+       *  be loaded (never created, or a failed request). */
+      unavailable: string;
+      /** Step 4's button; the step itself is titled differently. */
+      produceButton: string;
+    };
     /** Issue #91: a report row whose PDF bytes this machine cannot serve.
      *  The freshness badge is replaced by one of these two states: the
      *  document exists but is out of reach, or no usable document exists

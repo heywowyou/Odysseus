@@ -286,10 +286,12 @@ export const fr: DashboardStrings = {
     failureHintReportStage:
       'Le site a déjà été exploré et analysé : corrigez la cause puis régénérez le rapport depuis cette page. Inutile de relancer un scan.',
     failureHintAnalysisStage:
-      'Le scan est terminé, mais aucune analyse bilingue n’a encore été enregistrée : il n’y a donc aucun rapport à régénérer. Lancez la rédaction dans la carte « Préparer le rapport » ci-dessous, puis approuvez le candidat.',
+      'Le scan est terminé, mais aucune analyse bilingue n’a encore été enregistrée : il n’y a donc aucun rapport à régénérer. Lancez la rédaction à l’étape « Rédiger » ci-dessous, puis approuvez le candidat.',
     failureJobLink: 'Voir le détail du scan',
     failureScrollToFields: 'Aller aux champs à confirmer',
-    failureScrollToPrepare: 'Aller à Préparer le rapport',
+    failureScrollToRedact: 'Aller à Rédiger le rapport',
+    failureScrollToProduce: 'Aller à Produire les PDF',
+    previewManagedFromProspect: 'Aperçu géré depuis la fiche du prospect',
     reportPdfUnavailableBadge: 'PDF non disponible ici',
     reportPdfUnavailableNote:
       'Ce PDF a été généré sur une autre machine et n’est pas accessible depuis celle-ci. Régénérez le rapport pour l’obtenir ici.',
@@ -315,7 +317,7 @@ export const fr: DashboardStrings = {
     },
     outreachPreview: {
       title: 'Aperçu de prospection',
-      description: 'Consulter, publier ou retirer la synthèse construite à partir de cet audit.',
+      description: 'Consulter la synthèse construite à partir de cet audit.',
       viewScorecard: 'Afficher la synthèse',
       hideScorecard: 'Masquer la synthèse',
       downloadPdf: 'Télécharger le PDF',
@@ -364,6 +366,21 @@ export const fr: DashboardStrings = {
         'Aucun lien publié n’est disponible dans cette session. Réémettez un lien, copiez-le, puis créez le brouillon.',
       draftRefusedMessage: 'Rien n’a été rédigé ; l’orchestrateur a refusé cette action.',
       actionError: 'Impossible de terminer cette action.',
+    },
+    stepper: {
+      heading: 'Rapport client',
+      description: 'Cinq étapes, une seule action à la fois, jusqu’à la livraison.',
+      steps: {
+        prepare: 'Préparer',
+        redact: 'Rédiger',
+        choose: 'Choisir la version',
+        produce: 'Produire les PDF',
+        approve: 'Approuver pour livraison',
+      },
+      stepDone: 'Fait',
+      stepTodo: 'À faire',
+      unavailable: 'La préparation n’est pas disponible pour cet audit.',
+      produceButton: 'Régénérer les PDF',
     },
   },
   prepareReport: {

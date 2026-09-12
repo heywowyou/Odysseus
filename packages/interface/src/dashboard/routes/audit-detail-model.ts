@@ -348,12 +348,6 @@ export type OutreachPreviewPublishResponse =
   | { published: true; previewId: string; url: string; publicExpiresAt: string }
   | { published: false; refusal: string };
 
-/** POST /api/audits/:auditId/outreach-preview/revoke. */
-export interface OutreachPreviewRevokeResponse {
-  revoked: number;
-  alreadyRevoked: number;
-}
-
 /** POST /api/prospects/:candidateId/outreach/draft. */
 export type OutreachDraftResponse = { created: true } | { created: false; refusal: string };
 
@@ -423,4 +417,85 @@ export function canRevokeOutreachPreview(
   sessionPublished: boolean,
 ): boolean {
   return hasLiveV2Preview || sessionPublished;
+}
+
+// ---------------------------------------------------------------------------
+// Plan 040 slice 5: the client-report stepper
+// ---------------------------------------------------------------------------
+
+/** The five steps of the client-report stepper, in the order the IA fixes
+ *  them. */
+export type ReportStepKey = 'prepare' | 'redact' | 'choose' | 'produce' | 'approve';
+
+/** DOM ids of the stepper's steps, so the failure card can jump to the
+ *  step to redo instead of carrying its own regenerate button. */
+export const REPORT_STEP_ANCHORS: Record<ReportStepKey, string> = {
+  prepare: 'audit-step-prepare',
+  redact: 'audit-step-redact',
+  choose: 'audit-step-choose',
+  produce: 'audit-step-produce',
+  approve: 'audit-step-approve',
+};
+
+export type ReportStepState = 'done' | 'active' | 'todo';
+
+export interface ReportStep {
+  key: ReportStepKey;
+  state: ReportStepState;
+  /** Whether the step renders its body at all. A step the ladder has not
+   *  reached renders muted with its number and title but no button. */
+  enabled: boolean;
+}
+
+/** Everything the ladder reads. The preparation view decides the first
+ *  three steps; the audit row itself the last two, so an audit whose
+ *  preparation was never created (the endpoint answers 404) still reaches
+ *  the production steps. */
+export interface ReportStepperInput {
+  acknowledgementCurrent: boolean;
+  warningCount: number;
+  candidateStatus: 'ready' | 'failed' | 'selected' | undefined;
+  isWritingSelected: boolean;
+  lifecycle: AuditLifecycle;
+  /** Any stored report pair (the analysis produced rows), fresh or not. */
+  hasStoredReportPair: boolean;
+  /** A fresh, deliverable pair: lifecycle rendered or approved. */
+  hasFreshReportPair: boolean;
+}
+
+/** The five steps of the client-report stepper (approved IA, "The audit
+ *  page"): each step unlocks when the previous one is done, walking the
+ *  missing-context warnings, the writing candidate, its approval, the PDF
+ *  production, and the delivery approval.
+ *
+ *  Two deliberate openings in the ladder: a done step stays enabled (an
+ *  operator may redo it), and the production step also unlocks from a
+ *  stored pair alone, because a report-stage failure on an `analysed`
+ *  audit must be redoable there; that failure is exactly why the pair
+ *  never became fresh. */
+export function reportStepperSteps(input: ReportStepperInput): ReportStep[] {
+  const prepareDone = input.acknowledgementCurrent || input.warningCount === 0;
+  const redactDone =
+    input.candidateStatus === 'ready' ||
+    input.candidateStatus === 'selected' ||
+    input.isWritingSelected;
+  const chooseDone = redactDone && input.isWritingSelected;
+  const produceDone = input.hasFreshReportPair;
+  const approveDone = produceDone && input.lifecycle === 'approved';
+
+  // The ladder: a step is reachable when its predecessor is done, and a
+  // done step is always reachable again (redo). Production's second key
+  // is the stored pair, not the fresh one.
+  const steps: { key: ReportStepKey; done: boolean; enabled: boolean }[] = [
+    { key: 'prepare', done: prepareDone, enabled: true },
+    { key: 'redact', done: redactDone, enabled: prepareDone },
+    { key: 'choose', done: chooseDone, enabled: redactDone },
+    { key: 'produce', done: produceDone, enabled: chooseDone || input.hasStoredReportPair },
+    { key: 'approve', done: approveDone, enabled: produceDone },
+  ];
+  return steps.map(({ key, done: isDone, enabled: isEnabled }) => ({
+    key,
+    state: isDone ? 'done' : isEnabled ? 'active' : 'todo',
+    enabled: isEnabled,
+  }));
 }

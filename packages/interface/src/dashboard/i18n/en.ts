@@ -286,10 +286,12 @@ export const en: DashboardStrings = {
     failureHintReportStage:
       'The site has already been crawled and analysed: fix the cause and regenerate the report from this page. A new scan is not needed.',
     failureHintAnalysisStage:
-      'The scan finished, but no bilingual analysis was stored yet, so there is no report to regenerate. Run the writing regeneration in the “Prepare report” card below, then approve the candidate.',
+      'The scan finished, but no bilingual analysis was stored yet, so there is no report to regenerate. Run the writing in the “Write” step below, then approve the candidate.',
     failureJobLink: 'View scan details',
     failureScrollToFields: 'Go to the fields to confirm',
-    failureScrollToPrepare: 'Go to Prepare report',
+    failureScrollToRedact: 'Go to Write the report',
+    failureScrollToProduce: 'Go to Produce the PDFs',
+    previewManagedFromProspect: 'Preview managed from the prospect page',
     reportPdfUnavailableBadge: 'PDF not available here',
     reportPdfUnavailableNote:
       'This PDF was generated on another machine and is not reachable from this one. Regenerate the report to obtain it here.',
@@ -315,7 +317,7 @@ export const en: DashboardStrings = {
     },
     outreachPreview: {
       title: 'Outreach preview',
-      description: 'Inspect, publish, or take down the scorecard built from this audit.',
+      description: 'Inspect the scorecard built from this audit.',
       viewScorecard: 'View scorecard',
       hideScorecard: 'Hide scorecard',
       downloadPdf: 'Download PDF',
@@ -363,6 +365,21 @@ export const en: DashboardStrings = {
         'No published link is available in this session. Reissue a link, copy it, then create the draft.',
       draftRefusedMessage: 'Nothing was drafted; the orchestrator declined this action.',
       actionError: 'Could not complete this action.',
+    },
+    stepper: {
+      heading: 'Client report',
+      description: 'Five steps, one action at a time, through to delivery.',
+      steps: {
+        prepare: 'Prepare',
+        redact: 'Write',
+        choose: 'Choose the version',
+        produce: 'Produce the PDFs',
+        approve: 'Approve for delivery',
+      },
+      stepDone: 'Done',
+      stepTodo: 'To do',
+      unavailable: 'Preparation is not available for this audit.',
+      produceButton: 'Regenerate the PDFs',
     },
   },
   prepareReport: {
