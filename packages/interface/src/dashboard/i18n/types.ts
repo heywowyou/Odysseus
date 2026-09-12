@@ -628,7 +628,10 @@ export interface DashboardStrings {
   hub: {
     /** Accessible name of the pipeline strip. */
     pipelineLabel: string;
-    steps: Record<'fiche' | 'quick-check' | 'audit' | 'preview' | 'emails' | 'outcome', string>;
+    steps: Record<
+      'fiche' | 'quick-check' | 'audit' | 'report' | 'preview' | 'emails' | 'outcome',
+      string
+    >;
     stepStates: Record<'done' | 'active' | 'todo' | 'blocked', string>;
     /** The header's one primary action, chosen by state (review and the
      *  terminal refusal excepted: review reuses operator.accept, a refusal

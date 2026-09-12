@@ -230,3 +230,90 @@ describe('ProspectDetailPage section deep links (plan 040 slice 7)', () => {
     }
   });
 });
+
+async function clickButton(label: string, root?: ParentNode): Promise<void> {
+  const scope = root ?? document;
+  const button = await waitFor(() =>
+    [...scope.querySelectorAll('button')].find((element) => element.textContent?.includes(label)),
+  );
+  await act(async () => {
+    button.click();
+  });
+  await pause();
+}
+
+describe('ProspectDetailPage tabs (plan 042 slice 1)', () => {
+  const fetchMock = vi.fn();
+
+  const detailWithAudit = (): ProspectDetailResponse => ({
+    ...detailWithContact(null),
+    outreachScan: { canStart: false },
+    outreachAudit: {
+      auditId: 'audit-1',
+      startedAt: '2026-09-01T10:00:00.000Z',
+      severityRollup: { critical: 1, serious: 0, moderate: 2, minor: 3 },
+    },
+  });
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/outreach-preview/publish')) {
+        return jsonResponse({
+          published: true,
+          previewId: 'preview-1',
+          url: 'https://apercu.example.fr/apercu/token-abc',
+          publicExpiresAt: '2099-01-01T00:00:00.000Z',
+        });
+      }
+      return jsonResponse(detailWithAudit());
+    });
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+  });
+
+  it('renders one panel at a time and switches on the strip', async () => {
+    await renderDetail();
+    await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
+    await pause();
+
+    expect(document.getElementById('hub-fiche')).not.toBeNull();
+    expect(document.getElementById('hub-preview')).toBeNull();
+
+    await clickButton('Publier l’aperçu');
+    expect(document.getElementById('hub-preview')).not.toBeNull();
+    expect(document.getElementById('hub-fiche')).toBeNull();
+
+    await clickButton('Contrôle rapide');
+    expect(document.getElementById('hub-quick-check')).not.toBeNull();
+  });
+
+  it('keeps the one-time publish link across tab switches', async () => {
+    await renderDetail();
+    await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
+    await pause();
+
+    // The header's primary action lands on the Aperçu tab.
+    await clickButton('Publier l’aperçu');
+    const panel = document.getElementById('hub-preview');
+    expect(panel).not.toBeNull();
+
+    // Publish from inside the section: confirm the dialog.
+    await clickButton('Publier l’aperçu', panel ?? undefined);
+    await clickButton('Publier l’aperçu', document.querySelector('[role="dialog"]') ?? undefined);
+    await pause();
+    expect(pageText()).toContain('Conservez ce lien maintenant');
+
+    // Leave the tab and come back: the page (not the section) owns the
+    // link and its token, so the one-time link must still be shown.
+    await clickButton('Contrôle rapide');
+    expect(pageText()).not.toContain('Conservez ce lien maintenant');
+    await clickButton('Aperçu');
+    expect(pageText()).toContain('Conservez ce lien maintenant');
+  });
+});

@@ -580,6 +580,7 @@ export const fr: DashboardStrings = {
       fiche: 'Fiche',
       'quick-check': 'Contrôle rapide',
       audit: 'Audit',
+      report: 'Rapport client',
       preview: 'Aperçu',
       emails: 'Emails',
       outcome: 'Résultat',

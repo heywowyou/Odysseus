@@ -17,24 +17,31 @@ import type { ProspectDetailResponse } from './prospects-model';
  * primary action. Exactly one primary action is visible at a time.
  */
 
-/** The six pipeline stages, in the order the IA fixes them. */
-export type HubStepKey = 'fiche' | 'quick-check' | 'audit' | 'preview' | 'emails' | 'outcome';
+/** The seven hub tabs (plan 042 decision 6): the six campaign stages in
+ *  the order the IA fixes them, plus the paid report chain as position
+ *  four. 'report' is not a campaign stage - `pipelineSteps` never emits
+ *  it - and the tab bar shows it only once the hotel is sold. */
+export type HubStepKey =
+  'fiche' | 'quick-check' | 'audit' | 'report' | 'preview' | 'emails' | 'outcome';
 
 export const HUB_STEP_KEYS: readonly HubStepKey[] = [
   'fiche',
   'quick-check',
   'audit',
+  'report',
   'preview',
   'emails',
   'outcome',
 ];
 
-/** DOM ids of the hub's sections, so a strip step (or the primary action)
- *  can jump to its section. */
+/** DOM ids of the hub's panels, so a deep link (or a section reference
+ *  elsewhere) still lands on the right stage now that only the active
+ *  tab's panel exists in the DOM. */
 export const HUB_STEP_ANCHORS: Record<HubStepKey, string> = {
   fiche: 'hub-fiche',
   'quick-check': 'hub-quick-check',
   audit: 'hub-audit',
+  report: 'hub-report',
   preview: 'hub-preview',
   emails: 'hub-emails',
   outcome: 'hub-outcome',
@@ -131,6 +138,25 @@ export function pipelineSteps(detail: ProspectDetailResponse, now: number): HubS
       date: thread?.currentOutcome?.recordedAt ?? null,
     },
   ];
+}
+
+/** Plan 042 decision 5: "sold" is a recorded outcome of `won`, one of the
+ *  values in `OUTREACH_OUTCOMES` (packages/core). No new stored state and
+ *  no other reading: `quoted` or `reply-positive` does not open the paid
+ *  chain's tab. */
+export function isSold(detail: ProspectDetailResponse): boolean {
+  return detail.outcomes.rows.some((row) => row.outcome === 'won');
+}
+
+/** The ordered visible tabs (plan 042 decision 6): the pipeline steps
+ *  with the Rapport client tab inserted at position four when the hotel
+ *  is sold. The report step is deliberately stateless (date null, no
+ *  campaign state to show - the tab bar renders no state word for it). */
+export function hubTabs(steps: HubStep[], sold: boolean): HubStep[] {
+  if (!sold) return steps;
+  const auditIndex = steps.findIndex((step) => step.key === 'audit');
+  const report: HubStep = { key: 'report', state: 'todo', date: null };
+  return [...steps.slice(0, auditIndex + 1), report, ...steps.slice(auditIndex + 1)];
 }
 
 export type HubPrimaryAction =

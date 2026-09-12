@@ -574,6 +574,7 @@ export const en: DashboardStrings = {
       fiche: 'Record',
       'quick-check': 'Quick check',
       audit: 'Audit',
+      report: 'Client report',
       preview: 'Preview',
       emails: 'Emails',
       outcome: 'Outcome',

@@ -5,6 +5,8 @@ import {
   HUB_STEP_ANCHORS,
   HUB_STEP_KEYS,
   hubPrimaryAction,
+  hubTabs,
+  isSold,
   pipelineSteps,
   selectionVerdictSentence,
 } from './hub-model';
@@ -114,11 +116,12 @@ function threadWith(overrides: {
 }
 
 describe('pipelineSteps', () => {
-  it('orders the six stages the IA fixes', () => {
+  it('orders the seven tabs the IA fixes, six of them campaign stages', () => {
     expect(HUB_STEP_KEYS).toEqual([
       'fiche',
       'quick-check',
       'audit',
+      'report',
       'preview',
       'emails',
       'outcome',
@@ -126,6 +129,16 @@ describe('pipelineSteps', () => {
     for (const key of HUB_STEP_KEYS) {
       expect(HUB_STEP_ANCHORS[key]).toMatch(/^hub-/);
     }
+    // The report chain is not a campaign stage: pipelineSteps never
+    // emits it, hubTabs is the only place it enters the order.
+    expect(pipelineSteps(makeDetail(), NOW).map((step) => step.key)).toEqual([
+      'fiche',
+      'quick-check',
+      'audit',
+      'preview',
+      'emails',
+      'outcome',
+    ]);
   });
 
   it('shows an untouched prospect as review-free but todo everywhere', () => {
@@ -199,6 +212,99 @@ describe('pipelineSteps', () => {
       NOW,
     );
     expect(recorded[5]).toMatchObject({ key: 'outcome', state: 'done' });
+  });
+});
+
+describe('isSold', () => {
+  it('is true for a recorded won outcome only', () => {
+    const won = makeDetail({
+      outcomes: {
+        rows: [
+          {
+            outcomeId: 'o-1',
+            outcome: 'won',
+            lostReason: null,
+            actor: 'operator',
+            recordedAt: '2026-09-04T08:00:00.000Z',
+          },
+        ],
+        total: 1,
+        limit: 10,
+        offset: 0,
+      },
+    });
+    expect(isSold(won)).toBe(true);
+
+    const quoted = makeDetail({
+      outcomes: {
+        rows: [
+          {
+            outcomeId: 'o-2',
+            outcome: 'quoted',
+            lostReason: null,
+            actor: 'operator',
+            recordedAt: '2026-09-04T08:00:00.000Z',
+          },
+        ],
+        total: 1,
+        limit: 10,
+        offset: 0,
+      },
+    });
+    expect(isSold(quoted)).toBe(false);
+
+    const replyPositive = makeDetail({
+      outcomes: {
+        rows: [
+          {
+            outcomeId: 'o-3',
+            outcome: 'reply-positive',
+            lostReason: null,
+            actor: 'operator',
+            recordedAt: '2026-09-04T08:00:00.000Z',
+          },
+        ],
+        total: 1,
+        limit: 10,
+        offset: 0,
+      },
+    });
+    expect(isSold(replyPositive)).toBe(false);
+
+    expect(isSold(makeDetail())).toBe(false);
+  });
+});
+
+describe('hubTabs', () => {
+  const steps = pipelineSteps(makeDetail(), NOW);
+
+  it('hides Rapport client while no won outcome is recorded', () => {
+    expect(hubTabs(steps, false).map((step) => step.key)).toEqual([
+      'fiche',
+      'quick-check',
+      'audit',
+      'preview',
+      'emails',
+      'outcome',
+    ]);
+  });
+
+  it('inserts Rapport client between Audit and Apercu once sold', () => {
+    expect(hubTabs(steps, true).map((step) => step.key)).toEqual([
+      'fiche',
+      'quick-check',
+      'audit',
+      'report',
+      'preview',
+      'emails',
+      'outcome',
+    ]);
+  });
+
+  it('carries no campaign state on the report tab', () => {
+    const tabs = hubTabs(steps, true);
+    const report = tabs.find((step) => step.key === 'report');
+    expect(report).toEqual({ key: 'report', state: 'todo', date: null });
   });
 });
 

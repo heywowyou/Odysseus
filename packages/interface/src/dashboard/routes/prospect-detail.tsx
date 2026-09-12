@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import type { JSX } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { JSX, KeyboardEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { ChevronRight } from 'lucide-react';
@@ -15,11 +15,14 @@ import { ApiError, fetchJson, postEmpty, sendJson } from '../lib/api';
 import { usePolling } from '../lib/use-polling';
 import {
   HUB_STEP_ANCHORS,
+  HUB_STEP_KEYS,
   hubPrimaryAction,
+  hubTabs,
+  isSold,
   pipelineSteps,
   selectionVerdictSentence,
 } from './hub-model';
-import type { HubStep } from './hub-model';
+import type { HubStep, HubStepKey } from './hub-model';
 import {
   isPreviewUnavailableDraftRefusal,
   outreachRefusalCopy,
@@ -98,18 +101,51 @@ function scrollToAnchor(anchor: string): void {
   document.getElementById(anchor)?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
 }
 
-/** The pipeline strip between the header and the sections: one jump per
- *  stage, each carrying its state and date (approved IA). */
-function PipelineStrip(props: { steps: HubStep[] }): JSX.Element {
-  const { steps } = props;
+/** The pipeline strip between the header and the panels (plan 042 slice
+ *  1): the same per-stage state and date the strip always carried, now
+ *  with tab semantics - one stage's panel renders at a time. Hand-rolled
+ *  ARIA tabs (no @radix-ui/react-tabs dependency): roving tabIndex and
+ *  arrow-key activation per the WAI-ARIA tabs pattern. */
+function PipelineStrip(props: {
+  steps: HubStep[];
+  activeTab: HubStepKey;
+  onTabChange: (key: HubStepKey) => void;
+}): JSX.Element {
+  const { steps, activeTab, onTabChange } = props;
   const { strings } = useI18n();
+  const tabRefs = useRef(new Map<HubStepKey, HTMLButtonElement>());
+
+  const activate = (key: HubStepKey): void => {
+    onTabChange(key);
+    tabRefs.current.get(key)?.focus();
+  };
+
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    const index = steps.findIndex((step) => step.key === activeTab);
+    let next: number;
+    if (event.key === 'ArrowRight') next = (index + 1) % steps.length;
+    else if (event.key === 'ArrowLeft') next = (index - 1 + steps.length) % steps.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = steps.length - 1;
+    else return;
+    event.preventDefault();
+    activate(steps[next].key);
+  };
+
   return (
     <nav aria-label={strings.hub.pipelineLabel} className="mb-6">
-      <ol className="flex flex-wrap items-center gap-x-1 gap-y-2">
+      <div
+        role="tablist"
+        aria-label={strings.hub.pipelineLabel}
+        className="flex flex-wrap items-center gap-x-1 gap-y-2"
+        onKeyDown={onKeyDown}
+      >
         {steps.map((step, index) => {
-          const isActive = step.state === 'active';
+          const isSelected = step.key === activeTab;
           return (
-            <li key={step.key} className="flex items-center gap-1">
+            // presentation: the separators must not become the tablist's
+            // children - ARIA requires the tabs themselves to own that role.
+            <span key={step.key} role="presentation" className="flex items-center gap-1">
               {index > 0 ? (
                 <ChevronRight
                   className="mx-1 size-3.5 shrink-0 text-ink-muted"
@@ -117,31 +153,42 @@ function PipelineStrip(props: { steps: HubStep[] }): JSX.Element {
                 />
               ) : null}
               <button
+                ref={(node) => {
+                  if (node === null) tabRefs.current.delete(step.key);
+                  else tabRefs.current.set(step.key, node);
+                }}
                 type="button"
-                onClick={() => scrollToAnchor(HUB_STEP_ANCHORS[step.key])}
+                role="tab"
+                id={`hub-tab-${step.key}`}
+                aria-selected={isSelected}
+                aria-controls={HUB_STEP_ANCHORS[step.key]}
+                tabIndex={isSelected ? 0 : -1}
+                onClick={() => onTabChange(step.key)}
                 className="flex items-center gap-1.5 rounded-md px-2 py-1 text-left text-xs hover:bg-raised"
               >
-                <span className={isActive ? 'font-semibold text-ink' : 'text-ink-soft'}>
+                <span className={isSelected ? 'font-semibold text-ink' : 'text-ink-soft'}>
                   {strings.hub.steps[step.key]}
                 </span>
-                <span
-                  className={
-                    step.state === 'done'
-                      ? 'text-ink-muted'
-                      : step.state === 'active'
-                        ? 'font-medium text-accent-bright'
-                        : step.state === 'blocked'
-                          ? 'font-medium text-danger'
-                          : 'text-ink-muted'
-                  }
-                >
-                  {strings.hub.stepStates[step.state]}
-                </span>
+                {step.key === 'report' ? null : (
+                  <span
+                    className={
+                      step.state === 'done'
+                        ? 'text-ink-muted'
+                        : step.state === 'active'
+                          ? 'font-medium text-accent-bright'
+                          : step.state === 'blocked'
+                            ? 'font-medium text-danger'
+                            : 'text-ink-muted'
+                    }
+                  >
+                    {strings.hub.stepStates[step.state]}
+                  </span>
+                )}
               </button>
-            </li>
+            </span>
           );
         })}
-      </ol>
+      </div>
     </nav>
   );
 }
@@ -162,15 +209,27 @@ export function ProspectDetailPage(): JSX.Element {
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [publishedLink, setPublishedLink] = useState<string | null>(null);
   const [draftHint, setDraftHint] = useState(false);
+  /** The active hub tab (plan 042 decision 3): component state, one URL.
+   *  It lives in the page, above every section component, so a tab switch
+   *  never remounts the page and never voids sessionToken. */
+  const [activeTab, setActiveTab] = useState<HubStepKey>('fiche');
 
   // Plan 040 slice 7: the a-traiter rows and the audit page's preview note
   // deep-link into a hub section (/prospects/:id#hub-emails and friends).
   // The sections only exist once the detail has loaded, so the scroll is
-  // deferred until then and replays when the hash itself changes.
+  // deferred until then and replays when the hash itself changes. Since
+  // plan 042 the anchor first names a tab: the panel is mounted by the tab
+  // switch, and the scroll happens on the next tick so the panel exists.
+  // A 'report' deep link only scrolls: whether the paid tab is visible is
+  // the sold signal's decision, not the link's.
   const hasLoaded = data !== undefined;
   useEffect(() => {
     if (hash === '' || !hasLoaded) return;
-    scrollToAnchor(hash.slice(1));
+    const anchor = hash.slice(1);
+    const tabKey = HUB_STEP_KEYS.find((key) => HUB_STEP_ANCHORS[key] === anchor);
+    if (tabKey !== undefined && tabKey !== 'report') setActiveTab(tabKey);
+    const timer = window.setTimeout(() => scrollToAnchor(anchor), 0);
+    return () => window.clearTimeout(timer);
   }, [hash, hasLoaded]);
 
   const encodedId = candidateId === undefined ? '' : encodeURIComponent(candidateId);
@@ -277,7 +336,7 @@ export function ProspectDetailPage(): JSX.Element {
         isPreviewUnavailableDraftRefusal(result.refusal)
       ) {
         setDraftHint(true);
-        scrollToAnchor(HUB_STEP_ANCHORS.preview);
+        setActiveTab('preview');
       } else {
         toast.error(
           (typeof result.refusal === 'string'
@@ -367,7 +426,52 @@ export function ProspectDetailPage(): JSX.Element {
   const now = Date.now();
   const action = hubPrimaryAction(data, now);
   const steps = pipelineSteps(data, now);
+  const tabs = hubTabs(steps, isSold(data));
   const auditId = data.outreachAudit?.auditId ?? null;
+
+  const sectionFor = (key: HubStepKey): JSX.Element | null => {
+    switch (key) {
+      case 'fiche':
+        return <HubFicheSection detail={data} onRequestReview={setPendingAction} />;
+      case 'quick-check':
+        return <HubQuickCheckSection candidateId={data.candidateId} detail={data} />;
+      case 'audit':
+        return <HubAuditSection detail={data} />;
+      // Plan 042 slice 3 renders the paid report chain here.
+      case 'report':
+        return null;
+      case 'preview':
+        return (
+          <HubPreviewSection
+            auditId={auditId}
+            preview={data.preview}
+            publishedLink={publishedLink}
+            draftHint={draftHint}
+            isBusy={isOutreachBusy}
+            onPublish={runPublish}
+            onRevoke={runRevoke}
+          />
+        );
+      case 'emails':
+        return (
+          <HubEmailsSection
+            thread={data.thread}
+            isBusy={isOutreachBusy}
+            onFirstEmail={() => {
+              void runCreateFirstEmail();
+            }}
+            onFollowUp={() => {
+              void runFollowUp();
+            }}
+            refresh={refresh}
+          />
+        );
+      case 'outcome':
+        return (
+          <HubOutcomeSection thread={data.thread} outcomes={data.outcomes} refresh={refresh} />
+        );
+    }
+  };
 
   const primaryButton = (): JSX.Element | null => {
     switch (action.kind) {
@@ -405,7 +509,7 @@ export function ProspectDetailPage(): JSX.Element {
             size="sm"
             isLoading={isOutreachBusy}
             disabled={isOutreachBusy}
-            onClick={() => scrollToAnchor(HUB_STEP_ANCHORS.preview)}
+            onClick={() => setActiveTab('preview')}
           >
             {data.preview === null
               ? strings.auditDetail.outreachPreview.publishAction
@@ -427,19 +531,19 @@ export function ProspectDetailPage(): JSX.Element {
         );
       case 'review-draft':
         return (
-          <Button size="sm" onClick={() => scrollToAnchor(HUB_STEP_ANCHORS.emails)}>
+          <Button size="sm" onClick={() => setActiveTab('emails')}>
             {strings.hub.primary.reviewDraft}
           </Button>
         );
       case 'prepare-follow-up':
         return (
-          <Button size="sm" onClick={() => scrollToAnchor(HUB_STEP_ANCHORS.emails)}>
+          <Button size="sm" onClick={() => setActiveTab('emails')}>
             {strings.hub.primary.prepareFollowUp}
           </Button>
         );
       case 'record-outcome':
         return (
-          <Button size="sm" onClick={() => scrollToAnchor(HUB_STEP_ANCHORS.outcome)}>
+          <Button size="sm" onClick={() => setActiveTab('outcome')}>
             {strings.hub.primary.recordOutcome}
           </Button>
         );
@@ -499,45 +603,19 @@ export function ProspectDetailPage(): JSX.Element {
         </div>
       ) : null}
 
-      <PipelineStrip steps={steps} />
+      <PipelineStrip steps={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <div className="flex flex-col gap-6">
-        <div id={HUB_STEP_ANCHORS.fiche}>
-          <HubFicheSection detail={data} onRequestReview={setPendingAction} />
-        </div>
-        <div id={HUB_STEP_ANCHORS['quick-check']}>
-          <HubQuickCheckSection candidateId={data.candidateId} detail={data} />
-        </div>
-        <div id={HUB_STEP_ANCHORS.audit}>
-          <HubAuditSection detail={data} />
-        </div>
-        <div id={HUB_STEP_ANCHORS.preview}>
-          <HubPreviewSection
-            auditId={auditId}
-            preview={data.preview}
-            publishedLink={publishedLink}
-            draftHint={draftHint}
-            isBusy={isOutreachBusy}
-            onPublish={runPublish}
-            onRevoke={runRevoke}
-          />
-        </div>
-        <div id={HUB_STEP_ANCHORS.emails}>
-          <HubEmailsSection
-            thread={data.thread}
-            isBusy={isOutreachBusy}
-            onFirstEmail={() => {
-              void runCreateFirstEmail();
-            }}
-            onFollowUp={() => {
-              void runFollowUp();
-            }}
-            refresh={refresh}
-          />
-        </div>
-        <div id={HUB_STEP_ANCHORS.outcome}>
-          <HubOutcomeSection thread={data.thread} outcomes={data.outcomes} refresh={refresh} />
-        </div>
+      {/* One panel at a time (plan 042 slice 1): the ids stay the anchors
+          the deep links reference, and the wrapper carries the tabpanel
+          semantics the strip's buttons point at. */}
+      <div
+        key={activeTab}
+        id={HUB_STEP_ANCHORS[activeTab]}
+        role="tabpanel"
+        aria-labelledby={`hub-tab-${activeTab}`}
+        className="flex flex-col gap-6"
+      >
+        {sectionFor(activeTab)}
       </div>
 
       <ConfirmDialog
