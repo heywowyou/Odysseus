@@ -294,7 +294,7 @@ const jobOptionsSchema = new Schema(
     concurrency: { type: Number },
     rescan: { type: Boolean },
     domain: { type: String },
-    prescanCandidateIds: { type: [String] },
+    prescanCandidateIds: { type: [String], default: undefined },
     limit: { type: Number },
     language: { type: String, enum: ['fr', 'en'] },
     outreachCandidateId: { type: String },
