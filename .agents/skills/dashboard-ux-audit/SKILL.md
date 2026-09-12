@@ -28,6 +28,58 @@ login fallback below), make the conservative choice, and stop with a
 clear report when blocked. A run is a full session's work on its own;
 never combine it with other repo work in the same session.
 
+## Task-completion mode (plan 045)
+
+The recurring sweep above never performs an action, so it cannot see a
+defect that only shows up when a job is actually finished end to end
+(plan 045's dead ends: confirmed fields with no reachable PDF, a
+stale-findings lockout, and similar). Task-completion mode is a separate,
+occasional run that DOES perform actions, to verify each core job is
+actually completable from the dashboard, not merely navigable.
+
+Trigger: the operator asks to verify plan 045's fixes, "run the
+task-completion check," or run the dashboard skill in task-completion
+mode explicitly - never on the recurring trigger phrases above, and never
+combined with a normal sweep in the same run.
+
+Target: the local stack by default. Before starting, read
+prometheus-backend/.env-equivalent for this repo (the interface package's
+own `.env` / deployment config) to confirm which MongoDB database the
+local stack points at - never assume. Run the interface server and
+dashboard locally (`pnpm run serve` from the repo root, plus
+`pnpm --filter @odysseus/interface dev:dashboard`, per CLAUDE.md's
+Testing section) and drive that instance. Only touch production when the
+operator names specific records to verify there (as in plan 045's slice
+1.9), and even then only those named records.
+
+Perform each job end to end, not just to the first blocker:
+
+- generate PDFs on an audit whose findings you have made stale by hand
+  (edit the manifest's stamped `normalizationFingerprint` to a fake
+  value, or use a fixture under `fixtures/test-audits/` with an old
+  stamp) and confirm both PDFs render and the job's status advances;
+- confirm an identity field, and confirm the report is then reachable
+  (or, once slice 1.3 lands, generates automatically);
+- approve and download both language reports;
+- add a manual contact address (once slice 1.6 lands) and create the
+  first email;
+- launch a paid audit and a quick check from the hub.
+
+Pass criterion: each job either visibly succeeds, or every control that
+cannot be used shows a grey state with a stated reason - never a hidden
+control and never a silent no-op. Note which of these jobs are not yet
+implemented (earlier plan 045 slices not yet landed) rather than treating
+that as a failure of this run.
+
+Record failures the same way a normal run does: append to
+docs/product/dashboard-ux-audit.md (or, if the operator asked for a
+dedicated one-off note, docs/product/dashboard-ux-audit-2026-09-12.md)
+and file a GitHub issue per genuine defect, per the issue bridge below.
+If the run creates any Gmail drafts (slice 1.7's "create first email"),
+list every one created in the final report so the operator can delete
+them - a task-completion run must never leave a real draft behind
+unaccounted for.
+
 ## Host adaptation (read first)
 
 - Drive the browser YOURSELF, in the main thread, with whatever browser
