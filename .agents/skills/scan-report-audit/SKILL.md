@@ -1,6 +1,6 @@
 ---
 name: scan-report-audit
-description: Run a full live audit against a real, not-yet-scanned hotel from the catalogue, generate the bilingual report, and critique it in character as the hotel's owner/GM to surface report defects before a real client sees them. Use when the user asks to "dogfood a hotel," "run an audit rehearsal," "audit the reports," "find defects in the reports," or otherwise QA the report pipeline against a real site. Runs repeat across hotels; the cumulative log at docs/report/audit-rehearsal-notes.md is what turns a recurring nit into a visible pattern.
+description: Run a full live audit against a real, not-yet-scanned hotel from the catalogue, generate the bilingual report, and critique it in character as the hotel's owner/GM to surface report defects before a real client sees them. Also rehearses the outreach preview scorecard end to end through its own candidate-linked outreach full scan, because nothing else exercises the rendered preview against a real audit. Use when the user asks to "dogfood a hotel," "run an audit rehearsal," "audit the reports," "find defects in the reports," "rehearse the outreach preview," or otherwise QA the report or preview pipeline against a real site. Runs repeat across hotels; the cumulative log at docs/report/audit-rehearsal-notes.md is what turns a recurring nit into a visible pattern.
 ---
 
 # Scan report audit
@@ -12,6 +12,12 @@ time. The goal is to catch the kind of defect that only shows up on a real
 site with a real report in front of a real reader, before a paying client
 is the one who finds it.
 
+The same pass covers both artifacts a real human ever sees: the paid
+full-audit report pair, and the outreach preview scorecard that is a
+prospect's first sight of the work. One run rehearses exactly one of the
+two tracks (see Scope); alternating across runs is what keeps both
+surfaces watched.
+
 This complements, not replaces, the existing test suite: unit tests and the
 fixture-based suite (`fixtures/spa-demo`, `fixtures/test-audits/`) catch
 regressions in known behavior. This skill exists to catch what nobody
@@ -19,9 +25,31 @@ has looked for yet.
 
 ## Scope
 
-The paid full-audit report only (crawl, scan, normalize, analyze, PDF).
-The outreach preview (9c) and the operator dashboard are separate surfaces
-with their own QA needs and are out of scope here.
+Two tracks. One run rehearses exactly one of them; the log records which.
+
+- **Paid-report track** (the skill's original target): the paid
+  full-audit report (crawl, scan, normalize, analyze, PDF). The main
+  flow of steps 1 to 7 below describes this track.
+- **Outreach-preview track**: the outreach preview scorecard (milestone
+  9c, plan 037's v2 preview), French only. It is not a by-product of
+  the paid audit: it builds from its own candidate-linked **outreach
+  full scan**, which runs the same crawl/scan/normalize pipeline and
+  then stops before model analysis and report. The "Outreach-preview
+  track" subsections in steps 1, 2, and 4 replace the main flow for a
+  preview run.
+
+Out of scope for both tracks: the operator dashboard's own chrome
+(views, i18n, shell accessibility) and the touch-1 outreach email
+draft, which can only exist after a real publication. For the preview
+track the artifact is the scorecard the dashboard's audit page shows in
+its sandboxed iframe (the render endpoint's HTML and the operator
+`apercu-<auditId>.pdf`), not the page around it. Publication of the
+public preview page enters the preview track only as the optional,
+operator-gated exercise in step 4. The `/apercu` page's no-token and
+malformed-token error states stay with the `public-website-audit`
+skill, which checks them read-only and never consumes a real preview
+link; the preview track here is the only pass that reads a real
+scorecard built from a real scan.
 
 ## Host adaptation
 
@@ -75,6 +103,11 @@ cannot break sourcing.
 Local `odysseus audit`/`analyze`/`report` remain a documented fallback
 (kept below, marked as such) for when the VPS is unreachable — do not
 delete that path, just don't default to it.
+
+The outreach-preview track has no local fallback at all: the v2 preview
+is dashboard-owned end to end, and the CLI's old `prospect preview
+publish` path is retired (`v1-retired` refusal). If the VPS is
+unreachable, a preview-track run is blocked, not degraded.
 
 ## Steps
 
@@ -132,6 +165,29 @@ receive here is also the operator's current, explicit permission for this
 named site that AGENTS.md requires before any live third-party scan:
 record it (date, hotel, operator) in a session-log stream section for
 this rehearsal before submitting the job.
+
+#### Outreach-preview track pick
+
+The preview cannot be rehearsed on the paid audit's record: the render
+and publish routes require the audit to carry an outreach candidate
+link (`audit.outreach.candidateId`, refusal `not-an-outreach-audit`),
+and only an outreach full scan creates one. Pick differently:
+
+- The candidate must sit in a cohort with state `selected`
+  (approved). `planOutreachFullScan` re-validates cohort selection,
+  current qualification, own registrable domain, suppression, and
+  duplicates server-side and refuses with a typed code before anything
+  is scanned, so a wrong pick is cheap, but check first anyway,
+  through the dashboard's prospect views or the mongodb-readonly MCP
+  server.
+- Not already scanned: same rule as the paid track, no existing
+  `audits` document for the hostname.
+- SIREN is not an input here. The legal facts block takes its Sirene
+  data from the qualification's stored join on the server side; there
+  is no flag to pass, and passing nothing is correct.
+- Same stop-and-show veto: state the hotel's name, candidate ID, URL,
+  and cohort state, and wait for the go-ahead, recording it in the
+  session log as the live-scan permission before submitting the job.
 
 ### 2. Scan
 
@@ -216,11 +272,40 @@ curl -s -b /tmp/odysseus-dashboard-cookies.txt -X POST \
   https://app.odysseusaudit.com/api/audits/<auditId>/regenerate-report
 ```
 
+#### Outreach-preview track scan
+
+Start the scan through the prospects route. It takes no url, no
+options, and no siren from the client; everything is resolved from the
+candidate server-side:
+
+```bash
+curl -s -b /tmp/odysseus-dashboard-cookies.txt -X POST \
+  https://app.odysseusaudit.com/api/prospects/<candidateId>/outreach/full-scan
+```
+
+`201` returns `{"started":true,"jobId":"..."}`; `200` returns
+`{"started":false,"refusal":"<code>"}` and no scan ran. The typed
+refusal vocabulary (`candidate-unknown`, `no-audit`, `audit-in-flight`,
+`audit-failed`, `domain-mismatch`, `suppressed`, `stale-provenance`,
+`coverage-incomplete`, `insufficient-safe-cards`) is shared across the
+start, render, and publish routes. A start-time refusal means pick
+another candidate and note the code in the log; treat it as a defect
+only when the code contradicts the candidate's recorded state. Poll
+the job exactly as in the paid track; `auditId` appears on the job
+document at `complete`. The uncapped rule and the
+record-in-session-log-on-submission rule apply identically.
+
+The transactional-flow manual-fields correction does not apply to this
+track: the preview carries deterministic facts, never an obligation
+conclusion, so there is no flow determination in it to correct.
+
 ### 3. Generate the report
 
 Nothing to do here for a VPS-run scan: step 2's job already produced both
 bilingual analyses and both PDFs as part of the same pipeline run. Skip to
-step 4.
+step 4. Same for the outreach-preview track, for a different reason: the
+outreach full scan stops before analysis and report by design, and the
+preview renders on demand from the finished audit in step 4.
 
 #### Local fallback (only when the VPS is unreachable)
 
@@ -300,6 +385,74 @@ how new defects get missed while old ones get re-found on cue.
 Reconciliation against the log is step 5's second half, not part of the
 read.
 
+#### Outreach-preview track read and critique
+
+Fetch both renderings of the one preview build with the session cookie:
+
+```bash
+curl -s -b /tmp/odysseus-dashboard-cookies.txt \
+  https://app.odysseusaudit.com/api/audits/<auditId>/outreach-preview \
+  -o <scratchpad>/rehearsal-<hostname>-preview.json
+curl -s -b /tmp/odysseus-dashboard-cookies.txt \
+  https://app.odysseusaudit.com/api/audits/<auditId>/outreach-preview/pdf \
+  -o <scratchpad>/rehearsal-<hostname>-apercu.pdf
+```
+
+The render route writes `{"rendered":false,"refusal":"..."}` instead of
+HTML if the build refuses; record the code and judge whether it matches
+the audit's actual state before calling it a defect or discarding the
+hotel. Read the `html` field of the first file in full and the PDF
+visually; the PDF is short, so the 20-page-window concern does not
+arise. There is no second language to compare against: the render and
+publish paths hardcode `fr`, so the paid track's bilingual comparison
+does not apply. Note that the operator PDF is generated from the
+finished preview HTML string, never from paid-report fields, so any
+leak between the two documents is a P1.
+
+Critique in the same owner/GM persona and the same five-part structure,
+with the reader framed as the prospect receiving this scorecard as a
+cold first touch, and add the checks the fail-closed preview lint
+cannot judge:
+
+- Section order and completeness per `docs/rules/outreach-rules.md`
+  section 6bis: title and scan date; coverage facts with the three
+  page counts reported separately; distinct-finding and affected-page
+  totals; four severity tiles; exactly three proof cards; the legal
+  facts block; the code-owned EUR 1,600 HT price with its reply CTA;
+  the article 14 disclosures (identity, data origins, purpose,
+  opt-out, 30-day expiry).
+- Number sanity against the audit itself: coverage counts against what
+  the crawl actually did, severity tiles against the distinct-finding
+  total, each proof card's affected-page count against the site.
+- Prohibited-content spot check, read like a skeptic (the lint
+  enforces this structurally; the read is the second line): no
+  screenshots or images, no exact URLs, no selectors, no rule or
+  finding ids, no occurrence counts (affected-page counts are the
+  allowed form), no raw evidence, no remediation, no model prose, no
+  0-100 score, no prevalence statistics, no sanctions, no legal
+  conclusion.
+- French copy quality: the proof-card sentences come from a reviewed
+  catalog; read all three as prose anyway. A stiff or mis-conjugated
+  sentence is a nit for the log; one that states something wrong is a
+  defect.
+
+**Publishing is optional and operator-gated.** It creates a real,
+unlisted public URL for a hotel that is not a prospect, so only do it
+with an explicit go-ahead in this run, and revoke immediately after:
+
+```bash
+curl -s -b /tmp/odysseus-dashboard-cookies.txt -X POST \
+  https://app.odysseusaudit.com/api/audits/<auditId>/outreach-preview/publish
+curl -s '<returned public url>' -o <scratchpad>/rehearsal-<hostname>-public.html
+curl -s -b /tmp/odysseus-dashboard-cookies.txt -X POST \
+  https://app.odysseusaudit.com/api/prospects/<candidateId>/preview/revoke
+```
+
+Confirm the public page serves the same scorecard the internal build
+rendered, then confirm the URL refuses after the revoke. The raw token
+in the publish response is returned exactly once and never stored
+server-side; never copy it into the log or an issue.
+
 ### 5. Triage the findings
 
 Split what the critique surfaced into two buckets:
@@ -350,7 +503,11 @@ the template there if this is the first run) with:
 
 - date, hostname, URL, `auditId`, and the `artifacts/<host>/<timestamp>/`
   path, which is the way back to the data behind the entry
-- the run outcome: COMPLETE (both PDFs read and critiqued), PARTIAL
+- the track rehearsed (paid-report or outreach-preview), plus the
+  `candidateId` for a preview run
+- the run outcome: COMPLETE (both PDFs read and critiqued for the paid
+  track; both preview renderings read and critiqued for the preview
+  track), PARTIAL
   (the pipeline broke part way: log what completed, file the blocking
   defect, but no owner verdict), or BLOCKED (hotel discarded before or
   during the scan; no defect unless the failure is the tool's)

@@ -2,10 +2,13 @@
 
 Running log for the `scan-report-audit` skill (formerly
 `audit-rehearsal`; `.agents/skills/scan-report-audit/SKILL.md`): one
-real, previously-unscanned hotel audited and read as its owner/GM would
-read it, before it ever reaches a real client. Cumulative across runs so
-a nit that keeps recurring across different hotels is visible as a
-pattern, not just a one-off complaint.
+real, previously-unscanned hotel run through the skill and read as its
+owner/GM would read it, before it ever reaches a real client or
+prospect. Each entry records its track: the paid full-audit report
+pair, or the outreach preview scorecard rehearsed through its own
+candidate-linked outreach full scan. Cumulative across runs so a nit
+that keeps recurring across different hotels is visible as a pattern,
+not just a one-off complaint.
 
 Each entry's critique is written before the log is re-read (a real owner
 has no memory of the previous hotel's report); reconciliation against
@@ -21,8 +24,10 @@ Each entry:
 ```
 ## <ISO date> — <hostname>
 
+- Track: <paid-report | outreach-preview>
 - URL: <url>
 - Audit ID: <auditId>
+- Candidate ID: <candidateId, outreach-preview track only>
 - Outcome: <COMPLETE / PARTIAL / BLOCKED, plus what completed if partial>
 - Verdict: <one or two sentence summary of the critique's verdict>
 - Top concerns: <one or two lines, if any stood out beyond what became an issue>
