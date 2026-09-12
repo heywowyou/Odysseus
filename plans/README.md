@@ -73,7 +73,12 @@ suppression, retention, and outcome measurement.
     `isProspectingWorthy`; the existing cost gate remains intact.
 11. **Role contacts only.** Discover only approved role addresses on the
     hotel's own domain. No named contacts, free-mail addresses, email guessing,
-    SMTP probing, catch-all testing, or phone collection.
+    SMTP probing, catch-all testing, or phone collection. Amended 2026-09-13,
+    plan 045: a named contact or a free-mail address may be entered manually
+    by the operator for a hotel with no usable discovered address, with its
+    own honest origin disclosure and, for free-mail, an explicit attestation.
+    Automated discovery is unchanged. See trade-off 39 and
+    `docs/rules/outreach-rules.md` section 7.
 12. **Ninety-day operational retention.** Source snapshots, candidates,
     prescans, previews, contacts, drafts, and outcomes expire by policy.
     Permanent suppression remains a separate hash-only collection.

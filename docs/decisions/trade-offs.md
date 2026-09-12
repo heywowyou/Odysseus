@@ -1954,6 +1954,16 @@ cap instead; that decision is the operator's.
     point beside it, because plan 007's own scope line is that no contact
     happens before scoring selection.
 
+    **Amended 2026-09-13, plan 045 slice 1.6.** The prohibition above still
+    governs automated discovery exactly as written. A separate, manual path
+    now exists for a hotel linked to an audit with no usable discovered
+    address: the operator may type in an address by hand, including a named
+    person or a free-mail domain, each with its own honest origin (recorded
+    as `addressOrigin` on the contact record, `contactVersion: 'manual-v1'`)
+    and, for free-mail, an explicit attestation
+    (`docs/rules/operator-obligations.md` section 5). This is an addition, not
+    a widening of the ordered allowlist or the discovery domains above.
+
 40. **A derived document fails closed on provenance, and five legal-copy rules
     the paid report had been breaking (2026-08-29).** A report read-through
     against a real Haaitza scan produced fifteen findings in
@@ -4393,6 +4403,18 @@ operator decision. Change a sentence only with operator approval, and bump
 `template-v1`. The email names only categories from that hotel's own preview
 cards, never a fixed list. Every draft is still read before it is sent, which
 is also where a brand name `formatHotelName` recased badly is fixed.
+
+**Amended 2026-09-13, plan 045 slice 1.6.** The same discipline (operator
+approves every sentence) governs the disclosure frame in
+`outreach-draft-copy.ts` too, not only the body template above. Two new
+data-origin fragments for a manually entered contact address were approved
+sentence by sentence: "un annuaire professionnel ou une plateforme de
+réservation en ligne" for one found elsewhere online, and "les coordonnées
+que vous nous avez communiquées" for one given directly by the hotel
+(never "public source" - see `docs/rules/outreach-rules.md` section 7). A
+third approved sentence, the free-mail attestation checkbox, is
+operator-facing dashboard copy, not outreach wording, and is recorded in
+`docs/rules/operator-obligations.md` section 5 instead.
 
 ### 84. The dashboard wears the report and site's design language; Inter and the near-black ground are retired (plan 040 slice 3, 2026-09-12)
 

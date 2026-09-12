@@ -237,6 +237,16 @@ business.
 **No contact before selection.** Addresses are discovered only for hotels a
 scoring cohort has already selected, not for the qualified population.
 
+**These three rules govern automated discovery only.** Plan 045 slice 1.6
+adds a separate, manual override: the operator may type in an address for
+a hotel already linked to an audit, including a named person or a
+free-mail domain, when nothing usable was discovered. It does not widen
+the allowlist, the discovery domains, or the no-contact-before-selection
+rule above; a manually entered address still requires its own honest
+origin disclosure (`docs/rules/outreach-rules.md` section 7) and, for a
+free-mail domain, the operator's attestation
+(`docs/rules/operator-obligations.md` section 5).
+
 ---
 
 ## 7. Storage and retention

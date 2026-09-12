@@ -256,6 +256,22 @@ person. Every first-contact message states:
 The origin disclosure is why `docs/rules/prospect-qualification.md` section 7
 stores data origin per record rather than relying on a boilerplate line.
 
+**A manually entered contact address (plan 045 slice 1.6) carries its own
+origin,** honestly stated per record rather than reusing the automated
+addresses' phrasing:
+
+- found on a public page other than the hotel's own site (a directory, a
+  booking platform): "un annuaire professionnel ou une plateforme de
+  réservation en ligne" / "a professional directory or an online booking
+  platform".
+- given to the operator directly by someone at the hotel: "les
+  coordonnées que vous nous avez communiquées" / "the contact details you
+  provided to us". This line never says "public source", because it is
+  not one. Status: secondary, like the telephone rule in
+  `docs/rules/operator-obligations.md` section 5 - this case sits under RGPD
+  article 13 (data obtained directly from the person) rather than
+  article 14, and that distinction has not had its own legal review.
+
 The prospect's site language is not yet stored on `HotelCandidate` or
 `HotelPrescan`. Until that missing fact has a deterministic source, draft
 generation inherits the operator-supplied language and records
@@ -335,7 +351,12 @@ manual, exactly as it does for touch 1. There is still no sequencer.
 - Any answer to the "my site predates June 2025" objection beyond
   saying it is a question for their lawyer
 - Any finding not present in that prospect's own scan
-- Named individual recipients, and free-mail addresses
+- Named individual recipients and free-mail addresses discovered by the
+  automated pipeline (`docs/rules/prospect-qualification.md` section 6 is
+  unchanged). A named person or a free-mail address the operator enters
+  by hand is the sole exception (plan 045 slice 1.6, honest origin
+  wording above; a free-mail address additionally requires the
+  operator's attestation in `docs/rules/operator-obligations.md` section 5).
 - Any statement about what a competitor of theirs is doing
 - Any description of the offer as an audit RGAA or as producing an
   official conformity rate

@@ -325,7 +325,10 @@ means numbered entry 24, not a literal Markdown heading anchor.
     the qualified population, and a hotel with no usable address parks with one
     of four typed reasons rather than a null. Widening the ordered local-part
     allowlist is a new `contactVersion`, never an in-place edit. A resolver
-    failure is `unknown`, never `no-mx`. → trade-offs.md#39
+    failure is `unknown`, never `no-mx`. Amended plan 045: a manual override
+    lets the operator enter a named or free-mail address per hotel, with its
+    own origin disclosure and, for free-mail, an attestation; automated
+    discovery is unchanged. → trade-offs.md#39
 
 40. Every derived document carries a `findingsProvenance` stamp and fails
     closed: an analysis, report, or artifact carrying none is refused, never

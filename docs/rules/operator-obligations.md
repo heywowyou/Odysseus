@@ -158,6 +158,29 @@ before any call. This matters more than it looks, because "just call
 them" was the obvious fallback if email underperforms, and it no longer
 exists.
 
+**Manual free-mail contact, attested override (plan 045 slice 1.6).**
+`docs/rules/prospect-qualification.md` section 6 excludes free-mail domains
+(Gmail, Outlook and equivalents) from automated discovery because they
+read as personal, not professional. When the operator manually enters
+such an address for a hotel, the dashboard shows a warning and requires
+an explicit attestation before it can be saved:
+
+- Warning (FR): "Cette adresse appartient à un service de messagerie
+  grand public (Gmail, Outlook, etc.). Ces adresses sont normalement
+  exclues car assimilées à un usage personnel." (EN: "This address
+  belongs to a consumer email service (Gmail, Outlook, etc.). These
+  addresses are normally excluded as personal.")
+- Attestation checkbox (FR): "Je confirme que cette adresse est utilisée
+  par cet établissement dans le cadre de son activité professionnelle."
+  (EN: "I confirm that this address is used by this business for its
+  professional activity.")
+
+The checkbox lets the operator assert a fact about one specific address,
+never a legal conclusion about the B2B exception in general. Status:
+secondary. Run a `research` pass against current CNIL guidance on B2B
+email prospecting before the first real send to an attested free-mail
+address; nothing here authorizes sending until that pass has happened.
+
 ---
 
 ## 6. Tax and status
