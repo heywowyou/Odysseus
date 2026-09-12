@@ -247,7 +247,7 @@ export function HubFicheSection(props: {
                 {strings.prospectDetail.sourcesHeading}
               </h3>
               {detail.conflicts.length === 0 ? (
-                <p className="text-sm text-ink-muted">{strings.prospectDetail.outcomeNone}</p>
+                <p className="text-sm text-ink-muted">{strings.prospectDetail.sources.none}</p>
               ) : (
                 <Table>
                   <TableHead>

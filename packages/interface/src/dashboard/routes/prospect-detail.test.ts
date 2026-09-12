@@ -77,7 +77,7 @@ function detailWithContact(contact: ProspectDetailResponse['contact']): Prospect
   };
 }
 
-async function renderDetail(): Promise<void> {
+async function renderDetail(initialEntry: string = '/prospects/candidate-1'): Promise<void> {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -88,7 +88,7 @@ async function renderDetail(): Promise<void> {
         null,
         createElement(
           MemoryRouter,
-          { initialEntries: ['/prospects/candidate-1'] },
+          { initialEntries: [initialEntry] },
           createElement(
             Routes,
             null,
@@ -185,5 +185,48 @@ describe('ProspectDetailPage contact section (issue #95)', () => {
     await pause();
 
     expect(pageText()).not.toContain('Source');
+  });
+});
+
+describe('ProspectDetailPage section deep links (plan 040 slice 7)', () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    fetchMock.mockImplementation(async () => jsonResponse(detailWithContact(null)));
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+  });
+
+  it('scrolls to the hashed section once the detail has loaded', async () => {
+    const calls: string[] = [];
+    Element.prototype.scrollIntoView = function scrollIntoView(this: Element): void {
+      calls.push(this.id);
+    };
+    try {
+      await renderDetail('/prospects/candidate-1#hub-emails');
+      await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
+      await pause();
+      expect(calls).toEqual(['hub-emails']);
+    } finally {
+      delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+    }
+  });
+
+  it('does not scroll without a hash', async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      await renderDetail();
+      await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
+      await pause();
+      expect(scrollIntoView).not.toHaveBeenCalled();
+    } finally {
+      delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+    }
   });
 });

@@ -563,10 +563,10 @@ describe('preview note on the audit page (plan 040 slice 5)', () => {
       },
     });
     const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
-    await settle(container, 'Aperçu de prospection');
+    await settle(container, 'Aperçu');
     expect(
       [...container.querySelectorAll('button')].some((button) =>
-        button.textContent?.includes('Afficher la synthèse'),
+        button.textContent?.includes('Afficher l’aperçu'),
       ),
     ).toBe(true);
     expect(

@@ -1,5 +1,8 @@
 export type JobStatus = 'queued' | 'running' | 'complete' | 'failed' | 'cancelled' | 'needs-input';
-export type JobType = 'full-audit' | 'prospecting' | 'hotel-prescan';
+/** Job types the dashboard can be asked to display. 'outreach-full-scan'
+ *  is the prospect-linked full scan the hub starts; it is a display
+ *  union only, the API names are never respelled. */
+export type JobType = 'full-audit' | 'prospecting' | 'hotel-prescan' | 'outreach-full-scan';
 
 export interface SeverityRollup {
   critical: number;

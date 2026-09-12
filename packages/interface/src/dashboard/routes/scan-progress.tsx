@@ -153,9 +153,11 @@ export function ScanProgressPage(): JSX.Element {
             ? undefined
             : job.type === 'full-audit'
               ? strings.common.typeLabels.fullAudit
-              : job.type === 'hotel-prescan'
-                ? strings.common.typeLabels.hotelPrescan
-                : strings.common.typeLabels.prospecting
+              : job.type === 'outreach-full-scan'
+                ? strings.common.typeLabels.outreachFullScan
+                : job.type === 'hotel-prescan'
+                  ? strings.common.typeLabels.hotelPrescan
+                  : strings.common.typeLabels.prospecting
         }
         subject={job?.siteUrl === undefined ? undefined : hostnameOf(job.siteUrl)}
         title={strings.progress.title}
@@ -429,8 +431,10 @@ function CompleteCard({ job }: { job: ScanJobDetail }): JSX.Element {
   return (
     <Card title={strings.progress.completeHeading} className="border-sev-minor/40">
       {job.auditId !== undefined ? (
+        // Plan 040 slice 7: the link opens the audit page, so it says so
+        // (the old "full report" wording promised a different document).
         <Link to={`/audits/${job.auditId}`} className={buttonStyles('primary', 'sm')}>
-          {strings.progress.viewDetailLink}
+          {strings.progress.goToAuditLink}
         </Link>
       ) : null}
     </Card>

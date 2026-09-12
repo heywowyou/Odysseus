@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { JSX } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { ChevronRight } from 'lucide-react';
 import { PAGE_WIDTH, PageHeader } from '../components/page-header';
@@ -88,7 +88,9 @@ function useProspectDetail(candidateId: string | undefined): ProspectDetailState
 }
 
 function scrollToAnchor(anchor: string): void {
-  document.getElementById(anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Optional call: a test DOM has no layout engine, so scrollIntoView may
+  // not exist; in a real browser it always does.
+  document.getElementById(anchor)?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
 }
 
 /** The pipeline strip between the header and the sections: one jump per
@@ -143,6 +145,7 @@ export function ProspectDetailPage(): JSX.Element {
   const { candidateId } = useParams<{ candidateId: string }>();
   const { strings, language } = useI18n();
   const navigate = useNavigate();
+  const { hash } = useLocation();
   const { data, error, refresh, isNotFound } = useProspectDetail(candidateId);
 
   const [pendingAction, setPendingAction] = useState<ReviewAction | null>(null);
@@ -154,6 +157,16 @@ export function ProspectDetailPage(): JSX.Element {
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [publishedLink, setPublishedLink] = useState<string | null>(null);
   const [draftHint, setDraftHint] = useState(false);
+
+  // Plan 040 slice 7: the a-traiter rows and the audit page's preview note
+  // deep-link into a hub section (/prospects/:id#hub-emails and friends).
+  // The sections only exist once the detail has loaded, so the scroll is
+  // deferred until then and replays when the hash itself changes.
+  const hasLoaded = data !== undefined;
+  useEffect(() => {
+    if (hash === '' || !hasLoaded) return;
+    scrollToAnchor(hash.slice(1));
+  }, [hash, hasLoaded]);
 
   const encodedId = candidateId === undefined ? '' : encodeURIComponent(candidateId);
 

@@ -188,7 +188,7 @@ describe('HubPreviewSection action wiring', () => {
     );
     const { root } = await renderSection({ preview: null });
 
-    await clickButton('Afficher la synthèse');
+    await clickButton('Afficher l’aperçu');
 
     await waitFor(() =>
       (document.body.textContent ?? '').includes('refuse d’inventer des chiffres')

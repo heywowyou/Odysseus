@@ -17,6 +17,7 @@ function scan(overrides: Partial<ScanSummary>): ScanSummary {
 const EMAIL_LABELS: DashboardStrings['hub']['emails'] = {
   followUpName: 'Relance {n}',
   firstEmailName: 'Premier email',
+  providerDraft: 'Dans Gmail',
   needsReviewNotice: '',
   noPendingDraft: '',
 };

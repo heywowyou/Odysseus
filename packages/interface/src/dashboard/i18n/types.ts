@@ -30,8 +30,16 @@ export interface DashboardStrings {
   common: {
     severityLabels: { critical: string; serious: string; moderate: string; minor: string };
     statusLabels: Record<JobStatus, string>;
-    /** camelCase keys mirror the API job types displayed by the dashboard. */
-    typeLabels: { fullAudit: string; prospecting: string; hotelPrescan: string };
+    /** camelCase keys mirror the API job types displayed by the dashboard.
+     *  The prescan family (the batch prospecting crawl and the single-hotel
+     *  quick check) shares one plain-language name per the approved IA
+     *  vocabulary; the prospect-linked full scan is named separately. */
+    typeLabels: {
+      fullAudit: string;
+      prospecting: string;
+      hotelPrescan: string;
+      outreachFullScan: string;
+    };
     downloadReport: string;
     viewDetails: string;
     error: string;
@@ -196,7 +204,6 @@ export interface DashboardStrings {
      *  added there fails to compile until both languages cover it. */
     phaseLabels: Record<ProgressPhase, string>;
     completeHeading: string;
-    viewDetailLink: string;
     failedHeading: string;
     /** Issue #73: a job stopped deliberately on the D8 identity-
      *  confirmation gate, not crashed - its own card, distinct from
@@ -220,8 +227,6 @@ export interface DashboardStrings {
   };
   auditDetail: {
     title: string;
-    description: string;
-    siteLabel: string;
     dateLabel: string;
     pagesVisitedLabel: string;
     findingsHeading: string;
@@ -252,7 +257,6 @@ export interface DashboardStrings {
     lifecycleLabel: string;
     lifecycle: Record<'scanned' | 'analysed' | 'rendered' | 'approved', string>;
     approveReportsButton: string;
-    approvingReportsMessage: string;
     reportsApprovedMessage: string;
     previewReport: string;
     approvedDownload: string;
@@ -260,6 +264,8 @@ export interface DashboardStrings {
     actionError: string;
     manualFieldsHeading: string;
     manualFieldsHint: string;
+    /** SIREN expanded on the field's first use on the page (approved IA
+     *  vocabulary); later mentions on the same screen stay plain. */
     sirenLabel: string;
     sirenCheckButton: string;
     sirenCheckingMessage: string;
@@ -289,10 +295,6 @@ export interface DashboardStrings {
     /** Template: {value}. */
     transactionalFlowDetectedTemplate: string;
     transactionalFlowSavedHint: string;
-    confirmDetectedFieldsButton: string;
-    saveButton: string;
-    savedMessage: string;
-    regenerateButton: string;
     regeneratingMessage: string;
     regeneratedMessage: string;
     confirmApproveTitle: string;
@@ -371,11 +373,13 @@ export interface DashboardStrings {
       'accessibility' | 'seo' | 'geo' | 'performance' | 'rendering' | 'privacy',
       string
     >;
-    /** Plan 037 slice 5: the outreach preview card. Rendered on every
-     *  audit; the endpoints decide readiness. refusalReasons maps each of
-     *  the server's stable refusal codes to one short sentence; an
-     *  unknown code falls back to unavailableWithReason carrying the raw
-     *  code, deliberately untranslated. */
+    /** The scorecard card of an audit with no linked prospect (a
+     *  prospect-linked audit shows only the one-line link to the hub).
+     *  Named "Aperçu" / "Preview" per the approved IA vocabulary.
+     *  refusalReasons maps each of the server's stable refusal codes to one
+     *  short sentence; an unknown code falls back to
+     *  unavailableWithReason carrying the raw code, deliberately
+     *  untranslated. */
     outreachPreview: {
       title: string;
       description: string;
@@ -391,18 +395,11 @@ export interface DashboardStrings {
       renderError: string;
       publishAction: string;
       reissueAction: string;
-      publishConfirmTitle: string;
-      publishConfirmBody: string;
       linkOnceTitle: string;
       linkOnceWarning: string;
       linkCopy: string;
       linkCopied: string;
-      linkConfirmButton: string;
-      revokeAction: string;
-      revokeConfirmTitle: string;
-      revokeConfirmBody: string;
       revokedMessage: string;
-      draftAction: string;
       draftCreatedMessage: string;
       draftNeedsPreviewHint: string;
       draftRefusedMessage: string;
@@ -455,6 +452,8 @@ export interface DashboardStrings {
     journeyRemove: string;
     journeyConfirmedLabel: string;
     journeyRemovedLabel: string;
+    /** Why a suggested journey is not verifiable; read through
+     *  prepare-report-model's exclusionLabel. */
     exclusionNoVisitedPages: string;
     exclusionNoTransactionalFlow: string;
     exclusionNoTransactionalPageVisited: string;
@@ -483,7 +482,6 @@ export interface DashboardStrings {
     regenerateButton: string;
     confirmRegenerateTitle: string;
     confirmRegenerateBody: string;
-    regeneratingMessage: string;
     approvedMessage: string;
     situationOptions: Record<
       | 'no-work-started'
@@ -555,40 +553,18 @@ export interface DashboardStrings {
       group: string;
       qualification: string;
       review: string;
-      score: string;
       contact: string;
       thread: string;
       outcome: string;
     };
-    openDetail: string;
     filterEmpty: string;
   };
   prospectDetail: {
-    /** The page title is the hotel name; this stands in while the name
-     *  is loading and on the placeholder page. */
-    fallbackTitle: string;
     description: string;
-    sections: Record<
-      | 'catalogue'
-      | 'identity'
-      | 'qualification'
-      | 'prescan'
-      | 'score'
-      | 'evidence'
-      | 'contact'
-      | 'preview'
-      | 'thread'
-      | 'outcome',
-      string
-    >;
-    openPrescan: string;
-    openScore: string;
-    openEvidence: string;
-    openPreview: string;
-    openOutreach: string;
+    /** Section labels the hub's Fiche section still renders; the other
+     *  stage names live in hub.steps. */
+    sections: Record<'identity' | 'qualification', string>;
     openSite: string;
-    launchAudit: string;
-    startOutreachScan: string;
     outreachScanQueued: string;
     outreachScanRefused: string;
     sourcesHeading: string;
@@ -596,10 +572,10 @@ export interface DashboardStrings {
       field: string;
       value: string;
       source: string;
-      status: string;
-      chosen: string;
+      /** Empty state of the sources list, plain about sources (the old
+       *  copy reused the outcome-empty sentence). */
+      none: string;
     };
-    qualificationHeading: string;
     qualification: { outcome: string; reason: string; events: string };
     /** Contact section rows (issue #95): operator labels for the store's
      *  contact evaluation fields. A field with no value is omitted rather
@@ -611,14 +587,11 @@ export interface DashboardStrings {
       source: string;
       validatedAt: string;
     };
-    threadHeading: string;
-    thread: { state: string; touch: string; lastEventAt: string };
-    outcomeHeading: string;
+    thread: { lastEventAt: string };
     outcomeNone: string;
     catalogue: {
       name: string;
       city: string;
-      department: string;
       ownDomain: string;
       groupId: string;
     };
@@ -638,7 +611,6 @@ export interface DashboardStrings {
     primary: {
       startScan: string;
       seeProgress: string;
-      publish: string;
       createFirstEmail: string;
       reviewDraft: string;
       prepareFollowUp: string;
@@ -667,8 +639,6 @@ export interface DashboardStrings {
       /** Disclosure holding the internal identifiers and version codes. */
       technicalDetails: string;
       hideTechnicalDetails: string;
-      /** Re-opens the accept/reject decision after it was recorded. */
-      changeDecision: string;
     };
     quickCheck: {
       empty: string;
@@ -692,6 +662,9 @@ export interface DashboardStrings {
       /** {n} is the follow-up number: Relance 1, Relance 2. */
       followUpName: string;
       firstEmailName: string;
+      /** Badge for a draft that also exists in the operator's mailbox
+       *  (approved IA vocabulary: no raw provider code on screen). */
+      providerDraft: string;
       needsReviewNotice: string;
       noPendingDraft: string;
     };
@@ -707,35 +680,20 @@ export interface DashboardStrings {
       actionError: string;
     };
   };
+  /** Stage groups the hub sections render directly. The retired
+   *  single-purpose pages are gone, so only the keys those sections still
+   *  read remain. */
   prescan: {
-    title: string;
-    description: string;
     statusLabel: string;
     scannedAtLabel: string;
-    vendorLabel: string;
-    pagesHeading: string;
-    columns: { url: string; role: string; status: string };
+    columns: { role: string; status: string };
     roleLabels: Record<'homepage' | 'booking' | 'content', string>;
-    bookingKindLabels: Record<
-      | 'checkout-form'
-      | 'payment-embed'
-      | 'booking-engine-script'
-      | 'booking-engine-domain-reference'
-      | 'booking-iframe',
-      string
-    >;
-    empty: string;
   };
   score: {
-    title: string;
-    description: string;
     totalLabel: string;
-    versionLabel: string;
     computedAtLabel: string;
     breakdownHeading: string;
-    /** {x} is the problems-found total, {y} the ability-to-fix total. */
-    breakdownSummary: string;
-    breakdownColumns: { component: string; value: string; weight: string; why: string };
+    breakdownColumns: { component: string; value: string };
     componentLabels: Record<
       | 'render-gap'
       | 'booking-failure'
@@ -754,41 +712,24 @@ export interface DashboardStrings {
     diffColumns: { field: string; before: string; after: string };
     diffFromLabel: string;
     diffToLabel: string;
-    empty: string;
   };
   evidence: {
     title: string;
-    description: string;
     assetNames: { homepage: string; contact: string };
-    columns: { asset: string; capturedAt: string; sourceUrl: string; status: string };
     /** Issue #92: shown in place of a screenshot whose bytes cannot be
      *  resolved from this machine (swept artifacts, or the quick check ran
      *  elsewhere). */
     unavailable: string;
-    empty: string;
   };
+  /** The hub Aperçu section's status, dates, and confirmations. Publish,
+   *  reissue, and the once-only link copy live in
+   *  auditDetail.outreachPreview (both sections share them). */
   preview: {
-    title: string;
     description: string;
     statusLabel: string;
     publishedLabel: string;
     expiresLabel: string;
     states: Record<'live' | 'revoked' | 'expired' | 'none', string>;
-    openPublic: string;
-    rendererNote: string;
-    /** Plan 037: creating a new preview moved to the audit detail page;
-     *  this page keeps the legacy records and their revocation only. */
-    retiredNote: string;
-    showCurrentPreview: string;
-    hideCurrentPreview: string;
-    currentPreviewNote: string;
-    currentPreviewUnavailable: string;
-    currentPreviewError: string;
-    /** Issue #97: the three publication actions. Re-issue is the same
-     *  publish endpoint called when a preview already exists; only the
-     *  copy differs. */
-    publishAction: string;
-    reissueAction: string;
     revokeAction: string;
     publishConfirmTitle: string;
     publishConfirmBody: string;
@@ -796,29 +737,14 @@ export interface DashboardStrings {
     reissueConfirmBody: string;
     revokeConfirmTitle: string;
     revokeConfirmBody: string;
-    actionRefused: string;
-    actionError: string;
-    /** The once-only display of a freshly published bearer link. */
-    linkOnceTitle: string;
-    linkOnceWarning: string;
-    linkCopy: string;
-    linkCopied: string;
-    linkConfirmButton: string;
-    empty: string;
   };
+  /** The hub Emails section's generate actions and toasts; the thread
+   *  state badge reads labels.thread. */
   outreachThread: {
-    title: string;
     description: string;
-    noThread: string;
     generateFirstEmail: string;
     generateFollowUp: string;
-    stateLabel: string;
     touchLabel: string;
-    states: Record<
-      'e1-drafted' | 'e1-sent' | 'e2-drafted' | 'e2-sent' | 'e3-drafted' | 'e3-sent' | 'closed',
-      string
-    >;
-    draftCreated: string;
     followUpCreated: string;
     /** One generic refusal toast for every typed refusal code, the same
      *  discipline prospect-detail.tsx already uses for its review action:
@@ -926,7 +852,7 @@ export interface DashboardStrings {
     group: Record<'independent' | 'group-member' | 'vendor-hosted' | 'unknown', string>;
     review: Record<'not-required' | 'pending' | 'accepted' | 'rejected', string>;
     qualification: Record<
-      'qualified' | 'parked' | 'rejected' | 'already-engaged' | 'group-routed',
+      'qualified' | 'parked' | 'rejected' | 'already-engaged' | 'group-routed' | 'not-evaluated',
       string
     >;
     contact: Record<'found' | 'parked' | 'rejected' | 'suppressed', string>;
@@ -986,15 +912,11 @@ export interface DashboardStrings {
   };
   /** One-line plain-language hints of the pipeline stages, shown next to
    *  the vocabulary by InfoTip on operator pages. Each key names the stage
-   *  it explains, in pipeline order. */
+   *  it explains; only stages a rendered InfoTip still explains remain. */
   hints: {
     crawl: string;
     scan: string;
-    prescan: string;
     score: string;
-    evidence: string;
-    preview: string;
-    outreach: string;
     qualification: string;
     review: string;
   };

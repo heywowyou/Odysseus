@@ -71,6 +71,9 @@ function typeBadge(
   if (summary.type === 'full-audit') {
     return { tone: 'accent', label: strings.common.typeLabels.fullAudit };
   }
+  if (summary.type === 'outreach-full-scan') {
+    return { tone: 'accent', label: strings.common.typeLabels.outreachFullScan };
+  }
   if (summary.type === 'hotel-prescan') {
     return { tone: 'neutral', label: strings.common.typeLabels.hotelPrescan };
   }

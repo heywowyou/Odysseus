@@ -171,7 +171,10 @@ function DraftReviewRow(props: {
       <div className="flex flex-wrap items-baseline gap-2">
         <span className="text-sm font-medium text-ink">{name}</span>
         <span className="text-xs text-ink-muted">{formatDateTime(draft.createdAt, language)}</span>
-        {draft.hasProviderDraft ? <Badge tone="neutral">gmail</Badge> : null}
+        {draft.hasProviderDraft ? (
+          // Plan 040 slice 7: the provider's own name, not its raw code.
+          <Badge tone="neutral">{strings.hub.emails.providerDraft}</Badge>
+        ) : null}
       </div>
       <Button
         variant="secondary"

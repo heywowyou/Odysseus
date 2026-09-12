@@ -114,7 +114,7 @@ describe('AuditPreviewNote', () => {
 
     const link = document.querySelector('a[href="/prospects/candidate-1#hub-preview"]');
     expect(link?.textContent).toContain('Aperçu géré depuis la fiche du prospect');
-    expect(findButton('Afficher la synthèse')).toBeUndefined();
+    expect(findButton('Afficher l’aperçu')).toBeUndefined();
     expect(findButton('Télécharger le PDF')).toBeUndefined();
     // Slice 4 moved these to the hub; they must not reappear here.
     expect(findButton('Publier l’aperçu')).toBeUndefined();
@@ -133,7 +133,7 @@ describe('AuditPreviewNote', () => {
     expect(document.querySelector('iframe')).toBeNull();
     expect(fetchMock.mock.calls.map(([url]) => String(url))).not.toContain(renderUrl);
 
-    await clickButton('Afficher la synthèse');
+    await clickButton('Afficher l’aperçu');
 
     const iframe = await waitFor(() => document.querySelector('iframe') ?? undefined);
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toContain(renderUrl);
@@ -154,7 +154,7 @@ describe('AuditPreviewNote', () => {
     );
     const { root } = await renderNote({ auditId: 'audit-1', candidateId: null });
 
-    await clickButton('Afficher la synthèse');
+    await clickButton('Afficher l’aperçu');
 
     await waitFor(() =>
       (document.body.textContent ?? '').includes('refuse d’inventer des chiffres')
