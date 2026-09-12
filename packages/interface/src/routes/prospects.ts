@@ -11,6 +11,7 @@ import {
   findOutreachThreadByCandidate,
   getOperatorProspect,
   getOutreachAuditStatus,
+  listOutreachAudits,
   getProspectPreviewView,
   getProspectQualificationHistory,
   getSelectionVerdict,
@@ -303,6 +304,10 @@ export function registerProspectRoutes(
     // of a scan still in flight. The report lifecycle stays on
     // GET /api/audits/:auditId, which computes it from the stored pair.
     const auditStatus = await getOutreachAuditStatus(connection, candidateId);
+    // Plan 042 slice 2: every outreach audit of the candidate, newest
+    // first, for the hub's Audit tab picker. Additive sibling of
+    // outreachAudit above, which stays the newest one for existing readers.
+    const outreachAudits = await listOutreachAudits(connection, candidateId);
     const severityRollup =
       auditStatus.audit === null
         ? null
@@ -322,6 +327,7 @@ export function registerProspectRoutes(
           ? null
           : { ...auditStatus.audit, severityRollup },
       selectionVerdict,
+      outreachAudits,
     });
   });
 

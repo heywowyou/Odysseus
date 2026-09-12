@@ -290,7 +290,7 @@ export type {
 // queue runner cannot drift apart.
 export { planOutreachFullScan, resolveOutreachAuditForCandidate } from './outreach-scans.js';
 export { findActiveOutreachFullScanJob, findActiveScanJobForHost } from './outreach-scans.js';
-export { getOutreachAuditStatus } from './outreach-scans.js';
+export { getOutreachAuditStatus, listOutreachAudits } from './outreach-scans.js';
 export type {
   OutreachFullScanAuthorization,
   OutreachFullScanPlan,
@@ -299,6 +299,7 @@ export type {
   OutreachAuditRefusal,
   OutreachAuditResolution,
   OutreachAuditStatus,
+  OutreachAuditListItem,
 } from './outreach-scans.js';
 
 // Plan 041 slice B2: the operator's wave roster, a second authorization

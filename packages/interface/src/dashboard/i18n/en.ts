@@ -635,6 +635,9 @@ export const en: DashboardStrings = {
       running: 'The prospecting audit is running.',
       openAudit: 'Open the audit',
       stageLabel: 'Client report stage',
+      pickerLabel: 'Audit shown',
+      standaloneHint:
+        'Standalone view: the full audit page remains available; nothing here duplicates it.',
     },
     emails: {
       firstEmailName: 'First email',

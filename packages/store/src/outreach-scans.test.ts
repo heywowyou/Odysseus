@@ -9,6 +9,7 @@ import { upsertHotelCandidates } from './hotel-candidates.js';
 import {
   findActiveOutreachFullScanJob,
   findActiveScanJobForHost,
+  listOutreachAudits,
   planOutreachFullScan,
   resolveOutreachAuditForCandidate,
 } from './outreach-scans.js';
@@ -108,6 +109,7 @@ async function seedOutreachAudit(input: {
   siteUrl?: string;
   pages?: AuditManifest['pages'];
   withProvenance?: boolean;
+  startedAt?: string;
 }): Promise<void> {
   const auditId = input.auditId ?? randomUUID();
   const pages =
@@ -132,7 +134,7 @@ async function seedOutreachAudit(input: {
     auditId,
     kind: 'audit',
     siteUrl: input.siteUrl ?? 'https://example.fr/',
-    startedAt: '2026-09-11T00:00:00.000Z',
+    startedAt: input.startedAt ?? '2026-09-11T00:00:00.000Z',
     finishedAt: '2026-09-11T00:05:00.000Z',
     ...(input.withProvenance === false
       ? {}
@@ -544,4 +546,50 @@ describe.skipIf(!mongoAvailable)('resolveOutreachAuditForCandidate', () => {
       reason: 'audit-in-flight',
     });
   });
+});
+
+describe('listOutreachAudits (plan 042 slice 2)', () => {
+  it.skipIf(!mongoAvailable)(
+    'returns every audit newest first, with the creating job type',
+    async () => {
+      const { candidate } = await seedSelectedCandidate('list-audits.fr');
+      const olderId = randomUUID();
+      const newerId = randomUUID();
+      await seedOutreachAudit({
+        candidateId: candidate.candidateId,
+        auditId: olderId,
+        startedAt: '2026-09-01T00:00:00.000Z',
+        siteUrl: 'https://list-audits.fr/',
+      });
+      await seedOutreachAudit({
+        candidateId: candidate.candidateId,
+        auditId: newerId,
+        startedAt: '2026-09-10T00:00:00.000Z',
+        siteUrl: 'https://list-audits.fr/',
+      });
+      // completeJob writes the audit id onto the job row; reproduce that
+      // linkage for the newer audit only, so the join's tolerance of a
+      // missing job row is exercised by the older one.
+      const jobId = await seedJob({
+        type: 'outreach-full-scan',
+        status: 'failed',
+        siteUrl: 'https://list-audits.fr/',
+        candidateId: candidate.candidateId,
+      });
+      await createJobModel(connection!).updateOne({ jobId }, { $set: { auditId: newerId } });
+
+      const audits = await listOutreachAudits(connection!, candidate.candidateId);
+      expect(audits.map((audit) => audit.auditId)).toEqual([newerId, olderId]);
+      expect(audits[0]).toMatchObject({ jobType: 'outreach-full-scan' });
+      expect(audits[1]).toMatchObject({ jobType: null });
+    },
+  );
+
+  it.skipIf(!mongoAvailable)(
+    'returns an empty list, not null, for a candidate with no audit',
+    async () => {
+      const { candidate } = await seedSelectedCandidate('no-audits.fr');
+      expect(await listOutreachAudits(connection!, candidate.candidateId)).toEqual([]);
+    },
+  );
 });

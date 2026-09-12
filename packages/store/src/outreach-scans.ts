@@ -231,6 +231,47 @@ export async function getOutreachAuditStatus(
   };
 }
 
+/** Plan 042 slice 2: every audit carrying the candidate's outreach
+ *  provenance, newest first, for the hub's Audit tab picker. The creating
+ *  job's type rides along when the job row still exists (operational job
+ *  data expires; the audit does not), so the picker can name the kind of
+ *  run and not just a date. An empty list, never null. */
+export interface OutreachAuditListItem {
+  auditId: string;
+  startedAt: Date;
+  jobType: string | null;
+}
+
+export async function listOutreachAudits(
+  connection: Connection,
+  candidateId: string,
+): Promise<OutreachAuditListItem[]> {
+  const audits = await createAuditModel(connection)
+    .find({ 'outreach.candidateId': candidateId })
+    .sort({ startedAt: -1 })
+    .select({ auditId: 1, startedAt: 1 })
+    .lean<{ auditId: string; startedAt: Date }[]>();
+  if (audits.length === 0) return [];
+
+  // Outreach audits are created by outreach-full-scan jobs, which record
+  // the audit under the job's single auditId (completeJob). A job row may
+  // be gone; the type is then unknown rather than guessed.
+  const auditIds = audits.map((audit) => audit.auditId);
+  const jobs = await createJobModel(connection)
+    .find({ auditId: { $in: auditIds } })
+    .select({ auditId: 1, type: 1 })
+    .lean<{ auditId?: string; type: string }[]>();
+  const typeByAuditId = new Map(
+    jobs.filter((job) => job.auditId !== undefined).map((job) => [job.auditId as string, job.type]),
+  );
+
+  return audits.map((audit) => ({
+    auditId: audit.auditId,
+    startedAt: audit.startedAt,
+    jobType: typeByAuditId.get(audit.auditId) ?? null,
+  }));
+}
+
 /** Any queued-or-running browser scan of one hostname, so the route can
  *  refuse an outreach scan that would duplicate a full audit already in
  *  flight against the same site. */

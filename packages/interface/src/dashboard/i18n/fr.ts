@@ -642,6 +642,9 @@ export const fr: DashboardStrings = {
       running: "L'audit de prospection est en cours.",
       openAudit: "Ouvrir l'audit",
       stageLabel: 'Étape du rapport client',
+      pickerLabel: 'Audit affiché',
+      standaloneHint:
+        "Vue autonome : la page d'audit complète reste disponible, sans rien refaire ici.",
     },
     emails: {
       firstEmailName: 'Premier email',

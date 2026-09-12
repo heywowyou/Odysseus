@@ -426,6 +426,12 @@ export interface ProspectDetailResponse {
     startedAt: string;
     severityRollup: { critical: number; serious: number; moderate: number; minor: number };
   } | null;
+  /** Plan 042 slice 2: every audit carrying this candidate's outreach
+   *  provenance, newest first, with the creating job's type when the job
+   *  row still exists. Optional for the same fixture tolerance as
+   *  outreachAudit; the hub's Audit tab picker falls back to the singular
+   *  field when a cached payload predates it. */
+  outreachAudits?: { auditId: string; startedAt: string; jobType: string | null }[];
   /** The queued-or-running outreach full scan for this candidate, if any. */
   outreachScanJobId?: string | null;
   /** Plan 041 slice B1: the same selection projection the list uses, so

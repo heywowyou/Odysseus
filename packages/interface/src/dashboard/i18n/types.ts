@@ -697,6 +697,11 @@ export interface DashboardStrings {
       running: string;
       openAudit: string;
       stageLabel: string;
+      /** Plan 042 slice 2: the audit picker (shown once the hotel has
+       *  more than one audit) and the standalone-view note beside the
+       *  open-audit link. */
+      pickerLabel: string;
+      standaloneHint: string;
     };
     emails: {
       /** {n} is the follow-up number: Relance 1, Relance 2. */

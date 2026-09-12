@@ -495,6 +495,128 @@ describe('operator page accessibility (plan 013 step 5, extended plan 022 step 6
     root.unmount();
   });
 
+  it('hotel hub Audit tab has no axe violations with findings rendered and one expanded', async () => {
+    // Plan 042 slice 2: the findings table moved into the hub. This scan
+    // covers the state the audit page's own axe suite cannot see: the
+    // findings inside the hub, behind the tab bar, with a row expanded.
+    stubRoutes({
+      '/api/audits/audit-1/report-preparation': null,
+      '/api/audits/audit-1': {
+        auditId: 'audit-1',
+        lifecycle: 'rendered',
+        severityRollup: { critical: 0, serious: 1, moderate: 0, minor: 0 },
+        findings: [
+          {
+            findingId: 'f001',
+            auditId: 'audit-1',
+            schemaVersion: 1,
+            source: 'axe',
+            ruleId: 'button-name',
+            category: 'accessibility',
+            severity: 'serious',
+            wcagCriteria: ['4.1.2'],
+            title: 'Buttons must have discernible text',
+            description: 'The button has no accessible name.',
+            pageUrls: ['https://exemple.fr/'],
+            occurrences: 6,
+            elements: [
+              {
+                pageUrl: 'https://exemple.fr/',
+                selector: '#formulaire > button:nth-child(3)',
+                snippet: '<button class="valider"></button>',
+              },
+            ],
+            rawEvidence: {},
+            dedupeKey: 'dedupe-1',
+            firstSeenAt: '2026-09-01T10:00:00.000Z',
+            lastSeenAt: '2026-09-01T10:00:00.000Z',
+          },
+        ],
+        ruleCopy: {
+          'button-name': {
+            titleFr: 'Les boutons doivent avoir un texte explicite',
+            glossFr: 'Un bouton sans texte lisible ne dit pas à quoi il sert.',
+            remediationFr: 'Ajoutez un texte visible dans chaque bouton.',
+            remediationEn: 'Add visible text inside every button.',
+          },
+        },
+      },
+      '/api/prospects/cand-1': {
+        candidateId: 'cand-1',
+        resolutionVersion: 'v1',
+        identityKey: 'key-1',
+        identityStatus: 'resolved',
+        matchedOn: null,
+        siret: null,
+        siren: null,
+        name: 'Hôtel Exemple',
+        commune: 'Grenoble',
+        postcode: '38000',
+        starRating: 3,
+        roomCount: 42,
+        capacity: 90,
+        campaignEligibility: 'eligible',
+        groupStatus: 'independent',
+        groupDomain: null,
+        groupSize: null,
+        ownRegistrableDomain: 'exemple.fr',
+        domainProvenance: 'declared',
+        declaredRegistrableDomain: 'exemple.fr',
+        reviewState: 'not-required',
+        review: { queuedReason: null, actor: null, reason: null, decidedAt: null },
+        qualificationOutcome: 'qualified',
+        prescanStatus: null,
+        websites: [],
+        conflicts: [],
+        sourceRefs: [],
+        qualification: null,
+        qualificationHistory: { rows: [], total: 0, limit: 10, offset: 0 },
+        prescan: null,
+        score: null,
+        evidence: null,
+        preview: null,
+        contact: null,
+        thread: null,
+        outcomes: { rows: [], total: 0, limit: 10, offset: 0 },
+        outreachScan: { canStart: false, refusal: 'not-selected' },
+        outreachAudit: {
+          auditId: 'audit-1',
+          startedAt: '2026-09-01T10:00:00.000Z',
+          severityRollup: { critical: 0, serious: 1, moderate: 0, minor: 0 },
+        },
+        outreachScanJobId: null,
+      },
+    });
+    const { container, root } = await renderPage(createElement(ProspectDetailPage), {
+      path: '/prospects/cand-1',
+      pattern: 'prospects/:candidateId',
+    });
+    await settle(container, 'Hôtel Exemple');
+    // Switch to the Audit tab.
+    const auditTab = [...container.querySelectorAll('[role="tab"]')].find((tab) =>
+      tab.textContent?.includes('Audit'),
+    );
+    expect(auditTab).toBeDefined();
+    await act(async () => {
+      auditTab?.click();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+    await settle(container, 'Les boutons doivent avoir un texte explicite');
+    await expectNoAxeViolations(container);
+    // Expand the finding row, then scan the expanded state.
+    const toggle = [...container.querySelectorAll('button')].find((button) =>
+      (button.getAttribute('aria-label') ?? '').includes('Afficher le détail du constat'),
+    );
+    expect(toggle).toBeDefined();
+    await act(async () => {
+      toggle?.click();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+    await settle(container, 'Ajoutez un texte visible dans chaque bouton.');
+    await expectNoAxeViolations(container);
+    root.unmount();
+  });
+
   it('a-traiter page has no axe violations in its empty state', async () => {
     // The scans inbox filter is the only list whose default empty-page stub
     // does not fit: the scans endpoint answers an array, not a page.

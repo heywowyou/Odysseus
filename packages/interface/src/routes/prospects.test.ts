@@ -12,6 +12,7 @@ vi.mock('@odysseus/store', () => ({
   planOutreachFullScan: vi.fn(),
   createJob: vi.fn(),
   getOutreachAuditStatus: vi.fn(),
+  listOutreachAudits: vi.fn(),
   getSeverityRollup: vi.fn(),
   getSelectionVerdict: vi.fn(),
 }));
@@ -34,6 +35,7 @@ import {
   findOutreachThreadByCandidate,
   getOperatorProspect,
   getOutreachAuditStatus,
+  listOutreachAudits,
   getProspectPreviewView,
   getProspectQualificationHistory,
   getSelectionVerdict,
@@ -187,6 +189,7 @@ beforeEach(() => {
     audit: null,
     runningJobId: null,
   } as never);
+  vi.mocked(listOutreachAudits).mockResolvedValue([] as never);
   vi.mocked(getSeverityRollup).mockResolvedValue({
     critical: 0,
     serious: 0,
@@ -326,8 +329,8 @@ describe('GET /api/prospects/:candidateId', () => {
     const res = await handle('/api/prospects/cand-1');
     const body = JSON.parse(res.body ?? '{}') as Record<string, unknown>;
     // The route may add qualificationHistory, outreachScan, the audit
-    // summary, the running-scan id, and the selection verdict, and nothing
-    // else.
+    // summary, the running-scan id, the selection verdict, and the plan
+    // 042 audit list, and nothing else.
     expect(Object.keys(body).sort()).toEqual(
       [
         ...Object.keys(makeDetail()),
@@ -336,6 +339,7 @@ describe('GET /api/prospects/:candidateId', () => {
         'outreachAudit',
         'outreachScanJobId',
         'selectionVerdict',
+        'outreachAudits',
       ].sort(),
     );
     const serialized = res.body ?? '';
@@ -402,6 +406,27 @@ describe('GET /api/prospects/:candidateId', () => {
     const body = JSON.parse(res.body ?? '{}');
     expect(body.outreachAudit).toBeNull();
     expect(body.outreachScanJobId).toBe('job-queued-1');
+  });
+
+  it('exposes every outreach audit newest first as an additive sibling field (plan 042)', async () => {
+    vi.mocked(listOutreachAudits).mockResolvedValue([
+      {
+        auditId: 'audit-2',
+        startedAt: new Date('2026-09-10T00:00:00.000Z'),
+        jobType: 'outreach-full-scan',
+      },
+      { auditId: 'audit-1', startedAt: new Date('2026-09-01T00:00:00.000Z'), jobType: null },
+    ] as never);
+    const res = await handle('/api/prospects/cand-1');
+    expect(res.statusCode).toBe(200);
+    expect(listOutreachAudits).toHaveBeenCalledWith(fakeConnection, 'cand-1');
+    const body = JSON.parse(res.body ?? '{}');
+    expect(body.outreachAudits).toEqual([
+      { auditId: 'audit-2', startedAt: '2026-09-10T00:00:00.000Z', jobType: 'outreach-full-scan' },
+      { auditId: 'audit-1', startedAt: '2026-09-01T00:00:00.000Z', jobType: null },
+    ]);
+    // The singular field the first hub slices read stays untouched.
+    expect(body.outreachAudit).toBeDefined();
   });
 });
 
