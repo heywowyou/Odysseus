@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   SELECTION_RULE_VERSION,
+  SELECTION_RULE_VERSION_QUINTILE,
   selectOutreachCohort,
   type OutreachSelectionRow,
 } from './outreach-selection.js';
@@ -168,6 +169,42 @@ describe('selectOutreachCohort ranking', () => {
     const selection = selectOutreachCohort(rows, approved);
     const ranked = selection.records.filter((record) => record.rank !== undefined);
     expect(ranked.map((record) => record.rank)).toEqual([2, 1]);
+  });
+});
+
+describe('selectOutreachCohort selection rule version', () => {
+  it('rejects an unrecognized selection rule version', () => {
+    expect(() =>
+      selectOutreachCohort([row()], { ...approved, selectionRuleVersion: 'made-up-v1' }),
+    ).toThrow(/unknown selection rule version/);
+  });
+
+  it('selects the top brokenness quintile of the ability half when asked', () => {
+    const rows = population(100, (index) => ({
+      abilityTotal: 100 - index,
+      brokennessTotal: index,
+    }));
+    const selection = selectOutreachCohort(rows, {
+      ...approved,
+      selectionRuleVersion: SELECTION_RULE_VERSION_QUINTILE,
+    });
+    expect(selection.selectionRuleVersion).toBe(SELECTION_RULE_VERSION_QUINTILE);
+    expect(selection.abilityCutoff).toBe(51);
+    // Twice the decile's 5, since a fifth of the top half is twice a tenth.
+    expect(selection.selectedCount).toBe(10);
+    expect(selection.brokennessCutoff).toBe(40);
+    const selected = selection.records.filter((record) => record.state === 'selected');
+    expect(selected.every((record) => record.reason === 'top-brokenness-quintile')).toBe(true);
+  });
+
+  it('still applies the decile rule when no version is requested', () => {
+    const rows = population(100, (index) => ({
+      abilityTotal: 100 - index,
+      brokennessTotal: index,
+    }));
+    const selection = selectOutreachCohort(rows, approved);
+    expect(selection.selectionRuleVersion).toBe(SELECTION_RULE_VERSION);
+    expect(selection.selectedCount).toBe(5);
   });
 });
 

@@ -113,9 +113,18 @@ export function registerScoreCommand(prospect: Command): void {
       'Qualification generation a candidate must still hold',
       CURRENT_QUALIFICATION_VERSION,
     )
+    .option(
+      '--selection-rule-version <version>',
+      'Brokenness band to select on (defaults to the decile rule)',
+    )
     .option('--dry-run', 'Compute and print the cohort without recording it', false)
     .action(
-      async (opts: { scoringVersion: string; qualificationVersion: string; dryRun: boolean }) => {
+      async (opts: {
+        scoringVersion: string;
+        qualificationVersion: string;
+        selectionRuleVersion?: string;
+        dryRun: boolean;
+      }) => {
         let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
         try {
           mongoConnection = await connectToMongo();
@@ -123,6 +132,9 @@ export function registerScoreCommand(prospect: Command): void {
             store: createMongoCohortSelectionStore(mongoConnection),
             scoringVersion: opts.scoringVersion,
             qualificationVersion: opts.qualificationVersion,
+            ...(opts.selectionRuleVersion === undefined
+              ? {}
+              : { selectionRuleVersion: opts.selectionRuleVersion }),
             dryRun: opts.dryRun,
           });
           console.log(JSON.stringify(report, null, 2));

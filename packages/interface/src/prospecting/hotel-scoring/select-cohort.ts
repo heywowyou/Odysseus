@@ -32,6 +32,9 @@ export interface SelectCohortOptions {
   store: CohortSelectionStorePort;
   scoringVersion: string;
   qualificationVersion: string;
+  /** Which brokenness band counts as selected. Defaults to the decile rule
+   *  inside selectOutreachCohort when omitted. */
+  selectionRuleVersion?: string;
   /** Compute and report the cohort without writing it. */
   dryRun: boolean;
 }
@@ -102,6 +105,9 @@ export async function selectCohort(options: SelectCohortOptions): Promise<Select
   const selection = selectOutreachCohort(rows, {
     scoringVersion: options.scoringVersion,
     approved: config.approved,
+    ...(options.selectionRuleVersion === undefined
+      ? {}
+      : { selectionRuleVersion: options.selectionRuleVersion }),
   });
 
   const notSelectedByReason: Record<string, number> = {};

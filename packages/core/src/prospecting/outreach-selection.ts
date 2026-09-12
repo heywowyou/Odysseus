@@ -16,6 +16,12 @@
 
 export const SELECTION_RULE_VERSION = 'half-ability-decile-brokenness-v1';
 
+/** Same ability-half gate, but the top brokenness quintile (20%) rather than
+ *  the decile (10%). A separate version, never a mutation of the one above:
+ *  a past cohort recorded under the decile rule must stay reproducible.
+ *  Selecting under this version requires the caller to opt in explicitly. */
+export const SELECTION_RULE_VERSION_QUINTILE = 'half-ability-quintile-brokenness-v1';
+
 export type OutreachSelectionState =
   | 'selected'
   | 'not-selected'
@@ -26,6 +32,7 @@ export type OutreachSelectionState =
 
 export type OutreachSelectionReason =
   | 'top-brokenness-decile'
+  | 'top-brokenness-quintile'
   | 'below-brokenness-cutoff'
   | 'below-ability-cutoff'
   | 'not-qualified'
@@ -65,6 +72,28 @@ export interface OutreachSelectionOptions {
   scoringVersion: string;
   /** False leaves every eligible row in `calibration`. */
   approved: boolean;
+  /** Which brokenness band within the top ability half counts as selected.
+   *  Defaults to the decile rule so every existing caller is unaffected. */
+  selectionRuleVersion?: string;
+}
+
+/** The brokenness fraction and selected-reason for one selection rule
+ *  version. Throws on an unrecognized version rather than silently falling
+ *  back to a fraction nobody chose. */
+function ruleConfig(selectionRuleVersion: string): {
+  brokennessFraction: number;
+  selectedReason: OutreachSelectionReason;
+} {
+  switch (selectionRuleVersion) {
+    case SELECTION_RULE_VERSION:
+      return { brokennessFraction: 10, selectedReason: 'top-brokenness-decile' };
+    case SELECTION_RULE_VERSION_QUINTILE:
+      return { brokennessFraction: 5, selectedReason: 'top-brokenness-quintile' };
+    default:
+      throw new Error(
+        `selectOutreachCohort: unknown selection rule version '${selectionRuleVersion}'`,
+      );
+  }
 }
 
 export interface OutreachSelection {
@@ -117,6 +146,9 @@ export function selectOutreachCohort(
   rows: readonly OutreachSelectionRow[],
   options: OutreachSelectionOptions,
 ): OutreachSelection {
+  const selectionRuleVersion = options.selectionRuleVersion ?? SELECTION_RULE_VERSION;
+  const { brokennessFraction, selectedReason } = ruleConfig(selectionRuleVersion);
+
   const records: OutreachSelectionRecord[] = [];
   const eligible: OutreachSelectionRow[] = [];
 
@@ -144,13 +176,11 @@ export function selectOutreachCohort(
       : (topHalf[topHalf.length - 1] as OutreachSelectionRow).abilityTotal;
 
   const byBrokenness = [...topHalf].sort(compareByBrokenness);
-  const decile = byBrokenness.slice(0, Math.ceil(byBrokenness.length / 10));
+  const band = byBrokenness.slice(0, Math.ceil(byBrokenness.length / brokennessFraction));
   const brokennessCutoff =
-    decile.length === 0
-      ? null
-      : (decile[decile.length - 1] as OutreachSelectionRow).brokennessTotal;
+    band.length === 0 ? null : (band[band.length - 1] as OutreachSelectionRow).brokennessTotal;
 
-  const selectedIds = new Set(decile.map((row) => row.candidateId));
+  const selectedIds = new Set(band.map((row) => row.candidateId));
   const rankByCandidateId = new Map<string, number>();
   byBrokenness.forEach((row, index) => rankByCandidateId.set(row.candidateId, index + 1));
 
@@ -192,7 +222,7 @@ export function selectOutreachCohort(
       candidateId: row.candidateId,
       scoreId: row.scoreId,
       state: 'selected',
-      reason: 'top-brokenness-decile',
+      reason: selectedReason,
       ...(rank === undefined ? {} : { rank }),
     });
   }
@@ -202,7 +232,7 @@ export function selectOutreachCohort(
   );
 
   return {
-    selectionRuleVersion: SELECTION_RULE_VERSION,
+    selectionRuleVersion,
     scoringVersion: options.scoringVersion,
     approved: options.approved,
     populationSize: eligible.length,
