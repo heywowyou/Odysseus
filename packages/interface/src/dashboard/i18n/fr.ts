@@ -563,6 +563,7 @@ export const fr: DashboardStrings = {
     },
     selectionCountLine: '{selected} dans la sélection, {scored} scorés, {total} au catalogue',
     addRowAction: '+ Vague',
+    notScoredCell: 'Non scoré',
     selectionOverview: {
       show: 'Voir la sélection',
       hide: 'Masquer la sélection',
@@ -733,6 +734,12 @@ export const fr: DashboardStrings = {
         'candidate-unknown': "Cet hôtel n'existe plus dans le catalogue.",
         'not-on-roster': "Cet hôtel n'est pas sur cette vague.",
       },
+      scoring: {
+        scored: "Il vient d'être scoré.",
+        alreadyScored: 'Il avait déjà un score courant.',
+        notScoreable:
+          "Il n'est pas encore scoré : il n'a ni préscan ni qualification à jour ; lancez d'abord ces passages.",
+      },
     },
     emails: {
       firstEmailName: 'Premier email',
@@ -788,6 +795,9 @@ export const fr: DashboardStrings = {
     diffColumns: { field: 'Champ', before: 'Avant', after: 'Après' },
     diffFromLabel: 'Version de départ',
     diffToLabel: 'Version d’arrivée',
+    notScoredHeading: 'Pas encore scoré',
+    notScoredBody:
+      'Cet hôtel est dans la sélection mais n’a aucun score à la version de scoring courante. Un hôtel reçoit son score dès qu’il a un préscan et une qualification à jour ; pour un hôtel ajouté à la main, lancez d’abord ces passages.',
   },
   evidence: {
     title: 'Preuves',

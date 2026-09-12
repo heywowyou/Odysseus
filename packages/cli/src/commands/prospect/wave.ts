@@ -6,8 +6,41 @@ import {
   listWaveRoster,
   revokeWaveRosterEntry,
 } from '@odysseus/store';
-import { CURRENT_SCORING_VERSION } from '@odysseus/interface';
+import {
+  CURRENT_SCORING_VERSION,
+  scoreHotelOnDemandForConnection,
+  type ScoreOnDemandOutcome,
+} from '@odysseus/interface';
 import { parsePositiveInt } from './shared.js';
+
+/** Issue #199: one operator line per scoring outcome, so a hand-added
+ *  hotel's missing score is stated here the same way the dashboard states
+ *  it. Every skip is a normal situation (the hotel has not been scanned
+ *  yet) except a store fault, which carries the fault's message. */
+function printScoringOutcome(outcome: ScoreOnDemandOutcome, domain: string): void {
+  if (outcome.outcome === 'scored') {
+    console.log(`odysseus prospect wave add: scored ${domain}`);
+    return;
+  }
+  if (outcome.outcome === 'already-scored') {
+    console.log(`odysseus prospect wave add: ${domain} already holds a current score`);
+    return;
+  }
+  if (outcome.reason === 'prescan-missing') {
+    console.error(`odysseus prospect wave add: not scored (${domain}'s prescan is gone)`);
+    return;
+  }
+  if (outcome.reason === 'error') {
+    console.error(
+      `odysseus prospect wave add: not scored (${outcome.errorMessage ?? 'scoring failed'})`,
+    );
+    return;
+  }
+  console.error(
+    `odysseus prospect wave add: not scored (${domain} has no current prescan or qualification; ` +
+      'run those passes first, then prospect score run --domain)',
+  );
+}
 
 /**
  * Plan 041 slice B2: the operator's wave roster, a small hand-authored list
@@ -77,6 +110,10 @@ export function registerWaveCommand(prospect: Command): void {
           }
           console.log(
             `odysseus prospect wave add: added ${result.domain} (${result.candidateId}) to ${opts.wave}`,
+          );
+          printScoringOutcome(
+            await scoreHotelOnDemandForConnection(mongoConnection, result.domain),
+            result.domain,
           );
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);

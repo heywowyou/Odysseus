@@ -35,6 +35,7 @@ import { createMongoOutreachPreviewStore } from '../outreach/mongo-outreach-prev
 import { revokePreviewsForDomain } from '../outreach/publish-preview.js';
 import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-hotels.js';
 import { CURRENT_QUALIFICATION_VERSION } from '../prospecting/hotel-qualification/qualify-hotels.js';
+import { scoreHotelOnDemandForConnection } from '../prospecting/hotel-scoring/score-on-demand.js';
 import type { JobQueue } from '../queue/job-queue.js';
 import type { Router } from '../router.js';
 import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
@@ -583,11 +584,18 @@ export function registerProspectRoutes(
       sendJson(res, 200, { added: false, refusal: result.refused });
       return;
     }
+    // Issue #199: a hand-added hotel used to stay unscored, because scoring
+    // only ran as the operator's CLI batch. Run the same pass bounded to
+    // this hotel so the score surfaces fill like any cohort member's; a
+    // hotel outside the scoring population (no current prescan or
+    // qualification) is a normal outcome, reported as a typed skip.
+    const scoring = await scoreHotelOnDemandForConnection(connection, result.domain);
     sendJson(res, 200, {
       added: true,
       wave: parsed.wave,
       candidateId: result.candidateId,
       domain: result.domain,
+      scoring,
     });
   });
 

@@ -6,7 +6,9 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '../i18n/provider';
+import { fr } from '../i18n/fr';
 import { ProspectsPage } from './prospects';
+import { waveScoringSentence } from './wave-dialog';
 
 // Plan 043 slice 3: the prospects list's wave add and the read-only
 // selection overview. Same createElement discipline as the other dashboard
@@ -91,7 +93,7 @@ describe('ProspectsPage wave roster (plan 043 slice 3)', () => {
       const url = String(input);
       const method = init?.method ?? 'GET';
       if (method === 'POST' && url.endsWith('/wave')) {
-        return jsonResponse({ added: true, wave: 'wave-1' });
+        return jsonResponse({ added: true, wave: 'wave-1', scoring: { outcome: 'scored' } });
       }
       if (url.startsWith('/api/selection')) {
         return jsonResponse({
@@ -215,5 +217,32 @@ describe('ProspectsPage wave roster (plan 043 slice 3)', () => {
     // main list renders the third) and no mutation control.
     expect(container.querySelectorAll('table')).toHaveLength(3);
     expect(container.textContent).not.toContain('Retirer de la vague');
+  });
+
+  // Issue #199: a selected row without a score states that, instead of a
+  // dash that reads as "no problems".
+  it('marks selected rows without a score as not scored', async () => {
+    await renderList();
+    await waitFor(() =>
+      container.textContent?.includes('Hôtel Dans la Sélection') ? true : undefined,
+    );
+
+    const rows = [...container.querySelectorAll('tbody tr')];
+    const selectedRow = rows.find((row) => row.textContent?.includes('Hôtel Dans la Sélection'));
+    const outRow = rows.find((row) => row.textContent?.includes('Hôtel Hors Sélection'));
+    expect(selectedRow?.textContent).toContain('Non scoré');
+    expect(outRow?.textContent).not.toContain('Non scoré');
+    expect(outRow?.textContent).toContain('-');
+  });
+
+  it('maps each add-time scoring outcome to its sentence', () => {
+    expect(waveScoringSentence({ outcome: 'scored' }, fr)).toBe("Il vient d'être scoré.");
+    expect(waveScoringSentence({ outcome: 'already-scored' }, fr)).toBe(
+      'Il avait déjà un score courant.',
+    );
+    expect(
+      waveScoringSentence({ outcome: 'skipped', reason: 'not-in-scoring-population' }, fr),
+    ).toBe(fr.hub.wave.scoring.notScoreable);
+    expect(waveScoringSentence(undefined, fr)).toBeUndefined();
   });
 });

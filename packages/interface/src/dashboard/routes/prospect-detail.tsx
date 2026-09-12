@@ -41,7 +41,12 @@ import type {
   ProspectReviewRequest,
   ProspectReviewResponse,
 } from './prospects-model';
-import { WaveDialog, mutateWaveRoster, waveRefusalSentence } from './wave-dialog';
+import {
+  WaveDialog,
+  mutateWaveRoster,
+  waveRefusalSentence,
+  waveScoringSentence,
+} from './wave-dialog';
 import { HubFicheSection } from './hub-fiche-section';
 import { HubQuickCheckSection } from './hub-quick-check-section';
 import { HubAuditSection } from './hub-audit-section';
@@ -399,7 +404,7 @@ export function ProspectDetailPage(): JSX.Element {
     wave: string,
   ): Promise<void> => {
     try {
-      const refusal = await mutateWaveRoster(waveCandidateId, wave, mode);
+      const { refusal, scoring } = await mutateWaveRoster(waveCandidateId, wave, mode);
       if (refusal !== undefined) {
         toast.error(waveRefusalSentence(refusal, strings) ?? strings.operator.actionError);
         return;
@@ -409,6 +414,7 @@ export function ProspectDetailPage(): JSX.Element {
           '{wave}',
           wave,
         ),
+        { description: waveScoringSentence(scoring, strings) },
       );
       refresh();
     } catch (caught) {

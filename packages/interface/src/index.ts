@@ -208,6 +208,12 @@ export {
   createMongoHotelScoringStore,
   createMongoCohortSelectionStore,
 } from './prospecting/hotel-scoring/mongo-hotel-score-store.js';
+// Issue #199: the wave add actions score the hotel they added.
+export {
+  scoreHotelOnDemand,
+  scoreHotelOnDemandForConnection,
+} from './prospecting/hotel-scoring/score-on-demand.js';
+export type { ScoreOnDemandOutcome } from './prospecting/hotel-scoring/score-on-demand.js';
 // Milestone 9c plan 007: contact discovery over the selected cohort.
 export {
   discoverContacts,

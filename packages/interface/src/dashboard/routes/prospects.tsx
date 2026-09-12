@@ -30,7 +30,12 @@ import { formatDateTime } from '../lib/format';
 import { useDebouncedValue } from '../lib/use-debounced-value';
 import { usePolling } from '../lib/use-polling';
 import { vocabularyLabel } from '../lib/vocabulary';
-import { WaveDialog, mutateWaveRoster, waveRefusalSentence } from './wave-dialog';
+import {
+  WaveDialog,
+  mutateWaveRoster,
+  waveRefusalSentence,
+  waveScoringSentence,
+} from './wave-dialog';
 import {
   GROUP_STATUS_VALUES,
   IDENTITY_STATUS_VALUES,
@@ -145,12 +150,14 @@ export function ProspectsPage(): JSX.Element {
 
   const submitWave = async (row: ProspectRow, wave: string): Promise<void> => {
     try {
-      const refusal = await mutateWaveRoster(row.candidateId, wave, 'add');
+      const { refusal, scoring } = await mutateWaveRoster(row.candidateId, wave, 'add');
       if (refusal !== undefined) {
         toast.error(waveRefusalSentence(refusal, strings) ?? strings.operator.actionError);
         return;
       }
-      toast.success(strings.hub.wave.addedToast.replace('{wave}', wave));
+      toast.success(strings.hub.wave.addedToast.replace('{wave}', wave), {
+        description: waveScoringSentence(scoring, strings),
+      });
       page.refresh();
     } catch (caught) {
       toast.error(strings.operator.actionError, {
@@ -312,10 +319,13 @@ export function ProspectsPage(): JSX.Element {
                     </Badge>
                   </TableCell>
                   <TableCell className="numeric text-right text-ink">
-                    {row.brokennessTotal ?? '-'}
+                    {/* Issue #199: a selected row without a score says so,
+                        instead of a dash that reads as "no problems". */}
+                    {row.brokennessTotal ??
+                      (row.inSelection ? strings.prospects.notScoredCell : '-')}
                   </TableCell>
                   <TableCell className="numeric text-right text-ink">
-                    {row.abilityTotal ?? '-'}
+                    {row.abilityTotal ?? (row.inSelection ? strings.prospects.notScoredCell : '-')}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-xs text-ink-soft">
                     {vocabularyLabel(

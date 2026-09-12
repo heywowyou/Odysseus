@@ -106,23 +106,50 @@ export function waveRefusalSentence(
   return strings.hub.wave.refusals[refusal as keyof typeof strings.hub.wave.refusals];
 }
 
+/** Issue #199: what the add action's follow-up scoring pass reports, as
+ *  the API states it. Absent on remove and on refusals: nothing was
+ *  added, so nothing was scored. */
+export interface WaveScoringOutcome {
+  outcome: 'scored' | 'already-scored' | 'skipped';
+  reason?: 'not-in-scoring-population' | 'prescan-missing' | 'error';
+}
+
+export interface WaveMutationResult {
+  refusal?: string;
+  scoring?: WaveScoringOutcome;
+}
+
+/** One sentence per scoring outcome, for the added toast's second line. */
+export function waveScoringSentence(
+  scoring: WaveScoringOutcome | undefined,
+  strings: ReturnType<typeof useI18n>['strings'],
+): string | undefined {
+  if (scoring === undefined) return undefined;
+  if (scoring.outcome === 'scored') return strings.hub.wave.scoring.scored;
+  if (scoring.outcome === 'already-scored') return strings.hub.wave.scoring.alreadyScored;
+  return strings.hub.wave.scoring.notScoreable;
+}
+
 /** One POST to the wave roster, shared by every caller. Returns the typed
- *  refusal when the store refused, so the caller picks its own fallback. */
+ *  refusal when the store refused, so the caller picks its own fallback,
+ *  and the add-time scoring outcome when the store added. */
 export async function mutateWaveRoster(
   candidateId: string,
   wave: string,
   mode: 'add' | 'remove',
-): Promise<string | undefined> {
+): Promise<WaveMutationResult> {
   const path = `/api/prospects/${encodeURIComponent(candidateId)}/wave${mode === 'remove' ? '/remove' : ''}`;
   const body = { wave };
-  const result =
-    mode === 'add'
-      ? await sendJson<{ added: boolean; refusal?: string }>(path, 'POST', body)
-      : await sendJson<{ revoked: boolean; refusal?: string }>(path, 'POST', body);
-  const refused =
-    mode === 'add'
-      ? (result as { added: boolean; refusal?: string }).added === false
-      : (result as { revoked: boolean; refusal?: string }).revoked === false;
-  if (refused) return (result as { refusal?: string }).refusal ?? 'unknown';
-  return undefined;
+  if (mode === 'remove') {
+    const result = await sendJson<{ revoked: boolean; refusal?: string }>(path, 'POST', body);
+    if (result.revoked === false) return { refusal: result.refusal ?? 'unknown' };
+    return {};
+  }
+  const result = await sendJson<{
+    added: boolean;
+    refusal?: string;
+    scoring?: WaveScoringOutcome;
+  }>(path, 'POST', body);
+  if (result.added === false) return { refusal: result.refusal ?? 'unknown' };
+  return result.scoring === undefined ? {} : { scoring: result.scoring };
 }

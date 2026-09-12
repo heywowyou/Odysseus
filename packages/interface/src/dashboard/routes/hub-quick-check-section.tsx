@@ -47,6 +47,19 @@ const SEVERITY_TONES: Record<Severity, BadgeTone> = {
 /** Both scoring sides, in the order the qualification gate reads them. */
 const SCORE_SIDES = ['brokenness', 'ability'] as const;
 
+/** Issue #199: a selected hotel without a score states that plainly, in
+ *  place of the score breakdown, instead of leaving the section silent
+ *  (which reads as "no problems"). */
+function NotScoredNotice(): JSX.Element {
+  const { strings } = useI18n();
+  return (
+    <div className="rounded-lg border border-line bg-raised p-4">
+      <p className="text-sm font-medium text-ink">{strings.score.notScoredHeading}</p>
+      <p className="mt-1 text-sm text-ink-soft">{strings.score.notScoredBody}</p>
+    </div>
+  );
+}
+
 function formatDelta(delta: number): string {
   return delta > 0 ? `+${delta}` : `${delta}`;
 }
@@ -137,7 +150,10 @@ export function HubQuickCheckSection(props: {
   if (!hasAnything) {
     return (
       <Card title={strings.hub.steps['quick-check']}>
-        <EmptyState title={strings.hub.quickCheck.empty} />
+        <div className="flex flex-col gap-4">
+          <EmptyState title={strings.hub.quickCheck.empty} />
+          {detail.selectionVerdict?.inSelection === true ? <NotScoredNotice /> : null}
+        </div>
       </Card>
     );
   }
@@ -384,6 +400,10 @@ export function HubQuickCheckSection(props: {
               ) : null}
             </div>
           </div>
+        ) : null}
+
+        {score === null && detail.selectionVerdict?.inSelection === true ? (
+          <NotScoredNotice />
         ) : null}
 
         {evidence !== null ? (

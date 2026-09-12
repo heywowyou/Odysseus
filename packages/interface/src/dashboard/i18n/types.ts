@@ -594,6 +594,9 @@ export interface DashboardStrings {
     /** Plan 043 slice 3: the row-level wave add and the read-only
      *  selection overview (the formula's cohorts and the active roster). */
     addRowAction: string;
+    /** Issue #199: a selected row without a score states that, instead of
+     *  a dash that reads as "no problems". */
+    notScoredCell: string;
     selectionOverview: {
       show: string;
       hide: string;
@@ -779,6 +782,9 @@ export interface DashboardStrings {
         | 'not-on-roster',
         string
       >;
+      /** Issue #199: one sentence per add-time scoring outcome, shown as
+       *  the added toast's second line. */
+      scoring: Record<'scored' | 'alreadyScored' | 'notScoreable', string>;
     };
     emails: {
       /** {n} is the follow-up number: Relance 1, Relance 2. */
@@ -842,6 +848,11 @@ export interface DashboardStrings {
     diffColumns: { field: string; before: string; after: string };
     diffFromLabel: string;
     diffToLabel: string;
+    /** Issue #199: shown instead of the score breakdown when a selected
+     *  hotel holds no score at the current version (a hand-added hotel
+     *  before its first scan). */
+    notScoredHeading: string;
+    notScoredBody: string;
   };
   evidence: {
     title: string;

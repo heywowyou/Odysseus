@@ -37,6 +37,10 @@ vi.mock('../outreach/publish-preview.js', () => ({
   revokePreviewsForDomain: vi.fn(),
 }));
 
+vi.mock('../prospecting/hotel-scoring/score-on-demand.js', () => ({
+  scoreHotelOnDemandForConnection: vi.fn(),
+}));
+
 import {
   addWaveRosterEntry,
   createJob,
@@ -61,6 +65,7 @@ import {
 import { createFollowUpForCandidate, createTouchOneDraft } from '../outreach/draft-runtime.js';
 import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
 import { revokePreviewsForDomain } from '../outreach/publish-preview.js';
+import { scoreHotelOnDemandForConnection } from '../prospecting/hotel-scoring/score-on-demand.js';
 import { CURRENT_SCORING_VERSION } from '@odysseus/core';
 import { Router } from '../router.js';
 import { registerProspectRoutes } from './prospects.js';
@@ -222,6 +227,7 @@ beforeEach(() => {
     rank: null,
     cohort: null,
   } as never);
+  vi.mocked(scoreHotelOnDemandForConnection).mockResolvedValue({ outcome: 'scored' } as never);
 });
 
 async function handle(url: string, options: FakeReqOptions = {}) {
@@ -805,7 +811,7 @@ describe('POST /api/prospects/:candidateId/preview/revoke (issue #97)', () => {
 });
 
 describe('POST /api/prospects/:candidateId/wave (plan 043 slice 1)', () => {
-  it('adds through the store helper with the dashboard actor', async () => {
+  it('adds through the store helper with the dashboard actor, then scores the hotel', async () => {
     vi.mocked(addWaveRosterEntry).mockResolvedValue({
       added: true,
       entryId: 'entry-1',
@@ -823,15 +829,47 @@ describe('POST /api/prospects/:candidateId/wave (plan 043 slice 1)', () => {
       scoringVersion: CURRENT_SCORING_VERSION,
       actor: 'dashboard',
     });
+    // Issue #199: the add action scores the hotel it just added, so the
+    // score columns do not stay empty for a hand-picked hotel.
+    expect(scoreHotelOnDemandForConnection).toHaveBeenCalledWith(
+      fakeConnection,
+      'hotel-exemple.fr',
+    );
     expect(JSON.parse(res.body ?? '{}')).toEqual({
       added: true,
       wave: 'wave-1',
       candidateId: 'cand-1',
       domain: 'hotel-exemple.fr',
+      scoring: { outcome: 'scored' },
     });
   });
 
-  it('answers a typed refusal as a 200 body', async () => {
+  it('carries a typed scoring skip in the added body', async () => {
+    vi.mocked(addWaveRosterEntry).mockResolvedValue({
+      added: true,
+      entryId: 'entry-2',
+      candidateId: 'cand-2',
+      domain: 'hotel-hors-population.fr',
+    } as never);
+    vi.mocked(scoreHotelOnDemandForConnection).mockResolvedValue({
+      outcome: 'skipped',
+      reason: 'not-in-scoring-population',
+    } as never);
+    const res = await handle('/api/prospects/cand-2/wave', {
+      method: 'POST',
+      body: { wave: 'wave-1' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body ?? '{}')).toEqual({
+      added: true,
+      wave: 'wave-1',
+      candidateId: 'cand-2',
+      domain: 'hotel-hors-population.fr',
+      scoring: { outcome: 'skipped', reason: 'not-in-scoring-population' },
+    });
+  });
+
+  it('does not score when the store refuses the add', async () => {
     vi.mocked(addWaveRosterEntry).mockResolvedValue({
       added: false,
       refused: 'already-on-roster',
@@ -841,6 +879,7 @@ describe('POST /api/prospects/:candidateId/wave (plan 043 slice 1)', () => {
       body: { wave: 'wave-1' },
     });
     expect(res.statusCode).toBe(200);
+    expect(scoreHotelOnDemandForConnection).not.toHaveBeenCalled();
     expect(JSON.parse(res.body ?? '{}')).toEqual({ added: false, refusal: 'already-on-roster' });
   });
 

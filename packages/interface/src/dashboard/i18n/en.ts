@@ -554,6 +554,7 @@ export const en: DashboardStrings = {
     },
     selectionCountLine: '{selected} in selection, {scored} scored, {total} in catalogue',
     addRowAction: '+ Wave',
+    notScoredCell: 'Not scored',
     selectionOverview: {
       show: 'View selection',
       hide: 'Hide selection',
@@ -723,6 +724,12 @@ export const en: DashboardStrings = {
         'candidate-unknown': 'This hotel no longer exists in the catalogue.',
         'not-on-roster': 'This hotel is not on that wave.',
       },
+      scoring: {
+        scored: 'It was scored just now.',
+        alreadyScored: 'It already held a current score.',
+        notScoreable:
+          'It is not scored yet: it has no current prescan or qualification, so run those passes first.',
+      },
     },
     emails: {
       firstEmailName: 'First email',
@@ -775,6 +782,9 @@ export const en: DashboardStrings = {
     diffColumns: { field: 'Field', before: 'Before', after: 'After' },
     diffFromLabel: 'From version',
     diffToLabel: 'To version',
+    notScoredHeading: 'Not scored yet',
+    notScoredBody:
+      'This hotel is in the selection but holds no score at the current scoring version. A hotel gets its score once it has a current prescan and qualification; run those passes first for a hotel added by hand.',
   },
   evidence: {
     title: 'Evidence',
