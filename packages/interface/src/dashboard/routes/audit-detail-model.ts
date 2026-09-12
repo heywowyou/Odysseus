@@ -12,6 +12,7 @@ import type {
   AuditLifecycle,
   FindingElementResponse,
   FindingResponse,
+  IdentityField,
   ManualFieldsResponse,
   RuleCopyResponse,
   Severity,
@@ -293,6 +294,32 @@ export function manualFieldValuesFromResponse(
   };
 }
 
+const IDENTITY_FIELDS = ['nomCommercial', 'raisonSociale'] as const;
+
+export interface UnconfirmedIdentityField {
+  field: IdentityField;
+  value: string;
+}
+
+/** Plan 045 slice 1.3: mirrors packages/report's
+ *  findUnconfirmedIdentityFields (D8's cover-identity gate) client-side,
+ *  over the manualFields the detail response already carries - the exact
+ *  set the stepper's Prepare step must offer an inline Confirm for,
+ *  without waiting for a report-stage failure to surface the same fields
+ *  as AuditFailureResponse.needsInputFields. */
+export function unconfirmedIdentityFields(
+  manualFields: ManualFieldsResponse | null | undefined,
+): UnconfirmedIdentityField[] {
+  if (!manualFields) return [];
+  const unconfirmed: UnconfirmedIdentityField[] = [];
+  for (const field of IDENTITY_FIELDS) {
+    const entry = manualFields[field];
+    if (entry === undefined || entry.provenance !== 'detected') continue;
+    unconfirmed.push({ field, value: entry.value });
+  }
+  return unconfirmed;
+}
+
 /** The PATCH body: only keys the operator actually changed, only non-empty
  *  values, so a save can never erase a stored field by sending '' and
  *  never re-sends unchanged data (which would needlessly rewrite
@@ -461,6 +488,18 @@ export interface ReportStepperInput {
   hasStoredReportPair: boolean;
   /** A fresh, deliverable pair: lifecycle rendered or approved. */
   hasFreshReportPair: boolean;
+  /** Plan 045 slice 1.2: whether a bilingual analysis pair resolves for
+   *  this audit at all (AuditDetailResponse.analysisPair). An audit like
+   *  Belleval - confirmed identity fields, both analyses present, zero
+   *  reports - has neither an approved candidate nor a stored report row,
+   *  so without this the produce step stayed disabled with nothing left to
+   *  unlock it. */
+  analysisPair: 'selected' | 'legacy-latest' | 'none';
+  /** Plan 045 slice 1.2: whether the request behind produce will refresh
+   *  stale findings first (AuditDetailResponse.findingsStale), so the
+   *  button's own label can say so instead of the operator discovering it
+   *  only after clicking. */
+  findingsStale: boolean;
 }
 
 /** The five steps of the client-report stepper (approved IA, "The audit
@@ -484,13 +523,17 @@ export function reportStepperSteps(input: ReportStepperInput): ReportStep[] {
   const approveDone = produceDone && input.lifecycle === 'approved';
 
   // The ladder: a step is reachable when its predecessor is done, and a
-  // done step is always reachable again (redo). Production's second key
-  // is the stored pair, not the fresh one.
+  // done step is always reachable again (redo). Production's real gate is
+  // "does a bilingual analysis pair resolve at all" (analysisPair !==
+  // 'none'): the old chooseDone-or-stored-pair pair of openings both
+  // implied that gate but did not cover it, which is exactly how Belleval
+  // (confirmed fields, both analyses, zero reports, no approved candidate)
+  // stayed stuck at needs-input with nothing left to click.
   const steps: { key: ReportStepKey; done: boolean; enabled: boolean }[] = [
     { key: 'prepare', done: prepareDone, enabled: true },
     { key: 'redact', done: redactDone, enabled: prepareDone },
     { key: 'choose', done: chooseDone, enabled: redactDone },
-    { key: 'produce', done: produceDone, enabled: chooseDone || input.hasStoredReportPair },
+    { key: 'produce', done: produceDone, enabled: input.analysisPair !== 'none' },
     { key: 'approve', done: approveDone, enabled: produceDone },
   ];
   return steps.map(({ key, done: isDone, enabled: isEnabled }) => ({

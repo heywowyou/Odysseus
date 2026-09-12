@@ -21,12 +21,17 @@ import { useI18n } from '../i18n/provider';
 import { postEmpty, sendJson } from '../lib/api';
 import { cn } from '../lib/cn';
 import { useApi } from '../lib/use-api';
-import { REPORT_STEP_ANCHORS, reportStepperSteps } from './audit-detail-model';
+import {
+  REPORT_STEP_ANCHORS,
+  reportStepperSteps,
+  unconfirmedIdentityFields,
+} from './audit-detail-model';
 import type { ReportStep } from './audit-detail-model';
 import type { AuditDetailResponse } from './audit-detail-types';
 import { HotelFieldsForm } from './audit-hotel-fields-form';
 import type { HotelFieldsFormHandle } from './audit-hotel-fields-form';
 import { ReportsCard } from './audit-reports-section';
+import { IdentityConfirmField } from './identity-confirm-field';
 import { PrepareReportForm } from './prepare-report-card';
 import type { PrepareReportFormHandle } from './prepare-report-card';
 import type { PreparationViewResponse } from './prepare-report-types';
@@ -68,6 +73,8 @@ export function AuditReportStepper(props: {
     lifecycle: detail.lifecycle,
     hasStoredReportPair: detail.reportLanguages.length > 0,
     hasFreshReportPair: detail.lifecycle === 'rendered' || detail.lifecycle === 'approved',
+    analysisPair: detail.analysisPair,
+    findingsStale: detail.findingsStale,
   });
 
   /** Step 1's single save: the preparation choices and the hotel fields
@@ -79,11 +86,7 @@ export function AuditReportStepper(props: {
     onBusy(true);
     try {
       const hotelForm = hotelFormRef.current;
-      // The detected identity fields ride along when they still await a
-      // confirmation, which is exactly what the needs-input gate wants.
-      const fieldsSaved = hotelForm
-        ? await hotelForm.save({ confirmDetected: hotelForm.hasDetectedConfirmation() })
-        : true;
+      const fieldsSaved = hotelForm ? await hotelForm.save() : true;
       const preparationSaved = (await prepareFormRef.current?.save()) ?? true;
       if (fieldsSaved && preparationSaved) {
         toast.success(strings.prepareReport.savedMessage);
@@ -207,14 +210,29 @@ export function AuditReportStepper(props: {
               <PrepareReportForm ref={prepareFormRef} auditId={auditId} view={preparation} />
             )}
             {/* Anchor target of the failure card's "go to the fields"
-                action: the identity gate lands on this form. */}
-            <div id="audit-hotel-fields">
+                action: the identity gate lands here. Plan 045 slice 1.3:
+                a detected-but-unconfirmed identity field gets its own
+                inline Confirm, separate from the form's own Save, so
+                confirming one field no longer requires touching (or
+                accidentally leaving untouched) the whole form. */}
+            <div id="audit-hotel-fields" className="flex flex-col gap-3">
+              {unconfirmedIdentityFields(detail.manualFields).map((entry) => (
+                <IdentityConfirmField
+                  key={entry.field}
+                  auditId={auditId}
+                  field={entry.field}
+                  detectedValue={entry.value}
+                  onConfirmed={() => {
+                    refreshPreparation();
+                    refresh();
+                  }}
+                />
+              ))}
               <HotelFieldsForm
                 ref={hotelFormRef}
                 auditId={auditId}
                 manualFields={detail.manualFields ?? null}
                 detectedTransactionalFlow={detail.detectedTransactionalFlow}
-                awaitingIdentityFields={detail.failure?.needsInputFields}
               />
             </div>
             <div className="flex justify-end">
@@ -306,10 +324,15 @@ export function AuditReportStepper(props: {
       case 'produce':
         return (
           <div className="flex flex-col gap-3">
-            <div>
-              <Button size="sm" isLoading={isRegenerating} onClick={() => void handleProduce()}>
-                {copy.produceButton}
-              </Button>
+            <div className="flex flex-col gap-1.5">
+              <div>
+                <Button size="sm" isLoading={isRegenerating} onClick={() => void handleProduce()}>
+                  {detail.findingsStale ? copy.produceButtonRefreshFirst : copy.produceButton}
+                </Button>
+              </div>
+              {detail.findingsStale ? (
+                <p className="text-xs text-ink-muted">{copy.produceRefreshFirstHint}</p>
+              ) : null}
             </div>
             <ReportsCard detail={detail} />
           </div>

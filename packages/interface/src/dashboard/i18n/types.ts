@@ -288,6 +288,16 @@ export interface DashboardStrings {
     raisonSocialeLabel: string;
     nomCommercialLabel: string;
     detectedFieldHint: string;
+    /** Plan 045 slice 1.3: the inline Confirm button next to a detected
+     *  identity field, used both in the stepper's first step and in
+     *  NeedsInputCard on the progress page. */
+    identityConfirmButton: string;
+    /** Shown once the field is confirmed and no other one still awaits it;
+     *  the PDFs are then produced automatically. */
+    identityConfirmedGeneratedMessage: string;
+    /** Shown once this field is confirmed but another detected identity
+     *  field still awaits confirmation, so PDFs were not attempted yet. */
+    identityConfirmedWaitingMessage: string;
     recipientNameLabel: string;
     sectorLabel: string;
     sectorAutoOption: string;
@@ -349,6 +359,11 @@ export interface DashboardStrings {
       unavailable: string;
       /** Step 4's button; the step itself is titled differently. */
       produceButton: string;
+      /** Plan 045 slice 1.2: step 4's button label when findings will be
+       *  refreshed before the PDFs render (AuditDetailResponse.findingsStale). */
+      produceButtonRefreshFirst: string;
+      /** Explains produceButtonRefreshFirst's label under the button. */
+      produceRefreshFirstHint: string;
     };
     /** Issue #91: a report row whose PDF bytes this machine cannot serve.
      *  The freshness badge is replaced by one of these two states: the

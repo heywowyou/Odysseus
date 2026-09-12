@@ -26,6 +26,12 @@ export type AuditLifecycle = 'scanned' | 'analysed' | 'rendered' | 'approved';
 
 export type FieldProvenance = 'detected' | 'operator';
 
+/** The two fields D8's cover-identity gate cares about
+ *  (packages/report/src/template/unconfirmed-fields.ts's IDENTITY_FIELDS),
+ *  mirrored here so the client can name them without importing a report
+ *  package it has no other reason to depend on. */
+export type IdentityField = 'nomCommercial' | 'raisonSociale';
+
 export interface SeverityRollup {
   critical: number;
   serious: number;
@@ -171,6 +177,18 @@ export interface AuditDetailResponse {
   reportLanguages: ReportLanguage[];
   reports: ReportStatusResponse[];
   lifecycle: AuditLifecycle;
+  /** Plan 045 slice 1.2: whether a bilingual analysis pair resolves for
+   *  this audit at all, from resolveSelectedAnalysisPairForAudit's own
+   *  three outcomes - the fact the produce step actually needs to unlock,
+   *  since an approved candidate or an existing report row (what it used
+   *  to gate on) are not the only ways to reach a resolvable pair. */
+  analysisPair: 'selected' | 'legacy-latest' | 'none';
+  /** Plan 045 slice 1.2: whether the audit's findings were normalized
+   *  under a schema version or fingerprint the current code no longer
+   *  produces (trade-off 40). True here means the produce step's own
+   *  request will refresh findings before rendering, not that the button
+   *  is disabled. */
+  findingsStale: boolean;
   /** Plan 032 (issue #162): the selected analysis pair was produced by the
    *  audit fallback gate, so its reports carry no model-written analysis.
    *  False also when no analysis pair exists at all. */
@@ -193,4 +211,23 @@ export interface AuditDetailResponse {
 export interface SirenPreviewResponse {
   resolved: boolean;
   denomination?: string;
+}
+
+/** MakeReportReadyOutcome's refusal union (packages/interface's
+ *  pipeline/make-report-ready.ts) as it crosses the HTTP boundary. */
+export type MakeReportReadyRefusalResponse =
+  | { kind: 'audit-not-found' }
+  | { kind: 'scan-data-missing' }
+  | { kind: 'no-analysis' }
+  | { kind: 'identity-unconfirmed'; fields: { field: string; value: string }[] };
+
+/** POST /api/audits/:auditId/manual-fields/confirm. The field is stamped
+ *  operator-confirmed unconditionally (manualFields always reflects the
+ *  write); pdfs then reports what, if anything, that unblocked:
+ *  'waiting-other-field' when a second detected identity field still
+ *  awaits confirmation, 'generated' when makeReportReady produced both
+ *  PDFs, or the exact refusal it returned otherwise. */
+export interface ManualFieldsConfirmResponse {
+  manualFields: ManualFieldsResponse;
+  pdfs: 'generated' | 'waiting-other-field' | MakeReportReadyRefusalResponse;
 }

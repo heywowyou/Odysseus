@@ -109,6 +109,8 @@ const emptyAudit = {
     { language: 'en', status: 'unverified', pdfAvailable: false },
   ],
   lifecycle: 'scanned',
+  analysisPair: 'none',
+  findingsStale: false,
   approval: null,
   manualFields: null,
 };
@@ -312,7 +314,12 @@ describe('audit detail report-stage failure card (issue #90)', () => {
     root.unmount();
   });
 
-  it('confirms the unchanged detected identity fields through the step 1 save', async () => {
+  it('offers an inline Confirm per detected identity field instead of an implicit confirm-on-save', async () => {
+    // Plan 045 slice 1.3: confirming a detected identity field used to
+    // require an operator to open the Prepare step and hit the form's own
+    // Save, which rode the field along unasked (and, worse, only if the
+    // form happened to be untouched). Each detected field now gets its
+    // own Confirm control; the step 1 Save no longer touches them at all.
     const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
       if (url.includes('report-preparation')) return notFoundResponse();
@@ -336,10 +343,17 @@ describe('audit detail report-stage failure card (issue #90)', () => {
     });
     vi.stubGlobal('fetch', fetchSpy);
     const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
-    // Plan 040 slice 5: one Enregistrer button for the whole Prepare step;
-    // it detects the awaiting confirmation itself and rides the detected
-    // identity fields along on the PATCH.
     await settle(container, 'Enregistrer les choix');
+
+    // One Confirm button per detected identity field, prefilled with the
+    // detected value as an editable input.
+    const confirmButtons = [...container.querySelectorAll('button')].filter(
+      (button) => button.textContent === 'Confirmer',
+    );
+    expect(confirmButtons).toHaveLength(2);
+    const inputValues = [...container.querySelectorAll('input')].map((input) => input.value);
+    expect(inputValues).toEqual(expect.arrayContaining(['Site Officiel', "L'ESPRIT DU SUD"]));
+
     const saveButton = [...container.querySelectorAll('button')].find(
       (button) => button.textContent === 'Enregistrer les choix',
     );
@@ -348,14 +362,14 @@ describe('audit detail report-stage failure card (issue #90)', () => {
       saveButton?.click();
       await new Promise((resolve) => setTimeout(resolve, 10));
     });
+    // Step 1's own Save never sends a patch for fields nothing changed:
+    // confirming a detected field is the Confirm button's job now, not an
+    // implicit side effect of an unrelated click.
     const patchCall = fetchSpy.mock.calls.find(([input]) => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-      return url.includes('/manual-fields');
+      return url.includes('/manual-fields') && !url.includes('/confirm');
     });
-    expect(patchCall?.[1]).toMatchObject({
-      method: 'PATCH',
-      body: JSON.stringify({ nomCommercial: 'Site Officiel', raisonSociale: "L'ESPRIT DU SUD" }),
-    });
+    expect(patchCall).toBeUndefined();
     root.unmount();
   });
 });
@@ -430,12 +444,14 @@ describe('static fallback analysis notice (issue #162)', () => {
   });
 
   // The reports list renders inside the production step, which unlocks
-  // from a stored pair: the fixture carries the report languages the
-  // fallback gate wrote.
+  // whenever a bilingual analysis pair resolves at all (plan 045 slice
+  // 1.2): the fixture carries the report languages the fallback gate
+  // wrote, plus the resolved pair kind that fact now depends on.
   const analysedAudit = {
     ...emptyAudit,
     lifecycle: 'analysed',
     reportLanguages: ['fr', 'en'],
+    analysisPair: 'selected',
   };
 
   it('shows the fallback notice on the reports card when the pair is a static fallback', async () => {
@@ -482,6 +498,7 @@ describe('reports card PDF availability (issue #91)', () => {
     ...emptyAudit,
     lifecycle: 'analysed',
     reportLanguages: ['fr'],
+    analysisPair: 'selected',
     reports: [
       {
         language: 'fr',
@@ -631,6 +648,7 @@ describe('client-report stepper (plan 040 slice 5)', () => {
     ...emptyAudit,
     lifecycle: 'analysed',
     reportLanguages: ['fr', 'en'],
+    analysisPair: 'selected',
   };
 
   it('renders the five steps with one save on the prepare step', async () => {

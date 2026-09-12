@@ -449,6 +449,8 @@ describe('reportStepperSteps', () => {
     lifecycle: 'scanned',
     hasStoredReportPair: false,
     hasFreshReportPair: false,
+    analysisPair: 'none',
+    findingsStale: false,
   };
 
   const statesOf = (input: ReportStepperInput): string[] =>
@@ -494,6 +496,7 @@ describe('reportStepperSteps', () => {
       isWritingSelected: true,
       lifecycle: 'analysed',
       hasStoredReportPair: true,
+      analysisPair: 'selected',
     });
     expect(states).toEqual(['done', 'done', 'done', 'active', 'todo']);
   });
@@ -502,13 +505,31 @@ describe('reportStepperSteps', () => {
     // The static fallback gate stores an analysis pair without operator
     // writing, so a report-stage failure must still be redoable at the
     // production step.
-    const states = statesOf({ ...baseInput, hasStoredReportPair: true });
+    const states = statesOf({
+      ...baseInput,
+      hasStoredReportPair: true,
+      analysisPair: 'legacy-latest',
+    });
     expect(states).toEqual(['done', 'active', 'todo', 'active', 'todo']);
   });
 
   it('keeps production locked while no pair exists', () => {
     const steps = reportStepperSteps(baseInput);
     expect(steps.find((step) => step.key === 'produce')?.enabled).toBe(false);
+  });
+
+  // Plan 045 slice 1.2: Hôtel Belleval's real shape - both identity fields
+  // already confirmed, both analyses present, but zero reports and no
+  // approved writing candidate. Nothing had ever wired the produce step to
+  // unlock from "a bilingual pair resolves" alone; it needed an approved
+  // candidate or an existing report row, and Belleval had neither.
+  it('unlocks production when a resolvable pair exists with no candidate and no stored report', () => {
+    const states = statesOf({
+      ...baseInput,
+      lifecycle: 'analysed',
+      analysisPair: 'selected',
+    });
+    expect(states).toEqual(['done', 'active', 'todo', 'active', 'todo']);
   });
 
   it('marks production done and approval active once the pair is fresh', () => {
@@ -519,6 +540,7 @@ describe('reportStepperSteps', () => {
       lifecycle: 'rendered',
       hasStoredReportPair: true,
       hasFreshReportPair: true,
+      analysisPair: 'selected',
     });
     expect(states).toEqual(['done', 'done', 'done', 'done', 'active']);
   });
@@ -531,6 +553,7 @@ describe('reportStepperSteps', () => {
       lifecycle: 'approved',
       hasStoredReportPair: true,
       hasFreshReportPair: true,
+      analysisPair: 'selected',
     });
     expect(states).toEqual(['done', 'done', 'done', 'done', 'done']);
   });
