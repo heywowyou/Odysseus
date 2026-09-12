@@ -9,14 +9,12 @@ import { axe } from 'vitest-axe';
 import { I18nProvider } from './i18n/provider';
 import { AuditDetailPage } from './routes/audit-detail';
 import { AuditsPage } from './routes/audits';
-import { DraftsPage } from './routes/drafts';
+import { ATraiterPage } from './routes/a-traiter';
 import { LoginPage } from './routes/login';
 import { NewScanPage } from './routes/new-scan';
-import { OutreachIndexPage } from './routes/outreach-index';
 import { OutcomesPage } from './routes/outcomes';
 import { ProspectDetailPage } from './routes/prospect-detail';
 import { ProspectsPage } from './routes/prospects';
-import { RepliesPage } from './routes/replies';
 import { ScanProgressPage } from './routes/scan-progress';
 import { SuppressionsPage } from './routes/suppressions';
 
@@ -488,24 +486,97 @@ describe('operator page accessibility (plan 013 step 5, extended plan 022 step 6
     root.unmount();
   });
 
-  it('outreach hub has no axe violations', async () => {
-    const { container, root } = await renderPage(createElement(OutreachIndexPage));
-    await settle(container, 'Brouillons');
-    await expectNoAxeViolations(container);
-    root.unmount();
-  });
-
-  it('drafts review page has no axe violations in its empty state', async () => {
-    const { container, root } = await renderPage(createElement(DraftsPage));
+  it('a-traiter page has no axe violations in its empty state', async () => {
+    // The scans inbox filter is the only list whose default empty-page stub
+    // does not fit: the scans endpoint answers an array, not a page.
+    stubRoutes({ '/api/scans?limit=200': [] });
+    const { container, root } = await renderPage(createElement(ATraiterPage));
     await settle(container, 'Aucun brouillon en attente de revue.');
     await expectNoAxeViolations(container);
     root.unmount();
   });
 
-  it('replies page has no axe violations in its empty state', async () => {
-    stubRoutes({ '/api/outreach/replies': { rows: [], total: 0, limit: 50, offset: 0 } });
-    const { container, root } = await renderPage(createElement(RepliesPage));
-    await settle(container, 'Aucune réponse en attente');
+  it('a-traiter page has no axe violations with every list populated', async () => {
+    stubRoutes({
+      '/api/outreach/drafts?limit=5': {
+        rows: [
+          {
+            draftId: 'draft-1',
+            threadId: 'thread-1',
+            candidateId: 'cand-1',
+            hotelName: 'Hôtel du Quai Exemple',
+            touch: 1,
+            language: 'fr',
+            touch1EvidenceSlot: null,
+            hasProviderDraft: true,
+            createdAt: '2026-09-01T08:00:00.000Z',
+          },
+        ],
+        total: 4,
+        limit: 5,
+        offset: 0,
+      },
+      '/api/outreach/replies?limit=5': {
+        rows: [
+          {
+            threadId: 'thread-2',
+            candidateId: 'cand-2',
+            hotelName: null,
+            domain: 'hotel-exemple.fr',
+            language: 'fr',
+            state: 'e1-sent',
+            currentTouch: 1,
+            reviewReason: 'unclassified-reply',
+            reviewDetectedAt: '2026-09-02T08:00:00.000Z',
+            lastSyncedAt: null,
+          },
+        ],
+        total: 1,
+        limit: 5,
+        offset: 0,
+      },
+      '/api/prospects?queue=join-review': {
+        rows: [
+          {
+            candidateId: 'cand-3',
+            name: 'Hôtel de la Gare',
+            commune: 'Grenoble',
+            postcode: '38000',
+            starRating: null,
+            identityStatus: 'needs-review',
+            groupStatus: 'independent',
+            campaignEligibility: 'eligible',
+            reviewState: 'pending',
+            qualificationOutcome: 'not-evaluated',
+            qualificationReasons: [],
+            prescanStatus: null,
+            scoringVersion: null,
+            brokennessTotal: null,
+            abilityTotal: null,
+            worthy: null,
+            contactState: null,
+            threadState: null,
+            outcome: null,
+          },
+        ],
+        total: 2,
+        limit: 5,
+        offset: 0,
+      },
+      '/api/scans?limit=200': [
+        {
+          jobId: 'job-1',
+          type: 'full-audit',
+          status: 'failed',
+          phase: 'report',
+          siteUrl: 'https://exemple.fr',
+          createdAt: '2026-09-01T10:00:00.000Z',
+          auditId: 'audit-1',
+        },
+      ],
+    });
+    const { container, root } = await renderPage(createElement(ATraiterPage));
+    await settle(container, 'Hôtel du Quai Exemple');
     await expectNoAxeViolations(container);
     root.unmount();
   });

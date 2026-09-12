@@ -8,12 +8,10 @@ export interface DashboardStrings {
     audits: string;
     newScan: string;
     prospects: string;
-    /** Sidebar label for /outreach, plan 040's "A traiter" (operator decision
-     *  2026-09-12): the URL is unchanged until slice 6 rebuilds it as the
-     *  landing page. */
+    /** Sidebar label for /a-traiter, the landing page (plan 040 slice 6;
+     *  operator decision 2026-09-12: "Démarches" becomes "À traiter"). */
     outreach: string;
-    /** Sidebar label for /outreach/outcomes, kept at its current URL until
-     *  slice 6 renames it to /resultats. */
+    /** Sidebar label for /resultats. */
     results: string;
   };
   shell: {
@@ -26,7 +24,7 @@ export interface DashboardStrings {
     openMenu: string;
     closeMenu: string;
     language: string;
-    /** Footer link to the do-not-contact lookup (/outreach/do-not-contact). */
+    /** Footer link to the do-not-contact lookup (/ne-pas-contacter). */
     checkAddress: string;
   };
   common: {
@@ -809,19 +807,32 @@ export interface DashboardStrings {
     actionRefused: string;
     actionError: string;
   };
-  outreachIndex: {
+  /** Plan 040 slice 6: the a-traiter page, the dashboard's landing page and
+   *  the operator's inbox (approved IA). Four short lists whose rows open
+   *  the hotel hub or the audit, plus the two batch draft buttons. */
+  aTraiter: {
     title: string;
     description: string;
-    cards: {
-      draftsTitle: string;
-      draftsDescription: string;
-      repliesTitle: string;
-      repliesDescription: string;
-      suppressionsTitle: string;
-      suppressionsDescription: string;
-      outcomesTitle: string;
-      outcomesDescription: string;
+    /** Headings of the four short lists, each carrying its queue total. */
+    lists: {
+      drafts: string;
+      replies: string;
+      /** The prospects whose identity still awaits the operator's join
+       *  review (the /api/prospects join-review queue). */
+      hotels: string;
+      /** Audits whose display status is needs-input (issue #90). */
+      audits: string;
     };
+    /** The muted one-liner an empty list renders instead of an empty-state
+     *  block. */
+    empty: {
+      drafts: string;
+      replies: string;
+      hotels: string;
+      audits: string;
+    };
+    /** The page's only create-draft entry points: the two batch buttons
+     *  moved here from the retired outreach index page. */
     batch: {
       draftBatchLabel: string;
       draftBatchButton: string;
@@ -832,38 +843,20 @@ export interface DashboardStrings {
       error: string;
     };
   };
+  /** Plan 040 slice 4: the drafts queue page retired into /a-traiter, so
+   *  what remains here is the never-send note the inbox carries and the
+   *  review dialog the hub's Emails section renders. */
   drafts: {
-    title: string;
-    description: string;
-    columns: {
-      prospect: string;
-      touch: string;
-      createdAt: string;
-      providerState: string;
-      reviewState: string;
-    };
     approve: string;
     skip: string;
     neverSendNote: string;
-    empty: string;
-    /** Issue #15: read-only dialog with the draft's persisted text. The
-     *  meta labels (touch, created date) reuse the column names above so
-     *  the table and the dialog cannot drift apart. */
+    /** Issue #15: read-only dialog with the draft's persisted text. */
     viewText: string;
     textDialogDescription: string;
-    textRecipientLabel: string;
     textSubjectLabel: string;
     textBodyLabel: string;
     copyButton: string;
     copiedLabel: string;
-  };
-  replies: {
-    title: string;
-    description: string;
-    columns: { prospect: string; receivedAt: string; state: string; reason: string };
-    markReviewed: string;
-    metadataNote: string;
-    empty: string;
   };
   suppressions: {
     title: string;

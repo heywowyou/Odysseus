@@ -8,6 +8,7 @@ import {
   findOutreachDraftById,
   findOutreachThreadById,
   getHotelCandidate,
+  getHotelCandidatesByIds,
   getOutcomeSummary,
   isSuppressed,
   listLivePreviewsForDomain,
@@ -216,10 +217,20 @@ export function registerOutreachRoutes(
       getOutcomeSummary(connection),
       listOutreachOutcomes(connection, { limit: Math.min(offset + limit, MAX_OUTCOME_SCAN) }),
     ]);
-    const rows = events.slice(offset).map((event) => ({
+    const page = events.slice(offset);
+    // Plan 040 slice 6 (approved IA, additive item 2): rows gain the hotel's
+    // name. One bounded load over the page's distinct candidate ids, the same
+    // degrade-to-null rule as the draft text endpoint above; a candidate whose
+    // catalogue row is gone stays null rather than a guessed name.
+    const candidates = await getHotelCandidatesByIds(connection, [
+      ...new Set(page.map((event) => event.candidateId)),
+    ]);
+    const nameByCandidate = new Map(candidates.map((c) => [c.candidateId, c.name]));
+    const rows = page.map((event) => ({
       outcomeId: event.outcomeId,
       threadId: event.threadId,
       candidateId: event.candidateId,
+      hotelName: nameByCandidate.get(event.candidateId) ?? null,
       outcome: event.outcome,
       lostReason: event.lostReason ?? null,
       actor: event.actor,

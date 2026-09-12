@@ -778,18 +778,21 @@ export const en: DashboardStrings = {
     actionRefused: 'Nothing was drafted; the orchestrator declined this action.',
     actionError: 'Could not complete this action.',
   },
-  outreachIndex: {
-    title: 'Outreach',
-    description: 'Drafts, replies, do-not-contact checks, and outcomes under operator review.',
-    cards: {
-      draftsTitle: 'Drafts',
-      draftsDescription: 'Gmail drafts waiting for review. Reviewing never sends.',
-      repliesTitle: 'Replies',
-      repliesDescription: 'Replies needing review. Classification stays human.',
-      suppressionsTitle: 'Do-not-contact list',
-      suppressionsDescription: 'Check one address against the do-not-contact list.',
-      outcomesTitle: 'Outcomes',
-      outcomesDescription: 'Operator-set outcomes and campaign aggregates.',
+  aTraiter: {
+    title: 'To do',
+    description:
+      'What waits for a decision: drafts, replies, identities, audits. Every row opens the hotel page or the audit.',
+    lists: {
+      drafts: 'Drafts to review',
+      replies: 'Replies to review',
+      hotels: 'Identities to check',
+      audits: 'Audits waiting for action',
+    },
+    empty: {
+      drafts: 'No drafts are waiting for review.',
+      replies: 'No replies are waiting for review.',
+      hotels: 'No identities to check.',
+      audits: 'No audits waiting for action.',
     },
     batch: {
       draftBatchLabel: 'Draft first emails for the contactable cohort',
@@ -802,35 +805,16 @@ export const en: DashboardStrings = {
     },
   },
   drafts: {
-    title: 'Drafts',
-    description: 'Gmail drafts waiting for operator review.',
-    columns: {
-      prospect: 'Prospect',
-      touch: 'Email step',
-      createdAt: 'Created',
-      providerState: 'Gmail status',
-      reviewState: 'Verification status',
-    },
     approve: 'Mark reviewed',
     skip: 'Skip',
     neverSendNote: 'Odysseus cannot send drafts. Sending happens only in the operator mailbox.',
-    empty: 'No drafts are waiting for review.',
     viewText: 'View text',
     textDialogDescription:
       'The exact text stored with this draft. Sending happens only in your mailbox.',
-    textRecipientLabel: 'Recipient',
     textSubjectLabel: 'Subject',
     textBodyLabel: 'Message body',
     copyButton: 'Copy',
     copiedLabel: 'Copied',
-  },
-  replies: {
-    title: 'Replies',
-    description: 'Replies that need operator review.',
-    columns: { prospect: 'Prospect', receivedAt: 'Received', state: 'State', reason: 'Reason' },
-    markReviewed: 'Mark reviewed',
-    metadataNote: 'Only thread metadata is shown. Message content is never stored.',
-    empty: 'No replies are waiting for review.',
   },
   suppressions: {
     title: 'Do-not-contact list',

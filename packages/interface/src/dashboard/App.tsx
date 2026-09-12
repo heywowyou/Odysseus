@@ -3,16 +3,14 @@ import type { JSX } from 'react';
 import { AppShell } from './app/shell';
 import { AuditDetailPage } from './routes/audit-detail';
 import { AuditsPage } from './routes/audits';
-import { DraftsPage } from './routes/drafts';
+import { ATraiterPage } from './routes/a-traiter';
 import { LoginPage } from './routes/login';
 import { NewScanPage } from './routes/new-scan';
 import { OutcomesPage } from './routes/outcomes';
 import { ProspectDetailPage } from './routes/prospect-detail';
 import { ProspectsPage } from './routes/prospects';
-import { RepliesPage } from './routes/replies';
 import { ScanProgressPage } from './routes/scan-progress';
 import { SuppressionsPage } from './routes/suppressions';
-import { OutreachIndexPage } from './routes/outreach-index';
 
 /** Plan 040 slice 4: the five single-purpose prospect subpages retired
  *  into the hub. Old links and bookmarks keep working: each subpage URL
@@ -30,7 +28,8 @@ export function App() {
           renders without the operator navigation. */}
       <Route path="login" element={<LoginPage />} />
       <Route element={<AppShell />}>
-        <Route index element={<Navigate to="/audits" replace />} />
+        {/* Plan 040 slice 6: /a-traiter is the landing page (IA nav map). */}
+        <Route index element={<Navigate to="/a-traiter" replace />} />
         <Route path="audits" element={<AuditsPage />} />
         <Route path="audits/:auditId" element={<AuditDetailPage />} />
         <Route path="scans/new" element={<NewScanPage />} />
@@ -42,11 +41,22 @@ export function App() {
         <Route path="prospects/:candidateId/evidence" element={<ProspectSubpageRedirect />} />
         <Route path="prospects/:candidateId/preview" element={<ProspectSubpageRedirect />} />
         <Route path="prospects/:candidateId/outreach" element={<ProspectSubpageRedirect />} />
-        <Route path="outreach" element={<OutreachIndexPage />} />
-        <Route path="outreach/drafts" element={<DraftsPage />} />
-        <Route path="outreach/replies" element={<RepliesPage />} />
-        <Route path="outreach/do-not-contact" element={<SuppressionsPage />} />
-        <Route path="outreach/outcomes" element={<OutcomesPage />} />
+        {/* Plan 040 slice 6 (page destiny table): /a-traiter absorbs the
+            outreach index, the drafts queue, and the replies queue; the
+            outcomes and do-not-contact pages keep their content under their
+            new names. Every old outreach URL redirects so bookmarks and
+            links in old notes keep working. */}
+        <Route path="a-traiter" element={<ATraiterPage />} />
+        <Route path="resultats" element={<OutcomesPage />} />
+        <Route path="ne-pas-contacter" element={<SuppressionsPage />} />
+        <Route path="outreach" element={<Navigate to="/a-traiter" replace />} />
+        <Route path="outreach/drafts" element={<Navigate to="/a-traiter" replace />} />
+        <Route path="outreach/replies" element={<Navigate to="/a-traiter" replace />} />
+        <Route path="outreach/outcomes" element={<Navigate to="/resultats" replace />} />
+        <Route
+          path="outreach/do-not-contact"
+          element={<Navigate to="/ne-pas-contacter" replace />}
+        />
         <Route path="*" element={<Navigate to="/audits" replace />} />
       </Route>
     </Routes>

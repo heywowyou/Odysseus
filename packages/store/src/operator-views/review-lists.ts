@@ -6,6 +6,7 @@
 
 import type { Connection } from 'mongoose';
 import type { OutreachEvidenceSlot, OutreachThreadState } from '@odysseus/core';
+import { getHotelCandidatesByIds } from '../hotel-candidates.js';
 import { createOutreachDraftModel } from '../schemas/outreach-draft.schema.js';
 import { createOutreachThreadModel } from '../schemas/outreach-thread.schema.js';
 import { pageBounds, type OperatorViewPage, type OperatorViewPageOptions } from './shared.js';
@@ -14,11 +15,27 @@ export interface OperatorReviewDraftRow {
   draftId: string;
   threadId: string;
   candidateId: string;
+  /** Plan 040 slice 6 (approved IA, additive item 2): the catalogue name of
+   *  the row's candidate, so a queue row names a business instead of a raw
+   *  identifier. Null when the candidate row no longer resolves; never a
+   *  guessed name. */
+  hotelName: string | null;
   touch: number;
   language: 'fr' | 'en';
   touch1EvidenceSlot: OutreachEvidenceSlot | null;
   hasProviderDraft: boolean;
   createdAt: Date;
+}
+
+/** Names for one page's candidate ids in a single bounded $in query. The id
+ *  set never exceeds the page limit, so the lookup stays proportional to
+ *  what the caller already fetched. */
+async function hotelNamesByIds(
+  connection: Connection,
+  candidateIds: string[],
+): Promise<Map<string, string>> {
+  const candidates = await getHotelCandidatesByIds(connection, [...new Set(candidateIds)]);
+  return new Map(candidates.map((candidate) => [candidate.candidateId, candidate.name]));
 }
 
 /** Every pending Gmail draft across candidates, metadata only. Reviewing a
@@ -61,11 +78,16 @@ export async function listOutreachReviewDrafts(
         }[]
       >(),
   ]);
+  const names = await hotelNamesByIds(
+    connection,
+    rows.map((row) => row.candidateId),
+  );
   return {
     rows: rows.map((row) => ({
       draftId: row.draftId,
       threadId: row.threadId,
       candidateId: row.candidateId,
+      hotelName: names.get(row.candidateId) ?? null,
       touch: row.touch,
       language: row.language,
       touch1EvidenceSlot: row.touch1EvidenceSlot ?? null,
@@ -81,6 +103,8 @@ export async function listOutreachReviewDrafts(
 export interface OperatorReplyReviewRow {
   threadId: string;
   candidateId: string;
+  /** Same contract as OperatorReviewDraftRow.hotelName above. */
+  hotelName: string | null;
   domain: string;
   language: 'fr' | 'en';
   state: OutreachThreadState;
@@ -131,10 +155,15 @@ export async function listRepliesNeedingReview(
         }[]
       >(),
   ]);
+  const names = await hotelNamesByIds(
+    connection,
+    rows.map((row) => row.candidateId),
+  );
   return {
     rows: rows.map((row) => ({
       threadId: row.threadId,
       candidateId: row.candidateId,
+      hotelName: names.get(row.candidateId) ?? null,
       domain: row.domain,
       language: row.language,
       state: row.state,

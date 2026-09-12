@@ -3,21 +3,28 @@ import { Building2, ClipboardCheck, ListChecks, Mail, Menu, ShieldCheck, X } fro
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { Brand } from './brand';
 import { LanguageSwitcher } from './language-switcher';
+import { Badge } from '../components/ui/badge';
 import { useI18n } from '../i18n/provider';
 import { cn } from '../lib/cn';
+import { useApi } from '../lib/use-api';
+import type { OutreachDraftsPage } from '../routes/outreach-model';
 
 export function AppShell() {
   const { strings } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname } = useLocation();
 
+  // Plan 040 slice 6 (IA nav map, "A traiter [count]"): one lightweight
+  // fetch of the drafts inbox, the page's core work item. No polling: the
+  // count refreshes when the shell remounts. Hidden on error or zero, so
+  // the badge never invents work.
+  const draftsInbox = useApi<OutreachDraftsPage>('/api/outreach/drafts?limit=1');
+  const inboxCount = draftsInbox.data?.total;
+
   /* Grouped by the two halves of the work rather than listed flat: measuring a
      site and running a campaign are different jobs with different rhythms.
-     Plan 040 slice 3 (approved IA, docs/product/dashboard-ia.md): "Nouveau
-     scan" moves to a header button on the Audits page it sat next to
-     (removed here, not duplicated); "A traiter" and "Resultats" are new
-     Campagne entries at their current URLs (/outreach, /outreach/outcomes)
-     until slice 6 rebuilds them at /a-traiter and /resultats. */
+     Plan 040 slice 6: "A traiter" is the landing page at /a-traiter, and
+     "Resultats" and the footer lookup sit at their renamed URLs. */
   const navGroups = [
     {
       label: strings.shell.groupMeasure,
@@ -27,10 +34,16 @@ export function AppShell() {
       label: strings.shell.groupCampaign,
       items: [
         // end: true so this item's own NavLink match does not also light up
-        // for the /outreach/outcomes item nested under the same prefix.
-        { to: '/outreach', label: strings.nav.outreach, icon: Mail, end: true },
+        // for other Campagne items nested under a shared prefix.
+        {
+          to: '/a-traiter',
+          label: strings.nav.outreach,
+          icon: Mail,
+          end: false,
+          badge: inboxCount !== undefined && inboxCount > 0 ? inboxCount : undefined,
+        },
         { to: '/prospects', label: strings.nav.prospects, icon: Building2, end: false },
-        { to: '/outreach/outcomes', label: strings.nav.results, icon: ClipboardCheck, end: false },
+        { to: '/resultats', label: strings.nav.results, icon: ClipboardCheck, end: false },
       ],
     },
   ];
@@ -71,7 +84,15 @@ export function AppShell() {
                 }
               >
                 <item.icon className="size-4 shrink-0" aria-hidden="true" />
-                {item.label}
+                {/* flex-1 pushes the count badge to the row's right edge. */}
+                <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                {/* The count is the link's own text content, so a screen
+                    reader reads it as part of the item name: "A traiter, 4". */}
+                {'badge' in item && item.badge !== undefined ? (
+                  <Badge tone="accent" className="numeric shrink-0">
+                    {item.badge}
+                  </Badge>
+                ) : null}
               </NavLink>
             ))}
           </div>
@@ -83,7 +104,7 @@ export function AppShell() {
   const footer = (
     <div className="mt-auto border-t border-line p-4">
       <NavLink
-        to="/outreach/do-not-contact"
+        to="/ne-pas-contacter"
         className="mb-3 flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-raised hover:text-ink"
       >
         <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />

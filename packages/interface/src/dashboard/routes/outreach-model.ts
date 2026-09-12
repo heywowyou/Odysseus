@@ -1,8 +1,8 @@
 /**
- * Response types and pure display logic of the outreach pages: drafts,
- * replies, suppression check, and outcomes (packages/interface/src/routes/
- * outreach.ts). Field names are the API's persisted contract, not UI
- * vocabulary; never respell them.
+ * Response types and pure display logic of the outreach surfaces: the
+ * a-traiter inbox lists, suppression check, and outcomes
+ * (packages/interface/src/routes/outreach.ts). Field names are the API's
+ * persisted contract, not UI vocabulary; never respell them.
  *
  * Declared by value rather than imported from @odysseus/core and
  * @odysseus/store: this file describes what crosses the HTTP boundary
@@ -11,13 +11,16 @@
  * discipline as lib/api-types.ts.
  */
 
-/** The list page size every outreach page uses; the API clamps its own cap. */
+/** The list page size the outcomes page uses; the API clamps its own cap. */
 export const PAGE_SIZE = 50;
 
 export interface OutreachDraftRow {
   draftId: string;
   threadId: string;
   candidateId: string;
+  /** Plan 040 slice 6 (additive IA item 2): the hotel's catalogue name,
+   *  null when the candidate row no longer resolves. */
+  hotelName: string | null;
   touch: number;
   language: 'fr' | 'en';
   touch1EvidenceSlot: string | null;
@@ -53,6 +56,8 @@ export interface OutreachDraftText {
 export interface ReplyReviewRow {
   threadId: string;
   candidateId: string;
+  /** Same contract as OutreachDraftRow.hotelName above. */
+  hotelName: string | null;
   domain: string;
   language: 'fr' | 'en';
   state: string;
@@ -79,6 +84,8 @@ export interface OutcomeEventRow {
   outcomeId: string;
   threadId: string;
   candidateId: string;
+  /** Same contract as OutreachDraftRow.hotelName above. */
+  hotelName: string | null;
   outcome: string;
   lostReason: string | null;
   actor: string;

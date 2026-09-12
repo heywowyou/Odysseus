@@ -6,6 +6,7 @@ vi.mock('@odysseus/store', () => ({
   listOutreachReviewDrafts: vi.fn(),
   findOutreachDraftById: vi.fn(),
   getHotelCandidate: vi.fn(),
+  getHotelCandidatesByIds: vi.fn(),
   recordOutreachDraftReview: vi.fn(),
   listRepliesNeedingReview: vi.fn(),
   findOutreachThreadById: vi.fn(),
@@ -28,6 +29,7 @@ import {
   findOutreachDraftById,
   findOutreachThreadById,
   getHotelCandidate,
+  getHotelCandidatesByIds,
   getOutcomeSummary,
   isSuppressed,
   listLivePreviewsForDomain,
@@ -117,6 +119,7 @@ describe('GET /api/outreach/drafts', () => {
           draftId: DRAFT_ID,
           threadId: THREAD_ID,
           candidateId: 'c-1',
+          hotelName: 'Hôtel Exemple',
           touch: 1,
           language: 'fr',
           touch1EvidenceSlot: null,
@@ -140,6 +143,7 @@ describe('GET /api/outreach/drafts', () => {
     expect(body.total).toBe(11);
     expect(body.rows).toHaveLength(1);
     expect(body.rows[0].draftId).toBe(DRAFT_ID);
+    expect(body.rows[0].hotelName).toBe('Hôtel Exemple');
   });
 
   it('falls back to the default page window when the query is empty', async () => {
@@ -349,6 +353,7 @@ describe('GET /api/outreach/replies', () => {
         {
           threadId: THREAD_ID,
           candidateId: 'c-1',
+          hotelName: null,
           domain: 'hotel-exemple.fr',
           language: 'fr',
           state: 'e1-sent',
@@ -375,6 +380,7 @@ describe('GET /api/outreach/replies', () => {
         'candidateId',
         'currentTouch',
         'domain',
+        'hotelName',
         'language',
         'lastSyncedAt',
         'reviewDetectedAt',
@@ -486,7 +492,7 @@ describe('POST /api/outreach/suppression-check', () => {
 });
 
 describe('GET /api/outreach/outcomes', () => {
-  it('returns the aggregate summary and the newest event rows', async () => {
+  it('returns the aggregate summary and the newest event rows with hotel names', async () => {
     vi.mocked(getOutcomeSummary).mockResolvedValue({
       total: 3,
       byOutcome: { 'no-reply': 2, won: 1 },
@@ -503,7 +509,20 @@ describe('GET /api/outreach/outcomes', () => {
         recordedAt: new Date('2026-08-30T10:00:00.000Z'),
         expiresAt: new Date('2026-11-28T10:00:00.000Z'),
       },
+      {
+        outcomeId: 'o-2',
+        idempotencyKey: 'k-2',
+        threadId: THREAD_ID,
+        candidateId: 'c-gone',
+        outcome: 'no-reply',
+        actor: 'operator',
+        recordedAt: new Date('2026-08-30T09:00:00.000Z'),
+        expiresAt: new Date('2026-11-28T09:00:00.000Z'),
+      },
     ]);
+    vi.mocked(getHotelCandidatesByIds).mockResolvedValue([
+      { candidateId: 'c-1', name: 'Hôtel Exemple' },
+    ] as never);
 
     const router = new Router();
     registerOutreachRoutes(router, fakeConnection, fakeQueue);
@@ -512,14 +531,21 @@ describe('GET /api/outreach/outcomes', () => {
 
     expect(res.statusCode).toBe(200);
     expect(getOutcomeSummary).toHaveBeenCalledWith(fakeConnection);
+    // One bounded batch load over the page's distinct candidate ids.
+    expect(getHotelCandidatesByIds).toHaveBeenCalledWith(fakeConnection, ['c-1', 'c-gone']);
     const body = JSON.parse(res.body ?? '{}');
     expect(body.summary.total).toBe(3);
     expect(body.total).toBe(3);
+    expect(body.rows[0].hotelName).toBe('Hôtel Exemple');
+    // A candidate whose catalogue row is gone degrades to null, never a
+    // guessed name.
+    expect(body.rows[1].hotelName).toBeNull();
     // Internal fields (idempotencyKey, expiresAt) stay out of the response.
     expect(Object.keys(body.rows[0]).sort()).toEqual(
       [
         'actor',
         'candidateId',
+        'hotelName',
         'lostReason',
         'outcome',
         'outcomeId',

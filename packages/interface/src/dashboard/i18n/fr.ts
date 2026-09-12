@@ -791,18 +791,21 @@ export const fr: DashboardStrings = {
     actionRefused: 'Rien n’a été rédigé ; l’orchestrateur a refusé cette action.',
     actionError: 'Impossible de terminer cette action.',
   },
-  outreachIndex: {
-    title: 'Démarches',
-    description: 'Brouillons, réponses, liste à ne pas contacter et résultats en revue opérateur.',
-    cards: {
-      draftsTitle: 'Brouillons',
-      draftsDescription: 'Brouillons Gmail en attente de revue. La revue n’envoie jamais.',
-      repliesTitle: 'Réponses',
-      repliesDescription: 'Réponses à valider. La classification reste humaine.',
-      suppressionsTitle: 'Liste à ne pas contacter',
-      suppressionsDescription: 'Vérifier une adresse dans la liste à ne pas contacter.',
-      outcomesTitle: 'Résultats',
-      outcomesDescription: 'Résultats définis par l’opérateur et agrégats de campagne.',
+  aTraiter: {
+    title: 'À traiter',
+    description:
+      'Ce qui attend une décision : brouillons, réponses, identités, audits. Chaque ligne ouvre la fiche de l’hôtel ou l’audit.',
+    lists: {
+      drafts: 'Brouillons à relire',
+      replies: 'Réponses à valider',
+      hotels: 'Identités à vérifier',
+      audits: 'Audits en attente d’action',
+    },
+    empty: {
+      drafts: 'Aucun brouillon en attente de revue.',
+      replies: 'Aucune réponse en attente de revue.',
+      hotels: 'Aucune identité à vérifier.',
+      audits: 'Aucun audit en attente d’action.',
     },
     batch: {
       draftBatchLabel: 'Rédiger les premiers emails pour la cohorte contactable',
@@ -815,37 +818,17 @@ export const fr: DashboardStrings = {
     },
   },
   drafts: {
-    title: 'Brouillons',
-    description: 'Brouillons Gmail en attente de revue opérateur.',
-    columns: {
-      prospect: 'Prospect',
-      touch: 'Relance',
-      createdAt: 'Créé le',
-      providerState: 'Statut Gmail',
-      reviewState: 'État de vérification',
-    },
     approve: 'Marquer revu',
     skip: 'Passer',
     neverSendNote:
       'Odysseus ne peut pas envoyer de brouillons. L’envoi se fait uniquement depuis la boîte de l’opérateur.',
-    empty: 'Aucun brouillon en attente de revue.',
     viewText: 'Voir le texte',
     textDialogDescription:
       'Le texte exact stocké avec ce brouillon. L’envoi se fait uniquement depuis votre boîte.',
-    textRecipientLabel: 'Destinataire',
     textSubjectLabel: 'Objet',
     textBodyLabel: 'Corps du message',
     copyButton: 'Copier',
     copiedLabel: 'Copié',
-  },
-  replies: {
-    title: 'Réponses',
-    description: 'Réponses nécessitant une revue opérateur.',
-    columns: { prospect: 'Prospect', receivedAt: 'Reçue le', state: 'État', reason: 'Motif' },
-    markReviewed: 'Marquer revue',
-    metadataNote:
-      'Seules les métadonnées du fil sont affichées. Le contenu des messages n’est jamais stocké.',
-    empty: 'Aucune réponse en attente de revue.',
   },
   suppressions: {
     title: 'Liste à ne pas contacter',

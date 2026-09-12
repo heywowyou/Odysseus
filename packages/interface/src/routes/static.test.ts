@@ -71,6 +71,29 @@ describe('resolveStaticPath', () => {
     });
   });
 
+  it('falls back for the a-traiter landing page and the renamed outreach routes', async () => {
+    // Plan 040 slice 6: the renamed pages live at new top-level prefixes,
+    // and the retired /outreach URLs still reach the SPA whose router
+    // redirects them.
+    const entry = path.join(publicDir, 'index.html');
+    expect(await resolveStaticPath(publicDir, '/a-traiter')).toEqual({
+      kind: 'spa-fallback',
+      filePath: entry,
+    });
+    expect(await resolveStaticPath(publicDir, '/resultats')).toEqual({
+      kind: 'spa-fallback',
+      filePath: entry,
+    });
+    expect(await resolveStaticPath(publicDir, '/ne-pas-contacter')).toEqual({
+      kind: 'spa-fallback',
+      filePath: entry,
+    });
+    expect(await resolveStaticPath(publicDir, '/outreach/outcomes')).toEqual({
+      kind: 'spa-fallback',
+      filePath: entry,
+    });
+  });
+
   it('does not treat prefixes that merely contain the words as app routes', async () => {
     const resolution = await resolveStaticPath(publicDir, '/audits-other.html');
     expect(resolution).toEqual({ kind: 'not-found' });

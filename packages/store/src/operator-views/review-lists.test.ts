@@ -12,7 +12,14 @@ import { createOutreachDraftModel } from '../schemas/outreach-draft.schema.js';
 import { createOutreachOutcomeModel } from '../schemas/outreach-outcome.schema.js';
 import { createOutreachPreviewModel } from '../schemas/outreach-preview.schema.js';
 import { listOutreachReviewDrafts, listRepliesNeedingReview } from './review-lists.js';
-import { expectSafeShape, PRESCAN_VERSION, seedDraft, seedThread } from './test-fixtures.js';
+import { upsertHotelCandidates } from '../hotel-candidates.js';
+import {
+  candidateInput,
+  expectSafeShape,
+  PRESCAN_VERSION,
+  seedDraft,
+  seedThread,
+} from './test-fixtures.js';
 
 const { available: mongoAvailable, connection } = await probeMongoAvailability();
 
@@ -57,11 +64,26 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
         createdAt: new Date('2026-08-24T10:00:00.000Z'),
       });
       const liveB = await seedDraft(connection!, threadB, b, 1);
+      // Only candidate a has a catalogue row; candidate b's row is gone, so
+      // its row must degrade to a null name rather than a guessed one.
+      await upsertHotelCandidates(connection!, [
+        candidateInput({
+          candidateId: a,
+          identityKey: `domain:${a}.fr`,
+          name: 'Hôtel Résolu',
+          normalizedName: 'hotel resolu',
+          ownRegistrableDomain: `${a}.fr`,
+        }),
+      ]);
 
       const page = await listOutreachReviewDrafts(connection!, { limit: 10, offset: 0 });
       expect(page.total).toBe(2);
       expect(page.rows.map((row) => row.draftId).sort()).toEqual([liveA, liveB].sort());
       expect(page.rows.every((row) => row.hasProviderDraft)).toBe(true);
+      const rowA = page.rows.find((row) => row.draftId === liveA);
+      expect(rowA?.hotelName).toBe('Hôtel Résolu');
+      const rowB = page.rows.find((row) => row.draftId === liveB);
+      expect(rowB?.hotelName).toBeNull();
       expectSafeShape(page);
     });
 
@@ -80,6 +102,9 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
       expect(page.total).toBe(1);
       expect(page.rows[0]?.candidateId).toBe(flagged);
       expect(page.rows[0]?.reviewReason).toBe('ambiguous-disappearance');
+      // The flagged candidate has no catalogue row in this fixture: the name
+      // stays null instead of a guess.
+      expect(page.rows[0]?.hotelName).toBeNull();
       expectSafeShape(page);
     });
   });

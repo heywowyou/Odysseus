@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { ChartPie } from 'lucide-react';
+import { Link } from 'react-router';
 import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
-import { ConfirmDialog } from '../components/ui/dialog';
 import { EmptyState } from '../components/ui/empty-state';
 import { Skeleton } from '../components/ui/skeleton';
 import {
@@ -18,7 +18,7 @@ import {
 import { useI18n } from '../i18n/provider';
 import { vocabularyLabel } from '../lib/vocabulary';
 import { cn } from '../lib/cn';
-import { fetchJson, postEmpty } from '../lib/api';
+import { fetchJson } from '../lib/api';
 import { formatDateTime } from '../lib/format';
 import { usePolling } from '../lib/use-polling';
 import {
@@ -72,27 +72,12 @@ export function OutcomesPage(): JSX.Element {
     POLL_INTERVAL_MS,
     { key: `outreach-outcomes:${offset}` },
   );
-  // The thread waiting for its opt-out confirmation, or null with the
-  // dialog closed.
-  const [optOutThreadId, setOptOutThreadId] = useState<string | null>(null);
-  const [actionFailed, setActionFailed] = useState(false);
 
   useEffect(() => {
     if (data !== undefined && offset !== clampedOffset(data.total, PAGE_SIZE, offset)) {
       setOffset(clampedOffset(data.total, PAGE_SIZE, offset));
     }
   }, [data, offset]);
-
-  const optOut = async (): Promise<void> => {
-    if (optOutThreadId === null) return;
-    setActionFailed(false);
-    try {
-      await postEmpty(`/api/outreach/threads/${optOutThreadId}/opt-out`);
-      refresh();
-    } catch {
-      setActionFailed(true);
-    }
-  };
 
   const summary = data?.summary;
   const outcomeCounts = summary === undefined ? [] : summaryOutcomeCounts(summary.byOutcome);
@@ -128,11 +113,6 @@ export function OutcomesPage(): JSX.Element {
     const pages = pageState(data.total, PAGE_SIZE, offset);
     body = (
       <>
-        {actionFailed ? (
-          <p className="mb-3 text-sm text-danger" role="alert">
-            {strings.operator.actionError}
-          </p>
-        ) : null}
         <div className="overflow-hidden rounded-xl border border-line bg-panel">
           <Table>
             <TableHead>
@@ -140,14 +120,26 @@ export function OutcomesPage(): JSX.Element {
                 <TableHeaderCell>{strings.outcomes.columns.prospect}</TableHeaderCell>
                 <TableHeaderCell>{strings.outcomes.columns.outcome}</TableHeaderCell>
                 <TableHeaderCell>{strings.outcomes.columns.setAt}</TableHeaderCell>
-                <TableHeaderCell className="w-36">{null}</TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
+              {/* Plan 040 slice 6 (page destiny table): opt-out moved to the
+                  hub's Resultat section, and each row now names the hotel and
+                  opens its page. Only a candidate whose name is unknown
+                  degrades to the raw identifier. */}
               {data.rows.map((event) => (
                 <TableRow key={event.outcomeId}>
                   <TableCell>
-                    <span className="ident text-ink">{event.candidateId}</span>
+                    <Link
+                      to={`/prospects/${encodeURIComponent(event.candidateId)}`}
+                      className="underline-offset-2 hover:underline"
+                    >
+                      {event.hotelName !== null ? (
+                        <span className="text-ink">{event.hotelName}</span>
+                      ) : (
+                        <span className="ident text-ink">{event.candidateId}</span>
+                      )}
+                    </Link>
                   </TableCell>
                   <TableCell>
                     <span className="text-ink">
@@ -170,15 +162,6 @@ export function OutcomesPage(): JSX.Element {
                     ) : null}
                   </TableCell>
                   <TableCell>{formatDateTime(event.recordedAt, language)}</TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => setOptOutThreadId(event.threadId)}
-                    >
-                      {strings.outcomes.optOut}
-                    </Button>
-                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -258,18 +241,6 @@ export function OutcomesPage(): JSX.Element {
       </Card>
 
       {body}
-
-      <ConfirmDialog
-        open={optOutThreadId !== null}
-        onOpenChange={(open) => {
-          if (!open) setOptOutThreadId(null);
-        }}
-        title={strings.outcomes.optOut}
-        description={strings.outcomes.description}
-        confirmLabel={strings.outcomes.optOut}
-        cancelLabel={strings.common.cancel}
-        onConfirm={optOut}
-      />
     </article>
   );
 }
