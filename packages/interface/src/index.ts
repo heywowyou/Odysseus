@@ -8,6 +8,14 @@ export { runAnalysisStage } from './pipeline/analysis-stage.js';
 export type { RunAnalysisStageOptions, AnalysisStageResult } from './pipeline/analysis-stage.js';
 export { runReportStage, runAllReportsStage } from './pipeline/report-stage.js';
 export { backfillAuditRow } from './pipeline/backfill-audit-row.js';
+export { renormalizeAudit } from './pipeline/renormalize-audit.js';
+export type { RenormalizeAuditResult } from './pipeline/renormalize-audit.js';
+export {
+  regenerateReportsForAudit,
+  readAuditArtifacts,
+  AuditArtifactsUnavailableError,
+  NoAnalysisPairError,
+} from './pipeline/regenerate-reports.js';
 export type {
   BackfillAuditRowOptions,
   BackfillAuditRowResult,

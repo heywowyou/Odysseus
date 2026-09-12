@@ -214,7 +214,21 @@ describe('POST /api/audits/:auditId/regenerate-report', () => {
     // resolution; the default beforeEach mock already answers kind 'none'.
     await fs.mkdir('/tmp/fake-audit-dir', { recursive: true });
     await Promise.all([
-      fs.writeFile('/tmp/fake-audit-dir/manifest.json', JSON.stringify({ auditId: 'audit-1' })),
+      // A fresh (not stale) provenance stamp: schema version and
+      // normalization fingerprint match what makeReportReady recomputes
+      // from findings.json, so this test isolates the no-analysis-pair
+      // refusal from the separate stale-findings refresh path.
+      fs.writeFile(
+        '/tmp/fake-audit-dir/manifest.json',
+        JSON.stringify({
+          auditId: 'audit-1',
+          findingsProvenance: {
+            findingsSchemaVersion: FINDINGS_SCHEMA_VERSION,
+            normalizationFingerprint: NORMALIZATION_FINGERPRINT,
+            findingsDigest: `sha256:${'0'.repeat(64)}`,
+          },
+        }),
+      ),
       fs.writeFile('/tmp/fake-audit-dir/findings.json', JSON.stringify([])),
     ]);
 

@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
 import {
-  buildFindingsProvenance,
   buildOutreachPreviewSummary,
   coverageFactsFromAudit,
   isValidSiren,
@@ -43,7 +42,6 @@ import {
   remediationFor,
   RULE_TRANSLATIONS_FR,
   type ReportFreshness,
-  type StoredAnalysis,
 } from '@odysseus/report';
 import { getPreviewPublicBaseUrl } from '../config.js';
 import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
@@ -58,8 +56,8 @@ import { CURRENT_QUALIFICATION_VERSION } from '../prospecting/hotel-qualificatio
 import type { Router } from '../router.js';
 import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
 import { lookupOperatorProfile } from '../sirene/sirene-cache.js';
-import { runAllReportsStage } from '../pipeline/report-stage.js';
 import { pdfDigestOf } from '../pipeline/pdf-digest.js';
+import { makeReportReady } from '../pipeline/make-report-ready.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { resolveArtifactFile } from '../artifacts/resolve-artifact.js';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
@@ -594,77 +592,46 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
 
   // Manual-input-layer milestone: re-renders both language reports from
   // the audit's selected analysis pair (plan 019), exactly what
-  // `odysseus report <dir> --all` does - no rescan, no new LLM call. The
-  // saved manualFields (siren included) are picked up automatically by
-  // runReportStage's own fresh-recompute step, not passed explicitly here.
+  // `odysseus report <dir> --all` does. Plan 045 slice 1.1: routed through
+  // makeReportReady, which refreshes stale findings and the writing pair
+  // first when needed, instead of only ever rendering whatever pair is
+  // already selected - the saved manualFields (siren included) are still
+  // picked up automatically by runReportStage's own fresh-recompute step.
   router.post('/api/audits/:auditId/regenerate-report', async ({ res, params }) => {
     const auditId = params['auditId']!;
-    const audit = await getAuditRuntimeFields(connection, auditId);
-    if (!audit) {
-      sendError(res, 404, 'audit not found');
-      return;
-    }
-
-    const hostname = new URL(audit.siteUrl).hostname;
-    const auditDir = buildAuditDir(getArtifactsRoot(), hostname, audit.startedAt);
-
-    let manifest: AuditManifest;
-    let findings: Finding[];
     try {
-      const [manifestBytes, findingsBytes] = await Promise.all([
-        resolveArtifactFile(
-          path.join(auditDir, 'manifest.json'),
-          buildArtifactBucketKey(hostname, audit.startedAt, 'manifest.json'),
-          artifactStore,
-        ),
-        resolveArtifactFile(
-          path.join(auditDir, 'findings.json'),
-          buildArtifactBucketKey(hostname, audit.startedAt, 'findings.json'),
-          artifactStore,
-        ),
-      ]);
-      manifest = JSON.parse(manifestBytes.toString('utf-8'));
-      findings = JSON.parse(findingsBytes.toString('utf-8'));
-    } catch {
-      sendError(res, 404, 'audit artifacts not found on disk or in the bucket');
-      return;
-    }
-
-    // Computed once over the parsed findings: the report stage used to
-    // canonicalize and hash the full array once per language, twice per
-    // request. The stage still asserts the supplied value against the
-    // manifest and the analyses, so a stale artifact still fails closed
-    // exactly as before.
-    const findingsProvenance = buildFindingsProvenance(findings);
-
-    // Selection-aware resolution (plan 019): the selected exact pair, or
-    // the legacy latest complete pair for audits without a selection. A
-    // ready-but-unapproved candidate is never rendered as the paid report.
-    const resolution = await resolveSelectedAnalysisPairForAudit(connection, auditId);
-    if (resolution.kind === 'none') {
-      // Name the remedy, not just the precondition: this audit's job most
-      // likely failed at the writing stage, so no pair exists and only the
-      // Prepare report card's writing regeneration can create one.
-      sendError(
-        res,
-        409,
-        'a complete bilingual analysis pair is required before a report can be regenerated; run the writing regeneration in the Prepare report card, then approve the candidate',
-      );
-      return;
-    }
-    const fr: StoredAnalysis = { ...resolution.fr };
-    const en: StoredAnalysis = { ...resolution.en };
-
-    try {
-      const results = await runAllReportsStage(
-        auditDir,
-        manifest,
-        findings,
-        { fr, en },
-        connection,
-        findingsProvenance,
-      );
-      sendJson(res, 200, { reports: results });
+      const outcome = await makeReportReady(connection, auditId, artifactStore);
+      if (outcome.kind === 'refused') {
+        switch (outcome.refusal.kind) {
+          case 'audit-not-found':
+            sendError(res, 404, 'audit not found');
+            return;
+          case 'scan-data-missing':
+            sendError(res, 404, 'audit artifacts not found on disk or in the bucket');
+            return;
+          case 'no-analysis':
+            sendError(
+              res,
+              409,
+              'a complete bilingual analysis pair is required before a report can be regenerated; ' +
+                'run the writing regeneration in the Prepare report card, then approve the candidate',
+            );
+            return;
+          case 'identity-unconfirmed':
+            sendError(
+              res,
+              409,
+              'the detected commercial name and/or legal name must be confirmed before a report ' +
+                'can be regenerated: ' +
+                outcome.refusal.fields.map((field) => field.field).join(', '),
+            );
+            return;
+        }
+      }
+      sendJson(res, 200, {
+        reports: outcome.reports,
+        findingsWereRefreshed: outcome.findingsWereRefreshed,
+      });
     } catch (error) {
       sendError(res, 409, error instanceof Error ? error.message : 'could not regenerate reports');
     }
