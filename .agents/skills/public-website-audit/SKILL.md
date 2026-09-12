@@ -189,6 +189,28 @@ every chrome element, and flag:
 - metadata defects: missing or wrong OG/title/hreflang/robots/favicon;
 - a not-found page that fails to render or reads as internal.
 
+Then run the deterministic design detector once over the site source
+and fold it into the same ledger:
+
+```bash
+.agents/skills/impeccable/scripts/impeccable detect --json packages/site
+```
+
+Exit 2 marks actionable findings; exit 0 with a short advisory list is
+the expected steady state on this repo (verified 2026-09-12: five
+advisories, all echoing the committed ignore entries for the side-tab
+motif and the fenced preview type ramp). Verify each finding in its
+source context before recording (the detector flags string literals
+and intentional patterns), then file verified findings as ledger
+entries like any other. A finding the committed ignore decisions
+already explain (`.impeccable/config.json`,
+`packages/site/.impeccable/config.json`, each entry carries its
+reason) is possibly-deliberate, not new. Record false positives in the
+run section with one line each so the noise level stays visible across
+runs, but do not ledger them. If the detector binary is missing or
+fails, note `DETECT-UNAVAILABLE` in the run header and continue; a
+dead detector blocks nothing.
+
 Before recording each flag, check docs/decisions/trade-offs.md, the
 impeccable critique snapshots, and the numbered plans for anything that
 looks deliberate; mark those findings "possibly deliberate" with the
