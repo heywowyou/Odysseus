@@ -32,6 +32,7 @@
  */
 
 import type { Browser } from 'playwright';
+import type { PageWorkGuard } from '../page-work-guard.js';
 
 /** Cookie names, or name prefixes, that belong to a measurement or
  *  advertising product and are therefore never "strictly necessary" for
@@ -237,6 +238,9 @@ export function classifyTrackerUrl(rawUrl: string): { host: string; vendor: stri
 export interface CookieConsentCheckOptions {
   timeoutMs: number;
   userAgent?: string;
+  /** Issue #200: tracks this call's context so an external watchdog can
+   *  force-close it if it never returns on its own. */
+  guard?: PageWorkGuard;
 }
 
 export async function checkCookieConsent(
@@ -250,6 +254,7 @@ export async function checkCookieConsent(
   const context = await browser.newContext(
     options.userAgent !== undefined ? { userAgent: options.userAgent } : {},
   );
+  options.guard?.track(context);
   try {
     const trackerRequests = new Map<string, ObservedTrackerRequest>();
     const thirdPartyOrigins = new Map<string, number>();
@@ -315,6 +320,7 @@ export async function checkCookieConsent(
   } catch (error) {
     return { ...emptyResult(), checkError: error instanceof Error ? error.message : String(error) };
   } finally {
+    options.guard?.untrack(context);
     await context.close();
   }
 }

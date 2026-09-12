@@ -35,6 +35,7 @@ import type {
 import { DEFAULT_TIMEOUT_MS } from '../browser.js';
 import { getCrawlerUserAgent } from '../config.js';
 import { isSocialPlatformHost } from '../social-hosts.js';
+import type { PageWorkGuard } from '../page-work-guard.js';
 
 const CHECKOUT_FORM_SELECTOR =
   'form[action*="checkout"], form[action*="panier"], form[action*="cart"], [class*="add-to-cart"], [id*="add-to-cart"]';
@@ -509,8 +510,10 @@ async function inspectDestinationPage(
   originName: string,
   timeoutMs: number,
   userAgent: string,
+  guard: PageWorkGuard | undefined,
 ): Promise<Omit<TransactionalFlowRedirectCheck, 'pageUrl'>> {
   const context = await browser.newContext({ userAgent });
+  guard?.track(context);
   try {
     context.setDefaultTimeout(timeoutMs);
     context.setDefaultNavigationTimeout(timeoutMs);
@@ -534,6 +537,7 @@ async function inspectDestinationPage(
       detail: `Redirect could not be followed: ${message}`,
     };
   } finally {
+    guard?.untrack(context);
     await context.close();
   }
 }
@@ -584,6 +588,10 @@ export interface DelegatedBookingRedirectOptions {
    *  re-guessing from the destination page's content - a confirmed fact
    *  should not be re-guessed, same spirit as SiteSignalOverride. */
   bookingEngineUrl?: string;
+  /** Issue #200: tracks the destination-page context this call opens, so
+   *  an external watchdog can force-close it if the redirect never
+   *  resolves on its own. */
+  guard?: PageWorkGuard;
 }
 
 /**
@@ -677,6 +685,7 @@ export async function findDelegatedBookingRedirectChecks(
                 originName,
                 timeoutMs,
                 userAgent,
+                options.guard,
               );
             })();
       hostCache.set(cacheKey, resultPromise);

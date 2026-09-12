@@ -7,6 +7,7 @@ import { getCrawlerUserAgent, getRenderSettleTimeoutMs } from './config.js';
 import { computeMissingPercent, extractTextFromHtml } from './extract-text.js';
 import { buildPageDir } from './artifacts/paths.js';
 import { couldEverBeKept } from './artifacts/prune-screenshots.js';
+import type { PageWorkGuard } from './page-work-guard.js';
 
 /** RenderDiffResult (packages/core) is a locked contract; this widens it
  *  with a scanner-only fact rather than touching that file. renderedUrl
@@ -58,6 +59,13 @@ export interface RenderDiffOptions {
    *  as an ordinary page, which is the safe direction (the pair is skipped
    *  only when the render gap also says it could never be kept). */
   isHomepage?: boolean;
+
+  /** Issue #200: when given, every context this call opens is tracked
+   *  here so an external watchdog can force-close it if this call never
+   *  returns on its own (a hung page.evaluate has no built-in timeout).
+   *  Absent for callers with no watchdog (the standalone render-diff CLI,
+   *  most tests), which get today's behavior unchanged. */
+  guard?: PageWorkGuard;
 }
 
 /**
@@ -93,6 +101,7 @@ export async function renderDiff(
   // small next to writing two full-page PNGs that get deleted at the end
   // of the scan. See couldEverBeKept in artifacts/prune-screenshots.ts.
   const rawContext = await browser.newContext({ javaScriptEnabled: false, userAgent });
+  options.guard?.track(rawContext);
   let rawTextLength: number;
   let httpStatus: number;
   let renderedTextLength: number;
@@ -114,6 +123,7 @@ export async function renderDiff(
     }
 
     const renderedContext = await browser.newContext({ userAgent });
+    options.guard?.track(renderedContext);
     try {
       renderedContext.setDefaultTimeout(timeoutMs);
       renderedContext.setDefaultNavigationTimeout(timeoutMs);
@@ -172,9 +182,11 @@ export async function renderDiff(
 
       await options.onRenderedPage?.(renderedPage);
     } finally {
+      options.guard?.untrack(renderedContext);
       await renderedContext.close();
     }
   } finally {
+    options.guard?.untrack(rawContext);
     await rawContext.close();
   }
 

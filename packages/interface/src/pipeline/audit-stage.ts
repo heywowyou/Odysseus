@@ -27,6 +27,7 @@ import {
   writeAuditArtifacts,
   writeFindingsFile,
   writeManifestFile,
+  type PageWorkGuard,
   type PrunePageInfo,
   type ScanProgressEvent,
 } from '@odysseus/scanner';
@@ -65,6 +66,11 @@ export interface RunAuditStageOptions {
    *  the option can only reduce load, never raise it. */
   scanConcurrency?: number;
   onProgress?: (event: ScanProgressEvent) => void;
+  /** Issue #200: forwarded to scanSite's own onGuardReady, so a caller
+   *  (the queued full-audit job) can force-close this run's live
+   *  Chromium contexts on cancellation rather than only marking the job
+   *  document cancelled. */
+  onGuardReady?: (guard: PageWorkGuard) => void;
   /** Checksum-validated at the CLI/interface boundary before it ever
    *  reaches this stage (see the manual-SIREN milestone) - runObligationStage
    *  re-checks defensively but trusts the caller for the primary
@@ -196,6 +202,7 @@ export async function runAuditStage(
       ...(effectiveDelayMs !== undefined ? { delayMs: effectiveDelayMs } : {}),
       ...(effectiveScanConcurrency !== undefined ? { concurrency: effectiveScanConcurrency } : {}),
       ...(options.onProgress !== undefined ? { onProgress: options.onProgress } : {}),
+      ...(options.onGuardReady !== undefined ? { onGuardReady: options.onGuardReady } : {}),
       ...(options.seeds !== undefined ? { seeds: options.seeds } : {}),
       ...(options.exclusions !== undefined ? { exclusions: options.exclusions } : {}),
       ...(options.bookingEngineUrl !== undefined

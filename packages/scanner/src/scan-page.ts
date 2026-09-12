@@ -53,6 +53,7 @@ import {
 } from './checks/rendered-cost-profile.js';
 import type { RenderedCostProfile } from './full-audit-plan.js';
 import type { CheckExecutionOutcome, CheckId } from './check-scope-coverage.js';
+import type { PageWorkGuard } from './page-work-guard.js';
 
 export interface ScanPageOptions {
   /** Politeness delay applied between the raw/rendered/Lighthouse passes. */
@@ -116,6 +117,11 @@ export interface ScanPageOptions {
   securityHeadersCheck?: SecurityHeadersCheckResult;
   cookieConsentCheck?: CookieConsentCheckResult;
   accessibilityStatementCheck?: AccessibilityStatementCheckResult;
+  /** Issue #200: tracks every context this page's work opens (render-diff's
+   *  raw/rendered contexts, plus any delegated-booking-redirect probe), so
+   *  scan-site.ts's per-page watchdog can force-close them if this call
+   *  never returns on its own. */
+  guard?: PageWorkGuard;
 }
 
 /**
@@ -346,6 +352,7 @@ export async function runRenderedAnalysis(
       ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
       ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
       ...(options.delayMs !== undefined ? { preRenderedDelayMs: options.delayMs } : {}),
+      ...(options.guard !== undefined ? { guard: options.guard } : {}),
       onRenderedPageCreated: async (page) => {
         // Must be attached before navigation - see
         // rendered-cost-profile.ts's own doc comment.
@@ -401,6 +408,7 @@ export async function runRenderedAnalysis(
             ...(options.bookingEngineUrl !== undefined
               ? { bookingEngineUrl: options.bookingEngineUrl }
               : {}),
+            ...(options.guard !== undefined ? { guard: options.guard } : {}),
           });
           checkOutcomes['transactional-flow-redirect-checks'] = 'completed';
           // Only a confirmed single-property redirect promotes to

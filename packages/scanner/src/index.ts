@@ -31,6 +31,7 @@ export type {
   ScanProgressEvent,
   CrawlCheckpointResumeDecision,
 } from './scan-site.js';
+export type { PageWorkGuard } from './page-work-guard.js';
 export { findMentionsLegalesUrl, extractMentionsLegales } from './checks/mentions-legales.js';
 export type { MentionsLegalesExtraction } from './checks/mentions-legales.js';
 export {

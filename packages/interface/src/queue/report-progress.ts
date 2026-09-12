@@ -6,7 +6,7 @@
  */
 
 import type { Connection } from 'mongoose';
-import type { ScanProgressEvent } from '@odysseus/scanner';
+import type { PageWorkGuard, ScanProgressEvent } from '@odysseus/scanner';
 import { updateJobProgress } from '@odysseus/store';
 import { JobCancelledError, type CancellationRegistry } from './cancellation.js';
 import { computeCrawlEtaMs, computeScanEtaMs, computeStageEtaMs } from './eta.js';
@@ -15,6 +15,14 @@ export function createScanProgressReporter(
   connection: Connection,
   jobId: string,
   cancellation?: CancellationRegistry,
+  /** Issue #200: a mutable holder the caller fills in via scanSite's
+   *  onGuardReady once the run-wide guard exists - a plain optional
+   *  value would be captured before that happens, since this reporter is
+   *  built before scanSite runs. Force-closed the moment a cancellation
+   *  is seen, so the live Chromium contexts for this run are actually
+   *  released - not just the job document marked cancelled - even for a
+   *  page that never reaches a progress boundary of its own. */
+  guardHolder?: { current?: PageWorkGuard },
 ): (event: ScanProgressEvent) => void {
   let effectiveDelayMs = 0;
   let scanStartedAtMs: number | undefined;
@@ -209,6 +217,7 @@ export function createScanProgressReporter(
     // onProgress call site sits between pages, so a stop lands within one
     // page of work. Errors inside handle() stay best-effort.
     if (cancellation?.isRequested(jobId)) {
+      void guardHolder?.current?.closeAll();
       throw new JobCancelledError(jobId);
     }
     void handle(event).catch(() => {

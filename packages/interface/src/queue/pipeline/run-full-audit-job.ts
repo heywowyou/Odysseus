@@ -22,7 +22,7 @@ import {
   type OutreachAuthorizationSource,
   type SiteSignalOverrides,
 } from '@odysseus/core';
-import { deleteCrawlCheckpoint, deleteCrawlStateFile } from '@odysseus/scanner';
+import { deleteCrawlCheckpoint, deleteCrawlStateFile, type PageWorkGuard } from '@odysseus/scanner';
 import { hasMeasuredCoreWebVitals } from '@odysseus/report';
 import { pauseBetweenLanguagePasses } from '@odysseus/llm';
 import { runAnalysisStage } from '../../pipeline/analysis-stage.js';
@@ -49,7 +49,20 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
     // interrupted attempt was writing and its per-page results are reused.
     const runIdentity = await ensureJobRunIdentity(connection, job.jobId);
 
-    const onProgress = createScanProgressReporter(connection, job.jobId, ctx.cancellation);
+    // Issue #200: filled in by scanSite's onGuardReady once the run-wide
+    // PageWorkGuard exists, so a cancellation seen through onProgress
+    // (below) can force-close this run's live Chromium contexts instead
+    // of only marking the job document cancelled.
+    const guardHolder: { current?: PageWorkGuard } = {};
+    const onProgress = createScanProgressReporter(
+      connection,
+      job.jobId,
+      ctx.cancellation,
+      guardHolder,
+    );
+    const onGuardReady = (guard: PageWorkGuard): void => {
+      guardHolder.current = guard;
+    };
 
     const siteSignalOverrides: SiteSignalOverrides | undefined =
       job.options.transactionalFlow !== undefined
@@ -111,6 +124,7 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
           ? { bookingEngineUrl: job.options.bookingEngineUrl }
           : {}),
         onProgress,
+        onGuardReady,
         runIdentity,
       },
       connection,

@@ -56,6 +56,7 @@ import {
   readCrawlFrontierState,
   writeCrawlFrontierState,
 } from './artifacts/crawl-frontier-io.js';
+import { createPageWorkGuard, type PageWorkGuard } from './page-work-guard.js';
 
 /** Extends crawl's own events with the scan phase's. scan-start fires
  *  once, after the crawl finishes (the total page count isn't known
@@ -172,6 +173,13 @@ export interface ScanSiteOptions {
    *  count of pages whose scan.json already existed, or fresh with the
    *  reason no checkpoint was reusable). */
   onResumeDecision?: (decision: CrawlCheckpointResumeDecision) => void;
+  /** Issue #200: invoked once, before the crawl starts, with the run-wide
+   *  PageWorkGuard every page's work reports its contexts into. A caller
+   *  that needs to react to job cancellation mid-run (packages/interface)
+   *  can hold this and call guard.closeAll() to force-close every context
+   *  still open for this audit, rather than waiting for a page-boundary
+   *  progress event that a wedged page may never reach. */
+  onGuardReady?: (guard: PageWorkGuard) => void;
 }
 
 export interface SiteScanResult {
@@ -249,19 +257,39 @@ const FULL_SCAN_PAGE_WATCHDOG_MS = 600_000;
  * empty checkOutcomes is what makes the persisted pass record honest:
  * derivePageAnalysisCoverage derives failed for every content pass with
  * no completed checks, and the error string carries the reason.
+ *
+ * Issue #200: on timeout, also force-closes every context `guard` has
+ * tracked for this page before resolving. Earlier, the deadline branch
+ * only abandoned `work`'s promise - the Playwright BrowserContext(s) it
+ * had open stayed alive (and so did their renderer processes) for as
+ * long as whatever `work` was stuck on never settled, which is how a
+ * real audit accumulated 100+ live renderer processes into an OOM.
+ * `work` itself is left to settle on its own time (closing its context
+ * makes any pending Playwright call reject quickly in practice) with its
+ * eventual rejection swallowed, so it can never surface as an unhandled
+ * rejection after this function has already returned via the deadline.
  */
 export async function withPageWatchdog<T extends RenderedAnalysisResult | PageScanResult>(
   url: string,
   work: Promise<T>,
   watchdogMs: number,
+  guard?: PageWorkGuard,
 ): Promise<T | RenderedAnalysisResult> {
+  work.catch(() => {
+    // See doc comment: once abandoned via the deadline branch below, a
+    // later rejection here (typically caused by our own forced close)
+    // must never surface as an unhandled rejection.
+  });
   let timer: ReturnType<typeof setTimeout> | undefined;
   const deadline = new Promise<RenderedAnalysisResult>((resolve) => {
     timer = setTimeout(() => {
-      resolve({
-        url,
-        renderDiffError: `watchdog: page analysis did not complete within ${watchdogMs}ms; abandoned so the audit could continue`,
-        checkOutcomes: {},
+      const closed = guard?.closeAll() ?? Promise.resolve();
+      void closed.finally(() => {
+        resolve({
+          url,
+          renderDiffError: `watchdog: page analysis did not complete within ${watchdogMs}ms; abandoned so the audit could continue`,
+          checkOutcomes: {},
+        });
       });
     }, watchdogMs);
   });
@@ -304,6 +332,7 @@ async function runScanLane(
   accessibilityStatementCheck: AccessibilityStatementCheckResult | undefined,
   bookingEngineUrl: string | undefined,
   skipLighthouse: boolean,
+  runGuard: PageWorkGuard | undefined,
   onPageDone: (pageResult: PageScanResult) => void,
 ): Promise<void> {
   let nextDelayMs = startDelayMs;
@@ -314,12 +343,19 @@ async function runScanLane(
     }
     nextDelayMs = delayMs;
 
+    // Issue #200: a fresh guard per page, mirrored into the run-wide
+    // guard, so the watchdog below can force-close only this page's
+    // contexts on timeout without touching other lanes' still-legitimate
+    // work.
+    const pageGuard = createPageWorkGuard(runGuard);
+
     const pageResult = await withPageWatchdog(
       url,
       scanPage(browser, debugPort, url, {
         delayMs,
         screenshotDir,
         redirectHostCache,
+        guard: pageGuard,
         ...(timeoutMs !== undefined ? { timeoutMs } : {}),
         ...(userAgent !== undefined ? { userAgent } : {}),
         ...(mentionsLegalesUrl !== undefined ? { mentionsLegalesUrl } : {}),
@@ -335,6 +371,7 @@ async function runScanLane(
         ...(skipLighthouse ? { skipLighthouse } : {}),
       }),
       FULL_SCAN_PAGE_WATCHDOG_MS,
+      pageGuard,
     );
     onPageDone(pageResult as PageScanResult);
   }
@@ -362,6 +399,8 @@ interface StagedScanContext {
   cookieConsentCheck: CookieConsentCheckResult | undefined;
   accessibilityStatementCheck: AccessibilityStatementCheckResult | undefined;
   bookingEngineUrl: string | undefined;
+  /** Issue #200: the run-wide guard every page's own guard mirrors into. */
+  runGuard: PageWorkGuard | undefined;
 }
 
 /**
@@ -387,12 +426,17 @@ async function runRenderedAnalysisLane(
     }
     nextDelayMs = delayMs;
 
+    // Issue #200: same per-page-guard-mirrored-into-run-wide-guard shape
+    // as runScanLane above.
+    const pageGuard = createPageWorkGuard(context.runGuard);
+
     const result = await withPageWatchdog(
       url,
       runRenderedAnalysis(browser, url, {
         delayMs,
         screenshotDir: context.screenshotDir,
         redirectHostCache: context.redirectHostCache,
+        guard: pageGuard,
         ...(context.timeoutMs !== undefined ? { timeoutMs: context.timeoutMs } : {}),
         ...(context.userAgent !== undefined ? { userAgent: context.userAgent } : {}),
         ...(context.mentionsLegalesUrl !== undefined
@@ -415,6 +459,7 @@ async function runRenderedAnalysisLane(
           : {}),
       }),
       RENDERED_ANALYSIS_WATCHDOG_MS,
+      pageGuard,
     );
     onPageDone(url, result as RenderedAnalysisResult);
   }
@@ -815,6 +860,12 @@ export async function scanSite(
   if (options.writePagesAsScanned && options.auditDir === undefined) {
     throw new Error('scanSite: writePagesAsScanned requires auditDir to be set.');
   }
+  // Issue #200: created before any page work so onGuardReady's caller
+  // (packages/interface's cancellation path) can force-close every
+  // context this run ever opens, not just the ones from pages a
+  // per-page watchdog has already given up on.
+  const runGuard = createPageWorkGuard();
+  options.onGuardReady?.(runGuard);
   const checkpointContext = options.checkpointContext;
   if (checkpointContext !== undefined) {
     // Plan 035: the checkpoint's skip rules exist for the staged
@@ -1016,6 +1067,7 @@ export async function scanSite(
   const cookieConsentCheck = homepageWasVisited
     ? await checkCookieConsent(options.browser, crawl.startUrl, {
         timeoutMs: options.timeoutMs ?? getPageTimeoutMs(),
+        guard: runGuard,
         ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
       })
     : undefined;
@@ -1064,6 +1116,7 @@ export async function scanSite(
       cookieConsentCheck,
       accessibilityStatementCheck,
       bookingEngineUrl: options.bookingEngineUrl,
+      runGuard,
     };
     const { pages, fullAuditPlan, analysisCoverageByUrl } = await runStagedFullAuditScan(
       pagesToScan,
@@ -1135,6 +1188,7 @@ export async function scanSite(
           accessibilityStatementCheck,
           options.bookingEngineUrl,
           options.skipLighthouse ?? false,
+          runGuard,
           onPageDone,
         ),
       ),

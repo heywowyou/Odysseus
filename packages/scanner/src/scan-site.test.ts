@@ -27,8 +27,10 @@ import { scanPage, runRenderedAnalysis, runLighthouseAnalysis } from './scan-pag
 import { checkLlmsTxt } from './checks/llms-txt.js';
 import { checkSecurityHeaders } from './checks/security-headers.js';
 import { checkCookieConsent } from './checks/cookie-consent.js';
-import { scanSite, type ScanProgressEvent } from './scan-site.js';
+import { scanSite, withPageWatchdog, type ScanProgressEvent } from './scan-site.js';
 import { readPageScanJson } from './artifacts/page-scan-io.js';
+import { createPageWorkGuard } from './page-work-guard.js';
+import type { RenderedAnalysisResult } from './scan-page.js';
 
 let writtenTempDirs: string[] = [];
 
@@ -499,5 +501,57 @@ describe('scanSite with fullAuditPlanning', () => {
       expect(written?.checkOutcomes).toEqual({ 'render-diff': 'completed', axe: 'completed' });
       expect(written?.renderedCostProfile?.url).toBeDefined();
     }
+  });
+});
+
+describe('withPageWatchdog', () => {
+  it('resolves work normally when it settles before the deadline', async () => {
+    const result: RenderedAnalysisResult = { url: 'https://example.test/', checkOutcomes: {} };
+    const guard = createPageWorkGuard();
+    const closeAllSpy = vi.spyOn(guard, 'closeAll');
+
+    const outcome = await withPageWatchdog(
+      'https://example.test/',
+      Promise.resolve(result),
+      1000,
+      guard,
+    );
+
+    expect(outcome).toBe(result);
+    expect(closeAllSpy).not.toHaveBeenCalled();
+  });
+
+  it('force-closes the guard and returns a synthesized failure once the deadline fires', async () => {
+    // Issue #200: a work promise that never settles must not leave its
+    // tracked contexts open forever - the watchdog has to force-close
+    // them itself once it gives up waiting.
+    const guard = createPageWorkGuard();
+    const closeAllSpy = vi.spyOn(guard, 'closeAll');
+    const neverSettles = new Promise<RenderedAnalysisResult>(() => {});
+
+    const outcome = await withPageWatchdog('https://example.test/', neverSettles, 20, guard);
+
+    expect(closeAllSpy).toHaveBeenCalledTimes(1);
+    expect(outcome.url).toBe('https://example.test/');
+    expect(outcome.checkOutcomes).toEqual({});
+    expect(outcome.renderDiffError).toMatch(/watchdog/);
+  });
+
+  it('never surfaces an unhandled rejection once the abandoned work later rejects', async () => {
+    // The forced close above typically makes the abandoned promise reject
+    // shortly after the deadline branch has already resolved; that later
+    // rejection must be swallowed, not thrown into the process.
+    let rejectWork: (error: Error) => void = () => {};
+    const work = new Promise<RenderedAnalysisResult>((_resolve, reject) => {
+      rejectWork = reject;
+    });
+
+    const outcome = await withPageWatchdog('https://example.test/', work, 10);
+    expect(outcome.renderDiffError).toMatch(/watchdog/);
+
+    rejectWork(new Error('target closed'));
+    // Let the swallowed .catch() run; a failure here would show up as an
+    // unhandled rejection in the test run rather than a normal assertion.
+    await new Promise((resolve) => setTimeout(resolve, 10));
   });
 });
