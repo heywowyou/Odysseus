@@ -37,7 +37,7 @@ const manifestKeys = {
 
 // DB-only enrichment fields declared on AuditDocumentFields, never part of
 // manifest.json.
-const documentOnlyKeys = ['manualFields', 'reportPreparation'] as const;
+const documentOnlyKeys = ['manualFields', 'reportPreparation', 'hotelLink'] as const;
 
 describe('auditSchema', () => {
   it('declares a path for every AuditManifest key plus the DB-only enrichment fields', () => {

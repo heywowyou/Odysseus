@@ -50,3 +50,28 @@ export interface AuditManualFields {
   transactionalFlowOverride?: SiteSignalOverride & { reason: string };
   updatedAt: Date;
 }
+
+/** Plan 045 slice 1.4: a store-only pointer from an ordinary audit to the
+ *  hotel catalogue candidate its site belongs to, resolved from the
+ *  audit's own site URL. DB-only for the same reason AuditManualFields
+ *  is: it is not a scanner fact, and it is layered on after the audit
+ *  already exists.
+ *
+ *  Deliberately never the immutable `AuditOutreachContext` (`outreach` on
+ *  AuditManifest): that field is prospecting provenance, stamped only
+ *  when a scan was itself authorized as candidate evidence, and its
+ *  contract forbids inferring it after the fact. This is the opposite
+ *  case: an ordinary audit (paid from the hub, or run standalone) whose
+ *  site happens to match a catalogue candidate's own domain. It carries
+ *  no authorization and grants no preview or outreach eligibility - it
+ *  only lets the dashboard link the audit back to the hotel it is about.
+ *
+ *  `matchedOn` has one value today (the only identity key
+ *  `linkAuditToHotelByDomain` currently resolves against); a closed union
+ *  rather than a bare string so a future second matching strategy is a
+ *  visible addition, not a silent freeform label. */
+export interface AuditHotelLink {
+  candidateId: string;
+  matchedOn: 'own-registrable-domain';
+  linkedAt: Date;
+}

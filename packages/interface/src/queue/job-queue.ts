@@ -25,6 +25,7 @@ import {
 } from '@odysseus/store';
 import { DEFAULT_QUEUE_CONCURRENCY } from '../config.js';
 import { logger } from '../logger.js';
+import { backfillAuditHotelLinks } from '../pipeline/backfill-audit-hotel-links.js';
 import { CancellationRegistry, JobCancelledError } from './cancellation.js';
 
 export interface PipelineContext {
@@ -76,15 +77,17 @@ export class JobQueue {
   /** Resets any job left 'running' by an unclean previous shutdown back
    *  to 'queued' (see resetOrphanedRunningJobs), then advances any failed
    *  full-audit job whose audit has since gained a current bilingual
-   *  report pair (see reconcileFailedAuditJobs, issue #56), then starts
-   *  the claim loop. Returns the number of jobs reset, for the caller to
-   *  log. includeFreshHeartbeats is required by the single-container
-   *  deployment (issue #124): at start() every running job is by
-   *  definition unowned because the container that wrote its heartbeat
-   *  no longer exists, so waiting out the staleness window would only
-   *  delay recovery after a fast bounce. A reconciliation failure must
-   *  never keep the queue from starting: it is a bookkeeping pass, not a
-   *  prerequisite for work. */
+   *  report pair (see reconcileFailedAuditJobs, issue #56), then links any
+   *  audit predating linkAuditToHotelByDomain to its catalogue hotel
+   *  candidate (plan 045 slices 1.4/1.5, see
+   *  backfill-audit-hotel-links.ts), then starts the claim loop. Returns
+   *  the number of jobs reset, for the caller to log. includeFreshHeartbeats
+   *  is required by the single-container deployment (issue #124): at
+   *  start() every running job is by definition unowned because the
+   *  container that wrote its heartbeat no longer exists, so waiting out
+   *  the staleness window would only delay recovery after a fast bounce.
+   *  Neither bookkeeping pass may ever keep the queue from starting: each
+   *  is maintenance, not a prerequisite for work. */
   async start(): Promise<number> {
     const orphanedCount = await resetOrphanedRunningJobs(this.connection, new Date(), {
       includeFreshHeartbeats: true,
@@ -99,6 +102,14 @@ export class JobQueue {
       }
     } catch (error) {
       logger.error({ err: error }, 'failed job reconciliation skipped; the queue will still start');
+    }
+    try {
+      const linked = await backfillAuditHotelLinks(this.connection);
+      if (linked > 0) {
+        logger.info({ linked }, 'linked existing audits to their catalogue hotel candidate');
+      }
+    } catch (error) {
+      logger.error({ err: error }, 'audit-to-hotel backfill skipped; the queue will still start');
     }
     this.running = true;
     this.loopPromise = this.runLoop();

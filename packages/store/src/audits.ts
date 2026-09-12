@@ -6,9 +6,19 @@
  */
 
 import type { Connection } from 'mongoose';
-import { isValidSiren, type AuditManualFields } from '@odysseus/core';
+import {
+  isValidSiren,
+  normalizeDeclaredWebsite,
+  type AuditHotelLink,
+  type AuditManualFields,
+} from '@odysseus/core';
 import { createAuditModel, type AuditDocument } from './schemas/audit.schema.js';
 import { createFindingModel, type FindingDocument } from './schemas/finding.schema.js';
+import {
+  getHotelCandidate,
+  getLatestHotelCandidateByOwnRegistrableDomain,
+} from './hotel-candidates.js';
+import type { HotelCandidateDocument } from './schemas/hotel-candidate.schema.js';
 
 export async function getAudit(
   connection: Connection,
@@ -129,6 +139,120 @@ export async function prefillAuditManualFields(
 
   await setAuditManualFields(connection, auditId, provenancedPartial);
   return toWrite;
+}
+
+/** Plan 045 slice 1.5: like `prefillAuditManualFields` above, but for a
+ *  source that can improve on its own earlier guess - a linked audit's
+ *  catalogue name is better evidence than the scan's own detector, and an
+ *  existing stuck audit relinked by the plan 045 backfill should pick up
+ *  the better suggestion rather than keep whatever the detector wrote the
+ *  first time. Overwrites a field only when it is currently absent or
+ *  still carries provenance 'detected'; a field the operator has
+ *  confirmed is never touched, exactly like prefillAuditManualFields.
+ *  Every written field is stamped provenance 'detected' - this replaces
+ *  one detector's guess with a better one, it never counts as the
+ *  operator's own confirmation. Returns the fields that were actually
+ *  written (a subset of `candidates`, possibly empty). */
+export async function replaceDetectedManualFields(
+  connection: Connection,
+  auditId: string,
+  candidates: Partial<Record<keyof Omit<AuditManualFields, 'updatedAt'>, string>>,
+): Promise<Partial<Record<keyof Omit<AuditManualFields, 'updatedAt'>, string>>> {
+  const existing = await getAuditManualFields(connection, auditId);
+  const toWrite: Partial<Record<keyof Omit<AuditManualFields, 'updatedAt'>, string>> = {};
+
+  for (const [key, value] of Object.entries(candidates)) {
+    if (value === undefined) continue;
+    const fieldKey = key as keyof Omit<AuditManualFields, 'updatedAt'>;
+    // Cast: every field this function is meant for (nomCommercial,
+    // raisonSociale, ...) is a ProvenancedField and carries `provenance`;
+    // transactionalFlowOverride is the one AuditManualFields key that
+    // does not, and is never passed here since candidates' values are
+    // always string.
+    const existingField = existing?.[fieldKey] as { provenance?: string } | undefined;
+    if (existingField?.provenance === 'operator') continue;
+    toWrite[fieldKey] = value;
+  }
+
+  if (Object.keys(toWrite).length === 0) return toWrite;
+
+  const provenancedPartial = Object.fromEntries(
+    Object.entries(toWrite).map(([key, value]) => [
+      key,
+      { value, provenance: 'detected' as const },
+    ]),
+  ) as Omit<AuditManualFields, 'updatedAt'>;
+
+  await setAuditManualFields(connection, auditId, provenancedPartial);
+  return toWrite;
+}
+
+export interface AuditHotelLinkResult {
+  /** The candidate this audit is associated with - either the one an
+   *  earlier call already linked or stamped via prospecting provenance
+   *  (outreach), or the one this call just matched by domain. Null when
+   *  the audit's site never matched a catalogue candidate's own domain
+   *  and carries no prior association. */
+  candidate: HotelCandidateDocument | null;
+}
+
+/** Resolves and, on a fresh match, stores the catalogue hotel an ordinary
+ *  audit's site belongs to. Idempotent and safe to call repeatedly on the
+ *  same audit (the queue-startup backfill does exactly that): writes
+ *  `hotelLink` only the first time, and every later call (including this
+ *  one, once written) returns the same candidate without touching the
+ *  document again.
+ *
+ *  Never overwrites an existing association. An audit already carrying
+ *  `outreach` (the immutable prospecting-provenance stamp, plan 037) is
+ *  already linked to its candidate by a stronger fact than a domain
+ *  match, so that candidate is returned and `hotelLink` is left unset -
+ *  writing it would just be a second, weaker pointer to the same hotel.
+ *  An audit already carrying `hotelLink` from a previous call is treated
+ *  the same way.
+ *
+ *  Domain matching reuses `normalizeDeclaredWebsite` and
+ *  `getLatestHotelCandidateByOwnRegistrableDomain`, the same pair
+ *  analysis-stage.ts's writing-context enrichment already uses:
+ *  `ownRegistrableDomain` is set on a candidate only when its domain has
+ *  exactly one holder in the catalogue (trade-off 33), so a group member
+ *  or vendor-hosted domain never matches here either. */
+export async function linkAuditToHotelByDomain(
+  connection: Connection,
+  auditId: string,
+  siteUrl: string,
+): Promise<AuditHotelLinkResult> {
+  const AuditModel = createAuditModel(connection);
+  const existing = await AuditModel.findOne(
+    { auditId },
+    { _id: 0, outreach: 1, hotelLink: 1 },
+  ).lean<Pick<AuditDocument, 'outreach' | 'hotelLink'> | null>();
+
+  if (!existing) {
+    throw new Error(`odysseus: audit ${auditId} not found`);
+  }
+
+  const existingCandidateId = existing.outreach?.candidateId ?? existing.hotelLink?.candidateId;
+  if (existingCandidateId !== undefined) {
+    return { candidate: await getHotelCandidate(connection, existingCandidateId) };
+  }
+
+  const normalized = normalizeDeclaredWebsite(siteUrl);
+  if (normalized.kind !== 'own-domain') return { candidate: null };
+
+  const candidate = await getLatestHotelCandidateByOwnRegistrableDomain(
+    connection,
+    normalized.registrableDomain,
+  );
+  if (!candidate) return { candidate: null };
+
+  const hotelLink: AuditHotelLink = {
+    candidateId: candidate.candidateId,
+    matchedOn: 'own-registrable-domain',
+    linkedAt: new Date(),
+  };
+  await AuditModel.updateOne({ auditId }, { $set: { hotelLink } });
+  return { candidate };
 }
 
 export async function getFindingsForAudit(

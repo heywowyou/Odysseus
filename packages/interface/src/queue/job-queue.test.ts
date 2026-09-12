@@ -7,6 +7,9 @@ vi.mock('@odysseus/store', () => ({
   resetOrphanedRunningJobs: vi.fn(),
   reconcileFailedAuditJobs: vi.fn(),
 }));
+vi.mock('../pipeline/backfill-audit-hotel-links.js', () => ({
+  backfillAuditHotelLinks: vi.fn(),
+}));
 vi.mock('../logger.js', () => ({ logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() } }));
 
 import {
@@ -18,6 +21,7 @@ import {
 } from '@odysseus/store';
 import { ReportIdentityUnconfirmedError } from '@odysseus/report';
 import { logger } from '../logger.js';
+import { backfillAuditHotelLinks } from '../pipeline/backfill-audit-hotel-links.js';
 import { JobQueue } from './job-queue.js';
 
 const fakeConnection = {} as never;
@@ -59,6 +63,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(resetOrphanedRunningJobs).mockResolvedValue(0);
   vi.mocked(reconcileFailedAuditJobs).mockResolvedValue(0);
+  vi.mocked(backfillAuditHotelLinks).mockResolvedValue(0);
   vi.mocked(claimNextQueuedJob).mockResolvedValue(null);
   vi.mocked(failJob).mockResolvedValue(undefined);
   vi.mocked(markJobNeedsInput).mockResolvedValue(undefined);
@@ -118,6 +123,61 @@ describe('JobQueue', () => {
     expect(logger.info).toHaveBeenCalledWith(
       expect.objectContaining({ reconciled: 2 }),
       expect.stringContaining('completed outside the queue'),
+    );
+  });
+
+  // Plan 045 slices 1.4/1.5: an audit predating linkAuditToHotelByDomain
+  // eventually gets the same hotel association and cover-name suggestions
+  // a fresh audit gets automatically, without a one-off migration script.
+  it('backfills audit-to-hotel links on start', async () => {
+    vi.mocked(backfillAuditHotelLinks).mockResolvedValueOnce(4);
+    queue = new JobQueue({
+      connection: fakeConnection,
+      pollIntervalMs: 20,
+      runners: {
+        'full-audit': vi.fn().mockResolvedValue(undefined),
+        prospecting: vi.fn().mockResolvedValue(undefined),
+        'prospect-ingestion': vi.fn().mockResolvedValue(undefined),
+        'hotel-prescan': vi.fn().mockResolvedValue(undefined),
+        'outreach-draft-batch': vi.fn().mockResolvedValue(undefined),
+        'outreach-full-scan': vi.fn().mockResolvedValue(undefined),
+        'outreach-followup-batch': vi.fn().mockResolvedValue(undefined),
+      },
+    });
+
+    await queue.start();
+    expect(backfillAuditHotelLinks).toHaveBeenCalledWith(fakeConnection);
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ linked: 4 }),
+      expect.stringContaining('catalogue hotel candidate'),
+    );
+  });
+
+  it('still starts the claim loop when the audit-to-hotel backfill fails', async () => {
+    vi.mocked(backfillAuditHotelLinks).mockRejectedValueOnce(new Error('mongo hiccup'));
+    const job = fakeJob({ jobId: 'job-after-backfill-error' });
+    vi.mocked(claimNextQueuedJob).mockResolvedValueOnce(job).mockResolvedValue(null);
+    const runFullAuditJob = vi.fn().mockResolvedValue(undefined);
+
+    queue = new JobQueue({
+      connection: fakeConnection,
+      pollIntervalMs: 20,
+      runners: {
+        'full-audit': runFullAuditJob,
+        prospecting: vi.fn(),
+        'prospect-ingestion': vi.fn(),
+        'hotel-prescan': vi.fn(),
+        'outreach-draft-batch': vi.fn(),
+        'outreach-full-scan': vi.fn(),
+        'outreach-followup-batch': vi.fn(),
+      },
+    });
+
+    await queue.start();
+    await waitFor(() => runFullAuditJob.mock.calls.length > 0);
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ err: expect.any(Error) }),
+      expect.stringContaining('backfill skipped'),
     );
   });
 

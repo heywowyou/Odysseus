@@ -235,7 +235,16 @@ export async function getOutreachAuditStatus(
  *  provenance, newest first, for the hub's Audit tab picker. The creating
  *  job's type rides along when the job row still exists (operational job
  *  data expires; the audit does not), so the picker can name the kind of
- *  run and not just a date. An empty list, never null. */
+ *  run and not just a date. An empty list, never null.
+ *
+ *  Plan 045 slice 1.4: also matches `hotelLink.candidateId`, so an
+ *  ordinary paid or standalone audit whose site was resolved to this
+ *  candidate by domain (never authorized as prospecting evidence) shows
+ *  up in the same picker. Preview resolution elsewhere
+ *  (resolveOutreachAuditForCandidate above) deliberately stays
+ *  outreach-only: only a candidate-linked outreach scan is preview
+ *  evidence, but any audit of the hotel's own site belongs in its
+ *  picker. */
 export interface OutreachAuditListItem {
   auditId: string;
   startedAt: Date;
@@ -247,7 +256,9 @@ export async function listOutreachAudits(
   candidateId: string,
 ): Promise<OutreachAuditListItem[]> {
   const audits = await createAuditModel(connection)
-    .find({ 'outreach.candidateId': candidateId })
+    .find({
+      $or: [{ 'outreach.candidateId': candidateId }, { 'hotelLink.candidateId': candidateId }],
+    })
     .sort({ startedAt: -1 })
     .select({ auditId: 1, startedAt: 1 })
     .lean<{ auditId: string; startedAt: Date }[]>();

@@ -19,6 +19,7 @@ import {
   getAudit,
   getAuditRuntimeFields,
   getFindingsForAudit,
+  getHotelCandidate,
   getLatestReport,
   getLatestReportApproval,
   getSeverityRollup,
@@ -453,6 +454,15 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       outreachCandidateId !== null &&
       (await findLatestLiveV2PreviewForCandidate(connection, outreachCandidateId)) !== null;
 
+    // Plan 045 slice 1.4: the hotel this audit is about, from either
+    // association a real audit can carry - prospecting provenance
+    // (outreach) or a plain domain link (hotelLink). Never both are read
+    // as separate facts here: whichever is present names the same
+    // candidate, per linkAuditToHotelByDomain's own never-overwrite rule.
+    const hotelCandidateId = outreachCandidateId ?? audit.hotelLink?.candidateId ?? null;
+    const hotelCandidate =
+      hotelCandidateId !== null ? await getHotelCandidate(connection, hotelCandidateId) : null;
+
     sendJson(res, 200, {
       auditId: audit.auditId,
       siteUrl: audit.siteUrl,
@@ -480,6 +490,10 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       approval: approved ? approval : null,
       manualFields: audit.manualFields,
       outreach: { candidateId: outreachCandidateId, hasLiveV2Preview },
+      hotel:
+        hotelCandidate !== null
+          ? { candidateId: hotelCandidate.candidateId, name: hotelCandidate.name }
+          : null,
       // Issue #90: the failed job's own record, so the audit pages can show
       // the reason and its prescribed fix instead of a bare failed badge.
       ...(failureJob !== null

@@ -37,7 +37,10 @@ export function PageHeader({
    *  link back to a parent list, a separator, the current section) when the
    *  page has one to show. */
   eyebrow?: ReactNode;
-  title: string;
+  /** A plain string title for most pages, or a node (a link to a parent
+   *  record, e.g. the audit page's hotel-name header) when the page's
+   *  subject is itself something the operator navigates to. */
+  title: ReactNode;
   subject?: string | undefined;
   description?: string | undefined;
   meta?: ReactNode;
