@@ -273,11 +273,3 @@ export function selectionVerdictSentence(
     .replace('{brokennessCutoff}', String(verdict.cohort.brokennessCutoff ?? '-'))
     .replace('{date}', formatDateTime(verdict.cohort.computedAt, language));
 }
-
-/** Narrow slice of GET /api/audits/:auditId the hub's Audit section reads
- *  for the report stage. The full payload carries the findings; the hub
- *  deliberately does not: severity totals arrive on the prospect detail
- *  itself, and findings live on the audit page. */
-export interface HubAuditReportState {
-  lifecycle: 'scanned' | 'analysed' | 'rendered' | 'approved';
-}
