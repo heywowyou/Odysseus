@@ -26,6 +26,11 @@ export interface ScanSummary {
   auditIds?: string[];
   severityRollup?: SeverityRollup;
   needsReview?: boolean;
+  /** Plan 042 slice 4: the hotel a prospect-linked job works for, and
+   *  its display name. The name is absent when the candidate no longer
+   *  resolves; the id alone is still the hub link's target. */
+  outreachCandidateId?: string;
+  outreachCandidateName?: string;
 }
 
 /** Response of POST /api/scans. */

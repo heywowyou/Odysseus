@@ -8,6 +8,7 @@ import {
   deleteAuditCascade,
   deleteJob,
   getAudit,
+  getHotelCandidatesByIds,
   getJob,
   listJobs,
   type JobOptionsSnapshot,
@@ -175,7 +176,25 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
     const auditIds = jobs.map((job) => job.auditId).filter((id): id is string => id !== undefined);
     const rollups = await getSeverityRollupsForPoll(connection, auditIds);
 
+    // Plan 042 slice 4: the hotel name behind each prospect-linked job,
+    // one batched read for the page's distinct candidates. A candidate
+    // that no longer resolves simply carries no name.
+    const candidateIds = [
+      ...new Set(
+        jobs.map((job) => job.outreachCandidateId).filter((id): id is string => id !== undefined),
+      ),
+    ];
+    const candidates = await getHotelCandidatesByIds(connection, candidateIds);
+    const candidateNames = new Map(
+      candidates.map((candidate) => [candidate.candidateId, candidate.name]),
+    );
+
     const summaries = jobs.map((job) => ({
+      outreachCandidateId: job.outreachCandidateId,
+      outreachCandidateName:
+        job.outreachCandidateId !== undefined
+          ? candidateNames.get(job.outreachCandidateId)
+          : undefined,
       jobId: job.jobId,
       type: job.type,
       status: job.status,

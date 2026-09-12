@@ -159,7 +159,7 @@ it reads existing endpoints.
 
 | Today | Destiny | Becomes |
 | --- | --- | --- |
-| `/audits` | keep | Audits list; hotel name shown for hotel audits |
+| `/audits` | keep | Audits list; hotel name shown for hotel audits (landed 2026-09-12, plan 042 slice 4) |
 | `/audits/:auditId` | keep, restructure (slice 5) | the audit; preview publishing moves to the hub |
 | `/scans/new` | keep | leaves the sidebar; reached from the Audits header |
 | `/scans/:jobId` | keep | "Voir l’audit" button; breadcrumb back |

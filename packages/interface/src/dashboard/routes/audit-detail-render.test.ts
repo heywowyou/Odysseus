@@ -147,6 +147,44 @@ function preparationView(overrides: Record<string, unknown> = {}): Record<string
   };
 }
 
+describe('audits list hotel link (plan 042 slice 4)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+  });
+
+  it('shows the hotel name linked to its hub while the row keeps opening the audit', async () => {
+    stubRoutes({
+      '/api/scans?limit=200': [
+        {
+          jobId: 'job-1',
+          type: 'outreach-full-scan',
+          status: 'complete',
+          phase: 'complete',
+          siteUrl: 'https://exemple.fr',
+          createdAt: '2026-09-05T13:09:00.000Z',
+          auditId: 'audit-1',
+          outreachCandidateId: 'cand-1',
+          outreachCandidateName: 'Hôtel du Quai',
+        },
+      ],
+    });
+    const { container, root } = await renderPage(createElement(AuditsPage));
+    await settle(container, 'exemple.fr');
+    const hotelLink = [...container.querySelectorAll('a')].find((link) =>
+      link.textContent?.includes('Hôtel du Quai'),
+    );
+    expect(hotelLink).toBeDefined();
+    expect(hotelLink?.getAttribute('href')).toContain('/prospects/cand-1');
+    // The row's own link still opens the audit.
+    const siteLink = [...container.querySelectorAll('a')].find((link) =>
+      link.textContent?.includes('exemple.fr'),
+    );
+    expect(siteLink?.getAttribute('href')).toContain('/audits/audit-1');
+    root.unmount();
+  });
+});
+
 describe('audits list report-stage failure display (issue #90)', () => {
   beforeEach(() => {
     stubRoutes({});

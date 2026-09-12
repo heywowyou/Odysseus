@@ -253,7 +253,11 @@ export type JobSummaryFields = Pick<
   | 'auditId'
   | 'auditIds'
   | 'needsReview'
->;
+> & {
+  /** Plan 042 slice 4: the outreach candidate a prospecting job works
+   *  for, projected out of options for the audits list's hotel link. */
+  outreachCandidateId?: string;
+};
 
 export async function listJobs(connection: Connection, limit = 200): Promise<JobSummaryFields[]> {
   const JobModel = createJobModel(connection);
@@ -271,6 +275,7 @@ export async function listJobs(connection: Connection, limit = 200): Promise<Job
       auditId: 1,
       auditIds: 1,
       needsReview: 1,
+      'options.outreachCandidateId': 1,
     },
   )
     .sort({ createdAt: -1 })

@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@odysseus/store', () => ({
   createJob: vi.fn(),
   getJob: vi.fn(),
+  getHotelCandidatesByIds: vi.fn(),
   getSeverityRollups: vi.fn(),
   listJobs: vi.fn(),
   cancelJob: vi.fn(),
@@ -27,6 +28,7 @@ import {
   deleteAuditCascade,
   deleteJob,
   getAudit,
+  getHotelCandidatesByIds,
   getJob,
   getSeverityRollups,
   listJobs,
@@ -62,6 +64,7 @@ const fakeQueue = { notify: vi.fn(), requestCancel: vi.fn() } as unknown as JobQ
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(getHotelCandidatesByIds).mockResolvedValue([] as never);
   vi.mocked(createJob).mockResolvedValue({ jobId: 'job-1' } as never);
 });
 
@@ -396,6 +399,48 @@ describe('GET /api/scans summary list', () => {
     ]);
     expect(listJobs).toHaveBeenCalledTimes(1);
     expect(listJobs).toHaveBeenCalledWith(fakeConnection, 200);
+  });
+
+  it('names the hotel behind a prospect-linked job (plan 042 slice 4)', async () => {
+    vi.mocked(listJobs).mockResolvedValue([
+      {
+        jobId: 'job-outreach',
+        type: 'outreach-full-scan',
+        status: 'complete',
+        phase: 'complete',
+        siteUrl: 'https://c.example/',
+        createdAt: new Date('2026-09-03T00:00:00Z'),
+        auditId: 'audit-c',
+        outreachCandidateId: 'cand-77',
+      },
+      {
+        jobId: 'job-plain',
+        type: 'full-audit',
+        status: 'complete',
+        phase: 'complete',
+        siteUrl: 'https://d.example/',
+        createdAt: new Date('2026-09-04T00:00:00Z'),
+      },
+    ] as never);
+    vi.mocked(getHotelCandidatesByIds).mockResolvedValue([
+      { candidateId: 'cand-77', name: 'Hôtel du Quai' },
+    ] as never);
+
+    const router = new Router();
+    registerScanRoutes(router, fakeConnection, fakeQueue);
+    const res = fakeRes();
+    await router.handle(fakeReq(undefined, 'GET', '/api/scans'), res);
+
+    expect(getHotelCandidatesByIds).toHaveBeenCalledWith(fakeConnection, ['cand-77']);
+    const body = JSON.parse(res.body ?? '[]') as Array<Record<string, unknown>>;
+    expect(body[0]).toMatchObject({
+      outreachCandidateId: 'cand-77',
+      outreachCandidateName: 'Hôtel du Quai',
+    });
+    // A job with no outreach candidate carries neither field, and the row
+    // still renders.
+    expect(body[1]).not.toHaveProperty('outreachCandidateId');
+    expect(body[1]).not.toHaveProperty('outreachCandidateName');
   });
 });
 

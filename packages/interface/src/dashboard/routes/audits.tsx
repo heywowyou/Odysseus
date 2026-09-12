@@ -237,6 +237,18 @@ export function AuditsPage(): JSX.Element {
                         >
                           {site === '' ? strings.common.unknownSite : site}
                         </Link>
+                        {/* Plan 042 slice 4 (approved IA destiny table): the
+                            hotel a prospect-linked audit belongs to, named and
+                            linked to its hub; the row still opens the audit. */}
+                        {summary.outreachCandidateName !== undefined ? (
+                          <Link
+                            to={`/prospects/${encodeURIComponent(summary.outreachCandidateId ?? '')}`}
+                            className="mt-0.5 block text-xs text-ink-soft hover:text-accent-bright"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            {summary.outreachCandidateName}
+                          </Link>
+                        ) : null}
                       </TableCell>
                       <TableCell>
                         <Badge tone={type.tone} className="whitespace-nowrap">
