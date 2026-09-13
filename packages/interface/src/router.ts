@@ -1,26 +1,14 @@
 /**
  * Hand-rolled path-pattern router over node:http. No dependency: the
- * whole API surface is five routes plus a static-file fallback, well
- * under what justifies pulling in Express (which CLAUDE.md explicitly
- * rules out for this milestone).
+ * whole API surface is deliberately small and does not justify Express.
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { sendError } from './http-utils.js';
 import { applyBaseSecurityHeaders } from './security-headers.js';
 
-const STATE_CHANGING_METHODS = new Set(['POST', 'PATCH', 'DELETE']);
+const STATE_CHANGING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
-/** The dashboard binds to 127.0.0.1 by design, which stops a remote
- *  attacker but not a malicious page open in the same browser while
- *  odysseus serve is running - a CORS "simple request" (Content-Type:
- *  text/plain, no preflight) can otherwise deliver a JSON-shaped body to
- *  a state-changing endpoint with no confirmation shown to the operator.
- *  Rejecting anything but an exact application/json body, plus any Origin
- *  that doesn't match what the client actually connected to, closes that
- *  without requiring the browser's CORS preflight at all. Absent Origin is
- *  allowed - non-browser local tools (curl, the CLI) don't always send
- *  one, and same-origin navigation reliably does when it matters. */
 function isAcceptableOrigin(req: IncomingMessage): boolean {
   const origin = req.headers.origin;
   if (origin === undefined) return true;
@@ -39,9 +27,6 @@ function hasJsonContentType(req: IncomingMessage): boolean {
   return contentType.split(';')[0]?.trim().toLowerCase() === 'application/json';
 }
 
-/** Some state-changing routes (e.g. POST regenerate-report) take no body
- *  at all and so never send a Content-Type - only routes that actually
- *  read one via readJsonBody need to be held to application/json. */
 function hasBody(req: IncomingMessage): boolean {
   const length = req.headers['content-length'];
   if (length !== undefined) return Number.parseInt(length, 10) > 0;
@@ -67,8 +52,6 @@ function splitPath(pathname: string): string[] {
   return pathname.split('/').filter((segment) => segment.length > 0);
 }
 
-/** Matches literal segments exactly and captures `:name` segments.
- *  Returns null on any mismatch, including a different segment count. */
 function matchSegments(
   pattern: readonly string[],
   actual: readonly string[],
@@ -99,6 +82,10 @@ export class Router {
     this.routes.push({ method: 'POST', segments: splitPath(pattern), handler });
   }
 
+  put(pattern: string, handler: RouteHandler): void {
+    this.routes.push({ method: 'PUT', segments: splitPath(pattern), handler });
+  }
+
   patch(pattern: string, handler: RouteHandler): void {
     this.routes.push({ method: 'PATCH', segments: splitPath(pattern), handler });
   }
@@ -107,16 +94,11 @@ export class Router {
     this.routes.push({ method: 'DELETE', segments: splitPath(pattern), handler });
   }
 
-  /** Handles every request that matches no route above - the static
-   *  file server, in practice. */
   setFallback(handler: RouteHandler): void {
     this.fallback = handler;
   }
 
   async handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    // Every routed response, the fallback, and the bare 404 get the baseline
-    // headers here; the server applies them too so guard and error paths,
-    // which never reach this method, are covered as well.
     applyBaseSecurityHeaders(res);
     const url = new URL(req.url ?? '/', 'http://internal');
     const pathSegments = splitPath(url.pathname);
