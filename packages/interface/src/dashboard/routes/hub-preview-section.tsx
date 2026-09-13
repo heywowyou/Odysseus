@@ -64,22 +64,20 @@ function savePdfFile(blob: Blob, fileName: string): void {
 /** The hub's fourth section: the preview's status, publication and expiry
  *  dates, the scorecard view, the operator PDF, publish or reissue,
  *  revocation, and the once-only published link (approved IA, section 4).
- *  Publishing and first-email drafting share this page so the one-time
- *  token never has to survive a screen change; the page owns that token
- *  and hands the section its actions. */
+ *  Plan 045 section 1.7: first-email drafting publishes its own preview
+ *  server-side and never routes a token through this page; a link shown
+ *  here can come from a manual publish made on this tab, or from a
+ *  first-email call reporting back the fresh link it just made. */
 export function HubPreviewSection(props: {
   auditId: string | null;
   preview: PreviewResponse | null;
   /** The once-only bearer link of a publish made on this visit, if any. */
   publishedLink: string | null;
-  /** Set when a first-email attempt was refused because the published
-   *  link is not usable: the remedy is a reissue here. */
-  draftHint: boolean;
   isBusy: boolean;
   onPublish: () => Promise<void>;
   onRevoke: () => Promise<void>;
 }): JSX.Element {
-  const { auditId, preview, publishedLink, draftHint, isBusy, onPublish, onRevoke } = props;
+  const { auditId, preview, publishedLink, isBusy, onPublish, onRevoke } = props;
   const { strings, language } = useI18n();
   const copy = strings.auditDetail.outreachPreview;
 
@@ -181,12 +179,6 @@ export function HubPreviewSection(props: {
           </div>
           <p className="mt-2 text-xs text-ink-muted">{copy.linkOnceWarning}</p>
         </div>
-      ) : null}
-
-      {draftHint ? (
-        <p className="mt-4 text-sm text-ink-soft" role="status">
-          {copy.draftNeedsPreviewHint}
-        </p>
       ) : null}
 
       <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-4">

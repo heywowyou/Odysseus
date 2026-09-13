@@ -63,7 +63,6 @@ function livePreview(): Record<string, unknown> {
 async function renderSection(props: {
   preview: Record<string, unknown> | null;
   publishedLink?: string | null;
-  draftHint?: boolean;
   onPublish?: () => Promise<void>;
   onRevoke?: () => Promise<void>;
 }): Promise<{ root: Root }> {
@@ -79,7 +78,6 @@ async function renderSection(props: {
           auditId: 'audit-1',
           preview: props.preview as never,
           publishedLink: props.publishedLink ?? null,
-          draftHint: props.draftHint ?? false,
           isBusy: false,
           onPublish: props.onPublish ?? (async () => {}),
           onRevoke: props.onRevoke ?? (async () => {}),

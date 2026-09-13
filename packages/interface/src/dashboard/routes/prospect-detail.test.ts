@@ -333,7 +333,10 @@ describe('ProspectDetailPage tabs (plan 042 slice 1)', () => {
     expect(document.getElementById('hub-fiche')).not.toBeNull();
     expect(document.getElementById('hub-preview')).toBeNull();
 
-    await clickButton('Publier l’aperçu');
+    // Plan 045 section 1.7: the primary action now creates the first
+    // email directly (it publishes its own preview server-side), so this
+    // switches panels through the tab strip itself instead.
+    await clickButton('Aperçu');
     expect(document.getElementById('hub-preview')).not.toBeNull();
     expect(document.getElementById('hub-fiche')).toBeNull();
 
@@ -346,8 +349,11 @@ describe('ProspectDetailPage tabs (plan 042 slice 1)', () => {
     await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
     await pause();
 
-    // The header's primary action lands on the Aperçu tab.
-    await clickButton('Publier l’aperçu');
+    // Plan 045 section 1.7: the header's primary action creates the first
+    // email directly and no longer routes through this tab, so this test
+    // reaches the Aperçu tab through the tab strip to exercise the
+    // section's own manual publish button.
+    await clickButton('Aperçu');
     const panel = document.getElementById('hub-preview');
     expect(panel).not.toBeNull();
 

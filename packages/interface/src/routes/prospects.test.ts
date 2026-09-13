@@ -27,6 +27,7 @@ vi.mock('@odysseus/store', () => ({
 vi.mock('../outreach/draft-runtime.js', () => ({
   createTouchOneDraft: vi.fn(),
   createFollowUpForCandidate: vi.fn(),
+  createFirstEmailForCandidate: vi.fn(),
 }));
 
 vi.mock('../outreach/configured-preview-publisher.js', () => ({
@@ -62,7 +63,11 @@ import {
   recordHotelCandidateReview,
   revokeWaveRosterEntry,
 } from '@odysseus/store';
-import { createFollowUpForCandidate, createTouchOneDraft } from '../outreach/draft-runtime.js';
+import {
+  createFirstEmailForCandidate,
+  createFollowUpForCandidate,
+  createTouchOneDraft,
+} from '../outreach/draft-runtime.js';
 import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
 import { revokePreviewsForDomain } from '../outreach/publish-preview.js';
 import { scoreHotelOnDemandForConnection } from '../prospecting/hotel-scoring/score-on-demand.js';
@@ -707,6 +712,84 @@ describe('POST /api/prospects/:candidateId/outreach/draft', () => {
     const res = await handle('/api/prospects/cand-1/outreach/draft', {
       method: 'POST',
       body: { previewToken: 'raw-one-time-token' },
+    });
+    expect(res.statusCode).toBe(503);
+  });
+});
+
+describe('POST /api/prospects/:candidateId/outreach/first-email (plan 045 section 1.7)', () => {
+  it('returns 200 and the result when a first email is created', async () => {
+    vi.mocked(createFirstEmailForCandidate).mockResolvedValue({
+      configured: true,
+      created: true,
+      draftId: 'draft-1',
+      threadId: 'thread-1',
+      previewId: 'preview-1',
+      previewUrl: 'https://www.odysseusaudit.com/apercu/fresh-token',
+    } as never);
+    const res = await handle('/api/prospects/cand-1/outreach/first-email', {
+      method: 'POST',
+      body: {},
+    });
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body ?? '{}')).toEqual({
+      created: true,
+      draftId: 'draft-1',
+      threadId: 'thread-1',
+      previewId: 'preview-1',
+      previewUrl: 'https://www.odysseusaudit.com/apercu/fresh-token',
+    });
+    expect(createFirstEmailForCandidate).toHaveBeenCalledWith(fakeConnection, 'cand-1', {
+      language: 'fr',
+    });
+  });
+
+  it('returns 200 with the refusal code and no preview fields when nothing was published', async () => {
+    vi.mocked(createFirstEmailForCandidate).mockResolvedValue({
+      configured: true,
+      created: false,
+      refusal: 'draft-already-live',
+    } as never);
+    const res = await handle('/api/prospects/cand-1/outreach/first-email', {
+      method: 'POST',
+      body: {},
+    });
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body ?? '{}')).toEqual({
+      created: false,
+      refusal: 'draft-already-live',
+    });
+  });
+
+  it('still reports the published link when drafting refuses after a successful publish', async () => {
+    vi.mocked(createFirstEmailForCandidate).mockResolvedValue({
+      configured: true,
+      created: false,
+      refusal: 'no-usable-contact',
+      previewId: 'preview-1',
+      previewUrl: 'https://www.odysseusaudit.com/apercu/fresh-token',
+    } as never);
+    const res = await handle('/api/prospects/cand-1/outreach/first-email', {
+      method: 'POST',
+      body: {},
+    });
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body ?? '{}')).toEqual({
+      created: false,
+      refusal: 'no-usable-contact',
+      previewId: 'preview-1',
+      previewUrl: 'https://www.odysseusaudit.com/apercu/fresh-token',
+    });
+  });
+
+  it('returns 503 when the preview bucket is not configured, before anything is created', async () => {
+    vi.mocked(createFirstEmailForCandidate).mockResolvedValue({
+      configured: false,
+      refusal: 'no-preview-bucket-configured',
+    } as never);
+    const res = await handle('/api/prospects/cand-1/outreach/first-email', {
+      method: 'POST',
+      body: {},
     });
     expect(res.statusCode).toBe(503);
   });

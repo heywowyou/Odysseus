@@ -327,30 +327,33 @@ describe('selectedAuditId (plan 042 slice 3)', () => {
 
 describe('hubPrimaryAction', () => {
   it('walks the IA ladder from the identity review down', () => {
-    expect(hubPrimaryAction(makeDetail({ reviewState: 'pending' }), NOW)).toEqual({
+    expect(hubPrimaryAction(makeDetail({ reviewState: 'pending' }))).toEqual({
       kind: 'review',
     });
   });
 
   it('offers the scan start when the plan allows and progress while one runs', () => {
-    expect(hubPrimaryAction(makeDetail({ outreachScan: { canStart: true } }), NOW)).toEqual({
+    expect(hubPrimaryAction(makeDetail({ outreachScan: { canStart: true } }))).toEqual({
       kind: 'start-scan',
     });
-    expect(hubPrimaryAction(makeDetail({ outreachScanJobId: 'job-9' }), NOW)).toEqual({
+    expect(hubPrimaryAction(makeDetail({ outreachScanJobId: 'job-9' }))).toEqual({
       kind: 'see-progress',
       jobId: 'job-9',
     });
   });
 
-  it('publishes when an audit has no live preview, including a reissue after expiry', () => {
-    const detail = makeDetail({
+  it('offers the first email as soon as an audit exists, whatever the preview state', () => {
+    // Plan 045 section 1.7: the single call publishes its own preview, so
+    // an audit with no preview, an expired one, or a revoked one all offer
+    // the same one action - none of them wait on a separate publish step.
+    const noPreview = makeDetail({
       outreachAudit: {
         auditId: 'audit-1',
         startedAt: '2026-09-01T10:00:00.000Z',
         severityRollup: { critical: 0, serious: 0, moderate: 0, minor: 0 },
       },
     });
-    expect(hubPrimaryAction(detail, NOW)).toEqual({ kind: 'publish-preview' });
+    expect(hubPrimaryAction(noPreview)).toEqual({ kind: 'create-first-email' });
 
     const expired = makeDetail({
       outreachAudit: {
@@ -364,7 +367,7 @@ describe('hubPrimaryAction', () => {
         publicExpiresAt: '2026-09-02T00:00:00.000Z',
       },
     });
-    expect(hubPrimaryAction(expired, NOW)).toEqual({ kind: 'publish-preview' });
+    expect(hubPrimaryAction(expired)).toEqual({ kind: 'create-first-email' });
 
     const revoked = makeDetail({
       preview: { ...LIVE_PREVIEW, status: 'revoked' },
@@ -374,12 +377,19 @@ describe('hubPrimaryAction', () => {
         severityRollup: { critical: 0, serious: 0, moderate: 0, minor: 0 },
       },
     });
-    expect(hubPrimaryAction(revoked, NOW)).toEqual({ kind: 'publish-preview' });
+    expect(hubPrimaryAction(revoked)).toEqual({ kind: 'create-first-email' });
   });
 
   it('creates the first email on a live preview with no thread, reviews a created draft next', () => {
-    const live = makeDetail({ preview: LIVE_PREVIEW });
-    expect(hubPrimaryAction(live, NOW)).toEqual({ kind: 'create-first-email' });
+    const live = makeDetail({
+      outreachAudit: {
+        auditId: 'audit-1',
+        startedAt: '2026-09-01T10:00:00.000Z',
+        severityRollup: { critical: 0, serious: 0, moderate: 0, minor: 0 },
+      },
+      preview: LIVE_PREVIEW,
+    });
+    expect(hubPrimaryAction(live)).toEqual({ kind: 'create-first-email' });
 
     const drafted = makeDetail({
       preview: LIVE_PREVIEW,
@@ -402,12 +412,12 @@ describe('hubPrimaryAction', () => {
         ],
       }),
     });
-    expect(hubPrimaryAction(drafted, NOW)).toEqual({ kind: 'review-draft', draftId: 'draft-1' });
+    expect(hubPrimaryAction(drafted)).toEqual({ kind: 'review-draft', draftId: 'draft-1' });
   });
 
   it('prepares a follow-up after a sent touch and records an outcome on a reply', () => {
     const sent = makeDetail({ thread: threadWith({ state: 'e1-sent' }) });
-    expect(hubPrimaryAction(sent, NOW)).toEqual({ kind: 'prepare-follow-up' });
+    expect(hubPrimaryAction(sent)).toEqual({ kind: 'prepare-follow-up' });
 
     const replied = makeDetail({
       thread: threadWith({
@@ -415,15 +425,12 @@ describe('hubPrimaryAction', () => {
         needsReview: { reason: 'reply-detected', detectedAt: '2026-09-03T08:00:00.000Z' },
       }),
     });
-    expect(hubPrimaryAction(replied, NOW)).toEqual({ kind: 'record-outcome' });
+    expect(hubPrimaryAction(replied)).toEqual({ kind: 'record-outcome' });
   });
 
   it('explains a terminal refusal only when nothing later in the pipeline needs work', () => {
     expect(
-      hubPrimaryAction(
-        makeDetail({ outreachScan: { canStart: false, refusal: 'suppressed' } }),
-        NOW,
-      ),
+      hubPrimaryAction(makeDetail({ outreachScan: { canStart: false, refusal: 'suppressed' } })),
     ).toEqual({ kind: 'scan-refused', refusal: 'suppressed' });
 
     // A stale selection must not hide a publishable audit behind the
@@ -436,7 +443,7 @@ describe('hubPrimaryAction', () => {
         severityRollup: { critical: 0, serious: 0, moderate: 0, minor: 0 },
       },
     });
-    expect(hubPrimaryAction(staleButAudited, NOW)).toEqual({ kind: 'publish-preview' });
+    expect(hubPrimaryAction(staleButAudited)).toEqual({ kind: 'create-first-email' });
   });
 
   it('answers none for a settled pipeline', () => {
@@ -451,7 +458,7 @@ describe('hubPrimaryAction', () => {
       }),
       preview: LIVE_PREVIEW,
     });
-    expect(hubPrimaryAction(settled, NOW)).toEqual({ kind: 'none' });
+    expect(hubPrimaryAction(settled)).toEqual({ kind: 'none' });
   });
 });
 

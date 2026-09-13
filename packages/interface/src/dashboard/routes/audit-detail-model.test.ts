@@ -3,7 +3,6 @@ import { en } from '../i18n/en';
 import { fr } from '../i18n/fr';
 import {
   buildManualFieldsPatch,
-  canCreateOutreachDraft,
   canRevokeOutreachPreview,
   countOccurrences,
   countPages,
@@ -15,7 +14,6 @@ import {
   findPublisherIdentificationFinding,
   hasPageCountWarning,
   hostnameOf,
-  isPreviewUnavailableDraftRefusal,
   isReportStageFailure,
   isSeverity,
   isValidSiren,
@@ -26,7 +24,6 @@ import {
   reportStepperSteps,
   REPORT_PAGE_COUNT_WARNING_THRESHOLD,
   sortFindings,
-  tokenFromPublishedUrl,
 } from './audit-detail-model';
 import type { ManualFieldValues, ReportStepperInput, RuleCopyMap } from './audit-detail-model';
 import type {
@@ -378,32 +375,10 @@ describe('finding display copy (issue 93)', () => {
 });
 
 describe('outreach preview card model (plan 037 slice 5)', () => {
-  it('reads the one-time token from the last segment of the published url', () => {
-    expect(tokenFromPublishedUrl('https://www.odysseusaudit.com/apercu/abc123')).toBe('abc123');
-    expect(tokenFromPublishedUrl('https://www.odysseusaudit.com/apercu/abc123/')).toBe('');
-  });
-
-  it('gates the first draft on a session token or a live server preview', () => {
-    expect(canCreateOutreachDraft(null, false)).toBe(false);
-    expect(canCreateOutreachDraft('tok', false)).toBe(true);
-    expect(canCreateOutreachDraft(null, true)).toBe(true);
-    expect(canCreateOutreachDraft('tok', true)).toBe(true);
-  });
-
   it('gates revocation on a live server preview or a publish in this session', () => {
     expect(canRevokeOutreachPreview(false, false)).toBe(false);
     expect(canRevokeOutreachPreview(true, false)).toBe(true);
     expect(canRevokeOutreachPreview(false, true)).toBe(true);
-  });
-
-  it('sends the reissue hint for every draft refusal that means an unusable link', () => {
-    expect(isPreviewUnavailableDraftRefusal('preview-not-published')).toBe(true);
-    expect(isPreviewUnavailableDraftRefusal('preview-revoked')).toBe(true);
-    expect(isPreviewUnavailableDraftRefusal('preview-expired')).toBe(true);
-    expect(isPreviewUnavailableDraftRefusal('preview-wrong-audit')).toBe(true);
-    expect(isPreviewUnavailableDraftRefusal('suppressed')).toBe(false);
-    expect(isPreviewUnavailableDraftRefusal('address-suppressed')).toBe(false);
-    expect(isPreviewUnavailableDraftRefusal('')).toBe(false);
   });
 
   it('maps each known refusal code to one sentence per language', () => {

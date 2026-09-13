@@ -366,6 +366,8 @@ export const fr: DashboardStrings = {
         'assembly-refused': 'L’email n’a pas pu être composé à partir des preuves disponibles.',
         'provider-draft-unrecorded':
           'L’envoi au fournisseur n’a pas pu être confirmé ; vérifiez manuellement avant de réessayer.',
+        'no-mailbox-configured':
+          'La boîte mail d’envoi n’est pas configurée sur ce serveur ; l’aperçu a tout de même été publié, copiez le lien ci-dessus.',
       },
       renderError: 'Impossible de générer l’aperçu.',
       publishAction: 'Publier l’aperçu',
@@ -377,8 +379,6 @@ export const fr: DashboardStrings = {
       linkCopied: 'Copié',
       revokedMessage: 'Aperçu retiré.',
       draftCreatedMessage: 'Brouillon créé : relisez-le dans la section Emails de cette fiche.',
-      draftNeedsPreviewHint:
-        'Aucun lien publié n’est disponible dans cette session. Réémettez un lien, copiez-le, puis créez le brouillon.',
       draftRefusedMessage: 'Rien n’a été rédigé ; l’orchestrateur a refusé cette action.',
       actionError: 'Impossible de terminer cette action.',
     },

@@ -361,6 +361,8 @@ export const en: DashboardStrings = {
         'assembly-refused': 'The email couldn’t be assembled from the available evidence.',
         'provider-draft-unrecorded':
           'Sending to the provider couldn’t be confirmed; check manually before retrying.',
+        'no-mailbox-configured':
+          'The sending mailbox isn’t configured on this server; the preview was still published, copy the link above.',
       },
       renderError: 'Could not render the preview.',
       publishAction: 'Publish preview',
@@ -372,8 +374,6 @@ export const en: DashboardStrings = {
       linkCopied: 'Copied',
       revokedMessage: 'Preview taken down.',
       draftCreatedMessage: 'Draft created: review it in the Emails section of this page.',
-      draftNeedsPreviewHint:
-        'No published link is available in this session. Reissue a link, copy it, then create the draft.',
       draftRefusedMessage: 'Nothing was drafted; the orchestrator declined this action.',
       actionError: 'Could not complete this action.',
     },

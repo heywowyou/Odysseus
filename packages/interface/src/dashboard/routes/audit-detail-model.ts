@@ -375,26 +375,13 @@ export type OutreachPreviewPublishResponse =
   | { published: true; previewId: string; url: string; publicExpiresAt: string }
   | { published: false; refusal: string };
 
-/** POST /api/prospects/:candidateId/outreach/draft. */
-export type OutreachDraftResponse = { created: true } | { created: false; refusal: string };
-
-/** The published url is `${publicBaseUrl}/apercu/${token}`; the raw
- *  one-time token is its last path segment. This is the only place the
- *  interface splits the token out, and it never leaves the page. */
-export function tokenFromPublishedUrl(url: string): string {
-  const segments = url.split('/');
-  return segments.at(-1) ?? '';
-}
-
-/** The first-draft gate: the page can only hand the draft route a token it
- *  holds from a publish in this session, or trust a preview that the
- *  server reports as currently live. */
-export function canCreateOutreachDraft(
-  sessionToken: string | null,
-  hasLiveV2Preview: boolean,
-): boolean {
-  return sessionToken !== null || hasLiveV2Preview;
-}
+/** POST /api/prospects/:candidateId/outreach/first-email. Plan 045 section
+ *  1.7: publish, supersede whatever was live, and draft in one call.
+ *  `previewUrl` carries the fresh one-time link whenever this call
+ *  published one - even when drafting itself then refused, since a real
+ *  publish is a side effect the page must never let go unreported. */
+export type OutreachFirstEmailResponse =
+  { created: true; previewUrl: string } | { created: false; refusal: string; previewUrl?: string };
 
 /** The one short sentence per stable refusal code, in the interface
  *  language. Refusal codes are stable API strings, so this table is the
@@ -421,18 +408,6 @@ export function outreachRefusalSentence(refusal: string, language: DashboardLang
       ? fr.auditDetail.outreachPreview.unavailableWithReason
       : en.auditDetail.outreachPreview.unavailableWithReason
     ).replace('{refusal}', refusal)
-  );
-}
-
-/** Draft refusals that mean "the published link is not usable": the
- *  remedy is the same reissue-and-copy hint for all four. Any other code
- *  (a suppression or contact refusal) stays a plain refusal message. */
-export function isPreviewUnavailableDraftRefusal(refusal: string): boolean {
-  return (
-    refusal === 'preview-not-published' ||
-    refusal === 'preview-revoked' ||
-    refusal === 'preview-expired' ||
-    refusal === 'preview-wrong-audit'
   );
 }
 

@@ -426,7 +426,6 @@ export interface DashboardStrings {
       linkCopied: string;
       revokedMessage: string;
       draftCreatedMessage: string;
-      draftNeedsPreviewHint: string;
       draftRefusedMessage: string;
       actionError: string;
     };

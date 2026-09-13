@@ -29,7 +29,11 @@ import {
   revokeWaveRosterEntry,
 } from '@odysseus/store';
 import type { ListOperatorProspectsOptions, OperatorProspectQueue } from '@odysseus/store';
-import { createFollowUpForCandidate, createTouchOneDraft } from '../outreach/draft-runtime.js';
+import {
+  createFirstEmailForCandidate,
+  createFollowUpForCandidate,
+  createTouchOneDraft,
+} from '../outreach/draft-runtime.js';
 import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
 import { createMongoOutreachPreviewStore } from '../outreach/mongo-outreach-preview-store.js';
 import { revokePreviewsForDomain } from '../outreach/publish-preview.js';
@@ -496,6 +500,31 @@ export function registerProspectRoutes(
     }
     const { configured: _configured, ...result } = outcome;
     sendJson(res, 200, result);
+  });
+
+  // Plan 045 section 1.7: the hub's single "Create first email" action.
+  // Collapses publish + copy-the-token + draft into one call so the
+  // dashboard never has to hold a one-time preview token in page state
+  // between two requests. Publishing a fresh v2 preview here is safe only
+  // because touch 1 has not happened: nobody holds an older link yet.
+  router.post('/api/prospects/:candidateId/outreach/first-email', async ({ res, params }) => {
+    const candidateId = params['candidateId']!;
+    if (!isPlausibleCandidateId(candidateId)) {
+      sendError(res, 400, 'candidateId must be a non-empty string without control characters');
+      return;
+    }
+    const result = await createFirstEmailForCandidate(connection, candidateId, { language: 'fr' });
+    if (!result.configured) {
+      sendError(
+        res,
+        503,
+        `the preview bucket is not configured on this machine (${result.refusal})`,
+      );
+      return;
+    }
+    if (result.previewUrl !== undefined) res.setHeader('cache-control', 'no-store');
+    const { configured: _configured, ...body } = result;
+    sendJson(res, 200, body);
   });
 
   // Follow-up (touch 2 or 3) for a candidate's existing thread. 404s if no

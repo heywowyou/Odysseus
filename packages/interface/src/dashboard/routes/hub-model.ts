@@ -188,7 +188,6 @@ export type HubPrimaryAction =
   | { kind: 'review' }
   | { kind: 'start-scan' }
   | { kind: 'see-progress'; jobId: string }
-  | { kind: 'publish-preview' }
   | { kind: 'create-first-email' }
   | { kind: 'review-draft'; draftId: string }
   | { kind: 'prepare-follow-up' }
@@ -197,9 +196,8 @@ export type HubPrimaryAction =
   | { kind: 'none' };
 
 /** The one primary action for the hub header, chosen by the IA's state
- *  ladder. `now` separates a live preview from an expired one the same
- *  way the Aperçu section does. */
-export function hubPrimaryAction(detail: ProspectDetailResponse, now: number): HubPrimaryAction {
+ *  ladder. */
+export function hubPrimaryAction(detail: ProspectDetailResponse): HubPrimaryAction {
   // 1. An identity decision gates every later stage.
   if (detail.reviewState === 'pending') return { kind: 'review' };
 
@@ -211,16 +209,13 @@ export function hubPrimaryAction(detail: ProspectDetailResponse, now: number): H
   // 3. The scan stage itself, when the server's plan allows it.
   if (detail.outreachScan?.canStart) return { kind: 'start-scan' };
 
-  const preview = previewState(detail.preview ?? null, now);
-
-  // 4. An audit with no live preview waits for its publication (first
-  //    publish or reissue alike: the endpoint decides).
-  if (detail.outreachAudit != null && preview !== 'live') {
-    return { kind: 'publish-preview' };
+  // 4. An audited candidate with no thread yet is ready for its first
+  //    email. Plan 045 section 1.7: the single call publishes its own v2
+  //    preview (superseding whatever was or wasn't live), so the hub no
+  //    longer waits on a separate publish step before offering it.
+  if (detail.outreachAudit != null && detail.thread === null) {
+    return { kind: 'create-first-email' };
   }
-
-  // 5. A live preview with no thread yet waits for its first email.
-  if (preview === 'live' && detail.thread === null) return { kind: 'create-first-email' };
 
   // 6. A created draft waits for its review.
   const pendingDraft = detail.thread?.drafts.find((draft) => draft.status === 'created');

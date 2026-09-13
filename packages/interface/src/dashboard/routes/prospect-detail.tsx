@@ -27,11 +27,9 @@ import {
 } from './hub-model';
 import type { HubStep, HubStepKey } from './hub-model';
 import {
-  isPreviewUnavailableDraftRefusal,
   outreachRefusalCopy,
   outreachRefusalSentence,
-  tokenFromPublishedUrl,
-  type OutreachDraftResponse,
+  type OutreachFirstEmailResponse,
   type OutreachPreviewPublishResponse,
 } from './audit-detail-model';
 import { reviewBadgeTone } from './prospects-model';
@@ -216,15 +214,13 @@ export function ProspectDetailPage(): JSX.Element {
   const [scanStarting, setScanStarting] = useState(false);
   const [prescanStarting, setPrescanStarting] = useState(false);
   const [isOutreachBusy, setIsOutreachBusy] = useState(false);
-  /** The one-time token of a publish made on this visit. Held only in
-   *  page memory so the first-email call can hand it back; it never
-   *  leaves the page (the publish-and-draft constraint the IA records). */
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  /** The one-time link of a publish made on this visit (a manual Aperçu
+   *  publish, or the fresh preview a first-email call just made). Held only
+   *  in page memory: Odysseus never stores the raw token. */
   const [publishedLink, setPublishedLink] = useState<string | null>(null);
-  const [draftHint, setDraftHint] = useState(false);
   /** The active hub tab (plan 042 decision 3): component state, one URL.
    *  It lives in the page, above every section component, so a tab switch
-   *  never remounts the page and never voids sessionToken. */
+   *  never remounts the page. */
   const [activeTab, setActiveTab] = useState<HubStepKey>('fiche');
   /** Which audit the Audit and Rapport client tabs render (default: the
    *  newest), and whether the operator revealed the paid chain's tab
@@ -336,8 +332,6 @@ export function ProspectDetailPage(): JSX.Element {
       );
       if (result.published) {
         setPublishedLink(result.url);
-        setSessionToken(tokenFromPublishedUrl(result.url));
-        setDraftHint(false);
       } else {
         toast.error(outreachRefusalSentence(result.refusal, language));
       }
@@ -370,29 +364,22 @@ export function ProspectDetailPage(): JSX.Element {
   const runCreateFirstEmail = async (): Promise<void> => {
     if (candidateId === undefined || isOutreachBusy) return;
     setIsOutreachBusy(true);
-    setDraftHint(false);
     try {
-      const result = await sendJson<OutreachDraftResponse>(
-        `/api/prospects/${encodedId}/outreach/draft`,
+      // Plan 045 section 1.7: one call publishes its own v2 preview,
+      // supersedes whatever was live, and drafts touch 1 - no token ever
+      // held in page state between two requests.
+      const result = await sendJson<OutreachFirstEmailResponse>(
+        `/api/prospects/${encodedId}/outreach/first-email`,
         'POST',
-        // Without a token from a publish on this visit the call still
-        // runs; the server fails it closed with 'preview-not-published',
-        // which the Aperçu section's hint turns into the reissue remedy.
-        { previewToken: sessionToken ?? '' },
+        {},
       );
+      if (result.previewUrl !== undefined) setPublishedLink(result.previewUrl);
       if (result.created) {
         toast.success(strings.auditDetail.outreachPreview.draftCreatedMessage);
-      } else if (
-        typeof result.refusal === 'string' &&
-        isPreviewUnavailableDraftRefusal(result.refusal)
-      ) {
-        setDraftHint(true);
-        setActiveTab('preview');
       } else {
         toast.error(
-          (typeof result.refusal === 'string'
-            ? outreachRefusalCopy(result.refusal, language)
-            : undefined) ?? strings.auditDetail.outreachPreview.draftRefusedMessage,
+          outreachRefusalCopy(result.refusal, language) ??
+            strings.auditDetail.outreachPreview.draftRefusedMessage,
         );
       }
       refresh();
@@ -527,7 +514,7 @@ export function ProspectDetailPage(): JSX.Element {
   }
 
   const now = Date.now();
-  const action = hubPrimaryAction(data, now);
+  const action = hubPrimaryAction(data);
   const steps = pipelineSteps(data, now);
   const sold = isSold(data);
   const tabs = hubTabs(steps, sold || reportRevealed);
@@ -566,7 +553,6 @@ export function ProspectDetailPage(): JSX.Element {
             auditId={auditId}
             preview={data.preview}
             publishedLink={publishedLink}
-            draftHint={draftHint}
             isBusy={isOutreachBusy}
             onPublish={runPublish}
             onRevoke={runRevoke}
@@ -627,19 +613,6 @@ export function ProspectDetailPage(): JSX.Element {
           >
             {strings.hub.primary.seeProgress}
           </Link>
-        );
-      case 'publish-preview':
-        return (
-          <Button
-            size="sm"
-            isLoading={isOutreachBusy}
-            disabled={isOutreachBusy}
-            onClick={() => setActiveTab('preview')}
-          >
-            {data.preview === null
-              ? strings.auditDetail.outreachPreview.publishAction
-              : strings.auditDetail.outreachPreview.reissueAction}
-          </Button>
         );
       case 'create-first-email':
         return (
