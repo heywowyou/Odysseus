@@ -16,6 +16,7 @@ import { vocabularyLabel } from '../lib/vocabulary';
 import { formatDateTime } from '../lib/format';
 import { qualificationBadgeTone, reviewBadgeTone } from './prospects-model';
 import type { ProspectDetailResponse } from './prospects-model';
+import { HubContactEditor } from './hub-contact-editor';
 
 type ReviewAction = 'accept' | 'reject';
 
@@ -192,6 +193,8 @@ export function HubFicheSection(props: {
           ) : null}
         </div>
       </div>
+
+      <HubContactEditor candidateId={detail.candidateId} />
 
       {detail.review.actor !== null || detail.review.reason !== null ? (
         <p className="mt-3 text-xs text-ink-muted">

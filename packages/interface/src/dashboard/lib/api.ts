@@ -39,7 +39,11 @@ export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> 
   return (await response.json()) as T;
 }
 
-export function sendJson<T>(url: string, method: 'POST' | 'PATCH', body: unknown): Promise<T> {
+export function sendJson<T>(
+  url: string,
+  method: 'POST' | 'PUT' | 'PATCH',
+  body: unknown,
+): Promise<T> {
   return fetchJson<T>(url, {
     method,
     headers: { 'content-type': 'application/json' },
