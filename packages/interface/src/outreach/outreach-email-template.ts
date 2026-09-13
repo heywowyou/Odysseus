@@ -1,24 +1,4 @@
-/**
- * The body of every outreach email, as fixed operator-approved sentences
- * (trade-off 83). No model writes outreach any more: the operator rejected
- * every generated draft as reading translated, then approved this wording
- * sentence by sentence on 2026-09-11. Code fills in only the hotel's name
- * and the categories of its own preview's three proof cards.
- *
- * **Why two variants per sentence.** A single fixed text sent to every hotel
- * is the signature of mass mail, to recipients and to spam filters alike. Each
- * rotating sentence has two approved wordings, and the choice is derived from
- * the candidate id, so one hotel always receives the same combination (a
- * re-draft never changes the wording) while neighbouring hotels differ.
- *
- * **Why the category list comes from the proof cards.** The email may name
- * only problems that hotel's own scan found (non-negotiable rule 1); the three
- * proof cards are exactly what the linked preview shows, so the email and the
- * page it links to name the same categories. "Notamment" / "notably" keeps the
- * list honest without claiming it is exhaustive.
- *
- * French was written first; English is translated from it.
- */
+/** Operator-approved outreach sequence, locked 2026-09-13. */
 
 import type { OutreachProofCard, ReportLanguage } from '@odysseus/core';
 import { frenchOfHotel } from './hotel-name.js';
@@ -26,7 +6,6 @@ import type { DraftBodyBlock, DraftLink } from './render-outreach-draft.js';
 
 export type OutreachCategory = OutreachProofCard['category'];
 
-/** Reading order of categories in a list, whatever order the cards came in. */
 const CATEGORY_ORDER: readonly OutreachCategory[] = [
   'accessibility',
   'seo',
@@ -35,32 +14,31 @@ const CATEGORY_ORDER: readonly OutreachCategory[] = [
   'rendering',
   'privacy',
 ];
-
-/** A subject longer than this falls back to "Votre site" instead of the
- *  hotel's name; the same bound the model-era subject guard enforced. */
 const OUTREACH_SUBJECT_MAX_CHARS = 78;
-
 const NBSP = '\u00a0';
 
 interface EmailTemplate {
-  /** "de l'Hôtel des Tilleuls" / "of Hôtel des Tilleuls". */
   of: (hotelName: string) => string;
-  /** Used when the catalogue name is unusable. */
   fallbackOf: string;
-  /** Subject prefix when the hotel's name would make the subject too long. */
-  fallbackSubjectName: string;
-  subjectSeparator: string;
-  subjectNoun: Record<OutreachCategory, string>;
-  findingPhrase: Record<OutreachCategory, string>;
+  subjectAudit: (of: string) => string;
+  subjectAnalysis: (of: string) => string;
+  fallbackAudit: string;
+  fallbackAnalysis: string;
+  relation: Record<OutreachCategory, (count: number) => string>;
   joinList: (items: readonly string[]) => string;
-  opening: readonly [(of: string) => string, (of: string) => string];
-  findings: readonly [(list: string) => string, (list: string) => string];
+  opening: (of: string) => string;
+  findingsLead: string;
+  criticalFinding: (count: number) => string;
   linkLead: string;
-  closing: readonly [string, string];
-  question: readonly [string, string];
-  reminder: readonly [(of: string) => string, (of: string) => string];
+  closing: string;
+  question: string;
+  reminderIntro: (of: string) => string;
+  reminderQuestion: string;
+  reminderCommercial: string;
   finalIntro: (of: string) => string;
-  finalClosing: string;
+  finalLawLead: string;
+  finalCommercial: string;
+  finalExit: string;
 }
 
 function joinWith(conjunction: string): (items: readonly string[]) => string {
@@ -73,126 +51,99 @@ function joinWith(conjunction: string): (items: readonly string[]) => string {
 const FR: EmailTemplate = {
   of: frenchOfHotel,
   fallbackOf: 'de votre établissement',
-  fallbackSubjectName: 'Votre site',
-  subjectSeparator: `${NBSP}: `,
-  subjectNoun: {
-    accessibility: 'accessibilité',
-    seo: 'référencement',
-    performance: 'performance',
-    geo: 'visibilité IA',
-    // A rendering gap is a search problem to a hotelier, and two identical
-    // words in one subject read as a template bug.
-    rendering: 'référencement',
-    privacy: 'confidentialité',
-  },
-  findingPhrase: {
-    accessibility: "d'accessibilité",
-    seo: 'de référencement dans les moteurs de recherche',
-    performance: 'de vitesse de chargement',
-    geo: "de visibilité dans les assistants d'IA",
-    rendering: "d'affichage de votre contenu pour les moteurs de recherche",
-    privacy: 'de confidentialité et de sécurité',
+  subjectAudit: (of) => `Audit du site ${of}`,
+  subjectAnalysis: (of) => `Analyse du site ${of}`,
+  fallbackAudit: 'Audit de votre site',
+  fallbackAnalysis: 'Analyse de votre site',
+  relation: {
+    accessibility: (count) => `${count === 1 ? 'lié' : 'liés'} à l'accessibilité`,
+    seo: (count) =>
+      `${count === 1 ? 'lié' : 'liés'} au référencement dans les moteurs de recherche`,
+    performance: (count) => `${count === 1 ? 'lié' : 'liés'} aux performances du site`,
+    geo: (count) => `${count === 1 ? 'lié' : 'liés'} à la visibilité dans les assistants d'IA`,
+    rendering: (count) =>
+      `${count === 1 ? 'lié' : 'liés'} à l'affichage de votre contenu pour les moteurs de recherche`,
+    privacy: (count) => `${count === 1 ? 'lié' : 'liés'} à la confidentialité et à la sécurité`,
   },
   joinList: joinWith('et'),
-  opening: [
-    (of) => `Nous vous écrivons car nous avons analysé le site ${of}.`,
-    (of) => `Nous avons récemment analysé le site ${of} et souhaitions vous en faire part.`,
-  ],
-  findings: [
-    (list) => `Nous y avons relevé plusieurs problèmes, notamment en matière ${list}.`,
-    (list) =>
-      `Cette analyse a mis en évidence plusieurs points à corriger, notamment en matière ${list}.`,
-  ],
+  opening: (of) =>
+    `Nous avons récemment effectué un audit du site web ${of} et souhaitions vous faire part de ce que notre analyse a révélé.`,
+  findingsLead: 'Cette analyse a mis en évidence plusieurs problèmes importants, notamment',
+  criticalFinding: (count) => `${count} ${count === 1 ? 'constat critique' : 'constats critiques'}`,
   linkLead: `Vous trouverez un résumé de notre analyse ici${NBSP}:`,
-  closing: [
-    "Pour chacun de ces points, l'audit complet indique la page concernée et la correction à apporter.",
-    "L'audit complet détaille chacun de ces points, avec la page concernée et la correction à apporter.",
-  ],
-  question: [
-    `Souhaitez-vous que nous vous en présentions le détail${NBSP}? N'hésitez pas à répondre à cet e-mail.`,
-    'Nous restons à votre disposition pour vous en dire davantage.',
-  ],
-  reminder: [
-    (of) =>
-      `Nous nous permettons de vous relancer au sujet de l'analyse du site ${of}. Le résumé ` +
-      `reste consultable via le lien de notre précédent message${NBSP}; n'hésitez pas à ` +
-      'répondre à cet e-mail si vous souhaitez en recevoir le détail.',
-    (of) =>
-      'Nous souhaitions nous assurer que notre précédent message vous était bien parvenu. ' +
-      `Le résumé de notre analyse du site ${of} reste consultable via le lien qu'il ` +
-      `contient${NBSP}; n'hésitez pas à répondre à cet e-mail si vous souhaitez en recevoir le détail.`,
-  ],
+  closing:
+    "L'audit complet est disponible à l'achat dès à présent. Pour chacun de ces constats, il indique la page concernée et la correction à apporter.",
+  question: `Souhaitez-vous recevoir le détail de ces constats${NBSP}?`,
+  reminderIntro: (of) =>
+    `Je me permets de revenir vers vous au sujet de mon précédent message concernant l'audit du site ${of}.`,
+  reminderQuestion: `Avez-vous eu l'occasion de consulter l'aperçu${NBSP}?`,
+  reminderCommercial:
+    "Si vous souhaitez aller plus loin, l'audit complet est disponible à l'achat. Il détaille chacun des constats relevés, les pages concernées et les corrections à apporter.",
   finalIntro: (of) =>
-    `Ce sera notre dernier message au sujet du site ${of}. Avant de clore ce sujet, voici, ` +
-    "pour information, le cadre réglementaire de l'accessibilité numérique tel que les " +
-    'textes le décrivent.',
-  finalClosing:
-    'Nous restons à votre disposition si vous souhaitez recevoir le détail de notre analyse.',
+    `Je me permets de vous écrire une dernière fois au sujet de l'audit du site ${of}.`,
+  finalLawLead:
+    "Avant de clore ce sujet, je souhaitais attirer votre attention sur le cadre réglementaire de l'accessibilité numérique, au regard des constats relevés lors de notre analyse.",
+  finalCommercial:
+    "L'aperçu de notre analyse reste disponible dans mon premier message et l'audit complet est disponible à l'achat si vous souhaitez consulter le détail des constats, les pages concernées et les corrections à apporter.",
+  finalExit: 'Sans retour de votre part, je ne vous relancerai pas davantage.',
 };
 
 const EN: EmailTemplate = {
   of: (hotelName) => `of ${hotelName}`,
   fallbackOf: 'of your property',
-  fallbackSubjectName: 'Your website',
-  subjectSeparator: ': ',
-  subjectNoun: {
-    accessibility: 'accessibility',
-    seo: 'search',
-    performance: 'performance',
-    geo: 'AI visibility',
-    rendering: 'search',
-    privacy: 'privacy',
-  },
-  findingPhrase: {
-    accessibility: 'accessibility',
-    seo: 'search engine visibility',
-    performance: 'loading speed',
-    geo: 'visibility in AI assistants',
-    rendering: 'how your content displays to search engines',
-    privacy: 'privacy and security',
+  subjectAudit: (of) => `Website audit ${of}`,
+  subjectAnalysis: (of) => `Website analysis ${of}`,
+  fallbackAudit: 'Website audit',
+  fallbackAnalysis: 'Website analysis',
+  relation: {
+    accessibility: () => 'related to accessibility',
+    seo: () => 'related to search-engine visibility',
+    performance: () => 'related to website performance',
+    geo: () => 'related to visibility in AI assistants',
+    rendering: () => 'related to how your content displays to search engines',
+    privacy: () => 'related to privacy and security',
   },
   joinList: joinWith('and'),
-  opening: [
-    (of) => `We are writing because we have analysed the website ${of}.`,
-    (of) => `We recently analysed the website ${of} and wanted to share what we found.`,
-  ],
-  findings: [
-    (list) => `We found several issues, notably in ${list}.`,
-    (list) => `This analysis brought up several points to fix, notably in ${list}.`,
-  ],
+  opening: (of) =>
+    `We recently carried out an audit of the website ${of} and wanted to share what our analysis found.`,
+  findingsLead: 'This analysis highlighted several important issues, including',
+  criticalFinding: (count) => `${count} ${count === 1 ? 'critical finding' : 'critical findings'}`,
   linkLead: 'You will find a summary of our analysis here:',
-  closing: [
-    'For each of these points, the full audit shows the page concerned and the fix to apply.',
-    'The full audit details each of these points, with the page concerned and the fix to apply.',
-  ],
-  question: [
-    'Would you like us to walk you through the details? Feel free to reply to this email.',
-    'We remain at your disposal to tell you more.',
-  ],
-  reminder: [
-    (of) =>
-      `We are following up on the analysis of the website ${of}. The summary is still ` +
-      'available through the link in our previous message; feel free to reply to this email ' +
-      'if you would like the details.',
-    (of) =>
-      'We wanted to make sure our previous message reached you. The summary of our analysis ' +
-      `of the website ${of} is still available through the link it contains; feel free to ` +
-      'reply to this email if you would like the details.',
-  ],
-  finalIntro: (of) =>
-    `This will be our last message about the website ${of}. Before we close the subject, ` +
-    'here, for information, is the regulatory framework for digital accessibility as the ' +
-    'texts describe it.',
-  finalClosing: 'We remain at your disposal if you would like the details of our analysis.',
+  closing:
+    'The full audit is available for purchase now. For each of these findings, it shows the page concerned and the correction to apply.',
+  question: 'Would you like to receive the details of these findings?',
+  reminderIntro: (of) =>
+    `I am following up on my previous message about the audit of the website ${of}.`,
+  reminderQuestion: 'Have you had a chance to review the preview?',
+  reminderCommercial:
+    'If you would like to go further, the full audit is available for purchase. It details each finding, the pages concerned and the corrections to apply.',
+  finalIntro: (of) => `I am writing one last time about the audit of the website ${of}.`,
+  finalLawLead:
+    'Before closing the subject, I wanted to draw your attention to the regulatory framework for digital accessibility in light of the findings from our analysis.',
+  finalCommercial:
+    'The preview of our analysis remains available in my first message, and the full audit is available for purchase if you would like to review the findings, the pages concerned and the corrections to apply.',
+  finalExit: 'If I do not hear back from you, I will not follow up again.',
 };
 
 function templateFor(language: ReportLanguage): EmailTemplate {
   return language === 'fr' ? FR : EN;
 }
 
-/** Which approved wording each rotating sentence uses, derived from the
- *  candidate id so the same hotel always gets the same combination. FNV-1a:
- *  tiny, dependency-free, and stable across runs and machines. */
+function hotelOf(template: EmailTemplate, hotelName: string | undefined): string {
+  return hotelName === undefined || hotelName.trim() === ''
+    ? template.fallbackOf
+    : template.of(hotelName);
+}
+
+function stableBit(value: string): 0 | 1 {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return (hash & 1) as 0 | 1;
+}
+
 export interface OutreachVariantPick {
   opening: 0 | 1;
   findings: 0 | 1;
@@ -202,27 +153,8 @@ export interface OutreachVariantPick {
 }
 
 export function pickOutreachVariants(seed: string): OutreachVariantPick {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < seed.length; index += 1) {
-    hash ^= seed.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  const bit = (position: number): 0 | 1 => ((hash >>> position) & 1) as 0 | 1;
-  return { opening: bit(0), findings: bit(1), closing: bit(2), question: bit(3), reminder: bit(4) };
-}
-
-/** Unique categories in reading order. A rendering gap folds into search when
- *  both are present, so the body never names search engines twice. */
-function orderedCategories(categories: readonly OutreachCategory[]): OutreachCategory[] {
-  const present = new Set(categories);
-  if (present.has('seo')) present.delete('rendering');
-  return CATEGORY_ORDER.filter((category) => present.has(category));
-}
-
-function hotelOf(template: EmailTemplate, hotelName: string | undefined): string {
-  return hotelName === undefined || hotelName.trim() === ''
-    ? template.fallbackOf
-    : template.of(hotelName);
+  const bit = stableBit(seed);
+  return { opening: bit, findings: bit, closing: bit, question: bit, reminder: bit };
 }
 
 export function composeOutreachSubject(options: {
@@ -231,15 +163,29 @@ export function composeOutreachSubject(options: {
   categories: readonly OutreachCategory[];
 }): string {
   const template = templateFor(options.language);
-  const nouns = [
-    ...new Set(orderedCategories(options.categories).map((c) => template.subjectNoun[c])),
-  ];
-  const list = template.joinList(nouns);
   const name = options.hotelName?.trim() ?? '';
-  const named = `${name}${template.subjectSeparator}${list}`;
-  return name !== '' && named.length <= OUTREACH_SUBJECT_MAX_CHARS
-    ? named
-    : `${template.fallbackSubjectName}${template.subjectSeparator}${list}`;
+  const variant = stableBit(name || 'fallback');
+  const subject =
+    name === ''
+      ? variant === 0
+        ? template.fallbackAudit
+        : template.fallbackAnalysis
+      : variant === 0
+        ? template.subjectAudit(template.of(name))
+        : template.subjectAnalysis(template.of(name));
+  if (subject.length <= OUTREACH_SUBJECT_MAX_CHARS) return subject;
+  return variant === 0 ? template.fallbackAudit : template.fallbackAnalysis;
+}
+
+function criticalCounts(
+  categories: readonly OutreachCategory[],
+): Array<[OutreachCategory, number]> {
+  const counts = new Map<OutreachCategory, number>();
+  for (const category of categories) counts.set(category, (counts.get(category) ?? 0) + 1);
+  return CATEGORY_ORDER.flatMap((category) => {
+    const count = counts.get(category) ?? 0;
+    return count > 0 ? [[category, count] as [OutreachCategory, number]] : [];
+  }).slice(0, 3);
 }
 
 export function composeTouchOneBody(options: {
@@ -251,16 +197,21 @@ export function composeTouchOneBody(options: {
 }): DraftBodyBlock[] {
   const template = templateFor(options.language);
   const of = hotelOf(template, options.hotelName);
+  const counts = criticalCounts(options.categories);
   const list = template.joinList(
-    orderedCategories(options.categories).map((c) => template.findingPhrase[c]),
+    counts.map(([category, count], index) => {
+      const relation = template.relation[category](count);
+      return index === 0
+        ? `${template.criticalFinding(count)} ${relation}`
+        : `${count} ${relation}`;
+    }),
   );
-  const v = options.variants;
   return [
-    { kind: 'paragraph', text: template.opening[v.opening](of) },
-    { kind: 'paragraph', text: template.findings[v.findings](list) },
+    { kind: 'paragraph', text: template.opening(of) },
+    { kind: 'paragraph', text: `${template.findingsLead} ${list}.` },
     { kind: 'link', lead: template.linkLead, link: options.previewLink },
-    { kind: 'paragraph', text: template.closing[v.closing] },
-    { kind: 'paragraph', text: template.question[v.question] },
+    { kind: 'paragraph', text: template.closing },
+    { kind: 'paragraph', text: template.question },
   ];
 }
 
@@ -271,18 +222,21 @@ export function composeTouchTwoBody(options: {
 }): DraftBodyBlock[] {
   const template = templateFor(options.language);
   const of = hotelOf(template, options.hotelName);
-  return [{ kind: 'paragraph', text: template.reminder[options.variants.reminder](of) }];
+  return [
+    { kind: 'paragraph', text: template.reminderIntro(of) },
+    { kind: 'paragraph', text: template.reminderQuestion },
+    { kind: 'paragraph', text: template.reminderCommercial },
+  ];
 }
 
-/** Touch 3's own sentences; the assembler places the deterministic facts
- *  block between them. */
 export function composeTouchThreeFrame(options: {
   language: ReportLanguage;
   hotelName: string | undefined;
-}): { intro: string; closing: string } {
+}): { intro: string[]; closing: string[] } {
   const template = templateFor(options.language);
+  const of = hotelOf(template, options.hotelName);
   return {
-    intro: template.finalIntro(hotelOf(template, options.hotelName)),
-    closing: template.finalClosing,
+    intro: [template.finalIntro(of), template.finalLawLead],
+    closing: [template.finalCommercial, template.finalExit],
   };
 }

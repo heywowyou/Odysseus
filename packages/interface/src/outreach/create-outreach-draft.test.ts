@@ -253,12 +253,10 @@ describe('createOutreachDraft, happy path', () => {
     const result = await createOutreachDraft(
       harness({ draftRow: row({ businessName: 'HÔTEL DE LA POSTE' }) }).options,
     );
-    expect(result.subject).toBe(
-      'Hôtel de la Poste\u00a0: accessibilité, référencement et performance',
-    );
-    expect(result.body).toContain("le site de l'Hôtel de la Poste");
+    expect(result.subject).toBe("Analyse du site de l'Hôtel de la Poste");
+    expect(result.body).toContain("du site web de l'Hôtel de la Poste");
     expect(result.body).toContain(
-      "en matière d'accessibilité, de référencement dans les moteurs de recherche et de vitesse de chargement.",
+      "1 constat critique lié à l'accessibilité, 1 lié au référencement dans les moteurs de recherche et 1 lié aux performances du site.",
     );
   });
 

@@ -44,9 +44,7 @@ export type HotelContactReason =
  *  `hotel-website`; manual overrides must state the honest origin selected by
  *  the operator. */
 export type HotelContactAddressOrigin =
-  | 'hotel-website'
-  | 'other-public-source'
-  | 'provided-directly';
+  'hotel-website' | 'other-public-source' | 'provided-directly';
 
 /**
  * Whether the address's domain publishes mail exchangers. A public DNS record,

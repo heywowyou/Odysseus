@@ -14,10 +14,7 @@ import { jsonBodyNotRead, readJsonBodyOrRespond, sendJson } from '../http-utils.
 import type { Router } from '../router.js';
 import { CURRENT_CONTACT_VERSION } from '../prospecting/hotel-contacts/discover-contacts.js';
 
-const ORIGINS = new Set<HotelContactAddressOrigin>([
-  'other-public-source',
-  'provided-directly',
-]);
+const ORIGINS = new Set<HotelContactAddressOrigin>(['other-public-source', 'provided-directly']);
 
 function normalizeEmail(value: string): string | null {
   const normalized = value.trim().toLowerCase();
@@ -28,7 +25,11 @@ function normalizeEmail(value: string): string | null {
   const domain = normalized.slice(at + 1);
   if (localPart.length > 64 || normalized.length > 254) return null;
   if (!/^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+$/iu.test(localPart)) return null;
-  if (!/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/iu.test(domain)) {
+  if (
+    !/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/iu.test(
+      domain,
+    )
+  ) {
     return null;
   }
   return normalized;

@@ -66,8 +66,7 @@ function storeForContact(resolveContact: () => OutreachContactFacts): OutreachDr
         contact: resolveContact(),
       }),
     isSuppressed: vi.fn(() => Promise.resolve(false)),
-    openThread: () =>
-      Promise.resolve({ threadId: 'thread-1', state: 'open', currentTouch: 0 }),
+    openThread: () => Promise.resolve({ threadId: 'thread-1', state: 'open', currentTouch: 0 }),
     findLiveDraft: () => Promise.resolve(null),
     recordDraft: () => Promise.resolve({ draftId: 'draft-1' }),
     recordFailure: () => Promise.resolve(),

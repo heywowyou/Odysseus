@@ -80,24 +80,25 @@ beforeEach(() => {
   vi.mocked(getEffectiveHotelContact).mockResolvedValue(null);
   vi.mocked(isSuppressed).mockResolvedValue(false);
   vi.mocked(deleteManualHotelContact).mockResolvedValue(true);
-  vi.mocked(recordManualHotelContact).mockImplementation(async (_connection, input) =>
-    ({
-      contactId: 'manual-id',
-      contactVersion: 'manual-v1',
-      candidateId: input.candidateId,
-      domain: input.domain,
-      state: 'found',
-      reason: 'operator-entered',
-      address: input.address,
-      localPart: input.address.split('@')[0],
-      addressOrigin: input.addressOrigin,
-      ...(input.freeMailAttestedAt === undefined
-        ? {}
-        : { freeMailAttestedAt: input.freeMailAttestedAt }),
-      mxStatus: 'unknown',
-      validatedAt: input.validatedAt,
-      expiresAt: new Date('2026-12-12T00:00:00.000Z'),
-    }) as never,
+  vi.mocked(recordManualHotelContact).mockImplementation(
+    async (_connection, input) =>
+      ({
+        contactId: 'manual-id',
+        contactVersion: 'manual-v1',
+        candidateId: input.candidateId,
+        domain: input.domain,
+        state: 'found',
+        reason: 'operator-entered',
+        address: input.address,
+        localPart: input.address.split('@')[0],
+        addressOrigin: input.addressOrigin,
+        ...(input.freeMailAttestedAt === undefined
+          ? {}
+          : { freeMailAttestedAt: input.freeMailAttestedAt }),
+        mxStatus: 'unknown',
+        validatedAt: input.validatedAt,
+        expiresAt: new Date('2026-12-12T00:00:00.000Z'),
+      }) as never,
   );
 });
 

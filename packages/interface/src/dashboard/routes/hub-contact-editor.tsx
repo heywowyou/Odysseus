@@ -45,7 +45,7 @@ const FR: Copy = {
   title: 'Adresse de contact',
   overrideBadge: 'Remplacement manuel',
   helper:
-    "Une adresse saisie ici remplace l’adresse découverte pour la rédaction. La supprimer retire uniquement ce remplacement et rétablit la version découverte demandée.",
+    'Une adresse saisie ici remplace l’adresse découverte pour la rédaction. La supprimer retire uniquement ce remplacement et rétablit la version découverte demandée.',
   address: 'Adresse e-mail',
   origin: 'Origine de cette adresse',
   publicSource: 'Annuaire professionnel ou plateforme de réservation en ligne',
@@ -106,7 +106,10 @@ export function HubContactEditor(props: { candidateId: string }): JSX.Element {
     setData(next);
     if (next.manual?.address !== null && next.manual?.address !== undefined) {
       setAddress(next.manual.address);
-      if (next.manual.origin === 'other-public-source' || next.manual.origin === 'provided-directly') {
+      if (
+        next.manual.origin === 'other-public-source' ||
+        next.manual.origin === 'provided-directly'
+      ) {
         setOrigin(next.manual.origin);
       }
       const hasAttestation = next.manual.freeMailAttestedAt !== null;
@@ -233,7 +236,9 @@ export function HubContactEditor(props: { candidateId: string }): JSX.Element {
         </div>
       ) : null}
 
-      {!data.linkedToAudit ? <p className="mt-3 text-xs text-ink-muted">{copy.linkedReason}</p> : null}
+      {!data.linkedToAudit ? (
+        <p className="mt-3 text-xs text-ink-muted">{copy.linkedReason}</p>
+      ) : null}
       {message !== null ? <p className="mt-3 text-xs text-ink-soft">{message}</p> : null}
 
       <div className="mt-3 flex flex-wrap gap-2">
