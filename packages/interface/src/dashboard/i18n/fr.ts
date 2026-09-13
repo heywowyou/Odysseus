@@ -23,6 +23,9 @@ export const fr: DashboardStrings = {
     closeMenu: 'Fermer le menu',
     checkAddress: 'Vérifier une adresse',
     language: 'Langue de l’interface',
+    buildRevisionLabel: 'Version',
+    copyBuildRevision: 'Copier la version',
+    buildRevisionCopied: 'Copié',
   },
   common: {
     severityLabels: {

@@ -130,6 +130,26 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
     expect(stored?.status).toBe('running');
   });
 
+  it('stamps the claiming worker revision when provided, and omits it otherwise', async () => {
+    const withRevision = await createJob(connection!, {
+      type: 'full-audit',
+      siteUrl: 'https://revision-a.example/',
+      options: {},
+    });
+    const claimed = await claimNextQueuedJob(connection!, { workerRevision: 'deadbee' });
+    expect(claimed?.jobId).toBe(withRevision.jobId);
+    expect(claimed?.workerRevision).toBe('deadbee');
+
+    const withoutRevision = await createJob(connection!, {
+      type: 'full-audit',
+      siteUrl: 'https://revision-b.example/',
+      options: {},
+    });
+    const claimedWithout = await claimNextQueuedJob(connection!);
+    expect(claimedWithout?.jobId).toBe(withoutRevision.jobId);
+    expect(claimedWithout?.workerRevision).toBeUndefined();
+  });
+
   it('updates phase and progress fields independently', async () => {
     const job = await createJob(connection!, {
       type: 'full-audit',

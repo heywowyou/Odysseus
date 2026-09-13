@@ -1,6 +1,6 @@
 import { OUTREACH_CONTACT } from '@odysseus/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getMailboxSenderAddress } from './config.js';
+import { getDeployMetadata, getMailboxSenderAddress } from './config.js';
 
 describe('getMailboxSenderAddress', () => {
   afterEach(() => {
@@ -21,5 +21,37 @@ describe('getMailboxSenderAddress', () => {
     vi.stubEnv('ODYSSEUS_MAILBOX_SENDER_ADDRESS', 'someone-else@example.test');
     expect(() => getMailboxSenderAddress()).toThrow(OUTREACH_CONTACT.address);
     expect(() => getMailboxSenderAddress()).not.toThrow('someone-else');
+  });
+});
+
+describe('getDeployMetadata', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('reports the configured build revision, built-at stamp, and environment', () => {
+    vi.stubEnv('ODYSSEUS_BUILD_ID', 'deadbee');
+    vi.stubEnv('ODYSSEUS_BUILT_AT', '2026-09-13T20:01:07Z');
+    vi.stubEnv('NODE_ENV', 'production');
+
+    expect(getDeployMetadata()).toEqual({
+      revision: 'deadbee',
+      builtAt: '2026-09-13T20:01:07Z',
+      environment: 'production',
+    });
+  });
+
+  it('degrades to a null builtAt and a development environment when unstamped', () => {
+    vi.stubEnv('ODYSSEUS_BUILT_AT', '');
+    vi.stubEnv('NODE_ENV', '');
+
+    const metadata = getDeployMetadata();
+
+    expect(metadata.builtAt).toBeNull();
+    expect(metadata.environment).toBe('development');
+  });
+
+  it('never exposes fields beyond the allowlisted revision, builtAt, and environment', () => {
+    expect(Object.keys(getDeployMetadata()).sort()).toEqual(['builtAt', 'environment', 'revision']);
   });
 });

@@ -11,6 +11,7 @@ import { registerProspectInsightRoutes } from './routes/prospect-insights.js';
 import { registerOutreachRoutes } from './routes/outreach.js';
 import { registerTodoRoutes } from './routes/todo.js';
 import { registerHealthRoutes } from './routes/health.js';
+import { registerMetaRoutes } from './routes/meta.js';
 import { registerStaticFallback } from './routes/static.js';
 import { createAuthGuard, type AuthGuard } from './auth/auth-guard.js';
 import { applyBaseSecurityHeaders } from './security-headers.js';
@@ -108,6 +109,7 @@ export async function startInterfaceServer(
   const rateLimiter: LoginRateLimiter = options.rateLimiter ?? createLoginRateLimiter(clock);
 
   registerHealthRoutes(router, { connection, isQueueReady: () => queue.isReady() });
+  registerMetaRoutes(router);
   registerScanRoutes(router, connection, queue);
   registerAuditRoutes(router, connection);
   registerReportPreparationRoutes(router, connection);

@@ -49,6 +49,12 @@ COPY --from=build /app ./
 ARG ODYSSEUS_BUILD_ID=""
 ENV ODYSSEUS_BUILD_ID=${ODYSSEUS_BUILD_ID}
 
+# Same reasoning, for the build timestamp /api/meta reports alongside the
+# commit (issue: expose build/revision metadata). Empty by default; the
+# metadata endpoint reports null rather than a guessed value when unset.
+ARG ODYSSEUS_BUILT_AT=""
+ENV ODYSSEUS_BUILT_AT=${ODYSSEUS_BUILT_AT}
+
 # Chromium lands in a fixed, world-readable path, installed as root BEFORE
 # dropping to the runtime user so both the browser and its apt system deps
 # are present. Called via node directly: the runtime stage needs no package

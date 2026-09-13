@@ -22,6 +22,9 @@ export const en: DashboardStrings = {
     closeMenu: 'Close menu',
     checkAddress: 'Check an address',
     language: 'Interface language',
+    buildRevisionLabel: 'Build',
+    copyBuildRevision: 'Copy build revision',
+    buildRevisionCopied: 'Copied',
   },
   common: {
     severityLabels: {

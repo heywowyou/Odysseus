@@ -386,6 +386,30 @@ describe('JobQueue', () => {
     expect(logger.error).toHaveBeenCalledWith({ err: expect.any(Error) }, 'pipeline job failed');
   });
 
+  it('claims with a non-empty worker revision string', async () => {
+    vi.mocked(claimNextQueuedJob).mockResolvedValue(null);
+    queue = new JobQueue({
+      connection: fakeConnection,
+      pollIntervalMs: 20,
+      runners: {
+        'full-audit': vi.fn(),
+        prospecting: vi.fn(),
+        'prospect-ingestion': vi.fn(),
+        'hotel-prescan': vi.fn(),
+        'outreach-draft-batch': vi.fn(),
+        'outreach-full-scan': vi.fn(),
+        'outreach-followup-batch': vi.fn(),
+      },
+    });
+    await queue.start();
+    queue.notify();
+    await waitFor(() => vi.mocked(claimNextQueuedJob).mock.calls.length >= 1);
+
+    const [, options] = vi.mocked(claimNextQueuedJob).mock.calls[0]!;
+    expect(typeof options?.workerRevision).toBe('string');
+    expect(options?.workerRevision).not.toBe('');
+  });
+
   it('gives the runner a job-scoped logger carrying jobId and jobType, with no request ID', async () => {
     const job = fakeJob({ jobId: 'job-no-http', type: 'prospect-ingestion' });
     vi.mocked(claimNextQueuedJob).mockResolvedValueOnce(job).mockResolvedValue(null);

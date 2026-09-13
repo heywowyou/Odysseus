@@ -266,6 +266,14 @@ export interface JobDocumentFields {
    *  link straight to the awaited fields instead of reading the error
    *  string. */
   needsInputFields?: JobNeedsInputField[];
+  /** Diagnostic only, not artifact provenance: the build revision of the
+   *  worker that claimed this job, stamped by claimNextQueuedJob so a
+   *  surprising result can be checked against a stale worker rather than
+   *  a stale dashboard/server. No attempt history exists on this model, so
+   *  a re-claim after a crash overwrites this with the re-claiming
+   *  worker's revision - the field always answers "which worker most
+   *  recently ran this", never a full history. */
+  workerRevision?: string;
 }
 
 export interface JobNeedsInputField {
@@ -493,6 +501,7 @@ const jobSchema = new Schema<JobDocument>(
     orphaned: { type: Boolean },
     needsReview: { type: String },
     needsInputFields: { type: [jobNeedsInputFieldSchema] },
+    workerRevision: { type: String },
   },
   { collection: 'jobs' },
 );

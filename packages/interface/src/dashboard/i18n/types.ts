@@ -32,6 +32,11 @@ export interface DashboardStrings {
     language: string;
     /** Footer link to the do-not-contact lookup (/ne-pas-contacter). */
     checkAddress: string;
+    /** Footer build-revision disclosure (issue: expose build/revision
+     *  metadata) - "which build handled this?" without opening devtools. */
+    buildRevisionLabel: string;
+    copyBuildRevision: string;
+    buildRevisionCopied: string;
   };
   common: {
     severityLabels: { critical: string; serious: string; moderate: string; minor: string };

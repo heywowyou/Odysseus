@@ -48,13 +48,28 @@ export async function createJob(connection: Connection, input: NewJobInput): Pro
 }
 
 /** Atomic claim: the oldest queued job is marked running in one operation,
- *  so two worker slots racing to dequeue never claim the same job twice. */
-export async function claimNextQueuedJob(connection: Connection): Promise<JobDocument | null> {
+ *  so two worker slots racing to dequeue never claim the same job twice.
+ *  workerRevision is diagnostic build-provenance (issue: worker/job
+ *  provenance), stamped here rather than at completion because the same
+ *  process runs the job start to finish; the caller passes its own build
+ *  identity rather than this package reaching into scanner/config to
+ *  resolve it itself. */
+export async function claimNextQueuedJob(
+  connection: Connection,
+  options: { workerRevision?: string } = {},
+): Promise<JobDocument | null> {
   const JobModel = createJobModel(connection);
   const claimedAt = new Date();
   return JobModel.findOneAndUpdate(
     { status: 'queued' },
-    { $set: { status: 'running', startedAt: claimedAt, lastHeartbeatAt: claimedAt } },
+    {
+      $set: {
+        status: 'running',
+        startedAt: claimedAt,
+        lastHeartbeatAt: claimedAt,
+        ...(options.workerRevision !== undefined ? { workerRevision: options.workerRevision } : {}),
+      },
+    },
     { sort: { createdAt: 1 }, returnDocument: 'after' },
   ).lean<JobDocument>();
 }

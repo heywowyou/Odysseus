@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { Brand } from './brand';
+import { BuildRevision } from './build-revision';
 import { DashboardErrorBoundary } from './error-boundary';
 import { LanguageSwitcher } from './language-switcher';
 import { Badge } from '../components/ui/badge';
@@ -128,6 +129,7 @@ export function AppShell() {
         {strings.tools.navLabel}
       </NavLink>
       <LanguageSwitcher />
+      <BuildRevision />
     </div>
   );
 

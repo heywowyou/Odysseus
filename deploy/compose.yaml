@@ -29,6 +29,9 @@ services:
         # this, every audit produced through that path recorded its build as
         # "unknown", which is what made a stale deploy invisible.
         ODYSSEUS_BUILD_ID: ${ODYSSEUS_BUILD_ID:-${ODYSSEUS_IMAGE_TAG:-}}
+        # Same rsync-deploy stamping as ODYSSEUS_BUILD_ID above, for the
+        # /api/meta build timestamp. Empty for a local build.
+        ODYSSEUS_BUILT_AT: ${ODYSSEUS_BUILT_AT:-}
     # Automated releases set this to the verified Git commit. Local and legacy
     # deployments keep the existing latest tag.
     image: odysseus-app:${ODYSSEUS_IMAGE_TAG:-latest}

@@ -11,7 +11,7 @@
  */
 
 import type { Connection } from 'mongoose';
-import { OriginLock } from '@odysseus/scanner';
+import { OriginLock, readOdysseusBuildId } from '@odysseus/scanner';
 import { ReportIdentityUnconfirmedError } from '@odysseus/report';
 import {
   cancelJob,
@@ -69,12 +69,14 @@ export class JobQueue {
   private running = false;
   private loopPromise?: Promise<void>;
   private wake: (() => void) | undefined;
+  private readonly workerRevision: string;
 
   constructor(options: JobQueueOptions) {
     this.connection = options.connection;
     this.concurrency = options.concurrency ?? DEFAULT_QUEUE_CONCURRENCY;
     this.pollIntervalMs = options.pollIntervalMs ?? 500;
     this.runners = options.runners;
+    this.workerRevision = readOdysseusBuildId();
   }
 
   /** Resets any job left 'running' by an unclean previous shutdown back
@@ -170,7 +172,7 @@ export class JobQueue {
       while (this.activeCount < this.concurrency) {
         let job: JobDocument | null;
         try {
-          job = await claimNextQueuedJob(this.connection);
+          job = await claimNextQueuedJob(this.connection, { workerRevision: this.workerRevision });
         } catch (error) {
           // A transient claim failure (e.g. a Mongo hiccup) must not escape
           // runLoop: an unhandled rejection here would either crash the

@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { ensureEnvLoaded, findWorkspaceRoot } from '@odysseus/scanner';
+import { ensureEnvLoaded, findWorkspaceRoot, readOdysseusBuildId } from '@odysseus/scanner';
 import { OUTREACH_CONTACT } from '@odysseus/core';
 
 export const DEFAULT_INTERFACE_PORT = 4600;
@@ -121,6 +121,31 @@ export function getInterfacePort(): number {
 export function getInterfaceHost(): string {
   ensureEnvLoaded();
   return process.env['ODYSSEUS_INTERFACE_HOST'] || DEFAULT_INTERFACE_HOST;
+}
+
+export interface DeployMetadata {
+  /** ODYSSEUS_BUILD_ID (git short SHA the image was built from) via
+   *  readOdysseusBuildId, or its 'unknown' sentinel outside a stamped
+   *  deploy. Never undefined - only allowlisted build identity, no
+   *  secrets or environment dump. */
+  revision: string;
+  /** ODYSSEUS_BUILT_AT, stamped the same way as ODYSSEUS_BUILD_ID; null
+   *  when the image was not built with that stamp (issue: expose build
+   *  revision - absence degrades to an explicit null, not a failure). */
+  builtAt: string | null;
+  /** NODE_ENV, or 'development' when unset - never a hostname, secret, or
+   *  full environment dump. */
+  environment: string;
+}
+
+export function getDeployMetadata(): DeployMetadata {
+  ensureEnvLoaded();
+  const builtAt = process.env['ODYSSEUS_BUILT_AT']?.trim();
+  return {
+    revision: readOdysseusBuildId(),
+    builtAt: builtAt ? builtAt : null,
+    environment: process.env['NODE_ENV']?.trim() || 'development',
+  };
 }
 
 export function getQueueConcurrency(): number {

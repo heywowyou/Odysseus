@@ -82,12 +82,15 @@ BUILD_ID="$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo '')"
 if [[ -n "$BUILD_ID" && -n "$(git -C "$REPO_ROOT" status --porcelain 2>/dev/null)" ]]; then
   log "warning: working tree is dirty, so the image is stamped $BUILD_ID but does not match that commit exactly"
 fi
+# Alongside the commit, for /api/meta's builtAt (issue: expose build/
+# revision metadata) - this build's wall-clock time, not the commit's.
+BUILT_AT="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 
 COMPOSE="docker compose -p '$ODYSSEUS_DEPLOY_COMPOSE_PROJECT' -f '$ODYSSEUS_DEPLOY_COMPOSE_DIR/docker-compose.yml'"
 
 log "building the app image on the server ($ODYSSEUS_DEPLOY_COMPOSE_DIR, project $ODYSSEUS_DEPLOY_COMPOSE_PROJECT, build ${BUILD_ID:-unstamped})"
 ssh "${SSH_OPTS[@]}" "$ODYSSEUS_DEPLOY_HOST" \
-  "ODYSSEUS_BUILD_ID='$BUILD_ID' $COMPOSE build app"
+  "ODYSSEUS_BUILD_ID='$BUILD_ID' ODYSSEUS_BUILT_AT='$BUILT_AT' $COMPOSE build app"
 
 # The Hostinger panel's Deployer/Renouveler button runs `pull` + `up` and
 # never `build`. odysseus-app is built here and exists in no registry, so its
@@ -98,7 +101,7 @@ ssh "${SSH_OPTS[@]}" "$ODYSSEUS_DEPLOY_HOST" \
 # same run as the build, is what makes that impossible.
 log "rolling out the new image"
 ssh "${SSH_OPTS[@]}" "$ODYSSEUS_DEPLOY_HOST" \
-  "ODYSSEUS_BUILD_ID='$BUILD_ID' $COMPOSE up -d app"
+  "ODYSSEUS_BUILD_ID='$BUILD_ID' ODYSSEUS_BUILT_AT='$BUILT_AT' $COMPOSE up -d app"
 
 log "verifying the running container came from this build"
 RUNNING_BUILD="$(ssh "${SSH_OPTS[@]}" "$ODYSSEUS_DEPLOY_HOST" \
