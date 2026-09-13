@@ -97,6 +97,12 @@ export interface OperatorProspectDetail {
   outcomes: OperatorViewPage<OperatorOutcomeEventView>;
 }
 
+export interface GetOperatorProspectOptions {
+  /** When supplied, contact metadata follows plan 045 precedence: manual-v1
+   *  first, otherwise this exact discovered generation. */
+  contactVersion?: string;
+}
+
 /** One candidate's whole funnel, composed from the per-stage views above. A
  *  detail response is bounded by construction: at most one qualification
  *  generation, one prescan, one score, one contact row, one thread with its
@@ -104,6 +110,7 @@ export interface OperatorProspectDetail {
 export async function getOperatorProspect(
   connection: Connection,
   candidateId: string,
+  options: GetOperatorProspectOptions = {},
 ): Promise<OperatorProspectDetail | null> {
   const candidate = await getHotelCandidate(connection, candidateId);
   if (candidate === null) return null;
@@ -120,7 +127,11 @@ export async function getOperatorProspect(
       getProspectPrescanView(connection, candidateId),
       getProspectEvidenceView(connection, candidateId),
       getProspectScoreView(connection, candidateId),
-      getProspectContactView(connection, candidateId),
+      getProspectContactView(
+        connection,
+        candidateId,
+        options.contactVersion === undefined ? {} : { contactVersion: options.contactVersion },
+      ),
       getProspectThreadView(connection, candidateId),
       getProspectPreviewView(connection, candidateId),
       getProspectOutcomeView(connection, candidateId, { limit: 10 }),
