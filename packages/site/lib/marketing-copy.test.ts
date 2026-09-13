@@ -65,9 +65,12 @@ describe('both commercial pages', () => {
     expect(priced(source)).toContain('EUR 1,600 excl. VAT');
   });
 
-  it.each(commercialSources)('%s names the canonical monitored contact address', (_name, source) => {
-    expect(source).toContain('contact@odysseusaudit.fr');
-  });
+  it.each(commercialSources)(
+    '%s names the canonical monitored contact address',
+    (_name, source) => {
+      expect(source).toContain('contact@odysseusaudit.fr');
+    },
+  );
 
   it.each(commercialSources)(
     '%s keeps AI-assistant claims bounded to verifiable technical signals',
@@ -137,19 +140,25 @@ describe('both commercial pages', () => {
     },
   );
 
-  it.each(commercialSources)('%s names security headers instead of implying a security audit', (_name, source) => {
-    const prose = readable(source);
-    expect(prose).toContain('en-têtes de sécurité');
-    expect(prose).toContain('security headers');
-  });
+  it.each(commercialSources)(
+    '%s names security headers instead of implying a security audit',
+    (_name, source) => {
+      const prose = readable(source);
+      expect(prose).toContain('en-têtes de sécurité');
+      expect(prose).toContain('security headers');
+    },
+  );
 
-  it.each(commercialSources)('%s does not sell the report languages as a feature', (_name, source) => {
-    const prose = readable(source);
-    expect(prose).not.toContain('bilingue');
-    expect(prose).not.toContain('bilingual');
-    expect(prose).not.toContain('en français et en anglais');
-    expect(prose).not.toContain('in French and English');
-  });
+  it.each(commercialSources)(
+    '%s does not sell the report languages as a feature',
+    (_name, source) => {
+      const prose = readable(source);
+      expect(prose).not.toContain('bilingue');
+      expect(prose).not.toContain('bilingual');
+      expect(prose).not.toContain('en français et en anglais');
+      expect(prose).not.toContain('in French and English');
+    },
+  );
 
   it.each(commercialSources)('%s renders the shared dossier card', (_name, source) => {
     expect(source).toContain('<Dossier lang="fr" />');
