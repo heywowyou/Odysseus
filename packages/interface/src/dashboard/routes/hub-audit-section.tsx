@@ -12,7 +12,7 @@ import { useI18n } from '../i18n/provider';
 import { vocabularyLabel } from '../lib/vocabulary';
 import { formatDateTime } from '../lib/format';
 import { findPublisherIdentificationFinding, isReportStageFailure } from './audit-detail-model';
-import { FailureCard } from './audit-reports-section';
+import { FailureCard } from './failure-card';
 import { FindingsCard, PublisherIdentificationAlert } from './audit-findings-section';
 import type { AuditDetailResponse } from './audit-detail-types';
 import { auditChoices, type HubAuditChoice } from './hub-model';

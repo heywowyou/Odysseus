@@ -32,7 +32,6 @@ import type { ListOperatorProspectsOptions, OperatorProspectQueue } from '@odyss
 import {
   createFirstEmailForCandidate,
   createFollowUpForCandidate,
-  createTouchOneDraft,
 } from '../outreach/draft-runtime.js';
 import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
 import { createMongoOutreachPreviewStore } from '../outreach/mongo-outreach-preview-store.js';
@@ -461,47 +460,6 @@ export function registerProspectRoutes(
     });
     queue?.notify();
     sendJson(res, 201, { started: true, jobId: job.jobId });
-  });
-
-  // Single-candidate, single-touch action: one LLM call, one preview
-  // publish, one Gmail draft call, the same synchronous-route shape as
-  // `/review` above rather than the job queue, which plan 030 reserves for
-  // multi-candidate batches. `createTouchOneDraft` refuses (never throws)
-  // when a thread already exists or the candidate is not contactable; a
-  // refusal is a correct, complete outcome, so it comes back 200 with the
-  // typed refusal code in the body for the dashboard to read, exactly like
-  // the CLI's own JSON output. Only "no mailbox configured" is a genuine
-  // operator setup problem, so that alone is a non-2xx (503).
-  router.post('/api/prospects/:candidateId/outreach/draft', async ({ req, res, params }) => {
-    const candidateId = params['candidateId']!;
-    if (!isPlausibleCandidateId(candidateId)) {
-      sendError(res, 400, 'candidateId must be a non-empty string without control characters');
-      return;
-    }
-    // Plan 037: the body carries the one-time token of the already
-    // published v2 preview the email will link. The route can no longer
-    // publish or reissue a preview as a side effect of drafting.
-    const body = await readJsonBodyOrRespond(req, res);
-    if (body === jsonBodyNotRead) return;
-    const rawToken =
-      body !== null && typeof body === 'object'
-        ? (body as Record<string, unknown>)['previewToken']
-        : undefined;
-    if (typeof rawToken !== 'string' || rawToken.trim() === '') {
-      sendJson(res, 200, { created: false, refusal: 'preview-not-published' });
-      return;
-    }
-    const outcome = await createTouchOneDraft(connection, candidateId, {
-      language: 'fr',
-      dryRun: false,
-      previewToken: rawToken.trim(),
-    });
-    if (!outcome.configured) {
-      sendError(res, 503, `no mailbox is configured (${outcome.refusal})`);
-      return;
-    }
-    const { configured: _configured, ...result } = outcome;
-    sendJson(res, 200, result);
   });
 
   // Plan 045 section 1.7: the hub's single "Create first email" action.

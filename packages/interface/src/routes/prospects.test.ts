@@ -25,7 +25,6 @@ vi.mock('@odysseus/store', () => ({
 }));
 
 vi.mock('../outreach/draft-runtime.js', () => ({
-  createTouchOneDraft: vi.fn(),
   createFollowUpForCandidate: vi.fn(),
   createFirstEmailForCandidate: vi.fn(),
 }));
@@ -66,7 +65,6 @@ import {
 import {
   createFirstEmailForCandidate,
   createFollowUpForCandidate,
-  createTouchOneDraft,
 } from '../outreach/draft-runtime.js';
 import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
 import { revokePreviewsForDomain } from '../outreach/publish-preview.js';
@@ -664,71 +662,6 @@ describe('POST /api/prospects/:candidateId/review', () => {
     });
     expect(res.statusCode).toBe(415);
     expect(recordHotelCandidateReview).not.toHaveBeenCalled();
-  });
-});
-
-describe('POST /api/prospects/:candidateId/outreach/draft', () => {
-  // Since plan 037 the body must carry the one-time token of the already
-  // published v2 preview; drafting never publishes as a side effect.
-  it('returns 200 and the result when a draft is created', async () => {
-    vi.mocked(createTouchOneDraft).mockResolvedValue({
-      configured: true,
-      created: true,
-      draftId: 'draft-1',
-    } as never);
-    const res = await handle('/api/prospects/cand-1/outreach/draft', {
-      method: 'POST',
-      body: { previewToken: 'raw-one-time-token' },
-    });
-    expect(res.statusCode).toBe(200);
-    expect(JSON.parse(res.body ?? '{}')).toEqual({ created: true, draftId: 'draft-1' });
-    expect(createTouchOneDraft).toHaveBeenCalledWith(
-      fakeConnection,
-      'cand-1',
-      expect.objectContaining({ previewToken: 'raw-one-time-token' }),
-    );
-  });
-
-  it('refuses without drafting when the body carries no preview token', async () => {
-    const res = await handle('/api/prospects/cand-1/outreach/draft', {
-      method: 'POST',
-      body: {},
-    });
-    expect(res.statusCode).toBe(200);
-    expect(JSON.parse(res.body ?? '{}')).toEqual({
-      created: false,
-      refusal: 'preview-not-published',
-    });
-    expect(createTouchOneDraft).not.toHaveBeenCalled();
-  });
-
-  it('returns 200 with the refusal code when the orchestrator refuses', async () => {
-    vi.mocked(createTouchOneDraft).mockResolvedValue({
-      configured: true,
-      created: false,
-      refusal: 'draft-already-live',
-    } as never);
-    const res = await handle('/api/prospects/cand-1/outreach/draft', {
-      method: 'POST',
-      body: { previewToken: 'raw-one-time-token' },
-    });
-    expect(res.statusCode).toBe(200);
-    expect(JSON.parse(res.body ?? '{}')).toEqual({
-      created: false,
-      refusal: 'draft-already-live',
-    });
-  });
-
-  it('returns 503 when no mailbox is configured', async () => {
-    vi.mocked(createTouchOneDraft).mockResolvedValue({
-      configured: false,
-      refusal: 'no-mailbox-configured',
-    } as never);
-    const res = await handle('/api/prospects/cand-1/outreach/draft', {
-      method: 'POST',
-      body: { previewToken: 'raw-one-time-token' },
-    });
-    expect(res.statusCode).toBe(503);
   });
 });
 
