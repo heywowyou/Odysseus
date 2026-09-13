@@ -1,75 +1,61 @@
 # Issue tracker: GitHub
 
-Issues and specs for this repo live as GitHub issues on `heywowyou/Odysseus`. Use the `gh` CLI for all operations.
+GitHub issues are the work-tracking surface when the operator asks to use them
+or an explicitly invoked audit/triage workflow defines issues as its output.
+Routine coding work does not create, comment on, label, or close issues merely
+because a defect was found.
+
+Use `gh` or the host's GitHub tooling when issue work is part of the task.
+
+## Before writing externally
+
+Creating or changing an issue is an external shared-system write. It is
+authorized when:
+
+- the operator explicitly asked to create/update/triage issues;
+- the active task is an explicitly invoked workflow whose stated deliverable
+  is issue tracking;
+- the operator already authorized that concrete external-write workflow.
+
+Otherwise, keep the finding in the current work/report and offer issue creation
+rather than doing it silently.
 
 ## Conventions
 
-- **Create an issue**: `gh issue create --title "..." --body "..."`. Use a heredoc for multi-line bodies.
-- **Read an issue**: `gh issue view <number> --comments`, filtering comments by `jq` and also fetching labels.
-- **List issues**: `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'` with appropriate `--label` and `--state` filters.
-- **Comment on an issue**: `gh issue comment <number> --body "..."`
-- **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
-- **Close**: `gh issue close <number> --comment "..."`
+When issues are in scope:
 
-Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
+- Search before creating to avoid duplicates.
+- One verified root cause per issue.
+- Include enough evidence for a fresh context: observable problem, relevant
+  paths, reproduction/verification evidence, user impact, and a suggested fix
+  direction.
+- Do not reproduce secrets, credentials, personal data, or sensitive client
+  material.
+- Reference the issue from a fixing commit or plan when useful.
+- Close only after the fix is committed and verified; include the verification
+  evidence when practical.
+- Use `docs/agents/triage-labels.md` for label vocabulary.
 
-## Resolution lifecycle (binding on every agent)
+A finding fixed in the current task does not need an issue just to satisfy
+process.
 
-Every verified defect follows one path through GitHub issues. There is no
-second ledger: no local backlog file, no findings document, no plan entry
-acting as the system of record (`plans/README.md`'s work lifecycle defines
-what each of those places is for instead).
+## Pull requests
 
-1. **Log it the moment it is deferred.** When work surfaces a real defect
-   that will not be fixed in the current session, create the issue before
-   the session ends, labelled `needs-triage`. One issue per finding, and
-   the finding must be unique: search open issues first
-   (`gh issue list --state open --search "..."`); if an issue for the same
-   defect already exists, add the new evidence to it as a comment instead
-   of opening a duplicate. The body must be
-   self-contained for a fresh session or another LLM: what is wrong, the
-   file and line pointers, the reproduction or verification evidence, the
-   user-visible impact, and a suggested fix direction. A finding audited as
-   unreachable is not an issue: record the audit reasoning where the finding
-   was evaluated and move on.
-2. **Reference the issue while fixing.** A commit or plan that implements a
-   fix names the issue (`Fixes #N` in the commit body, or a reference in
-   the plan file), so GitHub links the fix to the finding.
-3. **Close with evidence.** Close the issue only after the fix is committed
-   and verified; the closing comment carries the commit hash and the
-   verification commands with their results.
-4. **Triage moves labels, not files.** A triage decision is a label change
-   per `docs/agents/triage-labels.md` (`needs-triage` to `ready-for-agent`,
-   `ready-for-human`, or `wontfix`), never a copy of the finding into
-   another document.
+External PRs are not a general request surface for this repo unless the
+operator explicitly chooses to use them that way.
 
-## Pull requests as a triage surface
+When PR review/triage is requested, inspect the PR, its diff, and relevant
+discussion, then use the same evidence and external-write rules above.
 
-**PRs as a request surface: no.** _(Set to `yes` if this repo treats external PRs as feature requests; `/triage` reads this flag.)_
+## Wayfinder and specialist workflows
 
-When set to `yes`, PRs run through the same labels and states as issues, using the `gh pr` equivalents:
+Skills such as `triage`, `to-tickets`, and `wayfinder` may define richer issue
+state machines. Those skills are explicit-only. Their workflow applies after
+the operator invokes it; it does not become the default lifecycle for ordinary
+repo work.
 
-- **Read a PR**: `gh pr view <number> --comments` and `gh pr diff <number>` for the diff.
-- **List external PRs for triage**: `gh pr list --state open --json number,title,body,labels,author,authorAssociation,comments` then keep only `authorAssociation` of `CONTRIBUTOR`, `FIRST_TIME_CONTRIBUTOR`, or `NONE` (drop `OWNER`/`MEMBER`/`COLLABORATOR`).
-- **Comment / label / close**: `gh pr comment`, `gh pr edit --add-label`/`--remove-label`, `gh pr close`.
+## Tool availability
 
-GitHub shares one number space across issues and PRs, so a bare `#42` may be either: resolve with `gh pr view 42` and fall back to `gh issue view 42`.
-
-## When a skill says "publish to the issue tracker"
-
-Create a GitHub issue.
-
-## When a skill says "fetch the relevant ticket"
-
-Run `gh issue view <number> --comments`.
-
-## Wayfinding operations
-
-Used by `/wayfinder`. The **map** is a single issue with **child** issues as tickets.
-
-- **Map**: a single issue labelled `wayfinder:map`, holding the Notes / Decisions-so-far / Fog body. `gh issue create --label wayfinder:map`.
-- **Child ticket**: an issue linked to the map as a GitHub sub-issue (`gh api` on the sub-issues endpoint). Where sub-issues aren't enabled, add the child to a task list in the map body and put `Part of #<map>` at the top of the child body. Labels: `wayfinder:<type>` (`research`/`prototype`/`grilling`/`task`). Once claimed, the ticket is assigned to the driving dev.
-- **Blocking**: GitHub's **native issue dependencies**, the canonical, UI-visible representation. Add an edge with `gh api --method POST repos/<owner>/<repo>/issues/<child>/dependencies/blocked_by -F issue_id=<blocker-db-id>`, where `<blocker-db-id>` is the blocker's numeric **database id** (`gh api repos/<owner>/<repo>/issues/<n> --jq .id`, _not_ the `#number` or `node_id`). GitHub reports `issue_dependencies_summary.blocked_by` (open blockers only, the live gate). Where dependencies aren't available, fall back to a `Blocked by: #<n>, #<n>` line at the top of the child body. A ticket is unblocked when every blocker is closed.
-- **Frontier query**: list the map's open children (`gh issue list --state open`, scoped to the map's sub-issues / task list), drop any with an open blocker (`issue_dependencies_summary.blocked_by > 0`, or an open issue in the `Blocked by` line) or an assignee; first in map order wins.
-- **Claim**: `gh issue edit <n> --add-assignee @me`, the session's first write.
-- **Resolve**: `gh issue comment <n> --body "<answer>"`, then `gh issue close <n>`, then append a context pointer (gist + link) to the map's Decisions-so-far.
+Prefer the GitHub capability exposed by the active host. A documented `gh`
+command is an example, not proof that a shell or authenticated CLI exists in
+the current session.

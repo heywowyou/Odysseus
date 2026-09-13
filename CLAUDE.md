@@ -1,933 +1,238 @@
 # Odysseus
 
-> **Shared project charter.** This file is consumed by Claude Code, Codex,
-> and ZCode (added 2026-08-29). Its filename is historical: it remains the
-> authoritative source for
-> durable engineering and product rules. Codex starts from `AGENTS.md`, which
-> intentionally points here instead of maintaining a second copy. The shared
-> handoff protocol is `docs/agents/handoff.md`; document authority and status
-> are mapped in `docs/agents/documentation-map.md`; shared code and prose
-> conventions are in `docs/agents/coding-conventions.md`.
+> **Shared project charter.** This file is the compact project-level contract
+> consumed by Claude Code and referenced by Codex and ZCode through
+> `AGENTS.md`. Detailed evidence, history, and procedures live in focused docs;
+> do not grow this file back into a ledger.
 
-Internal tooling for a productized web audit service sold to French small
-and mid-size businesses. Two audit types share one engine: technical /
-SPA-SEO, and accessibility against WCAG 2.2 AA and EN 301 549.
+Odysseus is internal tooling for a productized web-audit service sold to French
+small and mid-size businesses. It runs technical / SPA-SEO audits and
+accessibility audits against WCAG 2.2 AA and EN 301 549.
 
-Full context: `docs/product/odysseus-project-brief.md`. Read it before
-proposing any architecture. Normalization behaviour and the reasoning
-behind it: `docs/rules/normalization-rules.md`. What the model may see, must
-return, and how failures are handled: `docs/rules/llm-layer-rules.md`.
+Product context: `docs/product/odysseus-project-brief.md`.
+Document authority and routing: `docs/agents/documentation-map.md`.
+Shared coding and writing rules: `docs/agents/coding-conventions.md`.
+Cross-agent recovery: `docs/agents/handoff.md`.
+Current execution order: `plans/README.md`.
 
-Client-facing legal claims are governed by `docs/rules/obligation-basis.md`;
-nothing legal may be stated anywhere in the product unless it appears
-there with status `primary`. Odysseus's own regulatory position (AI Act,
-electronic invoicing, the perimeter of legal advice, prospecting channel
-rules) is `docs/rules/operator-obligations.md`. Prospecting is governed by
-`docs/rules/prospect-qualification.md` (who may be scanned and contacted) and
-`docs/rules/outreach-rules.md` (what may be said). Pricing and offer framing:
-`docs/rules/offer-positioning.md`.
+## Working contract
 
-## Non-negotiable rules
+Default to action.
 
-1. **Deterministic scanners detect. The LLM explains, groups, prioritizes,
-   and translates.** The model may never introduce a finding absent from
-   its structured input. This single rule is the credibility of the whole
-   business.
-2. Every finding traces back to a scanner rule ID and an affected element.
-3. All LLM output is validated with Zod. Any response referencing a
-   finding ID not present in the input is rejected, logged, and retried.
-   See `packages/core/src/types/llm-output.ts`.
-4. The LLM never receives raw HTML or full page content. Normalized
-   findings plus site context only.
-5. Crawling is polite: respect robots.txt, identifiable user agent,
-   delay between requests, hard per-page timeout. The
-   delay is enforced between scanner passes on a page as well, not only
-   between crawl requests.
+The operator owns this repository. For local, reversible work that is within
+the request, inspect, edit, refactor, add justified dependencies, change
+package boundaries, and run non-destructive validation without asking first.
 
-   **Amended 2026-08-24.** A page cap used to be mandatory
-   (`DEFAULT_MAX_PAGES` 20); it is now opt-in (`--max-pages`, `MAX_PAGES`)
-   and off by default, after a real audit silently under-reported a site
-   by more than a third. Politeness is otherwise unchanged. Do not
-   silently reintroduce a default cap. Full incident and reasoning:
-   `docs/decisions/trade-offs.md`, "Non-negotiable rule 5 amendment".
+Ask only when the operator's decision is genuinely required: a destructive or
+hard-to-reverse action, a production or external/shared-system write, sending
+or publishing something externally, secret input that only the operator can
+provide, a material expansion of requested product scope, or an unresolved
+product choice with materially different outcomes.
 
-   **Amended 2026-09-02, plan 021.** A separate, disclosed
-   continuation-family guard may stop a proven runaway link-discovered
-   continuation (an infinite calendar, filter, or pagination family). It
-   is explicit, reason-coded, counted separately from inventoried URLs,
-   and disclosed in the report. It is not a global cap: it never drops an
-   operator seed or any eligible sitemap-declared URL, including a
-   taxonomy or listing URL, and it applies only to same-family URLs
-   discovered through links, never to sitemap-declared ones. Full
-   reasoning: `docs/decisions/trade-offs.md` entry 64.
+Important files are **protected contracts**, not forbidden files. When a
+requested change touches one, inspect downstream consumers, persistence and
+migration implications, update the relevant tests and docs, and proceed when
+the requested outcome is clear. Do not turn importance into a permission
+ritual.
 
-   **Coverage vocabulary, plan 021.** A full audit no longer runs an
-   identical set of tools on every URL; these terms distinguish what
-   actually happened on a page from what was merely reached:
-   - **inventoried URL**: successfully navigated, or explicitly recorded
-     with a failure or planned-skip reason. Never includes an omitted
-     continuation URL.
-   - **omitted continuation URL**: discovered behind the bound
-     continuation-family guard above and counted in its summary, not
-     silently folded into the inventoried-URL total.
-   - **content-checked page**: received render diff, axe, and the
-     extended accessibility pass. Every successfully crawled HTML page is
-     content-checked, regardless of role or family.
-   - **performance-measured page**: selected to run Lighthouse. Only
-     Lighthouse is family-stratified; a repeated template contributes at
-     most a stable representative and a measured cost outlier per
-     family and language, never every member.
-   - **performance representative**: one family member actually selected
-     for Lighthouse. It is a performance-measurement provenance fact,
-     never a substitute for content checks on its siblings and never a
-     claim that they are byte-identical.
-   - **distinct finding**, **affected page**, and **occurrence** keep
-     their existing normalization meaning (`docs/rules/normalization-rules.md`
-     section 2): one finding can name many affected pages and many
-     occurrences without being copied onto a page no scanner actually
-     ran on.
-   - **planned skip** (recorded pass outcome `not-planned`, valid only
-     for Lighthouse) is not a **scanner failure** (`failed`); a
-     `visited` page status is a crawl fact, not proof that every
-     scanner pass on it completed.
-6. Never overstate legal exposure in any generated text. Accessibility
-   obligations depend on company size and sector. State the criterion,
-   not a verdict on whether a law applies to a given client. This is the
-   "we report, we do not conclude" rule: reproduce the criteria, state
-   the company's own registry data, describe where the case law stands
-   including the current split between courts, and recommend confirming
-   scope with a lawyer. Never state that a specific business is bound,
-   never give a deadline, never state a sanction amount for that client,
-   never present scope as settled. Binds report templates and the
-   outreach email templates equally. Full rule and legal basis:
-   `docs/rules/obligation-basis.md` section 7 and `docs/rules/operator-obligations.md`
-   section 2.
+Legacy `STOP`, `locked`, or `ask first` language in plans and specialist
+workflows is interpreted through this current contract. For reversible local
+work it means "check impact before proceeding", not "the owner may not change
+this". Specific legal, destructive-data, production, external-write, and secret
+boundaries still apply.
 
-## Locked contracts, do not modify without asking
+This section explicitly supersedes the older always-ask interpretation of
+protected files, dependencies, package boundaries, mandatory session logging,
+and globally enabled Impeccable hooks.
 
-- `packages/core/src/types/findings.ts` — findings model v1
-- `packages/core/src/normalize/severity.ts` — severity mapping
-- `packages/core/src/types/llm-output.ts` — LLM schema and guards
-  (`themeSchema.category` gained `'privacy'` on 2026-08-24, an approved
-  change; see trade-off 31)
+## Non-negotiable product rules
 
-Every downstream layer reads these shapes. Changing them invalidates
-stored audits and breaks monitoring diffs. If a change is genuinely
-needed, say so and stop. Do not change them and continue.
+1. **Deterministic scanners detect. The LLM explains, groups, prioritizes, and
+   translates.** The model may never introduce a finding absent from its
+   structured input.
+2. Every finding traces to scanner evidence and an affected element/page.
+3. LLM output is validated with the authoritative Zod schemas. A response that
+   invents finding identifiers is rejected and retried.
+4. The LLM never receives raw HTML or full page content. Use normalized
+   findings plus bounded site context.
+5. Crawling is polite: respect `robots.txt`, use the identifiable user agent,
+   preserve pacing and hard timeouts. A global default page cap remains off;
+   the continuation-family guard is separate and disclosed.
+6. Never overstate legal exposure. Report criteria and verified facts, not a
+   client-specific legal verdict. Approved legal wording and evidence live in
+   `docs/rules/obligation-basis.md` and
+   `docs/rules/operator-obligations.md`.
 
-## Known trade-offs, do not silently reverse
+## Protected contracts
 
-Full write-ups (root cause, alternatives tried and rejected, measured
-effect) live in `docs/decisions/trade-offs.md`, same numbering. Each line
-below is the one governing "do not X" imperative; read the linked entry
-before touching the area it covers. A suffix such as `trade-offs.md#24`
-means numbered entry 24, not a literal Markdown heading anchor.
+These files have unusually broad downstream impact:
 
-1. Axe already covers WCAG 2.2 AA; Lighthouse's `accessibility` category
-   is excluded to avoid duplicate findings, and `best-practices` has no
-   home among the four locked `FindingCategory` values. Do not re-enable
-   either category for finding emission without an argued change; add to
-   `LIGHTHOUSE_EXCLUDED_AUDITS` only overlap confirmed against real
-   output. → trade-offs.md#1
-2. `prune-screenshots.ts`'s `selectPageDirsToKeep`/`pruneScreenshots` is
-   the single implementation deciding which screenshots survive a scan.
-   Do not reimplement selection logic elsewhere. → trade-offs.md#2
-3. Dedupe (`computeDedupeKey`, cross-page) and
-   `aggregateSamePageOccurrences` (same-page, fine groups only) are two
-   separate passes with different keys. Do not merge them, and do not add
-   selector normalization (stripping `:nth-child()` etc merges genuinely
-   distinct elements). → trade-offs.md#3
-4. Non-HTML resources are dropped by extension before enqueueing
-   (`links.ts`), with a Content-Type fallback in `crawl.ts`. Never crawl
-   binary resources as pages. → trade-offs.md#4
-5. `persistAudit` upserts by `auditId` (a re-run is a retry);
-   `persistAnalysis` inserts (a re-run is a distinct, legitimate
-   document). Do not change either's semantics. → trade-offs.md#5
-6. Two cost gates control LLM calls: a conservative audit fallback and a
-   stricter prospecting-worthiness gate, both scoring on `SEVERITY_ORDER`
-   over distinct findings. Do not remove either without revisiting
-   `docs/rules/llm-layer-rules.md` section 10. → trade-offs.md#6
-7. `structure-output-schema.ts`/`writing-output-schema.ts` are provider-
-   facing Zod-v3 shape hints needed only because the SDK helper requires
-   zod v4 (the writing one is built per call, trade-off 70). Never treat
-   them as the validation authority — the real Zod schemas' `.parse()` is
-   what runs. → trade-offs.md#7
-8. Findings the LLM can't give good advice about (wrapper pages,
-   noindex-legal pages) are diverted before the structure pass via
-   `packages/llm/src/diversion.ts`'s `partitionFindings`, not explained
-   away with a prompt instruction. `packages/report` must import that
-   function, never duplicate the predicate. `legalRelevance` is built in
-   code, never written by the model. → trade-offs.md#8
-9. `packages/report`'s CSS is hand-maintained from the readable flat
-   design sources in `docs/report/design/`, not Tailwind. Do not reintroduce a
-   Tailwind build step without checking the existing design system first;
-   derive tokens from source CSS, never invent them. → trade-offs.md#9
-10. Render-diff/axe/Lighthouse run across `SCAN_CONCURRENCY` lanes; the
-    crawl stays sequential; Lighthouse calls are serialized behind an
-    in-process queue, now for memory and measurement validity, not the
-    original `perf_hooks` collision. Do not remove that queue without a
-    measured drift budget on client-facing metrics. → trade-offs.md#10
-11. Legal content (Argument B) is a deterministic splice from
-    `assessObligations()`, byte-identical-validated, never model prose.
-    Do not revert to a "be careful" prompt instruction instead of
-    withholding the pen. → trade-offs.md#11
-12. Single-tier commercial model: no paid screening tier, flat full-audit
-    price, free outreach preview instead. `ReportTier` is gone everywhere.
-    The preview is not a lighter report tier — give it its own render
-    path and its own RGPD article 14 disclosures. → trade-offs.md#12
-13. Full audit price is EUR 1,600 HT (raised from EUR 300 HT
-    2026-08-16), a pricing decision only, not a scope change. The Stripe
-    link amount is updated by hand. → trade-offs.md#13
-14. SEO/GEO checks use a new `geo` `FindingCategory` (purely additive),
-    not folded under `seo`. Citability of factual statements is
-    explicitly out of scope for a heuristic — that's an LLM-explains job,
-    not a scanner check. → trade-offs.md#14
-15. The business-impact reference-stat table
-    (`packages/core/src/reference-stats/stats.ts`) is compiled TS, not
-    JSON — it's edited content, not operator config. Only rows the
-    research doc tags "safe to cite by name" are encoded; never add an
-    aggregate market-size figure or an unverified year.
-    → trade-offs.md#15
-16. Reference-stat citation selection in the report is fully
-    deterministic (`selectReferenceStats` called at render time), never a
-    model choice. `Theme.category` has no `'geo'` option. Outreach
-    (9c) must never import `@odysseus/core`'s stat table — stricter "no
-    statistics" rule applies there. → trade-offs.md#16
-17. No annex group in the PDF is ever forced onto one page with
-    `break-inside: avoid`, regardless of finding count — only bounded
-    per-row atomicity is safe. Do not reintroduce group-level atomicity
-    without a real mechanism for bounding rendered height first.
-    → trade-offs.md#17
-18. Milestone 8.6 detections (security headers, AI-crawler robots check,
-    structured-data validation, CrUX field data) all use `source:
-    'custom'` into the existing dedupe/severity machinery. CrUX requires
-    `globalThis.fetch` passed explicitly (library throws in Node
-    otherwise). → trade-offs.md#18
-19. The PDF glyph-splitting defect is Chromium print-to-PDF font hinting,
-    fixed via `REPORT_PDF_CHROMIUM_ARGS` (`--font-render-hinting=none`)
-    applied only to the report's own Chromium launch, not the scanner's.
-    → trade-offs.md#19
-20. Five report-template fixes from a full read-through (broken
-    `--space-5` token, uncoloured Impact/Conformité, unfilled manual
-    fields via `prefillAuditManualFields`, contradictory lab-vs-CrUX Core
-    Web Vitals numbers, repeated annex URL lists). Do not reintroduce a
-    `var(--space-*)` reference without a matching declaration —
-    `spacing-tokens.test.ts` guards this. → trade-offs.md#20
-21. Sector-targeted reference-stat research lives in
-    `docs/research/sector-reference-stats/`, one file per sector. Only
-    wire in rows with confirmed methodology; an absence of a scalable
-    stat (e.g. hospitality accessibility-to-conversion) is the correct
-    conservative answer, not a gap to paper over. → trade-offs.md#21
-22. `estimateRevenueImpact` is wired only for `scales-down` citations with
-    a Sirene-reliable turnover, applied exactly once against full
-    turnover — never scaled by a measured gap, page count, or finding
-    count. Result is floored to 2 significant figures. Do not relax
-    `scales-down` eligibility to cover a context-only stat.
-    → trade-offs.md#22
-23. `computeBrokennessScore`/`isAuditFallbackEligible`/
-    `isProspectingWorthy` are real as of 9b but `isAuditFallbackEligible`
-    is still not wired into the pipeline — documented gap, not silently
-    solved. Restaurants (56.10A) stay disabled in the NAF allowlist; do
-    not enable by analogy to hotels without the same legal review.
-    → trade-offs.md#23
-24. Language variants of one page are collapsed into a single finding
-    using the site's own hreflang declarations only (two gates:
-    self-inclusion, one-URL-per-language) — never URL-prefix guessing.
-    Clusters are computed once in `write-audit.ts` and stored on the
-    manifest, not recomputed per consumer. → trade-offs.md#24
-25. `FindingCategory` gained `privacy` (approved locked-contract change)
-    covering both security-header and cookie/tracker concerns as one
-    client-facing story. → trade-offs.md#25
-26. Six 2026-08-24 detection checks (cookie/tracker consent, WCAG 1.4.10
-    reflow, accessibility-statement presence, third-party origin
-    inventory, NAP consistency, HTML structural validity via an
-    `ALLOWED_RULES` allowlist that excludes all `wcag/*` rules to avoid
-    axe duplication). NAP compares only phone/postal code, never street
-    names. → trade-offs.md#26
-27. The structure pass sees dense `x1..xN` alias finding IDs
-    (`finding-alias.ts`), not real ones, so there are no numeric gaps for
-    the model to "complete." Do not reintroduce a prompt instruction
-    about ID gaps — there's nothing left to explain. → trade-offs.md#27
-28. The LCEN identification obligation (article 1-1, I, 2, post-SREN) is
-    spliced deterministically from `regimes.ts` via `renderLcenBlock`,
-    never routed through `assessObligations()` (no scope test), and never
-    renders a sanction amount. → trade-offs.md#28
-29. Three client-visible copy fixes: the exec-summary "commercial not
-    legal" note now reflects what `legalRelevance` actually knows;
-    French guillemets use U+00A0 (guarded by
-    `guillemet-spacing.test.ts`), never U+202F (missing-glyph risk in
-    PDF). → trade-offs.md#29
-30. Lighthouse resource audits (images etc) collapse to one site-wide
-    finding via `FindingCandidate.dedupeIdentity` overriding selector
-    identity — allowlist only audits whose items describe one action over
-    a set of files; selector/URL-based identity was tried and measured
-    worse. → trade-offs.md#30
-31. `render-diff.ts` uses `load` + a bounded best-effort
-    `networkidle` wait (`RENDER_SETTLE_TIMEOUT_MS`), never a hard
-    `waitUntil: 'networkidle'` requirement — it can hang indefinitely on
-    a real site. Language subtrees are recorded `discovered-not-scanned`,
-    never silently dropped by a link filter. `hreflang-missing` must
-    actually have an emitter, not just severity/copy — sweep periodically
-    for other dressed-but-dead rule ids. The writing pass is guarded
-    against stating legal consequences
-    (`legal-consequence-guard.ts`). → trade-offs.md#31
-32. A normalize-layer change that drops/reorders findings renumbers every
-    later finding ID — any analysis generated against the old
-    `findings.json` must be regenerated (`analyze
-    --regenerate-structure`), never reused. Lighthouse's `document-title`
-    SEO audit duplicates axe's own rule of the same name — keep it in
-    `LIGHTHOUSE_EXCLUDED_AUDITS` and re-run
-    `generate-reachable-rule-ids.mjs` after any such change. A generic
-    `h1..h6 { break-after: avoid }` rule must not apply to
-    `.remaining-category h5` — use the bounded `.remaining-category-head`
-    wrapper instead. CWV metric tie-breaks return no metric on a genuine
-    tie, never fall back to LCP by list order. → trade-offs.md#32
-33. eTLD+1 comes from `tldts` with `allowPrivateDomains`, never a
-    hand-rolled parser or ICANN-only `tldts-icann`; only a domain held by
-    exactly one establishment is ever an identity key. → trade-offs.md#33
-34. Real-scan test fixtures under `fixtures/test-audits/` are committed with
-    the client removed, built only by `scripts/deidentify-audit.mjs`. Never
-    gitignore them (a green suite then describes data no other machine has),
-    and never commit a real one as-is. Never hand-edit a fixture in place -
-    rebuild it, so the script's read-back leak check and page-collision check
-    both run. Real hostnames stay wherever they point at local gitignored
-    `artifacts/` directories. The site-agnostic observed-rule inventory is
-    rebuilt with `pnpm fixtures:rules`; it must never encode which audit
-    emitted a rule. → trade-offs.md#34
-35. `prescanSite` never calls `runAuditStage`, `scanSite`, `scanPage`, or
-    Lighthouse; its artifacts live under a separate `prescans/` root, never
-    `artifacts/`. Every prescan metric (bytes, CLS, blocking time, LCP,
-    request counts) is approximate on a real site and must be banded, never
-    treated as exact; only axe facts are exact. Evidence bytes get the same
-    banding. Page roles order on path depth before lexicographic. A prescan
-    is inserted, never upserted, and emits no `prospects` event. The Atout
-    France export carries no SIREN column. → trade-offs.md#35
-36. Hotel outreach evidence is a strict contract over two logical assets (a
-    raw/rendered composite, a measured failure crop) plus three to five
-    allowlisted summaries — no selectors, exact URLs, rule/finding IDs, free
-    prose, legal conclusions, or statistics. `complete` requires the failure
-    crop plus three summaries; the composite is a bonus, not required (v2).
-    Do not widen the contract, do not re-require the composite, and do not
-    lower the 20 percent render-gap threshold. → trade-offs.md#36
-37. A redirect off the declared domain is classified by counting
-    establishments at the target, never by comparing domain names.
-    → trade-offs.md#37
-38. Hotel outreach scores are insert-only and versioned, and the selected
-    cohort is its own insert-only generation, never a field written back onto
-    a score. Worthiness over a prescan is a separate pure predicate
-    (`isHotelOutreachWorthy`); do not reuse or edit the shipped cost gates,
-    which read `Finding`s a prescan never produces. A missing fact scores zero
-    and records an `unknown` reason, never a false, and metrics are banded.
-    Weights are approved per version and are never edited in place - broadening
-    what a weight reads is a new version. → trade-offs.md#38
+- `packages/core/src/types/findings.ts`
+- `packages/core/src/normalize/severity.ts`
+- `packages/core/src/types/llm-output.ts`
 
-39. Hotel role contacts are discovered for the selected cohort only, never for
-    the qualified population, and a hotel with no usable address parks with one
-    of four typed reasons rather than a null. Widening the ordered local-part
-    allowlist is a new `contactVersion`, never an in-place edit. A resolver
-    failure is `unknown`, never `no-mx`. Amended plan 045: a manual override
-    lets the operator enter a named or free-mail address per hotel, with its
-    own origin disclosure and, for free-mail, an attestation; automated
-    discovery is unchanged. → trade-offs.md#39
+Changing them is allowed when required by the task. Treat the change as a
+migration-sensitive contract change: inspect stored-data compatibility and
+every downstream consumer, update focused tests, and record any durable
+decision. Do not change them casually as an unrelated cleanup.
 
-40. Every derived document carries a `findingsProvenance` stamp and fails
-    closed: an analysis, report, or artifact carrying none is refused, never
-    trusted for being old. `packages/core/src/normalize/findings-provenance.ts`
-    is the one place that computes or compares one. → trade-offs.md#40
+Other schemas may also be high impact in their domain. Their owning focused
+document describes the contract; use the same impact-first approach rather
+than inventing a new permission gate.
 
-41. The Sirene join runs in the qualification pass, never identity
-    resolution, and is written onto the qualification generation, never back
-    onto the candidate. Apply a fresh stock file with `backfillSirene`
-    (contacts nobody), never by re-running `qualifyHotels` (re-probes every
-    live site). → trade-offs.md#41
+## Canonical focused documents
 
-42. The outreach preview is a separate document kind, never a tier of the paid
-    report: its input contract (`packages/core/src/types/outreach-preview.ts`)
-    shares no type with `GenerateReportInput`. Do not spread a report input
-    into a preview input, and do not widen the schema to admit finding IDs,
-    selectors, exact URLs, or statistics. → trade-offs.md#42
+Read the narrowest source that owns the work:
 
-44. A paid deliverable is the exact current French and English report pair:
-    render identity is created before PDF generation, approval is insert-only
-    over both verified digests, and delivery requires the matching current
-    approval. Keep one PDF per language with the glossary last and the
-    technical appendix second to last. → trade-offs.md#44
+| Work | Canonical source |
+| --- | --- |
+| Product purpose and architecture | `docs/product/odysseus-project-brief.md` |
+| Full decision rationale and rejected alternatives | `docs/decisions/trade-offs.md` |
+| Normalization, dedupe, IDs, artifacts | `docs/rules/normalization-rules.md` |
+| Model inputs, prompts, output guards | `docs/rules/llm-layer-rules.md` |
+| Client-facing legal facts | `docs/rules/obligation-basis.md` |
+| Operator regulatory obligations | `docs/rules/operator-obligations.md` |
+| Prospect qualification and contact rules | `docs/rules/prospect-qualification.md` |
+| Outreach and previews | `docs/rules/outreach-rules.md` |
+| Pricing and offer framing | `docs/rules/offer-positioning.md` |
+| Report design | `docs/report/report-design-system.md`, `docs/report/report-design-tokens.md` |
+| Dashboard navigation and vocabulary | `docs/product/dashboard-ia.md` |
+| Coding, tests, prose, attribution | `docs/agents/coding-conventions.md` |
+| Deployment | `deploy/runbook.md` |
+| Current planned work | `plans/README.md` and the selected active plan |
 
-55. WCAG-citation and business-claim guards run in the writing pass's retry
-    loop (measured promotion, zero false positives over stored analyses), and
-    an always-on shadow reviewer returns evidence-bound prose verdicts without
-    ever blocking; it was measured not promotable on the Mistral-era medium
-    model; re-measure on the current provider before any promotion decision.
-    The plan 033 correction-review pass was measured on 2026-09-11 (151
-    proposals, 20 FR/EN outputs): 3 unsafe and 100 false positives against 5
-    useful catches, so it is not promotable and its propose-change verdicts
-    stay advisory-only.
-    → trade-offs.md#55
-61. Production deploys locally: the operator runs `deploy/odysseus-deploy.sh`
-    against the Hostinger box, which renders the compose file and writes it to
-    the server, rsyncs the repo, builds the commit-tagged image, rolls out
-    `up -d app` under compose project name `odysseus` (never `deploy`), and
-    verifies the running build id. Never deploy by GitHub workflow (kept
-    disabled), push-to-live, a server-side `git pull`, or a general-purpose
-    Actions SSH key.
-    → trade-offs.md#61
+Trade-offs are evidence and guardrails, not an instruction to preload every
+numbered entry. Read the entries that touch the change. Historical plans do not
+override current canonical docs.
 
-62. Report preparation (plan 019) is one deep core module with typed
-    vocabularies and evidence-bound journeys; handlers and rendering consume
-    its bounded outputs and never reimplement preparation policy.
-    `no-issue-detected` requires positive evidence the detector ran.
-    → trade-offs.md#62
-
-63. Client-specific financial estimates are denied by default; broad
-    `scales-down` status never grants estimate permission. The canonical
-    opportunity resolver is **not implemented**. The EUR 7,500 EAA sentence is
-    a separate deterministic general reference, never this client's exposure.
-    → trade-offs.md#63
-
-64. A full audit's tool coverage is pass-specific, not uniform per URL
-    (plan 021). Every successfully crawled HTML page keeps render diff, axe,
-    and the extended pass; only Lighthouse is family-stratified. Page role
-    and template-family classification never remove rendered, axe, or
-    extended checks, and fall back to fuller coverage on any ambiguity. A
-    sampled finding is never propagated to an untested page.
-    → trade-offs.md#64
-
-66. `CLAUDE.md` and `AGENTS.md` are loaded into every session, not read on
-    demand; keep both to load-bearing content only (rules, locked
-    contracts, package boundaries, the one-line trade-off imperative) and
-    push root-cause narrative, measured evidence, and amendment history to
-    the linked focused document instead — see
-    `docs/agents/documentation-map.md`'s "Keeping entry-point documents
-    lean". `CLAUDE.md`'s size is capped in `scripts/check-agent-docs.mjs`,
-    same mechanism as `AGENTS.md`'s existing 24 KiB limit; raise the
-    ceiling only as a deliberate choice, never as a side effect.
-    → trade-offs.md#66
-
-67. Every model pass uses OpenAI `gpt-5.4-mini` through strict structured
-    output with reasoning effort `none`, the structure and reviewer passes at
-    temperature 0.2, and the writing pass at its own measured setting; read
-    the entry before touching either. The generic alias
-    is an operator-approved automatic-upgrade trade-off; recheck bilingual
-    report quality after an alias repoint. Never split models per pass while
-    persisted analysis provenance has only one model field.
-    → trade-offs.md#67
-69. Per-host prompting guidance lives in `docs/agents/model-prompting.md`, not
-    in this charter. Do not restate its per-model detail here beyond the
-    delegation and document-length rules already promoted into Style.
-    → trade-offs.md#69
-70. The writing pass's provider schema is built per call and keyed by the
-    expected theme keys, so a duplicate, missing, or invented theme key is
-    unrepresentable. Do not revert it to an array of self-labelled themes,
-    and do not add a local repair for a key mismatch: keep
-    `findThemeKeyMismatches` as a guard that should never fire.
-    → trade-offs.md#70
-71. Every rule the scanners can emit — `CUSTOM_CHECK_SEVERITY` plus the whole
-    reachable axe/Lighthouse set — must carry reviewed FR/EN remediation copy,
-    enforced by a source-derived test. An upgrade adding a rule fails the
-    build until copy exists; write it, do not lower the check.
-    → trade-offs.md#71
-
-72. The build identity is stamped into the deployment image
-    (`ODYSSEUS_BUILD_ID`, passed by `release.sh` through compose), never derived
-    from a runtime `git` call, which production has no checkout for; and
-    client-facing copy gates every build identity on `isKnownBuildId` rather
-    than printing the `unknown` sentinel. → trade-offs.md#72
-
-73. A MongoDB connection with no named database refuses to run: the URI
-    path wins, then `MONGODB_DB_NAME`, never a driver default; production's
-    database is pinned in `deploy/compose.yaml` (issue #38).
-    → trade-offs.md#73
-
-74. Screenshot capture is gated on the same predicate that governs retention
-    (trade-off 2 now covers capture too), and Lighthouse is asked only for
-    the categories that can become findings. Do not let the two screenshot
-    predicates drift, and do not reach for scan concurrency before page
-    classification is fixed. → trade-offs.md#74
-75. A `--limit`-bound hotel prescan job (no `--domain`) is not restart-safe
-    against its operator-approved scope: it persists only a count, not the
-    candidate IDs, so a restart re-lists "next unscanned qualified
-    candidates" and can silently drift past the approved list, as plan
-    034's v4 batch did (110 of 229 scanned domains unapproved). The
-    2026-09-08 spurious-reclaim fix (`24d7ac0`/`b6461ab`) does not close
-    this; issue #114 tracks the remainder. Treat a `--limit`-only batch's
-    approval as a count, not a site guarantee, until then.
-    → trade-offs.md#75
-
-76. A full audit stamps a stable run identity on its job, checkpoints the
-    crawl (and the mid-crawl frontier) into the audit directory, and
-    resumes across re-claims; resume requires the same effective config and
-    tool identity, re-runs the coverage gate, and startup resets every
-    running job (single container). The release flow refuses to recreate
-    the container over running jobs unless explicitly forced.
-    → trade-offs.md#76
-
-78. The LCEN publisher-identification finding's evidence carries the
-    checked-page list and the full article 1-1 field-presence table; a
-    detector-status row moves from absent-not-proven to detectably present
-    only when a reviewed deterministic extractor for that exact field
-    lands, never by rewording, severity, or copy. Full audits only.
-    → trade-offs.md#78
-79. Impeccable (pbakaus/impeccable) is now a persistent native-installer
-    skill install (`.claude/skills/impeccable`, `.agents/skills/impeccable`,
-    hooks enabled in `.claude/settings.json`/`.codex/hooks.json`), not a
-    one-off run like plans 022/023 were. Its `overused-font`/Inter ignore
-    on `packages/report/**` (via `.impeccable/config.json`) was removed by
-    plan 039 with the retired Inter keep (trade-off 81); do not add an
-    ignore for a rule not observed to fire, and do not let the detector
-    touch the locked report design system otherwise. → trade-offs.md#79
-
-80. fallow is the codebase-intelligence CLI (`pnpm run audit:code`,
-    `.fallowrc.json`): dead code, cycles, duplicate exports, dependency
-    hygiene, and boundary zones mirroring the charter package walls. Gated
-    in `pnpm run check` (and so the pre-push hook) since the 2026-09-11
-    triage cleared the baseline to zero; never wire it into CI, never
-    enable its runtime tier, and verify any dead-code finding with
-    `fallow dead-code --trace` before deleting anything. → trade-offs.md#80
-
-82. Outreach drafts are light HTML plus a plain-text twin from one block
-    model, naming only `OUTREACH_CONTACT` (`contact@odysseusaudit.fr`).
-    Never add an image, remote asset, tracking, or stylesheet to a draft,
-    and never spell the prospect address outside that constant.
-    → trade-offs.md#82
-83. No model writes outreach: every email is operator-approved template
-    wording (`outreach-email-template.ts`), filled only with the formatted
-    hotel name and that hotel's own preview proof-card categories. Change a
-    sentence only with operator approval. → trade-offs.md#83
-84. The dashboard's grounds, ink ladder, hairlines and sky accent are
-    transcribed by value from the same site/report source trade-off 81
-    used; severity and `--color-danger` stay untouched, and primary
-    buttons stay ink-inverted, never sky-filled. Do not invent a token
-    value instead of transcribing one. → trade-offs.md#84
+## Package boundaries
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
-Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node
-module, Mongoose 9, Zod, Commander, Vitest, pino, `openai`.
 
-No Redis, no BullMQ, no Express API, no Next.js dashboard, no public web
-interface to the audit engine itself. Those are later phases and are
-deliberately not being built.
+- `core`: contracts and pure normalization; no infrastructure I/O.
+- `scanner`: crawl, Chromium lifecycle, render diff, axe, Lighthouse, scan
+  artifacts.
+- `store`: Mongoose persistence and connection handling.
+- `llm`: the only workspace package that talks to the configured OpenAI API;
+  depends on `core`.
+- `report`: bilingual report rendering and PDF generation.
+- `interface`: job queue, private operator HTTP server, hosted dashboard.
+- `cli`: thin Commander entry points.
+- `site`: standalone public marketing/bot-information site; deployed
+  separately and does not import the audit-engine packages.
 
-**Amended 2026-08-31, plan 016.** The single-user operator dashboard is now
-served from a hosted EU VPS at `app.odysseusaudit.com`, behind Caddy and a
-built-in password session (`packages/interface` auth). It stays a private
-single-user interface and gains no public client surface; previews remain
-hash-token gated on the standalone site. Decision and rejected
-alternatives: trade-offs.md#60. `packages/site` (added 2026-08-07) is not
-an exception to this: it is a standalone Next.js marketing/bot-info site
-with no access to the queue, the database, or any other package, not a
-public front end for the tool.
+Prefer existing packages. A new package or dependency is allowed when it
+creates a cleaner design for the requested outcome; justify it by architecture
+and maintenance cost, not by an approval ritual.
 
-PDF generation uses Playwright's Chromium, not Puppeteer. One browser
-dependency, not two.
+`packages/site` is public marketing only. `packages/interface` is the private
+single-user operator surface. Do not accidentally create a public interface to
+the audit engine.
 
-Lighthouse cannot accept a Playwright `Page`. Launch Chromium with a
-remote debugging port and pass that port to Lighthouse, reusing the same
-browser instance used for rendering and the axe pass. Playwright makes
-at most two explicit loads per page (once raw, once rendered). Lighthouse
-adds its own internal navigation on top of that when run in navigation
-mode. That extra load is unavoidable and required to produce trace based
-Core Web Vitals (LCP, CLS, INP). Snapshot mode was considered and
-rejected because it cannot produce those metrics.
+## High-value decision guardrails
 
-## Packages
+The full numbered record is `docs/decisions/trade-offs.md`. Keep these
+cross-cutting outcomes unless the requested work intentionally revisits them:
 
-- `core` — locked contracts plus pure normalization. No I/O, no database
-  driver. This package is defined by the contracts it holds; keep live
-  infrastructure out of it.
-- `scanner` — owns the Chromium lifecycle, render diff, crawler, axe,
-  Lighthouse, config, and the artifacts layout.
-- `store` — Mongoose models and connection handling. Nothing else.
-- `llm` — the only package that talks to the OpenAI API. Peer of
-  scanner, not a consumer: it depends on `core` and nothing else in the
-  workspace.
-- `report` — renders a stored analysis and the findings appendix into a
-  branded, bilingual PDF via Playwright's Chromium, reusing `scanner`'s
-  browser lifecycle rather than adding Puppeteer as a second dependency.
-- `interface` — runs the job queue and a small private HTTP server that
-  serves the single-user dashboard. The only package that binds a
-  network port.
-- `cli` — Commander entry points, thin. Real logic lives in the packages
-  above.
-- `site` — the public marketing site and bot-information page at
-  odysseusaudit.com, added 2026-08-07. A standalone Next.js app deployed
-  separately to Vercel, not part of the `tsc -b` build graph the other
-  packages share, and does not import from and is not imported by any of
-  them. Exists so `ODYSSEUS_USER_AGENT` points at a domain that actually
-  resolves, per the crawling-politeness rule.
+- Full audits do not silently reintroduce a global page cap.
+- Dedupe and same-page occurrence aggregation remain separate concepts.
+- Legal content that the rules require to be deterministic stays
+  deterministic.
+- The outreach preview is its own document kind, not a paid-report tier.
+- Stored analyses/reports preserve findings provenance and fail closed when
+  provenance is missing or stale.
+- Real-scan fixtures are de-identified and rebuilt through the repository
+  scripts, never hand-edited or committed raw.
+- Production deploys through `deploy/odysseus-deploy.sh`, not the disabled
+  GitHub release workflow.
+- Outreach wording comes from operator-approved deterministic templates; no
+  model writes outreach copy at runtime.
+- Impeccable remains installed as an optional design workflow, but global
+  edit/stop hooks are intentionally disabled. Invoke the design workflow when
+  the task actually calls for it.
 
-Eight packages for a tool one person runs is close to the ceiling. If a
-ninth is proposed, check that its one-sentence description does not
-overlap an existing package before agreeing.
+If a task intentionally needs to revisit one of these choices, do the analysis
+and implement the better decision; update the owning trade-off instead of
+treating history as immutable.
 
-## Artifacts layout
+## Live and external boundaries
 
+Local edits, builds, tests, analysis regeneration from saved audits, and
+bilingual PDF rendering are standing-authorized.
+
+Read-only prospecting checks against catalogue-declared domains remain allowed
+within the crawler's politeness and batch bounds.
+
+A live third-party **browser audit** is an external operation. Run it when the
+operator asked for that real-site audit or when an explicitly invoked
+real-site QA workflow requires it. Do not silently turn a generic wording or
+report-review request into a new live scan.
+
+Production mutations, sending/publishing material, destructive database work,
+and destructive git actions require clear current intent for that action.
+
+Never expose `.env` secrets. Use the capabilities actually available in the
+host; a repo file mentioning a tool is not proof that the current session has
+it.
+
+## Sessions and dirty trees
+
+Treat existing worktree changes as deliberate. Preserve unrelated work and
+continue around it when possible. Ask only if the requested edit overlaps
+unknown changes in a way that cannot be resolved safely from the diff/history.
+
+`docs/session/current-session.md` is an optional crash/handoff recovery file,
+not mandatory bookkeeping. Use it for substantial unfinished work that another
+context may need to resume. Routine edits, reviews, and short implementation
+tasks do not need a session log.
+
+When a handoff is genuinely needed, follow `docs/agents/handoff.md`.
+
+## Verification
+
+Prefer the smallest proof that matches the risk.
+
+Typical commands:
+
+```bash
+pnpm run format
+pnpm run check
+pnpm test <affected test paths>
+pnpm run test:e2e
+pnpm run test:all
 ```
-artifacts/<hostname>/<ISO-8601-UTC-timestamp>/
-  manifest.json
-  findings.json
-  pages/<slug>-<6-char-url-hash>/
-    raw.png
-    rendered.png
-    scan.json
-  analyses/<ISO-timestamp>-<language>.json
-```
 
-One `analyses/` file per run rather than one per audit, since multiple
-analyses per audit are expected and must not overwrite each other.
+A behavior change normally gets a focused test. Broaden verification when the
+change crosses packages, persistence, browser flows, generated output, or
+deployment. Client-facing output is also reviewed as a client would see it.
 
-Screenshot references are relative to the audit directory, never absolute
-paths, so stored findings survive the artifacts root moving or the
-database being read from another machine. The manifest and the `audits`
-collection share one type, which is what lets `normalize <dir>` re-run
-offline against any artifacts folder with no database attached.
+Tests do not call a live model API. Use stubs. Real-site or production checks
+are deliberate external operations, not default test steps.
 
-Tool versions in the manifest are self-reported by the tools themselves
-(`testEngine.version`, `lighthouseVersion`) rather than read from
-installed `package.json` files, so they record what actually ran. Not
-retrofittable onto stored audits, and the monitoring tier depends on them
-to tell a real regression from a scanner upgrade.
+## Skills
 
-## Scope discipline
+Skills are optional specialist modes, not hidden authority layers.
 
-This is a command-line tool. Do not scaffold an API, a queue, a UI, or a
-public-facing scanner unless explicitly asked. Do not add dependencies
-without asking first. Prefer standard library and existing dependencies.
+A skill that is intentionally read-only, files issues, commits, creates
+prototype artifacts, writes research notes, performs a recurring audit, or
+runs a heavyweight design process must be explicitly invoked. Ordinary wording
+such as "audit", "improve", "research", or "design" does not silently switch
+the task into such a workflow.
 
-When a task is ambiguous, ask rather than assuming. Inventing structure
-is worse than pausing.
-
-## Session log
-
-Keep `docs/session/current-session.md` current for the whole of every
-repository-work session. It is gitignored and deliberately ephemeral. Start
-new logs from `docs/agents/session-template.md`; conversational questions that
-do not inspect or change the repository do not need one.
-
-Read it first, before anything else, at the start of a session. If it
-exists, a previous session did not finish: reconstruct from it rather
-than from the working tree alone.
-
-Write to it continuously, not at the end:
-
-- the session's plan and a checklist, before starting work;
-- tick each item the moment it is actually done, not when it is planned;
-- any finding worth keeping, at the moment it is found, including
-  negative results and things checked and ruled out;
-- for anything reconstructed after a crash, record what the evidence for
-  it was, so the next reader can tell a verified state from a guessed one.
-
-At the end of a session, fold what is durable into CLAUDE.md, the brief,
-or the relevant `docs/` file. Delete the session file only when the working
-tree no longer needs its provenance, normally because the coherent work was
-committed or explicitly discarded. If implementation is complete but remains
-uncommitted, set status `ready-for-commit` and leave the log in place. Nothing
-durable should survive only there; the file's presence means the next agent
-must reconcile it before starting new work. Rationale: `docs/agents/handoff.md`,
-"Parking or handing off work".
-
-## Pausing before the usage limit
-
-When usage approaches its limit (around 99 percent), stop deliberately rather
-than being cut off mid-change: do not start anything new, bring the tree to a
-state that builds and typechecks, update the session log per
-`docs/agents/handoff.md`'s parking checklist, commit only if authorized, then
-stop and report. Resume from the session log after the reset, not from the
-working tree alone.
-
-## Testing
-
-Run against `fixtures/spa-demo`, a local client-rendered React app with
-deliberately seeded faults. Vitest for unit tests, with scanner output
-fixtures committed so tests do not require a browser.
-
-**Live-site authorization, amended 2026-08-27.** The per-named-site
-permission this section used to require is withdrawn. It was asked and
-re-asked for every batch of a campaign whose whole point is checking
-thousands of declared hotel domains, which made it a prompt to click
-through rather than a decision anyone was actually taking.
-
-Read-only, no-browser prospecting checks (DNS, TLS, bounded HTTP) against
-a domain a catalogue already declares are standing-authorized, subject to
-non-negotiable rule 5, which is unchanged and is what actually protects
-the site being checked: robots.txt honoured, identifiable user agent,
-delay between requests, hard timeout. Every such batch still runs bounded,
-with `--dry-run`, an explicit `--limit`, and a checkpoint.
-
-A *browser* audit of a live third-party site is still a deliberate act,
-not a background habit: prefer the fixture, and run Chromium against a
-real site when there is a reason to, not by default.
-
-The fixture is two pages and cannot exercise everything. Both bugs found
-after Milestone 4 (attachment URLs crawled as pages, positional selectors
-defeating dedupe) passed the entire test suite and were visible only in a
-real-site scan. Saved artifacts under `artifacts/sas-fernande.fr/` are
-real-site reference data; `normalize <dir>` re-runs against them offline
-without touching the site.
-
-Tests never call a live model API. The LLM package is tested with
-a stubbed client, including the path where retries are exhausted and the
-call throws rather than returning a partial analysis. Live verification
-is a manual step, and for anything client-facing it means reading the
-output as the client would, not just checking that it validated.
-
-**Analysis and PDF authorization, amended 2026-08-27.** Generating or
-regenerating an analysis from a saved audit is standing-authorized. The
-structured `manifest.json` and normalized `findings.json` may be sent to the
-configured OpenAI API, and French and English PDFs may be rendered from the
-validated stored analyses, without asking for permission each time. This does
-not authorize sending raw HTML, page bodies, or screenshots to the model, and
-it does not authorize a new live browser scan. OpenAI analysis cost is small
-for this workflow and is not a separate approval gate; still avoid
-gratuitous regeneration and preserve the existing cost gates and provenance.
-
-Any fixture dev server started during a session must be stopped before the
-session ends. Verify it is stopped with `pgrep` before reporting
-completion.
-
-### Real-scan fixtures go stale silently. Refresh them and let a test catch it.
-
-`fixtures/audits.json` is the single curated list of real-scan directories
-the test suite depends on, each with a one-line reason it is kept. Run
-`pnpm fixtures:refresh` after any change under `packages/core/src/normalize`
-to re-derive every one of them and stamp each with a normalization-source
-fingerprint (`scripts/fixture-fingerprint.mjs`); `fixture-freshness.test.ts`
-fails the build the moment a listed fixture's stamp does not match the code
-in the tree. `rule-coverage.test.ts` adds two ratchets: a recall floor (never
-lower it to make a red build green) and a 30-percent single-rule
-concentration cap that catches a wrong-identity defect before it ships.
-Incident, full reasoning, and prior catches: trade-offs.md#68.
-
-## Claude Code MCP servers
-
-Start Claude Code sessions in this repo with `codysseus` (alias for
-`./scripts/dev.sh`), not a bare `claude`, so `.env` is sourced and the
-MCP servers below authenticate correctly.
-
-This launch instruction is Claude Code-specific. Codex, ZCode, and future
-agents use the tools exposed by their own host session; they must not assume
-these MCP servers are loaded merely because `.mcp.json` exists. The same
-data-access and live-navigation approval boundaries still apply whenever
-equivalent tools are available. ZCode has no wrapper equivalent to
-`codysseus`; where a command needs credentials, source `.env` at the point of
-use (`set -a; . ./.env; set +a`), the same pattern Codex already uses.
-
-Three MCP servers are available during development:
-
-- **context7** — current documentation for any library in the stack.
-- **mongodb-readonly** — a read-only view into the Atlas cluster, through
-  a dedicated read-only database user separate from the app's own
-  pro_db_user, for inspecting real findings and audit data while
-  debugging.
-- **playwright** — a separate Playwright instance for ad hoc, local page
-  inspection during development: the dashboard UI, the spa-demo fixture,
-  or a real page while writing a milestone 8 custom check. Not wired
-  into the scanner package's own Playwright dependency.
-
-Both mongodb-readonly and playwright are set to ask before every call,
-not auto-allow. mongodb-readonly can read real audit and prospect data;
-playwright can navigate to arbitrary URLs, including live client or
-prospect sites. Each call is approved before it runs.
-
-## Agent skills
-
-### Issue tracker
-
-Issues live as GitHub issues on `heywowyou/Odysseus`, via the `gh` CLI. See
-`docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-The five canonical roles (`needs-triage`, `needs-info`, `ready-for-agent`,
-`ready-for-human`, `wontfix`) map 1:1 to identically-named labels on the
-repo. See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Multi-context: a root `CONTEXT-MAP.md` will point to a `CONTEXT.md` per
-package under `packages/<name>/`, created lazily as `/domain-modeling`
-resolves real terms and decisions, not scaffolded upfront. See
-`docs/agents/domain.md`.
-
-## Skill Usage Policy
-
-Installed via the `skills` CLI (`npx skills@latest list` to check the
-current set). Like the MCP policy above, these fire on the trigger
-condition stated, not on vague "use when helpful" judgment.
-
-This is a repository capability catalog, not proof that every host loaded
-every skill. Use a listed skill when it is available in the active agent; if
-it is unavailable, state that briefly and follow the underlying repository
-documents and guardrails directly.
-
-Most of the skills below carry only a trigger note here because the active
-host already lists each installed skill with its own one-line description
-every session; this catalogue exists for the one that carries repo-specific
-facts no host listing has (audit-rehearsal) and for routing.
-
-- **ask-matt** — route to the right skill when unsure which fits.
-- **grill-with-docs** / **grilling** — stress-test a plan or idea before
-  committing; `grill-with-docs` also produces an ADR or glossary entry.
-- **triage** — work a GitHub issue or PR through the
-  needs-triage/needs-info/ready-for-agent/ready-for-human/wontfix states.
-- **improve-codebase-architecture** — survey the codebase for deepening
-  opportunities as a visual HTML report.
-- **to-spec** — synthesize a converged design into a GitHub Issues spec.
-- **to-tickets** — break an agreed plan into tracer-bullet tickets.
-- **implement** — implement a piece of work with a spec or ticket behind it.
-- **wayfinder** — plan oversized work as a map of decision tickets, or
-  resolve the next open ticket in an existing map.
-- **prototype** — throwaway sanity-check of a state model or UI look.
-- **diagnosing-bugs** — diagnose something broken, throwing, or slow with
-  more than one plausible cause.
-- **research** — investigate primary sources and write findings to
-  `docs/research/`.
-- **tdd** — build or fix test-first.
-- **domain-modeling** — write or edit a `CONTEXT.md` or ADR.
-- **codebase-design** — design a module interface or seam, most relevant
-  to `core`'s locked-contract boundaries.
-- **resolving-merge-conflicts** — resolve an in-progress merge or rebase.
-- **improve** (shadcn) — read-only codebase audit producing plans for
-  another agent to execute; never implements itself.
-- **find-skills** (vercel-labs) — find a capability no listed skill covers;
-  verify install count and source reputation before recommending one.
-- **frontend-design** (anthropics/skills) — visual design guidance when
-  building new UI or reshaping existing UI: aesthetic direction,
-  typography, and choices that do not read as templated defaults.
-- **impeccable** (pbakaus/impeccable) — design critique, audit, and
-  refinement commands (`/impeccable <command>`) plus a deterministic
-  post-edit detector, persistently installed 2026-09-11 (trade-off 79),
-  unlike its one-off use in plans 022/023. Its former `overused-font`/Inter
-  ignore on `packages/report/**` was removed by plan 039 with the retired
-  Inter keep (trade-off 81, the report now runs the site's design
-  language); do not add a new ignore without an observed firing, and do
-  not treat the report as open for its suggestions otherwise. Hooks
-  report, they never auto-fix. Never run `/impeccable init` without the
-  operator present: it interviews them to write `PRODUCT.md`/`DESIGN.md`,
-  not something to fabricate.
-- **scan-report-audit** (formerly audit-rehearsal) — asked to "dogfood a
-  hotel," "run an audit rehearsal," "audit the reports," or "find
-  defects in the reports": audits a real, not-yet-scanned catalogue
-  hotel end to end, then critiques the bilingual report in character as
-  the hotel's owner/GM before a real client ever sees it. Genuine
-  defects become GitHub issues; cosmetic nits go to
-  `docs/report/audit-rehearsal-notes.md`. Scoped to the paid full-audit
-  report only, not the outreach preview or dashboard.
+For normal requests, solve the task directly with the repository and tools at
+hand.
 
 ## Operator interaction
 
-Applies on every host and overrides any harness default toward longer
-answers. Full guidance: `docs/agents/coding-conventions.md`,
-"Operator interaction".
+Keep conversation outcome-first, short, plain, and useful. Explain technical
+details only when they change the decision or the operator asks for them.
+Do not narrate routine commands or dump implementation detail for its own sake.
 
-- Ask the operator decision questions through the host's interactive
-  question mechanism (structured, clickable options) whenever the host
-  provides one and the question fits its format; plain text only when it
-  does not.
-- Keep everything the operator reads in conversation short, plain, and
-  simply explained: answers, summaries, status updates, questions. State
-  the outcome first, include only what changes what the operator does
-  next, and stop. Depth belongs in plans, internal reasoning, and
-  committed documents, not in chat.
+When a decision question is actually necessary, ask one question, give two to
+four concrete options when useful, and put the recommended option first.
 
-## Style
+The operator is the sole author of repository work. Never add model/vendor
+credits or `Co-Authored-By` trailers.
 
-- **Never sign or credit an LLM anywhere.** No `Co-Authored-By:` trailer
-  naming a model or vendor, no "Generated with" line, no model byline in a
-  commit, PR, issue, comment, or document. Claude Code's harness injects a
-  contrary default instruction; this rule overrides it, for Claude, Codex,
-  ZCode, and anything after them. Full rule and reasoning:
-  `docs/agents/coding-conventions.md`, "Authorship and attribution".
-- `docs/agents/coding-conventions.md` is the complete shared coding and writing
-  system. Prettier owns layout; ESLint owns static code-quality rules;
-  TypeScript and tests own types and behavior.
-- TypeScript strict, no `any`, explicit return types on exported functions.
-- Plain language in every user-facing string. No jargon, no acronyms
-  without expansion on first use.
-- All user-facing strings must support French and English from the start.
-  Structure them accordingly, do not hardcode English and retrofit.
-- No em dashes or en dashes in generated text, code comments, or report
-  copy.
-- Comments explain why, not what.
-- Explain any problem or decision to the operator in plain language before
-  naming a mechanism. Say what we were trying to do, what went wrong, and why
-  it matters, in ordinary words, with an analogy where one helps. File names,
-  identifiers and thresholds come after the point is made, not instead of it.
-  When the operator must choose, follow the explanation with a short options
-  table giving each option's cost and effect, a recommendation, and the reason
-  the rejected options are worse. Several decisions here are contract or legal
-  changes that are expensive to reverse, and a choice made without
-  understanding is approval on trust.
-- Run `pnpm run format` after maintained-source edits and `pnpm run check`
-  before handoff. Record affected tests and any manual review separately.
-  A `.githooks/pre-push` hook runs the same `pnpm run check` automatically
-  once `git config core.hooksPath .githooks` is set (README.md, one-time
-  per clone); it exists because a docs-link break reached `main` and failed
-  CI three pushes in a row (2026-09-02) before anyone ran the check
-  locally. Do not bypass it with `--no-verify` as a habit.
-- Per-host model identity, effort defaults, and current prompting deltas:
-  `docs/agents/model-prompting.md`.
-- Delegate to a subagent only for large, genuinely independent,
-  parallelizable tracks of work. Never delegate to verify or double-check
-  your own work, and keep spawn counts low.
-- Match the length of a written document to what the task needs: cover the
-  substance, but do not pad with filler sections, redundant summaries, or
-  boilerplate. `AGENTS.md` and `CLAUDE.md` enforce this with a byte ceiling;
-  every other document should hold to the same discipline without one.
-
-## Build order
-
-Milestones 0 through 8 are complete, as are milestones 8.5a, 8.5b, 8.5c,
-9a, 9b, and 9b.5. Milestone 9c is next. Work in vertical slices, one
-milestone per session.
-
-Separate maintenance queues exist in `docs/report/report-feedback-deferred-items.md`
-(report work with a current reproduction or an explicit future trigger) and in
-GitHub issues (the intake for newly verified defects, per
-`docs/agents/issue-tracker.md`). They do not silently become
-the active milestone: verify their entries against current HEAD and act on
-them only when the user selects that maintenance scope or a blocking issue
-must be resolved first.
-
-1. Render diff only, CLI invocable — done
-2. Crawler: internal link discovery, robots.txt, depth and page caps — done
-3. Scanners: axe-core and Lighthouse against one shared Chromium instance — done
-4. Normalize and dedupe into MongoDB — done
-5. LLM prioritization layer with schema validation — done
-6. PDF report generation, bilingual — done
-7. Interface: queue and a private single-user dashboard (`odysseus serve`) — done
-8. Custom checks: meta/canonical/JSON-LD/sitemap/hreflang/heading-hierarchy plus the extended accessibility pass (keyboard traps, focus order, form error handling, video captions, alt-text heuristic) — done
-8.5a. Deterministic SEO/GEO detection checks, new `geo` finding category — done 2026-08-16, detection only. See trade-off 14.
-8.5b. Reference-stat table, sector detection, revenue calculator (`packages/core/src/reference-stats/`) — done 2026-08-16, data/pure functions only. See trade-off 15.
-8.5c. Reference-stat table wired into the report (per-theme/geo citations, `geo` in `CATEGORY_ORDER`) — done 2026-08-17, report-only. See trade-off 16.
-8.6. Security headers, AI-crawler robots check, structured-data validation, CrUX field data — done 2026-08-22, detection only. See trade-off 18.
-9a. Prospect acquisition and qualification — done 2026-08-16.
-9b. Prospecting throughput (worker pool, `skipLighthouse`, raised page/depth caps) — done 2026-08-22. See trade-off 23.
-9b.5. Sitemap-supplemented full-site scan coverage — done 2026-08-27. Recursive sitemap inspection stays separate from link reachability; full audits supplement eligible sitemap-only pages, while prospecting inspects and standalone crawl remains link-only. See the measured Haaitza validation in `docs/decisions/trade-offs.md`, "Build order milestone notes", 9b.5.
-9c. Hotel prospecting and outreach, planned as numbered vertical slices whose
-order, status, and dependencies are owned by `plans/README.md`. Durable
-decisions from the completed slices: plan 005's corrected crop was
-accepted on a separately authorized live rerun, closing its evidence gate, and
-the `redirect-offsite` defect that gate surfaced is fixed as qualification v2
-(trade-off 37), taking the qualified population from 5,720 to 5,995. Scoring
-ships as immutable versioned scores with an approved
-`hotel-outreach-v1` weight table and a separate cohort generation
-(trade-off 38). Role contacts cover the
-selected cohort only, with four typed absences instead of a null and an ordered
-local-part allowlist (trade-off 39). The
-outreach preview renders as a self-contained HTML document from its own narrow
-contract, with the offer price as a code-owned constant (trade-off 42). Previews
-publish to a private bucket behind an
-opaque token, the public site serves them by hashing the token the visitor
-brings, and the prospecting privacy, opt-out and offer pages exist with `/bot`
-corrected (trade-off 43); that deployment step is complete, recorded in
-trade-off 43,
-"Provisioned and verified, 2026-08-29". Reconciliation
-decisions and remaining verification gaps are recorded in
-`docs/decisions/trade-offs.md`, "Build order milestone notes", 9c.
-
-Full milestone list, including the phases beyond 8, is in the brief,
-section 7.
-
-Do not start a milestone before the previous one has tests passing, and
-do not consider a milestone finished until its output has been checked
-against a real site rather than the fixture alone.
+Per-host model/effort guidance lives in `docs/agents/model-prompting.md` and
+never overrides this project contract.

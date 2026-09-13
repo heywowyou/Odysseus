@@ -1,6 +1,7 @@
 ---
 name: dashboard-ux-audit
-description: Run the recurring UX audit of the Odysseus operator dashboard: a read-only live sweep of app.odysseusaudit.com in French and English, a code-level completeness pass, and reconciliation of the findings ledger at docs/product/dashboard-ux-audit.md, once per fix cycle until a run reports parity. Use whenever the operator asks to run the dashboard UX audit, run the next audit run, sweep the operator dashboard for UX problems, or check whether the dashboard is at UX parity. Its outputs are the updated ledger and one GitHub issue per finding; it never implements fixes.
+description: "Explicit recurring read-only UX audit of the Odysseus operator dashboard."
+disable-model-invocation: true
 ---
 
 # Dashboard UX audit (recurring)

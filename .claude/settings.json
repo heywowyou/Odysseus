@@ -1,40 +1,7 @@
 {
   "permissions": {
-    "ask": [
-      "Edit(/packages/core/src/types/findings.ts)",
-      "Edit(/packages/core/src/types/llm-output.ts)",
-      "Edit(/packages/core/src/normalize/severity.ts)",
-      "Edit(/CLAUDE.md)"
-    ],
     "deny": [
       "Read(./.env)"
-    ]
-  },
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "[ ! -f \"${CLAUDE_PROJECT_DIR}/.claude/skills/impeccable/scripts/impeccable\" ] || \"${CLAUDE_PROJECT_DIR}/.claude/skills/impeccable/scripts/impeccable\" hook",
-            "timeout": 5,
-            "statusMessage": "Checking UI changes"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "[ ! -f \"${CLAUDE_PROJECT_DIR}/.claude/skills/impeccable/scripts/impeccable\" ] || \"${CLAUDE_PROJECT_DIR}/.claude/skills/impeccable/scripts/impeccable\" hook",
-            "timeout": 30,
-            "statusMessage": "Design deep pass"
-          }
-        ]
-      }
     ]
   }
 }

@@ -1,87 +1,76 @@
-# Cross-agent working agreement
+# Cross-agent handoff and recovery
 
-Odysseus is maintained through Claude Code, Codex, and ZCode (added
-2026-08-29). They work in the same checkout, so the repository, not any chat
-transcript, is the source of truth for in-flight work.
+Odysseus may be worked on by Claude Code, Codex, ZCode, and human sessions.
+The repository is the source of truth for durable work. A session log exists
+only to make substantial unfinished work recoverable.
 
-## Sources of truth
+## When a session log is warranted
 
-1. `CLAUDE.md` is the shared engineering charter. Its filename is historical;
-   both agents must follow it. Durable project rules, package boundaries,
-   locked contracts, trade-offs, testing policy, and milestone state belong
-   there or in the documents it cites.
-2. `AGENTS.md` is the small Codex-specific entry point. It must link to the
-   charter rather than duplicate it.
-3. The focused documents under `docs/` own their subjects. Update the owning
-   document when a durable decision, rule, or fact changes.
-4. `docs/session/current-session.md` is an ignored, temporary crash-recovery
-   log. It owns only in-flight state. It must never become the only record of
-   a durable decision.
-5. `docs/agents/documentation-map.md` classifies documents by authority and
-   lifecycle; `docs/agents/session-template.md` defines the recovery fields.
-6. `docs/agents/coding-conventions.md` defines shared formatting, linting,
-   naming, testing, commenting, and product-writing conventions.
+Use `docs/session/current-session.md` when work is likely to be handed to
+another context before it is complete, when several agents are sharing one
+checkout, or when a large uncommitted tree would be expensive to reconstruct.
 
-If two documents conflict, stop and identify the conflict. Do not silently
-choose the newer-looking wording or make the implementation match one of
-them.
+Routine edits, short fixes, reviews, and completed work do not need a session
+log.
 
-## Beginning work
+Start from `docs/agents/session-template.md` when a log is needed. The file is
+gitignored and temporary.
 
-- Read the session log if it exists, then inspect `git status --short`.
-- Treat uncommitted work as intentional. Establish whether it is complete,
-  partial, or unrelated before touching it.
-- Read the shared charter and the focused source documents before changing
-  behaviour. Read the relevant trade-off entry before touching a protected
-  area.
-- Create a missing log from `docs/agents/session-template.md` before a
-  multi-step edit, then put the plan and checklist there.
-- Read `docs/agents/coding-conventions.md` before writing code or product copy.
+## Beginning or resuming work
 
-## During work
+- Inspect `git status --short`.
+- Read the session log when it exists and touches the work you are continuing.
+- Treat unrelated changes as deliberate and preserve them.
+- If provenance is unclear, use the diff, history, and the log to reconstruct
+  it. Ask the operator only when the requested change overlaps unknown work in
+  a way that cannot be safely separated.
+- Read `CLAUDE.md` / `AGENTS.md`, then the focused canonical docs for the task.
 
-- Record completed checks immediately, including negative findings and failed
-  commands. State facts, commands, and outcomes; avoid vague summaries such
-  as “tests look good”.
-- Update the log whenever the next safe step changes. A task is not complete
-  merely because code has been written.
-- Do not use either model's remembered chat state as evidence. Re-check the
-  workspace and source documents after a handoff or interruption.
-- Keep changes within the task. Ask the user before locked-contract,
-  dependency, package-boundary, legal-policy, or live-site-scan changes
-  requiring their permission.
-- Run Prettier after maintained-source edits. Resolve ESLint findings in code
-  where possible; keep any suppression narrow and justified.
+A dirty tree is not a reason to stop. Work around unrelated changes.
 
-## Parking or handing off work
+## During substantial unfinished work
 
-Before reaching a usage limit, stopping, or asking the other agent to take
-over, leave the tree in the most coherent buildable state available. Update
-`docs/session/current-session.md` with:
+Keep the recovery log factual enough that a fresh context can continue:
 
-- objective and scope;
-- completed and remaining checklist items;
-- changed paths and whether they are staged, committed, or uncommitted;
-- commands run and exact results, including tests not run;
-- formatting, lint, typecheck, affected tests, and manual review status;
-- known risks, blockers, and decisions needing the user's input;
-- one concrete next command or edit.
+- objective and current scope;
+- completed and remaining steps;
+- changed paths and ownership of pre-existing changes;
+- important decisions or discoveries;
+- verification already run and exact failures that matter;
+- blockers or risks;
+- one concrete next action.
 
-Commit only coherent work when authorised by the active task. At genuine
-completion, move durable information into its owning document. Delete the
-session log only after the tree no longer needs its provenance. If completed
-work remains uncommitted, set the log to `ready-for-commit` and leave it for
-the next agent; its presence always requires reconciliation before new work.
+Do not turn the log into a second product specification or duplicate durable
+rules there. Move durable decisions to the document that owns them.
 
-The reason is recovery, not bookkeeping: a crashed session leaves a large
-uncommitted working tree and no account of which items in it are finished,
-which are half-done, and which were deliberately deferred. That state is
-expensive to re-derive and easy to re-derive wrongly.
+## Autonomy during handoffs
 
-## Maintaining this agreement
+The normal project contract still applies during recovery.
 
-When a process rule applies to both agents, put it in `CLAUDE.md` or this
-document, not in only one tool's instruction file. When a rule is specific
-to Codex, put it in `AGENTS.md`; when it is specific to Claude Code, put it
-in `CLAUDE.md` only if it cannot be expressed in shared language. Keep links
-and file paths valid when moving documentation.
+Local, reversible edits and non-destructive validation proceed without an
+approval ritual. Protected contracts, dependencies, and package boundaries
+require impact analysis, not automatic permission prompts.
+
+Pause only for destructive or hard-to-reverse actions, production/external
+writes, secret input, a material scope expansion, or a product decision that
+the repo cannot resolve.
+
+Old plan language such as `STOP`, `locked`, or `ask first` is interpreted
+through this current boundary unless it protects one of those genuine external
+or irreversible cases.
+
+## Parking work
+
+When unfinished work must be handed off:
+
+- leave the tree in the most coherent state available;
+- update the recovery log with the exact state and next step;
+- record tests/checks actually run and failures still open;
+- do not overwrite or fold unrelated work;
+- commit only when the active task or operator requested a commit.
+
+If work is complete and the tree no longer needs recovery provenance, remove
+the session log. If completed work intentionally remains uncommitted and
+another context must pick it up, mark the log `ready-for-commit`.
+
+The purpose is recovery, not bookkeeping.

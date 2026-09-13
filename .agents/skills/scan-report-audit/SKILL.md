@@ -1,6 +1,7 @@
 ---
 name: scan-report-audit
-description: Run a full live audit against a real, not-yet-scanned hotel from the catalogue, generate the bilingual report, and critique it in character as the hotel's owner/GM to surface report defects before a real client sees them. Also rehearses the outreach preview scorecard end to end through its own candidate-linked outreach full scan, because nothing else exercises the rendered preview against a real audit. Use when the user asks to "dogfood a hotel," "run an audit rehearsal," "audit the reports," "find defects in the reports," "rehearse the outreach preview," or otherwise QA the report or preview pipeline against a real site. Runs repeat across hotels; the cumulative log at docs/report/audit-rehearsal-notes.md is what turns a recurring nit into a visible pattern.
+description: "Explicit real-site report/preview rehearsal against a hotel."
+disable-model-invocation: true
 ---
 
 # Scan report audit

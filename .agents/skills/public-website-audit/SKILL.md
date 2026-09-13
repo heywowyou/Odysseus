@@ -1,6 +1,7 @@
 ---
 name: public-website-audit
-description: Run the recurring audit of the public marketing site at https://odysseusaudit.com from a prospective client's perspective: a read-only live sweep of every page in French and English, a code-level completeness pass, and reconciliation of the findings ledger at docs/product/public-website-audit.md, once per fix cycle until a run reports parity. Use whenever the operator asks to audit the public website, audit the marketing site or site copy, check odysseusaudit.com for defects or weird phrasing, or check whether the public website is at parity. It audits and maintains the ledger only; it never implements fixes, and it never touches app.odysseusaudit.com (that is the dashboard-ux-audit skill's surface).
+description: "Explicit recurring read-only audit of the public Odysseus marketing site."
+disable-model-invocation: true
 ---
 
 # Public website audit (recurring)

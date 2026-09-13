@@ -1,6 +1,6 @@
 ---
 name: implement
-description: "Implement a piece of work based on a spec or set of tickets."
+description: "Explicit implementation workflow for a selected spec or ticket set."
 disable-model-invocation: true
 ---
 
@@ -12,4 +12,4 @@ Run typechecking regularly, single test files regularly, and the full test suite
 
 Once done, use /code-review to review the work.
 
-Commit your work to the current branch.
+Commit only when the operator asked for a commit or the active task already includes one.

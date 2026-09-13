@@ -1,120 +1,120 @@
 # Documentation map
 
-This map tells any coding agent which Odysseus documents are authoritative,
-which are active work queues, and which are retained only as history or
-research. It prevents a plausible-looking old plan from silently overriding a
-newer product or engineering decision.
+This map tells coding agents which Odysseus documents are authoritative and
+when to read them. The goal is high signal: load the smallest amount of
+context that can safely answer the task.
 
 ## Start here
 
-For repository work, read in this order:
+For repository work:
 
-1. `docs/session/current-session.md`, if present. It is the live handoff.
-2. `git status --short`. Reconcile the tree with the handoff before editing.
-3. `CLAUDE.md`. Despite its filename, this is the shared project charter for
-   Claude Code, Codex, ZCode, and any future coding agent.
-4. This map, then the focused documents for the task.
+1. Inspect the working tree before editing.
+2. Read `docs/session/current-session.md` only when it exists and is relevant
+   to work you are continuing.
+3. Read the host entry point (`CLAUDE.md` for Claude Code, `AGENTS.md` for
+   Codex/ZCode). Both implement the same autonomy contract.
+4. Read this map, then only the focused documents that own the requested work.
 
-If there is no session log but the tree is dirty, do not infer ownership or
-completion from the diff alone. Use history and ask the user when provenance
-cannot be established safely.
+A dirty tree is not itself a blocker. Preserve unrelated changes and continue
+around them. Ask only when the requested edit materially overlaps changes whose
+intent cannot be reconstructed safely.
 
-## Keeping entry-point documents lean
+## Keeping entry points lean
 
-`CLAUDE.md` and `AGENTS.md` are loaded into every session automatically,
-not read on demand like the focused documents below — their size is a
-per-turn cost every agent pays, every time. Both must hold only what is
-actually load-bearing at that altitude: non-negotiable rules, locked
-contracts, package boundaries, the one-line trade-off imperative (never its
-full root-cause story), and pointers to where the rest lives. Root-cause
-narrative, measured evidence, rejected alternatives, and amendment history
-belong in the linked focused document (`docs/decisions/trade-offs.md`,
-`docs/rules/*`, `docs/research/*`) and must not be duplicated back into
-either entry point once they are there — that duplication is exactly what
-made several `CLAUDE.md` trade-off entries drift long before this rule
-existed (trade-offs.md#66 records the 2026-09-03 cleanup that prompted it).
-`AGENTS.md` is capped at 24 KiB and
-`CLAUDE.md` at the ratcheted ceiling in `scripts/check-agent-docs.mjs`;
-`pnpm run docs:check` fails the build if either grows past its ceiling, so
-raising it is a deliberate choice, not a side effect of an unrelated edit.
+`CLAUDE.md` and `AGENTS.md` are high-frequency context. They hold only:
+
+- the local/reversible versus external/destructive autonomy boundary;
+- non-negotiable product invariants;
+- protected-contract semantics;
+- package roles and the highest-value cross-cutting guardrails;
+- routing to focused documents;
+- concise operator-interaction rules.
+
+Root-cause history, measured evidence, rejected alternatives, detailed
+procedures, and long workflow checklists belong in focused docs or explicit
+skills.
+
+`scripts/check-agent-docs.mjs` enforces small entry-point ceilings and checks
+that workflow-changing skills remain explicit-only.
 
 ## Authority and conflicts
 
-The current charter and focused canonical document govern intent. The code and
-tests show what is actually shipped. If they disagree, report the mismatch;
-do not silently rewrite either side to match the other.
+Use this order when sources disagree:
 
-Within documentation, explicit supersession notes win. Dates alone do not.
-Historical rationale remains useful, but never restores a decision that a
-canonical document says was superseded.
+1. the operator's current explicit instruction;
+2. the current shared charter and the focused canonical document that owns the
+   subject;
+3. an active execution plan for its scoped acceptance criteria;
+4. historical plans, archived notes, and research.
+
+An older plan's `STOP`, `locked`, or `ask` wording does not override the
+current autonomy contract for reversible local work. Specific legal,
+production, external-write, destructive-data, and secret restrictions remain
+binding.
+
+Explicit supersession notes win over dates alone. If two current canonical
+sources still imply materially different product outcomes, surface the
+conflict concisely and ask for the one decision that cannot be inferred.
+Otherwise use the narrower, better-supported source and continue.
+
+Code and tests show what is shipped; canonical docs show intended behavior. A
+mismatch is evidence to resolve, not a reason to freeze the task.
 
 ## Canonical project documents
 
 | Document | Owns |
 | --- | --- |
-| `CLAUDE.md` | Non-negotiable rules, locked contracts, package boundaries, compact trade-off index, testing policy, and current milestone order |
-| `docs/product/odysseus-project-brief.md` | Product purpose, offer, architecture, end-to-end workflow, and long-term roadmap; explicit supersession notes inside it must be respected |
-| `docs/decisions/trade-offs.md` | Full evidence and rejected alternatives behind the numbered charter guardrails |
-| `docs/rules/normalization-rules.md` | Scanner-output normalization, dedupe, finding identity, evidence, and artifact behavior |
-| `docs/rules/llm-layer-rules.md` | Model visibility, structured output, retries, guards, language, provenance, and cost gates |
-| `docs/rules/obligation-basis.md` | Approved client-facing legal facts and their evidence status |
-| `docs/rules/operator-obligations.md` | Odysseus's own regulatory and operating obligations |
-| `docs/rules/prospect-qualification.md` | Who may be sourced, scanned, qualified, retained, and contacted |
-| `docs/rules/outreach-rules.md` | What outreach and preview material may say and how it must be assembled |
-| `docs/rules/offer-positioning.md` | Current pricing, scope, sales claims, and offer framing |
-| `docs/report/report-design-system.md` and `docs/report/report-design-tokens.md` | Report visual language and implementation tokens; readable canonical design sources are under `docs/report/design/` |
+| `CLAUDE.md` | Compact shared project charter and autonomy contract |
+| `AGENTS.md` | Compact Codex/ZCode entry point matching the same contract |
+| `docs/product/odysseus-project-brief.md` | Product purpose, offer, architecture, workflow, roadmap |
+| `docs/decisions/trade-offs.md` | Full evidence and rejected alternatives behind durable decisions |
+| `docs/rules/normalization-rules.md` | Scanner-output normalization, dedupe, finding identity, evidence, artifacts |
+| `docs/rules/llm-layer-rules.md` | Model visibility, structured output, retries, guards, language, provenance, cost gates |
+| `docs/rules/obligation-basis.md` | Approved client-facing legal facts and evidence status |
+| `docs/rules/operator-obligations.md` | Odysseus's regulatory and operating obligations |
+| `docs/rules/prospect-qualification.md` | Sourcing, qualification, retention, and contact rules |
+| `docs/rules/outreach-rules.md` | Outreach and preview assembly rules |
+| `docs/rules/offer-positioning.md` | Pricing, scope, sales claims, offer framing |
+| `docs/report/report-design-system.md` and `docs/report/report-design-tokens.md` | Report visual language and implementation tokens |
 | `docs/rules/manual-accessibility-checklist.md` | Known limits of automated accessibility detection |
-| `docs/product/dashboard-ia.md` | Operator dashboard navigation map, page destinies, and operator vocabulary (plan 040) |
-| `docs/adr/` and package ADR directories | Accepted architectural decisions at their documented scope |
-| `docs/agents/coding-conventions.md` | Shared source formatting, lint, naming, testing, commenting, and product-writing conventions |
+| `docs/product/dashboard-ia.md` | Dashboard navigation, page destinies, operator vocabulary |
+| `docs/adr/` and package ADR directories | Accepted architecture decisions at their documented scope |
+| `docs/agents/coding-conventions.md` | Shared source, test, prose, interaction, and attribution conventions |
+| `docs/agents/model-prompting.md` | Small host-specific model and effort deltas |
 
 ## Planned work and active queues
 
-| Document | Status and use |
-| --- | --- |
-| `plans/README.md` and the active plans it indexes | Approved, execution-ready plans; the index owns order, status, dependencies, and rejected proposal choices. Only selected, execution-ready work lives at the `plans/` root; completed plans move to `plans/archive/` and raw findings are never stored as plans |
-| GitHub issues on `heywowyou/Odysseus` | Intake for newly verified defects, requests, and decisions; resolved issues are closed with the commit and verification evidence (`docs/agents/issue-tracker.md`) |
-| `docs/report/report-feedback-deferred-items.md` | Canonical queue for report work with a current reproduction or an explicit future trigger; fixed items are removed once verified |
+`plans/README.md` owns execution order, status, dependencies, and selected
+active plans. Plans specify scoped work and acceptance criteria; they do not
+create stronger permission boundaries than the current charter.
 
-GitHub issues may also hold specs and task state. `docs/agents/issue-tracker.md`
-defines how to inspect them; never assume a local briefing is newer than its
-linked issue without checking both.
+GitHub issues are the system of record when the operator or an explicitly
+invoked audit/triage workflow chooses to track work there. Routine work does
+not create issues merely because a defect was noticed.
+
+`docs/report/report-feedback-deferred-items.md` is the focused queue for report
+items with a current reproduction or explicit future trigger.
 
 ## Historical and research material
 
-- Closed report-review documents are removed after their unresolved work is
-  promoted into `docs/report/report-feedback-deferred-items.md` and durable
-  engineering rationale is promoted into `docs/decisions/trade-offs.md`. Git
-  history retains the original review evidence.
-- `docs/archive/report-v2-refactor.md` is implementation history and rationale for the
-  shipped report-v2 work, not the current task queue.
-- `docs/research/business-impact-statistics.md`,
-  `docs/research/sector-reference-stats/`,
-  `docs/research/llm-provider-alternatives.md`, and
-  `docs/research/milestone-10-benchmark-cohort.md` retain vetted source
-  research. Only facts promoted through the canonical legal, outreach, offer,
-  or reference-stat rules may reach product output.
+Archived plans, closed reviews, and `docs/research/*` preserve useful evidence
+and rationale. They are not live instructions unless a current canonical
+document explicitly promotes their content.
 
 ## Agent and workflow documents
 
-- `AGENTS.md`: Codex entry point only.
-- `docs/agents/handoff.md`: shared handoff and recovery protocol.
-- `docs/agents/session-template.md`: required structure for a new live session
-  log.
-- `docs/agents/coding-conventions.md`: shared coding and writing system enforced
-  by repository tooling and review.
-- `docs/agents/domain.md`: domain glossary and ADR conventions.
-- `docs/agents/issue-tracker.md` and `docs/agents/triage-labels.md`: GitHub
-  workflow.
-- `docs/agents/model-prompting.md`: per-host model identity, effort defaults,
-  and current prompting deltas from each vendor's own guidance.
+- `docs/agents/handoff.md`: recovery protocol for substantial unfinished work.
+- `docs/agents/session-template.md`: structure for a recovery log when one is
+  actually needed.
+- `docs/agents/issue-tracker.md`: issue workflow when issues are being used.
+- `docs/agents/triage-labels.md`: issue-label vocabulary.
+- `docs/agents/model-prompting.md`: host-specific deltas.
+- `.agents/skills/*`: optional specialist workflows. Workflow-changing modes
+  are explicit-only.
 
-Tool availability is agent-specific. Repository descriptions of a skill, MCP
-server, or launch command are not proof that the current agent has that
-capability. Use the capabilities actually exposed in the active session and
-preserve the same project guardrails when falling back.
+Tool availability is host-specific. Use the capabilities actually exposed in
+the current session.
 
-After changing Markdown or agent entry points, run `pnpm docs:check`. Before
-handoff, run `pnpm run check`. It verifies required entry-point files, local
-Markdown links, cross-references, the lean size of `AGENTS.md`, formatting,
-lint, workspace types, and the ignored status of the live session log.
+After changing maintained Markdown or agent entry points, run
+`pnpm run docs:check`. Before a handoff that changed code, run the verification
+appropriate to the risk; `pnpm run check` is the broad repository validation.
