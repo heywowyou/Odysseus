@@ -134,6 +134,11 @@ export class JobQueue {
     this.wake?.();
   }
 
+  /** Readiness requires start() to have completed and the claim loop to remain enabled. */
+  isReady(): boolean {
+    return this.running && this.loopPromise !== undefined;
+  }
+
   /** Registers an operator stop request for a job. The job document's
    *  'cancelled' status is written by the cancel route; this registry is
    *  only the in-process signal the runner observes. Forgetting the entry

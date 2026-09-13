@@ -93,6 +93,8 @@ export type { RouteContext, RouteHandler } from './router.js';
 export { startInterfaceServer } from './server.js';
 export type { InterfaceServerHandle, InterfaceAuthOptions } from './server.js';
 export { refusesUnprotectedNonLoopbackBind } from './server.js';
+export { registerHealthRoutes, LIVE_PATH, READY_PATH } from './routes/health.js';
+export type { HealthDependencies } from './routes/health.js';
 // Plan 016: password session auth for the operator dashboard. The password
 // hash getter is exported so the deploy runbook can check configuration, and
 // the store, limiter and guard seams so tests can inject fakes without

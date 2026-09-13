@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { sendError } from '../http-utils.js';
 import { LOGIN_PATH, LOGOUT_PATH } from './session-routes.js';
 import { readSessionCookieToken, type SessionStore } from './session-store.js';
+import { LIVE_PATH, READY_PATH } from '../routes/health.js';
 
 /** Extensions the built SPA actually loads by URL (hashed /assets/* bundles,
  *  self-hosted fonts, the shell's own index.html, the favicon). An explicit
@@ -29,6 +30,10 @@ export function createAuthGuard(deps: { sessionStore: SessionStore }): AuthGuard
   return async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://internal');
     const pathname = url.pathname;
+
+    // Deployment and monitoring infrastructure must reach these checks without
+    // an operator session. Their payloads are intentionally fixed and non-sensitive.
+    if (pathname === LIVE_PATH || pathname === READY_PATH) return true;
 
     const token = readSessionCookieToken(req);
     if (token !== null && deps.sessionStore.validate(token)) return true;

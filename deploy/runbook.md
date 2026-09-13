@@ -317,9 +317,11 @@ deployment has passed. The GitHub copy then becomes the only private-key copy.
 After a successful `CI` run on `main`, open Actions, `Deploy production`, Run
 workflow, keep branch `main`, and choose `deploy`. Documentation-only pushes
 need no deployment. The release controller serializes deployments, builds the
-commit-tagged app image, restarts Compose, and requires the public unauthenticated
-request to return a 302 redirect to `/login`. A failed live check restores the
-previous release automatically.
+commit-tagged app image, restarts Compose, and requires `/health/ready` to confirm
+both MongoDB connectivity and queue initialization. A failed readiness check restores
+the previous release automatically. The workflow separately requires the public
+unauthenticated request to return a 302 redirect to `/login`, which verifies the
+routing and authentication boundary rather than application readiness.
 
 Before recreating the app container, the controller asks the currently running
 container for the jobs whose status is `running`. The guard is fail-closed: any
@@ -614,10 +616,14 @@ dashboard hash whose plaintext is `odysseus-smoke-only`, fake bucket values.
 Through Caddy, on http://localhost:
 
 ```sh
+curl -s http://localhost/health/live
+curl -s http://localhost/health/ready
 curl -sI http://localhost/
 ```
 
-Expected: `302` with `location: /login`. Then:
+Expected: fixed JSON responses with `live` and `ready` statuses, followed by a
+`302` with `location: /login`. The readiness response returns HTTP 503 with only
+allowlisted dependency statuses when MongoDB or the queue is unavailable. Then:
 
 ```sh
 curl -s http://localhost/login

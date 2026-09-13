@@ -8,7 +8,7 @@ RELEASES_DIR="$DEPLOY_ROOT/releases"
 CURRENT_LINK="$DEPLOY_ROOT/current"
 PREVIOUS_FILE="$DEPLOY_ROOT/previous-release"
 LOCK_FILE="$DEPLOY_ROOT/.deploy.lock"
-HEALTH_URL="${ODYSSEUS_DEPLOY_HEALTH_URL:-https://app.odysseusaudit.com/}"
+HEALTH_URL="${ODYSSEUS_DEPLOY_HEALTH_URL:-https://app.odysseusaudit.com/health/ready}"
 HEALTH_ATTEMPTS="${ODYSSEUS_DEPLOY_HEALTH_ATTEMPTS:-30}"
 HEALTH_DELAY_SECONDS="${ODYSSEUS_DEPLOY_HEALTH_DELAY_SECONDS:-2}"
 # Ceiling for Docker build cache after each deploy. The VPS disk is 30 GB and
@@ -64,20 +64,19 @@ compose() {
 }
 
 health_is_ready() {
-  local response code redirect_url
-  response="$(curl --silent --show-error --output /dev/null \
+  local response
+  response="$(curl --fail --silent --show-error \
     --connect-timeout 5 --max-time 10 \
     --resolve "$HEALTH_HOST:$HEALTH_PORT:127.0.0.1" \
-    --write-out '%{http_code} %{redirect_url}' "$HEALTH_URL")" || return 1
-  read -r code redirect_url <<<"$response"
-  [[ "$code" == 302 && "$redirect_url" == */login ]]
+    "$HEALTH_URL")" || return 1
+  [[ "$response" == '{"status":"ready","database":"ok","queue":"ok"}' ]]
 }
 
 wait_until_ready() {
   local attempt
   for ((attempt = 1; attempt <= HEALTH_ATTEMPTS; attempt += 1)); do
     if health_is_ready; then
-      log "health check passed ($HEALTH_URL redirects to /login)"
+      log "readiness check passed ($HEALTH_URL)"
       return 0
     fi
     if ((attempt < HEALTH_ATTEMPTS)); then
@@ -179,7 +178,7 @@ restore_release() {
 install_controllers() {
   local release_path="$1"
   # The forced SSH command lives outside release directories. Refresh it only
-  # after the new app has passed its live check, so a broken release cannot
+  # after the new app has passed its readiness check, so a broken release cannot
   # replace the recovery path used by the next deployment.
   install -m 0755 "$release_path/deploy/release.sh" "$DEPLOY_ROOT/deploy/release.sh"
   install -m 0755 "$release_path/deploy/github-deploy-command.sh" \
@@ -326,10 +325,10 @@ deploy_release() {
   compose "$release_path" "$release_id" up -d --remove-orphans
 
   if ! wait_until_ready; then
-    log "release $release_id failed its live check; restoring $(basename "$previous_path")"
+    log "release $release_id failed its readiness check; restoring $(basename "$previous_path")"
     restore_release "$previous_path" ||
       fail 'new release and automatic restore both failed; inspect the Compose logs now'
-    fail "release $release_id failed its live check; the previous release is running"
+    fail "release $release_id failed its readiness check; the previous release is running"
   fi
 
   if [[ "$previous_path" != "$release_path" ]]; then
@@ -355,7 +354,7 @@ rollback_release() {
     compose "$target" "$target_tag" build app
   fi
 
-  restore_release "$target" || fail 'rollback failed its live check; inspect the Compose logs now'
+  restore_release "$target" || fail 'rollback failed its readiness check; inspect the Compose logs now'
   write_previous_release "$current_path"
   set_current_link "$target"
   log "rollback complete; $(basename "$target") is current"

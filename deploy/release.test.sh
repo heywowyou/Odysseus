@@ -39,7 +39,7 @@ make_fake_commands() {
     '  exit 7' \
     'fi' \
     'printf "%s\\n" "$*" >> "$FAKE_CURL_LOG"' \
-    'printf "302 https://app.odysseusaudit.com/login"' >"$bin_dir/curl"
+    'printf "{\"status\":\"ready\",\"database\":\"ok\",\"queue\":\"ok\"}"' >"$bin_dir/curl"
   printf '%s\n' '#!/usr/bin/env bash' 'exit 0' >"$bin_dir/sleep"
   chmod +x "$bin_dir/docker" "$bin_dir/curl" "$bin_dir/sleep"
 }
@@ -135,10 +135,12 @@ assert_contains "$TEST_ROOT/docker.log" 'builder prune -f -a --keep-storage 4GB'
 # The live check must pin the domain to this machine: a plain request follows
 # public DNS and can green-light a deploy against a different box (2026-09-09).
 assert_contains "$FAKE_CURL_LOG" '--resolve app.odysseusaudit.com:443:127.0.0.1'
+assert_contains "$FAKE_CURL_LOG" 'https://app.odysseusaudit.com/health/ready'
 
 run_controller "$DEPLOY_ROOT" rollback
 assert_eq "$(readlink -f "$DEPLOY_ROOT/current")" "$DEPLOY_ROOT"
 assert_eq "$(<"$DEPLOY_ROOT/previous-release")" "$DEPLOY_ROOT/releases/$RELEASE_ID"
+assert_eq "$(grep -Fc 'https://app.odysseusaudit.com/health/ready' "$FAKE_CURL_LOG")" 2
 
 FAILED_ROOT="$TEST_ROOT/failed-production"
 make_legacy_root "$FAILED_ROOT"

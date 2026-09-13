@@ -101,6 +101,16 @@ jobs:
             -o IdentitiesOnly=yes \
             "$PRODUCTION_USER@$PRODUCTION_HOST" rollback < /dev/null
 
+      - name: Verify application readiness
+        run: |
+          set -euo pipefail
+          response="$(curl --fail --silent --show-error \
+            --connect-timeout 5 --max-time 10 \
+            --resolve "app.odysseusaudit.com:443:$PRODUCTION_HOST" \
+            https://app.odysseusaudit.com/health/ready)"
+          test "$response" = '{"status":"ready","database":"ok","queue":"ok"}'
+          printf 'Production readiness verified: %s\n' "$response"
+
       - name: Verify the public login boundary
         run: |
           set -euo pipefail

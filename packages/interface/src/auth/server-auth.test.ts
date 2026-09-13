@@ -165,6 +165,14 @@ describe('startInterfaceServer auth composition', () => {
     expect(handle).toBeDefined();
     const base = handle!.url;
 
+    const live = await fetch(`${base}/health/live`);
+    expect(live.status).toBe(200);
+    expect(await live.text()).toBe('{"status":"live"}');
+
+    const ready = await fetch(`${base}/health/ready`);
+    expect(ready.status).toBe(503);
+    expect(await ready.text()).toBe('{"status":"not-ready","database":"unavailable","queue":"ok"}');
+
     const unauthenticated = await fetch(`${base}/api/audits/audit-1`);
     expect(unauthenticated.status).toBe(401);
     expect(await unauthenticated.text()).toBe('{"error":"unauthenticated"}');
