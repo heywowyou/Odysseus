@@ -26,7 +26,6 @@ export type HotelContactState =
 
 export type HotelContactReason =
   | 'role-address-published'
-  | 'operator-entered'
   | 'no-address-published'
   | 'site-unreachable'
   | 'robots-denied'
@@ -39,14 +38,6 @@ export type HotelContactReason =
   | 'off-domain-only'
   | 'domain-suppressed'
   | 'address-suppressed';
-
-/** Where an effective address came from. Discovered contacts use
- *  `hotel-website`; manual overrides must state the honest origin selected by
- *  the operator. */
-export type HotelContactAddressOrigin =
-  | 'hotel-website'
-  | 'other-public-source'
-  | 'provided-directly';
 
 /**
  * Whether the address's domain publishes mail exchangers. A public DNS record,
@@ -63,24 +54,16 @@ export type MailDomainStatus = 'has-mx' | 'no-mx' | 'unknown';
  *  persists it. Flat facts, so the decision is testable without a database. */
 export interface HotelContactRecord {
   candidateId: string;
-  /** Automated discovery always records the cohort that selected the hotel.
-   *  A plan-045 manual override is candidate-scoped instead: when it replaces
-   *  a discovered contact we preserve that row's cohort, otherwise this stays
-   *  absent rather than inventing a fake cohort id. */
-  cohortId?: string;
+  cohortId: string;
   domain: string;
   state: HotelContactState;
   reason: HotelContactReason;
-  /** Present whenever an effective address exists. Automated discovery still
-   *  stores only its approved role addresses; `operator-entered` is the manual
-   *  override path introduced by plan 045. */
+  /** Present whenever an allowlisted address was found, including on a row
+   *  parked for `no-mail-service`. Never a named or free-mail address. */
   address?: string;
   localPart?: string;
   source?: ContactSourceKind;
   sourceUrl?: string;
-  addressOrigin?: HotelContactAddressOrigin;
-  /** Present only when the operator attested a consumer free-mail address. */
-  freeMailAttestedAt?: Date;
   mxStatus: MailDomainStatus;
   validatedAt: Date;
 }

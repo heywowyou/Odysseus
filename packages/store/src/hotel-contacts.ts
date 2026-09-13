@@ -8,22 +8,11 @@
  * cheapest way to keep that true is to make the only available reader take a
  * cohort. There is deliberately no "list every qualified hotel" entry point
  * here for a contact pass to reach for.
- *
- * Plan 045 adds one operator-entered candidate-scoped override. It lives in the
- * same collection under the fixed `manual-v1` version so precedence stays a
- * single deterministic read: manual first, otherwise the exact discovered
- * version the caller asked for. There is intentionally no "latest discovered"
- * fallback.
  */
 
 import { randomUUID } from 'node:crypto';
 import type { Connection } from 'mongoose';
-import type {
-  HotelContactAddressOrigin,
-  HotelContactRecord,
-  HotelContactState,
-  OutreachSelectionState,
-} from '@odysseus/core';
+import type { HotelContactRecord, HotelContactState, OutreachSelectionState } from '@odysseus/core';
 import { createHotelCandidateModel } from './schemas/hotel-candidate.schema.js';
 import {
   createHotelContactModel,
@@ -32,7 +21,6 @@ import {
 import { createHotelScoreCohortModel } from './schemas/score-cohort.schema.js';
 
 const HOTEL_CONTACT_RETENTION_DAYS = 90;
-export const MANUAL_CONTACT_VERSION = 'manual-v1';
 
 function expiryFrom(createdAt: Date): Date {
   return new Date(createdAt.getTime() + HOTEL_CONTACT_RETENTION_DAYS * 24 * 60 * 60 * 1000);
@@ -143,16 +131,15 @@ export async function recordHotelContacts(
       // Every optional field is either set or explicitly unset, never omitted.
       // A re-run after a site took its address down has to clear the old one:
       // omitting the field would leave a stale address standing beside a parked
-      // state. Manual-v1 also uses this path, so its optional cohort and
-      // attestation must clear just as deterministically on replacement.
+      // state, which is the one shape of this document that could put an
+      // address the site no longer publishes in front of an operator. Split
+      // per field rather than keyed off `address`, because $set and $unset
+      // naming the same path is a Mongo write conflict, not a last-one-wins.
       const optional = {
-        cohortId: input.cohortId,
         address: input.address,
         localPart: input.localPart,
         source: input.source,
         sourceUrl: input.sourceUrl,
-        addressOrigin: input.addressOrigin,
-        freeMailAttestedAt: input.freeMailAttestedAt,
       };
       const set: Record<string, unknown> = {};
       const unset: Record<string, ''> = {};
@@ -166,6 +153,7 @@ export async function recordHotelContacts(
           filter: { contactVersion: input.contactVersion, candidateId: input.candidateId },
           update: {
             $set: {
+              cohortId: input.cohortId,
               domain: input.domain,
               state: input.state,
               reason: input.reason,
@@ -200,86 +188,6 @@ export async function getHotelContact(
   return createHotelContactModel(connection)
     .findOne({ contactVersion, candidateId })
     .lean<HotelContactDocument>();
-}
-
-export async function getManualHotelContact(
-  connection: Connection,
-  candidateId: string,
-): Promise<HotelContactDocument | null> {
-  return getHotelContact(connection, MANUAL_CONTACT_VERSION, candidateId);
-}
-
-/** Manual override first, otherwise exactly the discovered generation the
- *  caller requested. Never falls through to a newer or older discovery row. */
-export async function getEffectiveHotelContact(
-  connection: Connection,
-  discoveredContactVersion: string,
-  candidateId: string,
-): Promise<HotelContactDocument | null> {
-  const manual = await getManualHotelContact(connection, candidateId);
-  if (manual !== null) return manual;
-  return getHotelContact(connection, discoveredContactVersion, candidateId);
-}
-
-export interface RecordManualHotelContactInput {
-  candidateId: string;
-  domain: string;
-  address: string;
-  addressOrigin: HotelContactAddressOrigin;
-  /** Preserve the discovered row's real cohort when one exists. */
-  cohortId?: string;
-  /** Present only for the explicit free-mail override. */
-  freeMailAttestedAt?: Date;
-  validatedAt?: Date;
-}
-
-/** Candidate-scoped operator override. Validation, suppression and the linked
- *  audit gate live at the route boundary; this helper only persists the already
- *  normalized decision and keeps the same 90-day retention as discovered
- *  contacts. */
-export async function recordManualHotelContact(
-  connection: Connection,
-  input: RecordManualHotelContactInput,
-): Promise<HotelContactDocument> {
-  const address = input.address.trim().toLowerCase();
-  const at = address.lastIndexOf('@');
-  const localPart = at > 0 ? address.slice(0, at) : undefined;
-  await recordHotelContacts(connection, [
-    {
-      candidateId: input.candidateId,
-      ...(input.cohortId === undefined ? {} : { cohortId: input.cohortId }),
-      contactVersion: MANUAL_CONTACT_VERSION,
-      domain: input.domain.trim().toLowerCase(),
-      state: 'found',
-      reason: 'operator-entered',
-      address,
-      ...(localPart === undefined ? {} : { localPart }),
-      addressOrigin: input.addressOrigin,
-      ...(input.freeMailAttestedAt === undefined
-        ? {}
-        : { freeMailAttestedAt: input.freeMailAttestedAt }),
-      // Manual entry deliberately does not perform an MX probe. `unknown` is
-      // a factual "not checked", never a negative verdict.
-      mxStatus: 'unknown',
-      validatedAt: input.validatedAt ?? new Date(),
-    },
-  ]);
-  const stored = await getManualHotelContact(connection, input.candidateId);
-  if (stored === null) throw new Error('manual contact upsert did not persist');
-  return stored;
-}
-
-/** Removes only the operator override. The exact discovered generation the
- *  caller was already using becomes effective again automatically. */
-export async function deleteManualHotelContact(
-  connection: Connection,
-  candidateId: string,
-): Promise<boolean> {
-  const result = await createHotelContactModel(connection).deleteOne({
-    contactVersion: MANUAL_CONTACT_VERSION,
-    candidateId,
-  });
-  return result.deletedCount > 0;
 }
 
 export interface HotelContactSummary {
@@ -340,10 +248,17 @@ export interface ContactableCohortMember {
 }
 
 /**
- * Cohort members that actually have a usable discovered address, milestone 9c
- * plan 011. Manual overrides are resolved by the single-candidate drafting
- * adapter instead; a bounded discovery batch must still describe the cohort it
- * came from.
+ * Cohort members that actually have a usable address, milestone 9c plan 011.
+ *
+ * The mirror image of `listCohortMembersToContact`, which finds members still
+ * needing evaluation. This one finds the ones evaluation succeeded for, which
+ * is the population a bounded drafting batch may draw from. Rows in any of
+ * plan 007's four typed absences are not returned at all rather than returned
+ * with an empty address, so a caller cannot iterate them by accident.
+ *
+ * Sorted by candidate id rather than by score: ordering a batch by
+ * attractiveness would quietly make "the first ten" mean something different
+ * on every run, and a bounded batch has to be reproducible to be reviewable.
  */
 export async function listContactableCohortMembers(
   connection: Connection,
@@ -353,7 +268,6 @@ export async function listContactableCohortMembers(
     contactVersion: options.contactVersion,
     state: 'found',
     address: { $exists: true, $ne: '' },
-    cohortId: { $exists: true, $ne: '' },
   };
   if (options.candidateId !== undefined) query['candidateId'] = options.candidateId;
 
@@ -363,7 +277,7 @@ export async function listContactableCohortMembers(
 
   return rows.map((row) => ({
     candidateId: row.candidateId,
-    cohortId: row.cohortId as string,
+    cohortId: row.cohortId,
     domain: row.domain,
     address: row.address ?? '',
   }));

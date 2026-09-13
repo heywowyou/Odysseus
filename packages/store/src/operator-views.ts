@@ -108,7 +108,6 @@ export { getOutcomeSummary, getVendorFingerprintAggregate } from './operator-vie
 export type { OperatorOutcomeSummary } from './operator-views/aggregates.js';
 export { getOperatorProspect } from './operator-views/prospect-detail.js';
 export type {
-  GetOperatorProspectOptions,
   OperatorProspectDetail,
   OperatorWebsiteCandidateView,
 } from './operator-views/prospect-detail.js';

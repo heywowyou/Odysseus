@@ -10,23 +10,22 @@
  * report count the same hotel twice. A changed rule is a new contactVersion,
  * which is a new document beside the old one.
  *
- * `cohortId` is denormalized from the score cohort for discovered contacts.
- * Plan 045's `manual-v1` override is candidate-scoped: when there is a
- * discovered row to inherit from it keeps that cohort, otherwise the field is
- * absent rather than populated with a synthetic cohort id.
+ * `cohortId` is denormalized from the score cohort so this document is readable
+ * on its own, and so plan 014 can ask which cohort a contacted hotel belonged
+ * to without reconstructing the selection that produced it.
  *
  * Subject to the 90 day operational retention policy (binding decision 12), via
  * the precomputed `expiresAt` pattern every other 9c collection uses.
  *
- * Automated discovery still has no path for named or free-mail addresses. Plan
- * 045 adds a separate operator-entered override, with an explicit per-record
- * origin and a timestamped free-mail attestation when that exception is used.
+ * What this schema deliberately has no place for: a named contact, a phone
+ * number, a free-mail address, a catch-all verdict, or any field a verification
+ * vendor would populate. The absence is the design - see
+ * docs/rules/prospect-qualification.md section 6.
  */
 
 import { Schema, type Connection, type Model } from 'mongoose';
 import type {
   ContactSourceKind,
-  HotelContactAddressOrigin,
   HotelContactReason,
   HotelContactState,
   MailDomainStatus,
@@ -35,7 +34,7 @@ import type {
 export interface HotelContactDocumentFields {
   contactId: string;
   candidateId: string;
-  cohortId?: string;
+  cohortId: string;
   contactVersion: string;
   domain: string;
   state: HotelContactState;
@@ -44,8 +43,6 @@ export interface HotelContactDocumentFields {
   localPart?: string;
   source?: ContactSourceKind;
   sourceUrl?: string;
-  addressOrigin?: HotelContactAddressOrigin;
-  freeMailAttestedAt?: Date;
   mxStatus: MailDomainStatus;
   validatedAt: Date;
   createdAt: Date;
@@ -58,7 +55,7 @@ const hotelContactSchema = new Schema<HotelContactDocument>(
   {
     contactId: { type: String, required: true, unique: true },
     candidateId: { type: String, required: true },
-    cohortId: { type: String, required: false },
+    cohortId: { type: String, required: true },
     contactVersion: { type: String, required: true },
     domain: { type: String, required: true },
     state: {
@@ -75,8 +72,6 @@ const hotelContactSchema = new Schema<HotelContactDocument>(
     localPart: { type: String, required: false },
     source: { type: String, required: false },
     sourceUrl: { type: String, required: false },
-    addressOrigin: { type: String, required: false },
-    freeMailAttestedAt: { type: Date, required: false },
     mxStatus: { type: String, required: true, enum: ['has-mx', 'no-mx', 'unknown'] },
     validatedAt: { type: Date, required: true },
     createdAt: { type: Date, required: true },
