@@ -7,7 +7,7 @@ import { Card } from '../components/ui/card';
 import { ConfirmDialog } from '../components/ui/dialog';
 import { CopyButton } from '../components/ui/copy-button';
 import { useI18n } from '../i18n/provider';
-import { fetchJson } from '../lib/api';
+import { fetchJson, fetchWithTimeout } from '../lib/api';
 import { formatDateTime } from '../lib/format';
 import { previewState } from './insights-model';
 import type { PreviewResponse, PreviewState } from './insights-model';
@@ -30,7 +30,7 @@ type OutreachPdfFetch =
 async function fetchOutreachPreviewPdf(url: string): Promise<OutreachPdfFetch> {
   let response: Response;
   try {
-    response = await fetch(url);
+    response = await fetchWithTimeout(url);
   } catch {
     return { kind: 'failed' };
   }

@@ -69,9 +69,12 @@ function HubReportTab(props: { auditId: string | null }): JSX.Element | null {
   const [isBusy, setIsBusy] = useState(false);
 
   const path = auditId === null ? null : `/api/audits/${encodeURIComponent(auditId)}`;
-  const fetcher = useCallback(async (): Promise<AuditDetailResponse> => {
-    return fetchJson<AuditDetailResponse>(path ?? '');
-  }, [path]);
+  const fetcher = useCallback(
+    async (signal: AbortSignal): Promise<AuditDetailResponse> => {
+      return fetchJson<AuditDetailResponse>(path ?? '', { signal });
+    },
+    [path],
+  );
   const { data, error, refresh } = usePolling<AuditDetailResponse>(fetcher, isBusy ? 5_000 : 0, {
     enabled: path !== null,
     key: path ?? 'none',
@@ -131,16 +134,19 @@ function useProspectDetail(candidateId: string | undefined): ProspectDetailState
     setIsNotFound(false);
   }, [candidateId]);
 
-  const fetcher = useCallback(async (): Promise<ProspectDetailResponse> => {
-    try {
-      return await fetchJson<ProspectDetailResponse>(path ?? '');
-    } catch (cause: unknown) {
-      if (cause instanceof ApiError && cause.status === 404) {
-        setIsNotFound(true);
+  const fetcher = useCallback(
+    async (signal: AbortSignal): Promise<ProspectDetailResponse> => {
+      try {
+        return await fetchJson<ProspectDetailResponse>(path ?? '', { signal });
+      } catch (cause: unknown) {
+        if (cause instanceof ApiError && cause.status === 404) {
+          setIsNotFound(true);
+        }
+        throw cause;
       }
-      throw cause;
-    }
-  }, [path]);
+    },
+    [path],
+  );
 
   const polling = usePolling<ProspectDetailResponse>(fetcher, intervalMs, {
     enabled: path !== null,

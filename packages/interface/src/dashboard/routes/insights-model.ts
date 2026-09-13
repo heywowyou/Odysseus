@@ -333,16 +333,19 @@ export function useInsightView<T>(path: string | null): InsightViewState<T> {
     setIsNotFound(false);
   }, [path]);
 
-  const fetcher = useCallback(async (): Promise<T> => {
-    try {
-      return await fetchJson<T>(path ?? '');
-    } catch (cause: unknown) {
-      if (cause instanceof ApiError && cause.status === 404) {
-        setIsNotFound(true);
+  const fetcher = useCallback(
+    async (signal: AbortSignal): Promise<T> => {
+      try {
+        return await fetchJson<T>(path ?? '', { signal });
+      } catch (cause: unknown) {
+        if (cause instanceof ApiError && cause.status === 404) {
+          setIsNotFound(true);
+        }
+        throw cause;
       }
-      throw cause;
-    }
-  }, [path]);
+    },
+    [path],
+  );
 
   const polling = usePolling<T>(fetcher, 0, {
     enabled: path !== null,

@@ -68,7 +68,10 @@ export function OutcomesPage(): JSX.Element {
   const { strings, language } = useI18n();
   const [offset, setOffset] = useState(0);
   const { data, error, refresh } = usePolling(
-    () => fetchJson<OutcomesPage>(`/api/outreach/outcomes?limit=${PAGE_SIZE}&offset=${offset}`),
+    (signal) =>
+      fetchJson<OutcomesPage>(`/api/outreach/outcomes?limit=${PAGE_SIZE}&offset=${offset}`, {
+        signal,
+      }),
     POLL_INTERVAL_MS,
     { key: `outreach-outcomes:${offset}` },
   );

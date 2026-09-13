@@ -4,6 +4,7 @@ import { createPollingController } from './polling';
 interface Tick {
   resolve: (value: number) => void;
   reject: (error: Error) => void;
+  signal: AbortSignal;
 }
 
 /** Drives the controller with fake timers and manual promise handles so
@@ -16,9 +17,9 @@ function harness(intervalMs: number) {
   let nextValue = 0;
   const controller = createPollingController({
     intervalMs,
-    fetcher: () =>
+    fetcher: (signal) =>
       new Promise<number>((resolve, reject) => {
-        pending.push({ resolve, reject });
+        pending.push({ resolve, reject, signal });
       }),
     onUpdate: (data) => events.push(`update:${String(data)}`),
     onError: (message) => events.push(message === undefined ? 'error:clear' : `error:${message}`),
@@ -36,6 +37,7 @@ function harness(intervalMs: number) {
       await Promise.resolve();
     },
     pendingCount: () => pending.length,
+    pendingSignal: () => pending[0]?.signal,
     advance: (ms: number) => {
       vi.advanceTimersByTime(ms);
     },
@@ -115,7 +117,7 @@ describe('createPollingController', () => {
     vi.useRealTimers();
   });
 
-  it('stop() cancels the pending timer and drops in-flight results', async () => {
+  it('stop() cancels the pending timer and aborts the in-flight request', async () => {
     vi.useFakeTimers();
     const tick = harness(5_000);
     tick.controller.start();
@@ -123,6 +125,7 @@ describe('createPollingController', () => {
     tick.advance(5_000);
     expect(tick.pendingCount()).toBe(1);
     tick.controller.stop();
+    expect(tick.pendingSignal()?.aborted).toBe(true);
     await tick.settle(2);
     expect(tick.events).not.toContain('update:2');
     tick.advance(60_000);

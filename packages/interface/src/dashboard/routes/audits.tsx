@@ -86,7 +86,7 @@ export function AuditsPage(): JSX.Element {
   // Poll errors keep the last good data on screen, so a blip never blanks a
   // list the operator is reading; the error surfaces as a line instead.
   const { data, error, lastUpdatedAt, refresh } = usePolling(
-    () => fetchJson<ScanSummary[]>('/api/scans?limit=200'),
+    (signal) => fetchJson<ScanSummary[]>('/api/scans?limit=200', { signal }),
     POLL_INTERVAL_MS,
     { key: 'audits' },
   );

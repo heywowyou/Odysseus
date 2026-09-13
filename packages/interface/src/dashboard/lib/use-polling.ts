@@ -24,7 +24,7 @@ export interface PollingOptions {
  *  while the five-second poll runs never blanks a page the operator is
  *  reading. */
 export function usePolling<T>(
-  fetcher: () => Promise<T>,
+  fetcher: (signal: AbortSignal) => Promise<T>,
   intervalMs: number,
   options: PollingOptions = {},
 ): PollingState<T> {
@@ -61,7 +61,7 @@ export function usePolling<T>(
 
     const controller = createPollingController({
       intervalMs,
-      fetcher: () => fetcherRef.current(),
+      fetcher: (signal) => fetcherRef.current(signal),
       onUpdate: (result) => {
         setData(result as T);
         setLastUpdatedAt(Date.now());

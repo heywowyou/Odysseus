@@ -133,7 +133,8 @@ export function ProspectsPage(): JSX.Element {
   }, [debouncedSearch]);
 
   const page = usePolling(
-    () => fetchJson<ProspectListResponse>(buildProspectsPath(filters, requestedOffset)),
+    (signal) =>
+      fetchJson<ProspectListResponse>(buildProspectsPath(filters, requestedOffset), { signal }),
     POLL_INTERVAL_MS,
     // The path is the poll key: a filter or page change resets state and
     // refetches, an unrelated re-render never does.

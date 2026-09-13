@@ -11,6 +11,27 @@ export class ApiError extends Error {
   }
 }
 
+/** Same-origin dashboard requests should return promptly, even when the
+ *  action only enqueues longer-running work. This bound prevents a stalled
+ *  connection from wedging one-shot views or the polling state machine. */
+export const DEFAULT_API_TIMEOUT_MS = 15_000;
+
+export class ApiTimeoutError extends Error {
+  constructor(
+    readonly url: string,
+    readonly timeoutMs: number,
+  ) {
+    super(`Request to ${url} timed out after ${timeoutMs}ms`);
+    this.name = 'ApiTimeoutError';
+  }
+}
+
+export interface ApiRequestInit extends RequestInit {
+  /** Override the dashboard default. Set to 0 only for an explicitly
+   *  caller-bounded request. */
+  timeoutMs?: number;
+}
+
 /** Any 401 on a dashboard API call means the session is absent or expired,
  *  so the whole app reloads at the pre-auth page. A module flag keeps
  *  concurrent fetches from stacking identical navigations. */
@@ -22,8 +43,36 @@ function redirectToLogin(): void {
   window.location.assign('/login');
 }
 
-export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, init);
+/** Bounded fetch primitive for same-origin responses that are not JSON, such
+ *  as report PDFs and the deliberately special-cased login response. */
+export async function fetchWithTimeout(url: string, init: ApiRequestInit = {}): Promise<Response> {
+  const { timeoutMs = DEFAULT_API_TIMEOUT_MS, signal: callerSignal, ...requestInit } = init;
+  const requestController = new AbortController();
+  let didTimeout = false;
+  const abortFromCaller = (): void => requestController.abort(callerSignal?.reason);
+  if (callerSignal?.aborted === true) abortFromCaller();
+  else callerSignal?.addEventListener('abort', abortFromCaller, { once: true });
+  const timeout =
+    timeoutMs > 0
+      ? setTimeout(() => {
+          didTimeout = true;
+          requestController.abort();
+        }, timeoutMs)
+      : undefined;
+
+  try {
+    return await fetch(url, { ...requestInit, signal: requestController.signal });
+  } catch (cause) {
+    if (didTimeout) throw new ApiTimeoutError(url, timeoutMs);
+    throw cause;
+  } finally {
+    if (timeout !== undefined) clearTimeout(timeout);
+    callerSignal?.removeEventListener('abort', abortFromCaller);
+  }
+}
+
+export async function fetchJson<T>(url: string, init: ApiRequestInit = {}): Promise<T> {
+  const response = await fetchWithTimeout(url, init);
   if (!response.ok) {
     if (response.status === 401) redirectToLogin();
     const body: unknown = await response.json().catch(() => ({}));

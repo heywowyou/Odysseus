@@ -13,7 +13,7 @@ import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Skeleton } from '../components/ui/skeleton';
 import { useI18n } from '../i18n/provider';
-import { fetchJson } from '../lib/api';
+import { fetchJson, fetchWithTimeout } from '../lib/api';
 import { outreachRefusalSentence } from './audit-detail-model';
 import type { OutreachPreviewRenderResponse } from './audit-detail-model';
 
@@ -27,7 +27,7 @@ type OutreachPdfFetch =
 async function fetchOutreachPreviewPdf(url: string): Promise<OutreachPdfFetch> {
   let response: Response;
   try {
-    response = await fetch(url);
+    response = await fetchWithTimeout(url);
   } catch {
     return { kind: 'failed' };
   }

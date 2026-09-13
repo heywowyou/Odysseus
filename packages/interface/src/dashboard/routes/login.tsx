@@ -5,6 +5,7 @@ import { Card } from '../components/ui/card';
 import { Field } from '../components/ui/field';
 import { Input } from '../components/ui/input';
 import { useI18n } from '../i18n/provider';
+import { fetchWithTimeout } from '../lib/api';
 import type { DashboardStrings } from '../i18n/types';
 
 /** Human wait ("3 min 20 s") substituted into errorLocked's {wait} slot,
@@ -47,7 +48,7 @@ export function LoginPage(): JSX.Element {
   // expired-session redirect the shared helper performs.
   const submit = async (): Promise<void> => {
     try {
-      const response = await fetch('/api/session/login', {
+      const response = await fetchWithTimeout('/api/session/login', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ password }),

@@ -1,6 +1,6 @@
 export interface PollingControllerOptions {
   intervalMs: number;
-  fetcher: () => Promise<unknown>;
+  fetcher: (signal: AbortSignal) => Promise<unknown>;
   onUpdate: (data: unknown) => void;
   /** Receives a failure message, then `undefined` when a later request
    *  succeeds so consumers cannot retain an obsolete transport error. */
@@ -26,7 +26,7 @@ export interface PollingController {
  *  overlap rules are unit-testable without a component tree. Guarantees:
  *  the first fetch starts immediately; the next fetch is scheduled only
  *  after the current one settles (a slow response can never stack requests);
- *  stop() cancels the pending timer and every in-flight result; intervalMs
+ *  stop() cancels the pending timer and aborts the in-flight request; intervalMs
  *  <= 0 means fetch once and never reschedule; pause()/resume() suspend and
  *  restart the interval without losing state (used to stop polling while the
  *  browser tab is hidden, plan 040's poll policy). */
@@ -36,6 +36,7 @@ export function createPollingController(options: PollingControllerOptions): Poll
   let stopped = false;
   let paused = false;
   let inFlight = false;
+  let requestController: AbortController | undefined;
 
   const clearTimer = (): void => {
     if (timer !== undefined) {
@@ -47,9 +48,10 @@ export function createPollingController(options: PollingControllerOptions): Poll
   const runOnce = async (): Promise<void> => {
     if (stopped || inFlight) return;
     inFlight = true;
+    requestController = new AbortController();
     onSettled(true);
     try {
-      const data = await fetcher();
+      const data = await fetcher(requestController.signal);
       if (!stopped) {
         onError(undefined);
         onUpdate(data);
@@ -58,6 +60,7 @@ export function createPollingController(options: PollingControllerOptions): Poll
       if (!stopped) onError(cause instanceof Error ? cause.message : String(cause));
     } finally {
       inFlight = false;
+      requestController = undefined;
       if (!stopped) {
         onSettled(false);
         if (intervalMs > 0 && !paused) timer = setTimeout(() => void runOnce(), intervalMs);
@@ -73,6 +76,7 @@ export function createPollingController(options: PollingControllerOptions): Poll
     stop: () => {
       stopped = true;
       clearTimer();
+      requestController?.abort();
     },
     pause: () => {
       if (stopped || paused) return;

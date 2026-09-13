@@ -18,7 +18,7 @@ import { Button, buttonStyles } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { useI18n } from '../i18n/provider';
 import type { DashboardStrings } from '../i18n/types';
-import { postEmpty } from '../lib/api';
+import { fetchWithTimeout, postEmpty } from '../lib/api';
 import { failureReasonKind, fallbackNoticeText, hasPageCountWarning } from './audit-detail-model';
 import type {
   AuditDetailResponse,
@@ -151,7 +151,7 @@ async function openReportPdf(
   mode: 'preview' | 'download',
   fileName: string,
 ): Promise<void> {
-  const response = await fetch(url);
+  const response = await fetchWithTimeout(url);
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => ({}));
     const detail =

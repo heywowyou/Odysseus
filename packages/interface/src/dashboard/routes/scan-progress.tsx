@@ -75,21 +75,24 @@ export function ScanProgressPage(): JSX.Element {
     setSettled(false);
   }, [jobId]);
 
-  const fetcher = useCallback((): Promise<ScanJobDetail | null> => {
-    if (jobId === undefined) return Promise.resolve(null);
-    return fetchJson<ScanJobDetail>(`/api/scans/${jobId}`)
-      .then((job) => {
-        setSettled(isTerminal(job.status));
-        return job;
-      })
-      .catch((error: unknown) => {
-        if (error instanceof ApiError && error.status === 404) {
-          setMissing(true);
-          return null;
-        }
-        throw error;
-      });
-  }, [jobId]);
+  const fetcher = useCallback(
+    (signal: AbortSignal): Promise<ScanJobDetail | null> => {
+      if (jobId === undefined) return Promise.resolve(null);
+      return fetchJson<ScanJobDetail>(`/api/scans/${jobId}`, { signal })
+        .then((job) => {
+          setSettled(isTerminal(job.status));
+          return job;
+        })
+        .catch((error: unknown) => {
+          if (error instanceof ApiError && error.status === 404) {
+            setMissing(true);
+            return null;
+          }
+          throw error;
+        });
+    },
+    [jobId],
+  );
 
   const { data, error, refresh } = usePolling<ScanJobDetail | null>(fetcher, POLL_INTERVAL_MS, {
     enabled: jobId !== undefined && !missing && !settled,

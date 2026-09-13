@@ -56,16 +56,19 @@ function useAuditDetail(auditId: string | undefined, intervalMs: number): AuditD
     setIsNotFound(false);
   }, [auditId]);
 
-  const fetcher = useCallback(async (): Promise<AuditDetailResponse> => {
-    try {
-      return await fetchJson<AuditDetailResponse>(path ?? '');
-    } catch (cause: unknown) {
-      if (cause instanceof ApiError && cause.status === 404) {
-        setIsNotFound(true);
+  const fetcher = useCallback(
+    async (signal: AbortSignal): Promise<AuditDetailResponse> => {
+      try {
+        return await fetchJson<AuditDetailResponse>(path ?? '', { signal });
+      } catch (cause: unknown) {
+        if (cause instanceof ApiError && cause.status === 404) {
+          setIsNotFound(true);
+        }
+        throw cause;
       }
-      throw cause;
-    }
-  }, [path]);
+    },
+    [path],
+  );
 
   const polling = usePolling<AuditDetailResponse>(fetcher, intervalMs, {
     enabled: path !== null,

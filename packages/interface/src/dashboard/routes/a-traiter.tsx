@@ -92,7 +92,7 @@ export function ATraiterPage(): JSX.Element {
   const { strings } = useI18n();
   const navigate = useNavigate();
   const { data, error, refresh } = usePolling(
-    () => fetchJson<TodoPage>('/api/todo'),
+    (signal) => fetchJson<TodoPage>('/api/todo', { signal }),
     POLL_INTERVAL_MS,
     {
       key: 'a-traiter:todo',
