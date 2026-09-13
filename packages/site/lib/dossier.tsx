@@ -26,7 +26,8 @@ const COPY = {
         detail: 'La correction recommandée et son niveau de priorité.',
       },
     ],
-    caption: 'Exemple de présentation uniquement\u00a0: ces données ne proviennent pas d’un diagnostic réel.',
+    caption:
+      'Exemple de présentation uniquement\u00a0: ces données ne proviennent pas d’un diagnostic réel.',
   },
   en: {
     title: 'What every finding contains',
