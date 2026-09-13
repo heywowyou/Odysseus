@@ -5,9 +5,6 @@ export const metadata: Metadata = {
   title: 'Page introuvable',
 };
 
-/** Bilingual 404 inside the shared frame, so an unknown URL stops serving
- *  Next's default English error page regardless of the visitor's chosen
- *  language. */
 export default function NotFound() {
   return (
     <main id="contenu" tabIndex={-1} className="flex-1">
@@ -15,16 +12,16 @@ export default function NotFound() {
         <section className="shell hero">
           <h1 className="title measure">Page introuvable</h1>
           <p className="lede measure mt-5">
-            Erreur 404&#160;: la page demandée n&apos;existe pas ou n&apos;est plus disponible.
-            Voici les pages du site.
+            La page que vous cherchez n&apos;existe pas ou n&apos;est plus disponible. Vous pouvez
+            revenir à l&apos;accueil ou consulter le diagnostic.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <a className="btn btn-primary" href="/">
-              Retour à la page d&apos;accueil
+              Retour à l&apos;accueil
             </a>
             <a className="btn btn-secondary" href="/offre">
-              L&apos;offre
+              Le diagnostic
             </a>
             <a className="btn btn-secondary" href="/bot">
               OdysseusBot
@@ -37,16 +34,16 @@ export default function NotFound() {
         <section className="shell hero">
           <h1 className="title measure">Page not found</h1>
           <p className="lede measure mt-5">
-            Error 404: the requested page does not exist or is no longer available. Here are the
-            pages of the site.
+            The page you&apos;re looking for doesn&apos;t exist or is no longer available. You can
+            return to the homepage or view the technical diagnostic.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <a className="btn btn-primary" href="/">
-              Back to the homepage
+              Back to homepage
             </a>
             <a className="btn btn-secondary" href="/offre">
-              The offer
+              The diagnostic
             </a>
             <a className="btn btn-secondary" href="/bot">
               OdysseusBot
