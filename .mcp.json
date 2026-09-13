@@ -6,7 +6,8 @@
       "args": [
         "scripts/mcp-mongodb-readonly.sh"
       ],
-      "env": {}
+      "env": {},
+      "alwaysLoad": false
     },
     "playwright": {
       "type": "stdio",
@@ -19,7 +20,8 @@
         "--executable-path",
         "/home/heywow/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome"
       ],
-      "env": {}
+      "env": {},
+      "alwaysLoad": false
     }
   }
 }
