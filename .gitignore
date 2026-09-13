@@ -37,9 +37,7 @@ coverage/
 # while uncommitted work still needs provenance.
 /docs/session/current-session.md
 
-# Impeccable live-mode runtime state (helper recreates these; a future
-# .impeccable/live/config.json, if deliberately committed, stays trackable)
-.impeccable/live/server.json
-.impeccable/live/roots.json
-.impeccable/live/sessions/
-.impeccable/live/annotations/
+# Impeccable live-mode output is local session scratch. The one committed
+# config keeps the PDF workbench discoverable across agent sessions.
+/.impeccable/live/*
+!/.impeccable/live/config.json
