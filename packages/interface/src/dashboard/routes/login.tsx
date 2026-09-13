@@ -92,7 +92,7 @@ export function LoginPage(): JSX.Element {
             is the cheapest way to make it obviously this tool and not a
             generic password box. */}
         <div className="mb-6 text-center">
-          <p className="text-[13px] font-semibold uppercase tracking-[0.22em] text-ink">Odysseus</p>
+          <p className="text-[26px] font-semibold uppercase tracking-[0.22em] text-ink">Odysseus</p>
           <p className="mt-1 text-sm text-ink-muted">{strings.shell.tagline}</p>
         </div>
         <Card>

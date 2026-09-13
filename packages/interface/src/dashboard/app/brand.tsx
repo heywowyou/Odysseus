@@ -10,8 +10,8 @@ export function Brand({ layout }: { layout: 'sidebar' | 'topbar' }) {
       to="/audits"
       className={
         layout === 'sidebar'
-          ? 'px-2 text-[13px] font-semibold uppercase tracking-[0.22em] text-ink'
-          : 'text-[13px] font-semibold uppercase tracking-[0.22em] text-ink'
+          ? 'px-2 text-[26px] font-semibold uppercase tracking-[0.22em] text-ink'
+          : 'text-[26px] font-semibold uppercase tracking-[0.22em] text-ink'
       }
     >
       Odysseus
