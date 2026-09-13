@@ -47,7 +47,8 @@ import { candidateIdentityView } from './prescan-evidence.js';
 export interface OperatorContactView {
   contactId: string;
   contactVersion: string;
-  cohortId: string;
+  /** Manual contacts can exist without a discovered-contact cohort. */
+  cohortId: string | null;
   domain: string;
   state: HotelContactState;
   reason: string;
@@ -81,7 +82,7 @@ export async function getProspectContactView(
   return {
     contactId: contact.contactId,
     contactVersion: contact.contactVersion,
-    cohortId: contact.cohortId,
+    cohortId: contact.cohortId ?? null,
     domain: contact.domain,
     state: contact.state,
     reason: contact.reason,

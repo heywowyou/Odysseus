@@ -359,7 +359,7 @@ export interface ProspectDetailResponse {
   contact: {
     contactId: string;
     contactVersion: string;
-    cohortId: string;
+    cohortId: string | null;
     domain: string;
     state: string;
     reason: string;
