@@ -590,18 +590,15 @@ describe('ProspectDetailPage full-audit launch (plan 044)', () => {
     document.body.innerHTML = '';
   });
 
-  it('launches the paid full audit from the Audit tab after confirmation', async () => {
+  it('launches the paid full audit from the Audit tab directly, no confirmation', async () => {
     await renderDetail();
     await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
     await pause();
 
-    // The launch lives on the Audit tab.
+    // The launch lives on the Audit tab. Plan 045 section 2.4: this is a
+    // plain action now, no confirm dialog stands in front of it.
     await clickButton('Audit');
     await clickButton('Lancer un audit complet');
-    await clickButton(
-      'Lancer un audit complet',
-      document.querySelector('[role="dialog"]') ?? undefined,
-    );
     await pause();
     const launchCall = fetchMock.mock.calls.find(
       (call) =>

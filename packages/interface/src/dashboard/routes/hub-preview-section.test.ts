@@ -60,9 +60,14 @@ function livePreview(): Record<string, unknown> {
   };
 }
 
+function revokedPreview(): Record<string, unknown> {
+  return { ...livePreview(), status: 'revoked', revokedAt: '2026-09-02T09:00:00.000Z' };
+}
+
 async function renderSection(props: {
   preview: Record<string, unknown> | null;
   publishedLink?: string | null;
+  hasTouch1Draft?: boolean;
   onPublish?: () => Promise<void>;
   onRevoke?: () => Promise<void>;
 }): Promise<{ root: Root }> {
@@ -78,6 +83,7 @@ async function renderSection(props: {
           auditId: 'audit-1',
           preview: props.preview as never,
           publishedLink: props.publishedLink ?? null,
+          hasTouch1Draft: props.hasTouch1Draft ?? false,
           isBusy: false,
           onPublish: props.onPublish ?? (async () => {}),
           onRevoke: props.onRevoke ?? (async () => {}),
@@ -116,18 +122,13 @@ describe('HubPreviewSection action wiring', () => {
     document.body.innerHTML = '';
   });
 
-  it('offers publish for a prospect with no live preview and calls onPublish after confirmation', async () => {
+  it('offers publish for a prospect with no live preview and calls onPublish directly, no confirmation', async () => {
     const onPublish = vi.fn(async () => {});
     const { root } = await renderSection({ preview: null, onPublish });
 
+    // Plan 045 section 2.4: a first publish is a plain action, nobody holds
+    // a link yet, so no confirm dialog stands in front of it.
     await clickButton('Publier l’aperçu');
-    // The confirm dialog is radix-mounted at the end of body, so its
-    // footer button is the last match for the action label.
-    const confirm = [...document.querySelectorAll('button')].at(-1);
-    expect(confirm?.textContent).toContain('Publier l’aperçu');
-    await act(async () => {
-      confirm?.click();
-    });
     await waitFor(() => (onPublish.mock.calls.length > 0 ? true : undefined));
     // A publish in flight, no takedown yet: nothing is live.
     expect(
@@ -135,6 +136,46 @@ describe('HubPreviewSection action wiring', () => {
         button.textContent?.includes('Retirer l’aperçu'),
       ),
     ).toBe(false);
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it('reissues over a live preview directly when no touch-1 draft holds the link', async () => {
+    const onPublish = vi.fn(async () => {});
+    const { root } = await renderSection({
+      preview: revokedPreview(),
+      onPublish,
+      hasTouch1Draft: false,
+    });
+
+    await clickButton('Réémettre un lien');
+    await waitFor(() => (onPublish.mock.calls.length > 0 ? true : undefined));
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it('asks for confirmation before reissuing over a touch-1 draft that already carries the link', async () => {
+    const onPublish = vi.fn(async () => {});
+    const { root } = await renderSection({
+      preview: revokedPreview(),
+      onPublish,
+      hasTouch1Draft: true,
+    });
+
+    await clickButton('Réémettre un lien');
+    expect(onPublish).not.toHaveBeenCalled();
+    // The confirm dialog is radix-mounted at the end of body, so its
+    // footer button is the last match for the action label.
+    const confirm = [...document.querySelectorAll('button')].at(-1);
+    expect(confirm?.textContent).toContain('Réémettre un lien');
+    await act(async () => {
+      confirm?.click();
+    });
+    await waitFor(() => (onPublish.mock.calls.length > 0 ? true : undefined));
 
     await act(async () => {
       root.unmount();

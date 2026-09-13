@@ -509,12 +509,6 @@ export const fr: DashboardStrings = {
     reject: 'Rejeter',
     accepted: 'Accepté',
     rejected: 'Rejeté',
-    confirmAcceptTitle: 'Accepter ce prospect ?',
-    confirmAcceptBody:
-      'Le prospect devient éligible à la campagne de démarchage. La décision est enregistrée avec l’origine des informations.',
-    confirmRejectTitle: 'Rejeter ce prospect ?',
-    confirmRejectBody:
-      'Le prospect quitte la campagne. Le motif du rejet est enregistré et affiché dans l’interface.',
     actionError: 'L’action a échoué. Réessayez.',
     provenanceLabel: 'Origine des données',
     provenanceReasonFallback: 'décision prise depuis le tableau de bord',
@@ -699,9 +693,6 @@ export const fr: DashboardStrings = {
       standaloneHint:
         "Vue autonome : la page d'audit complète reste disponible, sans rien refaire ici.",
       launchFullAudit: 'Lancer un audit complet',
-      launchConfirmTitle: 'Lancer un audit complet ?',
-      launchConfirmBody:
-        "L'audit refait un passage complet sur le site, puis produit l'analyse et les rapports : c'est le scan facturable de la chaîne client. La production se pilote ensuite depuis la page d'audit.",
       launchQueued: 'Audit complet lancé.',
       launchRefusals: {
         'no-own-domain': "Aucun site propre n'est rattaché à cet hôtel.",
@@ -820,9 +811,6 @@ export const fr: DashboardStrings = {
     expiresLabel: 'Expire le',
     states: { live: 'En ligne', revoked: 'Retiré', expired: 'Expiré', none: 'Aucun' },
     revokeAction: 'Retirer l’aperçu',
-    publishConfirmTitle: 'Publier cet aperçu ?',
-    publishConfirmBody:
-      'Un lien public sera créé à partir des preuves actuelles. Il n’est affiché qu’une seule fois : préparez-vous à le copier.',
     reissueConfirmTitle: 'Émettre un nouveau lien ?',
     reissueConfirmBody:
       'Un nouveau lien public sera créé et affiché une seule fois. Le lien précédent continue de fonctionner jusqu’à son expiration ou son retrait.',

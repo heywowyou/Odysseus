@@ -545,10 +545,6 @@ export interface DashboardStrings {
     reject: string;
     accepted: string;
     rejected: string;
-    confirmAcceptTitle: string;
-    confirmAcceptBody: string;
-    confirmRejectTitle: string;
-    confirmRejectBody: string;
     /** Shown when a prospect action fails. */
     actionError: string;
     provenanceLabel: string;
@@ -757,8 +753,6 @@ export interface DashboardStrings {
       standaloneHint: string;
       /** Plan 044: the paid deliverable scan's launch on this tab. */
       launchFullAudit: string;
-      launchConfirmTitle: string;
-      launchConfirmBody: string;
       launchQueued: string;
       launchRefusals: Record<'no-own-domain' | 'already-in-flight' | 'no-cohort', string>;
     };
@@ -894,8 +888,6 @@ export interface DashboardStrings {
     expiresLabel: string;
     states: Record<'live' | 'revoked' | 'expired' | 'none', string>;
     revokeAction: string;
-    publishConfirmTitle: string;
-    publishConfirmBody: string;
     reissueConfirmTitle: string;
     reissueConfirmBody: string;
     revokeConfirmTitle: string;

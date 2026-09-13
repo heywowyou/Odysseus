@@ -73,15 +73,20 @@ export function HubPreviewSection(props: {
   preview: PreviewResponse | null;
   /** The once-only bearer link of a publish made on this visit, if any. */
   publishedLink: string | null;
+  /** Whether a touch-1 draft already carries the current live link: if so,
+   *  reissuing invalidates a link an email draft already embeds and needs
+   *  confirmation. Otherwise nobody holds the link yet and publishing (or
+   *  reissuing) is a plain action, plan 045 section 2.4. */
+  hasTouch1Draft: boolean;
   isBusy: boolean;
   onPublish: () => Promise<void>;
   onRevoke: () => Promise<void>;
 }): JSX.Element {
-  const { auditId, preview, publishedLink, isBusy, onPublish, onRevoke } = props;
+  const { auditId, preview, publishedLink, hasTouch1Draft, isBusy, onPublish, onRevoke } = props;
   const { strings, language } = useI18n();
   const copy = strings.auditDetail.outreachPreview;
 
-  const [isPublishOpen, setIsPublishOpen] = useState(false);
+  const [isReissueOpen, setIsReissueOpen] = useState(false);
   const [isRevokeOpen, setIsRevokeOpen] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [pdfNotice, setPdfNotice] = useState<string | null>(null);
@@ -189,7 +194,11 @@ export function HubPreviewSection(props: {
             isLoading={isBusy}
             disabled={isBusy}
             onClick={() => {
-              setIsPublishOpen(true);
+              if (state !== 'none' && hasTouch1Draft) {
+                setIsReissueOpen(true);
+                return;
+              }
+              void onPublish();
             }}
           >
             {state === 'none' ? copy.publishAction : copy.reissueAction}
@@ -258,17 +267,11 @@ export function HubPreviewSection(props: {
       ) : null}
 
       <ConfirmDialog
-        open={isPublishOpen}
-        onOpenChange={setIsPublishOpen}
-        title={
-          state === 'none'
-            ? strings.preview.publishConfirmTitle
-            : strings.preview.reissueConfirmTitle
-        }
-        description={
-          state === 'none' ? strings.preview.publishConfirmBody : strings.preview.reissueConfirmBody
-        }
-        confirmLabel={state === 'none' ? copy.publishAction : copy.reissueAction}
+        open={isReissueOpen}
+        onOpenChange={setIsReissueOpen}
+        title={strings.preview.reissueConfirmTitle}
+        description={strings.preview.reissueConfirmBody}
+        confirmLabel={copy.reissueAction}
         cancelLabel={strings.common.cancel}
         onConfirm={onPublish}
       />

@@ -501,12 +501,6 @@ export const en: DashboardStrings = {
     reject: 'Reject',
     accepted: 'Accepted',
     rejected: 'Rejected',
-    confirmAcceptTitle: 'Accept this prospect?',
-    confirmAcceptBody:
-      'The prospect becomes eligible for the outreach campaign. The decision is recorded with where the information came from.',
-    confirmRejectTitle: 'Reject this prospect?',
-    confirmRejectBody:
-      'The prospect leaves the campaign. The rejection reason is recorded and shown in the interface.',
     actionError: 'The action failed. Try again.',
     provenanceLabel: 'Data source',
     provenanceReasonFallback: 'decision made from the dashboard',
@@ -690,9 +684,6 @@ export const en: DashboardStrings = {
       standaloneHint:
         'Standalone view: the full audit page remains available; nothing here duplicates it.',
       launchFullAudit: 'Launch a full audit',
-      launchConfirmTitle: 'Launch a full audit?',
-      launchConfirmBody:
-        'The audit re-runs the full pass on the site, then produces the analysis and the reports: this is the billable scan of the client chain. Production is then driven from the audit page.',
       launchQueued: 'Full audit launched.',
       launchRefusals: {
         'no-own-domain': 'No website of its own is attached to this hotel.',
@@ -808,9 +799,6 @@ export const en: DashboardStrings = {
     expiresLabel: 'Expires at',
     states: { live: 'Live', revoked: 'Taken down', expired: 'Expired', none: 'None' },
     revokeAction: 'Take the preview down',
-    publishConfirmTitle: 'Publish this preview?',
-    publishConfirmBody:
-      'A public link will be created from the current evidence. It is shown only once, so be ready to copy it.',
     reissueConfirmTitle: 'Issue a new link?',
     reissueConfirmBody:
       'A new public link will be created and shown only once. The previous link keeps working until it expires or is taken down.',

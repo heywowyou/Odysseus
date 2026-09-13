@@ -6,7 +6,6 @@ import { ChevronRight } from 'lucide-react';
 import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import { Button, buttonStyles } from '../components/ui/button';
-import { ConfirmDialog } from '../components/ui/dialog';
 import { EmptyState } from '../components/ui/empty-state';
 import { Skeleton } from '../components/ui/skeleton';
 import { useI18n } from '../i18n/provider';
@@ -210,7 +209,6 @@ export function ProspectDetailPage(): JSX.Element {
   const { hash } = useLocation();
   const { data, error, refresh, isNotFound } = useProspectDetail(candidateId);
 
-  const [pendingAction, setPendingAction] = useState<ReviewAction | null>(null);
   const [scanStarting, setScanStarting] = useState(false);
   const [prescanStarting, setPrescanStarting] = useState(false);
   const [isOutreachBusy, setIsOutreachBusy] = useState(false);
@@ -230,8 +228,6 @@ export function ProspectDetailPage(): JSX.Element {
   /** Plan 043: the open wave-roster dialog, if any. The mutation itself is
    *  shared with the prospects list via wave-dialog.tsx. */
   const [waveDialog, setWaveDialog] = useState<'add' | 'remove' | null>(null);
-  /** Plan 044: the paid full audit's confirm dialog. */
-  const [isFullAuditOpen, setIsFullAuditOpen] = useState(false);
 
   // Plan 040 slice 7: the a-traiter rows and the audit page's preview note
   // deep-link into a hub section (/prospects/:id#hub-emails and friends).
@@ -524,7 +520,14 @@ export function ProspectDetailPage(): JSX.Element {
   const sectionFor = (key: HubStepKey): JSX.Element | null => {
     switch (key) {
       case 'fiche':
-        return <HubFicheSection detail={data} onRequestReview={setPendingAction} />;
+        return (
+          <HubFicheSection
+            detail={data}
+            onRequestReview={(action) => {
+              void handleReview(action);
+            }}
+          />
+        );
       case 'quick-check':
         return (
           <HubQuickCheckSection
@@ -542,7 +545,9 @@ export function ProspectDetailPage(): JSX.Element {
             detail={data}
             auditId={auditId}
             onPickAudit={setPickedAuditId}
-            onLaunchFullAudit={() => setIsFullAuditOpen(true)}
+            onLaunchFullAudit={() => {
+              void launchFullAudit();
+            }}
           />
         );
       case 'report':
@@ -553,6 +558,11 @@ export function ProspectDetailPage(): JSX.Element {
             auditId={auditId}
             preview={data.preview}
             publishedLink={publishedLink}
+            hasTouch1Draft={
+              data.thread?.drafts.some(
+                (draft) => draft.touch === 1 && draft.status === 'created',
+              ) ?? false
+            }
             isBusy={isOutreachBusy}
             onPublish={runPublish}
             onRevoke={runRevoke}
@@ -588,7 +598,12 @@ export function ProspectDetailPage(): JSX.Element {
     switch (action.kind) {
       case 'review':
         return (
-          <Button size="sm" onClick={() => setPendingAction('accept')}>
+          <Button
+            size="sm"
+            onClick={() => {
+              void handleReview('accept');
+            }}
+          >
             {strings.operator.accept}
           </Button>
         );
@@ -695,7 +710,13 @@ export function ProspectDetailPage(): JSX.Element {
       ) : null}
       {action.kind === 'review' ? (
         <div className="mb-4">
-          <Button variant="danger" size="sm" onClick={() => setPendingAction('reject')}>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => {
+              void handleReview('reject');
+            }}
+          >
             {strings.operator.reject}
           </Button>
         </div>
@@ -762,16 +783,6 @@ export function ProspectDetailPage(): JSX.Element {
         {sectionFor(activeTab)}
       </div>
 
-      <ConfirmDialog
-        open={isFullAuditOpen}
-        onOpenChange={setIsFullAuditOpen}
-        title={strings.hub.audit.launchConfirmTitle}
-        description={strings.hub.audit.launchConfirmBody}
-        confirmLabel={strings.hub.audit.launchFullAudit}
-        cancelLabel={strings.common.cancel}
-        onConfirm={launchFullAudit}
-      />
-
       <WaveDialog
         open={waveDialog !== null}
         onOpenChange={(open) => {
@@ -781,28 +792,6 @@ export function ProspectDetailPage(): JSX.Element {
         candidateId={candidateId ?? null}
         hotelName={data.name}
         onSubmit={(waveCandidateId, wave) => submitWave(waveDialog ?? 'add', waveCandidateId, wave)}
-      />
-
-      <ConfirmDialog
-        open={pendingAction !== null}
-        onOpenChange={(open) => {
-          if (!open) setPendingAction(null);
-        }}
-        title={
-          pendingAction === 'reject'
-            ? strings.operator.confirmRejectTitle
-            : strings.operator.confirmAcceptTitle
-        }
-        description={
-          pendingAction === 'reject'
-            ? strings.operator.confirmRejectBody
-            : strings.operator.confirmAcceptBody
-        }
-        confirmLabel={
-          pendingAction === 'reject' ? strings.operator.reject : strings.operator.accept
-        }
-        cancelLabel={strings.common.cancel}
-        onConfirm={() => handleReview(pendingAction ?? 'accept')}
       />
     </article>
   );
