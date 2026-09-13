@@ -186,8 +186,8 @@ export const STAKEHOLDER_ROLE_COPY: Record<ReportStakeholderRole, BilingualCopy>
  *  when preparation exists. Remediation-neutral and claim-free. */
 export const HOOK_FAMILY_COPY: Record<HookFamily, BilingualCopy> = {
   accessibility: {
-    fr: "L'accessibilité de votre site concentre le plus de constats de ce rapport.",
-    en: 'Accessibility carries the most findings in this report.',
+    fr: "L'accessibilité ressort comme l'un des principaux sujets de ce rapport.",
+    en: 'Accessibility stands out as one of the main subjects of this report.',
   },
   'speed-and-booking': {
     fr: 'La vitesse de votre site agit directement sur vos réservations.',

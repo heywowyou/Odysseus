@@ -85,6 +85,24 @@ describe('buildReportPreparationPreview', () => {
     expect(preview.fr.hook.value).not.toBe(preview.en.hook.value);
   });
 
+  it('does not claim a raw-count maximum when severity weighting selects accessibility', () => {
+    const findings = [
+      buildFinding({ source: 'axe', category: 'accessibility', severity: 'critical' }),
+      buildFinding({ source: 'axe', category: 'accessibility', severity: 'critical' }),
+      buildFinding({ source: 'lighthouse', category: 'performance', severity: 'minor' }),
+      buildFinding({ source: 'lighthouse', category: 'performance', severity: 'minor' }),
+    ];
+    const preview = buildReportPreparationPreview({
+      preparation: preparationWith({}),
+      manifest: buildManifest([homepage]),
+      findings,
+    });
+
+    expect(preview.fr.hook.family).toBe('accessibility');
+    expect(preview.fr.hook.value).not.toContain('le plus de constats');
+    expect(preview.en.hook.value).not.toContain('the most findings');
+  });
+
   it('marks the hook as evidence-unavailable mixed when there are no findings', () => {
     const preview = buildReportPreparationPreview({
       preparation: preparationWith({}),
