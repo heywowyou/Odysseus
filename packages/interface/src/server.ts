@@ -6,6 +6,7 @@ import { registerAuditRoutes } from './routes/audits.js';
 import { registerReportPreparationRoutes } from './routes/report-preparation.js';
 import { registerProspectingRoutes } from './routes/prospecting.js';
 import { registerProspectRoutes } from './routes/prospects.js';
+import { registerProspectContactRoutes } from './routes/prospect-contact.js';
 import { registerProspectInsightRoutes } from './routes/prospect-insights.js';
 import { registerOutreachRoutes } from './routes/outreach.js';
 import { registerStaticFallback } from './routes/static.js';
@@ -39,9 +40,7 @@ export interface InterfaceServerHandle {
 }
 
 export interface InterfaceAuthOptions {
-  /** Overrides the env lookup so tests never race process.env. */
   getPasswordHash?: () => string | null;
-  /** Injectable clock shared by the session store and the rate limiter. */
   now?: () => number;
   sessionStore?: SessionStore;
   rateLimiter?: LoginRateLimiter;
@@ -49,23 +48,11 @@ export interface InterfaceAuthOptions {
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', '::1', 'localhost']);
 
-/** The fail-closed bind rule, pure so it is testable without listening:
- *  without a password hash the dashboard keeps its historical no-auth
- *  posture, which is only defensible while it stays on loopback, so any
- *  wider bind must refuse to start rather than silently go public. */
 export function refusesUnprotectedNonLoopbackBind(host: string, authConfigured: boolean): boolean {
   if (authConfigured) return false;
   return !LOOPBACK_HOSTS.has(host.trim().toLowerCase());
 }
 
-/** Boots the router, the job queue, and the node:http server, in that
- *  order, then starts the queue (which resets any job an unclean
- *  previous shutdown left 'running' back to 'queued' - see JobQueue.start
- *  and resetOrphanedRunningJobs). Binds to 127.0.0.1 by default: this is
- *  what makes it a private interface, not a public one. With a dashboard
- *  password hash configured, an auth guard runs ahead of every request and
- *  the session login/logout routes are live; without one, nothing about
- *  request handling changes (and a non-loopback bind is refused outright). */
 export async function startInterfaceServer(
   connection: Connection,
   options: InterfaceAuthOptions = {},
@@ -108,21 +95,18 @@ export async function startInterfaceServer(
   registerReportPreparationRoutes(router, connection);
   registerProspectingRoutes(router, connection, queue);
   registerProspectRoutes(router, connection, queue);
+  registerProspectContactRoutes(router, connection);
   registerProspectInsightRoutes(router, connection);
   registerOutreachRoutes(router, connection, queue);
   registerSessionRoutes(router, { getPasswordHash, sessionStore, rateLimiter });
   registerStaticFallback(router);
 
-  // Only a configured hash installs the guard; without one every request
-  // takes today's unguarded path unchanged.
   let guard: AuthGuard | undefined;
   if (configuredHash !== null) {
     guard = createAuthGuard({ sessionStore });
   }
 
   const server = createServer((req, res) => {
-    // Baseline hardening before anything else, so guard rejections and the
-    // catch-handler 500 carry the same headers as routed responses.
     applyBaseSecurityHeaders(res);
     void (async () => {
       if (guard !== undefined && !(await guard(req, res))) return;
