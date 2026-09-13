@@ -79,7 +79,7 @@ export default function OfferPage() {
               <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
                 <p className="price numeric">1&#160;600&#160;€ HT</p>
                 <a className="btn btn-primary" href="mailto:contact@odysseusaudit.fr">
-                  Parler de votre site
+                  Nous contacter
                 </a>
               </div>
               <p className="small muted mt-4">
@@ -238,7 +238,7 @@ export default function OfferPage() {
               </p>
               <div className="mt-7">
                 <a className="btn btn-primary" href="mailto:contact@odysseusaudit.fr">
-                  Parler de votre site
+                  Nous contacter
                 </a>
               </div>
             </div>
@@ -281,7 +281,7 @@ export default function OfferPage() {
               <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
                 <p className="price numeric">EUR 1,600 excl. VAT</p>
                 <a className="btn btn-primary" href="mailto:contact@odysseusaudit.fr">
-                  Discuss your site
+                  Contact us
                 </a>
               </div>
               <p className="small muted mt-4">
@@ -430,7 +430,7 @@ export default function OfferPage() {
               </p>
               <div className="mt-7">
                 <a className="btn btn-primary" href="mailto:contact@odysseusaudit.fr">
-                  Discuss your site
+                  Contact us
                 </a>
               </div>
             </div>

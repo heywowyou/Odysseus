@@ -214,8 +214,8 @@ describe('home page', () => {
   });
 
   it('uses a conversational contact action rather than an order commitment', () => {
-    expect(home).toContain('Parler de votre site');
-    expect(home).toContain('Discuss your site');
+    expect(home).toContain('Nous contacter');
+    expect(home).toContain('Contact us');
     expect(home).not.toContain('Commander');
     expect(home).not.toContain('Order');
   });
@@ -238,8 +238,8 @@ describe('offer page', () => {
   });
 
   it('uses a contact action that describes the actual act', () => {
-    expect(offer).toContain('Parler de votre site');
-    expect(offer).toContain('Discuss your site');
+    expect(offer).toContain('Nous contacter');
+    expect(offer).toContain('Contact us');
     expect(offer).not.toContain('Commander');
     expect(offer).not.toContain('Order');
   });

@@ -115,10 +115,10 @@ function HomeFr() {
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <a className="btn btn-primary" href="mailto:contact@odysseusaudit.fr">
-                Parler de votre site
+                Nous contacter
               </a>
               <a className="btn btn-secondary" href="/offre">
-                Voir le diagnostic
+                Comprendre le diagnostic
               </a>
             </div>
             <p className="small muted mt-4 md:hidden">Tarif fixe&#160;: 1&#160;600&#160;€ HT.</p>
@@ -313,10 +313,10 @@ function HomeFr() {
           </p>
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <a className="btn btn-primary" href="mailto:contact@odysseusaudit.fr">
-              Parler de votre site
+              Nous contacter
             </a>
             <a className="btn btn-secondary" href="/offre">
-              Voir le diagnostic
+              Comprendre le diagnostic
             </a>
           </div>
           <p className="small muted mt-7">
@@ -365,10 +365,10 @@ function HomeEn() {
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <a className="btn btn-primary" href="mailto:contact@odysseusaudit.fr">
-                Discuss your site
+                Contact us
               </a>
               <a className="btn btn-secondary" href="/offre">
-                View the diagnostic
+                Understand the diagnostic
               </a>
             </div>
             <p className="small muted mt-4 md:hidden">Fixed price: EUR 1,600 excl. VAT.</p>
@@ -556,10 +556,10 @@ function HomeEn() {
           </p>
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <a className="btn btn-primary" href="mailto:contact@odysseusaudit.fr">
-              Discuss your site
+              Contact us
             </a>
             <a className="btn btn-secondary" href="/offre">
-              View the diagnostic
+              Understand the diagnostic
             </a>
           </div>
           <p className="small muted mt-7">
