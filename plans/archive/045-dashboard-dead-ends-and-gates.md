@@ -1,5 +1,8 @@
 # Plan 045: remove dead ends and gates from the operator dashboard
 
+Archived 2026-09-14 after all implementation stages, the local task-completion
+pass, the production Stage 1 proof, and the UX-012 closeout regression fix.
+
 ## Context
 
 The operator cannot finish core jobs on their own dashboard. Four layout
