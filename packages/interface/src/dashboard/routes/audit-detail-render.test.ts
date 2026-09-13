@@ -143,7 +143,6 @@ function preparationView(overrides: Record<string, unknown> = {}): Record<string
       turnover: { status: 'omitted', reason: 'missing-turnover' },
     },
     suggestions: [],
-    acknowledgementCurrent: true,
     regenerationInFlight: false,
     ...overrides,
   };
@@ -702,10 +701,11 @@ describe('audit report panel (plan 045 stage 3.1)', () => {
     root.unmount();
   });
 
-  it('keeps the legacy ready-candidate preview links and approve fallback', async () => {
+  it('shows a stale writing failure but no preview or approve action for a legacy ready candidate', async () => {
     // A candidate left 'ready' by a pre-plan-045-2.1 run: every regeneration
-    // from this build already approves inline, but this fallback still
-    // surfaces one left over from before.
+    // from this build already approves inline, so the preview and approve
+    // routes and their UI were retired in stage 3.4. Regenerating again is
+    // the only way forward for a leftover 'ready' record.
     stubRoutes({
       '/api/audits/audit-1/report-preparation': preparationView({
         preparation: {
@@ -726,17 +726,17 @@ describe('audit report panel (plan 045 stage 3.1)', () => {
       '/api/audits/audit-1': analysedAudit,
     });
     const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
-    await settle(container, 'Approuver cette version');
+    await settle(container, 'Rapport client');
     expect(
       container.querySelector(
         'a[href="/api/audits/audit-1/report-preparation/candidate/fr/preview"]',
       ),
-    ).not.toBeNull();
+    ).toBeNull();
     expect(
       [...container.querySelectorAll('button')].some(
         (button) => button.textContent === 'Approuver cette version',
       ),
-    ).toBe(true);
+    ).toBe(false);
     root.unmount();
   });
 });

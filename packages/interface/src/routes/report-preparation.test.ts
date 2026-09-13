@@ -4,7 +4,6 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   applyPreparationPatch,
-  buildReportPreparationPreview,
   emptyReportPreparation,
   type ReportPreparation,
 } from '@odysseus/core';
@@ -20,13 +19,9 @@ vi.mock('@odysseus/store', () => {
     getAudit: vi.fn(),
     getReportPreparation: vi.fn(),
     patchReportPreparationInputs: vi.fn(),
-    setWarningAcknowledgement: vi.fn(),
-    clearStaleWarningAcknowledgement: vi.fn(),
     approveWritingCandidate: vi.fn(),
     recordReadyWritingCandidate: vi.fn(),
     recordFailedWritingCandidate: vi.fn(),
-    getAnalysisById: vi.fn(),
-    getAuditManualFields: vi.fn(),
     WritingSelectionConflictError,
   };
 });
@@ -47,7 +42,6 @@ vi.mock('@odysseus/report', () => {
     }
   }
   return {
-    generateReportPdf: vi.fn(),
     REPORT_TEMPLATE_VERSION: 3,
     ReportIdentityUnconfirmedError,
   };
@@ -71,21 +65,17 @@ vi.mock('@odysseus/llm', async (importOriginal) => ({
 
 import {
   approveWritingCandidate,
-  clearStaleWarningAcknowledgement,
   getAudit,
   getReportPreparation,
   patchReportPreparationInputs,
   recordFailedWritingCandidate,
   recordReadyWritingCandidate,
-  setWarningAcknowledgement,
   WritingSelectionConflictError,
 } from '@odysseus/store';
 import { runAnalysisStage } from '../pipeline/analysis-stage.js';
 import { isWritingRegenerationInFlight } from '../pipeline/regenerate-writing.js';
 import { regenerateReportsForAudit } from '../pipeline/regenerate-reports.js';
-import { generateReportPdf } from '@odysseus/report';
 import { pauseBetweenLanguagePasses } from '@odysseus/llm';
-import { getAnalysisById, getAuditManualFields } from '@odysseus/store';
 import { Router } from '../router.js';
 import { registerReportPreparationRoutes } from './report-preparation.js';
 
@@ -125,22 +115,6 @@ beforeEach(() => {
   vi.mocked(patchReportPreparationInputs).mockImplementation(
     async (_connection, _auditId, patch) => {
       storedPreparation = applyPreparationPatch(storedPreparation, patch, new Date().toISOString());
-      return storedPreparation;
-    },
-  );
-  vi.mocked(setWarningAcknowledgement).mockImplementation(async (_connection, _auditId, digest) => {
-    storedPreparation = {
-      ...storedPreparation,
-      warningAcknowledgement: { digest, acknowledgedAt: new Date().toISOString() },
-    };
-    return storedPreparation;
-  });
-  vi.mocked(clearStaleWarningAcknowledgement).mockImplementation(
-    async (_connection, _auditId, digest) => {
-      if (storedPreparation.warningAcknowledgement?.digest !== digest) {
-        const { warningAcknowledgement: _dropped, ...rest } = storedPreparation;
-        storedPreparation = rest as ReportPreparation;
-      }
       return storedPreparation;
     },
   );
@@ -215,7 +189,7 @@ describe('GET /api/audits/:auditId/report-preparation', () => {
     expect(res.statusCode).toBe(404);
   });
 
-  it('returns the preparation, its preview, suggestions, and acknowledgement state', async () => {
+  it('returns the preparation, its preview, and suggestions', async () => {
     await writeEvidence();
     const router = new Router();
     registerReportPreparationRoutes(router, fakeConnection);
@@ -231,7 +205,6 @@ describe('GET /api/audits/:auditId/report-preparation', () => {
       { journeyId: 'discovery-navigation', available: true },
       { journeyId: 'transaction-booking', available: false, reason: 'no-transactional-flow' },
     ]);
-    expect(body.acknowledgementCurrent).toBe(false);
     expect(body.regenerationInFlight).toBe(false);
   });
 
@@ -307,14 +280,7 @@ describe('PATCH /api/audits/:auditId/report-preparation', () => {
     expect(unknownRole.statusCode).toBe(400);
   });
 
-  it('applies a valid patch and re-evaluates the acknowledgement against the new inputs', async () => {
-    storedPreparation = {
-      ...emptyReportPreparation(),
-      warningAcknowledgement: {
-        digest: 'sha256:stale',
-        acknowledgedAt: '2026-09-01T00:00:00.000Z',
-      },
-    };
+  it('applies a valid patch', async () => {
     const router = new Router();
     registerReportPreparationRoutes(router, fakeConnection);
     const res = fakeRes();
@@ -328,16 +294,8 @@ describe('PATCH /api/audits/:auditId/report-preparation', () => {
     );
     expect(res.statusCode).toBe(200);
     expect(patchReportPreparationInputs).toHaveBeenCalledTimes(1);
-    // The stored ack digest (sha256:stale) can never match the freshly
-    // computed digest, so the patch path must have pruned it.
-    expect(clearStaleWarningAcknowledgement).toHaveBeenCalledWith(
-      fakeConnection,
-      'audit-1',
-      expect.stringMatching(/^sha256:[0-9a-f]{64}$/),
-    );
     const body = JSON.parse(res.body!);
     expect(body.preparation.context.situation).toBe('periodic-review');
-    expect(body.acknowledgementCurrent).toBe(false);
   });
 
   it('round-trips a replacement while retaining the detected official turnover', async () => {
@@ -424,65 +382,6 @@ describe('PATCH /api/audits/:auditId/report-preparation', () => {
     }
 
     expect(patchReportPreparationInputs).not.toHaveBeenCalled();
-  });
-
-  it('does not invalidate the missing-context acknowledgement when only turnover changes', async () => {
-    const warningDigest = buildReportPreparationPreview({
-      preparation: emptyReportPreparation(),
-    }).warningDigest;
-    storedPreparation = {
-      ...emptyReportPreparation(),
-      warningAcknowledgement: {
-        digest: warningDigest,
-        acknowledgedAt: '2026-09-01T00:00:00.000Z',
-      },
-    };
-    const router = new Router();
-    registerReportPreparationRoutes(router, fakeConnection);
-    const res = fakeRes();
-
-    await router.handle(
-      fakeReq(
-        '/api/audits/audit-1/report-preparation',
-        {
-          turnover: {
-            useReplacement: true,
-            replacement: {
-              kind: 'exact',
-              amountEur: 7_200_000,
-              year: 2024,
-              source: 'official-annual-accounts',
-            },
-          },
-        },
-        'PATCH',
-      ),
-      res,
-    );
-
-    expect(res.statusCode).toBe(200);
-    expect(JSON.parse(res.body!).acknowledgementCurrent).toBe(true);
-  });
-});
-
-describe('POST /api/audits/:auditId/report-preparation/confirm-warnings', () => {
-  it('records a server-computed digest for the current inputs', async () => {
-    await writeEvidence();
-    const router = new Router();
-    registerReportPreparationRoutes(router, fakeConnection);
-    const res = fakeRes();
-    await router.handle(
-      fakeReq('/api/audits/audit-1/report-preparation/confirm-warnings', {}, 'POST'),
-      res,
-    );
-    expect(res.statusCode).toBe(200);
-    expect(setWarningAcknowledgement).toHaveBeenCalledWith(
-      fakeConnection,
-      'audit-1',
-      expect.stringMatching(/^sha256:[0-9a-f]{64}$/),
-    );
-    const body = JSON.parse(res.body!);
-    expect(body.acknowledgementCurrent).toBe(true);
   });
 });
 
@@ -682,146 +581,5 @@ describe('POST /api/audits/:auditId/report-preparation/regenerate-writing', () =
     expect(res.body).toContain('could not regenerate writing');
     expect(recordFailedWritingCandidate).not.toHaveBeenCalled();
     expect(isWritingRegenerationInFlight('audit-1')).toBe(false);
-  });
-});
-
-describe('POST /api/audits/:auditId/report-preparation/approve-candidate', () => {
-  it('returns 409 when there is no ready candidate', async () => {
-    vi.mocked(approveWritingCandidate).mockRejectedValue(
-      new WritingSelectionConflictError(
-        'odysseus: no ready writing candidate to approve for this audit',
-      ),
-    );
-    const router = new Router();
-    registerReportPreparationRoutes(router, fakeConnection);
-    const res = fakeRes();
-    await router.handle(
-      fakeReq('/api/audits/audit-1/report-preparation/approve-candidate', {}, 'POST'),
-      res,
-    );
-    expect(res.statusCode).toBe(409);
-    expect(res.body).toContain('no ready writing candidate');
-  });
-
-  it('returns the updated view after an approval', async () => {
-    vi.mocked(approveWritingCandidate).mockImplementation(async () => {
-      storedPreparation = {
-        ...storedPreparation,
-        writingSelection: {
-          selected: {
-            frAnalysisId: 'fr-1',
-            enAnalysisId: 'en-1',
-            findingsProvenance: {
-              findingsSchemaVersion: 1 as const,
-              normalizationFingerprint: 'fp',
-              findingsDigest: 'sha256:d',
-            },
-          },
-          candidate: {
-            status: 'selected',
-            pair: {
-              frAnalysisId: 'fr-1',
-              enAnalysisId: 'en-1',
-              findingsProvenance: {
-                findingsSchemaVersion: 1 as const,
-                normalizationFingerprint: 'fp',
-                findingsDigest: 'sha256:d',
-              },
-            },
-            approvedAt: '2026-09-01T12:00:00.000Z',
-          },
-        },
-      };
-      return storedPreparation;
-    });
-    const router = new Router();
-    registerReportPreparationRoutes(router, fakeConnection);
-    const res = fakeRes();
-    await router.handle(
-      fakeReq('/api/audits/audit-1/report-preparation/approve-candidate', {}, 'POST'),
-      res,
-    );
-    expect(res.statusCode).toBe(200);
-    const body = JSON.parse(res.body!);
-    expect(body.preparation.writingSelection.selected.frAnalysisId).toBe('fr-1');
-    expect(body.preparation.writingSelection.candidate.status).toBe('selected');
-  });
-});
-
-describe('GET /api/audits/:auditId/report-preparation/candidate/:language/preview', () => {
-  const pairProvenance = {
-    findingsSchemaVersion: 1 as const,
-    normalizationFingerprint: 'fp',
-    findingsDigest: 'sha256:digest',
-  };
-
-  function seedReadyCandidate(): void {
-    storedPreparation = {
-      ...emptyReportPreparation(),
-      writingSelection: {
-        candidate: {
-          status: 'ready',
-          pair: {
-            frAnalysisId: 'analysis-fr',
-            enAnalysisId: 'analysis-en',
-            findingsProvenance: pairProvenance,
-          },
-          createdAt: '2026-09-01T12:00:00.000Z',
-        },
-      },
-    };
-  }
-
-  it('returns 409 when there is no ready candidate', async () => {
-    const router = new Router();
-    registerReportPreparationRoutes(router, fakeConnection);
-    const res = fakeRes();
-    await router.handle(
-      fakeReq('/api/audits/audit-1/report-preparation/candidate/fr/preview'),
-      res,
-    );
-    expect(res.statusCode).toBe(409);
-    expect(generateReportPdf).not.toHaveBeenCalled();
-  });
-
-  it('renders the candidate PDF for the requested language without persisting anything', async () => {
-    seedReadyCandidate();
-    await writeEvidence();
-    vi.mocked(getAnalysisById).mockImplementation(async (_connection, _auditId, analysisId) => {
-      return {
-        analysisId,
-        auditId: 'audit-1',
-        language: analysisId.endsWith('-fr') ? 'fr' : 'en',
-      } as never;
-    });
-    vi.mocked(getAuditManualFields).mockResolvedValue(undefined);
-    vi.mocked(generateReportPdf).mockResolvedValue({
-      pdf: Buffer.from('%PDF-candidate'),
-      pageCount: 12,
-    } as never);
-
-    const router = new Router();
-    registerReportPreparationRoutes(router, fakeConnection);
-    const res = fakeRes();
-    await router.handle(
-      fakeReq('/api/audits/audit-1/report-preparation/candidate/fr/preview'),
-      res,
-    );
-    expect(res.statusCode).toBe(200);
-    expect(generateReportPdf).toHaveBeenCalledTimes(1);
-    const input = vi.mocked(generateReportPdf).mock.calls[0]![0]!;
-    expect(input.analysis.analysisId).toBe('analysis-fr');
-    expect(input.preparation?.language).toBe('fr');
-  });
-
-  it('rejects an unknown language with 400', async () => {
-    const router = new Router();
-    registerReportPreparationRoutes(router, fakeConnection);
-    const res = fakeRes();
-    await router.handle(
-      fakeReq('/api/audits/audit-1/report-preparation/candidate/es/preview'),
-      res,
-    );
-    expect(res.statusCode).toBe(400);
   });
 });

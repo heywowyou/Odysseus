@@ -163,6 +163,5 @@ export interface PreparationViewResponse {
     turnover: EffectiveTurnoverResponse;
   };
   suggestions: JourneySuggestionResponse[];
-  acknowledgementCurrent: boolean;
   regenerationInFlight: boolean;
 }

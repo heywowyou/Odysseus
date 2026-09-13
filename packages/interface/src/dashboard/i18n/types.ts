@@ -499,8 +499,6 @@ export interface DashboardStrings {
     warningSituation: string;
     warningTrigger: string;
     warningJourneyScope: string;
-    confirmWarningsButton: string;
-    warningsConfirmedLabel: string;
     previewHeading: string;
     previewAutomaticLabel: string;
     previewCustomLabel: string;
@@ -509,13 +507,8 @@ export interface DashboardStrings {
     savedMessage: string;
     writingHeading: string;
     selectedWritingLabel: string;
-    candidateReadyLabel: string;
     candidateFailedLabel: string;
-    candidateSelectedLabel: string;
-    candidatePreviewLabel: string;
-    approveCandidateButton: string;
     regenerateButton: string;
-    approvedMessage: string;
     /** Plan 045 section 2.1: regeneration now approves and renders in one
      *  call, replacing the separate "candidate ready for review" toast. */
     writingRegeneratedMessage: string;

@@ -79,21 +79,6 @@ export function AuditReportPanel(props: {
     refresh();
   };
 
-  const handleConfirmWarnings = async (): Promise<void> => {
-    onBusy(true);
-    try {
-      await postEmpty(`${basePath}/confirm-warnings`);
-      toast.success(strings.prepareReport.warningsConfirmedLabel);
-      handleAfterSave();
-    } catch (confirmError) {
-      toast.error(strings.auditDetail.actionError, {
-        description: confirmError instanceof Error ? confirmError.message : undefined,
-      });
-    } finally {
-      onBusy(false);
-    }
-  };
-
   // Plan 045 section 2.1: regeneration approves and renders automatically,
   // so this single call replaces the old rewrite-then-approve pair, and no
   // confirm dialog gates it any more (2.4) - it is already the explicit
@@ -122,24 +107,6 @@ export function AuditReportPanel(props: {
       });
     } finally {
       setIsRewriting(false);
-      onBusy(false);
-    }
-  };
-
-  // Kept for a candidate left in 'ready' state by a pre-2.1 run; every
-  // regeneration from this build already approves inline. Goes away with
-  // the rest of this fallback in stage 3.4, alongside the server route.
-  const handleApproveCandidate = async (): Promise<void> => {
-    onBusy(true);
-    try {
-      await postEmpty(`${basePath}/approve-candidate`);
-      toast.success(strings.prepareReport.approvedMessage);
-      handleAfterSave();
-    } catch (approveError) {
-      toast.error(strings.auditDetail.actionError, {
-        description: approveError instanceof Error ? approveError.message : undefined,
-      });
-    } finally {
       onBusy(false);
     }
   };
@@ -192,23 +159,14 @@ export function AuditReportPanel(props: {
         >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-sm font-semibold text-ink">{copy.writingHeading}</h3>
-            <div className="flex flex-wrap items-center gap-2">
-              {preparation?.acknowledgementCurrent ? (
-                <Badge tone="minor">{strings.prepareReport.warningsConfirmedLabel}</Badge>
-              ) : preparation !== undefined && preparation.preview.warnings.length > 0 ? (
-                <Button variant="secondary" size="sm" onClick={() => void handleConfirmWarnings()}>
-                  {strings.prepareReport.confirmWarningsButton}
-                </Button>
-              ) : null}
-              <Button
-                variant="secondary"
-                size="sm"
-                isLoading={isRewriting}
-                onClick={() => void handleRewrite()}
-              >
-                {strings.prepareReport.regenerateButton}
-              </Button>
-            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              isLoading={isRewriting}
+              onClick={() => void handleRewrite()}
+            >
+              {strings.prepareReport.regenerateButton}
+            </Button>
           </div>
           <div className="flex flex-col gap-1 text-[13px]">
             {selected !== undefined ? (
@@ -217,38 +175,7 @@ export function AuditReportPanel(props: {
                 {selected.enAnalysisId.slice(0, 8)}
               </p>
             ) : null}
-            {candidate?.status === 'ready' ? (
-              <>
-                <p className="flex items-center gap-2">
-                  <Badge>{strings.prepareReport.candidateReadyLabel}</Badge>
-                  {candidate.pair.frAnalysisId.slice(0, 8)} /{' '}
-                  {candidate.pair.enAnalysisId.slice(0, 8)}
-                </p>
-                <p className="flex flex-wrap gap-3">
-                  <a
-                    className="underline"
-                    href={`${basePath}/candidate/fr/preview`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {strings.prepareReport.candidatePreviewLabel} (FR)
-                  </a>
-                  <a
-                    className="underline"
-                    href={`${basePath}/candidate/en/preview`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {strings.prepareReport.candidatePreviewLabel} (EN)
-                  </a>
-                </p>
-                <div>
-                  <Button size="sm" onClick={() => void handleApproveCandidate()}>
-                    {strings.prepareReport.approveCandidateButton}
-                  </Button>
-                </div>
-              </>
-            ) : candidate?.status === 'failed' ? (
+            {candidate?.status === 'failed' ? (
               <p className="text-ink-muted">
                 {strings.prepareReport.candidateFailedLabel} · {candidate.reason}
               </p>

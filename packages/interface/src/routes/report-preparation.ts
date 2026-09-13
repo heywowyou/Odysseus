@@ -1,12 +1,12 @@
 /**
  * The Prepare report workflow's endpoints, plan 019 step 5. One audit-
  * scoped surface: read the preparation with its resolved bilingual
- * preview, patch the bounded operator inputs, confirm the current
- * missing-context warnings, start a cost-warned writing regeneration, and
- * approve a ready candidate. All persistence goes through the store
- * service functions; validation goes through the preparation module's
- * parse function, so an unknown option, an oversized text, or a malformed
- * shape is rejected here with 400 before it can reach storage.
+ * preview, patch the bounded operator inputs, and start a cost-warned
+ * writing regeneration (which approves and renders inline - plan 045
+ * section 2.1). All persistence goes through the store service functions;
+ * validation goes through the preparation module's parse function, so an
+ * unknown option, an oversized text, or a malformed shape is rejected here
+ * with 400 before it can reach storage.
  */
 
 import path from 'node:path';
@@ -15,7 +15,6 @@ import type { Connection } from 'mongoose';
 import type { AuditManifest, Finding } from '@odysseus/core';
 import {
   buildReportPreparationPreview,
-  isAcknowledgementCurrent,
   parseReportPreparationPatch,
   suggestJourneys,
   type JourneySuggestion,
@@ -23,15 +22,7 @@ import {
   type ReportPreparationPreview,
 } from '@odysseus/core';
 import type { AuditDocument } from '@odysseus/store';
-import {
-  approveWritingCandidate,
-  clearStaleWarningAcknowledgement,
-  getAudit,
-  getReportPreparation,
-  patchReportPreparationInputs,
-  setWarningAcknowledgement,
-  WritingSelectionConflictError,
-} from '@odysseus/store';
+import { getAudit, getReportPreparation, patchReportPreparationInputs } from '@odysseus/store';
 import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import type { Router } from '../router.js';
 import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
@@ -42,17 +33,11 @@ import {
   isWritingRegenerationInFlight,
   WritingRegenerationFailedError,
 } from '../pipeline/regenerate-writing.js';
-import { renderCandidatePreview } from '../pipeline/candidate-preview.js';
-
-function isReportLanguage(value: string): value is 'fr' | 'en' {
-  return value === 'fr' || value === 'en';
-}
 
 interface PreparationView {
   preparation: ReportPreparation;
   preview: ReportPreparationPreview;
   suggestions: readonly JourneySuggestion[];
-  acknowledgementCurrent: boolean;
   regenerationInFlight: boolean;
 }
 
@@ -92,10 +77,6 @@ async function buildPreparationView(
     preview,
     suggestions: suggestJourneys(
       manifest !== undefined && findings !== undefined ? { manifest, findings } : null,
-    ),
-    acknowledgementCurrent: isAcknowledgementCurrent(
-      preparation.warningAcknowledgement,
-      preview.warningDigest,
     ),
     regenerationInFlight: isWritingRegenerationInFlight(auditId),
   };
@@ -140,27 +121,8 @@ export function registerReportPreparationRoutes(router: Router, connection: Conn
     }
 
     await patchReportPreparationInputs(connection, auditId, patch);
-    // The acknowledgement is only remembered while the warning-relevant
-    // input has not changed: recompute the digest for the new inputs and
-    // prune a confirmation that no longer matches.
-    const view = await buildPreparationView(connection, audit);
-    await clearStaleWarningAcknowledgement(connection, auditId, view.preview.warningDigest);
     sendJson(res, 200, await buildPreparationView(connection, audit));
   });
-
-  router.post(
-    '/api/audits/:auditId/report-preparation/confirm-warnings',
-    async ({ res, params }) => {
-      const auditId = params['auditId']!;
-      const audit = await readAudit(connection, auditId, res);
-      if (!audit) return;
-      // The digest is always recomputed server-side from the current inputs;
-      // the client never supplies one.
-      const view = await buildPreparationView(connection, audit);
-      await setWarningAcknowledgement(connection, auditId, view.preview.warningDigest);
-      sendJson(res, 200, await buildPreparationView(connection, audit));
-    },
-  );
 
   router.post(
     '/api/audits/:auditId/report-preparation/regenerate-writing',
@@ -182,55 +144,6 @@ export function registerReportPreparationRoutes(router: Router, connection: Conn
         }
         sendError(res, 500, 'could not regenerate writing');
       }
-    },
-  );
-
-  // Renders the ready candidate's report for one language WITHOUT
-  // persisting anything: previewing can never alter the selected paid
-  // report, and approval remains a separate explicit action.
-  router.get(
-    '/api/audits/:auditId/report-preparation/candidate/:language/preview',
-    async ({ res, params }) => {
-      const auditId = params['auditId']!;
-      const language = params['language']!;
-      if (!isReportLanguage(language)) {
-        sendError(res, 400, 'language must be "fr" or "en"');
-        return;
-      }
-      const audit = await readAudit(connection, auditId, res);
-      if (!audit) return;
-      try {
-        const pdf = await renderCandidatePreview(connection, audit, language);
-        res.statusCode = 200;
-        res.setHeader('content-type', 'application/pdf');
-        res.end(pdf);
-      } catch (error) {
-        if (error instanceof RegenerationConflictError) {
-          sendError(res, 409, error.message);
-          return;
-        }
-        sendError(res, 500, 'could not render the candidate preview');
-      }
-    },
-  );
-
-  router.post(
-    '/api/audits/:auditId/report-preparation/approve-candidate',
-    async ({ res, params }) => {
-      const auditId = params['auditId']!;
-      const audit = await readAudit(connection, auditId, res);
-      if (!audit) return;
-      try {
-        await approveWritingCandidate(connection, auditId);
-      } catch (error) {
-        if (error instanceof WritingSelectionConflictError) {
-          sendError(res, 409, error.message);
-          return;
-        }
-        sendError(res, 500, 'could not approve the writing candidate');
-        return;
-      }
-      sendJson(res, 200, await buildPreparationView(connection, audit));
     },
   );
 }

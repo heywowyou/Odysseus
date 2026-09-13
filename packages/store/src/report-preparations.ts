@@ -14,7 +14,6 @@ import type { Connection } from 'mongoose';
 import {
   applyPreparationPatch,
   isCompleteCompatiblePair,
-  pruneStaleAcknowledgement,
   resolveSelectedAnalysisPair,
   type AnalysisPairRef,
   type ReportPreparation,
@@ -92,40 +91,6 @@ export async function patchReportPreparationInputs(
 ): Promise<ReportPreparation> {
   const current = await getReportPreparation(connection, auditId);
   const next = applyPreparationPatch(current, patch, new Date().toISOString());
-  return persistPreparation(connection, auditId, next);
-}
-
-/** Record a confirmation of the current missing-context warnings. The
- *  digest is computed by the caller from the same core function the
- *  preview uses; this method only stores it. */
-export async function setWarningAcknowledgement(
-  connection: Connection,
-  auditId: string,
-  digest: string,
-): Promise<ReportPreparation> {
-  const current = await getReportPreparation(connection, auditId);
-  const next: ReportPreparation = {
-    ...current,
-    warningAcknowledgement: { digest, acknowledgedAt: new Date().toISOString() },
-    updatedAt: new Date().toISOString(),
-  };
-  return persistPreparation(connection, auditId, next);
-}
-
-/** Drop a stored acknowledgement whose digest no longer matches the
- *  current inputs. Confirmation is remembered only while the
- *  warning-relevant input has not changed. */
-export async function clearStaleWarningAcknowledgement(
-  connection: Connection,
-  auditId: string,
-  currentDigest: string,
-): Promise<ReportPreparation> {
-  const current = await getReportPreparation(connection, auditId);
-  const next = {
-    ...pruneStaleAcknowledgement(current, currentDigest),
-    updatedAt: new Date().toISOString(),
-  };
-  if (next.warningAcknowledgement === current.warningAcknowledgement) return next;
   return persistPreparation(connection, auditId, next);
 }
 

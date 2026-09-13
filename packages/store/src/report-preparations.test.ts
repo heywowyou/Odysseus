@@ -12,14 +12,12 @@ import { createAnalysisModel } from './schemas/analysis.schema.js';
 import { createAuditModel } from './schemas/audit.schema.js';
 import {
   approveWritingCandidate,
-  clearStaleWarningAcknowledgement,
   getAnalysisById,
   getReportPreparation,
   patchReportPreparationInputs,
   recordFailedWritingCandidate,
   recordReadyWritingCandidate,
   resolveSelectedAnalysisPairForAudit,
-  setWarningAcknowledgement,
   WritingSelectionConflictError,
 } from './report-preparations.js';
 import type { AnalysisDocumentFields } from './schemas/analysis.schema.js';
@@ -252,25 +250,6 @@ describe.skipIf(!mongoAvailable)('report preparation persistence', () => {
     );
     const round = await getReportPreparation(connection!, 'prep-clear');
     expect(round.stakeholders.legal).toBeUndefined();
-  });
-
-  it('remembers a warning acknowledgement only while the digest matches', async () => {
-    await insertAudit('prep-ack');
-    await setWarningAcknowledgement(connection!, 'prep-ack', 'sha256:current');
-    let preparation = await getReportPreparation(connection!, 'prep-ack');
-    expect(preparation.warningAcknowledgement?.digest).toBe('sha256:current');
-
-    const unchanged = await clearStaleWarningAcknowledgement(
-      connection!,
-      'prep-ack',
-      'sha256:current',
-    );
-    expect(unchanged.warningAcknowledgement?.digest).toBe('sha256:current');
-
-    const pruned = await clearStaleWarningAcknowledgement(connection!, 'prep-ack', 'sha256:new');
-    expect(pruned.warningAcknowledgement).toBeUndefined();
-    preparation = await getReportPreparation(connection!, 'prep-ack');
-    expect(preparation.warningAcknowledgement).toBeUndefined();
   });
 });
 

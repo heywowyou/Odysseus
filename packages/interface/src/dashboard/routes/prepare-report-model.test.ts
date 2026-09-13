@@ -5,7 +5,6 @@ import {
   formValuesFromView,
   resolveTurnoverFormPreview,
   showsTriggerOtherNotes,
-  warningRelevantInputsChanged,
   type PreparationFormValues,
 } from './prepare-report-model';
 import type { PreparationViewResponse } from './prepare-report-types';
@@ -41,7 +40,6 @@ function buildView(overrides: Partial<PreparationViewResponse> = {}): Preparatio
       ...overrides['preview'],
     },
     suggestions: [],
-    acknowledgementCurrent: false,
     regenerationInFlight: false,
     ...overrides,
   } as PreparationViewResponse;
@@ -229,33 +227,6 @@ describe('buildPreparationPatch', () => {
     expect(buildPreparationPatch(values, baseline)).toEqual({
       turnover: { replacement: null },
     });
-  });
-});
-
-describe('warningRelevantInputsChanged', () => {
-  const acknowledged: PreparationFormValues = {
-    ...emptyValues(),
-    situation: 'periodic-review',
-    stakeholderManagement: 'Jeanne',
-  };
-
-  it('ignores stakeholder names entirely', () => {
-    const values: PreparationFormValues = {
-      ...acknowledged,
-      stakeholderManagement: 'Autre nom',
-      stakeholderLegal: 'Nouveau',
-    };
-    expect(warningRelevantInputsChanged(values, acknowledged)).toBe(false);
-  });
-
-  it('sees a warning-relevant change', () => {
-    const values: PreparationFormValues = { ...acknowledged, situation: 'unknown' };
-    expect(warningRelevantInputsChanged(values, acknowledged)).toBe(true);
-    const journey: PreparationFormValues = {
-      ...acknowledged,
-      journeyDecisions: { 'discovery-navigation': 'confirmed' },
-    };
-    expect(warningRelevantInputsChanged(journey, acknowledged)).toBe(true);
   });
 });
 

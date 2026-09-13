@@ -3,7 +3,6 @@ import {
   applyPreparationPatch,
   emptyReportPreparation,
   parseReportPreparationPatch,
-  pruneStaleAcknowledgement,
 } from './preparation.js';
 
 describe('parseReportPreparationPatch', () => {
@@ -193,27 +192,5 @@ describe('applyPreparationPatch', () => {
     expect(next.turnover.detected).toEqual(current.turnover.detected);
     expect(next.turnover.useReplacement).toBe(true);
     expect(next.turnover.replacement).toMatchObject({ amountEur: 600_000 });
-  });
-});
-
-describe('pruneStaleAcknowledgement', () => {
-  const base = {
-    ...emptyReportPreparation(),
-    warningAcknowledgement: { digest: 'sha256:old', acknowledgedAt: '2026-09-01T00:00:00.000Z' },
-  };
-
-  it('drops the acknowledgement when the digest no longer matches', () => {
-    const pruned = pruneStaleAcknowledgement(base, 'sha256:new');
-    expect(pruned.warningAcknowledgement).toBeUndefined();
-  });
-
-  it('keeps the acknowledgement while the digest still matches', () => {
-    const kept = pruneStaleAcknowledgement(base, 'sha256:old');
-    expect(kept.warningAcknowledgement).toEqual(base.warningAcknowledgement);
-  });
-
-  it('keeps a preparation that never had an acknowledgement', () => {
-    const plain = emptyReportPreparation();
-    expect(pruneStaleAcknowledgement(plain, 'sha256:new')).toEqual(plain);
   });
 });

@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  buildWarningDigest,
-  computeMissingContextWarnings,
-  isAcknowledgementCurrent,
-} from './warning-digest.js';
+import { buildWarningDigest, computeMissingContextWarnings } from './warning-digest.js';
 
 const baseInput = {
   commercialName: 'Hôtel Belledonne',
@@ -93,14 +89,5 @@ describe('computeMissingContextWarnings', () => {
     expect(computeMissingContextWarnings(baseInput)).toEqual(
       computeMissingContextWarnings(baseInput),
     );
-  });
-});
-
-describe('isAcknowledgementCurrent', () => {
-  it('holds only for the exact current digest', () => {
-    const digest = buildWarningDigest(baseInput);
-    expect(isAcknowledgementCurrent({ digest }, digest)).toBe(true);
-    expect(isAcknowledgementCurrent({ digest }, 'sha256:other')).toBe(false);
-    expect(isAcknowledgementCurrent(undefined, digest)).toBe(false);
   });
 });

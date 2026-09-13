@@ -274,30 +274,6 @@ export function buildPreparationPatch(
   return patch;
 }
 
-/**
- * True when any warning-relevant input changed since the stored warning
- * acknowledgement was recorded. Stakeholder names deliberately do not
- * count (they never enter the digest), so filling a name never invalidates
- * a confirmation.
- */
-export function warningRelevantInputsChanged(
-  values: PreparationFormValues,
-  acknowledgedBaseline: PreparationFormValues,
-): boolean {
-  return (
-    values.situation !== acknowledgedBaseline.situation ||
-    values.trigger !== acknowledgedBaseline.trigger ||
-    values.triggerOtherFr !== acknowledgedBaseline.triggerOtherFr ||
-    values.triggerOtherEn !== acknowledgedBaseline.triggerOtherEn ||
-    values.customQuestionFr !== acknowledgedBaseline.customQuestionFr ||
-    values.customQuestionEn !== acknowledgedBaseline.customQuestionEn ||
-    (Object.keys(values.journeyDecisions) as JourneyVocab[]).some(
-      (journeyId) =>
-        values.journeyDecisions[journeyId] !== acknowledgedBaseline.journeyDecisions[journeyId],
-    )
-  );
-}
-
 /** Whether the trigger is `other`, which reveals the bounded notes fields. */
 export function showsTriggerOtherNotes(trigger: string): boolean {
   return trigger === 'other';

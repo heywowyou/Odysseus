@@ -17,7 +17,6 @@ import type { JSX } from 'react';
 import { useI18n } from '../i18n/provider';
 import type { DashboardStrings } from '../i18n/types';
 import { Card } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Field } from '../components/ui/field';
 import { Input } from '../components/ui/input';
@@ -527,14 +526,11 @@ export const PrepareReportForm = forwardRef<PrepareReportFormHandle, PrepareRepo
           })}
         </ul>
 
-        {/* The warnings are listed here so the Prepare step shows the whole
-            picture, but the confirmation button lives on the Write step:
-            confirming is what unlocks rewriting, not saving. */}
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+        {/* Purely informational: a missing-context warning never blocks
+            writing regeneration (plan 045 section 2.2), so nothing here
+            gates anything else on the panel. */}
+        <div className="mt-5 border-t border-line pt-4">
           <h3 className="text-[13px] font-medium">{strings.prepareReport.warningsHeading}</h3>
-          {view.acknowledgementCurrent ? (
-            <Badge>{strings.prepareReport.warningsConfirmedLabel}</Badge>
-          ) : null}
         </div>
         {view.preview.warnings.length > 0 ? (
           <ul className="mt-2 flex flex-col gap-1 text-[13px] text-ink-muted">

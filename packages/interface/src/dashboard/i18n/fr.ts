@@ -456,8 +456,6 @@ export const fr: DashboardStrings = {
     warningTrigger: "Le déclencheur n'est pas renseigné.",
     warningJourneyScope:
       'Aucun parcours confirmé : la section parcours ne sera pas présente dans le rapport.',
-    confirmWarningsButton: 'Confirmer et continuer',
-    warningsConfirmedLabel: 'Avertissements confirmés pour ces choix.',
     previewHeading: 'Aperçu en direct',
     previewAutomaticLabel: 'automatique',
     previewCustomLabel: 'votre texte',
@@ -466,13 +464,8 @@ export const fr: DashboardStrings = {
     savedMessage: 'Préparation enregistrée.',
     writingHeading: 'Versions de rédaction du rapport',
     selectedWritingLabel: 'Version actuelle',
-    candidateReadyLabel: 'Nouvelle version prête à être relue',
     candidateFailedLabel: 'Échec de la nouvelle version',
-    candidateSelectedLabel: 'Nouvelle version approuvée',
-    candidatePreviewLabel: 'Aperçu (ouvre le rapport rendu)',
-    approveCandidateButton: 'Approuver cette version',
     regenerateButton: 'Réécrire le rapport',
-    approvedMessage: 'Version approuvée : les prochains rapports utilisent la nouvelle rédaction.',
     writingRegeneratedMessage: 'Nouvelle version rédigée, approuvée, et PDF régénérés.',
     writingApprovedPdfsPendingMessage:
       'Nouvelle version rédigée et approuvée ; les PDF n’ont pas été régénérés automatiquement.',

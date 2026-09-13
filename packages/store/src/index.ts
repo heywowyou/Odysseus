@@ -82,14 +82,12 @@ export type { AuditRuntimeFields, AuditHotelLinkResult } from './audits.js';
 // go through these service functions; handlers never issue raw updates.
 export {
   approveWritingCandidate,
-  clearStaleWarningAcknowledgement,
   getAnalysisById,
   getReportPreparation,
   patchReportPreparationInputs,
   recordFailedWritingCandidate,
   recordReadyWritingCandidate,
   resolveSelectedAnalysisPairForAudit,
-  setWarningAcknowledgement,
   WritingSelectionConflictError,
 } from './report-preparations.js';
 export type { SelectedAuditAnalysisPairResolution } from './report-preparations.js';

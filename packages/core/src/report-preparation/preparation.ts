@@ -256,9 +256,7 @@ function applyJourneyDecisions(
 
 /**
  * Apply a validated patch to the operator-owned inputs. Workflow metadata
- * (acknowledgement, writing selection) passes through untouched here; the
- * acknowledgement is pruned by `pruneStaleAcknowledgement` once the service
- * has recomputed the warning digest for the new inputs.
+ * (acknowledgement, writing selection) passes through untouched here.
  */
 export function applyPreparationPatch(
   current: ReportPreparation,
@@ -321,19 +319,4 @@ export function applyPreparationPatch(
     ...(current.writingSelection ? { writingSelection: current.writingSelection } : {}),
     updatedAt: now,
   };
-}
-
-/**
- * Drop the warning acknowledgement when it no longer matches the digest of
- * the current inputs. Confirmation is remembered only while the
- * warning-relevant input has not changed.
- */
-export function pruneStaleAcknowledgement(
-  preparation: ReportPreparation,
-  currentDigest: string,
-): ReportPreparation {
-  const acknowledgement = preparation.warningAcknowledgement;
-  if (!acknowledgement || acknowledgement.digest === currentDigest) return preparation;
-  const { warningAcknowledgement: _dropped, ...rest } = preparation;
-  return { ...rest };
 }

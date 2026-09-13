@@ -70,14 +70,3 @@ export function computeMissingContextWarnings(input: WarningDigestInput): Missin
   if (input.confirmedJourneyIds.length === 0) warnings.push('journey-scope');
   return warnings;
 }
-
-/**
- * True when the stored acknowledgement matches the digest of the current
- * inputs. An acknowledgement for different inputs is never honoured.
- */
-export function isAcknowledgementCurrent(
-  acknowledgement: { digest: string } | undefined,
-  currentDigest: string,
-): boolean {
-  return acknowledgement !== undefined && acknowledgement.digest === currentDigest;
-}
