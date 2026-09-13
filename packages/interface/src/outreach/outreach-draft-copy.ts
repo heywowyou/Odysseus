@@ -5,7 +5,29 @@
  * a French hotel is worse than one that fails to build).
  *
  * Written in French first, as a French professional would write it, and
- * translated to English from there, never the reverse.
+ * translated to English from there, never the reverse: the first version of
+ * this file read as English carried into French ("une prestation d'audit, une
+ * fois"), which is exactly the impression a cold email cannot afford. The
+ * voice is the firm's ("nous"), matching the model's prose.
+ *
+ * Who is writing comes from `OUTREACH_CONTACT`, the constant the v2 preview
+ * also interpolates, so the email and the preview it links to can never name
+ * different people or mailboxes.
+ *
+ * `optOutLabel` (a link, first contact only) and `optOutByReply` (text only,
+ * every later touch) are deliberately two different sentences, not one
+ * templated on whether a link is present - `docs/rules/outreach-rules.md` section 6
+ * forbids a new link on touch 2 or 3, and the objection mechanism on those
+ * touches has to exist without introducing one.
+ *
+ * French lines put U+00A0 before a colon, as French typography requires (an
+ * ordinary space there lets a mail client wrap the colon onto its own line);
+ * U+00A0 rather than U+202F for the glyph-coverage reason in trade-off 29.
+ *
+ * `purpose` states the whole sequence honestly: a first message and at most two
+ * reminders, the ceiling `outreach-thread-state.ts` enforces (no fourth touch
+ * exists). A purpose line promising a single contact would be contradicted by
+ * the reminder the recipient receives four days later.
  */
 
 import {
@@ -13,17 +35,23 @@ import {
   OUTREACH_SENDER_DISPLAY_NAME,
   type ReportLanguage,
 } from '@odysseus/core';
-import type { OutreachDataOrigin } from './assemble-outreach-draft.js';
 
 export interface OutreachDraftCopy {
   salutation: string;
   signOff: string;
+  /** Plain text lines, never links: touches 2 and 3 may carry no link, and a
+   *  signature is identical on every touch. */
   signature: string[];
+  /** The visible text of touch 1's one body link, to the published preview. */
   previewLinkLabel: string;
+  /** Separator between a label and its URL in the plain-text rendering. */
   linkSeparator: string;
   purpose: string;
   originIntro: string;
-  dataOrigin: Record<OutreachDataOrigin, string>;
+  dataOrigin: Record<
+    'public-hotel-catalogue' | 'public-website' | 'public-business-registry',
+    string
+  >;
   /** Article 14 identity line; checked verbatim by the disclosure guard. */
   senderIdentity: string;
   replyInvite: string;
@@ -54,8 +82,6 @@ const FR: OutreachDraftCopy = {
     'public-hotel-catalogue': 'le classement public des hébergements touristiques (Atout France)',
     'public-website': 'votre site internet',
     'public-business-registry': 'la base Sirene (INSEE)',
-    'other-public-source': 'un annuaire professionnel ou une plateforme de réservation en ligne',
-    'provided-directly': 'les coordonnées que vous nous avez communiquées',
   },
   senderIdentity: `Responsable du traitement\u00a0: ${OUTREACH_SENDER_DISPLAY_NAME}, ${OUTREACH_CONTACT.address}.`,
   replyInvite: 'Vous pouvez répondre directement à ce message.',
@@ -86,8 +112,6 @@ const EN: OutreachDraftCopy = {
     'public-hotel-catalogue': 'the public classification of tourist accommodation (Atout France)',
     'public-website': 'your website',
     'public-business-registry': 'the Sirene register (INSEE)',
-    'other-public-source': 'a professional directory or an online booking platform',
-    'provided-directly': 'the contact details you provided to us',
   },
   senderIdentity: `Data controller: ${OUTREACH_SENDER_DISPLAY_NAME}, ${OUTREACH_CONTACT.address}.`,
   replyInvite: 'You can reply directly to this message.',
