@@ -171,9 +171,15 @@ report-review request into a new live scan.
 Production mutations, sending/publishing material, destructive database work,
 and destructive git actions require clear current intent for that action.
 
-Never expose `.env` secrets. Use the capabilities actually available in the
-host; a repo file mentioning a tool is not proof that the current session has
-it.
+Claude Code, Codex, ZCode, and future repository coding agents may inspect the
+repository-root `.env` when it is relevant to the current task. That access is
+strictly read-only: never edit, replace, or delete the file; reproduce its
+values in chat, logs, documentation, commits, or artifacts; or pass its
+contents to the product LLM or another external service. This permission does
+not extend to production environment files or other secret stores.
+
+Use the capabilities actually available in the host; a repo file mentioning a
+tool is not proof that the current session has it.
 
 ## Sessions and dirty trees
 

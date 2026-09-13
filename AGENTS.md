@@ -57,6 +57,10 @@ and explain the consequence in plain language.
 - Respect crawl politeness and the opt-in page-cap policy.
 - Keep French and English user-facing variants aligned.
 - Never expose secrets or personal data unnecessarily.
+- Every repository coding agent may inspect the root `.env` when relevant, but
+  only read it: never modify it, reproduce its values in output or artifacts,
+  or pass its contents to the product LLM or an external service. This does not
+  authorize access to production environment files or other secret stores.
 - Never sign or credit a model in commits, PRs, issues, comments, or documents.
 
 ## Verification
