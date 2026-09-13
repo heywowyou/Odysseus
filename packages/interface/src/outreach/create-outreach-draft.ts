@@ -7,30 +7,16 @@
  * ask for it to be drafted, because there is no parameter for one.
  *
  * **The two suppression checks are the point of the module.** One immediately
- * before the model call, one immediately before the provider call. They look
- * redundant and are not: everything between them takes real time (a preview
- * resolution, an audit read, four validators), and an objection that
- * arrives during that window has to stop the draft that is in flight, not
- * merely the next batch. `publish-preview.ts` states the same rule for the
- * same reason.
+ * before generation, one immediately before the provider call. They check the
+ * hotel domain and, when present, the effective address. Everything between
+ * them takes real time, so an objection that arrives during that window has to
+ * stop the draft that is in flight, not merely the next batch.
  *
  * **Plan 037: the draft consumes an already published preview.** A preview
  * link is the only access control on one hotel's evidence, so the raw token
- * exists only where it was first shown: at publication, on the audit page,
- * exactly once. Under the v1 flow this module published its own preview for
- * that reason; under v2 that side effect is forbidden, because an unreviewed
- * publication must never be a side effect of drafting. The caller supplies
- * the token the operator copied after reviewing and publishing, and the
+ * exists only where it was first shown. The caller supplies the token and the
  * adapter validates it live, unrevoked, unexpired, and attached to the
- * candidate's current outreach audit. A draft sitting in review now risks
- * its link expiring rather than a stale one being minted for it, which is
- * the fail-closed direction.
- *
- * Refusals are returned, never thrown, matching `assembleOutreachDraft` and
- * `publishPreview`: the caller is a bounded batch, and one hotel that cannot
- * be drafted must not abort the run. Every refusal past the point a thread
- * exists is also written to the drafts collection, so a hotel that was
- * selected and never contacted has a recorded reason rather than an absence.
+ * candidate's current outreach audit.
  */
 
 import {
@@ -38,6 +24,7 @@ import {
   HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION,
   isTerminalOutreachThreadState,
   selectOutreachEvidence,
+  type HotelContactAddressOrigin,
   type HotelPrescanEvidence,
   type OutreachEvidenceSlot,
   type OutreachThreadState,
@@ -53,14 +40,7 @@ import type { OutreachCategory } from './outreach-email-template.js';
 import type { MailboxDraftAdapter } from './mailbox-draft-adapter.js';
 import { previewLinks, registryAssessment, type PreviewSireneFacts } from './publish-preview.js';
 
-/** Only the first touch is orchestrated by this plan. Touches 2 and 3 need
- *  reply detection to know whether a follow-up is still wanted, which is plan
- *  012's job, and creating them before that exists would be a sequencer. */
 export const FIRST_TOUCH = 1;
-
-/** Recorded on every draft as `outreachPromptVersion` (the field predates
- *  trade-off 83): which approved template produced the text. `template-v1` is
- *  the operator-approved wording of 2026-09-11; there is no model prompt. */
 export const CURRENT_OUTREACH_PROMPT_VERSION = 'template-v1';
 
 export type CreateOutreachDraftRefusal =
@@ -84,13 +64,11 @@ export type CreateOutreachDraftRefusal =
 
 export interface OutreachContactFacts {
   address: string;
-  /** `found` is the only state that may be written to. The others are the four
-   *  typed absences plan 007 records instead of a null. */
   state: string;
+  /** Undefined on legacy discovered rows, which means the hotel website. */
+  addressOrigin?: HotelContactAddressOrigin;
 }
 
-/** Everything drafting needs about one hotel, read in one go by the store
- *  adapter so this module never issues a query of its own. */
 export interface OutreachDraftRow {
   candidateId: string;
   domain: string;
@@ -100,11 +78,6 @@ export interface OutreachDraftRow {
   prescanExpiresAt: Date;
   evidence?: HotelPrescanEvidence;
   contact?: OutreachContactFacts;
-  /** Registry facts as the qualification pass stored them, in the same shape
-   *  `PreviewPublicationRow` carries. Turned into an `ObligationAssessment` by
-   *  the one shared `registryAssessment` builder, which never calls
-   *  `assessObligations`: that decides scope, and a scope determination is a
-   *  conclusion outreach may not state (trade-off 42). */
   sirene?: PreviewSireneFacts;
 }
 
@@ -153,7 +126,7 @@ export interface RecordFailureFacts {
 
 export interface OutreachDraftStorePort {
   findDraftRow(candidateId: string): Promise<OutreachDraftRow | null>;
-  isSuppressed(domain: string): Promise<boolean>;
+  isSuppressed(domain: string, address?: string): Promise<boolean>;
   openThread(input: {
     candidateId: string;
     prescanId: string;
@@ -173,10 +146,6 @@ export interface OutreachDraftStorePort {
   recordFailure(facts: RecordFailureFacts): Promise<void>;
   attachProviderThreadId(threadId: string, providerThreadId: string): Promise<boolean>;
   advanceTouch(threadId: string, touch: number): Promise<void>;
-  /** Moves the thread into its "drafted" state once the provider has actually
-   *  accepted the draft. Without this, `listThreadsToSync` (which reads only
-   *  drafted/sent states) would never pick the thread up, and a confirmed send
-   *  would have nothing to transition from. */
   transition(input: {
     threadId: string;
     from: readonly OutreachThreadState[];
@@ -190,16 +159,9 @@ export interface PublishedPreviewRef {
   previewId: string;
   url: string;
   publicExpiresAt: Date;
-  /** The categories of the preview's three proof cards, recomputed from the
-   *  same audit by the same deterministic selection: the only problems the
-   *  email may name. */
   proofCardCategories: OutreachCategory[];
 }
 
-/** Plan 037: the draft consumes an ALREADY published v2 preview, resolved
- *  from the one-time token the operator copied at publication. This module
- *  can no longer publish, render, scan, or reissue as a side effect, and a
- *  missing, revoked, expired, or wrong-audit preview refuses the draft. */
 export interface OutreachPreviewPort {
   resolvePublished(
     candidateId: string,
@@ -216,9 +178,6 @@ export interface CreateOutreachDraftOptions {
   candidateId: string;
   language: 'fr' | 'en';
   dryRun: boolean;
-  /** The one-time token of the v2 preview the operator published and copied
-   *  from the audit page. Required: without a published preview there is no
-   *  link for the email to carry, and publishing one here is forbidden. */
   previewToken: string;
   now?: Date;
 }
@@ -232,8 +191,6 @@ export interface CreateOutreachDraftResult {
   previewId?: string;
   subject?: string;
   body?: string;
-  /** Populated only by `--dry-run`: what would have happened, nothing
-   *  observed, no model call and no preview published. */
   plan?: {
     wouldDraft: true;
     domain: string;
@@ -258,12 +215,14 @@ function refuse(refusal: CreateOutreachDraftRefusal): CreateOutreachDraftResult 
   return { created: false, refusal };
 }
 
-/** Every origin the data behind this draft actually came from, per
- *  `docs/rules/outreach-rules.md` section 7. Built per hotel rather than as a fixed
- *  list: a hotel with no registry match must not disclose an origin it has
- *  none of. */
+/** Every origin the data behind this draft actually came from. Public site and
+ * catalogue facts remain present because the message discusses the audit; a
+ * manual contact adds the approved per-address origin when it differs from the
+ * hotel's own site. */
 function dataOriginsFor(row: OutreachDraftRow): OutreachDataOrigin[] {
   const origins: OutreachDataOrigin[] = ['public-hotel-catalogue', 'public-website'];
+  if (row.contact?.addressOrigin === 'other-public-source') origins.push('other-public-source');
+  if (row.contact?.addressOrigin === 'provided-directly') origins.push('provided-directly');
   if (registryAssessment(row.sirene) !== undefined) origins.push('public-business-registry');
   return origins;
 }
@@ -277,12 +236,14 @@ export async function createOutreachDraft(
   const row = await options.store.findDraftRow(options.candidateId);
   if (row === null) return refuse('candidate-unknown');
 
-  // Before anything else, and again below. An objection has to stop the next
-  // thing we do, not the next batch.
-  if (await options.store.isSuppressed(row.domain)) return refuse('suppressed-before-generation');
+  // Check the effective address as well as the hotel domain whenever we have
+  // one. This is intentionally before the contact-state refusal so a newly
+  // suppressed mailbox cannot be used simply because its domain is not on the
+  // suppression list.
+  if (await options.store.isSuppressed(row.domain, row.contact?.address)) {
+    return refuse('suppressed-before-generation');
+  }
 
-  // Plan 007 records four typed absences rather than a null, and only `found`
-  // carries an address that passed the allowlist and the MX check.
   if (row.contact === undefined || row.contact.state !== 'found' || row.contact.address === '') {
     return refuse('no-usable-contact');
   }
@@ -295,8 +256,6 @@ export async function createOutreachDraft(
   }
   if (evidence.summaries.length < HOTEL_EVIDENCE_MIN_SUMMARIES)
     return refuse('evidence-incomplete');
-  // A prescan past its own retention describes a site as it was too long ago
-  // to write to anybody about, and its screenshots may already be swept.
   if (row.prescanExpiresAt.getTime() <= now.getTime()) return refuse('prescan-expired');
 
   const selection = selectOutreachEvidence(evidence);
@@ -325,8 +284,6 @@ export async function createOutreachDraft(
     };
   }
 
-  // The draft consumes the already published v2 preview the operator's token
-  // names; it can never publish or reissue one itself.
   const published = await options.preview.resolvePublished(
     options.candidateId,
     options.previewToken,
@@ -385,9 +342,7 @@ export async function createOutreachDraft(
     return refuse('assembly-refused');
   }
 
-  // The second gate, immediately before the provider call and after every slow
-  // step above.
-  if (await options.store.isSuppressed(row.domain)) {
+  if (await options.store.isSuppressed(row.domain, row.contact.address)) {
     await options.store.recordFailure({
       ...failureFacts,
       failureReason: 'suppressed-before-provider',
@@ -416,10 +371,6 @@ export async function createOutreachDraft(
       providerThreadId: providerDraft.providerThreadId,
     });
   } catch {
-    // The provider has a draft we cannot account for. Left in the mailbox it
-    // would be an unreviewed message the operator could send by reflex with no
-    // record of what produced it, so it is withdrawn rather than orphaned.
-    // Deletion is idempotent, so a second failure here is survivable.
     await options.mailbox.deleteDraft(providerDraft.providerDraftId).catch(() => undefined);
     await options.store
       .recordFailure({ ...failureFacts, failureReason: 'provider-draft-unrecorded' })
