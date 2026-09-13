@@ -170,7 +170,7 @@ function renderBody(
   // section always renders. Adding a future conditionally-suppressed
   // section means adding its condition to this Set, not inventing a
   // second numbering scheme.
-  const { diverted } = partitionFindings(resolvedFindings, manifest);
+  const { forModel: actionableFindings, diverted } = partitionFindings(resolvedFindings, manifest);
   const includedSectionIds = new Set<SectionId>(SECTION_IDS);
   if (diverted.length === 0) includedSectionIds.delete('section-06');
   // item 19: the déclaration d'accessibilité (section 10) belongs to
@@ -249,7 +249,12 @@ function renderBody(
       ord('section-05b'),
       analysis.language,
       analysis,
-      resolvedFindings,
+      // Remaining Work is an action surface. Use the non-diverted side of
+      // the same partition Observations consumes so one finding cannot be
+      // presented both as corrective work and as contextual guidance that
+      // needs no correction by default (issue #211). The annex below still
+      // receives resolvedFindings in full for traceability.
+      actionableFindings,
       renderedPriorities,
     ),
     includedSectionIds.has('section-06')

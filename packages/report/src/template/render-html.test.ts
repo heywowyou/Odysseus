@@ -5,9 +5,11 @@ import {
   eaaSanctionFigureSentence,
   type ObligationAssessment,
 } from '@odysseus/core';
+import { partitionFindings } from '@odysseus/llm';
 import { renderHtml } from './render-html.js';
 import { escapeHtml } from './html-utils.js';
 import { findRenderLintViolations } from './render-lint.js';
+import { selectRemainingFindings } from './sections/remaining-work.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
 import {
   loadSmallSiteAnalysis,
@@ -52,6 +54,38 @@ describe('renderHtml against the real small-site.test audit', () => {
     expect(hrefs.length).toBeGreaterThan(0);
     for (const id of hrefs) {
       expect(html).toContain(`id="annexref-${id}"`);
+    }
+  });
+
+  it('keeps diverted legal findings out of remaining work while preserving observations and annex traceability (issue #211)', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('fr');
+    const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
+    const { forModel: actionableFindings, diverted } = partitionFindings(findings, manifest);
+    const legalIds = diverted
+      .filter(({ reason }) => reason === 'legal')
+      .map(({ finding }) => finding.findingId);
+    expect(legalIds.length).toBeGreaterThan(0);
+
+    const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages });
+    const remainingStart = html.indexOf('id="section-05b"');
+    const observationsStart = html.indexOf('id="section-06"');
+    const observationsEnd = html.indexOf('id="section-07"');
+    const remainingWork = html.slice(remainingStart, observationsStart);
+    const observations = html.slice(observationsStart, observationsEnd);
+    const renderedRemainingCount = Number(
+      remainingWork.match(/Les (\d+) constats? restants?/)?.[1],
+    );
+
+    expect(renderedRemainingCount).toBe(
+      selectRemainingFindings(analysis, actionableFindings).length,
+    );
+
+    for (const findingId of legalIds) {
+      expect(remainingWork).not.toContain(`annexref-${findingId}`);
+      expect(observations).toContain(findingId);
+      expect(html).toContain(`id="annexref-${findingId}"`);
     }
   });
 
