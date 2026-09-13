@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { Brand } from './brand';
+import { DashboardErrorBoundary } from './error-boundary';
 import { LanguageSwitcher } from './language-switcher';
 import { Badge } from '../components/ui/badge';
 import { useI18n } from '../i18n/provider';
@@ -182,7 +183,9 @@ export function AppShell() {
         {/* Keyed by pathname so each navigation remounts the page container
             and replays the entrance animation. */}
         <main key={pathname} className="animate-page-in px-4 pb-16 pt-16 md:px-8 md:pt-10">
-          <Outlet />
+          <DashboardErrorBoundary>
+            <Outlet />
+          </DashboardErrorBoundary>
         </main>
       </div>
     </div>

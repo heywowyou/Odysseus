@@ -1032,4 +1032,16 @@ export const en: DashboardStrings = {
     review:
       'A human review is requested when the hotel’s identity stays ambiguous after matching against the catalogue.',
   },
+  errorBoundary: {
+    heading: 'Something went wrong on this page',
+    description:
+      'An unexpected error interrupted this page. Your data is safe. Try again, or reload the page; if the problem keeps happening, go back to the to-do list and report the incident id below.',
+    retryButton: 'Try again',
+    reloadButton: 'Reload the page',
+    homeButton: 'Back to the to-do list',
+    routeLabel: 'Route',
+    incidentLabel: 'Incident id',
+    copyButton: 'Copy the details',
+    copiedLabel: 'Copied',
+  },
 };

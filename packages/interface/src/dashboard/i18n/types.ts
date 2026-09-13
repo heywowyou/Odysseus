@@ -1074,4 +1074,19 @@ export interface DashboardStrings {
     qualification: string;
     review: string;
   };
+  /** Issue #228: the recovery surface an unexpected render/lifecycle error
+   *  below the shell falls back to, instead of a blank dashboard. Never
+   *  shows the thrown error's own message or stack - only the plain
+   *  operator-facing copy below plus the route and a generated incident id. */
+  errorBoundary: {
+    heading: string;
+    description: string;
+    retryButton: string;
+    reloadButton: string;
+    homeButton: string;
+    routeLabel: string;
+    incidentLabel: string;
+    copyButton: string;
+    copiedLabel: string;
+  };
 }

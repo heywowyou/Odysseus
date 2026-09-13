@@ -1046,4 +1046,16 @@ export const fr: DashboardStrings = {
     review:
       'Revue humaine demandée quand l’identité de l’hôtel est ambiguë après rapprochement du catalogue.',
   },
+  errorBoundary: {
+    heading: 'Une erreur est survenue sur cette page',
+    description:
+      'Une erreur inattendue a interrompu cette page. Vos données sont en sécurité. Réessayez, ou rechargez la page ; si le problème persiste, revenez à la liste À traiter et signalez l’identifiant d’incident ci-dessous.',
+    retryButton: 'Réessayer',
+    reloadButton: 'Recharger la page',
+    homeButton: 'Retour à la liste À traiter',
+    routeLabel: 'Route',
+    incidentLabel: 'Identifiant d’incident',
+    copyButton: 'Copier les détails',
+    copiedLabel: 'Copié',
+  },
 };
