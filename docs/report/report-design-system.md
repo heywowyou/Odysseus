@@ -146,14 +146,15 @@ two-act pages: the content act, then a deliberately placed closing act,
 then quiet ground. A front-matter sheet that ends when its last field runs
 out is a defect, not minimalism:
 
-- **Cover**: the radial glow and the centered kicker/title/question block
-  own the upper half (hero block `flex:1.4`); the closing group (centered
-  symmetric-fade accent rule, report type line, date and Odysseus
-  signature) sits at roughly two-thirds page height; a `flex:1` quiet
-  spacer closes the sheet. The closing group is never pinned to the sheet
-  bottom, and the accent rule is centered above the centered text, never
-  left-anchored. The cover stays minimal by contract: no fields return
-  from the metadata sheet.
+- **Cover**: the radial glow and centered kicker/title/question block own the
+  upper half. The kicker sits in a faint bordered tint, the client identity is
+  the dominant tightly set title, and the question follows at a quieter
+  measure. The report-type line sits at roughly two-thirds page height between
+  two short hairlines, with the date and Odysseus signature beneath it and
+  quiet ground closing the sheet. This accepted 2026-09-13 Impeccable polish
+  supersedes the former detached symmetric-fade rule; the rule now belongs to
+  the report-type line, so their alignment cannot drift. The cover stays
+  minimal by contract: no fields return from the metadata sheet.
 - **Metadata sheet**: the fact grid carries the audit identity fields. Its
   closing act is a centered vertical signal: the deterministic letter grade
   first, inside two concentric severity-colour strokes, its mandatory

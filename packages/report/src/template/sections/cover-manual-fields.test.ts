@@ -31,6 +31,9 @@ describe('renderCover headline identity precedence (plan 018 step 4)', () => {
     expect(hostnameFromSiteUrl(manifest.siteUrl)).toBe('small-site.test');
     expect(coverHeadline(html)).toBe('small-site.test');
     expect(html).not.toContain(fr.cover.recipientLabel);
+    expect(html).toContain('class="cover-hero"');
+    expect(html).toContain('class="cover-title"');
+    expect(html).toContain('class="cover-type"');
   });
 
   it('renders nomCommercial as the headline when supplied, ahead of the hostname', async () => {

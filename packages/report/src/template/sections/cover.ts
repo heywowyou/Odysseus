@@ -96,19 +96,19 @@ export function renderCover(
   return sheet(
     `
     <div class="footer-source">${escapeHtml(strings.footer.confidentialityLabel.toUpperCase())} &middot; ${escapeHtml(manifest.siteUrl)}</div>
-    <div style="flex:1.4;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:var(--space-6)">
-      <div style="font-size:11px;letter-spacing:0.02em;text-transform:uppercase;color:var(--color-accent-200)">${escapeHtml(strings.cover.kicker)}</div>
-      <h1 style="font-size:52px;max-width:13ch;margin:0">${escapeHtml(headline)}</h1>
-      <div style="font-size:17px;opacity:0.8;max-width:38ch">${escapeHtml(resolveDecisionQuestion(analysis.language, preparation))}</div>
+    <div class="cover-hero" style="flex:1.4;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:var(--space-6)">
+      <div class="cover-kicker" style="font-size:11px;letter-spacing:0.02em;text-transform:uppercase;color:var(--color-accent-200)">${escapeHtml(strings.cover.kicker)}</div>
+      <h1 class="cover-title" style="font-size:52px;max-width:13ch;margin:0">${escapeHtml(headline)}</h1>
+      <div class="cover-question" style="font-size:17px;opacity:0.8;max-width:38ch">${escapeHtml(resolveDecisionQuestion(analysis.language, preparation))}</div>
     </div>
-    <div>
-      <div style="height:1px;width:160px;margin:0 auto var(--space-12);background:linear-gradient(to right,transparent,var(--color-accent),transparent)"></div>
-      <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:var(--space-2)">
-        <div style="font-size:13px;text-transform:uppercase;letter-spacing:0.02em;opacity:0.7">${escapeHtml(reportType)}</div>
-        <div style="font-size:13px;opacity:0.5">${escapeHtml(formatDate(new Date(manifest.startedAt), analysis.language))} &middot; Odysseus</div>
+    <div class="cover-closing">
+      <div class="cover-rule" style="height:1px;width:160px;margin:0 auto var(--space-12);background:linear-gradient(to right,transparent,var(--color-accent),transparent)"></div>
+      <div class="cover-meta" style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:var(--space-2)">
+        <div class="cover-type" style="font-size:13px;text-transform:uppercase;letter-spacing:0.02em;opacity:0.7">${escapeHtml(reportType)}</div>
+        <div class="cover-signature" style="font-size:13px;opacity:0.5">${escapeHtml(formatDate(new Date(manifest.startedAt), analysis.language))} &middot; Odysseus</div>
       </div>
     </div>
-    <div style="flex:1"></div>
+    <div class="cover-spacer" style="flex:1"></div>
   `,
     'sheet-cover',
   );

@@ -59,7 +59,10 @@ What the plan 039 pass records:
   labels now match the flat source's non-underlined form); page numbers
   in `@page` margin boxes instead of markup; mm-based page geometry.
 - **Deliberate departures from the flat source, recorded where they
-  live:** the metadata sheet's centered letter-grade signal and the
+  live:** the cover uses the accepted 2026-09-13 typographic-hierarchy polish
+  (faint bordered kicker, 62px client identity, and short hairlines attached to
+  the report-type line) instead of the flat's detached accent rule; the
+  metadata sheet's centered letter-grade signal and the
   qualitative scale below it replace the flat's single risk pill and severity
   legend (item 42, plan 018 step 4, then the operator's accepted Impeccable
   direction on 2026-09-13); section 03 uses an editorial scoreboard with the

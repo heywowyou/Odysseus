@@ -374,6 +374,67 @@ h4 {
   min-height: 32mm !important;
   flex: 1;
 }
+
+/* Cover — accepted Impeccable polish direction, 2026-09-13.
+   Stronger type hierarchy without changing the cover's content or centered
+   topology. The report-type line owns the closing rule so the two elements
+   cannot become optically detached during pagination. */
+.sheet-cover .cover-title {
+  max-width: 11ch !important;
+  margin-top: var(--space-8) !important;
+  font-size: 62px !important;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+}
+.sheet-cover .cover-question {
+  max-width: 40ch !important;
+  margin-top: var(--space-8);
+  color: var(--color-neutral-300);
+  font-size: 16px !important;
+  line-height: 1.52;
+  opacity: 1 !important;
+}
+.sheet-cover .cover-hero {
+  flex: 1.38 !important;
+  gap: 0 !important;
+}
+.sheet-cover .cover-kicker {
+  padding: 7px 13px;
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-accent) 7%, transparent);
+  font-weight: 500;
+}
+.sheet-cover .cover-rule {
+  display: none;
+}
+.sheet-cover .cover-meta {
+  gap: var(--space-4) !important;
+}
+.sheet-cover .cover-type {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  color: var(--color-neutral-300);
+  opacity: 1 !important;
+}
+.sheet-cover .cover-type::before,
+.sheet-cover .cover-type::after {
+  width: 76px;
+  height: 1px;
+  flex: none;
+  background: var(--color-divider);
+  content: '';
+}
+.sheet-cover .cover-signature {
+  color: var(--color-neutral-400);
+  opacity: 1 !important;
+}
+.sheet-cover .cover-spacer {
+  flex: 0.94 !important;
+}
 h5 {
   font-size: 16px;
 }
