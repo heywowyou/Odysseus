@@ -4,82 +4,50 @@ import { LanguageSection } from '../../lib/language';
 import { Reveal } from '../../lib/reveal';
 import { Steps, type Step } from '../../lib/steps';
 
+const description =
+  'Les contrôles réalisés, le contenu du rapport, le délai et le tarif fixe de 1 600 € HT du diagnostic technique Odysseus.';
+
 export const metadata: Metadata = {
-  title: 'Diagnostic technique complet',
-  description:
-    'Ce que couvre le diagnostic technique complet Odysseus, ce que contient le rapport de diagnostic, et comment le recevoir. Le prix publié figure plus bas sur la page.',
+  title: 'Le diagnostic technique Odysseus',
+  description,
   alternates: { canonical: '/offre' },
   openGraph: {
     type: 'website',
     siteName: 'Odysseus',
     locale: 'fr_FR',
     url: '/offre',
-    title: 'Diagnostic technique complet',
-    description:
-      'Ce que couvre le diagnostic technique complet Odysseus, ce que contient le rapport de diagnostic, et comment le recevoir. Le prix publié figure plus bas sur la page.',
+    title: 'Le diagnostic technique Odysseus',
+    description,
   },
 };
 
-/**
- * La page d'offre vers laquelle un aperçu renvoie, milestone 9c plan 009.
- *
- * Le contrat de l'aperçu exige un lien `offer` sur cet hôte : cette page doit
- * donc exister pour qu'un aperçu puisse être publié. La page elle-même
- * n'explique plus l'aperçu ni aucun mécanisme de prospection : une page
- * d'offre générale ne décrit pas un actif d'amorçage à froid, et plan 038
- * veut précisément qu'un changement d'implémentation de l'aperçu n'oblige
- * jamais à réécrire ce texte marketing.
- *
- * **Le prix est publié ici, par décision de l'opérateur du 2026-08-29.** Le
- * chiffre lui-même appartient à `ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT` dans
- * `packages/core` (trade-off 42), et cette page ne peut pas l'importer : le
- * site ne dépend délibérément d'aucun autre paquet du dépôt. Le chiffre est
- * donc répété en texte littéral, et `packages/core/src/offer/pricing.test.ts`
- * lit ce fichier et échoue si les deux divergent un jour, ou si une autre
- * somme en euros apparaît ici. Le garde-fou vit du côté qui possède le
- * chiffre, ce qui préserve l'isolation du site.
- *
- * Recast 2026-09-11, plan 038 : la page est réorganisée en page de décision.
- * La phrase de limitation approuvée (offer-positioning.md, section 2) reste
- * en tête de chaque langue, avant toute promesse détaillée. Le périmètre est
- * présenté en quatre entrées bornées, puis la liste concrète de ce que
- * contient chaque constat, puis la note de couverture qui distingue les
- * vérifications de contenu, conduites sur toutes les pages explorées avec
- * succès, de la mesure de performance, conduite sur une sélection
- * déterministe de pages annoncée comme telle (offer-positioning.md, section 3, et
- * trade-offs 64).
- *
- * Passe éditoriale du 2026-09-11 (opérateur) : bouton « Nous écrire », sans
- * la ligne de réassurance redondante placée dessous ; fiche constat
- * partagée avec l'accueil (lib/dossier.tsx) ; les trois mêmes principes que
- * l'accueil ; une seule mention factuelle des deux langues du rapport, qui
- * n'est plus présentée comme un argument de vente.
- *
- * La page n'affirme non plus aucune obligation légale. Savoir si une règle
- * donnée s'applique à une entreprise donnée est précisément la conclusion
- * que ce projet ne tire jamais.
- */
 const NEXT_STEPS_FR: readonly Step[] = [
-  { title: 'Réponse', text: 'Nous lisons votre message et vous répondons personnellement.' },
   {
-    title: 'Questionnaire',
-    text: 'Un questionnaire écrit de huit à douze questions, sur votre site et votre activité.',
+    title: 'Premier échange',
+    text: 'Nous vous répondons personnellement pour vérifier que le diagnostic correspond bien à votre besoin.',
   },
   {
-    title: 'Proposition écrite',
-    text: 'Une proposition écrite qui confirme le tarif et le délai, à valider avant tout engagement.',
+    title: 'Quelques questions',
+    text: 'Un court questionnaire nous permet de comprendre votre site, votre activité et les éventuelles contraintes à prendre en compte.',
+  },
+  {
+    title: 'Validation',
+    text: 'Vous recevez une proposition écrite qui confirme le périmètre, le tarif et le délai. Rien ne démarre avant votre accord.',
   },
 ];
 
 const NEXT_STEPS_EN: readonly Step[] = [
-  { title: 'Reply', text: 'We read your message and reply to you personally.' },
   {
-    title: 'Questionnaire',
-    text: 'A written questionnaire of eight to twelve questions, about your site and your business.',
+    title: 'Initial conversation',
+    text: 'We reply personally to make sure the diagnostic is a good fit for what you need.',
   },
   {
-    title: 'Written proposal',
-    text: 'A written proposal confirming the price and the timeline, for you to approve before any commitment.',
+    title: 'A few questions',
+    text: 'A short written questionnaire helps us understand your site, your business and any constraints we should take into account.',
+  },
+  {
+    title: 'Approval',
+    text: 'You receive a written proposal confirming the scope, price and delivery time. Nothing starts until you approve it.',
   },
 ];
 
@@ -88,12 +56,12 @@ export default function OfferPage() {
     <main id="contenu" tabIndex={-1} className="flex-1">
       <LanguageSection lang="fr">
         <section className="shell hero">
-          <h1 className="title measure">Diagnostic technique complet</h1>
+          <h1 className="title measure">Le diagnostic technique Odysseus</h1>
 
           <div className="split mt-10 hero-split">
             <div className="split-main">
               <p className="lede measure">
-                Un rapport de diagnostic qui dit quoi corriger, où, et dans quel ordre, sur
+                Un rapport qui vous montre quoi corriger, où intervenir et dans quel ordre, sur
                 l&apos;ensemble de votre site.
               </p>
 
@@ -111,13 +79,13 @@ export default function OfferPage() {
               <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
                 <p className="price numeric">1&#160;600&#160;€ HT</p>
                 <a className="btn btn-primary" href="mailto:contact@odysseusaudit.fr">
-                  Nous écrire
+                  Parler de votre site
                 </a>
               </div>
               <p className="small muted mt-4">
-                Tarif unique et publié, confirmé par écrit avant tout engagement. Une fois vos
-                corrections faites, une nouvelle vérification peut être réalisée sur demande, pour
-                450&#160;€&#160;HT, sous cinq jours ouvrés.
+                Tarif fixe, confirmé par écrit avant tout engagement. Après correction, vous pouvez
+                demander une nouvelle vérification au tarif de 450&#160;€&#160;HT. Elle est
+                réalisée sous cinq jours ouvrés.
               </p>
             </div>
 
@@ -128,42 +96,44 @@ export default function OfferPage() {
         <div className="shell section-tight">
           <section aria-labelledby="perimetre-offre" className="offer-section">
             <h2 id="perimetre-offre" className="heading">
-              Ce que le diagnostic vérifie
+              Les contrôles réalisés
             </h2>
 
             <Reveal className="check-grid mt-8">
               <div className="check">
                 <h3 className="subheading">Accessibilité</h3>
                 <p className="soft mt-3">
-                  Élément par élément, au regard de la norme WCAG 2.2 niveau AA et de la norme
-                  européenne EN 301 549, avec preuve à l&apos;appui de chaque écart relevé.
+                  Les contrôles automatisables liés aux WCAG 2.2 niveau AA et à la norme européenne
+                  EN 301 549 sont exécutés sur chaque page. Chaque écart détecté est rattaché à la
+                  règle concernée et accompagné d&apos;une preuve.
                 </p>
               </div>
 
               <div className="check">
-                <h3 className="subheading">Référencement naturel et rendu</h3>
+                <h3 className="subheading">Référencement naturel&#160;: HTML initial et rendu JavaScript</h3>
                 <p className="soft mt-3">
-                  Chaque page est comparée telle que reçue par un moteur de recherche sans
-                  JavaScript, et telle qu&apos;affichée dans un navigateur complet, pour repérer ce
-                  que le premier manque du second.
+                  Le HTML envoyé par le serveur est comparé à la page après exécution du JavaScript
+                  dans un navigateur. Cette comparaison repère les contenus, liens ou métadonnées
+                  qui dépendent du rendu JavaScript, sans présumer de la manière dont un moteur de
+                  recherche donné les traitera.
                 </p>
               </div>
 
               <div className="check">
-                <h3 className="subheading">Visibilité dans les assistants IA</h3>
+                <h3 className="subheading">Signaux techniques liés aux assistants IA</h3>
                 <p className="soft mt-3">
                   Le diagnostic contrôle des signaux techniques vérifiables&#160;: les données
                   structurées déclarées par votre site, les règles d&apos;accès des robots
-                  d&apos;indexation IA, le fichier llms.txt (un fichier que certains assistants IA
-                  consultent avant d&apos;explorer un site) et le balisage FAQ (des données qui
-                  signalent qu&apos;une page répond à des questions courantes). Il ne prédit pas si
-                  un assistant IA citera votre site, le classera, le recommandera, ou répondra à une
-                  question sur votre activité.
+                  d&apos;indexation IA, le fichier llms.txt (une convention proposée pour présenter aux
+                  agents IA les contenus importants d&apos;un site) et le balisage FAQ (des données
+                  structurées indiquant qu&apos;une page répond à des questions fréquentes). Il ne
+                  prédit pas si un assistant IA citera votre site, le classera, le recommandera, ou
+                  répondra à une question sur votre activité.
                 </p>
               </div>
 
               <div className="check">
-                <h3 className="subheading">Performance et sécurité</h3>
+                <h3 className="subheading">Performance et en-têtes de sécurité</h3>
                 <div className="metric-row mt-4">
                   <div className="metric">
                     <p className="metric-name">Chargement du contenu principal (LCP)</p>
@@ -179,7 +149,7 @@ export default function OfferPage() {
                   </div>
                   <div className="metric">
                     <p className="metric-name">
-                      Réactivité réelle (INP, lorsque des données terrain sont disponibles)
+                      Réactivité aux interactions (INP, lorsque des données terrain sont disponibles)
                     </p>
                     <p className="metric-desc">
                       La rapidité avec laquelle la page réagit aux interactions, lorsque des mesures
@@ -188,8 +158,9 @@ export default function OfferPage() {
                   </div>
                 </div>
                 <p className="soft mt-4">
-                  La performance de laboratoire est mesurée sur une sélection de pages&#160;; les
-                  données terrain, lorsqu&apos;elles existent, viennent la compléter.
+                  Les performances sont mesurées en environnement contrôlé sur une sélection de
+                  pages. Lorsqu&apos;elles sont disponibles, les données issues de visiteurs réels
+                  viennent compléter ces mesures.
                 </p>
                 <p className="soft mt-3">
                   Les en-têtes de sécurité du serveur sont vérifiés sur l&apos;ensemble du site,
@@ -202,37 +173,36 @@ export default function OfferPage() {
           <section aria-labelledby="livrable-offre" className="offer-section">
             <div className="measure">
               <h2 id="livrable-offre" className="heading">
-                Rigueur du rapport de diagnostic
+                Un rapport fondé sur des mesures
               </h2>
               <p className="soft mt-4">
-                Le rapport de diagnostic vous est remis au format PDF, en français ou en anglais
-                selon votre préférence. Trois principes encadrent son contenu.
+                Le rapport vous est remis au format PDF, en français ou en anglais selon votre
+                préférence. Son contenu suit trois règles simples.
               </p>
             </div>
 
             <Reveal className="method-grid mt-8">
               <div className="method-item">
-                <p className="subheading">Chaque constat provient d&apos;un test.</p>
+                <p className="subheading">Chaque constat technique repose sur une mesure.</p>
                 <p className="soft mt-2">
-                  Les constats sont établis par des outils de mesure. La rédaction du rapport de
-                  diagnostic repose exclusivement sur leurs résultats&#160;: elle les explique, les
-                  hiérarchise et les formule en langage clair, sans rien y ajouter.
+                  Le rapport s&apos;appuie uniquement sur les résultats des outils. Il les explique,
+                  les hiérarchise et les traduit en actions compréhensibles, sans transformer une
+                  mesure en supposition.
                 </p>
               </div>
               <div className="method-item">
-                <p className="subheading">Chaque constat est localisé.</p>
+                <p className="subheading">Chaque constat indique où intervenir.</p>
                 <p className="soft mt-2">
-                  Il indique la page et l&apos;élément concernés. Votre prestataire peut ainsi le
-                  vérifier rapidement et remonter directement à la mesure d&apos;origine.
+                  La page et l&apos;élément concernés sont indiqués précisément. Votre prestataire
+                  peut vérifier le constat et remonter directement à la mesure d&apos;origine.
                 </p>
               </div>
               <div className="method-item">
-                <p className="subheading">Le cadre réglementaire reste factuel.</p>
+                <p className="subheading">Le rapport ne se prononce pas sur vos obligations juridiques.</p>
                 <p className="soft mt-2">
-                  Il présente les critères réglementaires applicables à votre type d&apos;activité
-                  et les données publiques du registre des entreprises, sans extrapoler au-delà de
-                  ces faits. Votre situation juridique peut ensuite être confirmée par votre
-                  conseil.
+                  Il présente les textes et critères susceptibles de concerner votre activité, ainsi
+                  que les données publiques disponibles sur votre entreprise. La détermination de
+                  vos obligations juridiques reste du ressort d&apos;un professionnel du droit.
                 </p>
               </div>
             </Reveal>
@@ -244,10 +214,9 @@ export default function OfferPage() {
                 Couverture
               </h2>
               <p className="soft mt-4">
-                Chaque page explorée avec succès fait l&apos;objet de toutes les vérifications de
-                contenu, quel que soit son rôle dans le site. La performance est mesurée sur une
-                sélection déterministe de pages, ce que le rapport de diagnostic indique
-                explicitement.
+                Tous les contrôles de contenu prévus sont exécutés sur chaque page accessible à
+                l&apos;outil. Les mesures de performance sont réalisées sur une sélection déterminée
+                de pages, identifiée dans le rapport.
               </p>
             </div>
           </section>
@@ -255,16 +224,16 @@ export default function OfferPage() {
           <section aria-labelledby="tarif-offre" className="offer-section">
             <div className="measure">
               <h2 id="tarif-offre" className="heading">
-                Un tarif unique et publié
+                Un tarif fixe
               </h2>
               <p className="price numeric mt-5">1&#160;600&#160;€ HT</p>
               <p className="soft mt-4">
-                Il ne dépend ni de la taille du site ni du nombre de constats, et il vous est
+                Le tarif ne dépend ni de la taille du site ni du nombre de constats. Il vous est
                 confirmé par écrit avant tout engagement.
               </p>
               <div className="mt-7">
                 <a className="btn btn-primary" href="mailto:contact@odysseusaudit.fr">
-                  Nous écrire
+                  Parler de votre site
                 </a>
               </div>
             </div>
@@ -284,20 +253,20 @@ export default function OfferPage() {
 
       <LanguageSection lang="en">
         <section className="shell hero">
-          <h1 className="title measure">The complete technical diagnostic</h1>
+          <h1 className="title measure">The Odysseus technical diagnostic</h1>
 
           <div className="split mt-10 hero-split">
             <div className="split-main">
               <p className="lede measure">
-                A report that tells you what to fix, where, and in what order, across your whole
-                site.
+                A report that shows you what to fix, where to act and in what order across your
+                entire website.
               </p>
 
               <Reveal className="measure mt-8">
                 <div className="statement">
                   <p className="label">Scope of the diagnostic</p>
                   <p className="mt-2">
-                    This is a technical diagnostic, not an audit RGAA. It does not produce an
+                    This is a technical diagnostic, not an RGAA audit. It does not produce an
                     official conformity rate and cannot serve as the basis for an accessibility
                     statement.
                   </p>
@@ -307,13 +276,13 @@ export default function OfferPage() {
               <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
                 <p className="price numeric">EUR 1,600 excl. VAT</p>
                 <a className="btn btn-primary" href="mailto:contact@odysseusaudit.fr">
-                  Write to us
+                  Discuss your site
                 </a>
               </div>
               <p className="small muted mt-4">
-                One published price, confirmed to you in writing before any commitment. Once your
-                corrections are made, a new check can be run on request, for EUR 450 excl. VAT,
-                within five business days.
+                Fixed price, confirmed in writing before you commit to anything. After the fixes are
+                made, you can request a new verification for EUR 450 excl. VAT, delivered within
+                five business days.
               </p>
             </div>
 
@@ -324,42 +293,41 @@ export default function OfferPage() {
         <div className="shell section-tight">
           <section aria-labelledby="scope-offre-en" className="offer-section">
             <h2 id="scope-offre-en" className="heading">
-              What the diagnostic checks
+              Checks performed
             </h2>
 
             <Reveal className="check-grid mt-8">
               <div className="check">
                 <h3 className="subheading">Accessibility</h3>
                 <p className="soft mt-3">
-                  Element by element, against WCAG 2.2 level AA and the European standard EN 301
-                  549, with evidence attached to every gap found.
+                  The automatable checks mapped to WCAG 2.2 Level AA and EN 301 549 are run on every
+                  page. Each detected issue is tied to the relevant rule and backed by evidence.
                 </p>
               </div>
 
               <div className="check">
-                <h3 className="subheading">Search and rendering</h3>
+                <h3 className="subheading">Search&#160;: initial HTML and JavaScript rendering</h3>
                 <p className="soft mt-3">
-                  Each page is compared as a search engine receives it without JavaScript against
-                  how it appears in a full browser, to find what the first one misses of the second.
+                  The HTML sent by the server is compared with the page after JavaScript has run in
+                  a browser. This identifies content, links or metadata that depend on JavaScript
+                  rendering without assuming how any particular search engine will handle them.
                 </p>
               </div>
 
               <div className="check">
-                <h3 className="subheading">
-                  AI visibility signals in search engines and assistants
-                </h3>
+                <h3 className="subheading">Technical signals for AI assistants</h3>
                 <p className="soft mt-3">
-                  The diagnostic checks technical signals that can be verified: the structured data
-                  your site declares, the access rules for AI crawlers, the llms.txt file (a file
-                  some AI assistants check before crawling a site) and FAQ markup (data that marks a
-                  page as answering common questions). It does not predict whether an AI assistant
-                  will cite your site, rank it, recommend it, or answer a question about your
-                  business.
+                  The diagnostic checks verifiable technical signals&#160;: structured data declared
+                  by your site, access rules for AI crawlers, the llms.txt file (a proposed
+                  convention for presenting a site&apos;s important content to AI agents), and FAQ
+                  markup (structured data indicating that a page answers common questions). It does
+                  not predict whether an AI assistant will cite your site, rank it, recommend it, or
+                  answer a question about your business.
                 </p>
               </div>
 
               <div className="check">
-                <h3 className="subheading">Performance and security</h3>
+                <h3 className="subheading">Performance and security headers</h3>
                 <div className="metric-row mt-4">
                   <div className="metric">
                     <p className="metric-name">Largest contentful paint (LCP)</p>
@@ -378,14 +346,14 @@ export default function OfferPage() {
                       Interaction to next paint (INP, when field data is available)
                     </p>
                     <p className="metric-desc">
-                      How quickly the page responds to interactions, when measurements from real
-                      visitors exist.
+                      How quickly the page responds to interactions when measurements from real
+                      visitors are available.
                     </p>
                   </div>
                 </div>
                 <p className="soft mt-4">
-                  Lab performance is measured on a representative sample of pages; field data, where
-                  it exists, supplements it.
+                  Performance is measured in a controlled environment on a selection of pages.
+                  Where available, data from real visitors complements those measurements.
                 </p>
                 <p className="soft mt-3">
                   The server&apos;s security headers are checked across the whole site,
@@ -398,36 +366,36 @@ export default function OfferPage() {
           <section aria-labelledby="deliverable-offre-en" className="offer-section">
             <div className="measure">
               <h2 id="deliverable-offre-en" className="heading">
-                Rigour of the report
+                A report grounded in measurements
               </h2>
               <p className="soft mt-4">
-                The report is delivered as a PDF, in French or English as you prefer. Three
-                principles govern its content.
+                The report is delivered as a PDF in French or English, according to your preference.
+                Its content follows three simple rules.
               </p>
             </div>
 
             <Reveal className="method-grid mt-8">
               <div className="method-item">
-                <p className="subheading">Every finding comes from a test.</p>
+                <p className="subheading">Every technical finding is backed by a measurement.</p>
                 <p className="soft mt-2">
-                  Findings are established by measuring tools. The writing of the report relies
-                  exclusively on their results: it explains them, ranks them and puts them into
-                  plain language, without adding anything.
+                  The report relies only on the results produced by the measurement tools. It
+                  explains and prioritises them, then turns them into clear actions without turning
+                  measurements into assumptions.
                 </p>
               </div>
               <div className="method-item">
-                <p className="subheading">Every finding is located.</p>
+                <p className="subheading">Every finding tells you where to act.</p>
                 <p className="soft mt-2">
-                  It names the page and the element concerned. Your web provider can check it in
-                  moments, without having to take our word for it.
+                  The affected page and element are identified precisely. Your web provider can
+                  verify the finding and trace it back to the underlying measurement.
                 </p>
               </div>
               <div className="method-item">
-                <p className="subheading">The report does not rule on your legal obligations.</p>
+                <p className="subheading">The report does not determine your legal obligations.</p>
                 <p className="soft mt-2">
-                  It reproduces the regulatory criteria that apply to your type of activity and the
-                  public business registry data, without concluding that they apply to your case.
-                  That assessment is for a lawyer, as the report expressly states.
+                  It presents the rules and criteria that may be relevant to your activity, together
+                  with the public company data available. Determining your legal obligations remains
+                  a matter for a qualified legal professional.
                 </p>
               </div>
             </Reveal>
@@ -439,9 +407,8 @@ export default function OfferPage() {
                 Coverage
               </h2>
               <p className="soft mt-4">
-                Every successfully crawled page receives all the content checks, whatever its role
-                in the site. Performance is measured on a representative sample of pages, which the
-                report states explicitly.
+                Every content check in scope is run on every page the tool can access. Performance
+                measurements are taken on a defined selection of pages, identified in the report.
               </p>
             </div>
           </section>
@@ -449,16 +416,16 @@ export default function OfferPage() {
           <section aria-labelledby="price-offre-en" className="offer-section">
             <div className="measure">
               <h2 id="price-offre-en" className="heading">
-                One published price
+                One fixed price
               </h2>
               <p className="price numeric mt-5">EUR 1,600 excl. VAT</p>
               <p className="soft mt-4">
-                It does not depend on the size of the site or on the number of findings, and it is
-                confirmed to you in writing before any commitment.
+                The price does not depend on the size of the site or the number of findings. It is
+                confirmed in writing before you commit to anything.
               </p>
               <div className="mt-7">
                 <a className="btn btn-primary" href="mailto:contact@odysseusaudit.fr">
-                  Write to us
+                  Discuss your site
                 </a>
               </div>
             </div>
