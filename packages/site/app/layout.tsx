@@ -28,7 +28,7 @@ const avenirNext = localFont({
  * card is `summary`, the variant that renders correctly without an image.
  */
 const description =
-  'Diagnostic technique de site web : accessibilité, référencement naturel, rendu JavaScript, performance et signaux techniques liés aux assistants IA. Rapport priorisé, tarif fixe de 1 600 € HT.';
+  'Diagnostic technique de site web : accessibilité, référencement naturel, rendu JavaScript, performance et signaux techniques liés aux assistants IA. Rapport priorisé, tarif fixe de 1 600 € HT.';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.odysseusaudit.com'),

@@ -10,7 +10,7 @@ export const PAGE_META: Record<
     fr: {
       title: 'Odysseus, diagnostic technique de site web',
       description:
-        'Diagnostic technique de site web : accessibilité, référencement naturel, rendu JavaScript, performance et signaux techniques liés aux assistants IA. Rapport priorisé, tarif fixe de 1 600 € HT.',
+        'Diagnostic technique de site web : accessibilité, référencement naturel, rendu JavaScript, performance et signaux techniques liés aux assistants IA. Rapport priorisé, tarif fixe de 1 600 € HT.',
     },
     en: {
       title: 'Odysseus, technical website diagnostic',
@@ -22,7 +22,7 @@ export const PAGE_META: Record<
     fr: {
       title: 'Le diagnostic technique Odysseus | Odysseus',
       description:
-        'Les contrôles réalisés, le contenu du rapport, le délai et le tarif fixe de 1 600 € HT du diagnostic technique Odysseus.',
+        'Les contrôles réalisés, le contenu du rapport, le délai et le tarif fixe de 1 600 € HT du diagnostic technique Odysseus.',
     },
     en: {
       title: 'The Odysseus technical diagnostic | Odysseus',

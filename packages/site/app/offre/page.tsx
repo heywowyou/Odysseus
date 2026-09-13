@@ -5,7 +5,7 @@ import { Reveal } from '../../lib/reveal';
 import { Steps, type Step } from '../../lib/steps';
 
 const description =
-  'Les contrôles réalisés, le contenu du rapport, le délai et le tarif fixe de 1 600 € HT du diagnostic technique Odysseus.';
+  'Les contrôles réalisés, le contenu du rapport, le délai et le tarif fixe de 1 600 € HT du diagnostic technique Odysseus.';
 
 export const metadata: Metadata = {
   title: 'Le diagnostic technique Odysseus',
