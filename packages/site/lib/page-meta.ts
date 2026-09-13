@@ -62,7 +62,8 @@ export const PAGE_META: Record<
     },
     en: {
       title: 'Opt out of future contact | Odysseus',
-      description: 'How to opt out of future contact from Odysseus and have an online preview removed.',
+      description:
+        'How to opt out of future contact from Odysseus and have an online preview removed.',
     },
   },
 };
