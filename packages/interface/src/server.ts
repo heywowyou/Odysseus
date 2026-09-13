@@ -6,6 +6,7 @@ import { registerAuditRoutes } from './routes/audits.js';
 import { registerReportPreparationRoutes } from './routes/report-preparation.js';
 import { registerProspectingRoutes } from './routes/prospecting.js';
 import { registerProspectRoutes } from './routes/prospects.js';
+import { registerProspectContactRoutes } from './routes/prospect-contact.js';
 import { registerProspectInsightRoutes } from './routes/prospect-insights.js';
 import { registerOutreachRoutes } from './routes/outreach.js';
 import { registerStaticFallback } from './routes/static.js';
@@ -108,6 +109,7 @@ export async function startInterfaceServer(
   registerReportPreparationRoutes(router, connection);
   registerProspectingRoutes(router, connection, queue);
   registerProspectRoutes(router, connection, queue);
+  registerProspectContactRoutes(router, connection);
   registerProspectInsightRoutes(router, connection);
   registerOutreachRoutes(router, connection, queue);
   registerSessionRoutes(router, { getPasswordHash, sessionStore, rateLimiter });

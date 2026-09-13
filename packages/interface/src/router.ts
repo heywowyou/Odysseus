@@ -9,7 +9,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { sendError } from './http-utils.js';
 import { applyBaseSecurityHeaders } from './security-headers.js';
 
-const STATE_CHANGING_METHODS = new Set(['POST', 'PATCH', 'DELETE']);
+const STATE_CHANGING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 /** The dashboard binds to 127.0.0.1 by design, which stops a remote
  *  attacker but not a malicious page open in the same browser while
@@ -97,6 +97,10 @@ export class Router {
 
   post(pattern: string, handler: RouteHandler): void {
     this.routes.push({ method: 'POST', segments: splitPath(pattern), handler });
+  }
+
+  put(pattern: string, handler: RouteHandler): void {
+    this.routes.push({ method: 'PUT', segments: splitPath(pattern), handler });
   }
 
   patch(pattern: string, handler: RouteHandler): void {
