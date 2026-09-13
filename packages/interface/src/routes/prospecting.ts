@@ -3,6 +3,7 @@ import { createJob } from '@odysseus/store';
 import type { Router } from '../router.js';
 import { sendJson } from '../http-utils.js';
 import type { JobQueue } from '../queue/job-queue.js';
+import { logJobCreated } from '../request-context.js';
 
 /** Makes "wired into the JobQueue/dashboard infrastructure from day one"
  *  concrete beyond internal dispatch: lets a running `odysseus serve`
@@ -16,8 +17,9 @@ export function registerProspectingRoutes(
   connection: Connection,
   queue: JobQueue,
 ): void {
-  router.post('/api/prospecting/ingest', async ({ res }) => {
+  router.post('/api/prospecting/ingest', async ({ req, res }) => {
     const job = await createJob(connection, { type: 'prospect-ingestion', options: {} });
+    logJobCreated(req, job.jobId, job.type);
     queue.notify();
     sendJson(res, 201, { jobId: job.jobId });
   });

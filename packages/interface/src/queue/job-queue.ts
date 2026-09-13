@@ -33,6 +33,9 @@ export interface PipelineContext {
   originLock: OriginLock;
   /** Shared stop-request registry; runners check it at page boundaries. */
   cancellation: CancellationRegistry;
+  /** Pre-bound with jobId/jobType so a runner's own logging automatically
+   *  carries this job's correlation context. */
+  log: typeof logger;
 }
 
 export type PipelineFn = (job: JobDocument, ctx: PipelineContext) => Promise<void>;
@@ -206,11 +209,13 @@ export class JobQueue {
 
   private async runJob(job: JobDocument): Promise<void> {
     const runner = this.runners[job.type];
+    const jobLog = logger.child({ jobId: job.jobId, jobType: job.type });
     try {
       await runner(job, {
         connection: this.connection,
         originLock: this.originLock,
         cancellation: this.cancellation,
+        log: jobLog,
       });
     } catch (error) {
       if (error instanceof JobCancelledError) {
@@ -226,6 +231,7 @@ export class JobQueue {
         await markJobNeedsInput(this.connection, job.jobId, error.fields, error.message);
       } else {
         const message = error instanceof Error ? error.message : String(error);
+        jobLog.error({ err: error }, 'pipeline job failed');
         await failJob(this.connection, job.jobId, message);
       }
     } finally {

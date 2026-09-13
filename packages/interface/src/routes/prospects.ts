@@ -43,6 +43,7 @@ import { scoreHotelOnDemandForConnection } from '../prospecting/hotel-scoring/sc
 import type { JobQueue } from '../queue/job-queue.js';
 import type { Router } from '../router.js';
 import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
+import { logJobCreated } from '../request-context.js';
 
 /** How many qualification generations one detail response carries. The
  *  catalogue pointer holds only the current generation; the history page is
@@ -430,7 +431,7 @@ export function registerProspectRoutes(
   // needs is resolved server-side from the candidate record, and the plan
   // helper's validations (cohort selection, current qualification, own
   // domain, suppression, duplicates) are the only path in.
-  router.post('/api/prospects/:candidateId/outreach/full-scan', async ({ res, params }) => {
+  router.post('/api/prospects/:candidateId/outreach/full-scan', async ({ req, res, params }) => {
     const candidateId = params['candidateId']!;
     if (!isPlausibleCandidateId(candidateId)) {
       sendError(res, 400, 'candidateId must be a non-empty string without control characters');
@@ -458,6 +459,7 @@ export function registerProspectRoutes(
         outreachAuthorizedBy: plan.authorizedBy,
       },
     });
+    logJobCreated(req, job.jobId, job.type);
     queue?.notify();
     sendJson(res, 201, { started: true, jobId: job.jobId });
   });
@@ -607,7 +609,7 @@ export function registerProspectRoutes(
   // default; this route is always one operator naming one hotel, and a
   // silent no-op here (0 hotels prescanned, reported as success) is the
   // same failure shape #202 already was.
-  router.post('/api/prospects/:candidateId/prescan', async ({ res, params }) => {
+  router.post('/api/prospects/:candidateId/prescan', async ({ req, res, params }) => {
     const candidateId = params['candidateId']!;
     if (!isPlausibleCandidateId(candidateId)) {
       sendError(res, 400, 'candidateId must be a non-empty string without control characters');
@@ -635,6 +637,7 @@ export function registerProspectRoutes(
         rescan: true,
       },
     });
+    logJobCreated(req, job.jobId, job.type);
     queue?.notify();
     sendJson(res, 201, { started: true, jobId: job.jobId });
   });
@@ -703,7 +706,7 @@ export function registerProspectRoutes(
   // hostname at a time still applies, and the stamp records the candidate
   // link plus the selection run beside which the audit was launched
   // (context, not a membership claim, the same rule as the wave roster).
-  router.post('/api/prospects/:candidateId/full-audit', async ({ res, params }) => {
+  router.post('/api/prospects/:candidateId/full-audit', async ({ req, res, params }) => {
     const candidateId = params['candidateId']!;
     if (!isPlausibleCandidateId(candidateId)) {
       sendError(res, 400, 'candidateId must be a non-empty string without control characters');
@@ -729,6 +732,7 @@ export function registerProspectRoutes(
         outreachAuthorizedBy: 'paid',
       },
     });
+    logJobCreated(req, job.jobId, job.type);
     queue?.notify();
     sendJson(res, 201, { started: true, jobId: job.jobId });
   });

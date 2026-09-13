@@ -22,6 +22,7 @@ import {
 } from '@odysseus/store';
 import type { Router } from '../router.js';
 import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
+import { logJobCreated } from '../request-context.js';
 import type { JobQueue } from '../queue/job-queue.js';
 
 /** Plan 013 step 4: pending Gmail draft review, replies needing review,
@@ -350,6 +351,7 @@ export function registerOutreachRoutes(
       type: 'outreach-draft-batch',
       options: { limit, ...(rawLanguage === undefined ? {} : { language: rawLanguage }) },
     });
+    logJobCreated(req, job.jobId, job.type);
     queue.notify();
     sendJson(res, 201, { jobId: job.jobId });
   });
@@ -368,6 +370,7 @@ export function registerOutreachRoutes(
       type: 'outreach-followup-batch',
       options: { limit },
     });
+    logJobCreated(req, job.jobId, job.type);
     queue.notify();
     sendJson(res, 201, { jobId: job.jobId });
   });

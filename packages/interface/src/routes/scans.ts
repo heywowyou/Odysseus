@@ -18,6 +18,7 @@ import type { Router } from '../router.js';
 import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
 import type { JobQueue } from '../queue/job-queue.js';
 import { getSeverityRollupsForPoll } from './severity-rollup-cache.js';
+import { logJobCreated } from '../request-context.js';
 
 /** Minimal glob shape check, not a compiler: routes/scans.ts's boundary
  *  only needs to reject garbage early (rule: fail fast at the boundary,
@@ -145,6 +146,7 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
         siteUrl: url,
         options,
       });
+      logJobCreated(req, job.jobId, job.type);
       queue.notify();
       sendJson(res, 201, { jobId: job.jobId });
       return;
@@ -157,6 +159,7 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
         return;
       }
       const job = await createJob(connection, { type: 'prospecting', urls, options: {} });
+      logJobCreated(req, job.jobId, job.type);
       queue.notify();
       sendJson(res, 201, { jobId: job.jobId });
       return;

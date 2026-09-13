@@ -1,3 +1,4 @@
+import { logger } from '../../logger.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../pipeline/audit-stage.js', () => ({ runAuditStage: vi.fn() }));
@@ -51,6 +52,7 @@ function fakeContext(): PipelineContext {
     connection: fakeConnection,
     originLock: new OriginLock(),
     cancellation: new CancellationRegistry(),
+    log: logger,
   };
 }
 

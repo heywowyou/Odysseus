@@ -11,7 +11,15 @@ vi.mock('@odysseus/store', () => ({
 vi.mock('../pipeline/backfill-audit-hotel-links.js', () => ({
   backfillAuditHotelLinks: vi.fn(),
 }));
-vi.mock('../logger.js', () => ({ logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() } }));
+vi.mock('../logger.js', () => {
+  const mockLogger = {
+    warn: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    child: vi.fn(() => mockLogger),
+  };
+  return { logger: mockLogger };
+});
 
 import {
   cancelJob,
@@ -374,6 +382,40 @@ describe('JobQueue', () => {
     await waitFor(() => vi.mocked(failJob).mock.calls.length >= 1);
 
     expect(failJob).toHaveBeenCalledWith(fakeConnection, 'job-boom', 'boom');
+    expect(logger.child).toHaveBeenCalledWith({ jobId: 'job-boom', jobType: 'full-audit' });
+    expect(logger.error).toHaveBeenCalledWith({ err: expect.any(Error) }, 'pipeline job failed');
+  });
+
+  it('gives the runner a job-scoped logger carrying jobId and jobType, with no request ID', async () => {
+    const job = fakeJob({ jobId: 'job-no-http', type: 'prospect-ingestion' });
+    vi.mocked(claimNextQueuedJob).mockResolvedValueOnce(job).mockResolvedValue(null);
+    const runProspectIngestionJob = vi.fn().mockResolvedValue(undefined);
+
+    queue = new JobQueue({
+      connection: fakeConnection,
+      pollIntervalMs: 20,
+      runners: {
+        'full-audit': vi.fn(),
+        prospecting: vi.fn(),
+        'prospect-ingestion': runProspectIngestionJob,
+        'hotel-prescan': vi.fn(),
+        'outreach-draft-batch': vi.fn(),
+        'outreach-full-scan': vi.fn(),
+        'outreach-followup-batch': vi.fn(),
+      },
+    });
+    await queue.start();
+    queue.notify();
+    await waitFor(() => runProspectIngestionJob.mock.calls.length >= 1);
+
+    expect(logger.child).toHaveBeenCalledWith({
+      jobId: 'job-no-http',
+      jobType: 'prospect-ingestion',
+    });
+    expect(runProspectIngestionJob).toHaveBeenCalledWith(
+      job,
+      expect.objectContaining({ log: logger }),
+    );
   });
 
   it('marks a job needs-input, not failed, when the report gate throws ReportIdentityUnconfirmedError', async () => {

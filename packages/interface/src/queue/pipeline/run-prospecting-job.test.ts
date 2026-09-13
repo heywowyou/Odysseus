@@ -1,3 +1,4 @@
+import { logger } from '../../logger.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../pipeline/audit-stage.js', () => ({ runAuditStage: vi.fn() }));
@@ -41,6 +42,7 @@ beforeEach(() => {
   ctx = {
     connection: fakeConnection,
     cancellation,
+    log: logger,
     originLock: {
       acquire: vi.fn().mockImplementation(async () => {
         const release = vi.fn();

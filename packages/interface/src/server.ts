@@ -33,6 +33,7 @@ import {
   getQueueConcurrency,
 } from './config.js';
 import { logger } from './logger.js';
+import { attachRequestContext, getRequestId } from './request-context.js';
 
 export interface InterfaceServerHandle {
   server: Server;
@@ -130,12 +131,13 @@ export async function startInterfaceServer(
     // Baseline hardening before anything else, so guard rejections and the
     // catch-handler 500 carry the same headers as routed responses.
     applyBaseSecurityHeaders(res);
+    attachRequestContext(req, res);
     void (async () => {
       if (guard !== undefined && !(await guard(req, res))) return;
       await router.handle(req, res);
     })().catch((error: unknown) => {
       logger.error(
-        { err: error, method: req.method, url: req.url },
+        { err: error, method: req.method, url: req.url, requestId: getRequestId(req) },
         'unhandled error while handling request',
       );
       if (!res.headersSent) {
