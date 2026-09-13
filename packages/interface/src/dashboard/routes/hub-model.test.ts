@@ -7,7 +7,6 @@ import {
   auditChoices,
   hubPrimaryAction,
   hubTabs,
-  isSold,
   pipelineSteps,
   selectedAuditId,
   selectionVerdictSentence,
@@ -217,70 +216,10 @@ describe('pipelineSteps', () => {
   });
 });
 
-describe('isSold', () => {
-  it('is true for a recorded won outcome only', () => {
-    const won = makeDetail({
-      outcomes: {
-        rows: [
-          {
-            outcomeId: 'o-1',
-            outcome: 'won',
-            lostReason: null,
-            actor: 'operator',
-            recordedAt: '2026-09-04T08:00:00.000Z',
-          },
-        ],
-        total: 1,
-        limit: 10,
-        offset: 0,
-      },
-    });
-    expect(isSold(won)).toBe(true);
-
-    const quoted = makeDetail({
-      outcomes: {
-        rows: [
-          {
-            outcomeId: 'o-2',
-            outcome: 'quoted',
-            lostReason: null,
-            actor: 'operator',
-            recordedAt: '2026-09-04T08:00:00.000Z',
-          },
-        ],
-        total: 1,
-        limit: 10,
-        offset: 0,
-      },
-    });
-    expect(isSold(quoted)).toBe(false);
-
-    const replyPositive = makeDetail({
-      outcomes: {
-        rows: [
-          {
-            outcomeId: 'o-3',
-            outcome: 'reply-positive',
-            lostReason: null,
-            actor: 'operator',
-            recordedAt: '2026-09-04T08:00:00.000Z',
-          },
-        ],
-        total: 1,
-        limit: 10,
-        offset: 0,
-      },
-    });
-    expect(isSold(replyPositive)).toBe(false);
-
-    expect(isSold(makeDetail())).toBe(false);
-  });
-});
-
-describe('hubTabs', () => {
+describe('hubTabs (plan 045 stage 3.2: visible whenever a full audit exists)', () => {
   const steps = pipelineSteps(makeDetail(), NOW);
 
-  it('hides Rapport client while no won outcome is recorded', () => {
+  it('hides Rapport client while no full audit exists', () => {
     expect(hubTabs(steps, false).map((step) => step.key)).toEqual([
       'fiche',
       'quick-check',
@@ -291,7 +230,7 @@ describe('hubTabs', () => {
     ]);
   });
 
-  it('inserts Rapport client between Audit and Apercu once sold', () => {
+  it('inserts Rapport client between Audit and Apercu once a full audit exists', () => {
     expect(hubTabs(steps, true).map((step) => step.key)).toEqual([
       'fiche',
       'quick-check',

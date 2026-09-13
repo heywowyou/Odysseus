@@ -259,21 +259,30 @@ describe('audit detail report-stage failure card (issue #90)', () => {
       'Voir le détail du scan',
     );
     // Plan 040 slice 5: the card carries no regenerate button; the
-    // identity gate links to the hotel-fields form inside the stepper.
+    // identity gate links to the hotel-fields form inside the panel.
     const fieldsLink = [...container.querySelectorAll('button')].find(
       (button) => button.textContent === 'Aller aux champs à confirmer',
     );
     expect(fieldsLink).toBeDefined();
     expect(container.querySelector('#audit-hotel-fields')).not.toBeNull();
-    expect(container.textContent).not.toContain('Régénérer les PDF');
+    // Plan 045 stage 3.1: the produce action stays visible, greyed with its
+    // reason - no bilingual pair resolves for this audit yet.
+    const produceButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Régénérer les PDF',
+    );
+    expect(produceButton).toBeDefined();
+    expect(produceButton?.disabled).toBe(true);
+    expect(container.textContent).toContain(
+      'Aucune rédaction bilingue n’est encore disponible : rédigez le rapport ci-dessus avant de produire les PDF.',
+    );
     root.unmount();
   });
 
   it('points a scanned audit at the writing step instead of a regenerate that always 409s', async () => {
     // hautsdesancerre.com case: the job failed inside the fr writing pass,
     // before any analysis was stored. Regenerating the report cannot
-    // succeed, so the card must route the operator to the stepper's
-    // writing step, the only action that creates a pair.
+    // succeed, so the card must route the operator to the panel's writing
+    // section, the only action that creates a pair.
     stubRoutes({
       '/api/audits/audit-1/report-preparation': null,
       '/api/audits/audit-1': {
@@ -293,13 +302,15 @@ describe('audit detail report-stage failure card (issue #90)', () => {
       (button) => button.textContent === 'Aller à Rédiger le rapport',
     );
     expect(redactLink).toBeDefined();
-    expect(container.querySelector('#audit-step-redact')).not.toBeNull();
-    // No report-regenerate button exists anywhere on the page: the header
-    // lost its buttons, and the locked production step renders none.
-    const regenerateButtons = [...container.querySelectorAll('button')].filter((button) =>
-      ['Régénérer le rapport', 'Régénérer les PDF'].includes(button.textContent ?? ''),
+    expect(container.querySelector('#audit-panel-writing')).not.toBeNull();
+    // Plan 045 stage 3.1: the produce action stays visible (greyed, no pair
+    // resolves yet) instead of disappearing; only the old "Régénérer le
+    // rapport" wording is gone for good.
+    expect(container.textContent).not.toContain('Régénérer le rapport');
+    const produceButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Régénérer les PDF',
     );
-    expect(regenerateButtons).toHaveLength(0);
+    expect(produceButton?.disabled).toBe(true);
     root.unmount();
   });
 
@@ -638,7 +649,7 @@ describe('preview note on the audit page (plan 040 slice 5)', () => {
   });
 });
 
-describe('client-report stepper (plan 040 slice 5)', () => {
+describe('audit report panel (plan 045 stage 3.1)', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     document.body.innerHTML = '';
@@ -651,23 +662,24 @@ describe('client-report stepper (plan 040 slice 5)', () => {
     analysisPair: 'selected',
   };
 
-  it('renders the five steps with one save on the prepare step', async () => {
+  it('renders every row always visible, with one save inside the collapsed report details', async () => {
     stubRoutes({
       '/api/audits/audit-1/report-preparation': preparationView(),
       '/api/audits/audit-1': analysedAudit,
     });
     const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
     await settle(container, 'Rapport client');
-    for (const stepTitle of [
-      'Préparer',
-      'Rédiger',
-      'Choisir la version',
+    for (const heading of [
+      'Confirmer l’identité du client',
+      'Rédiger le rapport',
       'Produire les PDF',
-      'Approuver pour livraison',
+      'Approuver et livrer',
     ]) {
-      expect(container.textContent).toContain(stepTitle);
+      expect(container.textContent).toContain(heading);
     }
-    // Step 1 hosts both forms behind one Enregistrer button.
+    // The collapsed "Report details" disclosure hosts both forms behind one
+    // Enregistrer button.
+    expect(container.textContent).toContain('Détails du rapport (optionnel)');
     expect(
       [...container.querySelectorAll('button')].filter(
         (button) => button.textContent === 'Enregistrer les choix',
@@ -675,28 +687,25 @@ describe('client-report stepper (plan 040 slice 5)', () => {
     ).toHaveLength(1);
     expect(container.textContent).toContain('Informations sur l’hôtel');
     expect(container.querySelector('#audit-hotel-fields')).not.toBeNull();
-    // Step 2 is active: its rewrite button is on.
+    // The writing row's rewrite button is always available, never gated.
     expect(
       [...container.querySelectorAll('button')].some(
         (button) => button.textContent === 'Réécrire le rapport',
       ),
     ).toBe(true);
     // A stored pair unlocks production even though no writing was chosen.
-    expect(
-      [...container.querySelectorAll('button')].some(
-        (button) => button.textContent === 'Régénérer les PDF',
-      ),
-    ).toBe(true);
-    // Delivery approval stays locked until the pair is fresh.
-    expect(
-      [...container.querySelectorAll('button')].some(
-        (button) => button.textContent === 'Approuver les deux rapports',
-      ),
-    ).toBe(false);
+    const produceButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Régénérer les PDF',
+    );
+    expect(produceButton).toBeDefined();
+    expect(produceButton?.disabled).toBe(false);
     root.unmount();
   });
 
-  it('offers the candidate previews and approval on the choice step when a writing is ready', async () => {
+  it('keeps the legacy ready-candidate preview links and approve fallback', async () => {
+    // A candidate left 'ready' by a pre-plan-045-2.1 run: every regeneration
+    // from this build already approves inline, but this fallback still
+    // surfaces one left over from before.
     stubRoutes({
       '/api/audits/audit-1/report-preparation': preparationView({
         preparation: {
@@ -718,7 +727,6 @@ describe('client-report stepper (plan 040 slice 5)', () => {
     });
     const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
     await settle(container, 'Approuver cette version');
-    expect(container.textContent).toContain('Nouvelle version prête à être relue');
     expect(
       container.querySelector(
         'a[href="/api/audits/audit-1/report-preparation/candidate/fr/preview"]',

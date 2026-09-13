@@ -371,70 +371,30 @@ describe('ProspectDetailPage tabs (plan 042 slice 1)', () => {
     expect(pageText()).toContain('Conservez ce lien maintenant');
   });
 
-  it('hides Rapport client until sold, and reveals it on demand', async () => {
+  it('shows Rapport client whenever a full audit exists, with no sold gate (plan 045 stage 3.2)', async () => {
+    // The default fixture (detailWithAudit) carries an outreachAudit and no
+    // recorded outcome at all: the tab is visible purely because a full
+    // audit exists, replacing the old isSold/reportRevealed double gate.
     await renderDetail();
     await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
     await pause();
 
-    // No recorded `won` outcome: the tab is absent entirely.
-    expect(buttonWithText('Rapport client')).toBeUndefined();
-
-    // The reveal sits with the pipeline strip it affects (issue #185); it
-    // is view state only.
-    await clickButton('Afficher la chaîne de rapport manuellement');
     expect(buttonWithText('Rapport client')).toBeDefined();
     await clickButton('Rapport client');
     expect(document.getElementById('hub-report')).not.toBeNull();
   });
 
-  it('shows Rapport client without a reveal once a won outcome is recorded', async () => {
-    const auditDetailFixture = {
-      auditId: 'audit-1',
-      siteUrl: 'https://exemple.fr',
-      startedAt: '2026-09-01T10:00:00.000Z',
-      finishedAt: '2026-09-01T10:20:00.000Z',
-      pagesVisited: 12,
-      lifecycle: 'rendered',
-      severityRollup: { critical: 1, serious: 0, moderate: 2, minor: 3 },
-      findings: [],
-      ruleCopy: {},
-      reportLanguages: [],
-      reports: [
-        { language: 'fr', status: 'unverified', pdfAvailable: false },
-        { language: 'en', status: 'unverified', pdfAvailable: false },
-      ],
-      approval: null,
-      manualFields: null,
-    };
+  it('hides Rapport client while no full audit exists yet', async () => {
     fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes('/report-preparation')) return notFoundResponse();
-      if (url.endsWith('/api/audits/audit-1')) return jsonResponse(auditDetailFixture);
-      return jsonResponse({
-        ...detailWithAudit(),
-        outcomes: {
-          rows: [
-            {
-              outcomeId: 'o-1',
-              outcome: 'won',
-              lostReason: null,
-              actor: 'operator',
-              recordedAt: '2026-09-05T08:00:00.000Z',
-            },
-          ],
-          total: 1,
-          limit: 10,
-          offset: 0,
-        },
-      });
+      return jsonResponse(detailWithContact(null));
     });
     await renderDetail();
     await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
     await pause();
 
-    expect(buttonWithText('Rapport client')).toBeDefined();
-    await clickButton('Rapport client');
-    expect(document.getElementById('hub-report')).not.toBeNull();
+    expect(buttonWithText('Rapport client')).toBeUndefined();
   });
 });
 

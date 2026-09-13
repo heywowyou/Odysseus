@@ -235,8 +235,6 @@ export const en: DashboardStrings = {
       rendered: 'Report ready',
       approved: 'Approved',
     },
-    approveReportsButton: 'Approve both reports',
-    reportsApprovedMessage: 'Both reports (French and English) approved.',
     previewReport: 'Preview',
     approvedDownload: 'Download the approved version',
     approveAndDownload: 'Approve (both languages) and download',
@@ -374,23 +372,26 @@ export const en: DashboardStrings = {
       draftRefusedMessage: 'Nothing was drafted; the orchestrator declined this action.',
       actionError: 'Could not complete this action.',
     },
-    stepper: {
+    panel: {
       heading: 'Client report',
-      description: 'Five steps, one action at a time, through to delivery.',
-      steps: {
-        prepare: 'Prepare',
-        redact: 'Write',
-        choose: 'Choose the version',
-        produce: 'Produce the PDFs',
-        approve: 'Approve for delivery',
-      },
-      stepDone: 'Done',
-      stepTodo: 'To do',
-      unavailable: 'Preparation is not available for this audit.',
+      description:
+        'Every action stays visible: it is greyed out with its reason when it is not available yet.',
+      doneLabel: 'Done',
+      findingsFreshLabel: 'Findings up to date',
+      findingsStaleLabel: 'Findings out of date',
+      identityHeading: 'Confirm the client’s identity',
+      writingHeading: 'Write the report',
+      produceHeading: 'Produce the PDFs',
+      deliveryHeading: 'Approve and deliver',
+      preparationUnavailable: 'Preparation is not available for this audit.',
       produceButton: 'Regenerate the PDFs',
       produceButtonRefreshFirst: 'Refresh findings then regenerate the PDFs',
       produceRefreshFirstHint:
         'This audit’s findings are out of date; they will be refreshed before the PDFs are produced.',
+      produceUnavailableReason:
+        'No bilingual writing is available yet: write the report above before producing the PDFs.',
+      deliveryUnavailableReason: 'No fresh report is available yet for approval and download.',
+      reportDetailsSummary: 'Report details (optional)',
     },
   },
   prepareReport: {
@@ -689,11 +690,6 @@ export const en: DashboardStrings = {
         'no-own-domain': 'No website of its own is attached to this hotel.',
         'already-in-flight': 'A scan of this site is already running.',
       },
-    },
-    report: {
-      description:
-        'The production chain of the sold client report: prepare, write, choose, produce, approve.',
-      reveal: 'Reveal the report chain manually',
     },
     wave: {
       addAction: 'Add to a wave',

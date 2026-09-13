@@ -236,8 +236,6 @@ export const fr: DashboardStrings = {
       rendered: 'Rapport prêt',
       approved: 'Approuvé',
     },
-    approveReportsButton: 'Approuver les deux rapports',
-    reportsApprovedMessage: 'Les deux rapports (français et anglais) sont approuvés.',
     previewReport: 'Prévisualiser',
     approvedDownload: 'Télécharger la version approuvée',
     approveAndDownload: 'Approuver (les deux langues) et télécharger',
@@ -379,23 +377,27 @@ export const fr: DashboardStrings = {
       draftRefusedMessage: 'Rien n’a été rédigé ; l’orchestrateur a refusé cette action.',
       actionError: 'Impossible de terminer cette action.',
     },
-    stepper: {
+    panel: {
       heading: 'Rapport client',
-      description: 'Cinq étapes, une seule action à la fois, jusqu’à la livraison.',
-      steps: {
-        prepare: 'Préparer',
-        redact: 'Rédiger',
-        choose: 'Choisir la version',
-        produce: 'Produire les PDF',
-        approve: 'Approuver pour livraison',
-      },
-      stepDone: 'Fait',
-      stepTodo: 'À faire',
-      unavailable: 'La préparation n’est pas disponible pour cet audit.',
+      description:
+        'Chaque action reste visible : elle est grisée avec sa raison quand elle n’est pas encore disponible.',
+      doneLabel: 'Fait',
+      findingsFreshLabel: 'Constats à jour',
+      findingsStaleLabel: 'Constats non à jour',
+      identityHeading: 'Confirmer l’identité du client',
+      writingHeading: 'Rédiger le rapport',
+      produceHeading: 'Produire les PDF',
+      deliveryHeading: 'Approuver et livrer',
+      preparationUnavailable: 'La préparation n’est pas disponible pour cet audit.',
       produceButton: 'Régénérer les PDF',
       produceButtonRefreshFirst: 'Actualiser les constats puis régénérer les PDF',
       produceRefreshFirstHint:
         'Les constats de cet audit ne sont plus à jour ; ils seront actualisés avant que les PDF ne soient produits.',
+      produceUnavailableReason:
+        'Aucune rédaction bilingue n’est encore disponible : rédigez le rapport ci-dessus avant de produire les PDF.',
+      deliveryUnavailableReason:
+        'Aucun rapport à jour n’est encore disponible pour l’approbation et le téléchargement.',
+      reportDetailsSummary: 'Détails du rapport (optionnel)',
     },
   },
   prepareReport: {
@@ -698,11 +700,6 @@ export const fr: DashboardStrings = {
         'no-own-domain': "Aucun site propre n'est rattaché à cet hôtel.",
         'already-in-flight': 'Un scan de ce site est déjà en cours.',
       },
-    },
-    report: {
-      description:
-        'La chaîne de production du rapport vendu : préparer, rédiger, choisir, produire, approuver.',
-      reveal: 'Afficher la chaîne de rapport manuellement',
     },
     wave: {
       addAction: 'Ajouter à une vague',

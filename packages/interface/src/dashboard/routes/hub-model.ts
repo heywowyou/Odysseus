@@ -140,20 +140,15 @@ export function pipelineSteps(detail: ProspectDetailResponse, now: number): HubS
   ];
 }
 
-/** Plan 042 decision 5: "sold" is a recorded outcome of `won`, one of the
- *  values in `OUTREACH_OUTCOMES` (packages/core). No new stored state and
- *  no other reading: `quoted` or `reply-positive` does not open the paid
- *  chain's tab. */
-export function isSold(detail: ProspectDetailResponse): boolean {
-  return detail.outcomes.rows.some((row) => row.outcome === 'won');
-}
-
-/** The ordered visible tabs (plan 042 decision 6): the pipeline steps
- *  with the Rapport client tab inserted at position four when the hotel
- *  is sold. The report step is deliberately stateless (date null, no
- *  campaign state to show - the tab bar renders no state word for it). */
-export function hubTabs(steps: HubStep[], sold: boolean): HubStep[] {
-  if (!sold) return steps;
+/** The ordered visible tabs (plan 045 stage 3.2, amending plan 042 decision
+ *  6): the pipeline steps with the Rapport client tab inserted at position
+ *  four whenever a full audit exists, replacing the old `isSold`/
+ *  `reportRevealed` double gate (hub-model.ts, prospect-detail.tsx) that
+ *  hid a job the operator could otherwise finish end to end. The report
+ *  step is deliberately stateless (date null, no campaign state to show -
+ *  the tab bar renders no state word for it). */
+export function hubTabs(steps: HubStep[], hasAudit: boolean): HubStep[] {
+  if (!hasAudit) return steps;
   const auditIndex = steps.findIndex((step) => step.key === 'audit');
   const report: HubStep = { key: 'report', state: 'todo', date: null };
   return [...steps.slice(0, auditIndex + 1), report, ...steps.slice(auditIndex + 1)];

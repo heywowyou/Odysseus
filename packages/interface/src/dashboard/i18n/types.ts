@@ -265,8 +265,6 @@ export interface DashboardStrings {
     reportPageCountWarning: string;
     lifecycleLabel: string;
     lifecycle: Record<'scanned' | 'analysed' | 'rendered' | 'approved', string>;
-    approveReportsButton: string;
-    reportsApprovedMessage: string;
     previewReport: string;
     approvedDownload: string;
     /** Plan 045 section 2.3: the download link's label before the pair is
@@ -346,24 +344,38 @@ export interface DashboardStrings {
     /** Plan 040 slice 5: an audit linked to a prospect manages its preview
      *  from the hotel hub; this one line points there. */
     previewManagedFromProspect: string;
-    /** Plan 040 slice 5: the client-report stepper, one button per step,
-     *  each step unlocked by the previous one. */
-    stepper: {
+    /** Plan 045 stage 3.1: the audit report panel. Replaces the plan 040
+     *  five-step ladder (audit-report-stepper.tsx, deleted): every row is
+     *  always visible, greyed with `disabledReason` copy instead of
+     *  disappearing when its action is not available yet. */
+    panel: {
       heading: string;
       description: string;
-      steps: Record<'prepare' | 'redact' | 'choose' | 'produce' | 'approve', string>;
-      stepDone: string;
-      stepTodo: string;
-      /** Step 1's preparation half when the report-preparation view cannot
-       *  be loaded (never created, or a failed request). */
-      unavailable: string;
-      /** Step 4's button; the step itself is titled differently. */
+      doneLabel: string;
+      findingsFreshLabel: string;
+      findingsStaleLabel: string;
+      identityHeading: string;
+      writingHeading: string;
+      produceHeading: string;
+      deliveryHeading: string;
+      /** The preparation view (report-details-form.tsx) could not be
+       *  loaded (never created, or a failed request). */
+      preparationUnavailable: string;
+      /** The produce action's button. */
       produceButton: string;
-      /** Plan 045 slice 1.2: step 4's button label when findings will be
+      /** Plan 045 slice 1.2: the button label when findings will be
        *  refreshed before the PDFs render (AuditDetailResponse.findingsStale). */
       produceButtonRefreshFirst: string;
       /** Explains produceButtonRefreshFirst's label under the button. */
       produceRefreshFirstHint: string;
+      /** Why the produce action is greyed: no bilingual writing pair
+       *  resolves yet (AuditDetailResponse.analysisPair === 'none'). */
+      produceUnavailableReason: string;
+      /** Why the delivery action is greyed: no fresh report pair yet. */
+      deliveryUnavailableReason: string;
+      /** Summary label of the collapsed "Report details (optional)"
+       *  disclosure (report-details-form.tsx). */
+      reportDetailsSummary: string;
     };
     /** Issue #91: a report row whose PDF bytes this machine cannot serve.
      *  The freshness badge is replaced by one of these two states: the
@@ -759,11 +771,6 @@ export interface DashboardStrings {
     /** Plan 042 slice 3: the paid report chain's tab, visible once the
      *  hotel is sold (outcome `won`) or revealed manually from the Audit
      *  tab - view state only, nothing stored. */
-    report: {
-      description: string;
-      /** The Audit tab's one-line link that reveals the tab early. */
-      reveal: string;
-    };
     /** Plan 043: the wave roster's controls - the add/remove mutations on
      *  the hub and the list, their dialog copy, and one sentence per typed
      *  refusal the store can answer. */

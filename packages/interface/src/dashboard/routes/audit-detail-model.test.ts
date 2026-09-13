@@ -21,11 +21,10 @@ import {
   normalizeSiren,
   outreachRefusalCopy,
   outreachRefusalSentence,
-  reportStepperSteps,
   REPORT_PAGE_COUNT_WARNING_THRESHOLD,
   sortFindings,
 } from './audit-detail-model';
-import type { ManualFieldValues, ReportStepperInput, RuleCopyMap } from './audit-detail-model';
+import type { ManualFieldValues, RuleCopyMap } from './audit-detail-model';
 import type {
   AuditFailureResponse,
   FindingResponse,
@@ -410,126 +409,5 @@ describe('outreach preview card model (plan 037 slice 5)', () => {
     expect(outreachRefusalSentence('a-future-code', 'en')).toBe(
       'Preview unavailable (a-future-code).',
     );
-  });
-});
-
-describe('reportStepperSteps', () => {
-  // A touched audit: warnings acknowledged, no writing yet, nothing
-  // stored. Each test pushes one step forward.
-  const baseInput: ReportStepperInput = {
-    acknowledgementCurrent: true,
-    warningCount: 0,
-    candidateStatus: undefined,
-    isWritingSelected: false,
-    lifecycle: 'scanned',
-    hasStoredReportPair: false,
-    hasFreshReportPair: false,
-    analysisPair: 'none',
-    findingsStale: false,
-  };
-
-  const statesOf = (input: ReportStepperInput): string[] =>
-    reportStepperSteps(input).map((step) => step.state);
-
-  it('walks the ladder from a fresh audit: prepare done, writing active', () => {
-    expect(reportStepperSteps(baseInput)).toEqual([
-      { key: 'prepare', state: 'done', enabled: true },
-      { key: 'redact', state: 'active', enabled: true },
-      { key: 'choose', state: 'todo', enabled: false },
-      { key: 'produce', state: 'todo', enabled: false },
-      { key: 'approve', state: 'todo', enabled: false },
-    ]);
-  });
-
-  it('leaves the writing step reachable while warnings await acknowledgement (plan 045 2.2: warnings never block)', () => {
-    const states = statesOf({ ...baseInput, acknowledgementCurrent: false, warningCount: 2 });
-    expect(states).toEqual(['active', 'active', 'todo', 'todo', 'todo']);
-  });
-
-  it('considers preparation done when no warnings exist at all', () => {
-    // acknowledgementCurrent is false because the view was never created
-    // (the endpoint answered 404); with zero known warnings there is
-    // nothing to acknowledge, so the writing step is still reachable.
-    const states = statesOf({ ...baseInput, acknowledgementCurrent: false, warningCount: 0 });
-    expect(states).toEqual(['done', 'active', 'todo', 'todo', 'todo']);
-  });
-
-  it('marks the writing step done for a ready candidate and unlocks the choice', () => {
-    const states = statesOf({ ...baseInput, candidateStatus: 'ready' });
-    expect(states).toEqual(['done', 'done', 'active', 'todo', 'todo']);
-  });
-
-  it('sends a failed candidate back to the writing step', () => {
-    const states = statesOf({ ...baseInput, candidateStatus: 'failed' });
-    expect(states).toEqual(['done', 'active', 'todo', 'todo', 'todo']);
-  });
-
-  it('marks the choice done for a selected writing and unlocks production', () => {
-    const states = statesOf({
-      ...baseInput,
-      candidateStatus: 'selected',
-      isWritingSelected: true,
-      lifecycle: 'analysed',
-      hasStoredReportPair: true,
-      analysisPair: 'selected',
-    });
-    expect(states).toEqual(['done', 'done', 'done', 'active', 'todo']);
-  });
-
-  it('unlocks production from a stored pair alone when no writing was selected', () => {
-    // The static fallback gate stores an analysis pair without operator
-    // writing, so a report-stage failure must still be redoable at the
-    // production step.
-    const states = statesOf({
-      ...baseInput,
-      hasStoredReportPair: true,
-      analysisPair: 'legacy-latest',
-    });
-    expect(states).toEqual(['done', 'active', 'todo', 'active', 'todo']);
-  });
-
-  it('keeps production locked while no pair exists', () => {
-    const steps = reportStepperSteps(baseInput);
-    expect(steps.find((step) => step.key === 'produce')?.enabled).toBe(false);
-  });
-
-  // Plan 045 slice 1.2: Hôtel Belleval's real shape - both identity fields
-  // already confirmed, both analyses present, but zero reports and no
-  // approved writing candidate. Nothing had ever wired the produce step to
-  // unlock from "a bilingual pair resolves" alone; it needed an approved
-  // candidate or an existing report row, and Belleval had neither.
-  it('unlocks production when a resolvable pair exists with no candidate and no stored report', () => {
-    const states = statesOf({
-      ...baseInput,
-      lifecycle: 'analysed',
-      analysisPair: 'selected',
-    });
-    expect(states).toEqual(['done', 'active', 'todo', 'active', 'todo']);
-  });
-
-  it('marks production done and approval active once the pair is fresh', () => {
-    const states = statesOf({
-      ...baseInput,
-      candidateStatus: 'selected',
-      isWritingSelected: true,
-      lifecycle: 'rendered',
-      hasStoredReportPair: true,
-      hasFreshReportPair: true,
-      analysisPair: 'selected',
-    });
-    expect(states).toEqual(['done', 'done', 'done', 'done', 'active']);
-  });
-
-  it('finishes on an approved audit with the delivery step done', () => {
-    const states = statesOf({
-      ...baseInput,
-      candidateStatus: 'selected',
-      isWritingSelected: true,
-      lifecycle: 'approved',
-      hasStoredReportPair: true,
-      hasFreshReportPair: true,
-      analysisPair: 'selected',
-    });
-    expect(states).toEqual(['done', 'done', 'done', 'done', 'done']);
   });
 });

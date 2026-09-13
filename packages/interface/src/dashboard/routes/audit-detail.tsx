@@ -23,7 +23,7 @@ import { ApiError, fetchJson } from '../lib/api';
 import { formatDateTime } from '../lib/format';
 import { usePolling } from '../lib/use-polling';
 import { AuditPreviewNote } from './audit-preview-note';
-import { AuditReportStepper } from './audit-report-stepper';
+import { AuditReportPanel } from './audit-report-panel';
 import {
   findPublisherIdentificationFinding,
   hostnameOf,
@@ -244,13 +244,13 @@ export function AuditDetailPage(): JSX.Element {
           expandedFindingId={expandedFindingId}
           onExpandedFindingChange={setExpandedFindingId}
         />
-        {/* Plan 042 slice 3: the stepper stays always visible here, even
+        {/* Plan 042 slice 3: the panel stays always visible here, even
             though the hub shows it only once the hotel is sold. A
             standalone audit (started from /scans/new, or a paying client
             who was never a prospect) has no outcome to read, so hiding
             the paid chain behind "sold" on this page would make it
             unreachable for exactly the clients it exists for. */}
-        <AuditReportStepper
+        <AuditReportPanel
           auditId={data.auditId}
           detail={data}
           onBusy={setIsBusy}

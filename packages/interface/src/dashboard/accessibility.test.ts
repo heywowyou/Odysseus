@@ -699,8 +699,11 @@ describe('operator page accessibility (plan 013 step 5, extended plan 022 step 6
   });
 
   it('hotel hub Rapport client tab has no axe violations while active', async () => {
-    // Plan 042 slice 3: the paid report chain relocated into the hub,
-    // visible here through the sold path (a recorded won outcome).
+    // Plan 042 slice 3: the paid report chain relocated into the hub.
+    // Plan 045 stage 3.2: the tab is visible whenever a full audit exists
+    // (the fixture's outreachAudit), no longer gated on a recorded won
+    // outcome; this fixture also keeps a won outcome to show both can
+    // coexist.
     stubRoutes({
       '/api/audits/audit-1/report-preparation': null,
       '/api/audits/audit-1': {
@@ -793,8 +796,11 @@ describe('operator page accessibility (plan 013 step 5, extended plan 022 step 6
       reportTab?.click();
       await new Promise((resolve) => setTimeout(resolve, 10));
     });
-    // The tab panel's own description proves the section mounted.
-    await settle(container, 'La chaîne de production du rapport vendu');
+    // The panel's own description proves the section mounted.
+    await settle(
+      container,
+      'Chaque action reste visible : elle est grisée avec sa raison quand elle n’est pas encore disponible.',
+    );
     await expectNoAxeViolations(container);
     root.unmount();
   });

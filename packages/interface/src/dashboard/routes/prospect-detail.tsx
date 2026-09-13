@@ -6,6 +6,7 @@ import { ChevronRight } from 'lucide-react';
 import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import { Button, buttonStyles } from '../components/ui/button';
+import { Card } from '../components/ui/card';
 import { EmptyState } from '../components/ui/empty-state';
 import { Skeleton } from '../components/ui/skeleton';
 import { useI18n } from '../i18n/provider';
@@ -19,7 +20,6 @@ import {
   auditChoices,
   hubPrimaryAction,
   hubTabs,
-  isSold,
   pipelineSteps,
   selectedAuditId,
   selectionVerdictSentence,
@@ -31,6 +31,8 @@ import {
   type OutreachFirstEmailResponse,
   type OutreachPreviewPublishResponse,
 } from './audit-detail-model';
+import { AuditReportPanel } from './audit-report-panel';
+import type { AuditDetailResponse } from './audit-detail-types';
 import { reviewBadgeTone } from './prospects-model';
 import type {
   OutreachDraftActionResponse,
@@ -47,12 +49,64 @@ import {
 import { HubFicheSection } from './hub-fiche-section';
 import { HubQuickCheckSection } from './hub-quick-check-section';
 import { HubAuditSection } from './hub-audit-section';
-import { HubReportSection } from './hub-report-section';
 import { HubPreviewSection } from './hub-preview-section';
 import { HubEmailsSection } from './hub-emails-section';
 import { HubOutcomeSection } from './hub-outcome-section';
 
 type ReviewAction = 'accept' | 'reject';
+
+/** The hub's Rapport client tab (plan 045 stage 3.2): shown whenever a full
+ *  audit exists, rendering the same panel the audit page itself renders
+ *  (audit-report-panel.tsx) - no separate "sold" or "revealed" gate any
+ *  more (hub-report-section.tsx, deleted, used to gate this on isSold).
+ *  This is the only place that fetches the audit detail for the tab; the
+ *  page polls every five seconds only while one of the panel's writes is
+ *  in flight, and refetches after each action, the same policy as the
+ *  audit detail page. */
+function HubReportTab(props: { auditId: string | null }): JSX.Element | null {
+  const { auditId } = props;
+  const { strings } = useI18n();
+  const [isBusy, setIsBusy] = useState(false);
+
+  const path = auditId === null ? null : `/api/audits/${encodeURIComponent(auditId)}`;
+  const fetcher = useCallback(async (): Promise<AuditDetailResponse> => {
+    return fetchJson<AuditDetailResponse>(path ?? '');
+  }, [path]);
+  const { data, error, refresh } = usePolling<AuditDetailResponse>(fetcher, isBusy ? 5_000 : 0, {
+    enabled: path !== null,
+    key: path ?? 'none',
+  });
+
+  // Switching audits (or leaving the tab) must not leave a busy flag the
+  // new audit never set - the same rule as the audit detail page.
+  useEffect(() => {
+    setIsBusy(false);
+  }, [auditId]);
+
+  if (auditId === null) return null;
+  if (error !== undefined && data === undefined) {
+    return (
+      <Card title={strings.hub.steps.report}>
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-ink-soft">{strings.common.requestFailed}</p>
+          <Button variant="secondary" size="sm" onClick={refresh} className="self-start">
+            {strings.common.retry}
+          </Button>
+        </div>
+      </Card>
+    );
+  }
+  if (data === undefined) {
+    return (
+      <Card title={strings.hub.steps.report}>
+        <p className="text-sm text-ink-muted">{strings.common.loading}</p>
+      </Card>
+    );
+  }
+  return (
+    <AuditReportPanel auditId={data.auditId} detail={data} onBusy={setIsBusy} refresh={refresh} />
+  );
+}
 
 interface ProspectDetailState {
   data: ProspectDetailResponse | undefined;
@@ -221,10 +275,8 @@ export function ProspectDetailPage(): JSX.Element {
    *  never remounts the page. */
   const [activeTab, setActiveTab] = useState<HubStepKey>('fiche');
   /** Which audit the Audit and Rapport client tabs render (default: the
-   *  newest), and whether the operator revealed the paid chain's tab
-   *  without a recorded `won` outcome. Both view state; nothing stored. */
+   *  newest). View state only; nothing stored. */
   const [pickedAuditId, setPickedAuditId] = useState<string | null>(null);
-  const [reportRevealed, setReportRevealed] = useState(false);
   /** Plan 043: the open wave-roster dialog, if any. The mutation itself is
    *  shared with the prospects list via wave-dialog.tsx. */
   const [waveDialog, setWaveDialog] = useState<'add' | 'remove' | null>(null);
@@ -235,14 +287,15 @@ export function ProspectDetailPage(): JSX.Element {
   // deferred until then and replays when the hash itself changes. Since
   // plan 042 the anchor first names a tab: the panel is mounted by the tab
   // switch, and the scroll happens on the next tick so the panel exists.
-  // A 'report' deep link only scrolls: whether the paid tab is visible is
-  // the sold signal's decision, not the link's.
+  // Plan 045 stage 3.2: the Rapport client tab is visible whenever a full
+  // audit exists (hubTabs below), so a 'report' deep link can switch to it
+  // like any other tab.
   const hasLoaded = data !== undefined;
   useEffect(() => {
     if (hash === '' || !hasLoaded) return;
     const anchor = hash.slice(1);
     const tabKey = HUB_STEP_KEYS.find((key) => HUB_STEP_ANCHORS[key] === anchor);
-    if (tabKey !== undefined && tabKey !== 'report') setActiveTab(tabKey);
+    if (tabKey !== undefined) setActiveTab(tabKey);
     const timer = window.setTimeout(() => scrollToAnchor(anchor), 0);
     return () => window.clearTimeout(timer);
   }, [hash, hasLoaded]);
@@ -512,10 +565,9 @@ export function ProspectDetailPage(): JSX.Element {
   const now = Date.now();
   const action = hubPrimaryAction(data);
   const steps = pipelineSteps(data, now);
-  const sold = isSold(data);
-  const tabs = hubTabs(steps, sold || reportRevealed);
   const choices = auditChoices(data);
   const auditId = selectedAuditId(choices, pickedAuditId);
+  const tabs = hubTabs(steps, auditId !== null);
 
   const sectionFor = (key: HubStepKey): JSX.Element | null => {
     switch (key) {
@@ -551,7 +603,7 @@ export function ProspectDetailPage(): JSX.Element {
           />
         );
       case 'report':
-        return <HubReportSection auditId={auditId} />;
+        return <HubReportTab auditId={auditId} />;
       case 'preview':
         return (
           <HubPreviewSection
@@ -750,21 +802,6 @@ export function ProspectDetailPage(): JSX.Element {
           <Button variant="secondary" size="sm" onClick={() => setWaveDialog('add')}>
             {strings.hub.wave.addAction}
           </Button>
-        </div>
-      ) : null}
-
-      {/* Issue #185: this is a decision about the sale gate on the Rapport
-          client tab, not about this audit's findings - it sits with the
-          pipeline strip it affects, not buried past the findings table. */}
-      {!sold && !reportRevealed ? (
-        <div className="mb-4">
-          <button
-            type="button"
-            className="text-sm text-ink-soft underline underline-offset-2 hover:text-ink"
-            onClick={() => setReportRevealed(true)}
-          >
-            {strings.hub.report.reveal}
-          </button>
         </div>
       ) : null}
 

@@ -116,12 +116,16 @@ export function FailureCard(props: {
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => scrollToAnchor('audit-step-produce')}
+            onClick={() => scrollToAnchor('audit-panel-produce')}
           >
             {strings.auditDetail.failureScrollToProduce}
           </Button>
         ) : (
-          <Button variant="secondary" size="sm" onClick={() => scrollToAnchor('audit-step-redact')}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => scrollToAnchor('audit-panel-writing')}
+          >
             {strings.auditDetail.failureScrollToRedact}
           </Button>
         )}
