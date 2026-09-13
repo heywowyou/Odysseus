@@ -4,25 +4,16 @@ import type { SiteLanguage } from './language';
 
 /**
  * The three check schematics on the home page. Each is a schematic of what
- * the check measures, never a result: no real site, no real finding, and the
- * caption under every figure says so. Every figure shares one grammar, the
- * artifact a program reads (left or top) beside the readout a person reads
- * (right or below), so the three checks look like one instrument.
- *
- * The artifact side is decorative and hidden from assistive technology; the
- * readout side is real text, so nothing a sighted visitor learns from a
- * figure is lost to a screen reader. Motion only reveals, it never carries
- * meaning of its own: every figure's resting state is its finished state.
- * Timing lives in the `--d` delay on each element and in globals.css.
+ * the check measures, never a real result. Motion reveals the finished state
+ * but never carries meaning on its own.
  */
-
 function delay(seconds: number): CSSProperties {
   return { '--d': `${seconds}s` } as CSSProperties;
 }
 
 const CAPTION = {
-  fr: "Schéma de principe : il ne représente ni un site réel, ni le résultat d'un audit.",
-  en: 'A schematic illustration: it represents neither a real site nor an audit result.',
+  fr: 'Illustration du fonctionnement\u00a0: données fictives.',
+  en: 'Illustration only: fictional data.',
 } as const;
 
 const REPLAY = {
@@ -75,38 +66,33 @@ const RAW_LINES = {
 
 const RENDER_COPY = {
   fr: {
-    crawler: "Page reçue par un robot d'indexation",
-    crawlerTag: 'Sans JavaScript',
-    crawlerVerdict: 'Ni titre, ni texte, ni lien.',
-    visitor: 'Page affichée à un visiteur',
-    visitorTag: 'Navigateur complet',
+    crawler: 'HTML initial envoyé par le serveur',
+    crawlerTag: 'Avant JavaScript',
+    crawlerVerdict: 'Ni titre, ni texte, ni lien dans cet extrait.',
+    visitor: 'Page après exécution du JavaScript',
+    visitorTag: 'Navigateur',
     running: 'Exécution du JavaScript',
     title: 'Titre de la page',
     text: 'Texte de présentation',
     button: 'Bouton de contact',
     visitorVerdict:
-      "Ce contenu n'apparaît qu'après l'exécution du JavaScript : le robot d'indexation ne l'a jamais reçu.",
+      "Ce contenu est absent du HTML initial et n'apparaît qu'après l'exécution du JavaScript.",
   },
   en: {
-    crawler: 'Page received by a crawler',
-    crawlerTag: 'Without JavaScript',
-    crawlerVerdict: 'No title, no text, no link.',
-    visitor: 'Page shown to a visitor',
-    visitorTag: 'Full browser',
+    crawler: 'Initial HTML sent by the server',
+    crawlerTag: 'Before JavaScript',
+    crawlerVerdict: 'No title, text or link in this excerpt.',
+    visitor: 'Page after JavaScript runs',
+    visitorTag: 'Browser',
     running: 'Running JavaScript',
     title: 'Page title',
     text: 'Introductory text',
     button: 'Contact button',
     visitorVerdict:
-      'This content only appears once JavaScript has run: the crawler never received it.',
+      'This content is absent from the initial HTML and only appears after JavaScript has run.',
   },
 } as const;
 
-/**
- * Two loads of one page, stacked in the order they happen. Stacking replaced
- * a side-by-side pair that squeezed each panel to a third of the card and
- * wrapped the verdict sentence into a column of single words.
- */
 export function RenderSchematic({ lang }: { lang: SiteLanguage }) {
   const t = RENDER_COPY[lang];
   const lines = RAW_LINES[lang];
@@ -183,11 +169,6 @@ export function RenderSchematic({ lang }: { lang: SiteLanguage }) {
 
 /* ---- Accessibility ------------------------------------------------------ */
 
-/**
- * Criterion numbers are the ones axe-core itself tags these three rules with
- * (image-alt, color-contrast, label in axe-core 4.13), so the schematic names
- * the same references a real finding in the report would carry.
- */
 const A11Y_COPY = {
   fr: {
     readout: 'Écarts relevés, élément par élément',
@@ -198,7 +179,7 @@ const A11Y_COPY = {
     ],
   },
   en: {
-    readout: 'Gaps found, element by element',
+    readout: 'Issues found, element by element',
     gaps: [
       { title: 'Image with no text alternative', element: '<img>', criterion: 'WCAG 1.1.1' },
       { title: 'Text with insufficient contrast', element: '<p>', criterion: 'WCAG 1.4.3' },
@@ -207,7 +188,6 @@ const A11Y_COPY = {
   },
 } as const;
 
-/** When the scan line reaches each flagged element, in seconds. */
 const A11Y_HITS = [0.6, 1.35, 1.85] as const;
 
 function Pin({ n, at }: { n: number; at: number }) {
@@ -318,8 +298,6 @@ const AI_COPY = {
 } as const;
 
 const SIGNAL_STATES: readonly SignalState[] = ['blocked', 'absent', 'present', 'absent'];
-
-/** When each file is read, and when its readout row resolves, in seconds. */
 const AI_READS = [0.3, 1.0, 1.7] as const;
 const AI_RESOLVES = [0.7, 1.4, 2.1, 2.45] as const;
 
