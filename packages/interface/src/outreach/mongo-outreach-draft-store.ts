@@ -2,18 +2,8 @@
  * Mongo adapter for `OutreachDraftStorePort`, milestone 9c plan 011,
  * mirroring `mongo-outreach-preview-store.ts`.
  *
- * Assembles one drafting row out of the four collections that each hold a
- * piece of it: the candidate knows the hotel's name, the prescan holds the
- * evidence and its retention, the qualification holds the Sirene join whose
- * registry facts argument B may quote, and the contact row holds the approved
- * role address. Doing that here rather than in the orchestrator is what keeps
- * `createOutreachDraft` free of queries and testable without a database.
- *
- * The contact is passed through with its state intact rather than being
- * filtered to an address here. Plan 007 records four typed absences instead of
- * a null, and the orchestrator refusing on the state is what turns "this hotel
- * had no usable contact" into a recorded reason rather than a row that quietly
- * looks like a candidate nobody got to.
+ * Plan 045 resolves contacts deterministically: manual-v1 wins, otherwise the
+ * exact discovered contact generation configured for this draft runtime.
  */
 
 import type { Connection } from 'mongoose';
@@ -21,8 +11,8 @@ import {
   advanceThreadTouch,
   attachProviderThreadId,
   findLiveOutreachDraft,
+  getEffectiveHotelContact,
   getHotelCandidate,
-  getHotelContact,
   getHotelQualification,
   getLatestPrescan,
   isSuppressed,
@@ -57,7 +47,11 @@ export function createMongoOutreachDraftStore(
       const prescan = await getLatestPrescan(connection, candidateId, options.prescanVersion);
       if (prescan === null) return null;
 
-      const contact = await getHotelContact(connection, options.contactVersion, candidateId);
+      const contact = await getEffectiveHotelContact(
+        connection,
+        options.contactVersion,
+        candidateId,
+      );
       const qualification = await getHotelQualification(
         connection,
         options.qualificationVersion,
@@ -75,9 +69,15 @@ export function createMongoOutreachDraftStore(
         ...(prescan.evidence === undefined ? {} : { evidence: prescan.evidence }),
         ...(contact === null
           ? {}
-          : { contact: { address: contact.address ?? '', state: contact.state } }),
-        // The same Sirene facts the preview store reads, in the same shape, so
-        // one builder turns them into registry facts for both documents.
+          : {
+              contact: {
+                address: contact.address ?? '',
+                state: contact.state,
+                ...(contact.addressOrigin === undefined
+                  ? {}
+                  : { addressOrigin: contact.addressOrigin }),
+              },
+            }),
         ...(join?.status === 'matched' && join.denomination !== undefined
           ? {
               sirene: {
@@ -93,8 +93,8 @@ export function createMongoOutreachDraftStore(
       };
     },
 
-    isSuppressed(domain: string): Promise<boolean> {
-      return isSuppressed(connection, domain);
+    isSuppressed(domain: string, address?: string): Promise<boolean> {
+      return isSuppressed(connection, domain, address);
     },
 
     async openThread(input): Promise<OutreachThreadRef> {
