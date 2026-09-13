@@ -15,10 +15,9 @@ import { toast } from 'sonner';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
-import { ConfirmDialog } from '../components/ui/dialog';
 import { Skeleton } from '../components/ui/skeleton';
 import { useI18n } from '../i18n/provider';
-import { postEmpty, sendJson } from '../lib/api';
+import { postEmpty } from '../lib/api';
 import { cn } from '../lib/cn';
 import { useApi } from '../lib/use-api';
 import {
@@ -34,7 +33,7 @@ import { ReportsCard } from './audit-reports-section';
 import { IdentityConfirmField } from './identity-confirm-field';
 import { PrepareReportForm } from './prepare-report-card';
 import type { PrepareReportFormHandle } from './prepare-report-card';
-import type { PreparationViewResponse } from './prepare-report-types';
+import type { PreparationViewResponse, RegenerateWritingResponse } from './prepare-report-types';
 
 export function AuditReportStepper(props: {
   auditId: string;
@@ -60,8 +59,6 @@ export function AuditReportStepper(props: {
   const [isSavingAll, setIsSavingAll] = useState(false);
   const [isRewriting, setIsRewriting] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
-  const [isConfirmRewriteOpen, setIsConfirmRewriteOpen] = useState(false);
-  const [isConfirmApproveOpen, setIsConfirmApproveOpen] = useState(false);
 
   const candidate = preparation?.preparation.writingSelection?.candidate;
   const selected = preparation?.preparation.writingSelection?.selected;
@@ -102,7 +99,7 @@ export function AuditReportStepper(props: {
   const handleConfirmWarnings = async (): Promise<void> => {
     onBusy(true);
     try {
-      await sendJson(`${basePath}/confirm-warnings`, 'POST', {});
+      await postEmpty(`${basePath}/confirm-warnings`);
       toast.success(strings.prepareReport.warningsConfirmedLabel);
       refreshPreparation();
       refresh();
@@ -115,22 +112,25 @@ export function AuditReportStepper(props: {
     }
   };
 
+  // Plan 045 section 2.1: regeneration approves and renders automatically,
+  // so this single call replaces the old rewrite-then-approve pair, and no
+  // confirm dialog gates it any more (2.4) - it is already the explicit
+  // operator action that replaces the current version.
   const handleRewrite = async (): Promise<void> => {
-    setIsConfirmRewriteOpen(false);
-    // UX pre-check only; the server re-verifies and is the authority.
-    if (
-      preparation !== undefined &&
-      !preparation.acknowledgementCurrent &&
-      preparation.preview.warnings.length > 0
-    ) {
-      toast.info(strings.prepareReport.confirmWarningsFirstHint);
-      return;
-    }
     setIsRewriting(true);
     onBusy(true);
     try {
-      await sendJson(`${basePath}/regenerate-writing`, 'POST', { costWarningConfirmed: true });
-      toast.success(strings.prepareReport.candidateReadyLabel);
+      const result = await postEmpty<RegenerateWritingResponse>(`${basePath}/regenerate-writing`);
+      if (result.replacedApprovedSelection) {
+        toast.info(strings.prepareReport.writingReplacedDeliveredMessage);
+      }
+      if (result.pdfs.kind === 'generated') {
+        toast.success(strings.prepareReport.writingRegeneratedMessage);
+      } else {
+        toast.success(strings.prepareReport.writingApprovedPdfsPendingMessage, {
+          description: result.pdfs.reason,
+        });
+      }
       refreshPreparation();
       refresh();
     } catch (rewriteError) {
@@ -143,10 +143,13 @@ export function AuditReportStepper(props: {
     }
   };
 
+  // Kept for a candidate left in 'ready' state by a pre-2.1 run; every
+  // regeneration from this build already approves inline (removed in stage
+  // 3 with the rest of this stepper).
   const handleApproveCandidate = async (): Promise<void> => {
     onBusy(true);
     try {
-      await sendJson(`${basePath}/approve-candidate`, 'POST', {});
+      await postEmpty(`${basePath}/approve-candidate`);
       toast.success(strings.prepareReport.approvedMessage);
       refreshPreparation();
       refresh();
@@ -261,7 +264,7 @@ export function AuditReportStepper(props: {
                 variant="secondary"
                 size="sm"
                 isLoading={isRewriting}
-                onClick={() => setIsConfirmRewriteOpen(true)}
+                onClick={() => void handleRewrite()}
               >
                 {strings.prepareReport.regenerateButton}
               </Button>
@@ -334,7 +337,7 @@ export function AuditReportStepper(props: {
                 <p className="text-xs text-ink-muted">{copy.produceRefreshFirstHint}</p>
               ) : null}
             </div>
-            <ReportsCard detail={detail} />
+            <ReportsCard detail={detail} onApproved={refresh} />
           </div>
         );
       case 'approve':
@@ -345,7 +348,7 @@ export function AuditReportStepper(props: {
           </p>
         ) : (
           <div>
-            <Button size="sm" onClick={() => setIsConfirmApproveOpen(true)}>
+            <Button size="sm" onClick={() => void handleApproveReports()}>
               {strings.auditDetail.approveReportsButton}
             </Button>
           </div>
@@ -388,24 +391,6 @@ export function AuditReportStepper(props: {
           );
         })}
       </ol>
-      <ConfirmDialog
-        open={isConfirmRewriteOpen}
-        onOpenChange={setIsConfirmRewriteOpen}
-        title={strings.prepareReport.confirmRegenerateTitle}
-        description={strings.prepareReport.confirmRegenerateBody}
-        confirmLabel={strings.prepareReport.regenerateButton}
-        cancelLabel={strings.common.cancel}
-        onConfirm={handleRewrite}
-      />
-      <ConfirmDialog
-        open={isConfirmApproveOpen}
-        onOpenChange={setIsConfirmApproveOpen}
-        title={strings.auditDetail.confirmApproveTitle}
-        description={strings.auditDetail.confirmApproveBody}
-        confirmLabel={strings.auditDetail.approveReportsButton}
-        cancelLabel={strings.common.cancel}
-        onConfirm={handleApproveReports}
-      />
     </Card>
   );
 }

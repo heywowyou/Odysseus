@@ -2,10 +2,19 @@
  * Candidate-first writing regeneration, plan 019 step 6. Reuses the
  * audit's existing structural analysis (runAnalysisStage reuses the newest
  * compatible `-structure.json` by default), regenerates the French and
- * English writing passes, persists both as new immutable analyses, and
- * records the exact pair as a ready candidate. Selection changes only
- * through the separate approval endpoint; failure leaves the selected pair
- * untouched.
+ * English writing passes, and persists both as new immutable analyses.
+ *
+ * Plan 045 section 2.1 (trade-off 62 amendment): the pair is approved and
+ * rendered automatically once ready. Regeneration is already an explicit
+ * operator action to replace the current version, so a second manual
+ * "approve this candidate" click adds ceremony without adding safety - the
+ * operator reads the result (and the "delivered version replaced" status
+ * this reports back when a previously approved pair existed) rather than
+ * clicking a second gate. Only the writing generation itself failing - the
+ * catch block below, before a candidate is ever recorded - leaves the
+ * selected pair untouched; a render refusal after approval is reported back
+ * as `pdfs`, not thrown, since PDF production stays reachable separately
+ * (slice 1.2).
  *
  * The in-flight registry is deliberately in-memory only (trade-off 62): a
  * persisted `generating` state could be stranded by a server restart, so a
@@ -14,39 +23,28 @@
 
 import type { Connection } from 'mongoose';
 import type { AnalysisPairRef, AuditManifest, Finding } from '@odysseus/core';
+import { buildFindingsProvenance } from '@odysseus/core';
 import {
-  buildFindingsProvenance,
-  buildReportPreparationPreview,
-  isAcknowledgementCurrent,
-  type MissingContextField,
-} from '@odysseus/core';
-import {
+  approveWritingCandidate,
   getReportPreparation,
   recordFailedWritingCandidate,
   recordReadyWritingCandidate,
   type AuditDocument,
 } from '@odysseus/store';
 import { pauseBetweenLanguagePasses } from '@odysseus/llm';
+import { ReportIdentityUnconfirmedError } from '@odysseus/report';
+import type { ArtifactStore } from '../artifacts/artifact-store.js';
 import { runAnalysisStage } from './analysis-stage.js';
 import { readAuditEvidence } from './audit-evidence.js';
 import { RegenerationConflictError } from './regeneration-conflict-error.js';
+import {
+  regenerateReportsForAudit,
+  AuditArtifactsUnavailableError,
+  NoAnalysisPairError,
+  type AllReportsStageResult,
+} from './regenerate-reports.js';
 
 export { RegenerationConflictError } from './regeneration-conflict-error.js';
-
-/** Thrown when the stored warning acknowledgement does not match the
- *  current inputs; carries the typed warnings the client must show before
- *  the operator can confirm them. */
-export class MissingAcknowledgementError extends Error {
-  readonly warnings: readonly MissingContextField[];
-
-  constructor(warnings: readonly MissingContextField[]) {
-    super(
-      'odysseus: the current missing-context warnings must be confirmed before regenerating writing',
-    );
-    this.name = 'MissingAcknowledgementError';
-    this.warnings = warnings;
-  }
-}
 
 const inFlight = new Set<string>();
 
@@ -63,24 +61,17 @@ export class WritingRegenerationFailedError extends Error {
   }
 }
 
-function currentWarningDigest(
-  audit: AuditDocument,
-  preparation: Awaited<ReturnType<typeof getReportPreparation>>,
-  manifest: AuditManifest,
-  findings: Finding[],
-): { digest: string; warnings: readonly MissingContextField[] } {
-  const preview = buildReportPreparationPreview({
-    preparation,
-    commercialName: audit.manualFields?.nomCommercial?.value,
-    manifest,
-    findings,
-  });
-  return { digest: preview.warningDigest, warnings: preview.warnings };
-}
+export type RegeneratedReportsOutcome =
+  { kind: 'generated'; reports: AllReportsStageResult[] } | { kind: 'refused'; reason: string };
 
 export interface RegenerateWritingResult {
-  candidate: { status: 'ready'; pair: AnalysisPairRef; createdAt: string };
+  candidate: { status: 'selected'; pair: AnalysisPairRef; approvedAt: string };
   analyses: { fr: string; en: string };
+  pdfs: RegeneratedReportsOutcome;
+  /** True when a previously approved (and possibly already delivered) pair
+   *  existed before this regeneration replaced it - the client's cue for
+   *  the "delivered version replaced" status line instead of a dialog. */
+  replacedApprovedSelection: boolean;
 }
 
 /**
@@ -91,14 +82,9 @@ export interface RegenerateWritingResult {
 export async function regenerateWriting(
   connection: Connection,
   audit: AuditDocument,
-  costWarningConfirmed: boolean,
+  artifactStore: ArtifactStore | undefined,
 ): Promise<RegenerateWritingResult> {
   const auditId = audit.auditId;
-  if (!costWarningConfirmed) {
-    throw new RegenerationConflictError(
-      'odysseus: the model-call and cost warning must be explicitly confirmed',
-    );
-  }
   if (inFlight.has(auditId)) {
     throw new RegenerationConflictError(
       'odysseus: a writing regeneration is already running for this audit',
@@ -111,20 +97,17 @@ export async function regenerateWriting(
   // (issue #143).
   inFlight.add(auditId);
 
-  // Pre-flight: load the evidence and the stored preparation, then validate
-  // the warning acknowledgement. Nothing is generated yet, so a failure here
-  // releases the marker and propagates unchanged: no failed candidate is
-  // recorded, and the route maps the original error exactly as before.
+  // Pre-flight: load the evidence and note whether an approved pair already
+  // exists (the "replaced" signal). Nothing is generated yet, so a failure
+  // here releases the marker and propagates unchanged.
   let auditDir: string;
   let manifest: AuditManifest;
   let findings: Finding[];
+  let replacedApprovedSelection: boolean;
   try {
     ({ auditDir, manifest, findings } = await readAuditEvidence(audit));
     const preparation = await getReportPreparation(connection, auditId);
-    const { digest, warnings } = currentWarningDigest(audit, preparation, manifest, findings);
-    if (!isAcknowledgementCurrent(preparation.warningAcknowledgement, digest)) {
-      throw new MissingAcknowledgementError(warnings);
-    }
+    replacedApprovedSelection = preparation.writingSelection?.selected !== undefined;
   } catch (error) {
     // Set.delete is idempotent, so a delete of an already absent marker
     // changes nothing.
@@ -200,22 +183,50 @@ export async function regenerateWriting(
       enAnalysisId: enStage.analysis.analysisId,
       findingsProvenance: frStage.analysis.findingsProvenance,
     };
-    const updated = await recordReadyWritingCandidate(connection, auditId, pair);
-    const candidate = updated.writingSelection?.candidate;
-    if (!candidate || candidate.status !== 'ready') {
+    const readied = await recordReadyWritingCandidate(connection, auditId, pair);
+    if (readied.writingSelection?.candidate?.status !== 'ready') {
       throw new WritingRegenerationFailedError(
         'odysseus: the ready writing candidate could not be recorded',
       );
     }
+
+    // Plan 045 section 2.1: approve immediately, no separate manual click.
+    const approved = await approveWritingCandidate(connection, auditId);
+    const candidate = approved.writingSelection?.candidate;
+    if (!candidate || candidate.status !== 'selected') {
+      throw new WritingRegenerationFailedError(
+        'odysseus: the writing candidate could not be selected after regeneration',
+      );
+    }
+
+    let pdfs: RegeneratedReportsOutcome;
+    try {
+      const reports = await regenerateReportsForAudit(connection, audit, artifactStore);
+      pdfs = { kind: 'generated', reports };
+    } catch (renderError) {
+      // The writing pair is already generated and selected; a render
+      // refusal at this point is reported back rather than thrown, so it is
+      // never mistaken for a failed writing candidate (production stays
+      // separately reachable, slice 1.2).
+      if (
+        renderError instanceof AuditArtifactsUnavailableError ||
+        renderError instanceof NoAnalysisPairError ||
+        renderError instanceof ReportIdentityUnconfirmedError
+      ) {
+        pdfs = { kind: 'refused', reason: renderError.message };
+      } else {
+        throw renderError;
+      }
+    }
+
     return {
-      candidate: { status: 'ready', pair, createdAt: candidate.createdAt },
+      candidate: { status: 'selected', pair, approvedAt: candidate.approvedAt },
       analyses: { fr: frStage.analysis.analysisId, en: enStage.analysis.analysisId },
+      pdfs,
+      replacedApprovedSelection,
     };
   } catch (error) {
-    if (
-      error instanceof RegenerationConflictError ||
-      error instanceof MissingAcknowledgementError
-    ) {
+    if (error instanceof RegenerationConflictError) {
       throw error;
     }
     const reason = error instanceof Error ? error.message : String(error);

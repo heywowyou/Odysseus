@@ -44,7 +44,6 @@ export const en: DashboardStrings = {
       hotelPrescan: 'Quick check',
       outreachFullScan: 'Prospecting audit',
     },
-    downloadReport: 'Download report',
     viewDetails: 'View details',
     error: 'Error',
     loading: 'Loading…',
@@ -240,6 +239,7 @@ export const en: DashboardStrings = {
     reportsApprovedMessage: 'Both reports (French and English) approved.',
     previewReport: 'Preview',
     approvedDownload: 'Download the approved version',
+    approveAndDownload: 'Approve (both languages) and download',
     actionError: 'The action failed. Try again.',
     manualFieldsHeading: 'Hotel details',
     manualFieldsHint: 'Optional fields, editable at any time without rerunning the scan.',
@@ -276,9 +276,6 @@ export const en: DashboardStrings = {
       'After saving, regenerate the writing in “Prepare report” before generating the PDF.',
     regeneratingMessage: 'Regeneration in progress…',
     regeneratedMessage: 'Report regenerated.',
-    confirmApproveTitle: 'Approve both reports?',
-    confirmApproveBody:
-      'Approval authorises delivery of both PDF reports (French and English) to the client. Review both previews before continuing.',
     notFound: 'Audit not found.',
     languageLabels: { fr: 'Français', en: 'English' },
     failureHeading: 'The report could not be generated',
@@ -451,7 +448,6 @@ export const en: DashboardStrings = {
     warningTrigger: 'The trigger is not set.',
     warningJourneyScope: 'No journey is confirmed, so no journey section will render.',
     confirmWarningsButton: 'Confirm and continue',
-    confirmWarningsFirstHint: 'Confirm the missing-context warnings above first, then regenerate.',
     warningsConfirmedLabel: 'Warnings confirmed for the current choices.',
     previewHeading: 'Live preview',
     previewAutomaticLabel: 'automatic',
@@ -467,10 +463,11 @@ export const en: DashboardStrings = {
     candidatePreviewLabel: 'Preview (opens the rendered report)',
     approveCandidateButton: 'Approve this version',
     regenerateButton: 'Rewrite the report',
-    confirmRegenerateTitle: 'Regenerate the report writing?',
-    confirmRegenerateBody:
-      'This rewrites the French and English reports. The current report stays in place until you approve the new one.',
     approvedMessage: 'New version approved: future reports use it.',
+    writingRegeneratedMessage: 'New version written, approved, and PDFs regenerated.',
+    writingApprovedPdfsPendingMessage:
+      'New version written and approved; PDFs were not regenerated automatically.',
+    writingReplacedDeliveredMessage: 'The previously delivered version was replaced.',
     situationOptions: {
       'no-work-started': 'No work started',
       'redesign-underway': 'Redesign planned or underway',

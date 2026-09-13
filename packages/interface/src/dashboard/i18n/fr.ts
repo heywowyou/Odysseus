@@ -45,7 +45,6 @@ export const fr: DashboardStrings = {
       hotelPrescan: 'Contrôle rapide',
       outreachFullScan: 'Audit de prospection',
     },
-    downloadReport: 'Télécharger le rapport',
     viewDetails: 'Voir le détail',
     error: 'Erreur',
     loading: 'Chargement…',
@@ -241,6 +240,7 @@ export const fr: DashboardStrings = {
     reportsApprovedMessage: 'Les deux rapports (français et anglais) sont approuvés.',
     previewReport: 'Prévisualiser',
     approvedDownload: 'Télécharger la version approuvée',
+    approveAndDownload: 'Approuver (les deux langues) et télécharger',
     actionError: 'L’action a échoué. Réessayez.',
     manualFieldsHeading: 'Informations sur l’hôtel',
     manualFieldsHint: 'Champs optionnels, modifiables à tout moment sans relancer le scan.',
@@ -277,9 +277,6 @@ export const fr: DashboardStrings = {
       'Après enregistrement, régénérez la rédaction dans « Préparer le rapport » avant de générer le PDF.',
     regeneratingMessage: 'Régénération en cours…',
     regeneratedMessage: 'Rapport régénéré.',
-    confirmApproveTitle: 'Approuver les deux rapports ?',
-    confirmApproveBody:
-      'L’approbation autorise la livraison des deux rapports PDF (français et anglais) au client. Vérifiez les deux aperçus avant de continuer.',
     notFound: 'Audit introuvable.',
     languageLabels: { fr: 'Français', en: 'English' },
     failureHeading: 'Le rapport n’a pas pu être généré',
@@ -458,8 +455,6 @@ export const fr: DashboardStrings = {
     warningJourneyScope:
       'Aucun parcours confirmé : la section parcours ne sera pas présente dans le rapport.',
     confirmWarningsButton: 'Confirmer et continuer',
-    confirmWarningsFirstHint:
-      "Confirmez d'abord les avertissements de contexte manquant ci-dessus, puis régénérez.",
     warningsConfirmedLabel: 'Avertissements confirmés pour ces choix.',
     previewHeading: 'Aperçu en direct',
     previewAutomaticLabel: 'automatique',
@@ -475,10 +470,11 @@ export const fr: DashboardStrings = {
     candidatePreviewLabel: 'Aperçu (ouvre le rapport rendu)',
     approveCandidateButton: 'Approuver cette version',
     regenerateButton: 'Réécrire le rapport',
-    confirmRegenerateTitle: 'Régénérer la rédaction du rapport ?',
-    confirmRegenerateBody:
-      'Cela réécrit les rapports français et anglais. Le rapport actuel reste en place tant que vous n’avez pas approuvé le nouveau.',
     approvedMessage: 'Version approuvée : les prochains rapports utilisent la nouvelle rédaction.',
+    writingRegeneratedMessage: 'Nouvelle version rédigée, approuvée, et PDF régénérés.',
+    writingApprovedPdfsPendingMessage:
+      'Nouvelle version rédigée et approuvée ; les PDF n’ont pas été régénérés automatiquement.',
+    writingReplacedDeliveredMessage: 'La version précédemment livrée a été remplacée.',
     situationOptions: {
       'no-work-started': 'Aucun travail commencé',
       'redesign-underway': 'Refonte prévue ou en cours',

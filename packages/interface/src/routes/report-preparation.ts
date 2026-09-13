@@ -35,8 +35,8 @@ import {
 import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import type { Router } from '../router.js';
 import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
+import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import {
-  MissingAcknowledgementError,
   regenerateWriting,
   RegenerationConflictError,
   isWritingRegenerationInFlight,
@@ -115,6 +115,8 @@ async function readAudit(
 }
 
 export function registerReportPreparationRoutes(router: Router, connection: Connection): void {
+  const artifactStore = createConfiguredArtifactStore();
+
   router.get('/api/audits/:auditId/report-preparation', async ({ res, params }) => {
     const audit = await readAudit(connection, params['auditId']!, res);
     if (!audit) return;
@@ -162,30 +164,15 @@ export function registerReportPreparationRoutes(router: Router, connection: Conn
 
   router.post(
     '/api/audits/:auditId/report-preparation/regenerate-writing',
-    async ({ req, res, params }) => {
+    async ({ res, params }) => {
       const auditId = params['auditId']!;
       const audit = await readAudit(connection, auditId, res);
       if (!audit) return;
 
-      const body = await readJsonBodyOrRespond(req, res);
-      if (body === jsonBodyNotRead) return;
-      const costWarningConfirmed =
-        body !== null &&
-        typeof body === 'object' &&
-        (body as Record<string, unknown>)['costWarningConfirmed'] === true;
-      if (!costWarningConfirmed) {
-        sendError(res, 400, 'the model-call and cost warning must be explicitly confirmed');
-        return;
-      }
-
       try {
-        const result = await regenerateWriting(connection, audit, true);
+        const result = await regenerateWriting(connection, audit, artifactStore);
         sendJson(res, 201, result);
       } catch (error) {
-        if (error instanceof MissingAcknowledgementError) {
-          sendError(res, 409, error.message);
-          return;
-        }
         if (
           error instanceof RegenerationConflictError ||
           error instanceof WritingRegenerationFailedError

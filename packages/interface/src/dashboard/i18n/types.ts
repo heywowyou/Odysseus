@@ -46,7 +46,6 @@ export interface DashboardStrings {
       hotelPrescan: string;
       outreachFullScan: string;
     };
-    downloadReport: string;
     viewDetails: string;
     error: string;
     loading: string;
@@ -270,6 +269,9 @@ export interface DashboardStrings {
     reportsApprovedMessage: string;
     previewReport: string;
     approvedDownload: string;
+    /** Plan 045 section 2.3: the download link's label before the pair is
+     *  approved - clicking it approves both languages, then downloads. */
+    approveAndDownload: string;
     /** Shown when a mutation (save, regenerate, approve) fails. */
     actionError: string;
     manualFieldsHeading: string;
@@ -317,8 +319,6 @@ export interface DashboardStrings {
     transactionalFlowSavedHint: string;
     regeneratingMessage: string;
     regeneratedMessage: string;
-    confirmApproveTitle: string;
-    confirmApproveBody: string;
     notFound: string;
     /** Report rows show the language's endonym, never a locale code. */
     languageLabels: Record<'fr' | 'en', string>;
@@ -488,7 +488,6 @@ export interface DashboardStrings {
     warningTrigger: string;
     warningJourneyScope: string;
     confirmWarningsButton: string;
-    confirmWarningsFirstHint: string;
     warningsConfirmedLabel: string;
     previewHeading: string;
     previewAutomaticLabel: string;
@@ -504,9 +503,12 @@ export interface DashboardStrings {
     candidatePreviewLabel: string;
     approveCandidateButton: string;
     regenerateButton: string;
-    confirmRegenerateTitle: string;
-    confirmRegenerateBody: string;
     approvedMessage: string;
+    /** Plan 045 section 2.1: regeneration now approves and renders in one
+     *  call, replacing the separate "candidate ready for review" toast. */
+    writingRegeneratedMessage: string;
+    writingApprovedPdfsPendingMessage: string;
+    writingReplacedDeliveredMessage: string;
     situationOptions: Record<
       | 'no-work-started'
       | 'redesign-underway'

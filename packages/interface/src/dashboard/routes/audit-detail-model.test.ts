@@ -441,9 +441,9 @@ describe('reportStepperSteps', () => {
     ]);
   });
 
-  it('keeps every later step locked while warnings await acknowledgement', () => {
+  it('leaves the writing step reachable while warnings await acknowledgement (plan 045 2.2: warnings never block)', () => {
     const states = statesOf({ ...baseInput, acknowledgementCurrent: false, warningCount: 2 });
-    expect(states).toEqual(['active', 'todo', 'todo', 'todo', 'todo']);
+    expect(states).toEqual(['active', 'active', 'todo', 'todo', 'todo']);
   });
 
   it('considers preparation done when no warnings exist at all', () => {

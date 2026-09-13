@@ -506,7 +506,10 @@ export function reportStepperSteps(input: ReportStepperInput): ReportStep[] {
   // stayed stuck at needs-input with nothing left to click.
   const steps: { key: ReportStepKey; done: boolean; enabled: boolean }[] = [
     { key: 'prepare', done: prepareDone, enabled: true },
-    { key: 'redact', done: redactDone, enabled: prepareDone },
+    // Plan 045 section 2.2: a missing-context warning is informational, not
+    // a gate - the writing step no longer waits on its acknowledgement
+    // (which nothing downstream enforces any more either).
+    { key: 'redact', done: redactDone, enabled: true },
     { key: 'choose', done: chooseDone, enabled: redactDone },
     { key: 'produce', done: produceDone, enabled: input.analysisPair !== 'none' },
     { key: 'approve', done: approveDone, enabled: produceDone },

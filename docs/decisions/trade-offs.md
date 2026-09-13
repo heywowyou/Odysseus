@@ -2953,12 +2953,21 @@ shallow grab bag with no policy boundary; free-text prompt input, which
 reopens the door to unreviewed model-facing text and unreviewed report copy;
 custom operator-drawn journeys and free-form stakeholder roles, which cannot
 be bound to deterministic evidence; treating a missing finding as a passed
-check, which turns untested pages into claimed passes; auto-selecting a
-finished candidate, which makes regeneration effective before the operator
-has read it; and a persisted `generating` candidate state, which a server
-restart could strand, so in-flight generation is tracked in memory and a
-failed or interrupted run simply leaves the selected pair unchanged with no
-candidate record.
+check, which turns untested pages into claimed passes; and a persisted
+`generating` candidate state, which a server restart could strand, so
+in-flight generation is tracked in memory and a failed or interrupted run
+simply leaves the selected pair unchanged with no candidate record.
+
+**Amended by plan 045 (section 2.1): auto-selecting a finished candidate,
+previously rejected above, is now the accepted behavior.**
+`regenerateWriting` approves the candidate itself and attempts to render it
+inline, rather than waiting for a separate operator approve-click; a render
+refusal is surfaced as a non-error outcome, not a failed candidate (see plan
+045's own decisions log for the full rationale). The candidate/selection
+storage model and the server-side report-approval gate (trade-off 44) are
+unchanged — this removes only the client-facing approval ceremony sitting in
+front of them. See plan 019's original text above for why candidate-before-
+selection storage itself still stands.
 
 ### 63. Financial opportunity is deny-by-default, singular, and separate from the general EAA reference (plan 020)
 

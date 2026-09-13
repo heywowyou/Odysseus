@@ -18,6 +18,7 @@ import { Button, buttonStyles } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { useI18n } from '../i18n/provider';
 import type { DashboardStrings } from '../i18n/types';
+import { postEmpty } from '../lib/api';
 import { failureReasonKind, fallbackNoticeText, hasPageCountWarning } from './audit-detail-model';
 import type {
   AuditDetailResponse,
@@ -178,8 +179,15 @@ const FRESHNESS_TONES: Record<ReportFreshness, BadgeTone> = {
   unverified: 'neutral',
 };
 
-export function ReportsCard(props: { detail: AuditDetailResponse }): JSX.Element {
-  const { detail } = props;
+export function ReportsCard(props: {
+  detail: AuditDetailResponse;
+  /** Plan 045 section 2.3: a download approves the current pair first when
+   *  it is not already approved, so this refetches the audit detail
+   *  afterwards (the lifecycle badge and the other language's button both
+   *  depend on it). */
+  onApproved: () => void;
+}): JSX.Element {
+  const { detail, onApproved } = props;
   const { language, strings } = useI18n();
   const [isLoadingReport, setIsLoadingReport] = useState(false);
   const hasReports = detail.reportLanguages.length > 0 && detail.reports.length > 0;
@@ -195,6 +203,14 @@ export function ReportsCard(props: { detail: AuditDetailResponse }): JSX.Element
   ): Promise<void> => {
     setIsLoadingReport(true);
     try {
+      // One-click approve & download (plan 045 section 2.3, trade-off 44
+      // unchanged): approval still gates the actual download, but the
+      // operator no longer has to find the separate approve step first -
+      // clicking download approves both languages when needed.
+      if (mode === 'download' && detail.lifecycle !== 'approved') {
+        await postEmpty(`/api/audits/${encodeURIComponent(detail.auditId)}/approve-reports`);
+        onApproved();
+      }
       await openReportPdf(
         mode === 'preview' ? `${reportBase}/${language}/preview` : `${reportBase}/${language}`,
         mode,
@@ -263,7 +279,7 @@ export function ReportsCard(props: { detail: AuditDetailResponse }): JSX.Element
                   >
                     {detail.lifecycle === 'approved'
                       ? strings.auditDetail.approvedDownload
-                      : strings.common.downloadReport}
+                      : strings.auditDetail.approveAndDownload}
                   </a>
                 </>
               ) : (

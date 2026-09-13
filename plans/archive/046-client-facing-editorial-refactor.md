@@ -145,4 +145,4 @@ French is locked when:
 
 ## Status
 
-**IMPLEMENTED (2026-09-13).** The French client-facing refactor, idiomatic English adaptation, visitor-centered proof cards, public-site alignment, shared generic question, and deterministic editorial QA are complete. The full repository suite passes (443 files, 4,587 tests), including browser and PDF checks. Human/merge verification remains pending, so this plan is not yet `DONE`.
+**DONE (2026-09-13).** The French client-facing refactor, idiomatic English adaptation, visitor-centered proof cards, public-site alignment, shared generic question, and deterministic editorial QA are complete. The full repository suite passes (443 files, 4,587 tests), including browser and PDF checks. The implementation was merged to `main` as `38c64ea`; the operator accepted closure and requested archival.
