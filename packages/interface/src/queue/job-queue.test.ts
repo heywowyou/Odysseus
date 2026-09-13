@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@odysseus/store', () => ({
+  cancelJob: vi.fn(),
   claimNextQueuedJob: vi.fn(),
   failJob: vi.fn(),
   markJobNeedsInput: vi.fn(),
@@ -13,6 +14,7 @@ vi.mock('../pipeline/backfill-audit-hotel-links.js', () => ({
 vi.mock('../logger.js', () => ({ logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() } }));
 
 import {
+  cancelJob,
   claimNextQueuedJob,
   failJob,
   markJobNeedsInput,
@@ -22,6 +24,7 @@ import {
 import { ReportIdentityUnconfirmedError } from '@odysseus/report';
 import { logger } from '../logger.js';
 import { backfillAuditHotelLinks } from '../pipeline/backfill-audit-hotel-links.js';
+import { JobCancelledError } from './cancellation.js';
 import { JobQueue } from './job-queue.js';
 
 const fakeConnection = {} as never;
@@ -65,6 +68,7 @@ beforeEach(() => {
   vi.mocked(reconcileFailedAuditJobs).mockResolvedValue(0);
   vi.mocked(backfillAuditHotelLinks).mockResolvedValue(0);
   vi.mocked(claimNextQueuedJob).mockResolvedValue(null);
+  vi.mocked(cancelJob).mockResolvedValue(true);
   vi.mocked(failJob).mockResolvedValue(undefined);
   vi.mocked(markJobNeedsInput).mockResolvedValue(undefined);
 });
@@ -405,6 +409,77 @@ describe('JobQueue', () => {
     );
     expect(failJob).not.toHaveBeenCalled();
   });
+
+  it.each([
+    {
+      terminalState: 'failed',
+      runnerError: () => new Error('pipeline failed'),
+      rejectTerminalWrite: () =>
+        vi.mocked(failJob).mockRejectedValueOnce(new Error('failed write unavailable')),
+    },
+    {
+      terminalState: 'cancelled',
+      runnerError: () => new JobCancelledError('job-terminal-write-fails'),
+      rejectTerminalWrite: () =>
+        vi.mocked(cancelJob).mockRejectedValueOnce(new Error('cancel write unavailable')),
+    },
+    {
+      terminalState: 'needs-input',
+      runnerError: () =>
+        new ReportIdentityUnconfirmedError(
+          [{ field: 'nomCommercial' as const, value: 'Site Officiel' }],
+          'confirm the fields',
+        ),
+      rejectTerminalWrite: () =>
+        vi
+          .mocked(markJobNeedsInput)
+          .mockRejectedValueOnce(new Error('needs-input write unavailable')),
+    },
+  ])(
+    'contains a $terminalState terminal-write failure and runs the next job',
+    async ({ runnerError, rejectTerminalWrite }) => {
+      const failedJobId = 'job-terminal-write-fails';
+      const failedJobType = 'full-audit';
+      const failedJob = fakeJob({ jobId: failedJobId, type: failedJobType });
+      const nextJob = fakeJob({ jobId: 'job-after-terminal-write-failure', type: 'full-audit' });
+      vi.mocked(claimNextQueuedJob)
+        .mockResolvedValueOnce(failedJob)
+        .mockResolvedValueOnce(nextJob)
+        .mockResolvedValue(null);
+      rejectTerminalWrite();
+      const runFullAuditJob = vi.fn().mockImplementation(async (job: { jobId: string }) => {
+        if (job.jobId === failedJobId) throw runnerError();
+      });
+
+      queue = new JobQueue({
+        connection: fakeConnection,
+        concurrency: 1,
+        pollIntervalMs: 20,
+        runners: {
+          'full-audit': runFullAuditJob,
+          prospecting: vi.fn(),
+          'prospect-ingestion': vi.fn(),
+          'hotel-prescan': vi.fn(),
+          'outreach-draft-batch': vi.fn(),
+          'outreach-full-scan': vi.fn(),
+          'outreach-followup-batch': vi.fn(),
+        },
+      });
+      await queue.start();
+      queue.notify();
+      await waitFor(() => runFullAuditJob.mock.calls.length >= 2);
+
+      expect(runFullAuditJob).toHaveBeenNthCalledWith(2, nextJob, expect.anything());
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          err: expect.any(Error),
+          jobId: failedJobId,
+          jobType: failedJobType,
+        }),
+        expect.stringContaining('terminal state'),
+      );
+    },
+  );
 
   it('keeps polling after claimNextQueuedJob rejects once', async () => {
     const job = fakeJob({ jobId: 'job-after-error' });

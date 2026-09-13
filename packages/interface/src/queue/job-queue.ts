@@ -178,10 +178,22 @@ export class JobQueue {
         }
         if (!job) break;
         this.activeCount++;
-        void this.runJob(job).finally(() => {
-          this.activeCount--;
-          this.wake?.();
-        });
+        void this.runJob(job)
+          .catch((error: unknown) => {
+            // runJob contains pipeline failures, so a rejection here means
+            // recording the appropriate terminal state failed. This promise
+            // is deliberately detached; keep its final rejection boundary
+            // here so a transient store outage cannot become an unhandled
+            // rejection or disable subsequent queue work (issue #224).
+            logger.error(
+              { err: error, jobId: job.jobId, jobType: job.type },
+              'failed to persist job terminal state; the queue will continue',
+            );
+          })
+          .finally(() => {
+            this.activeCount--;
+            this.wake?.();
+          });
       }
       await this.sleep(this.pollIntervalMs);
     }
