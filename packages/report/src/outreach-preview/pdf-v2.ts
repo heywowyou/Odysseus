@@ -21,9 +21,10 @@ import { REPORT_PDF_CHROMIUM_ARGS } from '../constants.js';
 import { assertOutreachPreviewHtml } from './preview-lint.js';
 
 export async function generateOutreachPreviewPdf(html: string): Promise<Buffer> {
-  // Prove the source passed the document lint before it prints: the PDF is
-  // a print of an approved public document, never an independent render.
-  assertOutreachPreviewHtml(html);
+  // Prove the source passed the same v2 document + editorial lint before it
+  // prints: the PDF is a print of an approved public document, never an
+  // independent render.
+  assertOutreachPreviewHtml(html, { editorialV2: true });
   const { browser } = await launchBrowser({ extraArgs: REPORT_PDF_CHROMIUM_ARGS });
   try {
     const context = await browser.newContext();

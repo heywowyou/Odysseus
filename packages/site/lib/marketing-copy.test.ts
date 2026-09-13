@@ -14,7 +14,8 @@ import { fileURLToPath } from 'node:url';
  * card structure are deliberately not asserted.
  */
 
-const appDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'app');
+const libDir = path.dirname(fileURLToPath(import.meta.url));
+const appDir = path.join(libDir, '..', 'app');
 
 function page(route: string): string {
   return readFileSync(path.join(appDir, route, 'page.tsx'), 'utf8');
@@ -22,6 +23,10 @@ function page(route: string): string {
 
 function readApp(file: string): string {
   return readFileSync(path.join(appDir, file), 'utf8');
+}
+
+function readLib(file: string): string {
+  return readFileSync(path.join(libDir, file), 'utf8');
 }
 
 /**
@@ -49,6 +54,8 @@ const homeProse = readable(home);
 const offer = page('offre');
 const offerProse = readable(offer);
 const layout = readApp('layout.tsx');
+const siteChrome = readLib('site-chrome.tsx');
+const pageMeta = readLib('page-meta.ts');
 
 const commercialSources = [
   ['home', home],
@@ -78,7 +85,7 @@ describe('both commercial pages', () => {
   it.each(commercialSources)(
     '%s keeps the AI-visibility section bounded to verifiable signals',
     (_name, source) => {
-      expect(readable(source)).toContain('Signaux de visibilité dans les moteurs et assistants IA');
+      expect(readable(source)).toContain('Visibilité dans les assistants IA');
       expect(readable(source)).toContain('AI visibility signals in search engines and assistants');
       // The check exists; the prediction does not. Both halves are asserted
       // because dropping either one reintroduces an overclaim or an
@@ -116,7 +123,8 @@ describe('both commercial pages', () => {
       const prose = readable(source);
       expect(prose).toContain('explorée avec succès');
       expect(prose).toContain('successfully crawled');
-      expect(prose).toContain('échantillon représentatif');
+      expect(prose).toContain('sélection de pages');
+      expect(prose).not.toContain('échantillon représentatif');
       expect(prose).toContain('representative sample');
     },
   );
@@ -178,6 +186,38 @@ describe('both commercial pages', () => {
   });
 });
 
+describe('Plan 046 canonical French vocabulary', () => {
+  const frenchPublicCopy = [
+    homeProse,
+    offerProse,
+    readable(layout),
+    readable(siteChrome),
+    readable(pageMeta),
+  ].join(' ');
+
+  it('uses diagnostic and diagnostic-report terminology on the commercial pages', () => {
+    expect(homeProse).toContain('diagnostic technique');
+    expect(homeProse).toContain('rapport de diagnostic');
+    expect(offerProse).toContain('diagnostic technique');
+    expect(offerProse).toContain('rapport de diagnostic');
+  });
+
+  it('uses the plain-language search and AI-assistant category names', () => {
+    expect(homeProse).toContain('Référencement naturel et rendu');
+    expect(offerProse).toContain('Référencement naturel et rendu');
+    expect(frenchPublicCopy).toContain('visibilité dans les assistants IA');
+    expect(frenchPublicCopy).not.toContain('signaux de visibilité IA');
+    expect(frenchPublicCopy).not.toContain(
+      'Signaux de visibilité dans les moteurs et assistants IA',
+    );
+  });
+
+  it('uses complexity rather than effort on the French decision-maker surface', () => {
+    expect(homeProse).toContain('la complexité et la priorité');
+    expect(homeProse).not.toContain("L'enjeu, l'effort et la priorité");
+  });
+});
+
 describe('home page', () => {
   it('leads with the correction handoff, not scanner mechanics', () => {
     expect(homeProse).toContain('quoi corriger');
@@ -210,8 +250,8 @@ describe('offer page', () => {
   });
 
   it('keeps the no-legal-conclusion discipline', () => {
-    expect(offerProse).toContain('sans conclure');
-    expect(offerProse).toContain('without concluding');
+    expect(offerProse).toContain('sans extrapoler au-delà de ces faits');
+    expect(offerProse).toContain('without concluding that they apply to your case');
   });
 
   it('uses one contact action that describes the actual act', () => {
@@ -223,8 +263,9 @@ describe('offer page', () => {
 });
 
 describe('root metadata', () => {
-  it('describes the full accurate scope, including the bounded AI signals', () => {
-    expect(layout).toContain('signaux de visibilité IA');
+  it('describes the full accurate scope using the canonical French AI-assistant wording', () => {
+    expect(layout).toContain('visibilité dans les assistants IA');
+    expect(layout).not.toContain('signaux de visibilité IA');
     expect(layout).not.toContain('français et en anglais');
     expect(layout).not.toContain('Premier affichage');
     expect(layout).not.toMatch(/[\u2013\u2014]/u);

@@ -58,15 +58,13 @@ function summary(overrides: Partial<OutreachPreviewSummary> = {}): OutreachPrevi
 describe('generateOutreachPreviewHtmlV2', () => {
   it('renders the product-specified section order, in French', () => {
     const html = generateOutreachPreviewHtmlV2(summary());
-    // The offer heading is matched with its tags: the lede names the audit
-    // earlier in the document too.
     const order = [
-      'Ce qui a été mesuré',
-      'Ce qui a été relevé',
+      'Périmètre de l’analyse',
+      'Principaux résultats',
       'Répartition par gravité',
-      'Trois constats en exemple',
-      '>L’audit complet</h2>',
-      'Vos données et ce document',
+      'Trois constats qui méritent votre attention',
+      '>Commander le diagnostic technique complet</h2>',
+      'À propos de vos données',
     ].map((heading) => html.indexOf(heading));
     expect(order.every((index) => index > 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
@@ -77,32 +75,38 @@ describe('generateOutreachPreviewHtmlV2', () => {
     const html = generateOutreachPreviewHtmlV2(summary());
     expect(html).toContain('>23</div>');
     expect(html).toContain('>9</div>');
-    expect(html).toContain('échantillon représentatif');
+    expect(html).toContain('sur une sélection de pages');
+    expect(html).not.toContain('échantillon représentatif');
   });
 
-  it('renders four severity tiles with their counts', () => {
+  it('renders four severity tiles with the canonical French gravity labels', () => {
     const html = generateOutreachPreviewHtmlV2(summary());
     expect(html).toContain('severity-critical');
     expect(html).toContain('severity-serious');
     expect(html).toContain('severity-moderate');
     expect(html).toContain('severity-minor');
     expect(html).toContain('Critique');
-    expect(html).toContain('Mineure');
+    expect(html).toContain('Sérieux');
+    expect(html).toContain('Modéré');
+    expect(html).toContain('Mineur');
+    expect(html).not.toContain('>Grave<');
+    expect(html).not.toContain('>Modérée<');
+    expect(html).not.toContain('>Mineure<');
   });
 
   it('renders exactly three proof cards with category, severity, and page counts', () => {
     const html = generateOutreachPreviewHtmlV2(summary());
     expect((html.match(/class="card"/gu) ?? []).length).toBe(3);
     expect(html).toContain('Accessibilité');
-    expect(html).toContain('Référencement');
+    expect(html).toContain('Référencement naturel');
     expect(html).toContain('6 pages concernées');
   });
 
-  it('carries the code-owned price exactly once and the reply CTA', () => {
+  it('carries the code-owned price exactly once and an unambiguous purchase CTA', () => {
     const html = generateOutreachPreviewHtmlV2(summary());
     const price = formatFullAuditPrice('fr');
     expect((html.match(new RegExp(price.replaceAll('$', ''), 'gu')) ?? []).length).toBe(1);
-    expect(html).toContain('Répondre pour demander l’audit');
+    expect(html).toContain('Commander le diagnostic');
     expect(html).not.toContain('stripe');
   });
 
@@ -135,10 +139,10 @@ describe('generateOutreachPreviewHtmlV2', () => {
     // scale has no F, an unsolicited outreach document should not tell a
     // stranger their site "failed").
     const html = generateOutreachPreviewHtmlV2(summary());
-    expect(html).toContain('Note de constats');
+    expect(html).toContain('Niveau global des constats');
     expect(html).toContain('>D</span>');
     expect(html).toContain(
-      'Cette note mesure les constats des scanners, pas la conformité légale.',
+      'Cette note synthétise la gravité des constats mesurés ; elle ne constitue pas une évaluation juridique.',
     );
   });
 
@@ -151,20 +155,28 @@ describe('generateOutreachPreviewHtmlV2', () => {
     );
     expect(html).toContain('>A</span>');
     expect(html).toContain(
-      'Cette note mesure les constats des scanners, pas la conformité légale.',
+      'Cette note synthétise la gravité des constats mesurés ; elle ne constitue pas une évaluation juridique.',
     );
+  });
+
+  it('keeps internal-tool and defensive vocabulary off the French prospect surface', () => {
+    const html = generateOutreachPreviewHtmlV2(summary());
+    expect(html).not.toMatch(/\bscanners?\b/iu);
+    expect(html).not.toContain('notre robot');
+    expect(html).not.toContain('outils déterministes');
+    expect(html).not.toContain("rien n'est inventé");
   });
 
   it('is deterministic: the same input renders the same bytes', () => {
     expect(generateOutreachPreviewHtmlV2(summary())).toBe(generateOutreachPreviewHtmlV2(summary()));
   });
 
-  it('switches languages completely', () => {
+  it('switches languages completely with the English client-facing adaptation', () => {
     const en = generateOutreachPreviewHtmlV2(summary({ language: 'en' }));
     expect(en).toContain('<html lang="en">');
-    expect(en).toContain('What was measured');
-    expect(en).toContain('Reply to request the audit');
-    expect(en).not.toContain('Ce qui a été mesuré');
+    expect(en).toContain('Scope of the analysis');
+    expect(en).toContain('Order the diagnostic');
+    expect(en).not.toContain('Périmètre de l’analyse');
   });
 
   it('escapes a hostile business name', () => {
@@ -182,8 +194,10 @@ describe('generateOutreachPreviewHtmlV2', () => {
     expect(() => generateOutreachPreviewHtmlV2(bad)).toThrow();
   });
 
-  it('passes the document lint', () => {
-    expect(lintOutreachPreviewHtml(generateOutreachPreviewHtmlV2(summary()))).toBeNull();
+  it('passes the v2 document and French editorial lint', () => {
+    expect(
+      lintOutreachPreviewHtml(generateOutreachPreviewHtmlV2(summary()), { editorialV2: true }),
+    ).toBeNull();
   });
 
   it('round-trips through the strict schema the renderer parses with', () => {

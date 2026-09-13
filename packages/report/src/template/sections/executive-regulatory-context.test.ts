@@ -50,10 +50,10 @@ describe('the executive regulatory-context block (issue #57)', () => {
   it('renders the criterion, the unchanged sanction sentence, and the counsel note', async () => {
     const html = await renderWith('fr', eaaLikelyInScope);
     expect(html).toContain('data-executive-regulatory-context');
-    expect(html).toContain('Cadre réglementaire');
+    expect(html).toContain('Point réglementaire à vérifier');
     expect(html).toContain('European Accessibility Act');
     expect(html).toContain('Exposition légale');
-    expect(html).toContain('référence légale générale');
+    expect(html).toContain('plafond prévu par le texte');
     // Byte-identical splice from core, not a restated figure.
     expect(html).toContain(escapeHtml(eaaSanctionFigureSentence('fr')));
   });
@@ -63,10 +63,10 @@ describe('the executive regulatory-context block (issue #57)', () => {
       ...eaaLikelyInScope,
       basis: [{ regimeId: EAA_REGIME_ID, facts: [{ kind: 'siren-missing' }] }],
     });
-    expect(html).toContain('Regulatory context');
+    expect(html).toContain('Regulatory point to verify');
     expect(html).toContain('Legal exposure');
     expect(html).toContain(escapeHtml(eaaSanctionFigureSentence('en')));
-    expect(html).not.toContain('Cadre réglementaire');
+    expect(html).not.toContain('Point réglementaire à vérifier');
   });
 
   it('adds no deadline and never names the article 47 figure', async () => {

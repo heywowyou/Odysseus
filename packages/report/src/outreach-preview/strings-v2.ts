@@ -69,111 +69,115 @@ export interface OutreachPreviewStringsV2 {
 }
 
 const OUTREACH_PREVIEW_STRINGS_V2_FR: OutreachPreviewStringsV2 = {
-  documentTitle: 'Aperçu de votre site',
-  heroLabel: 'Aperçu gratuit',
+  documentTitle: 'Aperçu de votre diagnostic',
+  heroLabel: 'Aperçu du diagnostic',
   lede:
-    'Ce document résume ce qu’une analyse complète de votre site a relevé. ' +
-    'Il ne montre que des totaux et quelques constats résumés, jamais de ' +
-    'détail technique. L’audit complet, lui, nomme chaque constat, sa page ' +
-    'et sa correction.',
+    'Nous avons réalisé une analyse préalable de votre site afin d’identifier les points qui ' +
+    'méritent votre attention en matière d’accessibilité, de visibilité et de performance. ' +
+    'Cet aperçu présente les principaux résultats mesurés. Le diagnostic complet documente ' +
+    'ensuite chaque constat, sa localisation et la correction recommandée.',
   observedOn: 'Analyse réalisée le {date}.',
-  coverageHeading: 'Ce qui a été mesuré',
+  coverageHeading: 'Périmètre de l’analyse',
   coverageIntro:
-    'L’analyse parcourt l’ensemble du site. Trois compteurs distincts, parce ' +
-    'qu’ils ne mesurent pas la même chose :',
+    'Trois niveaux de couverture sont distingués : les pages recensées, les pages analysées ' +
+    'en détail et les pages mesurées pour la vitesse.',
   coverage: {
-    inventoried: 'Pages inventoriées',
+    inventoried: 'Pages recensées',
     contentChecked: 'Pages analysées en détail',
     performanceMeasured: 'Pages mesurées pour la vitesse',
   },
   performanceNote:
-    'La vitesse de chargement est mesurée sur un échantillon représentatif de ' +
-    'pages, jamais sur la totalité : c’est le seul compteur partiel, et il est ' +
-    'annoncé comme tel.',
-  totalsHeading: 'Ce qui a été relevé',
+    'La vitesse est mesurée sur une sélection de pages ; son périmètre est donc plus restreint ' +
+    'que celui de l’analyse de contenu.',
+  totalsHeading: 'Principaux résultats',
   distinctFindings: 'Constats distincts',
   affectedPages: 'Pages concernées',
   severityHeading: 'Répartition par gravité',
   severity: {
     critical: 'Critique',
-    serious: 'Grave',
-    moderate: 'Modérée',
-    minor: 'Mineure',
+    serious: 'Sérieux',
+    moderate: 'Modéré',
+    minor: 'Mineur',
   },
-  scorecardLabel: 'Note de constats',
-  scorecardDisclaimer: 'Cette note mesure les constats des scanners, pas la conformité légale.',
+  scorecardLabel: 'Niveau global des constats',
+  scorecardDisclaimer:
+    'Cette note synthétise la gravité des constats mesurés ; elle ne constitue pas une ' +
+    'évaluation juridique.',
   category: {
     accessibility: 'Accessibilité',
-    seo: 'Référencement',
-    geo: 'Visibilité IA',
+    seo: 'Référencement naturel',
+    geo: 'Visibilité dans les assistants IA',
     performance: 'Performance',
     rendering: 'Rendu JavaScript',
     privacy: 'Confidentialité',
   },
-  cardsHeading: 'Trois constats en exemple',
+  cardsHeading: 'Trois constats qui méritent votre attention',
   cardsIntro:
-    'Choisis parmi les plus graves et les plus répandus sur votre site. Le ' +
-    'diagnostic complet les documente un par un, avec la page et l’élément ' +
-    'concernés.',
+    'Cette sélection réunit des constats parmi les plus graves et les plus répandus relevés ' +
+    'sur votre site. Le rapport de diagnostic complet précise pour chacun la page et l’élément ' +
+    'concernés, ainsi que la correction recommandée.',
   cardPagesLabel: 'pages concernées',
-  offerHeading: 'L’audit complet',
+  offerHeading: 'Commander le diagnostic technique complet',
   offerBody:
-    'Un audit complet de votre site, établi à partir d’une nouvelle analyse, ' +
-    'est proposé à {price}. Chaque constat y est documenté avec la page et ' +
-    'l’élément concernés, une capture d’écran et une correction recommandée. ' +
-    'Pour le recevoir, répondez simplement à ce message.',
-  offerReplyLabel: 'Répondre pour demander l’audit',
-  offerLinkLabel: 'Détails de l’offre',
-  privacyHeading: 'Vos données et ce document',
+    'Le diagnostic technique complet, proposé à {price}, comprend une analyse complète du site ' +
+    'et un rapport détaillé. Chaque constat y est documenté avec la page et l’élément concernés, ' +
+    'une capture d’écran lorsqu’elle est disponible et une correction recommandée. Pour le ' +
+    'commander, répondez simplement à ce message.',
+  offerReplyLabel: 'Commander le diagnostic',
+  offerLinkLabel: 'Voir le détail de l’offre',
+  privacyHeading: 'À propos de vos données',
   privacyController:
     `Ce document vous est adressé par ${OUTREACH_SENDER_DISPLAY_NAME}, ` +
     `${OUTREACH_CONTACT.address}.`,
   privacyData:
-    'Il repose sur une analyse de votre site réalisée par notre robot, ' +
-    'identifiable dans vos journaux, et sur des données publiques.',
-  privacyOriginsIntro: 'Origine des données vous concernant :',
+    'Il repose sur une analyse automatisée de pages accessibles publiquement de votre site, ' +
+    'ainsi que sur des données publiques. Nos requêtes peuvent apparaître dans les journaux ' +
+    'techniques de votre site.',
+  privacyOriginsIntro: 'Sources des données utilisées :',
   dataOrigin: {
     'public-hotel-catalogue':
       'Le fichier public des hébergements classés (Atout France, data.gouv.fr) : ' +
       'nom, adresse et site déclaré de votre établissement.',
-    'public-website': 'Votre site internet, consulté publiquement comme le ferait un visiteur.',
+    'public-website': 'Votre site internet, accessible publiquement.',
     'public-business-registry':
       'La base Sirene (INSEE, données ouvertes) : dénomination, activité et ' +
       'effectif déclarés.',
   },
-  privacyPurpose: 'Utilisation : vous proposer un audit de votre site, et rien d’autre.',
+  privacyPurpose: 'Ces données sont utilisées uniquement pour vous proposer ce diagnostic.',
   privacyBasis:
-    'Vous pouvez vous opposer à la prospection à tout moment, gratuitement, ' +
-    'sans justification.',
-  privacyExpiry: 'Ce lien cesse de fonctionner 30 jours après son envoi.',
+    'Vous pouvez vous opposer à cette prospection à tout moment, gratuitement et sans ' +
+    'justification.',
+  privacyExpiry: 'Le lien vers cet aperçu reste actif pendant 30 jours après son envoi.',
   privacyRights:
-    `Accès, rectification, effacement : écrivez à ${OUTREACH_CONTACT.address}. ` +
-    'La page prospection et données personnelles détaille tout cela.',
+    `Pour exercer vos droits d’accès, de rectification ou d’effacement, écrivez à ` +
+    `${OUTREACH_CONTACT.address}. La page prospection et données personnelles présente le ` +
+    'détail de vos droits.',
   privacyLink: 'Prospection et données personnelles',
   optOutLink: 'Ne plus être contacté',
 };
 
 const OUTREACH_PREVIEW_STRINGS_V2_EN: OutreachPreviewStringsV2 = {
-  documentTitle: 'Preview of your website',
-  heroLabel: 'Free preview',
+  documentTitle: 'Preview of your diagnostic',
+  heroLabel: 'Diagnostic preview',
   lede:
-    'This document summarises what a full analysis of your site found. It ' +
-    'shows totals and a few summarised findings only, never technical ' +
-    'detail. The full audit names every finding, its page, and its fix.',
+    'We ran a preliminary analysis of your site to identify the points that deserve attention ' +
+    'across accessibility, visibility, and performance. This preview shows the main measured ' +
+    'results. The full diagnostic then documents every finding, where it occurs, and the ' +
+    'recommended fix.',
   observedOn: 'Analysis carried out on {date}.',
-  coverageHeading: 'What was measured',
+  coverageHeading: 'Scope of the analysis',
   coverageIntro:
-    'The analysis walks the whole site. Three separate counters, because ' +
-    'they do not measure the same thing:',
+    'The document distinguishes three levels of coverage: pages inventoried, pages analysed in ' +
+    'detail, and pages measured for speed.',
   coverage: {
     inventoried: 'Pages inventoried',
     contentChecked: 'Pages analysed in detail',
     performanceMeasured: 'Pages measured for speed',
   },
   performanceNote:
-    'Loading speed is measured on a representative sample of pages, never on ' +
-    'all of them: it is the only partial counter, and it is stated as one.',
-  totalsHeading: 'What was found',
+    'Loading speed is measured on a selection of pages, so its coverage is narrower than the ' +
+    'content analysis.',
+  totalsHeading: 'Key results',
   distinctFindings: 'Distinct findings',
   affectedPages: 'Pages affected',
   severityHeading: 'Breakdown by severity',
@@ -183,54 +187,55 @@ const OUTREACH_PREVIEW_STRINGS_V2_EN: OutreachPreviewStringsV2 = {
     moderate: 'Moderate',
     minor: 'Minor',
   },
-  scorecardLabel: 'Findings grade',
-  scorecardDisclaimer: 'This grade measures scanner findings, not legal compliance.',
+  scorecardLabel: 'Overall findings level',
+  scorecardDisclaimer:
+    'This grade summarizes the severity of measured findings; it is not a legal assessment.',
   category: {
     accessibility: 'Accessibility',
-    seo: 'Search',
-    geo: 'AI visibility',
+    seo: 'Organic search',
+    geo: 'Visibility in AI assistants',
     performance: 'Performance',
     rendering: 'JavaScript rendering',
     privacy: 'Privacy',
   },
-  cardsHeading: 'Three example findings',
+  cardsHeading: 'Three findings that deserve your attention',
   cardsIntro:
-    'Chosen from the most severe and the most widespread on your site. The ' +
-    'full audit documents them one by one, with the page and the element ' +
-    'concerned.',
+    'This selection includes findings among the most severe and widespread on your site. The ' +
+    'full diagnostic report identifies the page and element concerned for each one and gives ' +
+    'the recommended fix.',
   cardPagesLabel: 'pages affected',
-  offerHeading: 'The full audit',
+  offerHeading: 'Order the full technical diagnostic',
   offerBody:
-    'A full audit of your site, built from a fresh analysis, is offered at ' +
-    '{price}. Every finding is documented with the page and the element ' +
-    'concerned, a screenshot, and a recommended fix. To receive it, simply ' +
-    'reply to this message.',
-  offerReplyLabel: 'Reply to request the audit',
-  offerLinkLabel: 'Offer details',
-  privacyHeading: 'Your data and this document',
+    'The full technical diagnostic, offered at {price}, includes a complete site analysis and ' +
+    'a detailed report. Every finding is documented with the page and element concerned, a ' +
+    'screenshot where available, and a recommended fix. To order it, simply reply to this ' +
+    'message.',
+  offerReplyLabel: 'Order the diagnostic',
+  offerLinkLabel: 'See the full offer',
+  privacyHeading: 'About your data',
   privacyController:
     `This document was sent to you by ${OUTREACH_SENDER_DISPLAY_NAME}, ` +
     `${OUTREACH_CONTACT.address}.`,
   privacyData:
-    'It rests on an analysis of your site carried out by our robot, ' +
-    'identifiable in your server logs, and on public data.',
-  privacyOriginsIntro: 'Where the data about you comes from:',
+    'It is based on an automated analysis of publicly accessible pages on your website and on ' +
+    'public data. Our requests may appear in your site’s technical logs.',
+  privacyOriginsIntro: 'Sources of the data used:',
   dataOrigin: {
     'public-hotel-catalogue':
       'The public classified-accommodation file (Atout France, data.gouv.fr): ' +
       'your establishment’s name, address, and declared website.',
-    'public-website': 'Your own website, viewed publicly as any visitor would.',
+    'public-website': 'Your publicly accessible website.',
     'public-business-registry':
-      'The Sirene register (INSEE, open data): declared name, activity, and ' + 'headcount.',
+      'The Sirene register (INSEE, open data): declared name, activity, and headcount.',
   },
-  privacyPurpose: 'Use: to offer you an audit of your site, and nothing else.',
+  privacyPurpose: 'This data is used only to offer you this diagnostic.',
   privacyBasis:
-    'You can object to prospecting at any time, free of charge, with no ' +
-    'justification required.',
-  privacyExpiry: 'This link stops working 30 days after it is sent.',
+    'You can object to prospecting at any time, free of charge and without giving a reason.',
+  privacyExpiry: 'The link to this preview remains active for 30 days after it is sent.',
   privacyRights:
-    `Access, rectification, erasure: write to ${OUTREACH_CONTACT.address}. The ` +
-    'prospecting and personal data page sets all of this out.',
+    `To exercise your rights of access, rectification, or erasure, write to ` +
+    `${OUTREACH_CONTACT.address}. The prospecting and personal data page explains your rights in ` +
+    'full.',
   privacyLink: 'Prospecting and personal data',
   optOutLink: 'Stop being contacted',
 };

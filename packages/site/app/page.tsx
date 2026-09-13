@@ -22,7 +22,7 @@ import { Steps, type Step } from '../lib/steps';
  * décisions 14, 18 et 57 de docs/decisions/trade-offs.md : la visibilité IA
  * est décrite comme des signaux techniques vérifiables, jamais comme une
  * prédiction de citation ou de classement ; la performance de laboratoire
- * reste un échantillon représentatif, jamais une mesure universelle. La
+ * reste une sélection déterministe de pages, jamais une mesure universelle. La
  * limite RGAA complète reste énoncée en tête de la page offre ; ici, elle
  * est résumée et renvoie vers cette page.
  *
@@ -39,17 +39,17 @@ const GUARANTEES_FR = [
   {
     claim: "Chaque constat provient d'un test.",
     basis:
-      'Les constats sont établis par des outils de mesure. La rédaction du rapport repose exclusivement sur leurs résultats : elle les explique, les hiérarchise et les formule en langage clair, sans rien y ajouter.',
+      'Les constats sont établis par des outils de mesure. La rédaction du rapport de diagnostic repose exclusivement sur leurs résultats : elle les explique, les hiérarchise et les formule en langage clair, sans rien y ajouter.',
   },
   {
     claim: 'Chaque constat est localisé.',
     basis:
-      "Il indique la page et l'élément concernés. Votre prestataire peut ainsi le vérifier en quelques instants, sans avoir à nous croire sur parole.",
+      "Il indique la page et l'élément concernés. Votre prestataire peut ainsi le vérifier rapidement et remonter directement à la mesure d'origine.",
   },
   {
-    claim: 'Le rapport ne se prononce pas sur vos obligations légales.',
+    claim: 'Le cadre réglementaire reste factuel.',
     basis:
-      "Il reproduit les critères réglementaires applicables à votre type d'activité et les données publiques du registre des entreprises, sans conclure à leur application à votre cas. Cette appréciation relève d'un avocat, ce que le rapport rappelle expressément.",
+      "Il présente les critères réglementaires applicables à votre type d'activité et les données publiques du registre des entreprises, sans extrapoler au-delà de ces faits. Votre situation juridique peut ensuite être confirmée par votre conseil.",
   },
 ];
 
@@ -119,9 +119,9 @@ function HomeFr() {
           <div className="split-main">
             <p className="lede measure">
               Odysseus analyse l&apos;ensemble de votre site à l&apos;aide d&apos;outils de mesure
-              automatisés, puis vous remet un rapport clair&#160;: la liste des corrections à
-              apporter, classées par priorité, chacune vérifiable et prête à être transmise à votre
-              prestataire.
+              automatisés, puis vous remet un rapport de diagnostic clair&#160;: la liste des
+              corrections à apporter, classées par priorité, chacune vérifiable et prête à être
+              transmise à votre prestataire.
             </p>
 
             {/* Résumé de la limite approuvée. La formulation complète reste en
@@ -168,7 +168,7 @@ function HomeFr() {
           <h2 id="recevez" className="heading">
             Ce que vous recevez
           </h2>
-          <p className="soft mt-4">Un document de travail, pas une démonstration d&apos;outil.</p>
+          <p className="soft mt-4">Un document de travail conçu pour décider et corriger.</p>
         </div>
 
         <Reveal className="receive-grid mt-9">
@@ -187,9 +187,9 @@ function HomeFr() {
             </p>
           </div>
           <div className="receive-item">
-            <p className="receive-title">Un rapport écrit pour un dirigeant</p>
+            <p className="receive-title">Un rapport de diagnostic écrit pour un dirigeant</p>
             <p className="soft mt-2">
-              L&apos;enjeu, l&apos;effort et la priorité de chaque correction, expliqués sans
+              L&apos;enjeu, la complexité et la priorité de chaque correction sont expliqués sans
               jargon. Le détail technique est réservé à l&apos;annexe, pour votre prestataire.
             </p>
           </div>
@@ -229,7 +229,7 @@ function HomeFr() {
 
           <Exhibit>
             <div className="exhibit-copy">
-              <h3 className="subheading">Recherche et rendu</h3>
+              <h3 className="subheading">Référencement naturel et rendu</h3>
               <p className="soft mt-3">
                 Chaque page est chargée deux fois, sans JavaScript puis dans un navigateur complet.
                 La comparaison montre ce qu&apos;un moteur de recherche reçoit réellement, et ce qui
@@ -241,9 +241,7 @@ function HomeFr() {
 
           <Exhibit>
             <div className="exhibit-copy">
-              <h3 className="subheading">
-                Signaux de visibilité dans les moteurs et assistants IA
-              </h3>
+              <h3 className="subheading">Visibilité dans les assistants IA</h3>
               <p className="soft mt-3">
                 Le diagnostic contrôle des signaux techniques vérifiables&#160;: les données
                 structurées déclarées par votre site, les règles d&apos;accès des robots
@@ -263,8 +261,8 @@ function HomeFr() {
             <div className="exhibit-copy">
               <h3 className="subheading">Performance et sécurité</h3>
               <p className="soft mt-3">
-                La performance de laboratoire est mesurée sur un échantillon représentatif de
-                pages&#160;; les données terrain, lorsqu&apos;elles existent, viennent la compléter.
+                La performance de laboratoire est mesurée sur une sélection de pages&#160;; les
+                données terrain, lorsqu&apos;elles existent, viennent la compléter.
               </p>
               <p className="soft mt-3">
                 Les en-têtes de sécurité du serveur sont vérifiés sur l&apos;ensemble du site,
@@ -317,7 +315,7 @@ function HomeFr() {
             Des constats vérifiables
           </h2>
           <p className="soft mt-4">
-            Un rapport automatisé ne vaut que par sa rigueur. Trois principes encadrent le nôtre.
+            Un rapport de diagnostic ne vaut que par sa rigueur. Trois principes encadrent le nôtre.
           </p>
         </div>
 
@@ -350,8 +348,8 @@ function HomeFr() {
             </a>
           </div>
           <p className="small muted mt-7">
-            Le fonctionnement du robot qui réalise ces analyses, et la manière de lui interdire
-            l&apos;accès à votre site, sont décrits sur la page{' '}
+            La manière dont Odysseus accède aux sites, et comment bloquer cet accès, sont décrites
+            sur la page{' '}
             <a className="evidence-link" href="/bot">
               OdysseusBot
             </a>

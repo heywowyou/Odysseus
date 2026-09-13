@@ -7,7 +7,7 @@ import { previewTestImage, previewTestInput } from './test-fixtures.js';
 const LANGUAGES = ['fr', 'en'] as const;
 
 describe('lintOutreachPreviewHtml', () => {
-  describe('each rule fires on a crafted document', () => {
+  describe('each universal rule fires on a crafted document', () => {
     it.each([
       ['script-element', '<p>ok</p><script>alert(1)</script>'],
       ['iframe', '<iframe src="x"></iframe>'],
@@ -25,9 +25,38 @@ describe('lintOutreachPreviewHtml', () => {
     });
   });
 
+  describe('Plan 046 French v2 editorial rules', () => {
+    it.each([
+      [
+        'editorial-internal-tool-vocabulary',
+        '<html lang="fr"><body><p>Cette note mesure les constats des scanners.</p></body></html>',
+      ],
+      [
+        'editorial-internal-tool-vocabulary',
+        '<html lang="fr"><body><p>Notre robot parcourt votre site.</p></body></html>',
+      ],
+      [
+        'editorial-defensive-formulation',
+        '<html lang="fr"><body><p>Rien n’est inventé, rien n’est deviné.</p></body></html>',
+      ],
+      ['editorial-legacy-severity', '<html lang="fr"><body><p>Grave</p></body></html>'],
+      [
+        'editorial-sentence-fragment',
+        '<html lang="fr"><body><p>Choisis parmi les plus graves et les plus répandus.</p></body></html>',
+      ],
+    ])('fires %s', (rule, html) => {
+      expect(lintOutreachPreviewHtml(html, { editorialV2: true })).toBe(rule);
+    });
+  });
+
+  it('does not apply the French editorial vocabulary rules to English during the French-first phase', () => {
+    const html = '<html lang="en"><body><p>This grade measures scanner findings.</p></body></html>';
+    expect(lintOutreachPreviewHtml(html, { editorialV2: true })).toBeNull();
+  });
+
   // Without this, a pattern broad enough to reject every document would look
   // like the strictest possible safety and would in fact make the lint useless.
-  it.each(LANGUAGES)('passes the real rendered %s document', (language) => {
+  it.each(LANGUAGES)('passes the real rendered legacy %s document', (language) => {
     const html = generateOutreachPreviewHtml(
       previewTestInput({
         language,

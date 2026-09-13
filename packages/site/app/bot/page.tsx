@@ -21,7 +21,7 @@ export const metadata: Metadata = {
  * Corrigée le 2026-08-29, milestone 9c plan 009.
  *
  * La page disait que le robot exécutait Lighthouse à chaque visite. C'est
- * vrai pour un audit commandé, faux pour une visite de prospection, qui
+ * vrai pour un diagnostic commandé, faux pour une visite de prospection, qui
  * n'exécute jamais Lighthouse et s'arrête à trois pages. Une page décrivant
  * le robot dont la description ne correspond pas à ce qu'un propriétaire de
  * site observe dans ses propres journaux est pire qu'une absence de page&#160;:
@@ -29,8 +29,8 @@ export const metadata: Metadata = {
  * que quiconque ferait. Les deux cas sont désormais décrits séparément.
  *
  * Réécriture éditoriale du 2026-09-10&#160;: texte français rédigé
- * nativement, colonne anglaise traduite du français, mention Lighthouse de
- * l'audit commandé corrigée pour préciser un échantillon de pages
+ * nativement, colonne anglaise traduite du français, mention Lighthouse du
+ * diagnostic commandé corrigée pour préciser un échantillon de pages
  * (docs/rules/offer-positioning.md section 2), et « auto-entrepreneur »
  * remplacé par « micro-entrepreneur ».
  *
@@ -105,9 +105,9 @@ export default function BotInfoPage() {
 
           <section className="prose measure">
             <p>
-              Odysseus est un outil d&apos;audit technique de sites web. S&apos;il visite votre
-              site, c&apos;est dans l&apos;un des deux cas suivants&#160;: un audit a été commandé
-              pour ce site, ou le site a été analysé dans le cadre d&apos;une démarche de
+              Odysseus est un outil de diagnostic technique de sites web. S&apos;il visite votre
+              site, c&apos;est dans l&apos;un des deux cas suivants&#160;: un diagnostic a été
+              commandé pour ce site, ou le site a été analysé dans le cadre d&apos;une démarche de
               prospection commerciale, pour identifier des problèmes techniques avant une prise de
               contact.
             </p>
@@ -118,11 +118,11 @@ export default function BotInfoPage() {
             </p>
 
             <p>
-              <strong>Audit commandé</strong>&#160;: le robot parcourt le site, charge chaque page
-              avec et sans exécution JavaScript pour détecter les écarts de rendu (un problème
+              <strong>Diagnostic commandé</strong>&#160;: le robot parcourt le site, charge chaque
+              page avec et sans exécution JavaScript pour détecter les écarts de rendu (un problème
               fréquent sur les sites en React ou en Next.js, qui peut les rendre invisibles aux
               moteurs de recherche), et exécute des contrôles automatisés d&apos;accessibilité
-              (axe-core) et de performance (Lighthouse) sur une sélection de pages représentatives.
+              (axe-core) et de performance (Lighthouse) sur une sélection déterministe de pages.
             </p>
 
             <p id="prospection-bot">
@@ -130,7 +130,7 @@ export default function BotInfoPage() {
               pages, et <strong>sans Lighthouse</strong>. Le robot charge chaque page deux fois,
               avec et sans JavaScript, et exécute les contrôles d&apos;accessibilité. Pour un nombre
               restreint d&apos;établissements présélectionnés, une analyse complète du site suit
-              ensuite, selon la même méthode et le même rythme de requêtes qu&apos;un audit
+              ensuite, selon la même méthode et le même rythme de requêtes qu&apos;un diagnostic
               commandé. Dans les deux cas, il ne crée aucun compte, ne soumet aucun formulaire et
               n&apos;effectue aucune réservation.
             </p>
@@ -153,7 +153,7 @@ export default function BotInfoPage() {
 
             <p id="conservation-bot">
               Données conservées&#160;: le rendu des pages et des captures d&apos;écran, à des fins
-              d&apos;audit uniquement, supprimées automatiquement après 90 jours. Ces données ne
+              de diagnostic uniquement, supprimées automatiquement après 90 jours. Ces données ne
               sont ni vendues ni partagées avec des tiers. Pour une analyse de prospection,
               l&apos;origine des données, leur usage et la marche à suivre pour s&apos;y opposer
               sont détaillés sur la page{' '}

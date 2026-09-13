@@ -69,36 +69,35 @@ interface Copy {
 
 const COPY: Record<ReportLanguage, Copy> = {
   fr: {
-    heading: 'Le cadre applicable, et ce que nous pouvons en dire',
+    heading: 'Cadre réglementaire à vérifier',
     criterion: (name, threshold, citation) => `${name}. ${threshold} Référence : ${citation}.`,
     registry: (denomination, band) =>
       `Les données publiques du registre pour ${denomination} indiquent un effectif de ${band}. ` +
-      `Nous reproduisons cette donnée telle qu'elle est publiée, sans en tirer de conclusion.`,
+      `Cette information est reprise telle qu’elle figure dans le registre public.`,
     registryBandUnavailable: (denomination) =>
-      `Le registre public identifie ${denomination}, mais ne publie pas de tranche d'effectif ` +
-      `exploitable. Nous ne complétons pas une donnée absente.`,
+      `Le registre public identifie ${denomination}, mais ne publie pas de tranche d’effectif ` +
+      `exploitable pour cette analyse.`,
     registryAbsent:
-      "Nous n'avons pas retrouvé de données de registre publiques permettant de situer votre " +
-      'entreprise par rapport à ces critères. Le critère ci-dessus est reproduit pour lui-même.',
+      "Nous n'avons pas trouvé de donnée de registre publique suffisante pour rapprocher votre " +
+      'entreprise de ces critères.',
     counsel:
-      'Nous constatons, nous ne concluons pas : déterminer si ces critères visent votre ' +
-      "entreprise relève d'un avocat, et nous vous recommandons de lui poser la question.",
+      "L'applicabilité de ces critères dépend de la situation de l'entreprise. Faites confirmer " +
+      'votre situation par votre conseil juridique.',
   },
   en: {
-    heading: 'The applicable framework, and what we can say about it',
+    heading: 'Regulatory framework to verify',
     criterion: (name, threshold, citation) => `${name}. ${threshold} Reference: ${citation}.`,
     registry: (denomination, band) =>
       `Public registry data for ${denomination} records a headcount band of ${band}. ` +
-      `We reproduce that data as published, and draw no conclusion from it.`,
+      `This information is reproduced as it appears in the public register.`,
     registryBandUnavailable: (denomination) =>
-      `The public registry identifies ${denomination}, but publishes no usable headcount band. ` +
-      `We do not fill in data that is absent.`,
+      `The public register identifies ${denomination}, but does not publish a usable headcount ` +
+      `band for this analysis.`,
     registryAbsent:
-      'We did not find public registry data that would place your business against these ' +
-      'criteria. The criterion above is reproduced for its own sake.',
+      'We did not find enough public registry data to compare your organization with these criteria.',
     counsel:
-      'We report, we do not conclude: whether these criteria reach your business is a question ' +
-      'for a lawyer, and we recommend putting it to one.',
+      'Whether these criteria apply depends on the circumstances of the organization. Confirm ' +
+      'your position with your legal adviser.',
   },
 };
 

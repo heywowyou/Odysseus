@@ -7,7 +7,7 @@ import { Steps, type Step } from '../../lib/steps';
 export const metadata: Metadata = {
   title: 'Diagnostic technique complet',
   description:
-    'Ce que couvre le diagnostic technique complet Odysseus, ce que contient le rapport, et comment le recevoir. Le prix publié figure plus bas sur la page.',
+    'Ce que couvre le diagnostic technique complet Odysseus, ce que contient le rapport de diagnostic, et comment le recevoir. Le prix publié figure plus bas sur la page.',
   alternates: { canonical: '/offre' },
   openGraph: {
     type: 'website',
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     url: '/offre',
     title: 'Diagnostic technique complet',
     description:
-      'Ce que couvre le diagnostic technique complet Odysseus, ce que contient le rapport, et comment le recevoir. Le prix publié figure plus bas sur la page.',
+      'Ce que couvre le diagnostic technique complet Odysseus, ce que contient le rapport de diagnostic, et comment le recevoir. Le prix publié figure plus bas sur la page.',
   },
 };
 
@@ -45,8 +45,8 @@ export const metadata: Metadata = {
  * présenté en quatre entrées bornées, puis la liste concrète de ce que
  * contient chaque constat, puis la note de couverture qui distingue les
  * vérifications de contenu, conduites sur toutes les pages explorées avec
- * succès, de la mesure de performance, conduite sur un échantillon
- * représentatif annoncé comme tel (offer-positioning.md, section 3, et
+ * succès, de la mesure de performance, conduite sur une sélection
+ * déterministe de pages annoncée comme telle (offer-positioning.md, section 3, et
  * trade-offs 64).
  *
  * Passe éditoriale du 2026-09-11 (opérateur) : bouton « Nous écrire », sans
@@ -93,8 +93,8 @@ export default function OfferPage() {
           <div className="split mt-10 hero-split">
             <div className="split-main">
               <p className="lede measure">
-                Un rapport qui dit quoi corriger, où, et dans quel ordre, sur l&apos;ensemble de
-                votre site.
+                Un rapport de diagnostic qui dit quoi corriger, où, et dans quel ordre, sur
+                l&apos;ensemble de votre site.
               </p>
 
               <Reveal className="measure mt-8">
@@ -141,7 +141,7 @@ export default function OfferPage() {
               </div>
 
               <div className="check">
-                <h3 className="subheading">Recherche et rendu</h3>
+                <h3 className="subheading">Référencement naturel et rendu</h3>
                 <p className="soft mt-3">
                   Chaque page est comparée telle que reçue par un moteur de recherche sans
                   JavaScript, et telle qu&apos;affichée dans un navigateur complet, pour repérer ce
@@ -150,9 +150,7 @@ export default function OfferPage() {
               </div>
 
               <div className="check">
-                <h3 className="subheading">
-                  Signaux de visibilité dans les moteurs et assistants IA
-                </h3>
+                <h3 className="subheading">Visibilité dans les assistants IA</h3>
                 <p className="soft mt-3">
                   Le diagnostic contrôle des signaux techniques vérifiables&#160;: les données
                   structurées déclarées par votre site, les règles d&apos;accès des robots
@@ -190,9 +188,8 @@ export default function OfferPage() {
                   </div>
                 </div>
                 <p className="soft mt-4">
-                  La performance de laboratoire est mesurée sur un échantillon représentatif de
-                  pages&#160;; les données terrain, lorsqu&apos;elles existent, viennent la
-                  compléter.
+                  La performance de laboratoire est mesurée sur une sélection de pages&#160;; les
+                  données terrain, lorsqu&apos;elles existent, viennent la compléter.
                 </p>
                 <p className="soft mt-3">
                   Les en-têtes de sécurité du serveur sont vérifiés sur l&apos;ensemble du site,
@@ -205,11 +202,11 @@ export default function OfferPage() {
           <section aria-labelledby="livrable-offre" className="offer-section">
             <div className="measure">
               <h2 id="livrable-offre" className="heading">
-                Rigueur du rapport
+                Rigueur du rapport de diagnostic
               </h2>
               <p className="soft mt-4">
-                Le rapport vous est remis au format PDF, en français ou en anglais selon votre
-                préférence. Trois principes encadrent son contenu.
+                Le rapport de diagnostic vous est remis au format PDF, en français ou en anglais
+                selon votre préférence. Trois principes encadrent son contenu.
               </p>
             </div>
 
@@ -217,27 +214,25 @@ export default function OfferPage() {
               <div className="method-item">
                 <p className="subheading">Chaque constat provient d&apos;un test.</p>
                 <p className="soft mt-2">
-                  Les constats sont établis par des outils de mesure. La rédaction du rapport repose
-                  exclusivement sur leurs résultats&#160;: elle les explique, les hiérarchise et les
-                  formule en langage clair, sans rien y ajouter.
+                  Les constats sont établis par des outils de mesure. La rédaction du rapport de
+                  diagnostic repose exclusivement sur leurs résultats&#160;: elle les explique, les
+                  hiérarchise et les formule en langage clair, sans rien y ajouter.
                 </p>
               </div>
               <div className="method-item">
                 <p className="subheading">Chaque constat est localisé.</p>
                 <p className="soft mt-2">
                   Il indique la page et l&apos;élément concernés. Votre prestataire peut ainsi le
-                  vérifier en quelques instants, sans avoir à nous croire sur parole.
+                  vérifier rapidement et remonter directement à la mesure d&apos;origine.
                 </p>
               </div>
               <div className="method-item">
-                <p className="subheading">
-                  Le rapport ne se prononce pas sur vos obligations légales.
-                </p>
+                <p className="subheading">Le cadre réglementaire reste factuel.</p>
                 <p className="soft mt-2">
-                  Il reproduit les critères réglementaires applicables à votre type d&apos;activité
-                  et les données publiques du registre des entreprises, sans conclure à leur
-                  application à votre cas. Cette appréciation relève d&apos;un avocat, ce que le
-                  rapport rappelle expressément.
+                  Il présente les critères réglementaires applicables à votre type d&apos;activité
+                  et les données publiques du registre des entreprises, sans extrapoler au-delà de
+                  ces faits. Votre situation juridique peut ensuite être confirmée par votre
+                  conseil.
                 </p>
               </div>
             </Reveal>
@@ -250,8 +245,9 @@ export default function OfferPage() {
               </h2>
               <p className="soft mt-4">
                 Chaque page explorée avec succès fait l&apos;objet de toutes les vérifications de
-                contenu, quel que soit son rôle dans le site. La performance est mesurée sur un
-                échantillon représentatif de pages, ce que le rapport indique explicitement.
+                contenu, quel que soit son rôle dans le site. La performance est mesurée sur une
+                sélection déterministe de pages, ce que le rapport de diagnostic indique
+                explicitement.
               </p>
             </div>
           </section>

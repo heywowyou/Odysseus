@@ -93,7 +93,7 @@ describe('renderHtml against the real small-site.test audit', () => {
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages: [] });
 
     expect(html).toContain('<html lang="en">');
-    expect(html).toContain('What to take away');
+    expect(html).toContain('The essentials for a decision');
     expect(html).not.toContain('Résumé');
   });
 

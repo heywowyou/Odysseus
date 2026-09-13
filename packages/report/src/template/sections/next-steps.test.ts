@@ -267,7 +267,7 @@ describe('plan 018 step 7: the ending is a synthesis, not three sales cards', ()
       expect(html).not.toMatch(
         /(augmentera|améliorera|augmenter vos|boosts?|increases?|improves?|more bookings|more revenue|grow your)/i,
       );
-      expect(html).toMatch(/mesure distincte|separate measurement/i);
+      expect(html).toMatch(/indicateur distinct|separate business metric/i);
     }
   });
 
@@ -279,17 +279,17 @@ describe('plan 018 step 7: the ending is a synthesis, not three sales cards', ()
     ]);
     const html = renderNextSteps(getStrings('fr'), 14, fakeManifest(), 'fr', undefined, priorities);
     expect(html).toContain('section-14');
-    expect(html).toContain('canal direct de réservation');
+    expect(html).toContain('point de contact direct avec vos visiteurs');
     expect(html).toContain(
-      'Priorités classées : 3. Couvrant au moins un constat critique ou sérieux : 2. Gains rapides, faible complexité pour un impact moyen ou élevé : 1.',
+      'Le rapport retient 3 priorités. Parmi elles, 2 couvrent au moins un constat critique ou sérieux et 1 correspondent à des gains rapides',
     );
-    expect(html).toContain('la direction');
-    expect(html).toContain('le prestataire technique ou le service informatique');
-    expect(html).toContain('la communication');
+    expect(html).toContain('La direction');
+    expect(html).toContain('Le prestataire technique');
+    expect(html).toContain('La communication');
     expect(html).toContain('le juridique');
     expect(html).toContain('trois à six mois');
     expect(html).toContain(`${ODYSSEUS_REAUDIT_PRICE_EUR_HT} € HT`);
-    expect(html).toContain('Une question ?');
+    expect(html).toContain('Besoin de clarifier un point ?');
     expect(html).toContain(ODYSSEUS_CONTACT_EMAIL);
     expect(html).toContain('Rapport produit par');
     expect(html).toContain('a1b2c3');
@@ -304,17 +304,17 @@ describe('plan 018 step 7: the ending is a synthesis, not three sales cards', ()
       { findingId: 'f4', severity: 'serious', effort: 'low', impact: 'medium' },
     ]);
     const html = renderNextSteps(getStrings('en'), 14, fakeManifest(), 'en', undefined, priorities);
-    expect(html).toContain('direct booking and information channel');
+    expect(html).toContain('direct point of contact with your visitors');
     expect(html).toContain(
-      'Ranked priorities: 4. Covering at least one critical or serious finding: 3. Quick wins, low complexity for a medium or high impact: 2.',
+      'The report identifies 4 priorities. Of these, 3 include at least one critical or serious finding, and 2 are quick wins',
     );
-    expect(html).toContain('management');
-    expect(html).toContain('technical provider or IT');
-    expect(html).toContain('communications');
+    expect(html).toContain('Management');
+    expect(html).toContain('technical provider');
+    expect(html).toContain('Communications');
     expect(html).toContain('legal');
     expect(html).toContain('three to six months');
     expect(html).toContain(`EUR ${ODYSSEUS_REAUDIT_PRICE_EUR_HT}`);
-    expect(html).toContain('Questions?');
+    expect(html).toContain('Need to clarify a point?');
     expect(html).toContain('Report produced by');
     expect(html).toContain('cannot be held liable');
   });
@@ -323,10 +323,10 @@ describe('plan 018 step 7: the ending is a synthesis, not three sales cards', ()
     const fr = renderNextSteps(getStrings('fr'), 14, fakeManifest(), 'fr');
     const en = renderNextSteps(getStrings('en'), 14, fakeManifest(), 'en');
     expect(fr).toContain(
-      'La répartition des constats par gravité figure plus haut dans ce rapport',
+      'Les priorités et la répartition des constats par gravité présentées dans ce rapport',
     );
     expect(fr).not.toContain('Priorités classées :');
-    expect(en).toContain('The breakdown of findings by severity appears earlier in this report');
+    expect(en).toContain('The priorities and severity breakdown in this report');
     expect(en).not.toContain('Ranked priorities:');
   });
 });
@@ -338,7 +338,7 @@ describe('plan 018 step 7: re-audit comparison copy follows CrUX availability', 
   it('names no field data when the manifest carries none', () => {
     const withoutFieldDataSentence = {
       fr: 'les constats par gravité et les critères WCAG 2.2 AA en échec',
-      en: 'findings by severity and failed WCAG 2.2 AA criteria',
+      en: 'findings by severity and failing WCAG 2.2 AA criteria',
     } as const;
     for (const language of ['fr', 'en'] as const) {
       const html = renderNextSteps(getStrings(language), 14, fakeManifest(), language);
@@ -356,7 +356,7 @@ describe('plan 018 step 7: re-audit comparison copy follows CrUX availability', 
       const html = renderNextSteps(getStrings(language), 14, manifest, language);
       expect(html).toContain('Chrome UX Report');
       expect(html).toMatch(
-        /WCAG 2\.2 AA en échec et les données réelles|criteria, and Chrome UX Report real-user data/,
+        /WCAG 2\.2 AA en échec et, lorsqu’elles sont disponibles, les données réelles|criteria, and, where available, real-world Chrome UX Report data/,
       );
     }
   });

@@ -171,7 +171,7 @@ way an audit RGAA's own methodology is: every eligible declared page is
 resolved and every successfully crawled HTML page, including every listing,
 receives content-sensitive analysis (render diff, axe, the extended pass). It
 does not mean every tool runs identically on every URL. Performance
-measurement (Lighthouse) is a disclosed deterministic sample stratified by
+measurement (Lighthouse) uses a disclosed deterministic page selection stratified by
 page role, template family, and language, because it is the expensive,
 serialized, re-navigating check, not the content-defect check. Do not answer
 "does every page get scanned?" with an unqualified yes; answer with content
@@ -203,8 +203,8 @@ is fully automated, full stop. Still not a conformity rate. No video.
 Content-sensitive analysis (render diff, axe, the extended accessibility
 pass) covers every successfully crawled HTML page, including every listing
 and archive page, with no page-count sampling or per-template shortcut.
-Performance measurement (Lighthouse, and the Core Web Vitals it reports) is a
-disclosed deterministic sample: always the homepage, every transactional and
+Performance measurement (Lighthouse, and the Core Web Vitals it reports) uses a
+disclosed deterministic page selection: always the homepage, every transactional and
 seeded page, every unique page, and a stable representative plus a measured
 cost outlier per repeated template family and language, never the full page
 count. The report states inventoried, content-checked, and

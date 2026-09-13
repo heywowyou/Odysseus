@@ -3,11 +3,13 @@ import type { Finding, PreparationPreviewLanguage } from '@odysseus/core';
 import { renderReportIntro } from './report-intro.js';
 import { getStrings } from '../strings/i18n.js';
 import { fr } from '../strings/fr.js';
-import { en } from '../strings/en.js';
 import { escapeHtml, fillTemplate } from '../html-utils.js';
 import { resolveGenericDecisionQuestion } from '../generic-question.js';
 import { sectionTitle } from '../section-registry.js';
 import type { RenderedPriority } from '../rendered-priorities.js';
+
+const clientFr = getStrings('fr');
+const clientEn = getStrings('en');
 
 function buildFinding(overrides: Record<string, unknown>): Finding {
   return {
@@ -115,17 +117,17 @@ describe('renderReportIntro', () => {
 
     const html = renderReportIntro(getStrings('fr'), 1, analysis as never, findings);
 
-    expect(html).toContain(fr.reportIntro.situationHeading);
-    expect(html).toContain(fr.reportIntro.complicationHeading);
+    expect(html).toContain(clientFr.reportIntro.situationHeading);
+    expect(html).toContain(clientFr.reportIntro.complicationHeading);
     // Issue #52: the question renders without a labelling heading above it.
     expect(html).not.toContain('La question à laquelle ce rapport répond');
-    expect(html).toContain(escapeHtml(fr.reportIntro.situationBody));
+    expect(html).toContain(escapeHtml(clientFr.reportIntro.situationBody));
     // 3 distinct findings, 2 critical or serious, 2 distinct pages affected
     // (the union; the zero-page minor finding cannot shrink it), 1 priority
     // selected by the fallback path.
     expect(html).toContain(
       escapeHtml(
-        fillTemplate(fr.reportIntro.complicationBodyTemplate, {
+        fillTemplate(clientFr.reportIntro.complicationBodyTemplate, {
           findings: '3',
           criticalSerious: '2',
           pages: '2 pages',
@@ -144,12 +146,12 @@ describe('renderReportIntro', () => {
 
     const html = renderReportIntro(getStrings('en'), 1, analysis as never, findings);
 
-    expect(html).toContain(en.reportIntro.situationHeading);
-    expect(html).toContain(en.reportIntro.complicationHeading);
+    expect(html).toContain(clientEn.reportIntro.situationHeading);
+    expect(html).toContain(clientEn.reportIntro.complicationHeading);
     expect(html).not.toContain('The question this report answers');
-    expect(html).toContain(en.reportIntro.situationBody);
+    expect(html).toContain(clientEn.reportIntro.situationBody);
     expect(html).toContain(
-      fillTemplate(en.reportIntro.complicationBodyTemplate, {
+      fillTemplate(clientEn.reportIntro.complicationBodyTemplate, {
         findings: '1',
         criticalSerious: '1',
         pages: '1 page',
@@ -165,7 +167,7 @@ describe('renderReportIntro', () => {
 
     expect(html).toContain(
       escapeHtml(
-        fillTemplate(fr.reportIntro.complicationBodyTemplate, {
+        fillTemplate(clientFr.reportIntro.complicationBodyTemplate, {
           findings: '0',
           criticalSerious: '0',
           pages: '0 pages',
@@ -176,7 +178,7 @@ describe('renderReportIntro', () => {
     expect(html).toContain(resolveGenericDecisionQuestion('fr'));
     // The renamed heading (issue #53) carries an apostrophe, which renders
     // escaped, so compare the escaped form.
-    expect(html).toContain(escapeHtml(fr.reportIntro.audienceHeading));
+    expect(html).toContain(escapeHtml(clientFr.reportIntro.audienceHeading));
     // Issue #54: no top-3 action list on this page anymore.
     expect(html).not.toContain('Les trois actions à lancer en priorité');
   });
@@ -186,7 +188,7 @@ describe('renderReportIntro', () => {
     const html = renderReportIntro(getStrings('en'), 1, analysis as never, [], []);
 
     expect(html).toContain(
-      fillTemplate(en.reportIntro.complicationBodyTemplate, {
+      fillTemplate(clientEn.reportIntro.complicationBodyTemplate, {
         findings: '0',
         criticalSerious: '0',
         pages: '0 pages',
@@ -194,7 +196,7 @@ describe('renderReportIntro', () => {
       }),
     );
     expect(html).toContain(resolveGenericDecisionQuestion('en'));
-    expect(html).toContain(en.reportIntro.audienceHeading);
+    expect(html).toContain(clientEn.reportIntro.audienceHeading);
     expect(html).not.toContain('The three actions to launch first');
   });
 
@@ -210,9 +212,7 @@ describe('renderReportIntro', () => {
       buildPriority('Priorité fournie', 1, [findings[0]!]),
     ]);
 
-    expect(html).toContain(
-      'Ces constats sont regroupés en 1 priorités classées, qui indiquent par où commencer.',
-    );
+    expect(html).toContain('Ils sont regroupés en 1 priorités afin de faire ressortir');
     // Issue #54: the section no longer lists actions at all, so neither the
     // view's own titles nor the stored analysis's themes render here.
     expect(html).not.toContain('Les trois actions à lancer en priorité');
@@ -248,17 +248,17 @@ describe('renderReportIntro', () => {
       // No "the law applies to this business" claim: apostrophes render
       // escaped, so the French forms are compared in their escaped render
       // form to keep these assertions meaningful. Only the conditional
-      // "peuvent s'appliquer" / "may apply" forms are allowed, each in its
+      // "peuvent également concerner" / "may also apply" forms are allowed, each in its
       // own language.
       expect(html).not.toMatch(/legal obligations apply to your/i);
       expect(html).not.toContain(escapeHtml("obligations légales s'appliquent"));
       expect(html).not.toContain(escapeHtml("s'appliquent à votre établissement"));
       if (_language === 'fr') {
-        expect(html).toContain(escapeHtml("peuvent s'appliquer"));
+        expect(html).toContain('peuvent également concerner');
         expect(html).not.toContain('may apply');
       } else {
-        expect(html).toContain('may apply');
-        expect(html).not.toContain(escapeHtml("peuvent s'appliquer"));
+        expect(html).toContain('may also apply');
+        expect(html).not.toContain('peuvent également concerner');
       }
     },
   );
@@ -303,11 +303,11 @@ describe('renderReportIntro', () => {
     const analysis = buildAnalysis([], 'en');
     const html = renderReportIntro(getStrings('en'), 1, analysis as never, []);
 
-    expect(html).toContain(en.reportIntro.audienceHeading);
+    expect(html).toContain(clientEn.reportIntro.audienceHeading);
     // Same apostrophe rule as above: the French heading only ever renders
     // in its escaped form.
-    expect(html).not.toContain(escapeHtml(fr.reportIntro.audienceHeading));
-    expect(html).not.toContain(fr.reportIntro.heading);
+    expect(html).not.toContain(escapeHtml(clientFr.reportIntro.audienceHeading));
+    expect(html).not.toContain(clientFr.reportIntro.heading);
   });
 });
 
@@ -411,7 +411,7 @@ describe('plan 019: renderReportIntro consumes the preparation preview', () => {
       undefined,
       frPreview,
     );
-    expect(html).toContain('Parcours visiteurs vérifiés');
+    expect(html).toContain('Parcours visiteurs examinés');
     expect(html).toContain('Réservation et transaction');
     expect(html).toContain('Problème constaté');
     expect(html).toContain('Non évalué');
@@ -425,14 +425,14 @@ describe('plan 019: renderReportIntro consumes the preparation preview', () => {
       ...frPreview,
       journeys: [],
     });
-    expect(html).not.toContain('Parcours visiteurs vérifiés');
+    expect(html).not.toContain('Parcours visiteurs examinés');
   });
 
   it('leaves the generic opening untouched without preparation', () => {
     const strings = getStrings('fr');
     const html = renderReportIntro(strings, 1, buildAnalysis([]) as never, []);
     expect(html).toContain(resolveGenericDecisionQuestion('fr'));
-    expect(html).not.toContain('Parcours visiteurs vérifiés');
+    expect(html).not.toContain('Parcours visiteurs examinés');
     expect(html).toContain(strings.reportIntro.roleManagementLabel);
   });
 });

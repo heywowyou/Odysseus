@@ -19,7 +19,7 @@ export const PAGE_META: Record<
     fr: {
       title: 'Odysseus, diagnostic technique de site web',
       description:
-        'Diagnostic technique automatisé pour sites web : accessibilité, référencement naturel, signaux de visibilité IA et performance. Une liste de corrections classées par priorité, à un prix publié de 1 600 € HT.',
+        'Diagnostic technique automatisé pour sites web : accessibilité, référencement naturel, visibilité dans les assistants IA et performance. Une liste de corrections classées par priorité, à un prix publié de 1 600 € HT.',
     },
     en: {
       title: 'Odysseus, technical website diagnostic',
@@ -31,7 +31,7 @@ export const PAGE_META: Record<
     fr: {
       title: 'Diagnostic technique complet | Odysseus',
       description:
-        'Ce que couvre le diagnostic technique complet Odysseus, ce que contient le rapport, et comment le recevoir. Le prix publié figure plus bas sur la page.',
+        'Ce que couvre le diagnostic technique complet Odysseus, ce que contient le rapport de diagnostic et comment le recevoir. Le prix publié figure plus bas sur la page.',
     },
     en: {
       title: 'Full technical diagnostic | Odysseus',

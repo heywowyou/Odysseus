@@ -175,7 +175,7 @@ describe('GET /api/audits/:auditId/report-preparation', () => {
     const body = JSON.parse(res.body!);
     expect(body.preparation.context).toEqual({});
     expect(body.preview.fr.coverQuestion.source).toBe('fallback');
-    expect(body.preview.fr.coverQuestion.value).toContain('état actuel');
+    expect(body.preview.fr.coverQuestion.value).toContain('corriger en priorité');
     expect(body.preview.en.coverQuestion.source).toBe('fallback');
     expect(body.suggestions).toEqual([
       { journeyId: 'discovery-navigation', available: true },

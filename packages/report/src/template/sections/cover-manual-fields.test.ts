@@ -124,16 +124,13 @@ describe('item 3.9: "Préparé pour" never renders', () => {
   });
 });
 
-// Plan 018 step 4: the cover renders the shared resolver's exact bytes -
-// generic-question.ts is the only place the question exists, so a local
-// string literal in cover.ts (or a drift between the two) is a test
-// failure. Plan 018 step 5 binds report-intro.ts to the same resolver, and
-// plan 019 replaces the generic question by extending the resolver, never
-// by forking the copy.
+// Plan 046 keeps the fallback decision question canonical in core. Both cover
+// and report intro consume the report resolver, which re-exports that same core
+// function, so prepared and directly rendered reports cannot drift.
 describe('the cover carries the canonical generic decision question, byte for byte', () => {
-  it('the resolver returns the canonical French bytes from the flat design source', () => {
+  it('the resolver returns the canonical French decision-oriented wording', () => {
     expect(resolveGenericDecisionQuestion('fr')).toBe(
-      'Quel est l\u2019état actuel de votre site, et par où commencer\u00a0?',
+      'Quels points de votre site faut-il corriger en priorité pour améliorer son accessibilité, sa visibilité et son utilisation\u00a0?',
     );
   });
 
@@ -160,7 +157,7 @@ describe('the cover carries the canonical generic decision question, byte for by
 
 // Plan 019 step 7: the cover's decision question is the preparation
 // preview's resolved value for this language when a preview is passed in,
-// and exactly the plan 018 generic bytes when it is not.
+// and exactly the canonical generic bytes when it is not.
 describe('renderCover decision question (plan 019)', () => {
   const frPreview: PreparationPreviewLanguage = {
     language: 'fr',
