@@ -20,7 +20,7 @@ const GUARANTEES_FR = [
   {
     claim: 'Chaque constat indique où intervenir.',
     basis:
-      "La page et l’élément concernés sont indiqués précisément. Votre prestataire peut vérifier le constat et remonter directement à la mesure d’origine.",
+      'La page et l’élément concernés sont indiqués précisément. Votre prestataire peut vérifier le constat et remonter directement à la mesure d’origine.',
   },
   {
     claim: 'Le rapport ne se prononce pas sur vos obligations juridiques.',
@@ -48,8 +48,8 @@ const GUARANTEES_EN = [
 ];
 
 const HANDOFF_FR: readonly Step[] = [
-  { title: 'Explorer', text: "L’ensemble du site est parcouru et chaque page est mesurée." },
-  { title: 'Localiser', text: "Chaque constat est rattaché à la page et à l’élément concernés." },
+  { title: 'Explorer', text: 'L’ensemble du site est parcouru et chaque page est mesurée.' },
+  { title: 'Localiser', text: 'Chaque constat est rattaché à la page et à l’élément concernés.' },
   {
     title: 'Hiérarchiser',
     text: 'Les corrections sont classées de la plus urgente à la moins urgente.',
@@ -94,8 +94,8 @@ function HomeFr() {
         <div className="split mt-10 hero-split">
           <div className="split-main">
             <p className="lede measure">
-              Odysseus analyse l&apos;ensemble de votre site avec des outils de mesure automatisés et
-              vous remet un rapport directement exploitable&#160;: chaque problème est localisé,
+              Odysseus analyse l&apos;ensemble de votre site avec des outils de mesure automatisés
+              et vous remet un rapport directement exploitable&#160;: chaque problème est localisé,
               documenté et classé par priorité, avec la correction recommandée.
             </p>
 
@@ -121,9 +121,7 @@ function HomeFr() {
                 Voir le diagnostic
               </a>
             </div>
-            <p className="small muted mt-4 md:hidden">
-              Tarif fixe&#160;: 1&#160;600&#160;€ HT.
-            </p>
+            <p className="small muted mt-4 md:hidden">Tarif fixe&#160;: 1&#160;600&#160;€ HT.</p>
           </div>
 
           <Dossier lang="fr" />
@@ -188,8 +186,8 @@ function HomeFr() {
               <h3 className="subheading">Accessibilité</h3>
               <p className="soft mt-3">
                 Odysseus exécute sur chaque page les contrôles automatisables liés aux WCAG 2.2
-                niveau AA et à la norme européenne EN 301 549. Chaque écart détecté est associé à
-                la règle concernée et accompagné d&apos;une preuve.
+                niveau AA et à la norme européenne EN 301 549. Chaque écart détecté est associé à la
+                règle concernée et accompagné d&apos;une preuve.
               </p>
             </div>
             <AccessibilitySchematic lang="fr" />
@@ -197,7 +195,9 @@ function HomeFr() {
 
           <Exhibit>
             <div className="exhibit-copy">
-              <h3 className="subheading">Référencement naturel&#160;: HTML initial et rendu JavaScript</h3>
+              <h3 className="subheading">
+                Référencement naturel&#160;: HTML initial et rendu JavaScript
+              </h3>
               <p className="soft mt-3">
                 Chaque page est analysée sous deux formes&#160;: le HTML envoyé par le serveur, puis
                 la page après exécution du JavaScript dans un navigateur. La comparaison permet
@@ -215,9 +215,9 @@ function HomeFr() {
               <p className="soft mt-3">
                 Le diagnostic contrôle des signaux techniques vérifiables&#160;: les données
                 structurées déclarées par votre site, les règles d&apos;accès des robots
-                d&apos;indexation IA, le fichier llms.txt (une convention proposée pour présenter aux
-                agents IA les contenus importants d&apos;un site) et le balisage FAQ (des données
-                structurées indiquant qu&apos;une page répond à des questions fréquentes).
+                d&apos;indexation IA, le fichier llms.txt (une convention proposée pour présenter
+                aux agents IA les contenus importants d&apos;un site) et le balisage FAQ (des
+                données structurées indiquant qu&apos;une page répond à des questions fréquentes).
               </p>
               <p className="soft mt-3">
                 Il ne prédit pas si un assistant IA citera votre site, le classera, le recommandera,
@@ -232,8 +232,8 @@ function HomeFr() {
               <h3 className="subheading">Performance et en-têtes de sécurité</h3>
               <p className="soft mt-3">
                 Les performances sont mesurées en environnement contrôlé sur une sélection de
-                pages&#160;; lorsqu&apos;elles sont disponibles, les données issues de visiteurs réels
-                viennent compléter ces mesures.
+                pages&#160;; lorsqu&apos;elles sont disponibles, les données issues de visiteurs
+                réels viennent compléter ces mesures.
               </p>
               <p className="soft mt-3">
                 Les en-têtes de sécurité du serveur sont vérifiés sur l&apos;ensemble du site,
@@ -383,7 +383,9 @@ function HomeEn() {
           <h2 id="receive-en" className="heading">
             What you receive
           </h2>
-          <p className="soft mt-4">A report designed to take you straight from analysis to fixes.</p>
+          <p className="soft mt-4">
+            A report designed to take you straight from analysis to fixes.
+          </p>
         </div>
 
         <Reveal className="receive-grid mt-9">

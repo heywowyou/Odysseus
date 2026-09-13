@@ -87,8 +87,8 @@ export default function ProspectingPrivacyPage() {
               l&apos;analyse de votre site. Les données utilisées n&apos;ont pas été collectées
               directement auprès de vous&#160;: elles proviennent de registres publics et de pages
               accessibles publiquement sur votre site. Le règlement général sur la protection des
-              données (RGPD) nous impose notamment de vous indiquer leur origine et leur usage. Cette
-              page vous explique précisément quelles données nous utilisons, d&apos;où elles
+              données (RGPD) nous impose notamment de vous indiquer leur origine et leur usage.
+              Cette page vous explique précisément quelles données nous utilisons, d&apos;où elles
               proviennent et pourquoi.
             </p>
 
@@ -111,9 +111,9 @@ export default function ProspectingPrivacyPage() {
               <li>
                 Votre site internet&#160;: nous consultons uniquement les pages accessibles
                 publiquement et relevons les mesures techniques décrites ci-dessous. Lorsqu&apos;une
-                adresse de contact générique y est publiée, par exemple contact@ ou reception@,
-                elle peut également être utilisée. Nous ne collectons pas d&apos;adresse nominative
-                et n&apos;en reconstituons jamais par déduction.
+                adresse de contact générique y est publiée, par exemple contact@ ou reception@, elle
+                peut également être utilisée. Nous ne collectons pas d&apos;adresse nominative et
+                n&apos;en reconstituons jamais par déduction.
               </li>
               <li>
                 La base Sirene de l&apos;INSEE, en données ouvertes, lorsque votre site publie un
@@ -165,8 +165,8 @@ export default function ProspectingPrivacyPage() {
 
             <p>
               Les données de prospection, captures d&apos;écran comprises, sont conservées pendant
-              90 jours puis supprimées automatiquement. Un aperçu publié cesse d&apos;être accessible
-              au bout de 30 jours, soit avant cette échéance.
+              90 jours puis supprimées automatiquement. Un aperçu publié cesse d&apos;être
+              accessible au bout de 30 jours, soit avant cette échéance.
             </p>
 
             <p>
@@ -186,8 +186,8 @@ export default function ProspectingPrivacyPage() {
               vendues ni louées. Trois prestataires techniques interviennent&#160;: Scaleway, qui
               héberge les aperçus publiés en France (région de Paris)&#160;; Vercel, qui héberge ce
               site&#160;; et MongoDB Atlas, qui héberge la base de données également en France (AWS
-              Paris, eu-west-3). Les aperçus sont stockés dans un espace privé et ne sont accessibles
-              qu&apos;au moyen du lien qui vous a été envoyé.
+              Paris, eu-west-3). Les aperçus sont stockés dans un espace privé et ne sont
+              accessibles qu&apos;au moyen du lien qui vous a été envoyé.
             </p>
 
             <h2 id="droits-confid">Vos droits</h2>
@@ -287,9 +287,9 @@ export default function ProspectingPrivacyPage() {
             <ul>
               <li>
                 The classified tourist accommodation dataset published by Atout France on
-                data.gouv.fr under an open licence. It provides the establishment&apos;s trading name,
-                address, municipality, star rating, number of rooms and the website declared by the
-                establishment.
+                data.gouv.fr under an open licence. It provides the establishment&apos;s trading
+                name, address, municipality, star rating, number of rooms and the website declared
+                by the establishment.
               </li>
               <li>
                 Your website: we access only publicly available pages and record the technical

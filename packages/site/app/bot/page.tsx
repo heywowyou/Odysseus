@@ -76,26 +76,27 @@ export default function BotInfoPage() {
             </p>
 
             <p>
-              Le comportement d&apos;OdysseusBot diffère selon le type d&apos;analyse&#160;; les deux
-              cas peuvent donc être distingués dans les journaux d&apos;accès de votre serveur.
+              Le comportement d&apos;OdysseusBot diffère selon le type d&apos;analyse&#160;; les
+              deux cas peuvent donc être distingués dans les journaux d&apos;accès de votre serveur.
             </p>
 
             <p>
               <strong>Diagnostic commandé</strong>&#160;: le robot parcourt le site, charge chaque
               page avec et sans exécution JavaScript afin d&apos;identifier les contenus ou liens
               absents du HTML initial, notamment sur certains sites rendus côté client avec React ou
-              Next.js. Il exécute également des contrôles automatisés d&apos;accessibilité (axe-core)
-              et des mesures de performance (Lighthouse) sur une sélection déterministe de pages.
+              Next.js. Il exécute également des contrôles automatisés d&apos;accessibilité
+              (axe-core) et des mesures de performance (Lighthouse) sur une sélection déterministe
+              de pages.
             </p>
 
             <p id="prospection-bot">
               <strong>Analyse de prospection</strong>&#160;: lors de la première analyse, le robot
-              consulte au maximum trois pages et n&apos;exécute pas Lighthouse. Il charge chaque page
-              avec et sans JavaScript et effectue les contrôles automatisés d&apos;accessibilité.
-              Pour un nombre restreint d&apos;établissements présélectionnés, une analyse complète
-              du site est ensuite réalisée selon la même méthode et le même rythme de requêtes
-              qu&apos;un diagnostic commandé. Dans les deux cas, le robot ne crée aucun compte, ne
-              soumet aucun formulaire et n&apos;effectue aucune réservation.
+              consulte au maximum trois pages et n&apos;exécute pas Lighthouse. Il charge chaque
+              page avec et sans JavaScript et effectue les contrôles automatisés
+              d&apos;accessibilité. Pour un nombre restreint d&apos;établissements présélectionnés,
+              une analyse complète du site est ensuite réalisée selon la même méthode et le même
+              rythme de requêtes qu&apos;un diagnostic commandé. Dans les deux cas, le robot ne crée
+              aucun compte, ne soumet aucun formulaire et n&apos;effectue aucune réservation.
             </p>
 
             <p id="identification-bot">
@@ -110,16 +111,16 @@ export default function BotInfoPage() {
             <p id="frequence-bot">
               Rythme des requêtes&#160;: OdysseusBot attend au moins une seconde entre deux
               requêtes. Si votre fichier robots.txt définit une directive Crawl-delay plus longue,
-              c&apos;est elle qui s&apos;applique. Le fichier robots.txt est lu avant toute visite et
-              les pages interdites ne sont jamais chargées.
+              c&apos;est elle qui s&apos;applique. Le fichier robots.txt est lu avant toute visite
+              et les pages interdites ne sont jamais chargées.
             </p>
 
             <p id="conservation-bot">
-              Nous conservons le rendu des pages et les captures d&apos;écran à des fins de diagnostic
-              uniquement. Ils sont supprimés automatiquement après 90 jours et ne sont ni vendus ni
-              transmis à des tiers pour leur propre usage. Pour une analyse de prospection,
-              l&apos;origine des données, leur usage et la marche à suivre pour s&apos;y opposer sont
-              détaillés sur la page{' '}
+              Nous conservons le rendu des pages et les captures d&apos;écran à des fins de
+              diagnostic uniquement. Ils sont supprimés automatiquement après 90 jours et ne sont ni
+              vendus ni transmis à des tiers pour leur propre usage. Pour une analyse de
+              prospection, l&apos;origine des données, leur usage et la marche à suivre pour
+              s&apos;y opposer sont détaillés sur la page{' '}
               <a className="underline" href="/confidentialite-prospection">
                 prospection et données personnelles
               </a>
@@ -202,11 +203,11 @@ export default function BotInfoPage() {
             </p>
 
             <p>
-              <strong>Commissioned diagnostic</strong>: the crawler moves through the site and
-              loads each page with and without JavaScript to identify content or links that are
-              absent from the initial HTML, including on some client-rendered React or Next.js
-              sites. It also runs automated accessibility checks with axe-core and Lighthouse
-              performance measurements on a deterministic selection of pages.
+              <strong>Commissioned diagnostic</strong>: the crawler moves through the site and loads
+              each page with and without JavaScript to identify content or links that are absent
+              from the initial HTML, including on some client-rendered React or Next.js sites. It
+              also runs automated accessibility checks with axe-core and Lighthouse performance
+              measurements on a deterministic selection of pages.
             </p>
 
             <p id="prospecting-bot-en">

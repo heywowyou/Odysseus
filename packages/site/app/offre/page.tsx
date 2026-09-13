@@ -84,8 +84,8 @@ export default function OfferPage() {
               </div>
               <p className="small muted mt-4">
                 Tarif fixe, confirmé par écrit avant tout engagement. Après correction, vous pouvez
-                demander une nouvelle vérification au tarif de 450&#160;€&#160;HT. Elle est
-                réalisée sous cinq jours ouvrés.
+                demander une nouvelle vérification au tarif de 450&#160;€&#160;HT. Elle est réalisée
+                sous cinq jours ouvrés.
               </p>
             </div>
 
@@ -110,7 +110,9 @@ export default function OfferPage() {
               </div>
 
               <div className="check">
-                <h3 className="subheading">Référencement naturel&#160;: HTML initial et rendu JavaScript</h3>
+                <h3 className="subheading">
+                  Référencement naturel&#160;: HTML initial et rendu JavaScript
+                </h3>
                 <p className="soft mt-3">
                   Le HTML envoyé par le serveur est comparé à la page après exécution du JavaScript
                   dans un navigateur. Cette comparaison repère les contenus, liens ou métadonnées
@@ -124,11 +126,11 @@ export default function OfferPage() {
                 <p className="soft mt-3">
                   Le diagnostic contrôle des signaux techniques vérifiables&#160;: les données
                   structurées déclarées par votre site, les règles d&apos;accès des robots
-                  d&apos;indexation IA, le fichier llms.txt (une convention proposée pour présenter aux
-                  agents IA les contenus importants d&apos;un site) et le balisage FAQ (des données
-                  structurées indiquant qu&apos;une page répond à des questions fréquentes). Il ne
-                  prédit pas si un assistant IA citera votre site, le classera, le recommandera, ou
-                  répondra à une question sur votre activité.
+                  d&apos;indexation IA, le fichier llms.txt (une convention proposée pour présenter
+                  aux agents IA les contenus importants d&apos;un site) et le balisage FAQ (des
+                  données structurées indiquant qu&apos;une page répond à des questions fréquentes).
+                  Il ne prédit pas si un assistant IA citera votre site, le classera, le
+                  recommandera, ou répondra à une question sur votre activité.
                 </p>
               </div>
 
@@ -149,7 +151,8 @@ export default function OfferPage() {
                   </div>
                   <div className="metric">
                     <p className="metric-name">
-                      Réactivité aux interactions (INP, lorsque des données terrain sont disponibles)
+                      Réactivité aux interactions (INP, lorsque des données terrain sont
+                      disponibles)
                     </p>
                     <p className="metric-desc">
                       La rapidité avec laquelle la page réagit aux interactions, lorsque des mesures
@@ -198,7 +201,9 @@ export default function OfferPage() {
                 </p>
               </div>
               <div className="method-item">
-                <p className="subheading">Le rapport ne se prononce pas sur vos obligations juridiques.</p>
+                <p className="subheading">
+                  Le rapport ne se prononce pas sur vos obligations juridiques.
+                </p>
                 <p className="soft mt-2">
                   Il présente les textes et critères susceptibles de concerner votre activité, ainsi
                   que les données publiques disponibles sur votre entreprise. La détermination de
@@ -352,8 +357,8 @@ export default function OfferPage() {
                   </div>
                 </div>
                 <p className="soft mt-4">
-                  Performance is measured in a controlled environment on a selection of pages.
-                  Where available, data from real visitors complements those measurements.
+                  Performance is measured in a controlled environment on a selection of pages. Where
+                  available, data from real visitors complements those measurements.
                 </p>
                 <p className="soft mt-3">
                   The server&apos;s security headers are checked across the whole site,
