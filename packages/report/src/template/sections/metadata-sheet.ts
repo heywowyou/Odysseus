@@ -24,11 +24,12 @@ import { renderScorecardGrade } from '../render-scorecard.js';
  *  sheet that is unnumbered chrome, like the cover and the TOC. */
 export const METADATA_SHEET_ID = 'report-metadata';
 
-function field(label: string, valueHtml: string): string {
+function field(label: string, valueHtml: string, extraClass = ''): string {
+  const className = extraClass ? `metadata-field ${extraClass}` : 'metadata-field';
   return `
-    <div>
-      <div style="text-transform:uppercase;letter-spacing:0.02em;font-size:10px;opacity:0.5;margin-bottom:var(--space-3)">${escapeHtml(label)}</div>
-      <div style="font-size:18px">${valueHtml}</div>
+    <div class="${className}">
+      <div class="metadata-field-label" style="text-transform:uppercase;letter-spacing:0.02em;font-size:10px;opacity:0.5;margin-bottom:var(--space-3)">${escapeHtml(label)}</div>
+      <div class="metadata-field-value" style="font-size:18px">${valueHtml}</div>
     </div>
   `;
 }
@@ -64,7 +65,10 @@ function renderRiskBadge(
   const scale = RISK_LEVEL_ORDER.map((level) => {
     const isCurrent = level === analysis.overallRisk;
     const levelColor = LEVEL_COLOR[level];
-    return `<span style="padding:4px 10px;border-radius:calc(var(--radius-md)*0.75);font-size:${isCurrent ? '14px' : '11px'};font-weight:${isCurrent ? '500' : '400'};background:${isCurrent ? levelColor.bg : 'transparent'};color:${isCurrent ? levelColor.color : 'color-mix(in srgb, var(--color-text) 55%, transparent)'}">${escapeHtml(strings.metadata.riskLevels[level])}</span>`;
+    const className = isCurrent
+      ? 'metadata-risk-level metadata-risk-level-current'
+      : 'metadata-risk-level';
+    return `<span class="${className}" style="padding:4px 10px;border-radius:calc(var(--radius-md)*0.75);font-size:${isCurrent ? '14px' : '11px'};font-weight:${isCurrent ? '500' : '400'};background:${isCurrent ? levelColor.bg : 'transparent'};color:${isCurrent ? levelColor.color : 'color-mix(in srgb, var(--color-text) 55%, transparent)'}">${escapeHtml(strings.metadata.riskLevels[level])}</span>`;
   }).join('');
 
   const stats = computeStatistics(findings, manifest);
@@ -82,10 +86,10 @@ function renderRiskBadge(
   });
 
   return `
-    <div>
-      <div style="display:inline-flex;align-items:center;gap:4px">${scale}</div>
-      <div style="font-size:11px;opacity:0.55;margin-top:6px">${escapeHtml(basisNote)}</div>
-      <div style="font-size:10px;opacity:0.55;margin-top:2px">${escapeHtml(strings.metadata.riskScaleBasisNote)}</div>
+    <div class="metadata-risk">
+      <div class="metadata-risk-scale" style="display:inline-flex;align-items:center;gap:4px">${scale}</div>
+      <div class="metadata-risk-basis" style="font-size:11px;opacity:0.55;margin-top:6px">${escapeHtml(basisNote)}</div>
+      <div class="metadata-risk-note" style="font-size:10px;opacity:0.55;margin-top:2px">${escapeHtml(strings.metadata.riskScaleBasisNote)}</div>
     </div>
   `;
 }
@@ -163,7 +167,7 @@ export function renderMetadataSheet(
       <h6 style="color:var(--color-accent-300);margin:0">${escapeHtml(strings.metadata.eyebrow)}</h6>
     </div>
     <h2 style="margin-bottom:var(--space-6)">${escapeHtml(strings.metadata.heading)}</h2>
-    <div style="display:grid;grid-template-columns:1fr 1fr;row-gap:var(--space-8);column-gap:var(--space-8);font-size:13px">
+    <div class="metadata-facts" style="display:grid;grid-template-columns:1fr 1fr;row-gap:var(--space-8);column-gap:var(--space-8);font-size:13px">
       ${field(strings.metadata.siteLabel, escapeHtml(manifest.siteUrl))}
       ${field(strings.metadata.dateLabel, escapeHtml(formatDate(new Date(manifest.startedAt), analysis.language)))}
       ${field(strings.metadata.pagesScannedLabel, escapeHtml(scopeValue))}
@@ -177,14 +181,14 @@ export function renderMetadataSheet(
       )}
       ${raisonSociale ? field(strings.metadata.legalNameLabel, escapeHtml(raisonSociale)) : ''}
     </div>
-    <div style="margin-top:auto">
+    <div class="metadata-signal" style="margin-top:auto">
       <div class="hr"></div>
-      <div style="display:flex;gap:var(--space-8);align-items:flex-start">
-        ${field(strings.metadata.riskSmallLabel, renderRiskBadge(strings, analysis, findings, manifest))}
-        ${field(strings.metadata.scorecardLabel, renderScorecard(strings, findings, manifest))}
+      <div class="metadata-signal-stack" style="display:flex;gap:var(--space-8);align-items:flex-start">
+        ${field(strings.metadata.riskSmallLabel, renderRiskBadge(strings, analysis, findings, manifest), 'metadata-risk-field')}
+        ${field(strings.metadata.scorecardLabel, renderScorecard(strings, findings, manifest), 'metadata-grade-field')}
       </div>
     </div>
-    <div style="min-height:60mm"></div>
+    <div class="metadata-spacer" style="min-height:60mm"></div>
   `,
     'sheet-metadata',
     METADATA_SHEET_ID,

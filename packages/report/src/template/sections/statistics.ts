@@ -55,11 +55,14 @@ function criticalDriverRuleTitles(
  *  empty tile, so their grids can have anywhere from 1 to 4 (severity) or
  *  1 to CATEGORY_ORDER.length (category) tiles depending on what the scan
  *  actually found. */
-function renderNumberTile(value: string, label: string): string {
+function renderNumberTile(value: string, label: string, primary = false): string {
+  const className = primary
+    ? 'stat-tile statistics-number-tile statistics-number-tile-primary'
+    : 'stat-tile statistics-number-tile';
   return `
-    <div class="stat-tile" style="padding:var(--space-3);background:var(--color-surface);border-radius:var(--radius-md)">
-      <div style="font-size:28px;font-family:var(--font-heading);font-weight:500">${value}</div>
-      <div style="font-size:11.5px;opacity:0.65;margin-top:4px">${escapeHtml(label)}</div>
+    <div class="${className}">
+      <div class="statistics-number-value">${value}</div>
+      <div class="statistics-number-label">${escapeHtml(label)}</div>
     </div>
   `;
 }
@@ -110,7 +113,7 @@ export function renderStatistics(
       n(stats.pagesScanned),
       pluralize(stats.pagesScanned, s.pagesAnalyzedSingular, s.pagesAnalyzedPlural),
     ),
-    renderNumberTile(n(stats.totalFindings), s.findingsTileLabel),
+    renderNumberTile(n(stats.totalFindings), s.findingsTileLabel, true),
     renderNumberTile(n(stats.accessibilityOccurrences), s.accessibilityOccurrencesTileLabel),
     // Issue #77: this used to render as "{pagesWithCritical}/{pagesScanned}",
     // which reads as a fraction out of the tile above - but pagesWithCritical
@@ -195,7 +198,7 @@ export function renderStatistics(
   // heading stays constant whether or not the note renders.
   const heuristicOccurrencesNote =
     stats.accessibilityHeuristicOccurrences > 0
-      ? `<p style="font-size:11px;opacity:0.55;margin-bottom:4px">${escapeHtml(
+      ? `<p class="statistics-note">${escapeHtml(
           fillTemplate(s.heuristicOccurrencesExcludedNoteTemplate, {
             count: n(stats.accessibilityHeuristicOccurrences),
           }),
@@ -205,7 +208,7 @@ export function renderStatistics(
   const driverTitles = criticalDriverRuleTitles(findings, language);
   const criticalDriverNote =
     driverTitles.length > 0
-      ? `<p style="font-size:11px;opacity:0.55;margin-bottom:4px">${escapeHtml(
+      ? `<p class="statistics-note">${escapeHtml(
           fillTemplate(s.criticalDriverNoteTemplate, { rules: driverTitles.join(', ') }),
         )}</p>`
       : '';
@@ -215,7 +218,7 @@ export function renderStatistics(
   // total, same denominator the tile above shows.
   const thirdPartyOccurrencesNote =
     stats.thirdPartyAccessibilityOccurrences > 0 && stats.accessibilityOccurrences > 0
-      ? `<p style="font-size:11px;opacity:0.55;margin-bottom:4px">${escapeHtml(
+      ? `<p class="statistics-note">${escapeHtml(
           fillTemplate(s.thirdPartyOccurrencesNoteTemplate, {
             percent: Math.round(
               (stats.thirdPartyAccessibilityOccurrences / stats.accessibilityOccurrences) * 100,
@@ -225,7 +228,7 @@ export function renderStatistics(
       : '';
   const ownership = priorities ? summarizePriorityOwnership(priorities, manifest) : undefined;
   const priorityOwnershipNote = ownership
-    ? `<p style="font-size:11px;opacity:0.55;margin-bottom:4px">${escapeHtml(
+    ? `<p class="statistics-note">${escapeHtml(
         fillTemplate(s.priorityOwnershipTemplate, {
           firstParty: n(ownership['first-party-action']),
           thirdParty: n(ownership['third-party-escalation']),
@@ -239,33 +242,33 @@ export function renderStatistics(
     criticalDriverNote ||
     thirdPartyOccurrencesNote ||
     priorityOwnershipNote
-      ? `<div style="margin-bottom:var(--space-3)">${heuristicOccurrencesNote}${criticalDriverNote}${thirdPartyOccurrencesNote}${priorityOwnershipNote}</div>`
-      : '<div style="margin-bottom:var(--space-3)"></div>';
+      ? `<div class="statistics-notes">${heuristicOccurrencesNote}${criticalDriverNote}${thirdPartyOccurrencesNote}${priorityOwnershipNote}</div>`
+      : '<div class="statistics-notes"></div>';
 
   return sheet(
     `
     ${renderSheetHeader(ordinal, s.eyebrow, s.heading, 'var(--space-6)')}
-    <p style="font-size:12px;opacity:0.65;margin-bottom:var(--space-3)">${escapeHtml(
+    <p class="statistics-coverage">${escapeHtml(
       [coverage.summary, ...coverage.details].join(' '),
     )}</p>
-    <div class="stat-tile-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-4);margin-bottom:var(--space-3)">
+    <div class="stat-tile-row statistics-number-grid">
       ${numberTiles}
     </div>
     ${footnotes}
-    <h5>${escapeHtml(s.severityBreakdownHeading)}</h5>
+    <h5 class="statistics-breakdown-heading">${escapeHtml(s.severityBreakdownHeading)}</h5>
     <div class="stat-tile-row" style="display:grid;grid-template-columns:repeat(${nonZeroSeverities.length},1fr);gap:var(--space-4);margin-bottom:var(--space-8)">
       ${severityTiles}
     </div>
-    <h5>${escapeHtml(s.categoryBreakdownHeading)}</h5>
+    <h5 class="statistics-breakdown-heading">${escapeHtml(s.categoryBreakdownHeading)}</h5>
     <div class="stat-tile-row" style="display:grid;grid-template-columns:repeat(${nonZeroCategories.length},1fr);gap:var(--space-4);margin-bottom:var(--space-3)">
       ${categoryTiles}
     </div>
     ${stats.hasBelowThresholdRenderGap ? `<p style="font-size:11px;opacity:0.55;margin-bottom:var(--space-8)">${escapeHtml(fillTemplate(s.belowThresholdRenderGapNote, { threshold: RENDER_DIFF_EMISSION_THRESHOLD_PERCENT }))}</p>` : '<div style="margin-bottom:var(--space-8)"></div>'}
     <div class="hr"></div>
-    <h5>${escapeHtml(s.wcagFailingHeading)}</h5>
+    <h5 class="statistics-breakdown-heading">${escapeHtml(s.wcagFailingHeading)}</h5>
     <p style="font-size:13.5px;opacity:0.85">${escapeHtml(wcagFailCountText)}</p>
   `,
-    '',
+    'statistics-sheet',
     'section-03',
   );
 }

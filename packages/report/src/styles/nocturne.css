@@ -179,6 +179,201 @@ h3 {
 h4 {
   font-size: 20px;
 }
+
+/* Results measured — accepted Impeccable direction, 2026-09-13.
+   The findings total is the page's editorial lead; the other three
+   figures remain compact supporting evidence. Named classes keep the
+   hierarchy independent of translated copy and optional disclosure notes. */
+.statistics-sheet .section-head {
+  position: relative;
+  padding-bottom: calc(var(--space-6) * 1.02);
+  margin-bottom: calc(var(--space-6) * 1.02);
+  border-bottom: 1px solid var(--color-divider);
+}
+.statistics-sheet .section-head::after {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 72px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-accent);
+  content: '';
+}
+.statistics-sheet .section-head h2 {
+  max-width: 15ch;
+  margin-bottom: 0 !important;
+  font-size: 29px;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+}
+.statistics-coverage {
+  max-width: 68ch;
+  margin-bottom: calc(var(--space-4) * 1.02);
+  color: var(--color-neutral-300);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.statistics-number-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  align-items: stretch;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.statistics-number-tile {
+  display: flex;
+  grid-column: span 1;
+  min-width: 0;
+  min-height: 88px;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: calc(12px * 1.02);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+.statistics-number-tile-primary {
+  order: -1;
+  grid-column: span 3;
+  background: color-mix(in srgb, var(--color-accent) 9.2%, var(--color-surface));
+}
+.statistics-number-value {
+  font-family: var(--font-heading);
+  font-size: 28px;
+  font-weight: 500;
+}
+.statistics-number-tile-primary .statistics-number-value {
+  color: var(--color-accent-200);
+  font-size: 40.25px;
+}
+.statistics-number-label {
+  margin-top: 4px;
+  color: var(--color-neutral-400);
+  font-size: 11.5px;
+}
+.statistics-notes {
+  display: grid;
+  min-height: var(--space-4);
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  padding: var(--space-3) 0 var(--space-4);
+  border-bottom: 1px solid var(--color-divider);
+}
+.statistics-note {
+  margin: 0;
+  color: var(--color-neutral-300);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.statistics-breakdown-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: calc(var(--space-6) * 1.02);
+}
+.statistics-breakdown-heading::before {
+  width: 18px;
+  height: 3px;
+  flex: none;
+  border-radius: 2px;
+  background: var(--color-accent);
+  content: '';
+}
+
+/* Metadata signal — accepted Impeccable direction, 2026-09-13.
+   The grade and the qualitative scale are one centered vertical reading
+   sequence. Concentric strokes are attached to the badge itself, so the
+   round notation cannot drift away from the letter during PDF layout. */
+.metadata-signal {
+  width: 100%;
+  margin-top: 26mm !important;
+  break-inside: avoid;
+}
+.metadata-signal > .hr {
+  display: none;
+}
+.metadata-signal-stack {
+  flex-direction: column;
+  align-items: center !important;
+  gap: var(--space-8) !important;
+}
+.metadata-grade-field {
+  order: -1;
+  width: 100%;
+  text-align: center;
+}
+.metadata-grade-field .metadata-field-label,
+.metadata-risk-field .metadata-field-label {
+  color: var(--color-neutral-300);
+  opacity: 1 !important;
+}
+.metadata-grade-field .metadata-field-label {
+  margin-bottom: var(--space-8) !important;
+}
+.metadata-grade-field .scorecard-grade {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.metadata-grade-field .scorecard-grade-badge {
+  width: 112px !important;
+  height: 112px !important;
+  border-radius: 50% !important;
+  font-size: 64px !important;
+  line-height: 1 !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, currentcolor 48%, transparent),
+    0 0 0 10px var(--color-bg),
+    0 0 0 11px color-mix(in srgb, currentcolor 28%, transparent);
+}
+.metadata-grade-field .scorecard-grade-disclaimer {
+  max-width: 50ch !important;
+  margin: var(--space-8) auto 0 !important;
+  color: var(--color-neutral-400);
+  font-size: 11px !important;
+  line-height: 1.5;
+  opacity: 1 !important;
+}
+.metadata-risk-field {
+  width: min(100%, 560px);
+  padding: var(--space-6) var(--space-8);
+  border-top: 1px solid var(--color-divider);
+  border-bottom: 1px solid var(--color-divider);
+  text-align: center;
+}
+.metadata-risk-scale {
+  display: grid !important;
+  width: min(100%, 360px);
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3) !important;
+  margin: 0 auto;
+}
+.metadata-risk-level {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 12px !important;
+  font-size: 14px !important;
+}
+.metadata-risk-level-current {
+  font-size: 16px !important;
+  font-weight: 500 !important;
+}
+.metadata-risk-basis,
+.metadata-risk-note {
+  color: var(--color-neutral-400);
+  line-height: 1.45;
+  opacity: 1 !important;
+}
+.metadata-risk-basis {
+  margin-top: var(--space-3) !important;
+}
+.metadata-spacer {
+  min-height: 32mm !important;
+  flex: 1;
+}
 h5 {
   font-size: 16px;
 }

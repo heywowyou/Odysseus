@@ -25,12 +25,12 @@ export function renderScorecardGrade(grade: Grade, disclaimer: string, label?: s
   const labelHtml =
     label === undefined
       ? ''
-      : `<div style="text-transform:uppercase;letter-spacing:0.02em;font-size:10px;opacity:0.5;margin-bottom:4px">${escapeHtml(label)}</div>`;
+      : `<div class="scorecard-grade-label" style="text-transform:uppercase;letter-spacing:0.02em;font-size:10px;opacity:0.5;margin-bottom:4px">${escapeHtml(label)}</div>`;
   return `
-    <div>
+    <div class="scorecard-grade">
       ${labelHtml}
-      <span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:6px;font-size:20px;font-weight:600;color:${color};background:${bg}">${escapeHtml(grade)}</span>
-      <div style="font-size:10px;opacity:0.55;margin-top:4px;max-width:32ch">${escapeHtml(disclaimer)}</div>
+      <span class="scorecard-grade-badge" style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:6px;font-size:20px;font-weight:600;color:${color};background:${bg}">${escapeHtml(grade)}</span>
+      <div class="scorecard-grade-disclaimer" style="font-size:10px;opacity:0.55;margin-top:4px;max-width:32ch">${escapeHtml(disclaimer)}</div>
     </div>
   `;
 }

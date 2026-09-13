@@ -59,13 +59,17 @@ What the plan 039 pass records:
   labels now match the flat source's non-underlined form); page numbers
   in `@page` margin boxes instead of markup; mm-based page geometry.
 - **Deliberate departures from the flat source, recorded where they
-  live:** the metadata sheet's risk scale replaces the flat's single risk
-  pill and severity legend (item 42, plan 018 step 4); the flat's TOC
+  live:** the metadata sheet's centered letter-grade signal and the
+  qualitative scale below it replace the flat's single risk pill and severity
+  legend (item 42, plan 018 step 4, then the operator's accepted Impeccable
+  direction on 2026-09-13); section 03 uses an editorial scoreboard with the
+  distinct-finding total as its lead measure and the other three figures as
+  supporting evidence (accepted Impeccable direction, 2026-09-13); the flat's TOC
   footnote is dropped (page numbers print since B8, making it stale) and
   the flat's conditional revenue-opportunity card is not ported (financial
-  wording moved to theme-card citations, plan 020). Plan 023's
-  recomposition of the cover's closing group and the metadata sheet's
-  risk band, and its per-section heading rhythm, are preserved unchanged.
+  wording moved to theme-card citations, plan 020). Plan 023's cover
+  recomposition and per-section heading rhythm remain; its metadata closing
+  band was superseded by the accepted centered grade-first composition above.
 - **Print-medium decision with no flat basis:** the checklist's light
   `@media print` inversion (`#f7f7f5`, paged.css). The flat mockup's
   checklist is dark; the inversion is guarded by the item 36 and item 0.1

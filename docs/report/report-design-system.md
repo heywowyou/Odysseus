@@ -154,11 +154,13 @@ out is a defect, not minimalism:
   bottom, and the accent rule is centered above the centered text, never
   left-anchored. The cover stays minimal by contract: no fields return
   from the metadata sheet.
-- **Metadata sheet**: the fact grid carries the audit identity fields;
-  the risk scale is the sheet's closing band, full width below a fading
-  hairline, pulled down by `margin-top:auto` in a flex column with a
-  fixed quiet spacer after it, so it lands around two-thirds page height
-  regardless of how tall the grid wrapped.
+- **Metadata sheet**: the fact grid carries the audit identity fields. Its
+  closing act is a centered vertical signal: the deterministic letter grade
+  first, inside two concentric severity-colour strokes, its mandatory
+  disclaimer directly below, then the three-point qualitative scale and its
+  basis notes in a restrained hairline band. The circles are strokes attached
+  to the badge itself, never independently positioned decoration. A fixed
+  upper gap and flexible quiet spacer keep the composition stable in the PDF.
 - The sparse-pages rule below covers numbered sections only. Front matter
   is governed by this composition rule instead.
 
@@ -221,11 +223,11 @@ section IDs do not encode reading order.
 | # | Section | Rule | Cap |
 | --- | --- | --- | --- |
 | cover | Couverture | minimal: commercial identity, decision question (resolved preparation question; safe generic fallback when no preparation exists), report type, audit date, Odysseus signature | 1 sheet |
-| metadata | Fiche méta et sévérité | site audited, audit date, pages visited, report language, audited standard and scope, legal name when present, severity scale with basis note | 1 sheet |
+| metadata | Fiche méta et sévérité | site audited, audit date, pages visited, audited standard and scope, legal name when present; centered letter grade with disclaimer, followed by severity scale with basis note | 1 sheet |
 | toc | Sommaire | one row per section, grouped under seven narrative groups: executive context, decisions and actions, detailed evidence, legal reference, method and vocabulary, technical appendix, glossary | 16 rows |
 | 01 | Ouverture (situation, complication, question) | opening and reading guide; the question is the resolved preparation question or the safe generic fallback, no client-specific claim beyond what preparation explicitly provides | fixed |
 | 02 | Résumé exécutif | prose + jump links | 3 links |
-| 03 | L'audit en chiffres | 4 tiles + severity split + category split | fixed |
+| 03 | L'audit en chiffres | editorial scoreboard with total findings as the lead measure, 3 supporting number tiles, disclosure notes, severity split, and category split | fixed |
 | 04 | Priorités classées | one card per theme | 6 themes, may flow to 2 sheets |
 | 05 | Check-list | one row per theme, same 6 | 1 sheet |
 | 06 | Reste à traiter | findings outside the ranked priorities, grouped by domain and rule, linked to appendix ids | flows |

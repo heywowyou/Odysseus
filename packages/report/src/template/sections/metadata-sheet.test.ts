@@ -160,6 +160,10 @@ describe('renderMetadataSheet carries the severity scale and its basis note', ()
     expect(html).toContain(fr.metadata.riskLevels.high);
     // The note renders escaped (escapeHtml), so compare the escaped form.
     expect(html).toContain(escapeHtml(fr.metadata.riskScaleBasisNote));
+    expect(html).toContain('class="metadata-signal-stack"');
+    expect(html).toContain('class="metadata-field metadata-grade-field"');
+    expect(html).toContain('class="scorecard-grade-badge"');
+    expect(html).toContain('metadata-risk-level-current');
   });
 
   it('states the critical/serious counts the level is based on', async () => {

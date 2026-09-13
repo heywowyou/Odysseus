@@ -146,9 +146,22 @@ describe('renderStatistics against the real small-site.test scan', () => {
 
     const html = renderStatistics(getStrings('fr'), 3, 'fr', findings, manifest);
 
-    expect((html.match(/font-size:28px/g) ?? []).length).toBe(4);
+    expect((html.match(/class="stat-tile statistics-number-tile/g) ?? []).length).toBe(4);
     expect((html.match(/font-size:24px/g) ?? []).length).toBe(nonZeroSeverityCount);
     expect((html.match(/font-size:22px/g) ?? []).length).toBe(nonZeroCategoryCount);
+  });
+
+  it('renders the accepted editorial scoreboard hierarchy with stable semantic hooks', async () => {
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
+
+    const html = renderStatistics(getStrings('en'), 3, 'en', findings, manifest);
+
+    expect(html).toContain('<section class="sheet statistics-sheet" id="section-03">');
+    expect(html).toContain('statistics-number-grid');
+    expect(html).toContain('statistics-number-tile-primary');
+    expect(html).toContain('statistics-notes');
+    expect((html.match(/statistics-breakdown-heading/g) ?? []).length).toBe(3);
   });
 
   // item D7 (P4): a category with zero findings renders no tile at all -
@@ -190,7 +203,7 @@ describe('renderStatistics against the real small-site.test scan', () => {
 
     const html = renderStatistics(getStrings('fr'), 3, 'fr', findings, manifest);
 
-    expect(html).toContain('<h5>Conformité WCAG</h5>');
+    expect(html).toContain('<h5 class="statistics-breakdown-heading">Conformité WCAG</h5>');
   });
 
   // item 10: "pages avec au moins un constat critique" is already computed
