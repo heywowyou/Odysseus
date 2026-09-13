@@ -52,6 +52,16 @@ function assertGreetsExactlyOnce(body: string): void {
   expect(paragraphs[0]).toMatch(LEADING_GREETING);
 }
 
+function assertKeepsFrenchSignature(body: string): void {
+  expect(body).toContain(
+    'Cordialement,\n\n' +
+      'Jules Fontaine\n' +
+      'Fondateur — Odysseus\n' +
+      'Audits techniques de sites web : SEO, GEO, performance, accessibilité et sécurité\n' +
+      'odysseusaudit.com · contact@odysseusaudit.fr',
+  );
+}
+
 describe('assembleOutreachDraft - touch 1', () => {
   it('assembles the locked French first-touch frame', () => {
     const result = assembleOutreachDraft(TOUCH1_BASE);
@@ -71,12 +81,12 @@ describe('assembleOutreachDraft - touch 1', () => {
     expect(result.body).toContain(
       `Vous trouverez un résumé de notre analyse ici\u00a0:\n${PREVIEW_URL}`,
     );
-    expect(result.body).toContain("L'audit complet est disponible à l'achat dès à présent.");
-    expect(result.body).toContain('Souhaitez-vous recevoir le détail de ces constats\u00a0?');
-    expect(result.body).toContain('Cordialement,');
     expect(result.body).toContain(
-      'Jules Fontaine\nFondateur — Odysseus\nAudits techniques de sites web : SEO, GEO, performance, accessibilité et sécurité',
+      "L'audit complet de votre site est disponible à l'achat dès à présent. Pour chacun de ces constats, il indique la page concernée et la correction à apporter.",
     );
+    expect(result.body).not.toContain("L'audit complet est disponible à l'achat dès à présent.");
+    expect(result.body).toContain('Souhaitez-vous recevoir le détail de ces constats\u00a0?');
+    assertKeepsFrenchSignature(result.body);
     expect(result.body).toContain('Pourquoi vous recevez ce message\u00a0:');
     expect(result.body).toContain('deux relances au maximum');
     expect(result.body).toContain('Sources utilisées\u00a0:');
@@ -176,8 +186,23 @@ describe('assembleOutreachDraft - touch 1', () => {
     expect(result.htmlBody).toContain(`href="${OPT_OUT_URL}"`);
     expect(result.htmlBody).toContain(`href="${PRIVACY_URL}"`);
     expect(result.htmlBody.match(/<a /gu)).toHaveLength(3);
+    expect(result.htmlBody).toContain(
+      `style="font-weight:600;text-decoration:underline">Consulter l&#39;aperçu de votre site</a>`,
+    );
     expect(result.htmlBody).toContain('Ne plus être contacté</a> · <a');
-    expect(result.htmlBody).not.toMatch(/<img|src=|url\(/iu);
+    expect(result.htmlBody).toContain(
+      'style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#202124"',
+    );
+    expect(result.htmlBody).toContain(
+      'style="margin-top:24px;padding-top:12px;border-top:1px solid #dadce0;color:#6b6b6b;font-size:12px;line-height:1.5"',
+    );
+    expect(result.htmlBody).toContain(
+      `style="color:#6b6b6b;text-decoration:underline">Ne plus être contacté</a> · <a href="${PRIVACY_URL}" style="color:#6b6b6b;text-decoration:underline"`,
+    );
+    expect(result.htmlBody).toContain(
+      '<span style="font-weight:600">Jules Fontaine</span><br><span style="color:#5f6368">Fondateur — Odysseus<br>Audits techniques de sites web : SEO, GEO, performance, accessibilité et sécurité<br>odysseusaudit.com · contact@odysseusaudit.fr</span>',
+    );
+    expect(result.htmlBody).not.toMatch(/<img|<script|<link|<button|src=|url\(/iu);
   });
 });
 
@@ -191,12 +216,19 @@ describe('assembleOutreachDraft - touch 2', () => {
       "Je me permets de revenir vers vous au sujet de mon précédent message concernant l'audit du site de l'Hôtel des Tilleuls.",
     );
     expect(result.body).toContain("Avez-vous eu l'occasion de consulter l'aperçu\u00a0?");
-    expect(result.body).toContain("l'audit complet est disponible à l'achat");
+    expect(result.body).toContain(
+      "Si vous souhaitez aller plus loin, l'audit complet de votre site est disponible à l'achat. Il détaille chacun des constats relevés, les pages concernées et les corrections à apporter.",
+    );
+    expect(result.body).not.toContain(
+      "Si vous souhaitez aller plus loin, l'audit complet est disponible à l'achat.",
+    );
     expect(result.body).toContain(
       'Pour ne plus recevoir de message de notre part, répondez simplement à celui-ci.',
     );
+    assertKeepsFrenchSignature(result.body);
     expect(result.body).not.toMatch(/https?:\/\//u);
     expect(result.htmlBody).not.toContain('<a ');
+    expect(result.htmlBody).not.toMatch(/<img|<script|<link|<button|src=|url\(/iu);
   });
 
   it('does not double-prefix an existing Re:', () => {
@@ -233,6 +265,7 @@ describe('assembleOutreachDraft - touch 3', () => {
     expect(result.body).toContain(expectedFacts.heading);
     for (const paragraph of expectedFacts.paragraphs) expect(result.body).toContain(paragraph);
     expect(result.body).toContain("l'audit complet est disponible à l'achat");
+    expect(result.body).not.toContain("l'audit complet de votre site est disponible à l'achat");
     expect(result.body).toContain(
       'Sans retour de votre part, je ne vous relancerai pas davantage.',
     );
@@ -240,8 +273,11 @@ describe('assembleOutreachDraft - touch 3', () => {
       'Si vous souhaitez que nous effacions ces données de registre, répondez simplement à ' +
         'ce message\u00a0: nous les supprimerons.',
     );
+    assertKeepsFrenchSignature(result.body);
     expect(result.body).not.toMatch(/https?:\/\//u);
     expect(result.htmlBody).not.toContain('<a ');
+    expect(result.htmlBody).toContain('<div>Cadre réglementaire à vérifier</div>');
+    expect(result.htmlBody).not.toMatch(/<img|<script|<link|<button|src=|url\(/iu);
     expect(result.body.indexOf(expectedFacts.heading)).toBeLessThan(
       result.body.indexOf('Cordialement,'),
     );

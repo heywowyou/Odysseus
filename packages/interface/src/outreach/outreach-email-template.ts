@@ -72,13 +72,13 @@ const FR: EmailTemplate = {
   criticalFinding: (count) => `${count} ${count === 1 ? 'constat critique' : 'constats critiques'}`,
   linkLead: `Vous trouverez un résumé de notre analyse ici${NBSP}:`,
   closing:
-    "L'audit complet est disponible à l'achat dès à présent. Pour chacun de ces constats, il indique la page concernée et la correction à apporter.",
+    "L'audit complet de votre site est disponible à l'achat dès à présent. Pour chacun de ces constats, il indique la page concernée et la correction à apporter.",
   question: `Souhaitez-vous recevoir le détail de ces constats${NBSP}?`,
   reminderIntro: (of) =>
     `Je me permets de revenir vers vous au sujet de mon précédent message concernant l'audit du site ${of}.`,
   reminderQuestion: `Avez-vous eu l'occasion de consulter l'aperçu${NBSP}?`,
   reminderCommercial:
-    "Si vous souhaitez aller plus loin, l'audit complet est disponible à l'achat. Il détaille chacun des constats relevés, les pages concernées et les corrections à apporter.",
+    "Si vous souhaitez aller plus loin, l'audit complet de votre site est disponible à l'achat. Il détaille chacun des constats relevés, les pages concernées et les corrections à apporter.",
   finalIntro: (of) =>
     `Je me permets de vous écrire une dernière fois au sujet de l'audit du site ${of}.`,
   finalLawLead:

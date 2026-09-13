@@ -24,10 +24,15 @@ export interface RenderedOutreachDraft {
   html: string;
 }
 
+const ROOT_STYLE =
+  'font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#202124';
+const PREVIEW_LINK_STYLE = 'font-weight:600;text-decoration:underline';
+const SIGNATURE_NAME_STYLE = 'font-weight:600';
+const SIGNATURE_SECONDARY_STYLE = 'color:#5f6368';
 const FOOTER_STYLE =
-  'margin-top:24px;padding-top:12px;border-top:1px solid #dddddd;' +
+  'margin-top:24px;padding-top:12px;border-top:1px solid #dadce0;' +
   'color:#6b6b6b;font-size:12px;line-height:1.5';
-const FOOTER_LINK_STYLE = 'color:#6b6b6b';
+const FOOTER_LINK_STYLE = 'color:#6b6b6b;text-decoration:underline';
 
 function escapeDraftHtml(value: string): string {
   return value
@@ -105,16 +110,19 @@ export function renderOutreachDraft(document: OutreachDraftDocument): RenderedOu
   const htmlBody = document.body.map((block) => {
     if (block.kind === 'paragraph') return `<div>${escapeDraftHtml(block.text)}</div>`;
     const lead = block.lead === undefined ? '' : `${escapeDraftHtml(block.lead)}<br>`;
-    return `<div>${lead}${htmlLink(block.link)}</div>`;
+    return `<div>${lead}${htmlLink(block.link, PREVIEW_LINK_STYLE)}</div>`;
   });
   const htmlFooter = renderHtmlFooter(document.footer);
+  const [signatureName, ...signatureSecondary] = copy.signature;
   const html = [
-    `<div dir="ltr" lang="${document.language}">`,
+    `<div dir="ltr" lang="${document.language}" style="${ROOT_STYLE}">`,
     [
       `<div>${escapeDraftHtml(copy.salutation)}</div>`,
       ...htmlBody,
       `<div>${escapeDraftHtml(copy.signOff)}</div>`,
-      `<div>${copy.signature.map(escapeDraftHtml).join('<br>')}</div>`,
+      `<div><span style="${SIGNATURE_NAME_STYLE}">${escapeDraftHtml(signatureName ?? '')}</span>` +
+        `<br><span style="${SIGNATURE_SECONDARY_STYLE}">` +
+        `${signatureSecondary.map(escapeDraftHtml).join('<br>')}</span></div>`,
     ].join(spacer),
     `<div style="${FOOTER_STYLE}">${htmlFooter.join('')}</div>`,
     '</div>',
