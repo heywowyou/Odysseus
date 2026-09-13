@@ -31,6 +31,7 @@ export default defineConfig(
     '.codex/**',
     '.zcode/**',
     '.playwright-mcp/**',
+    '.impeccable/live/**',
   ]),
   {
     files: sourceFiles,
