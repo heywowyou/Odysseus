@@ -30,7 +30,7 @@ import {
   isReportStageFailure,
   SEVERITIES,
 } from './audit-detail-model';
-import { FailureCard } from './failure-card';
+import { FailureCard } from './audit-reports-section';
 import { FindingsCard, PublisherIdentificationAlert } from './audit-findings-section';
 import type { AuditDetailResponse, Severity, SeverityRollup } from './audit-detail-types';
 
