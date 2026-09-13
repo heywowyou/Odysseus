@@ -26,6 +26,7 @@ export type HotelContactState =
 
 export type HotelContactReason =
   | 'role-address-published'
+  | 'operator-entered'
   | 'no-address-published'
   | 'site-unreachable'
   | 'robots-denied'
@@ -38,6 +39,14 @@ export type HotelContactReason =
   | 'off-domain-only'
   | 'domain-suppressed'
   | 'address-suppressed';
+
+/** Where an effective address came from. Discovered contacts use
+ *  `hotel-website`; manual overrides must state the honest origin selected by
+ *  the operator. */
+export type HotelContactAddressOrigin =
+  | 'hotel-website'
+  | 'other-public-source'
+  | 'provided-directly';
 
 /**
  * Whether the address's domain publishes mail exchangers. A public DNS record,
@@ -58,12 +67,16 @@ export interface HotelContactRecord {
   domain: string;
   state: HotelContactState;
   reason: HotelContactReason;
-  /** Present whenever an allowlisted address was found, including on a row
-   *  parked for `no-mail-service`. Never a named or free-mail address. */
+  /** Present whenever an effective address exists. Automated discovery still
+   *  stores only its approved role addresses; `operator-entered` is the manual
+   *  override path introduced by plan 045. */
   address?: string;
   localPart?: string;
   source?: ContactSourceKind;
   sourceUrl?: string;
+  addressOrigin?: HotelContactAddressOrigin;
+  /** Present only when the operator attested a consumer free-mail address. */
+  freeMailAttestedAt?: Date;
   mxStatus: MailDomainStatus;
   validatedAt: Date;
 }
