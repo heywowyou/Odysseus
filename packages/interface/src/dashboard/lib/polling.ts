@@ -2,7 +2,9 @@ export interface PollingControllerOptions {
   intervalMs: number;
   fetcher: () => Promise<unknown>;
   onUpdate: (data: unknown) => void;
-  onError: (message: string) => void;
+  /** Receives a failure message, then `undefined` when a later request
+   *  succeeds so consumers cannot retain an obsolete transport error. */
+  onError: (message: string | undefined) => void;
   onSettled: (isLoading: boolean) => void;
 }
 
@@ -48,7 +50,10 @@ export function createPollingController(options: PollingControllerOptions): Poll
     onSettled(true);
     try {
       const data = await fetcher();
-      if (!stopped) onUpdate(data);
+      if (!stopped) {
+        onError(undefined);
+        onUpdate(data);
+      }
     } catch (cause) {
       if (!stopped) onError(cause instanceof Error ? cause.message : String(cause));
     } finally {

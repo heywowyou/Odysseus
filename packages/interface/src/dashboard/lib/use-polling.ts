@@ -7,6 +7,7 @@ export interface PollingState<T> {
   /** True only while no data has ever arrived; refreshes keep the previous
    *  data on screen instead of flashing a loader. */
   isLoading: boolean;
+  /** Time when fresh data was last accepted. Failed attempts do not advance it. */
   lastUpdatedAt: number | undefined;
   refresh: () => void;
 }
@@ -61,11 +62,13 @@ export function usePolling<T>(
     const controller = createPollingController({
       intervalMs,
       fetcher: () => fetcherRef.current(),
-      onUpdate: (result) => setData(result as T),
+      onUpdate: (result) => {
+        setData(result as T);
+        setLastUpdatedAt(Date.now());
+      },
       onError: (message) => setError(message),
       onSettled: (settledLoading) => {
         if (settledLoading) return;
-        setLastUpdatedAt(Date.now());
         setIsLoading(false);
       },
     });

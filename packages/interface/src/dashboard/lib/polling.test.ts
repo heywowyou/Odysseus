@@ -21,7 +21,7 @@ function harness(intervalMs: number) {
         pending.push({ resolve, reject });
       }),
     onUpdate: (data) => events.push(`update:${String(data)}`),
-    onError: (message) => events.push(`error:${message}`),
+    onError: (message) => events.push(message === undefined ? 'error:clear' : `error:${message}`),
     onSettled: (isLoading) => events.push(`loading:${String(isLoading)}`),
   });
   return {
@@ -49,7 +49,7 @@ describe('createPollingController', () => {
     tick.controller.start();
     expect(tick.pendingCount()).toBe(1);
     await tick.settle(7);
-    expect(tick.events).toEqual(['loading:true', 'update:7', 'loading:false']);
+    expect(tick.events).toEqual(['loading:true', 'error:clear', 'update:7', 'loading:false']);
     tick.advance(60_000);
     expect(tick.pendingCount()).toBe(0);
     vi.useRealTimers();
@@ -86,6 +86,32 @@ describe('createPollingController', () => {
     expect(tick.events).toContain('loading:false');
     tick.advance(5_000);
     expect(tick.pendingCount()).toBe(1);
+    vi.useRealTimers();
+  });
+
+  it('clears a transient error when polling later succeeds', async () => {
+    vi.useFakeTimers();
+    const tick = harness(5_000);
+    tick.controller.start();
+    await tick.settle(1);
+    tick.advance(5_000);
+    await tick.fail('temporary outage');
+    tick.advance(5_000);
+    await tick.settle(2);
+
+    expect(tick.events).toEqual([
+      'loading:true',
+      'error:clear',
+      'update:1',
+      'loading:false',
+      'loading:true',
+      'error:temporary outage',
+      'loading:false',
+      'loading:true',
+      'error:clear',
+      'update:2',
+      'loading:false',
+    ]);
     vi.useRealTimers();
   });
 
