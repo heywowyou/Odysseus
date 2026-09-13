@@ -221,6 +221,25 @@ html {
   break-inside: avoid;
 }
 
+/* Priority cards are intentionally fragmentable. Keeping every generic
+   .card atomic can strand the section heading on an otherwise empty page
+   when the first priority fits only on a fresh page. Keep the priority's
+   identity and opening explanation together, then let Paged.js use the
+   remaining space and continue the card cleanly when needed. */
+.theme-card {
+  break-inside: auto;
+}
+.theme-card-header,
+.theme-card-header + .theme-row {
+  break-inside: avoid;
+}
+.theme-card-header {
+  break-after: avoid;
+}
+.theme-card-header + .theme-row {
+  break-before: avoid;
+}
+
 /* Sections flow freely and share a page when short (item 34 above), which
    is deliberate - but nothing separated the end of one section's content
    from the next section's heading when that happened, so a heading could

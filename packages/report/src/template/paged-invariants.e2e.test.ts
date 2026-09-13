@@ -123,6 +123,33 @@ function addStartHereBoundaryPressure(html: string): string {
   );
 }
 
+/** Leaves enough room for a priority's heading and opening explanation but
+ * not its whole card. An atomic card would move to the next page and strand
+ * the section heading; a fragmentable card starts in the remaining space. */
+function addFirstThemeBoundaryPressure(html: string): string {
+  return html.replace(
+    '<div class="card elev-sm theme-card"',
+    '<div style="height:105mm" data-theme-boundary-pressure></div><div class="card elev-sm theme-card"',
+  );
+}
+
+const THEME_OVERFLOW_BLOCK_COUNT = 48;
+
+/** Extends priority 1 beyond a physical page with uniquely labelled blocks,
+ * exercising genuine multi-page fragmentation and text preservation. */
+function makeFirstThemeOversized(html: string): string {
+  const firstThemeStart = html.indexOf('id="theme-1"');
+  const secondThemeStart = html.indexOf('id="theme-2"', firstThemeStart);
+  if (firstThemeStart < 0 || secondThemeStart < 0) return html;
+  const firstThemeEnd = html.lastIndexOf('</div>', secondThemeStart);
+  const blocks = Array.from(
+    { length: THEME_OVERFLOW_BLOCK_COUNT },
+    (_, index) =>
+      `<p data-theme-overflow-block="${index + 1}">Priority overflow marker ${index + 1}: preserved exactly once.</p>`,
+  ).join('');
+  return `${html.slice(0, firstThemeEnd)}${blocks}${html.slice(firstThemeEnd)}`;
+}
+
 /** Every sheet eyebrow in source document order. html-utils.ts's sheet()
  *  helper, toc.ts, and metadata-sheet.ts are the only h6 emitters in the
  *  package (verified by plan 018's step-2 work), so each h6 marks exactly
@@ -316,35 +343,66 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
     expect(breakInside).toBe('avoid');
   });
 
-  // Plan 027 step 5: raising businessImpact's ceiling to 5 sentences and
-  // recommendedActions' to 5 entries (writing-schema.ts) is only safe if a
-  // theme-card at that new maximum still fits on one physical page -
-  // paged.css declares `.theme-card { break-inside: avoid }` (trade-off
-  // 17's atomicity rule), which does not itself guarantee the block fits;
-  // it only guarantees Paged.js will not split it, so an oversized card
-  // would silently overflow onto whatever page it landed on instead of
-  // fragmenting visibly. This is the only place that guarantee is checked
-  // against a real measured height rather than assumed from the CSS
-  // declaration. 261mm matches paged.css's own `.sheet-metadata` non-cover
-  // content-box comment (297mm A4 minus the 18mm top and bottom @page
-  // margins); Paged.js lays out at print resolution, so a generous
-  // px-per-mm estimate is used rather than assuming a fixed 96dpi.
-  it("invariant 7: every theme card fits within one page's content-box height, even at the raised businessImpact/recommendedActions maxima", async () => {
-    const CONTENT_BOX_HEIGHT_MM = 261;
-    const PX_PER_MM = 3.7795;
-    const maxContentBoxHeightPx = CONTENT_BOX_HEIGHT_MM * PX_PER_MM;
-
-    const cardHeights = await doc.page.evaluate(() =>
-      Array.from(document.querySelectorAll('.theme-card')).map(
-        (card) => card.getBoundingClientRect().height,
-      ),
+  it('invariant 7a: priority 1 starts beside its section heading when the whole card cannot fit', async () => {
+    const pressured = await paginate(
+      browser,
+      addFirstThemeBoundaryPressure(stressHtml),
+      pagedjsSource,
     );
-
-    expect(cardHeights.length).toBeGreaterThan(0);
-    for (const height of cardHeights) {
-      expect(height).toBeLessThanOrEqual(maxContentBoxHeightPx);
+    try {
+      const sharesPage = await pressured.page.evaluate(() =>
+        Array.from(document.querySelectorAll('.pagedjs_page')).some(
+          (physicalPage) =>
+            physicalPage.querySelector('#section-04 .section-head') !== null &&
+            physicalPage.querySelector('#theme-1') !== null,
+        ),
+      );
+      expect(sharesPage).toBe(true);
+    } finally {
+      await pressured.page.context().close();
     }
-  });
+  }, 60_000);
+
+  it('invariant 7b: an oversized priority fragments without losing, duplicating, or orphaning content', async () => {
+    const oversized = await paginate(browser, makeFirstThemeOversized(stressHtml), pagedjsSource);
+    try {
+      const result = await oversized.page.evaluate((blockCount) => {
+        const pages = Array.from(document.querySelectorAll('.pagedjs_page'));
+        const themePages = pages.flatMap((physicalPage, index) =>
+          physicalPage.querySelector('[data-theme-overflow-block]') === null ? [] : [index],
+        );
+        const markerCounts = Array.from(
+          { length: blockCount },
+          (_, index) =>
+            document.querySelectorAll(`[data-theme-overflow-block="${index + 1}"]`).length,
+        );
+        const headerPage = pages.findIndex(
+          (physicalPage) => physicalPage.querySelector('#theme-1 .theme-card-header') !== null,
+        );
+        const openingPage = pages.findIndex(
+          (physicalPage) => physicalPage.querySelector('#theme-1 .theme-row-problem') !== null,
+        );
+        return {
+          themePages,
+          markerCounts,
+          headerPage,
+          openingPage,
+          hasBlankInteriorPage: pages
+            .slice(1, -1)
+            .some((physicalPage) => (physicalPage.textContent ?? '').trim() === ''),
+        };
+      }, THEME_OVERFLOW_BLOCK_COUNT);
+
+      expect(new Set(result.themePages).size).toBeGreaterThan(1);
+      expect(result.markerCounts).toEqual(
+        Array.from({ length: THEME_OVERFLOW_BLOCK_COUNT }, () => 1),
+      );
+      expect(result.headerPage).toBe(result.openingPage);
+      expect(result.hasBlankInteriorPage).toBe(false);
+    } finally {
+      await oversized.page.context().close();
+    }
+  }, 60_000);
 
   // Plan 018's replacement for the retired three-per-page cap: every
   // numbered .sheet starts on a fresh physical page, so a page carries at

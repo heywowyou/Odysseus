@@ -66,11 +66,10 @@ const PAGEDJS_LAYOUT_REPEATED_MARKER = 'Layout repeated';
  *  class list may have identical text content appearing on two
  *  different pages - any match is Paged.js duplicating a fragment, not
  *  real content. The property every class here shares is verbatim
- *  uniqueness across a legitimate report, not CSS atomicity: the first
- *  five (paged.css's `.card, .render-card, .theme-card, .glossary-entry,
- *  .section-head`) are break-inside: avoid blocks a legitimate report
- *  never repeats, and `.appendix-rule-head` (issue #171) is NOT atomic
- *  (trade-off 17) but is still unique - one heading per annex rule
+ *  uniqueness across a legitimate report, not CSS atomicity. Most of these
+ *  classes remain break-inside: avoid, while `.theme-card` is explicitly
+ *  fragmentable and `.appendix-rule-head` (issue #171) is also NOT atomic
+ *  (trade-off 17); all are still unique - one heading per annex rule
  *  group, and its text renders the severity badge, rule code and
  *  occurrence counts together, so the same rule id's heading in the
  *  third-party partition always carries the vendor tag its first-party

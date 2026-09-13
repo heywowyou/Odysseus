@@ -564,7 +564,7 @@ function renderTheme(
 
   return `
     <div class="card elev-sm theme-card" style="margin-bottom:var(--space-6);gap:var(--space-3)" id="theme-${displayRank}" data-model-priority-rank="${theme.priorityRank}">
-      <div style="display:flex;align-items:flex-start;gap:var(--space-3)">
+      <div class="theme-card-header" style="display:flex;align-items:flex-start;gap:var(--space-3)">
         <span style="width:26px;height:26px;flex:none;border-radius:50%;border:1px solid var(--color-accent);color:var(--color-accent);font-size:12px;display:flex;align-items:center;justify-content:center">${displayRank}</span>
         <div style="flex:1">
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px">
