@@ -45,6 +45,9 @@ jobs:
       - name: Build
         run: pnpm --filter @odysseus/cli... run build
 
+      # The marketing site is not a dependency of the CLI, so the filter
+      # above never builds it. Its only CI exercise is here: a broken
+      # build used to surface first as a failed Vercel deploy.
       - name: Build site
         run: pnpm --filter @odysseus/site run build
 
@@ -52,6 +55,10 @@ jobs:
         run: pnpm run test:deploy
 
       - name: Test
+        # test:all runs all three vitest projects (unit, e2e, and the
+        # serial e2e project): the same complete suite that a plain
+        # `vitest run` executed before the split. `pnpm test` deliberately
+        # covers only the unit project so the local loop stays fast.
         run: pnpm run test:all
         env:
           MONGODB_TEST_URI: mongodb://localhost:27018/odysseus_test
