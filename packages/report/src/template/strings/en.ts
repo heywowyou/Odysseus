@@ -234,9 +234,9 @@ export const en: ReportStrings = {
       'This site has few significant SEO and GEO findings relative to accessibility: most of the priorities below concern accessibility.',
     jumpLinkLabelTemplate: 'See priority {rank}',
     topPriorityIsNotLegalWithPointerTemplate:
-      'Priority 1 above is not tied to any accessibility criterion: it was ranked first based on its complexity-to-impact ratio. The priorities tied to an accessibility criterion rank at position {legalRank}. Other obligations unrelated to accessibility may apply separately: see the "Legal exposure" section.',
+      'Priority 1 is not tied to any accessibility criterion: it was ranked first based on its complexity-to-impact ratio. The priorities tied to an accessibility criterion rank at position {legalRank}. Other obligations unrelated to accessibility may apply separately: see the "Legal exposure" section.',
     topPriorityIsNotLegalNoPointer:
-      'Priority 1 above is not tied to any accessibility criterion: it was ranked first based on its complexity-to-impact ratio. None of the priorities in this report are tied to an accessibility criterion. Other obligations unrelated to accessibility may apply separately: see the "Legal exposure" section for the detail.',
+      'Priority 1 is not tied to any accessibility criterion: it was ranked first based on its complexity-to-impact ratio. None of the priorities in this report are tied to an accessibility criterion. Other obligations unrelated to accessibility may apply separately: see the "Legal exposure" section for the detail.',
     summaryCountsTemplate:
       'The audit identified {total} findings in total, including {actionable} that are critical or serious ({critical} critical and {serious} serious).',
     coveredByPrioritiesTemplate:

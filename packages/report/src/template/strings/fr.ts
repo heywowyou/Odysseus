@@ -263,9 +263,9 @@ export const fr: ReportStrings = {
       "Ce site présente peu de constats SEO et GEO significatifs par rapport à l'accessibilité : l'essentiel des priorités ci-dessous concerne l'accessibilité.",
     jumpLinkLabelTemplate: 'Voir priorité {rank}',
     topPriorityIsNotLegalWithPointerTemplate:
-      "La priorité 1 ci-dessus n'est rattachée à aucun critère d'accessibilité : elle a été classée en premier sur la base de son rapport complexité/impact. Les priorités rattachées à un critère d'accessibilité figurent en position {legalRank}. D'autres obligations, sans lien avec l'accessibilité, peuvent s'appliquer par ailleurs : voir la section « Exposition légale ».",
+      "La priorité 1 n'est rattachée à aucun critère d'accessibilité : elle a été classée en premier sur la base de son rapport complexité/impact. Les priorités rattachées à un critère d'accessibilité figurent en position {legalRank}. D'autres obligations, sans lien avec l'accessibilité, peuvent s'appliquer par ailleurs : voir la section « Exposition légale ».",
     topPriorityIsNotLegalNoPointer:
-      "La priorité 1 ci-dessus n'est rattachée à aucun critère d'accessibilité : elle a été classée en premier sur la base de son rapport complexité/impact. Aucune des priorités retenues dans ce rapport n'est rattachée à un critère d'accessibilité. D'autres obligations, sans lien avec l'accessibilité, peuvent s'appliquer par ailleurs : voir la section « Exposition légale » pour le détail.",
+      "La priorité 1 n'est rattachée à aucun critère d'accessibilité : elle a été classée en premier sur la base de son rapport complexité/impact. Aucune des priorités retenues dans ce rapport n'est rattachée à un critère d'accessibilité. D'autres obligations, sans lien avec l'accessibilité, peuvent s'appliquer par ailleurs : voir la section « Exposition légale » pour le détail.",
     summaryCountsTemplate:
       "L'audit a identifié {total} constats au total, dont {actionable} critiques ou sérieux ({critical} critiques et {serious} sérieux).",
     coveredByPrioritiesTemplate:

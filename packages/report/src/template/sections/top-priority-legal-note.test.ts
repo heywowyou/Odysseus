@@ -51,5 +51,11 @@ describe('the top-priority note claims only what legalRelevance actually knows',
       expect(e.topPriorityIsNotLegalWithPointerTemplate).toContain('{legalRank}');
       expect(e.topPriorityIsNotLegalNoPointer).not.toContain('{legalRank}');
     });
+
+    it(`[${language}] avoids a backwards directional reference to priority 1`, () => {
+      for (const note of notes) {
+        expect(note).not.toMatch(language === 'fr' ? /ci-dessus/i : /\babove\b/i);
+      }
+    });
   }
 });
