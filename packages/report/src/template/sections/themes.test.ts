@@ -1384,7 +1384,7 @@ describe('P2.2: the inline "Sans objet" gloss', () => {
   });
 });
 
-// 2026-08-22, Large Rule Families report review: Impact commercial and
+// 2026-08-22, Large Rule Families report review: Why it matters and
 // Conformité rendered as plain grey text with no colour signal, so the
 // stated urgency ("Élevé", "Non conforme") carried no visual weight.
 // Effort deliberately stays uncoloured (high effort means expensive, not
@@ -1445,13 +1445,13 @@ describe('2026-08-22: Impact commercial and Conformité are colour-coded, Effort
 
   const manifest = { pages: [] } as never;
 
-  it('colours "Impact commercial : Élevé" with the critical/red tone, not plain text', () => {
+  it('colours "Pourquoi cela compte : Élevé" with the critical/red tone, not plain text', () => {
     const findings = [buildFinding('f001')];
     const analysis = buildAnalysis('high', 'accessibility');
     const html = renderThemes(getStrings('fr'), 4, analysis as never, findings, manifest);
 
     // #d97b82 is SEVERITY.critical.color / LEVEL_COLOR.high.color.
-    expect(html).toMatch(/Impact commercial : <strong style="color:#d97b82">Élevé<\/strong>/);
+    expect(html).toMatch(/Pourquoi cela compte : <strong style="color:#d97b82">Élevé<\/strong>/);
   });
 
   it('never colours "Complexité : Élevé" the same way, since high complexity is expensive, not urgent', () => {
@@ -1491,7 +1491,7 @@ describe('2026-08-22: Impact commercial and Conformité are colour-coded, Effort
 });
 
 // Issue #47: the metadata strip's fixed five-column grid wrapped values
-// away from their labels in both languages - "Impact commercial" split
+// away from their labels in both languages - "Pourquoi cela compte" split
 // from ": Élevé", "28" stranded at a line end away from "pages sur", and
 // "Conformité : Non / conforme" broken so a line began with a bare "Non".
 // Each short label/value pair is now one non-breaking unit and the row
@@ -1558,7 +1558,7 @@ describe('issue #47: each metadata unit keeps its label and value together, and 
     );
 
     expect(html).toContain('display:flex;flex-wrap:wrap;align-items:baseline');
-    for (const label of ['Complexité', 'Impact commercial', 'Pages affectées']) {
+    for (const label of ['Complexité', 'Pourquoi cela compte', 'Pages concernées']) {
       expect(html).toContain(
         `<span class="text-muted" style="white-space:nowrap">${label} : <strong`,
       );
@@ -1580,7 +1580,7 @@ describe('issue #47: each metadata unit keeps its label and value together, and 
     );
 
     expect(html).toContain('display:flex;flex-wrap:wrap;align-items:baseline');
-    for (const label of ['Complexity', 'Business impact', 'Affected pages']) {
+    for (const label of ['Complexity', 'Why it matters', 'Pages affected']) {
       // Issue #82: English closes the colon up to the label, unlike French.
       expect(html).toContain(
         `<span class="text-muted" style="white-space:nowrap">${label}: <strong`,
@@ -2052,9 +2052,9 @@ describe('plan 018 step 6: priority card order and the deterministic observation
       'Accessibilité', // 1. category tag
       'class="tag qw"', // 1. quick-win marker
       'Contraste insuffisant sur les pages clés', // 1. stored technical title
-      'Pourquoi c&#39;est important', // 2 (escapeHtml turns the apostrophe)
-      'Ce que nous avons observé', // 3
-      'Ce que vous pouvez faire', // 4
+      'Pourquoi cela compte', // 2
+      'Ce que nous avons constaté', // 3
+      'Comment le corriger', // 4
       'Exigence de conformité', // 5
       'Complexité :', // 6. footer metadata
       'id="theme-2"', // the second card follows the first card's blocks
@@ -2093,7 +2093,7 @@ describe('plan 018 step 6: priority card order and the deterministic observation
     // 2 + 3 = 5 occurrences, exact and never approximate. French guillemets
     // carry U+00A0 (never U+202F), per the canonical strings rule.
     expect(html).toContain(
-      'Constat représentatif : «\u00a0Le contraste des couleurs est insuffisant\u00a0», relevé par exemple sur la page https://example.com/a-propos. Ce chantier concerne 2 pages et 5 occurrences.',
+      'Ce chantier comprend notamment le constat «\u00a0Le contraste des couleurs est insuffisant\u00a0», relevé sur la page https://example.com/a-propos. Au total, il concerne 2 pages et 5 occurrences.',
     );
   });
 
@@ -2104,7 +2104,7 @@ describe('plan 018 step 6: priority card order and the deterministic observation
     const html = renderThemes(getStrings('fr'), 4, analysis as never, findings, manifest);
 
     expect(html).toContain(
-      'Constat représentatif : «\u00a0Le contraste des couleurs est insuffisant\u00a0». Ce chantier concerne 0 pages et 4 occurrences.',
+      'Ce chantier comprend notamment le constat «\u00a0Le contraste des couleurs est insuffisant\u00a0». Au total, il concerne 0 pages et 4 occurrences.',
     );
   });
 
@@ -2133,14 +2133,16 @@ describe('plan 018 step 6: priority card order and the deterministic observation
 
     const html = renderThemes(getStrings('en'), 4, analysis as never, findings, manifest);
 
-    for (const marker of ['Why it matters', 'What we observed', 'What you can do']) {
+    for (const marker of ['Why it matters', 'What we found', 'How to fix it']) {
       expect(html).toContain(marker);
     }
     // Issue #82: English closes the colon up to the label.
     expect(html).toContain('Complexity:');
     // The English report resolves the label to the scanner's own English
     // title through the same shared helper.
-    expect(html).toContain('observed for example on the page https://example.com/.');
-    expect(html).toContain('This priority covers 1 page and 1 occurrence.');
+    expect(html).toContain('This workstream includes the finding');
+    expect(html).toContain(
+      'found on https://example.com/. In total, it affects 1 page and 1 occurrence.',
+    );
   });
 });

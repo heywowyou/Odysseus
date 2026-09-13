@@ -180,6 +180,6 @@ export function generateOutreachPreviewHtmlV2(input: OutreachPreviewSummary): st
     '</html>',
   ].join('\n');
 
-  assertOutreachPreviewHtml(html);
+  assertOutreachPreviewHtml(html, { editorialV2: true });
   return html;
 }

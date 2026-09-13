@@ -31,6 +31,25 @@ const DOCUMENT_RULES: Array<[string, RegExp]> = [
   ['reference-stat-source', /\b(?:W3C|WebAIM|Forrester|Deloitte|Nielsen)\b/u],
 ];
 
+/** Plan 046: current French v2 sales-document copy has a second, narrower
+ * contract. These rules are intentionally NOT global: the legacy v1 renderer
+ * still exists, English receives its own idiomatic pass only after French is
+ * locked, and technical/methodology surfaces elsewhere may legitimately name
+ * tools. v2 opts into the checks explicitly and this module applies them only
+ * when the rendered document declares `lang="fr"`. */
+const EDITORIAL_RULES_FR: Array<[string, RegExp]> = [
+  ['editorial-internal-tool-vocabulary', /\b(?:scanners?|notre robot|outils? déterministes?)\b/iu],
+  [
+    'editorial-defensive-formulation',
+    /(?:rien n['’]est (?:inventé|deviné)|nous constatons,? nous ne concluons pas|pas une préférence esthétique)/iu,
+  ],
+  ['editorial-legacy-severity', /\b(?:Grave|Modérée|Mineure)\b/u],
+  [
+    'editorial-sentence-fragment',
+    /(?:^|\s|[.!?]\s+)(?:Choisis parmi|Couvrant\b|Basé sur\b|Utilisation\s*:)/u,
+  ],
+];
+
 /** Strips the parts of the document that are legitimately not prose, so the
  *  text guard is applied to what a reader reads.
  *
@@ -60,17 +79,40 @@ export class OutreachPreviewLintError extends Error {
   }
 }
 
+export interface OutreachPreviewLintOptions {
+  /** Enables the Plan 046 copy-quality contract for the current v2 sales
+   * document. Omitted for the historical v1 renderer. */
+  editorialV2?: boolean;
+}
+
 /** Returns the name of the first rule that fired, or null for a clean
  *  document. Exported separately from the throwing form so the tests can assert
  *  which rule caught what. */
-export function lintOutreachPreviewHtml(html: string): string | null {
+export function lintOutreachPreviewHtml(
+  html: string,
+  options: OutreachPreviewLintOptions = {},
+): string | null {
   for (const [name, pattern] of DOCUMENT_RULES) {
     if (pattern.test(html)) return name;
   }
-  return containsProhibitedPreviewContent(readableText(html));
+
+  const text = readableText(html);
+  const prohibited = containsProhibitedPreviewContent(text);
+  if (prohibited !== null) return prohibited;
+
+  if (options.editorialV2 && /<html\s+lang=["']fr["']/iu.test(html)) {
+    for (const [name, pattern] of EDITORIAL_RULES_FR) {
+      if (pattern.test(text)) return name;
+    }
+  }
+
+  return null;
 }
 
-export function assertOutreachPreviewHtml(html: string): void {
-  const rule = lintOutreachPreviewHtml(html);
+export function assertOutreachPreviewHtml(
+  html: string,
+  options: OutreachPreviewLintOptions = {},
+): void {
+  const rule = lintOutreachPreviewHtml(html, options);
   if (rule !== null) throw new OutreachPreviewLintError(rule);
 }

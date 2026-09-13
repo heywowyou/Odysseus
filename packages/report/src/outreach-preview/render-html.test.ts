@@ -71,14 +71,14 @@ describe('generateOutreachPreviewHtml', () => {
         }),
       }),
     );
-    expect(html).not.toContain('Le cadre applicable');
+    expect(html).not.toContain('Cadre réglementaire à vérifier');
     expect(html).toContain('</html>');
   });
 
   it('renders the legal section when it is supported', () => {
     const html = generateOutreachPreviewHtml(previewTestInput({ facts: facts('fr') }));
-    expect(html).toContain('Le cadre applicable');
-    expect(html).toContain('nous ne concluons pas');
+    expect(html).toContain('Cadre réglementaire à vérifier');
+    expect(html).toContain('Faites confirmer votre situation par votre conseil juridique');
   });
 
   describe('the RGPD article 14 disclosures', () => {

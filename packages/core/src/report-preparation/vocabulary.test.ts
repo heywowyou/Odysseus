@@ -68,9 +68,9 @@ describe('preparation copy tables', () => {
     }
   });
 
-  it('keeps the generic question bytes identical to the flat mockup question', () => {
+  it('keeps one canonical decision-oriented French fallback question', () => {
     expect(resolveGenericDecisionQuestion('fr')).toBe(
-      'Quel est l’état actuel de votre site, et par où commencer ?',
+      'Quels points de votre site faut-il corriger en priorité pour améliorer son accessibilité, sa visibilité et son utilisation ?',
     );
     expect(resolveGenericDecisionQuestion('en')).toBe(
       'What is the current state of your site, and where should you start?',

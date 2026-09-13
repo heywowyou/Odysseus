@@ -145,16 +145,13 @@ export const SITUATION_QUESTION_COPY: Partial<Record<ReportSituation, BilingualC
 };
 
 /**
- * The canonical generic decision question, plan 018 step 4. French bytes are
- * the mockup's own script data (docs/report/design/
- * report-mockup-standalone.flat.html, meta.question) kept byte-identical:
- * U+2019 in "l’état", plain spaces, plain "?" - the report must not
- * paraphrase the one sentence both the cover and the opening display, since
- * plan 018 step 5 asserts the two render sites agree exactly. The single
- * string table lives here in core so the preparation preview and the report
- * package cannot drift apart; packages/report re-exports the resolver.
+ * The canonical generic decision question shared by preparation previews and
+ * report rendering. Plan 046 replaces the old state-of-the-site wording with a
+ * decision-oriented French question while keeping this as the single source of
+ * truth so prepared and directly rendered reports cannot drift.
  */
-const GENERIC_DECISION_QUESTION_FR = 'Quel est l’état actuel de votre site, et par où commencer ?';
+const GENERIC_DECISION_QUESTION_FR =
+  'Quels points de votre site faut-il corriger en priorité pour améliorer son accessibilité, sa visibilité et son utilisation ?';
 
 const GENERIC_DECISION_QUESTION_EN =
   'What is the current state of your site, and where should you start?';

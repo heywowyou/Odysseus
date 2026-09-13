@@ -162,10 +162,10 @@ export default function ProspectingPrivacyPage() {
 
             <p>
               Pour un nombre restreint d&apos;établissements présélectionnés, une seconde passe
-              analyse l&apos;ensemble du site, selon la même méthode qu&apos;un audit
+              analyse l&apos;ensemble du site, selon la même méthode qu&apos;un diagnostic
               commandé&#160;: chaque page consultée reçoit les mêmes contrôles, et la vitesse de
-              chargement est mesurée sur un échantillon représentatif de pages. Aucune passe ne crée
-              de compte, ne remplit de formulaire et n&apos;effectue de réservation.
+              chargement est mesurée sur une sélection de pages. Aucune passe ne crée de compte, ne
+              remplit de formulaire et n&apos;effectue de réservation.
             </p>
 
             <p>
@@ -177,11 +177,11 @@ export default function ProspectingPrivacyPage() {
             <h2 id="finalite-confid">Finalité et base légale</h2>
 
             <p>
-              Ces données servent à vous proposer une prestation d&apos;audit de site web, et à ne
-              vous contacter que si l&apos;analyse a relevé des éléments utiles à vous signaler. Le
-              traitement repose sur l&apos;intérêt légitime&#160;: une prospection entre
-              professionnels, ciblée sur des établissements dont l&apos;activité correspond à la
-              prestation, assortie d&apos;un moyen simple de s&apos;y opposer.
+              Ces données servent à vous proposer une prestation de diagnostic technique de site
+              web, et à ne vous contacter que si l&apos;analyse a relevé des éléments utiles à vous
+              signaler. Le traitement repose sur l&apos;intérêt légitime&#160;: une prospection
+              entre professionnels, ciblée sur des établissements dont l&apos;activité correspond à
+              la prestation, assortie d&apos;un moyen simple de s&apos;y opposer.
             </p>
 
             <h2 id="duree-confid">Durée de conservation</h2>

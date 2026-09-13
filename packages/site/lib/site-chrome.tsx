@@ -24,7 +24,7 @@ const LABELS = {
     privacy: 'Prospection et données personnelles',
     optOut: 'Désinscription',
     tagline:
-      'Diagnostic technique de sites web\u00a0: accessibilité, référencement naturel, signaux de visibilité IA et performance.',
+      'Diagnostic technique de sites web\u00a0: accessibilité, référencement naturel, visibilité dans les assistants IA et performance.',
   },
   en: {
     skip: 'Skip to content',

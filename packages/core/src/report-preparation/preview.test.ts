@@ -29,7 +29,8 @@ describe('buildReportPreparationPreview', () => {
       findings: [],
     });
     expect(preview.fr.coverQuestion).toEqual({
-      value: 'Quel est l’état actuel de votre site, et par où commencer ?',
+      value:
+        'Quels points de votre site faut-il corriger en priorité pour améliorer son accessibilité, sa visibilité et son utilisation ?',
       source: 'fallback',
     });
     expect(preview.en.coverQuestion).toEqual({

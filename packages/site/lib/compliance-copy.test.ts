@@ -152,7 +152,7 @@ describe('bot page', () => {
   });
 
   it('distinguishes the commissioned audit from the prospecting passes', () => {
-    expect(bot).toContain('Audit commandé');
+    expect(bot).toContain('Diagnostic commandé');
     expect(bot).toContain('Commissioned audit');
     expect(bot).toContain('Analyse de prospection');
     expect(bot).toContain('Prospecting analysis');
@@ -219,7 +219,7 @@ describe('offer page', () => {
   it('states no obligation verdict', () => {
     // "We report, we do not conclude" binds every client-facing surface, not
     // only the report templates.
-    expect(offer).toContain('sans conclure');
+    expect(offer).toContain('sans extrapoler au-delà de ces faits');
     expect(offer).toContain('without concluding');
     expect(offer).not.toMatch(/vous êtes tenu|you are required|vous devez/u);
   });

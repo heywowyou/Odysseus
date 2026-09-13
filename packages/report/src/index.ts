@@ -29,10 +29,11 @@ export { hasMeasuredCoreWebVitals } from './template/sections/core-web-vitals-ta
  *  unsafe fields have nowhere to go. */
 export { generateOutreachPreviewHtml } from './outreach-preview/render-html.js';
 export { generateOutreachPreviewHtmlV2 } from './outreach-preview/render-html-v2.js';
+export type { OutreachProofCardCopyEntry } from './outreach-preview/proof-card-copy.js';
 export {
-  OUTREACH_PROOF_CARD_COPY,
-  type OutreachProofCardCopyEntry,
-} from './outreach-preview/proof-card-copy.js';
+  OUTREACH_PROOF_CARD_CLIENT_COPY as OUTREACH_PROOF_CARD_COPY,
+  outreachProofCardCopy,
+} from './outreach-preview/proof-card-client-copy.js';
 export { generateOutreachPreviewPdf } from './outreach-preview/pdf-v2.js';
 export { embedOutreachEvidenceAsset } from './outreach-preview/evidence-input.js';
 export type { OutreachEvidenceSlot } from './outreach-preview/evidence-input.js';

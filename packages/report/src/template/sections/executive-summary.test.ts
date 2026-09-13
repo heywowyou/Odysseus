@@ -271,7 +271,7 @@ describe('item 16: a non-legal top priority is acknowledged in the executive sum
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
 
     expect(html).toContain(
-      'L&#39;audit a identifié 4 constats au total, dont 3 critiques ou sérieux (2 critiques et 1 sérieux)',
+      'Le diagnostic a relevé 4 constats distincts, dont 3 critiques ou sérieux (2 critiques et 1 sérieux)',
     );
   });
 
@@ -309,7 +309,7 @@ describe('item 16: a non-legal top priority is acknowledged in the executive sum
     frAnalysis.executiveSummary = 'Le site montre des signes de vieillissement.';
     const frHtml = renderExecutiveSummary(getStrings('fr'), 1, frAnalysis, findings, emptyManifest);
     const frProseIndex = frHtml.indexOf('Le site montre des signes de vieillissement.');
-    const frCountsIndex = frHtml.indexOf('4 constats au total');
+    const frCountsIndex = frHtml.indexOf('4 constats distincts');
     expect(frProseIndex).toBeGreaterThan(-1);
     expect(frCountsIndex).toBeGreaterThan(-1);
     expect(frProseIndex).toBeLessThan(frCountsIndex);
@@ -318,7 +318,7 @@ describe('item 16: a non-legal top priority is acknowledged in the executive sum
     enAnalysis.executiveSummary = 'The site shows its age.';
     const enHtml = renderExecutiveSummary(getStrings('en'), 1, enAnalysis, findings, emptyManifest);
     const enProseIndex = enHtml.indexOf('The site shows its age.');
-    const enCountsIndex = enHtml.indexOf('4 findings in total');
+    const enCountsIndex = enHtml.indexOf('4 distinct findings');
     expect(enProseIndex).toBeGreaterThan(-1);
     expect(enCountsIndex).toBeGreaterThan(-1);
     expect(enProseIndex).toBeLessThan(enCountsIndex);
@@ -391,7 +391,7 @@ describe('fix #1 (2026-08-25 report review): the covered-by-priorities bridging 
     const findings = [buildFinding('f001'), buildFinding('f002')];
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
 
-    expect(html).toContain('1 sont couverts par les priorités ci-dessous');
+    expect(html).toContain('Les priorités présentées ci-dessous en couvrent 1');
     expect(html).toContain('Reste');
   });
 
@@ -400,7 +400,7 @@ describe('fix #1 (2026-08-25 report review): the covered-by-priorities bridging 
     const findings = [buildFinding('f001')];
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
 
-    expect(html).not.toContain('sont couverts par les priorités');
+    expect(html).not.toContain('Les priorités présentées ci-dessous en couvrent');
   });
 
   it('renders nothing when no priority is rendered at all', () => {
@@ -408,7 +408,7 @@ describe('fix #1 (2026-08-25 report review): the covered-by-priorities bridging 
     const findings = [buildFinding('f001')];
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
 
-    expect(html).not.toContain('sont couverts par les priorités');
+    expect(html).not.toContain('Les priorités présentées ci-dessous en couvrent');
   });
 });
 
@@ -450,14 +450,14 @@ describe('P2.4: the category-imbalance note', () => {
     ];
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
 
-    expect(html).toContain('peu de constats SEO et GEO significatifs');
+    expect(html).toContain('le référencement naturel et la visibilité dans les assistants IA');
   });
 
   it('renders nothing when there are no SEO/GEO findings at all', () => {
     const findings = ['f1', 'f2'].map((id) => findingWithCategory(id, 'accessibility'));
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
 
-    expect(html).not.toContain('peu de constats SEO et GEO significatifs');
+    expect(html).not.toContain('le référencement naturel et la visibilité dans les assistants IA');
   });
 
   it('renders nothing when accessibility does not dominate', () => {
@@ -468,6 +468,6 @@ describe('P2.4: the category-imbalance note', () => {
     ];
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
 
-    expect(html).not.toContain('peu de constats SEO et GEO significatifs');
+    expect(html).not.toContain('le référencement naturel et la visibilité dans les assistants IA');
   });
 });
