@@ -1,15 +1,6 @@
 /**
- * Per-route title and description, in both languages, added for issue #196.
- *
- * `app/*\/page.tsx` metadata exports are server-rendered and French only:
- * Next has no per-visitor language at request time, and the language toggle
- * is a same-URL client affordance. This map is what the toggle reads to
- * update `document.title` and the description meta tag in the browser once
- * a visitor switches to English, so the tab, a bookmark, or a share preview
- * taken after toggling no longer says one thing while the page shows
- * another. The French entries mirror the metadata already rendered on the
- * server; they exist here only so the effect has something to restore when
- * a visitor switches back.
+ * Per-route title and description used when the in-page language toggle
+ * changes the active language without changing the URL.
  */
 export const PAGE_META: Record<
   string,
@@ -19,59 +10,59 @@ export const PAGE_META: Record<
     fr: {
       title: 'Odysseus, diagnostic technique de site web',
       description:
-        'Diagnostic technique automatisé pour sites web : accessibilité, référencement naturel, visibilité dans les assistants IA et performance. Une liste de corrections classées par priorité, à un prix publié de 1 600 € HT.',
+        'Diagnostic technique de site web : accessibilité, référencement naturel, rendu JavaScript, performance et signaux techniques liés aux assistants IA. Rapport priorisé, tarif fixe de 1 600 € HT.',
     },
     en: {
       title: 'Odysseus, technical website diagnostic',
       description:
-        'Automated technical diagnostic for websites: accessibility, search optimisation, AI visibility signals and performance. A list of corrections ranked by priority, at a published price of EUR 1,600 excl. VAT.',
+        'Technical website diagnostic covering accessibility, search, JavaScript rendering, performance and technical signals for AI assistants. Prioritised report, fixed price of EUR 1,600 excl. VAT.',
     },
   },
   '/offre': {
     fr: {
-      title: 'Diagnostic technique complet | Odysseus',
+      title: 'Le diagnostic technique Odysseus | Odysseus',
       description:
-        'Ce que couvre le diagnostic technique complet Odysseus, ce que contient le rapport de diagnostic et comment le recevoir. Le prix publié figure plus bas sur la page.',
+        'Les contrôles réalisés, le contenu du rapport, le délai et le tarif fixe de 1 600 € HT du diagnostic technique Odysseus.',
     },
     en: {
-      title: 'Full technical diagnostic | Odysseus',
+      title: 'The Odysseus technical diagnostic | Odysseus',
       description:
-        'What the Odysseus full technical diagnostic covers, what the report contains, and how to receive it. The published price appears further down the page.',
+        'The checks performed, report contents, delivery process and fixed EUR 1,600 excl. VAT price of the Odysseus technical diagnostic.',
     },
   },
   '/bot': {
     fr: {
       title: 'OdysseusBot | Odysseus',
       description:
-        "Ce que fait le robot OdysseusBot lors de la visite d'un site : pages consultées, fréquence des requêtes, données conservées et durée, moyens de l'identifier ou de le bloquer.",
+        "Ce que fait OdysseusBot lorsqu'il visite un site : pages consultées, rythme des requêtes, données conservées et moyens de le bloquer.",
     },
     en: {
       title: 'OdysseusBot | Odysseus',
       description:
-        'What the OdysseusBot crawler does when it visits a site: pages consulted, request frequency, data kept and for how long, and how to identify or block it.',
+        'What OdysseusBot does when it visits a website: pages accessed, request pacing, retained data, and how to block it.',
     },
   },
   '/confidentialite-prospection': {
     fr: {
       title: 'Prospection et données personnelles | Odysseus',
       description:
-        "Comment Odysseus obtient et utilise les données des établissements contactés, et comment s'y opposer.",
+        "Quelles données Odysseus utilise pour sa prospection, d'où elles proviennent, combien de temps elles sont conservées et comment s'y opposer.",
     },
     en: {
-      title: 'Prospecting and personal data | Odysseus',
+      title: 'Outreach and personal data | Odysseus',
       description:
-        'How Odysseus obtains and uses the data of establishments it contacts, and how to opt out.',
+        'What data Odysseus uses for outreach, where it comes from, how long it is kept, and how to opt out.',
     },
   },
   '/desinscription': {
     fr: {
-      title: 'Désinscription | Odysseus',
+      title: 'Ne plus être contacté | Odysseus',
       description:
-        'Comment ne plus être contacté par Odysseus et faire retirer un aperçu en ligne.',
+        'Comment demander à ne plus être contacté par Odysseus et faire retirer un aperçu en ligne.',
     },
     en: {
-      title: 'Opt-out | Odysseus',
-      description: 'How to stop being contacted by Odysseus and have an online preview withdrawn.',
+      title: 'Opt out of future contact | Odysseus',
+      description: 'How to opt out of future contact from Odysseus and have an online preview removed.',
     },
   },
 };
