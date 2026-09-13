@@ -829,18 +829,26 @@ export const fr: DashboardStrings = {
     title: 'À traiter',
     description:
       'Ce qui attend une décision : brouillons, réponses, identités, audits. Chaque ligne ouvre la fiche de l’hôtel ou l’audit.',
-    lists: {
-      drafts: 'Brouillons à relire',
-      replies: 'Réponses à valider',
-      hotels: 'Identités à vérifier',
-      audits: 'Audits en attente d’action',
+    table: {
+      subjectHeader: 'Sujet',
+      actionHeader: 'Action',
+      sinceHeader: 'Depuis',
     },
-    empty: {
-      drafts: 'Aucun brouillon en attente de revue.',
-      replies: 'Aucune réponse en attente de revue.',
-      hotels: 'Aucune identité à vérifier.',
-      audits: 'Aucun audit en attente d’action.',
+    kinds: {
+      draft: 'Brouillon',
+      reply: 'Réponse',
+      hotel: 'Identité',
+      audit: 'Audit',
     },
+    actions: {
+      'review-draft': 'Relire le brouillon',
+      'review-reply': 'Valider la réponse',
+      'review-hotel': 'Vérifier l’identité',
+      'confirm-identity': 'Confirmer l’identité',
+      'generate-pdfs': 'Générer les PDF',
+      'approve-pair': 'Approuver la paire de rapports',
+    },
+    empty: 'Rien n’attend de décision.',
     batch: {
       draftBatchLabel: 'Rédiger les premiers emails pour les hôtels sélectionnés',
       draftBatchButton: 'Rédiger les premiers emails',

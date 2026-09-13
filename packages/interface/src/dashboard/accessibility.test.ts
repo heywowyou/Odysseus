@@ -806,93 +806,47 @@ describe('operator page accessibility (plan 013 step 5, extended plan 022 step 6
   });
 
   it('a-traiter page has no axe violations in its empty state', async () => {
-    // The scans inbox filter is the only list whose default empty-page stub
-    // does not fit: the scans endpoint answers an array, not a page.
-    stubRoutes({ '/api/scans?limit=200': [] });
+    stubRoutes({ '/api/todo': { rows: [] } });
     const { container, root } = await renderPage(createElement(ATraiterPage));
-    await settle(container, 'Aucun brouillon en attente de revue.');
+    await settle(container, 'Rien n’attend de décision.');
     await expectNoAxeViolations(container);
     root.unmount();
   });
 
-  it('a-traiter page has no axe violations with every list populated', async () => {
+  it('a-traiter page has no axe violations with the table populated', async () => {
     stubRoutes({
-      '/api/outreach/drafts?limit=5': {
+      '/api/todo': {
         rows: [
           {
-            draftId: 'draft-1',
-            threadId: 'thread-1',
-            candidateId: 'cand-1',
-            hotelName: 'Hôtel du Quai Exemple',
-            touch: 1,
-            language: 'fr',
-            touch1EvidenceSlot: null,
-            hasProviderDraft: true,
-            createdAt: '2026-09-01T08:00:00.000Z',
+            kind: 'draft',
+            subject: 'Hôtel du Quai Exemple',
+            action: 'review-draft',
+            href: '/prospects/cand-1#hub-emails',
+            since: '2026-09-01T08:00:00.000Z',
           },
-        ],
-        total: 4,
-        limit: 5,
-        offset: 0,
-      },
-      '/api/outreach/replies?limit=5': {
-        rows: [
           {
-            threadId: 'thread-2',
-            candidateId: 'cand-2',
-            hotelName: null,
-            domain: 'hotel-exemple.fr',
-            language: 'fr',
-            state: 'e1-sent',
-            currentTouch: 1,
-            reviewReason: 'unclassified-reply',
-            reviewDetectedAt: '2026-09-02T08:00:00.000Z',
-            lastSyncedAt: null,
+            kind: 'reply',
+            subject: 'cand-2',
+            action: 'review-reply',
+            href: '/prospects/cand-2#hub-outcome',
+            since: '2026-09-02T08:00:00.000Z',
           },
-        ],
-        total: 1,
-        limit: 5,
-        offset: 0,
-      },
-      '/api/prospects?queue=join-review': {
-        rows: [
           {
-            candidateId: 'cand-3',
-            name: 'Hôtel de la Gare',
-            commune: 'Grenoble',
-            postcode: '38000',
-            starRating: null,
-            identityStatus: 'needs-review',
-            groupStatus: 'independent',
-            campaignEligibility: 'eligible',
-            reviewState: 'pending',
-            qualificationOutcome: 'not-evaluated',
-            qualificationReasons: [],
-            prescanStatus: null,
-            scoringVersion: null,
-            brokennessTotal: null,
-            abilityTotal: null,
-            worthy: null,
-            contactState: null,
-            threadState: null,
-            outcome: null,
+            kind: 'hotel',
+            subject: 'Hôtel de la Gare',
+            action: 'review-hotel',
+            href: '/prospects/cand-3',
+            since: null,
+          },
+          {
+            kind: 'audit',
+            subject: 'exemple.fr',
+            action: 'generate-pdfs',
+            href: '/audits/audit-1',
+            since: '2026-09-01T10:00:00.000Z',
           },
         ],
-        total: 2,
-        limit: 5,
-        offset: 0,
       },
-      '/api/scans?limit=200': [
-        {
-          jobId: 'job-1',
-          type: 'full-audit',
-          status: 'failed',
-          phase: 'report',
-          siteUrl: 'https://exemple.fr',
-          createdAt: '2026-09-01T10:00:00.000Z',
-          auditId: 'audit-1',
-        },
-      ],
     });
     const { container, root } = await renderPage(createElement(ATraiterPage));
     await settle(container, 'Hôtel du Quai Exemple');

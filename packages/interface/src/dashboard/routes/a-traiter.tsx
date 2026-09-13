@@ -1,41 +1,41 @@
 import { useState } from 'react';
-import type { JSX, ReactNode } from 'react';
-import { ChevronRight } from 'lucide-react';
-import { Link } from 'react-router';
+import type { JSX } from 'react';
+import { CheckCircle2 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
+import type { BadgeTone } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
+import { EmptyState } from '../components/ui/empty-state';
 import { Field } from '../components/ui/field';
 import { Input } from '../components/ui/input';
 import { Skeleton } from '../components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+} from '../components/ui/table';
 import { useI18n } from '../i18n/provider';
-import { cn } from '../lib/cn';
 import { fetchJson, sendJson } from '../lib/api';
 import { formatRelativeTime } from '../lib/format';
 import { usePolling } from '../lib/use-polling';
-import type { ScanSummary } from '../lib/api-types';
-import { A_TRAITER_ROW_LIMIT, draftTouchName, needsInputScans } from './a-traiter-model';
-import { hostnameOf } from './audits-model';
-import type {
-  OutreachDraftsPage,
-  OutreachDraftRow,
-  RepliesPage,
-  ReplyReviewRow,
-} from './outreach-model';
-import { locationLabel } from './prospects-model';
-import type { ProspectListResponse, ProspectRow } from './prospects-model';
+import type { TodoPage, TodoRow, TodoRowKind } from '../lib/api-types';
 
 // Plan 040 poll policy: lists refresh every 10s (usePolling also pauses
 // every poll while the tab is hidden).
 const POLL_INTERVAL_MS = 10_000;
+const SKELETON_ROW_COUNT = 6;
 
 const DEFAULT_BATCH_LIMIT = 10;
 
 /** One "start a batch job" row: a bounded limit input plus a button, per the
  *  plan's choice not to build a dedicated progress page for these jobs. A
- *  toast on enqueue is enough; the job's own drafts show up in the lists
+ *  toast on enqueue is enough; the job's own drafts show up in the table
  *  below once it finishes. Starting a batch creates review-only drafts and
  *  sends nothing (trade-offs 82 and 83), so no confirmation dialog. */
 function BatchRow(props: { label: string; buttonLabel: string; path: string }): JSX.Element {
@@ -77,232 +77,94 @@ function BatchRow(props: { label: string; buttonLabel: string; path: string }): 
   );
 }
 
-/** Settled render state of one short list; the four lists differ only in
- *  what their rows contain, never in their chrome. */
-type QueueState =
-  { kind: 'loading' } | { kind: 'failed' } | { kind: 'ready'; total: number; rows: ReactNode[] };
+const KIND_TONE: Record<TodoRowKind, BadgeTone> = {
+  draft: 'neutral',
+  reply: 'accent',
+  hotel: 'neutral',
+  audit: 'accent',
+};
 
-/** Collapse a polled fetch into that state. A failed count renders as
- *  unavailable instead of silently disappearing, so unknown never reads as
- *  zero pending items; a list with a total but no rows is genuinely empty. */
-function queueState(total: number | undefined, hasFailed: boolean, rows: ReactNode[]): QueueState {
-  if (total !== undefined) return { kind: 'ready', total, rows };
-  return hasFailed ? { kind: 'failed' } : { kind: 'loading' };
-}
-
-/** One short list into the hub: a heading carrying the queue's full total
- *  and at most A_TRAITER_ROW_LIMIT rows. An empty queue renders a muted
- *  one-liner rather than an empty-state block. */
-function QueueSection(props: {
-  heading: string;
-  state: QueueState;
-  emptyLine: string;
-}): JSX.Element {
-  const { strings } = useI18n();
-  const { state } = props;
-  return (
-    <Card
-      title={props.heading}
-      actions={
-        state.kind === 'loading' ? (
-          <Skeleton className="h-5 w-10" />
-        ) : state.kind === 'failed' ? (
-          <Badge tone="neutral">{strings.common.valueUnavailable}</Badge>
-        ) : (
-          <Badge tone="neutral" className="numeric">
-            {state.total}
-          </Badge>
-        )
-      }
-    >
-      {state.kind === 'loading' ? (
-        <div className="flex flex-col gap-2">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-        </div>
-      ) : state.kind === 'failed' ? (
-        <p className="text-sm text-ink-muted">{strings.common.requestFailed}</p>
-      ) : state.rows.length === 0 ? (
-        <p className="text-sm text-ink-muted">{props.emptyLine}</p>
-      ) : (
-        <ul className="flex flex-col gap-2">{state.rows}</ul>
-      )}
-    </Card>
-  );
-}
-
-/** One row of a short list. The whole row is the door into the hub (or the
- *  audit); the hotel's own name is the primary line, and only a candidate
- *  whose name is unknown degrades to its raw identifier. */
-function QueueRow(props: {
-  to: string;
-  primary: string;
-  primaryIdent: boolean;
-  secondary: string;
-}): JSX.Element {
-  return (
-    <li>
-      <Link
-        to={props.to}
-        className="flex items-center gap-3 rounded-lg border border-line bg-raised px-3 py-2 transition-colors hover:border-line-strong"
-      >
-        <span className="min-w-0 flex-1">
-          <span
-            className={cn(
-              'block truncate text-sm font-medium text-ink',
-              props.primaryIdent && 'ident',
-            )}
-          >
-            {props.primary}
-          </span>
-          <span className="mt-0.5 block truncate text-xs text-ink-muted">{props.secondary}</span>
-        </span>
-        <ChevronRight className="size-4 shrink-0 text-ink-muted" aria-hidden="true" />
-      </Link>
-    </li>
-  );
-}
-
-/** Primary line of a row naming a hotel: the catalogue name when the
- *  candidate still resolves, otherwise the raw identifier. */
-function hotelPrimary(
-  hotelName: string | null,
-  candidateId: string,
-): {
-  primary: string;
-  primaryIdent: boolean;
-} {
-  return hotelName !== null
-    ? { primary: hotelName, primaryIdent: false }
-    : { primary: candidateId, primaryIdent: true };
-}
-
-function DraftsQueue(): JSX.Element {
-  const { strings } = useI18n();
-  const { data, error } = usePolling(
-    () => fetchJson<OutreachDraftsPage>(`/api/outreach/drafts?limit=${A_TRAITER_ROW_LIMIT}`),
-    POLL_INTERVAL_MS,
-    { key: 'a-traiter:drafts' },
-  );
-  const rows = (data?.rows ?? []).map((draft: OutreachDraftRow) => (
-    <QueueRow
-      key={draft.draftId}
-      to={`/prospects/${encodeURIComponent(draft.candidateId)}#hub-emails`}
-      {...hotelPrimary(draft.hotelName, draft.candidateId)}
-      secondary={`${draftTouchName(draft.touch, strings.hub.emails)} · ${formatRelativeTime(
-        draft.createdAt,
-        strings.common.relativeTime,
-      )}`}
-    />
-  ));
-  return (
-    <QueueSection
-      heading={strings.aTraiter.lists.drafts}
-      emptyLine={strings.aTraiter.empty.drafts}
-      state={queueState(data?.total, error !== undefined, rows)}
-    />
-  );
-}
-
-function RepliesQueue(): JSX.Element {
-  const { strings } = useI18n();
-  const { data, error } = usePolling(
-    () => fetchJson<RepliesPage>(`/api/outreach/replies?limit=${A_TRAITER_ROW_LIMIT}`),
-    POLL_INTERVAL_MS,
-    { key: 'a-traiter:replies' },
-  );
-  const rows = (data?.rows ?? []).map((reply: ReplyReviewRow) => (
-    <QueueRow
-      key={reply.threadId}
-      to={`/prospects/${encodeURIComponent(reply.candidateId)}#hub-outcome`}
-      {...hotelPrimary(reply.hotelName, reply.candidateId)}
-      secondary={`${reply.domain} · ${strings.hub.emails.needsReviewNotice} · ${formatRelativeTime(
-        reply.reviewDetectedAt,
-        strings.common.relativeTime,
-      )}`}
-    />
-  ));
-  return (
-    <QueueSection
-      heading={strings.aTraiter.lists.replies}
-      emptyLine={strings.aTraiter.empty.replies}
-      state={queueState(data?.total, error !== undefined, rows)}
-    />
-  );
-}
-
-function HotelsQueue(): JSX.Element {
-  const { strings } = useI18n();
-  const { data, error } = usePolling(
-    () =>
-      fetchJson<ProspectListResponse>(
-        `/api/prospects?queue=join-review&limit=${A_TRAITER_ROW_LIMIT}`,
-      ),
-    POLL_INTERVAL_MS,
-    { key: 'a-traiter:hotels' },
-  );
-  const rows = (data?.rows ?? []).map((prospect: ProspectRow) => (
-    <QueueRow
-      key={prospect.candidateId}
-      to={`/prospects/${encodeURIComponent(prospect.candidateId)}`}
-      primary={prospect.name}
-      primaryIdent={false}
-      secondary={locationLabel(prospect)}
-    />
-  ));
-  return (
-    <QueueSection
-      heading={strings.aTraiter.lists.hotels}
-      emptyLine={strings.aTraiter.empty.hotels}
-      state={queueState(data?.total, error !== undefined, rows)}
-    />
-  );
-}
-
-/** Audits waiting for input are the needs-input rows of the same bounded
- *  window the Audits list reads; the endpoint serves an array without a
- *  total, so the header count is computed over that window. */
-function AuditsQueue(): JSX.Element {
-  const { strings } = useI18n();
-  const { data, error } = usePolling(
-    () => fetchJson<ScanSummary[]>('/api/scans?limit=200'),
-    POLL_INTERVAL_MS,
-    { key: 'a-traiter:audits' },
-  );
-  const waiting = data === undefined ? [] : needsInputScans(data);
-  const rows = waiting
-    .filter(
-      (summary): summary is ScanSummary & { auditId: string } => summary.auditId !== undefined,
-    )
-    .slice(0, A_TRAITER_ROW_LIMIT)
-    .map((summary) => (
-      <QueueRow
-        key={summary.jobId}
-        to={`/audits/${encodeURIComponent(summary.auditId)}`}
-        primary={
-          summary.siteUrl !== undefined ? hostnameOf(summary.siteUrl) : strings.common.unknownSite
-        }
-        primaryIdent={false}
-        secondary={`${summary.outreachCandidateName ?? summary.jobId} · ${formatRelativeTime(
-          summary.createdAt,
-          strings.common.relativeTime,
-        )}`}
-      />
-    ));
-  return (
-    <QueueSection
-      heading={strings.aTraiter.lists.audits}
-      emptyLine={strings.aTraiter.empty.audits}
-      state={queueState(data === undefined ? undefined : waiting.length, error !== undefined, rows)}
-    />
-  );
-}
-
-/** The dashboard's landing page and the operator's inbox (plan 040 slice 6,
- *  approved IA): the two batch buttons, then four short queues whose rows
- *  open the hotel hub or the audit. Everything reads existing endpoints. */
+/** The dashboard's landing page and the operator's inbox (plan 045 stage
+ *  3.3): the two batch buttons, then one merged table over GET /api/todo.
+ *  Every row names one concrete action on one subject and opens straight
+ *  into the hotel hub or the audit. */
 export function ATraiterPage(): JSX.Element {
   const { strings } = useI18n();
+  const navigate = useNavigate();
+  const { data, error, refresh } = usePolling(
+    () => fetchJson<TodoPage>('/api/todo'),
+    POLL_INTERVAL_MS,
+    {
+      key: 'a-traiter:todo',
+    },
+  );
+
+  let body: JSX.Element;
+  if (error !== undefined && data === undefined) {
+    body = (
+      <Card>
+        <div className="flex flex-col items-start gap-2">
+          <p className="text-sm text-ink-muted">{strings.common.requestFailed}</p>
+          <Button variant="secondary" onClick={refresh}>
+            {strings.common.retry}
+          </Button>
+        </div>
+      </Card>
+    );
+  } else if (data === undefined) {
+    body = (
+      <Card>
+        <div className="flex flex-col gap-2">
+          {Array.from({ length: SKELETON_ROW_COUNT }, (_, index) => (
+            <Skeleton key={index} className="h-10 w-full" />
+          ))}
+        </div>
+      </Card>
+    );
+  } else if (data.rows.length === 0) {
+    body = <EmptyState icon={CheckCircle2} title={strings.aTraiter.empty} />;
+  } else {
+    body = (
+      <div className="overflow-hidden rounded-xl border border-line bg-panel">
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableHeaderCell>{strings.aTraiter.table.subjectHeader}</TableHeaderCell>
+              <TableHeaderCell>{strings.aTraiter.table.actionHeader}</TableHeaderCell>
+              <TableHeaderCell className="w-40">
+                {strings.aTraiter.table.sinceHeader}
+              </TableHeaderCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {data.rows.map((row: TodoRow) => (
+              <TableRow key={`${row.kind}-${row.href}`} onClick={() => navigate(row.href)}>
+                <TableCell>
+                  <span className="mb-1 inline-block">
+                    <Badge tone={KIND_TONE[row.kind]}>{strings.aTraiter.kinds[row.kind]}</Badge>
+                  </span>
+                  <Link
+                    to={row.href}
+                    className="block font-medium text-ink hover:text-accent-bright"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    {row.subject}
+                  </Link>
+                </TableCell>
+                <TableCell>{strings.aTraiter.actions[row.action]}</TableCell>
+                <TableCell className="numeric whitespace-nowrap text-xs text-ink-muted">
+                  {row.since !== null
+                    ? formatRelativeTime(row.since, strings.common.relativeTime)
+                    : strings.common.valueUnavailable}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  }
+
   return (
     <article className={PAGE_WIDTH.surface}>
       <PageHeader title={strings.aTraiter.title} description={strings.aTraiter.description} />
@@ -324,12 +186,13 @@ export function ATraiterPage(): JSX.Element {
           path="/api/outreach/followup-batch"
         />
       </Card>
-      <div className="flex flex-col gap-5">
-        <DraftsQueue />
-        <RepliesQueue />
-        <HotelsQueue />
-        <AuditsQueue />
-      </div>
+      {error !== undefined && data !== undefined ? (
+        <div className="mb-3 text-xs text-ink-muted" role="alert">
+          <p>{strings.common.requestFailed}</p>
+          <p>{error}</p>
+        </div>
+      ) : null}
+      {body}
     </article>
   );
 }

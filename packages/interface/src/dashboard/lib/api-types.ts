@@ -38,6 +38,33 @@ export interface ScanCreated {
   jobId: string;
 }
 
+/** The four sources GET /api/todo composes into one table (plan 045 stage
+ *  3.3). `action` is a stable code, never ready-made text, so FR/EN copy
+ *  stays in the client's own i18n table (aTraiter.actions). */
+export type TodoRowKind = 'draft' | 'reply' | 'hotel' | 'audit';
+export type TodoRowAction =
+  | 'review-draft'
+  | 'review-reply'
+  | 'review-hotel'
+  | 'confirm-identity'
+  | 'generate-pdfs'
+  | 'approve-pair';
+
+/** One row of GET /api/todo (routes/todo.ts). Field names are the API's
+ *  persisted contract, not UI vocabulary; never respell them. */
+export interface TodoRow {
+  kind: TodoRowKind;
+  subject: string;
+  action: TodoRowAction;
+  href: string;
+  since: string | null;
+}
+
+/** Response of GET /api/todo. */
+export interface TodoPage {
+  rows: TodoRow[];
+}
+
 /** Progress counters of GET /api/scans/:jobId (the Job document's progress
  *  sub-document, store's job.schema.ts). Only the fields the live progress
  *  page reads; the ingestion counters belong to prospect-ingestion jobs,

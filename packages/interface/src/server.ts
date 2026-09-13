@@ -9,6 +9,7 @@ import { registerProspectRoutes } from './routes/prospects.js';
 import { registerProspectContactRoutes } from './routes/prospect-contact.js';
 import { registerProspectInsightRoutes } from './routes/prospect-insights.js';
 import { registerOutreachRoutes } from './routes/outreach.js';
+import { registerTodoRoutes } from './routes/todo.js';
 import { registerStaticFallback } from './routes/static.js';
 import { createAuthGuard, type AuthGuard } from './auth/auth-guard.js';
 import { applyBaseSecurityHeaders } from './security-headers.js';
@@ -112,6 +113,7 @@ export async function startInterfaceServer(
   registerProspectContactRoutes(router, connection);
   registerProspectInsightRoutes(router, connection);
   registerOutreachRoutes(router, connection, queue);
+  registerTodoRoutes(router, connection);
   registerSessionRoutes(router, { getPasswordHash, sessionStore, rateLimiter });
   registerStaticFallback(router);
 

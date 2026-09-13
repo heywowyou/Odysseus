@@ -1,4 +1,4 @@
-import type { JobStatus } from '../lib/api-types';
+import type { JobStatus, TodoRowAction, TodoRowKind } from '../lib/api-types';
 import type { ProgressPhase } from '../lib/phase-order';
 
 export type DashboardLanguage = 'fr' | 'en';
@@ -925,24 +925,20 @@ export interface DashboardStrings {
   aTraiter: {
     title: string;
     description: string;
-    /** Headings of the four short lists, each carrying its queue total. */
-    lists: {
-      drafts: string;
-      replies: string;
-      /** The prospects whose identity still awaits the operator's join
-       *  review (the /api/prospects join-review queue). */
-      hotels: string;
-      /** Audits whose display status is needs-input (issue #90). */
-      audits: string;
+    /** Column headers of the merged to-do table (plan 045 stage 3.3). */
+    table: {
+      subjectHeader: string;
+      actionHeader: string;
+      sinceHeader: string;
     };
-    /** The muted one-liner an empty list renders instead of an empty-state
-     *  block. */
-    empty: {
-      drafts: string;
-      replies: string;
-      hotels: string;
-      audits: string;
-    };
+    /** Badge label naming which of the four sources a row comes from. */
+    kinds: Record<TodoRowKind, string>;
+    /** One concrete action per stable code the server returns; never a
+     *  ready-made sentence from the API. */
+    actions: Record<TodoRowAction, string>;
+    /** The muted one-liner the table renders instead of an empty-state
+     *  block when every source is empty. */
+    empty: string;
     /** The page's only create-draft entry points: the two batch buttons
      *  moved here from the retired outreach index page. */
     batch: {

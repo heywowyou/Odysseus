@@ -53,27 +53,6 @@ export interface OutreachDraftText {
   createdAt: string;
 }
 
-export interface ReplyReviewRow {
-  threadId: string;
-  candidateId: string;
-  /** Same contract as OutreachDraftRow.hotelName above. */
-  hotelName: string | null;
-  domain: string;
-  language: 'fr' | 'en';
-  state: string;
-  currentTouch: number;
-  reviewReason: string;
-  reviewDetectedAt: string;
-  lastSyncedAt: string | null;
-}
-
-export interface RepliesPage {
-  rows: ReplyReviewRow[];
-  total: number;
-  limit: number;
-  offset: number;
-}
-
 export interface OutreachOutcomeSummary {
   total: number;
   byOutcome: Record<string, number>;

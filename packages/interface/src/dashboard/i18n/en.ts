@@ -816,18 +816,26 @@ export const en: DashboardStrings = {
     title: 'To do',
     description:
       'What waits for a decision: drafts, replies, identities, audits. Every row opens the hotel page or the audit.',
-    lists: {
-      drafts: 'Drafts to review',
-      replies: 'Replies to review',
-      hotels: 'Identities to check',
-      audits: 'Audits waiting for action',
+    table: {
+      subjectHeader: 'Subject',
+      actionHeader: 'Action',
+      sinceHeader: 'Since',
     },
-    empty: {
-      drafts: 'No drafts are waiting for review.',
-      replies: 'No replies are waiting for review.',
-      hotels: 'No identities to check.',
-      audits: 'No audits waiting for action.',
+    kinds: {
+      draft: 'Draft',
+      reply: 'Reply',
+      hotel: 'Identity',
+      audit: 'Audit',
     },
+    actions: {
+      'review-draft': 'Review the draft',
+      'review-reply': 'Review the reply',
+      'review-hotel': 'Check the identity',
+      'confirm-identity': 'Confirm the identity',
+      'generate-pdfs': 'Generate the PDFs',
+      'approve-pair': 'Approve the report pair',
+    },
+    empty: 'Nothing is waiting for a decision.',
     batch: {
       draftBatchLabel: 'Draft first emails for the selected hotels',
       draftBatchButton: 'Draft first emails',
