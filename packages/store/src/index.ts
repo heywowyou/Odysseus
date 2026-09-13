@@ -241,17 +241,20 @@ export type {
   RecordScoreCohortResult,
 } from './scores.js';
 
-// Milestone 9c plan 007: the contact collection. Upserted on
-// (contactVersion, candidateId) - see schemas/hotel-contact.schema.ts for why a
-// re-run over a bounded cohort is a retry rather than a new observation.
+// Milestone 9c plan 007 plus plan 045's candidate-scoped manual override.
 export type {
   HotelContactDocument,
   HotelContactDocumentFields,
 } from './schemas/hotel-contact.schema.js';
 export {
+  MANUAL_CONTACT_VERSION,
   listCohortMembersToContact,
   recordHotelContacts,
   getHotelContact,
+  getManualHotelContact,
+  getEffectiveHotelContact,
+  recordManualHotelContact,
+  deleteManualHotelContact,
   getHotelContactSummary,
   listContactableCohortMembers,
   listHotelContacts,
@@ -261,6 +264,7 @@ export type {
   ListCohortMembersToContactOptions,
   RecordHotelContactInput,
   RecordHotelContactsResult,
+  RecordManualHotelContactInput,
   HotelContactSummary,
 } from './hotel-contacts.js';
 
@@ -358,111 +362,21 @@ export type {
   TransitionOutreachThreadInput,
   TransitionOutreachThreadResult,
   CloseOutreachThreadsResult,
-  ListOutreachThreadsOptions,
-  ListThreadsDueForFollowUpOptions,
-  CompleteOutreachSequenceInput,
-  CompleteOutreachSequenceResult,
-  ListThreadsToSyncOptions,
 } from './outreach-threads.js';
-
-export type {
-  OutreachDraftDocument,
-  OutreachDraftReviewOutcome,
-  OutreachDraftStatus,
-} from './schemas/outreach-draft.schema.js';
 export {
   recordOutreachDraft,
   recordFailedOutreachDraft,
-  recordOutreachDraftReview,
   findLiveOutreachDraft,
-  findOutreachDraftById,
-  markOutreachDraftDeleted,
   listOutreachDrafts,
+  markOutreachDraftDeleted,
+  markOutreachDraftReviewOutcome,
 } from './outreach-drafts.js';
 export type {
   RecordOutreachDraftInput,
   RecordFailedOutreachDraftInput,
-  MarkOutreachDraftDeletedResult,
-  ListOutreachDraftsOptions,
+  MarkOutreachDraftReviewOutcomeResult,
 } from './outreach-drafts.js';
 
-export type {
-  OutreachOutcomeDocument,
-  OutreachOutcomeDocumentFields,
-} from './schemas/outreach-outcome.schema.js';
-export { recordOutreachOutcome, listOutreachOutcomes } from './outreach-outcomes.js';
-export type {
-  RecordOutreachOutcomeInput,
-  RecordOutreachOutcomeResult,
-  ListOutreachOutcomesOptions,
-} from './outreach-outcomes.js';
-export type { ContactableCohortMember } from './hotel-contacts.js';
-
-// Milestone 9c plan 013: bounded operator view projections. Compositions of
-// the helpers above for the operator interface: every shape is an explicitly
-// picked projection that cannot carry message bodies, addresses, or hashes,
-// and every list is paginated.
-export {
-  getOperatorProspect,
-  getOutcomeSummary,
-  getProspectContactView,
-  getProspectEvidenceAssetSource,
-  getProspectEvidenceView,
-  getProspectOutcomeView,
-  getProspectPrescanView,
-  getProspectPreviewView,
-  getProspectQualificationHistory,
-  getProspectScoreDiffView,
-  getProspectScoreView,
-  getProspectSourceConflicts,
-  getProspectThreadView,
-  getSelectionProjection,
-  getSelectionVerdict,
-  getVendorFingerprintAggregate,
-  listOperatorProspects,
-  listOutreachReviewDrafts,
-  listRepliesNeedingReview,
-} from './operator-views.js';
-export type {
-  GetProspectContactViewOptions,
-  GetProspectEvidenceAssetSourceOptions,
-  GetProspectEvidenceViewOptions,
-  OperatorEvidenceAssetSlot,
-  OperatorEvidenceAssetSource,
-  GetProspectPrescanViewOptions,
-  GetProspectScoreViewOptions,
-  ListOperatorProspectsOptions,
-  OperatorProspectListPage,
-  SelectionCohortFacts,
-  SelectionMember,
-  SelectionProjection,
-  SelectionSource,
-  SelectionVerdict,
-  OperatorContactView,
-  OperatorDraftView,
-  OperatorEvidenceAssetView,
-  OperatorEvidenceSummaryView,
-  OperatorEvidenceView,
-  OperatorOutcomeEventView,
-  OperatorOutcomeSummary,
-  OperatorPrescanPageView,
-  OperatorPrescanView,
-  OperatorPreviewView,
-  OperatorProspectDetail,
-  OperatorProspectQueue,
-  OperatorProspectRow,
-  OperatorQualificationEvent,
-  OperatorReplyReviewRow,
-  OperatorReviewDraftRow,
-  OperatorScoreBreakdownView,
-  OperatorScoreComponentView,
-  OperatorScoreDiffView,
-  OperatorScoreView,
-  OperatorSourceConflictRow,
-  OperatorSourceConflictsView,
-  OperatorSourceRefRow,
-  OperatorThreadView,
-  OperatorViewPage,
-  OperatorViewPageOptions,
-  OperatorWebsiteCandidateView,
-} from './operator-views.js';
+// Plan 013: bounded private operator views, split by concern but re-exported
+// through one module so callers never reach into their internal collections.
+export * from './operator-views.js';
