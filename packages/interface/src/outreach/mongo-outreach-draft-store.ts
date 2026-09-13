@@ -45,6 +45,11 @@ export interface MongoOutreachDraftStoreOptions {
   contactVersion: string;
 }
 
+function addressDomain(address: string): string | null {
+  const at = address.lastIndexOf('@');
+  return at > 0 && at < address.length - 1 ? address.slice(at + 1).toLowerCase() : null;
+}
+
 export function createMongoOutreachDraftStore(
   connection: Connection,
   options: MongoOutreachDraftStoreOptions,
@@ -101,8 +106,12 @@ export function createMongoOutreachDraftStore(
       };
     },
 
-    isSuppressed(domain: string, address?: string): Promise<boolean> {
-      return isSuppressed(connection, domain, address);
+    async isSuppressed(domain: string, address?: string): Promise<boolean> {
+      if (await isSuppressed(connection, domain, address)) return true;
+      if (address === undefined) return false;
+      const mailDomain = addressDomain(address);
+      if (mailDomain === null || mailDomain === domain.toLowerCase()) return false;
+      return isSuppressed(connection, mailDomain, address);
     },
 
     async openThread(input): Promise<OutreachThreadRef> {

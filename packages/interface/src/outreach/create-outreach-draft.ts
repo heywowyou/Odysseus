@@ -261,21 +261,6 @@ function refuse(refusal: CreateOutreachDraftRefusal): CreateOutreachDraftResult 
   return { created: false, refusal };
 }
 
-function domainOfAddress(address: string): string | null {
-  const at = address.lastIndexOf('@');
-  return at > 0 && at < address.length - 1 ? address.slice(at + 1).toLowerCase() : null;
-}
-
-async function isRecipientSuppressed(
-  store: OutreachDraftStorePort,
-  hotelDomain: string,
-  address: string,
-): Promise<boolean> {
-  if (await store.isSuppressed(hotelDomain)) return true;
-  const mailDomain = domainOfAddress(address);
-  return mailDomain === null ? false : store.isSuppressed(mailDomain, address);
-}
-
 /** Every origin the data behind this draft actually came from, per
  *  `docs/rules/outreach-rules.md` section 7. Built per hotel rather than as a fixed
  *  list: a hotel with no registry match must not disclose an origin it has
@@ -300,16 +285,16 @@ export async function createOutreachDraft(
   if (row === null) return refuse('candidate-unknown');
 
   // Before anything else, and again below. An objection has to stop the next
-  // thing we do, not the next batch.
-  if (await options.store.isSuppressed(row.domain)) return refuse('suppressed-before-generation');
+  // thing we do, not the next batch. The store adapter expands this one gate
+  // to the hotel domain, mailbox domain, and exact address when an address is present.
+  if (await options.store.isSuppressed(row.domain, row.contact?.address)) {
+    return refuse('suppressed-before-generation');
+  }
 
   // Plan 007 records four typed absences rather than a null, and only `found`
   // carries an address that passed the allowlist and the MX check.
   if (row.contact === undefined || row.contact.state !== 'found' || row.contact.address === '') {
     return refuse('no-usable-contact');
-  }
-  if (await isRecipientSuppressed(options.store, row.domain, row.contact.address)) {
-    return refuse('suppressed-before-generation');
   }
 
   const evidence = row.evidence;
@@ -412,7 +397,7 @@ export async function createOutreachDraft(
 
   // The second gate, immediately before the provider call and after every slow
   // step above.
-  if (await isRecipientSuppressed(options.store, row.domain, row.contact.address)) {
+  if (await options.store.isSuppressed(row.domain, row.contact.address)) {
     await options.store.recordFailure({
       ...failureFacts,
       failureReason: 'suppressed-before-provider',
