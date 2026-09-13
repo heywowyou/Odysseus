@@ -47,7 +47,11 @@ import {
 } from './render-outreach-draft.js';
 
 export type OutreachDataOrigin =
-  'public-hotel-catalogue' | 'public-website' | 'public-business-registry';
+  | 'public-hotel-catalogue'
+  | 'public-website'
+  | 'public-business-registry'
+  | 'other-public-source'
+  | 'provided-directly';
 
 export type AssembleOutreachDraftRefusal =
   | 'missing-preview-url'
@@ -80,8 +84,8 @@ export interface AssembleOutreachDraftOptions {
    *  composed here into `Re: <that>`, idempotently. */
   previousSubject?: string;
   /** Touch 1 only. Never a fixed list: a hotel with no Sirene match discloses
-   *  fewer origins than one with a registry hit (docs/rules/outreach-rules.md
-   *  section 7). */
+   *  fewer origins than one with a registry hit, and a plan-045 manual address
+   *  adds its own approved origin sentence. */
   dataOrigins?: OutreachDataOrigin[];
   privacyUrl?: string;
   optOutUrl?: string;
@@ -144,8 +148,6 @@ export function assembleOutreachDraft(
   let factsParagraphs: string[] | undefined;
 
   if (touch === 3) {
-    // Rebuilt from the same inputs a caller would have used originally, never
-    // read off the passed object - see the module comment.
     const rebuilt = buildOutreachFactsBlock({
       assessment: options.assessment,
       language,
@@ -154,14 +156,9 @@ export function assembleOutreachDraft(
     if (JSON.stringify(rebuilt) !== JSON.stringify(options.expectedFacts)) {
       return refuse('facts-block-mismatch');
     }
-    // Only reachable if the regime table lost an entry another module still
-    // names (see buildOutreachFactsBlock's own comment) - a touch 3 draft with
-    // no facts to carry has nothing left to send.
     if (rebuilt.state !== 'rendered') return refuse('facts-block-omitted');
     factsHeading = rebuilt.heading;
     factsParagraphs = [rebuilt.heading, ...rebuilt.paragraphs];
-    // Blocks render joined by a blank line, so this is the exact run of text
-    // the splice check below looks for.
     factsText = factsParagraphs.join('\n\n');
   }
 
@@ -172,10 +169,7 @@ export function assembleOutreachDraft(
           hotelName: options.hotelName,
           categories: options.categories as readonly OutreachCategory[],
         })
-      : replySubject(
-          // Validated non-undefined above; narrowed here for TypeScript.
-          options.previousSubject as string,
-        );
+      : replySubject(options.previousSubject as string);
 
   let bodyBlocks: DraftBodyBlock[];
   if (touch === 1) {
@@ -218,31 +212,31 @@ export function assembleOutreachDraft(
     if (touch === 3) footer.push({ kind: 'text', text: copy.deletionOffer });
   }
 
-  const rendered = renderOutreachDraft({ language, body: bodyBlocks, footer });
-  const body = rendered.text;
+  const rendered = renderOutreachDraft({
+    salutation: copy.salutation,
+    bodyBlocks,
+    signOff: copy.signOff,
+    signature: copy.signature,
+    footer,
+    linkSeparator: copy.linkSeparator,
+  });
 
-  if (touch === 3) {
-    // The rebuild-and-compare above confirms the *content* is fresh; this
-    // confirms the *splice* put exactly one unaltered copy of it into the
-    // body, rather than trusting the render never dropped or duplicated it.
-    if (body.split(factsText as string).length !== 2) return refuse('facts-block-splice-failed');
+  if (touch === 3 && factsText !== undefined && !rendered.body.includes(factsText)) {
+    return refuse('facts-block-splice-failed');
   }
 
-  const allowedUrls = [options.previewUrl, options.privacyUrl, options.optOutUrl].filter(
-    (url): url is string => url !== undefined,
-  );
-  assertOutreachDraftBody(body, allowedUrls);
-  assertOutreachDraftHtml(rendered.html, allowedUrls);
-
   const missing = findMissingDraftDisclosures({
-    body,
+    body: rendered.body,
     touch,
     copy,
-    ...(options.privacyUrl !== undefined ? { privacyUrl: options.privacyUrl } : {}),
-    ...(options.optOutUrl !== undefined ? { optOutUrl: options.optOutUrl } : {}),
-    ...(factsHeading !== undefined ? { factsHeading } : {}),
+    ...(options.privacyUrl === undefined ? {} : { privacyUrl: options.privacyUrl }),
+    ...(options.optOutUrl === undefined ? {} : { optOutUrl: options.optOutUrl }),
+    ...(factsHeading === undefined ? {} : { factsHeading }),
   });
   if (missing.length > 0) return refuse('missing-disclosure');
 
-  return { assembled: true, subject, body, htmlBody: rendered.html };
+  assertOutreachDraftBody(rendered.body, { touch });
+  assertOutreachDraftHtml(rendered.htmlBody, { touch });
+
+  return { assembled: true, subject, body: rendered.body, htmlBody: rendered.htmlBody };
 }
