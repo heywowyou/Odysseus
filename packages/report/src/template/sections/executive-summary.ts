@@ -45,7 +45,7 @@ function renderTopPriorityLegalNote(
       })
     : e.topPriorityIsNotLegalNoPointer;
 
-  return `<p style="font-size:12px;opacity:0.6;margin-top:var(--space-3);max-width:66ch">${escapeHtml(text)}</p>`;
+  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:66ch">${escapeHtml(text)}</p>`;
 }
 
 function renderTopPriorityLegalNoteFromPriorities(
@@ -60,7 +60,7 @@ function renderTopPriorityLegalNoteFromPriorities(
         legalRank: firstLegal.displayRank,
       })
     : strings.executiveSummary.topPriorityIsNotLegalNoPointer;
-  return `<p style="font-size:12px;opacity:0.6;margin-top:var(--space-3);max-width:66ch">${escapeHtml(text)}</p>`;
+  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:66ch">${escapeHtml(text)}</p>`;
 }
 
 /** "Par où commencer" card: a numbered circle plus the theme's own title,
@@ -102,8 +102,8 @@ function renderStartHere(strings: ReportStrings, themes: StoredAnalysis['themes'
       // invariant 8a) caught it as a link-name violation. break-inside:
       // avoid keeps the whole link on one page instead.
       return `
-        <a href="#theme-${theme.priorityRank}" style="display:flex;align-items:center;gap:var(--space-3);text-decoration:none;color:var(--color-text);padding:var(--space-3) 0;break-inside:avoid;background:linear-gradient(to right,transparent,var(--color-divider) 0,var(--color-divider) 100%,transparent) no-repeat bottom/100% 1px">
-          <span style="width:22px;height:22px;flex:none;border-radius:50%;border:1px solid var(--color-accent);color:var(--color-accent);font-size:11px;display:flex;align-items:center;justify-content:center">${theme.priorityRank}</span>
+        <a href="#theme-${theme.priorityRank}" style="display:flex;align-items:center;gap:var(--space-3);text-decoration:none;color:var(--color-text);padding:var(--space-4) 0;break-inside:avoid;background:linear-gradient(to right,transparent,var(--color-divider) 0,var(--color-divider) 100%,transparent) no-repeat bottom/100% 1px">
+          <span style="width:22px;height:22px;flex:none;color:var(--color-accent);font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center;text-align:center;font-variant-numeric:tabular-nums">${theme.priorityRank}</span>
           <span style="font-size:14px;flex:1">${escapeProse(theme.title)}</span>
           <span style="font-size:11px;color:var(--color-accent-300)">${escapeHtml(jumpLinkLabel)}</span>
         </a>
@@ -112,8 +112,8 @@ function renderStartHere(strings: ReportStrings, themes: StoredAnalysis['themes'
     .join('');
 
   return `
-    <div class="start-here" data-render-atomic="start-here" style="margin-top:var(--space-6);padding:var(--space-4);background:var(--color-surface);border-radius:var(--radius-lg)">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.02em;color:var(--color-accent-300);margin-bottom:var(--space-3)">${escapeHtml(e.startHereKicker)}</div>
+    <div class="start-here" data-render-atomic="start-here" style="margin-top:var(--space-8);padding:var(--space-4) var(--space-6);background:var(--color-surface);border-radius:var(--radius-lg)">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.02em;color:var(--color-accent-300);margin-bottom:var(--space-4)">${escapeHtml(e.startHereKicker)}</div>
       ${rows}
     </div>
   `;
@@ -127,10 +127,10 @@ function renderStartHerePriorities(
     const label = fillTemplate(strings.executiveSummary.jumpLinkLabelTemplate, {
       rank: displayRank,
     });
-    return `<a href="#theme-${displayRank}" style="display:flex;align-items:center;gap:var(--space-3);text-decoration:none;color:var(--color-text);padding:var(--space-3) 0;break-inside:avoid;background:linear-gradient(to right,transparent,var(--color-divider) 0,var(--color-divider) 100%,transparent) no-repeat bottom/100% 1px"><span style="width:22px;height:22px;flex:none;border-radius:50%;border:1px solid var(--color-accent);color:var(--color-accent);font-size:11px;display:flex;align-items:center;justify-content:center">${displayRank}</span><span style="font-size:14px;flex:1">${escapeProse(theme.title)}</span><span style="font-size:11px;color:var(--color-accent-300)">${escapeHtml(label)}</span></a>`;
+    return `<a href="#theme-${displayRank}" style="display:flex;align-items:center;gap:var(--space-3);text-decoration:none;color:var(--color-text);padding:var(--space-4) 0;break-inside:avoid;background:linear-gradient(to right,transparent,var(--color-divider) 0,var(--color-divider) 100%,transparent) no-repeat bottom/100% 1px"><span style="width:22px;height:22px;flex:none;color:var(--color-accent);font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center;text-align:center;font-variant-numeric:tabular-nums">${displayRank}</span><span style="font-size:14px;flex:1">${escapeProse(theme.title)}</span><span style="font-size:11px;color:var(--color-accent-300)">${escapeHtml(label)}</span></a>`;
   });
   if (rows.length === 0) return '';
-  return `<div class="start-here" data-render-atomic="start-here" style="margin-top:var(--space-6);padding:var(--space-4);background:var(--color-surface);border-radius:var(--radius-lg)"><div style="font-size:11px;text-transform:uppercase;letter-spacing:0.02em;color:var(--color-accent-300);margin-bottom:var(--space-3)">${escapeHtml(strings.executiveSummary.startHereKicker)}</div>${rows.join('')}</div>`;
+  return `<div class="start-here" data-render-atomic="start-here" style="margin-top:var(--space-8);padding:var(--space-4) var(--space-6);background:var(--color-surface);border-radius:var(--radius-lg)"><div style="font-size:11px;text-transform:uppercase;letter-spacing:0.02em;color:var(--color-accent-300);margin-bottom:var(--space-4)">${escapeHtml(strings.executiveSummary.startHereKicker)}</div>${rows.join('')}</div>`;
 }
 
 /** P1.2 (2026-08-21 La Corniche feedback pass): same headline fact as
@@ -149,7 +149,7 @@ function renderThirdPartySplitNote(
   const percent = Math.round(
     (stats.thirdPartyAccessibilityOccurrences / stats.accessibilityOccurrences) * 100,
   );
-  return `<p style="font-size:12px;opacity:0.65;margin-top:var(--space-2);max-width:66ch">${escapeHtml(
+  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:66ch">${escapeHtml(
     fillTemplate(e.thirdPartySplitSentenceTemplate, { percent }),
   )}</p>`;
 }
@@ -174,7 +174,7 @@ function renderCategoryImbalanceNote(
   if (stats.accessibilityCount / stats.totalFindings < ACCESSIBILITY_DOMINANCE_THRESHOLD) return '';
 
   const e = strings.executiveSummary;
-  return `<p style="font-size:12px;opacity:0.6;margin-top:var(--space-2);max-width:66ch">${escapeHtml(e.categoryImbalanceNote)}</p>`;
+  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:66ch">${escapeHtml(e.categoryImbalanceNote)}</p>`;
 }
 
 /** The site-wide critical/serious count (computeStatistics) has no relation
@@ -204,7 +204,7 @@ function renderCoveredByPrioritiesNote(
     covered: formatNumber(covered, analysis.language),
     remainingSection: sectionTitle('section-05b', strings),
   });
-  return `<p style="font-size:12px;opacity:0.6;margin-top:var(--space-2);max-width:66ch">${escapeHtml(text)}</p>`;
+  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:66ch">${escapeHtml(text)}</p>`;
 }
 
 /** Issue #57: the executive pages previously carried no trace of the
@@ -233,7 +233,7 @@ function renderRegulatoryContextNote(
 
   const e = strings.executiveSummary;
   return `
-    <div class="card elev-sm" style="margin-top:var(--space-4)" data-executive-regulatory-context>
+    <div class="card elev-sm" style="margin-top:var(--space-8);padding:var(--space-4)" data-executive-regulatory-context>
       <div class="card-kicker">${escapeHtml(e.regulatoryContextKicker)}</div>
       <p style="font-size:12.5px;margin-top:var(--space-2);max-width:66ch">${escapeHtml(e.regulatoryContextCriterion)}</p>
       <p style="font-size:12.5px;margin-top:var(--space-2);max-width:66ch">${escapeHtml(eaaSanctionFigureSentence(language))}</p>
@@ -272,7 +272,7 @@ export function renderExecutiveSummary(
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
   const ownership = priorities ? summarizePriorityOwnership(priorities, manifest) : undefined;
   const ownershipNote = ownership
-    ? `<p style="font-size:12px;opacity:0.65;margin-top:var(--space-2);max-width:66ch">${escapeHtml(
+    ? `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:66ch">${escapeHtml(
         fillTemplate(e.priorityOwnershipTemplate, {
           firstParty: formatNumber(ownership['first-party-action'], analysis.language),
           thirdParty: formatNumber(ownership['third-party-escalation'], analysis.language),
@@ -283,9 +283,14 @@ export function renderExecutiveSummary(
   return sheet(
     `
     ${renderSheetHeader(ordinal, e.eyebrow, e.heading)}
-    <p style="font-size:15px;max-width:66ch;opacity:0.9">${escapeProse(analysis.executiveSummary)}</p>
-    <p style="font-size:12.5px;opacity:0.75;margin-top:var(--space-2);max-width:66ch">${escapeHtml(countsSentence)}</p>
-    <p style="font-size:11px;opacity:0.5;margin-top:var(--space-2);max-width:66ch">${escapeHtml(e.glossaryPointerSentence)}</p>
+    <!-- 2026-09-13 Impeccable acceptance (workbench, page 5): the sheet
+         reads as three bands - prose, legal, actions. Steps tighten inside
+         a band (--space-1/--space-3) and open to the sheet-level step
+         (--space-8) between bands. Note muting uses the ink ladder
+         (neutral-200/400), never opacity, to hold 4.5:1 on the ground. -->
+    <p style="font-size:15px;max-width:66ch;line-height:1.55;color:var(--color-neutral-100)">${escapeProse(analysis.executiveSummary)}</p>
+    <p style="font-size:12.5px;color:var(--color-neutral-200);margin-top:var(--space-3);max-width:66ch">${escapeHtml(countsSentence)}</p>
+    <p style="font-size:11px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:66ch">${escapeHtml(e.glossaryPointerSentence)}</p>
     ${renderCoveredByPrioritiesNote(strings, analysis, findings, findingsById, priorities)}
     ${ownershipNote}
     ${renderThirdPartySplitNote(strings, stats)}

@@ -288,12 +288,21 @@ section:not(.disclosure) {
 
 .fineprint { color: var(--muted); font-size: 0.85rem; }
 
-/* The article-14 disclosure section reads as fine print, not as a feature
-   panel: it never receives card chrome (see section:not(.disclosure)
-   above), the section spacing above does the separating. */
+/* The article-14 disclosure remains fine print rather than feature-card
+   chrome, but an accent rule and stronger heading give the final page a
+   deliberate editorial opening instead of leaving it visually adrift. */
 .disclosure {
   margin: 0 0 var(--space-6);
+  padding-top: 10mm;
+  border-top: 1px solid var(--accent);
 }
+.disclosure h2 {
+  margin-bottom: var(--space-6);
+  font-size: 1.375rem;
+  letter-spacing: -0.02em;
+}
+.disclosure ul { padding-left: 1.25rem; }
+.disclosure .actions { margin-top: var(--space-8); }
 
 /* Footer links get real padding so the opt-out link is a comfortable tap
    target on a phone (WCAG 2.5.8 comfort, not just the 24px floor). */
