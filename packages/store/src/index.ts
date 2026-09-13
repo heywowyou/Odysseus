@@ -362,21 +362,111 @@ export type {
   TransitionOutreachThreadInput,
   TransitionOutreachThreadResult,
   CloseOutreachThreadsResult,
+  ListOutreachThreadsOptions,
+  ListThreadsDueForFollowUpOptions,
+  CompleteOutreachSequenceInput,
+  CompleteOutreachSequenceResult,
+  ListThreadsToSyncOptions,
 } from './outreach-threads.js';
+
+export type {
+  OutreachDraftDocument,
+  OutreachDraftReviewOutcome,
+  OutreachDraftStatus,
+} from './schemas/outreach-draft.schema.js';
 export {
   recordOutreachDraft,
   recordFailedOutreachDraft,
+  recordOutreachDraftReview,
   findLiveOutreachDraft,
-  listOutreachDrafts,
+  findOutreachDraftById,
   markOutreachDraftDeleted,
-  markOutreachDraftReviewOutcome,
+  listOutreachDrafts,
 } from './outreach-drafts.js';
 export type {
   RecordOutreachDraftInput,
   RecordFailedOutreachDraftInput,
-  MarkOutreachDraftReviewOutcomeResult,
+  MarkOutreachDraftDeletedResult,
+  ListOutreachDraftsOptions,
 } from './outreach-drafts.js';
 
-// Plan 013: bounded private operator views, split by concern but re-exported
-// through one module so callers never reach into their internal collections.
-export * from './operator-views.js';
+export type {
+  OutreachOutcomeDocument,
+  OutreachOutcomeDocumentFields,
+} from './schemas/outreach-outcome.schema.js';
+export { recordOutreachOutcome, listOutreachOutcomes } from './outreach-outcomes.js';
+export type {
+  RecordOutreachOutcomeInput,
+  RecordOutreachOutcomeResult,
+  ListOutreachOutcomesOptions,
+} from './outreach-outcomes.js';
+export type { ContactableCohortMember } from './hotel-contacts.js';
+
+// Milestone 9c plan 013: bounded operator view projections. Compositions of
+// the helpers above for the operator interface: every shape is an explicitly
+// picked projection that cannot carry message bodies, addresses, or hashes,
+// and every list is paginated.
+export {
+  getOperatorProspect,
+  getOutcomeSummary,
+  getProspectContactView,
+  getProspectEvidenceAssetSource,
+  getProspectEvidenceView,
+  getProspectOutcomeView,
+  getProspectPrescanView,
+  getProspectPreviewView,
+  getProspectQualificationHistory,
+  getProspectScoreDiffView,
+  getProspectScoreView,
+  getProspectSourceConflicts,
+  getProspectThreadView,
+  getSelectionProjection,
+  getSelectionVerdict,
+  getVendorFingerprintAggregate,
+  listOperatorProspects,
+  listOutreachReviewDrafts,
+  listRepliesNeedingReview,
+} from './operator-views.js';
+export type {
+  GetProspectContactViewOptions,
+  GetProspectEvidenceAssetSourceOptions,
+  GetProspectEvidenceViewOptions,
+  OperatorEvidenceAssetSlot,
+  OperatorEvidenceAssetSource,
+  GetProspectPrescanViewOptions,
+  GetProspectScoreViewOptions,
+  ListOperatorProspectsOptions,
+  OperatorProspectListPage,
+  SelectionCohortFacts,
+  SelectionMember,
+  SelectionProjection,
+  SelectionSource,
+  SelectionVerdict,
+  OperatorContactView,
+  OperatorDraftView,
+  OperatorEvidenceAssetView,
+  OperatorEvidenceSummaryView,
+  OperatorEvidenceView,
+  OperatorOutcomeEventView,
+  OperatorOutcomeSummary,
+  OperatorPrescanPageView,
+  OperatorPrescanView,
+  OperatorPreviewView,
+  OperatorProspectDetail,
+  OperatorProspectQueue,
+  OperatorProspectRow,
+  OperatorQualificationEvent,
+  OperatorReplyReviewRow,
+  OperatorReviewDraftRow,
+  OperatorScoreBreakdownView,
+  OperatorScoreComponentView,
+  OperatorScoreDiffView,
+  OperatorScoreView,
+  OperatorSourceConflictRow,
+  OperatorSourceConflictsView,
+  OperatorSourceRefRow,
+  OperatorThreadView,
+  OperatorViewPage,
+  OperatorViewPageOptions,
+  OperatorWebsiteCandidateView,
+} from './operator-views.js';
