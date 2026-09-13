@@ -58,7 +58,15 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api': 'http://127.0.0.1:4600',
+      // The backend rejects state-changing requests whose Origin doesn't
+      // match the Host it received them on (router.ts's isAcceptableOrigin,
+      // a CSRF guard). Vite's proxy forwards the browser's real Origin
+      // (localhost:5173) unchanged while the upstream Host becomes the
+      // proxy target, so every POST/PUT/DELETE 403s unless the proxied
+      // Origin is rewritten to match.
+      '/api': {
+        target: 'http://127.0.0.1:4600',
+      },
     },
   },
 });
