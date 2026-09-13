@@ -14,7 +14,7 @@ import type {
   OutreachOutcome,
   OutreachThreadState,
 } from '@odysseus/core';
-import { getHotelContact } from '../hotel-contacts.js';
+import { getHotelContact, MANUAL_CONTACT_VERSION } from '../hotel-contacts.js';
 import { findOutreachThreadByCandidate } from '../outreach-threads.js';
 import { listOutreachDrafts } from '../outreach-drafts.js';
 import { listOutreachPreviews } from '../outreach-previews.js';
@@ -63,6 +63,23 @@ export interface GetProspectContactViewOptions {
   contactVersion?: string;
 }
 
+/** Plan 045: a manual override must win this view exactly as it wins drafting,
+ *  never a "whichever row was validated most recently" comparison. Without
+ *  this, a later automated recontact re-validating the discovered row could
+ *  make this generic status panel show the discovered state again while the
+ *  contact editor right beside it still shows the override as effective. */
+async function effectiveContactAcrossVersions(
+  connection: Connection,
+  candidateId: string,
+): Promise<HotelContactDocument | null> {
+  const manual = await getHotelContact(connection, MANUAL_CONTACT_VERSION, candidateId);
+  if (manual !== null) return manual;
+  return createHotelContactModel(connection)
+    .findOne({ candidateId, contactVersion: { $ne: MANUAL_CONTACT_VERSION } })
+    .sort({ validatedAt: -1, contactId: 1 })
+    .lean<HotelContactDocument>();
+}
+
 /** Contact state with no address material: `address`, `localPart`, and
  *  `sourceUrl` are the three fields this view must never carry, whatever a
  *  future render might want. */
@@ -74,10 +91,7 @@ export async function getProspectContactView(
   const contact =
     options.contactVersion !== undefined
       ? await getHotelContact(connection, options.contactVersion, candidateId)
-      : await createHotelContactModel(connection)
-          .findOne({ candidateId })
-          .sort({ validatedAt: -1, contactId: 1 })
-          .lean<HotelContactDocument>();
+      : await effectiveContactAcrossVersions(connection, candidateId);
   if (contact === null) return null;
   return {
     contactId: contact.contactId,
