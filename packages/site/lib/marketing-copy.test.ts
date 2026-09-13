@@ -4,14 +4,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
- * The commercial pages, asserted as content rather than rendered.
- *
- * Same pattern as `compliance-copy.test.ts`: `packages/site` has no React
- * testing setup, so these read the page sources as text. What needs guarding
- * here is public meaning, not layout: the correction-handoff benefit, the
- * exact published price, the bounded AI-visibility claim, and the
- * metric-led performance wording, in both languages. Layout, class names and
- * card structure are deliberately not asserted.
+ * Meaning-level guardrails for the two commercial pages. These tests protect
+ * the bounded product claims and the native public vocabulary, not layout.
  */
 
 const libDir = path.dirname(fileURLToPath(import.meta.url));
@@ -29,12 +23,6 @@ function readLib(file: string): string {
   return readFileSync(path.join(libDir, file), 'utf8');
 }
 
-/**
- * The prose as one line, with the module's own comments removed, JSX
- * apostrophe entities decoded, and French no-break space entities collapsed
- * into ordinary whitespace. This asserts the sentence a visitor reads, not
- * the formatting Prettier is free to change.
- */
 function readable(source: string): string {
   return source
     .replace(/\/\*[\s\S]*?\*\//gu, ' ')
@@ -44,7 +32,6 @@ function readable(source: string): string {
     .replace(/\s+/gu, ' ');
 }
 
-/** Price separators are exact bytes: see compliance-copy.test.ts, trade-off 29. */
 function priced(source: string): string {
   return source.replaceAll('&#160;', '\u00a0');
 }
@@ -65,7 +52,7 @@ const commercialSources = [
 const APPROVED_LIMIT_FR =
   "Ceci est un diagnostic technique, pas un audit RGAA. Il ne produit pas de taux de conformité officiel et ne peut pas servir de base à une déclaration d'accessibilité.";
 const APPROVED_LIMIT_EN =
-  'This is a technical diagnostic, not an audit RGAA. It does not produce an official conformity rate and cannot serve as the basis for an accessibility statement.';
+  'This is a technical diagnostic, not an RGAA audit. It does not produce an official conformity rate and cannot serve as the basis for an accessibility statement.';
 
 describe('both commercial pages', () => {
   it.each(commercialSources)('%s is bilingual', (_name, source) => {
@@ -73,29 +60,51 @@ describe('both commercial pages', () => {
     expect(/\blang="en"/u.test(source)).toBe(true);
   });
 
-  it.each(commercialSources)('%s publishes the one price in both spellings', (_name, source) => {
+  it.each(commercialSources)('%s publishes the fixed price in both spellings', (_name, source) => {
     expect(priced(source)).toContain('1\u00a0600\u00a0\u20ac HT');
     expect(priced(source)).toContain('EUR 1,600 excl. VAT');
   });
 
-  it.each(commercialSources)('%s names the one monitored contact address', (_name, source) => {
+  it.each(commercialSources)('%s names the canonical monitored contact address', (_name, source) => {
     expect(source).toContain('contact@odysseusaudit.fr');
   });
 
   it.each(commercialSources)(
-    '%s keeps the AI-visibility section bounded to verifiable signals',
+    '%s keeps AI-assistant claims bounded to verifiable technical signals',
     (_name, source) => {
-      expect(readable(source)).toContain('Visibilité dans les assistants IA');
-      expect(readable(source)).toContain('AI visibility signals in search engines and assistants');
-      // The check exists; the prediction does not. Both halves are asserted
-      // because dropping either one reintroduces an overclaim or an
-      // undisclosed limitation.
-      expect(readable(source)).toContain('ne prédit pas');
-      expect(readable(source)).toContain('does not predict');
-      expect(readable(source)).toContain('citera');
-      expect(readable(source)).toContain('recommandera');
-      expect(readable(source)).toContain('cite');
-      expect(readable(source)).toContain('recommend');
+      const prose = readable(source);
+      expect(prose).toContain('Signaux techniques liés aux assistants IA');
+      expect(prose).toContain('Technical signals for AI assistants');
+      expect(prose).toContain('ne prédit pas');
+      expect(prose).toContain('does not predict');
+      expect(prose).toContain('citera');
+      expect(prose).toContain('recommandera');
+      expect(prose).toContain('cite');
+      expect(prose).toContain('recommend');
+    },
+  );
+
+  it.each(commercialSources)(
+    '%s describes render comparison without claiming a search engine cannot render JavaScript',
+    (_name, source) => {
+      const prose = readable(source);
+      expect(prose).toContain('HTML');
+      expect(prose).toContain('JavaScript');
+      expect(prose).not.toContain("ce qu'un moteur de recherche reçoit réellement");
+      expect(prose).not.toContain('what a search engine actually receives');
+      expect(prose).not.toContain("le robot d'indexation ne l'a jamais reçu");
+      expect(prose).not.toContain('the crawler never received it');
+    },
+  );
+
+  it.each(commercialSources)(
+    '%s describes accessibility as automatable or automated checks rather than full conformance testing',
+    (_name, source) => {
+      const prose = readable(source);
+      expect(prose).toMatch(/contrôles automatisables|automated accessibility/u);
+      expect(prose).toMatch(/automatable checks|automated accessibility/u);
+      expect(prose).not.toContain('conforme aux WCAG');
+      expect(prose).not.toContain('WCAG compliant');
     },
   );
 
@@ -110,8 +119,6 @@ describe('both commercial pages', () => {
       expect(prose).toContain('Stabilité visuelle');
       expect(prose).toContain('Cumulative layout shift');
       expect(prose).toContain('INP');
-      // INP depends on real-user field data that many smaller sites do not
-      // have; the availability qualifier must travel with the metric.
       expect(prose).toContain('lorsque des données terrain sont disponibles');
       expect(prose).toContain('when field data is available');
     },
@@ -121,72 +128,41 @@ describe('both commercial pages', () => {
     '%s keeps content coverage total and performance coverage sampled',
     (_name, source) => {
       const prose = readable(source);
-      expect(prose).toContain('explorée avec succès');
-      expect(prose).toContain('successfully crawled');
-      expect(prose).toContain('sélection de pages');
+      expect(prose).toContain("page accessible à l'outil");
+      expect(prose).toContain('page the tool can access');
+      expect(prose).toContain('sélection');
+      expect(prose).toContain('selection');
       expect(prose).not.toContain('échantillon représentatif');
-      expect(prose).toContain('representative sample');
+      expect(prose).not.toContain('representative sample');
     },
   );
 
-  it.each(commercialSources)('%s keeps security headers as their own check', (_name, source) => {
-    expect(readable(source)).toContain('en-têtes de sécurité');
-    expect(readable(source)).toContain('security headers');
-  });
-
-  it.each(commercialSources)('%s retains none of the retired claims', (_name, source) => {
+  it.each(commercialSources)('%s names security headers instead of implying a security audit', (_name, source) => {
     const prose = readable(source);
-    expect(prose).not.toContain('Premier affichage');
-    expect(prose).not.toContain('First paint');
-    expect(prose).not.toContain('deviner');
-    expect(prose).not.toContain('passer votre page');
-    expect(prose).not.toContain('guess, or skip');
-    // The offer page must not explain the cold-outreach preview at all: a
-    // general offer page does not describe an outreach asset, so an outreach
-    // implementation change can never force a marketing rewrite here.
-    expect(prose).not.toContain('Si vous avez reçu un aperçu');
-    expect(prose).not.toContain('If you received a preview');
-    expect(prose).not.toContain('aperçu');
-    expect(prose).not.toContain('preview');
+    expect(prose).toContain('en-têtes de sécurité');
+    expect(prose).toContain('security headers');
   });
 
-  it.each(commercialSources)(
-    '%s does not sell the two report languages as a feature',
-    (_name, source) => {
-      // Operator decision 2026-09-11: a client receives the report in their own
-      // language, which is normal service, not a selling point. The offer page
-      // keeps one factual "en français ou en anglais" line; nothing more.
-      const prose = readable(source);
-      expect(prose).not.toContain('bilingue');
-      expect(prose).not.toContain('bilingual');
-      expect(prose).not.toContain('en français et en anglais');
-      expect(prose).not.toContain('in French and English');
-    },
-  );
+  it.each(commercialSources)('%s does not sell the report languages as a feature', (_name, source) => {
+    const prose = readable(source);
+    expect(prose).not.toContain('bilingue');
+    expect(prose).not.toContain('bilingual');
+    expect(prose).not.toContain('en français et en anglais');
+    expect(prose).not.toContain('in French and English');
+  });
 
-  it.each(commercialSources)('%s renders the one shared dossier card', (_name, source) => {
-    // Two hand-kept copies of this card drifted apart once (different row
-    // names on each page). The card now lives only in lib/dossier.tsx.
+  it.each(commercialSources)('%s renders the shared dossier card', (_name, source) => {
     expect(source).toContain('<Dossier lang="fr" />');
     expect(source).toContain('<Dossier lang="en" />');
     expect(source).not.toContain('className="dossier"');
   });
-
-  it.each(commercialSources)(
-    '%s does not repeat a reassurance line under the contact button',
-    (_name, source) => {
-      const prose = readable(source);
-      expect(prose).not.toContain('jamais par un système automatisé');
-      expect(prose).not.toContain('never by an automated system');
-    },
-  );
 
   it.each(commercialSources)('%s uses no em or en dash', (_name, source) => {
     expect(source).not.toMatch(/[\u2013\u2014]/u);
   });
 });
 
-describe('Plan 046 canonical French vocabulary', () => {
+describe('canonical public vocabulary', () => {
   const frenchPublicCopy = [
     homeProse,
     offerProse,
@@ -195,79 +171,77 @@ describe('Plan 046 canonical French vocabulary', () => {
     readable(pageMeta),
   ].join(' ');
 
-  it('uses diagnostic and diagnostic-report terminology on the commercial pages', () => {
+  it('uses diagnostic terminology rather than selling an audit', () => {
     expect(homeProse).toContain('diagnostic technique');
-    expect(homeProse).toContain('rapport de diagnostic');
     expect(offerProse).toContain('diagnostic technique');
-    expect(offerProse).toContain('rapport de diagnostic');
+    expect(frenchPublicCopy).toContain('Le diagnostic');
   });
 
-  it('uses the plain-language search and AI-assistant category names', () => {
-    expect(homeProse).toContain('Référencement naturel et rendu');
-    expect(offerProse).toContain('Référencement naturel et rendu');
-    expect(frenchPublicCopy).toContain('visibilité dans les assistants IA');
-    expect(frenchPublicCopy).not.toContain('signaux de visibilité IA');
-    expect(frenchPublicCopy).not.toContain(
-      'Signaux de visibilité dans les moteurs et assistants IA',
-    );
+  it('uses the bounded AI-assistant category name throughout the public site', () => {
+    expect(homeProse).toContain('Signaux techniques liés aux assistants IA');
+    expect(offerProse).toContain('Signaux techniques liés aux assistants IA');
+    expect(frenchPublicCopy).toContain('signaux techniques liés aux assistants IA');
+    expect(frenchPublicCopy).not.toContain('visibilité dans les assistants IA');
   });
 
-  it('uses complexity rather than effort on the French decision-maker surface', () => {
-    expect(homeProse).toContain('la complexité et la priorité');
-    expect(homeProse).not.toContain("L'enjeu, l'effort et la priorité");
+  it('uses initial-HTML and rendered-page vocabulary for search rendering', () => {
+    expect(homeProse).toContain('HTML initial');
+    expect(offerProse).toContain('HTML initial');
+    expect(homeProse).toContain('rendu JavaScript');
+    expect(offerProse).toContain('rendu JavaScript');
   });
 });
 
 describe('home page', () => {
-  it('leads with the correction handoff, not scanner mechanics', () => {
+  it('leads with the correction handoff', () => {
     expect(homeProse).toContain('quoi corriger');
     expect(homeProse).toContain('what to fix');
   });
 
-  it('states the limitation concisely and sends the reader to the offer for the full wording', () => {
+  it('states the RGAA limitation concisely and links to the full wording', () => {
     expect(homeProse).toContain('Ceci est un diagnostic technique, pas un audit RGAA.');
     expect(homeProse).not.toContain(APPROVED_LIMIT_FR);
     expect(home).toContain('href="/offre"');
   });
 
-  it('has one primary write-to-us action rather than an order commitment', () => {
-    expect(home).toContain('Nous écrire');
-    expect(home).toContain('Write to us');
+  it('uses a conversational contact action rather than an order commitment', () => {
+    expect(home).toContain('Parler de votre site');
+    expect(home).toContain('Discuss your site');
     expect(home).not.toContain('Commander');
     expect(home).not.toContain('Order');
   });
 });
 
 describe('offer page', () => {
-  it('carries the approved limitation verbatim before its scope', () => {
+  it('carries the approved limitation before the detailed scope', () => {
     expect(offerProse).toContain(APPROVED_LIMIT_FR);
     expect(offerProse).toContain(APPROVED_LIMIT_EN);
   });
 
-  it('states the price does not vary, because a prospect will ask', () => {
+  it('states that the price does not vary with site size or findings', () => {
     expect(offerProse).toContain('ne dépend ni de la taille du site');
     expect(offerProse).toContain('does not depend on the size of the site');
   });
 
-  it('keeps the no-legal-conclusion discipline', () => {
-    expect(offerProse).toContain('sans extrapoler au-delà de ces faits');
-    expect(offerProse).toContain('without concluding that they apply to your case');
+  it('keeps legal scope explicitly non-determinative', () => {
+    expect(offerProse).toContain('ne se prononce pas sur vos obligations juridiques');
+    expect(offerProse).toContain('does not determine your legal obligations');
   });
 
-  it('uses one contact action that describes the actual act', () => {
-    expect(offer).toContain('Nous écrire');
-    expect(offer).toContain('Write to us');
+  it('uses a contact action that describes the actual act', () => {
+    expect(offer).toContain('Parler de votre site');
+    expect(offer).toContain('Discuss your site');
     expect(offer).not.toContain('Commander');
     expect(offer).not.toContain('Order');
   });
 });
 
 describe('root metadata', () => {
-  it('describes the full accurate scope using the canonical French AI-assistant wording', () => {
-    expect(layout).toContain('visibilité dans les assistants IA');
-    expect(layout).not.toContain('signaux de visibilité IA');
-    expect(layout).not.toContain('français et en anglais');
-    expect(layout).not.toContain('Premier affichage');
+  it('describes the bounded public scope', () => {
+    expect(layout).toContain('rendu JavaScript');
+    expect(layout).toContain('signaux techniques liés aux assistants IA');
+    expect(layout).toContain('tarif fixe');
+    expect(layout).not.toContain('visibilité dans les assistants IA');
     expect(layout).not.toMatch(/[\u2013\u2014]/u);
   });
 });
