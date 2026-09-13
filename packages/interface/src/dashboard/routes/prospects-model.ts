@@ -439,7 +439,7 @@ export interface ProspectDetailResponse {
    *  (`planFullAudit`), so the hub can show the refusal as page text
    *  before the confirm dialog opens rather than only after. Optional for
    *  the same fixture tolerance as outreachScan. */
-  fullAudit?: { canStart: boolean; refusal?: string };
+  fullAudit?: { canStart: boolean; refusal?: string; jobId?: string };
   /** Plan 041 slice B1: the same selection projection the list uses, so
    *  the hub's "why can't I scan this" copy can never disagree with the
    *  list's wave column about who is in play. Optional for the same

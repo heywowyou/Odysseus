@@ -71,6 +71,14 @@ export function HubAuditSection(props: {
           detail.fullAudit.refusal as keyof typeof strings.hub.audit.launchRefusals
         ] ?? strings.hub.scanRefusedLabel)
       : undefined;
+  // Plan 045 section 2.5: the in-flight refusal is actionable, so it links
+  // to the running job instead of only naming the reason.
+  const fullAuditInFlightJobId =
+    detail.fullAudit !== undefined &&
+    !detail.fullAudit.canStart &&
+    detail.fullAudit.refusal === 'already-in-flight'
+      ? detail.fullAudit.jobId
+      : undefined;
 
   const auditState = useApi<AuditDetailResponse>(
     selected === null ? null : `/api/audits/${encodeURIComponent(selected.auditId)}`,
@@ -181,8 +189,16 @@ export function HubAuditSection(props: {
             <span className="text-xs text-ink-muted">{strings.hub.audit.standaloneHint}</span>
           </div>
           {fullAuditRefusal !== undefined ? (
-            <p className="text-sm text-ink-soft" role="note">
+            <p className="flex flex-wrap items-center gap-2 text-sm text-ink-soft" role="note">
               {fullAuditRefusal}
+              {fullAuditInFlightJobId !== undefined ? (
+                <Link
+                  to={`/scans/${encodeURIComponent(fullAuditInFlightJobId)}`}
+                  className={buttonStyles('secondary', 'sm')}
+                >
+                  {strings.hub.primary.seeProgress}
+                </Link>
+              ) : null}
             </p>
           ) : null}
 

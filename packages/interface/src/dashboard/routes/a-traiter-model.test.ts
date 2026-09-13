@@ -21,6 +21,8 @@ const EMAIL_LABELS: DashboardStrings['hub']['emails'] = {
   needsReviewNotice: '',
   markReviewed: '',
   noPendingDraft: '',
+  firstEmailBlockedPendingDraft: '',
+  firstEmailBlockedThreadStarted: '',
 };
 
 describe('needsInputScans', () => {

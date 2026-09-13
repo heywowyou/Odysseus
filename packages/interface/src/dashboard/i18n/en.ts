@@ -688,8 +688,6 @@ export const en: DashboardStrings = {
       launchRefusals: {
         'no-own-domain': 'No website of its own is attached to this hotel.',
         'already-in-flight': 'A scan of this site is already running.',
-        'no-cohort':
-          'No selection recorded yet: a selection must first be computed outside the dashboard.',
       },
     },
     report: {
@@ -735,6 +733,8 @@ export const en: DashboardStrings = {
       needsReviewNotice: 'A reply arrived and waits for your review.',
       markReviewed: 'Mark as reviewed',
       noPendingDraft: 'No draft is waiting for review.',
+      firstEmailBlockedPendingDraft: 'A draft is already waiting for review below.',
+      firstEmailBlockedThreadStarted: 'The thread has already moved past its first touch.',
     },
     outcome: {
       formHeading: 'Record an outcome',
@@ -799,6 +799,7 @@ export const en: DashboardStrings = {
     expiresLabel: 'Expires at',
     states: { live: 'Live', revoked: 'Taken down', expired: 'Expired', none: 'None' },
     revokeAction: 'Take the preview down',
+    publishBlockedNoAudit: 'No audit exists yet: run one from the Audit tab first.',
     reissueConfirmTitle: 'Issue a new link?',
     reissueConfirmBody:
       'A new public link will be created and shown only once. The previous link keeps working until it expires or is taken down.',

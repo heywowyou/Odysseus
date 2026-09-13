@@ -408,6 +408,21 @@ describe('GET /api/prospects/:candidateId', () => {
     });
   });
 
+  it('plan 045 section 2.5: carries the in-flight job id alongside the full-audit refusal', async () => {
+    vi.mocked(getHotelCandidate).mockResolvedValue({
+      candidateId: 'cand-1',
+      ownRegistrableDomain: 'hotel-exemple.fr',
+    } as never);
+    vi.mocked(findActiveScanJobForHost).mockResolvedValue({ jobId: 'job-running' } as never);
+    const res = await handle('/api/prospects/cand-1');
+    const body = JSON.parse(res.body ?? '{}');
+    expect(body.fullAudit).toEqual({
+      canStart: false,
+      refusal: 'already-in-flight',
+      jobId: 'job-running',
+    });
+  });
+
   it('joins severity totals onto the latest outreach audit and carries the running job id', async () => {
     vi.mocked(getOutreachAuditStatus).mockResolvedValue({
       audit: { auditId: 'audit-1', startedAt: new Date('2026-09-01T00:00:00.000Z') },
@@ -1101,14 +1116,27 @@ describe('POST /api/prospects/:candidateId/full-audit (plan 044)', () => {
     });
     expect(createJob).not.toHaveBeenCalled();
 
-    vi.mocked(findActiveScanJobForHost).mockResolvedValue(null as never);
-    vi.mocked(getLatestScoreCohort).mockResolvedValue(null as never);
-    const noCohort = await handle('/api/prospects/cand-1/full-audit', { method: 'POST' });
-    expect(JSON.parse(noCohort.body ?? '{}')).toEqual({ started: false, refusal: 'no-cohort' });
-
     vi.mocked(getHotelCandidate).mockResolvedValue(null as never);
     const unknown = await handle('/api/prospects/cand-unknown/full-audit', { method: 'POST' });
     expect(unknown.statusCode).toBe(404);
+  });
+
+  it('plan 045 section 2.5: starts anyway when no scoring cohort exists, stamped cohortId none', async () => {
+    vi.mocked(getHotelCandidate).mockResolvedValue({
+      candidateId: 'cand-1',
+      ownRegistrableDomain: 'hotel-exemple.fr',
+    } as never);
+    vi.mocked(findActiveScanJobForHost).mockResolvedValue(null as never);
+    vi.mocked(getLatestScoreCohort).mockResolvedValue(null as never);
+    const res = await handle('/api/prospects/cand-1/full-audit', { method: 'POST' });
+    expect(res.statusCode).toBe(201);
+    expect(createJob).toHaveBeenCalledWith(
+      fakeConnection,
+      expect.objectContaining({
+        options: expect.objectContaining({ outreachCohortId: 'none' }),
+      }),
+    );
+    expect(JSON.parse(res.body ?? '{}')).toEqual({ started: true, jobId: 'job-new-1' });
   });
 });
 

@@ -697,8 +697,6 @@ export const fr: DashboardStrings = {
       launchRefusals: {
         'no-own-domain': "Aucun site propre n'est rattaché à cet hôtel.",
         'already-in-flight': 'Un scan de ce site est déjà en cours.',
-        'no-cohort':
-          "Aucune sélection enregistrée : une sélection doit d'abord être calculée en dehors du tableau de bord.",
       },
     },
     report: {
@@ -744,6 +742,8 @@ export const fr: DashboardStrings = {
       needsReviewNotice: 'Une réponse est arrivée et attend votre relecture.',
       markReviewed: 'Marquer comme relue',
       noPendingDraft: 'Aucun brouillon en attente de relecture.',
+      firstEmailBlockedPendingDraft: 'Un brouillon attend déjà d’être relu ci-dessous.',
+      firstEmailBlockedThreadStarted: 'Le fil a déjà dépassé son premier contact.',
     },
     outcome: {
       formHeading: 'Enregistrer un résultat',
@@ -811,6 +811,7 @@ export const fr: DashboardStrings = {
     expiresLabel: 'Expire le',
     states: { live: 'En ligne', revoked: 'Retiré', expired: 'Expiré', none: 'Aucun' },
     revokeAction: 'Retirer l’aperçu',
+    publishBlockedNoAudit: "Aucun audit n'existe encore : lancez-en un depuis l'onglet Audit.",
     reissueConfirmTitle: 'Émettre un nouveau lien ?',
     reissueConfirmBody:
       'Un nouveau lien public sera créé et affiché une seule fois. Le lien précédent continue de fonctionner jusqu’à son expiration ou son retrait.',

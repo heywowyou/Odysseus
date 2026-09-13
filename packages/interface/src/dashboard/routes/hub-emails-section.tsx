@@ -67,6 +67,16 @@ export function HubEmailsSection(props: {
   const canStartFirstEmail =
     (thread === null || thread.state === 'open') && createdDrafts.length === 0;
   const canFollowUp = thread !== null && canGenerateFollowUp(thread.state);
+  // Plan 045 section 2.5: greyed with a reason instead of hidden, so the
+  // operator sees why the first-email action is absent rather than a gap.
+  const firstEmailBlockedReason =
+    canStartFirstEmail || canFollowUp
+      ? null
+      : thread !== null && thread.state !== 'open'
+        ? strings.hub.emails.firstEmailBlockedThreadStarted
+        : createdDrafts.length > 0
+          ? strings.hub.emails.firstEmailBlockedPendingDraft
+          : null;
 
   const touchName = (touch: number): string =>
     touch <= 1
@@ -126,8 +136,13 @@ export function HubEmailsSection(props: {
       )}
 
       <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-4">
-        {canStartFirstEmail ? (
-          <Button size="sm" isLoading={isBusy} disabled={isBusy} onClick={onFirstEmail}>
+        {canStartFirstEmail || firstEmailBlockedReason !== null ? (
+          <Button
+            size="sm"
+            isLoading={isBusy}
+            disabled={isBusy || !canStartFirstEmail}
+            onClick={onFirstEmail}
+          >
             {strings.outreachThread.generateFirstEmail}
           </Button>
         ) : null}
@@ -137,6 +152,11 @@ export function HubEmailsSection(props: {
           </Button>
         ) : null}
       </div>
+      {firstEmailBlockedReason !== null ? (
+        <p className="mt-2 text-sm text-ink-soft" role="note">
+          {firstEmailBlockedReason}
+        </p>
+      ) : null}
     </Card>
   );
 }

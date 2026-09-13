@@ -377,7 +377,9 @@ export function registerProspectRoutes(
           ? { canStart: false, refusal: 'no-own-domain' }
           : fullAuditPlan.canStart
             ? { canStart: true }
-            : { canStart: false, refusal: fullAuditPlan.refusal },
+            : fullAuditPlan.refusal === 'already-in-flight'
+              ? { canStart: false, refusal: fullAuditPlan.refusal, jobId: fullAuditPlan.jobId }
+              : { canStart: false, refusal: fullAuditPlan.refusal },
       outreachAudit:
         auditStatus.audit === null || severityRollup === null
           ? null
@@ -683,11 +685,19 @@ export function registerProspectRoutes(
    *  GET detail composition can show the same refusal as page text before
    *  the operator opens the confirm dialog (issue #182), rather than a
    *  second check that could drift from the real one. Never creates a job:
-   *  callers that intend to start the scan still do that themselves. */
+   *  callers that intend to start the scan still do that themselves.
+   *
+   *  Plan 045 section 2.5: a missing scoring cohort no longer refuses the
+   *  audit. `cohortId` only ever rides on the created job as provenance
+   *  context (never a membership claim), so a hotel outside any computed
+   *  selection still gets its billable audit, stamped `cohortId: 'none'`
+   *  instead of being blocked on unrelated scoring-pipeline state. */
   async function planFullAudit(
     candidate: NonNullable<Awaited<ReturnType<typeof getHotelCandidate>>>,
   ): Promise<
-    { canStart: true; domain: string; cohortId: string } | { canStart: false; refusal: string }
+    | { canStart: true; domain: string; cohortId: string }
+    | { canStart: false; refusal: 'no-own-domain' }
+    | { canStart: false; refusal: 'already-in-flight'; jobId: string }
   > {
     const domain = candidate.ownRegistrableDomain;
     if (!domain) return { canStart: false, refusal: 'no-own-domain' };
@@ -695,10 +705,11 @@ export function registerProspectRoutes(
       connection,
       new URL(`https://${domain}`).hostname,
     );
-    if (inFlight !== null) return { canStart: false, refusal: 'already-in-flight' };
+    if (inFlight !== null) {
+      return { canStart: false, refusal: 'already-in-flight', jobId: inFlight.jobId };
+    }
     const cohort = await getLatestScoreCohort(connection, CURRENT_SCORING_VERSION);
-    if (cohort === null) return { canStart: false, refusal: 'no-cohort' };
-    return { canStart: true, domain, cohortId: cohort.cohortId };
+    return { canStart: true, domain, cohortId: cohort?.cohortId ?? 'none' };
   }
 
   router.post('/api/prospects/:candidateId/wave/remove', async ({ req, res, params }) => {

@@ -754,7 +754,7 @@ export interface DashboardStrings {
       /** Plan 044: the paid deliverable scan's launch on this tab. */
       launchFullAudit: string;
       launchQueued: string;
-      launchRefusals: Record<'no-own-domain' | 'already-in-flight' | 'no-cohort', string>;
+      launchRefusals: Record<'no-own-domain' | 'already-in-flight', string>;
     };
     /** Plan 042 slice 3: the paid report chain's tab, visible once the
      *  hotel is sold (outcome `won`) or revealed manually from the Audit
@@ -810,6 +810,8 @@ export interface DashboardStrings {
        *  outcome does not do this on its own. */
       markReviewed: string;
       noPendingDraft: string;
+      firstEmailBlockedPendingDraft: string;
+      firstEmailBlockedThreadStarted: string;
     };
     outcome: {
       formHeading: string;
@@ -888,6 +890,7 @@ export interface DashboardStrings {
     expiresLabel: string;
     states: Record<'live' | 'revoked' | 'expired' | 'none', string>;
     revokeAction: string;
+    publishBlockedNoAudit: string;
     reissueConfirmTitle: string;
     reissueConfirmBody: string;
     revokeConfirmTitle: string;

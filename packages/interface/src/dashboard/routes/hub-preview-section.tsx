@@ -148,6 +148,9 @@ export function HubPreviewSection(props: {
 
   const canPublish = auditId !== null && state !== 'live';
   const canRevoke = state === 'live';
+  // Plan 045 section 2.5: greyed with a reason instead of hidden when no
+  // audit exists yet to publish a preview from.
+  const publishBlockedReason = auditId === null ? strings.preview.publishBlockedNoAudit : null;
 
   return (
     <Card title={strings.hub.steps.preview} description={strings.preview.description}>
@@ -187,12 +190,12 @@ export function HubPreviewSection(props: {
       ) : null}
 
       <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-4">
-        {canPublish ? (
+        {canPublish || publishBlockedReason !== null ? (
           <Button
             variant="primary"
             size="sm"
             isLoading={isBusy}
-            disabled={isBusy}
+            disabled={isBusy || !canPublish}
             onClick={() => {
               if (state !== 'none' && hasTouch1Draft) {
                 setIsReissueOpen(true);
@@ -240,6 +243,12 @@ export function HubPreviewSection(props: {
           </>
         ) : null}
       </div>
+
+      {publishBlockedReason !== null ? (
+        <p className="mt-2 text-sm text-ink-soft" role="note">
+          {publishBlockedReason}
+        </p>
+      ) : null}
 
       {pdfNotice !== null ? (
         <p className="mt-3 text-sm text-danger" role="alert">
