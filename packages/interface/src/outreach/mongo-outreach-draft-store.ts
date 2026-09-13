@@ -21,8 +21,8 @@ import {
   advanceThreadTouch,
   attachProviderThreadId,
   findLiveOutreachDraft,
+  getEffectiveHotelContact,
   getHotelCandidate,
-  getHotelContact,
   getHotelQualification,
   getLatestPrescan,
   isSuppressed,
@@ -57,7 +57,7 @@ export function createMongoOutreachDraftStore(
       const prescan = await getLatestPrescan(connection, candidateId, options.prescanVersion);
       if (prescan === null) return null;
 
-      const contact = await getHotelContact(connection, options.contactVersion, candidateId);
+      const contact = await getEffectiveHotelContact(connection, options.contactVersion, candidateId);
       const qualification = await getHotelQualification(
         connection,
         options.qualificationVersion,
@@ -75,7 +75,15 @@ export function createMongoOutreachDraftStore(
         ...(prescan.evidence === undefined ? {} : { evidence: prescan.evidence }),
         ...(contact === null
           ? {}
-          : { contact: { address: contact.address ?? '', state: contact.state } }),
+          : {
+              contact: {
+                address: contact.address ?? '',
+                state: contact.state,
+                ...(contact.addressOrigin === undefined
+                  ? {}
+                  : { addressOrigin: contact.addressOrigin }),
+              },
+            }),
         // The same Sirene facts the preview store reads, in the same shape, so
         // one builder turns them into registry facts for both documents.
         ...(join?.status === 'matched' && join.denomination !== undefined
@@ -93,8 +101,8 @@ export function createMongoOutreachDraftStore(
       };
     },
 
-    isSuppressed(domain: string): Promise<boolean> {
-      return isSuppressed(connection, domain);
+    isSuppressed(domain: string, address?: string): Promise<boolean> {
+      return isSuppressed(connection, domain, address);
     },
 
     async openThread(input): Promise<OutreachThreadRef> {

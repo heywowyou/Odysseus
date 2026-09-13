@@ -38,6 +38,7 @@ import {
   HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION,
   isTerminalOutreachThreadState,
   selectOutreachEvidence,
+  type HotelContactAddressOrigin,
   type HotelPrescanEvidence,
   type OutreachEvidenceSlot,
   type OutreachThreadState,
@@ -87,6 +88,8 @@ export interface OutreachContactFacts {
   /** `found` is the only state that may be written to. The others are the four
    *  typed absences plan 007 records instead of a null. */
   state: string;
+  /** Undefined on legacy discovered rows, which means the hotel website. */
+  addressOrigin?: HotelContactAddressOrigin;
 }
 
 /** Everything drafting needs about one hotel, read in one go by the store
@@ -153,7 +156,7 @@ export interface RecordFailureFacts {
 
 export interface OutreachDraftStorePort {
   findDraftRow(candidateId: string): Promise<OutreachDraftRow | null>;
-  isSuppressed(domain: string): Promise<boolean>;
+  isSuppressed(domain: string, address?: string): Promise<boolean>;
   openThread(input: {
     candidateId: string;
     prescanId: string;
@@ -258,6 +261,21 @@ function refuse(refusal: CreateOutreachDraftRefusal): CreateOutreachDraftResult 
   return { created: false, refusal };
 }
 
+function domainOfAddress(address: string): string | null {
+  const at = address.lastIndexOf('@');
+  return at > 0 && at < address.length - 1 ? address.slice(at + 1).toLowerCase() : null;
+}
+
+async function isRecipientSuppressed(
+  store: OutreachDraftStorePort,
+  hotelDomain: string,
+  address: string,
+): Promise<boolean> {
+  if (await store.isSuppressed(hotelDomain)) return true;
+  const mailDomain = domainOfAddress(address);
+  return mailDomain === null ? false : store.isSuppressed(mailDomain, address);
+}
+
 /** Every origin the data behind this draft actually came from, per
  *  `docs/rules/outreach-rules.md` section 7. Built per hotel rather than as a fixed
  *  list: a hotel with no registry match must not disclose an origin it has
@@ -265,6 +283,10 @@ function refuse(refusal: CreateOutreachDraftRefusal): CreateOutreachDraftResult 
 function dataOriginsFor(row: OutreachDraftRow): OutreachDataOrigin[] {
   const origins: OutreachDataOrigin[] = ['public-hotel-catalogue', 'public-website'];
   if (registryAssessment(row.sirene) !== undefined) origins.push('public-business-registry');
+  const contactOrigin = row.contact?.addressOrigin;
+  if (contactOrigin === 'other-public-source' || contactOrigin === 'provided-directly') {
+    origins.push(contactOrigin);
+  }
   return origins;
 }
 
@@ -285,6 +307,9 @@ export async function createOutreachDraft(
   // carries an address that passed the allowlist and the MX check.
   if (row.contact === undefined || row.contact.state !== 'found' || row.contact.address === '') {
     return refuse('no-usable-contact');
+  }
+  if (await isRecipientSuppressed(options.store, row.domain, row.contact.address)) {
+    return refuse('suppressed-before-generation');
   }
 
   const evidence = row.evidence;
@@ -387,7 +412,7 @@ export async function createOutreachDraft(
 
   // The second gate, immediately before the provider call and after every slow
   // step above.
-  if (await options.store.isSuppressed(row.domain)) {
+  if (await isRecipientSuppressed(options.store, row.domain, row.contact.address)) {
     await options.store.recordFailure({
       ...failureFacts,
       failureReason: 'suppressed-before-provider',

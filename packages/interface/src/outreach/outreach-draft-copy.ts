@@ -36,6 +36,13 @@ import {
   type ReportLanguage,
 } from '@odysseus/core';
 
+export type OutreachDraftDataOrigin =
+  | 'public-hotel-catalogue'
+  | 'public-website'
+  | 'public-business-registry'
+  | 'other-public-source'
+  | 'provided-directly';
+
 export interface OutreachDraftCopy {
   salutation: string;
   signOff: string;
@@ -48,10 +55,7 @@ export interface OutreachDraftCopy {
   linkSeparator: string;
   purpose: string;
   originIntro: string;
-  dataOrigin: Record<
-    'public-hotel-catalogue' | 'public-website' | 'public-business-registry',
-    string
-  >;
+  dataOrigin: Record<OutreachDraftDataOrigin, string>;
   /** Article 14 identity line; checked verbatim by the disclosure guard. */
   senderIdentity: string;
   replyInvite: string;
@@ -82,6 +86,8 @@ const FR: OutreachDraftCopy = {
     'public-hotel-catalogue': 'le classement public des hébergements touristiques (Atout France)',
     'public-website': 'votre site internet',
     'public-business-registry': 'la base Sirene (INSEE)',
+    'other-public-source': 'un annuaire professionnel ou une plateforme de réservation en ligne',
+    'provided-directly': 'les coordonnées que vous nous avez communiquées',
   },
   senderIdentity: `Responsable du traitement\u00a0: ${OUTREACH_SENDER_DISPLAY_NAME}, ${OUTREACH_CONTACT.address}.`,
   replyInvite: 'Vous pouvez répondre directement à ce message.',
@@ -112,6 +118,8 @@ const EN: OutreachDraftCopy = {
     'public-hotel-catalogue': 'the public classification of tourist accommodation (Atout France)',
     'public-website': 'your website',
     'public-business-registry': 'the Sirene register (INSEE)',
+    'other-public-source': 'a professional directory or an online booking platform',
+    'provided-directly': 'the contact details you provided to us',
   },
   senderIdentity: `Data controller: ${OUTREACH_SENDER_DISPLAY_NAME}, ${OUTREACH_CONTACT.address}.`,
   replyInvite: 'You can reply directly to this message.',

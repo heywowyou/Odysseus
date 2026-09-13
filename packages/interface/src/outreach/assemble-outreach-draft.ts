@@ -47,7 +47,11 @@ import {
 } from './render-outreach-draft.js';
 
 export type OutreachDataOrigin =
-  'public-hotel-catalogue' | 'public-website' | 'public-business-registry';
+  | 'public-hotel-catalogue'
+  | 'public-website'
+  | 'public-business-registry'
+  | 'other-public-source'
+  | 'provided-directly';
 
 export type AssembleOutreachDraftRefusal =
   | 'missing-preview-url'
