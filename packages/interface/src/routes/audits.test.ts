@@ -98,6 +98,26 @@ const findingsProvenance = {
   findingsDigest: `sha256:${'0'.repeat(64)}`,
 };
 
+function mockCurrentAnalysisPair(): void {
+  vi.mocked(resolveSelectedAnalysisPairForAudit).mockResolvedValue({
+    kind: 'selected',
+    fr: {
+      analysisId: 'analysis-fr',
+      auditId: 'audit-1',
+      language: 'fr',
+      findingsProvenance,
+      generatedAt: new Date(),
+    },
+    en: {
+      analysisId: 'analysis-en',
+      auditId: 'audit-1',
+      language: 'en',
+      findingsProvenance,
+      generatedAt: new Date(),
+    },
+  } as never);
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(getAudit).mockResolvedValue({
@@ -461,6 +481,7 @@ describe('GET /api/audits/:auditId', () => {
   });
 
   it('marks matching reports fresh and mismatched reports stale', async () => {
+    mockCurrentAnalysisPair();
     vi.mocked(getLatestReport).mockImplementation(async (_connection, _auditId, language) => ({
       reportId: `report-${language}`,
       auditId: 'audit-1',
@@ -492,6 +513,7 @@ describe('GET /api/audits/:auditId', () => {
   });
 
   it('carries the optional measured page count and omits it for a legacy document', async () => {
+    mockCurrentAnalysisPair();
     vi.mocked(getLatestReport).mockImplementation(async (_connection, _auditId, language) => ({
       reportId: `report-${language}`,
       auditId: 'audit-1',
@@ -524,6 +546,7 @@ describe('GET /api/audits/:auditId', () => {
   });
 
   it('marks a report pdfAvailable only when this machine resolves its bytes (issue #91)', async () => {
+    mockCurrentAnalysisPair();
     // A real PDF whose digest matches what the report row records: the
     // same read the preview and download endpoints run.
     const bytes = Buffer.from('%PDF-1.4 fake bytes for availability');
@@ -578,6 +601,61 @@ describe('GET /api/audits/:auditId', () => {
     expect(getLatestReport).toHaveBeenCalledWith(fakeConnection, 'audit-1', 'fr');
     expect(getLatestReport).toHaveBeenCalledWith(fakeConnection, 'audit-1', 'en');
     expect(resolveSelectedAnalysisPairForAudit).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not advertise reports from a superseded analysis pair (issue #214)', async () => {
+    const pdf = Buffer.from('%PDF-1.4 superseded pair');
+    const pdfDigest = `sha256:${createHash('sha256').update(pdf).digest('hex')}`;
+    await fs.mkdir('/tmp/fake-audit-dir/reports', { recursive: true });
+    await Promise.all([
+      fs.writeFile('/tmp/fake-audit-dir/reports/fr.pdf', pdf),
+      fs.writeFile('/tmp/fake-audit-dir/reports/en.pdf', pdf),
+    ]);
+    vi.mocked(resolveSelectedAnalysisPairForAudit).mockResolvedValue({
+      kind: 'selected',
+      fr: {
+        analysisId: 'current-fr',
+        auditId: 'audit-1',
+        language: 'fr',
+        findingsProvenance,
+        generatedAt: new Date(),
+      },
+      en: {
+        analysisId: 'current-en',
+        auditId: 'audit-1',
+        language: 'en',
+        findingsProvenance,
+        generatedAt: new Date(),
+      },
+    } as never);
+    vi.mocked(getLatestReport).mockImplementation(async (_connection, _auditId, language) => ({
+      reportId: `old-report-${language}`,
+      auditId: 'audit-1',
+      analysisId: `superseded-${language}`,
+      findingsProvenance,
+      rendererVersion: 2,
+      rendererBuild: 'build',
+      pdfDigest,
+      language,
+      reportTemplateVersion: 2,
+      analysisGeneratedAt: new Date(),
+      fileRef: `reports/${language}.pdf`,
+      generatedAt: new Date(),
+    }));
+
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1');
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body ?? '{}');
+    expect(body.lifecycle).toBe('analysed');
+    expect(body.reports).toEqual([
+      { language: 'fr', status: 'unverified', pdfAvailable: false },
+      { language: 'en', status: 'unverified', pdfAvailable: false },
+    ]);
   });
 
   it('reads each report PDF at most once per request (issue #139)', async () => {

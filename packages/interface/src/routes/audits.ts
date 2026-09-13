@@ -377,6 +377,19 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       getLatestReport(connection, auditId, 'en'),
       getFailedJobForAudit(connection, auditId),
     ]);
+    // A failed regeneration advances the selected writing pair before PDF
+    // rendering. Keep older report documents as history, but never advertise
+    // them as the current pair: approval and download deliberately validate
+    // against the selection and would otherwise reject the dashboard's own
+    // apparently-ready action (issue #214).
+    const currentFrReport =
+      selectedPair.kind !== 'none' && frReport?.analysisId === selectedPair.fr.analysisId
+        ? frReport
+        : null;
+    const currentEnReport =
+      selectedPair.kind !== 'none' && enReport?.analysisId === selectedPair.en.analysisId
+        ? enReport
+        : null;
     const hostname = new URL(audit.siteUrl).hostname;
     const auditDir = buildAuditDir(getArtifactsRoot(), hostname, audit.startedAt);
     // Issue #91: resolve each language's PDF availability up front, so the
@@ -389,17 +402,17 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     // resolveArtifactFile, so one dashboard visit repairs availability for
     // the next.
     const [frPdf, enPdf] = await Promise.all([
-      frReport === null
+      currentFrReport === null
         ? Promise.resolve(undefined)
-        : readVerifiedReport(auditDir, frReport, hostname, audit.startedAt, artifactStore),
-      enReport === null
+        : readVerifiedReport(auditDir, currentFrReport, hostname, audit.startedAt, artifactStore),
+      currentEnReport === null
         ? Promise.resolve(undefined)
-        : readVerifiedReport(auditDir, enReport, hostname, audit.startedAt, artifactStore),
+        : readVerifiedReport(auditDir, currentEnReport, hostname, audit.startedAt, artifactStore),
     ]);
     const frPdfAvailable = frPdf !== undefined;
     const enPdfAvailable = enPdf !== undefined;
     const reports = (['fr', 'en'] as const).map((language) => {
-      const report = language === 'fr' ? frReport : enReport;
+      const report = language === 'fr' ? currentFrReport : currentEnReport;
       return {
         language,
         status: (report
