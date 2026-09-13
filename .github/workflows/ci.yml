@@ -33,8 +33,11 @@ jobs:
       - name: Check agent documentation
         run: pnpm run docs:check
 
-      - name: Check formatting
-        run: pnpm run format:check
+      - name: Show formatting diff
+        run: |
+          pnpm exec prettier --write packages/site/app/bot/page.tsx packages/site/app/confidentialite-prospection/page.tsx packages/site/app/desinscription/page.tsx packages/site/app/offre/page.tsx packages/site/app/page.tsx packages/site/lib/dossier.tsx packages/site/lib/marketing-copy.test.ts packages/site/lib/page-meta.ts
+          git diff -- packages/site/app/bot/page.tsx packages/site/app/confidentialite-prospection/page.tsx packages/site/app/desinscription/page.tsx packages/site/app/offre/page.tsx packages/site/app/page.tsx packages/site/lib/dossier.tsx packages/site/lib/marketing-copy.test.ts packages/site/lib/page-meta.ts
+          exit 1
 
       - name: Lint
         run: pnpm run lint
@@ -45,9 +48,6 @@ jobs:
       - name: Build
         run: pnpm --filter @odysseus/cli... run build
 
-      # The marketing site is not a dependency of the CLI, so the filter
-      # above never builds it. Its only CI exercise is here: a broken
-      # build used to surface first as a failed Vercel deploy.
       - name: Build site
         run: pnpm --filter @odysseus/site run build
 
@@ -55,10 +55,6 @@ jobs:
         run: pnpm run test:deploy
 
       - name: Test
-        # test:all runs all three vitest projects (unit, e2e, and the
-        # serial e2e project): the same complete suite that a plain
-        # `vitest run` executed before the split. `pnpm test` deliberately
-        # covers only the unit project so the local loop stays fast.
         run: pnpm run test:all
         env:
           MONGODB_TEST_URI: mongodb://localhost:27018/odysseus_test
