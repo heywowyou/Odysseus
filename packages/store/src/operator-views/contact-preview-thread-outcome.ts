@@ -14,7 +14,7 @@ import type {
   OutreachOutcome,
   OutreachThreadState,
 } from '@odysseus/core';
-import { getHotelContact } from '../hotel-contacts.js';
+import { getEffectiveHotelContact } from '../hotel-contacts.js';
 import { findOutreachThreadByCandidate } from '../outreach-threads.js';
 import { listOutreachDrafts } from '../outreach-drafts.js';
 import { listOutreachPreviews } from '../outreach-previews.js';
@@ -47,24 +47,28 @@ import { candidateIdentityView } from './prescan-evidence.js';
 export interface OperatorContactView {
   contactId: string;
   contactVersion: string;
-  cohortId: string;
+  /** Manual-v1 is candidate-scoped and may have no cohort. */
+  cohortId: string | null;
   domain: string;
   state: HotelContactState;
   reason: string;
   mxStatus: MailDomainStatus;
   /** The allowlisted source kind (contact page, legal page), never the page
-   *  url and never the address itself. */
+   *  url and never the address itself. Manual overrides have no sourceKind. */
   sourceKind: ContactSourceKind | null;
   validatedAt: Date;
 }
 
 export interface GetProspectContactViewOptions {
+  /** When supplied, plan 045's manual override wins; otherwise this legacy
+   *  projection keeps its newest-row behavior for existing internal callers. */
   contactVersion?: string;
 }
 
 /** Contact state with no address material: `address`, `localPart`, and
  *  `sourceUrl` are the three fields this view must never carry, whatever a
- *  future render might want. */
+ *  future render might want. The dashboard's editable address uses the narrow
+ *  `/api/prospects/:id/contact` endpoint instead. */
 export async function getProspectContactView(
   connection: Connection,
   candidateId: string,
@@ -72,7 +76,7 @@ export async function getProspectContactView(
 ): Promise<OperatorContactView | null> {
   const contact =
     options.contactVersion !== undefined
-      ? await getHotelContact(connection, options.contactVersion, candidateId)
+      ? await getEffectiveHotelContact(connection, options.contactVersion, candidateId)
       : await createHotelContactModel(connection)
           .findOne({ candidateId })
           .sort({ validatedAt: -1, contactId: 1 })
@@ -81,7 +85,7 @@ export async function getProspectContactView(
   return {
     contactId: contact.contactId,
     contactVersion: contact.contactVersion,
-    cohortId: contact.cohortId,
+    cohortId: contact.cohortId ?? null,
     domain: contact.domain,
     state: contact.state,
     reason: contact.reason,
