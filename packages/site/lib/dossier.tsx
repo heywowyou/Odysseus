@@ -1,15 +1,8 @@
 import type { SiteLanguage } from './language';
 
 /**
- * The signature card: the shape of one finding in the report. One component
- * for every page that shows it, because two hand-kept copies had already
- * drifted apart (home said Constat, Preuve, Action; the offer page said
- * Repérage, Preuve, Priorité et action). It carries format text only, never
- * a result: no figure, no real site, no invented finding.
- *
- * Each row carries a coloured rule in reading order, red for the problem,
- * yellow for the evidence, green for the action. The colours mark the three
- * parts of one finding, not a severity scale; the labels carry the meaning.
+ * The signature card: the shape of one finding in the report. It carries
+ * format text only, never a real result, score or metric.
  */
 const COPY = {
   fr: {
@@ -19,22 +12,22 @@ const COPY = {
       {
         kind: 'finding',
         term: 'Constat',
-        detail: 'Le problème relevé, énoncé en une phrase claire, sans jargon.',
+        detail: 'Le problème relevé, formulé en une phrase claire.',
       },
       {
         kind: 'evidence',
         term: 'Preuve',
         detail:
-          "La page et l'élément concernés, avec la mesure ou la capture d'écran qui l'établit.",
+          "La page et l'élément concernés, avec la mesure ou la capture d'écran qui permet de vérifier le constat.",
       },
       {
         kind: 'action',
         term: 'Action',
-        detail: "La correction recommandée et son rang dans l'ordre des priorités.",
+        detail: 'La correction recommandée et son niveau de priorité.',
       },
     ],
     caption:
-      "Illustration du format du rapport\u00a0: elle ne représente ni un site réel, ni un constat réel, ni le résultat d'un audit.",
+      'Exemple de présentation uniquement\u00a0: ces données ne proviennent pas d’un diagnostic réel.',
   },
   en: {
     title: 'What every finding contains',
@@ -43,22 +36,21 @@ const COPY = {
       {
         kind: 'finding',
         term: 'Finding',
-        detail: 'The problem detected, stated in one clear sentence, without jargon.',
+        detail: 'The issue detected, stated in one clear sentence.',
       },
       {
         kind: 'evidence',
         term: 'Evidence',
         detail:
-          'The page and the element concerned, with the measurement or screenshot that establishes it.',
+          'The affected page and element, with the measurement or screenshot needed to verify the finding.',
       },
       {
         kind: 'action',
         term: 'Action',
-        detail: 'The recommended correction and its place in the order of priorities.',
+        detail: 'The recommended fix and its priority level.',
       },
     ],
-    caption:
-      'An illustration of the report format: it represents neither a real site, nor a real finding, nor an audit result.',
+    caption: 'Example format only: this content does not come from a real diagnostic.',
   },
 } as const;
 
