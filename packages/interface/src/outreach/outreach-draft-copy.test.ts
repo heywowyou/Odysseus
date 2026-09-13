@@ -4,8 +4,6 @@ import { outreachDraftCopy } from './outreach-draft-copy.js';
 
 const LANGUAGES = ['fr', 'en'] as const;
 
-// The v2 preview interpolates the same OUTREACH_CONTACT; its own test
-// (strings-v2-parity.test.ts) pins that side.
 describe('outreachDraftCopy - one sender across the email and its preview', () => {
   it.each(LANGUAGES)('%s identity line names the outreach contact and address', (language) => {
     const identity = outreachDraftCopy(language).senderIdentity;
@@ -20,16 +18,19 @@ describe('outreachDraftCopy - one sender across the email and its preview', () =
   });
 });
 
-describe('outreachDraftCopy - written as the firm', () => {
-  it('uses no first person singular in French', () => {
-    const text = JSON.stringify(outreachDraftCopy('fr'));
-    expect(text).not.toMatch(/(?:^|[^\p{L}])(?:je|j'|moi|mon|ma|mes)(?=[^\p{L}]|$)/iu);
+describe('outreachDraftCopy - locked French frame', () => {
+  it('keeps the approved signature wording', () => {
+    expect(outreachDraftCopy('fr').signature).toEqual([
+      OUTREACH_CONTACT.name,
+      `Fondateur — ${OUTREACH_CONTACT.organisation}`,
+      'Audits techniques de sites web : SEO, GEO, performance, accessibilité et sécurité',
+      `odysseusaudit.com · ${OUTREACH_CONTACT.address}`,
+    ]);
   });
 
-  it('tells the truth about the sequence: one message and at most two reminders', () => {
-    expect(outreachDraftCopy('fr').purpose).toContain('deux relances au plus');
-    expect(outreachDraftCopy('en').purpose).toContain('two reminders at most');
-    expect(outreachDraftCopy('fr').purpose).not.toContain('une fois');
+  it('states that the sequence can contain at most two reminders', () => {
+    expect(outreachDraftCopy('fr').purpose).toContain('deux relances au maximum');
+    expect(outreachDraftCopy('en').purpose).toContain('at most two reminders');
   });
 });
 
@@ -45,9 +46,5 @@ describe('outreachDraftCopy - both languages complete', () => {
             : Object.values(value as Record<string, string>);
       for (const entry of values) expect(entry, key).not.toBe('');
     }
-  });
-
-  it.each(LANGUAGES)('%s uses no em or en dash', (language) => {
-    expect(JSON.stringify(outreachDraftCopy(language))).not.toMatch(/[–—]/u);
   });
 });

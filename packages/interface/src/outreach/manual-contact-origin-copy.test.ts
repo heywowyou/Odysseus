@@ -24,7 +24,9 @@ describe('manual contact origin disclosures', () => {
     expect(en.assembled).toBe(true);
     if (!fr.assembled || !en.assembled) return;
 
-    expect(fr.body).toContain('un annuaire professionnel ou une plateforme de réservation en ligne');
+    expect(fr.body).toContain(
+      'un annuaire professionnel ou une plateforme de réservation en ligne',
+    );
     expect(en.body).toContain('a professional directory or an online booking platform');
   });
 

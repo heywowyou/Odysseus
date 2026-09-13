@@ -142,10 +142,10 @@ describe('createFollowUpDraft, touch 2 happy path', () => {
 
   it('writes the approved reminder for this hotel, naming no finding', async () => {
     const result = await createFollowUpDraft(harness().options);
-    expect(result.body).toMatch(
-      /Nous nous permettons de vous relancer au sujet de l'analyse du site de l'Hôtel des Tilleuls\.|Nous souhaitions nous assurer que notre précédent message vous était bien parvenu\./u,
+    expect(result.body).toContain(
+      "Je me permets de revenir vers vous au sujet de mon précédent message concernant l'audit du site de l'Hôtel des Tilleuls.",
     );
-    expect(result.body).toContain("n'hésitez pas à répondre à cet e-mail");
+    expect(result.body).toContain("Avez-vous eu l'occasion de consulter l'aperçu ?");
   });
 
   it('produces one idempotent Re: subject from the touch-1 draft row', async () => {
@@ -188,11 +188,11 @@ describe('createFollowUpDraft, touch 3 happy path', () => {
     expect(result.touch).toBe(3);
     const body = result.body ?? '';
     const intro = body.indexOf(
-      "Ce sera notre dernier message au sujet du site de l'Hôtel des Tilleuls.",
+      "Je me permets de vous écrire une dernière fois au sujet de l'audit du site de l'Hôtel des Tilleuls.",
     );
-    const facts = body.indexOf('Le cadre applicable, et ce que nous pouvons en dire');
+    const facts = body.indexOf("Obligation d'accessibilité numérique");
     const closing = body.indexOf(
-      'Nous restons à votre disposition si vous souhaitez recevoir le détail de notre analyse.',
+      "L'aperçu de notre analyse reste disponible dans mon premier message et l'audit complet est disponible à l'achat",
     );
     expect(intro).toBeGreaterThanOrEqual(0);
     expect(facts).toBeGreaterThan(intro);

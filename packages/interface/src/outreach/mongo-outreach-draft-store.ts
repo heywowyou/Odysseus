@@ -62,7 +62,11 @@ export function createMongoOutreachDraftStore(
       const prescan = await getLatestPrescan(connection, candidateId, options.prescanVersion);
       if (prescan === null) return null;
 
-      const contact = await getEffectiveHotelContact(connection, options.contactVersion, candidateId);
+      const contact = await getEffectiveHotelContact(
+        connection,
+        options.contactVersion,
+        candidateId,
+      );
       const qualification = await getHotelQualification(
         connection,
         options.qualificationVersion,
