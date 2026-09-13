@@ -43,8 +43,8 @@ export default function OptOutPage() {
         <section className="shell hero">
           <h1 className="title measure">Ne plus être contacté</h1>
           <p className="lede measure mt-5">
-            Vous pouvez vous opposer à toute nouvelle prise de contact, gratuitement et sans avoir
-            à vous justifier.
+            Vous pouvez vous opposer à toute nouvelle prise de contact, gratuitement et sans avoir à
+            vous justifier.
           </p>
         </section>
 
@@ -88,9 +88,9 @@ export default function OptOutPage() {
 
             <p>
               La liste d&apos;opposition est vérifiée avant chaque prise de contact et chaque
-              publication d&apos;aperçu. Les empreintes qu&apos;elle contient sont conservées afin que
-              votre opposition reste effective dans le temps, même si vos coordonnées réapparaissent
-              ultérieurement dans une source publique.
+              publication d&apos;aperçu. Les empreintes qu&apos;elle contient sont conservées afin
+              que votre opposition reste effective dans le temps, même si vos coordonnées
+              réapparaissent ultérieurement dans une source publique.
             </p>
 
             <p>
@@ -120,9 +120,7 @@ export default function OptOutPage() {
 
         <div className="shell section-tight">
           <section className="prose measure">
-            <p>
-              Email contact@odysseusaudit.fr, or simply reply to the message you received.
-            </p>
+            <p>Email contact@odysseusaudit.fr, or simply reply to the message you received.</p>
 
             <p>
               <a className="btn btn-primary" href={MAILTO_EN}>
