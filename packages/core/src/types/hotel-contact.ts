@@ -63,7 +63,11 @@ export type MailDomainStatus = 'has-mx' | 'no-mx' | 'unknown';
  *  persists it. Flat facts, so the decision is testable without a database. */
 export interface HotelContactRecord {
   candidateId: string;
-  cohortId: string;
+  /** Automated discovery always records the cohort that selected the hotel.
+   *  A plan-045 manual override is candidate-scoped instead: when it replaces
+   *  a discovered contact we preserve that row's cohort, otherwise this stays
+   *  absent rather than inventing a fake cohort id. */
+  cohortId?: string;
   domain: string;
   state: HotelContactState;
   reason: HotelContactReason;
