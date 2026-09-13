@@ -76,6 +76,7 @@ mismatch is evidence to resolve, not a reason to freeze the task.
 | `docs/rules/outreach-rules.md` | Outreach and preview assembly rules |
 | `docs/rules/offer-positioning.md` | Pricing, scope, sales claims, offer framing |
 | `docs/report/report-design-system.md` and `docs/report/report-design-tokens.md` | Report visual language and implementation tokens |
+| `docs/report/report-workbench.md` | PDF-native Impeccable iteration, acceptance, verification, and commit workflow |
 | `docs/rules/manual-accessibility-checklist.md` | Known limits of automated accessibility detection |
 | `docs/product/dashboard-ia.md` | Dashboard navigation, page destinies, operator vocabulary |
 | `docs/adr/` and package ADR directories | Accepted architecture decisions at their documented scope |

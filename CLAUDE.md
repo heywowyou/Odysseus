@@ -96,6 +96,7 @@ Read the narrowest source that owns the work:
 | Outreach and previews | `docs/rules/outreach-rules.md` |
 | Pricing and offer framing | `docs/rules/offer-positioning.md` |
 | Report design | `docs/report/report-design-system.md`, `docs/report/report-design-tokens.md` |
+| PDF-native Impeccable editing | `docs/report/report-workbench.md` |
 | Dashboard navigation and vocabulary | `docs/product/dashboard-ia.md` |
 | Coding, tests, prose, attribution | `docs/agents/coding-conventions.md` |
 | Deployment | `deploy/runbook.md` |

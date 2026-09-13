@@ -27,6 +27,7 @@
     "test:store:down": "docker compose down",
     "serve": "tsx packages/cli/src/index.ts serve",
     "serve:full": "pnpm --filter @odysseus/cli... run build && pnpm run serve",
+    "report:workbench": "tsx scripts/report-workbench.ts",
     "fixtures:rules": "node scripts/build-observed-rule-inventory.mjs",
     "fixtures:refresh": "node scripts/refresh-fixtures.mjs"
   },
