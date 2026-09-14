@@ -62,6 +62,7 @@ function detailWithContact(contact: ProspectDetailResponse['contact']): Prospect
     reviewState: 'not-required',
     review: { queuedReason: null, actor: null, reason: null, decidedAt: null },
     qualificationOutcome: 'qualified',
+    qualificationOverride: null,
     prescanStatus: null,
     websites: [],
     conflicts: [],
@@ -891,5 +892,70 @@ describe('ProspectDetailPage active jobs (issue #220)', () => {
     const links = Array.from(document.querySelectorAll('a')).map((a) => a.getAttribute('href'));
     expect(links).toContain('/scans/job-quickcheck-1');
     expect(links).toContain('/scans/job-fullaudit-1');
+  });
+});
+
+describe('ProspectDetailPage qualification override (issue #237)', () => {
+  const fetchMock = vi.fn();
+  let overridden = false;
+
+  beforeEach(() => {
+    overridden = false;
+    fetchMock.mockReset();
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+      if (method === 'POST' && url.endsWith('/qualification-override')) {
+        overridden = true;
+        return jsonResponse({ candidateId: 'candidate-1', overridden: true, changed: true });
+      }
+      if (method === 'POST' && url.endsWith('/qualification-override/remove')) {
+        overridden = false;
+        return jsonResponse({ candidateId: 'candidate-1', overridden: false, changed: true });
+      }
+      return jsonResponse({
+        ...detailWithContact(null),
+        qualificationOutcome: 'rejected',
+        qualificationOverride: overridden
+          ? { actor: 'dashboard', reason: null, decidedAt: '2026-09-14T00:00:00.000Z' }
+          : null,
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+  });
+
+  it('marks a rejected candidate as qualified, then removes the override', async () => {
+    await renderDetail();
+    await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
+    await pause();
+
+    expect(pageText()).not.toContain(fr.hub.fiche.qualificationOverrideBadge);
+
+    await clickButton(fr.hub.fiche.qualificationOverrideAction);
+    const overrideCall = fetchMock.mock.calls.find(
+      (call) =>
+        String(call[0]).endsWith('/qualification-override') &&
+        (call[1] as RequestInit).method === 'POST',
+    );
+    expect(overrideCall).toBeDefined();
+    await waitFor(() =>
+      pageText().includes(fr.hub.fiche.qualificationOverrideBadge) ? true : undefined,
+    );
+
+    await clickButton(fr.hub.fiche.qualificationOverrideRemoveAction);
+    const removeCall = fetchMock.mock.calls.find(
+      (call) =>
+        String(call[0]).endsWith('/qualification-override/remove') &&
+        (call[1] as RequestInit).method === 'POST',
+    );
+    expect(removeCall).toBeDefined();
+    await waitFor(() =>
+      pageText().includes(fr.hub.fiche.qualificationOverrideBadge) ? undefined : true,
+    );
   });
 });

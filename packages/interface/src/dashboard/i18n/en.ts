@@ -698,6 +698,14 @@ export const en: DashboardStrings = {
       recheckQualificationQualified: 'Rechecked: the hotel now qualifies.',
       recheckQualificationStillRejected: 'Rechecked: the hotel is still rejected ({reason}).',
       recheckQualificationFailed: 'Could not rerun the check',
+      qualificationOverrideBadge: 'Manually qualified',
+      qualificationOverrideAction: 'Mark as qualified',
+      qualificationOverrideRemoveAction: 'Remove override',
+      qualificationOverrideSucceeded: 'Hotel marked as qualified.',
+      qualificationOverrideFailed: 'Could not mark this hotel as qualified',
+      qualificationOverrideRemoveSucceeded:
+        'Override removed: the automatic verdict is authoritative again.',
+      qualificationOverrideRemoveFailed: 'Could not remove the override',
     },
     quickCheck: {
       empty: 'No quick check yet for this hotel.',

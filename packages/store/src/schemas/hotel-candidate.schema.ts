@@ -96,6 +96,20 @@ const qualificationStateSchema = new Schema(
   { _id: false },
 );
 
+/** Issue #237: the operator's manual override of a rejected automatic
+ *  qualification. Structurally separate from qualificationStateSchema, so
+ *  the automatic pointer keeps being overwritten outright on every
+ *  re-qualification without this ever being in the write path. */
+const qualificationOverrideSchema = new Schema(
+  {
+    outcome: { type: String, required: true, enum: ['qualified'] },
+    actor: { type: String, required: true },
+    reason: { type: String },
+    decidedAt: { type: Date, required: true },
+  },
+  { _id: false },
+);
+
 /** The prescan pointer. Same pointer-not-record rule as
  *  qualificationStateSchema above; the measurements stay in `prescans`, one
  *  immutable document per run. */
@@ -158,6 +172,7 @@ const hotelCandidateSchema = new Schema<HotelCandidateDocument>(
     groupDomain: { type: String },
     groupSize: { type: Number },
     qualification: { type: qualificationStateSchema },
+    qualificationOverride: { type: qualificationOverrideSchema },
     prescan: { type: prescanStateSchema },
     conflicts: { type: [conflictSchema], required: true },
     review: {

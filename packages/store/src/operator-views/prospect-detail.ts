@@ -92,6 +92,13 @@ export interface OperatorProspectDetail {
    *  current qualification generation, not merely whether one exists
    *  (issue #217). */
   qualificationFreshness: PipelineFreshness;
+  /** Issue #237: present when the operator has manually corrected a
+   *  rejected/stale automatic qualification. Independent of
+   *  qualificationOutcome/qualificationFreshness above, which keep
+   *  reporting the automatic verdict unchanged - the dashboard shows both
+   *  so the override is always visible alongside the verdict it
+   *  overrides. */
+  qualificationOverride: { actor: string; reason: string | null; decidedAt: Date } | null;
   prescanStatus: HotelPrescanStatus | null;
   /** Same distinction as qualificationFreshness, for the candidate's own
    *  prescan pointer. */
@@ -269,6 +276,14 @@ export async function getOperatorProspect(
     },
     qualificationOutcome: candidate.qualification?.outcome ?? 'not-evaluated',
     qualificationFreshness,
+    qualificationOverride:
+      candidate.qualificationOverride === undefined
+        ? null
+        : {
+            actor: candidate.qualificationOverride.actor,
+            reason: candidate.qualificationOverride.reason ?? null,
+            decidedAt: candidate.qualificationOverride.decidedAt,
+          },
     prescanStatus: candidate.prescan?.status ?? null,
     prescanFreshness,
     scoreFreshness,

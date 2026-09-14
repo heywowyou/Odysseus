@@ -88,12 +88,19 @@ export async function planOutreachFullScan(
   const authorization = await authorizeOutreachFullScan(connection, candidateId);
   if ('refused' in authorization) return authorization;
 
-  const qualification = candidate.qualification;
-  if (qualification === undefined || qualification.outcome !== 'qualified') {
-    return { refused: 'not-qualified' };
-  }
-  if (qualification.qualificationVersion !== versions.qualificationVersion) {
-    return { refused: 'qualification-not-current' };
+  // Issue #237: an operator override of a rejected/stale automatic
+  // qualification satisfies this gate outright - it is a deliberate
+  // correction of the automatic verdict, not a claim about a different
+  // qualification version. Every check below (domain ownership,
+  // suppression, in-flight) still runs unmodified.
+  if (candidate.qualificationOverride?.outcome !== 'qualified') {
+    const qualification = candidate.qualification;
+    if (qualification === undefined || qualification.outcome !== 'qualified') {
+      return { refused: 'not-qualified' };
+    }
+    if (qualification.qualificationVersion !== versions.qualificationVersion) {
+      return { refused: 'qualification-not-current' };
+    }
   }
 
   // Re-resolve the catalogue's current owner of the domain: a hotel that

@@ -320,6 +320,7 @@ export function ProspectDetailPage(): JSX.Element {
   const [prescanStarting, setPrescanStarting] = useState(false);
   const [refreshBusy, setRefreshBusy] = useState(false);
   const [recheckQualificationBusy, setRecheckQualificationBusy] = useState(false);
+  const [qualificationOverrideBusy, setQualificationOverrideBusy] = useState(false);
   const [isOutreachBusy, setIsOutreachBusy] = useState(false);
   /** The one-time link of a publish made on this visit (a manual Aperçu
    *  publish, or the fresh preview a first-email call just made). Held only
@@ -560,6 +561,42 @@ export function ProspectDetailPage(): JSX.Element {
     }
   };
 
+  // Issue #237: the operator's correction of a rejected automatic
+  // qualification. Unlike runRecheckQualification (a second automatic
+  // probe), this records a manual decision that survives later automatic
+  // reruns and unblocks the outreach full-scan action.
+  const runOverrideQualification = async (): Promise<void> => {
+    if (candidateId === undefined || qualificationOverrideBusy) return;
+    setQualificationOverrideBusy(true);
+    try {
+      await postEmpty(`/api/prospects/${encodedId}/qualification-override`);
+      toast.success(strings.hub.fiche.qualificationOverrideSucceeded);
+      refresh();
+    } catch (caught) {
+      toast.error(strings.hub.fiche.qualificationOverrideFailed, {
+        description: caught instanceof Error ? caught.message : undefined,
+      });
+    } finally {
+      setQualificationOverrideBusy(false);
+    }
+  };
+
+  const runRemoveQualificationOverride = async (): Promise<void> => {
+    if (candidateId === undefined || qualificationOverrideBusy) return;
+    setQualificationOverrideBusy(true);
+    try {
+      await postEmpty(`/api/prospects/${encodedId}/qualification-override/remove`);
+      toast.success(strings.hub.fiche.qualificationOverrideRemoveSucceeded);
+      refresh();
+    } catch (caught) {
+      toast.error(strings.hub.fiche.qualificationOverrideRemoveFailed, {
+        description: caught instanceof Error ? caught.message : undefined,
+      });
+    } finally {
+      setQualificationOverrideBusy(false);
+    }
+  };
+
   const handleReview = async (action: ReviewAction): Promise<void> => {
     if (candidateId === undefined) return;
     const body: ProspectReviewRequest = { action };
@@ -797,6 +834,13 @@ export function ProspectDetailPage(): JSX.Element {
               void runRecheckQualification();
             }}
             isRecheckQualificationBusy={recheckQualificationBusy}
+            onOverrideQualification={() => {
+              void runOverrideQualification();
+            }}
+            onRemoveQualificationOverride={() => {
+              void runRemoveQualificationOverride();
+            }}
+            isQualificationOverrideBusy={qualificationOverrideBusy}
           />
         );
       case 'quick-check':

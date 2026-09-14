@@ -69,6 +69,7 @@ function detailWithAudits(
     reviewState: 'not-required',
     review: { queuedReason: null, actor: null, reason: null, decidedAt: null },
     qualificationOutcome: 'qualified',
+    qualificationOverride: null,
     prescanStatus: null,
     websites: [],
     conflicts: [],

@@ -9,6 +9,7 @@ import type {
 } from '@odysseus/core';
 import {
   addWaveRosterEntry,
+  clearHotelCandidateQualificationOverride,
   computeHubActions,
   createJob,
   findOutreachThreadByCandidate,
@@ -27,6 +28,7 @@ import {
   listWaveRoster,
   planOutreachFullScan,
   planProspectJobLaunch,
+  recordHotelCandidateQualificationOverride,
   recordHotelCandidateReview,
   revokeWaveRosterEntry,
 } from '@odysseus/store';
@@ -254,6 +256,10 @@ const REVIEW_ACTOR = 'dashboard';
  *  confirm dialogs carry no free-text field, so the stored reason names the
  *  surface rather than inventing an explanation. */
 const REVIEW_REASON_FALLBACK = 'dashboard-review';
+
+/** Issue #237: same single-operator-console reasoning as REVIEW_ACTOR. */
+const QUALIFICATION_OVERRIDE_ACTOR = 'dashboard';
+const QUALIFICATION_OVERRIDE_REASON_FALLBACK = 'dashboard-qualification-override';
 
 /** Plan 043: the same rule as REVIEW_ACTOR, for the wave roster - the
  *  console records itself as the deciding actor, and the CLI's
@@ -490,6 +496,50 @@ export function registerProspectRoutes(
       changed: result.changed,
     });
   });
+
+  // Issue #237: the operator's correction of a rejected/stale automatic
+  // qualification. Sets qualificationOverride, never qualification itself -
+  // the automatic verdict stays visible and a later automatic re-run keeps
+  // overwriting it exactly as before. planOutreachFullScan treats the
+  // override as satisfying the qualification gate; every other gate
+  // (suppression, domain ownership, in-flight) is unaffected. No body: the
+  // console records itself as the actor, the same REVIEW_ACTOR reasoning.
+  router.post('/api/prospects/:candidateId/qualification-override', async ({ res, params }) => {
+    const candidateId = params['candidateId']!;
+    if (!isPlausibleCandidateId(candidateId)) {
+      sendError(res, 400, 'candidateId must be a non-empty string without control characters');
+      return;
+    }
+    const result = await recordHotelCandidateQualificationOverride(connection, {
+      candidateId,
+      actor: QUALIFICATION_OVERRIDE_ACTOR,
+      reason: QUALIFICATION_OVERRIDE_REASON_FALLBACK,
+    });
+    if (!result.found) {
+      sendError(res, 404, 'prospect not found');
+      return;
+    }
+    sendJson(res, 200, { candidateId, overridden: true, changed: result.changed });
+  });
+
+  // The reversal: returns the candidate to whatever the automatic
+  // qualification currently says.
+  router.post(
+    '/api/prospects/:candidateId/qualification-override/remove',
+    async ({ res, params }) => {
+      const candidateId = params['candidateId']!;
+      if (!isPlausibleCandidateId(candidateId)) {
+        sendError(res, 400, 'candidateId must be a non-empty string without control characters');
+        return;
+      }
+      const result = await clearHotelCandidateQualificationOverride(connection, candidateId);
+      if (!result.found) {
+        sendError(res, 404, 'prospect not found');
+        return;
+      }
+      sendJson(res, 200, { candidateId, overridden: false, changed: result.changed });
+    },
+  );
 
   // Plan 037: start a candidate-linked outreach full scan. The route takes
   // no domain, no URL, and no options from the client: everything the scan

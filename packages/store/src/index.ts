@@ -172,6 +172,8 @@ export {
   getLatestHotelCandidateByOwnRegistrableDomain,
   getHotelCandidateYield,
   recordHotelCandidateReview,
+  recordHotelCandidateQualificationOverride,
+  clearHotelCandidateQualificationOverride,
 } from './hotel-candidates.js';
 export type {
   NewHotelCandidateInput,
@@ -180,6 +182,9 @@ export type {
   HotelCandidateYield,
   RecordHotelCandidateReviewInput,
   RecordHotelCandidateReviewResult,
+  RecordHotelCandidateQualificationOverrideInput,
+  RecordHotelCandidateQualificationOverrideResult,
+  ClearHotelCandidateQualificationOverrideResult,
 } from './hotel-candidates.js';
 export { listHotelCandidatesForQualification } from './hotel-candidates.js';
 export type { ListHotelCandidatesForQualificationOptions } from './hotel-candidates.js';

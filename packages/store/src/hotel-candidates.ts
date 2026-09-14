@@ -410,6 +410,81 @@ export async function recordHotelCandidateReview(
   return { changed: true, found: true };
 }
 
+export interface RecordHotelCandidateQualificationOverrideInput {
+  candidateId: string;
+  actor: string;
+  reason?: string;
+}
+
+export interface RecordHotelCandidateQualificationOverrideResult {
+  /** False when the candidate already carried this exact override. Same
+   *  repeat-is-normal reasoning as RecordHotelCandidateReviewResult. */
+  changed: boolean;
+  found: boolean;
+}
+
+/** Issue #237. Sets `qualificationOverride`, never touching `qualification`
+ *  - the automatic pointer keeps reflecting the automatic verdict, and a
+ *  later recordHotelQualifications write keeps overwriting it outright,
+ *  exactly as it does today. Callers gating the outreach full-scan flow
+ *  (planOutreachFullScan) check this field to let a manually qualified
+ *  candidate through the gate that a `rejected`/`stale` automatic
+ *  qualification would otherwise refuse. */
+export async function recordHotelCandidateQualificationOverride(
+  connection: Connection,
+  input: RecordHotelCandidateQualificationOverrideInput,
+): Promise<RecordHotelCandidateQualificationOverrideResult> {
+  const Model = createHotelCandidateModel(connection);
+  const existing = await Model.findOne({
+    candidateId: input.candidateId,
+  }).lean<HotelCandidateDocument>();
+  if (existing === null) return { changed: false, found: false };
+  if (
+    existing.qualificationOverride?.actor === input.actor &&
+    existing.qualificationOverride?.reason === input.reason
+  ) {
+    return { changed: false, found: true };
+  }
+  await Model.updateOne(
+    { candidateId: input.candidateId },
+    {
+      $set: {
+        qualificationOverride: {
+          outcome: 'qualified',
+          actor: input.actor,
+          reason: input.reason,
+          decidedAt: new Date(),
+        },
+        updatedAt: new Date(),
+      },
+    },
+  );
+  return { changed: true, found: true };
+}
+
+export interface ClearHotelCandidateQualificationOverrideResult {
+  changed: boolean;
+  found: boolean;
+}
+
+/** The reversal half of recordHotelCandidateQualificationOverride: removes
+ *  the override so the candidate returns to whatever `qualification`
+ *  currently says. */
+export async function clearHotelCandidateQualificationOverride(
+  connection: Connection,
+  candidateId: string,
+): Promise<ClearHotelCandidateQualificationOverrideResult> {
+  const Model = createHotelCandidateModel(connection);
+  const existing = await Model.findOne({ candidateId }).lean<HotelCandidateDocument>();
+  if (existing === null) return { changed: false, found: false };
+  if (existing.qualificationOverride === undefined) return { changed: false, found: true };
+  await Model.updateOne(
+    { candidateId },
+    { $unset: { qualificationOverride: '' }, $set: { updatedAt: new Date() } },
+  );
+  return { changed: true, found: true };
+}
+
 /** One candidate's redirect verdict, applied to the catalogue.
  *
  * Two shapes rather than one generic update, because they are two different

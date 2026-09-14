@@ -787,6 +787,14 @@ export interface DashboardStrings {
       /** {reason} interpolates the rejection reason code. */
       recheckQualificationStillRejected: string;
       recheckQualificationFailed: string;
+      /** Issue #237. */
+      qualificationOverrideBadge: string;
+      qualificationOverrideAction: string;
+      qualificationOverrideRemoveAction: string;
+      qualificationOverrideSucceeded: string;
+      qualificationOverrideFailed: string;
+      qualificationOverrideRemoveSucceeded: string;
+      qualificationOverrideRemoveFailed: string;
     };
     quickCheck: {
       empty: string;

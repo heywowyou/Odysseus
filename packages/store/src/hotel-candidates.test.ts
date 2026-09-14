@@ -8,6 +8,8 @@ import {
   getHotelCandidateYield,
   getLatestHotelCandidateByOwnRegistrableDomain,
   recordHotelCandidateReview,
+  recordHotelCandidateQualificationOverride,
+  clearHotelCandidateQualificationOverride,
 } from './hotel-candidates.js';
 import { createHotelCandidateModel } from './schemas/hotel-candidate.schema.js';
 import { probeMongoAvailability } from './test-support.js';
@@ -275,6 +277,160 @@ describe.skipIf(!mongoAvailable)('hotel_candidates', () => {
         reason: 'x',
       }),
     ).toEqual({ changed: false, found: false });
+  });
+
+  it('records a qualification override without touching the automatic qualification pointer', async () => {
+    const version = randomUUID();
+    const input = baseCandidate({
+      resolutionVersion: version,
+      identityKey: 'domain:override.fr',
+      qualification: { outcome: 'rejected', qualificationVersion: 'qv1', evaluatedAt: new Date() },
+    });
+    await upsertHotelCandidates(connection!, [input]);
+
+    expect(
+      await recordHotelCandidateQualificationOverride(connection!, {
+        candidateId: input.candidateId,
+        actor: 'dashboard',
+        reason: 'confirmed live by hand',
+      }),
+    ).toEqual({ changed: true, found: true });
+
+    const stored = await getHotelCandidate(connection!, input.candidateId);
+    expect(stored?.qualificationOverride).toMatchObject({
+      outcome: 'qualified',
+      actor: 'dashboard',
+      reason: 'confirmed live by hand',
+    });
+    // The automatic verdict is untouched - the override lives beside it,
+    // not instead of it.
+    expect(stored?.qualification?.outcome).toBe('rejected');
+  });
+
+  it('does not erase a qualification override on a later resolution upsert', async () => {
+    const version = randomUUID();
+    const key = 'domain:override-survives.fr';
+    const input = baseCandidate({
+      resolutionVersion: version,
+      identityKey: key,
+      qualification: { outcome: 'rejected', qualificationVersion: 'qv1', evaluatedAt: new Date() },
+    });
+    await upsertHotelCandidates(connection!, [input]);
+    await recordHotelCandidateQualificationOverride(connection!, {
+      candidateId: input.candidateId,
+      actor: 'dashboard',
+    });
+
+    // Same input replayed, as a re-run of resolution would.
+    await upsertHotelCandidates(connection!, [input]);
+
+    const stored = await getHotelCandidate(connection!, input.candidateId);
+    expect(stored?.qualificationOverride?.outcome).toBe('qualified');
+  });
+
+  it('does not erase a qualification override when the automatic qualification is rerun', async () => {
+    const version = randomUUID();
+    const input = baseCandidate({
+      resolutionVersion: version,
+      identityKey: 'domain:override-vs-requalify.fr',
+      qualification: { outcome: 'rejected', qualificationVersion: 'qv1', evaluatedAt: new Date() },
+    });
+    await upsertHotelCandidates(connection!, [input]);
+    await recordHotelCandidateQualificationOverride(connection!, {
+      candidateId: input.candidateId,
+      actor: 'dashboard',
+    });
+
+    // A later automatic re-qualification overwrites `qualification`
+    // outright, exactly as it does today (it is the field a rerun is
+    // meant to change) - it must never also touch `qualificationOverride`.
+    const Model = createHotelCandidateModel(connection!);
+    await Model.updateOne(
+      { candidateId: input.candidateId },
+      {
+        $set: {
+          qualification: {
+            outcome: 'rejected',
+            qualificationVersion: 'qv2',
+            evaluatedAt: new Date(),
+          },
+        },
+      },
+    );
+
+    const stored = await getHotelCandidate(connection!, input.candidateId);
+    expect(stored?.qualification?.qualificationVersion).toBe('qv2');
+    expect(stored?.qualificationOverride?.outcome).toBe('qualified');
+  });
+
+  it('reports a repeated qualification override as unchanged rather than failing', async () => {
+    const version = randomUUID();
+    const input = baseCandidate({
+      resolutionVersion: version,
+      identityKey: 'domain:override-idem.fr',
+    });
+    await upsertHotelCandidates(connection!, [input]);
+    const override = { candidateId: input.candidateId, actor: 'dashboard', reason: 'x' };
+    expect(await recordHotelCandidateQualificationOverride(connection!, override)).toEqual({
+      changed: true,
+      found: true,
+    });
+    expect(await recordHotelCandidateQualificationOverride(connection!, override)).toEqual({
+      changed: false,
+      found: true,
+    });
+  });
+
+  it('reports a missing candidate rather than silently doing nothing for an override', async () => {
+    expect(
+      await recordHotelCandidateQualificationOverride(connection!, {
+        candidateId: randomUUID(),
+        actor: 'dashboard',
+      }),
+    ).toEqual({ changed: false, found: false });
+  });
+
+  it('clears a qualification override and returns to the automatic verdict', async () => {
+    const version = randomUUID();
+    const input = baseCandidate({
+      resolutionVersion: version,
+      identityKey: 'domain:override-clear.fr',
+      qualification: { outcome: 'rejected', qualificationVersion: 'qv1', evaluatedAt: new Date() },
+    });
+    await upsertHotelCandidates(connection!, [input]);
+    await recordHotelCandidateQualificationOverride(connection!, {
+      candidateId: input.candidateId,
+      actor: 'dashboard',
+    });
+
+    expect(await clearHotelCandidateQualificationOverride(connection!, input.candidateId)).toEqual({
+      changed: true,
+      found: true,
+    });
+
+    const stored = await getHotelCandidate(connection!, input.candidateId);
+    expect(stored?.qualificationOverride).toBeUndefined();
+    expect(stored?.qualification?.outcome).toBe('rejected');
+  });
+
+  it('reports clearing an absent override as unchanged rather than failing', async () => {
+    const version = randomUUID();
+    const input = baseCandidate({
+      resolutionVersion: version,
+      identityKey: 'domain:no-override.fr',
+    });
+    await upsertHotelCandidates(connection!, [input]);
+    expect(await clearHotelCandidateQualificationOverride(connection!, input.candidateId)).toEqual({
+      changed: false,
+      found: true,
+    });
+  });
+
+  it('reports a missing candidate rather than silently doing nothing when clearing', async () => {
+    expect(await clearHotelCandidateQualificationOverride(connection!, randomUUID())).toEqual({
+      changed: false,
+      found: false,
+    });
   });
 
   it('counts the campaign-ready population and every status breakdown', async () => {

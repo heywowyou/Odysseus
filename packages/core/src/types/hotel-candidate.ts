@@ -162,6 +162,22 @@ export interface HotelCandidateQualificationState {
   evaluatedAt: Date;
 }
 
+/** Issue #237: the operator's manual correction of a rejected automatic
+ *  qualification. Kept structurally separate from `qualification` above -
+ *  never merged into that pointer - so a later automatic re-run
+ *  (recordHotelQualifications, or a resolution upsert) can keep
+ *  overwriting `qualification` outright without ever touching this field.
+ *  Absent means no override is in effect; the automatic verdict governs.
+ *  Only ever `qualified`: the gate this exists to unblock only refuses on
+ *  `not-qualified`/`qualification-not-current`, so there is nothing for a
+ *  `rejected` override to mean. */
+export interface HotelCandidateQualificationOverride {
+  outcome: 'qualified';
+  actor: string;
+  reason?: string;
+  decidedAt: Date;
+}
+
 /** The latest prescan's outcome, denormalized onto the candidate.
  *
  *  A pointer, not the record, for the same reason as
@@ -228,6 +244,10 @@ export interface HotelCandidate {
   /** Set by plan 003's qualification pass. Absent means never evaluated,
    *  which is different from evaluated and rejected. */
   qualification?: HotelCandidateQualificationState;
+  /** Issue #237: the operator's override of a rejected automatic
+   *  qualification. See HotelCandidateQualificationOverride for why this is
+   *  a separate field rather than a state on `qualification` itself. */
+  qualificationOverride?: HotelCandidateQualificationOverride;
   /** Set by plan 004's prescan pass. Absent means never prescanned. Same
    *  pointer-not-record rule as `qualification` above: the measurements live
    *  in `prescans`, one immutable document per run. */

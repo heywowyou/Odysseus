@@ -16,6 +16,8 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   getOperatorProspect: vi.fn(),
   getProspectQualificationHistory: vi.fn(),
   recordHotelCandidateReview: vi.fn(),
+  recordHotelCandidateQualificationOverride: vi.fn(),
+  clearHotelCandidateQualificationOverride: vi.fn(),
   findOutreachThreadByCandidate: vi.fn(),
   getProspectPreviewView: vi.fn(),
   planOutreachFullScan: vi.fn(),
@@ -70,6 +72,8 @@ import {
   listWaveRoster,
   planOutreachFullScan,
   recordHotelCandidateReview,
+  recordHotelCandidateQualificationOverride,
+  clearHotelCandidateQualificationOverride,
   revokeWaveRosterEntry,
 } from '@odysseus/store';
 import {
@@ -801,6 +805,103 @@ describe('POST /api/prospects/:candidateId/review', () => {
     });
     expect(res.statusCode).toBe(415);
     expect(recordHotelCandidateReview).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/prospects/:candidateId/qualification-override (issue #237)', () => {
+  it('records the override through the store helper with the fixed dashboard actor', async () => {
+    vi.mocked(recordHotelCandidateQualificationOverride).mockResolvedValue({
+      changed: true,
+      found: true,
+    } as never);
+    const res = await handle('/api/prospects/cand-1/qualification-override', {
+      method: 'POST',
+    });
+    expect(res.statusCode).toBe(200);
+    expect(recordHotelCandidateQualificationOverride).toHaveBeenCalledWith(fakeConnection, {
+      candidateId: 'cand-1',
+      actor: 'dashboard',
+      reason: 'dashboard-qualification-override',
+    });
+    expect(JSON.parse(res.body ?? '{}')).toEqual({
+      candidateId: 'cand-1',
+      overridden: true,
+      changed: true,
+    });
+  });
+
+  it('is idempotent: repeating the override is 200 with changed false', async () => {
+    vi.mocked(recordHotelCandidateQualificationOverride).mockResolvedValue({
+      changed: false,
+      found: true,
+    } as never);
+    const res = await handle('/api/prospects/cand-1/qualification-override', {
+      method: 'POST',
+    });
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body ?? '{}').changed).toBe(false);
+  });
+
+  it('returns 404 when no candidate carries the id', async () => {
+    vi.mocked(recordHotelCandidateQualificationOverride).mockResolvedValue({
+      changed: false,
+      found: false,
+    } as never);
+    const res = await handle('/api/prospects/missing/qualification-override', {
+      method: 'POST',
+    });
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('enforces the router CSRF pattern: a cross-origin POST is 403', async () => {
+    const res = await handle('/api/prospects/cand-1/qualification-override', {
+      method: 'POST',
+      headers: { origin: 'https://evil.example', host: '127.0.0.1:4310' },
+    });
+    expect(res.statusCode).toBe(403);
+    expect(recordHotelCandidateQualificationOverride).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/prospects/:candidateId/qualification-override/remove (issue #237)', () => {
+  it('clears the override through the store helper', async () => {
+    vi.mocked(clearHotelCandidateQualificationOverride).mockResolvedValue({
+      changed: true,
+      found: true,
+    } as never);
+    const res = await handle('/api/prospects/cand-1/qualification-override/remove', {
+      method: 'POST',
+    });
+    expect(res.statusCode).toBe(200);
+    expect(clearHotelCandidateQualificationOverride).toHaveBeenCalledWith(fakeConnection, 'cand-1');
+    expect(JSON.parse(res.body ?? '{}')).toEqual({
+      candidateId: 'cand-1',
+      overridden: false,
+      changed: true,
+    });
+  });
+
+  it('is idempotent: clearing an absent override is 200 with changed false', async () => {
+    vi.mocked(clearHotelCandidateQualificationOverride).mockResolvedValue({
+      changed: false,
+      found: true,
+    } as never);
+    const res = await handle('/api/prospects/cand-1/qualification-override/remove', {
+      method: 'POST',
+    });
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body ?? '{}').changed).toBe(false);
+  });
+
+  it('returns 404 when no candidate carries the id', async () => {
+    vi.mocked(clearHotelCandidateQualificationOverride).mockResolvedValue({
+      changed: false,
+      found: false,
+    } as never);
+    const res = await handle('/api/prospects/missing/qualification-override/remove', {
+      method: 'POST',
+    });
+    expect(res.statusCode).toBe(404);
   });
 });
 

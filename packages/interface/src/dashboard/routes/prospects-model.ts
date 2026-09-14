@@ -361,6 +361,7 @@ export interface ProspectDetailResponse {
   };
   qualificationOutcome: string;
   qualificationFreshness: PipelineFreshness;
+  qualificationOverride: { actor: string; reason: string | null; decidedAt: string } | null;
   prescanFreshness: PipelineFreshness;
   scoreFreshness: PipelineFreshness;
   prescanStatus: string | null;

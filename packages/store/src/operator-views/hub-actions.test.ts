@@ -29,6 +29,7 @@ function makeDetail(overrides: Partial<OperatorProspectDetail> = {}): OperatorPr
     reviewState: 'accepted',
     review: { queuedReason: null, actor: null, reason: null, decidedAt: null },
     qualificationOutcome: 'qualified',
+    qualificationOverride: null,
     qualificationFreshness: {
       state: 'current',
       version: 'v1',

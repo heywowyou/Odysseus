@@ -63,12 +63,21 @@ export function HubFicheSection(props: {
    *  onRunQuickCheck is. */
   onRecheckQualification?: () => void;
   isRecheckQualificationBusy?: boolean;
+  /** Issue #237: mark a rejected candidate as manually qualified, or
+   *  remove an existing override. Optional for the same test-convenience
+   *  reason as onRecheckQualification. */
+  onOverrideQualification?: () => void;
+  onRemoveQualificationOverride?: () => void;
+  isQualificationOverrideBusy?: boolean;
 }): JSX.Element {
   const {
     detail,
     onRequestReview,
     onRecheckQualification,
     isRecheckQualificationBusy = false,
+    onOverrideQualification,
+    onRemoveQualificationOverride,
+    isQualificationOverrideBusy = false,
   } = props;
   const { strings, language } = useI18n();
   const [showTechnical, setShowTechnical] = useState(false);
@@ -130,7 +139,7 @@ export function HubFicheSection(props: {
           <DefinitionRow
             label={strings.prospects.columns.qualification}
             value={
-              <span className="inline-flex items-center gap-2">
+              <span className="inline-flex flex-wrap items-center gap-2">
                 <Badge tone={qualificationBadgeTone(detail.qualificationOutcome)}>
                   {vocabularyLabel(
                     strings.labels.qualification,
@@ -138,6 +147,9 @@ export function HubFicheSection(props: {
                     strings.common.vocabularyFallback,
                   )}
                 </Badge>
+                {detail.qualificationOverride !== null ? (
+                  <Badge tone="minor">{strings.hub.fiche.qualificationOverrideBadge}</Badge>
+                ) : null}
                 {detail.qualificationOutcome === 'rejected' &&
                 onRecheckQualification !== undefined ? (
                   <Button
@@ -148,6 +160,31 @@ export function HubFicheSection(props: {
                     onClick={onRecheckQualification}
                   >
                     {strings.hub.fiche.recheckQualificationAction}
+                  </Button>
+                ) : null}
+                {detail.qualificationOverride === null &&
+                detail.qualificationOutcome === 'rejected' &&
+                onOverrideQualification !== undefined ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    isLoading={isQualificationOverrideBusy}
+                    disabled={isQualificationOverrideBusy}
+                    onClick={onOverrideQualification}
+                  >
+                    {strings.hub.fiche.qualificationOverrideAction}
+                  </Button>
+                ) : null}
+                {detail.qualificationOverride !== null &&
+                onRemoveQualificationOverride !== undefined ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    isLoading={isQualificationOverrideBusy}
+                    disabled={isQualificationOverrideBusy}
+                    onClick={onRemoveQualificationOverride}
+                  >
+                    {strings.hub.fiche.qualificationOverrideRemoveAction}
                   </Button>
                 ) : null}
               </span>

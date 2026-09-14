@@ -709,6 +709,14 @@ export const fr: DashboardStrings = {
       recheckQualificationStillRejected:
         "Nouvelle vérification effectuée : l'hôtel reste rejeté ({reason}).",
       recheckQualificationFailed: 'Impossible de relancer la vérification',
+      qualificationOverrideBadge: 'Qualifié manuellement',
+      qualificationOverrideAction: 'Qualifier manuellement',
+      qualificationOverrideRemoveAction: "Retirer l'override",
+      qualificationOverrideSucceeded: 'Hôtel qualifié manuellement.',
+      qualificationOverrideFailed: 'Impossible de qualifier manuellement cet hôtel',
+      qualificationOverrideRemoveSucceeded:
+        'Override retiré : la vérification automatique fait à nouveau foi.',
+      qualificationOverrideRemoveFailed: "Impossible de retirer l'override",
     },
     quickCheck: {
       empty: 'Pas encore de contrôle rapide pour cet hôtel.',

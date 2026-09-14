@@ -6,7 +6,10 @@ import { createAuditModel } from './schemas/audit.schema.js';
 import { createJobModel } from './schemas/job.schema.js';
 import { createHotelScoreCohortModel } from './schemas/score-cohort.schema.js';
 import { addSuppressionEntry } from './suppression.js';
-import { upsertHotelCandidates } from './hotel-candidates.js';
+import {
+  upsertHotelCandidates,
+  recordHotelCandidateQualificationOverride,
+} from './hotel-candidates.js';
 import {
   findActiveOutreachFullScanJob,
   findActiveScanJobForHost,
@@ -347,6 +350,69 @@ describe.skipIf(!mongoAvailable)('planOutreachFullScan', () => {
     await seedCohort({ cohortId: `cohort-${randomUUID()}`, candidateId: candidate.candidateId });
     expect(await planOutreachFullScan(connection!, candidate.candidateId, VERSIONS)).toEqual({
       refused: 'qualification-not-current',
+    });
+  });
+
+  it('an override authorizes a rejected candidate, issue #237', async () => {
+    const candidate = baseCandidate({
+      ownRegistrableDomain: 'override-rejected.fr',
+      qualification: {
+        outcome: 'rejected',
+        qualificationVersion: QUALIFICATION_VERSION,
+        evaluatedAt: new Date(),
+      },
+    });
+    await upsertHotelCandidates(connection!, [candidate]);
+    await recordHotelCandidateQualificationOverride(connection!, {
+      candidateId: candidate.candidateId,
+      actor: 'dashboard',
+    });
+    await seedCohort({ cohortId: `cohort-${randomUUID()}`, candidateId: candidate.candidateId });
+    const plan = await planOutreachFullScan(connection!, candidate.candidateId, VERSIONS);
+    expect(plan).toMatchObject({ candidateId: candidate.candidateId });
+  });
+
+  it('an override authorizes a candidate whose automatic qualification generation is stale', async () => {
+    const candidate = baseCandidate({
+      ownRegistrableDomain: 'override-stale.fr',
+      qualification: {
+        outcome: 'qualified',
+        qualificationVersion: 'v2-old',
+        evaluatedAt: new Date(),
+      },
+    });
+    await upsertHotelCandidates(connection!, [candidate]);
+    await recordHotelCandidateQualificationOverride(connection!, {
+      candidateId: candidate.candidateId,
+      actor: 'dashboard',
+    });
+    await seedCohort({ cohortId: `cohort-${randomUUID()}`, candidateId: candidate.candidateId });
+    const plan = await planOutreachFullScan(connection!, candidate.candidateId, VERSIONS);
+    expect(plan).toMatchObject({ candidateId: candidate.candidateId });
+  });
+
+  it('an override does not bypass suppression', async () => {
+    const candidate = baseCandidate({
+      ownRegistrableDomain: 'override-suppressed.fr',
+      qualification: {
+        outcome: 'rejected',
+        qualificationVersion: QUALIFICATION_VERSION,
+        evaluatedAt: new Date(),
+      },
+    });
+    await upsertHotelCandidates(connection!, [candidate]);
+    await recordHotelCandidateQualificationOverride(connection!, {
+      candidateId: candidate.candidateId,
+      actor: 'dashboard',
+    });
+    await seedCohort({ cohortId: `cohort-${randomUUID()}`, candidateId: candidate.candidateId });
+    await addSuppressionEntry(connection!, {
+      domain: 'override-suppressed.fr',
+      reasonCode: 'objection',
+      reason: 'test opt-out',
+    });
+    expect(await planOutreachFullScan(connection!, candidate.candidateId, VERSIONS)).toEqual({
+      refused: 'suppressed',
     });
   });
 
