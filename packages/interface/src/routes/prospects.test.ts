@@ -1422,6 +1422,30 @@ describe('POST /api/prospects/:candidateId/prescan (issue #201)', () => {
     expect(createJob).not.toHaveBeenCalled();
   });
 
+  // Regression found reproducing the same "Quick check still says not
+  // qualified" report against production a second time, after the operator
+  // had already used qualification-override (issue #237) to mark this same
+  // Ritz Paris candidate qualified by hand: planQuickCheck read only
+  // candidate.qualification and never candidate.qualificationOverride, so a
+  // manually-qualified candidate was refused exactly like an unreviewed
+  // one - the override worked everywhere except the one action it exists to
+  // unblock.
+  it('lets a candidate through on a qualification override alone, ignoring a rejected automatic verdict', async () => {
+    vi.mocked(getHotelCandidate).mockResolvedValue(
+      qualifiedCandidate({
+        qualification: { outcome: 'rejected', qualificationVersion: CURRENT_QUALIFICATION_VERSION },
+        qualificationOverride: { outcome: 'qualified', actor: 'operator', decidedAt: new Date() },
+      }) as never,
+    );
+    const res = await handle('/api/prospects/cand-1/prescan', { method: 'POST' });
+    expect(res.statusCode).toBe(201);
+    expect(JSON.parse(res.body ?? '{}')).toEqual({ started: true, jobId: 'job-new-1' });
+    expect(createJob).toHaveBeenCalledWith(
+      fakeConnection,
+      expect.objectContaining({ options: expect.objectContaining({ domain: 'hotel-exemple.fr' }) }),
+    );
+  });
+
   // Regression found reproducing "click Quick check, nothing happens"
   // against production (Ritz Paris, qualification outcome 'rejected'): the
   // route used to mint a job for any candidate with an own domain, with no

@@ -160,6 +160,16 @@ export interface ListCandidatesToPrescanOptions {
  * live sites a browser is pointed at, and a caller reading it should be able
  * to see the campaign gate being applied rather than have to know that
  * another package's decision function enforces it.
+ *
+ * Issue #237: an operator's `qualificationOverride` (a manual correction of
+ * a rejected/stale automatic verdict) satisfies the qualification half of
+ * this gate on its own, the same rule planQuickCheck and planOutreachFullScan
+ * apply - it does not carry a `qualificationVersion`, so it is never subject
+ * to that half of the check. Without this branch here, the two decision
+ * functions can wave an override-qualified hotel through their refusal check
+ * while this, the query that actually selects who gets prescanned, still
+ * silently excludes it - the job starts, matches nothing, and "completes"
+ * having done nothing, the same shape issue #202 was.
  */
 export async function listCandidatesToPrescan(
   connection: Connection,
@@ -169,8 +179,13 @@ export async function listCandidatesToPrescan(
 
   const filter: Record<string, unknown> = {
     resolutionVersion: options.resolutionVersion,
-    'qualification.outcome': 'qualified',
-    'qualification.qualificationVersion': options.qualificationVersion,
+    $or: [
+      {
+        'qualification.outcome': 'qualified',
+        'qualification.qualificationVersion': options.qualificationVersion,
+      },
+      { 'qualificationOverride.outcome': 'qualified' },
+    ],
     campaignEligibility: 'eligible',
     ownRegistrableDomain: { $exists: true, $ne: null },
   };

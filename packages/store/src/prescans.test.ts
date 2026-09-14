@@ -13,7 +13,11 @@ import {
   recordPrescan,
   type RecordPrescanInput,
 } from './prescans.js';
-import { getHotelCandidate, upsertHotelCandidates } from './hotel-candidates.js';
+import {
+  getHotelCandidate,
+  recordHotelCandidateQualificationOverride,
+  upsertHotelCandidates,
+} from './hotel-candidates.js';
 import { recordHotelQualifications } from './hotel-qualifications.js';
 import { createPrescanModel } from './schemas/prescan.schema.js';
 import { probeMongoAvailability } from './test-support.js';
@@ -327,6 +331,59 @@ describe.skipIf(!mongoAvailable)('prescans', () => {
       skipAlreadyPrescanned: true,
     });
     expect(selected.map((row) => row.candidateId)).toEqual([wanted]);
+  });
+
+  // Regression (Ritz Paris): an operator's qualificationOverride (issue
+  // #237) satisfies planQuickCheck and planOutreachFullScan on its own, but
+  // this query - the one that actually decides who a prescan job measures -
+  // still filtered on qualification.outcome alone. The gate let the job
+  // start; this query then matched zero rows, so the job "completed" having
+  // prescanned nothing and the operator's override never took visible
+  // effect.
+  it('selects a candidate qualified only by operator override, automatic verdict rejected', async () => {
+    const resolutionVersion = `rv-${randomUUID()}`;
+    const qualificationVersion = `qv-${randomUUID()}`;
+    const prescanVersion = `pv-${randomUUID()}`;
+
+    const overridden = randomUUID();
+    await upsertHotelCandidates(connection!, [candidate(overridden, { resolutionVersion })]);
+    await recordHotelCandidateQualificationOverride(connection!, {
+      candidateId: overridden,
+      actor: 'operator',
+    });
+    await recordHotelQualifications(connection!, [
+      {
+        candidateId: overridden,
+        resolutionVersion,
+        qualificationVersion,
+        domain: 'hotel-exemple.fr',
+        outcome: 'rejected',
+        reasons: ['robots-denied'],
+        notes: [],
+        siteFacts: {
+          finalUrl: 'https://hotel-exemple.fr/',
+          reachability: 'ok',
+          parkedPage: false,
+          reservationUrl: null,
+          bookingVendors: [],
+          accessibilityStatementUrl: null,
+          siren: null,
+          siret: null,
+          mentionsLegalesUrl: null,
+          redirectedWithinSite: false,
+        },
+        evaluatedAt: new Date(),
+      },
+    ]);
+
+    const selected = await listCandidatesToPrescan(connection!, {
+      resolutionVersion,
+      qualificationVersion,
+      prescanVersion,
+      limit: 50,
+      skipAlreadyPrescanned: true,
+    });
+    expect(selected.map((row) => row.candidateId)).toEqual([overridden]);
   });
 
   it('restricts the listing to one named domain', async () => {

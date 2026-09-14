@@ -911,15 +911,24 @@ export function registerProspectRoutes(
   > {
     const domain = candidate.ownRegistrableDomain;
     if (!domain) return { canStart: false, refusal: 'no-own-domain' };
-    if (
-      candidate.campaignEligibility !== 'eligible' ||
-      candidate.qualification === undefined ||
-      candidate.qualification.outcome !== 'qualified'
-    ) {
+    if (candidate.campaignEligibility !== 'eligible') {
       return { canStart: false, refusal: 'not-qualified' };
     }
-    if (candidate.qualification.qualificationVersion !== CURRENT_QUALIFICATION_VERSION) {
-      return { canStart: false, refusal: 'qualification-not-current' };
+    // Issue #237: an operator override of a rejected/stale automatic
+    // qualification satisfies this gate outright, the same rule
+    // planOutreachFullScan applies - it is a deliberate correction of the
+    // automatic verdict, not a claim about a different qualification
+    // version, so the version check below does not apply to it either.
+    if (candidate.qualificationOverride?.outcome !== 'qualified') {
+      if (
+        candidate.qualification === undefined ||
+        candidate.qualification.outcome !== 'qualified'
+      ) {
+        return { canStart: false, refusal: 'not-qualified' };
+      }
+      if (candidate.qualification.qualificationVersion !== CURRENT_QUALIFICATION_VERSION) {
+        return { canStart: false, refusal: 'qualification-not-current' };
+      }
     }
     const decision = await planProspectJobLaunch(connection, {
       kind: 'quick-check',
