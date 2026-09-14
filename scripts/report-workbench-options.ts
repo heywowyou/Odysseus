@@ -59,7 +59,11 @@ interface OptionResult {
   pageCount: number;
 }
 
-async function renderOption(index: number, htmlPath: string, browser: Browser): Promise<OptionResult> {
+async function renderOption(
+  index: number,
+  htmlPath: string,
+  browser: Browser,
+): Promise<OptionResult> {
   const html = await readFile(resolve(htmlPath), 'utf8');
   const rendered = await renderPdfWithPageCountFromHtml(html, browser);
   const pdfPath = join(outDir, `${prefix}-${index}.pdf`);
@@ -75,11 +79,28 @@ async function renderOption(index: number, htmlPath: string, browser: Browser): 
   const pagePngPath = join(outDir, `page-${String(pageNumber).padStart(2, '0')}-v${index}`);
   await execFileAsync(
     'pdftoppm',
-    ['-png', '-r', '144', '-f', String(pageNumber), '-l', String(pageNumber), '-singlefile', pdfPath, pagePngPath],
+    [
+      '-png',
+      '-r',
+      '144',
+      '-f',
+      String(pageNumber),
+      '-l',
+      String(pageNumber),
+      '-singlefile',
+      pdfPath,
+      pagePngPath,
+    ],
     { maxBuffer: 16 * 1024 * 1024 },
   );
 
-  return { index, htmlPath, pdfPath, pagePngPath: `${pagePngPath}.png`, pageCount: rendered.pageCount };
+  return {
+    index,
+    htmlPath,
+    pdfPath,
+    pagePngPath: `${pagePngPath}.png`,
+    pageCount: rendered.pageCount,
+  };
 }
 
 async function runWithConcurrency<T>(
@@ -102,7 +123,9 @@ async function runWithConcurrency<T>(
 
 const { browser } = await launchBrowser({ extraArgs: REPORT_PDF_CHROMIUM_ARGS });
 try {
-  const tasks = htmlPaths.map((htmlPath, position) => () => renderOption(position + 1, htmlPath, browser));
+  const tasks = htmlPaths.map(
+    (htmlPath, position) => () => renderOption(position + 1, htmlPath, browser),
+  );
   const results = await runWithConcurrency(tasks, concurrency);
   for (const result of results) {
     process.stdout.write(
