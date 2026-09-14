@@ -7,6 +7,7 @@ vi.mock('@odysseus/store', () => ({
   markJobNeedsInput: vi.fn(),
   resetOrphanedRunningJobs: vi.fn(),
   reconcileFailedAuditJobs: vi.fn(),
+  updateJobProgress: vi.fn(),
 }));
 vi.mock('../pipeline/backfill-audit-hotel-links.js', () => ({
   backfillAuditHotelLinks: vi.fn(),
@@ -28,12 +29,19 @@ import {
   markJobNeedsInput,
   reconcileFailedAuditJobs,
   resetOrphanedRunningJobs,
+  updateJobProgress,
 } from '@odysseus/store';
 import { ReportIdentityUnconfirmedError } from '@odysseus/report';
 import { logger } from '../logger.js';
 import { backfillAuditHotelLinks } from '../pipeline/backfill-audit-hotel-links.js';
+import {
+  configureJobTelemetrySink,
+  NullTelemetrySink,
+  RecordingTelemetrySink,
+} from '../telemetry/job-telemetry.js';
 import { JobCancelledError } from './cancellation.js';
 import { JobQueue } from './job-queue.js';
+import { reportJobPhase } from './pipeline/report-job-phase.js';
 
 const fakeConnection = {} as never;
 
@@ -79,11 +87,13 @@ beforeEach(() => {
   vi.mocked(cancelJob).mockResolvedValue(true);
   vi.mocked(failJob).mockResolvedValue(undefined);
   vi.mocked(markJobNeedsInput).mockResolvedValue(undefined);
+  vi.mocked(updateJobProgress).mockResolvedValue(undefined);
 });
 
 afterEach(async () => {
   await queue?.stop();
   queue = undefined;
+  configureJobTelemetrySink(new NullTelemetrySink());
 });
 
 describe('JobQueue', () => {
@@ -384,6 +394,90 @@ describe('JobQueue', () => {
     expect(failJob).toHaveBeenCalledWith(fakeConnection, 'job-boom', 'boom');
     expect(logger.child).toHaveBeenCalledWith({ jobId: 'job-boom', jobType: 'full-audit' });
     expect(logger.error).toHaveBeenCalledWith({ err: expect.any(Error) }, 'pipeline job failed');
+  });
+
+  it('issue #253: a failed job produces a locally verifiable stage/span tree through the telemetry interface', async () => {
+    const sink = new RecordingTelemetrySink();
+    configureJobTelemetrySink(sink);
+
+    const job = fakeJob({ jobId: 'job-telemetry' });
+    vi.mocked(claimNextQueuedJob).mockResolvedValueOnce(job).mockResolvedValue(null);
+    // A minimal stand-in for runFullAuditJob: reports the same phase
+    // transitions the real runner would (via report-progress.ts), then
+    // fails partway through, the way a crawl timeout or a provider error
+    // would surface after some real work already happened.
+    const runFullAuditJob = vi.fn().mockImplementation(async (runningJob) => {
+      await reportJobPhase(fakeConnection, runningJob.jobId, runningJob.type, {
+        phase: 'crawl',
+      });
+      await reportJobPhase(fakeConnection, runningJob.jobId, runningJob.type, {
+        phase: 'content-scan',
+      });
+      const error = new Error('crawl exceeded its deadline');
+      error.name = 'TimeoutError';
+      throw error;
+    });
+
+    queue = new JobQueue({
+      connection: fakeConnection,
+      pollIntervalMs: 20,
+      runners: {
+        'full-audit': runFullAuditJob,
+        prospecting: vi.fn(),
+        'prospect-ingestion': vi.fn(),
+        'hotel-prescan': vi.fn(),
+        'outreach-draft-batch': vi.fn(),
+        'outreach-full-scan': vi.fn(),
+        'outreach-followup-batch': vi.fn(),
+      },
+    });
+    await queue.start();
+    queue.notify();
+    await waitFor(() => vi.mocked(failJob).mock.calls.length >= 1);
+
+    expect(sink.events).toEqual([
+      expect.objectContaining({
+        kind: 'stage-transition',
+        jobId: 'job-telemetry',
+        jobType: 'full-audit',
+        stage: 'crawl',
+      }),
+      expect.objectContaining({
+        kind: 'stage-transition',
+        jobId: 'job-telemetry',
+        jobType: 'full-audit',
+        stage: 'axe',
+        previousStage: 'crawl',
+        previousStageDurationMs: expect.any(Number),
+      }),
+      expect.objectContaining({
+        kind: 'job-failed',
+        jobId: 'job-telemetry',
+        jobType: 'full-audit',
+        // The last stage observed before the throw, not 'unknown' - this
+        // is what makes the tree locally verifiable: it names exactly
+        // where the job died.
+        stage: 'axe',
+        errorKind: 'timeout',
+      }),
+    ]);
+    // No field on any captured event carries a raw error message, a URL,
+    // or anything else outside the closed telemetry schema.
+    const allowedKeys = new Set([
+      'kind',
+      'jobId',
+      'jobType',
+      'buildId',
+      'stage',
+      'previousStage',
+      'previousStageDurationMs',
+      'errorKind',
+    ]);
+    for (const event of sink.events) {
+      for (const key of Object.keys(event)) {
+        expect(allowedKeys.has(key)).toBe(true);
+      }
+    }
   });
 
   it('claims with a non-empty worker revision string', async () => {

@@ -7,13 +7,20 @@
 
 import type { Connection } from 'mongoose';
 import type { PageWorkGuard, ScanProgressEvent } from '@odysseus/scanner';
-import { updateJobProgress } from '@odysseus/store';
+import type { JobType } from '@odysseus/store';
 import { JobCancelledError, type CancellationRegistry } from './cancellation.js';
 import { computeCrawlEtaMs, computeStageEtaMs, createDurationEstimator } from './eta.js';
+import { reportJobPhase } from './pipeline/report-job-phase.js';
 
 export function createScanProgressReporter(
   connection: Connection,
   jobId: string,
+  /** Issue #253: job telemetry needs the job type to label its events;
+   *  the pilot only maps full-audit's phase vocabulary (see
+   *  ./pipeline/report-job-phase.ts), so a caller passing a different job
+   *  type still writes progress exactly as before, just without
+   *  telemetry. */
+  jobType: JobType,
   cancellation?: CancellationRegistry,
   /** Issue #200: a mutable holder the caller fills in via scanSite's
    *  onGuardReady once the run-wide guard exists - a plain optional
@@ -51,7 +58,7 @@ export function createScanProgressReporter(
         effectiveDelayMs: event.delayMs,
         observedPageCostMs: undefined,
       });
-      await updateJobProgress(connection, jobId, {
+      await reportJobPhase(connection, jobId, jobType, {
         phase: 'crawl',
         progress: {
           crawl: {
@@ -79,7 +86,7 @@ export function createScanProgressReporter(
         effectiveDelayMs,
         observedPageCostMs: undefined,
       });
-      await updateJobProgress(connection, jobId, {
+      await reportJobPhase(connection, jobId, jobType, {
         phase: 'crawl',
         progress: {
           crawl: {
@@ -107,7 +114,7 @@ export function createScanProgressReporter(
         effectiveDelayMs,
         observedPageCostMs: crawlDurationEstimator.estimateMs(),
       });
-      await updateJobProgress(connection, jobId, {
+      await reportJobPhase(connection, jobId, jobType, {
         phase: 'crawl',
         progress: {
           crawl: {
@@ -122,7 +129,7 @@ export function createScanProgressReporter(
     }
 
     if (event.type === 'continuation-guard') {
-      await updateJobProgress(connection, jobId, {
+      await reportJobPhase(connection, jobId, jobType, {
         progress: {
           continuationGuard: {
             omittedUrlCount: event.omittedUrlCount,
@@ -144,7 +151,7 @@ export function createScanProgressReporter(
         concurrency: contentScanConcurrency,
         smoothedPageDurationMs: contentScanDurationEstimator.estimateMs(),
       });
-      await updateJobProgress(connection, jobId, {
+      await reportJobPhase(connection, jobId, jobType, {
         phase: 'content-scan',
         progress: {
           contentScan: {
@@ -165,7 +172,7 @@ export function createScanProgressReporter(
         concurrency: contentScanConcurrency,
         smoothedPageDurationMs: contentScanDurationEstimator.estimateMs(),
       });
-      await updateJobProgress(connection, jobId, {
+      await reportJobPhase(connection, jobId, jobType, {
         phase: 'content-scan',
         progress: {
           contentScan: {
@@ -179,7 +186,7 @@ export function createScanProgressReporter(
     }
 
     if (event.type === 'select-performance') {
-      await updateJobProgress(connection, jobId, { phase: 'select-performance' });
+      await reportJobPhase(connection, jobId, jobType, { phase: 'select-performance' });
       return;
     }
 
@@ -194,7 +201,7 @@ export function createScanProgressReporter(
         concurrency: 1,
         smoothedPageDurationMs: lighthouseDurationEstimator.estimateMs(),
       });
-      await updateJobProgress(connection, jobId, {
+      await reportJobPhase(connection, jobId, jobType, {
         phase: 'lighthouse',
         progress: {
           lighthouse: {
@@ -215,7 +222,7 @@ export function createScanProgressReporter(
         concurrency: 1,
         smoothedPageDurationMs: lighthouseDurationEstimator.estimateMs(),
       });
-      await updateJobProgress(connection, jobId, {
+      await reportJobPhase(connection, jobId, jobType, {
         phase: 'lighthouse',
         progress: {
           lighthouse: {
@@ -229,12 +236,12 @@ export function createScanProgressReporter(
     }
 
     if (event.type === 'analysis-complete') {
-      await updateJobProgress(connection, jobId, { phase: 'normalize' });
+      await reportJobPhase(connection, jobId, jobType, { phase: 'normalize' });
       return;
     }
 
     if (event.type === 'scan-start') {
-      await updateJobProgress(connection, jobId, {
+      await reportJobPhase(connection, jobId, jobType, {
         phase: 'scan',
         progress: { scan: { scanned: 0, target: event.totalPages } },
       });
@@ -257,7 +264,7 @@ export function createScanProgressReporter(
       concurrency: 1,
       smoothedPageDurationMs: scanDurationEstimator.estimateMs(),
     });
-    await updateJobProgress(connection, jobId, {
+    await reportJobPhase(connection, jobId, jobType, {
       phase: event.scanned >= event.totalPages ? 'normalize' : 'scan',
       progress: {
         scan: {

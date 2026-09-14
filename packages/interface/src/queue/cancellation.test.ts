@@ -29,7 +29,7 @@ describe('createScanProgressReporter cancellation', () => {
 
   it('throws synchronously into the caller once a stop is requested', () => {
     const registry = new CancellationRegistry();
-    const reporter = createScanProgressReporter({} as never, 'job-1', registry);
+    const reporter = createScanProgressReporter({} as never, 'job-1', 'full-audit', registry);
 
     expect(() => reporter(crawlStartEvent)).not.toThrow();
 
@@ -40,7 +40,7 @@ describe('createScanProgressReporter cancellation', () => {
   });
 
   it('without a registry, the reporter behaves as before (async, never throws)', () => {
-    const reporter = createScanProgressReporter({} as never, 'job-1');
+    const reporter = createScanProgressReporter({} as never, 'job-1', 'full-audit');
     expect(() => reporter(crawlStartEvent)).not.toThrow();
   });
 });

@@ -76,6 +76,7 @@ mismatch is evidence to resolve, not a reason to freeze the task.
 | `docs/rules/prospect-qualification.md` | Sourcing, qualification, retention, and contact rules |
 | `docs/rules/outreach-rules.md` | Outreach and preview assembly rules |
 | `docs/rules/offer-positioning.md` | Pricing, scope, sales claims, offer framing |
+| `docs/rules/telemetry-rules.md` | Job telemetry event contract, sink behavior, pilot scope, production-enablement checklist |
 | `docs/report/report-design-system.md` and `docs/report/report-design-tokens.md` | Report visual language and implementation tokens |
 | `docs/report/report-workbench.md` | PDF-native Impeccable iteration, acceptance, verification, and commit workflow |
 | `docs/rules/manual-accessibility-checklist.md` | Known limits of automated accessibility detection |

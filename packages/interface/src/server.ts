@@ -35,6 +35,7 @@ import {
 } from './config.js';
 import { logger } from './logger.js';
 import { attachRequestContext, getRequestId } from './request-context.js';
+import { configureTelemetryFromEnv } from './telemetry/configure.js';
 
 export interface InterfaceServerHandle {
   server: Server;
@@ -88,6 +89,11 @@ export async function startInterfaceServer(
         'scripts/hash-dashboard-password.mjs, or keep ODYSSEUS_INTERFACE_HOST on loopback.',
     );
   }
+
+  // Issue #253: a no-op (NullTelemetrySink) unless SENTRY_DSN is set, so
+  // every deployment without that env var - including every test run -
+  // behaves exactly as it did before this pilot.
+  configureTelemetryFromEnv();
 
   const router = new Router();
   const queue = new JobQueue({

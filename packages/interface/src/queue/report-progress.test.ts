@@ -20,7 +20,7 @@ afterEach(() => {
 
 describe('createScanProgressReporter staged full-audit progress', () => {
   it('persists independent content and Lighthouse buckets with a target-free selection phase', async () => {
-    const report = createScanProgressReporter({} as never, 'job-1');
+    const report = createScanProgressReporter({} as never, 'job-1', 'full-audit');
 
     report({ type: 'content-scan-start', totalPages: 4, alreadyCompleted: 0, concurrency: 2 });
     report({
@@ -79,7 +79,7 @@ describe('createScanProgressReporter staged full-audit progress', () => {
     // the persisted completed/target immediately, but with no ETA until a
     // real page finishes in this process - a resumed page took no wall
     // time here, so it must never look like an instantly-fast sample.
-    const report = createScanProgressReporter({} as never, 'job-1');
+    const report = createScanProgressReporter({} as never, 'job-1', 'full-audit');
 
     report({ type: 'content-scan-start', totalPages: 10, alreadyCompleted: 6, concurrency: 3 });
     report({ type: 'lighthouse-start', totalPages: 10, alreadyCompleted: 4 });
@@ -92,7 +92,7 @@ describe('createScanProgressReporter staged full-audit progress', () => {
   });
 
   it('persists continuation omissions without changing the crawl phase', async () => {
-    const report = createScanProgressReporter({} as never, 'job-1');
+    const report = createScanProgressReporter({} as never, 'job-1', 'full-audit');
     report({ type: 'continuation-guard', omittedUrlCount: 7, omittedFamilyCount: 2 });
 
     await vi.waitFor(() => expect(updateJobProgress).toHaveBeenCalledOnce());
@@ -105,7 +105,7 @@ describe('createScanProgressReporter staged full-audit progress', () => {
     // Issue #121: a slow-profile job used to sit on phase queued for the
     // whole robots.txt plus sitemap window because the first event only
     // fired after those paced fetches.
-    const report = createScanProgressReporter({} as never, 'job-1');
+    const report = createScanProgressReporter({} as never, 'job-1', 'full-audit');
     report({ type: 'crawl-setup', maxPages: 12, delayMs: 60_000 });
     report({ type: 'crawl-start', maxPages: 12, effectiveDelayMs: 90_000, robotsTxtFound: true });
 
@@ -147,7 +147,7 @@ describe('createScanProgressReporter staged full-audit progress', () => {
       .mockReturnValueOnce(0) // crawl-start
       .mockReturnValueOnce(2000) // crawl-page #1
       .mockReturnValueOnce(6000); // crawl-page #2
-    const report = createScanProgressReporter({} as never, 'job-1');
+    const report = createScanProgressReporter({} as never, 'job-1', 'full-audit');
 
     report({ type: 'crawl-start', maxPages: 10, effectiveDelayMs: 1000, robotsTxtFound: false });
     report({ type: 'crawl-page', visited: 1, maxPages: 10, queued: 20 });

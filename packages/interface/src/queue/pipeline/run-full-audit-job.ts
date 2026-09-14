@@ -10,12 +10,7 @@
  * operator come back for a second language later.
  */
 
-import {
-  completeJob,
-  ensureJobRunIdentity,
-  updateJobProgress,
-  type JobDocument,
-} from '@odysseus/store';
+import { completeJob, ensureJobRunIdentity, type JobDocument } from '@odysseus/store';
 import {
   buildFindingsProvenance,
   type AuditOutreachContext,
@@ -31,6 +26,7 @@ import { runAllReportsStage } from '../../pipeline/report-stage.js';
 import { JobCancelledError } from '../cancellation.js';
 import type { PipelineContext } from '../job-queue.js';
 import { createScanProgressReporter } from '../report-progress.js';
+import { reportJobPhase } from './report-job-phase.js';
 
 export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): Promise<void> {
   const { connection, originLock } = ctx;
@@ -57,6 +53,7 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
     const onProgress = createScanProgressReporter(
       connection,
       job.jobId,
+      job.type,
       ctx.cancellation,
       guardHolder,
     );
@@ -141,7 +138,7 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
     // Written now, not only in completeJob at the end: a report-stage
     // failure below still leaves the audit and both analyses persisted,
     // and the operator needs the dashboard link to reach them. See #35.
-    await updateJobProgress(connection, job.jobId, {
+    await reportJobPhase(connection, job.jobId, job.type, {
       phase: 'analyze-fr',
       auditId: auditResult.auditId,
     });
@@ -163,7 +160,7 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
     // the rate-limit handling.
     await pauseBetweenLanguagePasses();
 
-    await updateJobProgress(connection, job.jobId, { phase: 'analyze-en' });
+    await reportJobPhase(connection, job.jobId, job.type, { phase: 'analyze-en' });
     const enAnalysis = await runAnalysisStage(
       auditResult.auditDir,
       auditResult.manifest,
@@ -179,7 +176,7 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
     // Renders both language reports (fr and en) from the two analyses
     // already produced above. See runAllReportsStage's own doc comment:
     // no re-scan, no second LLM call.
-    await updateJobProgress(connection, job.jobId, { phase: 'report-fr' });
+    await reportJobPhase(connection, job.jobId, job.type, { phase: 'report-fr' });
     await runAllReportsStage(
       auditResult.auditDir,
       auditResult.manifest,
@@ -188,7 +185,7 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
       connection,
       findingsProvenance,
     );
-    await updateJobProgress(connection, job.jobId, { phase: 'report-en' });
+    await reportJobPhase(connection, job.jobId, job.type, { phase: 'report-en' });
 
     // P0.1 (2026-08-21 La Corniche feedback pass): a completed job whose
     // report advertises a pillar (performance) it has zero data for used

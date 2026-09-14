@@ -26,6 +26,9 @@ import {
 import { DEFAULT_QUEUE_CONCURRENCY } from '../config.js';
 import { logger } from '../logger.js';
 import { backfillAuditHotelLinks } from '../pipeline/backfill-audit-hotel-links.js';
+import { forgetJobPhaseTelemetry, lastKnownJobStage } from './pipeline/report-job-phase.js';
+import { classifyJobError } from '../telemetry/events.js';
+import { captureJobTelemetry } from '../telemetry/job-telemetry.js';
 import { CancellationRegistry, JobCancelledError } from './cancellation.js';
 
 export interface PipelineContext {
@@ -230,10 +233,19 @@ export class JobQueue {
       } else {
         const message = error instanceof Error ? error.message : String(error);
         jobLog.error({ err: error }, 'pipeline job failed');
+        captureJobTelemetry({
+          kind: 'job-failed',
+          jobId: job.jobId,
+          jobType: job.type,
+          buildId: readOdysseusBuildId(),
+          stage: lastKnownJobStage(job.jobId) ?? 'unknown',
+          errorKind: classifyJobError(error),
+        });
         await failJob(this.connection, job.jobId, message);
       }
     } finally {
       this.cancellation.forget(job.jobId);
+      forgetJobPhaseTelemetry(job.jobId);
     }
   }
 }

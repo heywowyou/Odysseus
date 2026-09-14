@@ -96,6 +96,7 @@ Read the narrowest source that owns the work:
 | Prospect qualification and contact rules | `docs/rules/prospect-qualification.md` |
 | Outreach and previews | `docs/rules/outreach-rules.md` |
 | Pricing and offer framing | `docs/rules/offer-positioning.md` |
+| Job telemetry event contract and pilot scope | `docs/rules/telemetry-rules.md` |
 | Report design | `docs/report/report-design-system.md`, `docs/report/report-design-tokens.md` |
 | PDF-native Impeccable editing | `docs/report/report-workbench.md` |
 | Automated accessibility detection limits | `docs/rules/manual-accessibility-checklist.md` |

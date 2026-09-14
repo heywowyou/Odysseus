@@ -74,7 +74,12 @@ export async function runOutreachFullScanJob(
     }
 
     const runIdentity = await ensureJobRunIdentity(connection, job.jobId);
-    const onProgress = createScanProgressReporter(connection, job.jobId, ctx.cancellation);
+    const onProgress = createScanProgressReporter(
+      connection,
+      job.jobId,
+      job.type,
+      ctx.cancellation,
+    );
 
     const auditResult = await runAuditStage(
       url,

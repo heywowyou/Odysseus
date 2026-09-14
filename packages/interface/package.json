@@ -25,6 +25,7 @@
     "@radix-ui/react-dialog": "^1.1.23",
     "@radix-ui/react-toggle-group": "^1.1.19",
     "@radix-ui/react-tooltip": "^1.2.16",
+    "@sentry/node": "^10.74.0",
     "aws4fetch": "^1.0.20",
     "clsx": "^2.1.1",
     "csv-parse": "^7.0.2",
