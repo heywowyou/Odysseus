@@ -168,6 +168,9 @@ function harness(
         previewId: 'preview-1',
         url: 'https://www.odysseusaudit.com/apercu/token-abc',
         publicExpiresAt: new Date('2026-09-29T09:00:00.000Z'),
+        distinctFindingCount: 47,
+        affectedPageCount: 23,
+        severityTotals: { critical: 8, serious: 14, moderate: 17, minor: 8 },
         proofCardCategories: ['accessibility', 'seo', 'performance'],
       });
     },
@@ -249,14 +252,17 @@ describe('createOutreachDraft, happy path', () => {
     expect(withoutRegistry.body).not.toContain('Sirene');
   });
 
-  it('writes the approved email for this hotel and its own proof-card categories', async () => {
+  it('writes the approved email from the published full-scan aggregates', async () => {
     const result = await createOutreachDraft(
       harness({ draftRow: row({ businessName: 'HÔTEL DE LA POSTE' }) }).options,
     );
     expect(result.subject).toBe("Analyse du site de l'Hôtel de la Poste");
-    expect(result.body).toContain("du site web de l'Hôtel de la Poste");
+    expect(result.body).toContain("Nous avons récemment analysé le site web de l'Hôtel de la Poste.");
     expect(result.body).toContain(
-      "1 constat critique lié à l'accessibilité, 1 lié au référencement dans les moteurs de recherche et 1 lié aux performances du site.",
+      "Notre analyse a relevé 47 constats distincts sur 23 pages de votre site, dont 8 critiques et 14 sérieux. Les principaux problèmes concernent notamment l'accessibilité, le référencement dans les moteurs de recherche et les performances du site.",
+    );
+    expect(result.body).toContain(
+      'Ces constats ont un impact direct sur l’expérience de vos clients et peuvent également relever du cadre légal applicable en matière d’accessibilité.',
     );
   });
 
