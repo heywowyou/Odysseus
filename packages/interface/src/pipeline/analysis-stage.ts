@@ -116,6 +116,21 @@ function timestampForFilename(date: Date): string {
     .replace(/:/g, '-');
 }
 
+/** The static fallback branch's overallRisk, computed from every finding
+ *  the audit actually has - not only the ones that reached the model. A
+ *  diverted finding (docs/archive/report-v2-refactor.md Part 4.1: a legal
+ *  notice missing, or a WCAG defect confined to a wrapper/legal page) can
+ *  be 'serious' or worse and still never reach forModel, so this must not
+ *  reuse isAuditFallbackEligible's own severity read as a proxy for "the
+ *  site is clean" - that predicate only tells us the LLM was skipped, not
+ *  what severity the skipped findings were. See the forModel.length === 0
+ *  branch below. */
+function fallbackOverallRisk(findings: readonly Finding[]): 'low' | 'medium' | 'high' {
+  if (findings.some((finding) => finding.severity === 'critical')) return 'high';
+  if (findings.some((finding) => finding.severity === 'serious')) return 'medium';
+  return 'low';
+}
+
 /**
  * The CLI may supply full intake context, which remains the operator's
  * override. Without it, enrich only the writing pass with a candidate whose
@@ -257,7 +272,21 @@ export async function runAnalysisStage(
   // presentation concern (severity floor plus diversion) and must not move
   // the gate. When this holds, no model pass runs at all and the analysis
   // below is built statically.
-  const fallbackEligible = isAuditFallbackEligible(allFindings);
+  //
+  // `|| forModel.length === 0` is a second, independent reason to fall
+  // back, found reproducing "the report could not be generated" against
+  // the odysseus site's own dogfood scan: isAuditFallbackEligible can read
+  // false (a serious/critical finding exists in allFindings) while every
+  // one of those findings is diverted (partitionFindings above), leaving
+  // forModel empty. The structure pass was then still called with zero
+  // findings, correctly returned zero themes, and zod's `.min(1)` on
+  // `themes` rejected that response on every retry - `themes` must never
+  // be empty when the model is called, so this must stop the call from
+  // happening at all rather than adjust the schema to accept it. Reused
+  // here for the true isAuditFallbackEligible case too (an empty
+  // allFindings already implies forModel.length === 0), not just added
+  // alongside it.
+  const fallbackEligible = isAuditFallbackEligible(allFindings) || forModel.length === 0;
   const analysesDir = path.join(auditDir, 'analyses');
 
   let structurePath = '';
@@ -309,11 +338,15 @@ export async function runAnalysisStage(
     // Static fallback analysis (issue #162): no structure pass, no writing
     // pass, no advisory pass. The bilingual sentences come from the report
     // strings module so the stored artifact and the rendered note share one
-    // source of truth. Nothing here invents themes, praise, or a risk the
-    // predicate does not already imply (no critical or serious finding and
-    // fewer than 5 moderate ones is what makes overallRisk 'low'
-    // defensible), and no structure file is written, so nothing downstream
-    // can later claim to reuse one.
+    // source of truth. overallRisk is computed from allFindings
+    // (fallbackOverallRisk), not hardcoded 'low': the
+    // forModel.length === 0 branch above can reach this path with a
+    // serious or critical finding still in allFindings (diverted away from
+    // the model, not resolved), and reporting 'low' risk next to that
+    // finding's own entry in the report's deterministic Observations
+    // section would misstate the audit rather than merely omit an LLM
+    // opinion. No structure file is written, so nothing downstream can
+    // later claim to reuse one.
     const generatedAt = new Date();
     const strings = getStrings(options.language);
     analysis = {
@@ -324,7 +357,7 @@ export async function runAnalysisStage(
       model: 'static-fallback',
       temperature: 0,
       generatedAt,
-      overallRisk: 'low',
+      overallRisk: fallbackOverallRisk(allFindings),
       themes: [],
       quickWins: [],
       executiveSummary: strings.fallbackAnalysis.summarySentence,

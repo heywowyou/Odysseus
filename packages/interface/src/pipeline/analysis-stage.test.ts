@@ -36,6 +36,7 @@ import {
 import { getLatestHotelCandidateByOwnRegistrableDomain, persistAnalysis } from '@odysseus/store';
 import {
   FINDINGS_SCHEMA_VERSION,
+  LCEN_MENTIONS_LEGALES_RULE_ID,
   buildFindingsProvenance,
   type AuditManifest,
   type Finding,
@@ -735,6 +736,49 @@ describe('runAnalysisStage', () => {
     } finally {
       warn.mockRestore();
     }
+  });
+
+  // Regression found running the odysseus site's own dogfood full audit:
+  // the audit's only finding above the severity floor was a 'serious'
+  // lcen-mentions-legales-missing (a missing legal notice), which
+  // partitionFindings always diverts regardless of severity - it never
+  // reaches forModel. isAuditFallbackEligible(allFindings) read false
+  // (a serious finding exists), so the LLM path ran with an empty
+  // forModel; the structure pass correctly returned zero themes, and the
+  // response failed the stored document's own `themes: min(1)` on every
+  // retry, surfacing as "the report could not be generated" with no
+  // analysis ever stored. The fallback gate must also trigger when
+  // nothing survives severity-floor-plus-diversion, and the risk label it
+  // ships must still reflect the diverted finding's real severity.
+  it('falls back to a static analysis when every finding above the floor is diverted, without calling the model', async () => {
+    const findings = [
+      buildFinding({
+        findingId: 'lcen1',
+        dedupeKey: 'lcen1',
+        ruleId: LCEN_MENTIONS_LEGALES_RULE_ID,
+        severity: 'serious',
+      }),
+    ];
+    const manifest = fakeManifest(findings);
+
+    const result = await runAnalysisStage(
+      auditDir,
+      manifest,
+      findings,
+      { language: 'fr' },
+      fakeConnection,
+    );
+
+    expect(analyzeStructure).not.toHaveBeenCalled();
+    expect(analyzeWriting).not.toHaveBeenCalled();
+    expect(result.analysis.generationMode).toBe('static-fallback');
+    // Not 'low': a serious finding really exists in this audit, it was
+    // just diverted away from the model rather than resolved.
+    expect(result.analysis.overallRisk).toBe('medium');
+    expect(persistAnalysis).toHaveBeenCalledWith(
+      fakeConnection,
+      expect.objectContaining({ overallRisk: 'medium', generationMode: 'static-fallback' }),
+    );
   });
 
   // Issue #145: the stage starts the advisory passes but resolves before
