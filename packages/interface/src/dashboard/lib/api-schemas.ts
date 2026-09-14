@@ -126,7 +126,7 @@ export const scanSummarySchema = z.object({
 
 /** Issue #220's active-job projection, carried on the prospect hub
  *  snapshot. */
-export const prospectActiveJobSchema = z.object({
+const prospectActiveJobSchema = z.object({
   jobId: z.string(),
   kind: z.enum(['quick-check', 'light-audit', 'prospecting-audit', 'full-audit']),
   status: z.enum(['queued', 'running', 'needs-input']),
@@ -142,7 +142,7 @@ const actionabilitySchema = z.discriminatedUnion('state', [
   z.object({ state: z.literal('complete') }),
 ]);
 
-export const prospectHubActionsSchema = z.object({
+const prospectHubActionsSchema = z.object({
   refreshProspect: actionabilitySchema,
   runQuickCheck: actionabilitySchema,
   runProspectingAudit: actionabilitySchema,

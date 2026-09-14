@@ -112,11 +112,6 @@ export function isQualificationValue(value: string): value is QualificationFilte
 /** Issue #215: the score-derived sort, '' meaning the default name order. */
 export type ProspectSortField = '' | 'brokenness' | 'fixability';
 export type ProspectSortDirection = 'asc' | 'desc';
-const SORT_FIELD_VALUES: readonly ProspectSortField[] = ['brokenness', 'fixability'];
-export function isSortFieldValue(value: string): value is ProspectSortField {
-  return value === '' || (SORT_FIELD_VALUES as readonly string[]).includes(value);
-}
-
 /** Controlled state of the list's filters; '' means the filter is off.
  *  `search` is the free-text box and travels as the API's `q` param. */
 export interface ProspectFilterState {

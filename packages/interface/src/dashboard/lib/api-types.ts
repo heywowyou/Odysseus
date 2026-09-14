@@ -3,8 +3,6 @@ import type {
   jobStatusSchema,
   jobTypeSchema,
   scanJobDetailSchema,
-  scanJobNeedsInputFieldSchema,
-  scanJobProgressSchema,
   scanSummarySchema,
   scanUrlResultSchema,
   severityRollupSchema,
@@ -59,12 +57,6 @@ export interface TodoPage {
   rows: TodoRow[];
 }
 
-/** Progress counters of GET /api/scans/:jobId (the Job document's progress
- *  sub-document, store's job.schema.ts). Only the fields the live progress
- *  page reads; the ingestion counters belong to prospect-ingestion jobs,
- *  which this page does not render. */
-export type ScanJobProgress = z.infer<typeof scanJobProgressSchema>;
-
 /** One per-URL row of a prospecting job (store's UrlResult). status stays
  *  a plain string so a worker status the page does not know degrades to a
  *  neutral in-flight badge instead of breaking the page. */
@@ -80,5 +72,3 @@ export type ScanUrlResult = z.infer<typeof scanUrlResultSchema>;
  *  site it is scanning; both stay optional because a prospecting job has a
  *  URL list rather than one site. */
 export type ScanJobDetail = z.infer<typeof scanJobDetailSchema>;
-
-export type ScanJobNeedsInputField = z.infer<typeof scanJobNeedsInputFieldSchema>;
