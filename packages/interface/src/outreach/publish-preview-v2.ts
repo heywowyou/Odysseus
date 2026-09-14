@@ -158,6 +158,10 @@ export interface ResolvedPublishedPreview {
   previewId: string;
   url: string;
   publicExpiresAt: Date;
+  /** The safe aggregate facts rendered by the scorecard and reused by Touch 1. */
+  distinctFindingCount: number;
+  affectedPageCount: number;
+  severityTotals: OutreachPreviewSummary['severityTotals'];
   proofCardCategories: OutreachProofCard['category'][];
 }
 
@@ -168,6 +172,28 @@ function proofCardCategoriesFor(findings: readonly Finding[]): OutreachProofCard
   return selectOutreachProofCards(findings, (ruleId) => OUTREACH_PROOF_CARD_COPY[ruleId])
     .slice(0, 3)
     .map((card) => card.category);
+}
+
+function aggregateFacts(findings: readonly Finding[]): Pick<
+  ResolvedPublishedPreview,
+  'distinctFindingCount' | 'affectedPageCount' | 'severityTotals'
+> {
+  const affectedPages = new Set<string>();
+  const severityTotals: OutreachPreviewSummary['severityTotals'] = {
+    critical: 0,
+    serious: 0,
+    moderate: 0,
+    minor: 0,
+  };
+  for (const finding of findings) {
+    severityTotals[finding.severity] += 1;
+    for (const pageUrl of finding.pageUrls) affectedPages.add(pageUrl);
+  }
+  return {
+    distinctFindingCount: findings.length,
+    affectedPageCount: affectedPages.size,
+    severityTotals,
+  };
 }
 
 /** Validates the one-time token the operator copied at publication against
@@ -189,7 +215,7 @@ export async function resolvePublishedPreviewForDraft(options: {
   resolveOutreachAudit: (
     candidateId: string,
   ) => Promise<{ state: 'resolved'; audit: { auditId: string } } | { state: 'refused' }>;
-  /** The audit's findings, read only to recompute the proof-card categories. */
+  /** The immutable audit findings used both for the preview and the email aggregates. */
   findingsForAudit: (auditId: string) => Promise<readonly Finding[]>;
   candidateId: string;
   previewToken: string;
@@ -210,16 +236,17 @@ export async function resolvePublishedPreviewForDraft(options: {
   if (resolution.state !== 'resolved' || resolution.audit.auditId !== record.auditId) {
     return { refusal: 'preview-wrong-audit' };
   }
-  // A published preview always had three cards; none now means the audit's
-  // findings changed under it, and the email must not guess what it showed.
-  const proofCardCategories = proofCardCategoriesFor(
-    await options.findingsForAudit(resolution.audit.auditId),
-  );
-  if (proofCardCategories.length === 0) return { refusal: 'preview-wrong-audit' };
+  const findings = await options.findingsForAudit(resolution.audit.auditId);
+  // A published v2 preview always had exactly three cards. If deterministic
+  // selection no longer yields three, the underlying audit data drifted and
+  // the draft must not claim numbers against the already-published page.
+  const proofCardCategories = proofCardCategoriesFor(findings);
+  if (proofCardCategories.length !== 3) return { refusal: 'preview-wrong-audit' };
   return {
     previewId: record.previewId,
     url: previewUrl(options.publicBaseUrl, options.previewToken),
     publicExpiresAt: record.publicExpiresAt,
+    ...aggregateFacts(findings),
     proofCardCategories,
   };
 }
