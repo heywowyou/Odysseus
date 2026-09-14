@@ -1,34 +1,47 @@
 /** Operator-approved outreach sequence, locked 2026-09-14. */
 
-import type { OutreachProofCard, ReportLanguage } from '@odysseus/core';
+import type {
+  OutreachPreviewSeverity,
+  OutreachProofCard,
+  ReportLanguage,
+} from '@odysseus/core';
 import { frenchOfHotel } from './hotel-name.js';
 import type { DraftBodyBlock, DraftLink } from './render-outreach-draft.js';
 
 export type OutreachCategory = OutreachProofCard['category'];
 
-const CATEGORY_ORDER: readonly OutreachCategory[] = [
-  'accessibility',
-  'seo',
-  'performance',
-  'geo',
-  'rendering',
-  'privacy',
-];
 const OUTREACH_SUBJECT_MAX_CHARS = 78;
 const NBSP = '\u00a0';
+const SEVERITY_ORDER: readonly OutreachPreviewSeverity[] = [
+  'critical',
+  'serious',
+  'moderate',
+  'minor',
+];
+
+export interface OutreachScanSummary {
+  distinctFindingCount: number;
+  affectedPageCount: number;
+  severityTotals: Record<OutreachPreviewSeverity, number>;
+  /** Categories of the published preview's three proof cards, in card order. */
+  proofCardCategories: readonly OutreachCategory[];
+}
 
 interface EmailTemplate {
   of: (hotelName: string) => string;
   fallbackOf: string;
-  subjectAudit: (of: string) => string;
   subjectAnalysis: (of: string) => string;
-  fallbackAudit: string;
   fallbackAnalysis: string;
-  relation: Record<OutreachCategory, (count: number) => string>;
   joinList: (items: readonly string[]) => string;
+  categoryLabel: Record<OutreachCategory, string>;
+  severityLabel: Record<OutreachPreviewSeverity, (count: number) => string>;
   opening: (of: string) => string;
-  findingsLead: string;
-  criticalFinding: (count: number) => string;
+  findingsSummary: (
+    findingCount: number,
+    affectedPageCount: number,
+    severities: string,
+    categories: string,
+  ) => string;
   impactBridge: (categories: readonly OutreachCategory[]) => string;
   linkLead: string;
   closing: string;
@@ -36,9 +49,11 @@ interface EmailTemplate {
   reminderIntro: (of: string) => string;
   reminderQuestion: string;
   reminderCommercial: string;
+  reminderAction: string;
   finalIntro: (of: string) => string;
   finalLawLead: string;
   finalCommercial: string;
+  finalAction: string;
   finalExit: string;
 }
 
@@ -52,85 +67,99 @@ function joinWith(conjunction: string): (items: readonly string[]) => string {
 const FR: EmailTemplate = {
   of: frenchOfHotel,
   fallbackOf: 'de votre établissement',
-  subjectAudit: (of) => `Audit du site ${of}`,
   subjectAnalysis: (of) => `Analyse du site ${of}`,
-  fallbackAudit: 'Audit de votre site',
   fallbackAnalysis: 'Analyse de votre site',
-  relation: {
-    accessibility: (count) => `${count === 1 ? 'lié' : 'liés'} à l'accessibilité`,
-    seo: (count) =>
-      `${count === 1 ? 'lié' : 'liés'} au référencement dans les moteurs de recherche`,
-    performance: (count) => `${count === 1 ? 'lié' : 'liés'} aux performances du site`,
-    geo: (count) => `${count === 1 ? 'lié' : 'liés'} à la visibilité dans les assistants d'IA`,
-    rendering: (count) =>
-      `${count === 1 ? 'lié' : 'liés'} à l'affichage de votre contenu pour les moteurs de recherche`,
-    privacy: (count) => `${count === 1 ? 'lié' : 'liés'} à la confidentialité et à la sécurité`,
-  },
   joinList: joinWith('et'),
-  opening: (of) =>
-    `Nous avons récemment effectué un audit du site web ${of} et souhaitions vous faire part de ce que notre analyse a révélé.`,
-  findingsLead: 'Cette analyse a mis en évidence plusieurs problèmes importants, notamment',
-  criticalFinding: (count) => `${count} ${count === 1 ? 'constat critique' : 'constats critiques'}`,
+  categoryLabel: {
+    accessibility: "l'accessibilité",
+    seo: 'le référencement dans les moteurs de recherche',
+    performance: 'les performances du site',
+    geo: "la visibilité dans les assistants d'IA",
+    rendering: "l'affichage de votre contenu pour les moteurs de recherche",
+    privacy: 'la confidentialité et la sécurité',
+  },
+  severityLabel: {
+    critical: (count) => `${count} ${count === 1 ? 'critique' : 'critiques'}`,
+    serious: (count) => `${count} sérieux`,
+    moderate: (count) => `${count} ${count === 1 ? 'modéré' : 'modérés'}`,
+    minor: (count) => `${count} ${count === 1 ? 'mineur' : 'mineurs'}`,
+  },
+  opening: (of) => `Nous avons récemment analysé le site web ${of}.`,
+  findingsSummary: (findingCount, affectedPageCount, severities, categories) =>
+    `Notre analyse a relevé ${findingCount} ${findingCount === 1 ? 'constat distinct' : 'constats distincts'} ` +
+    `sur ${affectedPageCount} ${affectedPageCount === 1 ? 'page' : 'pages'} de votre site` +
+    `${severities === '' ? '' : `, dont ${severities}`}. ` +
+    `Les principaux problèmes concernent notamment ${categories}.`,
   impactBridge: (categories) =>
     categories.includes('accessibility')
       ? "Ces constats ont un impact direct sur l’expérience de vos clients et peuvent également relever du cadre légal applicable en matière d’accessibilité."
-      : 'Ces constats touchent directement l’expérience de vos clients, la visibilité de votre site ou sa fiabilité technique.',
+      : 'Ces constats ont un impact direct sur l’expérience de vos clients.',
   linkLead: `Vous trouverez un résumé de notre analyse ici${NBSP}:`,
   closing:
-    "L'audit complet de votre site est disponible à l'achat dès à présent. Pour chacun de ces constats, il indique la page concernée et la correction à apporter.",
-  question: `Souhaitez-vous recevoir le détail de ces constats${NBSP}?`,
+    "L’audit complet de votre site est disponible à l’achat. Il détaille les constats relevés, les pages concernées et les corrections à apporter.",
+  question: `Souhaitez-vous que je vous transmette les modalités de l’audit complet${NBSP}?`,
   reminderIntro: (of) =>
-    `Je me permets de revenir vers vous au sujet de mon précédent message concernant l'audit du site ${of}.`,
-  reminderQuestion: `Avez-vous eu l'occasion de consulter l'aperçu${NBSP}?`,
+    `Je me permets de revenir vers vous au sujet de mon précédent message concernant l’analyse du site ${of}.`,
+  reminderQuestion: `Avez-vous eu l’occasion de consulter l’aperçu${NBSP}?`,
   reminderCommercial:
-    "Si vous souhaitez aller plus loin, l'audit complet de votre site est disponible à l'achat. Il détaille chacun des constats relevés, les pages concernées et les corrections à apporter.",
+    "Si vous souhaitez agir sur ces constats, l’audit complet de votre site est disponible à l’achat. Il indique, pour chacun, les pages concernées et les corrections à apporter.",
+  reminderAction: `Souhaitez-vous que je vous transmette les modalités${NBSP}?`,
   finalIntro: (of) =>
-    `Je me permets de vous écrire une dernière fois au sujet de l'audit du site ${of}.`,
+    `Je me permets de vous écrire une dernière fois au sujet de l’analyse du site ${of}.`,
   finalLawLead:
-    "Avant de clore ce sujet, je souhaitais attirer votre attention sur le cadre réglementaire de l'accessibilité numérique, au regard des constats relevés lors de notre analyse.",
+    "Avant de clore ce sujet, un dernier point mérite votre attention : le cadre réglementaire de l’accessibilité numérique peut être pertinent au regard des constats relevés lors de notre analyse.",
   finalCommercial:
-    "L'aperçu de notre analyse reste disponible dans mon premier message et l'audit complet est disponible à l'achat si vous souhaitez consulter le détail des constats, les pages concernées et les corrections à apporter.",
+    "Indépendamment de cette question juridique, l’aperçu de notre analyse reste disponible dans mon premier message. Si vous souhaitez disposer du détail technique, l’audit complet est disponible à l’achat et indique les pages concernées et les corrections à apporter.",
+  finalAction: `Il vous suffit de répondre à ce message si vous souhaitez l’obtenir.`,
   finalExit: 'Sans retour de votre part, je ne vous relancerai pas davantage.',
 };
 
 const EN: EmailTemplate = {
   of: (hotelName) => `of ${hotelName}`,
   fallbackOf: 'of your property',
-  subjectAudit: (of) => `Website audit ${of}`,
   subjectAnalysis: (of) => `Website analysis ${of}`,
-  fallbackAudit: 'Website audit',
   fallbackAnalysis: 'Website analysis',
-  relation: {
-    accessibility: () => 'related to accessibility',
-    seo: () => 'related to search-engine visibility',
-    performance: () => 'related to website performance',
-    geo: () => 'related to visibility in AI assistants',
-    rendering: () => 'related to how your content displays to search engines',
-    privacy: () => 'related to privacy and security',
-  },
   joinList: joinWith('and'),
-  opening: (of) =>
-    `We recently carried out an audit of the website ${of} and wanted to share what our analysis found.`,
-  findingsLead: 'This analysis highlighted several important issues, including',
-  criticalFinding: (count) => `${count} ${count === 1 ? 'critical finding' : 'critical findings'}`,
+  categoryLabel: {
+    accessibility: 'accessibility',
+    seo: 'search-engine visibility',
+    performance: 'website performance',
+    geo: 'visibility in AI assistants',
+    rendering: 'how your content displays to search engines',
+    privacy: 'privacy and security',
+  },
+  severityLabel: {
+    critical: (count) => `${count} critical`,
+    serious: (count) => `${count} serious`,
+    moderate: (count) => `${count} moderate`,
+    minor: (count) => `${count} minor`,
+  },
+  opening: (of) => `We recently analyzed the website ${of}.`,
+  findingsSummary: (findingCount, affectedPageCount, severities, categories) =>
+    `Our analysis identified ${findingCount} distinct ${findingCount === 1 ? 'finding' : 'findings'} ` +
+    `across ${affectedPageCount} ${affectedPageCount === 1 ? 'page' : 'pages'} of your website` +
+    `${severities === '' ? '' : `, including ${severities}`}. ` +
+    `The main issues include ${categories}.`,
   impactBridge: (categories) =>
     categories.includes('accessibility')
       ? "These findings have a direct impact on your customers' experience and may also fall within the applicable legal framework for accessibility."
-      : "These findings directly affect your customers' experience, your website's visibility or its technical reliability.",
+      : "These findings have a direct impact on your customers' experience.",
   linkLead: 'You will find a summary of our analysis here:',
   closing:
-    'The full audit is available for purchase now. For each of these findings, it shows the page concerned and the correction to apply.',
-  question: 'Would you like to receive the details of these findings?',
+    'The full audit of your website is available for purchase. It details the findings identified, the pages concerned and the corrections to apply.',
+  question: 'Would you like me to send you the details for the full audit?',
   reminderIntro: (of) =>
-    `I am following up on my previous message about the audit of the website ${of}.`,
+    `I am following up on my previous message about the analysis of the website ${of}.`,
   reminderQuestion: 'Have you had a chance to review the preview?',
   reminderCommercial:
-    'If you would like to go further, the full audit is available for purchase. It details each finding, the pages concerned and the corrections to apply.',
-  finalIntro: (of) => `I am writing one last time about the audit of the website ${of}.`,
+    'If you would like to act on these findings, the full audit of your website is available for purchase. For each finding, it identifies the pages concerned and the corrections to apply.',
+  reminderAction: 'Would you like me to send you the details?',
+  finalIntro: (of) => `I am writing one last time about the analysis of the website ${of}.`,
   finalLawLead:
-    'Before closing the subject, I wanted to draw your attention to the regulatory framework for digital accessibility in light of the findings from our analysis.',
+    'Before closing the subject, one final point deserves your attention: the regulatory framework for digital accessibility may be relevant in light of the findings from our analysis.',
   finalCommercial:
-    'The preview of our analysis remains available in my first message, and the full audit is available for purchase if you would like to review the findings, the pages concerned and the corrections to apply.',
+    'Independently of that legal question, the preview of our analysis remains available in my first message. If you would like the technical detail, the full audit is available for purchase and identifies the pages concerned and the corrections to apply.',
+  finalAction: 'Simply reply to this message if you would like to receive it.',
   finalExit: 'If I do not hear back from you, I will not follow up again.',
 };
 
@@ -173,52 +202,44 @@ export function composeOutreachSubject(options: {
 }): string {
   const template = templateFor(options.language);
   const name = options.hotelName?.trim() ?? '';
-  const variant = stableBit(name || 'fallback');
   const subject =
-    name === ''
-      ? variant === 0
-        ? template.fallbackAudit
-        : template.fallbackAnalysis
-      : variant === 0
-        ? template.subjectAudit(template.of(name))
-        : template.subjectAnalysis(template.of(name));
-  if (subject.length <= OUTREACH_SUBJECT_MAX_CHARS) return subject;
-  return variant === 0 ? template.fallbackAudit : template.fallbackAnalysis;
+    name === '' ? template.fallbackAnalysis : template.subjectAnalysis(template.of(name));
+  return subject.length <= OUTREACH_SUBJECT_MAX_CHARS ? subject : template.fallbackAnalysis;
 }
 
-function criticalCounts(
-  categories: readonly OutreachCategory[],
-): Array<[OutreachCategory, number]> {
-  const counts = new Map<OutreachCategory, number>();
-  for (const category of categories) counts.set(category, (counts.get(category) ?? 0) + 1);
-  return CATEGORY_ORDER.flatMap((category) => {
-    const count = counts.get(category) ?? 0;
-    return count > 0 ? [[category, count] as [OutreachCategory, number]] : [];
-  }).slice(0, 3);
+function uniqueProofCategories(categories: readonly OutreachCategory[]): OutreachCategory[] {
+  return categories.filter((category, index) => categories.indexOf(category) === index).slice(0, 3);
+}
+
+function severitySummary(template: EmailTemplate, summary: OutreachScanSummary): string {
+  const items = SEVERITY_ORDER.flatMap((severity) => {
+    const count = summary.severityTotals[severity];
+    return count > 0 ? [template.severityLabel[severity](count)] : [];
+  }).slice(0, 2);
+  return template.joinList(items);
 }
 
 export function composeTouchOneBody(options: {
   language: ReportLanguage;
   hotelName: string | undefined;
-  categories: readonly OutreachCategory[];
+  scanSummary: OutreachScanSummary;
   variants: OutreachVariantPick;
   previewLink: DraftLink;
 }): DraftBodyBlock[] {
   const template = templateFor(options.language);
   const of = hotelOf(template, options.hotelName);
-  const counts = criticalCounts(options.categories);
-  const list = template.joinList(
-    counts.map(([category, count], index) => {
-      const relation = template.relation[category](count);
-      return index === 0
-        ? `${template.criticalFinding(count)} ${relation}`
-        : `${count} ${relation}`;
-    }),
+  const categories = uniqueProofCategories(options.scanSummary.proofCardCategories);
+  const categoryList = template.joinList(categories.map((category) => template.categoryLabel[category]));
+  const findings = template.findingsSummary(
+    options.scanSummary.distinctFindingCount,
+    options.scanSummary.affectedPageCount,
+    severitySummary(template, options.scanSummary),
+    categoryList,
   );
   return [
     { kind: 'paragraph', text: template.opening(of) },
-    { kind: 'paragraph', text: `${template.findingsLead} ${list}.` },
-    { kind: 'paragraph', text: template.impactBridge(options.categories) },
+    { kind: 'paragraph', text: findings },
+    { kind: 'paragraph', text: template.impactBridge(categories) },
     { kind: 'link', lead: template.linkLead, link: options.previewLink },
     { kind: 'paragraph', text: template.closing },
     { kind: 'paragraph', text: template.question },
@@ -236,6 +257,7 @@ export function composeTouchTwoBody(options: {
     { kind: 'paragraph', text: template.reminderIntro(of) },
     { kind: 'paragraph', text: template.reminderQuestion },
     { kind: 'paragraph', text: template.reminderCommercial },
+    { kind: 'paragraph', text: template.reminderAction },
   ];
 }
 
@@ -247,6 +269,6 @@ export function composeTouchThreeFrame(options: {
   const of = hotelOf(template, options.hotelName);
   return {
     intro: [template.finalIntro(of), template.finalLawLead],
-    closing: [template.finalCommercial, template.finalExit],
+    closing: [template.finalCommercial, template.finalAction, template.finalExit],
   };
 }
