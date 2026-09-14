@@ -63,7 +63,13 @@ import {
 } from '../outreach/publish-preview-v2.js';
 import { CURRENT_QUALIFICATION_VERSION } from '../prospecting/hotel-qualification/qualify-hotels.js';
 import type { Router } from '../router.js';
-import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
+import {
+  isPlausibleId,
+  jsonBodyNotRead,
+  readJsonBodyOrRespond,
+  sendError,
+  sendJson,
+} from '../http-utils.js';
 import { lookupOperatorProfile } from '../sirene/sirene-cache.js';
 import { pdfDigestOf } from '../pipeline/pdf-digest.js';
 import { findingsAreStale, makeReportReady } from '../pipeline/make-report-ready.js';
@@ -728,8 +734,8 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     const body = await readJsonBodyOrRespond(req, res);
     if (body === undefined) return;
     const candidateId = (body as { candidateId?: unknown }).candidateId;
-    if (typeof candidateId !== 'string' || candidateId.trim() === '') {
-      sendError(res, 400, 'candidateId must be a non-empty string');
+    if (!isPlausibleId(candidateId)) {
+      sendError(res, 400, 'candidateId must be a non-empty string without control characters');
       return;
     }
 

@@ -8,7 +8,7 @@ import {
 } from '@odysseus/store';
 import { buildArtifactBucketKey, getPrescansRoot } from '@odysseus/scanner';
 import type { Router } from '../router.js';
-import { sendError, sendJson } from '../http-utils.js';
+import { isPlausibleId, sendError, sendJson } from '../http-utils.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { resolveArtifactFile } from '../artifacts/resolve-artifact.js';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
@@ -37,12 +37,7 @@ const EVIDENCE_ASSET_SLOTS: Record<string, 'renderComparison' | 'specificFailure
  *  characters, the same early shape check scans.ts applies to globs. Whether
  *  the token names a real record is the store's answer, reported as 404. */
 function isPlausibleToken(value: unknown): value is string {
-  return (
-    typeof value === 'string' &&
-    value.length > 0 &&
-    value.length <= 128 &&
-    !/[\s\x00-\x1f]/.test(value)
-  );
+  return isPlausibleId(value, 128) && !/\s/.test(value);
 }
 
 function requireCandidateId(params: Record<string, string>): string | null {

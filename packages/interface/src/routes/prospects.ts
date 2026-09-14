@@ -50,7 +50,13 @@ import { scoreHotelOnDemandForConnection } from '../prospecting/hotel-scoring/sc
 import { qualifyHotelOnDemand } from '../prospecting/hotel-qualification/qualify-on-demand.js';
 import type { JobQueue } from '../queue/job-queue.js';
 import type { Router } from '../router.js';
-import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
+import {
+  isPlausibleId,
+  jsonBodyNotRead,
+  readJsonBodyOrRespond,
+  sendError,
+  sendJson,
+} from '../http-utils.js';
 import { logJobCreated } from '../request-context.js';
 
 /** How many qualification generations one detail response carries. The
@@ -236,14 +242,7 @@ function parseListQuery(query: URLSearchParams): ListOperatorProspectsOptions {
 /** Boundary shape check only (the scans.ts rule): a candidate id is a
  *  bounded string of printable characters. Existence stays the store's
  *  answer, surfaced as 404. */
-function isPlausibleCandidateId(value: unknown): value is string {
-  return (
-    typeof value === 'string' &&
-    value.length > 0 &&
-    value.length <= 200 &&
-    !/[\x00-\x1f\x7f]/.test(value)
-  );
-}
+const isPlausibleCandidateId = isPlausibleId;
 
 /** The dashboard is a single-operator private console (127.0.0.1 only), so
  *  the actor recorded on every review decision is the console itself; the

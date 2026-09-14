@@ -850,6 +850,18 @@ describe('POST /api/audits/:auditId/hotel-link (issue #216)', () => {
     expect(linkAuditToHotelManually).not.toHaveBeenCalled();
   });
 
+  it('rejects a candidateId containing control characters', async () => {
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1/hotel-link', { candidateId: 'cand-1\u0000suffix' });
+    req.method = 'POST';
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(400);
+    expect(linkAuditToHotelManually).not.toHaveBeenCalled();
+  });
+
   it('links and returns the candidate on success', async () => {
     vi.mocked(linkAuditToHotelManually).mockResolvedValue({
       outcome: 'linked',
