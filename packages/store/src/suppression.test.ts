@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import { addSuppressionEntry, isSuppressed } from './suppression.js';
+import { addSuppressionEntry, findSuppressedDomains, isSuppressed } from './suppression.js';
 import { createSuppressionModel } from './schemas/suppression.schema.js';
 import { createProspectModel } from './schemas/prospect.schema.js';
 import { probeMongoAvailability } from './test-support.js';
@@ -23,6 +23,21 @@ describe.skipIf(!mongoAvailable)('suppression', () => {
     });
     expect(await isSuppressed(connection!, 'opt-out.fr')).toBe(true);
     expect(await isSuppressed(connection!, 'OPT-OUT.FR')).toBe(true);
+  });
+
+  it("finds only suppressed domains in a batch and preserves the caller's formatting", async () => {
+    await addSuppressionEntry(connection!, {
+      domain: 'https://www.Batch-Opt-Out.fr/',
+      reasonCode: 'operator-request',
+      reason: 'batch removal',
+    });
+
+    const suppressed = await findSuppressedDomains(connection!, [
+      'BATCH-OPT-OUT.FR',
+      'not-suppressed.fr',
+    ]);
+
+    expect(suppressed).toEqual(new Set(['BATCH-OPT-OUT.FR']));
   });
 
   it('suppresses by address independently of domain', async () => {
