@@ -10,6 +10,9 @@ vi.mock('@odysseus/store', () => ({
   getAuditRuntimeFields: vi.fn(),
   getFindingsForAudit: vi.fn(),
   getHotelCandidate: vi.fn(),
+  linkAuditToHotelManually: vi.fn(),
+  unlinkAuditHotel: vi.fn(),
+  findLatestLiveV2PreviewForCandidate: vi.fn(),
   getSeverityRollup: vi.fn(),
   getLatestReport: vi.fn(),
   getLatestReportApproval: vi.fn(),
@@ -53,6 +56,9 @@ import {
   getAuditRuntimeFields,
   getFindingsForAudit,
   getHotelCandidate,
+  linkAuditToHotelManually,
+  unlinkAuditHotel,
+  findLatestLiveV2PreviewForCandidate,
   getLatestReport,
   getLatestReportApproval,
   approvalMatchesReportPair,
@@ -476,8 +482,35 @@ describe('GET /api/audits/:auditId', () => {
     await router.handle(req, res);
 
     const body = JSON.parse(res.body ?? '{}');
-    expect(body.hotel).toEqual({ candidateId: 'cand-1', name: 'HOTEL EXAMPLE' });
+    expect(body.hotel).toEqual({
+      candidateId: 'cand-1',
+      matchedOn: 'own-registrable-domain',
+      name: 'HOTEL EXAMPLE',
+    });
     expect(getHotelCandidate).toHaveBeenCalledWith(fakeConnection, 'cand-1');
+  });
+
+  it('marks canLinkHotelManually true only when no outreach provenance is stamped', async () => {
+    vi.mocked(getAudit).mockResolvedValue({
+      auditId: 'audit-1',
+      siteUrl: 'https://example.com/',
+      startedAt: new Date('2026-08-08T10:00:00.000Z'),
+      finishedAt: new Date('2026-08-08T10:05:00.000Z'),
+      findingsProvenance,
+      crawl: { visitedCount: 5 },
+      pages: [],
+      outreach: { candidateId: 'cand-1' },
+    } as never);
+    vi.mocked(findLatestLiveV2PreviewForCandidate).mockResolvedValue(null);
+
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1');
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    const body = JSON.parse(res.body ?? '{}');
+    expect(body.canLinkHotelManually).toBe(false);
   });
 
   it('marks matching reports fresh and mismatched reports stale', async () => {
@@ -801,6 +834,108 @@ describe('GET /api/audits/:auditId', () => {
     expect(typeof buttonCopy.titleFr).toBe('string');
     expect(typeof buttonCopy.remediationFr).toBe('string');
     expect(typeof buttonCopy.remediationEn).toBe('string');
+  });
+});
+
+describe('POST /api/audits/:auditId/hotel-link (issue #216)', () => {
+  it('rejects a missing or empty candidateId with 400 without calling the store', async () => {
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1/hotel-link', { candidateId: '  ' });
+    req.method = 'POST';
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(400);
+    expect(linkAuditToHotelManually).not.toHaveBeenCalled();
+  });
+
+  it('links and returns the candidate on success', async () => {
+    vi.mocked(linkAuditToHotelManually).mockResolvedValue({
+      outcome: 'linked',
+      candidate: { candidateId: 'cand-1', name: 'HOTEL EXAMPLE' },
+    } as never);
+
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1/hotel-link', { candidateId: 'cand-1' });
+    req.method = 'POST';
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(linkAuditToHotelManually).toHaveBeenCalledWith(fakeConnection, 'audit-1', 'cand-1');
+    const body = JSON.parse(res.body ?? '{}');
+    expect(body.hotel).toEqual({ candidateId: 'cand-1', name: 'HOTEL EXAMPLE' });
+  });
+
+  it('answers 409 when the audit already carries outreach provenance', async () => {
+    vi.mocked(linkAuditToHotelManually).mockResolvedValue({
+      outcome: 'refused',
+      reason: 'outreach-provenanced',
+    });
+
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1/hotel-link', { candidateId: 'cand-1' });
+    req.method = 'POST';
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(409);
+  });
+
+  it('answers 404 for an unknown audit or an unknown candidate', async () => {
+    vi.mocked(linkAuditToHotelManually).mockResolvedValueOnce({
+      outcome: 'refused',
+      reason: 'audit-not-found',
+    });
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    let req = fakeReq('/api/audits/audit-1/hotel-link', { candidateId: 'cand-1' });
+    req.method = 'POST';
+    let res = fakeRes();
+    await router.handle(req, res);
+    expect(res.statusCode).toBe(404);
+
+    vi.mocked(linkAuditToHotelManually).mockResolvedValueOnce({
+      outcome: 'refused',
+      reason: 'candidate-not-found',
+    });
+    req = fakeReq('/api/audits/audit-1/hotel-link', { candidateId: 'cand-1' });
+    req.method = 'POST';
+    res = fakeRes();
+    await router.handle(req, res);
+    expect(res.statusCode).toBe(404);
+  });
+});
+
+describe('DELETE /api/audits/:auditId/hotel-link (issue #216)', () => {
+  it('clears the link and returns 200 when one existed', async () => {
+    vi.mocked(unlinkAuditHotel).mockResolvedValue(true);
+
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1/hotel-link');
+    req.method = 'DELETE';
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(unlinkAuditHotel).toHaveBeenCalledWith(fakeConnection, 'audit-1');
+  });
+
+  it('answers 404 when the audit does not exist', async () => {
+    vi.mocked(unlinkAuditHotel).mockResolvedValue(false);
+
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1/hotel-link');
+    req.method = 'DELETE';
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(404);
   });
 });
 

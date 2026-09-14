@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX, KeyboardEvent } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { ChevronRight } from 'lucide-react';
 import { PAGE_WIDTH, PageHeader } from '../components/page-header';
@@ -10,9 +10,11 @@ import { Card } from '../components/ui/card';
 import { EmptyState } from '../components/ui/empty-state';
 import { Skeleton } from '../components/ui/skeleton';
 import { useI18n } from '../i18n/provider';
+import type { DashboardStrings } from '../i18n/types';
 import { formatDateTime } from '../lib/format';
 import { vocabularyLabel } from '../lib/vocabulary';
-import { ApiError, fetchJson, postEmpty, sendJson } from '../lib/api';
+import { ApiError, fetchJsonValidated, postEmpty, sendJson } from '../lib/api';
+import { auditDetailSchema, prospectHubSnapshotSchema } from '../lib/api-schemas';
 import { usePolling } from '../lib/use-polling';
 import {
   HUB_STEP_ANCHORS,
@@ -20,6 +22,7 @@ import {
   auditChoices,
   hubPrimaryAction,
   hubTabs,
+  parseHubStepKey,
   pipelineSteps,
   selectedAuditId,
   selectionVerdictSentence,
@@ -34,8 +37,10 @@ import {
 import { AuditReportPanel } from './audit-report-panel';
 import type { AuditDetailResponse } from './audit-detail-types';
 import { reviewBadgeTone } from './prospects-model';
+import { prospectPollIntervalMs } from './prospects-model';
 import type {
   OutreachDraftActionResponse,
+  ProspectActiveJob,
   ProspectDetailResponse,
   ProspectReviewRequest,
   ProspectReviewResponse,
@@ -71,7 +76,8 @@ function HubReportTab(props: { auditId: string | null }): JSX.Element | null {
   const path = auditId === null ? null : `/api/audits/${encodeURIComponent(auditId)}`;
   const fetcher = useCallback(
     async (signal: AbortSignal): Promise<AuditDetailResponse> => {
-      return fetchJson<AuditDetailResponse>(path ?? '', { signal });
+      const validated = await fetchJsonValidated(path ?? '', auditDetailSchema, { signal });
+      return validated as unknown as AuditDetailResponse;
     },
     [path],
   );
@@ -122,8 +128,14 @@ interface ProspectDetailState {
  *  polling layer flattens every failure to a message string and drops
  *  ApiError.status, so the fetcher records a 404 itself; and the poll
  *  interval follows the IA's detail-page policy, five seconds only while
- *  an outreach scan this hotel started is in flight, otherwise once (and
- *  again after each action). */
+ *  any job currently owns part of this prospect's workflow, otherwise
+ *  once (and again after each action).
+ *
+ *  Issue #220: outreachScanJobId alone used to be the only polling
+ *  trigger, so a running Quick check or paid Full audit never refreshed
+ *  the hub on its own. activeJobs is the general signal; outreachScanJobId
+ *  stays in the check too for a payload from a build that predates it
+ *  (activeJobs is optional on the response type for exactly that reason). */
 function useProspectDetail(candidateId: string | undefined): ProspectDetailState {
   const path =
     candidateId === undefined ? null : `/api/prospects/${encodeURIComponent(candidateId)}`;
@@ -137,7 +149,10 @@ function useProspectDetail(candidateId: string | undefined): ProspectDetailState
   const fetcher = useCallback(
     async (signal: AbortSignal): Promise<ProspectDetailResponse> => {
       try {
-        return await fetchJson<ProspectDetailResponse>(path ?? '', { signal });
+        const validated = await fetchJsonValidated(path ?? '', prospectHubSnapshotSchema, {
+          signal,
+        });
+        return validated as unknown as ProspectDetailResponse;
       } catch (cause: unknown) {
         if (cause instanceof ApiError && cause.status === 404) {
           setIsNotFound(true);
@@ -153,13 +168,28 @@ function useProspectDetail(candidateId: string | undefined): ProspectDetailState
     key: path ?? 'none',
   });
 
-  const runningJobId = polling.data?.outreachScanJobId;
+  const nextIntervalMs = prospectPollIntervalMs(polling.data);
   useEffect(() => {
-    const next = runningJobId != null ? 5_000 : 0;
-    setIntervalMs((current) => (current === next ? current : next));
-  }, [runningJobId]);
+    setIntervalMs((current) => (current === nextIntervalMs ? current : nextIntervalMs));
+  }, [nextIntervalMs]);
 
   return { ...polling, isNotFound };
+}
+
+const ACTIVE_JOB_LABEL_KEY: Record<
+  ProspectActiveJob['kind'],
+  keyof DashboardStrings['common']['typeLabels']
+> = {
+  'quick-check': 'hotelPrescan',
+  'light-audit': 'prospecting',
+  'prospecting-audit': 'outreachFullScan',
+  'full-audit': 'fullAudit',
+};
+
+function activeJobKindToLabelKey(
+  kind: ProspectActiveJob['kind'],
+): keyof DashboardStrings['common']['typeLabels'] {
+  return ACTIVE_JOB_LABEL_KEY[kind];
 }
 
 function scrollToAnchor(anchor: string): void {
@@ -247,7 +277,11 @@ function PipelineStrip(props: {
                           ? 'font-medium text-accent-bright'
                           : step.state === 'blocked'
                             ? 'font-medium text-danger'
-                            : 'text-ink-muted'
+                            : step.state === 'stale'
+                              ? 'font-medium text-sev-serious'
+                              : step.state === 'refreshing'
+                                ? 'font-medium text-accent-bright'
+                                : 'text-ink-muted'
                     }
                   >
                     {strings.hub.stepStates[step.state]}
@@ -271,40 +305,129 @@ export function ProspectDetailPage(): JSX.Element {
 
   const [scanStarting, setScanStarting] = useState(false);
   const [prescanStarting, setPrescanStarting] = useState(false);
+  const [refreshBusy, setRefreshBusy] = useState(false);
   const [isOutreachBusy, setIsOutreachBusy] = useState(false);
   /** The one-time link of a publish made on this visit (a manual Aperçu
    *  publish, or the fresh preview a first-email call just made). Held only
-   *  in page memory: Odysseus never stores the raw token. */
+   *  in page memory: Odysseus never stores the raw token, so it never
+   *  belongs in the URL either - a tab/audit navigation below leaves it
+   *  untouched. */
   const [publishedLink, setPublishedLink] = useState<string | null>(null);
-  /** The active hub tab (plan 042 decision 3): component state, one URL.
-   *  It lives in the page, above every section component, so a tab switch
-   *  never remounts the page. */
-  const [activeTab, setActiveTab] = useState<HubStepKey>('fiche');
-  /** Which audit the Audit and Rapport client tabs render (default: the
-   *  newest). View state only; nothing stored. */
-  const [pickedAuditId, setPickedAuditId] = useState<string | null>(null);
   /** Plan 043: the open wave-roster dialog, if any. The mutation itself is
    *  shared with the prospects list via wave-dialog.tsx. */
   const [waveDialog, setWaveDialog] = useState<'add' | 'remove' | null>(null);
 
+  // Issue #221: the active hub tab and the picked audit are addressable
+  // query state (?tab=...&audit=...), not component state - so a copied
+  // URL reopens the same stage and artifact, and browser back/forward
+  // walks prior hub stages. Neither param is ever validated against the
+  // real tabs/choices here (that needs the loaded detail); the effects
+  // below correct an unreachable or foreign value once data has loaded.
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const setActiveTab = useCallback(
+    (key: HubStepKey, options?: { replace?: boolean }): void => {
+      setSearchParams(
+        (previous) => {
+          const next = new URLSearchParams(previous);
+          next.set('tab', key);
+          return next;
+        },
+        { replace: options?.replace ?? false },
+      );
+    },
+    [setSearchParams],
+  );
+
+  const setPickedAuditId = useCallback(
+    (nextAuditId: string | null): void => {
+      setSearchParams(
+        (previous) => {
+          const next = new URLSearchParams(previous);
+          if (nextAuditId === null) next.delete('audit');
+          else next.set('audit', nextAuditId);
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
   // Plan 040 slice 7: the a-traiter rows and the audit page's preview note
   // deep-link into a hub section (/prospects/:id#hub-emails and friends).
   // The sections only exist once the detail has loaded, so the scroll is
-  // deferred until then and replays when the hash itself changes. Since
-  // plan 042 the anchor first names a tab: the panel is mounted by the tab
-  // switch, and the scroll happens on the next tick so the panel exists.
-  // Plan 045 stage 3.2: the Rapport client tab is visible whenever a full
-  // audit exists (hubTabs below), so a 'report' deep link can switch to it
-  // like any other tab.
+  // deferred until then. Since plan 042 the anchor first names a tab: the
+  // panel is mounted by the tab switch, and the scroll happens once the
+  // panel exists. Plan 045 stage 3.2: the Rapport client tab is visible
+  // whenever a full audit exists (hubTabs below), so a 'report' deep link
+  // can switch to it like any other tab.
+  //
+  // Issue #221: this legacy hash scheme still works - it now drives the
+  // same query-param tab state, with replace:true so an incoming hash link
+  // does not itself add a history entry. react-router's setSearchParams
+  // navigates to a bare "?search" target, dropping the hash, so `hash`
+  // itself goes back to '' the instant the tab switch lands - the anchor
+  // is captured once, on mount, into a ref rather than read again later.
   const hasLoaded = data !== undefined;
+  const deepLinkAnchorRef = useRef(hash === '' ? null : hash.slice(1));
   useEffect(() => {
-    if (hash === '' || !hasLoaded) return;
-    const anchor = hash.slice(1);
+    const anchor = deepLinkAnchorRef.current;
+    if (anchor === null || !hasLoaded) return;
     const tabKey = HUB_STEP_KEYS.find((key) => HUB_STEP_ANCHORS[key] === anchor);
-    if (tabKey !== undefined) setActiveTab(tabKey);
+    if (tabKey !== undefined) setActiveTab(tabKey, { replace: true });
+  }, [hasLoaded, setActiveTab]);
+
+  // The scroll itself is a second effect, keyed on searchParams as well:
+  // the tab switch above lands asynchronously, so a scroll scheduled in
+  // the same pass can fire before the tab's panel (and its target id)
+  // exists in the DOM. Re-running once the URL settles means the anchor is
+  // present by the time this effect's own timeout fires; a premature
+  // attempt against a not-yet-mounted id is a silent no-op (scrollToAnchor
+  // optional-chains the lookup).
+  useEffect(() => {
+    const anchor = deepLinkAnchorRef.current;
+    if (anchor === null || !hasLoaded) return;
     const timer = window.setTimeout(() => scrollToAnchor(anchor), 0);
     return () => window.clearTimeout(timer);
-  }, [hash, hasLoaded]);
+  }, [hasLoaded, searchParams]);
+
+  // Issue #221 required behavior: an audit id in the URL that does not
+  // belong to this prospect (foreign, stale, or simply unknown) must not
+  // crash or silently select an unrelated audit. selectedAuditId already
+  // falls back to the newest owned choice; once the detail has loaded, a
+  // requested id the fallback did not honor is corrected in place so the
+  // address bar never keeps pointing at an audit the hub did not actually
+  // select.
+  useEffect(() => {
+    if (data === undefined) return;
+    const requested = searchParams.get('audit');
+    if (requested === null) return;
+    const resolved = selectedAuditId(auditChoices(data), requested);
+    if (resolved === requested) return;
+    setSearchParams(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        if (resolved === null) next.delete('audit');
+        else next.set('audit', resolved);
+        return next;
+      },
+      { replace: true },
+    );
+  }, [data, searchParams, setSearchParams]);
+
+  // Same fallback for the tab itself: the only tab whose visibility depends
+  // on the loaded detail is 'report' (shown only once a full audit exists).
+  // A stale/unrecognised tab value already renders as the default 'fiche'
+  // below without needing a rewrite; only the loaded-but-unreachable case
+  // needs the URL corrected.
+  useEffect(() => {
+    if (data === undefined) return;
+    const requestedTab = parseHubStepKey(searchParams.get('tab'));
+    if (requestedTab !== 'report') return;
+    if (auditChoices(data).length > 0) return;
+    setActiveTab('fiche', { replace: true });
+  }, [data, searchParams, setActiveTab]);
 
   const encodedId = candidateId === undefined ? '' : encodeURIComponent(candidateId);
 
@@ -354,6 +477,26 @@ export function ProspectDetailPage(): JSX.Element {
       });
     } finally {
       setPrescanStarting(false);
+    }
+  };
+
+  // Issue #217: the hub's single recovery action for a stale prospect - the
+  // server decides which of qualification/quick-check/score is behind and
+  // reruns only that (route: POST /api/prospects/:id/refresh), so this
+  // click never needs the operator to know which field went stale.
+  const runRefresh = async (): Promise<void> => {
+    if (candidateId === undefined || refreshBusy) return;
+    setRefreshBusy(true);
+    try {
+      await postEmpty<{ refreshed: string[] }>(`/api/prospects/${encodedId}/refresh`);
+      toast.success(strings.hub.quickCheck.refreshQueued);
+      refresh();
+    } catch (caught) {
+      toast.error(strings.hub.quickCheck.refreshFailed, {
+        description: caught instanceof Error ? caught.message : undefined,
+      });
+    } finally {
+      setRefreshBusy(false);
     }
   };
 
@@ -572,8 +715,13 @@ export function ProspectDetailPage(): JSX.Element {
   const action = hubPrimaryAction(data);
   const steps = pipelineSteps(data, now);
   const choices = auditChoices(data);
-  const auditId = selectedAuditId(choices, pickedAuditId);
+  const auditId = selectedAuditId(choices, searchParams.get('audit'));
   const tabs = hubTabs(steps, auditId !== null);
+  const requestedTab = parseHubStepKey(searchParams.get('tab'));
+  const activeTab =
+    requestedTab !== null && tabs.some((step) => step.key === requestedTab)
+      ? requestedTab
+      : 'fiche';
 
   const sectionFor = (key: HubStepKey): JSX.Element | null => {
     switch (key) {
@@ -595,6 +743,10 @@ export function ProspectDetailPage(): JSX.Element {
               void runQuickCheck();
             }}
             isQuickCheckBusy={prescanStarting}
+            onRefresh={() => {
+              void runRefresh();
+            }}
+            isRefreshBusy={refreshBusy}
           />
         );
       case 'audit':
@@ -755,6 +907,29 @@ export function ProspectDetailPage(): JSX.Element {
           </span>
         }
       />
+
+      {/* Issue #220: every job currently owning part of this prospect's
+          workflow, not only the outreach full scan the Audit tab already
+          shows inline. One line per job so two allowed simultaneous jobs
+          (a Quick check alongside a browser-heavy audit) never hide one
+          another. */}
+      {data.activeJobs !== undefined && data.activeJobs.length > 0 ? (
+        <ul className="mb-4 flex flex-wrap items-center gap-3" role="status">
+          {data.activeJobs.map((job) => (
+            <li key={job.jobId} className="flex items-center gap-2">
+              <Badge tone="accent">
+                {strings.common.typeLabels[activeJobKindToLabelKey(job.kind)]}
+              </Badge>
+              <Link
+                to={`/scans/${encodeURIComponent(job.jobId)}`}
+                className={buttonStyles('secondary', 'sm')}
+              >
+                {strings.hub.primary.seeProgress}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
       {action.kind === 'scan-refused' ? (
         <p

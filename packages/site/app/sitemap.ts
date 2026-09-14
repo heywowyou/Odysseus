@@ -8,7 +8,14 @@
 
 import type { MetadataRoute } from 'next';
 
-const ROUTES = ['', '/offre', '/bot', '/confidentialite-prospection', '/desinscription'] as const;
+const ROUTES = [
+  '',
+  '/offre',
+  '/bot',
+  '/confidentialite-prospection',
+  '/desinscription',
+  '/accessibilite',
+] as const;
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date();

@@ -46,6 +46,7 @@ function detailWithAudits(
 ): ProspectDetailResponse {
   return {
     candidateId: 'cand-1',
+    businessId: null,
     resolutionVersion: 'v1',
     identityKey: 'key-1',
     identityStatus: 'resolved',
@@ -74,6 +75,9 @@ function detailWithAudits(
     sourceRefs: [],
     qualification: null,
     qualificationHistory: { rows: [], total: 0, limit: 10, offset: 0 },
+    qualificationFreshness: { state: 'missing' },
+    prescanFreshness: { state: 'missing' },
+    scoreFreshness: { state: 'missing' },
     prescan: null,
     score: null,
     evidence: null,

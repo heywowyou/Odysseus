@@ -15,10 +15,12 @@ import {
   getAuditRuntimeFields,
   getFindingsForAudit,
   linkAuditToHotelByDomain,
+  linkAuditToHotelManually,
   prefillAuditManualFields,
   replaceDetectedManualFields,
   setAuditGradeOverride,
   setAuditManualFields,
+  unlinkAuditHotel,
 } from './audits.js';
 import { upsertHotelCandidates } from './hotel-candidates.js';
 import { createAuditModel } from './schemas/audit.schema.js';
@@ -346,6 +348,7 @@ describe.skipIf(!mongoAvailable)('linkAuditToHotelByDomain', () => {
       candidateId: candidate.candidateId,
       matchedOn: 'own-registrable-domain',
     });
+    expect(stored?.hotelLink?.businessId).toEqual(expect.any(String));
   });
 
   it('is idempotent: a second call resolves the same candidate without rewriting hotelLink', async () => {
@@ -437,5 +440,134 @@ describe.skipIf(!mongoAvailable)('linkAuditToHotelByDomain', () => {
     );
 
     expect(result.candidate).toBeNull();
+  });
+});
+
+describe.skipIf(!mongoAvailable)('linkAuditToHotelManually / unlinkAuditHotel (issue #216)', () => {
+  const OWN_IDS = /^audits-manual-link-/;
+
+  beforeEach(async () => {
+    if (!connection) return;
+    await createAuditModel(connection).deleteMany({ auditId: OWN_IDS });
+  });
+
+  it('links an audit the automatic domain match never touched, stamping matchedOn: manual', async () => {
+    const candidate = buildHotelCandidate();
+    await upsertHotelCandidates(connection!, [candidate]);
+    await persistAudit(
+      connection!,
+      buildManifest('audits-manual-link-1', 'https://shared-vendor-domain.example/'),
+      [],
+    );
+
+    const result = await linkAuditToHotelManually(
+      connection!,
+      'audits-manual-link-1',
+      candidate.candidateId,
+    );
+
+    expect(result).toMatchObject({
+      outcome: 'linked',
+      candidate: { candidateId: candidate.candidateId },
+    });
+    const stored = await getAudit(connection!, 'audits-manual-link-1');
+    expect(stored?.hotelLink).toMatchObject({
+      candidateId: candidate.candidateId,
+      matchedOn: 'manual',
+    });
+  });
+
+  it('overwrites a prior hotelLink, unlike the automatic match, since this is the correction path', async () => {
+    const wrongCandidate = buildHotelCandidate();
+    const rightCandidate = buildHotelCandidate();
+    await upsertHotelCandidates(connection!, [wrongCandidate, rightCandidate]);
+    await persistAudit(
+      connection!,
+      buildManifest('audits-manual-link-2', 'https://some-domain.example/'),
+      [],
+    );
+    await linkAuditToHotelManually(connection!, 'audits-manual-link-2', wrongCandidate.candidateId);
+
+    const result = await linkAuditToHotelManually(
+      connection!,
+      'audits-manual-link-2',
+      rightCandidate.candidateId,
+    );
+
+    expect(result).toMatchObject({ outcome: 'linked' });
+    const stored = await getAudit(connection!, 'audits-manual-link-2');
+    expect(stored?.hotelLink?.candidateId).toBe(rightCandidate.candidateId);
+  });
+
+  it('refuses an audit already carrying outreach provenance, and never touches it', async () => {
+    const candidate = buildHotelCandidate();
+    await upsertHotelCandidates(connection!, [candidate]);
+    await persistAudit(
+      connection!,
+      buildManifest('audits-manual-link-3', 'https://some-domain.example/'),
+      [],
+    );
+    await createAuditModel(connection!).updateOne(
+      { auditId: 'audits-manual-link-3' },
+      {
+        $set: {
+          outreach: {
+            candidateId: candidate.candidateId,
+            cohortId: 'cohort-1',
+            scoringVersion: 'hotel-outreach-v1',
+            authorizedBy: 'cohort',
+          },
+        },
+      },
+    );
+
+    const result = await linkAuditToHotelManually(
+      connection!,
+      'audits-manual-link-3',
+      candidate.candidateId,
+    );
+
+    expect(result).toEqual({ outcome: 'refused', reason: 'outreach-provenanced' });
+    const stored = await getAudit(connection!, 'audits-manual-link-3');
+    expect(stored?.hotelLink).toBeUndefined();
+  });
+
+  it('refuses an unknown audit or an unknown candidate', async () => {
+    await persistAudit(
+      connection!,
+      buildManifest('audits-manual-link-4', 'https://some-domain.example/'),
+      [],
+    );
+    expect(
+      await linkAuditToHotelManually(connection!, 'audits-manual-link-missing', 'cand-x'),
+    ).toEqual({ outcome: 'refused', reason: 'audit-not-found' });
+    expect(
+      await linkAuditToHotelManually(connection!, 'audits-manual-link-4', 'unknown-candidate'),
+    ).toEqual({ outcome: 'refused', reason: 'candidate-not-found' });
+  });
+
+  it('unlinkAuditHotel clears an existing hotelLink and is recoverable by relinking', async () => {
+    const candidate = buildHotelCandidate();
+    await upsertHotelCandidates(connection!, [candidate]);
+    await persistAudit(
+      connection!,
+      buildManifest('audits-manual-link-5', 'https://some-domain.example/'),
+      [],
+    );
+    await linkAuditToHotelManually(connection!, 'audits-manual-link-5', candidate.candidateId);
+
+    expect(await unlinkAuditHotel(connection!, 'audits-manual-link-5')).toBe(true);
+    expect((await getAudit(connection!, 'audits-manual-link-5'))?.hotelLink).toBeUndefined();
+
+    const relinked = await linkAuditToHotelManually(
+      connection!,
+      'audits-manual-link-5',
+      candidate.candidateId,
+    );
+    expect(relinked).toMatchObject({ outcome: 'linked' });
+  });
+
+  it('unlinkAuditHotel returns false for an unknown audit, and never mutates outreach', async () => {
+    expect(await unlinkAuditHotel(connection!, 'audits-manual-link-missing')).toBe(false);
   });
 });

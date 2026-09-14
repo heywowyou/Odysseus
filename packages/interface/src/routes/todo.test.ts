@@ -28,8 +28,17 @@ import {
   listRepliesNeedingReview,
 } from '@odysseus/store';
 import { findUnconfirmedIdentityFields } from '@odysseus/report';
+import { CURRENT_SCORING_VERSION } from '@odysseus/core';
+import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-hotels.js';
+import { CURRENT_QUALIFICATION_VERSION } from '../prospecting/hotel-qualification/qualify-hotels.js';
 import { Router } from '../router.js';
 import { registerTodoRoutes } from './todo.js';
+
+const PROSPECT_VERSIONS = {
+  qualificationVersion: CURRENT_QUALIFICATION_VERSION,
+  prescanVersion: CURRENT_PRESCAN_VERSION,
+  scoringVersion: CURRENT_SCORING_VERSION,
+};
 
 function fakeGetReq(url: string): IncomingMessage {
   const req = Readable.from([]) as unknown as IncomingMessage;
@@ -169,11 +178,15 @@ describe('GET /api/todo', () => {
         since: null,
       },
     ]);
-    expect(listOperatorProspects).toHaveBeenCalledWith(fakeConnection, {
-      queue: 'join-review',
-      limit: 50,
-      offset: 0,
-    });
+    expect(listOperatorProspects).toHaveBeenCalledWith(
+      fakeConnection,
+      {
+        queue: 'join-review',
+        limit: 50,
+        offset: 0,
+      },
+      PROSPECT_VERSIONS,
+    );
   });
 
   it('skips a needs-input job whose audit has cleared every gate', async () => {

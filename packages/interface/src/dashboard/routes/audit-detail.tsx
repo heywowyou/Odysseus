@@ -19,10 +19,12 @@ import { Skeleton } from '../components/ui/skeleton';
 import { useI18n } from '../i18n/provider';
 import type { DashboardStrings } from '../i18n/types';
 import { cn } from '../lib/cn';
-import { ApiError, fetchJson } from '../lib/api';
+import { ApiError, fetchJsonValidated } from '../lib/api';
+import { auditDetailSchema } from '../lib/api-schemas';
 import { formatDateTime } from '../lib/format';
 import { usePolling } from '../lib/use-polling';
 import { AuditGradeOverridePanel } from './audit-grade-override-panel';
+import { AuditHotelLinkPanel } from './audit-hotel-link-panel';
 import { AuditPreviewNote } from './audit-preview-note';
 import { AuditReportPanel } from './audit-report-panel';
 import {
@@ -60,7 +62,8 @@ function useAuditDetail(auditId: string | undefined, intervalMs: number): AuditD
   const fetcher = useCallback(
     async (signal: AbortSignal): Promise<AuditDetailResponse> => {
       try {
-        return await fetchJson<AuditDetailResponse>(path ?? '', { signal });
+        const validated = await fetchJsonValidated(path ?? '', auditDetailSchema, { signal });
+        return validated as unknown as AuditDetailResponse;
       } catch (cause: unknown) {
         if (cause instanceof ApiError && cause.status === 404) {
           setIsNotFound(true);
@@ -218,6 +221,12 @@ export function AuditDetailPage(): JSX.Element {
               </div>
             </dl>
             <SeverityBar rollup={data.severityRollup} strings={strings} />
+            <AuditHotelLinkPanel
+              auditId={data.auditId}
+              hotel={data.hotel ?? null}
+              canLinkManually={data.canLinkHotelManually ?? false}
+              onChanged={refresh}
+            />
           </div>
         }
         // The report stage is the header's only action-shaped element:

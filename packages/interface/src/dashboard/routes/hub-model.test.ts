@@ -19,6 +19,7 @@ import type { ProspectDetailResponse } from './prospects-model';
 function makeDetail(overrides: Partial<ProspectDetailResponse> = {}): ProspectDetailResponse {
   return {
     candidateId: 'cand-1',
+    businessId: null,
     resolutionVersion: 'v1',
     identityKey: 'key-1',
     identityStatus: 'resolved',
@@ -47,6 +48,9 @@ function makeDetail(overrides: Partial<ProspectDetailResponse> = {}): ProspectDe
     sourceRefs: [],
     qualification: null,
     qualificationHistory: { rows: [], total: 0, limit: 10, offset: 0 },
+    qualificationFreshness: { state: 'missing' },
+    prescanFreshness: { state: 'missing' },
+    scoreFreshness: { state: 'missing' },
     prescan: null,
     score: null,
     evidence: null,
@@ -213,6 +217,42 @@ describe('pipelineSteps', () => {
       NOW,
     );
     expect(recorded[5]).toMatchObject({ key: 'outcome', state: 'done' });
+  });
+
+  it('reads the quick-check step from prescan freshness, not from prescan presence alone (issue #217)', () => {
+    const current = pipelineSteps(
+      makeDetail({
+        prescanFreshness: {
+          state: 'current',
+          version: 'v4',
+          computedAt: '2026-09-11T00:00:00.000Z',
+        },
+      }),
+      NOW,
+    );
+    expect(current[1]).toMatchObject({ key: 'quick-check', state: 'done' });
+
+    const stale = pipelineSteps(
+      makeDetail({
+        prescanFreshness: {
+          state: 'stale',
+          version: 'v3',
+          currentVersion: 'v4',
+          computedAt: '2026-09-10T00:00:00.000Z',
+        },
+      }),
+      NOW,
+    );
+    expect(stale[1]).toMatchObject({ key: 'quick-check', state: 'stale' });
+
+    const refreshing = pipelineSteps(
+      makeDetail({ prescanFreshness: { state: 'refreshing', jobId: 'job-1' } }),
+      NOW,
+    );
+    expect(refreshing[1]).toMatchObject({ key: 'quick-check', state: 'refreshing' });
+
+    const missing = pipelineSteps(makeDetail({ prescanFreshness: { state: 'missing' } }), NOW);
+    expect(missing[1]).toMatchObject({ key: 'quick-check', state: 'todo' });
   });
 });
 
@@ -383,6 +423,48 @@ describe('hubPrimaryAction', () => {
       },
     });
     expect(hubPrimaryAction(staleButAudited)).toEqual({ kind: 'create-first-email' });
+  });
+
+  it('issue #219: prefers the server actions field over the nullable-field fallback when both are present', () => {
+    // outreachAudit/thread alone would infer create-first-email here (audit
+    // exists, no thread yet), but the server actions field says the button
+    // is not actually available (e.g. a follow-up sub-read failed closed) -
+    // the server's own answer must win, since it is the one the write route
+    // itself will honour.
+    const detail = makeDetail({
+      outreachAudit: {
+        auditId: 'audit-1',
+        startedAt: '2026-09-01T10:00:00.000Z',
+        severityRollup: { critical: 0, serious: 0, moderate: 0, minor: 0 },
+      },
+      actions: {
+        refreshProspect: { state: 'complete' },
+        runQuickCheck: { state: 'complete' },
+        runProspectingAudit: { state: 'complete' },
+        runFullAudit: { state: 'complete' },
+        publishPreview: { state: 'complete' },
+        createFirstEmail: { state: 'blocked', reason: 'unknown' },
+        createFollowUp: { state: 'blocked', reason: 'no-thread' },
+        recordOutcome: { state: 'blocked', reason: 'no-thread' },
+      },
+    });
+    expect(hubPrimaryAction(detail)).not.toEqual({ kind: 'create-first-email' });
+  });
+
+  it('issue #219: takes create-first-email from the server actions field even when the older nullable-field rule would not offer it yet', () => {
+    const detail = makeDetail({
+      actions: {
+        refreshProspect: { state: 'complete' },
+        runQuickCheck: { state: 'complete' },
+        runProspectingAudit: { state: 'complete' },
+        runFullAudit: { state: 'complete' },
+        publishPreview: { state: 'available' },
+        createFirstEmail: { state: 'available' },
+        createFollowUp: { state: 'blocked', reason: 'no-thread' },
+        recordOutcome: { state: 'blocked', reason: 'no-thread' },
+      },
+    });
+    expect(hubPrimaryAction(detail)).toEqual({ kind: 'create-first-email' });
   });
 
   it('answers none for a settled pipeline', () => {

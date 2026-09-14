@@ -127,23 +127,30 @@ export interface JobOptionsSnapshot {
   outreachAuthorizedBy?: string;
 }
 
+/** Issue #223: `etaCalculatedAt` names the instant `etaMs` was computed,
+ *  so a client polling less often than pages complete can age the
+ *  displayed countdown down between polls instead of showing the same
+ *  frozen snapshot for the whole interval. Absent whenever etaMs is. */
 export interface JobProgressCrawl {
   visited: number;
   target: number;
   effectiveDelayMs?: number;
   etaMs?: number;
+  etaCalculatedAt?: Date;
 }
 
 export interface JobProgressScan {
   scanned: number;
   target: number;
   etaMs?: number;
+  etaCalculatedAt?: Date;
 }
 
 export interface JobProgressAnalysisStage {
   completed: number;
   target: number;
   etaMs?: number;
+  etaCalculatedAt?: Date;
 }
 
 export interface JobProgressContinuationGuard {
@@ -319,6 +326,7 @@ const jobProgressCrawlSchema = new Schema(
     target: { type: Number, required: true },
     effectiveDelayMs: { type: Number },
     etaMs: { type: Number },
+    etaCalculatedAt: { type: Date },
   },
   { _id: false },
 );
@@ -328,6 +336,7 @@ const jobProgressScanSchema = new Schema(
     scanned: { type: Number, required: true },
     target: { type: Number, required: true },
     etaMs: { type: Number },
+    etaCalculatedAt: { type: Date },
   },
   { _id: false },
 );
@@ -337,6 +346,7 @@ const jobProgressAnalysisStageSchema = new Schema(
     completed: { type: Number, required: true },
     target: { type: Number, required: true },
     etaMs: { type: Number },
+    etaCalculatedAt: { type: Date },
   },
   { _id: false },
 );

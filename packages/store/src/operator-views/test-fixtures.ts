@@ -23,11 +23,23 @@ import { openOutreachThread } from '../outreach-threads.js';
 import { recordOutreachDraft } from '../outreach-drafts.js';
 import { recordOutreachOutcome } from '../outreach-outcomes.js';
 import { recordOutreachPreview } from '../outreach-previews.js';
+import type { ProspectFreshnessVersions } from './freshness.js';
 
 export const RESOLUTION_VERSION = 'rv-operator-views';
-const QUALIFICATION_VERSION = 'qv-1';
+export const QUALIFICATION_VERSION = 'qv-1';
 export const PRESCAN_VERSION = 'v3';
 export const SCORING_VERSION = 'hotel-outreach-v1';
+
+/** The "current version" bundle every seeded fixture is written at, so a
+ *  test that never intends to exercise staleness can pass this straight
+ *  through to getOperatorProspect/listOperatorProspects and see 'current'
+ *  everywhere, the same way seedFullFunnel's records line up with these by
+ *  default. */
+export const CURRENT_VERSIONS: ProspectFreshnessVersions = {
+  qualificationVersion: QUALIFICATION_VERSION,
+  prescanVersion: PRESCAN_VERSION,
+  scoringVersion: SCORING_VERSION,
+};
 const OPENED_AT = new Date('2026-08-20T09:00:00.000Z');
 const SPACING = { touch2AfterDays: 4, touch3AfterDays: 11, replyWindowDays: 14 };
 // A 64 character hex value standing in for a captured evidence asset's sha256.

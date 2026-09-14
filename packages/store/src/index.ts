@@ -75,11 +75,26 @@ export {
   prefillAuditManualFields,
   replaceDetectedManualFields,
   linkAuditToHotelByDomain,
+  linkAuditToHotelManually,
+  unlinkAuditHotel,
   getAuditGradeOverride,
   setAuditGradeOverride,
   clearAuditGradeOverride,
 } from './audits.js';
-export type { AuditRuntimeFields, AuditHotelLinkResult } from './audits.js';
+export { createBusinessModel } from './schemas/business.schema.js';
+export type { BusinessDocument, BusinessDocumentFields } from './schemas/business.schema.js';
+export {
+  getBusiness,
+  getBusinessByDomain,
+  getBusinessForCandidate,
+  getAuditIdsForBusiness,
+  resolveOrCreateBusinessForCandidate,
+} from './businesses.js';
+export type {
+  AuditRuntimeFields,
+  AuditHotelLinkResult,
+  LinkAuditToHotelManuallyResult,
+} from './audits.js';
 
 // Plan 019: report preparation and exact-ID writing selection. All writes
 // go through these service functions; handlers never issue raw updates.
@@ -314,6 +329,19 @@ export type {
 // source beside cohort membership. addWaveRosterEntry/revokeWaveRosterEntry
 // back the CLI's `prospect wave add/remove`; findActiveWaveRosterEntry is
 // what outreach-scans.ts reads.
+// Issue #220: one candidate/business-scoped active-job projection and one
+// conflict policy shared by every prospect-scoped job-creation route.
+export {
+  findActiveBrowserHeavyHostConflict,
+  listActiveJobsForCandidate,
+  planProspectJobLaunch,
+} from './active-jobs.js';
+export type {
+  ProspectActiveJob,
+  ProspectActiveJobKind,
+  ProspectJobLaunchDecision,
+} from './active-jobs.js';
+
 export {
   addWaveRosterEntry,
   findActiveWaveRosterEntry,
@@ -408,6 +436,7 @@ export type { ContactableCohortMember } from './hotel-contacts.js';
 // picked projection that cannot carry message bodies, addresses, or hashes,
 // and every list is paginated.
 export {
+  computeHubActions,
   getOperatorProspect,
   getOutcomeSummary,
   getProspectContactView,
@@ -429,6 +458,7 @@ export {
   listRepliesNeedingReview,
 } from './operator-views.js';
 export type {
+  ComputeHubActionsInput,
   GetProspectContactViewOptions,
   GetProspectEvidenceAssetSourceOptions,
   GetProspectEvidenceViewOptions,
@@ -456,6 +486,8 @@ export type {
   OperatorProspectDetail,
   OperatorProspectQueue,
   OperatorProspectRow,
+  ProspectSortDirection,
+  ProspectSortField,
   OperatorQualificationEvent,
   OperatorReplyReviewRow,
   OperatorReviewDraftRow,
@@ -470,4 +502,7 @@ export type {
   OperatorViewPage,
   OperatorViewPageOptions,
   OperatorWebsiteCandidateView,
+  ProspectFreshnessVersions,
+  ProspectHubActionability,
+  ProspectHubActions,
 } from './operator-views.js';

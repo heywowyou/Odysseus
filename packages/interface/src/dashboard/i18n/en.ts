@@ -43,7 +43,7 @@ export const en: DashboardStrings = {
     },
     typeLabels: {
       fullAudit: 'Full audit',
-      prospecting: 'Quick check',
+      prospecting: 'Light audit',
       hotelPrescan: 'Quick check',
       outreachFullScan: 'Prospecting audit',
     },
@@ -118,10 +118,10 @@ export const en: DashboardStrings = {
   newScan: {
     title: 'New scan',
     description:
-      'Run a full audit of one site, or a quick check that shortlists hotels for outreach.',
+      'Run a full audit of one site, or a light audit that shortlists hotels for outreach.',
     typeLabel: 'Scan type',
     typeFullAudit: 'Full audit',
-    typeProspecting: 'Quick check',
+    typeProspecting: 'Light audit',
     urlLabel: 'Site URL',
     urlPlaceholder: 'https://example.co.uk',
     urlInvalidError:
@@ -175,6 +175,7 @@ export const en: DashboardStrings = {
       '{content} content pages checked. Sample pages measured for performance: {completed}/{target}.',
     etaLabel: 'Estimated time remaining',
     etaRoughSuffix: '(rough estimate)',
+    etaFinishingLabel: 'Almost done',
     phaseLabels: {
       queued: 'Queued',
       crawl: 'Reading the site’s pages',
@@ -278,6 +279,17 @@ export const en: DashboardStrings = {
     regeneratingMessage: 'Regeneration in progress…',
     regeneratedMessage: 'Report regenerated.',
     notFound: 'Audit not found.',
+    hotelLink: {
+      notLinked: 'Not linked to a prospect',
+      linkAction: 'Link to prospect',
+      manualBadge: 'Manually linked',
+      unlinkAction: 'Unlink',
+      unlinkConfirm: 'Unlink this audit from the prospect?',
+      dialogTitle: 'Link to prospect',
+      searchPlaceholder: 'Search by name or domain…',
+      searchEmpty: 'No matching prospect.',
+      actionError: 'Could not update the link',
+    },
     languageLabels: { fr: 'Français', en: 'English' },
     failureHeading: 'The report could not be generated',
     failureMessageLabel: 'Message from the generation step',
@@ -647,6 +659,8 @@ export const en: DashboardStrings = {
       active: 'In progress',
       todo: 'To do',
       blocked: 'Blocked',
+      stale: 'Out of date',
+      refreshing: 'Refreshing',
     },
     primary: {
       startScan: 'Start the prospecting audit',
@@ -692,6 +706,10 @@ export const en: DashboardStrings = {
         blocking: 'Blocking',
         requests: 'Requests',
       },
+      staleNotice: 'This data is out of date. Refresh it to see the current pipeline result.',
+      refreshAction: 'Refresh prospect data',
+      refreshQueued: 'Refresh started',
+      refreshFailed: 'Could not refresh this prospect',
     },
     audit: {
       empty: 'No prospecting audit yet.',

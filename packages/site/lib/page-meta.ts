@@ -9,13 +9,18 @@ export const PAGE_META: Record<
   '/': {
     fr: {
       title: 'Odysseus, diagnostic technique de site web',
+      // Issue #213 item 5: trimmed from 198 to 157 characters so search
+      // engines are much less likely to truncate it mid-sentence, while
+      // keeping the approved "signaux techniques liés aux assistants IA"
+      // and "tarif fixe" wording (see lib/marketing-copy.test.ts). Must
+      // match app/layout.tsx's FR description exactly.
       description:
-        'Diagnostic technique de site web : accessibilité, référencement naturel, rendu JavaScript, performance et signaux techniques liés aux assistants IA. Rapport priorisé, tarif fixe de 1 600 € HT.',
+        'Diagnostic technique de site : accessibilité, référencement, rendu JavaScript, performance, signaux techniques liés aux assistants IA, tarif fixe 1 600 € HT.',
     },
     en: {
       title: 'Odysseus, technical website diagnostic',
       description:
-        'Technical website diagnostic covering accessibility, search, JavaScript rendering, performance and technical signals for AI assistants. Prioritised report, fixed price of EUR 1,600 excl. VAT.',
+        'Technical website diagnostic: accessibility, search, JavaScript rendering, performance and AI-assistant signals. Prioritised report, EUR 1,600 excl. VAT.',
     },
   },
   '/offre': {
@@ -32,12 +37,14 @@ export const PAGE_META: Record<
   },
   '/bot': {
     fr: {
-      title: 'OdysseusBot | Odysseus',
+      // Issue #213 item 5: a bare "OdysseusBot" title was too short to be
+      // a useful SERP result once combined with the template suffix.
+      title: "OdysseusBot, le robot d'audit technique Odysseus",
       description:
         "Ce que fait OdysseusBot lorsqu'il visite un site : pages consultées, rythme des requêtes, données conservées et moyens de le bloquer.",
     },
     en: {
-      title: 'OdysseusBot | Odysseus',
+      title: "OdysseusBot, Odysseus's technical audit crawler",
       description:
         'What OdysseusBot does when it visits a website: pages accessed, request pacing, retained data, and how to block it.',
     },
@@ -64,6 +71,18 @@ export const PAGE_META: Record<
       title: 'Opt out of future contact | Odysseus',
       description:
         'How to opt out of future contact from Odysseus and have an online preview removed.',
+    },
+  },
+  '/accessibilite': {
+    fr: {
+      title: "Démarche d'accessibilité | Odysseus",
+      description:
+        "La démarche d'accessibilité de ce site, ce qui a été vérifié, ce qui ne l'a pas encore été, et comment signaler un problème.",
+    },
+    en: {
+      title: 'Accessibility approach | Odysseus',
+      description:
+        'What we have checked on this site, what has not been checked yet, and how to report a problem.',
     },
   },
 };

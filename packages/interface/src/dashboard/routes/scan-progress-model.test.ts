@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { en } from '../i18n/en';
 import type { ScanJobDetail, ScanUrlResult } from '../lib/api-types';
 import {
+  agedEtaMs,
   crawlProgress,
   contentScanProgress,
   coverageSegments,
@@ -224,6 +225,28 @@ describe('formatEta', () => {
     expect(formatEta(60_000)).toBe('1 min');
     expect(formatEta(61_000)).toBe('2 min');
     expect(formatEta(120_000)).toBe('2 min');
+  });
+});
+
+describe('agedEtaMs', () => {
+  it('returns the raw etaMs unchanged when etaCalculatedAt is absent', () => {
+    expect(agedEtaMs(10_000, undefined, Date.now())).toBe(10_000);
+  });
+
+  it('returns the raw etaMs unchanged when etaCalculatedAt cannot be parsed', () => {
+    expect(agedEtaMs(10_000, 'not-a-date', Date.now())).toBe(10_000);
+  });
+
+  it('subtracts the elapsed wall time since etaCalculatedAt', () => {
+    const calculatedAt = new Date('2026-01-01T00:00:00.000Z');
+    const now = calculatedAt.getTime() + 4000;
+    expect(agedEtaMs(10_000, calculatedAt.toISOString(), now)).toBe(6000);
+  });
+
+  it('never goes negative once the aged estimate has fully elapsed', () => {
+    const calculatedAt = new Date('2026-01-01T00:00:00.000Z');
+    const now = calculatedAt.getTime() + 30_000;
+    expect(agedEtaMs(10_000, calculatedAt.toISOString(), now)).toBe(0);
   });
 });
 

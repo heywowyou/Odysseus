@@ -20,6 +20,7 @@ import type { AuditDocumentFields } from './schemas/audit.schema.js';
 import { createAuditModel } from './schemas/audit.schema.js';
 import { createHotelScoreCohortModel } from './schemas/score-cohort.schema.js';
 import { createJobModel, type JobDocument } from './schemas/job.schema.js';
+import { findActiveBrowserHeavyHostConflict } from './active-jobs.js';
 import {
   getHotelCandidate,
   getLatestHotelCandidateByOwnRegistrableDomain,
@@ -75,7 +76,9 @@ export async function planOutreachFullScan(
   candidateId: string,
   versions: OutreachFullScanVersionInputs,
   options: OutreachFullScanStartOptions = {},
-): Promise<OutreachFullScanPlan | { refused: OutreachFullScanStartRefusal }> {
+): Promise<
+  OutreachFullScanPlan | { refused: OutreachFullScanStartRefusal; conflictingJobId?: string }
+> {
   const candidate = await getHotelCandidate(connection, candidateId);
   if (candidate === null) return { refused: 'candidate-unknown' };
 
@@ -103,8 +106,25 @@ export async function planOutreachFullScan(
 
   if (await isSuppressed(connection, domain)) return { refused: 'suppressed' };
 
-  if (await findActiveOutreachFullScanJob(connection, candidateId, options.excludeJobId)) {
-    return { refused: 'already-in-flight' };
+  const sameCandidateJob = await findActiveOutreachFullScanJob(
+    connection,
+    candidateId,
+    options.excludeJobId,
+  );
+  if (sameCandidateJob !== null) {
+    return { refused: 'already-in-flight', conflictingJobId: sameCandidateJob.jobId };
+  }
+
+  // Issue #220: one crawler slot per host, shared with the other
+  // browser-heavy kinds (Light audit, Full audit) - not only against
+  // another outreach-full-scan of this same candidate.
+  const hostConflict = await findActiveBrowserHeavyHostConflict(
+    connection,
+    'prospecting-audit',
+    domain,
+  );
+  if (hostConflict !== null) {
+    return { refused: 'already-in-flight', conflictingJobId: hostConflict.jobId };
   }
 
   return {
@@ -264,17 +284,23 @@ export async function listOutreachAudits(
     .lean<{ auditId: string; startedAt: Date }[]>();
   if (audits.length === 0) return [];
 
-  // Outreach audits are created by outreach-full-scan jobs, which record
-  // the audit under the job's single auditId (completeJob). A job row may
-  // be gone; the type is then unknown rather than guessed.
+  // A completed job records its audit(s) one of two ways: a full-audit or
+  // outreach-full-scan job under its single `auditId`, but a `prospecting`
+  // (Light audit) job under the plural `auditIds` array - one job can scan
+  // several URLs. Both must be matched, or every Light-audit-linked row
+  // resolves to an unknown type even though its job row exists. A job row
+  // may still be gone entirely; the type is then unknown rather than
+  // guessed.
   const auditIds = audits.map((audit) => audit.auditId);
   const jobs = await createJobModel(connection)
-    .find({ auditId: { $in: auditIds } })
-    .select({ auditId: 1, type: 1 })
-    .lean<{ auditId?: string; type: string }[]>();
-  const typeByAuditId = new Map(
-    jobs.filter((job) => job.auditId !== undefined).map((job) => [job.auditId as string, job.type]),
-  );
+    .find({ $or: [{ auditId: { $in: auditIds } }, { auditIds: { $in: auditIds } }] })
+    .select({ auditId: 1, auditIds: 1, type: 1 })
+    .lean<{ auditId?: string; auditIds?: string[]; type: string }[]>();
+  const typeByAuditId = new Map<string, string>();
+  for (const job of jobs) {
+    if (job.auditId !== undefined) typeByAuditId.set(job.auditId, job.type);
+    for (const id of job.auditIds ?? []) typeByAuditId.set(id, job.type);
+  }
 
   return audits.map((audit) => ({
     auditId: audit.auditId,

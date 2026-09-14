@@ -2,9 +2,14 @@ import { Readable } from 'node:stream';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@odysseus/store', () => ({
+vi.mock('@odysseus/store', async (importOriginal) => ({
+  // computeHubActions is a pure function of its inputs (issue #219); using
+  // the real implementation here keeps the response shape's actions field
+  // realistic without a vi.fn() every test would otherwise have to stub.
+  computeHubActions: (await importOriginal<typeof import('@odysseus/store')>()).computeHubActions,
   addWaveRosterEntry: vi.fn(),
-  findActiveScanJobForHost: vi.fn(),
+  listActiveJobsForCandidate: vi.fn(),
+  planProspectJobLaunch: vi.fn(),
   getHotelCandidate: vi.fn(),
   getLatestScoreCohort: vi.fn(),
   listOperatorProspects: vi.fn(),
@@ -44,7 +49,8 @@ vi.mock('../prospecting/hotel-scoring/score-on-demand.js', () => ({
 import {
   addWaveRosterEntry,
   createJob,
-  findActiveScanJobForHost,
+  listActiveJobsForCandidate,
+  planProspectJobLaunch,
   findOutreachThreadByCandidate,
   getHotelCandidate,
   getLatestScoreCohort,
@@ -74,6 +80,12 @@ import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-ho
 import { CURRENT_QUALIFICATION_VERSION } from '../prospecting/hotel-qualification/qualify-hotels.js';
 import { CURRENT_RESOLUTION_VERSION } from '../prospecting/hotel-identity/resolve-hotels.js';
 import { Router } from '../router.js';
+
+const PROSPECT_VERSIONS = {
+  qualificationVersion: CURRENT_QUALIFICATION_VERSION,
+  prescanVersion: CURRENT_PRESCAN_VERSION,
+  scoringVersion: CURRENT_SCORING_VERSION,
+};
 import { registerProspectRoutes } from './prospects.js';
 
 type Method = 'GET' | 'POST';
@@ -137,6 +149,9 @@ function makeDetail(): Record<string, unknown> {
     reviewState: 'pending',
     review: { queuedReason: 'identity-needs-review', actor: null, reason: null, decidedAt: null },
     qualificationOutcome: 'qualified',
+    qualificationFreshness: { state: 'current', version: 'v1', computedAt: new Date() },
+    prescanFreshness: { state: 'current', version: 'v1', computedAt: new Date() },
+    scoreFreshness: { state: 'current', version: 'v1', computedAt: new Date() },
     prescanStatus: 'complete',
     websites: [
       {
@@ -217,7 +232,8 @@ beforeEach(() => {
   } as never);
   vi.mocked(listOutreachAudits).mockResolvedValue([] as never);
   vi.mocked(listRecentScoreCohorts).mockResolvedValue([] as never);
-  vi.mocked(findActiveScanJobForHost).mockResolvedValue(null as never);
+  vi.mocked(planProspectJobLaunch).mockResolvedValue({ allowed: true } as never);
+  vi.mocked(listActiveJobsForCandidate).mockResolvedValue([] as never);
   vi.mocked(getHotelCandidate).mockResolvedValue(null as never);
   vi.mocked(getLatestScoreCohort).mockResolvedValue(null as never);
   vi.mocked(listWaveRoster).mockResolvedValue([] as never);
@@ -250,14 +266,18 @@ describe('GET /api/prospects', () => {
       '/api/prospects?queue=join-review&identityStatus=resolved&reviewState=pending&qualificationOutcome=not-evaluated&limit=10&offset=20',
     );
     expect(res.statusCode).toBe(200);
-    expect(listOperatorProspects).toHaveBeenCalledWith(fakeConnection, {
-      queue: 'join-review',
-      identityStatus: 'resolved',
-      reviewState: 'pending',
-      qualificationOutcome: 'not-evaluated',
-      limit: 10,
-      offset: 20,
-    });
+    expect(listOperatorProspects).toHaveBeenCalledWith(
+      fakeConnection,
+      {
+        queue: 'join-review',
+        identityStatus: 'resolved',
+        reviewState: 'pending',
+        qualificationOutcome: 'not-evaluated',
+        limit: 10,
+        offset: 20,
+      },
+      PROSPECT_VERSIONS,
+    );
     expect(JSON.parse(res.body ?? '{}')).toEqual({ rows: [], total: 0, limit: 50, offset: 0 });
   });
 
@@ -269,9 +289,11 @@ describe('GET /api/prospects', () => {
   it('passes the search through trimmed', async () => {
     const res = await handle('/api/prospects?q=%20H%C3%B4tel%20Belv%C3%A9d%C3%A8re%20');
     expect(res.statusCode).toBe(200);
-    expect(listOperatorProspects).toHaveBeenCalledWith(fakeConnection, {
-      search: 'Hôtel Belvédère',
-    });
+    expect(listOperatorProspects).toHaveBeenCalledWith(
+      fakeConnection,
+      { search: 'Hôtel Belvédère' },
+      PROSPECT_VERSIONS,
+    );
   });
 
   it('treats a blank search as no search constraint', async () => {
@@ -302,11 +324,29 @@ describe('GET /api/prospects', () => {
     ['limit=ten', /limit/],
     ['offset=-1', /offset/],
     ['offset=1.5', /offset/],
+    ['sortBy=popularity', /sortBy/],
+    ['sortDirection=descending', /sortDirection/],
+    ['sortDirection=asc', /sortDirection/],
   ])('rejects %s with 400 and never reaches the store', async (queryString, pattern) => {
     const res = await handle(`/api/prospects?${queryString}`);
     expect(res.statusCode).toBe(400);
     expect(res.body ?? '').toMatch(pattern as RegExp);
     expect(listOperatorProspects).not.toHaveBeenCalled();
+  });
+
+  it('passes sortBy and sortDirection through to the store (issue #215)', async () => {
+    await handle('/api/prospects?sortBy=brokenness&sortDirection=asc');
+    expect(vi.mocked(listOperatorProspects).mock.calls[0]?.[1]).toEqual({
+      sortBy: 'brokenness',
+      sortDirection: 'asc',
+    });
+  });
+
+  it('passes sortBy alone, leaving direction to the store default', async () => {
+    await handle('/api/prospects?sortBy=fixability');
+    expect(vi.mocked(listOperatorProspects).mock.calls[0]?.[1]).toEqual({
+      sortBy: 'fixability',
+    });
   });
 });
 
@@ -314,7 +354,7 @@ describe('GET /api/prospects/:candidateId', () => {
   it('composes the detail and the qualification history into one payload', async () => {
     const res = await handle('/api/prospects/cand-1');
     expect(res.statusCode).toBe(200);
-    expect(getOperatorProspect).toHaveBeenCalledWith(fakeConnection, 'cand-1');
+    expect(getOperatorProspect).toHaveBeenCalledWith(fakeConnection, 'cand-1', PROSPECT_VERSIONS);
     expect(getProspectQualificationHistory).toHaveBeenCalledWith(fakeConnection, 'cand-1', {
       limit: 10,
       offset: 0,
@@ -362,8 +402,9 @@ describe('GET /api/prospects/:candidateId', () => {
     const body = JSON.parse(res.body ?? '{}') as Record<string, unknown>;
     // The route may add qualificationHistory, outreachScan, the audit
     // summary, the running-scan id, the selection verdict, the plan 042
-    // audit list, and the paid full-audit gate (issue #182), and nothing
-    // else.
+    // audit list, the paid full-audit gate (issue #182), the active-job
+    // projection (issue #220), and the typed actionability snapshot
+    // (issue #219), and nothing else.
     expect(Object.keys(body).sort()).toEqual(
       [
         ...Object.keys(makeDetail()),
@@ -374,6 +415,8 @@ describe('GET /api/prospects/:candidateId', () => {
         'selectionVerdict',
         'outreachAudits',
         'fullAudit',
+        'activeJobs',
+        'actions',
       ].sort(),
     );
     const serialized = res.body ?? '';
@@ -411,7 +454,10 @@ describe('GET /api/prospects/:candidateId', () => {
       candidateId: 'cand-1',
       ownRegistrableDomain: 'hotel-exemple.fr',
     } as never);
-    vi.mocked(findActiveScanJobForHost).mockResolvedValue({ jobId: 'job-running' } as never);
+    vi.mocked(planProspectJobLaunch).mockResolvedValue({
+      allowed: false,
+      conflictingJobId: 'job-running',
+    } as never);
     const res = await handle('/api/prospects/cand-1');
     const body = JSON.parse(res.body ?? '{}');
     expect(body.fullAudit).toEqual({
@@ -419,6 +465,65 @@ describe('GET /api/prospects/:candidateId', () => {
       refusal: 'already-in-flight',
       jobId: 'job-running',
     });
+  });
+
+  it('issue #219: actions.runFullAudit carries the exact same refusal reason and job id as the fullAudit field', async () => {
+    vi.mocked(getHotelCandidate).mockResolvedValue({
+      candidateId: 'cand-1',
+      ownRegistrableDomain: 'hotel-exemple.fr',
+    } as never);
+    vi.mocked(planProspectJobLaunch).mockResolvedValue({
+      allowed: false,
+      conflictingJobId: 'job-running',
+    } as never);
+    const res = await handle('/api/prospects/cand-1');
+    const body = JSON.parse(res.body ?? '{}');
+    expect(body.fullAudit).toEqual({
+      canStart: false,
+      refusal: 'already-in-flight',
+      jobId: 'job-running',
+    });
+    expect(body.actions.runFullAudit).toEqual({
+      state: 'blocked',
+      reason: 'already-in-flight',
+    });
+  });
+
+  it('issue #219: actions.runProspectingAudit carries the exact same refusal reason POST /outreach/full-scan would answer', async () => {
+    vi.mocked(planOutreachFullScan).mockResolvedValue({ refused: 'not-qualified' } as never);
+    const res = await handle('/api/prospects/cand-1');
+    const body = JSON.parse(res.body ?? '{}');
+    expect(body.outreachScan).toEqual({ canStart: false, refusal: 'not-qualified', jobId: null });
+    expect(body.actions.runProspectingAudit).toEqual({
+      state: 'blocked',
+      reason: 'not-qualified',
+    });
+  });
+
+  it('issue #219: actions.runQuickCheck reads running once the #220 active-job projection carries a quick-check job', async () => {
+    vi.mocked(getHotelCandidate).mockResolvedValue({
+      candidateId: 'cand-1',
+      ownRegistrableDomain: 'hotel-exemple.fr',
+    } as never);
+    vi.mocked(listActiveJobsForCandidate).mockResolvedValue([
+      {
+        jobId: 'job-quick-1',
+        kind: 'quick-check',
+        status: 'running',
+        startedAt: new Date(),
+        targetDomain: 'hotel-exemple.fr',
+      },
+    ] as never);
+    const res = await handle('/api/prospects/cand-1');
+    const body = JSON.parse(res.body ?? '{}');
+    expect(body.actions.runQuickCheck).toEqual({ state: 'running', jobId: 'job-quick-1' });
+  });
+
+  it('issue #219: fails closed rather than silently available when the candidate lookup for the full-audit gate returns null', async () => {
+    vi.mocked(getHotelCandidate).mockResolvedValue(null as never);
+    const res = await handle('/api/prospects/cand-1');
+    const body = JSON.parse(res.body ?? '{}');
+    expect(body.actions.runFullAudit).toEqual({ state: 'blocked', reason: 'unknown' });
   });
 
   it('joins severity totals onto the latest outreach audit and carries the running job id', async () => {
@@ -508,7 +613,10 @@ describe('POST /api/prospects/:candidateId/outreach/full-scan', () => {
   });
 
   it('returns the typed refusal without creating a job', async () => {
-    vi.mocked(planOutreachFullScan).mockResolvedValue({ refused: 'already-in-flight' } as never);
+    vi.mocked(planOutreachFullScan).mockResolvedValue({
+      refused: 'already-in-flight',
+      conflictingJobId: 'job-running',
+    } as never);
     const res = await handle('/api/prospects/cand-1/outreach/full-scan', {
       method: 'POST',
       body: {},
@@ -517,6 +625,7 @@ describe('POST /api/prospects/:candidateId/outreach/full-scan', () => {
     expect(JSON.parse(res.body ?? '{}')).toEqual({
       started: false,
       refusal: 'already-in-flight',
+      jobId: 'job-running',
     });
     expect(createJob).not.toHaveBeenCalled();
   });
@@ -1035,17 +1144,25 @@ describe('POST /api/prospects/:candidateId/full-audit (plan 044)', () => {
     } as never);
     const noDomain = await handle('/api/prospects/cand-1/full-audit', { method: 'POST' });
     expect(noDomain.statusCode).toBe(200);
-    expect(JSON.parse(noDomain.body ?? '{}')).toEqual({ started: false, refusal: 'no-own-domain' });
+    expect(JSON.parse(noDomain.body ?? '{}')).toEqual({
+      started: false,
+      refusal: 'no-own-domain',
+      jobId: null,
+    });
 
     vi.mocked(getHotelCandidate).mockResolvedValue({
       candidateId: 'cand-1',
       ownRegistrableDomain: 'hotel-exemple.fr',
     } as never);
-    vi.mocked(findActiveScanJobForHost).mockResolvedValue({ jobId: 'job-running' } as never);
+    vi.mocked(planProspectJobLaunch).mockResolvedValue({
+      allowed: false,
+      conflictingJobId: 'job-running',
+    } as never);
     const inFlight = await handle('/api/prospects/cand-1/full-audit', { method: 'POST' });
     expect(JSON.parse(inFlight.body ?? '{}')).toEqual({
       started: false,
       refusal: 'already-in-flight',
+      jobId: 'job-running',
     });
     expect(createJob).not.toHaveBeenCalled();
 
@@ -1059,7 +1176,7 @@ describe('POST /api/prospects/:candidateId/full-audit (plan 044)', () => {
       candidateId: 'cand-1',
       ownRegistrableDomain: 'hotel-exemple.fr',
     } as never);
-    vi.mocked(findActiveScanJobForHost).mockResolvedValue(null as never);
+    vi.mocked(planProspectJobLaunch).mockResolvedValue({ allowed: true } as never);
     vi.mocked(getLatestScoreCohort).mockResolvedValue(null as never);
     const res = await handle('/api/prospects/cand-1/full-audit', { method: 'POST' });
     expect(res.statusCode).toBe(201);
@@ -1137,5 +1254,33 @@ describe('POST /api/prospects/:candidateId/prescan (issue #201)', () => {
     const res = await handle(`/api/prospects/${'x'.repeat(201)}/prescan`, { method: 'POST' });
     expect(res.statusCode).toBe(400);
     expect(getHotelCandidate).not.toHaveBeenCalled();
+  });
+
+  // Issue #220: a Quick check already queued/running for this domain is
+  // deduped through the shared conflict policy, the same way full-audit
+  // and outreach-full-scan already were, instead of always minting a
+  // second job for the same click.
+  it('dedupes against an already-running Quick check for the same domain', async () => {
+    vi.mocked(getHotelCandidate).mockResolvedValue({
+      candidateId: 'cand-1',
+      ownRegistrableDomain: 'hotel-exemple.fr',
+    } as never);
+    vi.mocked(planProspectJobLaunch).mockResolvedValue({
+      allowed: false,
+      conflictingJobId: 'job-prescan-running',
+    } as never);
+    const res = await handle('/api/prospects/cand-1/prescan', { method: 'POST' });
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body ?? '{}')).toEqual({
+      started: false,
+      refusal: 'already-in-flight',
+      jobId: 'job-prescan-running',
+    });
+    expect(planProspectJobLaunch).toHaveBeenCalledWith(fakeConnection, {
+      kind: 'quick-check',
+      candidateId: 'cand-1',
+      domain: 'hotel-exemple.fr',
+    });
+    expect(createJob).not.toHaveBeenCalled();
   });
 });

@@ -14,7 +14,8 @@ import { ProgressBar } from '../components/ui/progress-bar';
 import { Spinner } from '../components/ui/spinner';
 import { StatusDot } from '../components/ui/status-dot';
 import { useI18n } from '../i18n/provider';
-import { ApiError, fetchJson, postEmpty } from '../lib/api';
+import { ApiError, fetchJsonValidated, postEmpty } from '../lib/api';
+import { scanJobDetailSchema } from '../lib/api-schemas';
 import type { ScanJobDetail, ScanUrlResult } from '../lib/api-types';
 import { canStop } from '../lib/job-actions';
 import { cn } from '../lib/cn';
@@ -23,6 +24,7 @@ import { hostnameOf } from './audit-detail-model';
 import { IdentityConfirmField } from './identity-confirm-field';
 import type { IdentityField } from './identity-confirm-field';
 import {
+  agedEtaMs,
   contentScanProgress,
   coverageSegments,
   crawlProgress,
@@ -37,6 +39,20 @@ import {
   urlResultState,
   type UrlResultState,
 } from './scan-progress-model';
+
+// Issue #223: the server only recomputes etaMs when a progress event
+// fires, so this ticks a re-render once a second while a phase is live -
+// agedEtaMs then ages the last-seen etaMs down between polls instead of
+// the countdown sitting frozen for up to POLL_INTERVAL_MS.
+function useNowTicker(enabled: boolean): number {
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    if (!enabled) return;
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [enabled]);
+  return nowMs;
+}
 
 // Plan 040 poll policy: scan progress stays at 3s while the job is running
 // (the `enabled` flag below already stops polling once it settles).
@@ -78,7 +94,7 @@ export function ScanProgressPage(): JSX.Element {
   const fetcher = useCallback(
     (signal: AbortSignal): Promise<ScanJobDetail | null> => {
       if (jobId === undefined) return Promise.resolve(null);
-      return fetchJson<ScanJobDetail>(`/api/scans/${jobId}`, { signal })
+      return fetchJsonValidated(`/api/scans/${jobId}`, scanJobDetailSchema, { signal })
         .then((job) => {
           setSettled(isTerminal(job.status));
           return job;
@@ -221,12 +237,25 @@ function PhaseRow(props: {
   hint: string;
   value: number | null;
   etaMs?: number | undefined;
+  etaCalculatedAt?: string | undefined;
+  nowMs: number;
   rough?: boolean;
   note?: string | undefined;
   running?: boolean;
 }): JSX.Element {
   const { strings } = useI18n();
-  const { label, hint, value, etaMs, rough = false, note, running = false } = props;
+  const {
+    label,
+    hint,
+    value,
+    etaMs,
+    etaCalculatedAt,
+    nowMs,
+    rough = false,
+    note,
+    running = false,
+  } = props;
+  const displayedEtaMs = etaMs === undefined ? undefined : agedEtaMs(etaMs, etaCalculatedAt, nowMs);
   return (
     <div className="py-4 first:pt-0 last:pb-0">
       <div className="mb-2 flex items-baseline justify-between gap-4">
@@ -240,10 +269,19 @@ function PhaseRow(props: {
           </p>
           <InfoTip label={label} hint={hint} />
         </div>
-        {etaMs !== undefined ? (
+        {displayedEtaMs !== undefined ? (
           <p className="numeric shrink-0 text-xs text-ink-muted">
-            {strings.progress.etaLabel}: {formatEta(etaMs)}
-            {rough ? ` ${strings.progress.etaRoughSuffix}` : ''}
+            {/* Issue #223: once the aged countdown hits 0 while the phase
+                is still running, a fresh progress event just hasn't landed
+                yet - say so instead of showing a stuck "0 s". */}
+            {displayedEtaMs > 0 || !running ? (
+              <>
+                {strings.progress.etaLabel}: {formatEta(displayedEtaMs)}
+                {rough ? ` ${strings.progress.etaRoughSuffix}` : ''}
+              </>
+            ) : (
+              strings.progress.etaFinishingLabel
+            )}
           </p>
         ) : null}
       </div>
@@ -280,6 +318,7 @@ function FullAuditView({
   refresh: () => void;
 }): JSX.Element {
   const { strings } = useI18n();
+  const nowMs = useNowTicker(!terminal);
   // The old page swaps the phase bars for the result card once terminal;
   // cancelled keeps its own quiet card so a stopped job never reads as
   // failed or complete.
@@ -294,9 +333,16 @@ function FullAuditView({
   // its own phase is the current one, and only the scan estimate carries
   // the rough suffix.
   const crawlEta = job.phase === 'crawl' ? job.progress.crawl?.etaMs : undefined;
+  const crawlEtaCalculatedAt =
+    job.phase === 'crawl' ? job.progress.crawl?.etaCalculatedAt : undefined;
   const scanEta = job.phase === 'scan' ? job.progress.scan?.etaMs : undefined;
+  const scanEtaCalculatedAt = job.phase === 'scan' ? job.progress.scan?.etaCalculatedAt : undefined;
   const contentEta = job.phase === 'content-scan' ? job.progress.contentScan?.etaMs : undefined;
+  const contentEtaCalculatedAt =
+    job.phase === 'content-scan' ? job.progress.contentScan?.etaCalculatedAt : undefined;
   const lighthouseEta = job.phase === 'lighthouse' ? job.progress.lighthouse?.etaMs : undefined;
+  const lighthouseEtaCalculatedAt =
+    job.phase === 'lighthouse' ? job.progress.lighthouse?.etaCalculatedAt : undefined;
   const staged = hasStagedAnalysisProgress(job);
   const content = job.progress.contentScan;
   const lighthouse = job.progress.lighthouse;
@@ -328,6 +374,8 @@ function FullAuditView({
              renders indeterminate instead of pretending to know a percentage. */
           value={crawlProgress(job)}
           etaMs={crawlEta}
+          etaCalculatedAt={crawlEtaCalculatedAt}
+          nowMs={nowMs}
           running={job.phase === 'crawl'}
         />
         {staged ? (
@@ -337,6 +385,8 @@ function FullAuditView({
               hint={strings.hints.scan}
               value={contentScanProgress(job)}
               etaMs={contentEta}
+              etaCalculatedAt={contentEtaCalculatedAt}
+              nowMs={nowMs}
               rough
               running={job.phase === 'content-scan'}
             />
@@ -345,6 +395,8 @@ function FullAuditView({
               hint={strings.hints.scan}
               value={lighthouseProgress(job)}
               etaMs={lighthouseEta}
+              etaCalculatedAt={lighthouseEtaCalculatedAt}
+              nowMs={nowMs}
               rough
               note={stagedSummary}
               running={job.phase === 'lighthouse' || job.phase === 'select-performance'}
@@ -356,6 +408,8 @@ function FullAuditView({
             hint={strings.hints.scan}
             value={scanProgress(job)}
             etaMs={scanEta}
+            etaCalculatedAt={scanEtaCalculatedAt}
+            nowMs={nowMs}
             rough
             running={job.phase === 'scan'}
           />

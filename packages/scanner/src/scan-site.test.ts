@@ -392,18 +392,48 @@ describe('scanSite with fullAuditPlanning', () => {
       lighthouse: { outcome: 'not-planned' },
     });
     expect(events.filter((event) => event.type.startsWith('content-scan'))).toEqual([
-      { type: 'content-scan-start', totalPages: 3 },
-      { type: 'content-scan-page', completed: 1, totalPages: 3, url: startUrl },
-      { type: 'content-scan-page', completed: 2, totalPages: 3, url: pageA },
-      { type: 'content-scan-page', completed: 3, totalPages: 3, url: pageB },
+      { type: 'content-scan-start', totalPages: 3, alreadyCompleted: 0, concurrency: 3 },
+      {
+        type: 'content-scan-page',
+        completed: 1,
+        totalPages: 3,
+        url: startUrl,
+        durationMs: expect.any(Number),
+      },
+      {
+        type: 'content-scan-page',
+        completed: 2,
+        totalPages: 3,
+        url: pageA,
+        durationMs: expect.any(Number),
+      },
+      {
+        type: 'content-scan-page',
+        completed: 3,
+        totalPages: 3,
+        url: pageB,
+        durationMs: expect.any(Number),
+      },
     ]);
     expect(events.filter((event) => event.type === 'select-performance')).toEqual([
       { type: 'select-performance' },
     ]);
     expect(events.filter((event) => event.type.startsWith('lighthouse'))).toEqual([
-      { type: 'lighthouse-start', totalPages: 2 },
-      { type: 'lighthouse-page', completed: 1, totalPages: 2, url: startUrl },
-      { type: 'lighthouse-page', completed: 2, totalPages: 2, url: pageA },
+      { type: 'lighthouse-start', totalPages: 2, alreadyCompleted: 0 },
+      {
+        type: 'lighthouse-page',
+        completed: 1,
+        totalPages: 2,
+        url: startUrl,
+        durationMs: expect.any(Number),
+      },
+      {
+        type: 'lighthouse-page',
+        completed: 2,
+        totalPages: 2,
+        url: pageA,
+        durationMs: expect.any(Number),
+      },
     ]);
     expect(events.at(-1)).toEqual({ type: 'analysis-complete' });
   });

@@ -209,6 +209,10 @@ export interface DashboardStrings {
     lighthouseProgressMessage: string;
     etaLabel: string;
     etaRoughSuffix: string;
+    /** Issue #223: shown in place of the countdown once the client-aged
+     *  estimate reaches 0 while the phase is still running - the phase
+     *  isn't stuck, the estimate is just older than the current poll. */
+    etaFinishingLabel: string;
     /** Operator copy per pipeline phase, keyed by the vocabulary derived
      *  from the checked-in order fixture (lib/phase-order.ts), so a phase
      *  added there fails to compile until both languages cover it. */
@@ -323,6 +327,20 @@ export interface DashboardStrings {
     regeneratingMessage: string;
     regeneratedMessage: string;
     notFound: string;
+    /** Issue #216: the manual hotel-link action, offered when the
+     *  automatic domain match could not safely link this audit (or linked
+     *  it to the wrong hotel). */
+    hotelLink: {
+      notLinked: string;
+      linkAction: string;
+      manualBadge: string;
+      unlinkAction: string;
+      unlinkConfirm: string;
+      dialogTitle: string;
+      searchPlaceholder: string;
+      searchEmpty: string;
+      actionError: string;
+    };
     /** Report rows show the language's endonym, never a locale code. */
     languageLabels: Record<'fr' | 'en', string>;
     /** Issue #90: the report-stage failure card. The stored error text is
@@ -717,7 +735,7 @@ export interface DashboardStrings {
       'fiche' | 'quick-check' | 'audit' | 'report' | 'preview' | 'emails' | 'outcome',
       string
     >;
-    stepStates: Record<'done' | 'active' | 'todo' | 'blocked', string>;
+    stepStates: Record<'done' | 'active' | 'todo' | 'blocked' | 'stale' | 'refreshing', string>;
     /** The header's one primary action, chosen by state (review and the
      *  terminal refusal excepted: review reuses operator.accept, a refusal
      *  is a sentence, not a button). */
@@ -776,6 +794,13 @@ export interface DashboardStrings {
         blocking: string;
         requests: string;
       };
+      /** Issue #217: the stale-pipeline banner and its recovery action,
+       *  shown whenever qualification, quick check, or score names an
+       *  older pipeline version than the one currently running. */
+      staleNotice: string;
+      refreshAction: string;
+      refreshQueued: string;
+      refreshFailed: string;
     };
     audit: {
       empty: string;

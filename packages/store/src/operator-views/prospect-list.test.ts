@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { probeMongoAvailability } from '../test-support.js';
 import { upsertHotelCandidates } from '../hotel-candidates.js';
 import { recordHotelQualifications } from '../hotel-qualifications.js';
+import { recordHotelScores } from '../scores.js';
 import { createHotelCandidateModel } from '../schemas/hotel-candidate.schema.js';
 import { createHotelQualificationModel } from '../schemas/hotel-qualification.schema.js';
 import { createPrescanModel } from '../schemas/prescan.schema.js';
@@ -17,9 +18,12 @@ import { addWaveRosterEntry } from '../wave-roster.js';
 import { listOperatorProspects, type OperatorProspectQueue } from './prospect-list.js';
 import {
   candidateInput,
+  CURRENT_VERSIONS,
   expectSafeShape,
   qualificationInput,
+  QUALIFICATION_VERSION,
   RESOLUTION_VERSION,
+  scoreInput,
   SCORING_VERSION,
   seedFullFunnel,
 } from './test-fixtures.js';
@@ -54,11 +58,15 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
 
       const collected: string[] = [];
       for (const offset of [0, 10, 20, 30]) {
-        const page = await listOperatorProspects(connection!, {
-          resolutionVersion: RESOLUTION_VERSION,
-          limit: 10,
-          offset,
-        });
+        const page = await listOperatorProspects(
+          connection!,
+          {
+            resolutionVersion: RESOLUTION_VERSION,
+            limit: 10,
+            offset,
+          },
+          CURRENT_VERSIONS,
+        );
         expect(page.limit).toBe(10);
         expect(page.offset).toBe(offset);
         expect(page.total).toBe(25);
@@ -70,11 +78,15 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
       // Sorted set: walking again collects the same ids in the same order.
       const secondWalk: string[] = [];
       for (const offset of [0, 10, 20]) {
-        const page = await listOperatorProspects(connection!, {
-          resolutionVersion: RESOLUTION_VERSION,
-          limit: 10,
-          offset,
-        });
+        const page = await listOperatorProspects(
+          connection!,
+          {
+            resolutionVersion: RESOLUTION_VERSION,
+            limit: 10,
+            offset,
+          },
+          CURRENT_VERSIONS,
+        );
         secondWalk.push(...page.rows.map((row) => row.candidateId));
       }
       expect(secondWalk).toEqual(collected.slice(0, 30));
@@ -85,22 +97,34 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
       const inputs = Array.from({ length: 5 }, () => candidateInput());
       await upsertHotelCandidates(connection!, inputs);
 
-      const first = await listOperatorProspects(connection!, {
-        resolutionVersion: RESOLUTION_VERSION,
-      });
-      const second = await listOperatorProspects(connection!, {
-        resolutionVersion: RESOLUTION_VERSION,
-      });
+      const first = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+        },
+        CURRENT_VERSIONS,
+      );
+      const second = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+        },
+        CURRENT_VERSIONS,
+      );
       expect(first.rows.map((row) => row.candidateId)).toEqual(
         second.rows.map((row) => row.candidateId),
       );
       // Default limit is 50; the hard cap clamps a larger request.
       expect(first.limit).toBe(50);
 
-      const capped = await listOperatorProspects(connection!, {
-        resolutionVersion: RESOLUTION_VERSION,
-        limit: 500,
-      });
+      const capped = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+          limit: 500,
+        },
+        CURRENT_VERSIONS,
+      );
       expect(capped.limit).toBe(200);
     });
 
@@ -112,9 +136,13 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
       );
       await upsertHotelCandidates(connection!, inputs);
 
-      const page = await listOperatorProspects(connection!, {
-        resolutionVersion: RESOLUTION_VERSION,
-      });
+      const page = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+        },
+        CURRENT_VERSIONS,
+      );
       expect(page.rows.map((row) => row.name)).toEqual([shared, shared, shared]);
       const ids = page.rows.map((row) => row.candidateId);
       expect(new Set(ids).size).toBe(3);
@@ -151,10 +179,14 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
       ]);
 
       const members = async (queue: OperatorProspectQueue) => {
-        const page = await listOperatorProspects(connection!, {
-          resolutionVersion: RESOLUTION_VERSION,
-          queue,
-        });
+        const page = await listOperatorProspects(
+          connection!,
+          {
+            resolutionVersion: RESOLUTION_VERSION,
+            queue,
+          },
+          CURRENT_VERSIONS,
+        );
         return page.rows.map((row) => row.candidateId).sort();
       };
 
@@ -165,16 +197,24 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
       await expect(members('groups')).resolves.toEqual([grouped.candidateId]);
 
       // Plain field filters refine the same query surface.
-      const pendingReview = await listOperatorProspects(connection!, {
-        resolutionVersion: RESOLUTION_VERSION,
-        reviewState: 'pending',
-      });
+      const pendingReview = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+          reviewState: 'pending',
+        },
+        CURRENT_VERSIONS,
+      );
       expect(pendingReview.rows.map((row) => row.candidateId)).toEqual([join.candidateId]);
 
-      const notEvaluated = await listOperatorProspects(connection!, {
-        resolutionVersion: RESOLUTION_VERSION,
-        qualificationOutcome: 'not-evaluated',
-      });
+      const notEvaluated = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+          qualificationOutcome: 'not-evaluated',
+        },
+        CURRENT_VERSIONS,
+      );
       expect(notEvaluated.rows.map((row) => row.candidateId).sort()).toEqual(
         [join.candidateId, grouped.candidateId, plain.candidateId].sort(),
       );
@@ -188,17 +228,23 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
       await upsertHotelCandidates(connection!, [candidateInput({ candidateId: parkedId })]);
       await recordHotelQualifications(connection!, [qualificationInput(parkedId)]);
 
-      const page = await listOperatorProspects(connection!, {
-        resolutionVersion: RESOLUTION_VERSION,
-        limit: 10,
-        offset: 0,
-      });
+      const page = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+          limit: 10,
+          offset: 0,
+        },
+        CURRENT_VERSIONS,
+      );
       const funnelRow = page.rows.find((row) => row.candidateId === candidateId);
       expect(funnelRow).toBeDefined();
       expect(funnelRow?.qualificationOutcome).toBe('qualified');
       expect(funnelRow?.qualificationReasons).toEqual([]);
+      expect(funnelRow?.qualificationFreshness.state).toBe('current');
       expect(funnelRow?.prescanStatus).toBe('complete');
       expect(funnelRow?.scoringVersion).toBe(SCORING_VERSION);
+      expect(funnelRow?.scoreFreshness.state).toBe('current');
       expect(funnelRow?.brokennessTotal).toBe(42);
       expect(funnelRow?.abilityTotal).toBe(65);
       expect(funnelRow?.contactState).toBe('found');
@@ -213,6 +259,53 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
       expect(parkedRow?.contactState).toBeNull();
     });
 
+    // Issue #217 item 8: list and detail projections must agree about
+    // current/stale score state, so a sort or filter on the list never
+    // treats an old generation's score as current.
+    it('agrees with the detail view that a row is stale, not current, at an older pipeline version', async () => {
+      if (!connection) return;
+      const candidateId = 'cand-funnel-stale-row';
+      await seedFullFunnel(connection!, candidateId);
+
+      const staleVersions = { ...CURRENT_VERSIONS, qualificationVersion: 'qv-2' };
+      const page = await listOperatorProspects(
+        connection!,
+        { resolutionVersion: RESOLUTION_VERSION, limit: 10, offset: 0 },
+        staleVersions,
+      );
+
+      const row = page.rows.find((r) => r.candidateId === candidateId);
+      expect(row?.qualificationFreshness).toMatchObject({
+        state: 'stale',
+        version: QUALIFICATION_VERSION,
+        currentVersion: 'qv-2',
+      });
+      // Never silently converted to numeric zero: the historical score
+      // total stays visible even though its stage-freshness is untouched
+      // here (only qualification was made stale).
+      expect(row?.brokennessTotal).toBe(42);
+      expect(row?.scoreFreshness.state).toBe('current');
+    });
+
+    it('marks a score stale when the prescan generation it was derived from is stale', async () => {
+      if (!connection) return;
+      const candidateId = 'cand-funnel-stale-score-row';
+      await seedFullFunnel(connection!, candidateId);
+
+      const staleVersions = { ...CURRENT_VERSIONS, prescanVersion: 'v4' };
+      const page = await listOperatorProspects(
+        connection!,
+        { resolutionVersion: RESOLUTION_VERSION, limit: 10, offset: 0 },
+        staleVersions,
+      );
+
+      const row = page.rows.find((r) => r.candidateId === candidateId);
+      expect(row?.scoreFreshness).toMatchObject({
+        state: 'stale',
+        currentVersion: SCORING_VERSION,
+      });
+    });
+
     it('finds candidates by name case- and accent-insensitively in both directions', async () => {
       if (!connection) return;
       const accented = candidateInput({
@@ -225,16 +318,24 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
       });
       await upsertHotelCandidates(connection!, [accented, plain]);
 
-      const byUnaccentedQuery = await listOperatorProspects(connection!, {
-        resolutionVersion: RESOLUTION_VERSION,
-        search: 'belvedere',
-      });
+      const byUnaccentedQuery = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+          search: 'belvedere',
+        },
+        CURRENT_VERSIONS,
+      );
       expect(byUnaccentedQuery.rows.map((row) => row.candidateId)).toEqual([accented.candidateId]);
 
-      const byAccentedQuery = await listOperatorProspects(connection!, {
-        resolutionVersion: RESOLUTION_VERSION,
-        search: 'Hôtel',
-      });
+      const byAccentedQuery = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+          search: 'Hôtel',
+        },
+        CURRENT_VERSIONS,
+      );
       expect(byAccentedQuery.rows.map((row) => row.candidateId).sort()).toEqual(
         [accented.candidateId, plain.candidateId].sort(),
       );
@@ -247,22 +348,34 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
       const byId = candidateInput({ candidateId: 'cand-siren-42810' });
       await upsertHotelCandidates(connection!, [byCommune, byPostcode, byId]);
 
-      const communeHit = await listOperatorProspects(connection!, {
-        resolutionVersion: RESOLUTION_VERSION,
-        search: 'chamonix',
-      });
+      const communeHit = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+          search: 'chamonix',
+        },
+        CURRENT_VERSIONS,
+      );
       expect(communeHit.rows.map((row) => row.candidateId)).toEqual([byCommune.candidateId]);
 
-      const postcodeHit = await listOperatorProspects(connection!, {
-        resolutionVersion: RESOLUTION_VERSION,
-        search: '74400',
-      });
+      const postcodeHit = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+          search: '74400',
+        },
+        CURRENT_VERSIONS,
+      );
       expect(postcodeHit.rows.map((row) => row.candidateId)).toEqual([byPostcode.candidateId]);
 
-      const idHit = await listOperatorProspects(connection!, {
-        resolutionVersion: RESOLUTION_VERSION,
-        search: '42810',
-      });
+      const idHit = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+          search: '42810',
+        },
+        CURRENT_VERSIONS,
+      );
       expect(idHit.rows.map((row) => row.candidateId)).toEqual([byId.candidateId]);
     });
 
@@ -272,16 +385,24 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
       const parens = candidateInput({ name: 'Le Panier (Bis)', normalizedName: 'le panier bis' });
       await upsertHotelCandidates(connection!, [plus, parens]);
 
-      const plusHit = await listOperatorProspects(connection!, {
-        resolutionVersion: RESOLUTION_VERSION,
-        search: 'a+b',
-      });
+      const plusHit = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+          search: 'a+b',
+        },
+        CURRENT_VERSIONS,
+      );
       expect(plusHit.rows.map((row) => row.candidateId)).toEqual([plus.candidateId]);
 
-      const parensHit = await listOperatorProspects(connection!, {
-        resolutionVersion: RESOLUTION_VERSION,
-        search: '(bis)',
-      });
+      const parensHit = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+          search: '(bis)',
+        },
+        CURRENT_VERSIONS,
+      );
       expect(parensHit.rows.map((row) => row.candidateId)).toEqual([parens.candidateId]);
     });
 
@@ -290,17 +411,25 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
       const seeded = candidateInput();
       await upsertHotelCandidates(connection!, [seeded]);
 
-      const noHit = await listOperatorProspects(connection!, {
-        resolutionVersion: RESOLUTION_VERSION,
-        search: 'zzzzquarante-deux',
-      });
+      const noHit = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+          search: 'zzzzquarante-deux',
+        },
+        CURRENT_VERSIONS,
+      );
       expect(noHit.rows).toEqual([]);
       expect(noHit.total).toBe(0);
 
-      const blank = await listOperatorProspects(connection!, {
-        resolutionVersion: RESOLUTION_VERSION,
-        search: '   ',
-      });
+      const blank = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+          search: '   ',
+        },
+        CURRENT_VERSIONS,
+      );
       expect(blank.total).toBe(1);
       expect(blank.rows.map((row) => row.candidateId)).toEqual([seeded.candidateId]);
     });
@@ -318,11 +447,15 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
       await upsertHotelCandidates(connection!, [parked, pending]);
       await recordHotelQualifications(connection!, [qualificationInput(parked.candidateId)]);
 
-      const page = await listOperatorProspects(connection!, {
-        resolutionVersion: RESOLUTION_VERSION,
-        search: 'belvedere',
-        queue: 'parked',
-      });
+      const page = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+          search: 'belvedere',
+          queue: 'parked',
+        },
+        CURRENT_VERSIONS,
+      );
       expect(page.total).toBe(1);
       expect(page.rows.map((row) => row.candidateId)).toEqual([parked.candidateId]);
     });
@@ -357,9 +490,13 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
         expiresAt: new Date(Date.now() + 86_400_000),
       });
 
-      const page = await listOperatorProspects(connection!, {
-        resolutionVersion: RESOLUTION_VERSION,
-      });
+      const page = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+        },
+        CURRENT_VERSIONS,
+      );
       const byId = new Map(page.rows.map((row) => [row.candidateId, row]));
       expect(byId.get(selected.candidateId)).toMatchObject({
         inSelection: true,
@@ -409,10 +546,14 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
         expiresAt: new Date(Date.now() + 86_400_000),
       });
 
-      const beforeRoster = await listOperatorProspects(connection!, {
-        resolutionVersion: RESOLUTION_VERSION,
-        inSelection: true,
-      });
+      const beforeRoster = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+          inSelection: true,
+        },
+        CURRENT_VERSIONS,
+      );
       expect(beforeRoster.rows).toEqual([]);
 
       await addWaveRosterEntry(connection!, {
@@ -423,10 +564,14 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
         actor: 'operator',
       });
 
-      const afterRoster = await listOperatorProspects(connection!, {
-        resolutionVersion: RESOLUTION_VERSION,
-        inSelection: true,
-      });
+      const afterRoster = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+          inSelection: true,
+        },
+        CURRENT_VERSIONS,
+      );
       expect(afterRoster.rows.map((row) => row.candidateId)).toEqual([candidate.candidateId]);
       expect(afterRoster.rows[0]).toMatchObject({
         selectionSource: 'wave-roster',
@@ -463,16 +608,24 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
         expiresAt: new Date(Date.now() + 86_400_000),
       });
 
-      const onlySelected = await listOperatorProspects(connection!, {
-        resolutionVersion: RESOLUTION_VERSION,
-        inSelection: true,
-      });
+      const onlySelected = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+          inSelection: true,
+        },
+        CURRENT_VERSIONS,
+      );
       expect(onlySelected.rows.map((row) => row.candidateId)).toEqual([selected.candidateId]);
 
-      const onlyRest = await listOperatorProspects(connection!, {
-        resolutionVersion: RESOLUTION_VERSION,
-        inSelection: false,
-      });
+      const onlyRest = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+          inSelection: false,
+        },
+        CURRENT_VERSIONS,
+      );
       expect(onlyRest.rows.map((row) => row.candidateId)).toEqual([other.candidateId]);
     });
 
@@ -505,12 +658,163 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
         expiresAt: new Date(Date.now() + 86_400_000),
       });
 
-      const filtered = await listOperatorProspects(connection!, {
-        resolutionVersion: RESOLUTION_VERSION,
-        inSelection: true,
-      });
+      const filtered = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+          inSelection: true,
+        },
+        CURRENT_VERSIONS,
+      );
       expect(filtered.total).toBe(1);
       expect(filtered.catalogueTotal).toBe(2);
+    });
+  });
+
+  describe('listOperatorProspects sorting (issue #215)', () => {
+    it('sorts descending by brokenness, most broken first, with unscored rows sorting last', async () => {
+      if (!connection) return;
+      const low = candidateInput({ name: 'A Hotel' });
+      const high = candidateInput({ name: 'B Hotel' });
+      const unscored = candidateInput({ name: 'C Hotel' });
+      await upsertHotelCandidates(connection!, [low, high, unscored]);
+      await recordHotelScores(connection!, [
+        scoreInput(low.candidateId, SCORING_VERSION, 10, 20),
+        scoreInput(high.candidateId, SCORING_VERSION, 90, 5),
+      ]);
+
+      const page = await listOperatorProspects(
+        connection!,
+        { resolutionVersion: RESOLUTION_VERSION, sortBy: 'brokenness', sortDirection: 'desc' },
+        CURRENT_VERSIONS,
+      );
+      expect(page.rows.map((row) => row.candidateId)).toEqual([
+        high.candidateId,
+        low.candidateId,
+        unscored.candidateId,
+      ]);
+      expect(page.rows[2]!.brokennessTotal).toBeNull();
+    });
+
+    it('sorts ascending by brokenness, least broken first, with unscored rows still sorting last', async () => {
+      if (!connection) return;
+      const low = candidateInput({ name: 'A Hotel' });
+      const high = candidateInput({ name: 'B Hotel' });
+      const unscored = candidateInput({ name: 'C Hotel' });
+      await upsertHotelCandidates(connection!, [low, high, unscored]);
+      await recordHotelScores(connection!, [
+        scoreInput(low.candidateId, SCORING_VERSION, 10, 20),
+        scoreInput(high.candidateId, SCORING_VERSION, 90, 5),
+      ]);
+
+      const page = await listOperatorProspects(
+        connection!,
+        { resolutionVersion: RESOLUTION_VERSION, sortBy: 'brokenness', sortDirection: 'asc' },
+        CURRENT_VERSIONS,
+      );
+      expect(page.rows.map((row) => row.candidateId)).toEqual([
+        low.candidateId,
+        high.candidateId,
+        unscored.candidateId,
+      ]);
+    });
+
+    it('sorts by fixability (ability) independently of brokenness', async () => {
+      if (!connection) return;
+      const lowAbility = candidateInput({ name: 'A Hotel' });
+      const highAbility = candidateInput({ name: 'B Hotel' });
+      await upsertHotelCandidates(connection!, [lowAbility, highAbility]);
+      await recordHotelScores(connection!, [
+        scoreInput(lowAbility.candidateId, SCORING_VERSION, 50, 5),
+        scoreInput(highAbility.candidateId, SCORING_VERSION, 50, 95),
+      ]);
+
+      const descending = await listOperatorProspects(
+        connection!,
+        { resolutionVersion: RESOLUTION_VERSION, sortBy: 'fixability', sortDirection: 'desc' },
+        CURRENT_VERSIONS,
+      );
+      expect(descending.rows.map((row) => row.candidateId)).toEqual([
+        highAbility.candidateId,
+        lowAbility.candidateId,
+      ]);
+
+      const ascending = await listOperatorProspects(
+        connection!,
+        { resolutionVersion: RESOLUTION_VERSION, sortBy: 'fixability', sortDirection: 'asc' },
+        CURRENT_VERSIONS,
+      );
+      expect(ascending.rows.map((row) => row.candidateId)).toEqual([
+        lowAbility.candidateId,
+        highAbility.candidateId,
+      ]);
+    });
+
+    it('applies the sort before pagination rather than per page', async () => {
+      if (!connection) return;
+      const inputs = Array.from({ length: 6 }, (_, index) =>
+        candidateInput({ name: `Hotel ${String(index).padStart(2, '0')}` }),
+      );
+      await upsertHotelCandidates(connection!, inputs);
+      await recordHotelScores(
+        connection!,
+        inputs.map((input, index) => scoreInput(input.candidateId, SCORING_VERSION, index * 10, 0)),
+      );
+      const expectedOrder = [...inputs].reverse().map((input) => input.candidateId);
+
+      const firstPage = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+          sortBy: 'brokenness',
+          sortDirection: 'desc',
+          limit: 4,
+          offset: 0,
+        },
+        CURRENT_VERSIONS,
+      );
+      const secondPage = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+          sortBy: 'brokenness',
+          sortDirection: 'desc',
+          limit: 4,
+          offset: 4,
+        },
+        CURRENT_VERSIONS,
+      );
+      expect([...firstPage.rows, ...secondPage.rows].map((row) => row.candidateId)).toEqual(
+        expectedOrder,
+      );
+    });
+
+    it('composes with an existing filter/search constraint', async () => {
+      if (!connection) return;
+      const matching = candidateInput({ name: 'Match Hotel', postcode: '75001' });
+      const other = candidateInput({ name: 'Other Hotel', postcode: '75001' });
+      const excluded = candidateInput({ name: 'Match Elsewhere', postcode: '69000' });
+      await upsertHotelCandidates(connection!, [matching, other, excluded]);
+      await recordHotelScores(connection!, [
+        scoreInput(matching.candidateId, SCORING_VERSION, 40, 0),
+        scoreInput(other.candidateId, SCORING_VERSION, 80, 0),
+        scoreInput(excluded.candidateId, SCORING_VERSION, 99, 0),
+      ]);
+
+      const page = await listOperatorProspects(
+        connection!,
+        {
+          resolutionVersion: RESOLUTION_VERSION,
+          search: '75001',
+          sortBy: 'brokenness',
+          sortDirection: 'desc',
+        },
+        CURRENT_VERSIONS,
+      );
+      expect(page.rows.map((row) => row.candidateId)).toEqual([
+        other.candidateId,
+        matching.candidateId,
+      ]);
     });
   });
 });

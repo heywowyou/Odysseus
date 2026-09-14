@@ -66,12 +66,26 @@ export interface AuditManualFields {
  *  no authorization and grants no preview or outreach eligibility - it
  *  only lets the dashboard link the audit back to the hotel it is about.
  *
- *  `matchedOn` has one value today (the only identity key
- *  `linkAuditToHotelByDomain` currently resolves against); a closed union
- *  rather than a bare string so a future second matching strategy is a
- *  visible addition, not a silent freeform label. */
+ *  `matchedOn` is a closed union rather than a bare string so a new
+ *  matching strategy is a visible addition, not a silent freeform label.
+ *  `'own-registrable-domain'` is the automatic match
+ *  `linkAuditToHotelByDomain` resolves after every audit-producing scan.
+ *  `'manual'` (issue #216) is an operator's explicit "this audit is about
+ *  this hotel" correction from the audit detail page, for a domain the
+ *  automatic rule deliberately refuses to guess (shared/vendor-hosted) or
+ *  one it linked to the wrong candidate. */
 export interface AuditHotelLink {
   candidateId: string;
-  matchedOn: 'own-registrable-domain';
+  matchedOn: 'own-registrable-domain' | 'manual';
   linkedAt: Date;
+  /** Issue #218: the durable business identity behind `candidateId`, when
+   *  one could be resolved. `candidateId` still names the exact 90-day
+   *  campaign generation the domain match happened against (real
+   *  evidence, never rewritten); `businessId` is the stable pointer that
+   *  keeps this audit discoverable from the Prospect hub after that
+   *  candidate generation expires or is superseded. Absent when the
+   *  candidate's domain was ambiguous (shared/vendor-hosted) and no
+   *  durable business could be safely resolved - see
+   *  resolveOrCreateBusinessForCandidate in @odysseus/store. */
+  businessId?: string;
 }

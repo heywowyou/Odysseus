@@ -34,6 +34,16 @@ export const HUB_STEP_KEYS: readonly HubStepKey[] = [
   'outcome',
 ];
 
+/** Issue #221: parses a `?tab=` query value into a HubStepKey, or null for
+ *  anything else (absent, unknown, or a stale value from a build that used
+ *  a different key) - the page falls back to the default tab rather than
+ *  rendering an unrecognised one. */
+export function parseHubStepKey(value: string | null | undefined): HubStepKey | null {
+  return value != null && (HUB_STEP_KEYS as readonly string[]).includes(value)
+    ? (value as HubStepKey)
+    : null;
+}
+
 /** DOM ids of the hub's panels, so a deep link (or a section reference
  *  elsewhere) still lands on the right stage now that only the active
  *  tab's panel exists in the DOM. */
@@ -47,7 +57,11 @@ export const HUB_STEP_ANCHORS: Record<HubStepKey, string> = {
   outcome: 'hub-outcome',
 };
 
-export type HubStepState = 'done' | 'active' | 'todo' | 'blocked';
+/** 'stale' and 'refreshing' (issue #217) are freshness-driven states, only
+ *  ever produced for a step whose stage is versioned (today, quick-check):
+ *  a stage whose persisted artifact exists but names an old pipeline
+ *  version, or one whose candidate-scoped refresh is in flight. */
+export type HubStepState = 'done' | 'active' | 'todo' | 'blocked' | 'stale' | 'refreshing';
 
 export interface HubStep {
   key: HubStepKey;
@@ -118,7 +132,22 @@ export function pipelineSteps(detail: ProspectDetailResponse, now: number): HubS
     },
     {
       key: 'quick-check',
-      state: detail.prescan !== null ? 'done' : 'todo',
+      // Issue #217: never 'done' merely because a prescan record exists -
+      // an older prescan generation reads as 'stale', and a candidate-scoped
+      // refresh in flight reads as 'refreshing', both distinct from 'todo'
+      // (never run at all).
+      state: (() => {
+        switch (detail.prescanFreshness.state) {
+          case 'current':
+            return 'done';
+          case 'stale':
+            return 'stale';
+          case 'refreshing':
+            return 'refreshing';
+          case 'missing':
+            return 'todo';
+        }
+      })(),
       date: detail.prescan?.startedAt ?? null,
     },
     {
@@ -208,7 +237,16 @@ export function hubPrimaryAction(detail: ProspectDetailResponse): HubPrimaryActi
   //    email. Plan 045 section 1.7: the single call publishes its own v2
   //    preview (superseding whatever was or wasn't live), so the hub no
   //    longer waits on a separate publish step before offering it.
-  if (detail.outreachAudit != null && detail.thread === null) {
+  //    Issue #219: prefer the server's own actions.createFirstEmail when the
+  //    payload carries it, so this button can never disagree with what
+  //    POST /outreach/first-email would actually do; the outreachAudit/
+  //    thread inference below stays only as a fallback for a cached or
+  //    fixture payload that predates the field.
+  if (
+    detail.actions !== undefined
+      ? detail.actions.createFirstEmail.state === 'available'
+      : detail.outreachAudit != null && detail.thread === null
+  ) {
     return { kind: 'create-first-email' };
   }
 
@@ -217,15 +255,23 @@ export function hubPrimaryAction(detail: ProspectDetailResponse): HubPrimaryActi
   if (pendingDraft !== undefined) return { kind: 'review-draft', draftId: pendingDraft.draftId };
 
   // 7. A sent touch with the sequence still open waits for its follow-up.
-  if (detail.thread !== null && canGenerateFollowUp(detail.thread.state)) {
+  //    Same #219 preference: server actions.createFollowUp first.
+  if (
+    detail.actions !== undefined
+      ? detail.actions.createFollowUp.state === 'available'
+      : detail.thread !== null && canGenerateFollowUp(detail.thread.state)
+  ) {
     return { kind: 'prepare-follow-up' };
   }
 
-  // 8. A reply (or a sync that flagged one) waits for its outcome.
+  // 8. A reply (or a sync that flagged one) waits for its outcome. Same
+  //    #219 preference: server actions.recordOutcome first.
   if (
-    detail.thread !== null &&
-    detail.thread.currentOutcome === null &&
-    (detail.thread.state === 'replied' || detail.thread.needsReview !== null)
+    detail.actions !== undefined
+      ? detail.actions.recordOutcome.state === 'available'
+      : detail.thread !== null &&
+        detail.thread.currentOutcome === null &&
+        (detail.thread.state === 'replied' || detail.thread.needsReview !== null)
   ) {
     return { kind: 'record-outcome' };
   }

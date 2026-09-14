@@ -181,6 +181,24 @@ export function formatEta(etaMs: number): string {
   return `${Math.ceil(etaMs / 60_000)} min`;
 }
 
+/** Issue #223: the server only recomputes etaMs when a progress event
+ *  fires, but the dashboard polls on its own cadence - without this, the
+ *  displayed countdown would freeze at the same value for the whole poll
+ *  interval instead of ticking down live. Ages a server-computed etaMs
+ *  down by the wall time elapsed since etaCalculatedAt, clamped at 0.
+ *  Returns the raw etaMs unchanged when etaCalculatedAt is absent or
+ *  unparseable, so an older/degraded response still renders something. */
+export function agedEtaMs(
+  etaMs: number,
+  etaCalculatedAt: string | undefined,
+  nowMs: number,
+): number {
+  if (etaCalculatedAt === undefined) return etaMs;
+  const calculatedAtMs = new Date(etaCalculatedAt).getTime();
+  if (!Number.isFinite(calculatedAtMs)) return etaMs;
+  return Math.max(etaMs - (nowMs - calculatedAtMs), 0);
+}
+
 /** Badge state of one prospecting URL row, ported from app-progress.ts
  *  renderProspecting: complete is success, error is failure, every other
  *  status (pending, scanning, skipped-non-html) is still in flight. */

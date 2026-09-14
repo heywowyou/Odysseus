@@ -593,8 +593,11 @@ const reportPreparationSchema = new Schema(
 const hotelLinkSchema = new Schema(
   {
     candidateId: { type: String, required: true },
-    matchedOn: { type: String, required: true, enum: ['own-registrable-domain'] },
+    matchedOn: { type: String, required: true, enum: ['own-registrable-domain', 'manual'] },
     linkedAt: { type: Date, required: true },
+    // Issue #218: the durable business behind candidateId, when one could
+    // be safely resolved.
+    businessId: { type: String },
   },
   { _id: false },
 );
@@ -643,6 +646,8 @@ export const auditSchema = new Schema<AuditDocument>(
 );
 
 auditSchema.index({ siteUrl: 1, startedAt: -1 });
+// Issue #218: the Prospect hub's durable-business audit list.
+auditSchema.index({ 'hotelLink.businessId': 1 });
 
 export function createAuditModel(connection: Connection): Model<AuditDocument> {
   return connection.models['Audit'] ?? connection.model<AuditDocument>('Audit', auditSchema);

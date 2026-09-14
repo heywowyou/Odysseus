@@ -44,7 +44,7 @@ export const fr: DashboardStrings = {
     },
     typeLabels: {
       fullAudit: 'Audit complet',
-      prospecting: 'Contrôle rapide',
+      prospecting: 'Audit léger',
       hotelPrescan: 'Contrôle rapide',
       outreachFullScan: 'Audit de prospection',
     },
@@ -119,10 +119,10 @@ export const fr: DashboardStrings = {
   newScan: {
     title: 'Nouveau scan',
     description:
-      'Lancer un audit complet d’un site, ou un contrôle rapide pour présélectionner des hôtels.',
+      'Lancer un audit complet d’un site, ou un audit léger pour présélectionner des hôtels.',
     typeLabel: 'Type d’analyse',
     typeFullAudit: 'Audit complet',
-    typeProspecting: 'Contrôle rapide',
+    typeProspecting: 'Audit léger',
     urlLabel: 'Adresse du site',
     urlPlaceholder: 'https://exemple.fr',
     urlInvalidError:
@@ -176,6 +176,7 @@ export const fr: DashboardStrings = {
       '{content} pages de contenu vérifiées. Pages échantillons mesurées pour les performances : {completed}/{target}.',
     etaLabel: 'Temps restant estimé',
     etaRoughSuffix: '(estimation approximative)',
+    etaFinishingLabel: 'Presque terminé',
     phaseLabels: {
       queued: 'En attente',
       crawl: 'Exploration du site',
@@ -279,6 +280,17 @@ export const fr: DashboardStrings = {
     regeneratingMessage: 'Régénération en cours…',
     regeneratedMessage: 'Rapport régénéré.',
     notFound: 'Audit introuvable.',
+    hotelLink: {
+      notLinked: 'Non lié à un prospect',
+      linkAction: 'Lier à un prospect',
+      manualBadge: 'Lié manuellement',
+      unlinkAction: 'Délier',
+      unlinkConfirm: 'Délier cet audit du prospect ?',
+      dialogTitle: 'Lier à un prospect',
+      searchPlaceholder: 'Rechercher par nom ou domaine…',
+      searchEmpty: 'Aucun prospect correspondant.',
+      actionError: 'Impossible de mettre à jour le lien',
+    },
     languageLabels: { fr: 'Français', en: 'English' },
     failureHeading: 'Le rapport n’a pas pu être généré',
     failureMessageLabel: 'Message renvoyé par la génération',
@@ -656,6 +668,8 @@ export const fr: DashboardStrings = {
       active: 'En cours',
       todo: 'À faire',
       blocked: 'Bloqué',
+      stale: 'Pas à jour',
+      refreshing: 'Actualisation…',
     },
     primary: {
       startScan: "Lancer l'audit de prospection",
@@ -702,6 +716,11 @@ export const fr: DashboardStrings = {
         blocking: 'Blocage',
         requests: 'Requêtes',
       },
+      staleNotice:
+        'Ces données ne sont plus à jour. Actualisez-les pour voir le résultat du pipeline actuel.',
+      refreshAction: 'Actualiser les données du prospect',
+      refreshQueued: 'Actualisation lancée',
+      refreshFailed: "Impossible d'actualiser ce prospect",
     },
     audit: {
       empty: "Pas encore d'audit de prospection.",

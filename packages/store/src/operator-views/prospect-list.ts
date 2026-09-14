@@ -16,7 +16,9 @@ import type {
   HotelQualificationReason,
   OutreachOutcome,
   OutreachThreadState,
+  PipelineFreshness,
 } from '@odysseus/core';
+import { computeFreshness, type ProspectFreshnessVersions } from './freshness.js';
 import { createHotelCandidateModel } from '../schemas/hotel-candidate.schema.js';
 import { createHotelQualificationModel } from '../schemas/hotel-qualification.schema.js';
 import { createHotelScoreModel } from '../schemas/score.schema.js';
@@ -33,6 +35,12 @@ import type { SelectionCohortFacts, SelectionSource } from './selection-projecti
  *  outcomes; `groups` covers both shared-web-presence statuses. */
 export type OperatorProspectQueue =
   'join-review' | 'parked' | 'rejected' | 'already-engaged' | 'groups';
+
+/** Issue #215: the two score-derived sort keys the list can order by. Kept
+ *  as a closed allow-list (not an arbitrary field name) so a route can
+ *  reject anything else before it ever reaches the query layer. */
+export type ProspectSortField = 'brokenness' | 'fixability';
+export type ProspectSortDirection = 'asc' | 'desc';
 
 export interface ListOperatorProspectsOptions extends OperatorViewPageOptions {
   resolutionVersion?: string;
@@ -51,6 +59,16 @@ export interface ListOperatorProspectsOptions extends OperatorViewPageOptions {
    *  current wave, false keeps only the rest. Absent means the whole
    *  catalogue, which is what every existing caller gets. */
   inSelection?: boolean;
+  /** Issue #215: sort the page by the candidate's latest brokenness or
+   *  ability (fixability) score instead of the default name order. Absent
+   *  keeps the existing `find().sort().skip().limit()` path unchanged;
+   *  present switches to an aggregation that joins the latest score before
+   *  paging, since sorting on a field paging currently only attaches after
+   *  the page is chosen is otherwise impossible. Direction defaults to
+   *  descending (most broken / most fixable first) when sortBy is set but
+   *  sortDirection is not. */
+  sortBy?: ProspectSortField;
+  sortDirection?: ProspectSortDirection;
 }
 
 /** One row per fold family: the base letter plus its accented variants.
@@ -114,8 +132,17 @@ export interface OperatorProspectRow {
   reviewState: HotelCandidateReviewState;
   qualificationOutcome: HotelQualificationOutcome | 'not-evaluated';
   qualificationReasons: HotelQualificationReason[];
+  /** Issue #217: whether the qualification pointer names the pipeline's
+   *  current qualification generation, agreeing with the same field on the
+   *  detail view. */
+  qualificationFreshness: PipelineFreshness;
   prescanStatus: HotelPrescanStatus | null;
   scoringVersion: string | null;
+  /** Same distinction as qualificationFreshness, for the latest score -
+   *  also stale when the prescan generation the score was derived from is,
+   *  so a sort or filter on the score never treats stale evidence as
+   *  current. */
+  scoreFreshness: PipelineFreshness;
   brokennessTotal: number | null;
   abilityTotal: number | null;
   worthy: boolean | null;
@@ -148,6 +175,20 @@ interface ProspectCandidateRowDoc {
   prescan?: { status: HotelPrescanStatus };
 }
 
+/** Shared by both freshness-aware list functions: turns one candidate row's
+ *  qualification pointer into a PipelineFreshness against the caller's
+ *  current version. */
+function qualificationFreshnessOf(
+  row: Pick<ProspectCandidateRowDoc, 'qualification'>,
+  versions: ProspectFreshnessVersions,
+): PipelineFreshness {
+  return computeFreshness({
+    version: row.qualification?.qualificationVersion,
+    computedAt: row.qualification?.evaluatedAt,
+    currentVersion: versions.qualificationVersion,
+  });
+}
+
 /** Explicit pick, never a whole document: the catalogue holds a street
  *  address and per-source raw website strings the list has no use for. */
 const PROSPECT_ROW_PROJECTION: Record<string, number> = {
@@ -163,6 +204,7 @@ const PROSPECT_ROW_PROJECTION: Record<string, number> = {
   'review.state': 1,
   'qualification.outcome': 1,
   'qualification.qualificationVersion': 1,
+  'qualification.evaluatedAt': 1,
   'prescan.status': 1,
 };
 
@@ -268,34 +310,31 @@ async function qualificationReasonsForCandidates(
  *  scores collection is insert-only, so "latest" is a group-after-sort, the
  *  same shape listLatestHotelScores uses, bounded to this page's ids rather
  *  than run over a whole scoring version. */
+interface LatestScoreRow {
+  scoringVersion: string;
+  prescanVersion: string;
+  computedAt: Date;
+  brokennessTotal: number;
+  abilityTotal: number;
+  worthy: boolean;
+}
+
 async function latestScoresForCandidates(
   connection: Connection,
   candidateIds: string[],
-): Promise<
-  Map<
-    string,
-    { scoringVersion: string; brokennessTotal: number; abilityTotal: number; worthy: boolean }
-  >
-> {
-  const byCandidate = new Map<
-    string,
-    { scoringVersion: string; brokennessTotal: number; abilityTotal: number; worthy: boolean }
-  >();
+): Promise<Map<string, LatestScoreRow>> {
+  const byCandidate = new Map<string, LatestScoreRow>();
   if (candidateIds.length === 0) return byCandidate;
 
-  const rows = await createHotelScoreModel(connection).aggregate<{
-    _id: string;
-    scoringVersion: string;
-    brokennessTotal: number;
-    abilityTotal: number;
-    worthy: boolean;
-  }>([
+  const rows = await createHotelScoreModel(connection).aggregate<{ _id: string } & LatestScoreRow>([
     { $match: { candidateId: { $in: candidateIds } } },
     { $sort: { candidateId: 1, computedAt: -1 } },
     {
       $group: {
         _id: '$candidateId',
         scoringVersion: { $first: '$scoringVersion' },
+        prescanVersion: { $first: '$prescanVersion' },
+        computedAt: { $first: '$computedAt' },
         brokennessTotal: { $first: '$brokenness.total' },
         abilityTotal: { $first: '$ability.total' },
         worthy: { $first: '$worthy' },
@@ -305,12 +344,36 @@ async function latestScoresForCandidates(
   for (const row of rows) {
     byCandidate.set(row._id, {
       scoringVersion: row.scoringVersion,
+      prescanVersion: row.prescanVersion,
+      computedAt: row.computedAt,
       brokennessTotal: row.brokennessTotal,
       abilityTotal: row.abilityTotal,
       worthy: row.worthy,
     });
   }
   return byCandidate;
+}
+
+/** Same rule as prospect-detail.ts's scoreFreshness: current only when both
+ *  the score's own scoringVersion and the prescan generation it was derived
+ *  from are current. */
+function scoreFreshnessOf(
+  score: LatestScoreRow | undefined,
+  versions: ProspectFreshnessVersions,
+): PipelineFreshness {
+  if (score !== undefined && score.prescanVersion !== versions.prescanVersion) {
+    return {
+      state: 'stale',
+      version: score.scoringVersion,
+      currentVersion: versions.scoringVersion,
+      computedAt: score.computedAt,
+    };
+  }
+  return computeFreshness({
+    version: score?.scoringVersion,
+    computedAt: score?.computedAt,
+    currentVersion: versions.scoringVersion,
+  });
 }
 
 async function latestContactStatesForCandidates(
@@ -356,9 +419,65 @@ async function threadStatesForCandidates(
   return { states, outcomePointers };
 }
 
+/** Issue #215: the field inside a `hotel_scores` document that a given sort
+ *  key reads. */
+function scoreFieldFor(sortBy: ProspectSortField): string {
+  return sortBy === 'brokenness' ? 'brokenness.total' : 'ability.total';
+}
+
+/** The score-sorted page of candidates: unlike the default path, the latest
+ *  score has to be joined *before* `$sort`/`$skip`/`$limit` run, since the
+ *  sort key lives in a separate collection that the default path only joins
+ *  once the page is already chosen. `hasScore` sorts first (descending) so
+ *  an unscored candidate always lands after every scored one, in either
+ *  direction; `name`/`candidateId` remain the tiebreaker so offset windows
+ *  stay stable, matching the default path's own tiebreaker. The final
+ *  `$project` narrows back down to exactly `PROSPECT_ROW_PROJECTION`'s
+ *  fields, so the result satisfies the same `ProspectCandidateRowDoc[]`
+ *  shape the rest of the function consumes either way. */
+async function sortedProspectCandidates(
+  connection: Connection,
+  filter: Record<string, unknown>,
+  sortBy: ProspectSortField,
+  sortDirection: ProspectSortDirection | undefined,
+  skip: number,
+  limit: number,
+): Promise<ProspectCandidateRowDoc[]> {
+  const scoreField = scoreFieldFor(sortBy);
+  const direction = sortDirection === 'asc' ? 1 : -1;
+
+  return createHotelCandidateModel(connection).aggregate<ProspectCandidateRowDoc>([
+    { $match: filter },
+    {
+      $lookup: {
+        from: 'hotel_scores',
+        let: { candidateId: '$candidateId' },
+        pipeline: [
+          { $match: { $expr: { $eq: ['$candidateId', '$$candidateId'] } } },
+          { $sort: { computedAt: -1 } },
+          { $limit: 1 },
+          { $project: { _id: 0, value: `$${scoreField}` } },
+        ],
+        as: 'latestScore',
+      },
+    },
+    {
+      $addFields: {
+        hasScore: { $gt: [{ $size: '$latestScore' }, 0] },
+        sortScore: { $arrayElemAt: ['$latestScore.value', 0] },
+      },
+    },
+    { $sort: { hasScore: -1, sortScore: direction, name: 1, candidateId: 1 } },
+    { $skip: skip },
+    { $limit: limit },
+    { $project: PROSPECT_ROW_PROJECTION },
+  ]);
+}
+
 export async function listOperatorProspects(
   connection: Connection,
   options: ListOperatorProspectsOptions,
+  versions: ProspectFreshnessVersions,
 ): Promise<OperatorProspectListPage> {
   const CandidateModel = createHotelCandidateModel(connection);
   const { limit, offset, skip } = pageBounds(options);
@@ -378,14 +497,23 @@ export async function listOperatorProspects(
   const [total, catalogueTotal, candidates] = await Promise.all([
     CandidateModel.countDocuments(filter),
     CandidateModel.countDocuments(catalogueFilter),
-    CandidateModel.find(filter)
-      // candidateId is unique, so the name tiebreaker makes offset windows
-      // exact even when two establishments share a name.
-      .sort({ name: 1, candidateId: 1 })
-      .skip(skip)
-      .limit(limit)
-      .select(PROSPECT_ROW_PROJECTION)
-      .lean<ProspectCandidateRowDoc[]>(),
+    options.sortBy === undefined
+      ? CandidateModel.find(filter)
+          // candidateId is unique, so the name tiebreaker makes offset
+          // windows exact even when two establishments share a name.
+          .sort({ name: 1, candidateId: 1 })
+          .skip(skip)
+          .limit(limit)
+          .select(PROSPECT_ROW_PROJECTION)
+          .lean<ProspectCandidateRowDoc[]>()
+      : sortedProspectCandidates(
+          connection,
+          filter,
+          options.sortBy,
+          options.sortDirection,
+          skip,
+          limit,
+        ),
   ]);
 
   const candidateIds = candidates.map((row) => row.candidateId);
@@ -431,8 +559,10 @@ export async function listOperatorProspects(
           : (reasonsByCandidate.get(
               `${row.qualification.qualificationVersion}:${row.candidateId}`,
             ) ?? []),
+      qualificationFreshness: qualificationFreshnessOf(row, versions),
       prescanStatus: row.prescan?.status ?? null,
       scoringVersion: score?.scoringVersion ?? null,
+      scoreFreshness: scoreFreshnessOf(score, versions),
       brokennessTotal: score?.brokennessTotal ?? null,
       abilityTotal: score?.abilityTotal ?? null,
       worthy: score?.worthy ?? null,

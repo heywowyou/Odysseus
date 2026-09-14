@@ -20,6 +20,16 @@ import type {
  * strings.
  */
 
+/** Mirrors @odysseus/core's PipelineFreshness (issue #217), by value for the
+ *  same reason every other response type here is: whether a versioned
+ *  pipeline stage's persisted artifact names the pipeline's current
+ *  version, not merely whether one exists. */
+export type PipelineFreshness =
+  | { state: 'missing' }
+  | { state: 'current'; version: string; computedAt: string }
+  | { state: 'stale'; version: string; currentVersion: string; computedAt: string }
+  | { state: 'refreshing'; jobId: string };
+
 export type ProspectQueue =
   'all' | 'join-review' | 'parked' | 'rejected' | 'already-engaged' | 'groups';
 
@@ -99,6 +109,14 @@ export function isQualificationValue(value: string): value is QualificationFilte
   return value === '' || (QUALIFICATION_VALUES as readonly string[]).includes(value);
 }
 
+/** Issue #215: the score-derived sort, '' meaning the default name order. */
+export type ProspectSortField = '' | 'brokenness' | 'fixability';
+export type ProspectSortDirection = 'asc' | 'desc';
+const SORT_FIELD_VALUES: readonly ProspectSortField[] = ['brokenness', 'fixability'];
+export function isSortFieldValue(value: string): value is ProspectSortField {
+  return value === '' || (SORT_FIELD_VALUES as readonly string[]).includes(value);
+}
+
 /** Controlled state of the list's filters; '' means the filter is off.
  *  `search` is the free-text box and travels as the API's `q` param. */
 export interface ProspectFilterState {
@@ -109,6 +127,8 @@ export interface ProspectFilterState {
   reviewState: ReviewStateFilter;
   qualificationOutcome: QualificationFilter;
   search: string;
+  sortBy: ProspectSortField;
+  sortDirection: ProspectSortDirection;
 }
 
 /** The list opens on the actionable set (plan 041 slice B1's design
@@ -122,6 +142,8 @@ export function createEmptyFilters(): ProspectFilterState {
     reviewState: '',
     qualificationOutcome: '',
     search: '',
+    sortBy: '',
+    sortDirection: 'desc',
   };
 }
 
@@ -143,6 +165,12 @@ export function buildProspectsPath(filters: ProspectFilterState, offset: number)
   }
   const search = filters.search.trim();
   if (search !== '') params.set('q', search);
+  if (filters.sortBy !== '') {
+    params.set('sortBy', filters.sortBy);
+    // 'desc' is the default the store applies when sortBy is set with no
+    // explicit direction, so only an 'asc' override needs to travel.
+    if (filters.sortDirection === 'asc') params.set('sortDirection', 'asc');
+  }
   params.set('limit', String(PROSPECT_PAGE_SIZE));
   if (offset > 0) params.set('offset', String(offset));
   const queryString = params.toString();
@@ -180,8 +208,10 @@ export interface ProspectRow {
   reviewState: string;
   qualificationOutcome: string;
   qualificationReasons: string[];
+  qualificationFreshness: PipelineFreshness;
   prescanStatus: string | null;
   scoringVersion: string | null;
+  scoreFreshness: PipelineFreshness;
   brokennessTotal: number | null;
   abilityTotal: number | null;
   worthy: boolean | null;
@@ -304,6 +334,10 @@ export interface QualificationEventResponse {
 
 export interface ProspectDetailResponse {
   candidateId: string;
+  /** The durable business identity this candidate is reconciled to (issue
+   *  #218), or null before reconciliation has run for it. Stable across
+   *  campaign candidate expiry/regeneration; candidateId is not. */
+  businessId: string | null;
   resolutionVersion: string;
   identityKey: string;
   identityStatus: string;
@@ -331,6 +365,9 @@ export interface ProspectDetailResponse {
     decidedAt: string | null;
   };
   qualificationOutcome: string;
+  qualificationFreshness: PipelineFreshness;
+  prescanFreshness: PipelineFreshness;
+  scoreFreshness: PipelineFreshness;
   prescanStatus: string | null;
   websites: {
     raw: string;
@@ -455,6 +492,50 @@ export interface ProspectDetailResponse {
     decidedAt?: string;
     actor?: string;
   };
+  /** Issue #220: every job currently owning part of this prospect's
+   *  workflow, across every operator-launchable kind - not only the
+   *  outreach full scan outreachScanJobId above already tracked. Optional
+   *  for the same fixture tolerance as outreachScan; a payload predating
+   *  it simply polls off outreachScanJobId alone. */
+  activeJobs?: ProspectActiveJob[];
+  /** Issue #219: the server's own answer to "what can the operator do right
+   *  now", computed from the same plans/gates the write routes consult
+   *  (planOutreachFullScan, planProspectJobLaunch). The client renders
+   *  buttons from this instead of re-deriving availability from nullable
+   *  thread/preview fields, so a button can never claim an action is
+   *  available when the route behind it would refuse. Optional for the same
+   *  fixture tolerance as outreachScan; a payload predating it falls back
+   *  to the older per-field inference in hub-model.ts. */
+  actions?: ProspectHubActions;
+}
+
+/** Mirrors @odysseus/store's ProspectHubActionability/ProspectHubActions by
+ *  value, the same discipline as every other response type in this file. */
+export type ProspectHubActionability =
+  | { state: 'available' }
+  | { state: 'running'; jobId: string }
+  | { state: 'blocked'; reason: string }
+  | { state: 'complete' };
+
+export interface ProspectHubActions {
+  refreshProspect: ProspectHubActionability;
+  runQuickCheck: ProspectHubActionability;
+  runProspectingAudit: ProspectHubActionability;
+  runFullAudit: ProspectHubActionability;
+  publishPreview: ProspectHubActionability;
+  createFirstEmail: ProspectHubActionability;
+  createFollowUp: ProspectHubActionability;
+  recordOutcome: ProspectHubActionability;
+}
+
+/** Mirrors @odysseus/store's ProspectActiveJob by value, the same
+ *  discipline as every other response type in this file. */
+export interface ProspectActiveJob {
+  jobId: string;
+  kind: 'quick-check' | 'light-audit' | 'prospecting-audit' | 'full-audit';
+  status: 'queued' | 'running' | 'needs-input';
+  startedAt: string;
+  targetDomain: string;
 }
 
 /** Plan 043 slice 3: the selection record behind GET /api/selection - the
@@ -517,4 +598,24 @@ export interface OutreachDraftActionResponse {
  *  refuse anyway. */
 export function canGenerateFollowUp(state: string): boolean {
   return state === 'e1-sent' || state === 'e2-sent';
+}
+
+// ---------------------------------------------------------------------------
+// Active-work polling (issue #220)
+// ---------------------------------------------------------------------------
+
+/** The hub's poll interval given the latest fetched detail: 5s while any
+ *  job currently owns part of this prospect's workflow, otherwise 0 (a
+ *  single fetch, refreshed again only after an operator action).
+ *  outreachScanJobId alone used to be the only trigger, so a running Quick
+ *  check or paid Full audit never refreshed the hub on its own - activeJobs
+ *  is the general signal now, with outreachScanJobId kept in the check for
+ *  a response from a build that predates the field (activeJobs is optional
+ *  on the response type for exactly that reason). */
+export function prospectPollIntervalMs(
+  detail: Pick<ProspectDetailResponse, 'outreachScanJobId' | 'activeJobs'> | undefined,
+): number {
+  if (detail === undefined) return 0;
+  const hasActiveJob = (detail.activeJobs?.length ?? 0) > 0;
+  return detail.outreachScanJobId != null || hasActiveJob ? 5_000 : 0;
 }

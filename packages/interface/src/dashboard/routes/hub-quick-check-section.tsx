@@ -84,6 +84,36 @@ function NotScoredNotice(props: {
   );
 }
 
+/** Issue #217: the section's recovery banner for a stale prospect - a
+ *  qualification, quick check, or score naming an older pipeline version
+ *  than the one currently running. Distinct from NotScoredNotice, which
+ *  handles the "never run" case; this one handles "ran, but on an old
+ *  version". */
+function StaleNotice(props: {
+  onRefresh: (() => void) | undefined;
+  isRefreshBusy: boolean;
+}): JSX.Element {
+  const { strings } = useI18n();
+  return (
+    <div className="rounded-lg border border-sev-serious/40 bg-raised p-4">
+      <p className="text-sm text-ink">{strings.hub.quickCheck.staleNotice}</p>
+      {props.onRefresh !== undefined ? (
+        <div className="mt-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            isLoading={props.isRefreshBusy}
+            disabled={props.isRefreshBusy}
+            onClick={props.onRefresh}
+          >
+            {strings.hub.quickCheck.refreshAction}
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function formatDelta(delta: number): string {
   return delta > 0 ? `+${delta}` : `${delta}`;
 }
@@ -145,9 +175,25 @@ export function HubQuickCheckSection(props: {
    *  prescan being null, not from this prop alone. */
   onRunQuickCheck?: () => void;
   isQuickCheckBusy?: boolean;
+  /** Issue #217: the section's recovery action for a stale prospect
+   *  (qualification, quick check, or score naming an older pipeline
+   *  version). Optional for the same reason as onRunQuickCheck above. */
+  onRefresh?: () => void;
+  isRefreshBusy?: boolean;
 }): JSX.Element {
-  const { candidateId, detail, onRunQuickCheck, isQuickCheckBusy = false } = props;
+  const {
+    candidateId,
+    detail,
+    onRunQuickCheck,
+    isQuickCheckBusy = false,
+    onRefresh,
+    isRefreshBusy = false,
+  } = props;
   const { strings, language } = useI18n();
+  const isStale =
+    detail.qualificationFreshness.state === 'stale' ||
+    detail.prescanFreshness.state === 'stale' ||
+    detail.scoreFreshness.state === 'stale';
   const [showMetrics, setShowMetrics] = useState(false);
   const [showDiff, setShowDiff] = useState(false);
   const [fromVersion, setFromVersion] = useState('');
@@ -182,6 +228,7 @@ export function HubQuickCheckSection(props: {
     return (
       <Card title={strings.hub.steps['quick-check']}>
         <div className="flex flex-col gap-4">
+          {isStale ? <StaleNotice onRefresh={onRefresh} isRefreshBusy={isRefreshBusy} /> : null}
           <EmptyState title={strings.hub.quickCheck.empty} />
           {detail.selectionVerdict?.inSelection === true ? (
             <NotScoredNotice
@@ -199,6 +246,7 @@ export function HubQuickCheckSection(props: {
   return (
     <Card title={strings.hub.steps['quick-check']}>
       <div className="flex flex-col gap-6">
+        {isStale ? <StaleNotice onRefresh={onRefresh} isRefreshBusy={isRefreshBusy} /> : null}
         {prescan !== null ? (
           <div>
             <dl className="grid grid-cols-1 gap-4 sm:grid-cols-3">

@@ -36,6 +36,14 @@ export interface HotelCandidateDocumentFields extends HotelCandidate {
   createdAt: Date;
   updatedAt: Date;
   expiresAt: Date;
+  /** Issue #218: the durable business this candidate generation was
+   *  reconciled to, stamped lazily (businesses.ts's
+   *  resolveOrCreateBusinessForCandidate) rather than at write time here -
+   *  this collection stays the versioned campaign record, not the place
+   *  that owns identity reconciliation. Absent for a candidate whose
+   *  domain is ambiguous/shared, or simply not yet viewed since this
+   *  field was introduced. */
+  businessId?: string;
 }
 
 export type HotelCandidateDocument = HotelCandidateDocumentFields;
@@ -166,6 +174,7 @@ const hotelCandidateSchema = new Schema<HotelCandidateDocument>(
     createdAt: { type: Date, required: true },
     updatedAt: { type: Date, required: true },
     expiresAt: { type: Date, required: true },
+    businessId: { type: String },
   },
   { collection: 'hotel_candidates', minimize: false },
 );

@@ -9,7 +9,7 @@ import type { Connection } from 'mongoose';
 import type { PageWorkGuard, ScanProgressEvent } from '@odysseus/scanner';
 import { updateJobProgress } from '@odysseus/store';
 import { JobCancelledError, type CancellationRegistry } from './cancellation.js';
-import { computeCrawlEtaMs, computeScanEtaMs, computeStageEtaMs } from './eta.js';
+import { computeCrawlEtaMs, computeStageEtaMs, createDurationEstimator } from './eta.js';
 
 export function createScanProgressReporter(
   connection: Connection,
@@ -25,9 +25,18 @@ export function createScanProgressReporter(
   guardHolder?: { current?: PageWorkGuard },
 ): (event: ScanProgressEvent) => void {
   let effectiveDelayMs = 0;
-  let scanStartedAtMs: number | undefined;
-  let contentScanStartedAtMs: number | undefined;
-  let lighthouseStartedAtMs: number | undefined;
+  // Issue #223: crawl-page fires once per dequeued page in a single
+  // serial stream, so the wall time between two consecutive events is
+  // exactly one page's real cost (politeness delay + navigation +
+  // extraction) - no separate durationMs field is needed on the event
+  // itself the way the concurrent stages below need one.
+  let lastCrawlPageAtMs: number | undefined;
+  const crawlDurationEstimator = createDurationEstimator();
+
+  let contentScanConcurrency = 1;
+  const contentScanDurationEstimator = createDurationEstimator();
+  const lighthouseDurationEstimator = createDurationEstimator();
+  const scanDurationEstimator = createDurationEstimator();
 
   async function handle(event: ScanProgressEvent): Promise<void> {
     if (event.type === 'crawl-setup') {
@@ -35,6 +44,13 @@ export function createScanProgressReporter(
       // so the job leaves the queued phase while they run. The configured
       // delay stands in as effective until robots.txt can raise it; the
       // crawl-start event that follows corrects both fields.
+      const etaMs = computeCrawlEtaMs({
+        visited: 0,
+        maxPages: event.maxPages,
+        queued: 0,
+        effectiveDelayMs: event.delayMs,
+        observedPageCostMs: undefined,
+      });
       await updateJobProgress(connection, jobId, {
         phase: 'crawl',
         progress: {
@@ -42,14 +58,7 @@ export function createScanProgressReporter(
             visited: 0,
             target: event.maxPages,
             effectiveDelayMs: event.delayMs,
-            ...(() => {
-              const etaMs = computeCrawlEtaMs({
-                visited: 0,
-                maxPages: event.maxPages,
-                effectiveDelayMs: event.delayMs,
-              });
-              return etaMs !== undefined ? { etaMs } : {};
-            })(),
+            ...(etaMs !== undefined ? { etaMs, etaCalculatedAt: new Date() } : {}),
           },
         },
       });
@@ -58,6 +67,18 @@ export function createScanProgressReporter(
 
     if (event.type === 'crawl-start') {
       effectiveDelayMs = event.effectiveDelayMs;
+      // Issue #223: the clock for observed per-page cadence starts here,
+      // once the real (robots-adjusted) delay is known, not at
+      // crawl-setup - the robots.txt/sitemap fetch that precedes this
+      // event is not itself a page's cost.
+      lastCrawlPageAtMs = Date.now();
+      const etaMs = computeCrawlEtaMs({
+        visited: 0,
+        maxPages: event.maxPages,
+        queued: 0,
+        effectiveDelayMs,
+        observedPageCostMs: undefined,
+      });
       await updateJobProgress(connection, jobId, {
         phase: 'crawl',
         progress: {
@@ -66,14 +87,7 @@ export function createScanProgressReporter(
             target: event.maxPages,
             effectiveDelayMs,
             // Absent when the crawl is uncapped: no known target, no honest ETA.
-            ...(() => {
-              const etaMs = computeCrawlEtaMs({
-                visited: 0,
-                maxPages: event.maxPages,
-                effectiveDelayMs,
-              });
-              return etaMs !== undefined ? { etaMs } : {};
-            })(),
+            ...(etaMs !== undefined ? { etaMs, etaCalculatedAt: new Date() } : {}),
           },
         },
       });
@@ -81,6 +95,18 @@ export function createScanProgressReporter(
     }
 
     if (event.type === 'crawl-page') {
+      const now = Date.now();
+      if (lastCrawlPageAtMs !== undefined) {
+        crawlDurationEstimator.record(now - lastCrawlPageAtMs);
+      }
+      lastCrawlPageAtMs = now;
+      const etaMs = computeCrawlEtaMs({
+        visited: event.visited,
+        maxPages: event.maxPages,
+        queued: event.queued,
+        effectiveDelayMs,
+        observedPageCostMs: crawlDurationEstimator.estimateMs(),
+      });
       await updateJobProgress(connection, jobId, {
         phase: 'crawl',
         progress: {
@@ -88,14 +114,7 @@ export function createScanProgressReporter(
             visited: event.visited,
             target: event.maxPages,
             effectiveDelayMs,
-            ...(() => {
-              const etaMs = computeCrawlEtaMs({
-                visited: event.visited,
-                maxPages: event.maxPages,
-                effectiveDelayMs,
-              });
-              return etaMs !== undefined ? { etaMs } : {};
-            })(),
+            ...(etaMs !== undefined ? { etaMs, etaCalculatedAt: new Date() } : {}),
           },
         },
       });
@@ -115,21 +134,36 @@ export function createScanProgressReporter(
     }
 
     if (event.type === 'content-scan-start') {
-      contentScanStartedAtMs = Date.now();
+      contentScanConcurrency = event.concurrency;
+      // Issue #223: seeded from the reused count, but no timing sample is
+      // recorded for it - a resumed page took no wall time in this
+      // process, so it never distorts the fresh estimator below.
+      const etaMs = computeStageEtaMs({
+        completed: event.alreadyCompleted,
+        target: event.totalPages,
+        concurrency: contentScanConcurrency,
+        smoothedPageDurationMs: contentScanDurationEstimator.estimateMs(),
+      });
       await updateJobProgress(connection, jobId, {
         phase: 'content-scan',
-        progress: { contentScan: { completed: 0, target: event.totalPages } },
+        progress: {
+          contentScan: {
+            completed: event.alreadyCompleted,
+            target: event.totalPages,
+            ...(etaMs !== undefined ? { etaMs, etaCalculatedAt: new Date() } : {}),
+          },
+        },
       });
       return;
     }
 
     if (event.type === 'content-scan-page') {
-      const elapsedMs =
-        contentScanStartedAtMs !== undefined ? Date.now() - contentScanStartedAtMs : 0;
+      contentScanDurationEstimator.record(event.durationMs);
       const etaMs = computeStageEtaMs({
         completed: event.completed,
         target: event.totalPages,
-        elapsedMs,
+        concurrency: contentScanConcurrency,
+        smoothedPageDurationMs: contentScanDurationEstimator.estimateMs(),
       });
       await updateJobProgress(connection, jobId, {
         phase: 'content-scan',
@@ -137,7 +171,7 @@ export function createScanProgressReporter(
           contentScan: {
             completed: event.completed,
             target: event.totalPages,
-            ...(etaMs !== undefined ? { etaMs } : {}),
+            ...(etaMs !== undefined ? { etaMs, etaCalculatedAt: new Date() } : {}),
           },
         },
       });
@@ -150,21 +184,36 @@ export function createScanProgressReporter(
     }
 
     if (event.type === 'lighthouse-start') {
-      lighthouseStartedAtMs = Date.now();
+      // Issue #223: Lighthouse passes are serialized process-wide, so
+      // concurrency is always 1 here regardless of the content stage's
+      // lane count - never divide this stage's ETA as if it ran in
+      // parallel.
+      const etaMs = computeStageEtaMs({
+        completed: event.alreadyCompleted,
+        target: event.totalPages,
+        concurrency: 1,
+        smoothedPageDurationMs: lighthouseDurationEstimator.estimateMs(),
+      });
       await updateJobProgress(connection, jobId, {
         phase: 'lighthouse',
-        progress: { lighthouse: { completed: 0, target: event.totalPages } },
+        progress: {
+          lighthouse: {
+            completed: event.alreadyCompleted,
+            target: event.totalPages,
+            ...(etaMs !== undefined ? { etaMs, etaCalculatedAt: new Date() } : {}),
+          },
+        },
       });
       return;
     }
 
     if (event.type === 'lighthouse-page') {
-      const elapsedMs =
-        lighthouseStartedAtMs !== undefined ? Date.now() - lighthouseStartedAtMs : 0;
+      lighthouseDurationEstimator.record(event.durationMs);
       const etaMs = computeStageEtaMs({
         completed: event.completed,
         target: event.totalPages,
-        elapsedMs,
+        concurrency: 1,
+        smoothedPageDurationMs: lighthouseDurationEstimator.estimateMs(),
       });
       await updateJobProgress(connection, jobId, {
         phase: 'lighthouse',
@@ -172,7 +221,7 @@ export function createScanProgressReporter(
           lighthouse: {
             completed: event.completed,
             target: event.totalPages,
-            ...(etaMs !== undefined ? { etaMs } : {}),
+            ...(etaMs !== undefined ? { etaMs, etaCalculatedAt: new Date() } : {}),
           },
         },
       });
@@ -185,7 +234,6 @@ export function createScanProgressReporter(
     }
 
     if (event.type === 'scan-start') {
-      scanStartedAtMs = Date.now();
       await updateJobProgress(connection, jobId, {
         phase: 'scan',
         progress: { scan: { scanned: 0, target: event.totalPages } },
@@ -196,16 +244,26 @@ export function createScanProgressReporter(
     // scan-page: reports 'normalize' once the last page has been
     // scanned, since normalize+persist run inside the same audit-stage
     // call with no separately observable hook of their own - a fast,
-    // pure in-memory step that doesn't warrant one.
-    const elapsedMs = scanStartedAtMs !== undefined ? Date.now() - scanStartedAtMs : 0;
-    const etaMs = computeScanEtaMs({ scanned: event.scanned, target: event.totalPages, elapsedMs });
+    // pure in-memory step that doesn't warrant one. Issue #223: the
+    // legacy (non-staged) scan phase also runs concurrent lanes, but its
+    // progress event carries no lane count, so this stage's ETA stays
+    // concurrency 1 (same conservative, never-underestimate choice
+    // Lighthouse's inherently serial stage uses) rather than assuming a
+    // lane count it was never told.
+    scanDurationEstimator.record(event.durationMs);
+    const etaMs = computeStageEtaMs({
+      completed: event.scanned,
+      target: event.totalPages,
+      concurrency: 1,
+      smoothedPageDurationMs: scanDurationEstimator.estimateMs(),
+    });
     await updateJobProgress(connection, jobId, {
       phase: event.scanned >= event.totalPages ? 'normalize' : 'scan',
       progress: {
         scan: {
           scanned: event.scanned,
           target: event.totalPages,
-          ...(etaMs !== undefined ? { etaMs } : {}),
+          ...(etaMs !== undefined ? { etaMs, etaCalculatedAt: new Date() } : {}),
         },
       },
     });
