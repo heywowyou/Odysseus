@@ -1,7 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AuditManifest, Finding } from '@odysseus/core';
 import { OPENAI_MODEL, OPENAI_TEMPERATURE, MAX_RETRIES } from './constants.js';
 import type { StructureInput, StructurePassOutput } from './structure-schema.js';
+import {
+  configureLlmTelemetrySink,
+  NullLlmTelemetrySink,
+  RecordingLlmTelemetrySink,
+} from './telemetry/llm-telemetry.js';
 
 vi.mock('./client.js', () => ({
   callOpenAiForStructure: vi.fn(),
@@ -131,6 +136,13 @@ function buildInventedOutput(): StructurePassOutput {
 }
 
 describe('analyzeStructure', () => {
+  const sink = new RecordingLlmTelemetrySink();
+
+  afterEach(() => {
+    sink.events.length = 0;
+    configureLlmTelemetrySink(new NullLlmTelemetrySink());
+  });
+
   it('returns themeKey-assigned themes on a clean pass and reports unreferenced findings', async () => {
     vi.mocked(callOpenAiForStructure).mockReset().mockResolvedValueOnce({
       output: buildCleanOutput(),
@@ -213,5 +225,77 @@ describe('analyzeStructure', () => {
       /exhausted \d+ attempts/,
     );
     expect(callOpenAiForStructure).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+  });
+
+  it('issue #254: reports schemaValidFirstAttempt telemetry for a clean, single-attempt pass', async () => {
+    configureLlmTelemetrySink(sink);
+    vi.mocked(callOpenAiForStructure).mockReset().mockResolvedValueOnce({
+      output: buildCleanOutput(),
+    });
+
+    await analyzeStructure(input, filteredFindings, false, manifest);
+
+    expect(sink.events).toEqual([
+      expect.objectContaining({
+        kind: 'call-succeeded',
+        pass: 'structure',
+        model: OPENAI_MODEL,
+        attemptCount: 1,
+        schemaValidFirstAttempt: true,
+      }),
+    ]);
+  });
+
+  it('issue #254: reports schemaValidFirstAttempt: false once a retry was needed', async () => {
+    configureLlmTelemetrySink(sink);
+    vi.mocked(callOpenAiForStructure)
+      .mockReset()
+      .mockResolvedValueOnce({ output: buildInventedOutput() })
+      .mockResolvedValueOnce({ output: buildCleanOutput() });
+
+    await analyzeStructure(input, filteredFindings, false, manifest);
+
+    expect(sink.events).toEqual([
+      expect.objectContaining({
+        kind: 'call-succeeded',
+        attemptCount: 2,
+        schemaValidFirstAttempt: false,
+      }),
+    ]);
+  });
+
+  it('issue #254: reports a call-exhausted event with no prompt/output content when every attempt fails', async () => {
+    configureLlmTelemetrySink(sink);
+    vi.mocked(callOpenAiForStructure)
+      .mockReset()
+      .mockResolvedValue({ output: buildInventedOutput() });
+
+    await expect(analyzeStructure(input, filteredFindings, false, manifest)).rejects.toThrow();
+
+    expect(sink.events).toEqual([
+      expect.objectContaining({
+        kind: 'call-exhausted',
+        pass: 'structure',
+        attemptCount: MAX_RETRIES + 1,
+      }),
+    ]);
+    const allowedKeys = new Set([
+      'kind',
+      'pass',
+      'model',
+      'language',
+      'attemptCount',
+      'durationMs',
+      'schemaValidFirstAttempt',
+      'promptTokens',
+      'completionTokens',
+      'totalTokens',
+      'reasoningTokens',
+    ]);
+    for (const event of sink.events) {
+      for (const key of Object.keys(event)) {
+        expect(allowedKeys.has(key)).toBe(true);
+      }
+    }
   });
 });

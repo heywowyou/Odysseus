@@ -19,6 +19,7 @@ import { findThemeKeyMismatches, isThemeKeyMismatchEmpty } from './theme-key-gua
 import { findTransactionalFlowViolations } from './transactional-flow-guard.js';
 import { findWcagCitationViolations } from './wcag-citation-guard.js';
 import { paceRateLimitedRetry } from './rate-limit-pacing.js';
+import { captureLlmCallTelemetry } from './telemetry/llm-telemetry.js';
 import type { WritingInput, WritingPassOutput } from './writing-schema.js';
 
 export interface AnalyzeWritingResult {
@@ -48,6 +49,7 @@ export async function analyzeWriting(
 ): Promise<AnalyzeWritingResult> {
   let lastFailureReason = '';
   let previousRejection: string | undefined;
+  const startedAtMs = Date.now();
   // Resolved once rather than per attempt: the retry feedback must name the
   // same phrase across every attempt, or a retry contradicts its predecessor.
   const assignedProviderPhrase = input.providerPhrase ?? selectProviderPhrase(input.language);
@@ -218,6 +220,25 @@ export async function analyzeWriting(
 
     // Normalization, not validation: applied after every rejecting guard
     // has passed, so a guard never inspects text this rewrote.
+    captureLlmCallTelemetry({
+      kind: 'call-succeeded',
+      pass: 'writing',
+      model: OPENAI_MODEL,
+      language: input.language,
+      attemptCount: attempt,
+      durationMs: Date.now() - startedAtMs,
+      schemaValidFirstAttempt: attempt === 1,
+      ...(result.usage !== undefined
+        ? {
+            promptTokens: result.usage.promptTokens,
+            completionTokens: result.usage.completionTokens,
+            totalTokens: result.usage.totalTokens,
+            ...(result.usage.reasoningTokens !== undefined
+              ? { reasoningTokens: result.usage.reasoningTokens }
+              : {}),
+          }
+        : {}),
+    });
     return {
       output: normalizeWritingOutputTypography(result.output, input.language),
       model: OPENAI_MODEL,
@@ -225,6 +246,14 @@ export async function analyzeWriting(
     };
   }
 
+  captureLlmCallTelemetry({
+    kind: 'call-exhausted',
+    pass: 'writing',
+    model: OPENAI_MODEL,
+    language: input.language,
+    attemptCount: MAX_RETRIES + 1,
+    durationMs: Date.now() - startedAtMs,
+  });
   throw new Error(
     `odysseus analyze (writing pass, language=${input.language}): exhausted ${MAX_RETRIES + 1} attempts without a valid response. Last failure: ${lastFailureReason}`,
   );

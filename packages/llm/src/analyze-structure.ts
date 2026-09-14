@@ -17,6 +17,7 @@ import {
   type StructureThemeWithKey,
 } from './structure-schema.js';
 import { paceRateLimitedRetry } from './rate-limit-pacing.js';
+import { captureLlmCallTelemetry } from './telemetry/llm-telemetry.js';
 
 export interface AnalyzeStructureResult {
   themes: StructureThemeWithKey[];
@@ -45,6 +46,7 @@ export async function analyzeStructure(
   manifest: AuditManifest,
 ): Promise<AnalyzeStructureResult> {
   let lastFailureReason = '';
+  const startedAtMs = Date.now();
 
   // Findings are shown to the model under dense alias IDs, so the holes left
   // by filtering and diversion cannot tempt it into completing a numeric run.
@@ -95,6 +97,14 @@ export async function analyzeStructure(
 
     const themes = applyStructureRankingRules(assignThemeKeys(output), filteredFindings, manifest);
 
+    captureLlmCallTelemetry({
+      kind: 'call-succeeded',
+      pass: 'structure',
+      model: OPENAI_MODEL,
+      attemptCount: attempt,
+      durationMs: Date.now() - startedAtMs,
+      schemaValidFirstAttempt: attempt === 1,
+    });
     return {
       themes,
       quickWins: output.quickWins,
@@ -105,6 +115,13 @@ export async function analyzeStructure(
     };
   }
 
+  captureLlmCallTelemetry({
+    kind: 'call-exhausted',
+    pass: 'structure',
+    model: OPENAI_MODEL,
+    attemptCount: MAX_RETRIES + 1,
+    durationMs: Date.now() - startedAtMs,
+  });
   throw new Error(
     `odysseus analyze (structure pass): exhausted ${MAX_RETRIES + 1} attempts without a valid response. Last failure: ${lastFailureReason}`,
   );

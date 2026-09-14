@@ -1,6 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { OPENAI_MODEL, WRITING_OPENAI_TEMPERATURE, MAX_RETRIES } from './constants.js';
 import type { WritingInput, WritingPassOutput } from './writing-schema.js';
+import {
+  configureLlmTelemetrySink,
+  NullLlmTelemetrySink,
+  RecordingLlmTelemetrySink,
+} from './telemetry/llm-telemetry.js';
 
 vi.mock('./client.js', () => ({
   callOpenAiForWriting: vi.fn(),
@@ -126,6 +131,75 @@ function buildViolatingThemeTitleOutput(): WritingPassOutput {
 }
 
 describe('analyzeWriting', () => {
+  const sink = new RecordingLlmTelemetrySink();
+
+  afterEach(() => {
+    sink.events.length = 0;
+    configureLlmTelemetrySink(new NullLlmTelemetrySink());
+  });
+
+  it('issue #254: reports schemaValidFirstAttempt telemetry, including token usage, for a clean pass', async () => {
+    configureLlmTelemetrySink(sink);
+    vi.mocked(callOpenAiForWriting)
+      .mockReset()
+      .mockResolvedValueOnce({
+        output: buildCleanFrenchOutput(),
+        usage: { promptTokens: 900, completionTokens: 300, totalTokens: 1200 },
+      });
+
+    await analyzeWriting(input, ['t1'], false);
+
+    expect(sink.events).toEqual([
+      expect.objectContaining({
+        kind: 'call-succeeded',
+        pass: 'writing',
+        model: OPENAI_MODEL,
+        language: 'fr',
+        attemptCount: 1,
+        schemaValidFirstAttempt: true,
+        promptTokens: 900,
+        completionTokens: 300,
+        totalTokens: 1200,
+      }),
+    ]);
+  });
+
+  it('issue #254: reports a call-exhausted event with no prompt/output content when every attempt fails', async () => {
+    configureLlmTelemetrySink(sink);
+    vi.mocked(callOpenAiForWriting)
+      .mockReset()
+      .mockResolvedValue({ output: buildFailingEnglishTitleOutput() });
+
+    await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow();
+
+    expect(sink.events).toEqual([
+      expect.objectContaining({
+        kind: 'call-exhausted',
+        pass: 'writing',
+        language: 'fr',
+        attemptCount: MAX_RETRIES + 1,
+      }),
+    ]);
+    const allowedKeys = new Set([
+      'kind',
+      'pass',
+      'model',
+      'language',
+      'attemptCount',
+      'durationMs',
+      'schemaValidFirstAttempt',
+      'promptTokens',
+      'completionTokens',
+      'totalTokens',
+      'reasoningTokens',
+    ]);
+    for (const event of sink.events) {
+      for (const key of Object.keys(event)) {
+        expect(allowedKeys.has(key)).toBe(true);
+      }
+    }
+  });
+
   it('returns the output on a clean pass', async () => {
     vi.mocked(callOpenAiForWriting).mockReset().mockResolvedValueOnce({
       output: buildCleanFrenchOutput(),

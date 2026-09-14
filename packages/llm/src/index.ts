@@ -99,3 +99,13 @@ export type { LanguageComplianceViolation } from './language-guard.js';
 
 export { ensureEnvLoaded, getOpenAiApiKey, getOpenAiBaseUrl } from './config.js';
 export { pauseBetweenLanguagePasses } from './rate-limit-pacing.js';
+
+export type { LlmPass, LlmCallTelemetryEvent } from './telemetry/events.js';
+export {
+  captureLlmCallTelemetry,
+  configureLlmTelemetrySink,
+  getLlmTelemetrySink,
+  NullLlmTelemetrySink,
+  RecordingLlmTelemetrySink,
+} from './telemetry/llm-telemetry.js';
+export type { LlmTelemetrySink } from './telemetry/llm-telemetry.js';

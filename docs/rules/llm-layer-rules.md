@@ -1008,3 +1008,75 @@ results. Do not leave a confirmed fixed issue open for a later cleanup pass.
 check, labels, and the full resolution lifecycle. This rule is repeated here
 because model-output guards and review work routinely expose defects: the
 discovery and resolution paths must be equally automatic.
+
+---
+
+## 14. Call-level telemetry and the Langfuse decision (issue #254)
+
+`packages/llm/src/telemetry/` reports one metadata-only event per model call
+from `analyzeStructure` and `analyzeWriting`: `call-succeeded` (`pass`,
+`model`, `language` for the writing pass, `attemptCount`,
+`schemaValidFirstAttempt`, `durationMs`, and token counts when the provider
+returns them) or `call-exhausted` (same identifying fields, no output data,
+emitted from the same final-retry throw described in section 2). Same shape
+as the interface layer's job telemetry (`docs/rules/telemetry-rules.md`):
+a closed discriminated union with no field wide enough to carry a prompt,
+a finding, or model output, rebuilt from an allowlist by
+`redactLlmCallTelemetryEvent` before it reaches a sink, captured through
+`captureLlmCallTelemetry` which never lets a sink failure fail the analysis
+pass it describes. The default `NullLlmTelemetrySink` means every existing
+environment, including every test run, is unaffected until a real sink is
+configured; no real sink exists yet, so today this only feeds
+`RecordingLlmTelemetrySink` in tests.
+
+**Decision: metadata-only telemetry, not Langfuse, for now.** Langfuse's
+incremental value over this metadata is prompt/response-level tracing:
+seeing the actual system prompt, the actual model output, and diffing them
+across runs. That is exactly the content sections 1, 4, and 6-9 above treat
+as needing to reach nowhere outside the retry loop and the on-disk
+`analyses/*.json` artifacts a client paid for - a hosted third-party tracer
+is a new place client site content and model output would leave this
+codebase, which none of the guards, redaction, or provenance rules above
+were designed to flow through. The questions this package actually needed
+answered while building the two-pass split and its guards (is a pass
+retrying, how often, on which failure, does a schema-shape change move
+attempt counts) are answered by attempt counts, durations, and
+`schemaValidFirstAttempt` alone, without ever holding a prompt or a
+finding. Langfuse's other advantages - cost dashboards, prompt versioning
+UI, dataset-based eval runs - are not problems this package currently has:
+`docs/archive/report-v2-refactor.md` and the trade-off log already carry
+prompt-change history and measured before/after evidence by hand, and the
+few-dozen-analyses-per-week volume here does not need a dashboard to stay
+legible.
+
+**Operating and privacy cost, if Langfuse were adopted instead:** a new
+hosted dependency in the call path of every structure/writing pass (self-
+hosting Langfuse was not evaluated as it trades the privacy cost for an
+operator-run service to maintain, a cost this single-operator project does
+not currently carry for anything else); prompt and response payloads -
+client site findings, business context, generated report prose - leaving
+the process boundary to a third party, which is a new fact for
+`docs/rules/obligation-basis.md`'s and `docs/rules/operator-obligations.md`'s
+client-facing claims to account for; and a second telemetry contract to keep
+redacted and reasoned about alongside the one this section already owns.
+None of that cost is justified by a need this package has actually hit.
+
+**Production export stays off**, same posture as the job-telemetry pilot:
+no sink beyond `NullLlmTelemetrySink` and `RecordingLlmTelemetrySink` is
+wired to a live endpoint. Revisit only if a real, observed need appears for
+prompt/response-level tracing specifically (not just call-count metrics,
+which this section's events already cover) and only with an explicit data
+policy - client site content leaving this codebase is a materially
+different decision than the job-queue pilot's coarse stage names, and needs
+its own review of what a hosted tracer would receive, where it is hosted,
+and who can read it, before any DSN or API key is configured.
+
+**Extending this telemetry.** A new model-calling pass reports by calling
+`captureLlmCallTelemetry` at its own success-return and exhausted-retries
+exit points, adding its name to `LlmPass` (`events.ts`) and its allowed
+fields to `ALLOWED_KEYS` if it captures something the two existing passes
+do not. `analyzeReview` and `analyzeCorrectionReview` (sections 12, 12a)
+are advisory, single-attempt, never-blocking passes with materially
+different failure semantics (a `skipped` outcome, not a retry-then-throw);
+they were deliberately left uninstrumented rather than forced into a
+retry-shaped event they do not have.
