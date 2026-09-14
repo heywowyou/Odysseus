@@ -19,6 +19,7 @@ import type { ProspectDetailResponse } from './prospects-model';
 function makeDetail(overrides: Partial<ProspectDetailResponse> = {}): ProspectDetailResponse {
   return {
     candidateId: 'cand-1',
+    businessId: null,
     resolutionVersion: 'v1',
     identityKey: 'key-1',
     identityStatus: 'resolved',

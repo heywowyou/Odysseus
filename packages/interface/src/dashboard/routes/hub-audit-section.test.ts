@@ -46,6 +46,7 @@ function detailWithAudits(
 ): ProspectDetailResponse {
   return {
     candidateId: 'cand-1',
+    businessId: null,
     resolutionVersion: 'v1',
     identityKey: 'key-1',
     identityStatus: 'resolved',

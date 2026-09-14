@@ -40,6 +40,7 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
 
       const detail = await getOperatorProspect(connection!, candidateId);
       expect(detail).not.toBeNull();
+      expect(detail?.businessId).toBeNull();
       expect(detail?.name).toBe('Hôtel cand-detail');
       expect(detail?.reviewState).toBe('pending');
       expect(detail?.qualificationOutcome).toBe('qualified');

@@ -74,4 +74,14 @@ export interface AuditHotelLink {
   candidateId: string;
   matchedOn: 'own-registrable-domain';
   linkedAt: Date;
+  /** Issue #218: the durable business identity behind `candidateId`, when
+   *  one could be resolved. `candidateId` still names the exact 90-day
+   *  campaign generation the domain match happened against (real
+   *  evidence, never rewritten); `businessId` is the stable pointer that
+   *  keeps this audit discoverable from the Prospect hub after that
+   *  candidate generation expires or is superseded. Absent when the
+   *  candidate's domain was ambiguous (shared/vendor-hosted) and no
+   *  durable business could be safely resolved - see
+   *  resolveOrCreateBusinessForCandidate in @odysseus/store. */
+  businessId?: string;
 }

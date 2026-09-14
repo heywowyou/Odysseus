@@ -53,6 +53,11 @@ export interface OperatorWebsiteCandidateView {
 
 export interface OperatorProspectDetail {
   candidateId: string;
+  /** The durable business identity this candidate generation is reconciled
+   *  to (issue #218), or null before that reconciliation has run for it.
+   *  Stable across campaign candidate expiry/regeneration; `candidateId`
+   *  above is not. */
+  businessId: string | null;
   resolutionVersion: string;
   identityKey: string;
   identityStatus: HotelIdentityStatus;
@@ -152,6 +157,7 @@ export async function getOperatorProspect(
 
   return {
     candidateId: candidate.candidateId,
+    businessId: candidate.businessId ?? null,
     resolutionVersion: candidate.resolutionVersion,
     identityKey: candidate.identityKey,
     identityStatus: candidate.identityStatus,

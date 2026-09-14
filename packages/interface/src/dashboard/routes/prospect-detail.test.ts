@@ -38,6 +38,7 @@ async function waitFor<T>(read: () => T | undefined): Promise<T> {
 function detailWithContact(contact: ProspectDetailResponse['contact']): ProspectDetailResponse {
   return {
     candidateId: 'candidate-1',
+    businessId: null,
     resolutionVersion: 'v1',
     identityKey: 'key-1',
     identityStatus: 'resolved',

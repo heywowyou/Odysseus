@@ -304,6 +304,10 @@ export interface QualificationEventResponse {
 
 export interface ProspectDetailResponse {
   candidateId: string;
+  /** The durable business identity this candidate is reconciled to (issue
+   *  #218), or null before reconciliation has run for it. Stable across
+   *  campaign candidate expiry/regeneration; candidateId is not. */
+  businessId: string | null;
   resolutionVersion: string;
   identityKey: string;
   identityStatus: string;

@@ -16,6 +16,7 @@ import {
 } from '@odysseus/core';
 import { createAuditModel, type AuditDocument } from './schemas/audit.schema.js';
 import { createFindingModel, type FindingDocument } from './schemas/finding.schema.js';
+import { resolveOrCreateBusinessForCandidate } from './businesses.js';
 import {
   getHotelCandidate,
   getLatestHotelCandidateByOwnRegistrableDomain,
@@ -305,10 +306,19 @@ export async function linkAuditToHotelByDomain(
   );
   if (!candidate) return { candidate: null };
 
+  // Issue #218: resolve/create the durable business behind this candidate
+  // generation so the audit stays discoverable from the Prospect hub after
+  // this 90-day generation expires. Null only when the candidate's domain
+  // is not a safe own-registrable-domain match, which cannot happen here -
+  // getLatestHotelCandidateByOwnRegistrableDomain only ever returns a
+  // candidate that has one.
+  const business = await resolveOrCreateBusinessForCandidate(connection, candidate);
+
   const hotelLink: AuditHotelLink = {
     candidateId: candidate.candidateId,
     matchedOn: 'own-registrable-domain',
     linkedAt: new Date(),
+    ...(business !== null ? { businessId: business.businessId } : {}),
   };
   await AuditModel.updateOne({ auditId }, { $set: { hotelLink } });
   return { candidate };

@@ -79,6 +79,15 @@ export {
   setAuditGradeOverride,
   clearAuditGradeOverride,
 } from './audits.js';
+export { createBusinessModel } from './schemas/business.schema.js';
+export type { BusinessDocument, BusinessDocumentFields } from './schemas/business.schema.js';
+export {
+  getBusiness,
+  getBusinessByDomain,
+  getBusinessForCandidate,
+  getAuditIdsForBusiness,
+  resolveOrCreateBusinessForCandidate,
+} from './businesses.js';
 export type { AuditRuntimeFields, AuditHotelLinkResult } from './audits.js';
 
 // Plan 019: report preparation and exact-ID writing selection. All writes

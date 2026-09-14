@@ -346,6 +346,7 @@ describe.skipIf(!mongoAvailable)('linkAuditToHotelByDomain', () => {
       candidateId: candidate.candidateId,
       matchedOn: 'own-registrable-domain',
     });
+    expect(stored?.hotelLink?.businessId).toEqual(expect.any(String));
   });
 
   it('is idempotent: a second call resolves the same candidate without rewriting hotelLink', async () => {
