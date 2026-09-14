@@ -28,6 +28,7 @@
     "serve": "tsx packages/cli/src/index.ts serve",
     "serve:full": "pnpm --filter @odysseus/cli... run build && pnpm run serve",
     "report:workbench": "tsx scripts/report-workbench.ts",
+    "report:workbench:options": "tsx scripts/report-workbench-options.ts",
     "fixtures:rules": "node scripts/build-observed-rule-inventory.mjs",
     "fixtures:refresh": "node scripts/refresh-fixtures.mjs"
   },
