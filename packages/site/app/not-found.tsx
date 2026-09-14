@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { LanguageSection } from '../lib/language';
+import { LanguageSection, PageHeading } from '../lib/language';
 
 export const metadata: Metadata = {
   title: 'Page introuvable',
@@ -8,9 +8,11 @@ export const metadata: Metadata = {
 export default function NotFound() {
   return (
     <main id="contenu" tabIndex={-1} className="flex-1">
+      <section className="shell hero pb-0">
+        <PageHeading className="title measure" fr="Page introuvable" en="Page not found" />
+      </section>
       <LanguageSection lang="fr">
-        <section className="shell hero">
-          <h1 className="title measure">Page introuvable</h1>
+        <section className="shell hero pt-0">
           <p className="lede measure mt-5">
             La page que vous cherchez n&apos;existe pas ou n&apos;est plus disponible. Vous pouvez
             revenir à l&apos;accueil ou consulter le diagnostic.
@@ -31,8 +33,7 @@ export default function NotFound() {
       </LanguageSection>
 
       <LanguageSection lang="en">
-        <section className="shell hero">
-          <h1 className="title measure">Page not found</h1>
+        <section className="shell hero pt-0">
           <p className="lede measure mt-5">
             The page you&apos;re looking for doesn&apos;t exist or is no longer available. You can
             return to the homepage or view the technical diagnostic.

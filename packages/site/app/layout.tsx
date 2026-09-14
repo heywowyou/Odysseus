@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
 import { SiteChrome } from '../lib/site-chrome';
+import { StructuredData } from '../lib/structured-data';
 
 /**
  * Avenir Next, self-hosted, site-only (operator-licensed 2026-09-11; see
@@ -27,8 +28,12 @@ const avenirNext = localFont({
  * (PRODUCT.md, Evidence on Hand) and none may be fabricated. The twitter
  * card is `summary`, the variant that renders correctly without an image.
  */
+// Issue #213 item 5: trimmed from 198 to 157 characters so search
+// engines are much less likely to truncate it mid-sentence, while keeping
+// the approved "signaux techniques liés aux assistants IA" and "tarif
+// fixe" wording (see lib/marketing-copy.test.ts).
 const description =
-  'Diagnostic technique de site web : accessibilité, référencement naturel, rendu JavaScript, performance et signaux techniques liés aux assistants IA. Rapport priorisé, tarif fixe de 1 600 € HT.';
+  'Diagnostic technique de site : accessibilité, référencement, rendu JavaScript, performance, signaux techniques liés aux assistants IA, tarif fixe 1 600 € HT.';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.odysseusaudit.com'),
@@ -53,6 +58,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html lang="fr" className={`h-full ${avenirNext.variable}`}>
       <body className="flex min-h-full flex-col">
+        <StructuredData />
         <SiteChrome>{children}</SiteChrome>
       </body>
     </html>

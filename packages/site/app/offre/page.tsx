@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Dossier } from '../../lib/dossier';
-import { LanguageSection } from '../../lib/language';
+import { LanguageSection, PageHeading } from '../../lib/language';
 import { Reveal } from '../../lib/reveal';
 import { Steps, type Step } from '../../lib/steps';
 
@@ -54,10 +54,15 @@ const NEXT_STEPS_EN: readonly Step[] = [
 export default function OfferPage() {
   return (
     <main id="contenu" tabIndex={-1} className="flex-1">
+      <section className="shell hero pb-0">
+        <PageHeading
+          className="title measure"
+          fr="Le diagnostic technique Odysseus"
+          en="The Odysseus technical diagnostic"
+        />
+      </section>
       <LanguageSection lang="fr">
-        <section className="shell hero">
-          <h1 className="title measure">Le diagnostic technique Odysseus</h1>
-
+        <section className="shell hero pt-0">
           <div className="split mt-10 hero-split">
             <div className="split-main">
               <p className="lede measure">
@@ -257,9 +262,7 @@ export default function OfferPage() {
       </LanguageSection>
 
       <LanguageSection lang="en">
-        <section className="shell hero">
-          <h1 className="title measure">The Odysseus technical diagnostic</h1>
-
+        <section className="shell hero pt-0">
           <div className="split mt-10 hero-split">
             <div className="split-main">
               <p className="lede measure">

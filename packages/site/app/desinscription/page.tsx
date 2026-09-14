@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { LanguageSection } from '../../lib/language';
+import { LanguageSection, PageHeading } from '../../lib/language';
 
 const description =
   'Comment demander à ne plus être contacté par Odysseus et faire retirer un aperçu en ligne.';
@@ -39,9 +39,15 @@ const MAILTO_EN =
 export default function OptOutPage() {
   return (
     <main id="contenu" tabIndex={-1} className="flex-1">
+      <section className="shell hero pb-0">
+        <PageHeading
+          className="title measure"
+          fr="Ne plus être contacté"
+          en="Opt out of future contact"
+        />
+      </section>
       <LanguageSection lang="fr">
-        <section className="shell hero">
-          <h1 className="title measure">Ne plus être contacté</h1>
+        <section className="shell hero pt-0">
           <p className="lede measure mt-5">
             Vous pouvez vous opposer à toute nouvelle prise de contact, gratuitement et sans avoir à
             vous justifier.
@@ -111,8 +117,7 @@ export default function OptOutPage() {
       </LanguageSection>
 
       <LanguageSection lang="en">
-        <section className="shell hero">
-          <h1 className="title measure">Opt out of future contact</h1>
+        <section className="shell hero pt-0">
           <p className="lede measure mt-5">
             You can opt out at any time, free of charge and without giving a reason.
           </p>

@@ -1,6 +1,6 @@
 import { Dossier } from '../lib/dossier';
 import { Exhibit } from '../lib/exhibit';
-import { LanguageSection } from '../lib/language';
+import { LanguageSection, PageHeading } from '../lib/language';
 import { Reveal } from '../lib/reveal';
 import { AccessibilitySchematic, AiSignalsSchematic, RenderSchematic } from '../lib/schematics';
 import { Steps, type Step } from '../lib/steps';
@@ -73,6 +73,13 @@ const HANDOFF_EN: readonly Step[] = [
 export default function Home() {
   return (
     <main id="contenu" tabIndex={-1} className="flex-1">
+      <section className="shell hero pb-0">
+        <PageHeading
+          className="display measure-display"
+          fr="Un diagnostic pour passer du constat à la solution"
+          en="A diagnostic that takes you from findings to fixes"
+        />
+      </section>
       <LanguageSection lang="fr">
         <HomeFr />
       </LanguageSection>
@@ -86,11 +93,7 @@ export default function Home() {
 function HomeFr() {
   return (
     <>
-      <section className="shell hero">
-        <h1 className="display measure-display">
-          Un diagnostic pour passer du constat à la solution
-        </h1>
-
+      <section className="shell hero pt-0">
         <div className="split mt-10 hero-split">
           <div className="split-main">
             <p className="lede measure">
@@ -336,11 +339,7 @@ function HomeFr() {
 function HomeEn() {
   return (
     <>
-      <section className="shell hero">
-        <h1 className="display measure-display">
-          A diagnostic that takes you from findings to fixes
-        </h1>
-
+      <section className="shell hero pt-0">
         <div className="split mt-10 hero-split">
           <div className="split-main">
             <p className="lede measure">

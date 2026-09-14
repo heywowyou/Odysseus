@@ -96,6 +96,38 @@ export function LanguageSection({ lang, children }: { lang: SiteLanguage; childr
   );
 }
 
+/**
+ * Issue #213 item 2: the self-audit found multiple `<h1>` elements on every
+ * page and mapped that to WCAG 1.3.1. The cause was that each page's h1 sat
+ * inside its own per-language `LanguageSection`, so both copies were always
+ * in the DOM at once (only `hidden` differed). This renders a single `<h1>`
+ * for the whole page, with the two language variants as inline `hidden`
+ * spans inside it - one primary heading in the markup, not two duplicated
+ * ones, while still keeping both languages server-rendered for no-JS
+ * visitors and search engines.
+ */
+export function PageHeading({
+  fr,
+  en,
+  className,
+}: {
+  fr: ReactNode;
+  en: ReactNode;
+  className?: string;
+}) {
+  const { language } = useLanguage();
+  return (
+    <h1 className={className}>
+      <span hidden={language !== 'fr'} lang="fr">
+        {fr}
+      </span>
+      <span hidden={language !== 'en'} lang="en">
+        {en}
+      </span>
+    </h1>
+  );
+}
+
 const TOGGLE_LABELS: Record<SiteLanguage, string> = { fr: 'Français', en: 'English' };
 
 /** The FR/EN switch itself. Lives once in the shared header. */

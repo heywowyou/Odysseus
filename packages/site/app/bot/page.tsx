@@ -1,11 +1,18 @@
 import type { Metadata } from 'next';
-import { LanguageSection } from '../../lib/language';
+import { LanguageSection, PageHeading } from '../../lib/language';
 
 const description =
   "Ce que fait OdysseusBot lorsqu'il visite un site : pages consultées, rythme des requêtes, données conservées et moyens de le bloquer.";
 
+// Issue #213 item 5: a bare "OdysseusBot" title rendered as just
+// "OdysseusBot | Odysseus" (22 characters) via the layout's title
+// template - too short to be a useful SERP result. `absolute` sets the
+// full tag directly instead of feeding the template, since the template
+// suffix would otherwise repeat "Odysseus" a second time here.
+const title = "OdysseusBot, le robot d'audit technique Odysseus";
+
 export const metadata: Metadata = {
-  title: 'OdysseusBot',
+  title: { absolute: title },
   description,
   alternates: { canonical: '/bot' },
   openGraph: {
@@ -13,7 +20,7 @@ export const metadata: Metadata = {
     siteName: 'Odysseus',
     locale: 'fr_FR',
     url: '/bot',
-    title: 'OdysseusBot',
+    title,
     description,
   },
 };
@@ -21,9 +28,11 @@ export const metadata: Metadata = {
 export default function BotInfoPage() {
   return (
     <main id="contenu" tabIndex={-1} className="flex-1">
+      <section className="shell hero pb-0">
+        <PageHeading className="title measure" fr="OdysseusBot" en="OdysseusBot" />
+      </section>
       <LanguageSection lang="fr">
-        <section className="shell hero">
-          <h1 className="title measure">OdysseusBot</h1>
+        <section className="shell hero pt-0">
           <p className="lede measure mt-5">
             Ce que fait ce robot lorsqu&apos;il visite un site, les données qu&apos;il conserve et
             comment bloquer son accès.
@@ -145,8 +154,7 @@ export default function BotInfoPage() {
       </LanguageSection>
 
       <LanguageSection lang="en">
-        <section className="shell hero">
-          <h1 className="title measure">OdysseusBot</h1>
+        <section className="shell hero pt-0">
           <p className="lede measure mt-5">
             What this crawler does when it visits a website, what data it retains, and how to block
             it.

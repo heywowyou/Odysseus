@@ -13,6 +13,7 @@ const LABELS = {
     info: 'Informations',
     privacy: 'Prospection et données personnelles',
     optOut: 'Ne plus être contacté',
+    accessibility: "Démarche d'accessibilité",
     tagline:
       'Diagnostic technique de sites web\u00a0: accessibilité, référencement naturel, rendu JavaScript, performance et signaux techniques liés aux assistants IA.',
   },
@@ -25,6 +26,7 @@ const LABELS = {
     info: 'Information',
     privacy: 'Outreach and personal data',
     optOut: 'Opt out',
+    accessibility: 'Accessibility approach',
     tagline:
       'Technical website diagnostic: accessibility, search, JavaScript rendering, performance and technical signals for AI assistants.',
   },
@@ -76,6 +78,9 @@ function SiteFooter() {
           </a>
           <a className="navlink" href="/desinscription">
             {t.optOut}
+          </a>
+          <a className="navlink" href="/accessibilite">
+            {t.accessibility}
           </a>
         </nav>
       </div>

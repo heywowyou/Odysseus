@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { LanguageSection } from '../../lib/language';
+import { LanguageSection, PageHeading } from '../../lib/language';
 
 const description =
   "Quelles données Odysseus utilise pour sa prospection, d'où elles proviennent, combien de temps elles sont conservées et comment s'y opposer.";
@@ -22,9 +22,15 @@ export const metadata: Metadata = {
 export default function ProspectingPrivacyPage() {
   return (
     <main id="contenu" tabIndex={-1} className="flex-1">
+      <section className="shell hero pb-0">
+        <PageHeading
+          className="title measure"
+          fr="Prospection et données personnelles"
+          en="Outreach and personal data"
+        />
+      </section>
       <LanguageSection lang="fr">
-        <section className="shell hero">
-          <h1 className="title measure">Prospection et données personnelles</h1>
+        <section className="shell hero pt-0">
           <p className="lede measure mt-5">
             D&apos;où viennent les données utilisées par Odysseus, à quoi elles servent, combien de
             temps elles sont conservées et comment vous opposer à leur utilisation pour la
@@ -209,8 +215,7 @@ export default function ProspectingPrivacyPage() {
       </LanguageSection>
 
       <LanguageSection lang="en">
-        <section className="shell hero">
-          <h1 className="title measure">Outreach and personal data</h1>
+        <section className="shell hero pt-0">
           <p className="lede measure mt-5">
             Where the data Odysseus uses for outreach comes from, what it is used for, how long we
             keep it, and how to object.
