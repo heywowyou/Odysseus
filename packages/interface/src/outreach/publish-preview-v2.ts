@@ -174,10 +174,9 @@ function proofCardCategoriesFor(findings: readonly Finding[]): OutreachProofCard
     .map((card) => card.category);
 }
 
-function aggregateFacts(findings: readonly Finding[]): Pick<
-  ResolvedPublishedPreview,
-  'distinctFindingCount' | 'affectedPageCount' | 'severityTotals'
-> {
+function aggregateFacts(
+  findings: readonly Finding[],
+): Pick<ResolvedPublishedPreview, 'distinctFindingCount' | 'affectedPageCount' | 'severityTotals'> {
   const affectedPages = new Set<string>();
   const severityTotals: OutreachPreviewSummary['severityTotals'] = {
     critical: 0,

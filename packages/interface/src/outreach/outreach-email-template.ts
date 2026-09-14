@@ -1,10 +1,6 @@
 /** Operator-approved outreach sequence, locked 2026-09-14. */
 
-import type {
-  OutreachPreviewSeverity,
-  OutreachProofCard,
-  ReportLanguage,
-} from '@odysseus/core';
+import type { OutreachPreviewSeverity, OutreachProofCard, ReportLanguage } from '@odysseus/core';
 import { frenchOfHotel } from './hotel-name.js';
 import type { DraftBodyBlock, DraftLink } from './render-outreach-draft.js';
 
@@ -92,24 +88,24 @@ const FR: EmailTemplate = {
     `Les principaux problèmes concernent notamment ${categories}.`,
   impactBridge: (categories) =>
     categories.includes('accessibility')
-      ? "Ces constats ont un impact direct sur l’expérience de vos clients et peuvent également relever du cadre légal applicable en matière d’accessibilité."
+      ? 'Ces constats ont un impact direct sur l’expérience de vos clients et peuvent également relever du cadre légal applicable en matière d’accessibilité.'
       : 'Ces constats ont un impact direct sur l’expérience de vos clients.',
   linkLead: `Vous trouverez un résumé de notre analyse ici${NBSP}:`,
   closing:
-    "L’audit complet de votre site est disponible à l’achat. Il détaille les constats relevés, les pages concernées et les corrections à apporter.",
+    'L’audit complet de votre site est disponible à l’achat. Il détaille les constats relevés, les pages concernées et les corrections à apporter.',
   question: `Souhaitez-vous que je vous transmette les modalités de l’audit complet${NBSP}?`,
   reminderIntro: (of) =>
     `Je me permets de revenir vers vous au sujet de mon précédent message concernant l’analyse du site ${of}.`,
   reminderQuestion: `Avez-vous eu l’occasion de consulter l’aperçu${NBSP}?`,
   reminderCommercial:
-    "Si vous souhaitez agir sur ces constats, l’audit complet de votre site est disponible à l’achat. Il indique, pour chacun, les pages concernées et les corrections à apporter.",
+    'Si vous souhaitez agir sur ces constats, l’audit complet de votre site est disponible à l’achat. Il indique, pour chacun, les pages concernées et les corrections à apporter.',
   reminderAction: `Souhaitez-vous que je vous transmette les modalités${NBSP}?`,
   finalIntro: (of) =>
     `Je me permets de vous écrire une dernière fois au sujet de l’analyse du site ${of}.`,
   finalLawLead:
-    "Avant de clore ce sujet, un dernier point mérite votre attention : le cadre réglementaire de l’accessibilité numérique peut être pertinent au regard des constats relevés lors de notre analyse.",
+    'Avant de clore ce sujet, un dernier point mérite votre attention : le cadre réglementaire de l’accessibilité numérique peut être pertinent au regard des constats relevés lors de notre analyse.',
   finalCommercial:
-    "Indépendamment de cette question juridique, l’aperçu de notre analyse reste disponible dans mon premier message. Si vous souhaitez disposer du détail technique, l’audit complet est disponible à l’achat et indique les pages concernées et les corrections à apporter.",
+    'Indépendamment de cette question juridique, l’aperçu de notre analyse reste disponible dans mon premier message. Si vous souhaitez disposer du détail technique, l’audit complet est disponible à l’achat et indique les pages concernées et les corrections à apporter.',
   finalAction: `Il vous suffit de répondre à ce message si vous souhaitez l’obtenir.`,
   finalExit: 'Sans retour de votre part, je ne vous relancerai pas davantage.',
 };
@@ -229,7 +225,9 @@ export function composeTouchOneBody(options: {
   const template = templateFor(options.language);
   const of = hotelOf(template, options.hotelName);
   const categories = uniqueProofCategories(options.scanSummary.proofCardCategories);
-  const categoryList = template.joinList(categories.map((category) => template.categoryLabel[category]));
+  const categoryList = template.joinList(
+    categories.map((category) => template.categoryLabel[category]),
+  );
   const findings = template.findingsSummary(
     options.scanSummary.distinctFindingCount,
     options.scanSummary.affectedPageCount,

@@ -257,7 +257,9 @@ describe('createOutreachDraft, happy path', () => {
       harness({ draftRow: row({ businessName: 'HÔTEL DE LA POSTE' }) }).options,
     );
     expect(result.subject).toBe("Analyse du site de l'Hôtel de la Poste");
-    expect(result.body).toContain("Nous avons récemment analysé le site web de l'Hôtel de la Poste.");
+    expect(result.body).toContain(
+      "Nous avons récemment analysé le site web de l'Hôtel de la Poste.",
+    );
     expect(result.body).toContain(
       "Notre analyse a relevé 47 constats distincts sur 23 pages de votre site, dont 8 critiques et 14 sérieux. Les principaux problèmes concernent notamment l'accessibilité, le référencement dans les moteurs de recherche et les performances du site.",
     );

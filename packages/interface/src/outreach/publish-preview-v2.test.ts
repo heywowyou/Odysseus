@@ -98,7 +98,11 @@ function harness(overrides: { suppressed?: boolean; recordPreview?: boolean } = 
 
 describe('buildOutreachPreviewSummaryV2', () => {
   it('builds the scorecard from the full outreach audit', () => {
-    const result = buildOutreachPreviewSummaryV2({ row: row(), language: 'fr', publicBaseUrl: BASE_URL });
+    const result = buildOutreachPreviewSummaryV2({
+      row: row(),
+      language: 'fr',
+      publicBaseUrl: BASE_URL,
+    });
     expect('summary' in result).toBe(true);
     if (!('summary' in result)) return;
     expect(result.summary.distinctFindingCount).toBe(3);
