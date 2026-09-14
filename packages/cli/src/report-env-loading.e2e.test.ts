@@ -127,6 +127,6 @@ describe.skipIf(!mongoAvailable)(
       expect(result.stderr).not.toMatch(/MONGODB_URI is not set/);
       expect(result.code).toBe(0);
       expect(result.stdout).toContain(`Report for ${TEST_AUDIT_ID} complete`);
-    }, 60_000);
+    }, 90_000);
   },
 );

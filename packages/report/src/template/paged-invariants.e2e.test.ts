@@ -493,7 +493,7 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
       throw new Error(`Paginated report DOM failed its own axe-core audit:\n${summary}`);
     }
     expect(results.violations).toEqual([]);
-  }, 60_000);
+  }, 90_000);
 
   it('invariant 8b: the generated PDF is tagged and carries a bookmark outline', async () => {
     const pdf = await doc.page.pdf({

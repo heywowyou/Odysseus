@@ -114,7 +114,7 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
       options: {},
     });
     await new Promise((resolve) => setTimeout(resolve, 5));
-    await createJob(connection!, {
+    const second = await createJob(connection!, {
       type: 'full-audit',
       siteUrl: 'https://b.example/',
       options: {},
@@ -128,6 +128,9 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
 
     const stored = await getJob(connection!, first.jobId);
     expect(stored?.status).toBe('running');
+
+    await deleteJob(connection!, first.jobId);
+    await deleteJob(connection!, second.jobId);
   });
 
   it('stamps the claiming worker revision when provided, and omits it otherwise', async () => {

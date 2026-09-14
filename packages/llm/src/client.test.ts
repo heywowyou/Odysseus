@@ -4,9 +4,9 @@ import { WRITING_OPENAI_TEMPERATURE } from './constants.js';
 const completeMock = vi.fn();
 
 vi.mock('openai', () => ({
-  default: vi.fn().mockImplementation(() => ({
-    chat: { completions: { create: completeMock } },
-  })),
+  default: vi.fn().mockImplementation(function OpenAiMock() {
+    return { chat: { completions: { create: completeMock } } };
+  }),
 }));
 
 vi.mock('./config.js', () => ({

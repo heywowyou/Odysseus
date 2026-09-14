@@ -196,7 +196,7 @@ describe('scanSite staggers lane starts by laneIndex * delayMs', () => {
       debugPort,
       maxPages: 4,
       maxDepth: 1,
-      delayMs: 50,
+      delayMs: 250,
       concurrency: 2,
       skipLighthouse: true,
       screenshotDir,
@@ -226,13 +226,14 @@ describe('scanSite staggers lane starts by laneIndex * delayMs', () => {
     lanePhaseTimes.sort((a, b) => a - b);
 
     // The earliest lane-phase request is lane 0's first raw navigation; the
-    // next is at least one 50 ms delay later, whether it is lane 1's own
+    // next is at least one 250 ms delay later, whether it is lane 1's own
     // first navigation (the lanes start laneIndex * effectiveDelayMs apart)
     // or lane 0's rendered pass (renderDiff sleeps delayMs between its two
     // navigations). A regression that drops the stagger collapses this gap
     // to near zero; that collapse is the failure this test exists to catch.
-    // Floor 40 ms for a 50 ms setting.
-    expect(lanePhaseTimes[1]! - lanePhaseTimes[0]!).toBeGreaterThanOrEqual(40);
+    // A 200 ms floor for a 250 ms setting leaves ordinary timer jitter while
+    // remaining observable when the full suite heavily contends for CPU.
+    expect(lanePhaseTimes[1]! - lanePhaseTimes[0]!).toBeGreaterThanOrEqual(200);
 
     // Generous ceiling: crawl phase plus scan phase, over a dozen
     // navigations plus paced sleeps. Standalone this run finishes in about

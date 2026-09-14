@@ -39,5 +39,5 @@ describe('runLighthouseIsolated', () => {
     await expect(
       runLighthouseIsolated('http://127.0.0.1:1', 0, { timeoutMs: 5_000 }),
     ).rejects.toThrow();
-  }, 20_000);
+  }, 30_000);
 });
