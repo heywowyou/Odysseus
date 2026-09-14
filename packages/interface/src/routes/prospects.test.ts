@@ -397,7 +397,28 @@ describe('GET /api/prospects/:candidateId', () => {
     vi.mocked(getOperatorProspect).mockResolvedValue(null as never);
     const res = await handle('/api/prospects/missing');
     expect(res.statusCode).toBe(404);
-    expect(getProspectQualificationHistory).not.toHaveBeenCalled();
+  });
+
+  it('starts independent hub reads concurrently instead of serializing Mongo round trips', async () => {
+    let resolveDetail!: (value: ReturnType<typeof makeDetail>) => void;
+    vi.mocked(getOperatorProspect).mockReturnValue(
+      new Promise((resolve) => {
+        resolveDetail = resolve as typeof resolveDetail;
+      }) as never,
+    );
+
+    const response = handle('/api/prospects/cand-1');
+    await Promise.resolve();
+
+    expect(getProspectQualificationHistory).toHaveBeenCalledOnce();
+    expect(planOutreachFullScan).toHaveBeenCalledOnce();
+    expect(getOutreachAuditStatus).toHaveBeenCalledOnce();
+    expect(listOutreachAudits).toHaveBeenCalledOnce();
+    expect(getSelectionVerdict).toHaveBeenCalledOnce();
+    expect(getHotelCandidate).toHaveBeenCalledOnce();
+
+    resolveDetail(makeDetail());
+    expect((await response).statusCode).toBe(200);
   });
 
   it('rejects a malformed candidateId with 400', async () => {

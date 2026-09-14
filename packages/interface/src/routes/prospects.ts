@@ -349,11 +349,32 @@ export function registerProspectRoutes(
       sendError(res, 400, 'candidateId must be a non-empty string without control characters');
       return;
     }
-    const detail = await getOperatorProspect(connection, candidateId, {
-      qualificationVersion: CURRENT_QUALIFICATION_VERSION,
-      prescanVersion: CURRENT_PRESCAN_VERSION,
-      scoringVersion: CURRENT_SCORING_VERSION,
-    });
+    const [
+      detail,
+      qualificationHistory,
+      plan,
+      auditStatus,
+      outreachAudits,
+      selectionVerdict,
+      fullAuditCandidate,
+    ] = await Promise.all([
+      getOperatorProspect(connection, candidateId, {
+        qualificationVersion: CURRENT_QUALIFICATION_VERSION,
+        prescanVersion: CURRENT_PRESCAN_VERSION,
+        scoringVersion: CURRENT_SCORING_VERSION,
+      }),
+      getProspectQualificationHistory(connection, candidateId, {
+        limit: DETAIL_QUALIFICATION_HISTORY_LIMIT,
+        offset: 0,
+      }),
+      planOutreachFullScan(connection, candidateId, {
+        qualificationVersion: CURRENT_QUALIFICATION_VERSION,
+      }),
+      getOutreachAuditStatus(connection, candidateId),
+      listOutreachAudits(connection, candidateId),
+      getSelectionVerdict(connection, candidateId),
+      getHotelCandidate(connection, candidateId),
+    ]);
     if (detail === null) {
       sendError(res, 404, 'prospect not found');
       return;
@@ -364,39 +385,22 @@ export function registerProspectRoutes(
     // getProspectContactView / getProspectOutcomeView again); the one view
     // it does not carry is the qualification history beyond the current
     // pointer, so that is the only extra read.
-    const qualificationHistory = await getProspectQualificationHistory(connection, candidateId, {
-      limit: DETAIL_QUALIFICATION_HISTORY_LIMIT,
-      offset: 0,
-    });
     // Plan 037: the same fail-closed plan the start action validates, so
     // the action card can show the button (or the reason it is absent)
     // without a second validation path drifting from the real one.
-    const plan = await planOutreachFullScan(connection, candidateId, {
-      qualificationVersion: CURRENT_QUALIFICATION_VERSION,
-    });
     // Plan 040 slice 4: the hub's Audit section reads the candidate's
     // latest outreach audit identity and severity totals here, and the id
     // of a scan still in flight. The report lifecycle stays on
     // GET /api/audits/:auditId, which computes it from the stored pair.
-    const auditStatus = await getOutreachAuditStatus(connection, candidateId);
     // Plan 042 slice 2: every outreach audit of the candidate, newest
     // first, for the hub's Audit tab picker. Additive sibling of
     // outreachAudit above, which stays the newest one for existing readers.
-    const outreachAudits = await listOutreachAudits(connection, candidateId);
-    const severityRollup =
-      auditStatus.audit === null
-        ? null
-        : await getSeverityRollup(connection, auditStatus.audit.auditId);
     // Plan 041 slice B1: the same read-only projection the list uses, so
     // the hub's "why can't I scan this" copy and the list's wave column
     // can never disagree about who is in play.
-    const selectionVerdict = await getSelectionVerdict(connection, candidateId);
     // Issue #182: the paid full-audit button's refusal, computed the same
     // way the POST action itself gates, so the hub can show it as page
     // text before the confirm dialog opens instead of only after.
-    const fullAuditCandidate = await getHotelCandidate(connection, candidateId);
-    const fullAuditPlan =
-      fullAuditCandidate === null ? null : await planFullAudit(fullAuditCandidate);
     // Issue #220: every job currently owning part of this prospect's
     // workflow, across all four operator-launchable kinds - not only the
     // outreach full scan outreachScanJobId already tracked. Requires the
@@ -404,15 +408,16 @@ export function registerProspectRoutes(
     // has any of these jobs against.
     const domainForConflicts = fullAuditCandidate?.ownRegistrableDomain;
     const hasOwnDomain = domainForConflicts !== undefined && domainForConflicts !== '';
-    const activeJobs = !hasOwnDomain
-      ? []
-      : await listActiveJobsForCandidate(connection, candidateId, domainForConflicts);
     // Issue #219: the same quick-check gate the POST /prescan route
     // consults, computed here too so the hub snapshot's actions.runQuickCheck
     // can never claim the button is available when the route would refuse
     // it (and vice versa).
-    const quickCheckPlan =
-      fullAuditCandidate === null ? undefined : await planQuickCheck(fullAuditCandidate);
+    const [severityRollup, fullAuditPlan, activeJobs, quickCheckPlan] = await Promise.all([
+      auditStatus.audit === null ? null : getSeverityRollup(connection, auditStatus.audit.auditId),
+      fullAuditCandidate === null ? null : planFullAudit(fullAuditCandidate),
+      !hasOwnDomain ? [] : listActiveJobsForCandidate(connection, candidateId, domainForConflicts),
+      fullAuditCandidate === null ? undefined : planQuickCheck(fullAuditCandidate),
+    ]);
     const actions = computeHubActions({
       detail,
       activeJobs,
