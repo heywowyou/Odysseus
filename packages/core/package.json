@@ -17,5 +17,8 @@
   "dependencies": {
     "tldts": "^7.4.11",
     "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "fast-check": "4.10.0"
   }
 }

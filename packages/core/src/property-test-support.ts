@@ -11,9 +11,9 @@
  * debugging: `FAST_CHECK_NUM_RUNS=5000 pnpm test <file>` runs the same
  * properties far more times locally when hunting for a rare counterexample.
  */
-export const PROPERTY_TEST_SEED = 20260914;
+const PROPERTY_TEST_SEED = 20260914;
 
-export const PROPERTY_TEST_RUNS = Number(process.env.FAST_CHECK_NUM_RUNS) || 100;
+const PROPERTY_TEST_RUNS = Number(process.env.FAST_CHECK_NUM_RUNS) || 100;
 
 export const PROPERTY_TEST_PARAMETERS = {
   seed: PROPERTY_TEST_SEED,
