@@ -11,7 +11,7 @@ import { createOutreachOutcomeModel } from '../schemas/outreach-outcome.schema.j
 import { createOutreachPreviewModel } from '../schemas/outreach-preview.schema.js';
 import type { HotelCandidate } from '@odysseus/core';
 import { upsertHotelCandidates } from '../hotel-candidates.js';
-import { createJob } from '../jobs.js';
+import { createJob, deleteJob } from '../jobs.js';
 import { getOperatorProspect } from './prospect-detail.js';
 import {
   CURRENT_VERSIONS,
@@ -206,6 +206,14 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
 
       expect(detail?.prescanFreshness).toEqual({ state: 'refreshing', jobId: job.jobId });
       expect(detail?.scoreFreshness).toEqual({ state: 'refreshing', jobId: job.jobId });
+
+      // This job is deliberately left queued above so getOperatorProspect
+      // sees it as active; the jobs collection is shared across the whole
+      // test database (this file's beforeEach never touches it, unlike
+      // every other collection here), so a leftover queued document
+      // outlives this test and can jump ahead of jobs created by other,
+      // concurrently-running test files' own FIFO-ordering assertions.
+      await deleteJob(connection!, job.jobId);
     });
   });
 });

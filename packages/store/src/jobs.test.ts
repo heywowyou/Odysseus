@@ -15,6 +15,7 @@ import {
   updateJobProgress,
 } from './jobs.js';
 import { createJobModel } from './schemas/job.schema.js';
+import type { JobDocument } from './schemas/job.schema.js';
 import { probeMongoAvailability } from './test-support.js';
 
 const { available: mongoAvailable, connection } = await probeMongoAvailability();
@@ -44,6 +45,30 @@ async function drainQueue(): Promise<void> {
 beforeAll(async () => {
   if (mongoAvailable) await drainQueue();
 });
+
+/** Claims jobs, completing away any that are not the one expected, until
+ *  the expected job is claimed. Needed only by the ordering-sensitive
+ *  tests below: claimNextQueuedJob claims the oldest queued job across the
+ *  whole shared, never-dropped test database (jobs.ts's own doc: "two
+ *  worker slots racing... never claim the same job twice" is a
+ *  correctness guarantee about the collection, not scoped per caller), so
+ *  a job enqueued by another test file running concurrently in the same
+ *  vitest worker pool can outrank the job a test here just created.
+ *  Discarding a foreign claim by completing it is drainQueue's own
+ *  strategy above, just applied against one expected jobId instead of
+ *  unconditionally at suite start. */
+async function claimExpectedJob(
+  expectedJobId: string,
+  options?: { workerRevision?: string },
+): Promise<JobDocument | null> {
+  for (let attempt = 0; attempt < 25; attempt++) {
+    const claimed = await claimNextQueuedJob(connection!, options);
+    if (!claimed) return null;
+    if (claimed.jobId === expectedJobId) return claimed;
+    await completeJob(connection!, claimed.jobId);
+  }
+  throw new Error(`claimExpectedJob: did not see job ${expectedJobId} after 25 claim attempts`);
+}
 
 describe.skipIf(!mongoAvailable)('jobs', () => {
   it('creates a job with a generated jobId, queued status and phase', async () => {
@@ -120,7 +145,7 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
       options: {},
     });
 
-    const claimed = await claimNextQueuedJob(connection!);
+    const claimed = await claimExpectedJob(first.jobId);
     expect(claimed?.jobId).toBe(first.jobId);
     expect(claimed?.status).toBe('running');
     expect(claimed?.startedAt).toBeInstanceOf(Date);
@@ -139,7 +164,7 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
       siteUrl: 'https://revision-a.example/',
       options: {},
     });
-    const claimed = await claimNextQueuedJob(connection!, { workerRevision: 'deadbee' });
+    const claimed = await claimExpectedJob(withRevision.jobId, { workerRevision: 'deadbee' });
     expect(claimed?.jobId).toBe(withRevision.jobId);
     expect(claimed?.workerRevision).toBe('deadbee');
 
@@ -148,7 +173,7 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
       siteUrl: 'https://revision-b.example/',
       options: {},
     });
-    const claimedWithout = await claimNextQueuedJob(connection!);
+    const claimedWithout = await claimExpectedJob(withoutRevision.jobId);
     expect(claimedWithout?.jobId).toBe(withoutRevision.jobId);
     expect(claimedWithout?.workerRevision).toBeUndefined();
   });
@@ -465,15 +490,16 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
   });
 
   it('cancelQueuedJobs cancels every queued job and leaves running ones alone', async () => {
-    // The running job must genuinely be running before the clear: it is
-    // created first and claimed while it is the only queued document, so
-    // the claim cannot hit one of the queued jobs created below.
+    // The running job must genuinely be running before the clear: claimed
+    // via claimExpectedJob rather than a bare claim, since a concurrently
+    // running test file can enqueue a job ahead of this one in the shared
+    // database (see claimExpectedJob's own doc above).
     const running = await createJob(connection!, {
       type: 'full-audit',
       siteUrl: 'https://l.example/',
       options: {},
     });
-    const claimed = await claimNextQueuedJob(connection!);
+    const claimed = await claimExpectedJob(running.jobId);
     expect(claimed?.jobId).toBe(running.jobId);
 
     const queuedA = await createJob(connection!, {
