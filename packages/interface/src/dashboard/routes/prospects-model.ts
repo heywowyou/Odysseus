@@ -109,6 +109,14 @@ export function isQualificationValue(value: string): value is QualificationFilte
   return value === '' || (QUALIFICATION_VALUES as readonly string[]).includes(value);
 }
 
+/** Issue #215: the score-derived sort, '' meaning the default name order. */
+export type ProspectSortField = '' | 'brokenness' | 'fixability';
+export type ProspectSortDirection = 'asc' | 'desc';
+const SORT_FIELD_VALUES: readonly ProspectSortField[] = ['brokenness', 'fixability'];
+export function isSortFieldValue(value: string): value is ProspectSortField {
+  return value === '' || (SORT_FIELD_VALUES as readonly string[]).includes(value);
+}
+
 /** Controlled state of the list's filters; '' means the filter is off.
  *  `search` is the free-text box and travels as the API's `q` param. */
 export interface ProspectFilterState {
@@ -119,6 +127,8 @@ export interface ProspectFilterState {
   reviewState: ReviewStateFilter;
   qualificationOutcome: QualificationFilter;
   search: string;
+  sortBy: ProspectSortField;
+  sortDirection: ProspectSortDirection;
 }
 
 /** The list opens on the actionable set (plan 041 slice B1's design
@@ -132,6 +142,8 @@ export function createEmptyFilters(): ProspectFilterState {
     reviewState: '',
     qualificationOutcome: '',
     search: '',
+    sortBy: '',
+    sortDirection: 'desc',
   };
 }
 
@@ -153,6 +165,12 @@ export function buildProspectsPath(filters: ProspectFilterState, offset: number)
   }
   const search = filters.search.trim();
   if (search !== '') params.set('q', search);
+  if (filters.sortBy !== '') {
+    params.set('sortBy', filters.sortBy);
+    // 'desc' is the default the store applies when sortBy is set with no
+    // explicit direction, so only an 'asc' override needs to travel.
+    if (filters.sortDirection === 'asc') params.set('sortDirection', 'asc');
+  }
   params.set('limit', String(PROSPECT_PAGE_SIZE));
   if (offset > 0) params.set('offset', String(offset));
   const queryString = params.toString();

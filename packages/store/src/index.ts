@@ -486,6 +486,8 @@ export type {
   OperatorProspectDetail,
   OperatorProspectQueue,
   OperatorProspectRow,
+  ProspectSortDirection,
+  ProspectSortField,
   OperatorQualificationEvent,
   OperatorReplyReviewRow,
   OperatorReviewDraftRow,

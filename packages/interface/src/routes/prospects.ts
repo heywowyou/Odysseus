@@ -30,7 +30,12 @@ import {
   recordHotelCandidateReview,
   revokeWaveRosterEntry,
 } from '@odysseus/store';
-import type { ListOperatorProspectsOptions, OperatorProspectQueue } from '@odysseus/store';
+import type {
+  ListOperatorProspectsOptions,
+  OperatorProspectQueue,
+  ProspectSortDirection,
+  ProspectSortField,
+} from '@odysseus/store';
 import {
   createFirstEmailForCandidate,
   createFollowUpForCandidate,
@@ -100,6 +105,11 @@ const CAMPAIGN_ELIGIBILITIES: readonly HotelCampaignEligibility[] = [
   'parked-below-three-stars',
   'parked-unknown-rating',
 ];
+
+/** Issue #215: the sort keys the list can be ordered by, beyond the
+ *  default name order. */
+const SORT_FIELDS: readonly ProspectSortField[] = ['brokenness', 'fixability'];
+const SORT_DIRECTIONS: readonly ProspectSortDirection[] = ['asc', 'desc'];
 
 /** Free-text search is an unbounded string by nature; this cap keeps one
  *  query from carrying a pathological payload while staying far above any
@@ -202,6 +212,17 @@ function parseListQuery(query: URLSearchParams): ListOperatorProspectsOptions {
       throw new ProspectRequestError('inSelection must be "true" or "false"');
     }
     options.inSelection = rawInSelection === 'true';
+  }
+
+  const rawSortBy = query.get('sortBy');
+  if (rawSortBy !== null) options.sortBy = requireEnumValue(rawSortBy, 'sortBy', SORT_FIELDS);
+
+  const rawSortDirection = query.get('sortDirection');
+  if (rawSortDirection !== null) {
+    if (options.sortBy === undefined) {
+      throw new ProspectRequestError('sortDirection requires sortBy');
+    }
+    options.sortDirection = requireEnumValue(rawSortDirection, 'sortDirection', SORT_DIRECTIONS);
   }
 
   const rawLimit = query.get('limit');

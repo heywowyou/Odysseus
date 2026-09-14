@@ -69,6 +69,8 @@ describe('buildProspectsPath', () => {
       reviewState: 'pending',
       qualificationOutcome: 'not-evaluated',
       search: '',
+      sortBy: '',
+      sortDirection: 'desc',
     };
     const path = buildProspectsPath(filters, 50);
     expect(path).toBe(

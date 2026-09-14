@@ -64,6 +64,7 @@ import type {
   ProspectListResponse,
   ProspectQueue,
   ProspectRow,
+  ProspectSortDirection,
   SelectionFilter,
   SelectionOverviewResponse,
 } from './prospects-model';
@@ -108,6 +109,41 @@ function HeaderWithTip(props: {
     <TableHeaderCell className={props.className ?? ''}>
       <span className="inline-flex items-center gap-1">
         {props.label}
+        <InfoTip label={props.label} hint={props.hint} />
+      </span>
+    </TableHeaderCell>
+  );
+}
+
+/** Issue #215: a "Problems found" / "Ability to fix" header whose label is
+ *  also the sort toggle. Sibling to the InfoTip button rather than wrapping
+ *  it, so the cell never nests one interactive element inside another. The
+ *  cell's `aria-sort` carries the current state to assistive tech, which is
+ *  why the direction arrow itself is aria-hidden. */
+function SortableHeaderCell(props: {
+  label: string;
+  hint: string;
+  field: 'brokenness' | 'fixability';
+  activeField: ProspectFilterState['sortBy'];
+  direction: ProspectSortDirection;
+  onSort: (field: 'brokenness' | 'fixability') => void;
+  className?: string | undefined;
+}): JSX.Element {
+  const active = props.activeField === props.field;
+  return (
+    <TableHeaderCell
+      className={props.className ?? ''}
+      aria-sort={active ? (props.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
+      <span className="inline-flex items-center gap-1">
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 hover:text-ink"
+          onClick={() => props.onSort(props.field)}
+        >
+          {props.label}
+          {active ? <span aria-hidden="true">{props.direction === 'asc' ? '▲' : '▼'}</span> : null}
+        </button>
         <InfoTip label={props.label} hint={props.hint} />
       </span>
     </TableHeaderCell>
@@ -182,6 +218,20 @@ export function ProspectsPage(): JSX.Element {
     setRequestedOffset(0);
   };
 
+  /** Issue #215: click cycles descending (most broken / most fixable
+   *  first) -> ascending -> off, matching the header's arrow. Paging is
+   *  preserved automatically since the sort lives in `filters`, the same
+   *  state every other filter click resets the offset through. */
+  const toggleSort = (field: 'brokenness' | 'fixability'): void => {
+    if (filters.sortBy !== field) {
+      applyFilters({ ...filters, sortBy: field, sortDirection: 'desc' });
+    } else if (filters.sortDirection === 'desc') {
+      applyFilters({ ...filters, sortDirection: 'asc' });
+    } else {
+      applyFilters({ ...filters, sortBy: '', sortDirection: 'desc' });
+    }
+  };
+
   const queueOptions = useMemo(
     () =>
       PROSPECT_QUEUES.map((queue) => ({
@@ -245,14 +295,24 @@ export function ProspectsPage(): JSX.Element {
                   label={strings.prospects.columns.review}
                   hint={strings.hints.review}
                 />
-                <HeaderWithTip
+                <SortableHeaderCell
                   label={strings.labels.scoreSide.brokenness}
                   hint={strings.hints.score}
+                  field="brokenness"
+                  activeField={filters.sortBy}
+                  direction={filters.sortDirection}
+                  onSort={toggleSort}
                   className="w-28 text-right"
                 />
-                <TableHeaderCell className="w-28 text-right">
-                  {strings.labels.scoreSide.ability}
-                </TableHeaderCell>
+                <SortableHeaderCell
+                  label={strings.labels.scoreSide.ability}
+                  hint={strings.hints.score}
+                  field="fixability"
+                  activeField={filters.sortBy}
+                  direction={filters.sortDirection}
+                  onSort={toggleSort}
+                  className="w-28 text-right"
+                />
                 <TableHeaderCell>{strings.prospects.columns.contact}</TableHeaderCell>
                 <TableHeaderCell>{strings.prospects.columns.thread}</TableHeaderCell>
                 <TableHeaderCell>{strings.prospects.columns.outcome}</TableHeaderCell>

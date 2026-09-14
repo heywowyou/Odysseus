@@ -36,6 +36,12 @@ import type { SelectionCohortFacts, SelectionSource } from './selection-projecti
 export type OperatorProspectQueue =
   'join-review' | 'parked' | 'rejected' | 'already-engaged' | 'groups';
 
+/** Issue #215: the two score-derived sort keys the list can order by. Kept
+ *  as a closed allow-list (not an arbitrary field name) so a route can
+ *  reject anything else before it ever reaches the query layer. */
+export type ProspectSortField = 'brokenness' | 'fixability';
+export type ProspectSortDirection = 'asc' | 'desc';
+
 export interface ListOperatorProspectsOptions extends OperatorViewPageOptions {
   resolutionVersion?: string;
   queue?: OperatorProspectQueue;
@@ -53,6 +59,16 @@ export interface ListOperatorProspectsOptions extends OperatorViewPageOptions {
    *  current wave, false keeps only the rest. Absent means the whole
    *  catalogue, which is what every existing caller gets. */
   inSelection?: boolean;
+  /** Issue #215: sort the page by the candidate's latest brokenness or
+   *  ability (fixability) score instead of the default name order. Absent
+   *  keeps the existing `find().sort().skip().limit()` path unchanged;
+   *  present switches to an aggregation that joins the latest score before
+   *  paging, since sorting on a field paging currently only attaches after
+   *  the page is chosen is otherwise impossible. Direction defaults to
+   *  descending (most broken / most fixable first) when sortBy is set but
+   *  sortDirection is not. */
+  sortBy?: ProspectSortField;
+  sortDirection?: ProspectSortDirection;
 }
 
 /** One row per fold family: the base letter plus its accented variants.
@@ -403,6 +419,61 @@ async function threadStatesForCandidates(
   return { states, outcomePointers };
 }
 
+/** Issue #215: the field inside a `hotel_scores` document that a given sort
+ *  key reads. */
+function scoreFieldFor(sortBy: ProspectSortField): string {
+  return sortBy === 'brokenness' ? 'brokenness.total' : 'ability.total';
+}
+
+/** The score-sorted page of candidates: unlike the default path, the latest
+ *  score has to be joined *before* `$sort`/`$skip`/`$limit` run, since the
+ *  sort key lives in a separate collection that the default path only joins
+ *  once the page is already chosen. `hasScore` sorts first (descending) so
+ *  an unscored candidate always lands after every scored one, in either
+ *  direction; `name`/`candidateId` remain the tiebreaker so offset windows
+ *  stay stable, matching the default path's own tiebreaker. The final
+ *  `$project` narrows back down to exactly `PROSPECT_ROW_PROJECTION`'s
+ *  fields, so the result satisfies the same `ProspectCandidateRowDoc[]`
+ *  shape the rest of the function consumes either way. */
+async function sortedProspectCandidates(
+  connection: Connection,
+  filter: Record<string, unknown>,
+  sortBy: ProspectSortField,
+  sortDirection: ProspectSortDirection | undefined,
+  skip: number,
+  limit: number,
+): Promise<ProspectCandidateRowDoc[]> {
+  const scoreField = scoreFieldFor(sortBy);
+  const direction = sortDirection === 'asc' ? 1 : -1;
+
+  return createHotelCandidateModel(connection).aggregate<ProspectCandidateRowDoc>([
+    { $match: filter },
+    {
+      $lookup: {
+        from: 'hotel_scores',
+        let: { candidateId: '$candidateId' },
+        pipeline: [
+          { $match: { $expr: { $eq: ['$candidateId', '$$candidateId'] } } },
+          { $sort: { computedAt: -1 } },
+          { $limit: 1 },
+          { $project: { _id: 0, value: `$${scoreField}` } },
+        ],
+        as: 'latestScore',
+      },
+    },
+    {
+      $addFields: {
+        hasScore: { $gt: [{ $size: '$latestScore' }, 0] },
+        sortScore: { $arrayElemAt: ['$latestScore.value', 0] },
+      },
+    },
+    { $sort: { hasScore: -1, sortScore: direction, name: 1, candidateId: 1 } },
+    { $skip: skip },
+    { $limit: limit },
+    { $project: PROSPECT_ROW_PROJECTION },
+  ]);
+}
+
 export async function listOperatorProspects(
   connection: Connection,
   options: ListOperatorProspectsOptions,
@@ -426,14 +497,23 @@ export async function listOperatorProspects(
   const [total, catalogueTotal, candidates] = await Promise.all([
     CandidateModel.countDocuments(filter),
     CandidateModel.countDocuments(catalogueFilter),
-    CandidateModel.find(filter)
-      // candidateId is unique, so the name tiebreaker makes offset windows
-      // exact even when two establishments share a name.
-      .sort({ name: 1, candidateId: 1 })
-      .skip(skip)
-      .limit(limit)
-      .select(PROSPECT_ROW_PROJECTION)
-      .lean<ProspectCandidateRowDoc[]>(),
+    options.sortBy === undefined
+      ? CandidateModel.find(filter)
+          // candidateId is unique, so the name tiebreaker makes offset
+          // windows exact even when two establishments share a name.
+          .sort({ name: 1, candidateId: 1 })
+          .skip(skip)
+          .limit(limit)
+          .select(PROSPECT_ROW_PROJECTION)
+          .lean<ProspectCandidateRowDoc[]>()
+      : sortedProspectCandidates(
+          connection,
+          filter,
+          options.sortBy,
+          options.sortDirection,
+          skip,
+          limit,
+        ),
   ]);
 
   const candidateIds = candidates.map((row) => row.candidateId);

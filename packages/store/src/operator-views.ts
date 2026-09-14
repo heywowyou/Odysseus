@@ -37,6 +37,8 @@ export type {
   OperatorProspectListPage,
   OperatorProspectQueue,
   OperatorProspectRow,
+  ProspectSortDirection,
+  ProspectSortField,
 } from './operator-views/prospect-list.js';
 export {
   getSelectionProjection,

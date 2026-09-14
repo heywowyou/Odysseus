@@ -1,4 +1,4 @@
-import type { JSX, MouseEventHandler, ReactNode } from 'react';
+import type { ComponentPropsWithoutRef, JSX, MouseEventHandler, ReactNode } from 'react';
 import { cn } from '../../lib/cn';
 
 export function Table({ children }: { children: ReactNode }): JSX.Element {
@@ -43,12 +43,16 @@ export function TableRow({
 export function TableHeaderCell({
   children,
   className,
+  ...rest
 }: {
   children: ReactNode;
   className?: string;
-}): JSX.Element {
+} & Omit<ComponentPropsWithoutRef<'th'>, 'children' | 'className'>): JSX.Element {
   return (
-    <th className={cn('px-3 py-2 text-left text-xs font-medium text-ink-muted', className)}>
+    <th
+      className={cn('px-3 py-2 text-left text-xs font-medium text-ink-muted', className)}
+      {...rest}
+    >
       {children}
     </th>
   );

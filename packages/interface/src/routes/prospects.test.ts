@@ -324,11 +324,29 @@ describe('GET /api/prospects', () => {
     ['limit=ten', /limit/],
     ['offset=-1', /offset/],
     ['offset=1.5', /offset/],
+    ['sortBy=popularity', /sortBy/],
+    ['sortDirection=descending', /sortDirection/],
+    ['sortDirection=asc', /sortDirection/],
   ])('rejects %s with 400 and never reaches the store', async (queryString, pattern) => {
     const res = await handle(`/api/prospects?${queryString}`);
     expect(res.statusCode).toBe(400);
     expect(res.body ?? '').toMatch(pattern as RegExp);
     expect(listOperatorProspects).not.toHaveBeenCalled();
+  });
+
+  it('passes sortBy and sortDirection through to the store (issue #215)', async () => {
+    await handle('/api/prospects?sortBy=brokenness&sortDirection=asc');
+    expect(vi.mocked(listOperatorProspects).mock.calls[0]?.[1]).toEqual({
+      sortBy: 'brokenness',
+      sortDirection: 'asc',
+    });
+  });
+
+  it('passes sortBy alone, leaving direction to the store default', async () => {
+    await handle('/api/prospects?sortBy=fixability');
+    expect(vi.mocked(listOperatorProspects).mock.calls[0]?.[1]).toEqual({
+      sortBy: 'fixability',
+    });
   });
 });
 
