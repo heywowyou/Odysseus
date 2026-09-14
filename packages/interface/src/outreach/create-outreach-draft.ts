@@ -61,9 +61,9 @@ import { previewLinks, registryAssessment, type PreviewSireneFacts } from './pub
 export const FIRST_TOUCH = 1;
 
 /** Recorded on every draft as `outreachPromptVersion` (the field predates
- *  trade-off 83): which approved template produced the text. `template-v1` is
- *  the operator-approved wording of 2026-09-11; there is no model prompt. */
-export const CURRENT_OUTREACH_PROMPT_VERSION = 'template-v1';
+ *  trade-off 83): which approved code-owned template produced the text.
+ *  `template-v2` is the operator-approved wording locked 2026-09-14. */
+export const CURRENT_OUTREACH_PROMPT_VERSION = 'template-v2';
 
 export type CreateOutreachDraftRefusal =
   | 'candidate-unknown'
