@@ -173,7 +173,7 @@ describe('createFollowUpDraft, touch 2 happy path', () => {
   it('records the template version, not a model prompt', async () => {
     const h = harness();
     await createFollowUpDraft(h.options);
-    expect(h.recordedDrafts[0]?.outreachPromptVersion).toBe('template-v1');
+    expect(h.recordedDrafts[0]?.outreachPromptVersion).toBe('template-v2');
   });
 
   it('moves the thread from e1-sent to e2-drafted once recorded', async () => {
