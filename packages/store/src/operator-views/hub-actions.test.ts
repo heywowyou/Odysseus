@@ -76,7 +76,7 @@ const BASE_INPUT: ComputeHubActionsInput = {
   activeJobs: [],
   outreachScanPlan: {},
   fullAuditPlan: { canStart: true },
-  quickCheckPlan: { allowed: true },
+  quickCheckPlan: { canStart: true },
   hasAudit: false,
 };
 
@@ -105,15 +105,23 @@ describe('computeHubActions (issue #219)', () => {
     expect(actions.runFullAudit).toEqual({ state: 'blocked', reason: 'already-in-flight' });
   });
 
-  it('blocks the quick-check action with the same reasons planProspectJobLaunch would refuse it for', () => {
-    expect(computeHubActions({ ...BASE_INPUT, quickCheckPlan: null }).runQuickCheck).toEqual({
-      state: 'blocked',
-      reason: 'no-own-domain',
-    });
+  it('blocks the quick-check action with the same reasons planQuickCheck would refuse it for', () => {
     expect(
       computeHubActions({
         ...BASE_INPUT,
-        quickCheckPlan: { allowed: false, conflictingJobId: 'job-x' },
+        quickCheckPlan: { canStart: false, refusal: 'no-own-domain' },
+      }).runQuickCheck,
+    ).toEqual({ state: 'blocked', reason: 'no-own-domain' });
+    expect(
+      computeHubActions({
+        ...BASE_INPUT,
+        quickCheckPlan: { canStart: false, refusal: 'not-qualified' },
+      }).runQuickCheck,
+    ).toEqual({ state: 'blocked', reason: 'not-qualified' });
+    expect(
+      computeHubActions({
+        ...BASE_INPUT,
+        quickCheckPlan: { canStart: false, refusal: 'already-in-flight' },
       }).runQuickCheck,
     ).toEqual({ state: 'blocked', reason: 'already-in-flight' });
   });

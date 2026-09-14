@@ -469,7 +469,13 @@ export function ProspectDetailPage(): JSX.Element {
         navigate(`/scans/${result.jobId}`);
         return;
       }
-      toast.error(strings.prospectDetail.quickCheckRefused);
+      toast.error(strings.prospectDetail.quickCheckRefused, {
+        description:
+          result.refusal !== undefined
+            ? (strings.hub.scanRefusals[result.refusal as keyof typeof strings.hub.scanRefusals] ??
+              undefined)
+            : undefined,
+      });
       refresh();
     } catch (caught) {
       toast.error(strings.prospectDetail.quickCheckRefused, {

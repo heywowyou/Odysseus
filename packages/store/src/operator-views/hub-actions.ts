@@ -63,11 +63,11 @@ export interface ComputeHubActionsInput {
   /** The same object GET/POST full-audit already compute via
    *  planFullAudit/planProspectJobLaunch. */
   fullAuditPlan: { canStart: true } | { canStart: false; refusal: string } | undefined;
-  /** planProspectJobLaunch('quick-check', ...), or null when the candidate
-   *  has no own domain (the route's own no-own-domain refusal), or
-   *  undefined if not computed. */
-  quickCheckPlan:
-    { allowed: true } | { allowed: false; conflictingJobId: string } | null | undefined;
+  /** The same object GET/POST /prescan already compute via planQuickCheck
+   *  - not qualification-independent: unlike planFullAudit, this refuses
+   *  'not-qualified'/'qualification-not-current' too, matching
+   *  listCandidatesToPrescan's own filter, or undefined if not computed. */
+  quickCheckPlan: { canStart: true } | { canStart: false; refusal: string } | undefined;
   /** Whether the candidate has a linked outreach audit (getOutreachAuditStatus
    *  .audit !== null) - not part of OperatorProspectDetail, composed
    *  separately by the route, same as activeJobs. */
@@ -96,11 +96,9 @@ export function computeHubActions(input: ComputeHubActionsInput): ProspectHubAct
     runningJob(activeJobs, 'quick-check') ??
     (quickCheckPlan === undefined
       ? { state: 'blocked', reason: 'unknown' }
-      : quickCheckPlan === null
-        ? { state: 'blocked', reason: 'no-own-domain' }
-        : quickCheckPlan.allowed
-          ? { state: 'available' }
-          : { state: 'blocked', reason: 'already-in-flight' });
+      : quickCheckPlan.canStart
+        ? { state: 'available' }
+        : { state: 'blocked', reason: quickCheckPlan.refusal });
 
   const runProspectingAudit: ProspectHubActionability =
     runningJob(activeJobs, 'prospecting-audit') ??

@@ -412,13 +412,8 @@ export function registerProspectRoutes(
     // consults, computed here too so the hub snapshot's actions.runQuickCheck
     // can never claim the button is available when the route would refuse
     // it (and vice versa).
-    const quickCheckPlan = !hasOwnDomain
-      ? null
-      : await planProspectJobLaunch(connection, {
-          kind: 'quick-check',
-          candidateId,
-          domain: domainForConflicts,
-        });
+    const quickCheckPlan =
+      fullAuditCandidate === null ? undefined : await planQuickCheck(fullAuditCandidate);
     const actions = computeHubActions({
       detail,
       activeJobs,
@@ -678,6 +673,12 @@ export function registerProspectRoutes(
   // default; this route is always one operator naming one hotel, and a
   // silent no-op here (0 hotels prescanned, reported as success) is the
   // same failure shape #202 already was.
+  //
+  // planQuickCheck (below) is what actually keeps that promise: it refuses
+  // up front, before a job is ever created, for exactly the candidates
+  // listCandidatesToPrescan would silently match zero of - not qualified,
+  // qualification stale, or not campaign-eligible - instead of minting a
+  // job that reports started:true and then completes having done nothing.
   router.post('/api/prospects/:candidateId/prescan', async ({ req, res, params }) => {
     const candidateId = params['candidateId']!;
     if (!isPlausibleCandidateId(candidateId)) {
@@ -689,24 +690,12 @@ export function registerProspectRoutes(
       sendError(res, 404, 'prospect not found');
       return;
     }
-    const domain = candidate.ownRegistrableDomain;
-    if (domain === undefined || domain === null || domain === '') {
-      sendJson(res, 200, { started: false, refusal: 'no-own-domain' });
-      return;
-    }
-    // Issue #220: a Quick check already queued/running for this domain is
-    // always the same click fired twice - dedupe rather than queue a
-    // second identical probe.
-    const launchDecision = await planProspectJobLaunch(connection, {
-      kind: 'quick-check',
-      candidateId,
-      domain,
-    });
-    if (!launchDecision.allowed) {
+    const plan = await planQuickCheck(candidate);
+    if (!plan.canStart) {
       sendJson(res, 200, {
         started: false,
-        refusal: 'already-in-flight',
-        jobId: launchDecision.conflictingJobId,
+        refusal: plan.refusal,
+        jobId: plan.refusal === 'already-in-flight' ? plan.jobId : null,
       });
       return;
     }
@@ -716,7 +705,7 @@ export function registerProspectRoutes(
         resolutionVersion: CURRENT_RESOLUTION_VERSION,
         qualificationVersion: CURRENT_QUALIFICATION_VERSION,
         prescanVersion: CURRENT_PRESCAN_VERSION,
-        domain,
+        domain: plan.domain,
         maxPages: 1,
         concurrency: 1,
         rescan: true,
@@ -829,6 +818,51 @@ export function registerProspectRoutes(
     }
     const cohort = await getLatestScoreCohort(connection, CURRENT_SCORING_VERSION);
     return { canStart: true, domain, cohortId: cohort?.cohortId ?? 'none' };
+  }
+
+  /** Regression found while reproducing "click Quick check, nothing
+   *  happens" against production: the POST /prescan route below used to
+   *  create a hotel-prescan job for any candidate with an own domain, with
+   *  no qualification check at all. But listCandidatesToPrescan (the job's
+   *  own candidate query, prescans.ts) requires
+   *  qualification.outcome === 'qualified', a current
+   *  qualification.qualificationVersion, and campaignEligibility ===
+   *  'eligible'. A rejected or stale-qualification candidate matched none
+   *  of that, so the job "completed" in under a second having prescanned
+   *  zero hotels - the same silent-empty-scope failure #202 was, just
+   *  reachable through a different route. Factored out, the same way
+   *  planFullAudit is, so the GET detail's quickCheckPlan and this POST
+   *  route can never disagree about whether the button should work. */
+  async function planQuickCheck(
+    candidate: NonNullable<Awaited<ReturnType<typeof getHotelCandidate>>>,
+  ): Promise<
+    | { canStart: true; domain: string }
+    | { canStart: false; refusal: 'no-own-domain' }
+    | { canStart: false; refusal: 'not-qualified' }
+    | { canStart: false; refusal: 'qualification-not-current' }
+    | { canStart: false; refusal: 'already-in-flight'; jobId: string }
+  > {
+    const domain = candidate.ownRegistrableDomain;
+    if (!domain) return { canStart: false, refusal: 'no-own-domain' };
+    if (
+      candidate.campaignEligibility !== 'eligible' ||
+      candidate.qualification === undefined ||
+      candidate.qualification.outcome !== 'qualified'
+    ) {
+      return { canStart: false, refusal: 'not-qualified' };
+    }
+    if (candidate.qualification.qualificationVersion !== CURRENT_QUALIFICATION_VERSION) {
+      return { canStart: false, refusal: 'qualification-not-current' };
+    }
+    const decision = await planProspectJobLaunch(connection, {
+      kind: 'quick-check',
+      candidateId: candidate.candidateId,
+      domain,
+    });
+    if (!decision.allowed) {
+      return { canStart: false, refusal: 'already-in-flight', jobId: decision.conflictingJobId };
+    }
+    return { canStart: true, domain };
   }
 
   router.post('/api/prospects/:candidateId/wave/remove', async ({ req, res, params }) => {

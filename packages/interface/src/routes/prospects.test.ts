@@ -1190,12 +1190,21 @@ describe('POST /api/prospects/:candidateId/full-audit (plan 044)', () => {
   });
 });
 
+/** A candidate that planQuickCheck lets through: everything
+ *  listCandidatesToPrescan's own filter (prescans.ts) requires. */
+function qualifiedCandidate(overrides: Record<string, unknown> = {}): unknown {
+  return {
+    candidateId: 'cand-1',
+    ownRegistrableDomain: 'hotel-exemple.fr',
+    campaignEligibility: 'eligible',
+    qualification: { outcome: 'qualified', qualificationVersion: CURRENT_QUALIFICATION_VERSION },
+    ...overrides,
+  };
+}
+
 describe('POST /api/prospects/:candidateId/prescan (issue #201)', () => {
   it('mints a domain-scoped hotel-prescan job for a hand-added hotel', async () => {
-    vi.mocked(getHotelCandidate).mockResolvedValue({
-      candidateId: 'cand-1',
-      ownRegistrableDomain: 'hotel-exemple.fr',
-    } as never);
+    vi.mocked(getHotelCandidate).mockResolvedValue(qualifiedCandidate() as never);
     const res = await handle('/api/prospects/cand-1/prescan', { method: 'POST' });
     expect(res.statusCode).toBe(201);
     expect(createJob).toHaveBeenCalledWith(fakeConnection, {
@@ -1220,11 +1229,11 @@ describe('POST /api/prospects/:candidateId/prescan (issue #201)', () => {
   // and rescan: false silently prescanned nothing for exactly that
   // candidate, reporting success with 0 hotels prescanned.
   it('forces a rescan even for a candidate already prescanned at the current version', async () => {
-    vi.mocked(getHotelCandidate).mockResolvedValue({
-      candidateId: 'cand-1',
-      ownRegistrableDomain: 'hotel-exemple.fr',
-      prescan: { prescanId: 'old-prescan', prescanVersion: CURRENT_PRESCAN_VERSION },
-    } as never);
+    vi.mocked(getHotelCandidate).mockResolvedValue(
+      qualifiedCandidate({
+        prescan: { prescanId: 'old-prescan', prescanVersion: CURRENT_PRESCAN_VERSION },
+      }) as never,
+    );
     await handle('/api/prospects/cand-1/prescan', { method: 'POST' });
     expect(createJob).toHaveBeenCalledWith(
       fakeConnection,
@@ -1242,6 +1251,7 @@ describe('POST /api/prospects/:candidateId/prescan (issue #201)', () => {
     expect(JSON.parse(noDomain.body ?? '{}')).toEqual({
       started: false,
       refusal: 'no-own-domain',
+      jobId: null,
     });
     expect(createJob).not.toHaveBeenCalled();
 
@@ -1261,10 +1271,7 @@ describe('POST /api/prospects/:candidateId/prescan (issue #201)', () => {
   // and outreach-full-scan already were, instead of always minting a
   // second job for the same click.
   it('dedupes against an already-running Quick check for the same domain', async () => {
-    vi.mocked(getHotelCandidate).mockResolvedValue({
-      candidateId: 'cand-1',
-      ownRegistrableDomain: 'hotel-exemple.fr',
-    } as never);
+    vi.mocked(getHotelCandidate).mockResolvedValue(qualifiedCandidate() as never);
     vi.mocked(planProspectJobLaunch).mockResolvedValue({
       allowed: false,
       conflictingJobId: 'job-prescan-running',
@@ -1280,6 +1287,70 @@ describe('POST /api/prospects/:candidateId/prescan (issue #201)', () => {
       kind: 'quick-check',
       candidateId: 'cand-1',
       domain: 'hotel-exemple.fr',
+    });
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
+  // Regression found reproducing "click Quick check, nothing happens"
+  // against production (Ritz Paris, qualification outcome 'rejected'): the
+  // route used to mint a job for any candidate with an own domain, with no
+  // qualification check. listCandidatesToPrescan (the job's own candidate
+  // query) requires qualification.outcome === 'qualified', so the job
+  // matched zero rows and completed in under a second having prescanned
+  // nothing - reported as started:true with no indication anything failed.
+  it('refuses a candidate whose qualification is not "qualified", without creating a job', async () => {
+    vi.mocked(getHotelCandidate).mockResolvedValue(
+      qualifiedCandidate({
+        qualification: { outcome: 'rejected', qualificationVersion: CURRENT_QUALIFICATION_VERSION },
+      }) as never,
+    );
+    const res = await handle('/api/prospects/cand-1/prescan', { method: 'POST' });
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body ?? '{}')).toEqual({
+      started: false,
+      refusal: 'not-qualified',
+      jobId: null,
+    });
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
+  it('refuses a candidate with no qualification recorded at all, without creating a job', async () => {
+    vi.mocked(getHotelCandidate).mockResolvedValue(
+      qualifiedCandidate({ qualification: undefined }) as never,
+    );
+    const res = await handle('/api/prospects/cand-1/prescan', { method: 'POST' });
+    expect(JSON.parse(res.body ?? '{}')).toEqual({
+      started: false,
+      refusal: 'not-qualified',
+      jobId: null,
+    });
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
+  it('refuses a candidate whose qualification is stale, without creating a job', async () => {
+    vi.mocked(getHotelCandidate).mockResolvedValue(
+      qualifiedCandidate({
+        qualification: { outcome: 'qualified', qualificationVersion: 'v0-old' },
+      }) as never,
+    );
+    const res = await handle('/api/prospects/cand-1/prescan', { method: 'POST' });
+    expect(JSON.parse(res.body ?? '{}')).toEqual({
+      started: false,
+      refusal: 'qualification-not-current',
+      jobId: null,
+    });
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
+  it('refuses a candidate parked outside campaign eligibility, without creating a job', async () => {
+    vi.mocked(getHotelCandidate).mockResolvedValue(
+      qualifiedCandidate({ campaignEligibility: 'parked-below-three-stars' }) as never,
+    );
+    const res = await handle('/api/prospects/cand-1/prescan', { method: 'POST' });
+    expect(JSON.parse(res.body ?? '{}')).toEqual({
+      started: false,
+      refusal: 'not-qualified',
+      jobId: null,
     });
     expect(createJob).not.toHaveBeenCalled();
   });
