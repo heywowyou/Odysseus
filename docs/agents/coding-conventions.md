@@ -155,6 +155,29 @@ CycloneDX SBOM artifact.
   pnpm-lock.yaml format at all and silently skip dependency scanning; do not
   downgrade below it.
 
+## Dependency maintenance
+
+Renovate (`renovate.json`, issue #252) opens grouped PRs on a weekday
+morning schedule: React/Next, TypeScript/ESLint, Playwright/browser
+tooling, and accessibility tooling each move as one reviewed group rather
+than one PR per package. Runtime `dependencies` and every `minor`/`major`
+update always land as a normal reviewed PR gated on CI; only a `devDependencies`
+`patch` update can automerge, and only after every required check passes.
+
+- OpenAI, Lighthouse, Mongoose, Next, Playwright, and pnpm majors are
+  excluded from automerge outright (`renovate/manual-major-review` label):
+  these are the packages where a major carries real behavior, cost, or
+  browser-compatibility risk, not just an API surface change.
+- `.codex/config.toml`'s Playwright MCP server is pinned to an exact
+  version (`@playwright/mcp@0.0.80`, not `@latest`) and tracked by a
+  Renovate custom manager, the same as any other dependency - a floating
+  `@latest` on agent tooling means the MCP server's behavior can change
+  under an agent without a diff to review.
+- To pause a noisy group temporarily, add a `matchPackageNames` rule above
+  the offending group's rule in `renovate.json` with `"enabled": false` and
+  a comment naming why and when to remove it, rather than disabling
+  Renovate entirely or ignoring its PRs.
+
 ## Product writing
 
 - Use plain, direct language. Expand an acronym on first use when the audience
