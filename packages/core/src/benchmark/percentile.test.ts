@@ -1,11 +1,14 @@
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
   computeBenchmarkPercentiles,
   computeSiteBenchmarkPercentile,
   MINIMUM_BENCHMARK_COHORT_SIZE,
   type BenchmarkCohortSite,
+  type BenchmarkPercentileResult,
 } from './percentile.js';
 import type { Finding, Severity } from '../types/findings.js';
+import { PROPERTY_TEST_PARAMETERS } from '../property-test-support.js';
 
 function buildFinding(severity: Severity, overrides: Partial<Finding> = {}): Finding {
   return {
@@ -155,6 +158,56 @@ describe('computeSiteBenchmarkPercentile', () => {
     const cohort = padToFloor([]);
     expect(() => computeSiteBenchmarkPercentile(cohort, 'not-in-cohort')).toThrow(
       /not in the cohort/,
+    );
+  });
+});
+
+describe('computeBenchmarkPercentiles, input-order independence', () => {
+  const severityArbitrary = fc.constantFrom<Severity>('critical', 'serious', 'moderate', 'minor');
+  const scanDateArbitrary = fc.constantFrom('2026-08-20', '2026-09-01', '2026-09-10', '2026-09-15');
+
+  const cohortArbitrary = fc
+    .array(fc.tuple(fc.array(severityArbitrary, { maxLength: 6 }), scanDateArbitrary), {
+      minLength: MINIMUM_BENCHMARK_COHORT_SIZE,
+      maxLength: MINIMUM_BENCHMARK_COHORT_SIZE + 10,
+    })
+    .map((sites) =>
+      sites.map(([severities, scanDate], index) =>
+        buildSite(`site-${index}`, severities, scanDate),
+      ),
+    );
+
+  function byId(
+    results: readonly BenchmarkPercentileResult[],
+  ): Map<string, BenchmarkPercentileResult> {
+    return new Map(results.map((result) => [result.siteId, result]));
+  }
+
+  it("permuting the cohort never changes any site's own score or percentile", () => {
+    fc.assert(
+      fc.property(
+        cohortArbitrary.chain((cohort) =>
+          fc.tuple(
+            fc.constant(cohort),
+            fc.shuffledSubarray(cohort, { minLength: cohort.length, maxLength: cohort.length }),
+          ),
+        ),
+        ([cohort, shuffled]) => {
+          const inOrder = computeBenchmarkPercentiles(cohort);
+          const reordered = computeBenchmarkPercentiles(shuffled);
+          expect(inOrder.kind).toBe('scored');
+          expect(reordered.kind).toBe('scored');
+          if (inOrder.kind !== 'scored' || reordered.kind !== 'scored') return;
+
+          const inOrderById = byId(inOrder.results);
+          const reorderedById = byId(reordered.results);
+          expect(reorderedById.size).toBe(inOrderById.size);
+          for (const [siteId, result] of inOrderById) {
+            expect(reorderedById.get(siteId)).toEqual(result);
+          }
+        },
+      ),
+      PROPERTY_TEST_PARAMETERS,
     );
   });
 });

@@ -1,8 +1,13 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import fc from 'fast-check';
 import { describe, expect, it, vi } from 'vitest';
-import { CUSTOM_CHECK_SEVERITY, severityFromCustom } from './severity.js';
+import { CUSTOM_CHECK_SEVERITY, severityFromCustom, severityFromLighthouse } from './severity.js';
+import type { Severity } from '../types/findings.js';
+import { PROPERTY_TEST_PARAMETERS } from '../property-test-support.js';
+
+const ALLOWED_SEVERITIES: readonly Severity[] = ['critical', 'serious', 'moderate', 'minor'];
 
 const normalizeDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -47,5 +52,37 @@ describe('severityFromCustom', () => {
     );
 
     warn.mockRestore();
+  });
+});
+
+describe('severityFromLighthouse', () => {
+  it('always returns a value on the unified severity scale, for any score/weight', () => {
+    fc.assert(
+      fc.property(
+        fc.oneof(fc.constant(null), fc.float({ min: 0, max: 1, noNaN: true })),
+        fc.float({ min: 0, max: Math.fround(100), noNaN: true }),
+        (score, weight) => {
+          const severity = severityFromLighthouse(score, weight);
+          expect(ALLOWED_SEVERITIES).toContain(severity);
+        },
+      ),
+      PROPERTY_TEST_PARAMETERS,
+    );
+  });
+
+  it('never lets a weight below 10 produce critical', () => {
+    // A low-weight Lighthouse audit is capped (see severity.ts): weight < 3
+    // caps at 'moderate', weight < 10 caps at 'serious'. Regardless of how
+    // badly the audit failed, 'critical' requires weight >= 10.
+    fc.assert(
+      fc.property(
+        fc.float({ min: 0, max: 1, noNaN: true }),
+        fc.float({ min: 0, max: Math.fround(9.999), noNaN: true }),
+        (score, weight) => {
+          expect(severityFromLighthouse(score, weight)).not.toBe('critical');
+        },
+      ),
+      PROPERTY_TEST_PARAMETERS,
+    );
   });
 });

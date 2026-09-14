@@ -1,5 +1,7 @@
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { normalizeDeclaredWebsite } from './hotel-domain.js';
+import { PROPERTY_TEST_PARAMETERS } from '../property-test-support.js';
 
 /** Every value in this file that is marked "real" was taken verbatim from the
  *  Atout France national export measured 2026-08-27. The export's defects are
@@ -175,5 +177,45 @@ describe('normalizeDeclaredWebsite, determinism', () => {
   it('returns the same result for the same input', () => {
     const raw = 'https://www.1924hotel.com/';
     expect(normalizeDeclaredWebsite(raw)).toEqual(normalizeDeclaredWebsite(raw));
+  });
+});
+
+describe('normalizeDeclaredWebsite, registrable domain stability', () => {
+  // Real ICANN-section suffixes only, so every generated domain resolves
+  // (the property below assumes that, via fc.pre - it doesn't silently pass
+  // on the rare label that happens to land in an unusable branch).
+  const labelArbitrary = fc
+    .array(fc.constantFrom(...'abcdefghijklmnopqrstuvwxyz0123456789'.split('')), {
+      minLength: 1,
+      maxLength: 12,
+    })
+    .map((chars) => chars.join(''));
+  const publicSuffixArbitrary = fc.constantFrom('com', 'net', 'org', 'fr', 'co.uk', 'io');
+  const domainLikeArbitrary = fc
+    .tuple(labelArbitrary, publicSuffixArbitrary)
+    .map(([label, suffix]) => `${label}.${suffix}`);
+
+  it('is a fixed point: re-normalizing a resolved registrable domain returns itself', () => {
+    fc.assert(
+      fc.property(domainLikeArbitrary, fc.boolean(), (domain, includeScheme) => {
+        const raw = includeScheme ? `https://${domain}` : domain;
+        const first = normalizeDeclaredWebsite(raw);
+        fc.pre(first.kind === 'own-domain' || first.kind === 'vendor-hosted');
+        if (first.kind !== 'own-domain' && first.kind !== 'vendor-hosted') return;
+
+        // Lowercase, not merely self-consistent: a transformation that
+        // flipped every domain to uppercase would still be a fixed point
+        // under re-normalization (uppercase in, uppercase back out), so the
+        // fixed-point check alone would not catch it.
+        expect(first.registrableDomain).toBe(first.registrableDomain.toLowerCase());
+
+        const second = normalizeDeclaredWebsite(`https://${first.registrableDomain}`);
+        expect(second.kind === 'own-domain' || second.kind === 'vendor-hosted').toBe(true);
+        if (second.kind === 'own-domain' || second.kind === 'vendor-hosted') {
+          expect(second.registrableDomain).toBe(first.registrableDomain);
+        }
+      }),
+      PROPERTY_TEST_PARAMETERS,
+    );
   });
 });

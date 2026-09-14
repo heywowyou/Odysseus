@@ -1,5 +1,15 @@
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { computeDedupeKey } from './dedupe.js';
+import type { FindingSource } from '../types/findings.js';
+import { PROPERTY_TEST_PARAMETERS } from '../property-test-support.js';
+
+const findingSourceArbitrary: fc.Arbitrary<FindingSource> = fc.constantFrom(
+  'axe',
+  'lighthouse',
+  'custom',
+  'renderdiff',
+);
 
 describe('computeDedupeKey', () => {
   it('is deterministic for the same inputs', () => {
@@ -34,5 +44,25 @@ describe('computeDedupeKey', () => {
   it('treats the empty selector as a distinct, valid page-scoped key', () => {
     const a = computeDedupeKey('renderdiff', 'text-missing-from-raw-html', '');
     expect(a).toMatch(/^[0-9a-f]{16}$/);
+  });
+
+  it('is always exactly 16 lowercase hex characters, for any input', () => {
+    fc.assert(
+      fc.property(findingSourceArbitrary, fc.string(), fc.string(), (source, ruleId, selector) => {
+        expect(computeDedupeKey(source, ruleId, selector)).toMatch(/^[0-9a-f]{16}$/);
+      }),
+      PROPERTY_TEST_PARAMETERS,
+    );
+  });
+
+  it('is deterministic, for any input', () => {
+    fc.assert(
+      fc.property(findingSourceArbitrary, fc.string(), fc.string(), (source, ruleId, selector) => {
+        const first = computeDedupeKey(source, ruleId, selector);
+        const second = computeDedupeKey(source, ruleId, selector);
+        expect(first).toBe(second);
+      }),
+      PROPERTY_TEST_PARAMETERS,
+    );
   });
 });
