@@ -13,7 +13,8 @@ import { useI18n } from '../i18n/provider';
 import type { DashboardStrings } from '../i18n/types';
 import { formatDateTime } from '../lib/format';
 import { vocabularyLabel } from '../lib/vocabulary';
-import { ApiError, fetchJson, postEmpty, sendJson } from '../lib/api';
+import { ApiError, fetchJsonValidated, postEmpty, sendJson } from '../lib/api';
+import { auditDetailSchema, prospectHubSnapshotSchema } from '../lib/api-schemas';
 import { usePolling } from '../lib/use-polling';
 import {
   HUB_STEP_ANCHORS,
@@ -74,7 +75,8 @@ function HubReportTab(props: { auditId: string | null }): JSX.Element | null {
   const path = auditId === null ? null : `/api/audits/${encodeURIComponent(auditId)}`;
   const fetcher = useCallback(
     async (signal: AbortSignal): Promise<AuditDetailResponse> => {
-      return fetchJson<AuditDetailResponse>(path ?? '', { signal });
+      const validated = await fetchJsonValidated(path ?? '', auditDetailSchema, { signal });
+      return validated as unknown as AuditDetailResponse;
     },
     [path],
   );
@@ -146,7 +148,10 @@ function useProspectDetail(candidateId: string | undefined): ProspectDetailState
   const fetcher = useCallback(
     async (signal: AbortSignal): Promise<ProspectDetailResponse> => {
       try {
-        return await fetchJson<ProspectDetailResponse>(path ?? '', { signal });
+        const validated = await fetchJsonValidated(path ?? '', prospectHubSnapshotSchema, {
+          signal,
+        });
+        return validated as unknown as ProspectDetailResponse;
       } catch (cause: unknown) {
         if (cause instanceof ApiError && cause.status === 404) {
           setIsNotFound(true);

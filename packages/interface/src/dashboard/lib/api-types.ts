@@ -1,37 +1,31 @@
-export type JobStatus = 'queued' | 'running' | 'complete' | 'failed' | 'cancelled' | 'needs-input';
+import type { z } from 'zod';
+import type {
+  jobStatusSchema,
+  jobTypeSchema,
+  scanJobDetailSchema,
+  scanJobNeedsInputFieldSchema,
+  scanJobProgressSchema,
+  scanSummarySchema,
+  scanUrlResultSchema,
+  severityRollupSchema,
+} from './api-schemas.js';
+
+/** Issue #229: these types are inferred from the zod schemas in
+ *  api-schemas.ts, which is the single source of truth fetchJsonValidated
+ *  actually checks a response against - editing a field here without
+ *  editing the schema is not possible, since there is nothing here to
+ *  edit independently. */
+export type JobStatus = z.infer<typeof jobStatusSchema>;
 /** Job types the dashboard can be asked to display. 'outreach-full-scan'
  *  is the prospect-linked full scan the hub starts; it is a display
  *  union only, the API names are never respelled. */
-export type JobType = 'full-audit' | 'prospecting' | 'hotel-prescan' | 'outreach-full-scan';
+export type JobType = z.infer<typeof jobTypeSchema>;
 
-export interface SeverityRollup {
-  critical: number;
-  serious: number;
-  moderate: number;
-  minor: number;
-}
+export type SeverityRollup = z.infer<typeof severityRollupSchema>;
 
 /** One row of GET /api/scans (routes/scans.ts). Field names are the API's
  *  persisted contract, not UI vocabulary; never respell them. */
-export interface ScanSummary {
-  jobId: string;
-  type: JobType;
-  status: JobStatus;
-  phase: string;
-  siteUrl?: string;
-  urls?: string[];
-  createdAt: string;
-  finishedAt?: string;
-  auditId?: string;
-  auditIds?: string[];
-  severityRollup?: SeverityRollup;
-  needsReview?: boolean;
-  /** Plan 042 slice 4: the hotel a prospect-linked job works for, and
-   *  its display name. The name is absent when the candidate no longer
-   *  resolves; the id alone is still the hub link's target. */
-  outreachCandidateId?: string;
-  outreachCandidateName?: string;
-}
+export type ScanSummary = z.infer<typeof scanSummarySchema>;
 
 /** Response of POST /api/scans. */
 export interface ScanCreated {
@@ -69,24 +63,12 @@ export interface TodoPage {
  *  sub-document, store's job.schema.ts). Only the fields the live progress
  *  page reads; the ingestion counters belong to prospect-ingestion jobs,
  *  which this page does not render. */
-export interface ScanJobProgress {
-  crawl?: { visited: number; target: number; etaMs?: number };
-  scan?: { scanned: number; target: number; etaMs?: number };
-  contentScan?: { completed: number; target: number; etaMs?: number };
-  lighthouse?: { completed: number; target: number; etaMs?: number };
-  continuationGuard?: { omittedUrlCount: number; omittedFamilyCount: number };
-  message?: string;
-}
+export type ScanJobProgress = z.infer<typeof scanJobProgressSchema>;
 
 /** One per-URL row of a prospecting job (store's UrlResult). status stays
  *  a plain string so a worker status the page does not know degrades to a
  *  neutral in-flight badge instead of breaking the page. */
-export interface ScanUrlResult {
-  url: string;
-  status: string;
-  auditId?: string;
-  error?: string;
-}
+export type ScanUrlResult = z.infer<typeof scanUrlResultSchema>;
 
 /** Response of GET /api/scans/:jobId: the full job document (store's
  *  getJob, served verbatim by routes/scans.ts), narrowed to the fields the
@@ -97,24 +79,6 @@ export interface ScanUrlResult {
  *  document verbatim) and are read here so the progress page can name the
  *  site it is scanning; both stay optional because a prospecting job has a
  *  URL list rather than one site. */
-export interface ScanJobDetail {
-  jobId: string;
-  type: JobType;
-  status: JobStatus;
-  phase: string;
-  siteUrl?: string;
-  createdAt?: string;
-  auditId?: string;
-  auditIds?: string[];
-  urlResults?: ScanUrlResult[];
-  progress: ScanJobProgress;
-  error?: string;
-  /** Issue #73: present only when status is 'needs-input' - which detected
-   *  identity fields the D8 report gate is waiting to have confirmed. */
-  needsInputFields?: ScanJobNeedsInputField[];
-}
+export type ScanJobDetail = z.infer<typeof scanJobDetailSchema>;
 
-export interface ScanJobNeedsInputField {
-  field: string;
-  value: string;
-}
+export type ScanJobNeedsInputField = z.infer<typeof scanJobNeedsInputFieldSchema>;

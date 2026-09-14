@@ -1,3 +1,5 @@
+import type { z } from 'zod';
+
 /** Error surfaced by the dashboard API layer: carries the HTTP status and
  *  the server's error string so pages can distinguish a 404 (unknown job)
  *  from a 409 (unmet action precondition) without matching on text. */
@@ -86,6 +88,43 @@ export async function fetchJson<T>(url: string, init: ApiRequestInit = {}): Prom
     throw new ApiError(message, response.status);
   }
   return (await response.json()) as T;
+}
+
+/** Issue #229: a critical response crossed the HTTP boundary but does not
+ *  match the shape the dashboard expects. The message names the endpoint
+ *  and the zod issue paths/messages only - never the response body itself,
+ *  which may carry operator-identifying content. */
+export class ApiValidationError extends Error {
+  constructor(
+    readonly url: string,
+    readonly issues: string,
+  ) {
+    super(`Response from ${url} did not match the expected shape: ${issues}`);
+    this.name = 'ApiValidationError';
+  }
+}
+
+/** Issue #229: the runtime-validated sibling of fetchJson, for the handful
+ *  of critical operator surfaces (prospect hub snapshot, prospect list,
+ *  audit detail, scan progress) where a malformed or stale response shape
+ *  should fail loudly at the API boundary instead of surfacing later as an
+ *  unexplained render exception or a silently wrong value. Not a
+ *  repo-wide replacement for fetchJson: most dashboard endpoints stay on
+ *  the plain TypeScript cast, matching the issue's own scoped intent. */
+export async function fetchJsonValidated<S extends z.ZodTypeAny>(
+  url: string,
+  schema: S,
+  init: ApiRequestInit = {},
+): Promise<z.infer<S>> {
+  const raw = await fetchJson<unknown>(url, init);
+  const result = schema.safeParse(raw);
+  if (!result.success) {
+    const issues = result.error.issues
+      .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
+      .join('; ');
+    throw new ApiValidationError(url, issues);
+  }
+  return result.data;
 }
 
 export function sendJson<T>(

@@ -24,7 +24,8 @@ import {
 } from '../components/ui/table';
 import { useI18n } from '../i18n/provider';
 import type { DashboardStrings } from '../i18n/types';
-import { fetchJson } from '../lib/api';
+import { fetchJsonValidated } from '../lib/api';
+import { prospectListResponseSchema } from '../lib/api-schemas';
 import { useApi } from '../lib/use-api';
 import { formatDateTime } from '../lib/format';
 import { useDebouncedValue } from '../lib/use-debounced-value';
@@ -134,7 +135,9 @@ export function ProspectsPage(): JSX.Element {
 
   const page = usePolling(
     (signal) =>
-      fetchJson<ProspectListResponse>(buildProspectsPath(filters, requestedOffset), { signal }),
+      fetchJsonValidated(buildProspectsPath(filters, requestedOffset), prospectListResponseSchema, {
+        signal,
+      }).then((validated) => validated as unknown as ProspectListResponse),
     POLL_INTERVAL_MS,
     // The path is the poll key: a filter or page change resets state and
     // refetches, an unrelated re-render never does.

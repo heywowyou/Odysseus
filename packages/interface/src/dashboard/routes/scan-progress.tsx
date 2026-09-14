@@ -14,7 +14,8 @@ import { ProgressBar } from '../components/ui/progress-bar';
 import { Spinner } from '../components/ui/spinner';
 import { StatusDot } from '../components/ui/status-dot';
 import { useI18n } from '../i18n/provider';
-import { ApiError, fetchJson, postEmpty } from '../lib/api';
+import { ApiError, fetchJsonValidated, postEmpty } from '../lib/api';
+import { scanJobDetailSchema } from '../lib/api-schemas';
 import type { ScanJobDetail, ScanUrlResult } from '../lib/api-types';
 import { canStop } from '../lib/job-actions';
 import { cn } from '../lib/cn';
@@ -78,7 +79,7 @@ export function ScanProgressPage(): JSX.Element {
   const fetcher = useCallback(
     (signal: AbortSignal): Promise<ScanJobDetail | null> => {
       if (jobId === undefined) return Promise.resolve(null);
-      return fetchJson<ScanJobDetail>(`/api/scans/${jobId}`, { signal })
+      return fetchJsonValidated(`/api/scans/${jobId}`, scanJobDetailSchema, { signal })
         .then((job) => {
           setSettled(isTerminal(job.status));
           return job;
