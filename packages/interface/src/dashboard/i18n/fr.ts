@@ -199,6 +199,18 @@ export const fr: DashboardStrings = {
     needsInputNote:
       'Le scan est terminé. Confirmez les champs ci-dessous sur la page de l’audit, puis régénérez le rapport.',
     goToAuditLink: 'Aller à la page de l’audit',
+    goToProspectLink: 'Aller au prospect',
+    prescanScoringOutcomeLabels: {
+      scored: 'Le score a été mis à jour.',
+      'already-scored': 'Déjà scoré à la version actuelle.',
+    },
+    prescanScoringSkippedReasonLabels: {
+      'not-in-scoring-population':
+        'Cet hôtel ne fait pas partie de la population de scoring actuelle.',
+      'prescan-missing': 'Pas encore de score : la mesure de prescan est toujours manquante.',
+      'prescan-incomplete': 'Pas encore de score : le prescan n’a pas atteint une mesure complète.',
+      error: 'Le scoring n’a pas pu s’exécuter après la fin du scan.',
+    },
     urlResultsHeading: 'Résultat par site',
     notFound: 'Scan introuvable.',
     stopButton: 'Arrêter le scan',

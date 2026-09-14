@@ -15,6 +15,7 @@ import {
   type JobNeedsInputField,
   type JobOptionsSnapshot,
   type JobPhase,
+  type JobPrescanScoringOutcome,
   type JobProgress,
   type JobRunIdentity,
   type JobType,
@@ -163,6 +164,7 @@ export interface CompleteJobPatch {
   ingestionResults?: ProspectIngestionResult[];
   outreachBatchResults?: OutreachBatchResult[];
   needsReview?: string;
+  prescanScoringOutcome?: JobPrescanScoringOutcome;
 }
 
 export async function completeJob(
@@ -276,7 +278,12 @@ export type JobSummaryFields = Pick<
 
 export async function listJobs(connection: Connection, limit = 200): Promise<JobSummaryFields[]> {
   const JobModel = createJobModel(connection);
-  return JobModel.find(
+  // A dotted-path projection ('options.outreachCandidateId': 1) returns a
+  // nested { options: { outreachCandidateId } }, not a flattened top-level
+  // field - lean() does not collapse it, whatever JobSummaryFields' cast
+  // claims. Project the whole options subdocument and flatten it here so
+  // the field this type actually promises is the field callers get.
+  const docs = await JobModel.find(
     {},
     {
       jobId: 1,
@@ -295,7 +302,17 @@ export async function listJobs(connection: Connection, limit = 200): Promise<Job
   )
     .sort({ createdAt: -1 })
     .limit(limit)
-    .lean<JobSummaryFields[]>();
+    .lean<
+      (Omit<JobSummaryFields, 'outreachCandidateId'> & {
+        options?: { outreachCandidateId?: string };
+      })[]
+    >();
+  return docs.map(({ options, ...rest }) => ({
+    ...rest,
+    ...(options?.outreachCandidateId !== undefined
+      ? { outreachCandidateId: options.outreachCandidateId }
+      : {}),
+  }));
 }
 
 export async function getJob(connection: Connection, jobId: string): Promise<JobDocument | null> {

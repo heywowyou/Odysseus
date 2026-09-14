@@ -112,19 +112,36 @@ export interface JobOptionsSnapshot {
   /** outreach-draft-batch jobs only. Follow-up drafts read the thread's own
    *  stored language instead - there is nothing to override. */
   language?: 'fr' | 'en';
-  /** outreach-full-scan jobs only (plan 037): the selected candidate this
-   *  scan was created from, with the cohort and scoring version whose
-   *  membership authorized it. Persisted so the resulting audit carries
-   *  prospect provenance by record rather than by hostname inference.
-   *  Validated server-side at creation (cohort membership, current
-   *  qualification, suppression, duplicates) and re-validated when the
-   *  worker claims the job. */
+  /** The prospect candidate a candidate-launched job was created from -
+   *  originally outreach-full-scan only (plan 037: cohort membership,
+   *  current qualification, suppression, and duplicates are all validated
+   *  server-side at creation and re-validated when the worker claims the
+   *  job), and reused as-is by hotel-prescan (issue #263's Quick check
+   *  fix) purely as denormalized context: which prospect this run belongs
+   *  to, with no equivalent re-validation on that job type. Persisted so
+   *  GET /api/scans and the audits list (listJobs' flattened projection)
+   *  can link a run back to its prospect by record rather than by hostname
+   *  inference, and the cohort/scoring fields below stay outreach-full-scan
+   *  only. */
   outreachCandidateId?: string;
   outreachCohortId?: string;
   outreachScoringVersion?: string;
   /** Plan 041 slice B2: which record authorized this scan, 'cohort' or
    *  'wave-roster'. */
   outreachAuthorizedBy?: string;
+}
+
+/** Issue #263: a domain-scoped hotel-prescan job's own on-demand scoring
+ *  pass (run-hotel-prescan-job.ts, mirroring scoreHotelOnDemandForConnection
+ *  in packages/interface) reduced to plain fields a store-only reader can
+ *  render without depending on that package's richer union type. `outcome`
+ *  and `reason` are copies of ScoreOnDemandOutcome's own discriminant/reason
+ *  strings, not re-derived here, so completion can state a specific reason
+ *  instead of an unqualified success when scoring produced no score. */
+export interface JobPrescanScoringOutcome {
+  outcome: 'scored' | 'already-scored' | 'skipped';
+  reason?: 'not-in-scoring-population' | 'prescan-missing' | 'prescan-incomplete' | 'error';
+  errorMessage?: string;
 }
 
 /** Issue #223: `etaCalculatedAt` names the instant `etaMs` was computed,
@@ -281,6 +298,12 @@ export interface JobDocumentFields {
    *  worker's revision - the field always answers "which worker most
    *  recently ran this", never a full history. */
   workerRevision?: string;
+  /** Issue #263: a domain-scoped hotel-prescan job's own on-demand scoring
+   *  outcome, written at completion so the live progress page can state
+   *  whether the click that started it actually produced a score instead
+   *  of showing an unqualified "Scan complete". Absent for a
+   *  population-wide batch (no domain), which never scores inline. */
+  prescanScoringOutcome?: JobPrescanScoringOutcome;
 }
 
 export interface JobNeedsInputField {
@@ -438,6 +461,18 @@ const outreachBatchResultSchema = new Schema(
   { _id: false },
 );
 
+const jobPrescanScoringOutcomeSchema = new Schema(
+  {
+    outcome: { type: String, required: true, enum: ['scored', 'already-scored', 'skipped'] },
+    reason: {
+      type: String,
+      enum: ['not-in-scoring-population', 'prescan-missing', 'prescan-incomplete', 'error'],
+    },
+    errorMessage: { type: String },
+  },
+  { _id: false },
+);
+
 const jobRunIdentitySchema = new Schema(
   {
     startedAt: { type: Date, required: true },
@@ -512,6 +547,7 @@ const jobSchema = new Schema<JobDocument>(
     needsReview: { type: String },
     needsInputFields: { type: [jobNeedsInputFieldSchema] },
     workerRevision: { type: String },
+    prescanScoringOutcome: { type: jobPrescanScoringOutcomeSchema },
   },
   { collection: 'jobs' },
 );

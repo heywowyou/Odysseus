@@ -242,6 +242,21 @@ export interface DashboardStrings {
      *  concurrency fields on /scans/new that its own message names as the
      *  remedy. */
     coverageGateFieldsLink: string;
+    /** Issue #263: a completed hotel-prescan job launched from a prospect
+     *  returns the operator there instead of dead-ending on this generic
+     *  job view. */
+    goToProspectLink: string;
+    /** Shown on a completed hotel-prescan's card, keyed by
+     *  prescanScoringOutcome.outcome - 'skipped' reads its specific line
+     *  from prescanScoringSkippedReasonLabels instead. */
+    prescanScoringOutcomeLabels: Record<'scored' | 'already-scored', string>;
+    /** One line per ScoreOnDemandOutcome skip reason, so a completed Quick
+     *  check that produced no score states why instead of reading as an
+     *  unqualified success. */
+    prescanScoringSkippedReasonLabels: Record<
+      'not-in-scoring-population' | 'prescan-missing' | 'prescan-incomplete' | 'error',
+      string
+    >;
   };
   auditDetail: {
     title: string;

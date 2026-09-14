@@ -1340,6 +1340,7 @@ describe('POST /api/prospects/:candidateId/prescan (issue #201)', () => {
     expect(res.statusCode).toBe(201);
     expect(createJob).toHaveBeenCalledWith(fakeConnection, {
       type: 'hotel-prescan',
+      siteUrl: 'https://hotel-exemple.fr',
       options: {
         resolutionVersion: CURRENT_RESOLUTION_VERSION,
         qualificationVersion: CURRENT_QUALIFICATION_VERSION,
@@ -1348,9 +1349,26 @@ describe('POST /api/prospects/:candidateId/prescan (issue #201)', () => {
         maxPages: 1,
         concurrency: 1,
         rescan: true,
+        outreachCandidateId: 'cand-1',
       },
     });
     expect(JSON.parse(res.body ?? '{}')).toEqual({ started: true, jobId: 'job-new-1' });
+  });
+
+  // Issue #263: a Quick check completing without a score, an "Unknown
+  // site" Audits row, and no way back to the prospect all traced to this
+  // job never carrying siteUrl or the candidate it was launched for -
+  // both the outreach-full-scan and full-audit routes already stamp both.
+  it('stamps siteUrl and outreachCandidateId so the job carries its own prospect context', async () => {
+    vi.mocked(getHotelCandidate).mockResolvedValue(qualifiedCandidate() as never);
+    await handle('/api/prospects/cand-1/prescan', { method: 'POST' });
+    expect(createJob).toHaveBeenCalledWith(
+      fakeConnection,
+      expect.objectContaining({
+        siteUrl: 'https://hotel-exemple.fr',
+        options: expect.objectContaining({ outreachCandidateId: 'cand-1' }),
+      }),
+    );
   });
 
   // Issue #204: this route used to hardcode rescan: false, which mirrors
@@ -1564,6 +1582,7 @@ describe('POST /api/prospects/:candidateId/refresh (issue #217)', () => {
     expect(res.statusCode).toBe(200);
     expect(createJob).toHaveBeenCalledWith(fakeConnection, {
       type: 'hotel-prescan',
+      siteUrl: 'https://hotel-exemple.fr',
       options: {
         resolutionVersion: CURRENT_RESOLUTION_VERSION,
         qualificationVersion: CURRENT_QUALIFICATION_VERSION,
@@ -1572,6 +1591,7 @@ describe('POST /api/prospects/:candidateId/refresh (issue #217)', () => {
         maxPages: 1,
         concurrency: 1,
         rescan: true,
+        outreachCandidateId: 'cand-1',
       },
     });
     const body = JSON.parse(res.body ?? '{}');

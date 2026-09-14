@@ -94,7 +94,41 @@ describe('runHotelPrescanJob on-demand scoring (issue #201)', () => {
       expect.anything(),
       'hotel-exemple.fr',
     );
-    expect(completeJob).toHaveBeenCalledWith(expect.anything(), 'job-1');
+    // Issue #263: the outcome used to be discarded; it must now reach
+    // completeJob so the progress page can state it instead of showing a
+    // plain success indistinguishable from a skipped scoring pass.
+    expect(completeJob).toHaveBeenCalledWith(expect.anything(), 'job-1', {
+      prescanScoringOutcome: { outcome: 'scored' },
+    });
+  });
+
+  it('records a skipped scoring outcome with its reason, not a plain success', async () => {
+    vi.mocked(scoreHotelOnDemandForConnection).mockResolvedValueOnce({
+      outcome: 'skipped',
+      reason: 'prescan-incomplete',
+    });
+
+    await runHotelPrescanJob(
+      {
+        jobId: 'job-3',
+        type: 'hotel-prescan',
+        status: 'running',
+        phase: 'prescanning',
+        options: {
+          resolutionVersion: 'rv1',
+          qualificationVersion: 'qv1',
+          domain: 'hotel-exemple.fr',
+          maxPages: 1,
+        },
+        createdAt: new Date(),
+        progress: {},
+      } as never,
+      ctx(),
+    );
+
+    expect(completeJob).toHaveBeenCalledWith(expect.anything(), 'job-3', {
+      prescanScoringOutcome: { outcome: 'skipped', reason: 'prescan-incomplete' },
+    });
   });
 
   it('leaves a population-wide batch to the operator’s own score run', async () => {
@@ -116,6 +150,6 @@ describe('runHotelPrescanJob on-demand scoring (issue #201)', () => {
     );
 
     expect(scoreHotelOnDemandForConnection).not.toHaveBeenCalled();
-    expect(completeJob).toHaveBeenCalledWith(expect.anything(), 'job-2');
+    expect(completeJob).toHaveBeenCalledWith(expect.anything(), 'job-2', {});
   });
 });

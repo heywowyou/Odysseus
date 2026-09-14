@@ -254,9 +254,19 @@ export async function runHotelPrescanJob(job: JobDocument, ctx: PipelineContext)
   // nothing ever retried after the prescan it was waiting on finally ran.
   // A population-wide batch (no domain) stays untouched by this and keeps
   // going through the operator's own `prospect score run`.
+  //
+  // Issue #263: the outcome used to be discarded, so a click that ended in
+  // "skipped, prescan-incomplete" looked identical on the progress page to
+  // one that produced a score - completion recorded a plain success either
+  // way. Stamping it on the job lets the dashboard state the specific
+  // reason instead.
+  let prescanScoringOutcome:
+    Awaited<ReturnType<typeof scoreHotelOnDemandForConnection>> | undefined;
   if (options.domain !== undefined) {
-    await scoreHotelOnDemandForConnection(connection, options.domain);
+    prescanScoringOutcome = await scoreHotelOnDemandForConnection(connection, options.domain);
   }
 
-  await completeJob(connection, job.jobId);
+  await completeJob(connection, job.jobId, {
+    ...(prescanScoringOutcome !== undefined ? { prescanScoringOutcome } : {}),
+  });
 }

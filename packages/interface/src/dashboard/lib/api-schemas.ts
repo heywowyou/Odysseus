@@ -90,6 +90,18 @@ const scanJobNeedsInputFieldSchema = z.object({
   value: z.string(),
 });
 
+/** Issue #263: the hotel-prescan job's own on-demand scoring pass, so the
+ *  progress page can say why a completed Quick check produced no score
+ *  instead of presenting a bare "Scan complete". Absent for every other job
+ *  type and for a population-wide prescan batch, which never scores inline. */
+const scanJobPrescanScoringOutcomeSchema = z.object({
+  outcome: z.enum(['scored', 'already-scored', 'skipped']),
+  reason: z
+    .enum(['not-in-scoring-population', 'prescan-missing', 'prescan-incomplete', 'error'])
+    .optional(),
+  errorMessage: z.string().optional(),
+});
+
 /** GET /api/scans/:jobId. */
 export const scanJobDetailSchema = z.object({
   jobId: z.string(),
@@ -104,6 +116,12 @@ export const scanJobDetailSchema = z.object({
   progress: scanJobProgressSchema,
   error: z.string().optional(),
   needsInputFields: z.array(scanJobNeedsInputFieldSchema).optional(),
+  // Issue #263: the prospect a Quick check was launched from, and its own
+  // scoring outcome, so the terminal card can return the operator there and
+  // state a specific reason instead of a bare "Scan complete".
+  outreachCandidateId: z.string().optional(),
+  outreachCandidateName: z.string().optional(),
+  prescanScoringOutcome: scanJobPrescanScoringOutcomeSchema.optional(),
 });
 
 /** GET /api/scans, one row. */

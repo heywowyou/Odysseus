@@ -30,6 +30,7 @@ export type {
   JobNeedsInputField,
   JobOptionsSnapshot,
   JobPhase,
+  JobPrescanScoringOutcome,
   JobProgress,
   JobProgressAnalysisStage,
   JobProgressContinuationGuard,

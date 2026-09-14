@@ -59,6 +59,28 @@ function clampPercent(value: number): number {
   return Math.min(100, Math.max(0, value));
 }
 
+/** Issue #263: a completed hotel-prescan job's own scoring outcome, reduced
+ *  to the copy line the terminal card shows so a click that produced no
+ *  score states why instead of reading as an unqualified success. Absent
+ *  return means no note - a plain 'scored'/'already-scored' outcome with no
+ *  labelled skip reason, or no outcome recorded at all (a population-wide
+ *  batch never scores inline). */
+export function prescanScoringNote(
+  outcome: ScanJobDetail['prescanScoringOutcome'],
+  labels: Pick<
+    DashboardStrings['progress'],
+    'prescanScoringOutcomeLabels' | 'prescanScoringSkippedReasonLabels'
+  >,
+): string | undefined {
+  if (outcome === undefined) return undefined;
+  if (outcome.outcome === 'skipped') {
+    return outcome.reason === undefined
+      ? undefined
+      : labels.prescanScoringSkippedReasonLabels[outcome.reason];
+  }
+  return labels.prescanScoringOutcomeLabels[outcome.outcome];
+}
+
 /**
  * What this run has actually covered so far.
  *

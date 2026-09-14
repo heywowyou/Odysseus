@@ -336,6 +336,73 @@ describe('POST /api/scans/:jobId/cancel', () => {
   });
 });
 
+describe('GET /api/scans/:jobId', () => {
+  // Issue #263: the live progress page needs the same prospect-link
+  // context the audits list carries, so a completed Quick check can return
+  // the operator to the prospect it was launched from.
+  it('enriches the job with its outreach candidate name when one is stamped', async () => {
+    vi.mocked(getJob).mockResolvedValue({
+      jobId: 'job-prescan-1',
+      type: 'hotel-prescan',
+      status: 'complete',
+      phase: 'complete',
+      siteUrl: 'https://hotel-exemple.fr',
+      options: { domain: 'hotel-exemple.fr', outreachCandidateId: 'cand-77' },
+      createdAt: new Date('2026-09-01T00:00:00Z'),
+      progress: {},
+    } as never);
+    vi.mocked(getHotelCandidatesByIds).mockResolvedValue([
+      { candidateId: 'cand-77', name: 'Hôtel du Quai' },
+    ] as never);
+
+    const router = new Router();
+    registerScanRoutes(router, fakeConnection, fakeQueue);
+    const res = fakeRes();
+    await router.handle(fakeReq(undefined, 'GET', '/api/scans/job-prescan-1'), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(getHotelCandidatesByIds).toHaveBeenCalledWith(fakeConnection, ['cand-77']);
+    expect(JSON.parse(res.body ?? '{}')).toMatchObject({
+      jobId: 'job-prescan-1',
+      outreachCandidateId: 'cand-77',
+      outreachCandidateName: 'Hôtel du Quai',
+    });
+  });
+
+  it('carries neither field for a job with no outreach candidate', async () => {
+    vi.mocked(getJob).mockResolvedValue({
+      jobId: 'job-plain-1',
+      type: 'full-audit',
+      status: 'complete',
+      phase: 'complete',
+      options: {},
+      createdAt: new Date('2026-09-01T00:00:00Z'),
+      progress: {},
+    } as never);
+
+    const router = new Router();
+    registerScanRoutes(router, fakeConnection, fakeQueue);
+    const res = fakeRes();
+    await router.handle(fakeReq(undefined, 'GET', '/api/scans/job-plain-1'), res);
+
+    expect(getHotelCandidatesByIds).not.toHaveBeenCalled();
+    const body = JSON.parse(res.body ?? '{}') as Record<string, unknown>;
+    expect(body).not.toHaveProperty('outreachCandidateId');
+    expect(body).not.toHaveProperty('outreachCandidateName');
+  });
+
+  it('answers 404 for an unknown job', async () => {
+    vi.mocked(getJob).mockResolvedValue(null);
+
+    const router = new Router();
+    registerScanRoutes(router, fakeConnection, fakeQueue);
+    const res = fakeRes();
+    await router.handle(fakeReq(undefined, 'GET', '/api/scans/nope'), res);
+
+    expect(res.statusCode).toBe(404);
+  });
+});
+
 describe('GET /api/scans summary list', () => {
   beforeEach(() => {
     // The route reads rollups through the module-level poll cache, so each

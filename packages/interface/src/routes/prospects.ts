@@ -756,6 +756,7 @@ export function registerProspectRoutes(
     }
     const job = await createJob(connection, {
       type: 'hotel-prescan',
+      siteUrl: `https://${plan.domain}`,
       options: {
         resolutionVersion: CURRENT_RESOLUTION_VERSION,
         qualificationVersion: CURRENT_QUALIFICATION_VERSION,
@@ -764,6 +765,7 @@ export function registerProspectRoutes(
         maxPages: 1,
         concurrency: 1,
         rescan: true,
+        outreachCandidateId: candidateId,
       },
     });
     logJobCreated(req, job.jobId, job.type);
@@ -825,6 +827,7 @@ export function registerProspectRoutes(
       if (plan?.canStart === true) {
         const job = await createJob(connection, {
           type: 'hotel-prescan',
+          siteUrl: `https://${plan.domain}`,
           options: {
             resolutionVersion: CURRENT_RESOLUTION_VERSION,
             qualificationVersion: CURRENT_QUALIFICATION_VERSION,
@@ -833,6 +836,7 @@ export function registerProspectRoutes(
             maxPages: 1,
             concurrency: 1,
             rescan: true,
+            outreachCandidateId: candidateId,
           },
         });
         logJobCreated(req, job.jobId, job.type);

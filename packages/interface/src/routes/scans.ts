@@ -221,7 +221,24 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       sendError(res, 404, 'job not found');
       return;
     }
-    sendJson(res, 200, job);
+    // Issue #263: the live progress page needs the same prospect-link
+    // context the audits list already carries (siteLabel/outreachCandidateId
+    // in audits-model.ts), so a Quick check launched from a prospect can
+    // return the operator there on completion instead of dead-ending on a
+    // generic job view. options.outreachCandidateId is nested (see
+    // listJobs' flattening for why a dotted projection can't just be
+    // spread onto the response), so it's surfaced explicitly rather than
+    // asking the client to reach into job.options.
+    const outreachCandidateId = job.options.outreachCandidateId;
+    const candidate =
+      outreachCandidateId === undefined
+        ? undefined
+        : (await getHotelCandidatesByIds(connection, [outreachCandidateId]))[0];
+    sendJson(res, 200, {
+      ...job,
+      outreachCandidateId,
+      outreachCandidateName: candidate?.name,
+    });
   });
 
   /** Operator clear of every queued job at once. Running and terminal

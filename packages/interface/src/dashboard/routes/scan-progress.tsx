@@ -35,6 +35,7 @@ import {
   isCoverageGateFailure,
   isTerminal,
   lighthouseProgress,
+  prescanScoringNote,
   scanProgress,
   urlResultState,
   type UrlResultState,
@@ -494,17 +495,35 @@ function UrlRow({ row, linked }: { row: ScanUrlResult; linked: boolean }): JSX.E
   );
 }
 
+/** Issue #263: a completed hotel-prescan job used to render this card with
+ *  neither an auditId (it never has one) nor any other content - a
+ *  "successful-looking dead end" the issue reported by name. The scoring
+ *  note states a specific reason when no score resulted, and the link
+ *  returns the operator to the prospect's Quick check section instead of
+ *  leaving them to search for it. */
 function CompleteCard({ job }: { job: ScanJobDetail }): JSX.Element {
   const { strings } = useI18n();
+  const scoringNote = prescanScoringNote(job.prescanScoringOutcome, strings.progress);
   return (
     <Card title={strings.progress.completeHeading} className="border-sev-minor/40">
-      {job.auditId !== undefined ? (
-        // Plan 040 slice 7: the link opens the audit page, so it says so
-        // (the old "full report" wording promised a different document).
-        <Link to={`/audits/${job.auditId}`} className={buttonStyles('primary', 'sm')}>
-          {strings.progress.goToAuditLink}
-        </Link>
-      ) : null}
+      {scoringNote !== undefined ? <p className="text-sm text-ink-soft">{scoringNote}</p> : null}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {job.auditId !== undefined ? (
+          // Plan 040 slice 7: the link opens the audit page, so it says so
+          // (the old "full report" wording promised a different document).
+          <Link to={`/audits/${job.auditId}`} className={buttonStyles('primary', 'sm')}>
+            {strings.progress.goToAuditLink}
+          </Link>
+        ) : null}
+        {job.outreachCandidateId !== undefined ? (
+          <Link
+            to={`/prospects/${encodeURIComponent(job.outreachCandidateId)}?tab=quick-check`}
+            className={buttonStyles(job.auditId !== undefined ? 'secondary' : 'primary', 'sm')}
+          >
+            {strings.progress.goToProspectLink}
+          </Link>
+        ) : null}
+      </div>
     </Card>
   );
 }

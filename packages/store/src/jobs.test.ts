@@ -289,6 +289,26 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
     expect(stored?.auditId).toBe('audit-123');
   });
 
+  // Issue #263: the hotel-prescan job's on-demand scoring outcome round-trips
+  // through completeJob/getJob so a completed Quick check can state a
+  // specific reason instead of an unqualified success.
+  it('completeJob persists the prescanScoringOutcome patch', async () => {
+    const job = await createJob(connection!, {
+      type: 'hotel-prescan',
+      siteUrl: 'https://scored.example/',
+      options: { domain: 'scored.example' },
+    });
+    await completeJob(connection!, job.jobId, {
+      prescanScoringOutcome: { outcome: 'skipped', reason: 'prescan-incomplete' },
+    });
+
+    const stored = await getJob(connection!, job.jobId);
+    expect(stored?.prescanScoringOutcome).toEqual({
+      outcome: 'skipped',
+      reason: 'prescan-incomplete',
+    });
+  });
+
   it('keeps a job auditId set via updateJobProgress after a later failJob (#35)', async () => {
     const job = await createJob(connection!, {
       type: 'full-audit',
@@ -352,6 +372,36 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
     expect(row).not.toHaveProperty('outreachBatchResults');
 
     await completeJob(connection!, job.jobId);
+  });
+
+  // Issue #263: 'options.outreachCandidateId': 1 is a dotted-path
+  // projection - MongoDB returns it nested as { options: { outreachCandidateId } },
+  // not flattened onto the document root, so a naive .lean<JobSummaryFields[]>()
+  // cast silently returned undefined for every row's outreachCandidateId
+  // (the audits list's hotel-name link, plan 042 slice 4, was dead on
+  // arrival for exactly this reason). This exercises the real Mongo
+  // projection rather than a mocked one, which a route-level test cannot.
+  it('listJobs flattens options.outreachCandidateId onto the row (issue #263)', async () => {
+    const linked = await createJob(connection!, {
+      type: 'outreach-full-scan',
+      siteUrl: 'https://linked.example/',
+      options: { outreachCandidateId: 'cand-projection-1' },
+    });
+    const unlinked = await createJob(connection!, {
+      type: 'full-audit',
+      siteUrl: 'https://unlinked.example/',
+      options: {},
+    });
+
+    const rows = await listJobs(connection!, 10);
+    const linkedRow = rows.find((row) => row.jobId === linked.jobId);
+    const unlinkedRow = rows.find((row) => row.jobId === unlinked.jobId);
+    expect(linkedRow?.outreachCandidateId).toBe('cand-projection-1');
+    expect(unlinkedRow).not.toHaveProperty('outreachCandidateId');
+    expect(unlinkedRow).not.toHaveProperty('options');
+
+    await completeJob(connection!, linked.jobId);
+    await completeJob(connection!, unlinked.jobId);
   });
 
   it('resetOrphanedRunningJobs leaves a fresh job running and requeues a stale one, preserving createdAt', async () => {
