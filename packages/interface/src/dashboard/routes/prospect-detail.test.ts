@@ -6,7 +6,8 @@ import { createRoot } from 'react-dom/client';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '../i18n/provider';
-import { ProspectDetailPage } from './prospect-detail';
+import { fr } from '../i18n/fr';
+import { actionBlockedReason, ProspectDetailPage } from './prospect-detail';
 import { websiteHref } from './hub-fiche-section';
 import type { ProspectDetailResponse } from './prospects-model';
 
@@ -215,6 +216,20 @@ describe('websiteHref', () => {
 
   it('rejects a mailto scheme', () => {
     expect(websiteHref('mailto:contact@example.fr')).toBeUndefined();
+  });
+});
+
+describe('actionBlockedReason', () => {
+  it('uses the specific dashboard copy for a known server refusal', () => {
+    expect(actionBlockedReason({ state: 'blocked', reason: 'not-selected' }, fr, 'fr')).toBe(
+      'Cet hôtel ne fait pas partie de la sélection actuelle.',
+    );
+  });
+
+  it('falls back to outreach refusal copy for a non-scan reason', () => {
+    expect(
+      actionBlockedReason({ state: 'blocked', reason: 'audit-required' }, fr, 'fr'),
+    ).not.toBeNull();
   });
 });
 
@@ -524,6 +539,14 @@ describe('ProspectDetailPage stage/audit deep links (issue #221)', () => {
     fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes('/report-preparation')) return notFoundResponse();
+      if (url.includes('/outreach-preview/publish')) {
+        return jsonResponse({
+          published: true,
+          previewId: 'preview-1',
+          url: 'https://apercu.example.fr/apercu/token-selected',
+          publicExpiresAt: '2099-01-01T00:00:00.000Z',
+        });
+      }
       if (url.endsWith('/api/audits/audit-1')) return jsonResponse(auditDetailFixture('audit-1'));
       if (url.endsWith('/api/audits/audit-2')) return jsonResponse(auditDetailFixture('audit-2'));
       return jsonResponse(detailWithTwoAudits());
@@ -556,6 +579,26 @@ describe('ProspectDetailPage stage/audit deep links (issue #221)', () => {
     expect(
       fetchMock.mock.calls.some((call) => String(call[0]).endsWith('/api/audits/audit-1')),
     ).toBe(true);
+  });
+
+  it('publishes the currently selected audit rather than the newest linked audit', async () => {
+    await renderDetailWithProbe('/prospects/candidate-1?tab=preview&audit=audit-1');
+    await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
+    await pause();
+
+    await clickButton('Publier l’aperçu');
+    await waitFor(() =>
+      fetchMock.mock.calls.some((call) =>
+        String(call[0]).includes('/api/audits/audit-1/outreach-preview/publish'),
+      )
+        ? true
+        : undefined,
+    );
+    expect(
+      fetchMock.mock.calls.some((call) =>
+        String(call[0]).includes('/api/audits/audit-2/outreach-preview/publish'),
+      ),
+    ).toBe(false);
   });
 
   it('falls back to the newest owned audit for an id that does not belong to this prospect', async () => {

@@ -61,7 +61,7 @@ import { HubOutcomeSection } from './hub-outcome-section';
 
 type ReviewAction = 'accept' | 'reject';
 
-function actionBlockedReason(
+export function actionBlockedReason(
   action: ProspectHubActionability | undefined,
   strings: DashboardStrings,
   language: DashboardLanguage,
