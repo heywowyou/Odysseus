@@ -227,7 +227,16 @@ export function hubPrimaryAction(detail: ProspectDetailResponse): HubPrimaryActi
   //    email. Plan 045 section 1.7: the single call publishes its own v2
   //    preview (superseding whatever was or wasn't live), so the hub no
   //    longer waits on a separate publish step before offering it.
-  if (detail.outreachAudit != null && detail.thread === null) {
+  //    Issue #219: prefer the server's own actions.createFirstEmail when the
+  //    payload carries it, so this button can never disagree with what
+  //    POST /outreach/first-email would actually do; the outreachAudit/
+  //    thread inference below stays only as a fallback for a cached or
+  //    fixture payload that predates the field.
+  if (
+    detail.actions !== undefined
+      ? detail.actions.createFirstEmail.state === 'available'
+      : detail.outreachAudit != null && detail.thread === null
+  ) {
     return { kind: 'create-first-email' };
   }
 
@@ -236,15 +245,23 @@ export function hubPrimaryAction(detail: ProspectDetailResponse): HubPrimaryActi
   if (pendingDraft !== undefined) return { kind: 'review-draft', draftId: pendingDraft.draftId };
 
   // 7. A sent touch with the sequence still open waits for its follow-up.
-  if (detail.thread !== null && canGenerateFollowUp(detail.thread.state)) {
+  //    Same #219 preference: server actions.createFollowUp first.
+  if (
+    detail.actions !== undefined
+      ? detail.actions.createFollowUp.state === 'available'
+      : detail.thread !== null && canGenerateFollowUp(detail.thread.state)
+  ) {
     return { kind: 'prepare-follow-up' };
   }
 
-  // 8. A reply (or a sync that flagged one) waits for its outcome.
+  // 8. A reply (or a sync that flagged one) waits for its outcome. Same
+  //    #219 preference: server actions.recordOutcome first.
   if (
-    detail.thread !== null &&
-    detail.thread.currentOutcome === null &&
-    (detail.thread.state === 'replied' || detail.thread.needsReview !== null)
+    detail.actions !== undefined
+      ? detail.actions.recordOutcome.state === 'available'
+      : detail.thread !== null &&
+        detail.thread.currentOutcome === null &&
+        (detail.thread.state === 'replied' || detail.thread.needsReview !== null)
   ) {
     return { kind: 'record-outcome' };
   }

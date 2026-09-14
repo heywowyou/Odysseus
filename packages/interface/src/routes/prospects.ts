@@ -9,6 +9,7 @@ import type {
 } from '@odysseus/core';
 import {
   addWaveRosterEntry,
+  computeHubActions,
   createJob,
   findOutreachThreadByCandidate,
   getHotelCandidate,
@@ -381,15 +382,30 @@ export function registerProspectRoutes(
     // outreach full scan outreachScanJobId already tracked. Requires the
     // candidate's own domain, which a candidate with no own domain never
     // has any of these jobs against.
-    const activeJobs =
-      fullAuditCandidate?.ownRegistrableDomain === undefined ||
-      fullAuditCandidate.ownRegistrableDomain === ''
-        ? []
-        : await listActiveJobsForCandidate(
-            connection,
-            candidateId,
-            fullAuditCandidate.ownRegistrableDomain,
-          );
+    const domainForConflicts = fullAuditCandidate?.ownRegistrableDomain;
+    const hasOwnDomain = domainForConflicts !== undefined && domainForConflicts !== '';
+    const activeJobs = !hasOwnDomain
+      ? []
+      : await listActiveJobsForCandidate(connection, candidateId, domainForConflicts);
+    // Issue #219: the same quick-check gate the POST /prescan route
+    // consults, computed here too so the hub snapshot's actions.runQuickCheck
+    // can never claim the button is available when the route would refuse
+    // it (and vice versa).
+    const quickCheckPlan = !hasOwnDomain
+      ? null
+      : await planProspectJobLaunch(connection, {
+          kind: 'quick-check',
+          candidateId,
+          domain: domainForConflicts,
+        });
+    const actions = computeHubActions({
+      detail,
+      activeJobs,
+      outreachScanPlan: 'refused' in plan ? plan : {},
+      fullAuditPlan: fullAuditPlan ?? undefined,
+      quickCheckPlan,
+      hasAudit: auditStatus.audit !== null,
+    });
     sendJson(res, 200, {
       ...detail,
       qualificationHistory,
@@ -413,6 +429,7 @@ export function registerProspectRoutes(
       selectionVerdict,
       outreachAudits,
       activeJobs,
+      actions,
     });
   });
 

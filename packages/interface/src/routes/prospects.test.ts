@@ -2,7 +2,11 @@ import { Readable } from 'node:stream';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@odysseus/store', () => ({
+vi.mock('@odysseus/store', async (importOriginal) => ({
+  // computeHubActions is a pure function of its inputs (issue #219); using
+  // the real implementation here keeps the response shape's actions field
+  // realistic without a vi.fn() every test would otherwise have to stub.
+  computeHubActions: (await importOriginal<typeof import('@odysseus/store')>()).computeHubActions,
   addWaveRosterEntry: vi.fn(),
   listActiveJobsForCandidate: vi.fn(),
   planProspectJobLaunch: vi.fn(),
@@ -145,6 +149,9 @@ function makeDetail(): Record<string, unknown> {
     reviewState: 'pending',
     review: { queuedReason: 'identity-needs-review', actor: null, reason: null, decidedAt: null },
     qualificationOutcome: 'qualified',
+    qualificationFreshness: { state: 'current', version: 'v1', computedAt: new Date() },
+    prescanFreshness: { state: 'current', version: 'v1', computedAt: new Date() },
+    scoreFreshness: { state: 'current', version: 'v1', computedAt: new Date() },
     prescanStatus: 'complete',
     websites: [
       {
@@ -377,8 +384,9 @@ describe('GET /api/prospects/:candidateId', () => {
     const body = JSON.parse(res.body ?? '{}') as Record<string, unknown>;
     // The route may add qualificationHistory, outreachScan, the audit
     // summary, the running-scan id, the selection verdict, the plan 042
-    // audit list, and the paid full-audit gate (issue #182), and nothing
-    // else.
+    // audit list, the paid full-audit gate (issue #182), the active-job
+    // projection (issue #220), and the typed actionability snapshot
+    // (issue #219), and nothing else.
     expect(Object.keys(body).sort()).toEqual(
       [
         ...Object.keys(makeDetail()),
@@ -390,6 +398,7 @@ describe('GET /api/prospects/:candidateId', () => {
         'outreachAudits',
         'fullAudit',
         'activeJobs',
+        'actions',
       ].sort(),
     );
     const serialized = res.body ?? '';
@@ -438,6 +447,65 @@ describe('GET /api/prospects/:candidateId', () => {
       refusal: 'already-in-flight',
       jobId: 'job-running',
     });
+  });
+
+  it('issue #219: actions.runFullAudit carries the exact same refusal reason and job id as the fullAudit field', async () => {
+    vi.mocked(getHotelCandidate).mockResolvedValue({
+      candidateId: 'cand-1',
+      ownRegistrableDomain: 'hotel-exemple.fr',
+    } as never);
+    vi.mocked(planProspectJobLaunch).mockResolvedValue({
+      allowed: false,
+      conflictingJobId: 'job-running',
+    } as never);
+    const res = await handle('/api/prospects/cand-1');
+    const body = JSON.parse(res.body ?? '{}');
+    expect(body.fullAudit).toEqual({
+      canStart: false,
+      refusal: 'already-in-flight',
+      jobId: 'job-running',
+    });
+    expect(body.actions.runFullAudit).toEqual({
+      state: 'blocked',
+      reason: 'already-in-flight',
+    });
+  });
+
+  it('issue #219: actions.runProspectingAudit carries the exact same refusal reason POST /outreach/full-scan would answer', async () => {
+    vi.mocked(planOutreachFullScan).mockResolvedValue({ refused: 'not-qualified' } as never);
+    const res = await handle('/api/prospects/cand-1');
+    const body = JSON.parse(res.body ?? '{}');
+    expect(body.outreachScan).toEqual({ canStart: false, refusal: 'not-qualified', jobId: null });
+    expect(body.actions.runProspectingAudit).toEqual({
+      state: 'blocked',
+      reason: 'not-qualified',
+    });
+  });
+
+  it('issue #219: actions.runQuickCheck reads running once the #220 active-job projection carries a quick-check job', async () => {
+    vi.mocked(getHotelCandidate).mockResolvedValue({
+      candidateId: 'cand-1',
+      ownRegistrableDomain: 'hotel-exemple.fr',
+    } as never);
+    vi.mocked(listActiveJobsForCandidate).mockResolvedValue([
+      {
+        jobId: 'job-quick-1',
+        kind: 'quick-check',
+        status: 'running',
+        startedAt: new Date(),
+        targetDomain: 'hotel-exemple.fr',
+      },
+    ] as never);
+    const res = await handle('/api/prospects/cand-1');
+    const body = JSON.parse(res.body ?? '{}');
+    expect(body.actions.runQuickCheck).toEqual({ state: 'running', jobId: 'job-quick-1' });
+  });
+
+  it('issue #219: fails closed rather than silently available when the candidate lookup for the full-audit gate returns null', async () => {
+    vi.mocked(getHotelCandidate).mockResolvedValue(null as never);
+    const res = await handle('/api/prospects/cand-1');
+    const body = JSON.parse(res.body ?? '{}');
+    expect(body.actions.runFullAudit).toEqual({ state: 'blocked', reason: 'unknown' });
   });
 
   it('joins severity totals onto the latest outreach audit and carries the running job id', async () => {

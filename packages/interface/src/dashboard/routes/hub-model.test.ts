@@ -425,6 +425,48 @@ describe('hubPrimaryAction', () => {
     expect(hubPrimaryAction(staleButAudited)).toEqual({ kind: 'create-first-email' });
   });
 
+  it('issue #219: prefers the server actions field over the nullable-field fallback when both are present', () => {
+    // outreachAudit/thread alone would infer create-first-email here (audit
+    // exists, no thread yet), but the server actions field says the button
+    // is not actually available (e.g. a follow-up sub-read failed closed) -
+    // the server's own answer must win, since it is the one the write route
+    // itself will honour.
+    const detail = makeDetail({
+      outreachAudit: {
+        auditId: 'audit-1',
+        startedAt: '2026-09-01T10:00:00.000Z',
+        severityRollup: { critical: 0, serious: 0, moderate: 0, minor: 0 },
+      },
+      actions: {
+        refreshProspect: { state: 'complete' },
+        runQuickCheck: { state: 'complete' },
+        runProspectingAudit: { state: 'complete' },
+        runFullAudit: { state: 'complete' },
+        publishPreview: { state: 'complete' },
+        createFirstEmail: { state: 'blocked', reason: 'unknown' },
+        createFollowUp: { state: 'blocked', reason: 'no-thread' },
+        recordOutcome: { state: 'blocked', reason: 'no-thread' },
+      },
+    });
+    expect(hubPrimaryAction(detail)).not.toEqual({ kind: 'create-first-email' });
+  });
+
+  it('issue #219: takes create-first-email from the server actions field even when the older nullable-field rule would not offer it yet', () => {
+    const detail = makeDetail({
+      actions: {
+        refreshProspect: { state: 'complete' },
+        runQuickCheck: { state: 'complete' },
+        runProspectingAudit: { state: 'complete' },
+        runFullAudit: { state: 'complete' },
+        publishPreview: { state: 'available' },
+        createFirstEmail: { state: 'available' },
+        createFollowUp: { state: 'blocked', reason: 'no-thread' },
+        recordOutcome: { state: 'blocked', reason: 'no-thread' },
+      },
+    });
+    expect(hubPrimaryAction(detail)).toEqual({ kind: 'create-first-email' });
+  });
+
   it('answers none for a settled pipeline', () => {
     const settled = makeDetail({
       thread: threadWith({

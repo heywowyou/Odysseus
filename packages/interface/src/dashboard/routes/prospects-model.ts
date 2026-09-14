@@ -480,6 +480,34 @@ export interface ProspectDetailResponse {
    *  for the same fixture tolerance as outreachScan; a payload predating
    *  it simply polls off outreachScanJobId alone. */
   activeJobs?: ProspectActiveJob[];
+  /** Issue #219: the server's own answer to "what can the operator do right
+   *  now", computed from the same plans/gates the write routes consult
+   *  (planOutreachFullScan, planProspectJobLaunch). The client renders
+   *  buttons from this instead of re-deriving availability from nullable
+   *  thread/preview fields, so a button can never claim an action is
+   *  available when the route behind it would refuse. Optional for the same
+   *  fixture tolerance as outreachScan; a payload predating it falls back
+   *  to the older per-field inference in hub-model.ts. */
+  actions?: ProspectHubActions;
+}
+
+/** Mirrors @odysseus/store's ProspectHubActionability/ProspectHubActions by
+ *  value, the same discipline as every other response type in this file. */
+export type ProspectHubActionability =
+  | { state: 'available' }
+  | { state: 'running'; jobId: string }
+  | { state: 'blocked'; reason: string }
+  | { state: 'complete' };
+
+export interface ProspectHubActions {
+  refreshProspect: ProspectHubActionability;
+  runQuickCheck: ProspectHubActionability;
+  runProspectingAudit: ProspectHubActionability;
+  runFullAudit: ProspectHubActionability;
+  publishPreview: ProspectHubActionability;
+  createFirstEmail: ProspectHubActionability;
+  createFollowUp: ProspectHubActionability;
+  recordOutcome: ProspectHubActionability;
 }
 
 /** Mirrors @odysseus/store's ProspectActiveJob by value, the same

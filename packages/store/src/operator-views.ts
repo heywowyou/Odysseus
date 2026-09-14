@@ -112,3 +112,9 @@ export type {
   OperatorWebsiteCandidateView,
 } from './operator-views/prospect-detail.js';
 export type { ProspectFreshnessVersions } from './operator-views/freshness.js';
+export { computeHubActions } from './operator-views/hub-actions.js';
+export type {
+  ComputeHubActionsInput,
+  ProspectHubActionability,
+  ProspectHubActions,
+} from './operator-views/hub-actions.js';

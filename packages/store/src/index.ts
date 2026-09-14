@@ -436,6 +436,7 @@ export type { ContactableCohortMember } from './hotel-contacts.js';
 // picked projection that cannot carry message bodies, addresses, or hashes,
 // and every list is paginated.
 export {
+  computeHubActions,
   getOperatorProspect,
   getOutcomeSummary,
   getProspectContactView,
@@ -457,6 +458,7 @@ export {
   listRepliesNeedingReview,
 } from './operator-views.js';
 export type {
+  ComputeHubActionsInput,
   GetProspectContactViewOptions,
   GetProspectEvidenceAssetSourceOptions,
   GetProspectEvidenceViewOptions,
@@ -499,4 +501,6 @@ export type {
   OperatorViewPageOptions,
   OperatorWebsiteCandidateView,
   ProspectFreshnessVersions,
+  ProspectHubActionability,
+  ProspectHubActions,
 } from './operator-views.js';
