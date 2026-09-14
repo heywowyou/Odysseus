@@ -90,6 +90,7 @@ Read the narrowest source that owns the work:
 | Full decision rationale and rejected alternatives | `docs/decisions/trade-offs.md` |
 | Normalization, dedupe, IDs, artifacts | `docs/rules/normalization-rules.md` |
 | Model inputs, prompts, output guards | `docs/rules/llm-layer-rules.md` |
+| Report prose style and structure | `docs/rules/report-writing-style.md` |
 | Client-facing legal facts | `docs/rules/obligation-basis.md` |
 | Operator regulatory obligations | `docs/rules/operator-obligations.md` |
 | Prospect qualification and contact rules | `docs/rules/prospect-qualification.md` |
@@ -97,6 +98,7 @@ Read the narrowest source that owns the work:
 | Pricing and offer framing | `docs/rules/offer-positioning.md` |
 | Report design | `docs/report/report-design-system.md`, `docs/report/report-design-tokens.md` |
 | PDF-native Impeccable editing | `docs/report/report-workbench.md` |
+| Automated accessibility detection limits | `docs/rules/manual-accessibility-checklist.md` |
 | Dashboard navigation and vocabulary | `docs/product/dashboard-ia.md` |
 | Coding, tests, prose, attribution | `docs/agents/coding-conventions.md` |
 | Deployment | `deploy/runbook.md` |

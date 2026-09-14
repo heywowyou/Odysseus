@@ -70,6 +70,7 @@ mismatch is evidence to resolve, not a reason to freeze the task.
 | `docs/decisions/trade-offs.md` | Full evidence and rejected alternatives behind durable decisions |
 | `docs/rules/normalization-rules.md` | Scanner-output normalization, dedupe, finding identity, evidence, artifacts |
 | `docs/rules/llm-layer-rules.md` | Model visibility, structured output, retries, guards, language, provenance, cost gates |
+| `docs/rules/report-writing-style.md` | Report prose style, structure, terminology, and bilingual writing constraints |
 | `docs/rules/obligation-basis.md` | Approved client-facing legal facts and evidence status |
 | `docs/rules/operator-obligations.md` | Odysseus's regulatory and operating obligations |
 | `docs/rules/prospect-qualification.md` | Sourcing, qualification, retention, and contact rules |
