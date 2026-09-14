@@ -14,7 +14,7 @@ export class ApiError extends Error {
 /** Same-origin dashboard requests should return promptly, even when the
  *  action only enqueues longer-running work. This bound prevents a stalled
  *  connection from wedging one-shot views or the polling state machine. */
-export const DEFAULT_API_TIMEOUT_MS = 15_000;
+const DEFAULT_API_TIMEOUT_MS = 15_000;
 
 export class ApiTimeoutError extends Error {
   constructor(
