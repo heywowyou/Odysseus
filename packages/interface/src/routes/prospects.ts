@@ -10,12 +10,12 @@ import type {
 import {
   addWaveRosterEntry,
   createJob,
-  findActiveScanJobForHost,
   findOutreachThreadByCandidate,
   getHotelCandidate,
   getLatestScoreCohort,
   getOperatorProspect,
   getOutreachAuditStatus,
+  listActiveJobsForCandidate,
   listOutreachAudits,
   getProspectPreviewView,
   getProspectQualificationHistory,
@@ -25,6 +25,7 @@ import {
   listRecentScoreCohorts,
   listWaveRoster,
   planOutreachFullScan,
+  planProspectJobLaunch,
   recordHotelCandidateReview,
   revokeWaveRosterEntry,
 } from '@odysseus/store';
@@ -375,11 +376,27 @@ export function registerProspectRoutes(
     const fullAuditCandidate = await getHotelCandidate(connection, candidateId);
     const fullAuditPlan =
       fullAuditCandidate === null ? null : await planFullAudit(fullAuditCandidate);
+    // Issue #220: every job currently owning part of this prospect's
+    // workflow, across all four operator-launchable kinds - not only the
+    // outreach full scan outreachScanJobId already tracked. Requires the
+    // candidate's own domain, which a candidate with no own domain never
+    // has any of these jobs against.
+    const activeJobs =
+      fullAuditCandidate?.ownRegistrableDomain === undefined ||
+      fullAuditCandidate.ownRegistrableDomain === ''
+        ? []
+        : await listActiveJobsForCandidate(
+            connection,
+            candidateId,
+            fullAuditCandidate.ownRegistrableDomain,
+          );
     sendJson(res, 200, {
       ...detail,
       qualificationHistory,
       outreachScan:
-        'refused' in plan ? { canStart: false, refusal: plan.refused } : { canStart: true },
+        'refused' in plan
+          ? { canStart: false, refusal: plan.refused, jobId: plan.conflictingJobId ?? null }
+          : { canStart: true },
       outreachScanJobId: auditStatus.runningJobId,
       fullAudit:
         fullAuditPlan === null
@@ -395,6 +412,7 @@ export function registerProspectRoutes(
           : { ...auditStatus.audit, severityRollup },
       selectionVerdict,
       outreachAudits,
+      activeJobs,
     });
   });
 
@@ -454,7 +472,11 @@ export function registerProspectRoutes(
         sendError(res, 404, 'candidate not found');
         return;
       }
-      sendJson(res, 200, { started: false, refusal: plan.refused });
+      sendJson(res, 200, {
+        started: false,
+        refusal: plan.refused,
+        jobId: plan.conflictingJobId ?? null,
+      });
       return;
     }
     const job = await createJob(connection, {
@@ -634,6 +656,22 @@ export function registerProspectRoutes(
       sendJson(res, 200, { started: false, refusal: 'no-own-domain' });
       return;
     }
+    // Issue #220: a Quick check already queued/running for this domain is
+    // always the same click fired twice - dedupe rather than queue a
+    // second identical probe.
+    const launchDecision = await planProspectJobLaunch(connection, {
+      kind: 'quick-check',
+      candidateId,
+      domain,
+    });
+    if (!launchDecision.allowed) {
+      sendJson(res, 200, {
+        started: false,
+        refusal: 'already-in-flight',
+        jobId: launchDecision.conflictingJobId,
+      });
+      return;
+    }
     const job = await createJob(connection, {
       type: 'hotel-prescan',
       options: {
@@ -743,12 +781,13 @@ export function registerProspectRoutes(
   > {
     const domain = candidate.ownRegistrableDomain;
     if (!domain) return { canStart: false, refusal: 'no-own-domain' };
-    const inFlight = await findActiveScanJobForHost(
-      connection,
-      new URL(`https://${domain}`).hostname,
-    );
-    if (inFlight !== null) {
-      return { canStart: false, refusal: 'already-in-flight', jobId: inFlight.jobId };
+    const decision = await planProspectJobLaunch(connection, {
+      kind: 'full-audit',
+      candidateId: candidate.candidateId,
+      domain,
+    });
+    if (!decision.allowed) {
+      return { canStart: false, refusal: 'already-in-flight', jobId: decision.conflictingJobId };
     }
     const cohort = await getLatestScoreCohort(connection, CURRENT_SCORING_VERSION);
     return { canStart: true, domain, cohortId: cohort?.cohortId ?? 'none' };
@@ -800,7 +839,11 @@ export function registerProspectRoutes(
     }
     const plan = await planFullAudit(candidate);
     if (!plan.canStart) {
-      sendJson(res, 200, { started: false, refusal: plan.refusal });
+      sendJson(res, 200, {
+        started: false,
+        refusal: plan.refusal,
+        jobId: plan.refusal === 'already-in-flight' ? plan.jobId : null,
+      });
       return;
     }
     const job = await createJob(connection, {

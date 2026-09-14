@@ -571,3 +571,53 @@ describe('ProspectDetailPage full-audit launch (plan 044)', () => {
     expect(launchCall).toBeDefined();
   });
 });
+
+describe('ProspectDetailPage active jobs (issue #220)', () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    fetchMock.mockImplementation(async () =>
+      jsonResponse({
+        ...detailWithContact(null),
+        activeJobs: [
+          {
+            jobId: 'job-quickcheck-1',
+            kind: 'quick-check',
+            status: 'running',
+            startedAt: '2026-09-01T10:00:00.000Z',
+            targetDomain: 'hotel-exemple.fr',
+          },
+          {
+            jobId: 'job-fullaudit-1',
+            kind: 'full-audit',
+            status: 'queued',
+            startedAt: '2026-09-01T10:00:00.000Z',
+            targetDomain: 'hotel-exemple.fr',
+          },
+        ],
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+  });
+
+  // Regression: every simultaneously active job renders its own kind badge
+  // and progress link, so a Quick check running alongside a Full audit
+  // never hides one behind the other.
+  it('lists every active job by kind, each with its own progress link', async () => {
+    await renderDetail();
+    await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
+    await pause();
+
+    expect(pageText()).toContain('Contrôle rapide');
+    expect(pageText()).toContain('Audit complet');
+    const links = Array.from(document.querySelectorAll('a')).map((a) => a.getAttribute('href'));
+    expect(links).toContain('/scans/job-quickcheck-1');
+    expect(links).toContain('/scans/job-fullaudit-1');
+  });
+});

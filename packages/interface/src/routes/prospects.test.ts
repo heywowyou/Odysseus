@@ -4,7 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@odysseus/store', () => ({
   addWaveRosterEntry: vi.fn(),
-  findActiveScanJobForHost: vi.fn(),
+  listActiveJobsForCandidate: vi.fn(),
+  planProspectJobLaunch: vi.fn(),
   getHotelCandidate: vi.fn(),
   getLatestScoreCohort: vi.fn(),
   listOperatorProspects: vi.fn(),
@@ -44,7 +45,8 @@ vi.mock('../prospecting/hotel-scoring/score-on-demand.js', () => ({
 import {
   addWaveRosterEntry,
   createJob,
-  findActiveScanJobForHost,
+  listActiveJobsForCandidate,
+  planProspectJobLaunch,
   findOutreachThreadByCandidate,
   getHotelCandidate,
   getLatestScoreCohort,
@@ -223,7 +225,8 @@ beforeEach(() => {
   } as never);
   vi.mocked(listOutreachAudits).mockResolvedValue([] as never);
   vi.mocked(listRecentScoreCohorts).mockResolvedValue([] as never);
-  vi.mocked(findActiveScanJobForHost).mockResolvedValue(null as never);
+  vi.mocked(planProspectJobLaunch).mockResolvedValue({ allowed: true } as never);
+  vi.mocked(listActiveJobsForCandidate).mockResolvedValue([] as never);
   vi.mocked(getHotelCandidate).mockResolvedValue(null as never);
   vi.mocked(getLatestScoreCohort).mockResolvedValue(null as never);
   vi.mocked(listWaveRoster).mockResolvedValue([] as never);
@@ -386,6 +389,7 @@ describe('GET /api/prospects/:candidateId', () => {
         'selectionVerdict',
         'outreachAudits',
         'fullAudit',
+        'activeJobs',
       ].sort(),
     );
     const serialized = res.body ?? '';
@@ -423,7 +427,10 @@ describe('GET /api/prospects/:candidateId', () => {
       candidateId: 'cand-1',
       ownRegistrableDomain: 'hotel-exemple.fr',
     } as never);
-    vi.mocked(findActiveScanJobForHost).mockResolvedValue({ jobId: 'job-running' } as never);
+    vi.mocked(planProspectJobLaunch).mockResolvedValue({
+      allowed: false,
+      conflictingJobId: 'job-running',
+    } as never);
     const res = await handle('/api/prospects/cand-1');
     const body = JSON.parse(res.body ?? '{}');
     expect(body.fullAudit).toEqual({
@@ -520,7 +527,10 @@ describe('POST /api/prospects/:candidateId/outreach/full-scan', () => {
   });
 
   it('returns the typed refusal without creating a job', async () => {
-    vi.mocked(planOutreachFullScan).mockResolvedValue({ refused: 'already-in-flight' } as never);
+    vi.mocked(planOutreachFullScan).mockResolvedValue({
+      refused: 'already-in-flight',
+      conflictingJobId: 'job-running',
+    } as never);
     const res = await handle('/api/prospects/cand-1/outreach/full-scan', {
       method: 'POST',
       body: {},
@@ -529,6 +539,7 @@ describe('POST /api/prospects/:candidateId/outreach/full-scan', () => {
     expect(JSON.parse(res.body ?? '{}')).toEqual({
       started: false,
       refusal: 'already-in-flight',
+      jobId: 'job-running',
     });
     expect(createJob).not.toHaveBeenCalled();
   });
@@ -1047,17 +1058,25 @@ describe('POST /api/prospects/:candidateId/full-audit (plan 044)', () => {
     } as never);
     const noDomain = await handle('/api/prospects/cand-1/full-audit', { method: 'POST' });
     expect(noDomain.statusCode).toBe(200);
-    expect(JSON.parse(noDomain.body ?? '{}')).toEqual({ started: false, refusal: 'no-own-domain' });
+    expect(JSON.parse(noDomain.body ?? '{}')).toEqual({
+      started: false,
+      refusal: 'no-own-domain',
+      jobId: null,
+    });
 
     vi.mocked(getHotelCandidate).mockResolvedValue({
       candidateId: 'cand-1',
       ownRegistrableDomain: 'hotel-exemple.fr',
     } as never);
-    vi.mocked(findActiveScanJobForHost).mockResolvedValue({ jobId: 'job-running' } as never);
+    vi.mocked(planProspectJobLaunch).mockResolvedValue({
+      allowed: false,
+      conflictingJobId: 'job-running',
+    } as never);
     const inFlight = await handle('/api/prospects/cand-1/full-audit', { method: 'POST' });
     expect(JSON.parse(inFlight.body ?? '{}')).toEqual({
       started: false,
       refusal: 'already-in-flight',
+      jobId: 'job-running',
     });
     expect(createJob).not.toHaveBeenCalled();
 
@@ -1071,7 +1090,7 @@ describe('POST /api/prospects/:candidateId/full-audit (plan 044)', () => {
       candidateId: 'cand-1',
       ownRegistrableDomain: 'hotel-exemple.fr',
     } as never);
-    vi.mocked(findActiveScanJobForHost).mockResolvedValue(null as never);
+    vi.mocked(planProspectJobLaunch).mockResolvedValue({ allowed: true } as never);
     vi.mocked(getLatestScoreCohort).mockResolvedValue(null as never);
     const res = await handle('/api/prospects/cand-1/full-audit', { method: 'POST' });
     expect(res.statusCode).toBe(201);
@@ -1149,5 +1168,33 @@ describe('POST /api/prospects/:candidateId/prescan (issue #201)', () => {
     const res = await handle(`/api/prospects/${'x'.repeat(201)}/prescan`, { method: 'POST' });
     expect(res.statusCode).toBe(400);
     expect(getHotelCandidate).not.toHaveBeenCalled();
+  });
+
+  // Issue #220: a Quick check already queued/running for this domain is
+  // deduped through the shared conflict policy, the same way full-audit
+  // and outreach-full-scan already were, instead of always minting a
+  // second job for the same click.
+  it('dedupes against an already-running Quick check for the same domain', async () => {
+    vi.mocked(getHotelCandidate).mockResolvedValue({
+      candidateId: 'cand-1',
+      ownRegistrableDomain: 'hotel-exemple.fr',
+    } as never);
+    vi.mocked(planProspectJobLaunch).mockResolvedValue({
+      allowed: false,
+      conflictingJobId: 'job-prescan-running',
+    } as never);
+    const res = await handle('/api/prospects/cand-1/prescan', { method: 'POST' });
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body ?? '{}')).toEqual({
+      started: false,
+      refusal: 'already-in-flight',
+      jobId: 'job-prescan-running',
+    });
+    expect(planProspectJobLaunch).toHaveBeenCalledWith(fakeConnection, {
+      kind: 'quick-check',
+      candidateId: 'cand-1',
+      domain: 'hotel-exemple.fr',
+    });
+    expect(createJob).not.toHaveBeenCalled();
   });
 });

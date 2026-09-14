@@ -10,6 +10,7 @@ import {
   isIdentityStatusValue,
   isQualificationValue,
   locationLabel,
+  prospectPollIntervalMs,
   qualificationBadgeTone,
   reviewBadgeTone,
   selectionBadgeTone,
@@ -201,5 +202,64 @@ describe('canGenerateFollowUp', () => {
     expect(canGenerateFollowUp('e3-drafted')).toBe(false);
     expect(canGenerateFollowUp('e3-sent')).toBe(false);
     expect(canGenerateFollowUp('closed')).toBe(false);
+  });
+});
+
+describe('prospectPollIntervalMs (issue #220)', () => {
+  it('polls at 5s while a Quick check or a Full audit is active, not only an outreach full scan', () => {
+    expect(
+      prospectPollIntervalMs({
+        outreachScanJobId: null,
+        activeJobs: [
+          {
+            jobId: 'job-1',
+            kind: 'quick-check',
+            status: 'running',
+            startedAt: '2026-09-01T00:00:00.000Z',
+            targetDomain: 'hotel-exemple.fr',
+          },
+        ],
+      }),
+    ).toBe(5_000);
+  });
+
+  it('still polls at 5s from the legacy outreachScanJobId signal alone', () => {
+    expect(prospectPollIntervalMs({ outreachScanJobId: 'job-1', activeJobs: [] })).toBe(5_000);
+  });
+
+  it('never polls when nothing is active', () => {
+    expect(prospectPollIntervalMs({ outreachScanJobId: null, activeJobs: [] })).toBe(0);
+  });
+
+  it('never polls when activeJobs is absent (a fixture predating the field) and no legacy job id either', () => {
+    expect(prospectPollIntervalMs({ outreachScanJobId: null })).toBe(0);
+  });
+
+  it('treats an undefined detail (nothing fetched yet) as no active work', () => {
+    expect(prospectPollIntervalMs(undefined)).toBe(0);
+  });
+
+  it('handles two simultaneously active jobs without either hiding the other', () => {
+    expect(
+      prospectPollIntervalMs({
+        outreachScanJobId: null,
+        activeJobs: [
+          {
+            jobId: 'job-1',
+            kind: 'quick-check',
+            status: 'running',
+            startedAt: '2026-09-01T00:00:00.000Z',
+            targetDomain: 'hotel-exemple.fr',
+          },
+          {
+            jobId: 'job-2',
+            kind: 'full-audit',
+            status: 'running',
+            startedAt: '2026-09-01T00:00:00.000Z',
+            targetDomain: 'hotel-exemple.fr',
+          },
+        ],
+      }),
+    ).toBe(5_000);
   });
 });

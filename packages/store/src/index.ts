@@ -329,6 +329,19 @@ export type {
 // source beside cohort membership. addWaveRosterEntry/revokeWaveRosterEntry
 // back the CLI's `prospect wave add/remove`; findActiveWaveRosterEntry is
 // what outreach-scans.ts reads.
+// Issue #220: one candidate/business-scoped active-job projection and one
+// conflict policy shared by every prospect-scoped job-creation route.
+export {
+  findActiveBrowserHeavyHostConflict,
+  listActiveJobsForCandidate,
+  planProspectJobLaunch,
+} from './active-jobs.js';
+export type {
+  ProspectActiveJob,
+  ProspectActiveJobKind,
+  ProspectJobLaunchDecision,
+} from './active-jobs.js';
+
 export {
   addWaveRosterEntry,
   findActiveWaveRosterEntry,

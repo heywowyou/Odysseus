@@ -20,6 +20,7 @@ import type { AuditDocumentFields } from './schemas/audit.schema.js';
 import { createAuditModel } from './schemas/audit.schema.js';
 import { createHotelScoreCohortModel } from './schemas/score-cohort.schema.js';
 import { createJobModel, type JobDocument } from './schemas/job.schema.js';
+import { findActiveBrowserHeavyHostConflict } from './active-jobs.js';
 import {
   getHotelCandidate,
   getLatestHotelCandidateByOwnRegistrableDomain,
@@ -75,7 +76,9 @@ export async function planOutreachFullScan(
   candidateId: string,
   versions: OutreachFullScanVersionInputs,
   options: OutreachFullScanStartOptions = {},
-): Promise<OutreachFullScanPlan | { refused: OutreachFullScanStartRefusal }> {
+): Promise<
+  OutreachFullScanPlan | { refused: OutreachFullScanStartRefusal; conflictingJobId?: string }
+> {
   const candidate = await getHotelCandidate(connection, candidateId);
   if (candidate === null) return { refused: 'candidate-unknown' };
 
@@ -103,8 +106,25 @@ export async function planOutreachFullScan(
 
   if (await isSuppressed(connection, domain)) return { refused: 'suppressed' };
 
-  if (await findActiveOutreachFullScanJob(connection, candidateId, options.excludeJobId)) {
-    return { refused: 'already-in-flight' };
+  const sameCandidateJob = await findActiveOutreachFullScanJob(
+    connection,
+    candidateId,
+    options.excludeJobId,
+  );
+  if (sameCandidateJob !== null) {
+    return { refused: 'already-in-flight', conflictingJobId: sameCandidateJob.jobId };
+  }
+
+  // Issue #220: one crawler slot per host, shared with the other
+  // browser-heavy kinds (Light audit, Full audit) - not only against
+  // another outreach-full-scan of this same candidate.
+  const hostConflict = await findActiveBrowserHeavyHostConflict(
+    connection,
+    'prospecting-audit',
+    domain,
+  );
+  if (hostConflict !== null) {
+    return { refused: 'already-in-flight', conflictingJobId: hostConflict.jobId };
   }
 
   return {

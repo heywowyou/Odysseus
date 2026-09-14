@@ -379,7 +379,7 @@ describe.skipIf(!mongoAvailable)('planOutreachFullScan', () => {
 
   it('refuses while an outreach scan is already in flight', async () => {
     const { candidate } = await seedSelectedCandidate('inflight.fr');
-    await seedJob({
+    const jobId = await seedJob({
       type: 'outreach-full-scan',
       status: 'running',
       siteUrl: 'https://inflight.fr/',
@@ -387,6 +387,7 @@ describe.skipIf(!mongoAvailable)('planOutreachFullScan', () => {
     });
     expect(await planOutreachFullScan(connection!, candidate.candidateId, VERSIONS)).toEqual({
       refused: 'already-in-flight',
+      conflictingJobId: jobId,
     });
     const active = await findActiveOutreachFullScanJob(connection!, candidate.candidateId);
     expect(active?.options.outreachCandidateId).toBe(candidate.candidateId);
@@ -422,7 +423,7 @@ describe.skipIf(!mongoAvailable)('planOutreachFullScan', () => {
       siteUrl: 'https://twoscan.fr/',
       candidateId: candidate.candidateId,
     });
-    await seedJob({
+    const runningJobId = await seedJob({
       type: 'outreach-full-scan',
       status: 'running',
       siteUrl: 'https://twoscan.fr/',
@@ -432,7 +433,7 @@ describe.skipIf(!mongoAvailable)('planOutreachFullScan', () => {
       await planOutreachFullScan(connection!, candidate.candidateId, VERSIONS, {
         excludeJobId: otherJobId,
       }),
-    ).toEqual({ refused: 'already-in-flight' });
+    ).toEqual({ refused: 'already-in-flight', conflictingJobId: runningJobId });
   });
 
   it('finds an active full-audit job for the same host', async () => {

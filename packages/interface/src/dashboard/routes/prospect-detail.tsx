@@ -10,6 +10,7 @@ import { Card } from '../components/ui/card';
 import { EmptyState } from '../components/ui/empty-state';
 import { Skeleton } from '../components/ui/skeleton';
 import { useI18n } from '../i18n/provider';
+import type { DashboardStrings } from '../i18n/types';
 import { formatDateTime } from '../lib/format';
 import { vocabularyLabel } from '../lib/vocabulary';
 import { ApiError, fetchJson, postEmpty, sendJson } from '../lib/api';
@@ -34,8 +35,10 @@ import {
 import { AuditReportPanel } from './audit-report-panel';
 import type { AuditDetailResponse } from './audit-detail-types';
 import { reviewBadgeTone } from './prospects-model';
+import { prospectPollIntervalMs } from './prospects-model';
 import type {
   OutreachDraftActionResponse,
+  ProspectActiveJob,
   ProspectDetailResponse,
   ProspectReviewRequest,
   ProspectReviewResponse,
@@ -122,8 +125,14 @@ interface ProspectDetailState {
  *  polling layer flattens every failure to a message string and drops
  *  ApiError.status, so the fetcher records a 404 itself; and the poll
  *  interval follows the IA's detail-page policy, five seconds only while
- *  an outreach scan this hotel started is in flight, otherwise once (and
- *  again after each action). */
+ *  any job currently owns part of this prospect's workflow, otherwise
+ *  once (and again after each action).
+ *
+ *  Issue #220: outreachScanJobId alone used to be the only polling
+ *  trigger, so a running Quick check or paid Full audit never refreshed
+ *  the hub on its own. activeJobs is the general signal; outreachScanJobId
+ *  stays in the check too for a payload from a build that predates it
+ *  (activeJobs is optional on the response type for exactly that reason). */
 function useProspectDetail(candidateId: string | undefined): ProspectDetailState {
   const path =
     candidateId === undefined ? null : `/api/prospects/${encodeURIComponent(candidateId)}`;
@@ -153,13 +162,28 @@ function useProspectDetail(candidateId: string | undefined): ProspectDetailState
     key: path ?? 'none',
   });
 
-  const runningJobId = polling.data?.outreachScanJobId;
+  const nextIntervalMs = prospectPollIntervalMs(polling.data);
   useEffect(() => {
-    const next = runningJobId != null ? 5_000 : 0;
-    setIntervalMs((current) => (current === next ? current : next));
-  }, [runningJobId]);
+    setIntervalMs((current) => (current === nextIntervalMs ? current : nextIntervalMs));
+  }, [nextIntervalMs]);
 
   return { ...polling, isNotFound };
+}
+
+const ACTIVE_JOB_LABEL_KEY: Record<
+  ProspectActiveJob['kind'],
+  keyof DashboardStrings['common']['typeLabels']
+> = {
+  'quick-check': 'hotelPrescan',
+  'light-audit': 'prospecting',
+  'prospecting-audit': 'outreachFullScan',
+  'full-audit': 'fullAudit',
+};
+
+function activeJobKindToLabelKey(
+  kind: ProspectActiveJob['kind'],
+): keyof DashboardStrings['common']['typeLabels'] {
+  return ACTIVE_JOB_LABEL_KEY[kind];
 }
 
 function scrollToAnchor(anchor: string): void {
@@ -784,6 +808,29 @@ export function ProspectDetailPage(): JSX.Element {
           </span>
         }
       />
+
+      {/* Issue #220: every job currently owning part of this prospect's
+          workflow, not only the outreach full scan the Audit tab already
+          shows inline. One line per job so two allowed simultaneous jobs
+          (a Quick check alongside a browser-heavy audit) never hide one
+          another. */}
+      {data.activeJobs !== undefined && data.activeJobs.length > 0 ? (
+        <ul className="mb-4 flex flex-wrap items-center gap-3" role="status">
+          {data.activeJobs.map((job) => (
+            <li key={job.jobId} className="flex items-center gap-2">
+              <Badge tone="accent">
+                {strings.common.typeLabels[activeJobKindToLabelKey(job.kind)]}
+              </Badge>
+              <Link
+                to={`/scans/${encodeURIComponent(job.jobId)}`}
+                className={buttonStyles('secondary', 'sm')}
+              >
+                {strings.hub.primary.seeProgress}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
       {action.kind === 'scan-refused' ? (
         <p

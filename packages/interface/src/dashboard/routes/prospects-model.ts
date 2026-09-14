@@ -474,6 +474,22 @@ export interface ProspectDetailResponse {
     decidedAt?: string;
     actor?: string;
   };
+  /** Issue #220: every job currently owning part of this prospect's
+   *  workflow, across every operator-launchable kind - not only the
+   *  outreach full scan outreachScanJobId above already tracked. Optional
+   *  for the same fixture tolerance as outreachScan; a payload predating
+   *  it simply polls off outreachScanJobId alone. */
+  activeJobs?: ProspectActiveJob[];
+}
+
+/** Mirrors @odysseus/store's ProspectActiveJob by value, the same
+ *  discipline as every other response type in this file. */
+export interface ProspectActiveJob {
+  jobId: string;
+  kind: 'quick-check' | 'light-audit' | 'prospecting-audit' | 'full-audit';
+  status: 'queued' | 'running' | 'needs-input';
+  startedAt: string;
+  targetDomain: string;
 }
 
 /** Plan 043 slice 3: the selection record behind GET /api/selection - the
@@ -536,4 +552,24 @@ export interface OutreachDraftActionResponse {
  *  refuse anyway. */
 export function canGenerateFollowUp(state: string): boolean {
   return state === 'e1-sent' || state === 'e2-sent';
+}
+
+// ---------------------------------------------------------------------------
+// Active-work polling (issue #220)
+// ---------------------------------------------------------------------------
+
+/** The hub's poll interval given the latest fetched detail: 5s while any
+ *  job currently owns part of this prospect's workflow, otherwise 0 (a
+ *  single fetch, refreshed again only after an operator action).
+ *  outreachScanJobId alone used to be the only trigger, so a running Quick
+ *  check or paid Full audit never refreshed the hub on its own - activeJobs
+ *  is the general signal now, with outreachScanJobId kept in the check for
+ *  a response from a build that predates the field (activeJobs is optional
+ *  on the response type for exactly that reason). */
+export function prospectPollIntervalMs(
+  detail: Pick<ProspectDetailResponse, 'outreachScanJobId' | 'activeJobs'> | undefined,
+): number {
+  if (detail === undefined) return 0;
+  const hasActiveJob = (detail.activeJobs?.length ?? 0) > 0;
+  return detail.outreachScanJobId != null || hasActiveJob ? 5_000 : 0;
 }
