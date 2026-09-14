@@ -19,11 +19,6 @@ import {
 import { SEVERITY } from '../design-tokens.js';
 import { buildCoverageDisclosure } from '../coverage-disclosure.js';
 
-/** No "good" tone exists in design-tokens.ts's SEVERITY map (every entry
- *  there is bad-to-worse); reuses the same green already used for the
- *  quick-win tag in themes.ts rather than inventing a new colour. */
-const GOOD_COLOR = '#7cd9a0';
-
 /** Threshold values (good/needsImprovement) now live in
  *  `@odysseus/core`'s cwv-thresholds.ts, shared with normalize-
  *  lighthouse.ts (report-feedback-palais-gallien.md item 9) - this table
@@ -198,17 +193,11 @@ function renderRealUserDataBlock(
   const tableRows = rows
     .map((row) => {
       const rating = rateCoreWebVital(row.value, row.good, row.needsImprovement);
-      const ratingColor =
-        rating === 'good'
-          ? GOOD_COLOR
-          : rating === 'mid'
-            ? SEVERITY.moderate.color
-            : SEVERITY.critical.color;
       return `
         <tr>
           ${cell(escapeHtml(row.label))}
           ${cell(formatMetricValue(row.value, row.unit, language))}
-          ${cell(escapeHtml(ratingLabel(strings, rating)), `color:${ratingColor}`)}
+          ${cell(ratingTag(strings, rating))}
         </tr>
       `;
     })
@@ -240,6 +229,20 @@ function ratingLabel(strings: ReportStrings, rating: CoreWebVitalRating): string
     : rating === 'mid'
       ? c.ratingNeedsImprovementLabel
       : c.ratingPoorLabel;
+}
+
+/** 2026-09-14 Impeccable acceptance (workbench, page 19): the status
+ *  column used to be color-only text, the one spot in this section that
+ *  opted out of the `.tag` pill motif every severity/quick-win badge
+ *  elsewhere in the report already uses (severity-badge.ts, themes.ts's
+ *  quick-win tag). Reuses the existing `.tag.qw` green pairing for "bon"
+ *  since design-tokens.ts's SEVERITY map has no "good" tone, and the same
+ *  SEVERITY bg/color pairs renderSeverityBadge already uses for the rest. */
+function ratingTag(strings: ReportStrings, rating: CoreWebVitalRating): string {
+  const label = escapeHtml(ratingLabel(strings, rating));
+  if (rating === 'good') return `<span class="tag qw">${label}</span>`;
+  const tone = rating === 'mid' ? SEVERITY.moderate : SEVERITY.critical;
+  return `<span class="tag" style="background:${tone.bg};color:${tone.color}">${label}</span>`;
 }
 
 function headCell(label: string, width: string): string {
@@ -328,12 +331,6 @@ export function renderCoreWebVitalsTable(
       `;
     }
     const rating = rateCoreWebVital(value, metric.good, metric.needsImprovement);
-    const ratingColor =
-      rating === 'good'
-        ? GOOD_COLOR
-        : rating === 'mid'
-          ? SEVERITY.moderate.color
-          : SEVERITY.critical.color;
     const worst = worstForMetric(manifest.pages, metric.key);
     const worstCell =
       worst !== null && worst.value > value
@@ -344,11 +341,11 @@ export function renderCoreWebVitalsTable(
         : cell(escapeHtml(c.worstPageSameAsMedian), 'opacity:0.55;font-size:12px');
     return `
       <tr>
-        ${cell(escapeHtml(metricLabels[metric.key]))}
+        ${cell(escapeHtml(metricLabels[metric.key]), rating === 'poor' ? `border-left:3px solid ${SEVERITY.critical.color}` : '')}
         ${cell(formatMetricValue(value, unit, language))}
         ${worstCell}
         ${cell(`${'≤'} ${formatMetricValue(metric.good, unit, language)}`)}
-        ${cell(escapeHtml(ratingLabel(strings, rating)), `color:${ratingColor}`)}
+        ${cell(ratingTag(strings, rating))}
       </tr>
     `;
   }).join('');
