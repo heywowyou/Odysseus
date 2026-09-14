@@ -214,4 +214,40 @@ describe('probeUrl address guard', () => {
       expect.objectContaining({ redirect: 'manual' }),
     );
   });
+
+  it('aborts a response whose body stalls after the headers arrive', async () => {
+    const fetchStub = vi.fn(async (_url: string, init?: RequestInit) => {
+      const signal = init?.signal;
+      return {
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'text/html' }),
+        text: () =>
+          new Promise<string>((_resolve, reject) => {
+            signal?.addEventListener('abort', () => {
+              reject(new DOMException('The operation was aborted', 'AbortError'));
+            });
+          }),
+      } as Response;
+    });
+    global.fetch = fetchStub as unknown as typeof fetch;
+
+    const didNotFinish = Symbol('did-not-finish');
+    const result = await Promise.race([
+      probeUrl('https://slow-body.example/', {
+        ...options,
+        timeoutMs: 20,
+        sameSite: () => true,
+        lookupAddresses: async () => [{ address: '93.184.216.34', family: 4 }],
+      }),
+      new Promise<typeof didNotFinish>((resolve) => setTimeout(() => resolve(didNotFinish), 200)),
+    ]);
+
+    expect(result).toEqual({
+      kind: 'failed',
+      failure: 'timeout',
+      detail: 'request aborted at the configured timeout',
+      finalUrl: 'https://slow-body.example/',
+    });
+  });
 });

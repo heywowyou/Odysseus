@@ -187,75 +187,68 @@ export async function probeUrl(
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), options.timeoutMs);
-    let response: Response;
     try {
-      response = await fetch(currentUrl, {
+      const response = await fetch(currentUrl, {
         headers: { 'User-Agent': options.userAgent },
         redirect: 'manual',
         signal: controller.signal,
       });
+
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get('location');
+        if (location === null) {
+          return {
+            kind: 'failed',
+            failure: 'http-error',
+            detail: `${response.status} with no Location header`,
+            finalUrl: currentUrl,
+          };
+        }
+        let next: string;
+        try {
+          next = new URL(location, currentUrl).href;
+        } catch {
+          return {
+            kind: 'failed',
+            failure: 'http-error',
+            detail: `${response.status} with an unusable Location`,
+            finalUrl: currentUrl,
+          };
+        }
+        if (!options.sameSite(next)) {
+          return { kind: 'failed', failure: 'redirect-offsite', detail: next, finalUrl: next };
+        }
+        redirectedWithinSite = true;
+        currentUrl = next;
+        continue;
+      }
+
+      if (!response.ok) {
+        return {
+          kind: 'failed',
+          failure: 'http-error',
+          detail: String(response.status),
+          finalUrl: currentUrl,
+        };
+      }
+
+      if (!isHtml(response.headers.get('content-type'))) {
+        return {
+          kind: 'failed',
+          failure: 'non-html-response',
+          detail: response.headers.get('content-type') ?? '',
+          finalUrl: currentUrl,
+        };
+      }
+
+      const html = await response.text();
+      return { kind: 'ok', finalUrl: currentUrl, html, redirectedWithinSite };
     } catch (error) {
       const { failure, detail } = classifyFetchError(error);
       return { kind: 'failed', failure, detail, finalUrl: currentUrl };
     } finally {
       clearTimeout(timeout);
     }
-
-    if (response.status >= 300 && response.status < 400) {
-      const location = response.headers.get('location');
-      if (location === null) {
-        return {
-          kind: 'failed',
-          failure: 'http-error',
-          detail: `${response.status} with no Location header`,
-          finalUrl: currentUrl,
-        };
-      }
-      let next: string;
-      try {
-        next = new URL(location, currentUrl).href;
-      } catch {
-        return {
-          kind: 'failed',
-          failure: 'http-error',
-          detail: `${response.status} with an unusable Location`,
-          finalUrl: currentUrl,
-        };
-      }
-      if (!options.sameSite(next)) {
-        return { kind: 'failed', failure: 'redirect-offsite', detail: next, finalUrl: next };
-      }
-      redirectedWithinSite = true;
-      currentUrl = next;
-      continue;
-    }
-
-    if (!response.ok) {
-      return {
-        kind: 'failed',
-        failure: 'http-error',
-        detail: String(response.status),
-        finalUrl: currentUrl,
-      };
-    }
-
-    if (!isHtml(response.headers.get('content-type'))) {
-      return {
-        kind: 'failed',
-        failure: 'non-html-response',
-        detail: response.headers.get('content-type') ?? '',
-        finalUrl: currentUrl,
-      };
-    }
-
-    let html: string;
-    try {
-      html = await response.text();
-    } catch (error) {
-      const { failure, detail } = classifyFetchError(error);
-      return { kind: 'failed', failure, detail, finalUrl: currentUrl };
-    }
-    return { kind: 'ok', finalUrl: currentUrl, html, redirectedWithinSite };
   }
 
   return {
