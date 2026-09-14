@@ -155,6 +155,60 @@ CycloneDX SBOM artifact.
   pnpm-lock.yaml format at all and silently skip dependency scanning; do not
   downgrade below it.
 
+### Custom Semgrep rules
+
+CI also runs five narrow, hand-written Semgrep rules (`.semgrep/rules/`,
+issue #261) targeting risk seams a generic community ruleset can't express:
+
+- `prospecting-fetch-without-ssrf-guard` — a `fetch()` reaching a
+  prospect-controlled URL without a preceding `checkFetchTarget()` call in
+  the same function (issue #158's resolve-then-classify guard).
+- `dangerous-shell-exec` — `exec()`/`execSync()` from `node:child_process`,
+  which interpret their argument as a shell command.
+- `credentials-in-logs` — a logger/console call passed something that looks
+  like a secret (`process.env`, `.apiKey`, `.secret`, `.password`, a
+  `getXApiKey()`-shaped call, etc).
+- `preview-token-unsafe-comparison` — a preview token compared with
+  `===`/`==` instead of routed through the hash-then-lookup design in
+  `packages/interface/src/outreach/preview-token.ts`.
+- `storage-write-outside-adapter` — `new AwsClient(...)` constructed outside
+  the three approved storage adapters, bypassing the PreviewPublisher /
+  ArtifactStore port.
+
+Each rule carries positive and negative fixtures under
+`.semgrep/fixtures/<rule-id>/{bad.ts,good.ts,stage-path}`, checked by
+`.semgrep/test-rules.py` before the real scan runs in CI; a fixture-test
+failure means the rule regressed, not that product code did.
+
+- Reproduce the fixture check and the real scan locally with the same pinned
+  image CI uses:
+
+  ```bash
+  python3 .semgrep/test-rules.py semgrep/semgrep:1.145.0
+
+  docker run --rm -v "$PWD:/src" semgrep/semgrep:1.145.0 \
+    semgrep scan --config /src/.semgrep/rules --error \
+    --sarif --output /src/semgrep-odysseus.sarif.json \
+    /src/packages /src/scripts
+  ```
+
+- Semgrep Community Edition analyzes one file at a time: no cross-file
+  import resolution, no dataflow. A rule that gates on "was the guard
+  function called nearby" (the SSRF and preview-token rules) can miss a
+  guard that lives in a helper in another file, or flag a call that's
+  actually guarded by a caller two files away. Each rule's `message` names
+  the specific false-positive/negative shape this leaves open for that rule;
+  treat a finding as a prompt to check the surrounding code, not an
+  automatic violation.
+- These rules are scoped to `languages: [typescript]` only. The `nosemgrep`
+  markers already present in `docs/report/design/*.flat.html` belong to a
+  vendored static HTML mockup bundle and are unrelated to this ruleset — do
+  not read their presence as evidence of a repo-wide Semgrep policy.
+- Add a sixth rule the same way: write the rule, add `bad.ts`/`good.ts`
+  fixtures plus a `stage-path` file naming the directory the fixture should
+  be scanned as if it lived in (so `paths.include`/`paths.exclude` behave the
+  same in the fixture as in the real repo), then run `test-rules.py`.
+
 ## Dependency maintenance
 
 Renovate (`renovate.json`, issue #252) opens grouped PRs on a weekday

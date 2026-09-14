@@ -1,0 +1,29 @@
+rules:
+  - id: prospecting-fetch-without-ssrf-guard
+    languages: [typescript]
+    severity: ERROR
+    message: >
+      fetch() reaching a prospect-controlled URL (a page redirect or a
+      catalogue-declared domain) without a preceding checkFetchTarget()
+      resolve-and-classify call in the same function. Prospecting is the
+      one seam that touches attacker-influenced hosts on the deployment's
+      own Docker network (issue #158): the URL must be resolved and
+      classified before connecting, refusing on
+      verdict.kind === 'refused', exactly as probe-url.ts and
+      fetch-candidate-page.ts do. Route it through
+      packages/interface/src/prospecting/fetch-address-guard.ts's
+      checkFetchTarget() first.
+    paths:
+      include:
+        - '**/packages/interface/src/prospecting/*.ts'
+      exclude:
+        - '**/packages/interface/src/prospecting/*.test.ts'
+        - '**/packages/interface/src/prospecting/fetch-address-guard.ts'
+    patterns:
+      - pattern: fetch($URL, ...)
+      - pattern-not-inside: |
+          ...
+          checkFetchTarget(...)
+          ...
+          fetch($URL, ...)
+          ...

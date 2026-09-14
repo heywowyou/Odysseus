@@ -1,0 +1,25 @@
+rules:
+  - id: storage-write-outside-adapter
+    languages: [typescript]
+    severity: ERROR
+    message: >
+      new AwsClient(...) (aws4fetch's S3-signing client) constructed
+      outside the three approved storage adapters
+      (outreach/scaleway-preview-publisher.ts,
+      artifacts/scaleway-artifact-store.ts, and site/lib/read-preview.ts).
+      Every publication or artifact write goes through the PreviewPublisher
+      / ArtifactStore port so bucket credentials and object-key derivation
+      stay in one reviewed place - call the existing adapter (via
+      configured-preview-publisher.ts) instead of signing requests
+      directly.
+    paths:
+      include:
+        - '**/packages/interface/src/**/*.ts'
+        - '**/packages/site/**/*.ts'
+      exclude:
+        - '*.test.ts'
+        - '*.e2e.test.ts'
+        - '**/packages/interface/src/outreach/scaleway-preview-publisher.ts'
+        - '**/packages/interface/src/artifacts/scaleway-artifact-store.ts'
+        - '**/packages/site/lib/read-preview.ts'
+    pattern: new AwsClient(...)

@@ -194,3 +194,43 @@ jobs:
           name: odysseus-image-sbom-${{ github.sha }}
           path: odysseus-image.sbom.cdx.json
           retention-days: 90
+
+  security-scan-semgrep:
+    name: Custom Semgrep rules (Odysseus seams)
+    runs-on: ubuntu-latest
+    # Issue #261. Narrow, hand-written rules for risk seams a generic
+    # ruleset can't express: the prospecting SSRF guard (checkFetchTarget),
+    # shell-interpreting exec()/execSync(), a credential reaching a log
+    # line, a raw preview-token comparison, and a storage write bypassing
+    # the approved PreviewPublisher/ArtifactStore adapter. Deliberately
+    # just these five, not a community pack (config:auto or a p/ registry
+    # ruleset) - baseline results get reviewed before any of that is added.
+    # Every rule under .semgrep/rules/ has positive and negative fixtures
+    # under .semgrep/fixtures/, verified by .semgrep/test-rules.py before
+    # the real scan runs: a fixture-test failure means a rule regressed,
+    # not that product code did. Both steps invoke the same pinned image
+    # docker run invocation used to develop and validate these rules
+    # locally, so "it worked when I wrote it" and "it works in CI" are the
+    # same command. Semgrep CE analyzes one file at a time - no cross-file
+    # import resolution or dataflow - so each rule's own message documents
+    # the specific false-positive/negative shape that limitation leaves
+    # open in this repo; see docs/agents/coding-conventions.md, "Custom
+    # Semgrep rules".
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify custom rule fixtures
+        run: python3 .semgrep/test-rules.py semgrep/semgrep:1.145.0
+
+      - name: Scan with the Odysseus custom Semgrep rules
+        run: |
+          docker run --rm -v "$PWD:/src" semgrep/semgrep:1.145.0 \
+            semgrep scan --config /src/.semgrep/rules --error \
+            --sarif --output /src/semgrep-odysseus.sarif.json \
+            /src/packages /src/scripts
+
+      - name: Upload SARIF to GitHub code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep-odysseus.sarif.json

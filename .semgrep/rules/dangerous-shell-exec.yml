@@ -1,0 +1,31 @@
+rules:
+  - id: dangerous-shell-exec
+    languages: [typescript]
+    severity: ERROR
+    message: >
+      node:child_process's shell-interpreting exec()/execSync() runs its
+      argument through a real shell, so any interpolated value becomes a
+      command-injection vector. Every command execution in this repo today
+      uses the argv-array forms (execFile/execFileSync/spawn/fork) instead,
+      which never invoke a shell - use one of those. See
+      packages/scanner/src/artifacts/manifest.ts for the established
+      pattern. Scoped to a file that names exec or execSync in its own
+      node:child_process import (Semgrep CE has no cross-file import
+      resolution, so an unrelated bare exec()/execSync() function in a
+      file that also imports one of these by name would also match - none
+      exist in this repo today), and only the bare-identifier call form,
+      never a $OBJ.exec(...) member call - that shape is shared with
+      RegExp.prototype.exec() and Mongoose's Query.prototype.exec(),
+      both common in this codebase, and would false-positive constantly.
+    patterns:
+      - pattern-either:
+          - pattern: exec(...)
+          - pattern: execSync(...)
+      - pattern-inside:
+          pattern-either:
+            - pattern: |
+                import {..., exec, ...} from "node:child_process"
+                ...
+            - pattern: |
+                import {..., execSync, ...} from "node:child_process"
+                ...

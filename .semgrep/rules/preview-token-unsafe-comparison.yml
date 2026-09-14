@@ -1,0 +1,36 @@
+rules:
+  - id: preview-token-unsafe-comparison
+    languages: [typescript]
+    severity: ERROR
+    message: >
+      A preview token is compared directly with === / == instead of going
+      through the hash-then-lookup design (see
+      packages/interface/src/outreach/preview-token.ts: hashPreviewToken +
+      deriveObjectKey turn a token into an object-storage lookup key, so
+      validity is a hit/miss on the store rather than a byte comparison of
+      a secret - see also packages/interface/src/auth/password.ts's
+      timingSafeEqual for the one place this codebase does compare a
+      secret directly, and does so constant-time). Route this through
+      isValidPreviewToken() / objectKeyForToken() instead of comparing the
+      raw token value.
+    paths:
+      include:
+        - '**/packages/interface/src/outreach/*.ts'
+        - '**/packages/site/lib/*.ts'
+      exclude:
+        - '*.test.ts'
+        - '**/packages/interface/src/outreach/preview-token.ts'
+    patterns:
+      - pattern-either:
+          - pattern: $TOKEN === $STORED
+          - pattern: $TOKEN == $STORED
+      - metavariable-regex:
+          metavariable: $TOKEN
+          regex: (?i).*token.*
+      - metavariable-pattern:
+          metavariable: $STORED
+          patterns:
+            - pattern-not: '""'
+            - pattern-not: "''"
+            - pattern-not: undefined
+            - pattern-not: 'null'
