@@ -41,15 +41,16 @@
       "exports": ["CURRENT_OUTREACH_PROMPT_VERSION"]
     }
   ],
-  // Both are pnpm-workspace.yaml CVE-fix pins on transitive dependencies
-  // (nth-check ReDoS, validator ReDoS), the same pattern as the documented
-  // lodash.pick override right above them in that file. fallow flags them
-  // because nothing in the workspace depends on these packages by that
-  // exact version range directly - that is the point of a transitive
-  // override.
+  // All three are pnpm-workspace.yaml CVE-fix pins on transitive
+  // dependencies (nth-check ReDoS, validator ReDoS, nanoid DoS via issue
+  // #255's Trivy scan), the same pattern as the documented lodash.pick
+  // override right above them in that file. fallow flags them because
+  // nothing in the workspace depends on these packages by that exact
+  // version range directly - that is the point of a transitive override.
   "ignoreDependencyOverrides": [
     { "package": "nth-check", "source": "pnpm-workspace.yaml" },
-    { "package": "validator", "source": "pnpm-workspace.yaml" }
+    { "package": "validator", "source": "pnpm-workspace.yaml" },
+    { "package": "nanoid", "source": "pnpm-workspace.yaml" }
   ],
   "boundaries": {
     "zones": [

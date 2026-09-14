@@ -1,0 +1,18 @@
+# Issue #255: the CI gate's reviewed ignore policy. An entry here is a
+# reviewed decision, not a way to silence noise. Every entry must:
+#   - name a specific finding ID (never suppress a whole rule or scanner);
+#   - carry a `statement` explaining why it is safe or not actionable here;
+#   - carry an `expired_at` date so it is revisited rather than forgotten,
+#     unless the underlying advisory itself has no fix and the statement
+#     says so explicitly.
+# See docs/agents/coding-conventions.md, "Security scanning", for how to
+# reproduce a finding locally before adding or removing an entry here.
+#
+# Format reference:
+# https://trivy.dev/latest/docs/configuration/filtering/#trivyignoreyaml
+
+vulnerabilities: []
+
+misconfigurations: []
+
+secrets: []

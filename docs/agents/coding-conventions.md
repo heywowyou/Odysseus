@@ -112,6 +112,49 @@ safe.
   `*.e2e.test.ts` so the fast local loop stays browser-free; CI gates on
   `test:all`, so tiering never removes coverage.
 
+## Security scanning
+
+CI runs Trivy (`.github/workflows/ci.yml`, issue #255) over every pull
+request: dependency manifests, secrets across every text file, and
+Dockerfile misconfiguration checks, gated on actionable HIGH/CRITICAL
+findings only. `deploy/compose.yaml` gets secret scanning like any other
+text file but not structural misconfiguration checks: Trivy's misconfig
+scanner has no ruleset for Compose's schema (Dockerfile and Containerfile
+only, per its own coverage docs), not a gap in this configuration.
+`main` additionally builds and scans the production image and publishes a
+CycloneDX SBOM artifact.
+
+- Reproduce the PR-gate scan locally with Docker (no local Trivy install
+  needed):
+
+  ```bash
+  docker run --rm -v "$PWD":/repo:ro -w /repo aquasec/trivy:0.74.0 fs \
+    --scanners vuln,secret,misconfig \
+    --skip-dirs node_modules,.agents,.claude,.codex,.zcode,data,artifacts,reports,coverage,.pnpm-store \
+    --skip-files .env,.env.smoke \
+    --severity HIGH,CRITICAL --ignore-unfixed \
+    --trivyignores .trivyignore.yaml /repo
+  ```
+
+  Drop `--ignore-unfixed` and widen `--severity` to see everything CI's
+  non-gating report step shows. Keep `--skip-files .env,.env.smoke`: those
+  hold this repo's real local secrets and are never in git, so Trivy has
+  nothing useful to say about them beyond confirming they contain
+  credentials, which is what they are for.
+- Reproduce the fixture self-test (proves the secret-scanning gate fires)
+  with `bash deploy/trivy-secret-gate.test.sh`; it works with either a local
+  `trivy` binary on `PATH` or Docker.
+- `.trivyignore.yaml` is the reviewed suppression list. An entry names one
+  finding ID, explains why it is safe or not actionable here, and carries an
+  expiry unless the advisory has no fix at all. Prefer fixing the underlying
+  dependency or configuration over adding an entry; see the file's own header
+  for the format.
+- Keep the `version:` pinned in the workflow, the fallback in
+  `deploy/trivy-secret-gate.test.sh`, and the version used above in sync when
+  bumping Trivy. Trivy versions before 0.74 do not parse this repo's
+  pnpm-lock.yaml format at all and silently skip dependency scanning; do not
+  downgrade below it.
+
 ## Product writing
 
 - Use plain, direct language. Expand an acronym on first use when the audience

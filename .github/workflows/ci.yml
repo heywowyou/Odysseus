@@ -86,3 +86,111 @@ jobs:
         run: pnpm run test:all
         env:
           MONGODB_TEST_URI: mongodb://localhost:27018/odysseus_test
+
+  security-scan:
+    name: Security scan (Trivy)
+    runs-on: ubuntu-latest
+    # Issue #255. Two passes over the same repository filesystem scan
+    # (dependency manifests, secrets across every text file including
+    # deploy/compose.yaml, and Dockerfile misconfiguration): a non-gating
+    # report at every severity so lower-severity findings stay visible, then
+    # a gate that fails only on actionable HIGH/CRITICAL findings with a
+    # known fix. Known upstream gap, not a config error here: Trivy's
+    # misconfig scanner has no ruleset for Compose's schema (Dockerfile and
+    # Containerfile only, confirmed against its own docs), so
+    # deploy/compose.yaml gets secret scanning but not structural
+    # misconfiguration checks. Vendored agent-tooling trees (.agents,
+    # .claude, .codex, .zcode) are excluded for the same reason the
+    # Dockerfile's build context excludes them: they are not shipped
+    # product code, and scanning them is pure noise. data/artifacts/reports/
+    # coverage/.pnpm-store are gitignored local-only output (data/ in
+    # particular holds multi-gigabyte Sirene source CSVs on a developer
+    # machine) that a checkout never has, listed here so the same skip-dirs
+    # value is safe to reuse verbatim for a local run. .env/.env.smoke are
+    # this repo's designated real-secret store (gitignored, never checked
+    # out here either): scanning them is not this gate's job and would make
+    # a local run flag a developer's own working credentials every time.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trivy report (all severities, non-gating)
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          version: v0.74.0
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          skip-dirs: node_modules,.agents,.claude,.codex,.zcode,data,artifacts,reports,coverage,.pnpm-store
+          skip-files: .env,.env.smoke
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+
+      - name: Trivy gate (HIGH/CRITICAL with a known fix)
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          version: v0.74.0
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          skip-dirs: node_modules,.agents,.claude,.codex,.zcode,data,artifacts,reports,coverage,.pnpm-store
+          skip-files: .env,.env.smoke
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          trivyignores: .trivyignore.yaml
+
+      - name: Verify the secret-scanning gate against a synthetic fixture
+        # Proves the gate above actually fires, without committing anything
+        # that looks like a real credential (deploy/trivy-secret-gate.test.sh
+        # generates and scans a throwaway fixture, never checked into git).
+        run: bash deploy/trivy-secret-gate.test.sh
+
+  security-scan-image:
+    name: Security scan production image (Trivy)
+    # Issue #255. Only on main: builds the same image the deploy pipeline
+    # ships, scans it, and publishes a software bill of materials. Gated
+    # behind the test job so a broken commit never pays for an image build.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build production image
+        run: docker build -t odysseus-app:ci-scan .
+
+      - name: Trivy image report (all severities, non-gating)
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          version: v0.74.0
+          scan-type: image
+          image-ref: odysseus-app:ci-scan
+          scanners: vuln,secret,misconfig
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+
+      - name: Trivy image gate (HIGH/CRITICAL with a known fix)
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          version: v0.74.0
+          scan-type: image
+          image-ref: odysseus-app:ci-scan
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          trivyignores: .trivyignore.yaml
+
+      - name: Generate SBOM (CycloneDX)
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          version: v0.74.0
+          scan-type: image
+          image-ref: odysseus-app:ci-scan
+          format: cyclonedx
+          output: odysseus-image.sbom.cdx.json
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: odysseus-image-sbom-${{ github.sha }}
+          path: odysseus-image.sbom.cdx.json
+          retention-days: 90
