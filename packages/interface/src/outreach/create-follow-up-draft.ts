@@ -47,9 +47,9 @@ import { registryAssessment, type PreviewSireneFacts } from './publish-preview.j
 export const SECOND_TOUCH = 2;
 export const THIRD_TOUCH = 3;
 
-/** Same value and meaning as `create-outreach-draft.ts`'s constant: the
- *  approved template behind the text, not a model prompt (trade-off 83). */
-export const CURRENT_OUTREACH_PROMPT_VERSION = 'template-v1';
+/** Same meaning as `create-outreach-draft.ts`'s constant: the approved
+ *  code-owned template version, not a model prompt (trade-off 83). */
+export const CURRENT_OUTREACH_PROMPT_VERSION = 'template-v2';
 
 export type CreateFollowUpDraftRefusal =
   | 'thread-unknown'

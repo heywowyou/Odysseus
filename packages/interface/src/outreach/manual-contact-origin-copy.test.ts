@@ -7,7 +7,12 @@ function draft(origin: OutreachDataOrigin, language: 'fr' | 'en') {
     language,
     hotelName: 'Hôtel Exemple',
     variantSeed: 'candidate-origin-test',
-    categories: ['accessibility', 'seo', 'performance'],
+    scanSummary: {
+      distinctFindingCount: 12,
+      affectedPageCount: 6,
+      severityTotals: { critical: 2, serious: 4, moderate: 4, minor: 2 },
+      proofCardCategories: ['accessibility', 'seo', 'performance'],
+    },
     previewUrl: 'https://www.odysseusaudit.com/apercu/token',
     dataOrigins: ['public-hotel-catalogue', 'public-website', origin],
     privacyUrl: 'https://www.odysseusaudit.com/confidentialite-prospection',

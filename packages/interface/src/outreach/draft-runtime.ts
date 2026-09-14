@@ -1,6 +1,5 @@
 /** Real-adapter runtime for creating outreach drafts. */
 
-import type { Finding } from '@odysseus/core';
 import {
   findLiveOutreachDraft,
   findOutreachPreviewByTokenHash,
@@ -16,7 +15,6 @@ import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-ho
 import { CURRENT_QUALIFICATION_VERSION } from '../prospecting/hotel-qualification/qualify-hotels.js';
 import { createConfiguredMailboxDraftAdapter } from './configured-mailbox-draft-adapter.js';
 import { createConfiguredPreviewPublisher } from './configured-preview-publisher.js';
-import { criticalFindingCategoryOccurrences } from './critical-finding-counts.js';
 import type {
   CreateFollowUpDraftResult,
   CreateFollowUpDraftStorePort,
@@ -80,8 +78,7 @@ export async function createTouchOneDraft(
       async resolvePublished(id, token, _language) {
         if (token === '') return { refusal: 'preview-not-published' };
 
-        let validatedFindings: readonly Finding[] = [];
-        const resolved = await resolvePublishedPreviewForDraft({
+        return resolvePublishedPreviewForDraft({
           findByTokenHash: async (tokenHash) => {
             const record = await findOutreachPreviewByTokenHash(connection, tokenHash);
             if (record === null) return null;
@@ -104,20 +101,11 @@ export async function createTouchOneDraft(
               ? { state: 'resolved', audit: { auditId: resolution.audit.auditId } }
               : { state: 'refused' };
           },
-          findingsForAudit: async (auditId) => {
-            validatedFindings = await getFindingsForAudit(connection, auditId);
-            return validatedFindings;
-          },
+          findingsForAudit: (auditId) => getFindingsForAudit(connection, auditId),
           candidateId: id,
           previewToken: token,
           publicBaseUrl: getPreviewPublicBaseUrl(),
         });
-        if ('refusal' in resolved) return resolved;
-
-        const criticalCategories = criticalFindingCategoryOccurrences(validatedFindings);
-        if (criticalCategories.length === 0) return { refusal: 'preview-wrong-audit' };
-
-        return { ...resolved, proofCardCategories: criticalCategories };
       },
     },
     publicBaseUrl: getPreviewPublicBaseUrl(),

@@ -19,7 +19,7 @@ import {
   composeTouchThreeFrame,
   composeTouchTwoBody,
   pickOutreachVariants,
-  type OutreachCategory,
+  type OutreachScanSummary,
 } from './outreach-email-template.js';
 import {
   renderOutreachDraft,
@@ -36,6 +36,7 @@ export type OutreachDataOrigin =
 
 export type AssembleOutreachDraftRefusal =
   | 'missing-preview-url'
+  | 'missing-scan-summary'
   | 'missing-categories'
   | 'missing-previous-subject'
   | 'missing-data-origins'
@@ -52,8 +53,8 @@ export interface AssembleOutreachDraftOptions {
   language: ReportLanguage;
   hotelName?: string;
   variantSeed: string;
-  /** Each entry represents one distinct critical finding in that category. */
-  categories?: readonly OutreachCategory[];
+  /** Safe aggregate facts from the already-published full-scan preview. */
+  scanSummary?: OutreachScanSummary;
   previewUrl?: string;
   previousSubject?: string;
   dataOrigins?: OutreachDataOrigin[];
@@ -92,7 +93,8 @@ export function assembleOutreachDraft(
     return refuse('missing-previous-subject');
   }
   if (touch === 1 && options.previewUrl === undefined) return refuse('missing-preview-url');
-  if (touch === 1 && (options.categories === undefined || options.categories.length === 0)) {
+  if (touch === 1 && options.scanSummary === undefined) return refuse('missing-scan-summary');
+  if (touch === 1 && options.scanSummary?.proofCardCategories.length === 0) {
     return refuse('missing-categories');
   }
   if (touch === 1 && (options.dataOrigins === undefined || options.dataOrigins.length === 0)) {
@@ -126,7 +128,7 @@ export function assembleOutreachDraft(
       ? composeOutreachSubject({
           language,
           hotelName: options.hotelName,
-          categories: options.categories as readonly OutreachCategory[],
+          categories: (options.scanSummary as OutreachScanSummary).proofCardCategories,
         })
       : replySubject(options.previousSubject as string);
 
@@ -135,7 +137,7 @@ export function assembleOutreachDraft(
     bodyBlocks = composeTouchOneBody({
       language,
       hotelName: options.hotelName,
-      categories: options.categories as readonly OutreachCategory[],
+      scanSummary: options.scanSummary as OutreachScanSummary,
       variants,
       previewLink: { label: copy.previewLinkLabel, url: options.previewUrl as string },
     });
