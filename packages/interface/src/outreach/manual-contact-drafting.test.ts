@@ -83,6 +83,9 @@ function preview(): OutreachPreviewPort {
         previewId: 'preview-1',
         url: 'https://www.odysseusaudit.com/apercu/token-abc',
         publicExpiresAt: new Date('2026-10-01T00:00:00.000Z'),
+        distinctFindingCount: 18,
+        affectedPageCount: 9,
+        severityTotals: { critical: 3, serious: 6, moderate: 6, minor: 3 },
         proofCardCategories: ['accessibility', 'seo', 'performance'],
       }),
   };
