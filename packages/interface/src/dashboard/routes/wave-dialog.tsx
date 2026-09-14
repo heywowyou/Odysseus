@@ -25,22 +25,26 @@ export function WaveDialog(props: {
   candidateId: string | null;
   /** The hotel's display name, for the confirm text. */
   hotelName: string | null;
+  /** Existing roster wave used to confirm a removal. Add mode keeps the
+   *  conventional wave-1 suggestion. */
+  initialWave?: string | null | undefined;
   /** Called with the wave name; the caller performs the request, shows
    *  the toast, and refreshes. The dialog closes when the promise lands. */
   onSubmit: (candidateId: string, wave: string) => Promise<void>;
 }): JSX.Element {
-  const { open, onOpenChange, mode, candidateId, hotelName, onSubmit } = props;
+  const { open, onOpenChange, mode, candidateId, hotelName, initialWave, onSubmit } = props;
   const { strings } = useI18n();
   const copy = strings.hub.wave;
 
-  const [wave, setWave] = useState('wave-1');
+  const defaultWave = mode === 'remove' ? (initialWave ?? '') : 'wave-1';
+  const [wave, setWave] = useState(defaultWave);
   const [isBusy, setIsBusy] = useState(false);
 
-  // Reopening starts from the default wave: the field is a confirmation of
-  // intent, not a persisted preference.
+  // Reopening starts from the relevant default: a removal confirms the
+  // persisted roster wave, while an add suggests the conventional name.
   useEffect(() => {
-    if (open) setWave('wave-1');
-  }, [open]);
+    if (open) setWave(defaultWave);
+  }, [defaultWave, open]);
 
   const submit = async (): Promise<void> => {
     const trimmed = wave.trim();

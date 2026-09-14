@@ -11,6 +11,7 @@ import { fetchJson, fetchWithTimeout } from '../lib/api';
 import { formatDateTime } from '../lib/format';
 import { previewState } from './insights-model';
 import type { PreviewResponse, PreviewState } from './insights-model';
+import type { ProspectHubActionability } from './prospects-model';
 import { outreachRefusalSentence, type OutreachPreviewRenderResponse } from './audit-detail-model';
 
 const STATE_TONES: Record<PreviewState, BadgeTone> = {
@@ -81,8 +82,20 @@ export function HubPreviewSection(props: {
   isBusy: boolean;
   onPublish: () => Promise<void>;
   onRevoke: () => Promise<void>;
+  action?: ProspectHubActionability | undefined;
+  blockedReason?: string | null | undefined;
 }): JSX.Element {
-  const { auditId, preview, publishedLink, hasTouch1Draft, isBusy, onPublish, onRevoke } = props;
+  const {
+    auditId,
+    preview,
+    publishedLink,
+    hasTouch1Draft,
+    isBusy,
+    onPublish,
+    onRevoke,
+    action,
+    blockedReason,
+  } = props;
   const { strings, language } = useI18n();
   const copy = strings.auditDetail.outreachPreview;
 
@@ -146,11 +159,13 @@ export function HubPreviewSection(props: {
     }
   };
 
-  const canPublish = auditId !== null && state !== 'live';
+  const canPublish =
+    auditId !== null && state !== 'live' && (action === undefined || action.state === 'available');
   const canRevoke = state === 'live';
   // Plan 045 section 2.5: greyed with a reason instead of hidden when no
   // audit exists yet to publish a preview from.
-  const publishBlockedReason = auditId === null ? strings.preview.publishBlockedNoAudit : null;
+  const publishBlockedReason =
+    blockedReason ?? (auditId === null ? strings.preview.publishBlockedNoAudit : null);
 
   return (
     <Card title={strings.hub.steps.preview} description={strings.preview.description}>

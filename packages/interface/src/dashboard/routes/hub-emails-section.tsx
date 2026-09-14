@@ -18,7 +18,7 @@ import { vocabularyLabel } from '../lib/vocabulary';
 import { fetchJson, postEmpty, sendJson } from '../lib/api';
 import { formatDateTime } from '../lib/format';
 import { canGenerateFollowUp } from './prospects-model';
-import type { ProspectDetailResponse } from './prospects-model';
+import type { ProspectDetailResponse, ProspectHubActionability } from './prospects-model';
 import type { OutreachDraftText } from './outreach-model';
 
 type ThreadDraft = NonNullable<ProspectDetailResponse['thread']>['drafts'][number];
@@ -44,8 +44,20 @@ export function HubEmailsSection(props: {
   onFirstEmail: () => void;
   onFollowUp: () => void;
   refresh: () => void;
+  firstEmailAction?: ProspectHubActionability | undefined;
+  firstEmailBlockedReason?: string | null | undefined;
+  followUpAction?: ProspectHubActionability | undefined;
 }): JSX.Element {
-  const { thread, isBusy, onFirstEmail, onFollowUp, refresh } = props;
+  const {
+    thread,
+    isBusy,
+    onFirstEmail,
+    onFollowUp,
+    refresh,
+    firstEmailAction,
+    firstEmailBlockedReason: serverBlockedReason,
+    followUpAction,
+  } = props;
   const { strings, language } = useI18n();
   const [isMarkingReviewed, setIsMarkingReviewed] = useState(false);
 
@@ -64,19 +76,27 @@ export function HubEmailsSection(props: {
   };
 
   const createdDrafts = thread?.drafts.filter((draft) => draft.status === 'created') ?? [];
-  const canStartFirstEmail =
+  const locallyCanStartFirstEmail =
     (thread === null || thread.state === 'open') && createdDrafts.length === 0;
-  const canFollowUp = thread !== null && canGenerateFollowUp(thread.state);
+  const canStartFirstEmail =
+    firstEmailAction === undefined
+      ? locallyCanStartFirstEmail
+      : firstEmailAction.state === 'available';
+  const canFollowUp =
+    followUpAction === undefined
+      ? thread !== null && canGenerateFollowUp(thread.state)
+      : followUpAction.state === 'available';
   // Plan 045 section 2.5: greyed with a reason instead of hidden, so the
   // operator sees why the first-email action is absent rather than a gap.
   const firstEmailBlockedReason =
-    canStartFirstEmail || canFollowUp
+    serverBlockedReason ??
+    (canStartFirstEmail || canFollowUp
       ? null
       : thread !== null && thread.state !== 'open'
         ? strings.hub.emails.firstEmailBlockedThreadStarted
         : createdDrafts.length > 0
           ? strings.hub.emails.firstEmailBlockedPendingDraft
-          : null;
+          : null);
 
   const touchName = (touch: number): string =>
     touch <= 1

@@ -29,7 +29,7 @@ import {
   scoreDiffRows,
 } from './insights-model';
 import type { PrescanStatus, ScoreDiffResponse, Severity } from './insights-model';
-import type { ProspectDetailResponse } from './prospects-model';
+import type { ProspectDetailResponse, ProspectHubActionability } from './prospects-model';
 
 const STATUS_TONES: Record<PrescanStatus, BadgeTone> = {
   complete: 'accent',
@@ -57,6 +57,8 @@ const SCORE_SIDES = ['brokenness', 'ability'] as const;
 function NotScoredNotice(props: {
   onRunQuickCheck: (() => void) | undefined;
   isQuickCheckBusy: boolean;
+  action: ProspectHubActionability | undefined;
+  blockedReason: string | null;
 }): JSX.Element {
   const { strings } = useI18n();
   return (
@@ -72,13 +74,22 @@ function NotScoredNotice(props: {
           <Button
             variant="secondary"
             size="sm"
-            isLoading={props.isQuickCheckBusy}
-            disabled={props.isQuickCheckBusy}
+            isLoading={props.isQuickCheckBusy || props.action?.state === 'running'}
+            disabled={
+              props.isQuickCheckBusy ||
+              props.action?.state === 'running' ||
+              props.action?.state === 'blocked'
+            }
             onClick={props.onRunQuickCheck}
           >
             {strings.score.runQuickCheckAction}
           </Button>
         </div>
+      ) : null}
+      {props.blockedReason !== null ? (
+        <p className="mt-2 text-sm text-ink-soft" role="note">
+          {props.blockedReason}
+        </p>
       ) : null}
     </div>
   );
@@ -180,6 +191,8 @@ export function HubQuickCheckSection(props: {
    *  version). Optional for the same reason as onRunQuickCheck above. */
   onRefresh?: () => void;
   isRefreshBusy?: boolean;
+  action?: ProspectHubActionability | undefined;
+  blockedReason?: string | null | undefined;
 }): JSX.Element {
   const {
     candidateId,
@@ -188,6 +201,8 @@ export function HubQuickCheckSection(props: {
     isQuickCheckBusy = false,
     onRefresh,
     isRefreshBusy = false,
+    action,
+    blockedReason = null,
   } = props;
   const { strings, language } = useI18n();
   const isStale =
@@ -234,6 +249,8 @@ export function HubQuickCheckSection(props: {
             <NotScoredNotice
               onRunQuickCheck={onRunQuickCheck}
               isQuickCheckBusy={isQuickCheckBusy}
+              action={action}
+              blockedReason={blockedReason}
             />
           ) : null}
         </div>
@@ -490,6 +507,8 @@ export function HubQuickCheckSection(props: {
           <NotScoredNotice
             onRunQuickCheck={prescan === null ? onRunQuickCheck : undefined}
             isQuickCheckBusy={isQuickCheckBusy}
+            action={action}
+            blockedReason={blockedReason}
           />
         ) : null}
 

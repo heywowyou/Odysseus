@@ -86,10 +86,12 @@ export function pipelineSteps(detail: ProspectDetailResponse, now: number): HubS
       : detail.review.decidedAt;
 
   const auditRefusal = detail.outreachScan?.canStart ? undefined : detail.outreachScan?.refusal;
+  const linkedAudits = auditChoices(detail);
+  const latestLinkedAudit = linkedAudits[0];
   const auditState: HubStepState =
     detail.outreachScanJobId != null
       ? 'active'
-      : detail.outreachAudit != null
+      : linkedAudits.length > 0
         ? 'done'
         : auditRefusal !== undefined
           ? 'blocked'
@@ -153,7 +155,7 @@ export function pipelineSteps(detail: ProspectDetailResponse, now: number): HubS
     {
       key: 'audit',
       state: auditState,
-      date: detail.outreachAudit?.startedAt ?? null,
+      date: latestLinkedAudit?.startedAt ?? null,
     },
     {
       key: 'preview',

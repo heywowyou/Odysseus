@@ -72,6 +72,10 @@ export interface ComputeHubActionsInput {
    *  .audit !== null) - not part of OperatorProspectDetail, composed
    *  separately by the route, same as activeJobs. */
   hasAudit: boolean;
+  /** Whether any audit is linked to the candidate, including a general
+   *  audit resolved through hotelLink.candidateId that is not authorized
+   *  as campaign outreach evidence. */
+  hasAnyAudit: boolean;
 }
 
 /** Fails closed: any input that was not actually computed (an optional
@@ -79,7 +83,15 @@ export interface ComputeHubActionsInput {
  *  blocked, never as silently available (issue #219 regression
  *  requirement 8). */
 export function computeHubActions(input: ComputeHubActionsInput): ProspectHubActions {
-  const { detail, activeJobs, outreachScanPlan, fullAuditPlan, quickCheckPlan, hasAudit } = input;
+  const {
+    detail,
+    activeJobs,
+    outreachScanPlan,
+    fullAuditPlan,
+    quickCheckPlan,
+    hasAudit,
+    hasAnyAudit,
+  } = input;
 
   const freshnessNeedsWork =
     detail.qualificationFreshness.state === 'missing' ||
@@ -121,8 +133,8 @@ export function computeHubActions(input: ComputeHubActionsInput): ProspectHubAct
     runQuickCheck,
     runProspectingAudit,
     runFullAudit,
-    publishPreview: publishPreviewActionability(detail, hasAudit),
-    createFirstEmail: createFirstEmailActionability(detail, hasAudit),
+    publishPreview: publishPreviewActionability(detail, hasAudit, hasAnyAudit),
+    createFirstEmail: createFirstEmailActionability(detail, hasAudit, hasAnyAudit),
     createFollowUp: createFollowUpActionability(detail),
     recordOutcome: recordOutcomeActionability(detail),
   };
@@ -135,8 +147,14 @@ export function computeHubActions(input: ComputeHubActionsInput): ProspectHubAct
 function publishPreviewActionability(
   detail: OperatorProspectDetail,
   hasAudit: boolean,
+  hasAnyAudit: boolean,
 ): ProspectHubActionability {
-  if (!hasAudit) return { state: 'blocked', reason: 'no-audit' };
+  if (!hasAudit) {
+    return {
+      state: 'blocked',
+      reason: hasAnyAudit ? 'not-an-outreach-audit' : 'no-audit',
+    };
+  }
   if (detail.preview !== null && detail.preview.status === 'live') return { state: 'complete' };
   return { state: 'available' };
 }
@@ -144,9 +162,15 @@ function publishPreviewActionability(
 function createFirstEmailActionability(
   detail: OperatorProspectDetail,
   hasAudit: boolean,
+  hasAnyAudit: boolean,
 ): ProspectHubActionability {
   if (detail.thread !== null) return { state: 'complete' };
-  if (!hasAudit) return { state: 'blocked', reason: 'no-audit' };
+  if (!hasAudit) {
+    return {
+      state: 'blocked',
+      reason: hasAnyAudit ? 'not-an-outreach-audit' : 'no-audit',
+    };
+  }
   return { state: 'available' };
 }
 

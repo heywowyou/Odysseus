@@ -55,7 +55,12 @@ describe('HubQuickCheckSection not-scored notice (issue #199)', () => {
 
   async function renderSection(
     response: ProspectDetailResponse,
-    extraProps: { onRunQuickCheck?: () => void; isQuickCheckBusy?: boolean } = {},
+    extraProps: {
+      onRunQuickCheck?: () => void;
+      isQuickCheckBusy?: boolean;
+      action?: { state: 'available' } | { state: 'blocked'; reason: string };
+      blockedReason?: string | null;
+    } = {},
   ): Promise<void> {
     await act(async () => {
       root!.render(
@@ -119,7 +124,12 @@ describe('HubQuickCheckSection quick-check action (issue #201)', () => {
 
   async function renderSection(
     response: ProspectDetailResponse,
-    extraProps: { onRunQuickCheck?: () => void; isQuickCheckBusy?: boolean } = {},
+    extraProps: {
+      onRunQuickCheck?: () => void;
+      isQuickCheckBusy?: boolean;
+      action?: { state: 'available' } | { state: 'blocked'; reason: string };
+      blockedReason?: string | null;
+    } = {},
   ): Promise<void> {
     await act(async () => {
       root!.render(
@@ -150,6 +160,20 @@ describe('HubQuickCheckSection quick-check action (issue #201)', () => {
       button!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
     expect(calls).toBe(1);
+  });
+
+  it('renders the server refusal proactively and does not run a blocked action', async () => {
+    let calls = 0;
+    await renderSection(detail({}), {
+      onRunQuickCheck: () => (calls += 1),
+      action: { state: 'blocked', reason: 'not-qualified' },
+      blockedReason: 'Qualification requise.',
+    });
+    const button = container!.querySelector('button');
+    expect(button?.disabled).toBe(true);
+    expect(container!.textContent).toContain('Qualification requise.');
+    button?.click();
+    expect(calls).toBe(0);
   });
 
   it('withholds the action when no handler is wired, describing the manual passes instead', async () => {

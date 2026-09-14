@@ -421,6 +421,7 @@ export function registerProspectRoutes(
       fullAuditPlan: fullAuditPlan ?? undefined,
       quickCheckPlan,
       hasAudit: auditStatus.audit !== null,
+      hasAnyAudit: outreachAudits.length > 0,
     });
     sendJson(res, 200, {
       ...detail,

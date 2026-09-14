@@ -78,6 +78,7 @@ const BASE_INPUT: ComputeHubActionsInput = {
   fullAuditPlan: { canStart: true },
   quickCheckPlan: { canStart: true },
   hasAudit: false,
+  hasAnyAudit: false,
 };
 
 describe('computeHubActions (issue #219)', () => {
@@ -145,6 +146,18 @@ describe('computeHubActions (issue #219)', () => {
     });
     expect(computeHubActions({ ...BASE_INPUT, hasAudit: true }).createFirstEmail).toEqual({
       state: 'available',
+    });
+  });
+
+  it('distinguishes a linked general audit from authorized outreach evidence', () => {
+    const actions = computeHubActions({ ...BASE_INPUT, hasAnyAudit: true });
+    expect(actions.publishPreview).toEqual({
+      state: 'blocked',
+      reason: 'not-an-outreach-audit',
+    });
+    expect(actions.createFirstEmail).toEqual({
+      state: 'blocked',
+      reason: 'not-an-outreach-audit',
     });
   });
 

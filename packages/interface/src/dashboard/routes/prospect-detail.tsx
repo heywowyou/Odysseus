@@ -10,7 +10,7 @@ import { Card } from '../components/ui/card';
 import { EmptyState } from '../components/ui/empty-state';
 import { Skeleton } from '../components/ui/skeleton';
 import { useI18n } from '../i18n/provider';
-import type { DashboardStrings } from '../i18n/types';
+import type { DashboardLanguage, DashboardStrings } from '../i18n/types';
 import { formatDateTime } from '../lib/format';
 import { vocabularyLabel } from '../lib/vocabulary';
 import { ApiError, fetchJsonValidated, postEmpty, sendJson } from '../lib/api';
@@ -42,6 +42,7 @@ import type {
   OutreachDraftActionResponse,
   ProspectActiveJob,
   ProspectDetailResponse,
+  ProspectHubActionability,
   ProspectReviewRequest,
   ProspectReviewResponse,
 } from './prospects-model';
@@ -59,6 +60,18 @@ import { HubEmailsSection } from './hub-emails-section';
 import { HubOutcomeSection } from './hub-outcome-section';
 
 type ReviewAction = 'accept' | 'reject';
+
+function actionBlockedReason(
+  action: ProspectHubActionability | undefined,
+  strings: DashboardStrings,
+  language: DashboardLanguage,
+): string | null {
+  if (action?.state !== 'blocked') return null;
+  return (
+    strings.hub.scanRefusals[action.reason as keyof typeof strings.hub.scanRefusals] ??
+    outreachRefusalSentence(action.reason, language)
+  );
+}
 
 /** The hub's Rapport client tab (plan 045 stage 3.2): shown whenever a full
  *  audit exists, rendering the same panel the audit page itself renders
@@ -568,8 +581,9 @@ export function ProspectDetailPage(): JSX.Element {
   };
 
   const runPublish = async (): Promise<void> => {
-    const auditId = data?.outreachAudit?.auditId;
-    if (auditId === undefined || isOutreachBusy) return;
+    const auditId =
+      data === undefined ? null : selectedAuditId(auditChoices(data), searchParams.get('audit'));
+    if (auditId === null || isOutreachBusy) return;
     setIsOutreachBusy(true);
     try {
       const result = await postEmpty<OutreachPreviewPublishResponse>(
@@ -798,6 +812,8 @@ export function ProspectDetailPage(): JSX.Element {
               void runRefresh();
             }}
             isRefreshBusy={refreshBusy}
+            action={data.actions?.runQuickCheck}
+            blockedReason={actionBlockedReason(data.actions?.runQuickCheck, strings, language)}
           />
         );
       case 'audit':
@@ -827,6 +843,8 @@ export function ProspectDetailPage(): JSX.Element {
             isBusy={isOutreachBusy}
             onPublish={runPublish}
             onRevoke={runRevoke}
+            action={data.actions?.publishPreview}
+            blockedReason={actionBlockedReason(data.actions?.publishPreview, strings, language)}
           />
         );
       case 'emails':
@@ -841,6 +859,13 @@ export function ProspectDetailPage(): JSX.Element {
               void runFollowUp();
             }}
             refresh={refresh}
+            firstEmailAction={data.actions?.createFirstEmail}
+            firstEmailBlockedReason={actionBlockedReason(
+              data.actions?.createFirstEmail,
+              strings,
+              language,
+            )}
+            followUpAction={data.actions?.createFollowUp}
           />
         );
       case 'outcome':
@@ -1060,6 +1085,7 @@ export function ProspectDetailPage(): JSX.Element {
         mode={waveDialog ?? 'add'}
         candidateId={candidateId ?? null}
         hotelName={data.name}
+        initialWave={waveDialog === 'remove' ? data.selectionVerdict?.wave : null}
         onSubmit={(waveCandidateId, wave) => submitWave(waveDialog ?? 'add', waveCandidateId, wave)}
       />
     </article>

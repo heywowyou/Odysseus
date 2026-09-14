@@ -70,6 +70,8 @@ async function renderSection(props: {
   hasTouch1Draft?: boolean;
   onPublish?: () => Promise<void>;
   onRevoke?: () => Promise<void>;
+  action?: { state: 'available' } | { state: 'blocked'; reason: string };
+  blockedReason?: string | null;
 }): Promise<{ root: Root }> {
   const container = document.createElement('div');
   document.body.appendChild(container);
@@ -87,6 +89,8 @@ async function renderSection(props: {
           isBusy: false,
           onPublish: props.onPublish ?? (async () => {}),
           onRevoke: props.onRevoke ?? (async () => {}),
+          action: props.action,
+          blockedReason: props.blockedReason,
         }),
       ),
     );
@@ -140,6 +144,26 @@ describe('HubPreviewSection action wiring', () => {
     await act(async () => {
       root.unmount();
     });
+  });
+
+  it('greys publish and explains the server refusal before a click', async () => {
+    const onPublish = vi.fn(async () => {});
+    const { root } = await renderSection({
+      preview: null,
+      onPublish,
+      action: { state: 'blocked', reason: 'not-an-outreach-audit' },
+      blockedReason: 'Cet audit n’est pas lié à un prospect de la campagne.',
+    });
+    const button = [...document.querySelectorAll('button')].find((candidate) =>
+      candidate.textContent?.includes('Publier l’aperçu'),
+    );
+    expect(button?.disabled).toBe(true);
+    expect(document.body.textContent).toContain(
+      'Cet audit n’est pas lié à un prospect de la campagne.',
+    );
+    button?.click();
+    expect(onPublish).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
   });
 
   it('reissues over a live preview directly when no touch-1 draft holds the link', async () => {
