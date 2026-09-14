@@ -162,6 +162,13 @@ out is a defect, not minimalism:
   basis notes in a restrained hairline band. The circles are strokes attached
   to the badge itself, never independently positioned decoration. A fixed
   upper gap and flexible quiet spacer keep the composition stable in the PDF.
+- **Outreach preview**: its cover calls the paid report's canonical cover
+  renderer, with the preview's recipient and scan date bound into the same
+  slots. Its scorecard calls the same grade renderer and applies the metadata
+  sheet's 112px circular badge, concentric strokes, and disclaimer geometry.
+  The four severity totals retain the full report's dot, label, count, and
+  plain-language meaning anatomy. This is a source-level reuse contract, not a
+  screenshot match.
 - The sparse-pages rule below covers numbered sections only. Front matter
   is governed by this composition rule instead.
 

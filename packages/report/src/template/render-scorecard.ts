@@ -1,16 +1,6 @@
 import { escapeHtml } from './html-utils.js';
-import { SEVERITY } from './design-tokens.js';
+import { GRADE } from './design-tokens.js';
 import type { Grade } from './grade.js';
-
-/** Reuses the existing severity color ramp (design-tokens.ts's `SEVERITY`,
- *  trade-off 84: never invent a token value instead of transcribing one).
- *  Four grades, four tones - one each, no sharing needed. */
-const GRADE_COLOR: Record<Grade, { color: string; bg: string }> = {
-  A: SEVERITY.minor,
-  B: SEVERITY.moderate,
-  C: SEVERITY.serious,
-  D: SEVERITY.critical,
-};
 
 /** Renders a deterministic letter grade with its mandatory disclaimer
  *  sentence. There is deliberately no code path here that can render the
@@ -21,7 +11,7 @@ const GRADE_COLOR: Record<Grade, { color: string; bg: string }> = {
  *  report cover/metadata sheet and the outreach preview call to render one,
  *  so the two can never drift into showing a bare grade. */
 export function renderScorecardGrade(grade: Grade, disclaimer: string, label?: string): string {
-  const { color, bg } = GRADE_COLOR[grade];
+  const { color, bg } = GRADE[grade];
   const labelHtml =
     label === undefined
       ? ''
@@ -29,7 +19,7 @@ export function renderScorecardGrade(grade: Grade, disclaimer: string, label?: s
   return `
     <div class="scorecard-grade">
       ${labelHtml}
-      <span class="scorecard-grade-badge" style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:6px;font-size:20px;font-weight:600;color:${color};background:${bg}">${escapeHtml(grade)}</span>
+      <span class="scorecard-grade-badge" data-grade="${escapeHtml(grade)}" style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:6px;font-size:20px;font-weight:600;color:${color};background:${bg}">${escapeHtml(grade)}</span>
       <div class="scorecard-grade-disclaimer" style="font-size:10px;opacity:0.55;margin-top:4px;max-width:32ch">${escapeHtml(disclaimer)}</div>
     </div>
   `;

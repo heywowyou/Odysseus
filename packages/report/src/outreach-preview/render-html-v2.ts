@@ -23,6 +23,9 @@ import {
 import { escapeHtml, fillTemplate, formatDate } from '../template/html-utils.js';
 import { computeSeverityGrade } from '../template/grade.js';
 import { renderScorecardGrade } from '../template/render-scorecard.js';
+import { renderDocumentCoverLayout } from '../template/sections/cover.js';
+import { resolveDecisionQuestion } from '../template/generic-question.js';
+import { getStrings, type ReportStrings } from '../template/strings/i18n.js';
 import { OUTREACH_PREVIEW_STYLES_V2 } from './styles-v2.js';
 import { outreachPreviewStringsV2, type OutreachPreviewStringsV2 } from './strings-v2.js';
 import { assertOutreachPreviewHtml } from './preview-lint.js';
@@ -42,27 +45,41 @@ function renderCoverage(input: OutreachPreviewSummary, s: OutreachPreviewStrings
   ].join('');
 }
 
-function renderTotals(input: OutreachPreviewSummary, s: OutreachPreviewStringsV2): string {
+function renderTotals(
+  input: OutreachPreviewSummary,
+  s: OutreachPreviewStringsV2,
+  reportStrings: ReportStrings,
+): string {
+  const severityMeanings = {
+    critical: reportStrings.statistics.legendCriticalText,
+    serious: reportStrings.statistics.legendSeriousText,
+    moderate: reportStrings.statistics.legendModerateText,
+    minor: reportStrings.statistics.legendMinorText,
+  } as const;
   const severities = (['critical', 'serious', 'moderate', 'minor'] as const).map(
     (severity) =>
-      `<div class="tile severity-${severity}"><div class="value">${input.severityTotals[severity]}</div><div class="key">${escapeHtml(s.severity[severity])}</div></div>`,
+      `<div class="tile severity-tile severity-${severity}"><div class="severity-heading"><span class="severity-dot"></span><span class="key">${escapeHtml(s.severity[severity])}</span></div><div class="value">${input.severityTotals[severity]}</div><div class="severity-meaning">${escapeHtml(severityMeanings[severity])}</div></div>`,
   );
   // Plan 041 Part A: own-counts grade only, never the benchmark percentile
   // (trade-off 42/16 forbid a comparison to other sites in this document -
   // the operator's own pick, made once this tension surfaced mid-design).
   const { grade } = computeSeverityGrade(input.severityTotals);
   return [
-    '<section>',
+    '<section class="results-section">',
     `<h2>${escapeHtml(s.totalsHeading)}</h2>`,
     '<div class="tiles">',
     `<div class="tile"><div class="value">${input.distinctFindingCount}</div><div class="key">${escapeHtml(s.distinctFindings)}</div></div>`,
     `<div class="tile"><div class="value">${input.affectedPageCount}</div><div class="key">${escapeHtml(s.affectedPages)}</div></div>`,
     '</div>',
+    `<div class="preview-scorecard">${renderScorecardGrade(grade, s.scorecardDisclaimer, s.scorecardLabel)}</div>`,
     `<h2 class="mt">${escapeHtml(s.severityHeading)}</h2>`,
     `<div class="tiles four">${severities.join('')}</div>`,
-    renderScorecardGrade(grade, s.scorecardDisclaimer, s.scorecardLabel),
     '</section>',
   ].join('');
+}
+
+function renderIntroduction(s: OutreachPreviewStringsV2): string {
+  return `<div class="preview-introduction"><p>${escapeHtml(s.lede)}</p></div>`;
 }
 
 function renderCards(input: OutreachPreviewSummary, s: OutreachPreviewStringsV2): string {
@@ -142,6 +159,12 @@ function renderPrivacy(input: OutreachPreviewSummary, s: OutreachPreviewStringsV
 export function generateOutreachPreviewHtmlV2(input: OutreachPreviewSummary): string {
   const validated = outreachPreviewSummarySchema.parse(input);
   const s = outreachPreviewStringsV2(validated.language);
+  const reportStrings = getStrings(validated.language);
+  const observedDate = formatDate(new Date(validated.observedAt), validated.language);
+  const reportType =
+    validated.coverage.performanceMeasuredPageCount > 0
+      ? reportStrings.cover.reportType
+      : reportStrings.cover.reportTypeNoPerformance;
 
   const html = [
     '<!doctype html>',
@@ -156,21 +179,21 @@ export function generateOutreachPreviewHtmlV2(input: OutreachPreviewSummary): st
     '</head>',
     '<body>',
     '<main>',
-    // The cover wraps the document's own opening elements (label, business
-    // name, lede, scan date) in the order they already had - a class hook
-    // for the cover treatment, no content and no order change (plan 039).
+    // This is the paid report's actual cover renderer, with preview data bound
+    // into its canonical slots. The longer preview introduction moves below
+    // the cover so the cover keeps the report's deliberate two-act composition.
     '<header class="cover">',
-    `<p class="label">${escapeHtml(s.heroLabel)}</p>`,
-    `<h1>${escapeHtml(validated.recipient.businessName)}</h1>`,
-    `<p class="lede">${escapeHtml(s.lede)}</p>`,
-    `<p class="meta">${escapeHtml(
-      fillTemplate(s.observedOn, {
-        date: formatDate(new Date(validated.observedAt), validated.language),
-      }),
-    )}</p>`,
+    renderDocumentCoverLayout({
+      kicker: reportStrings.cover.kicker,
+      headline: validated.recipient.businessName,
+      question: resolveDecisionQuestion(validated.language),
+      reportType,
+      signature: `${observedDate} · Odysseus`,
+    }),
     '</header>',
+    renderIntroduction(s),
     renderCoverage(validated, s),
-    renderTotals(validated, s),
+    renderTotals(validated, s, reportStrings),
     renderCards(validated, s),
     renderFacts(validated),
     renderOffer(validated, s),

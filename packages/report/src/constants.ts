@@ -4,7 +4,7 @@
  * as FINDINGS_SCHEMA_VERSION: a template change between two monitoring
  * reports must never read as the client's site having changed.
  */
-export const REPORT_TEMPLATE_VERSION = 2;
+export const REPORT_TEMPLATE_VERSION = 3;
 
 /** A report-level display filter on top of, never a reimplementation of,
  *  the canonical scan-time selectPageDirsToKeep pruning decision (which

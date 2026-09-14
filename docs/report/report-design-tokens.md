@@ -103,6 +103,10 @@ over the new ground. The old Nocturne values (`#161826` ground, violet
 | `--mute` | `#909cab` | site `--ink-muted` |
 | `--accent` | `#38bdf8` (sky-400) | site `--accent` (dark mode); links, eyebrow labels, rank numbers |
 | `--accent-tint` | `rgb(56 189 248 / 0.16)` | site `--accent-soft` |
+| grade A | `#4cc98a` on `#152a29` | established Odysseus success green on its 0.12 dark tint; distinct from the dossier signal token |
+| grade B | `#7dd3fc` on `#1b2b37` | site/report sky-300 on the accessibility tint |
+| grade C | `#d6c96e` on `#262a26` | report moderate yellow pair |
+| grade D | `#d97b82` on `#262028` | report critical red pair |
 | `--crit` | `#d97b82` | plan 023 severity hue, re-verified (5.38:1 on its new tint) |
 | `--crit-tint` | `#262028` | 0.12 alpha of `--crit` over `--bg` |
 | `--maj` | `#dba36c` | plan 023 severity hue, re-verified (6.87:1) |

@@ -48,6 +48,14 @@ export const OUTREACH_PREVIEW_STYLES_V2 = `
   --accent: #38bdf8;
   --accent-strong: #7dd3fc;
   --accent-soft: rgb(56 189 248 / 0.16);
+  /* Aliases used by the paid report's shared cover and scorecard markup. */
+  --color-bg: var(--bg);
+  --color-text: var(--text);
+  --color-accent: var(--accent);
+  --color-accent-200: #cdeafd;
+  --color-accent-300: var(--accent-strong);
+  --color-neutral-300: var(--muted);
+  --color-neutral-400: var(--faint);
   --divider: rgba(233, 238, 245, 0.13);
   --mark-finding: #dc2626;
   /* Cover glow: the report cover's sky-navy recipe on this ground
@@ -105,7 +113,6 @@ html {
 
 body {
   margin: 0;
-  padding: var(--space-12) var(--space-6);
   /* The cover glow is painted on the document canvas at its top, so it
      bleeds edge to edge without any overflow-prone negative margins; it
      has faded to the ground long before the first section card begins. */
@@ -123,7 +130,7 @@ body {
   line-height: 1.65;
 }
 
-main { max-width: 720px; margin: 0 auto; }
+main { width: 100%; }
 
 h1, h2, h3 { font-weight: 600; }
 
@@ -141,64 +148,83 @@ a:focus-visible {
   outline-offset: 3px;
 }
 
-/* The cover (operator request, plan 039 review): the document's own opening
-   elements - label, business name, lede, scan date, in that order - presented
-   as a full-height opening in the report cover's grammar: the sky-navy glow on
-   the near-navy ground, centered type, and the symmetric-fade accent rule
-   (drawn below) before the date line. Print fills exactly the first A4 page,
-   so the operator PDF opens on a real cover page. */
+/* The paid report's accepted 2026-09-13 cover, using the exact shared markup
+   from template/sections/cover.ts: a composed hero act, a report-type closing
+   act at roughly two-thirds height, then quiet ground. */
 .cover {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  min-height: 100svh;
+  padding: 0 var(--space-6);
+}
+.cover .cover-hero {
+  flex: 1.38 !important;
+  gap: 0 !important;
+}
+.cover .cover-kicker {
+  padding: 7px 13px;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  font-weight: 500;
+}
+.cover .cover-title {
+  max-width: 11ch !important;
+  margin-top: var(--space-8) !important;
+  font-size: 62px !important;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+}
+.cover .cover-question {
+  max-width: 40ch !important;
+  margin-top: var(--space-8);
+  color: var(--muted);
+  font-size: 16px !important;
+  line-height: 1.52;
+  opacity: 1 !important;
+}
+.cover .cover-closing { width: 100%; }
+.cover .cover-rule { display: none; }
+.cover .cover-meta { gap: var(--space-4) !important; }
+.cover .cover-type {
+  display: flex;
+  width: 100%;
   align-items: center;
-  text-align: center;
-  min-height: calc(100svh - var(--space-12));
+  justify-content: center;
+  gap: var(--space-4);
+  color: var(--muted);
+  opacity: 1 !important;
 }
-
-/* The hero label's string is locked content, but its treatment is not the
-   banned kicker pattern (impeccable kicker-above-heading): sentence case,
-   body size, muted - a quiet intro line, not a tracked uppercase label. */
-.label {
-  color: var(--faint);
-  font-size: 0.9rem;
-  margin: 0 0 var(--space-2);
-}
-
-.cover h1 {
-  font-size: 2.375rem;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  margin: var(--space-3) 0;
-}
-
-.cover .lede {
-  max-width: 34rem;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-/* The report cover's centered symmetric-fade accent rule, drawn before the
-   scan-date line. Decoration only: no content element is added. */
-.cover .meta::before {
-  content: '';
-  display: block;
-  width: 160px;
+.cover .cover-type::before,
+.cover .cover-type::after {
+  width: 76px;
   height: 1px;
-  margin: var(--space-4) auto var(--space-6);
-  background: linear-gradient(to right, transparent, var(--accent), transparent);
+  flex: none;
+  background: var(--divider);
+  content: '';
 }
+.cover .cover-signature { color: var(--faint); opacity: 1 !important; }
+.cover .cover-spacer { flex: 0.94 !important; }
 
-.lede { color: var(--muted); }
-
-.meta { color: var(--muted); font-size: 0.85rem; }
+.preview-introduction,
+main > section {
+  width: min(720px, calc(100% - (2 * var(--space-6))));
+  margin-right: auto;
+  margin-left: auto;
+}
+.preview-introduction {
+  max-width: 65ch;
+  padding: var(--space-12) 0;
+  color: var(--muted);
+}
 
 section:not(.disclosure) {
   background: var(--surface);
   border: 1px solid var(--divider);
   border-radius: var(--radius);
   padding: var(--space-6);
-  margin: 0 0 var(--space-6);
+  margin-bottom: var(--space-6);
 }
 
 /* The severity heading carries the renderer's own spacing hook; without
@@ -212,6 +238,7 @@ section:not(.disclosure) {
   gap: var(--space-3);
 }
 .tiles.four { grid-template-columns: repeat(4, 1fr); }
+.results-section > .tiles:not(.four) { grid-template-columns: repeat(2, 1fr); }
 .tile {
   background: var(--bg);
   border: 1px solid var(--divider);
@@ -225,22 +252,67 @@ section:not(.disclosure) {
 }
 .tile .key { color: var(--muted); font-size: 0.8rem; margin-top: var(--space-1); }
 
+/* The full report's centered metadata-grade signal, applied directly to the
+   preview's shared scorecard markup. The round letter and both concentric
+   strokes stay attached to the badge through currentColor. */
+.preview-scorecard {
+  width: 100%;
+  margin: 26mm 0 var(--space-12);
+  text-align: center;
+}
+.preview-scorecard .scorecard-grade {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.preview-scorecard .scorecard-grade-label {
+  margin-bottom: var(--space-8) !important;
+  color: var(--muted);
+  opacity: 1 !important;
+}
+.preview-scorecard .scorecard-grade-badge {
+  width: 112px !important;
+  height: 112px !important;
+  border-radius: 50% !important;
+  font-size: 64px !important;
+  line-height: 1 !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, currentcolor 48%, transparent),
+    0 0 0 10px var(--bg),
+    0 0 0 11px color-mix(in srgb, currentcolor 28%, transparent);
+}
+.preview-scorecard .scorecard-grade-disclaimer {
+  max-width: 50ch !important;
+  margin: var(--space-8) auto 0 !important;
+  color: var(--faint);
+  font-size: 11px !important;
+  line-height: 1.5;
+  opacity: 1 !important;
+}
+
 /* WCAG 1.4.10: at reflow widths the report's 3-up and 4-up tile rows
    collapse to two columns, so a long tile label can never force the page
    sideways at 320px. */
 @media (max-width: 480px) {
   .tiles, .tiles.four { grid-template-columns: repeat(2, 1fr); }
+  .cover .cover-title { font-size: clamp(40px, 15vw, 52px) !important; }
+  .cover .cover-type { gap: var(--space-3); font-size: 11px !important; }
+  .cover .cover-type::before,
+  .cover .cover-type::after { width: 32px; }
 }
 
-/* Severity tiles: the pair carries the meaning, the label carries the word. */
-.tile.severity-critical { background: var(--sev-critical-bg); }
-.tile.severity-critical .value { color: var(--sev-critical); }
-.tile.severity-serious { background: var(--sev-serious-bg); }
-.tile.severity-serious .value { color: var(--sev-serious); }
-.tile.severity-moderate { background: var(--sev-moderate-bg); }
-.tile.severity-moderate .value { color: var(--sev-moderate); }
-.tile.severity-minor { background: var(--sev-minor-bg); }
-.tile.severity-minor .value { color: var(--sev-minor); }
+/* The full report's severity-tile anatomy: coloured dot and label, plain
+   count, and the exact reader-facing explanation beneath it. */
+.severity-tile { border: 0; }
+.severity-heading { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.severity-heading .key { margin: 0; color: var(--severity-color); font-weight: 500; }
+.severity-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--severity-color); }
+.severity-tile .value { color: var(--text); font-size: 24px; font-weight: 400; }
+.severity-meaning { margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.4; }
+.tile.severity-critical { --severity-color: var(--sev-critical); background: var(--sev-critical-bg); }
+.tile.severity-serious { --severity-color: var(--sev-serious); background: var(--sev-serious-bg); }
+.tile.severity-moderate { --severity-color: var(--sev-moderate); background: var(--sev-moderate-bg); }
+.tile.severity-minor { --severity-color: var(--sev-minor); background: var(--sev-minor-bg); }
 
 /* The three proof cards wear the site's dossier motif (DESIGN.md, "The
    Dossier Rule Set"): a raised card whose finding-red mark sits above the
@@ -292,7 +364,7 @@ section:not(.disclosure) {
    chrome, but an accent rule and stronger heading give the final page a
    deliberate editorial opening instead of leaving it visually adrift. */
 .disclosure {
-  margin: 0 0 var(--space-6);
+  margin-bottom: var(--space-6);
   padding-top: 10mm;
   border-top: 1px solid var(--accent);
 }
@@ -344,10 +416,12 @@ section:not(.disclosure) {
    edge; every block in this document is far shorter than a page. */
 @media print {
   body { padding: 0; }
-  main { max-width: none; padding: 0 14mm; }
+  main { padding: 0 18mm; }
   main > * { break-inside: avoid; }
   main > section { padding: 8mm 0 0; }
-  .cover { min-height: 296mm; break-after: page; }
+  .cover { min-height: 296mm; padding: 0; break-after: page; }
+  .preview-introduction,
+  main > section { width: 100%; }
   .cta { letter-spacing: 0.02em; text-transform: none; }
 }
 

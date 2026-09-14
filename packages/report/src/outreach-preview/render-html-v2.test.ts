@@ -3,6 +3,8 @@ import { outreachPreviewSummarySchema, type OutreachPreviewSummary } from '@odys
 import { generateOutreachPreviewHtmlV2 } from './render-html-v2.js';
 import { lintOutreachPreviewHtml } from './preview-lint.js';
 import { formatFullAuditPrice } from '@odysseus/core';
+import { OUTREACH_PREVIEW_STYLES_V2 } from './styles-v2.js';
+import { resolveDecisionQuestion } from '../template/generic-question.js';
 
 function summary(overrides: Partial<OutreachPreviewSummary> = {}): OutreachPreviewSummary {
   return {
@@ -79,6 +81,17 @@ describe('generateOutreachPreviewHtmlV2', () => {
     expect(html).not.toContain('échantillon représentatif');
   });
 
+  it('uses the paid report cover renderer and keeps the longer introduction below it', () => {
+    const html = generateOutreachPreviewHtmlV2(summary());
+    const coverEnd = html.indexOf('</header>');
+
+    expect(html).toContain('class="cover-hero"');
+    expect(html).toContain('class="cover-title"');
+    expect(html).toContain('class="cover-type"');
+    expect(html).toContain(resolveDecisionQuestion('fr'));
+    expect(html.indexOf('Nous avons réalisé une analyse préalable')).toBeGreaterThan(coverEnd);
+  });
+
   it('renders four severity tiles with the canonical French gravity labels', () => {
     const html = generateOutreachPreviewHtmlV2(summary());
     expect(html).toContain('severity-critical');
@@ -92,6 +105,8 @@ describe('generateOutreachPreviewHtmlV2', () => {
     expect(html).not.toContain('>Grave<');
     expect(html).not.toContain('>Modérée<');
     expect(html).not.toContain('>Mineure<');
+    expect(html).toContain('bloque des visiteurs ou l&#39;indexation');
+    expect(html).toContain('dégrade fortement l&#39;usage ou la conformité');
   });
 
   it('renders exactly three proof cards with category, severity, and page counts', () => {
@@ -141,8 +156,18 @@ describe('generateOutreachPreviewHtmlV2', () => {
     const html = generateOutreachPreviewHtmlV2(summary());
     expect(html).toContain('Niveau global des constats');
     expect(html).toContain('>D</span>');
+    expect(html).toContain('data-grade="D"');
     expect(html).toContain(
       'Cette note synthétise la gravité des constats mesurés ; elle ne constitue pas une évaluation juridique.',
+    );
+  });
+
+  it('ports the full report circular scorecard geometry into the preview stylesheet', () => {
+    expect(OUTREACH_PREVIEW_STYLES_V2).toContain('.preview-scorecard .scorecard-grade-badge');
+    expect(OUTREACH_PREVIEW_STYLES_V2).toContain('width: 112px !important');
+    expect(OUTREACH_PREVIEW_STYLES_V2).toContain('border-radius: 50% !important');
+    expect(OUTREACH_PREVIEW_STYLES_V2).toContain(
+      '0 0 0 11px color-mix(in srgb, currentcolor 28%, transparent)',
     );
   });
 

@@ -1,4 +1,4 @@
-import type { FindingCategory, Severity } from '@odysseus/core';
+import type { FindingCategory, Grade, Severity } from '@odysseus/core';
 
 /**
  * Canonical badge/tile colour maps, taken verbatim from
@@ -26,6 +26,20 @@ export const SEVERITY: Record<Severity, { color: string; bg: string }> = {
   serious: { color: '#dba36c', bg: '#272526' },
   moderate: { color: '#d6c96e', bg: '#262a26' },
   minor: { color: '#b2b6ca', bg: '#222731' },
+};
+
+/** Semantic letter-grade palette shared by the paid report and the outreach
+ * preview. The hues are existing Odysseus tokens rather than a second visual
+ * system: the established Odysseus success green, sky blue, the severity
+ * yellow, and the severity red. The A green deliberately does not reuse the
+ * dossier's signal token, whose meaning remains reserved for action marks.
+ * Backgrounds use the same restrained dark tints as the report's other
+ * measured signals. */
+export const GRADE: Record<Grade, { color: string; bg: string }> = {
+  A: { color: '#4cc98a', bg: '#152a29' },
+  B: { color: 'var(--color-accent-300)', bg: '#1b2b37' },
+  C: SEVERITY.moderate,
+  D: SEVERITY.critical,
 };
 
 /** accessibility.color stays var(--color-accent-300): under plan 039 that
