@@ -41,6 +41,7 @@ import {
   type HotelContactAddressOrigin,
   type HotelPrescanEvidence,
   type OutreachEvidenceSlot,
+  type OutreachPreviewSeverity,
   type OutreachThreadState,
 } from '@odysseus/core';
 import {
@@ -193,9 +194,12 @@ export interface PublishedPreviewRef {
   previewId: string;
   url: string;
   publicExpiresAt: Date;
-  /** The categories of the preview's three proof cards, recomputed from the
-   *  same audit by the same deterministic selection: the only problems the
-   *  email may name. */
+  /** Safe aggregate facts rendered from the same full outreach audit as the
+   *  published preview. Touch 1 reuses them verbatim rather than falling back
+   *  to prescan evidence or inventing personalised-looking copy. */
+  distinctFindingCount: number;
+  affectedPageCount: number;
+  severityTotals: Record<OutreachPreviewSeverity, number>;
   proofCardCategories: OutreachCategory[];
 }
 
@@ -384,7 +388,12 @@ export async function createOutreachDraft(
     language: options.language,
     hotelName: formatHotelName(row.businessName),
     variantSeed: row.candidateId,
-    categories: published.proofCardCategories,
+    scanSummary: {
+      distinctFindingCount: published.distinctFindingCount,
+      affectedPageCount: published.affectedPageCount,
+      severityTotals: published.severityTotals,
+      proofCardCategories: published.proofCardCategories,
+    },
     previewUrl: published.url,
     dataOrigins: dataOriginsFor(row),
     privacyUrl: links.privacy,
