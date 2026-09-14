@@ -269,7 +269,7 @@ describe('createOutreachDraft, happy path', () => {
   it('records the template version, not a model prompt', async () => {
     const h = harness();
     await createOutreachDraft(h.options);
-    expect(h.recordedDrafts[0]?.outreachPromptVersion).toBe('template-v1');
+    expect(h.recordedDrafts[0]?.outreachPromptVersion).toBe('template-v2');
   });
 
   it('moves the thread from open to e1-drafted once the draft is recorded', async () => {
