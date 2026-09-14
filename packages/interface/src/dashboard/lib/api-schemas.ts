@@ -38,16 +38,39 @@ export const severityRollupSchema = z.object({
 
 export const scanJobProgressSchema = z.object({
   crawl: z
-    .object({ visited: z.number(), target: z.number(), etaMs: z.number().optional() })
+    .object({
+      visited: z.number(),
+      target: z.number(),
+      etaMs: z.number().optional(),
+      // Issue #223: the instant etaMs was computed (serialized as an ISO
+      // string over JSON), so the dashboard can age a countdown down
+      // between polls instead of showing a frozen snapshot.
+      etaCalculatedAt: z.string().optional(),
+    })
     .optional(),
   scan: z
-    .object({ scanned: z.number(), target: z.number(), etaMs: z.number().optional() })
+    .object({
+      scanned: z.number(),
+      target: z.number(),
+      etaMs: z.number().optional(),
+      etaCalculatedAt: z.string().optional(),
+    })
     .optional(),
   contentScan: z
-    .object({ completed: z.number(), target: z.number(), etaMs: z.number().optional() })
+    .object({
+      completed: z.number(),
+      target: z.number(),
+      etaMs: z.number().optional(),
+      etaCalculatedAt: z.string().optional(),
+    })
     .optional(),
   lighthouse: z
-    .object({ completed: z.number(), target: z.number(), etaMs: z.number().optional() })
+    .object({
+      completed: z.number(),
+      target: z.number(),
+      etaMs: z.number().optional(),
+      etaCalculatedAt: z.string().optional(),
+    })
     .optional(),
   continuationGuard: z
     .object({ omittedUrlCount: z.number(), omittedFamilyCount: z.number() })

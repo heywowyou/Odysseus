@@ -66,12 +66,42 @@ import { createPageWorkGuard, type PageWorkGuard } from './page-work-guard.js';
 export type ScanProgressEvent =
   | CrawlProgressEvent
   | { type: 'scan-start'; totalPages: number }
-  | { type: 'scan-page'; scanned: number; totalPages: number; url: string }
-  | { type: 'content-scan-start'; totalPages: number }
-  | { type: 'content-scan-page'; completed: number; totalPages: number; url: string }
+  | { type: 'scan-page'; scanned: number; totalPages: number; url: string; durationMs: number }
+  | {
+      type: 'content-scan-start';
+      totalPages: number;
+      /** Issue #223: pages already complete on disk from a resumed run, so
+       *  the reporter can seed its progress counter without folding them
+       *  into this run's fresh timing window (they took no wall time in
+       *  this process). */
+      alreadyCompleted: number;
+      /** Parallel content lanes this run uses, so the ETA can turn a
+       *  per-page duration into a per-wave one instead of assuming a
+       *  serial stream. */
+      concurrency: number;
+    }
+  | {
+      type: 'content-scan-page';
+      completed: number;
+      totalPages: number;
+      url: string;
+      durationMs: number;
+    }
   | { type: 'select-performance' }
-  | { type: 'lighthouse-start'; totalPages: number }
-  | { type: 'lighthouse-page'; completed: number; totalPages: number; url: string }
+  | {
+      type: 'lighthouse-start';
+      totalPages: number;
+      /** Same resume accounting as content-scan-start's alreadyCompleted,
+       *  for pages whose scan.json already recorded a Lighthouse outcome. */
+      alreadyCompleted: number;
+    }
+  | {
+      type: 'lighthouse-page';
+      completed: number;
+      totalPages: number;
+      url: string;
+      durationMs: number;
+    }
   | { type: 'analysis-complete' };
 
 /** Plan 035 (issue #124): how the crawl phase was sourced. A resumed run
@@ -333,7 +363,7 @@ async function runScanLane(
   bookingEngineUrl: string | undefined,
   skipLighthouse: boolean,
   runGuard: PageWorkGuard | undefined,
-  onPageDone: (pageResult: PageScanResult) => void,
+  onPageDone: (pageResult: PageScanResult, durationMs: number) => void,
 ): Promise<void> {
   let nextDelayMs = startDelayMs;
 
@@ -349,6 +379,11 @@ async function runScanLane(
     // work.
     const pageGuard = createPageWorkGuard(runGuard);
 
+    // Issue #223: timed around the actual page work only (not the
+    // pre-page pacing sleep above, and not job-progress persistence),
+    // since that is what the ETA's per-page duration estimator needs to
+    // reflect the real cost of a page.
+    const workStartedAtMs = Date.now();
     const pageResult = await withPageWatchdog(
       url,
       scanPage(browser, debugPort, url, {
@@ -373,7 +408,7 @@ async function runScanLane(
       FULL_SCAN_PAGE_WATCHDOG_MS,
       pageGuard,
     );
-    onPageDone(pageResult as PageScanResult);
+    onPageDone(pageResult as PageScanResult, Date.now() - workStartedAtMs);
   }
 }
 
@@ -416,7 +451,7 @@ async function runRenderedAnalysisLane(
   delayMs: number,
   startDelayMs: number,
   context: StagedScanContext,
-  onPageDone: (url: string, result: RenderedAnalysisResult) => void,
+  onPageDone: (url: string, result: RenderedAnalysisResult, durationMs: number) => void,
 ): Promise<void> {
   let nextDelayMs = startDelayMs;
 
@@ -430,6 +465,9 @@ async function runRenderedAnalysisLane(
     // as runScanLane above.
     const pageGuard = createPageWorkGuard(context.runGuard);
 
+    // Issue #223: same "actual page work only" timing window as
+    // runScanLane above.
+    const workStartedAtMs = Date.now();
     const result = await withPageWatchdog(
       url,
       runRenderedAnalysis(browser, url, {
@@ -461,7 +499,7 @@ async function runRenderedAnalysisLane(
       RENDERED_ANALYSIS_WATCHDOG_MS,
       pageGuard,
     );
-    onPageDone(url, result as RenderedAnalysisResult);
+    onPageDone(url, result as RenderedAnalysisResult, Date.now() - workStartedAtMs);
   }
 }
 
@@ -579,7 +617,12 @@ async function runStagedFullAuditScan(
   // Starts at the reused count so content-scan-page progress stays
   // truthful against the full inventory size.
   let contentCompleted = completedByUrl.size;
-  onProgress?.({ type: 'content-scan-start', totalPages: pagesToScan.length });
+  onProgress?.({
+    type: 'content-scan-start',
+    totalPages: pagesToScan.length,
+    alreadyCompleted: completedByUrl.size,
+    concurrency,
+  });
 
   const lanes: string[][] = Array.from({ length: concurrency }, () => []);
   pendingPages.forEach((page, index) => {
@@ -596,7 +639,7 @@ async function runStagedFullAuditScan(
           delayMs,
           laneIndex * delayMs,
           context,
-          (url, result) => {
+          (url, result, durationMs) => {
             const { checkOutcomes, renderedCostProfile, ...content } = result;
             if (context.writePagesAsScanned) {
               // Issue #64: the content-scan phase must wait for every
@@ -635,6 +678,7 @@ async function runStagedFullAuditScan(
               completed: contentCompleted,
               totalPages: pagesToScan.length,
               url,
+              durationMs,
             });
           },
         ),
@@ -650,13 +694,33 @@ async function runStagedFullAuditScan(
           .filter((decision) => decision.plannedPasses.includes('lighthouse'))
           .map((decision) => decision.url),
   );
-  onProgress?.({ type: 'lighthouse-start', totalPages: selectedUrls.size });
-
-  const pages: PageScanResult[] = [];
-  const analysisCoverageByUrl = new Map<string, PageAnalysisCoverage>();
   const decisionByUrl = new Map(
     finalizedPlan.decisions.map((decision) => [decision.url, decision]),
   );
+  // Issue #223: a page whose scan.json already recorded a Lighthouse
+  // outcome (see needsLighthouseRun below) does no new work this run, so
+  // it is counted up front rather than left to silently under-report
+  // progress and over-report the ETA's remaining work.
+  let lighthouseAlreadyCompleted = 0;
+  for (const url of selectedUrls) {
+    const decision = decisionByUrl.get(url);
+    const reusedScanJson = completedByUrl.get(url);
+    if (
+      decision !== undefined &&
+      reusedScanJson !== undefined &&
+      !needsLighthouseRun(decision, reusedScanJson)
+    ) {
+      lighthouseAlreadyCompleted += 1;
+    }
+  }
+  onProgress?.({
+    type: 'lighthouse-start',
+    totalPages: selectedUrls.size,
+    alreadyCompleted: lighthouseAlreadyCompleted,
+  });
+
+  const pages: PageScanResult[] = [];
+  const analysisCoverageByUrl = new Map<string, PageAnalysisCoverage>();
   // Plan 035: counts only newly performed work on top of the reused base,
   // so a resumed run's scan-page progress stays truthful.
   let scanned = completedByUrl.size;
@@ -664,6 +728,10 @@ async function runStagedFullAuditScan(
     url: string,
     lighthouseResult: LighthouseAnalysisResult | undefined,
     isNewWork: boolean,
+    /** Issue #223: the underlying work's own duration (content-lane or
+     *  lighthouse timing, whichever produced this call), reused here
+     *  rather than re-measured around this bookkeeping-only step. */
+    durationMs: number,
   ): void => {
     const rendered = renderedResults.get(url);
     if (rendered === undefined) return;
@@ -720,7 +788,7 @@ async function runStagedFullAuditScan(
     );
     if (kept !== undefined) pages.push(kept);
     scanned += 1;
-    onProgress?.({ type: 'scan-page', scanned, totalPages: pagesToScan.length, url });
+    onProgress?.({ type: 'scan-page', scanned, totalPages: pagesToScan.length, url, durationMs });
   };
 
   // Pages not selected for Lighthouse are already fully done once the
@@ -728,9 +796,12 @@ async function runStagedFullAuditScan(
   // interleaving) keeps this stage a clean two-phase run. Step 8 revisits
   // progress ordering for the staged pipeline; this is a correct, if not
   // yet interleaved, signal. On a resume, a reused page reports no new
-  // work here (isNewWork false): only its coverage is derived.
+  // work here (isNewWork false): only its coverage is derived. No extra
+  // work happens between the content lane finishing and this bookkeeping
+  // step, so durationMs is 0 here - the page's real cost was already
+  // reported on its content-scan-page event.
   for (const url of renderedResults.keys()) {
-    if (!selectedUrls.has(url)) emit(url, undefined, !completedByUrl.has(url));
+    if (!selectedUrls.has(url)) emit(url, undefined, !completedByUrl.has(url), 0);
   }
 
   // Lighthouse calls are already serialized process-wide (see
@@ -738,7 +809,10 @@ async function runStagedFullAuditScan(
   // them through a second lane structure would add complexity without
   // adding real parallelism - a plain sequential loop gets the same
   // throughput while keeping the pre-call politeness delay simple.
-  let lighthouseCompleted = 0;
+  // Seeded from the reused count above so completed/target agree from the
+  // first lighthouse-page event onward, instead of only reaching target
+  // once every reused page has separately been walked again.
+  let lighthouseCompleted = lighthouseAlreadyCompleted;
   for (const url of selectedUrls) {
     const decision = decisionByUrl.get(url);
     const reusedScanJson = completedByUrl.get(url);
@@ -761,17 +835,21 @@ async function runStagedFullAuditScan(
             : {}),
         },
         false,
+        0,
       );
       continue;
     }
+    const workStartedAtMs = Date.now();
     const lighthouseResult = await runLighthouseAnalysis(url, debugPort, { delayMs });
-    emit(url, lighthouseResult, true);
+    const durationMs = Date.now() - workStartedAtMs;
+    emit(url, lighthouseResult, true, durationMs);
     lighthouseCompleted += 1;
     onProgress?.({
       type: 'lighthouse-page',
       completed: lighthouseCompleted,
       totalPages: selectedUrls.size,
       url,
+      durationMs,
     });
   }
 
@@ -1146,7 +1224,7 @@ export async function scanSite(
 
   const pages: PageScanResult[] = [];
   let scannedCount = 0;
-  const onPageDone = (pageResult: PageScanResult): void => {
+  const onPageDone = (pageResult: PageScanResult, durationMs: number): void => {
     const kept = persistPageIfConfigured(
       pageResult,
       options.screenshotDir,
@@ -1160,6 +1238,7 @@ export async function scanSite(
       scanned: scannedCount,
       totalPages: pagesToScan.length,
       url: pageResult.url,
+      durationMs,
     });
   };
 

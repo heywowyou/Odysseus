@@ -161,6 +161,16 @@ describe('scanSite resumes a full audit from the crawl checkpoint (plan 035)', (
     expect(events.filter((event) => event.type === 'scan-page')).toEqual([]);
     expect(events.filter((event) => event.type === 'lighthouse-page')).toEqual([]);
 
+    // Issue #223: the reused pages still show up as already-complete on
+    // the start events, so a resumed dashboard shows accurate progress
+    // from the first tick instead of restarting the counter at 0 and
+    // timing an ETA off pages that took no wall time in this process.
+    const contentScanStart = events.find((event) => event.type === 'content-scan-start');
+    expect(contentScanStart).toMatchObject({ alreadyCompleted: visitedUrls.length });
+    const lighthouseStart = events.find((event) => event.type === 'lighthouse-start');
+    expect(lighthouseStart).toMatchObject({ alreadyCompleted: expect.any(Number) });
+    expect((lighthouseStart as { alreadyCompleted: number }).alreadyCompleted).toBeGreaterThan(0);
+
     // Plan 002 (issue #132): a post-persist crash re-runs this exact path,
     // so the resumed run must serve the crawl phase entirely from the
     // checkpoint and never crawl again. (The run is not literally request

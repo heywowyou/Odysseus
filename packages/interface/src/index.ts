@@ -69,8 +69,8 @@ export {
   getOutreachTouch3AfterDays,
   getOutreachReplyWindowDays,
 } from './config.js';
-export { computeCrawlEtaMs, computeScanEtaMs } from './queue/eta.js';
-export type { CrawlEtaInput, ScanEtaInput } from './queue/eta.js';
+export { computeCrawlEtaMs, computeStageEtaMs, createDurationEstimator } from './queue/eta.js';
+export type { CrawlEtaInput, StageEtaInput, DurationEstimator } from './queue/eta.js';
 export { JobQueue } from './queue/job-queue.js';
 export type { JobQueueOptions, PipelineContext, PipelineFn } from './queue/job-queue.js';
 export { runFullAuditJob } from './queue/pipeline/run-full-audit-job.js';

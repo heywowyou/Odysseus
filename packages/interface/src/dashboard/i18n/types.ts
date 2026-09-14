@@ -209,6 +209,10 @@ export interface DashboardStrings {
     lighthouseProgressMessage: string;
     etaLabel: string;
     etaRoughSuffix: string;
+    /** Issue #223: shown in place of the countdown once the client-aged
+     *  estimate reaches 0 while the phase is still running - the phase
+     *  isn't stuck, the estimate is just older than the current poll. */
+    etaFinishingLabel: string;
     /** Operator copy per pipeline phase, keyed by the vocabulary derived
      *  from the checked-in order fixture (lib/phase-order.ts), so a phase
      *  added there fails to compile until both languages cover it. */

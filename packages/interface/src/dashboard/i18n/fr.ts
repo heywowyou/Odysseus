@@ -176,6 +176,7 @@ export const fr: DashboardStrings = {
       '{content} pages de contenu vérifiées. Pages échantillons mesurées pour les performances : {completed}/{target}.',
     etaLabel: 'Temps restant estimé',
     etaRoughSuffix: '(estimation approximative)',
+    etaFinishingLabel: 'Presque terminé',
     phaseLabels: {
       queued: 'En attente',
       crawl: 'Exploration du site',
