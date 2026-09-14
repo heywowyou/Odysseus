@@ -346,6 +346,7 @@ export const fr: DashboardStrings = {
       description: 'Consulter la synthèse construite à partir de cet audit.',
       viewScorecard: 'Afficher l’aperçu',
       hideScorecard: 'Masquer l’aperçu',
+      regenerateScorecard: 'Régénérer l’aperçu',
       downloadPdf: 'Télécharger le PDF',
       unavailableWithReason: 'Aperçu indisponible ({refusal}).',
       refusalReasons: {

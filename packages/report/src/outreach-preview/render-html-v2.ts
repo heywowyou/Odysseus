@@ -63,7 +63,8 @@ function renderTotals(
   // Plan 041 Part A: own-counts grade only, never the benchmark percentile
   // (trade-off 42/16 forbid a comparison to other sites in this document -
   // the operator's own pick, made once this tension surfaced mid-design).
-  const { grade } = computeSeverityGrade(input.severityTotals);
+  const { grade: automaticGrade } = computeSeverityGrade(input.severityTotals);
+  const grade = input.gradeOverride ?? automaticGrade;
   return [
     '<section class="results-section">',
     `<h2>${escapeHtml(s.totalsHeading)}</h2>`,

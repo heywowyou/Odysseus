@@ -58,6 +58,13 @@ function summary(overrides: Partial<OutreachPreviewSummary> = {}): OutreachPrevi
 }
 
 describe('generateOutreachPreviewHtmlV2', () => {
+  it('renders the operator-reviewed grade when one is present', () => {
+    const html = generateOutreachPreviewHtmlV2(summary({ gradeOverride: 'D' }));
+
+    expect(html).toContain('grade-d');
+    expect(html).toContain('>D<');
+  });
+
   it('renders the product-specified section order, in French', () => {
     const html = generateOutreachPreviewHtmlV2(summary());
     const order = [

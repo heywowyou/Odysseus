@@ -146,6 +146,29 @@ describe('AuditPreviewNote', () => {
     });
   });
 
+  it('regenerates an open scorecard from the latest confirmed audit data', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ rendered: true, html: '<main>Note A</main>' }))
+      .mockResolvedValueOnce(jsonResponse({ rendered: true, html: '<main>Note D</main>' }));
+    const { root } = await renderNote({ auditId: 'audit-1', candidateId: null });
+
+    await clickButton('Afficher l’aperçu');
+    expect(
+      (await waitFor(() => document.querySelector('iframe') ?? undefined)).getAttribute('srcdoc'),
+    ).toBe('<main>Note A</main>');
+
+    await clickButton('Régénérer l’aperçu');
+    expect(
+      await waitFor(() => {
+        const value = document.querySelector('iframe')?.getAttribute('srcdoc');
+        return value === '<main>Note D</main>' ? value : undefined;
+      }),
+    ).toBe('<main>Note D</main>');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    await act(async () => root.unmount());
+  });
+
   it('explains a render refusal with its sentence instead of an iframe', async () => {
     // The scorecard fetch is the note's first fetch, so a one-shot override
     // is enough.

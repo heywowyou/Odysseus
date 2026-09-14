@@ -486,6 +486,7 @@ export interface DashboardStrings {
       description: string;
       viewScorecard: string;
       hideScorecard: string;
+      regenerateScorecard: string;
       downloadPdf: string;
       unavailableWithReason: string;
       /** One sentence per stable refusal code the audit page can surface:

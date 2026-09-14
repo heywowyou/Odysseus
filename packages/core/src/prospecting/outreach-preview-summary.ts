@@ -47,6 +47,7 @@ export interface BuildOutreachPreviewSummaryInput {
   /** Rendering language of the document this summary feeds. */
   language: 'fr' | 'en';
   facts: OutreachPreviewSummary['facts'];
+  gradeOverride?: OutreachPreviewSummary['gradeOverride'];
   proofCardCopy: OutreachProofCardCopyLookup;
 }
 
@@ -169,6 +170,7 @@ export function buildOutreachPreviewSummary(
     distinctFindingCount: input.findings.length,
     affectedPageCount: affectedPages.size,
     severityTotals,
+    ...(input.gradeOverride !== undefined ? { gradeOverride: input.gradeOverride } : {}),
     proofCards: [proofCards[0]!, proofCards[1]!, proofCards[2]!],
     facts: input.facts,
   };

@@ -141,6 +141,9 @@ export function buildOutreachPreviewSummaryV2(options: {
     links: previewLinks(publicBaseUrl),
     language,
     facts,
+    ...(row.audit.gradeOverride !== undefined
+      ? { gradeOverride: row.audit.gradeOverride.grade }
+      : {}),
     proofCardCopy: (ruleId) => OUTREACH_PROOF_CARD_COPY[ruleId],
   });
   if (built.state === 'refused') return { refused: built.reason };

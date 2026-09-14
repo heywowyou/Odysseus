@@ -344,6 +344,7 @@ export const en: DashboardStrings = {
       description: 'Inspect the scorecard built from this audit.',
       viewScorecard: 'View the preview',
       hideScorecard: 'Hide the preview',
+      regenerateScorecard: 'Regenerate preview',
       downloadPdf: 'Download PDF',
       unavailableWithReason: 'Preview unavailable ({refusal}).',
       refusalReasons: {

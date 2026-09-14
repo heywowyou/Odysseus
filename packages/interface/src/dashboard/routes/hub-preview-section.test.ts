@@ -264,6 +264,29 @@ describe('HubPreviewSection action wiring', () => {
       root.unmount();
     });
   });
+
+  it('regenerates an open scorecard from the latest confirmed audit data', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ rendered: true, html: '<main>Note A</main>' }))
+      .mockResolvedValueOnce(jsonResponse({ rendered: true, html: '<main>Note D</main>' }));
+    const { root } = await renderSection({ preview: null });
+
+    await clickButton('Afficher l’aperçu');
+    await waitFor(() =>
+      document.querySelector('iframe')?.getAttribute('srcdoc') === '<main>Note A</main>'
+        ? true
+        : undefined,
+    );
+    await clickButton('Régénérer l’aperçu');
+    await waitFor(() =>
+      document.querySelector('iframe')?.getAttribute('srcdoc') === '<main>Note D</main>'
+        ? true
+        : undefined,
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    await act(async () => root.unmount());
+  });
 });
 
 function findPublishButton(): HTMLButtonElement | undefined {

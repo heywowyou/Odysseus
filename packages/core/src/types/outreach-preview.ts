@@ -43,6 +43,7 @@
  */
 
 import { z } from 'zod';
+import type { Grade } from '../grade.js';
 import { REGIME_TABLE, getRegime } from '../compliance/regimes.js';
 import { formatFullAuditPrice } from '../offer/pricing.js';
 import {
@@ -388,6 +389,9 @@ export interface OutreachPreviewSummary {
   distinctFindingCount: number;
   affectedPageCount: number;
   severityTotals: Record<OutreachPreviewSeverity, number>;
+  /** Operator-confirmed replacement for the severity-derived display grade.
+   *  The review reason remains private and never enters the public preview. */
+  gradeOverride?: Grade;
   proofCards: [OutreachProofCard, OutreachProofCard, OutreachProofCard];
   /** Built by `buildOutreachFactsBlock`, same shape and same re-validation
    *  as v1: deterministic paragraphs, or omitted when the sources do not
@@ -442,6 +446,7 @@ export const outreachPreviewSummarySchema: z.ZodType<OutreachPreviewSummary> = z
     distinctFindingCount: countSchema(MAX_TOTAL_PAGES),
     affectedPageCount: countSchema(MAX_TOTAL_PAGES),
     severityTotals: severityTotalsSchema,
+    gradeOverride: z.enum(['A', 'B', 'C', 'D']).optional(),
     proofCards: z.tuple([proofCardSchema, proofCardSchema, proofCardSchema]),
     facts: factsSchema,
   })

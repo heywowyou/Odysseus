@@ -118,6 +118,27 @@ describe('buildOutreachPreviewSummaryV2', () => {
     expect(result.summary.affectedPageCount).toBe(2);
     expect(result.summary.proofCards).toHaveLength(3);
   });
+
+  it('carries only the operator-reviewed grade into the public summary', () => {
+    const publicationRow = row();
+    publicationRow.audit.gradeOverride = {
+      grade: 'D',
+      reason: 'Private operator rationale',
+      reviewedAt: new Date('2026-09-12T09:00:00.000Z'),
+      reviewedBy: 'operator',
+    };
+
+    const result = buildOutreachPreviewSummaryV2({
+      row: publicationRow,
+      language: 'fr',
+      publicBaseUrl: BASE_URL,
+    });
+
+    expect('summary' in result).toBe(true);
+    if (!('summary' in result)) return;
+    expect(result.summary.gradeOverride).toBe('D');
+    expect(result.summary).not.toHaveProperty('reason');
+  });
 });
 
 describe('publishPreviewV2', () => {

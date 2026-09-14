@@ -134,6 +134,17 @@ function ReadOnlyPreviewCard(props: { auditId: string }): JSX.Element {
         >
           {isScorecardOpen ? copy.hideScorecard : copy.viewScorecard}
         </Button>
+        {isScorecardOpen && scorecardHtml !== undefined ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            isLoading={isLoadingScorecard}
+            disabled={isLoadingScorecard}
+            onClick={() => void loadScorecard()}
+          >
+            {copy.regenerateScorecard}
+          </Button>
+        ) : null}
         <Button
           variant="secondary"
           size="sm"

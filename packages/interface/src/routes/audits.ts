@@ -349,6 +349,7 @@ async function buildAuditOutreachPreviewHtml(
     links: previewLinks(publicBaseUrl),
     language: 'fr',
     facts: { state: 'omitted' },
+    ...(audit.gradeOverride !== undefined ? { gradeOverride: audit.gradeOverride.grade } : {}),
     proofCardCopy: (ruleId) => OUTREACH_PROOF_CARD_COPY[ruleId],
   });
   if (built.state === 'refused') {

@@ -244,6 +244,15 @@ describe('GET /api/audits/:auditId/outreach-preview', () => {
   });
 
   it('renders a non-candidate audit straight from the stored audit and findings', async () => {
+    vi.mocked(getAudit).mockResolvedValueOnce({
+      ...auditFixture(),
+      gradeOverride: {
+        grade: 'D',
+        reason: 'Private operator rationale',
+        reviewedAt: new Date('2026-09-12T09:00:00.000Z'),
+        reviewedBy: 'operator',
+      },
+    } as never);
     vi.mocked(getFindingsForAudit).mockResolvedValueOnce([
       {
         ruleId: 'rule-a',
@@ -272,6 +281,9 @@ describe('GET /api/audits/:auditId/outreach-preview', () => {
     });
     expect(getFindingsForAudit).toHaveBeenCalledWith(fakeConnection, 'audit-1');
     expect(resolveOutreachAuditForCandidate).not.toHaveBeenCalled();
+    expect(generateOutreachPreviewHtmlV2).toHaveBeenCalledWith(
+      expect.objectContaining({ gradeOverride: 'D' }),
+    );
   });
 });
 
