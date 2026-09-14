@@ -694,6 +694,10 @@ export const en: DashboardStrings = {
       capacityLabel: 'Capacity',
       technicalDetails: 'Technical details',
       hideTechnicalDetails: 'Hide technical details',
+      recheckQualificationAction: 'Check again',
+      recheckQualificationQualified: 'Rechecked: the hotel now qualifies.',
+      recheckQualificationStillRejected: 'Rechecked: the hotel is still rejected ({reason}).',
+      recheckQualificationFailed: 'Could not rerun the check',
     },
     quickCheck: {
       empty: 'No quick check yet for this hotel.',

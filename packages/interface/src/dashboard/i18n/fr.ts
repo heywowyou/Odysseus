@@ -704,6 +704,11 @@ export const fr: DashboardStrings = {
       capacityLabel: 'Capacité',
       technicalDetails: 'Détails techniques',
       hideTechnicalDetails: 'Masquer les détails techniques',
+      recheckQualificationAction: 'Vérifier à nouveau',
+      recheckQualificationQualified: 'Nouvelle vérification : hôtel désormais qualifié.',
+      recheckQualificationStillRejected:
+        "Nouvelle vérification effectuée : l'hôtel reste rejeté ({reason}).",
+      recheckQualificationFailed: 'Impossible de relancer la vérification',
     },
     quickCheck: {
       empty: 'Pas encore de contrôle rapide pour cet hôtel.',

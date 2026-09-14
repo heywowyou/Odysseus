@@ -743,9 +743,16 @@ export function registerProspectRoutes(
 
     const refreshed: ('qualification' | 'prescan' | 'score')[] = [];
     let qualification: Awaited<ReturnType<typeof qualifyHotelOnDemand>> | null = null;
+    // A current-but-rejected verdict also recheck-eligible, not only a
+    // missing/stale one: a rejection reason like http-error can be this
+    // exact prober hitting a WAF/bot defense rather than a genuinely broken
+    // site, and until now the operator had no way to ask for a second look
+    // short of the next whole-catalogue CLI pass.
     if (
       detail.qualificationFreshness.state === 'missing' ||
-      detail.qualificationFreshness.state === 'stale'
+      detail.qualificationFreshness.state === 'stale' ||
+      (detail.qualificationFreshness.state === 'current' &&
+        detail.qualificationOutcome === 'rejected')
     ) {
       qualification = await qualifyHotelOnDemand(connection, candidateId);
       if (qualification.outcome === 'qualified') refreshed.push('qualification');
@@ -754,15 +761,20 @@ export function registerProspectRoutes(
     let prescanJobId: string | null = null;
     if (detail.prescanFreshness.state === 'missing' || detail.prescanFreshness.state === 'stale') {
       const candidate = await getHotelCandidate(connection, candidateId);
-      const domain = candidate?.ownRegistrableDomain;
-      if (domain !== undefined && domain !== null && domain !== '') {
+      // Same gate the POST /prescan route consults (planQuickCheck): a
+      // candidate listCandidatesToPrescan would match zero of - not
+      // qualified, qualification stale, no own domain - must not mint a
+      // hotel-prescan job here either, or this route falls into the exact
+      // fake-success shape #201/#204 already were for the per-hotel button.
+      const plan = candidate === null ? null : await planQuickCheck(candidate);
+      if (plan?.canStart === true) {
         const job = await createJob(connection, {
           type: 'hotel-prescan',
           options: {
             resolutionVersion: CURRENT_RESOLUTION_VERSION,
             qualificationVersion: CURRENT_QUALIFICATION_VERSION,
             prescanVersion: CURRENT_PRESCAN_VERSION,
-            domain,
+            domain: plan.domain,
             maxPages: 1,
             concurrency: 1,
             rescan: true,

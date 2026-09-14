@@ -52,8 +52,24 @@ function DefinitionRow(props: { label: string; value: React.ReactNode }): JSX.El
 export function HubFicheSection(props: {
   detail: ProspectDetailResponse;
   onRequestReview: (action: ReviewAction) => void;
+  /** Plan-free follow-up to the user's "why can't I recheck a rejected
+   *  qualification" question: qualifyHotelOnDemand already re-probes the
+   *  live site and writes a fresh verdict for a missing/stale record
+   *  (issue #217's /refresh route); this offers the same live re-probe for
+   *  a current-but-rejected one, since a rejection reason like
+   *  http-error can be this exact prober hitting a WAF/bot defense rather
+   *  than a genuinely broken site, and the operator had no way to ask for
+   *  a second look. Optional for test convenience, the same reason
+   *  onRunQuickCheck is. */
+  onRecheckQualification?: () => void;
+  isRecheckQualificationBusy?: boolean;
 }): JSX.Element {
-  const { detail, onRequestReview } = props;
+  const {
+    detail,
+    onRequestReview,
+    onRecheckQualification,
+    isRecheckQualificationBusy = false,
+  } = props;
   const { strings, language } = useI18n();
   const [showTechnical, setShowTechnical] = useState(false);
   const decided = detail.reviewState === 'accepted' || detail.reviewState === 'rejected';
@@ -122,6 +138,18 @@ export function HubFicheSection(props: {
                     strings.common.vocabularyFallback,
                   )}
                 </Badge>
+                {detail.qualificationOutcome === 'rejected' &&
+                onRecheckQualification !== undefined ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    isLoading={isRecheckQualificationBusy}
+                    disabled={isRecheckQualificationBusy}
+                    onClick={onRecheckQualification}
+                  >
+                    {strings.hub.fiche.recheckQualificationAction}
+                  </Button>
+                ) : null}
               </span>
             }
           />

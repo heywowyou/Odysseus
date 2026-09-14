@@ -306,6 +306,7 @@ export function ProspectDetailPage(): JSX.Element {
   const [scanStarting, setScanStarting] = useState(false);
   const [prescanStarting, setPrescanStarting] = useState(false);
   const [refreshBusy, setRefreshBusy] = useState(false);
+  const [recheckQualificationBusy, setRecheckQualificationBusy] = useState(false);
   const [isOutreachBusy, setIsOutreachBusy] = useState(false);
   /** The one-time link of a publish made on this visit (a manual Aperçu
    *  publish, or the fresh preview a first-email call just made). Held only
@@ -503,6 +504,46 @@ export function ProspectDetailPage(): JSX.Element {
       });
     } finally {
       setRefreshBusy(false);
+    }
+  };
+
+  // Answers "why can't I recheck a rejected qualification" (the operator
+  // has no way today to ask for a second look at a current-but-rejected
+  // verdict, only a stale/missing one): the same /refresh route, now
+  // widened server-side to also re-probe that case, reported with its own
+  // outcome-specific toast instead of the generic "refresh queued" since
+  // the operator is waiting to hear qualified-or-still-rejected, not just
+  // that something ran.
+  const runRecheckQualification = async (): Promise<void> => {
+    if (candidateId === undefined || recheckQualificationBusy) return;
+    setRecheckQualificationBusy(true);
+    try {
+      const result = await postEmpty<{
+        qualification:
+          { outcome: 'qualified'; result: string } | { outcome: 'skipped' | 'error' } | null;
+      }>(`/api/prospects/${encodedId}/refresh`);
+      if (
+        result.qualification?.outcome === 'qualified' &&
+        result.qualification.result === 'qualified'
+      ) {
+        toast.success(strings.hub.fiche.recheckQualificationQualified);
+      } else if (result.qualification?.outcome === 'qualified') {
+        toast.info(
+          strings.hub.fiche.recheckQualificationStillRejected.replace(
+            '{reason}',
+            result.qualification.result,
+          ),
+        );
+      } else {
+        toast.error(strings.hub.fiche.recheckQualificationFailed);
+      }
+      refresh();
+    } catch (caught) {
+      toast.error(strings.hub.fiche.recheckQualificationFailed, {
+        description: caught instanceof Error ? caught.message : undefined,
+      });
+    } finally {
+      setRecheckQualificationBusy(false);
     }
   };
 
@@ -738,6 +779,10 @@ export function ProspectDetailPage(): JSX.Element {
             onRequestReview={(action) => {
               void handleReview(action);
             }}
+            onRecheckQualification={() => {
+              void runRecheckQualification();
+            }}
+            isRecheckQualificationBusy={recheckQualificationBusy}
           />
         );
       case 'quick-check':

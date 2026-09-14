@@ -46,6 +46,10 @@ vi.mock('../prospecting/hotel-scoring/score-on-demand.js', () => ({
   scoreHotelOnDemandForConnection: vi.fn(),
 }));
 
+vi.mock('../prospecting/hotel-qualification/qualify-on-demand.js', () => ({
+  qualifyHotelOnDemand: vi.fn(),
+}));
+
 import {
   addWaveRosterEntry,
   createJob,
@@ -75,6 +79,7 @@ import {
 import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
 import { revokePreviewsForDomain } from '../outreach/publish-preview.js';
 import { scoreHotelOnDemandForConnection } from '../prospecting/hotel-scoring/score-on-demand.js';
+import { qualifyHotelOnDemand } from '../prospecting/hotel-qualification/qualify-on-demand.js';
 import { CURRENT_SCORING_VERSION } from '@odysseus/core';
 import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-hotels.js';
 import { CURRENT_QUALIFICATION_VERSION } from '../prospecting/hotel-qualification/qualify-hotels.js';
@@ -250,6 +255,10 @@ beforeEach(() => {
     cohort: null,
   } as never);
   vi.mocked(scoreHotelOnDemandForConnection).mockResolvedValue({ outcome: 'scored' } as never);
+  vi.mocked(qualifyHotelOnDemand).mockResolvedValue({
+    outcome: 'qualified',
+    result: 'qualified',
+  } as never);
 });
 
 async function handle(url: string, options: FakeReqOptions = {}) {
@@ -1353,5 +1362,74 @@ describe('POST /api/prospects/:candidateId/prescan (issue #201)', () => {
       jobId: null,
     });
     expect(createJob).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/prospects/:candidateId/refresh (issue #217)', () => {
+  it('re-probes a current-but-rejected qualification, not only a missing or stale one', async () => {
+    vi.mocked(getOperatorProspect).mockResolvedValue({
+      ...makeDetail(),
+      qualificationOutcome: 'rejected',
+      qualificationFreshness: { state: 'current', version: 'v1', computedAt: new Date() },
+    } as never);
+    const res = await handle('/api/prospects/cand-1/refresh', { method: 'POST' });
+    expect(res.statusCode).toBe(200);
+    expect(qualifyHotelOnDemand).toHaveBeenCalledWith(fakeConnection, 'cand-1');
+    expect(JSON.parse(res.body ?? '{}').refreshed).toContain('qualification');
+  });
+
+  it('does not re-probe a qualification that is already current and qualified', async () => {
+    vi.mocked(getOperatorProspect).mockResolvedValue(makeDetail() as never);
+    const res = await handle('/api/prospects/cand-1/refresh', { method: 'POST' });
+    expect(res.statusCode).toBe(200);
+    expect(qualifyHotelOnDemand).not.toHaveBeenCalled();
+    expect(JSON.parse(res.body ?? '{}').refreshed).not.toContain('qualification');
+  });
+
+  // The same fake-success shape #201/#204 already were for the per-hotel
+  // prescan button (planQuickCheck, above): a candidate whose qualification
+  // listCandidatesToPrescan would match zero of must not get a hotel-prescan
+  // job minted here either, even though its prescan is missing.
+  it('does not mint a hotel-prescan job for a missing prescan when the candidate is not qualified', async () => {
+    vi.mocked(getOperatorProspect).mockResolvedValue({
+      ...makeDetail(),
+      prescanFreshness: { state: 'missing' },
+    } as never);
+    vi.mocked(getHotelCandidate).mockResolvedValue(
+      qualifiedCandidate({
+        qualification: { outcome: 'rejected', qualificationVersion: CURRENT_QUALIFICATION_VERSION },
+      }) as never,
+    );
+    const res = await handle('/api/prospects/cand-1/refresh', { method: 'POST' });
+    expect(res.statusCode).toBe(200);
+    expect(createJob).not.toHaveBeenCalled();
+    const body = JSON.parse(res.body ?? '{}');
+    expect(body.refreshed).not.toContain('prescan');
+    expect(body.prescanJobId).toBeNull();
+  });
+
+  it('mints a hotel-prescan job for a missing prescan when the candidate is qualified', async () => {
+    vi.mocked(getOperatorProspect).mockResolvedValue({
+      ...makeDetail(),
+      prescanFreshness: { state: 'missing' },
+    } as never);
+    vi.mocked(getHotelCandidate).mockResolvedValue(qualifiedCandidate() as never);
+    const res = await handle('/api/prospects/cand-1/refresh', { method: 'POST' });
+    expect(res.statusCode).toBe(200);
+    expect(createJob).toHaveBeenCalledWith(fakeConnection, {
+      type: 'hotel-prescan',
+      options: {
+        resolutionVersion: CURRENT_RESOLUTION_VERSION,
+        qualificationVersion: CURRENT_QUALIFICATION_VERSION,
+        prescanVersion: CURRENT_PRESCAN_VERSION,
+        domain: 'hotel-exemple.fr',
+        maxPages: 1,
+        concurrency: 1,
+        rescan: true,
+      },
+    });
+    const body = JSON.parse(res.body ?? '{}');
+    expect(body.refreshed).toContain('prescan');
+    expect(body.prescanJobId).toBe('job-new-1');
   });
 });

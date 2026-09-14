@@ -782,6 +782,11 @@ export interface DashboardStrings {
       /** Disclosure holding the internal identifiers and version codes. */
       technicalDetails: string;
       hideTechnicalDetails: string;
+      recheckQualificationAction: string;
+      recheckQualificationQualified: string;
+      /** {reason} interpolates the rejection reason code. */
+      recheckQualificationStillRejected: string;
+      recheckQualificationFailed: string;
     };
     quickCheck: {
       empty: string;
