@@ -270,6 +270,7 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       job.status === 'running' &&
       job.type !== 'full-audit' &&
       job.type !== 'prospecting' &&
+      job.type !== 'outreach-full-scan' &&
       job.type !== 'hotel-prescan'
     ) {
       sendError(

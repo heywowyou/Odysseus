@@ -182,7 +182,7 @@ describe('HubQuickCheckSection quick-check action (issue #201)', () => {
     expect(container!.textContent).toContain('lancez d’abord ces passages');
   });
 
-  it('withholds the action once a prescan already exists, since re-running it would not help', async () => {
+  it('offers the action again when a completed prescan produced no score', async () => {
     await renderSection(
       detail({
         prescan: {
@@ -195,6 +195,6 @@ describe('HubQuickCheckSection quick-check action (issue #201)', () => {
       }),
       { onRunQuickCheck: () => {} },
     );
-    expect(container!.textContent).not.toContain('Lancer une vérification rapide');
+    expect(container!.textContent).toContain('Lancer une vérification rapide');
   });
 });

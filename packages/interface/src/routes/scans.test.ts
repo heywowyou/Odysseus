@@ -290,6 +290,24 @@ describe('POST /api/scans/:jobId/cancel', () => {
     expect(cancelJob).toHaveBeenCalledWith(fakeConnection, 'job-3', 'cancelled by operator');
   });
 
+  it('registers the stop and cancels a running outreach-full-scan job', async () => {
+    vi.mocked(getJob).mockResolvedValue({
+      jobId: 'job-outreach',
+      type: 'outreach-full-scan',
+      status: 'running',
+    } as never);
+    vi.mocked(cancelJob).mockResolvedValue(true);
+
+    const router = new Router();
+    registerScanRoutes(router, fakeConnection, fakeQueue);
+    const res = fakeRes();
+    await router.handle(fakeReq(undefined, 'POST', '/api/scans/job-outreach/cancel'), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(fakeQueue.requestCancel).toHaveBeenCalledWith('job-outreach');
+    expect(cancelJob).toHaveBeenCalledWith(fakeConnection, 'job-outreach', 'cancelled by operator');
+  });
+
   it('answers 409 for an already terminal job', async () => {
     vi.mocked(getJob).mockResolvedValue({
       jobId: 'job-4',

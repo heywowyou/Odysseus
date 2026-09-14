@@ -51,9 +51,11 @@ const SCORE_SIDES = ['brokenness', 'ability'] as const;
 /** Issue #199: a selected hotel without a score states that plainly, in
  *  place of the score breakdown, instead of leaving the section silent
  *  (which reads as "no problems"). Issue #201: when there is no prescan at
- *  all yet, the notice also offers the one-click remedy instead of only
- *  describing it - the CLI two-step round-trip that left the gap stays
- *  available, but is no longer the only path. */
+ *  all yet, or the completed check did not yield a score, the notice also
+ *  offers the one-click remedy instead of only describing it. The backend
+ *  deliberately creates these operator-launched jobs with `rescan: true`,
+ *  so an existing current prescan is not a reason to hide the recovery
+ *  action. */
 function NotScoredNotice(props: {
   onRunQuickCheck: (() => void) | undefined;
   isQuickCheckBusy: boolean;
@@ -505,7 +507,7 @@ export function HubQuickCheckSection(props: {
 
         {score === null && detail.selectionVerdict?.inSelection === true ? (
           <NotScoredNotice
-            onRunQuickCheck={prescan === null ? onRunQuickCheck : undefined}
+            onRunQuickCheck={onRunQuickCheck}
             isQuickCheckBusy={isQuickCheckBusy}
             action={action}
             blockedReason={blockedReason}
