@@ -247,7 +247,11 @@ function PipelineStrip(props: {
                           ? 'font-medium text-accent-bright'
                           : step.state === 'blocked'
                             ? 'font-medium text-danger'
-                            : 'text-ink-muted'
+                            : step.state === 'stale'
+                              ? 'font-medium text-sev-serious'
+                              : step.state === 'refreshing'
+                                ? 'font-medium text-accent-bright'
+                                : 'text-ink-muted'
                     }
                   >
                     {strings.hub.stepStates[step.state]}
@@ -271,6 +275,7 @@ export function ProspectDetailPage(): JSX.Element {
 
   const [scanStarting, setScanStarting] = useState(false);
   const [prescanStarting, setPrescanStarting] = useState(false);
+  const [refreshBusy, setRefreshBusy] = useState(false);
   const [isOutreachBusy, setIsOutreachBusy] = useState(false);
   /** The one-time link of a publish made on this visit (a manual Aperçu
    *  publish, or the fresh preview a first-email call just made). Held only
@@ -354,6 +359,26 @@ export function ProspectDetailPage(): JSX.Element {
       });
     } finally {
       setPrescanStarting(false);
+    }
+  };
+
+  // Issue #217: the hub's single recovery action for a stale prospect - the
+  // server decides which of qualification/quick-check/score is behind and
+  // reruns only that (route: POST /api/prospects/:id/refresh), so this
+  // click never needs the operator to know which field went stale.
+  const runRefresh = async (): Promise<void> => {
+    if (candidateId === undefined || refreshBusy) return;
+    setRefreshBusy(true);
+    try {
+      await postEmpty<{ refreshed: string[] }>(`/api/prospects/${encodedId}/refresh`);
+      toast.success(strings.hub.quickCheck.refreshQueued);
+      refresh();
+    } catch (caught) {
+      toast.error(strings.hub.quickCheck.refreshFailed, {
+        description: caught instanceof Error ? caught.message : undefined,
+      });
+    } finally {
+      setRefreshBusy(false);
     }
   };
 
@@ -595,6 +620,10 @@ export function ProspectDetailPage(): JSX.Element {
               void runQuickCheck();
             }}
             isQuickCheckBusy={prescanStarting}
+            onRefresh={() => {
+              void runRefresh();
+            }}
+            isRefreshBusy={refreshBusy}
           />
         );
       case 'audit':

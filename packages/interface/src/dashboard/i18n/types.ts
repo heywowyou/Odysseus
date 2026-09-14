@@ -717,7 +717,7 @@ export interface DashboardStrings {
       'fiche' | 'quick-check' | 'audit' | 'report' | 'preview' | 'emails' | 'outcome',
       string
     >;
-    stepStates: Record<'done' | 'active' | 'todo' | 'blocked', string>;
+    stepStates: Record<'done' | 'active' | 'todo' | 'blocked' | 'stale' | 'refreshing', string>;
     /** The header's one primary action, chosen by state (review and the
      *  terminal refusal excepted: review reuses operator.accept, a refusal
      *  is a sentence, not a button). */
@@ -776,6 +776,13 @@ export interface DashboardStrings {
         blocking: string;
         requests: string;
       };
+      /** Issue #217: the stale-pipeline banner and its recovery action,
+       *  shown whenever qualification, quick check, or score names an
+       *  older pipeline version than the one currently running. */
+      staleNotice: string;
+      refreshAction: string;
+      refreshQueued: string;
+      refreshFailed: string;
     };
     audit: {
       empty: string;

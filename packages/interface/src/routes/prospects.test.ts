@@ -74,6 +74,12 @@ import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-ho
 import { CURRENT_QUALIFICATION_VERSION } from '../prospecting/hotel-qualification/qualify-hotels.js';
 import { CURRENT_RESOLUTION_VERSION } from '../prospecting/hotel-identity/resolve-hotels.js';
 import { Router } from '../router.js';
+
+const PROSPECT_VERSIONS = {
+  qualificationVersion: CURRENT_QUALIFICATION_VERSION,
+  prescanVersion: CURRENT_PRESCAN_VERSION,
+  scoringVersion: CURRENT_SCORING_VERSION,
+};
 import { registerProspectRoutes } from './prospects.js';
 
 type Method = 'GET' | 'POST';
@@ -250,14 +256,18 @@ describe('GET /api/prospects', () => {
       '/api/prospects?queue=join-review&identityStatus=resolved&reviewState=pending&qualificationOutcome=not-evaluated&limit=10&offset=20',
     );
     expect(res.statusCode).toBe(200);
-    expect(listOperatorProspects).toHaveBeenCalledWith(fakeConnection, {
-      queue: 'join-review',
-      identityStatus: 'resolved',
-      reviewState: 'pending',
-      qualificationOutcome: 'not-evaluated',
-      limit: 10,
-      offset: 20,
-    });
+    expect(listOperatorProspects).toHaveBeenCalledWith(
+      fakeConnection,
+      {
+        queue: 'join-review',
+        identityStatus: 'resolved',
+        reviewState: 'pending',
+        qualificationOutcome: 'not-evaluated',
+        limit: 10,
+        offset: 20,
+      },
+      PROSPECT_VERSIONS,
+    );
     expect(JSON.parse(res.body ?? '{}')).toEqual({ rows: [], total: 0, limit: 50, offset: 0 });
   });
 
@@ -269,9 +279,11 @@ describe('GET /api/prospects', () => {
   it('passes the search through trimmed', async () => {
     const res = await handle('/api/prospects?q=%20H%C3%B4tel%20Belv%C3%A9d%C3%A8re%20');
     expect(res.statusCode).toBe(200);
-    expect(listOperatorProspects).toHaveBeenCalledWith(fakeConnection, {
-      search: 'Hôtel Belvédère',
-    });
+    expect(listOperatorProspects).toHaveBeenCalledWith(
+      fakeConnection,
+      { search: 'Hôtel Belvédère' },
+      PROSPECT_VERSIONS,
+    );
   });
 
   it('treats a blank search as no search constraint', async () => {
@@ -314,7 +326,7 @@ describe('GET /api/prospects/:candidateId', () => {
   it('composes the detail and the qualification history into one payload', async () => {
     const res = await handle('/api/prospects/cand-1');
     expect(res.statusCode).toBe(200);
-    expect(getOperatorProspect).toHaveBeenCalledWith(fakeConnection, 'cand-1');
+    expect(getOperatorProspect).toHaveBeenCalledWith(fakeConnection, 'cand-1', PROSPECT_VERSIONS);
     expect(getProspectQualificationHistory).toHaveBeenCalledWith(fakeConnection, 'cand-1', {
       limit: 10,
       offset: 0,

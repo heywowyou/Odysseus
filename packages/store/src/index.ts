@@ -479,4 +479,5 @@ export type {
   OperatorViewPage,
   OperatorViewPageOptions,
   OperatorWebsiteCandidateView,
+  ProspectFreshnessVersions,
 } from './operator-views.js';

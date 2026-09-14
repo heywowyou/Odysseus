@@ -35,6 +35,8 @@ function makeRow(overrides: Partial<ProspectRow> = {}): ProspectRow {
     reviewState: 'pending',
     qualificationOutcome: 'qualified',
     qualificationReasons: [],
+    qualificationFreshness: { state: 'missing' },
+    scoreFreshness: { state: 'missing' },
     prescanStatus: 'complete',
     scoringVersion: 'v1',
     brokennessTotal: 4,

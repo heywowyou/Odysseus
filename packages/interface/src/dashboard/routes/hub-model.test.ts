@@ -48,6 +48,9 @@ function makeDetail(overrides: Partial<ProspectDetailResponse> = {}): ProspectDe
     sourceRefs: [],
     qualification: null,
     qualificationHistory: { rows: [], total: 0, limit: 10, offset: 0 },
+    qualificationFreshness: { state: 'missing' },
+    prescanFreshness: { state: 'missing' },
+    scoreFreshness: { state: 'missing' },
     prescan: null,
     score: null,
     evidence: null,
@@ -214,6 +217,42 @@ describe('pipelineSteps', () => {
       NOW,
     );
     expect(recorded[5]).toMatchObject({ key: 'outcome', state: 'done' });
+  });
+
+  it('reads the quick-check step from prescan freshness, not from prescan presence alone (issue #217)', () => {
+    const current = pipelineSteps(
+      makeDetail({
+        prescanFreshness: {
+          state: 'current',
+          version: 'v4',
+          computedAt: '2026-09-11T00:00:00.000Z',
+        },
+      }),
+      NOW,
+    );
+    expect(current[1]).toMatchObject({ key: 'quick-check', state: 'done' });
+
+    const stale = pipelineSteps(
+      makeDetail({
+        prescanFreshness: {
+          state: 'stale',
+          version: 'v3',
+          currentVersion: 'v4',
+          computedAt: '2026-09-10T00:00:00.000Z',
+        },
+      }),
+      NOW,
+    );
+    expect(stale[1]).toMatchObject({ key: 'quick-check', state: 'stale' });
+
+    const refreshing = pipelineSteps(
+      makeDetail({ prescanFreshness: { state: 'refreshing', jobId: 'job-1' } }),
+      NOW,
+    );
+    expect(refreshing[1]).toMatchObject({ key: 'quick-check', state: 'refreshing' });
+
+    const missing = pipelineSteps(makeDetail({ prescanFreshness: { state: 'missing' } }), NOW);
+    expect(missing[1]).toMatchObject({ key: 'quick-check', state: 'todo' });
   });
 });
 

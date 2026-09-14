@@ -16,7 +16,9 @@ import type {
   HotelQualificationReason,
   OutreachOutcome,
   OutreachThreadState,
+  PipelineFreshness,
 } from '@odysseus/core';
+import { computeFreshness, type ProspectFreshnessVersions } from './freshness.js';
 import { createHotelCandidateModel } from '../schemas/hotel-candidate.schema.js';
 import { createHotelQualificationModel } from '../schemas/hotel-qualification.schema.js';
 import { createHotelScoreModel } from '../schemas/score.schema.js';
@@ -114,8 +116,17 @@ export interface OperatorProspectRow {
   reviewState: HotelCandidateReviewState;
   qualificationOutcome: HotelQualificationOutcome | 'not-evaluated';
   qualificationReasons: HotelQualificationReason[];
+  /** Issue #217: whether the qualification pointer names the pipeline's
+   *  current qualification generation, agreeing with the same field on the
+   *  detail view. */
+  qualificationFreshness: PipelineFreshness;
   prescanStatus: HotelPrescanStatus | null;
   scoringVersion: string | null;
+  /** Same distinction as qualificationFreshness, for the latest score -
+   *  also stale when the prescan generation the score was derived from is,
+   *  so a sort or filter on the score never treats stale evidence as
+   *  current. */
+  scoreFreshness: PipelineFreshness;
   brokennessTotal: number | null;
   abilityTotal: number | null;
   worthy: boolean | null;
@@ -148,6 +159,20 @@ interface ProspectCandidateRowDoc {
   prescan?: { status: HotelPrescanStatus };
 }
 
+/** Shared by both freshness-aware list functions: turns one candidate row's
+ *  qualification pointer into a PipelineFreshness against the caller's
+ *  current version. */
+function qualificationFreshnessOf(
+  row: Pick<ProspectCandidateRowDoc, 'qualification'>,
+  versions: ProspectFreshnessVersions,
+): PipelineFreshness {
+  return computeFreshness({
+    version: row.qualification?.qualificationVersion,
+    computedAt: row.qualification?.evaluatedAt,
+    currentVersion: versions.qualificationVersion,
+  });
+}
+
 /** Explicit pick, never a whole document: the catalogue holds a street
  *  address and per-source raw website strings the list has no use for. */
 const PROSPECT_ROW_PROJECTION: Record<string, number> = {
@@ -163,6 +188,7 @@ const PROSPECT_ROW_PROJECTION: Record<string, number> = {
   'review.state': 1,
   'qualification.outcome': 1,
   'qualification.qualificationVersion': 1,
+  'qualification.evaluatedAt': 1,
   'prescan.status': 1,
 };
 
@@ -268,34 +294,31 @@ async function qualificationReasonsForCandidates(
  *  scores collection is insert-only, so "latest" is a group-after-sort, the
  *  same shape listLatestHotelScores uses, bounded to this page's ids rather
  *  than run over a whole scoring version. */
+interface LatestScoreRow {
+  scoringVersion: string;
+  prescanVersion: string;
+  computedAt: Date;
+  brokennessTotal: number;
+  abilityTotal: number;
+  worthy: boolean;
+}
+
 async function latestScoresForCandidates(
   connection: Connection,
   candidateIds: string[],
-): Promise<
-  Map<
-    string,
-    { scoringVersion: string; brokennessTotal: number; abilityTotal: number; worthy: boolean }
-  >
-> {
-  const byCandidate = new Map<
-    string,
-    { scoringVersion: string; brokennessTotal: number; abilityTotal: number; worthy: boolean }
-  >();
+): Promise<Map<string, LatestScoreRow>> {
+  const byCandidate = new Map<string, LatestScoreRow>();
   if (candidateIds.length === 0) return byCandidate;
 
-  const rows = await createHotelScoreModel(connection).aggregate<{
-    _id: string;
-    scoringVersion: string;
-    brokennessTotal: number;
-    abilityTotal: number;
-    worthy: boolean;
-  }>([
+  const rows = await createHotelScoreModel(connection).aggregate<{ _id: string } & LatestScoreRow>([
     { $match: { candidateId: { $in: candidateIds } } },
     { $sort: { candidateId: 1, computedAt: -1 } },
     {
       $group: {
         _id: '$candidateId',
         scoringVersion: { $first: '$scoringVersion' },
+        prescanVersion: { $first: '$prescanVersion' },
+        computedAt: { $first: '$computedAt' },
         brokennessTotal: { $first: '$brokenness.total' },
         abilityTotal: { $first: '$ability.total' },
         worthy: { $first: '$worthy' },
@@ -305,12 +328,36 @@ async function latestScoresForCandidates(
   for (const row of rows) {
     byCandidate.set(row._id, {
       scoringVersion: row.scoringVersion,
+      prescanVersion: row.prescanVersion,
+      computedAt: row.computedAt,
       brokennessTotal: row.brokennessTotal,
       abilityTotal: row.abilityTotal,
       worthy: row.worthy,
     });
   }
   return byCandidate;
+}
+
+/** Same rule as prospect-detail.ts's scoreFreshness: current only when both
+ *  the score's own scoringVersion and the prescan generation it was derived
+ *  from are current. */
+function scoreFreshnessOf(
+  score: LatestScoreRow | undefined,
+  versions: ProspectFreshnessVersions,
+): PipelineFreshness {
+  if (score !== undefined && score.prescanVersion !== versions.prescanVersion) {
+    return {
+      state: 'stale',
+      version: score.scoringVersion,
+      currentVersion: versions.scoringVersion,
+      computedAt: score.computedAt,
+    };
+  }
+  return computeFreshness({
+    version: score?.scoringVersion,
+    computedAt: score?.computedAt,
+    currentVersion: versions.scoringVersion,
+  });
 }
 
 async function latestContactStatesForCandidates(
@@ -359,6 +406,7 @@ async function threadStatesForCandidates(
 export async function listOperatorProspects(
   connection: Connection,
   options: ListOperatorProspectsOptions,
+  versions: ProspectFreshnessVersions,
 ): Promise<OperatorProspectListPage> {
   const CandidateModel = createHotelCandidateModel(connection);
   const { limit, offset, skip } = pageBounds(options);
@@ -431,8 +479,10 @@ export async function listOperatorProspects(
           : (reasonsByCandidate.get(
               `${row.qualification.qualificationVersion}:${row.candidateId}`,
             ) ?? []),
+      qualificationFreshness: qualificationFreshnessOf(row, versions),
       prescanStatus: row.prescan?.status ?? null,
       scoringVersion: score?.scoringVersion ?? null,
+      scoreFreshness: scoreFreshnessOf(score, versions),
       brokennessTotal: score?.brokennessTotal ?? null,
       abilityTotal: score?.abilityTotal ?? null,
       worthy: score?.worthy ?? null,

@@ -20,6 +20,9 @@ function detail(overrides: {
 }): ProspectDetailResponse {
   return {
     candidateId: 'cand-1',
+    qualificationFreshness: { state: 'missing' },
+    prescanFreshness: { state: 'missing' },
+    scoreFreshness: { state: 'missing' },
     prescan: overrides.prescan ?? null,
     score: null,
     evidence: null,

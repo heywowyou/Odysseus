@@ -43,6 +43,7 @@ export * from './reference-stats/recommendation-templates.js';
 export * from './reference-stats/effort-estimate.js';
 export * from './types/prospecting.js';
 export * from './types/business.js';
+export * from './types/pipeline-freshness.js';
 export * from './types/hotel-catalogue.js';
 export * from './types/hotel-candidate.js';
 export * from './types/hotel-contact.js';

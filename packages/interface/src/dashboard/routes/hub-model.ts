@@ -47,7 +47,11 @@ export const HUB_STEP_ANCHORS: Record<HubStepKey, string> = {
   outcome: 'hub-outcome',
 };
 
-export type HubStepState = 'done' | 'active' | 'todo' | 'blocked';
+/** 'stale' and 'refreshing' (issue #217) are freshness-driven states, only
+ *  ever produced for a step whose stage is versioned (today, quick-check):
+ *  a stage whose persisted artifact exists but names an old pipeline
+ *  version, or one whose candidate-scoped refresh is in flight. */
+export type HubStepState = 'done' | 'active' | 'todo' | 'blocked' | 'stale' | 'refreshing';
 
 export interface HubStep {
   key: HubStepKey;
@@ -118,7 +122,22 @@ export function pipelineSteps(detail: ProspectDetailResponse, now: number): HubS
     },
     {
       key: 'quick-check',
-      state: detail.prescan !== null ? 'done' : 'todo',
+      // Issue #217: never 'done' merely because a prescan record exists -
+      // an older prescan generation reads as 'stale', and a candidate-scoped
+      // refresh in flight reads as 'refreshing', both distinct from 'todo'
+      // (never run at all).
+      state: (() => {
+        switch (detail.prescanFreshness.state) {
+          case 'current':
+            return 'done';
+          case 'stale':
+            return 'stale';
+          case 'refreshing':
+            return 'refreshing';
+          case 'missing':
+            return 'todo';
+        }
+      })(),
       date: detail.prescan?.startedAt ?? null,
     },
     {

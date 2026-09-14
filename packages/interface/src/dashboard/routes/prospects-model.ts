@@ -20,6 +20,16 @@ import type {
  * strings.
  */
 
+/** Mirrors @odysseus/core's PipelineFreshness (issue #217), by value for the
+ *  same reason every other response type here is: whether a versioned
+ *  pipeline stage's persisted artifact names the pipeline's current
+ *  version, not merely whether one exists. */
+export type PipelineFreshness =
+  | { state: 'missing' }
+  | { state: 'current'; version: string; computedAt: string }
+  | { state: 'stale'; version: string; currentVersion: string; computedAt: string }
+  | { state: 'refreshing'; jobId: string };
+
 export type ProspectQueue =
   'all' | 'join-review' | 'parked' | 'rejected' | 'already-engaged' | 'groups';
 
@@ -180,8 +190,10 @@ export interface ProspectRow {
   reviewState: string;
   qualificationOutcome: string;
   qualificationReasons: string[];
+  qualificationFreshness: PipelineFreshness;
   prescanStatus: string | null;
   scoringVersion: string | null;
+  scoreFreshness: PipelineFreshness;
   brokennessTotal: number | null;
   abilityTotal: number | null;
   worthy: boolean | null;
@@ -335,6 +347,9 @@ export interface ProspectDetailResponse {
     decidedAt: string | null;
   };
   qualificationOutcome: string;
+  qualificationFreshness: PipelineFreshness;
+  prescanFreshness: PipelineFreshness;
+  scoreFreshness: PipelineFreshness;
   prescanStatus: string | null;
   websites: {
     raw: string;

@@ -17,9 +17,12 @@ import {
   listRepliesNeedingReview,
 } from '@odysseus/store';
 import type { Connection } from 'mongoose';
+import { CURRENT_SCORING_VERSION } from '@odysseus/core';
 import { findUnconfirmedIdentityFields } from '@odysseus/report';
 import type { Router } from '../router.js';
 import { sendJson } from '../http-utils.js';
+import { CURRENT_QUALIFICATION_VERSION } from '../prospecting/hotel-qualification/qualify-hotels.js';
+import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-hotels.js';
 import { auditTodoAction, isNeedsInputJob } from './todo-model.js';
 
 /** Every source this table draws from fetches a bounded page; the queues
@@ -113,7 +116,15 @@ export function registerTodoRoutes(router: Router, connection: Connection): void
     const [drafts, replies, hotels, audits] = await Promise.all([
       listOutreachReviewDrafts(connection, { limit: SOURCE_LIMIT, offset: 0 }),
       listRepliesNeedingReview(connection, { limit: SOURCE_LIMIT, offset: 0 }),
-      listOperatorProspects(connection, { queue: 'join-review', limit: SOURCE_LIMIT, offset: 0 }),
+      listOperatorProspects(
+        connection,
+        { queue: 'join-review', limit: SOURCE_LIMIT, offset: 0 },
+        {
+          qualificationVersion: CURRENT_QUALIFICATION_VERSION,
+          prescanVersion: CURRENT_PRESCAN_VERSION,
+          scoringVersion: CURRENT_SCORING_VERSION,
+        },
+      ),
       auditRows(connection),
     ]);
 

@@ -30,6 +30,7 @@ import {
   listRepliesNeedingReview,
 } from '../operator-views.js';
 import {
+  CURRENT_VERSIONS,
   expectSafeShape,
   PRESCAN_VERSION,
   RESOLUTION_VERSION,
@@ -72,12 +73,12 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
       await seedFullFunnel(connection!, otherId, SECOND_PREVIEW_TOKEN_HASH);
 
       const views: unknown[] = [
-        await getOperatorProspect(connection!, candidateId),
-        await listOperatorProspects(connection!, {
-          resolutionVersion: RESOLUTION_VERSION,
-          limit: 50,
-          offset: 0,
-        }),
+        await getOperatorProspect(connection!, candidateId, CURRENT_VERSIONS),
+        await listOperatorProspects(
+          connection!,
+          { resolutionVersion: RESOLUTION_VERSION, limit: 50, offset: 0 },
+          CURRENT_VERSIONS,
+        ),
         await getProspectSourceConflicts(connection!, candidateId),
         await getProspectQualificationHistory(connection!, candidateId, { limit: 10, offset: 0 }),
         await getProspectPrescanView(connection!, candidateId),
@@ -95,7 +96,7 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
       for (const view of views) expectSafeShape(view);
 
       // The composed detail still shows the states, only stripped of material.
-      const detail = await getOperatorProspect(connection!, candidateId);
+      const detail = await getOperatorProspect(connection!, candidateId, CURRENT_VERSIONS);
       expect(detail?.contact?.state).toBe('found');
       expect(detail?.thread?.drafts).toHaveLength(1);
       expect(detail?.evidence?.evidenceStatus).toBe('complete');

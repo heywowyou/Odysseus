@@ -66,6 +66,7 @@ const scoreView: OperatorScoreView = {
   postcode: '38000',
   scoringVersion: 'hotel-outreach-v1',
   prescanId: 'prescan-1',
+  prescanVersion: 'v4',
   computedAt: new Date('2026-08-29T11:00:00.000Z'),
   worthy: true,
   evidenceComplete: true,

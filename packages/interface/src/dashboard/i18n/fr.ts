@@ -656,6 +656,8 @@ export const fr: DashboardStrings = {
       active: 'En cours',
       todo: 'À faire',
       blocked: 'Bloqué',
+      stale: 'Pas à jour',
+      refreshing: 'Actualisation…',
     },
     primary: {
       startScan: "Lancer l'audit de prospection",
@@ -702,6 +704,11 @@ export const fr: DashboardStrings = {
         blocking: 'Blocage',
         requests: 'Requêtes',
       },
+      staleNotice:
+        'Ces données ne sont plus à jour. Actualisez-les pour voir le résultat du pipeline actuel.',
+      refreshAction: 'Actualiser les données du prospect',
+      refreshQueued: 'Actualisation lancée',
+      refreshFailed: "Impossible d'actualiser ce prospect",
     },
     audit: {
       empty: "Pas encore d'audit de prospection.",

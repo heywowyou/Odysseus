@@ -40,6 +40,7 @@ import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-ho
 import { CURRENT_QUALIFICATION_VERSION } from '../prospecting/hotel-qualification/qualify-hotels.js';
 import { CURRENT_RESOLUTION_VERSION } from '../prospecting/hotel-identity/resolve-hotels.js';
 import { scoreHotelOnDemandForConnection } from '../prospecting/hotel-scoring/score-on-demand.js';
+import { qualifyHotelOnDemand } from '../prospecting/hotel-qualification/qualify-on-demand.js';
 import type { JobQueue } from '../queue/job-queue.js';
 import type { Router } from '../router.js';
 import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
@@ -312,7 +313,11 @@ export function registerProspectRoutes(
       sendError(res, 400, error instanceof Error ? error.message : 'invalid query');
       return;
     }
-    const page = await listOperatorProspects(connection, options);
+    const page = await listOperatorProspects(connection, options, {
+      qualificationVersion: CURRENT_QUALIFICATION_VERSION,
+      prescanVersion: CURRENT_PRESCAN_VERSION,
+      scoringVersion: CURRENT_SCORING_VERSION,
+    });
     sendJson(res, 200, page);
   });
 
@@ -322,7 +327,11 @@ export function registerProspectRoutes(
       sendError(res, 400, 'candidateId must be a non-empty string without control characters');
       return;
     }
-    const detail = await getOperatorProspect(connection, candidateId);
+    const detail = await getOperatorProspect(connection, candidateId, {
+      qualificationVersion: CURRENT_QUALIFICATION_VERSION,
+      prescanVersion: CURRENT_PRESCAN_VERSION,
+      scoringVersion: CURRENT_SCORING_VERSION,
+    });
     if (detail === null) {
       sendError(res, 404, 'prospect not found');
       return;
@@ -640,6 +649,78 @@ export function registerProspectRoutes(
     logJobCreated(req, job.jobId, job.type);
     queue?.notify();
     sendJson(res, 201, { started: true, jobId: job.jobId });
+  });
+
+  // Issue #217: the operator's single recovery action for a stale prospect,
+  // so bringing one hotel back to current pipeline state does not require
+  // knowing which CLI batch or version bump corresponds to which stale
+  // field. Determines server-side what is stale/missing and reruns only
+  // that - never a version-wide batch scoped to one row. Qualification runs
+  // inline (one bounded site probe); prescan reuses the existing per-hotel
+  // job above, whose own completion already reruns scoring, so a stale
+  // score is only refreshed directly here when the prescan was already
+  // current and only the score itself had fallen behind.
+  router.post('/api/prospects/:candidateId/refresh', async ({ req, res, params }) => {
+    const candidateId = params['candidateId']!;
+    if (!isPlausibleCandidateId(candidateId)) {
+      sendError(res, 400, 'candidateId must be a non-empty string without control characters');
+      return;
+    }
+    const detail = await getOperatorProspect(connection, candidateId, {
+      qualificationVersion: CURRENT_QUALIFICATION_VERSION,
+      prescanVersion: CURRENT_PRESCAN_VERSION,
+      scoringVersion: CURRENT_SCORING_VERSION,
+    });
+    if (detail === null) {
+      sendError(res, 404, 'prospect not found');
+      return;
+    }
+
+    const refreshed: ('qualification' | 'prescan' | 'score')[] = [];
+    let qualification: Awaited<ReturnType<typeof qualifyHotelOnDemand>> | null = null;
+    if (
+      detail.qualificationFreshness.state === 'missing' ||
+      detail.qualificationFreshness.state === 'stale'
+    ) {
+      qualification = await qualifyHotelOnDemand(connection, candidateId);
+      if (qualification.outcome === 'qualified') refreshed.push('qualification');
+    }
+
+    let prescanJobId: string | null = null;
+    if (detail.prescanFreshness.state === 'missing' || detail.prescanFreshness.state === 'stale') {
+      const candidate = await getHotelCandidate(connection, candidateId);
+      const domain = candidate?.ownRegistrableDomain;
+      if (domain !== undefined && domain !== null && domain !== '') {
+        const job = await createJob(connection, {
+          type: 'hotel-prescan',
+          options: {
+            resolutionVersion: CURRENT_RESOLUTION_VERSION,
+            qualificationVersion: CURRENT_QUALIFICATION_VERSION,
+            prescanVersion: CURRENT_PRESCAN_VERSION,
+            domain,
+            maxPages: 1,
+            concurrency: 1,
+            rescan: true,
+          },
+        });
+        logJobCreated(req, job.jobId, job.type);
+        queue?.notify();
+        prescanJobId = job.jobId;
+        refreshed.push('prescan');
+      }
+    } else if (
+      detail.scoreFreshness.state === 'missing' ||
+      detail.scoreFreshness.state === 'stale'
+    ) {
+      const candidate = await getHotelCandidate(connection, candidateId);
+      const domain = candidate?.ownRegistrableDomain;
+      if (domain !== undefined && domain !== null && domain !== '') {
+        await scoreHotelOnDemandForConnection(connection, domain);
+        refreshed.push('score');
+      }
+    }
+
+    sendJson(res, 200, { refreshed, qualification, prescanJobId });
   });
 
   /** Plan 044's paid-audit gate, factored out of the POST action so the

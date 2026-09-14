@@ -33,6 +33,7 @@ export interface OperatorScoreView {
   postcode: string | null;
   scoringVersion: string;
   prescanId: string;
+  prescanVersion: string;
   computedAt: Date;
   worthy: boolean;
   evidenceComplete: boolean;
@@ -70,6 +71,7 @@ function projectScore(
     ...identity,
     scoringVersion: score.scoringVersion,
     prescanId: score.prescanId,
+    prescanVersion: score.prescanVersion,
     computedAt: score.computedAt,
     worthy: score.worthy,
     evidenceComplete: score.evidenceComplete,

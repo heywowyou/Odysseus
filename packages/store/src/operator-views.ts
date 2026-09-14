@@ -111,3 +111,4 @@ export type {
   OperatorProspectDetail,
   OperatorWebsiteCandidateView,
 } from './operator-views/prospect-detail.js';
+export type { ProspectFreshnessVersions } from './operator-views/freshness.js';
