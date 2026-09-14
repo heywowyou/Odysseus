@@ -16,6 +16,81 @@ reconciliation properly). History is never deleted.
 | --- | ---- | ---- | --- | ---------- | ----- | ------------ | -------- | ------ |
 | 1 | 2026-09-12 | `ab96bd5` | 11 | 11 | 0 | 0 | partial (no browser-use skill; Playwright driven directly) | no |
 | 2 | 2026-09-13 | `692bd92` | 1 | 12 | 0 | 0 | local leg only, task-completion mode, plan 045 Stage 3 | no (production leg pending) |
+| 3 | 2026-09-14 | `48ae763` | 3 | 15 | 0 | 0 | local + production, partial (journeys 2/3/6 and full FR/EN parity not covered) | no |
+
+## Run 3 notes (local + production, partial)
+
+Local leg driven live against `odysseus-local` (interface `pnpm run serve` on
+:4600, dashboard `pnpm --filter @odysseus/interface dev:dashboard` on :5173).
+Production leg driven live against `app.odysseusaudit.com` at the same HEAD,
+by explicit operator instruction to navigate and mutate freely with the sole
+exception of launching a full/paid audit; mutations made on real records were
+reversed where the dashboard offered a way to (see below).
+
+- **Coverage gap, unchanged from run 2**: `odysseus-local` still has zero
+  `hotel_candidates` documents (confirmed via direct query), so journeys 1, 2,
+  3, 4, and 6 have no local data to exercise. The catalogue fixture
+  (`atout-france-sample.csv`) only contains real, named hotel domains that
+  cannot be scanned without authorization, so no local substitute was
+  fabricated. These journeys were instead exercised live against production
+  data (see below), which is not a substitute for local-fixture coverage.
+- **Verified fix, live**: the "not-qualified to qualified" transition the
+  operator previously reported as broken now completes end-to-end. On a real
+  rejected prospect (ARIANE HOTEL), "Qualifier manuellement" applied the
+  override, "Accepter" cleared the identity-review gate, and the remaining
+  block ("Aucun site propre n'est rattaché à cet hôtel") was stated in plain
+  French rather than silently blocking the next action. Consistent with the
+  qualification-override work landed at this HEAD and closed issue #237.
+- **New: UX-013 (P1)**, issue #264. The Audits list includes non-scan job
+  types (`outreach-draft-batch`, reproduced via the "Rédiger les premiers
+  emails" batch button) mislabeled as "Audit léger"; clicking through crashes
+  `/scans/:jobId` with a raw Zod schema-validation error in English, and the
+  "Réessayer" button can never succeed.
+- **New: UX-014 (P1)**, issue #265. On a real, currently relevant audit
+  (HÔTEL BELLEVAL, `809b5e87-...`), "Régénérer les PDF" fails because the
+  report renderer's print-overflow safety gate is correctly aborting on a
+  genuine ~1794px content overflow on page 2 - but the dashboard surfaces this
+  only as a raw, untranslated internal exception string in a toast that
+  auto-dismisses within seconds, with no durable error state and no plain
+  explanation. This client's paid PDF cannot currently be produced at all.
+- **New: UX-015 (P2)**, issue #266. The hub's Aperçu tab actions (e.g.
+  "Réémettre un lien") operate on whichever audit is selected via the
+  separate Audit tab's own selector; the default selection (most recent
+  audit) can be a full/paid audit that the preview API refuses
+  (`not-an-outreach-audit`), surfaced only as a raw HTTP status line.
+  Switching the Audit tab's selection to the outreach audit and returning
+  fixes it, but nothing on the Aperçu tab reveals that dependency.
+- **Verified working, no defect**: unknown prospect id (`/prospects/does-not-
+  exist-xyz`) renders a clean "Not found." with a working "Back to prospects"
+  link, in both languages checked. First-email refusal for a hotel with no
+  usable contact address ("Aucune adresse de contact utilisable...") is clear
+  plain French with no draft created.
+- **Reverted after testing**: ARIANE HOTEL's qualification override was
+  removed ("Retirer l'override") after verifying the fix, restoring the
+  automatic "Rejeté" verdict. Its identity-review state could **not** be
+  fully restored: the dashboard offers only Accept/Reject, no route back to
+  the original "En attente" (pending) state, so it now reads "Rejeté"
+  instead of pending - a residual, minor side effect of this run, not a
+  reported defect (a one-way review decision may be deliberate). HÔTEL
+  BELLEVAL's outreach preview was reissued to test the reissue action, then
+  taken back down via "Take the preview down", restoring its original
+  "Retiré" / "operator request" state.
+- **Retained local artifacts**: two empty `outreach-draft-batch` jobs
+  (`f631fa26-...`, `7344c803-...`, both "0 of 0 drafted") created in
+  `odysseus-local` while testing the À traiter batch buttons against zero
+  eligible hotels; harmless, no real drafts, surfaced UX-013.
+- **No drafts created for real send**: the one first-email attempt (HÔTEL
+  BELLEVAL) was refused before any draft was written; no Gmail draft exists
+  from this run.
+- **Not launched**: no full/paid audit was started this run, per explicit
+  instruction.
+- **Not covered this run**: journey 2 (quick check launch), journey 3
+  (prospecting audit launch), journey 6 (outreach follow-through: due
+  follow-up, reply review, outcome recording), and a full FR/EN parity sweep
+  across every journey's critical text. The 11 legacy findings (UX-001
+  through UX-011) were not deliberately re-verified against current source
+  this run (still OPEN, last seen run 1) beyond incidental observation.
+  Parity is not claimed.
 
 ## Run 2 notes (task-completion mode, plan 045 Stage 3, local leg)
 
@@ -135,6 +210,30 @@ plan 045 section 1.9) is pending the operator's deploy.
 - Evidence: `"lancez d'abord une sélection (score select)."` names the literal CLI command, not something a dashboard-only operator can act on.
 - Suggested UX fix: rephrase without the CLI command name, or point at whatever dashboard equivalent exists.
 - Issue: #190 (closed on GitHub; not yet re-verified live in this register).
+
+### UX-013 (P1) Audits list mislabels non-scan jobs as an audit and the scan-detail page crashes on them
+
+- Status: OPEN. First seen: run 3. Last seen: run 3.
+- Where: `/audits`, `/scans/:jobId`, FR (reproduced locally on `odysseus-local`).
+- Evidence: an `outreach-draft-batch` job (from the À traiter "Rédiger les premiers emails" batch button) appears in the Audits list mislabeled "Audit léger" via the default branch of `packages/interface/src/dashboard/routes/audits.tsx:71-80`, because `GET /api/scans` (`packages/interface/src/routes/scans.ts:174`) returns every job type unfiltered. Clicking through to `/scans/:jobId` crashes: `jobTypeSchema` (`packages/interface/src/dashboard/lib/api-schemas.ts:25-29`) only allows `full-audit`/`prospecting`/`hotel-prescan`/`outreach-full-scan`, so the response fails Zod parsing and the page shows the raw English validation error with a "Réessayer" button that can never succeed.
+- Suggested UX fix: exclude non-scan job types from the Audits list, or give them their own correctly-labeled, working detail view.
+- Issue: #264.
+
+### UX-014 (P1) Report PDF regeneration failure shown only as a raw, untranslated, auto-dismissing exception - blocking a live client's paid report
+
+- Status: OPEN. First seen: run 3. Last seen: run 3.
+- Where: audit page, Rapport client, "Régénérer les PDF", production (HÔTEL BELLEVAL, audit `809b5e87-...`).
+- Evidence: `POST /api/audits/:auditId/regenerate-report` returns 409 with the report renderer's raw print-overflow-guard exception (`packages/report/src/pdf.ts:198-334`, issue #118's gate; genuine ~1794px overflow on page 2). The dashboard's catch handler (`packages/interface/src/dashboard/routes/audit-report-panel.tsx:120-126`) relays that exact string in an auto-dismissing toast; no durable error state, no plain-language explanation, no remedy. This client's PDF currently cannot be produced.
+- Suggested UX fix: a durable, plain-language error state on the report panel for this failure class, distinct from the raw exception text.
+- Issue: #265.
+
+### UX-015 (P2) Hub preview action silently depends on a cross-tab audit selection; wrong default is a dead end shown only as a raw HTTP status
+
+- Status: OPEN. First seen: run 3. Last seen: run 3.
+- Where: hub, Aperçu tab, "Réémettre un lien", production (HÔTEL BELLEVAL, a hotel with both a full audit and an outreach audit).
+- Evidence: the Aperçu tab's action targets whichever audit is selected via the Audit tab's own selector/URL `?audit=` param (default: most recent audit, here the full/paid one), which `outreach-preview/publish` refuses (`{"published":false,"refusal":"not-an-outreach-audit"}`). The toast shows only "Request to /api/... failed (409)", not the refusal reason. Selecting the outreach audit on the Audit tab first makes the same button succeed.
+- Suggested UX fix: scope preview/email hub actions to the hotel's outreach audit specifically, or surface the dependency and translate `not-an-outreach-audit` on the Aperçu tab itself.
+- Issue: #266.
 
 ## Fixed register
 
