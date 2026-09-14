@@ -15,7 +15,12 @@ const TOUCH1_BASE: AssembleOutreachDraftOptions = {
   language: 'fr',
   hotelName: 'Hôtel des Tilleuls',
   variantSeed: 'candidate-1',
-  categories: ['accessibility', 'seo', 'performance'],
+  scanSummary: {
+    distinctFindingCount: 47,
+    affectedPageCount: 23,
+    severityTotals: { critical: 8, serious: 14, moderate: 17, minor: 8 },
+    proofCardCategories: ['accessibility', 'seo', 'performance'],
+  },
   previewUrl: PREVIEW_URL,
   dataOrigins: ['public-hotel-catalogue', 'public-website'],
   privacyUrl: PRIVACY_URL,
@@ -27,7 +32,7 @@ const TOUCH2_BASE: AssembleOutreachDraftOptions = {
   language: 'fr',
   hotelName: 'Hôtel des Tilleuls',
   variantSeed: 'candidate-1',
-  previousSubject: 'Audit du site de l’Hôtel des Tilleuls',
+  previousSubject: 'Analyse du site de l’Hôtel des Tilleuls',
 };
 
 function assertAssembled(
@@ -63,29 +68,30 @@ function assertKeepsFrenchSignature(body: string): void {
 }
 
 describe('assembleOutreachDraft - touch 1', () => {
-  it('assembles the locked French first-touch frame', () => {
+  it('assembles the locked French first-touch frame from full-scan aggregates', () => {
     const result = assembleOutreachDraft(TOUCH1_BASE);
     assertAssembled(result);
 
-    expect([
-      "Audit du site de l'Hôtel des Tilleuls",
-      "Analyse du site de l'Hôtel des Tilleuls",
-    ]).toContain(result.subject);
+    expect(result.subject).toBe("Analyse du site de l'Hôtel des Tilleuls");
     assertGreetsExactlyOnce(result.body);
     expect(result.body).toContain(
-      "Nous avons récemment effectué un audit du site web de l'Hôtel des Tilleuls",
+      "Nous avons récemment analysé le site web de l'Hôtel des Tilleuls.",
     );
     expect(result.body).toContain(
-      "1 constat critique lié à l'accessibilité, 1 lié au référencement dans les moteurs de recherche et 1 lié aux performances du site.",
+      "Notre analyse a relevé 47 constats distincts sur 23 pages de votre site, dont 8 critiques et 14 sérieux. Les principaux problèmes concernent notamment l'accessibilité, le référencement dans les moteurs de recherche et les performances du site.",
+    );
+    expect(result.body).toContain(
+      'Ces constats ont un impact direct sur l’expérience de vos clients et peuvent également relever du cadre légal applicable en matière d’accessibilité.',
     );
     expect(result.body).toContain(
       `Vous trouverez un résumé de notre analyse ici\u00a0:\n${PREVIEW_URL}`,
     );
     expect(result.body).toContain(
-      "L'audit complet de votre site est disponible à l'achat dès à présent. Pour chacun de ces constats, il indique la page concernée et la correction à apporter.",
+      'L’audit complet de votre site est disponible à l’achat. Il détaille les constats relevés, les pages concernées et les corrections à apporter.',
     );
-    expect(result.body).not.toContain("L'audit complet est disponible à l'achat dès à présent.");
-    expect(result.body).toContain('Souhaitez-vous recevoir le détail de ces constats\u00a0?');
+    expect(result.body).toContain(
+      'Souhaitez-vous que je vous transmette les modalités de l’audit complet\u00a0?',
+    );
     assertKeepsFrenchSignature(result.body);
     expect(result.body).toContain('Pourquoi vous recevez ce message\u00a0:');
     expect(result.body).toContain('deux relances au maximum');
@@ -95,22 +101,30 @@ describe('assembleOutreachDraft - touch 1', () => {
     );
     expect(result.body).toContain(PRIVACY_URL);
     expect(result.body).toContain(OPT_OUT_URL);
-    expect(result.body).not.toContain('Le cadre applicable');
   });
 
-  it('renders real per-category critical counts from repeated category occurrences', () => {
+  it('uses the strongest non-zero severities and does not print zero critical findings', () => {
     const result = assembleOutreachDraft({
       ...TOUCH1_BASE,
-      categories: [
-        ...Array.from({ length: 30 }, () => 'accessibility' as const),
-        ...Array.from({ length: 13 }, () => 'rendering' as const),
-        ...Array.from({ length: 18 }, () => 'performance' as const),
-      ],
+      scanSummary: {
+        distinctFindingCount: 12,
+        affectedPageCount: 5,
+        severityTotals: { critical: 0, serious: 3, moderate: 7, minor: 2 },
+        proofCardCategories: ['performance', 'performance', 'seo'],
+      },
     });
     assertAssembled(result);
     expect(result.body).toContain(
-      "30 constats critiques liés à l'accessibilité, 18 liés aux performances du site et 13 liés à l'affichage de votre contenu pour les moteurs de recherche.",
+      '12 constats distincts sur 5 pages de votre site, dont 3 sérieux et 7 modérés.',
     );
+    expect(result.body).toContain(
+      'Les principaux problèmes concernent notamment les performances du site et le référencement dans les moteurs de recherche.',
+    );
+    expect(result.body).toContain(
+      'Ces constats ont un impact direct sur l’expérience de vos clients.',
+    );
+    expect(result.body).not.toContain('0 critique');
+    expect(result.body).not.toContain('cadre légal applicable');
   });
 
   it('falls back to a short subject when the hotel name is too long', () => {
@@ -119,13 +133,13 @@ describe('assembleOutreachDraft - touch 1', () => {
       hotelName: 'Hôtel Restaurant Campanile Toulouse Ouest Purpan Aéroport Blagnac Centre',
     });
     assertAssembled(result);
-    expect(['Audit de votre site', 'Analyse de votre site']).toContain(result.subject);
+    expect(result.subject).toBe('Analyse de votre site');
   });
 
   it('writes "votre établissement" when there is no usable name', () => {
     const result = assembleOutreachDraft({ ...TOUCH1_BASE, hotelName: '  ' });
     assertAssembled(result);
-    expect(result.body).toContain('du site web de votre établissement');
+    expect(result.body).toContain('site web de votre établissement');
   });
 
   it('keeps the body canonical when only the variant seed changes', () => {
@@ -136,25 +150,27 @@ describe('assembleOutreachDraft - touch 1', () => {
     expect(second.body).toBe(first.body);
   });
 
-  it('refuses when no category is supplied', () => {
-    expect(assembleOutreachDraft({ ...TOUCH1_BASE, categories: [] })).toEqual({
-      assembled: false,
-      refusal: 'missing-categories',
-    });
+  it('refuses when the published preview carries no proof-card category', () => {
+    expect(
+      assembleOutreachDraft({
+        ...TOUCH1_BASE,
+        scanSummary: {
+          ...(TOUCH1_BASE.scanSummary as NonNullable<AssembleOutreachDraftOptions['scanSummary']>),
+          proofCardCategories: [],
+        },
+      }),
+    ).toEqual({ assembled: false, refusal: 'missing-categories' });
   });
 
   it('writes the English template for an English draft', () => {
     const result = assembleOutreachDraft({ ...TOUCH1_BASE, language: 'en' });
     assertAssembled(result);
-    expect([
-      'Website audit of Hôtel des Tilleuls',
-      'Website analysis of Hôtel des Tilleuls',
-    ]).toContain(result.subject);
+    expect(result.subject).toBe('Website analysis of Hôtel des Tilleuls');
+    expect(result.body).toContain('We recently analyzed the website of Hôtel des Tilleuls.');
     expect(result.body).toContain(
-      'We recently carried out an audit of the website of Hôtel des Tilleuls',
+      'Our analysis identified 47 distinct findings across 23 pages of your website, including 8 critical and 14 serious.',
     );
-    expect(result.body).toContain('1 critical finding related to accessibility');
-    expect(result.body).toContain('The full audit is available for purchase now.');
+    expect(result.body).toContain('The full audit of your website is available for purchase.');
   });
 
   it('refuses when required first-touch inputs are missing', () => {
@@ -162,6 +178,11 @@ describe('assembleOutreachDraft - touch 1', () => {
     expect(assembleOutreachDraft(withoutPreview)).toEqual({
       assembled: false,
       refusal: 'missing-preview-url',
+    });
+    const { scanSummary: _summary, ...withoutSummary } = TOUCH1_BASE;
+    expect(assembleOutreachDraft(withoutSummary)).toEqual({
+      assembled: false,
+      refusal: 'missing-scan-summary',
     });
     expect(assembleOutreachDraft({ ...TOUCH1_BASE, dataOrigins: [] })).toEqual({
       assembled: false,
@@ -211,17 +232,15 @@ describe('assembleOutreachDraft - touch 2', () => {
     const result = assembleOutreachDraft(TOUCH2_BASE);
     assertAssembled(result);
 
-    expect(result.subject).toBe('Re: Audit du site de l’Hôtel des Tilleuls');
+    expect(result.subject).toBe('Re: Analyse du site de l’Hôtel des Tilleuls');
     expect(result.body).toContain(
-      "Je me permets de revenir vers vous au sujet de mon précédent message concernant l'audit du site de l'Hôtel des Tilleuls.",
+      'Je me permets de revenir vers vous au sujet de mon précédent message concernant l’analyse du site de l’Hôtel des Tilleuls.',
     );
-    expect(result.body).toContain("Avez-vous eu l'occasion de consulter l'aperçu\u00a0?");
+    expect(result.body).toContain('Avez-vous eu l’occasion de consulter l’aperçu\u00a0?');
     expect(result.body).toContain(
-      "Si vous souhaitez aller plus loin, l'audit complet de votre site est disponible à l'achat. Il détaille chacun des constats relevés, les pages concernées et les corrections à apporter.",
+      'Si vous souhaitez agir sur ces constats, l’audit complet de votre site est disponible à l’achat. Il indique, pour chacun, les pages concernées et les corrections à apporter.',
     );
-    expect(result.body).not.toContain(
-      "Si vous souhaitez aller plus loin, l'audit complet est disponible à l'achat.",
-    );
+    expect(result.body).toContain('Souhaitez-vous que je vous transmette les modalités\u00a0?');
     expect(result.body).toContain(
       'Pour ne plus recevoir de message de notre part, répondez simplement à celui-ci.',
     );
@@ -234,10 +253,10 @@ describe('assembleOutreachDraft - touch 2', () => {
   it('does not double-prefix an existing Re:', () => {
     const result = assembleOutreachDraft({
       ...TOUCH2_BASE,
-      previousSubject: 'Re: Audit du site de l’Hôtel des Tilleuls',
+      previousSubject: 'Re: Analyse du site de l’Hôtel des Tilleuls',
     });
     assertAssembled(result);
-    expect(result.subject).toBe('Re: Audit du site de l’Hôtel des Tilleuls');
+    expect(result.subject).toBe('Re: Analyse du site de l’Hôtel des Tilleuls');
   });
 
   it('refuses when the previous subject is missing', () => {
@@ -256,16 +275,20 @@ describe('assembleOutreachDraft - touch 3', () => {
     assertAssembled(result);
 
     expect(result.body).toContain(
-      "Je me permets de vous écrire une dernière fois au sujet de l'audit du site de l'Hôtel des Tilleuls.",
+      'Je me permets de vous écrire une dernière fois au sujet de l’analyse du site de l’Hôtel des Tilleuls.',
     );
     expect(result.body).toContain(
-      "Avant de clore ce sujet, je souhaitais attirer votre attention sur le cadre réglementaire de l'accessibilité numérique, au regard des constats relevés lors de notre analyse.",
+      'Avant de clore ce sujet, un dernier point mérite votre attention : le cadre réglementaire de l’accessibilité numérique peut être pertinent au regard des constats relevés lors de notre analyse.',
     );
     if (expectedFacts.state !== 'rendered') throw new Error('expected a rendered facts block');
     expect(result.body).toContain(expectedFacts.heading);
     for (const paragraph of expectedFacts.paragraphs) expect(result.body).toContain(paragraph);
-    expect(result.body).toContain("l'audit complet est disponible à l'achat");
-    expect(result.body).not.toContain("l'audit complet de votre site est disponible à l'achat");
+    expect(result.body).toContain(
+      'Indépendamment de cette question juridique, l’aperçu de notre analyse reste disponible dans mon premier message.',
+    );
+    expect(result.body).toContain(
+      'Il vous suffit de répondre à ce message si vous souhaitez l’obtenir.',
+    );
     expect(result.body).toContain(
       'Sans retour de votre part, je ne vous relancerai pas davantage.',
     );
