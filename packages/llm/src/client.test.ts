@@ -14,7 +14,12 @@ vi.mock('./config.js', () => ({
   getOpenAiBaseUrl: () => undefined,
 }));
 
-const { callOpenAiForStructure, callOpenAiForWriting } = await import('./client.js');
+const {
+  callOpenAiForStructure,
+  callOpenAiForWriting,
+  callOpenAiForReview,
+  callOpenAiForCorrectionReview,
+} = await import('./client.js');
 
 const structureInput = {
   siteContext: {
@@ -78,6 +83,33 @@ const validWritingOutput = {
   ],
   executiveSummary: 'The site has one accessibility issue worth fixing.',
   notes: '',
+};
+
+const reviewInput = { writingInput, written: validWritingOutput };
+const validReviewOutput = {
+  themes: [
+    {
+      themeKey: 'theme-1',
+      businessImpact: { verdict: 'supported', reason: 'Supported by the supplied finding.' },
+      recommendedActions: [
+        { verdict: 'supported', reason: 'The action addresses the supplied finding.' },
+        { verdict: 'supported', reason: 'The action addresses the supplied finding.' },
+      ],
+    },
+  ],
+  executiveSummary: { verdict: 'supported', reason: 'It summarizes the supplied finding.' },
+  notes: { verdict: 'supported', reason: 'The empty notes field makes no unsupported claim.' },
+};
+
+const validCorrectionReviewOutput = {
+  proposals: [
+    {
+      field: 'executiveSummary',
+      verdict: 'keep',
+      checks: [],
+      reason: 'The summary is already evidence-bound.',
+    },
+  ],
 };
 
 function choice(
@@ -255,3 +287,72 @@ describe('callOpenAiForWriting', () => {
     );
   });
 });
+
+function responseValidationCases(
+  name: string,
+  invoke: () => Promise<unknown>,
+  validOutput: unknown,
+): void {
+  describe(name, () => {
+    afterEach(() => {
+      completeMock.mockReset();
+    });
+
+    it('returns schema-validated output on success', async () => {
+      completeMock.mockResolvedValue(choice({ content: JSON.stringify(validOutput) }));
+      await expect(invoke()).resolves.toMatchObject({ output: validOutput });
+    });
+
+    it('rejects a response with no choices', async () => {
+      completeMock.mockResolvedValue({ choices: [] });
+      await expect(invoke()).rejects.toThrow('contained no choices');
+    });
+
+    it('rejects a truncated response', async () => {
+      completeMock.mockResolvedValue(choice({ finishReason: 'length' }));
+      await expect(invoke()).rejects.toThrow('truncated');
+    });
+
+    it('rejects an explicit provider refusal', async () => {
+      completeMock.mockResolvedValue(choice({ refusal: 'I cannot comply.' }));
+      await expect(invoke()).rejects.toThrow('refused the request');
+    });
+
+    it('rejects non-string message content', async () => {
+      completeMock.mockResolvedValue(choice({ content: null }));
+      await expect(invoke()).rejects.toThrow('unexpected shape');
+    });
+
+    it('rejects invalid JSON', async () => {
+      completeMock.mockResolvedValue(choice({ content: 'not json' }));
+      await expect(invoke()).rejects.toThrow();
+    });
+
+    it('rejects schema-invalid JSON', async () => {
+      completeMock.mockResolvedValue(choice({ content: JSON.stringify({}) }));
+      await expect(invoke()).rejects.toThrow();
+    });
+
+    it('appends the provider Retry-After hint to a 429', async () => {
+      completeMock.mockRejectedValue(
+        Object.assign(new Error('429 Rate limit exceeded'), {
+          status: 429,
+          headers: new Headers({ 'retry-after': '2' }),
+        }),
+      );
+      await expect(invoke()).rejects.toThrow('(provider retry-after: 2s)');
+    });
+  });
+}
+
+responseValidationCases(
+  'callOpenAiForReview',
+  () => callOpenAiForReview(reviewInput),
+  validReviewOutput,
+);
+
+responseValidationCases(
+  'callOpenAiForCorrectionReview',
+  () => callOpenAiForCorrectionReview(reviewInput),
+  validCorrectionReviewOutput,
+);
