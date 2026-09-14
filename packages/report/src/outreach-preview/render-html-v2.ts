@@ -21,7 +21,7 @@ import {
   type OutreachPreviewSummary,
 } from '@odysseus/core';
 import { escapeHtml, fillTemplate, formatDate } from '../template/html-utils.js';
-import { computeSeverityGrade } from '../template/grade.js';
+import { computeSeverityGrade, computeSeverityRiskLevel } from '../template/grade.js';
 import { renderScorecardGrade } from '../template/render-scorecard.js';
 import { renderDocumentCoverLayout } from '../template/sections/cover.js';
 import { resolveDecisionQuestion } from '../template/generic-question.js';
@@ -29,6 +29,52 @@ import { getStrings, type ReportStrings } from '../template/strings/i18n.js';
 import { OUTREACH_PREVIEW_STYLES_V2 } from './styles-v2.js';
 import { outreachPreviewStringsV2, type OutreachPreviewStringsV2 } from './strings-v2.js';
 import { assertOutreachPreviewHtml } from './preview-lint.js';
+
+/** The full report's metadata-sheet signal (template/sections/metadata-
+ *  sheet.ts's renderScorecard + renderRiskBadge), transcribed here rather
+ *  than imported: that section reads `StoredAnalysis.overallRisk`, an LLM
+ *  judgment the preview's schema deliberately has no field for. The risk
+ *  level shown here is `computeSeverityRiskLevel` instead - see that
+ *  function's doc comment for why it does not simply reuse the grade's own
+ *  cutoffs. Rendered as its own centered block directly on the page
+ *  background, matching the report's plain (non-card) sheet, immediately
+ *  after the cover and before any section gets its bordered-card treatment. */
+function renderGradeSignal(input: OutreachPreviewSummary, s: OutreachPreviewStringsV2): string {
+  // Plan 041 Part A: own-counts grade only, never the benchmark percentile
+  // (trade-off 42/16 forbid a comparison to other sites in this document -
+  // the operator's own pick, made once this tension surfaced mid-design).
+  const { grade: automaticGrade } = computeSeverityGrade(input.severityTotals);
+  const grade = input.gradeOverride ?? automaticGrade;
+  const riskLevel = computeSeverityRiskLevel(input.severityTotals);
+  const scale = (['low', 'medium', 'high'] as const)
+    .map((level) => {
+      const className =
+        level === riskLevel
+          ? 'preview-risk-level preview-risk-level-current'
+          : 'preview-risk-level';
+      return `<span class="${className}" data-level="${level}">${escapeHtml(s.riskLevels[level])}</span>`;
+    })
+    .join('');
+  const basisNote = fillTemplate(s.riskBasisTemplate, {
+    critical: input.severityTotals.critical,
+    criticalWord:
+      input.severityTotals.critical === 1 ? s.criticalFindingSingular : s.criticalFindingPlural,
+    serious: input.severityTotals.serious,
+    seriousWord:
+      input.severityTotals.serious === 1 ? s.seriousFindingSingular : s.seriousFindingPlural,
+  });
+  return [
+    '<div class="preview-signal">',
+    `<div class="preview-scorecard">${renderScorecardGrade(grade, s.scorecardDisclaimer, s.scorecardLabel)}</div>`,
+    '<div class="preview-risk">',
+    `<div class="preview-risk-label">${escapeHtml(s.scorecardLabel)}</div>`,
+    `<div class="preview-risk-scale">${scale}</div>`,
+    `<div class="preview-risk-basis">${escapeHtml(basisNote)}</div>`,
+    `<div class="preview-risk-note">${escapeHtml(s.riskScaleBasisNote)}</div>`,
+    '</div>',
+    '</div>',
+  ].join('');
+}
 
 function renderCoverage(input: OutreachPreviewSummary, s: OutreachPreviewStringsV2): string {
   return [
@@ -56,15 +102,19 @@ function renderTotals(
     moderate: reportStrings.statistics.legendModerateText,
     minor: reportStrings.statistics.legendMinorText,
   } as const;
-  const severities = (['critical', 'serious', 'moderate', 'minor'] as const).map(
+  // The report's statistics.ts drops a severity tile entirely once its
+  // count is zero (item D7/P4: "Modéré 0" reads as a bug, not a signal) and
+  // sizes the grid to what actually renders, rather than always laying out
+  // a fixed four-up row - reused here for the same reason. severityTotals
+  // always sums to at least distinctFindingCount >= proofCards.length (3),
+  // so at least one tile always renders.
+  const nonZeroSeverities = (['critical', 'serious', 'moderate', 'minor'] as const).filter(
+    (severity) => input.severityTotals[severity] > 0,
+  );
+  const severities = nonZeroSeverities.map(
     (severity) =>
       `<div class="tile severity-tile severity-${severity}"><div class="severity-heading"><span class="severity-dot"></span><span class="key">${escapeHtml(s.severity[severity])}</span></div><div class="value">${input.severityTotals[severity]}</div><div class="severity-meaning">${escapeHtml(severityMeanings[severity])}</div></div>`,
   );
-  // Plan 041 Part A: own-counts grade only, never the benchmark percentile
-  // (trade-off 42/16 forbid a comparison to other sites in this document -
-  // the operator's own pick, made once this tension surfaced mid-design).
-  const { grade: automaticGrade } = computeSeverityGrade(input.severityTotals);
-  const grade = input.gradeOverride ?? automaticGrade;
   return [
     '<section class="results-section">',
     `<h2>${escapeHtml(s.totalsHeading)}</h2>`,
@@ -72,9 +122,8 @@ function renderTotals(
     `<div class="tile"><div class="value">${input.distinctFindingCount}</div><div class="key">${escapeHtml(s.distinctFindings)}</div></div>`,
     `<div class="tile"><div class="value">${input.affectedPageCount}</div><div class="key">${escapeHtml(s.affectedPages)}</div></div>`,
     '</div>',
-    `<div class="preview-scorecard">${renderScorecardGrade(grade, s.scorecardDisclaimer, s.scorecardLabel)}</div>`,
     `<h2 class="mt">${escapeHtml(s.severityHeading)}</h2>`,
-    `<div class="tiles four">${severities.join('')}</div>`,
+    `<div class="tiles tiles-${nonZeroSeverities.length}">${severities.join('')}</div>`,
     '</section>',
   ].join('');
 }
@@ -192,6 +241,7 @@ export function generateOutreachPreviewHtmlV2(input: OutreachPreviewSummary): st
       signature: `${observedDate} · Odysseus`,
     }),
     '</header>',
+    renderGradeSignal(validated, s),
     renderIntroduction(s),
     renderCoverage(validated, s),
     renderTotals(validated, s, reportStrings),

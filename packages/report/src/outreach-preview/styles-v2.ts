@@ -207,6 +207,7 @@ a:focus-visible {
 .cover .cover-signature { color: var(--faint); opacity: 1 !important; }
 .cover .cover-spacer { flex: 0.94 !important; }
 
+.preview-signal,
 .preview-introduction,
 main > section {
   width: min(720px, calc(100% - (2 * var(--space-6))));
@@ -237,8 +238,14 @@ section:not(.disclosure) {
   grid-template-columns: repeat(3, 1fr);
   gap: var(--space-3);
 }
-.tiles.four { grid-template-columns: repeat(4, 1fr); }
-.results-section > .tiles:not(.four) { grid-template-columns: repeat(2, 1fr); }
+.results-section > .tiles { grid-template-columns: repeat(2, 1fr); }
+/* Severity breakdown grid: sized to the number of non-zero severities
+   actually rendered (report statistics.ts's own item D7/P4 behaviour),
+   1 to 4, rather than always laying out a fixed four-up row. */
+.tiles-1 { grid-template-columns: 1fr; }
+.tiles-2 { grid-template-columns: repeat(2, 1fr); }
+.tiles-3 { grid-template-columns: repeat(3, 1fr); }
+.tiles-4 { grid-template-columns: repeat(4, 1fr); }
 .tile {
   background: var(--bg);
   border: 1px solid var(--divider);
@@ -252,13 +259,18 @@ section:not(.disclosure) {
 }
 .tile .key { color: var(--muted); font-size: 0.8rem; margin-top: var(--space-1); }
 
-/* The full report's centered metadata-grade signal, applied directly to the
-   preview's shared scorecard markup. The round letter and both concentric
-   strokes stay attached to the badge through currentColor. */
+/* The full report's centered metadata-sheet signal (template/sections/
+   metadata-sheet.ts + nocturne.css's .metadata-signal), transcribed onto
+   the preview's own dark ground: the grade circle and the qualitative
+   scale below it as one centered vertical reading sequence, directly on
+   the page background rather than inside a bordered card. */
+.preview-signal {
+  padding: var(--space-12) 0 var(--space-8);
+  text-align: center;
+}
 .preview-scorecard {
   width: 100%;
-  margin: 26mm 0 var(--space-12);
-  text-align: center;
+  margin-bottom: var(--space-12);
 }
 .preview-scorecard .scorecard-grade {
   display: flex;
@@ -290,11 +302,72 @@ section:not(.disclosure) {
   opacity: 1 !important;
 }
 
+/* The full report's risk scale (metadata-sheet.ts's renderRiskBadge +
+   nocturne.css's .metadata-risk-field), reusing the same currentColor
+   pairing the severity tiles use below (design-tokens.ts's LEVEL_COLOR:
+   low/medium/high read the moderate/serious/critical severity hues). */
+.preview-risk {
+  width: min(100%, 420px);
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-8);
+  border-top: 1px solid var(--divider);
+  border-bottom: 1px solid var(--divider);
+}
+.preview-risk-label {
+  margin-bottom: var(--space-4);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-size: 10px;
+}
+.preview-risk-scale {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  width: min(100%, 360px);
+  margin: 0 auto;
+}
+.preview-risk-level {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: calc(var(--radius-sm) * 1.5);
+  padding: 7px 12px;
+  color: var(--faint);
+  font-size: 12px;
+}
+.preview-risk-level-current { font-size: 15px; font-weight: 500; }
+.preview-risk-level[data-level='low'].preview-risk-level-current {
+  color: var(--sev-moderate);
+  background: var(--sev-moderate-bg);
+}
+.preview-risk-level[data-level='medium'].preview-risk-level-current {
+  color: var(--sev-serious);
+  background: var(--sev-serious-bg);
+}
+.preview-risk-level[data-level='high'].preview-risk-level-current {
+  color: var(--sev-critical);
+  background: var(--sev-critical-bg);
+}
+.preview-risk-basis {
+  margin-top: var(--space-4);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.preview-risk-note {
+  margin-top: 2px;
+  color: var(--faint);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
 /* WCAG 1.4.10: at reflow widths the report's 3-up and 4-up tile rows
    collapse to two columns, so a long tile label can never force the page
    sideways at 320px. */
 @media (max-width: 480px) {
-  .tiles, .tiles.four { grid-template-columns: repeat(2, 1fr); }
+  .tiles, .tiles-3, .tiles-4 { grid-template-columns: repeat(2, 1fr); }
   .cover .cover-title { font-size: clamp(40px, 15vw, 52px) !important; }
   .cover .cover-type { gap: var(--space-3); font-size: 11px !important; }
   .cover .cover-type::before,
@@ -420,6 +493,7 @@ section:not(.disclosure) {
   main > * { break-inside: avoid; }
   main > section { padding: 8mm 0 0; }
   .cover { min-height: 296mm; padding: 0; break-after: page; }
+  .preview-signal,
   .preview-introduction,
   main > section { width: 100%; }
   .cta { letter-spacing: 0.02em; text-transform: none; }

@@ -36,6 +36,31 @@ export interface OutreachPreviewStringsV2 {
    *  operator's chosen mitigation for showing a grade at all without
    *  overstating legal exposure (non-negotiable rule 6). */
   scorecardDisclaimer: string;
+  /** The three-point risk scale shown beside the grade, computed by
+   *  `computeSeverityRiskLevel` (no model involved - see that function's
+   *  doc comment). Same three words the paid report uses
+   *  (strings/fr.ts's metadata.riskLevels), kept here as its own copy
+   *  rather than imported: the preview's stricter editorial lint
+   *  (preview-lint.ts's EDITORIAL_RULES_FR) rejects the report's own
+   *  `riskBasisTemplate` sentence fragment ("Basé sur ..."), so the two
+   *  documents cannot literally share that string. */
+  riskLevels: { low: string; medium: string; high: string };
+  /** Full sentence, unlike the report's own riskBasisTemplate - see the
+   *  riskLevels doc comment above for why the report's fragment cannot be
+   *  reused here. */
+  riskBasisTemplate: string;
+  /** Word forms interpolated into riskBasisTemplate. */
+  criticalFindingSingular: string;
+  criticalFindingPlural: string;
+  seriousFindingSingular: string;
+  seriousFindingPlural: string;
+  /** Same sentence the report's risk scale carries
+   *  (strings/fr.ts's metadata.riskScaleBasisNote): a complete sentence
+   *  already, so - unlike riskBasisTemplate - nothing here stops it being
+   *  reused verbatim; kept as its own copy anyway for the same reason as
+   *  riskLevels above, so this table stays the preview's one complete,
+   *  independently reviewable string set. */
+  riskScaleBasisNote: string;
   category: {
     accessibility: string;
     seo: string;
@@ -103,6 +128,16 @@ const OUTREACH_PREVIEW_STRINGS_V2_FR: OutreachPreviewStringsV2 = {
   scorecardDisclaimer:
     'Cette note synthétise la gravité des constats mesurés ; elle ne constitue pas une ' +
     'évaluation juridique.',
+  riskLevels: { low: 'Faible', medium: 'Moyen', high: 'Élevé' },
+  riskBasisTemplate:
+    'Ce niveau prend en compte {critical} {criticalWord} et {serious} {seriousWord}.',
+  criticalFindingSingular: 'constat critique',
+  criticalFindingPlural: 'constats critiques',
+  seriousFindingSingular: 'constat sérieux',
+  seriousFindingPlural: 'constats sérieux',
+  riskScaleBasisNote:
+    "Ce niveau reflète une évaluation d'ensemble de la gravité et de la portée des constats " +
+    'sur le site, pas un seuil numérique unique.',
   category: {
     accessibility: 'Accessibilité',
     seo: 'Référencement naturel',
@@ -190,6 +225,16 @@ const OUTREACH_PREVIEW_STRINGS_V2_EN: OutreachPreviewStringsV2 = {
   scorecardLabel: 'Overall findings level',
   scorecardDisclaimer:
     'This grade summarizes the severity of measured findings; it is not a legal assessment.',
+  riskLevels: { low: 'Low', medium: 'Medium', high: 'High' },
+  riskBasisTemplate:
+    'This level takes into account {critical} {criticalWord} and {serious} {seriousWord}.',
+  criticalFindingSingular: 'critical finding',
+  criticalFindingPlural: 'critical findings',
+  seriousFindingSingular: 'serious finding',
+  seriousFindingPlural: 'serious findings',
+  riskScaleBasisNote:
+    'This level reflects an overall assessment of the severity and reach of the findings on ' +
+    'the site, not a single numeric threshold.',
   category: {
     accessibility: 'Accessibility',
     seo: 'Organic search',
