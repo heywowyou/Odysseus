@@ -233,8 +233,8 @@ function renderRegulatoryContextNote(
 
   const e = strings.executiveSummary;
   return `
-    <div class="card elev-sm" style="margin-top:var(--space-8);padding:var(--space-4)" data-executive-regulatory-context>
-      <div class="card-kicker">${escapeHtml(e.regulatoryContextKicker)}</div>
+    <div class="card elev-sm" style="margin-top:var(--space-8);padding:var(--space-4);border-left:3px solid var(--color-accent);border-radius:0 var(--radius-lg) var(--radius-lg) 0" data-executive-regulatory-context>
+      <div class="card-kicker" style="color:var(--color-accent-300);font-weight:600">${escapeHtml(e.regulatoryContextKicker)}</div>
       <p style="font-size:12.5px;margin-top:var(--space-2);max-width:66ch">${escapeHtml(e.regulatoryContextCriterion)}</p>
       <p style="font-size:12.5px;margin-top:var(--space-2);max-width:66ch">${escapeHtml(eaaSanctionFigureSentence(language))}</p>
       <p style="font-size:11.5px;margin-top:var(--space-2);max-width:66ch" class="text-muted">${escapeHtml(e.regulatoryContextCounsel)}</p>
