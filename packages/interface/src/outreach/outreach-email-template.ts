@@ -29,7 +29,7 @@ interface EmailTemplate {
   opening: (of: string) => string;
   findingsLead: string;
   criticalFinding: (count: number) => string;
-  impactBridge: string;
+  impactBridge: (categories: readonly OutreachCategory[]) => string;
   linkLead: string;
   closing: string;
   question: string;
@@ -71,8 +71,10 @@ const FR: EmailTemplate = {
     `Nous avons récemment effectué un audit du site web ${of} et souhaitions vous faire part de ce que notre analyse a révélé.`,
   findingsLead: 'Cette analyse a mis en évidence plusieurs problèmes importants, notamment',
   criticalFinding: (count) => `${count} ${count === 1 ? 'constat critique' : 'constats critiques'}`,
-  impactBridge:
-    "Ces constats ont un impact direct sur l’expérience de vos clients et peuvent également relever du cadre légal applicable en matière d’accessibilité.",
+  impactBridge: (categories) =>
+    categories.includes('accessibility')
+      ? "Ces constats ont un impact direct sur l’expérience de vos clients et peuvent également relever du cadre légal applicable en matière d’accessibilité."
+      : 'Ces constats touchent directement l’expérience de vos clients, la visibilité de votre site ou sa fiabilité technique.',
   linkLead: `Vous trouverez un résumé de notre analyse ici${NBSP}:`,
   closing:
     "L'audit complet de votre site est disponible à l'achat dès à présent. Pour chacun de ces constats, il indique la page concernée et la correction à apporter.",
@@ -111,8 +113,10 @@ const EN: EmailTemplate = {
     `We recently carried out an audit of the website ${of} and wanted to share what our analysis found.`,
   findingsLead: 'This analysis highlighted several important issues, including',
   criticalFinding: (count) => `${count} ${count === 1 ? 'critical finding' : 'critical findings'}`,
-  impactBridge:
-    "These findings have a direct impact on your customers' experience and may also fall within the applicable legal framework for accessibility.",
+  impactBridge: (categories) =>
+    categories.includes('accessibility')
+      ? "These findings have a direct impact on your customers' experience and may also fall within the applicable legal framework for accessibility."
+      : "These findings directly affect your customers' experience, your website's visibility or its technical reliability.",
   linkLead: 'You will find a summary of our analysis here:',
   closing:
     'The full audit is available for purchase now. For each of these findings, it shows the page concerned and the correction to apply.',
@@ -214,7 +218,7 @@ export function composeTouchOneBody(options: {
   return [
     { kind: 'paragraph', text: template.opening(of) },
     { kind: 'paragraph', text: `${template.findingsLead} ${list}.` },
-    { kind: 'paragraph', text: template.impactBridge },
+    { kind: 'paragraph', text: template.impactBridge(options.categories) },
     { kind: 'link', lead: template.linkLead, link: options.previewLink },
     { kind: 'paragraph', text: template.closing },
     { kind: 'paragraph', text: template.question },
