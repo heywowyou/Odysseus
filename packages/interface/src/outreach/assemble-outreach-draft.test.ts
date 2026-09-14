@@ -234,7 +234,7 @@ describe('assembleOutreachDraft - touch 2', () => {
 
     expect(result.subject).toBe('Re: Analyse du site de l’Hôtel des Tilleuls');
     expect(result.body).toContain(
-      'Je me permets de revenir vers vous au sujet de mon précédent message concernant l’analyse du site de l’Hôtel des Tilleuls.',
+      "Je me permets de revenir vers vous au sujet de mon précédent message concernant l’analyse du site de l'Hôtel des Tilleuls.",
     );
     expect(result.body).toContain('Avez-vous eu l’occasion de consulter l’aperçu\u00a0?');
     expect(result.body).toContain(
@@ -275,7 +275,7 @@ describe('assembleOutreachDraft - touch 3', () => {
     assertAssembled(result);
 
     expect(result.body).toContain(
-      'Je me permets de vous écrire une dernière fois au sujet de l’analyse du site de l’Hôtel des Tilleuls.',
+      "Je me permets de vous écrire une dernière fois au sujet de l’analyse du site de l'Hôtel des Tilleuls.",
     );
     expect(result.body).toContain(
       'Avant de clore ce sujet, un dernier point mérite votre attention : le cadre réglementaire de l’accessibilité numérique peut être pertinent au regard des constats relevés lors de notre analyse.',

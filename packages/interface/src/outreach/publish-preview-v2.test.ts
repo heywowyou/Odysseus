@@ -42,19 +42,28 @@ function audit(): AuditDocumentFields {
     domain: 'hotel-exemple.fr',
     startedAt: new Date('2026-09-11T07:00:00.000Z'),
     finishedAt: new Date('2026-09-11T08:00:00.000Z'),
-    coverage: {
-      kind: 'current',
-      inventoriedUrlCount: 3,
-      eligibleHtmlUrlCount: 3,
-      content: { completed: 3, partial: 0, failed: 0 },
-      passes: {
-        lighthouse: { completed: 2, partial: 0, failed: 0, notSelected: 1 },
-        axe: { completed: 3, partial: 0, failed: 0, notSelected: 0 },
-        extendedAccessibility: { completed: 3, partial: 0, failed: 0, notSelected: 0 },
-        renderDiff: { completed: 3, partial: 0, failed: 0, notSelected: 0 },
+    pages: [
+      'https://hotel-exemple.fr/',
+      'https://hotel-exemple.fr/chambres',
+      'https://hotel-exemple.fr/contact',
+    ].map((url) => ({
+      url,
+      depth: 0,
+      status: 'visited',
+      analysisCoverage: {
+        plannerVersion: 'v1',
+        role: 'content',
+        confidence: 'high',
+        reasonCodes: ['content-json-ld'],
+        passes: {
+          rendered: { outcome: 'completed' },
+          axe: { outcome: 'completed' },
+          extended: { outcome: 'completed' },
+          lighthouse: { outcome: 'completed' },
+        },
       },
-      pages: [],
-    },
+      errors: {},
+    })),
   } as unknown as AuditDocumentFields;
 }
 

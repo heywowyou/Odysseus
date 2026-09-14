@@ -143,7 +143,7 @@ describe('createFollowUpDraft, touch 2 happy path', () => {
   it('writes the approved reminder for this hotel, naming no finding', async () => {
     const result = await createFollowUpDraft(harness().options);
     expect(result.body).toContain(
-      'Je me permets de revenir vers vous au sujet de mon précédent message concernant l’analyse du site de l’Hôtel des Tilleuls.',
+      "Je me permets de revenir vers vous au sujet de mon précédent message concernant l’analyse du site de l'Hôtel des Tilleuls.",
     );
     expect(result.body).toContain('Avez-vous eu l’occasion de consulter l’aperçu ?');
     expect(result.body).toContain(
@@ -192,7 +192,7 @@ describe('createFollowUpDraft, touch 3 happy path', () => {
     expect(result.touch).toBe(3);
     const body = result.body ?? '';
     const intro = body.indexOf(
-      'Je me permets de vous écrire une dernière fois au sujet de l’analyse du site de l’Hôtel des Tilleuls.',
+      "Je me permets de vous écrire une dernière fois au sujet de l’analyse du site de l'Hôtel des Tilleuls.",
     );
     const facts = body.indexOf("Obligation d'accessibilité numérique");
     const closing = body.indexOf(
