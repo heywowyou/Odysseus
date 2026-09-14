@@ -27,8 +27,26 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Read Playwright version
+        id: playwright-version
+        run: echo "version=$(node -p \"require('playwright/package.json').version\")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright Chromium
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-chromium-${{ steps.playwright-version.outputs.version }}
+
+      # Runner images can change independently of the browser cache. Keep the
+      # cheap, idempotent system-package check on every run; only the browser
+      # download is skipped on a cache hit.
+      - name: Install Playwright system dependencies
+        run: pnpm exec playwright install-deps chromium
+
       - name: Install Playwright Chromium
-        run: pnpm exec playwright install --with-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install chromium
 
       - name: Check agent documentation
         run: pnpm run docs:check
