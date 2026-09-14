@@ -1,7 +1,7 @@
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { removePrescanArtifacts, sweepExpiredPrescanArtifacts } from './retention.js';
 
 let scratchDir = '';
@@ -51,6 +51,27 @@ describe('prescan artifact retention', () => {
     );
     await expect(removePrescanArtifacts(scratchDir, '/absolute')).rejects.toThrow(
       'must be relative',
+    );
+  });
+
+  it('warns about an unreadable manifest but silently skips a missing one', async () => {
+    scratchDir = await fs.mkdtemp(path.join(os.tmpdir(), 'odysseus-retention-'));
+    const corruptRun = await createRun('corrupt', '2026-01-01T00:00:00.000Z');
+    await fs.writeFile(path.join(corruptRun, 'expiry-manifest.json'), '{not-json');
+    await fs.mkdir(path.join(scratchDir, 'hotel.example', 'missing'), { recursive: true });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    const report = await sweepExpiredPrescanArtifacts(scratchDir, {
+      dryRun: true,
+      limit: 10,
+      now: new Date('2026-08-27T00:00:00.000Z'),
+    });
+
+    expect(report).toMatchObject({ inspected: 2, expired: 0, removed: 0 });
+    expect(warn).toHaveBeenCalledOnce();
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining(path.join('hotel.example', 'corrupt', 'expiry-manifest.json')),
+      expect.any(SyntaxError),
     );
   });
 });

@@ -72,12 +72,17 @@ export async function sweepExpiredPrescanArtifacts(
       inspected += 1;
       const runDir = path.join(domainDir, run.name);
       assertBelowRoot(root, runDir);
+      const manifestPath = path.join(runDir, 'expiry-manifest.json');
       let expiry: Date | null;
       try {
-        expiry = readExpiry(
-          JSON.parse(await fs.readFile(path.join(runDir, 'expiry-manifest.json'), 'utf8')),
-        );
-      } catch {
+        expiry = readExpiry(JSON.parse(await fs.readFile(manifestPath, 'utf8')));
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          console.warn(
+            `[prescan-retention] unable to read ${path.relative(root, manifestPath)}`,
+            error,
+          );
+        }
         continue;
       }
       if (expiry === null || expiry.getTime() > now.getTime()) continue;
