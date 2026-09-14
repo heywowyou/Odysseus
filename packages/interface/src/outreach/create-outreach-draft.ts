@@ -41,6 +41,7 @@ import {
   type HotelContactAddressOrigin,
   type HotelPrescanEvidence,
   type OutreachEvidenceSlot,
+  type OutreachPreviewSeverity,
   type OutreachThreadState,
 } from '@odysseus/core';
 import {
@@ -60,9 +61,9 @@ import { previewLinks, registryAssessment, type PreviewSireneFacts } from './pub
 export const FIRST_TOUCH = 1;
 
 /** Recorded on every draft as `outreachPromptVersion` (the field predates
- *  trade-off 83): which approved template produced the text. `template-v1` is
- *  the operator-approved wording of 2026-09-11; there is no model prompt. */
-export const CURRENT_OUTREACH_PROMPT_VERSION = 'template-v1';
+ *  trade-off 83): which approved code-owned template produced the text.
+ *  `template-v2` is the operator-approved wording locked 2026-09-14. */
+export const CURRENT_OUTREACH_PROMPT_VERSION = 'template-v2';
 
 export type CreateOutreachDraftRefusal =
   | 'candidate-unknown'
@@ -193,9 +194,12 @@ export interface PublishedPreviewRef {
   previewId: string;
   url: string;
   publicExpiresAt: Date;
-  /** The categories of the preview's three proof cards, recomputed from the
-   *  same audit by the same deterministic selection: the only problems the
-   *  email may name. */
+  /** Safe aggregate facts rendered from the same full outreach audit as the
+   *  published preview. Touch 1 reuses them verbatim rather than falling back
+   *  to prescan evidence or inventing personalised-looking copy. */
+  distinctFindingCount: number;
+  affectedPageCount: number;
+  severityTotals: Record<OutreachPreviewSeverity, number>;
   proofCardCategories: OutreachCategory[];
 }
 
@@ -384,7 +388,12 @@ export async function createOutreachDraft(
     language: options.language,
     hotelName: formatHotelName(row.businessName),
     variantSeed: row.candidateId,
-    categories: published.proofCardCategories,
+    scanSummary: {
+      distinctFindingCount: published.distinctFindingCount,
+      affectedPageCount: published.affectedPageCount,
+      severityTotals: published.severityTotals,
+      proofCardCategories: published.proofCardCategories,
+    },
     previewUrl: published.url,
     dataOrigins: dataOriginsFor(row),
     privacyUrl: links.privacy,

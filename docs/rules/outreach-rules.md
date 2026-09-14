@@ -6,11 +6,19 @@ outreach email templates in `packages/interface/src/outreach`. Written
 
 **Amended 2026-09-11, trade-off 83: no model writes outreach.** Every
 email is fixed operator-approved wording
-(`outreach-email-template.ts`), two approved variants per rotating
-sentence, filled only with the hotel's formatted name and the categories
-of its own preview's proof cards. Where this document says "the model" or
+(`outreach-email-template.ts`). Where this document says "the model" or
 "the prompt", the rule now binds those templates; the model-era
 mechanics (prompt, prose guards, touch word limits) are retired.
+
+**Amended 2026-09-14, template v2.** The prescan remains the cheap
+qualification and cohort-selection gate. A hotel is contacted only after its
+selected candidate has a coverage-complete outreach full scan and a published
+v2 preview. Touch 1 reuses only the public-safe aggregates from that same scan:
+distinct-finding count, unique affected-page count, the strongest non-zero
+severity totals, and the categories of the preview's own three proof cards.
+Those facts make the message genuinely prospect-specific rather than merely
+personalised-looking. The subject and opener use "analyse"; "audit complet" is
+reserved for the paid deliverable.
 
 Companions: `docs/rules/obligation-basis.md` for what may be claimed about the
 client, `docs/rules/operator-obligations.md` for what binds us,
@@ -45,6 +53,16 @@ happening, is verifiable today, and is not contingent on a law. An SMB
 has a mental budget line for being found and for completed sales; it has
 none for accessibility. Argument B needs prior credibility and is easily
 dismissed as scare-selling when it arrives cold from a stranger.
+
+**Template-v2 exception, 2026-09-14.** Touch 1 may contain one fixed bridge
+after the prospect-specific scan facts: "Ces constats ont un impact direct
+sur l’expérience de vos clients et peuvent également relever du cadre légal
+applicable en matière d’accessibilité." The legal half is emitted only when
+the published preview's proof-card set contains an accessibility finding. It
+is not Argument B's facts block, does not say the regime applies to this
+business, and carries no criterion, registry datum, deadline, sanction or
+scope conclusion. If no accessibility proof card is present, the bridge ends
+after the customer-experience sentence.
 
 **B before A in the paid report.** The buyer has paid and now wants to
 know where they stand. This inversion is deliberate; report templates
@@ -148,37 +166,46 @@ One new piece of information per touch. Each is deterministic in
 substance; since trade-off 83 the wording is too (approved templates, no
 model).
 
-**Revised 2026-09-11, plan 037.** The first touch's evidence document is the
+**Revised 2026-09-14, template v2.** The first touch's evidence document is the
 full-scan scorecard preview (section 6bis), built from a candidate-linked
-full outreach scan rather than from the three-page prescan. Touch 1's render
-diff and measured failure crop belonged to the retired v1 preview, which
-carried images; the v2 preview carries none. The prescan evidence contract
-itself is unchanged and still feeds prescan completeness, scoring inputs,
-and the touch 2 observation, but the measured crop and composite no longer
-reach the prospect.
+full outreach scan rather than from the three-page prescan. The same immutable
+audit supplies Touch 1's aggregate counts and proof-card categories, so the
+email and linked preview cannot describe different slices of the site. The
+prescan remains a cost gate and qualification input; it is not the evidentiary
+source for the first email.
 
 | Touch | Content | Source |
 |---|---|---|
-| 1 | The published full-scan scorecard preview: coverage counts, aggregate finding totals, three proof cards | outreach full scan |
-| 2 | A short reminder pointing back to the preview; names no finding (trade-off 83) | approved template |
-| 3 | Criteria, this company's registry data, and where the case law stands | `assessObligations()` |
+| 1 | Prospect-specific full-scan aggregates, conditional impact/legal bridge, and the published scorecard preview | outreach full scan |
+| 2 | A short reminder focused on acting on the findings; names no new finding | approved template |
+| 3 | Criteria and this company's available registry data, followed by a commercial paragraph explicitly separated from the legal question | deterministic facts block + approved template |
 
 Touch 2 no longer carries a second observation, so it is no longer gated on
 the prescan having one (trade-off 83); the reminder is the operator's
-approved wording and names no finding.
+approved wording and names no new finding.
 
 The deterministic facts block appears on touch 3 only. Assembly refuses it on
-touches 1 and 2, so legal context cannot be front-loaded into the cold opener.
+touches 1 and 2. Touch 1's fixed conditional bridge is deliberately narrower:
+it may say the observed findings "peuvent également relever du cadre légal
+applicable en matière d’accessibilité" when an accessibility proof card is
+present, but it never carries the legal criteria, registry facts or a scope
+conclusion. Touch 3 remains the first place where those facts are spelled out.
 
 ## 6bis. The full-scan scorecard preview
 
-**Added 2026-09-11, plan 037.** The preview sent at touch 1 is a versioned
-v2 document built from one candidate-linked **outreach full scan**: a full
-audit run with the paid audit's content-coverage policy, stopped before the
-model analysis. Cheap qualification, the prescan, immutable scoring, and
-cohort selection remain the cost gate; only selected cohort members receive
-one. It is started by the operator from a selected prospect, never
-automatically.
+**Added 2026-09-11, plan 037; email reuse clarified 2026-09-14.** The preview
+sent at touch 1 is a versioned v2 document built from one candidate-linked
+**outreach full scan**: a full audit run with the paid audit's content-coverage
+policy, stopped before the model analysis. Cheap qualification, the prescan,
+immutable scoring, and cohort selection remain the cost gate; only selected
+cohort members receive one. It is started by the operator from a selected
+prospect, never automatically.
+
+Touch 1 may reuse the scorecard's public-safe aggregate facts from that exact
+scan: distinct-finding count, unique affected-page count, up to the two
+strongest non-zero severity totals, and the categories of the scorecard's own
+three proof cards. It does not expose occurrences, exact URLs, selectors,
+remediation or any other report-only detail.
 
 What the preview shows, and nothing more:
 
