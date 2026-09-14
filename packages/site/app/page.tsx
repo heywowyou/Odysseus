@@ -338,7 +338,7 @@ function HomeEn() {
     <>
       <section className="shell hero">
         <h1 className="display measure-display">
-          A technical diagnostic that tells you what to fix, where, and in what order
+          A diagnostic that takes you from findings to fixes
         </h1>
 
         <div className="split mt-10 hero-split">

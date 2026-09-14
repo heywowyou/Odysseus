@@ -204,7 +204,7 @@ describe('canonical public vocabulary', () => {
 describe('home page', () => {
   it('leads with the correction handoff', () => {
     expect(homeProse).toContain('Un diagnostic pour passer du constat à la solution');
-    expect(homeProse).toContain('what to fix');
+    expect(homeProse).toContain('A diagnostic that takes you from findings to fixes');
   });
 
   it('states the RGAA limitation concisely and links to the full wording', () => {
