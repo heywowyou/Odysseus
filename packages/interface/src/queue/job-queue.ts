@@ -33,9 +33,6 @@ export interface PipelineContext {
   originLock: OriginLock;
   /** Shared stop-request registry; runners check it at page boundaries. */
   cancellation: CancellationRegistry;
-  /** Pre-bound with jobId/jobType so a runner's own logging automatically
-   *  carries this job's correlation context. */
-  log: typeof logger;
 }
 
 export type PipelineFn = (job: JobDocument, ctx: PipelineContext) => Promise<void>;
@@ -217,7 +214,6 @@ export class JobQueue {
         connection: this.connection,
         originLock: this.originLock,
         cancellation: this.cancellation,
-        log: jobLog,
       });
     } catch (error) {
       if (error instanceof JobCancelledError) {

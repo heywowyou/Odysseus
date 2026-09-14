@@ -1,4 +1,3 @@
-import { logger } from '../../logger.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Issue #201: a domain-scoped hotel-prescan job (the dashboard's per-hotel
@@ -64,7 +63,6 @@ function ctx(): PipelineContext {
     connection: { id: 'fake-connection' } as never,
     originLock: { acquire: vi.fn(async () => vi.fn()) } as never,
     cancellation: new CancellationRegistry(),
-    log: logger,
   };
 }
 

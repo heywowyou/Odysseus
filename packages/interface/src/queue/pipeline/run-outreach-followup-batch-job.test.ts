@@ -1,4 +1,3 @@
-import { logger } from '../../logger.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@odysseus/store', () => ({
@@ -37,7 +36,6 @@ beforeEach(() => {
   ctx = {
     connection: fakeConnection,
     cancellation,
-    log: logger,
     originLock: { acquire: vi.fn() } as never,
   };
   vi.mocked(completeJob).mockResolvedValue(undefined);

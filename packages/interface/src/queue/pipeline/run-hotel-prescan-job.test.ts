@@ -1,4 +1,3 @@
-import { logger } from '../../logger.js';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -86,7 +85,6 @@ describe('hotel prescan cancellation', () => {
       connection: {} as never,
       originLock: {} as never,
       cancellation,
-      log: logger,
     };
 
     await expect(
@@ -110,7 +108,6 @@ describe('hotel prescan cancellation', () => {
       connection: {} as never,
       originLock: {} as never,
       cancellation: new CancellationRegistry(),
-      log: logger,
     };
 
     await expect(
@@ -143,7 +140,6 @@ describe('hotel prescan cancellation', () => {
       connection: {} as never,
       originLock: {} as never,
       cancellation: new CancellationRegistry(),
-      log: logger,
     };
 
     await expect(

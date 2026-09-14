@@ -1,4 +1,3 @@
-import { logger } from '../../logger.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../pipeline/audit-stage.js', () => ({ runAuditStage: vi.fn() }));
@@ -99,7 +98,6 @@ beforeEach(() => {
     connection: fakeConnection,
     originLock: { acquire: vi.fn().mockResolvedValue(release) } as never,
     cancellation: new CancellationRegistry(),
-    log: logger,
   };
 
   vi.mocked(runAuditStage).mockResolvedValue(fakeAuditResult());

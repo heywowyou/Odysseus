@@ -438,7 +438,7 @@ describe('JobQueue', () => {
     });
     expect(runProspectIngestionJob).toHaveBeenCalledWith(
       job,
-      expect.objectContaining({ log: logger }),
+      expect.not.objectContaining({ log: expect.anything() }),
     );
   });
 

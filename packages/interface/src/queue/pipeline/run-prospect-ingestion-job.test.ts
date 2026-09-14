@@ -1,4 +1,3 @@
-import { logger } from '../../logger.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { statSync } from 'node:fs';
@@ -138,7 +137,6 @@ beforeEach(async () => {
     connection: fakeConnection,
     originLock: new OriginLock(),
     cancellation: new CancellationRegistry(),
-    log: logger,
   };
 
   vi.mocked(getCheckpoint).mockResolvedValue(null);
