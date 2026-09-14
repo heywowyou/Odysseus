@@ -180,6 +180,7 @@ describe('operator page accessibility (plan 013 step 5, extended plan 022 step 6
         pagesVisited: 12,
         severityRollup: { critical: 0, serious: 0, moderate: 0, minor: 0 },
         findings: [],
+        findingsStale: false,
         reportLanguages: [],
         reports: [],
         lifecycle: 'scanned',
@@ -724,6 +725,7 @@ describe('operator page accessibility (plan 013 step 5, extended plan 022 step 6
         lifecycle: 'rendered',
         severityRollup: { critical: 0, serious: 0, moderate: 0, minor: 0 },
         findings: [],
+        findingsStale: false,
         ruleCopy: {},
         reportLanguages: [],
         reports: [

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JSX, KeyboardEvent } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { ChevronRight } from 'lucide-react';
 import { PAGE_WIDTH, PageHeader } from '../components/page-header';
@@ -22,6 +22,7 @@ import {
   auditChoices,
   hubPrimaryAction,
   hubTabs,
+  parseHubStepKey,
   pipelineSteps,
   selectedAuditId,
   selectionVerdictSentence,
@@ -308,37 +309,125 @@ export function ProspectDetailPage(): JSX.Element {
   const [isOutreachBusy, setIsOutreachBusy] = useState(false);
   /** The one-time link of a publish made on this visit (a manual Aperçu
    *  publish, or the fresh preview a first-email call just made). Held only
-   *  in page memory: Odysseus never stores the raw token. */
+   *  in page memory: Odysseus never stores the raw token, so it never
+   *  belongs in the URL either - a tab/audit navigation below leaves it
+   *  untouched. */
   const [publishedLink, setPublishedLink] = useState<string | null>(null);
-  /** The active hub tab (plan 042 decision 3): component state, one URL.
-   *  It lives in the page, above every section component, so a tab switch
-   *  never remounts the page. */
-  const [activeTab, setActiveTab] = useState<HubStepKey>('fiche');
-  /** Which audit the Audit and Rapport client tabs render (default: the
-   *  newest). View state only; nothing stored. */
-  const [pickedAuditId, setPickedAuditId] = useState<string | null>(null);
   /** Plan 043: the open wave-roster dialog, if any. The mutation itself is
    *  shared with the prospects list via wave-dialog.tsx. */
   const [waveDialog, setWaveDialog] = useState<'add' | 'remove' | null>(null);
 
+  // Issue #221: the active hub tab and the picked audit are addressable
+  // query state (?tab=...&audit=...), not component state - so a copied
+  // URL reopens the same stage and artifact, and browser back/forward
+  // walks prior hub stages. Neither param is ever validated against the
+  // real tabs/choices here (that needs the loaded detail); the effects
+  // below correct an unreachable or foreign value once data has loaded.
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const setActiveTab = useCallback(
+    (key: HubStepKey, options?: { replace?: boolean }): void => {
+      setSearchParams(
+        (previous) => {
+          const next = new URLSearchParams(previous);
+          next.set('tab', key);
+          return next;
+        },
+        { replace: options?.replace ?? false },
+      );
+    },
+    [setSearchParams],
+  );
+
+  const setPickedAuditId = useCallback(
+    (nextAuditId: string | null): void => {
+      setSearchParams(
+        (previous) => {
+          const next = new URLSearchParams(previous);
+          if (nextAuditId === null) next.delete('audit');
+          else next.set('audit', nextAuditId);
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
   // Plan 040 slice 7: the a-traiter rows and the audit page's preview note
   // deep-link into a hub section (/prospects/:id#hub-emails and friends).
   // The sections only exist once the detail has loaded, so the scroll is
-  // deferred until then and replays when the hash itself changes. Since
-  // plan 042 the anchor first names a tab: the panel is mounted by the tab
-  // switch, and the scroll happens on the next tick so the panel exists.
-  // Plan 045 stage 3.2: the Rapport client tab is visible whenever a full
-  // audit exists (hubTabs below), so a 'report' deep link can switch to it
-  // like any other tab.
+  // deferred until then. Since plan 042 the anchor first names a tab: the
+  // panel is mounted by the tab switch, and the scroll happens once the
+  // panel exists. Plan 045 stage 3.2: the Rapport client tab is visible
+  // whenever a full audit exists (hubTabs below), so a 'report' deep link
+  // can switch to it like any other tab.
+  //
+  // Issue #221: this legacy hash scheme still works - it now drives the
+  // same query-param tab state, with replace:true so an incoming hash link
+  // does not itself add a history entry. react-router's setSearchParams
+  // navigates to a bare "?search" target, dropping the hash, so `hash`
+  // itself goes back to '' the instant the tab switch lands - the anchor
+  // is captured once, on mount, into a ref rather than read again later.
   const hasLoaded = data !== undefined;
+  const deepLinkAnchorRef = useRef(hash === '' ? null : hash.slice(1));
   useEffect(() => {
-    if (hash === '' || !hasLoaded) return;
-    const anchor = hash.slice(1);
+    const anchor = deepLinkAnchorRef.current;
+    if (anchor === null || !hasLoaded) return;
     const tabKey = HUB_STEP_KEYS.find((key) => HUB_STEP_ANCHORS[key] === anchor);
-    if (tabKey !== undefined) setActiveTab(tabKey);
+    if (tabKey !== undefined) setActiveTab(tabKey, { replace: true });
+  }, [hasLoaded, setActiveTab]);
+
+  // The scroll itself is a second effect, keyed on searchParams as well:
+  // the tab switch above lands asynchronously, so a scroll scheduled in
+  // the same pass can fire before the tab's panel (and its target id)
+  // exists in the DOM. Re-running once the URL settles means the anchor is
+  // present by the time this effect's own timeout fires; a premature
+  // attempt against a not-yet-mounted id is a silent no-op (scrollToAnchor
+  // optional-chains the lookup).
+  useEffect(() => {
+    const anchor = deepLinkAnchorRef.current;
+    if (anchor === null || !hasLoaded) return;
     const timer = window.setTimeout(() => scrollToAnchor(anchor), 0);
     return () => window.clearTimeout(timer);
-  }, [hash, hasLoaded]);
+  }, [hasLoaded, searchParams]);
+
+  // Issue #221 required behavior: an audit id in the URL that does not
+  // belong to this prospect (foreign, stale, or simply unknown) must not
+  // crash or silently select an unrelated audit. selectedAuditId already
+  // falls back to the newest owned choice; once the detail has loaded, a
+  // requested id the fallback did not honor is corrected in place so the
+  // address bar never keeps pointing at an audit the hub did not actually
+  // select.
+  useEffect(() => {
+    if (data === undefined) return;
+    const requested = searchParams.get('audit');
+    if (requested === null) return;
+    const resolved = selectedAuditId(auditChoices(data), requested);
+    if (resolved === requested) return;
+    setSearchParams(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        if (resolved === null) next.delete('audit');
+        else next.set('audit', resolved);
+        return next;
+      },
+      { replace: true },
+    );
+  }, [data, searchParams, setSearchParams]);
+
+  // Same fallback for the tab itself: the only tab whose visibility depends
+  // on the loaded detail is 'report' (shown only once a full audit exists).
+  // A stale/unrecognised tab value already renders as the default 'fiche'
+  // below without needing a rewrite; only the loaded-but-unreachable case
+  // needs the URL corrected.
+  useEffect(() => {
+    if (data === undefined) return;
+    const requestedTab = parseHubStepKey(searchParams.get('tab'));
+    if (requestedTab !== 'report') return;
+    if (auditChoices(data).length > 0) return;
+    setActiveTab('fiche', { replace: true });
+  }, [data, searchParams, setActiveTab]);
 
   const encodedId = candidateId === undefined ? '' : encodeURIComponent(candidateId);
 
@@ -626,8 +715,13 @@ export function ProspectDetailPage(): JSX.Element {
   const action = hubPrimaryAction(data);
   const steps = pipelineSteps(data, now);
   const choices = auditChoices(data);
-  const auditId = selectedAuditId(choices, pickedAuditId);
+  const auditId = selectedAuditId(choices, searchParams.get('audit'));
   const tabs = hubTabs(steps, auditId !== null);
+  const requestedTab = parseHubStepKey(searchParams.get('tab'));
+  const activeTab =
+    requestedTab !== null && tabs.some((step) => step.key === requestedTab)
+      ? requestedTab
+      : 'fiche';
 
   const sectionFor = (key: HubStepKey): JSX.Element | null => {
     switch (key) {

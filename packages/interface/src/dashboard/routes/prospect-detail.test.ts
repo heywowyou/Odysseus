@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
-import { createElement } from 'react';
+import { createElement, Fragment } from 'react';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '../i18n/provider';
 import { ProspectDetailPage } from './prospect-detail';
@@ -111,6 +111,85 @@ async function renderDetail(initialEntry: string = '/prospects/candidate-1'): Pr
  *  section since the hub merged the former per-topic cards. */
 function pageText(): string {
   return document.body.textContent ?? '';
+}
+
+/** Issue #221: renders alongside the page (outside its matched Route, but
+ *  inside the same MemoryRouter context) so tests can read the address bar
+ *  the page's own navigation produced, and walk browser-style history with
+ *  a real navigate(-1)/navigate(1) rather than reaching into router
+ *  internals. */
+function LocationProbe(): ReturnType<typeof createElement> {
+  const location = useLocation();
+  return createElement(
+    'div',
+    { 'data-testid': 'location-probe' },
+    location.pathname + location.search + location.hash,
+  );
+}
+
+function HistoryControls(): ReturnType<typeof createElement> {
+  const navigate = useNavigate();
+  return createElement(
+    Fragment,
+    null,
+    createElement(
+      'button',
+      { type: 'button', 'data-testid': 'history-back', onClick: () => navigate(-1) },
+      'history-back',
+    ),
+    createElement(
+      'button',
+      { type: 'button', 'data-testid': 'history-forward', onClick: () => navigate(1) },
+      'history-forward',
+    ),
+  );
+}
+
+function currentLocation(): string {
+  return document.querySelector('[data-testid="location-probe"]')?.textContent ?? '';
+}
+
+async function renderDetailWithProbe(
+  initialEntry: string = '/prospects/candidate-1',
+): Promise<void> {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  await act(async () => {
+    root.render(
+      createElement(
+        I18nProvider,
+        null,
+        createElement(
+          MemoryRouter,
+          { initialEntries: [initialEntry] },
+          createElement(
+            Fragment,
+            null,
+            createElement(LocationProbe),
+            createElement(HistoryControls),
+            createElement(
+              Routes,
+              null,
+              createElement(Route, {
+                path: '/prospects/:candidateId',
+                element: createElement(ProspectDetailPage),
+              }),
+            ),
+          ),
+        ),
+      ),
+    );
+  });
+}
+
+async function clickTestId(testId: string): Promise<void> {
+  const element = document.querySelector(`[data-testid="${testId}"]`);
+  if (element === null) throw new Error(`no element with data-testid="${testId}"`);
+  await act(async () => {
+    (element as HTMLElement).click();
+  });
+  await pause();
 }
 
 describe('websiteHref', () => {
@@ -284,6 +363,7 @@ describe('ProspectDetailPage tabs (plan 042 slice 1)', () => {
       lifecycle: 'rendered',
       severityRollup: { critical: 1, serious: 0, moderate: 2, minor: 3 },
       findings: [],
+      findingsStale: false,
       ruleCopy: {},
       reportLanguages: [],
       reports: [
@@ -399,6 +479,155 @@ describe('ProspectDetailPage tabs (plan 042 slice 1)', () => {
     await pause();
 
     expect(buttonWithText('Rapport client')).toBeUndefined();
+  });
+});
+
+describe('ProspectDetailPage stage/audit deep links (issue #221)', () => {
+  const fetchMock = vi.fn();
+
+  const auditDetailFixture = (auditId: string) => ({
+    auditId,
+    siteUrl: 'https://exemple.fr',
+    startedAt: '2026-09-01T10:00:00.000Z',
+    finishedAt: '2026-09-01T10:20:00.000Z',
+    pagesVisited: 12,
+    lifecycle: 'rendered',
+    severityRollup: { critical: 1, serious: 0, moderate: 2, minor: 3 },
+    findings: [],
+    findingsStale: false,
+    ruleCopy: {},
+    reportLanguages: [],
+    reports: [
+      { language: 'fr', status: 'unverified', pdfAvailable: false },
+      { language: 'en', status: 'unverified', pdfAvailable: false },
+    ],
+    approval: null,
+    manualFields: null,
+  });
+
+  const detailWithTwoAudits = (): ProspectDetailResponse => ({
+    ...detailWithContact(null),
+    outreachScan: { canStart: false },
+    outreachAudit: {
+      auditId: 'audit-2',
+      startedAt: '2026-09-05T10:00:00.000Z',
+      severityRollup: { critical: 0, serious: 0, moderate: 0, minor: 0 },
+    },
+    outreachAudits: [
+      { auditId: 'audit-2', startedAt: '2026-09-05T10:00:00.000Z', jobType: 'full-audit' },
+      { auditId: 'audit-1', startedAt: '2026-09-01T10:00:00.000Z', jobType: 'prospecting-audit' },
+    ],
+  });
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/report-preparation')) return notFoundResponse();
+      if (url.endsWith('/api/audits/audit-1')) return jsonResponse(auditDetailFixture('audit-1'));
+      if (url.endsWith('/api/audits/audit-2')) return jsonResponse(auditDetailFixture('audit-2'));
+      return jsonResponse(detailWithTwoAudits());
+    });
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+  });
+
+  it('opens a deep-linked tab directly, no click required', async () => {
+    await renderDetailWithProbe('/prospects/candidate-1?tab=quick-check');
+    await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
+    await pause();
+
+    expect(document.getElementById('hub-quick-check')).not.toBeNull();
+    expect(document.getElementById('hub-fiche')).toBeNull();
+  });
+
+  it('selects the audit named in the URL rather than defaulting to the newest', async () => {
+    await renderDetailWithProbe('/prospects/candidate-1?tab=audit&audit=audit-1');
+    await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
+    await pause();
+
+    // audit-1 started 2026-09-01, audit-2 (the newest) started 2026-09-05;
+    // only the requested one's fetch confirms the picker honored the URL
+    // instead of the default-newest fallback.
+    expect(
+      fetchMock.mock.calls.some((call) => String(call[0]).endsWith('/api/audits/audit-1')),
+    ).toBe(true);
+  });
+
+  it('falls back to the newest owned audit for an id that does not belong to this prospect', async () => {
+    await renderDetailWithProbe('/prospects/candidate-1?tab=audit&audit=someone-elses-audit');
+    await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
+    await pause();
+
+    expect(pageText()).not.toContain('someone-elses-audit');
+    expect(currentLocation()).toContain('audit=audit-2');
+    expect(currentLocation()).not.toContain('someone-elses-audit');
+  });
+
+  it('falls back to the fiche tab for an unrecognised tab value', async () => {
+    await renderDetailWithProbe('/prospects/candidate-1?tab=not-a-real-tab');
+    await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
+    await pause();
+
+    expect(document.getElementById('hub-fiche')).not.toBeNull();
+  });
+
+  it('updates the URL when the tab strip is used, and old plain links still open the default state', async () => {
+    await renderDetailWithProbe();
+    await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
+    await pause();
+
+    expect(document.getElementById('hub-fiche')).not.toBeNull();
+    expect(currentLocation()).toBe('/prospects/candidate-1');
+
+    await clickButton('Contrôle rapide');
+    expect(currentLocation()).toBe('/prospects/candidate-1?tab=quick-check');
+  });
+
+  it('updates the URL when the audit picker changes, without remounting the page', async () => {
+    await renderDetailWithProbe('/prospects/candidate-1?tab=audit');
+    await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
+    await pause();
+
+    // Two choices render as a segmented control (radix ToggleGroup, role
+    // "radio" per item); the newest (audit-2) is already selected, so
+    // picking the other one is the unselected radio.
+    const options = [...document.querySelectorAll('[role="radio"]')];
+    const other = options.find((option) => option.getAttribute('data-state') !== 'on');
+    expect(other).toBeDefined();
+    await act(async () => {
+      (other as HTMLElement).click();
+    });
+    await pause();
+
+    expect(currentLocation()).toContain('audit=audit-1');
+    // Still the same mounted page, not a fresh load: the hub's own name
+    // stays rendered rather than a skeleton/loading state briefly showing.
+    expect(pageText()).toContain('Hôtel Exemple');
+  });
+
+  it('lets browser back/forward walk prior tab navigation', async () => {
+    await renderDetailWithProbe();
+    await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
+    await pause();
+
+    await clickButton('Contrôle rapide');
+    expect(currentLocation()).toBe('/prospects/candidate-1?tab=quick-check');
+
+    await clickButton('Audit');
+    expect(currentLocation()).toBe('/prospects/candidate-1?tab=audit');
+
+    await clickTestId('history-back');
+    expect(currentLocation()).toBe('/prospects/candidate-1?tab=quick-check');
+    expect(document.getElementById('hub-quick-check')).not.toBeNull();
+
+    await clickTestId('history-forward');
+    expect(currentLocation()).toBe('/prospects/candidate-1?tab=audit');
+    expect(document.getElementById('hub-audit')).not.toBeNull();
   });
 });
 

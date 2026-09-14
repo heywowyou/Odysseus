@@ -34,6 +34,16 @@ export const HUB_STEP_KEYS: readonly HubStepKey[] = [
   'outcome',
 ];
 
+/** Issue #221: parses a `?tab=` query value into a HubStepKey, or null for
+ *  anything else (absent, unknown, or a stale value from a build that used
+ *  a different key) - the page falls back to the default tab rather than
+ *  rendering an unrecognised one. */
+export function parseHubStepKey(value: string | null | undefined): HubStepKey | null {
+  return value != null && (HUB_STEP_KEYS as readonly string[]).includes(value)
+    ? (value as HubStepKey)
+    : null;
+}
+
 /** DOM ids of the hub's panels, so a deep link (or a section reference
  *  elsewhere) still lands on the right stage now that only the active
  *  tab's panel exists in the DOM. */

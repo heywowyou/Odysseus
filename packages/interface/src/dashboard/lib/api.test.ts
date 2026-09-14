@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { ApiError, ApiTimeoutError, ApiValidationError, fetchJson, fetchJsonValidated } from './api';
+import {
+  ApiError,
+  ApiTimeoutError,
+  ApiValidationError,
+  fetchJson,
+  fetchJsonValidated,
+} from './api';
 
 afterEach(() => {
   vi.restoreAllMocks();
