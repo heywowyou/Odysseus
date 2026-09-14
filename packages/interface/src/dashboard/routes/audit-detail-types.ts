@@ -175,6 +175,10 @@ export interface AuditOutreachStatusResponse {
 export interface AuditHotelResponse {
   candidateId: string;
   name: string;
+  /** Issue #216: which of the two association kinds this is - the
+   *  automatic domain match, or an operator's manual correction. Null for
+   *  a stale-cached-page payload from before this field existed. */
+  matchedOn: 'own-registrable-domain' | 'manual' | null;
 }
 
 /** Issue: operator-reviewed overall grade override. Present whenever the
@@ -233,6 +237,12 @@ export interface AuditDetailResponse {
    *  always sends it; optional here for the same stale-cached-page
    *  tolerance as `outreach` above. */
   hotel?: AuditHotelResponse | null;
+  /** Issue #216: whether the manual "Link to prospect" action is offered
+   *  at all - false only when the audit already carries outreach
+   *  provenance, which linkAuditToHotelManually refuses to override.
+   *  Optional for the same stale-cached-page tolerance as `hotel` above;
+   *  a missing value renders as no manual-link action. */
+  canLinkHotelManually?: boolean;
   /** The scan's original signal, before a possible operator correction. */
   detectedTransactionalFlow?: boolean;
   /** Issue #90: the failed pipeline run behind this audit, when there was

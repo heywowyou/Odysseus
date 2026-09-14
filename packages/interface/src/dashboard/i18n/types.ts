@@ -323,6 +323,20 @@ export interface DashboardStrings {
     regeneratingMessage: string;
     regeneratedMessage: string;
     notFound: string;
+    /** Issue #216: the manual hotel-link action, offered when the
+     *  automatic domain match could not safely link this audit (or linked
+     *  it to the wrong hotel). */
+    hotelLink: {
+      notLinked: string;
+      linkAction: string;
+      manualBadge: string;
+      unlinkAction: string;
+      unlinkConfirm: string;
+      dialogTitle: string;
+      searchPlaceholder: string;
+      searchEmpty: string;
+      actionError: string;
+    };
     /** Report rows show the language's endonym, never a locale code. */
     languageLabels: Record<'fr' | 'en', string>;
     /** Issue #90: the report-stage failure card. The stored error text is

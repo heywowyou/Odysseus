@@ -23,6 +23,7 @@ import { ApiError, fetchJson } from '../lib/api';
 import { formatDateTime } from '../lib/format';
 import { usePolling } from '../lib/use-polling';
 import { AuditGradeOverridePanel } from './audit-grade-override-panel';
+import { AuditHotelLinkPanel } from './audit-hotel-link-panel';
 import { AuditPreviewNote } from './audit-preview-note';
 import { AuditReportPanel } from './audit-report-panel';
 import {
@@ -218,6 +219,12 @@ export function AuditDetailPage(): JSX.Element {
               </div>
             </dl>
             <SeverityBar rollup={data.severityRollup} strings={strings} />
+            <AuditHotelLinkPanel
+              auditId={data.auditId}
+              hotel={data.hotel ?? null}
+              canLinkManually={data.canLinkHotelManually ?? false}
+              onChanged={refresh}
+            />
           </div>
         }
         // The report stage is the header's only action-shaped element:

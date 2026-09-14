@@ -264,17 +264,23 @@ export async function listOutreachAudits(
     .lean<{ auditId: string; startedAt: Date }[]>();
   if (audits.length === 0) return [];
 
-  // Outreach audits are created by outreach-full-scan jobs, which record
-  // the audit under the job's single auditId (completeJob). A job row may
-  // be gone; the type is then unknown rather than guessed.
+  // A completed job records its audit(s) one of two ways: a full-audit or
+  // outreach-full-scan job under its single `auditId`, but a `prospecting`
+  // (Light audit) job under the plural `auditIds` array - one job can scan
+  // several URLs. Both must be matched, or every Light-audit-linked row
+  // resolves to an unknown type even though its job row exists. A job row
+  // may still be gone entirely; the type is then unknown rather than
+  // guessed.
   const auditIds = audits.map((audit) => audit.auditId);
   const jobs = await createJobModel(connection)
-    .find({ auditId: { $in: auditIds } })
-    .select({ auditId: 1, type: 1 })
-    .lean<{ auditId?: string; type: string }[]>();
-  const typeByAuditId = new Map(
-    jobs.filter((job) => job.auditId !== undefined).map((job) => [job.auditId as string, job.type]),
-  );
+    .find({ $or: [{ auditId: { $in: auditIds } }, { auditIds: { $in: auditIds } }] })
+    .select({ auditId: 1, auditIds: 1, type: 1 })
+    .lean<{ auditId?: string; auditIds?: string[]; type: string }[]>();
+  const typeByAuditId = new Map<string, string>();
+  for (const job of jobs) {
+    if (job.auditId !== undefined) typeByAuditId.set(job.auditId, job.type);
+    for (const id of job.auditIds ?? []) typeByAuditId.set(id, job.type);
+  }
 
   return audits.map((audit) => ({
     auditId: audit.auditId,

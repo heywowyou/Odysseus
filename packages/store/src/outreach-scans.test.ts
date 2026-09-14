@@ -625,4 +625,49 @@ describe('listOutreachAudits (plan 042 slice 2)', () => {
       expect(audits.map((audit) => audit.auditId)).toEqual([auditId]);
     },
   );
+
+  it.skipIf(!mongoAvailable)(
+    'reads the job type off the plural auditIds array too (issue #216), for a Light audit produced by the generic prospecting job',
+    async () => {
+      const { candidate } = await seedSelectedCandidate('light-audit-picker.fr');
+      const auditId = randomUUID();
+      await seedOutreachAudit({
+        candidateId: candidate.candidateId,
+        auditId,
+        siteUrl: 'https://light-audit-picker.fr/',
+      });
+      // A prospecting/Light-audit job completes with the plural auditIds
+      // array (run-prospecting-job.ts), never the singular auditId a
+      // full-audit/outreach-full-scan job writes - listOutreachAudits must
+      // read both, or a hotel-linked Light audit always resolves
+      // jobType: null even though its job row exists.
+      await createAuditModel(connection!).updateOne(
+        { auditId },
+        {
+          $unset: { outreach: '' },
+          $set: {
+            hotelLink: {
+              candidateId: candidate.candidateId,
+              matchedOn: 'own-registrable-domain',
+              linkedAt: new Date(),
+            },
+          },
+        },
+      );
+      await createJobModel(connection!).create({
+        jobId: randomUUID(),
+        type: 'prospecting',
+        status: 'complete',
+        phase: 'complete',
+        siteUrl: 'https://light-audit-picker.fr/',
+        options: {},
+        createdAt: new Date(),
+        progress: {},
+        auditIds: [auditId],
+      });
+
+      const audits = await listOutreachAudits(connection!, candidate.candidateId);
+      expect(audits).toEqual([{ auditId, startedAt: expect.any(Date), jobType: 'prospecting' }]);
+    },
+  );
 });

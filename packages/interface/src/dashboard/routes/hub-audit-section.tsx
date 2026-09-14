@@ -29,12 +29,20 @@ const SEVERITY_TONES: Record<SeverityKey, BadgeTone> = {
 
 const SEVERITY_KEYS: readonly SeverityKey[] = ['critical', 'serious', 'moderate', 'minor'];
 
+// Issue #216: the four audit-producing job types are distinct pipelines
+// with distinct semantics (a Light audit is not hotel-prescan evidence,
+// full-audit is not outreach evidence) and must read as distinct labels
+// here, the same four the Audits list page's own typeBadge already
+// distinguishes - a picker entry naming only two of the four silently
+// hid which pipeline actually produced the rest.
 function jobTypeLabel(
   jobType: string | null,
   strings: ReturnType<typeof useI18n>['strings'],
 ): string | null {
   if (jobType === 'full-audit') return strings.common.typeLabels.fullAudit;
   if (jobType === 'outreach-full-scan') return strings.common.typeLabels.outreachFullScan;
+  if (jobType === 'hotel-prescan') return strings.common.typeLabels.hotelPrescan;
+  if (jobType === 'prospecting') return strings.common.typeLabels.prospecting;
   return null;
 }
 

@@ -26,12 +26,14 @@ import {
   getLatestReportApproval,
   getSeverityRollup,
   approvalMatchesReportPair,
+  linkAuditToHotelManually,
   listReportLanguages,
   persistReportApproval,
   resolveOutreachAuditForCandidate,
   resolveSelectedAnalysisPairForAudit,
   setAuditGradeOverride,
   setAuditManualFields,
+  unlinkAuditHotel,
   type AuditDocumentFields,
   type JobDocument,
   type ReportDocument,
@@ -521,8 +523,16 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       outreach: { candidateId: outreachCandidateId, hasLiveV2Preview },
       hotel:
         hotelCandidate !== null
-          ? { candidateId: hotelCandidate.candidateId, name: hotelCandidate.name }
+          ? {
+              candidateId: hotelCandidate.candidateId,
+              name: hotelCandidate.name,
+              matchedOn: audit.hotelLink?.matchedOn ?? null,
+            }
           : null,
+      // Issue #216: an audit already carrying outreach provenance refuses
+      // a manual link (linkAuditToHotelManually's own rule) - the page
+      // hides the action entirely rather than offering it and failing.
+      canLinkHotelManually: outreachCandidateId === null,
       // Issue #90: the failed job's own record, so the audit pages can show
       // the reason and its prescribed fix instead of a bare failed badge.
       ...(failureJob !== null
@@ -705,6 +715,50 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         error instanceof Error ? error.message : 'could not clear grade override',
       );
     }
+  });
+
+  // Issue #216: the audit detail page's operator recovery action for an
+  // audit the automatic domain match could not safely link (a
+  // shared/vendor-hosted domain) or linked to the wrong candidate. Never
+  // succeeds over an outreach-provenanced audit - linkAuditToHotelManually
+  // itself refuses that case, so the 409 here names why rather than the
+  // route silently no-opping.
+  router.post('/api/audits/:auditId/hotel-link', async ({ req, res, params }) => {
+    const auditId = params['auditId']!;
+    const body = await readJsonBodyOrRespond(req, res);
+    if (body === undefined) return;
+    const candidateId = (body as { candidateId?: unknown }).candidateId;
+    if (typeof candidateId !== 'string' || candidateId.trim() === '') {
+      sendError(res, 400, 'candidateId must be a non-empty string');
+      return;
+    }
+
+    const result = await linkAuditToHotelManually(connection, auditId, candidateId);
+    if (result.outcome === 'refused') {
+      if (result.reason === 'audit-not-found') {
+        sendError(res, 404, 'audit not found');
+        return;
+      }
+      if (result.reason === 'candidate-not-found') {
+        sendError(res, 404, 'prospect not found');
+        return;
+      }
+      sendError(res, 409, 'this audit already carries outreach provenance and cannot be relinked');
+      return;
+    }
+    sendJson(res, 200, {
+      hotel: { candidateId: result.candidate.candidateId, name: result.candidate.name },
+    });
+  });
+
+  router.delete('/api/audits/:auditId/hotel-link', async ({ res, params }) => {
+    const auditId = params['auditId']!;
+    const cleared = await unlinkAuditHotel(connection, auditId);
+    if (!cleared) {
+      sendError(res, 404, 'audit not found');
+      return;
+    }
+    sendJson(res, 200, { cleared: true });
   });
 
   // Plan 045 slice 1.3: the inline Confirm button next to a detected

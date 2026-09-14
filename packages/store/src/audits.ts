@@ -324,6 +324,63 @@ export async function linkAuditToHotelByDomain(
   return { candidate };
 }
 
+export type LinkAuditToHotelManuallyResult =
+  | { outcome: 'linked'; candidate: HotelCandidateDocument }
+  | {
+      outcome: 'refused';
+      reason: 'audit-not-found' | 'candidate-not-found' | 'outreach-provenanced';
+    };
+
+/** Issue #216's operator recovery path for an audit the automatic domain
+ *  match could not safely link (a shared/vendor-hosted domain, or any
+ *  identity shape `linkAuditToHotelByDomain` deliberately refuses) or
+ *  linked to the wrong candidate. Unlike the automatic match, this
+ *  overwrites an existing `hotelLink` - a manual correction is exactly
+ *  what this path is for - but it never touches `outreach`: an audit
+ *  already carrying that immutable prospecting-provenance stamp is
+ *  refused outright, since `matchedOn: 'manual'` must never read as
+ *  stronger evidence than the real authorization it is not. */
+export async function linkAuditToHotelManually(
+  connection: Connection,
+  auditId: string,
+  candidateId: string,
+): Promise<LinkAuditToHotelManuallyResult> {
+  const AuditModel = createAuditModel(connection);
+  const existing = await AuditModel.findOne({ auditId }, { _id: 0, outreach: 1 }).lean<Pick<
+    AuditDocument,
+    'outreach'
+  > | null>();
+  if (!existing) return { outcome: 'refused', reason: 'audit-not-found' };
+  if (existing.outreach?.candidateId !== undefined) {
+    return { outcome: 'refused', reason: 'outreach-provenanced' };
+  }
+
+  const candidate = await getHotelCandidate(connection, candidateId);
+  if (!candidate) return { outcome: 'refused', reason: 'candidate-not-found' };
+
+  const business = await resolveOrCreateBusinessForCandidate(connection, candidate);
+  const hotelLink: AuditHotelLink = {
+    candidateId: candidate.candidateId,
+    matchedOn: 'manual',
+    linkedAt: new Date(),
+    ...(business !== null ? { businessId: business.businessId } : {}),
+  };
+  await AuditModel.updateOne({ auditId }, { $set: { hotelLink } });
+  return { outcome: 'linked', candidate };
+}
+
+/** The recovery path's undo: clears a mistaken `hotelLink` (automatic or
+ *  manual) so it stops appearing in that hotel's Audit tab. Never touches
+ *  `outreach` - an audit's real prospecting provenance is not something
+ *  this action can or should remove. Returns false when the audit does
+ *  not exist; true whether or not it actually carried a `hotelLink` to
+ *  clear, since either way the audit ends this call with none. */
+export async function unlinkAuditHotel(connection: Connection, auditId: string): Promise<boolean> {
+  const AuditModel = createAuditModel(connection);
+  const result = await AuditModel.updateOne({ auditId }, { $unset: { hotelLink: '' } });
+  return result.matchedCount > 0;
+}
+
 export async function getFindingsForAudit(
   connection: Connection,
   auditId: string,

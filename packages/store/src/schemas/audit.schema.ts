@@ -593,7 +593,7 @@ const reportPreparationSchema = new Schema(
 const hotelLinkSchema = new Schema(
   {
     candidateId: { type: String, required: true },
-    matchedOn: { type: String, required: true, enum: ['own-registrable-domain'] },
+    matchedOn: { type: String, required: true, enum: ['own-registrable-domain', 'manual'] },
     linkedAt: { type: Date, required: true },
     // Issue #218: the durable business behind candidateId, when one could
     // be safely resolved.

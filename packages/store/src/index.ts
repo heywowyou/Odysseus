@@ -75,6 +75,8 @@ export {
   prefillAuditManualFields,
   replaceDetectedManualFields,
   linkAuditToHotelByDomain,
+  linkAuditToHotelManually,
+  unlinkAuditHotel,
   getAuditGradeOverride,
   setAuditGradeOverride,
   clearAuditGradeOverride,
@@ -88,7 +90,11 @@ export {
   getAuditIdsForBusiness,
   resolveOrCreateBusinessForCandidate,
 } from './businesses.js';
-export type { AuditRuntimeFields, AuditHotelLinkResult } from './audits.js';
+export type {
+  AuditRuntimeFields,
+  AuditHotelLinkResult,
+  LinkAuditToHotelManuallyResult,
+} from './audits.js';
 
 // Plan 019: report preparation and exact-ID writing selection. All writes
 // go through these service functions; handlers never issue raw updates.
