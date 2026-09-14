@@ -88,7 +88,7 @@ function HomeFr() {
     <>
       <section className="shell hero">
         <h1 className="display measure-display">
-          Un diagnostic technique pour savoir quoi corriger, où, et dans quel ordre
+          Un diagnostic pour passer du constat à la solution
         </h1>
 
         <div className="split mt-10 hero-split">

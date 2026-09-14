@@ -203,7 +203,7 @@ describe('canonical public vocabulary', () => {
 
 describe('home page', () => {
   it('leads with the correction handoff', () => {
-    expect(homeProse).toContain('quoi corriger');
+    expect(homeProse).toContain('Un diagnostic pour passer du constat à la solution');
     expect(homeProse).toContain('what to fix');
   });
 
