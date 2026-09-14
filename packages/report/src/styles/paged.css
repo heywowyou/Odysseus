@@ -225,9 +225,19 @@ html {
    .card atomic can strand the section heading on an otherwise empty page
    when the first priority fits only on a fresh page. Keep the priority's
    identity and opening explanation together, then let Paged.js use the
-   remaining space and continue the card cleanly when needed. */
+   remaining space and continue the card cleanly when needed.
+   Paged.js's column-based fragmentation is unreliable on a `display:flex`
+   container: the real small-site report measured a split .theme-card
+   whose leftover fragment painted ~1800px past the page's right edge
+   (the .card base rule is flex for its gap-based child spacing). Dropping
+   to block layout here, with the gap replaced by child margins, keeps
+   fragmentation on ordinary block boxes, which Paged.js splits correctly. */
 .theme-card {
+  display: block;
   break-inside: auto;
+}
+.theme-card > * + * {
+  margin-top: var(--space-3);
 }
 .theme-card-header,
 .theme-card-header + .theme-row {
