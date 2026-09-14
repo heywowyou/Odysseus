@@ -36,7 +36,7 @@ export const severityRollupSchema = z.object({
   minor: z.number(),
 });
 
-export const scanJobProgressSchema = z.object({
+const scanJobProgressSchema = z.object({
   crawl: z
     .object({
       visited: z.number(),
@@ -85,7 +85,7 @@ export const scanUrlResultSchema = z.object({
   error: z.string().optional(),
 });
 
-export const scanJobNeedsInputFieldSchema = z.object({
+const scanJobNeedsInputFieldSchema = z.object({
   field: z.string(),
   value: z.string(),
 });
