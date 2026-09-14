@@ -132,6 +132,12 @@ export interface ListCandidatesToScoreOptions {
  * qualification outcome, for the reason `listCandidatesToPrescan` gives: a
  * reader of this query should be able to see who can be scored without knowing
  * that another package's decision function enforces it.
+ *
+ * An operator qualification override satisfies the qualification gate on
+ * its own. It deliberately has no qualification version: it corrects the
+ * current automatic verdict rather than creating another automatic
+ * qualification generation. This matches listCandidatesToPrescan and keeps
+ * an override-qualified hotel in the scoring population after Quick check.
  */
 export async function listCandidatesToScore(
   connection: Connection,
@@ -139,8 +145,13 @@ export async function listCandidatesToScore(
 ): Promise<HotelCandidateDocument[]> {
   const filter: Record<string, unknown> = {
     resolutionVersion: options.resolutionVersion,
-    'qualification.outcome': 'qualified',
-    'qualification.qualificationVersion': options.qualificationVersion,
+    $or: [
+      {
+        'qualification.outcome': 'qualified',
+        'qualification.qualificationVersion': options.qualificationVersion,
+      },
+      { 'qualificationOverride.outcome': 'qualified' },
+    ],
     campaignEligibility: 'eligible',
     'prescan.prescanVersion': options.prescanVersion,
   };

@@ -18,7 +18,10 @@ import {
   recordScoreCohort,
   type RecordHotelScoreInput,
 } from './scores.js';
-import { upsertHotelCandidates } from './hotel-candidates.js';
+import {
+  recordHotelCandidateQualificationOverride,
+  upsertHotelCandidates,
+} from './hotel-candidates.js';
 import { getPrescanVendorAggregate, recordPrescan } from './prescans.js';
 import { createHotelScoreModel } from './schemas/score.schema.js';
 import { createHotelScoreCohortModel } from './schemas/score-cohort.schema.js';
@@ -262,6 +265,57 @@ describe.skipIf(!mongoAvailable)('listCandidatesToScore', () => {
       limit: 50,
     });
     expect(rows.map((row) => row.candidateId)).toEqual([ready.candidateId]);
+  });
+
+  // Regression (Ritz Paris): Quick check accepts an operator qualification
+  // override and stores the new prescan, but scoring used to filter only on
+  // the rejected automatic verdict. The job therefore completed successfully
+  // while the prospect remained "Not scored".
+  it('selects a prescanned candidate qualified only by operator override', async () => {
+    const resolutionVersion = `rv-${randomUUID()}`;
+    const qualificationVersion = `qv-${randomUUID()}`;
+    const prescanVersion = `pv-${randomUUID()}`;
+    const overridden = candidate({
+      resolutionVersion,
+      qualification: {
+        outcome: 'rejected',
+        qualificationVersion,
+        evaluatedAt: new Date(),
+      },
+    });
+    await upsertHotelCandidates(db, [overridden]);
+    await recordHotelCandidateQualificationOverride(db, {
+      candidateId: overridden.candidateId,
+      actor: 'operator',
+    });
+    await recordPrescan(db, {
+      candidateId: overridden.candidateId,
+      resolutionVersion,
+      qualificationVersion,
+      prescanVersion,
+      scanJobId: randomUUID(),
+      domain: 'hotel-exemple.fr',
+      startUrl: 'https://hotel-exemple.fr/',
+      status: 'complete',
+      pages: [],
+      absentRoles: [],
+      offsiteBookingLinks: [],
+      robotsTxtFound: true,
+      effectiveDelayMs: 1000,
+      artifactsDir: 'hotel-exemple.fr/operator-override-score',
+      browserVersion: 'Chromium/1.0',
+      startedAt: new Date(),
+      durationMs: 1234,
+    });
+
+    const rows = await listCandidatesToScore(db, {
+      resolutionVersion,
+      qualificationVersion,
+      prescanVersion,
+      limit: 1,
+      domain: 'hotel-exemple.fr',
+    });
+    expect(rows.map((row) => row.candidateId)).toEqual([overridden.candidateId]);
   });
 });
 
