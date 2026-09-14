@@ -9,11 +9,12 @@
   },
   "packageManager": "pnpm@12.3.4+sha512.961aa41fb077da3a04a441d9f8e15ebc0c96da8ef710b2eb67bf9ee7cb0610eabd48f1fd85f51cffe73846785fa0f87c56a3a872a1d893f8446741b5cce45457",
   "scripts": {
-    "check": "pnpm run docs:check && pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run audit:code",
+    "check": "pnpm run docs:check && pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run architecture:check && pnpm run audit:code",
     "docs:check": "node scripts/check-agent-docs.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings 0",
+    "architecture:check": "depcruise --config .dependency-cruiser.cjs packages/core/src packages/scanner/src packages/llm/src packages/store/src packages/report/src packages/interface/src packages/cli/src packages/site/app packages/site/lib",
     "audit:code": "fallow dead-code",
     "test": "vitest run --project unit",
     "test:e2e": "vitest run --project \"e2e*\"",
@@ -35,6 +36,7 @@
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@types/node": "^22.10.5",
+    "dependency-cruiser": "18.3.0",
     "eslint": "10.9.1",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",

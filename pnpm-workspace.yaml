@@ -6,6 +6,8 @@ allowBuilds:
   core-js: false
   es5-ext: false
   esbuild: true
+minimumReleaseAgeExclude:
+  - dependency-cruiser@18.3.0
 overrides:
   # lodash.pick's GHSA-p6mc-m468-83gw has no fix: the registry never
   # published a version past 4.4.0 despite the advisory naming 4.4.1 as

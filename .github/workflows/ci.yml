@@ -60,6 +60,9 @@ jobs:
       - name: Typecheck
         run: pnpm run typecheck
 
+      - name: Architecture check
+        run: pnpm run architecture:check
+
       - name: Audit code graph
         run: pnpm run audit:code
 
