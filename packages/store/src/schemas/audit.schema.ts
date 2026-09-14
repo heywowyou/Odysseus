@@ -13,6 +13,7 @@ import type {
   AuditHotelLink,
   AuditManifest,
   AuditManualFields,
+  GradeOverride,
   ReportPreparation,
 } from '@odysseus/core';
 
@@ -41,6 +42,13 @@ export interface AuditDocumentFields extends Omit<
    *  linkAuditToHotelByDomain resolves a match, or forever on an audit
    *  whose site never matches a catalogue candidate's own domain. */
   hotelLink?: AuditHotelLink;
+  /** Issue: operator-reviewed overall grade override, DB-only like
+   *  manualFields above. The automatic grade itself is never stored - it
+   *  is always recomputed fresh from findings/manifest
+   *  (@odysseus/report's computeAutomaticGrade). Absent until the
+   *  operator saves an override; cleared, not defaulted back to the
+   *  automatic grade, when the operator removes it. */
+  gradeOverride?: GradeOverride;
 }
 
 export type AuditDocument = AuditDocumentFields;
@@ -591,6 +599,19 @@ const hotelLinkSchema = new Schema(
   { _id: false },
 );
 
+// Issue: operator-reviewed overall grade override. DB-only, like the
+// sub-schemas above (issue #173's lesson) - Mongoose would otherwise
+// silently strip this undeclared top-level path.
+const gradeOverrideSchema = new Schema(
+  {
+    grade: { type: String, required: true, enum: ['A', 'B', 'C', 'D'] },
+    reason: { type: String, required: true },
+    reviewedAt: { type: Date, required: true },
+    reviewedBy: { type: String, required: true, enum: ['operator'] },
+  },
+  { _id: false },
+);
+
 // Exported for schemas/audit.schema.test.ts's AuditManifest-vs-paths diff
 // guard; the rest of the package keeps going through createAuditModel.
 export const auditSchema = new Schema<AuditDocument>(
@@ -616,6 +637,7 @@ export const auditSchema = new Schema<AuditDocument>(
     manualFields: { type: manualFieldsSchema },
     reportPreparation: { type: reportPreparationSchema },
     hotelLink: { type: hotelLinkSchema },
+    gradeOverride: { type: gradeOverrideSchema },
   },
   { collection: 'audits' },
 );

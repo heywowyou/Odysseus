@@ -1,4 +1,4 @@
-import type { AuditManifest, AuditManualFields, Finding } from '@odysseus/core';
+import type { AuditManifest, AuditManualFields, Finding, GradeOverride } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import {
@@ -13,7 +13,7 @@ import { LEVEL_COLOR } from '../design-tokens.js';
 import { computeStatistics } from '../statistics.js';
 import { hasMeasuredCoreWebVitals } from './core-web-vitals-table.js';
 import { buildCoverageDisclosure } from '../coverage-disclosure.js';
-import { computeComparativeGrade, computeSeverityGrade } from '../grade.js';
+import { computeAutomaticGrade, resolveEffectiveGrade } from '../grade.js';
 import { renderScorecardGrade } from '../render-scorecard.js';
 
 /** Stable DOM id of the metadata sheet. The reference template
@@ -110,12 +110,10 @@ function renderScorecard(
   strings: ReportStrings,
   findings: readonly Finding[],
   manifest: AuditManifest,
+  gradeOverride?: GradeOverride,
 ): string {
-  const outcome = manifest.benchmarkPercentile;
-  const grade =
-    outcome?.kind === 'scored'
-      ? computeComparativeGrade(outcome).grade
-      : computeSeverityGrade(computeStatistics(findings, manifest)).grade;
+  const automaticGrade = computeAutomaticGrade(findings, manifest);
+  const grade = resolveEffectiveGrade(automaticGrade, gradeOverride);
   return renderScorecardGrade(grade, strings.metadata.scorecardDisclaimer);
 }
 
@@ -153,6 +151,7 @@ export function renderMetadataSheet(
   analysis: StoredAnalysis,
   findings: readonly Finding[] = [],
   manualFields?: AuditManualFields,
+  gradeOverride?: GradeOverride,
 ): string {
   const pagesScanned = manifest.pages.filter((page) => page.status === 'visited').length;
   const coverage = buildCoverageDisclosure(strings, manifest, analysis.language);
@@ -185,7 +184,7 @@ export function renderMetadataSheet(
       <div class="hr"></div>
       <div class="metadata-signal-stack" style="display:flex;gap:var(--space-8);align-items:flex-start">
         ${field(strings.metadata.riskSmallLabel, renderRiskBadge(strings, analysis, findings, manifest), 'metadata-risk-field')}
-        ${field(strings.metadata.scorecardLabel, renderScorecard(strings, findings, manifest), 'metadata-grade-field')}
+        ${field(strings.metadata.scorecardLabel, renderScorecard(strings, findings, manifest, gradeOverride), 'metadata-grade-field')}
       </div>
     </div>
     <div class="metadata-spacer" style="min-height:60mm"></div>

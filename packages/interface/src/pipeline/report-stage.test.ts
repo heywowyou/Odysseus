@@ -17,6 +17,7 @@ vi.mock('@odysseus/report', async (importOriginal) => {
 vi.mock('@odysseus/store', () => ({
   persistReport: vi.fn(),
   getAuditManualFields: vi.fn().mockResolvedValue(undefined),
+  getAuditGradeOverride: vi.fn().mockResolvedValue(undefined),
   getReportPreparation: vi.fn().mockResolvedValue({
     context: {},
     stakeholders: {},
@@ -48,7 +49,7 @@ vi.mock('@odysseus/core', async (importOriginal) => {
 
 import { generateReportPdf } from '@odysseus/report';
 import { launchBrowser } from '@odysseus/scanner';
-import { getAuditManualFields, persistReport } from '@odysseus/store';
+import { getAuditGradeOverride, getAuditManualFields, persistReport } from '@odysseus/store';
 import {
   buildFindingsProvenance,
   type AuditManifest,
@@ -290,6 +291,31 @@ describe('runReportStage', () => {
 
     const sidecar = JSON.parse(await fs.readFile(result.provenancePath, 'utf-8'));
     expect(sidecar['pageCount']).toBe(61);
+  });
+
+  it('threads a saved grade override into generateReportPdf, read fresh at render time', async () => {
+    const manifest = fakeManifest();
+    const gradeOverride = {
+      grade: 'B' as const,
+      reason: 'Findings resolved since this scan.',
+      reviewedAt: new Date('2026-09-10T00:00:00.000Z'),
+      reviewedBy: 'operator' as const,
+    };
+    vi.mocked(getAuditGradeOverride).mockResolvedValue(gradeOverride);
+
+    await runReportStage(auditDir, manifest, [], fakeAnalysis(), fakeConnection);
+
+    expect(getAuditGradeOverride).toHaveBeenCalledWith(fakeConnection, manifest.auditId);
+    expect(generateReportPdf).toHaveBeenCalledWith(expect.objectContaining({ gradeOverride }));
+  });
+
+  it('omits gradeOverride from generateReportPdf when no override is saved', async () => {
+    vi.mocked(getAuditGradeOverride).mockResolvedValue(undefined);
+
+    await runReportStage(auditDir, fakeManifest(), [], fakeAnalysis(), fakeConnection);
+
+    const passedInput = vi.mocked(generateReportPdf).mock.calls[0]?.[0];
+    expect(passedInput).not.toHaveProperty('gradeOverride');
   });
 
   it('rejects stale analysis provenance before Chromium report generation starts', async () => {

@@ -4,6 +4,7 @@ import type { Connection } from 'mongoose';
 import {
   buildOutreachPreviewSummary,
   coverageFactsFromAudit,
+  isGrade,
   isValidSiren,
   summarizeAuditCoverage,
   type AuditManifest,
@@ -14,6 +15,7 @@ import {
   type StatSector,
 } from '@odysseus/core';
 import {
+  clearAuditGradeOverride,
   createJobModel,
   findLatestLiveV2PreviewForCandidate,
   getAudit,
@@ -28,6 +30,7 @@ import {
   persistReportApproval,
   resolveOutreachAuditForCandidate,
   resolveSelectedAnalysisPairForAudit,
+  setAuditGradeOverride,
   setAuditManualFields,
   type AuditDocumentFields,
   type JobDocument,
@@ -37,11 +40,13 @@ import {
 import { buildArtifactBucketKey, buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import {
   classifyReportFreshness,
+  computeAutomaticGrade,
   findUnconfirmedIdentityFields,
   generateOutreachPreviewHtmlV2,
   generateOutreachPreviewPdf,
   OUTREACH_PROOF_CARD_COPY,
   remediationFor,
+  resolveEffectiveGrade,
   RULE_TRANSLATIONS_FR,
   type ReportFreshness,
 } from '@odysseus/report';
@@ -476,6 +481,14 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     const hotelCandidate =
       hotelCandidateId !== null ? await getHotelCandidate(connection, hotelCandidateId) : null;
 
+    // Issue: operator-reviewed overall grade override. computeAutomaticGrade
+    // needs the full AuditManifest shape (findings + manifest.pages); the
+    // cast is safe because it only reads pages/coverage fields, never the
+    // three Date-vs-ISO-string fields that separate AuditDocument from
+    // AuditManifest (see audit.schema.ts's own doc comment).
+    const automaticGrade = computeAutomaticGrade(findings, audit as unknown as AuditManifest);
+    const effectiveGrade = resolveEffectiveGrade(automaticGrade, audit.gradeOverride);
+
     sendJson(res, 200, {
       auditId: audit.auditId,
       siteUrl: audit.siteUrl,
@@ -502,6 +515,9 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       analysisIsStaticFallback,
       approval: approved ? approval : null,
       manualFields: audit.manualFields,
+      automaticGrade,
+      effectiveGrade,
+      gradeOverride: audit.gradeOverride ?? null,
       outreach: { candidateId: outreachCandidateId, hasLiveV2Preview },
       hotel:
         hotelCandidate !== null
@@ -623,6 +639,71 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       sendJson(res, 200, { manualFields });
     } catch (error) {
       sendError(res, 400, error instanceof Error ? error.message : 'could not save manual fields');
+    }
+  });
+
+  // Issue: operator-reviewed overall grade override. Same validation shape
+  // as the manual-fields PATCH above: look up the audit, 404 if missing,
+  // then reject a malformed body with 400 before ever calling the store.
+  router.put('/api/audits/:auditId/grade-override', async ({ req, res, params }) => {
+    const auditId = params['auditId']!;
+    const audit = await getAuditRuntimeFields(connection, auditId);
+    if (!audit) {
+      sendError(res, 404, 'audit not found');
+      return;
+    }
+
+    const body = await readJsonBodyOrRespond(req, res);
+    if (body === jsonBodyNotRead) return;
+    if (body === null || typeof body !== 'object') {
+      sendError(res, 400, 'request body must be a JSON object');
+      return;
+    }
+    const record = body as Record<string, unknown>;
+
+    const grade = record['grade'];
+    if (typeof grade !== 'string' || !isGrade(grade)) {
+      sendError(res, 400, 'grade must be one of A, B, C, D');
+      return;
+    }
+    const reason = record['reason'];
+    if (typeof reason !== 'string' || reason.trim() === '') {
+      sendError(res, 400, 'reason must be a non-empty string');
+      return;
+    }
+    if (reason.length > 2000) {
+      sendError(res, 400, 'reason must be 2000 characters or fewer');
+      return;
+    }
+
+    try {
+      const gradeOverride = await setAuditGradeOverride(connection, auditId, {
+        grade,
+        reason: reason.trim(),
+      });
+      sendJson(res, 200, { gradeOverride });
+    } catch (error) {
+      sendError(res, 400, error instanceof Error ? error.message : 'could not save grade override');
+    }
+  });
+
+  router.delete('/api/audits/:auditId/grade-override', async ({ res, params }) => {
+    const auditId = params['auditId']!;
+    const audit = await getAuditRuntimeFields(connection, auditId);
+    if (!audit) {
+      sendError(res, 404, 'audit not found');
+      return;
+    }
+
+    try {
+      await clearAuditGradeOverride(connection, auditId);
+      sendJson(res, 200, { cleared: true });
+    } catch (error) {
+      sendError(
+        res,
+        400,
+        error instanceof Error ? error.message : 'could not clear grade override',
+      );
     }
   });
 

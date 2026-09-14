@@ -8,13 +8,16 @@ import {
 } from '@odysseus/core';
 import { persistAudit } from './persist-audit.js';
 import {
+  clearAuditGradeOverride,
   getAudit,
+  getAuditGradeOverride,
   getAuditManualFields,
   getAuditRuntimeFields,
   getFindingsForAudit,
   linkAuditToHotelByDomain,
   prefillAuditManualFields,
   replaceDetectedManualFields,
+  setAuditGradeOverride,
   setAuditManualFields,
 } from './audits.js';
 import { upsertHotelCandidates } from './hotel-candidates.js';
@@ -231,6 +234,65 @@ describe.skipIf(!mongoAvailable)('audits read helpers', () => {
       value: 'Operator-confirmed name',
       provenance: 'operator',
     });
+  });
+
+  it('getAuditGradeOverride returns undefined before any override is saved', async () => {
+    await persistAudit(connection!, buildManifest('audits-grade-1'), []);
+    expect(await getAuditGradeOverride(connection!, 'audits-grade-1')).toBeUndefined();
+  });
+
+  it('setAuditGradeOverride saves the grade and reason, stamping reviewedAt/reviewedBy', async () => {
+    await persistAudit(connection!, buildManifest('audits-grade-2'), []);
+
+    const saved = await setAuditGradeOverride(connection!, 'audits-grade-2', {
+      grade: 'B',
+      reason: 'Findings resolved on the live site since this scan.',
+    });
+
+    expect(saved.grade).toBe('B');
+    expect(saved.reason).toBe('Findings resolved on the live site since this scan.');
+    expect(saved.reviewedBy).toBe('operator');
+    expect(saved.reviewedAt).toBeInstanceOf(Date);
+
+    const found = await getAuditGradeOverride(connection!, 'audits-grade-2');
+    expect(found).toEqual(saved);
+  });
+
+  it('setAuditGradeOverride replaces a prior override rather than merging', async () => {
+    await persistAudit(connection!, buildManifest('audits-grade-3'), []);
+
+    await setAuditGradeOverride(connection!, 'audits-grade-3', {
+      grade: 'C',
+      reason: 'First review.',
+    });
+    const second = await setAuditGradeOverride(connection!, 'audits-grade-3', {
+      grade: 'A',
+      reason: 'Second review, superseding the first.',
+    });
+
+    expect(second.grade).toBe('A');
+    expect(second.reason).toBe('Second review, superseding the first.');
+
+    const found = await getAuditGradeOverride(connection!, 'audits-grade-3');
+    expect(found).toEqual(second);
+  });
+
+  it('clearAuditGradeOverride removes a saved override', async () => {
+    await persistAudit(connection!, buildManifest('audits-grade-4'), []);
+    await setAuditGradeOverride(connection!, 'audits-grade-4', { grade: 'D', reason: 'x' });
+
+    await clearAuditGradeOverride(connection!, 'audits-grade-4');
+
+    expect(await getAuditGradeOverride(connection!, 'audits-grade-4')).toBeUndefined();
+  });
+
+  it('setAuditGradeOverride and clearAuditGradeOverride throw for an unknown auditId', async () => {
+    await expect(
+      setAuditGradeOverride(connection!, 'audits-grade-missing', { grade: 'A', reason: 'x' }),
+    ).rejects.toThrow(/not found/);
+    await expect(clearAuditGradeOverride(connection!, 'audits-grade-missing')).rejects.toThrow(
+      /not found/,
+    );
   });
 });
 

@@ -24,6 +24,11 @@ export type ReportFreshness = 'fresh' | 'stale' | 'unverified';
 
 export type AuditLifecycle = 'scanned' | 'analysed' | 'rendered' | 'approved';
 
+/** The report's A-D scorecard scale (packages/report/src/template/grade.ts).
+ *  No F: an outreach or report document telling a client their site
+ *  "failed" reads as an insult, not an opportunity - D is the floor. */
+export type Grade = 'A' | 'B' | 'C' | 'D';
+
 export type FieldProvenance = 'detected' | 'operator';
 
 /** The two fields D8's cover-identity gate cares about
@@ -172,6 +177,16 @@ export interface AuditHotelResponse {
   name: string;
 }
 
+/** Issue: operator-reviewed overall grade override. Present whenever the
+ *  operator has saved one; absent means the report renders automaticGrade
+ *  unchanged. */
+export interface GradeOverrideResponse {
+  grade: Grade;
+  reason: string;
+  reviewedAt: string;
+  reviewedBy: 'operator';
+}
+
 /** The whole GET /api/audits/:auditId body. */
 export interface AuditDetailResponse {
   auditId: string;
@@ -204,6 +219,12 @@ export interface AuditDetailResponse {
   analysisIsStaticFallback: boolean;
   approval: ReportApprovalResponse | null;
   manualFields: ManualFieldsResponse | null;
+  /** Issue: operator-reviewed overall grade override. The server always
+   *  sends both; optional here for the same stale-cached-page tolerance
+   *  as `outreach` below. */
+  automaticGrade?: Grade;
+  effectiveGrade?: Grade;
+  gradeOverride?: GradeOverrideResponse | null;
   /** Plan 037 slice 5: prospecting provenance and current preview state.
    *  The server always sends it; optional here so an older cached page
    *  tolerates a payload from before the field existed. */

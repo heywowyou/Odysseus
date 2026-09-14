@@ -22,6 +22,7 @@ import { cn } from '../lib/cn';
 import { ApiError, fetchJson } from '../lib/api';
 import { formatDateTime } from '../lib/format';
 import { usePolling } from '../lib/use-polling';
+import { AuditGradeOverridePanel } from './audit-grade-override-panel';
 import { AuditPreviewNote } from './audit-preview-note';
 import { AuditReportPanel } from './audit-report-panel';
 import {
@@ -254,6 +255,12 @@ export function AuditDetailPage(): JSX.Element {
             the paid chain behind "sold" on this page would make it
             unreachable for exactly the clients it exists for. */}
         <AuditReportPanel
+          auditId={data.auditId}
+          detail={data}
+          onBusy={setIsBusy}
+          refresh={refresh}
+        />
+        <AuditGradeOverridePanel
           auditId={data.auditId}
           detail={data}
           onBusy={setIsBusy}

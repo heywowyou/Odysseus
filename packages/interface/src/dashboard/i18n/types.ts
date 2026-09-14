@@ -382,6 +382,32 @@ export interface DashboardStrings {
        *  disclosure (report-details-form.tsx). */
       reportDetailsSummary: string;
     };
+    /** Issue: operator-reviewed overall grade override. Shown as its own
+     *  section of the report panel: the automatic grade the report would
+     *  render, and, when the operator has overridden it, the override's
+     *  grade and reason alongside a way to save a new one or clear it. */
+    gradeOverride: {
+      heading: string;
+      description: string;
+      automaticGradeLabel: string;
+      /** {grade} is replaced with the override's letter, {reason} with its
+       *  saved reason. */
+      overrideActiveLabel: string;
+      overrideReasonLabel: string;
+      overrideReviewedAtLabel: string;
+      editButton: string;
+      clearButton: string;
+      cancelButton: string;
+      saveButton: string;
+      gradeFieldLabel: string;
+      reasonFieldLabel: string;
+      reasonPlaceholder: string;
+      reasonRequiredError: string;
+      saveError: string;
+      clearError: string;
+      saveSuccess: string;
+      clearSuccess: string;
+    };
     /** Issue #91: a report row whose PDF bytes this machine cannot serve.
      *  The freshness badge is replaced by one of these two states: the
      *  document exists but is out of reach, or no usable document exists

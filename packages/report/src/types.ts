@@ -5,6 +5,7 @@ import type {
   AnalysisSiteContext,
   Finding,
   FindingsProvenance,
+  GradeOverride,
   LlmOutput,
   ObligationAssessment,
   PreparationPreviewLanguage,
@@ -91,6 +92,11 @@ export interface GenerateReportInput {
    *  absent means the report renders its safe generic fallbacks
    *  unchanged. */
   preparation?: PreparationPreviewLanguage;
+  /** Issue: operator-reviewed overall grade override, read fresh from the
+   *  store at render time (not baked into `analysis`) - same convention as
+   *  manualFields above. Absent means the report renders the automatic
+   *  grade unchanged. */
+  gradeOverride?: GradeOverride;
   /** Issue #6: a caller generating both language reports for the same
    *  audit back to back (packages/interface's report-stage.ts) launches
    *  Chromium once and passes it here for both passes, instead of paying a

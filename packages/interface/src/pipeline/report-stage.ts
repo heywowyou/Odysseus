@@ -30,7 +30,12 @@ import {
   type StoredAnalysis,
 } from '@odysseus/report';
 import { launchBrowser, readOdysseusBuildId } from '@odysseus/scanner';
-import { getAuditManualFields, getReportPreparation, persistReport } from '@odysseus/store';
+import {
+  getAuditGradeOverride,
+  getAuditManualFields,
+  getReportPreparation,
+  persistReport,
+} from '@odysseus/store';
 import { runObligationStage } from './obligation-stage.js';
 import { pdfDigestOf } from './pdf-digest.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
@@ -125,6 +130,10 @@ export async function runReportStage(
   // is reused unchanged, "manual" now just means "freshest at render
   // time" instead of "given at job creation."
   const manualFields = await getAuditManualFields(connection, manifest.auditId);
+  // Issue: operator-reviewed overall grade override, read fresh at render
+  // time exactly like manualFields above - the operator can review the
+  // grade after the fact with no rescan and no new analysis document.
+  const gradeOverride = await getAuditGradeOverride(connection, manifest.auditId);
   const obligationAssessment = manualFields?.transactionalFlowOverride
     ? await runObligationStage(
         manifest,
@@ -159,6 +168,7 @@ export async function runReportStage(
     },
     ...(manualFields !== undefined ? { manualFields } : {}),
     preparation: preparationPreview[analysis.language],
+    ...(gradeOverride !== undefined ? { gradeOverride } : {}),
     ...(browser !== undefined ? { browser } : {}),
   });
 

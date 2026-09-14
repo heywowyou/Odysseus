@@ -93,6 +93,12 @@ export { remediationFor } from './template/remediation/index.js';
 export { RULE_TRANSLATIONS_FR } from './template/rule-translations.js';
 export type { RuleTranslation } from './template/rule-translations.js';
 
+/** Issue: operator-reviewed overall grade override. Re-exported so the
+ *  dashboard's grade-override route computes the exact same automatic grade
+ *  the report itself would render, instead of duplicating the "which grade
+ *  wins" decision in @odysseus/interface. */
+export { computeAutomaticGrade, resolveEffectiveGrade } from './template/grade.js';
+
 export async function generateReportPdf(
   input: GenerateReportInput,
 ): Promise<RenderedPdfWithPageCount> {
@@ -137,6 +143,7 @@ export async function generateReportPdf(
       renderDiffWrapperOrLegalExcludedCount,
       ...(input.manualFields !== undefined ? { manualFields: input.manualFields } : {}),
       ...(input.preparation !== undefined ? { preparation: input.preparation } : {}),
+      ...(input.gradeOverride !== undefined ? { gradeOverride: input.gradeOverride } : {}),
     });
 
     const lintViolations = findRenderLintViolations(html);

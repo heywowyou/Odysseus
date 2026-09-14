@@ -75,6 +75,9 @@ export {
   prefillAuditManualFields,
   replaceDetectedManualFields,
   linkAuditToHotelByDomain,
+  getAuditGradeOverride,
+  setAuditGradeOverride,
+  clearAuditGradeOverride,
 } from './audits.js';
 export type { AuditRuntimeFields, AuditHotelLinkResult } from './audits.js';
 

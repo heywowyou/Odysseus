@@ -37,6 +37,8 @@ vi.mock('@odysseus/scanner', () => ({
 
 vi.mock('@odysseus/report', () => ({
   classifyReportFreshness: vi.fn(() => 'unverified'),
+  computeAutomaticGrade: vi.fn(() => 'A'),
+  resolveEffectiveGrade: vi.fn((automaticGrade: string) => automaticGrade),
   generateOutreachPreviewHtmlV2: vi.fn(() => '<main>scorecard</main>'),
   generateOutreachPreviewPdf: vi.fn(async () => Buffer.from('%PDF-outreach-preview')),
   OUTREACH_PROOF_CARD_COPY: { 'rule-a': { fr: 'Titre revu', en: 'Reviewed title' } },

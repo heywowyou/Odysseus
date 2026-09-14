@@ -37,9 +37,17 @@
  * module (operator direction, 2026-09-12).
  */
 
-import type { BenchmarkPercentileResult, Severity } from '@odysseus/core';
+import type {
+  AuditManifest,
+  BenchmarkPercentileResult,
+  Finding,
+  Grade,
+  GradeOverride,
+  Severity,
+} from '@odysseus/core';
+import { computeStatistics } from './statistics.js';
 
-export type Grade = 'A' | 'B' | 'C' | 'D';
+export type { Grade } from '@odysseus/core';
 
 export interface SeverityGrade {
   grade: Grade;
@@ -106,4 +114,30 @@ export function computeComparativeGrade(outcome: BenchmarkPercentileResult): Com
     (candidate) => outcome.percentile < candidate.maxPercentile,
   );
   return { grade: band?.grade ?? 'D', percentile: outcome.percentile };
+}
+
+/** The single "which grade wins" decision (benchmark percentile when this
+ *  audit has one, own-counts severity grade otherwise), factored out of
+ *  renderScorecard so the dashboard's grade-override panel (issue:
+ *  operator-reviewed overall grade override) can show the exact same
+ *  automatic grade the report itself would render, computed fresh from
+ *  findings/manifest rather than duplicated or persisted anywhere. */
+export function computeAutomaticGrade(
+  findings: readonly Finding[],
+  manifest: AuditManifest,
+): Grade {
+  const outcome = manifest.benchmarkPercentile;
+  return outcome?.kind === 'scored'
+    ? computeComparativeGrade(outcome).grade
+    : computeSeverityGrade(computeStatistics(findings, manifest)).grade;
+}
+
+/** The automatic grade remains an audit's immutable, deterministic output
+ *  (issue: operator-reviewed overall grade override); an override is a
+ *  human review layer over it, never a rewrite of it. Every client-facing
+ *  surface renders this effective grade, never the automatic grade
+ *  directly, so the two can never independently drift into showing
+ *  different letters in different places. */
+export function resolveEffectiveGrade(automaticGrade: Grade, override?: GradeOverride): Grade {
+  return override?.grade ?? automaticGrade;
 }

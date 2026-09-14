@@ -20,6 +20,7 @@ import type {
   AuditManifest,
   AuditManualFields,
   Finding,
+  GradeOverride,
   PreparationPreviewLanguage,
 } from '@odysseus/core';
 import type { ReportRenderMetadata, StoredAnalysis } from '../types.js';
@@ -112,6 +113,10 @@ export interface RenderHtmlInput {
    *  language, resolved by the orchestration layer. Absent means every
    *  personalized site renders its safe generic fallback unchanged. */
   preparation?: PreparationPreviewLanguage;
+  /** Issue: operator-reviewed overall grade override. Read fresh from the
+   *  store at render time, same convention as manualFields - never baked
+   *  into a rarely-regenerated analysis. */
+  gradeOverride?: GradeOverride;
 }
 
 /** Single-tier report body, since the 2026-08-16 commercial model drop of
@@ -138,6 +143,7 @@ function renderBody(
   manualFields: AuditManualFields | undefined,
   renderMetadata: ReportRenderMetadata | undefined,
   preparation: PreparationPreviewLanguage | undefined,
+  gradeOverride: GradeOverride | undefined,
 ): string {
   // B1: one Set shared by every reference-stat citation render site
   // (renderThemes, then renderFindingsAppendix's geo section), so the same
@@ -194,7 +200,7 @@ function renderBody(
     // Second physical page (plan 018 step 4): audit facts and the risk
     // scale on their own sheet, before the TOC. Unnumbered chrome, like
     // the cover - it takes no ordinal and stays out of the registry.
-    renderMetadataSheet(strings, manifest, analysis, resolvedFindings, manualFields),
+    renderMetadataSheet(strings, manifest, analysis, resolvedFindings, manualFields, gradeOverride),
     renderToc(strings, includedSectionIds),
     renderReportIntro(
       strings,
@@ -337,6 +343,7 @@ export async function renderHtml(input: RenderHtmlInput): Promise<string> {
     manualFields,
     renderMetadata,
     preparation,
+    gradeOverride,
   } = input;
   const renderDiffTotalEligible = input.renderDiffTotalEligible ?? renderDiffEvidencePages.length;
   const renderDiffWrapperOrLegalExcludedCount = input.renderDiffWrapperOrLegalExcludedCount ?? 0;
@@ -354,6 +361,7 @@ export async function renderHtml(input: RenderHtmlInput): Promise<string> {
     manualFields,
     renderMetadata,
     preparation,
+    gradeOverride,
   );
 
   return `<!doctype html>

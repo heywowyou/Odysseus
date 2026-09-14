@@ -11,6 +11,8 @@ import {
   normalizeDeclaredWebsite,
   type AuditHotelLink,
   type AuditManualFields,
+  type Grade,
+  type GradeOverride,
 } from '@odysseus/core';
 import { createAuditModel, type AuditDocument } from './schemas/audit.schema.js';
 import { createFindingModel, type FindingDocument } from './schemas/finding.schema.js';
@@ -58,6 +60,63 @@ export async function getAuditRuntimeFields(
     { auditId },
     { _id: 0, auditId: 1, siteUrl: 1, startedAt: 1, findingsProvenance: 1 },
   ).lean<AuditRuntimeFields | null>();
+}
+
+/** Issue: operator-reviewed overall grade override. Same read shape as
+ *  getAuditManualFields above - undefined for every audit until the
+ *  operator saves one. */
+export async function getAuditGradeOverride(
+  connection: Connection,
+  auditId: string,
+): Promise<GradeOverride | undefined> {
+  const AuditModel = createAuditModel(connection);
+  const audit = await AuditModel.findOne({ auditId }, { gradeOverride: 1 }).lean<
+    Pick<AuditDocument, 'gradeOverride'>
+  >();
+  return audit?.gradeOverride;
+}
+
+/** Sets or replaces the operator's grade override, always stamping a fresh
+ *  reviewedAt/reviewedBy - unlike setAuditManualFields, this has no
+ *  per-field merge semantics because the override is a single reviewed
+ *  decision (one grade, one reason), not a bag of independent fields. */
+export async function setAuditGradeOverride(
+  connection: Connection,
+  auditId: string,
+  input: { grade: Grade; reason: string },
+): Promise<GradeOverride> {
+  const AuditModel = createAuditModel(connection);
+  const gradeOverride: GradeOverride = {
+    grade: input.grade,
+    reason: input.reason,
+    reviewedAt: new Date(),
+    reviewedBy: 'operator',
+  };
+
+  const updated = await AuditModel.findOneAndUpdate(
+    { auditId },
+    { $set: { gradeOverride } },
+    { new: true, projection: { gradeOverride: 1 } },
+  ).lean<Pick<AuditDocument, 'gradeOverride'>>();
+
+  if (!updated?.gradeOverride) {
+    throw new Error(`odysseus: audit ${auditId} not found`);
+  }
+  return updated.gradeOverride;
+}
+
+/** Removes the operator's grade override, reverting the audit to its
+ *  automatic grade - never persisted as a "no override" record, just
+ *  absent, same convention as every other DB-only field. */
+export async function clearAuditGradeOverride(
+  connection: Connection,
+  auditId: string,
+): Promise<void> {
+  const AuditModel = createAuditModel(connection);
+  const result = await AuditModel.updateOne({ auditId }, { $unset: { gradeOverride: '' } });
+  if (result.matchedCount === 0) {
+    throw new Error(`odysseus: audit ${auditId} not found`);
+  }
 }
 
 /** Merge semantics: only the keys present in `partial` are touched, every
