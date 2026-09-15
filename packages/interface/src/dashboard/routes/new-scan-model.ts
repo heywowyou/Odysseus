@@ -28,11 +28,11 @@ export interface FullAuditScanRequest {
   options: FullAuditScanOptions;
 }
 
-export type NewScanType =
-  'full-audit' | 'prospecting' | 'quick-check' | 'light-audit' | 'prospecting-audit';
+export const NEW_SCAN_TYPES = ['full-audit', 'quick-check', 'prospecting-audit'] as const;
+export type NewScanType = (typeof NEW_SCAN_TYPES)[number];
 
 export interface ProspectScanRequest {
-  type: 'quick-check' | 'light-audit' | 'prospecting-audit';
+  type: 'quick-check' | 'prospecting-audit';
   url: string;
   prospectId?: string;
 }
@@ -54,7 +54,6 @@ export interface NewScanFormValues {
   siren: string;
   transactionalFlow: '' | 'true' | 'false';
   transactionalFlowReason: string;
-  urls: string;
   maxPages: string;
   maxDepth: string;
   delayMs: string;
@@ -72,7 +71,6 @@ export function createEmptyFormValues(): NewScanFormValues {
     siren: '',
     transactionalFlow: '',
     transactionalFlowReason: '',
-    urls: '',
     maxPages: '',
     maxDepth: '',
     delayMs: '',
@@ -169,9 +167,6 @@ function parsePositiveIntOption(raw: string): number | undefined {
  *  JSON.stringify to drop undefined keys; here the keys are omitted up
  *  front, which produces the same wire body). */
 export function buildScanRequest(form: NewScanFormValues): ScanRequest {
-  if (form.type === 'prospecting') {
-    return { type: 'prospecting', urls: splitLines(form.urls) };
-  }
   if (form.type !== 'full-audit') {
     const prospectId = form.prospectId.trim();
     return {

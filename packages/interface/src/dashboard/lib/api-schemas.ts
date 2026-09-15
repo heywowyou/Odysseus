@@ -26,7 +26,6 @@ const jobTypeSchema = z.enum([
   'full-audit',
   'prospecting',
   'quick-check',
-  'light-audit',
   'prospecting-audit',
   'outreach-full-scan',
 ]);

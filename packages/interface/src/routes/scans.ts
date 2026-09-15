@@ -91,11 +91,7 @@ function parseOptionsSnapshot(raw: unknown): JobOptionsSnapshot {
   if (typeof record['prospectId'] === 'string' && record['prospectId'].trim() !== '') {
     options.prospectId = record['prospectId'].trim();
   }
-  if (
-    record['scanType'] === 'quick-check' ||
-    record['scanType'] === 'light-audit' ||
-    record['scanType'] === 'prospecting-audit'
-  ) {
+  if (record['scanType'] === 'quick-check' || record['scanType'] === 'prospecting-audit') {
     options.scanType = record['scanType'];
   }
 
@@ -161,11 +157,7 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
     }
     const parsed = body as Record<string, unknown>;
 
-    if (
-      parsed['type'] === 'quick-check' ||
-      parsed['type'] === 'light-audit' ||
-      parsed['type'] === 'prospecting-audit'
-    ) {
+    if (parsed['type'] === 'quick-check' || parsed['type'] === 'prospecting-audit') {
       const url = parsed['url'];
       if (!isHttpUrlWithoutCredentials(url)) {
         sendError(res, 400, 'url must be an absolute http(s) URL without embedded credentials');
@@ -256,10 +248,12 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
   router.get('/api/scans', async ({ res, query }) => {
     const limitParam = query.get('limit');
     const parsedLimit = limitParam ? Number.parseInt(limitParam, 10) : NaN;
-    const jobs = await listJobs(
-      connection,
-      Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : undefined,
-    );
+    const jobs = (
+      await listJobs(
+        connection,
+        Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : undefined,
+      )
+    ).filter((job) => job.type !== 'prospecting' || job.scanType === 'quick-check');
 
     const auditIds = jobs.map((job) => job.auditId).filter((id): id is string => id !== undefined);
     const rollups = await getSeverityRollupsForPoll(connection, auditIds);

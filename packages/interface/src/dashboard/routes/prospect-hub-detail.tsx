@@ -211,9 +211,7 @@ export function ProspectHubDetailPage(): JSX.Element {
       setSaving(false);
     }
   };
-  const launchScan = async (
-    type: 'quick-check' | 'light-audit' | 'prospecting-audit',
-  ): Promise<void> => {
+  const launchScan = async (type: 'quick-check' | 'prospecting-audit'): Promise<void> => {
     if (!primaryWebsite) return;
     const result = await sendJson<{ started: boolean; jobId?: string }>('/api/scans', 'POST', {
       type,
@@ -484,9 +482,6 @@ export function ProspectHubDetailPage(): JSX.Element {
           <div className="flex flex-wrap gap-2">
             <Button disabled={!primaryWebsite} onClick={() => void launchScan('quick-check')}>
               {copy.quick}
-            </Button>
-            <Button disabled={!primaryWebsite} onClick={() => void launchScan('light-audit')}>
-              {copy.light}
             </Button>
             <Button disabled={!primaryWebsite} onClick={() => void launchScan('prospecting-audit')}>
               {copy.prospecting}

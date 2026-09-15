@@ -4,6 +4,7 @@ import {
   createEmptyFormValues,
   isValidAbsoluteHttpUrl,
   isValidSiren,
+  NEW_SCAN_TYPES,
   prefillUrlFromQuery,
   validateSiren,
 } from './new-scan-model';
@@ -97,6 +98,10 @@ describe('SIREN validation', () => {
 });
 
 describe('buildScanRequest', () => {
+  it('keeps the new-scan form to the three operator intents', () => {
+    expect(NEW_SCAN_TYPES).toEqual(['full-audit', 'quick-check', 'prospecting-audit']);
+  });
+
   it('builds a full-audit body with every option set, trimming and cleaning values', () => {
     const request = buildScanRequest(
       formValues({
@@ -188,32 +193,17 @@ describe('buildScanRequest', () => {
     }
   });
 
-  it('builds a prospecting body by splitting lines, trimming, and dropping empties', () => {
-    const request = buildScanRequest(
-      formValues({
-        type: 'prospecting',
-        urls: ' https://a.fr \n\nhttps://b.fr\n   \n',
-      }),
-    );
-    expect(request).toEqual({ type: 'prospecting', urls: ['https://a.fr', 'https://b.fr'] });
-  });
-
-  it('builds a prospecting body with an empty urls array when every line is blank', () => {
-    const request = buildScanRequest(formValues({ type: 'prospecting', urls: ' \n  \n' }));
-    expect(request).toEqual({ type: 'prospecting', urls: [] });
-  });
-
-  it('builds a prospect-linked light audit request', () => {
+  it('builds a prospect-linked outreach audit request', () => {
     expect(
       buildScanRequest(
         formValues({
-          type: 'light-audit',
+          type: 'prospecting-audit',
           url: 'https://hotel.example.fr',
           prospectId: 'prospect-1',
         }),
       ),
     ).toEqual({
-      type: 'light-audit',
+      type: 'prospecting-audit',
       url: 'https://hotel.example.fr',
       prospectId: 'prospect-1',
     });

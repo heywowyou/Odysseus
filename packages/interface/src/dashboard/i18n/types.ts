@@ -43,9 +43,8 @@ export interface DashboardStrings {
     severityLabels: { critical: string; serious: string; moderate: string; minor: string };
     statusLabels: Record<JobStatus, string>;
     /** camelCase keys mirror the API job types displayed by the dashboard.
-     *  The prescan family (the batch prospecting crawl and the single-hotel
-     *  quick check) shares one plain-language name per the approved IA
-     *  vocabulary; the prospect-linked full scan is named separately. */
+     *  Internal batch jobs keep a neutral label if opened directly; the
+     *  ordinary scan form exposes only the three public intents. */
     typeLabels: {
       fullAudit: string;
       prospecting: string;
@@ -147,9 +146,7 @@ export interface DashboardStrings {
     typeLabel: string;
     typeFullAudit: string;
     typeQuickCheck: string;
-    typeLightAudit: string;
     typeProspectingAudit: string;
-    typeProspectingBatch: string;
     urlLabel: string;
     urlPlaceholder: string;
     prospectLabel: string;
@@ -167,8 +164,6 @@ export interface DashboardStrings {
     /** Shown when a non-empty URL is not an absolute http(s) URL without
      *  embedded credentials, the shape routes/scans.ts accepts. */
     urlInvalidError: string;
-    urlsLabel: string;
-    urlsPlaceholder: string;
     /** Full-audit only (single-audit input, no bulk equivalent for
      *  prospecting yet). Optional: used for the obligation determination
      *  when the site itself does not publish a SIREN, or to cross-check
@@ -749,7 +744,6 @@ export interface DashboardStrings {
       addEmail: string;
       actions: string;
       quick: string;
-      light: string;
       prospecting: string;
       outcome: string;
       history: string;

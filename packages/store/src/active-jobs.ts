@@ -9,19 +9,16 @@
  * hub while it ran.
  *
  * Every operator-launchable job kind maps to exactly one JobType. The kind
- * vocabulary is the hub's, not the queue's: "Light audit" (JobType
- * 'prospecting') is not prospect-scoped when it is created (it takes raw
- * URLs, see routes/scans.ts), so matching it to a prospect while active
- * can only go by hostname, the same domain the prospect's own site lives
- * on.
+ * vocabulary is the hub's, not the queue's: quick checks use the internal
+ * `prospecting` job type, while outreach audits and full audits have their
+ * own queue types.
  */
 
 import type { Connection } from 'mongoose';
 import { isHotelVendorHost } from '@odysseus/core';
 import { createJobModel, type JobDocument, type JobType } from './schemas/job.schema.js';
 
-export type ProspectActiveJobKind =
-  'quick-check' | 'light-audit' | 'prospecting-audit' | 'full-audit';
+export type ProspectActiveJobKind = 'quick-check' | 'prospecting-audit' | 'full-audit';
 
 export interface ProspectActiveJob {
   jobId: string;
@@ -32,7 +29,7 @@ export interface ProspectActiveJob {
 }
 
 const KIND_BY_JOB_TYPE: Record<JobType, ProspectActiveJobKind | undefined> = {
-  prospecting: 'light-audit',
+  prospecting: undefined,
   'outreach-full-scan': 'prospecting-audit',
   'full-audit': 'full-audit',
   'outreach-draft-batch': undefined,
@@ -41,7 +38,6 @@ const KIND_BY_JOB_TYPE: Record<JobType, ProspectActiveJobKind | undefined> = {
 
 const JOB_TYPE_BY_KIND: Record<ProspectActiveJobKind, JobType> = {
   'quick-check': 'prospecting',
-  'light-audit': 'prospecting',
   'prospecting-audit': 'outreach-full-scan',
   'full-audit': 'full-audit',
 };
@@ -49,12 +45,8 @@ const JOB_TYPE_BY_KIND: Record<ProspectActiveJobKind, JobType> = {
 /** The kinds that own the shared browser/crawler resource against one
  *  host. Quick check is a single-page, non-crawling probe (maxPages: 1)
  *  and deliberately does not compete for this slot: it may run alongside
- *  any of the three below. */
-const BROWSER_HEAVY_KINDS: readonly ProspectActiveJobKind[] = [
-  'light-audit',
-  'prospecting-audit',
-  'full-audit',
-];
+ *  either browser-heavy kind. */
+const BROWSER_HEAVY_KINDS: readonly ProspectActiveJobKind[] = ['prospecting-audit', 'full-audit'];
 
 const ACTIVE_STATUSES = ['queued', 'running', 'needs-input'] as const;
 
@@ -64,8 +56,8 @@ function escapeRegExp(value: string): string {
 
 /** Matches a bare or www-prefixed hostname at the start of a URL, any path
  *  included - unlike findActiveScanJobForHost's root-only pattern, this
- *  one also has to match a Light audit's `urls` array entries, which are
- *  ordinary page URLs with paths, not just a scan's root siteUrl. */
+ *  one also has to match ordinary page URLs with paths, not just a scan's
+ *  root siteUrl. */
 function hostUrlPattern(hostname: string): RegExp {
   return new RegExp(`^https?://(www\\.)?${escapeRegExp(hostname)}(:\\d+)?(/|\\?|#|$)`, 'iu');
 }
@@ -112,21 +104,23 @@ function toActiveJob(job: JobDocument, fallbackDomain: string): ProspectActiveJo
 
 /** Every active job that currently owns part of this prospect's
  *  workflow: its own prospect-linked jobs (quick-check, prospecting-audit,
- *  full-audit), plus any Light audit job whose URL list touches the
- *  prospect's own domain. Newest first. An empty array, never null. */
+ *  full-audit). Newest first. An empty array, never null. */
 export async function listActiveJobsForProspect(
   connection: Connection,
   prospectId: string,
   domain: string,
 ): Promise<ProspectActiveJob[]> {
-  const hostname = hostnameOf(domain);
   const jobs = await createJobModel(connection)
     .find({
       status: { $in: ACTIVE_STATUSES },
       $or: [
         { type: 'full-audit', 'options.prospectId': prospectId },
         { type: 'outreach-full-scan', 'options.prospectId': prospectId },
-        { type: 'prospecting', urls: hostUrlPattern(hostname) },
+        {
+          type: 'prospecting',
+          'options.prospectId': prospectId,
+          'options.scanType': 'quick-check',
+        },
       ],
     })
     .sort({ createdAt: -1 })
@@ -176,9 +170,9 @@ export type ProspectJobLaunchDecision =
  *     concurrent runs of the same scan for one prospect are always an
  *     operator mistake, and the plan/authorization gates elsewhere are the
  *     real volume control.
- *  2. Otherwise, a browser-heavy kind (Light audit, Prospecting audit,
- *     Full audit) refuses against any *other* browser-heavy kind already
- *     active on the same host - one crawler slot per site at a time -
+ *  2. Otherwise, a browser-heavy kind (Prospecting audit, Full audit)
+ *     refuses against any *other* browser-heavy kind already active on the
+ *     same host - one crawler slot per site at a time -
  *     unless that host is a known shared/vendor platform (issue #216's
  *     own-registrable-domain rule), where two different businesses
  *     legitimately publish on the same host and must not block each
@@ -191,10 +185,9 @@ export async function planProspectJobLaunch(
   params: { kind: ProspectActiveJobKind; prospectId: string; domain: string },
 ): Promise<ProspectJobLaunchDecision> {
   const { kind, prospectId, domain } = params;
-  const hostname = hostnameOf(domain);
   const JobModel = createJobModel(connection);
 
-  const sameKind = await findActiveJobForProspectKind(JobModel, kind, prospectId, domain, hostname);
+  const sameKind = await findActiveJobForProspectKind(JobModel, kind, prospectId);
   if (sameKind !== null) return { allowed: false, conflictingJobId: sameKind.jobId };
 
   const hostConflict = await findActiveBrowserHeavyHostConflict(connection, kind, domain);
@@ -207,16 +200,12 @@ async function findActiveJobForProspectKind(
   JobModel: ReturnType<typeof createJobModel>,
   kind: ProspectActiveJobKind,
   prospectId: string,
-  domain: string,
-  hostname: string,
 ): Promise<JobDocument | null> {
   const type = JOB_TYPE_BY_KIND[kind];
   const scopeQuery =
     kind === 'quick-check'
       ? { 'options.prospectId': prospectId, 'options.scanType': 'quick-check' as const }
-      : kind === 'light-audit'
-        ? { urls: hostUrlPattern(hostname) }
-        : { 'options.prospectId': prospectId };
+      : { 'options.prospectId': prospectId };
   return JobModel.findOne({
     type,
     status: { $in: ACTIVE_STATUSES },

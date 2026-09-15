@@ -76,7 +76,7 @@ describe('central prospect guards', () => {
     await expect(
       checkScanLaunch(fakeConnection, {
         url: 'https://arkhotel.octosite.net',
-        kind: 'light-audit',
+        kind: 'prospecting-audit',
       }),
     ).resolves.toEqual({ allowed: true, registrableDomain: 'octosite.net' });
   });

@@ -31,7 +31,7 @@ function registrableDomainOf(url: string): string | null {
 
 export async function checkScanLaunch(
   connection: Connection,
-  input: { url: string; kind: 'quick-check' | 'light-audit' | 'prospecting-audit' | 'full-audit' },
+  input: { url: string; kind: 'quick-check' | 'prospecting-audit' | 'full-audit' },
 ): Promise<ScanLaunchCheck> {
   let parsed: URL;
   try {

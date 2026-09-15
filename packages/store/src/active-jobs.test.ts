@@ -24,7 +24,7 @@ async function seedJob(input: {
   siteUrl?: string;
   urls?: string[];
   prospectId?: string;
-  scanType?: 'quick-check' | 'light-audit' | 'prospecting-audit';
+  scanType?: 'quick-check' | 'prospecting-audit';
   domain?: string;
   createdAt?: Date;
 }): Promise<string> {
@@ -82,19 +82,18 @@ describe.skipIf(!mongoAvailable)('listActiveJobsForProspect', () => {
     expect(byId.get(fullId)?.kind).toBe('full-audit');
   });
 
-  it('matches an unlinked light audit by a URL touching the prospect domain', async () => {
+  it('ignores an unlinked internal prospecting batch', async () => {
     const prospectId = randomUUID();
-    const domain = 'active-jobs-light.fr';
-    const lightAuditId = await seedJob({
+    const domain = 'active-jobs-batch.fr';
+    await seedJob({
       type: 'prospecting',
       status: 'running',
       urls: ['https://other.example/', `https://www.${domain}/rooms`],
-      scanType: 'light-audit',
     });
 
     const active = await listActiveJobsForProspect(connection!, prospectId, domain);
 
-    expect(active).toEqual([expect.objectContaining({ jobId: lightAuditId, kind: 'light-audit' })]);
+    expect(active).toEqual([]);
   });
 
   it('omits terminal jobs and returns an empty array when no work is active', async () => {

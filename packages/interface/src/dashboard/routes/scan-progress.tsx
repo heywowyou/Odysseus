@@ -126,7 +126,6 @@ export function ScanProgressPage(): JSX.Element {
     (job.type === 'full-audit' ||
       job.type === 'prospecting' ||
       job.type === 'quick-check' ||
-      job.type === 'light-audit' ||
       job.type === 'prospecting-audit') &&
     canStop(job.status);
 
@@ -301,10 +300,7 @@ function PhaseRow(props: {
 function JobView({ job, refresh }: { job: ScanJobDetail; refresh: () => void }): JSX.Element {
   const terminal = isTerminal(job.status);
   const prospecting =
-    job.type === 'prospecting' ||
-    job.type === 'quick-check' ||
-    job.type === 'light-audit' ||
-    job.type === 'prospecting-audit';
+    job.type === 'prospecting' || job.type === 'quick-check' || job.type === 'prospecting-audit';
   return (
     <div className="flex flex-col gap-4">
       {prospecting ? (

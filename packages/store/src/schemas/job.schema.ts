@@ -39,7 +39,7 @@ export type JobPhase =
 export interface JobOptionsSnapshot {
   /** Durable prospect hub link. */
   prospectId?: string;
-  scanType?: 'quick-check' | 'light-audit' | 'prospecting-audit';
+  scanType?: 'quick-check' | 'prospecting-audit';
   maxPages?: number;
   maxDepth?: number;
   delayMs?: number;
@@ -216,7 +216,7 @@ export type JobDocument = JobDocumentFields;
 const jobOptionsSchema = new Schema(
   {
     prospectId: { type: String },
-    scanType: { type: String, enum: ['quick-check', 'light-audit', 'prospecting-audit'] },
+    scanType: { type: String, enum: ['quick-check', 'prospecting-audit'] },
     maxPages: { type: Number },
     maxDepth: { type: Number },
     delayMs: { type: Number },

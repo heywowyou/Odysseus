@@ -19,6 +19,7 @@ import {
   buildScanRequest,
   createEmptyFormValues,
   isValidAbsoluteHttpUrl,
+  NEW_SCAN_TYPES,
   prefillUrlFromQuery,
   validateSiren,
 } from './new-scan-model';
@@ -38,6 +39,11 @@ interface ProspectMatch {
 export function NewScanPage() {
   const { strings } = useI18n();
   const copy = strings.newScan;
+  const scanTypeLabels: Record<NewScanType, string> = {
+    'full-audit': copy.typeFullAudit,
+    'quick-check': copy.typeQuickCheck,
+    'prospecting-audit': copy.typeProspectingAudit,
+  };
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   // ?url= prefill from the prospect page's launch-audit link, read once as
@@ -71,7 +77,6 @@ export function NewScanPage() {
   }, []);
 
   const isFullAudit = form.type === 'full-audit';
-  const isBatchProspecting = form.type === 'prospecting';
   const sirenError = validateSiren(form.siren, copy.sirenInvalidError);
   const trimmedUrl = form.url.trim();
   const urlError =
@@ -79,7 +84,7 @@ export function NewScanPage() {
   const showTransactionalFlowReason = form.transactionalFlow !== '';
 
   useEffect(() => {
-    if (isBatchProspecting || !isValidAbsoluteHttpUrl(trimmedUrl)) {
+    if (!isValidAbsoluteHttpUrl(trimmedUrl)) {
       setProspectMatches([]);
       return;
     }
@@ -107,7 +112,7 @@ export function NewScanPage() {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [form.type, isBatchProspecting, trimmedUrl]);
+  }, [trimmedUrl]);
 
   useEffect(() => {
     const query = prospectSearch.trim();
@@ -204,7 +209,7 @@ export function NewScanPage() {
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     if (isSubmitting) return;
-    if (!isBatchProspecting && (urlError !== null || (isFullAudit && sirenError !== null))) return;
+    if (urlError !== null || (isFullAudit && sirenError !== null)) return;
     void submit();
   };
 
@@ -216,13 +221,7 @@ export function NewScanPage() {
           <SegmentedControl<NewScanType>
             value={form.type}
             onValueChange={(type) => setField('type', type)}
-            options={[
-              { value: 'full-audit', label: copy.typeFullAudit },
-              { value: 'quick-check', label: copy.typeQuickCheck },
-              { value: 'light-audit', label: copy.typeLightAudit },
-              { value: 'prospecting-audit', label: copy.typeProspectingAudit },
-              { value: 'prospecting', label: copy.typeProspectingBatch },
-            ]}
+            options={NEW_SCAN_TYPES.map((type) => ({ value: type, label: scanTypeLabels[type] }))}
             ariaLabel={copy.typeLabel}
           />
 
@@ -288,15 +287,6 @@ export function NewScanPage() {
                 </Field>
               ) : null}
             </>
-          ) : isBatchProspecting ? (
-            <Field label={copy.urlsLabel} htmlFor="new-scan-urls">
-              <Textarea
-                id="new-scan-urls"
-                value={form.urls}
-                onChange={(event) => setField('urls', event.target.value)}
-                placeholder={copy.urlsPlaceholder}
-              />
-            </Field>
           ) : (
             <Field
               label={copy.urlLabel}
@@ -314,68 +304,66 @@ export function NewScanPage() {
             </Field>
           )}
 
-          {!isBatchProspecting ? (
-            <Field label={copy.prospectLabel} htmlFor="new-scan-prospect-search">
-              <Input
-                id="new-scan-prospect-search"
-                value={prospectSearch}
-                onChange={(event) => setProspectSearch(event.target.value)}
-                placeholder={copy.prospectSearchPlaceholder}
-                aria-label={copy.prospectSearchAria}
-              />
-              <Select
-                id="new-scan-prospect"
-                value={form.prospectId}
-                onChange={(event) => setField('prospectId', event.target.value)}
-                aria-label={copy.prospectLabel}
+          <Field label={copy.prospectLabel} htmlFor="new-scan-prospect-search">
+            <Input
+              id="new-scan-prospect-search"
+              value={prospectSearch}
+              onChange={(event) => setProspectSearch(event.target.value)}
+              placeholder={copy.prospectSearchPlaceholder}
+              aria-label={copy.prospectSearchAria}
+            />
+            <Select
+              id="new-scan-prospect"
+              value={form.prospectId}
+              onChange={(event) => setField('prospectId', event.target.value)}
+              aria-label={copy.prospectLabel}
+            >
+              <option value="">{copy.noProspectOption}</option>
+              {availableProspectMatches.map((match) => (
+                <option key={match.prospectId} value={match.prospectId}>
+                  {match.name}
+                </option>
+              ))}
+            </Select>
+            <p className="mt-1 text-xs text-ink-muted">{copy.prospectMatchHint}</p>
+            {prospectSearch.trim() !== '' && availableProspectMatches.length === 0 ? (
+              <p className="mt-2 text-xs text-ink-muted">{copy.prospectSearchEmpty}</p>
+            ) : null}
+            <div className="mt-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setNewProspectName((current) => current || prospectSearch.trim());
+                  setCreateProspectOpen((open) => !open);
+                }}
               >
-                <option value="">{copy.noProspectOption}</option>
-                {availableProspectMatches.map((match) => (
-                  <option key={match.prospectId} value={match.prospectId}>
-                    {match.name}
-                  </option>
-                ))}
-              </Select>
-              <p className="mt-1 text-xs text-ink-muted">{copy.prospectMatchHint}</p>
-              {prospectSearch.trim() !== '' && availableProspectMatches.length === 0 ? (
-                <p className="mt-2 text-xs text-ink-muted">{copy.prospectSearchEmpty}</p>
-              ) : null}
-              <div className="mt-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setNewProspectName((current) => current || prospectSearch.trim());
-                    setCreateProspectOpen((open) => !open);
-                  }}
-                >
-                  {copy.createProspectAction}
-                </Button>
-              </div>
-              {createProspectOpen ? (
-                <div className="mt-2 rounded-lg border border-line bg-raised p-3">
-                  <p className="mb-2 text-sm font-medium text-ink">{copy.createProspectTitle}</p>
-                  <div className="flex gap-2">
-                    <Input
-                      value={newProspectName}
-                      onChange={(event) => setNewProspectName(event.target.value)}
-                      placeholder={copy.createProspectNamePlaceholder}
-                      aria-label={copy.createProspectNameAria}
-                    />
-                    <Button
-                      type="button"
-                      isLoading={creatingProspect}
-                      disabled={newProspectName.trim() === ''}
-                      onClick={() => void createProspect()}
-                    >
-                      {copy.createProspectSubmit}
-                    </Button>
-                  </div>
+                {copy.createProspectAction}
+              </Button>
+            </div>
+            {createProspectOpen ? (
+              <div className="mt-2 rounded-lg border border-line bg-raised p-3">
+                <p className="mb-2 text-sm font-medium text-ink">{copy.createProspectTitle}</p>
+                <div className="flex gap-2">
+                  <Input
+                    value={newProspectName}
+                    onChange={(event) => setNewProspectName(event.target.value)}
+                    placeholder={copy.createProspectNamePlaceholder}
+                    aria-label={copy.createProspectNameAria}
+                  />
+                  <Button
+                    type="button"
+                    isLoading={creatingProspect}
+                    disabled={newProspectName.trim() === ''}
+                    onClick={() => void createProspect()}
+                  >
+                    {copy.createProspectSubmit}
+                  </Button>
                 </div>
-              ) : null}
-            </Field>
-          ) : null}
+              </div>
+            ) : null}
+          </Field>
 
           {isFullAudit ? (
             <div>
