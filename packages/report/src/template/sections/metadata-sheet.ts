@@ -137,14 +137,11 @@ function renderScorecard(
  *  every non-cover sheet, so this section is its own physical page and the
  *  TOC starts on the next one with no extra class.
  *
- *  Plan 023 recomposition: the sheet renders as a flex column
- *  (.sheet-metadata, paged.css) and the risk scale is the closing band -
- *  full width under a fading hairline, margin-top:auto pulling it to
- *  roughly two-thirds page height with a fixed quiet spacer after it -
- *  so the page reads as composed instead of ending where the grid ran
- *  out. No field moves between languages and no wording changes: the
- *  scale keeps its exact field anatomy, just full width below the grid
- *  instead of as the grid's last cell. */
+ *  The sheet renders as a flex column (.sheet-metadata, paged.css). The
+ *  grade and the risk scale open the page, because the level is what a
+ *  reader looks for first; the audit facts follow as the reference block,
+ *  with a quiet spacer after them. No field moves between languages and no
+ *  wording changes. */
 export function renderMetadataSheet(
   strings: ReportStrings,
   manifest: AuditManifest,
@@ -166,7 +163,14 @@ export function renderMetadataSheet(
       <h6 style="color:var(--color-accent-300);margin:0">${escapeHtml(strings.metadata.eyebrow)}</h6>
     </div>
     <h2 style="margin-bottom:var(--space-6)">${escapeHtml(strings.metadata.heading)}</h2>
-    <div class="metadata-facts" style="display:grid;grid-template-columns:1fr 1fr;row-gap:var(--space-8);column-gap:var(--space-8);font-size:13px">
+    <div class="metadata-signal">
+      <div class="hr"></div>
+      <div class="metadata-signal-stack" style="display:flex;gap:var(--space-8);align-items:flex-start">
+        ${field(strings.metadata.riskSmallLabel, renderRiskBadge(strings, analysis, findings, manifest), 'metadata-risk-field')}
+        ${field(strings.metadata.scorecardLabel, renderScorecard(strings, findings, manifest, gradeOverride), 'metadata-grade-field')}
+      </div>
+    </div>
+    <div class="metadata-facts" style="margin-top:var(--space-12);display:grid;grid-template-columns:1fr 1fr;row-gap:var(--space-8);column-gap:var(--space-8);font-size:13px">
       ${field(strings.metadata.siteLabel, escapeHtml(manifest.siteUrl))}
       ${field(strings.metadata.dateLabel, escapeHtml(formatDate(new Date(manifest.startedAt), analysis.language)))}
       ${field(strings.metadata.pagesScannedLabel, escapeHtml(scopeValue))}
@@ -179,13 +183,6 @@ export function renderMetadataSheet(
         ),
       )}
       ${raisonSociale ? field(strings.metadata.legalNameLabel, escapeHtml(raisonSociale)) : ''}
-    </div>
-    <div class="metadata-signal" style="margin-top:auto">
-      <div class="hr"></div>
-      <div class="metadata-signal-stack" style="display:flex;gap:var(--space-8);align-items:flex-start">
-        ${field(strings.metadata.riskSmallLabel, renderRiskBadge(strings, analysis, findings, manifest), 'metadata-risk-field')}
-        ${field(strings.metadata.scorecardLabel, renderScorecard(strings, findings, manifest, gradeOverride), 'metadata-grade-field')}
-      </div>
     </div>
     <div class="metadata-spacer" style="min-height:60mm"></div>
   `,

@@ -260,12 +260,11 @@ so the page a section lands on depends on which sections are included.
   plus the legal name when the operator supplied one) as a two-column
   grid, 10px uppercase labels (`opacity: 0.5`, `--space-3` below) over
   18px values, `--space-8` row and column gaps. The sheet renders as a
-  flex column (`min-height: 261mm`): the risk scale, the full three-level
-  scale with the current level highlighted plus its two basis notes
-  (item 42), is the sheet's closing band, full width under a fading
-  hairline, pulled to roughly two-thirds page height by
-  `margin-top: auto` with a fixed quiet spacer after it, so the page
-  reads as composed rather than ending where the grid ran out. The flat
+  flex column (`min-height: 261mm`): since 2026-09-15 the grade and the
+  risk scale (the full three-level scale with the current level
+  highlighted plus its two basis notes, item 42) open the sheet under the
+  heading, and the fact grid follows `--space-12` below them with a quiet
+  spacer after it, so the level a reader looks for comes first. The flat
   source's single risk pill and four-row severity legend were
   deliberately replaced by this scale (item 42, plan 018 step 4).
 - **TOC**: eyebrow `SOMMAIRE`, numbered rows with a hairline

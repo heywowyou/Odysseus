@@ -155,13 +155,14 @@ out is a defect, not minimalism:
   supersedes the former detached symmetric-fade rule; the rule now belongs to
   the report-type line, so their alignment cannot drift. The cover stays
   minimal by contract: no fields return from the metadata sheet.
-- **Metadata sheet**: the fact grid carries the audit identity fields. Its
-  closing act is a centered vertical signal: the deterministic letter grade
-  first, inside two concentric severity-colour strokes, its mandatory
-  disclaimer directly below, then the three-point qualitative scale and its
-  basis notes in a restrained hairline band. The circles are strokes attached
-  to the badge itself, never independently positioned decoration. A fixed
-  upper gap and flexible quiet spacer keep the composition stable in the PDF.
+- **Metadata sheet**: the page opens, under its heading, with a centered
+  vertical signal: the deterministic letter grade first, inside two
+  concentric severity-colour strokes, its mandatory disclaimer directly
+  below, then the three-point qualitative scale and its basis notes in a
+  restrained hairline band. The fact grid with the audit identity fields
+  follows as the reference block. The circles are strokes attached to the
+  badge itself, never independently positioned decoration. A flexible quiet
+  spacer after the grid keeps the composition stable in the PDF.
 - **Outreach preview**: its cover calls the paid report's canonical cover
   renderer, with the preview's recipient and scan date bound into the same
   slots. Its scorecard calls the same grade renderer and applies the metadata

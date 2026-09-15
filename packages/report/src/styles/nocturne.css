@@ -292,7 +292,7 @@ h4 {
    round notation cannot drift away from the letter during PDF layout. */
 .metadata-signal {
   width: 100%;
-  margin-top: 26mm !important;
+  margin-top: var(--space-4) !important;
   break-inside: avoid;
 }
 .metadata-signal > .hr {

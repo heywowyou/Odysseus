@@ -56,18 +56,18 @@ async function manifestWithOneMeasuredPage(): Promise<AuditManifest> {
 }
 
 describe('renderMetadataSheet field order and presence', () => {
-  it('renders the reference fact grid in order, legal name omitted when absent (French)', async () => {
+  it('renders the grade and scale before the fact grid, legal name omitted when absent (French)', async () => {
     const manifest = await loadSmallSiteManifest();
     const analysis = await loadSmallSiteAnalysis('fr');
     const html = renderMetadataSheet(fr, manifest, analysis);
 
     expect(fieldLabelsInOrder(html)).toEqual([
+      escapeHtml(fr.metadata.riskSmallLabel),
+      escapeHtml(fr.metadata.scorecardLabel),
       escapeHtml(fr.metadata.siteLabel),
       escapeHtml(fr.metadata.dateLabel),
       escapeHtml(fr.metadata.pagesScannedLabel),
       escapeHtml(fr.metadata.wcagReferentialLabel),
-      escapeHtml(fr.metadata.riskSmallLabel),
-      escapeHtml(fr.metadata.scorecardLabel),
     ]);
     // The site URL, the audit date and the visited-page count are real
     // values from the manifest, never empty labels.
@@ -99,7 +99,7 @@ describe('renderMetadataSheet field order and presence', () => {
     expect(htmlEn).not.toContain('1 pages analyzed');
   });
 
-  it('inserts the legal-name row between the referential and the risk scale when present', async () => {
+  it('closes the fact grid with the legal-name row when present', async () => {
     const manifest = await loadSmallSiteManifest();
     const analysis = await loadSmallSiteAnalysis('fr');
     const html = renderMetadataSheet(fr, manifest, analysis, [], {
@@ -108,13 +108,13 @@ describe('renderMetadataSheet field order and presence', () => {
     });
 
     expect(fieldLabelsInOrder(html)).toEqual([
+      escapeHtml(fr.metadata.riskSmallLabel),
+      escapeHtml(fr.metadata.scorecardLabel),
       escapeHtml(fr.metadata.siteLabel),
       escapeHtml(fr.metadata.dateLabel),
       escapeHtml(fr.metadata.pagesScannedLabel),
       escapeHtml(fr.metadata.wcagReferentialLabel),
       escapeHtml(fr.metadata.legalNameLabel),
-      escapeHtml(fr.metadata.riskSmallLabel),
-      escapeHtml(fr.metadata.scorecardLabel),
     ]);
   });
 
@@ -124,12 +124,12 @@ describe('renderMetadataSheet field order and presence', () => {
     const html = renderMetadataSheet(en, manifest, analysis);
 
     expect(fieldLabelsInOrder(html)).toEqual([
+      escapeHtml(en.metadata.riskSmallLabel),
+      escapeHtml(en.metadata.scorecardLabel),
       escapeHtml(en.metadata.siteLabel),
       escapeHtml(en.metadata.dateLabel),
       escapeHtml(en.metadata.pagesScannedLabel),
       escapeHtml(en.metadata.wcagReferentialLabel),
-      escapeHtml(en.metadata.riskSmallLabel),
-      escapeHtml(en.metadata.scorecardLabel),
     ]);
     // Issue #51: no report-language row in English either.
     expect(html).not.toContain('Report language');
