@@ -30,6 +30,27 @@
 
 ## Status
 
+- **DONE** (2026-09-15)
+
+- Implementation is complete across the dashboard, interface routes, store
+  filters, bilingual copy, workflow coverage, and documentation. The final
+  local closeout rehearsal used an isolated Mongo database and a synthetic
+  loopback-resolving site: directory add returned 201, a real
+  `prospecting-audit` queue job completed, the audit attached to the prospect,
+  and the detail page advanced to the expected `qualifying` state with the
+  recommended next action visible.
+- The closeout also fixed two defects found during that rehearsal: the detail
+  page's literal `{state}` placeholder and the prospect edit service's
+  Mongoose metadata leak into strict Zod validation. Both have regression
+  coverage.
+- Verification completed: focused route/render/axe/model suites, the stateful
+  workflow e2e, the full e2e suite serialized (`38` files / `145` tests),
+  `pnpm run check`, `pnpm run docs:check`, and the full test suite. The one
+  parallel scanner timing flake was isolated and passed when rerun alone.
+- The production real-record rehearsal remains deliberately outside this
+  closeout: deployment is a separate operator action, and no live
+  third-party scan or mailbox mutation was performed from this local pass.
+
 - **Priority**: P1
 - **Effort**: L
 - **Risk**: MED
@@ -39,7 +60,8 @@
 - **Category**: direction / tech-debt
 - **Planned at**: commit `ade9bfb`, 2026-09-15, with Plan 047 in progress in the
   working tree
-- **Execution status**: BLOCKED until the dependency above is complete
+- **Execution status**: DONE; archived after the implementation and local
+  closeout verification above
 
 ## Why this matters
 
@@ -547,29 +569,29 @@ render tests.
 
 ## Done criteria
 
-- [ ] Plan 047 is DONE, its production reset is recorded, and its post-deploy
+- [x] Plan 047 is DONE, its production reset is recorded, and its post-deploy
       rehearsal predates Plan 048 implementation.
-- [ ] Sidebar operational links are exactly À traiter, Prospects, and Audits;
+- [x] Sidebar operational links are exactly À traiter, Prospects, and Audits;
       Annuaire remains reachable from Prospects.
-- [ ] `/resultats` redirects to `/prospects?view=results`; no dedicated Results
+- [x] `/resultats` redirects to `/prospects?view=results`; no dedicated Results
       component or endpoint remains.
-- [ ] Results view preserves campaign-level status counts and outcome entry;
+- [x] Results view preserves campaign-level status counts and outcome entry;
       it does not duplicate manual status editing.
-- [ ] The dashboard exposes exactly Quick check, Prepare outreach, and Prepare
+- [x] The dashboard exposes exactly Quick check, Prepare outreach, and Prepare
       client report; no TypeScript runtime file contains the `light-audit`
       alias, and the legacy batch is absent from New scan.
-- [ ] Prospect detail renders at most one recommended action (none for terminal
+- [x] Prospect detail renders at most one recommended action (none for terminal
       states), keeps every other valid action reachable, and moves
       edit/history/status correction to secondary controls.
-- [ ] Prospects and Directory share one filter model and filter-bar interface;
+- [x] Prospects and Directory share one filter model and filter-bar interface;
       all combined filters and URL deep links still work.
-- [ ] `À traiter`, its sidebar badge, and prospect detail agree because all use
+- [x] `À traiter`, its sidebar badge, and prospect detail agree because all use
       the Plan 047 prospect-work module.
-- [ ] Typed FR/EN parity, render tests, axe tests, and the complete e2e workflow
+- [x] Typed FR/EN parity, render tests, axe tests, and the complete e2e workflow
       pass.
-- [ ] `pnpm run check`, `pnpm run test:e2e`, `pnpm run test:all`, and
+- [x] `pnpm run check`, `pnpm run test:e2e`, `pnpm run test:all`, and
       `pnpm run docs:check` exit 0.
-- [ ] `git diff --name-only` contains only the reconciled in-scope files and the
+- [x] `git diff --name-only` contains only the reconciled in-scope files and the
       Plan 048 index/changelog update.
 
 ## STOP conditions

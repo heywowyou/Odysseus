@@ -840,6 +840,7 @@ export const fr: DashboardStrings = {
         operator: 'Opérateur',
       },
       auditKindLabels: {
+        audit: 'Audit',
         'full-audit': 'Préparer le rapport client',
         'quick-check': 'Contrôle rapide',
         'prospecting-audit': 'Préparer la prospection',

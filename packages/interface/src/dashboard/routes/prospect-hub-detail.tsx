@@ -191,6 +191,8 @@ export function ProspectHubDetailPage(): JSX.Element {
   const drafts = prospect.drafts ?? [];
   const work = prospect.work;
   const recommendation = work?.recommendation;
+  const auditState = work?.auditState ?? 'missing';
+  const auditStateLabel = copy.auditStateLabels[auditState] ?? strings.common.vocabularyFallback;
   const recentEvents = prospect.events.slice(0, 3);
   const qualifyingAudit =
     (work?.qualifyingAuditId === undefined
@@ -719,10 +721,8 @@ export function ProspectHubDetailPage(): JSX.Element {
         <Card id="emails" title={copy.outreach}>
           <div className="grid gap-3 text-sm sm:grid-cols-2">
             <div>
-              <p className="text-xs text-ink-muted">{copy.auditState}</p>
-              <p className="mt-1 font-medium">
-                {copy.auditStateLabels[work?.auditState ?? 'missing'] ??
-                  strings.common.vocabularyFallback}
+              <p className="text-sm font-medium">
+                {copy.auditState.replace('{state}', auditStateLabel)}
               </p>
             </div>
             <div>

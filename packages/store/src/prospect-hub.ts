@@ -316,7 +316,9 @@ export async function updateProspect(
   actor = 'operator',
 ): Promise<ProspectHubDocument | null> {
   const Model = createProspectHubModel(connection);
-  const current = await Model.findOne({ prospectId }).lean<ProspectHubDocument>();
+  const current = await Model.findOne({ prospectId })
+    .select({ _id: 0, __v: 0 })
+    .lean<ProspectHubDocument>();
   if (!current) return null;
   const normalizedPatch =
     patch.websites === undefined
@@ -347,6 +349,10 @@ export async function updateProspect(
   if (Object.keys(editedOrigins).length > 0) {
     next.fieldOrigins = { ...current.fieldOrigins, ...editedOrigins };
   }
+  // Mongoose may add its version key to the replacement object while it is
+  // persisted. Keep the service return value in the strict domain shape that
+  // callers validated above rather than leaking that storage metadata.
+  const returned = { ...next };
   await Model.replaceOne({ prospectId }, next);
   const changedFields = Object.keys(patch).filter(
     (key) =>
@@ -357,7 +363,7 @@ export async function updateProspect(
     connection,
     event(prospectId, 'field-edited', { fields: changedFields }, actor),
   );
-  return next;
+  return returned;
 }
 
 export async function setProspectStatus(

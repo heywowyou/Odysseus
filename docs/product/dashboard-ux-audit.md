@@ -18,6 +18,7 @@ reconciliation properly). History is never deleted.
 | 2 | 2026-09-13 | `692bd92` | 1 | 12 | 0 | 0 | local leg only, task-completion mode, plan 045 Stage 3 | no (production leg pending) |
 | 3 | 2026-09-14 | `48ae763` | 3 | 15 | 0 | 0 | local + production, partial (journeys 2/3/6 and full FR/EN parity not covered) | no |
 | 4 | 2026-09-15 | `15bc280` | 0 | 15 | 0 | 0 | local synthetic browser fixture + stateful dashboard fixture, FR/EN surface pass | yes (surface copy) |
+| 5 | 2026-09-15 | `Plan 048 closeout` | 0 | 15 | 0 | 0 | isolated local stateful browser fixture + real prospecting queue scan, FR detail state pass | yes (FR stateful; EN surface run 4) |
 
 ## Run 4 notes (Plan 048 local fixture pass)
 
@@ -50,14 +51,36 @@ review draft → record outcome → Results count path.
   is not evidence that those historical findings are fixed; their last live
   verification remains the run recorded above.
 
-**Coverage boundary.** The local `odysseus-local` database still has no
-prospect/directory fixture suitable for a real browser mutation and no local
-site authorized for a scanner run. The production login was not bypassed or
-fed a secret, so this run does not claim a post-deploy rehearsal of the five
-real-record journeys (directory add, qualifying audit/draft creation, queue
-review, reply/follow-up outcome, and paid audit). The deterministic fixture
-workflow and browser surface pass are the available safe evidence; a deployed
-real-record rehearsal remains an external follow-up.
+**Coverage boundary.** Run 5 closes the local directory/add and qualifying
+audit portions with a synthetic fixture, but it does not claim a post-deploy
+rehearsal of the five real-record journeys (directory add, qualifying
+audit/draft creation, queue review, reply/follow-up outcome, and paid audit).
+The production login was not bypassed or fed a secret, and no mailbox mutation
+was performed; the deployed real-record rehearsal remains an external
+follow-up.
+
+## Run 5 notes (Plan 048 stateful local closeout)
+
+Driven against the actual Vite dashboard and API at the Plan 048 closeout
+working tree, using an isolated Mongo database and a synthetic site served on
+`lvh.me` (which resolves to loopback). No production data, live model,
+mailbox, or third-party site was touched.
+
+- **Directory → prospect:** the browser selected the synthetic Atout France
+  entry and the real `/api/directory/add` action returned `201`; the new row
+  appeared in Prospects and linked to its prospect detail.
+- **Prospecting audit:** the detail's recommended “Préparer la prospection”
+  action created a real `prospecting-audit` queue job. The bounded local scan
+  completed, attached an audit, advanced the prospect to `Audité`, and exposed
+  `État de l’audit : qualifiant` with `Vérifier la fiche` as the next action.
+- **Detail safety:** the page kept the edit, actions, history, suppression,
+  and manual-status controls secondary; no literal `{state}` placeholder
+  remained. A strict-Zod update regression was added after the rehearsal
+  found Mongoose `_id`/`__v` metadata entering the edit service.
+- **No new UX finding:** the two closeout defects were fixed before this run
+  was recorded; the 15 historical entries remain open with their prior live
+  verification dates. The full production-record rehearsal remains outside
+  this local closeout by the no-live-third-party/mailbox boundary.
 
 ## Run 3 notes (local + production, partial)
 

@@ -333,6 +333,8 @@ describe('dashboard prospect workflow', () => {
     await click(exactElement(container, 'button', 'Ajouter aux prospects (1)'));
     await click(container.querySelector('a[href="/prospects"]')!);
     await click(container.querySelector('a[href^="/prospects/prospect-1?"]')!);
+    expect(container.textContent).toContain('État de l’audit : absent');
+    expect(container.textContent).not.toContain('{state}');
     await click(exactElement(container, 'button', 'Préparer la prospection'));
 
     expect(fixture.calls.some(({ method, url }) => method === 'POST' && url === '/api/scans')).toBe(
