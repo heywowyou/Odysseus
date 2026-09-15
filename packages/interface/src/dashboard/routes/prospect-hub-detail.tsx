@@ -86,6 +86,7 @@ interface ProspectDraft {
   touch: number;
   status: string;
   subject: string;
+  language?: 'fr' | 'en';
   previewUrl?: string;
   createdAt: string;
 }
@@ -97,6 +98,7 @@ interface ProspectHubDetail extends ProspectHubRow {
   siren?: string;
   siret?: string;
   notes?: string;
+  outreachLanguage?: 'fr' | 'en';
   fieldOrigins: Record<string, string>;
   audits?: ProspectAudit[];
   previews?: ProspectPreview[];
@@ -142,7 +144,7 @@ function formatDate(value: string): string {
 }
 
 export function ProspectHubDetailPage(): JSX.Element {
-  const { language, strings } = useI18n();
+  const { strings } = useI18n();
   const copy = strings.prospectHub.detail;
   const { prospectId } = useParams<{ prospectId: string }>();
   const [searchParams] = useSearchParams();
@@ -386,7 +388,7 @@ export function ProspectHubDetailPage(): JSX.Element {
       const result = await sendJson<{ created: boolean; refusal?: string }>(
         `/api/prospects/${prospect.prospectId}/outreach/first-email`,
         'POST',
-        { language },
+        {},
       );
       setOutreachNotice(
         result.created
@@ -455,6 +457,19 @@ export function ProspectHubDetailPage(): JSX.Element {
       setOutreachBusy(null);
       response.refresh();
       actionability.refresh();
+    }
+  };
+
+  const outreachLanguage = prospect.outreachLanguage ?? 'fr';
+  const changeOutreachLanguage = async (next: string): Promise<void> => {
+    setSaving(true);
+    try {
+      await sendJson(`/api/prospects/${prospect.prospectId}`, 'PATCH', { outreachLanguage: next });
+      response.refresh();
+    } catch {
+      setOutreachNotice(copy.actionFailed);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -877,6 +892,18 @@ export function ProspectHubDetailPage(): JSX.Element {
               )}
             </div>
           </div>
+          <label className="mt-4 grid max-w-xs gap-1 border-t border-line pt-4 text-sm">
+            <span className="text-xs text-ink-muted">{copy.outreachLanguage}</span>
+            <Select
+              value={outreachLanguage}
+              disabled={saving || drafts.some((draft) => draft.status === 'created')}
+              onChange={(event) => void changeOutreachLanguage(event.target.value)}
+            >
+              <option value="fr">{copy.languageLabels.fr}</option>
+              <option value="en">{copy.languageLabels.en}</option>
+            </Select>
+            <span className="text-xs text-ink-muted">{copy.outreachLanguageHint}</span>
+          </label>
           <div className="mt-4 border-t border-line pt-4">
             <p className="text-xs text-ink-muted">{copy.threadState}</p>
             {prospect.thread ? (

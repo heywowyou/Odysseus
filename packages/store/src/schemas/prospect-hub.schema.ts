@@ -58,6 +58,7 @@ const prospectSchema = new Schema<ProspectHubDocument>(
     siren: { type: String },
     siret: { type: String },
     notes: { type: String },
+    outreachLanguage: { type: String, enum: ['fr', 'en'] },
     status: {
       type: String,
       required: true,

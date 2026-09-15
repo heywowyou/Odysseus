@@ -66,6 +66,10 @@ export const prospectSchema = z
     siren: z.string().optional(),
     siret: z.string().optional(),
     notes: z.string().optional(),
+    /** Issue #275: the language client-facing outreach is written in. Absent
+     *  means French, the default for French prospects; never the dashboard's
+     *  UI language. */
+    outreachLanguage: z.enum(['fr', 'en']).optional(),
     status: prospectStatusSchema,
     hotel: hotelExtrasSchema.optional(),
     fieldOrigins: z.record(z.string(), originSchema),

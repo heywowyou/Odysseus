@@ -866,6 +866,9 @@ export interface DashboardStrings {
       firstEmailCreated: string;
       followUpCreated: string;
       outcomeSaved: string;
+      outreachLanguage: string;
+      outreachLanguageHint: string;
+      languageLabels: Record<'fr' | 'en', string>;
       outcomeRefused: string;
       optOutWithdrawn: string;
       detachAudit: string;

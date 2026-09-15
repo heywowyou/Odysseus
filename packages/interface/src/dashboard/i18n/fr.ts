@@ -863,6 +863,10 @@ export const fr: DashboardStrings = {
       firstEmailCreated: 'Premier email préparé. Relisez-le dans cette section.',
       followUpCreated: 'Relance préparée. Relisez-la dans cette section.',
       outcomeSaved: 'Résultat enregistré : {outcome}.',
+      outreachLanguage: 'Langue des emails et de l’aperçu',
+      outreachLanguageHint:
+        'Langue utilisée pour le client, indépendante de la langue du tableau de bord.',
+      languageLabels: { fr: 'Français', en: 'Anglais' },
       outcomeRefused:
         'Résultat non enregistré : aucun email n’a encore été envoyé à ce prospect, ou ce résultat contredit son statut actuel.',
       optOutWithdrawn:

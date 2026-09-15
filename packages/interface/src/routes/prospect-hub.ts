@@ -134,12 +134,14 @@ function recordBody(body: unknown): Record<string, unknown> | null {
     : null;
 }
 
-function languageFromBody(body: unknown): 'fr' | 'en' | null {
-  if (body === undefined) return 'fr';
+/** Issue #275: an explicit request language wins; otherwise the prospect's
+ *  own outreach language, French by default. */
+function languageFromBody(body: unknown, fallback: 'fr' | 'en'): 'fr' | 'en' | null {
+  if (body === undefined) return fallback;
   const record = recordBody(body);
   if (record === null) return null;
   const language = record['language'];
-  if (language === undefined) return 'fr';
+  if (language === undefined) return fallback;
   return language === 'fr' || language === 'en' ? language : null;
 }
 
@@ -330,6 +332,7 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
           touch: draft.touch,
           status: draft.status,
           subject: draft.subject,
+          language: draft.language,
           previewUrl: draft.previewUrl,
           createdAt: draft.createdAt,
         })),
@@ -343,7 +346,10 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
       sendError(res, 404, 'prospect not found');
       return;
     }
-    const language = languageFromBody(await readJsonBodyOrRespond(req, res));
+    const language = languageFromBody(
+      await readJsonBodyOrRespond(req, res),
+      prospect.outreachLanguage ?? 'fr',
+    );
     if (language === null) {
       sendError(res, 400, 'language must be fr or en');
       return;
@@ -408,7 +414,7 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
       publisher,
       publicBaseUrl: getPreviewPublicBaseUrl(),
       prospectId: prospect.prospectId,
-      language: 'fr',
+      language: prospect.outreachLanguage ?? 'fr',
       dryRun: false,
     });
     if (result.published) {

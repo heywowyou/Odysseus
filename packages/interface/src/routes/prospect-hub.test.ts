@@ -518,3 +518,25 @@ describe('POST /api/outreach/mailbox-sync', () => {
     expect(missing.statusCode).toBe(503);
   });
 });
+
+describe('outreach language', () => {
+  it('writes the first email in the prospect language, not a default from the dashboard', async () => {
+    vi.mocked(getProspectHub).mockResolvedValue({
+      prospectId: 'p-1',
+      outreachLanguage: 'en',
+    } as never);
+    vi.mocked(checkOutreachAction).mockResolvedValue({ allowed: true } as never);
+    vi.mocked(createFirstEmailForProspect).mockResolvedValue({ configured: true } as never);
+
+    await handle('/api/prospects/p-1/outreach/first-email', 'POST', {});
+    expect(createFirstEmailForProspect).toHaveBeenCalledWith(fakeConnection, 'p-1', {
+      language: 'en',
+    });
+
+    vi.mocked(getProspectHub).mockResolvedValue({ prospectId: 'p-1' } as never);
+    await handle('/api/prospects/p-1/outreach/first-email', 'POST', {});
+    expect(createFirstEmailForProspect).toHaveBeenLastCalledWith(fakeConnection, 'p-1', {
+      language: 'fr',
+    });
+  });
+});
