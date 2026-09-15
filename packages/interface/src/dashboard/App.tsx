@@ -47,7 +47,7 @@ export function App() {
           path="outreach/do-not-contact"
           element={<Navigate to="/ne-pas-contacter" replace />}
         />
-        <Route path="*" element={<Navigate to="/audits" replace />} />
+        <Route path="*" element={<Navigate to="/a-traiter" replace />} />
       </Route>
     </Routes>
   );

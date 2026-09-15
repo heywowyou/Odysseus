@@ -3,7 +3,7 @@ import type { JSX } from 'react';
 import { Building2 } from 'lucide-react';
 import { Link, useLocation, useSearchParams } from 'react-router';
 import { PageHeader, PAGE_WIDTH } from '../components/page-header';
-import { Button } from '../components/ui/button';
+import { Button, buttonStyles } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Card } from '../components/ui/card';
 import { EmptyState } from '../components/ui/empty-state';
@@ -131,7 +131,7 @@ export function ProspectHubListPage(): JSX.Element {
     response.refresh();
   };
   return (
-    <main className={`${PAGE_WIDTH.surface} px-5 py-8`}>
+    <div className={`${PAGE_WIDTH.surface} px-5 py-8`}>
       <PageHeader
         eyebrow={pageCopy.eyebrow}
         title={pageCopy.title}
@@ -141,8 +141,8 @@ export function ProspectHubListPage(): JSX.Element {
             <Button variant="secondary" onClick={() => setNewProspectOpen((open) => !open)}>
               {copy.newAction}
             </Button>
-            <Link to="/annuaire">
-              <Button>{copy.addFromDirectory}</Button>
+            <Link to="/annuaire" className={buttonStyles()}>
+              {copy.addFromDirectory}
             </Link>
           </div>
         }
@@ -254,8 +254,8 @@ export function ProspectHubListPage(): JSX.Element {
           title={resultsView ? resultsCopy.emptyTitle : copy.emptyTitle}
           description={resultsView ? resultsCopy.emptyDescription : copy.emptyDescription}
           action={
-            <Link to="/annuaire">
-              <Button>{copy.openDirectory}</Button>
+            <Link to="/annuaire" className={buttonStyles()}>
+              {copy.openDirectory}
             </Link>
           }
         />
@@ -375,6 +375,6 @@ export function ProspectHubListPage(): JSX.Element {
           </div>
         </Card>
       )}
-    </main>
+    </div>
   );
 }

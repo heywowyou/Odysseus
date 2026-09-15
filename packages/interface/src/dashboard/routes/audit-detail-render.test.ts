@@ -834,7 +834,7 @@ describe('findings table rows and expansion (issue #93)', () => {
     },
   };
 
-  it('distinguishes duplicate detector titles by id and selector, in French', async () => {
+  it('distinguishes duplicate detector titles by selector, never by internal id, in French', async () => {
     stubRoutes({
       '/api/audits/audit-1/report-preparation': null,
       '/api/audits/audit-1': auditWithFindings,
@@ -842,10 +842,9 @@ describe('findings table rows and expansion (issue #93)', () => {
     const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
     await settle(container, 'Les boutons doivent avoir un texte explicite');
     // The raw detector title no longer shows; both rows carry the reviewed
-    // French title, told apart by id and first selector.
+    // French title, told apart by first selector; internal ids stay hidden.
     expect(container.textContent).not.toContain('Buttons must have discernible text');
-    expect(container.textContent).toContain('f001');
-    expect(container.textContent).toContain('f002');
+    expect(container.textContent).not.toContain('f001');
     expect(container.textContent).toContain('#formulaire > button:nth-child(3)');
     root.unmount();
   });
@@ -861,24 +860,26 @@ describe('findings table rows and expansion (issue #93)', () => {
       '/api/audits/audit-1': { ...auditWithFindings, findings },
     });
     const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
-    await settle(container, 'f006');
+    await settle(container, 'Afficher les 2 autres constats');
+    const row = (id: string): Element | null => container.querySelector(`#finding-toggle-${id}`);
 
-    expect(container.textContent).not.toContain('f007');
+    expect(row('f006')).not.toBeNull();
+    expect(row('f007')).toBeNull();
     const showMore = [...container.querySelectorAll('button')].find(
       (button) => button.textContent === 'Afficher les 2 autres constats',
     );
     expect(showMore?.getAttribute('aria-expanded')).toBe('false');
 
     await act(async () => showMore?.click());
-    expect(container.textContent).toContain('f007');
-    expect(container.textContent).toContain('f008');
+    expect(row('f007')).not.toBeNull();
+    expect(row('f008')).not.toBeNull();
 
     const showLess = [...container.querySelectorAll('button')].find(
       (button) => button.textContent === 'Réduire à 6 constats',
     );
     expect(showLess?.getAttribute('aria-expanded')).toBe('true');
     await act(async () => showLess?.click());
-    expect(container.textContent).not.toContain('f007');
+    expect(row('f007')).toBeNull();
     root.unmount();
   });
 
@@ -888,7 +889,7 @@ describe('findings table rows and expansion (issue #93)', () => {
       '/api/audits/audit-1': auditWithFindings,
     });
     const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
-    await settle(container, 'f001');
+    await settle(container, 'Les boutons doivent avoir un texte explicite');
     const toggle = container.querySelector<HTMLButtonElement>(
       'button[aria-label="Afficher le détail du constat"]',
     );

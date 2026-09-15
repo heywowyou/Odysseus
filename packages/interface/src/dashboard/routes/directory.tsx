@@ -3,7 +3,7 @@ import type { JSX } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router';
 import { PageHeader, PAGE_WIDTH } from '../components/page-header';
-import { Button } from '../components/ui/button';
+import { Button, buttonStyles } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { EmptyState } from '../components/ui/empty-state';
 import {
@@ -55,17 +55,15 @@ export function DirectoryPage(): JSX.Element {
     response.refresh();
   };
   return (
-    <main className={`${PAGE_WIDTH.surface} px-5 py-8`}>
+    <div className={`${PAGE_WIDTH.surface} px-5 py-8`}>
       <PageHeader
         eyebrow={copy.eyebrow}
         title={copy.title}
         description={copy.description}
         actions={
-          <Link to="/prospects">
-            <Button variant="secondary">
-              <ArrowLeft className="size-4" aria-hidden="true" />
-              {copy.backToProspects}
-            </Button>
+          <Link to="/prospects" className={buttonStyles('secondary')}>
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            {copy.backToProspects}
           </Link>
         }
       />
@@ -175,6 +173,6 @@ export function DirectoryPage(): JSX.Element {
           </div>
         </Card>
       )}
-    </main>
+    </div>
   );
 }

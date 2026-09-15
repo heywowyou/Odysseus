@@ -45,6 +45,7 @@ import {
   type AuditCoverageSummary,
 } from '@odysseus/core';
 import {
+  getProspectHub,
   persistAudit,
   prefillAuditManualFields,
   replaceDetectedManualFields,
@@ -389,8 +390,14 @@ export async function runAuditStage(
       obligationAssessment,
       artifacts.manifest.siteSignals?.siteName,
     );
+    // A linked prospect's name was chosen by a person; the page title often
+    // carries ratings or "Site Officiel" boilerplate.
+    const prospectName =
+      options.prospectId === undefined
+        ? undefined
+        : (await getProspectHub(connection, options.prospectId))?.name;
     const preferredNomCommercial =
-      coverPrefill.nomCommercial ?? artifacts.manifest.siteSignals?.siteName;
+      coverPrefill.nomCommercial ?? prospectName ?? artifacts.manifest.siteSignals?.siteName;
     await replaceDetectedManualFields(connection, artifacts.auditId, {
       ...(preferredNomCommercial !== undefined ? { nomCommercial: preferredNomCommercial } : {}),
       ...(coverPrefill.raisonSociale !== undefined

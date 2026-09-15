@@ -758,6 +758,14 @@ export const en: DashboardStrings = {
     detail: {
       back: 'Prospects',
       missing: 'Prospect not found',
+      missingDescription: 'This prospect does not exist or was deleted.',
+      emailPlaceholder: 'contact@example.com',
+      actorLabels: {
+        operator: 'Operator',
+        scanner: 'Site scan',
+        automation: 'Automation',
+        'public-opt-out': 'Opt-out request',
+      },
       return: 'Back to prospects',
       loading: 'Loading…',
       record: 'Prospect record',

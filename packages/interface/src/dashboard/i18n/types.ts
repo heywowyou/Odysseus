@@ -785,6 +785,9 @@ export interface DashboardStrings {
     detail: {
       back: string;
       missing: string;
+      missingDescription: string;
+      emailPlaceholder: string;
+      actorLabels: Record<string, string>;
       return: string;
       loading: string;
       record: string;

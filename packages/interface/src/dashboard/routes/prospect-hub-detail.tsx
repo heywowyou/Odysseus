@@ -19,6 +19,7 @@ import {
   contactRemovalRequest,
   type ContactRemoval,
 } from './prospect-contact-model';
+import { formatDateTime } from '../lib/format';
 
 interface ProspectEvent {
   eventId: string;
@@ -145,13 +146,12 @@ function label(value: string, labels: Record<string, string>): string {
   return labels[value] ?? value;
 }
 
-function formatDate(value: string): string {
-  return new Date(value).toLocaleString();
-}
-
 export function ProspectHubDetailPage(): JSX.Element {
-  const { strings } = useI18n();
+  const { strings, language } = useI18n();
   const copy = strings.prospectHub.detail;
+  const formatDate = (value: string): string => formatDateTime(value, language);
+  const actorLabel = (actor: string): string =>
+    copy.actorLabels[actor] ?? strings.common.vocabularyFallback;
   const { prospectId } = useParams<{ prospectId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -191,23 +191,23 @@ export function ProspectHubDetailPage(): JSX.Element {
 
   if (response.error)
     return (
-      <main className={`${PAGE_WIDTH.reading} px-5 py-8`}>
+      <div className={`${PAGE_WIDTH.reading} px-5 py-8`}>
         <EmptyState
           title={copy.missing}
-          description={response.error}
+          description={copy.missingDescription}
           action={
-            <Link to={returnTo}>
-              <Button>{copy.return}</Button>
+            <Link to={returnTo} className={buttonStyles()}>
+              {copy.return}
             </Link>
           }
         />
-      </main>
+      </div>
     );
   if (!prospect)
     return (
-      <main className={`${PAGE_WIDTH.reading} px-5 py-8`}>
+      <div className={`${PAGE_WIDTH.reading} px-5 py-8`}>
         <p className="text-sm text-ink-muted">{copy.loading}</p>
-      </main>
+      </div>
     );
 
   const primaryWebsite = prospect.websites.find((item) => item.primary) ?? prospect.websites[0];
@@ -624,7 +624,7 @@ export function ProspectHubDetailPage(): JSX.Element {
   const terminal = TERMINAL_STATUSES.includes(prospect.status);
 
   return (
-    <main className={`${PAGE_WIDTH.reading} px-5 py-8`}>
+    <div className={`${PAGE_WIDTH.reading} px-5 py-8`}>
       <PageHeader
         eyebrow={
           <Link className="inline-flex items-center gap-1 hover:underline" to={returnTo}>
@@ -633,7 +633,6 @@ export function ProspectHubDetailPage(): JSX.Element {
           </Link>
         }
         title={prospect.name}
-        subject={prospect.prospectId}
         actions={
           <Badge tone={terminal ? 'neutral' : 'accent'}>
             {label(prospect.status, copy.statusLabels)}
@@ -943,7 +942,7 @@ export function ProspectHubDetailPage(): JSX.Element {
                   <Input
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
-                    placeholder="contact@exemple.fr"
+                    placeholder={copy.emailPlaceholder}
                     aria-label={copy.email}
                   />
                   <Button
@@ -1252,7 +1251,7 @@ export function ProspectHubDetailPage(): JSX.Element {
                     {copy.eventLabels[event.type] ?? strings.common.vocabularyFallback}
                   </p>
                   <p className="text-xs text-ink-muted">
-                    {formatDate(event.at)} · {event.actor}
+                    {formatDate(event.at)} · {actorLabel(event.actor)}
                   </p>
                 </li>
               ))}
@@ -1381,7 +1380,7 @@ export function ProspectHubDetailPage(): JSX.Element {
                           {copy.eventLabels[event.type] ?? strings.common.vocabularyFallback}
                         </p>
                         <p className="text-xs text-ink-muted">
-                          {formatDate(event.at)} · {event.actor}
+                          {formatDate(event.at)} · {actorLabel(event.actor)}
                         </p>
                       </li>
                     ))}
@@ -1394,7 +1393,7 @@ export function ProspectHubDetailPage(): JSX.Element {
           </details>
         </Card>
       </div>
-    </main>
+    </div>
   );
 }
 

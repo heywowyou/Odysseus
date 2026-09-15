@@ -212,12 +212,11 @@ function FindingRowGroup(props: {
               <span className="block text-ink">
                 {findingDisplayTitle(finding, ruleCopy, language)}
               </span>
-              <span className="numeric block font-mono text-xs text-ink-muted">
-                {finding.findingId}
-                {selector !== undefined ? (
-                  <span className="ml-2 max-w-72 truncate align-baseline">{selector}</span>
-                ) : null}
-              </span>
+              {selector !== undefined ? (
+                <span className="block max-w-72 truncate font-mono text-xs text-ink-muted">
+                  {selector}
+                </span>
+              ) : null}
             </span>
           </div>
         </TableCell>

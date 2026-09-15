@@ -770,6 +770,14 @@ export const fr: DashboardStrings = {
     detail: {
       back: 'Prospects',
       missing: 'Prospect introuvable',
+      missingDescription: 'Ce prospect n’existe pas ou a été supprimé.',
+      emailPlaceholder: 'contact@exemple.fr',
+      actorLabels: {
+        operator: 'Opérateur',
+        scanner: 'Analyse du site',
+        automation: 'Automatisation',
+        'public-opt-out': 'Demande d’opposition',
+      },
       return: 'Retour aux prospects',
       loading: 'Chargement…',
       record: 'Fiche prospect',
