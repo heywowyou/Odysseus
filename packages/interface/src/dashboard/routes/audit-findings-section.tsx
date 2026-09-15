@@ -39,6 +39,7 @@ import type { RuleCopyMap } from './audit-detail-model';
 import type { FindingResponse, Severity } from './audit-detail-types';
 
 type SeverityFilter = '' | Severity;
+const FINDINGS_PREVIEW_COUNT = 6;
 
 export function FindingsCard(props: {
   findings: FindingResponse[];
@@ -50,8 +51,22 @@ export function FindingsCard(props: {
   const { findings, ruleCopy, language, expandedFindingId, onExpandedFindingChange } = props;
   const { strings } = useI18n();
   const [filter, setFilter] = useState<SeverityFilter>('');
+  const [isListExpanded, setIsListExpanded] = useState(false);
   const sorted = useMemo(() => sortFindings(findings), [findings]);
   const visible = filter === '' ? sorted : sorted.filter((finding) => finding.severity === filter);
+  const displayedFindings = isListExpanded ? visible : visible.slice(0, FINDINGS_PREVIEW_COUNT);
+  const hiddenFindingCount = visible.length - displayedFindings.length;
+  const expandedFindingIndex = visible.findIndex(
+    (finding) => finding.findingId === expandedFindingId,
+  );
+  // A dedicated alert can reveal a finding that is outside the six-row
+  // preview. Open the list first so the existing focus/scroll behavior has a
+  // control to target.
+  useEffect(() => {
+    if (expandedFindingIndex >= FINDINGS_PREVIEW_COUNT) {
+      setIsListExpanded(true);
+    }
+  }, [expandedFindingIndex]);
   // The dedicated alert lands on the same actionable control as a direct
   // table click, so its remediation remains the existing reviewed copy.
   useEffect(() => {
@@ -61,7 +76,7 @@ export function FindingsCard(props: {
       control.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     (control as HTMLButtonElement | null)?.focus({ preventScroll: true });
-  }, [expandedFindingId]);
+  }, [expandedFindingId, isListExpanded]);
   return (
     <Card
       title={strings.auditDetail.findingsHeading}
@@ -74,6 +89,7 @@ export function FindingsCard(props: {
               const next = event.target.value;
               if (next === '' || isSeverity(next)) {
                 setFilter(next);
+                setIsListExpanded(false);
               }
             }}
           >
@@ -90,40 +106,59 @@ export function FindingsCard(props: {
       {visible.length === 0 ? (
         <p className="text-sm text-ink-muted">{strings.auditDetail.findingsEmpty}</p>
       ) : (
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableHeaderCell className="w-24">
-                {strings.auditDetail.severityColumn}
-              </TableHeaderCell>
-              <TableHeaderCell>{strings.auditDetail.categoryColumn}</TableHeaderCell>
-              <TableHeaderCell>{strings.auditDetail.titleColumn}</TableHeaderCell>
-              <TableHeaderCell className="w-28 text-right">
-                {strings.auditDetail.occurrencesColumn}
-              </TableHeaderCell>
-              <TableHeaderCell className="w-28 text-right">
-                {strings.auditDetail.pagesColumn}
-              </TableHeaderCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {visible.map((finding) => {
-              const isExpanded = expandedFindingId === finding.findingId;
-              const selector = firstElementSelector(finding);
-              return (
-                <FindingRowGroup
-                  key={finding.findingId}
-                  finding={finding}
-                  ruleCopy={ruleCopy}
-                  language={language}
-                  isExpanded={isExpanded}
-                  selector={selector}
-                  onToggle={() => onExpandedFindingChange(isExpanded ? null : finding.findingId)}
-                />
-              );
-            })}
-          </TableBody>
-        </Table>
+        <>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell className="w-24">
+                  {strings.auditDetail.severityColumn}
+                </TableHeaderCell>
+                <TableHeaderCell>{strings.auditDetail.categoryColumn}</TableHeaderCell>
+                <TableHeaderCell>{strings.auditDetail.titleColumn}</TableHeaderCell>
+                <TableHeaderCell className="w-28 text-right">
+                  {strings.auditDetail.occurrencesColumn}
+                </TableHeaderCell>
+                <TableHeaderCell className="w-28 text-right">
+                  {strings.auditDetail.pagesColumn}
+                </TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {displayedFindings.map((finding) => {
+                const isExpanded = expandedFindingId === finding.findingId;
+                const selector = firstElementSelector(finding);
+                return (
+                  <FindingRowGroup
+                    key={finding.findingId}
+                    finding={finding}
+                    ruleCopy={ruleCopy}
+                    language={language}
+                    isExpanded={isExpanded}
+                    selector={selector}
+                    onToggle={() => onExpandedFindingChange(isExpanded ? null : finding.findingId)}
+                  />
+                );
+              })}
+            </TableBody>
+          </Table>
+          {visible.length > FINDINGS_PREVIEW_COUNT ? (
+            <div className="mt-3 flex justify-center">
+              <Button
+                variant="secondary"
+                size="sm"
+                aria-expanded={isListExpanded}
+                onClick={() => setIsListExpanded((expanded) => !expanded)}
+              >
+                {isListExpanded
+                  ? strings.auditDetail.findingsShowLess
+                  : strings.auditDetail.findingsShowMore.replace(
+                      '{count}',
+                      String(hiddenFindingCount),
+                    )}
+              </Button>
+            </div>
+          ) : null}
+        </>
       )}
     </Card>
   );

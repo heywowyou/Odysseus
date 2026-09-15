@@ -465,6 +465,10 @@ export interface DashboardStrings {
     findingMoreElements: string;
     /** Default option of the findings severity filter. */
     findingsFilterAll: string;
+    /** Expands the findings table; {count} is the number of hidden rows. */
+    findingsShowMore: string;
+    /** Collapses the findings table back to its six-row preview. */
+    findingsShowLess: string;
     /** Shown when the findings table has no rows, overall or at the
      *  selected severity. */
     findingsEmpty: string;

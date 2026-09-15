@@ -821,6 +821,38 @@ describe('findings table rows and expansion (issue #93)', () => {
     root.unmount();
   });
 
+  it('shows six findings by default and expands or collapses the rest in one click', async () => {
+    const findings = Array.from({ length: 8 }, (_, index) => ({
+      ...auditWithFindings.findings[0],
+      findingId: `f00${index + 1}`,
+      dedupeKey: `dedupe-${index + 1}`,
+    }));
+    stubRoutes({
+      '/api/audits/audit-1/report-preparation': null,
+      '/api/audits/audit-1': { ...auditWithFindings, findings },
+    });
+    const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
+    await settle(container, 'f006');
+
+    expect(container.textContent).not.toContain('f007');
+    const showMore = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Afficher les 2 autres constats',
+    );
+    expect(showMore?.getAttribute('aria-expanded')).toBe('false');
+
+    await act(async () => showMore?.click());
+    expect(container.textContent).toContain('f007');
+    expect(container.textContent).toContain('f008');
+
+    const showLess = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Réduire à 6 constats',
+    );
+    expect(showLess?.getAttribute('aria-expanded')).toBe('true');
+    await act(async () => showLess?.click());
+    expect(container.textContent).not.toContain('f007');
+    root.unmount();
+  });
+
   it('expands a row into reviewed copy, affected pages, and element identity', async () => {
     stubRoutes({
       '/api/audits/audit-1/report-preparation': null,

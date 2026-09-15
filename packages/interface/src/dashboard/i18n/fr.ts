@@ -332,6 +332,8 @@ export const fr: DashboardStrings = {
     findingMorePages: '+ {count} autres pages',
     findingMoreElements: '+ {count} autres occurrences',
     findingsFilterAll: 'Toutes les gravités',
+    findingsShowMore: 'Afficher les {count} autres constats',
+    findingsShowLess: 'Réduire à 6 constats',
     findingsEmpty: 'Aucun problème constaté pour cet audit.',
     categoryLabels: {
       accessibility: 'Accessibilité',

@@ -330,6 +330,8 @@ export const en: DashboardStrings = {
     findingMorePages: '+ {count} more pages',
     findingMoreElements: '+ {count} more occurrences',
     findingsFilterAll: 'All severities',
+    findingsShowMore: 'Show {count} more findings',
+    findingsShowLess: 'Collapse to 6 findings',
     findingsEmpty: 'No problems found for this audit.',
     categoryLabels: {
       accessibility: 'Accessibility',
