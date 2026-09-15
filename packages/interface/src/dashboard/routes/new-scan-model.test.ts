@@ -202,4 +202,20 @@ describe('buildScanRequest', () => {
     const request = buildScanRequest(formValues({ type: 'prospecting', urls: ' \n  \n' }));
     expect(request).toEqual({ type: 'prospecting', urls: [] });
   });
+
+  it('builds a prospect-linked light audit request', () => {
+    expect(
+      buildScanRequest(
+        formValues({
+          type: 'light-audit',
+          url: 'https://hotel.example.fr',
+          prospectId: 'prospect-1',
+        }),
+      ),
+    ).toEqual({
+      type: 'light-audit',
+      url: 'https://hotel.example.fr',
+      prospectId: 'prospect-1',
+    });
+  });
 });

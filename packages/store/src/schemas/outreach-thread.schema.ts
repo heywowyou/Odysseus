@@ -4,9 +4,9 @@
  * which evidence the conversation rests on, how far it has got, and what
  * state it is in.
  *
- * **One thread per candidate, enforced by the database.** `candidateId` is
- * unique rather than merely indexed. A hotel receives one outreach
- * conversation, and a second thread for the same hotel would be a second cold
+ * **One thread per prospect, enforced by the database.** `prospectId` is
+ * unique rather than merely indexed. A prospect receives one outreach
+ * conversation, and a second thread for the same prospect would be a second cold
  * opener to the same inbox from the same sender, which is the exact failure
  * the touch sequence exists to prevent. Making it a unique index means a
  * retried command cannot produce one even if the caller's own check raced.
@@ -95,8 +95,7 @@ export interface OutreachThreadSpacing {
 
 export interface OutreachThreadDocumentFields {
   threadId: string;
-  candidateId: string;
-  prescanId: string;
+  prospectId: string;
   previewId: string;
   domain: string;
   roleAddress: string;
@@ -162,8 +161,7 @@ const outreachThreadSpacingSchema = new Schema<OutreachThreadSpacing>(
 const outreachThreadSchema = new Schema<OutreachThreadDocument>(
   {
     threadId: { type: String, required: true, unique: true },
-    candidateId: { type: String, required: true, unique: true },
-    prescanId: { type: String, required: true },
+    prospectId: { type: String, required: true, unique: true },
     previewId: { type: String, required: true },
     domain: { type: String, required: true },
     roleAddress: { type: String, required: true },

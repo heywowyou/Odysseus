@@ -1,16 +1,12 @@
-import { useState } from 'react';
 import type { JSX } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
-import { toast } from 'sonner';
 import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import type { BadgeTone } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { EmptyState } from '../components/ui/empty-state';
-import { Field } from '../components/ui/field';
-import { Input } from '../components/ui/input';
 import { Skeleton } from '../components/ui/skeleton';
 import {
   Table,
@@ -21,7 +17,7 @@ import {
   TableRow,
 } from '../components/ui/table';
 import { useI18n } from '../i18n/provider';
-import { fetchJson, sendJson } from '../lib/api';
+import { fetchJson } from '../lib/api';
 import { formatRelativeTime } from '../lib/format';
 import { usePolling } from '../lib/use-polling';
 import type { TodoPage, TodoRow, TodoRowKind } from '../lib/api-types';
@@ -31,68 +27,21 @@ import type { TodoPage, TodoRow, TodoRowKind } from '../lib/api-types';
 const POLL_INTERVAL_MS = 10_000;
 const SKELETON_ROW_COUNT = 6;
 
-const DEFAULT_BATCH_LIMIT = 10;
-
-/** One "start a batch job" row: a bounded limit input plus a button, per the
- *  plan's choice not to build a dedicated progress page for these jobs. A
- *  toast on enqueue is enough; the job's own drafts show up in the table
- *  below once it finishes. Starting a batch creates review-only drafts and
- *  sends nothing (trade-offs 82 and 83), so no confirmation dialog. */
-function BatchRow(props: { label: string; buttonLabel: string; path: string }): JSX.Element {
-  const { strings } = useI18n();
-  const [limit, setLimit] = useState(DEFAULT_BATCH_LIMIT);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleStart = async (): Promise<void> => {
-    setIsSubmitting(true);
-    try {
-      await sendJson<{ jobId: string }>(props.path, 'POST', { limit });
-      toast.success(strings.aTraiter.batch.started);
-    } catch {
-      toast.error(strings.aTraiter.batch.error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="flex flex-wrap items-end gap-3">
-      <div className="min-w-0 flex-1">
-        <p className="text-sm text-ink">{props.label}</p>
-      </div>
-      <Field label={strings.aTraiter.batch.limitLabel} htmlFor={`${props.path}-limit`}>
-        <Input
-          id={`${props.path}-limit`}
-          type="number"
-          min={1}
-          value={limit}
-          onChange={(event) => setLimit(Math.max(1, Number(event.target.value) || 1))}
-          className="w-20"
-        />
-      </Field>
-      <Button onClick={() => void handleStart()} disabled={isSubmitting}>
-        {props.buttonLabel}
-      </Button>
-    </div>
-  );
-}
-
 const KIND_TONE: Record<TodoRowKind, BadgeTone> = {
   draft: 'neutral',
   reply: 'accent',
-  hotel: 'neutral',
-  audit: 'accent',
+  'follow-up': 'neutral',
+  'first-email': 'accent',
+  'audit-input': 'serious',
 };
 
-/** The dashboard's landing page and the operator's inbox (plan 045 stage
- *  3.3): the two batch buttons, then one merged table over GET /api/todo.
- *  Every row names one concrete action on one subject and opens straight
- *  into the hotel hub or the audit. */
+/** The dashboard's landing page and the operator's inbox: every row is derived
+ * from a durable prospect and opens that prospect's actionable page. */
 export function ATraiterPage(): JSX.Element {
   const { strings } = useI18n();
   const navigate = useNavigate();
   const { data, error, refresh } = usePolling(
-    (signal) => fetchJson<TodoPage>('/api/todo', { signal }),
+    (signal) => fetchJson<TodoPage>('/api/prospect-hub/todo', { signal }),
     POLL_INTERVAL_MS,
     {
       key: 'a-traiter:todo',
@@ -153,9 +102,7 @@ export function ATraiterPage(): JSX.Element {
                 </TableCell>
                 <TableCell>{strings.aTraiter.actions[row.action]}</TableCell>
                 <TableCell className="numeric whitespace-nowrap text-xs text-ink-muted">
-                  {row.since !== null
-                    ? formatRelativeTime(row.since, strings.common.relativeTime)
-                    : strings.common.valueUnavailable}
+                  {formatRelativeTime(row.since, strings.common.relativeTime)}
                 </TableCell>
               </TableRow>
             ))}
@@ -174,18 +121,6 @@ export function ATraiterPage(): JSX.Element {
       >
         {strings.drafts.neverSendNote}
       </p>
-      <Card className="mb-5 flex flex-col gap-4">
-        <BatchRow
-          label={strings.aTraiter.batch.draftBatchLabel}
-          buttonLabel={strings.aTraiter.batch.draftBatchButton}
-          path="/api/outreach/draft-batch"
-        />
-        <BatchRow
-          label={strings.aTraiter.batch.followUpBatchLabel}
-          buttonLabel={strings.aTraiter.batch.followUpBatchButton}
-          path="/api/outreach/followup-batch"
-        />
-      </Card>
       {error !== undefined && data !== undefined ? (
         <div className="mb-3 text-xs text-ink-muted" role="alert">
           <p>{strings.common.requestFailed}</p>

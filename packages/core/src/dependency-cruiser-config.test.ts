@@ -83,7 +83,7 @@ describe('dependency-cruiser architecture rules', () => {
   it("flags a package reaching directly into another package's src", async () => {
     const file = writeFixture(
       'packages/scanner/src/__depcruise_fixture_deep_import__.ts',
-      "export { REVIEW_ACTOR } from '../../interface/src/routes/prospects.js';\n",
+      "export { registerProspectHubRoutes } from '../../interface/src/routes/prospect-hub.ts';\n",
     );
     const violations = await architectureViolations([file]);
     expect(violations.map((violation) => violation.rule.name)).toContain(

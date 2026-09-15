@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { Severity } from './findings.js';
-import type { HotelPrescanPageRole } from './hotel-prescan.js';
+export type HotelPrescanPageRole = 'homepage' | 'booking' | 'content';
 
 export const HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION = 2 as const;
 export const HOTEL_EVIDENCE_MAX_ASSET_BYTES = 1024 * 1024;

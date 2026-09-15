@@ -15,7 +15,7 @@ export interface OutreachOutcomeDocumentFields {
   outcomeId: string;
   idempotencyKey: string;
   threadId: string;
-  candidateId: string;
+  prospectId: string;
   outcome: OutreachOutcome;
   lostReason?: OutreachLostReason;
   actor: string;
@@ -30,7 +30,7 @@ const outreachOutcomeSchema = new Schema<OutreachOutcomeDocument>(
     outcomeId: { type: String, required: true, unique: true },
     idempotencyKey: { type: String, required: true, unique: true },
     threadId: { type: String, required: true },
-    candidateId: { type: String, required: true },
+    prospectId: { type: String, required: true },
     outcome: { type: String, required: true, enum: OUTREACH_OUTCOMES },
     lostReason: { type: String, enum: OUTREACH_LOST_REASONS },
     actor: { type: String, required: true },
@@ -42,7 +42,7 @@ const outreachOutcomeSchema = new Schema<OutreachOutcomeDocument>(
 
 outreachOutcomeSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 outreachOutcomeSchema.index({ threadId: 1, recordedAt: -1 });
-outreachOutcomeSchema.index({ candidateId: 1, recordedAt: -1 });
+outreachOutcomeSchema.index({ prospectId: 1, recordedAt: -1 });
 
 export function createOutreachOutcomeModel(connection: Connection): Model<OutreachOutcomeDocument> {
   return (

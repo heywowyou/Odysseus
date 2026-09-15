@@ -25,7 +25,6 @@
  */
 
 import { Schema, type Connection, type Model } from 'mongoose';
-import type { OutreachEvidenceSlot } from '@odysseus/core';
 
 /** `failed` records an attempt that never reached the provider, so a run that
  *  refused for a good reason leaves evidence instead of nothing. */
@@ -40,8 +39,8 @@ export type OutreachDraftReviewOutcome = 'approved' | 'skipped';
 
 export interface OutreachDraftDocumentFields {
   draftId: string;
+  prospectId: string;
   threadId: string;
-  candidateId: string;
   touch: number;
   language: 'fr' | 'en';
   roleAddress: string;
@@ -55,7 +54,6 @@ export interface OutreachDraftDocumentFields {
   bodyHash: string;
   /** Which deterministic evidence family opened touch 1. Absent on follow-ups
    * and historical touch-1 rows created before plan 012. */
-  touch1EvidenceSlot?: OutreachEvidenceSlot;
   /** Touch 1 only. Touches 2 and 3 publish no preview and add no link (a
    *  reply-based opt-out instead, trade-off 54), so there is nothing honest
    *  to store here for them - absent, never an empty-string sentinel. */
@@ -64,7 +62,6 @@ export interface OutreachDraftDocumentFields {
   /** The contract versions behind this exact text, so a draft can be told
    *  apart from one produced before a prompt or evidence change without
    *  re-deriving anything. */
-  prescanVersion: string;
   evidenceVersion: string;
   outreachPromptVersion: string;
   providerDraftId?: string;
@@ -94,8 +91,8 @@ function requiredWhenCreated(this: { status?: OutreachDraftStatus }): boolean {
 const outreachDraftSchema = new Schema<OutreachDraftDocument>(
   {
     draftId: { type: String, required: true, unique: true },
+    prospectId: { type: String, required: true },
     threadId: { type: String, required: true },
-    candidateId: { type: String, required: true },
     touch: { type: Number, required: true, min: 1, max: 3 },
     language: { type: String, required: true, enum: ['fr', 'en'] },
     roleAddress: { type: String, required: true },
@@ -109,13 +106,8 @@ const outreachDraftSchema = new Schema<OutreachDraftDocument>(
     htmlBody: { type: String },
     subjectHash: { type: String, required: true },
     bodyHash: { type: String, required: true },
-    touch1EvidenceSlot: {
-      type: String,
-      enum: ['render-comparison', 'specific-failure', 'summary'],
-    },
     previewId: { type: String },
     previewUrl: { type: String },
-    prescanVersion: { type: String, required: true },
     evidenceVersion: { type: String, required: true },
     outreachPromptVersion: { type: String, required: true },
     providerDraftId: { type: String },
@@ -137,7 +129,7 @@ outreachDraftSchema.index(
   { threadId: 1, touch: 1 },
   { unique: true, partialFilterExpression: { status: 'created' } },
 );
-outreachDraftSchema.index({ candidateId: 1, createdAt: -1 });
+outreachDraftSchema.index({ prospectId: 1, createdAt: -1 });
 outreachDraftSchema.index({ status: 1, createdAt: -1 });
 
 export function createOutreachDraftModel(connection: Connection): Model<OutreachDraftDocument> {

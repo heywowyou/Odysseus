@@ -5,7 +5,6 @@
  */
 
 import type { LlmInput } from '../types/llm-output.js';
-import type { HotelCandidate } from '../types/hotel-candidate.js';
 
 export interface HotelCatalogueWritingSiteContext {
   propertyType?: string;
@@ -34,10 +33,11 @@ export interface HotelCatalogueWritingSiteContextResolution {
   >;
 }
 
-type HotelWritingContextCandidate = Pick<
-  HotelCandidate,
-  'accommodationType' | 'starRating' | 'commune'
->;
+type HotelWritingContextCandidate = {
+  accommodationType?: string;
+  starRating?: string;
+  commune?: string;
+};
 
 function missingAllFacts(
   reason: HotelCatalogueWritingSiteContextUnknownReason,

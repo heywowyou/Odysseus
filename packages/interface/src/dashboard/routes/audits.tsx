@@ -71,10 +71,10 @@ function typeBadge(
   if (summary.type === 'full-audit') {
     return { tone: 'accent', label: strings.common.typeLabels.fullAudit };
   }
-  if (summary.type === 'outreach-full-scan') {
+  if (summary.type === 'outreach-full-scan' || summary.type === 'prospecting-audit') {
     return { tone: 'accent', label: strings.common.typeLabels.outreachFullScan };
   }
-  if (summary.type === 'hotel-prescan') {
+  if (summary.type === 'quick-check') {
     return { tone: 'neutral', label: strings.common.typeLabels.hotelPrescan };
   }
   return { tone: 'neutral', label: strings.common.typeLabels.prospecting };
@@ -240,13 +240,13 @@ export function AuditsPage(): JSX.Element {
                         {/* Plan 042 slice 4 (approved IA destiny table): the
                             hotel a prospect-linked audit belongs to, named and
                             linked to its hub; the row still opens the audit. */}
-                        {summary.outreachCandidateName !== undefined ? (
+                        {summary.prospectId !== undefined ? (
                           <Link
-                            to={`/prospects/${encodeURIComponent(summary.outreachCandidateId ?? '')}`}
+                            to={`/prospects/${encodeURIComponent(summary.prospectId)}`}
                             className="mt-0.5 block text-xs text-ink-soft hover:text-accent-bright"
                             onClick={(event) => event.stopPropagation()}
                           >
-                            {summary.outreachCandidateName}
+                            {strings.nav.prospects}
                           </Link>
                         ) : null}
                       </TableCell>

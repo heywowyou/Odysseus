@@ -304,31 +304,10 @@ export interface PrivacySecurityCoverage {
   cookieConsent: 'completed' | 'unavailable';
 }
 
-/** Plan 041 slice B2: which record authorized a candidate-linked outreach
- *  full scan. `cohort` is the selection rule's own record; `wave-roster` is
- *  the operator's own additive list, used only when the rule's cohorts do
- *  not authorize the candidate. Plan 044: `paid` is the operator's own
- *  decision to produce a deliverable for this candidate, recorded when a
- *  full audit is launched from the hotel's hub. */
-export type OutreachAuthorizationSource = 'cohort' | 'wave-roster' | 'paid';
-
-/** Plan 037: prospecting provenance stamped on one candidate-linked
- *  audit. Presence marks the audit as candidate evidence: prospecting
- *  scans are authorized by cohort or wave roster and re-validated when the
- *  worker claims them; a `paid` audit is the operator's own deliverable
- *  decision, made at launch and never re-validated. It is never inferred
- *  from a hostname after the fact. Absent on ordinary unlinked audits.
- *  Immutable after insert: a later scan of the same site is a new audit
- *  with its own context. */
-export interface AuditOutreachContext {
-  candidateId: string;
-  cohortId: string;
-  scoringVersion: string;
-  authorizedBy: OutreachAuthorizationSource;
-}
-
 export interface AuditManifest {
   auditId: string;
+  /** Durable prospect hub link. Absent on historical and unattached scans. */
+  prospectId?: string;
   kind: ManifestKind;
   siteUrl: string;
   /** ISO 8601. manifest.json is disk JSON, so no native Date here. */
@@ -394,7 +373,4 @@ export interface AuditManifest {
    *  never "compared and found nothing", so the report section renders
    *  nothing rather than a false zero. */
   benchmarkPercentile?: SiteBenchmarkPercentile;
-  /** Plan 037. Present only on candidate-linked outreach full scans; see
-   *  AuditOutreachContext. */
-  outreach?: AuditOutreachContext;
 }

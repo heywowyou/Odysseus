@@ -10,7 +10,6 @@
 
 import { Schema, type Connection, type Model } from 'mongoose';
 import type {
-  AuditHotelLink,
   AuditManifest,
   AuditManualFields,
   GradeOverride,
@@ -36,12 +35,6 @@ export interface AuditDocumentFields extends Omit<
    *  first saves preparation input. All writes go through the store
    *  service functions; handlers never issue raw updates. */
   reportPreparation?: ReportPreparation;
-  /** Plan 045 slice 1.4: store-only audit-to-hotel-candidate pointer. See
-   *  AuditHotelLink's own doc comment in @odysseus/core for why this is
-   *  never the immutable `outreach` stamp. Absent until
-   *  linkAuditToHotelByDomain resolves a match, or forever on an audit
-   *  whose site never matches a catalogue candidate's own domain. */
-  hotelLink?: AuditHotelLink;
   /** Issue: operator-reviewed overall grade override, DB-only like
    *  manualFields above. The automatic grade itself is never stored - it
    *  is always recomputed fresh from findings/manifest
@@ -271,20 +264,6 @@ const findingsProvenanceSchema = new Schema(
     findingsSchemaVersion: { type: Number, required: true },
     normalizationFingerprint: { type: String, required: true },
     findingsDigest: { type: String, required: true },
-  },
-  { _id: false },
-);
-
-// Plan 037: prospecting provenance on candidate-linked outreach full
-// scans. Mirrors core's AuditOutreachContext; without this sub-schema
-// Mongoose would silently strip the field on persist.
-const outreachContextSchema = new Schema(
-  {
-    candidateId: { type: String, required: true },
-    cohortId: { type: String, required: true },
-    scoringVersion: { type: String, required: true },
-    // Plan 041 slice B2: which record authorized this scan.
-    authorizedBy: { type: String, required: true, enum: ['cohort', 'wave-roster'] },
   },
   { _id: false },
 );
@@ -586,22 +565,6 @@ const reportPreparationSchema = new Schema(
   { _id: false },
 );
 
-// Plan 045 slice 1.4: mirrors AuditHotelLink. DB-only, like manualFields
-// and reportPreparation below - Mongoose would otherwise silently strip
-// an undeclared top-level path (issue #173's lesson, why every sub-schema
-// above exists at all).
-const hotelLinkSchema = new Schema(
-  {
-    candidateId: { type: String, required: true },
-    matchedOn: { type: String, required: true, enum: ['own-registrable-domain', 'manual'] },
-    linkedAt: { type: Date, required: true },
-    // Issue #218: the durable business behind candidateId, when one could
-    // be safely resolved.
-    businessId: { type: String },
-  },
-  { _id: false },
-);
-
 // Issue: operator-reviewed overall grade override. DB-only, like the
 // sub-schemas above (issue #173's lesson) - Mongoose would otherwise
 // silently strip this undeclared top-level path.
@@ -620,6 +583,7 @@ const gradeOverrideSchema = new Schema(
 export const auditSchema = new Schema<AuditDocument>(
   {
     auditId: { type: String, required: true, unique: true },
+    prospectId: { type: String },
     kind: { type: String, required: true, enum: ['audit', 'render-diff'] },
     siteUrl: { type: String, required: true },
     startedAt: { type: Date, required: true },
@@ -627,7 +591,6 @@ export const auditSchema = new Schema<AuditDocument>(
     renormalizedAt: { type: Date },
     findingsProvenance: { type: findingsProvenanceSchema },
     privacySecurityCoverage: { type: privacySecurityCoverageSchema },
-    outreach: { type: outreachContextSchema },
     tool: { type: toolVersionsSchema, required: true },
     config: { type: configSnapshotSchema, required: true },
     crawl: { type: crawlStatsSchema, required: true },
@@ -639,15 +602,14 @@ export const auditSchema = new Schema<AuditDocument>(
     benchmarkPercentile: { type: benchmarkPercentileSchema },
     manualFields: { type: manualFieldsSchema },
     reportPreparation: { type: reportPreparationSchema },
-    hotelLink: { type: hotelLinkSchema },
     gradeOverride: { type: gradeOverrideSchema },
   },
   { collection: 'audits' },
 );
 
 auditSchema.index({ siteUrl: 1, startedAt: -1 });
+auditSchema.index({ prospectId: 1, startedAt: -1 });
 // Issue #218: the Prospect hub's durable-business audit list.
-auditSchema.index({ 'hotelLink.businessId': 1 });
 
 export function createAuditModel(connection: Connection): Model<AuditDocument> {
   return connection.models['Audit'] ?? connection.model<AuditDocument>('Audit', auditSchema);

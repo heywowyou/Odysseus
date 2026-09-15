@@ -22,10 +22,12 @@ export const jobStatusSchema = z.enum([
   'needs-input',
 ]);
 
-export const jobTypeSchema = z.enum([
+const jobTypeSchema = z.enum([
   'full-audit',
   'prospecting',
-  'hotel-prescan',
+  'quick-check',
+  'light-audit',
+  'prospecting-audit',
   'outreach-full-scan',
 ]);
 
@@ -90,18 +92,6 @@ const scanJobNeedsInputFieldSchema = z.object({
   value: z.string(),
 });
 
-/** Issue #263: the hotel-prescan job's own on-demand scoring pass, so the
- *  progress page can say why a completed Quick check produced no score
- *  instead of presenting a bare "Scan complete". Absent for every other job
- *  type and for a population-wide prescan batch, which never scores inline. */
-const scanJobPrescanScoringOutcomeSchema = z.object({
-  outcome: z.enum(['scored', 'already-scored', 'skipped']),
-  reason: z
-    .enum(['not-in-scoring-population', 'prescan-missing', 'prescan-incomplete', 'error'])
-    .optional(),
-  errorMessage: z.string().optional(),
-});
-
 /** GET /api/scans/:jobId. */
 export const scanJobDetailSchema = z.object({
   jobId: z.string(),
@@ -116,12 +106,7 @@ export const scanJobDetailSchema = z.object({
   progress: scanJobProgressSchema,
   error: z.string().optional(),
   needsInputFields: z.array(scanJobNeedsInputFieldSchema).optional(),
-  // Issue #263: the prospect a Quick check was launched from, and its own
-  // scoring outcome, so the terminal card can return the operator there and
-  // state a specific reason instead of a bare "Scan complete".
-  outreachCandidateId: z.string().optional(),
-  outreachCandidateName: z.string().optional(),
-  prescanScoringOutcome: scanJobPrescanScoringOutcomeSchema.optional(),
+  prospectId: z.string().optional(),
 });
 
 /** GET /api/scans, one row. */
@@ -138,130 +123,7 @@ export const scanSummarySchema = z.object({
   auditIds: z.array(z.string()).optional(),
   severityRollup: severityRollupSchema.optional(),
   needsReview: z.boolean().optional(),
-  outreachCandidateId: z.string().optional(),
-  outreachCandidateName: z.string().optional(),
-});
-
-/** Issue #220's active-job projection, carried on the prospect hub
- *  snapshot. */
-const prospectActiveJobSchema = z.object({
-  jobId: z.string(),
-  kind: z.enum(['quick-check', 'light-audit', 'prospecting-audit', 'full-audit']),
-  status: z.enum(['queued', 'running', 'needs-input']),
-  startedAt: z.string(),
-  targetDomain: z.string(),
-});
-
-/** Issue #219's typed actionability snapshot. */
-const actionabilitySchema = z.discriminatedUnion('state', [
-  z.object({ state: z.literal('available') }),
-  z.object({ state: z.literal('running'), jobId: z.string() }),
-  z.object({ state: z.literal('blocked'), reason: z.string() }),
-  z.object({ state: z.literal('complete') }),
-]);
-
-const prospectHubActionsSchema = z.object({
-  refreshProspect: actionabilitySchema,
-  runQuickCheck: actionabilitySchema,
-  runProspectingAudit: actionabilitySchema,
-  runFullAudit: actionabilitySchema,
-  publishPreview: actionabilitySchema,
-  createFirstEmail: actionabilitySchema,
-  createFollowUp: actionabilitySchema,
-  recordOutcome: actionabilitySchema,
-});
-
-const pipelineFreshnessSchema = z.union([
-  z.object({ state: z.literal('missing') }),
-  z.object({ state: z.literal('current'), version: z.string(), computedAt: z.string() }),
-  z.object({
-    state: z.literal('stale'),
-    version: z.string(),
-    currentVersion: z.string(),
-    computedAt: z.string(),
-  }),
-  z.object({ state: z.literal('refreshing'), jobId: z.string() }),
-]);
-
-/** Issue #229: the prospect hub snapshot (GET /api/prospects/:candidateId)
- *  is a large, still-growing composed response (operator identity,
- *  qualification, prescan, score, contact, thread, preview, outcomes,
- *  #220's activeJobs, #219's actions, and more). Rather than transcribe
- *  every nested leaf field - much of it presentational copy with no
- *  control-flow impact - this schema strictly validates the envelope
- *  fields that actually drive primary-action and routing logic
- *  (identity, review/qualification state, the freshness triad, the scan
- *  gates, activeJobs, actions) and leaves the rest as an open object via
- *  passthrough. A malformed shape in the strictly-checked fields - the
- *  ones a wrong render decision or a wrong POST actually depends on -
- *  still fails loudly at the boundary; a malformed shape in an
- *  unvalidated presentational field degrades the same way it always has
- *  (an absent/undefined read), which is the pragmatic scope the issue
- *  itself allows ("do not require every tiny endpoint... establish the
- *  pattern and cover the core surfaces"). */
-export const prospectHubSnapshotSchema = z
-  .object({
-    candidateId: z.string(),
-    name: z.string(),
-    reviewState: z.enum(['not-required', 'pending', 'accepted', 'rejected']),
-    qualificationOutcome: z.string(),
-    qualificationFreshness: pipelineFreshnessSchema,
-    prescanFreshness: pipelineFreshnessSchema,
-    scoreFreshness: pipelineFreshnessSchema,
-    outreachScan: z
-      .object({
-        canStart: z.boolean(),
-        refusal: z.string().optional(),
-        jobId: z.string().nullable().optional(),
-      })
-      .optional(),
-    outreachScanJobId: z.string().nullable().optional(),
-    fullAudit: z
-      .object({
-        canStart: z.boolean(),
-        refusal: z.string().optional(),
-        jobId: z.string().optional(),
-      })
-      .optional(),
-    activeJobs: z.array(prospectActiveJobSchema).optional(),
-    actions: prospectHubActionsSchema.optional(),
-  })
-  .passthrough();
-
-/** GET /api/prospects, one row and its paginated envelope. Strictly
- *  validates identity/state fields the list filters and links by; other
- *  presentational row fields pass through unvalidated, same scoping
- *  rationale as prospectHubSnapshotSchema above. */
-const prospectListRowSchema = z
-  .object({
-    candidateId: z.string(),
-    name: z.string(),
-    identityStatus: z.string(),
-    reviewState: z.enum(['not-required', 'pending', 'accepted', 'rejected']),
-    qualificationOutcome: z.string(),
-  })
-  .passthrough();
-
-const selectionCohortFactsSchema = z
-  .object({
-    cohortId: z.string(),
-    scoringVersion: z.string(),
-    computedAt: z.string(),
-    populationSize: z.number(),
-    selectedCount: z.number(),
-    abilityCutoff: z.number(),
-    brokennessCutoff: z.number(),
-  })
-  .passthrough();
-
-export const prospectListResponseSchema = z.object({
-  rows: z.array(prospectListRowSchema),
-  total: z.number(),
-  limit: z.number(),
-  offset: z.number(),
-  selection: selectionCohortFactsSchema.nullable(),
-  selectedCount: z.number(),
-  catalogueTotal: z.number(),
+  prospectId: z.string().optional(),
 });
 
 /** GET /api/audits/:auditId. Strictly validates the identity/lifecycle

@@ -10,13 +10,9 @@
  */
 
 import { Schema, type Connection, type Model } from 'mongoose';
-import type { ProspectQualificationReason } from './prospect.schema.js';
-
 export type JobType =
   | 'full-audit'
   | 'prospecting'
-  | 'prospect-ingestion'
-  | 'hotel-prescan'
   | 'outreach-draft-batch'
   | 'outreach-followup-batch'
   | 'outreach-full-scan';
@@ -34,9 +30,6 @@ export type JobPhase =
   | 'report-fr'
   | 'report-en'
   | 'scanning'
-  | 'afnic-scan'
-  | 'fetch-qualify'
-  | 'prescanning'
   | 'drafting'
   | 'complete'
   | 'failed'
@@ -44,6 +37,9 @@ export type JobPhase =
   | 'needs-input';
 
 export interface JobOptionsSnapshot {
+  /** Durable prospect hub link. */
+  prospectId?: string;
+  scanType?: 'quick-check' | 'light-audit' | 'prospecting-audit';
   maxPages?: number;
   maxDepth?: number;
   delayMs?: number;
@@ -65,9 +61,6 @@ export interface JobOptionsSnapshot {
    *  false - false must be an explicit operator assertion. */
   transactionalFlow?: boolean;
   transactionalFlowReason?: string;
-  /** prospect-ingestion jobs only: how many AFNIC candidates this batch
-   *  targets. Absent falls back to DEFAULT_PROSPECT_BATCH_SIZE. */
-  batchSize?: number;
   /** Manual-input-layer milestone, pre-scan fields (full-audit jobs only):
    *  changing any of these invalidates a crawl already run, which is why
    *  they live here rather than on the audit record - see
@@ -82,29 +75,8 @@ export interface JobOptionsSnapshot {
    *  delegated-booking-redirect check) - short-circuits that check to
    *  'single-property' instead of re-guessing from page content. */
   bookingEngineUrl?: string;
-  /** hotel-prescan jobs only (milestone 9c plan 004). Which slice of the
-   *  catalogue this batch prescans, and at which rule versions, so a job
-   *  document alone says what it did rather than depending on whatever the
-   *  configured defaults happened to be when it ran. */
-  resolutionVersion?: string;
-  qualificationVersion?: string;
-  prescanVersion?: string;
-  /** Candidates in flight at once. Bounds browser work; it never shortens
-   *  the delay between requests, which the shared per-origin lock and the
-   *  crawl delay enforce independently. */
-  concurrency?: number;
-  /** Prescan candidates already measured at this prescan version. Absent
-   *  means the default skip, which is what makes a re-run of an interrupted
-   *  batch continue rather than start over. */
-  rescan?: boolean;
-  /** One named registrable domain to prescan. Recorded on the job so the
-   *  document itself says which site was authorized, rather than leaving
-   *  that to be inferred from whichever candidate happened to sort first. */
+  /** Optional target domain used for a prospect-scoped scan. */
   domain?: string;
-  /** Limit-bound hotel-prescan jobs only. The exact candidate list selected
-   *  at enqueue time, retained so a recovered job cannot continue past the
-   *  operator-approved scope after earlier candidates were recorded. */
-  prescanCandidateIds?: string[];
   /** outreach-draft-batch and outreach-followup-batch jobs only (milestone
    *  9c plan 030): maximum drafts/follow-ups this batch prepares, the same
    *  bound the CLI's own `--limit` has always used. */
@@ -112,36 +84,6 @@ export interface JobOptionsSnapshot {
   /** outreach-draft-batch jobs only. Follow-up drafts read the thread's own
    *  stored language instead - there is nothing to override. */
   language?: 'fr' | 'en';
-  /** The prospect candidate a candidate-launched job was created from -
-   *  originally outreach-full-scan only (plan 037: cohort membership,
-   *  current qualification, suppression, and duplicates are all validated
-   *  server-side at creation and re-validated when the worker claims the
-   *  job), and reused as-is by hotel-prescan (issue #263's Quick check
-   *  fix) purely as denormalized context: which prospect this run belongs
-   *  to, with no equivalent re-validation on that job type. Persisted so
-   *  GET /api/scans and the audits list (listJobs' flattened projection)
-   *  can link a run back to its prospect by record rather than by hostname
-   *  inference, and the cohort/scoring fields below stay outreach-full-scan
-   *  only. */
-  outreachCandidateId?: string;
-  outreachCohortId?: string;
-  outreachScoringVersion?: string;
-  /** Plan 041 slice B2: which record authorized this scan, 'cohort' or
-   *  'wave-roster'. */
-  outreachAuthorizedBy?: string;
-}
-
-/** Issue #263: a domain-scoped hotel-prescan job's own on-demand scoring
- *  pass (run-hotel-prescan-job.ts, mirroring scoreHotelOnDemandForConnection
- *  in packages/interface) reduced to plain fields a store-only reader can
- *  render without depending on that package's richer union type. `outcome`
- *  and `reason` are copies of ScoreOnDemandOutcome's own discriminant/reason
- *  strings, not re-derived here, so completion can state a specific reason
- *  instead of an unqualified success when scoring produced no score. */
-export interface JobPrescanScoringOutcome {
-  outcome: 'scored' | 'already-scored' | 'skipped';
-  reason?: 'not-in-scoring-population' | 'prescan-missing' | 'prescan-incomplete' | 'error';
-  errorMessage?: string;
 }
 
 /** Issue #223: `etaCalculatedAt` names the instant `etaMs` was computed,
@@ -175,26 +117,12 @@ export interface JobProgressContinuationGuard {
   omittedFamilyCount: number;
 }
 
-/** prospect-ingestion jobs only: one bounded batch's worth of progress
- *  counters, never the cumulative total across every batch ever run - see
- *  ingestionResults below for why the same "one batch, not the whole
- *  AFNIC file" scoping applies. */
-export interface JobProgressIngestion {
-  afnicRowsScanned: number;
-  candidatesFiltered: number;
-  candidatesFetched: number;
-  candidatesQualified: number;
-  target: number;
-  etaMs?: number;
-}
-
 export interface JobProgress {
   crawl?: JobProgressCrawl;
   scan?: JobProgressScan;
   contentScan?: JobProgressAnalysisStage;
   lighthouse?: JobProgressAnalysisStage;
   continuationGuard?: JobProgressContinuationGuard;
-  ingestion?: JobProgressIngestion;
   message?: string;
 }
 
@@ -207,28 +135,7 @@ export interface UrlResult {
   error?: string;
 }
 
-export type ProspectIngestionResultStatus =
-  'pending' | 'fetching' | 'no-siren' | 'qualified' | 'not-qualified' | 'error';
-
-/** One entry per candidate in the *current batch only* (default 2,000,
- *  ~100-200 bytes each), never one entry per AFNIC row ever seen - a job
- *  document only ever represents one bounded batch, the same
- *  boundedness urlResults already relies on for a prospecting job's URL
- *  list, so this never risks Mongo's 16MB document limit regardless of
- *  how many total AFNIC rows exist. */
-export interface ProspectIngestionResult {
-  domain: string;
-  status: ProspectIngestionResultStatus;
-  siren?: string;
-  reasons?: ProspectQualificationReason[];
-  error?: string;
-}
-
-/** One entry per item in the current outreach-draft-batch or
- *  outreach-followup-batch job only, same bounded-batch reasoning as
- *  ProspectIngestionResult above. `id` is a candidateId for a draft batch
- *  and a threadId for a follow-up batch - the two job types never mix, so
- *  one shared shape is enough rather than two near-identical ones. */
+/** One entry per item in the current draft batch. */
 export interface OutreachBatchResult {
   id: string;
   created: boolean;
@@ -269,7 +176,6 @@ export interface JobDocumentFields {
   auditId?: string;
   auditIds?: string[];
   urlResults?: UrlResult[];
-  ingestionResults?: ProspectIngestionResult[];
   outreachBatchResults?: OutreachBatchResult[];
   progress: JobProgress;
   error?: string;
@@ -298,12 +204,6 @@ export interface JobDocumentFields {
    *  worker's revision - the field always answers "which worker most
    *  recently ran this", never a full history. */
   workerRevision?: string;
-  /** Issue #263: a domain-scoped hotel-prescan job's own on-demand scoring
-   *  outcome, written at completion so the live progress page can state
-   *  whether the click that started it actually produced a score instead
-   *  of showing an unqualified "Scan complete". Absent for a
-   *  population-wide batch (no domain), which never scores inline. */
-  prescanScoringOutcome?: JobPrescanScoringOutcome;
 }
 
 export interface JobNeedsInputField {
@@ -315,6 +215,8 @@ export type JobDocument = JobDocumentFields;
 
 const jobOptionsSchema = new Schema(
   {
+    prospectId: { type: String },
+    scanType: { type: String, enum: ['quick-check', 'light-audit', 'prospecting-audit'] },
     maxPages: { type: Number },
     maxDepth: { type: Number },
     delayMs: { type: Number },
@@ -322,23 +224,12 @@ const jobOptionsSchema = new Schema(
     siren: { type: String },
     transactionalFlow: { type: Boolean },
     transactionalFlowReason: { type: String },
-    batchSize: { type: Number },
     seeds: { type: [String] },
     exclusions: { type: [String] },
     bookingEngineUrl: { type: String },
-    resolutionVersion: { type: String },
-    qualificationVersion: { type: String },
-    prescanVersion: { type: String },
-    concurrency: { type: Number },
-    rescan: { type: Boolean },
     domain: { type: String },
-    prescanCandidateIds: { type: [String], default: undefined },
     limit: { type: Number },
     language: { type: String, enum: ['fr', 'en'] },
-    outreachCandidateId: { type: String },
-    outreachCohortId: { type: String },
-    outreachScoringVersion: { type: String },
-    outreachAuthorizedBy: { type: String },
   },
   { _id: false },
 );
@@ -382,18 +273,6 @@ const jobProgressContinuationGuardSchema = new Schema(
   { _id: false },
 );
 
-const jobProgressIngestionSchema = new Schema(
-  {
-    afnicRowsScanned: { type: Number, required: true },
-    candidatesFiltered: { type: Number, required: true },
-    candidatesFetched: { type: Number, required: true },
-    candidatesQualified: { type: Number, required: true },
-    target: { type: Number, required: true },
-    etaMs: { type: Number },
-  },
-  { _id: false },
-);
-
 const jobProgressSchema = new Schema(
   {
     crawl: { type: jobProgressCrawlSchema },
@@ -401,7 +280,6 @@ const jobProgressSchema = new Schema(
     contentScan: { type: jobProgressAnalysisStageSchema },
     lighthouse: { type: jobProgressAnalysisStageSchema },
     continuationGuard: { type: jobProgressContinuationGuardSchema },
-    ingestion: { type: jobProgressIngestionSchema },
     message: { type: String },
   },
   { _id: false },
@@ -429,46 +307,11 @@ const jobNeedsInputFieldSchema = new Schema(
   { _id: false },
 );
 
-const jobIngestionResultSchema = new Schema(
-  {
-    domain: { type: String, required: true },
-    status: {
-      type: String,
-      required: true,
-      enum: ['pending', 'fetching', 'no-siren', 'qualified', 'not-qualified', 'error'],
-    },
-    siren: { type: String },
-    reasons: {
-      type: [String],
-      enum: [
-        'no-siren-extracted',
-        'siren-not-in-qualifying-sirene-set',
-        'domain-suppressed',
-        'no-qualifying-contact-address',
-      ],
-    },
-    error: { type: String },
-  },
-  { _id: false },
-);
-
 const outreachBatchResultSchema = new Schema(
   {
     id: { type: String, required: true },
     created: { type: Boolean, required: true },
     refusal: { type: String },
-  },
-  { _id: false },
-);
-
-const jobPrescanScoringOutcomeSchema = new Schema(
-  {
-    outcome: { type: String, required: true, enum: ['scored', 'already-scored', 'skipped'] },
-    reason: {
-      type: String,
-      enum: ['not-in-scoring-population', 'prescan-missing', 'prescan-incomplete', 'error'],
-    },
-    errorMessage: { type: String },
   },
   { _id: false },
 );
@@ -490,8 +333,6 @@ const jobSchema = new Schema<JobDocument>(
       enum: [
         'full-audit',
         'prospecting',
-        'prospect-ingestion',
-        'hotel-prescan',
         'outreach-draft-batch',
         'outreach-followup-batch',
         'outreach-full-scan',
@@ -518,9 +359,6 @@ const jobSchema = new Schema<JobDocument>(
         'report-fr',
         'report-en',
         'scanning',
-        'afnic-scan',
-        'fetch-qualify',
-        'prescanning',
         'drafting',
         'complete',
         'failed',
@@ -539,7 +377,6 @@ const jobSchema = new Schema<JobDocument>(
     auditId: { type: String },
     auditIds: { type: [String] },
     urlResults: { type: [urlResultSchema] },
-    ingestionResults: { type: [jobIngestionResultSchema] },
     outreachBatchResults: { type: [outreachBatchResultSchema] },
     progress: { type: jobProgressSchema, required: true, default: {} },
     error: { type: String },
@@ -547,13 +384,13 @@ const jobSchema = new Schema<JobDocument>(
     needsReview: { type: String },
     needsInputFields: { type: [jobNeedsInputFieldSchema] },
     workerRevision: { type: String },
-    prescanScoringOutcome: { type: jobPrescanScoringOutcomeSchema },
   },
   { collection: 'jobs' },
 );
 
 jobSchema.index({ status: 1, createdAt: 1 });
 jobSchema.index({ createdAt: -1 });
+jobSchema.index({ 'options.prospectId': 1, createdAt: -1 });
 
 export function createJobModel(connection: Connection): Model<JobDocument> {
   return connection.models['Job'] ?? connection.model<JobDocument>('Job', jobSchema);

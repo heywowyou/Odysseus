@@ -4,11 +4,17 @@ import type { Connection } from 'mongoose';
 import type { OutreachLostReason, OutreachOutcome } from '@odysseus/core';
 import { findOutreachThreadById, setOutreachThreadOutcome } from './outreach-threads.js';
 import {
+  appendProspectEvent,
+  advanceProspectStatus,
+  getProspectHub,
+  setProspectStatus,
+} from './prospect-hub.js';
+import {
   createOutreachOutcomeModel,
   type OutreachOutcomeDocument,
 } from './schemas/outreach-outcome.schema.js';
 
-export const OUTREACH_OUTCOME_RETENTION_DAYS = 90;
+const OUTREACH_OUTCOME_RETENTION_DAYS = 90;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface RecordOutreachOutcomeInput {
@@ -64,7 +70,7 @@ export async function recordOutreachOutcome(
     outcomeId: randomUUID(),
     idempotencyKey: key,
     threadId: input.threadId,
-    candidateId: thread.candidateId,
+    prospectId: thread.prospectId,
     outcome: input.outcome,
     ...(input.lostReason === undefined ? {} : { lostReason: input.lostReason }),
     actor,
@@ -84,7 +90,50 @@ export async function recordOutreachOutcome(
     return { recorded: false, outcome: raced };
   }
   await setOutreachThreadOutcome(connection, input.threadId, outcome.outcomeId);
+  if (thread.prospectId !== undefined) {
+    const status = statusForOutcome(input.outcome);
+    const prospect =
+      status === 'opted-out'
+        ? await setProspectStatus(connection, thread.prospectId, status)
+        : status === undefined
+          ? await getProspectHub(connection, thread.prospectId)
+          : await advanceProspectStatus(connection, thread.prospectId, status);
+    if (prospect !== null) {
+      await appendProspectEvent(connection, {
+        eventId: randomUUID(),
+        prospectId: thread.prospectId,
+        type: input.outcome === 'opt-out' ? 'opted-out' : 'outcome-recorded',
+        payload: { outcomeId: outcome.outcomeId, outcome: input.outcome },
+        actor: actor,
+        at: input.recordedAt,
+      });
+    }
+  }
   return { recorded: true, outcome };
+}
+
+function statusForOutcome(
+  outcome: OutreachOutcome,
+): 'replied' | 'call' | 'quoted' | 'won' | 'lost' | 'opted-out' | undefined {
+  switch (outcome) {
+    case 'reply-positive':
+    case 'reply-not-now':
+      return 'replied';
+    case 'reply-negative':
+      return 'lost';
+    case 'opt-out':
+      return 'opted-out';
+    case 'call':
+      return 'call';
+    case 'quoted':
+      return 'quoted';
+    case 'won':
+      return 'won';
+    case 'lost':
+      return 'lost';
+    case 'no-reply':
+      return undefined;
+  }
 }
 
 export interface ListOutreachOutcomesOptions {

@@ -6,22 +6,17 @@
  */
 
 import type { Connection } from 'mongoose';
+import { randomUUID } from 'node:crypto';
 import {
+  assessCrawlCoverage,
   isValidSiren,
-  normalizeDeclaredWebsite,
-  type AuditHotelLink,
   type AuditManualFields,
   type Grade,
   type GradeOverride,
 } from '@odysseus/core';
 import { createAuditModel, type AuditDocument } from './schemas/audit.schema.js';
 import { createFindingModel, type FindingDocument } from './schemas/finding.schema.js';
-import { resolveOrCreateBusinessForCandidate } from './businesses.js';
-import {
-  getHotelCandidate,
-  getLatestHotelCandidateByOwnRegistrableDomain,
-} from './hotel-candidates.js';
-import type { HotelCandidateDocument } from './schemas/hotel-candidate.schema.js';
+import { advanceProspectStatus, appendProspectEvent, getProspectHub } from './prospect-hub.js';
 
 export async function getAudit(
   connection: Connection,
@@ -29,6 +24,56 @@ export async function getAudit(
 ): Promise<AuditDocument | null> {
   const AuditModel = createAuditModel(connection);
   return AuditModel.findOne({ auditId }).lean<AuditDocument>();
+}
+
+export async function attachAuditToProspect(
+  connection: Connection,
+  auditId: string,
+  prospectId: string | null,
+  actor = 'operator',
+): Promise<AuditDocument | null> {
+  if (prospectId !== null && (await getProspectHub(connection, prospectId)) === null) return null;
+  const AuditModel = createAuditModel(connection);
+  const current = await AuditModel.findOne({ auditId }).lean<AuditDocument>();
+  if (current === null) return null;
+  if (
+    current.prospectId === prospectId ||
+    (current.prospectId === undefined && prospectId === null)
+  )
+    return current;
+  const now = new Date();
+  const update = prospectId === null ? { $unset: { prospectId: '' } } : { $set: { prospectId } };
+  await AuditModel.updateOne({ auditId }, update);
+  if (current.prospectId !== undefined) {
+    await appendProspectEvent(connection, {
+      eventId: randomUUID(),
+      prospectId: current.prospectId,
+      type: 'scan-detached',
+      payload: { auditId },
+      actor,
+      at: now,
+    });
+  }
+  if (prospectId !== null) {
+    await appendProspectEvent(connection, {
+      eventId: randomUUID(),
+      prospectId,
+      type: 'scan-attached',
+      payload: { auditId },
+      actor,
+      at: now,
+    });
+    const coverage = assessCrawlCoverage({
+      pages: current.pages,
+      ...(current.crawl.sitemapCoverage === undefined
+        ? {}
+        : { sitemapCoverage: current.crawl.sitemapCoverage }),
+    });
+    if (coverage.reasonCodes.length === 0) {
+      await advanceProspectStatus(connection, prospectId, 'audited');
+    }
+  }
+  return { ...current, ...(prospectId === null ? {} : { prospectId }) };
 }
 
 export async function getAuditManualFields(
@@ -245,140 +290,6 @@ export async function replaceDetectedManualFields(
 
   await setAuditManualFields(connection, auditId, provenancedPartial);
   return toWrite;
-}
-
-export interface AuditHotelLinkResult {
-  /** The candidate this audit is associated with - either the one an
-   *  earlier call already linked or stamped via prospecting provenance
-   *  (outreach), or the one this call just matched by domain. Null when
-   *  the audit's site never matched a catalogue candidate's own domain
-   *  and carries no prior association. */
-  candidate: HotelCandidateDocument | null;
-}
-
-/** Resolves and, on a fresh match, stores the catalogue hotel an ordinary
- *  audit's site belongs to. Idempotent and safe to call repeatedly on the
- *  same audit (the queue-startup backfill does exactly that): writes
- *  `hotelLink` only the first time, and every later call (including this
- *  one, once written) returns the same candidate without touching the
- *  document again.
- *
- *  Never overwrites an existing association. An audit already carrying
- *  `outreach` (the immutable prospecting-provenance stamp, plan 037) is
- *  already linked to its candidate by a stronger fact than a domain
- *  match, so that candidate is returned and `hotelLink` is left unset -
- *  writing it would just be a second, weaker pointer to the same hotel.
- *  An audit already carrying `hotelLink` from a previous call is treated
- *  the same way.
- *
- *  Domain matching reuses `normalizeDeclaredWebsite` and
- *  `getLatestHotelCandidateByOwnRegistrableDomain`, the same pair
- *  analysis-stage.ts's writing-context enrichment already uses:
- *  `ownRegistrableDomain` is set on a candidate only when its domain has
- *  exactly one holder in the catalogue (trade-off 33), so a group member
- *  or vendor-hosted domain never matches here either. */
-export async function linkAuditToHotelByDomain(
-  connection: Connection,
-  auditId: string,
-  siteUrl: string,
-): Promise<AuditHotelLinkResult> {
-  const AuditModel = createAuditModel(connection);
-  const existing = await AuditModel.findOne(
-    { auditId },
-    { _id: 0, outreach: 1, hotelLink: 1 },
-  ).lean<Pick<AuditDocument, 'outreach' | 'hotelLink'> | null>();
-
-  if (!existing) {
-    throw new Error(`odysseus: audit ${auditId} not found`);
-  }
-
-  const existingCandidateId = existing.outreach?.candidateId ?? existing.hotelLink?.candidateId;
-  if (existingCandidateId !== undefined) {
-    return { candidate: await getHotelCandidate(connection, existingCandidateId) };
-  }
-
-  const normalized = normalizeDeclaredWebsite(siteUrl);
-  if (normalized.kind !== 'own-domain') return { candidate: null };
-
-  const candidate = await getLatestHotelCandidateByOwnRegistrableDomain(
-    connection,
-    normalized.registrableDomain,
-  );
-  if (!candidate) return { candidate: null };
-
-  // Issue #218: resolve/create the durable business behind this candidate
-  // generation so the audit stays discoverable from the Prospect hub after
-  // this 90-day generation expires. Null only when the candidate's domain
-  // is not a safe own-registrable-domain match, which cannot happen here -
-  // getLatestHotelCandidateByOwnRegistrableDomain only ever returns a
-  // candidate that has one.
-  const business = await resolveOrCreateBusinessForCandidate(connection, candidate);
-
-  const hotelLink: AuditHotelLink = {
-    candidateId: candidate.candidateId,
-    matchedOn: 'own-registrable-domain',
-    linkedAt: new Date(),
-    ...(business !== null ? { businessId: business.businessId } : {}),
-  };
-  await AuditModel.updateOne({ auditId }, { $set: { hotelLink } });
-  return { candidate };
-}
-
-export type LinkAuditToHotelManuallyResult =
-  | { outcome: 'linked'; candidate: HotelCandidateDocument }
-  | {
-      outcome: 'refused';
-      reason: 'audit-not-found' | 'candidate-not-found' | 'outreach-provenanced';
-    };
-
-/** Issue #216's operator recovery path for an audit the automatic domain
- *  match could not safely link (a shared/vendor-hosted domain, or any
- *  identity shape `linkAuditToHotelByDomain` deliberately refuses) or
- *  linked to the wrong candidate. Unlike the automatic match, this
- *  overwrites an existing `hotelLink` - a manual correction is exactly
- *  what this path is for - but it never touches `outreach`: an audit
- *  already carrying that immutable prospecting-provenance stamp is
- *  refused outright, since `matchedOn: 'manual'` must never read as
- *  stronger evidence than the real authorization it is not. */
-export async function linkAuditToHotelManually(
-  connection: Connection,
-  auditId: string,
-  candidateId: string,
-): Promise<LinkAuditToHotelManuallyResult> {
-  const AuditModel = createAuditModel(connection);
-  const existing = await AuditModel.findOne({ auditId }, { _id: 0, outreach: 1 }).lean<Pick<
-    AuditDocument,
-    'outreach'
-  > | null>();
-  if (!existing) return { outcome: 'refused', reason: 'audit-not-found' };
-  if (existing.outreach?.candidateId !== undefined) {
-    return { outcome: 'refused', reason: 'outreach-provenanced' };
-  }
-
-  const candidate = await getHotelCandidate(connection, candidateId);
-  if (!candidate) return { outcome: 'refused', reason: 'candidate-not-found' };
-
-  const business = await resolveOrCreateBusinessForCandidate(connection, candidate);
-  const hotelLink: AuditHotelLink = {
-    candidateId: candidate.candidateId,
-    matchedOn: 'manual',
-    linkedAt: new Date(),
-    ...(business !== null ? { businessId: business.businessId } : {}),
-  };
-  await AuditModel.updateOne({ auditId }, { $set: { hotelLink } });
-  return { outcome: 'linked', candidate };
-}
-
-/** The recovery path's undo: clears a mistaken `hotelLink` (automatic or
- *  manual) so it stops appearing in that hotel's Audit tab. Never touches
- *  `outreach` - an audit's real prospecting provenance is not something
- *  this action can or should remove. Returns false when the audit does
- *  not exist; true whether or not it actually carried a `hotelLink` to
- *  clear, since either way the audit ends this call with none. */
-export async function unlinkAuditHotel(connection: Connection, auditId: string): Promise<boolean> {
-  const AuditModel = createAuditModel(connection);
-  const result = await AuditModel.updateOne({ auditId }, { $unset: { hotelLink: '' } });
-  return result.matchedCount > 0;
 }
 
 export async function getFindingsForAudit(

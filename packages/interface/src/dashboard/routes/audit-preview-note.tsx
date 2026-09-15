@@ -1,9 +1,8 @@
 /**
  * The audit page's preview note (plan 040 slice 5): publication, takedown,
  * and the first-draft action moved to the hotel hub in slice 4, so an
- * audit linked to a prospect only points there. An audit with no prospect
- * keeps the two read-only preview actions, the scorecard view and the
- * operator PDF, ported from the retired plan 037 outreach card.
+ * audit linked to a prospect only points there. An unattached audit keeps the
+ * two read-only preview actions, the scorecard view and the operator PDF.
  */
 
 import { useState } from 'react';
@@ -187,18 +186,16 @@ function ReadOnlyPreviewCard(props: { auditId: string }): JSX.Element {
 
 export function AuditPreviewNote(props: {
   auditId: string;
-  candidateId: string | null;
+  prospectId: string | null;
 }): JSX.Element {
-  const { auditId, candidateId } = props;
+  const { auditId, prospectId } = props;
   const { strings } = useI18n();
-  if (candidateId !== null) {
-    // The IA's one line: the preview of a prospect-linked audit is
-    // published, reissued, and revoked from the hotel hub, so the audit
-    // page only shows the way there.
+  if (prospectId !== null) {
+    // The preview of an attached audit is managed from the prospect page.
     return (
       <p className="text-sm text-ink-soft">
         <Link
-          to={`/prospects/${encodeURIComponent(candidateId)}#hub-preview`}
+          to={`/prospects/${encodeURIComponent(prospectId)}#emails`}
           className="underline transition-colors hover:text-ink"
         >
           {strings.auditDetail.previewManagedFromProspect}

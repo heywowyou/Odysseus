@@ -12,7 +12,6 @@ import {
   isTerminal,
   hasStagedAnalysisProgress,
   lighthouseProgress,
-  prescanScoringNote,
   scanProgress,
   urlResultState,
 } from './scan-progress-model';
@@ -276,36 +275,5 @@ describe('urlResultState', () => {
     expect(urlResultState('pending')).toBe('running');
     expect(urlResultState('scanning')).toBe('running');
     expect(urlResultState('skipped-non-html')).toBe('running');
-  });
-});
-
-// Issue #263: a completed hotel-prescan job used to render an unqualified
-// "Scan complete" whether or not scoring actually produced a score. This
-// note is what tells the two cases apart.
-describe('prescanScoringNote', () => {
-  it('returns undefined when the job never recorded a scoring outcome', () => {
-    expect(prescanScoringNote(undefined, en.progress)).toBeUndefined();
-  });
-
-  it('states the plain outcome for scored and already-scored', () => {
-    expect(prescanScoringNote({ outcome: 'scored' }, en.progress)).toBe(
-      en.progress.prescanScoringOutcomeLabels.scored,
-    );
-    expect(prescanScoringNote({ outcome: 'already-scored' }, en.progress)).toBe(
-      en.progress.prescanScoringOutcomeLabels['already-scored'],
-    );
-  });
-
-  it('states the specific reason for a skipped outcome instead of a bare success', () => {
-    expect(
-      prescanScoringNote({ outcome: 'skipped', reason: 'prescan-incomplete' }, en.progress),
-    ).toBe(en.progress.prescanScoringSkippedReasonLabels['prescan-incomplete']);
-    expect(
-      prescanScoringNote({ outcome: 'skipped', reason: 'not-in-scoring-population' }, en.progress),
-    ).toBe(en.progress.prescanScoringSkippedReasonLabels['not-in-scoring-population']);
-  });
-
-  it('returns undefined for a skipped outcome with no labelled reason', () => {
-    expect(prescanScoringNote({ outcome: 'skipped' }, en.progress)).toBeUndefined();
   });
 });

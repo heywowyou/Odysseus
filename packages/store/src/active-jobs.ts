@@ -1,7 +1,7 @@
 /**
  * Issue #220: one place that answers "what is currently running for this
  * prospect" and "may this scan-like job start". Before this module, each
- * job-creation route ran its own dedupe check (hotel-prescan had none at
+ * job-creation route ran its own dedupe check (quick-check had none at
  * all; outreach-full-scan checked only itself via
  * findActiveOutreachFullScanJob; full-audit checked only host-level
  * browser conflicts via findActiveScanJobForHost), so the rules were
@@ -10,9 +10,9 @@
  *
  * Every operator-launchable job kind maps to exactly one JobType. The kind
  * vocabulary is the hub's, not the queue's: "Light audit" (JobType
- * 'prospecting') is not candidate-scoped when it is created (it takes raw
- * URLs, see routes/scans.ts), so matching it to a candidate while active
- * can only go by hostname, the same domain the candidate's own site lives
+ * 'prospecting') is not prospect-scoped when it is created (it takes raw
+ * URLs, see routes/scans.ts), so matching it to a prospect while active
+ * can only go by hostname, the same domain the prospect's own site lives
  * on.
  */
 
@@ -32,17 +32,15 @@ export interface ProspectActiveJob {
 }
 
 const KIND_BY_JOB_TYPE: Record<JobType, ProspectActiveJobKind | undefined> = {
-  'hotel-prescan': 'quick-check',
   prospecting: 'light-audit',
   'outreach-full-scan': 'prospecting-audit',
   'full-audit': 'full-audit',
-  'prospect-ingestion': undefined,
   'outreach-draft-batch': undefined,
   'outreach-followup-batch': undefined,
 };
 
 const JOB_TYPE_BY_KIND: Record<ProspectActiveJobKind, JobType> = {
-  'quick-check': 'hotel-prescan',
+  'quick-check': 'prospecting',
   'light-audit': 'prospecting',
   'prospecting-audit': 'outreach-full-scan',
   'full-audit': 'full-audit',
@@ -98,7 +96,10 @@ function targetDomainOf(job: JobDocument, fallbackDomain: string): string {
 }
 
 function toActiveJob(job: JobDocument, fallbackDomain: string): ProspectActiveJob | null {
-  const kind = KIND_BY_JOB_TYPE[job.type];
+  const kind =
+    job.type === 'prospecting' && job.options.scanType === 'quick-check'
+      ? 'quick-check'
+      : KIND_BY_JOB_TYPE[job.type];
   if (kind === undefined) return null;
   return {
     jobId: job.jobId,
@@ -109,13 +110,13 @@ function toActiveJob(job: JobDocument, fallbackDomain: string): ProspectActiveJo
   };
 }
 
-/** Every active job that currently owns part of this candidate's
- *  workflow: its own candidate-scoped jobs (prescan, prospecting-audit,
+/** Every active job that currently owns part of this prospect's
+ *  workflow: its own prospect-linked jobs (quick-check, prospecting-audit,
  *  full-audit), plus any Light audit job whose URL list touches the
- *  candidate's own domain. Newest first. An empty array, never null. */
-export async function listActiveJobsForCandidate(
+ *  prospect's own domain. Newest first. An empty array, never null. */
+export async function listActiveJobsForProspect(
   connection: Connection,
-  candidateId: string,
+  prospectId: string,
   domain: string,
 ): Promise<ProspectActiveJob[]> {
   const hostname = hostnameOf(domain);
@@ -123,9 +124,8 @@ export async function listActiveJobsForCandidate(
     .find({
       status: { $in: ACTIVE_STATUSES },
       $or: [
-        { type: 'hotel-prescan', 'options.domain': domain },
-        { type: 'outreach-full-scan', 'options.outreachCandidateId': candidateId },
-        { type: 'full-audit', 'options.outreachCandidateId': candidateId },
+        { type: 'full-audit', 'options.prospectId': prospectId },
+        { type: 'outreach-full-scan', 'options.prospectId': prospectId },
         { type: 'prospecting', urls: hostUrlPattern(hostname) },
       ],
     })
@@ -142,7 +142,7 @@ export async function listActiveJobsForCandidate(
 /** The cross-kind half of the conflict policy alone: any *other*
  *  browser-heavy kind already active on this host, or null. Exported
  *  separately from planProspectJobLaunch so callers with their own
- *  same-kind dedupe logic (outreach-scans.ts's planOutreachFullScan,
+ *  same-kind dedupe logic (
  *  which also needs to exclude the re-validating job itself at claim
  *  time) can still share this one host-level rule instead of
  *  reimplementing it. */
@@ -172,8 +172,8 @@ export type ProspectJobLaunchDecision =
 /** The one conflict policy every prospect-scoped job-creation route
  *  consults, so refusals never drift between routes.
  *
- *  1. Same candidate, same kind, already active: always refused - two
- *     concurrent runs of the same pipeline for one prospect are always an
+ *  1. Same prospect, same kind, already active: always refused - two
+ *     concurrent runs of the same scan for one prospect are always an
  *     operator mistake, and the plan/authorization gates elsewhere are the
  *     real volume control.
  *  2. Otherwise, a browser-heavy kind (Light audit, Prospecting audit,
@@ -188,19 +188,13 @@ export type ProspectJobLaunchDecision =
  *     active statuses are searched. */
 export async function planProspectJobLaunch(
   connection: Connection,
-  params: { kind: ProspectActiveJobKind; candidateId: string; domain: string },
+  params: { kind: ProspectActiveJobKind; prospectId: string; domain: string },
 ): Promise<ProspectJobLaunchDecision> {
-  const { kind, candidateId, domain } = params;
+  const { kind, prospectId, domain } = params;
   const hostname = hostnameOf(domain);
   const JobModel = createJobModel(connection);
 
-  const sameKind = await findActiveJobForCandidateKind(
-    JobModel,
-    kind,
-    candidateId,
-    domain,
-    hostname,
-  );
+  const sameKind = await findActiveJobForProspectKind(JobModel, kind, prospectId, domain, hostname);
   if (sameKind !== null) return { allowed: false, conflictingJobId: sameKind.jobId };
 
   const hostConflict = await findActiveBrowserHeavyHostConflict(connection, kind, domain);
@@ -209,20 +203,20 @@ export async function planProspectJobLaunch(
   return { allowed: true };
 }
 
-async function findActiveJobForCandidateKind(
+async function findActiveJobForProspectKind(
   JobModel: ReturnType<typeof createJobModel>,
   kind: ProspectActiveJobKind,
-  candidateId: string,
+  prospectId: string,
   domain: string,
   hostname: string,
 ): Promise<JobDocument | null> {
   const type = JOB_TYPE_BY_KIND[kind];
   const scopeQuery =
     kind === 'quick-check'
-      ? { 'options.domain': domain }
+      ? { 'options.prospectId': prospectId, 'options.scanType': 'quick-check' as const }
       : kind === 'light-audit'
         ? { urls: hostUrlPattern(hostname) }
-        : { 'options.outreachCandidateId': candidateId };
+        : { 'options.prospectId': prospectId };
   return JobModel.findOne({
     type,
     status: { $in: ACTIVE_STATUSES },

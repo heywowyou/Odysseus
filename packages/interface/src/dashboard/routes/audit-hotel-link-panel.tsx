@@ -1,10 +1,4 @@
-/**
- * Issue #216: the audit detail page's manual hotel-link recovery action.
- * The automatic domain match (linkAuditToHotelByDomain, store) already
- * links most audits on its own; this panel covers what it deliberately
- * refuses to guess (a shared/vendor-hosted domain) or got wrong, and lets
- * the operator undo either kind of link.
- */
+/** Attach/detach control for an audit's prospect relationship. */
 
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
@@ -13,16 +7,21 @@ import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
 import { useI18n } from '../i18n/provider';
-import { fetchJson, sendDelete, sendJson } from '../lib/api';
-import type { ProspectListResponse, ProspectRow } from './prospects-model';
-import type { AuditHotelResponse } from './audit-detail-types';
+import { fetchJson, sendJson } from '../lib/api';
+import type { AuditProspectResponse } from './audit-detail-types';
 
-/** One outstanding search request at a time: a stale earlier response
- *  (e.g. from a query the operator already replaced) is dropped rather
- *  than allowed to overwrite the newer one - the standard sequence-token
- *  guard used elsewhere in the dashboard for a debounced fetch. */
-function useProspectSearch(query: string): { rows: ProspectRow[]; isLoading: boolean } {
-  const [rows, setRows] = useState<ProspectRow[]>([]);
+interface ProspectSearchRow {
+  prospectId: string;
+  name: string;
+  commune?: string;
+  postcode?: string;
+}
+
+function useProspectSearch(query: string): {
+  rows: ProspectSearchRow[];
+  isLoading: boolean;
+} {
+  const [rows, setRows] = useState<ProspectSearchRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -35,8 +34,8 @@ function useProspectSearch(query: string): { rows: ProspectRow[]; isLoading: boo
     let cancelled = false;
     setIsLoading(true);
     const timer = window.setTimeout(() => {
-      void fetchJson<ProspectListResponse>(
-        `/api/prospects?q=${encodeURIComponent(trimmed)}&limit=5`,
+      void fetchJson<{ rows: ProspectSearchRow[] }>(
+        `/api/prospects?q=${encodeURIComponent(trimmed)}&page=1&pageSize=5`,
       )
         .then((result) => {
           if (!cancelled) setRows(result.rows);
@@ -57,13 +56,13 @@ function useProspectSearch(query: string): { rows: ProspectRow[]; isLoading: boo
   return { rows, isLoading };
 }
 
-function LinkDialog(props: {
+function AttachDialog(props: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onPick: (candidateId: string) => void;
+  onPick: (prospectId: string) => void;
 }): JSX.Element {
   const { strings } = useI18n();
-  const copy = strings.auditDetail.hotelLink;
+  const copy = strings.auditDetail.prospectLink;
   const [query, setQuery] = useState('');
   const { rows, isLoading } = useProspectSearch(query);
 
@@ -84,15 +83,15 @@ function LinkDialog(props: {
         />
         <ul className="mt-3 flex max-h-72 flex-col gap-1 overflow-y-auto">
           {rows.map((row) => (
-            <li key={row.candidateId}>
+            <li key={row.prospectId}>
               <button
                 type="button"
                 className="flex w-full flex-col items-start rounded-md px-2 py-1.5 text-left text-sm hover:bg-raised"
-                onClick={() => props.onPick(row.candidateId)}
+                onClick={() => props.onPick(row.prospectId)}
               >
                 <span className="text-ink">{row.name}</span>
                 <span className="text-xs text-ink-muted">
-                  {[row.commune, row.postcode].filter((part) => part !== null).join(' · ')}
+                  {[row.commune, row.postcode].filter((part) => part !== undefined).join(' · ')}
                 </span>
               </button>
             </li>
@@ -106,43 +105,27 @@ function LinkDialog(props: {
   );
 }
 
-export function AuditHotelLinkPanel(props: {
+export function AuditProspectLinkPanel(props: {
   auditId: string;
-  hotel: AuditHotelResponse | null;
-  canLinkManually: boolean;
+  prospect: AuditProspectResponse | null;
+  canAttachProspect: boolean;
   onChanged: () => void;
 }): JSX.Element | null {
-  const { auditId, hotel, canLinkManually, onChanged } = props;
+  const { auditId, prospect, canAttachProspect, onChanged } = props;
   const { strings } = useI18n();
-  const copy = strings.auditDetail.hotelLink;
+  const copy = strings.auditDetail.prospectLink;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!canLinkManually) return null;
+  if (!canAttachProspect) return null;
 
-  const link = async (candidateId: string): Promise<void> => {
+  const update = async (prospectId: string | null): Promise<void> => {
     setIsBusy(true);
     setError(null);
     try {
-      await sendJson(`/api/audits/${encodeURIComponent(auditId)}/hotel-link`, 'POST', {
-        candidateId,
-      });
+      await sendJson(`/api/audits/${encodeURIComponent(auditId)}/prospect`, 'POST', { prospectId });
       setDialogOpen(false);
-      onChanged();
-    } catch {
-      setError(copy.actionError);
-    } finally {
-      setIsBusy(false);
-    }
-  };
-
-  const unlink = async (): Promise<void> => {
-    if (!window.confirm(copy.unlinkConfirm)) return;
-    setIsBusy(true);
-    setError(null);
-    try {
-      await sendDelete(`/api/audits/${encodeURIComponent(auditId)}/hotel-link`);
       onChanged();
     } catch {
       setError(copy.actionError);
@@ -153,7 +136,7 @@ export function AuditHotelLinkPanel(props: {
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
-      {hotel === null ? (
+      {prospect === null ? (
         <>
           <span className="text-ink-muted">{copy.notLinked}</span>
           <Button
@@ -167,14 +150,14 @@ export function AuditHotelLinkPanel(props: {
         </>
       ) : (
         <>
-          {hotel.matchedOn === 'manual' ? <Badge tone="neutral">{copy.manualBadge}</Badge> : null}
+          <Badge tone="neutral">{prospect.name}</Badge>
           <Button
             variant="secondary"
             size="sm"
             isLoading={isBusy}
             disabled={isBusy}
             onClick={() => {
-              void unlink();
+              if (window.confirm(copy.unlinkConfirm)) void update(null);
             }}
           >
             {copy.unlinkAction}
@@ -182,12 +165,10 @@ export function AuditHotelLinkPanel(props: {
         </>
       )}
       {error !== null ? <span className="text-danger">{error}</span> : null}
-      <LinkDialog
+      <AttachDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        onPick={(candidateId) => {
-          void link(candidateId);
-        }}
+        onPick={(prospectId) => void update(prospectId)}
       />
     </div>
   );

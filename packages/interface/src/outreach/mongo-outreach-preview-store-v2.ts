@@ -1,74 +1,82 @@
-/**
- * The Mongo adapter for the v2 preview publication port (plan 037).
- *
- * Reads the candidate's outreach audit through the store's exact-resolution
- * projection, so the port can never see a stale, failed, wrong-domain,
- * suppressed, or coverage-incomplete audit as a publishable row, and joins
- * the same candidate name and qualification Sirene facts the v1 adapter
- * joined. This module issues the only queries; the port stays pure.
- */
+/** Mongo adapter for the prospect-native full-audit preview contract. */
 
 import type { Connection } from 'mongoose';
 import type { Finding } from '@odysseus/core';
 import {
-  getHotelCandidate,
+  createAuditModel,
   getFindingsForAudit,
-  getHotelQualification,
+  getProspectHub,
   isSuppressed,
   listLivePreviewsForDomain,
   recordOutreachPreview,
-  resolveOutreachAuditForCandidate,
   revokeOutreachPreview,
-  type OutreachAuditRefusal,
+  selectNewestQualifyingAudit,
+  type ProspectWorkAudit,
 } from '@odysseus/store';
 import type {
-  OutreachPreviewStorePortV2,
+  OutreachPublicationAudit,
   OutreachPublicationRowV2,
+  OutreachPreviewStorePortV2,
+  PublishPreviewV2Refusal,
   RecordPreviewV2Input,
 } from './publish-preview-v2.js';
-import type { PreviewSireneFacts } from './publish-preview.js';
+
+type PublicationAudit = ProspectWorkAudit & OutreachPublicationAudit;
 
 export function createMongoOutreachPreviewStoreV2(
   connection: Connection,
-  options: { qualificationVersion: string },
+  options: { prospectId: string; qualificationVersion?: string },
 ): OutreachPreviewStorePortV2 {
+  void options.qualificationVersion;
   return {
     async findPublicationRow(
-      candidateId: string,
-    ): Promise<OutreachPublicationRowV2 | { refused: OutreachAuditRefusal }> {
-      const resolution = await resolveOutreachAuditForCandidate(connection, candidateId);
-      if (resolution.state === 'refused') return { refused: resolution.reason };
+      prospectId: string,
+    ): Promise<OutreachPublicationRowV2 | { refused: PublishPreviewV2Refusal }> {
+      const prospect = await getProspectHub(connection, prospectId);
+      if (prospect === null) return { refused: 'prospect-unknown' };
 
-      const candidate = await getHotelCandidate(connection, candidateId);
-      if (candidate === null) return { refused: 'candidate-unknown' };
+      const audits = await createAuditModel(connection)
+        .find({ prospectId })
+        .select({
+          _id: 0,
+          auditId: 1,
+          prospectId: 1,
+          siteUrl: 1,
+          kind: 1,
+          startedAt: 1,
+          finishedAt: 1,
+          pages: 1,
+          crawl: 1,
+          continuationGuardSummary: 1,
+          'findingsProvenance.normalizationFingerprint': 1,
+          gradeOverride: 1,
+        })
+        .sort({ startedAt: -1, auditId: -1 })
+        .lean<PublicationAudit[]>();
+      const qualification = selectNewestQualifyingAudit(audits);
+      if (qualification.audit === undefined) {
+        return {
+          refused:
+            qualification.state === 'missing'
+              ? 'no-audit'
+              : qualification.state === 'stale'
+                ? 'stale-provenance'
+                : 'coverage-incomplete',
+        };
+      }
 
-      const findings: Finding[] = await getFindingsForAudit(connection, resolution.audit.auditId);
-
-      const qualification = await getHotelQualification(
+      const website = prospect.websites.find((item) => item.primary) ?? prospect.websites[0];
+      if (website === undefined) return { refused: 'domain-mismatch' };
+      const findings: Finding[] = await getFindingsForAudit(
         connection,
-        options.qualificationVersion,
-        candidateId,
+        qualification.audit.auditId,
       );
-      const join = qualification?.sireneJoin;
-
       return {
-        candidateId,
-        domain: candidate.ownRegistrableDomain ?? resolution.audit.siteUrl,
-        businessName: candidate.name,
-        audit: resolution.audit,
+        prospectId,
+        domain: website.registrableDomain,
+        businessName: prospect.name,
+        audit: qualification.audit,
         findings,
-        ...(join?.status === 'matched' && join.denomination !== undefined
-          ? {
-              sirene: {
-                denomination: join.denomination,
-                ...(join.effectifBandCode === undefined
-                  ? {}
-                  : { effectifBandCode: join.effectifBandCode }),
-                checkedAt: join.checkedAt,
-                ...(join.stockVersion === undefined ? {} : { stockVersion: join.stockVersion }),
-              } satisfies PreviewSireneFacts,
-            }
-          : {}),
       };
     },
 

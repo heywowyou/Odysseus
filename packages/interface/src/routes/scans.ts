@@ -7,8 +7,10 @@ import {
   createJob,
   deleteAuditCascade,
   deleteJob,
+  checkScanLaunch,
+  findProspectsByDomain,
   getAudit,
-  getHotelCandidatesByIds,
+  getProspectHub,
   getJob,
   listJobs,
   type JobOptionsSnapshot,
@@ -86,6 +88,17 @@ function parseOptionsSnapshot(raw: unknown): JobOptionsSnapshot {
     options.transactionalFlowReason = record['transactionalFlowReason'].trim();
   }
 
+  if (typeof record['prospectId'] === 'string' && record['prospectId'].trim() !== '') {
+    options.prospectId = record['prospectId'].trim();
+  }
+  if (
+    record['scanType'] === 'quick-check' ||
+    record['scanType'] === 'light-audit' ||
+    record['scanType'] === 'prospecting-audit'
+  ) {
+    options.scanType = record['scanType'];
+  }
+
   const rawSeeds = record['seeds'];
   if (Array.isArray(rawSeeds) && rawSeeds.length > 0) {
     if (!rawSeeds.every(isHttpUrlWithoutCredentials)) {
@@ -113,6 +126,27 @@ function parseOptionsSnapshot(raw: unknown): JobOptionsSnapshot {
   return options;
 }
 
+function mergeTopLevelProspectId(
+  options: JobOptionsSnapshot,
+  body: Record<string, unknown>,
+): JobOptionsSnapshot {
+  if (options.prospectId !== undefined) return options;
+  const prospectId = body['prospectId'];
+  return typeof prospectId === 'string' && prospectId.trim() !== ''
+    ? { ...options, prospectId: prospectId.trim() }
+    : options;
+}
+
+async function autoAttachProspect(
+  connection: Connection,
+  options: JobOptionsSnapshot,
+  registrableDomain: string,
+): Promise<JobOptionsSnapshot> {
+  if (options.prospectId !== undefined) return options;
+  const matches = await findProspectsByDomain(connection, registrableDomain);
+  return matches.length === 1 ? { ...options, prospectId: matches[0]!.prospectId } : options;
+}
+
 /** Registers the job-creation and job-status endpoints. `queue.notify()`
  *  is called after every successful create so a submitted scan starts
  *  promptly rather than waiting out the queue's poll interval. */
@@ -127,15 +161,66 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
     }
     const parsed = body as Record<string, unknown>;
 
+    if (
+      parsed['type'] === 'quick-check' ||
+      parsed['type'] === 'light-audit' ||
+      parsed['type'] === 'prospecting-audit'
+    ) {
+      const url = parsed['url'];
+      if (!isHttpUrlWithoutCredentials(url)) {
+        sendError(res, 400, 'url must be an absolute http(s) URL without embedded credentials');
+        return;
+      }
+      const check = await checkScanLaunch(connection, { url, kind: parsed['type'] });
+      if (!check.allowed) {
+        sendJson(res, 200, { started: false, refusal: check.refusal });
+        return;
+      }
+      let options: JobOptionsSnapshot;
+      try {
+        options = await autoAttachProspect(
+          connection,
+          mergeTopLevelProspectId(parseOptionsSnapshot(parsed['options']), parsed),
+          check.registrableDomain,
+        );
+      } catch (error) {
+        sendError(res, 400, error instanceof Error ? error.message : 'invalid options');
+        return;
+      }
+      const job = await createJob(connection, {
+        type: 'prospecting',
+        siteUrl: url,
+        urls: [url],
+        options: {
+          ...options,
+          scanType: parsed['type'],
+          ...(parsed['type'] === 'quick-check' ? { maxPages: 1 } : {}),
+        },
+      });
+      logJobCreated(req, job.jobId, job.type);
+      queue.notify();
+      sendJson(res, 201, { started: true, jobId: job.jobId, type: parsed['type'] });
+      return;
+    }
+
     if (parsed['type'] === 'full-audit') {
       const url = parsed['url'];
       if (!isHttpUrlWithoutCredentials(url)) {
         sendError(res, 400, 'url must be an absolute http(s) URL without embedded credentials');
         return;
       }
+      const check = await checkScanLaunch(connection, { url, kind: 'full-audit' });
+      if (!check.allowed) {
+        sendJson(res, 200, { started: false, refusal: check.refusal });
+        return;
+      }
       let options: JobOptionsSnapshot;
       try {
-        options = parseOptionsSnapshot(parsed['options']);
+        options = await autoAttachProspect(
+          connection,
+          mergeTopLevelProspectId(parseOptionsSnapshot(parsed['options']), parsed),
+          check.registrableDomain,
+        );
       } catch (error) {
         sendError(res, 400, error instanceof Error ? error.message : 'invalid options');
         return;
@@ -179,27 +264,10 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
     const auditIds = jobs.map((job) => job.auditId).filter((id): id is string => id !== undefined);
     const rollups = await getSeverityRollupsForPoll(connection, auditIds);
 
-    // Plan 042 slice 4: the hotel name behind each prospect-linked job,
-    // one batched read for the page's distinct candidates. A candidate
-    // that no longer resolves simply carries no name.
-    const candidateIds = [
-      ...new Set(
-        jobs.map((job) => job.outreachCandidateId).filter((id): id is string => id !== undefined),
-      ),
-    ];
-    const candidates = await getHotelCandidatesByIds(connection, candidateIds);
-    const candidateNames = new Map(
-      candidates.map((candidate) => [candidate.candidateId, candidate.name]),
-    );
-
     const summaries = jobs.map((job) => ({
-      outreachCandidateId: job.outreachCandidateId,
-      outreachCandidateName:
-        job.outreachCandidateId !== undefined
-          ? candidateNames.get(job.outreachCandidateId)
-          : undefined,
+      prospectId: job.prospectId,
       jobId: job.jobId,
-      type: job.type,
+      type: job.scanType ?? job.type,
       status: job.status,
       phase: job.phase,
       siteUrl: job.siteUrl,
@@ -221,23 +289,15 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       sendError(res, 404, 'job not found');
       return;
     }
-    // Issue #263: the live progress page needs the same prospect-link
-    // context the audits list already carries (siteLabel/outreachCandidateId
-    // in audits-model.ts), so a Quick check launched from a prospect can
-    // return the operator there on completion instead of dead-ending on a
-    // generic job view. options.outreachCandidateId is nested (see
-    // listJobs' flattening for why a dotted projection can't just be
-    // spread onto the response), so it's surfaced explicitly rather than
-    // asking the client to reach into job.options.
-    const outreachCandidateId = job.options.outreachCandidateId;
-    const candidate =
-      outreachCandidateId === undefined
-        ? undefined
-        : (await getHotelCandidatesByIds(connection, [outreachCandidateId]))[0];
+    const prospect =
+      job.options.prospectId === undefined
+        ? null
+        : await getProspectHub(connection, job.options.prospectId);
     sendJson(res, 200, {
       ...job,
-      outreachCandidateId,
-      outreachCandidateName: candidate?.name,
+      type: job.options.scanType ?? job.type,
+      prospectId: job.options.prospectId,
+      prospectName: prospect?.name,
     });
   });
 
@@ -270,8 +330,7 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       job.status === 'running' &&
       job.type !== 'full-audit' &&
       job.type !== 'prospecting' &&
-      job.type !== 'outreach-full-scan' &&
-      job.type !== 'hotel-prescan'
+      job.type !== 'outreach-full-scan'
     ) {
       sendError(
         res,

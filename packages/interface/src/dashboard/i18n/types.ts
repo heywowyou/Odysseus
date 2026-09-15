@@ -8,6 +8,7 @@ export interface DashboardStrings {
     audits: string;
     newScan: string;
     prospects: string;
+    directory: string;
     /** Sidebar label for /a-traiter, the landing page (plan 040 slice 6;
      *  operator decision 2026-09-12: "Démarches" becomes "À traiter"). */
     outreach: string;
@@ -145,9 +146,24 @@ export interface DashboardStrings {
     description: string;
     typeLabel: string;
     typeFullAudit: string;
-    typeProspecting: string;
+    typeQuickCheck: string;
+    typeLightAudit: string;
+    typeProspectingAudit: string;
+    typeProspectingBatch: string;
     urlLabel: string;
     urlPlaceholder: string;
+    prospectLabel: string;
+    noProspectOption: string;
+    prospectMatchHint: string;
+    prospectSearchPlaceholder: string;
+    prospectSearchAria: string;
+    prospectSearchEmpty: string;
+    createProspectAction: string;
+    createProspectTitle: string;
+    createProspectNamePlaceholder: string;
+    createProspectNameAria: string;
+    createProspectSubmit: string;
+    prospectCreated: string;
     /** Shown when a non-empty URL is not an absolute http(s) URL without
      *  embedded credentials, the shape routes/scans.ts accepts. */
     urlInvalidError: string;
@@ -241,21 +257,8 @@ export interface DashboardStrings {
      *  concurrency fields on /scans/new that its own message names as the
      *  remedy. */
     coverageGateFieldsLink: string;
-    /** Issue #263: a completed hotel-prescan job launched from a prospect
-     *  returns the operator there instead of dead-ending on this generic
-     *  job view. */
+    /** A completed prospect-linked scan returns the operator to its record. */
     goToProspectLink: string;
-    /** Shown on a completed hotel-prescan's card, keyed by
-     *  prescanScoringOutcome.outcome - 'skipped' reads its specific line
-     *  from prescanScoringSkippedReasonLabels instead. */
-    prescanScoringOutcomeLabels: Record<'scored' | 'already-scored', string>;
-    /** One line per ScoreOnDemandOutcome skip reason, so a completed Quick
-     *  check that produced no score states why instead of reading as an
-     *  unqualified success. */
-    prescanScoringSkippedReasonLabels: Record<
-      'not-in-scoring-population' | 'prescan-missing' | 'prescan-incomplete' | 'error',
-      string
-    >;
   };
   auditDetail: {
     title: string;
@@ -341,10 +344,8 @@ export interface DashboardStrings {
     regeneratingMessage: string;
     regeneratedMessage: string;
     notFound: string;
-    /** Issue #216: the manual hotel-link action, offered when the
-     *  automatic domain match could not safely link this audit (or linked
-     *  it to the wrong hotel). */
-    hotelLink: {
+    /** Attach/detach controls for an audit's prospect relationship. */
+    prospectLink: {
       notLinked: string;
       linkAction: string;
       manualBadge: string;
@@ -378,8 +379,7 @@ export interface DashboardStrings {
      *  affordance per cause on the page. */
     failureScrollToRedact: string;
     failureScrollToProduce: string;
-    /** Plan 040 slice 5: an audit linked to a prospect manages its preview
-     *  from the hotel hub; this one line points there. */
+    /** An audit linked to a prospect manages its preview from that page. */
     previewManagedFromProspect: string;
     /** Plan 045 stage 3.1: the audit report panel. Replaces the plan 040
      *  five-step ladder (audit-report-stepper.tsx, deleted): every row is
@@ -627,6 +627,178 @@ export interface DashboardStrings {
     provenanceReasonFallback: string;
     notFound: string;
     backToProspects: string;
+  };
+  /** Plan 047's durable prospect hub pages. FR is the source table: every
+   *  operator-facing label in the new directory, list, results, and detail
+   *  routes lives here before its English counterpart is added. */
+  prospectHub: {
+    list: {
+      eyebrow: string;
+      title: string;
+      description: string;
+      newAction: string;
+      addFromDirectory: string;
+      newTitle: string;
+      namePlaceholder: string;
+      sectorPlaceholder: string;
+      websitePlaceholder: string;
+      emailPlaceholder: string;
+      nameAria: string;
+      sectorAria: string;
+      websiteAria: string;
+      emailAria: string;
+      createAction: string;
+      searchPlaceholder: string;
+      searchAria: string;
+      sectorFilterAria: string;
+      statusFilterAria: string;
+      starsFilterAria: string;
+      groupFilterAria: string;
+      websiteFilterAria: string;
+      departmentPlaceholder: string;
+      departmentAria: string;
+      roomsMinPlaceholder: string;
+      roomsMinAria: string;
+      roomsMaxPlaceholder: string;
+      roomsMaxAria: string;
+      scanFilterAria: string;
+      activityFilterAria: string;
+      allStatuses: string;
+      allStars: string;
+      allGroups: string;
+      allWebsiteKinds: string;
+      allScans: string;
+      withScan: string;
+      withoutScan: string;
+      allActivity: string;
+      activeOnly: string;
+      inactiveOnly: string;
+      errorTitle: string;
+      emptyTitle: string;
+      emptyDescription: string;
+      openDirectory: string;
+      columns: { name: string; site: string; location: string; status: string; activity: string };
+      unknown: string;
+      notProvided: string;
+      count: string;
+      previous: string;
+      next: string;
+      starOption: string;
+    };
+    directory: {
+      eyebrow: string;
+      title: string;
+      description: string;
+      backToProspects: string;
+      searchPlaceholder: string;
+      searchAria: string;
+      sectorAria: string;
+      starsAria: string;
+      groupAria: string;
+      websiteAria: string;
+      departmentPlaceholder: string;
+      departmentAria: string;
+      roomsMinPlaceholder: string;
+      roomsMinAria: string;
+      roomsMaxPlaceholder: string;
+      roomsMaxAria: string;
+      allStars: string;
+      allGroups: string;
+      allWebsiteKinds: string;
+      columns: { select: string; name: string; site: string; location: string; property: string };
+      count: string;
+      addSelected: string;
+      addOne: string;
+      alreadyAdded: string;
+      notProvided: string;
+      noFacets: string;
+      errorTitle: string;
+      previous: string;
+      next: string;
+      starOption: string;
+      roomsOption: string;
+      groupLabels: Record<string, string>;
+      websiteKindLabels: Record<string, string>;
+    };
+    results: {
+      eyebrow: string;
+      title: string;
+      description: string;
+      errorTitle: string;
+      emptyTitle: string;
+      emptyDescription: string;
+      columns: { prospect: string; status: string; outcome: string; site: string };
+      statusAria: string;
+      outcomeAria: string;
+      outcomePlaceholder: string;
+      statusLabels: Record<string, string>;
+      outcomeLabels: Record<string, string>;
+      unknownSite: string;
+    };
+    detail: {
+      back: string;
+      missing: string;
+      return: string;
+      loading: string;
+      record: string;
+      origin: string;
+      site: string;
+      noSite: string;
+      saveSite: string;
+      email: string;
+      addEmail: string;
+      actions: string;
+      quick: string;
+      light: string;
+      prospecting: string;
+      outcome: string;
+      history: string;
+      delete: string;
+      confirm: string;
+      info: string;
+      outreach: string;
+      identity: string;
+      name: string;
+      sector: string;
+      address: string;
+      postcode: string;
+      commune: string;
+      department: string;
+      phone: string;
+      notes: string;
+      saveDetails: string;
+      preview: string;
+      firstEmail: string;
+      followUp: string;
+      publishPreview: string;
+      statusAria: string;
+      ready: string;
+      blocked: string;
+      emailSection: string;
+      noThread: string;
+      threadState: string;
+      draftLabel: string;
+      draftCreated: string;
+      noDraft: string;
+      auditState: string;
+      eventLabel: string;
+      noEvents: string;
+      actionFailed: string;
+      actionRefused: string;
+      firstEmailCreated: string;
+      followUpCreated: string;
+      detachAudit: string;
+      confirmDetachAudit: string;
+      auditDetached: string;
+      originLabels: Record<string, string>;
+      auditKindLabels: Record<string, string>;
+      previewStatusLabels: Record<string, string>;
+      refusalLabels: Record<string, string>;
+      statusLabels: Record<string, string>;
+      outcomeLabels: Record<string, string>;
+      eventLabels: Record<string, string>;
+      auditStateLabels: Record<string, string>;
+    };
   };
   prospects: {
     title: string;
@@ -1000,9 +1172,8 @@ export interface DashboardStrings {
     actionRefused: string;
     actionError: string;
   };
-  /** Plan 040 slice 6: the a-traiter page, the dashboard's landing page and
-   *  the operator's inbox (approved IA). Four short lists whose rows open
-   *  the hotel hub or the audit, plus the two batch draft buttons. */
+  /** The a-traiter page, the dashboard's landing page and the operator's
+   *  prospect-only inbox. */
   aTraiter: {
     title: string;
     description: string;
@@ -1012,7 +1183,7 @@ export interface DashboardStrings {
       actionHeader: string;
       sinceHeader: string;
     };
-    /** Badge label naming which of the four sources a row comes from. */
+    /** Badge label naming which prospect queue a row comes from. */
     kinds: Record<TodoRowKind, string>;
     /** One concrete action per stable code the server returns; never a
      *  ready-made sentence from the API. */
@@ -1020,8 +1191,8 @@ export interface DashboardStrings {
     /** The muted one-liner the table renders instead of an empty-state
      *  block when every source is empty. */
     empty: string;
-    /** The page's only create-draft entry points: the two batch buttons
-     *  moved here from the retired outreach index page. */
+    /** Kept for compatibility with the existing translation shape while
+     *  batch entry points remain retired from the prospect-only inbox. */
     batch: {
       draftBatchLabel: string;
       draftBatchButton: string;

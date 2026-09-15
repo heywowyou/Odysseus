@@ -4,12 +4,7 @@ import { Router } from './router.js';
 import { registerScanRoutes } from './routes/scans.js';
 import { registerAuditRoutes } from './routes/audits.js';
 import { registerReportPreparationRoutes } from './routes/report-preparation.js';
-import { registerProspectingRoutes } from './routes/prospecting.js';
-import { registerProspectRoutes } from './routes/prospects.js';
-import { registerProspectContactRoutes } from './routes/prospect-contact.js';
-import { registerProspectInsightRoutes } from './routes/prospect-insights.js';
-import { registerOutreachRoutes } from './routes/outreach.js';
-import { registerTodoRoutes } from './routes/todo.js';
+import { registerProspectHubRoutes } from './routes/prospect-hub.js';
 import { registerHealthRoutes } from './routes/health.js';
 import { registerMetaRoutes } from './routes/meta.js';
 import { registerStaticFallback } from './routes/static.js';
@@ -22,8 +17,6 @@ import { JobQueue } from './queue/job-queue.js';
 import { runFullAuditJob } from './queue/pipeline/run-full-audit-job.js';
 import { runOutreachFullScanJob } from './queue/pipeline/run-outreach-full-scan-job.js';
 import { runProspectingJob } from './queue/pipeline/run-prospecting-job.js';
-import { runHotelPrescanJob } from './queue/pipeline/run-hotel-prescan-job.js';
-import { runProspectIngestionJob } from './queue/pipeline/run-prospect-ingestion-job.js';
 import { runOutreachDraftBatchJob } from './queue/pipeline/run-outreach-draft-batch-job.js';
 import { runOutreachFollowupBatchJob } from './queue/pipeline/run-outreach-followup-batch-job.js';
 import {
@@ -103,8 +96,6 @@ export async function startInterfaceServer(
       'full-audit': runFullAuditJob,
       'outreach-full-scan': runOutreachFullScanJob,
       prospecting: runProspectingJob,
-      'prospect-ingestion': runProspectIngestionJob,
-      'hotel-prescan': runHotelPrescanJob,
       'outreach-draft-batch': runOutreachDraftBatchJob,
       'outreach-followup-batch': runOutreachFollowupBatchJob,
     },
@@ -119,12 +110,7 @@ export async function startInterfaceServer(
   registerScanRoutes(router, connection, queue);
   registerAuditRoutes(router, connection);
   registerReportPreparationRoutes(router, connection);
-  registerProspectingRoutes(router, connection, queue);
-  registerProspectRoutes(router, connection, queue);
-  registerProspectContactRoutes(router, connection);
-  registerProspectInsightRoutes(router, connection);
-  registerOutreachRoutes(router, connection, queue);
-  registerTodoRoutes(router, connection);
+  registerProspectHubRoutes(router, connection);
   registerSessionRoutes(router, { getPasswordHash, sessionStore, rateLimiter });
   registerStaticFallback(router);
 

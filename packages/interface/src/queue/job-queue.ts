@@ -25,7 +25,6 @@ import {
 } from '@odysseus/store';
 import { DEFAULT_QUEUE_CONCURRENCY } from '../config.js';
 import { logger } from '../logger.js';
-import { backfillAuditHotelLinks } from '../pipeline/backfill-audit-hotel-links.js';
 import { forgetJobPhaseTelemetry, lastKnownJobStage } from './pipeline/report-job-phase.js';
 import { classifyJobError } from '../telemetry/events.js';
 import { captureJobTelemetry } from '../telemetry/job-telemetry.js';
@@ -82,10 +81,8 @@ export class JobQueue {
   /** Resets any job left 'running' by an unclean previous shutdown back
    *  to 'queued' (see resetOrphanedRunningJobs), then advances any failed
    *  full-audit job whose audit has since gained a current bilingual
-   *  report pair (see reconcileFailedAuditJobs, issue #56), then links any
-   *  audit predating linkAuditToHotelByDomain to its catalogue hotel
-   *  candidate (plan 045 slices 1.4/1.5, see
-   *  backfill-audit-hotel-links.ts), then starts the claim loop. Returns
+   *  report pair (see reconcileFailedAuditJobs, issue #56), then starts the
+   *  claim loop. Returns
    *  the number of jobs reset, for the caller to log. includeFreshHeartbeats
    *  is required by the single-container deployment (issue #124): at
    *  start() every running job is by definition unowned because the
@@ -107,14 +104,6 @@ export class JobQueue {
       }
     } catch (error) {
       logger.error({ err: error }, 'failed job reconciliation skipped; the queue will still start');
-    }
-    try {
-      const linked = await backfillAuditHotelLinks(this.connection);
-      if (linked > 0) {
-        logger.info({ linked }, 'linked existing audits to their catalogue hotel candidate');
-      }
-    } catch (error) {
-      logger.error({ err: error }, 'audit-to-hotel backfill skipped; the queue will still start');
     }
     this.running = true;
     this.loopPromise = this.runLoop();

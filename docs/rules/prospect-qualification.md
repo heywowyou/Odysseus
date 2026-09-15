@@ -1,5 +1,16 @@
 # Prospect qualification
 
+> **Plan 047 amendment (2026-09-15).** This document's candidate,
+> qualification, selection, and 90-day-retention language describes the
+> superseded hotel funnel. The durable product record is now a `prospect` and
+> the Atout France source is a directory. Facets inform the operator but do
+> not block adding or scanning a prospect; only suppression, valid URLs, and
+> crawl politeness/safety checks block actions. A prospect remains until the
+> operator deletes it, with an inactivity flag after the operational review
+> period. Attached scan, draft, and preview artifacts keep their own retention
+> rules until the Plan 047 cascade deletes them with the prospect. Origin
+> recording and role-address-only discovery remain mandatory.
+
 How a candidate domain becomes a qualified prospect. Governs milestone
 9a. Written 2026-08-15.
 

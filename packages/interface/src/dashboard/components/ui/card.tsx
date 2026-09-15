@@ -2,16 +2,17 @@ import type { JSX, ReactNode } from 'react';
 import { cn } from '../../lib/cn';
 
 export function Card(props: {
+  id?: string;
   title?: string;
   description?: string;
   actions?: ReactNode;
   className?: string;
   children: ReactNode;
 }): JSX.Element {
-  const { title, description, actions, className, children } = props;
+  const { id, title, description, actions, className, children } = props;
   const hasHeader = title !== undefined || description !== undefined || actions !== undefined;
   return (
-    <section className={cn('rounded-xl border border-line bg-panel', className)}>
+    <section id={id} className={cn('rounded-xl border border-line bg-panel', className)}>
       {hasHeader ? (
         <div className="flex items-center justify-between gap-4 px-5 pb-1 pt-4">
           <div className="min-w-0">

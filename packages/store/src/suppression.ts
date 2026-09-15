@@ -106,3 +106,48 @@ export async function findSuppressedDomains(
   }
   return suppressed;
 }
+
+export interface SuppressionMatches {
+  domains: Set<string>;
+  addresses: Set<string>;
+}
+
+/**
+ * Bulk counterpart used by the prospect-work loader. It intentionally returns
+ * only membership sets: the suppression collection stores hashes, and neither
+ * a list page nor a recommendation needs the reason or the row itself.
+ */
+export async function findSuppressionMatches(
+  connection: Connection,
+  domains: readonly string[],
+  addresses: readonly string[],
+): Promise<SuppressionMatches> {
+  if (domains.length === 0 && addresses.length === 0) {
+    return { domains: new Set(), addresses: new Set() };
+  }
+  const SuppressionModel = createSuppressionModel(connection);
+  const domainByHash = new Map<string, string>();
+  for (const domain of domains) {
+    domainByHash.set(hashSuppressionValue(normalizeDomainForHash(domain)), domain);
+  }
+  const addressByHash = new Map<string, string>();
+  for (const address of addresses) {
+    addressByHash.set(hashSuppressionValue(normalizeAddressForHash(address)), address);
+  }
+  const clauses: Record<string, unknown>[] = [];
+  if (domainByHash.size > 0) clauses.push({ domainHash: { $in: [...domainByHash.keys()] } });
+  if (addressByHash.size > 0) clauses.push({ addressHash: { $in: [...addressByHash.keys()] } });
+  const rows = await SuppressionModel.find({ $or: clauses })
+    .select({ domainHash: 1, addressHash: 1 })
+    .lean<{ domainHash: string; addressHash?: string }[]>();
+  const matches: SuppressionMatches = { domains: new Set(), addresses: new Set() };
+  for (const row of rows) {
+    const domain = domainByHash.get(row.domainHash);
+    if (domain !== undefined) matches.domains.add(domain);
+    if (row.addressHash !== undefined) {
+      const address = addressByHash.get(row.addressHash);
+      if (address !== undefined) matches.addresses.add(address);
+    }
+  }
+  return matches;
+}

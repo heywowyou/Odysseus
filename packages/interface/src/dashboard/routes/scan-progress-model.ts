@@ -8,12 +8,9 @@ import {
   type ProgressPhase,
 } from '../lib/phase-order.js';
 
-/** Phase values come from the checked-in pipeline order fixture
- *  (../fixtures/full-audit-phase-order.ts) via lib/phase-order.ts, not from
- *  a hand list here. Anything outside that list (afnic-scan, fetch-qualify,
- *  prescanning, ...) has no dashboard copy yet and renders as its raw value,
- *  so a new pipeline phase degrades to a technical label instead of a blank
- *  line. */
+/** Phase values come from the checked-in pipeline order fixture via
+ *  lib/phase-order.ts. Unknown values render as their raw value so a new
+ *  pipeline phase never becomes a blank line. */
 export type { ProgressPhase };
 
 export type ProgressPhaseLabels = DashboardStrings['progress']['phaseLabels'];
@@ -57,28 +54,6 @@ export function isTerminal(status: JobStatus | undefined): boolean {
 
 function clampPercent(value: number): number {
   return Math.min(100, Math.max(0, value));
-}
-
-/** Issue #263: a completed hotel-prescan job's own scoring outcome, reduced
- *  to the copy line the terminal card shows so a click that produced no
- *  score states why instead of reading as an unqualified success. Absent
- *  return means no note - a plain 'scored'/'already-scored' outcome with no
- *  labelled skip reason, or no outcome recorded at all (a population-wide
- *  batch never scores inline). */
-export function prescanScoringNote(
-  outcome: ScanJobDetail['prescanScoringOutcome'],
-  labels: Pick<
-    DashboardStrings['progress'],
-    'prescanScoringOutcomeLabels' | 'prescanScoringSkippedReasonLabels'
-  >,
-): string | undefined {
-  if (outcome === undefined) return undefined;
-  if (outcome.outcome === 'skipped') {
-    return outcome.reason === undefined
-      ? undefined
-      : labels.prescanScoringSkippedReasonLabels[outcome.reason];
-  }
-  return labels.prescanScoringOutcomeLabels[outcome.outcome];
 }
 
 /**

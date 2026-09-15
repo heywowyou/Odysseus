@@ -157,18 +157,3 @@ export async function fetchPageText(
     clearTimeout(timeout);
   }
 }
-
-const MAILTO_HREF_PATTERN = /<a\b[^>]*\bhref\s*=\s*["'](mailto:[^"']+)["'][^>]*>/gi;
-
-/** `mailto:` targets, which extractAnchorHrefs drops by design (it resolves
- *  http(s) URLs only). Milestone 9c plan 007 needs them because a hotel whose
- *  footer renders its address as an envelope icon publishes it nowhere else on
- *  the page. */
-export function extractMailtoTargets(html: string): string[] {
-  const targets: string[] = [];
-  for (const match of html.matchAll(MAILTO_HREF_PATTERN)) {
-    const raw = match[1];
-    if (raw !== undefined) targets.push(raw);
-  }
-  return targets;
-}

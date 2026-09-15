@@ -4569,3 +4569,33 @@ anywhere in this repository, matching existing `.env`-only secret handling.
 has not been checked. This project documents processor and data-residency
 status explicitly for Mistral elsewhere; MailReach's status is currently
 unverified. Flagged here, not resolved.
+
+### 87. The prospect is the durable hub; the catalogue is a directory (operator decision, 2026-09-15, Plan 047)
+
+The dashboard's previous campaign subject was a renewable `hotel_candidates`
+row. That made identity, selection, scoring, cohorts, waves, contacts, scans,
+and outreach separate gates, and a re-run could give the same business a new
+identifier. Plan 047 makes `prospectId` the durable business record. It is
+editable, retained until the operator deletes it, and carries generic contact
+fields plus sector-specific facets such as hotel stars, rooms, capacity, and
+group status. Every autofilled field records its origin.
+
+The Atout France catalogue is now a filterable `directory_entries` collection.
+Adding a directory entry, creating a record by hand, or creating one from a
+scan is the selection action; stars, group, agency-hosted websites,
+qualification facts, and quick-check results are informational and never
+selection gates. Combined directory filters are indexed.
+
+Every scan, preview, draft, thread, outcome, status change, and history event
+uses `prospectId` when attached. Launch guards retain only legal and safety
+refusals: valid HTTP(S) URL, suppression, robots/pacing policy, and one
+browser-heavy job per host. Public previews and first emails still require a
+complete crawl with current provenance. Automation can move a status forward,
+but never overwrites a manual later status; manual changes remain history
+events.
+
+This supersedes trade-offs #6, #33, #38, #39, and #75, and the mutable
+registry proposal in `plans/README.md`. The old selection/cohort/wave model
+from Plan 014 is blocked by Plan 047. The production fresh start is a
+separate operator-confirmed deployment step: backups and suppression survive
+the pipeline collection reset.

@@ -391,7 +391,7 @@ export interface OutreachPreviewSummary {
   severityTotals: Record<OutreachPreviewSeverity, number>;
   /** Operator-confirmed replacement for the severity-derived display grade.
    *  The review reason remains private and never enters the public preview. */
-  gradeOverride?: Grade;
+  gradeOverride?: Grade | undefined;
   proofCards: [OutreachProofCard, OutreachProofCard, OutreachProofCard];
   /** Built by `buildOutreachFactsBlock`, same shape and same re-validation
    *  as v1: deterministic paragraphs, or omitted when the sources do not

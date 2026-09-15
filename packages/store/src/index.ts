@@ -30,19 +30,15 @@ export type {
   JobNeedsInputField,
   JobOptionsSnapshot,
   JobPhase,
-  JobPrescanScoringOutcome,
   JobProgress,
   JobProgressAnalysisStage,
   JobProgressContinuationGuard,
   JobProgressCrawl,
-  JobProgressIngestion,
   JobProgressScan,
   JobRunIdentity,
   JobStatus,
   JobType,
   OutreachBatchResult,
-  ProspectIngestionResult,
-  ProspectIngestionResultStatus,
   UrlResult,
   UrlResultStatus,
 } from './schemas/job.schema.js';
@@ -69,33 +65,18 @@ export { getSeverityRollup, getSeverityRollups } from './severity-rollup.js';
 export type { SeverityRollup } from './severity-rollup.js';
 export {
   getAudit,
+  attachAuditToProspect,
   getAuditRuntimeFields,
   getFindingsForAudit,
   getAuditManualFields,
   setAuditManualFields,
   prefillAuditManualFields,
   replaceDetectedManualFields,
-  linkAuditToHotelByDomain,
-  linkAuditToHotelManually,
-  unlinkAuditHotel,
   getAuditGradeOverride,
   setAuditGradeOverride,
   clearAuditGradeOverride,
 } from './audits.js';
-export { createBusinessModel } from './schemas/business.schema.js';
-export type { BusinessDocument, BusinessDocumentFields } from './schemas/business.schema.js';
-export {
-  getBusiness,
-  getBusinessByDomain,
-  getBusinessForCandidate,
-  getAuditIdsForBusiness,
-  resolveOrCreateBusinessForCandidate,
-} from './businesses.js';
-export type {
-  AuditRuntimeFields,
-  AuditHotelLinkResult,
-  LinkAuditToHotelManuallyResult,
-} from './audits.js';
+export type { AuditRuntimeFields } from './audits.js';
 
 // Plan 019: report preparation and exact-ID writing selection. All writes
 // go through these service functions; handlers never issue raw updates.
@@ -112,20 +93,65 @@ export {
 export type { SelectedAuditAnalysisPairResolution } from './report-preparations.js';
 export { getLatestReport, listReportLanguages } from './reports.js';
 export type {
-  ProspectContactAddress,
-  ProspectDataOrigin,
-  ProspectDocument,
-  ProspectDocumentFields,
-  ProspectQualificationReason,
-} from './schemas/prospect.schema.js';
-export { createProspect, findProspectByDomainAndSourceVersion, getProspect } from './prospects.js';
-export type { NewProspectInput } from './prospects.js';
+  DirectoryFilter,
+  NewProspectHubInput,
+  Page,
+  ProspectCascadeCounts,
+  ProspectHubFilter,
+} from './prospect-hub.js';
+export {
+  addDirectoryEntriesToProspects,
+  advanceProspectStatus,
+  appendProspectEvent,
+  createProspectHub,
+  deleteProspect,
+  directoryEntryToProspectInput,
+  getProspectHub,
+  findProspectsByDomain,
+  listDirectory,
+  listProspectTodo,
+  listProspectEvents,
+  listProspectAudits,
+  listProspects,
+  recordProspectOutcome,
+  setProspectStatus,
+  upsertDirectoryEntries,
+  updateProspect,
+  updateProspectRecord,
+} from './prospect-hub.js';
+export {
+  createProspectHub as createProspect,
+  getProspectHub as getProspect,
+} from './prospect-hub.js';
+export type { NewProspectHubInput as NewProspectInput } from './prospect-hub.js';
+export type { DirectoryEntryDocument } from './schemas/directory-entry.schema.js';
+export { createDirectoryEntryModel } from './schemas/directory-entry.schema.js';
+export type { ProspectEventDocument } from './schemas/prospect-event.schema.js';
+export { createProspectEventModel } from './schemas/prospect-event.schema.js';
+export type {
+  ProspectHubDocument,
+  ProspectHubDocumentFields,
+} from './schemas/prospect-hub.schema.js';
+export { createProspectHubModel } from './schemas/prospect-hub.schema.js';
+export { checkOutreachAction, checkScanLaunch } from './guards.js';
+export type {
+  OutreachAction,
+  OutreachActionCheck,
+  OutreachActionRefusal,
+  ScanLaunchCheck,
+  ScanLaunchRefusal,
+} from './guards.js';
 export type {
   SuppressionDocument,
   SuppressionDocumentFields,
 } from './schemas/suppression.schema.js';
-export { addSuppressionEntry, isSuppressed, findSuppressedDomains } from './suppression.js';
-export type { AddSuppressionEntryInput } from './suppression.js';
+export {
+  addSuppressionEntry,
+  findSuppressedDomains,
+  findSuppressionMatches,
+  isSuppressed,
+} from './suppression.js';
+export type { AddSuppressionEntryInput, SuppressionMatches } from './suppression.js';
 export type {
   BenchmarkCandidateDocument,
   BenchmarkCandidateDocumentFields,
@@ -145,151 +171,6 @@ export type {
   BenchmarkCandidateOutcome,
   BenchmarkQualificationSummary,
 } from './benchmark-candidates.js';
-export type { ProspectIngestionCheckpointFields } from './schemas/prospect-ingestion-checkpoint.schema.js';
-export { getCheckpoint, upsertCheckpoint } from './prospect-ingestion-checkpoint.js';
-export type { CheckpointPatch } from './prospect-ingestion-checkpoint.js';
-export type {
-  HotelSourceRecordDocument,
-  HotelSourceRecordDocumentFields,
-} from './schemas/hotel-source-record.schema.js';
-export {
-  insertHotelSourceRecords,
-  streamHotelSourceRecords,
-  getLatestHotelIngestRunId,
-} from './hotel-source-records.js';
-export type {
-  NewHotelSourceRecordInput,
-  InsertHotelSourceRecordsResult,
-  HotelSourceYield,
-} from './hotel-source-records.js';
-export type {
-  HotelCandidateDocument,
-  HotelCandidateDocumentFields,
-} from './schemas/hotel-candidate.schema.js';
-export {
-  upsertHotelCandidates,
-  listHotelCandidates,
-  getHotelCandidate,
-  getLatestHotelCandidateByOwnRegistrableDomain,
-  getHotelCandidateYield,
-  recordHotelCandidateReview,
-  recordHotelCandidateQualificationOverride,
-  clearHotelCandidateQualificationOverride,
-} from './hotel-candidates.js';
-export type {
-  NewHotelCandidateInput,
-  UpsertHotelCandidatesResult,
-  HotelCandidateFilter,
-  HotelCandidateYield,
-  RecordHotelCandidateReviewInput,
-  RecordHotelCandidateReviewResult,
-  RecordHotelCandidateQualificationOverrideInput,
-  RecordHotelCandidateQualificationOverrideResult,
-  ClearHotelCandidateQualificationOverrideResult,
-} from './hotel-candidates.js';
-export { listHotelCandidatesForQualification } from './hotel-candidates.js';
-export type { ListHotelCandidatesForQualificationOptions } from './hotel-candidates.js';
-export { applyRedirectReclassifications, getHotelCandidatesByIds } from './hotel-candidates.js';
-export type { RedirectReclassification } from './hotel-candidates.js';
-export { createHotelQualificationModel } from './schemas/hotel-qualification.schema.js';
-export type {
-  HotelQualificationDocument,
-  HotelQualificationDocumentFields,
-} from './schemas/hotel-qualification.schema.js';
-export {
-  recordHotelQualifications,
-  getHotelQualification,
-  getLatestHotelQualificationVersion,
-  listHotelQualifications,
-  listQualificationsByCandidate,
-  countCandidatesByOwnDomain,
-  getHotelQualificationYield,
-} from './hotel-qualifications.js';
-export type {
-  RecordHotelQualificationInput,
-  RecordHotelQualificationsResult,
-  HotelQualificationFilter,
-  HotelQualificationYield,
-} from './hotel-qualifications.js';
-
-// Milestone 9c plan 004: the prescan collection. Inserted, never upserted -
-// see schemas/prescan.schema.ts for why a re-run is a new observation rather
-// than a correction of the previous one.
-export type { PrescanDocument, PrescanDocumentFields } from './schemas/prescan.schema.js';
-export {
-  recordPrescan,
-  getPrescan,
-  getLatestPrescan,
-  listCandidatesToPrescan,
-  getPrescanSummary,
-  getPrescanVendorAggregate,
-} from './prescans.js';
-export type {
-  ListCandidatesToPrescanOptions,
-  PrescanRunSummary,
-  RecordPrescanInput,
-  RecordPrescanResult,
-  PrescanVendorAggregate,
-  PrescanVendorFingerprint,
-} from './prescans.js';
-
-// Milestone 9c plan 006: immutable outreach scores and the cohorts selected
-// from them. Both collections are inserted, never updated - see
-// schemas/score.schema.ts and schemas/score-cohort.schema.ts.
-export type { HotelScoreDocument, HotelScoreDocumentFields } from './schemas/score.schema.js';
-export type {
-  HotelScoreCohortDocument,
-  HotelScoreCohortDocumentFields,
-  HotelScoreCohortMember,
-} from './schemas/score-cohort.schema.js';
-export {
-  recordHotelScores,
-  listLatestHotelScores,
-  listCandidatesToScore,
-  findScoredCandidateIds,
-  getHotelScoreSummary,
-  diffHotelScoreVersions,
-  recordScoreCohort,
-  getLatestScoreCohort,
-  listRecentScoreCohorts,
-} from './scores.js';
-export type {
-  RecordHotelScoreInput,
-  RecordHotelScoresResult,
-  ListCandidatesToScoreOptions,
-  HotelScoreSummary,
-  HotelScoreDiff,
-  HotelScoreDiffRow,
-  RecordScoreCohortResult,
-} from './scores.js';
-
-// Milestone 9c plan 007 plus plan 045's candidate-scoped manual override.
-export type {
-  HotelContactDocument,
-  HotelContactDocumentFields,
-} from './schemas/hotel-contact.schema.js';
-export {
-  MANUAL_CONTACT_VERSION,
-  listCohortMembersToContact,
-  recordHotelContacts,
-  getHotelContact,
-  getManualHotelContact,
-  getEffectiveHotelContact,
-  recordManualHotelContact,
-  deleteManualHotelContact,
-  getHotelContactSummary,
-  listContactableCohortMembers,
-  listHotelContacts,
-} from './hotel-contacts.js';
-export type {
-  CohortMemberToContact,
-  ListCohortMembersToContactOptions,
-  RecordHotelContactInput,
-  RecordHotelContactsResult,
-  RecordManualHotelContactInput,
-  HotelContactSummary,
-} from './hotel-contacts.js';
-
 // Milestone 9c plan 009: published outreach previews. Inserted at publication
 // and transitioned once at revocation - see schemas/outreach-preview.schema.ts
 // for why the raw token has no field to live in.
@@ -303,7 +184,6 @@ export {
   revokeOutreachPreview,
   listOutreachPreviews,
   listLivePreviewsForDomain,
-  findLatestLiveV2PreviewForCandidate,
 } from './outreach-previews.js';
 export { findOutreachPreviewByTokenHash } from './outreach-previews.js';
 export type {
@@ -313,33 +193,11 @@ export type {
   ListOutreachPreviewsOptions,
 } from './outreach-previews.js';
 
-// Milestone 9c plan 037: candidate-linked outreach full scans. The plan
-// (start eligibility) and the exact audit resolution (which stored audit is
-// the candidate's outreach evidence) both live here so the route and the
-// queue runner cannot drift apart.
-export { planOutreachFullScan, resolveOutreachAuditForCandidate } from './outreach-scans.js';
-export { findActiveOutreachFullScanJob, findActiveScanJobForHost } from './outreach-scans.js';
-export { getOutreachAuditStatus, listOutreachAudits } from './outreach-scans.js';
-export type {
-  OutreachFullScanAuthorization,
-  OutreachFullScanPlan,
-  OutreachFullScanStartRefusal,
-  OutreachFullScanVersionInputs,
-  OutreachAuditRefusal,
-  OutreachAuditResolution,
-  OutreachAuditStatus,
-  OutreachAuditListItem,
-} from './outreach-scans.js';
-
-// Plan 041 slice B2: the operator's wave roster, a second authorization
-// source beside cohort membership. addWaveRosterEntry/revokeWaveRosterEntry
-// back the CLI's `prospect wave add/remove`; findActiveWaveRosterEntry is
-// what outreach-scans.ts reads.
-// Issue #220: one candidate/business-scoped active-job projection and one
-// conflict policy shared by every prospect-scoped job-creation route.
+// Issue #220: one prospect-scoped active-job projection and one conflict
+// policy shared by every prospect-scoped job-creation route.
 export {
   findActiveBrowserHeavyHostConflict,
-  listActiveJobsForCandidate,
+  listActiveJobsForProspect,
   planProspectJobLaunch,
 } from './active-jobs.js';
 export type {
@@ -347,25 +205,6 @@ export type {
   ProspectActiveJobKind,
   ProspectJobLaunchDecision,
 } from './active-jobs.js';
-
-export {
-  addWaveRosterEntry,
-  findActiveWaveRosterEntry,
-  listWaveRoster,
-  revokeWaveRosterEntry,
-} from './wave-roster.js';
-export type {
-  AddWaveRosterEntryInput,
-  AddWaveRosterEntryRefusal,
-  AddWaveRosterEntryResult,
-  ListWaveRosterOptions,
-  RevokeWaveRosterEntryInput,
-  RevokeWaveRosterEntryResult,
-} from './wave-roster.js';
-export type {
-  WaveRosterEntryDocument,
-  WaveRosterEntryState,
-} from './schemas/wave-roster.schema.js';
 
 // Milestone 9c plans 011 and 012: outreach threads and draft attempts.
 export { OUTREACH_THREAD_STATES } from './schemas/outreach-thread.schema.js';
@@ -379,7 +218,7 @@ export type {
 export {
   openOutreachThread,
   findOutreachThreadById,
-  findOutreachThreadByCandidate,
+  findOutreachThreadByProspect,
   attachProviderThreadId,
   advanceThreadTouch,
   transitionOutreachThread,
@@ -435,80 +274,23 @@ export type {
   RecordOutreachOutcomeResult,
   ListOutreachOutcomesOptions,
 } from './outreach-outcomes.js';
-export type { ContactableCohortMember } from './hotel-contacts.js';
-
-// Milestone 9c plan 013: bounded operator view projections. Compositions of
-// the helpers above for the operator interface: every shape is an explicitly
-// picked projection that cannot carry message bodies, addresses, or hashes,
-// and every list is paginated.
 export {
-  computeHubActions,
-  getOperatorProspect,
-  getOutcomeSummary,
-  getProspectContactView,
-  getProspectEvidenceAssetSource,
-  getProspectEvidenceView,
-  getProspectOutcomeView,
-  getProspectPrescanView,
-  getProspectPreviewView,
-  getProspectQualificationHistory,
-  getProspectScoreDiffView,
-  getProspectScoreView,
-  getProspectSourceConflicts,
-  getProspectThreadView,
-  getSelectionProjection,
-  getSelectionVerdict,
-  getVendorFingerprintAggregate,
-  listOperatorProspects,
-  listOutreachReviewDrafts,
-  listRepliesNeedingReview,
-} from './operator-views.js';
+  deriveProspectWork,
+  loadProspectWork,
+  selectNewestQualifyingAudit,
+} from './prospect-work.js';
 export type {
-  ComputeHubActionsInput,
-  GetProspectContactViewOptions,
-  GetProspectEvidenceAssetSourceOptions,
-  GetProspectEvidenceViewOptions,
-  OperatorEvidenceAssetSlot,
-  OperatorEvidenceAssetSource,
-  GetProspectPrescanViewOptions,
-  GetProspectScoreViewOptions,
-  ListOperatorProspectsOptions,
-  OperatorProspectListPage,
-  SelectionCohortFacts,
-  SelectionMember,
-  SelectionProjection,
-  SelectionSource,
-  SelectionVerdict,
-  OperatorContactView,
-  OperatorDraftView,
-  OperatorEvidenceAssetView,
-  OperatorEvidenceSummaryView,
-  OperatorEvidenceView,
-  OperatorOutcomeEventView,
-  OperatorOutcomeSummary,
-  OperatorPrescanPageView,
-  OperatorPrescanView,
-  OperatorPreviewView,
-  OperatorProspectDetail,
-  OperatorProspectQueue,
-  OperatorProspectRow,
-  ProspectSortDirection,
-  ProspectSortField,
-  OperatorQualificationEvent,
-  OperatorReplyReviewRow,
-  OperatorReviewDraftRow,
-  OperatorScoreBreakdownView,
-  OperatorScoreComponentView,
-  OperatorScoreDiffView,
-  OperatorScoreView,
-  OperatorSourceConflictRow,
-  OperatorSourceConflictsView,
-  OperatorSourceRefRow,
-  OperatorThreadView,
-  OperatorViewPage,
-  OperatorViewPageOptions,
-  OperatorWebsiteCandidateView,
-  ProspectFreshnessVersions,
-  ProspectHubActionability,
-  ProspectHubActions,
-} from './operator-views.js';
+  NewestQualifyingAuditResult,
+  ProspectAuditQualificationState,
+  ProspectTodoKind,
+  ProspectTodoRow,
+  ProspectWorkAction,
+  ProspectWorkAudit,
+  ProspectWorkDraft,
+  ProspectWorkJob,
+  ProspectWorkReason,
+  ProspectWorkResult,
+  ProspectWorkSources,
+  ProspectWorkThread,
+  ProspectWorkRecommendation,
+} from './prospect-work.js';

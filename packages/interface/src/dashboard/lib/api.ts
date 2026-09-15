@@ -129,7 +129,7 @@ export async function fetchJsonValidated<S extends z.ZodTypeAny>(
 
 export function sendJson<T>(
   url: string,
-  method: 'POST' | 'PUT' | 'PATCH',
+  method: 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   body: unknown,
 ): Promise<T> {
   return fetchJson<T>(url, {

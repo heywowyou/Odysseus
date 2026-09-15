@@ -46,7 +46,7 @@ async function waitFor<T>(read: () => T | undefined): Promise<T> {
 
 async function renderNote(props: {
   auditId: string;
-  candidateId: string | null;
+  prospectId: string | null;
 }): Promise<{ root: Root }> {
   const container = document.createElement('div');
   document.body.appendChild(container);
@@ -61,7 +61,7 @@ async function renderNote(props: {
           null,
           createElement(AuditPreviewNote, {
             auditId: props.auditId,
-            candidateId: props.candidateId,
+            prospectId: props.prospectId,
           }),
         ),
       ),
@@ -109,10 +109,10 @@ describe('AuditPreviewNote', () => {
   });
 
   it('renders one line to the hub for a prospect-linked audit, with no preview actions', async () => {
-    const { root } = await renderNote({ auditId: 'audit-1', candidateId: 'candidate-1' });
+    const { root } = await renderNote({ auditId: 'audit-1', prospectId: 'prospect-1' });
     await pause();
 
-    const link = document.querySelector('a[href="/prospects/candidate-1#hub-preview"]');
+    const link = document.querySelector('a[href="/prospects/prospect-1#emails"]');
     expect(link?.textContent).toContain('Aperçu géré depuis la fiche du prospect');
     expect(findButton('Afficher l’aperçu')).toBeUndefined();
     expect(findButton('Télécharger le PDF')).toBeUndefined();
@@ -126,7 +126,7 @@ describe('AuditPreviewNote', () => {
   });
 
   it('fetches the scorecard only when opened and embeds it in an empty sandbox', async () => {
-    const { root } = await renderNote({ auditId: 'audit-1', candidateId: null });
+    const { root } = await renderNote({ auditId: 'audit-1', prospectId: null });
     const renderUrl = '/api/audits/audit-1/outreach-preview';
 
     await pause();
@@ -150,7 +150,7 @@ describe('AuditPreviewNote', () => {
     fetchMock
       .mockResolvedValueOnce(jsonResponse({ rendered: true, html: '<main>Note A</main>' }))
       .mockResolvedValueOnce(jsonResponse({ rendered: true, html: '<main>Note D</main>' }));
-    const { root } = await renderNote({ auditId: 'audit-1', candidateId: null });
+    const { root } = await renderNote({ auditId: 'audit-1', prospectId: null });
 
     await clickButton('Afficher l’aperçu');
     expect(
@@ -175,7 +175,7 @@ describe('AuditPreviewNote', () => {
     fetchMock.mockImplementationOnce(async () =>
       jsonResponse({ rendered: false, refusal: 'coverage-incomplete' }),
     );
-    const { root } = await renderNote({ auditId: 'audit-1', candidateId: null });
+    const { root } = await renderNote({ auditId: 'audit-1', prospectId: null });
 
     await clickButton('Afficher l’aperçu');
 
@@ -201,7 +201,7 @@ describe('AuditPreviewNote', () => {
       }
       return jsonResponse({});
     });
-    const { root } = await renderNote({ auditId: 'audit-1', candidateId: null });
+    const { root } = await renderNote({ auditId: 'audit-1', prospectId: null });
 
     await clickButton('Télécharger le PDF');
 

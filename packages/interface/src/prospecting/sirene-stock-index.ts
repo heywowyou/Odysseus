@@ -61,16 +61,6 @@ const EFFECTIF_BAND_LABELS_FR: Readonly<Record<string, string>> = {
   '53': '10 000 salariés et plus',
 };
 
-/** INSEE's own wording for a headcount band code, or the code itself when the
- *  nomenclature has no entry for it. Exported because plan 009's outreach
- *  preview prints this label to a prospect: a *fourth* private copy of the map
- *  is one thing in an internal report and another in a document a hotel reads,
- *  and the label a preview shows must be the one the qualification pass
- *  recorded. */
-export function effectifBandLabelFr(code: string): string {
-  return EFFECTIF_BAND_LABELS_FR[code] ?? code;
-}
-
 export interface SireneStockIndexHandle {
   lookup(siren: string): SireneIndexEntry | null;
   version: string;

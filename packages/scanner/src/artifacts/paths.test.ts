@@ -5,7 +5,6 @@ import {
   buildAuditDir,
   buildAuditTimestampDir,
   buildPageDir,
-  buildPrescanDir,
   hashUrl,
   parseAuditTimestampDir,
   slugify,
@@ -91,12 +90,6 @@ describe('hostname shape guard', () => {
 
   it('buildArtifactBucketKey throws on a dot-only hostname', () => {
     expect(() => buildArtifactBucketKey('..', date, 'manifest.json')).toThrow(
-      /contains no alphanumeric character/u,
-    );
-  });
-
-  it('buildPrescanDir throws on a dot-only hostname', () => {
-    expect(() => buildPrescanDir('/prescans', '..', date)).toThrow(
       /contains no alphanumeric character/u,
     );
   });

@@ -35,7 +35,6 @@ import {
   isCoverageGateFailure,
   isTerminal,
   lighthouseProgress,
-  prescanScoringNote,
   scanProgress,
   urlResultState,
   type UrlResultState,
@@ -124,7 +123,11 @@ export function ScanProgressPage(): JSX.Element {
   const stoppable =
     job !== undefined &&
     !isTerminal(job.status) &&
-    (job.type === 'full-audit' || job.type === 'prospecting' || job.type === 'hotel-prescan') &&
+    (job.type === 'full-audit' ||
+      job.type === 'prospecting' ||
+      job.type === 'quick-check' ||
+      job.type === 'light-audit' ||
+      job.type === 'prospecting-audit') &&
     canStop(job.status);
 
   const stopJob = async (): Promise<void> => {
@@ -176,9 +179,9 @@ export function ScanProgressPage(): JSX.Element {
             ? undefined
             : job.type === 'full-audit'
               ? strings.common.typeLabels.fullAudit
-              : job.type === 'outreach-full-scan'
+              : job.type === 'outreach-full-scan' || job.type === 'prospecting-audit'
                 ? strings.common.typeLabels.outreachFullScan
-                : job.type === 'hotel-prescan'
+                : job.type === 'quick-check'
                   ? strings.common.typeLabels.hotelPrescan
                   : strings.common.typeLabels.prospecting
         }
@@ -297,7 +300,11 @@ function PhaseRow(props: {
  *  carries the phase copy instead, so the label never shows twice. */
 function JobView({ job, refresh }: { job: ScanJobDetail; refresh: () => void }): JSX.Element {
   const terminal = isTerminal(job.status);
-  const prospecting = job.type === 'prospecting' || job.type === 'hotel-prescan';
+  const prospecting =
+    job.type === 'prospecting' ||
+    job.type === 'quick-check' ||
+    job.type === 'light-audit' ||
+    job.type === 'prospecting-audit';
   return (
     <div className="flex flex-col gap-4">
       {prospecting ? (
@@ -441,7 +448,7 @@ function ProspectingView({
           ) : null}
         </Card>
       ) : null}
-      {job.type === 'prospecting' ? (
+      {job.type !== 'quick-check' && job.type !== 'full-audit' ? (
         <Card title={strings.progress.urlResultsHeading}>
           <ul className="divide-y divide-line">
             {(job.urlResults ?? []).map((row) => (
@@ -495,18 +502,10 @@ function UrlRow({ row, linked }: { row: ScanUrlResult; linked: boolean }): JSX.E
   );
 }
 
-/** Issue #263: a completed hotel-prescan job used to render this card with
- *  neither an auditId (it never has one) nor any other content - a
- *  "successful-looking dead end" the issue reported by name. The scoring
- *  note states a specific reason when no score resulted, and the link
- *  returns the operator to the prospect's Quick check section instead of
- *  leaving them to search for it. */
 function CompleteCard({ job }: { job: ScanJobDetail }): JSX.Element {
   const { strings } = useI18n();
-  const scoringNote = prescanScoringNote(job.prescanScoringOutcome, strings.progress);
   return (
     <Card title={strings.progress.completeHeading} className="border-sev-minor/40">
-      {scoringNote !== undefined ? <p className="text-sm text-ink-soft">{scoringNote}</p> : null}
       <div className="mt-3 flex flex-wrap gap-2">
         {job.auditId !== undefined ? (
           // Plan 040 slice 7: the link opens the audit page, so it says so
@@ -515,9 +514,9 @@ function CompleteCard({ job }: { job: ScanJobDetail }): JSX.Element {
             {strings.progress.goToAuditLink}
           </Link>
         ) : null}
-        {job.outreachCandidateId !== undefined ? (
+        {job.prospectId !== undefined ? (
           <Link
-            to={`/prospects/${encodeURIComponent(job.outreachCandidateId)}?tab=quick-check`}
+            to={`/prospects/${encodeURIComponent(job.prospectId)}#emails`}
             className={buttonStyles(job.auditId !== undefined ? 'secondary' : 'primary', 'sm')}
           >
             {strings.progress.goToProspectLink}

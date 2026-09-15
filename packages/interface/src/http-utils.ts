@@ -5,17 +5,6 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
  *  sending data would grow memory without limit. */
 const MAX_JSON_BODY_BYTES = 1_000_000;
 
-/** Shape check for opaque identifiers at HTTP boundaries. Record existence
- * remains the owning store's decision. */
-export function isPlausibleId(value: unknown, maxLength = 200): value is string {
-  return (
-    typeof value === 'string' &&
-    value.trim().length > 0 &&
-    value.length <= maxLength &&
-    !/[\x00-\x1f\x7f]/.test(value)
-  );
-}
-
 class PayloadTooLargeError extends Error {
   constructor() {
     super('request body exceeds the maximum allowed size');

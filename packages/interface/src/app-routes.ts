@@ -7,6 +7,7 @@
  *  slice 6: 'outreach' stays listed even though every one of its routes is
  *  now a redirect, so an old bookmark still reaches the SPA that serves it. */
 export const APP_ROUTE_PREFIXES = [
+  'annuaire',
   'audits',
   'scans',
   'login',

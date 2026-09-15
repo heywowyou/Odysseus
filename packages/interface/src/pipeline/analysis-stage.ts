@@ -27,8 +27,6 @@ import {
   assertFindingsProvenance,
   buildFindingsProvenance,
   isAuditFallbackEligible,
-  normalizeDeclaredWebsite,
-  resolveHotelCatalogueWritingSiteContext,
 } from '@odysseus/core';
 import {
   analyzeReview,
@@ -52,9 +50,8 @@ import {
   type SiteContextInput,
   type StructureDocument,
   type WritingInput,
-  type WritingSiteContext,
 } from '@odysseus/llm';
-import { getLatestHotelCandidateByOwnRegistrableDomain, persistAnalysis } from '@odysseus/store';
+import { persistAnalysis } from '@odysseus/store';
 import { getStrings, type VerifiedStoredAnalysis } from '@odysseus/report';
 import { runObligationStage } from './obligation-stage.js';
 
@@ -129,34 +126,6 @@ function fallbackOverallRisk(findings: readonly Finding[]): 'low' | 'medium' | '
   if (findings.some((finding) => finding.severity === 'critical')) return 'high';
   if (findings.some((finding) => finding.severity === 'serious')) return 'medium';
   return 'low';
-}
-
-/**
- * The CLI may supply full intake context, which remains the operator's
- * override. Without it, enrich only the writing pass with a candidate whose
- * own registrable domain exactly matches this audit's site. The structure pass
- * keeps its established fallback context, because catalogue facts are prose
- * context rather than ranking evidence.
- */
-async function resolveWritingSiteContext(
-  manifest: AuditManifest,
-  connection: Connection,
-  fallbackSiteContext: SiteContextInput,
-): Promise<{ siteContext: WritingSiteContext; hasCatalogueFacts: boolean }> {
-  const normalizedSite = normalizeDeclaredWebsite(manifest.siteUrl);
-  const candidate =
-    normalizedSite.kind === 'own-domain'
-      ? await getLatestHotelCandidateByOwnRegistrableDomain(
-          connection,
-          normalizedSite.registrableDomain,
-        )
-      : undefined;
-  const resolution = resolveHotelCatalogueWritingSiteContext(candidate ?? undefined);
-  const hasCatalogueFacts = Object.keys(resolution.siteContext).length > 0;
-  return {
-    siteContext: { ...fallbackSiteContext, ...resolution.siteContext },
-    hasCatalogueFacts,
-  };
 }
 
 /** Newest existing analyses/<timestamp>-structure.json for this audit, by
@@ -254,13 +223,8 @@ export async function runAnalysisStage(
   assertFindingsProvenance(manifest.findingsProvenance, findingsProvenance, 'legacy manifest');
   const usedFallbackContext = options.siteContext === undefined;
   const siteContext = options.siteContext ?? buildFallbackSiteContext();
-  const catalogueContext =
-    options.siteContext === undefined
-      ? await resolveWritingSiteContext(manifest, connection, siteContext)
-      : undefined;
-  const writingSiteContext = catalogueContext?.siteContext ?? siteContext;
-  const persistsSiteContext =
-    options.siteContext !== undefined || catalogueContext?.hasCatalogueFacts === true;
+  const writingSiteContext = siteContext;
+  const persistsSiteContext = options.siteContext !== undefined;
   // Diversion (docs/archive/report-v2-refactor.md 4.1) runs after the severity
   // floor, on the same set: forModel must be exactly what reaches the
   // structure and writing passes and their guards, never allFindings.

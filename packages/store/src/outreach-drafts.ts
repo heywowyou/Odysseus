@@ -29,12 +29,12 @@ import {
   type OutreachDraftDocument,
   type OutreachDraftReviewOutcome,
 } from './schemas/outreach-draft.schema.js';
-import type { OutreachEvidenceSlot } from '@odysseus/core';
+import { advanceProspectStatus, appendProspectEvent } from './prospect-hub.js';
 
 export type { OutreachDraftReviewOutcome };
 
 /** Operational retention, per docs/rules/prospect-qualification.md section 7. */
-export const OUTREACH_DRAFT_RETENTION_DAYS = 90;
+const OUTREACH_DRAFT_RETENTION_DAYS = 90;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -46,20 +46,17 @@ function hash(value: string): string {
 }
 
 export interface RecordOutreachDraftInput {
+  prospectId: string;
   threadId: string;
-  candidateId: string;
   touch: number;
   language: 'fr' | 'en';
   roleAddress: string;
   subject: string;
   body: string;
   htmlBody: string;
-  /** Present on touch 1 only; follow-ups do not replace the opener variant. */
-  touch1EvidenceSlot?: OutreachEvidenceSlot;
   /** Touch 1 only - see the schema's own note. */
   previewId?: string;
   previewUrl?: string;
-  prescanVersion: string;
   evidenceVersion: string;
   outreachPromptVersion: string;
   providerDraftId: string;
@@ -68,7 +65,7 @@ export interface RecordOutreachDraftInput {
   createdAt: Date;
 }
 
-export class DuplicateLiveDraftError extends Error {
+class DuplicateLiveDraftError extends Error {
   constructor(threadId: string, touch: number) {
     super(`A live draft already exists for thread ${threadId} touch ${String(touch)}`);
     this.name = 'DuplicateLiveDraftError';
@@ -93,8 +90,8 @@ export async function recordOutreachDraft(
 
   const document: OutreachDraftDocument = {
     draftId: randomUUID(),
+    prospectId: input.prospectId,
     threadId: input.threadId,
-    candidateId: input.candidateId,
     touch: input.touch,
     language: input.language,
     roleAddress: input.roleAddress,
@@ -103,12 +100,8 @@ export async function recordOutreachDraft(
     htmlBody: input.htmlBody,
     subjectHash: hash(input.subject),
     bodyHash: hash(input.body),
-    ...(input.touch1EvidenceSlot === undefined
-      ? {}
-      : { touch1EvidenceSlot: input.touch1EvidenceSlot }),
     ...(input.previewId !== undefined ? { previewId: input.previewId } : {}),
     ...(input.previewUrl !== undefined ? { previewUrl: input.previewUrl } : {}),
-    prescanVersion: input.prescanVersion,
     evidenceVersion: input.evidenceVersion,
     outreachPromptVersion: input.outreachPromptVersion,
     providerDraftId: input.providerDraftId,
@@ -125,6 +118,18 @@ export async function recordOutreachDraft(
     if (isDuplicateKeyError(error)) throw new DuplicateLiveDraftError(input.threadId, input.touch);
     throw error;
   }
+  const status = input.touch === 1 ? 'contacted' : 'follow-up';
+  const prospect = await advanceProspectStatus(connection, input.prospectId, status);
+  if (prospect !== null) {
+    await appendProspectEvent(connection, {
+      eventId: randomUUID(),
+      prospectId: input.prospectId,
+      type: 'draft-created',
+      payload: { draftId: document.draftId, touch: input.touch },
+      actor: 'automation',
+      at: new Date(),
+    });
+  }
   return document;
 }
 
@@ -133,15 +138,14 @@ function isDuplicateKeyError(error: unknown): boolean {
 }
 
 export interface RecordFailedOutreachDraftInput {
+  prospectId: string;
   threadId: string;
-  candidateId: string;
   touch: number;
   language: 'fr' | 'en';
   roleAddress: string;
   /** Touch 1 only - see the schema's own note. */
   previewId?: string;
   previewUrl?: string;
-  prescanVersion: string;
   evidenceVersion: string;
   outreachPromptVersion: string;
   failureReason: string;
@@ -165,8 +169,8 @@ export async function recordFailedOutreachDraft(
 
   const document: OutreachDraftDocument = {
     draftId: randomUUID(),
+    prospectId: input.prospectId,
     threadId: input.threadId,
-    candidateId: input.candidateId,
     touch: input.touch,
     language: input.language,
     roleAddress: input.roleAddress,
@@ -176,7 +180,6 @@ export async function recordFailedOutreachDraft(
     bodyHash: hash(''),
     ...(input.previewId !== undefined ? { previewId: input.previewId } : {}),
     ...(input.previewUrl !== undefined ? { previewUrl: input.previewUrl } : {}),
-    prescanVersion: input.prescanVersion,
     evidenceVersion: input.evidenceVersion,
     outreachPromptVersion: input.outreachPromptVersion,
     status: 'failed',
@@ -265,7 +268,7 @@ export async function recordOutreachDraftReview(
 export interface ListOutreachDraftsOptions {
   status?: 'created' | 'deleted' | 'failed';
   threadId?: string;
-  candidateId?: string;
+  prospectId?: string;
   limit?: number;
 }
 
@@ -277,7 +280,7 @@ export async function listOutreachDrafts(
   const query: Record<string, unknown> = {};
   if (options.status !== undefined) query['status'] = options.status;
   if (options.threadId !== undefined) query['threadId'] = options.threadId;
-  if (options.candidateId !== undefined) query['candidateId'] = options.candidateId;
+  if (options.prospectId !== undefined) query['prospectId'] = options.prospectId;
   const cursor = DraftModel.find(query).sort({ createdAt: -1 });
   if (options.limit !== undefined) cursor.limit(options.limit);
   return cursor.lean();

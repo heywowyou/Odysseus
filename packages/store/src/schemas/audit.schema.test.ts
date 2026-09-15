@@ -16,6 +16,7 @@ import { auditSchema } from './audit.schema.js';
 // itself drifted before issue #173.
 const manifestKeys = {
   auditId: true,
+  prospectId: true,
   kind: true,
   siteUrl: true,
   startedAt: true,
@@ -32,17 +33,11 @@ const manifestKeys = {
   cruxFieldData: true,
   translationClusters: true,
   benchmarkPercentile: true,
-  outreach: true,
 } satisfies Record<keyof AuditManifest, true>;
 
 // DB-only enrichment fields declared on AuditDocumentFields, never part of
 // manifest.json.
-const documentOnlyKeys = [
-  'manualFields',
-  'reportPreparation',
-  'hotelLink',
-  'gradeOverride',
-] as const;
+const documentOnlyKeys = ['manualFields', 'reportPreparation', 'gradeOverride'] as const;
 
 describe('auditSchema', () => {
   it('declares a path for every AuditManifest key plus the DB-only enrichment fields', () => {

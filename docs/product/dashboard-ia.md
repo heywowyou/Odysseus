@@ -1,5 +1,14 @@
 # Operator dashboard information architecture
 
+> **Plan 047 amendment (2026-09-15).** The navigation now treats the durable
+> prospect as the hub: `Annuaire` (`/annuaire`) is the searchable Atout France
+> directory, `Prospects` (`/prospects`) lists only added records, `À traiter`
+> derives work from prospect-linked scans and outreach, and `Résultats`
+> edits one status per prospect. Use “Rattacher” / “Attach” for linking a
+> scan. “Identité à vérifier”, selected hotels, waves, cohorts, scores, and
+> qualification overrides are retired vocabulary. The old candidate route is
+> kept only as a compatibility redirect while the legacy pipeline is removed.
+
 Plan 040, slice 1. **Status: approved by the operator 2026-09-12** through the
 interactive question mechanism (plan 040, binding decision 1); the rebuild
 slices may start from it. This document owns the dashboard's navigation map,

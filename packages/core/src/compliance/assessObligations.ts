@@ -15,20 +15,11 @@
  * 'likely_in_scope' with a 'transactional-flow-inconclusive' fact rather
  * than dressing an unresolved detection up as a clean negative.
  *
- * Milestone 9a note: an OperatorProfile built from the Sirene *stock*
- * file (packages/interface's sirene-stock-join.ts, used by the
- * prospect-qualification pipeline) has no turnover field at all - unlike
- * the live Sirene API, the stock file INSEE publishes doesn't carry it.
- * That's safe for 9a's own population by construction: every prospect
- * this function might ever be called with already has headcount >=10
- * (docs/rules/prospect-qualification.md qualifies on headcount only), and
- * checkSmeExemption below returns not-exempt from the headcount branch
- * alone, without ever inspecting turnover, whenever headcount is 10+. A
- * future milestone that reused the stock-join path for a headcount-under-
- * 10 population would hit the turnover===null branch for real - which
- * already degrades conservatively (not-exempt, never a false exempt) -
- * but report/outreach text must still say "not confirmed exempt," never
- * "obligated," per the report-not-conclude rule (CLAUDE.md).
+ * An OperatorProfile built from a stock import may have no turnover field,
+ * unlike the live Sirene API. The exemption check degrades conservatively
+ * when that fact is unavailable: it never invents an exemption, and report
+ * or outreach text must still say "not confirmed exempt," never "obligated,"
+ * per the report-not-conclude rule (CLAUDE.md).
  */
 
 import type { OperatorProfile } from '../types/entity.js';

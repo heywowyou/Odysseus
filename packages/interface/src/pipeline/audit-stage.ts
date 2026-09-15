@@ -8,6 +8,7 @@
  */
 
 import * as fs from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
 import {
@@ -33,35 +34,32 @@ import {
 } from '@odysseus/scanner';
 import {
   normalizeAudit,
+  assessCrawlCoverage,
   buildFindingsProvenance,
   type AuditConfigSnapshot,
   type AuditManifest,
-  type AuditOutreachContext,
   type Finding,
   type ObligationAssessment,
   type SiteSignalOverrides,
   type SitemapMode,
-  normalizeRegistryDisplayName,
   summarizeAuditCoverage,
   type AuditCoverageSummary,
 } from '@odysseus/core';
 import {
-  getHotelQualification,
-  linkAuditToHotelByDomain,
   persistAudit,
   prefillAuditManualFields,
   replaceDetectedManualFields,
-  type HotelCandidateDocument,
+  advanceProspectStatus,
+  appendProspectEvent,
 } from '@odysseus/store';
 import { runObligationStage } from './obligation-stage.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { syncAuditDirToBucket } from '../artifacts/sync-audit-artifacts.js';
 import { logger } from '../logger.js';
-import { formatHotelName } from '../outreach/hotel-name.js';
-import { CURRENT_QUALIFICATION_VERSION } from '../prospecting/hotel-qualification/qualify-hotels.js';
-import { lookupOperatorProfile } from '../sirene/sirene-cache.js';
 
 export interface RunAuditStageOptions {
+  /** Durable prospect hub link for scans launched from the prospect page. */
+  prospectId?: string;
   maxPages?: number;
   maxDepth?: number;
   /** Per-job crawl pacing (issue #111). Exposed by the `odysseus audit`
@@ -111,11 +109,6 @@ export interface RunAuditStageOptions {
    *  its auditId becomes the persisted audit's id. When absent (the CLI
    *  path) the stage mints a fresh startedAt exactly as before. */
   runIdentity?: { startedAt: Date; auditId: string };
-  /** Plan 037: prospecting provenance for a candidate-linked outreach full
-   *  scan. Stamped onto the manifest and the persisted audit so the
-   *  candidate association is a record fact. Never set for an ordinary
-   *  paid or CLI audit. */
-  outreachContext?: AuditOutreachContext;
 }
 
 export interface AuditStageResult {
@@ -129,107 +122,17 @@ export interface AuditStageResult {
   obligationAssessment: ObligationAssessment;
 }
 
-// Plan 045 slice 1.5: hotels only, deliberately narrower than
-// reference-stats/sector.ts's detectSector (which also matches 56.xx,
-// restauration, for a different purpose - report citation selection,
-// trade-off 15). A restaurant's registry name is not evidence that this
-// audit's site belongs to a hotel, and trade-off 23 already keeps
-// restaurants out of the hotel campaign for a separate legal reason -
-// this cover-name gate should not quietly treat them as good evidence
-// either. Kept local rather than exported: nothing outside this cover-
-// prefill logic needs it.
-const HOTEL_ONLY_NAF_PREFIX = '55.';
-
-function isHotelOnlyNaf(naf: string | undefined): boolean {
-  return naf !== undefined && naf.trim().toUpperCase().startsWith(HOTEL_ONLY_NAF_PREFIX);
-}
-
-/** The raw NAF code behind `obligationAssessment.registrySnapshot`, for
- *  the same NAF-55 gate `isHotelOnlyNaf` applies to the catalogue path.
- *  Deliberately not read off `registrySnapshot` itself: that object omits
- *  the raw NAF by design (see ObligationAssessment's own doc comment,
- *  "a deliberate data-minimisation choice"), storing only the coarse
- *  `sector` derived from it. Re-resolving the SIREN obligation-stage.ts
- *  already looked up is a second read, not a second external call: the
- *  Sirene cache it already populated absorbs the cost, the same
- *  precedent analysis-stage.ts's own fallback SIREN lookup relies on. */
-async function resolveRegistrySnapshotNaf(
-  connection: Connection,
+/** Fills only the audit's own detected name and registry snapshot. The former
+ * catalogue/candidate join is intentionally gone with the retired pipeline. */
+function resolveCoverPrefill(
   obligationAssessment: ObligationAssessment,
-  manualSiren: string | undefined,
-  extractedSiren: string | undefined,
-): Promise<string | undefined> {
-  if (!obligationAssessment.registrySnapshot) return undefined;
-  const siren = obligationAssessment.sirenSource === 'manual' ? manualSiren : extractedSiren;
-  if (!siren) return undefined;
-  const lookup = await lookupOperatorProfile(connection, siren);
-  return lookup.status === 'found' ? lookup.profile.naf.value : undefined;
-}
-
-/** Plan 045 slice 1.5: what to prefill `nomCommercial`/`raisonSociale`
- *  with, computed once so `runAuditStage` only has to spread the result
- *  into `prefillAuditManualFields` (which itself never overwrites a
- *  field already set, detected or operator).
- *
- *  A linked audit's catalogue name is always better than the scan's own
- *  guess (item 3 of plan 045's context: "Site Officiel", a raw nav-link
- *  fragment, are real production values `siteSignals.siteName` has
- *  produced), so `nomCommercial` prefers it whenever the audit is linked.
- *  `raisonSociale` prefers the qualification pass's own Sirene join,
- *  which already knows this candidate's NAF, over a fresh registry
- *  lookup; either source is gated on the same hotel-only NAF check so a
- *  denomination belonging to the site's web host (item 3's "O2SWITCH")
- *  or another non-hotel company never becomes the printed raison
- *  sociale.
- *
- *  Exported for backfill-audit-hotel-links.ts, which reuses it unchanged
- *  against an already-persisted audit: passing an `obligationAssessment`
- *  with no `registrySnapshot` (nothing that stage has stored on the audit
- *  document) simply skips the registry-fallback half below, so the
- *  backfill still improves nomCommercial/raisonSociale from the linked
- *  candidate's own catalogue name and Sirene join. */
-export async function resolveCoverPrefill(
-  connection: Connection,
-  candidate: HotelCandidateDocument | null,
-  obligationAssessment: ObligationAssessment,
-  manualSiren: string | undefined,
-  extractedSiren: string | undefined,
-): Promise<{ nomCommercial?: string; raisonSociale?: string }> {
-  let raisonSociale: string | undefined;
-
-  if (candidate) {
-    const qualification = await getHotelQualification(
-      connection,
-      CURRENT_QUALIFICATION_VERSION,
-      candidate.candidateId,
-    );
-    const sireneJoin = qualification?.sireneJoin;
-    if (
-      sireneJoin?.status === 'matched' &&
-      isHotelOnlyNaf(sireneJoin.naf) &&
-      sireneJoin.denomination !== undefined
-    ) {
-      raisonSociale = normalizeRegistryDisplayName(sireneJoin.denomination);
-    }
-  }
-
-  if (raisonSociale === undefined && obligationAssessment.registrySnapshot) {
-    const naf = await resolveRegistrySnapshotNaf(
-      connection,
-      obligationAssessment,
-      manualSiren,
-      extractedSiren,
-    );
-    if (isHotelOnlyNaf(naf)) {
-      raisonSociale = normalizeRegistryDisplayName(
-        obligationAssessment.registrySnapshot.denomination,
-      );
-    }
-  }
-
+  siteName: string | undefined,
+): { nomCommercial?: string; raisonSociale?: string } {
   return {
-    ...(candidate ? { nomCommercial: formatHotelName(candidate.name) } : {}),
-    ...(raisonSociale !== undefined ? { raisonSociale } : {}),
+    ...(siteName === undefined ? {} : { nomCommercial: siteName }),
+    ...(obligationAssessment.registrySnapshot === undefined
+      ? {}
+      : { raisonSociale: obligationAssessment.registrySnapshot.denomination }),
   };
 }
 
@@ -424,7 +327,7 @@ export async function runAuditStage(
     const manifest: AuditManifest = {
       ...artifacts.manifest,
       findingsProvenance: buildFindingsProvenance(findings),
-      ...(options.outreachContext !== undefined ? { outreach: options.outreachContext } : {}),
+      ...(options.prospectId !== undefined ? { prospectId: options.prospectId } : {}),
     };
     await writeManifestFile(artifacts.auditDir, manifest);
 
@@ -434,17 +337,25 @@ export async function runAuditStage(
     );
 
     await persistAudit(connection, manifest, findings);
-
-    // Plan 045 slice 1.4: resolves (and, on a fresh match, stores) the
-    // catalogue hotel this audit's own site belongs to. Must run after
-    // persistAudit above, since it reads the audit document it just
-    // wrote. Never overwrites an existing outreach/hotelLink association
-    // - see linkAuditToHotelByDomain's own doc comment.
-    const { candidate: linkedCandidate } = await linkAuditToHotelByDomain(
-      connection,
-      artifacts.auditId,
-      manifest.siteUrl,
-    );
+    if (options.prospectId !== undefined) {
+      await appendProspectEvent(connection, {
+        eventId: randomUUID(),
+        prospectId: options.prospectId,
+        type: 'scan-attached',
+        payload: { auditId: artifacts.auditId },
+        actor: 'scanner',
+        at: new Date(),
+      });
+      const coverage = assessCrawlCoverage({
+        pages: manifest.pages,
+        ...(manifest.crawl.sitemapCoverage === undefined
+          ? {}
+          : { sitemapCoverage: manifest.crawl.sitemapCoverage }),
+      });
+      if (coverage.reasonCodes.length === 0) {
+        await advanceProspectStatus(connection, options.prospectId, 'audited');
+      }
+    }
 
     // Plan 002 (issue #132): no checkpoint deletion here. The checkpoint
     // must survive until the JOB reaches its terminal state, because a
@@ -492,12 +403,9 @@ export async function runAuditStage(
     // detected value with the better one (that is the whole point for an
     // existing stuck audit relinked by the plan 045 backfill), but never
     // an operator-confirmed one.
-    const coverPrefill = await resolveCoverPrefill(
-      connection,
-      linkedCandidate,
+    const coverPrefill = resolveCoverPrefill(
       obligationAssessment,
-      options.manualSiren,
-      artifacts.manifest.siteSignals?.siren,
+      artifacts.manifest.siteSignals?.siteName,
     );
     const preferredNomCommercial =
       coverPrefill.nomCommercial ?? artifacts.manifest.siteSignals?.siteName;

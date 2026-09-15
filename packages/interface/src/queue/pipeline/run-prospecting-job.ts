@@ -91,10 +91,11 @@ export async function runProspectingJob(job: JobDocument, ctx: PipelineContext):
       const result = await runAuditStage(
         url,
         {
-          maxPages: PROSPECTING_MAX_PAGES,
-          maxDepth: PROSPECTING_MAX_DEPTH,
+          maxPages: job.options.maxPages ?? PROSPECTING_MAX_PAGES,
+          maxDepth: job.options.maxDepth ?? PROSPECTING_MAX_DEPTH,
           skipLighthouse: true,
           sitemapMode: 'inspect',
+          ...(job.options.prospectId !== undefined ? { prospectId: job.options.prospectId } : {}),
         },
         connection,
       );

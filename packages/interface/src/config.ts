@@ -21,13 +21,7 @@ export const DEFAULT_QUEUE_CONCURRENCY = 1;
  *  *count* ceiling, not a page-role classifier: the crawl still discovers
  *  pages in ordinary link order, so "the second and third page scanned"
  *  are whichever the crawl reaches first at depth 1, not a guaranteed
- *  listing/transactional pair. The page-role classifier this comment used
- *  to flag as an unsolved gap now exists as the prescan's
- *  selectPrescanPages (packages/scanner/src/prescan/page-roles.ts), which
- *  picks homepage/booking/content deliberately - but it belongs to the
- *  hotel-prescan path, not to this legacy prospecting crawl, whose
- *  link-order behaviour is left unchanged on purpose so its existing tests
- *  stay a regression guard. This ceiling is enforced server-side
+ *  listing/transactional pair. This ceiling is enforced server-side
  *  regardless of what a request asks for. */
 export const PROSPECTING_MAX_PAGES = 3;
 export const PROSPECTING_MAX_DEPTH = 1;

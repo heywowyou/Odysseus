@@ -24,7 +24,7 @@ import { auditDetailSchema } from '../lib/api-schemas';
 import { formatDateTime } from '../lib/format';
 import { usePolling } from '../lib/use-polling';
 import { AuditGradeOverridePanel } from './audit-grade-override-panel';
-import { AuditHotelLinkPanel } from './audit-hotel-link-panel';
+import { AuditProspectLinkPanel } from './audit-hotel-link-panel';
 import { AuditPreviewNote } from './audit-preview-note';
 import { AuditReportPanel } from './audit-report-panel';
 import {
@@ -184,30 +184,24 @@ export function AuditDetailPage(): JSX.Element {
   }
 
   const publisherIdentificationFinding = findPublisherIdentificationFinding(data.findings);
-  const hotel = data.hotel ?? null;
+  const prospect = data.prospect ?? null;
 
   return (
     <article className={PAGE_WIDTH.surface}>
       <PageHeader
         eyebrow={strings.common.typeLabels.fullAudit}
-        // Plan 045 slice 1.4: the audit page's title links back to the
-        // hotel it is about whenever one is known, with the hostname
-        // demoted to the secondary identifier line - replacing the
-        // plan 040 breadcrumb, which could only link to "Prospects" and
-        // never named the hotel itself.
+        // An attached audit links back to the durable prospect; an
+        // unattached audit keeps its hostname as the stable subject.
         title={
-          hotel !== null ? (
-            <Link
-              to={`/prospects/${hotel.candidateId}`}
-              className="transition-colors hover:text-ink"
-            >
-              {hotel.name}
+          data.prospectId !== undefined ? (
+            <Link to={`/prospects/${data.prospectId}`} className="transition-colors hover:text-ink">
+              {prospect?.name ?? hostnameOf(data.siteUrl)}
             </Link>
           ) : (
             hostnameOf(data.siteUrl)
           )
         }
-        subject={hotel !== null ? hostnameOf(data.siteUrl) : undefined}
+        subject={prospect !== null ? hostnameOf(data.siteUrl) : undefined}
         meta={
           <div className="flex flex-col gap-4">
             <dl className="flex flex-wrap items-baseline gap-x-6 gap-y-1 text-sm">
@@ -221,10 +215,10 @@ export function AuditDetailPage(): JSX.Element {
               </div>
             </dl>
             <SeverityBar rollup={data.severityRollup} strings={strings} />
-            <AuditHotelLinkPanel
+            <AuditProspectLinkPanel
               auditId={data.auditId}
-              hotel={data.hotel ?? null}
-              canLinkManually={data.canLinkHotelManually ?? false}
+              prospect={prospect}
+              canAttachProspect={data.canAttachProspect ?? false}
               onChanged={refresh}
             />
           </div>
@@ -275,7 +269,7 @@ export function AuditDetailPage(): JSX.Element {
           onBusy={setIsBusy}
           refresh={refresh}
         />
-        <AuditPreviewNote auditId={data.auditId} candidateId={data.outreach?.candidateId ?? null} />
+        <AuditPreviewNote auditId={data.auditId} prospectId={data.outreach?.prospectId ?? null} />
       </div>
     </article>
   );

@@ -86,8 +86,7 @@ export type {
   ReportIntegrityFs,
 } from './pipeline/report-integrity.js';
 export { runProspectingJob } from './queue/pipeline/run-prospecting-job.js';
-export { runProspectIngestionJob } from './queue/pipeline/run-prospect-ingestion-job.js';
-export { registerProspectingRoutes } from './routes/prospecting.js';
+export { registerProspectHubRoutes } from './routes/prospect-hub.js';
 export { Router } from './router.js';
 export type { RouteContext, RouteHandler } from './router.js';
 export { startInterfaceServer } from './server.js';
@@ -130,131 +129,14 @@ export { createAuthGuard } from './auth/auth-guard.js';
 export type { AuthGuard } from './auth/auth-guard.js';
 export { createAtoutFranceSource } from './prospecting/hotel-sources/atout-france-reader.js';
 export type { HotelCatalogueSource } from './prospecting/hotel-sources/hotel-catalogue-source.js';
-export { ingestHotelCatalogue } from './prospecting/hotel-sources/ingest-hotel-catalogue.js';
-export type {
-  HotelIngestReport,
-  IngestHotelCatalogueOptions,
-} from './prospecting/hotel-sources/ingest-hotel-catalogue.js';
-export {
-  resolveHotels,
-  CURRENT_RESOLUTION_VERSION,
-} from './prospecting/hotel-identity/resolve-hotels.js';
-export type {
-  ResolveHotelsOptions,
-  ResolveHotelsReport,
-  HotelCandidateStorePort,
-} from './prospecting/hotel-identity/resolve-hotels.js';
-export { createMongoHotelCandidateStore } from './prospecting/hotel-identity/mongo-hotel-candidate-store.js';
-export { createHotelSireneJoiner } from './prospecting/hotel-identity/hotel-sirene-join.js';
-export {
-  qualifyHotels,
-  factsFor,
-  CURRENT_QUALIFICATION_VERSION,
-  QUALIFY_BATCH_SIZE,
-} from './prospecting/hotel-qualification/qualify-hotels.js';
-export type {
-  HotelQualificationStorePort,
-  HotelQualificationReport,
-  HotelQualificationPlan,
-  QualifyHotelsOptions,
-  HotelSiteChecker,
-} from './prospecting/hotel-qualification/qualify-hotels.js';
-export {
-  createMongoHotelQualificationStore,
-  createMongoReconcileRedirectsStore,
-  createMongoBackfillSireneStore,
-} from './prospecting/hotel-qualification/mongo-hotel-qualification-store.js';
-export {
-  backfillSirene,
-  BACKFILL_BATCH_SIZE,
-} from './prospecting/hotel-qualification/backfill-sirene.js';
-export type {
-  BackfillSireneStorePort,
-  BackfillSireneOptions,
-  BackfillSireneReport,
-} from './prospecting/hotel-qualification/backfill-sirene.js';
-export {
-  reconcileRedirects,
-  RECONCILE_BATCH_SIZE,
-} from './prospecting/hotel-qualification/reconcile-redirects.js';
-export type {
-  ReconcileRedirectsStorePort,
-  ReconcileRedirectsOptions,
-  ReconcileRedirectsReport,
-  ReconcileRedirectsPlan,
-} from './prospecting/hotel-qualification/reconcile-redirects.js';
-export {
-  prescanHotels,
-  CURRENT_PRESCAN_VERSION,
-  PRESCAN_BATCH_SIZE,
-} from './prospecting/hotel-prescan/prescan-hotels.js';
-export type {
-  HotelPrescanStorePort,
-  HotelPrescanReport,
-  HotelPrescanPlan,
-  HotelPrescanner,
-  PrescanHotelsOptions,
-} from './prospecting/hotel-prescan/prescan-hotels.js';
-export {
-  scoreHotels,
-  scoreInputFor,
-  CURRENT_SCORING_VERSION,
-  SCORE_BATCH_SIZE,
-} from './prospecting/hotel-scoring/score-hotels.js';
-export type {
-  HotelScoringStorePort,
-  ScoreHotelsOptions,
-  ScoreHotelsReport,
-  ScoreHotelsPlan,
-  HotelScoreSkipReason,
-} from './prospecting/hotel-scoring/score-hotels.js';
-export { selectCohort } from './prospecting/hotel-scoring/select-cohort.js';
-export type {
-  CohortSelectionStorePort,
-  SelectCohortOptions,
-  SelectCohortReport,
-} from './prospecting/hotel-scoring/select-cohort.js';
-export {
-  createMongoHotelScoringStore,
-  createMongoCohortSelectionStore,
-} from './prospecting/hotel-scoring/mongo-hotel-score-store.js';
-// Issue #199: the wave add actions score the hotel they added.
-export {
-  scoreHotelOnDemand,
-  scoreHotelOnDemandForConnection,
-} from './prospecting/hotel-scoring/score-on-demand.js';
-export type { ScoreOnDemandOutcome } from './prospecting/hotel-scoring/score-on-demand.js';
-// Milestone 9c plan 007: contact discovery over the selected cohort.
-export {
-  discoverContacts,
-  decideContact,
-  CURRENT_CONTACT_VERSION,
-} from './prospecting/hotel-contacts/discover-contacts.js';
-export type {
-  HotelContactStorePort,
-  ContactPagesFetcher,
-  DiscoverContactsOptions,
-  DiscoverContactsReport,
-} from './prospecting/hotel-contacts/discover-contacts.js';
-export { fetchContactPages } from './prospecting/hotel-contacts/fetch-contact-pages.js';
-export type {
-  FetchContactPagesOptions,
-  ContactPagesFetch,
-  ContactFetchOutcome,
-} from './prospecting/hotel-contacts/fetch-contact-pages.js';
-export { verifyMailDomain } from './prospecting/hotel-contacts/verify-mail-domain.js';
-export type { MailDomainVerifier } from './prospecting/hotel-contacts/verify-mail-domain.js';
-export { createMongoHotelContactStore } from './prospecting/hotel-contacts/mongo-hotel-contact-store.js';
-export type { MongoHotelContactStoreOptions } from './prospecting/hotel-contacts/mongo-hotel-contact-store.js';
+export { importDirectory } from './prospecting/hotel-sources/import-directory.js';
+export type { DirectoryImportReport } from './prospecting/hotel-sources/import-directory.js';
 
-export { checkHotelSite } from './prospecting/check-hotel-site.js';
 export { toLanes } from './prospecting/to-lanes.js';
 export { fetchMentionsLegalesData } from './prospecting/mentions-legales-fetch.js';
 export type { CandidateFetchResult } from './prospecting/mentions-legales-fetch.js';
 export { getOrBuildSireneStockIndex } from './prospecting/sirene-stock-index.js';
 export type { SireneStockIndexHandle } from './prospecting/sirene-stock-index.js';
-export type { CheckHotelSiteOptions } from './prospecting/check-hotel-site.js';
-export type { HotelSireneJoiner } from './prospecting/hotel-identity/hotel-sirene-join.js';
 
 // Milestone 9c plan 009: publishing outreach previews to a private bucket and
 // withdrawing them again. The port has two adapters - see
@@ -281,27 +163,6 @@ export type { InMemoryPreviewPublisher } from './outreach/in-memory-preview-publ
 export { createScalewayPreviewPublisher } from './outreach/scaleway-preview-publisher.js';
 export type { ScalewayPreviewPublisherOptions } from './outreach/scaleway-preview-publisher.js';
 export { createConfiguredPreviewPublisher } from './outreach/configured-preview-publisher.js';
-export {
-  publishPreview,
-  revokePreviewsForDomain,
-  buildPreviewInput,
-  previewLinks,
-  previewUrl,
-  CURRENT_PREVIEW_CONTENT_VERSION,
-} from './outreach/publish-preview.js';
-export type {
-  OutreachPreviewStorePort,
-  PublishPreviewOptions,
-  PublishPreviewResult,
-  PublishPreviewRefusal,
-  PreviewPublicationRow,
-  PreviewSireneFacts,
-  LivePreviewRef,
-  RecordPreviewInput,
-  RevokePreviewsResult,
-} from './outreach/publish-preview.js';
-export { createMongoOutreachPreviewStore } from './outreach/mongo-outreach-preview-store.js';
-export type { MongoOutreachPreviewStoreOptions } from './outreach/mongo-outreach-preview-store.js';
 
 // Milestone 9c plan 011: the mailbox port, its adapters, and draft creation.
 export {
@@ -330,23 +191,6 @@ export type { GmailDraftAdapterOptions } from './outreach/gmail-draft-adapter.js
 export { createConfiguredMailboxDraftAdapter } from './outreach/configured-mailbox-draft-adapter.js';
 export { buildDraftMime, encodeDraftMimeForTransport } from './outreach/draft-mime.js';
 export type { BuildDraftMimeInput } from './outreach/draft-mime.js';
-export {
-  createOutreachDraft,
-  CURRENT_OUTREACH_PROMPT_VERSION,
-  FIRST_TOUCH,
-} from './outreach/create-outreach-draft.js';
-export type {
-  CreateOutreachDraftOptions,
-  CreateOutreachDraftResult,
-  CreateOutreachDraftRefusal,
-  OutreachDraftRow,
-  OutreachDraftStorePort,
-  OutreachPreviewPort,
-  PublishedPreviewRef,
-} from './outreach/create-outreach-draft.js';
-export { createMongoOutreachDraftStore } from './outreach/mongo-outreach-draft-store.js';
-export type { MongoOutreachDraftStoreOptions } from './outreach/mongo-outreach-draft-store.js';
-
 // Milestone 9c plan 012: reconciling replies, sends and bounces from mailbox
 // metadata only.
 export { reconcileMailbox } from './outreach/reconcile-mailbox.js';
@@ -359,34 +203,18 @@ export type {
 } from './outreach/reconcile-mailbox.js';
 export { createMongoMailboxReconciliationStore } from './outreach/mongo-mailbox-reconciliation-store.js';
 
-// Milestone 9c plan 012 step 4: drafting due follow-ups (touches 2 and 3).
+// Plan 047: the one prospect-native runtime used by dashboard routes and jobs.
 export {
-  createFollowUpDraft,
-  CURRENT_OUTREACH_PROMPT_VERSION as FOLLOW_UP_PROMPT_VERSION,
-  SECOND_TOUCH,
-  THIRD_TOUCH,
-} from './outreach/create-follow-up-draft.js';
-export type {
-  CreateFollowUpDraftOptions,
-  CreateFollowUpDraftResult,
-  CreateFollowUpDraftRefusal,
-  CreateFollowUpDraftStorePort,
-  FollowUpDraftRow,
-  RecordFollowUpDraftFacts,
-  RecordFollowUpFailureFacts,
-} from './outreach/create-follow-up-draft.js';
-export { createMongoFollowUpDraftStore } from './outreach/mongo-follow-up-draft-store.js';
-export type { MongoFollowUpDraftStoreOptions } from './outreach/mongo-follow-up-draft-store.js';
-
-// Milestone 9c plan 030: the one shared runtime that builds real adapters
-// (Mongo, mailbox, preview) for both drafting orchestrators, used by the CLI
-// and by the interface's own routes and job runners so there is exactly one
-// definition of "a real draft".
-export { createTouchOneDraft, createFollowUpForCandidate } from './outreach/draft-runtime.js';
+  createFirstEmailForProspect,
+  createTouchOneDraft,
+  createFollowUpForProspect,
+} from './outreach/draft-runtime.js';
 export type {
   CreateTouchOneDraftOptions,
   CreateTouchOneDraftResult,
-  CreateFollowUpForCandidateOptions,
-  CreateFollowUpForCandidateResult,
+  CreateFollowUpForProspectOptions,
+  CreateFollowUpForProspectResult,
+  CreateFirstEmailRefusal,
+  CreateFirstEmailResult,
   DraftRuntimeRefusal,
 } from './outreach/draft-runtime.js';

@@ -8,7 +8,10 @@ import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { useI18n } from '../i18n/provider';
 import { sendJson } from '../lib/api';
-import type { SuppressionCheckResult } from './outreach-model';
+
+interface SuppressionCheckResult {
+  suppressed: boolean;
+}
 
 /** The lookup keeps only what the banner needs: whether the entered value
  *  matched. The address itself is cleared with the form, and no hash ever

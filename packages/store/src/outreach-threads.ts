@@ -35,13 +35,12 @@ import {
 import { addSuppressionEntry } from './suppression.js';
 
 /** Operational retention, per docs/rules/prospect-qualification.md section 7. */
-export const OUTREACH_THREAD_RETENTION_DAYS = 90;
+const OUTREACH_THREAD_RETENTION_DAYS = 90;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface OpenOutreachThreadInput {
-  candidateId: string;
-  prescanId: string;
+  prospectId: string;
   previewId: string;
   domain: string;
   roleAddress: string;
@@ -64,13 +63,12 @@ export async function openOutreachThread(
   const ThreadModel = createOutreachThreadModel(connection);
   await ThreadModel.init();
 
-  const existing = await ThreadModel.findOne({ candidateId: input.candidateId }).lean();
+  const existing = await ThreadModel.findOne({ prospectId: input.prospectId }).lean();
   if (existing !== null) return { thread: existing, created: false };
 
   const thread: OutreachThreadDocument = {
     threadId: randomUUID(),
-    candidateId: input.candidateId,
-    prescanId: input.prescanId,
+    prospectId: input.prospectId,
     previewId: input.previewId,
     // Stored canonically, so closing every thread for a domain on objection
     // matches the same spelling suppression writes use (see trade-off note in
@@ -93,10 +91,10 @@ export async function openOutreachThread(
     await ThreadModel.create(thread);
     return { thread, created: true };
   } catch (error) {
-    // A concurrent opener won the unique index on `candidateId`. Theirs is as
+    // A concurrent opener won the unique index on `prospectId`. Theirs is as
     // good as ours, so read it back rather than failing the run: this is
     // exactly the race the index exists to decide.
-    const raced = await ThreadModel.findOne({ candidateId: input.candidateId }).lean();
+    const raced = await ThreadModel.findOne({ prospectId: input.prospectId }).lean();
     if (raced !== null) return { thread: raced, created: false };
     throw error;
   }
@@ -110,12 +108,12 @@ export async function findOutreachThreadById(
   return ThreadModel.findOne({ threadId }).lean();
 }
 
-export async function findOutreachThreadByCandidate(
+export async function findOutreachThreadByProspect(
   connection: Connection,
-  candidateId: string,
+  prospectId: string,
 ): Promise<OutreachThreadDocument | null> {
   const ThreadModel = createOutreachThreadModel(connection);
-  return ThreadModel.findOne({ candidateId }).lean();
+  return ThreadModel.findOne({ prospectId }).lean();
 }
 
 /**
@@ -303,6 +301,7 @@ export async function closeOutreachThreadsForDomain(
 export interface ListOutreachThreadsOptions {
   state?: OutreachThreadState;
   domain?: string;
+  prospectId?: string;
   limit?: number;
 }
 
@@ -314,6 +313,7 @@ export async function listOutreachThreads(
   const query: Record<string, unknown> = {};
   if (options.state !== undefined) query['state'] = options.state;
   if (options.domain !== undefined) query['domain'] = normalizeDomainForHash(options.domain);
+  if (options.prospectId !== undefined) query['prospectId'] = options.prospectId;
   const cursor = ThreadModel.find(query).sort({ createdAt: -1 });
   if (options.limit !== undefined) cursor.limit(options.limit);
   return cursor.lean();

@@ -17,15 +17,6 @@
 
 import type { Command } from 'commander';
 import { registerIngestCommands } from './prospect/ingest.js';
-import { registerHotelQualifyCommand } from './prospect/hotel-qualify.js';
-import { registerPrescanCommand } from './prospect/prescan.js';
-import { registerScoreCommand } from './prospect/score.js';
-import { registerHotelReviewCommand } from './prospect/hotel-review.js';
-import { registerContactsCommand } from './prospect/contacts.js';
-import { registerPreviewCommand } from './prospect/preview.js';
-import { registerDraftCommand } from './prospect/draft.js';
-import { registerOutreachCommand } from './prospect/outreach.js';
-import { registerWaveCommand } from './prospect/wave.js';
 
 export function registerProspectCommand(program: Command): void {
   const prospect = program
@@ -36,13 +27,4 @@ export function registerProspectCommand(program: Command): void {
     );
 
   registerIngestCommands(prospect);
-  registerHotelQualifyCommand(prospect);
-  registerPrescanCommand(prospect);
-  registerScoreCommand(prospect);
-  registerHotelReviewCommand(prospect);
-  registerContactsCommand(prospect);
-  registerPreviewCommand(prospect);
-  registerDraftCommand(prospect);
-  registerOutreachCommand(prospect);
-  registerWaveCommand(prospect);
 }

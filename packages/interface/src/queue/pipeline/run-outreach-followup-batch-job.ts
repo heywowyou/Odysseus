@@ -14,7 +14,7 @@ import {
   type JobDocument,
   type OutreachBatchResult,
 } from '@odysseus/store';
-import { createFollowUpForCandidate } from '../../outreach/draft-runtime.js';
+import { createFollowUpForProspect } from '../../outreach/draft-runtime.js';
 import type { PipelineContext } from '../job-queue.js';
 import { JobCancelledError } from '../cancellation.js';
 
@@ -40,7 +40,7 @@ export async function runOutreachFollowupBatchJob(
   for (const thread of due) {
     if (cancellation.isRequested(job.jobId)) throw new JobCancelledError(job.jobId);
 
-    const outcome = await createFollowUpForCandidate(connection, thread.threadId);
+    const outcome = await createFollowUpForProspect(connection, thread.prospectId);
     if (!outcome.configured) {
       throw new Error(`no mailbox is configured (${outcome.refusal})`);
     }

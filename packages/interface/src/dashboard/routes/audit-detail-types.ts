@@ -160,25 +160,16 @@ export interface RuleCopyResponse {
   remediationEn?: string;
 }
 
-/** Plan 037 slice 5: the audit's prospecting provenance and current v2
- *  preview state, present on every audit detail response. A non-candidate
- *  audit reads as candidateId null and hasLiveV2Preview false. */
+/** The audit's prospect link and current preview state. */
 export interface AuditOutreachStatusResponse {
-  candidateId: string | null;
+  prospectId: string | null;
   hasLiveV2Preview: boolean;
 }
 
-/** Plan 045 slice 1.4: the hotel this audit is about, from either
- *  association an audit can carry (prospecting provenance, or a plain
- *  domain link) - see AuditHotelLink's own doc comment in @odysseus/core.
- *  Null when the audit's site never matched a catalogue candidate. */
-export interface AuditHotelResponse {
-  candidateId: string;
+/** The prospect this audit is attached to, when any. */
+export interface AuditProspectResponse {
+  prospectId: string;
   name: string;
-  /** Issue #216: which of the two association kinds this is - the
-   *  automatic domain match, or an operator's manual correction. Null for
-   *  a stale-cached-page payload from before this field existed. */
-  matchedOn: 'own-registrable-domain' | 'manual' | null;
 }
 
 /** Issue: operator-reviewed overall grade override. Present whenever the
@@ -194,6 +185,7 @@ export interface GradeOverrideResponse {
 /** The whole GET /api/audits/:auditId body. */
 export interface AuditDetailResponse {
   auditId: string;
+  prospectId?: string;
   siteUrl: string;
   startedAt: string;
   finishedAt: string;
@@ -233,16 +225,10 @@ export interface AuditDetailResponse {
    *  The server always sends it; optional here so an older cached page
    *  tolerates a payload from before the field existed. */
   outreach?: AuditOutreachStatusResponse;
-  /** Plan 045 slice 1.4: the hotel this audit is about. The server
-   *  always sends it; optional here for the same stale-cached-page
-   *  tolerance as `outreach` above. */
-  hotel?: AuditHotelResponse | null;
-  /** Issue #216: whether the manual "Link to prospect" action is offered
-   *  at all - false only when the audit already carries outreach
-   *  provenance, which linkAuditToHotelManually refuses to override.
-   *  Optional for the same stale-cached-page tolerance as `hotel` above;
-   *  a missing value renders as no manual-link action. */
-  canLinkHotelManually?: boolean;
+  /** The attached prospect, if any. */
+  prospect?: AuditProspectResponse | null;
+  /** Whether the attach/detach control is available on this audit. */
+  canAttachProspect?: boolean;
   /** The scan's original signal, before a possible operator correction. */
   detectedTransactionalFlow?: boolean;
   /** Issue #90: the failed pipeline run behind this audit, when there was

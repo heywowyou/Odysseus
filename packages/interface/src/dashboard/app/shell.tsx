@@ -18,19 +18,18 @@ import { Badge } from '../components/ui/badge';
 import { useI18n } from '../i18n/provider';
 import { cn } from '../lib/cn';
 import { useApi } from '../lib/use-api';
-import type { OutreachDraftsPage } from '../routes/outreach-model';
+import type { TodoPage } from '../lib/api-types';
 
 export function AppShell() {
   const { strings } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname } = useLocation();
 
-  // Plan 040 slice 6 (IA nav map, "A traiter [count]"): one lightweight
-  // fetch of the drafts inbox, the page's core work item. No polling: the
-  // count refreshes when the shell remounts. Hidden on error or zero, so
-  // the badge never invents work.
-  const draftsInbox = useApi<OutreachDraftsPage>('/api/outreach/drafts?limit=1');
-  const inboxCount = draftsInbox.data?.total;
+  // Plan 047 addendum: the shell badge and the To-do page consume the same
+  // prospect work model. No polling: the count refreshes when the shell
+  // remounts. Hidden on error or zero, so the badge never invents work.
+  const todo = useApi<TodoPage>('/api/prospect-hub/todo');
+  const inboxCount = todo.data?.rows.length;
 
   /* Grouped by the two halves of the work rather than listed flat: measuring a
      site and running a campaign are different jobs with different rhythms.
@@ -53,6 +52,7 @@ export function AppShell() {
           end: false,
           badge: inboxCount !== undefined && inboxCount > 0 ? inboxCount : undefined,
         },
+        { to: '/annuaire', label: strings.nav.directory, icon: Building2, end: false },
         { to: '/prospects', label: strings.nav.prospects, icon: Building2, end: false },
         { to: '/resultats', label: strings.nav.results, icon: ClipboardCheck, end: false },
       ],

@@ -28,35 +28,56 @@ import type { Finding } from '@odysseus/core';
 import { generateOutreachPreviewHtmlV2, OUTREACH_PROOF_CARD_COPY } from '@odysseus/report';
 import { createPreviewToken, deriveObjectKey, hashPreviewToken } from './preview-token.js';
 import type { PreviewPublisher } from './preview-publisher.js';
-import {
-  previewLinks,
-  previewUrl,
-  registryAssessment,
-  type PreviewSireneFacts,
-} from './publish-preview.js';
-import type { OutreachAuditRefusal } from '@odysseus/store';
 import { buildOutreachFactsBlock } from '@odysseus/core';
 import { logger } from '../logger.js';
 
-export type PublishPreviewV2Refusal = OutreachAuditRefusal | 'insufficient-safe-cards';
+export type PublishPreviewV2Refusal =
+  | 'prospect-unknown'
+  | 'no-audit'
+  | 'stale-provenance'
+  | 'coverage-incomplete'
+  | 'domain-mismatch'
+  | 'suppressed'
+  | 'insufficient-safe-cards';
+
+export function previewLinks(publicBaseUrl: string): {
+  offer: string;
+  privacy: string;
+  optOut: string;
+} {
+  const base = publicBaseUrl.replace(/\/+$/u, '');
+  return {
+    offer: `${base}/offre`,
+    privacy: `${base}/confidentialite-prospection`,
+    optOut: `${base}/desinscription`,
+  };
+}
+
+function previewUrl(publicBaseUrl: string, token: string): string {
+  return `${publicBaseUrl.replace(/\/+$/u, '')}/apercu/${token}`;
+}
 
 /** Everything publication needs about one candidate's outreach audit, read
  *  in one go by the store adapter: the resolved audit itself, its findings,
  *  the catalogue name, and the qualification's stored Sirene join. No query
  *  is issued inside this module. */
+export type OutreachPublicationAudit = Pick<
+  AuditDocumentFields,
+  'auditId' | 'finishedAt' | 'pages' | 'continuationGuardSummary' | 'gradeOverride'
+>;
+
 export interface OutreachPublicationRowV2 {
-  candidateId: string;
+  prospectId: string;
   domain: string;
   businessName: string;
-  audit: AuditDocumentFields;
+  audit: OutreachPublicationAudit;
   findings: readonly Finding[];
-  sirene?: PreviewSireneFacts;
 }
 
 export interface RecordPreviewV2Input {
   tokenHash: string;
   objectKey: string;
-  candidateId: string;
+  prospectId: string;
   domain: string;
   language: 'fr' | 'en';
   publishedAt: Date;
@@ -65,8 +86,8 @@ export interface RecordPreviewV2Input {
 
 export interface OutreachPreviewStorePortV2 {
   findPublicationRow(
-    candidateId: string,
-  ): Promise<OutreachPublicationRowV2 | { refused: OutreachAuditRefusal }>;
+    prospectId: string,
+  ): Promise<OutreachPublicationRowV2 | { refused: PublishPreviewV2Refusal }>;
   isSuppressed(domain: string): Promise<boolean>;
   /** Same insert-then-recheck-suppression contract as the v1 port: a
    *  `recorded: false` return means the object must come back down. */
@@ -81,7 +102,7 @@ export interface PublishPreviewV2Options {
   store: OutreachPreviewStorePortV2;
   publisher: PreviewPublisher;
   publicBaseUrl: string;
-  candidateId: string;
+  prospectId: string;
   language: 'fr' | 'en';
   dryRun: boolean;
   now?: Date;
@@ -116,10 +137,9 @@ export function buildOutreachPreviewSummaryV2(options: {
     // would have to invent the numbers, so it refuses instead.
     return { refused: 'insufficient-safe-cards' };
   }
-  // Same argument-B posture as v1: the assessment carries only the registry
-  // snapshot the qualification pass already stored; no scope determination
-  // is computed, because this document is forbidden from stating one.
-  const assessment = registryAssessment(row.sirene);
+  // The prospect hub publication contract contains only the public audit
+  // facts. Keep the compliance block deterministic without a registry join.
+  const assessment = undefined;
   const facts = buildOutreachFactsBlock({
     assessment,
     language,
@@ -133,10 +153,7 @@ export function buildOutreachPreviewSummaryV2(options: {
     findings: row.findings,
     recipient: {
       businessName: row.businessName,
-      dataOrigins:
-        assessment === undefined
-          ? ['public-hotel-catalogue', 'public-website']
-          : ['public-hotel-catalogue', 'public-website', 'public-business-registry'],
+      dataOrigins: ['public-hotel-catalogue', 'public-website'],
     },
     links: previewLinks(publicBaseUrl),
     language,
@@ -210,16 +227,16 @@ export async function resolvePublishedPreviewForDraft(options: {
     status: string;
     sourceKind?: string;
     previewContentVersion: string;
-    candidateId: string;
+    prospectId: string;
     auditId?: string;
     publicExpiresAt: Date;
   } | null>;
   resolveOutreachAudit: (
-    candidateId: string,
+    prospectId: string,
   ) => Promise<{ state: 'resolved'; audit: { auditId: string } } | { state: 'refused' }>;
   /** The immutable audit findings used both for the preview and the email aggregates. */
   findingsForAudit: (auditId: string) => Promise<readonly Finding[]>;
-  candidateId: string;
+  prospectId: string;
   previewToken: string;
   publicBaseUrl: string;
   now?: Date;
@@ -233,8 +250,8 @@ export async function resolvePublishedPreviewForDraft(options: {
   if ((options.now ?? new Date()).getTime() >= record.publicExpiresAt.getTime()) {
     return { refusal: 'preview-expired' };
   }
-  if (record.candidateId !== options.candidateId) return { refusal: 'preview-wrong-audit' };
-  const resolution = await options.resolveOutreachAudit(options.candidateId);
+  if (record.prospectId !== options.prospectId) return { refusal: 'preview-wrong-audit' };
+  const resolution = await options.resolveOutreachAudit(options.prospectId);
   if (resolution.state !== 'resolved' || resolution.audit.auditId !== record.auditId) {
     return { refusal: 'preview-wrong-audit' };
   }
@@ -257,7 +274,7 @@ export async function publishPreviewV2(
   options: PublishPreviewV2Options,
 ): Promise<PublishPreviewV2Result> {
   const now = options.now ?? new Date();
-  const resolved = await options.store.findPublicationRow(options.candidateId);
+  const resolved = await options.store.findPublicationRow(options.prospectId);
   if ('refused' in resolved) return refuse(resolved.refused);
   const row = resolved;
 
@@ -300,7 +317,7 @@ export async function publishPreviewV2(
     recorded = await options.store.recordPreview({
       tokenHash,
       objectKey,
-      candidateId: row.candidateId,
+      prospectId: row.prospectId,
       domain: row.domain,
       language: options.language,
       publishedAt,
@@ -310,7 +327,7 @@ export async function publishPreviewV2(
     try {
       await options.publisher.delete(objectKey);
     } catch {
-      logger.error({ objectKey, candidateId: row.candidateId }, 'orphaned preview object');
+      logger.error({ objectKey, prospectId: row.prospectId }, 'orphaned preview object');
     }
     throw error;
   }
@@ -320,7 +337,7 @@ export async function publishPreviewV2(
     try {
       await options.publisher.delete(objectKey);
     } catch {
-      logger.error({ objectKey, candidateId: row.candidateId }, 'orphaned preview object');
+      logger.error({ objectKey, prospectId: row.prospectId }, 'orphaned preview object');
     }
     return refuse('suppressed');
   }

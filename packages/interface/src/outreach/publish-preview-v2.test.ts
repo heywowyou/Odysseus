@@ -69,7 +69,7 @@ function audit(): AuditDocumentFields {
 
 function row(): OutreachPublicationRowV2 {
   return {
-    candidateId: 'candidate-1',
+    prospectId: 'prospect-1',
     domain: 'hotel-exemple.fr',
     businessName: 'Hôtel Exemple',
     audit: audit(),
@@ -148,7 +148,7 @@ describe('publishPreviewV2', () => {
       store: h.store,
       publisher: h.publisher,
       publicBaseUrl: BASE_URL,
-      candidateId: 'candidate-1',
+      prospectId: 'prospect-1',
       language: 'fr',
       dryRun: false,
       now: NOW,
@@ -157,7 +157,7 @@ describe('publishPreviewV2', () => {
     expect(result.previewId).toBe('preview-1');
     expect(result.url).toContain(`${BASE_URL}/apercu/`);
     expect(h.publisher.keys()).toHaveLength(1);
-    expect(h.store.recorded[0]).toMatchObject({ auditId: 'audit-1', candidateId: 'candidate-1' });
+    expect(h.store.recorded[0]).toMatchObject({ auditId: 'audit-1', prospectId: 'prospect-1' });
   });
 
   it('refuses a suppressed domain before publication', async () => {
@@ -166,7 +166,7 @@ describe('publishPreviewV2', () => {
       store: h.store,
       publisher: h.publisher,
       publicBaseUrl: BASE_URL,
-      candidateId: 'candidate-1',
+      prospectId: 'prospect-1',
       language: 'fr',
       dryRun: false,
       now: NOW,
@@ -181,7 +181,7 @@ describe('publishPreviewV2', () => {
       store: h.store,
       publisher: h.publisher,
       publicBaseUrl: BASE_URL,
-      candidateId: 'candidate-1',
+      prospectId: 'prospect-1',
       language: 'fr',
       dryRun: false,
       now: NOW,
@@ -196,7 +196,7 @@ describe('publishPreviewV2', () => {
       store: h.store,
       publisher: h.publisher,
       publicBaseUrl: BASE_URL,
-      candidateId: 'candidate-1',
+      prospectId: 'prospect-1',
       language: 'fr',
       dryRun: true,
       now: NOW,
@@ -221,7 +221,7 @@ describe('resolvePublishedPreviewForDraft', () => {
     status: 'live',
     sourceKind: 'full-audit',
     previewContentVersion: 'v2',
-    candidateId: 'candidate-1',
+    prospectId: 'prospect-1',
     auditId: 'audit-1',
     publicExpiresAt: new Date('2026-10-11T09:00:00.000Z'),
   };
@@ -230,7 +230,7 @@ describe('resolvePublishedPreviewForDraft', () => {
     overrides: {
       record?: Partial<typeof baseRecord> | null;
       auditAuditId?: string;
-      candidateId?: string;
+      prospectId?: string;
       previewToken?: string;
     } = {},
   ) {
@@ -243,14 +243,14 @@ describe('resolvePublishedPreviewForDraft', () => {
           audit: { auditId: overrides.auditAuditId ?? 'audit-1' },
         }),
       findingsForAudit: () => Promise.resolve(row().findings),
-      candidateId: overrides.candidateId ?? 'candidate-1',
+      prospectId: overrides.prospectId ?? 'prospect-1',
       previewToken: overrides.previewToken ?? TOKEN,
       publicBaseUrl: BASE_URL,
       now: NOW,
     };
   }
 
-  it('resolves a live v2 preview of the current candidate audit', async () => {
+  it('resolves a live v2 preview of the current prospect audit', async () => {
     const result = await resolvePublishedPreviewForDraft(draftHarness());
     expect(result).toMatchObject({
       previewId: 'preview-1',
@@ -270,9 +270,8 @@ describe('resolvePublishedPreviewForDraft', () => {
   const refusalCases: [string, Partial<typeof baseRecord>][] = [
     ['a revoked row', { status: 'revoked' }],
     ['an expired row', { publicExpiresAt: new Date('2026-09-01T09:00:00.000Z') }],
-    ['a v1 prescan row', { sourceKind: 'prescan' }],
     ['a different audit', { auditId: 'audit-2' }],
-    ['a different candidate', { candidateId: 'candidate-2' }],
+    ['a different prospect', { prospectId: 'prospect-2' }],
   ];
   it.each(refusalCases)('refuses %s', async (_name, overrides) => {
     const result = await resolvePublishedPreviewForDraft(draftHarness({ record: overrides }));
@@ -282,9 +281,7 @@ describe('resolvePublishedPreviewForDraft', () => {
           ? 'preview-revoked'
           : overrides['publicExpiresAt'] !== undefined
             ? 'preview-expired'
-            : overrides['sourceKind'] === 'prescan'
-              ? 'preview-not-published'
-              : 'preview-wrong-audit',
+            : 'preview-wrong-audit',
     });
   });
 
@@ -296,7 +293,7 @@ describe('resolvePublishedPreviewForDraft', () => {
     expect(result).toEqual({ refusal: 'preview-wrong-audit' });
   });
 
-  it('refuses when the resolution refuses the candidate outright', async () => {
+  it('refuses when the resolution refuses the prospect outright', async () => {
     const h = draftHarness();
     const result = await resolvePublishedPreviewForDraft({
       ...h,

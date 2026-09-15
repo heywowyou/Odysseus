@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { listActiveJobsForProspect, planProspectJobLaunch } from './active-jobs.js';
 import { createJobModel, type JobStatus, type JobType } from './schemas/job.schema.js';
-import { listActiveJobsForCandidate, planProspectJobLaunch } from './active-jobs.js';
 import { probeMongoAvailability } from './test-support.js';
 
 const { available: mongoAvailable, connection } = await probeMongoAvailability();
@@ -23,7 +23,8 @@ async function seedJob(input: {
   status: JobStatus;
   siteUrl?: string;
   urls?: string[];
-  candidateId?: string;
+  prospectId?: string;
+  scanType?: 'quick-check' | 'light-audit' | 'prospecting-audit';
   domain?: string;
   createdAt?: Date;
 }): Promise<string> {
@@ -33,11 +34,12 @@ async function seedJob(input: {
     type: input.type,
     status: input.status,
     phase: 'queued',
-    ...(input.siteUrl !== undefined ? { siteUrl: input.siteUrl } : {}),
-    ...(input.urls !== undefined ? { urls: input.urls } : {}),
+    ...(input.siteUrl === undefined ? {} : { siteUrl: input.siteUrl }),
+    ...(input.urls === undefined ? {} : { urls: input.urls }),
     options: {
-      ...(input.domain !== undefined ? { domain: input.domain } : {}),
-      ...(input.candidateId !== undefined ? { outreachCandidateId: input.candidateId } : {}),
+      ...(input.prospectId === undefined ? {} : { prospectId: input.prospectId }),
+      ...(input.scanType === undefined ? {} : { scanType: input.scanType }),
+      ...(input.domain === undefined ? {} : { domain: input.domain }),
     },
     createdAt: input.createdAt ?? new Date(),
     progress: {},
@@ -45,200 +47,157 @@ async function seedJob(input: {
   return jobId;
 }
 
-describe.skipIf(!mongoAvailable)('listActiveJobsForCandidate (issue #220)', () => {
-  it('lists an active Quick check, Prospecting audit, and Full audit, each mapped to its operator kind', async () => {
-    const candidateId = randomUUID();
-    const domain = 'active-jobs-quickcheck.fr';
-    const prescanId = await seedJob({ type: 'hotel-prescan', status: 'running', domain });
-    const outreachId = await seedJob({
+describe.skipIf(!mongoAvailable)('listActiveJobsForProspect', () => {
+  it('lists active quick, prospecting, and full audits by their operator kind', async () => {
+    const prospectId = randomUUID();
+    const domain = 'active-jobs-kinds.fr';
+    const quickId = await seedJob({
+      type: 'prospecting',
+      status: 'running',
+      urls: [`https://${domain}/`],
+      prospectId,
+      scanType: 'quick-check',
+    });
+    const prospectingId = await seedJob({
       type: 'outreach-full-scan',
       status: 'queued',
       siteUrl: `https://${domain}/`,
-      candidateId,
+      prospectId,
+      scanType: 'prospecting-audit',
     });
-    const fullAuditId = await seedJob({
+    const fullId = await seedJob({
       type: 'full-audit',
       status: 'running',
       siteUrl: `https://${domain}/`,
-      candidateId,
+      prospectId,
     });
 
-    const active = await listActiveJobsForCandidate(connection!, candidateId, domain);
+    const active = await listActiveJobsForProspect(connection!, prospectId, domain);
 
     expect(active).toHaveLength(3);
-    expect(active.map((job) => job.jobId).sort()).toEqual(
-      [fullAuditId, outreachId, prescanId].sort(),
-    );
+    expect(active.map((job) => job.jobId).sort()).toEqual([fullId, prospectingId, quickId].sort());
     const byId = new Map(active.map((job) => [job.jobId, job]));
-    expect(byId.get(prescanId)?.kind).toBe('quick-check');
-    expect(byId.get(outreachId)?.kind).toBe('prospecting-audit');
-    expect(byId.get(fullAuditId)?.kind).toBe('full-audit');
+    expect(byId.get(quickId)?.kind).toBe('quick-check');
+    expect(byId.get(prospectingId)?.kind).toBe('prospecting-audit');
+    expect(byId.get(fullId)?.kind).toBe('full-audit');
   });
 
-  it('matches a Light audit job by its urls array touching the candidate domain, not a candidateId', async () => {
-    const candidateId = randomUUID();
-    const domain = 'active-jobs-lightaudit.fr';
+  it('matches an unlinked light audit by a URL touching the prospect domain', async () => {
+    const prospectId = randomUUID();
+    const domain = 'active-jobs-light.fr';
     const lightAuditId = await seedJob({
       type: 'prospecting',
       status: 'running',
-      urls: ['https://other-hotel.fr/', `https://www.${domain}/rooms`],
+      urls: ['https://other.example/', `https://www.${domain}/rooms`],
+      scanType: 'light-audit',
     });
 
-    const active = await listActiveJobsForCandidate(connection!, candidateId, domain);
+    const active = await listActiveJobsForProspect(connection!, prospectId, domain);
 
-    expect(active).toHaveLength(1);
-    expect(active[0]).toMatchObject({ jobId: lightAuditId, kind: 'light-audit' });
+    expect(active).toEqual([expect.objectContaining({ jobId: lightAuditId, kind: 'light-audit' })]);
   });
 
-  it('omits completed, failed, and cancelled jobs', async () => {
-    const candidateId = randomUUID();
-    const domain = 'active-jobs-done.fr';
-    await seedJob({ type: 'hotel-prescan', status: 'complete', domain });
-    const active = await listActiveJobsForCandidate(connection!, candidateId, domain);
-    expect(active).toEqual([]);
-  });
+  it('omits terminal jobs and returns an empty array when no work is active', async () => {
+    const prospectId = randomUUID();
+    const domain = 'active-jobs-terminal.fr';
+    await seedJob({
+      type: 'full-audit',
+      status: 'complete',
+      siteUrl: `https://${domain}/`,
+      prospectId,
+    });
 
-  it('returns an empty array for a candidate with no active work', async () => {
-    const active = await listActiveJobsForCandidate(
-      connection!,
-      randomUUID(),
-      'active-jobs-quiet.fr',
-    );
-    expect(active).toEqual([]);
+    expect(await listActiveJobsForProspect(connection!, prospectId, domain)).toEqual([]);
   });
 });
 
-describe.skipIf(!mongoAvailable)('planProspectJobLaunch (issue #220)', () => {
-  it('refuses a second Quick check for the same candidate while one is already active', async () => {
-    const candidateId = randomUUID();
-    const domain = 'active-jobs-dup-quickcheck.fr';
-    const existing = await seedJob({ type: 'hotel-prescan', status: 'running', domain });
-
-    const decision = await planProspectJobLaunch(connection!, {
-      kind: 'quick-check',
-      candidateId,
-      domain,
+describe.skipIf(!mongoAvailable)('planProspectJobLaunch', () => {
+  it('refuses a second quick check for the same prospect', async () => {
+    const prospectId = randomUUID();
+    const domain = 'active-jobs-duplicate-quick.fr';
+    const existing = await seedJob({
+      type: 'prospecting',
+      status: 'running',
+      urls: [`https://${domain}/`],
+      prospectId,
+      scanType: 'quick-check',
     });
 
-    expect(decision).toEqual({ allowed: false, conflictingJobId: existing });
+    await expect(
+      planProspectJobLaunch(connection!, { kind: 'quick-check', prospectId, domain }),
+    ).resolves.toEqual({ allowed: false, conflictingJobId: existing });
   });
 
-  it('refuses a Full audit while a Prospecting audit is already crawling the same host', async () => {
-    const candidateId = randomUUID();
-    const domain = 'active-jobs-full-vs-prospecting.fr';
+  it('refuses browser-heavy scans that overlap on the same host', async () => {
+    const domain = 'active-jobs-heavy-conflict.fr';
     const existing = await seedJob({
       type: 'outreach-full-scan',
       status: 'running',
-      siteUrl: `https://${domain}/`,
-      candidateId: randomUUID(),
-    });
-
-    const decision = await planProspectJobLaunch(connection!, {
-      kind: 'full-audit',
-      candidateId,
-      domain,
-    });
-
-    expect(decision).toEqual({ allowed: false, conflictingJobId: existing });
-  });
-
-  it('refuses a Light audit while a Full audit is already crawling the same host', async () => {
-    const domain = 'active-jobs-light-vs-full.fr';
-    const existing = await seedJob({
-      type: 'full-audit',
-      status: 'queued',
       siteUrl: `https://www.${domain}/`,
-      candidateId: randomUUID(),
+      prospectId: randomUUID(),
+      scanType: 'prospecting-audit',
     });
 
-    const decision = await planProspectJobLaunch(connection!, {
-      kind: 'light-audit',
-      candidateId: randomUUID(),
-      domain,
-    });
-
-    expect(decision).toEqual({ allowed: false, conflictingJobId: existing });
+    await expect(
+      planProspectJobLaunch(connection!, {
+        kind: 'full-audit',
+        prospectId: randomUUID(),
+        domain,
+      }),
+    ).resolves.toEqual({ allowed: false, conflictingJobId: existing });
   });
 
-  it('allows a Quick check to run alongside a browser-heavy audit on the same host', async () => {
-    const candidateId = randomUUID();
-    const domain = 'active-jobs-quickcheck-vs-full.fr';
+  it('allows quick checks alongside a heavy audit', async () => {
+    const domain = 'active-jobs-quick-with-heavy.fr';
     await seedJob({
       type: 'full-audit',
       status: 'running',
       siteUrl: `https://${domain}/`,
-      candidateId,
+      prospectId: randomUUID(),
     });
 
-    const decision = await planProspectJobLaunch(connection!, {
-      kind: 'quick-check',
-      candidateId,
-      domain,
-    });
-
-    expect(decision).toEqual({ allowed: true });
+    await expect(
+      planProspectJobLaunch(connection!, {
+        kind: 'quick-check',
+        prospectId: randomUUID(),
+        domain,
+      }),
+    ).resolves.toEqual({ allowed: true });
   });
 
-  it('allows two different candidates to both scan a shared/vendor host at once', async () => {
+  it('allows independent prospects on a shared vendor host', async () => {
     const domain = 'wixsite.com';
     await seedJob({
       type: 'full-audit',
       status: 'running',
       siteUrl: `https://${domain}/`,
-      candidateId: randomUUID(),
+      prospectId: randomUUID(),
     });
 
-    const decision = await planProspectJobLaunch(connection!, {
-      kind: 'prospecting-audit',
-      candidateId: randomUUID(),
-      domain,
-    });
-
-    expect(decision).toEqual({ allowed: true });
+    await expect(
+      planProspectJobLaunch(connection!, {
+        kind: 'prospecting-audit',
+        prospectId: randomUUID(),
+        domain,
+      }),
+    ).resolves.toEqual({ allowed: true });
   });
 
-  it('allows a retry once the conflicting job has completed', async () => {
-    const candidateId = randomUUID();
+  it('allows a retry after the conflicting job is complete', async () => {
     const domain = 'active-jobs-retry.fr';
     await seedJob({
-      type: 'hotel-prescan',
+      type: 'full-audit',
       status: 'complete',
-      domain,
+      siteUrl: `https://${domain}/`,
+      prospectId: randomUUID(),
     });
 
-    const decision = await planProspectJobLaunch(connection!, {
-      kind: 'quick-check',
-      candidateId,
-      domain,
-    });
-
-    expect(decision).toEqual({ allowed: true });
-  });
-
-  it('treats www and bare hostnames as the same host for the browser-heavy conflict check', async () => {
-    const domain = 'active-jobs-www.fr';
-    const existing = await seedJob({
-      type: 'outreach-full-scan',
-      status: 'running',
-      siteUrl: 'https://www.active-jobs-www.fr/',
-      candidateId: randomUUID(),
-    });
-
-    const decision = await planProspectJobLaunch(connection!, {
-      kind: 'full-audit',
-      candidateId: randomUUID(),
-      domain,
-    });
-
-    expect(decision).toEqual({ allowed: false, conflictingJobId: existing });
-  });
-
-  it('allows the launch when nothing active touches the candidate or the host', async () => {
-    const decision = await planProspectJobLaunch(connection!, {
-      kind: 'full-audit',
-      candidateId: randomUUID(),
-      domain: 'active-jobs-free.fr',
-    });
-    expect(decision).toEqual({ allowed: true });
+    await expect(
+      planProspectJobLaunch(connection!, {
+        kind: 'full-audit',
+        prospectId: randomUUID(),
+        domain,
+      }),
+    ).resolves.toEqual({ allowed: true });
   });
 });

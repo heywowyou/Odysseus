@@ -148,13 +148,13 @@ function preparationView(overrides: Record<string, unknown> = {}): Record<string
   };
 }
 
-describe('audits list hotel link (plan 042 slice 4)', () => {
+describe('audits list prospect link', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     document.body.innerHTML = '';
   });
 
-  it('shows the hotel name linked to its hub while the row keeps opening the audit', async () => {
+  it('shows the prospect link while the row keeps opening the audit', async () => {
     stubRoutes({
       '/api/scans?limit=200': [
         {
@@ -165,18 +165,17 @@ describe('audits list hotel link (plan 042 slice 4)', () => {
           siteUrl: 'https://exemple.fr',
           createdAt: '2026-09-05T13:09:00.000Z',
           auditId: 'audit-1',
-          outreachCandidateId: 'cand-1',
-          outreachCandidateName: 'Hôtel du Quai',
+          prospectId: 'prospect-1',
         },
       ],
     });
     const { container, root } = await renderPage(createElement(AuditsPage));
     await settle(container, 'exemple.fr');
-    const hotelLink = [...container.querySelectorAll('a')].find((link) =>
-      link.textContent?.includes('Hôtel du Quai'),
+    const prospectLink = [...container.querySelectorAll('a')].find((link) =>
+      link.textContent?.includes('Prospects'),
     );
-    expect(hotelLink).toBeDefined();
-    expect(hotelLink?.getAttribute('href')).toContain('/prospects/cand-1');
+    expect(prospectLink).toBeDefined();
+    expect(prospectLink?.getAttribute('href')).toContain('/prospects/prospect-1');
     // The row's own link still opens the audit.
     const siteLink = [...container.querySelectorAll('a')].find((link) =>
       link.textContent?.includes('exemple.fr'),
@@ -630,12 +629,12 @@ describe('preview note on the audit page (plan 040 slice 5)', () => {
       '/api/audits/audit-1/report-preparation': null,
       '/api/audits/audit-1': {
         ...emptyAudit,
-        outreach: { candidateId: 'candidate-1', hasLiveV2Preview: false },
+        outreach: { prospectId: 'prospect-1', hasLiveV2Preview: false },
       },
     });
     const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
     await settle(container, 'Aperçu géré depuis la fiche du prospect');
-    const link = container.querySelector('a[href="/prospects/candidate-1#hub-preview"]');
+    const link = container.querySelector('a[href="/prospects/prospect-1#emails"]');
     expect(link?.textContent).toContain('Aperçu géré depuis la fiche du prospect');
     // Slice 4 moved publication, takedown, and the first draft to the
     // hub; none of them may reappear here.
@@ -654,7 +653,7 @@ describe('preview note on the audit page (plan 040 slice 5)', () => {
       '/api/audits/audit-1/report-preparation': null,
       '/api/audits/audit-1': {
         ...emptyAudit,
-        outreach: { candidateId: null, hasLiveV2Preview: false },
+        outreach: { prospectId: null, hasLiveV2Preview: false },
       },
     });
     const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');

@@ -369,20 +369,6 @@ export function buildManualFieldsPatch(
 export type OutreachPreviewRenderResponse =
   { rendered: true; html: string } | { rendered: false; refusal: string };
 
-/** POST /api/audits/:auditId/outreach-preview/publish. The url carries the
- *  raw one-time token and exists only in this one response. */
-export type OutreachPreviewPublishResponse =
-  | { published: true; previewId: string; url: string; publicExpiresAt: string }
-  | { published: false; refusal: string };
-
-/** POST /api/prospects/:candidateId/outreach/first-email. Plan 045 section
- *  1.7: publish, supersede whatever was live, and draft in one call.
- *  `previewUrl` carries the fresh one-time link whenever this call
- *  published one - even when drafting itself then refused, since a real
- *  publish is a side effect the page must never let go unreported. */
-export type OutreachFirstEmailResponse =
-  { created: true; previewUrl: string } | { created: false; refusal: string; previewUrl?: string };
-
 /** The one short sentence per stable refusal code, in the interface
  *  language. Refusal codes are stable API strings, so this table is the
  *  only place that turns one into operator copy; a code with no entry

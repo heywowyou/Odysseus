@@ -1,5 +1,3 @@
-import type { JobType } from '../lib/api-types';
-
 /** Options block of a full-audit POST /api/scans body. Keys use the API's
  *  persisted contract names (routes/scans.ts); every key is optional and
  *  absent means "server default applies", never "zero". */
@@ -26,7 +24,17 @@ export interface FullAuditScanOptions {
 export interface FullAuditScanRequest {
   type: 'full-audit';
   url: string;
+  prospectId?: string;
   options: FullAuditScanOptions;
+}
+
+export type NewScanType =
+  'full-audit' | 'prospecting' | 'quick-check' | 'light-audit' | 'prospecting-audit';
+
+export interface ProspectScanRequest {
+  type: 'quick-check' | 'light-audit' | 'prospecting-audit';
+  url: string;
+  prospectId?: string;
 }
 
 export interface ProspectingScanRequest {
@@ -34,14 +42,15 @@ export interface ProspectingScanRequest {
   urls: string[];
 }
 
-export type ScanRequest = FullAuditScanRequest | ProspectingScanRequest;
+export type ScanRequest = FullAuditScanRequest | ProspectScanRequest | ProspectingScanRequest;
 
 /** Controlled state of the new-scan form. Numeric advanced options are kept
  *  as raw strings so the input stays editable between valid values; they are
  *  parsed only when the request is built. */
 export interface NewScanFormValues {
-  type: JobType;
+  type: NewScanType;
   url: string;
+  prospectId: string;
   siren: string;
   transactionalFlow: '' | 'true' | 'false';
   transactionalFlowReason: string;
@@ -59,6 +68,7 @@ export function createEmptyFormValues(): NewScanFormValues {
   return {
     type: 'full-audit',
     url: '',
+    prospectId: '',
     siren: '',
     transactionalFlow: '',
     transactionalFlowReason: '',
@@ -162,6 +172,14 @@ export function buildScanRequest(form: NewScanFormValues): ScanRequest {
   if (form.type === 'prospecting') {
     return { type: 'prospecting', urls: splitLines(form.urls) };
   }
+  if (form.type !== 'full-audit') {
+    const prospectId = form.prospectId.trim();
+    return {
+      type: form.type,
+      url: form.url.trim(),
+      ...(prospectId !== '' ? { prospectId } : {}),
+    };
+  }
 
   const maxPages = parsePositiveIntOption(form.maxPages);
   const maxDepth = parsePositiveIntOption(form.maxDepth);
@@ -187,5 +205,11 @@ export function buildScanRequest(form: NewScanFormValues): ScanRequest {
     ...(exclusions.length > 0 ? { exclusions } : {}),
     ...(bookingEngineUrl !== '' ? { bookingEngineUrl } : {}),
   };
-  return { type: 'full-audit', url: form.url.trim(), options };
+  const prospectId = form.prospectId.trim();
+  return {
+    type: 'full-audit',
+    url: form.url.trim(),
+    ...(prospectId !== '' ? { prospectId } : {}),
+    options,
+  };
 }

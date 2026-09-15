@@ -17,23 +17,20 @@ import {
 import {
   clearAuditGradeOverride,
   createJobModel,
-  findLatestLiveV2PreviewForCandidate,
   getAudit,
   getAuditRuntimeFields,
   getFindingsForAudit,
-  getHotelCandidate,
   getLatestReport,
   getLatestReportApproval,
   getSeverityRollup,
+  getProspectHub,
   approvalMatchesReportPair,
-  linkAuditToHotelManually,
+  listOutreachPreviews,
   listReportLanguages,
   persistReportApproval,
-  resolveOutreachAuditForCandidate,
   resolveSelectedAnalysisPairForAudit,
   setAuditGradeOverride,
   setAuditManualFields,
-  unlinkAuditHotel,
   type AuditDocumentFields,
   type JobDocument,
   type ReportDocument,
@@ -55,21 +52,14 @@ import {
 import { getPreviewPublicBaseUrl } from '../config.js';
 import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
 import { createMongoOutreachPreviewStoreV2 } from '../outreach/mongo-outreach-preview-store-v2.js';
-import { previewLinks } from '../outreach/publish-preview.js';
+import { previewLinks } from '../outreach/publish-preview-v2.js';
 import {
   buildOutreachPreviewSummaryV2,
   publishPreviewV2,
   type PublishPreviewV2Refusal,
 } from '../outreach/publish-preview-v2.js';
-import { CURRENT_QUALIFICATION_VERSION } from '../prospecting/hotel-qualification/qualify-hotels.js';
 import type { Router } from '../router.js';
-import {
-  isPlausibleId,
-  jsonBodyNotRead,
-  readJsonBodyOrRespond,
-  sendError,
-  sendJson,
-} from '../http-utils.js';
+import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
 import { lookupOperatorProfile } from '../sirene/sirene-cache.js';
 import { pdfDigestOf } from '../pipeline/pdf-digest.js';
 import { findingsAreStale, makeReportReady } from '../pipeline/make-report-ready.js';
@@ -300,9 +290,9 @@ async function getFailedJobForAudit(
 
 /** Plan 037 slice 5: the outreach preview section of the audit detail page.
  *  One build path for both the on-page render and the operator PDF: a
- *  candidate-linked audit goes through the exact resolution and summary
- *  build publication uses, so what the operator inspects here is what a
- *  published link would serve; any other audit gets an internal view built
+ *  prospect-linked audit goes through the exact summary build publication
+ *  uses, so what the operator inspects here is what a published link would
+ *  serve; any other audit gets an internal view built
  *  straight from the stored audit and findings (French, no recipient
  *  facts). Refusal names are the stable API strings the store and the v2
  *  publish path already use; they are never translated. */
@@ -314,17 +304,13 @@ async function buildAuditOutreachPreviewHtml(
   audit: AuditDocumentFields,
 ): Promise<OutreachPreviewBuildOutcome> {
   const publicBaseUrl = getPreviewPublicBaseUrl();
-  const candidateId = audit.outreach?.candidateId;
+  const prospectId = audit.prospectId;
 
-  if (candidateId !== undefined) {
-    const resolution = await resolveOutreachAuditForCandidate(connection, candidateId);
-    if (resolution.state === 'refused') {
-      return { state: 'refused', refusal: resolution.reason };
-    }
+  if (prospectId !== undefined) {
     const store = createMongoOutreachPreviewStoreV2(connection, {
-      qualificationVersion: CURRENT_QUALIFICATION_VERSION,
+      prospectId,
     });
-    const row = await store.findPublicationRow(candidateId);
+    const row = await store.findPublicationRow(prospectId);
     if ('refused' in row) return { state: 'refused', refusal: row.refused };
     const built = buildOutreachPreviewSummaryV2({ row, language: 'fr', publicBaseUrl });
     if ('refused' in built) return { state: 'refused', refusal: built.refused };
@@ -473,22 +459,25 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         : analysed
           ? 'analysed'
           : 'scanned';
-    // Plan 037 slice 5: prospecting provenance and current preview state,
-    // so the audit page knows which outreach actions exist without a
-    // second request. A non-candidate audit reads as null/false.
-    const outreachCandidateId = audit.outreach?.candidateId ?? null;
+    // Plan 047: prospect provenance and current preview state come from the
+    // durable prospect identity; no legacy candidate link is consulted.
+    const outreachProspectId = audit.prospectId ?? null;
+    const prospect =
+      outreachProspectId === null ? null : await getProspectHub(connection, outreachProspectId);
     const hasLiveV2Preview =
-      outreachCandidateId !== null &&
-      (await findLatestLiveV2PreviewForCandidate(connection, outreachCandidateId)) !== null;
-
-    // Plan 045 slice 1.4: the hotel this audit is about, from either
-    // association a real audit can carry - prospecting provenance
-    // (outreach) or a plain domain link (hotelLink). Never both are read
-    // as separate facts here: whichever is present names the same
-    // candidate, per linkAuditToHotelByDomain's own never-overwrite rule.
-    const hotelCandidateId = outreachCandidateId ?? audit.hotelLink?.candidateId ?? null;
-    const hotelCandidate =
-      hotelCandidateId !== null ? await getHotelCandidate(connection, hotelCandidateId) : null;
+      outreachProspectId !== null &&
+      (
+        await listOutreachPreviews(connection, {
+          prospectId: outreachProspectId,
+          status: 'live',
+          limit: 10,
+        })
+      ).some(
+        (preview) =>
+          preview.sourceKind === 'full-audit' &&
+          preview.previewContentVersion === 'v2' &&
+          preview.publicExpiresAt.getTime() > Date.now(),
+      );
 
     // Issue: operator-reviewed overall grade override. computeAutomaticGrade
     // needs the full AuditManifest shape (findings + manifest.pages); the
@@ -500,6 +489,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
 
     sendJson(res, 200, {
       auditId: audit.auditId,
+      prospectId: audit.prospectId,
       siteUrl: audit.siteUrl,
       startedAt: audit.startedAt,
       finishedAt: audit.finishedAt,
@@ -527,19 +517,9 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       automaticGrade,
       effectiveGrade,
       gradeOverride: audit.gradeOverride ?? null,
-      outreach: { candidateId: outreachCandidateId, hasLiveV2Preview },
-      hotel:
-        hotelCandidate !== null
-          ? {
-              candidateId: hotelCandidate.candidateId,
-              name: hotelCandidate.name,
-              matchedOn: audit.hotelLink?.matchedOn ?? null,
-            }
-          : null,
-      // Issue #216: an audit already carrying outreach provenance refuses
-      // a manual link (linkAuditToHotelManually's own rule) - the page
-      // hides the action entirely rather than offering it and failing.
-      canLinkHotelManually: outreachCandidateId === null,
+      outreach: { prospectId: outreachProspectId, hasLiveV2Preview },
+      prospect: prospect === null ? null : { prospectId: prospect.prospectId, name: prospect.name },
+      canAttachProspect: true,
       // Issue #90: the failed job's own record, so the audit pages can show
       // the reason and its prescribed fix instead of a bare failed badge.
       ...(failureJob !== null
@@ -722,50 +702,6 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         error instanceof Error ? error.message : 'could not clear grade override',
       );
     }
-  });
-
-  // Issue #216: the audit detail page's operator recovery action for an
-  // audit the automatic domain match could not safely link (a
-  // shared/vendor-hosted domain) or linked to the wrong candidate. Never
-  // succeeds over an outreach-provenanced audit - linkAuditToHotelManually
-  // itself refuses that case, so the 409 here names why rather than the
-  // route silently no-opping.
-  router.post('/api/audits/:auditId/hotel-link', async ({ req, res, params }) => {
-    const auditId = params['auditId']!;
-    const body = await readJsonBodyOrRespond(req, res);
-    if (body === undefined) return;
-    const candidateId = (body as { candidateId?: unknown }).candidateId;
-    if (!isPlausibleId(candidateId)) {
-      sendError(res, 400, 'candidateId must be a non-empty string without control characters');
-      return;
-    }
-
-    const result = await linkAuditToHotelManually(connection, auditId, candidateId);
-    if (result.outcome === 'refused') {
-      if (result.reason === 'audit-not-found') {
-        sendError(res, 404, 'audit not found');
-        return;
-      }
-      if (result.reason === 'candidate-not-found') {
-        sendError(res, 404, 'prospect not found');
-        return;
-      }
-      sendError(res, 409, 'this audit already carries outreach provenance and cannot be relinked');
-      return;
-    }
-    sendJson(res, 200, {
-      hotel: { candidateId: result.candidate.candidateId, name: result.candidate.name },
-    });
-  });
-
-  router.delete('/api/audits/:auditId/hotel-link', async ({ res, params }) => {
-    const auditId = params['auditId']!;
-    const cleared = await unlinkAuditHotel(connection, auditId);
-    if (!cleared) {
-      sendError(res, 404, 'audit not found');
-      return;
-    }
-    sendJson(res, 200, { cleared: true });
   });
 
   // Plan 045 slice 1.3: the inline Confirm button next to a detected
@@ -1077,9 +1013,9 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     res.end(pdf);
   });
 
-  // Publication stays candidate-linked only: the v2 preview is the
-  // scorecard of one candidate's resolved outreach audit, so an audit with
-  // no outreach provenance refuses instead of guessing a candidate.
+  // Publication stays prospect-linked: the v2 preview is the scorecard of
+  // one prospect's qualifying audit, so an unlinked audit refuses instead of
+  // guessing an identity.
   router.post('/api/audits/:auditId/outreach-preview/publish', async ({ res, params }) => {
     const auditId = params['auditId']!;
     const audit = await getAudit(connection, auditId);
@@ -1087,9 +1023,9 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       sendError(res, 404, 'audit not found');
       return;
     }
-    const candidateId = audit.outreach?.candidateId;
-    if (candidateId === undefined) {
-      sendJson(res, 409, { published: false, refusal: 'not-an-outreach-audit' });
+    const prospectId = audit.prospectId;
+    if (prospectId === undefined) {
+      sendJson(res, 409, { published: false, refusal: 'not-a-prospect-audit' });
       return;
     }
     let publisher;
@@ -1101,11 +1037,11 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     }
     const result = await publishPreviewV2({
       store: createMongoOutreachPreviewStoreV2(connection, {
-        qualificationVersion: CURRENT_QUALIFICATION_VERSION,
+        prospectId,
       }),
       publisher,
       publicBaseUrl: getPreviewPublicBaseUrl(),
-      candidateId,
+      prospectId,
       language: 'fr',
       dryRun: false,
     });

@@ -42,7 +42,7 @@ export function DialogTitle(props: { children: ReactNode }): JSX.Element {
   );
 }
 
-export function DialogDescription(props: { children: ReactNode }): JSX.Element {
+function DialogDescription(props: { children: ReactNode }): JSX.Element {
   return (
     <DialogPrimitive.Description className="mt-1 text-sm text-ink-soft">
       {props.children}
@@ -50,7 +50,7 @@ export function DialogDescription(props: { children: ReactNode }): JSX.Element {
   );
 }
 
-export function DialogFooter(props: { children: ReactNode }): JSX.Element {
+function DialogFooter(props: { children: ReactNode }): JSX.Element {
   return <div className="mt-6 flex justify-end gap-2">{props.children}</div>;
 }
 

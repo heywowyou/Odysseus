@@ -15,12 +15,10 @@ import {
   type JobNeedsInputField,
   type JobOptionsSnapshot,
   type JobPhase,
-  type JobPrescanScoringOutcome,
   type JobProgress,
   type JobRunIdentity,
   type JobType,
   type OutreachBatchResult,
-  type ProspectIngestionResult,
   type UrlResult,
 } from './schemas/job.schema.js';
 
@@ -83,9 +81,6 @@ export interface JobProgressPatch {
    *  progress during a prospecting job's run, so it travels through this
    *  same patch helper rather than a second single-purpose function. */
   urlResults?: UrlResult[];
-  /** Same reasoning as urlResults above, for prospect-ingestion jobs:
-   *  one entry per candidate in the current batch only. */
-  ingestionResults?: ProspectIngestionResult[];
   /** Same reasoning again, for outreach-draft-batch and
    *  outreach-followup-batch jobs: one entry per item in the current
    *  batch only. */
@@ -142,11 +137,8 @@ export async function updateJobProgress(
     $set['progress.lighthouse'] = patch.progress.lighthouse;
   if (patch.progress?.continuationGuard !== undefined)
     $set['progress.continuationGuard'] = patch.progress.continuationGuard;
-  if (patch.progress?.ingestion !== undefined)
-    $set['progress.ingestion'] = patch.progress.ingestion;
   if (patch.progress?.message !== undefined) $set['progress.message'] = patch.progress.message;
   if (patch.urlResults !== undefined) $set['urlResults'] = patch.urlResults;
-  if (patch.ingestionResults !== undefined) $set['ingestionResults'] = patch.ingestionResults;
   if (patch.outreachBatchResults !== undefined)
     $set['outreachBatchResults'] = patch.outreachBatchResults;
   if (patch.auditId !== undefined) $set['auditId'] = patch.auditId;
@@ -161,10 +153,8 @@ export interface CompleteJobPatch {
   auditId?: string;
   auditIds?: string[];
   urlResults?: UrlResult[];
-  ingestionResults?: ProspectIngestionResult[];
   outreachBatchResults?: OutreachBatchResult[];
   needsReview?: string;
-  prescanScoringOutcome?: JobPrescanScoringOutcome;
 }
 
 export async function completeJob(
@@ -254,7 +244,7 @@ export async function deleteJob(connection: Connection, jobId: string): Promise<
 }
 
 /** The fields GET /api/scans maps into its per-row summary. The job
- *  document's urlResults / ingestionResults / outreachBatchResults
+ *  document's urlResults / outreachBatchResults
  *  arrays (job.schema.ts) are excluded: the poll runs every 5 seconds
  *  per open dashboard tab and never reads them. */
 export type JobSummaryFields = Pick<
@@ -271,15 +261,14 @@ export type JobSummaryFields = Pick<
   | 'auditIds'
   | 'needsReview'
 > & {
-  /** Plan 042 slice 4: the outreach candidate a prospecting job works
-   *  for, projected out of options for the audits list's hotel link. */
-  outreachCandidateId?: string;
+  prospectId?: string;
+  scanType?: JobOptionsSnapshot['scanType'];
 };
 
 export async function listJobs(connection: Connection, limit = 200): Promise<JobSummaryFields[]> {
   const JobModel = createJobModel(connection);
-  // A dotted-path projection ('options.outreachCandidateId': 1) returns a
-  // nested { options: { outreachCandidateId } }, not a flattened top-level
+  // A dotted-path projection ('options.prospectId': 1) returns a nested
+  // { options: { prospectId } }, not a flattened top-level
   // field - lean() does not collapse it, whatever JobSummaryFields' cast
   // claims. Project the whole options subdocument and flatten it here so
   // the field this type actually promises is the field callers get.
@@ -297,21 +286,24 @@ export async function listJobs(connection: Connection, limit = 200): Promise<Job
       auditId: 1,
       auditIds: 1,
       needsReview: 1,
-      'options.outreachCandidateId': 1,
+      'options.prospectId': 1,
+      'options.scanType': 1,
     },
   )
     .sort({ createdAt: -1 })
     .limit(limit)
     .lean<
-      (Omit<JobSummaryFields, 'outreachCandidateId'> & {
-        options?: { outreachCandidateId?: string };
+      (Omit<JobSummaryFields, 'prospectId'> & {
+        options?: {
+          prospectId?: string;
+          scanType?: JobOptionsSnapshot['scanType'];
+        };
       })[]
     >();
   return docs.map(({ options, ...rest }) => ({
     ...rest,
-    ...(options?.outreachCandidateId !== undefined
-      ? { outreachCandidateId: options.outreachCandidateId }
-      : {}),
+    ...(options?.prospectId !== undefined ? { prospectId: options.prospectId } : {}),
+    ...(options?.scanType !== undefined ? { scanType: options.scanType } : {}),
   }));
 }
 
@@ -323,7 +315,7 @@ export async function getJob(connection: Connection, jobId: string): Promise<Job
 /** A worker that has not reported progress for this long is treated as
  *  stopped. The bound exceeds one hotel's three-page prescan timeout, so a
  *  slow but live browser is never reclaimed by a second worker. */
-export const ORPHANED_JOB_TIMEOUT_MS = 10 * 60 * 1000;
+const ORPHANED_JOB_TIMEOUT_MS = 10 * 60 * 1000;
 
 /** Called once at server startup, before the worker loop starts. A job that
  *  has been silent past ORPHANED_JOB_TIMEOUT_MS was left running by an
