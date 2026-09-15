@@ -142,6 +142,20 @@ describe('buildOutreachPreviewSummaryV2', () => {
 });
 
 describe('publishPreviewV2', () => {
+  it('keeps the published link on the live record so the operator can find it again', async () => {
+    const h = harness();
+    const result = await publishPreviewV2({
+      store: h.store,
+      publisher: h.publisher,
+      publicBaseUrl: 'https://odysseusaudit.com',
+      prospectId: 'prospect-1',
+      language: 'fr',
+      dryRun: false,
+    });
+    expect(result.url).toMatch(/^https:\/\/odysseusaudit\.com\/apercu\//u);
+    expect(h.store.recorded[0]).toMatchObject({ previewUrl: result.url });
+  });
+
   it('publishes one validated v2 scorecard and records its audit id', async () => {
     const h = harness();
     const result = await publishPreviewV2({

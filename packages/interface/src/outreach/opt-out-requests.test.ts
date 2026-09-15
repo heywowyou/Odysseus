@@ -71,6 +71,7 @@ describe.skipIf(!mongoAvailable)('processing opt-out requests', () => {
       prospectId: prospect.prospectId,
       tokenHash: 'b'.repeat(64),
       objectKey,
+      previewUrl: 'https://odysseusaudit.com/apercu/test',
       domain: 'hotel-opposition.fr',
       language: 'fr',
       previewContentVersion: 'test',
@@ -101,6 +102,8 @@ describe.skipIf(!mongoAvailable)('processing opt-out requests', () => {
     await expect(publisher.get(objectKey)).resolves.toBeNull();
     const previews = await listOutreachPreviews(connection!, { prospectId: prospect.prospectId });
     expect(previews.map((preview) => preview.status)).toEqual(['revoked']);
+    // A revoked record keeps no working link.
+    expect(previews[0]?.previewUrl).toBeUndefined();
   });
 
   it('blacklists an address that matches no prospect', async () => {

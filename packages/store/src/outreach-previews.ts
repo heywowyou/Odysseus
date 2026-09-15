@@ -5,9 +5,9 @@
  * insert-then-transition-once rule live here, and a caller writing directly
  * would have to reimplement both.
  *
- * This module never sees a raw token. It is given a hash, which is the shape
- * that makes "the database cannot produce a working URL" a property of the
- * boundary rather than a discipline anyone has to remember.
+ * Tokens are looked up by hash. The public link is stored only while a
+ * preview is live (issue #288) and revoke unsets it, so a revoked record
+ * never yields a working URL.
  */
 
 import { randomUUID } from 'node:crypto';
@@ -34,6 +34,7 @@ export interface RecordOutreachPreviewInput {
   prospectId: string;
   tokenHash: string;
   objectKey: string;
+  previewUrl: string;
   domain: string;
   language: 'fr' | 'en';
   previewContentVersion: string;
@@ -77,6 +78,7 @@ export async function recordOutreachPreview(
     prospectId: input.prospectId,
     tokenHash: input.tokenHash,
     objectKey: input.objectKey,
+    previewUrl: input.previewUrl,
     domain: input.domain,
     language: input.language,
     previewContentVersion: input.previewContentVersion,
@@ -142,7 +144,10 @@ export async function revokeOutreachPreview(
   const PreviewModel = createOutreachPreviewModel(connection);
   const updated = await PreviewModel.findOneAndUpdate(
     { previewId, status: 'live' },
-    { $set: { status: 'revoked', revokedAt: new Date(), revokedReason: reason } },
+    {
+      $set: { status: 'revoked', revokedAt: new Date(), revokedReason: reason },
+      $unset: { previewUrl: 1 },
+    },
     { returnDocument: 'after' },
   ).lean<OutreachPreviewDocument>();
 

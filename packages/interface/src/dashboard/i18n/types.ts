@@ -869,7 +869,10 @@ export interface DashboardStrings {
       draftLabel: string;
       draftCreated: string;
       previewPublished: string;
-      previewLinkOnce: string;
+      previewLink: string;
+      previewLinkUnavailable: string;
+      copyPreviewLink: string;
+      previewLinkCopied: string;
       previewExpires: string;
       revokePreview: string;
       confirmRevokePreview: string;

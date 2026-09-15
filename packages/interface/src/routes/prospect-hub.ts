@@ -321,9 +321,13 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
           publicExpiresAt: preview.publicExpiresAt,
           revokedAt: preview.revokedAt,
           revokedReason: preview.revokedReason,
-          // The token is never stored on the preview; the draft that carries
-          // this preview is the one place its public link is kept.
-          url: drafts.find((draft) => draft.previewId === preview.previewId)?.previewUrl,
+          // Live rows keep their link (issue #288); older rows fall back to
+          // the draft that carried the preview. Revoked rows expose none.
+          url:
+            preview.status === 'live'
+              ? (preview.previewUrl ??
+                drafts.find((draft) => draft.previewId === preview.previewId)?.previewUrl)
+              : undefined,
         })),
         work: {
           items: work[0]?.items ?? [],

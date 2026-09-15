@@ -660,7 +660,10 @@ export async function deleteProspect(
   const Preview = createOutreachPreviewModel(connection);
   await Preview.updateMany(
     { prospectId, status: 'live' },
-    { $set: { status: 'revoked', revokedAt: new Date(), revokedReason: 'prospect-deleted' } },
+    {
+      $set: { status: 'revoked', revokedAt: new Date(), revokedReason: 'prospect-deleted' },
+      $unset: { previewUrl: 1 },
+    },
   );
   const [previews, drafts, deletedThreads, outcomes, events, jobs, prospects] = await Promise.all([
     Preview.deleteMany({ prospectId }).exec(),
@@ -736,7 +739,10 @@ export async function withdrawProspectOutreach(
   if (livePreviews.length > 0) {
     await Previews.updateMany(
       { previewId: { $in: livePreviews.map((preview) => preview.previewId) }, status: 'live' },
-      { $set: { status: 'revoked', revokedAt: now, revokedReason: reason } },
+      {
+        $set: { status: 'revoked', revokedAt: now, revokedReason: reason },
+        $unset: { previewUrl: 1 },
+      },
     );
   }
 

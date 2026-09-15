@@ -362,8 +362,7 @@ export const fr: DashboardStrings = {
         'no-audit': 'Aucune analyse complète de prospection n’est terminée pour ce prospect.',
         'audit-in-flight': 'L’analyse complète de prospection de ce prospect est encore en cours.',
         'audit-failed': 'La dernière analyse complète de prospection a échoué ou a été arrêtée.',
-        'preview-already-live':
-          'un aperçu est déjà en ligne ; retirez-le depuis l’historique pour en publier un autre',
+        'preview-already-live': 'un aperçu est déjà en ligne ; retirez-le pour en publier un autre',
         'domain-mismatch': 'L’audit enregistré ne correspond pas au domaine propre de ce prospect.',
         suppressed: 'Ce domaine figure sur la liste à ne pas contacter.',
         'address-suppressed': 'Cette adresse figure sur la liste à ne pas contacter.',
@@ -878,7 +877,11 @@ export const fr: DashboardStrings = {
       draftLabel: 'Brouillon {touch}',
       draftCreated: 'Créé le {date}',
       previewPublished: 'Aperçu publié. Le premier email réutilisera ce lien.',
-      previewLinkOnce: 'Lien public de l’aperçu, affiché une seule fois :',
+      previewLink: 'Lien public de l’aperçu :',
+      previewLinkUnavailable:
+        'Le lien de cet aperçu, publié avant son enregistrement, n’est plus affichable. Retirez-le puis republiez pour en obtenir un.',
+      copyPreviewLink: 'Copier le lien',
+      previewLinkCopied: 'Lien copié.',
       previewExpires: 'expire le {date}',
       revokePreview: 'Retirer l’aperçu',
       confirmRevokePreview: 'Retirer cet aperçu ? Le lien public cessera de fonctionner.',

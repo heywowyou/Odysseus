@@ -4,7 +4,7 @@
  * The safety shape is inherited unchanged from the v1 port
  * (`publish-preview.ts`): object first, record second; revoke deletes the
  * object before it marks anything; the raw token exists only in the publish
- * result; suppression is re-checked after the insert. What changes is the
+ * result and on the live record (issue #288); suppression is re-checked after the insert. What changes is the
  * source of the document: the aggregate scorecard of ONE candidate-linked,
  * coverage-complete outreach full audit, resolved exactly by
  * `resolveOutreachAuditForCandidate`, never by domain and never from a
@@ -77,6 +77,7 @@ export interface OutreachPublicationRowV2 {
 export interface RecordPreviewV2Input {
   tokenHash: string;
   objectKey: string;
+  previewUrl: string;
   prospectId: string;
   domain: string;
   language: 'fr' | 'en';
@@ -112,7 +113,7 @@ export interface PublishPreviewV2Result {
   published: boolean;
   refusal?: PublishPreviewV2Refusal;
   previewId?: string;
-  /** The raw token, returned exactly once and never stored. */
+  /** The public link, also kept on the record while the preview is live. */
   url?: string;
   publicExpiresAt?: Date;
   plan?: {
@@ -309,6 +310,7 @@ export async function publishPreviewV2(
   const objectKey = deriveObjectKey(tokenHash);
   const publishedAt = now;
   const publicExpiresAt = new Date(publishedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const url = previewUrl(options.publicBaseUrl, token);
 
   await options.publisher.put({ objectKey, html, publicExpiresAt });
 
@@ -317,6 +319,7 @@ export async function publishPreviewV2(
     recorded = await options.store.recordPreview({
       tokenHash,
       objectKey,
+      previewUrl: url,
       prospectId: row.prospectId,
       domain: row.domain,
       language: options.language,
@@ -345,7 +348,7 @@ export async function publishPreviewV2(
   return {
     published: true,
     previewId: recorded.previewId,
-    url: previewUrl(options.publicBaseUrl, token),
+    url,
     publicExpiresAt: recorded.publicExpiresAt,
   };
 }

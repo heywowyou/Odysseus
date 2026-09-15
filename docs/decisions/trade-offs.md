@@ -4659,3 +4659,20 @@ public door into the audit engine) and a shared encryption secret between the
 two deployments (a second secret to rotate for a convenience feature). The
 mailto remains as a fallback.
 
+
+### 90. A live preview keeps its public link on the private record (operator request, 2026-09-15, issue #288)
+
+The preview record used to hold only the token's SHA-256, so the operator saw
+the public link once and lost it on reload. The record now also stores
+`previewUrl` while `status` is `live`; every revoke path (manual revoke,
+objection, withdraw, prospect deletion) unsets it. Lookups still go through
+the hash. The Touch 1 draft already stored the same URL, so the private
+database already could produce live links; this change adds no new class of
+exposure and keeps revoked rows unable to produce one.
+
+Revoke sits next to the publish action and the visible link. Republishing
+after a revoke issues a new token and URL; the old object was already deleted
+by the revoke, so the old link stops working. The one-live-preview gate stays:
+it protects a link that may already be in a draft, and its refusal now points
+to the adjacent revoke action. Rejected: reusing the same URL across
+republishes, which would resurrect a link the operator deliberately withdrew.

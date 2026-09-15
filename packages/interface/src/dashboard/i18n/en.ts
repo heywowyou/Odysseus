@@ -361,8 +361,7 @@ export const en: DashboardStrings = {
         'no-audit': 'No completed outreach audit exists for this prospect yet.',
         'audit-in-flight': 'The outreach audit for this prospect is still running.',
         'audit-failed': 'The latest outreach audit failed or was stopped.',
-        'preview-already-live':
-          'a preview is already live; revoke it from the history to publish another',
+        'preview-already-live': 'a preview is already live; revoke it to publish another',
         'domain-mismatch': 'The stored audit does not match this prospect’s own domain.',
         suppressed: 'This domain is on the do-not-contact list.',
         'address-suppressed': 'This address is on the do-not-contact list.',
@@ -865,7 +864,11 @@ export const en: DashboardStrings = {
       draftLabel: 'Draft {touch}',
       draftCreated: 'Created {date}',
       previewPublished: 'Preview published. The first email will reuse this link.',
-      previewLinkOnce: 'Public preview link, shown only once:',
+      previewLink: 'Public preview link:',
+      previewLinkUnavailable:
+        'This preview was published before its link was kept, so it cannot be shown. Revoke it and publish again to get one.',
+      copyPreviewLink: 'Copy link',
+      previewLinkCopied: 'Link copied.',
       previewExpires: 'expires {date}',
       revokePreview: 'Revoke the preview',
       confirmRevokePreview: 'Revoke this preview? The public link will stop working.',

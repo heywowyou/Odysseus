@@ -4,11 +4,12 @@
  * prospect and audit, when it stops being reachable, and whether it was
  * withdrawn.
  *
- * **The raw token is not here, and there is no field it could go in.** Only its
- * SHA-256 is stored, and the object key is derived from that hash. A preview
- * link is the only access control on one hotel's evidence, so a database that
- * held the token would turn a read of this collection into a set of working
- * public URLs.
+ * **The token is looked up by hash; the link is kept only while live.** Lookups
+ * and the object key use the token's SHA-256. Issue #288: the operator needs
+ * the published link again after leaving the page, so `previewUrl` holds it
+ * while the row is live and revoke unsets it. The Touch 1 draft already stored
+ * the same URL, so this adds no new exposure, and a revoked row still cannot
+ * produce a working URL.
  *
  * **Two expiries, deliberately.** `publicExpiresAt` at 30 days is when the
  * document stops being served - the lifetime the recipient was promised.
@@ -45,6 +46,9 @@ export interface OutreachPreviewDocumentFields {
    *  another's evidence. */
   tokenHash: string;
   objectKey: string;
+  /** The public link, present only while `status` is 'live'. Rows published
+   *  before issue #288 never carry it. */
+  previewUrl?: string;
   domain: string;
   language: 'fr' | 'en';
   previewContentVersion: string;
@@ -69,6 +73,7 @@ const outreachPreviewSchema = new Schema<OutreachPreviewDocument>(
     prospectId: { type: String, required: true },
     tokenHash: { type: String, required: true, unique: true },
     objectKey: { type: String, required: true },
+    previewUrl: { type: String },
     domain: { type: String, required: true },
     language: { type: String, required: true, enum: ['fr', 'en'] },
     previewContentVersion: { type: String, required: true },

@@ -178,9 +178,6 @@ export function ProspectHubDetailPage(): JSX.Element {
   const [outreachBusy, setOutreachBusy] = useState<string | null>(null);
   const [outreachNotice, setOutreachNotice] = useState<string | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<ContactRemoval | null>(null);
-  // Issue #280: the one-time link of a preview published from this page, so
-  // the first email reuses it instead of publishing a replacement.
-  const [publishedPreviewUrl, setPublishedPreviewUrl] = useState<string | null>(null);
 
   // Issue #277: deep links like #emails arrive before the record renders.
   const loaded = response.data !== undefined;
@@ -213,6 +210,10 @@ export function ProspectHubDetailPage(): JSX.Element {
   const primaryWebsite = prospect.websites.find((item) => item.primary) ?? prospect.websites[0];
   const audits = prospect.audits ?? [];
   const previews = prospect.previews ?? [];
+  // Issue #288: the live preview's link stays on the record, so it is shown,
+  // copied, and revoked next to the publish action for as long as it is live.
+  const livePreview = previews.find((preview) => preview.status === 'live');
+  const livePreviewUrl = livePreview?.url ?? null;
   const drafts = prospect.drafts ?? [];
   const work = prospect.work;
   const recommendation = work?.recommendation;
@@ -394,7 +395,6 @@ export function ProspectHubDetailPage(): JSX.Element {
         'POST',
         {},
       );
-      if (result.published && result.url !== undefined) setPublishedPreviewUrl(result.url);
       setOutreachNotice(
         result.published
           ? copy.previewPublished
@@ -418,9 +418,8 @@ export function ProspectHubDetailPage(): JSX.Element {
       const result = await sendJson<{ created: boolean; refusal?: string }>(
         `/api/prospects/${prospect.prospectId}/outreach/first-email`,
         'POST',
-        publishedPreviewUrl === null ? {} : { previewToken: publishedPreviewUrl.split('/').at(-1) },
+        livePreviewUrl === null ? {} : { previewToken: livePreviewUrl.split('/').at(-1) },
       );
-      if (result.created) setPublishedPreviewUrl(null);
       setOutreachNotice(
         result.created
           ? copy.firstEmailCreated
@@ -517,13 +516,21 @@ export function ProspectHubDetailPage(): JSX.Element {
         'POST',
         {},
       );
-      setPublishedPreviewUrl(null);
       setOutreachNotice(copy.previewRevoked);
     } catch {
       setOutreachNotice(copy.actionFailed);
     } finally {
       setOutreachBusy(null);
       refreshAll();
+    }
+  };
+
+  const copyPreviewLink = async (url: string): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setOutreachNotice(copy.previewLinkCopied);
+    } catch {
+      setOutreachNotice(copy.actionFailed);
     }
   };
 
@@ -1090,17 +1097,44 @@ export function ProspectHubDetailPage(): JSX.Element {
               <p className="mt-3 text-sm text-ink-muted">{copy.noDraft}</p>
             )}
           </div>
-          {publishedPreviewUrl !== null ? (
+          {livePreview !== undefined ? (
             <div className="mt-3 rounded-lg border border-line px-3 py-2 text-sm">
-              <p className="text-xs text-ink-muted">{copy.previewLinkOnce}</p>
-              <a
-                className="break-all text-ink hover:underline"
-                href={publishedPreviewUrl}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {publishedPreviewUrl}
-              </a>
+              <p className="text-xs text-ink-muted">
+                {copy.previewLink}{' '}
+                {copy.previewExpires.replace('{date}', formatDate(livePreview.publicExpiresAt))}
+              </p>
+              {livePreviewUrl !== null ? (
+                <a
+                  className="break-all text-ink hover:underline"
+                  href={livePreviewUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {livePreviewUrl}
+                </a>
+              ) : (
+                <p className="text-xs text-ink-muted">{copy.previewLinkUnavailable}</p>
+              )}
+              <div className="mt-2 flex flex-wrap gap-2">
+                {livePreviewUrl !== null ? (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => void copyPreviewLink(livePreviewUrl)}
+                  >
+                    {copy.copyPreviewLink}
+                  </Button>
+                ) : null}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={outreachBusy !== null}
+                  isLoading={outreachBusy === `revoke-${livePreview.previewId}`}
+                  onClick={() => void revokePreview(livePreview.previewId)}
+                >
+                  {copy.revokePreview}
+                </Button>
+              </div>
             </div>
           ) : null}
           {outreachNotice ? (
@@ -1172,6 +1206,18 @@ export function ProspectHubDetailPage(): JSX.Element {
                         </div>
                         {!available ? (
                           <p className="mt-1 text-xs text-ink-muted">{gateReason(key)}</p>
+                        ) : null}
+                        {key === 'preview' && livePreview !== undefined ? (
+                          <Button
+                            className="mt-2 mr-2"
+                            size="sm"
+                            variant="ghost"
+                            disabled={outreachBusy !== null}
+                            isLoading={outreachBusy === `revoke-${livePreview.previewId}`}
+                            onClick={() => void revokePreview(livePreview.previewId)}
+                          >
+                            {copy.revokePreview}
+                          </Button>
                         ) : null}
                         <Button
                           className="mt-2"
