@@ -40,6 +40,7 @@ import { createConfiguredMailboxDraftAdapter } from '../outreach/configured-mail
 import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
 import { createMongoOutreachPreviewStoreV2 } from '../outreach/mongo-outreach-preview-store-v2.js';
 import { publishPreviewV2 } from '../outreach/publish-preview-v2.js';
+import { withdrawOutreachForProspect } from '../outreach/withdraw-prospect-outreach.js';
 import {
   createFirstEmailForProspect,
   createFollowUpForProspect,
@@ -540,8 +541,32 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
     }
     try {
       const prospect = await recordProspectOutcome(connection, params['prospectId']!, outcome);
-      if (prospect === null) sendError(res, 404, 'prospect not found');
-      else sendJson(res, 200, prospect);
+      if (prospect === null) {
+        sendError(res, 404, 'prospect not found');
+        return;
+      }
+      if (outcome !== 'opt-out') {
+        sendJson(res, 200, prospect);
+        return;
+      }
+      // Issue #273: an opt-out also takes pending drafts, live previews and
+      // the thread out of circulation, and tells the operator what went.
+      let withdrawn;
+      try {
+        withdrawn = await withdrawOutreachForProspect(
+          connection,
+          prospect.prospectId,
+          'opted-out',
+          {
+            publisher: createConfiguredPreviewPublisher,
+            mailbox: createConfiguredMailboxDraftAdapter(),
+          },
+        );
+      } catch {
+        sendError(res, 503, 'the opt-out was saved but live previews could not be removed');
+        return;
+      }
+      sendJson(res, 200, { ...prospect, withdrawn });
     } catch (error) {
       if (error instanceof Error && error.name === 'AutomaticStatusTransitionError') {
         sendError(res, 409, error.message);
@@ -553,22 +578,20 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
 
   router.delete('/api/prospects/:prospectId', async ({ res, params }) => {
     const prospectId = params['prospectId']!;
-    const [audits, livePreviews] = await Promise.all([
-      listProspectAudits(connection, prospectId),
-      listOutreachPreviews(connection, { prospectId, status: 'live' }),
-    ]);
+    const audits = await listProspectAudits(connection, prospectId);
 
     try {
       const auditDirs = audits.map((audit) =>
         buildAuditDir(getArtifactsRoot(), new URL(audit.siteUrl).hostname, audit.startedAt),
       );
-      const publisher = livePreviews.length > 0 ? createConfiguredPreviewPublisher() : undefined;
-      await Promise.all([
-        ...auditDirs.map((auditDir) => fs.rm(auditDir, { recursive: true, force: true })),
-        ...(publisher === undefined
-          ? []
-          : livePreviews.map((preview) => publisher.delete(preview.objectKey))),
-      ]);
+      await Promise.all(
+        auditDirs.map((auditDir) => fs.rm(auditDir, { recursive: true, force: true })),
+      );
+      // Issue #273: the mailbox draft is withdrawn too, not orphaned.
+      await withdrawOutreachForProspect(connection, prospectId, 'prospect-deleted', {
+        publisher: createConfiguredPreviewPublisher,
+        mailbox: createConfiguredMailboxDraftAdapter(),
+      });
     } catch {
       sendError(res, 503, 'prospect artifacts or previews could not be removed');
       return;

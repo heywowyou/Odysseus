@@ -1,6 +1,9 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { departmentFromPostcodeForTest } from './prospect-hub.js';
-import { createProspectHub, updateProspect } from './prospect-hub.js';
+import { createProspectHub, updateProspect, withdrawProspectOutreach } from './prospect-hub.js';
+import { createOutreachDraftModel } from './schemas/outreach-draft.schema.js';
+import { createOutreachPreviewModel } from './schemas/outreach-preview.schema.js';
+import { createOutreachThreadModel } from './schemas/outreach-thread.schema.js';
 import { createProspectHubModel } from './schemas/prospect-hub.schema.js';
 import { probeMongoAvailability } from './test-support.js';
 
@@ -46,5 +49,59 @@ describe.skipIf(!mongoAvailable)('prospect hub persistence', () => {
     expect(
       await createProspectHubModel(connection!).countDocuments({ prospectId: created.prospectId }),
     ).toBe(1);
+  });
+});
+
+describe.skipIf(!mongoAvailable)('withdrawing a prospect outreach', () => {
+  it('withdraws pending drafts, revokes live previews and closes the active thread', async () => {
+    const prospect = await createProspectHub(connection!, { sector: 'hotel', name: 'Withdraw' });
+    const { prospectId } = prospect;
+    const now = new Date();
+    await createOutreachDraftModel(connection!).collection.insertMany([
+      {
+        draftId: 'd-pending',
+        prospectId,
+        status: 'created',
+        providerDraftId: 'g-1',
+        createdAt: now,
+      },
+      { draftId: 'd-sent', prospectId, status: 'deleted', providerDraftId: 'g-0', createdAt: now },
+    ]);
+    await createOutreachPreviewModel(connection!).collection.insertOne({
+      previewId: 'pv-1',
+      prospectId,
+      status: 'live',
+      objectKey: 'hotel/preview.html',
+    });
+    await createOutreachThreadModel(connection!).collection.insertOne({
+      threadId: 't-1',
+      prospectId,
+      state: 'e1-drafted',
+    });
+
+    const withdrawn = await withdrawProspectOutreach(connection!, prospectId, 'opted-out');
+
+    expect(withdrawn).toEqual({
+      drafts: 1,
+      previews: 1,
+      threadClosed: true,
+      providerDraftIds: ['g-1'],
+      previewObjectKeys: ['hotel/preview.html'],
+    });
+    const draft = await createOutreachDraftModel(connection!).collection.findOne({
+      draftId: 'd-pending',
+    });
+    expect(draft?.['status']).toBe('deleted');
+    const preview = await createOutreachPreviewModel(connection!).collection.findOne({
+      previewId: 'pv-1',
+    });
+    expect(preview?.['status']).toBe('revoked');
+    const thread = await createOutreachThreadModel(connection!).collection.findOne({
+      threadId: 't-1',
+    });
+    expect(thread?.['state']).toBe('opted-out');
+
+    const again = await withdrawProspectOutreach(connection!, prospectId, 'opted-out');
+    expect(again).toMatchObject({ drafts: 0, previews: 0, threadClosed: false });
   });
 });

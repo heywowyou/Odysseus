@@ -101,6 +101,7 @@ export type {
   ProspectResultStatus,
   ProspectCascadeCounts,
   ProspectHubFilter,
+  WithdrawnProspectOutreach,
 } from './prospect-hub.js';
 export {
   addDirectoryEntriesToProspects,
@@ -125,6 +126,7 @@ export {
   upsertDirectoryEntries,
   updateProspect,
   updateProspectRecord,
+  withdrawProspectOutreach,
 } from './prospect-hub.js';
 export {
   AUTOMATIC_PROGRESS_RANK,

@@ -33,6 +33,7 @@ vi.mock('@odysseus/store', () => ({
   setPrimaryProspectWebsite: vi.fn(),
   setProspectStatus: vi.fn(),
   updateProspect: vi.fn(),
+  withdrawProspectOutreach: vi.fn(),
 }));
 vi.mock('../outreach/draft-runtime.js', () => ({
   createFirstEmailForProspect: vi.fn(),
@@ -70,6 +71,7 @@ import {
   setOutreachProspectEmail,
   setPrimaryProspectWebsite,
   setProspectStatus,
+  withdrawProspectOutreach,
   type ProspectTodoRow,
 } from '@odysseus/store';
 import { buildAuditDir } from '@odysseus/scanner';
@@ -140,6 +142,14 @@ beforeEach(() => {
   vi.mocked(recordProspectOutcome).mockResolvedValue({ status: 'replied' } as never);
   vi.mocked(deleteProspect).mockResolvedValue({ deleted: true } as never);
   vi.mocked(getProspectHub).mockResolvedValue({ prospectId: 'p-1' } as never);
+  vi.mocked(listOutreachPreviews).mockResolvedValue([]);
+  vi.mocked(withdrawProspectOutreach).mockResolvedValue({
+    drafts: 0,
+    previews: 0,
+    threadClosed: false,
+    providerDraftIds: [],
+    previewObjectKeys: [],
+  });
   vi.mocked(checkOutreachAction).mockResolvedValue({ allowed: true } as never);
   vi.mocked(findOutreachThreadByProspect).mockResolvedValue(null);
   vi.mocked(listOutreachDrafts).mockResolvedValue([]);
@@ -322,6 +332,55 @@ describe('prospect hub routes', () => {
 
     const missing = await handle('/api/prospects/p-1/emails', 'DELETE', {});
     expect(missing.statusCode).toBe(400);
+  });
+
+  it('withdraws drafts, previews and the thread when an opt-out is recorded', async () => {
+    vi.mocked(recordProspectOutcome).mockResolvedValue({
+      prospectId: 'p-1',
+      status: 'opted-out',
+    } as never);
+    vi.mocked(listOutreachPreviews).mockResolvedValue([{ objectKey: 'k/preview.html' }] as never);
+    vi.mocked(withdrawProspectOutreach).mockResolvedValue({
+      drafts: 1,
+      previews: 1,
+      threadClosed: true,
+      providerDraftIds: ['gmail-draft-9'],
+      previewObjectKeys: ['k/preview.html'],
+    });
+    deleteMailboxDraft.mockResolvedValue(undefined);
+
+    const response = await handle('/api/prospects/p-1/outcome', 'POST', { outcome: 'opt-out' });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toMatchObject({
+      status: 'opted-out',
+      withdrawn: { drafts: 1, previews: 1, threadClosed: true },
+    });
+    expect(deletePreview).toHaveBeenCalledWith('k/preview.html');
+    expect(withdrawProspectOutreach).toHaveBeenCalledWith(fakeConnection, 'p-1', 'opted-out');
+    expect(deleteMailboxDraft).toHaveBeenCalledWith('gmail-draft-9');
+  });
+
+  it('withdraws the mailbox draft when a prospect is deleted', async () => {
+    vi.mocked(listProspectAudits).mockResolvedValue([]);
+    vi.mocked(withdrawProspectOutreach).mockResolvedValue({
+      drafts: 1,
+      previews: 0,
+      threadClosed: true,
+      providerDraftIds: ['gmail-draft-2'],
+      previewObjectKeys: [],
+    });
+    deleteMailboxDraft.mockResolvedValue(undefined);
+
+    const response = await handle('/api/prospects/p-1', 'DELETE');
+
+    expect(response.statusCode).toBe(200);
+    expect(deleteMailboxDraft).toHaveBeenCalledWith('gmail-draft-2');
+    expect(withdrawProspectOutreach).toHaveBeenCalledWith(
+      fakeConnection,
+      'p-1',
+      'prospect-deleted',
+    );
   });
 
   it('returns a conflict when normal outcome recording would overwrite a terminal status', async () => {

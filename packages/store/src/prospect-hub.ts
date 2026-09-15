@@ -7,7 +7,7 @@ import type {
   ProspectStatus,
   ProspectWebsiteKind,
 } from '@odysseus/core';
-import { normalizeDeclaredWebsite } from '@odysseus/core';
+import { ACTIVE_OUTREACH_THREAD_STATES, normalizeDeclaredWebsite } from '@odysseus/core';
 import { directoryEntrySchema, prospectEventSchema, prospectSchema } from '@odysseus/core';
 import {
   createProspectEventModel,
@@ -24,6 +24,7 @@ import { createOutreachDraftModel } from './schemas/outreach-draft.schema.js';
 import { createOutreachOutcomeModel } from './schemas/outreach-outcome.schema.js';
 import { createOutreachPreviewModel } from './schemas/outreach-preview.schema.js';
 import { createOutreachThreadModel } from './schemas/outreach-thread.schema.js';
+import { transitionOutreachThread } from './outreach-threads.js';
 import { deleteAuditCascade, type AuditCascadeCounts } from './delete-audit.js';
 import { addSuppressionEntry } from './suppression.js';
 import { loadProspectWork, type ProspectTodoRow } from './prospect-work.js';
@@ -677,6 +678,78 @@ export async function deleteProspect(
     outcomes: outcomes.deletedCount,
     events: events.deletedCount,
     jobs: jobs.deletedCount,
+  };
+}
+
+export interface WithdrawnProspectOutreach {
+  drafts: number;
+  previews: number;
+  threadClosed: boolean;
+  /** Mailbox drafts the caller still has to delete at the provider. */
+  providerDraftIds: string[];
+  /** Public preview objects the caller still has to delete from the bucket. */
+  previewObjectKeys: string[];
+}
+
+/**
+ * Takes every pending outreach artefact of one prospect out of circulation:
+ * unsent drafts leave review, live previews are revoked, and an active thread
+ * moves to its terminal state. Sent history is never touched. Provider-side
+ * cleanup is returned rather than performed, because the store has no I/O
+ * adapters.
+ */
+export async function withdrawProspectOutreach(
+  connection: Connection,
+  prospectId: string,
+  reason: 'opted-out' | 'prospect-deleted',
+): Promise<WithdrawnProspectOutreach> {
+  const now = new Date();
+  const Drafts = createOutreachDraftModel(connection);
+  const pendingDrafts = await Drafts.find({ prospectId, status: 'created' })
+    .select({ draftId: 1, providerDraftId: 1, _id: 0 })
+    .lean<{ draftId: string; providerDraftId?: string }[]>();
+  if (pendingDrafts.length > 0) {
+    await Drafts.updateMany(
+      { draftId: { $in: pendingDrafts.map((draft) => draft.draftId) }, status: 'created' },
+      { $set: { status: 'deleted', deletedAt: now } },
+    );
+  }
+
+  const Previews = createOutreachPreviewModel(connection);
+  const livePreviews = await Previews.find({ prospectId, status: 'live' })
+    .select({ previewId: 1, objectKey: 1, _id: 0 })
+    .lean<{ previewId: string; objectKey: string }[]>();
+  if (livePreviews.length > 0) {
+    await Previews.updateMany(
+      { previewId: { $in: livePreviews.map((preview) => preview.previewId) }, status: 'live' },
+      { $set: { status: 'revoked', revokedAt: now, revokedReason: reason } },
+    );
+  }
+
+  const threads = await createOutreachThreadModel(connection)
+    .find({ prospectId, state: { $in: ACTIVE_OUTREACH_THREAD_STATES } })
+    .select({ threadId: 1, _id: 0 })
+    .lean<{ threadId: string }[]>();
+  let threadClosed = false;
+  for (const thread of threads) {
+    const result = await transitionOutreachThread(connection, {
+      threadId: thread.threadId,
+      from: ACTIVE_OUTREACH_THREAD_STATES,
+      to: reason === 'opted-out' ? 'opted-out' : 'closed',
+      at: now,
+      reason,
+    });
+    threadClosed ||= result.changed;
+  }
+
+  return {
+    drafts: pendingDrafts.length,
+    previews: livePreviews.length,
+    threadClosed,
+    providerDraftIds: pendingDrafts.flatMap((draft) =>
+      draft.providerDraftId === undefined ? [] : [draft.providerDraftId],
+    ),
+    previewObjectKeys: livePreviews.map((preview) => preview.objectKey),
   };
 }
 

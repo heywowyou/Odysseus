@@ -432,9 +432,28 @@ export function ProspectHubDetailPage(): JSX.Element {
   };
 
   const recordOutcome = async (outcome: string): Promise<void> => {
-    await sendJson(`/api/prospects/${prospect.prospectId}/outcome`, 'POST', { outcome });
-    response.refresh();
-    actionability.refresh();
+    setOutreachBusy('outcome');
+    setOutreachNotice(null);
+    try {
+      const result = await sendJson<{ withdrawn?: { drafts: number; previews: number } }>(
+        `/api/prospects/${prospect.prospectId}/outcome`,
+        'POST',
+        { outcome },
+      );
+      setOutreachNotice(
+        result.withdrawn !== undefined
+          ? copy.optOutWithdrawn
+              .replace('{drafts}', String(result.withdrawn.drafts))
+              .replace('{previews}', String(result.withdrawn.previews))
+          : copy.outcomeSaved.replace('{outcome}', label(outcome, copy.outcomeLabels)),
+      );
+    } catch {
+      setOutreachNotice(copy.actionFailed);
+    } finally {
+      setOutreachBusy(null);
+      response.refresh();
+      actionability.refresh();
+    }
   };
 
   const changeStatus = async (status: string): Promise<void> => {
@@ -987,7 +1006,8 @@ export function ProspectHubDetailPage(): JSX.Element {
                 className="flex flex-wrap items-center gap-2 border-t border-line pt-4"
               >
                 <Select
-                  defaultValue=""
+                  value=""
+                  disabled={outreachBusy !== null}
                   onChange={(event) => {
                     if (event.target.value) void recordOutcome(event.target.value);
                   }}

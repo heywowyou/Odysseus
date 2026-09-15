@@ -22,6 +22,8 @@ import {
 } from '@odysseus/store';
 import type { Connection } from 'mongoose';
 import { logger } from '../logger.js';
+import { createConfiguredMailboxDraftAdapter } from './configured-mailbox-draft-adapter.js';
+import { withdrawOutreachForProspect } from './withdraw-prospect-outreach.js';
 import {
   deriveOptOutLinkKey,
   OPT_OUT_REQUEST_PREFIX,
@@ -72,6 +74,10 @@ async function applyOptOut(
       // already stops any further contact.
       if (!(error instanceof AutomaticStatusTransitionError)) throw error;
     }
+    await withdrawOutreachForProspect(connection, prospect.prospectId, 'opted-out', {
+      publisher: () => publisher,
+      mailbox: createConfiguredMailboxDraftAdapter(),
+    });
     const website = prospect.websites.find((item) => item.primary) ?? prospect.websites[0];
     if (website === undefined) continue;
     for (const preview of await listLivePreviewsForDomain(connection, website.registrableDomain)) {

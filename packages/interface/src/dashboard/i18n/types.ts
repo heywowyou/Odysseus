@@ -865,6 +865,8 @@ export interface DashboardStrings {
       actionRefused: string;
       firstEmailCreated: string;
       followUpCreated: string;
+      outcomeSaved: string;
+      optOutWithdrawn: string;
       detachAudit: string;
       confirmDetachAudit: string;
       auditDetached: string;

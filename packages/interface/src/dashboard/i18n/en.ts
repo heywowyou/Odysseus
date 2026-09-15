@@ -849,6 +849,9 @@ export const en: DashboardStrings = {
       actionRefused: 'Action refused: {reason}',
       firstEmailCreated: 'First email prepared. Review it in this section.',
       followUpCreated: 'Follow-up prepared. Review it in this section.',
+      outcomeSaved: 'Outcome saved: {outcome}.',
+      optOutWithdrawn:
+        'Opt-out saved. Withdrawn: {drafts} mailbox draft(s), {previews} public preview(s); the thread is closed.',
       detachAudit: 'Detach',
       confirmDetachAudit:
         'Detach this audit from the prospect? The audit will remain available in scans.',

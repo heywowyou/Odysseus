@@ -862,6 +862,9 @@ export const fr: DashboardStrings = {
       actionRefused: 'Action refusée : {reason}',
       firstEmailCreated: 'Premier email préparé. Relisez-le dans cette section.',
       followUpCreated: 'Relance préparée. Relisez-la dans cette section.',
+      outcomeSaved: 'Résultat enregistré : {outcome}.',
+      optOutWithdrawn:
+        'Désinscription enregistrée. Retirés : {drafts} brouillon(s) de la boîte mail, {previews} aperçu(s) public(s) ; le fil est clos.',
       detachAudit: 'Détacher',
       confirmDetachAudit:
         'Détacher cet audit du prospect ? L’audit restera disponible dans les scans.',
