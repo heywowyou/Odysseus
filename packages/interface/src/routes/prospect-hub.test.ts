@@ -27,6 +27,7 @@ vi.mock('@odysseus/store', () => ({
   listProspects: vi.fn(),
   loadProspectWork: vi.fn(),
   recordOutreachDraftReview: vi.fn(),
+  revokeOutreachPreview: vi.fn(),
   recordProspectOutcome: vi.fn(),
   removeProspectEmail: vi.fn(),
   removeProspectWebsite: vi.fn(),
@@ -69,6 +70,7 @@ import {
   loadProspectWork,
   listProspects,
   recordOutreachDraftReview,
+  revokeOutreachPreview,
   recordProspectOutcome,
   removeProspectEmail,
   removeProspectWebsite,
@@ -556,6 +558,36 @@ describe('draft review', () => {
     expect(deleteMailboxDraft).toHaveBeenCalledWith('g-1');
 
     const missing = await handle('/api/prospects/p-1/drafts/nope/discard', 'POST', {});
+    expect(missing.statusCode).toBe(404);
+  });
+});
+
+describe('one preview per outreach attempt', () => {
+  it('passes the published preview token to the first email instead of publishing again', async () => {
+    vi.mocked(getProspectHub).mockResolvedValue({ prospectId: 'p-1' } as never);
+    vi.mocked(checkOutreachAction).mockResolvedValue({ allowed: true } as never);
+    vi.mocked(createFirstEmailForProspect).mockResolvedValue({ configured: true } as never);
+
+    await handle('/api/prospects/p-1/outreach/first-email', 'POST', { previewToken: 'tok' });
+    expect(createFirstEmailForProspect).toHaveBeenCalledWith(fakeConnection, 'p-1', {
+      language: 'fr',
+      previewToken: 'tok',
+    });
+  });
+
+  it('revokes a live preview object first, then its record', async () => {
+    vi.mocked(listOutreachPreviews).mockResolvedValue([
+      { previewId: 'pv-1', objectKey: 'k.html', status: 'live' },
+    ] as never);
+    const response = await handle('/api/prospects/p-1/previews/pv-1/revoke', 'POST', {});
+    expect(response.statusCode).toBe(200);
+    expect(deletePreview).toHaveBeenCalledWith('k.html');
+    expect(revokeOutreachPreview).toHaveBeenCalledWith(
+      fakeConnection,
+      'pv-1',
+      'revoked by the operator',
+    );
+    const missing = await handle('/api/prospects/p-1/previews/nope/revoke', 'POST', {});
     expect(missing.statusCode).toBe(404);
   });
 });

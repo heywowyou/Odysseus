@@ -374,7 +374,7 @@ export type CreateFirstEmailResult =
 export async function createFirstEmailForProspect(
   connection: Connection,
   prospectId: string,
-  options: { language: 'fr' | 'en' },
+  options: { language: 'fr' | 'en'; previewToken?: string },
 ): Promise<CreateFirstEmailResult> {
   const prospect = await getProspectHub(connection, prospectId);
   if (prospect === null) return { configured: true, created: false, refusal: 'prospect-unknown' };
@@ -387,6 +387,29 @@ export async function createFirstEmailForProspect(
   }
   const allowed = await checkOutreachAction(connection, { prospect, action: 'first-email' });
   if (!allowed.allowed) return { configured: true, created: false, refusal: allowed.refusal };
+
+  // Issue #280: a preview the operator just published is reused, not
+  // superseded. createTouchOneDraft validates the token against the live
+  // record and the current audit, so a stale token refuses cleanly.
+  if (options.previewToken !== undefined) {
+    const reused = await createTouchOneDraft(connection, prospectId, {
+      language: options.language,
+      previewToken: options.previewToken,
+      dryRun: false,
+    });
+    if (!reused.configured) {
+      return { configured: true, created: false, refusal: 'no-mailbox-configured' };
+    }
+    return {
+      configured: true,
+      created: reused.created,
+      ...(reused.refusal === undefined ? {} : { refusal: reused.refusal }),
+      ...(reused.draftId === undefined ? {} : { draftId: reused.draftId }),
+      ...(reused.threadId === undefined ? {} : { threadId: reused.threadId }),
+      ...(reused.subject === undefined ? {} : { subject: reused.subject }),
+      ...(reused.body === undefined ? {} : { body: reused.body }),
+    };
+  }
 
   let publisher;
   try {

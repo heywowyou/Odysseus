@@ -16,6 +16,9 @@ vi.mock('./schemas/job.schema.js', () => ({
 vi.mock('./outreach-threads.js', () => ({
   findOutreachThreadByProspect: vi.fn(),
 }));
+vi.mock('./schemas/outreach-preview.schema.js', () => ({
+  createOutreachPreviewModel: vi.fn(() => ({ exists: vi.fn().mockResolvedValue(null) })),
+}));
 vi.mock('./outreach-drafts.js', () => ({
   findLiveOutreachDraft: vi.fn(),
 }));

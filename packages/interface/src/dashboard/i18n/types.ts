@@ -858,6 +858,12 @@ export interface DashboardStrings {
       threadState: string;
       draftLabel: string;
       draftCreated: string;
+      previewPublished: string;
+      previewLinkOnce: string;
+      previewExpires: string;
+      revokePreview: string;
+      confirmRevokePreview: string;
+      previewRevoked: string;
       draftRecipient: string;
       draftBody: string;
       openPreview: string;

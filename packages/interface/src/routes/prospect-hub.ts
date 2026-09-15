@@ -21,6 +21,7 @@ import {
   listOutreachPreviews,
   deleteProspect,
   recordOutreachDraftReview,
+  revokeOutreachPreview,
   recordProspectOutcome,
   removeProspectEmail,
   removeProspectWebsite,
@@ -309,6 +310,9 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
           publicExpiresAt: preview.publicExpiresAt,
           revokedAt: preview.revokedAt,
           revokedReason: preview.revokedReason,
+          // The token is never stored on the preview; the draft that carries
+          // this preview is the one place its public link is kept.
+          url: drafts.find((draft) => draft.previewId === preview.previewId)?.previewUrl,
         })),
         work: {
           items: work[0]?.items ?? [],
@@ -354,10 +358,9 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
       sendError(res, 404, 'prospect not found');
       return;
     }
-    const language = languageFromBody(
-      await readJsonBodyOrRespond(req, res),
-      prospect.outreachLanguage ?? 'fr',
-    );
+    const body = await readJsonBodyOrRespond(req, res);
+    const language = languageFromBody(body, prospect.outreachLanguage ?? 'fr');
+    const previewToken = recordBody(body)?.['previewToken'];
     if (language === null) {
       sendError(res, 400, 'language must be fr or en');
       return;
@@ -367,7 +370,10 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
       sendJson(res, 200, { created: false, refusal: allowed.refusal });
       return;
     }
-    const result = await createFirstEmailForProspect(connection, prospect.prospectId, { language });
+    const result = await createFirstEmailForProspect(connection, prospect.prospectId, {
+      language,
+      ...(typeof previewToken === 'string' && previewToken !== '' ? { previewToken } : {}),
+    });
     if (!result.configured) {
       sendJson(res, 503, result);
       return;
@@ -414,6 +420,28 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
     }
     res.setHeader('cache-control', 'no-store');
     sendJson(res, 200, result);
+  });
+
+  // Issue #280: the operator can take a live preview offline from the hub.
+  // Object first, record second, as in every other revocation.
+  router.post('/api/prospects/:prospectId/previews/:previewId/revoke', async ({ res, params }) => {
+    const previews = await listOutreachPreviews(connection, {
+      prospectId: params['prospectId']!,
+      status: 'live',
+    });
+    const preview = previews.find((item) => item.previewId === params['previewId']);
+    if (preview === undefined) {
+      sendError(res, 404, 'live preview not found');
+      return;
+    }
+    try {
+      await createConfiguredPreviewPublisher().delete(preview.objectKey);
+    } catch {
+      sendError(res, 503, 'the preview could not be removed from the bucket');
+      return;
+    }
+    await revokeOutreachPreview(connection, preview.previewId, 'revoked by the operator');
+    sendJson(res, 200, { revoked: true });
   });
 
   router.post('/api/prospects/:prospectId/preview/publish', async ({ res, params }) => {

@@ -16,6 +16,7 @@ import { isSuppressed } from './suppression.js';
 import { TERMINAL_OUTREACH_THREAD_STATES } from '@odysseus/core';
 import { findLiveOutreachDraft } from './outreach-drafts.js';
 import { findOutreachThreadByProspect } from './outreach-threads.js';
+import { createOutreachPreviewModel } from './schemas/outreach-preview.schema.js';
 
 export type ScanLaunchRefusal = 'invalid-url' | 'suppressed' | 'host-busy';
 export type OutreachActionRefusal =
@@ -27,7 +28,8 @@ export type OutreachActionRefusal =
   | 'thread-closed'
   | 'thread-unknown'
   | 'thread-not-eligible'
-  | 'thread-already-started';
+  | 'thread-already-started'
+  | 'preview-already-live';
 export type OutreachAction = 'preview' | 'first-email' | 'follow-up';
 
 export type ScanLaunchCheck =
@@ -110,6 +112,17 @@ export async function checkOutreachAction(
       return { allowed: false, refusal: 'draft-already-live' };
     }
     return { allowed: true };
+  }
+  // Issue #280: one live preview per outreach attempt. Publishing another
+  // would silently supersede the link the operator already copied.
+  if (
+    input.action === 'preview' &&
+    (await createOutreachPreviewModel(connection).exists({
+      prospectId: input.prospect.prospectId,
+      status: 'live',
+    })) !== null
+  ) {
+    return { allowed: false, refusal: 'preview-already-live' };
   }
   if (input.action === 'first-email' && thread !== null) {
     if ((await findLiveOutreachDraft(connection, thread.threadId, 1)) !== null) {
