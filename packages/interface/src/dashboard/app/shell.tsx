@@ -1,14 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-  Building2,
-  ClipboardCheck,
-  ListChecks,
-  Mail,
-  Menu,
-  ShieldCheck,
-  Wrench,
-  X,
-} from 'lucide-react';
+import { ListChecks, Mail, Menu, ShieldCheck, Wrench, X } from 'lucide-react';
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { Brand } from './brand';
 import { BuildRevision } from './build-revision';
@@ -31,10 +22,9 @@ export function AppShell() {
   const todo = useApi<TodoPage>('/api/prospect-hub/todo');
   const inboxCount = todo.data?.rows.length;
 
-  /* Grouped by the two halves of the work rather than listed flat: measuring a
-     site and running a campaign are different jobs with different rhythms.
-     Plan 040 slice 6: "A traiter" is the landing page at /a-traiter, and
-     "Resultats" and the footer lookup sit at their renamed URLs. */
+  /* The shell exposes only the three operational destinations. Directory and
+     results are modes inside Prospects, while old URLs remain handled by the
+     route table for bookmark safety. */
   const navGroups = [
     {
       label: strings.shell.groupMeasure,
@@ -52,9 +42,7 @@ export function AppShell() {
           end: false,
           badge: inboxCount !== undefined && inboxCount > 0 ? inboxCount : undefined,
         },
-        { to: '/annuaire', label: strings.nav.directory, icon: Building2, end: false },
-        { to: '/prospects', label: strings.nav.prospects, icon: Building2, end: false },
-        { to: '/resultats', label: strings.nav.results, icon: ClipboardCheck, end: false },
+        { to: '/prospects', label: strings.nav.prospects, icon: Mail, end: false },
       ],
     },
   ];

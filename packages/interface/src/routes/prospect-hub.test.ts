@@ -93,7 +93,22 @@ function fakeRes(): ServerResponse & { statusCode: number; body: string | undefi
 }
 
 const fakeConnection = {} as never;
-const emptyPage = { rows: [], page: 1, pageSize: 50, total: 0 };
+const emptyPage = {
+  rows: [],
+  page: 1,
+  pageSize: 50,
+  total: 0,
+  statusCounts: {
+    contacted: 0,
+    'follow-up': 0,
+    replied: 0,
+    call: 0,
+    quoted: 0,
+    won: 0,
+    lost: 0,
+    'opted-out': 0,
+  },
+};
 
 async function handle(url: string, method: Method = 'GET', body?: unknown) {
   const router = new Router();
@@ -138,6 +153,7 @@ describe('prospect hub routes', () => {
     expect(response.statusCode).toBe(200);
     expect(listProspects).toHaveBeenCalledWith(fakeConnection, {
       q: 'Paris',
+      view: 'all',
       status: 'audited',
       sector: 'hotel',
       stars: 4,
@@ -152,6 +168,36 @@ describe('prospect hub routes', () => {
       page: 2,
       pageSize: 20,
     });
+  });
+
+  it('routes the results view through the prospects endpoint', async () => {
+    const response = await handle('/api/prospects?view=results&status=won&page=2');
+
+    expect(response.statusCode).toBe(200);
+    expect(listProspects).toHaveBeenCalledWith(fakeConnection, {
+      q: undefined,
+      view: 'results',
+      status: 'won',
+      sector: undefined,
+      stars: undefined,
+      groupStatus: undefined,
+      websiteKind: undefined,
+      department: undefined,
+      commune: undefined,
+      roomsMin: undefined,
+      roomsMax: undefined,
+      hasScan: undefined,
+      inactive: undefined,
+      page: 2,
+      pageSize: undefined,
+    });
+  });
+
+  it('rejects an unknown prospect view', async () => {
+    const response = await handle('/api/prospects?view=archive');
+
+    expect(response.statusCode).toBe(400);
+    expect(listProspects).toHaveBeenCalledTimes(0);
   });
 
   it('serves the shared work rows consumed by both To do and the shell badge', async () => {

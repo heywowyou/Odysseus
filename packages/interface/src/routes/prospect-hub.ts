@@ -80,6 +80,9 @@ function filters(query: URLSearchParams): {
   prospects: ProspectHubFilter;
   directory: DirectoryFilter;
 } {
+  const view = optionalText(query, 'view');
+  if (view !== undefined && view !== 'all' && view !== 'results')
+    throw new Error('view is invalid');
   const status = optionalText(query, 'status');
   if (status !== undefined && !STATUSES.includes(status as ProspectStatus))
     throw new Error('status is invalid');
@@ -108,7 +111,11 @@ function filters(query: URLSearchParams): {
     pageSize: optionalNumber(query, 'pageSize'),
   };
   return {
-    prospects: { ...common, status: status as ProspectStatus | undefined },
+    prospects: {
+      ...common,
+      view: (view as ProspectHubFilter['view']) ?? 'all',
+      status: status as ProspectStatus | undefined,
+    },
     directory: { ...common, postcode: optionalText(query, 'postcode') },
   };
 }
@@ -131,14 +138,6 @@ function languageFromBody(body: unknown): 'fr' | 'en' | null {
 export function registerProspectHubRoutes(router: Router, connection: Connection): void {
   router.get('/api/prospect-hub/todo', async ({ res }) => {
     sendJson(res, 200, { rows: await listProspectTodo(connection) });
-  });
-
-  router.get('/api/prospect-hub/results', async ({ res, query }) => {
-    try {
-      sendJson(res, 200, await listProspects(connection, filters(query).prospects));
-    } catch (error) {
-      sendError(res, 400, error instanceof Error ? error.message : 'invalid result filters');
-    }
   });
 
   router.get('/api/prospects', async ({ res, query }) => {

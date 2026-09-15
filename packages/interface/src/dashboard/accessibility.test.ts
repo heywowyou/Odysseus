@@ -10,7 +10,6 @@ import { I18nProvider } from './i18n/provider';
 import { DirectoryPage } from './routes/directory';
 import { ProspectHubDetailPage } from './routes/prospect-hub-detail';
 import { ProspectHubListPage } from './routes/prospect-hub-list';
-import { ProspectHubResultsPage } from './routes/prospect-hub-results';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -72,10 +71,22 @@ function stubRoutes(): void {
       if (url.includes('/api/directory')) {
         return jsonResponse({ rows: [], total: 0, page: 1, pageSize: 50 });
       }
-      if (url.includes('/api/prospect-hub/results')) {
-        return jsonResponse({ rows: [prospect], total: 1, page: 1, pageSize: 200 });
-      }
-      return jsonResponse({ rows: [prospect], total: 1, page: 1, pageSize: 50 });
+      return jsonResponse({
+        rows: [prospect],
+        total: 1,
+        page: 1,
+        pageSize: 50,
+        statusCounts: {
+          contacted: 0,
+          'follow-up': 0,
+          replied: 1,
+          call: 0,
+          quoted: 0,
+          won: 0,
+          lost: 0,
+          'opted-out': 0,
+        },
+      });
     }),
   );
 }
@@ -153,12 +164,12 @@ describe('prospect dashboard accessibility contract', () => {
     root.unmount();
   });
 
-  it.each(['fr', 'en'] as const)('Results is axe-clean in %s', async (language) => {
+  it.each(['fr', 'en'] as const)('Results view is axe-clean in %s', async (language) => {
     stubRoutes();
     const { container, root } = await renderPage(
-      createElement(ProspectHubResultsPage),
-      '/resultats',
-      'resultats',
+      createElement(ProspectHubListPage),
+      '/prospects?view=results',
+      'prospects',
       language,
     );
     await expectNoAxeViolations(container);

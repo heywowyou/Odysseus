@@ -96,6 +96,9 @@ export type {
   DirectoryFilter,
   NewProspectHubInput,
   Page,
+  ProspectListPage,
+  ProspectListView,
+  ProspectResultStatus,
   ProspectCascadeCounts,
   ProspectHubFilter,
 } from './prospect-hub.js';
@@ -113,6 +116,7 @@ export {
   listProspectEvents,
   listProspectAudits,
   listProspects,
+  PROSPECT_RESULT_STATUSES,
   recordProspectOutcome,
   setProspectStatus,
   upsertDirectoryEntries,

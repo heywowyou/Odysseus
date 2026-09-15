@@ -10,6 +10,21 @@ export type ProspectStatus =
   | 'lost'
   | 'opted-out';
 
+export type ProspectListView = 'all' | 'results';
+
+export const PROSPECT_RESULT_STATUSES = [
+  'contacted',
+  'follow-up',
+  'replied',
+  'call',
+  'quoted',
+  'won',
+  'lost',
+  'opted-out',
+] as const;
+
+export type ProspectResultStatus = (typeof PROSPECT_RESULT_STATUSES)[number];
+
 export interface ProspectHubRow {
   prospectId: string;
   sector: string;
@@ -28,6 +43,7 @@ export interface ProspectHubListResponse {
   total: number;
   page: number;
   pageSize: number;
+  statusCounts: Record<ProspectResultStatus, number>;
 }
 
 export interface DirectoryRow {
@@ -59,6 +75,7 @@ function setText(query: URLSearchParams, key: string, value: string): void {
 }
 
 export function buildHubProspectsPath(params: {
+  view?: ProspectListView;
   q: string;
   status: string;
   sector?: string;
@@ -73,6 +90,7 @@ export function buildHubProspectsPath(params: {
   page: number;
 }): string {
   const query = new URLSearchParams();
+  if (params.view === 'results') query.set('view', 'results');
   setText(query, 'q', params.q);
   setText(query, 'status', params.status);
   setText(query, 'sector', params.sector ?? '');

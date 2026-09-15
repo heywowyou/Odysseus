@@ -7,7 +7,6 @@ import { LoginPage } from './routes/login';
 import { NewScanPage } from './routes/new-scan';
 import { ProspectHubListPage } from './routes/prospect-hub-list';
 import { ProspectHubDetailPage } from './routes/prospect-hub-detail';
-import { ProspectHubResultsPage } from './routes/prospect-hub-results';
 import { DirectoryPage } from './routes/directory';
 import { ScanProgressPage } from './routes/scan-progress';
 import { SuppressionsPage } from './routes/suppressions';
@@ -29,13 +28,10 @@ export function App() {
         <Route path="annuaire" element={<DirectoryPage />} />
         <Route path="prospects" element={<ProspectHubListPage />} />
         <Route path="prospects/:prospectId" element={<ProspectHubDetailPage />} />
-        {/* Plan 040 slice 6 (page destiny table): /a-traiter absorbs the
-            outreach index, the drafts queue, and the replies queue; the
-            outcomes and do-not-contact pages keep their content under their
-            new names. Every old outreach URL redirects so bookmarks and
-            links in old notes keep working. */}
+        {/* Plan 048 consolidates the prospect workspace. Legacy outreach
+            URLs remain safe redirects for bookmarks and old notes. */}
         <Route path="a-traiter" element={<ATraiterPage />} />
-        <Route path="resultats" element={<ProspectHubResultsPage />} />
+        <Route path="resultats" element={<Navigate to="/prospects?view=results" replace />} />
         <Route path="ne-pas-contacter" element={<SuppressionsPage />} />
         {/* Plan 040 slice 8: links to standalone claude.ai tools kept
             outside the dashboard (see routes/tools.tsx for why). */}
@@ -43,7 +39,10 @@ export function App() {
         <Route path="outreach" element={<Navigate to="/a-traiter" replace />} />
         <Route path="outreach/drafts" element={<Navigate to="/a-traiter" replace />} />
         <Route path="outreach/replies" element={<Navigate to="/a-traiter" replace />} />
-        <Route path="outreach/outcomes" element={<Navigate to="/resultats" replace />} />
+        <Route
+          path="outreach/outcomes"
+          element={<Navigate to="/prospects?view=results" replace />}
+        />
         <Route
           path="outreach/do-not-contact"
           element={<Navigate to="/ne-pas-contacter" replace />}

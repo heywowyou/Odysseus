@@ -49,6 +49,7 @@ export interface NewProspectHubInput {
 
 export interface ProspectHubFilter {
   q?: string | undefined;
+  view?: ProspectListView | undefined;
   status?: ProspectStatus | undefined;
   sector?: string | undefined;
   stars?: number | undefined;
@@ -84,6 +85,24 @@ export interface Page<T> {
   page: number;
   pageSize: number;
   total: number;
+}
+
+export const PROSPECT_RESULT_STATUSES = [
+  'contacted',
+  'follow-up',
+  'replied',
+  'call',
+  'quoted',
+  'won',
+  'lost',
+  'opted-out',
+] as const;
+
+export type ProspectResultStatus = (typeof PROSPECT_RESULT_STATUSES)[number];
+export type ProspectListView = 'all' | 'results';
+
+export interface ProspectListPage extends Page<ProspectHubDocument> {
+  statusCounts: Record<ProspectResultStatus, number>;
 }
 
 export type { ProspectTodoRow } from './prospect-work.js';
@@ -134,7 +153,6 @@ export async function appendProspectEvent(
 
 function queryForProspects(filter: ProspectHubFilter): Record<string, unknown> {
   const query: Record<string, unknown> = {};
-  if (filter.status) query['status'] = filter.status;
   if (filter.sector) query['sector'] = filter.sector;
   if (filter.stars !== undefined) query['hotel.stars'] = filter.stars;
   if (filter.groupStatus) query['hotel.groupStatus'] = filter.groupStatus;
@@ -231,7 +249,7 @@ export async function findProspectsByDomain(
 export async function listProspects(
   connection: Connection,
   filter: ProspectHubFilter = {},
-): Promise<Page<ProspectHubDocument>> {
+): Promise<ProspectListPage> {
   const [page, pageSize] = pageBounds(filter.page, filter.pageSize);
   const query = queryForProspects(filter);
   if (filter.hasScan !== undefined) {
@@ -242,7 +260,24 @@ export async function listProspects(
       ? { $in: scannedProspectIds }
       : { $nin: scannedProspectIds };
   }
+  if (filter.view === 'results') {
+    query['status'] = filter.status
+      ? PROSPECT_RESULT_STATUSES.includes(filter.status as ProspectResultStatus)
+        ? filter.status
+        : { $in: [] }
+      : { $in: PROSPECT_RESULT_STATUSES };
+  } else if (filter.status) {
+    query['status'] = filter.status;
+  }
   const Model = createProspectHubModel(connection);
+  const statusCounts = Object.fromEntries(
+    await Promise.all(
+      PROSPECT_RESULT_STATUSES.map(
+        async (status) =>
+          [status, await Model.countDocuments({ ...queryForStatusCounts(query), status })] as const,
+      ),
+    ),
+  ) as Record<ProspectResultStatus, number>;
   const [rows, total] = await Promise.all([
     Model.find(query)
       .sort({ name: 1, prospectId: 1 })
@@ -251,7 +286,12 @@ export async function listProspects(
       .lean<ProspectHubDocument[]>(),
     Model.countDocuments(query),
   ]);
-  return { rows, page, pageSize, total };
+  return { rows, page, pageSize, total, statusCounts };
+}
+
+function queryForStatusCounts(query: Record<string, unknown>): Record<string, unknown> {
+  const { status: _status, ...baseQuery } = query;
+  return baseQuery;
 }
 
 export async function listProspectTodo(connection: Connection): Promise<ProspectTodoRow[]> {

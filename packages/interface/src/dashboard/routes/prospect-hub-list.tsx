@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import type { JSX } from 'react';
 import { Building2, Search } from 'lucide-react';
-import { Link, useSearchParams } from 'react-router';
+import { Link, useLocation, useSearchParams } from 'react-router';
 import { PageHeader, PAGE_WIDTH } from '../components/page-header';
 import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
 import { Card } from '../components/ui/card';
 import { EmptyState } from '../components/ui/empty-state';
 import { Input } from '../components/ui/input';
@@ -21,6 +22,7 @@ import { useApi } from '../lib/use-api';
 import { useI18n } from '../i18n/provider';
 import {
   buildHubProspectsPath,
+  PROSPECT_RESULT_STATUSES,
   type ProspectHubListResponse,
   type ProspectHubRow,
 } from './prospect-hub-model';
@@ -39,9 +41,22 @@ const STATUS_OPTIONS = [
   'opted-out',
 ];
 
+const OUTCOMES = [
+  'no-reply',
+  'reply-positive',
+  'reply-not-now',
+  'reply-negative',
+  'opt-out',
+  'call',
+  'quoted',
+  'won',
+  'lost',
+] as const;
+
 export function ProspectHubListPage(): JSX.Element {
   const { strings } = useI18n();
   const copy = strings.prospectHub.list;
+  const resultsCopy = strings.prospectHub.results;
   const detailCopy = strings.prospectHub.detail;
   const [newProspectOpen, setNewProspectOpen] = useState(false);
   const [newProspect, setNewProspect] = useState({
@@ -52,6 +67,8 @@ export function ProspectHubListPage(): JSX.Element {
   });
   const [creating, setCreating] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
+  const { pathname } = useLocation();
+  const resultsView = searchParams.get('view') === 'results';
   const q = searchParams.get('q') ?? '';
   const status = searchParams.get('status') ?? '';
   const sector = searchParams.get('sector') ?? '';
@@ -90,6 +107,7 @@ export function ProspectHubListPage(): JSX.Element {
   const response = useApi<ProspectHubListResponse>(
     buildHubProspectsPath({
       q,
+      view: resultsView ? 'results' : 'all',
       status,
       sector,
       stars,
@@ -104,6 +122,10 @@ export function ProspectHubListPage(): JSX.Element {
     }),
   );
   const rows = response.data?.rows ?? [];
+  const pageCopy = resultsView ? resultsCopy : copy;
+  const returnTo = searchParams.toString() ? `${pathname}?${searchParams.toString()}` : pathname;
+  const detailHref = (prospectId: string): string =>
+    `/prospects/${encodeURIComponent(prospectId)}?returnTo=${encodeURIComponent(returnTo)}`;
   const create = async (): Promise<void> => {
     if (!newProspect.name.trim()) return;
     setCreating(true);
@@ -134,12 +156,18 @@ export function ProspectHubListPage(): JSX.Element {
       setCreating(false);
     }
   };
+  const recordOutcome = async (row: ProspectHubRow, outcome: string): Promise<void> => {
+    await sendJson(`/api/prospects/${encodeURIComponent(row.prospectId)}/outcome`, 'POST', {
+      outcome,
+    });
+    response.refresh();
+  };
   return (
     <main className={`${PAGE_WIDTH.surface} px-5 py-8`}>
       <PageHeader
-        eyebrow={copy.eyebrow}
-        title={copy.title}
-        description={copy.description}
+        eyebrow={pageCopy.eyebrow}
+        title={pageCopy.title}
+        description={pageCopy.description}
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={() => setNewProspectOpen((open) => !open)}>
@@ -225,9 +253,10 @@ export function ProspectHubListPage(): JSX.Element {
             aria-label={copy.statusFilterAria}
           >
             <option value="">{copy.allStatuses}</option>
-            {STATUS_OPTIONS.slice(1).map((value) => (
+            {(resultsView ? PROSPECT_RESULT_STATUSES : STATUS_OPTIONS.slice(1)).map((value) => (
               <option key={value} value={value}>
-                {detailCopy.statusLabels[value] ?? strings.common.vocabularyFallback}
+                {(resultsView ? resultsCopy.statusLabels : detailCopy.statusLabels)[value] ??
+                  strings.common.vocabularyFallback}
               </option>
             ))}
           </Select>
@@ -311,13 +340,36 @@ export function ProspectHubListPage(): JSX.Element {
           </Select>
         </div>
       </Card>
+      {resultsView ? (
+        <Card className="mb-5" title={resultsCopy.title}>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {PROSPECT_RESULT_STATUSES.map((status) => (
+              <div
+                key={status}
+                className="flex items-center justify-between rounded-lg border border-line bg-raised px-3 py-2"
+              >
+                <span className="text-sm text-ink-soft">
+                  {resultsCopy.statusLabels[status] ?? strings.common.vocabularyFallback}
+                </span>
+                <Badge tone="accent" className="numeric">
+                  {response.data?.statusCounts?.[status] ?? 0}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : null}
       {response.error ? (
-        <EmptyState icon={Building2} title={copy.errorTitle} description={response.error} />
+        <EmptyState
+          icon={Building2}
+          title={resultsView ? resultsCopy.errorTitle : copy.errorTitle}
+          description={response.error}
+        />
       ) : rows.length === 0 ? (
         <EmptyState
           icon={Building2}
-          title={copy.emptyTitle}
-          description={copy.emptyDescription}
+          title={resultsView ? resultsCopy.emptyTitle : copy.emptyTitle}
+          description={resultsView ? resultsCopy.emptyDescription : copy.emptyDescription}
           action={
             <Link to="/annuaire">
               <Button>{copy.openDirectory}</Button>
@@ -329,35 +381,88 @@ export function ProspectHubListPage(): JSX.Element {
           <Table>
             <TableHead>
               <TableRow>
-                <TableHeaderCell>{copy.columns.name}</TableHeaderCell>
-                <TableHeaderCell>{copy.columns.site}</TableHeaderCell>
-                <TableHeaderCell>{copy.columns.location}</TableHeaderCell>
-                <TableHeaderCell>{copy.columns.status}</TableHeaderCell>
-                <TableHeaderCell>{copy.columns.activity}</TableHeaderCell>
+                {resultsView ? (
+                  <>
+                    <TableHeaderCell>{resultsCopy.columns.prospect}</TableHeaderCell>
+                    <TableHeaderCell>{resultsCopy.columns.status}</TableHeaderCell>
+                    <TableHeaderCell>{resultsCopy.columns.outcome}</TableHeaderCell>
+                    <TableHeaderCell>{resultsCopy.columns.site}</TableHeaderCell>
+                  </>
+                ) : (
+                  <>
+                    <TableHeaderCell>{copy.columns.name}</TableHeaderCell>
+                    <TableHeaderCell>{copy.columns.site}</TableHeaderCell>
+                    <TableHeaderCell>{copy.columns.location}</TableHeaderCell>
+                    <TableHeaderCell>{copy.columns.status}</TableHeaderCell>
+                    <TableHeaderCell>{copy.columns.activity}</TableHeaderCell>
+                  </>
+                )}
               </TableRow>
             </TableHead>
             <TableBody>
               {rows.map((row: ProspectHubRow) => (
                 <TableRow key={row.prospectId}>
-                  <TableCell>
-                    <Link
-                      className="font-medium text-ink hover:underline"
-                      to={`/prospects/${row.prospectId}`}
-                    >
-                      {row.name}
-                    </Link>
-                    <div className="text-xs text-ink-muted">{row.sector}</div>
-                  </TableCell>
-                  <TableCell>
-                    {strings.prospectHub.directory.websiteKindLabels[
-                      row.websites[0]?.kind ?? 'unknown'
-                    ] ?? copy.unknown}
-                  </TableCell>
-                  <TableCell>
-                    {[row.commune, row.department].filter(Boolean).join(' · ') || copy.notProvided}
-                  </TableCell>
-                  <TableCell>{detailCopy.statusLabels[row.status] ?? row.status}</TableCell>
-                  <TableCell>{new Date(row.lastActivityAt).toLocaleDateString()}</TableCell>
+                  {resultsView ? (
+                    <>
+                      <TableCell>
+                        <Link
+                          className="font-medium text-ink hover:underline"
+                          to={detailHref(row.prospectId)}
+                        >
+                          {row.name}
+                        </Link>
+                        <div className="text-xs text-ink-muted">{row.sector}</div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge tone="neutral">
+                          {resultsCopy.statusLabels[row.status] ?? row.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value=""
+                          onChange={(event) => {
+                            if (event.target.value) void recordOutcome(row, event.target.value);
+                          }}
+                          aria-label={resultsCopy.outcomeAria.replace('{name}', row.name)}
+                        >
+                          <option value="">{resultsCopy.outcomePlaceholder}</option>
+                          {OUTCOMES.map((outcome) => (
+                            <option key={outcome} value={outcome}>
+                              {resultsCopy.outcomeLabels[outcome] ??
+                                strings.common.vocabularyFallback}
+                            </option>
+                          ))}
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        {row.websites[0]?.registrableDomain ?? resultsCopy.unknownSite}
+                      </TableCell>
+                    </>
+                  ) : (
+                    <>
+                      <TableCell>
+                        <Link
+                          className="font-medium text-ink hover:underline"
+                          to={detailHref(row.prospectId)}
+                        >
+                          {row.name}
+                        </Link>
+                        <div className="text-xs text-ink-muted">{row.sector}</div>
+                      </TableCell>
+                      <TableCell>
+                        {strings.prospectHub.directory.websiteKindLabels[
+                          row.websites[0]?.kind ?? 'unknown'
+                        ] ?? copy.unknown}
+                      </TableCell>
+                      <TableCell>
+                        {[row.commune, row.department].filter(Boolean).join(' · ') ||
+                          copy.notProvided}
+                      </TableCell>
+                      <TableCell>{detailCopy.statusLabels[row.status] ?? row.status}</TableCell>
+                      <TableCell>{new Date(row.lastActivityAt).toLocaleDateString()}</TableCell>
+                    </>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
@@ -376,7 +481,7 @@ export function ProspectHubListPage(): JSX.Element {
               <Button
                 size="sm"
                 variant="secondary"
-                disabled={rows.length < 50}
+                disabled={page * (response.data?.pageSize ?? 50) >= (response.data?.total ?? 0)}
                 onClick={() => setPage(page + 1)}
               >
                 {copy.next}
