@@ -805,6 +805,26 @@ export const fr: DashboardStrings = {
       websites: 'Sites rattachés',
       addWebsite: 'Ajouter un site',
       addWebsitePlaceholder: 'https://exemple.fr',
+      contacts: {
+        removeWebsite: 'Retirer le site {url}',
+        setPrimaryWebsite: 'Définir comme site principal',
+        removeWebsiteTitle: 'Retirer ce site ?',
+        removeWebsiteDescription:
+          '{url} ne sera plus rattaché à ce prospect. Les audits déjà rattachés restent liés ; détachez-les depuis leur page si besoin.',
+        removeWebsitePrimaryNote: 'C’est le site principal : le site suivant le remplacera.',
+        removeEmail: 'Retirer l’email {address}',
+        removeAndBlacklistEmail: 'Retirer et bloquer',
+        useForOutreach: 'Utiliser pour la prospection',
+        outreachRecipient: 'Destinataire de la prospection',
+        removeEmailTitle: 'Retirer cet email ?',
+        removeEmailDescription:
+          '{address} ne sera plus utilisé. Les brouillons non envoyés à cette adresse seront retirés ; l’historique envoyé reste intact. Retirer n’est pas bloquer : l’adresse pourra être ajoutée à nouveau.',
+        removeAndBlacklistTitle: 'Retirer et bloquer cet email ?',
+        removeAndBlacklistDescription:
+          '{address} sera retiré et ajouté à la liste d’opposition : plus aucune prospection ne lui sera adressée. À utiliser quand la personne s’y est opposée.',
+        confirmRemove: 'Retirer',
+        confirmRemoveAndBlacklist: 'Retirer et bloquer',
+      },
       emailList: 'Emails rattachés',
       notProvided: 'Non renseigné',
       roomsSummary: '{count} chambres',

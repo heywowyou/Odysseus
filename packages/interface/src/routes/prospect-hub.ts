@@ -20,6 +20,10 @@ import {
   listOutreachPreviews,
   deleteProspect,
   recordProspectOutcome,
+  removeProspectEmail,
+  removeProspectWebsite,
+  setOutreachProspectEmail,
+  setPrimaryProspectWebsite,
   setProspectStatus,
   updateProspect,
   type DirectoryFilter,
@@ -31,6 +35,7 @@ import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import type { Router } from '../router.js';
 import { readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
 import { getPreviewPublicBaseUrl } from '../config.js';
+import { createConfiguredMailboxDraftAdapter } from '../outreach/configured-mailbox-draft-adapter.js';
 import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
 import { createMongoOutreachPreviewStoreV2 } from '../outreach/mongo-outreach-preview-store-v2.js';
 import { publishPreviewV2 } from '../outreach/publish-preview-v2.js';
@@ -407,6 +412,77 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
     const prospect = await updateProspect(connection, params['prospectId']!, body as never);
     if (prospect === null) sendError(res, 404, 'prospect not found');
     else sendJson(res, 200, prospect);
+  });
+
+  // Issues #270/#271: explicit contact corrections, so the server enforces a
+  // single primary website and the outreach recipient order.
+  const contactBody = async (
+    req: Parameters<typeof readJsonBodyOrRespond>[0],
+    res: Parameters<typeof sendError>[0],
+    key: 'url' | 'address',
+  ): Promise<{ value: string; body: Record<string, unknown> } | null> => {
+    const body = recordBody(await readJsonBodyOrRespond(req, res));
+    const value = body?.[key];
+    if (body === null || typeof value !== 'string' || value.trim() === '') {
+      if (!res.headersSent) sendError(res, 400, `${key} is required`);
+      return null;
+    }
+    return { value, body };
+  };
+  const sendContactResult = (
+    res: Parameters<typeof sendError>[0],
+    result: Awaited<ReturnType<typeof removeProspectWebsite>>,
+  ): void => {
+    if (result.ok) sendJson(res, 200, result.prospect);
+    else if (result.refusal === 'prospect-not-found') sendError(res, 404, 'prospect not found');
+    else sendError(res, 404, 'contact not found on this prospect');
+  };
+
+  router.delete('/api/prospects/:prospectId/websites', async ({ req, res, params }) => {
+    const input = await contactBody(req, res, 'url');
+    if (input === null) return;
+    sendContactResult(
+      res,
+      await removeProspectWebsite(connection, params['prospectId']!, input.value),
+    );
+  });
+
+  router.post('/api/prospects/:prospectId/websites/primary', async ({ req, res, params }) => {
+    const input = await contactBody(req, res, 'url');
+    if (input === null) return;
+    sendContactResult(
+      res,
+      await setPrimaryProspectWebsite(connection, params['prospectId']!, input.value),
+    );
+  });
+
+  router.delete('/api/prospects/:prospectId/emails', async ({ req, res, params }) => {
+    const input = await contactBody(req, res, 'address');
+    if (input === null) return;
+    const result = await removeProspectEmail(connection, params['prospectId']!, input.value, {
+      suppress: input.body['suppress'] === true,
+    });
+    if (result.ok && result.withdrawnProviderDraftIds.length > 0) {
+      // Best effort: the stored draft is already withdrawn from review.
+      const mailbox = createConfiguredMailboxDraftAdapter();
+      if (mailbox !== null) {
+        await Promise.all(
+          result.withdrawnProviderDraftIds.map((id) =>
+            mailbox.deleteDraft(id).catch(() => undefined),
+          ),
+        );
+      }
+    }
+    sendContactResult(res, result);
+  });
+
+  router.post('/api/prospects/:prospectId/emails/primary', async ({ req, res, params }) => {
+    const input = await contactBody(req, res, 'address');
+    if (input === null) return;
+    sendContactResult(
+      res,
+      await setOutreachProspectEmail(connection, params['prospectId']!, input.value),
+    );
   });
 
   router.patch('/api/prospects/:prospectId/status', async ({ req, res, params }) => {

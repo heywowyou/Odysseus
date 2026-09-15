@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import type { JSX } from 'react';
-import { ArrowLeft, ExternalLink, History, Trash2 } from 'lucide-react';
+import { ArrowLeft, ExternalLink, History, Star, Trash2, X } from 'lucide-react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { PageHeader, PAGE_WIDTH } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import { Button, buttonStyles } from '../components/ui/button';
 import { Card } from '../components/ui/card';
+import { ConfirmDialog } from '../components/ui/dialog';
 import { EmptyState } from '../components/ui/empty-state';
 import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
@@ -13,6 +14,11 @@ import { useI18n } from '../i18n/provider';
 import { sendJson } from '../lib/api';
 import { useApi } from '../lib/use-api';
 import type { ProspectHubRow, ProspectStatus } from './prospect-hub-model';
+import {
+  contactRemovalConfirm,
+  contactRemovalRequest,
+  type ContactRemoval,
+} from './prospect-contact-model';
 
 interface ProspectEvent {
   eventId: string;
@@ -163,6 +169,7 @@ export function ProspectHubDetailPage(): JSX.Element {
   const [saving, setSaving] = useState(false);
   const [outreachBusy, setOutreachBusy] = useState<string | null>(null);
   const [outreachNotice, setOutreachNotice] = useState<string | null>(null);
+  const [pendingRemoval, setPendingRemoval] = useState<ContactRemoval | null>(null);
 
   if (response.error)
     return (
@@ -239,6 +246,34 @@ export function ProspectHubDetailPage(): JSX.Element {
       });
       setWebsite('');
       response.refresh();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const contactsCopy = copy.contacts;
+
+  const removeContact = async (removal: ContactRemoval): Promise<void> => {
+    const request = contactRemovalRequest(prospect.prospectId, removal);
+    try {
+      await sendJson(request.path, 'DELETE', request.body);
+      response.refresh();
+    } catch {
+      setOutreachNotice(copy.actionFailed);
+    }
+  };
+
+  const choosePrimary = async (kind: 'websites' | 'emails', value: string): Promise<void> => {
+    setSaving(true);
+    try {
+      await sendJson(
+        `/api/prospects/${encodeURIComponent(prospect.prospectId)}/${kind}/primary`,
+        'POST',
+        kind === 'websites' ? { url: value } : { address: value },
+      );
+      response.refresh();
+    } catch {
+      setOutreachNotice(copy.actionFailed);
     } finally {
       setSaving(false);
     }
@@ -657,6 +692,33 @@ export function ProspectHubDetailPage(): JSX.Element {
                           {strings.prospectHub.directory.websiteKindLabels[item.kind] ??
                             strings.common.vocabularyFallback}
                         </span>
+                        <span className="ml-auto flex items-center gap-1">
+                          {!item.primary ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={saving}
+                              onClick={() => void choosePrimary('websites', item.url)}
+                            >
+                              <Star className="size-4" aria-hidden="true" />
+                              {contactsCopy.setPrimaryWebsite}
+                            </Button>
+                          ) : null}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            aria-label={contactsCopy.removeWebsite.replace('{url}', item.url)}
+                            onClick={() =>
+                              setPendingRemoval({
+                                kind: 'website',
+                                url: item.url,
+                                primary: item.primary,
+                              })
+                            }
+                          >
+                            <X className="size-4" aria-hidden="true" />
+                          </Button>
+                        </span>
                       </li>
                     ))
                   ) : (
@@ -681,18 +743,73 @@ export function ProspectHubDetailPage(): JSX.Element {
               </div>
               <div>
                 <p className="mb-2 text-xs text-ink-muted">{copy.emailList}</p>
-                <div className="flex flex-wrap gap-2">
+                <ul className="grid gap-2">
                   {prospect.emails.length > 0 ? (
-                    prospect.emails.map((item) => (
-                      <Badge key={item.address} tone="neutral">
-                        {item.address} ·{' '}
-                        {copy.originLabels[item.origin] ?? strings.common.vocabularyFallback}
-                      </Badge>
+                    prospect.emails.map((item, index) => (
+                      <li key={item.address} className="flex flex-wrap items-center gap-2">
+                        <span className="break-all text-ink">{item.address}</span>
+                        <span className="text-xs text-ink-muted">
+                          {copy.originLabels[item.origin] ?? strings.common.vocabularyFallback}
+                        </span>
+                        {index === 0 ? (
+                          <Badge tone="accent">{contactsCopy.outreachRecipient}</Badge>
+                        ) : null}
+                        <span className="ml-auto flex flex-wrap items-center gap-1">
+                          {index !== 0 ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={saving}
+                              onClick={() => void choosePrimary('emails', item.address)}
+                            >
+                              {contactsCopy.useForOutreach}
+                            </Button>
+                          ) : null}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              setPendingRemoval({
+                                kind: 'email',
+                                address: item.address,
+                                blacklist: true,
+                              })
+                            }
+                          >
+                            {contactsCopy.removeAndBlacklistEmail}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            aria-label={contactsCopy.removeEmail.replace('{address}', item.address)}
+                            onClick={() =>
+                              setPendingRemoval({
+                                kind: 'email',
+                                address: item.address,
+                                blacklist: false,
+                              })
+                            }
+                          >
+                            <X className="size-4" aria-hidden="true" />
+                          </Button>
+                        </span>
+                      </li>
                     ))
                   ) : (
-                    <span className="text-sm text-ink-muted">{copy.notProvided}</span>
+                    <li className="text-sm text-ink-muted">{copy.notProvided}</li>
                   )}
-                </div>
+                </ul>
+                {pendingRemoval !== null ? (
+                  <ConfirmDialog
+                    open
+                    onOpenChange={(open) => {
+                      if (!open) setPendingRemoval(null);
+                    }}
+                    {...contactRemovalConfirm(pendingRemoval, contactsCopy)}
+                    cancelLabel={strings.common.cancel}
+                    onConfirm={() => removeContact(pendingRemoval)}
+                  />
+                ) : null}
                 <div className="mt-2 grid gap-2 md:grid-cols-[1fr_auto]">
                   <Input
                     value={email}

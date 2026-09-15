@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 
 import { createElement, type ReactElement } from 'react';
+import { en } from './i18n/en';
+import { fr } from './i18n/fr';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter, Route, Routes } from 'react-router';
@@ -203,6 +205,20 @@ describe('prospect dashboard accessibility contract', () => {
       language,
     );
     await expectNoAxeViolations(container);
+    // Issues #270/#271: every website and email row can be removed, and the
+    // outreach recipient is named explicitly.
+    const contacts = (language === 'fr' ? fr : en).prospectHub.detail.contacts;
+    expect(
+      container.querySelector(
+        `[aria-label="${contacts.removeWebsite.replace('{url}', 'https://exemple.fr/')}"]`,
+      ),
+    ).not.toBeNull();
+    expect(
+      container.querySelector(
+        `[aria-label="${contacts.removeEmail.replace('{address}', 'contact@exemple.fr')}"]`,
+      ),
+    ).not.toBeNull();
+    expect(container.textContent).toContain(contacts.outreachRecipient);
     root.unmount();
   });
 });

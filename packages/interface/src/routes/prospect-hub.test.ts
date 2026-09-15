@@ -26,12 +26,20 @@ vi.mock('@odysseus/store', () => ({
   listProspects: vi.fn(),
   loadProspectWork: vi.fn(),
   recordProspectOutcome: vi.fn(),
+  removeProspectEmail: vi.fn(),
+  removeProspectWebsite: vi.fn(),
+  setOutreachProspectEmail: vi.fn(),
+  setPrimaryProspectWebsite: vi.fn(),
   setProspectStatus: vi.fn(),
   updateProspect: vi.fn(),
 }));
 vi.mock('../outreach/draft-runtime.js', () => ({
   createFirstEmailForProspect: vi.fn(),
   createFollowUpForProspect: vi.fn(),
+}));
+const { deleteMailboxDraft } = vi.hoisted(() => ({ deleteMailboxDraft: vi.fn() }));
+vi.mock('../outreach/configured-mailbox-draft-adapter.js', () => ({
+  createConfiguredMailboxDraftAdapter: vi.fn(() => ({ deleteDraft: deleteMailboxDraft })),
 }));
 vi.mock('../outreach/configured-preview-publisher.js', () => ({
   createConfiguredPreviewPublisher: vi.fn(() => ({
@@ -55,6 +63,10 @@ import {
   loadProspectWork,
   listProspects,
   recordProspectOutcome,
+  removeProspectEmail,
+  removeProspectWebsite,
+  setOutreachProspectEmail,
+  setPrimaryProspectWebsite,
   setProspectStatus,
   type ProspectTodoRow,
 } from '@odysseus/store';
@@ -265,6 +277,49 @@ describe('prospect hub routes', () => {
     const deleted = await handle('/api/prospects/p-1', 'DELETE');
     expect(deleted.statusCode).toBe(200);
     expect(deleteProspect).toHaveBeenCalledWith(fakeConnection, 'p-1');
+  });
+
+  it('routes website and email corrections through the explicit contact endpoints', async () => {
+    const prospect = { prospectId: 'p-1' };
+    vi.mocked(removeProspectWebsite).mockResolvedValue({ ok: true, prospect } as never);
+    vi.mocked(setPrimaryProspectWebsite).mockResolvedValue({
+      ok: false,
+      refusal: 'contact-not-found',
+    });
+    vi.mocked(setOutreachProspectEmail).mockResolvedValue({ ok: true, prospect } as never);
+    vi.mocked(removeProspectEmail).mockResolvedValue({
+      ok: true,
+      prospect,
+      withdrawnProviderDraftIds: ['gmail-draft-1'],
+    } as never);
+    deleteMailboxDraft.mockResolvedValue(undefined);
+
+    const website = await handle('/api/prospects/p-1/websites', 'DELETE', { url: 'https://a.fr/' });
+    expect(website.statusCode).toBe(200);
+    expect(removeProspectWebsite).toHaveBeenCalledWith(fakeConnection, 'p-1', 'https://a.fr/');
+
+    const primary = await handle('/api/prospects/p-1/websites/primary', 'POST', {
+      url: 'https://missing.fr/',
+    });
+    expect(primary.statusCode).toBe(404);
+
+    const recipient = await handle('/api/prospects/p-1/emails/primary', 'POST', {
+      address: 'b@a.fr',
+    });
+    expect(recipient.statusCode).toBe(200);
+
+    const email = await handle('/api/prospects/p-1/emails', 'DELETE', {
+      address: 'x@a.fr',
+      suppress: true,
+    });
+    expect(email.statusCode).toBe(200);
+    expect(removeProspectEmail).toHaveBeenCalledWith(fakeConnection, 'p-1', 'x@a.fr', {
+      suppress: true,
+    });
+    expect(deleteMailboxDraft).toHaveBeenCalledWith('gmail-draft-1');
+
+    const missing = await handle('/api/prospects/p-1/emails', 'DELETE', {});
+    expect(missing.statusCode).toBe(400);
   });
 
   it('returns a conflict when normal outcome recording would overwrite a terminal status', async () => {

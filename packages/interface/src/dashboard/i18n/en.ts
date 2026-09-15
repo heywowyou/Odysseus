@@ -792,6 +792,26 @@ export const en: DashboardStrings = {
       websites: 'Attached websites',
       addWebsite: 'Add website',
       addWebsitePlaceholder: 'https://example.co.uk',
+      contacts: {
+        removeWebsite: 'Remove website {url}',
+        setPrimaryWebsite: 'Set as primary website',
+        removeWebsiteTitle: 'Remove this website?',
+        removeWebsiteDescription:
+          '{url} will no longer be attached to this prospect. Audits already attached stay linked; detach them from their page if needed.',
+        removeWebsitePrimaryNote: 'This is the primary website: the next one will replace it.',
+        removeEmail: 'Remove email {address}',
+        removeAndBlacklistEmail: 'Remove and block',
+        useForOutreach: 'Use for outreach',
+        outreachRecipient: 'Outreach recipient',
+        removeEmailTitle: 'Remove this email?',
+        removeEmailDescription:
+          '{address} will no longer be used. Unsent drafts to this address are withdrawn; sent history stays intact. Removing is not blocking: the address can be added again.',
+        removeAndBlacklistTitle: 'Remove and block this email?',
+        removeAndBlacklistDescription:
+          '{address} will be removed and added to the opt-out list: no outreach will be sent to it again. Use this when the person objected.',
+        confirmRemove: 'Remove',
+        confirmRemoveAndBlacklist: 'Remove and block',
+      },
       emailList: 'Attached emails',
       notProvided: 'Not provided',
       roomsSummary: '{count} rooms',

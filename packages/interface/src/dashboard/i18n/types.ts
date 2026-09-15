@@ -810,6 +810,24 @@ export interface DashboardStrings {
       websites: string;
       addWebsite: string;
       addWebsitePlaceholder: string;
+      /** Issues #270/#271: contact correction controls. {url} / {address}. */
+      contacts: {
+        removeWebsite: string;
+        setPrimaryWebsite: string;
+        removeWebsiteTitle: string;
+        removeWebsiteDescription: string;
+        removeWebsitePrimaryNote: string;
+        removeEmail: string;
+        removeAndBlacklistEmail: string;
+        useForOutreach: string;
+        outreachRecipient: string;
+        removeEmailTitle: string;
+        removeEmailDescription: string;
+        removeAndBlacklistTitle: string;
+        removeAndBlacklistDescription: string;
+        confirmRemove: string;
+        confirmRemoveAndBlacklist: string;
+      };
       emailList: string;
       notProvided: string;
       roomsSummary: string;

@@ -325,3 +325,14 @@ export type {
   ProspectWorkThread,
   ProspectWorkRecommendation,
 } from './prospect-work.js';
+export {
+  removeProspectEmail,
+  removeProspectWebsite,
+  setOutreachProspectEmail,
+  setPrimaryProspectWebsite,
+} from './prospect-contacts.js';
+export type {
+  ProspectContactRefusal,
+  ProspectContactResult,
+  RemoveProspectEmailOptions,
+} from './prospect-contacts.js';
