@@ -12,10 +12,12 @@
 import type { Connection } from 'mongoose';
 import {
   completeOutreachSequence,
+  findOutreachThreadById,
   listOutreachDrafts,
   listThreadsToSync,
   markOutreachThreadSynced,
   recordOutreachThreadTouchSent,
+  recordOutreachTouchSent,
   transitionOutreachThread,
 } from '@odysseus/store';
 import type { MailboxReconciliationStorePort, ThreadToSync } from './reconcile-mailbox.js';
@@ -72,6 +74,15 @@ export function createMongoMailboxReconciliationStore(
         sentAt: input.sentAt,
         detectedAt: input.detectedAt,
       });
+      const thread = await findOutreachThreadById(connection, input.threadId);
+      if (thread !== null) {
+        await recordOutreachTouchSent(connection, {
+          prospectId: thread.prospectId,
+          threadId: input.threadId,
+          touch: input.touch,
+          sentAt: input.sentAt,
+        });
+      }
     },
 
     async transition(input): Promise<boolean> {

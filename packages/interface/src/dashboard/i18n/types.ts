@@ -1271,6 +1271,10 @@ export interface DashboardStrings {
     /** The muted one-liner the table renders instead of an empty-state
      *  block when every source is empty. */
     empty: string;
+    syncMailbox: string;
+    syncMailboxDone: string;
+    syncMailboxNotConfigured: string;
+    syncMailboxFailed: string;
     /** Kept for compatibility with the existing translation shape while
      *  batch entry points remain retired from the prospect-only inbox. */
     batch: {

@@ -40,6 +40,7 @@ import { createConfiguredMailboxDraftAdapter } from '../outreach/configured-mail
 import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
 import { createMongoOutreachPreviewStoreV2 } from '../outreach/mongo-outreach-preview-store-v2.js';
 import { publishPreviewV2 } from '../outreach/publish-preview-v2.js';
+import { syncMailbox } from '../outreach/mailbox-sync.js';
 import { withdrawOutreachForProspect } from '../outreach/withdraw-prospect-outreach.js';
 import {
   createFirstEmailForProspect,
@@ -161,6 +162,13 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
     const address = raw.trim();
     const domain = address.slice(address.indexOf('@') + 1);
     sendJson(res, 200, { suppressed: await isSuppressed(connection, domain, address) });
+  });
+
+  // Issue #272: the operator can pull sent emails and replies in now rather
+  // than wait for the scheduled sync.
+  router.post('/api/outreach/mailbox-sync', async ({ res }) => {
+    const result = await syncMailbox(connection);
+    sendJson(res, result.configured ? 200 : 503, result);
   });
 
   router.get('/api/prospects', async ({ res, query }) => {

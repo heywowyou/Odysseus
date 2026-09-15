@@ -1301,6 +1301,11 @@ export const fr: DashboardStrings = {
       'review-audit': 'Compléter l’audit',
     },
     empty: 'Rien n’attend de décision.',
+    syncMailbox: 'Synchroniser la boîte mail',
+    syncMailboxDone:
+      'Boîte mail synchronisée : {sent} envoi(s) confirmé(s), {replies} réponse(s) ou retour(s), {review} à vérifier.',
+    syncMailboxNotConfigured: 'Aucune boîte mail n’est configurée sur cette machine.',
+    syncMailboxFailed: 'La boîte mail n’a pas pu être synchronisée. Réessayez.',
     batch: {
       draftBatchLabel: 'Rédiger les premiers emails pour les hôtels sélectionnés',
       draftBatchButton: 'Rédiger les premiers emails',

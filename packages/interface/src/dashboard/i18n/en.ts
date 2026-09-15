@@ -1282,6 +1282,11 @@ export const en: DashboardStrings = {
       'review-audit': 'Review the audit',
     },
     empty: 'Nothing is waiting for a decision.',
+    syncMailbox: 'Sync mailbox',
+    syncMailboxDone:
+      'Mailbox synced: {sent} confirmed send(s), {replies} reply(ies) or bounce(s), {review} to check.',
+    syncMailboxNotConfigured: 'No mailbox is configured on this machine.',
+    syncMailboxFailed: 'The mailbox could not be synced. Try again.',
     batch: {
       draftBatchLabel: 'Draft first emails for the selected hotels',
       draftBatchButton: 'Draft first emails',

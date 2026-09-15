@@ -118,19 +118,44 @@ export async function recordOutreachDraft(
     if (isDuplicateKeyError(error)) throw new DuplicateLiveDraftError(input.threadId, input.touch);
     throw error;
   }
-  const status = input.touch === 1 ? 'contacted' : 'follow-up';
-  const prospect = await advanceProspectStatus(connection, input.prospectId, status);
-  if (prospect !== null) {
-    await appendProspectEvent(connection, {
-      eventId: randomUUID(),
-      prospectId: input.prospectId,
-      type: 'draft-created',
-      payload: { draftId: document.draftId, touch: input.touch },
-      actor: 'automation',
-      at: new Date(),
-    });
-  }
+  // Issue #278: a draft is not contact. The prospect status only moves when
+  // mailbox reconciliation confirms the send (recordOutreachTouchSent).
+  await appendProspectEvent(connection, {
+    eventId: randomUUID(),
+    prospectId: input.prospectId,
+    type: 'draft-created',
+    payload: { draftId: document.draftId, touch: input.touch },
+    actor: 'automation',
+    at: new Date(),
+  });
   return document;
+}
+
+/**
+ * The prospect-side effects of a provider-confirmed send: the sent draft
+ * leaves review as approved, and the prospect becomes contacted (touch 1) or
+ * in follow-up (later touches). Idempotent, so a repeated sync is a no-op.
+ */
+export async function recordOutreachTouchSent(
+  connection: Connection,
+  input: { prospectId: string; threadId: string; touch: number; sentAt: Date },
+): Promise<void> {
+  await createOutreachDraftModel(connection).updateMany(
+    { threadId: input.threadId, touch: input.touch, status: 'created' },
+    {
+      $set: {
+        status: 'deleted',
+        reviewOutcome: 'approved',
+        reviewedAt: input.sentAt,
+        deletedAt: input.sentAt,
+      },
+    },
+  );
+  await advanceProspectStatus(
+    connection,
+    input.prospectId,
+    input.touch === 1 ? 'contacted' : 'follow-up',
+  );
 }
 
 function isDuplicateKeyError(error: unknown): boolean {

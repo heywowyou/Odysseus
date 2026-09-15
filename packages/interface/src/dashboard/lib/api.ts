@@ -131,8 +131,10 @@ export function sendJson<T>(
   url: string,
   method: 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   body: unknown,
+  init: Pick<ApiRequestInit, 'timeoutMs' | 'signal'> = {},
 ): Promise<T> {
   return fetchJson<T>(url, {
+    ...init,
     method,
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),

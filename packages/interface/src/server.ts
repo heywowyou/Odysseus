@@ -20,6 +20,7 @@ import { runProspectingAuditJob } from './queue/pipeline/run-prospecting-audit-j
 import { runOutreachFullScanJob } from './queue/pipeline/run-outreach-full-scan-job.js';
 import { runProspectingJob } from './queue/pipeline/run-prospecting-job.js';
 import { startOptOutPoller } from './outreach/opt-out-poller.js';
+import { startMailboxSyncPoller } from './outreach/mailbox-sync.js';
 import { runOutreachDraftBatchJob } from './queue/pipeline/run-outreach-draft-batch-job.js';
 import { runOutreachFollowupBatchJob } from './queue/pipeline/run-outreach-followup-batch-job.js';
 import {
@@ -50,6 +51,8 @@ export interface InterfaceAuthOptions {
   /** Consume public opt-out requests from the preview bucket. Only the real
    *  `serve` command turns this on, so tests never touch a bucket. */
   pollOptOutRequests?: boolean;
+  /** Reconcile the outreach mailbox on a timer. Same `serve`-only rule. */
+  syncMailbox?: boolean;
 }
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', '::1', 'localhost']);
@@ -162,6 +165,8 @@ export async function startInterfaceServer(
 
   const stopOptOutPoller =
     options.pollOptOutRequests === true ? startOptOutPoller(connection) : () => undefined;
+  const stopMailboxSync =
+    options.syncMailbox === true ? startMailboxSyncPoller(connection) : () => undefined;
 
   return {
     server,
@@ -169,6 +174,7 @@ export async function startInterfaceServer(
     url: `http://${host}:${port}`,
     async close(): Promise<void> {
       stopOptOutPoller();
+      stopMailboxSync();
       await queue.stop();
       await new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));

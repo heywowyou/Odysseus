@@ -35,6 +35,8 @@ vi.mock('@odysseus/store', () => ({
   updateProspect: vi.fn(),
   withdrawProspectOutreach: vi.fn(),
 }));
+const { syncMailbox } = vi.hoisted(() => ({ syncMailbox: vi.fn() }));
+vi.mock('../outreach/mailbox-sync.js', () => ({ syncMailbox }));
 vi.mock('../outreach/draft-runtime.js', () => ({
   createFirstEmailForProspect: vi.fn(),
   createFollowUpForProspect: vi.fn(),
@@ -484,5 +486,24 @@ describe('POST /api/outreach/suppression-check', () => {
     const result = await handle('/api/outreach/suppression-check', 'POST', { address: 'nope' });
     expect(result.statusCode).toBe(400);
     expect(isSuppressed).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/outreach/mailbox-sync', () => {
+  it('reports what the sync found, or 503 without a mailbox', async () => {
+    syncMailbox.mockResolvedValueOnce({
+      configured: true,
+      threads: 2,
+      sent: 1,
+      replies: 1,
+      review: 0,
+    });
+    const synced = await handle('/api/outreach/mailbox-sync', 'POST', {});
+    expect(synced.statusCode).toBe(200);
+    expect(synced.body).toMatchObject({ sent: 1, replies: 1 });
+
+    syncMailbox.mockResolvedValueOnce({ configured: false });
+    const missing = await handle('/api/outreach/mailbox-sync', 'POST', {});
+    expect(missing.statusCode).toBe(503);
   });
 });

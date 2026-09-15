@@ -1,6 +1,13 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { departmentFromPostcodeForTest } from './prospect-hub.js';
-import { createProspectHub, updateProspect, withdrawProspectOutreach } from './prospect-hub.js';
+import {
+  createProspectHub,
+  getProspectHub,
+  setProspectStatus,
+  updateProspect,
+  withdrawProspectOutreach,
+} from './prospect-hub.js';
+import { recordOutreachDraft, recordOutreachTouchSent } from './outreach-drafts.js';
 import { createOutreachDraftModel } from './schemas/outreach-draft.schema.js';
 import { createOutreachPreviewModel } from './schemas/outreach-preview.schema.js';
 import { createOutreachThreadModel } from './schemas/outreach-thread.schema.js';
@@ -103,5 +110,43 @@ describe.skipIf(!mongoAvailable)('withdrawing a prospect outreach', () => {
 
     const again = await withdrawProspectOutreach(connection!, prospectId, 'opted-out');
     expect(again).toMatchObject({ drafts: 0, previews: 0, threadClosed: false });
+  });
+});
+
+describe.skipIf(!mongoAvailable)('draft creation and confirmed sends', () => {
+  it('keeps the status on draft creation and marks the prospect contacted on a confirmed send', async () => {
+    const prospect = await createProspectHub(connection!, { sector: 'hotel', name: 'Sent' });
+    await setProspectStatus(connection!, prospect.prospectId, 'audited');
+    const now = new Date();
+    await recordOutreachDraft(connection!, {
+      prospectId: prospect.prospectId,
+      threadId: 't-sent',
+      touch: 1,
+      language: 'fr',
+      roleAddress: 'contact@sent.fr',
+      subject: 'Objet',
+      body: 'Corps',
+      htmlBody: '<p>Corps</p>',
+      evidenceVersion: 'v1',
+      outreachPromptVersion: 'v1',
+      providerDraftId: 'g-d',
+      providerMessageId: 'g-m',
+      providerThreadId: 'g-t',
+      createdAt: now,
+    });
+    expect((await getProspectHub(connection!, prospect.prospectId))?.status).toBe('audited');
+
+    await recordOutreachTouchSent(connection!, {
+      prospectId: prospect.prospectId,
+      threadId: 't-sent',
+      touch: 1,
+      sentAt: now,
+    });
+
+    expect((await getProspectHub(connection!, prospect.prospectId))?.status).toBe('contacted');
+    const draft = await createOutreachDraftModel(connection!).collection.findOne({
+      threadId: 't-sent',
+    });
+    expect(draft).toMatchObject({ status: 'deleted', reviewOutcome: 'approved' });
   });
 });

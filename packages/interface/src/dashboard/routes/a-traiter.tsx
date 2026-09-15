@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import type { JSX } from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, RefreshCw } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
@@ -17,7 +18,7 @@ import {
   TableRow,
 } from '../components/ui/table';
 import { useI18n } from '../i18n/provider';
-import { fetchJson } from '../lib/api';
+import { ApiError, fetchJson, sendJson } from '../lib/api';
 import { formatRelativeTime } from '../lib/format';
 import { usePolling } from '../lib/use-polling';
 import type { TodoPage, TodoRow, TodoRowKind } from '../lib/api-types';
@@ -47,6 +48,36 @@ export function ATraiterPage(): JSX.Element {
       key: 'a-traiter:todo',
     },
   );
+
+  const [syncing, setSyncing] = useState(false);
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
+  const syncMailbox = async (): Promise<void> => {
+    setSyncing(true);
+    setSyncNotice(null);
+    try {
+      const result = await sendJson<{ sent: number; replies: number; review: number }>(
+        '/api/outreach/mailbox-sync',
+        'POST',
+        {},
+        { timeoutMs: 120_000 },
+      );
+      setSyncNotice(
+        strings.aTraiter.syncMailboxDone
+          .replace('{sent}', String(result.sent))
+          .replace('{replies}', String(result.replies))
+          .replace('{review}', String(result.review)),
+      );
+      refresh();
+    } catch (syncError) {
+      setSyncNotice(
+        syncError instanceof ApiError && syncError.status === 503
+          ? strings.aTraiter.syncMailboxNotConfigured
+          : strings.aTraiter.syncMailboxFailed,
+      );
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   let body: JSX.Element;
   if (error !== undefined && data === undefined) {
@@ -114,7 +145,21 @@ export function ATraiterPage(): JSX.Element {
 
   return (
     <article className={PAGE_WIDTH.surface}>
-      <PageHeader title={strings.aTraiter.title} description={strings.aTraiter.description} />
+      <PageHeader
+        title={strings.aTraiter.title}
+        description={strings.aTraiter.description}
+        actions={
+          <Button variant="secondary" isLoading={syncing} onClick={() => void syncMailbox()}>
+            <RefreshCw className="size-4" aria-hidden="true" />
+            {strings.aTraiter.syncMailbox}
+          </Button>
+        }
+      />
+      {syncNotice !== null ? (
+        <p className="mb-3 text-sm text-ink-muted" role="status">
+          {syncNotice}
+        </p>
+      ) : null}
       <p
         className="mb-4 rounded-xl border border-line-strong bg-panel px-5 py-4 text-sm font-medium text-ink"
         role="note"
