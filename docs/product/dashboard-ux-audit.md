@@ -19,6 +19,54 @@ reconciliation properly). History is never deleted.
 | 3 | 2026-09-14 | `48ae763` | 3 | 15 | 0 | 0 | local + production, partial (journeys 2/3/6 and full FR/EN parity not covered) | no |
 | 4 | 2026-09-15 | `15bc280` | 0 | 15 | 0 | 0 | local synthetic browser fixture + stateful dashboard fixture, FR/EN surface pass | yes (surface copy) |
 | 5 | 2026-09-15 | `Plan 048 closeout` | 0 | 15 | 0 | 0 | isolated local stateful browser fixture + real prospecting queue scan, FR detail state pass | yes (FR stateful; EN surface run 4) |
+| 6 | 2026-09-15 | `13b65ea` | 14 | 16 | 0 | 0 | local stateful, authorized real site, real mailbox draft + preview bucket, FR+EN; journeys 1-5 and 7 partial, 6 blocked | no |
+
+## Run 6 notes (local stateful, operator-authorized real prospect)
+
+- Mode and boundary: local `pnpm run serve` + Vite dashboard at `13b65ea`
+  against Mongo database `odysseus-local` (production uses a different
+  database). The operator explicitly authorized one named real hotel site for
+  scans, edits and deletion, and every step short of sending mail. The
+  configured real mailbox and preview bucket were therefore used: one Gmail
+  draft (not sent) and two previews (one revoked by the product, one live)
+  were created. No email was sent.
+- Starting state: empty local catalogue, prospects and suppression data, so
+  the Directory journey could not run (catalogue import is CLI-only via
+  `prospect ingest`); the prospect was created with "Nouveau prospect".
+- Journey 1 (prospect decision): created, edited (email added), status
+  advanced automatically. Stale gates after edit -> UX-023. No not-qualified
+  -> qualified control exists in this IA (qualification is audit-derived).
+- Journey 2 (quick check): proof chain complete - double click created one
+  job, 1 page visited in 14 s, audit + findings persisted, attached to the
+  prospect. Labels mislead -> UX-026. Invalid-URL refusal is clear.
+- Journey 3 (prospecting audit): proof chain complete - 31/31 pages crawled,
+  content-scanned and measured in ~10 min, survived EN switch and reload,
+  prospect advanced to Audité with a qualifying audit.
+- Journey 4 (preview + first email): preview published, then silently
+  superseded by the draft's own preview (UX-024); draft created in the real
+  mailbox but in English because the dashboard was in EN (UX-019); review
+  surface shows only the subject (UX-021); status jumped to Contacté (UX-022).
+- Journey 5 (paid report): identity confirmed, writing succeeded with no
+  progress feedback (UX-025), PDF production fails reproducibly (UX-020).
+- Journey 6 (follow-through): blocked - mailbox reconciliation has no caller
+  (UX-016). Outcome recording on an unsent thread accepted silently (UX-022);
+  opt-out leaves draft, preview and task live (UX-017); suppression lookup
+  404s (UX-018).
+- Journey 7 (recovery/navigation): unknown prospect, unknown URL, invalid
+  URL, FR/EN toggle persistence and 390 px width checked; no horizontal
+  overflow. Locale leaks -> UX-028, landmarks -> UX-029. Keyboard-only
+  dialogs, expired session and slow-request states not covered.
+- Still open, re-seen: UX-002 (refusal falls back to "Autre"), UX-014 (raw
+  English exception still displayed beside the translated PDF failure).
+  Other historical entries were not re-verified in this run.
+- Retained for operator review/cleanup: prospect `95058d91`, audits
+  `82b11f72` (quick check) and `755d9e27` (prospecting, with FR/EN analyses)
+  and their local artifact directories, outreach thread `b446543c`, draft
+  `352d01f5` (Gmail provider draft still in the mailbox), previews
+  `e0557524` (revoked) and `b760f0fa` (live in the bucket), and a suppression
+  row for the prospect's email from the opt-out test. Deleting the prospect
+  from the dashboard will not remove the Gmail draft (UX-017).
+- Parity: no.
 
 ## Run 4 notes (Plan 048 local fixture pass)
 
@@ -206,7 +254,7 @@ plan 045 section 1.9) is pending the operator's deploy.
 
 ### UX-002 (P1) Most first-email draft refusal codes give no reason or remedy
 
-- Status: OPEN. First seen: run 1. Last seen: run 1.
+- Status: OPEN. First seen: run 1. Last seen: run 6.
 - Where: hub, Emails tab, "Générer/Créer le premier email", FR+EN.
 - Evidence: `prospect-detail.tsx:349-363` only covered 5 of the 17 `CreateOutreachDraftRefusal` codes; the other 12 fell through to a generic "the orchestrator refused" toast.
 - Suggested UX fix: add the missing 12 keys to `refusalReasons` in both i18n files, mirroring the CLI's own copy.
@@ -294,7 +342,7 @@ plan 045 section 1.9) is pending the operator's deploy.
 
 ### UX-014 (P1) Report PDF regeneration failure shown only as a raw, untranslated, auto-dismissing exception - blocking a live client's paid report
 
-- Status: OPEN. First seen: run 3. Last seen: run 3.
+- Status: OPEN. First seen: run 3. Last seen: run 6.
 - Where: audit page, Rapport client, "Régénérer les PDF", production (HÔTEL BELLEVAL, audit `809b5e87-...`).
 - Evidence: `POST /api/audits/:auditId/regenerate-report` returns 409 with the report renderer's raw print-overflow-guard exception (`packages/report/src/pdf.ts:198-334`, issue #118's gate; genuine ~1794px overflow on page 2). The dashboard's catch handler (`packages/interface/src/dashboard/routes/audit-report-panel.tsx:120-126`) relays that exact string in an auto-dismissing toast; no durable error state, no plain-language explanation, no remedy. This client's PDF currently cannot be produced.
 - Suggested UX fix: a durable, plain-language error state on the report panel for this failure class, distinct from the raw exception text.
@@ -307,6 +355,118 @@ plan 045 section 1.9) is pending the operator's deploy.
 - Evidence: the Aperçu tab's action targets whichever audit is selected via the Audit tab's own selector/URL `?audit=` param (default: most recent audit, here the full/paid one), which `outreach-preview/publish` refuses (`{"published":false,"refusal":"not-an-outreach-audit"}`). The toast shows only "Request to /api/... failed (409)", not the refusal reason. Selecting the outreach audit on the Audit tab first makes the same button succeed.
 - Suggested UX fix: scope preview/email hub actions to the hotel's outreach audit specifically, or surface the dependency and translate `not-an-outreach-audit` on the Aperçu tab itself.
 - Issue: #266.
+
+### UX-016 (P1) Mailbox reconciliation never runs, so sent emails, follow-ups and replies never reach the dashboard
+
+- Status: OPEN. First seen: run 6. Last seen: run 6.
+- Where: local dashboard, prospect journey, FR+EN as noted.
+- Evidence: `reconcileMailbox` (`packages/interface/src/outreach/reconcile-mailbox.ts:197`) and `createMongoMailboxReconciliationStore` are only exported from `packages/interface/src/index.ts`; no route, queue job, CLI command or timer calls them at `13b65ea`. Repro (local, run 6): create a first-email draft from a prospect page; the thread stays `e1-drafted` indefinitely. Sending it from Gmail can never move the thread to `e1-sent`, so the follow-up and reply rows in À traiter and the whole outcome follow-through journey are unreachable from the dashboard.
+- Suggested UX fix: After the operator sends a draft from the mailbox, the dashboard learns it (scheduled or explicit "sync mailbox" action) and exposes follow-up and reply work.
+- Issue: #272.
+
+### UX-017 (P1) Opt-out leaves the Gmail draft, the public preview and the review task live
+
+- Status: OPEN. First seen: run 6. Last seen: run 6.
+- Where: local dashboard, prospect journey, FR+EN as noted.
+- Evidence: Repro (local, run 6): prospect with a created first-email draft and a live preview -> record outcome "Ne plus contacter". Prospect becomes `opted-out`, suppression row is written and the prospect page blocks all outreach, but: `outreach_drafts.status` stays `created` (provider draft still in the mailbox), `outreach_previews` stays `live`, the thread stays `e1-drafted`, and `/a-traiter` still lists "Relire le brouillon" for the prospect while the prospect page says "Prospect traité". Deleting the prospect (`packages/interface/src/routes/prospect-hub.ts:537`) also removes the local draft rows without calling `deleteDraft` on the mailbox adapter, orphaning the provider draft.
+- Suggested UX fix: An opt-out (and a deletion) withdraws every pending draft in the mailbox, revokes live previews, closes the thread, and removes the work item; the operator sees what was withdrawn.
+- Issue: #273.
+
+### UX-018 (P1) "Vérifier une adresse" suppression lookup always fails with 404
+
+- Status: OPEN. First seen: run 6. Last seen: run 6.
+- Where: local dashboard, prospect journey, FR+EN as noted.
+- Evidence: `packages/interface/src/dashboard/routes/suppressions.tsx:33` POSTs `/api/outreach/suppression-check`; that route no longer exists (removed with the Plan 047 hub, `6580e22`). Repro (local, run 6): open `/ne-pas-contacter`, check any address -> network `POST /api/outreach/suppression-check 404`, UI "L'action a échoué. Réessayez." Retrying cannot help.
+- Suggested UX fix: The footer lookup answers whether an address is suppressed, or the page is removed from navigation.
+- Issue: #274.
+
+### UX-019 (P1) Client email and preview language follow the operator's dashboard language
+
+- Status: OPEN. First seen: run 6. Last seen: run 6.
+- Where: local dashboard, prospect journey, FR+EN as noted.
+- Evidence: `packages/interface/src/dashboard/routes/prospect-hub-detail.tsx:389` sends the UI `language` to `/outreach/first-email`. Repro (local, run 6): with the dashboard in EN, "First email" on a French hotel created an English draft (`language: en`, `languageSource: operator`) and published a new English preview. No language is shown or chosen before creation, and the draft card does not display it.
+- Suggested UX fix: The prospect's outreach language is an explicit prospect-level choice (default French for French prospects), shown before creating the draft, independent of the dashboard UI toggle.
+- Issue: #275.
+
+### UX-020 (P1) Paid report PDFs fail reproducibly on a long third-party URL with no operator remedy
+
+- Status: OPEN. First seen: run 6. Last seen: run 6.
+- Where: local dashboard, prospect journey, FR+EN as noted.
+- Evidence: Repro (local, run 6): 31-page prospecting audit of a real 5-star hotel -> confirm identity -> "Réécrire le rapport" (writing succeeds, FR+EN analyses stored) -> PDF production aborts: "Painted content <div> extends past the printable content rectangle on physical page 2 at right by 1793.7px". "Régénérer les PDF" reproduces it. Likely cause: `findings.json` contains a 771-character unbroken third-party script URL (hotel-widget CDN) that the report renders without wrapping. The operator has no way to fix it from the dashboard, so the paid report is blocked. The raw English exception is also still displayed next to the translated explanation.
+- Suggested UX fix: Report rendering wraps or truncates unbreakable evidence strings so PDFs always fit; failures that still occur name the offending finding.
+- Issue: #276.
+
+### UX-021 (P2) Draft review shows only the subject: no body, recipient, language, preview link or mailbox link
+
+- Status: OPEN. First seen: run 6. Last seen: run 6.
+- Where: local dashboard, prospect journey, FR+EN as noted.
+- Evidence: Repro (local, run 6): À traiter "Relire le brouillon" -> prospect `#emails`. The card shows "Draft 1", subject and creation time only. There is no body, recipient, language, preview URL, link to the provider draft, discard or recreate action. The deep link also does not scroll to the card (data renders after hash navigation).
+- Suggested UX fix: Reviewing a draft in the dashboard shows what will be sent and where, with a link to open it in the mailbox and a safe discard/recreate path.
+- Issue: #277.
+
+### UX-022 (P2) Prospect becomes "Contacté" at draft creation and outcomes can be recorded before anything was sent
+
+- Status: OPEN. First seen: run 6. Last seen: run 6.
+- Where: local dashboard, prospect journey, FR+EN as noted.
+- Evidence: Repro (local, run 6): creating the first-email draft emitted `status-changed audited -> contacted` (actor automation) although nothing was sent; the Results view counts it as contacted. Recording "Aucune réponse" on that unsent thread succeeded silently (200, event stored), the select reset to "Enregistrer…" with no confirmation.
+- Suggested UX fix: Status reflects what actually happened (drafted vs sent); outcome recording explains or refuses nonsensical transitions and confirms what was saved.
+- Issue: #278.
+
+### UX-023 (P2) Outreach action gates are stale after editing, and follow-up shows "Ready" when ineligible
+
+- Status: OPEN. First seen: run 6. Last seen: run 6.
+- Where: local dashboard, prospect journey, FR+EN as noted.
+- Evidence: Repro (local, run 6): add an email on the prospect page -> summary shows it, but the Preview/First email cards still say "Bloqué - aucun email disponible" until a full reload (the actionability fetch is not refreshed after the record PATCH). With a first-email draft pending, the Follow-up card shows "Prêt"; clicking returns `{"created":false,"refusal":"thread-not-eligible"}` rendered as "Action refusée : Autre" (no label for `thread-not-eligible`). The recommended-action reason also shows a permanent "Loading…" when the action is available.
+- Suggested UX fix: Gates refresh after every mutation, reflect the real server refusal set, and every refusal is translated with a remedy.
+- Issue: #279.
+
+### UX-024 (P2) Manual "Publier l'aperçu" is silently superseded by the first email and the hub never links to the preview
+
+- Status: OPEN. First seen: run 6. Last seen: run 6.
+- Where: local dashboard, prospect journey, FR+EN as noted.
+- Evidence: Repro (local, run 6): "Publier l'aperçu" published a FR preview; "Premier email" then published a second preview and revoked the first ("superseded by a new first-email call"). The hub history lists previews only as status + raw preview UUID: no public link, no expiry, no revoke, and "Publier l'aperçu" stays offered as "Prêt".
+- Suggested UX fix: One preview per outreach attempt, reused by the draft; the hub shows its link, expiry and a revoke action.
+- Issue: #280.
+
+### UX-025 (P2) Report writing gives no progress for a multi-minute model run and the request is dropped by the page
+
+- Status: OPEN. First seen: run 6. Last seen: run 6.
+- Where: local dashboard, prospect journey, FR+EN as noted.
+- Evidence: Repro (local, run 6): "Réécrire le rapport" (label shown although nothing was ever written) -> `POST .../report-preparation/regenerate-writing` ended `ERR_ABORTED` in the browser while the server continued and finished FR+EN analyses ~5 min later. For the whole run the panel showed no busy state and still said "Aucune rédaction bilingue n'est encore disponible"; the button stayed enabled (double-launch risk). The result appeared only after a manual reload.
+- Suggested UX fix: Writing runs as tracked background work with visible progress, a disabled launch while running, and automatic refresh on completion.
+- Issue: #281.
+
+### UX-026 (P2) Audit detail is always titled "Préparer le rapport client" and offers report work on quick checks
+
+- Status: OPEN. First seen: run 6. Last seen: run 6.
+- Where: local dashboard, prospect journey, FR+EN as noted.
+- Evidence: `packages/interface/src/dashboard/routes/audit-detail.tsx:192` hard-codes `typeLabels.fullAudit` as the eyebrow. Repro (local, run 6): a one-page quick check and a prospecting audit both show "PRÉPARER LE RAPPORT CLIENT" and an enabled "Réécrire le rapport". Outreach previews built from a prospecting audit are stored with `sourceKind: full-audit`. Separately, after a quick check the prospect page says the audit is "incomplet / ne contient pas encore toutes ses données", which reads as a failure.
+- Suggested UX fix: The audit page names its real intent (quick check / outreach / client report) and only offers report work for eligible audits; the prospect page explains that a quick check is not outreach-grade instead of calling it incomplete.
+- Issue: #282.
+
+### UX-027 (P2) Scan visits the page publishing the contact email but the operator must find and type it manually
+
+- Status: OPEN. First seen: run 6. Last seen: run 6.
+- Where: local dashboard, prospect journey, FR+EN as noted.
+- Evidence: Repro (local, run 6): the prospecting audit crawled 31 pages including the homepage that publishes a generic contact address; the prospect stayed "Vérifier la fiche - ajoutez un email". The operator had to leave the dashboard to find the address. (Check `docs/rules/prospect-qualification.md` for whether role-address capture is deliberately excluded before fixing.)
+- Suggested UX fix: Publicly published role addresses found during the scan are suggested on the prospect (with origin), for one-click operator acceptance.
+- Issue: #283.
+
+### UX-028 (P3) Prospect page and errors leak non-localized text and raw identifiers
+
+- Status: OPEN. First seen: run 6. Last seen: run 6.
+- Where: local dashboard, prospect journey, FR+EN as noted.
+- Evidence: Repro (local, run 6), FR and EN: prospect history timestamps render as `9/15/2026, 8:44:55 PM` in both languages while Audits uses `15 sept. 2026, 20:45`; actors show raw `operator`/`scanner`/`automation`; unknown prospect shows raw `prospect not found`; the prospect eyebrow shows the prospect UUID; finding rows show internal ids such as `f006[html-validate:element-permitted-content]`; the email input placeholder stays French in EN; the detected commercial name defaults to the raw page title including rating stars and "Site Officiel".
+- Suggested UX fix: Dates, actors and errors localized; internal ids hidden from operator surfaces; identity defaults reuse the prospect name.
+- Issue: #284.
+
+### UX-029 (P3) Nested main landmarks and buttons wrapped in links
+
+- Status: OPEN. First seen: run 6. Last seen: run 6.
+- Where: local dashboard, prospect journey, FR+EN as noted.
+- Evidence: Every AppShell route renders a `<main>` inside the shell `<main>` (e.g. `/prospects`, `/annuaire`, prospect detail). "Ajouter depuis l'annuaire", "Ouvrir l'annuaire" and "Prospects" are `<button>` elements inside `<a>`, producing nested interactive controls. Unknown URLs redirect silently to `/audits` rather than the À traiter landing page.
+- Suggested UX fix: One main landmark per page; links styled as buttons instead of nested controls.
+- Issue: #285.
 
 ## Fixed register
 
