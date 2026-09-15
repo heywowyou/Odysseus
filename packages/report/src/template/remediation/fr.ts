@@ -978,7 +978,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     text: 'Ajoutez les attributs width et height sur les images, pour que le navigateur réserve leur place avant de les charger.',
     snippet: {
       kind: 'fill-in-blank',
-      template: 'width="<largeur réelle>" height="<hauteur réelle>" sur l\'image ({{selector}}).',
+      template: 'width="<largeur réelle>" height="<hauteur réelle>" sur l’image concernée.',
     },
   },
   'unused-css-rules': {

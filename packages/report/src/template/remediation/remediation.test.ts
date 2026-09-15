@@ -154,6 +154,18 @@ describe('remediation copy', () => {
       }
     });
 
+    it('keeps interpolation tokens out of snippets that render literally', () => {
+      for (const table of [REMEDIATION_FR, REMEDIATION_EN]) {
+        for (const [ruleId, entry] of Object.entries(table)) {
+          if (entry.snippet.kind === 'fixed') continue;
+          if (entry.snippet.kind === 'fill-in-blank') {
+            expect(entry.snippet.template, ruleId).not.toContain('{{');
+            expect(entry.snippet.template, ruleId).not.toContain('}}');
+          }
+        }
+      }
+    });
+
     it('agrees on snippet kind between French and English for every rule', () => {
       // The classification (fixed vs fill-in-blank vs not-applicable) is a
       // fact about the rule, not a translation choice, so it must not drift

@@ -920,7 +920,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
     text: 'Add width and height attributes to images so the browser reserves their space before loading them.',
     snippet: {
       kind: 'fill-in-blank',
-      template: 'width="<real width>" height="<real height>" on the image ({{selector}}).',
+      template: 'width="<real width>" height="<real height>" on the affected image.',
     },
   },
   'unused-css-rules': {
