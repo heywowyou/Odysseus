@@ -267,6 +267,17 @@ describe('prospect hub routes', () => {
     expect(deleteProspect).toHaveBeenCalledWith(fakeConnection, 'p-1');
   });
 
+  it('returns a conflict when normal outcome recording would overwrite a terminal status', async () => {
+    const refusal = new Error('automatic status transition from won to lost is not allowed');
+    refusal.name = 'AutomaticStatusTransitionError';
+    vi.mocked(recordProspectOutcome).mockRejectedValueOnce(refusal);
+
+    const response = await handle('/api/prospects/p-1/outcome', 'POST', { outcome: 'lost' });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.body).toEqual({ error: refusal.message });
+  });
+
   it('removes audit artifacts and live preview objects before the cascade', async () => {
     const artifactsRoot = await fs.mkdtemp(join(tmpdir(), 'odysseus-prospect-delete-'));
     const startedAt = new Date('2026-09-15T10:20:30.000Z');

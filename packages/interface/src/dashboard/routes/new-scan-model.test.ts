@@ -3,6 +3,7 @@ import {
   buildScanRequest,
   createEmptyFormValues,
   isValidAbsoluteHttpUrl,
+  initialScanTypeFromQuery,
   isValidSiren,
   NEW_SCAN_TYPES,
   prefillUrlFromQuery,
@@ -15,7 +16,7 @@ const INVALID_SIREN_COPY = 'SIREN invalide';
 /** Pure fixture factory: the empty form overridden per test, so each case
  *  names only the fields it cares about. */
 function formValues(overrides: Partial<NewScanFormValues> = {}): NewScanFormValues {
-  return { ...createEmptyFormValues(), ...overrides };
+  return { ...createEmptyFormValues(), type: 'full-audit', ...overrides };
 }
 
 describe('isValidAbsoluteHttpUrl', () => {
@@ -98,6 +99,13 @@ describe('SIREN validation', () => {
 });
 
 describe('buildScanRequest', () => {
+  it('defaults the generic entry point to Prepare outreach', () => {
+    expect(createEmptyFormValues().type).toBe('prospecting-audit');
+    expect(initialScanTypeFromQuery(null)).toBe('prospecting-audit');
+    expect(initialScanTypeFromQuery('unknown')).toBe('prospecting-audit');
+    expect(initialScanTypeFromQuery('full-audit')).toBe('full-audit');
+  });
+
   it('keeps the new-scan form to the three operator intents', () => {
     expect(NEW_SCAN_TYPES).toEqual(['full-audit', 'quick-check', 'prospecting-audit']);
   });

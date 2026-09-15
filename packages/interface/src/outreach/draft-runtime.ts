@@ -10,6 +10,8 @@ import {
   attachProviderThreadId,
   checkOutreachAction,
   createAuditModel,
+  createJobModel,
+  effectiveAuditScanIntent,
   findLiveOutreachDraft,
   findOutreachPreviewByTokenHash,
   findOutreachThreadByProspect,
@@ -20,6 +22,8 @@ import {
   recordFailedOutreachDraft,
   recordOutreachDraft,
   selectNewestQualifyingAudit,
+  type AuditIntentSourceJob,
+  type ProspectWorkAudit,
   transitionOutreachThread,
 } from '@odysseus/store';
 import type { OutreachActionRefusal } from '@odysseus/store';
@@ -118,6 +122,7 @@ async function resolvePreview(connection: Connection, prospectId: string, token:
           _id: 0,
           auditId: 1,
           prospectId: 1,
+          scanIntent: 1,
           siteUrl: 1,
           kind: 1,
           startedAt: 1,
@@ -128,8 +133,21 @@ async function resolvePreview(connection: Connection, prospectId: string, token:
           'findingsProvenance.normalizationFingerprint': 1,
         })
         .sort({ startedAt: -1, auditId: -1 })
-        .lean();
-      const selected = selectNewestQualifyingAudit(audits);
+        .lean<ProspectWorkAudit[]>();
+      const auditIds = audits.map((audit) => audit.auditId);
+      const jobScope: Record<string, unknown>[] = [{ 'options.prospectId': id }];
+      if (auditIds.length > 0) {
+        jobScope.push({ auditId: { $in: auditIds } }, { auditIds: { $in: auditIds } });
+      }
+      const jobs = await createJobModel(connection)
+        .find({ $or: jobScope })
+        .select({ _id: 0, type: 1, auditId: 1, auditIds: 1, 'options.scanType': 1 })
+        .lean<AuditIntentSourceJob[]>();
+      const classifiedAudits = audits.map((audit) => {
+        const scanIntent = effectiveAuditScanIntent(audit, jobs);
+        return scanIntent === undefined ? audit : { ...audit, scanIntent };
+      });
+      const selected = selectNewestQualifyingAudit(classifiedAudits);
       return selected.audit === undefined
         ? { state: 'refused' as const }
         : { state: 'resolved' as const, audit: { auditId: selected.audit.auditId } };

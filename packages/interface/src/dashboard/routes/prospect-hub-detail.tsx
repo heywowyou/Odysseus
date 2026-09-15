@@ -865,7 +865,10 @@ export function ProspectHubDetailPage(): JSX.Element {
                   })}
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2 border-t border-line pt-4">
+              <div
+                id="outcome"
+                className="flex flex-wrap items-center gap-2 border-t border-line pt-4"
+              >
                 <Select
                   defaultValue=""
                   onChange={(event) => {

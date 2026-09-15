@@ -144,6 +144,9 @@ export interface DashboardStrings {
     typeFullAudit: string;
     typeQuickCheck: string;
     typeProspectingAudit: string;
+    typeFullAuditHint: string;
+    typeQuickCheckHint: string;
+    typeProspectingAuditHint: string;
     urlLabel: string;
     urlPlaceholder: string;
     prospectLabel: string;

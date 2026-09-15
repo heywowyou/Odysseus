@@ -444,7 +444,9 @@ function ProspectingView({
           ) : null}
         </Card>
       ) : null}
-      {job.type !== 'quick-check' && job.type !== 'full-audit' ? (
+      {job.type !== 'quick-check' &&
+      job.type !== 'prospecting-audit' &&
+      job.type !== 'full-audit' ? (
         <Card title={strings.progress.urlResultsHeading}>
           <ul className="divide-y divide-line">
             {(job.urlResults ?? []).map((row) => (

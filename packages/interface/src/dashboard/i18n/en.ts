@@ -120,6 +120,11 @@ export const en: DashboardStrings = {
     typeFullAudit: 'Prepare client report',
     typeQuickCheck: 'Quick check',
     typeProspectingAudit: 'Prepare outreach',
+    typeFullAuditHint:
+      'Complete the audit, then generate French and English analysis and client reports.',
+    typeQuickCheckHint: 'A one-page informational check with no analysis or client report.',
+    typeProspectingAuditHint:
+      'Complete the audit for outreach, then stop before analysis and client reports.',
     urlLabel: 'Site URL',
     urlPlaceholder: 'https://example.co.uk',
     prospectLabel: 'Attach to a prospect (optional)',

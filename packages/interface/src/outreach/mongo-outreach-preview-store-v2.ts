@@ -4,6 +4,8 @@ import type { Connection } from 'mongoose';
 import type { Finding } from '@odysseus/core';
 import {
   createAuditModel,
+  createJobModel,
+  effectiveAuditScanIntent,
   getFindingsForAudit,
   getProspectHub,
   isSuppressed,
@@ -11,6 +13,7 @@ import {
   recordOutreachPreview,
   revokeOutreachPreview,
   selectNewestQualifyingAudit,
+  type AuditIntentSourceJob,
   type ProspectWorkAudit,
 } from '@odysseus/store';
 import type {
@@ -41,6 +44,7 @@ export function createMongoOutreachPreviewStoreV2(
           _id: 0,
           auditId: 1,
           prospectId: 1,
+          scanIntent: 1,
           siteUrl: 1,
           kind: 1,
           startedAt: 1,
@@ -53,7 +57,20 @@ export function createMongoOutreachPreviewStoreV2(
         })
         .sort({ startedAt: -1, auditId: -1 })
         .lean<PublicationAudit[]>();
-      const qualification = selectNewestQualifyingAudit(audits);
+      const auditIds = audits.map((audit) => audit.auditId);
+      const jobScope: Record<string, unknown>[] = [{ 'options.prospectId': prospectId }];
+      if (auditIds.length > 0) {
+        jobScope.push({ auditId: { $in: auditIds } }, { auditIds: { $in: auditIds } });
+      }
+      const jobs = await createJobModel(connection)
+        .find({ $or: jobScope })
+        .select({ _id: 0, type: 1, auditId: 1, auditIds: 1, 'options.scanType': 1 })
+        .lean<AuditIntentSourceJob[]>();
+      const classifiedAudits = audits.map((audit) => {
+        const scanIntent = effectiveAuditScanIntent(audit, jobs);
+        return scanIntent === undefined ? audit : { ...audit, scanIntent };
+      });
+      const qualification = selectNewestQualifyingAudit(classifiedAudits);
       if (qualification.audit === undefined) {
         return {
           refused:

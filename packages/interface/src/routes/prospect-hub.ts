@@ -445,9 +445,17 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
       sendError(res, 400, 'outcome is invalid');
       return;
     }
-    const prospect = await recordProspectOutcome(connection, params['prospectId']!, outcome);
-    if (prospect === null) sendError(res, 404, 'prospect not found');
-    else sendJson(res, 200, prospect);
+    try {
+      const prospect = await recordProspectOutcome(connection, params['prospectId']!, outcome);
+      if (prospect === null) sendError(res, 404, 'prospect not found');
+      else sendJson(res, 200, prospect);
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AutomaticStatusTransitionError') {
+        sendError(res, 409, error.message);
+        return;
+      }
+      throw error;
+    }
   });
 
   router.delete('/api/prospects/:prospectId', async ({ res, params }) => {

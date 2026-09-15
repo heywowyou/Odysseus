@@ -121,6 +121,11 @@ export const fr: DashboardStrings = {
     typeFullAudit: 'Préparer le rapport client',
     typeQuickCheck: 'Contrôle rapide',
     typeProspectingAudit: 'Préparer la prospection',
+    typeFullAuditHint:
+      'Termine l’audit, puis génère les analyses française et anglaise et les rapports client.',
+    typeQuickCheckHint: 'Contrôle informatif d’une page, sans analyse ni rapport client.',
+    typeProspectingAuditHint:
+      'Termine l’audit pour la prospection, puis s’arrête avant les analyses et les rapports client.',
     urlLabel: 'Adresse du site',
     urlPlaceholder: 'https://exemple.fr',
     prospectLabel: 'Rattacher à un prospect (facultatif)',

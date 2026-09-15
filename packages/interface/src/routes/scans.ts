@@ -13,7 +13,10 @@ import {
   getProspectHub,
   getJob,
   listJobs,
+  canonicalJobTypeForScanIntent,
+  displayJobIntent,
   type JobOptionsSnapshot,
+  registrableDomainForScan,
 } from '@odysseus/store';
 import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import type { Router } from '../router.js';
@@ -163,29 +166,36 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
         sendError(res, 400, 'url must be an absolute http(s) URL without embedded credentials');
         return;
       }
-      const check = await checkScanLaunch(connection, { url, kind: parsed['type'] });
-      if (!check.allowed) {
-        sendJson(res, 200, { started: false, refusal: check.refusal });
-        return;
-      }
       let options: JobOptionsSnapshot;
       try {
+        const domain = registrableDomainForScan(url);
+        if (domain === null) {
+          sendError(res, 400, 'url must be an absolute http(s) URL without embedded credentials');
+          return;
+        }
         options = await autoAttachProspect(
           connection,
           mergeTopLevelProspectId(parseOptionsSnapshot(parsed['options']), parsed),
-          check.registrableDomain,
+          domain,
         );
       } catch (error) {
         sendError(res, 400, error instanceof Error ? error.message : 'invalid options');
         return;
       }
+      const check = await checkScanLaunch(connection, {
+        url,
+        kind: parsed['type'],
+        ...(options.prospectId === undefined ? {} : { prospectId: options.prospectId }),
+      });
+      if (!check.allowed) {
+        sendJson(res, 200, { started: false, refusal: check.refusal });
+        return;
+      }
       const job = await createJob(connection, {
-        type: 'prospecting',
+        type: canonicalJobTypeForScanIntent(parsed['type']),
         siteUrl: url,
-        urls: [url],
         options: {
           ...options,
-          scanType: parsed['type'],
           ...(parsed['type'] === 'quick-check' ? { maxPages: 1 } : {}),
         },
       });
@@ -201,25 +211,34 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
         sendError(res, 400, 'url must be an absolute http(s) URL without embedded credentials');
         return;
       }
-      const check = await checkScanLaunch(connection, { url, kind: 'full-audit' });
-      if (!check.allowed) {
-        sendJson(res, 200, { started: false, refusal: check.refusal });
-        return;
-      }
       let options: JobOptionsSnapshot;
       try {
+        const domain = registrableDomainForScan(url);
+        if (domain === null) {
+          sendError(res, 400, 'url must be an absolute http(s) URL without embedded credentials');
+          return;
+        }
         options = await autoAttachProspect(
           connection,
           mergeTopLevelProspectId(parseOptionsSnapshot(parsed['options']), parsed),
-          check.registrableDomain,
+          domain,
         );
       } catch (error) {
         sendError(res, 400, error instanceof Error ? error.message : 'invalid options');
         return;
       }
+      const check = await checkScanLaunch(connection, {
+        url,
+        kind: 'full-audit',
+        ...(options.prospectId === undefined ? {} : { prospectId: options.prospectId }),
+      });
+      if (!check.allowed) {
+        sendJson(res, 200, { started: false, refusal: check.refusal });
+        return;
+      }
 
       const job = await createJob(connection, {
-        type: 'full-audit',
+        type: canonicalJobTypeForScanIntent('full-audit'),
         siteUrl: url,
         options,
       });
@@ -242,7 +261,11 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       return;
     }
 
-    sendError(res, 400, 'type must be "full-audit" or "prospecting"');
+    sendError(
+      res,
+      400,
+      'type must be "quick-check", "prospecting-audit", "full-audit", or "prospecting"',
+    );
   });
 
   router.get('/api/scans', async ({ res, query }) => {
@@ -253,7 +276,12 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
         connection,
         Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : undefined,
       )
-    ).filter((job) => job.type !== 'prospecting' || job.scanType === 'quick-check');
+    ).filter(
+      (job) =>
+        job.type !== 'prospecting' ||
+        job.scanType === 'quick-check' ||
+        job.scanType === 'prospecting-audit',
+    );
 
     const auditIds = jobs.map((job) => job.auditId).filter((id): id is string => id !== undefined);
     const rollups = await getSeverityRollupsForPoll(connection, auditIds);
@@ -261,7 +289,7 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
     const summaries = jobs.map((job) => ({
       prospectId: job.prospectId,
       jobId: job.jobId,
-      type: job.scanType ?? job.type,
+      type: displayJobIntent(job.type, job.scanType),
       status: job.status,
       phase: job.phase,
       siteUrl: job.siteUrl,
@@ -289,7 +317,7 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
         : await getProspectHub(connection, job.options.prospectId);
     sendJson(res, 200, {
       ...job,
-      type: job.options.scanType ?? job.type,
+      type: displayJobIntent(job.type, job.options.scanType),
       prospectId: job.options.prospectId,
       prospectName: prospect?.name,
     });
@@ -323,6 +351,8 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
     if (
       job.status === 'running' &&
       job.type !== 'full-audit' &&
+      job.type !== 'quick-check' &&
+      job.type !== 'prospecting-audit' &&
       job.type !== 'prospecting' &&
       job.type !== 'outreach-full-scan'
     ) {

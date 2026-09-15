@@ -18,6 +18,7 @@ import { cn } from '../lib/cn';
 import {
   buildScanRequest,
   createEmptyFormValues,
+  initialScanTypeFromQuery,
   isValidAbsoluteHttpUrl,
   NEW_SCAN_TYPES,
   prefillUrlFromQuery,
@@ -44,12 +45,18 @@ export function NewScanPage() {
     'quick-check': copy.typeQuickCheck,
     'prospecting-audit': copy.typeProspectingAudit,
   };
+  const scanTypeHints: Record<NewScanType, string> = {
+    'full-audit': copy.typeFullAuditHint,
+    'quick-check': copy.typeQuickCheckHint,
+    'prospecting-audit': copy.typeProspectingAuditHint,
+  };
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   // ?url= prefill from the prospect page's launch-audit link, read once as
   // the initial state; the route boundary revalidates the submitted value.
   const [form, setForm] = useState<NewScanFormValues>(() => ({
     ...createEmptyFormValues(),
+    type: initialScanTypeFromQuery(searchParams.get('type')),
     url: prefillUrlFromQuery(searchParams.get('url')),
     prospectId: searchParams.get('prospectId')?.trim() ?? '',
   }));
@@ -224,6 +231,7 @@ export function NewScanPage() {
             options={NEW_SCAN_TYPES.map((type) => ({ value: type, label: scanTypeLabels[type] }))}
             ariaLabel={copy.typeLabel}
           />
+          <p className="-mt-3 text-sm text-ink-muted">{scanTypeHints[form.type]}</p>
 
           {isFullAudit ? (
             <>

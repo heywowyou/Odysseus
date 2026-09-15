@@ -65,7 +65,7 @@ export interface NewScanFormValues {
 
 export function createEmptyFormValues(): NewScanFormValues {
   return {
-    type: 'full-audit',
+    type: 'prospecting-audit',
     url: '',
     prospectId: '',
     siren: '',
@@ -79,6 +79,15 @@ export function createEmptyFormValues(): NewScanFormValues {
     exclusions: '',
     bookingEngineUrl: '',
   };
+}
+
+/** The ordinary New Scan entry point is the outreach-preparation workflow.
+ * Contexts that explicitly request another intent may pass `?type=`; any
+ * missing or unknown value stays on the safe ordinary default. */
+export function initialScanTypeFromQuery(raw: string | null): NewScanType {
+  return raw !== null && (NEW_SCAN_TYPES as readonly string[]).includes(raw)
+    ? (raw as NewScanType)
+    : 'prospecting-audit';
 }
 
 /** Duplicated by value from @odysseus/core's isHttpUrlWithoutCredentials
