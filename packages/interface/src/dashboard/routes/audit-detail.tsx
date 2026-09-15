@@ -185,11 +185,18 @@ export function AuditDetailPage(): JSX.Element {
 
   const publisherIdentificationFinding = findPublisherIdentificationFinding(data.findings);
   const prospect = data.prospect ?? null;
+  const scanIntent = data.scanIntent ?? 'full-audit';
 
   return (
     <article className={PAGE_WIDTH.surface}>
       <PageHeader
-        eyebrow={strings.common.typeLabels.fullAudit}
+        eyebrow={
+          scanIntent === 'quick-check'
+            ? strings.common.typeLabels.hotelPrescan
+            : scanIntent === 'prospecting-audit'
+              ? strings.common.typeLabels.outreachFullScan
+              : strings.common.typeLabels.fullAudit
+        }
         // An attached audit links back to the durable prospect; an
         // unattached audit keeps its hostname as the stable subject.
         title={
@@ -257,12 +264,20 @@ export function AuditDetailPage(): JSX.Element {
             who was never a prospect) has no outcome to read, so hiding
             the paid chain behind "sold" on this page would make it
             unreachable for exactly the clients it exists for. */}
-        <AuditReportPanel
-          auditId={data.auditId}
-          detail={data}
-          onBusy={setIsBusy}
-          refresh={refresh}
-        />
+        {scanIntent === 'full-audit' ? (
+          <AuditReportPanel
+            auditId={data.auditId}
+            detail={data}
+            onBusy={setIsBusy}
+            refresh={refresh}
+          />
+        ) : (
+          <p className="text-sm text-ink-muted">
+            {scanIntent === 'quick-check'
+              ? strings.auditDetail.reportNotOfferedQuickCheck
+              : strings.auditDetail.reportNotOfferedProspecting}
+          </p>
+        )}
         <AuditGradeOverridePanel
           auditId={data.auditId}
           detail={data}

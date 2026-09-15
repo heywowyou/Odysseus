@@ -490,6 +490,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     sendJson(res, 200, {
       auditId: audit.auditId,
       prospectId: audit.prospectId,
+      scanIntent: audit.scanIntent ?? null,
       siteUrl: audit.siteUrl,
       startedAt: audit.startedAt,
       finishedAt: audit.finishedAt,

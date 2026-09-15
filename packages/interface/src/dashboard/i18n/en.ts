@@ -227,6 +227,10 @@ export const en: DashboardStrings = {
   auditDetail: {
     title: 'Audit detail',
     dateLabel: 'Date',
+    reportNotOfferedQuickCheck:
+      'Quick check: it sorts prospects and does not cover enough of the site for a client report. Run a full audit to prepare a report.',
+    reportNotOfferedProspecting:
+      'Prospecting audit: it feeds the preview and the emails. Run a full audit to prepare a client report.',
     pagesVisitedLabel: 'Pages visited',
     findingsHeading: 'Problems found',
     publisherIdentificationHeading: 'Review website identification details',
@@ -782,6 +786,8 @@ export const en: DashboardStrings = {
       recommendationReasons: {
         'no-audit': 'No qualifying outreach audit is attached yet.',
         'audit-incomplete': 'The latest attached audit does not have all of its data yet.',
+        'audit-not-outreach-grade':
+          'The latest attached audit is a quick check, which is not enough for outreach. Run “Prepare outreach”.',
         'audit-stale': 'The latest attached audit uses an older data version.',
         suppressed: 'Outreach is blocked by a suppressed address or domain.',
         'no-contact': 'Add a usable email address to continue.',
@@ -967,6 +973,7 @@ export const en: DashboardStrings = {
       },
       auditStateLabels: {
         missing: 'missing',
+        'not-outreach-grade': 'quick check only',
         incomplete: 'incomplete',
         stale: 'needs refresh',
         qualifying: 'qualifying',

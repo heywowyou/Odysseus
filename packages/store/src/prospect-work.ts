@@ -39,9 +39,15 @@ export type ProspectWorkAction =
   | 'review-prospect';
 
 export type ProspectWorkReason =
-  'suppressed' | 'no-contact' | 'no-audit' | 'audit-incomplete' | 'audit-stale';
+  | 'suppressed'
+  | 'no-contact'
+  | 'no-audit'
+  | 'audit-not-outreach-grade'
+  | 'audit-incomplete'
+  | 'audit-stale';
 
-export type ProspectAuditQualificationState = 'missing' | 'incomplete' | 'stale' | 'qualifying';
+export type ProspectAuditQualificationState =
+  'missing' | 'not-outreach-grade' | 'incomplete' | 'stale' | 'qualifying';
 
 export type ProspectWorkAudit = Pick<
   AuditDocumentFields,
@@ -146,10 +152,12 @@ export function selectNewestQualifyingAudit(
     return { audit: qualifyingAudit, state: 'qualifying' };
   }
   if (ordered.length === 0) return { audit: undefined, state: 'missing' };
-  return {
-    audit: undefined,
-    state: ordered.some((audit) => hasCurrentFindingsProvenance(audit)) ? 'incomplete' : 'stale',
-  };
+  const current = ordered.filter((audit) => hasCurrentFindingsProvenance(audit));
+  if (current.length === 0) return { audit: undefined, state: 'stale' };
+  // A current quick check is finished work of the wrong kind, not a broken
+  // audit: it never covers enough of the site to support outreach.
+  const onlyQuickChecks = current.every((audit) => audit.scanIntent === 'quick-check');
+  return { audit: undefined, state: onlyQuickChecks ? 'not-outreach-grade' : 'incomplete' };
 }
 
 function suppressedDomainSet(values: ReadonlySet<string>): Set<string> {
@@ -204,9 +212,11 @@ function recommendation(
       reason:
         auditState === 'missing'
           ? 'no-audit'
-          : auditState === 'incomplete'
-            ? 'audit-incomplete'
-            : 'audit-stale',
+          : auditState === 'not-outreach-grade'
+            ? 'audit-not-outreach-grade'
+            : auditState === 'incomplete'
+              ? 'audit-incomplete'
+              : 'audit-stale',
     };
   }
   if (prospect.emails.length === 0) {

@@ -228,6 +228,10 @@ export const fr: DashboardStrings = {
   auditDetail: {
     title: 'Détail de l’audit',
     dateLabel: 'Date',
+    reportNotOfferedQuickCheck:
+      'Contrôle rapide : il sert à trier les prospects et ne couvre pas assez le site pour un rapport client. Lancez un audit complet pour préparer un rapport.',
+    reportNotOfferedProspecting:
+      'Audit de prospection : il alimente l’aperçu et les emails. Lancez un audit complet pour préparer un rapport client.',
     pagesVisitedLabel: 'Pages visitées',
     findingsHeading: 'Constats',
     publisherIdentificationHeading: 'Vérifier les informations d’identification du site',
@@ -794,6 +798,8 @@ export const fr: DashboardStrings = {
       recommendationReasons: {
         'no-audit': 'Aucun audit de prospection qualifiant n’est encore rattaché.',
         'audit-incomplete': 'Le dernier audit rattaché ne contient pas encore toutes ses données.',
+        'audit-not-outreach-grade':
+          'Le dernier audit rattaché est un contrôle rapide : il ne suffit pas pour prospecter. Lancez « Préparer la prospection ».',
         'audit-stale': 'Le dernier audit rattaché utilise une version de données ancienne.',
         suppressed: 'La prospection est bloquée par une adresse ou un domaine supprimé.',
         'no-contact': 'Ajoutez un email utilisable pour continuer.',
@@ -986,6 +992,7 @@ export const fr: DashboardStrings = {
       },
       auditStateLabels: {
         missing: 'absent',
+        'not-outreach-grade': 'contrôle rapide uniquement',
         incomplete: 'incomplet',
         stale: 'à actualiser',
         qualifying: 'qualifiant',

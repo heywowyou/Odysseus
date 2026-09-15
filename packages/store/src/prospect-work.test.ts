@@ -122,6 +122,20 @@ describe('prospect work model', () => {
     expect(work.recommendation).toMatchObject({ reason: 'suppressed' });
   });
 
+  it('explains that a finished quick check is not outreach-grade', () => {
+    const work = deriveProspectWork(
+      prospect,
+      { ...emptySources, audits: [audit({ auditId: 'audit-quick', scanIntent: 'quick-check' })] },
+      new Date('2026-09-15T00:00:00.000Z'),
+    );
+
+    expect(work.auditState).toBe('not-outreach-grade');
+    expect(work.recommendation).toMatchObject({
+      action: 'prepare-audit',
+      reason: 'audit-not-outreach-grade',
+    });
+  });
+
   it('does not offer first-email work when no attached audit qualifies', () => {
     const work = deriveProspectWork(
       prospect,

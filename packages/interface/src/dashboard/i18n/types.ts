@@ -258,6 +258,8 @@ export interface DashboardStrings {
   auditDetail: {
     title: string;
     dateLabel: string;
+    reportNotOfferedQuickCheck: string;
+    reportNotOfferedProspecting: string;
     pagesVisitedLabel: string;
     findingsHeading: string;
     /** Issue #120: a dedicated, bounded observation for the LCEN publisher-

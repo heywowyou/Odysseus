@@ -186,6 +186,9 @@ export interface GradeOverrideResponse {
 export interface AuditDetailResponse {
   auditId: string;
   prospectId?: string;
+  /** Null for audits stored before the intent was recorded; those keep the
+   * client-report treatment they always had. */
+  scanIntent?: 'quick-check' | 'prospecting-audit' | 'full-audit' | null;
   siteUrl: string;
   startedAt: string;
   finishedAt: string;
