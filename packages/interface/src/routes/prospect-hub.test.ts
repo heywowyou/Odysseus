@@ -147,7 +147,7 @@ beforeEach(() => {
 describe('prospect hub routes', () => {
   it('forwards the complete prospect filter set', async () => {
     const response = await handle(
-      '/api/prospects?q=Paris&status=audited&sector=hotel&stars=4&groupStatus=group-member&websiteKind=vendor-hosted&department=75&roomsMin=10&roomsMax=50&hasScan=true&inactive=false&page=2&pageSize=20',
+      '/api/prospects?q=Paris&status=audited&sector=hotel&stars=4&groupStatus=group-member&websiteKind=vendor-hosted&department=75&commune=Paris&roomsMin=10&roomsMax=50&hasScan=true&inactive=false&page=2&pageSize=20',
     );
 
     expect(response.statusCode).toBe(200);
@@ -160,7 +160,7 @@ describe('prospect hub routes', () => {
       groupStatus: 'group-member',
       websiteKind: 'vendor-hosted',
       department: '75',
-      commune: undefined,
+      commune: 'Paris',
       roomsMin: 10,
       roomsMax: 50,
       hasScan: true,
@@ -222,7 +222,7 @@ describe('prospect hub routes', () => {
 
   it('forwards directory facets and rejects invalid status values', async () => {
     const directory = await handle(
-      '/api/directory?sector=hotel&stars=3&groupStatus=independent&websiteKind=own&department=13&roomsMin=5&roomsMax=25',
+      '/api/directory?sector=hotel&stars=3&groupStatus=independent&websiteKind=own&department=13&commune=Aix&postcode=13100&roomsMin=5&roomsMax=25',
     );
     expect(directory.statusCode).toBe(200);
     expect(listDirectory).toHaveBeenCalledWith(fakeConnection, {
@@ -232,14 +232,14 @@ describe('prospect hub routes', () => {
       groupStatus: 'independent',
       websiteKind: 'own',
       department: '13',
-      commune: undefined,
+      commune: 'Aix',
       roomsMin: 5,
       roomsMax: 25,
       hasScan: undefined,
       inactive: undefined,
       page: undefined,
       pageSize: undefined,
-      postcode: undefined,
+      postcode: '13100',
     });
 
     const invalid = await handle('/api/prospects?status=banana');

@@ -21,13 +21,14 @@ export function AppShell() {
   // remounts. Hidden on error or zero, so the badge never invents work.
   const todo = useApi<TodoPage>('/api/prospect-hub/todo');
   const inboxCount = todo.data?.rows.length;
+  const refreshTodo = todo.refresh;
   const previousPathname = useRef(pathname);
 
   useEffect(() => {
     if (previousPathname.current === pathname) return;
     previousPathname.current = pathname;
-    todo.refresh();
-  }, [pathname, todo.refresh]);
+    refreshTodo();
+  }, [pathname, refreshTodo]);
 
   /* The shell exposes only the three operational destinations. Directory and
      results are modes inside Prospects, while old URLs remain handled by the

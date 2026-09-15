@@ -35,7 +35,7 @@ export interface ProspectFilterState {
   page: number;
 }
 
-export const PROSPECT_ADVANCED_FILTER_KEYS: readonly ProspectFilterKey[] = [
+const PROSPECT_ADVANCED_FILTER_KEYS: readonly ProspectFilterKey[] = [
   'sector',
   'stars',
   'groupStatus',
@@ -48,7 +48,7 @@ export const PROSPECT_ADVANCED_FILTER_KEYS: readonly ProspectFilterKey[] = [
   'inactive',
 ];
 
-export const DIRECTORY_ADVANCED_FILTER_KEYS: readonly ProspectFilterKey[] = [
+const DIRECTORY_ADVANCED_FILTER_KEYS: readonly ProspectFilterKey[] = [
   'sector',
   'groupStatus',
   'websiteKind',
@@ -164,7 +164,7 @@ export function clearProspectFilters(current: URLSearchParams): URLSearchParams 
   );
 }
 
-export function advancedFilterKeys(source: ProspectFilterSource): readonly ProspectFilterKey[] {
+function advancedFilterKeys(source: ProspectFilterSource): readonly ProspectFilterKey[] {
   return source === 'prospects' ? PROSPECT_ADVANCED_FILTER_KEYS : DIRECTORY_ADVANCED_FILTER_KEYS;
 }
 

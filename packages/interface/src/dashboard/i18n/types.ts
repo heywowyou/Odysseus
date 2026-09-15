@@ -8,12 +8,9 @@ export interface DashboardStrings {
     audits: string;
     newScan: string;
     prospects: string;
-    directory: string;
     /** Sidebar label for /a-traiter, the landing page (plan 040 slice 6;
      *  operator decision 2026-09-12: "Démarches" becomes "À traiter"). */
     outreach: string;
-    /** Sidebar label for /resultats. */
-    results: string;
   };
   /** Footer link and page for /outils, plan 040 slice 8. */
   tools: {

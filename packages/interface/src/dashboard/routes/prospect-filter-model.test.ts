@@ -68,6 +68,15 @@ describe('prospect filter model', () => {
     );
   });
 
+  it('round-trips every supported URL filter', () => {
+    const params = new URLSearchParams(
+      'view=results&q=Paris&status=won&sector=hotel&stars=4&groupStatus=independent&websiteKind=own&department=75&commune=Paris&postcode=75001&roomsMin=20&roomsMax=80&hasScan=true&inactive=false&page=4',
+    );
+
+    const serialized = serializeProspectFilters(parseProspectFilters(params));
+    expect(serialized.toString()).toBe(params.toString());
+  });
+
   it('builds a bounded API query for each source', () => {
     const state = parseProspectFilters(
       new URLSearchParams(

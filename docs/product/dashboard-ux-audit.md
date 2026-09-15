@@ -17,6 +17,47 @@ reconciliation properly). History is never deleted.
 | 1 | 2026-09-12 | `ab96bd5` | 11 | 11 | 0 | 0 | partial (no browser-use skill; Playwright driven directly) | no |
 | 2 | 2026-09-13 | `692bd92` | 1 | 12 | 0 | 0 | local leg only, task-completion mode, plan 045 Stage 3 | no (production leg pending) |
 | 3 | 2026-09-14 | `48ae763` | 3 | 15 | 0 | 0 | local + production, partial (journeys 2/3/6 and full FR/EN parity not covered) | no |
+| 4 | 2026-09-15 | `15bc280` | 0 | 15 | 0 | 0 | local synthetic browser fixture + stateful dashboard fixture, FR/EN surface pass | yes (surface copy) |
+
+## Run 4 notes (Plan 048 local fixture pass)
+
+Driven against the actual Vite dashboard at `15bc280` with Playwright and
+synthetic API responses only. No production data, live model, mailbox, or
+third-party site was touched. The separate stateful dashboard workflow test
+also passed the directory → prospect → prepare outreach → queue draft work →
+review draft → record outcome → Results count path.
+
+- **Navigation:** both FR and EN rendered exactly three primary links:
+  `Audits`, `À traiter` / `To do`, and `Prospects`. `Annuaire` remained
+  reachable from Prospects and was absent from the sidebar.
+- **Prospects and Results:** both languages rendered the shared progressive
+  filter bar, the Results view, and the campaign status projection. Results
+  kept one status badge and one outcome control per row.
+- **Detail:** both languages rendered the read-only summary and one stored
+  recommended action. The secondary edit/actions/history disclosures remained
+  reachable in the stateful fixture test.
+- **Scans:** both languages rendered exactly `Contrôle rapide`, `Préparer la
+  prospection`, and `Préparer le rapport client` (English equivalents in the
+  English pass); no light-audit or batch choice appeared.
+- **Manual send disclosure:** the stateful queue path retained the explicit
+  note that Odysseus cannot send drafts and that sending happens only in the
+  operator mailbox.
+- **Verification:** the dashboard workflow e2e passed, and the full e2e set
+  passed when serialized (`38` files, `145` tests). The parallel full-suite
+  run had one unrelated scanner timer assertion; its isolated rerun passed.
+- **No new UX finding:** the fixture pass produced no new wrong or dead-end
+  action, so the 15 existing register entries remain open and unchanged. This
+  is not evidence that those historical findings are fixed; their last live
+  verification remains the run recorded above.
+
+**Coverage boundary.** The local `odysseus-local` database still has no
+prospect/directory fixture suitable for a real browser mutation and no local
+site authorized for a scanner run. The production login was not bypassed or
+fed a secret, so this run does not claim a post-deploy rehearsal of the five
+real-record journeys (directory add, qualifying audit/draft creation, queue
+review, reply/follow-up outcome, and paid audit). The deterministic fixture
+workflow and browser surface pass are the available safe evidence; a deployed
+real-record rehearsal remains an external follow-up.
 
 ## Run 3 notes (local + production, partial)
 

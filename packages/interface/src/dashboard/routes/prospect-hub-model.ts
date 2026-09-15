@@ -1,9 +1,4 @@
-import {
-  buildProspectApiQuery,
-  type ProspectFilterState,
-} from './prospect-filter-model';
-
-export type { ProspectListView } from './prospect-filter-model';
+import { buildProspectApiQuery, type ProspectFilterState } from './prospect-filter-model';
 
 export type ProspectStatus =
   | 'new'

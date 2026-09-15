@@ -5,9 +5,7 @@ export const en: DashboardStrings = {
     audits: 'Audits',
     newScan: 'New scan',
     prospects: 'Prospects',
-    directory: 'Directory',
     outreach: 'To do',
-    results: 'Results',
   },
   tools: {
     navLabel: 'Tools',

@@ -4570,7 +4570,7 @@ has not been checked. This project documents processor and data-residency
 status explicitly for Mistral elsewhere; MailReach's status is currently
 unverified. Flagged here, not resolved.
 
-### 87. The prospect is the durable hub; the catalogue is a directory (operator decision, 2026-09-15, Plan 047)
+### 87. The prospect is the durable hub; the catalogue is a directory (operator decision, 2026-09-15, Plans 047-048)
 
 The dashboard's previous campaign subject was a renewable `hotel_candidates`
 row. That made identity, selection, scoring, cohorts, waves, contacts, scans,
@@ -4599,3 +4599,12 @@ registry proposal in `plans/README.md`. The old selection/cohort/wave model
 from Plan 014 is blocked by Plan 047. The production fresh start is a
 separate operator-confirmed deployment step: backups and suppression survive
 the pipeline collection reset.
+
+Plan 048 settles the dashboard expression of that model. The sidebar has only
+three operational destinations: `À traiter`, `Prospects`, and `Audits`.
+`Annuaire` remains a distinct page reached from Prospects, not a primary
+navigation item. Results is a `view=results` projection inside Prospects with
+campaign-level status counts, not a second data set or status model. The
+prospect-work recommendation is guidance for the next action, never a
+selection gate; legal, suppression, crawl-politeness, coverage, and current
+provenance checks remain the only action blockers.
