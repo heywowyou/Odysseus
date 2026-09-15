@@ -400,6 +400,15 @@ export interface DashboardStrings {
       produceButtonRefreshFirst: string;
       /** Explains produceButtonRefreshFirst's label under the button. */
       produceRefreshFirstHint: string;
+      /** Persistent failure block after "regenerate the PDFs" is refused. */
+      produceFailedHeading: string;
+      /** {page} and {amount}: the print gate found content wider than the page. */
+      produceFailedOverflow: string;
+      /** A different layout-safety refusal from the PDF renderer. */
+      produceFailedLayout: string;
+      produceFailedGeneric: string;
+      produceFailedTechnicalLabel: string;
+      produceFailedDismiss: string;
       /** Why the produce action is greyed: no bilingual writing pair
        *  resolves yet (AuditDetailResponse.analysisPair === 'none'). */
       produceUnavailableReason: string;

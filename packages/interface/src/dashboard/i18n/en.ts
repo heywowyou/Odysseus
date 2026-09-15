@@ -418,6 +418,13 @@ export const en: DashboardStrings = {
       preparationUnavailable: 'Preparation is not available for this audit.',
       produceButton: 'Regenerate the PDFs',
       produceButtonRefreshFirst: 'Refresh findings then regenerate the PDFs',
+      produceFailedHeading: 'The PDFs could not be produced',
+      produceFailedOverflow:
+        'Content on page {page} is too wide to fit on the page (overflow of {amount} px). This usually means one very long text without spaces (address, selector, URL). No PDF was delivered.',
+      produceFailedLayout: 'The report layout failed the print safety check. No PDF was delivered.',
+      produceFailedGeneric: 'Producing the PDFs was refused. No PDF was delivered.',
+      produceFailedTechnicalLabel: 'Technical detail',
+      produceFailedDismiss: 'Dismiss',
       produceRefreshFirstHint:
         'This audit’s findings are out of date; they will be refreshed before the PDFs are produced.',
       produceUnavailableReason:

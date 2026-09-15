@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { auditReportPanelRows, findPanelRow, produceButtonState } from './audit-report-panel-model';
+import {
+  auditReportPanelRows,
+  describeProduceFailure,
+  findPanelRow,
+  produceButtonState,
+} from './audit-report-panel-model';
 
 const baseInput = {
   findingsStale: false,
@@ -84,5 +89,27 @@ describe('produceButtonState', () => {
     expect(state.hint).toBe(
       'Les constats de cet audit ne sont plus à jour ; ils seront actualisés avant que les PDF ne soient produits.',
     );
+  });
+});
+
+describe('describeProduceFailure', () => {
+  const overflow =
+    'Report generation aborted: Painted content <div> extends past the printable content rectangle on physical page 2 at right by 1793.7px. Never shipped to a client.';
+
+  it('explains a print overflow in French with its page and amount, keeping the raw detail', () => {
+    const result = describeProduceFailure(overflow, 'fr');
+    expect(result.heading).toBe('Les PDF n’ont pas pu être produits');
+    expect(result.explanation).toContain('page 2');
+    expect(result.explanation).toContain('1794 px');
+    expect(result.technicalDetail).toBe(overflow);
+  });
+
+  it('uses the layout wording for other renderer refusals and a generic one otherwise', () => {
+    expect(
+      describeProduceFailure('Report generation aborted: stranded heading.', 'en').explanation,
+    ).toBe('The report layout failed the print safety check. No PDF was delivered.');
+    const generic = describeProduceFailure(undefined, 'en');
+    expect(generic.explanation).toBe('Producing the PDFs was refused. No PDF was delivered.');
+    expect(generic.technicalDetail).toBeUndefined();
   });
 });

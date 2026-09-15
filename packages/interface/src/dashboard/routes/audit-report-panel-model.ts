@@ -91,3 +91,34 @@ export function produceButtonState(
     ...(findingsStale ? { hint: copy.produceRefreshFirstHint } : {}),
   };
 }
+
+/** Turns a refused PDF production into operator language. The raw renderer
+ *  message stays available as technical detail; only its page number and
+ *  overflow amount are lifted into the explanation. */
+export function describeProduceFailure(
+  rawMessage: string | undefined,
+  language: DashboardLanguage,
+): { heading: string; explanation: string; technicalDetail?: string } {
+  const copy = (language === 'fr' ? fr : en).auditDetail.panel;
+  const detail = rawMessage?.trim() === '' ? undefined : rawMessage?.trim();
+  const base = {
+    heading: copy.produceFailedHeading,
+    ...(detail ? { technicalDetail: detail } : {}),
+  };
+  const overflow = detail?.match(
+    /printable content rectangle on physical page (\d+) at \w+ by ([\d.]+)px/u,
+  );
+  if (overflow) {
+    const amount = String(Math.round(Number(overflow[2])));
+    return {
+      ...base,
+      explanation: copy.produceFailedOverflow
+        .replace('{page}', overflow[1]!)
+        .replace('{amount}', amount),
+    };
+  }
+  if (detail?.startsWith('Report generation aborted:')) {
+    return { ...base, explanation: copy.produceFailedLayout };
+  }
+  return { ...base, explanation: copy.produceFailedGeneric };
+}

@@ -16,7 +16,12 @@ import { Card } from '../components/ui/card';
 import { useI18n } from '../i18n/provider';
 import { postEmpty } from '../lib/api';
 import { useApi } from '../lib/use-api';
-import { auditReportPanelRows, findPanelRow, produceButtonState } from './audit-report-panel-model';
+import {
+  auditReportPanelRows,
+  describeProduceFailure,
+  findPanelRow,
+  produceButtonState,
+} from './audit-report-panel-model';
 import { unconfirmedIdentityFields } from './audit-detail-model';
 import type { AuditDetailResponse } from './audit-detail-types';
 import { IdentityConfirmField } from './identity-confirm-field';
@@ -55,6 +60,9 @@ export function AuditReportPanel(props: {
 
   const [isRewriting, setIsRewriting] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  // Kept until dismissed or the next attempt: a toast alone vanished before
+  // the operator could read why the PDFs were refused.
+  const [produceFailure, setProduceFailure] = useState<string | null>(null);
 
   const candidate = preparation?.preparation.writingSelection?.candidate;
   const selected = preparation?.preparation.writingSelection?.selected;
@@ -115,15 +123,16 @@ export function AuditReportPanel(props: {
     if (isRegenerating || !produceState.enabled) return;
     setIsRegenerating(true);
     onBusy(true);
+    setProduceFailure(null);
     toast(strings.auditDetail.regeneratingMessage);
     try {
       await postEmpty(`/api/audits/${encodeURIComponent(auditId)}/regenerate-report`);
       toast.success(strings.auditDetail.regeneratedMessage);
       refresh();
     } catch (produceError) {
-      toast.error(strings.auditDetail.actionError, {
-        description: produceError instanceof Error ? produceError.message : undefined,
-      });
+      const message = produceError instanceof Error ? produceError.message : '';
+      setProduceFailure(message);
+      toast.error(describeProduceFailure(message, language).heading);
     } finally {
       setIsRegenerating(false);
       onBusy(false);
@@ -208,6 +217,14 @@ export function AuditReportPanel(props: {
           ) : produceState.hint !== undefined ? (
             <p className="text-xs text-ink-muted">{produceState.hint}</p>
           ) : null}
+          {produceFailure !== null ? (
+            <ProduceFailureNotice
+              failure={describeProduceFailure(produceFailure, language)}
+              technicalLabel={copy.produceFailedTechnicalLabel}
+              dismissLabel={copy.produceFailedDismiss}
+              onDismiss={() => setProduceFailure(null)}
+            />
+          ) : null}
         </section>
 
         <section className="border-t border-line pt-4">
@@ -227,5 +244,31 @@ export function AuditReportPanel(props: {
         />
       </div>
     </Card>
+  );
+}
+
+function ProduceFailureNotice(props: {
+  failure: ReturnType<typeof describeProduceFailure>;
+  technicalLabel: string;
+  dismissLabel: string;
+  onDismiss: () => void;
+}): JSX.Element {
+  const { failure } = props;
+  return (
+    <div role="alert" className="flex flex-col gap-2 rounded-md border border-line p-3 text-[13px]">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="font-semibold text-ink">{failure.heading}</p>
+        <Button variant="secondary" size="sm" onClick={props.onDismiss}>
+          {props.dismissLabel}
+        </Button>
+      </div>
+      <p>{failure.explanation}</p>
+      {failure.technicalDetail !== undefined ? (
+        <details className="text-xs text-ink-muted">
+          <summary>{props.technicalLabel}</summary>
+          <p className="mt-1 break-words font-mono">{failure.technicalDetail}</p>
+        </details>
+      ) : null}
+    </div>
   );
 }

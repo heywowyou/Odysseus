@@ -151,6 +151,11 @@ h4 {
 }
 body {
   margin: 0;
+  /* Last-resort wrap for any unbroken string (hotel name, URL, model text)
+     outside the .mono/.selector-cell/.url-cell rules: without it one long
+     token pushes a box past the page and the PDF overflow gate refuses the
+     whole report. break-word only applies when the token would overflow. */
+  overflow-wrap: break-word;
   font-size: 15px;
   line-height: 1.55;
   font-weight: 400;
