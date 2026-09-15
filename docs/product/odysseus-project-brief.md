@@ -130,6 +130,16 @@ measurement. The complete source, qualification, and rollout decisions are in
 | Follow-up              | Written question rounds, scoped and included in the price    |
 | Implementation kickoff | Written scope document plus a shared task board              |
 
+The dashboard exposes three operator scan intents with distinct runtime
+contracts. **Quick Check** is a one-page informational probe with no
+Lighthouse, model analysis, or client report. **Prepare outreach** runs the
+normal complete audit crawl and persists its findings, then stops before model
+analysis and reports. **Prepare client report** runs that same complete audit
+and continues through French and English analysis and client reports. The
+internal bounded `prospecting` batch remains available to proven batch callers
+but is not the implementation of Prepare outreach and is not an ordinary
+dashboard choice.
+
 **Intake questionnaire must capture:**
 
 - Site URL, CMS or framework, hosting.
@@ -169,6 +179,13 @@ when the operator opts in. Politeness delay and the identifiable user agent
 remain mandatory. `runAuditStage` takes no tier parameter; the paid report and
 the separate outreach preview consume scanner evidence through different
 render paths.
+
+The current dashboard composition makes the scan boundary explicit: Quick
+Check is the bounded one-page exception, while Prepare outreach and Prepare
+client report use the normal complete-audit crawl. Prepare outreach stops after
+this scanning/persistence stage; Prepare client report continues through the
+analysis and report stages below. The bounded internal prospecting batch is a
+separate compatibility path, not a fourth operator intent.
 
 **Stage 2: Run the scanners.**
 Against the rendered page:
@@ -265,8 +282,9 @@ and a limitations statement (see 6.6).
 
 **Tier concept dropped 2026-08-16 (originally added 2026-08-07, shipped 2026-08-08).** This stage used to take a `tier: 'screening' | 'full'` argument controlling section inclusion and detail depth, with a lighter screening render and a full render sharing one `findings.json`. The paid screening tier is gone, so is the parameter: `@odysseus/report`'s `renderHtml`/`generateReportPdf` and `runReportStage` no longer take a tier argument, there is exactly one report body (`render-html.ts`'s single `renderBody`), the `odysseus report --tier` CLI flag is removed, and stored report documents (`ReportDocumentFields`) no longer carry a `tier` field (historical documents still have one on disk; it is simply not read). The free outreach preview that replaces screening is not a lighter render of this same template; it has its own render path, its own document, and its own content rules in `docs/rules/outreach-rules.md`, not a tier flag on this one.
 
-**Stage 6: Prospecting pipeline.**
-This is a distinct bounded path, not a mode of the paid-audit pipeline. It
+**Stage 6: Internal bounded prospecting pipeline.**
+This is a distinct bounded batch path, not a mode of the paid-audit pipeline
+and not the dashboard's Prepare outreach intent. It
 starts with cheap HTTP qualification, then prescans at most the homepage, one
 same-site booking page, and one room or content page. It reuses low-level
 scanner primitives for axe, render diff, direct browser metrics, and booking

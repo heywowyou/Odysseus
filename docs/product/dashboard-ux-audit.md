@@ -59,6 +59,15 @@ The production login was not bypassed or fed a secret, and no mailbox mutation
 was performed; the deployed real-record rehearsal remains an external
 follow-up.
 
+## Plan 049 semantic closeout (2026-09-15)
+
+The runtime contract was verified with focused route, runner, qualification,
+status-policy, work-model, and launch-guard tests. The tests prove the three
+operator intents' compositions and their resulting qualification and work
+state without a live model, mailbox, or third-party site. This is a code-level
+closeout, not a post-deploy browser rehearsal; the real-record rehearsal for
+all three scan intents remains pending operator authorization.
+
 ## Run 5 notes (Plan 048 stateful local closeout)
 
 Driven against the actual Vite dashboard and API at the Plan 048 closeout

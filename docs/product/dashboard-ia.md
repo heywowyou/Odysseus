@@ -1,6 +1,6 @@
 # Operator dashboard information architecture
 
-> Canonical post-048 map (2026-09-15). The dashboard is organized around one
+> Canonical post-048 map and post-049 runtime contract (2026-09-15). The dashboard is organized around one
 > durable prospect record and one operator work queue. Directory is a source of
 > prospects, Results is a view of prospects, and scan/job implementation names
 > stay out of ordinary operator choices.
@@ -36,7 +36,7 @@ Compatibility routes remain safe for bookmarks:
 ```text
 Find or add a prospect
         ↓
-Prepare outreach (complete prospecting audit)
+Prepare outreach (complete scan-only audit)
         ↓
 Review the deterministic first-email draft in À traiter
         ↓
@@ -45,9 +45,11 @@ Handle a reply or due follow-up in À traiter
 Record the outcome; the prospect status advances automatically
 ```
 
-The quick check is optional information. A paid client report is a separate
-secondary action. Sending is always manual; the dashboard prepares and shows
-drafts but never sends email.
+The quick check is optional information. Prepare outreach runs the complete
+audit stage and stops before model analysis and client reports. Prepare client
+report runs that same audit and then produces the bilingual analysis and
+reports. A paid client report is a separate secondary action. Sending is
+always manual; the dashboard prepares and shows drafts but never sends email.
 
 ## Prospects and Directory
 
@@ -111,9 +113,9 @@ The secondary hierarchy is:
 6. `Historique complet` / `Full history` — all audits, previews, and events,
    with preserved attach/detach actions.
 
-The direct anchors `#emails`, `#actions`, and `#history` remain stable so work
-queue links and deep links open the relevant section. Returning to Prospects or
-its Results view preserves the originating query string.
+The direct anchors `#emails`, `#actions`, `#outcome`, and `#history` remain
+stable so work-queue links and deep links open the relevant control. Returning
+to Prospects or its Results view preserves the originating query string.
 
 ## Scan vocabulary
 
@@ -131,6 +133,21 @@ search/create/choose/no-attach behavior for operator-launched scans. Internal
 bounded batch job vocabulary may remain in the worker and CLI contracts, but
 it is not an operator-facing New scan option. The retired single-site
 `light-audit` alias is absent from runtime TypeScript.
+
+These names are behavioral contracts, not labels: `quick-check` is a one-page
+probe with no Lighthouse, model, or report stage; `prospecting-audit` is the
+complete scan-only path; and `full-audit` adds French/English analysis and
+reports. Every new single-site audit persists its intent, and outreach
+qualification requires an eligible intent, complete coverage, and current
+findings provenance. The internal bounded `prospecting` batch is never an
+outreach-grade audit.
+
+Status automation follows the same workflow path through `quoted`, then
+branches to `won` or `lost`; `opted-out` is a terminal sibling. Normal outcome
+recording never rewrites a terminal sibling, while Correct status remains the
+explicit manual correction path. Plan 049 records this correction because
+Plan 048 required a complete prospecting audit while an earlier implementation
+description still implied the lightweight batch behavior.
 
 ## Audits and scan progress
 

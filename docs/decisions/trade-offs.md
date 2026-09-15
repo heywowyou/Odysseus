@@ -4608,3 +4608,30 @@ campaign-level status counts, not a second data set or status model. The
 prospect-work recommendation is guidance for the next action, never a
 selection gate; legal, suppression, crawl-politeness, coverage, and current
 provenance checks remain the only action blockers.
+
+### 88. Operator scan intents are behavioral contracts, not labels (operator decision, 2026-09-15, Plan 049)
+
+The three dashboard scan intents now describe distinct runtime compositions.
+Quick Check is informational: a bounded one-page scan with no Lighthouse,
+model analysis, or client report. Prepare outreach is a normal complete
+scan-only audit, stopping after deterministic findings are persisted. Prepare
+client report is that same complete audit followed by French and English
+analysis and client report generation. The internal bounded `prospecting` batch
+remains an implementation path for proven batch callers, not a fourth ordinary
+operator choice and not a substitute for Prepare outreach.
+
+Outreach qualification is purpose plus complete coverage plus current findings
+provenance. Quick Check and ambiguous or bounded legacy audits fail closed;
+complete Prepare outreach and Full Audit records may qualify. The generic audit
+stage persists scanner evidence but does not advance prospect workflow state;
+one post-scan finalizer owns the attach event and purpose-aware `audited`
+transition. Automatic status progression is a graph: the non-terminal path
+reaches `quoted`, then branches to terminal `won` or `lost`, with `opted-out`
+as a terminal sibling. Normal outcome recording never changes a terminal
+sibling; Correct status remains the explicit manual correction path.
+
+This records Plan 049's correction to a Plan 048 planning contradiction:
+Plan 048 required a complete prospecting audit for Prepare outreach while also
+placing the scanner behavior needed to make that contract real out of scope.
+The historical Plan 048 text remains unchanged; the runtime and current
+workflow documentation now state the implemented boundary.
