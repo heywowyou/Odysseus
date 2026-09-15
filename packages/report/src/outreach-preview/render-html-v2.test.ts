@@ -65,6 +65,14 @@ describe('generateOutreachPreviewHtmlV2', () => {
     expect(html).toContain('>D<');
   });
 
+  it('labels the grade once and keeps the grade close under the cover on screen', () => {
+    const html = generateOutreachPreviewHtmlV2(summary({ gradeOverride: 'D' }));
+    expect(html.split('Niveau global des constats').length - 1).toBe(1);
+    expect(OUTREACH_PREVIEW_STYLES_V2).toMatch(
+      /@media screen \{\s*\.cover \.cover-spacer \{ flex: 0 0 var\(--space-8\) !important; \}/,
+    );
+  });
+
   it('renders the product-specified section order, in French', () => {
     const html = generateOutreachPreviewHtmlV2(summary());
     const order = [

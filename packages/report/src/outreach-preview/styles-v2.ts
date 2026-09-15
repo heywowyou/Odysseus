@@ -206,6 +206,12 @@ a:focus-visible {
 }
 .cover .cover-signature { color: var(--faint); opacity: 1 !important; }
 .cover .cover-spacer { flex: 0.94 !important; }
+/* On screen the quiet ground after the closing act would push the grade a
+   full empty screen below the cover footer; keep a short deliberate gap
+   instead. Print keeps the paper cover's two-act composition. */
+@media screen {
+  .cover .cover-spacer { flex: 0 0 var(--space-8) !important; }
+}
 
 .preview-signal,
 .preview-introduction,
@@ -312,13 +318,6 @@ section:not(.disclosure) {
   padding: var(--space-6) var(--space-8);
   border-top: 1px solid var(--divider);
   border-bottom: 1px solid var(--divider);
-}
-.preview-risk-label {
-  margin-bottom: var(--space-4);
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  font-size: 10px;
 }
 .preview-risk-scale {
   display: grid;

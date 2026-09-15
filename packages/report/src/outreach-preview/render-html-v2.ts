@@ -67,7 +67,6 @@ function renderGradeSignal(input: OutreachPreviewSummary, s: OutreachPreviewStri
     '<div class="preview-signal">',
     `<div class="preview-scorecard">${renderScorecardGrade(grade, s.scorecardDisclaimer, s.scorecardLabel)}</div>`,
     '<div class="preview-risk">',
-    `<div class="preview-risk-label">${escapeHtml(s.scorecardLabel)}</div>`,
     `<div class="preview-risk-scale">${scale}</div>`,
     `<div class="preview-risk-basis">${escapeHtml(basisNote)}</div>`,
     `<div class="preview-risk-note">${escapeHtml(s.riskScaleBasisNote)}</div>`,
