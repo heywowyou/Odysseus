@@ -26,6 +26,7 @@ vi.mock('@odysseus/store', () => ({
   listProspectTodo: vi.fn(),
   listProspects: vi.fn(),
   loadProspectWork: vi.fn(),
+  recordOutreachDraftReview: vi.fn(),
   recordProspectOutcome: vi.fn(),
   removeProspectEmail: vi.fn(),
   removeProspectWebsite: vi.fn(),
@@ -67,6 +68,7 @@ import {
   listProspectTodo,
   loadProspectWork,
   listProspects,
+  recordOutreachDraftReview,
   recordProspectOutcome,
   removeProspectEmail,
   removeProspectWebsite,
@@ -538,5 +540,22 @@ describe('outreach language', () => {
     expect(createFirstEmailForProspect).toHaveBeenLastCalledWith(fakeConnection, 'p-1', {
       language: 'fr',
     });
+  });
+});
+
+describe('draft review', () => {
+  it('discards a pending draft here and in the mailbox', async () => {
+    vi.mocked(listOutreachDrafts).mockResolvedValue([
+      { draftId: 'd-1', providerDraftId: 'g-1', status: 'created' },
+    ] as never);
+    deleteMailboxDraft.mockResolvedValue(undefined);
+
+    const response = await handle('/api/prospects/p-1/drafts/d-1/discard', 'POST', {});
+    expect(response.statusCode).toBe(200);
+    expect(recordOutreachDraftReview).toHaveBeenCalledWith(fakeConnection, 'd-1', 'skipped');
+    expect(deleteMailboxDraft).toHaveBeenCalledWith('g-1');
+
+    const missing = await handle('/api/prospects/p-1/drafts/nope/discard', 'POST', {});
+    expect(missing.statusCode).toBe(404);
   });
 });

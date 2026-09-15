@@ -858,6 +858,13 @@ export interface DashboardStrings {
       threadState: string;
       draftLabel: string;
       draftCreated: string;
+      draftRecipient: string;
+      draftBody: string;
+      openPreview: string;
+      openInMailbox: string;
+      discardDraft: string;
+      confirmDiscardDraft: string;
+      draftDiscarded: string;
       noDraft: string;
       auditState: string;
       eventLabel: string;

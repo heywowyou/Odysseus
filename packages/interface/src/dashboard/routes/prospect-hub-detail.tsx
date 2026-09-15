@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { ArrowLeft, ExternalLink, History, Star, Trash2, X } from 'lucide-react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
@@ -86,6 +86,9 @@ interface ProspectDraft {
   touch: number;
   status: string;
   subject: string;
+  body?: string;
+  recipient?: string;
+  mailboxUrl?: string;
   language?: 'fr' | 'en';
   previewUrl?: string;
   createdAt: string;
@@ -172,6 +175,13 @@ export function ProspectHubDetailPage(): JSX.Element {
   const [outreachBusy, setOutreachBusy] = useState<string | null>(null);
   const [outreachNotice, setOutreachNotice] = useState<string | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<ContactRemoval | null>(null);
+
+  // Issue #277: deep links like #emails arrive before the record renders.
+  const loaded = response.data !== undefined;
+  useEffect(() => {
+    if (!loaded || window.location.hash === '') return;
+    document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
+  }, [loaded]);
 
   if (response.error)
     return (
@@ -457,6 +467,25 @@ export function ProspectHubDetailPage(): JSX.Element {
       setOutreachNotice(
         error instanceof ApiError && error.status === 409 ? copy.outcomeRefused : copy.actionFailed,
       );
+    } finally {
+      setOutreachBusy(null);
+      refreshAll();
+    }
+  };
+
+  const discardDraft = async (draftId: string): Promise<void> => {
+    if (!window.confirm(copy.confirmDiscardDraft)) return;
+    setOutreachBusy(`discard-${draftId}`);
+    setOutreachNotice(null);
+    try {
+      await sendJson(
+        `/api/prospects/${prospect.prospectId}/drafts/${encodeURIComponent(draftId)}/discard`,
+        'POST',
+        {},
+      );
+      setOutreachNotice(copy.draftDiscarded);
+    } catch {
+      setOutreachNotice(copy.actionFailed);
     } finally {
       setOutreachBusy(null);
       refreshAll();
@@ -936,6 +965,65 @@ export function ProspectHubDetailPage(): JSX.Element {
                     <p className="text-xs text-ink-muted">
                       {copy.draftCreated.replace('{date}', formatDate(draft.createdAt))}
                     </p>
+                    <dl className="mt-2 grid gap-1 text-xs">
+                      <div className="flex gap-2">
+                        <dt className="text-ink-muted">{copy.draftRecipient}</dt>
+                        <dd className="break-all">{draft.recipient ?? copy.notProvided}</dd>
+                      </div>
+                      <div className="flex gap-2">
+                        <dt className="text-ink-muted">{copy.outreachLanguage}</dt>
+                        <dd>
+                          {draft.language === undefined
+                            ? copy.notProvided
+                            : copy.languageLabels[draft.language]}
+                        </dd>
+                      </div>
+                    </dl>
+                    {draft.body ? (
+                      <details className="mt-2">
+                        <summary className="cursor-pointer text-xs font-medium">
+                          {copy.draftBody}
+                        </summary>
+                        <pre className="mt-1 whitespace-pre-wrap break-words font-sans text-sm">
+                          {draft.body}
+                        </pre>
+                      </details>
+                    ) : null}
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {draft.previewUrl ? (
+                        <a
+                          className={buttonStyles('secondary', 'sm')}
+                          href={draft.previewUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {copy.openPreview}
+                          <ExternalLink className="size-3" aria-hidden="true" />
+                        </a>
+                      ) : null}
+                      {draft.mailboxUrl && draft.status === 'created' ? (
+                        <a
+                          className={buttonStyles('secondary', 'sm')}
+                          href={draft.mailboxUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {copy.openInMailbox}
+                          <ExternalLink className="size-3" aria-hidden="true" />
+                        </a>
+                      ) : null}
+                      {draft.status === 'created' ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={outreachBusy !== null}
+                          isLoading={outreachBusy === `discard-${draft.draftId}`}
+                          onClick={() => void discardDraft(draft.draftId)}
+                        >
+                          {copy.discardDraft}
+                        </Button>
+                      ) : null}
+                    </div>
                   </li>
                 ))}
               </ul>

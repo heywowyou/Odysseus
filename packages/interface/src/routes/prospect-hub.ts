@@ -20,6 +20,7 @@ import {
   listProspects,
   listOutreachPreviews,
   deleteProspect,
+  recordOutreachDraftReview,
   recordProspectOutcome,
   removeProspectEmail,
   removeProspectWebsite,
@@ -332,8 +333,15 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
           touch: draft.touch,
           status: draft.status,
           subject: draft.subject,
+          body: draft.body,
+          recipient: draft.roleAddress,
           language: draft.language,
           previewUrl: draft.previewUrl,
+          // Issue #277: Gmail opens a draft from its message id.
+          mailboxUrl:
+            draft.providerMessageId === undefined
+              ? undefined
+              : `https://mail.google.com/mail/#drafts?compose=${encodeURIComponent(draft.providerMessageId)}`,
           createdAt: draft.createdAt,
         })),
       });
@@ -366,6 +374,26 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
     }
     res.setHeader('cache-control', 'no-store');
     sendJson(res, 200, result);
+  });
+
+  // Issue #277: discarding a draft from the dashboard withdraws it from the
+  // mailbox too, so the operator can safely recreate it.
+  router.post('/api/prospects/:prospectId/drafts/:draftId/discard', async ({ res, params }) => {
+    const drafts = await listOutreachDrafts(connection, {
+      prospectId: params['prospectId']!,
+      status: 'created',
+    });
+    const draft = drafts.find((item) => item.draftId === params['draftId']);
+    if (draft === undefined) {
+      sendError(res, 404, 'pending draft not found');
+      return;
+    }
+    await recordOutreachDraftReview(connection, draft.draftId, 'skipped');
+    const mailbox = createConfiguredMailboxDraftAdapter();
+    if (mailbox !== null && draft.providerDraftId !== undefined) {
+      await mailbox.deleteDraft(draft.providerDraftId).catch(() => undefined);
+    }
+    sendJson(res, 200, { discarded: true });
   });
 
   router.post('/api/prospects/:prospectId/outreach/follow-up', async ({ res, params }) => {
