@@ -8,6 +8,7 @@ import {
   hubPrimaryAction,
   hubTabs,
   pipelineSteps,
+  outreachActionAuditId,
   selectedAuditId,
   selectionVerdictSentence,
 } from './hub-model';
@@ -302,6 +303,40 @@ describe('selectedAuditId (plan 042 slice 3)', () => {
     expect(selectedAuditId(choices, null)).toBe('audit-2');
     expect(selectedAuditId(choices, 'audit-1')).toBe('audit-1');
     expect(selectedAuditId([], null)).toBeNull();
+  });
+});
+
+describe('outreachActionAuditId (issue #266)', () => {
+  it('selects the outreach audit independently of the newest paid audit', () => {
+    const detail = makeDetail({
+      outreachAudit: {
+        auditId: 'outreach-1',
+        startedAt: '2026-09-01T00:00:00.000Z',
+        severityRollup: { critical: 0, serious: 0, moderate: 0, minor: 0 },
+      },
+      outreachAudits: [
+        { auditId: 'paid-2', startedAt: '2026-09-10T00:00:00.000Z', jobType: 'full-audit' },
+        {
+          auditId: 'outreach-1',
+          startedAt: '2026-09-01T00:00:00.000Z',
+          jobType: 'outreach-full-scan',
+        },
+      ],
+    });
+
+    expect(outreachActionAuditId(detail)).toBe('outreach-1');
+  });
+
+  it('falls back to the legacy singular outreach audit projection', () => {
+    const detail = makeDetail({
+      outreachAudit: {
+        auditId: 'outreach-legacy',
+        startedAt: '2026-09-01T00:00:00.000Z',
+        severityRollup: { critical: 0, serious: 0, moderate: 0, minor: 0 },
+      },
+    });
+
+    expect(outreachActionAuditId(detail)).toBe('outreach-legacy');
   });
 });
 

@@ -210,6 +210,18 @@ export function selectedAuditId(choices: HubAuditChoice[], picked: string | null
   return (choices.find((choice) => choice.auditId === picked) ?? choices[0])?.auditId ?? null;
 }
 
+/** The campaign audit owned by preview actions, independent of the Audit /
+ * Report tabs' display selection. The singular field is the authoritative
+ * outreach projection and also supports snapshots from before the audit list
+ * was added. Prefer an explicitly typed list entry when one is available. */
+export function outreachActionAuditId(detail: ProspectDetailResponse): string | null {
+  return (
+    detail.outreachAudits?.find((audit) => audit.jobType === 'outreach-full-scan')?.auditId ??
+    detail.outreachAudit?.auditId ??
+    null
+  );
+}
+
 export type HubPrimaryAction =
   | { kind: 'review' }
   | { kind: 'start-scan' }

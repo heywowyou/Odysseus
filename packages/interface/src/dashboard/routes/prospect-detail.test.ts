@@ -525,13 +525,17 @@ describe('ProspectDetailPage stage/audit deep links (issue #221)', () => {
     ...detailWithContact(null),
     outreachScan: { canStart: false },
     outreachAudit: {
-      auditId: 'audit-2',
-      startedAt: '2026-09-05T10:00:00.000Z',
+      auditId: 'audit-1',
+      startedAt: '2026-09-01T10:00:00.000Z',
       severityRollup: { critical: 0, serious: 0, moderate: 0, minor: 0 },
     },
     outreachAudits: [
       { auditId: 'audit-2', startedAt: '2026-09-05T10:00:00.000Z', jobType: 'full-audit' },
-      { auditId: 'audit-1', startedAt: '2026-09-01T10:00:00.000Z', jobType: 'prospecting-audit' },
+      {
+        auditId: 'audit-1',
+        startedAt: '2026-09-01T10:00:00.000Z',
+        jobType: 'outreach-full-scan',
+      },
     ],
   });
 
@@ -582,8 +586,8 @@ describe('ProspectDetailPage stage/audit deep links (issue #221)', () => {
     ).toBe(true);
   });
 
-  it('publishes the currently selected audit rather than the newest linked audit', async () => {
-    await renderDetailWithProbe('/prospects/candidate-1?tab=preview&audit=audit-1');
+  it('keeps the paid audit selection independent from preview actions', async () => {
+    await renderDetailWithProbe('/prospects/candidate-1?tab=preview&audit=audit-2');
     await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
     await pause();
 
@@ -595,6 +599,25 @@ describe('ProspectDetailPage stage/audit deep links (issue #221)', () => {
         ? true
         : undefined,
     );
+    expect(currentLocation()).toContain('audit=audit-2');
+  });
+
+  it('publishes the outreach audit when the default selected audit is a newer paid audit', async () => {
+    await renderDetailWithProbe('/prospects/candidate-1?tab=preview');
+    await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
+    await pause();
+
+    await clickButton('Publier l’aperçu');
+    await waitFor(() =>
+      fetchMock.mock.calls.some((call) => String(call[0]).includes('/outreach-preview/publish'))
+        ? true
+        : undefined,
+    );
+    expect(
+      fetchMock.mock.calls.some((call) =>
+        String(call[0]).includes('/api/audits/audit-1/outreach-preview/publish'),
+      ),
+    ).toBe(true);
     expect(
       fetchMock.mock.calls.some((call) =>
         String(call[0]).includes('/api/audits/audit-2/outreach-preview/publish'),

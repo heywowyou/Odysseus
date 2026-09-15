@@ -22,6 +22,7 @@ import {
   auditChoices,
   hubPrimaryAction,
   hubTabs,
+  outreachActionAuditId,
   parseHubStepKey,
   pipelineSteps,
   selectedAuditId,
@@ -618,13 +619,12 @@ export function ProspectDetailPage(): JSX.Element {
   };
 
   const runPublish = async (): Promise<void> => {
-    const auditId =
-      data === undefined ? null : selectedAuditId(auditChoices(data), searchParams.get('audit'));
-    if (auditId === null || isOutreachBusy) return;
+    const actionAuditId = data === undefined ? null : outreachActionAuditId(data);
+    if (actionAuditId === null || isOutreachBusy) return;
     setIsOutreachBusy(true);
     try {
       const result = await postEmpty<OutreachPreviewPublishResponse>(
-        `/api/audits/${encodeURIComponent(auditId)}/outreach-preview/publish`,
+        `/api/audits/${encodeURIComponent(actionAuditId)}/outreach-preview/publish`,
       );
       if (result.published) {
         setPublishedLink(result.url);
@@ -814,6 +814,7 @@ export function ProspectDetailPage(): JSX.Element {
   const steps = pipelineSteps(data, now);
   const choices = auditChoices(data);
   const auditId = selectedAuditId(choices, searchParams.get('audit'));
+  const previewAuditId = outreachActionAuditId(data);
   const tabs = hubTabs(steps, auditId !== null);
   const requestedTab = parseHubStepKey(searchParams.get('tab'));
   const activeTab =
@@ -876,7 +877,7 @@ export function ProspectDetailPage(): JSX.Element {
       case 'preview':
         return (
           <HubPreviewSection
-            auditId={auditId}
+            auditId={previewAuditId}
             preview={data.preview}
             publishedLink={publishedLink}
             hasTouch1Draft={
