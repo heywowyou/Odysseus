@@ -547,6 +547,18 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
       sendError(res, 400, 'outcome is invalid');
       return;
     }
+    // Issue #278: a reply outcome describes an email that was sent. Refuse it
+    // until the mailbox has confirmed a send, instead of storing nonsense.
+    if (['no-reply', 'reply-positive', 'reply-not-now', 'reply-negative'].includes(outcome)) {
+      const thread = await findOutreachThreadByProspect(connection, params['prospectId']!);
+      if (thread === null || thread.touches.length === 0) {
+        sendJson(res, 409, {
+          error: 'nothing has been sent to this prospect yet',
+          refusal: 'nothing-sent',
+        });
+        return;
+      }
+    }
     try {
       const prospect = await recordProspectOutcome(connection, params['prospectId']!, outcome);
       if (prospect === null) {

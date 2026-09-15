@@ -11,7 +11,7 @@ import { EmptyState } from '../components/ui/empty-state';
 import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
 import { useI18n } from '../i18n/provider';
-import { sendJson } from '../lib/api';
+import { ApiError, sendJson } from '../lib/api';
 import { useApi } from '../lib/use-api';
 import type { ProspectHubRow, ProspectStatus } from './prospect-hub-model';
 import {
@@ -447,8 +447,10 @@ export function ProspectHubDetailPage(): JSX.Element {
               .replace('{previews}', String(result.withdrawn.previews))
           : copy.outcomeSaved.replace('{outcome}', label(outcome, copy.outcomeLabels)),
       );
-    } catch {
-      setOutreachNotice(copy.actionFailed);
+    } catch (error) {
+      setOutreachNotice(
+        error instanceof ApiError && error.status === 409 ? copy.outcomeRefused : copy.actionFailed,
+      );
     } finally {
       setOutreachBusy(null);
       response.refresh();

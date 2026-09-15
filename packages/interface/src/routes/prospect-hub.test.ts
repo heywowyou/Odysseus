@@ -282,6 +282,9 @@ describe('prospect hub routes', () => {
     expect(status.statusCode).toBe(200);
     expect(setProspectStatus).toHaveBeenCalledWith(fakeConnection, 'p-1', 'audited');
 
+    vi.mocked(findOutreachThreadByProspect).mockResolvedValueOnce({
+      touches: [{ touch: 1 }],
+    } as never);
     const outcome = await handle('/api/prospects/p-1/outcome', 'POST', {
       outcome: 'reply-positive',
     });
@@ -334,6 +337,14 @@ describe('prospect hub routes', () => {
 
     const missing = await handle('/api/prospects/p-1/emails', 'DELETE', {});
     expect(missing.statusCode).toBe(400);
+  });
+
+  it('refuses a reply outcome while nothing has been sent', async () => {
+    vi.mocked(findOutreachThreadByProspect).mockResolvedValueOnce({ touches: [] } as never);
+    const response = await handle('/api/prospects/p-1/outcome', 'POST', { outcome: 'no-reply' });
+    expect(response.statusCode).toBe(409);
+    expect(response.body).toMatchObject({ refusal: 'nothing-sent' });
+    expect(recordProspectOutcome).not.toHaveBeenCalled();
   });
 
   it('withdraws drafts, previews and the thread when an opt-out is recorded', async () => {
