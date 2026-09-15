@@ -27,6 +27,7 @@ import { createOutreachThreadModel } from './schemas/outreach-thread.schema.js';
 import { deleteAuditCascade, type AuditCascadeCounts } from './delete-audit.js';
 import { addSuppressionEntry } from './suppression.js';
 import { loadProspectWork, type ProspectTodoRow } from './prospect-work.js';
+import { decideAutomaticStatus } from './prospect-status-policy.js';
 
 export interface NewProspectHubInput {
   sector: string;
@@ -385,18 +386,6 @@ export async function setProspectStatus(
   return { ...current, status, updatedAt: now, lastActivityAt: now };
 }
 
-const STATUS_ORDER: readonly ProspectStatus[] = [
-  'new',
-  'audited',
-  'contacted',
-  'follow-up',
-  'replied',
-  'call',
-  'quoted',
-  'won',
-  'lost',
-];
-
 export async function advanceProspectStatus(
   connection: Connection,
   prospectId: string,
@@ -404,10 +393,76 @@ export async function advanceProspectStatus(
   actor = 'automation',
 ): Promise<ProspectHubDocument | null> {
   const current = await getProspectHub(connection, prospectId);
-  if (current === null || current.status === 'opted-out') return current;
-  const currentIndex = STATUS_ORDER.indexOf(current.status);
-  const nextIndex = STATUS_ORDER.indexOf(status);
-  if (nextIndex <= currentIndex) return current;
+  if (current === null) return null;
+  const decision = decideAutomaticStatus(current.status, status);
+  if (!decision.allowed || !decision.changed) return current;
+  return setProspectStatus(connection, prospectId, status, actor);
+}
+
+export class AutomaticStatusTransitionError extends Error {
+  readonly current: ProspectStatus;
+  readonly requested: ProspectStatus;
+
+  constructor(current: ProspectStatus, requested: ProspectStatus) {
+    super(`automatic status transition from ${current} to ${requested} is not allowed`);
+    this.name = 'AutomaticStatusTransitionError';
+    this.current = current;
+    this.requested = requested;
+  }
+}
+
+async function suppressProspect(
+  connection: Connection,
+  prospect: ProspectHubDocument,
+): Promise<void> {
+  const primaryWebsite =
+    prospect.websites.find((website) => website.primary) ?? prospect.websites[0];
+  const domains = new Set<string>();
+  if (primaryWebsite?.registrableDomain !== undefined) {
+    domains.add(primaryWebsite.registrableDomain);
+  }
+  for (const email of prospect.emails) {
+    const at = email.address.lastIndexOf('@');
+    if (at > 0) domains.add(email.address.slice(at + 1));
+  }
+  await Promise.all(
+    [...domains].map((domain) =>
+      addSuppressionEntry(connection, {
+        domain,
+        reasonCode: 'objection',
+        reason: 'opt-out recorded on the prospect',
+      }),
+    ),
+  );
+  await Promise.all(
+    prospect.emails.map((email) => {
+      const at = email.address.lastIndexOf('@');
+      if (at <= 0) return Promise.resolve();
+      return addSuppressionEntry(connection, {
+        domain: email.address.slice(at + 1),
+        address: email.address,
+        reasonCode: 'objection',
+        reason: 'opt-out recorded on the prospect',
+      });
+    }),
+  );
+}
+
+/** Applies a workflow status requested by an automated outcome or scan
+ *  effect. Unlike setProspectStatus, this refuses terminal sibling changes
+ *  and regressions so callers cannot silently overwrite a manual result. */
+export async function applyAutomaticProspectStatus(
+  connection: Connection,
+  prospectId: string,
+  status: Exclude<ProspectStatus, 'new'>,
+  actor = 'automation',
+): Promise<ProspectHubDocument | null> {
+  const current = await getProspectHub(connection, prospectId);
+  if (current === null) return null;
+  const decision = decideAutomaticStatus(current.status, status);
+  if (!decision.allowed) throw new AutomaticStatusTransitionError(current.status, status);
+  if (!decision.changed) return current;
+  if (status === 'opted-out') await suppressProspect(connection, current);
   return setProspectStatus(connection, prospectId, status, actor);
 }
 
@@ -618,7 +673,7 @@ export async function recordProspectOutcome(
   outcome: string,
   actor = 'operator',
 ): Promise<ProspectHubDocument | null> {
-  const status: ProspectStatus | undefined = {
+  const status: Exclude<ProspectStatus, 'new'> | undefined = {
     'reply-positive': 'replied',
     'reply-not-now': 'replied',
     'reply-negative': 'lost',
@@ -627,43 +682,13 @@ export async function recordProspectOutcome(
     quoted: 'quoted',
     won: 'won',
     lost: 'lost',
-  }[outcome] as ProspectStatus | undefined;
+  }[outcome] as Exclude<ProspectStatus, 'new'> | undefined;
   const current = await getProspectHub(connection, prospectId);
   if (current === null) return null;
-  if (outcome === 'opt-out') {
-    const primaryWebsite =
-      current.websites.find((website) => website.primary) ?? current.websites[0];
-    const domains = new Set<string>();
-    if (primaryWebsite?.registrableDomain !== undefined)
-      domains.add(primaryWebsite.registrableDomain);
-    for (const email of current.emails) {
-      const at = email.address.lastIndexOf('@');
-      if (at > 0) domains.add(email.address.slice(at + 1));
-    }
-    await Promise.all(
-      [...domains].map((domain) =>
-        addSuppressionEntry(connection, {
-          domain,
-          reasonCode: 'objection',
-          reason: 'opt-out recorded on the prospect',
-        }),
-      ),
-    );
-    await Promise.all(
-      current.emails.map((email) => {
-        const at = email.address.lastIndexOf('@');
-        if (at <= 0) return Promise.resolve();
-        return addSuppressionEntry(connection, {
-          domain: email.address.slice(at + 1),
-          address: email.address,
-          reasonCode: 'objection',
-          reason: 'opt-out recorded on the prospect',
-        });
-      }),
-    );
-  }
   const prospect =
-    status === undefined ? current : await setProspectStatus(connection, prospectId, status, actor);
+    status === undefined
+      ? current
+      : await applyAutomaticProspectStatus(connection, prospectId, status, actor);
   if (prospect === null) return null;
   await recordEvent(
     connection,

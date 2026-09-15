@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { NORMALIZATION_FINGERPRINT } from '@odysseus/core';
 
 vi.mock('./schemas/audit.schema.js', () => ({ createAuditModel: vi.fn() }));
 vi.mock('./schemas/job.schema.js', () => ({ createJobModel: vi.fn() }));
@@ -48,7 +49,8 @@ function audit(overrides: Record<string, unknown> = {}): ProspectWorkAudit {
     finishedAt: new Date('2026-09-01T10:10:00.000Z'),
     pages: [{ status: 'visited', url: 'https://example.fr/' }],
     crawl: {},
-    findingsProvenance: { normalizationFingerprint: '256750115048ff0a' },
+    scanIntent: 'prospecting-audit',
+    findingsProvenance: { normalizationFingerprint: NORMALIZATION_FINGERPRINT },
     ...overrides,
   } as ProspectWorkAudit;
 }
@@ -211,7 +213,7 @@ describe('prospect work model', () => {
     });
     expect(reply.items[0]).toMatchObject({
       action: 'record-outcome',
-      href: `/prospects/${prospect.prospectId}#actions`,
+      href: `/prospects/${prospect.prospectId}#outcome`,
     });
 
     const followUp = deriveProspectWork(
@@ -243,6 +245,26 @@ describe('prospect work model', () => {
 
     const firstEmail = deriveProspectWork(prospect, { ...emptySources, audits: [audit()] });
     expect(firstEmail.items[0]?.href).toBe(`/prospects/${prospect.prospectId}#emails`);
+  });
+
+  it('clears reply work once the thread points to a recorded outcome', () => {
+    const work = deriveProspectWork(prospect, {
+      ...emptySources,
+      threads: [
+        {
+          threadId: 'thread-resolved',
+          prospectId: prospect.prospectId,
+          state: 'replied',
+          currentTouch: 1,
+          touches: [],
+          spacing: { touch2AfterDays: 3, touch3AfterDays: 7, replyWindowDays: 14 },
+          updatedAt: new Date(),
+          currentOutcome: 'outcome-1',
+        },
+      ],
+    });
+
+    expect(work.items.some((item) => item.action === 'record-outcome')).toBe(false);
   });
 
   it('loads all work sources with one bounded query per collection', async () => {

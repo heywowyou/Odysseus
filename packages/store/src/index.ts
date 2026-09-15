@@ -104,6 +104,7 @@ export type {
 } from './prospect-hub.js';
 export {
   addDirectoryEntriesToProspects,
+  applyAutomaticProspectStatus,
   advanceProspectStatus,
   appendProspectEvent,
   createProspectHub,
@@ -119,10 +120,23 @@ export {
   PROSPECT_RESULT_STATUSES,
   recordProspectOutcome,
   setProspectStatus,
+  AutomaticStatusTransitionError,
   upsertDirectoryEntries,
   updateProspect,
   updateProspectRecord,
 } from './prospect-hub.js';
+export {
+  AUTOMATIC_PROGRESS_RANK,
+  TERMINAL_PROSPECT_STATUSES,
+  decideAutomaticStatus,
+} from './prospect-status-policy.js';
+export type { AutomaticStatusDecision } from './prospect-status-policy.js';
+export {
+  CANONICAL_SINGLE_SITE_JOB_TYPES,
+  canonicalJobTypeForScanIntent,
+  displayJobIntent,
+} from './scan-intents.js';
+export type { CanonicalSingleSiteJobType } from './scan-intents.js';
 export {
   createProspectHub as createProspect,
   getProspectHub as getProspect,
@@ -137,7 +151,7 @@ export type {
   ProspectHubDocumentFields,
 } from './schemas/prospect-hub.schema.js';
 export { createProspectHubModel } from './schemas/prospect-hub.schema.js';
-export { checkOutreachAction, checkScanLaunch } from './guards.js';
+export { checkOutreachAction, checkScanLaunch, registrableDomainForScan } from './guards.js';
 export type {
   OutreachAction,
   OutreachActionCheck,
@@ -145,6 +159,19 @@ export type {
   ScanLaunchCheck,
   ScanLaunchRefusal,
 } from './guards.js';
+export {
+  OUTREACH_ELIGIBLE_SCAN_INTENTS,
+  classifyLegacyAuditScanIntent,
+  effectiveAuditScanIntent,
+  hasCurrentFindingsProvenance,
+  hasOutreachEligibleScanIntent,
+  isOutreachQualifyingAudit,
+} from './prospect-audit-qualification.js';
+export type {
+  AuditIntentSourceJob,
+  AuditQualificationInput,
+  ProspectAuditScanIntent,
+} from './prospect-audit-qualification.js';
 export type {
   SuppressionDocument,
   SuppressionDocumentFields,

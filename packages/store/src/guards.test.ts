@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { NORMALIZATION_FINGERPRINT } from '@odysseus/core';
 
 vi.mock('./active-jobs.js', () => ({
-  findActiveBrowserHeavyHostConflict: vi.fn(),
+  planProspectJobLaunch: vi.fn(),
 }));
 vi.mock('./suppression.js', () => ({
   isSuppressed: vi.fn(),
@@ -9,11 +10,15 @@ vi.mock('./suppression.js', () => ({
 vi.mock('./schemas/audit.schema.js', () => ({
   createAuditModel: vi.fn(),
 }));
+vi.mock('./schemas/job.schema.js', () => ({
+  createJobModel: vi.fn(),
+}));
 
-import { findActiveBrowserHeavyHostConflict } from './active-jobs.js';
+import { planProspectJobLaunch } from './active-jobs.js';
 import { checkOutreachAction, checkScanLaunch } from './guards.js';
 import { isSuppressed } from './suppression.js';
 import { createAuditModel } from './schemas/audit.schema.js';
+import { createJobModel } from './schemas/job.schema.js';
 
 const fakeConnection = {} as never;
 
@@ -46,7 +51,8 @@ const audit = (overrides: Record<string, unknown> = {}) => ({
   finishedAt: new Date('2026-09-01T10:10:00.000Z'),
   pages: [{ status: 'visited', url: 'https://arkhotel.octosite.net/' }],
   crawl: {},
-  findingsProvenance: { normalizationFingerprint: '256750115048ff0a' },
+  findingsProvenance: { normalizationFingerprint: NORMALIZATION_FINGERPRINT },
+  scanIntent: 'prospecting-audit',
   ...overrides,
 });
 
@@ -62,16 +68,27 @@ function mockAuditRows(rows: readonly Record<string, unknown>[]): void {
   vi.mocked(createAuditModel).mockReturnValue({ find: vi.fn().mockReturnValue(query) } as never);
 }
 
+function mockJobRows(rows: readonly Record<string, unknown>[] = []): void {
+  const query = {
+    select: vi.fn(),
+    lean: vi.fn(),
+  };
+  query.select.mockReturnValue(query);
+  query.lean.mockResolvedValue(rows);
+  vi.mocked(createJobModel).mockReturnValue({ find: vi.fn().mockReturnValue(query) } as never);
+}
+
 describe('central prospect guards', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(isSuppressed).mockResolvedValue(false);
-    vi.mocked(findActiveBrowserHeavyHostConflict).mockResolvedValue(null);
+    vi.mocked(planProspectJobLaunch).mockResolvedValue({ allowed: true });
+    mockJobRows();
   });
 
   it('accepts a vendor-hosted website as a valid scan target', async () => {
     vi.mocked(isSuppressed).mockResolvedValue(false);
-    vi.mocked(findActiveBrowserHeavyHostConflict).mockResolvedValue(null);
+    vi.mocked(planProspectJobLaunch).mockResolvedValue({ allowed: true });
 
     await expect(
       checkScanLaunch(fakeConnection, {
@@ -92,7 +109,10 @@ describe('central prospect guards', () => {
     ).resolves.toEqual({ allowed: false, refusal: 'suppressed' });
 
     vi.mocked(isSuppressed).mockResolvedValue(false);
-    vi.mocked(findActiveBrowserHeavyHostConflict).mockResolvedValue({ jobId: 'busy-job' } as never);
+    vi.mocked(planProspectJobLaunch).mockResolvedValue({
+      allowed: false,
+      conflictingJobId: 'busy-job',
+    });
     await expect(
       checkScanLaunch(fakeConnection, { url: 'https://example.com', kind: 'full-audit' }),
     ).resolves.toEqual({ allowed: false, refusal: 'host-busy' });

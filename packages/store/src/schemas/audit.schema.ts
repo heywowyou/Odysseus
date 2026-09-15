@@ -584,6 +584,7 @@ export const auditSchema = new Schema<AuditDocument>(
   {
     auditId: { type: String, required: true, unique: true },
     prospectId: { type: String },
+    scanIntent: { type: String, enum: ['quick-check', 'prospecting-audit', 'full-audit'] },
     kind: { type: String, required: true, enum: ['audit', 'render-diff'] },
     siteUrl: { type: String, required: true },
     startedAt: { type: Date, required: true },

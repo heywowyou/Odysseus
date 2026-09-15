@@ -127,6 +127,21 @@ describe.skipIf(!mongoAvailable)('planProspectJobLaunch', () => {
     ).resolves.toEqual({ allowed: false, conflictingJobId: existing });
   });
 
+  it('refuses canonical duplicate intent rows as well as legacy aliases', async () => {
+    const prospectId = randomUUID();
+    const domain = 'active-jobs-canonical-duplicate.fr';
+    const existing = await seedJob({
+      type: 'quick-check',
+      status: 'queued',
+      siteUrl: `https://${domain}/`,
+      prospectId,
+    });
+
+    await expect(
+      planProspectJobLaunch(connection!, { kind: 'quick-check', prospectId, domain }),
+    ).resolves.toEqual({ allowed: false, conflictingJobId: existing });
+  });
+
   it('refuses browser-heavy scans that overlap on the same host', async () => {
     const domain = 'active-jobs-heavy-conflict.fr';
     const existing = await seedJob({
@@ -146,9 +161,9 @@ describe.skipIf(!mongoAvailable)('planProspectJobLaunch', () => {
     ).resolves.toEqual({ allowed: false, conflictingJobId: existing });
   });
 
-  it('allows quick checks alongside a heavy audit', async () => {
+  it('refuses a quick check alongside a heavy audit on the same host', async () => {
     const domain = 'active-jobs-quick-with-heavy.fr';
-    await seedJob({
+    const existing = await seedJob({
       type: 'full-audit',
       status: 'running',
       siteUrl: `https://${domain}/`,
@@ -161,7 +176,26 @@ describe.skipIf(!mongoAvailable)('planProspectJobLaunch', () => {
         prospectId: randomUUID(),
         domain,
       }),
-    ).resolves.toEqual({ allowed: true });
+    ).resolves.toEqual({ allowed: false, conflictingJobId: existing });
+  });
+
+  it('treats bare and www hostnames as the same site', async () => {
+    const domain = 'active-jobs-www-conflict.fr';
+    const existing = await seedJob({
+      type: 'full-audit',
+      status: 'running',
+      siteUrl: `https://${domain}/`,
+      prospectId: randomUUID(),
+    });
+
+    await expect(
+      planProspectJobLaunch(connection!, {
+        kind: 'quick-check',
+        prospectId: randomUUID(),
+        domain,
+        hostname: `www.${domain}`,
+      }),
+    ).resolves.toEqual({ allowed: false, conflictingJobId: existing });
   });
 
   it('allows independent prospects on a shared vendor host', async () => {
@@ -180,6 +214,39 @@ describe.skipIf(!mongoAvailable)('planProspectJobLaunch', () => {
         domain,
       }),
     ).resolves.toEqual({ allowed: true });
+  });
+
+  it('still refuses duplicate work for the same prospect on a shared host', async () => {
+    const prospectId = randomUUID();
+    const domain = 'wixsite.com';
+    const existing = await seedJob({
+      type: 'quick-check',
+      status: 'running',
+      siteUrl: `https://hotel.wixsite.com/`,
+      prospectId,
+    });
+
+    await expect(
+      planProspectJobLaunch(connection!, { kind: 'quick-check', prospectId, domain }),
+    ).resolves.toEqual({ allowed: false, conflictingJobId: existing });
+  });
+
+  it('uses a conservative host conflict for an unattached shared-host job', async () => {
+    const domain = 'wixsite.com';
+    const existing = await seedJob({
+      type: 'full-audit',
+      status: 'running',
+      siteUrl: `https://hotel.wixsite.com/`,
+    });
+
+    await expect(
+      planProspectJobLaunch(connection!, {
+        kind: 'quick-check',
+        prospectId: randomUUID(),
+        domain,
+        hostname: 'hotel.wixsite.com',
+      }),
+    ).resolves.toEqual({ allowed: false, conflictingJobId: existing });
   });
 
   it('allows a retry after the conflicting job is complete', async () => {

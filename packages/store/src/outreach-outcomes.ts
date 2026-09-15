@@ -5,10 +5,11 @@ import type { OutreachLostReason, OutreachOutcome } from '@odysseus/core';
 import { findOutreachThreadById, setOutreachThreadOutcome } from './outreach-threads.js';
 import {
   appendProspectEvent,
-  advanceProspectStatus,
+  AutomaticStatusTransitionError,
+  applyAutomaticProspectStatus,
   getProspectHub,
-  setProspectStatus,
 } from './prospect-hub.js';
+import { decideAutomaticStatus } from './prospect-status-policy.js';
 import {
   createOutreachOutcomeModel,
   type OutreachOutcomeDocument,
@@ -66,6 +67,14 @@ export async function recordOutreachOutcome(
     return { recorded: false, outcome: existing };
   }
 
+  const status = statusForOutcome(input.outcome);
+  if (thread.prospectId !== undefined && status !== undefined) {
+    const prospect = await getProspectHub(connection, thread.prospectId);
+    if (prospect !== null && !decideAutomaticStatus(prospect.status, status).allowed) {
+      throw new AutomaticStatusTransitionError(prospect.status, status);
+    }
+  }
+
   const outcome: OutreachOutcomeDocument = {
     outcomeId: randomUUID(),
     idempotencyKey: key,
@@ -91,13 +100,10 @@ export async function recordOutreachOutcome(
   }
   await setOutreachThreadOutcome(connection, input.threadId, outcome.outcomeId);
   if (thread.prospectId !== undefined) {
-    const status = statusForOutcome(input.outcome);
     const prospect =
-      status === 'opted-out'
-        ? await setProspectStatus(connection, thread.prospectId, status)
-        : status === undefined
-          ? await getProspectHub(connection, thread.prospectId)
-          : await advanceProspectStatus(connection, thread.prospectId, status);
+      status === undefined
+        ? await getProspectHub(connection, thread.prospectId)
+        : await applyAutomaticProspectStatus(connection, thread.prospectId, status, actor);
     if (prospect !== null) {
       await appendProspectEvent(connection, {
         eventId: randomUUID(),

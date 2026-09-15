@@ -8,15 +8,20 @@
 import type { Connection } from 'mongoose';
 import { randomUUID } from 'node:crypto';
 import {
-  assessCrawlCoverage,
   isValidSiren,
   type AuditManualFields,
   type Grade,
   type GradeOverride,
 } from '@odysseus/core';
 import { createAuditModel, type AuditDocument } from './schemas/audit.schema.js';
+import { createJobModel } from './schemas/job.schema.js';
 import { createFindingModel, type FindingDocument } from './schemas/finding.schema.js';
 import { advanceProspectStatus, appendProspectEvent, getProspectHub } from './prospect-hub.js';
+import {
+  effectiveAuditScanIntent,
+  isOutreachQualifyingAudit,
+  type AuditIntentSourceJob,
+} from './prospect-audit-qualification.js';
 
 export async function getAudit(
   connection: Connection,
@@ -63,13 +68,12 @@ export async function attachAuditToProspect(
       actor,
       at: now,
     });
-    const coverage = assessCrawlCoverage({
-      pages: current.pages,
-      ...(current.crawl.sitemapCoverage === undefined
-        ? {}
-        : { sitemapCoverage: current.crawl.sitemapCoverage }),
-    });
-    if (coverage.reasonCodes.length === 0) {
+    const jobs = await createJobModel(connection)
+      .find({ $or: [{ auditId }, { auditIds: auditId }] })
+      .select({ _id: 0, type: 1, auditId: 1, auditIds: 1, 'options.scanType': 1 })
+      .lean<AuditIntentSourceJob[]>();
+    const scanIntent = effectiveAuditScanIntent(current, jobs);
+    if (isOutreachQualifyingAudit({ ...current, ...(scanIntent ? { scanIntent } : {}) })) {
       await advanceProspectStatus(connection, prospectId, 'audited');
     }
   }

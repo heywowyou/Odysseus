@@ -8,10 +8,9 @@
  * already drifting and a Quick check job never surfaced anywhere on the
  * hub while it ran.
  *
- * Every operator-launchable job kind maps to exactly one JobType. The kind
- * vocabulary is the hub's, not the queue's: quick checks use the internal
- * `prospecting` job type, while outreach audits and full audits have their
- * own queue types.
+ * Every operator-launchable job kind maps to a canonical JobType. Historical
+ * aliases remain readable below, but new routes must create the canonical
+ * `quick-check`, `prospecting-audit`, or `full-audit` row.
  */
 
 import type { Connection } from 'mongoose';
@@ -30,23 +29,30 @@ export interface ProspectActiveJob {
 
 const KIND_BY_JOB_TYPE: Record<JobType, ProspectActiveJobKind | undefined> = {
   prospecting: undefined,
+  'quick-check': 'quick-check',
+  'prospecting-audit': 'prospecting-audit',
   'outreach-full-scan': 'prospecting-audit',
   'full-audit': 'full-audit',
   'outreach-draft-batch': undefined,
   'outreach-followup-batch': undefined,
 };
 
-const JOB_TYPE_BY_KIND: Record<ProspectActiveJobKind, JobType> = {
-  'quick-check': 'prospecting',
-  'prospecting-audit': 'outreach-full-scan',
-  'full-audit': 'full-audit',
+const JOB_TYPES_BY_KIND: Record<ProspectActiveJobKind, readonly JobType[]> = {
+  'quick-check': ['quick-check', 'prospecting'],
+  'prospecting-audit': ['prospecting-audit', 'outreach-full-scan', 'prospecting'],
+  'full-audit': ['full-audit'],
 };
 
-/** The kinds that own the shared browser/crawler resource against one
- *  host. Quick check is a single-page, non-crawling probe (maxPages: 1)
- *  and deliberately does not compete for this slot: it may run alongside
- *  either browser-heavy kind. */
-const BROWSER_HEAVY_KINDS: readonly ProspectActiveJobKind[] = ['prospecting-audit', 'full-audit'];
+/** Every scan job can launch the scanner/Chromium stack. The generic
+ *  `prospecting` entry is retained here because queued historical batches
+ *  must also participate in the conservative host-level politeness check. */
+const BROWSER_SCAN_JOB_TYPES: readonly JobType[] = [
+  'quick-check',
+  'prospecting-audit',
+  'full-audit',
+  'outreach-full-scan',
+  'prospecting',
+];
 
 const ACTIVE_STATUSES = ['queued', 'running', 'needs-input'] as const;
 
@@ -64,6 +70,11 @@ function hostUrlPattern(hostname: string): RegExp {
 
 function hostnameOf(domain: string): string {
   return new URL(`https://${domain}`).hostname;
+}
+
+function hostnameForConflict(hostname: string): string {
+  const normalized = hostnameOf(hostname);
+  return normalized.startsWith('www.') ? normalized.slice('www.'.length) : normalized;
 }
 
 function targetDomainOf(job: JobDocument, fallbackDomain: string): string {
@@ -91,7 +102,9 @@ function toActiveJob(job: JobDocument, fallbackDomain: string): ProspectActiveJo
   const kind =
     job.type === 'prospecting' && job.options.scanType === 'quick-check'
       ? 'quick-check'
-      : KIND_BY_JOB_TYPE[job.type];
+      : job.type === 'prospecting' && job.options.scanType === 'prospecting-audit'
+        ? 'prospecting-audit'
+        : KIND_BY_JOB_TYPE[job.type];
   if (kind === undefined) return null;
   return {
     jobId: job.jobId,
@@ -115,11 +128,16 @@ export async function listActiveJobsForProspect(
       status: { $in: ACTIVE_STATUSES },
       $or: [
         { type: 'full-audit', 'options.prospectId': prospectId },
+        { type: 'prospecting-audit', 'options.prospectId': prospectId },
         { type: 'outreach-full-scan', 'options.prospectId': prospectId },
+        {
+          type: 'quick-check',
+          'options.prospectId': prospectId,
+        },
         {
           type: 'prospecting',
           'options.prospectId': prospectId,
-          'options.scanType': 'quick-check',
+          'options.scanType': { $in: ['quick-check', 'prospecting-audit'] },
         },
       ],
     })
@@ -133,31 +151,40 @@ export async function listActiveJobsForProspect(
   return active;
 }
 
-/** The cross-kind half of the conflict policy alone: any *other*
- *  browser-heavy kind already active on this host, or null. Exported
- *  separately from planProspectJobLaunch so callers with their own
- *  same-kind dedupe logic (
- *  which also needs to exclude the re-validating job itself at claim
- *  time) can still share this one host-level rule instead of
- *  reimplementing it. */
+/** The host half of the conflict policy. All active scanner jobs, including
+ *  Quick Check, occupy the host slot. Shared/vendor hosts allow distinct
+ *  attached prospects, but an unattached job (or the same prospect) remains
+ *  conservative because tenancy cannot be proven. */
 export async function findActiveBrowserHeavyHostConflict(
   connection: Connection,
-  kind: ProspectActiveJobKind,
+  _kind: ProspectActiveJobKind,
   domain: string,
+  prospectId?: string,
+  hostname = domain,
 ): Promise<JobDocument | null> {
-  if (!BROWSER_HEAVY_KINDS.includes(kind) || isHotelVendorHost(domain)) return null;
-  const hostname = hostnameOf(domain);
-  const otherKinds = BROWSER_HEAVY_KINDS.filter((candidate) => candidate !== kind).map(
-    (candidate) => JOB_TYPE_BY_KIND[candidate],
-  );
-  return createJobModel(connection)
-    .findOne({
-      type: { $in: otherKinds },
+  const targetHostname = hostnameForConflict(hostname);
+  const jobs = await createJobModel(connection)
+    .find({
+      type: { $in: BROWSER_SCAN_JOB_TYPES },
       status: { $in: ACTIVE_STATUSES },
-      $or: [{ siteUrl: hostUrlPattern(hostname) }, { urls: hostUrlPattern(hostname) }],
+      $or: [{ siteUrl: hostUrlPattern(targetHostname) }, { urls: hostUrlPattern(targetHostname) }],
     })
     .sort({ createdAt: -1 })
-    .lean<JobDocument>();
+    .lean<JobDocument[]>();
+
+  const sharedHost = isHotelVendorHost(domain);
+  for (const job of jobs) {
+    if (!sharedHost) return job;
+    const activeProspectId = job.options.prospectId;
+    if (
+      prospectId === undefined ||
+      activeProspectId === undefined ||
+      activeProspectId === prospectId
+    ) {
+      return job;
+    }
+  }
+  return null;
 }
 
 export type ProspectJobLaunchDecision =
@@ -170,27 +197,37 @@ export type ProspectJobLaunchDecision =
  *     concurrent runs of the same scan for one prospect are always an
  *     operator mistake, and the plan/authorization gates elsewhere are the
  *     real volume control.
- *  2. Otherwise, a browser-heavy kind (Prospecting audit, Full audit)
- *     refuses against any *other* browser-heavy kind already active on the
- *     same host - one crawler slot per site at a time -
- *     unless that host is a known shared/vendor platform (issue #216's
- *     own-registrable-domain rule), where two different businesses
- *     legitimately publish on the same host and must not block each
- *     other. Quick check never participates in this check: it is a
- *     single-page, non-crawling probe.
+ *  2. Otherwise, any scanner kind refuses against another active scanner on
+ *     the same host - one browser slot per site at a time - unless that host
+ *     is a known shared/vendor platform (issue #216's own-registrable-domain
+ *     rule), where two different attached businesses legitimately publish
+ *     on the same host. Quick Check participates in this check too.
  *  3. A completed, failed, or cancelled job never conflicts: only the
  *     active statuses are searched. */
 export async function planProspectJobLaunch(
   connection: Connection,
-  params: { kind: ProspectActiveJobKind; prospectId: string; domain: string },
+  params: {
+    kind: ProspectActiveJobKind;
+    prospectId?: string;
+    domain: string;
+    hostname?: string;
+  },
 ): Promise<ProspectJobLaunchDecision> {
   const { kind, prospectId, domain } = params;
   const JobModel = createJobModel(connection);
 
-  const sameKind = await findActiveJobForProspectKind(JobModel, kind, prospectId);
-  if (sameKind !== null) return { allowed: false, conflictingJobId: sameKind.jobId };
+  if (prospectId !== undefined) {
+    const sameKind = await findActiveJobForProspectKind(JobModel, kind, prospectId);
+    if (sameKind !== null) return { allowed: false, conflictingJobId: sameKind.jobId };
+  }
 
-  const hostConflict = await findActiveBrowserHeavyHostConflict(connection, kind, domain);
+  const hostConflict = await findActiveBrowserHeavyHostConflict(
+    connection,
+    kind,
+    domain,
+    prospectId,
+    params.hostname,
+  );
   if (hostConflict !== null) return { allowed: false, conflictingJobId: hostConflict.jobId };
 
   return { allowed: true };
@@ -201,16 +238,35 @@ async function findActiveJobForProspectKind(
   kind: ProspectActiveJobKind,
   prospectId: string,
 ): Promise<JobDocument | null> {
-  const type = JOB_TYPE_BY_KIND[kind];
+  const types = JOB_TYPES_BY_KIND[kind];
   const scopeQuery =
     kind === 'quick-check'
-      ? { 'options.prospectId': prospectId, 'options.scanType': 'quick-check' as const }
-      : { 'options.prospectId': prospectId };
-  return JobModel.findOne({
-    type,
+      ? {
+          $or: [
+            { type: 'quick-check', 'options.prospectId': prospectId },
+            {
+              type: 'prospecting',
+              'options.prospectId': prospectId,
+              'options.scanType': 'quick-check' as const,
+            },
+          ],
+        }
+      : kind === 'prospecting-audit'
+        ? {
+            $or: [
+              { type: 'prospecting-audit', 'options.prospectId': prospectId },
+              { type: 'outreach-full-scan', 'options.prospectId': prospectId },
+              {
+                type: 'prospecting',
+                'options.prospectId': prospectId,
+                'options.scanType': 'prospecting-audit' as const,
+              },
+            ],
+          }
+        : { type: { $in: types }, 'options.prospectId': prospectId };
+  const query = {
     status: { $in: ACTIVE_STATUSES },
     ...scopeQuery,
-  })
-    .sort({ createdAt: -1 })
-    .lean<JobDocument>();
+  } as never;
+  return JobModel.findOne(query).sort({ createdAt: -1 }).lean<JobDocument>();
 }

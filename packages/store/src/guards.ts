@@ -1,12 +1,17 @@
 import type { Connection } from 'mongoose';
 import { normalizeDeclaredWebsite, type Prospect } from '@odysseus/core';
 import { createAuditModel } from './schemas/audit.schema.js';
-import { findActiveBrowserHeavyHostConflict } from './active-jobs.js';
+import { planProspectJobLaunch } from './active-jobs.js';
+import { createJobModel } from './schemas/job.schema.js';
 import {
   selectNewestQualifyingAudit,
   type ProspectAuditQualificationState,
   type ProspectWorkAudit,
 } from './prospect-work.js';
+import {
+  effectiveAuditScanIntent,
+  type AuditIntentSourceJob,
+} from './prospect-audit-qualification.js';
 import { isSuppressed } from './suppression.js';
 
 export type ScanLaunchRefusal = 'invalid-url' | 'suppressed' | 'host-busy';
@@ -24,14 +29,18 @@ export type OutreachActionCheck =
       auditState?: ProspectAuditQualificationState;
     };
 
-function registrableDomainOf(url: string): string | null {
+export function registrableDomainForScan(url: string): string | null {
   const resolution = normalizeDeclaredWebsite(url);
   return resolution.kind === 'unusable' ? null : resolution.registrableDomain;
 }
 
 export async function checkScanLaunch(
   connection: Connection,
-  input: { url: string; kind: 'quick-check' | 'prospecting-audit' | 'full-audit' },
+  input: {
+    url: string;
+    kind: 'quick-check' | 'prospecting-audit' | 'full-audit';
+    prospectId?: string;
+  },
 ): Promise<ScanLaunchCheck> {
   let parsed: URL;
   try {
@@ -42,17 +51,16 @@ export async function checkScanLaunch(
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     return { allowed: false, refusal: 'invalid-url' };
   }
-  const domain = registrableDomainOf(input.url);
+  const domain = registrableDomainForScan(input.url);
   if (domain === null) return { allowed: false, refusal: 'invalid-url' };
   if (await isSuppressed(connection, domain)) return { allowed: false, refusal: 'suppressed' };
-  if (input.kind !== 'quick-check') {
-    const conflict = await findActiveBrowserHeavyHostConflict(
-      connection,
-      input.kind,
-      parsed.hostname,
-    );
-    if (conflict !== null) return { allowed: false, refusal: 'host-busy' };
-  }
+  const launch = await planProspectJobLaunch(connection, {
+    kind: input.kind,
+    domain,
+    hostname: parsed.hostname,
+    ...(input.prospectId === undefined ? {} : { prospectId: input.prospectId }),
+  });
+  if (!launch.allowed) return { allowed: false, refusal: 'host-busy' };
   return { allowed: true, registrableDomain: domain };
 }
 
@@ -83,6 +91,7 @@ export async function checkOutreachAction(
       _id: 0,
       auditId: 1,
       prospectId: 1,
+      scanIntent: 1,
       siteUrl: 1,
       kind: 1,
       startedAt: 1,
@@ -93,7 +102,20 @@ export async function checkOutreachAction(
     })
     .sort({ startedAt: -1 })
     .lean<ProspectWorkAudit[]>();
-  const qualification = selectNewestQualifyingAudit(audits);
+  const auditIds = audits.map((audit) => audit.auditId);
+  const jobScope: Record<string, unknown>[] = [{ 'options.prospectId': input.prospect.prospectId }];
+  if (auditIds.length > 0) {
+    jobScope.push({ auditId: { $in: auditIds } }, { auditIds: { $in: auditIds } });
+  }
+  const jobs = await createJobModel(connection)
+    .find({ $or: jobScope })
+    .select({ _id: 0, type: 1, auditId: 1, auditIds: 1, 'options.scanType': 1 })
+    .lean<AuditIntentSourceJob[]>();
+  const classifiedAudits = audits.map((audit) => {
+    const scanIntent = effectiveAuditScanIntent(audit, jobs);
+    return scanIntent === undefined ? audit : { ...audit, scanIntent };
+  });
+  const qualification = selectNewestQualifyingAudit(classifiedAudits);
   if (qualification.audit === undefined) {
     return {
       allowed: false,

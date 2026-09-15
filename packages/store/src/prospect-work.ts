@@ -1,11 +1,5 @@
 import type { Connection } from 'mongoose';
-import {
-  assessCrawlCoverage,
-  normalizeAddressForHash,
-  normalizeDomainForHash,
-  NORMALIZATION_FINGERPRINT,
-  type Prospect,
-} from '@odysseus/core';
+import { normalizeAddressForHash, normalizeDomainForHash, type Prospect } from '@odysseus/core';
 import { createAuditModel, type AuditDocumentFields } from './schemas/audit.schema.js';
 import { createJobModel, type JobDocumentFields } from './schemas/job.schema.js';
 import {
@@ -17,6 +11,12 @@ import {
   type OutreachThreadDocument,
 } from './schemas/outreach-thread.schema.js';
 import { findSuppressionMatches } from './suppression.js';
+import {
+  effectiveAuditScanIntent,
+  hasCurrentFindingsProvenance,
+  isOutreachQualifyingAudit,
+  type AuditIntentSourceJob,
+} from './prospect-audit-qualification.js';
 
 export type ProspectTodoKind = 'draft' | 'reply' | 'follow-up' | 'first-email' | 'audit-input';
 
@@ -47,6 +47,7 @@ export type ProspectWorkAudit = Pick<
   AuditDocumentFields,
   | 'auditId'
   | 'prospectId'
+  | 'scanIntent'
   | 'siteUrl'
   | 'kind'
   | 'startedAt'
@@ -71,11 +72,13 @@ export type ProspectWorkThread = Pick<
   | 'spacing'
   | 'updatedAt'
   | 'needsReview'
+  | 'currentOutcome'
 >;
 
-export type ProspectWorkJob = Pick<JobDocumentFields, 'jobId' | 'auditId' | 'createdAt'> & {
-  options?: { prospectId?: string };
-};
+export type ProspectWorkJob = Pick<JobDocumentFields, 'jobId' | 'createdAt'> &
+  Partial<Pick<JobDocumentFields, 'auditId' | 'auditIds' | 'status' | 'type'>> & {
+    options?: { prospectId?: string; scanType?: 'quick-check' | 'prospecting-audit' };
+  };
 
 export interface ProspectWorkSources {
   audits: readonly ProspectWorkAudit[];
@@ -110,7 +113,10 @@ export interface NewestQualifyingAuditResult {
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TERMINAL_PROSPECT_STATUSES = new Set<Prospect['status']>(['won', 'lost', 'opted-out']);
 
-function encodedProspectHref(prospectId: string, fragment: 'actions' | 'emails' | 'history') {
+function encodedProspectHref(
+  prospectId: string,
+  fragment: 'actions' | 'emails' | 'history' | 'outcome',
+) {
   return `/prospects/${encodeURIComponent(prospectId)}#${fragment}`;
 }
 
@@ -121,20 +127,6 @@ function asTime(value: Date | string): number {
 function emailDomain(address: string): string | undefined {
   const at = address.lastIndexOf('@');
   return at <= 0 || at === address.length - 1 ? undefined : address.slice(at + 1);
-}
-
-function auditHasCurrentProvenance(audit: ProspectWorkAudit): boolean {
-  return audit.findingsProvenance?.normalizationFingerprint === NORMALIZATION_FINGERPRINT;
-}
-
-function auditHasCompleteCoverage(audit: ProspectWorkAudit): boolean {
-  const coverage = assessCrawlCoverage({
-    pages: audit.pages,
-    ...(audit.crawl.sitemapCoverage === undefined
-      ? {}
-      : { sitemapCoverage: audit.crawl.sitemapCoverage }),
-  });
-  return coverage.reasonCodes.length === 0;
 }
 
 /**
@@ -149,16 +141,14 @@ export function selectNewestQualifyingAudit(
     const byStartedAt = asTime(right.startedAt) - asTime(left.startedAt);
     return byStartedAt !== 0 ? byStartedAt : right.auditId.localeCompare(left.auditId);
   });
-  const qualifyingAudit = ordered.find(
-    (audit) => auditHasCurrentProvenance(audit) && auditHasCompleteCoverage(audit),
-  );
+  const qualifyingAudit = ordered.find((audit) => isOutreachQualifyingAudit(audit));
   if (qualifyingAudit !== undefined) {
     return { audit: qualifyingAudit, state: 'qualifying' };
   }
   if (ordered.length === 0) return { audit: undefined, state: 'missing' };
   return {
     audit: undefined,
-    state: ordered.some(auditHasCurrentProvenance) ? 'incomplete' : 'stale',
+    state: ordered.some((audit) => hasCurrentFindingsProvenance(audit)) ? 'incomplete' : 'stale',
   };
 }
 
@@ -275,13 +265,13 @@ export function deriveProspectWork(
       since: new Date(draft.createdAt).toISOString(),
     });
   }
-  if (thread?.state === 'replied') {
+  if (thread?.state === 'replied' && thread.currentOutcome === undefined) {
     items.push({
       kind: 'reply',
       subject: prospect.name,
       action: 'record-outcome',
       prospectId: prospect.prospectId,
-      href: encodedProspectHref(prospect.prospectId, 'actions'),
+      href: encodedProspectHref(prospect.prospectId, 'outcome'),
       since: new Date(thread.updatedAt).toISOString(),
     });
   }
@@ -372,13 +362,14 @@ export async function loadProspectWork(
     prospects.flatMap((prospect) => prospect.emails.map((email) => email.address)),
   );
 
-  const [audits, drafts, threads, needsInputJobs, suppression] = await Promise.all([
+  const [audits, drafts, threads, suppression] = await Promise.all([
     createAuditModel(connection)
       .find({ prospectId: { $in: prospectIds } })
       .select({
         _id: 0,
         auditId: 1,
         prospectId: 1,
+        scanIntent: 1,
         siteUrl: 1,
         kind: 1,
         startedAt: 1,
@@ -415,19 +406,45 @@ export async function loadProspectWork(
         spacing: 1,
         updatedAt: 1,
         needsReview: 1,
+        currentOutcome: 1,
       })
       .sort({ updatedAt: -1 })
       .lean<ProspectWorkThread[]>(),
-    createJobModel(connection)
-      .find({ 'options.prospectId': { $in: prospectIds }, status: 'needs-input' })
-      .select({ _id: 0, jobId: 1, auditId: 1, createdAt: 1, 'options.prospectId': 1 })
-      .sort({ createdAt: -1 })
-      .lean<ProspectWorkJob[]>(),
     findSuppressionMatches(connection, domains, addresses),
   ]);
 
+  const auditIds = audits.map((audit) => audit.auditId);
+  const jobScope: Record<string, unknown>[] = [{ 'options.prospectId': { $in: prospectIds } }];
+  if (auditIds.length > 0) {
+    jobScope.push({ auditId: { $in: auditIds } }, { auditIds: { $in: auditIds } });
+  }
+  const scanJobs = await createJobModel(connection)
+    .find({ $or: jobScope })
+    .select({
+      _id: 0,
+      jobId: 1,
+      type: 1,
+      status: 1,
+      auditId: 1,
+      auditIds: 1,
+      createdAt: 1,
+      'options.prospectId': 1,
+      'options.scanType': 1,
+    })
+    .sort({ createdAt: -1 })
+    .lean<ProspectWorkJob[]>();
+
+  const sourceJobs = scanJobs.filter(
+    (job): job is ProspectWorkJob & AuditIntentSourceJob => job.type !== undefined,
+  );
+  const classifiedAudits = audits.map((audit) => {
+    const scanIntent = effectiveAuditScanIntent(audit, sourceJobs);
+    return scanIntent === undefined ? audit : { ...audit, scanIntent };
+  });
+  const needsInputJobs = scanJobs.filter((job) => job.status === 'needs-input');
+
   const sources: ProspectWorkSources = {
-    audits,
+    audits: classifiedAudits,
     drafts,
     threads,
     needsInputJobs,

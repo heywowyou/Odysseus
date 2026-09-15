@@ -17,6 +17,7 @@ import { auditSchema } from './audit.schema.js';
 const manifestKeys = {
   auditId: true,
   prospectId: true,
+  scanIntent: true,
   kind: true,
   siteUrl: true,
   startedAt: true,
