@@ -62,7 +62,7 @@ describe('generateOutreachPreviewHtmlV2', () => {
     const html = generateOutreachPreviewHtmlV2(summary({ gradeOverride: 'D' }));
 
     expect(html).toContain('grade-d');
-    expect(html).toContain('>D<');
+    expect(html).toContain('data-grade="D"');
   });
 
   it('labels the grade once and keeps the grade close under the cover on screen', () => {
@@ -170,7 +170,7 @@ describe('generateOutreachPreviewHtmlV2', () => {
     // stranger their site "failed").
     const html = generateOutreachPreviewHtmlV2(summary());
     expect(html).toContain('Niveau global des constats');
-    expect(html).toContain('>D</span>');
+    expect(html).toContain('data-grade="D"');
     expect(html).toContain('data-grade="D"');
     expect(html).toContain(
       'Cette note synthétise la gravité des constats mesurés ; elle ne constitue pas une évaluation juridique.',
@@ -193,7 +193,7 @@ describe('generateOutreachPreviewHtmlV2', () => {
         severityTotals: { critical: 0, serious: 0, moderate: 3, minor: 0 },
       }),
     );
-    expect(html).toContain('>A</span>');
+    expect(html).toContain('data-grade="A"');
     expect(html).toContain(
       'Cette note synthétise la gravité des constats mesurés ; elle ne constitue pas une évaluation juridique.',
     );
