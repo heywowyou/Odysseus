@@ -437,22 +437,20 @@ export function AuditsPage(): JSX.Element {
   );
 }
 
-/** The run list's own state, read as one line rather than as four boxes.
+/** The run list's own state, read as one line rather than as separate boxes.
  *  Running, complete and failed are three states of the same list, so they sit
- *  together and separated only by rules; the critical-finding count is a
- *  different axis entirely and is the one value allowed to carry colour. */
+ *  together and separated only by spacing. */
 function QueueReadout(props: {
-  kpis: { running: number; complete: number; failed: number; critical: number };
+  kpis: { running: number; complete: number; failed: number };
   state: KpiValueState;
   unavailableLabel: string;
 }): JSX.Element {
   const { strings } = useI18n();
   const { kpis, state, unavailableLabel } = props;
   const entries = [
-    { key: 'running', label: strings.audits.kpiRunning, value: kpis.running, critical: false },
-    { key: 'complete', label: strings.audits.kpiComplete, value: kpis.complete, critical: false },
-    { key: 'failed', label: strings.audits.kpiFailed, value: kpis.failed, critical: false },
-    { key: 'critical', label: strings.audits.kpiCritical, value: kpis.critical, critical: true },
+    { key: 'running', label: strings.audits.kpiRunning, value: kpis.running },
+    { key: 'complete', label: strings.audits.kpiComplete, value: kpis.complete },
+    { key: 'failed', label: strings.audits.kpiFailed, value: kpis.failed },
   ];
   return (
     <dl className="flex flex-wrap items-baseline gap-x-8 gap-y-3">
@@ -465,11 +463,7 @@ function QueueReadout(props: {
             <dd
               className={cn(
                 'numeric text-base font-semibold',
-                state === 'unavailable'
-                  ? 'text-ink-muted'
-                  : entry.critical && entry.value > 0
-                    ? 'text-sev-critical'
-                    : 'text-ink',
+                state === 'unavailable' ? 'text-ink-muted' : 'text-ink',
               )}
             >
               {state === 'unavailable' ? unavailableLabel : entry.value}

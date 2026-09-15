@@ -13,7 +13,6 @@ export interface AuditsKpis {
   running: number;
   complete: number;
   failed: number;
-  critical: number;
 }
 
 const SEVERITY_ORDER = ['critical', 'serious', 'moderate', 'minor'] as const;
@@ -27,14 +26,11 @@ export interface SeverityBadge {
 
 const RUNNING_STATUSES: readonly JobStatus[] = ['queued', 'running'];
 
-/** Header KPIs in one pass so a 200-row poll stays trivially cheap. Critical
- *  sums every rollup present, whatever the row status, because the API only
- *  fills the rollup once findings exist. */
+/** Header status KPIs in one pass so a 200-row poll stays trivially cheap. */
 export function computeKpis(summaries: ScanSummary[]): AuditsKpis {
   let running = 0;
   let complete = 0;
   let failed = 0;
-  let critical = 0;
   for (const summary of summaries) {
     if (RUNNING_STATUSES.includes(summary.status)) {
       running += 1;
@@ -43,9 +39,8 @@ export function computeKpis(summaries: ScanSummary[]): AuditsKpis {
     } else if (summary.status === 'failed') {
       failed += 1;
     }
-    critical += summary.severityRollup?.critical ?? 0;
   }
-  return { running, complete, failed, critical };
+  return { running, complete, failed };
 }
 
 /** Rows whose status matches the filter; the empty string keeps every row.

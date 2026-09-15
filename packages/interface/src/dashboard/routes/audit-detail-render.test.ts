@@ -186,6 +186,36 @@ describe('audits list hotel link (plan 042 slice 4)', () => {
   });
 });
 
+describe('audits header KPIs (issue #269)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+  });
+
+  it('omits the aggregate critical-problems count', async () => {
+    stubRoutes({
+      '/api/scans?limit=200': [
+        {
+          jobId: 'job-1',
+          type: 'full-audit',
+          status: 'complete',
+          phase: 'complete',
+          siteUrl: 'https://exemple.fr',
+          createdAt: '2026-09-05T13:09:00.000Z',
+          auditId: 'audit-1',
+          severityRollup: { critical: 4, serious: 0, moderate: 0, minor: 0 },
+        },
+      ],
+    });
+    const { container, root } = await renderPage(createElement(AuditsPage));
+    await settle(container, 'exemple.fr');
+
+    expect(container.textContent).toContain('Terminés');
+    expect(container.textContent).not.toContain('Problèmes critiques');
+    root.unmount();
+  });
+});
+
 describe('audits list report-stage failure display (issue #90)', () => {
   beforeEach(() => {
     stubRoutes({});

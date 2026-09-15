@@ -94,7 +94,6 @@ export const en: DashboardStrings = {
     kpiRunning: 'Running',
     kpiComplete: 'Complete',
     kpiFailed: 'Failed',
-    kpiCritical: 'Critical problems',
     updatedAt: 'Updated at {time}',
     emptyFilter: 'No audits match these filters.',
     sortLabel: 'Sort',

@@ -28,7 +28,7 @@ function makeSummary(overrides: Partial<ScanSummary> = {}): ScanSummary {
 }
 
 describe('computeKpis', () => {
-  it('counts statuses and sums critical findings across rollups', () => {
+  it('counts run statuses', () => {
     const summaries = [
       makeSummary({ jobId: 'a', status: 'queued' }),
       makeSummary({ jobId: 'b', status: 'running' }),
@@ -44,11 +44,11 @@ describe('computeKpis', () => {
         severityRollup: { critical: 3, serious: 0, moderate: 0, minor: 0 },
       }),
     ];
-    expect(computeKpis(summaries)).toEqual({ running: 2, complete: 2, failed: 1, critical: 5 });
+    expect(computeKpis(summaries)).toEqual({ running: 2, complete: 2, failed: 1 });
   });
 
   it('returns zeros for an empty list', () => {
-    expect(computeKpis([])).toEqual({ running: 0, complete: 0, failed: 0, critical: 0 });
+    expect(computeKpis([])).toEqual({ running: 0, complete: 0, failed: 0 });
   });
 });
 

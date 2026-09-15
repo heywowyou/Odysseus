@@ -113,7 +113,6 @@ export interface DashboardStrings {
     kpiRunning: string;
     kpiComplete: string;
     kpiFailed: string;
-    kpiCritical: string;
     /** {time} is replaced by a formatted clock time (lib/format.ts). */
     updatedAt: string;
     /** Shown when audits exist but no row survives search and filters. */
