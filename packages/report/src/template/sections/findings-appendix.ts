@@ -258,7 +258,7 @@ function shortenResourceUrl(url: string): string {
  *  start and end, which identify the file, and elides the middle. */
 const RESOURCE_URL_DISPLAY_MAX = 90;
 
-export function capResourceUrl(value: string): string {
+function capResourceUrl(value: string): string {
   if (value.length <= RESOURCE_URL_DISPLAY_MAX) return value;
   const head = value.slice(0, 60);
   const tail = value.slice(-(RESOURCE_URL_DISPLAY_MAX - 61));
