@@ -883,14 +883,14 @@ export const en: DashboardStrings = {
       refusalLabels: {
         'invalid-url': 'site URL is invalid',
         'host-busy': 'another scan is already using this site',
-        suppressed: 'contact is suppressed',
-        'no-contact': 'no email is available',
-        'no-complete-audit': 'no current complete audit',
-        'audit-stale': 'audit is stale or not normalized',
+        suppressed: 'contact is suppressed from outreach; no action is possible',
+        'no-contact': 'no email available; add an address on the record',
+        'no-complete-audit': 'no complete, current audit; run “Prepare outreach”',
+        'audit-stale': 'audit too old or not normalized; run “Prepare outreach” again',
         'candidate-unknown': 'prospect not found',
-        'thread-unknown': 'conversation thread not found',
-        'thread-already-started': 'conversation thread already started',
-        'draft-already-live': 'a draft is already pending',
+        'thread-unknown': 'no first email has been drafted yet; start with the first email',
+        'thread-already-started': 'the first email was already sent; use the follow-up',
+        'draft-already-live': 'a draft is already waiting; review it and send it from the mailbox',
         'no-preview-bucket-configured': 'preview storage is not configured',
         'no-mailbox-configured': 'mailbox is not configured',
         'insufficient-safe-cards': 'not enough safe proof cards',
@@ -900,6 +900,19 @@ export const en: DashboardStrings = {
         'preview-revoked': 'preview was taken down',
         'preview-expired': 'preview expired',
         'preview-wrong-audit': 'preview belongs to another audit',
+        'thread-not-eligible':
+          'a follow-up is only possible once the first email is confirmed sent; send the draft from the mailbox, then sync it',
+        'thread-closed': 'the conversation is closed (reply, opt-out or finished sequence)',
+        'prospect-unknown': 'prospect not found; reload the page',
+        'previous-draft-missing': 'the previous draft is missing; draft the first email again',
+        'assembly-refused':
+          'the email could not be composed from the evidence; run the prospecting audit again',
+        'suppressed-before-provider':
+          'the contact was suppressed while drafting; nothing was created',
+        'provider-draft-unrecorded': 'the mailbox did not confirm the draft; try again',
+        'domain-mismatch':
+          'the preview does not match the prospect’s website; publish a new preview',
+        'nothing-sent': 'no email has been sent to this prospect yet',
       },
       statusLabels: {
         new: 'New',

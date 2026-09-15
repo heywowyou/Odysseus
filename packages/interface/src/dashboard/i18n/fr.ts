@@ -897,14 +897,16 @@ export const fr: DashboardStrings = {
       refusalLabels: {
         'invalid-url': 'adresse de site invalide',
         'host-busy': 'un autre scan utilise déjà ce site',
-        suppressed: 'contact supprimé de la prospection',
-        'no-contact': 'aucun email disponible',
-        'no-complete-audit': 'aucun audit complet et actuel',
-        'audit-stale': 'audit trop ancien ou non normalisé',
+        suppressed: 'contact supprimé de la prospection ; aucune action n’est possible',
+        'no-contact': 'aucun email disponible ; ajoutez une adresse dans la fiche',
+        'no-complete-audit': 'aucun audit complet et actuel ; lancez « Préparer la prospection »',
+        'audit-stale': 'audit trop ancien ou non normalisé ; relancez « Préparer la prospection »',
         'candidate-unknown': 'prospect introuvable',
-        'thread-unknown': 'fil de conversation introuvable',
-        'thread-already-started': 'fil de conversation déjà commencé',
-        'draft-already-live': 'un brouillon est déjà en attente',
+        'thread-unknown':
+          'aucun premier email n’a encore été rédigé ; commencez par le premier email',
+        'thread-already-started': 'le premier email a déjà été envoyé ; passez par la relance',
+        'draft-already-live':
+          'un brouillon est déjà en attente ; relisez-le et envoyez-le depuis la boîte mail',
         'no-preview-bucket-configured': 'stockage de l’aperçu non configuré',
         'no-mailbox-configured': 'boîte mail non configurée',
         'insufficient-safe-cards': 'preuves sûres insuffisantes',
@@ -914,6 +916,21 @@ export const fr: DashboardStrings = {
         'preview-revoked': 'aperçu retiré',
         'preview-expired': 'aperçu expiré',
         'preview-wrong-audit': 'aperçu rattaché à un autre audit',
+        'thread-not-eligible':
+          'la relance n’est possible qu’après l’envoi confirmé du premier email ; envoyez le brouillon depuis la boîte mail puis synchronisez-la',
+        'thread-closed':
+          'le fil de conversation est clos (réponse, désinscription ou séquence terminée)',
+        'prospect-unknown': 'prospect introuvable ; rechargez la page',
+        'previous-draft-missing':
+          'le brouillon précédent est introuvable ; rédigez à nouveau le premier email',
+        'assembly-refused':
+          'l’email n’a pas pu être composé à partir des preuves ; relancez l’audit de prospection',
+        'suppressed-before-provider':
+          'le contact a été supprimé pendant la rédaction ; rien n’a été créé',
+        'provider-draft-unrecorded': 'la boîte mail n’a pas confirmé le brouillon ; réessayez',
+        'domain-mismatch':
+          'l’aperçu ne correspond pas au site du prospect ; publiez un nouvel aperçu',
+        'nothing-sent': 'aucun email n’a encore été envoyé à ce prospect',
       },
       statusLabels: {
         new: 'Nouveau',

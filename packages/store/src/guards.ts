@@ -13,10 +13,21 @@ import {
   type AuditIntentSourceJob,
 } from './prospect-audit-qualification.js';
 import { isSuppressed } from './suppression.js';
+import { TERMINAL_OUTREACH_THREAD_STATES } from '@odysseus/core';
+import { findLiveOutreachDraft } from './outreach-drafts.js';
+import { findOutreachThreadByProspect } from './outreach-threads.js';
 
 export type ScanLaunchRefusal = 'invalid-url' | 'suppressed' | 'host-busy';
 export type OutreachActionRefusal =
-  'suppressed' | 'no-contact' | 'no-complete-audit' | 'audit-stale';
+  | 'suppressed'
+  | 'no-contact'
+  | 'no-complete-audit'
+  | 'audit-stale'
+  | 'draft-already-live'
+  | 'thread-closed'
+  | 'thread-unknown'
+  | 'thread-not-eligible'
+  | 'thread-already-started';
 export type OutreachAction = 'preview' | 'first-email' | 'follow-up';
 
 export type ScanLaunchCheck =
@@ -84,7 +95,30 @@ export async function checkOutreachAction(
     return { allowed: false, refusal: 'suppressed' };
   }
   if (input.prospect.emails.length === 0) return { allowed: false, refusal: 'no-contact' };
-  if (input.action === 'follow-up') return { allowed: true };
+  // Issue #279: the thread facts the draft runtime refuses on are checked
+  // here too, so a gate never shows an action as ready that the server
+  // would then refuse.
+  const thread = await findOutreachThreadByProspect(connection, input.prospect.prospectId);
+  if (thread !== null && TERMINAL_OUTREACH_THREAD_STATES.includes(thread.state)) {
+    return { allowed: false, refusal: 'thread-closed' };
+  }
+  if (input.action === 'follow-up') {
+    if (thread === null) return { allowed: false, refusal: 'thread-unknown' };
+    const touch = thread.state === 'e1-sent' ? 2 : thread.state === 'e2-sent' ? 3 : undefined;
+    if (touch === undefined) return { allowed: false, refusal: 'thread-not-eligible' };
+    if ((await findLiveOutreachDraft(connection, thread.threadId, touch)) !== null) {
+      return { allowed: false, refusal: 'draft-already-live' };
+    }
+    return { allowed: true };
+  }
+  if (input.action === 'first-email' && thread !== null) {
+    if ((await findLiveOutreachDraft(connection, thread.threadId, 1)) !== null) {
+      return { allowed: false, refusal: 'draft-already-live' };
+    }
+    if (thread.state !== 'open' && thread.state !== 'e1-drafted') {
+      return { allowed: false, refusal: 'thread-already-started' };
+    }
+  }
   const audits = await createAuditModel(connection)
     .find({ prospectId: input.prospect.prospectId })
     .select({

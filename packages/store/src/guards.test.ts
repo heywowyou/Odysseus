@@ -13,8 +13,16 @@ vi.mock('./schemas/audit.schema.js', () => ({
 vi.mock('./schemas/job.schema.js', () => ({
   createJobModel: vi.fn(),
 }));
+vi.mock('./outreach-threads.js', () => ({
+  findOutreachThreadByProspect: vi.fn(),
+}));
+vi.mock('./outreach-drafts.js', () => ({
+  findLiveOutreachDraft: vi.fn(),
+}));
 
 import { planProspectJobLaunch } from './active-jobs.js';
+import { findLiveOutreachDraft } from './outreach-drafts.js';
+import { findOutreachThreadByProspect } from './outreach-threads.js';
 import { checkOutreachAction, checkScanLaunch } from './guards.js';
 import { isSuppressed } from './suppression.js';
 import { createAuditModel } from './schemas/audit.schema.js';
@@ -84,6 +92,35 @@ describe('central prospect guards', () => {
     vi.mocked(isSuppressed).mockResolvedValue(false);
     vi.mocked(planProspectJobLaunch).mockResolvedValue({ allowed: true });
     mockJobRows();
+    vi.mocked(findOutreachThreadByProspect).mockResolvedValue(null);
+    vi.mocked(findLiveOutreachDraft).mockResolvedValue(null);
+  });
+
+  it('refuses a follow-up the draft runtime would refuse', async () => {
+    const check = () =>
+      checkOutreachAction(fakeConnection, { prospect: vendorHostedProspect, action: 'follow-up' });
+    vi.mocked(findOutreachThreadByProspect).mockResolvedValue({
+      threadId: 'thread-1',
+      state: 'e1-sent',
+    } as never);
+
+    vi.mocked(findOutreachThreadByProspect).mockResolvedValueOnce(null);
+    await expect(check()).resolves.toEqual({ allowed: false, refusal: 'thread-unknown' });
+
+    vi.mocked(findOutreachThreadByProspect).mockResolvedValueOnce({
+      threadId: 'thread-1',
+      state: 'e1-drafted',
+    } as never);
+    await expect(check()).resolves.toEqual({ allowed: false, refusal: 'thread-not-eligible' });
+
+    vi.mocked(findLiveOutreachDraft).mockResolvedValueOnce({ draftId: 'd' } as never);
+    await expect(check()).resolves.toEqual({ allowed: false, refusal: 'draft-already-live' });
+
+    vi.mocked(findOutreachThreadByProspect).mockResolvedValueOnce({
+      threadId: 'thread-1',
+      state: 'opted-out',
+    } as never);
+    await expect(check()).resolves.toEqual({ allowed: false, refusal: 'thread-closed' });
   });
 
   it('accepts a vendor-hosted website as a valid scan target', async () => {
@@ -119,6 +156,10 @@ describe('central prospect guards', () => {
   });
 
   it('does not block a follow-up merely because the prospect is vendor-hosted', async () => {
+    vi.mocked(findOutreachThreadByProspect).mockResolvedValue({
+      threadId: 'thread-1',
+      state: 'e1-sent',
+    } as never);
     await expect(
       checkOutreachAction(fakeConnection, { prospect: vendorHostedProspect, action: 'follow-up' }),
     ).resolves.toEqual({ allowed: true });

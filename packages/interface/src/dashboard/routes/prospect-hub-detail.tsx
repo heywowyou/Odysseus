@@ -208,6 +208,13 @@ export function ProspectHubDetailPage(): JSX.Element {
       ? undefined
       : audits.find((audit) => audit.auditId === work.qualifyingAuditId)) ?? audits[0];
 
+  // Issue #279: every mutation can change what outreach is allowed, so the
+  // record and its gates always refresh together.
+  const refreshAll = (): void => {
+    response.refresh();
+    actionability.refresh();
+  };
+
   const gateFor = (action: ProspectOutreachAction) => actionability.data?.actions[action];
   const gateReason = (action: ProspectOutreachAction): string => {
     const check = gateFor(action);
@@ -247,7 +254,7 @@ export function ProspectHubDetailPage(): JSX.Element {
         ],
       });
       setWebsite('');
-      response.refresh();
+      refreshAll();
     } finally {
       setSaving(false);
     }
@@ -259,7 +266,7 @@ export function ProspectHubDetailPage(): JSX.Element {
     const request = contactRemovalRequest(prospect.prospectId, removal);
     try {
       await sendJson(request.path, 'DELETE', request.body);
-      response.refresh();
+      refreshAll();
     } catch {
       setOutreachNotice(copy.actionFailed);
     }
@@ -273,7 +280,7 @@ export function ProspectHubDetailPage(): JSX.Element {
         'POST',
         kind === 'websites' ? { url: value } : { address: value },
       );
-      response.refresh();
+      refreshAll();
     } catch {
       setOutreachNotice(copy.actionFailed);
     } finally {
@@ -290,7 +297,7 @@ export function ProspectHubDetailPage(): JSX.Element {
         emails: [...prospect.emails, { address, origin: 'operator' }],
       });
       setEmail('');
-      response.refresh();
+      refreshAll();
     } finally {
       setSaving(false);
     }
@@ -308,7 +315,7 @@ export function ProspectHubDetailPage(): JSX.Element {
     try {
       await sendJson(`/api/prospects/${prospect.prospectId}`, 'PATCH', patch);
       setEditedFields({});
-      response.refresh();
+      refreshAll();
     } finally {
       setSaving(false);
     }
@@ -372,8 +379,7 @@ export function ProspectHubDetailPage(): JSX.Element {
               copy.refusalLabels[result.refusal ?? ''] ?? strings.common.vocabularyFallback,
             ),
       );
-      response.refresh();
-      actionability.refresh();
+      refreshAll();
     } catch {
       setOutreachNotice(copy.actionFailed);
     } finally {
@@ -398,8 +404,7 @@ export function ProspectHubDetailPage(): JSX.Element {
               copy.refusalLabels[result.refusal ?? ''] ?? strings.common.vocabularyFallback,
             ),
       );
-      response.refresh();
-      actionability.refresh();
+      refreshAll();
     } catch {
       setOutreachNotice(copy.actionFailed);
     } finally {
@@ -424,8 +429,7 @@ export function ProspectHubDetailPage(): JSX.Element {
               copy.refusalLabels[result.refusal ?? ''] ?? strings.common.vocabularyFallback,
             ),
       );
-      response.refresh();
-      actionability.refresh();
+      refreshAll();
     } catch {
       setOutreachNotice(copy.actionFailed);
     } finally {
@@ -455,8 +459,7 @@ export function ProspectHubDetailPage(): JSX.Element {
       );
     } finally {
       setOutreachBusy(null);
-      response.refresh();
-      actionability.refresh();
+      refreshAll();
     }
   };
 
@@ -465,7 +468,7 @@ export function ProspectHubDetailPage(): JSX.Element {
     setSaving(true);
     try {
       await sendJson(`/api/prospects/${prospect.prospectId}`, 'PATCH', { outreachLanguage: next });
-      response.refresh();
+      refreshAll();
     } catch {
       setOutreachNotice(copy.actionFailed);
     } finally {
@@ -478,7 +481,7 @@ export function ProspectHubDetailPage(): JSX.Element {
     setOutreachNotice(null);
     try {
       await sendJson(`/api/prospects/${prospect.prospectId}/status`, 'PATCH', { status });
-      response.refresh();
+      refreshAll();
     } catch {
       setOutreachNotice(copy.actionFailed);
     } finally {
@@ -495,8 +498,7 @@ export function ProspectHubDetailPage(): JSX.Element {
         prospectId: null,
       });
       setOutreachNotice(copy.auditDetached);
-      response.refresh();
-      actionability.refresh();
+      refreshAll();
     } catch {
       setOutreachNotice(copy.actionFailed);
     } finally {
@@ -589,10 +591,12 @@ export function ProspectHubDetailPage(): JSX.Element {
               {recommendation.action === 'prepare-audit' && primaryWebsite === undefined ? (
                 <p className="text-sm text-ink-muted">{copy.noSite}</p>
               ) : null}
-              {recommendation.action === 'create-first-email' ? (
+              {recommendation.action === 'create-first-email' &&
+              gateFor('first-email')?.state !== 'available' ? (
                 <p className="text-sm text-ink-muted">{gateReason('first-email')}</p>
               ) : null}
-              {recommendation.action === 'create-follow-up' ? (
+              {recommendation.action === 'create-follow-up' &&
+              gateFor('follow-up')?.state !== 'available' ? (
                 <p className="text-sm text-ink-muted">{gateReason('follow-up')}</p>
               ) : null}
               {renderRecommendationAction()}
