@@ -17,6 +17,7 @@ import { hasMeasuredCoreWebVitals } from '@odysseus/report';
 import { pauseBetweenLanguagePasses } from '@odysseus/llm';
 import { runAnalysisStage } from '../../pipeline/analysis-stage.js';
 import { runAuditStage } from '../../pipeline/audit-stage.js';
+import { finalizeProspectScan } from '../../pipeline/finalize-prospect-scan.js';
 import { runAllReportsStage } from '../../pipeline/report-stage.js';
 import { JobCancelledError } from '../cancellation.js';
 import type { PipelineContext } from '../job-queue.js';
@@ -80,6 +81,7 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
         ...(job.options.siren !== undefined ? { manualSiren: job.options.siren } : {}),
         ...(siteSignalOverrides !== undefined ? { siteSignalOverrides } : {}),
         ...(job.options.prospectId !== undefined ? { prospectId: job.options.prospectId } : {}),
+        scanIntent: 'full-audit',
         ...(job.options.seeds !== undefined ? { seeds: job.options.seeds } : {}),
         ...(job.options.exclusions !== undefined ? { exclusions: job.options.exclusions } : {}),
         ...(job.options.bookingEngineUrl !== undefined
@@ -91,6 +93,13 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
       },
       connection,
     );
+
+    if (job.options.prospectId !== undefined) {
+      await finalizeProspectScan(connection, {
+        prospectId: job.options.prospectId,
+        manifest: auditResult.manifest,
+      });
+    }
 
     // Computed once here over the same findings array every later stage
     // receives: the analysis and report stages each used to canonicalize

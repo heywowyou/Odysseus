@@ -6,6 +6,7 @@
 import { completeJob, ensureJobRunIdentity, type JobDocument } from '@odysseus/store';
 import { deleteCrawlCheckpoint, deleteCrawlStateFile } from '@odysseus/scanner';
 import { runAuditStage } from '../../pipeline/audit-stage.js';
+import { finalizeProspectScan } from '../../pipeline/finalize-prospect-scan.js';
 import type { PipelineContext } from '../job-queue.js';
 import { createScanProgressReporter } from '../report-progress.js';
 
@@ -26,11 +27,13 @@ export async function runOutreachFullScanJob(
       url,
       {
         prospectId,
+        scanIntent: 'prospecting-audit',
         runIdentity,
         onProgress: createScanProgressReporter(connection, job.jobId, job.type, ctx.cancellation),
       },
       connection,
     );
+    await finalizeProspectScan(connection, { prospectId, manifest: auditResult.manifest });
     await completeJob(connection, job.jobId, { auditId: auditResult.auditId });
     deleteCrawlCheckpoint(auditResult.auditDir);
     deleteCrawlStateFile(auditResult.auditDir);

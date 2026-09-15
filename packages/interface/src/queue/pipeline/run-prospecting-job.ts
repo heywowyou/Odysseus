@@ -32,6 +32,7 @@
 
 import { completeJob, updateJobProgress, type JobDocument, type UrlResult } from '@odysseus/store';
 import { runAuditStage } from '../../pipeline/audit-stage.js';
+import { finalizeProspectScan } from '../../pipeline/finalize-prospect-scan.js';
 import { JobCancelledError } from '../cancellation.js';
 import {
   PROSPECTING_JOB_CONCURRENCY,
@@ -95,10 +96,17 @@ export async function runProspectingJob(job: JobDocument, ctx: PipelineContext):
           maxDepth: job.options.maxDepth ?? PROSPECTING_MAX_DEPTH,
           skipLighthouse: true,
           sitemapMode: 'inspect',
+          ...(job.options.scanType === 'quick-check' ? { scanIntent: 'quick-check' as const } : {}),
           ...(job.options.prospectId !== undefined ? { prospectId: job.options.prospectId } : {}),
         },
         connection,
       );
+      if (job.options.prospectId !== undefined) {
+        await finalizeProspectScan(connection, {
+          prospectId: job.options.prospectId,
+          manifest: result.manifest,
+        });
+      }
       urlResults[index] = { url, status: 'complete', auditId: result.auditId };
       auditIds.push(result.auditId);
     } catch (error) {

@@ -206,7 +206,13 @@ describe('runFullAuditJob', () => {
 
     expect(runAuditStage).toHaveBeenCalledWith(
       'https://example.com/',
-      expect.objectContaining({ maxPages: 5, maxDepth: 1, delayMs: 250, scanConcurrency: 1 }),
+      expect.objectContaining({
+        maxPages: 5,
+        maxDepth: 1,
+        delayMs: 250,
+        scanConcurrency: 1,
+        scanIntent: 'full-audit',
+      }),
       fakeConnection,
     );
   });

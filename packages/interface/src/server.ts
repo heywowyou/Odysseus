@@ -15,6 +15,8 @@ import { createLoginRateLimiter, type LoginRateLimiter } from './auth/rate-limit
 import { createInMemorySessionStore, type SessionStore } from './auth/session-store.js';
 import { JobQueue } from './queue/job-queue.js';
 import { runFullAuditJob } from './queue/pipeline/run-full-audit-job.js';
+import { runQuickCheckJob } from './queue/pipeline/run-quick-check-job.js';
+import { runProspectingAuditJob } from './queue/pipeline/run-prospecting-audit-job.js';
 import { runOutreachFullScanJob } from './queue/pipeline/run-outreach-full-scan-job.js';
 import { runProspectingJob } from './queue/pipeline/run-prospecting-job.js';
 import { runOutreachDraftBatchJob } from './queue/pipeline/run-outreach-draft-batch-job.js';
@@ -94,6 +96,8 @@ export async function startInterfaceServer(
     concurrency: getQueueConcurrency(),
     runners: {
       'full-audit': runFullAuditJob,
+      'quick-check': runQuickCheckJob,
+      'prospecting-audit': runProspectingAuditJob,
       'outreach-full-scan': runOutreachFullScanJob,
       prospecting: runProspectingJob,
       'outreach-draft-batch': runOutreachDraftBatchJob,

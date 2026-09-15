@@ -8,7 +8,6 @@
  */
 
 import * as fs from 'node:fs';
-import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
 import {
@@ -34,12 +33,12 @@ import {
 } from '@odysseus/scanner';
 import {
   normalizeAudit,
-  assessCrawlCoverage,
   buildFindingsProvenance,
   type AuditConfigSnapshot,
   type AuditManifest,
   type Finding,
   type ObligationAssessment,
+  type ScanIntent,
   type SiteSignalOverrides,
   type SitemapMode,
   summarizeAuditCoverage,
@@ -49,8 +48,6 @@ import {
   persistAudit,
   prefillAuditManualFields,
   replaceDetectedManualFields,
-  advanceProspectStatus,
-  appendProspectEvent,
 } from '@odysseus/store';
 import { runObligationStage } from './obligation-stage.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
@@ -60,6 +57,9 @@ import { logger } from '../logger.js';
 export interface RunAuditStageOptions {
   /** Durable prospect hub link for scans launched from the prospect page. */
   prospectId?: string;
+  /** Durable reason for this single-site scan. Internal bounded prospecting
+   *  calls leave it absent so their audits cannot qualify for outreach. */
+  scanIntent?: ScanIntent;
   maxPages?: number;
   maxDepth?: number;
   /** Per-job crawl pacing (issue #111). Exposed by the `odysseus audit`
@@ -328,6 +328,7 @@ export async function runAuditStage(
       ...artifacts.manifest,
       findingsProvenance: buildFindingsProvenance(findings),
       ...(options.prospectId !== undefined ? { prospectId: options.prospectId } : {}),
+      ...(options.scanIntent !== undefined ? { scanIntent: options.scanIntent } : {}),
     };
     await writeManifestFile(artifacts.auditDir, manifest);
 
@@ -337,25 +338,6 @@ export async function runAuditStage(
     );
 
     await persistAudit(connection, manifest, findings);
-    if (options.prospectId !== undefined) {
-      await appendProspectEvent(connection, {
-        eventId: randomUUID(),
-        prospectId: options.prospectId,
-        type: 'scan-attached',
-        payload: { auditId: artifacts.auditId },
-        actor: 'scanner',
-        at: new Date(),
-      });
-      const coverage = assessCrawlCoverage({
-        pages: manifest.pages,
-        ...(manifest.crawl.sitemapCoverage === undefined
-          ? {}
-          : { sitemapCoverage: manifest.crawl.sitemapCoverage }),
-      });
-      if (coverage.reasonCodes.length === 0) {
-        await advanceProspectStatus(connection, options.prospectId, 'audited');
-      }
-    }
 
     // Plan 002 (issue #132): no checkpoint deletion here. The checkpoint
     // must survive until the JOB reaches its terminal state, because a

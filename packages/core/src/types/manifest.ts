@@ -17,6 +17,11 @@ import type { SiteBenchmarkPercentile } from '../benchmark/percentile.js';
 
 export type ManifestKind = 'audit' | 'render-diff';
 
+/** Why a single-site operator scan was run. This is persisted audit
+ * provenance, not display copy: qualification and workflow automation must
+ * use this value rather than infer intent from a route or job label. */
+export type ScanIntent = 'quick-check' | 'prospecting-audit' | 'full-audit';
+
 export type SitemapMode = 'none' | 'inspect' | 'supplement';
 
 export type PageDiscoveryMethod = 'link' | 'seed' | 'sitemap-only';
@@ -308,6 +313,10 @@ export interface AuditManifest {
   auditId: string;
   /** Durable prospect hub link. Absent on historical and unattached scans. */
   prospectId?: string;
+  /** Durable reason for a single-site operator scan. Absent on historical
+   *  audits and internal bounded prospecting batches, which must fail closed
+   *  for outreach qualification. */
+  scanIntent?: ScanIntent;
   kind: ManifestKind;
   siteUrl: string;
   /** ISO 8601. manifest.json is disk JSON, so no native Date here. */

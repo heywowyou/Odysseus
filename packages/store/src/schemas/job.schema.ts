@@ -12,6 +12,8 @@
 import { Schema, type Connection, type Model } from 'mongoose';
 export type JobType =
   | 'full-audit'
+  | 'quick-check'
+  | 'prospecting-audit'
   | 'prospecting'
   | 'outreach-draft-batch'
   | 'outreach-followup-batch'
@@ -332,6 +334,8 @@ const jobSchema = new Schema<JobDocument>(
       required: true,
       enum: [
         'full-audit',
+        'quick-check',
+        'prospecting-audit',
         'prospecting',
         'outreach-draft-batch',
         'outreach-followup-batch',
