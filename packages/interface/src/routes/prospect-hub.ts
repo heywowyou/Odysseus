@@ -10,6 +10,7 @@ import {
   findProspectsByDomain,
   findOutreachThreadByProspect,
   getProspectHub,
+  isSuppressed,
   listOutreachDrafts,
   listDirectory,
   loadProspectWork,
@@ -143,6 +144,22 @@ function languageFromBody(body: unknown): 'fr' | 'en' | null {
 export function registerProspectHubRoutes(router: Router, connection: Connection): void {
   router.get('/api/prospect-hub/todo', async ({ res }) => {
     sendJson(res, 200, { rows: await listProspectTodo(connection) });
+  });
+
+  // Check one entered address against suppression. Hashing happens inside
+  // isSuppressed, so the entered value exists only in this call's memory:
+  // nothing is persisted, echoed, or listed.
+  router.post('/api/outreach/suppression-check', async ({ req, res }) => {
+    const body = recordBody(await readJsonBodyOrRespond(req, res));
+    if (res.headersSent) return;
+    const raw = body?.['address'];
+    if (typeof raw !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw.trim())) {
+      sendError(res, 400, 'address must be a valid email address');
+      return;
+    }
+    const address = raw.trim();
+    const domain = address.slice(address.indexOf('@') + 1);
+    sendJson(res, 200, { suppressed: await isSuppressed(connection, domain, address) });
   });
 
   router.get('/api/prospects', async ({ res, query }) => {

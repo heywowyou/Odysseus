@@ -17,6 +17,7 @@ vi.mock('@odysseus/store', () => ({
   findProspectsByDomain: vi.fn(),
   findOutreachThreadByProspect: vi.fn(),
   getProspectHub: vi.fn(),
+  isSuppressed: vi.fn(),
   listOutreachDrafts: vi.fn(),
   listOutreachPreviews: vi.fn(),
   listDirectory: vi.fn(),
@@ -54,6 +55,7 @@ import {
   deleteProspect,
   findOutreachThreadByProspect,
   getProspectHub,
+  isSuppressed,
   listOutreachDrafts,
   listOutreachPreviews,
   listDirectory,
@@ -401,5 +403,27 @@ describe('prospect hub routes', () => {
     expect(follow.statusCode).toBe(200);
     expect(follow.body).toEqual({ created: false, refusal: 'suppressed' });
     expect(createFollowUpForProspect).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/outreach/suppression-check', () => {
+  it('answers only whether the address is suppressed', async () => {
+    vi.mocked(isSuppressed).mockResolvedValue(true);
+    const result = await handle('/api/outreach/suppression-check', 'POST', {
+      address: ' Role@Hotel-Exemple.fr ',
+    });
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toEqual({ suppressed: true });
+    expect(isSuppressed).toHaveBeenCalledWith(
+      fakeConnection,
+      'Hotel-Exemple.fr',
+      'Role@Hotel-Exemple.fr',
+    );
+  });
+
+  it('rejects a malformed address without checking', async () => {
+    const result = await handle('/api/outreach/suppression-check', 'POST', { address: 'nope' });
+    expect(result.statusCode).toBe(400);
+    expect(isSuppressed).not.toHaveBeenCalled();
   });
 });
