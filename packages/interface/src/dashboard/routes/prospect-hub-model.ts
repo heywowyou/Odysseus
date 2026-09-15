@@ -1,3 +1,10 @@
+import {
+  buildProspectApiQuery,
+  type ProspectFilterState,
+} from './prospect-filter-model';
+
+export type { ProspectListView } from './prospect-filter-model';
+
 export type ProspectStatus =
   | 'new'
   | 'audited'
@@ -9,8 +16,6 @@ export type ProspectStatus =
   | 'won'
   | 'lost'
   | 'opted-out';
-
-export type ProspectListView = 'all' | 'results';
 
 export const PROSPECT_RESULT_STATUSES = [
   'contacted',
@@ -70,64 +75,10 @@ export interface DirectoryResponse {
   pageSize: number;
 }
 
-function setText(query: URLSearchParams, key: string, value: string): void {
-  if (value.trim()) query.set(key, value.trim());
+export function buildHubProspectsPath(state: ProspectFilterState): string {
+  return `/api/prospects?${buildProspectApiQuery(state, 'prospects').toString()}`;
 }
 
-export function buildHubProspectsPath(params: {
-  view?: ProspectListView;
-  q: string;
-  status: string;
-  sector?: string;
-  stars?: string;
-  groupStatus?: string;
-  websiteKind: string;
-  department?: string;
-  roomsMin?: string;
-  roomsMax?: string;
-  hasScan?: string;
-  inactive?: string;
-  page: number;
-}): string {
-  const query = new URLSearchParams();
-  if (params.view === 'results') query.set('view', 'results');
-  setText(query, 'q', params.q);
-  setText(query, 'status', params.status);
-  setText(query, 'sector', params.sector ?? '');
-  setText(query, 'stars', params.stars ?? '');
-  setText(query, 'groupStatus', params.groupStatus ?? '');
-  setText(query, 'websiteKind', params.websiteKind);
-  setText(query, 'department', params.department ?? '');
-  setText(query, 'roomsMin', params.roomsMin ?? '');
-  setText(query, 'roomsMax', params.roomsMax ?? '');
-  setText(query, 'hasScan', params.hasScan ?? '');
-  setText(query, 'inactive', params.inactive ?? '');
-  query.set('page', String(params.page));
-  query.set('pageSize', '50');
-  return `/api/prospects?${query.toString()}`;
-}
-
-export function buildDirectoryPath(params: {
-  q: string;
-  sector?: string;
-  stars: string;
-  groupStatus?: string;
-  websiteKind: string;
-  department?: string;
-  roomsMin?: string;
-  roomsMax?: string;
-  page: number;
-}): string {
-  const query = new URLSearchParams();
-  setText(query, 'q', params.q);
-  setText(query, 'sector', params.sector ?? '');
-  setText(query, 'stars', params.stars);
-  setText(query, 'groupStatus', params.groupStatus ?? '');
-  setText(query, 'websiteKind', params.websiteKind);
-  setText(query, 'department', params.department ?? '');
-  setText(query, 'roomsMin', params.roomsMin ?? '');
-  setText(query, 'roomsMax', params.roomsMax ?? '');
-  query.set('page', String(params.page));
-  query.set('pageSize', '50');
-  return `/api/directory?${query.toString()}`;
+export function buildDirectoryPath(state: ProspectFilterState): string {
+  return `/api/directory?${buildProspectApiQuery(state, 'directory').toString()}`;
 }

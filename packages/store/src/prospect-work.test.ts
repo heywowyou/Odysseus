@@ -143,6 +143,28 @@ describe('prospect work model', () => {
     });
   });
 
+  it('does not recommend stale open work for a terminal prospect', () => {
+    const work = deriveProspectWork(
+      { ...prospect, status: 'won' },
+      {
+        ...emptySources,
+        drafts: [
+          {
+            draftId: 'draft-terminal',
+            prospectId: prospect.prospectId,
+            threadId: 'thread-terminal',
+            touch: 1,
+            status: 'created',
+            createdAt: new Date(),
+          },
+        ],
+      },
+    );
+
+    expect(work.items).toHaveLength(1);
+    expect(work.recommendation).toBeUndefined();
+  });
+
   it('links every work row to the visible control that handles it', () => {
     const auditInput = deriveProspectWork(prospect, {
       ...emptySources,
@@ -187,7 +209,10 @@ describe('prospect work model', () => {
         },
       ],
     });
-    expect(reply.items[0]?.href).toBe(`/prospects/${prospect.prospectId}#history`);
+    expect(reply.items[0]).toMatchObject({
+      action: 'record-outcome',
+      href: `/prospects/${prospect.prospectId}#actions`,
+    });
 
     const followUp = deriveProspectWork(
       prospect,

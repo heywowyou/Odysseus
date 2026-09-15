@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import type { JSX } from 'react';
 import { ArrowLeft, ExternalLink, History, Trash2 } from 'lucide-react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { PageHeader, PAGE_WIDTH } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
-import { Button } from '../components/ui/button';
+import { Button, buttonStyles } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { EmptyState } from '../components/ui/empty-state';
 import { Input } from '../components/ui/input';
@@ -27,7 +27,7 @@ interface ProspectAudit {
   siteUrl: string;
   kind: string;
   startedAt: string;
-  finishedAt: string;
+  finishedAt?: string;
 }
 
 interface ProspectPreview {
@@ -39,13 +39,28 @@ interface ProspectPreview {
   revokedReason?: string;
 }
 
+type ProspectOutreachAction = 'preview' | 'first-email' | 'follow-up';
+
 interface ProspectActionability {
   actions: Record<string, { state: 'available' | 'blocked'; reason?: string }>;
 }
 
+type ProspectRecommendationAction =
+  | 'review-audit'
+  | 'review-draft'
+  | 'record-outcome'
+  | 'create-follow-up'
+  | 'create-first-email'
+  | 'prepare-audit'
+  | 'review-prospect';
+
 interface ProspectWorkSummary {
   items: { kind: string; action: string; href: string; since: string }[];
-  recommendation?: { action: string; href: string; reason?: string };
+  recommendation?: {
+    action: ProspectRecommendationAction;
+    href: string;
+    reason?: string;
+  };
   auditState: string;
   qualifyingAuditId?: string;
   websiteSuppressed: boolean;
@@ -85,7 +100,7 @@ interface ProspectHubDetail extends ProspectHubRow {
   drafts?: ProspectDraft[];
 }
 
-const STATUSES: ProspectStatus[] = [
+const STATUSES: readonly ProspectStatus[] = [
   'new',
   'audited',
   'contacted',
@@ -97,6 +112,7 @@ const STATUSES: ProspectStatus[] = [
   'lost',
   'opted-out',
 ];
+
 const OUTCOMES = [
   'no-reply',
   'reply-positive',
@@ -109,15 +125,24 @@ const OUTCOMES = [
   'lost',
 ] as const;
 
+const TERMINAL_STATUSES: readonly ProspectStatus[] = ['won', 'lost', 'opted-out'];
+
 function label(value: string, labels: Record<string, string>): string {
   return labels[value] ?? value;
+}
+
+function formatDate(value: string): string {
+  return new Date(value).toLocaleString();
 }
 
 export function ProspectHubDetailPage(): JSX.Element {
   const { language, strings } = useI18n();
   const copy = strings.prospectHub.detail;
   const { prospectId } = useParams<{ prospectId: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const requestedReturnTo = searchParams.get('returnTo');
+  const returnTo = requestedReturnTo?.startsWith('/prospects') ? requestedReturnTo : '/prospects';
   const response = useApi<ProspectHubDetail>(
     prospectId ? `/api/prospects/${encodeURIComponent(prospectId)}` : null,
   );
@@ -146,7 +171,7 @@ export function ProspectHubDetailPage(): JSX.Element {
           title={copy.missing}
           description={response.error}
           action={
-            <Link to="/prospects">
+            <Link to={returnTo}>
               <Button>{copy.return}</Button>
             </Link>
           }
@@ -165,14 +190,49 @@ export function ProspectHubDetailPage(): JSX.Element {
   const previews = prospect.previews ?? [];
   const drafts = prospect.drafts ?? [];
   const work = prospect.work;
+  const recommendation = work?.recommendation;
+  const recentEvents = prospect.events.slice(0, 3);
+  const qualifyingAudit =
+    (work?.qualifyingAuditId === undefined
+      ? undefined
+      : audits.find((audit) => audit.auditId === work.qualifyingAuditId)) ?? audits[0];
+
+  const gateFor = (action: ProspectOutreachAction) => actionability.data?.actions[action];
+  const gateReason = (action: ProspectOutreachAction): string => {
+    const check = gateFor(action);
+    if (check?.reason !== undefined) {
+      return copy.refusalLabels[check.reason] ?? strings.common.vocabularyFallback;
+    }
+    return actionability.error ?? copy.loading;
+  };
+
   const saveWebsite = async (): Promise<void> => {
-    if (!website.trim()) return;
+    const value = website.trim();
+    if (!value) return;
+    let url: URL;
+    try {
+      url = new URL(value);
+    } catch {
+      setOutreachNotice(copy.actionFailed);
+      return;
+    }
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      setOutreachNotice(copy.actionFailed);
+      return;
+    }
+    const normalizedUrl = url.toString();
+    if (prospect.websites.some((item) => item.url === normalizedUrl)) return;
     setSaving(true);
     try {
-      const url = new URL(website.trim());
       await sendJson(`/api/prospects/${prospect.prospectId}`, 'PATCH', {
         websites: [
-          { url: url.toString(), registrableDomain: url.hostname, kind: 'unknown', primary: true },
+          ...prospect.websites,
+          {
+            url: normalizedUrl,
+            registrableDomain: url.hostname,
+            kind: 'unknown',
+            primary: prospect.websites.length === 0,
+          },
         ],
       });
       setWebsite('');
@@ -181,6 +241,7 @@ export function ProspectHubDetailPage(): JSX.Element {
       setSaving(false);
     }
   };
+
   const saveEmail = async (): Promise<void> => {
     const address = email.trim().toLowerCase();
     if (!address || prospect.emails.some((item) => item.address === address)) return;
@@ -195,8 +256,10 @@ export function ProspectHubDetailPage(): JSX.Element {
       setSaving(false);
     }
   };
+
   const fieldValue = (key: keyof typeof editedFields): string =>
     editedFields[key] ?? String(prospect[key] ?? '');
+
   const saveDetails = async (): Promise<void> => {
     const patch = Object.fromEntries(
       Object.entries(editedFields).map(([key, value]) => [key, value?.trim() || undefined]),
@@ -211,20 +274,48 @@ export function ProspectHubDetailPage(): JSX.Element {
       setSaving(false);
     }
   };
-  const launchScan = async (type: 'quick-check' | 'prospecting-audit'): Promise<void> => {
+
+  const launchScan = async (
+    type: 'quick-check' | 'prospecting-audit' | 'full-audit',
+  ): Promise<void> => {
     if (!primaryWebsite) return;
-    const result = await sendJson<{ started: boolean; jobId?: string }>('/api/scans', 'POST', {
-      type,
-      url: primaryWebsite.url,
-      options: { prospectId: prospect.prospectId },
-    });
-    if (result.jobId) navigate(`/scans/${result.jobId}`);
+    setOutreachBusy(`scan-${type}`);
+    setOutreachNotice(null);
+    try {
+      const result = await sendJson<{ started?: boolean; jobId?: string; refusal?: string }>(
+        '/api/scans',
+        'POST',
+        {
+          type,
+          url: primaryWebsite.url,
+          options: { prospectId: prospect.prospectId },
+        },
+      );
+      if (result.jobId) {
+        navigate(`/scans/${result.jobId}`);
+      } else {
+        setOutreachNotice(
+          result.refusal === undefined
+            ? copy.actionFailed
+            : copy.actionRefused.replace(
+                '{reason}',
+                copy.refusalLabels[result.refusal] ?? strings.common.vocabularyFallback,
+              ),
+        );
+      }
+    } catch {
+      setOutreachNotice(copy.actionFailed);
+    } finally {
+      setOutreachBusy(null);
+    }
   };
+
   const deleteRecord = async (): Promise<void> => {
     if (!window.confirm(copy.confirm)) return;
     await sendJson(`/api/prospects/${prospect.prospectId}`, 'DELETE', {});
     navigate('/prospects');
   };
+
   const publishPreview = async (): Promise<void> => {
     setOutreachBusy('preview');
     setOutreachNotice(null);
@@ -250,6 +341,7 @@ export function ProspectHubDetailPage(): JSX.Element {
       setOutreachBusy(null);
     }
   };
+
   const runFirstEmail = async (): Promise<void> => {
     setOutreachBusy('first-email');
     setOutreachNotice(null);
@@ -275,6 +367,7 @@ export function ProspectHubDetailPage(): JSX.Element {
       setOutreachBusy(null);
     }
   };
+
   const runFollowUp = async (): Promise<void> => {
     setOutreachBusy('follow-up');
     setOutreachNotice(null);
@@ -300,6 +393,26 @@ export function ProspectHubDetailPage(): JSX.Element {
       setOutreachBusy(null);
     }
   };
+
+  const recordOutcome = async (outcome: string): Promise<void> => {
+    await sendJson(`/api/prospects/${prospect.prospectId}/outcome`, 'POST', { outcome });
+    response.refresh();
+    actionability.refresh();
+  };
+
+  const changeStatus = async (status: string): Promise<void> => {
+    setOutreachBusy('status');
+    setOutreachNotice(null);
+    try {
+      await sendJson(`/api/prospects/${prospect.prospectId}/status`, 'PATCH', { status });
+      response.refresh();
+    } catch {
+      setOutreachNotice(copy.actionFailed);
+    } finally {
+      setOutreachBusy(null);
+    }
+  };
+
   const detachAudit = async (auditId: string): Promise<void> => {
     if (!window.confirm(copy.confirmDetachAudit)) return;
     setOutreachBusy(`detach-${auditId}`);
@@ -318,11 +431,64 @@ export function ProspectHubDetailPage(): JSX.Element {
     }
   };
 
+  const renderRecommendationAction = (): JSX.Element | null => {
+    if (recommendation === undefined) return null;
+    const actionLabel =
+      copy.recommendationActions[recommendation.action] ?? strings.common.vocabularyFallback;
+    const recommendationGate =
+      recommendation.action === 'create-first-email'
+        ? gateFor('first-email')
+        : recommendation.action === 'create-follow-up'
+          ? gateFor('follow-up')
+          : undefined;
+    const disabled =
+      outreachBusy !== null ||
+      (recommendation.action === 'prepare-audit' && primaryWebsite === undefined) ||
+      (recommendationGate !== undefined && recommendationGate.state !== 'available');
+    if (
+      recommendation.action === 'prepare-audit' ||
+      recommendation.action === 'create-first-email' ||
+      recommendation.action === 'create-follow-up'
+    ) {
+      const onClick =
+        recommendation.action === 'prepare-audit'
+          ? () => void launchScan('prospecting-audit')
+          : recommendation.action === 'create-first-email'
+            ? () => void runFirstEmail()
+            : () => void runFollowUp();
+      return (
+        <Button
+          onClick={onClick}
+          disabled={disabled}
+          isLoading={
+            outreachBusy ===
+            (recommendation.action === 'prepare-audit'
+              ? 'scan-prospecting-audit'
+              : recommendation.action)
+          }
+        >
+          {actionLabel}
+        </Button>
+      );
+    }
+    return (
+      <Link className={buttonStyles('primary')} to={recommendation.href}>
+        {actionLabel}
+      </Link>
+    );
+  };
+
+  const recommendationReason =
+    recommendation?.reason === undefined
+      ? undefined
+      : (copy.recommendationReasons[recommendation.reason] ?? strings.common.vocabularyFallback);
+  const terminal = TERMINAL_STATUSES.includes(prospect.status);
+
   return (
     <main className={`${PAGE_WIDTH.reading} px-5 py-8`}>
       <PageHeader
         eyebrow={
-          <Link className="inline-flex items-center gap-1 hover:underline" to="/prospects">
+          <Link className="inline-flex items-center gap-1 hover:underline" to={returnTo}>
             <ArrowLeft className="size-3" aria-hidden="true" />
             {copy.back}
           </Link>
@@ -330,369 +496,429 @@ export function ProspectHubDetailPage(): JSX.Element {
         title={prospect.name}
         subject={prospect.prospectId}
         actions={
-          <Select
-            value={prospect.status}
-            onChange={(event) =>
-              void sendJson(`/api/prospects/${prospect.prospectId}/status`, 'PATCH', {
-                status: event.target.value,
-              }).then(() => response.refresh())
-            }
-            aria-label={copy.statusAria}
-          >
-            {STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {label(status, copy.statusLabels)}
-              </option>
-            ))}
-          </Select>
+          <Badge tone={terminal ? 'neutral' : 'accent'}>
+            {label(prospect.status, copy.statusLabels)}
+          </Badge>
         }
       />
+
       <div className="grid gap-5">
-        <Card title={copy.record} description={copy.info}>
-          <div className="grid gap-4 text-sm">
-            <div className="grid gap-3 md:grid-cols-2">
-              {(
-                [
-                  ['name', copy.name],
-                  ['sector', copy.sector],
-                  ['address', copy.address],
-                  ['postcode', copy.postcode],
-                  ['commune', copy.commune],
-                  ['department', copy.department],
-                  ['phone', copy.phone],
-                ] as const
-              ).map(([key, title]) => (
-                <label key={key} className="grid gap-1">
-                  <span className="text-xs text-ink-muted">{title}</span>
+        <Card id="recommended" title={copy.recommended}>
+          {recommendation !== undefined ? (
+            <div className="flex flex-col items-start gap-3">
+              <p className="text-sm font-medium text-ink">
+                {copy.recommendationActions[recommendation.action] ??
+                  strings.common.vocabularyFallback}
+              </p>
+              {recommendationReason ? (
+                <p className="text-sm text-ink-muted">{recommendationReason}</p>
+              ) : null}
+              {recommendation.action === 'prepare-audit' && primaryWebsite === undefined ? (
+                <p className="text-sm text-ink-muted">{copy.noSite}</p>
+              ) : null}
+              {recommendation.action === 'create-first-email' ? (
+                <p className="text-sm text-ink-muted">{gateReason('first-email')}</p>
+              ) : null}
+              {recommendation.action === 'create-follow-up' ? (
+                <p className="text-sm text-ink-muted">{gateReason('follow-up')}</p>
+              ) : null}
+              {renderRecommendationAction()}
+            </div>
+          ) : (
+            <p className="text-sm text-ink-muted">
+              {terminal ? copy.completed : copy.noRecommendation}
+            </p>
+          )}
+        </Card>
+
+        <Card title={copy.summary} description={copy.info}>
+          <dl className="grid gap-3 text-sm sm:grid-cols-2">
+            <SummaryField label={copy.name} value={prospect.name} />
+            <SummaryField label={copy.sector} value={prospect.sector} />
+            <SummaryField
+              label={copy.email}
+              value={prospect.emails[0]?.address ?? copy.notProvided}
+            />
+            <SummaryField
+              label={copy.commune}
+              value={
+                [prospect.commune, prospect.department].filter(Boolean).join(' · ') ||
+                copy.notProvided
+              }
+            />
+            <div className="sm:col-span-2">
+              <dt className="text-xs text-ink-muted">{copy.site}</dt>
+              <dd className="mt-1">
+                {primaryWebsite ? (
+                  <a
+                    className="inline-flex items-center gap-1 text-ink hover:underline"
+                    href={primaryWebsite.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {primaryWebsite.url}
+                    <ExternalLink className="size-3" aria-hidden="true" />
+                  </a>
+                ) : (
+                  <span className="text-ink-muted">{copy.noSite}</span>
+                )}
+              </dd>
+            </div>
+          </dl>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {prospect.hotel?.stars ? <Badge tone="neutral">{prospect.hotel.stars}★</Badge> : null}
+            {prospect.hotel?.rooms ? (
+              <Badge tone="neutral">
+                {copy.roomsSummary.replace('{count}', String(prospect.hotel.rooms))}
+              </Badge>
+            ) : null}
+            {prospect.hotel?.groupStatus ? (
+              <Badge tone="neutral">
+                {strings.prospectHub.directory.groupLabels[prospect.hotel.groupStatus] ??
+                  strings.common.vocabularyFallback}
+              </Badge>
+            ) : null}
+            {primaryWebsite ? (
+              <Badge tone="neutral">
+                {strings.prospectHub.directory.websiteKindLabels[primaryWebsite.kind] ??
+                  strings.common.vocabularyFallback}
+              </Badge>
+            ) : null}
+          </div>
+          <details
+            id="edit-details"
+            open={recommendation?.action === 'review-prospect'}
+            className="mt-5 border-t border-line pt-4"
+          >
+            <summary className="cursor-pointer text-sm font-medium text-ink">
+              {copy.editRecord}
+            </summary>
+            <div className="mt-4 grid gap-4 text-sm">
+              <div className="grid gap-3 md:grid-cols-2">
+                {(
+                  [
+                    ['name', copy.name],
+                    ['sector', copy.sector],
+                    ['address', copy.address],
+                    ['postcode', copy.postcode],
+                    ['commune', copy.commune],
+                    ['department', copy.department],
+                    ['phone', copy.phone],
+                  ] as const
+                ).map(([key, title]) => (
+                  <label key={key} className="grid gap-1">
+                    <span className="text-xs text-ink-muted">{title}</span>
+                    <Input
+                      value={fieldValue(key)}
+                      onChange={(event) =>
+                        setEditedFields((current) => ({ ...current, [key]: event.target.value }))
+                      }
+                    />
+                  </label>
+                ))}
+                <label className="grid gap-1 md:col-span-2">
+                  <span className="text-xs text-ink-muted">{copy.notes}</span>
                   <Input
-                    value={fieldValue(key)}
+                    value={fieldValue('notes')}
                     onChange={(event) =>
-                      setEditedFields((current) => ({ ...current, [key]: event.target.value }))
+                      setEditedFields((current) => ({ ...current, notes: event.target.value }))
                     }
                   />
                 </label>
-              ))}
-              <label className="grid gap-1 md:col-span-2">
-                <span className="text-xs text-ink-muted">{copy.notes}</span>
-                <Input
-                  value={fieldValue('notes')}
-                  onChange={(event) =>
-                    setEditedFields((current) => ({ ...current, notes: event.target.value }))
-                  }
-                />
-              </label>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  variant="secondary"
+                  isLoading={saving}
+                  disabled={Object.keys(editedFields).length === 0}
+                  onClick={() => void saveDetails()}
+                >
+                  {copy.saveDetails}
+                </Button>
+              </div>
+              <div>
+                <p className="mb-2 text-xs text-ink-muted">{copy.websites}</p>
+                <ul className="grid gap-2">
+                  {prospect.websites.length > 0 ? (
+                    prospect.websites.map((item) => (
+                      <li key={item.url} className="flex flex-wrap items-center gap-2">
+                        <a
+                          className="text-ink hover:underline"
+                          href={item.url}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {item.url}
+                        </a>
+                        {item.primary ? <Badge tone="accent">{copy.site}</Badge> : null}
+                        <span className="text-xs text-ink-muted">
+                          {strings.prospectHub.directory.websiteKindLabels[item.kind] ??
+                            strings.common.vocabularyFallback}
+                        </span>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="text-sm text-ink-muted">{copy.noSite}</li>
+                  )}
+                </ul>
+                <div className="mt-2 grid gap-2 md:grid-cols-[1fr_auto]">
+                  <Input
+                    value={website}
+                    onChange={(event) => setWebsite(event.target.value)}
+                    placeholder={copy.addWebsitePlaceholder}
+                    aria-label={copy.addWebsite}
+                  />
+                  <Button
+                    isLoading={saving}
+                    disabled={!website.trim()}
+                    onClick={() => void saveWebsite()}
+                  >
+                    {copy.addWebsite}
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <p className="mb-2 text-xs text-ink-muted">{copy.emailList}</p>
+                <div className="flex flex-wrap gap-2">
+                  {prospect.emails.length > 0 ? (
+                    prospect.emails.map((item) => (
+                      <Badge key={item.address} tone="neutral">
+                        {item.address} ·{' '}
+                        {copy.originLabels[item.origin] ?? strings.common.vocabularyFallback}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-sm text-ink-muted">{copy.notProvided}</span>
+                  )}
+                </div>
+                <div className="mt-2 grid gap-2 md:grid-cols-[1fr_auto]">
+                  <Input
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder="contact@exemple.fr"
+                    aria-label={copy.email}
+                  />
+                  <Button
+                    isLoading={saving}
+                    disabled={!email.trim()}
+                    onClick={() => void saveEmail()}
+                  >
+                    {copy.addEmail}
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs text-ink-muted">
+                {copy.origin}:{' '}
+                {copy.originLabels[prospect.fieldOrigins.name ?? ''] ??
+                  strings.common.vocabularyFallback}
+              </p>
             </div>
-            <div className="flex justify-end">
-              <Button
-                variant="secondary"
-                isLoading={saving}
-                disabled={Object.keys(editedFields).length === 0}
-                onClick={() => void saveDetails()}
-              >
-                {copy.saveDetails}
-              </Button>
+          </details>
+        </Card>
+
+        <Card id="emails" title={copy.outreach}>
+          <div className="grid gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <p className="text-xs text-ink-muted">{copy.auditState}</p>
+              <p className="mt-1 font-medium">
+                {copy.auditStateLabels[work?.auditState ?? 'missing'] ??
+                  strings.common.vocabularyFallback}
+              </p>
             </div>
             <div>
               <p className="text-xs text-ink-muted">{copy.site}</p>
-              {primaryWebsite ? (
-                <a
-                  className="inline-flex items-center gap-1 text-ink hover:underline"
-                  href={primaryWebsite.url}
-                  target="_blank"
-                  rel="noreferrer"
+              {qualifyingAudit ? (
+                <Link
+                  className="mt-1 block font-medium text-ink hover:underline"
+                  to={`/audits/${encodeURIComponent(qualifyingAudit.auditId)}`}
                 >
-                  {primaryWebsite.url}
-                  <ExternalLink className="size-3" aria-hidden="true" />
-                </a>
+                  {copy.auditKindLabels[qualifyingAudit.kind] ?? strings.common.vocabularyFallback}
+                </Link>
               ) : (
-                <span className="text-ink-muted">{copy.noSite}</span>
+                <p className="mt-1 text-ink-muted">{copy.notProvided}</p>
               )}
-              <span className="ml-2 text-xs text-ink-muted">
-                (
-                {copy.originLabels[
-                  prospect.fieldOrigins.websites ?? prospect.fieldOrigins.name ?? ''
-                ] ?? strings.common.vocabularyFallback}
-                )
-              </span>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {prospect.hotel?.stars ? <Badge tone="neutral">{prospect.hotel.stars}★</Badge> : null}
-              {prospect.hotel?.groupStatus ? (
-                <Badge tone="neutral">
-                  {strings.prospectHub.directory.groupLabels[prospect.hotel.groupStatus] ??
-                    strings.common.vocabularyFallback}
-                </Badge>
-              ) : null}
-              {primaryWebsite ? (
-                <Badge tone="neutral">
-                  {strings.prospectHub.directory.websiteKindLabels[primaryWebsite.kind] ??
-                    strings.common.vocabularyFallback}
-                </Badge>
-              ) : null}
-            </div>
-            <div className="grid gap-2 md:grid-cols-[1fr_auto]">
-              <Input
-                value={website}
-                onChange={(event) => setWebsite(event.target.value)}
-                placeholder={strings.prospectHub.list.websitePlaceholder}
-                aria-label={copy.site}
-              />
-              <Button
-                isLoading={saving}
-                disabled={!website.trim()}
-                onClick={() => void saveWebsite()}
-              >
-                {copy.saveSite}
-              </Button>
-            </div>
-            <div>
-              <p className="mb-2 text-xs text-ink-muted">{copy.email}</p>
-              <div className="flex flex-wrap gap-2">
-                {prospect.emails.map((item) => (
-                  <Badge key={item.address} tone="neutral">
-                    {item.address} ·{' '}
-                    {copy.originLabels[item.origin] ?? strings.common.vocabularyFallback}
-                  </Badge>
-                ))}
-              </div>
-              <div className="mt-2 grid gap-2 md:grid-cols-[1fr_auto]">
-                <Input
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="contact@exemple.fr"
-                  aria-label={copy.email}
-                />
-                <Button
-                  isLoading={saving}
-                  disabled={!email.trim()}
-                  onClick={() => void saveEmail()}
-                >
-                  {copy.addEmail}
-                </Button>
-              </div>
-            </div>
-            <p className="text-xs text-ink-muted">
-              {copy.origin}:{' '}
-              {copy.originLabels[prospect.fieldOrigins.name ?? ''] ??
-                strings.common.vocabularyFallback}
-            </p>
-          </div>
-        </Card>
-        <Card id="emails" title={copy.actions}>
-          <div className="flex flex-wrap gap-2">
-            <Button disabled={!primaryWebsite} onClick={() => void launchScan('quick-check')}>
-              {copy.quick}
-            </Button>
-            <Button disabled={!primaryWebsite} onClick={() => void launchScan('prospecting-audit')}>
-              {copy.prospecting}
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={
-                actionability.data?.actions.preview?.state !== 'available' || outreachBusy !== null
-              }
-              onClick={() => void publishPreview()}
-            >
-              {copy.publishPreview}
-            </Button>
           </div>
           <div className="mt-4 border-t border-line pt-4">
-            <p className="text-sm font-medium text-ink">{copy.outreach}</p>
-            <div className="mt-2 grid gap-2 sm:grid-cols-3">
-              {(
-                [
-                  ['preview', copy.preview],
-                  ['first-email', copy.firstEmail],
-                  ['follow-up', copy.followUp],
-                ] as const
-              ).map(([key, title]) => {
-                const action = actionability.data?.actions[key];
-                const available = action?.state === 'available';
-                return (
-                  <div key={key} className="rounded-lg border border-line px-3 py-2 text-sm">
-                    <div className="flex items-center justify-between gap-2">
-                      <span>{title}</span>
-                      <Badge tone={available ? 'accent' : 'neutral'}>
-                        {available ? copy.ready : copy.blocked}
-                      </Badge>
-                    </div>
-                    {!available && action?.reason ? (
-                      <p className="mt-1 text-xs text-ink-muted">
-                        {copy.refusalLabels[action.reason] ?? strings.common.vocabularyFallback}
-                      </p>
-                    ) : null}
-                    {key === 'first-email' ? (
-                      <Button
-                        className="mt-2"
-                        size="sm"
-                        variant="secondary"
-                        disabled={!available || outreachBusy !== null}
-                        isLoading={outreachBusy === 'first-email'}
-                        onClick={() => void runFirstEmail()}
-                      >
-                        {title}
-                      </Button>
-                    ) : null}
-                    {key === 'follow-up' ? (
-                      <Button
-                        className="mt-2"
-                        size="sm"
-                        variant="secondary"
-                        disabled={!available || outreachBusy !== null}
-                        isLoading={outreachBusy === 'follow-up'}
-                        onClick={() => void runFollowUp()}
-                      >
-                        {title}
-                      </Button>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          <div className="mt-4 grid gap-2 border-t border-line pt-4 text-sm">
-            <p className="font-medium text-ink">{copy.emailSection}</p>
-            <p className="text-xs text-ink-muted">
-              {copy.auditState.replace(
-                '{state}',
-                copy.auditStateLabels[work?.auditState ?? 'missing'] ??
-                  strings.common.vocabularyFallback,
-              )}
-            </p>
+            <p className="text-xs text-ink-muted">{copy.threadState}</p>
             {prospect.thread ? (
-              <p className="text-xs text-ink-muted">
-                {copy.threadState}:{' '}
+              <p className="mt-1 text-sm">
                 {strings.labels.thread[
                   prospect.thread.state as keyof typeof strings.labels.thread
                 ] ?? strings.common.vocabularyFallback}
+                <span className="ml-2 text-xs text-ink-muted">
+                  {formatDate(prospect.thread.updatedAt)}
+                </span>
               </p>
             ) : (
-              <p className="text-xs text-ink-muted">{copy.noThread}</p>
+              <p className="mt-1 text-sm text-ink-muted">{copy.noThread}</p>
             )}
             {drafts.length > 0 ? (
-              <ul className="grid gap-2">
-                {drafts.map((draft) => (
-                  <li key={draft.draftId} className="rounded-lg border border-line px-3 py-2">
+              <ul className="mt-3 grid gap-2">
+                {drafts.slice(0, 3).map((draft) => (
+                  <li
+                    key={draft.draftId}
+                    className="rounded-lg border border-line px-3 py-2 text-sm"
+                  >
                     <p className="font-medium">
                       {copy.draftLabel.replace('{touch}', String(draft.touch))}
                     </p>
                     <p>{draft.subject}</p>
                     <p className="text-xs text-ink-muted">
-                      {copy.draftCreated.replace(
-                        '{date}',
-                        new Date(draft.createdAt).toLocaleString(),
-                      )}
+                      {copy.draftCreated.replace('{date}', formatDate(draft.createdAt))}
                     </p>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-xs text-ink-muted">{copy.noDraft}</p>
+              <p className="mt-3 text-sm text-ink-muted">{copy.noDraft}</p>
             )}
-            {outreachNotice ? (
-              <p className="text-xs text-ink-muted" role="status">
-                {outreachNotice}
-              </p>
-            ) : null}
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Select
-              defaultValue=""
-              onChange={(event) => {
-                if (event.target.value)
-                  void sendJson(`/api/prospects/${prospect.prospectId}/outcome`, 'POST', {
-                    outcome: event.target.value,
-                  }).then(() => response.refresh());
-              }}
-              aria-label={copy.outcome}
-            >
-              <option value="">{copy.outcome}</option>
-              {OUTCOMES.map((outcome) => (
-                <option key={outcome} value={outcome}>
-                  {label(outcome, copy.outcomeLabels)}
-                </option>
-              ))}
-            </Select>
-            <Button variant="secondary" onClick={() => void deleteRecord()}>
-              <Trash2 className="size-4" aria-hidden="true" />
-              {copy.delete}
-            </Button>
-          </div>
+          {outreachNotice ? (
+            <p className="mt-3 text-sm text-ink-muted" role="status">
+              {outreachNotice}
+            </p>
+          ) : null}
         </Card>
-        <Card
-          id="history"
-          title={copy.history}
-          actions={<History className="size-4 text-ink-muted" aria-hidden="true" />}
-        >
-          {audits.length > 0 ? (
-            <div className="mb-4 space-y-2 border-b border-line pb-4">
-              {audits.map((audit) => (
-                <div
-                  key={audit.auditId}
-                  className="flex items-center justify-between rounded-lg border border-line px-3 py-2 text-sm hover:border-accent/50"
-                >
-                  <Link
-                    className="min-w-0 hover:underline"
-                    to={`/audits/${encodeURIComponent(audit.auditId)}`}
+
+        <Card id="actions">
+          <details
+            open={
+              recommendation?.action === 'review-prospect' ||
+              recommendation?.action === 'record-outcome'
+            }
+          >
+            <summary className="cursor-pointer text-sm font-semibold text-ink">
+              {copy.allActions}
+            </summary>
+            <div className="mt-4 grid gap-5">
+              <div>
+                <p className="text-sm font-medium text-ink">{copy.actions}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    disabled={!primaryWebsite || outreachBusy !== null}
+                    isLoading={outreachBusy === 'scan-quick-check'}
+                    onClick={() => void launchScan('quick-check')}
                   >
-                    <span className="font-medium">
-                      {copy.auditKindLabels[audit.kind] ?? strings.common.vocabularyFallback}
-                    </span>
-                    <span className="ml-2 text-ink-muted">{audit.siteUrl}</span>
-                  </Link>
-                  <span className="flex items-center gap-2">
-                    <span className="text-xs text-ink-muted">
-                      {new Date(audit.startedAt).toLocaleString()}
-                    </span>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      disabled={outreachBusy !== null}
-                      isLoading={outreachBusy === `detach-${audit.auditId}`}
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        void detachAudit(audit.auditId);
-                      }}
-                    >
-                      {copy.detachAudit}
-                    </Button>
-                  </span>
+                    {copy.quick}
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={!primaryWebsite || outreachBusy !== null}
+                    isLoading={outreachBusy === 'scan-prospecting-audit'}
+                    onClick={() => void launchScan('prospecting-audit')}
+                  >
+                    {copy.prospecting}
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={!primaryWebsite || outreachBusy !== null}
+                    isLoading={outreachBusy === 'scan-full-audit'}
+                    onClick={() => void launchScan('full-audit')}
+                  >
+                    {copy.fullAudit}
+                  </Button>
                 </div>
-              ))}
-            </div>
-          ) : null}
-          {previews.length > 0 ? (
-            <div className="mb-4 space-y-2 border-b border-line pb-4">
-              {previews.map((preview) => (
-                <div
-                  key={preview.previewId}
-                  className="flex items-center justify-between rounded-lg border border-line px-3 py-2 text-sm"
+              </div>
+              <div className="border-t border-line pt-4">
+                <p className="text-sm font-medium text-ink">{copy.outreach}</p>
+                <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                  {(
+                    [
+                      ['preview', copy.preview],
+                      ['first-email', copy.firstEmail],
+                      ['follow-up', copy.followUp],
+                    ] as const
+                  ).map(([key, title]) => {
+                    const action = gateFor(key);
+                    const available = action?.state === 'available';
+                    return (
+                      <div key={key} className="rounded-lg border border-line px-3 py-2 text-sm">
+                        <div className="flex items-center justify-between gap-2">
+                          <span>{title}</span>
+                          <Badge tone={available ? 'accent' : 'neutral'}>
+                            {available ? copy.ready : copy.blocked}
+                          </Badge>
+                        </div>
+                        {!available ? (
+                          <p className="mt-1 text-xs text-ink-muted">{gateReason(key)}</p>
+                        ) : null}
+                        <Button
+                          className="mt-2"
+                          size="sm"
+                          variant="secondary"
+                          disabled={!available || outreachBusy !== null}
+                          isLoading={outreachBusy === key}
+                          onClick={() =>
+                            void (key === 'preview'
+                              ? publishPreview()
+                              : key === 'first-email'
+                                ? runFirstEmail()
+                                : runFollowUp())
+                          }
+                        >
+                          {key === 'preview' ? copy.publishPreview : title}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 border-t border-line pt-4">
+                <Select
+                  defaultValue=""
+                  onChange={(event) => {
+                    if (event.target.value) void recordOutcome(event.target.value);
+                  }}
+                  aria-label={copy.outcome}
                 >
-                  <span>
-                    <span className="font-medium">
-                      {copy.previewStatusLabels[preview.status] ??
-                        strings.common.vocabularyFallback}
-                    </span>
-                    <span className="ml-2 text-ink-muted">
-                      {new Date(preview.publishedAt).toLocaleString()}
-                    </span>
-                  </span>
-                  <span className="text-xs text-ink-muted">{preview.previewId}</span>
+                  <option value="">{copy.outcome}</option>
+                  {OUTCOMES.map((outcome) => (
+                    <option key={outcome} value={outcome}>
+                      {label(outcome, copy.outcomeLabels)}
+                    </option>
+                  ))}
+                </Select>
+                <Button variant="danger" onClick={() => void deleteRecord()}>
+                  <Trash2 className="size-4" aria-hidden="true" />
+                  {copy.delete}
+                </Button>
+              </div>
+              <details className="border-t border-line pt-4">
+                <summary className="cursor-pointer text-sm font-medium text-ink">
+                  {copy.statusCorrection}
+                </summary>
+                <p className="mt-2 text-xs text-ink-muted">{copy.statusCorrectionHint}</p>
+                <div className="mt-2 max-w-xs">
+                  <Select
+                    value={prospect.status}
+                    disabled={outreachBusy !== null}
+                    onChange={(event) => void changeStatus(event.target.value)}
+                    aria-label={copy.statusAria}
+                  >
+                    {STATUSES.map((status) => (
+                      <option key={status} value={status}>
+                        {label(status, copy.statusLabels)}
+                      </option>
+                    ))}
+                  </Select>
                 </div>
-              ))}
+              </details>
             </div>
-          ) : null}
-          {prospect.events.length > 0 ? (
+          </details>
+        </Card>
+
+        <Card id="recent-activity" title={copy.recentActivity}>
+          {recentEvents.length > 0 ? (
             <ol className="space-y-3">
-              {prospect.events.map((event) => (
+              {recentEvents.map((event) => (
                 <li key={event.eventId} className="border-l-2 border-line pl-3 text-sm">
                   <p className="font-medium">
                     {copy.eventLabels[event.type] ?? strings.common.vocabularyFallback}
                   </p>
                   <p className="text-xs text-ink-muted">
-                    {new Date(event.at).toLocaleString()} · {event.actor}
+                    {formatDate(event.at)} · {event.actor}
                   </p>
                 </li>
               ))}
@@ -701,7 +927,117 @@ export function ProspectHubDetailPage(): JSX.Element {
             <p className="text-sm text-ink-muted">{copy.noEvents}</p>
           )}
         </Card>
+
+        <Card
+          id="history"
+          title={copy.history}
+          actions={<History className="size-4 text-ink-muted" aria-hidden="true" />}
+        >
+          <details>
+            <summary className="cursor-pointer text-sm font-medium text-ink">
+              {copy.fullHistory}
+            </summary>
+            <div className="mt-4 grid gap-4">
+              <div>
+                <p className="mb-2 text-xs text-ink-muted">{copy.websites}</p>
+                {audits.length > 0 ? (
+                  <div className="grid gap-2">
+                    {audits.map((audit) => (
+                      <div
+                        key={audit.auditId}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line px-3 py-2 text-sm"
+                      >
+                        <Link
+                          className="min-w-0 hover:underline"
+                          to={`/audits/${encodeURIComponent(audit.auditId)}`}
+                        >
+                          <span className="font-medium">
+                            {copy.auditKindLabels[audit.kind] ?? strings.common.vocabularyFallback}
+                          </span>
+                          <span className="ml-2 text-ink-muted">{audit.siteUrl}</span>
+                        </Link>
+                        <span className="flex items-center gap-2">
+                          <span className="text-xs text-ink-muted">
+                            {formatDate(audit.startedAt)}
+                          </span>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            disabled={outreachBusy !== null}
+                            isLoading={outreachBusy === `detach-${audit.auditId}`}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              void detachAudit(audit.auditId);
+                            }}
+                          >
+                            {copy.detachAudit}
+                          </Button>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-ink-muted">{copy.notProvided}</p>
+                )}
+              </div>
+              <div>
+                <p className="mb-2 text-xs text-ink-muted">{copy.preview}</p>
+                {previews.length > 0 ? (
+                  <div className="grid gap-2">
+                    {previews.map((preview) => (
+                      <div
+                        key={preview.previewId}
+                        className="rounded-lg border border-line px-3 py-2 text-sm"
+                      >
+                        <span className="font-medium">
+                          {copy.previewStatusLabels[preview.status] ??
+                            strings.common.vocabularyFallback}
+                        </span>
+                        <span className="ml-2 text-xs text-ink-muted">
+                          {formatDate(preview.publishedAt)}
+                        </span>
+                        <span className="ml-2 text-xs text-ink-muted">{preview.previewId}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-ink-muted">{copy.notProvided}</p>
+                )}
+              </div>
+              <div>
+                <p className="mb-2 text-xs text-ink-muted">{copy.recentActivity}</p>
+                {prospect.events.length > 0 ? (
+                  <ol className="space-y-3">
+                    {prospect.events.map((event) => (
+                      <li key={event.eventId} className="border-l-2 border-line pl-3 text-sm">
+                        <p className="font-medium">
+                          {copy.eventLabels[event.type] ?? strings.common.vocabularyFallback}
+                        </p>
+                        <p className="text-xs text-ink-muted">
+                          {formatDate(event.at)} · {event.actor}
+                        </p>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="text-sm text-ink-muted">{copy.noEvents}</p>
+                )}
+              </div>
+            </div>
+          </details>
+        </Card>
       </div>
     </main>
+  );
+}
+
+function SummaryField({ label: title, value }: { label: string; value: string }): JSX.Element {
+  return (
+    <div>
+      <dt className="text-xs text-ink-muted">{title}</dt>
+      <dd className="mt-1 text-ink">{value}</dd>
+    </div>
   );
 }

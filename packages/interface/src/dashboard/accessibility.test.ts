@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { axe } from 'vitest-axe';
 import { I18nProvider } from './i18n/provider';
 import { DirectoryPage } from './routes/directory';
+import { NewScanPage } from './routes/new-scan';
 import { ProspectHubDetailPage } from './routes/prospect-hub-detail';
 import { ProspectHubListPage } from './routes/prospect-hub-list';
 
@@ -175,6 +176,23 @@ describe('prospect dashboard accessibility contract', () => {
     await expectNoAxeViolations(container);
     root.unmount();
   });
+
+  it.each(['fr', 'en'] as const)(
+    'New scan is axe-clean with three intents in %s',
+    async (language) => {
+      stubRoutes();
+      const { container, root } = await renderPage(
+        createElement(NewScanPage),
+        '/scans/new',
+        'scans/new',
+        language,
+      );
+      await expectNoAxeViolations(container);
+      const text = container.textContent ?? '';
+      expect(text).not.toMatch(/light audit|audit léger|batch/i);
+      root.unmount();
+    },
+  );
 
   it.each(['fr', 'en'] as const)('prospect detail is axe-clean in %s', async (language) => {
     stubRoutes();

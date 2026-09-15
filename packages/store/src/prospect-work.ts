@@ -32,7 +32,7 @@ export interface ProspectTodoRow {
 export type ProspectWorkAction =
   | 'review-audit'
   | 'review-draft'
-  | 'review-reply'
+  | 'record-outcome'
   | 'create-follow-up'
   | 'create-first-email'
   | 'prepare-audit'
@@ -196,10 +196,10 @@ function recommendation(
   websiteSuppressed: boolean,
   emailSuppressed: boolean,
 ): ProspectWorkRecommendation | undefined {
+  if (TERMINAL_PROSPECT_STATUSES.has(prospect.status)) return undefined;
   if (item !== undefined) {
     return { action: item.action as ProspectWorkAction, href: item.href };
   }
-  if (TERMINAL_PROSPECT_STATUSES.has(prospect.status)) return undefined;
   if (websiteSuppressed || emailSuppressed) {
     return {
       action: 'review-prospect',
@@ -279,9 +279,9 @@ export function deriveProspectWork(
     items.push({
       kind: 'reply',
       subject: prospect.name,
-      action: 'review-reply',
+      action: 'record-outcome',
       prospectId: prospect.prospectId,
-      href: encodedProspectHref(prospect.prospectId, 'history'),
+      href: encodedProspectHref(prospect.prospectId, 'actions'),
       since: new Date(thread.updatedAt).toISOString(),
     });
   }

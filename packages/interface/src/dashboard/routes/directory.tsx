@@ -1,13 +1,11 @@
 import { useState } from 'react';
 import type { JSX } from 'react';
-import { ArrowLeft, Search } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router';
 import { PageHeader, PAGE_WIDTH } from '../components/page-header';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { EmptyState } from '../components/ui/empty-state';
-import { Input } from '../components/ui/input';
-import { Select } from '../components/ui/select';
 import {
   Table,
   TableBody,
@@ -24,57 +22,27 @@ import {
   type DirectoryResponse,
   type DirectoryRow,
 } from './prospect-hub-model';
+import { ProspectFilterBar } from './prospect-filter-bar';
+import {
+  clearProspectFilters,
+  parseProspectFilters,
+  setProspectPage,
+  updateProspectFilter,
+} from './prospect-filter-model';
 
 export function DirectoryPage(): JSX.Element {
   const { strings } = useI18n();
   const copy = strings.prospectHub.directory;
   const [searchParams, setSearchParams] = useSearchParams();
-  const q = searchParams.get('q') ?? '';
-  const sector = searchParams.get('sector') ?? '';
-  const stars = searchParams.get('stars') ?? '';
-  const groupStatus = searchParams.get('groupStatus') ?? '';
-  const websiteKind = searchParams.get('websiteKind') ?? '';
-  const department = searchParams.get('department') ?? '';
-  const roomsMin = searchParams.get('roomsMin') ?? '';
-  const roomsMax = searchParams.get('roomsMax') ?? '';
-  const parsedPage = Number(searchParams.get('page') ?? '1');
-  const page = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
-  const updateFilter = (key: string, value: string): void => {
-    setSearchParams(
-      (current) => {
-        const next = new URLSearchParams(current);
-        if (value.trim()) next.set(key, value.trim());
-        else next.delete(key);
-        next.set('page', '1');
-        return next;
-      },
-      { replace: true },
-    );
+  const filterState = parseProspectFilters(searchParams);
+  const updateFilter = (key: Parameters<typeof updateProspectFilter>[1], value: string): void => {
+    setSearchParams((current) => updateProspectFilter(current, key, value), { replace: true });
   };
   const setPage = (nextPage: number): void => {
-    setSearchParams(
-      (current) => {
-        const next = new URLSearchParams(current);
-        next.set('page', String(Math.max(1, nextPage)));
-        return next;
-      },
-      { replace: true },
-    );
+    setSearchParams((current) => setProspectPage(current, nextPage), { replace: true });
   };
   const [selected, setSelected] = useState<string[]>([]);
-  const response = useApi<DirectoryResponse>(
-    buildDirectoryPath({
-      q,
-      sector,
-      stars,
-      groupStatus,
-      websiteKind,
-      department,
-      roomsMin,
-      roomsMax,
-      page,
-    }),
-  );
+  const response = useApi<DirectoryResponse>(buildDirectoryPath(filterState));
   const rows = response.data?.rows ?? [];
   const toggle = (id: string): void =>
     setSelected((current) =>
@@ -101,87 +69,14 @@ export function DirectoryPage(): JSX.Element {
           </Link>
         }
       />
-      <Card className="mb-5">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <label className="relative">
-            <Search
-              className="pointer-events-none absolute left-3 top-2.5 size-4 text-ink-muted"
-              aria-hidden="true"
-            />
-            <Input
-              className="pl-9"
-              value={q}
-              onChange={(event) => updateFilter('q', event.target.value)}
-              placeholder={copy.searchPlaceholder}
-              aria-label={copy.searchAria}
-            />
-          </label>
-          <Input
-            value={sector}
-            onChange={(event) => updateFilter('sector', event.target.value)}
-            placeholder={strings.prospectHub.list.sectorPlaceholder}
-            aria-label={copy.sectorAria}
-          />
-          <Select
-            value={stars}
-            onChange={(event) => updateFilter('stars', event.target.value)}
-            aria-label={copy.starsAria}
-          >
-            <option value="">{copy.allStars}</option>
-            {[1, 2, 3, 4, 5].map((value) => (
-              <option key={value} value={value}>
-                {copy.starOption.replace('{count}', String(value))}
-              </option>
-            ))}
-          </Select>
-          <Select
-            value={groupStatus}
-            onChange={(event) => updateFilter('groupStatus', event.target.value)}
-            aria-label={copy.groupAria}
-          >
-            <option value="">{copy.allGroups}</option>
-            {Object.entries(copy.groupLabels).map(([value, text]) => (
-              <option key={value} value={value}>
-                {text}
-              </option>
-            ))}
-          </Select>
-          <Select
-            value={websiteKind}
-            onChange={(event) => updateFilter('websiteKind', event.target.value)}
-            aria-label={copy.websiteAria}
-          >
-            <option value="">{copy.allWebsiteKinds}</option>
-            {Object.entries(copy.websiteKindLabels).map(([value, text]) => (
-              <option key={value} value={value}>
-                {text}
-              </option>
-            ))}
-          </Select>
-          <Input
-            value={department}
-            onChange={(event) => updateFilter('department', event.target.value)}
-            placeholder={copy.departmentPlaceholder}
-            aria-label={copy.departmentAria}
-          />
-          <Input
-            type="number"
-            min="0"
-            value={roomsMin}
-            onChange={(event) => updateFilter('roomsMin', event.target.value)}
-            placeholder={copy.roomsMinPlaceholder}
-            aria-label={copy.roomsMinAria}
-          />
-          <Input
-            type="number"
-            min="0"
-            value={roomsMax}
-            onChange={(event) => updateFilter('roomsMax', event.target.value)}
-            placeholder={copy.roomsMaxPlaceholder}
-            aria-label={copy.roomsMaxAria}
-          />
-        </div>
-      </Card>
+      <ProspectFilterBar
+        source="directory"
+        state={filterState}
+        onChange={updateFilter}
+        onClear={() =>
+          setSearchParams((current) => clearProspectFilters(current), { replace: true })
+        }
+      />
       {response.error ? (
         <EmptyState title={copy.errorTitle} description={response.error} />
       ) : (
@@ -262,16 +157,18 @@ export function DirectoryPage(): JSX.Element {
             <Button
               size="sm"
               variant="secondary"
-              disabled={page <= 1}
-              onClick={() => setPage(page - 1)}
+              disabled={filterState.page <= 1}
+              onClick={() => setPage(filterState.page - 1)}
             >
               {copy.previous}
             </Button>
             <Button
               size="sm"
               variant="secondary"
-              disabled={rows.length < 50}
-              onClick={() => setPage(page + 1)}
+              disabled={
+                filterState.page * (response.data?.pageSize ?? 50) >= (response.data?.total ?? 0)
+              }
+              onClick={() => setPage(filterState.page + 1)}
             >
               {copy.next}
             </Button>

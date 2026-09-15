@@ -627,6 +627,41 @@ export interface DashboardStrings {
    *  operator-facing label in the new directory, list, results, and detail
    *  routes lives here before its English counterpart is added. */
   prospectHub: {
+    filters: {
+      searchPlaceholder: string;
+      searchAria: string;
+      advanced: string;
+      activeFilters: string;
+      removeFilter: string;
+      clearAll: string;
+      sectorPlaceholder: string;
+      sectorAria: string;
+      starsAria: string;
+      allStars: string;
+      starOption: string;
+      groupAria: string;
+      allGroups: string;
+      websiteAria: string;
+      allWebsiteKinds: string;
+      departmentPlaceholder: string;
+      departmentAria: string;
+      communePlaceholder: string;
+      communeAria: string;
+      postcodePlaceholder: string;
+      postcodeAria: string;
+      roomsMinPlaceholder: string;
+      roomsMinAria: string;
+      roomsMaxPlaceholder: string;
+      roomsMaxAria: string;
+      scanAria: string;
+      allScans: string;
+      withScan: string;
+      withoutScan: string;
+      activityAria: string;
+      allActivity: string;
+      activeOnly: string;
+      inactiveOnly: string;
+    };
     list: {
       eyebrow: string;
       title: string;
@@ -679,6 +714,9 @@ export interface DashboardStrings {
       previous: string;
       next: string;
       starOption: string;
+      viewAria: string;
+      allView: string;
+      resultsView: string;
     };
     directory: {
       eyebrow: string;
@@ -743,10 +781,29 @@ export interface DashboardStrings {
       email: string;
       addEmail: string;
       actions: string;
+      summary: string;
+      editRecord: string;
+      allActions: string;
+      recommended: string;
+      completed: string;
+      noRecommendation: string;
+      recommendationActions: Record<string, string>;
+      recommendationReasons: Record<string, string>;
       quick: string;
+      fullAudit: string;
       prospecting: string;
       outcome: string;
       history: string;
+      fullHistory: string;
+      recentActivity: string;
+      statusCorrection: string;
+      statusCorrectionHint: string;
+      websites: string;
+      addWebsite: string;
+      addWebsitePlaceholder: string;
+      emailList: string;
+      notProvided: string;
+      roomsSummary: string;
       delete: string;
       confirm: string;
       info: string;

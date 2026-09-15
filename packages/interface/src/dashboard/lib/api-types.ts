@@ -29,7 +29,7 @@ export interface ScanCreated {
  * i18n table (aTraiter.actions). */
 export type TodoRowKind = 'draft' | 'reply' | 'follow-up' | 'first-email' | 'audit-input';
 export type TodoRowAction =
-  'review-draft' | 'review-reply' | 'create-follow-up' | 'create-first-email' | 'review-audit';
+  'review-draft' | 'record-outcome' | 'create-follow-up' | 'create-first-email' | 'review-audit';
 
 /** One row of GET /api/prospect-hub/todo (routes/prospect-hub.ts). Field names are the API's
  *  persisted contract, not UI vocabulary; never respell them. */

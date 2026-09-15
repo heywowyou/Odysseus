@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ListChecks, Mail, Menu, ShieldCheck, Wrench, X } from 'lucide-react';
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { Brand } from './brand';
@@ -21,6 +21,13 @@ export function AppShell() {
   // remounts. Hidden on error or zero, so the badge never invents work.
   const todo = useApi<TodoPage>('/api/prospect-hub/todo');
   const inboxCount = todo.data?.rows.length;
+  const previousPathname = useRef(pathname);
+
+  useEffect(() => {
+    if (previousPathname.current === pathname) return;
+    previousPathname.current = pathname;
+    todo.refresh();
+  }, [pathname, todo.refresh]);
 
   /* The shell exposes only the three operational destinations. Directory and
      results are modes inside Prospects, while old URLs remain handled by the
