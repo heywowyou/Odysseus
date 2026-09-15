@@ -106,6 +106,8 @@ interface ProspectHubDetail extends ProspectHubRow {
   fieldOrigins: Record<string, string>;
   audits?: ProspectAudit[];
   previews?: ProspectPreview[];
+  /** A role address a scan read on the site, with the page it came from. */
+  contactSuggestion?: { address: string; sourceUrl: string } | null;
   events: ProspectEvent[];
   work?: ProspectWorkSummary;
   thread?: ProspectThread | null;
@@ -302,15 +304,22 @@ export function ProspectHubDetailPage(): JSX.Element {
     }
   };
 
-  const saveEmail = async (): Promise<void> => {
-    const address = email.trim().toLowerCase();
+  const saveEmail = async (
+    suggestion?: NonNullable<ProspectHubDetail['contactSuggestion']>,
+  ): Promise<void> => {
+    const address = (suggestion?.address ?? email).trim().toLowerCase();
     if (!address || prospect.emails.some((item) => item.address === address)) return;
     setSaving(true);
     try {
       await sendJson(`/api/prospects/${prospect.prospectId}`, 'PATCH', {
-        emails: [...prospect.emails, { address, origin: 'operator' }],
+        emails: [
+          ...prospect.emails,
+          suggestion === undefined
+            ? { address, origin: 'operator' }
+            : { address, origin: 'site-discovery', attestation: suggestion.sourceUrl },
+        ],
       });
-      setEmail('');
+      if (suggestion === undefined) setEmail('');
       refreshAll();
     } finally {
       setSaving(false);
@@ -820,6 +829,31 @@ export function ProspectHubDetailPage(): JSX.Element {
                     <li className="text-sm text-ink-muted">{copy.noSite}</li>
                   )}
                 </ul>
+                {prospect.contactSuggestion ? (
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-md border border-line p-3 text-sm">
+                    <p>
+                      {copy.contactSuggestion.replace(
+                        '{address}',
+                        prospect.contactSuggestion.address,
+                      )}{' '}
+                      <a
+                        href={prospect.contactSuggestion.sourceUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-ink-muted underline"
+                      >
+                        {copy.contactSuggestionSource}
+                      </a>
+                    </p>
+                    <Button
+                      variant="secondary"
+                      isLoading={saving}
+                      onClick={() => void saveEmail(prospect.contactSuggestion ?? undefined)}
+                    >
+                      {copy.contactSuggestionAccept}
+                    </Button>
+                  </div>
+                ) : null}
                 <div className="mt-2 grid gap-2 md:grid-cols-[1fr_auto]">
                   <Input
                     value={website}

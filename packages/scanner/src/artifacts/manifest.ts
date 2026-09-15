@@ -12,6 +12,7 @@ import type {
 import { findWorkspaceRoot } from '../config.js';
 import type { CrawlResult } from '../crawl.js';
 import type { CollectedToolVersions } from './versions.js';
+import type { SiteRoleContact } from '../role-contact.js';
 
 let cachedGitBuildId: string | undefined;
 
@@ -60,7 +61,7 @@ export interface BuildManifestInput {
   config: AuditConfigSnapshot;
   crawl: CrawlResult;
   pages: ManifestPageEntry[];
-  siteSignals?: AuditManifestSiteSignals;
+  siteSignals?: AuditManifestSiteSignals & { roleContact?: SiteRoleContact };
   cruxFieldData?: CruxFieldDataResult;
   privacySecurityCoverage?: PrivacySecurityCoverage;
   translationClusters?: TranslationCluster[];

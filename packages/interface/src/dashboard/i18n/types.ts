@@ -794,6 +794,9 @@ export interface DashboardStrings {
       saveSite: string;
       email: string;
       addEmail: string;
+      contactSuggestion: string;
+      contactSuggestionSource: string;
+      contactSuggestionAccept: string;
       actions: string;
       summary: string;
       editRecord: string;

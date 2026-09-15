@@ -575,6 +575,28 @@ describe('one preview per outreach attempt', () => {
     });
   });
 
+  it('suggests a role address a scan read on the site until the prospect carries it', async () => {
+    const roleContact = { address: 'contact@hotel.fr', sourceUrl: 'https://hotel.fr/contact' };
+    vi.mocked(listProspectAudits).mockResolvedValue([
+      { auditId: 'a-2', siteUrl: 'https://hotel.fr' },
+      { auditId: 'a-1', siteUrl: 'https://hotel.fr', siteSignals: { roleContact } },
+    ] as never);
+    vi.mocked(getProspectHub).mockResolvedValue({ prospectId: 'p-1', emails: [] } as never);
+    const suggested = (await handle('/api/prospects/p-1')).body as Record<string, unknown>;
+    expect(suggested['contactSuggestion']).toEqual(roleContact);
+    expect(suggested['audits']).toEqual([
+      { auditId: 'a-2', siteUrl: 'https://hotel.fr' },
+      { auditId: 'a-1', siteUrl: 'https://hotel.fr' },
+    ]);
+
+    vi.mocked(getProspectHub).mockResolvedValue({
+      prospectId: 'p-1',
+      emails: [{ address: 'contact@hotel.fr', origin: 'site-discovery' }],
+    } as never);
+    const accepted = (await handle('/api/prospects/p-1')).body as Record<string, unknown>;
+    expect(accepted['contactSuggestion']).toBeNull();
+  });
+
   it('revokes a live preview object first, then its record', async () => {
     vi.mocked(listOutreachPreviews).mockResolvedValue([
       { previewId: 'pv-1', objectKey: 'k.html', status: 'live' },

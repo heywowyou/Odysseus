@@ -343,6 +343,7 @@ const siteSignalsSchema = new Schema(
     siren: { type: String },
     mentionsLegalesPageUrl: { type: String },
     siteName: { type: String },
+    roleContact: { type: new Schema({ address: String, sourceUrl: String }, { _id: false }) },
   },
   { _id: false },
 );

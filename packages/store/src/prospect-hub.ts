@@ -492,15 +492,29 @@ export async function listProspectEvents(
     .lean<ProspectEventDocument[]>();
 }
 
+type ProspectAuditRow = Pick<
+  AuditDocument,
+  'auditId' | 'siteUrl' | 'kind' | 'startedAt' | 'finishedAt'
+> & {
+  siteSignals?: { roleContact?: { address: string; sourceUrl: string } };
+};
+
 export async function listProspectAudits(
   connection: Connection,
   prospectId: string,
-): Promise<Pick<AuditDocument, 'auditId' | 'siteUrl' | 'kind' | 'startedAt' | 'finishedAt'>[]> {
+): Promise<ProspectAuditRow[]> {
   return createAuditModel(connection)
     .find({ prospectId })
-    .select({ auditId: 1, siteUrl: 1, kind: 1, startedAt: 1, finishedAt: 1 })
+    .select({
+      auditId: 1,
+      siteUrl: 1,
+      kind: 1,
+      startedAt: 1,
+      finishedAt: 1,
+      'siteSignals.roleContact': 1,
+    })
     .sort({ startedAt: -1 })
-    .lean<Pick<AuditDocument, 'auditId' | 'siteUrl' | 'kind' | 'startedAt' | 'finishedAt'>[]>();
+    .lean<ProspectAuditRow[]>();
 }
 
 export async function listDirectory(

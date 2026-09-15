@@ -52,6 +52,7 @@ import {
   recordRenderedResourceTotals,
 } from './checks/rendered-cost-profile.js';
 import type { RenderedCostProfile } from './full-audit-plan.js';
+import { findPublishedRoleContact, type PublishedRoleContact } from './role-contact.js';
 import type { CheckExecutionOutcome, CheckId } from './check-scope-coverage.js';
 import type { PageWorkGuard } from './page-work-guard.js';
 
@@ -144,6 +145,8 @@ export interface PageScanResult {
   transactionalFlowAmbiguities?: TransactionalFlowAmbiguity[];
   headMetadata?: HeadMetadataExtraction;
   headMetadataError?: string;
+  /** The best role address this page publishes on the site's own domain. */
+  roleContact?: PublishedRoleContact;
   sitemapCheck?: SitemapCheckResult & {
     crawledUrls: string[];
     discoveredUrls: string[];
@@ -319,6 +322,7 @@ export async function runRenderedAnalysis(
   let transactionalFlowAmbiguities: TransactionalFlowAmbiguity[] | undefined;
   let headMetadataResult: HeadMetadataExtraction | undefined;
   let headMetadataError: string | undefined;
+  let roleContactResult: PublishedRoleContact | undefined;
   let canonicalTargetResult: CanonicalTargetCheckResult | undefined;
   let mixedContentResult: MixedContentExtraction | undefined;
   let mixedContentError: string | undefined;
@@ -455,6 +459,10 @@ export async function runRenderedAnalysis(
           headMetadataError = toErrorMessage(error);
           checkOutcomes['head-metadata'] = 'failed';
         }
+
+        // Best effort: a missed address only leaves the operator to find it
+        // by hand, so a failure here is not a check outcome.
+        roleContactResult = await findPublishedRoleContact(page, url).catch(() => undefined);
 
         // Only meaningful once headMetadataResult exists and names
         // exactly one canonical URL - zero means nothing to check, more
@@ -623,6 +631,7 @@ export async function runRenderedAnalysis(
   if (transactionalFlowAmbiguities !== undefined)
     result.transactionalFlowAmbiguities = transactionalFlowAmbiguities;
   if (headMetadataResult !== undefined) result.headMetadata = headMetadataResult;
+  if (roleContactResult !== undefined) result.roleContact = roleContactResult;
   if (headMetadataError !== undefined) result.headMetadataError = headMetadataError;
   if (canonicalTargetResult !== undefined) result.canonicalTarget = canonicalTargetResult;
   if (mixedContentResult !== undefined) result.mixedContent = mixedContentResult;

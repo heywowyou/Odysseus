@@ -294,9 +294,20 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
         findOutreachThreadByProspect(connection, prospect.prospectId),
         listOutreachDrafts(connection, { prospectId: prospect.prospectId, limit: 20 }),
       ]);
+      const audits = await listProspectAudits(connection, prospect.prospectId);
+      // The newest scan that read a role address on the site's own domain;
+      // offered only while the prospect does not already carry it.
+      const roleContact = audits.find((audit) => audit.siteSignals?.roleContact !== undefined)
+        ?.siteSignals?.roleContact;
+      const contactSuggestion =
+        roleContact === undefined ||
+        prospect.emails.some((item) => item.address.toLowerCase() === roleContact.address)
+          ? null
+          : roleContact;
       sendJson(res, 200, {
         ...prospect,
-        audits: await listProspectAudits(connection, prospect.prospectId),
+        audits: audits.map(({ siteSignals: _siteSignals, ...audit }) => audit),
+        contactSuggestion,
         events: await listProspectEvents(connection, prospect.prospectId),
         previews: (
           await listOutreachPreviews(connection, {

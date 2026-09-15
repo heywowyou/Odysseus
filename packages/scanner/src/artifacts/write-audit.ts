@@ -47,6 +47,7 @@ import { buildAuditDir, buildPageDir } from './paths.js';
 import { collectToolVersions } from './versions.js';
 import { buildManifest } from './manifest.js';
 import { readPageScanJson, writePageScanJson } from './page-scan-io.js';
+import { selectSiteRoleContact, type SiteRoleContact } from '../role-contact.js';
 
 export interface WriteAuditArtifactsInput {
   kind: ManifestKind;
@@ -401,7 +402,7 @@ function findOgTitleSiteName(
 
 function buildSiteSignals(
   siteResult: WriteAuditArtifactsInput['siteResult'],
-): AuditManifestSiteSignals {
+): AuditManifestSiteSignals & { roleContact?: SiteRoleContact } {
   const transactionalFlowEvidence = siteResult.pages.flatMap(
     (page) => page.transactionalFlowEvidence ?? [],
   );
@@ -437,6 +438,7 @@ function buildSiteSignals(
   const recurringSiteName = deriveSiteNameFromTitleFrequency(
     dedupeByTitleVotingIdentity(siteResult.pages).map((page) => page.headMetadata?.title ?? ''),
   );
+  const roleContact = selectSiteRoleContact(siteResult.pages.map((page) => page.roleContact));
   const siteName =
     explicitSiteName ??
     ogTitleSiteName ??
@@ -455,6 +457,9 @@ function buildSiteSignals(
     ...(siren !== undefined ? { siren } : {}),
     ...(mentionsLegalesPageUrl !== undefined ? { mentionsLegalesPageUrl } : {}),
     ...(siteName !== undefined ? { siteName } : {}),
+    ...(roleContact !== undefined
+      ? { roleContact: { address: roleContact.address, sourceUrl: roleContact.sourceUrl } }
+      : {}),
   };
 }
 
