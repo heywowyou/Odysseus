@@ -82,16 +82,6 @@ export type WritingCandidateResponse =
   | { status: 'failed'; reason: string; createdAt: string }
   | { status: 'selected'; pair: AnalysisPairRefResponse; approvedAt: string };
 
-/** POST .../regenerate-writing (plan 045 section 2.1): the pair is approved
- *  and rendered automatically, so the response carries both outcomes in one
- *  round trip instead of the client chaining a separate approve call. */
-export interface RegenerateWritingResponse {
-  candidate: { status: 'selected'; pair: AnalysisPairRefResponse; approvedAt: string };
-  analyses: { fr: string; en: string };
-  pdfs: { kind: 'generated'; reports: unknown[] } | { kind: 'refused'; reason: string };
-  replacedApprovedSelection: boolean;
-}
-
 export interface PreparationResponse {
   context: {
     situation?: SituationVocab;
