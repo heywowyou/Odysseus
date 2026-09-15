@@ -36,7 +36,11 @@ import {
 } from '../config.js';
 import { assembleOutreachDraft } from './assemble-outreach-draft.js';
 import { createConfiguredMailboxDraftAdapter } from './configured-mailbox-draft-adapter.js';
-import { createConfiguredPreviewPublisher } from './configured-preview-publisher.js';
+import {
+  createConfiguredOptOutBucket,
+  createConfiguredPreviewPublisher,
+} from './configured-preview-publisher.js';
+import { createOptOutLink, storeOptOutLink } from './opt-out-bucket.js';
 import { createInMemoryMailboxDraftAdapter } from './in-memory-mailbox-draft-adapter.js';
 import { formatHotelName } from './hotel-name.js';
 import { createMongoOutreachPreviewStoreV2 } from './mongo-outreach-preview-store-v2.js';
@@ -220,6 +224,8 @@ export async function createTouchOneDraft(
   }
 
   const links = previewLinks(getPreviewPublicBaseUrl());
+  // Personal to this recipient, so the opt-out page can prefill the address.
+  const optOutLink = createOptOutLink(getPreviewPublicBaseUrl());
   const assembled = assembleOutreachDraft({
     touch: 1,
     language: options.language,
@@ -234,7 +240,7 @@ export async function createTouchOneDraft(
     previewUrl: preview.url,
     dataOrigins: ['public-hotel-catalogue', 'public-website'],
     privacyUrl: links.privacy,
-    optOutUrl: links.optOut,
+    optOutUrl: optOutLink.url,
   });
   if (!assembled.assembled) {
     await recordFailedOutreachDraft(connection, {
@@ -284,6 +290,10 @@ export async function createTouchOneDraft(
     });
     return { configured: true, created: false, refusal: 'suppressed-before-provider' };
   }
+
+  // Written before the draft exists, so no email can carry a link whose
+  // prefill object is missing.
+  await storeOptOutLink(createConfiguredOptOutBucket(), optOutLink.token, contact.address, now);
 
   const providerDraft = await mailbox.createDraft({
     to: contact.address,

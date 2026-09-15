@@ -271,7 +271,10 @@ suppressed; no fourth touch exists.
 
 **Touch shape**, since trade-off 83: the approved templates themselves. Touch
 1 carries exactly one body link (the published preview) plus the footer's
-opt-out and privacy links; touches 2 and 3 carry no link at all. The model-era
+opt-out and privacy links; touches 2 and 3 carry no link at all. The opt-out
+link is personal (`/desinscription?t=<token>`): it prefills the recipient's
+address on the public form, whose submission reaches the blacklist through the
+bucket drop box (trade-off 89). The model-era
 word and sentence limits (`outreach-limits.ts`) are retired with the model.
 
 ---

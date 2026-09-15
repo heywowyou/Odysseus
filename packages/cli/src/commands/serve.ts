@@ -26,7 +26,7 @@ export function registerServeCommand(program: Command): void {
 
       try {
         const mongoConnection = await connectToMongo();
-        const handle = await startInterfaceServer(mongoConnection);
+        const handle = await startInterfaceServer(mongoConnection, { pollOptOutRequests: true });
         console.log(`odysseus serve: listening at ${handle.url}`);
 
         let shuttingDown = false;

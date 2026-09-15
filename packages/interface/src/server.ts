@@ -19,6 +19,7 @@ import { runQuickCheckJob } from './queue/pipeline/run-quick-check-job.js';
 import { runProspectingAuditJob } from './queue/pipeline/run-prospecting-audit-job.js';
 import { runOutreachFullScanJob } from './queue/pipeline/run-outreach-full-scan-job.js';
 import { runProspectingJob } from './queue/pipeline/run-prospecting-job.js';
+import { startOptOutPoller } from './outreach/opt-out-poller.js';
 import { runOutreachDraftBatchJob } from './queue/pipeline/run-outreach-draft-batch-job.js';
 import { runOutreachFollowupBatchJob } from './queue/pipeline/run-outreach-followup-batch-job.js';
 import {
@@ -46,6 +47,9 @@ export interface InterfaceAuthOptions {
   now?: () => number;
   sessionStore?: SessionStore;
   rateLimiter?: LoginRateLimiter;
+  /** Consume public opt-out requests from the preview bucket. Only the real
+   *  `serve` command turns this on, so tests never touch a bucket. */
+  pollOptOutRequests?: boolean;
 }
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', '::1', 'localhost']);
@@ -156,11 +160,15 @@ export async function startInterfaceServer(
     logger.info({ orphanedCount }, 'reset job(s) left running by an unclean shutdown');
   }
 
+  const stopOptOutPoller =
+    options.pollOptOutRequests === true ? startOptOutPoller(connection) : () => undefined;
+
   return {
     server,
     queue,
     url: `http://${host}:${port}`,
     async close(): Promise<void> {
+      stopOptOutPoller();
       await queue.stop();
       await new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));

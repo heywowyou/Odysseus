@@ -112,6 +112,7 @@ export {
   directoryEntryToProspectInput,
   getProspectHub,
   findProspectsByDomain,
+  findProspectsByEmail,
   listDirectory,
   listProspectTodo,
   listProspectEvents,

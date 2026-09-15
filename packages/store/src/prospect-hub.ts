@@ -247,6 +247,19 @@ export async function findProspectsByDomain(
     .lean<ProspectHubDocument[]>();
 }
 
+/** Prospects carrying this address, compared case-insensitively. Used by the
+ *  public opt-out flow, which only knows the address the visitor typed. */
+export async function findProspectsByEmail(
+  connection: Connection,
+  address: string,
+): Promise<ProspectHubDocument[]> {
+  const normalized = address.trim();
+  if (normalized === '') return [];
+  return createProspectHubModel(connection)
+    .find({ 'emails.address': new RegExp(`^${escapeRegex(normalized)}$`, 'iu') })
+    .lean<ProspectHubDocument[]>();
+}
+
 export async function listProspects(
   connection: Connection,
   filter: ProspectHubFilter = {},

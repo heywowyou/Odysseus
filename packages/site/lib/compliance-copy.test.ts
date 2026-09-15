@@ -79,6 +79,13 @@ describe('prospecting privacy page', () => {
 });
 
 describe('opt-out page', () => {
+  it('offers a one-click form that posts to the drop box', () => {
+    expect(optOut).toContain('action="/desinscription/envoyer"');
+    expect(optOut).toContain('name="email"');
+    expect(optOut).not.toContain('aucune demande n&apos;est transmise');
+    expect(optOut).not.toContain('does not submit anything automatically');
+  });
+
   it('is bilingual and offers a free mailto route', () => {
     expect(isBilingual(optOut)).toBe(true);
     expect(optOut).toContain('mailto:contact@odysseusaudit.fr');
@@ -98,11 +105,9 @@ describe('opt-out page', () => {
     expect(optOut).not.toContain('cannot be turned back into your address');
   });
 
-  it('accurately states that the button opens email rather than performing a database action', () => {
-    expect(optOut).toContain('aucune demande n&apos;est transmise automatiquement');
-    expect(optOut).toContain('does not submit anything automatically');
-    expect(optOut).not.toMatch(/<form/u);
-    expect(optOut).not.toMatch(/automatiquement retiré/u);
+  it('states that the form submits the request and is processed automatically', () => {
+    expect(optOut).toContain('traitée automatiquement dans la minute');
+    expect(optOut).toContain('processed automatically within a minute');
   });
 });
 

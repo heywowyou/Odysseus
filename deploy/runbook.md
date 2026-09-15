@@ -144,6 +144,14 @@ Fill in exactly these, leave everything else as shipped:
   explicitly prefers automatic minor upgrades over a dated snapshot pin.
 - The `ODYSSEUS_PREVIEW_BUCKET_*` block: the same Scaleway bucket values the
   local `.env` already uses.
+  The server's `serve` process also polls the bucket's `opt-out-requests/`
+  prefix once a minute and applies each public opt-out to the blacklist, so
+  this key needs list, read and delete there.
+- On Vercel (`packages/site`), one-click opt-out needs, besides the existing
+  `PREVIEW_BUCKET_*` read values, `OPT_OUT_BUCKET_ACCESS_KEY_ID` and
+  `OPT_OUT_BUCKET_SECRET_KEY`: a separate Scaleway key limited by bucket policy
+  to `PutObject` on `opt-out-requests/*`. Without them the form answers with
+  its error message and the mailto fallback still works.
 
 > STOP. Do NOT copy `ODYSSEUS_MAILBOX_*` values (the Gmail OAuth block) to
 > the server. Outreach drafting stays local by plan; a mailbox credential on

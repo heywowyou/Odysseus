@@ -4635,3 +4635,27 @@ Plan 048 required a complete prospecting audit for Prepare outreach while also
 placing the scanner behavior needed to make that contract real out of scope.
 The historical Plan 048 text remains unchanged; the runtime and current
 workflow documentation now state the implemented boundary.
+
+### 89. Public opt-out is a one-click form feeding a bucket drop box, not a public endpoint (operator decision, 2026-09-15)
+
+The opt-out page used to open a mailto and promise manual handling. It now has
+a form: the visitor submits their address and the request is applied without
+operator action. The public site (Vercel) still cannot reach Mongo and the
+private server still does not listen publicly. The site writes
+`opt-out-requests/<id>.json` into the private preview bucket with a key scoped
+to that prefix; the private `serve` process polls it once a minute, suppresses
+the address (and, through the existing store rules, its domain), records the
+`opt-out` outcome on matching prospects, revokes their live previews, closes
+their threads, then deletes the request. Every step is idempotent, so a
+failure leaves the object for the next pass.
+
+Touch 1's opt-out link carries a random token. At draft time the private side
+writes `opt-out-links/<sha256(token)>.json` holding the recipient address, so
+the page can prefill it with the site's existing read key; the address never
+appears in the URL.
+
+Rejected: a rate-limited public endpoint on the VPS (instant, but the first
+public door into the audit engine) and a shared encryption secret between the
+two deployments (a second secret to rotate for a convenience feature). The
+mailto remains as a fallback.
+

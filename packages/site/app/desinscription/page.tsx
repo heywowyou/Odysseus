@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { LanguageSection, PageHeading } from '../../lib/language';
+import { optOutStoreFromEnvironment } from '../../lib/opt-out';
 
 const description =
   'Comment demander à ne plus être contacté par Odysseus et faire retirer un aperçu en ligne.';
@@ -36,7 +37,100 @@ const MAILTO_EN =
   `mailto:contact@odysseusaudit.fr?subject=${encodeURIComponent(MAILTO_SUBJECT_EN)}` +
   `&body=${encodeURIComponent(MAILTO_BODY_EN)}`;
 
-export default function OptOutPage() {
+/** Rendered per request: the prefill depends on the link token. */
+export const dynamic = 'force-dynamic';
+
+type Status = 'envoye' | 'invalide' | 'erreur';
+
+const FORM_COPY = {
+  fr: {
+    label: 'Adresse e-mail',
+    submit: 'Ne plus être contacté',
+    envoye: 'Votre demande est enregistrée. Vous ne recevrez plus de message de notre part.',
+    invalide: 'Cette adresse e-mail ne semble pas valide. Vérifiez-la et réessayez.',
+    erreur:
+      'Votre demande n’a pas pu être transmise. Réessayez, ou écrivez à contact@odysseusaudit.fr.',
+  },
+  en: {
+    label: 'Email address',
+    submit: 'Stop being contacted',
+    envoye: 'Your request has been recorded. You will not hear from us again.',
+    invalide: 'This email address does not look valid. Please check it and try again.',
+    erreur: 'Your request could not be sent. Please try again, or email contact@odysseusaudit.fr.',
+  },
+} as const;
+
+async function prefillFor(token: string | undefined): Promise<string> {
+  if (token === undefined || token === '') return '';
+  try {
+    return (await optOutStoreFromEnvironment().addressForToken(token)) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function OptOutForm({
+  lang,
+  address,
+  token,
+  status,
+}: {
+  lang: 'fr' | 'en';
+  address: string;
+  token: string | undefined;
+  status: Status | undefined;
+}) {
+  const copy = FORM_COPY[lang];
+  const inputId = `opt-out-email-${lang}`;
+  return (
+    <>
+      {status !== undefined ? (
+        <p role="status" className="font-semibold">
+          {copy[status]}
+        </p>
+      ) : null}
+      {status === 'envoye' ? null : (
+        <form method="post" action="/desinscription/envoyer" className="not-prose grid gap-3">
+          <label htmlFor={inputId} className="font-semibold">
+            {copy.label}
+          </label>
+          <input
+            id={inputId}
+            name="email"
+            type="email"
+            required
+            autoComplete="email"
+            defaultValue={address}
+            className="w-full max-w-md rounded-md border border-[var(--line-strong)] bg-[var(--paper-raised)] px-3 py-2 text-[var(--ink)]"
+          />
+          {token !== undefined && token !== '' ? (
+            <input type="hidden" name="t" value={token} />
+          ) : null}
+          <div aria-hidden="true" className="hidden">
+            <input name="site" type="text" tabIndex={-1} autoComplete="off" />
+          </div>
+          <p>
+            <button type="submit" className="btn btn-primary">
+              {copy.submit}
+            </button>
+          </p>
+        </form>
+      )}
+    </>
+  );
+}
+
+export default async function OptOutPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ t?: string; statut?: string }>;
+}) {
+  const params = await searchParams;
+  const token = typeof params.t === 'string' ? params.t : undefined;
+  const status = (['envoye', 'invalide', 'erreur'] as const).find(
+    (value) => value === params.statut,
+  );
+  const address = await prefillFor(token);
   return (
     <main id="contenu" tabIndex={-1} className="flex-1">
       <section className="shell hero pb-0">
@@ -57,22 +151,25 @@ export default function OptOutPage() {
         <div className="shell section-tight">
           <section className="prose measure">
             <p>
-              Envoyez un message à contact@odysseusaudit.fr, ou répondez simplement à celui que vous
-              avez reçu.
+              Indiquez l&apos;adresse e-mail à laquelle nous vous avons écrit. Si vous arrivez
+              depuis notre message, elle est déjà remplie.
             </p>
 
+            <OptOutForm lang="fr" address={address} token={token} status={status} />
+
             <p>
-              <a className="btn btn-primary" href={MAILTO_FR}>
-                Demander à ne plus être contacté
-              </a>
+              Vous pouvez aussi{' '}
+              <a className="underline" href={MAILTO_FR}>
+                écrire à contact@odysseusaudit.fr
+              </a>{' '}
+              ou répondre simplement au message que vous avez reçu.
             </p>
 
             <h2>Ce qui se passe ensuite</h2>
 
             <p>
-              Ce bouton ouvre simplement votre messagerie&#160;; aucune demande n&apos;est transmise
-              automatiquement. Une fois votre message reçu, nous prenons les trois mesures
-              suivantes.
+              Votre demande nous est transmise dès que vous cliquez et elle est traitée
+              automatiquement dans la minute. Nous prenons alors les trois mesures suivantes.
             </p>
 
             <ul>
@@ -81,10 +178,10 @@ export default function OptOutPage() {
                 immédiatement de fonctionner et le document est supprimé de son espace de stockage.
               </li>
               <li>
-                Votre domaine, et votre adresse e-mail si vous en indiquez une, sont inscrits sur
-                une liste d&apos;opposition permanente. Elle ne conserve pas ces valeurs en clair,
-                uniquement des empreintes cryptographiques qui permettent de les reconnaître si
-                elles réapparaissent dans une source publique.
+                Votre adresse e-mail, son domaine et celui de votre site sont inscrits sur une liste
+                d&apos;opposition permanente. Elle ne conserve pas ces valeurs en clair, uniquement
+                des empreintes cryptographiques qui permettent de les reconnaître si elles
+                réapparaissent dans une source publique.
               </li>
               <li>
                 Les autres données de prospection vous concernant sont supprimées sans attendre
@@ -125,19 +222,26 @@ export default function OptOutPage() {
 
         <div className="shell section-tight">
           <section className="prose measure">
-            <p>Email contact@odysseusaudit.fr, or simply reply to the message you received.</p>
+            <p>
+              Enter the email address we wrote to. If you came from our message, it is already
+              filled in.
+            </p>
+
+            <OptOutForm lang="en" address={address} token={token} status={status} />
 
             <p>
-              <a className="btn btn-primary" href={MAILTO_EN}>
-                Opt out by email
-              </a>
+              You can also{' '}
+              <a className="underline" href={MAILTO_EN}>
+                email contact@odysseusaudit.fr
+              </a>{' '}
+              or simply reply to the message you received.
             </p>
 
             <h2>What happens next</h2>
 
             <p>
-              This button simply opens your email client; it does not submit anything automatically.
-              Once we receive your message, we take the following three steps.
+              Your request reaches us as soon as you click and is processed automatically within a
+              minute. We then take the following three steps.
             </p>
 
             <ul>
@@ -146,8 +250,8 @@ export default function OptOutPage() {
                 immediately and the document is deleted from storage.
               </li>
               <li>
-                Your domain, and your email address if you provide one, are added to a permanent
-                suppression list. The list does not store those values in plain text, only
+                Your email address, its domain and your website&apos;s domain are added to a
+                permanent suppression list. The list does not store those values in plain text, only
                 cryptographic fingerprints that allow us to recognise them if they reappear in a
                 public source.
               </li>
