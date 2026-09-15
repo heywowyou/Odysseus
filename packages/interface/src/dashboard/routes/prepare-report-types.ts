@@ -164,4 +164,13 @@ export interface PreparationViewResponse {
   };
   suggestions: JourneySuggestionResponse[];
   regenerationInFlight: boolean;
+  /** Issue #281: how the last background writing run ended. */
+  lastWritingRun?:
+    | {
+        status: 'succeeded';
+        pdfsGenerated: boolean;
+        pdfsRefusedReason?: string;
+        finishedAt: string;
+      }
+    | { status: 'failed'; message: string; finishedAt: string };
 }

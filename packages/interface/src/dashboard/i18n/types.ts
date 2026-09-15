@@ -582,6 +582,8 @@ export interface DashboardStrings {
     selectedWritingLabel: string;
     candidateFailedLabel: string;
     regenerateButton: string;
+    writeButton: string;
+    writingInProgress: string;
     /** Plan 045 section 2.1: regeneration now approves and renders in one
      *  call, replacing the separate "candidate ready for review" toast. */
     writingRegeneratedMessage: string;

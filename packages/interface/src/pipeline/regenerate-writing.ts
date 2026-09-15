@@ -52,6 +52,22 @@ export function isWritingRegenerationInFlight(auditId: string): boolean {
   return inFlight.has(auditId);
 }
 
+/** Issue #281: how the last background run for an audit ended, kept in
+ *  memory so the dashboard can report it after polling. */
+export type WritingRunOutcome =
+  | { status: 'succeeded'; pdfsGenerated: boolean; pdfsRefusedReason?: string; finishedAt: string }
+  | { status: 'failed'; message: string; finishedAt: string };
+
+const lastOutcome = new Map<string, WritingRunOutcome>();
+
+export function lastWritingRunOutcome(auditId: string): WritingRunOutcome | undefined {
+  return lastOutcome.get(auditId);
+}
+
+export function recordWritingRunOutcome(auditId: string, outcome: WritingRunOutcome): void {
+  lastOutcome.set(auditId, outcome);
+}
+
 /** Thrown when the regeneration itself fails after starting; the failed
  *  candidate is already recorded when this propagates. */
 export class WritingRegenerationFailedError extends Error {

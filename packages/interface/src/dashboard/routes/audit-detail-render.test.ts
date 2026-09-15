@@ -715,10 +715,10 @@ describe('audit report panel (plan 045 stage 3.1)', () => {
     ).toHaveLength(1);
     expect(container.textContent).toContain('Informations sur l’hôtel');
     expect(container.querySelector('#audit-hotel-fields')).not.toBeNull();
-    // The writing row's rewrite button is always available, never gated.
+    // The writing row's write button is always available, never gated.
     expect(
       [...container.querySelectorAll('button')].some(
-        (button) => button.textContent === 'Réécrire le rapport',
+        (button) => button.textContent === 'Rédiger le rapport',
       ),
     ).toBe(true);
     // A stored pair unlocks production even though no writing was chosen.

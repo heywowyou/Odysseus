@@ -31,14 +31,23 @@ import {
   regenerateWriting,
   RegenerationConflictError,
   isWritingRegenerationInFlight,
+  lastWritingRunOutcome,
+  recordWritingRunOutcome,
+  type WritingRunOutcome,
   WritingRegenerationFailedError,
 } from '../pipeline/regenerate-writing.js';
+
+function lastWritingRunField(auditId: string): { lastWritingRun?: WritingRunOutcome } {
+  const outcome = lastWritingRunOutcome(auditId);
+  return outcome === undefined ? {} : { lastWritingRun: outcome };
+}
 
 interface PreparationView {
   preparation: ReportPreparation;
   preview: ReportPreparationPreview;
   suggestions: readonly JourneySuggestion[];
   regenerationInFlight: boolean;
+  lastWritingRun?: WritingRunOutcome;
 }
 
 /** The one place assembling the preparation view: preparation plus its
@@ -79,6 +88,7 @@ async function buildPreparationView(
       manifest !== undefined && findings !== undefined ? { manifest, findings } : null,
     ),
     regenerationInFlight: isWritingRegenerationInFlight(auditId),
+    ...lastWritingRunField(auditId),
   };
 }
 
@@ -126,10 +136,39 @@ export function registerReportPreparationRoutes(router: Router, connection: Conn
 
   router.post(
     '/api/audits/:auditId/report-preparation/regenerate-writing',
-    async ({ res, params }) => {
+    async ({ res, params, query }) => {
       const auditId = params['auditId']!;
       const audit = await readAudit(connection, auditId, res);
       if (!audit) return;
+
+      // Issue #281: a writing run takes minutes, longer than a dashboard
+      // request may stay open. In async mode it runs as tracked background
+      // work: the in-flight marker is taken before the first await, the page
+      // polls the preparation view, and the outcome is kept for it to read.
+      if (query.get('async') === 'true') {
+        if (isWritingRegenerationInFlight(auditId)) {
+          sendError(res, 409, 'odysseus: a writing regeneration is already running for this audit');
+          return;
+        }
+        const run = regenerateWriting(connection, audit, artifactStore);
+        run.then(
+          (result) =>
+            recordWritingRunOutcome(auditId, {
+              status: 'succeeded',
+              pdfsGenerated: result.pdfs.kind === 'generated',
+              ...(result.pdfs.kind === 'refused' ? { pdfsRefusedReason: result.pdfs.reason } : {}),
+              finishedAt: new Date().toISOString(),
+            }),
+          (error: unknown) =>
+            recordWritingRunOutcome(auditId, {
+              status: 'failed',
+              message: error instanceof Error ? error.message : 'could not regenerate writing',
+              finishedAt: new Date().toISOString(),
+            }),
+        );
+        sendJson(res, 202, { started: true });
+        return;
+      }
 
       try {
         const result = await regenerateWriting(connection, audit, artifactStore);

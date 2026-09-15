@@ -521,6 +521,9 @@ export const en: DashboardStrings = {
     selectedWritingLabel: 'Current version',
     candidateFailedLabel: 'New version failed',
     regenerateButton: 'Rewrite the report',
+    writeButton: 'Write the report',
+    writingInProgress:
+      'Writing in progress (French, then English). This takes several minutes; this page updates on its own.',
     writingRegeneratedMessage: 'New version written, approved, and PDFs regenerated.',
     writingApprovedPdfsPendingMessage:
       'New version written and approved; PDFs were not regenerated automatically.',

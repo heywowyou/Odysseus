@@ -530,6 +530,9 @@ export const fr: DashboardStrings = {
     selectedWritingLabel: 'Version actuelle',
     candidateFailedLabel: 'Échec de la nouvelle version',
     regenerateButton: 'Réécrire le rapport',
+    writeButton: 'Rédiger le rapport',
+    writingInProgress:
+      'Rédaction en cours (français puis anglais). Cela prend plusieurs minutes ; cette page se met à jour toute seule.',
     writingRegeneratedMessage: 'Nouvelle version rédigée, approuvée, et PDF régénérés.',
     writingApprovedPdfsPendingMessage:
       'Nouvelle version rédigée et approuvée ; les PDF n’ont pas été régénérés automatiquement.',

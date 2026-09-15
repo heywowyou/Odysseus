@@ -7,7 +7,7 @@
  * the collapsed report-details-form.tsx, which never gates anything here.
  */
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { toast } from 'sonner';
 import { Badge } from '../components/ui/badge';
@@ -27,7 +27,7 @@ import type { AuditDetailResponse } from './audit-detail-types';
 import { IdentityConfirmField } from './identity-confirm-field';
 import { ReportDetailsForm } from './report-details-form';
 import { ReportsCard } from './audit-reports-section';
-import type { PreparationViewResponse, RegenerateWritingResponse } from './prepare-report-types';
+import type { PreparationViewResponse } from './prepare-report-types';
 
 /** DOM ids the failure card (audit-reports-section.tsx) scrolls to when it
  *  names which action to redo; kept in sync with that file's own literal
@@ -93,29 +93,50 @@ export function AuditReportPanel(props: {
   // operator action that replaces the current version. Never gated: a
   // missing-context warning and an unconfirmed identity field are both
   // informational here, not preconditions to writing.
+  // Issue #281: writing runs as tracked background work. The panel polls
+  // the preparation view while the server reports a run in flight, keeps
+  // the launch disabled, and refreshes the page once the run has ended.
+  const writingInFlight = isRewriting || preparation?.regenerationInFlight === true;
+  const wasInFlight = useRef(false);
+  useEffect(() => {
+    if (!writingInFlight) return;
+    const timer = setInterval(refreshPreparation, 5_000);
+    return () => clearInterval(timer);
+  }, [writingInFlight, refreshPreparation]);
+  useEffect(() => {
+    const running = preparation?.regenerationInFlight === true;
+    if (wasInFlight.current && !running) {
+      const outcome = preparation?.lastWritingRun;
+      if (outcome?.status === 'failed') {
+        toast.error(strings.auditDetail.actionError, { description: outcome.message });
+      } else if (outcome?.status === 'succeeded' && outcome.pdfsGenerated) {
+        toast.success(strings.prepareReport.writingRegeneratedMessage);
+      } else if (outcome?.status === 'succeeded') {
+        toast.success(strings.prepareReport.writingApprovedPdfsPendingMessage, {
+          description: outcome.pdfsRefusedReason,
+        });
+      }
+      refresh();
+      onBusy(false);
+    }
+    wasInFlight.current = running;
+  }, [preparation, refresh, onBusy, strings]);
+
   const handleRewrite = async (): Promise<void> => {
+    if (writingInFlight) return;
     setIsRewriting(true);
     onBusy(true);
     try {
-      const result = await postEmpty<RegenerateWritingResponse>(`${basePath}/regenerate-writing`);
-      if (result.replacedApprovedSelection) {
-        toast.info(strings.prepareReport.writingReplacedDeliveredMessage);
-      }
-      if (result.pdfs.kind === 'generated') {
-        toast.success(strings.prepareReport.writingRegeneratedMessage);
-      } else {
-        toast.success(strings.prepareReport.writingApprovedPdfsPendingMessage, {
-          description: result.pdfs.reason,
-        });
-      }
-      handleAfterSave();
+      await postEmpty(`${basePath}/regenerate-writing?async=true`);
+      wasInFlight.current = true;
+      refreshPreparation();
     } catch (rewriteError) {
+      onBusy(false);
       toast.error(strings.auditDetail.actionError, {
         description: rewriteError instanceof Error ? rewriteError.message : undefined,
       });
     } finally {
       setIsRewriting(false);
-      onBusy(false);
     }
   };
 
@@ -171,12 +192,20 @@ export function AuditReportPanel(props: {
             <Button
               variant="secondary"
               size="sm"
-              isLoading={isRewriting}
+              isLoading={writingInFlight}
+              disabled={writingInFlight}
               onClick={() => void handleRewrite()}
             >
-              {strings.prepareReport.regenerateButton}
+              {selected === undefined
+                ? strings.prepareReport.writeButton
+                : strings.prepareReport.regenerateButton}
             </Button>
           </div>
+          {writingInFlight ? (
+            <p className="text-[13px] text-ink-muted" role="status">
+              {strings.prepareReport.writingInProgress}
+            </p>
+          ) : null}
           <div className="flex flex-col gap-1 text-[13px]">
             {selected !== undefined ? (
               <p>

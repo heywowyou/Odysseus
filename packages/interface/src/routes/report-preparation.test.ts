@@ -73,7 +73,10 @@ import {
   WritingSelectionConflictError,
 } from '@odysseus/store';
 import { runAnalysisStage } from '../pipeline/analysis-stage.js';
-import { isWritingRegenerationInFlight } from '../pipeline/regenerate-writing.js';
+import {
+  isWritingRegenerationInFlight,
+  lastWritingRunOutcome,
+} from '../pipeline/regenerate-writing.js';
 import { regenerateReportsForAudit } from '../pipeline/regenerate-reports.js';
 import { pauseBetweenLanguagePasses } from '@odysseus/llm';
 import { Router } from '../router.js';
@@ -561,6 +564,49 @@ describe('POST /api/audits/:auditId/report-preparation/regenerate-writing', () =
     await first;
     expect(firstRes.statusCode).toBe(201);
     expect(isWritingRegenerationInFlight('audit-1')).toBe(false);
+  });
+
+  it('runs as tracked background work in async mode and records the outcome', async () => {
+    await writeEvidence();
+    storedPreparation = emptyReportPreparation();
+    vi.mocked(pauseBetweenLanguagePasses).mockResolvedValue(undefined);
+    vi.mocked(runAnalysisStage).mockImplementation(
+      async (_dir, _manifest, _findings, options) =>
+        ({
+          analysis: {
+            analysisId: `analysis-${options.language}`,
+            auditId: 'audit-1',
+            findingsProvenance: {
+              findingsSchemaVersion: 1 as const,
+              normalizationFingerprint: 'fp',
+              findingsDigest: 'sha256:digest',
+            },
+            language: options.language,
+          },
+          analysisPath: `/tmp/${options.language}.json`,
+          structurePath: '/tmp/structure.json',
+          structureReused: true,
+          unreferencedFindingCount: 0,
+          usedFallbackContext: true,
+          advisoryPasses: [],
+        }) as never,
+    );
+    const router = new Router();
+    registerReportPreparationRoutes(router, fakeConnection);
+    const res = fakeRes();
+    await router.handle(
+      fakeReq(
+        '/api/audits/audit-1/report-preparation/regenerate-writing?async=true',
+        undefined,
+        'POST',
+      ),
+      res,
+    );
+    expect(res.statusCode).toBe(202);
+    await vi.waitFor(() => expect(isWritingRegenerationInFlight('audit-1')).toBe(false));
+    await vi.waitFor(() =>
+      expect(lastWritingRunOutcome('audit-1')).toMatchObject({ status: 'succeeded' }),
+    );
   });
 
   it('releases the in-flight marker when a pre-flight read fails', async () => {
