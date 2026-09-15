@@ -245,10 +245,24 @@ function shortenResourceUrl(url: string): string {
     for (const key of [...parsed.searchParams.keys()]) {
       if (CREDENTIAL_LOOKING_PARAM_PATTERN.test(key)) parsed.searchParams.delete(key);
     }
-    return `${parsed.pathname}${parsed.search}`;
+    return capResourceUrl(`${parsed.pathname}${parsed.search}`);
   } catch {
-    return url;
+    return capResourceUrl(url);
   }
+}
+
+/** Issue #276: a third-party loader URL with a 700-character query string
+ *  stayed one unbreakable token inside the appendix table and aborted the
+ *  paid PDF. The file list is already a derived display (origin dropped,
+ *  credential-looking parameters removed), so a very long entry keeps its
+ *  start and end, which identify the file, and elides the middle. */
+const RESOURCE_URL_DISPLAY_MAX = 90;
+
+export function capResourceUrl(value: string): string {
+  if (value.length <= RESOURCE_URL_DISPLAY_MAX) return value;
+  const head = value.slice(0, 60);
+  const tail = value.slice(-(RESOURCE_URL_DISPLAY_MAX - 61));
+  return `${head}…${tail}`;
 }
 
 function renderResourceUrlList(

@@ -404,6 +404,7 @@ export interface DashboardStrings {
       produceFailedHeading: string;
       /** {page} and {amount}: the print gate found content wider than the page. */
       produceFailedOverflow: string;
+      produceFailedOverflowFinding: string;
       /** A different layout-safety refusal from the PDF renderer. */
       produceFailedLayout: string;
       produceFailedGeneric: string;

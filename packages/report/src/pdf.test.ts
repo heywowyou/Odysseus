@@ -655,3 +655,19 @@ describe('describeStrandedAppendixRuleHeadings', () => {
     expect(describeStrandedAppendixRuleHeadings(['select-name'])).toContain('issue #170');
   });
 });
+
+describe('overflow description names the appendix finding', () => {
+  it('appends the finding id when the overflowing box sits in an appendix row', () => {
+    expect(
+      describePagedjsOverflow({
+        pageIndex: 31,
+        tag: 'DIV',
+        side: 'right',
+        amountPx: 1793.7,
+        findingId: 'f052',
+      }),
+    ).toBe(
+      'Painted content <div> extends past the printable content rectangle on physical page 32 at right by 1793.7px in finding f052.',
+    );
+  });
+});

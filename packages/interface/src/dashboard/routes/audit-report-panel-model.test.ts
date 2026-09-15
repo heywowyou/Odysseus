@@ -104,6 +104,15 @@ describe('describeProduceFailure', () => {
     expect(result.technicalDetail).toBe(overflow);
   });
 
+  it('names the finding involved when the renderer reports one', () => {
+    const result = describeProduceFailure(
+      'Report generation aborted: Painted content <div> extends past the printable content rectangle on physical page 32 at right by 1793.7px in finding f052. Never shipped to a client.',
+      'fr',
+    );
+    expect(result.explanation).toContain('page 32');
+    expect(result.explanation).toContain('Constat en cause : f052.');
+  });
+
   it('uses the layout wording for other renderer refusals and a generic one otherwise', () => {
     expect(
       describeProduceFailure('Report generation aborted: stranded heading.', 'en').explanation,

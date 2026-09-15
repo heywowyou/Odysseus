@@ -426,6 +426,7 @@ export const fr: DashboardStrings = {
       produceFailedHeading: 'Les PDF n’ont pas pu être produits',
       produceFailedOverflow:
         'Un contenu de la page {page} est trop large pour tenir sur la page (dépassement de {amount} px). Le plus souvent, un texte très long sans espace (adresse, sélecteur, URL) en est la cause. Aucun PDF n’a été livré.',
+      produceFailedOverflowFinding: 'Constat en cause : {finding}.',
       produceFailedLayout:
         'La mise en page du rapport a échoué au contrôle de sécurité d’impression. Aucun PDF n’a été livré.',
       produceFailedGeneric: 'La production des PDF a été refusée. Aucun PDF n’a été livré.',

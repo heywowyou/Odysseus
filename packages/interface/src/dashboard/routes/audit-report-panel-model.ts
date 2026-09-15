@@ -106,15 +106,17 @@ export function describeProduceFailure(
     ...(detail ? { technicalDetail: detail } : {}),
   };
   const overflow = detail?.match(
-    /printable content rectangle on physical page (\d+) at \w+ by ([\d.]+)px/u,
+    /printable content rectangle on physical page (\d+) at \w+ by ([\d.]+)px(?: in finding (\S+?)\.)?/u,
   );
   if (overflow) {
     const amount = String(Math.round(Number(overflow[2])));
     return {
       ...base,
-      explanation: copy.produceFailedOverflow
-        .replace('{page}', overflow[1]!)
-        .replace('{amount}', amount),
+      explanation:
+        copy.produceFailedOverflow.replace('{page}', overflow[1]!).replace('{amount}', amount) +
+        (overflow[3] === undefined
+          ? ''
+          : ` ${copy.produceFailedOverflowFinding.replace('{finding}', overflow[3])}`),
     };
   }
   if (detail?.startsWith('Report generation aborted:')) {

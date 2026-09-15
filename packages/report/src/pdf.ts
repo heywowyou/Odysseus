@@ -260,6 +260,9 @@ export interface PagedOverflowCandidate {
    *  never in ink, so they must never fire. */
   painted: boolean;
   rect: PagedRect;
+  /** Issue #276: the appendix finding the box sits in, when there is one,
+   *  so a refused report names what to look at. */
+  findingId?: string;
 }
 
 export interface PagedPageOverflowModel {
@@ -279,6 +282,7 @@ export interface PagedjsOverflowViolation {
   tag: string;
   side: PagedOverflowSide;
   amountPx: number;
+  findingId?: string;
 }
 
 /** Fixed side order so a box wider than the whole sheet reports its
@@ -322,7 +326,12 @@ export function analyzePagedjsOverflow(
       }
       const overflow = firstOverflowSide(candidate.rect, p.contentRect);
       if (overflow !== undefined) {
-        return { pageIndex: p.pageIndex, tag: candidate.tag, ...overflow };
+        return {
+          pageIndex: p.pageIndex,
+          tag: candidate.tag,
+          ...overflow,
+          ...(candidate.findingId === undefined ? {} : { findingId: candidate.findingId }),
+        };
       }
     }
   }
@@ -332,7 +341,8 @@ export function analyzePagedjsOverflow(
 export function describePagedjsOverflow(violation: PagedjsOverflowViolation): string {
   return (
     `Painted content <${violation.tag.toLowerCase()}> extends past the printable content rectangle ` +
-    `on physical page ${violation.pageIndex + 1} at ${violation.side} by ${violation.amountPx}px.`
+    `on physical page ${violation.pageIndex + 1} at ${violation.side} by ${violation.amountPx}px` +
+    (violation.findingId === undefined ? '.' : ` in finding ${violation.findingId}.`)
   );
 }
 
@@ -375,9 +385,11 @@ export async function collectPagedjsOverflowModels(page: Page): Promise<PagedPag
             style.visibility !== 'hidden' &&
             (Number.isNaN(opacity) || opacity > 0);
           const r = el.getBoundingClientRect();
+          const annexRow = el.closest('[id^="annexref-"]');
           candidates.push({
             tag: el.tagName,
             painted,
+            ...(annexRow === null ? {} : { findingId: annexRow.id.slice('annexref-'.length) }),
             rect: {
               left: r.left,
               top: r.top,
