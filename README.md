@@ -56,6 +56,22 @@ At minimum, `OPENAI_API_KEY` and `MONGODB_URI` are required to run a
 real audit end to end. The other variables have documented defaults in
 `.env.example`.
 
+## Prospecting source data
+
+The prospect directory and the benchmark tooling read large public datasets
+that are downloaded by hand, never fetched by the tool. Place them under the
+gitignored `data/` directory at the workspace root, or point the matching
+variable in `.env` at another path:
+
+| File | Default path | Variable | Used by |
+| --- | --- | --- | --- |
+| Atout France classified accommodation export (CSV) | `data/atout-france/hebergements_classes.csv` | `ODYSSEUS_ATOUT_FRANCE_FILE_PATH` | `odysseus prospect directory-import` |
+| INSEE Sirene stock of legal units (CSV) | `data/sirene/stock-unite-legale.csv` | `ODYSSEUS_SIRENE_STOCK_PATH` | benchmark qualification |
+| AFNIC open data Fichier A, `.fr` domain names (CSV) | `data/afnic/fichier-a.csv` | `ODYSSEUS_AFNIC_FILE_PATH` | domain-first prospecting research |
+
+`directory-import` also accepts `--file <path>` for a one-off import. Sources,
+licences, and encodings are described in `docs/rules/prospect-qualification.md`.
+
 ## Running tests
 
 ```bash
