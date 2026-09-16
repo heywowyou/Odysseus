@@ -276,6 +276,35 @@ html {
   margin-top: var(--space-12);
 }
 
+/* Issue #303: each annex category starts its own page.
+
+   Two delivered reports printed "Référencement (SEO)", "Rendu",
+   "Performance", "Visibilité dans les moteurs d'IA (GEO)" and "À traiter
+   avec vos prestataires tiers" as the last line of a page, with the
+   category's first rule group opening the next one. A keep-with-next
+   cannot hold here for the reason issue #170's note in pdf.ts records at
+   length - in the stranded shape the engine decides the break inside the
+   group's table, whose rows cannot split, so the whole table retreats and
+   the heading stays behind, and it never re-consults a marker on the
+   heading.
+
+   A forced break is the only mechanism Paged.js actually honours, and
+   applying it unconditionally rather than as a post-layout repair is what
+   makes it predictable: a repair that only fires when a strand is detected
+   fights the issue #170 repair for the same boundary (moving a category's
+   first group to a fresh page is what strands its heading), and the two
+   chase each other across passes. Unconditional, the heading always opens
+   a page with its own first group under it, and #170's repair never has a
+   category's opening group to move.
+
+   The price is up to five extra page starts in the annex, in a document
+   whose one-section-per-page contract (plan 018) already accepts sparse
+   pages as an executive-reading choice. An annex category that starts
+   where the reader can see it start is worth more than the paper. */
+.appendix-category {
+  break-before: page;
+}
+
 /* P4.6 (2026-08-21 La Corniche feedback pass): extended from h2/h4/h5 to
    every heading level - a heading must never be the last line on a page
    with its content starting on the next, regardless of which level it

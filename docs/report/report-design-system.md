@@ -386,6 +386,10 @@ must not come back.
 8. There is no page-count failure range. A stress-fixture or client report
    above 60 pages renders successfully and returns a warning; it never fails.
 9. The generated PDF passes axe-core and carries a bookmark outline.
+10. No page ends on a heading: the last painted element on a physical page is
+    never a heading whose content starts on the next (issue #303). The annex's
+    category blocks take a forced page break rather than a keep-with-next,
+    since Paged.js honours only the former; see paged.css's note.
 
 ## 5. Deterministic render-QA contract
 
@@ -395,8 +399,9 @@ Chromium emits PDF bytes. These are structural checks, not a visual-quality
 score:
 
 - **Delivery blockers:** Paged.js's `Layout repeated` bailout, a blank
-  non-cover physical page, a duplicated declared atomic block, or a declared
-  bounded `data-render-atomic` unit spanning physical pages.
+  non-cover physical page, a duplicated declared atomic block, a declared
+  bounded `data-render-atomic` unit spanning physical pages, or a page whose
+  last painted element is a heading (issue #303).
 - **Regression fixtures only:** synthetic Paged.js boundary-pressure fixtures
   and the stable checklist print pixel baseline. A human visually reviews any
   intentional baseline replacement before it is committed.

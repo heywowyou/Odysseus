@@ -802,6 +802,89 @@ export function forceBreakBeforeAppendixRuleGroups(
   return `${html.slice(0, headClose)}<style>${rules}</style>${html.slice(headClose)}`;
 }
 
+/** Issue #303. One heading left as the last painted thing on a page, its
+ *  content starting on the next: the defect issue #170 fixed for annex
+ *  rule group headings, observed one level up on the annex's category
+ *  headings ("Référencement (SEO)", "Rendu", "Visibilité dans les moteurs
+ *  d'IA (GEO)", "À traiter avec vos prestataires tiers") across two
+ *  delivered reports. `category` is the group wrapper's own
+ *  data-appendix-category when the heading carries one, so the repair can
+ *  target it; a stranded heading with no repairable hook still reports,
+ *  and fails the gate rather than shipping. */
+export interface TrailingHeadingPlacement {
+  pageIndex: number;
+  tag: string;
+  text: string;
+  category?: string;
+}
+
+/** Reads the post-layout DOM for the last painted, text-carrying element on
+ *  each page and reports it when it is (or sits inside) a heading. Geometry,
+ *  not document order: Paged.js fragments containers, so the element that
+ *  paints lowest on a page is not reliably the last one in the fragment's
+ *  markup. Pure detection, no mutation - the repair patches the
+ *  pre-pagination source, same as issue #170's. Exported so the e2e suites
+ *  can run it against an already-paginated page, including one that
+ *  paginates cleanly, without going through the aborting render path. */
+export async function detectTrailingHeadings(page: Page): Promise<TrailingHeadingPlacement[]> {
+  return page.evaluate(() => {
+    // A sliver of a fragment's own border or a decorative rule is not
+    // content; the same negligible-box floor the overflow gate uses.
+    const MIN_PAINTED_PX = 2;
+    return Array.from(document.querySelectorAll('.pagedjs_page')).flatMap(
+      (pageEl, pageIndex): TrailingHeadingPlacement[] => {
+        const content = pageEl.querySelector('.pagedjs_page_content');
+        if (content === null) return [];
+        let lowest: Element | undefined;
+        let lowestBottom = Number.NEGATIVE_INFINITY;
+        for (const el of Array.from(content.querySelectorAll('.sheet *'))) {
+          if ((el.textContent ?? '').trim().length === 0) continue;
+          const style = getComputedStyle(el);
+          const opacity = Number.parseFloat(style.opacity);
+          if (style.display === 'none' || style.visibility === 'hidden') continue;
+          if (!Number.isNaN(opacity) && opacity <= 0) continue;
+          const rect = el.getBoundingClientRect();
+          if (rect.width < MIN_PAINTED_PX || rect.height < MIN_PAINTED_PX) continue;
+          // Ties go to the deeper element, which is the one actually
+          // carrying the text rather than a wrapper ending at the same
+          // edge.
+          if (rect.bottom >= lowestBottom) {
+            lowestBottom = rect.bottom;
+            lowest = el;
+          }
+        }
+        const heading = lowest?.closest('h1, h2, h3, h4, h5, h6');
+        if (heading === undefined || heading === null) return [];
+        const category = heading.getAttribute('data-appendix-category');
+        return [
+          {
+            pageIndex,
+            tag: heading.tagName,
+            text: (heading.textContent ?? '').trim(),
+            ...(category === null ? {} : { category }),
+          },
+        ];
+      },
+    );
+  });
+}
+
+/** Issue #303's fail-closed floor: undefined when no page ends on a
+ *  heading, otherwise the failure naming each one. Deliberately covers
+ *  every heading, not only the repairable annex categories - a heading
+ *  hanging at a page foot reads as a layout error to a paying client
+ *  wherever it is, and one this repair cannot move must stop the render
+ *  rather than ship. */
+export function describeTrailingHeadings(
+  placements: readonly TrailingHeadingPlacement[],
+): string | undefined {
+  if (placements.length === 0) return undefined;
+  const described = placements
+    .map((p) => `"${p.text}" (<${p.tag.toLowerCase()}>, page ${p.pageIndex + 1})`)
+    .join(', ');
+  return `Heading(s) ${described} are the last painted content on their page, with the content they introduce starting on the next (issue #303).`;
+}
+
 /** Pure gate description, no DOM: undefined when every annex heading sits
  *  with at least one of its finding rows, otherwise the failure naming the
  *  stranded rule ids. Runs after the bounded repair loop so a strand that
@@ -940,6 +1023,15 @@ export async function renderPdfWithPageCountFromHtml(
     );
     if (strandedFailure !== undefined) {
       throw new Error(`Report generation aborted: ${strandedFailure} Never shipped to a client.`);
+    }
+
+    // Issue #303's own fail-closed floor, for every heading rather than
+    // only the annex's.
+    const trailingHeadingFailure = describeTrailingHeadings(await detectTrailingHeadings(page));
+    if (trailingHeadingFailure !== undefined) {
+      throw new Error(
+        `Report generation aborted: ${trailingHeadingFailure} Never shipped to a client.`,
+      );
     }
 
     // Issue #118. Geometry runs after the structural gates, never before

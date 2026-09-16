@@ -28,6 +28,8 @@ import { renderHtml } from './render-html.js';
 import {
   analyzePagedjsOverflow,
   collectPagedjsOverflowModels,
+  describeTrailingHeadings,
+  detectTrailingHeadings,
   renderPdfWithPageCountFromHtml,
 } from '../pdf.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
@@ -120,6 +122,31 @@ function addStartHereBoundaryPressure(html: string): string {
   return html.replace(
     '<div class="start-here"',
     '<div style="height:120mm" data-start-here-pressure></div><div class="start-here"',
+  );
+}
+
+/** Issue #303: leaves the annex's first category heading just enough room to
+ * print at a page foot while its first rule group moves to the next page -
+ * the shape two delivered reports shipped ("Référencement (SEO)", "Rendu",
+ * "Visibilité dans les moteurs d'IA (GEO)"). 140mm was found by sweeping
+ * filler heights through the real pipeline; neighbouring heights resolve on
+ * their own, which is exactly why the defect survived the unpressured
+ * fixture. */
+function addAppendixCategoryBoundaryPressure(html: string): string {
+  return html.replace(
+    '<div class="appendix-category"',
+    '<div style="height:140mm" data-appendix-category-pressure></div><div class="appendix-category"',
+  );
+}
+
+/** Undoes paged.css's issue #303 rule, reproducing the layout the two
+ * delivered reports shipped. Only a test uses this: it is what makes the
+ * gate's own assertion meaningful, since with the rule in place the strand
+ * cannot be produced at all. */
+function withoutAppendixCategoryPageBreak(html: string): string {
+  return html.replace(
+    '</head>',
+    '<style>.appendix-category { break-before: auto; }</style></head>',
   );
 }
 
@@ -316,6 +343,36 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
     const violation = analyzePagedjsOverflow(await collectPagedjsOverflowModels(doc.page));
     expect(violation).toBeUndefined();
   });
+
+  it('issue #303: no page ends on a heading whose content starts on the next', async () => {
+    expect(describeTrailingHeadings(await detectTrailingHeadings(doc.page))).toBeUndefined();
+  });
+
+  it('issue #303: the gate has teeth - the same document strands a category heading once the forced break is taken away', async () => {
+    const pressured = await paginate(
+      browser,
+      withoutAppendixCategoryPageBreak(addAppendixCategoryBoundaryPressure(stressHtml)),
+      pagedjsSource,
+    );
+    try {
+      const placements = await detectTrailingHeadings(pressured.page);
+      // Proves the gate has teeth: this is the defect, unrepaired.
+      expect(placements.map((p) => p.category)).toContain('accessibility');
+      expect(describeTrailingHeadings(placements)).toContain('issue #303');
+    } finally {
+      await pressured.page.context().close();
+    }
+  }, 60_000);
+
+  it('issue #303: the production render path repairs that strand instead of shipping it', async () => {
+    const { pdf } = await renderPdfWithPageCountFromHtml(
+      addAppendixCategoryBoundaryPressure(stressHtml),
+      browser,
+    );
+    // renderPdfWithPageCountFromHtml aborts on a surviving strand, so
+    // reaching a PDF at all is the assertion.
+    expect(pdf.length).toBeGreaterThan(0);
+  }, 180_000);
 
   it('invariant 6a: the bounded start-here panel never fragments across physical pages', async () => {
     const pressured = await paginate(

@@ -703,9 +703,10 @@ function renderThirdPartySection(
     })
     .join('');
 
+  // Issue #303: same hooks as a category block below, for the same repair.
   return `
-    <div style="margin-bottom:var(--space-12)">
-      <h4>${escapeHtml(strings.findingsAppendix.thirdPartyHeading)}</h4>
+    <div class="appendix-category" data-appendix-category="third-party" style="margin-bottom:var(--space-12)">
+      <h4 class="appendix-category-head" data-appendix-category="third-party">${escapeHtml(strings.findingsAppendix.thirdPartyHeading)}</h4>
       <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-2);max-width:70ch">${escapeHtml(strings.findingsAppendix.thirdPartyIntro)}</p>
       <p style="font-size:11px;opacity:0.5;margin-bottom:var(--space-4);max-width:70ch">${escapeHtml(strings.findingsAppendix.thirdPartyCountedInTotalsNote)}</p>
       ${groupBlocks}
@@ -780,9 +781,16 @@ function renderCategorySection(
       ? `<div style="margin-top:var(--space-2)">${renderGeoCitationBlock(strings, language, sector, citedStatIds)}</div>`
       : '';
 
+  // Issue #303: a real report printed "Référencement (SEO)", "Rendu" and
+  // "Visibilité dans les moteurs d'IA (GEO)" as the last line of a page
+  // with the category's first rule group starting on the next one. The
+  // class and data attribute are what pdf.ts's repair targets - a CSS
+  // keep-with-next cannot hold here for exactly the reasons issue #170's
+  // note in that file records, and this is the same defect one level up
+  // from the rule-group heading that note is about.
   return `
-    <div style="margin-bottom:var(--space-12)">
-      <h4 style="color:${CATEGORY[category].color}">${escapeHtml(strings.findingsAppendix.categoryLabels[category])}</h4>
+    <div class="appendix-category" data-appendix-category="${escapeHtml(category)}" style="margin-bottom:var(--space-12)">
+      <h4 class="appendix-category-head" data-appendix-category="${escapeHtml(category)}" style="color:${CATEGORY[category].color}">${escapeHtml(strings.findingsAppendix.categoryLabels[category])}</h4>
       ${groupBlocks}
       ${citationBlock}
     </div>
