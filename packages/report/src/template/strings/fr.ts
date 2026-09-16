@@ -6,9 +6,9 @@ export const fr: ReportStrings = {
     notFoundObservation:
       "Aucune déclaration d'accessibilité n'a été trouvée sur les pages visitées.",
     article47Recommendation:
-      "Pour le régime de l'article 47 enregistré dans cette analyse, publiez la déclaration et ajoutez un lien vers celle-ci depuis le pied de page.",
+      "Cette analyse retient l'obligation de l'article 47 de la loi n° 2005-102, qui vise les organismes publics et les entreprises dont le chiffre d'affaires dépasse 250 millions d'euros. Publiez la déclaration et ajoutez un lien vers celle-ci depuis le pied de page.",
     optionalRecommendation:
-      "En dehors du régime de l'article 47, cette publication est une bonne pratique facultative : vous pouvez publier une déclaration et ajouter un lien depuis le pied de page.",
+      "La déclaration d'accessibilité est une obligation de l'article 47 de la loi n° 2005-102, qui vise les organismes publics et les entreprises dont le chiffre d'affaires dépasse 250 millions d'euros. En dehors de ce cas, sa publication est une bonne pratique facultative : vous pouvez publier une déclaration et ajouter un lien depuis le pied de page.",
   },
   toc: {
     eyebrow: 'Sommaire',

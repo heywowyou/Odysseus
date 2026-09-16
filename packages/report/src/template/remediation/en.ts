@@ -9,7 +9,7 @@ import type { RemediationEntry } from './snippet.js';
  */
 export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   'accessibility-statement-missing': {
-    text: 'Optional best practice outside Article 47: consider publishing an accessibility statement and linking to it from the footer.',
+    text: 'Optional best practice, except for public bodies and companies with turnover above EUR 250 million (Article 47 of French Law No. 2005-102): consider publishing an accessibility statement and linking to it from the footer.',
     snippet: { kind: 'not-applicable' },
   },
   'ai-crawler-blocked': {

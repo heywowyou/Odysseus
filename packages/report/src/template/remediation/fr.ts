@@ -33,7 +33,7 @@ import type { RemediationEntry } from './snippet.js';
  */
 export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
   'accessibility-statement-missing': {
-    text: "Bonne pratique facultative hors article 47 : envisagez de publier une déclaration d'accessibilité et d'ajouter un lien depuis le pied de page.",
+    text: "Bonne pratique facultative, sauf pour les organismes publics et les entreprises de plus de 250 millions d'euros de chiffre d'affaires (article 47 de la loi n° 2005-102) : envisagez de publier une déclaration d'accessibilité et d'ajouter un lien depuis le pied de page.",
     snippet: { kind: 'not-applicable' },
   },
   'ai-crawler-blocked': {

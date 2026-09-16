@@ -5,9 +5,9 @@ export const en: ReportStrings = {
     heading: 'Accessibility statement',
     notFoundObservation: 'No accessibility statement was found on the visited pages.',
     article47Recommendation:
-      'For the Article 47 regime recorded in this analysis, publish the statement and link to it from the footer.',
+      'This analysis records the Article 47 obligation of French Law No. 2005-102, which covers public bodies and companies with turnover above EUR 250 million. Publish the statement and link to it from the footer.',
     optionalRecommendation:
-      'Outside the Article 47 regime, publication is an optional best practice: you may publish a statement and link to it from the footer.',
+      'An accessibility statement is an obligation under Article 47 of French Law No. 2005-102, which covers public bodies and companies with turnover above EUR 250 million. Outside that case, publication is an optional best practice: you may publish a statement and link to it from the footer.',
   },
   toc: {
     eyebrow: 'Contents',
