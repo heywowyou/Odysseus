@@ -1,7 +1,7 @@
 /** Mongo adapter for the prospect-native full-audit preview contract. */
 
 import type { Connection } from 'mongoose';
-import type { Finding } from '@odysseus/core';
+import { primaryWebsite, type Finding } from '@odysseus/core';
 import {
   createAuditModel,
   createJobModel,
@@ -77,7 +77,7 @@ export function createMongoOutreachPreviewStoreV2(
         };
       }
 
-      const website = prospect.websites.find((item) => item.primary) ?? prospect.websites[0];
+      const website = primaryWebsite(prospect.websites);
       if (website === undefined) return { refused: 'domain-mismatch' };
       const findings: Finding[] = await getFindingsForAudit(
         connection,

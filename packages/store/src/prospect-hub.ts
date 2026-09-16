@@ -7,7 +7,12 @@ import type {
   ProspectStatus,
   ProspectWebsiteKind,
 } from '@odysseus/core';
-import { ACTIVE_OUTREACH_THREAD_STATES, normalizeDeclaredWebsite } from '@odysseus/core';
+import {
+  ACTIVE_OUTREACH_THREAD_STATES,
+  normalizeDeclaredWebsite,
+  emailDomain,
+  primaryWebsite,
+} from '@odysseus/core';
 import { directoryEntrySchema, prospectEventSchema, prospectSchema } from '@odysseus/core';
 import {
   createProspectEventModel,
@@ -636,15 +641,14 @@ async function suppressProspect(
   connection: Connection,
   prospect: ProspectHubDocument,
 ): Promise<void> {
-  const primaryWebsite =
-    prospect.websites.find((website) => website.primary) ?? prospect.websites[0];
+  const website = primaryWebsite(prospect.websites);
   const domains = new Set<string>();
-  if (primaryWebsite?.registrableDomain !== undefined) {
-    domains.add(primaryWebsite.registrableDomain);
+  if (website?.registrableDomain !== undefined) {
+    domains.add(website.registrableDomain);
   }
   for (const email of prospect.emails) {
-    const at = email.address.lastIndexOf('@');
-    if (at > 0) domains.add(email.address.slice(at + 1));
+    const domain = emailDomain(email.address);
+    if (domain !== undefined) domains.add(domain);
   }
   await Promise.all(
     [...domains].map((domain) =>
@@ -657,10 +661,10 @@ async function suppressProspect(
   );
   await Promise.all(
     prospect.emails.map((email) => {
-      const at = email.address.lastIndexOf('@');
-      if (at <= 0) return Promise.resolve();
+      const domain = emailDomain(email.address);
+      if (domain === undefined) return Promise.resolve();
       return addSuppressionEntry(connection, {
-        domain: email.address.slice(at + 1),
+        domain,
         address: email.address,
         reasonCode: 'objection',
         reason: 'opt-out recorded on the prospect',

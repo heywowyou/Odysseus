@@ -594,7 +594,7 @@ describe('POST /api/outreach/suppression-check', () => {
     expect(result.body).toEqual({ suppressed: true });
     expect(isSuppressed).toHaveBeenCalledWith(
       fakeConnection,
-      'Hotel-Exemple.fr',
+      'hotel-exemple.fr',
       'Role@Hotel-Exemple.fr',
     );
   });

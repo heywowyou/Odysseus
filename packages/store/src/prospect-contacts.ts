@@ -15,7 +15,12 @@
 import { randomUUID } from 'node:crypto';
 import type { Connection } from 'mongoose';
 import type { Prospect } from '@odysseus/core';
-import { hashSuppressionValue, normalizeAddressForHash, prospectEventSchema } from '@odysseus/core';
+import {
+  hashSuppressionValue,
+  normalizeAddressForHash,
+  prospectEventSchema,
+  emailDomain,
+} from '@odysseus/core';
 import { createProspectEventModel } from './schemas/prospect-event.schema.js';
 import { createProspectHubModel, type ProspectHubDocument } from './schemas/prospect-hub.schema.js';
 import { createOutreachDraftModel } from './schemas/outreach-draft.schema.js';
@@ -173,9 +178,8 @@ export async function removeProspectEmail(
   }
 
   if (options.suppress === true) {
-    const at = removed.address.lastIndexOf('@');
     await addSuppressionEntry(connection, {
-      domain: removed.address.slice(at + 1),
+      domain: emailDomain(removed.address) ?? '',
       address: removed.address,
       reasonCode: 'operator-request',
       reason: 'address removed from the prospect and blacklisted by the operator',

@@ -1,5 +1,10 @@
 import type { Connection } from 'mongoose';
-import { normalizeDeclaredWebsite, type Prospect } from '@odysseus/core';
+import {
+  normalizeDeclaredWebsite,
+  type Prospect,
+  emailDomain,
+  primaryWebsite,
+} from '@odysseus/core';
 import { createAuditModel } from './schemas/audit.schema.js';
 import { planProspectJobLaunch } from './active-jobs.js';
 import { createJobModel } from './schemas/job.schema.js';
@@ -87,16 +92,16 @@ export async function checkOutreachAction(
   connection: Connection,
   input: { prospect: Prospect; action: OutreachAction },
 ): Promise<OutreachActionCheck> {
-  const website =
-    input.prospect.websites.find((candidate) => candidate.primary) ?? input.prospect.websites[0];
+  const website = primaryWebsite(input.prospect.websites);
   const domain = website?.registrableDomain;
   const websiteSuppressed = domain === undefined ? false : await isSuppressed(connection, domain);
   const addressSuppressed = (
     await Promise.all(
-      input.prospect.emails.map((email) => {
-        const addressDomain = email.address.slice(email.address.lastIndexOf('@') + 1);
-        return isSuppressed(connection, addressDomain, email.address);
-      }),
+      input.prospect.emails.map((email) =>
+        // A malformed address has no domain row to match; its own address
+        // row still does.
+        isSuppressed(connection, emailDomain(email.address) ?? '', email.address),
+      ),
     )
   ).some(Boolean);
   if (websiteSuppressed || addressSuppressed) {

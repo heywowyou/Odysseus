@@ -26,7 +26,7 @@ import {
   recordProspectOutcome,
   revokeOutreachPreview,
 } from '@odysseus/store';
-import { isFreeMailDomain } from '@odysseus/core';
+import { isFreeMailDomain, emailDomain, primaryWebsite } from '@odysseus/core';
 import type { Connection } from 'mongoose';
 import { logger } from '../logger.js';
 import { createConfiguredMailboxDraftAdapter } from './configured-mailbox-draft-adapter.js';
@@ -59,11 +59,6 @@ export interface ProcessOptOutRequestsResult {
   failed: number;
 }
 
-function domainOfAddress(address: string): string {
-  const normalized = address.trim().toLowerCase();
-  return normalized.slice(normalized.lastIndexOf('@') + 1);
-}
-
 /** The address our emailed link was issued to, when the request carries a
  *  token whose link object still exists. */
 async function linkedAddressFor(bucket: OptOutBucket, token: unknown): Promise<string | undefined> {
@@ -81,13 +76,14 @@ async function applyOptOut(
   linkedAddress: string | undefined,
 ): Promise<void> {
   const address = rawAddress.trim().toLowerCase();
-  const emailDomain = domainOfAddress(address);
+  const domain = emailDomain(address);
   const domainWide =
+    domain !== undefined &&
     linkedAddress !== undefined &&
-    domainOfAddress(linkedAddress) === emailDomain &&
-    !isFreeMailDomain(emailDomain);
+    emailDomain(linkedAddress) === domain &&
+    !isFreeMailDomain(domain);
   await addSuppressionEntry(connection, {
-    domain: emailDomain,
+    domain: domain ?? '',
     address,
     addressOnly: !domainWide,
     reasonCode: 'objection',
@@ -106,7 +102,7 @@ async function applyOptOut(
       publisher: () => publisher,
       mailbox: createConfiguredMailboxDraftAdapter(),
     });
-    const website = prospect.websites.find((item) => item.primary) ?? prospect.websites[0];
+    const website = primaryWebsite(prospect.websites);
     if (website === undefined) continue;
     for (const preview of await listLivePreviewsForDomain(connection, website.registrableDomain)) {
       // Object first, record second, as in every other revocation.

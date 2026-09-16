@@ -39,7 +39,7 @@ import {
   type ProspectHubFilter,
 } from '@odysseus/store';
 import type { ProspectPatch } from '@odysseus/store';
-import type { ProspectStatus, ProspectWebsiteKind } from '@odysseus/core';
+import { emailDomain, type ProspectStatus, type ProspectWebsiteKind } from '@odysseus/core';
 import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import type { Router } from '../router.js';
 import { readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
@@ -171,8 +171,9 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
       return;
     }
     const address = raw.trim();
-    const domain = address.slice(address.indexOf('@') + 1);
-    sendJson(res, 200, { suppressed: await isSuppressed(connection, domain, address) });
+    sendJson(res, 200, {
+      suppressed: await isSuppressed(connection, emailDomain(address) ?? '', address),
+    });
   });
 
   // Issue #272: the operator can pull sent emails and replies in now rather

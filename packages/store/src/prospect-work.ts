@@ -1,5 +1,11 @@
 import type { Connection } from 'mongoose';
-import { normalizeAddressForHash, normalizeDomainForHash, type Prospect } from '@odysseus/core';
+import {
+  normalizeAddressForHash,
+  normalizeDomainForHash,
+  type Prospect,
+  emailDomain,
+  primaryWebsite,
+} from '@odysseus/core';
 import { createAuditModel, type AuditDocumentFields } from './schemas/audit.schema.js';
 import { createJobModel, type JobDocumentFields } from './schemas/job.schema.js';
 import {
@@ -134,11 +140,6 @@ function asTime(value: Date | string): number {
   return new Date(value).getTime();
 }
 
-function emailDomain(address: string): string | undefined {
-  const at = address.lastIndexOf('@');
-  return at <= 0 || at === address.length - 1 ? undefined : address.slice(at + 1);
-}
-
 /**
  * Selects the newest audit with an eligible purpose and complete coverage,
  * whatever normalization version produced its findings. The input is
@@ -181,7 +182,7 @@ function prospectContactSuppression(
 ): { websiteSuppressed: boolean; emailSuppressed: boolean } {
   const domains = suppressedDomainSet(sources.suppressedDomains);
   const addresses = suppressedAddressSet(sources.suppressedAddresses);
-  const website = prospect.websites.find((item) => item.primary) ?? prospect.websites[0];
+  const website = primaryWebsite(prospect.websites);
   const websiteSuppressed =
     website !== undefined && domains.has(normalizeDomainForHash(website.registrableDomain));
   const emailSuppressed = prospect.emails.some((email) => {
@@ -353,8 +354,7 @@ export function deriveProspectWork(
 }
 
 function primaryWebsiteDomain(prospect: Prospect): string | undefined {
-  const website = prospect.websites.find((item) => item.primary) ?? prospect.websites[0];
-  return website?.registrableDomain;
+  return primaryWebsite(prospect.websites)?.registrableDomain;
 }
 
 function unique(values: readonly (string | undefined)[]): string[] {

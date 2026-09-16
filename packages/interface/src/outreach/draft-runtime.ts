@@ -4,6 +4,7 @@ import {
   buildOutreachFactsBlock,
   isTerminalOutreachThreadState,
   NORMALIZATION_FINGERPRINT,
+  primaryWebsite,
 } from '@odysseus/core';
 import {
   advanceThreadTouch,
@@ -188,7 +189,7 @@ export async function createTouchOneDraft(
   const preview = await resolvePreview(connection, prospectId, options.previewToken ?? '');
   if ('refusal' in preview) return { configured: true, created: false, refusal: preview.refusal };
 
-  const website = prospect.websites.find((item) => item.primary) ?? prospect.websites[0];
+  const website = primaryWebsite(prospect.websites);
   if (website === undefined)
     return { configured: true, created: false, refusal: 'domain-mismatch' };
 
@@ -433,7 +434,7 @@ export async function createFirstEmailForProspect(
     };
   }
 
-  const website = prospect.websites.find((item) => item.primary) ?? prospect.websites[0];
+  const website = primaryWebsite(prospect.websites);
   if (website !== undefined) {
     const live = await previewStore.listLivePreviews(website.registrableDomain);
     for (const preview of live) {
@@ -515,7 +516,7 @@ export async function createFollowUpForProspect(
   if (previous === undefined)
     return { configured: true, created: false, refusal: 'previous-draft-missing' };
 
-  const website = prospect.websites.find((item) => item.primary) ?? prospect.websites[0];
+  const website = primaryWebsite(prospect.websites);
   if (website === undefined || prospect.emails[0] === undefined) {
     return { configured: true, created: false, refusal: 'no-contact' };
   }
