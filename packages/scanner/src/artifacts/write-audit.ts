@@ -41,6 +41,7 @@ import {
 import { getArtifactsRoot } from '../config.js';
 import type { CrawlResult } from '../crawl.js';
 import { isRedirectInterstitial } from '../redirect-interstitial.js';
+import { isSoftErrorPage } from '../soft-error-page.js';
 import type { PageScanResult } from '../scan-page.js';
 import type { NormalizePageInput } from '@odysseus/core';
 import { buildAuditDir, buildPageDir } from './paths.js';
@@ -559,11 +560,29 @@ export async function writeAuditArtifacts(
         ? scanJson.renderDiff.renderedLandedUrl
         : undefined;
 
+    // Issue #302: same after-the-scan timing as the redirect check above,
+    // for the same reason - the page's own title and h1 are the evidence,
+    // and they do not exist until it has been scanned. Only asked when
+    // the page is not already a redirect interstitial, since one status
+    // has to win and the redirect is the more specific fact.
+    const softErrorPage =
+      redirectTargetUrl === undefined &&
+      isSoftErrorPage({
+        url: scanJson.url,
+        title: scanJson.headMetadata?.title,
+        headings: scanJson.headMetadata?.headings,
+      });
+
     manifestPages.push({
       url: scanJson.url,
       pageDir: path.join('pages', pageDir),
       depth: crawledPage.depth,
-      status: redirectTargetUrl !== undefined ? 'redirect-interstitial' : 'visited',
+      status:
+        redirectTargetUrl !== undefined
+          ? 'redirect-interstitial'
+          : softErrorPage
+            ? 'soft-error-page'
+            : 'visited',
       discoveryMethod: crawledPage.discoveryMethod,
       // Issue #290: the page's own declared language (<html lang>), so the
       // report can attribute a root-path page - no /fr/-style prefix - to
@@ -577,6 +596,7 @@ export async function writeAuditArtifacts(
         : {}),
       ...(redirectTargetUrl !== undefined ? { redirectTargetUrl } : {}),
       ...(redirectTargetUrl === undefined &&
+      !softErrorPage &&
       input.siteResult.analysisCoverageByUrl?.get(scanJson.url) !== undefined
         ? { analysisCoverage: input.siteResult.analysisCoverageByUrl.get(scanJson.url)! }
         : {}),

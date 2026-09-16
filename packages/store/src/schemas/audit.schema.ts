@@ -188,6 +188,12 @@ const manifestPageEntrySchema = new Schema(
         // Issue #39: navigated to a non-2xx response; inventoried with its
         // httpStatus, never scanned.
         'http-error-status',
+        // Issue #85: a 200 whose content belongs to the URL the browser
+        // redirected to. Absent until issue #302 added its neighbour
+        // below, which meant saving an audit containing one was rejected.
+        'redirect-interstitial',
+        // Issue #302: a 200 serving an error template.
+        'soft-error-page',
         'error',
       ],
     },

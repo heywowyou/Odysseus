@@ -264,6 +264,7 @@ export interface ReportStrings {
       | 'error'
       | 'http-error-status'
       | 'redirect-interstitial'
+      | 'soft-error-page'
       | 'coverage-missing',
       { singular: string; plural: string }
     >;

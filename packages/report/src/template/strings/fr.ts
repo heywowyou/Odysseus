@@ -165,6 +165,7 @@ export const fr: ReportStrings = {
         singular: 'page de redirection',
         plural: 'pages de redirection',
       },
+      'soft-error-page': { singular: 'page d’erreur', plural: 'pages d’erreur' },
       'coverage-missing': {
         singular: 'donnée de couverture indisponible',
         plural: 'données de couverture indisponibles',

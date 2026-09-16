@@ -246,7 +246,24 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
   // site-level record.
   const goodFieldMetricKeys = goodFieldMetrics(input.cruxFieldData);
 
+  // Issue #302: two statuses mean "this page was scanned, but what was
+  // scanned is not this URL's own content": an error template served under
+  // its own URL, and a client-side redirect stub (issue #85). Both are
+  // already excluded from the analysed-page list, by never receiving
+  // analysisCoverage. Findings were not excluded with them, so a real
+  // audit carried four copies of one 404 template's defects and counted
+  // them against the site. Reported once here, at the only place that
+  // sees every page's candidates.
+  const contentExcludedUrls = new Set(
+    (input.crawl?.pages ?? [])
+      .filter(
+        (page) => page.status === 'soft-error-page' || page.status === 'redirect-interstitial',
+      )
+      .map((page) => page.url),
+  );
+
   for (const page of input.pages) {
+    if (contentExcludedUrls.has(page.url)) continue;
     if (page.axe) candidates.push(...extractAxeCandidates(page.axe, page.url));
     if (page.lighthouse) {
       candidates.push(

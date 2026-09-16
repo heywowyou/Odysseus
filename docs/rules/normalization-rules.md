@@ -59,6 +59,16 @@ cannot silently start emitting findings after an upgrade.
   merits (render-blocking resources, oversized images) is never capped,
   and a site with no CrUX record passes through both caps unchanged.
 
+**Pages whose content is not their own** produce no findings at all
+(issue #302). Two statuses mean the page was scanned but what was scanned
+does not belong to that URL: `soft-error-page`, a 200 serving an error
+template (detected in scanner's `soft-error-page.ts` from the URL's last
+path segment, the title, or the first h1), and `redirect-interstitial`
+(issue #85). Both were already kept out of the analysed-page list by never
+receiving `analysisCoverage`; normalization now also skips their
+candidates, so an error template's defects are not counted against the
+site once per language.
+
 **Render diff:** emits nothing at all for a page whose no-JavaScript
 fetch did not receive the page (issue #301). `unusableRawFetches` in
 `normalize-renderdiff.ts` judges that from `RenderDiffResult.rawDocument`,

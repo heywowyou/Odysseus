@@ -51,6 +51,12 @@ export type CrawlPageStatus =
    *  a broken target - isBrokenTarget must not flag it. Kept in sync with
    *  ManifestPageStatus by hand. */
   | 'redirect-interstitial'
+  /** A 200 whose content says the page does not exist (issue #302). Like
+   *  'redirect-interstitial' above, assigned after the scan, and not a
+   *  broken target - isBrokenTarget must not flag it, since the link
+   *  works and the server did answer. Kept in sync with
+   *  ManifestPageStatus by hand. */
+  | 'soft-error-page'
   | 'error';
 
 export interface CrawlPageInput {

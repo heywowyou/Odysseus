@@ -362,6 +362,87 @@ describe('writeAuditArtifacts characterization', () => {
     const homeEntry = result.manifest.pages.find((page) => page.url === home);
     expect(homeEntry?.status).toBe('visited');
   });
+
+  it('issue #302: marks a 200 serving an error template soft-error-page and withholds its coverage', async () => {
+    const home = 'https://example.com/';
+    const errorPage = 'https://example.com/erreur-404';
+    const startedAt = new Date('2026-09-16T10:00:00.000Z');
+    const coverage = {
+      plannerVersion: 'v1',
+      role: 'content',
+      confidence: 'high',
+      reasonCodes: ['content-json-ld'],
+      passes: {
+        rendered: { outcome: 'completed' },
+        axe: { outcome: 'completed' },
+        extended: { outcome: 'completed' },
+        lighthouse: { outcome: 'completed' },
+      },
+    } as never;
+
+    const result = await writeAuditArtifacts({
+      auditId: 'audit-soft-error',
+      kind: 'audit',
+      browser: {} as never,
+      startedAt,
+      finishedAt: new Date('2026-09-16T10:01:00.000Z'),
+      config: {
+        maxPages: 2,
+        maxDepth: 2,
+        crawlDelayMs: 0,
+        pageTimeoutMs: 30_000,
+        lighthouseTimeoutMs: 60_000,
+        userAgent: 'test',
+        scanConcurrency: 2,
+        sitemapMode: 'supplement',
+      },
+      siteResult: {
+        analysisCoverageByUrl: new Map([
+          [home, coverage],
+          [errorPage, coverage],
+        ]),
+        crawl: {
+          startUrl: home,
+          pages: [
+            { url: home, depth: 0, status: 'visited', discoveryMethod: 'link', httpStatus: 200 },
+            {
+              url: errorPage,
+              depth: 1,
+              status: 'visited',
+              discoveryMethod: 'link',
+              httpStatus: 200,
+              discoveredFrom: home,
+            },
+          ],
+          effectiveDelayMs: 0,
+          visitedCount: 2,
+          maxPages: 2,
+          maxDepth: 2,
+          robotsTxtFound: true,
+          robotsDisallowMatches: [],
+          aiCrawlerBlocks: [],
+          linkDiscoveredUrls: [errorPage],
+        } as never,
+        pages: [
+          { url: home } as never,
+          {
+            url: errorPage,
+            headMetadata: { title: '404 - Page introuvable', headings: [] } as never,
+          } as never,
+        ],
+      },
+    });
+
+    const errorEntry = result.manifest.pages.find((page) => page.url === errorPage);
+    expect(errorEntry?.status).toBe('soft-error-page');
+    // The URL stays inventoried and disclosed, but never joins the
+    // content-checked population.
+    expect(errorEntry?.analysisCoverage).toBeUndefined();
+
+    const homeEntry = result.manifest.pages.find((page) => page.url === home);
+    expect(homeEntry?.status).toBe('visited');
+    expect(homeEntry?.analysisCoverage).toBeDefined();
+  });
 });
 
 // Issue #79 (Le Grand Chalet, real audit d9d9ec5e-ed0d-471e-9721-c2e4d979cc06):

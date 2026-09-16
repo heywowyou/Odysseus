@@ -545,3 +545,47 @@ describe('site-level findings anchor to a content-checked page (issue #101)', ()
     expect(ruleIds).not.toContain('structured-data-entity-missing');
   });
 });
+
+describe('pages whose content is not their own (issue #302)', () => {
+  const axe = buildAxeResultsInput([
+    buildAxeViolation({ id: 'color-contrast', nodes: [buildAxeNode({ target: ['#footer a'] })] }),
+  ]);
+
+  function auditWithStatus(status: 'visited' | 'soft-error-page' | 'redirect-interstitial') {
+    return normalizeAudit({
+      auditId: 'audit-1',
+      startedAt: STARTED_AT,
+      pages: [
+        buildNormalizePageInput({ url: 'https://example.com/', axe }),
+        buildNormalizePageInput({ url: 'https://example.com/erreur-404', axe }),
+      ],
+      crawl: {
+        startUrl: 'https://example.com/',
+        pages: [
+          { url: 'https://example.com/', status: 'visited' },
+          { url: 'https://example.com/erreur-404', status },
+        ],
+      },
+    });
+  }
+
+  it('does not carry an error template’s defects against the site', () => {
+    const findings = auditWithStatus('soft-error-page');
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.pageUrls).toEqual(['https://example.com/']);
+    expect(findings[0]?.occurrences).toBe(1);
+  });
+
+  it('does the same for a client-side redirect stub, whose content is another URL’s', () => {
+    expect(auditWithStatus('redirect-interstitial')[0]?.pageUrls).toEqual(['https://example.com/']);
+  });
+
+  it('counts an ordinary page normally, so the exclusion is the status and nothing else', () => {
+    const findings = auditWithStatus('visited');
+    expect(findings[0]?.pageUrls).toEqual([
+      'https://example.com/',
+      'https://example.com/erreur-404',
+    ]);
+    expect(findings[0]?.occurrences).toBe(2);
+  });
+});

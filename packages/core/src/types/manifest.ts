@@ -150,6 +150,14 @@ export type ManifestPageStatus =
    *  the content-checked population and the report's analysed-page list
    *  with no extra logic in either place. */
   | 'redirect-interstitial'
+  /** A 200 response that tells the visitor the page does not exist (issue
+   *  #302): an error template served under its own URL. Decided post-hoc
+   *  in write-audit.ts from the page's slug, title and h1, the same
+   *  after-the-scan point 'redirect-interstitial' is decided at, and with
+   *  the same consequence - inventoried and disclosed, never given
+   *  analysisCoverage, so it counts towards neither the analysed-page
+   *  list nor any per-page denominator. */
+  | 'soft-error-page'
   | 'error';
 
 /**
