@@ -537,7 +537,10 @@ describe('issue #85: a redirect-interstitial page is absent from the crawled-pag
 
     const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [], manifest, 'general');
 
-    expect(html).toContain(covered);
+    // Issue #318: the list prints paths, the origin being on the cover.
+    expect(html).toContain('Pages analysées (1)');
+    expect(html).toContain('<li style="break-inside:avoid">/</li>');
+    expect(html).not.toContain('/fr</li>');
     expect(html).not.toContain(redirect);
   });
 });
@@ -935,7 +938,7 @@ describe('fix #4 (2026-08-25 report review): credential-looking query params are
     };
   }
 
-  it('drops key and token params but keeps the rest of the query string', async () => {
+  it('drops key and token params from the printed file', async () => {
     const manifest = buildManifest();
     const html = renderFindingsAppendix(
       getStrings('fr'),
@@ -948,8 +951,10 @@ describe('fix #4 (2026-08-25 report review): credential-looking query params are
 
     expect(html).not.toContain('SECRET123');
     expect(html).not.toContain('token=abc');
-    expect(html).toContain('center=1');
-    expect(html).toContain('size=640x400');
+    // Issue #318: the whole query string is dropped now, not only the
+    // credential-looking parameters.
+    expect(html).toContain('/maps/api/staticmap');
+    expect(html).not.toContain('center=1');
   });
 });
 
@@ -1116,5 +1121,91 @@ describe('issue #291: annex page figures are confined to the analysed (visited) 
     );
 
     expect(html).toContain('https://example.com/not-crawled-1');
+  });
+});
+
+describe('issue #318: long evidence lists stay readable', () => {
+  function resourceFinding(resourceUrls: readonly string[]): Finding {
+    return {
+      findingId: 'f001',
+      auditId: 'a',
+      schemaVersion: 1,
+      source: 'lighthouse',
+      ruleId: 'uses-long-cache-ttl',
+      category: 'performance',
+      severity: 'minor',
+      wcagCriteria: [],
+      title: 'Cache',
+      description: 'desc',
+      pageUrls: ['https://example.com/'],
+      occurrences: resourceUrls.length,
+      elements: [],
+      rawEvidence: { resourceUrls: [...resourceUrls] },
+      dedupeKey: 'k',
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+  }
+
+  it('lists a file once when its addresses differ only by query string', () => {
+    const html = renderFindingsAppendix(
+      getStrings('fr'),
+      12,
+      'fr',
+      [
+        resourceFinding([
+          'https://example.com/js/app.min.js?v=2026-09-15-23-33-08',
+          'https://example.com/js/app.min.js?v=2026-09-16-00-03-08',
+          'https://example.com/js/app.min.js',
+        ]),
+      ],
+      buildManifest(),
+      'general',
+    );
+
+    expect(html.split('/js/app.min.js').length - 1).toBe(1);
+    expect(html).not.toContain('?v=');
+    expect(html).toContain('1 fichier concerné');
+  });
+
+  it('keeps the whole file name when a long path is shortened', () => {
+    const fileName = 'hotel-villas-foch-bordeaux_seminaires-et-evenements_09.jpg';
+    const html = renderFindingsAppendix(
+      getStrings('fr'),
+      12,
+      'fr',
+      [
+        resourceFinding([
+          `https://example.com/wp-content/themes/diadao-theme/core/legacy/starter/public/uploads/2026/09/${fileName}`,
+        ]),
+      ],
+      buildManifest(),
+      'general',
+    );
+
+    expect(html).toContain(`…/${fileName}`);
+  });
+
+  it('prints the analysed pages one per line, grouped by first path segment', () => {
+    const manifest = buildManifestWithPages(1);
+    const page = manifest.pages[0]!;
+    manifest.pages = [
+      '/',
+      '/contact',
+      '/fr/chambres',
+      '/fr/contact',
+      '/en/rooms',
+      '/en/contact',
+    ].map((path) => ({ ...page, url: `https://example.com${path}` }));
+
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [], manifest, 'general');
+    const block = html.slice(html.indexOf('Pages analysées (6)'));
+
+    expect(block).not.toContain('https://example.com/, ');
+    expect(block).toContain('<li style="break-inside:avoid">/fr/chambres</li>');
+    for (const heading of ['>/en/</p>', '>/fr/</p>']) expect(block).toContain(heading);
+    // A lone top-level page joins the root group rather than heading its own.
+    expect(block).not.toContain('>/contact/</p>');
+    expect(block.indexOf('>/</p>')).toBeLessThan(block.indexOf('>/en/</p>'));
   });
 });

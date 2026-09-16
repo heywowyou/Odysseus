@@ -232,38 +232,40 @@ function elementResourceUrls(finding: Finding): string[] {
 /** Path and filename only. A column of forty absolute URLs sharing one
  *  origin is unreadable, and the origin is already on the cover.
  *
- *  A credential-shaped param (key/token/secret/auth/password) is stripped
- *  before rebuilding the query string, since a Lighthouse-reported LCP
- *  resource can legitimately be a third-party request carrying one (a real
- *  Google Maps tile URL, e.g. f084 on the Lagnonu report) - this is a
- *  client-forwardable PDF, not a debug log. Ordinary cache-busting params
- *  are kept, per this function's existing behaviour. */
-const CREDENTIAL_LOOKING_PARAM_PATTERN = /key|token|secret|auth|password/i;
-
-function shortenResourceUrl(url: string): string {
+ *  Issue #318: the query string is dropped too. A real report listed the
+ *  same script three times, differing only by a cache-busting
+ *  `?v=2026-09-15-23-33-08`, and a query is never what tells a developer
+ *  which file to fix. Dropping it also keeps credential-shaped parameters
+ *  (a Google Maps tile's `key=`) out of this client-forwardable PDF, which
+ *  used to need its own stripping step. */
+function resourceDisplayPath(url: string): string {
   try {
-    const parsed = new URL(url);
-    for (const key of [...parsed.searchParams.keys()]) {
-      if (CREDENTIAL_LOOKING_PARAM_PATTERN.test(key)) parsed.searchParams.delete(key);
-    }
-    return capResourceUrl(`${parsed.pathname}${parsed.search}`);
+    return capResourcePath(new URL(url).pathname);
   } catch {
-    return capResourceUrl(url);
+    return capResourcePath(url.split(/[?#]/)[0] ?? url);
   }
 }
 
-/** Issue #276: a third-party loader URL with a 700-character query string
- *  stayed one unbreakable token inside the appendix table and aborted the
- *  paid PDF. The file list is already a derived display (origin dropped,
- *  credential-looking parameters removed), so a very long entry keeps its
- *  start and end, which identify the file, and elides the middle. */
-const RESOURCE_URL_DISPLAY_MAX = 90;
+/** The distinct files a resource list names, once query strings are gone,
+ *  in the list's own order. The row's file count reads this too, so the
+ *  count and the printed list never disagree. */
+function distinctResourcePaths(urls: readonly string[]): string[] {
+  return [...new Set(urls.map(resourceDisplayPath))];
+}
 
-function capResourceUrl(value: string): string {
-  if (value.length <= RESOURCE_URL_DISPLAY_MAX) return value;
-  const head = value.slice(0, 60);
-  const tail = value.slice(-(RESOURCE_URL_DISPLAY_MAX - 61));
-  return `${head}…${tail}`;
+/** Issue #276: a very long entry stayed one unbreakable token inside the
+ *  appendix table and aborted the paid PDF, so a long path is shortened.
+ *  Issue #318: the cut used to fall in the middle of the string, which
+ *  could remove the file name itself ("j….min.js"), the one part that
+ *  identifies the file. The file name is now always kept whole and only
+ *  the directories before it are elided. */
+const RESOURCE_PATH_DISPLAY_MAX = 90;
+
+function capResourcePath(value: string): string {
+  if (value.length <= RESOURCE_PATH_DISPLAY_MAX) return value;
+  const fileName = value.slice(value.lastIndexOf('/') + 1);
+  const headLength = Math.max(RESOURCE_PATH_DISPLAY_MAX - fileName.length - 2, 1);
+  return `${value.slice(0, headLength)}…/${fileName}`;
 }
 
 function renderResourceUrlList(
@@ -273,7 +275,9 @@ function renderResourceUrlList(
 ): string {
   const collapsed = findingResourceUrls(finding);
   const fromElements = collapsed.length === 0;
-  const urls = collapsed.length > 0 ? collapsed : elementResourceUrls(finding);
+  const urls = distinctResourcePaths(
+    collapsed.length > 0 ? collapsed : elementResourceUrls(finding),
+  );
   if (urls.length === 0) return '';
   const a = strings.findingsAppendix;
 
@@ -285,7 +289,7 @@ function renderResourceUrlList(
   // count, the same reasoning the cover uses for an unconfirmed name.
   const truncated = fromElements && finding.elements.length < finding.occurrences;
 
-  const shown = urls.slice(0, RESOURCE_URL_LIST_CAP).map(shortenResourceUrl);
+  const shown = urls.slice(0, RESOURCE_URL_LIST_CAP);
   const remaining = urls.length - shown.length;
   const text =
     remaining > 0 && !truncated
@@ -368,7 +372,7 @@ function renderSubTableRow(
   // B4: a site-wide resource finding has no meaningful single selector -
   // its detail is the file list rendered below, so the column states how
   // many files rather than naming an arbitrary one of their DOM nodes.
-  const resourceUrls = findingResourceUrls(finding);
+  const resourceUrls = distinctResourcePaths(findingResourceUrls(finding));
   const selector =
     resourceUrls.length > 0
       ? fillTemplate(
@@ -796,6 +800,56 @@ function renderCategorySection(
   `;
 }
 
+/** Issue #318: the analysed pages used to print as one comma-separated
+ *  block that ran across almost two pages for a 140-page site. They are now
+ *  one path per line, in columns, grouped by the first path segment (which
+ *  is the language or the site section on the sites audited so far). A
+ *  segment with a single page joins the top-level group rather than getting
+ *  a heading of its own. Pages on another host keep their full address. */
+function renderCrawledPageGroups(pageUrls: readonly string[]): string {
+  const hostCounts = new Map<string, number>();
+  const parsed = pageUrls.map((url) => {
+    try {
+      const u = new URL(url);
+      hostCounts.set(u.host, (hostCounts.get(u.host) ?? 0) + 1);
+      return { url, host: u.host, path: `${u.pathname}${u.search}` };
+    } catch {
+      return { url, host: undefined, path: url };
+    }
+  });
+  const mainHost = [...hostCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  const entries = parsed.map((page) => {
+    const onMainHost = page.host !== undefined && page.host === mainHost;
+    const display = onMainHost ? page.path : page.url;
+    const segment = onMainHost ? (page.path.split('/')[1] ?? '').split('?')[0]! : '';
+    return { display, segment };
+  });
+  const segmentCounts = new Map<string, number>();
+  for (const { segment } of entries) {
+    segmentCounts.set(segment, (segmentCounts.get(segment) ?? 0) + 1);
+  }
+  const groups = new Map<string, string[]>();
+  for (const { display, segment } of entries) {
+    const key = segment !== '' && (segmentCounts.get(segment) ?? 0) > 1 ? `/${segment}/` : '/';
+    groups.set(key, [...(groups.get(key) ?? []), display]);
+  }
+  const orderedKeys = [...groups.keys()].sort((a, b) =>
+    a === '/' ? -1 : b === '/' ? 1 : a.localeCompare(b),
+  );
+  const showHeadings = orderedKeys.length > 1;
+  return orderedKeys
+    .map((key) => {
+      const items = (groups.get(key) ?? [])
+        .map((display) => `<li style="break-inside:avoid">${escapeHtml(display)}</li>`)
+        .join('');
+      const heading = showHeadings
+        ? `<p class="mono" style="font-size:10px;font-weight:600;opacity:0.8;margin:var(--space-2) 0 2px">${escapeHtml(key)}</p>`
+        : '';
+      return `<div class="crawled-page-group">${heading}<ul class="url-cell" style="list-style:none;padding:0;margin:0;columns:2;column-gap:var(--space-6);font-size:10px;line-height:1.45;opacity:0.65;max-width:none">${items}</ul></div>`;
+    })
+    .join('');
+}
+
 export function renderFindingsAppendix(
   strings: ReportStrings,
   ordinal: number,
@@ -909,7 +963,7 @@ export function renderFindingsAppendix(
       ? `
         <div style="margin-bottom:var(--space-12)">
           <h4>${escapeHtml(fillTemplate(strings.findingsAppendix.crawledPagesHeadingTemplate, { count: crawledPages.length }))}</h4>
-          <p class="url-cell" style="font-size:11px;opacity:0.65;max-width:none">${escapeHtml(crawledPages.join(', '))}</p>
+          ${renderCrawledPageGroups(crawledPages)}
         </div>
       `
       : '';
