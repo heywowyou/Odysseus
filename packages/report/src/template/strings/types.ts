@@ -1223,6 +1223,11 @@ export interface ReportStrings {
      *  way. Distinct from legalCitationNoTransactionalFlowFact's clean
      *  negative. */
     legalCitationTransactionalFlowInconclusiveFact: string;
+    /** Issue #294: the fact kind 'transactional-flow-form-only' sentence
+     *  - the only flow evidence is a form element, which alone does not
+     *  establish a transactional flow. Distinct from
+     *  legalCitationTransactionalFlowInconclusiveFact's booking controls. */
+    legalCitationTransactionalFlowFormOnlyFact: string;
     legalCitationNoTransactionalFlowFact: string;
     legalCitationSirenMissingFact: string;
     /** Template: {reason}. */

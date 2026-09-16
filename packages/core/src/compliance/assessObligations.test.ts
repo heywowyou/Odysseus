@@ -98,6 +98,66 @@ describe('assessObligations', () => {
     expect(result.basis[0]?.facts).toContainEqual({ kind: 'no-transactional-flow' });
   });
 
+  // Issue #294 (haaitza.com): the only flow evidence is 'checkout-form'
+  // matches from Gravity Forms, a contact-form plugin. A form element is
+  // not a booking, cart or payment flow, so the gate must not resolve
+  // in_scope off it - it lands on the established "could not be
+  // confirmed" status with its own fact kind.
+  it('resolves likely_in_scope with a form-only fact when checkout-form evidence is the only kind', () => {
+    const profile = buildProfile({ effectifCode: '22', turnover: null });
+    const formOnly: SiteSignals = {
+      hasTransactionalFlow: true,
+      transactionalFlowEvidence: [
+        {
+          kind: 'checkout-form',
+          selector: '#gform_1',
+          pageUrl: 'https://haaitza.com/',
+          detail: 'form action',
+        },
+      ],
+    };
+    const result = assessObligations(profile, formOnly);
+    expect(result.status).toBe('likely_in_scope');
+    expect(result.basis[0]?.facts).toContainEqual({ kind: 'transactional-flow-form-only' });
+    expect(result.basis[0]?.facts).not.toContainEqual({ kind: 'transactional-flow' });
+  });
+
+  it('stays in_scope when checkout-form evidence is joined by a real engine signal', () => {
+    const profile = buildProfile({ effectifCode: '22', turnover: null });
+    const mixed: SiteSignals = {
+      hasTransactionalFlow: true,
+      transactionalFlowEvidence: [
+        {
+          kind: 'checkout-form',
+          selector: '#gform_1',
+          pageUrl: 'https://example.com/',
+          detail: 'form action',
+        },
+        {
+          kind: 'payment-embed',
+          selector: 'script[src]',
+          pageUrl: 'https://example.com/',
+          detail: 'https://js.stripe.com/v3',
+        },
+      ],
+    };
+    const result = assessObligations(profile, mixed);
+    expect(result.status).toBe('in_scope');
+    expect(result.basis[0]?.facts).toContainEqual({
+      kind: 'transactional-flow',
+      evidence: mixed.transactionalFlowEvidence,
+    });
+  });
+
+  // An operator override asserts the flow personally and may carry no
+  // evidence at all; the vacuous "all evidence is checkout-form" reading
+  // of an empty list must not downgrade it (issue #294 follow-up).
+  it('keeps an operator override in_scope when no evidence was recorded', () => {
+    const profile = buildProfile({ effectifCode: '22', turnover: null });
+    const result = assessObligations(profile, withFlow);
+    expect(result.status).toBe('in_scope');
+  });
+
   // Issue #42 (Villas Foch, real audit ff95ff97): a five-star hotel whose
   // booking controls carry no href attribute at all left
   // hasTransactionalFlow=false with nothing else recorded, resolved

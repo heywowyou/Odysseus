@@ -113,6 +113,11 @@ function renderFact(
     // (likely_in_scope), materially different sentence for the client.
     case 'transactional-flow-inconclusive':
       return m.legalCitationTransactionalFlowInconclusiveFact;
+    // Issue #294: the only flow evidence was a form element, which alone
+    // establishes nothing - the gate reads "not confirmed", never "flow
+    // observed".
+    case 'transactional-flow-form-only':
+      return m.legalCitationTransactionalFlowFormOnlyFact;
     case 'no-transactional-flow':
       return m.legalCitationNoTransactionalFlowFact;
     case 'siren-missing':

@@ -174,6 +174,12 @@ export type ObligationBasisFact =
   | { kind: 'no-transactional-flow' }
   | { kind: 'transactional-flow-unknown' }
   | { kind: 'transactional-flow-inconclusive' }
+  /** Issue #294 (haaitza.com): the only flow evidence is 'checkout-form'
+   *  matches. A form element is not a booking, cart or payment flow -
+   *  Gravity Forms was named as the site's "booking engine" on exactly
+   *  this signal. The gate is reported as not confirmed either way
+   *  (status 'Parcours à confirmer'), never as observed. */
+  | { kind: 'transactional-flow-form-only' }
   | { kind: 'siren-missing' }
   | {
       kind: 'sirene-lookup-failed';

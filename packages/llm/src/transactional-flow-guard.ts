@@ -13,10 +13,15 @@ export interface TransactionalFlowViolation {
 export function deriveTransactionalFlowStatus(
   assessment: ObligationAssessment,
 ): TransactionalFlowStatus {
+  const facts = assessment.basis.flatMap((basis) => basis.facts);
+  // Issue #294: the only flow evidence was a form element, which alone
+  // establishes nothing. The prose must not assert a booking/cart/payment
+  // flow off that signal, so this steers 'inconclusive' ahead of the
+  // detected-true resolution check below.
+  if (facts.some((fact) => fact.kind === 'transactional-flow-form-only')) return 'inconclusive';
   const resolution = assessment.siteSignalResolutions?.['hasTransactionalFlow'];
   if (resolution?.value === true) return 'present';
   if (resolution === undefined) return 'unknown';
-  const facts = assessment.basis.flatMap((basis) => basis.facts);
   if (facts.some((fact) => fact.kind === 'transactional-flow-inconclusive')) {
     return 'inconclusive';
   }

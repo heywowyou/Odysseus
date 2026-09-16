@@ -72,6 +72,21 @@ function villaFochManifest(): AuditManifest {
   } as unknown as AuditManifest;
 }
 
+function haaitzaFormOnlyAssessment(): ObligationAssessment {
+  return {
+    status: 'likely_in_scope',
+    basis: [
+      {
+        regimeId: EAA_REGIME_ID,
+        facts: [
+          { kind: 'effectif-band', code: '22', label: '20 à 49 salariés' },
+          { kind: 'transactional-flow-form-only' },
+        ],
+      },
+    ],
+  };
+}
+
 function render(
   language: 'fr' | 'en',
   obligationAssessment: ObligationAssessment | undefined,
@@ -142,5 +157,37 @@ describe('the inconclusive transactional-flow resolution in section 03 (issue #4
     const html = render('fr', villaFochAssessment(), manifest);
     expect(html).toContain('Des contrôles de réservation ont été relevés');
     expect(html).not.toContain('https://www.villasfoch.fr/en/rooms-and-suites');
+  });
+});
+
+// Issue #294 (haaitza.com): the only flow evidence was checkout-form
+// matches from Gravity Forms, a contact-form plugin, yet the report named
+// it "moteur de réservation" and asserted "Effectif et parcours observés".
+// A form alone is not a flow: the status is "Parcours à confirmer", the
+// paragraph carries the form-only sentence, and no vendor scope note may
+// render.
+describe('the form-only transactional-flow resolution in section 03 (issue #294)', () => {
+  it('resolves to the "Parcours à confirmer" status, never "Effectif et parcours observés"', () => {
+    const html = render('fr', haaitzaFormOnlyAssessment());
+    expect(html).toContain('Parcours à confirmer');
+    expect(html).not.toContain('Effectif et parcours observés');
+  });
+
+  it('carries the form-only fact sentence, not the booking-controls one', () => {
+    const html = render('fr', haaitzaFormOnlyAssessment());
+    expect(html).toContain('un formulaire seul ne permet pas');
+    expect(html).not.toContain('Des contrôles de réservation ont été relevés');
+  });
+
+  it('never names a plugin as a booking engine or states an on-site flow', () => {
+    const html = render('fr', haaitzaFormOnlyAssessment());
+    expect(html).not.toContain('moteur de réservation');
+    expect(html).not.toContain('Gravity Forms');
+  });
+
+  it('renders the same resolution in English, with no French leaking in', () => {
+    const html = render('en', haaitzaFormOnlyAssessment());
+    expect(html).toContain('a form alone does not establish');
+    expect(html).not.toContain('un formulaire seul ne permet pas');
   });
 });

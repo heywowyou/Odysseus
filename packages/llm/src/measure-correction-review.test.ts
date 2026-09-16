@@ -141,6 +141,17 @@ describe('deriveTransactionalFlowStatus', () => {
     expect(deriveTransactionalFlowStatus(assessment({ resolution: { value: true } }))).toBe(
       'present',
     );
+    // Issue #294: a form-only detection must steer 'inconclusive' even
+    // though the detected boolean resolved true - a form element alone
+    // never lets the prose assert a flow.
+    expect(
+      deriveTransactionalFlowStatus(
+        assessment({
+          resolution: { value: true },
+          factKinds: ['transactional-flow-form-only'],
+        }),
+      ),
+    ).toBe('inconclusive');
     expect(deriveTransactionalFlowStatus(assessment({}))).toBe('unknown');
     expect(
       deriveTransactionalFlowStatus(

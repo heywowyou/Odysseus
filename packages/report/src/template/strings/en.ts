@@ -795,6 +795,11 @@ export const en: ReportStrings = {
     // materially different from the clean negative below.
     legalCitationTransactionalFlowInconclusiveFact:
       'Booking controls were found on the visited pages, but their destination could not be reliably established: a transactional flow can therefore be neither confirmed nor ruled out.',
+    // Issue #294: a form element alone (for example a contact-form plugin)
+    // does not establish a transactional flow - it must never be stated as
+    // one.
+    legalCitationTransactionalFlowFormOnlyFact:
+      'A form was found on the visited pages, but a form alone does not establish that a transactional flow exists: one can therefore be neither confirmed nor ruled out.',
     legalCitationNoTransactionalFlowFact:
       'No booking, cart, or checkout flow was found on the visited pages.',
     legalCitationSirenMissingFact: 'No SIREN identifier was found on the visited pages.',

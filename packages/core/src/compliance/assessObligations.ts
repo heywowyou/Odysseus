@@ -11,9 +11,11 @@
  * not-exempt profile resolves to 'likely_in_scope' rather than
  * 'in_scope'. Supplied: the gate is resolved definitively, either
  * 'in_scope' or 'out_of_scope' - except when the detector recorded
- * unresolved booking signals (issue #42), which resolves to
- * 'likely_in_scope' with a 'transactional-flow-inconclusive' fact rather
- * than dressing an unresolved detection up as a clean negative.
+ * unresolved booking signals (issue #42), or when the only flow evidence
+ * is checkout-form matches (issue #294: a form is not a transactional
+ * flow), both of which resolve to 'likely_in_scope' with a
+ * distinguishing fact kind rather than dressing an unresolved detection
+ * up as a clean negative or a confirmed flow.
  *
  * An OperatorProfile built from a stock import may have no turnover field,
  * unlike the live Sirene API. The exemption check degrades conservatively
@@ -135,12 +137,32 @@ export function assessObligations(
   const { exempt, fact: exemptionFact } = checkSmeExemption(profile);
   const eaaFacts: ObligationBasisFact[] = [exemptionFact];
 
+  // Issue #294 (haaitza.com): 'checkout-form' evidence alone is a form
+  // element, not a booking, cart or payment flow - the report named
+  // Gravity Forms, a contact-form plugin, as the site's "booking engine"
+  // on exactly this signal. A form alone does not establish that a
+  // contract can be concluded online, so a form-only detection resolves
+  // to the established "could not be confirmed" status with its own fact
+  // kind, never to a flow assertion. Evidence kinds that name a real
+  // engine (payment scripts, booking engines, confirmed redirects,
+  // booking iframes) keep asserting the flow, and so does an operator
+  // override with no recorded evidence: their word is the resolution.
+  const flowEvidence = siteSignals?.transactionalFlowEvidence ?? [];
+  const hasEngineEvidence = flowEvidence.some((e) => e.kind !== 'checkout-form');
+  const hasFormOnlyEvidence = !hasEngineEvidence && flowEvidence.length > 0;
+
   let eaaStatus: 'in_scope' | 'likely_in_scope' | 'out_of_scope';
   if (exempt) {
     eaaStatus = 'out_of_scope';
   } else if (siteSignals === undefined) {
     eaaStatus = 'likely_in_scope';
     eaaFacts.push({ kind: 'transactional-flow-unknown' });
+  } else if (siteSignals.hasTransactionalFlow && hasEngineEvidence) {
+    eaaStatus = 'in_scope';
+    eaaFacts.push({ kind: 'transactional-flow', evidence: siteSignals.transactionalFlowEvidence });
+  } else if (siteSignals.hasTransactionalFlow && hasFormOnlyEvidence) {
+    eaaStatus = 'likely_in_scope';
+    eaaFacts.push({ kind: 'transactional-flow-form-only' });
   } else if (siteSignals.hasTransactionalFlow) {
     eaaStatus = 'in_scope';
     eaaFacts.push({ kind: 'transactional-flow', evidence: siteSignals.transactionalFlowEvidence });

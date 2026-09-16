@@ -117,6 +117,19 @@ requirement in the 9c milestone note of `docs/decisions/trade-offs.md`.
 The argument B facts block may be used with hotel drafts from the first
 send, still subject to section 7's report-not-conclude rule.
 
+**A form is not a transactional flow (issue #294, 2026-09-16).**
+The deterministic detector's weakest flow signal is a form element whose
+action or class matches checkout/cart vocabulary. Real sites match it
+with generic contact-form plugins (haaitza.com's Gravity Forms was
+reported as the site's "booking engine" on exactly this signal), so a
+`checkout-form` match alone never establishes that a contract can be
+concluded online. When it is the only flow evidence, the obligation
+engine resolves the gate to `likely_in_scope` ("Parcours à confirmer")
+with a `transactional-flow-form-only` fact, and no report surface may
+name a plugin as a booking engine or state an on-site flow from it.
+Payment scripts, named booking engines, confirmed delegated redirects
+and booking iframes keep asserting the flow.
+
 **Known objection, unresolved: "my site predates June 2025."** Some
 commercial sources state that services or content published before 2025
 have until 28 June 2030. The directive's transitional provisions concern

@@ -914,6 +914,11 @@ export const fr: ReportStrings = {
     // materially different from the clean negative below.
     legalCitationTransactionalFlowInconclusiveFact:
       "Des contrôles de réservation ont été relevés sur les pages visitées, mais leur destination n'a pas pu être établie de manière fiable : un parcours transactionnel n'est donc ni confirmé ni exclu.",
+    // Issue #294: a form element alone (for example a contact-form plugin)
+    // does not establish a transactional flow - it must never be stated as
+    // one.
+    legalCitationTransactionalFlowFormOnlyFact:
+      "Un formulaire a été relevé sur les pages visitées, mais un formulaire seul ne permet pas d'établir qu'un parcours transactionnel existe : celui-ci n'est donc ni confirmé ni exclu.",
     legalCitationNoTransactionalFlowFact:
       "Aucun parcours de réservation, panier ou paiement en ligne n'a été trouvé sur les pages visitées.",
     legalCitationSirenMissingFact: "Aucun identifiant SIREN n'a été trouvé sur les pages visitées.",
