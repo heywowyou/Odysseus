@@ -686,6 +686,60 @@ export const fr: ReportStrings = {
           "Optimisation pour les moteurs d'intelligence artificielle générative (ex. réponses IA), une visibilité distincte du référencement classique.",
       },
       {
+        id: 'hreflang',
+        term: 'hreflang',
+        definition:
+          "Indication placée dans le code d'une page pour signaler aux moteurs de recherche ses versions dans d'autres langues ou pour d'autres pays, afin qu'ils présentent la bonne version à chaque visiteur.",
+      },
+      {
+        id: 'noindex',
+        term: 'noindex',
+        definition:
+          'Instruction demandant aux moteurs de recherche de ne pas faire figurer une page dans leurs résultats.',
+      },
+      {
+        id: 'canonical',
+        term: 'Balise canonique',
+        definition:
+          'Balise qui désigne, parmi plusieurs adresses au contenu identique ou très proche, celle que les moteurs de recherche doivent retenir.',
+      },
+      {
+        id: 'open-graph',
+        term: 'Open Graph',
+        definition:
+          "Balises qui définissent le titre, la description et l'image affichés lorsqu'une page est partagée sur un réseau social ou dans une messagerie.",
+      },
+      {
+        id: 'json-ld',
+        term: 'JSON-LD',
+        definition:
+          "Format de données structurées placé dans le code d'une page, qui décrit son contenu (établissement, adresse, avis, prix) aux moteurs de recherche et aux assistants IA.",
+      },
+      {
+        id: 'lighthouse',
+        term: 'Lighthouse',
+        definition:
+          "Outil de mesure de Google qui charge chaque page dans des conditions simulées (mobile, réseau et processeur ralentis) ; ses valeurs sont des mesures de laboratoire, pas l'expérience de vos visiteurs.",
+      },
+      {
+        id: 'crux',
+        term: 'Chrome UX Report',
+        definition:
+          'Données publiques de Google issues de visiteurs réels utilisant Chrome, qui montrent la vitesse effectivement vécue sur le site lorsque celui-ci reçoit assez de trafic.',
+      },
+      {
+        id: 'inp',
+        term: 'INP (Interaction to Next Paint)',
+        definition:
+          "Délai entre une action du visiteur (clic, appui, saisie) et la mise à jour visible de la page ; il n'est mesuré que sur des visiteurs réels.",
+      },
+      {
+        id: 'axe-core',
+        term: 'axe-core',
+        definition:
+          "Moteur open source de tests d'accessibilité automatisés, utilisé pour vérifier les critères WCAG qu'un outil peut contrôler.",
+      },
+      {
         id: 'constat-vs-occurrence',
         term: 'Constat / Occurrence',
         definition:

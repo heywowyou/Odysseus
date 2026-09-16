@@ -56,7 +56,7 @@ import {
 } from './sections/accessibility-statement.js';
 import { renderFindingsAppendix } from './sections/findings-appendix.js';
 import { renderMethodology } from './sections/methodology.js';
-import { renderGlossary } from './sections/glossary.js';
+import { htmlToText, renderGlossary } from './sections/glossary.js';
 import { renderNextSteps } from './sections/next-steps.js';
 import { escapeHtml } from './html-utils.js';
 import { buildRenderedPriorities } from './rendered-priorities.js';
@@ -201,7 +201,7 @@ function renderBody(
   // over a real gap.
   const ord = (id: SectionId): number => n.get(id)!;
 
-  return [
+  const sections = [
     renderCover(strings, manifest, analysis, resolvedFindings, manualFields, preparation),
     // Second physical page (plan 018 step 4): audit facts and the risk
     // scale on their own sheet, before the TOC. Unnumbered chrome, like
@@ -339,13 +339,18 @@ function renderBody(
       sectorOverride ?? analysis.obligationAssessment?.sector ?? 'general',
       citedStatIds,
     ),
-    renderGlossary(strings, ord('section-13'), {
-      findings: resolvedFindings,
-      obligationAssessment: analysis.obligationAssessment,
-      transactionalFlowEvaluated: manifest.siteSignals?.hasTransactionalFlow !== undefined,
-      hasMeasuredCoreWebVitals: hasMeasuredCoreWebVitals(manifest),
-    }),
-  ].join('\n');
+  ];
+  // Issue #330: the glossary renders last so it can read what the rest of
+  // the report actually printed - several terms are defined only when the
+  // rendered text uses them.
+  const glossary = renderGlossary(strings, ord('section-13'), {
+    findings: resolvedFindings,
+    obligationAssessment: analysis.obligationAssessment,
+    transactionalFlowEvaluated: manifest.siteSignals?.hasTransactionalFlow !== undefined,
+    hasMeasuredCoreWebVitals: hasMeasuredCoreWebVitals(manifest),
+    reportText: htmlToText(sections.join('\n')),
+  });
+  return [...sections, glossary].join('\n');
 }
 
 export async function renderHtml(input: RenderHtmlInput): Promise<string> {

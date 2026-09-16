@@ -589,6 +589,59 @@ export const en: ReportStrings = {
           'Generative engine optimization: visibility in AI answer engines, distinct from classic search visibility.',
       },
       {
+        id: 'hreflang',
+        term: 'hreflang',
+        definition:
+          'A marker in the page code that tells search engines which versions of the page exist in other languages or for other countries, so they show each visitor the right one.',
+      },
+      {
+        id: 'noindex',
+        term: 'noindex',
+        definition: 'An instruction asking search engines to leave a page out of their results.',
+      },
+      {
+        id: 'canonical',
+        term: 'Canonical tag',
+        definition:
+          'A tag that names, among several addresses with identical or near-identical content, the one search engines should keep.',
+      },
+      {
+        id: 'open-graph',
+        term: 'Open Graph',
+        definition:
+          'Tags that set the title, description and image shown when a page is shared on social media or in a messaging app.',
+      },
+      {
+        id: 'json-ld',
+        term: 'JSON-LD',
+        definition:
+          'A structured-data format placed in the page code that describes its content (business, address, reviews, prices) to search engines and AI assistants.',
+      },
+      {
+        id: 'lighthouse',
+        term: 'Lighthouse',
+        definition:
+          "Google's measurement tool, which loads each page under simulated conditions (mobile, slowed network and processor); its values are lab measurements, not your visitors' experience.",
+      },
+      {
+        id: 'crux',
+        term: 'Chrome UX Report',
+        definition:
+          'Public Google data from real visitors using Chrome, showing the speed actually experienced on the site once it receives enough traffic.',
+      },
+      {
+        id: 'inp',
+        term: 'INP (Interaction to Next Paint)',
+        definition:
+          'The delay between a visitor action (click, tap, typing) and the visible update of the page; it is only measured on real visitors.',
+      },
+      {
+        id: 'axe-core',
+        term: 'axe-core',
+        definition:
+          'An open-source automated accessibility testing engine, used to check the WCAG criteria a tool can verify.',
+      },
+      {
         id: 'constat-vs-occurrence',
         term: 'Finding / Occurrence',
         definition:

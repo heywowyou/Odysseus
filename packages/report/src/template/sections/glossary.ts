@@ -18,6 +18,42 @@ export interface GlossaryContext {
    *  a performance section that has zero content when Lighthouse failed
    *  on every page (P0.1, 2026-08-21 La Corniche feedback pass). */
   hasMeasuredCoreWebVitals: boolean;
+  /** Issue #330: the visible text of every section rendered before the
+   *  glossary (htmlToText). The Haaitza report used hreflang 13 times,
+   *  "balise canonique" 9 times and Lighthouse 10 times, and defined none
+   *  of them. Terms in TEXT_GATED_TERMS are defined exactly when this text
+   *  uses them, so the glossary follows the rendered report rather than a
+   *  hand-kept guess about which sections mention what. */
+  reportText: string;
+}
+
+/** Issue #330: terms defined only when the rendered report uses them.
+ *  Patterns match the French and English wording alike. `axe` alone is
+ *  also a common French noun, so only the engine's full name counts. */
+const TEXT_GATED_TERMS: Readonly<Record<string, RegExp>> = {
+  hreflang: /\bhreflang\b/i,
+  noindex: /\bnoindex\b/i,
+  canonical: /\bcanoni(?:que|cal)\b/i,
+  lighthouse: /\bLighthouse\b/,
+  crux: /\bChrome UX Report\b/,
+  inp: /\bINP\b/,
+  'open-graph': /\bOpen Graph\b/,
+  'json-ld': /\bJSON-LD\b/,
+  'axe-core': /\baxe-core\b/,
+};
+
+/** Visible text of rendered report HTML: tags dropped, the handful of
+ *  entities escapeHtml produces decoded. Good enough to ask "does the
+ *  report say this word", which is all the glossary needs. */
+export function htmlToText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
 }
 
 /** item 33: whether each conditional glossary term id is relevant to a
@@ -31,9 +67,13 @@ export interface GlossaryContext {
  *  five Core Web Vitals terms are handled below, gated on
  *  hasMeasuredCoreWebVitals rather than falling through to the default. */
 function isGlossaryTermRelevant(id: string, ctx: GlossaryContext): boolean {
+  const textPattern = TEXT_GATED_TERMS[id];
+  if (textPattern) return textPattern.test(ctx.reportText);
   switch (id) {
+    // Issue #330: the report can cite RGAA outside the article 47 route
+    // (the conformance table names it), so a mention defines it too.
     case 'rgaa':
-      return isArticle47Regime(ctx.obligationAssessment);
+      return isArticle47Regime(ctx.obligationAssessment) || /\bRGAA\b/.test(ctx.reportText);
     case 'seo':
       return ctx.findings.some((f) => f.category === 'seo');
     case 'geo':
