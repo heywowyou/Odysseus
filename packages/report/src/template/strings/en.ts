@@ -342,8 +342,26 @@ export const en: ReportStrings = {
     reviewedRemediationLabel: 'Reviewed technical remediation',
     fixSnippetLabel: 'Suggested fix',
     fixSnippetFillInBlankNote: 'Fill in with your own content.',
-    ownershipCountsTemplate:
-      'Ownership: {firstParty} to fix directly, {thirdParty} to pass on, {verifyIntent} to verify by intent.',
+    ownershipSummaryTemplate: 'Ownership: {parts}.',
+    ownershipPartTemplates: {
+      'first-party-action': '{count} to fix directly',
+      'third-party-escalation': '{count} to pass on',
+      'verify-intent': '{count} to verify by intent',
+    },
+    ownershipSingleGroupTemplates: {
+      'first-party-action': {
+        one: 'The correction in this workstream can be fixed directly.',
+        many: 'All {count} corrections in this workstream can be fixed directly.',
+      },
+      'third-party-escalation': {
+        one: 'The correction in this workstream must be passed on to a third party.',
+        many: 'All {count} corrections in this workstream must be passed on to a third party.',
+      },
+      'verify-intent': {
+        one: 'The correction in this workstream needs verifying by intent.',
+        many: 'All {count} corrections in this workstream need verifying by intent.',
+      },
+    },
     effortImpactLevels: { low: 'Low', medium: 'Medium', high: 'High' },
     pagesOfTotalTemplate: '{pages} {pageWord} of {totalPages}',
     refsLabel: 'Findings',

@@ -99,9 +99,26 @@ export function applyEnglishClientFacingCopy(strings: ReportStrings): ReportStri
       effortLabel: 'Complexity',
       impactLabel: 'Impact',
       affectedPagesLabel: 'Pages affected',
-      ownershipCountsTemplate:
-        'Correction ownership: {firstParty} to address directly, {thirdParty} to pass to a third ' +
-        'party, and {verifyIntent} to verify in context.',
+      ownershipSummaryTemplate: 'Correction ownership: {parts}.',
+      ownershipPartTemplates: {
+        'first-party-action': '{count} to address directly',
+        'third-party-escalation': '{count} to pass to a third party',
+        'verify-intent': '{count} to verify in context',
+      },
+      ownershipSingleGroupTemplates: {
+        'first-party-action': {
+          one: 'The correction in this workstream can be addressed directly.',
+          many: 'All {count} corrections in this workstream can be addressed directly.',
+        },
+        'third-party-escalation': {
+          one: 'The correction in this workstream must be passed to a third party.',
+          many: 'All {count} corrections in this workstream must be passed to a third party.',
+        },
+        'verify-intent': {
+          one: 'The correction in this workstream needs verification in context.',
+          many: 'All {count} corrections in this workstream need verification in context.',
+        },
+      },
       whyItMattersLabel: 'Why it matters',
       observationLabel: 'What we found',
       observationWithPageTemplate:

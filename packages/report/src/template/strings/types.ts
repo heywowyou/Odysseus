@@ -12,6 +12,13 @@ import type { FindingCategory } from '@odysseus/core';
  * to one without the other fails to compile rather than silently shipping
  * an English label inside a French report.
  */
+/** Keyed like rendered-priorities.ts's PriorityOwnership. */
+export interface OwnershipTemplates<T> {
+  'first-party-action': T;
+  'third-party-escalation': T;
+  'verify-intent': T;
+}
+
 export interface ReportStrings {
   accessibilityStatementGuidance: {
     heading: string;
@@ -667,8 +674,14 @@ export interface ReportStrings {
     /** Shown beside a fill-in-blank snippet, whose blank the client must
      *  complete themselves rather than paste as-is. */
     fixSnippetFillInBlankNote: string;
-    /** Template: {firstParty}, {thirdParty}, {verifyIntent}. */
-    ownershipCountsTemplate: string;
+    /** A priority card's correction ownership, naming only the non-zero
+     *  groups. Template: {parts}, the joined ownershipPartTemplates. */
+    ownershipSummaryTemplate: string;
+    /** One non-zero ownership group. Template: {count}. */
+    ownershipPartTemplates: OwnershipTemplates<string>;
+    /** Every correction of the card sits in one group, so a "breakdown"
+     *  would list a single item. `many` template: {count}. */
+    ownershipSingleGroupTemplates: OwnershipTemplates<{ one: string; many: string }>;
     effortImpactLevels: { low: string; medium: string; high: string };
     /** Template: {pages}, {pageWord}, {totalPages}. */
     pagesOfTotalTemplate: string;

@@ -60,7 +60,11 @@ describe('Plan 046 French client-facing editorial contract', () => {
     report.executiveSummary.topPriorityIsNotLegalNoPointer,
     report.executiveSummary.summaryCountsTemplate,
     report.executiveSummary.coveredByPrioritiesTemplate,
-    report.themes.ownershipCountsTemplate,
+    report.themes.ownershipSummaryTemplate,
+    ...Object.values(report.themes.ownershipSingleGroupTemplates).flatMap(({ one, many }) => [
+      one,
+      many,
+    ]),
     report.themes.ownershipSplitTemplate,
     report.themes.thirdPartyOnlyTemplate,
     report.themes.lcenCrossReferenceTemplate,

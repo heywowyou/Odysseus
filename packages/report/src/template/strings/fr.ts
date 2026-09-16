@@ -404,8 +404,26 @@ export const fr: ReportStrings = {
     reviewedRemediationLabel: 'Remédiation technique vérifiée',
     fixSnippetLabel: 'Correctif type',
     fixSnippetFillInBlankNote: 'À compléter avec votre propre contenu.',
-    ownershipCountsTemplate:
-      'Responsabilité : {firstParty} à corriger directement, {thirdParty} à transmettre à un tiers, {verifyIntent} à vérifier selon le contexte.',
+    ownershipSummaryTemplate: 'Responsabilité : {parts}.',
+    ownershipPartTemplates: {
+      'first-party-action': '{count} à corriger directement',
+      'third-party-escalation': '{count} à transmettre à un tiers',
+      'verify-intent': '{count} à vérifier selon le contexte',
+    },
+    ownershipSingleGroupTemplates: {
+      'first-party-action': {
+        one: 'La correction de ce chantier est à faire directement.',
+        many: 'Les {count} corrections de ce chantier sont à faire directement.',
+      },
+      'third-party-escalation': {
+        one: 'La correction de ce chantier est à transmettre à un tiers.',
+        many: 'Les {count} corrections de ce chantier sont à transmettre à un tiers.',
+      },
+      'verify-intent': {
+        one: 'La correction de ce chantier est à vérifier selon le contexte.',
+        many: 'Les {count} corrections de ce chantier sont à vérifier selon le contexte.',
+      },
+    },
     effortImpactLevels: { low: 'Faible', medium: 'Moyen', high: 'Élevé' },
     pagesOfTotalTemplate: '{pages} {pageWord} sur {totalPages}',
     refsLabel: 'Constats',

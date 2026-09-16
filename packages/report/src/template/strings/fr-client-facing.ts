@@ -109,9 +109,26 @@ export function applyFrenchClientFacingCopy(strings: ReportStrings): ReportStrin
       effortLabel: 'Complexité',
       impactLabel: 'Impact',
       affectedPagesLabel: 'Pages concernées',
-      ownershipCountsTemplate:
-        'Répartition des corrections : {firstParty} à traiter directement, {thirdParty} à ' +
-        'transmettre à un tiers et {verifyIntent} à vérifier selon le contexte.',
+      ownershipSummaryTemplate: 'Répartition des corrections : {parts}.',
+      ownershipPartTemplates: {
+        'first-party-action': '{count} à traiter directement',
+        'third-party-escalation': '{count} à transmettre à un tiers',
+        'verify-intent': '{count} à vérifier selon le contexte',
+      },
+      ownershipSingleGroupTemplates: {
+        'first-party-action': {
+          one: 'La correction de ce chantier est à traiter directement.',
+          many: 'Les {count} corrections de ce chantier sont à traiter directement.',
+        },
+        'third-party-escalation': {
+          one: 'La correction de ce chantier est à transmettre à un tiers.',
+          many: 'Les {count} corrections de ce chantier sont à transmettre à un tiers.',
+        },
+        'verify-intent': {
+          one: 'La correction de ce chantier est à vérifier selon le contexte.',
+          many: 'Les {count} corrections de ce chantier sont à vérifier selon le contexte.',
+        },
+      },
       whyItMattersLabel: 'Pourquoi cela compte',
       observationLabel: 'Ce que nous avons constaté',
       observationWithPageTemplate:

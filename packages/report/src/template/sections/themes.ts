@@ -34,6 +34,7 @@ import { sectionTitle } from '../section-registry.js';
 import {
   buildLegacyPriority,
   type PriorityEvidence,
+  type PriorityOwnership,
   type RenderedPriority,
   selectRenderedThemes,
 } from '../rendered-priorities.js';
@@ -502,14 +503,11 @@ function renderTheme(
         `<span class="mono theme-rule">${escapeHtml(item.ruleId)}</span>${labelSeparator(language)}${escapeHtml(item.text)}${renderThemeFixSnippet(item.snippet, t)}`,
     ),
   );
-  const ownershipBox = priority
-    ? `<p class="theme-note">${escapeHtml(
-        fillTemplate(t.ownershipCountsTemplate, {
-          firstParty: formatNumber(priority.ownershipCounts['first-party-action'], language),
-          thirdParty: formatNumber(priority.ownershipCounts['third-party-escalation'], language),
-          verifyIntent: formatNumber(priority.ownershipCounts['verify-intent'], language),
-        }),
-      )}</p>`
+  const ownershipSentence = priority
+    ? renderOwnershipSentence(strings, language, priority.ownershipCounts)
+    : undefined;
+  const ownershipBox = ownershipSentence
+    ? `<p class="theme-note">${escapeHtml(ownershipSentence)}</p>`
     : '';
   const displayRank = priority?.displayRank ?? theme.priorityRank;
 
@@ -594,6 +592,43 @@ function renderTheme(
       ${contextBox}
     </div>
   `;
+}
+
+const OWNERSHIP_ORDER: readonly PriorityOwnership[] = [
+  'first-party-action',
+  'third-party-escalation',
+  'verify-intent',
+];
+
+/** The card's correction ownership, naming only the groups that hold at
+ *  least one correction: "0 à transmettre à un tiers et 0 à vérifier"
+ *  told the client nothing. A card whose corrections all share one group
+ *  gets a plain sentence instead of a one-item breakdown, and a card with
+ *  no classified correction gets no sentence at all. */
+export function renderOwnershipSentence(
+  strings: ReportStrings,
+  language: ReportLanguage,
+  counts: Readonly<Record<PriorityOwnership, number>>,
+): string | undefined {
+  const t = strings.themes;
+  const present = OWNERSHIP_ORDER.filter((group) => counts[group] > 0);
+  if (present.length === 0) return undefined;
+  if (present.length === 1) {
+    const group = present[0]!;
+    const count = counts[group];
+    const templates = t.ownershipSingleGroupTemplates[group];
+    return count === 1
+      ? templates.one
+      : fillTemplate(templates.many, { count: formatNumber(count, language) });
+  }
+  const parts = present.map((group) =>
+    fillTemplate(t.ownershipPartTemplates[group], {
+      count: formatNumber(counts[group], language),
+    }),
+  );
+  return fillTemplate(t.ownershipSummaryTemplate, {
+    parts: new Intl.ListFormat(language, { type: 'conjunction' }).format(parts),
+  });
 }
 
 function renderFact(label: string, valueHtml: string, color?: string): string {
