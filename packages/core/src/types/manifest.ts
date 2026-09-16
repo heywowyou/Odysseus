@@ -225,6 +225,13 @@ export interface CruxFieldDataResult {
 
 export interface ManifestPageEntry {
   url: string;
+  /** The page's own declared content language (lowercased <html lang>),
+   *  recorded for every visited page whose head metadata was extracted.
+   *  Optional because historical manifests predate it (issue #290): the
+   *  report's language-coverage sentence uses it to attribute a page at
+   *  the site root - no /fr/-style path prefix - to the language the site
+   *  itself declares, instead of treating it as having no language. */
+  language?: string;
   /** Path relative to the audit directory, e.g. "pages/contact-d4e5f6".
    *  Absent for pages the crawler never scanned at all (status
    *  'skipped-robots' or crawl-phase 'error'), since nothing was written

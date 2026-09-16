@@ -565,6 +565,12 @@ export async function writeAuditArtifacts(
       depth: crawledPage.depth,
       status: redirectTargetUrl !== undefined ? 'redirect-interstitial' : 'visited',
       discoveryMethod: crawledPage.discoveryMethod,
+      // Issue #290: the page's own declared language (<html lang>), so the
+      // report can attribute a root-path page - no /fr/-style prefix - to
+      // a language at all.
+      ...(scanJson.headMetadata?.htmlLang !== undefined && scanJson.headMetadata.htmlLang !== null
+        ? { language: scanJson.headMetadata.htmlLang }
+        : {}),
       ...(crawledPage.httpStatus !== undefined ? { httpStatus: crawledPage.httpStatus } : {}),
       ...(crawledPage.discoveredFrom !== undefined
         ? { discoveredFrom: crawledPage.discoveredFrom }

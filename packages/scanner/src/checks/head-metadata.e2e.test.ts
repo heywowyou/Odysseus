@@ -153,4 +153,25 @@ describe('extractHeadMetadata against real pages', () => {
     ]);
     expect(result.robotsMeta).toBe('noindex, follow');
   });
+
+  /** Issue #290: the declared <html lang> rides along with the head
+   *  metadata so the manifest can attribute a root-path page to the
+   *  language the site itself declares. */
+  it('reads the declared html lang, lowercased', async () => {
+    const html = `<html lang="fr-FR"><head>
+      <title>Page en français</title>
+    </head><body></body></html>`;
+
+    const result = await extractFromHtml(html);
+
+    expect(result.htmlLang).toBe('fr-fr');
+  });
+
+  it('returns null html lang when the attribute is absent', async () => {
+    const html = `<html><head><title>No lang</title></head><body></body></html>`;
+
+    const result = await extractFromHtml(html);
+
+    expect(result.htmlLang).toBeNull();
+  });
 });

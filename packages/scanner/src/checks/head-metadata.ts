@@ -58,6 +58,12 @@ export interface HeadMetadataExtraction {
    *  question this module cannot answer on its own - see
    *  normalize-hreflang.ts, which is given every page's set at once. */
   hreflangLinks: HreflangLink[];
+  /** The page's own declared content language: the lowercased value of
+   *  the <html lang> attribute, or null when absent/empty. Persisted into
+   *  scan.json and then the manifest's per-page `language` field so the
+   *  report can attribute a root-path page (no /fr/ prefix) to the
+   *  language the site itself declares for it (issue #290). */
+  htmlLang: string | null;
   /** Lowercased content of <meta name="robots">, or null if absent.
    *  X-Robots-Tag response headers are not read here (this hook only
    *  has DOM access, not response headers) - a known, documented
@@ -155,6 +161,8 @@ export async function extractHeadMetadata(
         ?.trim()
         .toLowerCase() || null;
 
+    const htmlLang = document.documentElement.getAttribute('lang')?.trim().toLowerCase() || null;
+
     return {
       title,
       metaDescription,
@@ -164,6 +172,7 @@ export async function extractHeadMetadata(
       headings,
       hreflangLinks,
       robotsMeta,
+      htmlLang,
     };
   });
 
@@ -177,5 +186,6 @@ export async function extractHeadMetadata(
     headings: raw.headings,
     hreflangLinks: raw.hreflangLinks,
     robotsMeta: raw.robotsMeta,
+    htmlLang: raw.htmlLang,
   };
 }

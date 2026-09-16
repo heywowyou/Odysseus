@@ -10,7 +10,9 @@ import { computeLanguageCoverage } from './language-coverage.js';
  * languages were reached, so the sentence would read identically if a
  * language were missed again for another reason.
  */
-function manifestWith(pages: Array<{ url: string; status: string }>): AuditManifest {
+function manifestWith(
+  pages: Array<{ url: string; status: string; language?: string }>,
+): AuditManifest {
   return { pages } as unknown as AuditManifest;
 }
 
@@ -54,6 +56,53 @@ describe("language coverage stated from the site's own URL structure", () => {
     expect(
       computeLanguageCoverage(
         manifestWith([{ url: 'https://example.com/fr/a', status: 'visited' }]),
+      ),
+    ).toBeUndefined();
+  });
+
+  /** Issue #290 (haaitza.com): the default language lives at the root with
+   *  no path prefix, so prefix-only attribution reported French as
+   *  published-but-never-analysed while every analysed page WAS French.
+   *  The page's own declared <html lang>, persisted in the manifest,
+   *  attributes those pages. */
+  it('attributes a root-path page to its declared language (issue #290)', () => {
+    const coverage = computeLanguageCoverage(
+      manifestWith([
+        { url: 'https://example.com/', status: 'visited', language: 'fr' },
+        { url: 'https://example.com/actualites', status: 'visited', language: 'fr' },
+        { url: 'https://example.com/en/home', status: 'visited' },
+        { url: 'https://example.com/es', status: 'discovered-not-scanned' },
+      ]),
+    );
+
+    expect(coverage).toEqual({ scanned: ['en', 'fr'], discoveredOnly: ['es'] });
+  });
+
+  /** The same site, with the bare language homepage the crawl discovered
+   *  but did not scan: fr is analysed at the root, so the discovered /fr
+   *  URL no longer lists French as "not analysed". */
+  it('does not report a declared-analysed language as discovered-only', () => {
+    const coverage = computeLanguageCoverage(
+      manifestWith([
+        { url: 'https://example.com/', status: 'visited', language: 'fr' },
+        { url: 'https://example.com/en/home', status: 'visited' },
+        { url: 'https://example.com/fr', status: 'discovered-not-scanned' },
+      ]),
+    );
+
+    expect(coverage).toEqual({ scanned: ['en', 'fr'], discoveredOnly: [] });
+  });
+
+  /** A page with neither a prefix nor a recorded language (historical
+   *  manifest, or head-metadata extraction failed) states nothing rather
+   *  than guessing. */
+  it('skips pages with no prefix and no declared language', () => {
+    expect(
+      computeLanguageCoverage(
+        manifestWith([
+          { url: 'https://example.com/', status: 'visited' },
+          { url: 'https://example.com/en/home', status: 'visited' },
+        ]),
       ),
     ).toBeUndefined();
   });
