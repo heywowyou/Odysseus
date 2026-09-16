@@ -92,3 +92,32 @@ describe('every rule the scanners can emit has a French translation', () => {
     expect(missing, `Lighthouse audits with no French label: ${missing.join(', ')}`).toEqual([]);
   });
 });
+
+// Issue #329: Lighthouse titles read as literal translations and mixed
+// nouns ("Arbre des dépendances réseau") with imperatives ("Minifier le
+// CSS"). Every label is now a finding statement, like the axe and SEO
+// titles.
+describe('French rule labels are finding statements (issue #329)', () => {
+  const IMPERATIVE_OPENERS =
+    /^(Réduire|Éviter|Utiliser|Minifier|Servir|Différer|Précharger|Éliminer|Garantir|Encoder|Préconnecter|Dimensionner|Activer)\b/;
+  const LITERAL_NOUN_TITLES = [
+    'Arbre des dépendances réseau',
+    "Détail du temps d'affichage principal",
+    'Découverte de la requête du LCP',
+    'Amélioration de la diffusion des images',
+    'Latence de la requête du document',
+    'Recalcul de mise en page forcé',
+  ];
+
+  it('never opens a label on an imperative verb', () => {
+    const imperative = Object.entries(RULE_TRANSLATIONS_FR)
+      .filter(([, t]) => IMPERATIVE_OPENERS.test(t.label))
+      .map(([id, t]) => `${id}: ${t.label}`);
+    expect(imperative).toEqual([]);
+  });
+
+  it('no longer carries the literal noun titles from the review', () => {
+    const labels = Object.values(RULE_TRANSLATIONS_FR).map((t) => t.label.replace(/’/g, "'"));
+    for (const title of LITERAL_NOUN_TITLES) expect(labels).not.toContain(title);
+  });
+});

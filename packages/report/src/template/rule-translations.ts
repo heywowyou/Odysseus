@@ -186,7 +186,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
         "Un élément avec un rôle ARIA (ex. liste, menu) n'a pas la structure enfant que ce rôle exige.",
     },
     'bootup-time': {
-      label: "Réduire le temps d'exécution JavaScript",
+      label: "L'exécution du JavaScript prend trop de temps",
       gloss:
         'Le navigateur passe trop de temps à exécuter du code JavaScript avant que la page soit utilisable.',
     },
@@ -204,12 +204,12 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
         "La page n'offre aucun raccourci (lien d'évitement, repères de structure, titre de niveau 1) permettant de passer le menu de navigation. Une personne qui navigue au clavier ou au lecteur d'écran doit donc retraverser tout le menu sur chaque page avant d'atteindre le contenu.",
     },
     'cache-insight': {
-      label: 'Utiliser des durées de cache efficaces',
+      label: 'Des ressources sont mises en cache trop peu de temps',
       gloss:
         'Des fichiers statiques (images, scripts) sont retéléchargés inutilement faute de mise en cache.',
     },
     'cls-culprits-insight': {
-      label: 'Éléments responsables des décalages de mise en page',
+      label: 'Des éléments font bouger la mise en page pendant le chargement',
       gloss:
         "Identifie les éléments précis à l'origine de la stabilité visuelle insuffisante (CLS).",
     },
@@ -224,15 +224,15 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
         'Des liens ne sont pas des balises <a href> classiques, ce qui empêche les moteurs de recherche de les suivre.',
     },
     'cumulative-layout-shift': {
-      label: 'Stabilité visuelle (CLS)',
+      label: 'La mise en page se décale pendant le chargement (CLS)',
       gloss: "Mesure les déplacements inattendus d'éléments pendant le chargement de la page.",
     },
     'document-latency-insight': {
-      label: 'Latence de la requête du document',
+      label: 'Le serveur met du temps à renvoyer la page',
       gloss: 'Le temps que met le serveur à répondre à la toute première requête de la page.',
     },
     'dom-size': {
-      label: 'Éviter une taille de DOM excessive',
+      label: "La page contient un nombre excessif d'éléments",
       gloss: "La page contient un nombre d'éléments HTML trop élevé, ce qui ralentit le rendu.",
     },
     'entity-data-incomplete': {
@@ -246,7 +246,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
         "Une section FAQ n'utilise pas le balisage structuré (schema.org) qui la rendrait exploitable par les moteurs.",
     },
     'first-contentful-paint': {
-      label: 'Premier affichage de contenu (FCP)',
+      label: "Le premier contenu met du temps à s'afficher (FCP)",
       gloss: "Temps avant que le premier élément de contenu s'affiche à l'écran.",
     },
     'focus-order-mismatch': {
@@ -267,15 +267,15 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
       gloss: "Un iframe sans attribut title n'est pas identifiable par les lecteurs d'écran.",
     },
     'font-display': {
-      label: 'Garantir la visibilité du texte pendant le chargement des polices',
+      label: 'Le texte reste invisible pendant le chargement des polices',
       gloss: 'Le texte peut être invisible pendant le chargement des polices personnalisées.',
     },
     'font-display-insight': {
-      label: 'Affichage des polices',
+      label: "Le chargement des polices retarde l'affichage du texte",
       gloss: 'Le texte peut être invisible pendant le chargement des polices personnalisées.',
     },
     'forced-reflow-insight': {
-      label: 'Recalcul de mise en page forcé',
+      label: 'Le JavaScript force des recalculs de mise en page',
       gloss:
         'Du code JavaScript force le navigateur à recalculer la mise en page de façon synchrone, ralentissant la page.',
     },
@@ -299,11 +299,11 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
       gloss: "Une image n'a pas de texte alternatif du tout, invisible pour un lecteur d'écran.",
     },
     'image-delivery-insight': {
-      label: 'Amélioration de la diffusion des images',
+      label: 'Des images sont plus lourdes que nécessaire',
       gloss: 'Les images pourraient être compressées ou dimensionnées plus efficacement.',
     },
     interactive: {
-      label: 'Délai avant interactivité',
+      label: 'La page met du temps à devenir utilisable',
       gloss: "Temps avant que la page réponde de façon fiable aux interactions de l'utilisateur.",
     },
     'is-crawlable': {
@@ -325,16 +325,16 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
       gloss: "Un champ de formulaire n'a pas de libellé identifiable par un lecteur d'écran.",
     },
     'largest-contentful-paint': {
-      label: 'Affichage du plus grand contenu (LCP)',
+      label: "Le contenu principal met du temps à s'afficher (LCP)",
       gloss:
         "Temps d'affichage du plus grand élément visible de la page, un indicateur de vitesse perçue.",
     },
     'largest-contentful-paint-element': {
-      label: 'Élément du plus grand affichage de contenu',
+      label: "Le plus grand élément visible fixe le temps d'affichage (LCP)",
       gloss: "Identifie l'élément précis mesuré par le LCP.",
     },
     'layout-shifts': {
-      label: 'Éviter les décalages de mise en page importants',
+      label: 'Des décalages de mise en page importants se produisent',
       gloss: 'Des éléments se déplacent de façon inattendue pendant le chargement de la page.',
     },
     'lcen-mentions-legales-missing': {
@@ -343,7 +343,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
         "Aucun identifiant SIREN, RCS ou TVA n'a été trouvé sur les pages visitées (LCEN, article 1-1, I, 2°).",
     },
     'lcp-discovery-insight': {
-      label: 'Découverte de la requête du LCP',
+      label: "L'image principale est découverte tardivement par le navigateur",
       gloss:
         "Le navigateur met du temps à découvrir la ressource qui deviendra l'élément le plus visible (LCP).",
     },
@@ -353,12 +353,12 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
         'L\'image la plus importante de la page est retardée par un chargement "lazy", ce qui la ralentit.',
     },
     'legacy-javascript': {
-      label: 'Éviter de servir du JavaScript obsolète aux navigateurs modernes',
+      label: 'Du JavaScript obsolète est envoyé aux navigateurs modernes',
       gloss:
         "Du code ajouté pour compatibilité avec d'anciens navigateurs alourdit inutilement la page.",
     },
     'legacy-javascript-insight': {
-      label: 'JavaScript obsolète',
+      label: 'Du JavaScript obsolète est envoyé aux navigateurs modernes',
       gloss:
         "Du code ajouté pour compatibilité avec d'anciens navigateurs alourdit inutilement la page.",
     },
@@ -371,12 +371,12 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
       gloss: "Un lien n'a pas de texte ou a un texte non descriptif (ex. « cliquez ici »).",
     },
     'mainthread-work-breakdown': {
-      label: 'Réduire le travail du thread principal',
+      label: 'Le navigateur est trop occupé pour répondre rapidement',
       gloss:
         "Le navigateur passe trop de temps sur des tâches qui bloquent l'interactivité de la page.",
     },
     'max-potential-fid': {
-      label: 'Délai potentiel maximal de première interaction',
+      label: "La première interaction peut attendre longtemps avant d'être traitée",
       gloss:
         "Estimation du pire délai de réponse possible à la première interaction de l'utilisateur.",
     },
@@ -399,11 +399,11 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
       gloss: "La page empêche l'utilisateur de zoomer, ce qui gêne les personnes malvoyantes.",
     },
     'modern-http-insight': {
-      label: 'Protocole HTTP moderne',
+      label: 'Des ressources sont servies avec un protocole HTTP ancien',
       gloss: 'Le serveur ne sert pas les ressources via une version récente du protocole HTTP.',
     },
     'modern-image-formats': {
-      label: 'Servir les images dans des formats modernes',
+      label: 'Des images ne sont pas servies dans un format moderne',
       gloss:
         "Les formats d'image actuels (WebP, AVIF) réduisent le poids des pages par rapport au JPEG/PNG.",
     },
@@ -418,7 +418,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
         'Un élément interactif (bouton, lien) en contient un autre, ce qui perturbe la navigation au clavier.',
     },
     'network-dependency-tree-insight': {
-      label: 'Arbre des dépendances réseau',
+      label: 'Des chaînes de requêtes retardent le chargement',
       gloss:
         "Chaîne de requêtes qui doivent se charger l'une après l'autre avant que la page soit prête.",
     },
@@ -433,7 +433,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
         "Une directive technique (noindex) empêche cette page publique d'apparaître dans les moteurs.",
     },
     'offscreen-images': {
-      label: 'Différer les images hors écran',
+      label: 'Des images hors écran sont chargées immédiatement',
       gloss: "Des images non visibles au chargement retardent l'affichage du contenu utile.",
     },
     // P1.1 (2026-08-21 La Corniche feedback pass, regression): "No Open
@@ -444,21 +444,21 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
         "Les balises Open Graph (og:title, og:image, etc.) contrôlent l'aperçu de la page quand elle est partagée sur les réseaux sociaux ; aucune n'a été trouvée.",
     },
     'prioritize-lcp-image': {
-      label: "Précharger l'image du plus grand affichage de contenu",
+      label: "L'image principale n'est pas préchargée",
       gloss: "L'image la plus importante de la page n'est pas chargée en priorité.",
     },
     redirects: {
-      label: 'Éviter les redirections multiples',
+      label: 'La page passe par plusieurs redirections',
       gloss:
         "Une page passe par plusieurs redirections avant d'atteindre sa destination finale, ce qui la ralentit.",
     },
     'render-blocking-insight': {
-      label: 'Requêtes bloquant le rendu',
+      label: 'Des ressources bloquent le premier affichage',
       gloss:
         "Des fichiers CSS ou JavaScript retardent l'affichage de la page avant d'être chargés.",
     },
     'render-blocking-resources': {
-      label: 'Éliminer les ressources bloquant le rendu',
+      label: 'Des ressources bloquent le premier affichage',
       gloss:
         "Des fichiers CSS ou JavaScript retardent l'affichage de la page avant d'être chargés.",
     },
@@ -473,7 +473,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
         "Un champ de sélection (menu déroulant) n'a pas de nom identifiable par un lecteur d'écran.",
     },
     'server-response-time': {
-      label: 'Réduire le temps de réponse initial du serveur',
+      label: 'Le serveur répond lentement',
       gloss: 'Le serveur met trop de temps à répondre à la première requête.',
     },
     'sitemap-orphan-page': {
@@ -482,7 +482,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
         "Une page du plan de site n'est reliée par aucun lien interne, ce qui complique sa découverte.",
     },
     'speed-index': {
-      label: 'Indice de vitesse (Speed Index)',
+      label: 'Le contenu visible se remplit lentement (Speed Index)',
       gloss: "Vitesse à laquelle le contenu visible d'une page se remplit pendant le chargement.",
     },
     'structured-data-entity-missing': {
@@ -502,29 +502,29 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
         "Du texte visible dans le navigateur est absent du HTML brut, invisible pour certains robots d'indexation.",
     },
     'third-party-facades': {
-      label: 'Certaines ressources tierces peuvent être chargées en différé avec une façade',
+      label: "Des contenus tiers sont chargés avant d'être utilisés",
       gloss:
         'Un widget tiers (vidéo, chat) pourrait afficher un aperçu léger avant de charger le script complet.',
     },
     'third-party-summary': {
-      label: "Réduire l'impact du code tiers",
+      label: 'Le code tiers ralentit la page',
       gloss: 'Des scripts venant de services externes ralentissent la page.',
     },
     'total-blocking-time': {
-      label: 'Temps de blocage total (TBT)',
+      label: 'La page ne répond pas pendant de longues périodes (TBT)',
       gloss: "Durée pendant laquelle la page ne répond pas aux interactions de l'utilisateur.",
     },
     'total-byte-weight': {
-      label: 'Éviter les charges réseau énormes',
+      label: 'La page est trop lourde à télécharger',
       gloss: 'Le poids total des ressources téléchargées par la page est excessif.',
     },
     'unminified-css': {
-      label: 'Minifier le CSS',
+      label: "Le CSS n'est pas minifié",
       gloss:
         'Les fichiers de style contiennent des espaces et commentaires inutiles qui alourdissent leur poids.',
     },
     'unminified-javascript': {
-      label: 'Minifier le JavaScript',
+      label: "Le JavaScript n'est pas minifié",
       gloss:
         'Les fichiers de script contiennent des espaces et commentaires inutiles qui alourdissent leur poids.',
     },
@@ -534,37 +534,37 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
         "L'absence de dimensions déclarées provoque des décalages de mise en page pendant le chargement.",
     },
     'unused-css-rules': {
-      label: 'Réduire le CSS inutilisé',
+      label: 'Du CSS inutilisé est téléchargé',
       gloss: 'Une partie des styles chargés ne sert à rien sur cette page.',
     },
     'unused-javascript': {
-      label: 'Réduire le JavaScript inutilisé',
+      label: 'Du JavaScript inutilisé est téléchargé',
       gloss: 'Une partie du code chargé ne sert à rien sur cette page.',
     },
     'uses-http2': {
-      label: 'Utiliser HTTP/2',
+      label: 'Des ressources ne sont pas servies en HTTP/2',
       gloss:
         'Le serveur sert les ressources via une version plus ancienne et moins efficace du protocole HTTP.',
     },
     'uses-long-cache-ttl': {
-      label: 'Servir les ressources statiques avec une politique de cache efficace',
+      label: 'Des ressources statiques sont mises en cache trop peu de temps',
       gloss:
         'Des fichiers qui changent rarement (images, scripts) sont retéléchargés à chaque visite.',
     },
     'uses-optimized-images': {
-      label: 'Encoder les images efficacement',
+      label: 'Des images ne sont pas compressées efficacement',
       gloss: 'Les images pourraient être compressées davantage sans perte visible de qualité.',
     },
     'uses-rel-preconnect': {
-      label: 'Préconnecter aux origines nécessaires',
+      label: 'Les connexions aux domaines nécessaires ne sont pas anticipées',
       gloss: 'Le navigateur pourrait établir la connexion à des domaines tiers plus tôt.',
     },
     'uses-responsive-images': {
-      label: 'Dimensionner les images correctement',
+      label: "Des images sont plus grandes que leur taille d'affichage",
       gloss: "Des images plus grandes que nécessaire sont envoyées à l'appareil de l'utilisateur.",
     },
     'uses-text-compression': {
-      label: 'Activer la compression du texte',
+      label: 'Les fichiers texte ne sont pas compressés',
       gloss:
         'Les fichiers texte (HTML, CSS, JS) sont transmis sans compression, ce qui alourdit leur poids.',
     },
@@ -856,7 +856,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
     },
     // --- Lighthouse performance and seo audits that can emit findings ---
     'bf-cache': {
-      label: 'Retour arrière non instantané',
+      label: 'Le retour arrière ne se fait pas instantanément',
       gloss:
         "La page ne peut pas être restaurée instantanément lors d'un retour arrière, ce qui oblige à la recharger entièrement.",
     },
@@ -866,27 +866,27 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
         "L'adresse de référence déclarée par la page n'est pas valide ou pointe au mauvais endroit, ce qui peut envoyer les signaux de référencement vers la mauvaise adresse.",
     },
     'dom-size-insight': {
-      label: 'Page trop lourde en éléments',
+      label: "La page contient un nombre excessif d'éléments",
       gloss:
         "La page contient un très grand nombre d'éléments, ce qui ralentit son affichage et sa réaction aux interactions.",
     },
     'duplicated-javascript': {
-      label: 'Code JavaScript envoyé en double',
+      label: 'Du code JavaScript est envoyé en double',
       gloss:
         'Le même code est présent plusieurs fois dans les fichiers téléchargés, ce qui alourdit inutilement la page.',
     },
     'duplicated-javascript-insight': {
-      label: 'Code JavaScript envoyé en double',
+      label: 'Du code JavaScript est envoyé en double',
       gloss:
         'Le même code est téléchargé plusieurs fois, ce qui gaspille de la bande passante et du temps de chargement.',
     },
     'efficient-animated-content': {
-      label: 'Animations dans un format inadapté',
+      label: 'Des animations utilisent un format inadapté',
       gloss:
         "Une animation est servie sous forme d'image animée alors qu'une vidéo serait bien plus légère.",
     },
     'first-meaningful-paint': {
-      label: 'Premier affichage significatif',
+      label: "Le contenu utile met du temps à s'afficher",
       gloss: "Mesure le moment où l'essentiel du contenu de la page devient visible.",
     },
     hreflang: {
@@ -895,57 +895,57 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
         "Une annotation de langue déclarée par la page n'est pas valide, donc les moteurs de recherche ne peuvent pas relier les versions linguistiques.",
     },
     'http-status-code': {
-      label: 'Code de réponse HTTP non indexable',
+      label: 'La page renvoie un code HTTP qui empêche son indexation',
       gloss:
         "Le serveur renvoie un code d'erreur pour cette page, donc les moteurs de recherche ne l'indexeront pas.",
     },
     'inp-breakdown-insight': {
-      label: 'Détail du délai de réaction aux interactions',
+      label: 'Des étapes ralentissent la réaction aux interactions',
       gloss:
         'Décompose le temps de réaction de la page pour montrer quelle étape retarde le plus la réponse à un clic.',
     },
     'interaction-to-next-paint': {
-      label: 'Délai de réaction aux interactions (INP)',
+      label: 'La page réagit lentement aux interactions (INP)',
       gloss:
         "Le temps entre le clic d'un visiteur et la réaction visible de la page est trop long, ce qui donne une impression de lenteur.",
     },
     'lcp-breakdown-insight': {
-      label: "Détail du temps d'affichage principal",
+      label: "Des étapes retardent l'affichage du contenu principal",
       gloss:
         'Décompose le temps mis pour afficher le plus grand élément de la page, afin de montrer quelle étape domine.',
     },
     'long-tasks': {
-      label: 'Traitements longs bloquant la page',
+      label: 'De longs traitements bloquent la page',
       gloss:
         'Des calculs longs monopolisent le navigateur, pendant lesquels la page ne répond plus aux clics.',
     },
     'no-document-write': {
-      label: "Écriture de contenu bloquant l'affichage",
+      label: "Un script écrit du contenu en bloquant l'affichage",
       gloss:
         "La page utilise une méthode d'insertion de contenu qui interrompt l'affichage, particulièrement pénalisante sur mobile.",
     },
     'non-composited-animations': {
-      label: 'Animations coûteuses à afficher',
+      label: 'Des animations sont coûteuses à afficher',
       gloss:
         'Des animations obligent le navigateur à redessiner la page à chaque image, ce qui provoque des saccades.',
     },
     'structured-data': {
-      label: 'Données structurées à vérifier',
+      label: 'Les données structurées doivent être vérifiées',
       gloss:
         'Les données structurées de la page doivent être validées avec un outil dédié ; Lighthouse ne les vérifie pas lui-même.',
     },
     'third-parties-insight': {
-      label: 'Poids des services tiers',
+      label: 'Les services tiers alourdissent la page',
       gloss:
         "Des scripts extérieurs au site (mesure d'audience, widgets, publicité) occupent une part importante du temps de chargement.",
     },
     'uses-passive-event-listeners': {
-      label: 'Écouteurs de défilement bloquants',
+      label: "Des écouteurs d'événements ralentissent le défilement",
       gloss:
         "Le code peut retarder le défilement de la page parce qu'il n'indique pas au navigateur qu'il ne le bloquera pas.",
     },
     'uses-responsive-images-snapshot': {
-      label: "Images non adaptées à la taille d'écran",
+      label: "Des images ne sont pas adaptées à la taille de l'écran",
       gloss: 'Des images sont téléchargées dans une taille supérieure à celle réellement affichée.',
     },
     viewport: {
@@ -954,12 +954,12 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
         "Sans cette déclaration, un téléphone affiche la page comme sur un écran d'ordinateur, en tout petit.",
     },
     'viewport-insight': {
-      label: "Configuration d'affichage mobile",
+      label: "L'affichage mobile n'est pas configuré de façon optimale",
       gloss:
         "La déclaration d'affichage mobile de la page n'est pas optimale, ce qui peut retarder la réaction au premier contact tactile.",
     },
     'work-during-interaction': {
-      label: 'Traitements pendant une interaction',
+      label: 'Des traitements ralentissent la réponse à une interaction',
       gloss: "Du travail effectué au moment d'un clic retarde la réponse visible pour le visiteur.",
     },
     // Domaine Lagnonu, 2026-08-24: the first audited site whose pages were
