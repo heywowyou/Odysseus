@@ -1,5 +1,11 @@
 # Plan 014: Run the controlled first 100 hotel sends and evaluate the model
 
+> **SUPERSEDED — historical record only.** Archived 2026-09-16. Plan 047
+> (prospect hub) removed the roster, cohort and scoring model this plan was
+> built on, so its evaluation of whether the score predicts replies no longer
+> has a score to evaluate. Do not execute it. A redesigned outreach experiment
+> belongs in its own plan.
+
 > **Executor instructions**: This is an operator-controlled rollout, not a
 > coding batch. Complete plans 013 and 016 and every preflight gate before
 > touching a real prospect. Each real hotel scan requires current permission

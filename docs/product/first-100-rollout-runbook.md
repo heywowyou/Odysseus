@@ -1,7 +1,7 @@
 # First-100 rollout runbook (plan 014)
 
 Operational record for
-[plan 014](../../plans/014-first-100-hotel-rollout.md), opened 2026-09-08.
+[plan 014](../../plans/archive/014-first-100-hotel-rollout.md), opened 2026-09-08.
 Plan 014 owns the rules; this runbook owns the recorded evidence: the Step 1
 launch-gate table, the drift reconciliation, and the operator decision list.
 Nothing here overrides the plan. Status values for gates: `PASS` (evidence
