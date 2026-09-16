@@ -200,16 +200,20 @@ describe('plan 027: the writing prompt uses one consistent addressee phrase per 
   // words without demanding the provider be named everywhere.
   it('separates naming the provider from opening on it, in French', () => {
     const prompt = buildWritingSystemPrompt('fr', false, null);
-    expect(prompt).toContain('Employez cette formulation dans chaque entrée de recommendedActions');
+    // Issue #309: requiring the phrase in every entry pushed it to the end
+    // of almost every action; it is now named at most once per theme.
+    expect(prompt).toContain('ne le nommez donc pas dans chaque entrée de recommendedActions');
+    expect(prompt).toContain('Nommez-le au plus une fois par thème');
     expect(prompt).toContain(
-      'ne commencez jamais une entrée de recommendedActions par cette formulation',
+      'Ne commencez jamais non plus une entrée de recommendedActions par cette formulation',
     );
   });
 
   it('separates naming the provider from opening on it, in English', () => {
     const prompt = buildWritingSystemPrompt('en', false, null);
-    expect(prompt).toContain('Use that wording in every recommendedActions entry');
-    expect(prompt).toContain('Never begin a recommendedActions entry with that wording');
+    expect(prompt).toContain('so do not name it in every recommendedActions entry');
+    expect(prompt).toContain('Name it at most once per theme');
+    expect(prompt).toContain('Never begin a recommendedActions entry with that wording either');
   });
 });
 
@@ -517,30 +521,40 @@ describe('issue #106: the writing prompt caps the subject + devoir frame and sha
   it('requires varied sentence endings and names the measured closing tic, in French', () => {
     const prompt = buildWritingSystemPrompt('fr', false, null);
     expect(prompt).toContain('les mêmes mots après sa dernière virgule');
-    expect(prompt).toContain(', et votre prestataire technique peut ajouter');
+    expect(prompt).toContain('("..., afin que...", "..., ce qui...")');
   });
 
   it('requires varied sentence endings and names the measured closing tic, in English', () => {
     const prompt = buildWritingSystemPrompt('en', false, null);
     expect(prompt).toContain('the same words after its last comma');
-    expect(prompt).toContain(', and your technical provider can add');
+    expect(prompt).toContain('("..., so that...", "..., which...")');
   });
 
-  it('shows the ending tic with the assigned phrase, never a fixed provider wording', () => {
+  // Issue #309: the trailing provider clause is now forbidden outright, and
+  // the prompt names it with the assigned phrase only.
+  it('forbids the trailing provider clause with the assigned phrase, never a fixed wording', () => {
     for (const assigned of TECHNICAL_PROVIDER_PHRASES.fr) {
       const prompt = buildWritingSystemPrompt('fr', false, null, assigned);
-      expect(prompt).toContain(`..., et ${assigned} peut ajouter`);
-      expect(prompt).not.toContain(
-        `..., et ${TECHNICAL_PROVIDER_PHRASES.fr.find((p) => p !== assigned)} peut ajouter`,
-      );
+      expect(prompt).toContain(`"..., et ${assigned} peut..."`);
+      for (const other of TECHNICAL_PROVIDER_PHRASES.fr.filter((p) => p !== assigned)) {
+        expect(prompt).not.toContain(other);
+      }
     }
     for (const assigned of TECHNICAL_PROVIDER_PHRASES.en) {
       const prompt = buildWritingSystemPrompt('en', false, null, assigned);
-      expect(prompt).toContain(`..., and ${assigned} can add`);
-      expect(prompt).not.toContain(
-        `..., and ${TECHNICAL_PROVIDER_PHRASES.en.find((p) => p !== assigned)} can add`,
-      );
+      expect(prompt).toContain(`"..., and ${assigned} can..."`);
+      for (const other of TECHNICAL_PROVIDER_PHRASES.en.filter((p) => p !== assigned)) {
+        expect(prompt).not.toContain(other);
+      }
     }
+  });
+
+  it('shows the French glossary and forbids subjective impressions', () => {
+    const fr = buildWritingSystemPrompt('fr', false, null);
+    expect(fr).toContain('"adresse canonique" et non "canonical(s)"');
+    expect(fr).toContain('"appui" et non "tap"');
+    expect(fr).toContain('"donne une impression de"');
+    expect(buildWritingSystemPrompt('en', false, null)).toContain('"gives an impression of"');
   });
 
   // Round 1 of the issue #106 measurement (2026-09-08): the global cap in

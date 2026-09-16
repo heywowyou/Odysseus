@@ -29,6 +29,13 @@ const RULE_MEANING_NOTES: Partial<Record<string, Record<ReportLanguage, string>>
     fr: 'Le constat associé à la règle "alt-text-quality-heuristic" signale un texte alternatif d\'image présent mais probablement peu utile (par exemple un nom de fichier, un mot générique comme "image", ou une répétition du texte environnant). Ce n\'est ni une absence de texte alternatif, un autre constat couvre ce cas, ni une confirmation automatique que le texte est mauvais : c\'est un signal à vérifier manuellement. Décrivez-le ainsi dans votre prose, quelle que soit la langue de la réponse.',
     en: 'The finding tied to the rule "alt-text-quality-heuristic" flags image alt text that is present but likely low-value (for example a filename, a generic word like "image", or a repeat of the surrounding text). It is not a missing alt attribute, a different finding covers that, and it is not automatic confirmation the text is bad: it is a signal worth checking manually. Describe it this way in your prose, regardless of the response language.',
   },
+  // Issue #309: the same contrast finding was explained as hard to read "in
+  // bright light" in English and "dans de bonnes conditions de lumière" in
+  // French, which states the opposite situation.
+  'color-contrast': {
+    fr: "Le constat associé à la règle \"color-contrast\" signale un texte dont le contraste avec son fond est inférieur au seuil requis. Ce texte devient difficile à lire pour un visiteur malvoyant, et pour tout visiteur sous une forte luminosité, par exemple sur l'écran d'un téléphone en plein soleil. Si vous évoquez l'éclairage, c'est une lumière forte qui aggrave le problème, jamais de bonnes conditions de lumière.",
+    en: 'The finding tied to the rule "color-contrast" flags text whose contrast with its background is below the required threshold. That text becomes hard to read for a visitor with low vision, and for any visitor in strong light, for example on a phone screen in direct sunlight. If you mention lighting, it is strong light that makes the problem worse, never good lighting conditions.',
+  },
 };
 
 /** Builds the prompt note for whichever rule IDs from RULE_MEANING_NOTES

@@ -7,8 +7,11 @@ import { findLanguageComplianceViolations } from './language-guard.js';
 import { findLegalConsequenceViolations, excerptAroundMatch } from './legal-consequence-guard.js';
 import { findPageCountViolations } from './page-count-guard.js';
 import { findPositionalReferenceViolations } from './positional-reference-guard.js';
+import { PROSE_REGISTER_RETRY_HINT, findProseRegisterViolations } from './prose-register-guard.js';
 import {
   findProviderPhraseViolations,
+  findProviderPlacementViolations,
+  providerPlacementRetryHint,
   providerPhraseRetryHint,
   selectProviderPhrase,
 } from './provider-phrase-guard.js';
@@ -190,6 +193,33 @@ export async function analyzeWriting(
     const digitViolations = findExecutiveSummaryDigitViolations(result.output);
     if (digitViolations.length > 0) {
       lastFailureReason = `executiveSummary contains a digit, which the report template now owns: "${digitViolations[0]!.text}"`;
+      previousRejection = buildWritingRetryFeedback(lastFailureReason);
+      console.error(
+        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
+      );
+      continue;
+    }
+
+    // Issue #309: untranslated jargon in French prose and subjective
+    // impressions of the site that no finding measures.
+    const registerViolations = findProseRegisterViolations(result.output, input.language);
+    if (registerViolations.length > 0) {
+      lastFailureReason = `prose register defect in field(s): ${registerViolations.map((v) => `${v.field} (${v.matched})`).join(', ')}. ${PROSE_REGISTER_RETRY_HINT}`;
+      previousRejection = buildWritingRetryFeedback(lastFailureReason);
+      console.error(
+        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
+      );
+      continue;
+    }
+
+    // Issue #309: the provider bolted onto the end of every action.
+    const providerPlacementViolations = findProviderPlacementViolations(
+      result.output,
+      input.language,
+      assignedProviderPhrase,
+    );
+    if (providerPlacementViolations.length > 0) {
+      lastFailureReason = `provider named in the wrong place: ${providerPlacementViolations.map((v) => `${v.field} (${v.matched})`).join(', ')}. ${providerPlacementRetryHint(assignedProviderPhrase)}`;
       previousRejection = buildWritingRetryFeedback(lastFailureReason);
       console.error(
         `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,

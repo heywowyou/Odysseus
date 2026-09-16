@@ -181,3 +181,70 @@ export function selectProviderPhraseIndex(seed: string | undefined, count: numbe
 export function providerPhraseRetryHint(selectedPhrase: string): string {
   return `Use exactly "${selectedPhrase}" everywhere you name the provider, and no other wording for it. Do not make the sentences themselves uniform: the openings of your recommendedActions entries must still vary from theme to theme, and repeating one opening formula across every entry is its own defect.`;
 }
+
+/** The clause openers that attach the provider after a comma. Measured in
+ *  issue #309 as the ending of almost every action in two production
+ *  reports, where it produced causality that does not hold ("Chaque page
+ *  doit déclarer une adresse canonique cohérente, car l'équipe technique
+ *  ... évite ainsi..."). */
+const TRAILING_PROVIDER_CLAUSE_OPENERS: Record<ReportLanguage, readonly string[]> = {
+  fr: ['et', 'afin que', 'pour que', 'car', 'si bien que', 'de sorte que', 'ce qui permet à'],
+  en: ['and', 'so that', 'so', 'because', 'which lets', 'allowing'],
+};
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Issue #309: the prompt used to require the provider phrase in every
+ * recommendedActions entry while forbidding an action to open on it, and the
+ * model met both by bolting the provider onto the end of each sentence
+ * ("..., et l'équipe technique en charge de votre site peut..."). The
+ * prompt now asks for the provider at most once per theme, as the agent of
+ * the main clause; this asserts both halves, since a prompt rule on
+ * sentence shape alone has repeatedly not held (see the plan 027 notes
+ * above).
+ */
+export function findProviderPlacementViolations(
+  output: WritingPassOutput,
+  language: ReportLanguage,
+  selectedPhrase: string,
+): ProviderPhraseViolation[] {
+  const phrase = straighten(selectedPhrase);
+  const trailingClause = new RegExp(
+    `,\\s*(?:${TRAILING_PROVIDER_CLAUSE_OPENERS[language].map(escapeRegExp).join('|')})\\s+${escapeRegExp(phrase)}`,
+    'u',
+  );
+  const violations: ProviderPhraseViolation[] = [];
+
+  output.themes.forEach((theme, i) => {
+    const prefix = `themes[${i}](${theme.themeKey})`;
+    const naming = theme.recommendedActions
+      .map((action, j) => ({ action, j }))
+      .filter(({ action }) => straighten(action).includes(phrase));
+    if (naming.length > 1) {
+      violations.push({
+        field: `${prefix}.recommendedActions`,
+        text: naming.map(({ action }) => action).join(' | '),
+        matched: `"${selectedPhrase}" named in ${naming.length} actions of one theme`,
+      });
+    }
+    for (const { action, j } of naming) {
+      const clause = straighten(action).match(trailingClause);
+      if (clause) {
+        violations.push({
+          field: `${prefix}.recommendedActions[${j}]`,
+          text: action,
+          matched: `provider attached after a comma ("${clause[0]}")`,
+        });
+      }
+    }
+  });
+
+  return violations;
+}
+
+export function providerPlacementRetryHint(selectedPhrase: string): string {
+  return `Name "${selectedPhrase}" in at most one recommendedActions entry per theme, and only as the agent of the main clause, never in a clause added after a comma. The other actions do not need to name the provider at all.`;
+}

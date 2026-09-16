@@ -34,6 +34,15 @@ des champs. Concrètement :
   du plan de projet : on décrit le critère, jamais le verdict).
 - Le vouvoiement est la seule forme d'adresse. Le client n'est jamais
   tutoyé, jamais nommé par son prénom.
+- Le texte est écrit en français natif. Un terme technique anglais qui a un
+  équivalent français établi prend cet équivalent (« adresse canonique » et
+  non « canonical », « appui » et non « tap ») ; le glossaire est la table
+  `FRENCH_TERM_GLOSSARY` de `prose-register-guard.ts`, que le prompt affiche
+  et que le contrôle applique. Un nom d'attribut que le prestataire cherchera
+  tel quel, comme hreflang, reste en l'état.
+- Aucun jugement subjectif que les constats ne mesurent pas : jamais « le
+  site donne une impression de contenu riche mais insuffisamment cadré ».
+  Le même contrôle rejette la tournure d'impression (issue #309).
 
 ## 2. La règle de phrase complète
 
@@ -116,13 +125,19 @@ plus jamais se déclencher, puisque la formulation concurrente n'est plus
 proposée : il subsiste au cas où le modèle emploierait spontanément une
 formulation approuvée qu'on ne lui a pas montrée.
 
-**Ne commencez jamais une action par cette formulation.** Ouvrez sur ce qui
-doit être corrigé, sur la conséquence ou sur la page concernée, et nommez le
-prestataire ensuite, à l'intérieur de la phrase. Mesuré : lorsque la
-formulation est imposée sans cette interdiction, le modèle ouvre la majorité
-de ses actions avec elle, ce qui reproduit exactement le rapport-formulaire
-que la section 3 existe pour éviter. La variété d'ouverture décrite en
-section 3 reste la règle, y compris dans la réponse écrite après un rejet.
+**Nommez le prestataire au plus une fois par thème, comme agent de la
+proposition principale.** Chaque action lui est implicitement adressée ; il
+n'est pas nécessaire de le nommer dans chacune. Ne l'accrochez jamais en fin
+d'action après une virgule (« …, et votre prestataire technique peut… »,
+« …, afin que… », « …, car… »), et n'ouvrez jamais une action sur son nom.
+Mesuré : le prompt exigeait auparavant la formulation dans chaque action tout
+en interdisant d'ouvrir dessus, et le modèle a satisfait les deux en la
+reléguant en fin de phrase dans presque toutes les actions des deux rapports
+de production du 2026-09-15/16, avec des liens de cause absurdes (« Chaque
+page doit déclarer une adresse canonique cohérente, car l'équipe technique…
+évite ainsi… »). `findProviderPlacementViolations` rejette désormais les deux
+écarts (issue #309). La variété d'ouverture décrite en section 3 reste la
+règle, y compris dans la réponse écrite après un rejet.
 
 ## 5. Longueur des champs
 

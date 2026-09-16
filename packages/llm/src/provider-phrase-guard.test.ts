@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   findProviderPhraseViolations,
   findProviderPhraseViolationsInFields,
+  findProviderPlacementViolations,
+  providerPlacementRetryHint,
   providerPhraseRetryHint,
   selectProviderPhrase,
   selectProviderPhraseIndex,
@@ -187,5 +189,67 @@ describe('provider phrase retry hint', () => {
   // consistent", the model made all 29 actions identical.
   it('still forbids making the sentences themselves uniform', () => {
     expect(providerPhraseRetryHint('votre prestataire web')).toMatch(/vary|uniform/i);
+  });
+});
+
+// Issue #309: "..., et l'équipe technique en charge de votre site peut..."
+// closed almost every action of two production reports.
+describe('issue #309: provider placement', () => {
+  const phrase = "l'équipe technique en charge de votre site";
+
+  it('rejects the provider attached after a comma', () => {
+    for (const action of [
+      `Chaque page doit déclarer une adresse canonique cohérente, car ${phrase} évite ainsi les doublons.`,
+      `Les boutons doivent être agrandis, et ${phrase} peut ajuster leur taille.`,
+      `Les titres doivent suivre l'ordre du document, afin que ${phrase} rétablisse la structure.`,
+    ]) {
+      expect(
+        findProviderPlacementViolations(withActions([action]), 'fr', phrase),
+        action,
+      ).toHaveLength(1);
+    }
+  });
+
+  it('matches the attached phrase with a typographic apostrophe too', () => {
+    const action = `Les boutons doivent être agrandis, et l’équipe technique en charge de votre site peut ajuster leur taille.`;
+    expect(findProviderPlacementViolations(withActions([action]), 'fr', phrase)).toHaveLength(1);
+  });
+
+  it('rejects naming the provider in two actions of one theme', () => {
+    const violations = findProviderPlacementViolations(
+      withActions([
+        `Faites vérifier par ${phrase} le libellé de chaque bouton.`,
+        `Confiez à ${phrase} la correction des titres.`,
+      ]),
+      'fr',
+      phrase,
+    );
+    expect(violations).toHaveLength(1);
+    expect(violations[0]!.field).toBe('themes[0](t1).recommendedActions');
+  });
+
+  it('accepts one mention per theme as the agent of the main clause', () => {
+    expect(
+      findProviderPlacementViolations(
+        withActions([
+          `Faites vérifier par ${phrase} le libellé de chaque bouton.`,
+          'Les titres doivent suivre l’ordre du document.',
+        ]),
+        'fr',
+        phrase,
+      ),
+    ).toEqual([]);
+  });
+
+  it('applies the same rule in English', () => {
+    const en = 'your technical provider';
+    expect(
+      findProviderPlacementViolations(
+        withActions([`The buttons need a visible label, and ${en} can add one.`]),
+        'en',
+        en,
+      ),
+    ).toHaveLength(1);
+    expect(providerPlacementRetryHint(en)).toContain(`"${en}"`);
   });
 });

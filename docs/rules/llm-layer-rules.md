@@ -550,6 +550,24 @@ rejected wholesale rather than repaired, same posture as
 
 ---
 
+**Added 2026-09-16, issue #309.** Two production reports showed three
+writing defects no guard covered. The provider was bolted onto the end of
+almost every action ("..., et l'équipe technique en charge de votre site
+peut..."), because the prompt required the phrase in every action while
+forbidding an action to open on it; the prompt now asks for it at most once
+per theme, as the agent of the main clause, and
+`findProviderPlacementViolations` (`provider-phrase-guard.ts`) rejects a
+second mention in one theme or a mention attached after a comma. French
+prose used untranslated jargon ("Les canonicals", "erreurs de tap") and a
+subjective verdict on the site ("une impression de contenu riche mais
+encore insuffisamment cadré"); `findProseRegisterViolations`
+(`prose-register-guard.ts`, which owns the glossary the French prompt shows)
+rejects both. Both run just before the provider-phrase guard, for the same
+presentation-defect reasoning, with their own retry hints. A French
+contrast explanation also inverted the English one ("dans de bonnes
+conditions de lumière" against "in bright light"); `color-contrast` now has
+a shared meaning note in `rule-meaning-notes.ts`.
+
 ## 7. Analysis variance across runs
 
 Identical findings produced eight quick wins in French and seven in

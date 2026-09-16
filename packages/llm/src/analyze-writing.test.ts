@@ -267,6 +267,29 @@ describe('analyzeWriting', () => {
     expect(callOpenAiForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
 
+  // Issue #309: both new guards reject and retry like every other guard.
+  it('retries when a response bolts the provider onto an action or uses French jargon', async () => {
+    const trailing = buildCleanFrenchOutput();
+    trailing.themes[0]!.recommendedActions = [
+      'Le contraste des boutons doit être relevé, et votre prestataire technique peut ajuster les couleurs.',
+    ];
+    const jargon = buildCleanFrenchOutput();
+    jargon.themes[0]!.businessImpact =
+      'Les canonicals renvoient les visiteurs vers une autre page.';
+    vi.mocked(callOpenAiForWriting)
+      .mockReset()
+      .mockResolvedValueOnce({ output: trailing })
+      .mockResolvedValueOnce({ output: jargon })
+      .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
+
+    await analyzeWriting(input, ['t1'], false);
+
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(3);
+    const retryPrompts = vi.mocked(callOpenAiForWriting).mock.calls.map((call) => call[2]);
+    expect(retryPrompts[1]).toContain('provider named in the wrong place');
+    expect(retryPrompts[2]).toContain('prose register defect');
+  });
+
   it('retries once when the first response cites WCAG 2.1, then succeeds', async () => {
     vi.mocked(callOpenAiForWriting)
       .mockReset()
