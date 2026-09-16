@@ -115,6 +115,7 @@ export {
   advanceProspectStatus,
   appendProspectEvent,
   archiveProspect,
+  countActiveProspectDeletionJobs,
   countProspectDeletionImpact,
   createProspectHub,
   deleteProspectPermanently,

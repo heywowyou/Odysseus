@@ -16,6 +16,7 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   checkOutreachAction: vi.fn(),
   createProspectHub: vi.fn(),
   archiveProspect: vi.fn(),
+  countActiveProspectDeletionJobs: vi.fn(),
   countProspectDeletionImpact: vi.fn(),
   deleteProspectPermanently: vi.fn(),
   restoreProspect: vi.fn(),
@@ -63,6 +64,7 @@ vi.mock('../outreach/configured-preview-publisher.js', () => ({
 import {
   checkOutreachAction,
   archiveProspect,
+  countActiveProspectDeletionJobs,
   countProspectDeletionImpact,
   deleteProspectPermanently,
   restoreProspect,
@@ -156,6 +158,7 @@ beforeEach(() => {
   vi.mocked(setProspectStatus).mockResolvedValue({ status: 'audited' } as never);
   vi.mocked(recordProspectOutcome).mockResolvedValue({ status: 'replied' } as never);
   vi.mocked(deleteProspectPermanently).mockResolvedValue({ deleted: true } as never);
+  vi.mocked(countActiveProspectDeletionJobs).mockResolvedValue(0);
   vi.mocked(getProspectHub).mockResolvedValue({ prospectId: 'p-1' } as never);
   vi.mocked(listOutreachPreviews).mockResolvedValue([]);
   vi.mocked(withdrawProspectOutreach).mockResolvedValue({
@@ -482,7 +485,7 @@ describe('prospect hub routes', () => {
     expect(response.body).toEqual({ error: refusal.message });
   });
 
-  it('removes audit artifacts and live preview objects before the cascade', async () => {
+  async function withAuditArtifacts(run: (auditDir: string) => Promise<void>): Promise<void> {
     const artifactsRoot = await fs.mkdtemp(join(tmpdir(), 'odysseus-prospect-delete-'));
     const startedAt = new Date('2026-09-15T10:20:30.000Z');
     const auditDir = buildAuditDir(artifactsRoot, 'example.fr', startedAt);
@@ -502,8 +505,17 @@ describe('prospect hub routes', () => {
     vi.mocked(listOutreachPreviews).mockResolvedValue([
       { objectKey: 'example.fr/preview.html', status: 'live' },
     ] as never);
-
     try {
+      await run(auditDir);
+    } finally {
+      if (previousArtifactsRoot === undefined) delete process.env['ODYSSEUS_ARTIFACTS_ROOT'];
+      else process.env['ODYSSEUS_ARTIFACTS_ROOT'] = previousArtifactsRoot;
+      await fs.rm(artifactsRoot, { recursive: true, force: true });
+    }
+  }
+
+  it('withdraws previews, runs the cascade, then removes audit artifacts', async () => {
+    await withAuditArtifacts(async (auditDir) => {
       const response = await handle('/api/prospects/p-1', 'DELETE');
 
       expect(response.statusCode).toBe(200);
@@ -513,11 +525,30 @@ describe('prospect hub routes', () => {
       expect(deletePreview.mock.invocationCallOrder[0]).toBeLessThan(
         vi.mocked(deleteProspectPermanently).mock.invocationCallOrder[0]!,
       );
-    } finally {
-      if (previousArtifactsRoot === undefined) delete process.env['ODYSSEUS_ARTIFACTS_ROOT'];
-      else process.env['ODYSSEUS_ARTIFACTS_ROOT'] = previousArtifactsRoot;
-      await fs.rm(artifactsRoot, { recursive: true, force: true });
-    }
+    });
+  });
+
+  it('refuses to delete while a job for the prospect is unfinished', async () => {
+    await withAuditArtifacts(async (auditDir) => {
+      vi.mocked(countActiveProspectDeletionJobs).mockResolvedValueOnce(1);
+      const response = await handle('/api/prospects/p-1', 'DELETE');
+
+      expect(response.statusCode).toBe(409);
+      expect(deletePreview).not.toHaveBeenCalled();
+      expect(deleteProspectPermanently).not.toHaveBeenCalled();
+      await expect(fs.access(auditDir)).resolves.toBeUndefined();
+    });
+  });
+
+  it('keeps artifacts and records when the preview withdrawal fails', async () => {
+    await withAuditArtifacts(async (auditDir) => {
+      deletePreview.mockRejectedValueOnce(new Error('bucket unavailable'));
+      const response = await handle('/api/prospects/p-1', 'DELETE');
+
+      expect(response.statusCode).toBe(503);
+      expect(deleteProspectPermanently).not.toHaveBeenCalled();
+      await expect(fs.access(auditDir)).resolves.toBeUndefined();
+    });
   });
 
   it('returns central outreach actionability and rejects unknown actions', async () => {

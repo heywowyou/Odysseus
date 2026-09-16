@@ -792,17 +792,21 @@ export const en: DashboardStrings = {
       deletePermanentlyWith: 'along with',
       deletePermanentlyKeeps:
         'Live previews are taken down and the directory link is cleared. The suppression list is kept.',
+      deleteBlockedByJob:
+        'A scan for this prospect is still running. Cancel it or wait for it to finish, then delete.',
       deletionImpactLabels: {
         audits: '{count} scan(s)',
         findings: '{count} finding(s)',
         analyses: '{count} analysis record(s)',
         reports: '{count} report(s)',
+        reportApprovals: '{count} report approval(s)',
         previews: '{count} preview(s)',
         drafts: '{count} draft(s)',
         threads: '{count} conversation thread(s)',
         outcomes: '{count} recorded outcome(s)',
         events: '{count} history event(s)',
         jobs: '{count} job(s)',
+        directoryEntries: '{count} directory link(s) removed',
       },
       info: 'Website kind, stars, and group are informational badges. Safety and suppression checks still apply.',
       outreach: 'Outreach preparation',

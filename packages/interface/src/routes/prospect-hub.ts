@@ -20,6 +20,7 @@ import {
   listProspects,
   listOutreachPreviews,
   archiveProspect,
+  countActiveProspectDeletionJobs,
   countProspectDeletionImpact,
   deleteProspectPermanently,
   restoreProspect,
@@ -722,29 +723,45 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
 
   // Permanent deletion is the exceptional path (duplicates, test records,
   // bad imports). The dashboard asks for it only behind an impact summary.
+  // It refuses while a job for the prospect is unfinished: the job's later
+  // stages would recreate the audit and artifact folder being removed.
+  // Order: outreach withdrawal (external, may fail), then the store cascade
+  // (retry-safe, prospect record last), then the artifact folders, so a
+  // failure never removes files while the records that point at them stay.
   router.delete('/api/prospects/:prospectId', async ({ res, params }) => {
     const prospectId = params['prospectId']!;
+    if ((await getProspectHub(connection, prospectId)) === null) {
+      sendError(res, 404, 'prospect not found');
+      return;
+    }
+    if ((await countActiveProspectDeletionJobs(connection, prospectId)) > 0) {
+      sendError(res, 409, 'prospect has an unfinished job; cancel it or wait for it to end');
+      return;
+    }
     const audits = await listProspectAudits(connection, prospectId);
 
     try {
-      const auditDirs = audits.map((audit) =>
-        buildAuditDir(getArtifactsRoot(), new URL(audit.siteUrl).hostname, audit.startedAt),
-      );
-      await Promise.all(
-        auditDirs.map((auditDir) => fs.rm(auditDir, { recursive: true, force: true })),
-      );
       // Issue #273: the mailbox draft is withdrawn too, not orphaned.
       await withdrawOutreachForProspect(connection, prospectId, 'prospect-deleted', {
         publisher: createConfiguredPreviewPublisher,
         mailbox: createConfiguredMailboxDraftAdapter(),
       });
     } catch {
-      sendError(res, 503, 'prospect artifacts or previews could not be removed');
+      sendError(res, 503, 'prospect previews or mailbox drafts could not be withdrawn');
       return;
     }
 
     const deleted = await deleteProspectPermanently(connection, prospectId);
-    if (deleted === null) sendError(res, 404, 'prospect not found');
-    else sendJson(res, 200, deleted);
+    if (deleted === null) {
+      sendError(res, 404, 'prospect not found');
+      return;
+    }
+    const auditDirs = audits.map((audit) =>
+      buildAuditDir(getArtifactsRoot(), new URL(audit.siteUrl).hostname, audit.startedAt),
+    );
+    await Promise.all(
+      auditDirs.map((auditDir) => fs.rm(auditDir, { recursive: true, force: true })),
+    );
+    sendJson(res, 200, deleted);
   });
 }

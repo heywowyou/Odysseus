@@ -803,17 +803,21 @@ export const fr: DashboardStrings = {
       deletePermanentlyWith: 'ainsi que',
       deletePermanentlyKeeps:
         'Les aperçus en ligne sont retirés et le lien avec l’annuaire est rompu. La liste d’exclusion est conservée.',
+      deleteBlockedByJob:
+        'Un scan de ce prospect est encore en cours. Annulez-le ou attendez sa fin, puis supprimez.',
       deletionImpactLabels: {
         audits: '{count} scan(s)',
         findings: '{count} constat(s)',
         analyses: '{count} analyse(s)',
         reports: '{count} rapport(s)',
+        reportApprovals: '{count} validation(s) de rapport',
         previews: '{count} aperçu(s)',
         drafts: '{count} brouillon(s)',
         threads: '{count} fil(s) d’échange',
         outcomes: '{count} résultat(s) enregistré(s)',
         events: '{count} événement(s) d’historique',
         jobs: '{count} tâche(s)',
+        directoryEntries: '{count} lien(s) d’annuaire retiré(s)',
       },
       info: 'Le type de site, les étoiles et le groupe sont des badges informatifs. Les contrôles de sécurité et de suppression restent actifs.',
       outreach: 'Préparation de la prospection',

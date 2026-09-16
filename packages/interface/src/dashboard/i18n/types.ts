@@ -802,17 +802,20 @@ export interface DashboardStrings {
       deletePermanentlyIntro: string;
       deletePermanentlyWith: string;
       deletePermanentlyKeeps: string;
+      deleteBlockedByJob: string;
       deletionImpactLabels: {
         audits: string;
         findings: string;
         analyses: string;
         reports: string;
+        reportApprovals: string;
         previews: string;
         drafts: string;
         threads: string;
         outcomes: string;
         events: string;
         jobs: string;
+        directoryEntries: string;
       };
       info: string;
       outreach: string;

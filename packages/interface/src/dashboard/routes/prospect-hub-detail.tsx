@@ -551,8 +551,12 @@ export function ProspectHubDetailPage(): JSX.Element {
     try {
       await sendJson(`/api/prospects/${encodeURIComponent(prospect.prospectId)}`, 'DELETE', {});
       navigate('/prospects');
-    } catch {
-      setOutreachNotice(copy.actionFailed);
+    } catch (error) {
+      setOutreachNotice(
+        error instanceof ApiError && error.status === 409
+          ? copy.deleteBlockedByJob
+          : copy.actionFailed,
+      );
     }
   };
 

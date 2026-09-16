@@ -3,6 +3,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import {
   addDirectoryEntriesToProspects,
   archiveProspect,
+  countActiveProspectDeletionJobs,
   countProspectDeletionImpact,
   createProspectHub,
   deleteProspectPermanently,
@@ -17,7 +18,9 @@ import {
 import { createAuditModel } from './schemas/audit.schema.js';
 import { createDirectoryEntryModel } from './schemas/directory-entry.schema.js';
 import { createFindingModel } from './schemas/finding.schema.js';
+import { createJobModel } from './schemas/job.schema.js';
 import { createOutreachThreadModel } from './schemas/outreach-thread.schema.js';
+import { createReportApprovalModel } from './schemas/report-approval.schema.js';
 import { createReportModel } from './schemas/report.schema.js';
 import { addSuppressionEntry, isSuppressed } from './suppression.js';
 import { probeMongoAvailability } from './test-support.js';
@@ -211,5 +214,72 @@ describe.skipIf(!mongoAvailable)('prospect archive lifecycle', () => {
     const entry = await createDirectoryEntryModel(connection!).findOne({ directoryId }).lean();
     expect(entry?.prospectId).toBeUndefined();
     expect(await isSuppressed(connection!, 'dir-delete.example')).toBe(true);
+  });
+
+  it('counts exactly what the cascade removes, including approvals and jobs linked by audit', async () => {
+    const directoryId = `dir-${randomUUID()}`;
+    await upsertDirectoryEntries(connection!, [directoryEntry(directoryId, 'dir-scope.example')]);
+    const [linked] = await addDirectoryEntriesToProspects(connection!, [directoryId]);
+    const prospectId = linked!.prospectId;
+    const auditId = randomUUID();
+    const otherAuditId = randomUUID();
+    await createAuditModel(connection!).collection.insertOne({ auditId, prospectId });
+    await createReportApprovalModel(connection!).collection.insertOne({ auditId });
+    const Jobs = createJobModel(connection!).collection;
+    await Jobs.insertMany([
+      { jobId: randomUUID(), status: 'done', options: { prospectId } },
+      { jobId: randomUUID(), status: 'done', auditId },
+      { jobId: randomUUID(), status: 'done', auditIds: [otherAuditId, auditId] },
+      { jobId: randomUUID(), status: 'done', auditId: otherAuditId },
+    ]);
+
+    expect(await countActiveProspectDeletionJobs(connection!, prospectId)).toBe(0);
+    await Jobs.insertOne({ jobId: randomUUID(), status: 'running', auditId });
+    expect(await countActiveProspectDeletionJobs(connection!, prospectId)).toBe(1);
+    await Jobs.deleteOne({ status: 'running', auditId });
+
+    const impact = await countProspectDeletionImpact(connection!, prospectId);
+    expect(impact).toMatchObject({ reportApprovals: 1, jobs: 3, directoryEntries: 1 });
+    const deleted = await deleteProspectPermanently(connection!, prospectId);
+    const { prospects, ...removed } = deleted!;
+    expect(prospects).toBe(1);
+    expect(removed).toEqual(impact);
+    expect(await Jobs.countDocuments({ auditId: otherAuditId })).toBe(1);
+  });
+
+  it('leaves the prospect in place when a cascade step fails, so a retry finishes it', async () => {
+    const prospect = await createProspectHub(connection!, {
+      sector: 'hotel',
+      name: 'Cascade Retry',
+      websites: [
+        {
+          url: 'https://cascade-retry.example/',
+          registrableDomain: 'cascade-retry.example',
+          kind: 'own',
+          primary: true,
+        },
+      ],
+    });
+    const Jobs = createJobModel(connection!);
+    await Jobs.collection.insertOne({
+      jobId: randomUUID(),
+      status: 'done',
+      options: { prospectId: prospect.prospectId },
+    });
+    const originalDeleteMany = Jobs.deleteMany;
+    Jobs.deleteMany = (() => {
+      throw new Error('job delete failed');
+    }) as never;
+    try {
+      await expect(deleteProspectPermanently(connection!, prospect.prospectId)).rejects.toThrow(
+        'job delete failed',
+      );
+    } finally {
+      Jobs.deleteMany = originalDeleteMany;
+    }
+    expect(await getProspectHub(connection!, prospect.prospectId)).not.toBeNull();
+
+    const retried = await deleteProspectPermanently(connection!, prospect.prospectId);
+    expect(retried).toMatchObject({ prospects: 1, jobs: 1 });
   });
 });

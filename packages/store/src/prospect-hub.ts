@@ -23,6 +23,7 @@ import { createJobModel } from './schemas/job.schema.js';
 import { createAnalysisModel } from './schemas/analysis.schema.js';
 import { createFindingModel } from './schemas/finding.schema.js';
 import { createReportModel } from './schemas/report.schema.js';
+import { createReportApprovalModel } from './schemas/report-approval.schema.js';
 import { createOutreachDraftModel } from './schemas/outreach-draft.schema.js';
 import { createOutreachOutcomeModel } from './schemas/outreach-outcome.schema.js';
 import { createOutreachPreviewModel } from './schemas/outreach-preview.schema.js';
@@ -922,6 +923,7 @@ export interface ProspectCascadeCounts extends AuditCascadeCounts {
   outcomes: number;
   events: number;
   jobs: number;
+  directoryEntries: number;
 }
 
 export interface ProspectDeletionImpact {
@@ -929,12 +931,78 @@ export interface ProspectDeletionImpact {
   findings: number;
   analyses: number;
   reports: number;
+  reportApprovals: number;
   previews: number;
   drafts: number;
   threads: number;
   outcomes: number;
   events: number;
   jobs: number;
+  directoryEntries: number;
+}
+
+/** The record sets a permanent delete touches. countProspectDeletionImpact
+ *  and deleteProspectPermanently both build their queries from this, so the
+ *  confirmation cannot name a different scope than the cascade removes. */
+interface ProspectDeletionScope {
+  auditIds: string[];
+  threadIds: string[];
+  audit: Record<string, unknown>;
+  outcome: Record<string, unknown>;
+  job: Record<string, unknown>;
+}
+
+async function prospectDeletionScope(
+  connection: Connection,
+  prospectId: string,
+): Promise<ProspectDeletionScope> {
+  const [audits, threads] = await Promise.all([
+    createAuditModel(connection)
+      .find({ prospectId })
+      .select({ auditId: 1, _id: 0 })
+      .lean<{ auditId: string }[]>(),
+    createOutreachThreadModel(connection)
+      .find({ prospectId })
+      .select({ threadId: 1, _id: 0 })
+      .lean<{ threadId: string }[]>(),
+  ]);
+  const auditIds = audits.map((audit) => audit.auditId);
+  const threadIds = threads.map((thread) => thread.threadId);
+  return {
+    auditIds,
+    threadIds,
+    audit: { auditId: { $in: auditIds } },
+    outcome: {
+      $or: [{ prospectId }, ...(threadIds.length === 0 ? [] : [{ threadId: { $in: threadIds } }])],
+    },
+    // A job belongs to the prospect when it was started for it, or when it
+    // points at one of its audits (a scan attached to the prospect later, or
+    // a re-audit comparing two of them). Leaving the latter would keep job
+    // links to audits that no longer exist.
+    job: {
+      $or: [
+        { 'options.prospectId': prospectId },
+        ...(auditIds.length === 0
+          ? []
+          : [{ auditId: { $in: auditIds } }, { auditIds: { $in: auditIds } }]),
+      ],
+    },
+  };
+}
+
+const ACTIVE_JOB_STATUSES = ['queued', 'running', 'needs-input'];
+
+/** Counts the unfinished jobs a permanent delete would remove. Deleting under
+ *  a running job lets its later stages recreate the audit and artifacts the
+ *  delete just removed, so the caller refuses while this is non-zero. */
+export async function countActiveProspectDeletionJobs(
+  connection: Connection,
+  prospectId: string,
+): Promise<number> {
+  const scope = await prospectDeletionScope(connection, prospectId);
+  return createJobModel(connection).countDocuments({
+    $and: [scope.job, { status: { $in: ACTIVE_JOB_STATUSES } }],
+  });
 }
 
 /** What deleteProspectPermanently would remove, counted without removing
@@ -945,46 +1013,35 @@ export async function countProspectDeletionImpact(
   prospectId: string,
 ): Promise<ProspectDeletionImpact | null> {
   if ((await getProspectHub(connection, prospectId)) === null) return null;
-  const auditIds = (
-    await createAuditModel(connection)
-      .find({ prospectId })
-      .select({ auditId: 1, _id: 0 })
-      .lean<{ auditId: string }[]>()
-  ).map((audit) => audit.auditId);
-  const threadIds = (
-    await createOutreachThreadModel(connection)
-      .find({ prospectId })
-      .select({ threadId: 1, _id: 0 })
-      .lean<{ threadId: string }[]>()
-  ).map((thread) => thread.threadId);
-  const [findings, analyses, reports, previews, drafts, outcomes, events, jobs] = await Promise.all(
-    [
-      createFindingModel(connection).countDocuments({ auditId: { $in: auditIds } }),
-      createAnalysisModel(connection).countDocuments({ auditId: { $in: auditIds } }),
-      createReportModel(connection).countDocuments({ auditId: { $in: auditIds } }),
+  const scope = await prospectDeletionScope(connection, prospectId);
+  const [findings, analyses, reports, reportApprovals, previews, drafts, outcomes, events, jobs] =
+    await Promise.all([
+      createFindingModel(connection).countDocuments(scope.audit),
+      createAnalysisModel(connection).countDocuments(scope.audit),
+      createReportModel(connection).countDocuments(scope.audit),
+      createReportApprovalModel(connection).countDocuments(scope.audit),
       createOutreachPreviewModel(connection).countDocuments({ prospectId }),
       createOutreachDraftModel(connection).countDocuments({ prospectId }),
-      createOutreachOutcomeModel(connection).countDocuments({
-        $or: [
-          { prospectId },
-          ...(threadIds.length === 0 ? [] : [{ threadId: { $in: threadIds } }]),
-        ],
-      }),
+      createOutreachOutcomeModel(connection).countDocuments(scope.outcome),
       createProspectEventModel(connection).countDocuments({ prospectId }),
-      createJobModel(connection).countDocuments({ 'options.prospectId': prospectId }),
-    ],
-  );
+      createJobModel(connection).countDocuments(scope.job),
+    ]);
+  const directoryEntries = await createDirectoryEntryModel(connection).countDocuments({
+    prospectId,
+  });
   return {
-    audits: auditIds.length,
+    audits: scope.auditIds.length,
     findings,
     analyses,
     reports,
+    reportApprovals,
     previews,
     drafts,
-    threads: threadIds.length,
+    threads: scope.threadIds.length,
     outcomes,
     events,
     jobs,
+    directoryEntries,
   };
 }
 
@@ -994,6 +1051,11 @@ export async function countProspectDeletionImpact(
  * ordinary removal from active work is archiveProspect, which never runs
  * this cascade. Suppression is intentionally absent: opting out is a durable
  * safety fact, not prospect-owned history.
+ *
+ * The prospect record is removed last. Every earlier step is an idempotent
+ * delete or unlink, so if one fails the prospect is still there and the
+ * operator's retry finishes the cascade instead of leaving attached records
+ * behind a prospect that no longer exists.
  */
 export async function deleteProspectPermanently(
   connection: Connection,
@@ -1002,12 +1064,9 @@ export async function deleteProspectPermanently(
   const current = await getProspectHub(connection, prospectId);
   if (current === null) return null;
 
-  const audits = await createAuditModel(connection)
-    .find({ prospectId })
-    .select({ auditId: 1, _id: 0 })
-    .lean<{ auditId: string }[]>();
+  const scope = await prospectDeletionScope(connection, prospectId);
   const auditCounts = await Promise.all(
-    audits.map((audit) => deleteAuditCascade(connection, audit.auditId)),
+    scope.auditIds.map((auditId) => deleteAuditCascade(connection, auditId)),
   );
   const auditTotals = auditCounts.reduce<AuditCascadeCounts>(
     (total, count) => ({
@@ -1020,11 +1079,6 @@ export async function deleteProspectPermanently(
     { audits: 0, findings: 0, analyses: 0, reports: 0, reportApprovals: 0 },
   );
 
-  const Thread = createOutreachThreadModel(connection);
-  const threads = await Thread.find({ prospectId })
-    .select({ threadId: 1, _id: 0 })
-    .lean<{ threadId: string }[]>();
-  const threadIds = threads.map((thread) => thread.threadId);
   const Preview = createOutreachPreviewModel(connection);
   await Preview.updateMany(
     { prospectId, status: 'live' },
@@ -1033,36 +1087,29 @@ export async function deleteProspectPermanently(
       $unset: { previewUrl: 1 },
     },
   );
-  const [previews, drafts, deletedThreads, outcomes, events, jobs, prospects] = await Promise.all([
+  const [previews, drafts, threads, outcomes, events, jobs, directoryEntries] = await Promise.all([
     Preview.deleteMany({ prospectId }).exec(),
     createOutreachDraftModel(connection).deleteMany({ prospectId }).exec(),
-    Thread.deleteMany({ prospectId }).exec(),
-    createOutreachOutcomeModel(connection)
-      .deleteMany({
-        $or: [
-          { prospectId },
-          ...(threadIds.length === 0 ? [] : [{ threadId: { $in: threadIds } }]),
-        ],
-      })
-      .exec(),
+    createOutreachThreadModel(connection).deleteMany({ prospectId }).exec(),
+    createOutreachOutcomeModel(connection).deleteMany(scope.outcome).exec(),
     createProspectEventModel(connection).deleteMany({ prospectId }).exec(),
-    createJobModel(connection).deleteMany({ 'options.prospectId': prospectId }).exec(),
-    createProspectHubModel(connection).deleteOne({ prospectId }).exec(),
+    createJobModel(connection).deleteMany(scope.job).exec(),
+    createDirectoryEntryModel(connection)
+      .updateMany({ prospectId }, { $unset: { prospectId: '' }, $set: { updatedAt: new Date() } })
+      .exec(),
   ]);
-  await createDirectoryEntryModel(connection).updateMany(
-    { prospectId },
-    { $unset: { prospectId: '' }, $set: { updatedAt: new Date() } },
-  );
+  const prospects = await createProspectHubModel(connection).deleteOne({ prospectId }).exec();
 
   return {
     ...auditTotals,
     prospects: prospects.deletedCount,
     previews: previews.deletedCount,
     drafts: drafts.deletedCount,
-    threads: deletedThreads.deletedCount,
+    threads: threads.deletedCount,
     outcomes: outcomes.deletedCount,
     events: events.deletedCount,
     jobs: jobs.deletedCount,
+    directoryEntries: directoryEntries.modifiedCount,
   };
 }
 

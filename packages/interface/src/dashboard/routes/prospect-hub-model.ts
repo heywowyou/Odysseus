@@ -80,12 +80,14 @@ export interface ProspectDeletionImpact {
   findings: number;
   analyses: number;
   reports: number;
+  reportApprovals: number;
   previews: number;
   drafts: number;
   threads: number;
   outcomes: number;
   events: number;
   jobs: number;
+  directoryEntries: number;
 }
 
 /** The permanent-delete confirmation names what goes, non-zero counts only,
