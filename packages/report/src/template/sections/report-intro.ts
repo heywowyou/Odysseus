@@ -9,7 +9,6 @@ import {
   renderSheetHeader,
   sheet,
 } from '../html-utils.js';
-import { resolveDecisionQuestion } from '../generic-question.js';
 import { sectionTitle, type SectionId } from '../section-registry.js';
 import { selectRenderedThemes } from './themes.js';
 import type { RenderedPriority } from '../rendered-priorities.js';
@@ -52,20 +51,19 @@ function computeIntroFacts(
 }
 
 /** Plan 018 step 5: section-00 opens the report as a Situation,
- *  Complication, Question narrative, not a reading guide. The situation
- *  states what this diagnostic is for and how it was built; the
- *  complication states deterministic pages/findings/priorities facts plus
- *  the legal reminder pointing at the later legal section; the question is
- *  the same generic decision sentence the cover renders, taken from the
- *  one shared resolver (../generic-question.ts) so the two sites cannot
- *  drift. P3 (2026-08-21 La Corniche feedback pass) history: the section
+ *  Complication narrative, not a reading guide. The situation states what
+ *  this diagnostic is for and how it was built; the complication states
+ *  deterministic pages/findings/priorities facts plus the legal reminder
+ *  pointing at the later legal section. The decision question belongs to
+ *  the cover alone: issue #314 removed its repeat here, where it sat in
+ *  large type between two blocks it connected to neither. P3 (2026-08-21 La Corniche feedback pass) history: the section
  *  exists to answer "why am I, the non-technical director, holding this,
  *  and what do I do with it" - structural/navigational, template-driven,
  *  no new LLM pass.
  *
- *  Two removals, both de-duplication: the question renders without its
- *  old heading (issue #52), which labelled as a question the sentence
- *  directly below it, and without the former top-3 action list (issue
+ *  Two earlier removals, both de-duplication: the question's old heading
+ *  (issue #52), which labelled as a question the sentence directly below
+ *  it, and the former top-3 action list (issue
  *  #54), which repeated the priorities the executive summary's start-here
  *  block announces on the next page, with the detail this page never
  *  carried. The section ends on the audience roles and the scope note.
@@ -111,11 +109,6 @@ export function renderReportIntro(
     methodologySection: sectionTitle('section-11', strings),
   });
 
-  // The question is the shared resolver's exact bytes (plan 018 step 5),
-  // which with preparation present are the preview's already-resolved
-  // question - never a forked copy (plan 019).
-  const question = resolveDecisionQuestion(analysis.language, preparation);
-
   // Plan 019: the automatic opening hook, only when preparation resolved
   // it from real findings evidence. Evidence-unavailable mixed copy stays
   // unrendered: it would read as a measured conclusion when it is not.
@@ -147,8 +140,7 @@ export function renderReportIntro(
     <p style="font-size:12.5px;opacity:0.9;margin:0 0 var(--space-4)">${escapeHtml(r.situationBody)}</p>
     <h5>${escapeHtml(r.complicationHeading)}</h5>
     <p style="font-size:12.5px;opacity:0.9;margin:0 0 var(--space-2)">${escapeHtml(complication)}</p>
-    <p style="font-size:12.5px;opacity:0.9;margin:0 0 var(--space-4)">${escapeHtml(legalReminder)}</p>
-    <p style="font-size:17px;opacity:0.9;margin:0 0 var(--space-6);max-width:38ch">${escapeHtml(question)}</p>
+    <p style="font-size:12.5px;opacity:0.9;margin:0 0 var(--space-6)">${escapeHtml(legalReminder)}</p>
     <h5>${escapeHtml(r.audienceHeading)}</h5>
     <table style="width:100%;border-collapse:collapse;margin-bottom:var(--space-6)"><tbody>${audienceRows}</tbody></table>
     <p style="font-size:11.5px;opacity:0.6;margin:0">${escapeHtml(scopeNote)}</p>

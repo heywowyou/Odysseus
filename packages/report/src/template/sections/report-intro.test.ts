@@ -135,7 +135,8 @@ describe('renderReportIntro', () => {
         }),
       ),
     );
-    expect(html).toContain(resolveGenericDecisionQuestion('fr'));
+    // Issue #314: the cover's question is not repeated on this page.
+    expect(html).not.toContain(resolveGenericDecisionQuestion('fr'));
   });
 
   it('renders the same structure in English for an English analysis', () => {
@@ -158,7 +159,7 @@ describe('renderReportIntro', () => {
         priorities: '1 priority',
       }),
     );
-    expect(html).toContain(resolveGenericDecisionQuestion('en'));
+    expect(html).not.toContain(resolveGenericDecisionQuestion('en'));
   });
 
   it('renders every block with the fallbacks: no priorities argument, no findings, in French', () => {
@@ -175,7 +176,7 @@ describe('renderReportIntro', () => {
         }),
       ),
     );
-    expect(html).toContain(resolveGenericDecisionQuestion('fr'));
+    expect(html).not.toContain(resolveGenericDecisionQuestion('fr'));
     // The renamed heading (issue #53) carries an apostrophe, which renders
     // escaped, so compare the escaped form.
     expect(html).toContain(escapeHtml(clientFr.reportIntro.audienceHeading));
@@ -195,7 +196,7 @@ describe('renderReportIntro', () => {
         priorities: '0 priorities',
       }),
     );
-    expect(html).toContain(resolveGenericDecisionQuestion('en'));
+    expect(html).not.toContain(resolveGenericDecisionQuestion('en'));
     expect(html).toContain(clientEn.reportIntro.audienceHeading);
     expect(html).not.toContain('The three actions to launch first');
   });
@@ -221,14 +222,15 @@ describe('renderReportIntro', () => {
     expect(html).not.toContain('Priorité 2');
   });
 
-  it('renders the question byte for byte from the shared resolver, and never the other language', () => {
+  // Issue #314: the question appeared a second time here, in large type
+  // between "Ce qui mérite votre attention" and "Comment utiliser ce
+  // rapport". It belongs to the cover only.
+  it('leaves the decision question to the cover, in either language', () => {
     const frHtml = renderReportIntro(getStrings('fr'), 1, buildAnalysis([]) as never, []);
-    expect(frHtml).toContain(resolveGenericDecisionQuestion('fr'));
-    expect(frHtml).not.toContain(resolveGenericDecisionQuestion('en'));
+    expect(frHtml).not.toContain(resolveGenericDecisionQuestion('fr'));
 
     const enHtml = renderReportIntro(getStrings('en'), 1, buildAnalysis([], 'en') as never, []);
-    expect(enHtml).toContain(resolveGenericDecisionQuestion('en'));
-    expect(enHtml).not.toContain(resolveGenericDecisionQuestion('fr'));
+    expect(enHtml).not.toContain(resolveGenericDecisionQuestion('en'));
   });
 
   it.each([
@@ -313,8 +315,8 @@ describe('renderReportIntro', () => {
   });
 });
 
-// Plan 019 step 7: with a preparation preview, the opening question and
-// hook are the preview's already-resolved values. Without one, nothing
+// Plan 019 step 7: with a preparation preview, the opening hook is the
+// preview's already-resolved value. Without one, nothing
 // changes.
 describe('plan 019: renderReportIntro consumes the preparation preview', () => {
   const frPreview: PreparationPreviewLanguage = {
@@ -327,7 +329,7 @@ describe('plan 019: renderReportIntro consumes the preparation preview', () => {
     },
   };
 
-  it('replaces the question with the preview value in this language only', () => {
+  it('does not repeat the preview question either', () => {
     const html = renderReportIntro(
       getStrings('fr'),
       1,
@@ -336,7 +338,7 @@ describe('plan 019: renderReportIntro consumes the preparation preview', () => {
       undefined,
       frPreview,
     );
-    expect(html).toContain('Question personnalisée sur le rapport ?');
+    expect(html).not.toContain('Question personnalisée sur le rapport ?');
     expect(html).not.toContain(resolveGenericDecisionQuestion('fr'));
   });
 
@@ -381,7 +383,7 @@ describe('plan 019: renderReportIntro consumes the preparation preview', () => {
   it('leaves the generic opening untouched without preparation', () => {
     const strings = getStrings('fr');
     const html = renderReportIntro(strings, 1, buildAnalysis([]) as never, []);
-    expect(html).toContain(resolveGenericDecisionQuestion('fr'));
+    expect(html).not.toContain(resolveGenericDecisionQuestion('fr'));
     expect(html).toContain(strings.reportIntro.roleManagementLabel);
   });
 });
