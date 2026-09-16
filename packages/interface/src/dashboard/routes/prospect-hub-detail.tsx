@@ -21,7 +21,7 @@ import { EmptyState } from '../components/ui/empty-state';
 import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
 import { useI18n } from '../i18n/provider';
-import { ApiError, fetchJson, sendJson } from '../lib/api';
+import { fetchJson, sendJson } from '../lib/api';
 import { useApi } from '../lib/use-api';
 import {
   deletionImpactSummary,
@@ -42,7 +42,17 @@ import {
   sirenDraftError,
   type ProspectIdentityValues,
 } from './prospect-identity-model';
-import { normalizeSiren } from './audit-detail-model';
+import {
+  deleteFailureNotice,
+  detailsPatch,
+  emailAddition,
+  firstEmailBody,
+  outcomeFailureNotice,
+  outcomeNotice,
+  outreachResultNotice,
+  scanRefusalNotice,
+  websiteAddition,
+} from './prospect-hub-detail-model';
 import { formatDateTime } from '../lib/format';
 
 interface ProspectEvent {
@@ -315,33 +325,16 @@ export function ProspectHubDetailPage(): JSX.Element {
   };
 
   const saveWebsite = async (): Promise<void> => {
-    const value = website.trim();
-    if (!value) return;
-    let url: URL;
-    try {
-      url = new URL(value);
-    } catch {
+    const addition = websiteAddition(prospect.websites, website);
+    if (addition.kind === 'invalid') {
       setOutreachNotice(copy.actionFailed);
       return;
     }
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-      setOutreachNotice(copy.actionFailed);
-      return;
-    }
-    const normalizedUrl = url.toString();
-    if (prospect.websites.some((item) => item.url === normalizedUrl)) return;
+    if (addition.kind === 'unchanged') return;
     setSaving(true);
     try {
       await sendJson(`/api/prospects/${prospect.prospectId}`, 'PATCH', {
-        websites: [
-          ...prospect.websites,
-          {
-            url: normalizedUrl,
-            registrableDomain: url.hostname,
-            kind: 'unknown',
-            primary: prospect.websites.length === 0,
-          },
-        ],
+        websites: addition.websites,
       });
       setWebsite('');
       refreshAll();
@@ -381,18 +374,11 @@ export function ProspectHubDetailPage(): JSX.Element {
   const saveEmail = async (
     suggestion?: NonNullable<ProspectHubDetail['contactSuggestion']>,
   ): Promise<void> => {
-    const address = (suggestion?.address ?? email).trim().toLowerCase();
-    if (!address || prospect.emails.some((item) => item.address === address)) return;
+    const emails = emailAddition(prospect.emails, email, suggestion);
+    if (emails === null) return;
     setSaving(true);
     try {
-      await sendJson(`/api/prospects/${prospect.prospectId}`, 'PATCH', {
-        emails: [
-          ...prospect.emails,
-          suggestion === undefined
-            ? { address, origin: 'operator' }
-            : { address, origin: 'site-discovery', attestation: suggestion.sourceUrl },
-        ],
-      });
+      await sendJson(`/api/prospects/${prospect.prospectId}`, 'PATCH', { emails });
       if (suggestion === undefined) setEmail('');
       refreshAll();
     } finally {
@@ -460,15 +446,8 @@ export function ProspectHubDetailPage(): JSX.Element {
 
   const saveDetails = async (): Promise<void> => {
     if (sirenError !== null) return;
-    const patch = Object.fromEntries(
-      Object.entries(editedFields).map(([key, value]) => [
-        key,
-        key === 'siren'
-          ? normalizeSiren(value?.trim() ?? '') || undefined
-          : value?.trim() || undefined,
-      ]),
-    );
-    if (Object.keys(patch).length === 0) return;
+    const patch = detailsPatch(editedFields);
+    if (patch === null) return;
     setSaving(true);
     try {
       await sendJson(`/api/prospects/${prospect.prospectId}`, 'PATCH', patch);
@@ -497,12 +476,7 @@ export function ProspectHubDetailPage(): JSX.Element {
         navigate(`/scans/${result.jobId}`);
       } else {
         setOutreachNotice(
-          result.refusal === undefined
-            ? copy.actionFailed
-            : copy.actionRefused.replace(
-                '{reason}',
-                copy.refusalLabels[result.refusal] ?? strings.common.vocabularyFallback,
-              ),
+          scanRefusalNotice(copy, strings.common.vocabularyFallback, result.refusal),
         );
       }
     } catch {
@@ -552,11 +526,7 @@ export function ProspectHubDetailPage(): JSX.Element {
       await sendJson(`/api/prospects/${encodeURIComponent(prospect.prospectId)}`, 'DELETE', {});
       navigate('/prospects');
     } catch (error) {
-      setOutreachNotice(
-        error instanceof ApiError && error.status === 409
-          ? copy.deleteBlockedByJob
-          : copy.actionFailed,
-      );
+      setOutreachNotice(deleteFailureNotice(copy, error));
     }
   };
 
@@ -570,12 +540,12 @@ export function ProspectHubDetailPage(): JSX.Element {
         {},
       );
       setOutreachNotice(
-        result.published
-          ? copy.previewPublished
-          : copy.actionRefused.replace(
-              '{reason}',
-              copy.refusalLabels[result.refusal ?? ''] ?? strings.common.vocabularyFallback,
-            ),
+        outreachResultNotice(
+          copy,
+          strings.common.vocabularyFallback,
+          { done: result.published, refusal: result.refusal },
+          copy.previewPublished,
+        ),
       );
       refreshAll();
     } catch {
@@ -592,15 +562,15 @@ export function ProspectHubDetailPage(): JSX.Element {
       const result = await sendJson<{ created: boolean; refusal?: string }>(
         `/api/prospects/${prospect.prospectId}/outreach/first-email`,
         'POST',
-        livePreviewUrl === null ? {} : { previewToken: livePreviewUrl.split('/').at(-1) },
+        firstEmailBody(livePreviewUrl),
       );
       setOutreachNotice(
-        result.created
-          ? copy.firstEmailCreated
-          : copy.actionRefused.replace(
-              '{reason}',
-              copy.refusalLabels[result.refusal ?? ''] ?? strings.common.vocabularyFallback,
-            ),
+        outreachResultNotice(
+          copy,
+          strings.common.vocabularyFallback,
+          { done: result.created, refusal: result.refusal },
+          copy.firstEmailCreated,
+        ),
       );
       refreshAll();
     } catch {
@@ -620,12 +590,12 @@ export function ProspectHubDetailPage(): JSX.Element {
         {},
       );
       setOutreachNotice(
-        result.created
-          ? copy.followUpCreated
-          : copy.actionRefused.replace(
-              '{reason}',
-              copy.refusalLabels[result.refusal ?? ''] ?? strings.common.vocabularyFallback,
-            ),
+        outreachResultNotice(
+          copy,
+          strings.common.vocabularyFallback,
+          { done: result.created, refusal: result.refusal },
+          copy.followUpCreated,
+        ),
       );
       refreshAll();
     } catch {
@@ -644,17 +614,9 @@ export function ProspectHubDetailPage(): JSX.Element {
         'POST',
         { outcome },
       );
-      setOutreachNotice(
-        result.withdrawn !== undefined
-          ? copy.optOutWithdrawn
-              .replace('{drafts}', String(result.withdrawn.drafts))
-              .replace('{previews}', String(result.withdrawn.previews))
-          : copy.outcomeSaved.replace('{outcome}', label(outcome, copy.outcomeLabels)),
-      );
+      setOutreachNotice(outcomeNotice(copy, outcome, result));
     } catch (error) {
-      setOutreachNotice(
-        error instanceof ApiError && error.status === 409 ? copy.outcomeRefused : copy.actionFailed,
-      );
+      setOutreachNotice(outcomeFailureNotice(copy, error));
     } finally {
       setOutreachBusy(null);
       refreshAll();
