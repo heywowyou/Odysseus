@@ -118,7 +118,7 @@ function compactPagePath(url: string): string {
  *  the narrow column; the cell is now nowrap and a longer path loses its
  *  middle, keeping the start (the language prefix) and the end (the page
  *  itself). The link still points at the full URL. */
-export const WORST_PAGE_PATH_MAX_CHARS = 24;
+const WORST_PAGE_PATH_MAX_CHARS = 24;
 
 export function truncatePagePath(path: string): string {
   if (path.length <= WORST_PAGE_PATH_MAX_CHARS) return path;
@@ -135,7 +135,7 @@ export function truncatePagePath(path: string): string {
  *  that size comes from the measurement (a late hero image or carousel, a
  *  run waiting out a slow third party) rather than from anything a visitor
  *  lives through. */
-export const LAB_FIELD_LCP_DIVERGENCE_FACTOR = 4;
+const LAB_FIELD_LCP_DIVERGENCE_FACTOR = 4;
 
 /** The lab and field LCP values to flag, or null when the lab median is
  *  within LAB_FIELD_LCP_DIVERGENCE_FACTOR of the real-user p75 (or either
