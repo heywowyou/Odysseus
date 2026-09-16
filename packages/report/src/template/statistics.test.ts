@@ -40,10 +40,17 @@ describe('computeStatistics', () => {
     // drifting, not to describe the fixture.
     //
     // The cross-check that the collapse regrouped rather than dropped
-    // anything: accessibilityOccurrences (431) and
-    // thirdPartyAccessibilityOccurrences (165) are byte-identical to the
-    // pre-collapse values below, which is the same invariant trade-off 30
+    // anything: accessibilityOccurrences (431) is byte-identical to the
+    // pre-collapse value below, which is the same invariant trade-off 30
     // used when it made this class of change.
+    //
+    // thirdPartyAccessibilityOccurrences was 165 until issue #299. This
+    // fixture's site is built on its agency's own WordPress theme, and a
+    // bare /diadao/ vendor match counted fourteen selectors of that
+    // theme's markup - its header, its main menu, its booking snippet
+    // panel and their close buttons - as a third party's component the
+    // agency cannot modify. They are first-party now, and 129 is the
+    // share that genuinely sits outside the site.
     expect(rest).toEqual({
       pagesScanned: 20,
       totalFindings: 62,
@@ -57,7 +64,7 @@ describe('computeStatistics', () => {
       // fixture's own third-party occurrence count, confirmed against
       // third-party-attribution.ts's vendor table applied to this scan's
       // actual findings, not a guessed number.
-      thirdPartyAccessibilityOccurrences: 165,
+      thirdPartyAccessibilityOccurrences: 129,
       pagesWithCritical: 20,
       critical: 8,
       serious: 14,

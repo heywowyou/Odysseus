@@ -72,7 +72,7 @@ export const fr: ReportStrings = {
       // looking for a section that appeared nowhere in the contents, 55
       // pages further on. Naming the numbered section that contains it is
       // the difference between a reference and a dead end.
-      "{percent} % de ces occurrences proviennent de composants tiers (formulaires, fenêtres modales, widget de réservation) - voir « À traiter avec vos prestataires tiers », dans l'annexe technique.",
+      "{percent} % des occurrences d'accessibilité proviennent de composants tiers (formulaires, fenêtres modales, widget de réservation). La section « À traiter avec vos prestataires tiers » de l'annexe technique les recense, ainsi que celles des autres catégories.",
     priorityOwnership: {
       leadTemplate: 'Priorités : {clauses}.',
       firstPartySingularTemplate: '{count} constat à corriger directement',

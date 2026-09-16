@@ -30,7 +30,17 @@ const VENDOR_SELECTOR_PATTERNS: ReadonlyArray<{ pattern: RegExp; vendor: string 
   { pattern: /popmake|pum-content/i, vendor: 'Popup Maker' },
   { pattern: /gform|gravity-theme/i, vendor: 'Gravity Forms' },
   { pattern: /smartpreview/i, vendor: 'SmartPreview' },
-  { pattern: /diadao/i, vendor: 'Diadao' },
+  // Issue #299: Diadao is a hotel web agency, and on haaitza.com it is
+  // both the author of the site's own WordPress theme and the vendor of a
+  // same-origin booking widget. A bare /diadao/ match filed the theme's
+  // own navigation, header bar and layout shifts under "your agency
+  // cannot modify this code directly", which is the exact opposite of
+  // true: the agency wrote that code. Scoped to the widget's own markers,
+  // so the transactional-flow case (#diadao-widget, the HSC SDK
+  // packages/scanner's transactional-flow.ts already names) still
+  // attributes, and site chrome does not. Omitting an attribution is
+  // safe; making the wrong one is not.
+  { pattern: /diadao[-_]?(widget|hsc)/i, vendor: 'Diadao' },
   { pattern: /cmplz/i, vendor: 'Complianz' },
   { pattern: /ZC_sdk|zc-iframe|zenchef/i, vendor: 'ZenChef' },
 ];
@@ -43,11 +53,21 @@ function crossesFrameBoundary(selector: string): boolean {
   return selector.includes('>>>');
 }
 
+/** Issue #299: a WordPress theme is the site's own code. Whoever authored
+ *  it, it is what the client's agency is paid to maintain, so nothing
+ *  under /wp-content/themes/ can be something they "cannot modify
+ *  directly" - unlike /wp-content/plugins/, which is a third party's
+ *  release the agency would have to fork to patch. Checked before the
+ *  vendor table so a theme slug that happens to carry a vendor's name
+ *  cannot be read as that vendor's component. */
+const FIRST_PARTY_PATH_PATTERN = /wp-content\/themes\//i;
+
 /** Exported so any other caller with a raw selector but no Finding (e.g.
  *  legal-exposure.ts's TransactionalFlowEvidence, which carries the same
  *  kind of selector string) can reuse the same vendor table instead of
  *  re-deriving vendor names from scratch. */
 export function detectVendor(selector: string): string | undefined {
+  if (FIRST_PARTY_PATH_PATTERN.test(selector)) return undefined;
   for (const { pattern, vendor } of VENDOR_SELECTOR_PATTERNS) {
     if (pattern.test(selector)) return vendor;
   }

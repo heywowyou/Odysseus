@@ -60,7 +60,7 @@ export const en: ReportStrings = {
     thirdPartyOccurrencesNoteTemplate:
       // B6: see the French entry for why this names the containing
       // numbered section rather than the sub-heading alone.
-      '{percent}% of these occurrences come from third-party components (forms, popups, booking widget) - see "To address with your third-party providers", in the technical appendix.',
+      '{percent}% of accessibility occurrences come from third-party components (forms, popups, booking widget). The "To address with your third-party providers" section of the technical appendix lists them, along with those in the other categories.',
     priorityOwnership: {
       leadTemplate: 'Priorities: {clauses}.',
       firstPartySingularTemplate: '{count} to fix directly',

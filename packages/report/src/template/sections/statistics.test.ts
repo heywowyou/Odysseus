@@ -387,7 +387,7 @@ describe('P1.2: the third-party occurrences footnote', () => {
     const findings = [buildThirdPartyFinding(1), buildCategoryFinding('accessibility', 2)];
     const html = renderStatistics(getStrings('fr'), 3, 'fr', findings, manifest);
 
-    expect(html).toContain('50 % de ces occurrences proviennent de composants tiers');
+    expect(html).toContain('50 % des occurrences d’accessibilité proviennent de composants tiers');
   });
 
   it('renders nothing when no accessibility finding is third-party', () => {
