@@ -27,7 +27,18 @@ export interface ConformanceRow {
   pages: number;
 }
 
-function rollup(findings: readonly Finding[], includeHeuristic: boolean): ConformanceRow[] {
+function rollup(
+  findings: readonly Finding[],
+  includeHeuristic: boolean,
+  /** Issue #291: the analysed (visited-scope) page set the pages column is
+   *  confined to. Findings record every real URL - language variants kept
+   *  after a translation-cluster merge, and origin-level findings citing
+   *  discovered-but-not-scanned pages - so the raw union can exceed the
+   *  analysed-page total (a real report claimed 206 pages out of 140).
+   *  Undefined keeps the pre-#291 raw union, for callers that receive no
+   *  manifest yet; callers that can supply the scope must. */
+  scopePageUrls?: ReadonlySet<string>,
+): ConformanceRow[] {
   const counts = new Map<
     string,
     { findingCount: number; totalOccurrences: number; pages: Set<string> }
@@ -50,7 +61,10 @@ function rollup(findings: readonly Finding[], includeHeuristic: boolean): Confor
       };
       row.findingCount += 1;
       row.totalOccurrences += finding.occurrences;
-      for (const url of finding.pageUrls) row.pages.add(url);
+      for (const url of finding.pageUrls) {
+        if (scopePageUrls !== undefined && !scopePageUrls.has(url)) continue;
+        row.pages.add(url);
+      }
       counts.set(criterion, row);
     }
   }
@@ -77,8 +91,11 @@ function rollup(findings: readonly Finding[], includeHeuristic: boolean): Confor
  *  own words) rendered as a hard criterion failure in the one table a
  *  client might hand straight to a lawyer - 157 of that heuristic's
  *  occurrences alone, in the report that prompted this fix. */
-export function buildConformanceRollup(findings: readonly Finding[]): ConformanceRow[] {
-  return rollup(findings, false);
+export function buildConformanceRollup(
+  findings: readonly Finding[],
+  scopePageUrls?: ReadonlySet<string>,
+): ConformanceRow[] {
+  return rollup(findings, false, scopePageUrls);
 }
 
 /** The heuristic-only counterpart: rendered in its own clearly labeled
@@ -88,8 +105,11 @@ export function buildConformanceRollup(findings: readonly Finding[]): Conformanc
  *  axe image-alt finding AND separately flagged by the alt-text
  *  heuristic on different images) - that is not a bug, the two rollups
  *  answer different questions about different findings. */
-export function buildHeuristicRollup(findings: readonly Finding[]): ConformanceRow[] {
-  return rollup(findings, true);
+export function buildHeuristicRollup(
+  findings: readonly Finding[],
+  scopePageUrls?: ReadonlySet<string>,
+): ConformanceRow[] {
+  return rollup(findings, true, scopePageUrls);
 }
 
 /** item 1.2 (La Corniche pass): the table's own occurrence column
@@ -113,8 +133,17 @@ export function hasMultiCriterionFinding(findings: readonly Finding[]): boolean 
  *  the conformance summary's framing. item 8: excludes HEURISTIC_RULE_IDS
  *  findings for the same reason buildConformanceRollup does - this count
  *  feeds the same page-5 headline that must not be inflated by a
- *  heuristic red-flag. */
-export function pagesWithWcagFailures(findings: readonly Finding[]): number {
+ *  heuristic red-flag.
+ *
+ *  Issue #291: when the analysed (visited-scope) page set is supplied, only
+ *  in-scope URLs count, so "M" can never exceed the analysed-page total
+ *  (findings also cite discovered-but-not-scanned pages and post-merge
+ *  language variants). Undefined keeps the pre-#291 raw union, for callers
+ *  that receive no manifest yet; callers that can supply the scope must. */
+export function pagesWithWcagFailures(
+  findings: readonly Finding[],
+  scopePageUrls?: ReadonlySet<string>,
+): number {
   const pages = new Set<string>();
   for (const finding of findings) {
     if (
@@ -122,7 +151,10 @@ export function pagesWithWcagFailures(findings: readonly Finding[]): number {
       finding.wcagCriteria.length > 0 &&
       !HEURISTIC_RULE_IDS.has(finding.ruleId)
     ) {
-      for (const url of finding.pageUrls) pages.add(url);
+      for (const url of finding.pageUrls) {
+        if (scopePageUrls !== undefined && !scopePageUrls.has(url)) continue;
+        pages.add(url);
+      }
     }
   }
   return pages.size;

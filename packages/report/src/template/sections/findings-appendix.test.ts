@@ -985,3 +985,88 @@ describe('D11: file counts and overflow tails agree in number', () => {
     expect(html).not.toContain('et 1 autres');
   });
 });
+
+// Issue #319: the annex group header's gloss span opened with a literal
+// "- " separator. Whenever the flex-wrapped header pushed the gloss onto
+// its own line (the normal case for a long rule title), a sentence like
+// "Des boutons ou liens trop petits..." rendered as "- Des boutons ou
+// liens trop petits...", reading as a stray bullet before prose the dash
+// does not introduce.
+describe('issue #319: no stray hyphen before rule descriptions in the annex', () => {
+  it('renders the gloss without a leading "- " separator', async () => {
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
+
+    expect(html).not.toContain('opacity:0.5">- ');
+    // The gloss text itself still renders (item 38's own assertion, kept
+    // here so this test fails for the right reason if the gloss moves).
+    expect(html).toContain('en dessous du seuil minimal requis');
+  });
+});
+
+// Issue #291: findings record every real URL - language variants kept after
+// a translation-cluster merge, plus origin-level findings citing
+// discovered-but-not-scanned pages - so an unconfined page figure claimed
+// 206 pages against a 140-page analysed scope in a real report. The group
+// sum and each finding row's own page cell are confined to the visited
+// scope; the "Pages :" URL list underneath keeps the full item-25 detail.
+describe('issue #291: annex page figures are confined to the analysed (visited) scope', () => {
+  function scopedFinding(pageUrls: string[]): Finding {
+    return {
+      findingId: 'f001',
+      auditId: 'a',
+      schemaVersion: 1,
+      source: 'axe',
+      ruleId: 'color-contrast',
+      category: 'accessibility',
+      severity: 'serious',
+      wcagCriteria: ['1.4.3'],
+      title: 'Insufficient contrast',
+      description: 'desc',
+      pageUrls,
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: 'd1',
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+  }
+
+  it('the group sum counts only visited pages, and the finding row agrees', () => {
+    // buildManifest() declares exactly one visited page.
+    const finding = scopedFinding([
+      'https://example.com/',
+      'https://example.com/not-crawled-1',
+      'https://example.com/not-crawled-2',
+    ]);
+    const html = renderFindingsAppendix(
+      getStrings('en'),
+      12,
+      'en',
+      [finding],
+      buildManifest(),
+      'general',
+    );
+
+    // Group sum: 1 finding · 1 occurrence · 1 page (the raw union read 3).
+    expect(html).toContain('1 finding · 1 occurrence · 1 page');
+    // The finding row's own page cell agrees.
+    expect(html).toMatch(/<div[^>]*>f001<\/div>\s*<div>1<\/div>/);
+  });
+
+  it('the page URL list keeps every recorded URL even when the count is confined', () => {
+    const finding = scopedFinding(['https://example.com/', 'https://example.com/not-crawled-1']);
+    const html = renderFindingsAppendix(
+      getStrings('en'),
+      12,
+      'en',
+      [finding],
+      buildManifest(),
+      'general',
+    );
+
+    expect(html).toContain('https://example.com/not-crawled-1');
+  });
+});

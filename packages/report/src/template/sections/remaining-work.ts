@@ -75,7 +75,12 @@ interface RuleBlock {
  *  Diverted findings are not filtered here: the caller passes the same
  *  findings array every other section reads, so this section and Observations
  *  can never disagree about what was withheld from the model (trade-off 8's
- *  single-implementation rule). */
+ *  single-implementation rule).
+ *
+ *  Issue #293: the priorities passed here carry every finding of each rule
+ *  they name (rendered-priorities.ts expands the themes), so excluding by
+ *  findingId can no longer split one rule between a priority and this
+ *  section with two different counts for the same defect. */
 export function selectRemainingFindings(
   analysis: StoredAnalysis,
   findings: readonly Finding[],
@@ -90,7 +95,18 @@ export function selectRemainingFindings(
   return findings.filter((finding) => !covered.has(finding.findingId));
 }
 
-function groupByRule(findings: readonly Finding[], language: ReportLanguage): RuleBlock[] {
+function groupByRule(
+  findings: readonly Finding[],
+  language: ReportLanguage,
+  /** Issue #291: the analysed (visited-scope) page set every page figure is
+   *  confined to, threaded from render-html.ts. Findings record every real
+   *  URL - language variants kept after a translation-cluster merge, and
+   *  origin-level findings citing discovered-but-not-scanned pages - so the
+   *  raw union can exceed the analysed-page total the reader was given (a
+   *  real report claimed 206 pages out of 140). Undefined only in callers
+   *  that predate the scope (focused tests); those keep the raw union. */
+  scopePageUrls?: ReadonlySet<string>,
+): RuleBlock[] {
   const byRule = new Map<string, Finding[]>();
   for (const finding of findings) {
     byRule.set(finding.ruleId, [...(byRule.get(finding.ruleId) ?? []), finding]);
@@ -110,7 +126,11 @@ function groupByRule(findings: readonly Finding[], language: ReportLanguage): Ru
         findingIds: group.map((f) => f.findingId),
         representativeElement: first.elements[0],
         occurrences: group.reduce((sum, f) => sum + f.occurrences, 0),
-        pages: new Set(group.flatMap((f) => f.pageUrls)).size,
+        pages: new Set(
+          group
+            .flatMap((f) => f.pageUrls)
+            .filter((url) => scopePageUrls === undefined || scopePageUrls.has(url)),
+        ).size,
       };
     })
     .sort(
@@ -200,6 +220,9 @@ export function renderRemainingWork(
   analysis: StoredAnalysis,
   findings: readonly Finding[],
   priorities?: readonly RenderedPriority[],
+  /** Issue #291: the analysed (visited-scope) page set the per-rule page
+   *  counts are confined to. See groupByRule. */
+  scopePageUrls?: ReadonlySet<string>,
 ): string {
   const r = strings.remainingWork;
   const remaining = selectRemainingFindings(analysis, findings, priorities);
@@ -222,7 +245,7 @@ export function renderRemainingWork(
 
   const categoryBlocks = CATEGORY_ORDER.filter((category) => byCategory.has(category))
     .map((category) => {
-      const blocks = groupByRule(byCategory.get(category) ?? [], language);
+      const blocks = groupByRule(byCategory.get(category) ?? [], language, scopePageUrls);
       const [firstBlock, ...restBlocks] = blocks;
       // The heading and its first rule block are wrapped in one
       // break-inside: avoid unit (paged.css's `.remaining-category-head`,

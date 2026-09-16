@@ -103,10 +103,14 @@ describe('summarizePriorityOwnership', () => {
   // Issue #83: a finding shared between two priorities used to be counted
   // once per priority it appeared in, so this total could exceed the
   // distinct-finding count printed elsewhere in the executive summary.
+  // Issue #293: the two themes name DIFFERENT rules - after the rule
+  // expansion, two themes naming the same rule would both own that rule's
+  // entire finding set (and trip the shared-representative guard), so the
+  // shared-finding case only exists across distinct rules.
   it('counts a finding shared between two priorities exactly once', async () => {
     const manifest = await loadSmallSiteManifest();
-    const shared = buildFinding({ findingId: 'shared-1' });
-    const onlyInB = buildFinding({ findingId: 'only-in-b' });
+    const shared = buildFinding({ findingId: 'shared-1', ruleId: 'color-contrast' });
+    const onlyInB = buildFinding({ findingId: 'only-in-b', ruleId: 'image-alt' });
     const themeA = buildTheme([shared.findingId]);
     const themeB = { ...buildTheme([shared.findingId, onlyInB.findingId]), priorityRank: 2 };
     const priorities = buildRenderedPriorities([themeA, themeB], [shared, onlyInB], manifest, 'en');
@@ -433,14 +437,23 @@ describe('plan 018 step 6: deterministic priority evidence', () => {
     expect(priority.evidence.representativeFinding.findingId).toBe('f001');
   });
 
-  it('throws rather than let two priorities quote the same representative finding', () => {
+  // Issue #84's hard-fail guard on shared representatives was retired by the
+  // issue #293 rule expansion: two themes naming the same rule now legitimately
+  // share their whole finding set (issue #83 documented this in a real report),
+  // and crashing whole generations for it broke the committed stress fixture.
+  // The category-scoped representative selection above remains the protection
+  // #84 actually needed.
+  it('renders two same-rule themes with the full expanded set on both cards', () => {
     const findings = [buildFinding({ findingId: 'f001', category: 'performance' })];
     const themeA = { ...buildTheme(['f001']), category: 'performance' as const, priorityRank: 1 };
     const themeB = { ...buildTheme(['f001']), category: 'performance' as const, priorityRank: 2 };
 
-    expect(() => buildRenderedPriorities([themeA, themeB], findings, manifest, 'en')).toThrow(
-      'share the same representative finding',
-    );
+    const priorities = buildRenderedPriorities([themeA, themeB], findings, manifest, 'en');
+
+    expect(priorities).toHaveLength(2);
+    for (const priority of priorities) {
+      expect(priority.evidence.representativeFinding.findingId).toBe('f001');
+    }
   });
 });
 
@@ -513,5 +526,166 @@ describe('plan 041 Part A: fix snippets on priority remediations', () => {
     );
 
     expect(remediation?.snippet).toBeUndefined();
+  });
+});
+
+// Issue #293: the model names only some of a rule's findings on a theme, and
+// the remaining-work section used to exclude by findingId - so the rest of
+// the SAME rule rendered as "Reste à traiter" with a second, contradictory
+// count for one defect. A rule chosen for a priority brings ALL of its
+// findings into that priority, at the single point where rendered priorities
+// are built.
+describe('issue #293: a priority owns every finding of the rules it names', () => {
+  const manifest = {
+    pages: ['a', 'b', 'c', 'd'].map((slug) => ({
+      url: `https://example.com/${slug}`,
+      status: 'visited',
+    })),
+  } as never;
+
+  function threeFindingsOneTheme() {
+    const findings = [
+      buildFinding({
+        findingId: 'f001',
+        ruleId: 'image-alt',
+        occurrences: 2,
+        pageUrls: ['https://example.com/a'],
+      }),
+      buildFinding({
+        findingId: 'f002',
+        ruleId: 'image-alt',
+        occurrences: 3,
+        pageUrls: ['https://example.com/b'],
+      }),
+      buildFinding({
+        findingId: 'f003',
+        ruleId: 'image-alt',
+        occurrences: 4,
+        pageUrls: ['https://example.com/c'],
+      }),
+      // A different rule the theme never names: must stay out of the priority.
+      buildFinding({
+        findingId: 'f004',
+        ruleId: 'color-contrast',
+        occurrences: 5,
+        pageUrls: ['https://example.com/d'],
+      }),
+    ];
+    return { findings, themes: [buildTheme(['f002'])] };
+  }
+
+  it('expands a theme referencing 1 of 3 same-rule findings to all 3, on the theme and the finding set', () => {
+    const { findings, themes } = threeFindingsOneTheme();
+
+    const priorities = buildRenderedPriorities(themes, findings, manifest, 'en');
+    const priority = priorities[0]!;
+
+    expect(priority.findings.map((finding) => finding.findingId)).toEqual(['f001', 'f002', 'f003']);
+    expect(priority.theme.findingIds).toEqual(['f001', 'f002', 'f003']);
+  });
+
+  it('computes evidence over the expanded set, so the card counts agree with the WCAG rollup', () => {
+    const { findings, themes } = threeFindingsOneTheme();
+
+    const priorities = buildRenderedPriorities(themes, findings, manifest, 'en');
+    const priority = priorities[0]!;
+
+    // 2 + 3 + 4 across the rule's three findings; f004's 5 stay out.
+    expect(priority.evidence.occurrenceCount).toBe(9);
+    expect(priority.evidence.uniquePageCount).toBe(3);
+  });
+
+  it('leaves the source dimension alone: a same-named rule from another scanner is a different rule', () => {
+    const axeFinding = buildFinding({
+      findingId: 'f001',
+      ruleId: 'image-alt',
+      source: 'axe',
+      pageUrls: ['https://example.com/a'],
+    });
+    const lighthouseFinding = buildFinding({
+      findingId: 'f002',
+      ruleId: 'image-alt',
+      source: 'lighthouse',
+      pageUrls: ['https://example.com/b'],
+    });
+    const themes = [buildTheme(['f001'])];
+
+    const priorities = buildRenderedPriorities(
+      themes,
+      [axeFinding, lighthouseFinding],
+      manifest,
+      'en',
+    );
+
+    expect(priorities[0]!.findings.map((finding) => finding.findingId)).toEqual(['f001']);
+  });
+
+  it('still renders the cap and displayRank untouched for distinct-rule themes, whatever expansion adds', () => {
+    const findings = [
+      buildFinding({
+        findingId: 'f000',
+        ruleId: 'image-alt',
+        occurrences: 1,
+        pageUrls: ['https://example.com/page-0'],
+      }),
+      buildFinding({
+        findingId: 'f001',
+        ruleId: 'image-alt',
+        occurrences: 1,
+        pageUrls: ['https://example.com/page-1'],
+      }),
+      buildFinding({
+        findingId: 'f002',
+        ruleId: 'color-contrast',
+        occurrences: 1,
+        pageUrls: ['https://example.com/page-2'],
+      }),
+    ];
+    // The model ranked the color-contrast theme first but picked only one of
+    // the image-alt findings; expansion must not disturb ranks or the cap.
+    const themeA = {
+      ...buildTheme(['f002']),
+      title: 'Contraste',
+      priorityRank: 1,
+    };
+    const themeB = { ...buildTheme(['f000']), title: 'Images', priorityRank: 2 };
+
+    const priorities = buildRenderedPriorities([themeA, themeB], findings, manifest, 'en');
+
+    expect(priorities.map((priority) => priority.displayRank)).toEqual([1, 2]);
+    expect(priorities[0]!.theme.findingIds).toEqual(['f002']);
+    expect(priorities[1]!.theme.findingIds).toEqual(['f000', 'f001']);
+  });
+
+  // Issue #83 disclosed a finding belonging to two priorities in a real
+  // report; the #84 hard-fail on shared representatives had to go once
+  // expansion legitimately gives two same-rule themes the rule's entire
+  // finding set. The invariants that survive: both cards are self-consistent,
+  // and the cross-priority ownership total dedupes.
+  it('gives both same-rule themes the full rule set without throwing, and the ownership total dedupes', () => {
+    const findings = [
+      buildFinding({
+        findingId: 'f000',
+        ruleId: 'image-alt',
+        pageUrls: ['https://example.com/page-0'],
+      }),
+      buildFinding({
+        findingId: 'f001',
+        ruleId: 'image-alt',
+        pageUrls: ['https://example.com/page-1'],
+      }),
+    ];
+    const themeA = { ...buildTheme(['f000']), priorityRank: 1 };
+    const themeB = { ...buildTheme(['f001']), priorityRank: 2 };
+
+    const priorities = buildRenderedPriorities([themeA, themeB], findings, manifest, 'en');
+
+    expect(priorities).toHaveLength(2);
+    for (const priority of priorities) {
+      expect(priority.findings.map((finding) => finding.findingId)).toEqual(['f000', 'f001']);
+    }
+    // Issue #83's dedupe: two cards, one distinct-finding footprint.
+    const total = summarizePriorityOwnership(priorities, manifest);
+    expect(Object.values(total).reduce((a, b) => a + b, 0)).toBe(2);
   });
 });

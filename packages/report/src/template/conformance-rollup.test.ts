@@ -292,3 +292,91 @@ describe('A8: level AAA criteria are out of scope for the AA conformance table',
     expect(rows.map((r) => r.criterion)).toEqual(['4.1.4']);
   });
 });
+
+// Issue #291: findings record every real URL - language variants kept after
+// a translation-cluster merge, plus origin-level findings citing
+// discovered-but-not-scanned pages - so an unconfined union claimed 206
+// pages against a 140-page analysed scope in a real report. Every pages
+// figure here is confined to the visited scope when the caller supplies it.
+describe('issue #291: page unions are confined to the analysed (visited) scope', () => {
+  const base = {
+    auditId: 'a1',
+    schemaVersion: 1 as const,
+    source: 'axe' as const,
+    category: 'accessibility' as const,
+    severity: 'serious' as const,
+    title: 't',
+    description: 'd',
+    occurrences: 1,
+    elements: [],
+    rawEvidence: {},
+    firstSeenAt: new Date(),
+    lastSeenAt: new Date(),
+  };
+  const scopePageUrls = new Set(['https://example.com/in-1', 'https://example.com/in-2']);
+
+  const findings: Finding[] = [
+    {
+      ...base,
+      findingId: 'f1',
+      ruleId: 'image-alt',
+      wcagCriteria: ['1.1.1'],
+      dedupeKey: 'd1',
+      pageUrls: [
+        'https://example.com/in-1',
+        'https://example.com/out-1',
+        'https://example.com/out-2',
+      ],
+    },
+    {
+      ...base,
+      findingId: 'f2',
+      ruleId: 'list',
+      wcagCriteria: ['1.3.1'],
+      dedupeKey: 'd2',
+      pageUrls: ['https://example.com/in-2', 'https://example.com/out-3'],
+    },
+  ];
+
+  it('buildConformanceRollup counts only in-scope URLs in the pages column', () => {
+    const rows = buildConformanceRollup(findings, scopePageUrls);
+    expect(rows.map((r) => r.pages)).toEqual([1, 1]);
+    // Finding and occurrence counts are untouched by the confinement.
+    expect(rows.map((r) => r.findingCount)).toEqual([1, 1]);
+    expect(rows.map((r) => r.totalOccurrences)).toEqual([1, 1]);
+  });
+
+  it('a finding cited only on out-of-scope pages drops out of the pages column entirely', () => {
+    const outsideOnly: Finding = {
+      ...base,
+      findingId: 'f3',
+      ruleId: 'region',
+      wcagCriteria: ['1.3.1'],
+      dedupeKey: 'd3',
+      pageUrls: ['https://example.com/out-4'],
+    };
+    const rows = buildConformanceRollup([findings[1]!, outsideOnly], scopePageUrls);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ criterion: '1.3.1', pages: 1 });
+  });
+
+  it('buildHeuristicRollup confines the same way', () => {
+    const heuristic: Finding = {
+      ...base,
+      findingId: 'f4',
+      ruleId: 'alt-text-quality-heuristic',
+      wcagCriteria: ['1.1.1'],
+      dedupeKey: 'd4',
+      pageUrls: ['https://example.com/in-1', 'https://example.com/out-1'],
+    };
+    const rows = buildHeuristicRollup([heuristic], scopePageUrls);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ criterion: '1.1.1', findingCount: 1, pages: 1 });
+  });
+
+  it('pagesWithWcagFailures never exceeds the visited-page total', () => {
+    // 5 distinct cited URLs, but only 2 sit inside the visited scope.
+    expect(pagesWithWcagFailures(findings)).toBe(5);
+    expect(pagesWithWcagFailures(findings, scopePageUrls)).toBe(2);
+  });
+});

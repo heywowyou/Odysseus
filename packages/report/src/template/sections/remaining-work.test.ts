@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import type { AuditManifest, Finding, Theme } from '@odysseus/core';
+import type { StoredAnalysis } from '../../types.js';
 import { renderRemainingWork, selectRemainingFindings } from './remaining-work.js';
 import { selectRenderedThemes } from './themes.js';
+import { buildRenderedPriorities } from '../rendered-priorities.js';
 import { getStrings } from '../strings/i18n.js';
 import { loadSmallSiteAnalysis, loadSmallSiteFindings } from '../../test-fixtures.js';
 
@@ -115,5 +118,178 @@ describe('renderRemainingWork against the real small-site.test scan', () => {
     // must never be filled with the finding's own captured content.
     const html = renderRemainingWork(getStrings('fr'), 6, 'fr', analysis, findings);
     expect(html).toContain('À compléter avec votre propre contenu.');
+  });
+});
+
+function buildScenarioFinding(
+  overrides: Partial<Finding> & { findingId: string; ruleId: string },
+): Finding {
+  return {
+    auditId: 'a1',
+    schemaVersion: 1,
+    source: 'axe',
+    category: 'accessibility',
+    severity: 'serious',
+    wcagCriteria: [],
+    title: `Title ${overrides.findingId}`,
+    description: 'd',
+    pageUrls: ['https://example.com/a'],
+    occurrences: 1,
+    elements: [],
+    rawEvidence: {},
+    dedupeKey: overrides.findingId,
+    firstSeenAt: new Date(),
+    lastSeenAt: new Date(),
+    ...overrides,
+  };
+}
+
+function buildScenarioTheme(findingIds: string[]): Theme {
+  return {
+    title: 'Images sans alternative',
+    category: 'accessibility',
+    businessImpact: 'Impact',
+    effort: 'low',
+    impact: 'high',
+    priorityRank: 1,
+    findingIds,
+    recommendedActions: ['Action'],
+  };
+}
+
+// Issue #293 (Villas Foch, image-alt): the theme named 6 of a rule's 170
+// findings, and this section excluded by findingId - so the other 164
+// findings of the SAME rule rendered here as "Reste à traiter" with a
+// second, contradictory count against the priority card's and the WCAG
+// table's figures. A rule chosen for a priority brings all of its findings
+// into that priority, so this section must not list the rule at all.
+describe('issue #293: a rule ranked in a priority never reappears here', () => {
+  const manifest = {
+    pages: ['a', 'b', 'c'].map((slug) => ({
+      url: `https://example.com/${slug}`,
+      status: 'visited',
+    })),
+  } as never as AuditManifest;
+
+  function buildScenario() {
+    const findings = [
+      buildScenarioFinding({
+        findingId: 'f001',
+        ruleId: 'image-alt',
+        occurrences: 2,
+        pageUrls: ['https://example.com/a'],
+      }),
+      buildScenarioFinding({
+        findingId: 'f002',
+        ruleId: 'image-alt',
+        occurrences: 3,
+        pageUrls: ['https://example.com/b'],
+      }),
+      buildScenarioFinding({
+        findingId: 'f003',
+        ruleId: 'image-alt',
+        occurrences: 4,
+        pageUrls: ['https://example.com/c'],
+      }),
+      // A rule the theme never names: stays in the remainder.
+      buildScenarioFinding({
+        findingId: 'f004',
+        ruleId: 'meta-viewport',
+        occurrences: 1,
+        pageUrls: ['https://example.com/a'],
+      }),
+    ];
+    const analysis = {
+      themes: [buildScenarioTheme(['f001'])],
+      language: 'fr',
+    } as unknown as StoredAnalysis;
+    return { findings, analysis };
+  }
+
+  it('a theme referencing 1 of 3 same-rule findings excludes all 3 from the remainder', () => {
+    const { findings, analysis } = buildScenario();
+    const priorities = buildRenderedPriorities(analysis.themes, findings, manifest, 'fr');
+
+    const remaining = selectRemainingFindings(analysis, findings, priorities);
+
+    expect(remaining.map((finding) => finding.findingId)).toEqual(['f004']);
+    expect(remaining.map((finding) => finding.ruleId)).not.toContain('image-alt');
+  });
+
+  it('the priority carries the rule s whole footprint, so the counts agree across sections', () => {
+    const { findings, analysis } = buildScenario();
+    const priorities = buildRenderedPriorities(analysis.themes, findings, manifest, 'fr');
+    const priority = priorities[0]!;
+
+    expect(priority.findings).toHaveLength(3);
+    // 2 + 3 + 4 - the WCAG/rollup figures for the same rule, not the 6-vs-164
+    // split the real report showed.
+    expect(priority.evidence.occurrenceCount).toBe(9);
+    expect(priority.evidence.uniquePageCount).toBe(3);
+  });
+
+  it('the rendered section no longer names the split rule', () => {
+    const { findings, analysis } = buildScenario();
+    const priorities = buildRenderedPriorities(analysis.themes, findings, manifest, 'fr');
+
+    const html = renderRemainingWork(
+      getStrings('fr'),
+      6,
+      'fr',
+      analysis,
+      findings,
+      priorities,
+      new Set(manifest.pages.map((page) => page.url)),
+    );
+
+    expect(html).not.toContain('Les images doivent avoir un texte alternatif');
+    expect(html.split('class="remaining-rule"').length - 1).toBe(1);
+  });
+});
+
+// Issue #291: findings record every real URL - language variants kept after
+// a translation-cluster merge, plus origin-level findings citing
+// discovered-but-not-scanned pages - so the per-rule page figure here could
+// exceed the analysed-page total (206 pages claimed out of 140 in a real
+// report). render-html.ts now passes the visited-page scope and every figure
+// is confined to it.
+describe('issue #291: remaining-work page counts stay inside the analysed scope', () => {
+  const visitedUrls = ['https://example.com/a', 'https://example.com/b'];
+  const scopePageUrls = new Set(visitedUrls);
+
+  it('a rule citing out-of-scope pages counts only its visited ones', async () => {
+    const findings = [
+      buildScenarioFinding({
+        findingId: 'f001',
+        ruleId: 'image-alt',
+        occurrences: 2,
+        pageUrls: ['https://example.com/a', 'https://example.com/not-crawled-1'],
+      }),
+      buildScenarioFinding({
+        findingId: 'f002',
+        ruleId: 'image-alt',
+        occurrences: 3,
+        pageUrls: ['https://example.com/b', 'https://example.com/not-crawled-2'],
+      }),
+    ];
+    const analysis = {
+      themes: [],
+      language: 'fr',
+    } as unknown as StoredAnalysis;
+
+    // No priorities: every finding lands in the remainder, grouped under
+    // its one rule.
+    const html = renderRemainingWork(
+      getStrings('fr'),
+      6,
+      'fr',
+      analysis,
+      findings,
+      undefined,
+      scopePageUrls,
+    );
+
+    // 2 constats · 5 occurrences · 2 pages - not 4 pages, the raw union.
+    expect(html).toContain('2 constats · 5 occurrences · 2 pages');
   });
 });

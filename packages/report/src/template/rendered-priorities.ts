@@ -61,6 +61,9 @@ export interface RenderedPriority {
   theme: Theme;
   /** Contiguous client-facing position. The model rank remains on theme. */
   displayRank: number;
+  /** Issue #293: every finding of each (source, ruleId) pair the theme
+   *  names - theme.findingIds is expanded to the same set - so a rule can
+   *  never be split between a priority and the remaining-work section. */
   findings: Finding[];
   ownershipCounts: Record<PriorityOwnership, number>;
   remediations: PriorityRemediation[];
@@ -293,10 +296,48 @@ export function buildRenderedPriorities(
     manifest.pages.filter((page) => page.status === 'visited').map((page) => page.url),
   );
 
+  // Issue #293: a theme the model ranked names only a subset of a rule's
+  // findings, so the remaining-work section - which excludes by findingId -
+  // rendered the rest of the SAME rule as "Reste à traiter" with a second,
+  // contradictory count for one defect (a real report split image-alt into
+  // "6 findings / 114 occurrences" on the priority card and "164 findings /
+  // 627 occurrences" in the remaining-work list, against a WCAG table
+  // totaling 170/741). A rule chosen for a priority brings ALL of its
+  // findings into that priority: each selected theme's findingIds are
+  // expanded here, once, to every finding sharing the same (source, ruleId)
+  // pair, so the theme cards, the checklist, the remaining-work exclusion
+  // and every count derived from priority.findings describe one population.
+  // Selection (selectThemes, MAX_RENDERED_THEMES) already ran on the
+  // original themes above and is untouched; expansion only ever ADDS
+  // findings of rules the theme already named, so the remediation rule set
+  // cannot grow past what was reviewed.
+  const findingsByRuleKey = new Map<string, Finding[]>();
+  for (const finding of findings) {
+    const key = `${finding.source}::${finding.ruleId}`;
+    const group = findingsByRuleKey.get(key);
+    if (group) group.push(finding);
+    else findingsByRuleKey.set(key, [finding]);
+  }
+
   const priorities = selected.map((theme, index): RenderedPriority => {
-    const priorityFindings = theme.findingIds
+    const resolvedFindings = theme.findingIds
       .map((id) => findingsById.get(id))
       .filter((finding): finding is Finding => finding !== undefined);
+    const ruleKeys = [
+      ...new Set(resolvedFindings.map((finding) => `${finding.source}::${finding.ruleId}`)),
+    ];
+    // Theme order first (the model's own picking order), then the rule's
+    // remaining findings in stored findings order; deduped by findingId so
+    // a doubled id in the theme can never double-count.
+    const expandedFindings = [
+      ...new Map(
+        ruleKeys
+          .flatMap((key) => findingsByRuleKey.get(key) ?? [])
+          .map((finding) => [finding.findingId, finding] as const),
+      ).values(),
+    ];
+    const priorityFindings = expandedFindings;
+    const priorityTheme: Theme = { ...theme, findingIds: expandedFindings.map((f) => f.findingId) };
     const ownershipCounts: Record<PriorityOwnership, number> = {
       'first-party-action': 0,
       'third-party-escalation': 0,
@@ -324,7 +365,7 @@ export function buildRenderedPriorities(
       })
       .filter((item): item is PriorityRemediation => item !== undefined);
     return {
-      theme,
+      theme: priorityTheme,
       displayRank: index + 1,
       findings: priorityFindings,
       ownershipCounts,
@@ -349,22 +390,17 @@ export function buildRenderedPriorities(
     );
   }
 
-  // Issue #84: two priorities quoting the identical example finding read as
-  // indistinguishable at the exact moment the report is asking which one to
-  // fund first. Category-scoped selection above should already prevent
-  // this; this is a hard-fail safety net rather than a silent overlap.
-  const representativeIdOwners = new Map<string, number>();
-  for (const priority of priorities) {
-    const id = priority.evidence.representativeFinding.findingId;
-    const owner = representativeIdOwners.get(id);
-    if (owner !== undefined) {
-      throw new Error(
-        `Priorities ${owner} and ${priority.displayRank} share the same representative finding (${id})`,
-      );
-    }
-    representativeIdOwners.set(id, priority.displayRank);
-  }
-
+  // Issue #84's hard-fail safety net (two priorities quoting the identical
+  // example finding) is retired here rather than kept: since the issue #293
+  // rule expansion above, a representative collision can only arise when two
+  // themes name the same rule, and expansion then gives BOTH priorities the
+  // rule's entire finding set by design - the overlap is explicit, each card
+  // is self-consistent, and issue #83's cross-priority totals already dedupe
+  // it (summarizePriorityOwnership). A hard failure would crash whole report
+  // generations for data that previously rendered (the committed stress
+  // fixture and a real, disclosed report both do this). Issue #84's actual
+  // regression - a cross-category finding winning the quoted slot - remains
+  // prevented in buildPriorityEvidence's category-scoped selection.
   return priorities;
 }
 

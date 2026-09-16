@@ -166,6 +166,12 @@ function renderBody(
     manifest,
     analysis.language,
   );
+  // Issue #291: the analysed (visited-scope) page set every page figure is
+  // confined to - the same population buildRenderedPriorities, checklist.ts
+  // and themes.ts count the "sur {totalPages}" denominator against.
+  const scopePageUrls = new Set(
+    manifest.pages.filter((page) => page.status === 'visited').map((page) => page.url),
+  );
 
   // report-feedback-palais-gallien.md items 1/2/4: computed once, here,
   // so the TOC and every numbered section's own header agree on exactly
@@ -262,6 +268,7 @@ function renderBody(
       // receives resolvedFindings in full for traceability.
       actionableFindings,
       renderedPriorities,
+      scopePageUrls,
     ),
     includedSectionIds.has('section-06')
       ? renderObservations(strings, ord('section-06'), diverted, analysis.obligationAssessment)

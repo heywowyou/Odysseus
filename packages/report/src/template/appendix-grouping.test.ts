@@ -131,6 +131,84 @@ describe('groupAppendix', () => {
   });
 });
 
+// Issue #291: findings record every real URL - language variants kept after
+// a translation-cluster merge, plus origin-level findings citing
+// discovered-but-not-scanned pages - so the group's page union could exceed
+// the analysed-page total (a real report claimed 206 pages out of 140).
+// findings-appendix.ts always passes the visited-page scope; the count is
+// confined, the findings and occurrences are not.
+describe('issue #291: group page unions are confined to the analysed (visited) scope', () => {
+  const base = {
+    auditId: 'a1',
+    schemaVersion: 1 as const,
+    source: 'axe' as const,
+    ruleId: 'button-name',
+    category: 'accessibility' as const,
+    severity: 'critical' as const,
+    wcagCriteria: ['4.1.2'],
+    title: 't',
+    description: 'd',
+    occurrences: 2,
+    elements: [],
+    rawEvidence: {},
+    firstSeenAt: new Date(),
+    lastSeenAt: new Date(),
+  };
+  const scopePageUrls = new Set(['https://example.com/in-1', 'https://example.com/in-2']);
+
+  it('counts only in-scope URLs in group.pages, leaving findings and occurrences intact', () => {
+    const findings: Finding[] = [
+      {
+        ...base,
+        findingId: 'f1',
+        dedupeKey: 'd1',
+        pageUrls: ['https://example.com/in-1', 'https://example.com/out-1'],
+      },
+      {
+        ...base,
+        findingId: 'f2',
+        dedupeKey: 'd2',
+        pageUrls: ['https://example.com/in-2', 'https://example.com/out-2'],
+      },
+    ];
+
+    const groups = groupAppendix(findings, scopePageUrls);
+    expect(groups).toHaveLength(1);
+    // The raw union would read 4; only the 2 visited pages count.
+    expect(groups[0]!.pages).toBe(2);
+    expect(groups[0]!.findings).toHaveLength(2);
+    expect(groups[0]!.totalOccurrences).toBe(4);
+  });
+
+  it('a group cited only on out-of-scope pages drops to zero pages rather than an unconfined figure', () => {
+    const findings: Finding[] = [
+      {
+        ...base,
+        findingId: 'f1',
+        dedupeKey: 'd1',
+        pageUrls: ['https://example.com/out-1', 'https://example.com/out-2'],
+      },
+    ];
+
+    const groups = groupAppendix(findings, scopePageUrls);
+    expect(groups[0]!.pages).toBe(0);
+    expect(groups[0]!.findings).toHaveLength(1);
+  });
+
+  it('without a scope the raw union is kept, matching the pre-#291 behavior', () => {
+    const findings: Finding[] = [
+      {
+        ...base,
+        findingId: 'f1',
+        dedupeKey: 'd1',
+        pageUrls: ['https://example.com/in-1', 'https://example.com/out-1'],
+      },
+    ];
+
+    expect(groupAppendix(findings)[0]!.pages).toBe(2);
+  });
+});
+
 // item 26: minor findings no longer get a separate condensed pass - they
 // group through groupAppendix like every other severity, and sort to the
 // bottom by SEVERITY_ORDER rather than having their own detail withheld.

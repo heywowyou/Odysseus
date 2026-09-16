@@ -43,7 +43,9 @@ function renderRuleSum(strings: ReportStrings, language: ReportLanguage, group: 
     // denominator ("N sur M", matching the priority card's own wording)
     // since this group can span more rule ids than any one priority card
     // does (rule-family clustering, item 1.3) and a borrowed "sur M" here
-    // would need its own explanation.
+    // would need its own explanation. Issue #291: the union itself is now
+    // confined to the visited scope at the groupAppendix call sites, so
+    // the figure can never exceed the analysed-page total.
     `${formatNumber(group.pages, language)} ${pluralize(group.pages, a.pageSingular, a.pagePlural)}`,
   ];
   if (group.wcagCriteria.length > 0) {
@@ -360,6 +362,9 @@ function renderSubTableRow(
   totalPagesScanned: number,
   samePagesAsFindingId: string | undefined,
   clusterLookup: ClusterLookup,
+  /** Issue #291: the analysed (visited-scope) page set this row's own
+   *  "N pages" cell counts against. */
+  scopePageUrls: ReadonlySet<string>,
 ): string {
   // B4: a site-wide resource finding has no meaningful single selector -
   // its detail is the file list rendered below, so the column states how
@@ -376,12 +381,20 @@ function renderSubTableRow(
           { count: formatNumber(resourceUrls.length, language) },
         )
       : (finding.elements[0]?.selector ?? '');
+  // Issue #291: the row's page figure counts distinct visited-scope pages.
+  // The "Pages :" URL list underneath still prints every recorded URL -
+  // the item 25 detail promise covers URLs, not counts - but the figure
+  // can no longer exceed the analysed-page total (a real report showed a
+  // finding row claiming 24 pages against a 140-page analysed scope that
+  // included discovered-but-not-scanned pages and post-merge language
+  // variants).
+  const inScopePageCount = finding.pageUrls.filter((url) => scopePageUrls.has(url)).length;
   return `
     <tr id="annexref-${escapeHtml(finding.findingId)}" style="break-inside:avoid">
       <td colspan="4" style="padding:6px var(--space-2);border-bottom:1px solid var(--color-divider)">
         <div style="display:grid;grid-template-columns:${APPENDIX_COLUMN_WIDTHS.join(' ')}">
           <div style="font-family:ui-monospace,monospace;white-space:nowrap">${escapeHtml(finding.findingId)}</div>
-          <div>${formatNumber(finding.pageUrls.length, language)}</div>
+          <div>${formatNumber(inScopePageCount, language)}</div>
           <div>${formatNumber(finding.occurrences, language)}</div>
           <div style="${selectorCellStyle(selector)}">${escapeHtml(selector)}</div>
         </div>${renderResourceUrlList(strings, language, finding)}${renderPageUrlList(strings, language, finding, totalPagesScanned, samePagesAsFindingId, clusterLookup)}
@@ -401,6 +414,11 @@ function renderRuleGroup(
    *  group, or a generic "unidentified vendor" label for a frame-
    *  crossing selector matching none of the known prefixes. */
   clusterLookup: ClusterLookup,
+  /** Issue #291: the analysed (visited-scope) page set every page figure in
+   *  this group is confined to (the group sum via groupAppendix, and each
+   *  finding row's own count). Declared before the optional count below so
+   *  a required parameter never trails an optional one. */
+  scopePageUrls: ReadonlySet<string>,
   vendorLabel?: string,
   /** Fix #6, 2026-08-25 report review: the number of this same rule's
    *  occurrences that landed in the third-party section instead (item 1.4's
@@ -437,8 +455,15 @@ function renderRuleGroup(
     group.ruleId,
     group.findings[0]?.title,
   );
+  // Issue #319: the gloss span used to start with a literal "- " separator.
+  // In this flex header it lands on its own wrap line whenever the title,
+  // badge and rule code fill the row, so a full sentence like "Des boutons
+  // ou liens trop petits..." opened with a stray hyphen, reading as a
+  // bullet before prose it does not introduce. The flex gap already
+  // separates it from the rule code, so the separator is removed, not
+  // restyled.
   const gloss = translation
-    ? `<span style="font-size:10px;opacity:0.5">- ${escapeHtml(translation.gloss)}</span>`
+    ? `<span style="font-size:10px;opacity:0.5">${escapeHtml(translation.gloss)}</span>`
     : '';
   // item 1.3: a clustered group's `ruleId` is a synthetic family key
   // (e.g. "image-weight"), not a real scanner rule a developer could grep
@@ -469,6 +494,7 @@ function renderRuleGroup(
         totalPagesScanned,
         samePagesAsFindingId,
         clusterLookup,
+        scopePageUrls,
       );
     })
     .join('');
@@ -638,10 +664,11 @@ function renderThirdPartySection(
   missingPercentByUrl: ReadonlyMap<string, number>,
   totalPagesScanned: number,
   clusterLookup: ClusterLookup,
+  scopePageUrls: ReadonlySet<string>,
 ): string {
   if (thirdPartyFindings.length === 0) return '';
 
-  const groups = groupAppendix(thirdPartyFindings);
+  const groups = groupAppendix(thirdPartyFindings, scopePageUrls);
   const groupBlocks = groups
     .map((group) => {
       const isFullyDiverted = group.findings.every(
@@ -661,6 +688,7 @@ function renderThirdPartySection(
         isFullyDiverted,
         totalPagesScanned,
         clusterLookup,
+        scopePageUrls,
         vendorLabel,
       );
     })
@@ -691,12 +719,15 @@ function renderCategorySection(
    *  to its own split-off third-party occurrences without a second pass
    *  over findings or a new partition rule. */
   thirdPartyFindings: Finding[],
+  /** Issue #291: the analysed (visited-scope) page set every page figure in
+   *  this category's groups is confined to. */
+  scopePageUrls: ReadonlySet<string>,
 ): string {
   if (categoryFindings.length === 0) return '';
 
   // item 26: every severity groups and renders through the same full-
   // detail path now - see appendix-grouping.ts's groupAppendix comment.
-  const groups = groupAppendix(categoryFindings);
+  const groups = groupAppendix(categoryFindings, scopePageUrls);
 
   const groupBlocks = groups
     .map((group) => {
@@ -713,6 +744,7 @@ function renderCategorySection(
         isFullyDiverted,
         totalPagesScanned,
         clusterLookup,
+        scopePageUrls,
         undefined,
         thirdPartyCrossRefCount,
       );
@@ -765,6 +797,18 @@ export function renderFindingsAppendix(
   const missingPercentByUrl = buildMissingPercentIndex(manifest);
   const clusterLookup = buildClusterLookup(manifest);
 
+  // Issue #291: the analysed (visited-scope) page set every page figure in
+  // this annex is confined to - the group sums and each finding row's own
+  // page count. Findings record every real URL (language variants kept
+  // after a translation-cluster merge, and origin-level findings citing
+  // discovered-but-not-scanned pages), so an unconfined union claimed 206
+  // pages against a 140-page analysed scope in a real report. Same
+  // population buildRenderedPriorities, checklist.ts and themes.ts count
+  // against.
+  const scopePageUrls = new Set(
+    manifest.pages.filter((page) => page.status === 'visited').map((page) => page.url),
+  );
+
   // item 29: the list of crawled URLs was never printed anywhere - the
   // client had no way to verify the scope they paid for beyond a bare
   // count on the cover. Belongs here rather than a dedicated page (doc's
@@ -810,6 +854,7 @@ export function renderFindingsAppendix(
       crawledPages.length,
       clusterLookup,
       thirdPartyFindings,
+      scopePageUrls,
     );
   }).join('');
   const thirdPartySection = renderThirdPartySection(
@@ -819,6 +864,7 @@ export function renderFindingsAppendix(
     missingPercentByUrl,
     crawledPages.length,
     clusterLookup,
+    scopePageUrls,
   );
 
   // item D8 (P4): each category heading used its own colour with nothing

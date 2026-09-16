@@ -17,7 +17,10 @@ export interface RuleGroup {
    *  for the same rule states "N pages sur M", itself a union across the
    *  theme's findings, so a real report showed two different page counts
    *  for the same rule (18 vs. "jusqu'à 17"). Both now read from the same
-   *  union-of-pageUrls computation, so they can no longer disagree. */
+   *  union-of-pageUrls computation, so they can no longer disagree.
+   *  Issue #291: when the caller supplies the analysed (visited-scope)
+   *  page set, the union counts in-scope URLs only, so the figure can
+   *  never exceed the analysed-page total. */
   pages: number;
   /** Union across the group, numerically sorted. */
   wcagCriteria: string[];
@@ -64,8 +67,20 @@ const RULE_FAMILIES: Readonly<Record<string, string>> = {
  *  for the single paid tier this product now has (CLAUDE.md trade-off
  *  12). Severity ordering already sorts minor groups to the bottom
  *  (SEVERITY_ORDER below), so they still read as secondary without
- *  having their own detail withheld. */
-export function groupAppendix(findings: readonly Finding[]): RuleGroup[] {
+ *  having their own detail withheld.
+ *
+ *  Issue #291: scopePageUrls is the analysed (visited-scope) page set the
+ *  group page counts are confined to. Findings record every real URL -
+ *  language variants kept after a translation-cluster merge, and
+ *  origin-level findings citing discovered-but-not-scanned pages - so the
+ *  raw union can exceed the analysed-page total (a real report claimed
+ *  206 pages out of 140). Findings and occurrences are unchanged: pages
+ *  are counted, occurrences are not page counts. Undefined keeps the
+ *  pre-#291 raw union; findings-appendix.ts always passes the scope. */
+export function groupAppendix(
+  findings: readonly Finding[],
+  scopePageUrls?: ReadonlySet<string>,
+): RuleGroup[] {
   const map = new Map<string, RuleGroup>();
   const pageSets = new Map<string, Set<string>>();
 
@@ -90,7 +105,10 @@ export function groupAppendix(findings: readonly Finding[]): RuleGroup[] {
     group.findings.push(finding);
     group.totalOccurrences += finding.occurrences;
     const pageSet = pageSets.get(key) ?? new Set<string>();
-    for (const url of finding.pageUrls) pageSet.add(url);
+    for (const url of finding.pageUrls) {
+      if (scopePageUrls !== undefined && !scopePageUrls.has(url)) continue;
+      pageSet.add(url);
+    }
     pageSets.set(key, pageSet);
     group.pages = pageSet.size;
     if (finding.wcagCriteria.length > 0) {
