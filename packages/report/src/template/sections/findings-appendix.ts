@@ -23,6 +23,7 @@ import {
   renderSheetHeader,
   sheet,
 } from '../html-utils.js';
+import { VERBATIM_EVIDENCE_ATTRIBUTE } from '../render-lint.js';
 import { renderSeverityBadge } from '../severity-badge.js';
 import { CATEGORY, CATEGORY_ORDER } from '../design-tokens.js';
 import { renderReferenceStatNote } from '../reference-stat-note.js';
@@ -400,7 +401,7 @@ function renderSubTableRow(
           <div style="font-family:ui-monospace,monospace;white-space:nowrap">${escapeHtml(finding.findingId)}</div>
           <div>${formatNumber(inScopePageCount, language)}</div>
           <div>${formatNumber(finding.occurrences, language)}</div>
-          <div style="${selectorCellStyle(selector)}">${escapeHtml(selector)}</div>
+          <div ${VERBATIM_EVIDENCE_ATTRIBUTE} style="${selectorCellStyle(selector)}">${escapeHtml(selector)}</div>
         </div>${renderResourceUrlList(strings, language, finding)}${renderPageUrlList(strings, language, finding, totalPagesScanned, samePagesAsFindingId, clusterLookup)}
       </td>
     </tr>

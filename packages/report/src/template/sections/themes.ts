@@ -15,6 +15,7 @@ import {
   selectReferenceStats,
 } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
+import { VERBATIM_EVIDENCE_ATTRIBUTE } from '../render-lint.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import { formatMetricValue, METRIC_UNITS } from './core-web-vitals-table.js';
 import {
@@ -710,7 +711,7 @@ function renderThemeFixSnippet(
     snippet.kind === 'fill-in-blank'
       ? `<p class="theme-note" style="margin-top:var(--space-1)">${escapeHtml(t.fixSnippetFillInBlankNote)}</p>`
       : '';
-  return `<div class="theme-snippet"><div class="theme-snippet-label">${escapeHtml(t.fixSnippetLabel)}</div><pre><code>${escapeHtml(snippet.rendered)}</code></pre>${note}</div>`;
+  return `<div class="theme-snippet"><div class="theme-snippet-label">${escapeHtml(t.fixSnippetLabel)}</div><pre><code ${VERBATIM_EVIDENCE_ATTRIBUTE}>${escapeHtml(snippet.rendered)}</code></pre>${note}</div>`;
 }
 
 /** Categories the reference-stat table has rows for. 'rendering' still

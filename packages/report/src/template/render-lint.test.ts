@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findRenderLintViolations } from './render-lint.js';
+import { findRenderLintViolations, VERBATIM_EVIDENCE_ATTRIBUTE } from './render-lint.js';
 
 describe('findRenderLintViolations', () => {
   it('flags an unfilled template placeholder', () => {
@@ -122,5 +122,27 @@ describe('A6: prose rules never scan style or script bodies', () => {
     expect(findRenderLintViolations(html).map((v) => v.label)).toContain(
       'leaked markdown emphasis in rendered prose',
     );
+  });
+});
+
+describe('issue #377: verbatim scanner evidence', () => {
+  // The real audited site's own DOM carried a stringified object prop, so
+  // axe's captured selector legitimately contains the text.
+  const selector =
+    '.jcLePU.sc-column[spacing=&quot;[object Object]&quot;]:nth-child(10) &gt; .item';
+
+  it('does not flag a stringified object inside a marked selector cell', () => {
+    const html = `<div ${VERBATIM_EVIDENCE_ATTRIBUTE} style="font-size:10px">${selector}</div><p>Rien.</p>`;
+    expect(findRenderLintViolations(html)).toEqual([]);
+  });
+
+  it('still flags the same text outside a marked element', () => {
+    const html = `<div style="font-size:10px">${selector}</div>`;
+    expect(findRenderLintViolations(html).map((v) => v.label)).toContain('stringified object');
+  });
+
+  it('never lets a marker hide template output that follows it', () => {
+    const html = `<code ${VERBATIM_EVIDENCE_ATTRIBUTE}>a[x=null]</code><p>Valeur : [object Object]</p>`;
+    expect(findRenderLintViolations(html).map((v) => v.label)).toEqual(['stringified object']);
   });
 });

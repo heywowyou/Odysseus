@@ -76,6 +76,17 @@ const FORBIDDEN_PATTERNS: readonly { label: string; pattern: RegExp }[] = [
   },
 ];
 
+/** Marks an element whose text is scanner evidence quoted verbatim from the
+ *  audited site (a CSS selector axe captured, example code built from one),
+ *  never text this renderer composed. Issue #377: a hotel site built with
+ *  styled-components forwarded an object prop to its own DOM, so axe's
+ *  selector for that node really was `.sc-column[spacing="[object Object]"]`,
+ *  and the report quoting it faithfully tripped the stringified-object rule.
+ *  Rewriting the selector would falsify evidence; the lint's job is catching
+ *  this renderer's own leaks, so a marked element's escaped text is skipped
+ *  and every rule still runs on everything else. */
+export const VERBATIM_EVIDENCE_ATTRIBUTE = 'data-render-lint="verbatim"';
+
 /** Style and script bodies are not prose. They are full of characters the
  *  prose rules legitimately forbid (a CSS custom property's dashes, a
  *  snake_case class name's underscores), and a client never reads them.
@@ -83,9 +94,16 @@ const FORBIDDEN_PATTERNS: readonly { label: string; pattern: RegExp }[] = [
  *  future rule has to rediscover this. */
 function stripNonProse(html: string): string {
   return html
+    .replace(VERBATIM_EVIDENCE_ELEMENT, '<$1$2> </$1>')
     .replace(/<style\b[^>]*>[\s\S]*?<\/style>/giu, ' ')
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/giu, ' ');
 }
+
+/** Only the marked element's own text is skipped: `[^<]*` cannot run past a
+ *  nested tag, and escapeHtml guarantees quoted evidence contains no raw
+ *  "<", so a marker can never hide template markup that follows it. */
+const VERBATIM_EVIDENCE_ELEMENT =
+  /<(\w+)(\s[^>]*\bdata-render-lint="verbatim"[^>]*)>[^<]*<\/\1>/giu;
 
 export interface RenderLintViolation {
   label: string;

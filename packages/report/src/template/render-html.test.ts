@@ -134,6 +134,29 @@ describe('renderHtml against the real small-site.test audit', () => {
     expect(unexpectedViolations, JSON.stringify(unexpectedViolations, null, 2)).toEqual([]);
   });
 
+  it('issue #377: quotes an audited site selector carrying "[object Object]" without failing render-lint', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('fr');
+    const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
+    const selector = '.jcLePU.sc-column[spacing="[object Object]"]:nth-child(10) > .item';
+    const withLeakySiteSelector = findings.map((finding) =>
+      finding.elements.length === 0
+        ? finding
+        : { ...finding, elements: finding.elements.map((el) => ({ ...el, selector })) },
+    );
+
+    const html = await renderHtml({
+      manifest,
+      findings: withLeakySiteSelector,
+      analysis,
+      renderDiffEvidencePages,
+    });
+
+    expect(html).toContain('sc-column[spacing=&quot;[object Object]&quot;]');
+    expect(findRenderLintViolations(html).map((v) => v.label)).not.toContain('stringified object');
+  });
+
   // B3's "no majeur in the generated HTML" acceptance check is enforced at
   // the source: severity-vocabulary-guard.test.ts asserts the writing-pass
   // guard rejects "majeur" before an analysis is ever persisted. Not
