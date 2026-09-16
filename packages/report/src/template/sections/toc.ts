@@ -34,34 +34,27 @@ export function renderToc(strings: ReportStrings, includedIds: ReadonlySet<Secti
   // every ordinal monotonic top to bottom. The mockup's own tocGroups data
   // still carries the old membership (n: '12' inside Décisions et actions);
   // it needs the same one-row move the next time that file is touched.
+  // Issue #336: five reader-facing groups. Membership still follows
+  // document order (issue #49), so the ordinals stay monotonic top to
+  // bottom; only the grouping around them changed.
   const groups: Array<{ label: string; ids: readonly SectionId[] }> = [
     {
-      label: strings.toc.executiveContextGroupLabel,
+      label: strings.toc.overviewGroupLabel,
       ids: ['section-00', 'section-01', 'section-03'],
     },
     {
-      label: strings.toc.decisionsActionsGroupLabel,
-      ids: ['section-04', 'section-05', 'section-05b'],
+      label: strings.toc.priorityActionsGroupLabel,
+      ids: ['section-04', 'section-05', 'section-05b', 'section-06'],
     },
     {
-      label: strings.toc.detailedEvidenceGroupLabel,
-      ids: [
-        'section-06',
-        'section-07',
-        'section-08',
-        'section-09',
-        'section-15',
-        'section-10',
-        'section-14',
-      ],
+      label: strings.toc.detailedResultsGroupLabel,
+      ids: ['section-07', 'section-08', 'section-09', 'section-15', 'section-10', 'section-14'],
     },
-    { label: strings.toc.legalReferenceGroupLabel, ids: ['section-02'] },
+    { label: strings.toc.regulatoryFrameworkGroupLabel, ids: ['section-02'] },
     {
-      label: strings.toc.methodVocabularyGroupLabel,
-      ids: ['section-11'],
+      label: strings.toc.appendicesGroupLabel,
+      ids: ['section-11', 'section-12', 'section-13'],
     },
-    { label: strings.toc.technicalAppendixGroupLabel, ids: ['section-12'] },
-    { label: strings.toc.glossaryGroupLabel, ids: ['section-13'] },
   ];
   const rows = groups
     .map(({ label: groupLabel, ids }) => {

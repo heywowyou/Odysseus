@@ -1282,7 +1282,7 @@ describe('fix #3 (2026-08-25 report review): the LCEN priority card cross-refere
     const html = renderThemes(getStrings('fr'), 4, analysis as never, findings as never, manifest);
 
     expect(html).toContain('obligation légale d’identification');
-    expect(html).toContain('Exposition légale');
+    expect(html).toContain('Cadre réglementaire');
   });
 
   it('renders nothing when the theme has no LCEN finding', () => {

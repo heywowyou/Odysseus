@@ -388,7 +388,7 @@ describe('fix #1 (2026-08-25 report review): the covered-by-priorities bridging 
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
 
     expect(html).toContain('Les priorités présentées ci-dessous en couvrent 1');
-    expect(html).toContain('Reste');
+    expect(html).toContain('Autres constats');
   });
 
   it('renders nothing when every finding is covered by a rendered priority', () => {

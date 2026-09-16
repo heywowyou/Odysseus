@@ -13,13 +13,11 @@ export const fr: ReportStrings = {
   toc: {
     eyebrow: 'Sommaire',
     heading: 'Contenu du rapport',
-    executiveContextGroupLabel: 'Contexte exécutif',
-    decisionsActionsGroupLabel: 'Décisions et actions',
-    detailedEvidenceGroupLabel: 'Preuves détaillées',
-    legalReferenceGroupLabel: 'Référence légale',
-    methodVocabularyGroupLabel: 'Méthode et vocabulaire',
-    technicalAppendixGroupLabel: 'Annexe technique',
-    glossaryGroupLabel: 'Glossaire',
+    overviewGroupLabel: "Vue d'ensemble",
+    priorityActionsGroupLabel: 'Actions prioritaires',
+    detailedResultsGroupLabel: 'Résultats détaillés',
+    regulatoryFrameworkGroupLabel: 'Cadre réglementaire',
+    appendicesGroupLabel: 'Annexes',
   },
   reportIntro: {
     eyebrow: 'À propos de ce rapport',
@@ -98,7 +96,7 @@ export const fr: ReportStrings = {
     severityBreakdownHeading: 'Répartition par sévérité',
     categoryBreakdownHeading: 'Répartition par catégorie',
     belowThresholdRenderGapNote:
-      'La catégorie « Rendu » affiche 0 constat, mais un écart de rendu réel a été mesuré sur au moins une page, en dessous du seuil de {threshold} % à partir duquel un constat est généré (voir la section « Preuve de rendu »).',
+      'La catégorie « Rendu » affiche 0 constat, mais un écart de rendu réel a été mesuré sur au moins une page, en dessous du seuil de {threshold} % à partir duquel un constat est généré (voir la section « Rendu sans JavaScript »).',
     legendCriticalText: "bloque des visiteurs ou l'indexation",
     legendSeriousText: "dégrade fortement l'usage ou la conformité",
     legendModerateText: 'à corriger, sans urgence',
@@ -258,7 +256,7 @@ export const fr: ReportStrings = {
     // here.
     regulatoryContextKicker: 'Cadre réglementaire',
     regulatoryContextCriterion:
-      "Les obligations d'accessibilité traitées dans ce rapport s'inscrivent dans le cadre de l'European Accessibility Act, transposé en droit français par la loi n° 2023-171. Selon la taille de l'entreprise et le secteur d'activité, des exigences de conformité peuvent concerner votre site : les critères applicables et votre situation, telle que vérifiée par cet audit, sont détaillés dans la section « Exposition légale ».",
+      "Les obligations d'accessibilité traitées dans ce rapport s'inscrivent dans le cadre de l'European Accessibility Act, transposé en droit français par la loi n° 2023-171. Selon la taille de l'entreprise et le secteur d'activité, des exigences de conformité peuvent concerner votre site : les critères applicables et votre situation, telle que vérifiée par cet audit, sont détaillés dans la section « Cadre réglementaire ».",
     regulatoryContextCounsel:
       'Le montant ci-dessus est une référence légale générale, et non une sanction vous concernant. Faites confirmer votre situation par un conseil juridique.',
     priorityOwnership: {
@@ -285,9 +283,9 @@ export const fr: ReportStrings = {
       "Ce site présente peu de constats SEO et GEO significatifs par rapport à l'accessibilité : l'essentiel des priorités ci-dessous concerne l'accessibilité.",
     jumpLinkLabelTemplate: 'Voir priorité {rank}',
     topPriorityIsNotLegalWithPointerTemplate:
-      "La priorité 1 n'est rattachée à aucun critère d'accessibilité : elle a été classée en premier sur la base de son rapport complexité/impact. Les priorités rattachées à un critère d'accessibilité figurent en position {legalRank}. D'autres obligations, sans lien avec l'accessibilité, peuvent s'appliquer par ailleurs : voir la section « Exposition légale ».",
+      "La priorité 1 n'est rattachée à aucun critère d'accessibilité : elle a été classée en premier sur la base de son rapport complexité/impact. Les priorités rattachées à un critère d'accessibilité figurent en position {legalRank}. D'autres obligations, sans lien avec l'accessibilité, peuvent s'appliquer par ailleurs : voir la section « Cadre réglementaire ».",
     topPriorityIsNotLegalNoPointer:
-      "La priorité 1 n'est rattachée à aucun critère d'accessibilité : elle a été classée en premier sur la base de son rapport complexité/impact. Aucune des priorités retenues dans ce rapport n'est rattachée à un critère d'accessibilité. D'autres obligations, sans lien avec l'accessibilité, peuvent s'appliquer par ailleurs : voir la section « Exposition légale » pour le détail.",
+      "La priorité 1 n'est rattachée à aucun critère d'accessibilité : elle a été classée en premier sur la base de son rapport complexité/impact. Aucune des priorités retenues dans ce rapport n'est rattachée à un critère d'accessibilité. D'autres obligations, sans lien avec l'accessibilité, peuvent s'appliquer par ailleurs : voir la section « Cadre réglementaire » pour le détail.",
     summaryCountsTemplate:
       "L'audit a identifié {total} constats au total, dont {actionable} critiques ou sérieux ({critical} critiques et {serious} sérieux).",
     coveredByPrioritiesTemplate:
@@ -809,7 +807,7 @@ export const fr: ReportStrings = {
     scanQualifierTemplate: 'build de scan {scanBuild}',
     issuerBlockTemplate: 'Signataire : {signatory}. SIRET : {registrationNumber}.',
     liabilityStatement:
-      "Ce rapport reproduit des constats techniques détectés par des outils automatisés, accompagnés d'explications et de priorisations. Il ne constitue pas un avis juridique ; voir la section « Exposition légale » et la méthodologie pour les limites de couverture. Odysseus ne saurait être tenu responsable des décisions prises sur la seule base de ce document.",
+      "Ce rapport reproduit des constats techniques détectés par des outils automatisés, accompagnés d'explications et de priorisations. Il ne constitue pas un avis juridique ; voir la section « Cadre réglementaire » et la méthodologie pour les limites de couverture. Odysseus ne saurait être tenu responsable des décisions prises sur la seule base de ce document.",
   },
   findingsAppendix: {
     eyebrow: 'Annexe technique',
@@ -972,7 +970,7 @@ export const fr: ReportStrings = {
     legalCitationSirenMismatchTemplate:
       'Le numéro SIREN fourni manuellement ({manualSiren}) diffère de celui publié sur le site ({extractedSiren}). Cette détermination retient le numéro fourni manuellement.',
     legalCitationPointerSentence:
-      "Le détail de l'exposition légale figure dans la section « Exposition légale ».",
+      'Le détail du cadre réglementaire figure dans la section « Cadre réglementaire ».',
     socialExclusionDisclosureTemplate:
       "{count} pages ont été exclues de ce scan car elles redirigent vers un réseau social tiers, selon la liste d'exclusion par défaut d'Odysseus.",
     socialExclusionDisclosureSingularTemplate:

@@ -308,19 +308,27 @@ export function formatFindingIdLinks(findingIds: readonly string[]): string {
  *  lives in docs/report/report-design-system.md section 2, values in
  *  report-design-tokens.md). The old uniform --space-4 was the one
  *  undocumented drift the 2026-09-02 flat re-verification found. */
+/** Issue #336: a section whose heading adds nothing to its canonical title
+ *  passes an empty `heading`. The canonical title then becomes the <h2>
+ *  and the eyebrow line carries only the ordinal, so the section reads one
+ *  title instead of a title and its paraphrase, while the header keeps the
+ *  same two elements, height and page-break behaviour. */
 export function renderSheetHeader(
   ordinal: number,
   eyebrow: string,
   heading: string,
   headingGap: string = 'var(--space-4)',
 ): string {
-  const numbered = `${String(ordinal).padStart(2, '0')} · ${eyebrow}`;
+  const number = String(ordinal).padStart(2, '0');
+  const isSingleTitle = heading.trim() === '';
+  const eyebrowText = isSingleTitle ? number : `${number} · ${eyebrow}`;
+  const headingText = isSingleTitle ? eyebrow : heading;
   return `
     <div class="section-head">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-        <h6 style="color:var(--color-accent-300);margin:0">${escapeHtml(numbered)}</h6>
+        <h6 style="color:var(--color-accent-300);margin:0">${escapeHtml(eyebrowText)}</h6>
       </div>
-      <h2 style="margin-bottom:${headingGap}">${escapeHtml(heading)}</h2>
+      <h2 style="margin-bottom:${headingGap}">${escapeHtml(headingText)}</h2>
     </div>
   `;
 }

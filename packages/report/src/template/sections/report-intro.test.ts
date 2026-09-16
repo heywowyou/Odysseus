@@ -269,7 +269,8 @@ describe('renderReportIntro', () => {
     const html = renderReportIntro(strings, 7, buildAnalysis([]) as never, []);
 
     expect(html).toContain(sectionTitle('section-02', strings));
-    expect(html).toContain(`07 · ${strings.reportIntro.eyebrow}`);
+    expect(html).toContain('>07</h6>');
+    expect(html).toContain(`>${strings.reportIntro.eyebrow}</h2>`);
     // No hand-typed number: the legal section is referenced by its live
     // title, which survives any future reorder.
     expect(html).not.toMatch(/[Ss]ection\s+0?2\b/);
@@ -308,7 +309,7 @@ describe('renderReportIntro', () => {
     // Same apostrophe rule as above: the French heading only ever renders
     // in its escaped form.
     expect(html).not.toContain(escapeHtml(clientFr.reportIntro.audienceHeading));
-    expect(html).not.toContain(clientFr.reportIntro.heading);
+    expect(html).not.toContain(clientFr.reportIntro.eyebrow);
   });
 });
 

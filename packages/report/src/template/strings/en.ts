@@ -12,13 +12,11 @@ export const en: ReportStrings = {
   toc: {
     eyebrow: 'Contents',
     heading: "What's in this report",
-    executiveContextGroupLabel: 'Executive context',
-    decisionsActionsGroupLabel: 'Decisions and actions',
-    detailedEvidenceGroupLabel: 'Detailed evidence',
-    legalReferenceGroupLabel: 'Legal reference',
-    methodVocabularyGroupLabel: 'Method and vocabulary',
-    technicalAppendixGroupLabel: 'Technical appendix',
-    glossaryGroupLabel: 'Glossary',
+    overviewGroupLabel: 'Overview',
+    priorityActionsGroupLabel: 'Priority actions',
+    detailedResultsGroupLabel: 'Detailed results',
+    regulatoryFrameworkGroupLabel: 'Regulatory framework',
+    appendicesGroupLabel: 'Appendices',
   },
   reportIntro: {
     eyebrow: 'About this report',

@@ -147,7 +147,8 @@ describe('renderMethodology section-number eyebrow', () => {
   it('shows "11", matching its position in the single-tier 14-section TOC (2026-08-16 redesign)', async () => {
     const manifest = await loadSmallSiteManifest();
     const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr');
-    expect(html).toContain('11 · Méthodologie et limites');
+    expect(html).toContain('>11</h6>');
+    expect(html).toContain('>Méthodologie et limites</h2>');
   });
 
   it('shows "11" in English too', async () => {

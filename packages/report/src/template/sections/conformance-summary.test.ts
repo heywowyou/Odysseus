@@ -188,7 +188,7 @@ describe('D5: the scope note names the legal-exposure section, not an ordinal', 
     const findings = await loadSmallSiteFindings();
     const html = renderConformanceSummary(getStrings('fr'), 7, findings, 'fr');
 
-    expect(html).toContain('Exposition légale');
+    expect(html).toContain('Cadre réglementaire');
     expect(html).not.toMatch(/trait[ée] s[ée]par[ée]ment, section \d/);
   });
 

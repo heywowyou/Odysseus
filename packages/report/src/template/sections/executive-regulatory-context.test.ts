@@ -52,7 +52,7 @@ describe('the executive regulatory-context block (issue #57)', () => {
     expect(html).toContain('data-executive-regulatory-context');
     expect(html).toContain('Point réglementaire à vérifier');
     expect(html).toContain('European Accessibility Act');
-    expect(html).toContain('Exposition légale');
+    expect(html).toContain('Cadre réglementaire');
     expect(html).toContain('plafond prévu par le texte');
     // Byte-identical splice from core, not a restated figure.
     expect(html).toContain(escapeHtml(eaaSanctionFigureSentence('fr')));

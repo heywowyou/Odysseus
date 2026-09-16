@@ -13,10 +13,46 @@ import type { ReportStrings } from './types.js';
 export function applyFrenchClientFacingCopy(strings: ReportStrings): ReportStrings {
   return {
     ...strings,
+    // Issue #336: one canonical title per top-level section. An empty
+    // heading tells renderSheetHeader the title stands alone; the eyebrow is
+    // what sectionTitle returns, so the TOC and every cross-reference read
+    // the same words.
+    checklist: { ...strings.checklist, eyebrow: "Plan d'action", heading: '' },
+    remainingWork: { ...strings.remainingWork, eyebrow: 'Autres constats', heading: '' },
+    observations: { ...strings.observations, eyebrow: 'Observations complémentaires', heading: '' },
+    conformanceSummary: {
+      ...strings.conformanceSummary,
+      eyebrow: 'Conformité WCAG 2.2 AA',
+      heading: '',
+    },
+    renderDiffEvidence: {
+      ...strings.renderDiffEvidence,
+      eyebrow: 'Rendu sans JavaScript',
+      heading: '',
+    },
+    coreWebVitals: { ...strings.coreWebVitals, eyebrow: 'Performance', heading: '' },
+    benchmarkPercentile: {
+      ...strings.benchmarkPercentile,
+      eyebrow: 'Comparaison avec la cohorte de référence',
+      heading: '',
+    },
+    accessibilityStatement: {
+      ...strings.accessibilityStatement,
+      eyebrow: "Projet de déclaration d'accessibilité",
+      heading: '',
+    },
+    legalExposure: { ...strings.legalExposure, eyebrow: 'Cadre réglementaire', heading: '' },
+    methodology: { ...strings.methodology, eyebrow: 'Méthodologie et limites', heading: '' },
+    findingsAppendix: {
+      ...strings.findingsAppendix,
+      eyebrow: 'Annexe technique — constats détaillés',
+      heading: '',
+    },
+    glossary: { ...strings.glossary, eyebrow: 'Glossaire', heading: '' },
     reportIntro: {
       ...strings.reportIntro,
-      eyebrow: 'Votre diagnostic',
-      heading: 'Les priorités à traiter',
+      eyebrow: 'Présentation du diagnostic',
+      heading: '',
       situationHeading: 'Ce que ce diagnostic vous permet de décider',
       situationBody:
         "Ce rapport vous donne une vue d'ensemble de votre site sous quatre angles : " +
@@ -46,7 +82,7 @@ export function applyFrenchClientFacingCopy(strings: ReportStrings): ReportStrin
     statistics: {
       ...strings.statistics,
       eyebrow: 'Résultats mesurés',
-      heading: "Ce que l'analyse a relevé",
+      heading: '',
       introTemplate:
         '{pages}, {findings} constats distincts après regroupement des répétitions. Un même ' +
         'constat présent sur plusieurs pages ne compte qu’une fois.',
@@ -89,13 +125,13 @@ export function applyFrenchClientFacingCopy(strings: ReportStrings): ReportStrin
     executiveSummary: {
       ...strings.executiveSummary,
       eyebrow: 'Synthèse',
-      heading: "L'essentiel pour décider",
+      heading: '',
       regulatoryContextKicker: 'Point réglementaire à vérifier',
       regulatoryContextCriterion:
         "Les exigences d'accessibilité abordées dans ce rapport s'inscrivent notamment dans " +
         "le cadre de l'European Accessibility Act, transposé en droit français par la loi " +
         "n° 2023-171. Leur applicabilité dépend de la taille de l'entreprise, de son activité " +
-        'et des services proposés ; la section « Exposition légale » rapproche ces critères ' +
+        'et des services proposés ; la section « Cadre réglementaire » rapproche ces critères ' +
         'des faits disponibles pour votre établissement.',
       regulatoryContextCounsel:
         'Le montant indiqué ci-dessus correspond au plafond prévu par le texte, pas à une ' +
@@ -127,7 +163,7 @@ export function applyFrenchClientFacingCopy(strings: ReportStrings): ReportStrin
     themes: {
       ...strings.themes,
       eyebrow: 'Priorités de correction',
-      headingTemplate: '{count} chantiers à traiter par ordre de priorité',
+      headingTemplate: '',
       effortLabel: 'Complexité',
       impactLabel: 'Impact',
       affectedPagesLabel: 'Pages concernées',
@@ -164,8 +200,8 @@ export function applyFrenchClientFacingCopy(strings: ReportStrings): ReportStrin
     },
     nextSteps: {
       ...strings.nextSteps,
-      eyebrow: 'Synthèse finale',
-      heading: 'Vous avez les éléments pour agir',
+      eyebrow: 'Prochaines étapes',
+      heading: '',
       synthesisStake:
         'Votre site est un point de contact direct avec vos visiteurs. Son accessibilité, sa ' +
         'visibilité dans les moteurs de recherche et les assistants IA, ainsi que sa vitesse ' +

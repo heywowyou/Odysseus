@@ -65,8 +65,9 @@ The former Inter keep is dissolved: Avenir Next replaces it, so the
 `overused-font` ignore for `packages/report/**` in
 `.impeccable/config.json` is dead and is removed by this plan (binding
 decision 9). The `kicker-above-heading` ban is consciously not applied to
-the report's numbered h6 eyebrow (`NN · SECTION NAME`): it is the
-section-header navigation device and its text is locked content; the
+the report's numbered h6 eyebrow (`NN · SECTION NAME`, or `NN` alone
+above the canonical title when a section has a single title, issue #336):
+it is the section-header navigation device and its text is locked content; the
 preview's hero label string also stays, but its treatment is de-kickered
 (sentence case, body size, muted). The `skipped-heading` convention (h6
 eyebrow markup) is out of scope for visual revisions. The
@@ -253,22 +254,22 @@ section IDs do not encode reading order.
 | --- | --- | --- | --- |
 | cover | Couverture | minimal: commercial identity, decision question (resolved preparation question; safe generic fallback when no preparation exists), report type, audit date, Odysseus signature | 1 sheet |
 | metadata | Fiche méta et sévérité | site audited, audit date, pages visited, audited standard and scope, legal name when present; centered letter grade with disclaimer, followed by severity scale with basis note | 1 sheet |
-| toc | Sommaire | one row per section, grouped under seven narrative groups: executive context, decisions and actions, detailed evidence, legal reference, method and vocabulary, technical appendix, glossary | 16 rows |
-| 01 | Ouverture (situation, complication, question) | opening and reading guide; the question is the resolved preparation question or the safe generic fallback, no client-specific claim beyond what preparation explicitly provides | fixed |
-| 02 | Résumé exécutif | prose + jump links | 3 links |
-| 03 | L'audit en chiffres | editorial scoreboard with total findings as the lead measure, 3 supporting number tiles, disclosure notes, severity split, and category split | fixed |
-| 04 | Priorités classées | one card per theme | 6 themes, may flow to 2 sheets |
-| 05 | Check-list | one row per theme, same 6 | 1 sheet |
-| 06 | Reste à traiter | findings outside the ranked priorities, grouped by domain and rule, linked to appendix ids | flows |
-| 07 | Observations | 2 prose blocks | fixed |
-| 08 | Conformité | one row per failing WCAG criterion | flows |
-| 09 | Preuves de rendu | **bars only, no screenshots** | 3 worst pages by `missingPct` |
-| 10 | Mesures de performance | **5 aggregated medians, no per page table** | 1 sheet |
-| 11 | Déclaration | one row per failing criterion | flows |
+| toc | Sommaire | one row per section, grouped under five groups in document order (issue #336): Vue d'ensemble, Actions prioritaires, Résultats détaillés, Cadre réglementaire, Annexes | 17 rows |
+| 01 | Présentation du diagnostic (situation, complication, question) | opening and reading guide; the question is the resolved preparation question or the safe generic fallback, no client-specific claim beyond what preparation explicitly provides | fixed |
+| 02 | Synthèse | prose + jump links | 3 links |
+| 03 | Résultats mesurés | editorial scoreboard with total findings as the lead measure, 3 supporting number tiles, disclosure notes, severity split, and category split | fixed |
+| 04 | Priorités de correction | one card per theme | 6 themes, may flow to 2 sheets |
+| 05 | Plan d'action | one row per theme, same 6 | 1 sheet |
+| 06 | Autres constats | findings outside the ranked priorities, grouped by domain and rule, linked to appendix ids | flows |
+| 07 | Observations complémentaires | 2 prose blocks | fixed |
+| 08 | Conformité WCAG 2.2 AA | one row per failing WCAG criterion | flows |
+| 09 | Rendu sans JavaScript | **bars only, no screenshots** | 3 worst pages by `missingPct` |
+| 10 | Performance | **5 aggregated medians, no per page table** | 1 sheet |
+| 11 | Projet de déclaration d'accessibilité | one row per failing criterion | flows |
 | 12 | Prochaines étapes | action synthesis, responsible roles, and re-audit recommendation | 1 sheet |
-| 13 | Exposition légale | 2 cards + paragraph, from `assessObligations()` only | fixed |
-| 14 | Méthodologie | fixed prose | 1 sheet |
-| 15 | Annexe technique | all finding, URL, selector, occurrence, and provenance detail | flows |
+| 13 | Cadre réglementaire | 2 cards + paragraph, from `assessObligations()` only | fixed |
+| 14 | Méthodologie et limites | fixed prose | 1 sheet |
+| 15 | Annexe technique — constats détaillés | all finding, URL, selector, occurrence, and provenance detail | flows |
 | 16 | Glossaire, section finale | 9 entries | 1 sheet |
 
 Plan 020 adds two bounded blocks without changing this order or the visual

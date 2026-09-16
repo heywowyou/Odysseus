@@ -20,9 +20,9 @@ describe('renderToc', () => {
     const htmlFr = renderToc(getStrings('fr'), ALL_SECTIONS);
     const htmlEn = renderToc(getStrings('en'), ALL_SECTIONS);
 
-    expect(htmlFr).toContain('Exposition légale');
+    expect(htmlFr).toContain('Cadre réglementaire');
     expect(htmlEn).toContain('Legal exposure');
-    expect(htmlEn).not.toContain('Exposition légale');
+    expect(htmlEn).not.toContain('Cadre réglementaire');
   });
 
   it('B8: links each included row to its own section-NN id, via an anchor that itself carries the href target-counter reads (item 1)', () => {
@@ -43,40 +43,51 @@ describe('renderToc', () => {
     expect(html).not.toContain('signets du fichier PDF');
   });
 
-  // Plan 024's glossary-last reversal: the TOC's trailing groups must read
-  // methodology, then technical appendix, then glossary, and the final
-  // group must hold only the glossary row, in both languages.
-  describe('plan 024: the trailing groups read methodology, appendix, glossary last', () => {
-    const assertTrailingGroupOrder = (html: string): void => {
-      const methodIdx = html.indexOf('>Méthode et vocabulaire</h5>');
-      const appendixIdx = html.indexOf('>Annexe technique</h5>');
-      const glossaryIdx = html.indexOf('>Glossaire</h5>');
-      expect(methodIdx).toBeGreaterThan(-1);
-      expect(appendixIdx).toBeGreaterThan(methodIdx);
-      expect(glossaryIdx).toBeGreaterThan(appendixIdx);
-    };
-
-    it('orders the three trailing groups and closes with a glossary-only group (fr)', () => {
-      const html = renderToc(getStrings('fr'), ALL_SECTIONS);
-      assertTrailingGroupOrder(html);
-      const tail = html.slice(html.indexOf('>Glossaire</h5>'));
-      expect(tail).toContain('href="#section-13"');
-      expect(tail).not.toContain('href="#section-12"');
-      expect((tail.match(/href="#section-/g) ?? []).length).toBe(1);
+  // Issue #336: five reader-facing groups, in document order. Plan 024's
+  // glossary-last rule still holds inside the closing Annexes group.
+  describe('issue #336: the TOC reads five groups and closes on the glossary', () => {
+    it.each([
+      [
+        'fr',
+        [
+          'Vue d’ensemble',
+          'Actions prioritaires',
+          'Résultats détaillés',
+          'Cadre réglementaire',
+          'Annexes',
+        ],
+      ],
+      [
+        'en',
+        ['Overview', 'Priority actions', 'Detailed results', 'Regulatory framework', 'Appendices'],
+      ],
+    ] as const)('renders the five groups in order (%s)', (language, labels) => {
+      const html = renderToc(getStrings(language), ALL_SECTIONS);
+      const groupLabels = [...html.matchAll(/<h5[^>]*>([^<]*)<\/h5>/gu)].map((m) =>
+        m[1]!.replace(/&#39;/gu, "'"),
+      );
+      expect(groupLabels).toEqual(labels);
+      const tail = html.slice(html.lastIndexOf('</h5>'));
+      expect([...tail.matchAll(/href="#(section-[0-9b]+)"/gu)].map((m) => m[1])).toEqual([
+        'section-11',
+        'section-12',
+        'section-13',
+      ]);
     });
 
-    it('orders the three trailing groups and closes with a glossary-only group (en)', () => {
-      const html = renderToc(getStrings('en'), ALL_SECTIONS);
-      const methodIdx = html.indexOf('>Method and vocabulary</h5>');
-      const appendixIdx = html.indexOf('>Technical appendix</h5>');
-      const glossaryIdx = html.indexOf('>Glossary</h5>');
-      expect(methodIdx).toBeGreaterThan(-1);
-      expect(appendixIdx).toBeGreaterThan(methodIdx);
-      expect(glossaryIdx).toBeGreaterThan(appendixIdx);
-      const tail = html.slice(html.indexOf('>Glossary</h5>'));
-      expect(tail).toContain('href="#section-13"');
-      expect(tail).not.toContain('href="#section-12"');
-      expect((tail.match(/href="#section-/g) ?? []).length).toBe(1);
+    it('never uses the retired French group or section labels', () => {
+      const html = renderToc(getStrings('fr'), ALL_SECTIONS);
+      for (const retired of [
+        'Contexte exécutif',
+        'Synthèse finale',
+        'Exposition légale',
+        'Check-list imprimable',
+        'Preuve de rendu',
+        '>Référentiel<',
+        'Reste à traiter',
+      ]) {
+        expect(html).not.toContain(retired);
+      }
     });
 
     it('the glossary row is the 17th and last row', () => {

@@ -60,13 +60,11 @@ export interface ReportStrings {
   toc: {
     eyebrow: string;
     heading: string;
-    executiveContextGroupLabel: string;
-    decisionsActionsGroupLabel: string;
-    detailedEvidenceGroupLabel: string;
-    legalReferenceGroupLabel: string;
-    methodVocabularyGroupLabel: string;
-    technicalAppendixGroupLabel: string;
-    glossaryGroupLabel: string;
+    overviewGroupLabel: string;
+    priorityActionsGroupLabel: string;
+    detailedResultsGroupLabel: string;
+    regulatoryFrameworkGroupLabel: string;
+    appendicesGroupLabel: string;
   };
   /** P3 (2026-08-21 La Corniche feedback pass): section-00, a new
    *  non-technical intro page before the résumé. Plan 018 step 5 reshaped

@@ -42,6 +42,28 @@ describe('renderHtml against the real small-site.test audit', () => {
   // a real annex row, not a dead href - checked end to end against the
   // one composed document, since themes.ts and findings-appendix.ts each
   // know only their own half of the id/anchor pair.
+  it('issue #336: no French top-level section header repeats or paraphrases its title on a second line', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('fr');
+    const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
+
+    const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages });
+    const headers = [
+      ...html.matchAll(
+        /<div class="section-head">[\s\S]*?<h6[^>]*>([^<]*)<\/h6>[\s\S]*?<h2[^>]*>([^<]*)<\/h2>/gu,
+      ),
+    ];
+
+    expect(headers.length).toBeGreaterThan(10);
+    for (const [, eyebrow, title] of headers) {
+      // The eyebrow line carries only the live ordinal; the canonical title
+      // is the one heading.
+      expect(eyebrow).toMatch(/^\d{2}$/u);
+      expect(title!.trim()).not.toBe('');
+    }
+  });
+
   it('item 3.3: every theme card finding-id link resolves to a matching #annexref-{id} anchor in the annex', async () => {
     const manifest = await loadSmallSiteManifest();
     const findings = await loadSmallSiteFindings();
