@@ -303,18 +303,39 @@ function themeFindingsAgreeWithCategory(
   return themeFindings.every((finding) => finding.category === theme.category);
 }
 
+/** Issue #296: both halves of the split count the analyzed scope only, the
+ *  same population "Pages concernées" is confined to (issue #41's
+ *  scopePageUrls, and buildPriorityEvidence's own in-scope filter). A
+ *  Haaitza card printed "41 pages sur 140" above a split claiming 95 pages
+ *  on one side, because this note counted every cited URL while the card's
+ *  own total counted only visited ones. Each side is a union over the same
+ *  scope as that total, so neither can exceed it. */
+function scopedPageCount(
+  findings: readonly Finding[],
+  scopePageUrls: ReadonlySet<string> | undefined,
+): number {
+  return new Set(
+    findings.flatMap((f) => f.pageUrls).filter((url) => scopePageUrls?.has(url) ?? true),
+  ).size;
+}
+
 function renderOwnershipSplitNote(
   strings: ReportStrings,
   language: ReportLanguage,
   themeFindings: readonly Finding[],
+  scopePageUrls: ReadonlySet<string> | undefined,
 ): string {
   const thirdPartyFindings = themeFindings.filter((f) => isThirdPartyFinding(f));
   const firstPartyFindings = themeFindings.filter((f) => !isThirdPartyFinding(f));
   if (thirdPartyFindings.length === 0 || firstPartyFindings.length === 0) return '';
 
   const t = strings.themes;
-  const firstPartyPages = new Set(firstPartyFindings.flatMap((f) => f.pageUrls)).size;
-  const thirdPartyPages = new Set(thirdPartyFindings.flatMap((f) => f.pageUrls)).size;
+  const firstPartyPages = scopedPageCount(firstPartyFindings, scopePageUrls);
+  const thirdPartyPages = scopedPageCount(thirdPartyFindings, scopePageUrls);
+  // A split whose sides are both invisible to the analyzed scope has
+  // nothing to state, and printing "0 page ... 0 page" would read as a
+  // finding about the site rather than about the scope.
+  if (firstPartyPages === 0 && thirdPartyPages === 0) return '';
   const vendors = [
     ...new Set(
       thirdPartyFindings
@@ -550,7 +571,7 @@ function renderTheme(
   const observationBox = priority ? renderObservationBox(strings, language, priority.evidence) : '';
   const trailingActionNotes = [
     ownershipBox,
-    renderOwnershipSplitNote(strings, language, themeFindings),
+    renderOwnershipSplitNote(strings, language, themeFindings, scopePageUrls),
     renderThirdPartyOnlyNote(strings, themeFindings),
   ].join('');
   const [actionLead, actionRest] = recommendedActionsBox

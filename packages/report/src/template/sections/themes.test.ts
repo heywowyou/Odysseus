@@ -1058,7 +1058,18 @@ describe('P1.2: the first-party/third-party ownership split note', () => {
     };
   }
 
-  const manifest = { pages: [] } as never;
+  // Issue #296: both halves of the split count the analyzed scope, so these
+  // cases need a manifest that actually visited the pages they cite - an
+  // empty one describes a card whose own "Pages concernées" reads zero.
+  function manifestFor(...urls: string[]) {
+    return { pages: urls.map((url) => ({ url, status: 'visited' })) } as never;
+  }
+
+  const manifest = manifestFor(
+    'https://example.com/',
+    'https://example.com/contact',
+    'https://example.com/reserver',
+  );
 
   it('renders the split sentence naming the vendor when the theme spans first- and third-party pages', () => {
     const findings = [
@@ -1127,6 +1138,46 @@ describe('P1.2: the first-party/third-party ownership split note', () => {
     const html = renderThemes(getStrings('fr'), 4, analysis as never, findings as never, manifest);
 
     expect(html).toContain('ce composant tiers');
+  });
+
+  /** Issue #296: a Haaitza card read "Pages concernées : 41 pages sur 140"
+   *  above a split claiming 95 pages on the first-party side alone, because
+   *  the split counted every cited URL while the card's own total counted
+   *  only visited ones. */
+  it('counts both halves over the analyzed scope, so neither can exceed the card total', () => {
+    const findings = [
+      buildFinding({
+        findingId: 'f001',
+        pageUrls: ['https://example.com/', 'https://example.com/archive-2019'],
+        elements: [{ pageUrl: 'https://example.com/', selector: 'header form', snippet: '' }],
+      }),
+      buildFinding({
+        findingId: 'f002',
+        pageUrls: ['https://example.com/contact', 'https://example.com/archive-2020'],
+        elements: [
+          {
+            pageUrl: 'https://example.com/contact',
+            selector: '.gform_wrapper button',
+            snippet: '',
+          },
+        ],
+      }),
+    ];
+    const analysis = buildAnalysis(['f001', 'f002']);
+
+    const html = renderThemes(
+      getStrings('fr'),
+      4,
+      analysis as never,
+      findings as never,
+      manifestFor('https://example.com/', 'https://example.com/contact'),
+    );
+
+    // Two visited pages in the card total, one on each side of the split -
+    // the unvisited archive pages count for neither.
+    expect(html).toContain('2 pages sur 2');
+    expect(html).toContain('1 page relevant de votre site');
+    expect(html).toContain('et 1 page relevant de Gravity Forms');
   });
 
   it('fix #2 (2026-08-25 report review): names ZenChef when every finding in the theme is inside its iframe', () => {
