@@ -2,6 +2,7 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
 import { checkCanonicalTarget, extractRobotsMetaContent } from './canonical-target.js';
+import { getCrawlerUserAgent } from '../config.js';
 
 describe('extractRobotsMetaContent', () => {
   it('reads content from a well-formed meta robots tag', () => {
@@ -107,5 +108,65 @@ describe('checkCanonicalTarget', () => {
 
     expect(result?.httpStatus).toBe(404);
     expect(result?.noindex).toBe(false);
+  });
+
+  it('does not request a canonical on another host that resolves to a non-public address', async () => {
+    let requests = 0;
+    const started = await startServer({ '/target': { status: 200, body: '<html></html>' } });
+    server = started.server;
+    server.on('request', () => {
+      requests += 1;
+    });
+    const port = new URL(started.origin).port;
+
+    const result = await checkCanonicalTarget(
+      `${started.origin}/page`,
+      `http://localhost:${port}/target`,
+      5000,
+    );
+
+    expect(result).toBeNull();
+    expect(requests).toBe(0);
+  });
+
+  it('stops at a same-host redirect into a non-public host', async () => {
+    const hits: string[] = [];
+    server = createServer((req, res) => {
+      hits.push(req.url ?? '');
+      if (req.url === '/moved') {
+        const port = (server!.address() as AddressInfo).port;
+        res.writeHead(302, { location: `http://localhost:${port}/internal` }).end();
+        return;
+      }
+      res.writeHead(200, { 'content-type': 'text/html' }).end('<html></html>');
+    });
+    await new Promise<void>((resolve) => server!.listen(0, '127.0.0.1', resolve));
+    const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+
+    const result = await checkCanonicalTarget(`${origin}/page`, `${origin}/moved`, 5000);
+
+    expect(result).toBeNull();
+    expect(hits).toEqual(['/moved']);
+  });
+
+  it('requests a cleared off-host target with the crawler user agent', async () => {
+    let userAgent: string | undefined;
+    server = createServer((req, res) => {
+      userAgent = req.headers['user-agent'];
+      res.writeHead(200, { 'content-type': 'text/html' }).end('<html></html>');
+    });
+    await new Promise<void>((resolve) => server!.listen(0, '127.0.0.1', resolve));
+    const port = (server.address() as AddressInfo).port;
+
+    const result = await checkCanonicalTarget(
+      `http://127.0.0.1:${port}/page`,
+      `http://localhost:${port}/target`,
+      5000,
+      // Stands in for a public DNS answer so the allowed path is exercised.
+      { lookupAddresses: async () => [{ address: '192.0.2.10', family: 4 }] },
+    );
+
+    expect(result?.httpStatus).toBe(200);
+    expect(userAgent).toBe(getCrawlerUserAgent());
   });
 });

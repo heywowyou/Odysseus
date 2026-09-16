@@ -14,11 +14,18 @@
  * call, keeping this to the minimum extra request per page that actually
  * has something new to check.
  *
+ * A target on another host is requested only after the address guard
+ * clears it, hop by hop, so a page cannot point the server at an internal
+ * address.
+ *
  * A plain fetch(), not a Playwright navigation: this only needs the raw
  * HTML text for a single regex-based robots-meta read, not a rendered
  * DOM, matching the "hand-rolled over structured-but-simple text"
  * precedent in sitemap.ts and mentions-legales.ts.
  */
+
+import { checkFetchTarget, type LookupAddresses } from '../address-guard.js';
+import { getCrawlerUserAgent } from '../config.js';
 
 export interface CanonicalTargetCheckResult {
   pageUrl: string;
@@ -46,21 +53,74 @@ export function extractRobotsMetaContent(html: string): string | null {
   return null;
 }
 
+/** Redirect hops followed before the target counts as unreachable, the
+ *  same bound fetch applies by default. */
+const MAX_CANONICAL_REDIRECTS = 20;
+
+export interface CanonicalTargetCheckOptions {
+  /** Test seam for the address guard's DNS lookup. */
+  lookupAddresses?: LookupAddresses;
+}
+
+/** A hop on the scanned page's own host was chosen by the operator along
+ *  with the page. Any other host was chosen by the page's content, so it is
+ *  resolved and refused when it points at a non-public address. */
+async function hopIsAllowed(
+  hopUrl: URL,
+  pageHostname: string,
+  options: CanonicalTargetCheckOptions,
+): Promise<boolean> {
+  if (hopUrl.hostname === pageHostname) return true;
+  const verdict = await checkFetchTarget(hopUrl.href, {
+    lookupAddresses: options.lookupAddresses,
+  });
+  return verdict.kind === 'allowed';
+}
+
 export async function checkCanonicalTarget(
   pageUrl: string,
   canonicalHref: string,
   timeoutMs: number,
+  options: CanonicalTargetCheckOptions = {},
 ): Promise<CanonicalTargetCheckResult | null> {
   let resolved: string;
+  let pageHostname: string;
   try {
     resolved = new URL(canonicalHref, pageUrl).href;
+    pageHostname = new URL(pageUrl).hostname;
   } catch {
     return null;
   }
   if (resolved === pageUrl) return null;
 
   try {
-    const response = await fetch(resolved, { signal: AbortSignal.timeout(timeoutMs) });
+    const signal = AbortSignal.timeout(timeoutMs);
+    // Redirects are followed by hand so every hop passes the address guard,
+    // and the request identifies itself like the crawler does.
+    let hop = new URL(resolved);
+    let response: Response | undefined;
+    for (let redirects = 0; ; redirects++) {
+      // A target that resolves to a non-public address is not a fact about
+      // the client's site worth reporting, and must not be requested.
+      if (!(await hopIsAllowed(hop, pageHostname, options))) return null;
+      response = await fetch(hop, {
+        redirect: 'manual',
+        signal,
+        headers: { 'user-agent': getCrawlerUserAgent() },
+      });
+      const location = response.headers.get('location');
+      if (response.status < 300 || response.status >= 400 || location === null) break;
+      if (redirects >= MAX_CANONICAL_REDIRECTS) {
+        return {
+          pageUrl,
+          canonicalUrl: resolved,
+          noindex: false,
+          fetchError: 'redirect count exceeded',
+        };
+      }
+      await response.body?.cancel();
+      hop = new URL(location, hop);
+    }
     if (!response.ok) {
       return { pageUrl, canonicalUrl: resolved, httpStatus: response.status, noindex: false };
     }

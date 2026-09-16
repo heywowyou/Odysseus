@@ -133,6 +133,18 @@ describe('findDelegatedBookingRedirectChecks against real pages', () => {
     expect(checks[0]?.detail).toMatch(/could not be followed/i);
   });
 
+  it('does not navigate to a booking link on another host that resolves to a non-public address', async () => {
+    const port = new URL(destination.origin).port;
+    const originHtml = `<title>Hotel La Coorniche - Hébergement à Bayonne</title>
+      <body><a href="http://localhost:${port}/single-property">Réserver</a></body>`;
+
+    const checks = await runAgainstOriginPage(originHtml);
+
+    expect(checks).toHaveLength(1);
+    expect(checks[0]?.resolution).toBe('undetermined');
+    expect(checks[0]?.detail).toMatch(/non-public address/);
+  });
+
   it('regression: a first-party checkout form is unaffected by redirect-following (no candidates found)', async () => {
     const originHtml = `<title>Boutique</title>
       <body><form action="/panier"><button>Ajouter au panier</button></form></body>`;

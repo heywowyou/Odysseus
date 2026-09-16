@@ -4,6 +4,13 @@ export { launchBrowser, ODYSSEUS_USER_AGENT, DEFAULT_TIMEOUT_MS } from './browse
 export type { LaunchedBrowser } from './browser.js';
 export { extractTextFromHtml, computeMissingPercent } from './extract-text.js';
 export { crawlSite } from './crawl.js';
+export {
+  checkFetchTarget,
+  classifyIpAddress,
+  type FetchTargetVerdict,
+  type LookupAddresses,
+  type ResolvedAddress,
+} from './address-guard.js';
 export type {
   CrawlOptions,
   CrawlProgressEvent,

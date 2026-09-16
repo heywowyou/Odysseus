@@ -33,6 +33,7 @@ import type {
   TransactionalFlowRedirectCheck,
 } from '@odysseus/core';
 import { DEFAULT_TIMEOUT_MS } from '../browser.js';
+import { checkFetchTarget, type LookupAddresses } from '../address-guard.js';
 import { getCrawlerUserAgent } from '../config.js';
 import { isSocialPlatformHost } from '../social-hosts.js';
 import type { PageWorkGuard } from '../page-work-guard.js';
@@ -504,6 +505,39 @@ export function classifyDestinationPage(
   };
 }
 
+const NON_PUBLIC_DESTINATION_DETAIL =
+  'Redirect was not followed: the destination resolves to a non-public address.';
+
+/** Checks each host the destination context requests. The scanned page's
+ *  own host was chosen by the operator; every other host came from page
+ *  content and is refused when it resolves to a non-public address. One
+ *  lookup per host, shared across the context's requests. */
+function createDestinationHostCheck(
+  pageHostname: string,
+  lookupAddresses: LookupAddresses | undefined,
+): (url: string) => Promise<boolean> {
+  const verdicts = new Map<string, Promise<boolean>>();
+  return (url) => {
+    let target: URL;
+    try {
+      target = new URL(url);
+    } catch {
+      return Promise.resolve(false);
+    }
+    if (target.protocol !== 'http:' && target.protocol !== 'https:') return Promise.resolve(true);
+    if (target.hostname === pageHostname) return Promise.resolve(true);
+    let verdict = verdicts.get(target.hostname);
+    if (verdict === undefined) {
+      verdict = checkFetchTarget(target.href, { lookupAddresses }).then(
+        (result) => result.kind === 'allowed',
+        () => false,
+      );
+      verdicts.set(target.hostname, verdict);
+    }
+    return verdict;
+  };
+}
+
 async function inspectDestinationPage(
   browser: Browser,
   linkUrl: string,
@@ -511,12 +545,22 @@ async function inspectDestinationPage(
   timeoutMs: number,
   userAgent: string,
   guard: PageWorkGuard | undefined,
+  hostIsAllowed: (url: string) => Promise<boolean>,
 ): Promise<Omit<TransactionalFlowRedirectCheck, 'pageUrl'>> {
+  if (!(await hostIsAllowed(linkUrl))) {
+    return { linkUrl, resolution: 'undetermined', detail: NON_PUBLIC_DESTINATION_DETAIL };
+  }
   const context = await browser.newContext({ userAgent });
   guard?.track(context);
   try {
     context.setDefaultTimeout(timeoutMs);
     context.setDefaultNavigationTimeout(timeoutMs);
+    // Redirects and subresources go through the same check as the link, so
+    // a public booking link cannot bounce the browser to an internal host.
+    await context.route('**/*', async (route) => {
+      if (await hostIsAllowed(route.request().url())) await route.continue();
+      else await route.abort('blockedbyclient');
+    });
     const destinationPage = await context.newPage();
     await destinationPage.goto(linkUrl, { waitUntil: 'load' });
     const destinationUrl = destinationPage.url();
@@ -592,6 +636,8 @@ export interface DelegatedBookingRedirectOptions {
    *  an external watchdog can force-close it if the redirect never
    *  resolves on its own. */
   guard?: PageWorkGuard;
+  /** Test seam for the address guard's DNS lookup. */
+  lookupAddresses?: LookupAddresses;
 }
 
 /**
@@ -626,6 +672,10 @@ export async function findDelegatedBookingRedirectChecks(
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const userAgent = options.userAgent ?? getCrawlerUserAgent();
   const hostCache: RedirectHostCache = options.hostCache ?? new Map();
+  const hostIsAllowed = createDestinationHostCheck(
+    new URL(pageUrl).hostname,
+    options.lookupAddresses,
+  );
   const bookingEngineHost = (() => {
     if (!options.bookingEngineUrl) return undefined;
     try {
@@ -686,6 +736,7 @@ export async function findDelegatedBookingRedirectChecks(
                 timeoutMs,
                 userAgent,
                 options.guard,
+                hostIsAllowed,
               );
             })();
       hostCache.set(cacheKey, resultPromise);
