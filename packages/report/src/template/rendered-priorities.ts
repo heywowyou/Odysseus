@@ -146,9 +146,12 @@ function classifyPriorityOwnership(finding: Finding, manifest: AuditManifest): P
  *  priority. Selection rules, stated in full so callers can rely on them
  *  without re-deriving any of this in template code:
  *
- *  - representative finding: highest severity first (SEVERITY_ORDER), then
- *    the lexicographically smallest findingId as the tie-break, so two
- *    render runs over the same stored analysis can never disagree;
+ *  - representative finding: from the rule carrying most of the
+ *    priority's work (occurrences, then pages reached, then that rule's
+ *    own top severity, then ruleId), highest severity within that rule,
+ *    then the lexicographically smallest findingId as the tie-break, so
+ *    two render runs over the same stored analysis can never disagree
+ *    (issue #297);
  *  - representative page: the representative finding's own page URLs
  *    deduplicated, sorted lexicographically, first entry (issue #40: not
  *    the whole priority's union - the observation sentence quotes this
@@ -201,14 +204,51 @@ function buildPriorityEvidence(
   }
   const sameCategory = findings.filter((finding) => finding.category === category);
   const representativePool = sameCategory.length > 0 ? sameCategory : findings;
-  // Strict code-point lexicographic order for the findingId tie-break, not
-  // localeCompare: the plan's selection rule is lexicographic, and a locale
-  // collation could reorder ids differently across ICU versions.
-  const representative = [...representativePool].sort(
-    (a, b) =>
-      SEVERITY_ORDER[b.severity] - SEVERITY_ORDER[a.severity] ||
-      (a.findingId < b.findingId ? -1 : a.findingId > b.findingId ? 1 : 0),
-  )[0]!;
+  // Issue #297: severity alone chose the example, so a single critical
+  // outlier spoke for a priority built on something else. Haaitza's
+  // "Rendre les liens, les images et les vidéos compréhensibles" quoted a
+  // meta-refresh finding, and its "Réduire le temps d'affichage du contenu
+  // principal" quoted a CLS one - in both cases the most severe finding in
+  // the card, and in neither case what the card is about.
+  //
+  // The example is therefore drawn from the rule that carries the
+  // priority's work: rules ranked by the occurrences they contribute, then
+  // by the pages they reach, then by their own top severity, then by ruleId
+  // so two renders of one stored analysis can never disagree. Severity
+  // still decides within that rule, and still leads everywhere else on the
+  // card - the conformity fact, the severity chips and the annex are
+  // unchanged. "Representative" is a claim about the bulk of the job, not
+  // about its worst single instance.
+  const ruleReach = new Map<string, { occurrences: number; pages: Set<string>; top: number }>();
+  for (const finding of representativePool) {
+    const reach = ruleReach.get(finding.ruleId) ?? {
+      occurrences: 0,
+      pages: new Set<string>(),
+      top: 0,
+    };
+    reach.occurrences += finding.occurrences;
+    for (const url of finding.pageUrls) reach.pages.add(url);
+    reach.top = Math.max(reach.top, SEVERITY_ORDER[finding.severity]);
+    ruleReach.set(finding.ruleId, reach);
+  }
+  // Strict code-point lexicographic order for the ruleId and findingId
+  // tie-breaks, not localeCompare: the plan's selection rule is
+  // lexicographic, and a locale collation could reorder ids differently
+  // across ICU versions.
+  const dominantRuleId = [...ruleReach.entries()].sort(
+    ([aRule, a], [bRule, b]) =>
+      b.occurrences - a.occurrences ||
+      b.pages.size - a.pages.size ||
+      b.top - a.top ||
+      (aRule < bRule ? -1 : aRule > bRule ? 1 : 0),
+  )[0]![0];
+  const representative = [...representativePool]
+    .filter((finding) => finding.ruleId === dominantRuleId)
+    .sort(
+      (a, b) =>
+        SEVERITY_ORDER[b.severity] - SEVERITY_ORDER[a.severity] ||
+        (a.findingId < b.findingId ? -1 : a.findingId > b.findingId ? 1 : 0),
+    )[0]!;
   // Issue #100: the counted population is the card's whole finding set
   // minus the findings the visited scope cannot see, not the
   // category-narrowed subset above.

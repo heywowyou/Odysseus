@@ -689,3 +689,91 @@ describe('issue #293: a priority owns every finding of the rules it names', () =
     expect(Object.values(total).reduce((a, b) => a + b, 0)).toBe(2);
   });
 });
+
+/**
+ * Issue #297. A Haaitza priority titled "Rendre les liens, les images et
+ * les vidéos compréhensibles" quoted a meta-refresh finding as its
+ * example, and one titled "Réduire le temps d'affichage du contenu
+ * principal" quoted a CLS one: in both cases the most severe finding in
+ * the card, in neither case what the card is about.
+ */
+describe('issue #297: the example represents the priority, not its worst outlier', () => {
+  const manifest = { pages: [] } as never;
+
+  it('quotes the rule carrying the work, not a single more severe outlier', () => {
+    const findings = [
+      buildFinding({
+        findingId: 'f001',
+        ruleId: 'meta-refresh',
+        severity: 'critical',
+        occurrences: 1,
+      }),
+      buildFinding({
+        findingId: 'f002',
+        ruleId: 'link-name',
+        severity: 'serious',
+        occurrences: 40,
+        pageUrls: ['https://example.com/', 'https://example.com/a'],
+      }),
+    ];
+
+    const priorities = buildRenderedPriorities(
+      [buildTheme(['f001', 'f002'])],
+      findings,
+      manifest,
+      'en',
+    );
+
+    expect(priorities[0]!.evidence.representativeFinding.ruleId).toBe('link-name');
+  });
+
+  it('still prefers the higher severity inside the rule that carries the work', () => {
+    const findings = [
+      buildFinding({ findingId: 'f001', ruleId: 'link-name', severity: 'serious', occurrences: 5 }),
+      buildFinding({
+        findingId: 'f002',
+        ruleId: 'link-name',
+        severity: 'critical',
+        occurrences: 5,
+      }),
+      buildFinding({ findingId: 'f003', ruleId: 'meta-refresh', severity: 'critical' }),
+    ];
+
+    const priorities = buildRenderedPriorities(
+      [buildTheme(['f001', 'f002', 'f003'])],
+      findings,
+      manifest,
+      'en',
+    );
+
+    expect(priorities[0]!.evidence.representativeFinding.findingId).toBe('f002');
+  });
+
+  it('falls back to the pages reached when occurrences tie, ahead of the ruleId tie-break', () => {
+    const findings = [
+      buildFinding({
+        findingId: 'f001',
+        ruleId: 'color-contrast',
+        occurrences: 4,
+        pageUrls: ['https://example.com/'],
+      }),
+      buildFinding({
+        findingId: 'f002',
+        ruleId: 'target-size',
+        occurrences: 4,
+        pageUrls: ['https://example.com/', 'https://example.com/a'],
+      }),
+    ];
+
+    const priorities = buildRenderedPriorities(
+      [buildTheme(['f001', 'f002'])],
+      findings,
+      manifest,
+      'en',
+    );
+
+    // target-size loses the lexicographic tie-break and still wins, because
+    // it reaches twice the pages.
+    expect(priorities[0]!.evidence.representativeFinding.ruleId).toBe('target-size');
+  });
+});

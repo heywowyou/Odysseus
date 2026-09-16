@@ -89,6 +89,27 @@ including why occurrence weighting has no exact formula and is expected
 to need tuning against more real reports, in `docs/archive/report-v2-refactor.md`
 part 4.2 (A5, A6).
 
+**A theme is one remediation job (issue #297).** The structure prompt used
+to ask only for "roughly 8 to 15 themes a business owner can act on",
+which a real Haaitza report read as a size target: a theme about link and
+image text carried an automatic page reload and a zoom restriction, a
+theme about language annotations carried heading-structure findings, and
+a theme about loading time carried a layout-stability metric. The client
+then reads a title, a paragraph and a list of actions that do not describe
+each other.
+
+The prompt now states the grouping rule directly: two findings belong
+together when fixing one is the same task as fixing the other, a finding
+needing a different fix goes in a different theme even if that leaves the
+theme tiny, and a finding that fits nowhere coherent is better left
+ungrouped than filed under a theme it contradicts. This is prompt
+guidance, not a guard - the model still decides which findings belong
+together, and no deterministic rule-to-remediation taxonomy exists to
+check it against. The report's own defence is separate: the priority card
+draws its representative example from the rule carrying most of the
+priority's work rather than from its most severe single finding, so an
+off-topic finding cannot become the face of a card.
+
 ---
 
 ## 2. Failure handling

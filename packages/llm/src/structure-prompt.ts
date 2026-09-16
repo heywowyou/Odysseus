@@ -25,6 +25,8 @@ Before writing any ID into your response, confirm its exact text appears in the 
 
 Group the findings into roughly 8 to 15 themes a business owner can act on. Do not create a theme with zero findings, and do not leave any finding you consider important ungrouped.
 
+A theme is one remediation job: everything in it should be fixed by the same kind of work, so that a single sentence could tell the client what to do about the whole theme. Two findings belong together when fixing one is the same task as fixing the other, not merely because they share a category or a severity. A finding that needs a different fix belongs in a different theme, even when that leaves a theme with very few findings, and even when it means one finding gets a theme of its own. Never pad a theme with unrelated rules to reach a size: a heading-structure problem does not belong in a theme about language annotations, an automatic page reload does not belong in a theme about link and image text, and a layout-stability metric does not belong in a theme about loading time. Findings you cannot place in a coherent theme are better left ungrouped than filed under one they contradict.
+
 For each theme, set:
 - category: accessibility, seo, performance, rendering, or privacy. Use the category the theme's own findings carry. Use privacy for findings about security response headers, cookies, trackers, or what third parties can observe about visitors. Findings whose own category is geo have no theme category of their own: group them under seo.
 - effort (low/medium/high) and impact (low/medium/high) for fixing the theme.
