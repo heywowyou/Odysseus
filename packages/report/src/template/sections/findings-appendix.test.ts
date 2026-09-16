@@ -834,7 +834,47 @@ describe('item 1.4: third-party embed findings render in their own attributed bl
     const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
 
     expect(html).toContain('id="annexref-f001"');
-    expect(html).toContain('occurrences de cette règle concernent un composant tiers');
+    // One split-off occurrence, so the note is singular (issue #322).
+    expect(html).toContain('Encore 1 occurrence de cette règle concerne un composant tiers');
+  });
+
+  it('issue #322: the same pointer agrees in the plural once more than one occurrence is split off', async () => {
+    const manifest = buildManifest();
+    const findings = [
+      buildFinding({
+        findingId: 'f001',
+        ruleId: 'color-contrast',
+        category: 'accessibility',
+        severity: 'moderate',
+        elements: [{ pageUrl: 'https://example.com/', selector: 'footer p', snippet: '' }],
+      }),
+      buildFinding({
+        findingId: 'f002',
+        ruleId: 'color-contrast',
+        category: 'accessibility',
+        severity: 'moderate',
+        elements: [
+          { pageUrl: 'https://example.com/', selector: '#gform_submit_button_1', snippet: '' },
+        ],
+      }),
+      buildFinding({
+        findingId: 'f003',
+        ruleId: 'color-contrast',
+        category: 'accessibility',
+        severity: 'moderate',
+        elements: [
+          {
+            pageUrl: 'https://example.com/contact',
+            selector: '#gform_submit_button_2',
+            snippet: '',
+          },
+        ],
+      }),
+    ];
+
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
+
+    expect(html).toContain('Encore 2 occurrences de cette règle concernent un composant tiers');
   });
 
   it('fix #6: renders no pointer when a rule has no matching third-party occurrence', async () => {
@@ -855,7 +895,7 @@ describe('item 1.4: third-party embed findings render in their own attributed bl
       'general',
     );
 
-    expect(html).not.toContain('occurrences de cette règle concernent un composant tiers');
+    expect(html).not.toContain('de cette règle concerne');
   });
 });
 

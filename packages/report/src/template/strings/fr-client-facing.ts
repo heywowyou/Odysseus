@@ -26,9 +26,13 @@ export function applyFrenchClientFacingCopy(strings: ReportStrings): ReportStrin
         'peut attendre et ce qui demande une vérification complémentaire avant intervention.',
       complicationHeading: 'Ce qui mérite votre attention',
       complicationBodyTemplate:
-        "L'analyse a relevé {findings} constats distincts, dont {criticalSerious} critiques " +
-        'ou sérieux, sur au moins {pages} du périmètre analysé. Ils sont regroupés en ' +
-        '{priorities} priorités afin de faire ressortir les corrections à traiter en premier.',
+        "L'analyse a relevé {findings}, dont {criticalSerious} de gravité critique ou " +
+        'sérieuse, sur au moins {pages} du périmètre analysé. Le regroupement en {priorities} ' +
+        'fait ressortir les corrections à traiter en premier.',
+      // The base strings name these "priorités classées", which reads as
+      // internal vocabulary next to the client-facing section titles.
+      prioritySingular: 'priorité',
+      priorityPlural: 'priorités',
       consequenceRegulatory:
         "Certaines obligations d'accessibilité peuvent également concerner votre " +
         'établissement. La section « {legalSection} » présente les critères et les faits ' +
@@ -46,10 +50,17 @@ export function applyFrenchClientFacingCopy(strings: ReportStrings): ReportStrin
       introTemplate:
         '{pages}, {findings} constats distincts après regroupement des répétitions. Un même ' +
         'constat présent sur plusieurs pages ne compte qu’une fois.',
-      priorityOwnershipTemplate:
-        'Parmi les constats prioritaires, {firstParty} peuvent être corrigés directement, ' +
-        '{thirdParty} doivent être transmis à un tiers et {verifyIntent} demandent une ' +
-        'vérification selon le contexte.',
+      priorityOwnership: {
+        leadTemplate: 'Parmi les constats prioritaires, {clauses}.',
+        firstPartySingularTemplate: '{count} peut être corrigé directement',
+        firstPartyPluralTemplate: '{count} peuvent être corrigés directement',
+        thirdPartySingularTemplate: '{count} doit être transmis à un tiers',
+        thirdPartyPluralTemplate: '{count} doivent être transmis à un tiers',
+        verifyIntentSingularTemplate: '{count} demande une vérification selon le contexte',
+        verifyIntentPluralTemplate: '{count} demandent une vérification selon le contexte',
+        clauseSeparator: ', ',
+        clauseConjunction: ' et ',
+      },
       severityBreakdownHeading: 'Répartition par gravité',
     },
     cover: {
@@ -90,10 +101,17 @@ export function applyFrenchClientFacingCopy(strings: ReportStrings): ReportStrin
         'Le montant indiqué ci-dessus correspond au plafond prévu par le texte, pas à une ' +
         'sanction prononcée contre votre entreprise. Votre situation peut être confirmée par ' +
         'votre conseil juridique.',
-      priorityOwnershipTemplate:
-        'Parmi les priorités retenues, {firstParty} constats peuvent être corrigés directement, ' +
-        '{thirdParty} doivent être transmis à un tiers et {verifyIntent} demandent une ' +
-        'vérification selon votre contexte.',
+      priorityOwnership: {
+        leadTemplate: 'Parmi les priorités retenues, {clauses}.',
+        firstPartySingularTemplate: '{count} constat peut être corrigé directement',
+        firstPartyPluralTemplate: '{count} constats peuvent être corrigés directement',
+        thirdPartySingularTemplate: '{count} doit être transmis à un tiers',
+        thirdPartyPluralTemplate: '{count} doivent être transmis à un tiers',
+        verifyIntentSingularTemplate: '{count} demande une vérification selon votre contexte',
+        verifyIntentPluralTemplate: '{count} demandent une vérification selon votre contexte',
+        clauseSeparator: ', ',
+        clauseConjunction: ' et ',
+      },
       startHereKicker: 'À traiter en premier',
       categoryImbalanceNote:
         "Les constats les plus significatifs de ce site concernent surtout l'accessibilité ; " +
@@ -154,10 +172,21 @@ export function applyFrenchClientFacingCopy(strings: ReportStrings): ReportStrin
         'et sa fiabilité influencent la facilité avec laquelle ils peuvent trouver ' +
         "l'information et avancer dans leur parcours. Les priorités de ce rapport indiquent " +
         'où concentrer les premières corrections.',
-      synthesisCoverageTemplate:
-        'Le rapport retient {priorities} priorités. Parmi elles, {seriousCritical} couvrent au ' +
-        'moins un constat critique ou sérieux et {quickWins} correspondent à des gains rapides, ' +
-        'avec une complexité faible pour un impact moyen ou élevé.',
+      synthesisCoverage: {
+        leadTemplate: 'Le rapport retient {priorities}. Parmi elles, {clauses}.',
+        prioritySingularTemplate: '{count} priorité',
+        priorityPluralTemplate: '{count} priorités',
+        seriousCriticalSingularTemplate: '{count} couvre au moins un constat critique ou sérieux',
+        seriousCriticalPluralTemplate: '{count} couvrent au moins un constat critique ou sérieux',
+        quickWinsSingularTemplate:
+          '{count} correspond à un gain rapide, avec une complexité faible pour un impact moyen ' +
+          'ou élevé',
+        quickWinsPluralTemplate:
+          '{count} correspondent à des gains rapides, avec une complexité faible pour un impact ' +
+          'moyen ou élevé',
+        clauseSeparator: ', ',
+        clauseConjunction: ' et ',
+      },
       synthesisCoverageFallback:
         'Les priorités et la répartition des constats par gravité présentées dans ce rapport ' +
         'indiquent les corrections à engager en premier.',

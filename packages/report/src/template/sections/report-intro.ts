@@ -88,11 +88,13 @@ export function renderReportIntro(
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
   const facts = computeIntroFacts(analysis, findings, priorities, findingsById);
 
+  const countPhrase = (count: number, singular: string, plural: string): string =>
+    `${formatNumber(count, analysis.language)} ${pluralize(analysis.language, count, singular, plural)}`;
   const complication = fillTemplate(r.complicationBodyTemplate, {
-    findings: formatNumber(facts.findingCount, analysis.language),
+    findings: countPhrase(facts.findingCount, r.findingSingular, r.findingPlural),
     criticalSerious: formatNumber(facts.criticalSeriousCount, analysis.language),
-    pages: `${formatNumber(facts.affectedPageCount, analysis.language)} ${pluralize(facts.affectedPageCount, r.pageSingular, r.pagePlural)}`,
-    priorities: formatNumber(facts.priorityCount, analysis.language),
+    pages: countPhrase(facts.affectedPageCount, r.pageSingular, r.pagePlural),
+    priorities: countPhrase(facts.priorityCount, r.prioritySingular, r.priorityPlural),
   });
 
   // The legal reminder resolves the legal section through its canonical

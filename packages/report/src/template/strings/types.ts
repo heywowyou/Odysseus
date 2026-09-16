@@ -19,6 +19,27 @@ export interface OwnershipTemplates<T> {
   'verify-intent': T;
 }
 
+/** The who-has-to-act sentence, assembled clause by clause in
+ *  priority-ownership-note.ts. Split into per-clause singular/plural
+ *  templates (issue #322) because one fixed sentence with three
+ *  interpolated counts cannot agree with any of them, and cannot drop the
+ *  clauses whose count is zero. Each clause template takes {count}; the
+ *  lead-in takes {clauses}. */
+export interface PriorityOwnershipStrings {
+  leadTemplate: string;
+  firstPartySingularTemplate: string;
+  firstPartyPluralTemplate: string;
+  thirdPartySingularTemplate: string;
+  thirdPartyPluralTemplate: string;
+  verifyIntentSingularTemplate: string;
+  verifyIntentPluralTemplate: string;
+  /** Between all clauses but the last pair. */
+  clauseSeparator: string;
+  /** Before the last clause; carries its own surrounding spacing and, in
+   *  English, the serial comma the existing copy uses. */
+  clauseConjunction: string;
+}
+
 export interface ReportStrings {
   accessibilityStatementGuidance: {
     heading: string;
@@ -62,17 +83,23 @@ export interface ReportStrings {
     situationHeading: string;
     situationBody: string;
     complicationHeading: string;
-    /** The deterministic complication facts. {findings}, {criticalSerious}
-     *  and {priorities} arrive pre-formatted (formatNumber); {pages}
-     *  arrives as the full "N page(s)" phrase (formatNumber plus
-     *  pageSingular/pagePlural below), since English and French both
-     *  inflect the noun (issue #28: "1 pages" printed for a one-page
-     *  scope). The "at least" wording accounts for site-wide findings that
-     *  carry no page URL. Template: {findings}, {criticalSerious}, {pages},
-     *  {priorities}. */
+    /** The deterministic complication facts. {findings}, {pages} and
+     *  {priorities} each arrive as a full "N noun(s)" phrase (formatNumber
+     *  plus the singular/plural pairs below), since English and French
+     *  both inflect the noun (issue #28: "1 pages" printed for a one-page
+     *  scope; issue #322: "0 constats distincts" and "0 priorités" printed
+     *  for an empty scope, where French takes the singular). Only
+     *  {criticalSerious} is a bare pre-formatted count, so the sentence
+     *  wording around it must stay inflection-free. The "at least" wording
+     *  accounts for site-wide findings that carry no page URL. Template:
+     *  {findings}, {criticalSerious}, {pages}, {priorities}. */
     complicationBodyTemplate: string;
     pageSingular: string;
     pagePlural: string;
+    findingSingular: string;
+    findingPlural: string;
+    prioritySingular: string;
+    priorityPlural: string;
     /** The legal reminder, pointing at the later legal section. Kept
      *  conditional ("peuvent s'appliquer" / "may apply") and deferring to
      *  counsel: client-claims.test.ts pins both properties. Template:
@@ -125,8 +152,7 @@ export interface ReportStrings {
      *  only in the annex's "À traiter avec vos prestataires tiers"
      *  section. Template: {percent}. */
     thirdPartyOccurrencesNoteTemplate: string;
-    /** Template: {firstParty}, {thirdParty}, {verifyIntent}. */
-    priorityOwnershipTemplate: string;
+    priorityOwnership: PriorityOwnershipStrings;
     pagesWithCriticalTileLabel: string;
     criticalTileLabel: string;
     seriousTileLabel: string;
@@ -389,8 +415,7 @@ export interface ReportStrings {
     /** States that the general figure above is not this client's
      *  sanction, and recommends legal confirmation. */
     regulatoryContextCounsel: string;
-    /** Template: {firstParty}, {thirdParty}, {verifyIntent}. */
-    priorityOwnershipTemplate: string;
+    priorityOwnership: PriorityOwnershipStrings;
     /** Kicker over the "where to start" jump-link box (doc §3 section 01:
      *  prose + jump links, capped at 3). */
     startHereKicker: string;
@@ -944,13 +969,31 @@ export interface ReportStrings {
      *  never invents a financial amount; any approved financial view is
      *  Plan 020's, inserted once in the executive summary. */
     synthesisStake: string;
-    /** Deterministic coverage recap. Template: {priorities},
-     *  {seriousCritical}, {quickWins}, all counts derived in next-steps.ts
-     *  from the same RenderedPriority view the priority and checklist
-     *  sections consume. Rendered only when that view is supplied;
-     *  otherwise synthesisCoverageFallback renders instead, so no figure
-     *  is ever invented here. */
-    synthesisCoverageTemplate: string;
+    /** Deterministic coverage recap, assembled clause by clause in
+     *  next-steps.ts from the same RenderedPriority view the priority and
+     *  checklist sections consume, so no figure is ever invented here.
+     *
+     *  Issue #322: a single template with three interpolated counts and
+     *  hardcoded plural verbs printed "1 correspondent à des gains
+     *  rapides". Each clause now carries its own agreement, a clause
+     *  whose count is zero is dropped, and a report with fewer than two
+     *  priorities falls back to synthesisCoverageFallback rather than
+     *  needing a third set of "parmi elles" singular forms for a
+     *  breakdown that would say nothing.
+     *
+     *  leadTemplate takes {priorities} (a full "N priorités" phrase) and
+     *  {clauses}; each clause template takes {count}. */
+    synthesisCoverage: {
+      leadTemplate: string;
+      prioritySingularTemplate: string;
+      priorityPluralTemplate: string;
+      seriousCriticalSingularTemplate: string;
+      seriousCriticalPluralTemplate: string;
+      quickWinsSingularTemplate: string;
+      quickWinsPluralTemplate: string;
+      clauseSeparator: string;
+      clauseConjunction: string;
+    };
     /** Number-free fallback for synthesisCoverageTemplate, rendered when
      *  no rendered-priorities view reaches this section. */
     synthesisCoverageFallback: string;
@@ -1109,8 +1152,11 @@ export interface ReportStrings {
      *  section (item 1.4's partition), so a reader is not left thinking a
      *  rule's footprint here is its entire footprint. Template: {count},
      *  {thirdPartyHeading} (this same block's own thirdPartyHeading
-     *  string). */
+     *  string). Issue #322: the singular form exists because the note
+     *  printed "Encore 1 occurrences de cette règle concernent un
+     *  composant tiers" whenever exactly one occurrence was split off. */
     splitGroupThirdPartyNoteTemplate: string;
+    splitGroupThirdPartyNoteSingularTemplate: string;
     /** item 29: the list of crawled URLs was not printed anywhere - the
      *  client had no way to verify the scope they paid for beyond a bare
      *  count on the cover. Template: {count}. */

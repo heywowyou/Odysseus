@@ -149,9 +149,9 @@ function renderRuleBlock(
 ): string {
   const r = strings.remainingWork;
   const counts = [
-    `${formatNumber(block.findingIds.length, language)} ${pluralize(block.findingIds.length, r.findingSingular, r.findingPlural)}`,
-    `${formatNumber(block.occurrences, language)} ${pluralize(block.occurrences, r.occurrenceSingular, r.occurrencePlural)}`,
-    `${formatNumber(block.pages, language)} ${pluralize(block.pages, r.pageSingular, r.pagePlural)}`,
+    `${formatNumber(block.findingIds.length, language)} ${pluralize(language, block.findingIds.length, r.findingSingular, r.findingPlural)}`,
+    `${formatNumber(block.occurrences, language)} ${pluralize(language, block.occurrences, r.occurrenceSingular, r.occurrencePlural)}`,
+    `${formatNumber(block.pages, language)} ${pluralize(language, block.pages, r.pageSingular, r.pagePlural)}`,
   ].join(' · ');
 
   const remediation =

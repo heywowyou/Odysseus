@@ -128,10 +128,10 @@ describe('renderReportIntro', () => {
     expect(html).toContain(
       escapeHtml(
         fillTemplate(clientFr.reportIntro.complicationBodyTemplate, {
-          findings: '3',
+          findings: '3 constats distincts',
           criticalSerious: '2',
           pages: '2 pages',
-          priorities: '1',
+          priorities: '1 priorité',
         }),
       ),
     );
@@ -152,10 +152,10 @@ describe('renderReportIntro', () => {
     expect(html).toContain(clientEn.reportIntro.situationBody);
     expect(html).toContain(
       fillTemplate(clientEn.reportIntro.complicationBodyTemplate, {
-        findings: '1',
+        findings: '1 distinct finding',
         criticalSerious: '1',
         pages: '1 page',
-        priorities: '1',
+        priorities: '1 priority',
       }),
     );
     expect(html).toContain(resolveGenericDecisionQuestion('en'));
@@ -168,10 +168,10 @@ describe('renderReportIntro', () => {
     expect(html).toContain(
       escapeHtml(
         fillTemplate(clientFr.reportIntro.complicationBodyTemplate, {
-          findings: '0',
+          findings: '0 constat distinct',
           criticalSerious: '0',
-          pages: '0 pages',
-          priorities: '0',
+          pages: '0 page',
+          priorities: '0 priorité',
         }),
       ),
     );
@@ -189,10 +189,10 @@ describe('renderReportIntro', () => {
 
     expect(html).toContain(
       fillTemplate(clientEn.reportIntro.complicationBodyTemplate, {
-        findings: '0',
+        findings: '0 distinct findings',
         criticalSerious: '0',
         pages: '0 pages',
-        priorities: '0',
+        priorities: '0 priorities',
       }),
     );
     expect(html).toContain(resolveGenericDecisionQuestion('en'));
@@ -212,7 +212,8 @@ describe('renderReportIntro', () => {
       buildPriority('Priorité fournie', 1, [findings[0]!]),
     ]);
 
-    expect(html).toContain('Ils sont regroupés en 1 priorités afin de faire ressortir');
+    // Issue #322: one priority, so the noun agrees in the singular.
+    expect(html).toContain('Le regroupement en 1 priorité fait ressortir');
     // Issue #54: the section no longer lists actions at all, so neither the
     // view's own titles nor the stored analysis's themes render here.
     expect(html).not.toContain('Les trois actions à lancer en priorité');

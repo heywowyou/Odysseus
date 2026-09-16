@@ -102,8 +102,19 @@ function stripRegimeProperNouns(html: string): string {
   return stripped;
 }
 
-const enValues = new Set(flattenStrings(en));
-const frValues = new Set(flattenStrings(fr));
+/** Issue #322 introduced enumeration punctuation as strings ("\u00a0et\u00a0",
+ *  ", and ") so each language owns how it joins a clause list. These carry
+ *  no vocabulary, and a bare conjunction matches inside any code-owned
+ *  bilingual proper noun the other language legitimately contains - the
+ *  French name of the DGCCRF, spelled out in the English report, contains
+ *  " et ". Chrome leaks are about words, so values with no letter run long
+ *  enough to be one are not part of the comparison. */
+function isComparableChromeValue(value: string): boolean {
+  return /\p{L}{4}/u.test(value);
+}
+
+const enValues = new Set(flattenStrings(en).filter(isComparableChromeValue));
+const frValues = new Set(flattenStrings(fr).filter(isComparableChromeValue));
 const enOnlyValues = [...enValues].filter((value) => !frValues.has(value));
 const frOnlyValues = [...frValues].filter((value) => !enValues.has(value));
 

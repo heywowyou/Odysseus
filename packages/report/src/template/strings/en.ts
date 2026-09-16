@@ -28,9 +28,13 @@ export const en: ReportStrings = {
       'This report answers one simple need: a factual picture of the site, established by automated, reproducible tests, so you can decide what to fix and in what order. Deterministic tools visited the analyzed scope and compared every page against public criteria: accessibility (WCAG 2.2 level AA), search engine optimization (SEO), visibility to AI assistants (GEO), and rendering without JavaScript. Every finding listed in this report comes from one of those tests: nothing is invented, nothing is guessed.',
     complicationHeading: 'What the diagnostic found',
     complicationBodyTemplate:
-      'The analysis raised {findings} distinct findings, {criticalSerious} of them critical or serious, present on at least {pages} of the analyzed scope. These findings are grouped into {priorities} ranked priorities, which indicate where to start.',
+      'The analysis raised {findings}, {criticalSerious} of them critical or serious, present on at least {pages} of the analyzed scope. Grouping them into {priorities} indicates where to start.',
     pageSingular: 'page',
     pagePlural: 'pages',
+    findingSingular: 'distinct finding',
+    findingPlural: 'distinct findings',
+    prioritySingular: 'ranked priority',
+    priorityPlural: 'ranked priorities',
     consequenceRegulatory:
       'Legal obligations may apply to your establishment: the "{legalSection}" section sets out the published criteria and the recorded facts, to be confirmed with your legal adviser.',
     notALegalOpinionNote:
@@ -57,8 +61,17 @@ export const en: ReportStrings = {
       // B6: see the French entry for why this names the containing
       // numbered section rather than the sub-heading alone.
       '{percent}% of these occurrences come from third-party components (forms, popups, booking widget) - see "To address with your third-party providers", in the technical appendix.',
-    priorityOwnershipTemplate:
-      'Priorities: {firstParty} to fix directly, {thirdParty} to pass on, {verifyIntent} to verify by intent.',
+    priorityOwnership: {
+      leadTemplate: 'Priorities: {clauses}.',
+      firstPartySingularTemplate: '{count} to fix directly',
+      firstPartyPluralTemplate: '{count} to fix directly',
+      thirdPartySingularTemplate: '{count} to pass on',
+      thirdPartyPluralTemplate: '{count} to pass on',
+      verifyIntentSingularTemplate: '{count} to verify by intent',
+      verifyIntentPluralTemplate: '{count} to verify by intent',
+      clauseSeparator: ', ',
+      clauseConjunction: ', ',
+    },
     pagesWithCriticalTileLabel: 'pages with at least one critical finding',
     criticalTileLabel: 'critical',
     seriousTileLabel: 'serious',
@@ -222,8 +235,17 @@ export const en: ReportStrings = {
       'The accessibility obligations addressed in this report fall under the European Accessibility Act, transposed into French law by loi n° 2023-171. Depending on the size of the company and its sector, conformance requirements may apply to your site: the applicable criteria and your situation, as verified by this audit, are detailed in the "Legal exposure" section.',
     regulatoryContextCounsel:
       'The amount above is a general legal reference, not a sanction applying to your company. Have your situation confirmed by a legal adviser.',
-    priorityOwnershipTemplate:
-      'Within the priorities: {firstParty} to fix directly, {thirdParty} to pass on, and {verifyIntent} to verify by intent.',
+    priorityOwnership: {
+      leadTemplate: 'Within the priorities: {clauses}.',
+      firstPartySingularTemplate: '{count} to fix directly',
+      firstPartyPluralTemplate: '{count} to fix directly',
+      thirdPartySingularTemplate: '{count} to pass on',
+      thirdPartyPluralTemplate: '{count} to pass on',
+      verifyIntentSingularTemplate: '{count} to verify by intent',
+      verifyIntentPluralTemplate: '{count} to verify by intent',
+      clauseSeparator: ', ',
+      clauseConjunction: ', and ',
+    },
     startHereKicker: 'Where to start',
     glossaryPointerSentence:
       'Technical terms used in this report are defined in the "Glossary" section.',
@@ -644,8 +666,17 @@ export const en: ReportStrings = {
     // reference replaces the former three sales cards.
     synthesisStake:
       'Your site is a direct booking and information channel: its accessibility, its visibility in search engines and AI assistants, and its speed shape what your visitors can actually do there. This report states the measured facts; fixing them is the job of the roles below.',
-    synthesisCoverageTemplate:
-      'Ranked priorities: {priorities}. Covering at least one critical or serious finding: {seriousCritical}. Quick wins, low complexity for a medium or high impact: {quickWins}.',
+    synthesisCoverage: {
+      leadTemplate: 'Ranked priorities: {priorities}. {clauses}.',
+      prioritySingularTemplate: '{count}',
+      priorityPluralTemplate: '{count}',
+      seriousCriticalSingularTemplate: 'Covering at least one critical or serious finding: {count}',
+      seriousCriticalPluralTemplate: 'Covering at least one critical or serious finding: {count}',
+      quickWinsSingularTemplate: 'Quick wins, low complexity for a medium or high impact: {count}',
+      quickWinsPluralTemplate: 'Quick wins, low complexity for a medium or high impact: {count}',
+      clauseSeparator: '. ',
+      clauseConjunction: '. ',
+    },
     synthesisCoverageFallback:
       'The breakdown of findings by severity appears earlier in this report, in the ranked priorities and the audit figures.',
     synthesisRoles:
@@ -731,6 +762,8 @@ export const en: ReportStrings = {
     observationsCrossRefLabel: 'see Observations',
     splitGroupThirdPartyNoteTemplate:
       '{count} more occurrences of this rule affect a third-party component; see "{thirdPartyHeading}".',
+    splitGroupThirdPartyNoteSingularTemplate:
+      '{count} more occurrence of this rule affects a third-party component; see "{thirdPartyHeading}".',
     crawledPagesHeadingTemplate: 'Pages analyzed ({count})',
   },
   methodology: {

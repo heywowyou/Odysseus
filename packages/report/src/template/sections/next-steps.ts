@@ -1,5 +1,5 @@
 import { isKnownBuildId } from '@odysseus/core';
-import type { AuditManifest } from '@odysseus/core';
+import type { AuditManifest, ReportLanguage } from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
 import type { ReportRenderMetadata } from '../../types.js';
 import type { RenderedPriority } from '../rendered-priorities.js';
@@ -17,6 +17,8 @@ import {
   ODYSSEUS_SIGNATORY_NAME,
   ODYSSEUS_REGISTRATION_NUMBER,
   auditDate,
+  joinClauseList,
+  takesSingularAgreement,
 } from '../html-utils.js';
 import { isQuickWinTheme } from './themes.js';
 
@@ -101,23 +103,7 @@ export function renderNextSteps(
   // findings carries that severity; the quick-win test is themes.ts's F40
   // definition (low effort, medium or high impact), so this line and the
   // cards' badge can never disagree.
-  const coverage = renderedPriorities
-    ? fillTemplate(n.synthesisCoverageTemplate, {
-        priorities: formatNumber(renderedPriorities.length, language),
-        seriousCritical: formatNumber(
-          renderedPriorities.filter((priority) =>
-            priority.findings.some(
-              (finding) => finding.severity === 'critical' || finding.severity === 'serious',
-            ),
-          ).length,
-          language,
-        ),
-        quickWins: formatNumber(
-          renderedPriorities.filter((priority) => isQuickWinTheme(priority.theme)).length,
-          language,
-        ),
-      })
-    : n.synthesisCoverageFallback;
+  const coverage = renderCoverageRecap(renderedPriorities, n, language);
 
   // The comparison may only name Chrome UX Report field data when the
   // manifest actually carries it, same predicate section 09 renders its
@@ -156,4 +142,52 @@ export function renderNextSteps(
     '',
     'section-14',
   );
+}
+
+/** Issue #322: the recap used to be one template with three interpolated
+ *  counts and hardcoded plural verbs, which printed "5 couvrent ... et 1
+ *  correspondent à des gains rapides". Each clause picks its own
+ *  agreement, a clause whose count is zero is dropped, and a report with
+ *  fewer than two priorities skips the breakdown entirely: "parmi elles"
+ *  needs a plural antecedent, and a one-priority split says nothing the
+ *  priority card has not already said. */
+function renderCoverageRecap(
+  renderedPriorities: readonly RenderedPriority[] | undefined,
+  n: ReportStrings['nextSteps'],
+  language: ReportLanguage,
+): string {
+  const c = n.synthesisCoverage;
+  if (renderedPriorities === undefined || renderedPriorities.length < 2) {
+    return n.synthesisCoverageFallback;
+  }
+
+  const seriousCritical = renderedPriorities.filter((priority) =>
+    priority.findings.some(
+      (finding) => finding.severity === 'critical' || finding.severity === 'serious',
+    ),
+  ).length;
+  const quickWins = renderedPriorities.filter((priority) => isQuickWinTheme(priority.theme)).length;
+
+  const clause = (count: number, singular: string, plural: string): string | undefined =>
+    count === 0
+      ? undefined
+      : fillTemplate(takesSingularAgreement(language, count) ? singular : plural, {
+          count: formatNumber(count, language),
+        });
+
+  const clauses = [
+    clause(seriousCritical, c.seriousCriticalSingularTemplate, c.seriousCriticalPluralTemplate),
+    clause(quickWins, c.quickWinsSingularTemplate, c.quickWinsPluralTemplate),
+  ].filter((value): value is string => value !== undefined);
+  if (clauses.length === 0) return n.synthesisCoverageFallback;
+
+  return fillTemplate(c.leadTemplate, {
+    priorities: fillTemplate(
+      takesSingularAgreement(language, renderedPriorities.length)
+        ? c.prioritySingularTemplate
+        : c.priorityPluralTemplate,
+      { count: formatNumber(renderedPriorities.length, language) },
+    ),
+    clauses: joinClauseList(clauses, c),
+  });
 }

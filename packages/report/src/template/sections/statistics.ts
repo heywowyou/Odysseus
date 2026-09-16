@@ -15,6 +15,7 @@ import {
 } from '../html-utils.js';
 import { CATEGORY, CATEGORY_ORDER, SEVERITY } from '../design-tokens.js';
 import { type RenderedPriority, summarizePriorityOwnership } from '../rendered-priorities.js';
+import { renderPriorityOwnershipSentence } from '../priority-ownership-note.js';
 import { computeStatistics } from '../statistics.js';
 import { RULE_TRANSLATIONS_FR } from '../rule-translations.js';
 import { buildCoverageDisclosure } from '../coverage-disclosure.js';
@@ -111,7 +112,7 @@ export function renderStatistics(
   const numberTiles = [
     renderNumberTile(
       n(stats.pagesScanned),
-      pluralize(stats.pagesScanned, s.pagesAnalyzedSingular, s.pagesAnalyzedPlural),
+      pluralize(language, stats.pagesScanned, s.pagesAnalyzedSingular, s.pagesAnalyzedPlural),
     ),
     renderNumberTile(n(stats.totalFindings), s.findingsTileLabel, true),
     renderNumberTile(n(stats.accessibilityOccurrences), s.accessibilityOccurrencesTileLabel),
@@ -184,8 +185,8 @@ export function renderStatistics(
     .join('');
 
   const wcagFailCountText = fillTemplate(s.wcagFailingDescriptionTemplate, {
-    criteria: `${n(stats.wcagCriteriaFailingCount)} ${pluralize(stats.wcagCriteriaFailingCount, s.wcagCriterionSingular, s.wcagCriterionPlural)}`,
-    pages: `${n(stats.pagesWithWcagFailure)} ${pluralize(stats.pagesWithWcagFailure, s.pageSingular, s.pagePlural)}`,
+    criteria: `${n(stats.wcagCriteriaFailingCount)} ${pluralize(language, stats.wcagCriteriaFailingCount, s.wcagCriterionSingular, s.wcagCriterionPlural)}`,
+    pages: `${n(stats.pagesWithWcagFailure)} ${pluralize(language, stats.pagesWithWcagFailure, s.pageSingular, s.pagePlural)}`,
   });
 
   // item 1.8 (La Corniche pass): the tile above now excludes heuristic
@@ -227,14 +228,11 @@ export function renderStatistics(
         )}</p>`
       : '';
   const ownership = priorities ? summarizePriorityOwnership(priorities, manifest) : undefined;
-  const priorityOwnershipNote = ownership
-    ? `<p class="statistics-note">${escapeHtml(
-        fillTemplate(s.priorityOwnershipTemplate, {
-          firstParty: n(ownership['first-party-action']),
-          thirdParty: n(ownership['third-party-escalation']),
-          verifyIntent: n(ownership['verify-intent']),
-        }),
-      )}</p>`
+  const ownershipSentence = ownership
+    ? renderPriorityOwnershipSentence(ownership, s.priorityOwnership, language)
+    : undefined;
+  const priorityOwnershipNote = ownershipSentence
+    ? `<p class="statistics-note">${escapeHtml(ownershipSentence)}</p>`
     : '';
 
   const footnotes =

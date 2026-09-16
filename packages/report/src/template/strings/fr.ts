@@ -29,9 +29,13 @@ export const fr: ReportStrings = {
       "Ce rapport répond à un besoin simple : disposer d'un état des lieux factuel du site, établi par des tests automatisés et reproductibles, pour décider quoi corriger et dans quel ordre. Des outils déterministes ont visité le périmètre analysé et comparé chaque page à des critères publics : accessibilité (WCAG 2.2 niveau AA), référencement naturel (SEO), visibilité auprès des assistants IA (GEO), et rendu sans JavaScript. Chaque constat listé dans ce rapport provient d'un de ces tests : rien n'est inventé, rien n'est deviné.",
     complicationHeading: 'Ce que le diagnostic relève',
     complicationBodyTemplate:
-      "L'analyse a relevé {findings} constats distincts, dont {criticalSerious} critiques ou sérieux, présents sur au moins {pages} du périmètre analysé. Ces constats sont regroupés en {priorities} priorités classées, qui indiquent par où commencer.",
+      "L'analyse a relevé {findings}, dont {criticalSerious} de gravité critique ou sérieuse, sur au moins {pages} du périmètre analysé. Le regroupement en {priorities} indique par où commencer.",
     pageSingular: 'page',
     pagePlural: 'pages',
+    findingSingular: 'constat distinct',
+    findingPlural: 'constats distincts',
+    prioritySingular: 'priorité classée',
+    priorityPlural: 'priorités classées',
     consequenceRegulatory:
       "Des obligations légales peuvent s'appliquer à votre établissement : la section « {legalSection} » décrit les critères publiés et les faits enregistrés, à faire confirmer par votre conseil juridique.",
     notALegalOpinionNote:
@@ -69,8 +73,17 @@ export const fr: ReportStrings = {
       // pages further on. Naming the numbered section that contains it is
       // the difference between a reference and a dead end.
       "{percent} % de ces occurrences proviennent de composants tiers (formulaires, fenêtres modales, widget de réservation) - voir « À traiter avec vos prestataires tiers », dans l'annexe technique.",
-    priorityOwnershipTemplate:
-      'Priorités : {firstParty} constats à corriger directement, {thirdParty} à transmettre à un tiers, {verifyIntent} à vérifier selon le contexte.',
+    priorityOwnership: {
+      leadTemplate: 'Priorités : {clauses}.',
+      firstPartySingularTemplate: '{count} constat à corriger directement',
+      firstPartyPluralTemplate: '{count} constats à corriger directement',
+      thirdPartySingularTemplate: '{count} à transmettre à un tiers',
+      thirdPartyPluralTemplate: '{count} à transmettre à un tiers',
+      verifyIntentSingularTemplate: '{count} à vérifier selon le contexte',
+      verifyIntentPluralTemplate: '{count} à vérifier selon le contexte',
+      clauseSeparator: ', ',
+      clauseConjunction: ', ',
+    },
     pagesWithCriticalTileLabel: 'pages avec au moins un constat critique',
     criticalTileLabel: 'critiques',
     seriousTileLabel: 'sérieux',
@@ -247,8 +260,17 @@ export const fr: ReportStrings = {
       "Les obligations d'accessibilité traitées dans ce rapport s'inscrivent dans le cadre de l'European Accessibility Act, transposé en droit français par la loi n° 2023-171. Selon la taille de l'entreprise et le secteur d'activité, des exigences de conformité peuvent concerner votre site : les critères applicables et votre situation, telle que vérifiée par cet audit, sont détaillés dans la section « Exposition légale ».",
     regulatoryContextCounsel:
       'Le montant ci-dessus est une référence légale générale, et non une sanction vous concernant. Faites confirmer votre situation par un conseil juridique.',
-    priorityOwnershipTemplate:
-      'Dans les priorités : {firstParty} constats à corriger directement, {thirdParty} à transmettre à un tiers et {verifyIntent} à vérifier selon votre contexte.',
+    priorityOwnership: {
+      leadTemplate: 'Dans les priorités : {clauses}.',
+      firstPartySingularTemplate: '{count} constat à corriger directement',
+      firstPartyPluralTemplate: '{count} constats à corriger directement',
+      thirdPartySingularTemplate: '{count} à transmettre à un tiers',
+      thirdPartyPluralTemplate: '{count} à transmettre à un tiers',
+      verifyIntentSingularTemplate: '{count} à vérifier selon votre contexte',
+      verifyIntentPluralTemplate: '{count} à vérifier selon votre contexte',
+      clauseSeparator: ', ',
+      clauseConjunction: ' et ',
+    },
     startHereKicker: 'Par où commencer',
     glossaryPointerSentence:
       'Les termes techniques utilisés dans ce rapport sont définis dans la section « Glossaire ».',
@@ -745,8 +767,19 @@ export const fr: ReportStrings = {
     // reference replaces the former three sales cards.
     synthesisStake:
       "Votre site est un canal direct de réservation et d'information : son accessibilité, sa visibilité dans les moteurs de recherche et les assistants IA, et sa vitesse conditionnent ce que vos visiteurs peuvent y faire. Ce rapport en dresse les constats mesurés ; leur correction relève des rôles ci-dessous.",
-    synthesisCoverageTemplate:
-      'Priorités classées : {priorities}. Couvrant au moins un constat critique ou sérieux : {seriousCritical}. Gains rapides, faible complexité pour un impact moyen ou élevé : {quickWins}.',
+    synthesisCoverage: {
+      leadTemplate: 'Priorités classées : {priorities}. {clauses}.',
+      prioritySingularTemplate: '{count}',
+      priorityPluralTemplate: '{count}',
+      seriousCriticalSingularTemplate: 'Couvrant au moins un constat critique ou sérieux : {count}',
+      seriousCriticalPluralTemplate: 'Couvrant au moins un constat critique ou sérieux : {count}',
+      quickWinsSingularTemplate:
+        'Gains rapides, faible complexité pour un impact moyen ou élevé : {count}',
+      quickWinsPluralTemplate:
+        'Gains rapides, faible complexité pour un impact moyen ou élevé : {count}',
+      clauseSeparator: '. ',
+      clauseConjunction: '. ',
+    },
     synthesisCoverageFallback:
       "La répartition des constats par gravité figure plus haut dans ce rapport, dans les priorités classées et les chiffres de l'audit.",
     synthesisRoles:
@@ -841,6 +874,8 @@ export const fr: ReportStrings = {
     observationsCrossRefLabel: 'voir Observations',
     splitGroupThirdPartyNoteTemplate:
       'Encore {count} occurrences de cette règle concernent un composant tiers ; voir « {thirdPartyHeading} ».',
+    splitGroupThirdPartyNoteSingularTemplate:
+      'Encore {count} occurrence de cette règle concerne un composant tiers ; voir « {thirdPartyHeading} ».',
     crawledPagesHeadingTemplate: 'Pages analysées ({count})',
   },
   methodology: {

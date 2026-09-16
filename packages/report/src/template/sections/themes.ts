@@ -89,6 +89,7 @@ function renderObservationBox(
     pageWord: pageWord(strings, evidence.uniquePageCount),
     occurrences: formatNumber(evidence.occurrenceCount, language),
     occurrenceWord: pluralize(
+      language,
       evidence.occurrenceCount,
       appendixStrings.occurrenceSingular,
       appendixStrings.occurrencePlural,

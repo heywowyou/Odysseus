@@ -163,8 +163,42 @@ export function formatNumber(value: number, language: 'fr' | 'en'): string {
  *  pluralisation placeholder verbatim into a real report). One shared
  *  helper closes both instances at once and stops a third one from
  *  needing its own bespoke fix later. */
-export function pluralize(count: number, singular: string, plural: string): string {
-  return count === 1 ? singular : plural;
+export function pluralize(
+  language: 'fr' | 'en',
+  count: number,
+  singular: string,
+  plural: string,
+): string {
+  return takesSingularAgreement(language, count) ? singular : plural;
+}
+
+/** Issue #322: French and English disagree about zero. English pluralises
+ *  it ("0 pages"), French keeps the singular ("0 page", "0 demande une
+ *  vérification"). The count-1 test alone produced "0 demandent une
+ *  vérification" and "0 doivent être transmis" in real reports. Every
+ *  count-driven agreement decision in the template goes through here so
+ *  the two languages cannot drift apart clause by clause. */
+export function takesSingularAgreement(language: 'fr' | 'en', count: number): boolean {
+  return language === 'fr' ? count <= 1 : count === 1;
+}
+
+/** Joins an enumeration the way prose does - "a, b et c" in French,
+ *  "a, b, and c" in English - from clauses the caller has already
+ *  filtered. Issue #322: sentences that enumerate counts have to be able
+ *  to drop a clause whose count is zero, which a fixed template with
+ *  hardcoded commas and conjunctions cannot do. The separator and
+ *  conjunction come from the strings file so the punctuation stays with
+ *  the language rather than being decided here. */
+export function joinClauseList(
+  clauses: readonly string[],
+  punctuation: { clauseSeparator: string; clauseConjunction: string },
+): string {
+  if (clauses.length <= 1) return clauses[0] ?? '';
+  return (
+    clauses.slice(0, -1).join(punctuation.clauseSeparator) +
+    punctuation.clauseConjunction +
+    clauses[clauses.length - 1]!
+  );
 }
 
 /** Issue #82: French typography puts a space before a colon; English
@@ -337,7 +371,7 @@ export function formatAndNMore(
   strings: AndNMoreStrings,
 ): string {
   return fillTemplate(
-    pluralize(remaining, strings.andNMoreSingularTemplate, strings.andNMoreTemplate),
+    pluralize(language, remaining, strings.andNMoreSingularTemplate, strings.andNMoreTemplate),
     {
       count: formatNumber(remaining, language),
     },

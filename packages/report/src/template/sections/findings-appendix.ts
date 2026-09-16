@@ -34,8 +34,8 @@ import { buildCoverageDisclosure } from '../coverage-disclosure.js';
 function renderRuleSum(strings: ReportStrings, language: ReportLanguage, group: RuleGroup): string {
   const a = strings.findingsAppendix;
   const parts = [
-    `${formatNumber(group.findings.length, language)} ${pluralize(group.findings.length, a.findingSingular, a.findingPlural)}`,
-    `${formatNumber(group.totalOccurrences, language)} ${pluralize(group.totalOccurrences, a.occurrenceSingular, a.occurrencePlural)}`,
+    `${formatNumber(group.findings.length, language)} ${pluralize(language, group.findings.length, a.findingSingular, a.findingPlural)}`,
+    `${formatNumber(group.totalOccurrences, language)} ${pluralize(language, group.totalOccurrences, a.occurrenceSingular, a.occurrencePlural)}`,
     // item 1.6: no longer "jusqu'à N pages" ("up to") - group.pages is now
     // a real union across every finding's own pageUrls, not the largest
     // single finding's page count, so it is an exact figure, not an
@@ -46,7 +46,7 @@ function renderRuleSum(strings: ReportStrings, language: ReportLanguage, group: 
     // would need its own explanation. Issue #291: the union itself is now
     // confined to the visited scope at the groupAppendix call sites, so
     // the figure can never exceed the analysed-page total.
-    `${formatNumber(group.pages, language)} ${pluralize(group.pages, a.pageSingular, a.pagePlural)}`,
+    `${formatNumber(group.pages, language)} ${pluralize(language, group.pages, a.pageSingular, a.pagePlural)}`,
   ];
   if (group.wcagCriteria.length > 0) {
     parts.push(`${a.wcagLabel} ${group.wcagCriteria.join(', ')}`);
@@ -374,6 +374,7 @@ function renderSubTableRow(
     resourceUrls.length > 0
       ? fillTemplate(
           pluralize(
+            language,
             resourceUrls.length,
             strings.findingsAppendix.affectedFilesCountSingularTemplate,
             strings.findingsAppendix.affectedFilesCountTemplate,
@@ -433,10 +434,18 @@ function renderRuleGroup(
   const thirdPartyCrossRefNote =
     thirdPartyCrossRefCount > 0
       ? `<p style="font-size:11px;opacity:0.55;margin-top:2px">${escapeHtml(
-          fillTemplate(a.splitGroupThirdPartyNoteTemplate, {
-            count: formatNumber(thirdPartyCrossRefCount, language),
-            thirdPartyHeading: a.thirdPartyHeading,
-          }),
+          fillTemplate(
+            pluralize(
+              language,
+              thirdPartyCrossRefCount,
+              a.splitGroupThirdPartyNoteSingularTemplate,
+              a.splitGroupThirdPartyNoteTemplate,
+            ),
+            {
+              count: formatNumber(thirdPartyCrossRefCount, language),
+              thirdPartyHeading: a.thirdPartyHeading,
+            },
+          ),
         )}</p>`
       : '';
   const vendorTag = vendorLabel

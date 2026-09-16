@@ -281,7 +281,7 @@ describe('plan 018 step 7: the ending is a synthesis, not three sales cards', ()
     expect(html).toContain('section-14');
     expect(html).toContain('point de contact direct avec vos visiteurs');
     expect(html).toContain(
-      'Le rapport retient 3 priorités. Parmi elles, 2 couvrent au moins un constat critique ou sérieux et 1 correspondent à des gains rapides',
+      'Le rapport retient 3 priorités. Parmi elles, 2 couvrent au moins un constat critique ou sérieux et 1 correspond à un gain rapide',
     );
     expect(html).toContain('La direction');
     expect(html).toContain('Le prestataire technique');

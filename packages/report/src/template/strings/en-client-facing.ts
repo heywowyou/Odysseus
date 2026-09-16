@@ -23,9 +23,11 @@ export function applyEnglishClientFacingCopy(strings: ReportStrings): ReportStri
         'what can wait, and what needs further verification before work begins.',
       complicationHeading: 'What needs your attention',
       complicationBodyTemplate:
-        'The analysis found {findings} distinct findings, including {criticalSerious} critical ' +
-        'or serious findings, across at least {pages} of the analyzed scope. They are grouped ' +
-        'into {priorities} priorities to make the fixes that matter most easy to identify.',
+        'The analysis found {findings}, including {criticalSerious} critical or serious, ' +
+        'across at least {pages} of the analyzed scope. Grouping them into {priorities} makes ' +
+        'the fixes that matter most easy to identify.',
+      prioritySingular: 'priority',
+      priorityPlural: 'priorities',
       consequenceRegulatory:
         'Accessibility requirements may also apply to your organization. The ' +
         '"{legalSection}" section sets out the relevant criteria and the facts available for ' +
@@ -42,9 +44,17 @@ export function applyEnglishClientFacingCopy(strings: ReportStrings): ReportStri
       introTemplate:
         '{pages}, {findings} distinct findings after repeated instances are grouped together. ' +
         'A finding that appears on several pages is counted once.',
-      priorityOwnershipTemplate:
-        'Among the priority findings, {firstParty} can be fixed directly, {thirdParty} need to ' +
-        'be passed to a third party, and {verifyIntent} need verification in context.',
+      priorityOwnership: {
+        leadTemplate: 'Among the priority findings, {clauses}.',
+        firstPartySingularTemplate: '{count} can be fixed directly',
+        firstPartyPluralTemplate: '{count} can be fixed directly',
+        thirdPartySingularTemplate: '{count} needs to be passed to a third party',
+        thirdPartyPluralTemplate: '{count} need to be passed to a third party',
+        verifyIntentSingularTemplate: '{count} needs verification in context',
+        verifyIntentPluralTemplate: '{count} need verification in context',
+        clauseSeparator: ', ',
+        clauseConjunction: ', and ',
+      },
       severityBreakdownHeading: 'Breakdown by severity',
     },
     cover: {
@@ -81,10 +91,17 @@ export function applyEnglishClientFacingCopy(strings: ReportStrings): ReportStri
       regulatoryContextCounsel:
         'The amount shown above is the statutory ceiling, not a penalty imposed on your company. ' +
         'Your position can be confirmed with your legal adviser.',
-      priorityOwnershipTemplate:
-        'Among the selected priorities, {firstParty} findings can be fixed directly, ' +
-        '{thirdParty} need to be passed to a third party, and {verifyIntent} need verification ' +
-        'in context.',
+      priorityOwnership: {
+        leadTemplate: 'Among the selected priorities, {clauses}.',
+        firstPartySingularTemplate: '{count} finding can be fixed directly',
+        firstPartyPluralTemplate: '{count} findings can be fixed directly',
+        thirdPartySingularTemplate: '{count} needs to be passed to a third party',
+        thirdPartyPluralTemplate: '{count} need to be passed to a third party',
+        verifyIntentSingularTemplate: '{count} needs verification in context',
+        verifyIntentPluralTemplate: '{count} need verification in context',
+        clauseSeparator: ', ',
+        clauseConjunction: ', and ',
+      },
       startHereKicker: 'Start here',
       categoryImbalanceNote:
         'The most significant findings on this site are concentrated in accessibility; organic ' +
@@ -143,10 +160,20 @@ export function applyEnglishClientFacingCopy(strings: ReportStrings): ReportStri
         'visibility in search engines and AI assistants, speed, and reliability all affect how ' +
         'easily people can find information and move through their journey. The priorities in ' +
         'this report show where to focus the first fixes.',
-      synthesisCoverageTemplate:
-        'The report identifies {priorities} priorities. Of these, {seriousCritical} include at ' +
-        'least one critical or serious finding, and {quickWins} are quick wins with low ' +
-        'complexity and medium or high impact.',
+      synthesisCoverage: {
+        leadTemplate: 'The report identifies {priorities}. Of these, {clauses}.',
+        prioritySingularTemplate: '{count} priority',
+        priorityPluralTemplate: '{count} priorities',
+        seriousCriticalSingularTemplate:
+          '{count} includes at least one critical or serious finding',
+        seriousCriticalPluralTemplate: '{count} include at least one critical or serious finding',
+        quickWinsSingularTemplate:
+          '{count} is a quick win with low complexity and medium or high impact',
+        quickWinsPluralTemplate:
+          '{count} are quick wins with low complexity and medium or high impact',
+        clauseSeparator: ', ',
+        clauseConjunction: ', and ',
+      },
       synthesisCoverageFallback:
         'The priorities and severity breakdown in this report show which fixes to address first.',
       synthesisRoles:

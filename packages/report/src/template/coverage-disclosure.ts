@@ -41,7 +41,7 @@ export function buildCoverageDisclosure(
   // was 1, in both languages - French adjectives also needed the matching
   // gendered singular, not just the English noun's dropped "s").
   const phrase = (count: number, singular: string, plural: string): string =>
-    `${n(count)} ${pluralize(count, singular, plural)}`;
+    `${n(count)} ${pluralize(language, count, singular, plural)}`;
 
   if (coverage.kind === 'legacy-unknown') {
     return {

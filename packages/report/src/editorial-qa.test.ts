@@ -17,6 +17,19 @@ function editorialProblem(value: string): string | null {
   return null;
 }
 
+/** Everything in one of these clause groups except the lead-in sentence
+ *  and the punctuation that joins the clauses together. */
+function clauseTemplates(group: object): string[] {
+  return Object.entries(group)
+    .filter(
+      (entry): entry is [string, string] =>
+        typeof entry[1] === 'string' &&
+        entry[0].endsWith('Template') &&
+        entry[0] !== 'leadTemplate',
+    )
+    .map(([, value]) => value);
+}
+
 function expectCompleteSentence(value: string): void {
   expect(value.trim()).toMatch(/[.!?]$/u);
 }
@@ -48,11 +61,11 @@ describe('Plan 046 French client-facing editorial contract', () => {
     report.reportIntro.consequenceRegulatory,
     report.reportIntro.notALegalOpinionNote,
     report.statistics.introTemplate,
-    report.statistics.priorityOwnershipTemplate,
+    report.statistics.priorityOwnership.leadTemplate,
     report.metadata.scorecardDisclaimer,
     report.executiveSummary.regulatoryContextCriterion,
     report.executiveSummary.regulatoryContextCounsel,
-    report.executiveSummary.priorityOwnershipTemplate,
+    report.executiveSummary.priorityOwnership.leadTemplate,
     report.executiveSummary.glossaryPointerSentence,
     report.executiveSummary.thirdPartySplitSentenceTemplate,
     report.executiveSummary.categoryImbalanceNote,
@@ -71,7 +84,7 @@ describe('Plan 046 French client-facing editorial contract', () => {
     report.themes.observationWithPageTemplate,
     report.themes.observationNoPageTemplate,
     report.nextSteps.synthesisStake,
-    report.nextSteps.synthesisCoverageTemplate,
+    report.nextSteps.synthesisCoverage.leadTemplate,
     report.nextSteps.synthesisCoverageFallback,
     report.nextSteps.synthesisRoles,
     report.nextSteps.synthesisReauditRecommendation,
@@ -98,6 +111,17 @@ describe('Plan 046 French client-facing editorial contract', () => {
     });
   });
 
+  /** Issue #322 split these enumeration clauses out of the sentence
+   *  templates so each can agree with its own count and a zero clause can
+   *  be dropped. They are deliberately fragments - the lead-in above
+   *  supplies the sentence and its full stop - so they are held to the
+   *  vocabulary contract but not to the complete-sentence one. */
+  const executiveReportClauses = [
+    ...clauseTemplates(report.statistics.priorityOwnership),
+    ...clauseTemplates(report.executiveSummary.priorityOwnership),
+    ...clauseTemplates(report.nextSteps.synthesisCoverage),
+  ];
+
   it('keeps preview prose as complete sentences', () => {
     for (const value of previewProse) expectCompleteSentence(value);
   });
@@ -107,7 +131,7 @@ describe('Plan 046 French client-facing editorial contract', () => {
   });
 
   it('keeps internal-tool and defensive vocabulary off prospect and executive prose', () => {
-    for (const value of [...previewProse, ...executiveReportProse]) {
+    for (const value of [...previewProse, ...executiveReportProse, ...executiveReportClauses]) {
       expect(editorialProblem(value), value).toBeNull();
     }
   });

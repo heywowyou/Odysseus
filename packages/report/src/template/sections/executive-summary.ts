@@ -15,6 +15,7 @@ import { sectionTitle } from '../section-registry.js';
 import { pickPrimaryBasis } from './methodology.js';
 import { selectRenderedThemes } from './themes.js';
 import { type RenderedPriority, summarizePriorityOwnership } from '../rendered-priorities.js';
+import { renderPriorityOwnershipSentence } from '../priority-ownership-note.js';
 
 const TOP_THEME_COUNT = 3;
 
@@ -271,14 +272,11 @@ export function renderExecutiveSummary(
   });
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
   const ownership = priorities ? summarizePriorityOwnership(priorities, manifest) : undefined;
-  const ownershipNote = ownership
-    ? `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:66ch">${escapeHtml(
-        fillTemplate(e.priorityOwnershipTemplate, {
-          firstParty: formatNumber(ownership['first-party-action'], analysis.language),
-          thirdParty: formatNumber(ownership['third-party-escalation'], analysis.language),
-          verifyIntent: formatNumber(ownership['verify-intent'], analysis.language),
-        }),
-      )}</p>`
+  const ownershipSentence = ownership
+    ? renderPriorityOwnershipSentence(ownership, e.priorityOwnership, analysis.language)
+    : undefined;
+  const ownershipNote = ownershipSentence
+    ? `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:66ch">${escapeHtml(ownershipSentence)}</p>`
     : '';
   return sheet(
     `

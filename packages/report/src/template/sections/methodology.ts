@@ -372,7 +372,7 @@ function renderExtendedPassNote(
       const status =
         count === 0
           ? m.extendedPassCheckCleanLabel
-          : `${formatNumber(count, language)} ${pluralize(count, m.extendedPassCheckFoundSingular, m.extendedPassCheckFoundPlural)}`;
+          : `${formatNumber(count, language)} ${pluralize(language, count, m.extendedPassCheckFoundSingular, m.extendedPassCheckFoundPlural)}`;
       return `${label} (${status})`;
     })
     .join(', ');
@@ -483,7 +483,7 @@ export function renderMethodology(
   const toolingParagraph = fillTemplate(m.toolingParagraphTemplate, {
     axeVersion,
     lighthouseVersion,
-    pages: `${formatNumber(pagesScanned, language)} ${pluralize(pagesScanned, m.pagesScannedSingular, m.pagesScannedPlural)}`,
+    pages: `${formatNumber(pagesScanned, language)} ${pluralize(language, pagesScanned, m.pagesScannedSingular, m.pagesScannedPlural)}`,
     date: formatDate(auditDate(manifest), language),
   });
   const reportCoverage = buildCoverageDisclosure(strings, manifest, language);
