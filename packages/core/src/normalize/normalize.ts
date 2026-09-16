@@ -44,7 +44,7 @@ import {
   extractLighthouseCandidates,
   type LighthouseResultInput,
 } from './normalize-lighthouse.js';
-import { extractRenderDiffCandidates } from './normalize-renderdiff.js';
+import { extractRenderDiffCandidates, unusableRawFetches } from './normalize-renderdiff.js';
 import { extractCustomCandidates, type MentionsLegalesCheckInput } from './normalize-custom.js';
 import {
   extractHeadMetadataCandidates,
@@ -229,6 +229,19 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
       .filter((lhr): lhr is LighthouseResultInput => lhr !== undefined),
   );
 
+  // Issue #301: whether a page's raw fetch received the page at all is
+  // partly a cross-page question, so it is resolved over the whole audit
+  // before any page is normalized.
+  const unusableRaw = unusableRawFetches(
+    input.pages
+      .filter((page) => page.renderDiff !== undefined)
+      .map((page) => ({
+        pageUrl: page.url,
+        httpStatus: page.renderDiff?.httpStatus,
+        rawDocument: page.renderDiff?.rawDocument,
+      })),
+  );
+
   // Issue #300: resolved once for the whole audit, since CrUX is a
   // site-level record.
   const goodFieldMetricKeys = goodFieldMetrics(input.cruxFieldData);
@@ -245,7 +258,11 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
         ),
       );
     }
-    if (page.renderDiff) candidates.push(...extractRenderDiffCandidates(page.renderDiff, page.url));
+    if (page.renderDiff) {
+      candidates.push(
+        ...extractRenderDiffCandidates(page.renderDiff, page.url, unusableRaw.get(page.url)),
+      );
+    }
     if (page.mentionsLegales) candidates.push(...extractCustomCandidates(page.mentionsLegales));
     if (page.headMetadata) candidates.push(...extractHeadMetadataCandidates(page.headMetadata));
     if (page.canonicalTarget)

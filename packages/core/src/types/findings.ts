@@ -149,6 +149,33 @@ export const MAX_SNIPPET_LENGTH = 500;
  * so it gets a typed shape of its own rather than living loose in
  * rawEvidence.
  */
+/**
+ * Issue #301: bounded facts about the raw, non-JavaScript document itself,
+ * as opposed to the text extracted from it. A real report showed "raw HTML
+ * - 343 characters" on three different URLs of the same site, which is the
+ * signature of a fetch that captured something other than the page: a bot
+ * challenge, a consent wall, a redirect shell. Without these, nothing
+ * downstream can tell that case apart from a site that genuinely serves
+ * almost no markup, and the report asserts missing content either way.
+ *
+ * Deliberately three small derived values rather than the raw document:
+ * storing the served HTML of every page would multiply artifact size and
+ * put un-minimised client markup into stored analyses, which trade-off 2's
+ * data-minimisation posture rules out.
+ */
+export interface RawDocumentSignals {
+  /** Character count of the served markup, before text extraction. Read
+   *  with rawTextLength: markup that is large while its text is tiny is an
+   *  ordinary JavaScript-rendered shell, and both being tiny is not. */
+  markupLength: number;
+  /** Stable hash of the raw visible text. Equal signatures across pages
+   *  mean one document was served for several URLs. */
+  textSignature: string;
+  /** Names of the interstitial patterns matched in the raw document, from
+   *  scanner's raw-document-signals.ts. Empty for an ordinary page. */
+  interstitialMarkers: readonly string[];
+}
+
 export interface RenderDiffResult {
   pageUrl: string;
   /** Visible text character count in the raw, non-JavaScript fetch. */
@@ -163,4 +190,7 @@ export interface RenderDiffResult {
   /** Console errors captured during render. Often explains the failure. */
   consoleErrors: string[];
   httpStatus: number;
+  /** Issue #301. Optional: artifacts captured before this field existed
+   *  still parse, and simply get no raw-fetch reliability check. */
+  rawDocument?: RawDocumentSignals;
 }

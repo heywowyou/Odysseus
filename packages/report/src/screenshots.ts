@@ -17,6 +17,7 @@
 
 import {
   RENDERDIFF_RULE_ID,
+  unusableRawFetches,
   type AuditManifest,
   type Finding,
   type RenderDiffResult,
@@ -131,7 +132,22 @@ export function resolveRenderDiffEvidence(
   const keptDirs = selectPageDirsToKeep(candidates);
   const missingPercentByUrl = buildMissingPercentIndex(manifest);
 
-  const kept = candidates.filter((page) => keptDirs.has(page.pageDir));
+  // Issue #301: a page whose no-JavaScript fetch did not receive the page
+  // has no comparison to draw. Normalization already withholds the finding
+  // for these; this section reads the manifest's own percentages rather
+  // than the findings, so it has to apply the same judgement or it would
+  // keep printing "raw HTML - 343 characters" bars for a bot challenge.
+  const unusableRaw = unusableRawFetches(
+    manifest.pages.map((page) => ({
+      pageUrl: page.url,
+      httpStatus: page.httpStatus,
+      rawDocument: page.renderDiffRawDocument,
+    })),
+  );
+
+  const kept = candidates
+    .filter((page) => keptDirs.has(page.pageDir))
+    .filter((page) => !unusableRaw.has(page.pageUrl));
   const wrapperOrLegalExcludedCount = kept.filter(
     (page) => isWrapperPage(page.pageUrl, missingPercentByUrl) || isLegalPage(page.pageUrl),
   ).length;

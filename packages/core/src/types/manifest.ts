@@ -9,7 +9,7 @@
  * so treat it as stable once milestones 5/6 start depending on it.
  */
 
-import type { FINDINGS_SCHEMA_VERSION } from './findings.js';
+import type { FINDINGS_SCHEMA_VERSION, RawDocumentSignals } from './findings.js';
 import type { SiteSignals } from './compliance.js';
 import type { TranslationCluster } from '../normalize/translation-clusters.js';
 import type { FindingsProvenance } from '../normalize/findings-provenance.js';
@@ -245,6 +245,13 @@ export interface ManifestPageEntry {
   /** Recorded for every page regardless of whether a render-diff finding
    *  was emitted, so a healthy site's numbers aren't lost. */
   renderDiffMissingPercent?: number;
+  /** Issue #301: what the no-JavaScript pass actually fetched for this
+   *  page. Kept in the manifest, not only in the scan artifact, so the
+   *  report can apply normalize-renderdiff.ts's unusableRawFetches to the
+   *  same evidence normalization used and never draw a comparison bar
+   *  from a fetch that did not receive the page. Absent for manifests
+   *  captured before this field existed. */
+  renderDiffRawDocument?: RawDocumentSignals;
   lighthouseExcludedCategoryScores?: LighthouseExcludedCategoryScores;
   /** Recorded for every page with a successful Lighthouse pass,
    *  regardless of score, so a page with good vitals isn't lost the way

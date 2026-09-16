@@ -1,10 +1,11 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { Browser, Page } from 'playwright';
-import type { RenderDiffResult } from '@odysseus/core';
+import type { RawDocumentSignals, RenderDiffResult } from '@odysseus/core';
 import { DEFAULT_TIMEOUT_MS } from './browser.js';
 import { getCrawlerUserAgent, getRenderSettleTimeoutMs } from './config.js';
 import { computeMissingPercent, extractTextFromHtml } from './extract-text.js';
+import { analyzeRawDocument } from './raw-document-signals.js';
 import { buildPageDir } from './artifacts/paths.js';
 import { couldEverBeKept } from './artifacts/prune-screenshots.js';
 import type { PageWorkGuard } from './page-work-guard.js';
@@ -103,6 +104,7 @@ export async function renderDiff(
   const rawContext = await browser.newContext({ javaScriptEnabled: false, userAgent });
   options.guard?.track(rawContext);
   let rawTextLength: number;
+  let rawDocument: RawDocumentSignals;
   let httpStatus: number;
   let renderedTextLength: number;
   const consoleErrors: string[] = [];
@@ -117,6 +119,7 @@ export async function renderDiff(
     httpStatus = rawResponse.status();
     const rawHtml = await rawPage.content();
     rawTextLength = extractTextFromHtml(rawHtml).length;
+    rawDocument = analyzeRawDocument(rawHtml);
 
     if (options.preRenderedDelayMs) {
       await new Promise((resolve) => setTimeout(resolve, options.preRenderedDelayMs));
@@ -199,6 +202,7 @@ export async function renderDiff(
     renderedScreenshotRef,
     consoleErrors,
     httpStatus,
+    rawDocument,
     renderedLandedUrl,
   };
 }

@@ -81,6 +81,50 @@ describe('resolveRenderDiffEvidence against the real small-site.test capture', (
     expect(pages[0]?.missingPercent).toBe(40);
   });
 
+  it('drops a page whose raw fetch received an interstitial rather than the page (issue #301)', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const inflated = inflateMissingPercent(manifest, 'pages/root-c122da', 40);
+    const walled = {
+      ...inflated,
+      pages: inflated.pages.map((page) =>
+        page.pageDir === 'pages/root-c122da'
+          ? {
+              ...page,
+              renderDiffRawDocument: {
+                markupLength: 8000,
+                textSignature: 'sig',
+                interstitialMarkers: ['bot-challenge'],
+              },
+            }
+          : page,
+      ),
+    };
+
+    const { pages, totalEligible } = resolveRenderDiffEvidence(walled, []);
+
+    expect(pages).toHaveLength(0);
+    expect(totalEligible).toBe(0);
+  });
+
+  it('drops pages sharing one near-empty raw document, the reported 343-character case (issue #301)', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const shell = { markupLength: 420, textSignature: 'shared', interstitialMarkers: [] };
+    let inflated = manifest;
+    for (const page of manifest.pages.filter((p) => p.pageDir !== undefined)) {
+      inflated = inflateMissingPercent(inflated, page.pageDir!, 80);
+    }
+    const shelled = {
+      ...inflated,
+      pages: inflated.pages.map((page) => ({ ...page, renderDiffRawDocument: shell })),
+    };
+
+    expect(resolveRenderDiffEvidence(shelled, []).pages).toHaveLength(0);
+    // Without the signals, the same manifest still produces evidence -
+    // the exclusion comes from the raw-fetch judgement, not from the
+    // inflated percentages.
+    expect(resolveRenderDiffEvidence(inflated, []).pages.length).toBeGreaterThan(0);
+  });
+
   it('caps at the 3 worst pages by missingPercent and reports how many were eligible', async () => {
     const manifest = await loadSmallSiteManifest();
     // The scan-time prune (selectPageDirsToKeep) always keeps the

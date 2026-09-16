@@ -103,6 +103,16 @@ const lighthouseExcludedCategoryScoresSchema = new Schema(
   { _id: false },
 );
 
+/** Issue #301. Mirrors RawDocumentSignals (core types/findings.ts). */
+const rawDocumentSignalsSchema = new Schema(
+  {
+    markupLength: { type: Number, required: true },
+    textSignature: { type: String, required: true },
+    interstitialMarkers: { type: [String], default: [] },
+  },
+  { _id: false },
+);
+
 const coreWebVitalMeasurementSchema = new Schema(
   {
     score: { type: Number, default: null },
@@ -183,6 +193,9 @@ const manifestPageEntrySchema = new Schema(
     },
     httpStatus: { type: Number },
     renderDiffMissingPercent: { type: Number },
+    // Issue #301: the raw fetch's own signals, so a stored audit can be
+    // re-reported without re-reading the scan artifacts.
+    renderDiffRawDocument: { type: rawDocumentSignalsSchema },
     lighthouseExcludedCategoryScores: { type: lighthouseExcludedCategoryScoresSchema },
     coreWebVitals: { type: coreWebVitalsSchema },
     crawlError: { type: String },

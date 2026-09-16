@@ -59,7 +59,22 @@ cannot silently start emitting findings after an upgrade.
   merits (render-blocking resources, oversized images) is never capped,
   and a site with no CrUX record passes through both caps unchanged.
 
-**Render diff:** emits only at or above a named threshold, default 20
+**Render diff:** emits nothing at all for a page whose no-JavaScript
+fetch did not receive the page (issue #301). `unusableRawFetches` in
+`normalize-renderdiff.ts` judges that from `RenderDiffResult.rawDocument`,
+which scanner's `raw-document-signals.ts` fills: an interstitial's own
+markers, a non-2xx raw status, or one near-empty document (markup at or
+below 512 characters) answering for three or more distinct URLs. The third
+condition is deliberately narrow, because a site that renders everything
+client-side legitimately serves one shell for every route and that is the
+render diff's most valuable true positive; only a document too small to be
+a shell the site built counts. A "please enable JavaScript" notice is never
+treated as an interstitial for the same reason. Pages predating
+`rawDocument` are never judged unusable. The report's section 08 applies
+the same function over the manifest, since it draws its bars from
+`renderDiffMissingPercent` rather than from findings.
+
+Otherwise it emits only at or above a named threshold, default 20
 percent, matching the `moderate` floor in `severityFromRenderDiff`.
 Without the threshold, every page of a healthy server-rendered site
 produces a `minor` rendering finding that says nothing is wrong. The

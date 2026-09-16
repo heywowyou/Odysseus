@@ -583,6 +583,9 @@ export async function writeAuditArtifacts(
       ...(scanJson.renderDiff !== undefined
         ? { renderDiffMissingPercent: scanJson.renderDiff.missingPercent }
         : {}),
+      ...(scanJson.renderDiff?.rawDocument !== undefined
+        ? { renderDiffRawDocument: scanJson.renderDiff.rawDocument }
+        : {}),
       ...(scanJson.lighthouse !== undefined
         ? {
             lighthouseExcludedCategoryScores: extractLighthouseExcludedCategoryScores(
