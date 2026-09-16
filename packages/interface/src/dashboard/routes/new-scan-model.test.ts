@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ADVANCED_SCAN_FIELDS,
+  BATCH_SCAN_FIELDS,
+  buildBatchScanRequest,
   buildScanRequest,
+  moveBatchRow,
+  planBatchScan,
   createEmptyFormValues,
   isValidAbsoluteHttpUrl,
   initialScanTypeFromQuery,
@@ -269,5 +274,91 @@ describe('parseDelaySecondsToMs', () => {
     for (const raw of ['', '   ', '0', '-3', '0.0001', 'soon']) {
       expect(parseDelaySecondsToMs(raw)).toBeUndefined();
     }
+  });
+});
+
+describe('batch scan submission', () => {
+  const prospect = (
+    name: string,
+    websites: { url: string; primary: boolean }[] = [{ url: `https://${name}.fr/`, primary: true }],
+  ) => ({ prospectId: `p-${name}`, name, websites });
+
+  it('offers every single-site option except the ones that name pages of one site', () => {
+    for (const type of NEW_SCAN_TYPES) {
+      expect(BATCH_SCAN_FIELDS[type]).toEqual(
+        ADVANCED_SCAN_FIELDS[type].filter(
+          (field) => field !== 'seeds' && field !== 'bookingEngineUrl',
+        ),
+      );
+    }
+  });
+
+  it('resolves each prospect to its primary website, keeping selection order', () => {
+    const plan = planBatchScan([
+      prospect('b'),
+      prospect('a', [
+        { url: 'https://old-a.fr/', primary: false },
+        { url: 'https://a.fr/', primary: true },
+      ]),
+      prospect('c', [{ url: 'https://c.fr/', primary: false }]),
+    ]);
+    expect(plan.rows).toEqual([
+      { prospectId: 'p-b', name: 'b', url: 'https://b.fr/' },
+      { prospectId: 'p-a', name: 'a', url: 'https://a.fr/' },
+      { prospectId: 'p-c', name: 'c', url: 'https://c.fr/' },
+    ]);
+    expect(plan.withoutWebsite).toEqual([]);
+  });
+
+  it('sets aside prospects with no usable website', () => {
+    const plan = planBatchScan([
+      prospect('none', []),
+      prospect('broken', [{ url: 'pending', primary: true }]),
+      prospect('ok'),
+    ]);
+    expect(plan.rows.map((row) => row.name)).toEqual(['ok']);
+    expect(plan.withoutWebsite).toEqual(['none', 'broken']);
+  });
+
+  it('moves a row within bounds only', () => {
+    expect(moveBatchRow(['a', 'b', 'c'], 2, -1)).toEqual(['a', 'c', 'b']);
+    expect(moveBatchRow(['a', 'b', 'c'], 0, 1)).toEqual(['b', 'a', 'c']);
+    expect(moveBatchRow(['a', 'b', 'c'], 0, -1)).toEqual(['a', 'b', 'c']);
+    expect(moveBatchRow(['a', 'b', 'c'], 2, 1)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('builds the batch body from the rows and only the shared options', () => {
+    const request = buildBatchScanRequest(
+      formValues({
+        type: 'full-audit',
+        url: 'https://ignored.fr/',
+        siren: '732829320',
+        maxPages: '150',
+        delaySeconds: '2',
+        exclusions: '/blog/*\n',
+        seeds: 'https://a.fr/chambres',
+        bookingEngineUrl: 'https://booking.example/',
+      }),
+      [
+        { prospectId: 'p-b', name: 'b', url: 'https://b.fr/' },
+        { prospectId: 'p-a', name: 'a', url: 'https://a.fr/' },
+      ],
+    );
+    expect(request).toEqual({
+      type: 'full-audit',
+      items: [
+        { prospectId: 'p-b', url: 'https://b.fr/' },
+        { prospectId: 'p-a', url: 'https://a.fr/' },
+      ],
+      options: { maxPages: 150, delayMs: 2000, exclusions: ['/blog/*'] },
+    });
+  });
+
+  it('keeps a Quick check batch to its pacing options', () => {
+    const request = buildBatchScanRequest(
+      formValues({ type: 'quick-check', maxPages: '150', scanConcurrency: '2' }),
+      [{ prospectId: 'p-a', name: 'a', url: 'https://a.fr/' }],
+    );
+    expect(request.options).toEqual({ scanConcurrency: 2 });
   });
 });

@@ -1,4 +1,3 @@
-import type { ServerResponse } from 'node:http';
 import type { Connection } from 'mongoose';
 import { promises as fs } from 'node:fs';
 import { isHttpUrlWithoutCredentials, isValidSiren } from '@odysseus/core';
@@ -13,13 +12,13 @@ import {
   findProspectsByDomain,
   getAudit,
   getProspectHub,
+  getProspectNames,
   getJob,
   listJobs,
   canonicalJobTypeForScanIntent,
   displayJobIntent,
   type JobDocument,
   type JobOptionsSnapshot,
-  type NewJobInput,
   registrableDomainForScan,
 } from '@odysseus/store';
 import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
@@ -147,26 +146,82 @@ async function autoAttachProspect(
   return matches.length === 1 ? { ...options, prospectId: matches[0]!.prospectId } : options;
 }
 
-/** Registers the job-creation and job-status endpoints. `queue.notify()`
- *  is called after every successful create so a submitted scan starts
- *  promptly rather than waiting out the queue's poll interval. */
-/** createJob, answering a lost launch race the way the read-side conflict
- *  check answers: a concurrent launch for the same prospect slot is refused
- *  as host-busy instead of surfacing as a server error. */
-async function createJobOrRefuse(
+type LaunchableScanType = 'quick-check' | 'full-audit';
+
+type ScanLaunchOutcome =
+  | { started: true; job: JobDocument }
+  | { started: false; refusal: 'invalid-url' | 'suppressed' | 'host-busy' };
+
+/** The one launch path behind both the single and the batch endpoint: attach
+ *  a prospect, run the launch guard, then create the ordinary job. Throws
+ *  OptionsValidationError for options this route must refuse. A lost launch
+ *  race for the same prospect slot answers host-busy, the same way the
+ *  read-side conflict check does, instead of surfacing as a server error. */
+async function launchScan(
   connection: Connection,
-  res: ServerResponse,
-  input: NewJobInput,
-): Promise<JobDocument | null> {
+  type: LaunchableScanType,
+  url: string,
+  requested: JobOptionsSnapshot,
+): Promise<ScanLaunchOutcome> {
+  const domain = registrableDomainForScan(url);
+  if (domain === null) return { started: false, refusal: 'invalid-url' };
+  const options = await autoAttachProspect(connection, requested, domain);
+  const check = await checkScanLaunch(connection, {
+    url,
+    kind: type,
+    ...(options.prospectId === undefined ? {} : { prospectId: options.prospectId }),
+  });
+  if (!check.allowed) return { started: false, refusal: check.refusal };
   try {
-    return await createJob(connection, input);
+    const job = await createJob(connection, {
+      type: canonicalJobTypeForScanIntent(type),
+      siteUrl: url,
+      // Quick Check scans exactly one page whatever the options say.
+      options: type === 'quick-check' ? { ...options, maxPages: 1 } : options,
+    });
+    return { started: true, job };
   } catch (error) {
     if (!(error instanceof ActiveJobSlotTakenError)) throw error;
-    sendJson(res, 200, { started: false, refusal: 'host-busy' });
-    return null;
+    return { started: false, refusal: 'host-busy' };
   }
 }
 
+/** Upper bound on one batch: an overnight run is 5 to 10 sites, and a bound
+ *  keeps a malformed client from queueing the whole directory by accident. */
+export const MAX_SCAN_BATCH_SIZE = 50;
+
+/** Options that describe one site rather than a crawl policy. A batch shares
+ *  one options block across every site, so these are refused there instead of
+ *  being silently applied to the wrong businesses. */
+const PER_SITE_OPTION_KEYS = [
+  'prospectId',
+  'siren',
+  'seeds',
+  'bookingEngineUrl',
+  'transactionalFlow',
+  'transactionalFlowReason',
+] as const;
+
+type BatchItemResult =
+  | { index: number; url: string; prospectId?: string; outcome: 'queued'; jobId: string }
+  | {
+      index: number;
+      url: string;
+      prospectId?: string;
+      outcome: 'skipped';
+      reason: 'already-active';
+    }
+  | {
+      index: number;
+      url: string;
+      prospectId?: string;
+      outcome: 'rejected';
+      reason: 'invalid-url' | 'suppressed';
+    };
+
+/** Registers the job-creation and job-status endpoints. `queue.notify()`
+ *  is called after every successful create so a submitted scan starts
+ *  promptly rather than waiting out the queue's poll interval. */
 export function registerScanRoutes(router: Router, connection: Connection, queue: JobQueue): void {
   router.post('/api/scans', async ({ req, res }) => {
     const body = await readJsonBodyOrRespond(req, res);
@@ -190,90 +245,28 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       return;
     }
 
-    if (parsed['type'] === 'quick-check') {
+    if (parsed['type'] === 'quick-check' || parsed['type'] === 'full-audit') {
+      const type: LaunchableScanType = parsed['type'];
       const url = parsed['url'];
-      if (!isHttpUrlWithoutCredentials(url)) {
+      if (!isHttpUrlWithoutCredentials(url) || registrableDomainForScan(url) === null) {
         sendError(res, 400, 'url must be an absolute http(s) URL without embedded credentials');
         return;
       }
-      let options: JobOptionsSnapshot;
+      let requested: JobOptionsSnapshot;
       try {
-        const domain = registrableDomainForScan(url);
-        if (domain === null) {
-          sendError(res, 400, 'url must be an absolute http(s) URL without embedded credentials');
-          return;
-        }
-        options = await autoAttachProspect(
-          connection,
-          mergeTopLevelProspectId(parseOptionsSnapshot(parsed['options']), parsed),
-          domain,
-        );
+        requested = mergeTopLevelProspectId(parseOptionsSnapshot(parsed['options']), parsed);
       } catch (error) {
         sendError(res, 400, error instanceof Error ? error.message : 'invalid options');
         return;
       }
-      const check = await checkScanLaunch(connection, {
-        url,
-        kind: 'quick-check',
-        ...(options.prospectId === undefined ? {} : { prospectId: options.prospectId }),
-      });
-      if (!check.allowed) {
-        sendJson(res, 200, { started: false, refusal: check.refusal });
+      const outcome = await launchScan(connection, type, url, requested);
+      if (!outcome.started) {
+        sendJson(res, 200, { started: false, refusal: outcome.refusal });
         return;
       }
-      const job = await createJobOrRefuse(connection, res, {
-        type: canonicalJobTypeForScanIntent('quick-check'),
-        siteUrl: url,
-        options: { ...options, maxPages: 1 },
-      });
-      if (job === null) return;
-      logJobCreated(req, job.jobId, job.type);
+      logJobCreated(req, outcome.job.jobId, outcome.job.type);
       queue.notify();
-      sendJson(res, 201, { started: true, jobId: job.jobId, type: 'quick-check' });
-      return;
-    }
-
-    if (parsed['type'] === 'full-audit') {
-      const url = parsed['url'];
-      if (!isHttpUrlWithoutCredentials(url)) {
-        sendError(res, 400, 'url must be an absolute http(s) URL without embedded credentials');
-        return;
-      }
-      let options: JobOptionsSnapshot;
-      try {
-        const domain = registrableDomainForScan(url);
-        if (domain === null) {
-          sendError(res, 400, 'url must be an absolute http(s) URL without embedded credentials');
-          return;
-        }
-        options = await autoAttachProspect(
-          connection,
-          mergeTopLevelProspectId(parseOptionsSnapshot(parsed['options']), parsed),
-          domain,
-        );
-      } catch (error) {
-        sendError(res, 400, error instanceof Error ? error.message : 'invalid options');
-        return;
-      }
-      const check = await checkScanLaunch(connection, {
-        url,
-        kind: 'full-audit',
-        ...(options.prospectId === undefined ? {} : { prospectId: options.prospectId }),
-      });
-      if (!check.allowed) {
-        sendJson(res, 200, { started: false, refusal: check.refusal });
-        return;
-      }
-
-      const job = await createJobOrRefuse(connection, res, {
-        type: canonicalJobTypeForScanIntent('full-audit'),
-        siteUrl: url,
-        options,
-      });
-      if (job === null) return;
-      logJobCreated(req, job.jobId, job.type);
-      queue.notify();
-      sendJson(res, 201, { started: true, jobId: job.jobId, type: 'full-audit' });
+      sendJson(res, 201, { started: true, jobId: outcome.job.jobId, type });
       return;
     }
 
@@ -293,6 +286,105 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
     sendError(res, 400, 'type must be "quick-check", "full-audit", or "prospecting"');
   });
 
+  /** Queues several sites in one submission (issue #375). A batch is only a
+   *  submission convenience: each accepted site becomes an ordinary job,
+   *  created in the order given, which the FIFO claim then processes in the
+   *  same order. Everything a whole batch can get wrong (type, shape, size,
+   *  shared options) is refused with 400 before any job exists. Per-site
+   *  problems never fail the batch: an invalid or suppressed site is
+   *  rejected, a site that already has an active scan is skipped, and the
+   *  response names the outcome of every site. Jobs are created one by one,
+   *  so an interrupted request can leave the first sites queued; submitting
+   *  the same batch again is safe because those sites are then skipped. */
+  router.post('/api/scans/batch', async ({ req, res }) => {
+    const body = await readJsonBodyOrRespond(req, res);
+    if (body === jsonBodyNotRead) return;
+    if (body === undefined || body === null || typeof body !== 'object') {
+      sendError(res, 400, 'request body must be a JSON object');
+      return;
+    }
+    const parsed = body as Record<string, unknown>;
+    const type = parsed['type'];
+    if (type !== 'quick-check' && type !== 'full-audit') {
+      sendError(res, 400, 'type must be "quick-check" or "full-audit"');
+      return;
+    }
+    const items = parsed['items'];
+    if (!Array.isArray(items) || items.length === 0 || items.length > MAX_SCAN_BATCH_SIZE) {
+      sendError(res, 400, `items must be an array of 1 to ${MAX_SCAN_BATCH_SIZE} sites`);
+      return;
+    }
+    const sites: { url: unknown; prospectId?: string }[] = [];
+    for (const item of items) {
+      if (item === null || typeof item !== 'object') {
+        sendError(res, 400, 'each item must be an object with a url');
+        return;
+      }
+      const record = item as Record<string, unknown>;
+      const prospectId = record['prospectId'];
+      if (
+        prospectId !== undefined &&
+        (typeof prospectId !== 'string' || prospectId.trim() === '')
+      ) {
+        sendError(res, 400, 'item prospectId must be a non-empty string when present');
+        return;
+      }
+      sites.push({
+        url: record['url'],
+        ...(typeof prospectId === 'string' ? { prospectId: prospectId.trim() } : {}),
+      });
+    }
+    const rawOptions = parsed['options'];
+    if (rawOptions !== undefined && rawOptions !== null && typeof rawOptions === 'object') {
+      const perSite = PER_SITE_OPTION_KEYS.filter((key) => key in rawOptions);
+      if (perSite.length > 0) {
+        sendError(res, 400, `batch options cannot carry per-site fields: ${perSite.join(', ')}`);
+        return;
+      }
+    }
+    let shared: JobOptionsSnapshot;
+    try {
+      shared = parseOptionsSnapshot(rawOptions);
+    } catch (error) {
+      sendError(res, 400, error instanceof Error ? error.message : 'invalid options');
+      return;
+    }
+
+    const results: BatchItemResult[] = [];
+    for (const [index, site] of sites.entries()) {
+      const identity = {
+        index,
+        url: typeof site.url === 'string' ? site.url : '',
+        ...(site.prospectId === undefined ? {} : { prospectId: site.prospectId }),
+      };
+      if (!isHttpUrlWithoutCredentials(site.url)) {
+        results.push({ ...identity, outcome: 'rejected', reason: 'invalid-url' });
+        continue;
+      }
+      const requested =
+        site.prospectId === undefined ? shared : { ...shared, prospectId: site.prospectId };
+      const outcome = await launchScan(connection, type, site.url, requested);
+      if (outcome.started) {
+        logJobCreated(req, outcome.job.jobId, outcome.job.type);
+        results.push({ ...identity, outcome: 'queued', jobId: outcome.job.jobId });
+      } else if (outcome.refusal === 'host-busy') {
+        results.push({ ...identity, outcome: 'skipped', reason: 'already-active' });
+      } else {
+        results.push({ ...identity, outcome: 'rejected', reason: outcome.refusal });
+      }
+    }
+    const count = (outcome: BatchItemResult['outcome']): number =>
+      results.filter((result) => result.outcome === outcome).length;
+    if (count('queued') > 0) queue.notify();
+    sendJson(res, 200, {
+      type,
+      queued: count('queued'),
+      skipped: count('skipped'),
+      rejected: count('rejected'),
+      results,
+    });
+  });
+
   router.get('/api/scans', async ({ res, query }) => {
     const limitParam = query.get('limit');
     const parsedLimit = limitParam ? Number.parseInt(limitParam, 10) : NaN;
@@ -310,9 +402,19 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
 
     const auditIds = jobs.map((job) => job.auditId).filter((id): id is string => id !== undefined);
     const rollups = await getSeverityRollupsForPoll(connection, auditIds);
+    // Only the scan queue names its jobs, so only waiting and running jobs
+    // pay for the prospect lookup.
+    const prospectNames = await getProspectNames(
+      connection,
+      jobs
+        .filter((job) => job.status === 'queued' || job.status === 'running')
+        .map((job) => job.prospectId)
+        .filter((id): id is string => id !== undefined),
+    );
 
     const summaries = jobs.map((job) => ({
       prospectId: job.prospectId,
+      prospectName: job.prospectId === undefined ? undefined : prospectNames.get(job.prospectId),
       jobId: job.jobId,
       type: displayJobIntent(job.type, job.scanType),
       status: job.status,

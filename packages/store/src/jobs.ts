@@ -139,7 +139,10 @@ export async function claimNextQueuedJob(
         ...(options.workerRevision !== undefined ? { workerRevision: options.workerRevision } : {}),
       },
     },
-    { sort: { createdAt: 1 }, returnDocument: 'after' },
+    // _id breaks createdAt ties: a batch submission creates its jobs within
+    // the same millisecond, and ObjectIds generated in one process increase
+    // in creation order, so submission order is still the processing order.
+    { sort: { createdAt: 1, _id: 1 }, returnDocument: 'after' },
   ).lean<JobDocument>();
 }
 
@@ -366,7 +369,9 @@ export async function listJobs(connection: Connection, limit = 200): Promise<Job
       'options.scanType': 1,
     },
   )
-    .sort({ createdAt: -1 })
+    // Same _id tiebreak as the claim, reversed: jobs of one batch share a
+    // createdAt, and the list must still reflect their queue order.
+    .sort({ createdAt: -1, _id: -1 })
     .limit(limit)
     .lean<
       (Omit<JobSummaryFields, 'prospectId'> & {

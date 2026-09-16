@@ -79,10 +79,9 @@ export const audits = {
     confirmDeleteTitle: 'Supprimer ce scan ?',
     confirmDeleteBody:
       'Cette action supprime définitivement le scan {site} : constats, analyses, rapports et fichiers associés. Elle est irréversible.',
-    clearQueue: 'Vider la file d’attente',
-    confirmClearQueueTitle: 'Vider la file d’attente ?',
-    confirmClearQueueBody:
-      '{count} scan(s) en attente seront annulés. Les scans en cours ne sont pas affectés.',
+    clearQueue: 'Vider les scans en attente',
+    confirmClearQueueTitle: 'Vider les scans en attente ?',
+    confirmClearQueueBody: '{count} scan(s) en attente seront annulés. Le scan en cours continue.',
     stoppedMessage: 'Scan arrêté. L’arrêt prend effet à la fin de la page en cours.',
     deletedMessage: 'Scan supprimé.',
     queueClearedMessage: '{count} scan(s) en attente annulés.',
@@ -118,10 +117,9 @@ export const audits = {
     confirmDeleteTitle: 'Delete this scan?',
     confirmDeleteBody:
       'This permanently deletes the scan {site}: findings, analyses, reports and related files. It cannot be undone.',
-    clearQueue: 'Clear queue',
-    confirmClearQueueTitle: 'Clear the queue?',
-    confirmClearQueueBody:
-      '{count} queued scan(s) will be cancelled. Running scans are not affected.',
+    clearQueue: 'Clear waiting queue',
+    confirmClearQueueTitle: 'Clear the waiting queue?',
+    confirmClearQueueBody: '{count} waiting scan(s) will be cancelled. The running scan continues.',
     stoppedMessage: 'Scan stopped. The stop takes effect at the end of the current page.',
     deletedMessage: 'Scan deleted.',
     queueClearedMessage: '{count} queued scan(s) cancelled.',

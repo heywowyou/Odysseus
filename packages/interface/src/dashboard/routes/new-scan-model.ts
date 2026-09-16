@@ -77,6 +77,22 @@ export const ADVANCED_SCAN_FIELDS: Record<NewScanType, readonly AdvancedScanFiel
   'quick-check': ['delayMs', 'scanConcurrency'],
 };
 
+/** Issue #375: the advanced options a batch shares across every site. Seed
+ *  pages and the booking engine address name pages of one particular site, so
+ *  a batch never offers them; routes/scans.ts refuses them on the batch
+ *  endpoint as well. Derived from ADVANCED_SCAN_FIELDS so the batch can never
+ *  offer an option the single-site form does not. */
+const SITE_SPECIFIC_SCAN_FIELDS: readonly AdvancedScanField[] = ['seeds', 'bookingEngineUrl'];
+
+export const BATCH_SCAN_FIELDS: Record<NewScanType, readonly AdvancedScanField[]> = {
+  'full-audit': ADVANCED_SCAN_FIELDS['full-audit'].filter(
+    (field) => !SITE_SPECIFIC_SCAN_FIELDS.includes(field),
+  ),
+  'quick-check': ADVANCED_SCAN_FIELDS['quick-check'].filter(
+    (field) => !SITE_SPECIFIC_SCAN_FIELDS.includes(field),
+  ),
+};
+
 /** Controlled state of the new-scan form. Numeric advanced options are kept
  *  as raw strings so the input stays editable between valid values; they are
  *  parsed only when the request is built. The page-load pause is entered in
@@ -222,8 +238,11 @@ export function parseDelaySecondsToMs(raw: string): number | undefined {
 /** The shared crawl options for one intent, restricted to the fields that
  *  intent offers (ADVANCED_SCAN_FIELDS), so a value typed while another
  *  intent was selected never leaks into the request. */
-function buildCrawlOptions(form: NewScanFormValues): ScanCrawlOptions {
-  const offered = new Set<AdvancedScanField>(ADVANCED_SCAN_FIELDS[form.type]);
+function buildCrawlOptions(
+  form: NewScanFormValues,
+  fields: Record<NewScanType, readonly AdvancedScanField[]> = ADVANCED_SCAN_FIELDS,
+): ScanCrawlOptions {
+  const offered = new Set<AdvancedScanField>(fields[form.type]);
   const maxPages = offered.has('maxPages') ? parsePositiveIntOption(form.maxPages) : undefined;
   const maxDepth = offered.has('maxDepth') ? parsePositiveIntOption(form.maxDepth) : undefined;
   const delayMs = offered.has('delayMs') ? parseDelaySecondsToMs(form.delaySeconds) : undefined;
@@ -276,4 +295,100 @@ export function buildScanRequest(form: NewScanFormValues): ScanRequest {
     ...(prospectId !== '' ? { prospectId } : {}),
     options,
   };
+}
+
+/** One site of a batch submission, in queue order. */
+export interface BatchScanSite {
+  prospectId: string;
+  url: string;
+}
+
+/** Body of POST /api/scans/batch (issue #375). */
+export interface BatchScanRequest {
+  type: NewScanType;
+  items: BatchScanSite[];
+  options: ScanCrawlOptions;
+}
+
+/** The subset of a prospect row the batch needs. */
+export interface BatchScanProspect {
+  prospectId: string;
+  name: string;
+  websites: { url: string; primary: boolean }[];
+}
+
+export interface BatchScanPlanRow {
+  prospectId: string;
+  name: string;
+  url: string;
+}
+
+/** Selected prospects resolved to the site each would scan, in selection
+ *  order. The primary website wins, else the first one listed, the same
+ *  choice the prospect page's launch link makes; a prospect with no usable
+ *  website cannot be queued and is listed apart so the dialog can say so. */
+export function planBatchScan(prospects: readonly BatchScanProspect[]): {
+  rows: BatchScanPlanRow[];
+  withoutWebsite: string[];
+} {
+  const rows: BatchScanPlanRow[] = [];
+  const withoutWebsite: string[] = [];
+  for (const prospect of prospects) {
+    const website = prospect.websites.find((site) => site.primary) ?? prospect.websites[0];
+    if (website === undefined || !isValidAbsoluteHttpUrl(website.url)) {
+      withoutWebsite.push(prospect.name);
+      continue;
+    }
+    rows.push({ prospectId: prospect.prospectId, name: prospect.name, url: website.url });
+  }
+  return { rows, withoutWebsite };
+}
+
+/** Moves one row up or down, for reordering the batch before it is sent.
+ *  Out-of-range moves return the same order. */
+export function moveBatchRow<T>(rows: readonly T[], index: number, direction: -1 | 1): T[] {
+  const target = index + direction;
+  if (index < 0 || index >= rows.length || target < 0 || target >= rows.length) return [...rows];
+  const next = [...rows];
+  [next[index], next[target]] = [next[target]!, next[index]!];
+  return next;
+}
+
+/** The batch body: the rows in their final order plus the shared crawl
+ *  options the batch offers for this scan type. */
+export function buildBatchScanRequest(
+  form: NewScanFormValues,
+  rows: readonly BatchScanPlanRow[],
+): BatchScanRequest {
+  return {
+    type: form.type,
+    items: rows.map((row) => ({ prospectId: row.prospectId, url: row.url })),
+    options: buildCrawlOptions(form, BATCH_SCAN_FIELDS),
+  };
+}
+
+/** One site's outcome in the POST /api/scans/batch response. */
+export type BatchScanResult =
+  | { index: number; url: string; prospectId?: string; outcome: 'queued'; jobId: string }
+  | {
+      index: number;
+      url: string;
+      prospectId?: string;
+      outcome: 'skipped';
+      reason: 'already-active';
+    }
+  | {
+      index: number;
+      url: string;
+      prospectId?: string;
+      outcome: 'rejected';
+      reason: 'invalid-url' | 'suppressed';
+    };
+
+export interface BatchScanResponse {
+  type: NewScanType;
+  queued: number;
+  skipped: number;
+  rejected: number;
+  results: BatchScanResult[];
 }

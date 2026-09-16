@@ -123,6 +123,7 @@ export {
   directoryEntryToProspectInput,
   fillMissingProspectIdentity,
   getProspectHub,
+  getProspectNames,
   findProspectsByDomain,
   findProspectsByEmail,
   listDirectory,

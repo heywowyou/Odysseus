@@ -17,7 +17,7 @@ export function Dialog(props: {
   );
 }
 
-export function DialogContent(props: { children: ReactNode }): JSX.Element {
+export function DialogContent(props: { children: ReactNode; className?: string }): JSX.Element {
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/70 data-[state=open]:animate-overlay-in" />
@@ -26,6 +26,7 @@ export function DialogContent(props: { children: ReactNode }): JSX.Element {
           'fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2',
           'rounded-xl border border-line-strong bg-panel p-6 shadow-xl focus:outline-none',
           'data-[state=open]:animate-content-in',
+          props.className,
         )}
       >
         {props.children}
@@ -42,7 +43,7 @@ export function DialogTitle(props: { children: ReactNode }): JSX.Element {
   );
 }
 
-function DialogDescription(props: { children: ReactNode }): JSX.Element {
+export function DialogDescription(props: { children: ReactNode }): JSX.Element {
   return (
     <DialogPrimitive.Description className="mt-1 text-sm text-ink-soft">
       {props.children}
@@ -50,7 +51,7 @@ function DialogDescription(props: { children: ReactNode }): JSX.Element {
   );
 }
 
-function DialogFooter(props: { children: ReactNode }): JSX.Element {
+export function DialogFooter(props: { children: ReactNode }): JSX.Element {
   return <div className="mt-6 flex justify-end gap-2">{props.children}</div>;
 }
 

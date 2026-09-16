@@ -5,6 +5,7 @@ import { shell } from './sections/shell';
 import { common } from './sections/common';
 import { audits } from './sections/audits';
 import { newScan } from './sections/new-scan';
+import { scanQueue } from './sections/scan-queue';
 import { progress } from './sections/progress';
 import { auditDetail } from './sections/audit-detail';
 import { prepareReport } from './sections/prepare-report';
@@ -34,6 +35,7 @@ export const fr: DashboardStrings = {
   common: common.fr,
   audits: audits.fr,
   newScan: newScan.fr,
+  scanQueue: scanQueue.fr,
   progress: progress.fr,
   auditDetail: auditDetail.fr,
   prepareReport: prepareReport.fr,

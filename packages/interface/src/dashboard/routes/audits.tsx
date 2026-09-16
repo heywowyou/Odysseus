@@ -31,11 +31,13 @@ import type { JobStatus, ScanSummary } from '../lib/api-types';
 import { canDelete, canStop } from '../lib/job-actions';
 import { formatDateTime, formatRelativeTime } from '../lib/format';
 import { usePolling } from '../lib/use-polling';
+import { currentPhaseLabel } from './scan-progress-model';
 import {
   computeKpis,
   filterSummaries,
   listStatus,
   rowTarget,
+  scanQueue,
   searchMatches,
   severityBadges,
   siteLabel,
@@ -60,7 +62,7 @@ const STATUS_OPTIONS: readonly JobStatus[] = [
 /** The one confirm dialog this page can open: at most a single action is
  *  ever pending, so a row button replaces whatever the dialog showed. */
 interface PendingScanAction {
-  kind: 'stop' | 'delete' | 'clear-queue';
+  kind: 'stop' | 'delete' | 'remove' | 'clear-queue';
   row?: ScanSummary;
 }
 
@@ -112,19 +114,24 @@ export function AuditsPage(): JSX.Element {
   // unavailable marker, never a zero that would read as "nothing ran".
   const kpiState: KpiValueState =
     data !== undefined ? 'loaded' : error !== undefined ? 'unavailable' : 'loading';
-  const queuedCount = useMemo(
-    () => (data ?? []).filter((summary) => summary.status === 'queued').length,
-    [data],
-  );
+  const queue = useMemo(() => scanQueue(data ?? []), [data]);
+  const queuedCount = queue.upNext.length;
 
   /** One mutation wrapper for stop and delete: the distinction between a 409
    *  (the job just went terminal) and a network blip carries no different
    *  copy, and the refreshed list carries the truth either way. */
-  const runRowAction = async (row: ScanSummary, kind: 'stop' | 'delete'): Promise<void> => {
+  const runRowAction = async (
+    row: ScanSummary,
+    kind: 'stop' | 'delete' | 'remove',
+  ): Promise<void> => {
     try {
-      if (kind === 'stop') {
+      if (kind === 'stop' || kind === 'remove') {
+        // Removing a waiting scan is the same cancel as stopping one; only
+        // the wording differs, since nothing has started yet.
         await postEmpty(`/api/scans/${encodeURIComponent(row.jobId)}/cancel`);
-        toast.success(strings.audits.stoppedMessage);
+        toast.success(
+          kind === 'remove' ? strings.scanQueue.removedMessage : strings.audits.stoppedMessage,
+        );
       } else {
         await sendDelete(`/api/scans/${encodeURIComponent(row.jobId)}`);
         toast.success(strings.audits.deletedMessage);
@@ -354,6 +361,57 @@ export function AuditsPage(): JSX.Element {
         }
       />
 
+      {data !== undefined && (queue.running.length > 0 || queue.upNext.length > 0) ? (
+        <Card
+          className="mb-4"
+          title={strings.scanQueue.sectionTitle}
+          description={strings.scanQueue.sectionDescription}
+        >
+          <div className="grid gap-5 md:grid-cols-2">
+            <section aria-labelledby="scan-queue-running">
+              <h3 id="scan-queue-running" className="mb-2 text-xs font-medium text-ink-soft">
+                {strings.scanQueue.runningHeading}
+              </h3>
+              {queue.running.length === 0 ? (
+                <p className="text-sm text-ink-muted">{strings.scanQueue.noRunning}</p>
+              ) : (
+                <ul className="flex flex-col gap-2">
+                  {queue.running.map((row) => (
+                    <QueueRow
+                      key={row.jobId}
+                      row={row}
+                      detail={currentPhaseLabel(row.phase, strings.progress.phaseLabels)}
+                      actionLabel={strings.audits.stopAction}
+                      onAction={() => setPendingAction({ kind: 'stop', row })}
+                    />
+                  ))}
+                </ul>
+              )}
+            </section>
+            <section aria-labelledby="scan-queue-up-next">
+              <h3 id="scan-queue-up-next" className="mb-2 text-xs font-medium text-ink-soft">
+                {strings.scanQueue.upNextHeading.replace('{count}', String(queue.upNext.length))}
+              </h3>
+              {queue.upNext.length === 0 ? (
+                <p className="text-sm text-ink-muted">{strings.scanQueue.noWaiting}</p>
+              ) : (
+                <ol className="flex flex-col gap-2">
+                  {queue.upNext.map((row, index) => (
+                    <QueueRow
+                      key={row.jobId}
+                      row={row}
+                      position={index + 1}
+                      actionLabel={strings.scanQueue.removeAction}
+                      onAction={() => setPendingAction({ kind: 'remove', row })}
+                    />
+                  ))}
+                </ol>
+              )}
+            </section>
+          </div>
+        </Card>
+      ) : null}
+
       <Card className="mb-4">
         <div className="flex flex-wrap items-center gap-3">
           <Input
@@ -401,32 +459,41 @@ export function AuditsPage(): JSX.Element {
         title={
           pendingAction?.kind === 'stop'
             ? strings.audits.confirmStopTitle
-            : pendingAction?.kind === 'delete'
-              ? strings.audits.confirmDeleteTitle
-              : strings.audits.confirmClearQueueTitle
+            : pendingAction?.kind === 'remove'
+              ? strings.scanQueue.confirmRemoveTitle
+              : pendingAction?.kind === 'delete'
+                ? strings.audits.confirmDeleteTitle
+                : strings.audits.confirmClearQueueTitle
         }
         description={
           pendingAction?.kind === 'stop'
             ? strings.audits.confirmStopBody
-            : pendingAction?.kind === 'delete'
-              ? strings.audits.confirmDeleteBody.replace(
+            : pendingAction?.kind === 'remove'
+              ? strings.scanQueue.confirmRemoveBody.replace(
                   '{site}',
                   pendingSite === '' ? strings.common.unknownSite : pendingSite,
                 )
-              : strings.audits.confirmClearQueueBody.replace('{count}', String(queuedCount))
+              : pendingAction?.kind === 'delete'
+                ? strings.audits.confirmDeleteBody.replace(
+                    '{site}',
+                    pendingSite === '' ? strings.common.unknownSite : pendingSite,
+                  )
+                : strings.audits.confirmClearQueueBody.replace('{count}', String(queuedCount))
         }
         confirmLabel={
           pendingAction?.kind === 'stop'
             ? strings.audits.stopAction
-            : pendingAction?.kind === 'delete'
-              ? strings.audits.deleteAction
-              : strings.audits.clearQueue
+            : pendingAction?.kind === 'remove'
+              ? strings.scanQueue.removeAction
+              : pendingAction?.kind === 'delete'
+                ? strings.audits.deleteAction
+                : strings.audits.clearQueue
         }
         cancelLabel={strings.common.cancel}
         onConfirm={async () => {
           const action = pendingAction;
           if (action === null) return;
-          if ((action.kind === 'stop' || action.kind === 'delete') && action.row !== undefined) {
+          if (action.kind !== 'clear-queue' && action.row !== undefined) {
             await runRowAction(action.row, action.kind);
             return;
           }
@@ -434,6 +501,59 @@ export function AuditsPage(): JSX.Element {
         }}
       />
     </article>
+  );
+}
+
+/** One line of the scan queue: the prospect (or the site when the scan is not
+ *  linked to one), the scan type, the phase of a running scan, and its one
+ *  action. */
+function QueueRow(props: {
+  row: ScanSummary;
+  position?: number;
+  detail?: string;
+  actionLabel: string;
+  onAction: () => void;
+}): JSX.Element {
+  const { strings } = useI18n();
+  const { row, position, detail, actionLabel, onAction } = props;
+  const site = siteLabel(row, strings.audits);
+  const type = typeBadge(row, strings);
+  return (
+    <li className="flex items-center justify-between gap-3 rounded-lg border border-line bg-raised px-3 py-2">
+      <div className="min-w-0">
+        <div className="flex items-baseline gap-2">
+          {position !== undefined ? (
+            <span className="numeric text-xs text-ink-muted">{position}.</span>
+          ) : null}
+          <Link
+            to={rowTarget(row)}
+            className="truncate text-sm font-medium text-ink hover:text-accent-bright"
+          >
+            {row.prospectName ?? (site === '' ? strings.common.unknownSite : site)}
+          </Link>
+          <Badge tone={type.tone} className="whitespace-nowrap">
+            {type.label}
+          </Badge>
+        </div>
+        <div className="ident truncate text-xs text-ink-muted">
+          {row.prospectName !== undefined && site !== '' ? site : null}
+          {detail !== undefined ? (
+            <span className="ml-2 inline-flex items-center gap-1.5 text-ink-soft">
+              <StatusDot status={row.status} />
+              {detail}
+            </span>
+          ) : null}
+        </div>
+      </div>
+      <Button
+        variant={row.status === 'running' ? 'danger' : 'ghost'}
+        size="sm"
+        className="shrink-0"
+        onClick={onAction}
+      >
+        {actionLabel}
+      </Button>
+    </li>
   );
 }
 

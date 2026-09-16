@@ -138,3 +138,20 @@ export function severityBadges(rollup: SeverityRollup | undefined): SeverityBadg
 export function rowTarget(summary: ScanSummary): string {
   return summary.auditId !== undefined ? `/audits/${summary.auditId}` : `/scans/${summary.jobId}`;
 }
+
+/** Issue #375: the work that will happen, apart from the work that happened.
+ *  Running jobs first; waiting jobs oldest first, which is the order the
+ *  queue claims them in. */
+export function scanQueue(summaries: readonly ScanSummary[]): {
+  running: ScanSummary[];
+  upNext: ScanSummary[];
+} {
+  // The poll lists newest first, jobs of one batch sharing a createdAt in
+  // reverse queue order. Reversing first lets the stable sort keep those
+  // ties in queue order.
+  const byCreation = sortSummaries([...summaries].reverse(), 'oldest');
+  return {
+    running: byCreation.filter((summary) => summary.status === 'running'),
+    upNext: byCreation.filter((summary) => summary.status === 'queued'),
+  };
+}

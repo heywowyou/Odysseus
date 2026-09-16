@@ -5,6 +5,7 @@ import {
   hostnameOf,
   listStatus,
   rowTarget,
+  scanQueue,
   searchMatches,
   severityBadges,
   siteLabel,
@@ -203,5 +204,39 @@ describe('rowTarget', () => {
 
   it('links a running job to the scan progress page', () => {
     expect(rowTarget(makeSummary({ status: 'running' }))).toBe('/scans/job-1');
+  });
+});
+
+describe('scanQueue', () => {
+  it('separates running work from waiting work and ignores history', () => {
+    const queue = scanQueue([
+      makeSummary({ jobId: 'done', status: 'complete' }),
+      makeSummary({ jobId: 'failed', status: 'failed' }),
+      makeSummary({ jobId: 'input', status: 'needs-input' }),
+      makeSummary({ jobId: 'next', status: 'queued' }),
+      makeSummary({ jobId: 'now', status: 'running' }),
+    ]);
+    expect(queue.running.map((row) => row.jobId)).toEqual(['now']);
+    expect(queue.upNext.map((row) => row.jobId)).toEqual(['next']);
+  });
+
+  it('lists waiting jobs in the order the queue will claim them', () => {
+    // The poll's own order: newest first, and a batch's jobs share one
+    // createdAt, listed in reverse queue order.
+    const batchInstant = '2026-09-16T22:00:00.000Z';
+    const queue = scanQueue([
+      makeSummary({ jobId: 'later', status: 'queued', createdAt: '2026-09-16T22:05:00.000Z' }),
+      makeSummary({ jobId: 'batch-3', status: 'queued', createdAt: batchInstant }),
+      makeSummary({ jobId: 'batch-2', status: 'queued', createdAt: batchInstant }),
+      makeSummary({ jobId: 'batch-1', status: 'queued', createdAt: batchInstant }),
+      makeSummary({ jobId: 'earlier', status: 'queued', createdAt: '2026-09-16T21:00:00.000Z' }),
+    ]);
+    expect(queue.upNext.map((row) => row.jobId)).toEqual([
+      'earlier',
+      'batch-1',
+      'batch-2',
+      'batch-3',
+      'later',
+    ]);
   });
 });

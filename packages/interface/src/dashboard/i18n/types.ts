@@ -11,6 +11,7 @@ import type { ShellStrings } from './sections/shell';
 import type { CommonStrings } from './sections/common';
 import type { AuditsStrings } from './sections/audits';
 import type { NewScanStrings } from './sections/new-scan';
+import type { ScanQueueStrings } from './sections/scan-queue';
 import type { ProgressStrings } from './sections/progress';
 import type { AuditDetailStrings } from './sections/audit-detail';
 import type { PrepareReportStrings } from './sections/prepare-report';
@@ -43,6 +44,8 @@ export interface DashboardStrings {
   common: CommonStrings;
   audits: AuditsStrings;
   newScan: NewScanStrings;
+  /** Issue #375: batch submission from Prospects and the Audits page queue. */
+  scanQueue: ScanQueueStrings;
   progress: ProgressStrings;
   auditDetail: AuditDetailStrings;
   /** Plan 019: the Prepare report card. The closed vocabulary option

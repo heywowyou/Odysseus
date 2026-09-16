@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { JSX } from 'react';
 import { Building2 } from 'lucide-react';
 import { Link, useLocation, useSearchParams } from 'react-router';
@@ -28,6 +28,7 @@ import {
   type ProspectHubRow,
 } from './prospect-hub-model';
 import { ProspectFilterBar } from './prospect-filter-bar';
+import { QueueScansDialog } from './queue-scans-dialog';
 import {
   clearProspectFilters,
   parseProspectFilters,
@@ -75,6 +76,13 @@ export function ProspectHubListPage(): JSX.Element {
     email: '',
   });
   const [creating, setCreating] = useState(false);
+  // Issue #375: prospects picked for a batch scan, kept in the order they
+  // were ticked, which is the order the review dialog proposes.
+  const [selected, setSelected] = useState<ProspectHubRow[]>([]);
+  const [queueDialogOpen, setQueueDialogOpen] = useState(false);
+  // What the dialog reviews, captured when it opens: clearing the selection
+  // after a successful submission must not empty the result it is showing.
+  const [queueProspects, setQueueProspects] = useState<ProspectHubRow[]>([]);
   const [searchParams, setSearchParams] = useSearchParams();
   const { pathname } = useLocation();
   const filterState = parseProspectFilters(searchParams);
@@ -91,6 +99,21 @@ export function ProspectHubListPage(): JSX.Element {
   };
   const response = useApi<ProspectHubListResponse>(buildHubProspectsPath(filterState));
   const rows = response.data?.rows ?? [];
+  const selectedIds = useMemo(() => new Set(selected.map((row) => row.prospectId)), [selected]);
+  const pageFullySelected = rows.length > 0 && rows.every((row) => selectedIds.has(row.prospectId));
+  const toggleRow = (row: ProspectHubRow): void =>
+    setSelected((current) =>
+      current.some((entry) => entry.prospectId === row.prospectId)
+        ? current.filter((entry) => entry.prospectId !== row.prospectId)
+        : [...current, row],
+    );
+  const togglePage = (): void =>
+    setSelected((current) =>
+      pageFullySelected
+        ? current.filter((entry) => !rows.some((row) => row.prospectId === entry.prospectId))
+        : [...current, ...rows.filter((row) => !selectedIds.has(row.prospectId))],
+    );
+  const canSelect = !resultsView && !archivedView;
   const pageCopy = resultsView ? resultsCopy : copy;
   const returnTo = searchParams.toString() ? `${pathname}?${searchParams.toString()}` : pathname;
   const detailHref = (prospectId: string): string =>
@@ -250,6 +273,33 @@ export function ProspectHubListPage(): JSX.Element {
           </div>
         </Card>
       ) : null}
+      {canSelect && selected.length > 0 ? (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-raised px-4 py-2.5">
+          <span className="text-sm text-ink-soft">
+            {strings.scanQueue.selectedCount.replace('{count}', String(selected.length))}
+          </span>
+          <div className="flex gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setSelected([])}>
+              {strings.scanQueue.clearSelection}
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                setQueueProspects(selected);
+                setQueueDialogOpen(true);
+              }}
+            >
+              {strings.scanQueue.queueAction}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+      <QueueScansDialog
+        open={queueDialogOpen}
+        onOpenChange={setQueueDialogOpen}
+        prospects={queueProspects}
+        onQueued={() => setSelected([])}
+      />
       {response.error ? (
         <EmptyState
           icon={Building2}
@@ -295,6 +345,17 @@ export function ProspectHubListPage(): JSX.Element {
                   </>
                 ) : (
                   <>
+                    {canSelect ? (
+                      <TableHeaderCell className="w-10">
+                        <input
+                          type="checkbox"
+                          className="size-4 accent-accent-bright"
+                          checked={pageFullySelected}
+                          onChange={togglePage}
+                          aria-label={strings.scanQueue.selectPageAria}
+                        />
+                      </TableHeaderCell>
+                    ) : null}
                     <TableHeaderCell>{copy.columns.name}</TableHeaderCell>
                     <TableHeaderCell>{copy.columns.site}</TableHeaderCell>
                     <TableHeaderCell>{copy.columns.location}</TableHeaderCell>
@@ -346,6 +407,17 @@ export function ProspectHubListPage(): JSX.Element {
                     </>
                   ) : (
                     <>
+                      {canSelect ? (
+                        <TableCell>
+                          <input
+                            type="checkbox"
+                            className="size-4 accent-accent-bright"
+                            checked={selectedIds.has(row.prospectId)}
+                            onChange={() => toggleRow(row)}
+                            aria-label={strings.scanQueue.selectAria.replace('{name}', row.name)}
+                          />
+                        </TableCell>
+                      ) : null}
                       <TableCell>
                         <Link
                           className="font-medium text-ink hover:underline"

@@ -123,6 +123,9 @@ export const scanSummarySchema = z.object({
   severityRollup: severityRollupSchema.optional(),
   needsReview: z.boolean().optional(),
   prospectId: z.string().optional(),
+  /** Present on queued and running rows linked to a prospect, for the scan
+   *  queue's labels. */
+  prospectName: z.string().optional(),
 });
 
 /** GET /api/audits/:auditId. Strictly validates the identity/lifecycle

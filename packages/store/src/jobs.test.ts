@@ -69,6 +69,39 @@ describe.skipIf(!available)('job queue persistence', () => {
       expect(await claimNextQueuedJob(connection!)).toBeNull();
     });
 
+    it('claims jobs created in the same millisecond in creation order', async () => {
+      const sameInstant = new Date('2026-09-01T22:00:00Z');
+      const ids: string[] = [];
+      for (let index = 0; index < 5; index++) ids.push(await queuedJob(sameInstant));
+
+      const claimed: (string | undefined)[] = [];
+      for (let index = 0; index < 5; index++) {
+        claimed.push((await claimNextQueuedJob(connection!))?.jobId);
+      }
+      expect(claimed).toEqual(ids);
+    });
+
+    it('moves on to the next queued job whatever the previous one ended as', async () => {
+      const ids: string[] = [];
+      for (let index = 0; index < 4; index++) {
+        ids.push(await queuedJob(new Date(Date.UTC(2026, 8, 1, 22, index))));
+      }
+      const first = await claimNextQueuedJob(connection!);
+      await failJob(connection!, first!.jobId, 'crawl failed');
+      const second = await claimNextQueuedJob(connection!);
+      await markJobNeedsInput(
+        connection!,
+        second!.jobId,
+        [{ field: 'raisonSociale', value: 'x' }],
+        'needs input',
+      );
+      const third = await claimNextQueuedJob(connection!);
+      await cancelJob(connection!, third!.jobId, 'cancelled by operator');
+      const fourth = await claimNextQueuedJob(connection!);
+
+      expect([first, second, third, fourth].map((job) => job?.jobId)).toEqual(ids);
+    });
+
     it('never claims a cancelled job', async () => {
       const jobId = await queuedJob(new Date());
       await cancelJob(connection!, jobId, 'cancelled by operator');
