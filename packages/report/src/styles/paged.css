@@ -249,6 +249,29 @@ html {
   break-before: avoid;
 }
 
+/* Issue #304: the card's context footer (conformity, citation, finding
+   references) is already atomic, but nothing stopped the break from
+   happening immediately BEFORE it - so a page opened with "Conformité :
+   Non conforme · Constats : f181, f188, f189" and nothing else, the tail
+   of a priority whose body finished on the previous page. Two delivered
+   reports shipped that fragment. Glued to whatever precedes it: the
+   footer is a summary of the card above it and means nothing read alone,
+   the same reasoning that already keeps the header attached to its first
+   row. */
+.theme-row-context {
+  break-before: avoid;
+}
+
+/* Issue #304's second half: a section of card prose never leaves a single
+   line behind or carries a single line forward. Chromium's own default is
+   2, but the report states it rather than inheriting it, the same way the
+   appendix tables state their own 3 above. */
+.theme-row,
+.theme-row-text {
+  orphans: 2;
+  widows: 2;
+}
+
 /* Sections flow freely and share a page when short (item 34 above), which
    is deliberate - but nothing separated the end of one section's content
    from the next section's heading when that happened, so a heading could

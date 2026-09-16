@@ -139,6 +139,48 @@ function addAppendixCategoryBoundaryPressure(html: string): string {
   );
 }
 
+/** Issue #304: makes the priority card's own body tall enough that the
+ * break falls immediately before its context footer - the shape two
+ * delivered reports shipped, where a page opened with "Conformité : Non
+ * conforme · Constats : f181, f188, f189" and nothing else. 180mm was found
+ * by sweeping through the real pipeline; above ~230mm the preceding row is
+ * taller than a page on its own and no keep-together can be satisfied. */
+function addThemeContextBoundaryPressure(html: string): string {
+  return html.replace(
+    '<div class="theme-row theme-row-context">',
+    '<div class="theme-row" style="height:180mm" data-theme-context-pressure></div><div class="theme-row theme-row-context">',
+  );
+}
+
+/** Undoes paged.css's issue #304 rule, for the same reason
+ * withoutAppendixCategoryPageBreak exists: with the rule in place the
+ * defect cannot be produced, so the assertion needs the unfixed document to
+ * mean anything. */
+function withoutThemeContextKeepWithPrevious(html: string): string {
+  return html.replace(
+    '</head>',
+    '<style>.theme-row-context { break-before: auto; }</style></head>',
+  );
+}
+
+/** Counts priority-card context footers that open a page with none of their
+ * own card above them on that page. */
+async function countOrphanedThemeContextRows(page: Page): Promise<number> {
+  return page.evaluate(
+    () =>
+      Array.from(document.querySelectorAll('.pagedjs_page')).flatMap((pageEl) =>
+        Array.from(pageEl.querySelectorAll('.theme-row-context')).filter((context) => {
+          const cardFragment = context.closest('.theme-card');
+          return (
+            cardFragment !== null &&
+            cardFragment.querySelector('.theme-card-header, .theme-row:not(.theme-row-context)') ===
+              null
+          );
+        }),
+      ).length,
+  );
+}
+
 /** Undoes paged.css's issue #303 rule, reproducing the layout the two
  * delivered reports shipped. Only a test uses this: it is what makes the
  * gate's own assertion meaningful, since with the rule in place the strand
@@ -373,6 +415,34 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
     // reaching a PDF at all is the assertion.
     expect(pdf.length).toBeGreaterThan(0);
   }, 180_000);
+
+  it("issue #304: a priority card's context footer never opens a page on its own", async () => {
+    expect(await countOrphanedThemeContextRows(doc.page)).toBe(0);
+
+    const pressured = await paginate(
+      browser,
+      addThemeContextBoundaryPressure(stressHtml),
+      pagedjsSource,
+    );
+    try {
+      expect(await countOrphanedThemeContextRows(pressured.page)).toBe(0);
+    } finally {
+      await pressured.page.context().close();
+    }
+  }, 60_000);
+
+  it('issue #304: the same pressure orphans the footer once the keep-together is taken away', async () => {
+    const unfixed = await paginate(
+      browser,
+      withoutThemeContextKeepWithPrevious(addThemeContextBoundaryPressure(stressHtml)),
+      pagedjsSource,
+    );
+    try {
+      expect(await countOrphanedThemeContextRows(unfixed.page)).toBeGreaterThan(0);
+    } finally {
+      await unfixed.page.context().close();
+    }
+  }, 60_000);
 
   it('invariant 6a: the bounded start-here panel never fragments across physical pages', async () => {
     const pressured = await paginate(

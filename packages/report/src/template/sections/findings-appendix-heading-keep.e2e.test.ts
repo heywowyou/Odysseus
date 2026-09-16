@@ -129,7 +129,16 @@ afterAll(async () => {
   await browser?.close();
 });
 
-async function buildAppendixHtml(fillerMm: number): Promise<string> {
+/** Issue #303 gave every annex category an unconditional break-before:
+ *  page, which is also what keeps this fixture's filler from pushing the
+ *  heading into a strand at all. The defect-confirmation test below needs
+ *  the pre-#303 layout to have anything to confirm, so it - and only it -
+ *  turns that rule back off. The pipeline test renders with the real
+ *  stylesheet. */
+async function buildAppendixHtml(
+  fillerMm: number,
+  options: { withoutCategoryPageBreak?: boolean } = {},
+): Promise<string> {
   const appendixHtml = renderFindingsAppendix(
     getStrings('fr'),
     12,
@@ -142,9 +151,12 @@ async function buildAppendixHtml(fillerMm: number): Promise<string> {
   const groupIndex = appendixHtml.indexOf(groupMarker);
   if (groupIndex === -1) throw new Error('rule group wrapper marker not found');
   const withFiller = `${appendixHtml.slice(0, groupIndex)}<div style="height:${fillerMm}mm"></div>${appendixHtml.slice(groupIndex)}`;
+  const categoryBreakOverride = options.withoutCategoryPageBreak
+    ? '<style>.appendix-category { break-before: auto; }</style>'
+    : '';
   return `<!doctype html>
 <html lang="fr">
-  <head><meta charset="utf-8" /><style>${styles}</style></head>
+  <head><meta charset="utf-8" /><style>${styles}</style>${categoryBreakOverride}</head>
   <body><div style="font-family:var(--font-body);color:var(--color-text)">${withFiller}</div></body>
 </html>`;
 }
@@ -194,7 +206,9 @@ async function inspectHeadingPlacements(html: string): Promise<HeadingPlacement[
 
 describe('issue #170: an annex rule group heading never strands at a page bottom', () => {
   it('the fixture actually strands the heading when no repair runs (confirms the defect)', async () => {
-    const placements = await inspectHeadingPlacements(await buildAppendixHtml(165));
+    const placements = await inspectHeadingPlacements(
+      await buildAppendixHtml(165, { withoutCategoryPageBreak: true }),
+    );
     const headingPages = placements.filter((p) => p.headingOnPage);
     expect(headingPages.length).toBeGreaterThan(0);
     const stranded = headingPages.filter((p) => !p.followedByTableWithRow);
