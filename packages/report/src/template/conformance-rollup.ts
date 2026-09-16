@@ -25,6 +25,12 @@ export interface ConformanceRow {
   findingCount: number;
   totalOccurrences: number;
   pages: number;
+  /** Issue #335: the earlier criterion (in table order) backed by exactly
+   *  the same findings as this one. One axe rule mapped to two criteria
+   *  (link-name to 2.4.4 and 4.1.2) produced two rows with identical
+   *  figures that read as a duplication bug; the row now says so. Absent
+   *  when this criterion's finding set is its own. */
+  sameFindingsAs?: string;
 }
 
 function rollup(
@@ -41,7 +47,7 @@ function rollup(
 ): ConformanceRow[] {
   const counts = new Map<
     string,
-    { findingCount: number; totalOccurrences: number; pages: Set<string> }
+    { findingCount: number; totalOccurrences: number; pages: Set<string>; findingIds: string[] }
   >();
 
   for (const finding of findings) {
@@ -58,8 +64,10 @@ function rollup(
         findingCount: 0,
         totalOccurrences: 0,
         pages: new Set<string>(),
+        findingIds: [],
       };
       row.findingCount += 1;
+      row.findingIds.push(finding.findingId);
       row.totalOccurrences += finding.occurrences;
       for (const url of finding.pageUrls) {
         if (scopePageUrls !== undefined && !scopePageUrls.has(url)) continue;
@@ -69,19 +77,20 @@ function rollup(
     }
   }
 
-  const map = new Map<string, ConformanceRow>(
-    [...counts.entries()].map(([criterion, row]) => [
+  const sorted = [...counts.entries()].sort(([a], [b]) => compareCriteria(a, b));
+  const firstCriterionByFindingSet = new Map<string, string>();
+  return sorted.map(([criterion, row]) => {
+    const findingSetKey = [...row.findingIds].sort().join('\n');
+    const sameFindingsAs = firstCriterionByFindingSet.get(findingSetKey);
+    if (sameFindingsAs === undefined) firstCriterionByFindingSet.set(findingSetKey, criterion);
+    return {
       criterion,
-      {
-        criterion,
-        findingCount: row.findingCount,
-        totalOccurrences: row.totalOccurrences,
-        pages: row.pages.size,
-      },
-    ]),
-  );
-
-  return [...map.values()].sort((a, b) => compareCriteria(a.criterion, b.criterion));
+      findingCount: row.findingCount,
+      totalOccurrences: row.totalOccurrences,
+      pages: row.pages.size,
+      ...(sameFindingsAs !== undefined ? { sameFindingsAs } : {}),
+    };
+  });
 }
 
 /** item 8: only rules NOT in HEURISTIC_RULE_IDS (e.g. axe-core's own

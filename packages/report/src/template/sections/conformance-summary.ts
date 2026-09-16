@@ -82,7 +82,12 @@ function renderRollupTable(
             (row) => `
               <tr style="${rowExtra}">
                 ${showCriterionColumn ? cell(escapeHtml(row.criterion), 'color:var(--color-accent-300)') : ''}
-                ${cell(escapeHtml(getCriterionName(row.criterion, language) ?? row.criterion))}
+                ${cell(
+                  escapeHtml(getCriterionName(row.criterion, language) ?? row.criterion) +
+                    (row.sameFindingsAs !== undefined
+                      ? `<span class="text-muted" style="display:block;font-size:11px;margin-top:2px">${escapeHtml(fillTemplate(c.sameFindingsAsTemplate, { criterion: row.sameFindingsAs }))}</span>`
+                      : ''),
+                )}
                 ${cell(formatNumber(row.findingCount, language))}
                 ${cell(formatNumber(row.totalOccurrences, language))}
                 ${cell(formatNumber(row.pages, language))}

@@ -108,6 +108,7 @@ export const en: ReportStrings = {
       'These rows come from a heuristic signal on alt-text quality, not a deterministic conformance test: they flag alt text that may be low-value (generic, a raw filename, or duplicated), without asserting a confirmed non-conformance. A manual review is needed before treating these as conformance gaps.',
     multiCriterionNote:
       "A finding mapped to more than one WCAG criterion is counted under each row: the Occurrences column's total can therefore exceed the accessibility-occurrences count stated elsewhere in this report.",
+    sameFindingsAsTemplate: 'Same findings as criterion {criterion}',
   },
   coverage: {
     summaryTemplate:

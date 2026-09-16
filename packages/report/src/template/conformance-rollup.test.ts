@@ -26,6 +26,44 @@ function loadMultiPageFindings(): Finding[] {
 }
 
 describe('buildConformanceRollup', () => {
+  it('issue #335: marks a criterion whose figures come from exactly the same findings as an earlier row', () => {
+    const base = {
+      auditId: 'a1',
+      schemaVersion: 1 as const,
+      source: 'axe' as const,
+      category: 'accessibility' as const,
+      severity: 'serious' as const,
+      title: 't',
+      description: 'd',
+      pageUrls: ['https://example.com/'],
+      occurrences: 3,
+      elements: [],
+      rawEvidence: {},
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+    const shared = {
+      ...base,
+      findingId: 'f001',
+      ruleId: 'link-name',
+      wcagCriteria: ['2.4.4', '4.1.2'],
+    };
+    const sameOnly = buildConformanceRollup([shared as unknown as Finding]);
+    expect(sameOnly.find((r) => r.criterion === '2.4.4')?.sameFindingsAs).toBeUndefined();
+    expect(sameOnly.find((r) => r.criterion === '4.1.2')?.sameFindingsAs).toBe('2.4.4');
+
+    const withOwnFinding = buildConformanceRollup([
+      shared as unknown as Finding,
+      {
+        ...base,
+        findingId: 'f002',
+        ruleId: 'button-name',
+        wcagCriteria: ['4.1.2'],
+      } as unknown as Finding,
+    ]);
+    expect(withOwnFinding.find((r) => r.criterion === '4.1.2')?.sameFindingsAs).toBeUndefined();
+  });
+
   it('produces exactly the 7 criteria the doc itself verified against the real multi-page scan', () => {
     const findings = loadMultiPageFindings();
     const rows = buildConformanceRollup(findings);

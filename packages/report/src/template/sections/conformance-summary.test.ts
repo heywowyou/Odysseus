@@ -208,3 +208,19 @@ describe('D5: the scope note names the legal-exposure section, not an ordinal', 
     }
   });
 });
+
+describe('issue #335: identical criterion rows say they share their findings', () => {
+  it('names the earlier criterion under the repeated row', async () => {
+    const findings = await loadSmallSiteFindings();
+    const linkName = findings.find((f) => f.category === 'accessibility');
+    if (linkName === undefined) throw new Error('fixture has no accessibility finding');
+    const html = renderConformanceSummary(
+      getStrings('fr'),
+      7,
+      [{ ...linkName, ruleId: 'link-name', wcagCriteria: ['2.4.4', '4.1.2'] }],
+      'fr',
+    );
+    expect(html).toContain('Mêmes constats que le critère 2.4.4');
+    expect(html.split('Mêmes constats que').length - 1).toBe(1);
+  });
+});

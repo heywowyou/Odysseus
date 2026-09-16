@@ -123,6 +123,7 @@ export const fr: ReportStrings = {
     // exceeds the accessibility-occurrences tile elsewhere in the report.
     multiCriterionNote:
       "Un constat associé à plusieurs critères WCAG est compté dans chaque ligne concernée : la somme de la colonne « Occurrences » peut donc dépasser le nombre total d'occurrences d'accessibilité indiqué ailleurs dans ce rapport.",
+    sameFindingsAsTemplate: 'Mêmes constats que le critère {criterion}',
   },
   coverage: {
     summaryTemplate:

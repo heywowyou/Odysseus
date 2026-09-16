@@ -224,6 +224,10 @@ export interface ReportStrings {
      *  legitimately exceeding the accessibility-occurrences tile is
      *  explained rather than left for an agency to puzzle out. */
     multiCriterionNote: string;
+    /** Issue #335: under a criterion row whose figures come from exactly
+     *  the same findings as an earlier row. `{criterion}` is that row's
+     *  number. */
+    sameFindingsAsTemplate: string;
   };
   coverage: {
     /** Templates: {inventory}, {content}, {contentCompleted},
