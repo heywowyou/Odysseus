@@ -92,6 +92,8 @@ const prospectSchema = new Schema<ProspectHubDocument>(
     hotel: { type: hotelSchema },
     fieldOrigins: { type: Schema.Types.Mixed, required: true },
     directoryRef: { type: directoryRefSchema },
+    // Plan 050: absent on every active prospect, so no migration is needed.
+    archivedAt: { type: Date },
     createdAt: { type: Date, required: true },
     updatedAt: { type: Date, required: true },
     lastActivityAt: { type: Date, required: true },

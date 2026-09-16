@@ -18,6 +18,16 @@ describe('prospect filter model', () => {
     expect(state.status).toBe('');
   });
 
+  it('round-trips the archive view and asks the API for archived prospects only', () => {
+    const state = parseProspectFilters(new URLSearchParams('view=archived&q=Paris'));
+    expect(state.view).toBe('archived');
+    expect(serializeProspectFilters(state).get('view')).toBe('archived');
+    const query = buildProspectApiQuery(state, 'prospects');
+    expect(query.get('archived')).toBe('true');
+    expect(query.get('view')).toBeNull();
+    expect(buildProspectApiQuery(state, 'directory').get('archived')).toBeNull();
+  });
+
   it('treats unknown views as the ordinary portfolio view', () => {
     expect(parseProspectFilters(new URLSearchParams('view=unknown')).view).toBe('all');
   });

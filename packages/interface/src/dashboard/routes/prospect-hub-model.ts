@@ -36,6 +36,7 @@ export interface ProspectHubRow {
   hotel?: { stars?: number; rooms?: number; groupStatus?: string };
   emails: { address: string; origin: string }[];
   lastActivityAt: string;
+  archivedAt?: string;
 }
 
 export interface ProspectHubListResponse {
@@ -44,6 +45,7 @@ export interface ProspectHubListResponse {
   page: number;
   pageSize: number;
   statusCounts: Record<ProspectResultStatus, number>;
+  archivedCount?: number;
 }
 
 export interface DirectoryRow {
@@ -61,6 +63,8 @@ export interface DirectoryRow {
   capacity?: number;
   groupStatus?: string;
   prospectId?: string;
+  /** Plan 050: lifecycle of the linked prospect, read live from it. */
+  prospectState?: 'active' | 'archived';
 }
 
 export interface DirectoryResponse {
@@ -68,6 +72,31 @@ export interface DirectoryResponse {
   total: number;
   page: number;
   pageSize: number;
+}
+
+/** Plan 050: counts GET /api/prospects/:id/deletion-impact returns. */
+export interface ProspectDeletionImpact {
+  audits: number;
+  findings: number;
+  analyses: number;
+  reports: number;
+  previews: number;
+  drafts: number;
+  threads: number;
+  outcomes: number;
+  events: number;
+  jobs: number;
+}
+
+/** The permanent-delete confirmation names what goes, non-zero counts only,
+ *  in a fixed order, so the operator sees the scope before committing. */
+export function deletionImpactSummary(
+  impact: ProspectDeletionImpact,
+  labels: Record<keyof ProspectDeletionImpact, string>,
+): string[] {
+  return (Object.keys(labels) as (keyof ProspectDeletionImpact)[])
+    .filter((key) => impact[key] > 0)
+    .map((key) => labels[key].replace('{count}', String(impact[key])));
 }
 
 export function buildHubProspectsPath(state: ProspectFilterState): string {

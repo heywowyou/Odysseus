@@ -3,6 +3,7 @@ import type { JSX } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router';
 import { PageHeader, PAGE_WIDTH } from '../components/page-header';
+import { Badge } from '../components/ui/badge';
 import { Button, buttonStyles } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { EmptyState } from '../components/ui/empty-state';
@@ -48,11 +49,29 @@ export function DirectoryPage(): JSX.Element {
     setSelected((current) =>
       current.includes(id) ? current.filter((value) => value !== id) : [...current, id],
     );
+  const [adding, setAdding] = useState(false);
+  const [restoring, setRestoring] = useState<string | null>(null);
   const add = async (): Promise<void> => {
-    if (selected.length === 0) return;
-    await sendJson('/api/directory/add', 'POST', { directoryIds: selected });
-    setSelected([]);
-    response.refresh();
+    if (selected.length === 0 || adding) return;
+    setAdding(true);
+    try {
+      await sendJson('/api/directory/add', 'POST', { directoryIds: selected });
+      setSelected([]);
+      response.refresh();
+    } finally {
+      setAdding(false);
+    }
+  };
+  // Plan 050: an entry whose prospect was archived is restored, never
+  // re-added, so its history comes back on the same prospect.
+  const restore = async (prospectId: string): Promise<void> => {
+    setRestoring(prospectId);
+    try {
+      await sendJson(`/api/prospects/${encodeURIComponent(prospectId)}/restore`, 'POST', {});
+      response.refresh();
+    } finally {
+      setRestoring(null);
+    }
   };
   return (
     <div className={`${PAGE_WIDTH.surface} px-5 py-8`}>
@@ -81,7 +100,7 @@ export function DirectoryPage(): JSX.Element {
         <Card
           title={copy.count.replace('{count}', String(response.data?.total ?? 0))}
           actions={
-            <Button disabled={selected.length === 0} onClick={() => void add()}>
+            <Button disabled={selected.length === 0} isLoading={adding} onClick={() => void add()}>
               {copy.addSelected.replace('{count}', String(selected.length))}
             </Button>
           }
@@ -116,13 +135,35 @@ export function DirectoryPage(): JSX.Element {
                     {row.prospectId ? (
                       <Link
                         className="font-medium text-ink hover:underline"
-                        to={`/prospects/${row.prospectId}`}
+                        to={`/prospects/${encodeURIComponent(row.prospectId)}`}
                       >
                         {row.name}
                       </Link>
                     ) : (
                       <span className="font-medium">{row.name}</span>
                     )}
+                    {row.prospectId !== undefined && row.prospectState === 'archived' ? (
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        <Badge tone="neutral">{copy.archivedProspect}</Badge>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          isLoading={restoring === row.prospectId}
+                          onClick={() => void restore(row.prospectId!)}
+                        >
+                          {copy.restoreProspect}
+                        </Button>
+                      </div>
+                    ) : row.prospectId !== undefined ? (
+                      <div className="mt-1">
+                        <Link
+                          className="text-xs text-ink-muted hover:underline"
+                          to={`/prospects/${encodeURIComponent(row.prospectId)}`}
+                        >
+                          {copy.openProspect}
+                        </Link>
+                      </div>
+                    ) : null}
                   </TableCell>
                   <TableCell>
                     {copy.websiteKindLabels[row.websiteKind] ?? strings.common.vocabularyFallback}

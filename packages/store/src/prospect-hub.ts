@@ -20,6 +20,9 @@ import {
 } from './schemas/directory-entry.schema.js';
 import { createAuditModel, type AuditDocument } from './schemas/audit.schema.js';
 import { createJobModel } from './schemas/job.schema.js';
+import { createAnalysisModel } from './schemas/analysis.schema.js';
+import { createFindingModel } from './schemas/finding.schema.js';
+import { createReportModel } from './schemas/report.schema.js';
 import { createOutreachDraftModel } from './schemas/outreach-draft.schema.js';
 import { createOutreachOutcomeModel } from './schemas/outreach-outcome.schema.js';
 import { createOutreachPreviewModel } from './schemas/outreach-preview.schema.js';
@@ -72,6 +75,8 @@ export interface ProspectHubFilter {
   roomsMax?: number | undefined;
   hasScan?: boolean | undefined;
   inactive?: boolean | undefined;
+  /** Plan 050: false/absent lists active prospects, true the archive. */
+  archived?: boolean | undefined;
   page?: number | undefined;
   pageSize?: number | undefined;
 }
@@ -114,7 +119,15 @@ export type ProspectListView = 'all' | 'results';
 
 export interface ProspectListPage extends Page<ProspectHubDocument> {
   statusCounts: Record<ProspectResultStatus, number>;
+  /** Archived prospects matching the search and property filters, whatever
+   *  the status, so the archive tab count does not change with the view. */
+  archivedCount: number;
 }
+
+/** Plan 050: archive is explicit lifecycle state, not a status. Absence of
+ *  the field is the backward-compatible active state. */
+const ACTIVE_PROSPECT_QUERY = { archivedAt: { $exists: false } } as const;
+const ARCHIVED_PROSPECT_QUERY = { archivedAt: { $exists: true } } as const;
 
 export type { ProspectTodoRow } from './prospect-work.js';
 
@@ -185,6 +198,9 @@ function queryForProspects(filter: ProspectHubFilter): Record<string, unknown> {
     const boundary = new Date(Date.now() - INACTIVE_AFTER_MS);
     query['lastActivityAt'] = filter.inactive ? { $lt: boundary } : { $gte: boundary };
   }
+  query['archivedAt'] = (
+    filter.archived === true ? ARCHIVED_PROSPECT_QUERY : ACTIVE_PROSPECT_QUERY
+  )['archivedAt'];
   return query;
 }
 
@@ -196,6 +212,7 @@ export async function createProspectHub(
   connection: Connection,
   rawInput: NewProspectHubInput,
   actor = 'operator',
+  prospectId: string = randomUUID(),
 ): Promise<ProspectHubDocument> {
   const input = withNormalizedSiren(rawInput);
   const now = new Date();
@@ -210,7 +227,7 @@ export async function createProspectHub(
         };
   });
   const value = prospectSchema.parse({
-    prospectId: randomUUID(),
+    prospectId,
     sector: input.sector,
     name: input.name,
     websites,
@@ -305,15 +322,16 @@ export async function listProspects(
       ),
     ),
   ) as Record<ProspectResultStatus, number>;
-  const [rows, total] = await Promise.all([
+  const [rows, total, archivedCount] = await Promise.all([
     Model.find(query)
       .sort({ name: 1, prospectId: 1 })
       .skip((page - 1) * pageSize)
       .limit(pageSize)
       .lean<ProspectHubDocument[]>(),
     Model.countDocuments(query),
+    Model.countDocuments({ ...queryForStatusCounts(query), ...ARCHIVED_PROSPECT_QUERY }),
   ]);
-  return { rows, page, pageSize, total, statusCounts };
+  return { rows, page, pageSize, total, statusCounts, archivedCount };
 }
 
 function queryForStatusCounts(query: Record<string, unknown>): Record<string, unknown> {
@@ -327,7 +345,7 @@ export async function listProspectTodo(connection: Connection): Promise<Prospect
   // give the two consumers different snapshots. The work module keeps every
   // attached collection query bounded with `$in` and narrow projections.
   const prospects = await createProspectHubModel(connection)
-    .find({})
+    .find(ACTIVE_PROSPECT_QUERY)
     .sort({ name: 1, prospectId: 1 })
     .lean<ProspectHubDocument[]>();
   const work = await loadProspectWork(connection, prospects);
@@ -346,7 +364,9 @@ export interface UpdateProspectOptions {
 export async function updateProspect(
   connection: Connection,
   prospectId: string,
-  rawPatch: Partial<Omit<Prospect, 'prospectId' | 'createdAt' | 'updatedAt' | 'lastActivityAt'>>,
+  rawPatch: Partial<
+    Omit<Prospect, 'prospectId' | 'archivedAt' | 'createdAt' | 'updatedAt' | 'lastActivityAt'>
+  >,
   actor = 'operator',
   options: UpdateProspectOptions = {},
 ): Promise<ProspectHubDocument | null> {
@@ -427,6 +447,64 @@ export async function setProspectStatus(
     event(prospectId, 'status-changed', { from: current.status, to: status }, actor),
   );
   return { ...current, status, updatedAt: now, lastActivityAt: now };
+}
+
+export interface ProspectLifecycleResult {
+  prospect: ProspectHubDocument;
+  /** False when the prospect was already in the requested state. */
+  changed: boolean;
+}
+
+/**
+ * Plan 050: takes a prospect out of active work without touching anything
+ * attached to it. The prospect document, its enrichment and field origins,
+ * audits and their derivatives, outreach history, events, jobs, and the
+ * directory link all stay exactly where they are. Archiving is not an
+ * outreach outcome either: no status, suppression, preview, or draft is
+ * changed. The conditional update makes a repeated archive a no-op.
+ */
+export async function archiveProspect(
+  connection: Connection,
+  prospectId: string,
+  actor = 'operator',
+): Promise<ProspectLifecycleResult | null> {
+  const now = new Date();
+  const archived = await createProspectHubModel(connection)
+    .findOneAndUpdate(
+      { prospectId, ...ACTIVE_PROSPECT_QUERY },
+      { $set: { archivedAt: now, updatedAt: now, lastActivityAt: now } },
+      { returnDocument: 'after', projection: { _id: 0, __v: 0 } },
+    )
+    .lean<ProspectHubDocument>();
+  if (archived === null) {
+    const current = await getProspectHub(connection, prospectId);
+    return current === null ? null : { prospect: current, changed: false };
+  }
+  await recordEvent(connection, event(prospectId, 'prospect-archived', {}, actor));
+  return { prospect: archived, changed: true };
+}
+
+/** Returns an archived prospect to active work on the same prospectId, with
+ *  every attached record as it was. Restoring an active prospect is a no-op. */
+export async function restoreProspect(
+  connection: Connection,
+  prospectId: string,
+  actor = 'operator',
+): Promise<ProspectLifecycleResult | null> {
+  const now = new Date();
+  const restored = await createProspectHubModel(connection)
+    .findOneAndUpdate(
+      { prospectId, ...ARCHIVED_PROSPECT_QUERY },
+      { $unset: { archivedAt: 1 }, $set: { updatedAt: now, lastActivityAt: now } },
+      { returnDocument: 'after', projection: { _id: 0, __v: 0 } },
+    )
+    .lean<ProspectHubDocument>();
+  if (restored === null) {
+    const current = await getProspectHub(connection, prospectId);
+    return current === null ? null : { prospect: current, changed: false };
+  }
+  await recordEvent(connection, event(prospectId, 'prospect-restored', {}, actor));
+  return { prospect: restored, changed: true };
 }
 
 export async function advanceProspectStatus(
@@ -547,10 +625,19 @@ export async function listProspectAudits(
     .lean<ProspectAuditRow[]>();
 }
 
+export type DirectoryProspectState = 'active' | 'archived';
+
+export type DirectoryListRow = DirectoryEntryDocument & {
+  /** Plan 050: lifecycle of the linked prospect, read from the prospect
+   *  rather than copied into the directory. Absent when unlinked, or when a
+   *  link points at a prospect that no longer exists. */
+  prospectState?: DirectoryProspectState;
+};
+
 export async function listDirectory(
   connection: Connection,
   filter: DirectoryFilter = {},
-): Promise<Page<DirectoryEntryDocument>> {
+): Promise<Page<DirectoryListRow>> {
   const [page, pageSize] = pageBounds(filter.page, filter.pageSize);
   const query: Record<string, unknown> = {};
   if (filter.sector) query['sector'] = filter.sector;
@@ -568,7 +655,7 @@ export async function listDirectory(
   }
   if (filter.q) query['name'] = new RegExp(escapeRegex(filter.q), 'i');
   const Model = createDirectoryEntryModel(connection);
-  const [rows, total] = await Promise.all([
+  const [entries, total] = await Promise.all([
     Model.find(query)
       .sort({ name: 1, directoryId: 1 })
       .skip((page - 1) * pageSize)
@@ -576,9 +663,40 @@ export async function listDirectory(
       .lean<DirectoryEntryDocument[]>(),
     Model.countDocuments(query),
   ]);
+  const linkedIds = unique(entries.map((entry) => entry.prospectId));
+  const linked =
+    linkedIds.length === 0
+      ? []
+      : await createProspectHubModel(connection)
+          .find({ prospectId: { $in: linkedIds } })
+          .select({ _id: 0, prospectId: 1, archivedAt: 1 })
+          .lean<Pick<ProspectHubDocument, 'prospectId' | 'archivedAt'>[]>();
+  const stateById = new Map<string, DirectoryProspectState>(
+    linked.map((prospect) => [
+      prospect.prospectId,
+      prospect.archivedAt === undefined ? 'active' : 'archived',
+    ]),
+  );
+  const rows = entries.map((entry) => {
+    const prospectState =
+      entry.prospectId === undefined ? undefined : stateById.get(entry.prospectId);
+    return prospectState === undefined ? entry : { ...entry, prospectState };
+  });
   return { rows, page, pageSize, total };
 }
 
+function unique(values: readonly (string | undefined)[]): string[] {
+  return [...new Set(values.filter((value): value is string => value !== undefined))];
+}
+
+/**
+ * Creates one prospect per unlinked directory entry. Each entry is claimed
+ * first with a conditional write of a pre-minted prospectId, so two
+ * concurrent or repeated clicks can never manufacture a second prospect: the
+ * losing request matches nothing. An entry already linked to a prospect,
+ * active or archived, is never re-added; the directory offers Open or
+ * Restore for those instead.
+ */
 export async function addDirectoryEntriesToProspects(
   connection: Connection,
   directoryIds: readonly string[],
@@ -592,52 +710,64 @@ export async function addDirectoryEntriesToProspects(
   }).lean<DirectoryEntry[]>();
   const created: ProspectHubDocument[] = [];
   for (const entry of entries) {
-    const prospect = await createProspectHub(
-      connection,
-      {
-        sector: entry.sector,
-        name: entry.name,
-        websites:
-          entry.websiteUrl && entry.registrableDomain
-            ? [
-                {
-                  url: entry.websiteUrl,
-                  registrableDomain: entry.registrableDomain,
-                  kind: entry.websiteKind,
-                  primary: true,
-                },
-              ]
-            : [],
-        address: entry.address,
-        postcode: entry.postcode,
-        commune: entry.commune,
-        department: entry.department,
-        phone: entry.phone,
-        hotel: {
-          stars: entry.stars,
-          rooms: entry.rooms,
-          capacity: entry.capacity,
-          groupStatus: entry.groupStatus,
-          groupDomain: entry.groupDomain,
-        },
-        fieldOrigins: {
-          name: 'atout-france',
-          address: 'atout-france',
-          hotel: 'atout-france',
-          websites: 'atout-france',
-        },
-        directoryRef: {
-          source: entry.sourceRefs[0]?.source ?? 'atout-france',
-          sourceId: entry.sourceRefs[0]?.sourceId ?? entry.directoryId,
-        },
-      },
-      actor,
+    const prospectId = randomUUID();
+    const claim = await Directory.updateOne(
+      { directoryId: entry.directoryId, prospectId: { $exists: false } },
+      { $set: { prospectId, updatedAt: new Date() } },
     );
-    await Directory.updateOne(
-      { directoryId: entry.directoryId },
-      { $set: { prospectId: prospect.prospectId, updatedAt: new Date() } },
-    );
-    created.push(prospect);
+    if (claim.modifiedCount === 0) continue;
+    try {
+      const prospect = await createProspectHub(
+        connection,
+        {
+          sector: entry.sector,
+          name: entry.name,
+          websites:
+            entry.websiteUrl && entry.registrableDomain
+              ? [
+                  {
+                    url: entry.websiteUrl,
+                    registrableDomain: entry.registrableDomain,
+                    kind: entry.websiteKind,
+                    primary: true,
+                  },
+                ]
+              : [],
+          address: entry.address,
+          postcode: entry.postcode,
+          commune: entry.commune,
+          department: entry.department,
+          phone: entry.phone,
+          hotel: {
+            stars: entry.stars,
+            rooms: entry.rooms,
+            capacity: entry.capacity,
+            groupStatus: entry.groupStatus,
+            groupDomain: entry.groupDomain,
+          },
+          fieldOrigins: {
+            name: 'atout-france',
+            address: 'atout-france',
+            hotel: 'atout-france',
+            websites: 'atout-france',
+          },
+          directoryRef: {
+            source: entry.sourceRefs[0]?.source ?? 'atout-france',
+            sourceId: entry.sourceRefs[0]?.sourceId ?? entry.directoryId,
+          },
+        },
+        actor,
+        prospectId,
+      );
+      created.push(prospect);
+    } catch (error) {
+      // Release the claim so the entry is not left pointing at nothing.
+      await Directory.updateOne(
+        { directoryId: entry.directoryId, prospectId },
+        { $unset: { prospectId: '' }, $set: { updatedAt: new Date() } },
+      );
+      throw error;
+    }
   }
   return created;
 }
@@ -652,12 +782,78 @@ export interface ProspectCascadeCounts extends AuditCascadeCounts {
   jobs: number;
 }
 
+export interface ProspectDeletionImpact {
+  audits: number;
+  findings: number;
+  analyses: number;
+  reports: number;
+  previews: number;
+  drafts: number;
+  threads: number;
+  outcomes: number;
+  events: number;
+  jobs: number;
+}
+
+/** What deleteProspectPermanently would remove, counted without removing
+ *  anything, so the confirmation can state the scope before the operator
+ *  commits to it. */
+export async function countProspectDeletionImpact(
+  connection: Connection,
+  prospectId: string,
+): Promise<ProspectDeletionImpact | null> {
+  if ((await getProspectHub(connection, prospectId)) === null) return null;
+  const auditIds = (
+    await createAuditModel(connection)
+      .find({ prospectId })
+      .select({ auditId: 1, _id: 0 })
+      .lean<{ auditId: string }[]>()
+  ).map((audit) => audit.auditId);
+  const threadIds = (
+    await createOutreachThreadModel(connection)
+      .find({ prospectId })
+      .select({ threadId: 1, _id: 0 })
+      .lean<{ threadId: string }[]>()
+  ).map((thread) => thread.threadId);
+  const [findings, analyses, reports, previews, drafts, outcomes, events, jobs] = await Promise.all(
+    [
+      createFindingModel(connection).countDocuments({ auditId: { $in: auditIds } }),
+      createAnalysisModel(connection).countDocuments({ auditId: { $in: auditIds } }),
+      createReportModel(connection).countDocuments({ auditId: { $in: auditIds } }),
+      createOutreachPreviewModel(connection).countDocuments({ prospectId }),
+      createOutreachDraftModel(connection).countDocuments({ prospectId }),
+      createOutreachOutcomeModel(connection).countDocuments({
+        $or: [
+          { prospectId },
+          ...(threadIds.length === 0 ? [] : [{ threadId: { $in: threadIds } }]),
+        ],
+      }),
+      createProspectEventModel(connection).countDocuments({ prospectId }),
+      createJobModel(connection).countDocuments({ 'options.prospectId': prospectId }),
+    ],
+  );
+  return {
+    audits: auditIds.length,
+    findings,
+    analyses,
+    reports,
+    previews,
+    drafts,
+    threads: threadIds.length,
+    outcomes,
+    events,
+    jobs,
+  };
+}
+
 /**
  * Permanently removes one prospect and the operational material attached to
- * it. Suppression is intentionally absent: opting out is a durable safety
- * fact, not prospect-owned history.
+ * it. This is the exceptional path (duplicates, test records, bad imports);
+ * ordinary removal from active work is archiveProspect, which never runs
+ * this cascade. Suppression is intentionally absent: opting out is a durable
+ * safety fact, not prospect-owned history.
  */
-export async function deleteProspect(
+export async function deleteProspectPermanently(
   connection: Connection,
   prospectId: string,
 ): Promise<ProspectCascadeCounts | null> {
@@ -875,7 +1071,9 @@ export async function upsertDirectoryEntries(
   const now = new Date();
   const result = await Model.bulkWrite(
     validatedEntries.map((entry) => {
-      const { createdAt, ...fields } = entry;
+      // The prospect link is operator state, never source data: a directory
+      // refresh must not clear or overwrite it (Plan 050).
+      const { createdAt, prospectId: _sourceProspectId, ...fields } = entry;
       return {
         updateOne: {
           filter: { directoryId: entry.directoryId },

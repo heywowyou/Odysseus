@@ -19,7 +19,10 @@ import {
   listProspectEvents,
   listProspects,
   listOutreachPreviews,
-  deleteProspect,
+  archiveProspect,
+  countProspectDeletionImpact,
+  deleteProspectPermanently,
+  restoreProspect,
   recordOutreachDraftReview,
   revokeOutreachPreview,
   recordProspectOutcome,
@@ -125,6 +128,7 @@ function filters(query: URLSearchParams): {
       ...common,
       view: (view as ProspectHubFilter['view']) ?? 'all',
       status: status as ProspectStatus | undefined,
+      archived: optionalBoolean(query, 'archived'),
     },
     directory: { ...common, postcode: optionalText(query, 'postcode') },
   };
@@ -513,6 +517,10 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
       sendError(res, 400, 'use the status endpoint to change status');
       return;
     }
+    if ('archivedAt' in body) {
+      sendError(res, 400, 'use the archive and restore endpoints to change the archive state');
+      return;
+    }
     try {
       const prospect = await updateProspect(connection, params['prospectId']!, body as never);
       if (prospect === null) sendError(res, 404, 'prospect not found');
@@ -680,6 +688,29 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
     }
   });
 
+  // Plan 050: archive is the ordinary way to take a prospect out of active
+  // work. It keeps every attached record and the directory link, and never
+  // withdraws outreach or touches artifacts; both calls are idempotent.
+  router.post('/api/prospects/:prospectId/archive', async ({ res, params }) => {
+    const result = await archiveProspect(connection, params['prospectId']!);
+    if (result === null) sendError(res, 404, 'prospect not found');
+    else sendJson(res, 200, result);
+  });
+
+  router.post('/api/prospects/:prospectId/restore', async ({ res, params }) => {
+    const result = await restoreProspect(connection, params['prospectId']!);
+    if (result === null) sendError(res, 404, 'prospect not found');
+    else sendJson(res, 200, result);
+  });
+
+  router.get('/api/prospects/:prospectId/deletion-impact', async ({ res, params }) => {
+    const impact = await countProspectDeletionImpact(connection, params['prospectId']!);
+    if (impact === null) sendError(res, 404, 'prospect not found');
+    else sendJson(res, 200, impact);
+  });
+
+  // Permanent deletion is the exceptional path (duplicates, test records,
+  // bad imports). The dashboard asks for it only behind an impact summary.
   router.delete('/api/prospects/:prospectId', async ({ res, params }) => {
     const prospectId = params['prospectId']!;
     const audits = await listProspectAudits(connection, prospectId);
@@ -701,7 +732,7 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
       return;
     }
 
-    const deleted = await deleteProspect(connection, prospectId);
+    const deleted = await deleteProspectPermanently(connection, prospectId);
     if (deleted === null) sendError(res, 404, 'prospect not found');
     else sendJson(res, 200, deleted);
   });

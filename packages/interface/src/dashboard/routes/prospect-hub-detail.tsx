@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
-import { ArrowLeft, ExternalLink, History, Pencil, Star, Trash2, X } from 'lucide-react';
+import {
+  Archive,
+  ArchiveRestore,
+  ArrowLeft,
+  ExternalLink,
+  History,
+  Pencil,
+  Star,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { PageHeader, PAGE_WIDTH } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
@@ -11,9 +21,14 @@ import { EmptyState } from '../components/ui/empty-state';
 import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
 import { useI18n } from '../i18n/provider';
-import { ApiError, sendJson } from '../lib/api';
+import { ApiError, fetchJson, sendJson } from '../lib/api';
 import { useApi } from '../lib/use-api';
-import type { ProspectHubRow, ProspectStatus } from './prospect-hub-model';
+import {
+  deletionImpactSummary,
+  type ProspectDeletionImpact,
+  type ProspectHubRow,
+  type ProspectStatus,
+} from './prospect-hub-model';
 import {
   contactRemovalConfirm,
   contactRemovalRequest,
@@ -170,6 +185,21 @@ function daysSince(value: string, now = Date.now()): number {
   return Math.max(0, Math.floor((now - new Date(value).getTime()) / DAY_MS));
 }
 
+function permanentDeleteDescription(
+  impact: readonly string[],
+  copy: {
+    deletePermanentlyIntro: string;
+    deletePermanentlyWith: string;
+    deletePermanentlyKeeps: string;
+  },
+): string {
+  const scope =
+    impact.length === 0
+      ? copy.deletePermanentlyIntro
+      : `${copy.deletePermanentlyIntro} ${copy.deletePermanentlyWith} ${impact.join(', ')}`;
+  return `${scope}. ${copy.deletePermanentlyKeeps}`;
+}
+
 export function ProspectHubDetailPage(): JSX.Element {
   const { strings, language } = useI18n();
   const copy = strings.prospectHub.detail;
@@ -210,6 +240,8 @@ export function ProspectHubDetailPage(): JSX.Element {
   >({});
   const [saving, setSaving] = useState(false);
   const [outreachBusy, setOutreachBusy] = useState<string | null>(null);
+  const [lifecycleBusy, setLifecycleBusy] = useState(false);
+  const [deletionImpact, setDeletionImpact] = useState<ProspectDeletionImpact | null>(null);
   const [outreachNotice, setOutreachNotice] = useState<string | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<ContactRemoval | null>(null);
   const [newStakeholder, setNewStakeholder] = useState({ name: '', position: '' });
@@ -480,10 +512,48 @@ export function ProspectHubDetailPage(): JSX.Element {
     }
   };
 
-  const deleteRecord = async (): Promise<void> => {
-    if (!window.confirm(copy.confirm)) return;
-    await sendJson(`/api/prospects/${prospect.prospectId}`, 'DELETE', {});
-    navigate('/prospects');
+  // Plan 050: archive is the ordinary removal from active work and keeps
+  // everything; permanent deletion is a separate, impact-confirmed action.
+  const setArchived = async (archived: boolean): Promise<void> => {
+    setLifecycleBusy(true);
+    setOutreachNotice(null);
+    try {
+      await sendJson(
+        `/api/prospects/${encodeURIComponent(prospect.prospectId)}/${archived ? 'archive' : 'restore'}`,
+        'POST',
+        {},
+      );
+      refreshAll();
+    } catch {
+      setOutreachNotice(copy.actionFailed);
+    } finally {
+      setLifecycleBusy(false);
+    }
+  };
+
+  const requestPermanentDelete = async (): Promise<void> => {
+    setLifecycleBusy(true);
+    setOutreachNotice(null);
+    try {
+      setDeletionImpact(
+        await fetchJson<ProspectDeletionImpact>(
+          `/api/prospects/${encodeURIComponent(prospect.prospectId)}/deletion-impact`,
+        ),
+      );
+    } catch {
+      setOutreachNotice(copy.actionFailed);
+    } finally {
+      setLifecycleBusy(false);
+    }
+  };
+
+  const deletePermanently = async (): Promise<void> => {
+    try {
+      await sendJson(`/api/prospects/${encodeURIComponent(prospect.prospectId)}`, 'DELETE', {});
+      navigate('/prospects');
+    } catch {
+      setOutreachNotice(copy.actionFailed);
+    }
   };
 
   const publishPreview = async (): Promise<void> => {
@@ -727,6 +797,7 @@ export function ProspectHubDetailPage(): JSX.Element {
       ? undefined
       : (copy.recommendationReasons[recommendation.reason] ?? strings.common.vocabularyFallback);
   const terminal = TERMINAL_STATUSES.includes(prospect.status);
+  const archived = prospect.archivedAt !== undefined;
 
   return (
     <div className={`${PAGE_WIDTH.reading} px-5 py-8`}>
@@ -739,11 +810,51 @@ export function ProspectHubDetailPage(): JSX.Element {
         }
         title={prospect.name}
         actions={
-          <Badge tone={terminal ? 'neutral' : 'accent'}>
-            {label(prospect.status, copy.statusLabels)}
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            {archived ? <Badge tone="neutral">{copy.archivedBadge}</Badge> : null}
+            <Badge tone={terminal ? 'neutral' : 'accent'}>
+              {label(prospect.status, copy.statusLabels)}
+            </Badge>
+            {archived ? (
+              <Button size="sm" isLoading={lifecycleBusy} onClick={() => void setArchived(false)}>
+                <ArchiveRestore className="size-4" aria-hidden="true" />
+                {copy.restore}
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="secondary"
+                isLoading={lifecycleBusy}
+                onClick={() => void setArchived(true)}
+              >
+                <Archive className="size-4" aria-hidden="true" />
+                {copy.archive}
+              </Button>
+            )}
+          </div>
         }
       />
+      {archived ? (
+        <p className="mb-5 rounded-lg border border-line bg-raised px-4 py-3 text-sm text-ink-soft">
+          {copy.archivedNotice.replace('{date}', formatDate(prospect.archivedAt!))}
+        </p>
+      ) : null}
+      {deletionImpact !== null ? (
+        <ConfirmDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setDeletionImpact(null);
+          }}
+          title={copy.deletePermanentlyTitle}
+          description={permanentDeleteDescription(
+            deletionImpactSummary(deletionImpact, copy.deletionImpactLabels),
+            copy,
+          )}
+          confirmLabel={copy.deletePermanently}
+          cancelLabel={strings.common.cancel}
+          onConfirm={deletePermanently}
+        />
+      ) : null}
 
       <div className="grid gap-5">
         <Card id="recommended" title={copy.recommended}>
@@ -771,7 +882,11 @@ export function ProspectHubDetailPage(): JSX.Element {
             </div>
           ) : (
             <p className="text-sm text-ink-muted">
-              {terminal ? copy.completed : copy.noRecommendation}
+              {archived
+                ? copy.archivedNoRecommendation
+                : terminal
+                  ? copy.completed
+                  : copy.noRecommendation}
             </p>
           )}
         </Card>
@@ -1522,10 +1637,6 @@ export function ProspectHubDetailPage(): JSX.Element {
                     </option>
                   ))}
                 </Select>
-                <Button variant="danger" onClick={() => void deleteRecord()}>
-                  <Trash2 className="size-4" aria-hidden="true" />
-                  {copy.delete}
-                </Button>
               </div>
               <details className="border-t border-line pt-4">
                 <summary className="cursor-pointer text-sm font-medium text-ink">
@@ -1546,6 +1657,21 @@ export function ProspectHubDetailPage(): JSX.Element {
                     ))}
                   </Select>
                 </div>
+              </details>
+              <details className="border-t border-line pt-4">
+                <summary className="cursor-pointer text-sm font-medium text-danger">
+                  {copy.dangerZone}
+                </summary>
+                <p className="mt-2 text-xs text-ink-muted">{copy.deletePermanentlyHint}</p>
+                <Button
+                  className="mt-2"
+                  variant="danger"
+                  isLoading={lifecycleBusy}
+                  onClick={() => void requestPermanentDelete()}
+                >
+                  <Trash2 className="size-4" aria-hidden="true" />
+                  {copy.deletePermanently}
+                </Button>
               </details>
             </div>
           </details>

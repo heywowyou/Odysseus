@@ -79,13 +79,14 @@ export function ProspectHubListPage(): JSX.Element {
   const { pathname } = useLocation();
   const filterState = parseProspectFilters(searchParams);
   const resultsView = filterState.view === 'results';
+  const archivedView = filterState.view === 'archived';
   const updateFilter = (key: Parameters<typeof updateProspectFilter>[1], value: string): void => {
     setSearchParams((current) => updateProspectFilter(current, key, value), { replace: true });
   };
   const setPage = (nextPage: number): void => {
     setSearchParams((current) => setProspectPage(current, nextPage), { replace: true });
   };
-  const setView = (nextView: 'all' | 'results'): void => {
+  const setView = (nextView: 'all' | 'results' | 'archived'): void => {
     setSearchParams((current) => setProspectView(current, nextView), { replace: true });
   };
   const response = useApi<ProspectHubListResponse>(buildHubProspectsPath(filterState));
@@ -196,11 +197,18 @@ export function ProspectHubListPage(): JSX.Element {
       ) : null}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <SegmentedControl
-          value={resultsView ? 'results' : 'all'}
+          value={filterState.view}
           onValueChange={setView}
           options={[
             { value: 'all', label: copy.allView },
             { value: 'results', label: copy.resultsView },
+            {
+              value: 'archived',
+              label:
+                response.data?.archivedCount === undefined || archivedView
+                  ? copy.archivedView
+                  : `${copy.archivedView} (${response.data.archivedCount})`,
+            },
           ]}
           ariaLabel={copy.viewAria}
         />
@@ -251,12 +259,26 @@ export function ProspectHubListPage(): JSX.Element {
       ) : rows.length === 0 ? (
         <EmptyState
           icon={Building2}
-          title={resultsView ? resultsCopy.emptyTitle : copy.emptyTitle}
-          description={resultsView ? resultsCopy.emptyDescription : copy.emptyDescription}
+          title={
+            resultsView
+              ? resultsCopy.emptyTitle
+              : archivedView
+                ? copy.archivedEmptyTitle
+                : copy.emptyTitle
+          }
+          description={
+            resultsView
+              ? resultsCopy.emptyDescription
+              : archivedView
+                ? copy.archivedEmptyDescription
+                : copy.emptyDescription
+          }
           action={
-            <Link to="/annuaire" className={buttonStyles()}>
-              {copy.openDirectory}
-            </Link>
+            archivedView ? undefined : (
+              <Link to="/annuaire" className={buttonStyles()}>
+                {copy.openDirectory}
+              </Link>
+            )
           }
         />
       ) : (

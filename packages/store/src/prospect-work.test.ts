@@ -125,6 +125,18 @@ describe('prospect work model', () => {
     expect(work.recommendation).toMatchObject({ action: 'create-first-email' });
   });
 
+  it('opens no work and recommends nothing for an archived prospect, keeping its audit state', () => {
+    const work = deriveProspectWork(
+      { ...prospect, archivedAt: new Date('2026-09-12T00:00:00.000Z') },
+      { ...emptySources, audits: [audit()] },
+      new Date('2026-09-15T00:00:00.000Z'),
+    );
+    expect(work.items).toEqual([]);
+    expect(work.recommendation).toBeUndefined();
+    expect(work.auditState).toBe('qualifying');
+    expect(work.qualifyingAudit).toMatchObject({ auditId: 'audit-old' });
+  });
+
   it('qualifies a historical complete prospecting audit and a complete Full scan alike', () => {
     for (const scanIntent of ['prospecting-audit', 'full-audit'] as const) {
       expect(selectNewestQualifyingAudit([audit({ scanIntent })])).toMatchObject({

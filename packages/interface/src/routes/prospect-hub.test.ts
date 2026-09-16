@@ -13,7 +13,10 @@ vi.mock('@odysseus/store', () => ({
   attachAuditToProspect: vi.fn(),
   checkOutreachAction: vi.fn(),
   createProspectHub: vi.fn(),
-  deleteProspect: vi.fn(),
+  archiveProspect: vi.fn(),
+  countProspectDeletionImpact: vi.fn(),
+  deleteProspectPermanently: vi.fn(),
+  restoreProspect: vi.fn(),
   findProspectsByDomain: vi.fn(),
   findOutreachThreadByProspect: vi.fn(),
   getProspectHub: vi.fn(),
@@ -57,7 +60,10 @@ vi.mock('../outreach/configured-preview-publisher.js', () => ({
 
 import {
   checkOutreachAction,
-  deleteProspect,
+  archiveProspect,
+  countProspectDeletionImpact,
+  deleteProspectPermanently,
+  restoreProspect,
   findOutreachThreadByProspect,
   getProspectHub,
   isSuppressed,
@@ -147,7 +153,7 @@ beforeEach(() => {
   vi.mocked(listDirectory).mockResolvedValue(emptyPage as never);
   vi.mocked(setProspectStatus).mockResolvedValue({ status: 'audited' } as never);
   vi.mocked(recordProspectOutcome).mockResolvedValue({ status: 'replied' } as never);
-  vi.mocked(deleteProspect).mockResolvedValue({ deleted: true } as never);
+  vi.mocked(deleteProspectPermanently).mockResolvedValue({ deleted: true } as never);
   vi.mocked(getProspectHub).mockResolvedValue({ prospectId: 'p-1' } as never);
   vi.mocked(listOutreachPreviews).mockResolvedValue([]);
   vi.mocked(withdrawProspectOutreach).mockResolvedValue({
@@ -298,7 +304,40 @@ describe('prospect hub routes', () => {
 
     const deleted = await handle('/api/prospects/p-1', 'DELETE');
     expect(deleted.statusCode).toBe(200);
-    expect(deleteProspect).toHaveBeenCalledWith(fakeConnection, 'p-1');
+    expect(deleteProspectPermanently).toHaveBeenCalledWith(fakeConnection, 'p-1');
+  });
+
+  it('archives and restores through explicit, non-destructive endpoints', async () => {
+    vi.mocked(archiveProspect).mockResolvedValueOnce({
+      prospect: { prospectId: 'p-1' },
+      changed: true,
+    } as never);
+    const archived = await handle('/api/prospects/p-1/archive', 'POST');
+    expect(archived.statusCode).toBe(200);
+    expect(archiveProspect).toHaveBeenCalledWith(fakeConnection, 'p-1');
+    expect(withdrawProspectOutreach).not.toHaveBeenCalled();
+    expect(deleteProspectPermanently).not.toHaveBeenCalled();
+
+    vi.mocked(restoreProspect).mockResolvedValueOnce(null);
+    expect((await handle('/api/prospects/p-1/restore', 'POST')).statusCode).toBe(404);
+
+    vi.mocked(countProspectDeletionImpact).mockResolvedValueOnce({ audits: 2 } as never);
+    const impact = await handle('/api/prospects/p-1/deletion-impact');
+    expect(impact).toMatchObject({ statusCode: 200, body: { audits: 2 } });
+    expect(deleteProspectPermanently).not.toHaveBeenCalled();
+
+    const patched = await handle('/api/prospects/p-1', 'PATCH', { archivedAt: new Date() });
+    expect(patched.statusCode).toBe(400);
+    expect(updateProspect).not.toHaveBeenCalled();
+  });
+
+  it('passes the archived list filter through and rejects a malformed one', async () => {
+    await handle('/api/prospects?archived=true');
+    expect(listProspects).toHaveBeenCalledWith(
+      fakeConnection,
+      expect.objectContaining({ archived: true }),
+    );
+    expect((await handle('/api/prospects?archived=maybe')).statusCode).toBe(400);
   });
 
   // Issue #289: an invalid patch (a SIREN failing the 9-digit checksum) is
@@ -455,9 +494,9 @@ describe('prospect hub routes', () => {
       expect(response.statusCode).toBe(200);
       await expect(fs.access(auditDir)).rejects.toMatchObject({ code: 'ENOENT' });
       expect(deletePreview).toHaveBeenCalledWith('example.fr/preview.html');
-      expect(deleteProspect).toHaveBeenCalledWith(fakeConnection, 'p-1');
+      expect(deleteProspectPermanently).toHaveBeenCalledWith(fakeConnection, 'p-1');
       expect(deletePreview.mock.invocationCallOrder[0]).toBeLessThan(
-        vi.mocked(deleteProspect).mock.invocationCallOrder[0]!,
+        vi.mocked(deleteProspectPermanently).mock.invocationCallOrder[0]!,
       );
     } finally {
       if (previousArtifactsRoot === undefined) delete process.env['ODYSSEUS_ARTIFACTS_ROOT'];

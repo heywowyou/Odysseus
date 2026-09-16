@@ -663,6 +663,9 @@ export interface DashboardStrings {
       viewAria: string;
       allView: string;
       resultsView: string;
+      archivedView: string;
+      archivedEmptyTitle: string;
+      archivedEmptyDescription: string;
     };
     directory: {
       eyebrow: string;
@@ -689,6 +692,9 @@ export interface DashboardStrings {
       addSelected: string;
       addOne: string;
       alreadyAdded: string;
+      openProspect: string;
+      archivedProspect: string;
+      restoreProspect: string;
       notProvided: string;
       noFacets: string;
       errorTitle: string;
@@ -784,8 +790,30 @@ export interface DashboardStrings {
       emailList: string;
       notProvided: string;
       roomsSummary: string;
-      delete: string;
-      confirm: string;
+      archive: string;
+      restore: string;
+      archivedBadge: string;
+      archivedNotice: string;
+      archivedNoRecommendation: string;
+      dangerZone: string;
+      deletePermanently: string;
+      deletePermanentlyHint: string;
+      deletePermanentlyTitle: string;
+      deletePermanentlyIntro: string;
+      deletePermanentlyWith: string;
+      deletePermanentlyKeeps: string;
+      deletionImpactLabels: {
+        audits: string;
+        findings: string;
+        analyses: string;
+        reports: string;
+        previews: string;
+        drafts: string;
+        threads: string;
+        outcomes: string;
+        events: string;
+        jobs: string;
+      };
       info: string;
       outreach: string;
       identity: string;

@@ -95,6 +95,11 @@ export const prospectSchema = z
       .object({ source: z.string().min(1), sourceId: z.string().min(1) })
       .strict()
       .optional(),
+    /** Plan 050: record-management lifecycle, independent of the sales
+     *  status. Absent means active; present means the operator took the
+     *  prospect out of active work while keeping every attached record.
+     *  Restoring clears it on the same prospectId. */
+    archivedAt: z.coerce.date().optional(),
     createdAt: z.coerce.date(),
     updatedAt: z.coerce.date(),
     lastActivityAt: z.coerce.date(),
@@ -111,6 +116,8 @@ export const prospectEventTypeSchema = z.enum([
   'draft-created',
   'outcome-recorded',
   'opted-out',
+  'prospect-archived',
+  'prospect-restored',
 ]);
 export type ProspectEventType = z.infer<typeof prospectEventTypeSchema>;
 

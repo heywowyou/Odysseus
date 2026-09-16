@@ -1,6 +1,12 @@
 export type ProspectFilterSource = 'prospects' | 'directory';
 
-export type ProspectListView = 'all' | 'results';
+/** Plan 050: 'archived' lists prospects taken out of active work; the
+ *  other two views only ever show active prospects. */
+export type ProspectListView = 'all' | 'results' | 'archived';
+
+function viewFrom(value: string | null): ProspectListView {
+  return value === 'results' || value === 'archived' ? value : 'all';
+}
 
 export type ProspectFilterKey =
   | 'q'
@@ -82,7 +88,7 @@ function pageFrom(params: URLSearchParams): number {
 /** Reads the owned filter state without consuming unrelated query parameters. */
 export function parseProspectFilters(params: URLSearchParams): ProspectFilterState {
   return {
-    view: params.get('view') === 'results' ? 'results' : 'all',
+    view: viewFrom(params.get('view')),
     q: params.get('q') ?? '',
     status: params.get('status') ?? '',
     sector: params.get('sector') ?? '',
@@ -106,8 +112,8 @@ export function serializeProspectFilters(
   current: URLSearchParams = new URLSearchParams(),
 ): URLSearchParams {
   const next = new URLSearchParams(current);
-  if (state.view === 'results') next.set('view', 'results');
-  else next.delete('view');
+  if (state.view === 'all') next.delete('view');
+  else next.set('view', state.view);
   for (const key of FILTER_KEYS) {
     const value = state[key].trim();
     if (value === '') next.delete(key);
@@ -192,6 +198,7 @@ export function buildProspectApiQuery(
 ): URLSearchParams {
   const query = new URLSearchParams();
   if (source === 'prospects' && view === 'results') query.set('view', 'results');
+  if (source === 'prospects' && view === 'archived') query.set('archived', 'true');
   for (const key of FILTER_KEYS) {
     if (source === 'directory' && ['status', 'hasScan', 'inactive'].includes(key)) continue;
     if (source === 'prospects' && key === 'postcode') continue;

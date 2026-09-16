@@ -328,13 +328,14 @@ export function deriveProspectWork(
   }
 
   items.sort((left, right) => asTime(right.since) - asTime(left.since));
-  const nextRecommendation = recommendation(
-    prospect,
-    items[0],
-    qualification.state,
-    websiteSuppressed,
-    emailSuppressed,
-  );
+  // Plan 050: an archived prospect is out of active work. Its audit state
+  // stays visible on the detail page, but it opens no work and recommends
+  // nothing until the operator restores it.
+  if (prospect.archivedAt !== undefined) items.length = 0;
+  const nextRecommendation =
+    prospect.archivedAt !== undefined
+      ? undefined
+      : recommendation(prospect, items[0], qualification.state, websiteSuppressed, emailSuppressed);
   return {
     prospectId: prospect.prospectId,
     items,
