@@ -1017,7 +1017,9 @@ async function prospectDeletionScope(
   };
 }
 
-const ACTIVE_JOB_STATUSES = ['queued', 'running', 'needs-input'];
+/** Issue #383: a 'needs-input' job has stopped and cannot recreate
+ *  anything, so it does not block a delete or archive cleanup. */
+const ACTIVE_JOB_STATUSES = ['queued', 'running'];
 
 /** Counts the unfinished jobs a permanent delete would remove. Deleting under
  *  a running job lets its later stages recreate the audit and artifacts the

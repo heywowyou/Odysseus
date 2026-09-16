@@ -39,7 +39,11 @@ export class ActiveJobSlotTakenError extends Error {
   }
 }
 
-const UNFINISHED_JOB_STATUSES: JobStatus[] = ['queued', 'running', 'needs-input'];
+/** Issue #383: only work that can still execute holds a scan slot. A
+ *  'needs-input' job is terminal - the runner has already thrown and
+ *  returned - so it waits for a person, not for Chromium, and must not
+ *  block a new scan of the same prospect. */
+const UNFINISHED_JOB_STATUSES: JobStatus[] = ['queued', 'running'];
 
 /** The per-prospect slot a new job occupies: one complete crawl (Full scan,
  *  or the historical prospecting-audit and outreach full-scan types) and
@@ -278,6 +282,10 @@ export async function markJobNeedsInput(
         error,
         needsInputFields: fields,
       },
+      // Issue #383: released in the same write, so a stopped job never
+      // holds the prospect's scan slot. A historical needs-input holder that
+      // predates this is released by createJob's retry instead.
+      $unset: { activeSlot: '' },
     },
   );
 }

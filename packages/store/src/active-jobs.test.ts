@@ -105,12 +105,34 @@ describe.skipIf(!mongoAvailable)('listActiveJobsForProspect', () => {
       siteUrl: `https://${domain}/`,
       prospectId,
     });
+    // Issue #383: waiting for a person is not a scan still running.
+    await seedJob({
+      type: 'full-audit',
+      status: 'needs-input',
+      siteUrl: `https://${domain}/`,
+      prospectId,
+    });
 
     expect(await listActiveJobsForProspect(connection!, prospectId, domain)).toEqual([]);
   });
 });
 
 describe.skipIf(!mongoAvailable)('planProspectJobLaunch', () => {
+  it('allows a new Full scan while an older one waits for operator input (issue #383)', async () => {
+    const prospectId = randomUUID();
+    const domain = 'active-jobs-needs-input.fr';
+    await seedJob({
+      type: 'full-audit',
+      status: 'needs-input',
+      siteUrl: `https://${domain}/`,
+      prospectId,
+    });
+
+    await expect(
+      planProspectJobLaunch(connection!, { kind: 'full-audit', prospectId, domain }),
+    ).resolves.toEqual({ allowed: true });
+  });
+
   it('refuses a second quick check for the same prospect', async () => {
     const prospectId = randomUUID();
     const domain = 'active-jobs-duplicate-quick.fr';

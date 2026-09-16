@@ -24,7 +24,7 @@ export type ProspectActiveJobKind = 'quick-check' | 'prospecting-audit' | 'full-
 export interface ProspectActiveJob {
   jobId: string;
   kind: ProspectActiveJobKind;
-  status: 'queued' | 'running' | 'needs-input';
+  status: 'queued' | 'running';
   startedAt: Date;
   targetDomain: string;
 }
@@ -50,7 +50,10 @@ const BROWSER_SCAN_JOB_TYPES: readonly JobType[] = [
   'prospecting',
 ];
 
-const ACTIVE_STATUSES = ['queued', 'running', 'needs-input'] as const;
+/** Issue #383: a 'needs-input' job is terminal and waiting for a person; it
+ *  can neither crawl nor write artifacts, so it is not active work. It stays
+ *  visible as unresolved operator work in Audits and To do. */
+const ACTIVE_STATUSES = ['queued', 'running'] as const;
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
@@ -198,7 +201,7 @@ export type ProspectJobLaunchDecision =
  *     is a known shared/vendor platform (issue #216's own-registrable-domain
  *     rule), where two different attached businesses legitimately publish
  *     on the same host. Quick Check participates in this check too.
- *  3. A completed, failed, or cancelled job never conflicts: only the
+ *  3. A completed, failed, cancelled, or needs-input job never conflicts: only the
  *     active statuses are searched. */
 export async function planProspectJobLaunch(
   connection: Connection,

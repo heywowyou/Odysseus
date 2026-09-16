@@ -1,5 +1,11 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import { ActiveJobSlotTakenError, completeJob, createJob } from './jobs.js';
+import {
+  ActiveJobSlotTakenError,
+  claimNextQueuedJob,
+  completeJob,
+  createJob,
+  markJobNeedsInput,
+} from './jobs.js';
 import { createJobModel } from './schemas/job.schema.js';
 import { probeMongoAvailability, scopedMongoTestUri } from './test-support.js';
 
@@ -57,5 +63,66 @@ describe.skipIf(!available)('createJob prospect scan slot', () => {
       createJob(connection!, { type: 'full-audit', siteUrl: 'https://slot.example/', options: {} }),
     ]);
     expect(unattached.every((job) => job.activeSlot === undefined)).toBe(true);
+  });
+
+  it('releases the slot when a job stops for operator input, keeping the stopped job visible (issue #383)', async () => {
+    const first = await createJob(connection!, fullScan('p-needs-input'));
+    await createJobModel(connection!).updateOne(
+      { jobId: first.jobId },
+      { $set: { status: 'running' } },
+    );
+    await expect(createJob(connection!, fullScan('p-needs-input'))).rejects.toBeInstanceOf(
+      ActiveJobSlotTakenError,
+    );
+
+    await markJobNeedsInput(
+      connection!,
+      first.jobId,
+      [{ field: 'raisonSociale', value: 'HOTEL' }],
+      'confirm identity',
+    );
+    const stopped = await createJobModel(connection!).findOne({ jobId: first.jobId }).lean();
+    expect(stopped).toMatchObject({ status: 'needs-input' });
+    expect(stopped?.activeSlot).toBeUndefined();
+
+    const second = await createJob(connection!, fullScan('p-needs-input'));
+    expect(second.activeSlot).toBe('p-needs-input:complete-crawl');
+  });
+
+  it('releases a legacy needs-input or failed row that still carries the slot', async () => {
+    for (const status of ['needs-input', 'failed', 'cancelled', 'complete'] as const) {
+      const prospectId = `p-legacy-${status}`;
+      await createJobModel(connection!).collection.insertOne({
+        jobId: `legacy-${status}`,
+        type: 'full-audit',
+        status,
+        phase: status,
+        options: { prospectId },
+        createdAt: new Date(),
+        progress: {},
+        activeSlot: `${prospectId}:complete-crawl`,
+      });
+
+      const next = await createJob(connection!, fullScan(prospectId));
+
+      expect(next.activeSlot).toBe(`${prospectId}:complete-crawl`);
+      const legacy = await createJobModel(connection!)
+        .findOne({ jobId: `legacy-${status}` })
+        .lean();
+      expect(legacy).toMatchObject({ status });
+      expect(legacy?.activeSlot).toBeUndefined();
+    }
+  });
+
+  it('still refuses while a queued or running job holds the slot', async () => {
+    const queued = await createJob(connection!, fullScan('p-still-busy'));
+    await expect(createJob(connection!, fullScan('p-still-busy'))).rejects.toBeInstanceOf(
+      ActiveJobSlotTakenError,
+    );
+    const claimed = await claimNextQueuedJob(connection!);
+    expect(claimed?.status).toBe('running');
+    await expect(createJob(connection!, fullScan('p-still-busy'))).rejects.toMatchObject({
+      conflictingJobId: queued.jobId,
+    });
   });
 });

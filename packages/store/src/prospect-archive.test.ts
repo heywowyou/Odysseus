@@ -234,6 +234,10 @@ describe.skipIf(!mongoAvailable)('prospect archive lifecycle', () => {
     ]);
 
     expect(await countActiveProspectDeletionJobs(connection!, prospectId)).toBe(0);
+    // Issue #383: a job stopped for operator input can recreate nothing.
+    await Jobs.insertOne({ jobId: randomUUID(), status: 'needs-input', auditId });
+    expect(await countActiveProspectDeletionJobs(connection!, prospectId)).toBe(0);
+    await Jobs.deleteOne({ status: 'needs-input', auditId });
     await Jobs.insertOne({ jobId: randomUUID(), status: 'running', auditId });
     expect(await countActiveProspectDeletionJobs(connection!, prospectId)).toBe(1);
     await Jobs.deleteOne({ status: 'running', auditId });
