@@ -154,6 +154,21 @@ describe('remediation copy', () => {
       }
     });
 
+    // Issue #328: boxes labelled "Correctif type" printed instructions
+    // ("Retirez la balise <meta http-equiv="refresh">.") in a code font,
+    // often repeating the sentence just above them. A snippet is code a
+    // developer could paste; an instruction-only fix has no snippet.
+    it('keeps prose sentences out of fix snippets', () => {
+      const sentence = /^[A-ZÀ-Ý][a-zà-ÿ'’]+[ ,]|[.!?]\s*$| (?:sur|au lieu de|on the|instead of) /m;
+      for (const table of [REMEDIATION_FR, REMEDIATION_EN]) {
+        for (const [ruleId, entry] of Object.entries(table)) {
+          if (entry.snippet.kind === 'not-applicable') continue;
+          expect(entry.snippet.template, ruleId).not.toMatch(sentence);
+          expect(entry.text, ruleId).not.toContain(entry.snippet.template);
+        }
+      }
+    });
+
     it('keeps interpolation tokens out of snippets that render literally', () => {
       for (const table of [REMEDIATION_FR, REMEDIATION_EN]) {
         for (const [ruleId, entry] of Object.entries(table)) {

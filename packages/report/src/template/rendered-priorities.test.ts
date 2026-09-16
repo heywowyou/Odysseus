@@ -469,12 +469,12 @@ describe('plan 041 Part A: fix snippets on priority remediations', () => {
     const findings = [
       buildFinding({
         findingId: 'f001',
-        ruleId: 'duplicate-id-aria',
+        ruleId: 'target-size',
         elements: [
           {
             pageUrl: 'https://example.com/',
-            selector: '#dup-id',
-            snippet: '<div id="dup-id">',
+            selector: '.menu-toggle',
+            snippet: '<button class="menu-toggle">',
           },
         ],
       }),
@@ -482,13 +482,11 @@ describe('plan 041 Part A: fix snippets on priority remediations', () => {
     const themes = [buildTheme(['f001'])];
 
     const priorities = buildRenderedPriorities(themes, findings, manifest, 'en');
-    const remediation = priorities[0]!.remediations.find(
-      (item) => item.ruleId === 'duplicate-id-aria',
-    );
+    const remediation = priorities[0]!.remediations.find((item) => item.ruleId === 'target-size');
 
     expect(remediation?.snippet).toEqual({
       kind: 'fixed',
-      rendered: 'Make this id unique on the page (#dup-id is duplicated).',
+      rendered: '.menu-toggle {\n  min-width: 24px;\n  min-height: 24px;\n}',
     });
   });
 

@@ -14,11 +14,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'ai-crawler-blocked': {
     text: 'Remove the robots.txt rule that blocks this AI assistant crawler, if you want the site to be citable in its answers.',
-    snippet: {
-      kind: 'fixed',
-      template:
-        'In robots.txt, remove the line blocking this bot:\nUser-agent: GPTBot\nDisallow: /',
-    },
+    snippet: { kind: 'fixed', template: 'User-agent: GPTBot\nAllow: /' },
   },
   'alt-text-quality-heuristic': {
     text: 'Rewrite the alt text on these images so each one describes what it actually shows. This needs a human read, not an automated fix.',
@@ -30,7 +26,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'aria-allowed-attr': {
     text: "Remove the ARIA attribute this element's role does not accept, or change the role to the one that matches what the component really is.",
-    snippet: { kind: 'fixed', template: 'Remove the ARIA attribute this role does not allow.' },
+    snippet: { kind: 'not-applicable' },
   },
   'aria-braille-equivalent': {
     text: 'Add the text label matching the braille label, or remove the braille one if it is redundant.',
@@ -45,30 +41,21 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'aria-conditional-attr': {
     text: 'Remove this ARIA attribute, or put the element in the situation the specification allows it in.',
-    snippet: {
-      kind: 'fixed',
-      template:
-        'Remove this ARIA attribute, or put the element in the state where the specification allows it.',
-    },
+    snippet: { kind: 'not-applicable' },
   },
   'aria-deprecated-role': {
     text: 'Replace this deprecated ARIA role with its current equivalent, or with the native HTML element that does the same job.',
-    snippet: {
-      kind: 'fixed',
-      template:
-        'Replace this role with the equivalent native HTML element, e.g. <button> instead of role="button".',
-    },
+    snippet: { kind: 'not-applicable' },
   },
   'aria-hidden-body': {
     text: 'Remove the aria-hidden attribute set on the page body: as it stands, a screen reader sees no content at all.',
-    snippet: { kind: 'fixed', template: 'Remove aria-hidden="true" from the <body> tag.' },
+    snippet: { kind: 'fixed', template: '<body>' },
   },
   'aria-hidden-focus': {
     text: 'Take elements hidden from screen readers out of the keyboard path with tabindex="-1", or stop hiding them.',
     snippet: {
       kind: 'fixed',
-      template:
-        'Add tabindex="-1" to every interactive element under aria-hidden="true", or remove the hiding.',
+      template: '<div aria-hidden="true">\n  <a href="..." tabindex="-1">...</a>\n</div>',
     },
   },
   'aria-input-field-name': {
@@ -91,47 +78,33 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'aria-prohibited-attr': {
     text: 'Remove this ARIA attribute: it is prohibited on this type of element and causes an incorrect announcement.',
-    snippet: {
-      kind: 'fixed',
-      template: 'Remove this ARIA attribute: it is prohibited on this type of element.',
-    },
+    snippet: { kind: 'not-applicable' },
   },
   'aria-required-attr': {
     text: 'Add the ARIA attributes this role requires, without which the component is announced incompletely.',
-    snippet: {
-      kind: 'fixed',
-      template: 'Add the ARIA attributes this role requires, e.g. aria-checked for role="switch".',
-    },
+    snippet: { kind: 'fixed', template: '<div role="switch" aria-checked="false">...</div>' },
   },
   'aria-required-children': {
     text: 'Fix the ARIA structure: a menu or list role must directly contain the child roles the specification expects.',
     snippet: {
       kind: 'fixed',
-      template:
-        'Place the expected child roles directly inside, e.g. role="option" inside a role="listbox".',
+      template: '<ul role="listbox">\n  <li role="option">...</li>\n</ul>',
     },
   },
   'aria-required-parent': {
     text: 'Place this element inside the container its role requires, for example an option inside a list.',
     snippet: {
       kind: 'fixed',
-      template:
-        'Place this element inside the container its role requires, e.g. role="option" inside role="listbox".',
+      template: '<ul role="listbox">\n  <li role="option">...</li>\n</ul>',
     },
   },
   'aria-roledescription': {
     text: 'Give this element a role, or remove the role description: with no role, it is never announced.',
-    snippet: {
-      kind: 'fixed',
-      template: 'Add a valid ARIA role to this element, or remove aria-roledescription.',
-    },
+    snippet: { kind: 'not-applicable' },
   },
   'aria-roles': {
     text: 'Correct the ARIA role value: the one given does not exist in the specification, usually a typo.',
-    snippet: {
-      kind: 'fixed',
-      template: 'Correct the ARIA role value to one defined by the WAI-ARIA specification.',
-    },
+    snippet: { kind: 'not-applicable' },
   },
   'aria-tab-name': {
     text: 'Give every tab a name describing the content it leads to.',
@@ -150,10 +123,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'aria-valid-attr': {
     text: 'Correct this ARIA attribute name: it does not exist in the specification, so it is ignored.',
-    snippet: {
-      kind: 'fixed',
-      template: "Correct this ARIA attribute's name to one defined by the specification.",
-    },
+    snippet: { kind: 'not-applicable' },
   },
   'aria-valid-attr-value': {
     text: "Correct this ARIA attribute's value, often a reference to an id that is not on the page.",
@@ -169,18 +139,11 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'autocomplete-valid': {
     text: 'Correct the autocomplete attribute with one of the recognized keywords, so the browser can prefill the field.',
-    snippet: {
-      kind: 'fixed',
-      template: 'Use a recognized keyword, e.g. autocomplete="email" or autocomplete="name".',
-    },
+    snippet: { kind: 'fixed', template: '<input type="email" autocomplete="email">' },
   },
   'avoid-inline-spacing': {
     text: 'Remove the letter and line spacing set directly on the element, and handle it in the stylesheet instead.',
-    snippet: {
-      kind: 'fixed',
-      template:
-        'Remove inline letter-spacing, word-spacing, or line-height, and manage them in the stylesheet.',
-    },
+    snippet: { kind: 'not-applicable' },
   },
   'bf-cache': {
     text: 'Remove what stops the page being restored instantly on back navigation, usually a no-store header or an unload event listener.',
@@ -188,7 +151,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   blink: {
     text: 'Remove the blinking content: no setting makes this effect conform.',
-    snippet: { kind: 'fixed', template: 'Remove the <blink> element and its blinking style.' },
+    snippet: { kind: 'not-applicable' },
   },
   'bootup-time': {
     text: 'Reduce JavaScript execution time by deferring scripts that are not essential to the first render.',
@@ -270,11 +233,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'css-orientation-lock': {
     text: 'Let the page display in both portrait and landscape, without locking the orientation.',
-    snippet: {
-      kind: 'fixed',
-      template:
-        'Remove the CSS rule that locks orientation (a fixed portrait or landscape orientation).',
-    },
+    snippet: { kind: 'not-applicable' },
   },
   'cumulative-layout-shift': {
     text: 'Stabilise the layout during loading by giving images dimensions and reserving space for banners.',
@@ -282,14 +241,11 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'definition-list': {
     text: 'Put only terms and their definitions inside a definition list, with nothing else in between.',
-    snippet: {
-      kind: 'fixed',
-      template: 'Only place <dt>/<dd> pairs inside <dl>, moving any other element out.',
-    },
+    snippet: { kind: 'fixed', template: '<dl>\n  <dt>...</dt>\n  <dd>...</dd>\n</dl>' },
   },
   dlitem: {
     text: 'Put every term and its definition inside a definition list, so the link between them is kept.',
-    snippet: { kind: 'fixed', template: 'Place each <dt> and <dd> directly inside a <dl>.' },
+    snippet: { kind: 'fixed', template: '<dl>\n  <dt>...</dt>\n  <dd>...</dd>\n</dl>' },
   },
   'document-latency-insight': {
     text: "Reduce the server's response time for the main document, before the browser can begin rendering anything.",
@@ -309,10 +265,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'duplicate-id-aria': {
     text: 'Make this id unique within the page: a label or ARIA attribute points at it, and the reference becomes ambiguous.',
-    snippet: {
-      kind: 'fixed',
-      template: 'Make this id unique on the page ({{selector}} is duplicated).',
-    },
+    snippet: { kind: 'not-applicable' },
   },
   'duplicated-javascript-insight': {
     text: 'Remove the JavaScript downloaded more than once, usually a library bundled by several scripts.',
@@ -363,7 +316,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'form-field-multiple-labels': {
     text: 'Keep a single label per form field, merging the wording where needed.',
-    snippet: { kind: 'fixed', template: 'Keep only one <label> tag per field.' },
+    snippet: { kind: 'fixed', template: '<label for="field1">...</label>\n<input id="field1">' },
   },
   'frame-focusable-content': {
     text: 'Put this frame back in the keyboard path, or remove the interactive elements it contains.',
@@ -412,10 +365,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'html-lang-valid': {
     text: 'Correct the page language code with a recognized code, for example fr or en.',
-    snippet: {
-      kind: 'fixed',
-      template: 'Use a recognized code, e.g. <html lang="fr"> or <html lang="en">.',
-    },
+    snippet: { kind: 'fixed', template: '<html lang="en">' },
   },
   'html-structural-validity': {
     text: 'Fix the reported markup: duplicate ids, tags closed out of order, and elements placed inside a parent that does not accept them.',
@@ -423,10 +373,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'html-xml-lang-mismatch': {
     text: "Make the page's two language declarations agree, or keep only one of them.",
-    snippet: {
-      kind: 'fixed',
-      template: 'Make lang and xml:lang match, e.g. lang="en" xml:lang="en".',
-    },
+    snippet: { kind: 'fixed', template: '<html lang="en" xml:lang="en">' },
   },
   'http-error-status': {
     text: 'Restore this page, or redirect it to the address that replaced it, then fix the links still pointing at it.',
@@ -470,10 +417,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'is-crawlable': {
     text: 'Remove the indexing block from this page if it is meant to appear in search results.',
-    snippet: {
-      kind: 'fixed',
-      template: 'Remove <meta name="robots" content="noindex"> from this page.',
-    },
+    snippet: { kind: 'not-applicable' },
   },
   'jsonld-invalid': {
     text: 'Fix the syntax of the structured-data block: it does not parse as JSON and is therefore ignored entirely.',
@@ -489,10 +433,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'keyboard-trap': {
     text: 'Give this element a keyboard way out, such as the Escape key or an accessible close button, instead of intercepting the Tab key that should keep moving focus forward.',
-    snippet: {
-      kind: 'fixed',
-      template: 'Add an Escape key handler or a keyboard-accessible close button.',
-    },
+    snippet: { kind: 'not-applicable' },
   },
   label: {
     text: 'Associate a label with every form field, using a label tag tied to the field. Placeholder text inside the field is not enough.',
@@ -535,7 +476,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'lcp-lazy-loaded': {
     text: 'Remove lazy loading from the main image: it is visible immediately, and deferring it only delays the page.',
-    snippet: { kind: 'fixed', template: 'Remove loading="lazy" from the main image.' },
+    snippet: { kind: 'fixed', template: '<img src="..." loading="eager">' },
   },
   'legacy-javascript': {
     text: 'Stop serving modern browsers the compatibility code meant for old ones: it is downloaded and run for nothing.',
@@ -560,23 +501,20 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
     text: 'Replace generic link labels such as click here or read more with text that describes the destination.',
     snippet: {
       kind: 'fill-in-blank',
-      template: 'Replace "click here" with <text describing the destination>.',
+      template: '<a href="..."><text describing the destination></a>',
     },
   },
   list: {
     text: 'Put only list items inside a list, moving anything else out of it.',
-    snippet: { kind: 'fixed', template: 'Only place <li> elements inside <ul>/<ol>.' },
+    snippet: { kind: 'fixed', template: '<ul>\n  <li>...</li>\n</ul>' },
   },
   listitem: {
     text: 'Put every list item inside a list element, ul or ol.',
-    snippet: { kind: 'fixed', template: 'Place each <li> directly inside a <ul> or <ol>.' },
+    snippet: { kind: 'fixed', template: '<ul>\n  <li>...</li>\n</ul>' },
   },
   'llms-txt-missing': {
     text: 'Publish an /llms.txt file at the site root to tell AI answer engines what the site is and how to reference it. A recent convention, not yet a standard: an opportunity rather than a defect.',
-    snippet: {
-      kind: 'fixed',
-      template: 'Create /llms.txt at the site root with a brief site description.',
-    },
+    snippet: { kind: 'fill-in-blank', template: '# <site name>\n\n> <brief site description>' },
   },
   'long-tasks': {
     text: 'Split long-running work into shorter tasks, so the page keeps responding to clicks while it runs.',
@@ -588,7 +526,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   marquee: {
     text: 'Remove the automatic text scrolling and show this content statically.',
-    snippet: { kind: 'fixed', template: 'Remove the <marquee> element.' },
+    snippet: { kind: 'not-applicable' },
   },
   'max-potential-fid': {
     text: 'Break up long JavaScript tasks so the page can still respond to a click while it loads.',
@@ -617,7 +555,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'meta-refresh': {
     text: 'Remove the automatic page refresh, or let the visitor trigger it themselves.',
-    snippet: { kind: 'fixed', template: 'Remove the <meta http-equiv="refresh"> tag.' },
+    snippet: { kind: 'not-applicable' },
   },
   'meta-title-length': {
     text: 'Adjust the page title length so it is not cut off in search results, around 30 to 60 characters.',
@@ -648,7 +586,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'multiple-h1': {
     text: 'Keep a single level-1 heading per page and move the others down to level 2.',
-    snippet: { kind: 'fixed', template: 'Keep only one <h1> per page; change the others to <h2>.' },
+    snippet: { kind: 'not-applicable' },
   },
   'nap-phone-mismatch': {
     text: 'Bring the phone number in the structured data into line with the one shown to visitors, so both versions agree.',
@@ -660,10 +598,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'nested-interactive': {
     text: 'Do not place one clickable control inside another. Move the nested button or link out of its parent.',
-    snippet: {
-      kind: 'fixed',
-      template: 'Move the nested control (button or link) out of its interactive parent.',
-    },
+    snippet: { kind: 'not-applicable' },
   },
   'network-dependency-tree-insight': {
     text: 'Shorten chains of cascading requests: every extra level adds a round trip before anything renders.',
@@ -671,10 +606,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'no-autoplay-audio': {
     text: 'Do not start audio automatically, or provide an accessible stop button from the moment it starts.',
-    snippet: {
-      kind: 'fixed',
-      template: 'Remove the autoplay attribute, or add an accessible stop button from the start.',
-    },
+    snippet: { kind: 'fixed', template: '<audio controls src="..."></audio>' },
   },
   'no-h1': {
     text: 'Add a level-1 heading describing what the page is about.',
@@ -682,7 +614,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'noindex-on-public-page': {
     text: 'Remove the exclusion instruction from this page if it is meant to appear in search results.',
-    snippet: { kind: 'fixed', template: 'Remove <meta name="robots" content="noindex">.' },
+    snippet: { kind: 'not-applicable' },
   },
   'non-composited-animations': {
     text: 'Animate only transform and opacity properties, which the browser can handle without repainting the page.',
@@ -709,10 +641,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'p-as-heading': {
     text: 'Use a real heading element for this text, rather than an enlarged or bold paragraph.',
-    snippet: {
-      kind: 'fixed',
-      template: 'Replace the bolded <p> with a real heading tag, e.g. <h2>.',
-    },
+    snippet: { kind: 'fixed', template: '<h2>...</h2>' },
   },
   'prioritize-lcp-image': {
     text: "Preload the page's main image so the browser requests it without waiting.",
@@ -740,10 +669,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'robots-blocks-indexing': {
     text: 'Remove the robots.txt rule blocking access to the home page, otherwise the site can disappear from search results.',
-    snippet: {
-      kind: 'fixed',
-      template: 'In robots.txt, remove the Disallow line blocking the home page.',
-    },
+    snippet: { kind: 'not-applicable' },
   },
   'robots-disallow-broad': {
     text: "Narrow the robots.txt rule: as written it blocks a large share of the site's pages.",
@@ -762,7 +688,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'scrollable-region-focusable': {
     text: 'Add tabindex="0" to scrollable areas so they can be reached with a keyboard.',
-    snippet: { kind: 'fixed', template: 'tabindex="0" on the scrollable area ({{selector}}).' },
+    snippet: { kind: 'fixed', template: '<div tabindex="0">...</div>' },
   },
   'security-header-missing-csp': {
     text: 'Add a Content-Security-Policy header to limit which scripts the browser will run on your pages.',
@@ -803,10 +729,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'server-side-image-map': {
     text: 'Replace this server-side image map with ordinary links that can be used with a keyboard.',
-    snippet: {
-      kind: 'fixed',
-      template: 'Replace the server-side clickable area with ordinary <a> links.',
-    },
+    snippet: { kind: 'not-applicable' },
   },
   'sitemap-missing': {
     text: 'Publish a sitemap.xml listing the site pages and declare it in robots.txt, so their discovery does not rest on internal links alone.',
@@ -861,7 +784,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
     text: 'Make clickable targets at least 24 pixels across, or space them further apart. This is usually one style rule to fix across a group of controls.',
     snippet: {
       kind: 'fixed',
-      template: 'min-width: 24px; min-height: 24px; on the clickable area ({{selector}}).',
+      template: '{{selector}} {\n  min-width: 24px;\n  min-height: 24px;\n}',
     },
   },
   'td-has-header': {
@@ -920,7 +843,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
     text: 'Add width and height attributes to images so the browser reserves their space before loading them.',
     snippet: {
       kind: 'fill-in-blank',
-      template: 'width="<real width>" height="<real height>" on the affected image.',
+      template: '<img src="..." width="<real width>" height="<real height>">',
     },
   },
   'unused-css-rules': {
@@ -960,7 +883,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'valid-lang': {
     text: "Correct this text passage's language code with a recognized code.",
-    snippet: { kind: 'fixed', template: 'lang="fr" or lang="en" on this passage.' },
+    snippet: { kind: 'fixed', template: '<span lang="fr">...</span>' },
   },
   'video-caption': {
     text: 'Add a captions track to this video, so its spoken content is accessible.',
@@ -989,7 +912,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
     text: 'Swap the youtube.com domain for youtube-nocookie.com in the video embed code: the same video is served, without the advertising cookies set on load.',
     snippet: {
       kind: 'fixed',
-      template: 'youtube-nocookie.com instead of youtube.com in the embedded video URL.',
+      template: '<iframe src="https://www.youtube-nocookie.com/embed/..."></iframe>',
     },
   },
 };
