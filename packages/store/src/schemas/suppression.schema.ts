@@ -19,10 +19,18 @@
 import { Schema, type Connection, type Model } from 'mongoose';
 import type { SuppressionReasonCode } from '@odysseus/core';
 
+/** Placeholder `addressKey` for a domain-only suppression. Not a valid hash
+ *  output, so it can never collide with a real address hash. */
+export const DOMAIN_ONLY_ADDRESS_KEY = 'domain-only';
+
 export interface SuppressionDocumentFields {
   suppressionId: string;
   domainHash: string;
   addressHash?: string;
+  /** The address part of the idempotency key: `addressHash` for an address
+   *  suppression, `DOMAIN_ONLY_ADDRESS_KEY` for a domain-only one. Absent on
+   *  rows written before the key existed. */
+  addressKey?: string;
   reasonCode: SuppressionReasonCode;
   reason: string;
   createdAt: Date;
@@ -35,6 +43,7 @@ const suppressionSchema = new Schema<SuppressionDocument>(
     suppressionId: { type: String, required: true, unique: true },
     domainHash: { type: String, required: true },
     addressHash: { type: String },
+    addressKey: { type: String },
     reasonCode: {
       type: String,
       required: true,
@@ -49,17 +58,17 @@ const suppressionSchema = new Schema<SuppressionDocument>(
 suppressionSchema.index({ domainHash: 1 });
 suppressionSchema.index({ addressHash: 1 }, { sparse: true });
 // Idempotency: a retried objection or bounce-confirm for the same cause must
-// not write a second row. addressHash sits in a placeholder field rather than
-// a sparse partial key, so a domain-only suppression and a later
-// domain+address suppression for the same reasonCode still collide correctly
-// (both use the same literal placeholder when no address is given).
+// not write a second row. One unique key covers both shapes: addressKey is the
+// address hash, or the literal DOMAIN_ONLY_ADDRESS_KEY placeholder for a
+// domain-only row, so neither shape needs a "field is missing" filter.
+// MongoDB partial indexes cannot express `$exists: false`; an index declared
+// that way fails to build, and Mongoose's auto-index swallows the error. The
+// partial filter here is `$exists: true`, which is supported, and only keeps
+// rows written before addressKey existed out of the index instead of making
+// the build fail on them.
 suppressionSchema.index(
-  { domainHash: 1, addressHash: 1, reasonCode: 1 },
-  { unique: true, partialFilterExpression: { addressHash: { $exists: true } } },
-);
-suppressionSchema.index(
-  { domainHash: 1, reasonCode: 1 },
-  { unique: true, partialFilterExpression: { addressHash: { $exists: false } } },
+  { domainHash: 1, addressKey: 1, reasonCode: 1 },
+  { unique: true, partialFilterExpression: { addressKey: { $exists: true } } },
 );
 
 export function createSuppressionModel(connection: Connection): Model<SuppressionDocument> {

@@ -14,7 +14,7 @@ import {
   normalizeDomainForHash,
   type SuppressionReasonCode,
 } from '@odysseus/core';
-import { createSuppressionModel } from './schemas/suppression.schema.js';
+import { createSuppressionModel, DOMAIN_ONLY_ADDRESS_KEY } from './schemas/suppression.schema.js';
 
 export interface AddSuppressionEntryInput {
   domain: string;
@@ -24,10 +24,12 @@ export interface AddSuppressionEntryInput {
 }
 
 /**
- * Idempotent: an upsert keyed on the same (domainHash, addressHash,
- * reasonCode) the schema's partial unique indexes enforce, so a retried
- * objection or bounce-confirm writes nothing a second time rather than
- * accumulating duplicate rows for the same cause.
+ * Idempotent: an upsert keyed on the same (domainHash, addressKey,
+ * reasonCode) the schema's unique index enforces, so a retried objection or
+ * bounce-confirm writes nothing a second time rather than accumulating
+ * duplicate rows for the same cause. The filter also matches a row written
+ * before addressKey existed, which the index does not cover, so a retry
+ * against such a row still writes nothing.
  */
 export async function addSuppressionEntry(
   connection: Connection,
@@ -39,23 +41,41 @@ export async function addSuppressionEntry(
     input.address !== undefined
       ? hashSuppressionValue(normalizeAddressForHash(input.address))
       : undefined;
-  const filter: Record<string, unknown> = { domainHash, reasonCode: input.reasonCode };
-  if (addressHash !== undefined) filter['addressHash'] = addressHash;
-  else filter['addressHash'] = { $exists: false };
+  const addressKey = addressHash ?? DOMAIN_ONLY_ADDRESS_KEY;
+  const legacyShape =
+    addressHash !== undefined ? { addressHash } : { addressHash: { $exists: false } };
+  const filter = {
+    domainHash,
+    reasonCode: input.reasonCode,
+    $or: [{ addressKey }, { addressKey: { $exists: false }, ...legacyShape }],
+  };
 
-  await SuppressionModel.updateOne(
-    filter,
-    {
-      $setOnInsert: {
-        suppressionId: randomUUID(),
-        domainHash,
-        ...(addressHash !== undefined ? { addressHash } : {}),
-        reasonCode: input.reasonCode,
-        reason: input.reason,
-        createdAt: new Date(),
+  try {
+    await SuppressionModel.updateOne(
+      filter,
+      {
+        $setOnInsert: {
+          suppressionId: randomUUID(),
+          domainHash,
+          ...(addressHash !== undefined ? { addressHash } : {}),
+          addressKey,
+          reasonCode: input.reasonCode,
+          reason: input.reason,
+          createdAt: new Date(),
+        },
       },
-    },
-    { upsert: true },
+      { upsert: true },
+    );
+  } catch (error) {
+    // Two concurrent retries can both miss the filter and race to insert; the
+    // unique index lets exactly one land, and the loser's cause is recorded.
+    if (!isDuplicateKeyError(error)) throw error;
+  }
+}
+
+function isDuplicateKeyError(error: unknown): boolean {
+  return (
+    typeof error === 'object' && error !== null && (error as { code?: unknown }).code === 11000
   );
 }
 
