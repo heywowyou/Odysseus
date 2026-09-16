@@ -115,7 +115,7 @@ describe('describeProduceFailure', () => {
 
   it('explains a stale-data refusal as a format change, not a layout failure', () => {
     const stale =
-      'Report generation aborted: stale analysis uses normalization fingerprint 5d6066235a290ca9; current findings use f5d473387f3334bb. Run normalize and regenerate the analyses.';
+      'Report generation aborted: stale analysis uses normalization fingerprint 5d6066235a290ca9; current findings use d3e7566e15352410. Run normalize and regenerate the analyses.';
     const result = describeProduceFailure(stale, 'en');
     expect(result.explanation).toContain('changed format');
     expect(result.technicalDetail).toBe(stale);

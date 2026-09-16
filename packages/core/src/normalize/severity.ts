@@ -133,6 +133,9 @@ export const CUSTOM_CHECK_SEVERITY: Record<string, Severity> = {
   // imperceptible to assistive tech, not merely suboptimal.
   // video-missing-captions: WCAG 1.2.2, zero access for deaf/hard-of-
   // hearing users to that content.
+  // placeholder-only-label: WCAG 3.3.2, the field still has an accessible
+  // name (axe accepts the placeholder) but its visible label vanishes on
+  // input; a real barrier, not a total one.
   // alt-text-quality-heuristic: explicitly the lowest-confidence check in
   // this table by design (a heuristic red-flag, not a definitive
   // detection - see docs/rules/manual-accessibility-checklist.md).
@@ -140,6 +143,7 @@ export const CUSTOM_CHECK_SEVERITY: Record<string, Severity> = {
   'focus-order-mismatch': 'moderate',
   'form-error-not-associated': 'serious',
   'video-missing-captions': 'serious',
+  'placeholder-only-label': 'moderate',
   'alt-text-quality-heuristic': 'minor',
 
   // Milestone 8.5a: SEO checks beyond what milestone 8 and Lighthouse's

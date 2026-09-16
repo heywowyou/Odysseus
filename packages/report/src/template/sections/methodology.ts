@@ -6,6 +6,7 @@ import {
   FOCUS_ORDER_MISMATCH_RULE_ID,
   FORM_ERROR_NOT_ASSOCIATED_RULE_ID,
   VIDEO_MISSING_CAPTIONS_RULE_ID,
+  PLACEHOLDER_ONLY_LABEL_RULE_ID,
   getRegime,
   summarizeAuditCoverage,
   type AuditManifest,
@@ -331,6 +332,7 @@ const EXTENDED_PASS_RULE_IDS: readonly string[] = [
   FOCUS_ORDER_MISMATCH_RULE_ID,
   FORM_ERROR_NOT_ASSOCIATED_RULE_ID,
   VIDEO_MISSING_CAPTIONS_RULE_ID,
+  PLACEHOLDER_ONLY_LABEL_RULE_ID,
 ];
 
 /** Plan 036, binding decision 5 (both placements): the methodology-section
@@ -378,6 +380,7 @@ function renderExtendedPassNote(
     [m.extendedPassCheckFocusOrderLabel, FOCUS_ORDER_MISMATCH_RULE_ID],
     [m.extendedPassCheckFormErrorsLabel, FORM_ERROR_NOT_ASSOCIATED_RULE_ID],
     [m.extendedPassCheckVideoCaptionsLabel, VIDEO_MISSING_CAPTIONS_RULE_ID],
+    [m.extendedPassCheckPlaceholderLabelsLabel, PLACEHOLDER_ONLY_LABEL_RULE_ID],
   ];
 
   const checkList = checks

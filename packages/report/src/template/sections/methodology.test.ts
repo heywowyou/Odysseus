@@ -723,6 +723,9 @@ describe('item 1.10/B8: the extended accessibility pass states its own result', 
       'erreurs de formulaire non associées à leur champ (aucune anomalie détectée)',
     );
     expect(html).toContain('sous-titres vidéo (2 constats détectés)');
+    expect(html).toContain(
+      'champs nommés par leur seul texte indicatif (aucune anomalie détectée)',
+    );
   });
 
   it('ignores the alt-text heuristic rule id, which has its own separate block', async () => {

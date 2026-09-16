@@ -74,6 +74,12 @@ export function buildScanJson(
     ...(scanResult.videoCaptionsError !== undefined
       ? { videoCaptionsError: scanResult.videoCaptionsError }
       : {}),
+    ...(scanResult.placeholderLabels !== undefined
+      ? { placeholderLabels: scanResult.placeholderLabels }
+      : {}),
+    ...(scanResult.placeholderLabelsError !== undefined
+      ? { placeholderLabelsError: scanResult.placeholderLabelsError }
+      : {}),
     ...(scanResult.altText !== undefined ? { altText: scanResult.altText } : {}),
     ...(scanResult.altTextError !== undefined ? { altTextError: scanResult.altTextError } : {}),
     ...(scanResult.securityHeaders !== undefined

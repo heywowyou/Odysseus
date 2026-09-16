@@ -85,6 +85,7 @@ export * from './normalize/normalize-keyboard-navigation.js';
 export * from './normalize/normalize-form-error-handling.js';
 export * from './normalize/normalize-geo.js';
 export * from './normalize/normalize-video-captions.js';
+export * from './normalize/normalize-placeholder-labels.js';
 export * from './normalize/normalize-alt-text.js';
 export { languagePrefixOf } from './normalize/normalize-hreflang.js';
 

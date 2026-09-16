@@ -1240,6 +1240,7 @@ export interface ReportStrings {
     extendedPassCheckFocusOrderLabel: string;
     extendedPassCheckFormErrorsLabel: string;
     extendedPassCheckVideoCaptionsLabel: string;
+    extendedPassCheckPlaceholderLabelsLabel: string;
     extendedPassCheckCleanLabel: string;
     extendedPassCheckFoundSingular: string;
     extendedPassCheckFoundPlural: string;

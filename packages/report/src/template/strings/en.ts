@@ -863,6 +863,7 @@ export const en: ReportStrings = {
     extendedPassCheckFocusOrderLabel: 'focus order',
     extendedPassCheckFormErrorsLabel: 'form errors left unassociated with their field',
     extendedPassCheckVideoCaptionsLabel: 'video captions',
+    extendedPassCheckPlaceholderLabelsLabel: 'fields named only by their placeholder',
     extendedPassCheckCleanLabel: 'no issue detected',
     extendedPassCheckFoundSingular: 'finding detected',
     extendedPassCheckFoundPlural: 'findings detected',

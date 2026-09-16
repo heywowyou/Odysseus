@@ -323,6 +323,7 @@ describe('scanSite with fullAuditPlanning', () => {
         'keyboard-navigation': url === pageB ? 'failed' : 'completed',
         'form-error-handling': 'completed',
         'video-captions': 'completed',
+        'placeholder-labels': 'completed',
         'alt-text': 'completed',
         'nap-consistency': 'completed',
         reflow: 'completed',

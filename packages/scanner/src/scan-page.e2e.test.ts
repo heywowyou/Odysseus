@@ -44,7 +44,8 @@ describe('scanPage against fixtures/spa-demo', () => {
     // The fixture's email input has no <label>, but its placeholder
     // attribute is still a valid accessible-name source per the HTML-AAM
     // spec, so axe-core's `label` rule does not fire here even though
-    // placeholder-as-label is a real UX anti-pattern. Only color-contrast
+    // placeholder-as-label is a real UX anti-pattern (the custom
+    // placeholder-labels check covers it instead). Only color-contrast
     // and image-alt are rule violations axe-core actually reports.
     const violationIds: string[] =
       result.axe?.violations.map((violation: { id: string }) => violation.id) ?? [];

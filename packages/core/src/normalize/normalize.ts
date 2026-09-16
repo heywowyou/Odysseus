@@ -73,6 +73,10 @@ import {
   extractVideoCaptionsCandidates,
   type VideoCaptionsCheckInput,
 } from './normalize-video-captions.js';
+import {
+  extractPlaceholderLabelCandidates,
+  type PlaceholderLabelsCheckInput,
+} from './normalize-placeholder-labels.js';
 import { extractAltTextCandidates, type AltTextCheckInput } from './normalize-alt-text.js';
 import {
   extractCanonicalTargetCandidates,
@@ -132,6 +136,7 @@ export interface NormalizePageInput {
   keyboardNavigation?: KeyboardNavigationCheckInput;
   formErrorHandling?: FormErrorHandlingCheckInput;
   videoCaptions?: VideoCaptionsCheckInput;
+  placeholderLabels?: PlaceholderLabelsCheckInput;
   altText?: AltTextCheckInput;
   /** Milestone 8.6. Site-level, only set on the crawl's own start URL -
    *  same attribution pattern sitemapCheck/llmsTxtCheck already
@@ -293,6 +298,8 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
     if (page.formErrorHandling)
       candidates.push(...extractFormErrorHandlingCandidates(page.formErrorHandling));
     if (page.videoCaptions) candidates.push(...extractVideoCaptionsCandidates(page.videoCaptions));
+    if (page.placeholderLabels)
+      candidates.push(...extractPlaceholderLabelCandidates(page.placeholderLabels));
     if (page.altText) candidates.push(...extractAltTextCandidates(page.altText));
     if (page.securityHeaders)
       candidates.push(...extractSecurityHeadersCandidates(page.securityHeaders, page.url));

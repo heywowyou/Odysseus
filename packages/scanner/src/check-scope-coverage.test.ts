@@ -21,7 +21,9 @@ const VALID_COMPLETION_SIGNALS: readonly CheckCompletionSignal[] = [
 // 2026-09-04, issue #42: +1 for transactional-flow-ambiguities, the
 // per-page pass recording booking controls whose destination could not
 // be established.
-const EXPECTED_ENTRY_COUNT = 23;
+// Issue #372: +1 for placeholder-labels, fields named only by their
+// placeholder.
+const EXPECTED_ENTRY_COUNT = 24;
 
 describe('CHECK_SCOPE_REGISTRY', () => {
   it('has the expected number of entries', () => {

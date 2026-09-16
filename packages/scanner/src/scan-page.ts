@@ -39,6 +39,10 @@ import {
   type FormErrorHandlingExtraction,
 } from './checks/form-error-handling.js';
 import { checkVideoCaptions, type VideoCaptionsExtraction } from './checks/video-captions.js';
+import {
+  checkPlaceholderLabels,
+  type PlaceholderLabelsExtraction,
+} from './checks/placeholder-labels.js';
 import { extractAltTextFacts, type AltTextExtraction } from './checks/alt-text.js';
 import type { CookieConsentCheckResult } from './checks/cookie-consent.js';
 import type { AccessibilityStatementCheckResult } from './checks/accessibility-statement.js';
@@ -164,6 +168,8 @@ export interface PageScanResult {
   videoCaptionsError?: string;
   altText?: AltTextExtraction;
   altTextError?: string;
+  placeholderLabels?: PlaceholderLabelsExtraction;
+  placeholderLabelsError?: string;
   securityHeaders?: SecurityHeadersCheckResult;
   cookieConsent?: CookieConsentCheckResult;
   accessibilityStatement?: AccessibilityStatementCheckResult;
@@ -334,6 +340,8 @@ export async function runRenderedAnalysis(
   let videoCaptionsError: string | undefined;
   let altTextResult: AltTextExtraction | undefined;
   let altTextError: string | undefined;
+  let placeholderLabelsResult: PlaceholderLabelsExtraction | undefined;
+  let placeholderLabelsError: string | undefined;
   let structuredDataResult: StructuredDataCheckResult | undefined;
   let napConsistencyResult: NapConsistencyCheckResult | undefined;
   let reflowResult: ReflowCheckResult | undefined;
@@ -508,6 +516,14 @@ export async function runRenderedAnalysis(
         }
 
         try {
+          placeholderLabelsResult = await checkPlaceholderLabels(page, url);
+          checkOutcomes['placeholder-labels'] = 'completed';
+        } catch (error) {
+          placeholderLabelsError = toErrorMessage(error);
+          checkOutcomes['placeholder-labels'] = 'failed';
+        }
+
+        try {
           altTextResult = await extractAltTextFacts(page, url);
           checkOutcomes['alt-text'] = 'completed';
         } catch (error) {
@@ -645,6 +661,8 @@ export async function runRenderedAnalysis(
   if (videoCaptionsError !== undefined) result.videoCaptionsError = videoCaptionsError;
   if (altTextResult !== undefined) result.altText = altTextResult;
   if (altTextError !== undefined) result.altTextError = altTextError;
+  if (placeholderLabelsResult !== undefined) result.placeholderLabels = placeholderLabelsResult;
+  if (placeholderLabelsError !== undefined) result.placeholderLabelsError = placeholderLabelsError;
   if (structuredDataResult !== undefined) result.structuredData = structuredDataResult;
   if (napConsistencyResult !== undefined) result.napConsistency = napConsistencyResult;
   if (reflowResult !== undefined) result.reflow = reflowResult;

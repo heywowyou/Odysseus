@@ -543,6 +543,10 @@ export const OUTREACH_PROOF_CARD_COPY: Readonly<Record<string, OutreachProofCard
     fr: "Une erreur de formulaire visible n'est pas annoncée aux technologies d'assistance.",
     en: 'A visible form error is not exposed to assistive technology.',
   },
+  'placeholder-only-label': {
+    fr: "Un champ de formulaire n'a pour libellé que son texte indicatif, qui disparaît pendant la saisie.",
+    en: 'A form field is named only by its placeholder, which disappears while typing.',
+  },
   'heading-hierarchy-skip': {
     fr: 'La hiérarchie des titres de la page saute un niveau.',
     en: "The page's heading hierarchy skips a level.",

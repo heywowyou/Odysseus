@@ -173,6 +173,15 @@ export const CHECK_SCOPE_REGISTRY: readonly CheckScopeEntry[] = [
     completionSignal: 'explicit-error-field',
   },
   {
+    id: 'placeholder-labels',
+    resultField: 'placeholderLabels',
+    errorField: 'placeholderLabelsError',
+    scope: 'page',
+    pass: 'extended',
+    applicability: 'Every rendered page.',
+    completionSignal: 'explicit-error-field',
+  },
+  {
     id: 'video-captions',
     resultField: 'videoCaptions',
     errorField: 'videoCaptionsError',

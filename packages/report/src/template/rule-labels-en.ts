@@ -208,6 +208,7 @@ export const RULE_LABELS_EN: Readonly<Record<string, string>> = {
   'canonical-target-unreachable': 'The canonical tag points to an unreachable page',
   'keyboard-trap': 'Keyboard focus is trapped on an element',
   'form-error-not-associated': 'A form error message is only shown visually',
+  'placeholder-only-label': 'A form field is labelled only by its placeholder',
   'meta-title-missing': 'Title tag missing',
   'meta-description-missing': 'Meta description missing',
   'redirect-chain-excessive': 'Redirect chain too long',

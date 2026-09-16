@@ -984,6 +984,7 @@ export const fr: ReportStrings = {
     extendedPassCheckFocusOrderLabel: 'ordre de focus',
     extendedPassCheckFormErrorsLabel: 'erreurs de formulaire non associées à leur champ',
     extendedPassCheckVideoCaptionsLabel: 'sous-titres vidéo',
+    extendedPassCheckPlaceholderLabelsLabel: 'champs nommés par leur seul texte indicatif',
     extendedPassCheckCleanLabel: 'aucune anomalie détectée',
     extendedPassCheckFoundSingular: 'constat détecté',
     extendedPassCheckFoundPlural: 'constats détectés',

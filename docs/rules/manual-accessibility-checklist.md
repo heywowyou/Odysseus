@@ -31,13 +31,16 @@ it.
 
 ## Confirmed detection gaps
 
-### Placeholder used as the only label
+### ~~Placeholder used as the only label~~ - resolved 2026-09-16
 An input with a `placeholder` and no `<label>`, `aria-label`, or
 `aria-labelledby` passes axe's `label` rule, because accessible-name
 computation treats the placeholder as sufficient. It is still a real
 usability failure: the text disappears on focus, is often low
 contrast, and is unreliable with screen magnification.
-Confirmed on fixtures/spa-demo, 2026-08-02.
+Confirmed on fixtures/spa-demo, 2026-08-02. Now covered by a dedicated
+custom check (`packages/scanner/src/checks/placeholder-labels.ts`, rule ID
+`placeholder-only-label`, WCAG 3.3.2): a visible text field with a
+placeholder and no label, aria-labelledby text, aria-label or title.
 
 ### ~~Heading hierarchy skips~~ - resolved 2026-08-08
 `heading-order` is tagged best-practice in axe, not WCAG, so it is

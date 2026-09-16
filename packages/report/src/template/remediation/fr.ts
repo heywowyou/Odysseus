@@ -353,6 +353,14 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
         '<input aria-invalid="true" aria-describedby="err-1">\n<span id="err-1" role="alert"><message d\'erreur></span>',
     },
   },
+  'placeholder-only-label': {
+    text: "Donnez à chaque champ un libellé visible relié par l'attribut for, et gardez le texte indicatif pour un exemple de saisie. Le texte indicatif disparaît dès que la personne commence à écrire.",
+    snippet: {
+      kind: 'fill-in-blank',
+      template:
+        '<label for="champ-1"><nom du champ></label>\n<input id="champ-1" placeholder="<exemple>">',
+    },
+  },
   'form-field-multiple-labels': {
     text: "Ne gardez qu'une seule étiquette par champ de formulaire, en fusionnant les intitulés si nécessaire.",
     snippet: { kind: 'fixed', template: '<label for="champ1">...</label>\n<input id="champ1">' },

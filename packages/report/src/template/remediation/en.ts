@@ -314,6 +314,14 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
         '<input aria-invalid="true" aria-describedby="err-1">\n<span id="err-1" role="alert"><error message></span>',
     },
   },
+  'placeholder-only-label': {
+    text: 'Give each field a visible label tied to it with the for attribute, and keep the placeholder for an example value. The placeholder disappears as soon as the visitor starts typing.',
+    snippet: {
+      kind: 'fill-in-blank',
+      template:
+        '<label for="field-1"><field name></label>\n<input id="field-1" placeholder="<example>">',
+    },
+  },
   'form-field-multiple-labels': {
     text: 'Keep a single label per form field, merging the wording where needed.',
     snippet: { kind: 'fixed', template: '<label for="field1">...</label>\n<input id="field1">' },

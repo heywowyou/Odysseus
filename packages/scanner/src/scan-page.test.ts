@@ -24,6 +24,9 @@ vi.mock('./checks/form-error-handling.js', () => ({
 vi.mock('./checks/video-captions.js', () => ({
   checkVideoCaptions: vi.fn(async () => ({ videos: [] })),
 }));
+vi.mock('./checks/placeholder-labels.js', () => ({
+  checkPlaceholderLabels: vi.fn(async () => ({ controls: [] })),
+}));
 vi.mock('./checks/alt-text.js', () => ({
   extractAltTextFacts: vi.fn(async () => ({ images: [] })),
 }));

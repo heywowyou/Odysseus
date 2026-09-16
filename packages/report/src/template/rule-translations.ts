@@ -1051,6 +1051,11 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
       gloss:
         "L'erreur est affichée sans être rattachée au champ concerné, donc un lecteur d'écran ne l'annonce pas et la personne ne sait pas quoi corriger.",
     },
+    'placeholder-only-label': {
+      label: "Un champ de formulaire n'a pour libellé que son texte indicatif",
+      gloss:
+        'Le seul nom visible du champ est son texte indicatif, qui disparaît dès que la personne commence à écrire et reste souvent peu contrasté.',
+    },
     'meta-title-missing': {
       label: 'Balise titre absente',
       gloss:
