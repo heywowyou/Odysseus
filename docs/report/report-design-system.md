@@ -126,6 +126,11 @@ Rules:
 - Sparse numbered pages are an accepted executive-reading choice, not a
   defect. The former 80-percent-empty and three-sections-per-page invariants
   are retired (2026-08-30 executive review).
+- Exception (issue #311): a numbered section or annex category that the
+  first layout shows fits whole in the room under its predecessor follows it
+  (`sheet-flow` / `appendix-category-flow`, marked by `pdf.ts`) as one
+  unbreakable block, so a single paragraph or a one-row category no longer
+  takes a page of its own. Standalone sheets never flow or receive one.
 - The glossary is the final section in the PDF and the technical appendix is
   second to last, the appendix's rows flowing continuously after its opening
   page: findings do not each start a page, and no group-level

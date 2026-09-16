@@ -10,6 +10,7 @@ import {
   findStrandedAppendixRuleIds,
   forceBreakBeforeAppendixRuleGroups,
   insertRepeatedTheadsIntoHtml,
+  markFlowingBlocksInHtml,
   mergeStaleAppendixContinuationsIntoHtml,
   PAGEDJS_NEGLIGIBLE_BOX_PX,
   PAGEDJS_OVERFLOW_TOLERANCE_PX,
@@ -732,5 +733,47 @@ describe('mergeStaleAppendixContinuationsIntoHtml', () => {
         { ruleId: 'rule-b', continuationRowId: 'annexref-f002' },
       ]),
     ).toBe(twoGroups);
+  });
+});
+
+// Issue #311: a short section or annex category measured to fit under its
+// predecessor gets the flow class, and nothing else in the document changes.
+describe('markFlowingBlocksInHtml', () => {
+  const html =
+    '<section class="sheet" id="section-07"><h6>07</h6></section>' +
+    '<section class="sheet" id="section-08"><h6>08</h6></section>' +
+    '<section class="sheet sheet-standalone" id="section-12">' +
+    '<div class="appendix-category" data-appendix-category="accessibility"></div>' +
+    '<div class="appendix-category" data-appendix-category="third-party"></div>' +
+    '</section>';
+
+  it('adds the flow class to the named sections and categories only', () => {
+    const marked = markFlowingBlocksInHtml(html, {
+      sectionIds: ['section-08'],
+      appendixCategories: ['third-party'],
+    });
+
+    expect(marked).toContain('<section class="sheet sheet-flow" id="section-08">');
+    expect(marked).toContain('<section class="sheet" id="section-07">');
+    expect(marked).toContain(
+      '<div class="appendix-category appendix-category-flow" data-appendix-category="third-party"',
+    );
+    expect(marked).toContain(
+      '<div class="appendix-category" data-appendix-category="accessibility"',
+    );
+  });
+
+  it('keeps an existing extra class and ignores ids that are not plain tokens', () => {
+    const marked = markFlowingBlocksInHtml(html, {
+      sectionIds: ['section-12', 'section-07"><script>'],
+      appendixCategories: [],
+    });
+
+    expect(marked).toContain('<section class="sheet sheet-standalone sheet-flow" id="section-12">');
+    expect(marked).not.toContain('<script>');
+  });
+
+  it('returns the html unchanged when nothing flows', () => {
+    expect(markFlowingBlocksInHtml(html, { sectionIds: [], appendixCategories: [] })).toBe(html);
   });
 });

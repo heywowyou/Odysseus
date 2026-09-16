@@ -734,6 +734,102 @@ export function mergeStaleAppendixContinuationsIntoHtml(
   return result;
 }
 
+/** Issue #311. Blocks the first layout showed would fit whole in the room
+ *  under their predecessor: numbered sections (by id) and annex categories
+ *  (by data-appendix-category). */
+export interface FlowingBlocks {
+  sectionIds: string[];
+  appendixCategories: string[];
+}
+
+/** The gap a flowed block keeps from what precedes it, plus a margin for
+ *  Paged.js rounding: the section head's --space-12 cushion (33.6px) and
+ *  the annex category's own --space-12 bottom margin. */
+const FLOW_CUSHION_PX = 48;
+
+/** Reads the post-layout DOM for sections and annex categories that sit on
+ *  a single page and would fit whole under the previous block of the same
+ *  kind on that block's last page. Greedy in document order: a block that
+ *  flows uses up room, and the next block measures against what is left.
+ *  Standalone sheets (contents, checklist, annex opening) never receive a
+ *  flowed section, and the cover and standalone sheets never flow. Pure
+ *  detection, no mutation. */
+async function detectFlowingBlocks(page: Page): Promise<FlowingBlocks> {
+  // No named inner functions: the dev runner's name-keeping transform would
+  // reference a helper that does not exist inside the page.
+  return page.evaluate((cushion) => {
+    const chains: { key: string; fragments: Element[]; fixed: boolean }[][] = [[], []];
+    const sources: [string, 'id' | 'data-appendix-category'][] = [
+      ['section.sheet', 'id'],
+      ['.appendix-category[data-appendix-category]', 'data-appendix-category'],
+    ];
+    sources.forEach(([selector, attribute], chainIndex) => {
+      const chain = chains[chainIndex] ?? [];
+      for (const el of Array.from(document.querySelectorAll(selector))) {
+        const key = el.getAttribute(attribute) ?? '';
+        const existing = chain.find((unit) => unit.key === key);
+        if (existing && key !== '') {
+          existing.fragments.push(el);
+          continue;
+        }
+        const fixed =
+          key === '' ||
+          el.classList.contains('sheet-cover') ||
+          el.classList.contains('sheet-standalone');
+        chain.push({ key, fragments: [el], fixed });
+      }
+    });
+
+    const flowing = chains.map((chain) => {
+      const keys: string[] = [];
+      let room = 0;
+      for (const unit of chain) {
+        const first = unit.fragments[0];
+        const last = unit.fragments[unit.fragments.length - 1];
+        if (!first || !last) continue;
+        const firstPage = first.closest('.pagedjs_page');
+        const onePage = unit.fragments.every((f) => f.closest('.pagedjs_page') === firstPage);
+        const height = last.getBoundingClientRect().bottom - first.getBoundingClientRect().top;
+        if (!unit.fixed && onePage && height + cushion <= room) {
+          keys.push(unit.key);
+          room -= height + cushion;
+          continue;
+        }
+        const areaBottom =
+          last
+            .closest('.pagedjs_page')
+            ?.querySelector('.pagedjs_page_content')
+            ?.getBoundingClientRect().bottom ?? 0;
+        room = unit.fixed ? 0 : areaBottom - last.getBoundingClientRect().bottom;
+      }
+      return keys;
+    });
+    return { sectionIds: flowing[0] ?? [], appendixCategories: flowing[1] ?? [] };
+  }, FLOW_CUSHION_PX);
+}
+
+/** Pure string transform: adds the flow class (paged.css, issue #311) to
+ *  each named section's and annex category's opening tag. Ids and category
+ *  names are constrained to plain token characters before being matched. */
+export function markFlowingBlocksInHtml(html: string, blocks: FlowingBlocks): string {
+  let result = html;
+  for (const id of blocks.sectionIds) {
+    if (!/^[a-z0-9-]+$/i.test(id)) continue;
+    result = result.replace(
+      new RegExp(`<section class="sheet([^"]*)" id="${id}">`),
+      `<section class="sheet$1 sheet-flow" id="${id}">`,
+    );
+  }
+  for (const category of blocks.appendixCategories) {
+    if (!/^[a-z0-9-]+$/i.test(category)) continue;
+    result = result.replace(
+      `<div class="appendix-category" data-appendix-category="${category}"`,
+      `<div class="appendix-category appendix-category-flow" data-appendix-category="${category}"`,
+    );
+  }
+  return result;
+}
+
 /** Issue #170. One annex rule group heading's placement on the paginated
  *  page: `followedByRow` is true when the heading's own detail table sits
  *  directly after it on the SAME page fragment with at least one finding
@@ -1060,6 +1156,19 @@ export async function renderPdfWithPageCountFromHtml(
 
     let currentHtml = html;
     await runPagedjsPreview(currentHtml);
+
+    // Issue #311: short sections and annex categories that fit whole under
+    // their predecessor follow it instead of opening a page. Measured on the
+    // first layout and applied once, before the annex repairs below, which
+    // then work on the flowed document.
+    const flowing = await detectFlowingBlocks(page);
+    if (flowing.sectionIds.length > 0 || flowing.appendixCategories.length > 0) {
+      const flowed = markFlowingBlocksInHtml(currentHtml, flowing);
+      if (flowed !== currentHtml) {
+        currentHtml = flowed;
+        await runPagedjsPreview(currentHtml);
+      }
+    }
 
     // Issue #45, second half + issue #170 + issue #171 + issue #179: repair,
     // against the real post-layout DOM, the three appendix pagination defects

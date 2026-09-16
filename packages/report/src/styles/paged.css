@@ -167,6 +167,21 @@ html {
   break-before: page;
 }
 
+/* Issue #311 (2026-09-16 full-report review) revisits the rule above for
+   short sections: a page carrying one paragraph or three bars read as a
+   layout fault, not an executive-reading choice. After a first layout the
+   render pipeline (pdf.ts, markFlowingBlocksInHtml) marks a section that
+   fits whole in the room left under the previous section, and that
+   section then follows it instead of opening a page. break-inside: avoid
+   is safe here because the section was measured smaller than that room:
+   it moves as one block, so its heading can never strand at a page foot.
+   Declared after the general rule so the later declaration wins for
+   Paged.js's breaks module, the same override channel the annex tests use. */
+.sheet.sheet-flow {
+  break-before: auto;
+  break-inside: avoid;
+}
+
 /* Stated explicitly rather than left as the (identical) default, so the
    no-forced-break-after intent above reads directly from a rule instead
    of from the absence of one. */
@@ -326,6 +341,14 @@ html {
    where the reader can see it start is worth more than the paper. */
 .appendix-category {
   break-before: page;
+}
+
+/* Issue #311: the same measured flow for an annex category that fits whole
+   in the room its predecessor left (a third-party category of one row
+   printed alone on a page). Atomic, so the #303 strand cannot form. */
+.appendix-category.appendix-category-flow {
+  break-before: auto;
+  break-inside: avoid;
 }
 
 /* P4.6 (2026-08-21 La Corniche feedback pass): extended from h2/h4/h5 to

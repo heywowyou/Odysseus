@@ -2422,6 +2422,12 @@ compact flow with new-page section starts: sparse numbered pages are an
 accepted cost of executive readability, not a defect, and there is no
 page-count failure range (a report above 60 pages renders and returns a
 warning instead of failing).
+Issue #311 (2026-09-16 full-report review) narrowed that: a page holding one
+paragraph or three bars read as a layout fault in two delivered reports. The
+render pipeline now measures the first layout and lets a section, or an annex
+category, that fits whole in the room under its predecessor follow it as one
+unbreakable block. Every other section still opens a page, and standalone
+sheets neither flow nor receive a flowed section.
 
 **Approval and provenance:** reports receive their report ID, render timestamp,
 renderer build, and template version before Chromium starts. Those same values
