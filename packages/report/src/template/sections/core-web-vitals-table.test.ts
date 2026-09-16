@@ -4,6 +4,7 @@ import {
   hasMeasuredCoreWebVitals,
   divergentLabLcp,
   renderCoreWebVitalsTable,
+  truncatePagePath,
   worstForMetric,
 } from './core-web-vitals-table.js';
 import { getStrings } from '../strings/i18n.js';
@@ -400,7 +401,9 @@ describe('renderCoreWebVitalsTable', () => {
         cls: { p75: 0.3 },
       });
       const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
-      expect(html).toContain('A large gap between the values above and below is expected');
+      expect(html).toContain(
+        'A large gap between these real-user values and the lab measurements further down is expected',
+      );
     });
 
     // Issue #334: a real report printed a 20.9 s lab LCP median as the
@@ -443,10 +446,11 @@ describe('renderCoreWebVitalsTable', () => {
       expect(en).not.toContain('measurements above');
       const fr = renderCoreWebVitalsTable(getStrings('fr'), 9, 'fr', manifest);
       expect(fr).toContain('mesures de laboratoire Lighthouse');
-      // The two-way divergence note ("ci-dessus et ci-dessous") is a
-      // different, accurate sentence; only the intro's one-way pointer
-      // was the defect.
       expect(fr).not.toContain('mesures de laboratoire ci-dessus');
+      // Issue #320: both tables sit below the gap note, so it no longer
+      // points "above and below".
+      expect(fr).toContain('les mesures de laboratoire présentées plus bas');
+      expect(fr).not.toContain('ci-dessus et ci-dessous');
     });
 
     it('leads with field data and keeps the simulated lab values as the diagnostic below it', () => {
@@ -490,7 +494,9 @@ describe('renderCoreWebVitalsTable', () => {
     it('never shows the gap-explanation note when CrUX has no data to compare against', () => {
       const manifest = measuredManifestWith({ available: false });
       const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
-      expect(html).not.toContain('A large gap between the values above and below is expected');
+      expect(html).not.toContain(
+        'A large gap between these real-user values and the lab measurements further down is expected',
+      );
     });
 
     it('never shows the gap-explanation note when lab measurement did not complete at all, even if CrUX has data', async () => {
@@ -505,7 +511,9 @@ describe('renderCoreWebVitalsTable', () => {
         },
       } as AuditManifest;
       const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', withCrux);
-      expect(html).not.toContain('A large gap between the values above and below is expected');
+      expect(html).not.toContain(
+        'A large gap between these real-user values and the lab measurements further down is expected',
+      );
     });
 
     it('still renders the real-user block even when lab measurement did not complete at all', async () => {
@@ -515,5 +523,19 @@ describe('renderCoreWebVitalsTable', () => {
       expect(html).toContain('did not complete');
       expect(html).toContain('No public Chrome UX Report data');
     });
+  });
+});
+
+describe('truncatePagePath (issue #320)', () => {
+  it('keeps a path that fits the worst-page column whole', () => {
+    expect(truncatePagePath('/en/rooms-and-suites')).toBe('/en/rooms-and-suites');
+  });
+
+  it('cuts the middle of a longer path, keeping its start and its end', () => {
+    const out = truncatePagePath('/pt-pt/os-restaurantes/menu-de-degustacao');
+    expect(out).toHaveLength(24);
+    expect(out.startsWith('/pt-pt/')).toBe(true);
+    expect(out.endsWith('degustacao')).toBe(true);
+    expect(out).toContain('…');
   });
 });

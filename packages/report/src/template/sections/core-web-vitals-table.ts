@@ -103,12 +103,28 @@ export function worstForMetric(
 }
 
 function compactPagePath(url: string): string {
+  let path: string;
   try {
     const parsed = new URL(url);
-    return `${parsed.pathname || '/'}${parsed.search}`;
+    path = `${parsed.pathname || '/'}${parsed.search}`;
   } catch {
-    return url;
+    path = url;
   }
+  return truncatePagePath(path);
+}
+
+/** Issue #320: the longest path the worst-page column shows on one line.
+ *  Real reports wrapped paths such as `/en/rooms-and-` / `suites` inside
+ *  the narrow column; the cell is now nowrap and a longer path loses its
+ *  middle, keeping the start (the language prefix) and the end (the page
+ *  itself). The link still points at the full URL. */
+export const WORST_PAGE_PATH_MAX_CHARS = 24;
+
+export function truncatePagePath(path: string): string {
+  if (path.length <= WORST_PAGE_PATH_MAX_CHARS) return path;
+  const head = Math.ceil((WORST_PAGE_PATH_MAX_CHARS - 1) / 3);
+  const tail = WORST_PAGE_PATH_MAX_CHARS - 1 - head;
+  return `${path.slice(0, head)}…${path.slice(-tail)}`;
 }
 
 /** Issue #334: how many times the real-user LCP the lab median may reach
@@ -389,7 +405,7 @@ export function renderCoreWebVitalsTable(
       worst !== null && worst.value > value
         ? cell(
             `<a href="${escapeHtml(worst.pageUrl)}" style="color:inherit;text-decoration:underline">${escapeHtml(compactPagePath(worst.pageUrl))}</a><br><span class="mono">${escapeHtml(formatMetricValue(worst.value, unit, language))}</span>`,
-            'opacity:0.7;font-size:11px',
+            'opacity:0.7;font-size:11px;white-space:nowrap',
           )
         : cell(escapeHtml(c.worstPageSameAsMedian), 'opacity:0.55;font-size:12px');
     return `
@@ -423,10 +439,10 @@ export function renderCoreWebVitalsTable(
       <thead>
         <tr>
           ${headCell(c.metricColumnLabel, 'auto')}
-          ${headCell(c.valueColumnLabel, '110px')}
-          ${headCell(c.worstPageColumnLabel, '110px')}
-          ${headCell(c.thresholdColumnLabel, '120px')}
-          ${headCell(c.statusColumnLabel, '120px')}
+          ${headCell(c.valueColumnLabel, '90px')}
+          ${headCell(c.worstPageColumnLabel, '160px')}
+          ${headCell(c.thresholdColumnLabel, '90px')}
+          ${headCell(c.statusColumnLabel, '110px')}
         </tr>
       </thead>
       <tbody>
