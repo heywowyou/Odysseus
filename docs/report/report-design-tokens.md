@@ -224,6 +224,8 @@ unit, matching the mockup's own arithmetic:
 | `--space-8` | 22.4px | generous: block separations, grid row gaps |
 | `--space-12` | 33.6px | sheet-level: section-head cushion, appendix category blocks, cover rule gap (added by plan 023; not in the mockup) |
 
+`--measure-prose` (128mm) is the single reading measure for prose paragraphs (issue #315). Paragraphs never cap themselves in `ch`, which scales with each paragraph's own font size; text inside a card or callout is not capped, the box being its measure.
+
 Two conventions outside the token ladder stay as designed: the 4px/6px
 bare micro-literals inside cards and badges, and the mm-based page
 geometry in `paged.css` (`@page` margins, the 18mm sheet padding). The

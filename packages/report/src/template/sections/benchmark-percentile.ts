@@ -30,7 +30,7 @@ export function renderBenchmarkPercentile(
     return sheet(
       `
       ${renderSheetHeader(ordinal, b.eyebrow, b.heading, 'var(--space-2)')}
-      <p style="font-size:13.5px;opacity:0.85;max-width:64ch">${escapeHtml(b.tooSmallBody)}</p>
+      <p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(b.tooSmallBody)}</p>
     `,
       '',
       'section-15',
@@ -49,7 +49,7 @@ export function renderBenchmarkPercentile(
   return sheet(
     `
     ${renderSheetHeader(ordinal, b.eyebrow, b.heading, 'var(--space-2)')}
-    <p style="font-size:13.5px;opacity:0.85;max-width:64ch">${escapeHtml(body)}</p>
+    <p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(body)}</p>
     <p style="font-size:11px;opacity:0.55;margin-top:var(--space-2)">${escapeHtml(dateRange)}</p>
   `,
     '',

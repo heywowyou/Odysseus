@@ -710,8 +710,8 @@ function renderThirdPartySection(
   return `
     <div class="appendix-category" data-appendix-category="third-party" style="margin-bottom:var(--space-12)">
       <h4 class="appendix-category-head" data-appendix-category="third-party">${escapeHtml(strings.findingsAppendix.thirdPartyHeading)}</h4>
-      <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-2);max-width:70ch">${escapeHtml(strings.findingsAppendix.thirdPartyIntro)}</p>
-      <p style="font-size:11px;opacity:0.5;margin-bottom:var(--space-4);max-width:70ch">${escapeHtml(strings.findingsAppendix.thirdPartyCountedInTotalsNote)}</p>
+      <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-2);max-width:var(--measure-prose)">${escapeHtml(strings.findingsAppendix.thirdPartyIntro)}</p>
+      <p style="font-size:11px;opacity:0.5;margin-bottom:var(--space-4);max-width:var(--measure-prose)">${escapeHtml(strings.findingsAppendix.thirdPartyCountedInTotalsNote)}</p>
       ${groupBlocks}
     </div>
   `;

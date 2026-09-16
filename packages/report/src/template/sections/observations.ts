@@ -44,7 +44,7 @@ export function renderObservations(
       ? `
         <div style="margin-bottom:var(--space-6)">
           <h5>${escapeHtml(o.wrapperTitle)}</h5>
-          <p style="font-size:13.5px;opacity:0.85;max-width:64ch">${escapeHtml(fillTemplate(o.wrapperBodyTemplate, { findingIds: formatFindingIdRefs(wrapperIds) }))}</p>
+          <p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(fillTemplate(o.wrapperBodyTemplate, { findingIds: formatFindingIdRefs(wrapperIds) }))}</p>
         </div>
       `
       : '';
@@ -53,7 +53,7 @@ export function renderObservations(
       ? `
         <div>
           <h5>${escapeHtml(o.legalTitle)}</h5>
-          <p style="font-size:13.5px;opacity:0.85;max-width:64ch">${escapeHtml(fillTemplate(o.legalBodyTemplate, { findingIds: formatFindingIdRefs(legalIds) }))}</p>
+          <p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(fillTemplate(o.legalBodyTemplate, { findingIds: formatFindingIdRefs(legalIds) }))}</p>
         </div>
       `
       : '';
@@ -63,7 +63,7 @@ export function renderObservations(
       ? `
         <div>
           <h5>${escapeHtml(strings.accessibilityStatementGuidance.heading)}</h5>
-          <p style="font-size:13.5px;opacity:0.85;max-width:64ch">${escapeHtml(statementGuidance.observation)} ${escapeHtml(statementGuidance.recommendation)}</p>
+          <p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(statementGuidance.observation)} ${escapeHtml(statementGuidance.recommendation)}</p>
           <p class="text-muted" style="font-size:11px">${escapeHtml(
             fillTemplate(
               regimeDependentIds.length === 1

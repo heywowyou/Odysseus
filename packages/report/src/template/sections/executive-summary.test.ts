@@ -467,3 +467,30 @@ describe('P2.4: the category-imbalance note', () => {
     expect(html).not.toContain('le référencement naturel et la visibilité dans les assistants IA');
   });
 });
+
+// Issue #315: paragraphs capped themselves in `ch`, which scales with each
+// paragraph's own font size, so the synthesis lead, its notes and the
+// regulatory callout ran to different widths on one page.
+describe('issue #315: one reading measure', () => {
+  it('caps report prose with the shared measure token, never a font-relative ch width', async () => {
+    const { readdir, readFile } = await import('node:fs/promises');
+    const path = await import('node:path');
+    const dir = path.dirname(new URL(import.meta.url).pathname);
+    const sources = (await readdir(dir)).filter(
+      (name) => name.endsWith('.ts') && !name.endsWith('.test.ts') && name !== 'cover.ts',
+    );
+    for (const name of sources) {
+      const source = await readFile(path.join(dir, name), 'utf-8');
+      expect(source, name).not.toMatch(/max-width:\d+ch/);
+    }
+  });
+
+  it('lets callout text fill its card', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const path = await import('node:path');
+    const dir = path.dirname(new URL(import.meta.url).pathname);
+    const source = await readFile(path.join(dir, 'executive-summary.ts'), 'utf-8');
+    const callout = source.slice(source.indexOf('data-executive-regulatory-context'));
+    expect(callout.slice(0, callout.indexOf('</div>\n  `'))).not.toContain('max-width');
+  });
+});

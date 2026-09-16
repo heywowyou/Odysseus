@@ -501,7 +501,7 @@ export function renderMethodology(
     date: formatDate(auditDate(manifest), language),
   });
   const reportCoverage = buildCoverageDisclosure(strings, manifest, language);
-  const coverageNote = `<p style="font-size:12.5px;margin-top:var(--space-2);max-width:66ch">${escapeHtml(
+  const coverageNote = `<p style="font-size:12.5px;margin-top:var(--space-2);max-width:var(--measure-prose)">${escapeHtml(
     [reportCoverage.summary, ...reportCoverage.details].join(' '),
   )}</p>`;
 
@@ -512,7 +512,7 @@ export function renderMethodology(
   const languageCoverageNote =
     coverage === undefined
       ? ''
-      : `<p style="font-size:12.5px;margin-top:var(--space-2);max-width:66ch">${escapeHtml(
+      : `<p style="font-size:12.5px;margin-top:var(--space-2);max-width:var(--measure-prose)">${escapeHtml(
           fillTemplate(m.languageCoverageTemplate, { languages: coverage.scanned.join(', ') }),
         )}${
           coverage.discoveredOnly.length === 0
@@ -540,7 +540,7 @@ export function renderMethodology(
       )
     : undefined;
   const sitemapCoverageNote = sitemapCoverageText
-    ? `<p style="font-size:12.5px;margin-top:var(--space-2);max-width:66ch">${escapeHtml(sitemapCoverageText)}</p>`
+    ? `<p style="font-size:12.5px;margin-top:var(--space-2);max-width:var(--measure-prose)">${escapeHtml(sitemapCoverageText)}</p>`
     : '';
 
   const sitemapSummary = manifest.crawl.sitemapCoverage;
@@ -602,22 +602,22 @@ export function renderMethodology(
   return sheet(
     `
     ${renderSheetHeader(ordinal, eyebrow, m.heading)}
-    <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(toolingParagraph)}</p>
+    <p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(toolingParagraph)}</p>
     ${coverageNote}
     ${languageCoverageNote}
     ${sitemapCoverageNote}
-    ${sitemapIncompleteNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(sitemapIncompleteNote)}</p>` : ''}
-    ${crawlCapNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(crawlCapNote)}</p>` : ''}
-    ${socialExclusionNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(socialExclusionNote)}</p>` : ''}
-    ${lighthouseFailureNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(lighthouseFailureNote)}</p>` : ''}
-    ${mentionsLegalesCoverageNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(mentionsLegalesCoverageNote)}</p>` : ''}
-    ${privacySecurityNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(privacySecurityNote)}</p>` : ''}
+    ${sitemapIncompleteNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(sitemapIncompleteNote)}</p>` : ''}
+    ${crawlCapNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(crawlCapNote)}</p>` : ''}
+    ${socialExclusionNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(socialExclusionNote)}</p>` : ''}
+    ${lighthouseFailureNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(lighthouseFailureNote)}</p>` : ''}
+    ${mentionsLegalesCoverageNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(mentionsLegalesCoverageNote)}</p>` : ''}
+    ${privacySecurityNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(privacySecurityNote)}</p>` : ''}
     <div class="hr"></div>
-    <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(m.automatedCoverageCaveat)}</p>
-    ${extendedPassNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(extendedPassNote)}</p>` : ''}
+    <p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(m.automatedCoverageCaveat)}</p>
+    ${extendedPassNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(extendedPassNote)}</p>` : ''}
     <div class="hr"></div>
-    <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(m.legalCitationPointerSentence)}</p>
-    ${sirenNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(sirenNote)}</p>` : ''}
+    <p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(m.legalCitationPointerSentence)}</p>
+    ${sirenNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(sirenNote)}</p>` : ''}
   `,
     '',
     'section-11',

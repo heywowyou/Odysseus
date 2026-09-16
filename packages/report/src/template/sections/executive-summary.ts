@@ -46,7 +46,7 @@ function renderTopPriorityLegalNote(
       })
     : e.topPriorityIsNotLegalNoPointer;
 
-  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:66ch">${escapeHtml(text)}</p>`;
+  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:var(--measure-prose)">${escapeHtml(text)}</p>`;
 }
 
 function renderTopPriorityLegalNoteFromPriorities(
@@ -61,7 +61,7 @@ function renderTopPriorityLegalNoteFromPriorities(
         legalRank: firstLegal.displayRank,
       })
     : strings.executiveSummary.topPriorityIsNotLegalNoPointer;
-  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:66ch">${escapeHtml(text)}</p>`;
+  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:var(--measure-prose)">${escapeHtml(text)}</p>`;
 }
 
 /** "Par où commencer" card: a numbered circle plus the theme's own title,
@@ -155,7 +155,7 @@ function renderThirdPartySplitNote(
   const percent = Math.round(
     (stats.thirdPartyAccessibilityOccurrences / stats.accessibilityOccurrences) * 100,
   );
-  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:66ch">${escapeHtml(
+  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:var(--measure-prose)">${escapeHtml(
     fillTemplate(e.thirdPartySplitSentenceTemplate, { percent }),
   )}</p>`;
 }
@@ -180,7 +180,7 @@ function renderCategoryImbalanceNote(
   if (stats.accessibilityCount / stats.totalFindings < ACCESSIBILITY_DOMINANCE_THRESHOLD) return '';
 
   const e = strings.executiveSummary;
-  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:66ch">${escapeHtml(e.categoryImbalanceNote)}</p>`;
+  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:var(--measure-prose)">${escapeHtml(e.categoryImbalanceNote)}</p>`;
 }
 
 /** The site-wide critical/serious count (computeStatistics) has no relation
@@ -210,7 +210,7 @@ function renderCoveredByPrioritiesNote(
     covered: formatNumber(covered, analysis.language),
     remainingSection: sectionTitle('section-05b', strings),
   });
-  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:66ch">${escapeHtml(text)}</p>`;
+  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:var(--measure-prose)">${escapeHtml(text)}</p>`;
 }
 
 /** Issue #57: the executive pages previously carried no trace of the
@@ -241,9 +241,9 @@ function renderRegulatoryContextNote(
   return `
     <div class="card elev-sm" style="margin-top:var(--space-8);padding:var(--space-4);border-left:3px solid var(--color-accent);border-radius:0 var(--radius-lg) var(--radius-lg) 0" data-executive-regulatory-context>
       <div class="card-kicker" style="color:var(--color-accent-300);font-weight:600">${escapeHtml(e.regulatoryContextKicker)}</div>
-      <p style="font-size:12.5px;margin-top:var(--space-2);max-width:66ch">${escapeHtml(e.regulatoryContextCriterion)}</p>
-      <p style="font-size:12.5px;margin-top:var(--space-2);max-width:66ch">${escapeHtml(eaaSanctionFigureSentence(language))}</p>
-      <p style="font-size:11.5px;margin-top:var(--space-2);max-width:66ch" class="text-muted">${escapeHtml(e.regulatoryContextCounsel)}</p>
+      <p style="font-size:12.5px;margin-top:var(--space-2)">${escapeHtml(e.regulatoryContextCriterion)}</p>
+      <p style="font-size:12.5px;margin-top:var(--space-2)">${escapeHtml(eaaSanctionFigureSentence(language))}</p>
+      <p style="font-size:11.5px;margin-top:var(--space-2)" class="text-muted">${escapeHtml(e.regulatoryContextCounsel)}</p>
     </div>
   `;
 }
@@ -281,7 +281,7 @@ export function renderExecutiveSummary(
     ? renderPriorityOwnershipSentence(ownership, e.priorityOwnership, analysis.language)
     : undefined;
   const ownershipNote = ownershipSentence
-    ? `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:66ch">${escapeHtml(ownershipSentence)}</p>`
+    ? `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:var(--measure-prose)">${escapeHtml(ownershipSentence)}</p>`
     : '';
   return sheet(
     `
@@ -291,9 +291,9 @@ export function renderExecutiveSummary(
          a band (--space-1/--space-3) and open to the sheet-level step
          (--space-8) between bands. Note muting uses the ink ladder
          (neutral-200/400), never opacity, to hold 4.5:1 on the ground. -->
-    <p style="font-size:15px;max-width:66ch;line-height:1.55;color:var(--color-neutral-100)">${escapeProse(analysis.executiveSummary, analysis.language)}</p>
-    <p style="font-size:12.5px;color:var(--color-neutral-200);margin-top:var(--space-3);max-width:66ch">${escapeHtml(countsSentence)}</p>
-    <p style="font-size:11px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:66ch">${escapeHtml(e.glossaryPointerSentence)}</p>
+    <p style="font-size:15px;max-width:var(--measure-prose);line-height:1.55;color:var(--color-neutral-100)">${escapeProse(analysis.executiveSummary, analysis.language)}</p>
+    <p style="font-size:12.5px;color:var(--color-neutral-200);margin-top:var(--space-3);max-width:var(--measure-prose)">${escapeHtml(countsSentence)}</p>
+    <p style="font-size:11px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:var(--measure-prose)">${escapeHtml(e.glossaryPointerSentence)}</p>
     ${renderCoveredByPrioritiesNote(strings, analysis, findings, findingsById, priorities)}
     ${ownershipNote}
     ${renderThirdPartySplitNote(strings, stats)}

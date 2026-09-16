@@ -135,7 +135,7 @@ export function renderConformanceSummary(
     ? `
       <div class="hr"></div>
       <h5>${escapeHtml(c.heuristicSectionHeading)}</h5>
-      <p style="font-size:12px;opacity:0.6;max-width:66ch;margin-bottom:var(--space-4)">${escapeHtml(c.heuristicSectionNote)}</p>
+      <p style="font-size:12px;opacity:0.6;max-width:var(--measure-prose);margin-bottom:var(--space-4)">${escapeHtml(c.heuristicSectionNote)}</p>
       <div style="background:color-mix(in srgb, var(--color-accent-300) 6%, transparent);border-left:2px solid var(--color-accent-300);padding:var(--space-3)">
         ${renderRollupTable(strings, language, heuristicRows, { showCriterionColumn: false })}
       </div>
@@ -145,7 +145,7 @@ export function renderConformanceSummary(
   return sheet(
     `
     ${renderSheetHeader(ordinal, c.eyebrow, c.heading, 'var(--space-3)')}
-    <p style="font-size:13.5px;opacity:0.85;max-width:66ch;margin-bottom:var(--space-2)">${escapeHtml(c.bodyIntro)}</p>
+    <p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose);margin-bottom:var(--space-2)">${escapeHtml(c.bodyIntro)}</p>
     <p style="font-size:11px;opacity:0.5;margin-bottom:var(--space-6)">${escapeHtml(fillTemplate(c.scopeNote, { section: sectionTitle('section-02', strings) }))}</p>
     ${body}
     ${heuristicBlock}

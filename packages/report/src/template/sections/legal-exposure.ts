@@ -337,15 +337,15 @@ function renderLcenBlock(
     <div class="card elev-sm" style="margin-top:var(--space-4)">
       <div class="card-kicker">${escapeHtml(l.lcenKicker)}</div>
       <div class="card-title">${escapeHtml(regime.name)}</div>
-      <p style="font-size:12.5px;margin-top:var(--space-2);max-width:66ch">${escapeHtml(regime.thresholdDescription)}</p>
-      <p style="font-size:12.5px;margin-top:var(--space-2);max-width:66ch">${escapeHtml(l.lcenObserved)}</p>
-      <p style="font-size:11.5px;margin-top:var(--space-2);max-width:66ch" class="text-muted">${escapeHtml(
+      <p style="font-size:12.5px;margin-top:var(--space-2)">${escapeHtml(regime.thresholdDescription)}</p>
+      <p style="font-size:12.5px;margin-top:var(--space-2)">${escapeHtml(l.lcenObserved)}</p>
+      <p style="font-size:11.5px;margin-top:var(--space-2)" class="text-muted">${escapeHtml(
         fillTemplate(l.lcenSourceTemplate, {
           citation: regime.legalCitation,
           authority: authorityDisplay,
         }),
       )}</p>
-      <p style="font-size:11.5px;margin-top:2px;max-width:66ch" class="text-muted">${escapeHtml(l.lcenScanLimitNote)}</p>
+      <p style="font-size:11.5px;margin-top:2px" class="text-muted">${escapeHtml(l.lcenScanLimitNote)}</p>
     </div>
   `;
 }
@@ -417,7 +417,7 @@ export function renderLegalExposure(
         ${actionNote}
       </div>
     </div>
-    <p style="font-size:13.5px;opacity:0.85;max-width:66ch">${escapeHtml(paragraph)}</p>
+    <p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(paragraph)}</p>
     ${renderTransactionalFlowScopeNote(strings, manifest, obligationAssessment)}
     ${renderTransactionalFlowInconclusiveNote(strings, manifest, obligationAssessment)}
     ${renderTransactionalFlowConflictNote(strings, obligationAssessment)}

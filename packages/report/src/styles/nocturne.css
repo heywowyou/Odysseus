@@ -117,6 +117,13 @@
      arithmetic as the rest of the ladder; not in the flat mockup. */
   --space-12: 33.6px;
 
+  /* Issue #315: the one reading measure for prose paragraphs. Each paragraph
+     used to cap itself in `ch`, which scales with its own font size, so a
+     15px lead, a 12px note and an 11px aside on the same page ran to three
+     different widths. An absolute length keeps them flush. Text inside a
+     card or callout is not capped: the box is its measure. */
+  --measure-prose: 128mm;
+
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px; /* site raised-card corner (site-card-lg); was 14px */

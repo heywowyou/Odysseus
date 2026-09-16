@@ -39,7 +39,7 @@ describe('renderRemainingWork against the real small-site.test scan', () => {
     // The section exists to answer "what do I do about these". A group with
     // counts and no action is the defect this section was built to fix.
     const groupCount = html.split('class="remaining-rule"').length - 1;
-    const actionCount = html.split('max-width:70ch').length - 1;
+    const actionCount = html.split('class="remaining-action"').length - 1;
     expect(groupCount).toBeGreaterThan(0);
     expect(actionCount).toBe(groupCount);
   });
