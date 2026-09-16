@@ -142,6 +142,7 @@ describe('2026-08-22/23: the Constats cell caps a long findingIds list rather th
     pages: [],
     siteUrl: 'https://client.example',
     startedAt: new Date().toISOString(),
+    finishedAt: new Date().toISOString(),
   } as never;
 
   // selectRenderedThemes (themes.ts) drops any theme none of whose
@@ -273,6 +274,7 @@ describe('issue #41: no checklist PAGES ratio exceeds the visited-page total', (
     ],
     siteUrl: 'https://client.example',
     startedAt: new Date().toISOString(),
+    finishedAt: new Date().toISOString(),
   } as never;
 
   it('counts a theme only over the pages the denominator population covers', () => {

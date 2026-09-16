@@ -16,6 +16,7 @@ import {
   ODYSSEUS_REAUDIT_PRICE_EUR_HT,
   ODYSSEUS_SIGNATORY_NAME,
   ODYSSEUS_REGISTRATION_NUMBER,
+  auditDate,
 } from '../html-utils.js';
 import { isQuickWinTheme } from './themes.js';
 
@@ -78,8 +79,8 @@ export function renderNextSteps(
     : '';
   const authorship = fillTemplate(n.authorshipTemplate, {
     producer: ODYSSEUS_PRODUCER_NAME,
-    scanDate: formatDate(new Date(manifest.finishedAt), language),
-    renderDate: formatDate(renderMetadata?.renderedAt ?? new Date(manifest.startedAt), language),
+    scanDate: formatDate(auditDate(manifest), language),
+    renderDate: formatDate(renderMetadata?.renderedAt ?? auditDate(manifest), language),
     renderQualifier,
     scanQualifier,
     reportId: renderMetadata?.reportId ?? manifest.auditId,

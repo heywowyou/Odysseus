@@ -20,6 +20,7 @@ import {
   formatElapsedDuration,
   renderSheetHeader,
   sheet,
+  auditDate,
 } from '../html-utils.js';
 import { pickPrimaryBasis, renderLegalCitationParagraph } from './methodology.js';
 import { SEVERITY } from '../design-tokens.js';
@@ -79,7 +80,7 @@ function renderSirenNote(
         // registrySnapshot.retrievedAt is typed as a real Date, but this
         // value is loaded from a persisted analysis JSON file with no
         // reviver (same as every other date field in this pipeline -
-        // manifest.startedAt above gets the same new Date() wrap), so it
+        // the audit date above goes through auditDate(), which does the same), so it
         // arrives as a string at runtime. Confirmed by a real "Invalid
         // time value" crash against a live La Corniche regeneration
         // before this wrap was added.
@@ -88,7 +89,7 @@ function renderSirenNote(
     : siren
       ? fillTemplate(l.sirenTemplate, {
           siren,
-          date: formatDate(new Date(manifest.startedAt), language),
+          date: formatDate(auditDate(manifest), language),
         })
       : l.sirenUnavailable;
   // P2.1: a one-line trust note, only when a real registry snapshot

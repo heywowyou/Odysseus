@@ -12,6 +12,7 @@ import {
   formatNumber,
   renderSheetHeader,
   sheet,
+  auditDate,
 } from '../html-utils.js';
 import { selectRenderedThemes } from './themes.js';
 import { LEVEL_COLOR } from '../design-tokens.js';
@@ -83,7 +84,7 @@ export function renderChecklist(
   // it. Same nomCommercial fallback-to-siteUrl precedent as cover.ts.
   const identifier = fillTemplate(c.identifierTemplate, {
     company: manualFields?.nomCommercial?.value ?? manifest.siteUrl,
-    date: formatDate(new Date(manifest.startedAt), language),
+    date: formatDate(auditDate(manifest), language),
   });
 
   // item 35: the checklist was a near-exact restatement of the priorities

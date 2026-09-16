@@ -25,6 +25,7 @@ import {
   pluralize,
   renderSheetHeader,
   sheet,
+  auditDate,
 } from '../html-utils.js';
 import { translateEffectifLabel } from '../effectif-label.js';
 import { buildCoverageDisclosure } from '../coverage-disclosure.js';
@@ -483,7 +484,7 @@ export function renderMethodology(
     axeVersion,
     lighthouseVersion,
     pages: `${formatNumber(pagesScanned, language)} ${pluralize(pagesScanned, m.pagesScannedSingular, m.pagesScannedPlural)}`,
-    date: formatDate(new Date(manifest.startedAt), language),
+    date: formatDate(auditDate(manifest), language),
   });
   const reportCoverage = buildCoverageDisclosure(strings, manifest, language);
   const coverageNote = `<p style="font-size:12.5px;margin-top:var(--space-2);max-width:66ch">${escapeHtml(

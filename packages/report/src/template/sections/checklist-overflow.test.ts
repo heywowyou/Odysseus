@@ -62,6 +62,7 @@ const analysis = {
 
 const manifest = {
   startedAt: '2026-08-24T00:00:00.000Z',
+  finishedAt: '2026-08-24T00:30:00.000Z',
   siteUrl: 'https://example.com/',
   crawl: { startUrl: 'https://example.com/' },
   pages: Array.from({ length: 40 }, (_, p) => ({

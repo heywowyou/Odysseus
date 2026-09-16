@@ -6,7 +6,7 @@ import type {
 } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, formatDate, sheet } from '../html-utils.js';
+import { auditDate, escapeHtml, formatDate, sheet } from '../html-utils.js';
 import { resolveDecisionQuestion } from '../generic-question.js';
 import { hasMeasuredCoreWebVitals } from './core-web-vitals-table.js';
 
@@ -134,7 +134,7 @@ export function renderCover(
       headline,
       question: resolveDecisionQuestion(analysis.language, preparation),
       reportType,
-      signature: `${formatDate(new Date(manifest.startedAt), analysis.language)} · Odysseus`,
+      signature: `${formatDate(auditDate(manifest), analysis.language)} · Odysseus`,
     })}
   `,
     'sheet-cover',

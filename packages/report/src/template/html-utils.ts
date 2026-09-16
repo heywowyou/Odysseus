@@ -389,3 +389,18 @@ export function formatCappedFindingIdLinks(
   const tail = formatAndNMore(remaining, language, strings);
   return `${links}${AND_N_MORE_SEPARATOR}<span class="text-muted">${escapeHtml(tail)}</span>`;
 }
+
+/** The report used to print two different dates for the same audit: the
+ *  cover, the executive scope block, the checklist, the methodology and
+ *  the legal block formatted `manifest.startedAt`, while the closing page
+ *  formatted `manifest.finishedAt`. A scan that starts at 22:16 UTC and
+ *  ends after midnight straddles a day boundary, so a real Haaitza report
+ *  said "15 septembre 2026" on the cover and "le scan achevé le 16
+ *  septembre 2026" on the last page - which reads as a data error to a
+ *  client. Every client-facing date for the audit itself now comes from
+ *  here, so there is one audit date: the moment the evidence was complete.
+ *  The render date stays separate; it is when the PDF was produced, which
+ *  can legitimately be later. */
+export function auditDate(manifest: { finishedAt: string }): Date {
+  return new Date(manifest.finishedAt);
+}
