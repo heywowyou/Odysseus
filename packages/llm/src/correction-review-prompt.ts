@@ -1,6 +1,7 @@
 import type { CorrectionReviewInput } from './correction-review-schema.js';
+import { SCANNER_EVIDENCE_NOTICE } from './untrusted-evidence.js';
 
-export const CORRECTION_REVIEW_PROMPT_VERSION = '033-v1';
+export const CORRECTION_REVIEW_PROMPT_VERSION = '033-v2';
 
 export function buildCorrectionReviewSystemPrompt(): string {
   return `You are an advisory copy-review pass for Odysseus, a web audit tool. You receive exactly the structured input shown to the writing pass and its accepted prose output. Return one structured record for every eligible prose field.
@@ -9,7 +10,9 @@ You may identify only these observed concerns: unsupported-specific-claim, unhed
 
 For propose-change, give a replacement in the report language. It may only improve the existing eligible field and must not add a site-specific fact absent from writerInput. Otherwise use keep or unsure and omit replacement. Reasons are English operator notes and must name the evidence or exact observed wording.
 
-Never edit or propose changes to finding IDs, categories, severities, evidence, page counts, priorities, theme keys, theme titles, deterministic legal text, client identity, or report-template strings. Do not judge legal correctness, sanctions, or PDF layout. Do not use knowledge outside the provided input. Return only schema-valid JSON, with one record for each supplied field address.`;
+Never edit or propose changes to finding IDs, categories, severities, evidence, page counts, priorities, theme keys, theme titles, deterministic legal text, client identity, or report-template strings. Do not judge legal correctness, sanctions, or PDF layout. Do not use knowledge outside the provided input. ${SCANNER_EVIDENCE_NOTICE}
+
+Return only schema-valid JSON, with one record for each supplied field address.`;
 }
 
 export function buildCorrectionReviewUserPrompt(input: CorrectionReviewInput): string {

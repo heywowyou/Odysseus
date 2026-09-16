@@ -1,4 +1,5 @@
 import type { StructureInput } from './structure-schema.js';
+import { SCANNER_EVIDENCE_NOTICE } from './untrusted-evidence.js';
 
 /** System prompt for the structure pass: grouping and prioritization
  *  only, no prose, no language. usedFallbackContext tells the model
@@ -34,7 +35,9 @@ For each theme, set:
 
 quickWins should list findingId values (not free text) for low-effort, high-impact fixes worth doing first. Set overallRisk (low/medium/high) for the site as a whole.
 
-Do not write any prose. Do not include a title, an explanation, a business-impact statement, a legal citation, or recommended actions - none of those fields exist in the schema you must respond with. A separate pass writes them afterward from the grouping you produce here.${fallbackNote}
+Do not write any prose. Do not include a title, an explanation, a business-impact statement, a legal citation, or recommended actions - none of those fields exist in the schema you must respond with. A separate pass writes them afterward from the grouping you produce here.
+
+${SCANNER_EVIDENCE_NOTICE}${fallbackNote}
 
 Respond with structured JSON matching the required schema only. No prose outside the JSON fields, no markdown fences.`;
 }

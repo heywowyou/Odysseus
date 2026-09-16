@@ -16,6 +16,7 @@ import {
   MIN_RECOMMENDED_ACTIONS,
 } from './writing-schema.js';
 import { REQUIRED_WCAG_VERSION } from './wcag-citation-guard.js';
+import { SCANNER_EVIDENCE_NOTICE, SCANNER_EVIDENCE_NOTICE_FR } from './untrusted-evidence.js';
 
 const LANGUAGE_INSTRUCTION: Record<ReportLanguage, string> = {
   fr: "Rédigez title, businessImpact, chaque entrée de recommendedActions, executiveSummary et notes entièrement en français. Ne répondez pas en anglais. Votre réponse est vérifiée par un contrôle automatique de langue après chaque tentative : une réponse qui n'est pas en français sera rejetée et une nouvelle tentative vous sera demandée.",
@@ -269,6 +270,8 @@ Rédigez également un executiveSummary destiné à un décideur non technique, 
 ${dominantMetricNote('fr', dominantPerformanceMetric)}${businessFactsNote('fr', siteContext)}${severityVocabularyNote}${findingNounNote}${wcagVersionNote}${businessClaimNote}${causationNote}${registerNote}${providerPhraseNote}${sentenceStructureNote}${executiveSummaryClosingNote}${positionalReferenceNote}
 ${LANGUAGE_INSTRUCTION.fr}${usedFallbackContext ? fallbackNote('fr') : ''}
 
+${SCANNER_EVIDENCE_NOTICE_FR}
+
 Répondez uniquement avec un JSON structuré conforme au schéma requis. Aucune prose en dehors des champs JSON, aucun bloc de code markdown.`;
 }
 
@@ -350,6 +353,8 @@ Each theme you are given below has a themeKey (for example "t1"). The themes fie
 Also write an executiveSummary aimed at a non-technical decision maker, and a notes field for anything else worth telling the client. The report template states the exact counts (pages scanned, total findings, findings by severity) in a sentence placed immediately before your executiveSummary text, so do not restate, estimate, or reference any of those figures yourself: never write a number of findings, pages, or occurrences anywhere in executiveSummary, not even a rough or rounded one. Your response is checked for this after every attempt; a response containing a digit in executiveSummary is rejected and you are asked again. Write only the qualitative framing and connecting prose that goes with the counts already stated: what kind of problems dominate, why they matter for the business, and what the overall picture is.
 ${dominantMetricNote('en', dominantPerformanceMetric)}${businessFactsNote('en', siteContext)}${severityVocabularyNote}${findingNounNote}${wcagVersionNote}${businessClaimNote}${causationNote}${registerNote}${providerPhraseNote}${sentenceStructureNote}${executiveSummaryClosingNote}${positionalReferenceNote}
 ${LANGUAGE_INSTRUCTION.en}${usedFallbackContext ? fallbackNote('en') : ''}
+
+${SCANNER_EVIDENCE_NOTICE}
 
 Respond with structured JSON matching the required schema only. No prose outside the JSON fields, no markdown fences.`;
 }

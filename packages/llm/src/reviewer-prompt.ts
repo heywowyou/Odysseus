@@ -1,4 +1,5 @@
 import type { ReviewerInput } from './reviewer-schema.js';
+import { SCANNER_EVIDENCE_NOTICE } from './untrusted-evidence.js';
 
 /** System prompt for the shadow reviewer pass. The reviewer judges
  *  exactly one question per prose field: is every site-specific factual
@@ -25,6 +26,8 @@ Apply these examples exactly:
 - "This directly harms your search ranking" stated as a fact: unsupported. "This may affect how search engines see your site": supported, hedged possibility about a generic mechanism.
 
 Do not judge style, tone, language, or legal correctness. Do not invent facts from your own knowledge of the web to justify a verdict: if the input does not say it, it does not support it.
+
+${SCANNER_EVIDENCE_NOTICE}
 
 Correlate themes by their themeKey: return exactly one review object per themeKey shown, echoing it verbatim, in any order. Do not invent a themeKey, do not omit one, do not review theme titles.
 

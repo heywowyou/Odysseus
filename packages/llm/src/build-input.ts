@@ -9,6 +9,11 @@ import type {
   WritingThemeInput,
 } from './writing-schema.js';
 import { selectProviderPhrase } from './provider-phrase-guard.js';
+import {
+  boundScannerText,
+  MAX_FINDING_DESCRIPTION_CHARS_FOR_LLM,
+  MAX_FINDING_TITLE_CHARS_FOR_LLM,
+} from './untrusted-evidence.js';
 
 export type SiteContextInput = StructureInput['siteContext'];
 
@@ -50,8 +55,8 @@ function toLlmFindingShape(finding: Finding): StructureInput['findings'][number]
     category: finding.category,
     severity: finding.severity,
     wcagCriteria: finding.wcagCriteria,
-    title: finding.title,
-    description: finding.description,
+    title: boundScannerText(finding.title, MAX_FINDING_TITLE_CHARS_FOR_LLM),
+    description: boundScannerText(finding.description, MAX_FINDING_DESCRIPTION_CHARS_FOR_LLM),
     pageUrls: finding.pageUrls.slice(0, MAX_PAGE_URLS_FOR_LLM),
     occurrences: finding.occurrences,
   };
