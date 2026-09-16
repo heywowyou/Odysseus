@@ -349,6 +349,10 @@ export type JobSummaryFields = Pick<
   | 'needsReview'
 > & {
   prospectId?: string;
+  /** Issue #382: the job carries typed fields an operator must confirm.
+   *  True for every needs-input job, and for a legacy failed row that was
+   *  written with the fields before needs-input existed. */
+  awaitsInput?: boolean;
   scanType?: JobOptionsSnapshot['scanType'];
 };
 
@@ -373,6 +377,7 @@ export async function listJobs(connection: Connection, limit = 200): Promise<Job
       auditId: 1,
       auditIds: 1,
       needsReview: 1,
+      needsInputFields: 1,
       'options.prospectId': 1,
       'options.scanType': 1,
     },
@@ -387,10 +392,12 @@ export async function listJobs(connection: Connection, limit = 200): Promise<Job
           prospectId?: string;
           scanType?: JobOptionsSnapshot['scanType'];
         };
+        needsInputFields?: JobDocument['needsInputFields'];
       })[]
     >();
-  return docs.map(({ options, ...rest }) => ({
+  return docs.map(({ options, needsInputFields, ...rest }) => ({
     ...rest,
+    ...((needsInputFields?.length ?? 0) > 0 ? { awaitsInput: true } : {}),
     ...(options?.prospectId !== undefined ? { prospectId: options.prospectId } : {}),
     ...(options?.scanType !== undefined ? { scanType: options.scanType } : {}),
   }));

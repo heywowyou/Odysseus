@@ -122,6 +122,8 @@ export const scanSummarySchema = z.object({
   auditIds: z.array(z.string()).optional(),
   severityRollup: severityRollupSchema.optional(),
   needsReview: z.boolean().optional(),
+  /** Issue #382: typed operator-input fields exist on the job. */
+  awaitsInput: z.boolean().optional(),
   prospectId: z.string().optional(),
   /** Present on queued and running rows linked to a prospect, for the scan
    *  queue's labels. */

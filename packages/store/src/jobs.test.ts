@@ -6,6 +6,7 @@ import {
   createJob,
   failJob,
   getJob,
+  listJobs,
   markJobNeedsInput,
   resetOrphanedRunningJobs,
   updateJobProgress,
@@ -206,6 +207,27 @@ describe.skipIf(!available)('job queue persistence', () => {
       const stored = await getJob(connection!, claimed!.jobId);
       expect(stored?.phase).toBe('scan');
       expect(stored?.progress?.message).toBe('scanning');
+    });
+  });
+
+  describe('listJobs', () => {
+    it('flags only jobs that carry typed input fields as awaiting input (issue #382)', async () => {
+      const gated = await queuedJob(new Date('2026-09-16T10:00:00Z'));
+      await markJobNeedsInput(
+        connection!,
+        gated,
+        [{ field: 'nomCommercial', value: 'Hotel' }],
+        'confirm identity',
+      );
+      const renderFailure = await queuedJob(new Date('2026-09-16T11:00:00Z'));
+      await updateJobProgress(connection!, renderFailure, { auditId: 'audit-render' });
+      await failJob(connection!, renderFailure, 'Report generation aborted: render-lint');
+
+      const byId = new Map((await listJobs(connection!)).map((job) => [job.jobId, job]));
+
+      expect(byId.get(gated)).toMatchObject({ status: 'needs-input', awaitsInput: true });
+      expect(byId.get(renderFailure)).toMatchObject({ status: 'failed', auditId: 'audit-render' });
+      expect(byId.get(renderFailure)?.awaitsInput).toBeUndefined();
     });
   });
 

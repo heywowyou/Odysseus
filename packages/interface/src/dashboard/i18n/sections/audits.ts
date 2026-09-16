@@ -18,6 +18,8 @@ export interface AuditsStrings {
   sortNewest: string;
   sortOldest: string;
   kpiRunning: string;
+  /** Issue #380: same wording as the row status label. */
+  kpiNeedsInput: string;
   kpiComplete: string;
   kpiFailed: string;
   /** {time} is replaced by a formatted clock time (lib/format.ts). */
@@ -66,6 +68,7 @@ export const audits = {
     sortNewest: 'Plus récents d’abord',
     sortOldest: 'Plus anciens d’abord',
     kpiRunning: 'En cours',
+    kpiNeedsInput: 'Action requise',
     kpiComplete: 'Terminés',
     kpiFailed: 'Échecs',
     updatedAt: 'Actualisé à {time}',
@@ -104,6 +107,7 @@ export const audits = {
     sortNewest: 'Newest first',
     sortOldest: 'Oldest first',
     kpiRunning: 'Running',
+    kpiNeedsInput: 'Needs input',
     kpiComplete: 'Complete',
     kpiFailed: 'Failed',
     updatedAt: 'Updated at {time}',

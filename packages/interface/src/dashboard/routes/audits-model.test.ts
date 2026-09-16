@@ -45,11 +45,25 @@ describe('computeKpis', () => {
         severityRollup: { critical: 3, serious: 0, moderate: 0, minor: 0 },
       }),
     ];
-    expect(computeKpis(summaries)).toEqual({ running: 2, complete: 2, failed: 1 });
+    expect(computeKpis(summaries)).toEqual({ running: 2, needsInput: 0, complete: 2, failed: 1 });
   });
 
   it('returns zeros for an empty list', () => {
-    expect(computeKpis([])).toEqual({ running: 0, complete: 0, failed: 0 });
+    expect(computeKpis([])).toEqual({ running: 0, needsInput: 0, complete: 0, failed: 0 });
+  });
+
+  it('counts the displayed status, so the header matches the rows and filter (issues #380, #382)', () => {
+    const summaries = [
+      makeSummary({ jobId: 'a', status: 'needs-input', auditId: 'audit-a', awaitsInput: true }),
+      makeSummary({ jobId: 'b', status: 'failed', auditId: 'audit-b', awaitsInput: true }),
+      makeSummary({ jobId: 'c', status: 'failed', auditId: 'audit-c' }),
+      makeSummary({ jobId: 'd', status: 'failed' }),
+      makeSummary({ jobId: 'e', status: 'cancelled' }),
+    ];
+    const kpis = computeKpis(summaries);
+    expect(kpis).toEqual({ running: 0, needsInput: 2, complete: 0, failed: 2 });
+    expect(filterSummaries(summaries, 'needs-input')).toHaveLength(kpis.needsInput);
+    expect(filterSummaries(summaries, 'failed')).toHaveLength(kpis.failed);
   });
 });
 
@@ -73,22 +87,40 @@ describe('filterSummaries', () => {
     expect(summaries).toHaveLength(3);
   });
 
-  it('issue 90: files a failed post-scan row under the needs-input filter', () => {
+  it('files only a typed input request under the needs-input filter (issue #382)', () => {
     const summaries = [
       makeSummary({ jobId: 'a', status: 'failed', auditId: 'audit-a' }),
       makeSummary({ jobId: 'b', status: 'failed' }),
+      makeSummary({ jobId: 'c', status: 'needs-input', auditId: 'audit-c', awaitsInput: true }),
     ];
     expect(filterSummaries(summaries, 'needs-input').map((summary) => summary.jobId)).toEqual([
-      'a',
+      'c',
     ]);
-    expect(filterSummaries(summaries, 'failed').map((summary) => summary.jobId)).toEqual(['b']);
+    expect(filterSummaries(summaries, 'failed').map((summary) => summary.jobId)).toEqual([
+      'a',
+      'b',
+    ]);
   });
 });
 
-describe('listStatus (issue 90)', () => {
-  it('shows a failed job with an audit as needing operator action', () => {
+describe('listStatus', () => {
+  it('shows a job stopped on the identity gate as needing input', () => {
+    expect(
+      listStatus(makeSummary({ status: 'needs-input', auditId: 'audit-1', awaitsInput: true })),
+    ).toBe('needs-input');
+  });
+
+  it('keeps a technical failure with a persisted audit as failed, still linking to the audit (issue #382)', () => {
+    // The render-lint refusal of issue #377 is a failed job with an auditId.
     const summary = makeSummary({ status: 'failed', auditId: 'audit-1' });
-    expect(listStatus(summary)).toBe('needs-input');
+    expect(listStatus(summary)).toBe('failed');
+    expect(rowTarget(summary)).toBe('/audits/audit-1');
+  });
+
+  it('shows a legacy failed row carrying typed input fields as needing input', () => {
+    expect(
+      listStatus(makeSummary({ status: 'failed', auditId: 'audit-1', awaitsInput: true })),
+    ).toBe('needs-input');
   });
 
   it('leaves a failed job without an audit as failed', () => {

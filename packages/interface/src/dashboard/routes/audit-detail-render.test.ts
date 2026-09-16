@@ -206,7 +206,7 @@ describe('audits header KPIs (issue #269)', () => {
   });
 });
 
-describe('audits list report-stage failure display (issue #90)', () => {
+describe('audits list report-stage failure display (issues #90, #382)', () => {
   beforeEach(() => {
     stubRoutes({});
   });
@@ -216,7 +216,7 @@ describe('audits list report-stage failure display (issue #90)', () => {
     document.body.innerHTML = '';
   });
 
-  it('reads Action requise for a failed job whose audit was persisted', async () => {
+  it('reads Échoué, not Action requise, for a technical failure after the audit was persisted', async () => {
     stubRoutes({
       '/api/scans?limit=200': [
         {
@@ -236,8 +236,9 @@ describe('audits list report-stage failure display (issue #90)', () => {
     // status label as an option, so the whole-document text cannot
     // discriminate.
     const tableText = container.querySelector('tbody')?.textContent ?? '';
-    expect(tableText).toContain('Action requise');
-    expect(tableText).not.toContain('Échoué');
+    expect(tableText).toContain('Échoué');
+    expect(tableText).not.toContain('Action requise');
+    expect(container.querySelector('dl')?.textContent).toContain('Action requise0');
     root.unmount();
   });
 });

@@ -427,6 +427,7 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       auditIds: job.auditIds,
       severityRollup: job.auditId ? rollups.get(job.auditId) : undefined,
       needsReview: job.needsReview,
+      awaitsInput: job.awaitsInput,
     }));
 
     sendJson(res, 200, summaries);

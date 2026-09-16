@@ -43,7 +43,13 @@ import {
   siteLabel,
   sortSummaries,
 } from './audits-model';
-import type { SeverityBadge, SeverityKey, SortOrder, StatusFilter } from './audits-model';
+import type {
+  AuditsKpis,
+  SeverityBadge,
+  SeverityKey,
+  SortOrder,
+  StatusFilter,
+} from './audits-model';
 
 // Plan 040 poll policy: lists refresh every 10s (usePolling also pauses
 // every poll while the tab is hidden).
@@ -558,10 +564,10 @@ function QueueRow(props: {
 }
 
 /** The run list's own state, read as one line rather than as separate boxes.
- *  Running, complete and failed are three states of the same list, so they sit
+ *  Running, needs input, complete and failed are four states of the same list, so they sit
  *  together and separated only by spacing. */
 function QueueReadout(props: {
-  kpis: { running: number; complete: number; failed: number };
+  kpis: AuditsKpis;
   state: KpiValueState;
   unavailableLabel: string;
 }): JSX.Element {
@@ -569,6 +575,7 @@ function QueueReadout(props: {
   const { kpis, state, unavailableLabel } = props;
   const entries = [
     { key: 'running', label: strings.audits.kpiRunning, value: kpis.running },
+    { key: 'needs-input', label: strings.audits.kpiNeedsInput, value: kpis.needsInput },
     { key: 'complete', label: strings.audits.kpiComplete, value: kpis.complete },
     { key: 'failed', label: strings.audits.kpiFailed, value: kpis.failed },
   ];

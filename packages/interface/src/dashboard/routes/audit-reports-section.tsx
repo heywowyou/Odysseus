@@ -45,8 +45,9 @@ function scrollToAnchor(anchor: string): void {
   }
 }
 
-/** Issue #90: a report-stage failure is a needs-input state, and the
- *  reason exists only on the linked job row until this card surfaces it.
+/** Issue #90: a report-stage failure's reason exists only on the linked job
+ *  row until this card surfaces it. Issue #382: only the typed identity case
+ *  is an input request; any other failure is shown as a technical failure.
  *  The stored message is the pipeline's own English prescription and is
  *  shown verbatim as a technical detail; the bilingual hint above the
  *  actions carries the remediation, keyed on the typed failure case.
