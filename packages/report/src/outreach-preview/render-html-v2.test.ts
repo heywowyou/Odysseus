@@ -243,4 +243,70 @@ describe('generateOutreachPreviewHtmlV2', () => {
   it('round-trips through the strict schema the renderer parses with', () => {
     expect(outreachPreviewSummarySchema.parse(summary())).toBeTruthy();
   });
+
+  it('lays the post-cover sections on the ground under report section heads', () => {
+    const html = generateOutreachPreviewHtmlV2(summary());
+
+    expect((html.match(/<section class="preview-section /gu) ?? []).length).toBe(4);
+    expect((html.match(/class="section-head"/gu) ?? []).length).toBe(4);
+    expect(html).toContain('class="stat-tile stat-tile-primary"');
+    expect(html).toContain('class="severity-grid severity-grid-4"');
+    expect(OUTREACH_PREVIEW_STYLES_V2).not.toMatch(/section:not\(\.disclosure\)\s*\{/u);
+  });
+
+  it('uses the singular page label on a proof card naming one page', () => {
+    const base = summary();
+    const html = generateOutreachPreviewHtmlV2(
+      summary({
+        proofCards: [
+          { ...base.proofCards[0]!, affectedPageCount: 1 },
+          base.proofCards[1]!,
+          base.proofCards[2]!,
+        ],
+      }),
+    );
+
+    expect(html).toContain('1 page concernée');
+    expect(html).not.toContain('1 pages concernées');
+  });
+
+  it('renders the regime criterion as a reference card and the counsel caveat as fine print', () => {
+    const html = generateOutreachPreviewHtmlV2(
+      summary({
+        facts: {
+          state: 'rendered',
+          heading: 'Cadre',
+          paragraphs: ['Critère.', 'Registre.', 'Conseil.'],
+        },
+      }),
+    );
+
+    expect(html).toContain('<div class="facts-reference"><p>Critère.</p></div>');
+    expect(html).toContain('<p class="facts-body">Registre.</p>');
+    expect(html).toContain('<p class="fineprint">Conseil.</p>');
+  });
+
+  it('adds a screen-only scroll cue on the cover that jumps to the grade', () => {
+    const html = generateOutreachPreviewHtmlV2(summary());
+    const cue = html.indexOf('class="cover-scroll-cue"');
+
+    expect(cue).toBeGreaterThan(html.indexOf('class="cover-question"'));
+    expect(cue).toBeLessThan(html.indexOf('class="cover-type"'));
+    expect(html).toContain('href="#suite" aria-label="Voir la suite de l’aperçu"');
+    expect(html).toContain('<div class="preview-signal" id="suite">');
+    expect(
+      OUTREACH_PREVIEW_STYLES_V2.slice(OUTREACH_PREVIEW_STYLES_V2.indexOf('@media print {')),
+    ).toContain('.cover-scroll-cue { display: none; }');
+    expect(OUTREACH_PREVIEW_STYLES_V2).toMatch(
+      /prefers-reduced-motion: reduce\) \{\s*\.cover-scroll-cue svg \{ animation: none; \}/u,
+    );
+  });
+
+  it('keeps each report-type separator on the end of its line', () => {
+    const html = generateOutreachPreviewHtmlV2(summary());
+    const type = /class="cover-type"[^>]*>([^<]*)</u.exec(html)?.[1] ?? '';
+
+    expect(type).toContain('\u00a0· ');
+    expect(type).not.toContain(' ·\u00a0');
+  });
 });

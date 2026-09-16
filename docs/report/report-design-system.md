@@ -170,6 +170,26 @@ out is a defect, not minimalism:
   The four severity totals retain the full report's dot, label, count, and
   plain-language meaning anatomy. This is a source-level reuse contract, not a
   screenshot match.
+- **Outreach preview sections** (accepted Impeccable direction, 2026-09-16):
+  the post-cover sections carry the report's current section system, not
+  bordered section cards. Each section sits on the page ground under the
+  report's section head (heading over a hairline with a 72px accent
+  segment, no numbered eyebrow: the preview has no section numbering to
+  navigate by). Raised surface tiles and cards appear only where a figure or
+  an item needs holding: the three coverage counts, the totals pair led by
+  the accent-tinted findings tile, the severity grid (four across on
+  desktop, two on phones), and the three proof cards (meta row first, then
+  the dossier mark and title). The legal block raises the regime criterion
+  as a reference card, keeps the registry sentence as body text, and sets
+  the counsel caveat as fine print. The offer closes with the reply button
+  and the offer link side by side.
+- **Outreach preview scroll cue**: on screen only, a ringed chevron link
+  between the decision question and the report-type line tells a reader
+  landing on the full-height cover that the document continues, and jumps
+  to the grade. It drops three times after load and never moves under
+  reduced motion; print hides it. The paid report's cover never renders it.
+  At phone widths the report-type line drops its side hairlines and binds
+  each separator dot to the preceding category so no line opens with one.
 - The sparse-pages rule below covers numbered sections only. Front matter
   is governed by this composition rule instead.
 

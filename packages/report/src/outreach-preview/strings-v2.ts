@@ -72,6 +72,9 @@ export interface OutreachPreviewStringsV2 {
   cardsHeading: string;
   cardsIntro: string;
   cardPagesLabel: string;
+  cardPageLabelSingular: string;
+  /** Accessible name of the cover's scroll cue link. */
+  scrollCueLabel: string;
   offerHeading: string;
   offerBody: string;
   offerReplyLabel: string;
@@ -152,6 +155,8 @@ const OUTREACH_PREVIEW_STRINGS_V2_FR: OutreachPreviewStringsV2 = {
     'sur votre site. Le rapport de diagnostic complet précise pour chacun la page et l’élément ' +
     'concernés, ainsi que la correction recommandée.',
   cardPagesLabel: 'pages concernées',
+  cardPageLabelSingular: 'page concernée',
+  scrollCueLabel: 'Voir la suite de l’aperçu',
   offerHeading: 'Commander le diagnostic technique complet',
   offerBody:
     'Le diagnostic technique complet, proposé à {price}, comprend une analyse complète du site ' +
@@ -249,6 +254,8 @@ const OUTREACH_PREVIEW_STRINGS_V2_EN: OutreachPreviewStringsV2 = {
     'full diagnostic report identifies the page and element concerned for each one and gives ' +
     'the recommended fix.',
   cardPagesLabel: 'pages affected',
+  cardPageLabelSingular: 'page affected',
+  scrollCueLabel: 'See the rest of the preview',
   offerHeading: 'Order the full technical diagnostic',
   offerBody:
     'The full technical diagnostic, offered at {price}, includes a complete site analysis and ' +

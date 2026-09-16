@@ -64,7 +64,7 @@ function renderGradeSignal(input: OutreachPreviewSummary, s: OutreachPreviewStri
       input.severityTotals.serious === 1 ? s.seriousFindingSingular : s.seriousFindingPlural,
   });
   return [
-    '<div class="preview-signal">',
+    `<div class="preview-signal" id="${PREVIEW_CONTENT_ID}">`,
     `<div class="preview-scorecard">${renderScorecardGrade(grade, s.scorecardDisclaimer, s.scorecardLabel)}</div>`,
     '<div class="preview-risk">',
     `<div class="preview-risk-scale">${scale}</div>`,
@@ -75,15 +75,29 @@ function renderGradeSignal(input: OutreachPreviewSummary, s: OutreachPreviewStri
   ].join('');
 }
 
+/** The report's section head (nocturne.css's .statistics-sheet
+ *  .section-head): the heading sits on the page ground over a hairline
+ *  that carries a short accent segment. The report's numbered eyebrow is
+ *  deliberately not carried over: the preview has no section numbering
+ *  to navigate by, and the heading carries its own weight. */
+function renderSectionHead(heading: string): string {
+  return `<div class="section-head"><h2>${escapeHtml(heading)}</h2></div>`;
+}
+
+function renderStatTile(value: number, label: string, primary = false): string {
+  const className = primary ? 'stat-tile stat-tile-primary' : 'stat-tile';
+  return `<div class="${className}"><div class="stat-value">${value}</div><div class="stat-label">${escapeHtml(label)}</div></div>`;
+}
+
 function renderCoverage(input: OutreachPreviewSummary, s: OutreachPreviewStringsV2): string {
   return [
-    '<section>',
-    `<h2>${escapeHtml(s.coverageHeading)}</h2>`,
-    `<p>${escapeHtml(s.coverageIntro)}</p>`,
-    '<div class="tiles">',
-    `<div class="tile"><div class="value">${input.coverage.inventoriedPageCount}</div><div class="key">${escapeHtml(s.coverage.inventoried)}</div></div>`,
-    `<div class="tile"><div class="value">${input.coverage.contentCheckedPageCount}</div><div class="key">${escapeHtml(s.coverage.contentChecked)}</div></div>`,
-    `<div class="tile"><div class="value">${input.coverage.performanceMeasuredPageCount}</div><div class="key">${escapeHtml(s.coverage.performanceMeasured)}</div></div>`,
+    '<section class="preview-section coverage-section">',
+    renderSectionHead(s.coverageHeading),
+    `<p class="section-lede">${escapeHtml(s.coverageIntro)}</p>`,
+    '<div class="stat-grid stat-grid-coverage">',
+    renderStatTile(input.coverage.inventoriedPageCount, s.coverage.inventoried),
+    renderStatTile(input.coverage.contentCheckedPageCount, s.coverage.contentChecked),
+    renderStatTile(input.coverage.performanceMeasuredPageCount, s.coverage.performanceMeasured),
     '</div>',
     `<p class="fineprint">${escapeHtml(s.performanceNote)}</p>`,
     '</section>',
@@ -112,20 +126,38 @@ function renderTotals(
   );
   const severities = nonZeroSeverities.map(
     (severity) =>
-      `<div class="tile severity-tile severity-${severity}"><div class="severity-heading"><span class="severity-dot"></span><span class="key">${escapeHtml(s.severity[severity])}</span></div><div class="value">${input.severityTotals[severity]}</div><div class="severity-meaning">${escapeHtml(severityMeanings[severity])}</div></div>`,
+      `<div class="severity-tile severity-${severity}"><div class="severity-heading"><span class="severity-dot"></span><span class="severity-label">${escapeHtml(s.severity[severity])}</span></div><div class="severity-value">${input.severityTotals[severity]}</div><div class="severity-meaning">${escapeHtml(severityMeanings[severity])}</div></div>`,
   );
   return [
-    '<section class="results-section">',
-    `<h2>${escapeHtml(s.totalsHeading)}</h2>`,
-    '<div class="tiles">',
-    `<div class="tile"><div class="value">${input.distinctFindingCount}</div><div class="key">${escapeHtml(s.distinctFindings)}</div></div>`,
-    `<div class="tile"><div class="value">${input.affectedPageCount}</div><div class="key">${escapeHtml(s.affectedPages)}</div></div>`,
+    '<section class="preview-section results-section">',
+    renderSectionHead(s.totalsHeading),
+    // The report's editorial lead: the findings total is the primary tile,
+    // the affected-page count its compact supporting figure.
+    '<div class="stat-grid stat-grid-totals">',
+    renderStatTile(input.distinctFindingCount, s.distinctFindings, true),
+    renderStatTile(input.affectedPageCount, s.affectedPages),
     '</div>',
-    `<h2 class="mt">${escapeHtml(s.severityHeading)}</h2>`,
-    `<div class="tiles tiles-${nonZeroSeverities.length}">${severities.join('')}</div>`,
+    `<h3 class="breakdown-heading">${escapeHtml(s.severityHeading)}</h3>`,
+    `<div class="severity-grid severity-grid-${nonZeroSeverities.length}">${severities.join('')}</div>`,
     '</section>',
   ].join('');
 }
+
+/** The cover fills the first screen, so a reader landing from an email
+ *  link can take it for the whole document. A drawn chevron under the
+ *  decision question links to the grade that opens the rest of the
+ *  preview; it is hidden from print, where pages already continue. */
+function renderScrollCue(s: OutreachPreviewStringsV2): string {
+  return [
+    `<a class="cover-scroll-cue" href="#${PREVIEW_CONTENT_ID}" aria-label="${escapeHtml(s.scrollCueLabel)}">`,
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">',
+    '<path d="M6 9.5 12 15.5 18 9.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>',
+    '</svg>',
+    '</a>',
+  ].join('');
+}
+
+const PREVIEW_CONTENT_ID = 'suite';
 
 function renderIntroduction(s: OutreachPreviewStringsV2): string {
   return `<div class="preview-introduction"><p>${escapeHtml(s.lede)}</p></div>`;
@@ -136,20 +168,22 @@ function renderCards(input: OutreachPreviewSummary, s: OutreachPreviewStringsV2)
     .map((card) =>
       [
         '<div class="card">',
-        `<h3>${escapeHtml(card.title[input.language])}</h3>`,
         '<div class="card-meta">',
         `<span class="tag">${escapeHtml(s.category[card.category])}</span>`,
-        `<span>${escapeHtml(s.severity[card.severity])}</span>`,
-        `<span>${card.affectedPageCount} ${escapeHtml(s.cardPagesLabel)}</span>`,
+        `<span class="card-severity severity-${card.severity}"><span class="severity-dot"></span>${escapeHtml(s.severity[card.severity])}</span>`,
+        `<span class="card-pages">${card.affectedPageCount} ${escapeHtml(
+          card.affectedPageCount === 1 ? s.cardPageLabelSingular : s.cardPagesLabel,
+        )}</span>`,
         '</div>',
+        `<h3>${escapeHtml(card.title[input.language])}</h3>`,
         '</div>',
       ].join(''),
     )
     .join('');
   return [
-    '<section>',
-    `<h2>${escapeHtml(s.cardsHeading)}</h2>`,
-    `<p>${escapeHtml(s.cardsIntro)}</p>`,
+    '<section class="preview-section cards-section">',
+    renderSectionHead(s.cardsHeading),
+    `<p class="section-lede">${escapeHtml(s.cardsIntro)}</p>`,
     `<div class="cards">${cards}</div>`,
     '</section>',
   ].join('');
@@ -157,28 +191,45 @@ function renderCards(input: OutreachPreviewSummary, s: OutreachPreviewStringsV2)
 
 /** Already checked by the schema's own guard, and escaped here anyway: the
  *  paragraphs are code-generated today, and an escaping policy that depends
- *  on who generated a string is one refactor away from being wrong. */
+ *  on who generated a string is one refactor away from being wrong.
+ *
+ *  core's buildOutreachFactsBlock always emits the regime criterion first
+ *  and the confirm-with-counsel caveat last, so the layout follows the
+ *  report's own legal pages: the criterion is the raised reference card,
+ *  the registry reading is body text on the ground, and the caveat is fine
+ *  print. */
 function renderFacts(input: OutreachPreviewSummary): string {
   if (input.facts.state === 'omitted') return '';
-  const paragraphs = input.facts.paragraphs
-    .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
-    .join('');
-  return `<section><h2>${escapeHtml(input.facts.heading)}</h2>${paragraphs}</section>`;
+  const [criterion, ...rest] = input.facts.paragraphs;
+  const caveat = rest.length > 0 ? rest[rest.length - 1] : undefined;
+  const body = rest.slice(0, -1);
+  return [
+    '<section class="preview-section facts-section">',
+    renderSectionHead(input.facts.heading),
+    criterion === undefined
+      ? ''
+      : `<div class="facts-reference"><p>${escapeHtml(criterion)}</p></div>`,
+    ...body.map((paragraph) => `<p class="facts-body">${escapeHtml(paragraph)}</p>`),
+    caveat === undefined ? '' : `<p class="fineprint">${escapeHtml(caveat)}</p>`,
+    '</section>',
+  ].join('');
 }
 
 function renderOffer(input: OutreachPreviewSummary, s: OutreachPreviewStringsV2): string {
   return [
-    '<section>',
-    `<h2>${escapeHtml(s.offerHeading)}</h2>`,
-    `<p>${escapeHtml(
+    '<section class="preview-section offer-section">',
+    renderSectionHead(s.offerHeading),
+    `<p class="section-lede">${escapeHtml(
       fillTemplate(s.offerBody, { price: formatFullAuditPrice(input.language) }),
     )}</p>`,
-    `<p><a class="cta" href="mailto:${OUTREACH_CONTACT.address}?subject=${encodeURIComponent(
+    '<div class="offer-actions">',
+    `<a class="cta" href="mailto:${OUTREACH_CONTACT.address}?subject=${encodeURIComponent(
       s.offerHeading,
-    )}">${escapeHtml(s.offerReplyLabel)}</a></p>`,
-    `<p class="actions"><a href="${escapeHtml(input.links.offer)}">${escapeHtml(
+    )}">${escapeHtml(s.offerReplyLabel)}</a>`,
+    `<a class="secondary-action" href="${escapeHtml(input.links.offer)}">${escapeHtml(
       s.offerLinkLabel,
-    )}</a></p>`,
+    )}</a>`,
+    '</div>',
     '</section>',
   ].join('');
 }
@@ -236,8 +287,12 @@ export function generateOutreachPreviewHtmlV2(input: OutreachPreviewSummary): st
       kicker: reportStrings.cover.kicker,
       headline: validated.recipient.businessName,
       question: resolveDecisionQuestion(validated.language),
-      reportType,
+      // The shared copy binds each separator to the NEXT category
+      // (" ·\u00a0"); the preview binds it to the previous one instead, so a
+      // phone-width wrap never opens a line with "·".
+      reportType: reportType.replace(/ ·[\u00a0 ]/gu, '\u00a0· '),
       signature: `${observedDate} · Odysseus`,
+      scrollCue: renderScrollCue(s),
     }),
     '</header>',
     renderGradeSignal(validated, s),

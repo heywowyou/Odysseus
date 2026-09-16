@@ -64,6 +64,7 @@ export const OUTREACH_PREVIEW_STYLES_V2 = `
   --cover-ground: #0d1926;
   --radius: 12px;
   --radius-sm: 4px;
+  --radius-md: 8px;
   --space-1: 2.8px;
   --space-2: 5.6px;
   --space-3: 8.4px;
@@ -213,6 +214,41 @@ a:focus-visible {
   .cover .cover-spacer { flex: 0 0 var(--space-8) !important; }
 }
 
+/* Scroll cue: a quiet ringed chevron between the decision question and
+   the report-type line, telling a reader who lands on the full-screen
+   cover that the preview continues. One authored moment: three slow
+   drops after load, then still; none at all under reduced motion. */
+.cover-scroll-cue {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  place-items: center;
+  align-self: center;
+  margin: 0 auto var(--space-12);
+  border: 1px solid var(--divider);
+  border-radius: 50%;
+  color: var(--muted);
+  transition: color 160ms ease-out, border-color 160ms ease-out, background-color 160ms ease-out;
+}
+.cover-scroll-cue svg { animation: cue-drop 1.6s cubic-bezier(0.16, 1, 0.3, 1) 1.2s 3; }
+.cover-scroll-cue:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--accent-strong);
+}
+@keyframes cue-drop {
+  0%, 100% { transform: translateY(0); }
+  40% { transform: translateY(4px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cover-scroll-cue svg { animation: none; }
+}
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
 .preview-signal,
 .preview-introduction,
 main > section {
@@ -226,44 +262,111 @@ main > section {
   color: var(--muted);
 }
 
-section:not(.disclosure) {
-  background: var(--surface);
-  border: 1px solid var(--divider);
-  border-radius: var(--radius);
-  padding: var(--space-6);
+/* Sections sit directly on the page ground, as in the paid report since
+   its 2026-09-13 Impeccable pass: text on the ground, raised tiles and
+   cards only where there is a figure or an item to hold. The generous
+   gap between sections does the separating a card border used to do. */
+.preview-section { margin-bottom: calc(var(--space-12) * 1.6); }
+
+/* nocturne.css's .statistics-sheet .section-head: heading over a
+   hairline carrying a 72px accent segment. */
+.section-head {
+  position: relative;
+  padding-bottom: var(--space-6);
   margin-bottom: var(--space-6);
+  border-bottom: 1px solid var(--divider);
+}
+.section-head::after {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 72px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+  content: '';
+}
+.section-head h2 {
+  max-width: 30ch;
+  margin: 0;
+  font-size: 1.8rem;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.section-lede {
+  max-width: 65ch;
+  margin-bottom: var(--space-6);
+  color: var(--muted);
 }
 
-/* The severity heading carries the renderer's own spacing hook; without
-   this rule it renders flush under the totals tiles above it. */
-.mt { margin-top: var(--space-6); }
+/* nocturne.css's .statistics-breakdown-heading: a short accent dash
+   leading the sub-heading. */
+.breakdown-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-12) 0 var(--space-4);
+  font-size: 1.0625rem;
+}
+.breakdown-heading::before {
+  width: 18px;
+  height: 3px;
+  flex: none;
+  border-radius: 2px;
+  background: var(--accent);
+  content: '';
+}
 
-/* Stat tiles: the report's 4-up tile rhythm, stacked on small screens. */
-.tiles {
+/* nocturne.css's statistics number tiles: raised surface, hairline,
+   8px corner, figure over a quiet label. The primary tile carries the
+   accent-tinted fill and the larger figure. */
+.stat-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
   gap: var(--space-3);
 }
-.results-section > .tiles { grid-template-columns: repeat(2, 1fr); }
+.stat-grid-coverage { grid-template-columns: repeat(3, 1fr); }
+.stat-grid-totals { grid-template-columns: 2fr 1fr; }
+.stat-tile {
+  display: flex;
+  min-width: 0;
+  min-height: 104px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.stat-value {
+  font-size: 2rem;
+  font-weight: 500;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.stat-label {
+  color: var(--faint);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+.stat-tile-primary {
+  background: color-mix(in srgb, var(--accent) 9.2%, var(--surface));
+}
+.stat-tile-primary .stat-value {
+  color: var(--color-accent-200);
+  font-size: 3rem;
+}
+.stat-tile-primary .stat-label { color: var(--muted); }
+
 /* Severity breakdown grid: sized to the number of non-zero severities
    actually rendered (report statistics.ts's own item D7/P4 behaviour),
    1 to 4, rather than always laying out a fixed four-up row. */
-.tiles-1 { grid-template-columns: 1fr; }
-.tiles-2 { grid-template-columns: repeat(2, 1fr); }
-.tiles-3 { grid-template-columns: repeat(3, 1fr); }
-.tiles-4 { grid-template-columns: repeat(4, 1fr); }
-.tile {
-  background: var(--bg);
-  border: 1px solid var(--divider);
-  border-radius: var(--radius-sm);
-  padding: var(--space-4);
-}
-.tile .value {
-  font-size: 1.6rem;
-  font-weight: 700;
-  line-height: 1.2;
-}
-.tile .key { color: var(--muted); font-size: 0.8rem; margin-top: var(--space-1); }
+.severity-grid { display: grid; gap: var(--space-3); }
+.severity-grid-1 { grid-template-columns: 1fr; }
+.severity-grid-2 { grid-template-columns: repeat(2, 1fr); }
+.severity-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.severity-grid-4 { grid-template-columns: repeat(4, 1fr); }
 
 /* The full report's centered metadata-sheet signal (template/sections/
    metadata-sheet.ts + nocturne.css's .metadata-signal), transcribed onto
@@ -362,41 +465,90 @@ section:not(.disclosure) {
   line-height: 1.45;
 }
 
-/* WCAG 1.4.10: at reflow widths the report's 3-up and 4-up tile rows
-   collapse to two columns, so a long tile label can never force the page
-   sideways at 320px. */
+/* WCAG 1.4.10: at reflow widths the 3-up and 4-up rows collapse to two
+   columns and the totals pair stacks, so a long tile label can never
+   force the page sideways at 320px. */
+@media (max-width: 560px) {
+  .stat-grid-coverage { grid-template-columns: 1fr 1fr; }
+  .stat-grid-coverage .stat-tile:first-child { grid-column: 1 / -1; }
+  .stat-grid-totals { grid-template-columns: 1fr; }
+  .severity-grid-3,
+  .severity-grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .section-head h2 { font-size: 1.5rem; }
+  .stat-tile { min-height: 0; padding: var(--space-4); }
+  .stat-tile-primary .stat-value { font-size: 2.5rem; }
+}
 @media (max-width: 480px) {
-  .tiles, .tiles-3, .tiles-4 { grid-template-columns: repeat(2, 1fr); }
-  .cover .cover-title { font-size: clamp(40px, 15vw, 52px) !important; }
-  .cover .cover-type { gap: var(--space-3); font-size: 11px !important; }
+  .cover .cover-type { max-width: 34ch; margin: 0 auto; text-wrap: balance; }
   .cover .cover-type::before,
-  .cover .cover-type::after { width: 32px; }
+  .cover .cover-type::after { display: none; }
+  .cover .cover-title { font-size: clamp(40px, 15vw, 52px) !important; }
+  .cover .cover-type { font-size: 11px !important; }
 }
 
 /* The full report's severity-tile anatomy: coloured dot and label, plain
    count, and the exact reader-facing explanation beneath it. */
-.severity-tile { border: 0; }
-.severity-heading { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
-.severity-heading .key { margin: 0; color: var(--severity-color); font-weight: 500; }
-.severity-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--severity-color); }
-.severity-tile .value { color: var(--text); font-size: 24px; font-weight: 400; }
-.severity-meaning { margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.4; }
-.tile.severity-critical { --severity-color: var(--sev-critical); background: var(--sev-critical-bg); }
-.tile.severity-serious { --severity-color: var(--sev-serious); background: var(--sev-serious-bg); }
-.tile.severity-moderate { --severity-color: var(--sev-moderate); background: var(--sev-moderate-bg); }
-.tile.severity-minor { --severity-color: var(--sev-minor); background: var(--sev-minor-bg); }
-
-/* The three proof cards wear the site's dossier motif (DESIGN.md, "The
-   Dossier Rule Set"): a raised card whose finding-red mark sits above the
-   title. The mark is decoration - problem/evidence/action language, never
-   a severity; the severity word sits in the card's own meta row. Print has
-   no motion: the mark is designed from its finished frame. */
-.cards { display: flex; flex-direction: column; gap: var(--space-4); }
-.card {
-  background: var(--bg);
-  border: 1px solid var(--divider);
-  border-radius: var(--radius-sm);
+.severity-tile {
+  min-width: 0;
   padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--severity-bg);
+}
+.severity-heading { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.severity-label { color: var(--severity-color); font-size: 0.8125rem; font-weight: 500; }
+.severity-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--severity-color);
+}
+.severity-value {
+  color: var(--text);
+  font-size: 1.75rem;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.severity-meaning { margin-top: 4px; color: var(--muted); font-size: 0.75rem; line-height: 1.4; }
+.severity-critical { --severity-color: var(--sev-critical); --severity-bg: var(--sev-critical-bg); }
+.severity-serious { --severity-color: var(--sev-serious); --severity-bg: var(--sev-serious-bg); }
+.severity-moderate { --severity-color: var(--sev-moderate); --severity-bg: var(--sev-moderate-bg); }
+.severity-minor { --severity-color: var(--sev-minor); --severity-bg: var(--sev-minor-bg); }
+
+/* The three proof cards wear the report's finding-card register: a raised
+   surface card, meta row first (category tag, severity dot and word,
+   page count), then the title under the site's dossier mark. The mark is
+   decoration - problem/evidence/action language, never a severity; the
+   severity sits in the meta row. Print has no motion: the mark is
+   designed from its finished frame. */
+.cards { display: flex; flex-direction: column; gap: var(--space-3); }
+.card {
+  padding: var(--space-6);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-6);
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+.card-severity {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--severity-color);
+  font-weight: 500;
+}
+.card h3 {
+  max-width: 60ch;
+  margin: var(--space-4) 0 0;
+  font-size: 1.0625rem;
+  line-height: 1.4;
+  text-wrap: pretty;
 }
 .card h3::before {
   content: '';
@@ -405,15 +557,7 @@ section:not(.disclosure) {
   height: 3px;
   border-radius: 2px;
   background: var(--mark-finding);
-  margin-bottom: var(--space-2);
-}
-.card-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
-  color: var(--muted);
-  font-size: 0.85rem;
-  margin-top: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 
 /* Category tag in the site's dossier-stamp idiom: soft sky tint, strong
@@ -423,14 +567,44 @@ section:not(.disclosure) {
   align-items: center;
   background: var(--accent-soft);
   color: var(--accent-strong);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  padding: 3px 8px;
+  padding: 3px 10px;
   border-radius: var(--radius-sm);
 }
 
-.fineprint { color: var(--muted); font-size: 0.85rem; }
+.fineprint { max-width: 65ch; margin-top: var(--space-4); color: var(--faint); font-size: 0.8125rem; line-height: 1.55; }
+
+/* The report's legal reference card (section 11's "Référence légale
+   générale"): the regime criterion raised on the surface, the registry
+   reading as body text on the ground. */
+.facts-reference {
+  margin-bottom: var(--space-6);
+  padding: var(--space-6);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.facts-body { max-width: 65ch; color: var(--muted); }
+
+/* The offer closes on its two actions side by side: the reply CTA in the
+   site's primary-button register and the offer page as its quiet
+   secondary. */
+.offer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-6);
+  margin-top: var(--space-8);
+}
+.secondary-action {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  color: var(--accent);
+  font-weight: 500;
+  text-underline-offset: 4px;
+}
 
 /* The article-14 disclosure remains fine print rather than feature-card
    chrome, but an accent rule and stronger heading give the final page a
@@ -461,7 +635,9 @@ section:not(.disclosure) {
    near-light ink fill with ground-coloured label, 600, uppercase at the
    site's 0.14em nameplate tracking (DESIGN.md, Site buttons). */
 .cta {
-  display: inline-block;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
   background: var(--text);
   color: var(--bg);
   font-weight: 600;
@@ -472,7 +648,10 @@ section:not(.disclosure) {
   border-radius: 3px;
   padding: var(--space-4) var(--space-6);
 }
+.cta:hover { background: var(--muted); }
 .cta:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+
+::selection { background: color-mix(in srgb, var(--accent) 30%, transparent); }
 
 /* The operator PDF prints through this block on the same dark tokens as
    the screen (operator direction 2026-09-11, trade-offs.md#81): only
@@ -491,7 +670,9 @@ section:not(.disclosure) {
   main { padding: 0 18mm; }
   main > * { break-inside: avoid; }
   main > section { padding: 8mm 0 0; }
+  .preview-section { margin-bottom: 10mm; }
   .cover { min-height: 296mm; padding: 0; break-after: page; }
+  .cover-scroll-cue { display: none; }
   .preview-signal,
   .preview-introduction,
   main > section { width: 100%; }

@@ -29,6 +29,10 @@ export interface DocumentCoverLayout {
   question: string;
   reportType: string;
   signature: string;
+  /** Screen-only markup placed between the hero and the closing act. The
+   *  paid report never passes one; the outreach preview uses it for its
+   *  scroll cue. */
+  scrollCue?: string;
 }
 
 /** The cover's canonical inner structure. The paid report and the outreach
@@ -40,7 +44,7 @@ export function renderDocumentCoverLayout(content: DocumentCoverLayout): string 
       <div class="cover-kicker" style="font-size:11px;letter-spacing:0.02em;text-transform:uppercase;color:var(--color-accent-200)">${escapeHtml(content.kicker)}</div>
       <h1 class="cover-title" style="font-size:52px;max-width:13ch;margin:0">${escapeHtml(content.headline)}</h1>
       <div class="cover-question" style="font-size:17px;opacity:0.8;max-width:38ch">${escapeHtml(content.question)}</div>
-    </div>
+    </div>${content.scrollCue ?? ''}
     <div class="cover-closing">
       <div class="cover-rule" style="height:1px;width:160px;margin:0 auto var(--space-12);background:linear-gradient(to right,transparent,var(--color-accent),transparent)"></div>
       <div class="cover-meta" style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:var(--space-2)">
