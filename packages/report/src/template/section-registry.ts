@@ -8,6 +8,10 @@ import type { ReportStrings } from './strings/i18n.js';
 export const SECTION_IDS = [
   'section-00',
   'section-01',
+  // Plan 051: the re-audit's findings delta, right after the executive
+  // summary because what changed is the re-audit reader's first question.
+  // Present only when a delivered baseline audit exists.
+  'section-16',
   // section-02 (legal exposure) deliberately renders after the evidence and
   // the action synthesis (plan 018): the executive story comes first, the
   // full legal reference follows it. These ids are stable keys and DOM
@@ -94,6 +98,8 @@ export function sectionTitle(id: SectionId, strings: ReportStrings): string {
       return strings.glossary.eyebrow;
     case 'section-14':
       return strings.nextSteps.eyebrow;
+    case 'section-16':
+      return strings.findingsDelta.eyebrow;
   }
 }
 

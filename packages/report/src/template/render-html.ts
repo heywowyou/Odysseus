@@ -17,6 +17,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { partitionFindings } from '@odysseus/llm';
 import type {
+  FindingsDelta,
   AuditManifest,
   AuditManualFields,
   Finding,
@@ -59,6 +60,7 @@ import { renderFindingsAppendix } from './sections/findings-appendix.js';
 import { renderMethodology } from './sections/methodology.js';
 import { htmlToText, renderGlossary } from './sections/glossary.js';
 import { renderNextSteps } from './sections/next-steps.js';
+import { renderFindingsDelta } from './sections/findings-delta.js';
 import { escapeHtml } from './html-utils.js';
 import { buildRenderedPriorities } from './rendered-priorities.js';
 
@@ -118,6 +120,10 @@ export interface RenderHtmlInput {
    *  store at render time, same convention as manualFields - never baked
    *  into a rarely-regenerated analysis. */
   gradeOverride?: GradeOverride;
+  /** Plan 051: the re-audit findings delta, computed by the orchestration
+   *  layer. Absent on every report without a delivered baseline audit,
+   *  which then renders exactly as before. */
+  delta?: FindingsDelta;
 }
 
 /** Single-tier report body, since the 2026-08-16 commercial model drop of
@@ -145,6 +151,7 @@ function renderBody(
   renderMetadata: ReportRenderMetadata | undefined,
   preparation: PreparationPreviewLanguage | undefined,
   gradeOverride: GradeOverride | undefined,
+  delta: FindingsDelta | undefined,
 ): string {
   // B1: one Set shared by every reference-stat citation render site
   // (renderThemes, then renderFindingsAppendix's geo section), so the same
@@ -195,6 +202,7 @@ function renderBody(
   // is populated (build slice 3 has not shipped yet), so this stays
   // suppressed and today's reports are unchanged.
   if (!hasBenchmarkPercentile(manifest)) includedSectionIds.delete('section-15');
+  if (delta === undefined) includedSectionIds.delete('section-16');
   const n = computeSectionNumbers(includedSectionIds);
   // Every id in SECTION_IDS besides 'section-06' is unconditionally in
   // includedSectionIds above, so these lookups are always defined; the
@@ -229,6 +237,9 @@ function renderBody(
       manifest,
       renderedPriorities,
     ),
+    delta !== undefined
+      ? renderFindingsDelta(strings, ord('section-16'), analysis.language, delta)
+      : '',
     renderStatistics(
       strings,
       ord('section-03'),
@@ -363,6 +374,7 @@ export async function renderHtml(input: RenderHtmlInput): Promise<string> {
     renderMetadata,
     preparation,
     gradeOverride,
+    delta,
   } = input;
   // Issue #310: every priority's conformance line derives from its findings.
   const analysis = withPriorityConformance(input.analysis, findings);
@@ -383,6 +395,7 @@ export async function renderHtml(input: RenderHtmlInput): Promise<string> {
     renderMetadata,
     preparation,
     gradeOverride,
+    delta,
   );
 
   return `<!doctype html>

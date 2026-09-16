@@ -61,6 +61,7 @@ export * from './prospecting/parked-page-signatures.js';
 export * from './prospecting/overpass-decision.js';
 export * from './cost-gating/brokenness.js';
 export * from './benchmark/percentile.js';
+export * from './delta/findings-delta.js';
 export * from './benchmark/qualify-benchmark-candidate.js';
 export * from './prospecting/contact-identity.js';
 export * from './prospecting/free-mail-domains.js';

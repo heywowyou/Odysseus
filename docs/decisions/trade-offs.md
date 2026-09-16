@@ -4842,3 +4842,39 @@ Rejected: running the container as root so the sandbox works without user
 namespaces (swaps one privilege problem for a larger one), and
 `--privileged` or `seccomp=unconfined` for the whole app (widens the escape
 surface for every process, not only Chromium).
+
+### 93. The re-audit delta compares against the last approved audit, computed at render time (build decisions, 2026-09-16, Plan 051, issue #371)
+
+The findings delta designed in `docs/product/findings-delta-reaudit-design.md`
+is built as that design's defaults state it: a conditional section of the paid
+report, in both languages, pairing the two runs on `dedupeKey`. The design
+left some questions to the build. They are settled as follows.
+
+- **Delivered means approved.** The baseline is the most recent earlier audit
+  of the exact same site URL that has a report approval and a findings
+  provenance stamp. The approval is the only delivery record the store keeps.
+  An unapproved rerun and an unstamped findings set are never compared.
+- **A baseline makes the report a re-audit.** There is no flag. A new full audit
+  of a site that was already delivered is the re-audit by definition, and every
+  other report renders unchanged.
+- **Computed, not persisted.** `computeFindingsDelta` (core, pure) runs in
+  `runReportStage` over the baseline's stored audit row and findings and the
+  current manifest and findings. Re-rendering picks up a later approval with no
+  migration. Baseline data comes from the database, because disk artifacts are
+  per machine.
+- **Different crawl limits are disclosed, not disqualifying.** A changed
+  `maxPages` or `maxDepth` is stated next to the delta. Refusing the delta would
+  hide real fixes, and saying nothing would let a narrower crawl read as fixes.
+- **Tool and normalization changes suppress `changed-severity`.** Such rows count
+  as still present, a fixed note says why, and the differing versions are
+  listed. Playwright and Chromium are listed but do not suppress anything.
+- **A finding no longer detected is not called fixed.** The class is labelled
+  "no longer detected", and a fixed note states that the page may not have been
+  analysed this time.
+- **A duplicate dedupe key inside one run aborts the render.** Normalization
+  emits one finding per key, so a duplicate means corrupted input.
+
+Rejected: a dashboard-chosen baseline (the design rules out hand-picking), a
+stored delta document (it adds persistence for a value that is cheap to
+recompute), and listing still-present findings in the section (the appendix
+already lists every current finding).

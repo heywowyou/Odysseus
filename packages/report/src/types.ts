@@ -4,6 +4,7 @@ import type {
   AuditManualFields,
   AnalysisSiteContext,
   Finding,
+  FindingsDelta,
   FindingsProvenance,
   GradeOverride,
   LlmOutput,
@@ -97,6 +98,12 @@ export interface GenerateReportInput {
    *  manualFields above. Absent means the report renders the automatic
    *  grade unchanged. */
   gradeOverride?: GradeOverride;
+  /** Plan 051: the re-audit findings delta against the most recent
+   *  delivered audit of the same site, computed by the orchestration layer
+   *  with @odysseus/core's computeFindingsDelta and passed in, never derived
+   *  here from a second findings file. Absent on every report without a
+   *  delivered baseline, which renders unchanged. */
+  delta?: FindingsDelta;
   /** Issue #6: a caller generating both language reports for the same
    *  audit back to back (packages/interface's report-stage.ts) launches
    *  Chromium once and passes it here for both passes, instead of paying a

@@ -575,6 +575,54 @@ export const fr: ReportStrings = {
     tooSmallBody:
       'La cohorte de référence ne compte pas encore assez de sites scannés pour publier une comparaison fiable pour cet audit.',
   },
+  findingsDelta: {
+    eyebrow: 'Évolution depuis le précédent audit',
+    heading: '',
+    introTemplate:
+      "Cette section compare cet audit, constat par constat, à l'audit livré le {date}. Un constat est reconnu par sa règle et par l'élément ou la page qu'il concerne. La comparaison est calculée automatiquement, sans interprétation.",
+    countLabels: {
+      new: 'Nouveaux constats',
+      'changed-severity': 'Gravité modifiée',
+      resolved: 'Constats plus détectés',
+      persistent: 'Constats toujours présents',
+    },
+    newHeading: 'Nouveaux constats',
+    changedSeverityHeading: 'Constats dont la gravité a changé',
+    resolvedHeading: 'Constats plus détectés',
+    resolvedNote:
+      "Un constat qui n'est plus détecté a le plus souvent été corrigé. Il peut aussi avoir disparu parce que la page concernée n'a pas été analysée lors de cet audit.",
+    findingColumnLabel: 'Constat',
+    severityColumnLabel: 'Gravité',
+    pagesColumnLabel: 'Pages',
+    previousColumnLabel: 'Audit précédent',
+    currentColumnLabel: 'Cet audit',
+    persistentNoteSingular:
+      "{count} constat relevé lors du précédent audit l'est toujours. Il figure dans l'annexe technique.",
+    persistentNotePlural:
+      "{count} constats relevés lors du précédent audit le sont toujours. Ils figurent dans l'annexe technique.",
+    noChangesBody:
+      "Aucun constat n'est apparu, n'a disparu ou n'a changé de gravité entre les deux audits.",
+    severitySuppressedNote:
+      "Les outils d'analyse ou les règles de regroupement des constats ont changé entre les deux audits. Un changement de gravité peut alors venir des outils plutôt que du site : les constats concernés sont comptés comme toujours présents, sans changement de gravité.",
+    normalizationChangedNote:
+      'Les règles de regroupement des constats ont évolué entre les deux audits. Certains constats peuvent donc apparaître comme nouveaux ou comme plus détectés sans que le site ait changé.',
+    versionsHeading: "Versions des outils d'analyse",
+    versionRowTemplate: '{tool} : {before} lors du précédent audit, {after} pour cet audit.',
+    versionUnavailable: 'indisponible',
+    toolLabels: {
+      odysseusVersion: 'Odysseus',
+      findingsSchemaVersion: 'Format des constats',
+      axeCoreVersion: 'axe-core',
+      lighthouseVersion: 'Lighthouse',
+      playwrightVersion: 'Playwright',
+      chromiumVersion: 'Chromium',
+    },
+    maxPagesChangedTemplate:
+      'La limite de pages analysées est passée de {before} à {after}. Un périmètre différent peut faire apparaître ou disparaître des constats sans que le site ait changé.',
+    maxDepthChangedTemplate:
+      "La profondeur d'exploration est passée de {before} à {after}. Un périmètre différent peut faire apparaître ou disparaître des constats sans que le site ait changé.",
+    noPageLimit: 'aucune limite',
+  },
   accessibilityStatement: {
     eyebrow: 'Déclaration',
     heading: "Projet de déclaration d'accessibilité",

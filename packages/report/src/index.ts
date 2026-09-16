@@ -144,6 +144,7 @@ export async function generateReportPdf(
       ...(input.manualFields !== undefined ? { manualFields: input.manualFields } : {}),
       ...(input.preparation !== undefined ? { preparation: input.preparation } : {}),
       ...(input.gradeOverride !== undefined ? { gradeOverride: input.gradeOverride } : {}),
+      ...(input.delta !== undefined ? { delta: input.delta } : {}),
     });
 
     const lintViolations = findRenderLintViolations(html);

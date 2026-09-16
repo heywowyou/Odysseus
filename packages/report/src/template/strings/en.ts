@@ -482,6 +482,53 @@ export const en: ReportStrings = {
     tooSmallBody:
       'The benchmark cohort does not yet include enough scored sites to publish a reliable comparison for this audit.',
   },
+  findingsDelta: {
+    eyebrow: 'Changes since the previous audit',
+    heading: '',
+    introTemplate:
+      'This section compares this audit, finding by finding, with the audit delivered on {date}. A finding is recognised by its rule and by the element or page it concerns. The comparison is computed automatically, with no interpretation.',
+    countLabels: {
+      new: 'New findings',
+      'changed-severity': 'Severity changed',
+      resolved: 'No longer detected',
+      persistent: 'Still present',
+    },
+    newHeading: 'New findings',
+    changedSeverityHeading: 'Findings whose severity changed',
+    resolvedHeading: 'Findings no longer detected',
+    resolvedNote:
+      'A finding that is no longer detected has most often been fixed. It may also have disappeared because the page it concerned was not analysed in this audit.',
+    findingColumnLabel: 'Finding',
+    severityColumnLabel: 'Severity',
+    pagesColumnLabel: 'Pages',
+    previousColumnLabel: 'Previous audit',
+    currentColumnLabel: 'This audit',
+    persistentNoteSingular:
+      '{count} finding from the previous audit is still present. It is listed in the technical appendix.',
+    persistentNotePlural:
+      '{count} findings from the previous audit are still present. They are listed in the technical appendix.',
+    noChangesBody: 'No finding appeared, disappeared or changed severity between the two audits.',
+    severitySuppressedNote:
+      'The analysis tools or the rules that group findings changed between the two audits. A severity change may then come from the tools rather than the site, so the findings concerned are counted as still present, with no severity change.',
+    normalizationChangedNote:
+      'The rules that group findings changed between the two audits. Some findings may therefore appear as new or as no longer detected without the site having changed.',
+    versionsHeading: 'Analysis tool versions',
+    versionRowTemplate: '{tool}: {before} in the previous audit, {after} in this audit.',
+    versionUnavailable: 'unavailable',
+    toolLabels: {
+      odysseusVersion: 'Odysseus',
+      findingsSchemaVersion: 'Findings format',
+      axeCoreVersion: 'axe-core',
+      lighthouseVersion: 'Lighthouse',
+      playwrightVersion: 'Playwright',
+      chromiumVersion: 'Chromium',
+    },
+    maxPagesChangedTemplate:
+      'The limit on analysed pages changed from {before} to {after}. A different scope can make findings appear or disappear without the site having changed.',
+    maxDepthChangedTemplate:
+      'The crawl depth changed from {before} to {after}. A different scope can make findings appear or disappear without the site having changed.',
+    noPageLimit: 'no limit',
+  },
   accessibilityStatement: {
     eyebrow: 'Statement',
     heading: 'Draft accessibility statement',

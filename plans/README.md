@@ -83,6 +83,7 @@ The canonical sources for this behavior are `docs/product/odysseus-project-brief
 | [048](archive/048-dashboard-workflow-consolidation.md) | Reduce the dashboard to one operator workflow | P1 | L | 047 | DONE (2026-09-15) |
 | [049](archive/049-simplified-workflow-behaviorally-truthful.md) | Make the simplified workflow behaviorally truthful | P1 | L | 048 | DONE (2026-09-15) |
 | [050](050-reusable-scans-durable-prospects.md) | Make scans reusable and prospects durable: two scan intents, advisory data version, archive instead of ordinary deletion | P1 | XL | 049 | IMPLEMENTED (2026-09-16) |
+| [051](051-findings-delta-reaudit.md) | Add the findings delta to the re-audit report | P2 | L | 050 | IMPLEMENTED (2026-09-16) |
 
 Status values: `TODO`, `IN PROGRESS`, `IMPLEMENTED`, `DONE`,
 `BLOCKED: <reason>`, or `REJECTED: <reason>`. `IMPLEMENTED` means every done

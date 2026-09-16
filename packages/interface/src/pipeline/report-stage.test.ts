@@ -16,6 +16,7 @@ vi.mock('@odysseus/report', async (importOriginal) => {
 });
 vi.mock('@odysseus/store', () => ({
   persistReport: vi.fn(),
+  findDeltaBaseline: vi.fn().mockResolvedValue(null),
   getAuditManualFields: vi.fn().mockResolvedValue(undefined),
   getAuditGradeOverride: vi.fn().mockResolvedValue(undefined),
   getReportPreparation: vi.fn().mockResolvedValue({
@@ -46,7 +47,12 @@ vi.mock('@odysseus/core', async (importOriginal) => {
 
 import { generateReportPdf } from '@odysseus/report';
 import { launchBrowser } from '@odysseus/scanner';
-import { getAuditGradeOverride, getAuditManualFields, persistReport } from '@odysseus/store';
+import {
+  findDeltaBaseline,
+  getAuditGradeOverride,
+  getAuditManualFields,
+  persistReport,
+} from '@odysseus/store';
 import {
   buildFindingsProvenance,
   type AuditManifest,
@@ -134,6 +140,7 @@ let auditDir: string;
 beforeEach(async () => {
   vi.clearAllMocks();
   vi.mocked(getAuditManualFields).mockResolvedValue(undefined);
+  vi.mocked(findDeltaBaseline).mockResolvedValue(null);
   auditDir = await fs.mkdtemp(path.join(os.tmpdir(), 'odysseus-report-stage-'));
   vi.mocked(generateReportPdf).mockResolvedValue({
     pdf: Buffer.from('%PDF-fake'),
@@ -313,6 +320,50 @@ describe('runReportStage', () => {
 
     const passedInput = vi.mocked(generateReportPdf).mock.calls[0]?.[0];
     expect(passedInput).not.toHaveProperty('gradeOverride');
+  });
+
+  it('passes no delta when the site has no delivered earlier audit', async () => {
+    const manifest = fakeManifest();
+    await runReportStage(auditDir, manifest, [], fakeAnalysis(), fakeConnection);
+
+    expect(findDeltaBaseline).toHaveBeenCalledWith(fakeConnection, {
+      siteUrl: manifest.siteUrl,
+      startedAt: new Date(manifest.startedAt),
+    });
+    const passedInput = vi.mocked(generateReportPdf).mock.calls[0]?.[0];
+    expect(passedInput).not.toHaveProperty('delta');
+  });
+
+  it('passes the findings delta against the delivered baseline audit', async () => {
+    const manifest = fakeManifest();
+    vi.mocked(findDeltaBaseline).mockResolvedValue({
+      auditId: 'audit-0',
+      siteUrl: manifest.siteUrl,
+      startedAt: '2026-06-01T00:00:00.000Z',
+      tool: manifest.tool,
+      config: { maxPages: 20, maxDepth: 5 },
+      findingsProvenance: manifest.findingsProvenance!,
+      findings: [
+        {
+          findingId: 'f001',
+          ruleId: 'image-alt',
+          category: 'accessibility',
+          severity: 'serious',
+          title: 'Images must have alternative text',
+          pageUrls: ['https://example.com/'],
+          dedupeKey: 'fixed-key',
+        },
+      ],
+    });
+
+    await runReportStage(auditDir, manifest, [], fakeAnalysis(), fakeConnection);
+
+    const passedInput = vi.mocked(generateReportPdf).mock.calls[0]?.[0];
+    expect(passedInput?.delta).toMatchObject({
+      baseline: { auditId: 'audit-0' },
+      counts: { new: 0, resolved: 1, persistent: 0, 'changed-severity': 0 },
+      changedSeveritySuppressed: false,
+    });
   });
 
   it('rejects stale analysis provenance before Chromium report generation starts', async () => {

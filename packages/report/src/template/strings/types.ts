@@ -925,6 +925,56 @@ export interface ReportStrings {
      *  the minimum floor - never a fabricated approximate number. */
     tooSmallBody: string;
   };
+  /** Plan 051: the re-audit's findings delta, rendered only when the
+   *  orchestration layer found a delivered baseline audit. Every sentence
+   *  is deterministic; nothing here is model-written. */
+  findingsDelta: {
+    eyebrow: string;
+    heading: string;
+    /** Template: {date}, the baseline audit's date. */
+    introTemplate: string;
+    countLabels: {
+      new: string;
+      'changed-severity': string;
+      resolved: string;
+      persistent: string;
+    };
+    newHeading: string;
+    changedSeverityHeading: string;
+    resolvedHeading: string;
+    /** A finding no longer detected is not proof of a fix: the page may
+     *  not have been analysed this time. Stated under the resolved table. */
+    resolvedNote: string;
+    findingColumnLabel: string;
+    severityColumnLabel: string;
+    pagesColumnLabel: string;
+    previousColumnLabel: string;
+    currentColumnLabel: string;
+    /** Template: {count}. Singular and plural, chosen by pluralize. */
+    persistentNoteSingular: string;
+    persistentNotePlural: string;
+    noChangesBody: string;
+    /** Shown when a tool version or the normalization changed, so rows
+     *  whose severity moved are counted as still present. */
+    severitySuppressedNote: string;
+    normalizationChangedNote: string;
+    versionsHeading: string;
+    /** Template: {tool}, {before}, {after}. */
+    versionRowTemplate: string;
+    versionUnavailable: string;
+    toolLabels: {
+      odysseusVersion: string;
+      findingsSchemaVersion: string;
+      axeCoreVersion: string;
+      lighthouseVersion: string;
+      playwrightVersion: string;
+      chromiumVersion: string;
+    };
+    /** Template: {before}, {after}. */
+    maxPagesChangedTemplate: string;
+    maxDepthChangedTemplate: string;
+    noPageLimit: string;
+  };
   /** Per-criterion status is trivially derived, never a legal judgment:
    *  buildConformanceRollup only ever lists a criterion when at least one
    *  finding failed it, so "non conformant" is a restatement of that

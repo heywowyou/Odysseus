@@ -34,10 +34,11 @@ describe('section-registry order (plan 018 step 3)', () => {
     // to divert, so section-06 renders; it carries no obligationAssessment,
     // so the article-47-only section-10 never renders; it carries no
     // benchmarkPercentile (milestone 10 has not populated any manifest with
-    // one yet), so section-15 never renders either. The included registry
-    // order is therefore SECTION_IDS minus section-10 and section-15.
+    // one yet), so section-15 never renders either; no delta is passed, so
+    // the re-audit's section-16 is absent too. The included registry order
+    // is therefore SECTION_IDS minus section-10, section-15 and section-16.
     const expectedOrder: SectionId[] = SECTION_IDS.filter(
-      (id) => id !== 'section-10' && id !== 'section-15',
+      (id) => id !== 'section-10' && id !== 'section-15' && id !== 'section-16',
     );
     expect(domOrder).toEqual([...expectedOrder]);
   });
@@ -60,27 +61,30 @@ describe('section-registry order (plan 018 step 3)', () => {
 
   it('numbers every included id contiguously in registry order, so display ordinals follow the reorder', () => {
     const all = computeSectionNumbers(new Set<SectionId>(SECTION_IDS));
-    expect([...all.values()]).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
+    expect([...all.values()]).toEqual([
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+    ]);
     // Stable ids keep their identity, not their old number: section-02 now
     // renders after the evidence sections and the action synthesis (plan
     // 018), the glossary carries the last number (plan 024's glossary-last
     // reversal), and the opening carries 1.
     expect(all.get('section-00')).toBe(1);
-    expect(all.get('section-02')).toBe(13);
+    expect(all.get('section-16')).toBe(3);
+    expect(all.get('section-02')).toBe(14);
     // Issue #333: next steps closes the narrative after the legal reference.
-    expect(all.get('section-14')).toBe(14);
-    expect(all.get('section-12')).toBe(16);
-    expect(all.get('section-13')).toBe(17);
+    expect(all.get('section-14')).toBe(15);
+    expect(all.get('section-12')).toBe(17);
+    expect(all.get('section-13')).toBe(18);
 
     // Suppressing a mid-document section shifts only what follows it.
     const withoutObservations = computeSectionNumbers(
       new Set<SectionId>(SECTION_IDS.filter((id) => id !== 'section-06')),
     );
     expect([...withoutObservations.values()]).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
     ]);
-    expect(withoutObservations.get('section-05b')).toBe(6);
-    expect(withoutObservations.get('section-07')).toBe(7);
-    expect(withoutObservations.get('section-13')).toBe(16);
+    expect(withoutObservations.get('section-05b')).toBe(7);
+    expect(withoutObservations.get('section-07')).toBe(8);
+    expect(withoutObservations.get('section-13')).toBe(17);
   });
 });

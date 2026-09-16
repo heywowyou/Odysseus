@@ -23,6 +23,7 @@ export {
   getLatestReportApproval,
   persistReportApproval,
 } from './report-approvals.js';
+export { findDeltaBaseline } from './findings-delta-baseline.js';
 export { createJobModel } from './schemas/job.schema.js';
 export type {
   JobDocument,

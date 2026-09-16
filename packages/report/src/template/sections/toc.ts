@@ -40,7 +40,7 @@ export function renderToc(strings: ReportStrings, includedIds: ReadonlySet<Secti
   const groups: Array<{ label: string; ids: readonly SectionId[] }> = [
     {
       label: strings.toc.overviewGroupLabel,
-      ids: ['section-00', 'section-01', 'section-03'],
+      ids: ['section-00', 'section-01', 'section-16', 'section-03'],
     },
     {
       label: strings.toc.priorityActionsGroupLabel,

@@ -16,6 +16,7 @@ import {
   assertSufficientCrawlCoverage,
   buildFindingsProvenance,
   buildReportPreparationPreview,
+  computeFindingsDelta,
   type AuditManifest,
   type Finding,
   type FindingsProvenance,
@@ -31,6 +32,7 @@ import {
 } from '@odysseus/report';
 import { launchBrowser, readOdysseusBuildId } from '@odysseus/scanner';
 import {
+  findDeltaBaseline,
   getAuditGradeOverride,
   getAuditManualFields,
   getReportPreparation,
@@ -156,6 +158,27 @@ export async function runReportStage(
     findings,
   });
 
+  // Plan 051: a new audit of a site whose earlier audit was delivered is a
+  // re-audit, and its report compares the two runs finding by finding. The
+  // delta is computed here from stored data and passed in verbatim; the
+  // template never reads a second findings set itself.
+  const baseline = await findDeltaBaseline(connection, {
+    siteUrl: manifest.siteUrl,
+    startedAt: new Date(manifest.startedAt),
+  });
+  const delta =
+    baseline === null
+      ? undefined
+      : computeFindingsDelta(baseline, {
+          auditId: manifest.auditId,
+          siteUrl: manifest.siteUrl,
+          startedAt: manifest.startedAt,
+          tool: manifest.tool,
+          config: manifest.config,
+          findingsProvenance: resolvedFindingsProvenance,
+          findings,
+        });
+
   const { pdf, pageCount } = await generateReportPdf({
     auditDir,
     manifest,
@@ -168,6 +191,7 @@ export async function runReportStage(
     ...(manualFields !== undefined ? { manualFields } : {}),
     preparation: preparationPreview[analysis.language],
     ...(gradeOverride !== undefined ? { gradeOverride } : {}),
+    ...(delta !== undefined ? { delta } : {}),
     ...(browser !== undefined ? { browser } : {}),
   });
 
