@@ -10,7 +10,9 @@ vi.mock('@odysseus/store', () => ({
   reconcileFailedAuditJobs: vi.fn(),
   approveWritingCandidate: vi.fn(),
   recordReadyWritingCandidate: vi.fn(),
+  resolveSelectedAnalysisPairForAudit: vi.fn(),
 }));
+vi.mock('./regenerate-writing.js', () => ({ isWritingRegenerationInFlight: vi.fn(() => false) }));
 vi.mock('@odysseus/llm', () => ({ pauseBetweenLanguagePasses: vi.fn() }));
 vi.mock('../artifacts/sync-audit-artifacts.js', () => ({ syncAuditDirToBucket: vi.fn() }));
 vi.mock('./backfill-audit-row.js', () => ({ backfillAuditRow: vi.fn() }));
@@ -30,6 +32,7 @@ import {
   reconcileFailedAuditJobs,
   approveWritingCandidate,
   recordReadyWritingCandidate,
+  resolveSelectedAnalysisPairForAudit,
 } from '@odysseus/store';
 import { ReportIdentityUnconfirmedError } from '@odysseus/report';
 import { syncAuditDirToBucket } from '../artifacts/sync-audit-artifacts.js';
@@ -44,6 +47,7 @@ import {
   NoAnalysisPairError,
 } from './regenerate-reports.js';
 import { makeReportReady } from './make-report-ready.js';
+import { RegenerationConflictError } from './regeneration-conflict-error.js';
 
 const fakeConnection = {} as never;
 
@@ -63,6 +67,7 @@ beforeEach(() => {
   vi.mocked(getAuditRuntimeFields).mockResolvedValue(fakeAuditRuntimeFields());
   vi.mocked(getAuditManualFields).mockResolvedValue(undefined);
   vi.mocked(reconcileFailedAuditJobs).mockResolvedValue(0);
+  vi.mocked(resolveSelectedAnalysisPairForAudit).mockResolvedValue({ kind: 'none' } as never);
 });
 
 describe('makeReportReady', () => {
@@ -179,5 +184,65 @@ describe('makeReportReady', () => {
     // The scanner mock above exposes no crawl entry point, and the audit
     // stage (the only path to a website request) is never reached.
     expect(runAuditStage).not.toHaveBeenCalled();
+  });
+
+  it('rewrites a selected pair older than the already refreshed findings instead of rendering it', async () => {
+    vi.mocked(readAuditArtifacts).mockResolvedValue({
+      manifest: { findingsProvenance: freshProvenance } as never,
+      findings: [],
+    });
+    const oldProvenance = { ...freshProvenance, normalizationFingerprint: 'old-fingerprint' };
+    vi.mocked(resolveSelectedAnalysisPairForAudit).mockResolvedValue({
+      kind: 'selected',
+      fr: { analysisId: 'old-fr', findingsProvenance: oldProvenance },
+      en: { analysisId: 'old-en', findingsProvenance: oldProvenance },
+    } as never);
+    vi.mocked(runAnalysisStage).mockImplementation(
+      async (_dir, _manifest, _findings, options) =>
+        ({
+          analysis: {
+            analysisId: `analysis-${options.language}`,
+            findingsProvenance: freshProvenance,
+          },
+          advisoryPasses: [],
+        }) as never,
+    );
+    const reports = [{ language: 'fr' }, { language: 'en' }] as never;
+    vi.mocked(regenerateReportsForAudit).mockResolvedValue(reports);
+
+    const outcome = await makeReportReady(fakeConnection, 'audit-1', undefined);
+
+    expect(renormalizeAudit).not.toHaveBeenCalled();
+    expect(runAnalysisStage).toHaveBeenCalledTimes(2);
+    expect(approveWritingCandidate).toHaveBeenCalledWith(fakeConnection, 'audit-1');
+    expect(vi.mocked(approveWritingCandidate).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(regenerateReportsForAudit).mock.invocationCallOrder[0]!,
+    );
+    expect(outcome).toEqual({ kind: 'ready', reports, findingsWereRefreshed: true });
+  });
+
+  it('refuses a second production for the same audit while the first is running', async () => {
+    vi.mocked(readAuditArtifacts).mockResolvedValue({
+      manifest: { findingsProvenance: freshProvenance } as never,
+      findings: [],
+    });
+    let finish: (value: never) => void = () => undefined;
+    vi.mocked(regenerateReportsForAudit).mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+
+    const first = makeReportReady(fakeConnection, 'audit-1', undefined);
+    await expect(makeReportReady(fakeConnection, 'audit-1', undefined)).rejects.toBeInstanceOf(
+      RegenerationConflictError,
+    );
+    finish([] as never);
+    await expect(first).resolves.toMatchObject({ kind: 'ready' });
+
+    vi.mocked(regenerateReportsForAudit).mockResolvedValue([] as never);
+    await expect(makeReportReady(fakeConnection, 'audit-1', undefined)).resolves.toMatchObject({
+      kind: 'ready',
+    });
   });
 });

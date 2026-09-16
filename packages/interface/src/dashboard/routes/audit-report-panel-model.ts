@@ -92,6 +92,10 @@ export function produceButtonState(
   };
 }
 
+const STALE_DATA_REFUSAL =
+  /^Report generation aborted: (?:stale .+ uses (?:normalization fingerprint|findings schema version)|legacy .+ has no (?:findings provenance|analysis ID))/u;
+const IDENTITY_REFUSAL = /^Report generation aborted: the client identity on the cover/u;
+
 /** Turns a refused PDF production into operator language. The raw renderer
  *  message stays available as technical detail; only its page number and
  *  overflow amount are lifted into the explanation. */
@@ -118,6 +122,15 @@ export function describeProduceFailure(
           ? ''
           : ` ${copy.produceFailedOverflowFinding.replace('{finding}', overflow[3])}`),
     };
+  }
+  // Every refusal shares the "Report generation aborted:" prefix, so the
+  // data refusals are matched first by their own wording; only what remains
+  // is a renderer or layout refusal.
+  if (detail !== undefined && STALE_DATA_REFUSAL.test(detail)) {
+    return { ...base, explanation: copy.produceFailedStaleData };
+  }
+  if (detail !== undefined && IDENTITY_REFUSAL.test(detail)) {
+    return { ...base, explanation: copy.produceFailedIdentity };
   }
   if (detail?.startsWith('Report generation aborted:')) {
     return { ...base, explanation: copy.produceFailedLayout };

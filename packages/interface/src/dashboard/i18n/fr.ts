@@ -426,6 +426,10 @@ export const fr: DashboardStrings = {
       produceFailedOverflow:
         'Un contenu de la page {page} est trop large pour tenir sur la page (dépassement de {amount} px). Le plus souvent, un texte très long sans espace (adresse, sélecteur, URL) en est la cause. Aucun PDF n’a été livré.',
       produceFailedOverflowFinding: 'Constat en cause : {finding}.',
+      produceFailedStaleData:
+        'Le format des données du scan a changé depuis la rédaction. Relancez la production : les constats et la rédaction sont d’abord actualisés. Aucun PDF n’a été livré.',
+      produceFailedIdentity:
+        'Le nom du client sur la couverture est encore une détection non confirmée. Confirmez-le ci-dessus, puis produisez les PDF. Aucun PDF n’a été livré.',
       produceFailedLayout:
         'La mise en page du rapport a échoué au contrôle de sécurité d’impression. Aucun PDF n’a été livré.',
       produceFailedGeneric: 'La production des PDF a été refusée. Aucun PDF n’a été livré.',

@@ -26,6 +26,7 @@ import {
   reconcileFailedAuditJobs,
   approveWritingCandidate,
   recordReadyWritingCandidate,
+  resolveSelectedAnalysisPairForAudit,
   type AuditRuntimeFields,
 } from '@odysseus/store';
 import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
@@ -36,6 +37,8 @@ import { syncAuditDirToBucket } from '../artifacts/sync-audit-artifacts.js';
 import { backfillAuditRow } from './backfill-audit-row.js';
 import { renormalizeAudit } from './renormalize-audit.js';
 import { runAnalysisStage } from './analysis-stage.js';
+import { RegenerationConflictError } from './regeneration-conflict-error.js';
+import { isWritingRegenerationInFlight } from './regenerate-writing.js';
 import {
   readAuditArtifacts,
   regenerateReportsForAudit,
@@ -77,6 +80,29 @@ export function findingsAreStale(
     stamped.normalizationFingerprint !== current.normalizationFingerprint
   );
 }
+
+/** True when the pair the report would render was written from findings
+ *  normalized differently than the current ones. An earlier run can leave
+ *  the manifest refreshed but this pair old (it failed or was interrupted
+ *  during the analysis passes); the manifest check alone would then skip
+ *  the refresh on every retry and render a pair the report stage refuses. */
+async function selectedPairIsStale(
+  connection: Connection,
+  auditId: string,
+  findings: Finding[],
+): Promise<boolean> {
+  const resolution = await resolveSelectedAnalysisPairForAudit(connection, auditId);
+  if (resolution.kind === 'none') return false;
+  return (
+    findingsAreStale(resolution.fr.findingsProvenance, findings) ||
+    findingsAreStale(resolution.en.findingsProvenance, findings)
+  );
+}
+
+/** Audits with a report production running in this process. Two runs on one
+ *  audit would renormalize the same directory and pay for the analysis
+ *  passes twice. */
+const inFlight = new Set<string>();
 
 async function refreshWritingCandidate(
   connection: Connection,
@@ -159,6 +185,26 @@ export async function makeReportReady(
   auditId: string,
   artifactStore: ArtifactStore | undefined,
 ): Promise<MakeReportReadyOutcome> {
+  // Checked and taken with no await in between, so two concurrent requests
+  // cannot both pass.
+  if (inFlight.has(auditId) || isWritingRegenerationInFlight(auditId)) {
+    throw new RegenerationConflictError(
+      'odysseus: the PDFs or the writing for this audit are already being produced',
+    );
+  }
+  inFlight.add(auditId);
+  try {
+    return await produceReports(connection, auditId, artifactStore);
+  } finally {
+    inFlight.delete(auditId);
+  }
+}
+
+async function produceReports(
+  connection: Connection,
+  auditId: string,
+  artifactStore: ArtifactStore | undefined,
+): Promise<MakeReportReadyOutcome> {
   const audit = await getAuditRuntimeFields(connection, auditId);
   if (!audit) return { kind: 'refused', refusal: { kind: 'audit-not-found' } };
 
@@ -177,6 +223,9 @@ export async function makeReportReady(
       await renormalizeAudit(auditDir, artifactStore);
       await backfillAuditRow(auditDir, connection);
       await syncAuditDirToBucket(artifactStore, auditDir, hostname, audit.startedAt);
+      await refreshWritingCandidate(connection, auditDir, audit, artifactStore);
+      findingsWereRefreshed = true;
+    } else if (await selectedPairIsStale(connection, auditId, findings)) {
       await refreshWritingCandidate(connection, auditDir, audit, artifactStore);
       findingsWereRefreshed = true;
     }

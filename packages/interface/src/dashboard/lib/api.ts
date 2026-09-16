@@ -144,8 +144,12 @@ export function sendJson<T>(
 /** Mutations that take no payload (regenerate-report, approve-reports). The
  *  server only enforces application/json on routes that read a body, but
  *  sending an empty JSON object keeps every mutation uniform. */
-export function postEmpty<T>(url: string): Promise<T> {
+export function postEmpty<T>(
+  url: string,
+  init: Pick<ApiRequestInit, 'timeoutMs' | 'signal'> = {},
+): Promise<T> {
   return fetchJson<T>(url, {
+    ...init,
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: '{}',

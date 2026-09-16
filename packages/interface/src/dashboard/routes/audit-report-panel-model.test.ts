@@ -113,6 +113,29 @@ describe('describeProduceFailure', () => {
     expect(result.explanation).toContain('Constat en cause : f052.');
   });
 
+  it('explains a stale-data refusal as a format change, not a layout failure', () => {
+    const stale =
+      'Report generation aborted: stale analysis uses normalization fingerprint 5d6066235a290ca9; current findings use f5d473387f3334bb. Run normalize and regenerate the analyses.';
+    const result = describeProduceFailure(stale, 'en');
+    expect(result.explanation).toContain('changed format');
+    expect(result.technicalDetail).toBe(stale);
+    expect(
+      describeProduceFailure(
+        'Report generation aborted: legacy report has no findings provenance. Run normalize.',
+        'fr',
+      ).explanation,
+    ).toContain('format des données');
+  });
+
+  it('explains an unconfirmed cover identity separately', () => {
+    expect(
+      describeProduceFailure(
+        'Report generation aborted: the client identity on the cover is still a detected guess.',
+        'en',
+      ).explanation,
+    ).toContain('Confirm it above');
+  });
+
   it('uses the layout wording for other renderer refusals and a generic one otherwise', () => {
     expect(
       describeProduceFailure('Report generation aborted: stranded heading.', 'en').explanation,

@@ -406,6 +406,8 @@ export interface DashboardStrings {
       produceFailedOverflow: string;
       produceFailedOverflowFinding: string;
       /** A different layout-safety refusal from the PDF renderer. */
+      produceFailedStaleData: string;
+      produceFailedIdentity: string;
       produceFailedLayout: string;
       produceFailedGeneric: string;
       produceFailedTechnicalLabel: string;

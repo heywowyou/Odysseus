@@ -29,6 +29,10 @@ import { ReportDetailsForm } from './report-details-form';
 import { ReportsCard } from './audit-reports-section';
 import type { PreparationViewResponse } from './prepare-report-types';
 
+/** Upper bound for one PDF production: a findings refresh, two analysis
+ *  passes with the pacing pause between them, and both renders. */
+const PRODUCE_REPORT_TIMEOUT_MS = 20 * 60 * 1000;
+
 /** DOM ids the failure card (audit-reports-section.tsx) scrolls to when it
  *  names which action to redo; kept in sync with that file's own literal
  *  ids rather than shared, since exporting them for a single caller in a
@@ -147,7 +151,11 @@ export function AuditReportPanel(props: {
     setProduceFailure(null);
     toast(strings.auditDetail.regeneratingMessage);
     try {
-      await postEmpty(`/api/audits/${encodeURIComponent(auditId)}/regenerate-report`);
+      // Producing may first refresh stale findings and rewrite both analyses
+      // before rendering, which takes minutes, not the default request bound.
+      await postEmpty(`/api/audits/${encodeURIComponent(auditId)}/regenerate-report`, {
+        timeoutMs: PRODUCE_REPORT_TIMEOUT_MS,
+      });
       toast.success(strings.auditDetail.regeneratedMessage);
       refresh();
     } catch (produceError) {

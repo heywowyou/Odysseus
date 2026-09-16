@@ -421,6 +421,10 @@ export const en: DashboardStrings = {
       produceFailedOverflow:
         'Content on page {page} is too wide to fit on the page (overflow of {amount} px). This usually means one very long text without spaces (address, selector, URL). No PDF was delivered.',
       produceFailedOverflowFinding: 'Finding involved: {finding}.',
+      produceFailedStaleData:
+        'The scan data changed format since this writing was produced. Produce the PDFs again: the findings and the writing are refreshed first. No PDF was delivered.',
+      produceFailedIdentity:
+        'The client name on the cover is still a detected guess. Confirm it above, then produce the PDFs. No PDF was delivered.',
       produceFailedLayout: 'The report layout failed the print safety check. No PDF was delivered.',
       produceFailedGeneric: 'Producing the PDFs was refused. No PDF was delivered.',
       produceFailedTechnicalLabel: 'Technical detail',
