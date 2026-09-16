@@ -254,7 +254,7 @@ section IDs do not encode reading order.
 | --- | --- | --- | --- |
 | cover | Couverture | minimal: commercial identity, decision question (resolved preparation question; safe generic fallback when no preparation exists), report type, audit date, Odysseus signature | 1 sheet |
 | metadata | Fiche méta et sévérité | site audited, audit date, pages visited, audited standard and scope, legal name when present; centered letter grade with disclaimer, followed by severity scale with basis note | 1 sheet |
-| toc | Sommaire | one row per section, grouped under five groups in document order (issue #336): Vue d'ensemble, Actions prioritaires, Résultats détaillés, Cadre réglementaire, Annexes | 17 rows |
+| toc | Sommaire | one row per section, grouped in document order (issue #336): Vue d'ensemble, Actions prioritaires, Résultats détaillés, then the self-named Cadre réglementaire and Prochaines étapes rows standing without a repeated group label (issue #333), then Annexes | 17 rows |
 | 01 | Présentation du diagnostic (situation, complication, question) | opening and reading guide; the question is the resolved preparation question or the safe generic fallback, no client-specific claim beyond what preparation explicitly provides | fixed |
 | 02 | Synthèse | prose + jump links | 3 links |
 | 03 | Résultats mesurés | editorial scoreboard with total findings as the lead measure, 3 supporting number tiles, disclosure notes, severity split, and category split | fixed |
@@ -266,8 +266,8 @@ section IDs do not encode reading order.
 | 09 | Rendu sans JavaScript | **bars only, no screenshots** | 3 worst pages by `missingPct` |
 | 10 | Performance | **5 aggregated medians, no per page table** | 1 sheet |
 | 11 | Projet de déclaration d'accessibilité | one row per failing criterion | flows |
-| 12 | Prochaines étapes | action synthesis, responsible roles, and re-audit recommendation | 1 sheet |
-| 13 | Cadre réglementaire | 2 cards + paragraph, from `assessObligations()` only | fixed |
+| 12 | Cadre réglementaire | 2 cards + paragraph, from `assessObligations()` only | fixed |
+| 13 | Prochaines étapes | action synthesis, responsible roles, and re-audit recommendation; closes the narrative after the legal reference (issue #333) | 1 sheet |
 | 14 | Méthodologie et limites | fixed prose | 1 sheet |
 | 15 | Annexe technique — constats détaillés | all finding, URL, selector, occurrence, and provenance detail | flows |
 | 16 | Glossaire, section finale | 9 entries | 1 sheet |

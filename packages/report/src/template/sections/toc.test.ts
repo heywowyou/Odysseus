@@ -47,16 +47,7 @@ describe('renderToc', () => {
   // glossary-last rule still holds inside the closing Annexes group.
   describe('issue #336: the TOC reads five groups and closes on the glossary', () => {
     it.each([
-      [
-        'fr',
-        [
-          'Vue d’ensemble',
-          'Actions prioritaires',
-          'Résultats détaillés',
-          'Cadre réglementaire',
-          'Annexes',
-        ],
-      ],
+      ['fr', ['Vue d’ensemble', 'Actions prioritaires', 'Résultats détaillés', 'Annexes']],
       [
         'en',
         ['Overview', 'Priority actions', 'Detailed results', 'Regulatory framework', 'Appendices'],
@@ -73,6 +64,17 @@ describe('renderToc', () => {
         'section-12',
         'section-13',
       ]);
+    });
+
+    it('issue #333: a one-row group named like its row does not print the name twice', () => {
+      const html = renderToc(getStrings('fr'), ALL_SECTIONS);
+      expect(html.split('Cadre réglementaire').length - 1).toBe(1);
+      expect(html).toContain('href="#section-02"');
+    });
+
+    it('issue #333: a group keeps its label when its one row has a different name', () => {
+      const html = renderToc(getStrings('en'), ALL_SECTIONS);
+      expect(html).toContain('>Regulatory framework</h5>');
     });
 
     it('never uses the retired French group or section labels', () => {

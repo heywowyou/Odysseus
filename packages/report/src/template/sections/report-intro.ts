@@ -72,8 +72,8 @@ function computeIntroFacts(
  *
  *  Audience rows are role labels only and are
  *  anchored to the new canonical order semantics: section-02 (legal
- *  exposure) now renders after the synthesis, and section-14 (next steps)
- *  before it, so each row lists its ids in canonical reading order and
+ *  exposure) now renders after the evidence, and section-14 (next steps)
+ *  after it (issue #333), so each row lists its ids in canonical reading order and
  *  every display resolves through sectionTitle's live titles, never a
  *  hardcoded number. */
 export function renderReportIntro(

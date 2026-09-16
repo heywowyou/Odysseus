@@ -66,7 +66,9 @@ describe('section-registry order (plan 018 step 3)', () => {
     // 018), the glossary carries the last number (plan 024's glossary-last
     // reversal), and the opening carries 1.
     expect(all.get('section-00')).toBe(1);
-    expect(all.get('section-02')).toBe(14);
+    expect(all.get('section-02')).toBe(13);
+    // Issue #333: next steps closes the narrative after the legal reference.
+    expect(all.get('section-14')).toBe(14);
     expect(all.get('section-12')).toBe(16);
     expect(all.get('section-13')).toBe(17);
 

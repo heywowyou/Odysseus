@@ -28,8 +28,12 @@ export const SECTION_IDS = [
   'section-09',
   'section-15',
   'section-10',
-  'section-14',
   'section-02',
+  // Issue #333: next steps (roles, corrections, re-audit, contact) closes
+  // the narrative after the legal reference, instead of sitting between
+  // the evidence and the regulatory framework where it read as a summary
+  // in the middle of the report.
+  'section-14',
   'section-11',
   'section-12',
   // The glossary is always the final section (trade-off 44, amended

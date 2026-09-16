@@ -284,7 +284,7 @@ describe('renderReportIntro', () => {
     expect(html).toContain(fr.reportIntro.roleTechnicalLabel);
     expect(html).toContain(fr.reportIntro.roleCommunicationsLabel);
     expect(html).toContain(fr.reportIntro.roleLegalLabel);
-    // section-14 (next steps) now renders before section-02 (legal): the
+    // Issue #333: section-14 (next steps) now renders after section-02 (legal): the
     // management row ends on the synthesis, the legal row points at the
     // later legal section, both as live titles, no numbers.
     expect(html).toContain(

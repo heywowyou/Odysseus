@@ -303,14 +303,6 @@ function renderBody(
           scopePageUrls,
         )
       : '',
-    renderNextSteps(
-      strings,
-      ord('section-14'),
-      manifest,
-      analysis.language,
-      renderMetadata,
-      renderedPriorities,
-    ),
     renderLegalExposure(
       strings,
       ord('section-02'),
@@ -320,6 +312,14 @@ function renderBody(
       manifest,
       resolvedFindings,
       manualFields,
+    ),
+    renderNextSteps(
+      strings,
+      ord('section-14'),
+      manifest,
+      analysis.language,
+      renderMetadata,
+      renderedPriorities,
     ),
     renderMethodology(
       strings,

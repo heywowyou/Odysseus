@@ -48,9 +48,11 @@ export function renderToc(strings: ReportStrings, includedIds: ReadonlySet<Secti
     },
     {
       label: strings.toc.detailedResultsGroupLabel,
-      ids: ['section-07', 'section-08', 'section-09', 'section-15', 'section-10', 'section-14'],
+      ids: ['section-07', 'section-08', 'section-09', 'section-15', 'section-10'],
     },
     { label: strings.toc.regulatoryFrameworkGroupLabel, ids: ['section-02'] },
+    // Issue #333: self-named, so it renders as a standalone row.
+    { label: sectionTitle('section-14', strings), ids: ['section-14'] },
     {
       label: strings.toc.appendicesGroupLabel,
       ids: ['section-11', 'section-12', 'section-13'],
@@ -63,14 +65,25 @@ export function renderToc(strings: ReportStrings, includedIds: ReadonlySet<Secti
         .map((id) => {
           const label = sectionTitle(id, strings);
           return `
-        <div style="display:flex;align-items:baseline;gap:var(--space-3);padding:var(--space-3) 0;background:linear-gradient(to right,transparent,var(--color-divider) 0,var(--color-divider) 100%,transparent) no-repeat bottom/100% 1px">
+        <div style="display:flex;align-items:baseline;gap:var(--space-3);padding:var(--space-2) 0;background:linear-gradient(to right,transparent,var(--color-divider) 0,var(--color-divider) 100%,transparent) no-repeat bottom/100% 1px">
           <span class="n" style="font-size:12px;color:var(--color-accent-300);width:22px;flex:none">${numbers.get(id)}</span>
           <a href="#${id}" class="toc-row" style="flex:1;font-size:14.5px;color:inherit;text-decoration:none">${escapeHtml(label)}</a>
         </div>
       `;
         });
       if (rowsInGroup.length === 0) return '';
-      return `<h5 style="font-size:11px;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-accent-300);margin:var(--space-8) 0 var(--space-1)">${escapeHtml(groupLabel)}</h5>${rowsInGroup.join('')}`;
+      // Issue #333: a group whose only row carries the group's own name
+      // ("Cadre réglementaire" over "Cadre réglementaire") printed the same
+      // words twice. The row stands alone there, keeping its number, link
+      // and page number, and takes the group label's place in the rhythm.
+      const includedInGroup = ids.filter((id) => includedIds.has(id));
+      const isSelfNamedSingleRow =
+        includedInGroup.length === 1 &&
+        sectionTitle(includedInGroup[0]!, strings).trim() === groupLabel.trim();
+      if (isSelfNamedSingleRow) {
+        return `<div style="margin-top:var(--space-4)">${rowsInGroup.join('')}</div>`;
+      }
+      return `<h5 style="font-size:11px;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-accent-300);margin:var(--space-6) 0 var(--space-1)">${escapeHtml(groupLabel)}</h5>${rowsInGroup.join('')}`;
     })
     .join('');
 
