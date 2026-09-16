@@ -42,11 +42,9 @@ const TEXT_FIELDS_TOP: readonly TextFieldDef[] = [
   { key: 'sirenSourceUrl', label: 'sirenSourceUrlLabel' },
   { key: 'raisonSociale', label: 'raisonSocialeLabel' },
   { key: 'nomCommercial', label: 'nomCommercialLabel' },
-  { key: 'recipientName', label: 'recipientNameLabel' },
 ];
 
 const TEXT_FIELDS_BOTTOM: readonly TextFieldDef[] = [
-  { key: 'revenueBand', label: 'revenueBandLabel' },
   { key: 'declarationContactEmail', label: 'declarationContactEmailLabel' },
 ];
 

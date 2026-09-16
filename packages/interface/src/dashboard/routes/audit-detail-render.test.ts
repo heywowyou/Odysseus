@@ -123,15 +123,9 @@ function preparationView(overrides: Record<string, unknown> = {}): Record<string
     language,
     coverQuestion: { value: 'Question de couverture', source: 'fallback' },
     hook: { family: 'family', value: 'value', evidenceUnavailable: true },
-    stakeholders: [],
-    journeys: [],
   });
   return {
     preparation: {
-      context: {},
-      stakeholders: {},
-      journeyDecisions: [],
-      turnover: { useReplacement: false },
       updatedAt: '2026-09-01T10:00:00.000Z',
     },
     preview: {
@@ -139,10 +133,7 @@ function preparationView(overrides: Record<string, unknown> = {}): Record<string
       en: previewLanguage('en'),
       warnings: [],
       warningDigest: 'digest-1',
-      excludedJourneys: [],
-      turnover: { status: 'omitted', reason: 'missing-turnover' },
     },
-    suggestions: [],
     regenerationInFlight: false,
     ...overrides,
   };
@@ -738,10 +729,6 @@ describe('audit report panel (plan 045 stage 3.1)', () => {
     stubRoutes({
       '/api/audits/audit-1/report-preparation': preparationView({
         preparation: {
-          context: {},
-          stakeholders: {},
-          journeyDecisions: [],
-          turnover: { useReplacement: false },
           updatedAt: '2026-09-01T10:00:00.000Z',
           writingSelection: {
             candidate: {

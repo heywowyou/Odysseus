@@ -70,7 +70,7 @@ function computeIntroFacts(
  *  block announces on the next page, with the detail this page never
  *  carried. The section ends on the audience roles and the scope note.
  *
- *  Audience rows are role labels only (names arrive in plan 019) and are
+ *  Audience rows are role labels only and are
  *  anchored to the new canonical order semantics: section-02 (legal
  *  exposure) now renders after the synthesis, and section-14 (next steps)
  *  before it, so each row lists its ids in canonical reading order and
@@ -122,26 +122,13 @@ export function renderReportIntro(
       ? `<p style="font-size:14px;font-weight:500;margin:0 0 var(--space-4);max-width:52ch">${escapeHtml(preparation.hook.value)}</p>`
       : '';
 
-  // Role labels from the canonical audience map, personalized with the
-  // operator's optional stakeholder names where one exists (plan 019). A
-  // name is data, escaped here like every other operator-supplied string;
-  // it never adds an assertion, only an addressee.
-  const stakeholderName = (label: string, role: string): string => {
-    const named = preparation?.stakeholders.find((entry) => entry.role === role);
-    return named ? `${label} (${named.name})` : label;
-  };
+  // Role labels from the canonical audience map.
   const audienceRows = (
     [
-      [
-        stakeholderName(r.roleManagementLabel, 'management'),
-        ['section-01', 'section-04', 'section-14'],
-      ],
-      [
-        stakeholderName(r.roleTechnicalLabel, 'technical'),
-        ['section-04', 'section-05', 'section-12'],
-      ],
-      [stakeholderName(r.roleCommunicationsLabel, 'communications'), ['section-04', 'section-08']],
-      [stakeholderName(r.roleLegalLabel, 'legal'), ['section-02', 'section-11']],
+      [r.roleManagementLabel, ['section-01', 'section-04', 'section-14']],
+      [r.roleTechnicalLabel, ['section-04', 'section-05', 'section-12']],
+      [r.roleCommunicationsLabel, ['section-04', 'section-08']],
+      [r.roleLegalLabel, ['section-02', 'section-11']],
     ] as const satisfies readonly (readonly [string, readonly SectionId[]])[]
   )
     .map(([label, ids]) => {
@@ -149,27 +136,6 @@ export function renderReportIntro(
       return `<tr><td style="padding:6px 12px 6px 0;font-size:12.5px;font-weight:500;white-space:nowrap;vertical-align:top">${escapeHtml(label)}</td><td style="padding:6px 0;font-size:12.5px;opacity:0.8">${escapeHtml(sections)}</td></tr>`;
     })
     .join('');
-
-  // Plan 019: confirmed, evidence-resolved journeys only. The preview
-  // carries no journey the operator did not confirm and the evidence can
-  // no longer support, so rendering is a straight projection; every step's
-  // state is one of the three approved wordings and nothing else.
-  const journeysBlock =
-    preparation && preparation.journeys.length > 0
-      ? `<h5>${escapeHtml(r.journeysHeading)}</h5>${preparation.journeys
-          .map(
-            (journey) => `
-      <p style="font-size:12.5px;font-weight:500;margin:var(--space-4) 0 var(--space-1)">${escapeHtml(journey.label)}</p>
-      <p style="font-size:11.5px;opacity:0.7;margin:0 0 var(--space-2)">${escapeHtml(journey.description)}</p>
-      <table style="width:100%;border-collapse:collapse;margin-bottom:var(--space-2)"><tbody>${journey.steps
-        .map(
-          (step) =>
-            `<tr><td style="padding:4px 12px 4px 0;font-size:12px;vertical-align:top">${escapeHtml(step.label)}</td><td style="padding:4px 0;font-size:12px;opacity:0.85;text-align:right;white-space:nowrap">${escapeHtml(step.stateLabel)}</td></tr>`,
-        )
-        .join('')}</tbody></table>`,
-          )
-          .join('')}`
-      : '';
 
   return sheet(
     `
@@ -183,7 +149,6 @@ export function renderReportIntro(
     <p style="font-size:17px;opacity:0.9;margin:0 0 var(--space-6);max-width:38ch">${escapeHtml(question)}</p>
     <h5>${escapeHtml(r.audienceHeading)}</h5>
     <table style="width:100%;border-collapse:collapse;margin-bottom:var(--space-6)"><tbody>${audienceRows}</tbody></table>
-    ${journeysBlock}
     <p style="font-size:11.5px;opacity:0.6;margin:0">${escapeHtml(scopeNote)}</p>
   `,
     '',

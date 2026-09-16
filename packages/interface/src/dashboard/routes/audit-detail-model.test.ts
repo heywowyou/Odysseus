@@ -200,9 +200,7 @@ const BASELINE: ManualFieldValues = {
   raisonSociale: 'Exemple SARL',
   nomCommercial: '',
   sector: 'hospitality',
-  revenueBand: '',
   declarationContactEmail: 'contact@example.fr',
-  recipientName: '',
 };
 
 describe('buildManualFieldsPatch', () => {
@@ -211,10 +209,10 @@ describe('buildManualFieldsPatch', () => {
   });
 
   it('sends only changed, non-empty keys', () => {
-    const values = { ...BASELINE, raisonSociale: 'Nouvelle raison', recipientName: 'Jeanne' };
+    const values = { ...BASELINE, raisonSociale: 'Nouvelle raison', nomCommercial: 'Hôtel' };
     expect(buildManualFieldsPatch(values, BASELINE)).toEqual({
       raisonSociale: 'Nouvelle raison',
-      recipientName: 'Jeanne',
+      nomCommercial: 'Hôtel',
     });
   });
 
@@ -258,9 +256,7 @@ describe('manualFieldValuesFromResponse', () => {
       raisonSociale: '',
       nomCommercial: '',
       sector: 'hospitality',
-      revenueBand: '',
       declarationContactEmail: '',
-      recipientName: '',
     });
   });
 
@@ -271,9 +267,7 @@ describe('manualFieldValuesFromResponse', () => {
       raisonSociale: '',
       nomCommercial: '',
       sector: '',
-      revenueBand: '',
       declarationContactEmail: '',
-      recipientName: '',
     });
   });
 });

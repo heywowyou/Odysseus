@@ -41,6 +41,15 @@ const emailSchema = z
     attestation: z.string().min(1).optional(),
   })
   .strict();
+/** A named person at the business and their role there, entered by the
+ *  operator. Free text: hotels have no fixed org chart. */
+const stakeholderSchema = z
+  .object({
+    name: z.string().trim().min(1).max(120),
+    position: z.string().trim().min(1).max(120).optional(),
+  })
+  .strict();
+export type ProspectStakeholder = z.infer<typeof stakeholderSchema>;
 const hotelExtrasSchema = z
   .object({
     stars: z.number().int().min(1).max(5).optional(),
@@ -63,6 +72,7 @@ export const prospectSchema = z
     department: z.string().optional(),
     phone: z.string().optional(),
     emails: z.array(emailSchema),
+    stakeholders: z.array(stakeholderSchema).max(50).optional(),
     siren: z.string().optional(),
     siret: z.string().optional(),
     notes: z.string().optional(),

@@ -407,8 +407,7 @@ const benchmarkPercentileSchema = new Schema(
   { _id: false },
 );
 
-// Report preparation (plan 019). The enum validators mirror core's closed
-// vocabularies the same way analysis.schema.ts mirrors Theme['category'].
+// Report preparation (plan 019).
 const localizedOptionalTextSchema = new Schema(
   {
     fr: { type: String },
@@ -455,104 +454,12 @@ const writingSelectionSchema = new Schema(
   { _id: false },
 );
 
-const journeyDecisionSchema = new Schema(
-  {
-    journeyId: {
-      type: String,
-      required: true,
-      enum: ['discovery-navigation', 'transaction-booking'],
-    },
-    decision: {
-      type: String,
-      required: true,
-      enum: ['confirmed', 'removed'],
-    },
-  },
-  { _id: false },
-);
-
-const detectedTurnoverSchema = new Schema(
-  {
-    amountEur: { type: Number, required: true },
-    year: { type: Number, required: true },
-    source: { type: String, required: true, enum: ['sirene-api'] },
-  },
-  { _id: false },
-);
-
-const manualTurnoverSchema = new Schema(
-  {
-    kind: { type: String, required: true, enum: ['exact', 'range'] },
-    amountEur: { type: Number },
-    lowerEur: { type: Number },
-    upperEur: { type: Number },
-    year: { type: Number, required: true },
-    source: {
-      type: String,
-      required: true,
-      enum: ['official-annual-accounts', 'client-stated', 'other-documented'],
-    },
-    sourceNote: { type: String },
-  },
-  { _id: false },
-);
-
-const turnoverChoiceSchema = new Schema(
-  {
-    detected: { type: detectedTurnoverSchema },
-    replacement: { type: manualTurnoverSchema },
-    useReplacement: { type: Boolean, required: true },
-  },
-  { _id: false },
-);
-
+// Situation, trigger, stakeholder names, journeys, and turnover were
+// retired from preparation; Mongoose's strict mode drops those keys from
+// legacy documents on the next preparation write.
 const reportPreparationSchema = new Schema(
   {
-    context: {
-      _id: false,
-      type: {
-        situation: {
-          type: String,
-          enum: [
-            'no-work-started',
-            'redesign-underway',
-            'corrections-underway',
-            'accessibility-programme',
-            'periodic-review',
-            'unknown',
-          ],
-        },
-        trigger: {
-          type: String,
-          enum: [
-            'legal-question',
-            'customer-complaint',
-            'booking-or-conversion',
-            'search-visibility',
-            'redesign',
-            'procurement',
-            'commercial-discussion',
-            'proactive-review',
-            'other',
-          ],
-        },
-        triggerOther: { type: localizedOptionalTextSchema },
-      },
-      default: {},
-    },
     customCoverQuestion: { type: localizedOptionalTextSchema },
-    stakeholders: {
-      _id: false,
-      type: {
-        management: { type: String },
-        technical: { type: String },
-        communications: { type: String },
-        legal: { type: String },
-      },
-      default: {},
-    },
-    journeyDecisions: { type: [journeyDecisionSchema], default: [] },
-    turnover: { type: turnoverChoiceSchema, default: { useReplacement: false } },
     warningAcknowledgement: {
       _id: false,
       type: {

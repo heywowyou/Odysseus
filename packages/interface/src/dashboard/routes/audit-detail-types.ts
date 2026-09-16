@@ -100,9 +100,7 @@ export interface ManualFieldsResponse {
   raisonSociale?: ProvenancedFieldValue;
   nomCommercial?: ProvenancedFieldValue;
   sector?: ProvenancedSectorValue;
-  revenueBand?: ProvenancedFieldValue;
   declarationContactEmail?: ProvenancedFieldValue;
-  recipientName?: ProvenancedFieldValue;
   transactionalFlowOverride?: TransactionalFlowOverrideValue;
   updatedAt: string;
 }

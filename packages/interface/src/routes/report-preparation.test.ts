@@ -192,7 +192,7 @@ describe('GET /api/audits/:auditId/report-preparation', () => {
     expect(res.statusCode).toBe(404);
   });
 
-  it('returns the preparation, its preview, and suggestions', async () => {
+  it('returns the preparation and its preview', async () => {
     await writeEvidence();
     const router = new Router();
     registerReportPreparationRoutes(router, fakeConnection);
@@ -200,14 +200,12 @@ describe('GET /api/audits/:auditId/report-preparation', () => {
     await router.handle(fakeReq('/api/audits/audit-1/report-preparation'), res);
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body!);
-    expect(body.preparation.context).toEqual({});
+    expect(body.preparation).toEqual({ updatedAt: expect.any(String) });
     expect(body.preview.fr.coverQuestion.source).toBe('fallback');
     expect(body.preview.fr.coverQuestion.value).toContain('corriger en priorité');
     expect(body.preview.en.coverQuestion.source).toBe('fallback');
-    expect(body.suggestions).toEqual([
-      { journeyId: 'discovery-navigation', available: true },
-      { journeyId: 'transaction-booking', available: false, reason: 'no-transactional-flow' },
-    ]);
+    expect(body.preview.fr.hook.evidenceUnavailable).toBe(false);
+    expect(body).not.toHaveProperty('suggestions');
     expect(body.regenerationInFlight).toBe(false);
   });
 
@@ -218,15 +216,11 @@ describe('GET /api/audits/:auditId/report-preparation', () => {
     await router.handle(fakeReq('/api/audits/audit-1/report-preparation'), res);
     const body = JSON.parse(res.body!);
     expect(body.preview.fr.hook.evidenceUnavailable).toBe(true);
-    expect(body.suggestions).toEqual([
-      { journeyId: 'discovery-navigation', available: false, reason: 'evidence-unavailable' },
-      { journeyId: 'transaction-booking', available: false, reason: 'evidence-unavailable' },
-    ]);
   });
 });
 
 describe('PATCH /api/audits/:auditId/report-preparation', () => {
-  it('rejects an unknown option with 400', async () => {
+  it('rejects a retired preparation input with 400', async () => {
     const router = new Router();
     registerReportPreparationRoutes(router, fakeConnection);
     const res = fakeRes();
@@ -257,32 +251,6 @@ describe('PATCH /api/audits/:auditId/report-preparation', () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it('rejects an oversized stakeholder name and an unknown role with 400', async () => {
-    const router = new Router();
-    registerReportPreparationRoutes(router, fakeConnection);
-    const tooLong = fakeRes();
-    await router.handle(
-      fakeReq(
-        '/api/audits/audit-1/report-preparation',
-        { stakeholders: { legal: 'a'.repeat(81) } },
-        'PATCH',
-      ),
-      tooLong,
-    );
-    expect(tooLong.statusCode).toBe(400);
-
-    const unknownRole = fakeRes();
-    await router.handle(
-      fakeReq(
-        '/api/audits/audit-1/report-preparation',
-        { stakeholders: { president: 'X' } },
-        'PATCH',
-      ),
-      unknownRole,
-    );
-    expect(unknownRole.statusCode).toBe(400);
-  });
-
   it('applies a valid patch', async () => {
     const router = new Router();
     registerReportPreparationRoutes(router, fakeConnection);
@@ -290,7 +258,7 @@ describe('PATCH /api/audits/:auditId/report-preparation', () => {
     await router.handle(
       fakeReq(
         '/api/audits/audit-1/report-preparation',
-        { context: { situation: 'periodic-review' } },
+        { customCoverQuestion: { fr: 'Question ?' } },
         'PATCH',
       ),
       res,
@@ -298,93 +266,8 @@ describe('PATCH /api/audits/:auditId/report-preparation', () => {
     expect(res.statusCode).toBe(200);
     expect(patchReportPreparationInputs).toHaveBeenCalledTimes(1);
     const body = JSON.parse(res.body!);
-    expect(body.preparation.context.situation).toBe('periodic-review');
-  });
-
-  it('round-trips a replacement while retaining the detected official turnover', async () => {
-    storedPreparation = {
-      ...emptyReportPreparation(),
-      turnover: {
-        detected: { amountEur: 8_400_000, year: 2025, source: 'sirene-api' },
-        useReplacement: false,
-      },
-    };
-    const router = new Router();
-    registerReportPreparationRoutes(router, fakeConnection);
-    const res = fakeRes();
-
-    await router.handle(
-      fakeReq(
-        '/api/audits/audit-1/report-preparation',
-        {
-          turnover: {
-            useReplacement: true,
-            replacement: {
-              kind: 'range',
-              lowerEur: 7_000_000,
-              upperEur: 7_500_000,
-              year: 2024,
-              source: 'client-stated',
-            },
-          },
-        },
-        'PATCH',
-      ),
-      res,
-    );
-
-    expect(res.statusCode).toBe(200);
-    expect(JSON.parse(res.body!).preparation.turnover).toEqual({
-      detected: { amountEur: 8_400_000, year: 2025, source: 'sirene-api' },
-      replacement: {
-        kind: 'range',
-        lowerEur: 7_000_000,
-        upperEur: 7_500_000,
-        year: 2024,
-        source: 'client-stated',
-      },
-      useReplacement: true,
-    });
-    expect(JSON.parse(res.body!).preview.turnover).toEqual({
-      status: 'available',
-      amountEur: 7_000_000,
-      calculationAmountEur: 7_000_000,
-      rangeUpperEur: 7_500_000,
-      year: 2024,
-      source: 'client-stated',
-      provenance: 'replacement',
-      inputKind: 'range',
-    });
-  });
-
-  it('rejects forged detected provenance and unknown manual sources', async () => {
-    const router = new Router();
-    registerReportPreparationRoutes(router, fakeConnection);
-
-    for (const turnover of [
-      {
-        detected: { amountEur: 99_000_000, year: 2025, source: 'sirene-api' },
-        useReplacement: false,
-      },
-      {
-        replacement: {
-          kind: 'exact',
-          amountEur: 7_200_000,
-          year: 2024,
-          source: 'operator-guess',
-        },
-        useReplacement: true,
-      },
-    ]) {
-      const res = fakeRes();
-      await router.handle(
-        fakeReq('/api/audits/audit-1/report-preparation', { turnover }, 'PATCH'),
-        res,
-      );
-      expect(res.statusCode).toBe(400);
-    }
-
-    expect(patchReportPreparationInputs).not.toHaveBeenCalled();
+    expect(body.preparation.customCoverQuestion).toEqual({ fr: 'Question ?' });
+    expect(body.preview.fr.coverQuestion).toEqual({ value: 'Question ?', source: 'custom' });
   });
 });
 

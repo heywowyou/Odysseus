@@ -9,91 +9,27 @@ describe('parseReportPreparationPatch', () => {
   it('trims entered text and keeps both languages independently', () => {
     const patch = parseReportPreparationPatch({
       customCoverQuestion: { fr: '  Question  ', en: null },
-      context: { trigger: 'other', triggerOther: { fr: ' Note fr ', en: ' Note en ' } },
-      stakeholders: { management: ' Jeanne Dupont ' },
-      journeyDecisions: [{ journeyId: 'discovery-navigation', decision: 'confirmed' }],
     });
     expect(patch.customCoverQuestion).toEqual({ fr: 'Question', en: null });
-    expect(patch.context?.triggerOther).toEqual({ fr: 'Note fr', en: 'Note en' });
-    expect(patch.stakeholders?.management).toBe('Jeanne Dupont');
-  });
-
-  it('rejects vocabulary values outside the closed sets', () => {
-    expect(() => parseReportPreparationPatch({ context: { situation: 'winging-it' } })).toThrow();
-    expect(() => parseReportPreparationPatch({ context: { trigger: 'curiosity' } })).toThrow();
-    expect(() =>
-      parseReportPreparationPatch({
-        journeyDecisions: [{ journeyId: 'power-washing', decision: 'confirmed' }],
-      }),
-    ).toThrow();
   });
 
   it('rejects oversized text instead of clamping it', () => {
     const long = 'a'.repeat(201);
     expect(() => parseReportPreparationPatch({ customCoverQuestion: { fr: long } })).toThrow();
-    const longName = 'a'.repeat(81);
-    expect(() => parseReportPreparationPatch({ stakeholders: { legal: longName } })).toThrow();
   });
 
-  it('rejects unknown keys and workflow metadata in the operator patch', () => {
+  it('rejects unknown keys, retired inputs, and workflow metadata in the operator patch', () => {
     expect(() =>
       parseReportPreparationPatch({ warningAcknowledgement: { digest: 'x' } }),
     ).toThrow();
     expect(() => parseReportPreparationPatch({ writingSelection: {} })).toThrow();
-    expect(() => parseReportPreparationPatch({ stakeholders: { president: 'X' } })).toThrow();
+    expect(() => parseReportPreparationPatch({ context: { situation: 'unknown' } })).toThrow();
+    expect(() => parseReportPreparationPatch({ stakeholders: { legal: 'X' } })).toThrow();
+    expect(() => parseReportPreparationPatch({ turnover: { useReplacement: true } })).toThrow();
   });
 
   it('accepts an empty patch', () => {
     expect(parseReportPreparationPatch({})).toEqual({});
-  });
-
-  it('accepts bounded exact and range turnover replacements', () => {
-    expect(
-      parseReportPreparationPatch({
-        turnover: {
-          useReplacement: true,
-          replacement: {
-            kind: 'range',
-            lowerEur: 400_000,
-            upperEur: 650_000,
-            year: 2025,
-            source: 'official-annual-accounts',
-          },
-        },
-      }).turnover,
-    ).toEqual({
-      useReplacement: true,
-      replacement: {
-        kind: 'range',
-        lowerEur: 400_000,
-        upperEur: 650_000,
-        year: 2025,
-        source: 'official-annual-accounts',
-      },
-    });
-  });
-
-  it('rejects invalid turnover amounts, ranges, years, sources, and detected input', () => {
-    const invalidTurnover = [
-      { replacement: { kind: 'exact', amountEur: -1, year: 2025, source: 'client-stated' } },
-      { replacement: { kind: 'exact', amountEur: 1.5, year: 2025, source: 'client-stated' } },
-      {
-        replacement: {
-          kind: 'range',
-          lowerEur: 700_000,
-          upperEur: 600_000,
-          year: 2025,
-          source: 'client-stated',
-        },
-      },
-      { replacement: { kind: 'exact', amountEur: 1, year: 1999, source: 'client-stated' } },
-      { replacement: { kind: 'exact', amountEur: 1, year: 2027, source: 'client-stated' } },
-      { replacement: { kind: 'exact', amountEur: 1, year: 2025, source: 'spreadsheet' } },
-      { detected: { amountEur: 1, year: 2025, source: 'sirene-api' } },
-    ];
-    for (const turnover of invalidTurnover) {
-      expect(() => parseReportPreparationPatch({ turnover })).toThrow();
-    }
   });
 });
 
@@ -103,41 +39,34 @@ describe('applyPreparationPatch', () => {
   it('treats absent keys as unchanged and null as clear', () => {
     const current = {
       ...emptyReportPreparation(),
-      context: { situation: 'corrections-underway' as const },
       customCoverQuestion: { fr: 'Fr question', en: 'En question' },
-      stakeholders: { management: 'Jeanne' },
     };
+    const unchanged = applyPreparationPatch(current, parseReportPreparationPatch({}), now);
+    expect(unchanged.customCoverQuestion).toEqual(current.customCoverQuestion);
+
     const next = applyPreparationPatch(
       current,
       parseReportPreparationPatch({ customCoverQuestion: { en: null } }),
       now,
     );
-    expect(next.context.situation).toBe('corrections-underway');
     expect(next.customCoverQuestion).toEqual({ fr: 'Fr question' });
-    expect(next.stakeholders.management).toBe('Jeanne');
-  });
 
-  it('merges journey decisions, later decisions winning', () => {
-    const current = {
-      ...emptyReportPreparation(),
-      journeyDecisions: [
-        { journeyId: 'discovery-navigation' as const, decision: 'confirmed' as const },
-      ],
-    };
-    const next = applyPreparationPatch(
+    const cleared = applyPreparationPatch(
       current,
-      parseReportPreparationPatch({
-        journeyDecisions: [
-          { journeyId: 'discovery-navigation', decision: 'removed' },
-          { journeyId: 'transaction-booking', decision: 'confirmed' },
-        ],
-      }),
+      parseReportPreparationPatch({ customCoverQuestion: null }),
       now,
     );
-    expect(next.journeyDecisions).toEqual([
-      { journeyId: 'discovery-navigation', decision: 'removed' },
-      { journeyId: 'transaction-booking', decision: 'confirmed' },
-    ]);
+    expect(cleared.customCoverQuestion).toBeUndefined();
+  });
+
+  it('drops retired inputs still present on a stored legacy preparation', () => {
+    const legacy = {
+      ...emptyReportPreparation(),
+      context: { situation: 'periodic-review' },
+      stakeholders: { management: 'Jeanne' },
+    };
+    const next = applyPreparationPatch(legacy, parseReportPreparationPatch({}), now);
+    expect(Object.keys(next).sort()).toEqual(['updatedAt']);
   });
 
   it('passes workflow metadata through untouched', () => {
@@ -158,39 +87,11 @@ describe('applyPreparationPatch', () => {
     };
     const next = applyPreparationPatch(
       current,
-      parseReportPreparationPatch({ context: { situation: 'periodic-review' } }),
+      parseReportPreparationPatch({ customCoverQuestion: { fr: 'Question' } }),
       now,
     );
     expect(next.warningAcknowledgement).toEqual(current.warningAcknowledgement);
     expect(next.writingSelection).toEqual(current.writingSelection);
     expect(next.updatedAt).toBe(now);
-  });
-
-  it('updates operator turnover choices without dropping detected provenance', () => {
-    const current = {
-      ...emptyReportPreparation(),
-      turnover: {
-        detected: { amountEur: 800_000, year: 2025, source: 'sirene-api' as const },
-        useReplacement: false,
-      },
-    };
-    const next = applyPreparationPatch(
-      current,
-      parseReportPreparationPatch({
-        turnover: {
-          useReplacement: true,
-          replacement: {
-            kind: 'exact',
-            amountEur: 600_000,
-            year: 2024,
-            source: 'client-stated',
-          },
-        },
-      }),
-      now,
-    );
-    expect(next.turnover.detected).toEqual(current.turnover.detected);
-    expect(next.turnover.useReplacement).toBe(true);
-    expect(next.turnover.replacement).toMatchObject({ amountEur: 600_000 });
   });
 });

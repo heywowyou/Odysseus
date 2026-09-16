@@ -1,21 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { buildReportPreparationPreview } from './preview.js';
 import { emptyReportPreparation, type ReportPreparation } from './preparation.js';
-import { buildFinding, buildManifest, buildPage, buildProvenance } from './test-fixtures.js';
-
-const homepage = buildPage('https://site.example/');
-const reservation = buildPage('https://site.example/reservation', { depth: 1 });
-const transactionalSignals = {
-  hasTransactionalFlow: true,
-  transactionalFlowEvidence: [
-    {
-      kind: 'booking-engine-script' as const,
-      selector: '#booking',
-      pageUrl: 'https://site.example/reservation',
-      detail: 'booking script detected',
-    },
-  ],
-};
+import { buildFinding, buildProvenance } from './test-fixtures.js';
+import { resolveGenericDecisionQuestion } from './vocabulary.js';
 
 function preparationWith(overrides: Partial<ReportPreparation>): ReportPreparation {
   return { ...emptyReportPreparation(), ...overrides };
@@ -25,59 +12,32 @@ describe('buildReportPreparationPreview', () => {
   it('falls back to the generic question independently per language', () => {
     const preview = buildReportPreparationPreview({
       preparation: preparationWith({}),
-      manifest: buildManifest([homepage]),
       findings: [],
     });
-    expect(preview.fr.coverQuestion).toEqual({
-      value:
-        'Quels points de votre site faut-il corriger en priorité pour améliorer son accessibilité, sa visibilité et son utilisation ?',
-      source: 'fallback',
-    });
-    expect(preview.en.coverQuestion).toEqual({
-      value: 'What is the current state of your site, and where should you start?',
-      source: 'fallback',
-    });
-  });
-
-  it('prefers the situational question, then the custom question per language', () => {
-    const preparation = preparationWith({
-      context: { situation: 'corrections-underway' },
-      customCoverQuestion: { en: 'Custom English question' },
-    });
-    const preview = buildReportPreparationPreview({
-      preparation,
-      manifest: buildManifest([homepage]),
-      findings: [],
-    });
-    expect(preview.fr.coverQuestion.source).toBe('automatic');
-    expect(preview.fr.coverQuestion.value).toContain('corrections sont en cours');
-    expect(preview.en.coverQuestion).toEqual({
-      value: 'Custom English question',
-      source: 'custom',
-    });
+    for (const language of ['fr', 'en'] as const) {
+      expect(preview[language].coverQuestion).toEqual({
+        value: resolveGenericDecisionQuestion(language),
+        source: 'fallback',
+      });
+    }
   });
 
   it('does not copy a custom question from one language into the other', () => {
     const preview = buildReportPreparationPreview({
       preparation: preparationWith({ customCoverQuestion: { fr: 'Question française' } }),
-      manifest: buildManifest([homepage]),
       findings: [],
     });
-    expect(preview.fr.coverQuestion.source).toBe('custom');
+    expect(preview.fr.coverQuestion).toEqual({ value: 'Question française', source: 'custom' });
     expect(preview.en.coverQuestion.source).toBe('fallback');
   });
 
-  it('resolves the hook family from findings and labels it automatic', () => {
+  it('resolves the hook family from findings', () => {
     const findings = [
       buildFinding({ source: 'axe', category: 'accessibility', severity: 'critical' }),
       buildFinding({ source: 'axe', category: 'accessibility', severity: 'serious' }),
       buildFinding({ source: 'lighthouse', category: 'performance', severity: 'minor' }),
     ];
-    const preview = buildReportPreparationPreview({
-      preparation: preparationWith({}),
-      manifest: buildManifest([homepage]),
-      findings,
-    });
+    const preview = buildReportPreparationPreview({ preparation: preparationWith({}), findings });
     expect(preview.fr.hook.family).toBe('accessibility');
     expect(preview.fr.hook.evidenceUnavailable).toBe(false);
     expect(preview.fr.hook.value).toBeTruthy();
@@ -92,21 +52,16 @@ describe('buildReportPreparationPreview', () => {
       buildFinding({ source: 'lighthouse', category: 'performance', severity: 'minor' }),
       buildFinding({ source: 'lighthouse', category: 'performance', severity: 'minor' }),
     ];
-    const preview = buildReportPreparationPreview({
-      preparation: preparationWith({}),
-      manifest: buildManifest([homepage]),
-      findings,
-    });
+    const preview = buildReportPreparationPreview({ preparation: preparationWith({}), findings });
 
     expect(preview.fr.hook.family).toBe('accessibility');
     expect(preview.fr.hook.value).not.toContain('le plus de constats');
     expect(preview.en.hook.value).not.toContain('the most findings');
   });
 
-  it('marks the hook as evidence-unavailable mixed when there are no findings', () => {
+  it('resolves an empty findings list to measured mixed copy', () => {
     const preview = buildReportPreparationPreview({
       preparation: preparationWith({}),
-      manifest: buildManifest([homepage]),
       findings: [],
     });
     expect(preview.fr.hook).toEqual({
@@ -116,118 +71,22 @@ describe('buildReportPreparationPreview', () => {
     });
   });
 
-  it('marks evidence unavailable when the artifacts are missing entirely', () => {
+  it('marks evidence unavailable when the findings are missing entirely', () => {
     const preview = buildReportPreparationPreview({ preparation: preparationWith({}) });
     expect(preview.fr.hook.evidenceUnavailable).toBe(true);
-    expect(preview.excludedJourneys).toEqual([
-      { journeyId: 'discovery-navigation', reason: 'evidence-unavailable' },
-      { journeyId: 'transaction-booking', reason: 'evidence-unavailable' },
-    ]);
   });
 
-  it('carries the confirmed journey with tri-state labels in both languages', () => {
-    const preparation = preparationWith({
-      journeyDecisions: [{ journeyId: 'transaction-booking', decision: 'confirmed' }],
-    });
-    const preview = buildReportPreparationPreview({
-      preparation,
-      manifest: buildManifest([homepage, reservation], { siteSignals: transactionalSignals }),
-      findings: [],
-    });
-    expect(preview.fr.journeys).toHaveLength(1);
-    const journey = preview.fr.journeys[0]!;
-    expect(journey.label).toBe('Réservation et transaction');
-    expect(journey.steps).toHaveLength(2);
-    for (const step of journey.steps) {
-      expect(['Problème constaté', 'Aucun problème détecté', 'Non évalué']).toContain(
-        step.stateLabel,
-      );
-    }
-    expect(preview.en.journeys[0]!.label).toBe('Booking and transaction');
-  });
-
-  it('computes warnings and a digest over warning-relevant inputs only', () => {
+  it('warns only about a missing commercial name', () => {
     const preview = buildReportPreparationPreview({ preparation: preparationWith({}) });
-    expect(preview.warnings).toEqual(['commercial-name', 'situation', 'trigger', 'journey-scope']);
+    expect(preview.warnings).toEqual(['commercial-name']);
 
-    const withNames = buildReportPreparationPreview({
-      preparation: preparationWith({
-        stakeholders: { management: 'Jeanne Dupont' },
-        context: { situation: 'periodic-review', trigger: 'proactive-review' },
-      }),
+    const named = buildReportPreparationPreview({
+      preparation: preparationWith({}),
       commercialName: 'Hôtel Belledonne',
-      manifest: buildManifest([homepage]),
       findings: [],
     });
-    // Journey scope is still unconfirmed, and stakeholder names changed nothing.
-    expect(withNames.warnings).toEqual(['journey-scope']);
-    expect(withNames.warningDigest).toMatch(/^sha256:[0-9a-f]{64}$/);
-  });
-
-  it('changes the digest when the confirmed journey scope changes', () => {
-    const manifest = buildManifest([homepage, reservation], { siteSignals: transactionalSignals });
-    const without = buildReportPreparationPreview({
-      preparation: preparationWith({}),
-      manifest,
-      findings: [],
-    });
-    const withConfirmed = buildReportPreparationPreview({
-      preparation: preparationWith({
-        journeyDecisions: [{ journeyId: 'transaction-booking', decision: 'confirmed' }],
-      }),
-      manifest,
-      findings: [],
-    });
-    expect(without.warningDigest).not.toBe(withConfirmed.warningDigest);
-  });
-
-  it('reports typed exclusion reasons for unavailable journeys', () => {
-    const preview = buildReportPreparationPreview({
-      preparation: preparationWith({}),
-      manifest: buildManifest([homepage]),
-      findings: [],
-    });
-    expect(preview.excludedJourneys).toEqual([
-      { journeyId: 'transaction-booking', reason: 'no-transactional-flow' },
-    ]);
-  });
-
-  it('exposes the conservative lower-bound basis for a selected turnover range', () => {
-    const preview = buildReportPreparationPreview({
-      preparation: preparationWith({
-        turnover: {
-          detected: { amountEur: 8_400_000, year: 2025, source: 'sirene-api' },
-          replacement: {
-            kind: 'range',
-            lowerEur: 6_500_000,
-            upperEur: 7_000_000,
-            year: 2023,
-            source: 'client-stated',
-          },
-          useReplacement: true,
-        },
-      }),
-    });
-
-    expect(preview.turnover).toEqual({
-      status: 'available',
-      amountEur: 6_500_000,
-      calculationAmountEur: 6_500_000,
-      rangeUpperEur: 7_000_000,
-      year: 2023,
-      source: 'client-stated',
-      provenance: 'replacement',
-      inputKind: 'range',
-    });
-  });
-
-  it('treats a preparation document missing turnover as no replacement, matching legacy documents', () => {
-    const { turnover: _turnover, ...legacyPreparation } = preparationWith({});
-    const preview = buildReportPreparationPreview({
-      preparation: legacyPreparation as ReportPreparation,
-    });
-
-    expect(preview.turnover).toEqual({ status: 'omitted', reason: 'missing-turnover' });
+    expect(named.warnings).toEqual([]);
+    expect(named.warningDigest).toMatch(/^sha256:[0-9a-f]{64}$/);
   });
 
   it('round-trips provenance through a selected pair reference shape', () => {

@@ -34,7 +34,6 @@ export function applyEnglishClientFacingCopy(strings: ReportStrings): ReportStri
         'This is an automated technical diagnostic. It is not a full RGAA audit and it is not ' +
         'legal advice. Coverage limitations are set out in "{methodologySection}".',
       audienceHeading: 'How to use this report',
-      journeysHeading: 'Visitor journeys reviewed',
     },
     statistics: {
       ...strings.statistics,

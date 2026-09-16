@@ -19,9 +19,6 @@ vi.mock('@odysseus/store', () => ({
   getAuditManualFields: vi.fn().mockResolvedValue(undefined),
   getAuditGradeOverride: vi.fn().mockResolvedValue(undefined),
   getReportPreparation: vi.fn().mockResolvedValue({
-    context: {},
-    stakeholders: {},
-    journeyDecisions: [],
     updatedAt: '2026-09-01T00:00:00.000Z',
   }),
 }));

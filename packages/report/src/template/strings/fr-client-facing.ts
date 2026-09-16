@@ -38,7 +38,6 @@ export function applyFrenchClientFacingCopy(strings: ReportStrings): ReportStrin
         'audit RGAA exhaustif et ne constitue pas un avis juridique. Les limites de couverture ' +
         'sont précisées dans « {methodologySection} ».',
       audienceHeading: 'Comment utiliser ce rapport',
-      journeysHeading: 'Parcours visiteurs examinés',
     },
     statistics: {
       ...strings.statistics,

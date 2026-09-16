@@ -32,9 +32,7 @@ export interface ManualFieldValues {
   raisonSociale: string;
   nomCommercial: string;
   sector: SectorChoice;
-  revenueBand: string;
   declarationContactEmail: string;
-  recipientName: string;
 }
 
 export type ManualFieldKey = keyof ManualFieldValues;
@@ -288,9 +286,7 @@ export function manualFieldValuesFromResponse(
     raisonSociale: text(manualFields?.raisonSociale),
     nomCommercial: text(manualFields?.nomCommercial),
     sector: sector === 'general' || sector === 'hospitality' ? sector : '',
-    revenueBand: text(manualFields?.revenueBand),
     declarationContactEmail: text(manualFields?.declarationContactEmail),
-    recipientName: text(manualFields?.recipientName),
   };
 }
 
@@ -336,13 +332,11 @@ export function buildManualFieldsPatch(
     ['sirenSourceUrl', values.sirenSourceUrl.trim(), baseline.sirenSourceUrl],
     ['raisonSociale', values.raisonSociale.trim(), baseline.raisonSociale],
     ['nomCommercial', values.nomCommercial.trim(), baseline.nomCommercial],
-    ['revenueBand', values.revenueBand.trim(), baseline.revenueBand],
     [
       'declarationContactEmail',
       values.declarationContactEmail.trim(),
       baseline.declarationContactEmail,
     ],
-    ['recipientName', values.recipientName.trim(), baseline.recipientName],
   ];
   for (const [key, value, base] of textCandidates) {
     if (value !== '' && value !== base) {

@@ -312,9 +312,8 @@ describe('renderReportIntro', () => {
 });
 
 // Plan 019 step 7: with a preparation preview, the opening question and
-// hook are the preview's already-resolved values, the audience rows carry
-// optional stakeholder names, and confirmed journeys render with exactly
-// the three approved tri-state wordings. Without one, nothing changes.
+// hook are the preview's already-resolved values. Without one, nothing
+// changes.
 describe('plan 019: renderReportIntro consumes the preparation preview', () => {
   const frPreview: PreparationPreviewLanguage = {
     language: 'fr',
@@ -324,31 +323,6 @@ describe('plan 019: renderReportIntro consumes the preparation preview', () => {
       value: "L'accessibilité est le sujet le plus urgent de ce rapport.",
       evidenceUnavailable: false,
     },
-    stakeholders: [{ role: 'management', roleLabel: 'Direction', name: 'Jeanne Dupont' }],
-    journeys: [
-      {
-        journeyId: 'transaction-booking',
-        label: 'Réservation et transaction',
-        description: "Ce parcours vérifie ce qu'un visiteur voit.",
-        steps: [
-          {
-            stepId: 'booking-page',
-            label: 'Page de réservation',
-            description: 'Ce que la page affiche.',
-            state: 'issue-observed',
-            stateLabel: 'Problème constaté',
-          },
-          {
-            stepId: 'booking-form',
-            label: 'Formulaire de réservation',
-            description: 'Ce que le formulaire révèle.',
-            state: 'not-evaluated',
-            stateLabel: 'Non évalué',
-            notEvaluatedReason: 'detector-failed',
-          },
-        ],
-      },
-    ],
   };
 
   it('replaces the question with the preview value in this language only', () => {
@@ -388,51 +362,24 @@ describe('plan 019: renderReportIntro consumes the preparation preview', () => {
     );
   });
 
-  it('personalizes the matching audience row with the stakeholder name', () => {
+  it('keeps bare role labels in the audience rows', () => {
+    const strings = getStrings('fr');
     const html = renderReportIntro(
-      getStrings('fr'),
+      strings,
       1,
       buildAnalysis([]) as never,
       [],
       undefined,
       frPreview,
     );
-    expect(html).toContain('La direction (Jeanne Dupont)');
-    // The other rows keep their bare role labels.
-    expect(html).toContain(getStrings('fr').reportIntro.roleTechnicalLabel);
-  });
-
-  it('renders only the confirmed journeys, every step in one of the three approved states', () => {
-    const html = renderReportIntro(
-      getStrings('fr'),
-      1,
-      buildAnalysis([]) as never,
-      [],
-      undefined,
-      frPreview,
-    );
-    expect(html).toContain('Parcours visiteurs examinés');
-    expect(html).toContain('Réservation et transaction');
-    expect(html).toContain('Problème constaté');
-    expect(html).toContain('Non évalué');
-    // The disapproved tri-state and the other journey's copy are absent.
-    expect(html).not.toContain('Aucun problème détecté');
-    expect(html).not.toContain('Découverte et navigation');
-  });
-
-  it('renders no journeys block when no journey was confirmed', () => {
-    const html = renderReportIntro(getStrings('fr'), 1, buildAnalysis([]) as never, [], undefined, {
-      ...frPreview,
-      journeys: [],
-    });
-    expect(html).not.toContain('Parcours visiteurs examinés');
+    expect(html).toContain(strings.reportIntro.roleManagementLabel);
+    expect(html).toContain(strings.reportIntro.roleTechnicalLabel);
   });
 
   it('leaves the generic opening untouched without preparation', () => {
     const strings = getStrings('fr');
     const html = renderReportIntro(strings, 1, buildAnalysis([]) as never, []);
     expect(html).toContain(resolveGenericDecisionQuestion('fr'));
-    expect(html).not.toContain('Parcours visiteurs examinés');
     expect(html).toContain(strings.reportIntro.roleManagementLabel);
   });
 });

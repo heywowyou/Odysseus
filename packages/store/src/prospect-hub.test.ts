@@ -57,6 +57,34 @@ describe.skipIf(!mongoAvailable)('prospect hub persistence', () => {
       await createProspectHubModel(connection!).countDocuments({ prospectId: created.prospectId }),
     ).toBe(1);
   });
+
+  it('stores, edits, and removes stakeholders through a full-list update', async () => {
+    const created = await createProspectHub(connection!, {
+      sector: 'hotel',
+      name: 'Stakeholder Fixture',
+      websites: [],
+    });
+    expect(created.stakeholders).toBeUndefined();
+
+    await updateProspect(connection!, created.prospectId, {
+      stakeholders: [{ name: ' Jeanne Dupont ', position: ' Directrice ' }, { name: 'Sam Martin' }],
+    });
+    expect((await getProspectHub(connection!, created.prospectId))?.stakeholders).toEqual([
+      { name: 'Jeanne Dupont', position: 'Directrice' },
+      { name: 'Sam Martin' },
+    ]);
+
+    await updateProspect(connection!, created.prospectId, {
+      stakeholders: [{ name: 'Sam Martin', position: 'Responsable technique' }],
+    });
+    expect((await getProspectHub(connection!, created.prospectId))?.stakeholders).toEqual([
+      { name: 'Sam Martin', position: 'Responsable technique' },
+    ]);
+
+    await expect(
+      updateProspect(connection!, created.prospectId, { stakeholders: [{ name: '  ' }] }),
+    ).rejects.toThrow();
+  });
 });
 
 describe.skipIf(!mongoAvailable)('withdrawing a prospect outreach', () => {

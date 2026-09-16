@@ -25,6 +25,13 @@ const emailSchema = new Schema(
   },
   { _id: false },
 );
+const stakeholderSchema = new Schema(
+  {
+    name: { type: String, required: true },
+    position: { type: String },
+  },
+  { _id: false },
+);
 const hotelSchema = new Schema(
   {
     stars: { type: Number, min: 1, max: 5 },
@@ -55,6 +62,8 @@ const prospectSchema = new Schema<ProspectHubDocument>(
     department: { type: String },
     phone: { type: String },
     emails: { type: [emailSchema], required: true },
+    // Absent on prospects created before stakeholders existed.
+    stakeholders: { type: [stakeholderSchema], default: undefined },
     siren: { type: String },
     siret: { type: String },
     notes: { type: String },

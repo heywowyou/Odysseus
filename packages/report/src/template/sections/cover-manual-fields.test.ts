@@ -166,8 +166,6 @@ describe('renderCover decision question (plan 019)', () => {
     language: 'fr',
     coverQuestion: { value: 'Question personnalisée ?', source: 'custom' },
     hook: { family: 'mixed', value: 'Phrase.', evidenceUnavailable: true },
-    stakeholders: [],
-    journeys: [],
   };
 
   it('renders the preview question when preparation is supplied', async () => {

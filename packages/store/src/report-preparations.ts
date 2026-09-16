@@ -36,17 +36,13 @@ export class WritingSelectionConflictError extends Error {
 
 /**
  * A preparation read back from Mongo can lack keys whose subdocuments were
- * empty at write time (Mongoose does not persist empty objects inside a
- * $set nested document). Normalize at this boundary so callers always see
- * the complete core aggregate shape.
+ * empty at write time, and a legacy one can still carry retired inputs.
+ * Normalize at this boundary so callers only ever see the current core
+ * aggregate shape.
  */
 function withStoredDefaults(raw: ReportPreparation | undefined): ReportPreparation {
   return {
-    context: raw?.context ?? {},
     ...(raw?.customCoverQuestion ? { customCoverQuestion: raw.customCoverQuestion } : {}),
-    stakeholders: raw?.stakeholders ?? {},
-    journeyDecisions: raw?.journeyDecisions ?? [],
-    turnover: raw?.turnover ?? { useReplacement: false },
     ...(raw?.warningAcknowledgement ? { warningAcknowledgement: raw.warningAcknowledgement } : {}),
     ...(raw?.writingSelection ? { writingSelection: raw.writingSelection } : {}),
     updatedAt: raw?.updatedAt ?? new Date(0).toISOString(),

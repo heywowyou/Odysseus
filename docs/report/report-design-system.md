@@ -427,24 +427,21 @@ operator workflow, the dashboard's **Prepare report** card, own everything
 personalized in this report. Rendering consumes a bounded, render-ready
 preview; it never queries storage or derives preparation policy.
 
-- **Typed vocabularies, not free text.** Situation, trigger, stakeholder
-  role, hook family, journey, and journey-step state are closed vocabularies
-  with French and English copy tables. Stored operator text is trimmed,
-  length-bounded data, escaped at render time, and never becomes a model or
-  system instruction.
+- **Bounded operator text, not free prompts.** The only operator input is an
+  optional per-language custom cover question. Hook family is a closed
+  vocabulary derived from findings, with French and English copy tables.
+  Stored operator text is trimmed, length-bounded data, escaped at render
+  time, and never becomes a model or system instruction.
 - **Bilingual fallbacks are independent per language.** A missing custom
-  question, `other` note, or any other localized value falls back to the safe
-  generic copy for that language only; nothing is machine translated and
-  nothing is copied from the other language. Without preparation data the
-  report renders exactly as before (the byte-identical generic question).
-- **The opening question** on the cover and in section 01 is the resolved
-  preparation question: typed context plus safe copy, replaced per language
-  by an operator override where one exists.
-- **Journeys are evidence-bound and tri-state.** Every rendered journey step
-  reads exactly one of **issue observed**, **no issue detected**, or **not
-  evaluated**; `no-issue-detected` requires positive evidence the relevant
-  deterministic check ran. Only confirmed journeys render; unsupported or
-  removed journeys do not.
+  question falls back to the safe generic copy for that language only;
+  nothing is machine translated and nothing is copied from the other
+  language. Without preparation data the report renders exactly as before
+  (the byte-identical generic question).
+- **The opening question** on the cover and in section 01 is the operator's
+  custom question for that language where one exists, otherwise the generic
+  question.
+- **The audience table lists roles only.** Named contacts belong to the
+  prospect record, not the report.
 - **Writing versions are candidate-first.** A paid report renders the
   selected French/English analysis pair resolved by the store selector;
   regeneration produces a previewable candidate and selection changes only on

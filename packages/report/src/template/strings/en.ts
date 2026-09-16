@@ -36,7 +36,6 @@ export const en: ReportStrings = {
     notALegalOpinionNote:
       'What this report is not: legal advice (see the "{legalSection}" section); an exhaustive audit, since automated detection covers roughly 30 to 40 percent of accessibility criteria (see "{methodologySection}").',
     audienceHeading: 'Who this report is for',
-    journeysHeading: 'Verified visitor journeys',
     roleManagementLabel: 'Management',
     roleTechnicalLabel: 'Technical provider or IT',
     roleCommunicationsLabel: 'Communications',

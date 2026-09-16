@@ -52,3 +52,32 @@ export function contactRemovalRequest(
         body: { address: removal.address, ...(removal.blacklist ? { suppress: true } : {}) },
       };
 }
+
+export interface ProspectStakeholder {
+  name: string;
+  position?: string;
+}
+
+/** The stored entry for a typed name and position, or null when the name is
+ *  blank. An empty position is left out rather than stored as ''. */
+export function stakeholderFromInput(name: string, position: string): ProspectStakeholder | null {
+  const trimmedName = name.trim();
+  if (trimmedName === '') return null;
+  const trimmedPosition = position.trim();
+  return trimmedPosition === ''
+    ? { name: trimmedName }
+    : { name: trimmedName, position: trimmedPosition };
+}
+
+/** Stakeholders have no server-side invariants, so every change sends the
+ *  whole list: `index` undefined appends, `entry` null removes. */
+export function stakeholdersAfterChange(
+  current: readonly ProspectStakeholder[],
+  index: number | undefined,
+  entry: ProspectStakeholder | null,
+): ProspectStakeholder[] {
+  if (index === undefined) return entry === null ? [...current] : [...current, entry];
+  return current.flatMap((item, position) =>
+    position !== index ? [item] : entry === null ? [] : [entry],
+  );
+}

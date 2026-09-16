@@ -92,9 +92,7 @@ export { languagePrefixOf } from './normalize/normalize-hreflang.js';
 // (trade-off 62).
 export * from './report-preparation/vocabulary.js';
 export * from './report-preparation/preparation.js';
-export * from './report-preparation/turnover.js';
 export * from './report-preparation/warning-digest.js';
 export * from './report-preparation/hook-family.js';
-export * from './report-preparation/journeys.js';
 export * from './report-preparation/selection.js';
 export * from './report-preparation/preview.js';

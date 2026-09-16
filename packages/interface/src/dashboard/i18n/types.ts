@@ -321,12 +321,10 @@ export interface DashboardStrings {
     /** Shown once this field is confirmed but another detected identity
      *  field still awaits confirmation, so PDFs were not attempted yet. */
     identityConfirmedWaitingMessage: string;
-    recipientNameLabel: string;
     sectorLabel: string;
     sectorAutoOption: string;
     sectorGeneralOption: string;
     sectorHospitalityOption: string;
-    revenueBandLabel: string;
     declarationContactEmailLabel: string;
     transactionalFlowLabel: string;
     transactionalFlowUnspecifiedOption: string;
@@ -525,55 +523,11 @@ export interface DashboardStrings {
   prepareReport: {
     title: string;
     description: string;
-    situationLabel: string;
-    triggerLabel: string;
-    /** Shown only when the trigger 'other' is selected. */
-    triggerOtherNotesLabel: string;
     customQuestionLabel: string;
     frenchFieldLabel: string;
     englishFieldLabel: string;
-    automaticOption: string;
-    turnoverHeading: string;
-    turnoverDescription: string;
-    detectedTurnoverLabel: string;
-    detectedTurnoverUnavailable: string;
-    useDifferentTurnoverLabel: string;
-    useOfficialTurnoverLabel: string;
-    turnoverKindLabel: string;
-    turnoverExactOption: string;
-    turnoverRangeOption: string;
-    turnoverAmountLabel: string;
-    turnoverLowerLabel: string;
-    turnoverUpperLabel: string;
-    turnoverYearLabel: string;
-    turnoverSourceLabel: string;
-    turnoverSourceOfficialAccounts: string;
-    turnoverSourceClient: string;
-    turnoverSourceOther: string;
-    turnoverSourceNoteLabel: string;
-    turnoverEffectiveLabel: string;
-    turnoverDetectedBasis: string;
-    turnoverReplacementBasis: string;
-    turnoverRangeBasis: string;
-    turnoverMissing: string;
-    turnoverReplacementMissing: string;
-    stakeholdersHeading: string;
-    journeysHeading: string;
-    journeyConfirm: string;
-    journeyRemove: string;
-    journeyConfirmedLabel: string;
-    journeyRemovedLabel: string;
-    /** Why a suggested journey is not verifiable; read through
-     *  prepare-report-model's exclusionLabel. */
-    exclusionNoVisitedPages: string;
-    exclusionNoTransactionalFlow: string;
-    exclusionNoTransactionalPageVisited: string;
-    exclusionEvidenceUnavailable: string;
     warningsHeading: string;
     warningCommercialName: string;
-    warningSituation: string;
-    warningTrigger: string;
-    warningJourneyScope: string;
     previewHeading: string;
     previewAutomaticLabel: string;
     previewCustomLabel: string;
@@ -591,28 +545,6 @@ export interface DashboardStrings {
     writingRegeneratedMessage: string;
     writingApprovedPdfsPendingMessage: string;
     writingReplacedDeliveredMessage: string;
-    situationOptions: Record<
-      | 'no-work-started'
-      | 'redesign-underway'
-      | 'corrections-underway'
-      | 'accessibility-programme'
-      | 'periodic-review'
-      | 'unknown',
-      string
-    >;
-    triggerOptions: Record<
-      | 'legal-question'
-      | 'customer-complaint'
-      | 'booking-or-conversion'
-      | 'search-visibility'
-      | 'redesign'
-      | 'procurement'
-      | 'commercial-discussion'
-      | 'proactive-review'
-      | 'other',
-      string
-    >;
-    journeyLabels: Record<'discovery-navigation' | 'transaction-booking', string>;
   };
   /** Shared operator-interface strings (plan 013): pagination, review
    *  actions, and detail-page navigation used by several pages. */
@@ -838,6 +770,17 @@ export interface DashboardStrings {
         removeAndBlacklistDescription: string;
         confirmRemove: string;
         confirmRemoveAndBlacklist: string;
+        /** Named people at the business, with their position. */
+        stakeholders: string;
+        stakeholderName: string;
+        stakeholderPosition: string;
+        addStakeholder: string;
+        /** {name} is replaced with the person's name. */
+        editStakeholder: string;
+        removeStakeholder: string;
+        removeStakeholderTitle: string;
+        removeStakeholderDescription: string;
+        saveStakeholder: string;
       };
       emailList: string;
       notProvided: string;
@@ -1433,10 +1376,6 @@ export interface DashboardStrings {
      *  never observed, which is deliberately not the same as observing it
      *  absent, and the copy has to keep those apart. */
     scoreReason: Record<string, string>;
-    /** Stakeholder roles of the report-preparation card. Previously read off
-     *  the preview's filled-in roles, so an empty role showed its raw English
-     *  key to a French operator. */
-    stakeholderRole: Record<'management' | 'technical' | 'communications' | 'legal', string>;
   };
   /** One-line plain-language hints of the pipeline stages, shown next to
    *  the vocabulary by InfoTip on operator pages. Each key names the stage

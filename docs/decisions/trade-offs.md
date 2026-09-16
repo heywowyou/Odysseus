@@ -2969,6 +2969,26 @@ unchanged — this removes only the client-facing approval ceremony sitting in
 front of them. See plan 019's original text above for why candidate-before-
 selection storage itself still stands.
 
+**Amended 2026-09-16 (operator request): the preparation inputs shrink to the
+custom cover question.** Situation, trigger (and its `other` notes),
+stakeholder names, journey confirmations, and the turnover replacement are
+removed from the aggregate, the patch schema, the dashboard, and the report.
+In practice they were noise: trigger and turnover never reached the client
+report at all (trade-off 63's opportunity module that would have read the
+effective turnover was never built), and situation, journeys, and stakeholder
+names added setup work to every report for marginal copy changes. The cover
+question now resolves to the operator's per-language custom question or the
+generic fallback; the opening hook still derives from findings. The
+audience table keeps its role labels without names. Named people at the
+business now live on the prospect record as free-text name and position
+entries (`Prospect.stakeholders`), where they serve outreach rather than the
+report. Legacy preparation documents are not migrated: the store read
+ignores the retired keys and the next preparation save drops them. The
+dead `recipientName` and `revenueBand` manual-field inputs are also removed
+from the dashboard and the manual-fields API; their stored values and core
+types stay untouched. If journeys or a turnover basis return, they need a new
+decision rather than a revert of this one.
+
 ### 63. Financial opportunity is deny-by-default, singular, and separate from the general EAA reference (plan 020)
 
 The broad `ReferenceStat.scalability` field remains an editorial property, not

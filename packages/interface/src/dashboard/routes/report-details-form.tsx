@@ -1,9 +1,8 @@
 /**
  * The "Report details (optional)" disclosure (plan 045 stage 3.1): the
- * hotel-information form's non-identity fields (SIREN, sector, revenue
- * band, recipient, transactional-flow override) and the plan 019
- * preparation inputs (situation, trigger, custom question, stakeholders,
- * turnover, journeys) collapsed under one summary, native <details> so it
+ * hotel-information form's non-identity fields (SIREN, sector,
+ * transactional-flow override) and the plan 019 custom cover question
+ * collapsed under one summary, native <details> so it
  * needs no new dependency. None of this ever gates PDF production; it only
  * refines what the writing pass reads. Both halves share one Save, the same
  * split as the stepper's old Prepare step (audit-hotel-fields-form.tsx,

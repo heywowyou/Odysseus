@@ -153,7 +153,6 @@ export async function runReportStage(
   const preparationPreview = buildReportPreparationPreview({
     preparation: preparationAggregate,
     commercialName: manualFields?.nomCommercial?.value,
-    manifest,
     findings,
   });
 

@@ -116,140 +116,69 @@ describe.skipIf(!mongoAvailable)('report preparation persistence', () => {
   it('returns an empty preparation for an audit that never saved one', async () => {
     await insertAudit('prep-empty');
     const preparation = await getReportPreparation(connection!, 'prep-empty');
-    expect(preparation).toEqual({
-      context: {},
-      stakeholders: {},
-      journeyDecisions: [],
-      turnover: { useReplacement: false },
-      updatedAt: expect.any(String),
-    });
+    expect(preparation).toEqual({ updatedAt: expect.any(String) });
   });
 
-  it('round-trips every operator input without accepting unknown vocabulary values', async () => {
+  it('round-trips the custom cover question per language', async () => {
     await insertAudit('prep-roundtrip');
-    const patch = parseReportPreparationPatch({
-      context: {
-        situation: 'corrections-underway',
-        trigger: 'other',
-        triggerOther: { fr: 'Note française', en: 'English note' },
-      },
-      customCoverQuestion: { fr: 'Question ?', en: null },
-      stakeholders: { management: 'Jeanne Dupont', technical: 'Sam Martin' },
-      journeyDecisions: [{ journeyId: 'discovery-navigation', decision: 'confirmed' }],
-    });
-    await patchReportPreparationInputs(connection!, 'prep-roundtrip', patch);
-
+    await patchReportPreparationInputs(
+      connection!,
+      'prep-roundtrip',
+      parseReportPreparationPatch({ customCoverQuestion: { fr: 'Question ?', en: null } }),
+    );
     const round = await getReportPreparation(connection!, 'prep-roundtrip');
-    expect(round.context.situation).toBe('corrections-underway');
-    expect(round.context.trigger).toBe('other');
-    expect(round.context.triggerOther).toEqual({ fr: 'Note française', en: 'English note' });
     expect(round.customCoverQuestion).toEqual({ fr: 'Question ?' });
-    expect(round.stakeholders.management).toBe('Jeanne Dupont');
-    expect(round.journeyDecisions).toEqual([
-      { journeyId: 'discovery-navigation', decision: 'confirmed' },
-    ]);
-
-    // Unknown values are rejected by the parse boundary long before the
-    // store; the closed vocabulary is core-owned.
-    expect(() =>
-      parseReportPreparationPatch({ context: { situation: 'not-a-situation' } }),
-    ).toThrow();
   });
 
-  it('round-trips a manual turnover replacement without dropping the detected official value', async () => {
-    await insertAudit('prep-turnover');
+  it('hides retired inputs on read and drops them from storage on the next write', async () => {
+    await insertAudit('prep-legacy');
     await createAuditModel(connection!).collection.updateOne(
-      { auditId: 'prep-turnover' },
+      { auditId: 'prep-legacy' },
       {
         $set: {
           reportPreparation: {
-            context: {},
-            stakeholders: {},
-            journeyDecisions: [],
-            turnover: {
-              detected: { amountEur: 8_400_000, year: 2025, source: 'sirene-api' },
-              useReplacement: false,
-            },
+            context: { situation: 'periodic-review' },
+            stakeholders: { management: 'Jeanne Dupont' },
+            journeyDecisions: [{ journeyId: 'discovery-navigation', decision: 'confirmed' }],
+            turnover: { useReplacement: false },
             updatedAt: '2026-09-01T00:00:00.000Z',
           },
         },
       },
     );
-
-    await patchReportPreparationInputs(
-      connection!,
-      'prep-turnover',
-      parseReportPreparationPatch({
-        turnover: {
-          useReplacement: true,
-          replacement: {
-            kind: 'exact',
-            amountEur: 7_200_000,
-            year: 2024,
-            source: 'official-annual-accounts',
-          },
-        },
-      }),
-    );
-
-    expect(await getReportPreparation(connection!, 'prep-turnover')).toMatchObject({
-      turnover: {
-        detected: { amountEur: 8_400_000, year: 2025, source: 'sirene-api' },
-        replacement: {
-          kind: 'exact',
-          amountEur: 7_200_000,
-          year: 2024,
-          source: 'official-annual-accounts',
-        },
-        useReplacement: true,
-      },
+    expect(await getReportPreparation(connection!, 'prep-legacy')).toEqual({
+      updatedAt: '2026-09-01T00:00:00.000Z',
     });
 
     await patchReportPreparationInputs(
       connection!,
-      'prep-turnover',
-      parseReportPreparationPatch({
-        turnover: {
-          replacement: {
-            kind: 'range',
-            lowerEur: 6_500_000,
-            upperEur: 7_000_000,
-            year: 2023,
-            source: 'client-stated',
-          },
-        },
-      }),
+      'prep-legacy',
+      parseReportPreparationPatch({ customCoverQuestion: { fr: 'Question ?' } }),
     );
-
-    expect(await getReportPreparation(connection!, 'prep-turnover')).toMatchObject({
-      turnover: {
-        detected: { amountEur: 8_400_000, year: 2025, source: 'sirene-api' },
-        replacement: {
-          kind: 'range',
-          lowerEur: 6_500_000,
-          upperEur: 7_000_000,
-          year: 2023,
-          source: 'client-stated',
-        },
-        useReplacement: true,
-      },
-    });
+    const raw = await createAuditModel(connection!).collection.findOne(
+      { auditId: 'prep-legacy' },
+      { projection: { reportPreparation: 1 } },
+    );
+    expect(Object.keys(raw?.['reportPreparation'] ?? {}).sort()).toEqual([
+      'customCoverQuestion',
+      'updatedAt',
+    ]);
   });
 
-  it('clears a null value and records the clear', async () => {
+  it('clears a null value', async () => {
     await insertAudit('prep-clear');
     await patchReportPreparationInputs(
       connection!,
       'prep-clear',
-      parseReportPreparationPatch({ stakeholders: { legal: 'Tmp' } }),
+      parseReportPreparationPatch({ customCoverQuestion: { fr: 'Tmp' } }),
     );
     await patchReportPreparationInputs(
       connection!,
       'prep-clear',
-      parseReportPreparationPatch({ stakeholders: { legal: null } }),
+      parseReportPreparationPatch({ customCoverQuestion: null }),
     );
     const round = await getReportPreparation(connection!, 'prep-clear');
-    expect(round.stakeholders.legal).toBeUndefined();
+    expect(round.customCoverQuestion).toBeUndefined();
   });
 });
 

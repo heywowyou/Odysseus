@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { en } from '../i18n/en';
 import { fr } from '../i18n/fr';
-import { contactRemovalConfirm, contactRemovalRequest } from './prospect-contact-model';
+import {
+  contactRemovalConfirm,
+  contactRemovalRequest,
+  stakeholderFromInput,
+  stakeholdersAfterChange,
+} from './prospect-contact-model';
 
 describe('contactRemovalConfirm', () => {
   it('warns that removing the primary website promotes the next one', () => {
@@ -51,5 +56,35 @@ describe('contactRemovalRequest', () => {
       address: 'x@a.fr',
       suppress: true,
     });
+  });
+});
+
+describe('stakeholderFromInput', () => {
+  it('trims both values and leaves out an empty position', () => {
+    expect(stakeholderFromInput(' Jeanne Dupont ', ' Directrice ')).toEqual({
+      name: 'Jeanne Dupont',
+      position: 'Directrice',
+    });
+    expect(stakeholderFromInput('Sam Martin', '   ')).toEqual({ name: 'Sam Martin' });
+  });
+
+  it('refuses a blank name', () => {
+    expect(stakeholderFromInput('  ', 'Directrice')).toBeNull();
+  });
+});
+
+describe('stakeholdersAfterChange', () => {
+  const list = [{ name: 'Jeanne Dupont', position: 'Directrice' }, { name: 'Sam Martin' }];
+
+  it('appends, replaces, and removes by position', () => {
+    expect(stakeholdersAfterChange(list, undefined, { name: 'Léa Roux' })).toEqual([
+      ...list,
+      { name: 'Léa Roux' },
+    ]);
+    expect(stakeholdersAfterChange(list, 1, { name: 'Sam Martin', position: 'IT' })).toEqual([
+      list[0],
+      { name: 'Sam Martin', position: 'IT' },
+    ]);
+    expect(stakeholdersAfterChange(list, 0, null)).toEqual([list[1]]);
   });
 });

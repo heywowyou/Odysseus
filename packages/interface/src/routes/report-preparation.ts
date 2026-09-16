@@ -12,12 +12,10 @@
 import path from 'node:path';
 import { promises as fs } from 'node:fs';
 import type { Connection } from 'mongoose';
-import type { AuditManifest, Finding } from '@odysseus/core';
+import type { Finding } from '@odysseus/core';
 import {
   buildReportPreparationPreview,
   parseReportPreparationPatch,
-  suggestJourneys,
-  type JourneySuggestion,
   type ReportPreparation,
   type ReportPreparationPreview,
 } from '@odysseus/core';
@@ -45,14 +43,13 @@ function lastWritingRunField(auditId: string): { lastWritingRun?: WritingRunOutc
 interface PreparationView {
   preparation: ReportPreparation;
   preview: ReportPreparationPreview;
-  suggestions: readonly JourneySuggestion[];
   regenerationInFlight: boolean;
   lastWritingRun?: WritingRunOutcome;
 }
 
 /** The one place assembling the preparation view: preparation plus its
- *  resolved bilingual preview, computed from the on-disk evidence. Artifacts
- *  are optional here (unlike regeneration): a missing manifest degrades the
+ *  resolved bilingual preview, computed from the on-disk findings. Artifacts
+ *  are optional here (unlike regeneration): missing findings degrade the
  *  preview to evidence-unavailable instead of failing the read. */
 async function buildPreparationView(
   connection: Connection,
@@ -66,27 +63,21 @@ async function buildPreparationView(
     audit.startedAt,
   );
 
-  let manifest: AuditManifest | undefined;
   let findings: Finding[] | undefined;
   try {
-    manifest = JSON.parse(await fs.readFile(path.join(auditDir, 'manifest.json'), 'utf-8'));
     findings = JSON.parse(await fs.readFile(path.join(auditDir, 'findings.json'), 'utf-8'));
   } catch {
-    manifest = undefined;
     findings = undefined;
   }
 
   const preview = buildReportPreparationPreview({
     preparation,
     commercialName: audit.manualFields?.nomCommercial?.value,
-    ...(manifest !== undefined && findings !== undefined ? { manifest, findings } : {}),
+    findings,
   });
   return {
     preparation,
     preview,
-    suggestions: suggestJourneys(
-      manifest !== undefined && findings !== undefined ? { manifest, findings } : null,
-    ),
     regenerationInFlight: isWritingRegenerationInFlight(auditId),
     ...lastWritingRunField(auditId),
   };

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
-import { ArrowLeft, ExternalLink, History, Star, Trash2, X } from 'lucide-react';
+import { ArrowLeft, ExternalLink, History, Pencil, Star, Trash2, X } from 'lucide-react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { PageHeader, PAGE_WIDTH } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
@@ -17,7 +17,10 @@ import type { ProspectHubRow, ProspectStatus } from './prospect-hub-model';
 import {
   contactRemovalConfirm,
   contactRemovalRequest,
+  stakeholderFromInput,
+  stakeholdersAfterChange,
   type ContactRemoval,
+  type ProspectStakeholder,
 } from './prospect-contact-model';
 import { formatDateTime } from '../lib/format';
 
@@ -104,6 +107,7 @@ interface ProspectHubDetail extends ProspectHubRow {
   siret?: string;
   notes?: string;
   outreachLanguage?: 'fr' | 'en';
+  stakeholders?: ProspectStakeholder[];
   fieldOrigins: Record<string, string>;
   audits?: ProspectAudit[];
   previews?: ProspectPreview[];
@@ -178,6 +182,13 @@ export function ProspectHubDetailPage(): JSX.Element {
   const [outreachBusy, setOutreachBusy] = useState<string | null>(null);
   const [outreachNotice, setOutreachNotice] = useState<string | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<ContactRemoval | null>(null);
+  const [newStakeholder, setNewStakeholder] = useState({ name: '', position: '' });
+  const [stakeholderEdit, setStakeholderEdit] = useState<{
+    index: number;
+    name: string;
+    position: string;
+  } | null>(null);
+  const [pendingStakeholderRemoval, setPendingStakeholderRemoval] = useState<number | null>(null);
 
   // Issue #277: deep links like #emails arrive before the record renders.
   const loaded = response.data !== undefined;
@@ -325,6 +336,41 @@ export function ProspectHubDetailPage(): JSX.Element {
     } finally {
       setSaving(false);
     }
+  };
+
+  const stakeholders = prospect.stakeholders ?? [];
+
+  /** `index` undefined appends; `entry` null removes. Resolves true once saved. */
+  const saveStakeholders = async (
+    index: number | undefined,
+    entry: ProspectStakeholder | null,
+  ): Promise<boolean> => {
+    setSaving(true);
+    try {
+      await sendJson(`/api/prospects/${prospect.prospectId}`, 'PATCH', {
+        stakeholders: stakeholdersAfterChange(stakeholders, index, entry),
+      });
+      refreshAll();
+      return true;
+    } catch {
+      setOutreachNotice(copy.actionFailed);
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addStakeholder = async (): Promise<void> => {
+    const entry = stakeholderFromInput(newStakeholder.name, newStakeholder.position);
+    if (entry === null) return;
+    if (await saveStakeholders(undefined, entry)) setNewStakeholder({ name: '', position: '' });
+  };
+
+  const saveStakeholderEdit = async (): Promise<void> => {
+    if (stakeholderEdit === null) return;
+    const entry = stakeholderFromInput(stakeholderEdit.name, stakeholderEdit.position);
+    if (entry === null) return;
+    if (await saveStakeholders(stakeholderEdit.index, entry)) setStakeholderEdit(null);
   };
 
   const fieldValue = (key: keyof typeof editedFields): string =>
@@ -958,6 +1004,138 @@ export function ProspectHubDetailPage(): JSX.Element {
                     onClick={() => void saveEmail()}
                   >
                     {copy.addEmail}
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <p className="mb-2 text-xs text-ink-muted">{contactsCopy.stakeholders}</p>
+                <ul className="grid gap-2">
+                  {stakeholders.length > 0 ? (
+                    stakeholders.map((item, index) =>
+                      stakeholderEdit?.index === index ? (
+                        <li
+                          key={`${index}-edit`}
+                          className="grid gap-2 md:grid-cols-[1fr_1fr_auto]"
+                        >
+                          <Input
+                            value={stakeholderEdit.name}
+                            onChange={(event) =>
+                              setStakeholderEdit({ ...stakeholderEdit, name: event.target.value })
+                            }
+                            aria-label={contactsCopy.stakeholderName}
+                          />
+                          <Input
+                            value={stakeholderEdit.position}
+                            onChange={(event) =>
+                              setStakeholderEdit({
+                                ...stakeholderEdit,
+                                position: event.target.value,
+                              })
+                            }
+                            aria-label={contactsCopy.stakeholderPosition}
+                          />
+                          <span className="flex items-center gap-1">
+                            <Button
+                              variant="secondary"
+                              isLoading={saving}
+                              disabled={!stakeholderEdit.name.trim()}
+                              onClick={() => void saveStakeholderEdit()}
+                            >
+                              {contactsCopy.saveStakeholder}
+                            </Button>
+                            <Button variant="ghost" onClick={() => setStakeholderEdit(null)}>
+                              {strings.common.cancel}
+                            </Button>
+                          </span>
+                        </li>
+                      ) : (
+                        <li
+                          key={`${index}-${item.name}`}
+                          className="flex flex-wrap items-center gap-2"
+                        >
+                          <span className="text-ink">{item.name}</span>
+                          {item.position !== undefined ? (
+                            <span className="text-xs text-ink-muted">{item.position}</span>
+                          ) : null}
+                          <span className="ml-auto flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={saving}
+                              aria-label={contactsCopy.editStakeholder.replace('{name}', item.name)}
+                              onClick={() =>
+                                setStakeholderEdit({
+                                  index,
+                                  name: item.name,
+                                  position: item.position ?? '',
+                                })
+                              }
+                            >
+                              <Pencil className="size-4" aria-hidden="true" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={saving}
+                              aria-label={contactsCopy.removeStakeholder.replace(
+                                '{name}',
+                                item.name,
+                              )}
+                              onClick={() => setPendingStakeholderRemoval(index)}
+                            >
+                              <X className="size-4" aria-hidden="true" />
+                            </Button>
+                          </span>
+                        </li>
+                      ),
+                    )
+                  ) : (
+                    <li className="text-sm text-ink-muted">{copy.notProvided}</li>
+                  )}
+                </ul>
+                {pendingStakeholderRemoval !== null &&
+                stakeholders[pendingStakeholderRemoval] !== undefined ? (
+                  <ConfirmDialog
+                    open
+                    onOpenChange={(open) => {
+                      if (!open) setPendingStakeholderRemoval(null);
+                    }}
+                    title={contactsCopy.removeStakeholderTitle}
+                    description={contactsCopy.removeStakeholderDescription.replace(
+                      '{name}',
+                      stakeholders[pendingStakeholderRemoval].name,
+                    )}
+                    confirmLabel={contactsCopy.confirmRemove}
+                    cancelLabel={strings.common.cancel}
+                    onConfirm={async () => {
+                      await saveStakeholders(pendingStakeholderRemoval, null);
+                      setStakeholderEdit(null);
+                    }}
+                  />
+                ) : null}
+                <div className="mt-2 grid gap-2 md:grid-cols-[1fr_1fr_auto]">
+                  <Input
+                    value={newStakeholder.name}
+                    onChange={(event) =>
+                      setNewStakeholder({ ...newStakeholder, name: event.target.value })
+                    }
+                    placeholder={contactsCopy.stakeholderName}
+                    aria-label={contactsCopy.stakeholderName}
+                  />
+                  <Input
+                    value={newStakeholder.position}
+                    onChange={(event) =>
+                      setNewStakeholder({ ...newStakeholder, position: event.target.value })
+                    }
+                    placeholder={contactsCopy.stakeholderPosition}
+                    aria-label={contactsCopy.stakeholderPosition}
+                  />
+                  <Button
+                    isLoading={saving}
+                    disabled={!newStakeholder.name.trim()}
+                    onClick={() => void addStakeholder()}
+                  >
+                    {contactsCopy.addStakeholder}
                   </Button>
                 </div>
               </div>

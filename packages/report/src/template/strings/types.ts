@@ -78,8 +78,7 @@ export interface ReportStrings {
      *  sectionTitle. */
     notALegalOpinionNote: string;
     audienceHeading: string;
-    journeysHeading: string;
-    /** Role labels only: stakeholder names arrive in plan 019. Matches
+    /** Role labels only. Matches
      *  the role vocabulary next-steps' synthesisRoles restates. */
     roleManagementLabel: string;
     roleTechnicalLabel: string;

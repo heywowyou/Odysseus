@@ -214,9 +214,7 @@ const MANUAL_TEXT_FIELDS = [
   'sirenSourceUrl',
   'raisonSociale',
   'nomCommercial',
-  'revenueBand',
   'declarationContactEmail',
-  'recipientName',
 ] as const;
 
 function isStatSector(value: unknown): value is StatSector {

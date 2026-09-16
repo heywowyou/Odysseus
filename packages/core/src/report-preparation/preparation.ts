@@ -1,21 +1,6 @@
 import { z } from 'zod';
 import type { FindingsProvenance } from '../normalize/findings-provenance.js';
-import {
-  JOURNEY_DECISIONS,
-  JOURNEY_IDS,
-  MAX_CUSTOM_COVER_QUESTION_LENGTH,
-  MAX_STAKEHOLDER_NAME_LENGTH,
-  MAX_TRIGGER_OTHER_NOTE_LENGTH,
-  REPORT_SITUATIONS,
-  REPORT_STAKEHOLDER_ROLES,
-  REPORT_TRIGGERS,
-  type JourneyDecisionKind,
-  type JourneyId,
-  type ReportSituation,
-  type ReportStakeholderRole,
-  type ReportTrigger,
-} from './vocabulary.js';
-import { MANUAL_TURNOVER_SOURCES, type ManualTurnover, type TurnoverChoice } from './turnover.js';
+import { MAX_CUSTOM_COVER_QUESTION_LENGTH } from './vocabulary.js';
 
 /**
  * The report-preparation aggregate, plan 019 step 1 (trade-off 62). One
@@ -30,11 +15,6 @@ import { MANUAL_TURNOVER_SOURCES, type ManualTurnover, type TurnoverChoice } fro
 export interface LocalizedOptionalText {
   fr?: string;
   en?: string;
-}
-
-export interface JourneyDecision {
-  journeyId: JourneyId;
-  decision: JourneyDecisionKind;
 }
 
 /** Reference to one persisted immutable French/English analysis pair. */
@@ -70,15 +50,7 @@ export interface WritingSelection {
 }
 
 export interface ReportPreparation {
-  context: {
-    situation?: ReportSituation;
-    trigger?: ReportTrigger;
-    triggerOther?: LocalizedOptionalText;
-  };
   customCoverQuestion?: LocalizedOptionalText;
-  stakeholders: Partial<Record<ReportStakeholderRole, string>>;
-  journeyDecisions: readonly JourneyDecision[];
-  turnover: TurnoverChoice;
   warningAcknowledgement?: {
     digest: string;
     acknowledgedAt: string;
@@ -90,10 +62,6 @@ export interface ReportPreparation {
 /** A fresh aggregate with no operator input and no workflow metadata. */
 export function emptyReportPreparation(): ReportPreparation {
   return {
-    context: {},
-    stakeholders: {},
-    journeyDecisions: [],
-    turnover: { useReplacement: false },
     updatedAt: new Date().toISOString(),
   };
 }
@@ -110,110 +78,14 @@ export const localizedOptionalTextSchema = z
   })
   .strict();
 
-const triggerOtherSchema = z
-  .object({
-    fr: boundedText(MAX_TRIGGER_OTHER_NOTE_LENGTH).nullable().optional(),
-    en: boundedText(MAX_TRIGGER_OTHER_NOTE_LENGTH).nullable().optional(),
-  })
-  .strict();
-
-export const reportSituationSchema = z.enum(REPORT_SITUATIONS);
-export const reportTriggerSchema = z.enum(REPORT_TRIGGERS);
-export const journeyIdSchema = z.enum(JOURNEY_IDS);
-export const journeyDecisionKindSchema = z.enum(JOURNEY_DECISIONS);
-export const reportStakeholderRoleSchema = z.enum(REPORT_STAKEHOLDER_ROLES);
-
-export const MIN_TURNOVER_YEAR = 2000;
-export const MAX_TURNOVER_YEAR = 2026;
-export const MAX_TURNOVER_EUR = 1_000_000_000_000;
-export const MAX_TURNOVER_SOURCE_NOTE_LENGTH = 120;
-
-const turnoverAmountSchema = z.number().int().positive().max(MAX_TURNOVER_EUR);
-const turnoverYearSchema = z.number().int().min(MIN_TURNOVER_YEAR).max(MAX_TURNOVER_YEAR);
-const manualTurnoverSourceSchema = z.enum(MANUAL_TURNOVER_SOURCES);
-const turnoverSourceNoteSchema = boundedText(MAX_TURNOVER_SOURCE_NOTE_LENGTH);
-
-const manualTurnoverBase = {
-  year: turnoverYearSchema,
-  source: manualTurnoverSourceSchema,
-  sourceNote: turnoverSourceNoteSchema.optional(),
-};
-
-const manualTurnoverSchema = z
-  .discriminatedUnion('kind', [
-    z
-      .object({ kind: z.literal('exact'), amountEur: turnoverAmountSchema, ...manualTurnoverBase })
-      .strict(),
-    z
-      .object({
-        kind: z.literal('range'),
-        lowerEur: turnoverAmountSchema,
-        upperEur: turnoverAmountSchema,
-        ...manualTurnoverBase,
-      })
-      .strict(),
-  ])
-  .superRefine((value, ctx) => {
-    if (value.kind === 'range' && value.lowerEur > value.upperEur) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['upperEur'],
-        message: 'turnover range upper bound must be at least the lower bound',
-      });
-    }
-    if (value.source === 'other-documented' && !value.sourceNote) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['sourceNote'],
-        message: 'other documented turnover sources require a note',
-      });
-    }
-  });
-
 /**
  * The bounded operator inputs, and the only body a preparation patch
- * accepts. Unknown keys are rejected (strict), vocabulary values outside
- * the closed sets are rejected, and overlong text is rejected rather than
- * clamped. Absent means unchanged; null means clear.
+ * accepts. Unknown keys are rejected (strict) and overlong text is
+ * rejected rather than clamped. Absent means unchanged; null means clear.
  */
 export const reportPreparationPatchSchema = z
   .object({
-    context: z
-      .object({
-        situation: reportSituationSchema.nullable().optional(),
-        trigger: reportTriggerSchema.nullable().optional(),
-        triggerOther: triggerOtherSchema.nullable().optional(),
-      })
-      .strict()
-      .optional(),
     customCoverQuestion: localizedOptionalTextSchema.nullable().optional(),
-    stakeholders: z
-      .object({
-        management: boundedText(MAX_STAKEHOLDER_NAME_LENGTH).nullable().optional(),
-        technical: boundedText(MAX_STAKEHOLDER_NAME_LENGTH).nullable().optional(),
-        communications: boundedText(MAX_STAKEHOLDER_NAME_LENGTH).nullable().optional(),
-        legal: boundedText(MAX_STAKEHOLDER_NAME_LENGTH).nullable().optional(),
-      })
-      .strict()
-      .optional(),
-    journeyDecisions: z
-      .array(
-        z
-          .object({
-            journeyId: journeyIdSchema,
-            decision: journeyDecisionKindSchema,
-          })
-          .strict(),
-      )
-      .max(JOURNEY_IDS.length)
-      .optional(),
-    turnover: z
-      .object({
-        useReplacement: z.boolean().optional(),
-        replacement: manualTurnoverSchema.nullable().optional(),
-      })
-      .strict()
-      .optional(),
   })
   .strict();
 
@@ -241,19 +113,6 @@ function applyLocalizedText(
   return { ...(fr !== undefined ? { fr } : {}), ...(en !== undefined ? { en } : {}) };
 }
 
-function applyJourneyDecisions(
-  current: readonly JourneyDecision[],
-  patch: ReportPreparationPatch['journeyDecisions'],
-): JourneyDecision[] {
-  if (!patch) return [...current];
-  // Later decisions for the same journey win; catalogue order is preserved.
-  const merged = new Map<JourneyId, JourneyDecisionKind>(
-    current.map((d) => [d.journeyId, d.decision]),
-  );
-  for (const { journeyId, decision } of patch) merged.set(journeyId, decision);
-  return [...merged.entries()].map(([journeyId, decision]) => ({ journeyId, decision }));
-}
-
 /**
  * Apply a validated patch to the operator-owned inputs. Workflow metadata
  * (acknowledgement, writing selection) passes through untouched here.
@@ -263,56 +122,13 @@ export function applyPreparationPatch(
   patch: ReportPreparationPatch,
   now: string,
 ): ReportPreparation {
-  // Optional chaining throughout: a preparation read back from persistence
-  // can lack keys whose subdocuments were empty when stored.
-  const situation =
-    patch.context?.situation === undefined
-      ? current.context?.situation
-      : (patch.context.situation ?? undefined);
-  const trigger =
-    patch.context?.trigger === undefined
-      ? current.context?.trigger
-      : (patch.context.trigger ?? undefined);
-  const triggerOther = applyLocalizedText(
-    current.context?.triggerOther,
-    patch.context?.triggerOther,
-  );
   const customCoverQuestion = applyLocalizedText(
     current.customCoverQuestion,
     patch.customCoverQuestion,
   );
 
-  const stakeholders: Partial<Record<ReportStakeholderRole, string>> = {
-    ...(current.stakeholders ?? {}),
-  };
-  for (const role of REPORT_STAKEHOLDER_ROLES) {
-    const value = patch.stakeholders?.[role];
-    if (value === undefined) continue;
-    if (value === null) delete stakeholders[role];
-    else stakeholders[role] = value;
-  }
-
-  const currentTurnover = current.turnover ?? { useReplacement: false };
-  const replacement: ManualTurnover | undefined =
-    patch.turnover?.replacement === undefined
-      ? currentTurnover.replacement
-      : (patch.turnover.replacement ?? undefined);
-  const turnover: TurnoverChoice = {
-    ...(currentTurnover.detected ? { detected: currentTurnover.detected } : {}),
-    ...(replacement ? { replacement } : {}),
-    useReplacement: patch.turnover?.useReplacement ?? currentTurnover.useReplacement,
-  };
-
   return {
-    context: {
-      ...(situation !== undefined ? { situation } : {}),
-      ...(trigger !== undefined ? { trigger } : {}),
-      ...(triggerOther !== undefined ? { triggerOther } : {}),
-    },
     ...(customCoverQuestion !== undefined ? { customCoverQuestion } : {}),
-    stakeholders,
-    journeyDecisions: applyJourneyDecisions(current.journeyDecisions ?? [], patch.journeyDecisions),
-    turnover,
     ...(current.warningAcknowledgement
       ? { warningAcknowledgement: current.warningAcknowledgement }
       : {}),
