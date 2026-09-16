@@ -81,6 +81,10 @@ export function computeStatistics(
   manifest: AuditManifest,
 ): ReportStatistics {
   const coverage = summarizeAuditCoverage(manifest);
+  // Issue #291: page figures count distinct analysed (visited) pages only.
+  const scopePageUrls = new Set(
+    manifest.pages.filter((page) => page.status === 'visited').map((page) => page.url),
+  );
   const pagesScanned =
     coverage.kind === 'current'
       ? coverage.content.completed + coverage.content.partial
@@ -155,8 +159,8 @@ export function computeStatistics(
     serious,
     moderate,
     minor,
-    wcagCriteriaFailingCount: buildConformanceRollup(findings).length,
-    pagesWithWcagFailure: pagesWithWcagFailures(findings),
+    wcagCriteriaFailingCount: buildConformanceRollup(findings, scopePageUrls).length,
+    pagesWithWcagFailure: pagesWithWcagFailures(findings, scopePageUrls),
     accessibilityCount,
     seoRenderingCount,
     categoryCounts,

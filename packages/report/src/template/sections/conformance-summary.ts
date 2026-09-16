@@ -110,9 +110,12 @@ export function renderConformanceSummary(
   ordinal: number,
   findings: Finding[],
   language: ReportLanguage,
+  scopePageUrls?: ReadonlySet<string>,
 ): string {
-  const rows = buildConformanceRollup(findings);
-  const heuristicRows = buildHeuristicRollup(findings);
+  // Issue #291: same visited-scope confinement as the priorities' own
+  // page figures, so the WCAG table can never exceed the analysed total.
+  const rows = buildConformanceRollup(findings, scopePageUrls);
+  const heuristicRows = buildHeuristicRollup(findings, scopePageUrls);
   const c = strings.conformanceSummary;
 
   const multiCriterionNote = hasMultiCriterionFinding(findings)

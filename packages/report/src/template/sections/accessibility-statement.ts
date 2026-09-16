@@ -67,11 +67,13 @@ export function renderAccessibilityStatement(
   findings: Finding[],
   obligationAssessment: ObligationAssessment | undefined,
   manualFields?: AuditManualFields,
+  scopePageUrls?: ReadonlySet<string>,
 ): string {
   if (!isArticle47Regime(obligationAssessment)) return '';
 
   const a = strings.accessibilityStatement;
-  const rows = buildConformanceRollup(findings);
+  // Issue #291: same visited-scope confinement as every other page count.
+  const rows = buildConformanceRollup(findings, scopePageUrls);
   // item 4: reads the live title of the priorities section (section-04)
   // from the same registry the TOC uses, instead of quoting a fixed
   // string that could (and did) drift from the section's actual name.

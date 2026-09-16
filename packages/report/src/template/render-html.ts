@@ -273,7 +273,13 @@ function renderBody(
     includedSectionIds.has('section-06')
       ? renderObservations(strings, ord('section-06'), diverted, analysis.obligationAssessment)
       : '',
-    renderConformanceSummary(strings, ord('section-07'), resolvedFindings, analysis.language),
+    renderConformanceSummary(
+      strings,
+      ord('section-07'),
+      resolvedFindings,
+      analysis.language,
+      scopePageUrls,
+    ),
     renderRenderDiffEvidence(
       strings,
       ord('section-08'),
@@ -294,6 +300,7 @@ function renderBody(
           resolvedFindings,
           analysis.obligationAssessment,
           manualFields,
+          scopePageUrls,
         )
       : '',
     renderNextSteps(
