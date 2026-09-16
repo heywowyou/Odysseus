@@ -143,7 +143,7 @@ export function renderNextSteps(
     <p style="font-size:11px;opacity:0.55;margin-top:var(--space-4)">${escapeHtml(authorship)}</p>
     <p style="font-size:11px;opacity:0.55;margin-top:4px">${escapeHtml(issuerBlock)}</p>
     <p style="font-size:11px;opacity:0.55;margin-top:4px;max-width:70ch">${escapeHtml(n.liabilityStatement)}</p>
-    <p data-provenance style="font-size:9px;opacity:0.4;margin-top:var(--space-3)">${escapeHtml(provenance)}</p>
+    <p data-provenance style="font-size:9px;opacity:0.55;margin-top:var(--space-3)">${escapeHtml(provenance)}</p>
   `,
     '',
     'section-14',

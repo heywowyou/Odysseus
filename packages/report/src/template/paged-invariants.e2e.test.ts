@@ -128,14 +128,15 @@ function addStartHereBoundaryPressure(html: string): string {
 /** Issue #303: leaves the annex's first category heading just enough room to
  * print at a page foot while its first rule group moves to the next page -
  * the shape two delivered reports shipped ("Référencement (SEO)", "Rendu",
- * "Visibilité dans les moteurs d'IA (GEO)"). 140mm was found by sweeping
- * filler heights through the real pipeline; neighbouring heights resolve on
- * their own, which is exactly why the defect survived the unpressured
- * fixture. */
+ * "Visibilité dans les moteurs d'IA (GEO)"). The height was found by
+ * sweeping filler heights through the real pipeline; neighbouring heights
+ * resolve on their own, which is exactly why the defect survived the
+ * unpressured fixture. Re-swept at 158mm (155 to 160 strand) after issue
+ * #318 reflowed the analysed-page list above the first category. */
 function addAppendixCategoryBoundaryPressure(html: string): string {
   return html.replace(
     '<div class="appendix-category"',
-    '<div style="height:140mm" data-appendix-category-pressure></div><div class="appendix-category"',
+    '<div style="height:158mm" data-appendix-category-pressure></div><div class="appendix-category"',
   );
 }
 

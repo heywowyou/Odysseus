@@ -922,7 +922,8 @@ textarea.input {
 .theme-rule-id {
   font-size: 9.5px;
   white-space: nowrap;
-  color: var(--color-neutral-500);
+  /* neutral-500 measured 4.19:1 on the card ground; neutral-400 clears 4.5:1. */
+  color: var(--color-neutral-400);
 }
 .theme-note {
   margin: var(--space-3) 0 0;
