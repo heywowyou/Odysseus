@@ -289,6 +289,10 @@ describe('item 1.8: the accessibility-occurrences tile excludes heuristic occurr
     expect(html).toContain('>10</div>');
     expect(html).not.toContain('>84</div>');
     expect(html).toContain('exclut 74 occurrences');
+    // Issue #307: the note names the count it qualifies and sits under that
+    // tile, not under the distinct-findings tile it was read against.
+    expect(html).toContain('accessibilité exclut 74 occurrences');
+    expect(html).toContain('class="statistics-note statistics-note-occurrences"');
   });
 
   it('renders no footnote when there is no heuristic occurrence to exclude', async () => {

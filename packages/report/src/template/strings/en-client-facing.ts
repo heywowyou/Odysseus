@@ -17,8 +17,9 @@ export function applyEnglishClientFacingCopy(strings: ReportStrings): ReportStri
       heading: 'What to address first',
       situationHeading: 'What this diagnostic helps you decide',
       situationBody:
-        'This report gives you a clear view of your site across four areas: digital ' +
-        'accessibility, organic search, visibility in AI assistants, and rendering quality. ' +
+        'This report gives you a clear view of your site across five areas: digital ' +
+        'accessibility, loading speed, organic search, visibility in AI assistants, and ' +
+        'rendering quality. ' +
         'It then turns the findings into ranked fixes, separating what needs attention now, ' +
         'what can wait, and what needs further verification before work begins.',
       complicationHeading: 'What needs your attention',
@@ -110,8 +111,8 @@ export function applyEnglishClientFacingCopy(strings: ReportStrings): ReportStri
         'The diagnostic found {total} distinct findings, including {actionable} that are critical ' +
         'or serious ({critical} critical and {serious} serious).',
       coveredByPrioritiesTemplate:
-        'The priorities below cover {covered} of them; the remainder stay documented by severity ' +
-        'in "{remainingSection}".',
+        'The priorities in the "{prioritiesSection}" section cover {covered} of them; the ' +
+        'remainder stay documented by severity in "{remainingSection}".',
     },
     themes: {
       ...strings.themes,

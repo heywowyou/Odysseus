@@ -193,7 +193,7 @@ export function renderStatistics(
   // heading stays constant whether or not the note renders.
   const heuristicOccurrencesNote =
     stats.accessibilityHeuristicOccurrences > 0
-      ? `<p class="statistics-note">${escapeHtml(
+      ? `<p class="statistics-note statistics-note-occurrences">${escapeHtml(
           fillTemplate(s.heuristicOccurrencesExcludedNoteTemplate, {
             count: n(stats.accessibilityHeuristicOccurrences),
           }),
@@ -229,12 +229,18 @@ export function renderStatistics(
     ? `<p class="statistics-note">${escapeHtml(ownershipSentence)}</p>`
     : '';
 
+  // Issue #307: the heuristic note used to come first and so filled the
+  // left column, directly under the distinct-findings tile, where "this
+  // figure excludes 260 occurrences" read as a claim about the findings
+  // count. It now names the count it qualifies and sits in the right
+  // column, under the accessibility-occurrences tile it actually excludes
+  // from (.statistics-note-occurrences in nocturne.css).
   const footnotes =
     heuristicOccurrencesNote ||
     criticalDriverNote ||
     thirdPartyOccurrencesNote ||
     priorityOwnershipNote
-      ? `<div class="statistics-notes">${heuristicOccurrencesNote}${criticalDriverNote}${thirdPartyOccurrencesNote}${priorityOwnershipNote}</div>`
+      ? `<div class="statistics-notes">${criticalDriverNote}${heuristicOccurrencesNote}${thirdPartyOccurrencesNote}${priorityOwnershipNote}</div>`
       : '<div class="statistics-notes"></div>';
 
   return sheet(

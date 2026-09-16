@@ -343,15 +343,35 @@ describe('plan 019: renderReportIntro consumes the preparation preview', () => {
   });
 
   it('renders the automatic hook when it carries findings evidence', () => {
+    const finding = buildFinding({ findingId: 'f001', pageUrls: ['https://example.com/a'] });
     const html = renderReportIntro(
       getStrings('fr'),
       1,
       buildAnalysis([]) as never,
-      [],
-      undefined,
+      [finding],
+      [buildPriority('Contrastes', 1, [finding])],
       frPreview,
     );
     expect(html).toContain(
+      escapeHtml("L'accessibilité est le sujet le plus urgent de ce rapport."),
+    );
+  });
+
+  // Issue #307: the hook said accessibility stood out while the next page
+  // said priority 1 (structured data) was tied to no accessibility criterion.
+  it('omits a family hook that the top-ranked priority contradicts', () => {
+    const finding = buildFinding({ findingId: 'f001', pageUrls: ['https://example.com/a'] });
+    const seoPriority = buildPriority('Données structurées', 1, [finding]);
+    seoPriority.theme.category = 'seo';
+    const html = renderReportIntro(
+      getStrings('fr'),
+      1,
+      buildAnalysis([]) as never,
+      [finding],
+      [seoPriority],
+      frPreview,
+    );
+    expect(html).not.toContain(
       escapeHtml("L'accessibilité est le sujet le plus urgent de ce rapport."),
     );
   });

@@ -30,6 +30,18 @@ const weightedTotal = (
     0,
   );
 
+/** Issue #307: the concrete family a single category belongs to, so the
+ *  report can check the findings-weighted hook against the category of the
+ *  priority it actually ranks first. */
+export function hookFamilyForCategory(
+  category: FindingCategory,
+): Exclude<HookFamily, 'mixed'> | undefined {
+  for (const [family, categories] of Object.entries(HOOK_FAMILY_CATEGORIES)) {
+    if (categories.includes(category)) return family as Exclude<HookFamily, 'mixed'>;
+  }
+  return undefined;
+}
+
 export interface HookFamilyResolution {
   family: HookFamily;
   /** Weighted total per concrete family, for tests and typed previews. */

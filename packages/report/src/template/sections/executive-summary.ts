@@ -208,6 +208,9 @@ function renderCoveredByPrioritiesNote(
   const e = strings.executiveSummary;
   const text = fillTemplate(e.coveredByPrioritiesTemplate, {
     covered: formatNumber(covered, analysis.language),
+    // Issue #307: this sheet precedes the priorities by several pages, so
+    // the sentence names their section instead of saying "below".
+    prioritiesSection: sectionTitle('section-04', strings),
     remainingSection: sectionTitle('section-05b', strings),
   });
   return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:var(--measure-prose)">${escapeHtml(text)}</p>`;

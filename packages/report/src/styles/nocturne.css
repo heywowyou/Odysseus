@@ -271,6 +271,11 @@ h4 {
   font-size: 11px;
   line-height: 1.45;
 }
+/* Issue #307: under the accessibility-occurrences tile, never under the
+   distinct-findings tile the left column sits beneath. */
+.statistics-note-occurrences {
+  grid-column: 2;
+}
 .statistics-breakdown-heading {
   display: flex;
   align-items: center;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveHookFamily } from './hook-family.js';
+import { hookFamilyForCategory, resolveHookFamily } from './hook-family.js';
 import { buildFinding } from './test-fixtures.js';
 import type { Finding } from '../types/findings.js';
 
@@ -84,5 +84,16 @@ describe('resolveHookFamily', () => {
       buildFinding({ source: 'custom', category: 'seo', severity: 'minor' }),
     ];
     expect(resolveHookFamily(findings)).toEqual(resolveHookFamily([...findings].reverse()));
+  });
+});
+
+// Issue #307: the report checks the hook against its top priority's category.
+describe('hookFamilyForCategory', () => {
+  it('maps each category to the family whose weight it feeds', () => {
+    expect(hookFamilyForCategory('accessibility')).toBe('accessibility');
+    expect(hookFamilyForCategory('performance')).toBe('speed-and-booking');
+    expect(hookFamilyForCategory('rendering')).toBe('speed-and-booking');
+    expect(hookFamilyForCategory('seo')).toBe('search-and-ai-visibility');
+    expect(hookFamilyForCategory('geo')).toBe('search-and-ai-visibility');
   });
 });

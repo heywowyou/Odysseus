@@ -55,9 +55,10 @@ export function applyFrenchClientFacingCopy(strings: ReportStrings): ReportStrin
       heading: '',
       situationHeading: 'Ce que ce diagnostic vous permet de décider',
       situationBody:
-        "Ce rapport vous donne une vue d'ensemble de votre site sous quatre angles : " +
-        "l'accessibilité numérique, le référencement naturel, la visibilité dans les " +
-        'assistants IA et la qualité de son rendu. Il transforme ensuite les constats en ' +
+        "Ce rapport vous donne une vue d'ensemble de votre site sous cinq angles : " +
+        "l'accessibilité numérique, la vitesse de chargement, le référencement naturel, la " +
+        'visibilité dans les assistants IA et la qualité de son rendu. Il transforme ensuite ' +
+        'les constats en ' +
         'priorités de correction pour distinguer ce qui doit être traité maintenant, ce qui ' +
         'peut attendre et ce qui demande une vérification complémentaire avant intervention.',
       complicationHeading: 'Ce qui mérite votre attention',
@@ -157,8 +158,8 @@ export function applyFrenchClientFacingCopy(strings: ReportStrings): ReportStrin
         'Le diagnostic a relevé {total} constats distincts, dont {actionable} critiques ou ' +
         'sérieux ({critical} critiques et {serious} sérieux).',
       coveredByPrioritiesTemplate:
-        'Les priorités présentées ci-dessous en couvrent {covered} ; les autres restent ' +
-        'documentés par gravité dans « {remainingSection} ».',
+        'Les priorités présentées dans la section « {prioritiesSection} » en couvrent ' +
+        '{covered} ; les autres restent documentés par gravité dans « {remainingSection} ».',
     },
     themes: {
       ...strings.themes,

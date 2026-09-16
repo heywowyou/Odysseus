@@ -24,7 +24,7 @@ export const fr: ReportStrings = {
     heading: 'Situation, constats et question',
     situationHeading: 'La situation',
     situationBody:
-      "Ce rapport répond à un besoin simple : disposer d'un état des lieux factuel du site, établi par des tests automatisés et reproductibles, pour décider quoi corriger et dans quel ordre. Des outils déterministes ont visité le périmètre analysé et comparé chaque page à des critères publics : accessibilité (WCAG 2.2 niveau AA), référencement naturel (SEO), visibilité auprès des assistants IA (GEO), et rendu sans JavaScript. Chaque constat listé dans ce rapport provient d'un de ces tests : rien n'est inventé, rien n'est deviné.",
+      "Ce rapport répond à un besoin simple : disposer d'un état des lieux factuel du site, établi par des tests automatisés et reproductibles, pour décider quoi corriger et dans quel ordre. Des outils déterministes ont visité le périmètre analysé et comparé chaque page à des critères publics : accessibilité (WCAG 2.2 niveau AA), vitesse de chargement (Core Web Vitals), référencement naturel (SEO), visibilité auprès des assistants IA (GEO), et rendu sans JavaScript. Chaque constat listé dans ce rapport provient d'un de ces tests : rien n'est inventé, rien n'est deviné.",
     complicationHeading: 'Ce que le diagnostic relève',
     complicationBodyTemplate:
       "L'analyse a relevé {findings}, dont {criticalSerious} de gravité critique ou sérieuse, sur au moins {pages} du périmètre analysé. Le regroupement en {priorities} indique par où commencer.",
@@ -54,7 +54,7 @@ export const fr: ReportStrings = {
     findingsTileLabel: 'constats distincts',
     accessibilityOccurrencesTileLabel: "occurrences d'accessibilité",
     heuristicOccurrencesExcludedNoteTemplate:
-      "Ce chiffre exclut {count} occurrences supplémentaires provenant d'un signal heuristique sur la qualité des textes alternatifs, qui n'est pas un test de conformité déterministe (voir la section « Signaux à vérifier »).",
+      "Le nombre d'occurrences d'accessibilité exclut {count} occurrences supplémentaires provenant d'un signal heuristique sur la qualité des textes alternatifs, qui n'est pas un test de conformité déterministe (voir la section « Signaux à vérifier »). Les constats correspondants restent comptés parmi les constats distincts.",
     criticalDriverNoteTemplate: 'Ces constats critiques proviennent uniquement de : {rules}.',
     // P1.2 (2026-08-21 La Corniche feedback pass): this fact determines
     // who the client calls tomorrow morning - it used to be buried on
@@ -297,7 +297,7 @@ export const fr: ReportStrings = {
     summaryCountsTemplate:
       "L'audit a identifié {total} constats au total, dont {actionable} critiques ou sérieux ({critical} critiques et {serious} sérieux).",
     coveredByPrioritiesTemplate:
-      'Parmi eux, {covered} sont couverts par les priorités ci-dessous ; les autres sont listés par sévérité dans « {remainingSection} ».',
+      'Parmi eux, {covered} sont couverts par les priorités de la section « {prioritiesSection} » ; les autres sont listés par sévérité dans « {remainingSection} ».',
   },
   legalExposure: {
     eyebrow: 'Exposition légale',

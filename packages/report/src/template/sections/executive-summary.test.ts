@@ -387,7 +387,12 @@ describe('fix #1 (2026-08-25 report review): the covered-by-priorities bridging 
     const findings = [buildFinding('f001'), buildFinding('f002')];
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
 
-    expect(html).toContain('Les priorités présentées ci-dessous en couvrent 1');
+    // Issue #307: the priorities sit several pages later, so the sentence
+    // names their section rather than pointing "below".
+    expect(html).toMatch(
+      /Les priorités présentées dans la section «\s*Priorités de correction\s*» en couvrent 1/,
+    );
+    expect(html).not.toContain('ci-dessous');
     expect(html).toContain('Autres constats');
   });
 
@@ -396,7 +401,7 @@ describe('fix #1 (2026-08-25 report review): the covered-by-priorities bridging 
     const findings = [buildFinding('f001')];
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
 
-    expect(html).not.toContain('Les priorités présentées ci-dessous en couvrent');
+    expect(html).not.toContain('en couvrent');
   });
 
   it('renders nothing when no priority is rendered at all', () => {
@@ -404,7 +409,7 @@ describe('fix #1 (2026-08-25 report review): the covered-by-priorities bridging 
     const findings = [buildFinding('f001')];
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
 
-    expect(html).not.toContain('Les priorités présentées ci-dessous en couvrent');
+    expect(html).not.toContain('en couvrent');
   });
 });
 

@@ -1,3 +1,4 @@
+import { hookFamilyForCategory } from '@odysseus/core';
 import type { Finding, PreparationPreviewLanguage } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
@@ -112,8 +113,24 @@ export function renderReportIntro(
   // Plan 019: the automatic opening hook, only when preparation resolved
   // it from real findings evidence. Evidence-unavailable mixed copy stays
   // unrendered: it would read as a measured conclusion when it is not.
+  //
+  // Issue #307: the hook family is weighted over every finding, while the
+  // executive summary speaks about the top-ranked priority. A report whose
+  // findings were mostly accessibility opened on "L'accessibilité ressort
+  // comme l'un des principaux sujets", and the next page said priority 1
+  // (structured data) is tied to no accessibility criterion. A concrete
+  // family hook now renders only when the top priority belongs to that
+  // family; otherwise the page opens on the situation block, as it does
+  // without preparation.
+  const topPriorityCategory = priorities
+    ? priorities[0]?.theme.category
+    : selectRenderedThemes(analysis.themes, findingsById)[0]?.category;
+  const hookAgreesWithTopPriority =
+    preparation?.hook.family === 'mixed' ||
+    (topPriorityCategory !== undefined &&
+      hookFamilyForCategory(topPriorityCategory) === preparation?.hook.family);
   const hookBlock =
-    preparation && !preparation.hook.evidenceUnavailable
+    preparation && !preparation.hook.evidenceUnavailable && hookAgreesWithTopPriority
       ? `<p style="font-size:14px;font-weight:500;margin:0 0 var(--space-4);max-width:var(--measure-prose)">${escapeHtml(preparation.hook.value)}</p>`
       : '';
 

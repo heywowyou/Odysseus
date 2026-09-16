@@ -23,7 +23,7 @@ export const en: ReportStrings = {
     heading: 'Situation, findings, and question',
     situationHeading: 'The situation',
     situationBody:
-      'This report answers one simple need: a factual picture of the site, established by automated, reproducible tests, so you can decide what to fix and in what order. Deterministic tools visited the analyzed scope and compared every page against public criteria: accessibility (WCAG 2.2 level AA), search engine optimization (SEO), visibility to AI assistants (GEO), and rendering without JavaScript. Every finding listed in this report comes from one of those tests: nothing is invented, nothing is guessed.',
+      'This report answers one simple need: a factual picture of the site, established by automated, reproducible tests, so you can decide what to fix and in what order. Deterministic tools visited the analyzed scope and compared every page against public criteria: accessibility (WCAG 2.2 level AA), loading speed (Core Web Vitals), search engine optimization (SEO), visibility to AI assistants (GEO), and rendering without JavaScript. Every finding listed in this report comes from one of those tests: nothing is invented, nothing is guessed.',
     complicationHeading: 'What the diagnostic found',
     complicationBodyTemplate:
       'The analysis raised {findings}, {criticalSerious} of them critical or serious, present on at least {pages} of the analyzed scope. Grouping them into {priorities} indicates where to start.',
@@ -53,7 +53,7 @@ export const en: ReportStrings = {
     findingsTileLabel: 'distinct findings',
     accessibilityOccurrencesTileLabel: 'accessibility occurrences',
     heuristicOccurrencesExcludedNoteTemplate:
-      'This figure excludes {count} further occurrences from a heuristic signal on alt-text quality, which is not a deterministic conformance test (see the "Signals to verify" section).',
+      'The accessibility occurrence count excludes {count} further occurrences from a heuristic signal on alt-text quality, which is not a deterministic conformance test (see the "Signals to verify" section). The findings behind them are still counted among the distinct findings.',
     criticalDriverNoteTemplate: 'These critical findings come only from: {rules}.',
     thirdPartyOccurrencesNoteTemplate:
       // B6: see the French entry for why this names the containing
@@ -268,7 +268,7 @@ export const en: ReportStrings = {
     summaryCountsTemplate:
       'The audit identified {total} findings in total, including {actionable} that are critical or serious ({critical} critical and {serious} serious).',
     coveredByPrioritiesTemplate:
-      '{covered} of these are covered by the priorities below; the rest are listed by severity in "{remainingSection}".',
+      '{covered} of these are covered by the priorities in the "{prioritiesSection}" section; the rest are listed by severity in "{remainingSection}".',
   },
   legalExposure: {
     eyebrow: 'Legal exposure',
