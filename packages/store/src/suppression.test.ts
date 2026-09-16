@@ -5,7 +5,12 @@ import {
   normalizeDomainForHash,
 } from '@odysseus/core';
 import { createSuppressionModel } from './schemas/suppression.schema.js';
-import { addSuppressionEntry, isSuppressed } from './suppression.js';
+import {
+  addSuppressionEntry,
+  findSuppressedDomains,
+  findSuppressionMatches,
+  isSuppressed,
+} from './suppression.js';
 import { probeMongoAvailability, scopedMongoTestUri } from './test-support.js';
 
 const { available, connection } = await probeMongoAvailability(scopedMongoTestUri('suppression'));
@@ -90,5 +95,49 @@ describe.skipIf(!available)('suppression idempotency', () => {
       reason: 'r',
     });
     expect(await Suppression().countDocuments({})).toBe(2);
+  });
+});
+
+describe.skipIf(!available)('address-only suppression', () => {
+  const Suppression = () => createSuppressionModel(connection!);
+
+  beforeEach(async () => {
+    await Suppression().deleteMany({});
+  });
+
+  const objection = (address: string, addressOnly?: boolean) => ({
+    domain: address.slice(address.indexOf('@') + 1),
+    address,
+    reasonCode: 'objection' as const,
+    reason: 'opt-out form on the public site',
+    ...(addressOnly === undefined ? {} : { addressOnly }),
+  });
+
+  it('suppresses the address but not its domain', async () => {
+    await addSuppressionEntry(connection!, objection('someone@gmail.com', true));
+
+    expect(await isSuppressed(connection!, 'gmail.com', 'someone@gmail.com')).toBe(true);
+    expect(await isSuppressed(connection!, 'gmail.com', 'other@gmail.com')).toBe(false);
+    expect(await isSuppressed(connection!, 'gmail.com')).toBe(false);
+    expect(await findSuppressedDomains(connection!, ['gmail.com'])).toEqual(new Set());
+    const matches = await findSuppressionMatches(
+      connection!,
+      ['gmail.com'],
+      ['someone@gmail.com', 'other@gmail.com'],
+    );
+    expect(matches.domains).toEqual(new Set());
+    expect(matches.addresses).toEqual(new Set(['someone@gmail.com']));
+  });
+
+  it('widens to the domain when the same cause later arrives domain-wide, and never narrows', async () => {
+    await addSuppressionEntry(connection!, objection('contact@hotel.example', true));
+    expect(await isSuppressed(connection!, 'hotel.example')).toBe(false);
+
+    await addSuppressionEntry(connection!, objection('contact@hotel.example'));
+    expect(await isSuppressed(connection!, 'hotel.example')).toBe(true);
+
+    await addSuppressionEntry(connection!, objection('contact@hotel.example', true));
+    expect(await isSuppressed(connection!, 'hotel.example')).toBe(true);
+    expect(await Suppression().countDocuments({})).toBe(1);
   });
 });

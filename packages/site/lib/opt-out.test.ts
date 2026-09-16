@@ -2,7 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createOptOutStore, isPlausibleEmail, optOutLinkKeyForToken } from './opt-out';
+import {
+  clientAddressOf,
+  createOptOutStore,
+  createSubmissionLimiter,
+  isPlausibleEmail,
+  isSameOriginPost,
+  OPT_OUT_SUBMISSIONS_PER_WINDOW,
+  OPT_OUT_WINDOW_MS,
+  optOutLinkKeyForToken,
+} from './opt-out';
 
 interface KeyFixture {
   malformedTokens: string[];
@@ -104,5 +113,39 @@ describe('opt-out store', () => {
   it('checks email shape', () => {
     expect(isPlausibleEmail('contact@hotel.fr')).toBe(true);
     expect(isPlausibleEmail('not an email')).toBe(false);
+  });
+});
+
+describe('opt-out form abuse bounds', () => {
+  const post = (headers: Record<string, string>) =>
+    new Request('https://www.odysseusaudit.com/desinscription/envoyer', {
+      method: 'POST',
+      headers,
+    });
+
+  it('accepts a post from the site itself or with no Origin, and refuses another site', () => {
+    expect(isSameOriginPost(post({ origin: 'https://www.odysseusaudit.com' }))).toBe(true);
+    expect(isSameOriginPost(post({}))).toBe(true);
+    expect(isSameOriginPost(post({ origin: 'https://attacker.example' }))).toBe(false);
+    expect(isSameOriginPost(post({ origin: 'null' }))).toBe(false);
+  });
+
+  it('limits one client per window and resets after it', () => {
+    let now = 0;
+    const limiter = createSubmissionLimiter(() => now);
+    for (let n = 0; n < OPT_OUT_SUBMISSIONS_PER_WINDOW; n++) {
+      expect(limiter.allow('198.51.100.1')).toBe(true);
+    }
+    expect(limiter.allow('198.51.100.1')).toBe(false);
+    expect(limiter.allow('198.51.100.2')).toBe(true);
+    now += OPT_OUT_WINDOW_MS;
+    expect(limiter.allow('198.51.100.1')).toBe(true);
+  });
+
+  it('reads the first forwarded address', () => {
+    expect(clientAddressOf(post({ 'x-forwarded-for': '203.0.113.9, 10.0.0.1' }))).toBe(
+      '203.0.113.9',
+    );
+    expect(clientAddressOf(post({}))).toBe('unknown');
   });
 });

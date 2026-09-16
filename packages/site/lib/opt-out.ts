@@ -131,3 +131,47 @@ export function optOutStoreFromEnvironment(): OptOutStore {
     writeSecretAccessKey: required('OPT_OUT_BUCKET_SECRET_KEY'),
   });
 }
+
+/** True when a form post comes from this site's own page. Browsers send
+ *  Origin on every cross-site form post, so a mismatch is another site
+ *  posting on a visitor's behalf; a missing header (old clients, curl) is
+ *  let through, since an opt-out never needs proof of identity. */
+export function isSameOriginPost(request: Request): boolean {
+  const origin = request.headers.get('origin');
+  if (origin === null) return true;
+  try {
+    return new URL(origin).host === new URL(request.url).host;
+  } catch {
+    return false;
+  }
+}
+
+/** Submissions one client may make per window before further posts are
+ *  dropped. Generous for a person, tight for a script flooding the drop box.
+ *  Per serverless instance, so a bound on bursts rather than a global quota. */
+export const OPT_OUT_SUBMISSIONS_PER_WINDOW = 5;
+export const OPT_OUT_WINDOW_MS = 10 * 60 * 1000;
+const MAX_TRACKED_CLIENTS = 5_000;
+
+export function createSubmissionLimiter(now: () => number = Date.now) {
+  const windows = new Map<string, { startedAt: number; count: number }>();
+  return {
+    /** Counts one submission and says whether it is within the limit. */
+    allow(client: string): boolean {
+      const at = now();
+      const current = windows.get(client);
+      if (current === undefined || at - current.startedAt >= OPT_OUT_WINDOW_MS) {
+        if (windows.size >= MAX_TRACKED_CLIENTS) windows.clear();
+        windows.set(client, { startedAt: at, count: 1 });
+        return true;
+      }
+      current.count += 1;
+      return current.count <= OPT_OUT_SUBMISSIONS_PER_WINDOW;
+    },
+  };
+}
+
+/** The client address Vercel's edge put first in x-forwarded-for. */
+export function clientAddressOf(request: Request): string {
+  return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+}

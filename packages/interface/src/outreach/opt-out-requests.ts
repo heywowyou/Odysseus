@@ -7,8 +7,14 @@
  * second time), which is what makes that retry safe.
  *
  * Whatever address the visitor submits is blacklisted, token or not: an
- * opt-out never needs proof of identity. The token only decides whether the
- * form was prefilled, and lets the link object be cleaned up.
+ * opt-out never needs proof of identity. What the token decides is the
+ * reach (trade-off 89, amended for issue #341). The whole email domain is
+ * suppressed only when the request came through a link we sent to an
+ * address on that same domain and the domain is not a free-mail provider.
+ * Otherwise only the address is: an anonymous form post must not let anyone
+ * block a business they do not speak for, and one objection from a Gmail
+ * user must not silence every prospect whose contact uses Gmail. A matching
+ * prospect is still opted out, its previews revoked and its threads closed.
  */
 
 import {
@@ -20,6 +26,7 @@ import {
   recordProspectOutcome,
   revokeOutreachPreview,
 } from '@odysseus/store';
+import { isFreeMailDomain } from '@odysseus/core';
 import type { Connection } from 'mongoose';
 import { logger } from '../logger.js';
 import { createConfiguredMailboxDraftAdapter } from './configured-mailbox-draft-adapter.js';
@@ -52,16 +59,37 @@ export interface ProcessOptOutRequestsResult {
   failed: number;
 }
 
+function domainOfAddress(address: string): string {
+  const normalized = address.trim().toLowerCase();
+  return normalized.slice(normalized.lastIndexOf('@') + 1);
+}
+
+/** The address our emailed link was issued to, when the request carries a
+ *  token whose link object still exists. */
+async function linkedAddressFor(bucket: OptOutBucket, token: unknown): Promise<string | undefined> {
+  if (typeof token !== 'string' || !isValidPreviewToken(token)) return undefined;
+  const link = (await bucket.getJson(deriveOptOutLinkKey(hashPreviewToken(token)))) as {
+    address?: unknown;
+  } | null;
+  return typeof link?.address === 'string' ? link.address : undefined;
+}
+
 async function applyOptOut(
   connection: Connection,
   publisher: PreviewPublisher,
   rawAddress: string,
+  linkedAddress: string | undefined,
 ): Promise<void> {
   const address = rawAddress.trim().toLowerCase();
-  const emailDomain = address.slice(address.lastIndexOf('@') + 1);
+  const emailDomain = domainOfAddress(address);
+  const domainWide =
+    linkedAddress !== undefined &&
+    domainOfAddress(linkedAddress) === emailDomain &&
+    !isFreeMailDomain(emailDomain);
   await addSuppressionEntry(connection, {
     domain: emailDomain,
     address,
+    addressOnly: !domainWide,
     reasonCode: 'objection',
     reason: OPT_OUT_REASON,
   });
@@ -104,8 +132,13 @@ export async function processOptOutRequests(
         result.discarded += 1;
         continue;
       }
-      await applyOptOut(connection, publisher, request['address']);
       const token = request['token'];
+      await applyOptOut(
+        connection,
+        publisher,
+        request['address'],
+        await linkedAddressFor(bucket, token),
+      );
       if (typeof token === 'string' && isValidPreviewToken(token)) {
         await bucket.delete(deriveOptOutLinkKey(hashPreviewToken(token)));
       }

@@ -19,6 +19,11 @@ import { createSuppressionModel, DOMAIN_ONLY_ADDRESS_KEY } from './schemas/suppr
 export interface AddSuppressionEntryInput {
   domain: string;
   address?: string;
+  /** Suppress the address alone, leaving other addresses at its domain
+   *  contactable. Ignored without an address. A later write for the same
+   *  cause without this flag widens the row back to its domain; an
+   *  address-only write never narrows an existing domain-wide row. */
+  addressOnly?: boolean;
   reasonCode: SuppressionReasonCode;
   reason: string;
 }
@@ -50,6 +55,8 @@ export async function addSuppressionEntry(
     $or: [{ addressKey }, { addressKey: { $exists: false }, ...legacyShape }],
   };
 
+  const addressOnly = input.addressOnly === true && addressHash !== undefined;
+
   try {
     await SuppressionModel.updateOne(
       filter,
@@ -59,10 +66,12 @@ export async function addSuppressionEntry(
           domainHash,
           ...(addressHash !== undefined ? { addressHash } : {}),
           addressKey,
+          ...(addressOnly ? { scope: 'address' } : {}),
           reasonCode: input.reasonCode,
           reason: input.reason,
           createdAt: new Date(),
         },
+        ...(addressOnly ? {} : { $unset: { scope: '' } }),
       },
       { upsert: true },
     );
@@ -89,8 +98,8 @@ export async function isSuppressed(
   const addressHash =
     address !== undefined ? hashSuppressionValue(normalizeAddressForHash(address)) : undefined;
 
-  const query =
-    addressHash !== undefined ? { $or: [{ domainHash }, { addressHash }] } : { domainHash };
+  const domainClause = { domainHash, scope: { $ne: 'address' as const } };
+  const query = addressHash !== undefined ? { $or: [domainClause, { addressHash }] } : domainClause;
 
   const match = await SuppressionModel.findOne(query).lean();
   return match !== null;
@@ -116,7 +125,10 @@ export async function findSuppressedDomains(
   for (const domain of domains) {
     byHash.set(hashSuppressionValue(normalizeDomainForHash(domain)), domain);
   }
-  const rows = await SuppressionModel.find({ domainHash: { $in: [...byHash.keys()] } })
+  const rows = await SuppressionModel.find({
+    domainHash: { $in: [...byHash.keys()] },
+    scope: { $ne: 'address' as const },
+  })
     .select({ domainHash: 1 })
     .lean<{ domainHash: string }[]>();
   const suppressed = new Set<string>();
@@ -158,11 +170,11 @@ export async function findSuppressionMatches(
   if (domainByHash.size > 0) clauses.push({ domainHash: { $in: [...domainByHash.keys()] } });
   if (addressByHash.size > 0) clauses.push({ addressHash: { $in: [...addressByHash.keys()] } });
   const rows = await SuppressionModel.find({ $or: clauses })
-    .select({ domainHash: 1, addressHash: 1 })
-    .lean<{ domainHash: string; addressHash?: string }[]>();
+    .select({ domainHash: 1, addressHash: 1, scope: 1 })
+    .lean<{ domainHash: string; addressHash?: string; scope?: 'address' }[]>();
   const matches: SuppressionMatches = { domains: new Set(), addresses: new Set() };
   for (const row of rows) {
-    const domain = domainByHash.get(row.domainHash);
+    const domain = row.scope === 'address' ? undefined : domainByHash.get(row.domainHash);
     if (domain !== undefined) matches.domains.add(domain);
     if (row.addressHash !== undefined) {
       const address = addressByHash.get(row.addressHash);

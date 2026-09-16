@@ -4728,6 +4728,24 @@ public door into the audit engine) and a shared encryption secret between the
 two deployments (a second secret to rotate for a convenience feature). The
 mailto remains as a fallback.
 
+**Amendment (2026-09-16, issue #341): the reach of an opt-out depends on how
+it arrived.** Suppressing the submitted address's whole domain on every
+request let anyone block a business with one anonymous form post, and let one
+objection from a Gmail or Orange address silence every prospect whose contact
+uses that provider. An opt-out still suppresses the submitted address every
+time, with no proof of identity. The domain is suppressed as well only when
+the request carries a token for a link we emailed to an address on that same
+domain, and the domain is not a free-mail provider (`isFreeMailDomain`). A
+matching prospect is still opted out, its previews revoked and its threads
+closed, so a genuine objection from a known contact stops that business
+whatever the reach. Suppression rows gained an address-only scope that domain
+lookups skip; a later domain-wide write for the same cause widens such a row,
+and an address-only write never narrows a domain-wide one. The site route
+also refuses cross-site posts and bounds submissions per client. Rejected:
+keeping domain reach for anonymous requests on non-free-mail domains (the
+abuse path), and refusing anonymous requests (an opt-out must never need
+proof).
+
 
 ### 90. A live preview keeps its public link on the private record (operator request, 2026-09-15, issue #288)
 

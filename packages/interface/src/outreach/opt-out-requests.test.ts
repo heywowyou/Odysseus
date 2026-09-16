@@ -117,4 +117,70 @@ describe.skipIf(!mongoAvailable)('processing opt-out requests', () => {
     expect(result.applied).toBe(1);
     await expect(isSuppressed(connection!, 'x.fr', 'someone@elsewhere.fr')).resolves.toBe(true);
   });
+
+  async function submit(address: string, token?: string): Promise<void> {
+    const bucket = createInMemoryOptOutBucket();
+    if (token !== undefined) {
+      await storeOptOutLink(bucket, token, `contact@${address.slice(address.indexOf('@') + 1)}`);
+    }
+    await bucket.putJson(optOutRequestKey(), {
+      address,
+      ...(token === undefined ? {} : { token }),
+      receivedAt: new Date().toISOString(),
+    });
+    const result = await processOptOutRequests({
+      connection: connection!,
+      bucket,
+      publisher: createInMemoryPreviewPublisher(),
+    });
+    expect(result.applied).toBe(1);
+  }
+
+  it('suppresses only the address for an anonymous request, never the business domain', async () => {
+    await submit('reservation@anonymous-target.fr');
+
+    await expect(
+      isSuppressed(connection!, 'anonymous-target.fr', 'reservation@anonymous-target.fr'),
+    ).resolves.toBe(true);
+    await expect(isSuppressed(connection!, 'anonymous-target.fr')).resolves.toBe(false);
+  });
+
+  it('suppresses only the address for a free-mail request, even through our link', async () => {
+    await submit('owner@gmail.com', createOptOutLink('https://www.odysseusaudit.com').token);
+
+    await expect(isSuppressed(connection!, 'gmail.com', 'owner@gmail.com')).resolves.toBe(true);
+    await expect(isSuppressed(connection!, 'gmail.com', 'someone-else@gmail.com')).resolves.toBe(
+      false,
+    );
+  });
+
+  it('suppresses the domain when our link was issued to an address on that domain', async () => {
+    await submit(
+      'direction@linked-hotel.fr',
+      createOptOutLink('https://www.odysseusaudit.com').token,
+    );
+
+    await expect(isSuppressed(connection!, 'linked-hotel.fr')).resolves.toBe(true);
+  });
+
+  it('keeps a link issued to one domain from widening a request for another', async () => {
+    const bucket = createInMemoryOptOutBucket();
+    const link = createOptOutLink('https://www.odysseusaudit.com');
+    await storeOptOutLink(bucket, link.token, 'contact@issued-hotel.fr');
+    await bucket.putJson(optOutRequestKey(), {
+      address: 'someone@other-business.fr',
+      token: link.token,
+      receivedAt: new Date().toISOString(),
+    });
+    await processOptOutRequests({
+      connection: connection!,
+      bucket,
+      publisher: createInMemoryPreviewPublisher(),
+    });
+
+    await expect(isSuppressed(connection!, 'other-business.fr')).resolves.toBe(false);
+    await expect(
+      isSuppressed(connection!, 'other-business.fr', 'someone@other-business.fr'),
+    ).resolves.toBe(true);
+  });
 });

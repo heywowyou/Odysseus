@@ -31,6 +31,10 @@ export interface SuppressionDocumentFields {
    *  suppression, `DOMAIN_ONLY_ADDRESS_KEY` for a domain-only one. Absent on
    *  rows written before the key existed. */
   addressKey?: string;
+  /** 'address' when the row suppresses only its address and must not match
+   *  a domain lookup. Absent means the row also suppresses its domain, the
+   *  shape every row had before the scope existed. */
+  scope?: 'address';
   reasonCode: SuppressionReasonCode;
   reason: string;
   createdAt: Date;
@@ -44,6 +48,7 @@ const suppressionSchema = new Schema<SuppressionDocument>(
     domainHash: { type: String, required: true },
     addressHash: { type: String },
     addressKey: { type: String },
+    scope: { type: String, enum: ['address'] },
     reasonCode: {
       type: String,
       required: true,
