@@ -16,6 +16,7 @@ vi.mock('../artifacts/sync-audit-artifacts.js', () => ({ syncAuditDirToBucket: v
 vi.mock('./backfill-audit-row.js', () => ({ backfillAuditRow: vi.fn() }));
 vi.mock('./renormalize-audit.js', () => ({ renormalizeAudit: vi.fn() }));
 vi.mock('./analysis-stage.js', () => ({ runAnalysisStage: vi.fn() }));
+vi.mock('./audit-stage.js', () => ({ runAuditStage: vi.fn() }));
 vi.mock('./regenerate-reports.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./regenerate-reports.js')>()),
   readAuditArtifacts: vi.fn(),
@@ -35,6 +36,7 @@ import { syncAuditDirToBucket } from '../artifacts/sync-audit-artifacts.js';
 import { backfillAuditRow } from './backfill-audit-row.js';
 import { renormalizeAudit } from './renormalize-audit.js';
 import { runAnalysisStage } from './analysis-stage.js';
+import { runAuditStage } from './audit-stage.js';
 import {
   readAuditArtifacts,
   regenerateReportsForAudit,
@@ -173,5 +175,9 @@ describe('makeReportReady', () => {
     );
     expect(approveWritingCandidate).toHaveBeenCalledWith(fakeConnection, 'audit-1');
     expect(outcome).toEqual({ kind: 'ready', reports, findingsWereRefreshed: true });
+    // Plan 050: the refresh rebuilds derived data from stored evidence only.
+    // The scanner mock above exposes no crawl entry point, and the audit
+    // stage (the only path to a website request) is never reached.
+    expect(runAuditStage).not.toHaveBeenCalled();
   });
 });

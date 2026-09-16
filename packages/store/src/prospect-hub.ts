@@ -523,7 +523,7 @@ export async function listProspectEvents(
 
 type ProspectAuditRow = Pick<
   AuditDocument,
-  'auditId' | 'siteUrl' | 'kind' | 'startedAt' | 'finishedAt'
+  'auditId' | 'siteUrl' | 'kind' | 'scanIntent' | 'startedAt' | 'finishedAt'
 > & {
   siteSignals?: { roleContact?: { address: string; sourceUrl: string } };
 };
@@ -538,6 +538,7 @@ export async function listProspectAudits(
       auditId: 1,
       siteUrl: 1,
       kind: 1,
+      scanIntent: 1,
       startedAt: 1,
       finishedAt: 1,
       'siteSignals.roleContact': 1,

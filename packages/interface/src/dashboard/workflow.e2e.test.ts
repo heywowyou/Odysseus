@@ -16,6 +16,7 @@ interface WorkflowFixture {
   stage: WorkflowStage;
   directoryAdded: boolean;
   calls: { method: string; url: string }[];
+  scanBodies: unknown[];
 }
 
 function jsonResponse(body: unknown): Response {
@@ -23,7 +24,7 @@ function jsonResponse(body: unknown): Response {
 }
 
 function createFixture(): WorkflowFixture {
-  return { stage: 'added', directoryAdded: false, calls: [] };
+  return { stage: 'added', directoryAdded: false, calls: [], scanBodies: [] };
 }
 
 function prospect(fixture: WorkflowFixture): Record<string, unknown> {
@@ -241,6 +242,7 @@ function installFixture(fixture: WorkflowFixture): void {
       }
 
       if (path === '/api/scans' && method === 'POST') {
+        fixture.scanBodies.push(JSON.parse(String(init?.body)));
         fixture.stage = 'audit';
         return jsonResponse({ started: true, jobId: 'job-1' });
       }
@@ -248,7 +250,7 @@ function installFixture(fixture: WorkflowFixture): void {
       if (path === '/api/scans/job-1') {
         return jsonResponse({
           jobId: 'job-1',
-          type: 'prospecting-audit',
+          type: 'full-audit',
           status: 'complete',
           phase: 'complete',
           siteUrl: 'https://fixture.example/',
@@ -335,11 +337,13 @@ describe('dashboard prospect workflow', () => {
     await click(container.querySelector('a[href^="/prospects/prospect-1?"]')!);
     expect(container.textContent).toContain('État de l’audit : absent');
     expect(container.textContent).not.toContain('{state}');
-    await click(exactElement(container, 'button', 'Préparer la prospection'));
+    expect(container.textContent).not.toContain('Préparer la prospection');
+    await click(exactElement(container, 'button', 'Lancer un scan complet'));
 
     expect(fixture.calls.some(({ method, url }) => method === 'POST' && url === '/api/scans')).toBe(
       true,
     );
+    expect(fixture.scanBodies).toEqual([expect.objectContaining({ type: 'full-audit' })]);
 
     await click(container.querySelector('a[href="/a-traiter"]')!);
     expect(container.textContent).toContain('Odysseus ne peut pas envoyer de brouillons');

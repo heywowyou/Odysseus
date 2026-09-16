@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { NORMALIZATION_FINGERPRINT } from '@odysseus/core';
 import {
+  auditDataVersionState,
   classifyLegacyAuditScanIntent,
   effectiveAuditScanIntent,
   isOutreachQualifyingAudit,
@@ -24,12 +25,21 @@ describe('prospect audit qualification', () => {
     expect(isOutreachQualifyingAudit(audit({ scanIntent: 'quick-check' }))).toBe(false);
   });
 
-  it('requires complete coverage and current findings provenance', () => {
+  it('requires complete coverage but not the current normalization version', () => {
     expect(isOutreachQualifyingAudit(audit())).toBe(true);
     expect(isOutreachQualifyingAudit(audit({ pages: [{ status: 'error' }] }))).toBe(false);
     expect(
       isOutreachQualifyingAudit(audit({ findingsProvenance: { normalizationFingerprint: 'old' } })),
-    ).toBe(false);
+    ).toBe(true);
+    expect(isOutreachQualifyingAudit(audit({ findingsProvenance: undefined }))).toBe(true);
+  });
+
+  it('reports the data version as advisory provenance state', () => {
+    expect(auditDataVersionState(audit())).toBe('current');
+    expect(
+      auditDataVersionState(audit({ findingsProvenance: { normalizationFingerprint: 'old' } })),
+    ).toBe('older');
+    expect(auditDataVersionState(audit({ findingsProvenance: undefined }))).toBe('unknown');
   });
 
   it('allows a complete Full Audit to satisfy the same outreach requirement', () => {

@@ -36,11 +36,14 @@ export interface FullAuditScanRequest {
   options: FullAuditScanOptions;
 }
 
-export const NEW_SCAN_TYPES = ['full-audit', 'quick-check', 'prospecting-audit'] as const;
+/** Plan 050: the operator launches exactly two scans. A Full scan captures
+ *  the complete evidence once; outreach, analyses, and client reports all
+ *  reuse it afterwards, so there is no separate outreach crawl to offer. */
+export const NEW_SCAN_TYPES = ['full-audit', 'quick-check'] as const;
 export type NewScanType = (typeof NEW_SCAN_TYPES)[number];
 
 export interface ProspectScanRequest {
-  type: 'quick-check' | 'prospecting-audit';
+  type: 'quick-check';
   url: string;
   prospectId?: string;
   options: ScanCrawlOptions;
@@ -63,15 +66,6 @@ export type AdvancedScanField = keyof ScanCrawlOptions;
  *  rapid requests. */
 export const ADVANCED_SCAN_FIELDS: Record<NewScanType, readonly AdvancedScanField[]> = {
   'full-audit': [
-    'maxPages',
-    'maxDepth',
-    'delayMs',
-    'scanConcurrency',
-    'seeds',
-    'exclusions',
-    'bookingEngineUrl',
-  ],
-  'prospecting-audit': [
     'maxPages',
     'maxDepth',
     'delayMs',
@@ -105,7 +99,7 @@ export interface NewScanFormValues {
 
 export function createEmptyFormValues(): NewScanFormValues {
   return {
-    type: 'prospecting-audit',
+    type: 'full-audit',
     url: '',
     prospectId: '',
     siren: '',
@@ -121,13 +115,13 @@ export function createEmptyFormValues(): NewScanFormValues {
   };
 }
 
-/** The ordinary New Scan entry point is the outreach-preparation workflow.
- * Contexts that explicitly request another intent may pass `?type=`; any
- * missing or unknown value stays on the safe ordinary default. */
+/** The ordinary New Scan entry point is the Full scan. Contexts that
+ * explicitly request a Quick check may pass `?type=`; any missing, unknown,
+ * or retired value (an old `prospecting-audit` link) opens the Full scan. */
 export function initialScanTypeFromQuery(raw: string | null): NewScanType {
   return raw !== null && (NEW_SCAN_TYPES as readonly string[]).includes(raw)
     ? (raw as NewScanType)
-    : 'prospecting-audit';
+    : 'full-audit';
 }
 
 /** Duplicated by value from @odysseus/core's isHttpUrlWithoutCredentials

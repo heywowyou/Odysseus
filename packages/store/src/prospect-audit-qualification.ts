@@ -1,5 +1,12 @@
 /** Pure audit-purpose and outreach-qualification rules shared by scan
- * finalization, prospect work, guards, and manual audit attachment. */
+ * finalization, prospect work, guards, and manual audit attachment.
+ *
+ * Plan 050: two separate questions. Qualification asks whether the website
+ * evidence is complete enough for outreach (eligible purpose AND complete
+ * coverage). The data version asks whether the derived findings were
+ * produced by today's normalization code. The second is advisory only: an
+ * older version never makes captured evidence unusable or asks for a
+ * rescan. */
 
 import {
   assessCrawlCoverage,
@@ -11,6 +18,8 @@ import type { JobOptionsSnapshot, JobType } from './schemas/job.schema.js';
 
 export type ProspectAuditScanIntent = ScanIntent;
 
+/** Full scans, plus historical complete prospecting audits (including the
+ *  older outreach-full-scan rows classified as such below). */
 export const OUTREACH_ELIGIBLE_SCAN_INTENTS: readonly ProspectAuditScanIntent[] = [
   'prospecting-audit',
   'full-audit',
@@ -23,8 +32,15 @@ export interface AuditQualificationInput {
   findingsProvenance?: { normalizationFingerprint?: string };
 }
 
-export function hasCurrentFindingsProvenance(input: AuditQualificationInput): boolean {
-  return input.findingsProvenance?.normalizationFingerprint === NORMALIZATION_FINGERPRINT;
+/** Advisory provenance of an audit's derived findings. `older` means the
+ *  findings were normalized by earlier code; the stored results remain
+ *  usable. `unknown` means no fingerprint was ever stamped. */
+export type AuditDataVersionState = 'current' | 'older' | 'unknown';
+
+export function auditDataVersionState(input: AuditQualificationInput): AuditDataVersionState {
+  const fingerprint = input.findingsProvenance?.normalizationFingerprint;
+  if (fingerprint === undefined) return 'unknown';
+  return fingerprint === NORMALIZATION_FINGERPRINT ? 'current' : 'older';
 }
 
 export function hasOutreachEligibleScanIntent(input: AuditQualificationInput): boolean {
@@ -33,8 +49,7 @@ export function hasOutreachEligibleScanIntent(input: AuditQualificationInput): b
   );
 }
 
-export function isOutreachQualifyingAudit(input: AuditQualificationInput): boolean {
-  if (!hasOutreachEligibleScanIntent(input) || !hasCurrentFindingsProvenance(input)) return false;
+function hasCompleteCoverage(input: AuditQualificationInput): boolean {
   const coverage = assessCrawlCoverage({
     pages: input.pages,
     ...(input.crawl?.sitemapCoverage === undefined
@@ -42,6 +57,11 @@ export function isOutreachQualifyingAudit(input: AuditQualificationInput): boole
       : { sitemapCoverage: input.crawl.sitemapCoverage }),
   });
   return coverage.reasonCodes.length === 0;
+}
+
+/** Purpose + coverage. The data version is deliberately absent. */
+export function isOutreachQualifyingAudit(input: AuditQualificationInput): boolean {
+  return hasOutreachEligibleScanIntent(input) && hasCompleteCoverage(input);
 }
 
 export interface AuditIntentSourceJob {

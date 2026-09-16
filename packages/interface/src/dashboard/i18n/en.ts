@@ -41,10 +41,10 @@ export const en: DashboardStrings = {
       'needs-input': 'Needs input',
     },
     typeLabels: {
-      fullAudit: 'Prepare client report',
+      fullAudit: 'Full scan',
       prospecting: 'Internal processing',
       hotelPrescan: 'Quick check',
-      outreachFullScan: 'Prepare outreach',
+      outreachFullScan: 'Outreach scan (legacy)',
     },
     viewDetails: 'View details',
     error: 'Error',
@@ -115,16 +115,13 @@ export const en: DashboardStrings = {
   },
   newScan: {
     title: 'New scan',
-    description: 'Run a quick check, a prospect-linked audit, or a full audit.',
+    description: 'Run a quick check or a full scan.',
     typeLabel: 'Scan type',
-    typeFullAudit: 'Prepare client report',
+    typeFullAudit: 'Full scan',
     typeQuickCheck: 'Quick check',
-    typeProspectingAudit: 'Prepare outreach',
     typeFullAuditHint:
-      'Complete the audit, then generate French and English analysis and client reports.',
+      'Crawls the whole site once. The scan then serves outreach, the French and English analyses, and client reports without crawling again.',
     typeQuickCheckHint: 'A one-page informational check with no analysis or client report.',
-    typeProspectingAuditHint:
-      'Complete the audit for outreach, then stop before analysis and client reports.',
     urlLabel: 'Site URL',
     urlPlaceholder: 'https://example.co.uk',
     prospectLabel: 'Attach to a prospect (optional)',
@@ -228,9 +225,9 @@ export const en: DashboardStrings = {
     title: 'Audit detail',
     dateLabel: 'Date',
     reportNotOfferedQuickCheck:
-      'Quick check: it sorts prospects and does not cover enough of the site for a client report. Run a full audit to prepare a report.',
+      'Quick check: it sorts prospects and does not cover enough of the site for a client report. Run a full scan to prepare a report.',
     reportNotOfferedProspecting:
-      'Prospecting audit: it feeds the preview and the emails. Run a full audit to prepare a client report.',
+      'Older outreach scan: it feeds the preview and the emails. Run a full scan to prepare a client report.',
     pagesVisitedLabel: 'Pages visited',
     findingsHeading: 'Problems found',
     publisherIdentificationHeading: 'Review website identification details',
@@ -249,6 +246,7 @@ export const en: DashboardStrings = {
     analysisStaticFallbackNotice:
       'This report was written from the scan findings alone. The model-written analysis did not run, because the audit found no critical or serious issue and fewer than five moderate ones.',
     reportFreshness: { fresh: 'Fresh', stale: 'Out of date', unverified: 'Unverified' },
+    reportOlderTemplate: 'Older report template',
     reportPageCountWarning: 'Long report: {count} pages. It remains complete and deliverable.',
     lifecycleLabel: 'Stage',
     lifecycle: {
@@ -356,15 +354,13 @@ export const en: DashboardStrings = {
       unavailableWithReason: 'Preview unavailable ({refusal}).',
       refusalReasons: {
         'candidate-unknown': 'This prospect is unknown.',
-        'no-audit': 'No completed outreach audit exists for this prospect yet.',
+        'no-audit': 'No full scan has finished for this prospect yet.',
         'audit-in-flight': 'The outreach audit for this prospect is still running.',
         'audit-failed': 'The latest outreach audit failed or was stopped.',
         'preview-already-live': 'a preview is already live; revoke it to publish another',
         'domain-mismatch': 'The stored audit does not match this prospect’s own domain.',
         suppressed: 'This domain is on the do-not-contact list.',
         'address-suppressed': 'This address is on the do-not-contact list.',
-        'stale-provenance':
-          'This audit is too old: its findings can no longer be traced, run a new audit.',
         'coverage-incomplete':
           'The site crawl is incomplete, so the scorecard refuses to invent numbers.',
         'insufficient-safe-cards': 'Too few verified findings to build a reliable scorecard.',
@@ -720,21 +716,19 @@ export const en: DashboardStrings = {
         'record-outcome': 'Record the outcome',
         'create-follow-up': 'Draft the follow-up',
         'create-first-email': 'Draft the first email',
-        'prepare-audit': 'Prepare outreach',
+        'prepare-audit': 'Run full scan',
         'review-prospect': 'Check the record',
       },
       recommendationReasons: {
-        'no-audit': 'No qualifying outreach audit is attached yet.',
+        'no-audit': 'No usable full scan is attached yet.',
         'audit-incomplete': 'The latest attached audit does not have all of its data yet.',
         'audit-not-outreach-grade':
-          'The latest attached audit is a quick check, which is not enough for outreach. Run “Prepare outreach”.',
-        'audit-stale': 'The latest attached audit uses an older data version.',
+          'The latest attached audit is a quick check, which is not enough for outreach. Run a full scan.',
         suppressed: 'Outreach is blocked by a suppressed address or domain.',
         'no-contact': 'Add a usable email address to continue.',
       },
       quick: 'Run quick check',
-      fullAudit: 'Prepare client report',
-      prospecting: 'Prepare outreach',
+      fullAudit: 'Run full scan',
       outcome: 'Record outcome',
       history: 'History',
       fullHistory: 'Show full history',
@@ -825,6 +819,9 @@ export const en: DashboardStrings = {
       draftDiscarded: 'Draft discarded. You can draft a new one.',
       noDraft: 'No pending draft.',
       auditState: 'Audit state: {state}',
+      scanDate: 'Scanned {date}, {days} day(s) ago',
+      olderDataVersion:
+        'This scan was produced with an older Odysseus data version. Its stored results remain usable.',
       eventLabel: 'Event',
       noEvents: 'No events recorded.',
       actionFailed: 'Could not complete this action.',
@@ -851,10 +848,10 @@ export const en: DashboardStrings = {
       },
       auditKindLabels: {
         audit: 'Audit',
-        'full-audit': 'Prepare client report',
+        'full-audit': 'Full scan',
         'quick-check': 'Quick check',
-        'prospecting-audit': 'Prepare outreach',
-        'outreach-full-scan': 'Prepare outreach',
+        'prospecting-audit': 'Outreach scan (legacy)',
+        'outreach-full-scan': 'Outreach scan (legacy)',
       },
       previewStatusLabels: {
         live: 'Live',
@@ -866,8 +863,7 @@ export const en: DashboardStrings = {
         'host-busy': 'another scan is already using this site',
         suppressed: 'contact is suppressed from outreach; no action is possible',
         'no-contact': 'no email available; add an address on the record',
-        'no-complete-audit': 'no complete, current audit; run “Prepare outreach”',
-        'audit-stale': 'audit too old or not normalized; run “Prepare outreach” again',
+        'no-complete-audit': 'no usable full scan; run a full scan',
         'candidate-unknown': 'prospect not found',
         'thread-unknown': 'no first email has been drafted yet; start with the first email',
         'thread-already-started': 'the first email was already sent; use the follow-up',
@@ -887,7 +883,7 @@ export const en: DashboardStrings = {
         'prospect-unknown': 'prospect not found; reload the page',
         'previous-draft-missing': 'the previous draft is missing; draft the first email again',
         'assembly-refused':
-          'the email could not be composed from the evidence; run the prospecting audit again',
+          'the email could not be composed from the evidence; run a new full scan',
         'suppressed-before-provider':
           'the contact was suppressed while drafting; nothing was created',
         'provider-draft-unrecorded': 'the mailbox did not confirm the draft; try again',
@@ -932,7 +928,6 @@ export const en: DashboardStrings = {
         missing: 'missing',
         'not-outreach-grade': 'quick check only',
         incomplete: 'incomplete',
-        stale: 'needs refresh',
         qualifying: 'qualifying',
       },
     },

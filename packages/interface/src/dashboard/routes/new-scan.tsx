@@ -44,12 +44,10 @@ export function NewScanPage() {
   const scanTypeLabels: Record<NewScanType, string> = {
     'full-audit': copy.typeFullAudit,
     'quick-check': copy.typeQuickCheck,
-    'prospecting-audit': copy.typeProspectingAudit,
   };
   const scanTypeHints: Record<NewScanType, string> = {
     'full-audit': copy.typeFullAuditHint,
     'quick-check': copy.typeQuickCheckHint,
-    'prospecting-audit': copy.typeProspectingAuditHint,
   };
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

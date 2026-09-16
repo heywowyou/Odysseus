@@ -42,10 +42,10 @@ export const fr: DashboardStrings = {
       'needs-input': 'Action requise',
     },
     typeLabels: {
-      fullAudit: 'Préparer le rapport client',
+      fullAudit: 'Scan complet',
       prospecting: 'Traitement interne',
       hotelPrescan: 'Contrôle rapide',
-      outreachFullScan: 'Préparer la prospection',
+      outreachFullScan: 'Scan de prospection (ancien)',
     },
     viewDetails: 'Voir le détail',
     error: 'Erreur',
@@ -116,16 +116,13 @@ export const fr: DashboardStrings = {
   },
   newScan: {
     title: 'Nouveau scan',
-    description: 'Lancer un contrôle rapide, un audit lié à un prospect ou un audit complet.',
-    typeLabel: 'Type d’analyse',
-    typeFullAudit: 'Préparer le rapport client',
+    description: 'Lancer un contrôle rapide ou un scan complet.',
+    typeLabel: 'Type de scan',
+    typeFullAudit: 'Scan complet',
     typeQuickCheck: 'Contrôle rapide',
-    typeProspectingAudit: 'Préparer la prospection',
     typeFullAuditHint:
-      'Termine l’audit, puis génère les analyses française et anglaise et les rapports client.',
+      'Explore tout le site une seule fois. Ce scan sert ensuite à la prospection, aux analyses française et anglaise et aux rapports client, sans nouvelle exploration.',
     typeQuickCheckHint: 'Contrôle informatif d’une page, sans analyse ni rapport client.',
-    typeProspectingAuditHint:
-      'Termine l’audit pour la prospection, puis s’arrête avant les analyses et les rapports client.',
     urlLabel: 'Adresse du site',
     urlPlaceholder: 'https://exemple.fr',
     prospectLabel: 'Rattacher à un prospect (facultatif)',
@@ -229,9 +226,9 @@ export const fr: DashboardStrings = {
     title: 'Détail de l’audit',
     dateLabel: 'Date',
     reportNotOfferedQuickCheck:
-      'Contrôle rapide : il sert à trier les prospects et ne couvre pas assez le site pour un rapport client. Lancez un audit complet pour préparer un rapport.',
+      'Contrôle rapide : il sert à trier les prospects et ne couvre pas assez le site pour un rapport client. Lancez un scan complet pour préparer un rapport.',
     reportNotOfferedProspecting:
-      'Audit de prospection : il alimente l’aperçu et les emails. Lancez un audit complet pour préparer un rapport client.',
+      'Ancien scan de prospection : il alimente l’aperçu et les emails. Lancez un scan complet pour préparer un rapport client.',
     pagesVisitedLabel: 'Pages visitées',
     findingsHeading: 'Constats',
     publisherIdentificationHeading: 'Vérifier les informations d’identification du site',
@@ -250,6 +247,7 @@ export const fr: DashboardStrings = {
     analysisStaticFallbackNotice:
       'Ce rapport a été rédigé à partir des seuls constats du scan. L’analyse rédigée automatiquement n’a pas été lancée, l’audit n’ayant détecté aucun problème critique ou grave et moins de cinq problèmes de gravité modérée.',
     reportFreshness: { fresh: 'À jour', stale: 'À régénérer', unverified: 'Non vérifié' },
+    reportOlderTemplate: 'Modèle de rapport antérieur',
     reportPageCountWarning: 'Rapport long : {count} pages. Il reste complet et livrable.',
     lifecycleLabel: 'Étape',
     lifecycle: {
@@ -357,15 +355,13 @@ export const fr: DashboardStrings = {
       unavailableWithReason: 'Aperçu indisponible ({refusal}).',
       refusalReasons: {
         'candidate-unknown': 'Ce prospect est inconnu.',
-        'no-audit': 'Aucune analyse complète de prospection n’est terminée pour ce prospect.',
+        'no-audit': 'Aucun scan complet n’est terminé pour ce prospect.',
         'audit-in-flight': 'L’analyse complète de prospection de ce prospect est encore en cours.',
         'audit-failed': 'La dernière analyse complète de prospection a échoué ou a été arrêtée.',
         'preview-already-live': 'un aperçu est déjà en ligne ; retirez-le pour en publier un autre',
         'domain-mismatch': 'L’audit enregistré ne correspond pas au domaine propre de ce prospect.',
         suppressed: 'Ce domaine figure sur la liste à ne pas contacter.',
         'address-suppressed': 'Cette adresse figure sur la liste à ne pas contacter.',
-        'stale-provenance':
-          'Cet audit est trop ancien : ses constats ne sont plus traçables, relancez une analyse.',
         'coverage-incomplete':
           'L’exploration du site est incomplète : la synthèse refuse d’inventer des chiffres.',
         'insufficient-safe-cards':
@@ -730,21 +726,19 @@ export const fr: DashboardStrings = {
         'record-outcome': 'Enregistrer le résultat',
         'create-follow-up': 'Rédiger la relance',
         'create-first-email': 'Rédiger le premier email',
-        'prepare-audit': 'Préparer la prospection',
+        'prepare-audit': 'Lancer un scan complet',
         'review-prospect': 'Vérifier la fiche',
       },
       recommendationReasons: {
-        'no-audit': 'Aucun audit de prospection qualifiant n’est encore rattaché.',
+        'no-audit': 'Aucun scan complet exploitable n’est encore rattaché.',
         'audit-incomplete': 'Le dernier audit rattaché ne contient pas encore toutes ses données.',
         'audit-not-outreach-grade':
-          'Le dernier audit rattaché est un contrôle rapide : il ne suffit pas pour prospecter. Lancez « Préparer la prospection ».',
-        'audit-stale': 'Le dernier audit rattaché utilise une version de données ancienne.',
+          'Le dernier audit rattaché est un contrôle rapide : il ne suffit pas pour prospecter. Lancez un scan complet.',
         suppressed: 'La prospection est bloquée par une adresse ou un domaine supprimé.',
         'no-contact': 'Ajoutez un email utilisable pour continuer.',
       },
       quick: 'Lancer un contrôle rapide',
-      fullAudit: 'Préparer le rapport client',
-      prospecting: 'Préparer la prospection',
+      fullAudit: 'Lancer un scan complet',
       outcome: 'Enregistrer un résultat',
       history: 'Historique',
       fullHistory: 'Afficher tout l’historique',
@@ -837,6 +831,9 @@ export const fr: DashboardStrings = {
       draftDiscarded: 'Brouillon supprimé. Vous pouvez en rédiger un nouveau.',
       noDraft: 'Aucun brouillon en attente.',
       auditState: 'État de l’audit : {state}',
+      scanDate: 'Scanné le {date}, il y a {days} jour(s)',
+      olderDataVersion:
+        'Ce scan a été produit avec une version antérieure des données d’Odysseus. Ses résultats enregistrés restent utilisables.',
       eventLabel: 'Événement',
       noEvents: 'Aucun événement enregistré.',
       actionFailed: 'Impossible de terminer cette action.',
@@ -864,10 +861,10 @@ export const fr: DashboardStrings = {
       },
       auditKindLabels: {
         audit: 'Audit',
-        'full-audit': 'Préparer le rapport client',
+        'full-audit': 'Scan complet',
         'quick-check': 'Contrôle rapide',
-        'prospecting-audit': 'Préparer la prospection',
-        'outreach-full-scan': 'Préparer la prospection',
+        'prospecting-audit': 'Scan de prospection (ancien)',
+        'outreach-full-scan': 'Scan de prospection (ancien)',
       },
       previewStatusLabels: {
         live: 'En ligne',
@@ -879,8 +876,7 @@ export const fr: DashboardStrings = {
         'host-busy': 'un autre scan utilise déjà ce site',
         suppressed: 'contact supprimé de la prospection ; aucune action n’est possible',
         'no-contact': 'aucun email disponible ; ajoutez une adresse dans la fiche',
-        'no-complete-audit': 'aucun audit complet et actuel ; lancez « Préparer la prospection »',
-        'audit-stale': 'audit trop ancien ou non normalisé ; relancez « Préparer la prospection »',
+        'no-complete-audit': 'aucun scan complet exploitable ; lancez un scan complet',
         'candidate-unknown': 'prospect introuvable',
         'thread-unknown':
           'aucun premier email n’a encore été rédigé ; commencez par le premier email',
@@ -904,7 +900,7 @@ export const fr: DashboardStrings = {
         'previous-draft-missing':
           'le brouillon précédent est introuvable ; rédigez à nouveau le premier email',
         'assembly-refused':
-          'l’email n’a pas pu être composé à partir des preuves ; relancez l’audit de prospection',
+          'l’email n’a pas pu être composé à partir des preuves ; lancez un nouveau scan complet',
         'suppressed-before-provider':
           'le contact a été supprimé pendant la rédaction ; rien n’a été créé',
         'provider-draft-unrecorded': 'la boîte mail n’a pas confirmé le brouillon ; réessayez',
@@ -949,7 +945,6 @@ export const fr: DashboardStrings = {
         missing: 'absent',
         'not-outreach-grade': 'contrôle rapide uniquement',
         incomplete: 'incomplet',
-        stale: 'à actualiser',
         qualifying: 'qualifiant',
       },
     },

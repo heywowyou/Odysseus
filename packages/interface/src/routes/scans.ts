@@ -94,9 +94,6 @@ function parseOptionsSnapshot(raw: unknown): JobOptionsSnapshot {
   if (typeof record['prospectId'] === 'string' && record['prospectId'].trim() !== '') {
     options.prospectId = record['prospectId'].trim();
   }
-  if (record['scanType'] === 'quick-check' || record['scanType'] === 'prospecting-audit') {
-    options.scanType = record['scanType'];
-  }
 
   const rawSeeds = record['seeds'];
   if (Array.isArray(rawSeeds) && rawSeeds.length > 0) {
@@ -160,7 +157,19 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
     }
     const parsed = body as Record<string, unknown>;
 
-    if (parsed['type'] === 'quick-check' || parsed['type'] === 'prospecting-audit') {
+    // Plan 050: a complete crawl is launched only as a Full scan. The
+    // retired intent gets an explicit refusal instead of the generic
+    // unknown-type error so an old client learns what replaced it.
+    if (parsed['type'] === 'prospecting-audit' || parsed['type'] === 'outreach-full-scan') {
+      sendError(
+        res,
+        400,
+        `"${parsed['type']}" is no longer a launchable scan; use "full-audit" for a complete scan`,
+      );
+      return;
+    }
+
+    if (parsed['type'] === 'quick-check') {
       const url = parsed['url'];
       if (!isHttpUrlWithoutCredentials(url)) {
         sendError(res, 400, 'url must be an absolute http(s) URL without embedded credentials');
@@ -184,7 +193,7 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       }
       const check = await checkScanLaunch(connection, {
         url,
-        kind: parsed['type'],
+        kind: 'quick-check',
         ...(options.prospectId === undefined ? {} : { prospectId: options.prospectId }),
       });
       if (!check.allowed) {
@@ -192,16 +201,13 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
         return;
       }
       const job = await createJob(connection, {
-        type: canonicalJobTypeForScanIntent(parsed['type']),
+        type: canonicalJobTypeForScanIntent('quick-check'),
         siteUrl: url,
-        options: {
-          ...options,
-          ...(parsed['type'] === 'quick-check' ? { maxPages: 1 } : {}),
-        },
+        options: { ...options, maxPages: 1 },
       });
       logJobCreated(req, job.jobId, job.type);
       queue.notify();
-      sendJson(res, 201, { started: true, jobId: job.jobId, type: parsed['type'] });
+      sendJson(res, 201, { started: true, jobId: job.jobId, type: 'quick-check' });
       return;
     }
 
@@ -244,7 +250,7 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       });
       logJobCreated(req, job.jobId, job.type);
       queue.notify();
-      sendJson(res, 201, { jobId: job.jobId });
+      sendJson(res, 201, { started: true, jobId: job.jobId, type: 'full-audit' });
       return;
     }
 
@@ -261,11 +267,7 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       return;
     }
 
-    sendError(
-      res,
-      400,
-      'type must be "quick-check", "prospecting-audit", "full-audit", or "prospecting"',
-    );
+    sendError(res, 400, 'type must be "quick-check", "full-audit", or "prospecting"');
   });
 
   router.get('/api/scans', async ({ res, query }) => {

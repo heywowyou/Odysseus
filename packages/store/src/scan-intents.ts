@@ -1,18 +1,25 @@
 import type { ScanIntent } from '@odysseus/core';
 import type { JobOptionsSnapshot, JobType } from './schemas/job.schema.js';
 
-export const CANONICAL_SINGLE_SITE_JOB_TYPES = [
-  'quick-check',
-  'prospecting-audit',
-  'full-audit',
-] as const satisfies readonly JobType[];
+/** The scans an operator can launch today: a bounded informational Quick
+ *  check, or a Full scan that captures complete reusable evidence. The
+ *  wider core ScanIntent union stays the historical read contract: stored
+ *  audits and jobs may still carry `prospecting-audit`, which is readable
+ *  but never newly launchable. */
+export const CURRENT_SCAN_INTENTS = ['quick-check', 'full-audit'] as const satisfies readonly (
+  ScanIntent | JobType
+)[];
 
-export type CanonicalSingleSiteJobType = (typeof CANONICAL_SINGLE_SITE_JOB_TYPES)[number];
+export type CurrentScanIntent = (typeof CURRENT_SCAN_INTENTS)[number];
 
-/** The queue type for a public intent is intentionally identity-preserving.
+export function isCurrentScanIntent(value: unknown): value is CurrentScanIntent {
+  return typeof value === 'string' && (CURRENT_SCAN_INTENTS as readonly string[]).includes(value);
+}
+
+/** The queue type for a current intent is intentionally identity-preserving.
  * This tiny function makes the boundary explicit and keeps a future route
- * from silently sending Prepare outreach to the generic batch runner. */
-export function canonicalJobTypeForScanIntent(intent: ScanIntent): CanonicalSingleSiteJobType {
+ * from silently sending a scan to the generic batch runner. */
+export function canonicalJobTypeForScanIntent(intent: CurrentScanIntent): CurrentScanIntent {
   return intent;
 }
 

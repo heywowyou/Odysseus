@@ -1,8 +1,10 @@
-/** Single-site Prepare outreach composition. This deliberately calls the
- * normal audit stage with no bounded prospecting overrides, then stops before
- * analysis and report generation. Historical outreach-full-scan rows keep
- * using their compatibility runner; newly created rows use this canonical
- * job type. */
+/** Compatibility executor for historical `prospecting-audit` rows (Plan 050).
+ * No route creates this job type any more: a complete crawl is launched only
+ * as a Full scan. The runner stays registered so a row queued before the
+ * change still drains instead of failing with no runner. It calls the normal
+ * audit stage with no bounded prospecting overrides, then stops before
+ * analysis and report generation. Delete it once no such row can remain
+ * queued in production. */
 
 import { completeJob, ensureJobRunIdentity, type JobDocument } from '@odysseus/store';
 import { deleteCrawlCheckpoint, deleteCrawlStateFile, type PageWorkGuard } from '@odysseus/scanner';

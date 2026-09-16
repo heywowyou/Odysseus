@@ -334,6 +334,7 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
           recommendation: work[0]?.recommendation,
           auditState: work[0]?.auditState ?? 'missing',
           qualifyingAuditId: work[0]?.qualifyingAudit?.auditId,
+          dataVersionState: work[0]?.dataVersionState,
           websiteSuppressed: work[0]?.websiteSuppressed ?? false,
           emailSuppressed: work[0]?.emailSuppressed ?? false,
         },

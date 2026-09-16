@@ -133,7 +133,7 @@ describe('central prospect guards', () => {
     await expect(
       checkScanLaunch(fakeConnection, {
         url: 'https://arkhotel.octosite.net',
-        kind: 'prospecting-audit',
+        kind: 'full-audit',
       }),
     ).resolves.toEqual({ allowed: true, registrableDomain: 'octosite.net' });
   });
@@ -222,23 +222,44 @@ describe('central prospect guards', () => {
     ).resolves.toMatchObject({ allowed: true, audit: { auditId: 'audit-old' } });
   });
 
-  it('explains when no attached audit qualifies', async () => {
+  it('accepts a complete audit normalized by older code and flags it as advisory', async () => {
+    mockAuditRows([audit({ findingsProvenance: { normalizationFingerprint: 'older-release' } })]);
+
+    for (const action of ['preview', 'first-email'] as const) {
+      const check = await checkOutreachAction(fakeConnection, {
+        prospect: vendorHostedProspect,
+        action,
+      });
+      expect(check).toMatchObject({
+        allowed: true,
+        audit: { auditId: 'audit-1' },
+        dataVersionState: 'older',
+      });
+      expect(check).not.toHaveProperty('refusal');
+    }
+  });
+
+  it('refuses only on evidence, never on an unstamped data version alone', async () => {
+    mockAuditRows([audit({ findingsProvenance: undefined })]);
+    await expect(
+      checkOutreachAction(fakeConnection, { prospect: vendorHostedProspect, action: 'preview' }),
+    ).resolves.toMatchObject({ allowed: true, dataVersionState: 'unknown' });
+
     mockAuditRows([
       audit({
-        findingsProvenance: undefined,
-        pages: [{ status: 'visited', url: 'https://arkhotel.octosite.net/' }],
+        findingsProvenance: { normalizationFingerprint: 'older-release' },
+        pages: [
+          { status: 'error', url: 'https://arkhotel.octosite.net/' },
+          { status: 'error', url: 'https://arkhotel.octosite.net/contact' },
+        ],
       }),
     ]);
-
     await expect(
-      checkOutreachAction(fakeConnection, {
-        prospect: vendorHostedProspect,
-        action: 'preview',
-      }),
+      checkOutreachAction(fakeConnection, { prospect: vendorHostedProspect, action: 'preview' }),
     ).resolves.toEqual({
       allowed: false,
-      refusal: 'audit-stale',
-      auditState: 'stale',
+      refusal: 'no-complete-audit',
+      auditState: 'incomplete',
     });
   });
 });

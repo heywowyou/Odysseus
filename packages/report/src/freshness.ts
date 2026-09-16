@@ -12,6 +12,12 @@ export interface ReportFreshnessMetadata {
   reportTemplateVersion?: number;
 }
 
+/** Whether a report describes the audit's stored findings: the report's
+ *  findings provenance (schema, fingerprint, digest) must match the audit's
+ *  own stamped provenance. The renderer/template version is deliberately
+ *  not part of this verdict (Plan 050): a newer Odysseus release must not
+ *  make an existing digest-verified report undeliverable. Template age is
+ *  reported separately by reportUsesCurrentTemplate as advice. */
 export function classifyReportFreshness(
   report: ReportFreshnessMetadata,
   currentFindings: FindingsProvenance | undefined,
@@ -30,9 +36,16 @@ export function classifyReportFreshness(
   const provenance = report.findingsProvenance;
   return provenance.findingsSchemaVersion === currentFindings.findingsSchemaVersion &&
     provenance.normalizationFingerprint === currentFindings.normalizationFingerprint &&
-    provenance.findingsDigest === currentFindings.findingsDigest &&
-    report.rendererVersion === REPORT_TEMPLATE_VERSION &&
-    report.reportTemplateVersion === REPORT_TEMPLATE_VERSION
+    provenance.findingsDigest === currentFindings.findingsDigest
     ? 'fresh'
     : 'stale';
+}
+
+/** Advisory: false when the report was rendered by an older template than
+ *  this release ships. Regenerating is the operator's choice. */
+export function reportUsesCurrentTemplate(report: ReportFreshnessMetadata): boolean {
+  return (
+    report.rendererVersion === REPORT_TEMPLATE_VERSION &&
+    report.reportTemplateVersion === REPORT_TEMPLATE_VERSION
+  );
 }

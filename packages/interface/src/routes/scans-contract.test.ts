@@ -72,7 +72,6 @@ beforeEach(() => {
 describe('POST /api/scans runtime contract', () => {
   it.each([
     ['quick-check', { type: 'quick-check', url: 'https://example.fr/' }, { maxPages: 1 }],
-    ['prospecting-audit', { type: 'prospecting-audit', url: 'https://example.fr/' }, {}],
     ['full-audit', { type: 'full-audit', url: 'https://example.fr/', options: {} }, {}],
   ] as const)(
     'creates the canonical %s job and attaches a matching prospect',
@@ -90,16 +89,17 @@ describe('POST /api/scans runtime contract', () => {
         kind: body.type,
         prospectId: 'prospect-1',
       });
-      expect(response.body).toMatchObject({ jobId: `job-${body.type}` });
-      if (body.type !== 'full-audit') {
-        expect(response.body).toMatchObject({ started: true, type: body.type });
-      }
+      expect(response.body).toMatchObject({
+        started: true,
+        jobId: `job-${body.type}`,
+        type: body.type,
+      });
     },
   );
 
   it.each([
     ['quick-check', { maxPages: 1 }],
-    ['prospecting-audit', {}],
+    ['full-audit', {}],
   ] as const)(
     'stores the advanced pacing options sent with a %s scan',
     async (type, pinnedOptions) => {
@@ -120,6 +120,17 @@ describe('POST /api/scans runtime contract', () => {
           ...pinnedOptions,
         },
       });
+    },
+  );
+
+  it.each(['prospecting-audit', 'outreach-full-scan'])(
+    'refuses the retired %s intent without creating a job',
+    async (type) => {
+      const response = await post({ type, url: 'https://example.fr/' });
+
+      expect(response.statusCode).toBe(400);
+      expect(createJob).not.toHaveBeenCalled();
+      expect(checkScanLaunch).not.toHaveBeenCalled();
     },
   );
 });

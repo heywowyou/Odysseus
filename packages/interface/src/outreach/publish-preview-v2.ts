@@ -34,7 +34,6 @@ import { logger } from '../logger.js';
 export type PublishPreviewV2Refusal =
   | 'prospect-unknown'
   | 'no-audit'
-  | 'stale-provenance'
   | 'coverage-incomplete'
   | 'domain-mismatch'
   | 'suppressed'

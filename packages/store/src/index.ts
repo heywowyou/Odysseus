@@ -145,11 +145,12 @@ export {
 } from './prospect-status-policy.js';
 export type { AutomaticStatusDecision } from './prospect-status-policy.js';
 export {
-  CANONICAL_SINGLE_SITE_JOB_TYPES,
+  CURRENT_SCAN_INTENTS,
   canonicalJobTypeForScanIntent,
   displayJobIntent,
+  isCurrentScanIntent,
 } from './scan-intents.js';
-export type { CanonicalSingleSiteJobType } from './scan-intents.js';
+export type { CurrentScanIntent } from './scan-intents.js';
 export {
   createProspectHub as createProspect,
   getProspectHub as getProspect,
@@ -175,12 +176,13 @@ export type {
 export {
   OUTREACH_ELIGIBLE_SCAN_INTENTS,
   classifyLegacyAuditScanIntent,
+  auditDataVersionState,
   effectiveAuditScanIntent,
-  hasCurrentFindingsProvenance,
   hasOutreachEligibleScanIntent,
   isOutreachQualifyingAudit,
 } from './prospect-audit-qualification.js';
 export type {
+  AuditDataVersionState,
   AuditIntentSourceJob,
   AuditQualificationInput,
   ProspectAuditScanIntent,

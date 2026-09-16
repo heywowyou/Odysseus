@@ -358,7 +358,6 @@ export type CreateFirstEmailRefusal =
   | 'no-mailbox-configured'
   | 'insufficient-safe-cards'
   | 'no-audit'
-  | 'stale-provenance'
   | 'coverage-incomplete';
 export type CreateFirstEmailResult =
   | { configured: false; refusal: 'no-preview-bucket-configured' }

@@ -12,9 +12,10 @@ import {
 } from './schemas/outreach-thread.schema.js';
 import { findSuppressionMatches } from './suppression.js';
 import {
+  auditDataVersionState,
   effectiveAuditScanIntent,
-  hasCurrentFindingsProvenance,
   isOutreachQualifyingAudit,
+  type AuditDataVersionState,
   type AuditIntentSourceJob,
 } from './prospect-audit-qualification.js';
 
@@ -39,15 +40,10 @@ export type ProspectWorkAction =
   | 'review-prospect';
 
 export type ProspectWorkReason =
-  | 'suppressed'
-  | 'no-contact'
-  | 'no-audit'
-  | 'audit-not-outreach-grade'
-  | 'audit-incomplete'
-  | 'audit-stale';
+  'suppressed' | 'no-contact' | 'no-audit' | 'audit-not-outreach-grade' | 'audit-incomplete';
 
 export type ProspectAuditQualificationState =
-  'missing' | 'not-outreach-grade' | 'incomplete' | 'stale' | 'qualifying';
+  'missing' | 'not-outreach-grade' | 'incomplete' | 'qualifying';
 
 export type ProspectWorkAudit = Pick<
   AuditDocumentFields,
@@ -107,14 +103,22 @@ export interface ProspectWorkResult {
   recommendation?: ProspectWorkRecommendation;
   auditState: ProspectAuditQualificationState;
   qualifyingAudit?: ProspectWorkAudit;
+  /** Advisory only; present with a qualifying audit. Never open work. */
+  dataVersionState?: AuditDataVersionState;
   websiteSuppressed: boolean;
   emailSuppressed: boolean;
 }
 
-export interface NewestQualifyingAuditResult {
-  audit: ProspectWorkAudit | undefined;
-  state: ProspectAuditQualificationState;
-}
+export type NewestQualifyingAuditResult =
+  | {
+      audit: ProspectWorkAudit;
+      state: 'qualifying';
+      dataVersionState: AuditDataVersionState;
+    }
+  | {
+      audit: undefined;
+      state: Exclude<ProspectAuditQualificationState, 'qualifying'>;
+    };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TERMINAL_PROSPECT_STATUSES = new Set<Prospect['status']>(['won', 'lost', 'opted-out']);
@@ -136,7 +140,8 @@ function emailDomain(address: string): string | undefined {
 }
 
 /**
- * Selects the newest audit that is both current and complete. The input is
+ * Selects the newest audit with an eligible purpose and complete coverage,
+ * whatever normalization version produced its findings. The input is
  * deliberately an array rather than a database cursor so guards, previews,
  * drafts, and the To-do derivation all make the same decision.
  */
@@ -149,14 +154,16 @@ export function selectNewestQualifyingAudit(
   });
   const qualifyingAudit = ordered.find((audit) => isOutreachQualifyingAudit(audit));
   if (qualifyingAudit !== undefined) {
-    return { audit: qualifyingAudit, state: 'qualifying' };
+    return {
+      audit: qualifyingAudit,
+      state: 'qualifying',
+      dataVersionState: auditDataVersionState(qualifyingAudit),
+    };
   }
   if (ordered.length === 0) return { audit: undefined, state: 'missing' };
-  const current = ordered.filter((audit) => hasCurrentFindingsProvenance(audit));
-  if (current.length === 0) return { audit: undefined, state: 'stale' };
-  // A current quick check is finished work of the wrong kind, not a broken
-  // audit: it never covers enough of the site to support outreach.
-  const onlyQuickChecks = current.every((audit) => audit.scanIntent === 'quick-check');
+  // A quick check is finished work of the wrong kind, not a broken audit:
+  // it never covers enough of the site to support outreach.
+  const onlyQuickChecks = ordered.every((audit) => audit.scanIntent === 'quick-check');
   return { audit: undefined, state: onlyQuickChecks ? 'not-outreach-grade' : 'incomplete' };
 }
 
@@ -214,9 +221,7 @@ function recommendation(
           ? 'no-audit'
           : auditState === 'not-outreach-grade'
             ? 'audit-not-outreach-grade'
-            : auditState === 'incomplete'
-              ? 'audit-incomplete'
-              : 'audit-stale',
+            : 'audit-incomplete',
     };
   }
   if (prospect.emails.length === 0) {
@@ -335,7 +340,12 @@ export function deriveProspectWork(
     items,
     ...(nextRecommendation === undefined ? {} : { recommendation: nextRecommendation }),
     auditState: qualification.state,
-    ...(qualification.audit === undefined ? {} : { qualifyingAudit: qualification.audit }),
+    ...(qualification.audit === undefined
+      ? {}
+      : {
+          qualifyingAudit: qualification.audit,
+          dataVersionState: qualification.dataVersionState,
+        }),
     websiteSuppressed,
     emailSuppressed,
   };

@@ -106,6 +106,41 @@ describe('prospect work model', () => {
     ]);
   });
 
+  it('recommends the first email, not a rescan, for a complete audit from older code', () => {
+    const older = audit({ findingsProvenance: { normalizationFingerprint: 'older-release' } });
+    expect(selectNewestQualifyingAudit([older])).toEqual({
+      state: 'qualifying',
+      audit: older,
+      dataVersionState: 'older',
+    });
+
+    const work = deriveProspectWork(
+      prospect,
+      { ...emptySources, audits: [older] },
+      new Date('2026-09-15T00:00:00.000Z'),
+    );
+    expect(work.auditState).toBe('qualifying');
+    expect(work.dataVersionState).toBe('older');
+    expect(work.items).toEqual([expect.objectContaining({ kind: 'first-email' })]);
+    expect(work.recommendation).toMatchObject({ action: 'create-first-email' });
+  });
+
+  it('qualifies a historical complete prospecting audit and a complete Full scan alike', () => {
+    for (const scanIntent of ['prospecting-audit', 'full-audit'] as const) {
+      expect(selectNewestQualifyingAudit([audit({ scanIntent })])).toMatchObject({
+        state: 'qualifying',
+        dataVersionState: 'current',
+      });
+    }
+  });
+
+  it('never qualifies a legacy scan whose purpose cannot be established', () => {
+    expect(selectNewestQualifyingAudit([audit({ scanIntent: undefined })])).toEqual({
+      state: 'incomplete',
+      audit: undefined,
+    });
+  });
+
   it('suppresses first-email work from an email-domain match independently of the website', () => {
     const work = deriveProspectWork(
       prospect,

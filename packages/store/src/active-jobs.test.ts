@@ -198,6 +198,21 @@ describe.skipIf(!mongoAvailable)('planProspectJobLaunch', () => {
     ).resolves.toEqual({ allowed: false, conflictingJobId: existing });
   });
 
+  it('refuses a Full scan while a historical prospecting audit for the prospect drains', async () => {
+    const prospectId = randomUUID();
+    const domain = 'wixsite.com';
+    const existing = await seedJob({
+      type: 'prospecting-audit',
+      status: 'queued',
+      siteUrl: `https://drain.wixsite.com/`,
+      prospectId,
+    });
+
+    await expect(
+      planProspectJobLaunch(connection!, { kind: 'full-audit', prospectId, domain }),
+    ).resolves.toEqual({ allowed: false, conflictingJobId: existing });
+  });
+
   it('allows independent prospects on a shared vendor host', async () => {
     const domain = 'wixsite.com';
     await seedJob({
@@ -209,7 +224,7 @@ describe.skipIf(!mongoAvailable)('planProspectJobLaunch', () => {
 
     await expect(
       planProspectJobLaunch(connection!, {
-        kind: 'prospecting-audit',
+        kind: 'full-audit',
         prospectId: randomUUID(),
         domain,
       }),

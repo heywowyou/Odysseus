@@ -10,8 +10,10 @@ import {
 } from './prospect-work.js';
 import {
   effectiveAuditScanIntent,
+  type AuditDataVersionState,
   type AuditIntentSourceJob,
 } from './prospect-audit-qualification.js';
+import type { CurrentScanIntent } from './scan-intents.js';
 import { isSuppressed } from './suppression.js';
 import { TERMINAL_OUTREACH_THREAD_STATES } from '@odysseus/core';
 import { findLiveOutreachDraft } from './outreach-drafts.js';
@@ -23,7 +25,6 @@ export type OutreachActionRefusal =
   | 'suppressed'
   | 'no-contact'
   | 'no-complete-audit'
-  | 'audit-stale'
   | 'draft-already-live'
   | 'thread-closed'
   | 'thread-unknown'
@@ -35,7 +36,12 @@ export type OutreachAction = 'preview' | 'first-email' | 'follow-up';
 export type ScanLaunchCheck =
   { allowed: true; registrableDomain: string } | { allowed: false; refusal: ScanLaunchRefusal };
 export type OutreachActionCheck =
-  | { allowed: true; audit?: ProspectWorkAudit }
+  | {
+      allowed: true;
+      audit?: ProspectWorkAudit;
+      /** Advisory: an older data version is a warning, never a refusal. */
+      dataVersionState?: AuditDataVersionState;
+    }
   | {
       allowed: false;
       refusal: OutreachActionRefusal;
@@ -51,7 +57,7 @@ export async function checkScanLaunch(
   connection: Connection,
   input: {
     url: string;
-    kind: 'quick-check' | 'prospecting-audit' | 'full-audit';
+    kind: CurrentScanIntent;
     prospectId?: string;
   },
 ): Promise<ScanLaunchCheck> {
@@ -164,11 +170,11 @@ export async function checkOutreachAction(
   });
   const qualification = selectNewestQualifyingAudit(classifiedAudits);
   if (qualification.audit === undefined) {
-    return {
-      allowed: false,
-      refusal: qualification.state === 'stale' ? 'audit-stale' : 'no-complete-audit',
-      auditState: qualification.state,
-    };
+    return { allowed: false, refusal: 'no-complete-audit', auditState: qualification.state };
   }
-  return { allowed: true, audit: qualification.audit };
+  return {
+    allowed: true,
+    audit: qualification.audit,
+    dataVersionState: qualification.dataVersionState,
+  };
 }

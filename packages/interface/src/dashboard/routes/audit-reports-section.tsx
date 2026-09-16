@@ -258,6 +258,9 @@ export function ReportsCard(props: {
                       )}
                     </Badge>
                   ) : null}
+                  {report.olderTemplate === true ? (
+                    <Badge tone="neutral">{strings.auditDetail.reportOlderTemplate}</Badge>
+                  ) : null}
                   <a
                     className={buttonStyles('ghost', 'sm')}
                     href={`${reportBase}/${report.language}/preview`}

@@ -5,7 +5,7 @@ export type {
   StoredAnalysis,
   VerifiedStoredAnalysis,
 } from './types.js';
-export { classifyReportFreshness } from './freshness.js';
+export { classifyReportFreshness, reportUsesCurrentTemplate } from './freshness.js';
 export type { ReportFreshness, ReportFreshnessMetadata } from './freshness.js';
 /** Plan 032 (issue #162): re-exported so the interface analysis stage's
  *  static fallback analysis reads the exact same bilingual sentences the

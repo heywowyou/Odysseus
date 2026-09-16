@@ -42,6 +42,7 @@ interface ProspectAudit {
   auditId: string;
   siteUrl: string;
   kind: string;
+  scanIntent?: string;
   startedAt: string;
   finishedAt?: string;
 }
@@ -80,6 +81,8 @@ interface ProspectWorkSummary {
   };
   auditState: string;
   qualifyingAuditId?: string;
+  /** Advisory provenance of the qualifying audit; never a blocker. */
+  dataVersionState?: 'current' | 'older' | 'unknown';
   websiteSuppressed: boolean;
   emailSuppressed: boolean;
 }
@@ -157,6 +160,14 @@ const TERMINAL_STATUSES: readonly ProspectStatus[] = ['won', 'lost', 'opted-out'
 
 function label(value: string, labels: Record<string, string>): string {
   return labels[value] ?? value;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Whole days since a scan started. Informational only: no age makes a
+ *  scan unusable, the operator decides when the site may have changed. */
+function daysSince(value: string, now = Date.now()): number {
+  return Math.max(0, Math.floor((now - new Date(value).getTime()) / DAY_MS));
 }
 
 export function ProspectHubDetailPage(): JSX.Element {
@@ -436,9 +447,7 @@ export function ProspectHubDetailPage(): JSX.Element {
     }
   };
 
-  const launchScan = async (
-    type: 'quick-check' | 'prospecting-audit' | 'full-audit',
-  ): Promise<void> => {
+  const launchScan = async (type: 'quick-check' | 'full-audit'): Promise<void> => {
     if (!primaryWebsite) return;
     setOutreachBusy(`scan-${type}`);
     setOutreachNotice(null);
@@ -689,7 +698,7 @@ export function ProspectHubDetailPage(): JSX.Element {
     ) {
       const onClick =
         recommendation.action === 'prepare-audit'
-          ? () => void launchScan('prospecting-audit')
+          ? () => void launchScan('full-audit')
           : recommendation.action === 'create-first-email'
             ? () => void runFirstEmail()
             : () => void runFollowUp();
@@ -699,9 +708,7 @@ export function ProspectHubDetailPage(): JSX.Element {
           disabled={disabled}
           isLoading={
             outreachBusy ===
-            (recommendation.action === 'prepare-audit'
-              ? 'scan-prospecting-audit'
-              : recommendation.action)
+            (recommendation.action === 'prepare-audit' ? 'scan-full-audit' : recommendation.action)
           }
         >
           {actionLabel}
@@ -1232,12 +1239,24 @@ export function ProspectHubDetailPage(): JSX.Element {
             <div>
               <p className="text-xs text-ink-muted">{copy.site}</p>
               {qualifyingAudit ? (
-                <Link
-                  className="mt-1 block font-medium text-ink hover:underline"
-                  to={`/audits/${encodeURIComponent(qualifyingAudit.auditId)}`}
-                >
-                  {copy.auditKindLabels[qualifyingAudit.kind] ?? strings.common.vocabularyFallback}
-                </Link>
+                <>
+                  <Link
+                    className="mt-1 block font-medium text-ink hover:underline"
+                    to={`/audits/${encodeURIComponent(qualifyingAudit.auditId)}`}
+                  >
+                    {copy.auditKindLabels[qualifyingAudit.scanIntent ?? qualifyingAudit.kind] ??
+                      strings.common.vocabularyFallback}
+                  </Link>
+                  <p className="mt-1 text-xs text-ink-muted">
+                    {copy.scanDate
+                      .replace('{date}', formatDate(qualifyingAudit.startedAt))
+                      .replace('{days}', String(daysSince(qualifyingAudit.startedAt)))}
+                  </p>
+                  {qualifyingAudit.auditId === work?.qualifyingAuditId &&
+                  work.dataVersionState === 'older' ? (
+                    <p className="mt-1 text-xs text-ink-muted">{copy.olderDataVersion}</p>
+                  ) : null}
+                </>
               ) : (
                 <p className="mt-1 text-ink-muted">{copy.notProvided}</p>
               )}
@@ -1417,14 +1436,6 @@ export function ProspectHubDetailPage(): JSX.Element {
                     onClick={() => void launchScan('quick-check')}
                   >
                     {copy.quick}
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={!primaryWebsite || outreachBusy !== null}
-                    isLoading={outreachBusy === 'scan-prospecting-audit'}
-                    onClick={() => void launchScan('prospecting-audit')}
-                  >
-                    {copy.prospecting}
                   </Button>
                   <Button
                     size="sm"

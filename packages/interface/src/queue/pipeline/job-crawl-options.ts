@@ -2,8 +2,8 @@ import type { JobOptionsSnapshot } from '@odysseus/store';
 import type { RunAuditStageOptions } from '../../pipeline/audit-stage.js';
 
 /** The operator's advanced crawl options, as every single-site runner
- *  forwards them to runAuditStage. One mapping for Quick Check, Prepare
- *  outreach and Prepare client report, so the three intents cannot drift
+ *  forwards them to runAuditStage. One mapping for Quick Check, Full scan,
+ *  and the historical prospecting-audit runner, so the intents cannot drift
  *  apart on what "pause between page loads" or "pages at once" means; the
  *  clamps that keep these options from speeding a crawl up stay in
  *  runAuditStage. Absent keys stay absent: the stage's defaults apply. */

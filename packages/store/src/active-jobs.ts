@@ -8,14 +8,16 @@
  * already drifting and a Quick check job never surfaced anywhere on the
  * hub while it ran.
  *
- * Every operator-launchable job kind maps to a canonical JobType. Historical
- * aliases remain readable below, but new routes must create the canonical
- * `quick-check`, `prospecting-audit`, or `full-audit` row.
+ * Every operator-launchable scan maps to a canonical JobType: `quick-check`
+ * or `full-audit`. Historical `prospecting-audit` and `outreach-full-scan`
+ * rows remain readable below and still occupy the prospect and host slots
+ * while an old queued row drains, but no route creates them any more.
  */
 
 import type { Connection } from 'mongoose';
 import { isHotelVendorHost } from '@odysseus/core';
 import { createJobModel, type JobDocument, type JobType } from './schemas/job.schema.js';
+import type { CurrentScanIntent } from './scan-intents.js';
 
 export type ProspectActiveJobKind = 'quick-check' | 'prospecting-audit' | 'full-audit';
 
@@ -35,12 +37,6 @@ const KIND_BY_JOB_TYPE: Record<JobType, ProspectActiveJobKind | undefined> = {
   'full-audit': 'full-audit',
   'outreach-draft-batch': undefined,
   'outreach-followup-batch': undefined,
-};
-
-const JOB_TYPES_BY_KIND: Record<ProspectActiveJobKind, readonly JobType[]> = {
-  'quick-check': ['quick-check', 'prospecting'],
-  'prospecting-audit': ['prospecting-audit', 'outreach-full-scan', 'prospecting'],
-  'full-audit': ['full-audit'],
 };
 
 /** Every scan job can launch the scanner/Chromium stack. The generic
@@ -157,7 +153,7 @@ export async function listActiveJobsForProspect(
  *  conservative because tenancy cannot be proven. */
 export async function findActiveBrowserHeavyHostConflict(
   connection: Connection,
-  _kind: ProspectActiveJobKind,
+  _kind: CurrentScanIntent,
   domain: string,
   prospectId?: string,
   hostname = domain,
@@ -207,7 +203,7 @@ export type ProspectJobLaunchDecision =
 export async function planProspectJobLaunch(
   connection: Connection,
   params: {
-    kind: ProspectActiveJobKind;
+    kind: CurrentScanIntent;
     prospectId?: string;
     domain: string;
     hostname?: string;
@@ -235,10 +231,11 @@ export async function planProspectJobLaunch(
 
 async function findActiveJobForProspectKind(
   JobModel: ReturnType<typeof createJobModel>,
-  kind: ProspectActiveJobKind,
+  kind: CurrentScanIntent,
   prospectId: string,
 ): Promise<JobDocument | null> {
-  const types = JOB_TYPES_BY_KIND[kind];
+  // A Full scan duplicates any active complete crawl for the same prospect,
+  // including a historical prospecting-audit row still draining the queue.
   const scopeQuery =
     kind === 'quick-check'
       ? {
@@ -251,19 +248,18 @@ async function findActiveJobForProspectKind(
             },
           ],
         }
-      : kind === 'prospecting-audit'
-        ? {
-            $or: [
-              { type: 'prospecting-audit', 'options.prospectId': prospectId },
-              { type: 'outreach-full-scan', 'options.prospectId': prospectId },
-              {
-                type: 'prospecting',
-                'options.prospectId': prospectId,
-                'options.scanType': 'prospecting-audit' as const,
-              },
-            ],
-          }
-        : { type: { $in: types }, 'options.prospectId': prospectId };
+      : {
+          $or: [
+            { type: 'full-audit', 'options.prospectId': prospectId },
+            { type: 'prospecting-audit', 'options.prospectId': prospectId },
+            { type: 'outreach-full-scan', 'options.prospectId': prospectId },
+            {
+              type: 'prospecting',
+              'options.prospectId': prospectId,
+              'options.scanType': 'prospecting-audit' as const,
+            },
+          ],
+        };
   const query = {
     status: { $in: ACTIVE_STATUSES },
     ...scopeQuery,

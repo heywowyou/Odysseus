@@ -39,6 +39,7 @@ import {
 import { buildArtifactBucketKey, buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import {
   classifyReportFreshness,
+  reportUsesCurrentTemplate,
   computeAutomaticGrade,
   findUnconfirmedIdentityFields,
   generateOutreachPreviewHtmlV2,
@@ -420,6 +421,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         // a legacy document without one: the dashboard's length warning
         // must never be derived from an inferred value.
         ...(report?.pageCount !== undefined ? { pageCount: report.pageCount } : {}),
+        ...(report !== null && !reportUsesCurrentTemplate(report) ? { olderTemplate: true } : {}),
         pdfAvailable: language === 'fr' ? frPdfAvailable : enPdfAvailable,
       };
     });

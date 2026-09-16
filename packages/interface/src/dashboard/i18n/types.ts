@@ -143,10 +143,8 @@ export interface DashboardStrings {
     typeLabel: string;
     typeFullAudit: string;
     typeQuickCheck: string;
-    typeProspectingAudit: string;
     typeFullAuditHint: string;
     typeQuickCheckHint: string;
-    typeProspectingAuditHint: string;
     urlLabel: string;
     urlPlaceholder: string;
     prospectLabel: string;
@@ -282,6 +280,8 @@ export interface DashboardStrings {
      *  failure. Scoped to what the automated scan detected. */
     analysisStaticFallbackNotice: string;
     reportFreshness: Record<'fresh' | 'stale' | 'unverified', string>;
+    /** Plan 050: advisory badge on a report rendered by an older template. */
+    reportOlderTemplate: string;
     /** Non-blocking warning on a report row whose measured page count is
      *  above the report package's threshold; {count} is replaced with the
      *  page count by the page. */
@@ -743,7 +743,6 @@ export interface DashboardStrings {
       recommendationReasons: Record<string, string>;
       quick: string;
       fullAudit: string;
-      prospecting: string;
       outcome: string;
       history: string;
       fullHistory: string;
@@ -835,6 +834,8 @@ export interface DashboardStrings {
       draftDiscarded: string;
       noDraft: string;
       auditState: string;
+      scanDate: string;
+      olderDataVersion: string;
       eventLabel: string;
       noEvents: string;
       actionFailed: string;

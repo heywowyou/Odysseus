@@ -100,15 +100,19 @@ describe('SIREN validation', () => {
 });
 
 describe('buildScanRequest', () => {
-  it('defaults the generic entry point to Prepare outreach', () => {
-    expect(createEmptyFormValues().type).toBe('prospecting-audit');
-    expect(initialScanTypeFromQuery(null)).toBe('prospecting-audit');
-    expect(initialScanTypeFromQuery('unknown')).toBe('prospecting-audit');
-    expect(initialScanTypeFromQuery('full-audit')).toBe('full-audit');
+  it('defaults the generic entry point to Full scan', () => {
+    expect(createEmptyFormValues().type).toBe('full-audit');
+    expect(initialScanTypeFromQuery(null)).toBe('full-audit');
+    expect(initialScanTypeFromQuery('unknown')).toBe('full-audit');
+    expect(initialScanTypeFromQuery('quick-check')).toBe('quick-check');
   });
 
-  it('keeps the new-scan form to the three operator intents', () => {
-    expect(NEW_SCAN_TYPES).toEqual(['full-audit', 'quick-check', 'prospecting-audit']);
+  it('opens an old Prepare outreach link on the Full scan', () => {
+    expect(initialScanTypeFromQuery('prospecting-audit')).toBe('full-audit');
+  });
+
+  it('keeps the new-scan form to Quick check and Full scan', () => {
+    expect(NEW_SCAN_TYPES).toEqual(['full-audit', 'quick-check']);
   });
 
   it('builds a full-audit body with every option set, trimming and cleaning values', () => {
@@ -202,49 +206,35 @@ describe('buildScanRequest', () => {
     }
   });
 
-  it('builds a prospect-linked outreach audit request', () => {
+  it('builds a prospect-linked Full scan request with every crawl option', () => {
     expect(
       buildScanRequest(
         formValues({
-          type: 'prospecting-audit',
           url: 'https://hotel.example.fr',
           prospectId: 'prospect-1',
+          maxPages: '40',
+          maxDepth: '2',
+          delaySeconds: '60',
+          scanConcurrency: '1',
+          seeds: 'https://hotel.example.fr/a',
+          exclusions: 'https://hotel.example.fr/blog/*',
+          bookingEngineUrl: 'https://booking.example.fr/x',
         }),
       ),
     ).toEqual({
-      type: 'prospecting-audit',
+      type: 'full-audit',
       url: 'https://hotel.example.fr',
       prospectId: 'prospect-1',
-      options: {},
+      options: {
+        maxPages: 40,
+        maxDepth: 2,
+        delayMs: 60_000,
+        scanConcurrency: 1,
+        seeds: ['https://hotel.example.fr/a'],
+        exclusions: ['https://hotel.example.fr/blog/*'],
+        bookingEngineUrl: 'https://booking.example.fr/x',
+      },
     });
-  });
-
-  it('sends the same advanced crawl options for Prepare outreach as for a client report', () => {
-    const advanced = {
-      url: 'https://hotel.example.fr',
-      maxPages: '40',
-      maxDepth: '2',
-      delaySeconds: '60',
-      scanConcurrency: '1',
-      seeds: 'https://hotel.example.fr/a',
-      exclusions: 'https://hotel.example.fr/blog/*',
-      bookingEngineUrl: 'https://booking.example.fr/x',
-    };
-    const outreach = buildScanRequest(formValues({ ...advanced, type: 'prospecting-audit' }));
-    const report = buildScanRequest(formValues(advanced));
-    if (outreach.type !== 'prospecting-audit' || report.type !== 'full-audit') {
-      throw new Error('unexpected request types');
-    }
-    expect(outreach.options).toEqual({
-      maxPages: 40,
-      maxDepth: 2,
-      delayMs: 60_000,
-      scanConcurrency: 1,
-      seeds: ['https://hotel.example.fr/a'],
-      exclusions: ['https://hotel.example.fr/blog/*'],
-      bookingEngineUrl: 'https://booking.example.fr/x',
-    });
-    expect(report.options).toEqual(outreach.options);
   });
 
   it('sends only the pacing options for a one-page Quick Check', () => {

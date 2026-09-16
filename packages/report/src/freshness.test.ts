@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { FINDINGS_SCHEMA_VERSION, NORMALIZATION_FINGERPRINT } from '@odysseus/core';
 import { REPORT_TEMPLATE_VERSION } from './constants.js';
-import { classifyReportFreshness } from './freshness.js';
+import { classifyReportFreshness, reportUsesCurrentTemplate } from './freshness.js';
 
 const provenance = {
   findingsSchemaVersion: FINDINGS_SCHEMA_VERSION,
@@ -33,6 +33,17 @@ describe('classifyReportFreshness', () => {
         provenance,
       ),
     ).toBe('stale');
+  });
+
+  it('keeps a report rendered by an older template deliverable, with advice', () => {
+    const older = {
+      ...report,
+      rendererVersion: REPORT_TEMPLATE_VERSION - 1,
+      reportTemplateVersion: REPORT_TEMPLATE_VERSION - 1,
+    };
+    expect(classifyReportFreshness(older, provenance)).toBe('fresh');
+    expect(reportUsesCurrentTemplate(older)).toBe(false);
+    expect(reportUsesCurrentTemplate(report)).toBe(true);
   });
 
   it('marks legacy metadata unverified', () => {

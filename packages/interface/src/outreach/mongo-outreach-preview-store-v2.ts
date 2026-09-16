@@ -73,12 +73,7 @@ export function createMongoOutreachPreviewStoreV2(
       const qualification = selectNewestQualifyingAudit(classifiedAudits);
       if (qualification.audit === undefined) {
         return {
-          refused:
-            qualification.state === 'missing'
-              ? 'no-audit'
-              : qualification.state === 'stale'
-                ? 'stale-provenance'
-                : 'coverage-incomplete',
+          refused: qualification.state === 'missing' ? 'no-audit' : 'coverage-incomplete',
         };
       }
 
