@@ -4802,3 +4802,43 @@ Rejected: an automatic scan expiry (the operator sees the date and decides),
 rescanning or rewriting data as a migration, writing operator enrichment back
 into directory source records, and modelling archive as a `lost`-like status,
 which would have rewritten outreach history.
+
+### 92. Production Chromium runs without its sandbox, as a recorded accepted risk (decision recorded 2026-09-16, issue #344)
+
+The production container passes `--no-sandbox` to Chromium through
+`ODYSSEUS_CHROMIUM_EXTRA_ARGS` (`deploy/compose.yaml`). Chromium renders
+third-party pages during scans and renders reports for PDF, and it runs as the
+same unprivileged user, in the same container, as `odysseus serve`, which holds
+the LLM key, mailbox credentials, bucket keys and the Mongo URI. A renderer
+exploit triggered by a scanned site would therefore reach every one of those
+secrets and the live operator sessions. There is no second layer.
+
+The risk is accepted for now, with its bounds written down:
+
+- The scanner only visits sites the operator chose (catalogue domains,
+  prospects, explicit scans), not arbitrary user-submitted URLs, and the
+  private interface is never exposed without authentication.
+- Playwright's Chromium is updated with every image build; a release that
+  bumps Playwright is the patch path for renderer bugs.
+- Page content cannot steer the scanner to internal addresses (issue #340),
+  which removes the cheapest non-exploit abuse of the same browser.
+
+Restoring the sandbox was not switched on blindly. It needs unprivileged user
+namespaces inside the container (a seccomp profile allowing `clone`/`unshare`
+with user namespaces), and the Hostinger host's kernel and AppArmor policy may
+refuse them. A production change that cannot be proven from a workstation risks
+breaking every scan, which is a worse outcome than the documented risk.
+
+Revisit when any of these happens, in this order of preference:
+
+1. Split scanning and PDF rendering into their own container that holds no
+   mailbox, bucket or LLM secrets (only the artifacts volume and a narrow job
+   channel). This removes the blast radius even without the sandbox.
+2. Prove on the production host that Chromium starts with the sandbox under a
+   dedicated seccomp profile, then drop `--no-sandbox` from the compose file
+   (runbook section 7C).
+
+Rejected: running the container as root so the sandbox works without user
+namespaces (swaps one privilege problem for a larger one), and
+`--privileged` or `seccomp=unconfined` for the whole app (widens the escape
+surface for every process, not only Chromium).

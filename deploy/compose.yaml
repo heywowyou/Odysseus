@@ -60,6 +60,8 @@ services:
       MONGODB_DB_NAME: test
       ODYSSEUS_ARTIFACTS_ROOT: /data/artifacts
       # Rootless container Chromium cannot create its sandbox namespaces.
+      # Running without the sandbox, next to every production secret, is a
+      # recorded accepted risk (trade-offs.md 92, runbook section 7C).
       # Deployment flags arrive via this env hook (parsed in
       # packages/scanner/src/browser.ts) so none are baked into the image.
       ODYSSEUS_CHROMIUM_EXTRA_ARGS: --no-sandbox --disable-dev-shm-usage

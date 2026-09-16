@@ -435,6 +435,33 @@ Two standing rules:
   out itself; do not click the panel's own Deployer button after a rollout,
   because it re-runs `pull` + `up` from the panel's own context.
 
+## 7C. Chromium sandbox (accepted risk)
+
+Production Chromium runs with `--no-sandbox`, in the same container and user
+that hold every production secret. This is recorded as an accepted risk in
+`docs/decisions/trade-offs.md` entry 92; read it before changing
+`ODYSSEUS_CHROMIUM_EXTRA_ARGS`.
+
+To try restoring the sandbox, prove it on the production host first, never by
+editing the compose file and deploying:
+
+1. Check the host allows unprivileged user namespaces:
+   `sysctl kernel.unprivileged_userns_clone` (Debian/Ubuntu) and
+   `sysctl kernel.apparmor_restrict_unprivileged_userns` (Ubuntu 23.10+; `1`
+   blocks it).
+2. Start a throwaway container from the current image without the flag and
+   launch Chromium once:
+   `docker run --rm --entrypoint node odysseus-app:latest -e "require('playwright').chromium.launch().then(b => b.close()).then(() => console.log('sandbox ok'))"`.
+   Run it from a directory with no `.env`; the container needs no secrets for
+   this check.
+3. Only if that prints `sandbox ok` (possibly after adding a seccomp profile
+   that allows user namespaces via `security_opt`), remove `--no-sandbox` from
+   `deploy/compose.yaml`, deploy, run one Quick check and one PDF render, and
+   update trade-off 92.
+
+If Chromium fails to start after a change here, every scan and PDF fails;
+roll back by restoring the flag.
+
 ## 8. Backups
 
 The nightly job tars the artifacts volume and copies it to the existing
