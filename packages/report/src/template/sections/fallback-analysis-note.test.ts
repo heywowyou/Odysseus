@@ -38,10 +38,11 @@ describe('renderFallbackAnalysisNote', () => {
     expect(FALLBACK_ANALYSIS_NOTE_ID.startsWith('section-')).toBe(false);
     expect(html).toContain('class="sheet"');
     expect(html).not.toContain('section-head');
-    // Copy is interpolated through escapeHtml, so apostrophes appear as
-    // entities; assert against the escaped form.
-    expect(html).toContain(escapeHtml(fr.fallbackAnalysis.noteHeading));
-    expect(html).toContain(escapeHtml(fr.fallbackAnalysis.noteBody));
+    // getStrings('fr'), not the raw fr.ts table: the French copy is
+    // normalised for typography as it is loaded (issue #323), so the raw
+    // table's straight apostrophes are not what reaches the page.
+    expect(html).toContain(escapeHtml(getStrings('fr').fallbackAnalysis.noteHeading));
+    expect(html).toContain(escapeHtml(getStrings('fr').fallbackAnalysis.noteBody));
     expect(html).not.toContain(en.fallbackAnalysis.noteHeading);
   });
 

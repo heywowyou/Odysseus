@@ -323,8 +323,8 @@ describe('item 3.1: repeated URL lists collapse instead of reprinting every page
     // Scoped to "Pages : ..." (the per-finding url-cell prefix), not the
     // separate "Pages explorées (N)" crawled-pages block above it, which
     // legitimately lists every page-N URL regardless of this collapse.
-    expect(html).toContain('Pages : Toutes les pages analysées (8)');
-    expect(html).not.toContain('Pages : https://example.com/page-0');
+    expect(html).toContain('Pages : Toutes les pages analysées (8)');
+    expect(html).not.toContain('Pages : https://example.com/page-0');
   });
 
   it('caps the list and names the remainder when a finding hits many, but not all, pages', () => {
@@ -339,7 +339,7 @@ describe('item 3.1: repeated URL lists collapse instead of reprinting every page
     // pages block (which legitimately lists every page-N URL regardless).
     const urlCellLine = html
       .split('\n')
-      .find((line) => line.includes('class="url-cell"') && line.includes('Pages :'));
+      .find((line) => line.includes('class="url-cell"') && line.includes('Pages :'));
     expect(urlCellLine).toBeDefined();
     expect(urlCellLine).toContain('et 4 autres');
     // Capped at 5: shown pages present, the 6th-9th are not spelled out.
@@ -404,7 +404,7 @@ describe('2026-08-22: findings sharing an identical page-URL set within one rule
     const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
 
     // f001 (the first in id order) prints the real list.
-    expect(html).toContain(`Pages : ${sharedUrls.join(', ')}`);
+    expect(html).toContain(`Pages : ${sharedUrls.join(', ')}`);
     // f002 and f003 reference f001 instead of repeating it.
     const referenceCount = html.split('Mêmes pages que f001').length - 1;
     expect(referenceCount).toBe(2);
@@ -414,7 +414,7 @@ describe('2026-08-22: findings sharing an identical page-URL set within one rule
     // too, and sharedUrls is a subset of that longer joined string.
     const urlCellLines = html
       .split('\n')
-      .filter((line) => line.includes('class="url-cell"') && line.includes('Pages :'));
+      .filter((line) => line.includes('class="url-cell"') && line.includes('Pages :'));
     const linesWithFullList = urlCellLines.filter((line) => line.includes(sharedUrls.join(', ')));
     expect(linesWithFullList.length).toBe(1);
   });
@@ -454,7 +454,7 @@ describe('2026-08-22: findings sharing an identical page-URL set within one rule
     expect(html).not.toContain('Mêmes pages que f001');
     const urlCellLines = html
       .split('\n')
-      .filter((line) => line.includes('class="url-cell"') && line.includes('Pages :'));
+      .filter((line) => line.includes('class="url-cell"') && line.includes('Pages :'));
     const linesWithFullList = urlCellLines.filter((line) => line.includes(sharedUrls.join(', ')));
     expect(linesWithFullList.length).toBe(2);
   });
@@ -469,7 +469,7 @@ describe('2026-08-22: findings sharing an identical page-URL set within one rule
 
     const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
     expect(html).not.toContain('Mêmes pages que f001');
-    expect(html.split(`Pages : ${onePage[0]}`).length - 1).toBe(2);
+    expect(html.split(`Pages : ${onePage[0]}`).length - 1).toBe(2);
   });
 });
 

@@ -8,7 +8,7 @@ import {
   selectRenderedThemes,
 } from './themes.js';
 import { getStrings } from '../strings/i18n.js';
-import { escapeHtml } from '../html-utils.js';
+import { escapeHtml, escapeProse } from '../html-utils.js';
 import {
   loadSmallSiteAnalysis,
   loadSmallSiteFindings,
@@ -827,7 +827,7 @@ describe('item 27: theme cards render recommendedActions', () => {
 
     for (const theme of rendered) {
       for (const action of theme.recommendedActions) {
-        expect(html).toContain(escapeHtml(action));
+        expect(html).toContain(escapeProse(action, 'fr'));
       }
     }
   });

@@ -14,7 +14,7 @@ describe('renderObservations against the real small-site.test scan', () => {
 
     const html = renderObservations(getStrings('fr'), 6, diverted);
 
-    expect(html).toContain('Pages légales exclues de l&#39;indexation');
+    expect(html).toContain('Pages légales exclues de l’indexation');
     // Every finding confined entirely to /mentions-legales/, named by id.
     // Read off the same partition the section renders from rather than
     // hardcoded: finding ids are reassigned densely on every normalization,
@@ -69,6 +69,6 @@ describe('renderObservations against the real small-site.test scan', () => {
 
     expect(html).toContain('f1');
     expect(html).not.toContain('portent une directive noindex');
-    expect(html).toContain('généralement exclu de l&#39;indexation');
+    expect(html).toContain('généralement exclu de l’indexation');
   });
 });

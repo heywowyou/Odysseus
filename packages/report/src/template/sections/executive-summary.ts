@@ -1,4 +1,4 @@
-import type { AuditManifest, Finding, ObligationAssessment } from '@odysseus/core';
+import type { AuditManifest, Finding, ObligationAssessment, ReportLanguage } from '@odysseus/core';
 import { EAA_REGIME_ID, eaaSanctionFigureSentence } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
@@ -70,7 +70,11 @@ function renderTopPriorityLegalNoteFromPriorities(
  *  impact sentence here anymore - the theme card is the one place that
  *  prose lives (report.reference.html's exec-summary jump list is title
  *  + rank badge + "Voir ->" only, nothing else). */
-function renderStartHere(strings: ReportStrings, themes: StoredAnalysis['themes']): string {
+function renderStartHere(
+  strings: ReportStrings,
+  themes: StoredAnalysis['themes'],
+  language: ReportLanguage,
+): string {
   const topThemes = [...themes]
     .sort((a, b) => a.priorityRank - b.priorityRank)
     .slice(0, TOP_THEME_COUNT);
@@ -105,7 +109,7 @@ function renderStartHere(strings: ReportStrings, themes: StoredAnalysis['themes'
       return `
         <a href="#theme-${theme.priorityRank}" style="display:flex;align-items:center;gap:var(--space-3);text-decoration:none;color:var(--color-text);padding:var(--space-4) 0;break-inside:avoid;background:linear-gradient(to right,transparent,var(--color-divider) 0,var(--color-divider) 100%,transparent) no-repeat bottom/100% 1px">
           <span style="width:22px;height:22px;flex:none;color:var(--color-accent);font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center;text-align:center;font-variant-numeric:tabular-nums">${theme.priorityRank}</span>
-          <span style="font-size:14px;flex:1">${escapeProse(theme.title)}</span>
+          <span style="font-size:14px;flex:1">${escapeProse(theme.title, language)}</span>
           <span style="font-size:11px;color:var(--color-accent-300)">${escapeHtml(jumpLinkLabel)}</span>
         </a>
       `;
@@ -123,12 +127,13 @@ function renderStartHere(strings: ReportStrings, themes: StoredAnalysis['themes'
 function renderStartHerePriorities(
   strings: ReportStrings,
   priorities: readonly RenderedPriority[],
+  language: ReportLanguage,
 ): string {
   const rows = priorities.slice(0, TOP_THEME_COUNT).map(({ theme, displayRank }) => {
     const label = fillTemplate(strings.executiveSummary.jumpLinkLabelTemplate, {
       rank: displayRank,
     });
-    return `<a href="#theme-${displayRank}" style="display:flex;align-items:center;gap:var(--space-3);text-decoration:none;color:var(--color-text);padding:var(--space-4) 0;break-inside:avoid;background:linear-gradient(to right,transparent,var(--color-divider) 0,var(--color-divider) 100%,transparent) no-repeat bottom/100% 1px"><span style="width:22px;height:22px;flex:none;color:var(--color-accent);font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center;text-align:center;font-variant-numeric:tabular-nums">${displayRank}</span><span style="font-size:14px;flex:1">${escapeProse(theme.title)}</span><span style="font-size:11px;color:var(--color-accent-300)">${escapeHtml(label)}</span></a>`;
+    return `<a href="#theme-${displayRank}" style="display:flex;align-items:center;gap:var(--space-3);text-decoration:none;color:var(--color-text);padding:var(--space-4) 0;break-inside:avoid;background:linear-gradient(to right,transparent,var(--color-divider) 0,var(--color-divider) 100%,transparent) no-repeat bottom/100% 1px"><span style="width:22px;height:22px;flex:none;color:var(--color-accent);font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center;text-align:center;font-variant-numeric:tabular-nums">${displayRank}</span><span style="font-size:14px;flex:1">${escapeProse(theme.title, language)}</span><span style="font-size:11px;color:var(--color-accent-300)">${escapeHtml(label)}</span></a>`;
   });
   if (rows.length === 0) return '';
   return `<div class="start-here" data-render-atomic="start-here" style="margin-top:var(--space-8);padding:var(--space-4) var(--space-6);background:var(--color-surface);border-radius:var(--radius-lg)"><div style="font-size:11px;text-transform:uppercase;letter-spacing:0.02em;color:var(--color-accent-300);margin-bottom:var(--space-4)">${escapeHtml(strings.executiveSummary.startHereKicker)}</div>${rows.join('')}</div>`;
@@ -286,7 +291,7 @@ export function renderExecutiveSummary(
          a band (--space-1/--space-3) and open to the sheet-level step
          (--space-8) between bands. Note muting uses the ink ladder
          (neutral-200/400), never opacity, to hold 4.5:1 on the ground. -->
-    <p style="font-size:15px;max-width:66ch;line-height:1.55;color:var(--color-neutral-100)">${escapeProse(analysis.executiveSummary)}</p>
+    <p style="font-size:15px;max-width:66ch;line-height:1.55;color:var(--color-neutral-100)">${escapeProse(analysis.executiveSummary, analysis.language)}</p>
     <p style="font-size:12.5px;color:var(--color-neutral-200);margin-top:var(--space-3);max-width:66ch">${escapeHtml(countsSentence)}</p>
     <p style="font-size:11px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:66ch">${escapeHtml(e.glossaryPointerSentence)}</p>
     ${renderCoveredByPrioritiesNote(strings, analysis, findings, findingsById, priorities)}
@@ -295,7 +300,7 @@ export function renderExecutiveSummary(
     ${renderCategoryImbalanceNote(strings, stats)}
     ${priorities ? renderTopPriorityLegalNoteFromPriorities(strings, priorities) : renderTopPriorityLegalNote(strings, analysis.themes, findingsById)}
     ${renderRegulatoryContextNote(strings, analysis.language, analysis.obligationAssessment)}
-    ${priorities ? renderStartHerePriorities(strings, priorities) : renderStartHere(strings, analysis.themes)}
+    ${priorities ? renderStartHerePriorities(strings, priorities, analysis.language) : renderStartHere(strings, analysis.themes, analysis.language)}
   `,
     '',
     'section-01',

@@ -35,6 +35,8 @@ describe('stripInlineMarkdown', () => {
   });
 
   it('escapeProse still escapes HTML after stripping', () => {
-    expect(escapeProse('la balise `<title>` est *vide*')).toBe('la balise &lt;title&gt; est vide');
+    expect(escapeProse('la balise `<title>` est *vide*', 'en')).toBe(
+      'la balise &lt;title&gt; est vide',
+    );
   });
 });

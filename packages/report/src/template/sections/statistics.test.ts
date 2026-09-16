@@ -189,7 +189,7 @@ describe('renderStatistics against the real small-site.test scan', () => {
       'Accessibilité',
       'Référencement (SEO)',
       'Rendu',
-      'Visibilité dans les moteurs d&#39;IA (GEO)',
+      'Visibilité dans les moteurs d’IA (GEO)',
     ];
     const positions = labels.map((label) => html.indexOf(`>${label}<`));
 

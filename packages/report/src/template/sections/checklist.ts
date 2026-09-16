@@ -113,7 +113,7 @@ export function renderChecklist(
       return `
         <div class="row-atomic">
           ${cell(String(displayRank))}
-          ${cell(escapeProse(theme.title))}
+          ${cell(escapeProse(theme.title, language))}
           ${cell(escapeHtml(effortLevels[theme.effort]))}
           ${cell(`<span data-level="${theme.impact}" style="color:${LEVEL_COLOR[theme.impact].color}">${escapeHtml(levels[theme.impact])}</span>`)}
           ${cell(`${formatNumber(uniquePages, language)}/${formatNumber(totalPagesScanned, language)}`)}

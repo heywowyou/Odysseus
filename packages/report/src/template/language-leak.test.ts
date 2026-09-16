@@ -12,6 +12,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { REFERENCE_STAT_TABLE, REGIME_TABLE, getRegime } from '@odysseus/core';
+import { frenchCopy } from './french-typography.js';
 import { renderHtml } from './render-html.js';
 import { escapeHtml } from './html-utils.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
@@ -52,8 +53,11 @@ function stripStyleBlock(html: string): string {
 function stripReferenceStatCitations(html: string): string {
   let stripped = html;
   for (const stat of REFERENCE_STAT_TABLE) {
+    // Issue #323: code-owned French is printed through the report's
+    // typography pass, so the form present in the document - and therefore
+    // the form to strip - is the normalised one.
     stripped = stripped
-      .split(escapeHtml(stat.citation.fr))
+      .split(escapeHtml(frenchCopy(stat.citation.fr, 'fr')))
       .join('')
       .split(escapeHtml(stat.citation.en))
       .join('');
@@ -95,7 +99,7 @@ function stripRegimeProperNouns(html: string): string {
       if (!regime) continue;
       for (const value of [regime.name, regime.legalCitation, regime.authority]) {
         if (value === '') continue;
-        stripped = stripped.split(escapeHtml(value)).join('');
+        stripped = stripped.split(escapeHtml(frenchCopy(value, language))).join('');
       }
     }
   }

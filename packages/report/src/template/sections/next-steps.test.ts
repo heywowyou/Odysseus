@@ -289,7 +289,7 @@ describe('plan 018 step 7: the ending is a synthesis, not three sales cards', ()
     expect(html).toContain('le juridique');
     expect(html).toContain('trois à six mois');
     expect(html).toContain(`${ODYSSEUS_REAUDIT_PRICE_EUR_HT} € HT`);
-    expect(html).toContain('Besoin de clarifier un point ?');
+    expect(html).toContain('Besoin de clarifier un point ?');
     expect(html).toContain(ODYSSEUS_CONTACT_EMAIL);
     expect(html).toContain('Rapport produit par');
     expect(html).toContain('a1b2c3');

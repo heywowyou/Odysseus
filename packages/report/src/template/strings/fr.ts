@@ -493,8 +493,8 @@ export const fr: ReportStrings = {
     heading: 'Ce que reçoit un moteur de recherche avant JavaScript',
     intro:
       "Chaque page est chargée deux fois : une fois sans JavaScript, comme le fait un robot d'indexation basique, une fois dans un navigateur complet. La différence mesure le contenu invisible pour les moteurs.",
-    rawBarLabelTemplate: 'HTML brut - {chars} caractères',
-    renderedBarLabelTemplate: 'Page rendue - {chars} caractères',
+    rawBarLabelTemplate: 'HTML brut · {chars} caractères',
+    renderedBarLabelTemplate: 'Page rendue · {chars} caractères',
     charCountsUnavailableNote: 'Nombre de caractères non mesuré pour cette page.',
     missingCaptionTemplate:
       'Manquant : {percent}% du texte visible absent du HTML brut, sur {selector}.',

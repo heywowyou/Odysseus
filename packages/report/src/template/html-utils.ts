@@ -5,6 +5,8 @@
  * title containing "<script>" (a real possibility: it could be quoting a
  * client's own markup) from executing inside the report.
  */
+import { normalizeFrenchTypography } from './french-typography.js';
+
 export function escapeHtml(value: string): string {
   return value
     .replaceAll('&', '&amp;')
@@ -51,9 +53,29 @@ export function stripInlineMarkdown(value: string): string {
 /** Use for any string written by the model. Plain escapeHtml stays
  *  correct for scanner output, string-file copy and URLs - those never
  *  contain markdown, and running the stripper over a CSS selector like
- *  `a[href*="x"]` could damage it. */
-export function escapeProse(value: string): string {
-  return escapeHtml(stripInlineMarkdown(value));
+ *  `a[href*="x"]` could damage it.
+ *
+ *  Issue #323: the model writes straight apostrophes and "78%", so French
+ *  prose printed both conventions on the same page as the strings files'
+ *  typographic ones. Model prose is the third French source in the
+ *  document and goes through the same pass as the other two. */
+export function escapeProse(value: string, language: 'fr' | 'en'): string {
+  return escapeCopy(stripInlineMarkdown(value), language);
+}
+
+/** Escapes French display copy that did not come from the report's own
+ *  strings files - the legal regime names, authorities and citations
+ *  `core` owns, and the reference-stat citation sentences. Those carry
+ *  their own straight apostrophes, and issue #323 is precisely that two
+ *  conventions met in one sentence: "Critères publiés pour Obligation
+ *  d'accessibilité ... Faits vérifiés pour cet audit : le répertoire
+ *  indique la tranche d'effectif 02", with the second apostrophe
+ *  typographic and the first not. Typography is a presentation decision,
+ *  so the report normalises what it prints; the wording itself is
+ *  untouched. Never use this for a URL, a CSS selector or a code snippet:
+ *  those are verbatim evidence and take plain escapeHtml. */
+export function escapeCopy(value: string, language: 'fr' | 'en'): string {
+  return escapeHtml(language === 'fr' ? normalizeFrenchTypography(value) : value);
 }
 
 /** item 30 [REGRESSION]: the final page's "Une question ?" card said
@@ -208,7 +230,10 @@ export function joinClauseList(
  *  place that joins a label to its colon, so every such row reads
  *  correctly in both languages by construction. */
 export function labelSeparator(language: 'fr' | 'en'): string {
-  return language === 'fr' ? ' : ' : ': ';
+  // Issue #323: an ordinary space here is a legal break opportunity, so a
+  // label row could wrap with the colon orphaned onto the next line. Same
+  // no-break space the French strings use before high punctuation.
+  return language === 'fr' ? '\u00a0: ' : ': ';
 }
 
 /** Fills `{key}` placeholders in a static ReportStrings template with

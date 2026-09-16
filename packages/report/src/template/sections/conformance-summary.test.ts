@@ -31,7 +31,7 @@ describe('renderConformanceSummary against the real small-site.test findings', (
     // d'obligation légale") rather than the old defensive "does not
     // contradict section 2" framing, which read as the report arguing
     // with itself in front of the client.
-    expect(html).toContain('indépendamment de toute question d&#39;obligation légale');
+    expect(html).toContain('indépendamment de toute question d’obligation légale');
   });
 });
 

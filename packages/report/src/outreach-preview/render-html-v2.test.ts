@@ -120,8 +120,8 @@ describe('generateOutreachPreviewHtmlV2', () => {
     expect(html).not.toContain('>Grave<');
     expect(html).not.toContain('>Modérée<');
     expect(html).not.toContain('>Mineure<');
-    expect(html).toContain('bloque des visiteurs ou l&#39;indexation');
-    expect(html).toContain('dégrade fortement l&#39;usage ou la conformité');
+    expect(html).toContain('bloque des visiteurs ou l’indexation');
+    expect(html).toContain('dégrade fortement l’usage ou la conformité');
   });
 
   it('renders exactly three proof cards with category, severity, and page counts', () => {

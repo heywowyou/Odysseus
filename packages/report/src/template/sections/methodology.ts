@@ -27,6 +27,7 @@ import {
   sheet,
   auditDate,
 } from '../html-utils.js';
+import { frenchCopy } from '../french-typography.js';
 import { translateEffectifLabel } from '../effectif-label.js';
 import { buildCoverageDisclosure } from '../coverage-disclosure.js';
 
@@ -189,12 +190,15 @@ export function renderLegalCitationParagraph(
     if (!regime) return '';
     const authorityDisplay =
       language === 'fr' ? `${regime.authorityPrefixFr} ${regime.authority}` : regime.authority;
-    return fillTemplate(m.legalCitationUndeterminedParagraph, {
-      regimeName: regime.name,
-      authority: authorityDisplay,
-      legalCitation: regime.legalCitation,
-      facts: m.legalCitationSirenMissingFact,
-    });
+    return frenchCopy(
+      fillTemplate(m.legalCitationUndeterminedParagraph, {
+        regimeName: regime.name,
+        authority: authorityDisplay,
+        legalCitation: regime.legalCitation,
+        facts: m.legalCitationSirenMissingFact,
+      }),
+      language,
+    );
   }
 
   const basis =
@@ -235,7 +239,10 @@ export function renderLegalCitationParagraph(
     facts,
   });
 
-  return paragraph;
+  // Issue #323: regime.name, regime.authority and regime.legalCitation are
+  // core-owned French, written with straight apostrophes, and they land in
+  // the same sentence as the report's own typographic copy.
+  return frenchCopy(paragraph, language);
 }
 
 /**

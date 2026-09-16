@@ -205,7 +205,7 @@ describe('item 16: a non-legal top priority is acknowledged in the executive sum
       emptyManifest,
     );
 
-    expect(html).toContain('La priorité 1 n&#39;est rattachée à aucun critère d&#39;accessibilité');
+    expect(html).toContain('La priorité 1 n’est rattachée à aucun critère d’accessibilité');
     expect(html).toContain('position 2');
   });
 
@@ -219,7 +219,7 @@ describe('item 16: a non-legal top priority is acknowledged in the executive sum
       emptyManifest,
     );
 
-    expect(html).toContain('La priorité 1 n&#39;est rattachée à aucun critère d&#39;accessibilité');
+    expect(html).toContain('La priorité 1 n’est rattachée à aucun critère d’accessibilité');
     expect(html).toContain('Aucune des priorités');
   });
 

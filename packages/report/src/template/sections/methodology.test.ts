@@ -3,7 +3,7 @@ import type { ObligationAssessment } from '@odysseus/core';
 import { renderLegalCitationParagraph, renderMethodology } from './methodology.js';
 import { getStrings } from '../strings/i18n.js';
 import { loadSmallSiteManifest } from '../../test-fixtures.js';
-import { escapeHtml } from '../html-utils.js';
+import { escapeCopy } from '../html-utils.js';
 
 describe('renderMethodology against the real small-site.test manifest', () => {
   it('states the crawl size (B16) and tool versions in one merged section, no separate limitations section', async () => {
@@ -134,7 +134,7 @@ describe('renderMethodology surfaces the real Lighthouse failure reason', () => 
     expect(html).toContain('mesure de performance (Lighthouse)');
     // The tool's own wording names an internal function and a process exit
     // signal, so the reader is told the cause instead.
-    const stoppedFr = escapeHtml("la mesure s'est interrompue avant de renvoyer un résultat");
+    const stoppedFr = escapeCopy("la mesure s'est interrompue avant de renvoyer un résultat", 'fr');
     expect(html).toContain(stoppedFr);
     expect(html).not.toContain('exited before returning a result');
     // Grouped, not one line per page: both failures share one cause and
@@ -212,7 +212,7 @@ describe('renderLegalCitationParagraph', () => {
   it('renders criteria and the missing observed input when obligationAssessment is absent', () => {
     const html = renderLegalCitationParagraph(getStrings('fr'), undefined, 'fr');
     expect(html).toContain('Critères publiés pour');
-    expect(html).toContain("Aucun identifiant SIREN n'a été trouvé sur les pages visitées");
+    expect(html).toContain('Aucun identifiant SIREN n’a été trouvé sur les pages visitées');
   });
 
   it('renders the verified missing input for status undetermined', () => {
@@ -222,7 +222,7 @@ describe('renderLegalCitationParagraph', () => {
     };
     const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
     expect(html).toContain('Données disponibles pour cet audit');
-    expect(html).toContain("Aucun identifiant SIREN n'a été trouvé sur les pages visitées");
+    expect(html).toContain('Aucun identifiant SIREN n’a été trouvé sur les pages visitées');
   });
 
   it('renders criteria and registry facts without an out-of-scope conclusion', () => {
@@ -237,7 +237,7 @@ describe('renderLegalCitationParagraph', () => {
     };
     const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
     expect(html).toContain('Loi n° 2023-171');
-    expect(html).toContain("tranche d'effectif 02");
+    expect(html).toContain('tranche d’effectif 02');
     expect(html).toContain('500 000 €');
     expect(html).not.toContain('ne relève pas de');
   });
@@ -256,7 +256,7 @@ describe('renderLegalCitationParagraph', () => {
       ],
     };
     const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
-    expect(html).toContain("Obligation d'accessibilité numérique");
+    expect(html).toContain('Obligation d’accessibilité numérique');
     expect(html).toContain('DGCCRF');
     // End-to-end regression: packages/interface's sirene-client.ts used to
     // hand this fact's label in without accents ("100 a 199 salaries"),
@@ -294,7 +294,7 @@ describe('renderLegalCitationParagraph', () => {
     };
     const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
     expect(html).toContain('article 47');
-    expect(html).not.toContain("l'European Accessibility Act");
+    expect(html).not.toContain('l’European Accessibility Act');
   });
 
   // item 3.15: "sous le contrôle de Direction générale..." was missing
@@ -380,7 +380,7 @@ describe('renderLegalCitationParagraph', () => {
     };
     const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
     expect(html).not.toContain('relève probablement de');
-    expect(html).toContain("n'a pas pu être confirmée");
+    expect(html).toContain('n’a pas pu être confirmée');
   });
 
   it('translates the effectif band label by INSEE code for an English report, not the raw French label', () => {
@@ -650,7 +650,7 @@ describe('item 1.10/B8: the extended accessibility pass states its own result', 
   it('renders the "none found" note when no finding uses any of the four extended-pass rule ids', async () => {
     const manifest = await loadSmallSiteManifest();
     const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', undefined, []);
-    expect(html).toContain('Résultat de la passe d&#39;accessibilité étendue');
+    expect(html).toContain('Résultat de la passe d’accessibilité étendue');
   });
 
   // item 1.7 (Large Rule Families pass): the note used to be entirely suppressed
@@ -664,7 +664,7 @@ describe('item 1.10/B8: the extended accessibility pass states its own result', 
       { findingId: 'f1', ruleId: 'video-missing-captions' },
       { findingId: 'f2', ruleId: 'video-missing-captions' },
     ]);
-    expect(html).toContain('Résultat de la passe d&#39;accessibilité étendue');
+    expect(html).toContain('Résultat de la passe d’accessibilité étendue');
     expect(html).toContain('pièges au clavier (aucune anomalie détectée)');
     expect(html).toContain('ordre de focus (aucune anomalie détectée)');
     expect(html).toContain(
@@ -678,7 +678,7 @@ describe('item 1.10/B8: the extended accessibility pass states its own result', 
     const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', undefined, [
       { findingId: 'f1', ruleId: 'alt-text-quality-heuristic' },
     ]);
-    expect(html).toContain('Résultat de la passe d&#39;accessibilité étendue');
+    expect(html).toContain('Résultat de la passe d’accessibilité étendue');
   });
 });
 
@@ -770,7 +770,7 @@ describe('milestone 9b.5 sitemap coverage disclosure', () => {
 
     const french = renderMethodology(getStrings('fr'), 11, withDiscovery, 'fr');
     expect(french).toContain(
-      '6 atteintes depuis la page d&#39;accueil ou par des liens internes, 1 fournies explicitement et 4 ajoutées depuis le sitemap',
+      '6 atteintes depuis la page d’accueil ou par des liens internes, 1 fournies explicitement et 4 ajoutées depuis le sitemap',
     );
 
     const english = renderMethodology(getStrings('en'), 11, withDiscovery, 'en');
@@ -842,8 +842,10 @@ describe('Lighthouse failure detail is plain language, never the raw tool messag
 
   it('names each observed cause in the reader language', async () => {
     const fr = await renderWithFailures('fr');
-    expect(fr).toContain(escapeHtml("le navigateur de mesure n'a pas pu être contacté"));
-    expect(fr).toContain(escapeHtml("la mesure s'est interrompue avant de renvoyer un résultat"));
+    expect(fr).toContain(escapeCopy("le navigateur de mesure n'a pas pu être contacté", 'fr'));
+    expect(fr).toContain(
+      escapeCopy("la mesure s'est interrompue avant de renvoyer un résultat", 'fr'),
+    );
     expect(fr).toContain('la mesure a dépassé le temps imparti');
 
     const en = await renderWithFailures('en');
@@ -872,7 +874,7 @@ describe('language-home scope sentence (issue #103)', () => {
     const fr = renderMethodology(getStrings('fr'), 11, manifest, 'fr');
     expect(fr).toContain('que si elle déclare des annotations hreflang');
     expect(fr).not.toContain(
-      "n'est pas comptée comme une page analysée, car elle ne porte pas de contenu propre",
+      'n’est pas comptée comme une page analysée, car elle ne porte pas de contenu propre',
     );
     const en = renderMethodology(getStrings('en'), 11, manifest, 'en');
     expect(en).toContain('only when it declares hreflang annotations');

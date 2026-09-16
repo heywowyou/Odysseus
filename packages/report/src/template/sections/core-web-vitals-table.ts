@@ -16,6 +16,7 @@ import {
   renderSheetHeader,
   sheet,
 } from '../html-utils.js';
+import { preserveFrenchOrdinalCase } from '../french-typography.js';
 import { SEVERITY } from '../design-tokens.js';
 import { buildCoverageDisclosure } from '../coverage-disclosure.js';
 
@@ -245,8 +246,12 @@ function ratingTag(strings: ReportStrings, rating: CoreWebVitalRating): string {
   return `<span class="tag" style="background:${tone.bg};color:${tone.color}">${label}</span>`;
 }
 
+/** Issue #323: this header is set in capitals, which turned the French
+ *  column label "75e percentile" into "75E PERCENTILE". A French ordinal
+ *  suffix stays lower case whatever the surrounding case, so the suffix
+ *  opts out of the transform rather than the whole header losing it. */
 function headCell(label: string, width: string): string {
-  return `<th style="width:${width};padding:var(--space-2);font-size:11px;letter-spacing:0.02em;text-transform:uppercase;text-align:left;font-weight:400;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">${escapeHtml(label)}</th>`;
+  return `<th style="width:${width};padding:var(--space-2);font-size:11px;letter-spacing:0.02em;text-transform:uppercase;text-align:left;font-weight:400;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">${preserveFrenchOrdinalCase(escapeHtml(label))}</th>`;
 }
 
 function cell(html: string, extra = ''): string {

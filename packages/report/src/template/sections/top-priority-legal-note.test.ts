@@ -36,7 +36,7 @@ describe('the top-priority note claims only what legalRelevance actually knows',
     it(`[${language}] scopes the claim to accessibility criteria`, () => {
       for (const note of notes) {
         expect(note).toMatch(
-          language === 'fr' ? /critère d'accessibilité/ : /accessibility criterion/,
+          language === 'fr' ? /critère d’accessibilité/ : /accessibility criterion/,
         );
       }
     });

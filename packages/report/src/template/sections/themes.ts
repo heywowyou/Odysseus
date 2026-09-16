@@ -495,7 +495,7 @@ function renderTheme(
   // rendered.
   const recommendedActionsBox = renderThemeList(
     t.recommendedActionsLabel,
-    theme.recommendedActions.map((action) => escapeProse(action)),
+    theme.recommendedActions.map((action) => escapeProse(action, language)),
   );
   const deterministicActionsBox = renderThemeList(
     t.reviewedRemediationLabel,
@@ -545,7 +545,7 @@ function renderTheme(
   const whyItMattersBox = renderRow(
     'problem',
     t.whyItMattersLabel,
-    `<p class="theme-row-text">${escapeProse(theme.businessImpact)}</p>`,
+    `<p class="theme-row-text">${escapeProse(theme.businessImpact, language)}</p>`,
   );
   const observationBox = priority ? renderObservationBox(strings, language, priority.evidence) : '';
   const trailingActionNotes = [
@@ -584,7 +584,7 @@ function renderTheme(
           ${categoryTag}
           ${quickWinBadge}
         </div>
-        <div class="card-title">${escapeProse(theme.title)}</div>
+        <div class="card-title">${escapeProse(theme.title, language)}</div>
         <div class="theme-facts">${facts}</div>
       </div>
       ${whyItMattersBox}

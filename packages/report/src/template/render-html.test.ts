@@ -186,7 +186,7 @@ describe('renderHtml, the conformance summary, legal exposure, and methodology s
   // reverting to the blanket wording fails this test, not just a new one.
   // item 3.14: rephrased as a positive statement, dropping the old
   // defensive "n'implique pas... ne contredit pas" framing.
-  const CONFORMANCE_SCOPE_NOTE = 'indépendamment de toute question d&#39;obligation légale';
+  const CONFORMANCE_SCOPE_NOTE = 'indépendamment de toute question d’obligation légale';
   const OLD_CONTRADICTORY_SCOPE_NOTE = 'sans se prononcer sur leur applicabilité légale précise';
   const DATA_AVAILABLE = 'Données disponibles pour cet audit';
   const METHODOLOGY_POINTER = 'figure dans la section';

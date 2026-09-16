@@ -13,10 +13,10 @@ function counts(firstParty: number, thirdParty: number, verifyIntent: number) {
 describe('priority card correction ownership sentence', () => {
   it('names only the non-empty groups, joined as a French list', () => {
     expect(renderOwnershipSentence(getStrings('fr'), 'fr', counts(3, 0, 2))).toBe(
-      'Répartition des corrections : 3 à traiter directement et 2 à vérifier selon le contexte.',
+      'Répartition des corrections : 3 à traiter directement et 2 à vérifier selon le contexte.',
     );
     expect(renderOwnershipSentence(getStrings('fr'), 'fr', counts(3, 1, 2))).toBe(
-      'Répartition des corrections : 3 à traiter directement, 1 à transmettre à un tiers et 2 à vérifier selon le contexte.',
+      'Répartition des corrections : 3 à traiter directement, 1 à transmettre à un tiers et 2 à vérifier selon le contexte.',
     );
   });
 
