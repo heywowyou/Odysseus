@@ -756,22 +756,219 @@ textarea.input {
    meaning, the dash never encodes severity, and these three colours
    appear nowhere else in the document. Print has no motion: the dashes
    are designed from their finished frame. */
-.theme-row::before {
+.theme-row-label::before {
   content: '';
   display: block;
   width: 18px;
   height: 3px;
   border-radius: 2px;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-2);
 }
-.theme-row-problem::before {
+.theme-row-problem .theme-row-label::before {
   background: var(--color-mark-finding);
 }
-.theme-row-evidence::before {
+.theme-row-evidence .theme-row-label::before {
   background: var(--color-mark-evidence);
 }
-.theme-row-action::before {
+.theme-row-action .theme-row-label::before {
   background: var(--color-signal);
+}
+.theme-row-context .theme-row-label::before {
+  display: none;
+}
+
+/* Priority card (section 04). One two-column axis runs the whole card: a
+   left rail carries the rank numeral and every row label, the right column
+   carries the reading text at a ~70ch measure. Rows are divided by
+   hairlines, the site dossier's row separation. The rail label is
+   positioned out of the row's first content block (.theme-row-lead, kept
+   small and unbreakable: a paragraph, or a subhead with its first list
+   item) instead of living in a grid cell, so a long row still fragments as
+   plain block content under Paged.js (grid and flex containers split
+   unreliably there, see paged.css .theme-card) and the label always prints
+   beside the row's opening text. The rank
+   is a plain numeral, never a circled one: a digit centred by its line box
+   sits visibly low inside a ring. */
+.theme-card {
+  --theme-rail: 136px;
+  --theme-rail-gap: var(--space-6);
+  padding: var(--space-8) var(--space-8) var(--space-6);
+  border-radius: var(--radius-lg);
+}
+.theme-card-header {
+  position: relative;
+  min-height: 44px;
+  padding-left: calc(var(--theme-rail) + var(--theme-rail-gap));
+}
+.theme-rank {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 44px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums lining-nums;
+  color: var(--color-accent-300);
+}
+.theme-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.theme-card .card-title {
+  font-size: 19px;
+  line-height: 1.3;
+  color: var(--color-neutral-100);
+  text-wrap: balance;
+}
+.theme-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-8);
+  margin-top: var(--space-4);
+}
+.theme-fact {
+  white-space: nowrap;
+}
+.theme-fact-label {
+  display: block;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--color-neutral-400);
+}
+.theme-fact-value {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-neutral-100);
+}
+.theme-row {
+  position: relative;
+  padding: var(--space-6) 0 var(--space-6) calc(var(--theme-rail) + var(--theme-rail-gap));
+  border-top: 1px solid var(--color-divider);
+}
+.theme-card-header + .theme-row {
+  margin-top: var(--space-6);
+}
+.theme-row-lead {
+  position: relative;
+  break-inside: avoid;
+}
+.theme-row-label {
+  position: absolute;
+  top: 3px;
+  left: calc(-1 * (var(--theme-rail) + var(--theme-rail-gap)));
+  width: var(--theme-rail);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--color-neutral-300);
+}
+.theme-row-text,
+.theme-list {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--color-neutral-200);
+  /* break-word, not anywhere: a representative URL moves whole to the next
+     line when it fits there, and is only cut when it is wider than the
+     column itself. */
+  overflow-wrap: break-word;
+  hyphens: none;
+}
+/* A card continued on a new page: its first row's divider would sit
+   directly under the card's own top edge and read as a double rule. */
+.theme-card[data-split-from] > .theme-row:first-child,
+.theme-row[data-split-from] {
+  border-top-color: transparent;
+}
+.theme-subhead {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-neutral-300);
+}
+.theme-row-lead > .theme-subhead:first-child {
+  margin-top: 0;
+}
+.theme-list {
+  padding-left: 1.1em;
+}
+.theme-list li + li {
+  margin-top: var(--space-2);
+}
+.theme-list.theme-list-continued {
+  margin: 0;
+  padding-top: var(--space-2);
+}
+.theme-snippet:last-child {
+  margin-bottom: var(--space-2);
+}
+.theme-list li::marker {
+  color: var(--color-neutral-500);
+}
+.theme-rule {
+  font-size: 12px;
+  color: var(--color-neutral-100);
+}
+.theme-note {
+  margin: var(--space-3) 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-neutral-400);
+}
+.theme-snippet {
+  margin: var(--space-2) 0 0;
+}
+.theme-snippet-label {
+  font-size: 11px;
+  color: var(--color-neutral-400);
+}
+.theme-snippet pre {
+  margin: var(--space-1) 0 0;
+  padding: var(--space-3) var(--space-4);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--color-neutral-200);
+  background: var(--color-bg);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-sm);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.theme-context {
+  margin: 0;
+}
+.theme-context-item {
+  display: grid;
+  grid-template-columns: var(--theme-rail) 1fr;
+  column-gap: var(--theme-rail-gap);
+  align-items: baseline;
+}
+.theme-context-item + .theme-context-item {
+  margin-top: var(--space-3);
+}
+.theme-context-item dt {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--color-neutral-400);
+}
+.theme-context-item dd {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--color-neutral-300);
+}
+.theme-context-item dd p {
+  margin: 0;
+}
+.theme-context-item dd p + p {
+  margin-top: var(--space-1);
 }
 
 /* - navigation - */
@@ -889,4 +1086,11 @@ textarea.input {
   justify-content: flex-end;
   gap: var(--space-2);
   margin-top: var(--space-2);
+}
+.theme-row-context {
+  padding-left: 0;
+  padding-bottom: 0;
+}
+.theme-subhead {
+  break-after: avoid;
 }

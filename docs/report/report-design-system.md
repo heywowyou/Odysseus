@@ -351,6 +351,20 @@ site's own idiom (DESIGN.md, "The Dossier Rule Set"): the row labels
 carry the meaning, the dashes never encode severity, and they appear
 nowhere else in the document.
 
+Since 2026-09-16 the priority card is laid out on one two-column axis: a
+136px left rail carries the rank as a plain 44px numeral (never a circled
+digit, which sits visibly low in its ring) and every row label, and the
+right column carries the reading text at 13.5px on a measure of about 70
+characters. The decision facts (Complexité, Impact, Pages concernées, and
+Conformité when there is a status to state) sit directly under the title,
+each label and value one unbreakable unit. The evidence rows follow,
+divided by hairlines, and a closing context list (conformity requirement,
+reference figure, finding references) keeps the same rail. A row label is
+positioned out of the row's small, unbreakable lead block (a paragraph, or
+a subhead with its first list item), so Paged.js always prints the label
+beside the row's opening text; a card or row continued on a new page drops
+the divider that would otherwise double the card's top edge.
+
 ## 4. Invariants, assertable in a test
 
 Page count is deterministic once Paged.js runs, so these are checks, not

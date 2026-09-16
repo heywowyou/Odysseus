@@ -97,7 +97,7 @@ export function applyEnglishClientFacingCopy(strings: ReportStrings): ReportStri
       eyebrow: 'Correction priorities',
       headingTemplate: '{count} workstreams, ranked by priority',
       effortLabel: 'Complexity',
-      impactLabel: 'Why it matters',
+      impactLabel: 'Impact',
       affectedPagesLabel: 'Pages affected',
       ownershipCountsTemplate:
         'Correction ownership: {firstParty} to address directly, {thirdParty} to pass to a third ' +

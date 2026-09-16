@@ -29,8 +29,6 @@ import {
   sheet,
 } from '../html-utils.js';
 import { CATEGORY, LEVEL_COLOR, SEVERITY } from '../design-tokens.js';
-import { renderReferenceStatNote } from '../reference-stat-note.js';
-import { renderFixSnippet } from '../remediation/render-fix-snippet.js';
 import { detectFindingVendor, isThirdPartyFinding } from '../third-party-attribution.js';
 import { sectionTitle } from '../section-registry.js';
 import {
@@ -102,10 +100,11 @@ function renderObservationBox(
           page: evidence.representativePageUrl,
         })
       : fillTemplate(t.observationNoPageTemplate, sharedParams);
-  return `<div class="theme-row theme-row-evidence" style="margin-top:4px">
-          <div style="font-size:11px;opacity:0.6;text-transform:uppercase;letter-spacing:0.02em;margin-bottom:4px">${escapeHtml(t.observationLabel)}</div>
-          <p style="font-size:12.5px;opacity:0.9;margin:0;overflow-wrap:anywhere;word-break:normal;hyphens:none">${escapeHtml(text)}</p>
-        </div>`;
+  return renderRow(
+    'evidence',
+    t.observationLabel,
+    `<p class="theme-row-text">${escapeHtml(text)}</p>`,
+  );
 }
 
 const RATIO_KINDS_PER_TENTH_SECOND: ReadonlySet<string> = new Set([
@@ -330,7 +329,7 @@ function renderOwnershipSplitNote(
     thirdPartyPageWord: pageWord(strings, thirdPartyPages),
     vendor: vendorLabel,
   });
-  return `<p style="font-size:11.5px;opacity:0.6;margin-top:4px">${escapeHtml(text)}</p>`;
+  return `<p class="theme-note">${escapeHtml(text)}</p>`;
 }
 
 /** Companion to renderOwnershipSplitNote, for the case that function
@@ -356,7 +355,7 @@ function renderThirdPartyOnlyNote(
   const vendorLabel = vendors.length > 0 ? vendors.join(', ') : t.ownershipSplitUnknownVendorLabel;
 
   const text = fillTemplate(t.thirdPartyOnlyTemplate, { vendor: vendorLabel });
-  return `<p style="font-size:11.5px;opacity:0.6;margin-top:4px">${escapeHtml(text)}</p>`;
+  return `<p class="theme-note">${escapeHtml(text)}</p>`;
 }
 
 /** Points a priority card whose findings include the LCEN identification
@@ -374,7 +373,7 @@ function renderLcenCrossReferenceNote(
   const text = fillTemplate(strings.themes.lcenCrossReferenceTemplate, {
     legalSection: sectionTitle('section-02', strings),
   });
-  return `<p style="font-size:11.5px;opacity:0.6;margin-top:4px">${escapeHtml(text)}</p>`;
+  return `<p class="theme-note">${escapeHtml(text)}</p>`;
 }
 
 function renderTheme(
@@ -463,9 +462,11 @@ function renderTheme(
   // : Sans objet" line three lines below this one saying the same thing
   // (issue #47's related duplication); the explanation still appears
   // exactly where "Sans objet" is first encountered.
-  const legalBox = theme.legalRelevance
-    ? `<p style="font-size:12px;opacity:0.6;margin:0">${escapeHtml(t.legalTagLabel)}${labelSeparator(language)}${escapeHtml(theme.legalRelevance)}</p>`
-    : `<p style="font-size:12px;opacity:0.6;margin:0">${escapeHtml(t.legalTagLabel)}${labelSeparator(language)}${escapeHtml(t.conformityNotApplicable)}${showConformityGloss ? ` <span style="font-weight:400">(${escapeHtml(t.conformityNotApplicableGloss)})</span>` : ''}</p>`;
+  // P2.2 + issue #47: the "Sans objet" gloss is shown once, on the first
+  // rendered card that needs it, beside the conformity requirement itself.
+  const legalValue = theme.legalRelevance
+    ? escapeHtml(theme.legalRelevance)
+    : `${escapeHtml(t.conformityNotApplicable)}${showConformityGloss ? ` (${escapeHtml(t.conformityNotApplicableGloss)})` : ''}`;
 
   const gapNote = citationStat
     ? measuredCoreWebVitalGapNote(strings, language, citationStat, themeFindings, manifest)
@@ -473,14 +474,16 @@ function renderTheme(
   const revenueImpactNote = citationStat
     ? renderRevenueImpactNote(strings, language, citationStat, turnoverEur)
     : undefined;
-  const citationBox = citationStat
-    ? renderReferenceStatNote(
+  // Same content and order as renderReferenceStatNote (the site's measured
+  // gap first, the sourced benchmark, then the derived estimate), set as a
+  // context item whose label sits in the card's rail.
+  const citationItem = citationStat
+    ? renderContextItem(
         t.impactCitationLabel,
-        citationStat,
-        language,
-        undefined,
-        gapNote,
-        revenueImpactNote,
+        [gapNote, citationStat.citation[language], revenueImpactNote]
+          .filter((line): line is string => line !== undefined)
+          .map((line) => `<p>${escapeHtml(line)}</p>`)
+          .join(''),
       )
     : '';
 
@@ -488,33 +491,19 @@ function renderTheme(
   // recommendedActions on every theme (writing-schema.ts, capped at 3,
   // language/severity-vocabulary validated), it was simply never
   // rendered.
-  const recommendedActionsBox =
-    theme.recommendedActions.length > 0
-      ? `
-        <div style="margin-top:4px">
-          <div style="font-size:11px;opacity:0.6;text-transform:uppercase;letter-spacing:0.02em;margin-bottom:4px">${escapeHtml(t.recommendedActionsLabel)}</div>
-          <ul style="margin:0;padding-left:1.2em;font-size:12.5px;opacity:0.9">
-            ${theme.recommendedActions.map((action) => `<li>${escapeProse(action)}</li>`).join('')}
-          </ul>
-        </div>
-      `
-      : '';
-  const deterministicActionsBox =
-    priority && priority.remediations.length > 0
-      ? `<div style="margin-top:4px">
-          <div style="font-size:11px;opacity:0.6;text-transform:uppercase;letter-spacing:0.02em;margin-bottom:4px">${escapeHtml(t.reviewedRemediationLabel)}</div>
-          <ul style="margin:0;padding-left:1.2em;font-size:12.5px;opacity:0.9">
-            ${priority.remediations
-              .map(
-                (item) =>
-                  `<li><span class="mono">${escapeHtml(item.ruleId)}</span>: ${escapeHtml(item.text)}${renderFixSnippet(item.snippet, t)}</li>`,
-              )
-              .join('')}
-          </ul>
-        </div>`
-      : '';
+  const recommendedActionsBox = renderThemeList(
+    t.recommendedActionsLabel,
+    theme.recommendedActions.map((action) => escapeProse(action)),
+  );
+  const deterministicActionsBox = renderThemeList(
+    t.reviewedRemediationLabel,
+    (priority?.remediations ?? []).map(
+      (item) =>
+        `<span class="mono theme-rule">${escapeHtml(item.ruleId)}</span>${labelSeparator(language)}${escapeHtml(item.text)}${renderThemeFixSnippet(item.snippet, t)}`,
+    ),
+  );
   const ownershipBox = priority
-    ? `<p style="font-size:11.5px;opacity:0.65;margin-top:4px">${escapeHtml(
+    ? `<p class="theme-note">${escapeHtml(
         fillTemplate(t.ownershipCountsTemplate, {
           firstParty: formatNumber(priority.ownershipCounts['first-party-action'], language),
           thirdParty: formatNumber(priority.ownershipCounts['third-party-escalation'], language),
@@ -530,65 +519,132 @@ function renderTheme(
     totalPages: formatNumber(totalPagesScanned, language),
   });
 
-  // Plan 018 step 6 fixes the card's reading order, outcome first:
-  //   1. rank, category, quick-win marker, stored title (header, below);
+  // Plan 018 step 6 reading order, outcome first:
+  //   1. rank, category, quick-win marker, stored title, then the decision
+  //      facts a director budgets from (complexity, impact, affected pages,
+  //      conformity when there is a status to state);
   //   2. "Why it matters", the model's own businessImpact;
   //   3. "What we observed", deterministic defect label + representative
   //      page + exact page and occurrence counts from the priority evidence;
-  //   4. "What you can do", the existing recommended and reviewed
-  //      remediation plus the ownership notes that qualify the ask;
-  //   5. legal and citation context (unchanged content sources);
-  //   6. footer metadata: Complexity (the plan renames the card's effort
-  //      item and confines the word to this one detailed card), commercial
-  //      impact, affected pages, conformity (issue #47: only when there is
-  //      a conformance status to state - a non-accessibility card's "Sans
-  //      objet" is stated once in the Exigence box above instead of being
-  //      repeated here), finding references.
-  // The stored technical title is kept as is in this plan; presentation
-  // order is the only change.
-  const whyItMattersBox = `
-        <div class="theme-row theme-row-problem" style="margin-top:4px">
-          <div style="font-size:11px;opacity:0.6;text-transform:uppercase;letter-spacing:0.02em;margin-bottom:4px">${escapeHtml(t.whyItMattersLabel)}</div>
-          <p class="card-body" style="opacity:0.9">${escapeProse(theme.businessImpact)}</p>
-        </div>`;
+  //   4. "What you can do", the recommended and reviewed remediation plus
+  //      the ownership notes that qualify the ask;
+  //   5. context: conformity requirement, citation, legal cross-reference,
+  //      finding references.
+  const facts = [
+    renderFact(t.complexityLabel, escapeHtml(t.effortLevels[theme.effort])),
+    renderFact(
+      t.impactLabel,
+      escapeHtml(t.effortImpactLevels[theme.impact]),
+      LEVEL_COLOR[theme.impact].color,
+    ),
+    renderFact(t.affectedPagesLabel, escapeHtml(pagesText)),
+    isNonConformant
+      ? renderFact(t.conformityLabel, escapeHtml(conformityValue), SEVERITY.critical.color)
+      : '',
+  ].join('');
+
+  const whyItMattersBox = renderRow(
+    'problem',
+    t.whyItMattersLabel,
+    `<p class="theme-row-text">${escapeProse(theme.businessImpact)}</p>`,
+  );
   const observationBox = priority ? renderObservationBox(strings, language, priority.evidence) : '';
-  const whatYouCanDoBox = `
-        <div class="theme-row theme-row-action" style="margin-top:4px">
-          <div style="font-size:11px;opacity:0.6;text-transform:uppercase;letter-spacing:0.02em;margin-bottom:4px">${escapeHtml(t.whatYouCanDoLabel)}</div>
-          ${recommendedActionsBox}
-          ${deterministicActionsBox}
-          ${ownershipBox}
-          ${renderOwnershipSplitNote(strings, language, themeFindings)}
-          ${renderThirdPartyOnlyNote(strings, themeFindings)}
-        </div>`;
+  const trailingActionNotes = [
+    ownershipBox,
+    renderOwnershipSplitNote(strings, language, themeFindings),
+    renderThirdPartyOnlyNote(strings, themeFindings),
+  ].join('');
+  const [actionLead, actionRest] = recommendedActionsBox
+    ? [
+        recommendedActionsBox.lead,
+        recommendedActionsBox.rest + (deterministicActionsBox?.all ?? ''),
+      ]
+    : deterministicActionsBox
+      ? [deterministicActionsBox.lead, deterministicActionsBox.rest]
+      : [trailingActionNotes, ''];
+  const whatYouCanDoBox = renderRow(
+    'action',
+    t.whatYouCanDoLabel,
+    actionLead,
+    recommendedActionsBox || deterministicActionsBox ? actionRest + trailingActionNotes : '',
+  );
+  const contextBox = `
+      <div class="theme-row theme-row-context">
+        <dl class="theme-context">
+          ${renderContextItem(t.legalTagLabel, `<p>${legalValue}</p>${renderLcenCrossReferenceNote(strings, themeFindings)}`)}
+          ${citationItem}
+          ${renderContextItem(t.refsLabel, `<p>${formatCappedFindingIdLinks(theme.findingIds, language, strings.findingsAppendix)}</p>`)}
+        </dl>
+      </div>`;
 
   return `
-    <div class="card elev-sm theme-card" style="margin-bottom:var(--space-6);gap:var(--space-3)" id="theme-${displayRank}" data-model-priority-rank="${theme.priorityRank}">
-      <div class="theme-card-header" style="display:flex;align-items:flex-start;gap:var(--space-3)">
-        <span style="width:26px;height:26px;flex:none;border-radius:50%;border:1px solid var(--color-accent);color:var(--color-accent);font-size:12px;display:flex;align-items:center;justify-content:center">${displayRank}</span>
-        <div style="flex:1">
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px">
-            ${categoryTag}
-            ${quickWinBadge}
-          </div>
-          <div class="card-title">${escapeProse(theme.title)}</div>
+    <div class="card elev-sm theme-card" style="margin-bottom:var(--space-8)" id="theme-${displayRank}" data-model-priority-rank="${theme.priorityRank}">
+      <div class="theme-card-header">
+        <span class="theme-rank">${displayRank}</span>
+        <div class="theme-tags">
+          ${categoryTag}
+          ${quickWinBadge}
         </div>
+        <div class="card-title">${escapeProse(theme.title)}</div>
+        <div class="theme-facts">${facts}</div>
       </div>
       ${whyItMattersBox}
       ${observationBox}
       ${whatYouCanDoBox}
-      ${legalBox}
-      ${citationBox}
-      ${renderLcenCrossReferenceNote(strings, themeFindings)}
-      <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:2px var(--space-4);font-size:12px;margin-top:4px">
-        <span class="text-muted" style="white-space:nowrap">${escapeHtml(t.complexityLabel)}${labelSeparator(language)}<strong style="color:var(--color-text)">${escapeHtml(t.effortImpactLevels[theme.effort])}</strong></span>
-        <span class="text-muted" style="white-space:nowrap">${escapeHtml(t.impactLabel)}${labelSeparator(language)}<strong style="color:${LEVEL_COLOR[theme.impact].color}">${escapeHtml(t.effortImpactLevels[theme.impact])}</strong></span>
-        <span class="text-muted" style="white-space:nowrap">${escapeHtml(t.affectedPagesLabel)}${labelSeparator(language)}<strong style="color:var(--color-text)">${escapeHtml(pagesText)}</strong></span>
-        ${isNonConformant ? `<span class="text-muted" style="white-space:nowrap">${escapeHtml(t.conformityLabel)}${labelSeparator(language)}<strong style="color:${SEVERITY.critical.color}">${escapeHtml(conformityValue)}</strong></span>` : ''}
-        <span class="text-muted">${escapeHtml(t.refsLabel)}${labelSeparator(language)}${formatCappedFindingIdLinks(theme.findingIds, language, strings.findingsAppendix)}</span>
-      </div>
+      ${contextBox}
     </div>
   `;
+}
+
+function renderFact(label: string, valueHtml: string, color?: string): string {
+  const style = color ? ` style="color:${color}"` : '';
+  return `<span class="theme-fact"><span class="theme-fact-label">${escapeHtml(label)}</span><span class="theme-fact-value"${style}>${valueHtml}</span></span>`;
+}
+
+function renderRow(
+  kind: 'problem' | 'evidence' | 'action',
+  label: string,
+  leadHtml: string,
+  restHtml = '',
+): string {
+  return `
+      <div class="theme-row theme-row-${kind}">
+        <div class="theme-row-lead"><div class="theme-row-label">${escapeHtml(label)}</div>${leadHtml}</div>
+        ${restHtml}
+      </div>`;
+}
+
+/** A labelled list split so its subhead and first item form the row's
+ *  unbreakable lead block (see renderRow) and the remaining items flow as a
+ *  second, visually continuous list. */
+function renderThemeList(
+  label: string,
+  itemsHtml: readonly string[],
+): { lead: string; rest: string; all: string } | undefined {
+  if (itemsHtml.length === 0) return undefined;
+  const [first, ...others] = itemsHtml;
+  const lead = `<p class="theme-subhead">${escapeHtml(label)}</p><ul class="theme-list"><li>${first}</li></ul>`;
+  const rest =
+    others.length > 0
+      ? `<ul class="theme-list theme-list-continued">${others.map((item) => `<li>${item}</li>`).join('')}</ul>`
+      : '';
+  return { lead, rest, all: `<div class="theme-list-group">${lead}${rest}</div>` };
+}
+
+function renderContextItem(label: string, valueHtml: string): string {
+  return `<div class="theme-context-item"><dt>${escapeHtml(label)}</dt><dd>${valueHtml}</dd></div>`;
+}
+
+function renderThemeFixSnippet(
+  snippet: { kind: 'fixed' | 'fill-in-blank'; rendered: string } | undefined,
+  t: ReportStrings['themes'],
+): string {
+  if (snippet === undefined) return '';
+  const note =
+    snippet.kind === 'fill-in-blank'
+      ? `<p class="theme-note" style="margin-top:var(--space-1)">${escapeHtml(t.fixSnippetFillInBlankNote)}</p>`
+      : '';
+  return `<div class="theme-snippet"><div class="theme-snippet-label">${escapeHtml(t.fixSnippetLabel)}</div><pre><code>${escapeHtml(snippet.rendered)}</code></pre>${note}</div>`;
 }
 
 /** Categories the reference-stat table has rows for. 'rendering' still
@@ -813,7 +869,7 @@ export function renderThemes(
   // applied to the checklist/annexe/glossaire sections.
   return sheet(
     `
-    ${renderSheetHeader(ordinal, strings.themes.eyebrow, fillTemplate(strings.themes.headingTemplate, { count: sortedThemes.length }), 'var(--space-2)')}
+    ${renderSheetHeader(ordinal, strings.themes.eyebrow, fillTemplate(strings.themes.headingTemplate, { count: sortedThemes.length }), 'var(--space-8)')}
     ${themeBlocks}
   `,
     '',

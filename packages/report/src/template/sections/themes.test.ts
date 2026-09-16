@@ -161,7 +161,7 @@ describe('item 3.9: every theme card gets the "Exigence de conformité" box, acc
     };
   }
 
-  it('renders "Exigence de conformité : Sans objet" for an SEO theme, same box shape as an accessibility theme', () => {
+  it('renders the "Exigence de conformité" item as "Sans objet" for an SEO theme, same box shape as an accessibility theme', () => {
     const analysis = {
       auditId: 'a1',
       language: 'fr' as const,
@@ -178,7 +178,7 @@ describe('item 3.9: every theme card gets the "Exigence de conformité" box, acc
 
     const html = renderThemes(getStrings('fr'), 4, analysis, [buildFinding('f001')], manifest);
 
-    expect(html).toContain('Exigence de conformité : Sans objet');
+    expect(html).toContain('<dt>Exigence de conformité</dt><dd><p>Sans objet');
   });
 });
 
@@ -1445,32 +1445,37 @@ describe('2026-08-22: Impact commercial and Conformité are colour-coded, Effort
 
   const manifest = { pages: [] } as never;
 
-  it('colours "Pourquoi cela compte : Élevé" with the critical/red tone, not plain text', () => {
+  it('colours the "Impact : Élevé" fact with the critical/red tone, not plain text', () => {
     const findings = [buildFinding('f001')];
     const analysis = buildAnalysis('high', 'accessibility');
     const html = renderThemes(getStrings('fr'), 4, analysis as never, findings, manifest);
 
     // #d97b82 is SEVERITY.critical.color / LEVEL_COLOR.high.color.
-    expect(html).toMatch(/Pourquoi cela compte : <strong style="color:#d97b82">Élevé<\/strong>/);
+    expect(html).toContain(
+      '<span class="theme-fact-label">Impact</span><span class="theme-fact-value" style="color:#d97b82">Élevé</span>',
+    );
   });
 
-  it('never colours "Complexité : Élevé" the same way, since high complexity is expensive, not urgent', () => {
+  it('never colours the "Complexité : Élevé" fact the same way, since high complexity is expensive, not urgent', () => {
     const findings = [buildFinding('f001')];
     const analysis = buildAnalysis('high', 'accessibility');
     const html = renderThemes(getStrings('fr'), 4, analysis as never, findings, manifest);
 
     // Plan 018 step 6 renamed the card footer's effort item "Complexity"
     // (and confines the word to this one detailed card).
-    expect(html).toMatch(/Complexité : <strong style="color:var\(--color-text\)">Élevé<\/strong>/);
-    expect(html).not.toMatch(/Complexité : <strong style="color:#d97b82">/);
+    expect(html).toContain(
+      '<span class="theme-fact-label">Complexité</span><span class="theme-fact-value">Élevé</span>',
+    );
   });
 
-  it('colours "Conformité : Non conforme" red for an accessibility theme with legal relevance', () => {
+  it('colours the "Conformité : Non conforme" fact red for an accessibility theme with legal relevance', () => {
     const findings = [buildFinding('f001', 'accessibility')];
     const analysis = buildAnalysis('medium', 'accessibility');
     const html = renderThemes(getStrings('fr'), 4, analysis as never, findings, manifest);
 
-    expect(html).toMatch(/Conformité : <strong style="color:#d97b82">Non conforme<\/strong>/);
+    expect(html).toContain(
+      '<span class="theme-fact-label">Conformité</span><span class="theme-fact-value" style="color:#d97b82">Non conforme</span>',
+    );
   });
 
   // Issue #47: the footer strip no longer prints "Conformité : Sans
@@ -1479,14 +1484,14 @@ describe('2026-08-22: Impact commercial and Conformité are colour-coded, Effort
   // twice on one card. The strip states conformity only when there is a
   // conformance status to state; the box (with the P2.2 gloss on the
   // first card that needs it) carries the Sans objet statement.
-  it('states no "Conformité : Sans objet" in the strip for a non-accessibility theme; the Exigence box carries it', () => {
+  it('states no "Conformité : Sans objet" fact for a non-accessibility theme; the Exigence item carries it', () => {
     const findings = [buildFinding('f001', 'seo')];
     const analysis = buildAnalysis('medium', 'seo');
     const html = renderThemes(getStrings('fr'), 4, analysis as never, findings, manifest);
 
-    expect(html).not.toMatch(/Conformité : <strong[^>]*>Sans objet/);
-    expect(html).toContain('Exigence de conformité : Sans objet');
-    expect(html).not.toContain('Sans objet</strong>');
+    expect(html).not.toContain('<span class="theme-fact-label">Conformité</span>');
+    expect(html).toContain('<dt>Exigence de conformité</dt><dd><p>Sans objet');
+    expect(html).not.toContain('Sans objet</span>');
   });
 });
 
@@ -1496,7 +1501,7 @@ describe('2026-08-22: Impact commercial and Conformité are colour-coded, Effort
 // "Conformité : Non / conforme" broken so a line began with a bare "Non".
 // Each short label/value pair is now one non-breaking unit and the row
 // reflows between units.
-describe('issue #47: each metadata unit keeps its label and value together, and the strip reflows', () => {
+describe('issue #47: each metadata fact keeps its label and value together, and the facts reflow', () => {
   function buildFinding(findingId: string): Finding {
     return {
       findingId,
@@ -1548,7 +1553,7 @@ describe('issue #47: each metadata unit keeps its label and value together, and 
 
   const manifest = { pages: [{ url: 'https://example.com/', status: 'visited' }] } as never;
 
-  it('renders each short unit as one non-breaking span, in a wrapping row (fr)', () => {
+  it('renders each fact as one non-breaking unit in the wrapping facts row (fr)', () => {
     const html = renderThemes(
       getStrings('fr'),
       4,
@@ -1557,20 +1562,22 @@ describe('issue #47: each metadata unit keeps its label and value together, and 
       manifest,
     );
 
-    expect(html).toContain('display:flex;flex-wrap:wrap;align-items:baseline');
-    for (const label of ['Complexité', 'Pourquoi cela compte', 'Pages concernées']) {
+    // .theme-facts wraps between facts; .theme-fact is white-space:nowrap
+    // (nocturne.css), so a label and its value never split.
+    expect(html).toContain('<div class="theme-facts">');
+    for (const label of ['Complexité', 'Impact', 'Pages concernées']) {
       expect(html).toContain(
-        `<span class="text-muted" style="white-space:nowrap">${label} : <strong`,
+        `<span class="theme-fact"><span class="theme-fact-label">${label}</span>`,
       );
     }
     // The one card here is non-conformant, so its conformity status is a
-    // real value and stays in the strip, equally unbreakable.
-    expect(html).toMatch(
-      /<span class="text-muted" style="white-space:nowrap">Conformité : <strong style="color:#d97b82">Non conforme<\/strong><\/span>/,
+    // real value and stays among the facts, equally unbreakable.
+    expect(html).toContain(
+      '<span class="theme-fact"><span class="theme-fact-label">Conformité</span><span class="theme-fact-value" style="color:#d97b82">Non conforme</span></span>',
     );
   });
 
-  it('renders the same non-breaking units in English', () => {
+  it('renders the same non-breaking facts in English', () => {
     const html = renderThemes(
       getStrings('en'),
       4,
@@ -1579,11 +1586,10 @@ describe('issue #47: each metadata unit keeps its label and value together, and 
       manifest,
     );
 
-    expect(html).toContain('display:flex;flex-wrap:wrap;align-items:baseline');
-    for (const label of ['Complexity', 'Why it matters', 'Pages affected']) {
-      // Issue #82: English closes the colon up to the label, unlike French.
+    expect(html).toContain('<div class="theme-facts">');
+    for (const label of ['Complexity', 'Impact', 'Pages affected']) {
       expect(html).toContain(
-        `<span class="text-muted" style="white-space:nowrap">${label}: <strong`,
+        `<span class="theme-fact"><span class="theme-fact-label">${label}</span>`,
       );
     }
   });
@@ -2025,7 +2031,7 @@ describe('plan 018 step 6: priority card order and the deterministic observation
     ],
   } as never;
 
-  it('renders the six blocks in the plan order, outcome first, with the stored technical title', () => {
+  it('renders the card blocks in order, decision facts under the title, then outcome first', () => {
     const analysis = buildAnalysis([
       buildTheme(['f002', 'f001']),
       buildTheme(['f003'], {
@@ -2052,11 +2058,12 @@ describe('plan 018 step 6: priority card order and the deterministic observation
       'Accessibilité', // 1. category tag
       'class="tag qw"', // 1. quick-win marker
       'Contraste insuffisant sur les pages clés', // 1. stored technical title
+      'class="theme-fact-label">Complexité', // 1. decision facts
       'Pourquoi cela compte', // 2
       'Ce que nous avons constaté', // 3
       'Comment le corriger', // 4
-      'Exigence de conformité', // 5
-      'Complexité :', // 6. footer metadata
+      'Exigence de conformité', // 5. context
+      'class="theme-context-item"><dt>Constats', // 5. finding references
       'id="theme-2"', // the second card follows the first card's blocks
     ];
     let last = -1;
@@ -2136,8 +2143,7 @@ describe('plan 018 step 6: priority card order and the deterministic observation
     for (const marker of ['Why it matters', 'What we found', 'How to fix it']) {
       expect(html).toContain(marker);
     }
-    // Issue #82: English closes the colon up to the label.
-    expect(html).toContain('Complexity:');
+    expect(html).toContain('class="theme-fact-label">Complexity');
     // The English report resolves the label to the scanner's own English
     // title through the same shared helper.
     expect(html).toContain('This workstream includes the finding');

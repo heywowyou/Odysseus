@@ -236,11 +236,10 @@ html {
   display: block;
   break-inside: auto;
 }
-.theme-card > * + * {
-  margin-top: var(--space-3);
-}
 .theme-card-header,
-.theme-card-header + .theme-row {
+.theme-card-header + .theme-row,
+.theme-row-context,
+.theme-list li {
   break-inside: avoid;
 }
 .theme-card-header {

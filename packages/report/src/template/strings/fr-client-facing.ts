@@ -107,7 +107,7 @@ export function applyFrenchClientFacingCopy(strings: ReportStrings): ReportStrin
       eyebrow: 'Priorités de correction',
       headingTemplate: '{count} chantiers à traiter par ordre de priorité',
       effortLabel: 'Complexité',
-      impactLabel: 'Pourquoi cela compte',
+      impactLabel: 'Impact',
       affectedPagesLabel: 'Pages concernées',
       ownershipCountsTemplate:
         'Répartition des corrections : {firstParty} à traiter directement, {thirdParty} à ' +
