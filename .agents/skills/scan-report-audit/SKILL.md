@@ -86,20 +86,40 @@ Authenticate once per rehearsal session and reuse the session cookie for
 every subsequent call:
 
 ```bash
-set -a; . ./.env; set +a
-curl -s -c /tmp/odysseus-dashboard-cookies.txt -X POST \
+umask 077
+mkdir -p "$HOME/.cache/odysseus-rehearsal"
+chmod 700 "$HOME/.cache/odysseus-rehearsal"
+node -e '
+  const { parseEnv } = require("node:util");
+  const password = parseEnv(require("node:fs").readFileSync(".env", "utf8")).ODYSSEUS_DASHBOARD_PASSWORD;
+  if (!password) { console.error("ODYSSEUS_DASHBOARD_PASSWORD is not set in .env"); process.exit(1); }
+  process.stdout.write(JSON.stringify({ password }));
+' | curl -s -c "$HOME/.cache/odysseus-rehearsal/cookies.txt" -X POST \
   https://app.odysseusaudit.com/api/session/login \
   -H 'content-type: application/json' \
-  -d "{\"password\":\"$ODYSSEUS_DASHBOARD_PASSWORD\"}"
+  --data-binary @-
+chmod 600 "$HOME/.cache/odysseus-rehearsal/cookies.txt"
 ```
 
 This needs `ODYSSEUS_DASHBOARD_PASSWORD` in the local, gitignored `.env`
 (there is no dedicated env var for this documented yet elsewhere — it is
-specific to this workflow). Never print the password or the session
-cookie value to output; pass it through `$ODYSSEUS_DASHBOARD_PASSWORD`
-inside the JSON body, not as a literal in a command that could echo it,
-and quote the `.env` line's value so shell metacharacters in the password
-cannot break sourcing.
+specific to this workflow). The command above is shaped so the credential
+never leaves protected storage:
+
+- It reads only that one variable, inside a short-lived Node process,
+  instead of sourcing the whole `.env` into the shell, where every secret
+  in the file would be exported to each later child process.
+- The JSON body travels to `curl` on stdin (`--data-binary @-`), never as a
+  command-line argument, because arguments are visible to every user in
+  the process list.
+- The cookie jar holds a live production session, so it lives in a
+  private `0700` directory under the operator's home with a `0600` file,
+  never at a fixed, world-readable path under `/tmp`.
+
+Never print the password or the session cookie value to output. Every
+later call in this skill reuses the jar with
+`-b "$HOME/.cache/odysseus-rehearsal/cookies.txt"`. When the run ends
+(step 7), end the session and delete the jar.
 
 Local `odysseus audit`/`analyze`/`report` remain a documented fallback
 (kept below, marked as such) for when the VPS is unreachable — do not
@@ -196,7 +216,7 @@ Submit the audit through the VPS dashboard's job queue (see "Environment"
 above) — uncapped, the same way a real client's audit would run:
 
 ```bash
-curl -s -b /tmp/odysseus-dashboard-cookies.txt -X POST \
+curl -s -b "$HOME/.cache/odysseus-rehearsal/cookies.txt" -X POST \
   https://app.odysseusaudit.com/api/scans \
   -H 'content-type: application/json' \
   -d '{"type":"full-audit","url":"<finalUrl>","options":{"siren":"<siren>"}}'
@@ -223,7 +243,7 @@ engagement would supply one.
 Poll the job until it finishes:
 
 ```bash
-curl -s -b /tmp/odysseus-dashboard-cookies.txt \
+curl -s -b "$HOME/.cache/odysseus-rehearsal/cookies.txt" \
   https://app.odysseusaudit.com/api/scans/<jobId>
 ```
 
@@ -265,11 +285,11 @@ SIREN), correct it via the dashboard's manual-fields endpoint and
 regenerate, rather than resubmitting the scan:
 
 ```bash
-curl -s -b /tmp/odysseus-dashboard-cookies.txt -X PATCH \
+curl -s -b "$HOME/.cache/odysseus-rehearsal/cookies.txt" -X PATCH \
   https://app.odysseusaudit.com/api/audits/<auditId>/manual-fields \
   -H 'content-type: application/json' \
   -d '{"transactionalFlowOverride":{"value":true,"reason":"<why>"}}'
-curl -s -b /tmp/odysseus-dashboard-cookies.txt -X POST \
+curl -s -b "$HOME/.cache/odysseus-rehearsal/cookies.txt" -X POST \
   https://app.odysseusaudit.com/api/audits/<auditId>/regenerate-report
 ```
 
@@ -280,7 +300,7 @@ options, and no siren from the client; everything is resolved from the
 candidate server-side:
 
 ```bash
-curl -s -b /tmp/odysseus-dashboard-cookies.txt -X POST \
+curl -s -b "$HOME/.cache/odysseus-rehearsal/cookies.txt" -X POST \
   https://app.odysseusaudit.com/api/prospects/<candidateId>/outreach/full-scan
 ```
 
@@ -335,10 +355,10 @@ without requiring approval, which fits a rehearsal read rather than a
 client delivery):
 
 ```bash
-curl -s -b /tmp/odysseus-dashboard-cookies.txt \
+curl -s -b "$HOME/.cache/odysseus-rehearsal/cookies.txt" \
   https://app.odysseusaudit.com/api/audits/<auditId>/report/fr/preview \
   -o /tmp/claude-*/scratchpad/rehearsal-<hostname>-fr.pdf
-curl -s -b /tmp/odysseus-dashboard-cookies.txt \
+curl -s -b "$HOME/.cache/odysseus-rehearsal/cookies.txt" \
   https://app.odysseusaudit.com/api/audits/<auditId>/report/en/preview \
   -o /tmp/claude-*/scratchpad/rehearsal-<hostname>-en.pdf
 ```
@@ -391,10 +411,10 @@ read.
 Fetch both renderings of the one preview build with the session cookie:
 
 ```bash
-curl -s -b /tmp/odysseus-dashboard-cookies.txt \
+curl -s -b "$HOME/.cache/odysseus-rehearsal/cookies.txt" \
   https://app.odysseusaudit.com/api/audits/<auditId>/outreach-preview \
   -o <scratchpad>/rehearsal-<hostname>-preview.json
-curl -s -b /tmp/odysseus-dashboard-cookies.txt \
+curl -s -b "$HOME/.cache/odysseus-rehearsal/cookies.txt" \
   https://app.odysseusaudit.com/api/audits/<auditId>/outreach-preview/pdf \
   -o <scratchpad>/rehearsal-<hostname>-apercu.pdf
 ```
@@ -442,10 +462,10 @@ unlisted public URL for a hotel that is not a prospect, so only do it
 with an explicit go-ahead in this run, and revoke immediately after:
 
 ```bash
-curl -s -b /tmp/odysseus-dashboard-cookies.txt -X POST \
+curl -s -b "$HOME/.cache/odysseus-rehearsal/cookies.txt" -X POST \
   https://app.odysseusaudit.com/api/audits/<auditId>/outreach-preview/publish
 curl -s '<returned public url>' -o <scratchpad>/rehearsal-<hostname>-public.html
-curl -s -b /tmp/odysseus-dashboard-cookies.txt -X POST \
+curl -s -b "$HOME/.cache/odysseus-rehearsal/cookies.txt" -X POST \
   https://app.odysseusaudit.com/api/prospects/<candidateId>/preview/revoke
 ```
 
@@ -523,6 +543,15 @@ the template there if this is the first run) with:
 - links to any GitHub issues filed from this run
 
 ### 7. Stop
+
+End the dashboard session and remove the cookie jar, so no live
+production session outlives the run:
+
+```bash
+curl -s -b "$HOME/.cache/odysseus-rehearsal/cookies.txt" -X POST \
+  https://app.odysseusaudit.com/api/session/logout
+rm -rf "$HOME/.cache/odysseus-rehearsal"
+```
 
 The skill's job ends once issues are filed and the log is updated. Fixing
 filed issues happens later through the normal `ready-for-agent` triage
