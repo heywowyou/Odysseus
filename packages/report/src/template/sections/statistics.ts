@@ -17,7 +17,7 @@ import { CATEGORY, CATEGORY_ORDER, SEVERITY } from '../design-tokens.js';
 import { type RenderedPriority, summarizePriorityOwnership } from '../rendered-priorities.js';
 import { renderPriorityOwnershipSentence } from '../priority-ownership-note.js';
 import { computeStatistics } from '../statistics.js';
-import { RULE_TRANSLATIONS_FR } from '../rule-translations.js';
+import { resolveFindingDisplayLabel } from '../rule-translations.js';
 
 /** item 1.10 (La Corniche pass): "N/N pages avec au moins un constat
  *  critique" reads as an alarming, broad finding, but on a real report
@@ -38,13 +38,9 @@ function criticalDriverRuleTitles(
   ];
   if (criticalRuleIds.length === 0 || criticalRuleIds.length > CRITICAL_DRIVER_MAX_RULES) return [];
 
-  return criticalRuleIds.map((ruleId) => {
-    if (language === 'fr') {
-      const translation = RULE_TRANSLATIONS_FR[ruleId];
-      if (translation) return translation.label;
-    }
-    return findings.find((f) => f.ruleId === ruleId)?.title ?? ruleId;
-  });
+  return criticalRuleIds.map((ruleId) =>
+    resolveFindingDisplayLabel(language, ruleId, findings.find((f) => f.ruleId === ruleId)?.title),
+  );
 }
 
 /** Doc §3 section 03 cap: the 4 number tiles are fixed (report.reference.

@@ -1,5 +1,6 @@
 import type { ReportLanguage } from '@odysseus/core';
 import { normalizeFrenchTypographyDeep } from './french-typography.js';
+import { RULE_LABELS_EN } from './rule-labels-en.js';
 
 /**
  * item 38 [REGRESSION]: automated-tool rule names ("Certain ARIA roles
@@ -26,8 +27,8 @@ import { normalizeFrenchTypographyDeep } from './french-typography.js';
  * French report). `gloss` is a short plain-language explanation shown
  * under the machine-readable rule code, for the cryptic "-insight"
  * Lighthouse audit codes and other jargon a non-technical reader would
- * not otherwise decode. English reports use Finding.title verbatim
- * (already English) and render no gloss - this table is fr-only.
+ * not otherwise decode. English reports read their titles from
+ * rule-labels-en.ts (issue #332) and render no gloss.
  */
 export interface RuleTranslation {
   label: string;
@@ -1097,18 +1098,15 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
  *  extracted from the label logic the findings appendix used to inline, so
  *  the appendix and the deterministic priority evidence (rendered-priorities.ts)
  *  read the same table through the same function and cannot disagree about
- *  what a defect is called. Reviewed French rule label in a French report;
- *  the scanner's own English title otherwise (already the right language for
- *  an English report); the rule id as the last resort when even the scanner
- *  title is missing. */
+ *  what a defect is called. Reviewed French rule label in a French report,
+ *  reviewed English label (rule-labels-en.ts, issue #332) in an English one;
+ *  the scanner's own title for a rule neither table knows yet; the rule id
+ *  as the last resort when even the scanner title is missing. */
 export function resolveFindingDisplayLabel(
   language: ReportLanguage,
   ruleId: string,
   scannerTitle: string | undefined,
 ): string {
-  if (language === 'fr') {
-    const translation = RULE_TRANSLATIONS_FR[ruleId];
-    if (translation !== undefined) return translation.label;
-  }
-  return scannerTitle ?? ruleId;
+  const reviewed = language === 'fr' ? RULE_TRANSLATIONS_FR[ruleId]?.label : RULE_LABELS_EN[ruleId];
+  return reviewed ?? scannerTitle ?? ruleId;
 }

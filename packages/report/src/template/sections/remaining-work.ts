@@ -18,7 +18,7 @@ import {
 } from '../html-utils.js';
 import { sectionTitle } from '../section-registry.js';
 import { CATEGORY, CATEGORY_ORDER, SEVERITY } from '../design-tokens.js';
-import { RULE_TRANSLATIONS_FR } from '../rule-translations.js';
+import { resolveFindingDisplayLabel } from '../rule-translations.js';
 import { interpolateSnippet, remediationFor, snippetFor } from '../remediation/index.js';
 import { renderFixSnippet } from '../remediation/render-fix-snippet.js';
 import { accessibilityStatementGuidance } from '../accessibility-statement-guidance.js';
@@ -115,10 +115,9 @@ function groupByRule(
   return [...byRule.entries()]
     .map(([ruleId, group]): RuleBlock => {
       const first = group[0]!;
-      const translation = language === 'fr' ? RULE_TRANSLATIONS_FR[ruleId] : undefined;
       return {
         ruleId,
-        title: translation?.label ?? first.title,
+        title: resolveFindingDisplayLabel(language, ruleId, first.title),
         severity: group.reduce<Severity>(
           (worst, f) => (SEVERITY_RANK[f.severity] < SEVERITY_RANK[worst] ? f.severity : worst),
           'minor',

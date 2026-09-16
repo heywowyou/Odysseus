@@ -147,7 +147,7 @@ describe('plan 018 step 6: deterministic priority evidence', () => {
     const priority = priorities[0]!;
 
     expect(priority.evidence.representativeFinding.findingId).toBe('f001');
-    expect(priority.evidence.representativeLabel).toBe('Title f001');
+    expect(priority.evidence.representativeLabel).toBe('Color contrast is insufficient');
   });
 
   it('prefers the higher severity over the smaller findingId', () => {
@@ -288,7 +288,7 @@ describe('plan 018 step 6: deterministic priority evidence', () => {
     expect(priority.evidence.occurrenceCount).toBe(5);
   });
 
-  it('resolves the representative label through the shared helper: reviewed French rule label in fr, scanner title in en', async () => {
+  it('resolves the representative label through the shared helper: the reviewed rule label in each language', async () => {
     const findings = [buildFinding({ findingId: 'f001', ruleId: 'color-contrast' })];
     const themes = [buildTheme(['f001'])];
 
@@ -297,7 +297,8 @@ describe('plan 018 step 6: deterministic priority evidence', () => {
     const frPriorities = buildRenderedPriorities(themes, findings, manifest, 'fr');
     const frPriority = frPriorities[0]!;
 
-    expect(enPriority.evidence.representativeLabel).toBe('Title f001');
+    // Issue #332: English reads the reviewed English label, not the scanner title.
+    expect(enPriority.evidence.representativeLabel).toBe('Color contrast is insufficient');
     // Same reviewed label the findings appendix renders for this rule.
     expect(frPriority.evidence.representativeLabel).toBe(
       'Le contraste des couleurs est insuffisant',

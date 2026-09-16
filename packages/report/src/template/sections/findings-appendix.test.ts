@@ -150,7 +150,7 @@ describe('renderFindingsAppendix against the real small-site.test findings', () 
         auditId: 'a',
         schemaVersion: 1,
         source: 'axe',
-        ruleId: 'color-contrast',
+        ruleId: 'rule-not-in-the-translations',
         category: 'accessibility',
         severity: 'serious',
         wcagCriteria: ['1.4.3'],
@@ -241,12 +241,14 @@ describe('item 38: rule titles and codes render in French with a gloss', () => {
     expect(html).toContain('en dessous du seuil minimal requis');
   });
 
-  it('leaves the English title untranslated for an English report', async () => {
+  // Issue #332: English reports used to print the scanner's rule sentence.
+  it('uses the reviewed English title, not the scanner rule sentence, in an English report', async () => {
     const findings = await loadSmallSiteFindings();
     const manifest = await loadSmallSiteManifest();
     const html = renderFindingsAppendix(getStrings('en'), 12, 'en', findings, manifest, 'general');
 
-    expect(html).toContain('Elements must meet minimum color contrast ratio thresholds');
+    expect(html).toContain('Color contrast is insufficient');
+    expect(html).not.toContain('Elements must meet minimum color contrast ratio thresholds');
   });
 });
 
