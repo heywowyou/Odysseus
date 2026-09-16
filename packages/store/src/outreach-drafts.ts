@@ -120,14 +120,22 @@ export async function recordOutreachDraft(
   }
   // Issue #278: a draft is not contact. The prospect status only moves when
   // mailbox reconciliation confirms the send (recordOutreachTouchSent).
-  await appendProspectEvent(connection, {
-    eventId: randomUUID(),
-    prospectId: input.prospectId,
-    type: 'draft-created',
-    payload: { draftId: document.draftId, touch: input.touch },
-    actor: 'automation',
-    at: new Date(),
-  });
+  try {
+    await appendProspectEvent(connection, {
+      eventId: randomUUID(),
+      prospectId: input.prospectId,
+      type: 'draft-created',
+      payload: { draftId: document.draftId, touch: input.touch },
+      actor: 'automation',
+      at: new Date(),
+    });
+  } catch (error) {
+    // The caller treats a throw as "not recorded" and deletes the provider
+    // draft. Retire the local row too, or it stays live with nothing behind
+    // it and the one-live-draft index refuses every later attempt.
+    await markOutreachDraftDeleted(connection, document.draftId);
+    throw error;
+  }
   return document;
 }
 
