@@ -1456,15 +1456,17 @@ describe('2026-08-22: Impact commercial and Conformité are colour-coded, Effort
     );
   });
 
-  it('never colours the "Complexité : Élevé" fact the same way, since high complexity is expensive, not urgent', () => {
+  it('never colours the "Complexité : Élevée" fact the same way, since high complexity is expensive, not urgent', () => {
     const findings = [buildFinding('f001')];
     const analysis = buildAnalysis('high', 'accessibility');
     const html = renderThemes(getStrings('fr'), 4, analysis as never, findings, manifest);
 
     // Plan 018 step 6 renamed the card footer's effort item "Complexity"
-    // (and confines the word to this one detailed card).
+    // (and confines the word to this one detailed card). Issue #305:
+    // "complexité" is feminine, so the rating agrees ("Élevée"), distinct
+    // from the masculine impact ramp.
     expect(html).toContain(
-      '<span class="theme-fact-label">Complexité</span><span class="theme-fact-value">Élevé</span>',
+      '<span class="theme-fact-label">Complexité</span><span class="theme-fact-value">Élevée</span>',
     );
   });
 

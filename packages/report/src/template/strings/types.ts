@@ -620,6 +620,11 @@ export interface ReportStrings {
     aggregateEffortEstimateTemplate: string;
     effortLabel: string;
     impactLabel: string;
+    /** Complexity/effort rating values, grammatically separate from the
+     *  impact ramp: French "complexité" is feminine ("Élevée"/"Moyenne"),
+     *  so the card and checklist complexity columns cannot reuse
+     *  effortImpactLevels without a gender error (issue #305). */
+    effortLevels: { low: string; medium: string; high: string };
     affectedPagesLabel: string;
     conformityLabel: string;
     conformityNotApplicable: string;

@@ -73,6 +73,9 @@ export function renderChecklist(
   const sortedThemes = priorities
     ? priorities.map((priority) => priority.theme)
     : selectRenderedThemes(analysis.themes, findingsById);
+  // Issue #305: the complexity column carries its own rating vocabulary
+  // ("Complexité" is feminine in French), separate from the impact ramp.
+  const effortLevels = strings.themes.effortLevels;
   const levels = strings.themes.effortImpactLevels;
 
   // item 2.7: standing on its own once printed or captured, this page had
@@ -110,7 +113,7 @@ export function renderChecklist(
         <div class="row-atomic">
           ${cell(String(displayRank))}
           ${cell(escapeProse(theme.title))}
-          ${cell(escapeHtml(levels[theme.effort]))}
+          ${cell(escapeHtml(effortLevels[theme.effort]))}
           ${cell(`<span data-level="${theme.impact}" style="color:${LEVEL_COLOR[theme.impact].color}">${escapeHtml(levels[theme.impact])}</span>`)}
           ${cell(`${formatNumber(uniquePages, language)}/${formatNumber(totalPagesScanned, language)}`)}
           ${cell(`<span class="mono" style="font-size:11px">${escapeHtml(formatCappedFindingIdRefs(theme.findingIds, language, strings.findingsAppendix))}</span>`)}

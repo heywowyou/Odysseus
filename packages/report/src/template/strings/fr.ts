@@ -425,6 +425,9 @@ export const fr: ReportStrings = {
       },
     },
     effortImpactLevels: { low: 'Faible', medium: 'Moyen', high: 'Élevé' },
+    // "Complexité" is feminine: the effort column needs its own agreement
+    // (issue #305), while effortImpactLevels stays masculine for "Impact".
+    effortLevels: { low: 'Faible', medium: 'Moyenne', high: 'Élevée' },
     pagesOfTotalTemplate: '{pages} {pageWord} sur {totalPages}',
     refsLabel: 'Constats',
     // P1.2 (2026-08-21 La Corniche feedback pass): splits a priority

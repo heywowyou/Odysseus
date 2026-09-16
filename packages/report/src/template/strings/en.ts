@@ -363,6 +363,7 @@ export const en: ReportStrings = {
       },
     },
     effortImpactLevels: { low: 'Low', medium: 'Medium', high: 'High' },
+    effortLevels: { low: 'Low', medium: 'Medium', high: 'High' },
     pagesOfTotalTemplate: '{pages} {pageWord} of {totalPages}',
     refsLabel: 'Findings',
     ownershipSplitTemplate:
