@@ -39,6 +39,9 @@ directoryEntrySchema.index({ stars: 1, groupStatus: 1, websiteKind: 1, departmen
 directoryEntrySchema.index({ department: 1, commune: 1, rooms: 1, name: 1 });
 directoryEntrySchema.index({ registrableDomain: 1 });
 directoryEntrySchema.index({ prospectId: 1 });
+// The directory page's own sort, so an unfiltered or search page walks the
+// index in order instead of sorting the whole directory in memory.
+directoryEntrySchema.index({ name: 1, directoryId: 1 });
 
 export function createDirectoryEntryModel(connection: Connection): Model<DirectoryEntryDocument> {
   return (

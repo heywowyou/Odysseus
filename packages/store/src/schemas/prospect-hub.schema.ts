@@ -105,6 +105,8 @@ prospectSchema.index({ 'websites.registrableDomain': 1 });
 prospectSchema.index({ status: 1, lastActivityAt: -1 });
 prospectSchema.index({ sector: 1, 'hotel.stars': 1, 'hotel.groupStatus': 1, 'websites.kind': 1 });
 prospectSchema.index({ department: 1, commune: 1, 'hotel.rooms': 1 });
+// The list pages filter on archivedAt and sort by name, then prospectId.
+prospectSchema.index({ archivedAt: 1, name: 1, prospectId: 1 });
 
 export function createProspectHubModel(connection: Connection): Model<ProspectHubDocument> {
   return (

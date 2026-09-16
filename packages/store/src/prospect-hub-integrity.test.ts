@@ -11,6 +11,7 @@ import {
   getProspectHub,
   listProspectEvents,
   restoreProspect,
+  setProspectStatus,
   updateProspect,
 } from './prospect-hub.js';
 import { createDirectoryEntryModel } from './schemas/directory-entry.schema.js';
@@ -143,6 +144,35 @@ describe.skipIf(!available)('prospect record integrity', () => {
     await restoreProspect(connection!, prospect.prospectId);
     const types = (await listProspectEvents(connection!, prospect.prospectId)).map((e) => e.type);
     expect(types).not.toContain('prospect-restored');
+  });
+
+  it('counts result statuses within the list filter, ignoring the selected status', async () => {
+    const won = await newProspect('Counted Won Alpha');
+    const wonToo = await newProspect('Counted Won Beta');
+    const lost = await newProspect('Counted Lost');
+    const archived = await newProspect('Counted Archived');
+    await newProspect('Counted Fresh');
+    const outsideFilter = await newProspect('Elsewhere Won');
+    await setProspectStatus(connection!, won.prospectId, 'won');
+    await setProspectStatus(connection!, wonToo.prospectId, 'won');
+    await setProspectStatus(connection!, lost.prospectId, 'lost');
+    await setProspectStatus(connection!, outsideFilter.prospectId, 'won');
+    await setProspectStatus(connection!, archived.prospectId, 'won');
+    await archiveProspect(connection!, archived.prospectId);
+
+    const page = await listProspects(connection!, {
+      q: 'Counted',
+      view: 'results',
+      status: 'lost',
+      pageSize: 50,
+    });
+
+    expect(page.rows.map((row) => row.name)).toEqual(['Counted Lost']);
+    expect(page.total).toBe(1);
+    expect(page.statusCounts.won).toBe(2);
+    expect(page.statusCounts.lost).toBe(1);
+    expect(page.statusCounts.contacted).toBe(0);
+    expect(page.archivedCount).toBe(1);
   });
 
   describe('directory add', () => {

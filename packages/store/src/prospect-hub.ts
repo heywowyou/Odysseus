@@ -315,23 +315,33 @@ export async function listProspects(
     query['status'] = filter.status;
   }
   const Model = createProspectHubModel(connection);
-  const statusCounts = Object.fromEntries(
-    await Promise.all(
-      PROSPECT_RESULT_STATUSES.map(
-        async (status) =>
-          [status, await Model.countDocuments({ ...queryForStatusCounts(query), status })] as const,
-      ),
-    ),
-  ) as Record<ProspectResultStatus, number>;
-  const [rows, total, archivedCount] = await Promise.all([
+  const [rows, total, statusGroups, archivedCount] = await Promise.all([
     Model.find(query)
       .sort({ name: 1, prospectId: 1 })
       .skip((page - 1) * pageSize)
       .limit(pageSize)
       .lean<ProspectHubDocument[]>(),
     Model.countDocuments(query),
+    // One pass for every status count. The filter holds only plain values,
+    // regular expressions and dates, which an aggregation matches without
+    // the casting countDocuments would apply.
+    Model.aggregate<{ _id: string; count: number }>([
+      {
+        $match: {
+          ...queryForStatusCounts(query),
+          status: { $in: [...PROSPECT_RESULT_STATUSES] },
+        },
+      },
+      { $group: { _id: '$status', count: { $sum: 1 } } },
+    ]),
     Model.countDocuments({ ...queryForStatusCounts(query), ...ARCHIVED_PROSPECT_QUERY }),
   ]);
+  const statusCounts = Object.fromEntries(
+    PROSPECT_RESULT_STATUSES.map((status) => [
+      status,
+      statusGroups.find((group) => group._id === status)?.count ?? 0,
+    ]),
+  ) as Record<ProspectResultStatus, number>;
   return { rows, page, pageSize, total, statusCounts, archivedCount };
 }
 
