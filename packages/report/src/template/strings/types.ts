@@ -628,6 +628,9 @@ export interface ReportStrings {
   checklist: {
     eyebrow: string;
     heading: string;
+    /** Issue #317: the tag that marks this page as the light printable
+     *  insert, so its light ground reads as intended between dark pages. */
+    insertTag: string;
     intro: string;
     rankColumnLabel: string;
     priorityColumnLabel: string;

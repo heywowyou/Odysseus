@@ -231,6 +231,14 @@ baseline) guard it; the print-safe severity-level color pairings live in
 the `@media print` block and are re-derived against `#f7f7f5` at 4.5:1+
 if the palette ever moves.
 
+The PDF is generated under print media, so every reader sees that page
+light, usually on screen between two dark pages. Issue #317 (2026-09-16)
+decided to keep the inversion and mark the page as a deliberate insert
+rather than align it with the dark theme: an outlined "Encart à imprimer" /
+"Printable insert" tag sits at the right of the eyebrow row (adding no
+height, since the page must stay on one sheet), and the intro states that
+the light background is for printing.
+
 ## 3. Per section data contract
 
 The design's own information architecture is binding. Where it aggregates, the

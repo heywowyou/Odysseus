@@ -523,6 +523,21 @@ img[src=''] {
   }
 }
 
+/* Issue #317: the printable checklist's insert tag. Only visible as a
+   contrast cue on the light print page; on the dark screen preview it is a
+   plain outlined label. */
+.checklist-insert-tag {
+  display: inline-block;
+  padding: 0 6px;
+  line-height: 1.5;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
 /* item 36: section 05 (the printable checklist) is explicitly labeled
    "Page pensée pour être imprimée ou capturée seule" but rendered as
    light text on the same near-black background (#161826) as every other
@@ -591,6 +606,13 @@ img[src=''] {
      (high 6.56:1, medium 5.5:1, low 5.23:1) - not the same hex as
      LEVEL_COLOR's dark-mode values, which would fail contrast on this
      light background. */
+  /* Issue #317: on screen, the light page between two dark ones read as a
+     rendering glitch. It stays light (the reasons above still hold) but now
+     looks like a deliberate insert: a tag names it and the intro says why its
+     ground is light. */
+  #section-05 .checklist-insert-tag {
+    border-color: #161826 !important;
+  }
   #section-05 [data-level='high'] {
     color: #a52a37 !important;
   }

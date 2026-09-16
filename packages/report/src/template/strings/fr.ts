@@ -389,12 +389,13 @@ export const fr: ReportStrings = {
   checklist: {
     eyebrow: 'Check-list imprimable',
     heading: 'Check-list des priorités',
+    insertTag: 'Encart à imprimer',
     // P2.5 (2026-08-21 La Corniche feedback pass): 13 of the report's
     // pages are CSS-selector tables meant for a developer, not the
     // director reading the report - labeled explicitly rather than left
     // to be inferred from content alone.
     intro:
-      "Page pensée pour être imprimée ou capturée seule, sans prose, uniquement l'essentiel. À transmettre à votre prestataire technique.",
+      "Page pensée pour être imprimée ou capturée seule, d'où son fond clair : sans prose, uniquement l'essentiel. À transmettre à votre prestataire technique.",
     rankColumnLabel: '#',
     priorityColumnLabel: 'Priorité',
     complexityColumnLabel: 'Complexité',

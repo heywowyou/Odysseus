@@ -337,8 +337,9 @@ export const en: ReportStrings = {
   checklist: {
     eyebrow: 'Printable checklist',
     heading: 'Priority checklist',
+    insertTag: 'Printable insert',
     intro:
-      'Page designed to be printed or captured on its own, no prose, just the essentials. Pass this on to your technical provider.',
+      'Page designed to be printed or captured on its own, hence its light background: no prose, just the essentials. Pass this on to your technical provider.',
     rankColumnLabel: '#',
     priorityColumnLabel: 'Priority',
     complexityColumnLabel: 'Complexity',

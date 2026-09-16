@@ -12,6 +12,22 @@ import {
 // impact labels, same page counts. Now carries finding IDs and WCAG
 // criteria so it functions as an actual working checklist.
 describe('item 35: the checklist carries finding IDs and WCAG criteria', () => {
+  // Issue #317: the light print page read as a rendering glitch between
+  // dark pages until it was marked as a deliberate insert.
+  it('marks the page as the printable insert and says why its ground is light', async () => {
+    const [findings, manifest] = await Promise.all([
+      loadSmallSiteFindings(),
+      loadSmallSiteManifest(),
+    ]);
+    for (const language of ['fr', 'en'] as const) {
+      const analysis = await loadSmallSiteAnalysis(language);
+      const html = renderChecklist(getStrings(language), 5, language, analysis, findings, manifest);
+      const s = getStrings(language).checklist;
+      expect(html).toContain(`<span class="checklist-insert-tag">${s.insertTag}</span>`);
+      expect(s.intro).toMatch(language === 'fr' ? /fond clair/ : /light background/);
+    }
+  });
+
   it("renders each rendered theme's finding IDs", async () => {
     const [analysis, findings, manifest] = await Promise.all([
       loadSmallSiteAnalysis('fr'),

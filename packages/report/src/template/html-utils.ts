@@ -318,6 +318,9 @@ export function renderSheetHeader(
   eyebrow: string,
   heading: string,
   headingGap: string = 'var(--space-4)',
+  /** Issue #317: trusted markup placed at the right of the eyebrow row,
+   *  which adds no height to the header. */
+  eyebrowAsideHtml: string = '',
 ): string {
   const number = String(ordinal).padStart(2, '0');
   const isSingleTitle = heading.trim() === '';
@@ -326,7 +329,7 @@ export function renderSheetHeader(
   return `
     <div class="section-head">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-        <h6 style="color:var(--color-accent-300);margin:0">${escapeHtml(eyebrowText)}</h6>
+        <h6 style="color:var(--color-accent-300);margin:0">${escapeHtml(eyebrowText)}</h6>${eyebrowAsideHtml}
       </div>
       <h2 style="margin-bottom:${headingGap}">${escapeHtml(headingText)}</h2>
     </div>
