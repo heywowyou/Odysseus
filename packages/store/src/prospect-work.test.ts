@@ -361,7 +361,9 @@ describe('prospect work model', () => {
     expect(createJobModel).toHaveBeenCalledTimes(1);
     expect(findSuppressionMatches).toHaveBeenCalledTimes(1);
     const auditProjection = auditCursor.select.mock.calls[0]?.[0] as Record<string, unknown>;
-    expect(auditProjection).toHaveProperty('pages', 1);
+    // Only the per-page fields qualification reads, never the whole manifest.
+    expect(auditProjection).not.toHaveProperty('pages');
+    expect(auditProjection).toMatchObject({ 'pages.status': 1, 'pages.httpStatus': 1 });
     expect(auditProjection).not.toHaveProperty('findings');
     expect(auditProjection).not.toHaveProperty('analysis');
   });

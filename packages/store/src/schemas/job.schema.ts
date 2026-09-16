@@ -402,6 +402,10 @@ const jobSchema = new Schema<JobDocument>(
 jobSchema.index({ status: 1, createdAt: 1 });
 jobSchema.index({ createdAt: -1 });
 jobSchema.index({ 'options.prospectId': 1, createdAt: -1 });
+// The prospect hub and deletion scopes also reach jobs through the audits
+// they produced; without these the `$or` on audit links scans the collection.
+jobSchema.index({ auditId: 1 }, { sparse: true });
+jobSchema.index({ auditIds: 1 }, { sparse: true });
 jobSchema.index(
   { activeSlot: 1 },
   { unique: true, partialFilterExpression: { activeSlot: { $exists: true } } },

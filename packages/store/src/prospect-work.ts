@@ -395,7 +395,11 @@ export async function loadProspectWork(
         kind: 1,
         startedAt: 1,
         finishedAt: 1,
-        pages: 1,
+        // Qualification reads only each page's status and HTTP code. The full
+        // page manifest of every audit (Full scans have no page cap) would
+        // otherwise travel on every to-do poll.
+        'pages.status': 1,
+        'pages.httpStatus': 1,
         'crawl.sitemapCoverage': 1,
         'findingsProvenance.normalizationFingerprint': 1,
       })
@@ -472,5 +476,38 @@ export async function loadProspectWork(
     suppressedDomains: suppression.domains,
     suppressedAddresses: suppression.addresses,
   };
-  return prospects.map((prospect) => deriveProspectWork(prospect, sources, now));
+  // Grouped once, so each prospect's derivation filters its own rows instead
+  // of every prospect scanning every loaded row.
+  const auditsByProspect = groupByProspect(sources.audits, (audit) => audit.prospectId);
+  const draftsByProspect = groupByProspect(sources.drafts, (draft) => draft.prospectId);
+  const threadsByProspect = groupByProspect(sources.threads, (thread) => thread.prospectId);
+  const jobsByProspect = groupByProspect(sources.needsInputJobs, (job) => job.options?.prospectId);
+  return prospects.map((prospect) =>
+    deriveProspectWork(
+      prospect,
+      {
+        ...sources,
+        audits: auditsByProspect.get(prospect.prospectId) ?? [],
+        drafts: draftsByProspect.get(prospect.prospectId) ?? [],
+        threads: threadsByProspect.get(prospect.prospectId) ?? [],
+        needsInputJobs: jobsByProspect.get(prospect.prospectId) ?? [],
+      },
+      now,
+    ),
+  );
+}
+
+function groupByProspect<T>(
+  rows: readonly T[],
+  prospectIdOf: (row: T) => string | undefined,
+): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
+  for (const row of rows) {
+    const prospectId = prospectIdOf(row);
+    if (prospectId === undefined) continue;
+    const group = groups.get(prospectId);
+    if (group === undefined) groups.set(prospectId, [row]);
+    else group.push(row);
+  }
+  return groups;
 }
