@@ -62,6 +62,10 @@ export class JobQueue {
   private readonly pollIntervalMs: number;
   private readonly originLock = new OriginLock();
   private readonly cancellation = new CancellationRegistry();
+  /** Jobs whose runner is executing in this process right now. A stopped
+   *  job's document is terminal immediately, but its pipeline keeps working
+   *  until the next stage boundary; this is what tells the two apart. */
+  private readonly inFlight = new Set<string>();
   private readonly runners: Record<JobType, PipelineFn>;
 
   private activeCount = 0;
@@ -148,6 +152,12 @@ export class JobQueue {
     this.cancellation.request(jobId);
   }
 
+  /** True while the job's runner is still executing here, including after a
+   *  stop was requested and before the runner reached a stage boundary. */
+  isJobInFlight(jobId: string): boolean {
+    return this.inFlight.has(jobId);
+  }
+
   private async sleep(ms: number): Promise<void> {
     await new Promise<void>((resolve) => {
       this.wake = resolve;
@@ -201,6 +211,7 @@ export class JobQueue {
   private async runJob(job: JobDocument): Promise<void> {
     const runner = this.runners[job.type];
     const jobLog = logger.child({ jobId: job.jobId, jobType: job.type });
+    this.inFlight.add(job.jobId);
     try {
       await runner(job, {
         connection: this.connection,
@@ -233,6 +244,7 @@ export class JobQueue {
         await failJob(this.connection, job.jobId, message);
       }
     } finally {
+      this.inFlight.delete(job.jobId);
       this.cancellation.forget(job.jobId);
       forgetJobPhaseTelemetry(job.jobId);
     }

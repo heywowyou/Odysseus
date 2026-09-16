@@ -3,11 +3,17 @@
  *  durable prospect link; no candidate qualification or cohort provenance is
  *  consulted. */
 
-import { completeJob, ensureJobRunIdentity, type JobDocument } from '@odysseus/store';
+import {
+  completeJob,
+  ensureJobRunIdentity,
+  updateJobProgress,
+  type JobDocument,
+} from '@odysseus/store';
 import { deleteCrawlCheckpoint, deleteCrawlStateFile } from '@odysseus/scanner';
 import { runAuditStage } from '../../pipeline/audit-stage.js';
 import { finalizeProspectScan } from '../../pipeline/finalize-prospect-scan.js';
 import type { PipelineContext } from '../job-queue.js';
+import { JobCancelledError } from '../cancellation.js';
 import { createScanProgressReporter } from '../report-progress.js';
 
 export async function runOutreachFullScanJob(
@@ -34,6 +40,12 @@ export async function runOutreachFullScanJob(
       connection,
     );
     await finalizeProspectScan(connection, { prospectId, manifest: auditResult.manifest });
+    if (ctx.cancellation.isRequested(job.jobId)) {
+      // The audit is already persisted: link it so deleting the stopped job
+      // also removes it.
+      await updateJobProgress(connection, job.jobId, { auditId: auditResult.auditId });
+      throw new JobCancelledError(job.jobId);
+    }
     await completeJob(connection, job.jobId, { auditId: auditResult.auditId });
     deleteCrawlCheckpoint(auditResult.auditDir);
     deleteCrawlStateFile(auditResult.auditDir);

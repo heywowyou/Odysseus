@@ -147,6 +147,12 @@ export async function updateJobProgress(
     { jobId, status: { $nin: ['cancelled', 'complete', 'failed', 'needs-input'] } },
     { $set: { ...$set, lastHeartbeatAt: new Date() } },
   );
+  // The audit link is not progress: once the audit is persisted, the job
+  // must point at it even when a stop already made the job terminal, or
+  // deleting the stopped job would leave the audit behind with no owner.
+  if (patch.auditId !== undefined) {
+    await JobModel.updateOne({ jobId, status: 'cancelled' }, { $set: { auditId: patch.auditId } });
+  }
 }
 
 export interface CompleteJobPatch {

@@ -19,7 +19,7 @@ import { runAllReportsStage } from '../../pipeline/report-stage.js';
 import { completeJob, ensureJobRunIdentity, updateJobProgress } from '@odysseus/store';
 import { pauseBetweenLanguagePasses } from '@odysseus/llm';
 import { runFullAuditJob } from './run-full-audit-job.js';
-import { CancellationRegistry } from '../cancellation.js';
+import { CancellationRegistry, JobCancelledError } from '../cancellation.js';
 import type { PipelineContext } from '../job-queue.js';
 
 const fakeConnection = {} as never;
@@ -312,5 +312,47 @@ describe('runFullAuditJob', () => {
     } as never;
 
     await expect(runFullAuditJob(job, ctx)).rejects.toThrow(/no siteUrl/);
+  });
+
+  describe('stop between stages', () => {
+    it('links the audit, then stops before analysis when the stop came during the scan', async () => {
+      vi.mocked(runAuditStage).mockImplementation(async () => {
+        ctx.cancellation.request('job-1');
+        return fakeAuditResult();
+      });
+
+      await expect(runFullAuditJob(fakeJob(), ctx)).rejects.toBeInstanceOf(JobCancelledError);
+      expect(updateJobProgress).toHaveBeenCalledWith(fakeConnection, 'job-1', {
+        phase: 'analyze-fr',
+        auditId: 'audit-1',
+      });
+      expect(runAnalysisStage).not.toHaveBeenCalled();
+      expect(completeJob).not.toHaveBeenCalled();
+      expect(release).toHaveBeenCalled();
+    });
+
+    it('skips the English pass when the stop came during the French one', async () => {
+      vi.mocked(runAnalysisStage).mockImplementationOnce(async () => {
+        ctx.cancellation.request('job-1');
+        return fakeAnalysisResult('fr');
+      });
+
+      await expect(runFullAuditJob(fakeJob(), ctx)).rejects.toBeInstanceOf(JobCancelledError);
+      expect(runAnalysisStage).toHaveBeenCalledTimes(1);
+      expect(runAllReportsStage).not.toHaveBeenCalled();
+    });
+
+    it('skips rendering when the stop came during the English pass', async () => {
+      vi.mocked(runAnalysisStage)
+        .mockImplementationOnce(async () => fakeAnalysisResult('fr'))
+        .mockImplementationOnce(async () => {
+          ctx.cancellation.request('job-1');
+          return fakeAnalysisResult('en');
+        });
+
+      await expect(runFullAuditJob(fakeJob(), ctx)).rejects.toBeInstanceOf(JobCancelledError);
+      expect(runAnalysisStage).toHaveBeenCalledTimes(2);
+      expect(runAllReportsStage).not.toHaveBeenCalled();
+    });
   });
 });

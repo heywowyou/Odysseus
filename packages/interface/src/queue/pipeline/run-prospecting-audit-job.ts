@@ -6,7 +6,12 @@
  * analysis and report generation. Delete it once no such row can remain
  * queued in production. */
 
-import { completeJob, ensureJobRunIdentity, type JobDocument } from '@odysseus/store';
+import {
+  completeJob,
+  ensureJobRunIdentity,
+  updateJobProgress,
+  type JobDocument,
+} from '@odysseus/store';
 import { deleteCrawlCheckpoint, deleteCrawlStateFile, type PageWorkGuard } from '@odysseus/scanner';
 import { runAuditStage } from '../../pipeline/audit-stage.js';
 import { crawlOptionsFromJob } from './job-crawl-options.js';
@@ -59,6 +64,9 @@ export async function runProspectingAuditJob(
       });
     }
     if (ctx.cancellation.isRequested(job.jobId)) {
+      // The audit is already persisted: link it so deleting the stopped job
+      // also removes it.
+      await updateJobProgress(connection, job.jobId, { auditId: auditResult.auditId });
       throw new JobCancelledError(job.jobId);
     }
 

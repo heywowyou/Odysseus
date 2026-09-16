@@ -389,6 +389,17 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       sendError(res, 409, 'a running job must be stopped before it can be deleted');
       return;
     }
+    // A stopped job is marked cancelled at once, but its pipeline only
+    // aborts at the next stage boundary. Deleting before then would let the
+    // remaining stages write an audit, analyses and reports nothing links to.
+    if (queue.isJobInFlight(jobId)) {
+      sendError(
+        res,
+        409,
+        'the stopped job is still finishing its current stage; try again shortly',
+      );
+      return;
+    }
 
     const auditIds = new Set<string>();
     if (job.auditId !== undefined) auditIds.add(job.auditId);

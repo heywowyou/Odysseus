@@ -35,6 +35,13 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
   const origin = new URL(url).origin;
   const release = await originLock.acquire(origin);
 
+  // A stop is otherwise only seen during crawl and page work. Checked at
+  // each stage boundary, so a stopped job does not spend two analysis
+  // passes and a PDF render first.
+  const throwIfCancelled = (): void => {
+    if (ctx.cancellation.isRequested(job.jobId)) throw new JobCancelledError(job.jobId);
+  };
+
   try {
     // Plan 035 (issue #124): one identity per job, minted once, reused by
     // every orphan re-claim. Its startedAt is the audit directory's
@@ -107,6 +114,7 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
       phase: 'analyze-fr',
       auditId: auditResult.auditId,
     });
+    throwIfCancelled();
     const frAnalysis = await runAnalysisStage(
       auditResult.auditDir,
       auditResult.manifest,
@@ -124,6 +132,7 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
     // retry. The pacing knowledge lives in @odysseus/llm with the rest of
     // the rate-limit handling.
     await pauseBetweenLanguagePasses();
+    throwIfCancelled();
 
     await reportJobPhase(connection, job.jobId, job.type, { phase: 'analyze-en' });
     const enAnalysis = await runAnalysisStage(
@@ -141,6 +150,7 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
     // Renders both language reports (fr and en) from the two analyses
     // already produced above. See runAllReportsStage's own doc comment:
     // no re-scan, no second LLM call.
+    throwIfCancelled();
     await reportJobPhase(connection, job.jobId, job.type, { phase: 'report-fr' });
     await runAllReportsStage(
       auditResult.auditDir,
@@ -172,11 +182,10 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
     // resolves, so a stop requested during the long analyze or report window
     // still gets observed here instead of being overwritten by 'complete'.
     // The audit, analyses, and reports are already persisted and the job
-    // already carries the auditId (updateJobProgress above), so the
+    // already carries the auditId (updateJobProgress writes it even to a
+    // cancelled job), so the
     // dashboard still reaches the work.
-    if (ctx.cancellation.isRequested(job.jobId)) {
-      throw new JobCancelledError(job.jobId);
-    }
+    throwIfCancelled();
 
     await completeJob(connection, job.jobId, {
       auditId: auditResult.auditId,

@@ -6,6 +6,7 @@ vi.mock('../report-progress.js', () => ({ createScanProgressReporter: vi.fn(() =
 vi.mock('@odysseus/store', () => ({
   completeJob: vi.fn(),
   ensureJobRunIdentity: vi.fn(),
+  updateJobProgress: vi.fn(),
 }));
 vi.mock('@odysseus/scanner', () => ({
   deleteCrawlCheckpoint: vi.fn(),
@@ -14,9 +15,9 @@ vi.mock('@odysseus/scanner', () => ({
 
 import { runAuditStage } from '../../pipeline/audit-stage.js';
 import { finalizeProspectScan } from '../../pipeline/finalize-prospect-scan.js';
-import { completeJob, ensureJobRunIdentity } from '@odysseus/store';
+import { completeJob, ensureJobRunIdentity, updateJobProgress } from '@odysseus/store';
 import { runProspectingAuditJob } from './run-prospecting-audit-job.js';
-import { CancellationRegistry } from '../cancellation.js';
+import { CancellationRegistry, JobCancelledError } from '../cancellation.js';
 import type { PipelineContext } from '../job-queue.js';
 
 const fakeConnection = {} as never;
@@ -113,5 +114,18 @@ describe('runProspectingAuditJob', () => {
       prospectId: 'prospect-1',
       manifest: auditResult.manifest,
     });
+  });
+
+  it('links the persisted audit to a job stopped during its scan', async () => {
+    vi.mocked(runAuditStage).mockImplementation(async () => {
+      ctx.cancellation.request('outreach-job-1');
+      return auditResult as never;
+    });
+
+    await expect(runProspectingAuditJob(fakeJob(), ctx)).rejects.toBeInstanceOf(JobCancelledError);
+    expect(updateJobProgress).toHaveBeenCalledWith(fakeConnection, 'outreach-job-1', {
+      auditId: 'audit-outreach-1',
+    });
+    expect(completeJob).not.toHaveBeenCalled();
   });
 });

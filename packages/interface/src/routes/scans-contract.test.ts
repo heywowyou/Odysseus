@@ -7,12 +7,20 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   checkScanLaunch: vi.fn(),
   createJob: vi.fn(),
   findProspectsByDomain: vi.fn(),
+  getJob: vi.fn(),
+  getAudit: vi.fn(),
+  deleteAuditCascade: vi.fn(),
+  deleteJob: vi.fn(),
 }));
 
 import {
   checkScanLaunch,
   createJob,
+  deleteAuditCascade,
+  deleteJob,
   findProspectsByDomain,
+  getAudit,
+  getJob,
   type NewJobInput,
 } from '@odysseus/store';
 import { Router } from '../router.js';
@@ -133,4 +141,38 @@ describe('POST /api/scans runtime contract', () => {
       expect(checkScanLaunch).not.toHaveBeenCalled();
     },
   );
+});
+
+describe('DELETE /api/scans/:jobId', () => {
+  async function remove(inFlight: boolean): Promise<number> {
+    vi.mocked(getJob).mockResolvedValue({
+      jobId: 'job-1',
+      status: 'cancelled',
+      auditId: 'audit-1',
+    } as never);
+    vi.mocked(getAudit).mockResolvedValue(null);
+    const queue = { notify: vi.fn(), isJobInFlight: vi.fn().mockReturnValue(inFlight) } as never;
+    const router = new Router();
+    registerScanRoutes(router, fakeConnection, queue);
+    const req = Readable.from([]) as unknown as IncomingMessage;
+    req.method = 'DELETE';
+    req.url = '/api/scans/job-1';
+    req.headers = {};
+    const res = fakeRes();
+    await router.handle(req, res);
+    return res.statusCode;
+  }
+
+  it('refuses a stopped job whose pipeline is still finishing its stage', async () => {
+    expect(await remove(true)).toBe(409);
+    expect(deleteAuditCascade).not.toHaveBeenCalled();
+    expect(deleteJob).not.toHaveBeenCalled();
+  });
+
+  it('deletes a stopped job once its pipeline has let go', async () => {
+    vi.mocked(deleteJob).mockResolvedValue(true as never);
+    expect(await remove(false)).toBe(200);
+    expect(deleteAuditCascade).toHaveBeenCalledWith(fakeConnection, 'audit-1');
+    expect(deleteJob).toHaveBeenCalled();
+  });
 });
