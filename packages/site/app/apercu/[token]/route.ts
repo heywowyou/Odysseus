@@ -8,8 +8,12 @@
  *
  * Nothing here imports `@odysseus/store`, `@odysseus/interface` or Mongoose,
  * and `package-isolation.test.ts` fails the build if that ever stops being
- * true. The token is never logged: it is the only credential on the document,
- * and a request log carrying it would be a list of working links.
+ * true. This code never writes the token to a log: it is the only credential
+ * on the document, and a log carrying it would be a list of working links.
+ * The hosting platform is outside that guarantee. Vercel's runtime logs
+ * record every request's path, token included, for the plan's retention
+ * window; the controls that keep that log private are in
+ * `docs/rules/outreach-rules.md` section 6bis, "Preview links in hosting logs".
  */
 
 import { resolvePreviewResponse } from '@/lib/preview-response';

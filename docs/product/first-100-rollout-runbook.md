@@ -27,7 +27,8 @@ plan's constraints. Verified holds:
   (allowlist plus MX confirmed); no draft path accepts a caller-supplied
   recipient address.
 - Preview privacy: `/apercu/` disallowed in robots.txt, `x-robots-tag`
-  noindex on the route, token never logged, prohibited-content detector over
+  noindex on the route, token never logged by the site code (hosting-log
+  controls: outreach-rules section 6bis), prohibited-content detector over
   preview and linted draft body, no tracking scripts anywhere in
   `packages/site/app`.
 - Deterministic legal text: the touch-3 facts block is spliced in code with

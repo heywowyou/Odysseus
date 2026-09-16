@@ -256,6 +256,29 @@ Lifecycle rules:
 - A full-scan preview is built only after the audit's coverage gate passes;
   a coverage failure means no preview, not a partial one.
 
+**Preview links in hosting logs**, verified against Vercel's runtime logs
+documentation on 2026-09-16. The site code never logs a preview token, but
+the token is a path segment (`/apercu/<token>`) and the personal opt-out link
+carries one as a query parameter (`/desinscription?t=<token>`). Vercel's
+runtime logs record the request path and the search parameters of every
+function invocation, searchable by path, and keep them for 1 hour (Hobby),
+1 day (Pro), 3 days (Enterprise), or 30 days with Observability Plus. Anyone
+with runtime-log access to the site project can therefore read working
+preview links for that window, and a log drain would copy them to a third
+system with its own retention. The controls, all operator-side:
+
+- The Vercel team that owns `packages/site` has the operator as its only
+  member with runtime-log access. Adding a member is granting preview access.
+- No log drain and no Observability Plus on the site project. Either one
+  extends where, and for how long, the paths are kept.
+- If log access is ever shared or exposed, revoke and reissue every live
+  preview; the 30-day expiry bounds the damage but does not end it.
+
+Moving the token out of the request (for example into a URL fragment read by
+a client-side loader) was considered and not adopted: it would change every
+published link format and put script on a page whose CSP currently forbids
+all script, for a log that only the operator can read.
+
 Existing v1 previews are neither rewritten nor invalidated early: they stay
 revocable and expire under their existing records, and no new v1 preview or
 first-touch draft can be created after plan 037 ships.
