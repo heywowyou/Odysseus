@@ -93,7 +93,11 @@ import {
   extractStructuredDataCandidates,
   type StructuredDataCheckInput,
 } from './normalize-structured-data.js';
-import { extractCruxCandidates, type CruxFieldDataCheckInput } from './normalize-crux.js';
+import {
+  extractCruxCandidates,
+  goodFieldMetrics,
+  type CruxFieldDataCheckInput,
+} from './normalize-crux.js';
 import type { FindingCandidate } from './candidate.js';
 import type { RenderDiffResult } from '../types/findings.js';
 
@@ -225,10 +229,21 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
       .filter((lhr): lhr is LighthouseResultInput => lhr !== undefined),
   );
 
+  // Issue #300: resolved once for the whole audit, since CrUX is a
+  // site-level record.
+  const goodFieldMetricKeys = goodFieldMetrics(input.cruxFieldData);
+
   for (const page of input.pages) {
     if (page.axe) candidates.push(...extractAxeCandidates(page.axe, page.url));
     if (page.lighthouse) {
-      candidates.push(...extractLighthouseCandidates(page.lighthouse, page.url, supersededAudits));
+      candidates.push(
+        ...extractLighthouseCandidates(
+          page.lighthouse,
+          page.url,
+          supersededAudits,
+          goodFieldMetricKeys,
+        ),
+      );
     }
     if (page.renderDiff) candidates.push(...extractRenderDiffCandidates(page.renderDiff, page.url));
     if (page.mentionsLegales) candidates.push(...extractCustomCandidates(page.mentionsLegales));

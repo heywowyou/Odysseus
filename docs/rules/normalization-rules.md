@@ -47,6 +47,17 @@ cannot silently start emitting findings after an upgrade.
 - Failure threshold is `score < 0.9`, as a named constant.
 - Severity needs a weight that is not on the audit object. Read it from
   `lhr.categories[category].auditRefs[].weight`, matched by audit id.
+- Lab severity is then capped twice. `capSeverityByCoreWebVitalRating`
+  caps at `serious` when the audit's own raw value is not in the poor
+  band, and `capSeverityByGoodFieldData` (issue #300) caps at `moderate`
+  when Chrome's field data reports the metric that audit measures as good.
+  A lab measurement cannot outrank the real measurement of the same thing:
+  a critical on every crawled page while CrUX says LCP is 2.4s both
+  contradicts the report's own Core Web Vitals page and empties the
+  critical-pages KPI. `FIELD_METRIC_BY_AUDIT_ID` lists only audits whose
+  whole subject is one Core Web Vital; advice that stands on its own
+  merits (render-blocking resources, oversized images) is never capped,
+  and a site with no CrUX record passes through both caps unchanged.
 
 **Render diff:** emits only at or above a named threshold, default 20
 percent, matching the `moderate` floor in `severityFromRenderDiff`.

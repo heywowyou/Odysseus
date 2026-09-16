@@ -3,4 +3,4 @@
  * this value against scripts/fixture-fingerprint.mjs, so a normalization edit
  * cannot ship until this runtime provenance value is updated as well.
  */
-export const NORMALIZATION_FINGERPRINT = 'b41dd6631d6b7c17';
+export const NORMALIZATION_FINGERPRINT = '51b5bb8799a94244';

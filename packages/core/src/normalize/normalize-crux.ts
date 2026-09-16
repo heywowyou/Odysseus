@@ -27,6 +27,18 @@ const CRUX_POOR_THRESHOLDS = {
   inp: 500,
 };
 
+/** Issue #300: Google's own published "good" thresholds, the other end of
+ *  the same scale as CRUX_POOR_THRESHOLDS above and duplicated by value
+ *  for the same reason. A metric at or below these is what real visitors
+ *  actually experience as fine. */
+const CRUX_GOOD_THRESHOLDS = {
+  lcp: 2500,
+  cls: 0.1,
+  inp: 200,
+};
+
+export type CruxMetricKey = 'lcp' | 'cls' | 'inp';
+
 export interface CruxFieldDataCheckInput {
   available: boolean;
   lcp?: { p75: number };
@@ -88,4 +100,36 @@ export function extractCruxCandidates(
   }
 
   return candidates;
+}
+
+/**
+ * Issue #300: which field metrics real visitors experience as good.
+ *
+ * A Haaitza report marked FCP, LCP and Speed Index critical on all 140 of
+ * its pages - so "140 pages with at least one critical finding" out of 140
+ * carried no information - while Chrome's own real-user data for the same
+ * site put LCP at 2.4s and CLS at 0.04, both squarely good. The annex read
+ * "Critique" for a layout shift the site's actual visitors never
+ * experience.
+ *
+ * Lab and field measure different things and a lab number is not wrong for
+ * disagreeing: it runs one cold load on a throttled connection, which is a
+ * legitimate diagnostic. What it cannot do is outrank the real measurement
+ * in a client-facing severity. This exposes the judgment; the capping
+ * itself lives in normalize-lighthouse.ts, next to the lab-rating cap it
+ * sits beside.
+ *
+ * Empty whenever no CrUX record exists, so a site with no field data
+ * behaves exactly as before - absence of real-user data is not evidence
+ * that the lab number is wrong.
+ */
+export function goodFieldMetrics(
+  input: CruxFieldDataCheckInput | undefined,
+): ReadonlySet<CruxMetricKey> {
+  const good = new Set<CruxMetricKey>();
+  if (!input?.available) return good;
+  if (input.lcp !== undefined && input.lcp.p75 <= CRUX_GOOD_THRESHOLDS.lcp) good.add('lcp');
+  if (input.cls !== undefined && input.cls.p75 <= CRUX_GOOD_THRESHOLDS.cls) good.add('cls');
+  if (input.inp !== undefined && input.inp.p75 <= CRUX_GOOD_THRESHOLDS.inp) good.add('inp');
+  return good;
 }

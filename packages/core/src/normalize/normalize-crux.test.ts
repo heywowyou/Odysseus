@@ -4,6 +4,7 @@ import {
   CRUX_LCP_POOR_RULE_ID,
   CRUX_CLS_POOR_RULE_ID,
   CRUX_INP_POOR_RULE_ID,
+  goodFieldMetrics,
 } from './normalize-crux.js';
 
 describe('crux', () => {
@@ -39,5 +40,39 @@ describe('crux', () => {
     expect(candidates.map((c) => c.ruleId).sort()).toEqual(
       [CRUX_LCP_POOR_RULE_ID, CRUX_CLS_POOR_RULE_ID, CRUX_INP_POOR_RULE_ID].sort(),
     );
+  });
+});
+
+describe('goodFieldMetrics (issue #300)', () => {
+  it('reports nothing for a site with no public CrUX record', () => {
+    expect(goodFieldMetrics({ available: false })).toEqual(new Set());
+    expect(goodFieldMetrics(undefined)).toEqual(new Set());
+  });
+
+  it('reports only the metrics real visitors experience as good', () => {
+    // The Haaitza field record: LCP 2.4s and CLS 0.04 are good, INP 260ms
+    // is not.
+    const good = goodFieldMetrics({
+      available: true,
+      lcp: { p75: 2400 },
+      cls: { p75: 0.04 },
+      inp: { p75: 260 },
+    });
+    expect(good).toEqual(new Set(['lcp', 'cls']));
+  });
+
+  it('treats a metric sitting exactly on its threshold as good', () => {
+    expect(
+      goodFieldMetrics({
+        available: true,
+        lcp: { p75: 2500 },
+        cls: { p75: 0.1 },
+        inp: { p75: 200 },
+      }),
+    ).toEqual(new Set(['lcp', 'cls', 'inp']));
+  });
+
+  it('omits a metric CrUX does not report at all', () => {
+    expect(goodFieldMetrics({ available: true, lcp: { p75: 1000 } })).toEqual(new Set(['lcp']));
   });
 });

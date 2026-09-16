@@ -6,6 +6,7 @@ import {
 } from './normalize-lighthouse.js';
 import { buildLighthouseAudit, buildLighthouseResultInput } from './fixtures.js';
 import { MAX_LIGHTHOUSE_DETAILS_ITEMS } from './constants.js';
+import type { CruxMetricKey } from './normalize-crux.js';
 
 describe('extractLighthouseCandidates', () => {
   it('emits a page-scoped candidate for a failing weighted audit with no node details', () => {
@@ -179,6 +180,98 @@ describe('extractLighthouseCandidates', () => {
       // weight 5 already caps severityFromLighthouse's own output at
       // 'serious' before this fix's rating-based cap even applies.
       expect(candidates[0]?.severity).toBe('serious');
+    });
+  });
+
+  describe('issue #300: good field data caps the lab audits that measure the same thing', () => {
+    const goodLcp = new Set<CruxMetricKey>(['lcp']);
+
+    it('caps a critical lab LCP finding to "moderate" when real visitors experience LCP as good', () => {
+      // The Haaitza case: every one of 140 crawled pages carried a
+      // critical Lighthouse performance finding while CrUX reported LCP at
+      // 2.4s and CLS at 0.04, which emptied the critical-pages KPI of any
+      // meaning.
+      const lhr = buildLighthouseResultInput({
+        categories: {
+          performance: { score: 0.2, auditRefs: [{ id: 'largest-contentful-paint', weight: 25 }] },
+        },
+        audits: {
+          'largest-contentful-paint': buildLighthouseAudit({ score: 0.2, numericValue: 6000 }),
+        },
+      });
+      const candidates = extractLighthouseCandidates(
+        lhr,
+        'https://example.com/',
+        undefined,
+        goodLcp,
+      );
+      expect(candidates[0]?.severity).toBe('moderate');
+    });
+
+    it('caps the diagnostic audits that belong to a good field metric, not only the metric audit', () => {
+      const lhr = buildLighthouseResultInput({
+        categories: {
+          performance: { score: 0.2, auditRefs: [{ id: 'speed-index', weight: 25 }] },
+        },
+        audits: { 'speed-index': buildLighthouseAudit({ score: 0.2, numericValue: 9000 }) },
+      });
+      const candidates = extractLighthouseCandidates(
+        lhr,
+        'https://example.com/',
+        undefined,
+        goodLcp,
+      );
+      expect(candidates[0]?.severity).toBe('moderate');
+    });
+
+    it('leaves a lab metric alone when the field data for that metric is not good', () => {
+      const lhr = buildLighthouseResultInput({
+        categories: {
+          performance: { score: 0.2, auditRefs: [{ id: 'cumulative-layout-shift', weight: 25 }] },
+        },
+        audits: {
+          'cumulative-layout-shift': buildLighthouseAudit({ score: 0.2, numericValue: 0.4 }),
+        },
+      });
+      const candidates = extractLighthouseCandidates(
+        lhr,
+        'https://example.com/',
+        undefined,
+        goodLcp,
+      );
+      expect(candidates[0]?.severity).toBe('critical');
+    });
+
+    it('leaves advice that stands on its own merits uncapped, whatever the field data says', () => {
+      const lhr = buildLighthouseResultInput({
+        categories: {
+          performance: { score: 0.2, auditRefs: [{ id: 'render-blocking-resources', weight: 25 }] },
+        },
+        audits: {
+          'render-blocking-resources': buildLighthouseAudit({ score: 0.2, numericValue: 6000 }),
+        },
+      });
+      const candidates = extractLighthouseCandidates(
+        lhr,
+        'https://example.com/',
+        undefined,
+        new Set<CruxMetricKey>(['lcp', 'cls', 'inp']),
+      );
+      expect(candidates[0]?.severity).toBe('critical');
+    });
+
+    it('changes nothing for a site with no CrUX record', () => {
+      const lhr = buildLighthouseResultInput({
+        categories: {
+          performance: { score: 0.2, auditRefs: [{ id: 'largest-contentful-paint', weight: 25 }] },
+        },
+        audits: {
+          'largest-contentful-paint': buildLighthouseAudit({ score: 0.2, numericValue: 6000 }),
+        },
+      });
+      expect(extractLighthouseCandidates(lhr, 'https://example.com/')[0]?.severity).toBe(
+        'critical',
+      );
     });
   });
 

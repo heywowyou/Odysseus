@@ -26,6 +26,7 @@ import {
   MAX_LIGHTHOUSE_DETAILS_ITEMS,
 } from './constants.js';
 import { CORE_WEB_VITAL_THRESHOLDS, rateCoreWebVital } from './cwv-thresholds.js';
+import type { CruxMetricKey } from './normalize-crux.js';
 import type { FindingCandidate } from './candidate.js';
 
 export interface LighthouseAuditRefInput {
@@ -235,6 +236,53 @@ function capSeverityByCoreWebVitalRating(
   return capAt(severity, 'serious');
 }
 
+/** Issue #300: the field metric each lab audit is a proxy for. Only
+ *  audits whose whole subject is one Core Web Vital are listed - a
+ *  render-blocking resource or an oversized image is advice that stands on
+ *  its own merits whatever the field data says, while "your Largest
+ *  Contentful Paint is slow" is a claim about the exact thing CrUX
+ *  measured. Speed Index and First Contentful Paint are included under
+ *  lcp: they grade how fast the main content appears, which is what the
+ *  field LCP reports on real connections. */
+const FIELD_METRIC_BY_AUDIT_ID: ReadonlyMap<string, CruxMetricKey> = new Map([
+  ['largest-contentful-paint', 'lcp'],
+  ['largest-contentful-paint-element', 'lcp'],
+  ['lcp-breakdown-insight', 'lcp'],
+  ['lcp-discovery-insight', 'lcp'],
+  ['lcp-lazy-loaded', 'lcp'],
+  ['first-contentful-paint', 'lcp'],
+  ['speed-index', 'lcp'],
+  ['cumulative-layout-shift', 'cls'],
+  ['layout-shifts', 'cls'],
+  ['cls-culprits-insight', 'cls'],
+  ['interaction-to-next-paint', 'inp'],
+  ['inp-breakdown-insight', 'inp'],
+  ['total-blocking-time', 'inp'],
+  ['max-potential-fid', 'inp'],
+] as const);
+
+/** Issue #300: a lab metric cannot outrank the real measurement of the
+ *  same thing. Where Chrome's field data says visitors experience a metric
+ *  as good, the lab audits that are proxies for it are capped at
+ *  'moderate' - still reported, since one throttled cold load is a real
+ *  diagnostic and the client may want it, but no longer a headline that
+ *  contradicts the report's own Core Web Vitals page.
+ *
+ *  Sits beside capSeverityByCoreWebVitalRating rather than replacing it:
+ *  that one resolves a lab score disagreeing with the same lab
+ *  measurement's own threshold row, this one resolves a lab measurement
+ *  disagreeing with real visitors. A site with no CrUX record passes
+ *  through both unchanged. */
+function capSeverityByGoodFieldData(
+  severity: ReturnType<typeof severityFromLighthouse>,
+  auditId: string,
+  goodFieldMetrics: ReadonlySet<CruxMetricKey>,
+): ReturnType<typeof severityFromLighthouse> {
+  const metric = FIELD_METRIC_BY_AUDIT_ID.get(auditId);
+  if (metric === undefined || !goodFieldMetrics.has(metric)) return severity;
+  return capAt(severity, 'moderate');
+}
+
 function extractCoreWebVitalMeasurement(
   lhr: LighthouseResultInput,
   auditId: string,
@@ -362,6 +410,10 @@ export function extractLighthouseCandidates(
    *  single-page caller and for tests, but collapses less across a real
    *  multi-page audit. */
   supersededAudits?: ReadonlyMap<string, string>,
+  /** Issue #300: the field metrics real visitors experience as good, from
+   *  normalize-crux.ts's goodFieldMetrics. Empty by default, which is the
+   *  correct behaviour for a site with no CrUX record. */
+  goodFieldMetrics: ReadonlySet<CruxMetricKey> = new Set(),
 ): FindingCandidate[] {
   const candidates: FindingCandidate[] = [];
   const superseded = supersededAudits ?? computeSupersededAudits([lhr]);
@@ -390,10 +442,14 @@ export function extractLighthouseCandidates(
             source: 'lighthouse',
             ruleId: successorId,
             category,
-            severity: capSeverityByCoreWebVitalRating(
-              severityFromLighthouse(successor.score, auditRef.weight),
+            severity: capSeverityByGoodFieldData(
+              capSeverityByCoreWebVitalRating(
+                severityFromLighthouse(successor.score, auditRef.weight),
+                successorId,
+                successor.numericValue,
+              ),
               successorId,
-              successor.numericValue,
+              goodFieldMetrics,
             ),
             wcagCriteria: [],
             title: successor.title,
@@ -422,10 +478,14 @@ export function extractLighthouseCandidates(
       // severityFromLighthouse's separate weight===0 early return, for
       // diagnostic-only audits. Both are intentional; do not "fix" this
       // as dead code.
-      const severity = capSeverityByCoreWebVitalRating(
-        severityFromLighthouse(audit.score, auditRef.weight),
+      const severity = capSeverityByGoodFieldData(
+        capSeverityByCoreWebVitalRating(
+          severityFromLighthouse(audit.score, auditRef.weight),
+          auditRef.id,
+          audit.numericValue,
+        ),
         auditRef.id,
-        audit.numericValue,
+        goodFieldMetrics,
       );
 
       const rawItems = audit.details?.items;
