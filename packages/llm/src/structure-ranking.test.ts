@@ -2,12 +2,14 @@ import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { AuditManifest, Finding } from '@odysseus/core';
+import { FINDINGS_SCHEMA_VERSION, type AuditManifest, type Finding } from '@odysseus/core';
 import {
   applyOccurrenceWeighting,
   applyStructureRankingRules,
+  enforceCriticalVisibilityFloor,
   enforceImpactEffortOrdering,
   enforceQuickWinFloor,
+  enforceSeverityReachOrdering,
   enforceSiteWideAccessibilityFloor,
   logContainmentWarnings,
   SITE_WIDE_FINDING_PAGE_PERCENT_THRESHOLD,
@@ -161,6 +163,43 @@ function theme(
     priorityRank: 1,
     ...overrides,
   };
+}
+
+/** Hand-built finding for tests that need exact control of severity and
+ *  page spread - issue #295's Villas Foch shape is a critical site-wide
+ *  family versus low-reach trivia, which the stored fixtures only
+ *  approximate (their critical families are confined or few). Only the
+ *  fields the ranking rules read carry meaning here; the rest is inert
+ *  filler satisfying the Finding contract. */
+function makeFinding(overrides: Partial<Finding> & Pick<Finding, 'findingId'>): Finding {
+  return {
+    auditId: 'audit-ranking-test',
+    schemaVersion: FINDINGS_SCHEMA_VERSION,
+    source: 'axe',
+    ruleId: `rule-${overrides.findingId}`,
+    category: 'accessibility',
+    severity: 'serious',
+    wcagCriteria: [],
+    title: '',
+    description: '',
+    pageUrls: [],
+    occurrences: 1,
+    elements: [],
+    rawEvidence: {},
+    dedupeKey: overrides.findingId,
+    firstSeenAt: new Date(0),
+    lastSeenAt: new Date(0),
+    ...overrides,
+  };
+}
+
+/** Reach numerators for hand-built findings: real page URLs from the
+ *  multi-page fixture manifest (20 pages), so page spreads read as
+ *  shares of a real crawl. */
+function firstManifestPageUrls(count: number): string[] {
+  return loadMultiPageManifest()
+    .pages.slice(0, count)
+    .map((page) => page.url);
 }
 
 describe('enforceSiteWideAccessibilityFloor', () => {
@@ -354,7 +393,11 @@ describe('enforceQuickWinFloor', () => {
 // themes, all impact 'high', ranked by descending effort (high, medium,
 // low/quick-win last), which enforceQuickWinFloor does nothing about
 // (verified above: "leaves order unchanged when no low-impact theme
-// exists"). enforceImpactEffortOrdering is the general-case fix.
+// exists"). enforceImpactEffortOrdering is the general-case fix, and
+// since issue #295 it is the ratio-only order: no longer the pipeline's
+// definitive sort, but the exact tiebreak semantics
+// enforceSeverityReachOrdering inherits as its secondary key, so these
+// cases pin behavior the pipeline still relies on.
 describe('enforceImpactEffortOrdering', () => {
   it('ranks the quick win first even when every theme carries the same (non-low) impact, matching the reported symptom', () => {
     const themes: StructureThemeWithKey[] = [
@@ -461,6 +504,163 @@ describe('enforceImpactEffortOrdering', () => {
   });
 });
 
+// Issue #295 [Villas Foch, Haaitza]: severity x reach is the primary sort
+// key; these pin each tier of the sort in isolation.
+describe('enforceSeverityReachOrdering', () => {
+  it('ranks a critical site-wide theme above a low-reach quick win, however much better the quick win ratio is', () => {
+    const findings: Finding[] = [
+      // The Villas Foch alt-text family: critical, on every audited page.
+      makeFinding({
+        findingId: 'f-alt',
+        ruleId: 'image-alt',
+        severity: 'critical',
+        wcagCriteria: ['1.1.1'],
+        pageUrls: firstManifestPageUrls(20),
+        occurrences: 24,
+      }),
+      // The Villas Foch priority 1: Faible effort / Moyen impact, 3/24 pages.
+      makeFinding({
+        findingId: 'f-touch',
+        ruleId: 'target-size',
+        severity: 'moderate',
+        wcagCriteria: ['2.5.8'],
+        pageUrls: firstManifestPageUrls(3),
+        occurrences: 3,
+      }),
+    ];
+    const themes: StructureThemeWithKey[] = [
+      theme('t-touch', ['f-touch'], { priorityRank: 1, effort: 'low', impact: 'medium' }),
+      theme('t-alt', ['f-alt'], { priorityRank: 5, effort: 'high', impact: 'high' }),
+    ];
+
+    const result = enforceSeverityReachOrdering(themes, findings);
+
+    // weight 4x20=80 against 2x3=6: the model's rank (1 vs 5) and the
+    // ratio (2 vs 1) both favour the quick win and lose to reach x severity.
+    expect(result.map((t) => t.themeKey)).toEqual(['t-alt', 't-touch']);
+    expect(result.map((t) => t.priorityRank)).toEqual([1, 2]);
+  });
+
+  it('falls back to the impact/effort ratio when severity and reach tie', () => {
+    const pages = firstManifestPageUrls(3);
+    const findings: Finding[] = [
+      makeFinding({ findingId: 'f-a', pageUrls: pages, occurrences: 3 }),
+      makeFinding({ findingId: 'f-b', pageUrls: pages, occurrences: 3 }),
+    ];
+    const themes: StructureThemeWithKey[] = [
+      theme('t-plain', ['f-a'], { priorityRank: 1, effort: 'medium', impact: 'medium' }),
+      theme('t-quick-win', ['f-b'], { priorityRank: 2, effort: 'low', impact: 'medium' }),
+    ];
+
+    const result = enforceSeverityReachOrdering(themes, findings);
+
+    // Same weight (3x3 both ways): the quick win's ratio 2 beats ratio 1 -
+    // B9's guarantee survives as this tiebreak (see enforceQuickWinFloor's
+    // demotion note).
+    expect(result.map((t) => t.themeKey)).toEqual(['t-quick-win', 't-plain']);
+  });
+
+  it("keeps the model's own rank order when severity, reach and ratio all tie", () => {
+    const pages = firstManifestPageUrls(2);
+    const findings: Finding[] = [
+      makeFinding({ findingId: 'f-a', pageUrls: pages, occurrences: 2 }),
+      makeFinding({ findingId: 'f-b', pageUrls: pages, occurrences: 2 }),
+    ];
+    const themes: StructureThemeWithKey[] = [
+      theme('t-second', ['f-b'], { priorityRank: 2 }),
+      theme('t-first', ['f-a'], { priorityRank: 1 }),
+    ];
+
+    const result = enforceSeverityReachOrdering(themes, findings);
+
+    expect(result.map((t) => t.themeKey)).toEqual(['t-first', 't-second']);
+  });
+});
+
+// Issue #295, stated as an invariant: no critical finding outside the
+// rendered top-6 while a low-impact priority is included.
+describe('enforceCriticalVisibilityFloor', () => {
+  it('pulls a critical theme above critical-free low-impact themes that outranked it', () => {
+    const findings: Finding[] = [
+      makeFinding({
+        findingId: 'f-crit',
+        severity: 'critical',
+        pageUrls: firstManifestPageUrls(1),
+      }),
+      makeFinding({
+        findingId: 'f-minor-1',
+        severity: 'minor',
+        pageUrls: firstManifestPageUrls(20),
+        occurrences: 20,
+      }),
+      makeFinding({
+        findingId: 'f-minor-2',
+        severity: 'minor',
+        pageUrls: firstManifestPageUrls(20),
+        occurrences: 20,
+      }),
+    ];
+    const themes: StructureThemeWithKey[] = [
+      theme('t-low-1', ['f-minor-1'], { priorityRank: 1, effort: 'low', impact: 'low' }),
+      theme('t-low-2', ['f-minor-2'], { priorityRank: 2, effort: 'low', impact: 'low' }),
+      theme('t-critical', ['f-crit'], { priorityRank: 3, effort: 'medium', impact: 'high' }),
+    ];
+
+    const result = enforceCriticalVisibilityFloor(themes, findings);
+
+    expect(result.map((t) => t.themeKey)).toEqual(['t-critical', 't-low-1', 't-low-2']);
+    expect(result.map((t) => t.priorityRank)).toEqual([1, 2, 3]);
+  });
+
+  it('leaves the order unchanged when every critical theme already outranks the low-impact themes', () => {
+    const findings: Finding[] = [
+      makeFinding({
+        findingId: 'f-crit',
+        severity: 'critical',
+        pageUrls: firstManifestPageUrls(1),
+      }),
+      makeFinding({
+        findingId: 'f-minor',
+        severity: 'minor',
+        pageUrls: firstManifestPageUrls(20),
+        occurrences: 20,
+      }),
+    ];
+    const themes: StructureThemeWithKey[] = [
+      theme('t-critical', ['f-crit'], { priorityRank: 1, impact: 'high' }),
+      theme('t-low', ['f-minor'], { priorityRank: 2, effort: 'low', impact: 'low' }),
+    ];
+
+    const result = enforceCriticalVisibilityFloor(themes, findings);
+
+    expect(result.map((t) => t.themeKey)).toEqual(['t-critical', 't-low']);
+  });
+
+  it('does not demote a low-impact theme that itself carries the critical finding', () => {
+    const findings: Finding[] = [
+      makeFinding({
+        findingId: 'f-crit',
+        severity: 'critical',
+        pageUrls: firstManifestPageUrls(1),
+      }),
+      makeFinding({
+        findingId: 'f-minor',
+        severity: 'minor',
+        pageUrls: firstManifestPageUrls(20),
+        occurrences: 20,
+      }),
+    ];
+    const themes: StructureThemeWithKey[] = [
+      theme('t-critical-low-impact', ['f-crit'], { priorityRank: 1, effort: 'low', impact: 'low' }),
+      theme('t-other-low', ['f-minor'], { priorityRank: 2, effort: 'low', impact: 'low' }),
+    ];
+
+    const result = enforceCriticalVisibilityFloor(themes, findings);
+
+    expect(result.map((t) => t.themeKey)).toEqual(['t-critical-low-impact', 't-other-low']);
+  });
+});
+
 describe('logContainmentWarnings', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -536,5 +736,158 @@ describe('applyStructureRankingRules', () => {
     const result = applyStructureRankingRules(themes, findings, manifest);
 
     expect(result.find((t) => t.themeKey === 't-quick-win')?.priorityRank).toBe(1);
+  });
+
+  // Issue #295 [Villas Foch]: the real report's priorities ranked touch
+  // targets (Faible/Moyen, 3/24 pages) and contrast (Faible/Moyen, 2/24)
+  // above alt text (Élevé/Élevé, 24/24 pages, the source of ~170 critical
+  // findings), ranked a Faible/Faible heading theme above alt text too, and
+  // left critical button-name and serious untitled-iframes work (24 pages)
+  // out of the rendered top 6 entirely. The shape is rebuilt below on the
+  // multi-page fixture's 20 pages standing in for 24, with 12 critical
+  // alt findings standing in for ~170 - the proportions between families
+  // are what the sort must respect, not the raw counts.
+  it('issue #295: severity x reach outranks the quick-win ratio, and critical families are pulled into the rendered top 6', () => {
+    const manifest = loadMultiPageManifest();
+    const pages = manifest.pages.map((page) => page.url);
+    const altTextFindings = Array.from({ length: 12 }, (_, index) =>
+      makeFinding({
+        findingId: `vf-alt-${index}`,
+        ruleId: 'image-alt',
+        severity: 'critical',
+        wcagCriteria: ['1.1.1'],
+        pageUrls: pages,
+        occurrences: 1,
+      }),
+    );
+    const findings: Finding[] = [
+      ...altTextFindings,
+      makeFinding({
+        findingId: 'vf-buttons',
+        ruleId: 'button-name',
+        severity: 'critical',
+        wcagCriteria: ['4.1.2'],
+        pageUrls: pages.slice(0, 9),
+        occurrences: 9,
+      }),
+      makeFinding({
+        findingId: 'vf-iframes',
+        ruleId: 'frame-title',
+        severity: 'serious',
+        wcagCriteria: ['4.1.2'],
+        pageUrls: pages,
+        occurrences: 24,
+      }),
+      makeFinding({
+        findingId: 'vf-structured',
+        ruleId: 'jsonld-invalid',
+        category: 'seo',
+        severity: 'moderate',
+        pageUrls: pages.slice(0, 16),
+        occurrences: 16,
+      }),
+      makeFinding({
+        findingId: 'vf-touch',
+        ruleId: 'target-size',
+        severity: 'moderate',
+        wcagCriteria: ['2.5.8'],
+        pageUrls: pages.slice(0, 3),
+        occurrences: 3,
+      }),
+      makeFinding({
+        findingId: 'vf-contrast',
+        ruleId: 'color-contrast',
+        severity: 'moderate',
+        wcagCriteria: ['1.4.3'],
+        pageUrls: pages.slice(0, 2),
+        occurrences: 2,
+      }),
+      makeFinding({
+        findingId: 'vf-heading',
+        ruleId: 'heading-order',
+        severity: 'minor',
+        wcagCriteria: ['1.3.1'],
+        pageUrls: pages.slice(0, 6),
+        occurrences: 6,
+      }),
+      makeFinding({
+        findingId: 'vf-dom-size',
+        ruleId: 'dom-size',
+        category: 'performance',
+        severity: 'minor',
+        pageUrls: pages.slice(0, 4),
+        occurrences: 4,
+      }),
+    ];
+
+    // The model's raw ranks mirror the real report: the quick wins first,
+    // alt text mid-pack, the critical button and serious iframe families
+    // ranked last - where the old ratio-first order left them outside the
+    // rendered top 6.
+    const themes: StructureThemeWithKey[] = [
+      theme('t-touch', ['vf-touch'], { priorityRank: 1, effort: 'low', impact: 'medium' }),
+      theme('t-contrast', ['vf-contrast'], { priorityRank: 2, effort: 'low', impact: 'medium' }),
+      theme(
+        't-alt-text',
+        altTextFindings.map((f) => f.findingId),
+        {
+          priorityRank: 3,
+          effort: 'high',
+          impact: 'high',
+        },
+      ),
+      theme('t-structured', ['vf-structured'], {
+        priorityRank: 4,
+        category: 'seo',
+        effort: 'low',
+        impact: 'medium',
+      }),
+      theme('t-heading', ['vf-heading'], { priorityRank: 5, effort: 'low', impact: 'low' }),
+      theme('t-dom-size', ['vf-dom-size'], {
+        priorityRank: 6,
+        category: 'performance',
+        effort: 'low',
+        impact: 'low',
+      }),
+      theme('t-iframes', ['vf-iframes'], { priorityRank: 8, effort: 'medium', impact: 'medium' }),
+      theme('t-buttons', ['vf-buttons'], { priorityRank: 9, effort: 'high', impact: 'high' }),
+    ];
+
+    const result = applyStructureRankingRules(themes, findings, manifest);
+    const rankOf = (themeKey: string): number => {
+      const rank = result.find((t) => t.themeKey === themeKey)?.priorityRank;
+      if (rank === undefined) throw new Error(`theme ${themeKey} missing from result`);
+      return rank;
+    };
+
+    // Critical, site-wide alt text first; the low-reach quick wins can no
+    // longer buy their way past it with a better effort/impact ratio.
+    expect(rankOf('t-alt-text')).toBe(1);
+    expect(rankOf('t-touch')).toBeGreaterThan(rankOf('t-alt-text'));
+
+    // The two families the real report rendered out of the priorities
+    // entirely - critical button-name, serious site-wide iframes - are
+    // pulled into the top 6 the report actually renders.
+    expect(rankOf('t-buttons')).toBeLessThanOrEqual(6);
+    expect(rankOf('t-iframes')).toBeLessThanOrEqual(6);
+
+    // The Faible/Faible heading theme ranks below the critical families.
+    expect(rankOf('t-heading')).toBeGreaterThan(rankOf('t-buttons'));
+    expect(rankOf('t-heading')).toBeGreaterThan(rankOf('t-alt-text'));
+
+    // The issue's invariant: a low-impact theme IS rendered here (heading),
+    // so no critical theme may sit outside the top 6.
+    for (const criticalKey of ['t-alt-text', 't-buttons'] as const) {
+      expect(rankOf(criticalKey)).toBeLessThan(7);
+    }
+
+    // Contrast, on the same input, under the demoted ratio-first order:
+    // both critical families outside the top 6 while the low-impact
+    // heading theme is rendered - the exact bug this ordering replaces.
+    const oldOrder = enforceImpactEffortOrdering(themes);
+    const oldTop6 = oldOrder.filter((t) => t.priorityRank <= 6).map((t) => t.themeKey);
+    expect(oldTop6).toContain('t-heading');
+    expect(oldTop6).not.toContain('t-buttons');
+    expect(oldTop6).not.toContain('t-iframes');
   });
 });

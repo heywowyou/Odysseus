@@ -1,4 +1,9 @@
-import { summarizeAuditCoverage, type AuditManifest, type Finding } from '@odysseus/core';
+import {
+  SEVERITY_ORDER,
+  summarizeAuditCoverage,
+  type AuditManifest,
+  type Finding,
+} from '@odysseus/core';
 import { buildMissingPercentIndex, classifyDiversion } from './diversion.js';
 import type { StructureThemeWithKey } from './structure-schema.js';
 
@@ -186,6 +191,15 @@ const EFFORT_IMPACT_WEIGHT: Record<'low' | 'medium' | 'high', number> = {
   high: 3,
 };
 
+/** Shared by enforceImpactEffortOrdering (below) and
+ *  enforceSeverityReachOrdering, whose secondary key this ratio is.
+ *  Quantized to a handful of values (1, 1.5, 2, 3, ...), which is exactly
+ *  why it works as a tiebreak rather than a primary key: see
+ *  enforceSeverityReachOrdering. */
+function impactEffortRatio(theme: Pick<StructureThemeWithKey, 'effort' | 'impact'>): number {
+  return EFFORT_IMPACT_WEIGHT[theme.impact] / EFFORT_IMPACT_WEIGHT[theme.effort];
+}
+
 /** report-feedback-palais-gallien.md item 15: enforceQuickWinFloor above
  *  only promotes a quick win that falls *behind* the first impact-'low'
  *  theme - it does nothing when every theme in the set carries medium or
@@ -199,38 +213,18 @@ const EFFORT_IMPACT_WEIGHT: Record<'low' | 'medium' | 'high', number> = {
  *  re-sort by descending impact-to-effort ratio, with the model's own
  *  priorityRank kept only as the final tiebreaker so themes the ratio
  *  can't distinguish keep the model's relative order rather than an
- *  arbitrary one. Run last in applyStructureRankingRules so it is the
- *  definitive order, superseding (not fighting) the more narrowly-scoped
- *  floor rules that ran before it.
- *
- *  report-feedback-la-corniche.md item 0.8 [REGRESSION]: this used to
- *  bucket every quick-win theme (isQuickWinTheme, low effort + non-low
- *  impact) ahead of every non-quick-win theme as an absolute first sort
- *  key, before ever looking at the ratio - not merely a tiebreak among
- *  close calls, a hard partition. A real report had `image-alt` (25
- *  Critique findings, 166 occurrences, all 18 pages, impact 'high',
- *  effort 'medium', ratio 1.5) and `link-name` (Sérieux, 282
- *  occurrences, all 18 pages, same shape) sorted below every trivial
- *  low-effort fix in the audit, including a single-occurrence one,
- *  purely because they were not quick wins - contradicting the
- *  occurrence-weighting promotion applyStructureRankingRules had already
- *  given them earlier in the same pipeline. The bucket turns out to have
- *  been redundant for its own original purpose the whole time: both
- *  existing tests below (the "ranks the quick win first" and "orders
- *  non-quick-win themes by ratio" cases) already pass from the ratio
- *  computation alone - a low-effort, non-low-impact theme's ratio is
- *  always at least 2 (impact >= 'medium' over effort 'low'), which
- *  already outranks a 'medium'-impact/'medium'-effort theme's ratio of 1
- *  without needing a separate absolute veto. Deleted the bucket rather
- *  than tune it; nothing in this file's own test suite depended on it
- *  doing anything the ratio didn't already do. */
+ *  arbitrary one. It used to run as the definitive order of
+ *  applyStructureRankingRules; issue #295 demoted it (see
+ *  enforceSeverityReachOrdering, which reuses this ratio as its secondary
+ *  key), because a ratio-first sort carries no severity or page-reach
+ *  signal at all. Still exported, unchanged, as the ratio-only order:
+ *  its own tests pin the tiebreak semantics the new sort inherits. */
 export function enforceImpactEffortOrdering(
   themes: readonly StructureThemeWithKey[],
 ): StructureThemeWithKey[] {
   const sorted = [...themes].sort((a, b) => {
-    const aRatio = EFFORT_IMPACT_WEIGHT[a.impact] / EFFORT_IMPACT_WEIGHT[a.effort];
-    const bRatio = EFFORT_IMPACT_WEIGHT[b.impact] / EFFORT_IMPACT_WEIGHT[b.effort];
-    if (aRatio !== bRatio) return bRatio - aRatio;
+    const ratioDiff = impactEffortRatio(b) - impactEffortRatio(a);
+    if (ratioDiff !== 0) return ratioDiff;
 
     return a.priorityRank - b.priorityRank;
   });
@@ -251,7 +245,20 @@ export function enforceImpactEffortOrdering(
  *  enforceSiteWideAccessibilityFloor's own promote-to-the-boundary shape.
  *  A theme with impact 'low' can never itself be a quick win (the
  *  predicate requires impact !== 'low'), so the boundary theme is always
- *  a genuine non-quick-win. */
+ *  a genuine non-quick-win.
+ *
+ *  Issue #295 demoted this out of applyStructureRankingRules: its
+ *  promotion ignores severity and page reach entirely, so it would lift
+ *  a low-reach quick win above a critical, site-wide workstream that the
+ *  severity-reach sort had correctly placed higher - the exact Villas
+ *  Foch failure the issue is about, reintroduced as a "floor". Its
+ *  legitimate guarantee survives demotion without this function: a
+ *  quick-win theme's impact/effort ratio is always >= 2 and every
+ *  non-quick-win's ratio is <= 1, so inside any severity-reach tie group
+ *  (the only place the secondary ratio key is consulted) quick wins
+ *  already rank above non-quick-wins, and above low-impact themes in
+ *  particular. Kept exported with its original behavior for its own
+ *  documented unit tests. */
 export function enforceQuickWinFloor(
   themes: readonly StructureThemeWithKey[],
 ): StructureThemeWithKey[] {
@@ -273,39 +280,204 @@ export function enforceQuickWinFloor(
   return renumberRanks(reordered);
 }
 
-/** Applies all post-structure-pass ranking rules in order, per
- *  docs/archive/report-v2-refactor.md 4.2 plus B9's quick-win floor. Enforced in
- *  code after the structure pass returns, not asked of the model, since a
- *  model cannot be trusted to remember a numeric threshold rule across
- *  every response.
+/** Per-theme severity pressure: the sum of SEVERITY_ORDER weights
+ *  (critical 4, serious 3, moderate 2, minor 1 - the same weights
+ *  computeBrokennessScore uses) across the theme's distinct findings,
+ *  i.e. 4x the critical count + 3x the serious count + 2x the moderate
+ *  count + the minor count. Deliberately findings, not occurrences:
+ *  occurrences conflate pages with DOM nodes (docs/rules/
+ *  normalization-rules.md section 3), while severity pressure is meant
+ *  to measure how much harm this theme's rule family causes, with reach
+ *  measured separately below so the two signals stay readable apart. */
+function severityPressure(
+  theme: StructureThemeWithKey,
+  findingsById: ReadonlyMap<string, Finding>,
+): number {
+  return themeFindings(theme, findingsById).reduce(
+    (sum, finding) => sum + SEVERITY_ORDER[finding.severity],
+    0,
+  );
+}
+
+/** Distinct audited pages the theme's findings actually appear on, the
+ *  numerator of its reach share. The denominator (crawled pages) is the
+ *  same for every theme in a run, so ordering by
+ *  severityPressure x distinctPageCount is ordering by severity x reach
+ *  share without ever dividing - integer weights, exact comparisons, no
+ *  float equality anywhere in the sort. Themes carry no reach data of
+ *  their own (structure-schema.ts), so this is derived from the one
+ *  thing they do carry: findingIds, resolved against the findings'
+ *  pageUrls. A theme whose findings resolve to nothing scores 0 and
+ *  falls through to the tiebreaks. */
+function themePageCount(
+  theme: StructureThemeWithKey,
+  findingsById: ReadonlyMap<string, Finding>,
+): number {
+  const pages = new Set<string>();
+  for (const finding of themeFindings(theme, findingsById)) {
+    for (const url of finding.pageUrls) pages.add(url);
+  }
+  return pages.size;
+}
+
+/** Issue #295 [Villas Foch, Haaitza]: the definitive full re-sort that
+ *  replaces enforceImpactEffortOrdering as the pipeline's primary order.
+ *  The old ratio-first sort carries no severity and no page-reach signal
+ *  at all, which is how a real report ranked 1. Touch targets (Faible
+ *  effort / Moyen impact, 3/24 pages) and 2. Contrast (Faible/Moyen,
+ *  2/24) above 3. Alt text (Elevé/Elevé, 24/24 pages - the source of
+ *  ~170 critical findings), ranked a Faible/Faible heading theme above
+ *  it too, and left critical button-name and serious untitled-iframes
+ *  work (24 pages) out of the rendered priorities entirely; Haaitza's
+ *  priority 1 was structured data (Faible/Moyen, 16 pages) while its own
+ *  page 4 called accessibility the main subject.
  *
- *  report-feedback-la-corniche.md item 0.8 [REGRESSION]: applyOccurrenceWeighting
- *  used to run before enforceImpactEffortOrdering, which is documented as
- *  (and is) a full re-sort - it uses each theme's priorityRank only as a
- *  tiebreak for an *exactly equal* impact/effort ratio, so any promotion
- *  applyOccurrenceWeighting made was discarded the instant the promoted
- *  theme's ratio differed at all from its new neighbours', which is the
- *  common case (ratios are quantized to a handful of values from
- *  EFFORT_IMPACT_WEIGHT). A real report's `image-alt` theme (25 Critique
- *  findings, 166 occurrences, all 18 pages) got promoted into the top
- *  half by occurrence, then immediately sorted back down to rank 8 of 12
- *  by enforceImpactEffortOrdering, because its 'medium' effort gives it a
- *  ratio of 1.5 against a run of trivial 'low'-effort fixes at ratio 2.0
- *  or better - a large, severe, site-wide finding family losing to a
- *  single-occurrence fix purely because "effort" is a coarse three-value
- *  label with no reach signal in it at all. Occurrence weighting now runs
- *  last, so a theme whose reach the ratio-based sort cannot see still
- *  gets its floor enforced on the sort's actual final output rather than
- *  on an intermediate order that gets thrown away. */
+ *  Sort keys, in order:
+ *
+ *  1. severityPressure x themePageCount, descending - severity x reach
+ *     first, per the issue. This is report-feedback-la-corniche.md item
+ *     0.8's real lesson generalized: that regression (image-alt, 25
+ *     Critique findings on all 18 pages, buried at rank 8 of 12) was
+ *     diagnosed as an effort-ratio failure, but the deeper defect is that
+ *     any sort without severity and reach in its key can bury a large,
+ *     severe, site-wide family under trivial work, whatever its secondary
+ *     keys are.
+ *  2. impact/effort ratio, descending - effort still matters, but only
+ *     between themes the harm signal cannot distinguish. Every
+ *     quick-win ratio is >= 2 and every non-quick-win ratio is <= 1, so
+ *     within a tie group quick wins outrank low-impact themes: B9's
+ *     guarantee (enforceQuickWinFloor, demoted from the pipeline - see
+ *     its own comment) survives as this tiebreak without ever overriding
+ *     the severity-reach order.
+ *  3. the model's priorityRank, ascending - themes otherwise
+ *     indistinguishable keep the model's relative order.
+ *  4. the quick-win flag - reachable only if the model emitted duplicate
+ *     priorityRanks (the schema does not force them distinct), kept as
+ *     the explicit final tiebreak so "quick win" is a flag, never a
+ *     bucket.
+ *
+ *  Pure: derives everything from the themes and the findings they
+ *  reference; no I/O, no manifest (reach's denominator is constant per
+ *  run, so the integer product above orders identically to the share). */
+export function enforceSeverityReachOrdering(
+  themes: readonly StructureThemeWithKey[],
+  findings: readonly Finding[],
+): StructureThemeWithKey[] {
+  const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
+
+  const keyed = themes.map((theme) => ({
+    theme,
+    weight: severityPressure(theme, findingsById) * themePageCount(theme, findingsById),
+  }));
+
+  keyed.sort((a, b) => {
+    if (a.weight !== b.weight) return b.weight - a.weight;
+
+    const ratioDiff = impactEffortRatio(b.theme) - impactEffortRatio(a.theme);
+    if (ratioDiff !== 0) return ratioDiff;
+
+    if (a.theme.priorityRank !== b.theme.priorityRank) {
+      return a.theme.priorityRank - b.theme.priorityRank;
+    }
+
+    return (isQuickWinTheme(b.theme) ? 1 : 0) - (isQuickWinTheme(a.theme) ? 1 : 0);
+  });
+
+  return renumberRanks(keyed.map((entry) => entry.theme));
+}
+
+/** Issue #295, stated as an invariant: no critical finding may be left
+ *  outside the rendered priorities while a low-impact priority is
+ *  included. enforceSeverityReachOrdering already satisfies it whenever
+ *  the critical theme has meaningful reach, but a critical finding
+ *  confined to a few pages scores low on severity x reach and can
+ *  legitimately sort below broader moderate work - and then still below
+ *  a theme the model itself labelled impact 'low'. That last step is
+ *  never defensible: the model's own impact label says "do this later",
+ *  while a critical finding is the report's headline harm.
+ *
+ *  Enforces exactly that boundary, in
+ *  enforceSiteWideAccessibilityFloor's promote-to-the-boundary shape:
+ *  every theme carrying at least one critical-severity finding is moved
+ *  to sit just above the first critical-free impact-'low' theme, in
+ *  their existing relative order. Themes whose findings include a
+ *  critical one are never buried by their own low impact label, and
+ *  critical-free low-impact themes keep their order among themselves.
+ *  Runs last in applyStructureRankingRules so the guarantee holds on the
+ *  final order, after applyOccurrenceWeighting's bounded promotions. */
+export function enforceCriticalVisibilityFloor(
+  themes: readonly StructureThemeWithKey[],
+  findings: readonly Finding[],
+): StructureThemeWithKey[] {
+  const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
+  const carriesCritical = (theme: StructureThemeWithKey): boolean =>
+    themeFindings(theme, findingsById).some((finding) => finding.severity === 'critical');
+
+  const sorted = [...themes].sort((a, b) => a.priorityRank - b.priorityRank);
+  const buriesCritical = (theme: StructureThemeWithKey): boolean =>
+    !carriesCritical(theme) && theme.impact === 'low';
+  const floorIndex = sorted.findIndex(buriesCritical);
+  if (floorIndex === -1) return renumberRanks(sorted);
+
+  const promoted = sorted.filter((theme, index) => index > floorIndex && carriesCritical(theme));
+  if (promoted.length === 0) return renumberRanks(sorted);
+
+  const remaining = sorted.filter((theme) => !promoted.includes(theme));
+  const insertAt = Math.max(0, floorIndex - promoted.length);
+  const reordered = [...remaining.slice(0, insertAt), ...promoted, ...remaining.slice(insertAt)];
+
+  return renumberRanks(reordered);
+}
+
+/** Applies all post-structure-pass ranking rules in order, per
+ *  docs/archive/report-v2-refactor.md 4.2 as amended by issue #295.
+ *  Enforced in code after the structure pass returns, not asked of the
+ *  model, since a model cannot be trusted to remember a numeric
+ *  threshold rule across every response.
+ *
+ *  Order, and why each stage sits where it does:
+ *
+ *  1. enforceSiteWideAccessibilityFloor - kept first, as before. Its
+ *     lasting effect is the impact bump (low -> medium) on themes with a
+ *     site-wide WCAG finding, which feeds the ratio tiebreak of stage 2;
+ *     its promotion is subsumed by stage 2's severity x reach key, which
+ *     already puts a site-wide accessibility theme with critical
+ *     findings above every low-reach low-impact theme (issue #295's
+ *     restatement of this rule's goal).
+ *  2. enforceSeverityReachOrdering - the definitive full re-sort
+ *     (#295): severity x reach first, ratio second, model rank third,
+ *     quick-win flag last. Supersedes enforceImpactEffortOrdering's
+ *     ratio-first sort, which buried critical site-wide workstreams
+ *     under low-impact quick wins in the real Villas Foch report.
+ *  3. applyOccurrenceWeighting - kept, bounded as ever: promotes
+ *     occurrence-heavy themes from the bottom half to the half boundary
+ *     (report-v2 A6). It is no longer asked to rescue themes the primary
+ *     sort buried - severity x reach already sees page count and finding
+ *     weight - but a modest-severity, high-occurrence family on few
+ *     pages still deserves its bounded promotion, and it cannot break
+ *     stage 4's invariant.
+ *  4. enforceCriticalVisibilityFloor - the final invariant (#295): no
+ *     theme carrying a critical finding below any critical-free
+ *     low-impact theme, so a critical finding can never be rendered out
+ *     of the priorities while a low-impact priority is included. Runs
+ *     last because stages 2-3 reorder the list and the guarantee must
+ *     hold on the order actually returned.
+ *
+ *  enforceQuickWinFloor is no longer in the pipeline (demoted to a
+ *  tiebreak inside stage 2 - see its own comment): its promotion ignores
+ *  severity and reach, so keeping it would lift low-reach quick wins
+ *  back over critical site-wide work, the exact #295 failure.
+ *  enforceImpactEffortOrdering is likewise no longer called as a stage;
+ *  its ratio lives on as stage 2's secondary key. */
 export function applyStructureRankingRules(
   themes: readonly StructureThemeWithKey[],
   findings: readonly Finding[],
   manifest: AuditManifest,
 ): StructureThemeWithKey[] {
   const floored = enforceSiteWideAccessibilityFloor(themes, findings, manifest);
-  const ordered = enforceImpactEffortOrdering(floored);
-  const quickWinFloored = enforceQuickWinFloor(ordered);
-  const weighted = applyOccurrenceWeighting(quickWinFloored, findings);
-  logContainmentWarnings(weighted, findings, manifest);
-  return weighted;
+  const ordered = enforceSeverityReachOrdering(floored, findings);
+  const weighted = applyOccurrenceWeighting(ordered, findings);
+  const criticalFloored = enforceCriticalVisibilityFloor(weighted, findings);
+  logContainmentWarnings(criticalFloored, findings, manifest);
+  return criticalFloored;
 }
