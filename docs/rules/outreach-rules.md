@@ -4,9 +4,10 @@
 > `prospectId`, not a selected cohort or candidate generation. A prospect may
 > use an own or vendor-hosted website; website kind is an information badge.
 > The preview controls live on the prospect page, and a preview or first
-> email requires an attached audit with complete crawl coverage and current
-> provenance. Suppression, a valid URL, and polite crawling remain the only
-> hard safety gates.
+> email requires an attached audit with complete crawl coverage. **Plan 050
+> (2026-09-16):** the audit's normalization data version is advisory, not a
+> gate (trade-off 91). Suppression, a valid URL, and polite crawling remain
+> the only hard safety gates.
 
 Messaging doctrine for prospecting. Governs milestone 9c and the
 outreach email templates in `packages/interface/src/outreach`. Written

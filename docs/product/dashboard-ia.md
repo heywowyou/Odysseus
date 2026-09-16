@@ -36,7 +36,7 @@ Compatibility routes remain safe for bookmarks:
 ```text
 Find or add a prospect
         ↓
-Prepare outreach (complete scan-only audit)
+Run full scan (complete, reusable evidence)
         ↓
 Review the deterministic first-email draft in À traiter
         ↓
@@ -45,11 +45,12 @@ Handle a reply or due follow-up in À traiter
 Record the outcome; the prospect status advances automatically
 ```
 
-The quick check is optional information. Prepare outreach runs the complete
-audit stage and stops before model analysis and client reports. Prepare client
-report runs that same audit and then produces the bilingual analysis and
-reports. A paid client report is a separate secondary action. Sending is
-always manual; the dashboard prepares and shows drafts but never sends email.
+The quick check is optional information. One Full scan is the evidence source
+for everything afterwards: the outreach preview and emails, and the bilingual
+analysis and client reports. Nothing after the scan crawls the site again;
+recovering or regenerating a report works offline from the stored evidence.
+Sending is always manual; the dashboard prepares and shows drafts but never
+sends email.
 
 ## Prospects and Directory
 
@@ -58,7 +59,8 @@ view/status, and `Filtres (n)` / `Filters (n)`. Its `Tous les prospects` /
 `All prospects` view is the portfolio. Its `Résultats` / `Results` view is a
 projection over statuses `contacted`, `follow-up`, `replied`, `call`, `quoted`,
 `won`, `lost`, and `opted-out`; `new` and `audited` remain in the portfolio
-view.
+view. Its `Archivés` / `Archived` view lists archived prospects; the other two
+views, the counts, and À traiter only ever include active prospects.
 
 Results shows campaign-level counts for every result status above the table,
 one status badge per row, and one inline outcome control. It does not add a
@@ -76,7 +78,25 @@ unrelated query context.
 
 Directory rows are not prospects until the operator explicitly adds them.
 Directory and Prospects therefore share interaction vocabulary without sharing
-or silently mutating their data sets.
+or silently mutating their data sets. A row linked to a prospect offers
+`Ouvrir le prospect` / `Open prospect`, or `Restaurer le prospect` /
+`Restore prospect` when that prospect is archived; a linked row is never added
+a second time, and a directory source refresh never touches the link.
+
+## Archive and permanent deletion
+
+`Archiver le prospect` / `Archive prospect` is the ordinary way to take a
+prospect out of active work. It is record lifecycle, not a sales status: it
+changes no status, suppression, preview, draft, or thread, and keeps the
+record's enrichment, field origins, scans, reports, outreach history, events,
+and directory link. An archived prospect stays reachable directly, shows an
+`Archivé` / `Archived` badge, opens no work, and recommends nothing until
+`Restaurer le prospect` / `Restore prospect` returns it on the same record.
+
+`Supprimer définitivement` / `Delete permanently` remains for duplicates, test
+records, and bad imports. It sits in a collapsed destructive area under All
+actions, and its confirmation first states the counts of what the cascade will
+remove. The suppression list is always kept.
 
 ## Prospect detail hierarchy
 
@@ -87,7 +107,8 @@ module and renders at most one prominent recommended action.
 
 | Current facts | Recommended action |
 | --- | --- |
-| No qualifying outreach audit | Prepare outreach |
+| No qualifying outreach audit | Run full scan |
+| Archived prospect | None until restored |
 | Qualifying audit, no first-email draft/thread | Create first email |
 | Draft waiting for review | Review draft |
 | Sent touch with follow-up due | Create follow-up |
@@ -107,8 +128,9 @@ The secondary hierarchy is:
    multiple websites/emails, and technical record details.
 3. `Préparation de la prospection` / `Outreach preparation` — latest relevant
    audit/draft/thread state, outcome recording, and the manual-send note.
-4. `Toutes les actions` / `All actions` — quick check, prepare outreach, paid
-   client report, preview/email actions, deletion, and manual status correction.
+4. `Toutes les actions` / `All actions` — quick check, full scan,
+   preview/email actions, outcome recording, manual status correction, and the
+   collapsed permanent-deletion area. Archive/Restore sits in the page header.
 5. `Activité récente` / `Recent activity` — the three newest events.
 6. `Historique complet` / `Full history` — all audits, previews, and events,
    with preserved attach/detach actions.
@@ -119,28 +141,38 @@ to Prospects or its Results view preserves the originating query string.
 
 ## Scan vocabulary
 
-The ordinary dashboard exposes exactly three scan intents:
+The ordinary dashboard exposes exactly two scan intents:
 
 | Intent | French | English |
 | --- | --- | --- |
 | `quick-check` | Contrôle rapide | Quick check |
-| `prospecting-audit` | Préparer la prospection | Prepare outreach |
-| `full-audit` | Préparer le rapport client | Prepare client report |
+| `full-audit` | Scan complet | Full scan |
 
-From a prospect page, `Prepare outreach` is the ordinary scan action and the
-prospect is already attached. The generic New scan form retains URL matching,
+Plan 050 retired `prospecting-audit` as new work. Stored audits and queued jobs
+carrying it stay readable, qualify for outreach when complete, and display as
+`Scan de prospection (ancien)` / `Outreach scan (legacy)`; the scans API
+refuses it as a launch type. From a prospect page, `Lancer un scan complet` /
+`Run full scan` is the ordinary scan action and the prospect is already
+attached. The generic New scan form retains URL matching,
 search/create/choose/no-attach behavior for operator-launched scans. Internal
 bounded batch job vocabulary may remain in the worker and CLI contracts, but
 it is not an operator-facing New scan option. The retired single-site
 `light-audit` alias is absent from runtime TypeScript.
 
 These names are behavioral contracts, not labels: `quick-check` is a one-page
-probe with no Lighthouse, model, or report stage; `prospecting-audit` is the
-complete scan-only path; and `full-audit` adds French/English analysis and
-reports. Every new single-site audit persists its intent, and outreach
-qualification requires an eligible intent, complete coverage, and current
-findings provenance. The internal bounded `prospecting` batch is never an
-outreach-grade audit.
+probe with no Lighthouse, model, or report stage, and `full-audit` is the
+complete crawl followed by French/English analysis and reports. A report stage
+that cannot run (for example an unconfirmed identity) leaves the scan
+persisted and usable for outreach. Every new single-site audit persists its
+intent, and outreach qualification requires an eligible intent and complete
+coverage. The internal bounded `prospecting` batch is never an outreach-grade
+audit.
+
+The qualifying scan shows its date and age so the operator can judge whether
+the site may have changed. A scan normalized by an older release carries a
+calm note that its stored results remain usable, never an error or a block. A
+report rendered by an older template shows a neutral badge and stays
+deliverable while its findings provenance matches.
 
 Status automation follows the same workflow path through `quoted`, then
 branches to `won` or `lost`; `opted-out` is a terminal sibling. Normal outcome
@@ -159,8 +191,8 @@ the outreach sequence.
 
 Deterministic scanner findings remain the source of truth. The dashboard only
 groups and explains structured results already present in the API. Suppression,
-robots/pacing, complete-coverage, current-provenance, and manual-send rules
-remain unchanged.
+robots/pacing, complete-coverage, and manual-send rules remain unchanged; data
+version and template age are advisory (trade-off 91).
 
 ## Flow targets
 

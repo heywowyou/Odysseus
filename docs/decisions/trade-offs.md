@@ -4687,6 +4687,10 @@ reaches `quoted`, then branches to terminal `won` or `lost`, with `opted-out`
 as a terminal sibling. Normal outcome recording never changes a terminal
 sibling; Correct status remains the explicit manual correction path.
 
+**Superseded in part by trade-off 91 (Plan 050):** Prepare outreach is no
+longer a launchable intent, and current findings provenance is no longer part
+of outreach qualification.
+
 This records Plan 049's correction to a Plan 048 planning contradiction:
 Plan 048 required a complete prospecting audit for Prepare outreach while also
 placing the scanner behavior needed to make that contract real out of scope.
@@ -4733,3 +4737,42 @@ by the revoke, so the old link stops working. The one-live-preview gate stays:
 it protects a link that may already be in a draft, and its refusal now points
 to the adjacent revoke action. Rejected: reusing the same URL across
 republishes, which would resurrect a link the operator deliberately withdrew.
+
+### 91. One reusable Full scan; data version and template age are advice; archive replaces ordinary deletion (operator decision, 2026-09-16, Plan 050)
+
+The dashboard offers two scans: Quick check and Full scan. A separate
+prospecting crawl duplicated the expensive complete crawl only to stop before
+analysis, so it is retired as new work; stored `prospecting-audit` rows stay
+readable, qualify when complete, and a queued historical job still drains
+through its compatibility runner. The scans API refuses the retired types
+rather than silently remapping them. A Full scan whose report stage cannot run
+(unconfirmed identity) still persists its evidence and advances the prospect.
+
+Outreach qualification is eligible purpose plus complete coverage. The
+normalization fingerprint used to be a third condition, which made every
+release that touched normalization invalidate every existing scan and push the
+operator towards rescans that cost crawl time and third-party politeness for
+no new evidence. It is now reported as `current`, `older`, or `unknown` and
+shown as a calm note next to the scan date. Report delivery likewise depends
+only on the report's findings provenance matching its audit; an older
+renderer/template version is a neutral badge, not a refusal. Stored findings
+provenance itself still fails closed: a report whose digest no longer matches
+its audit remains stale. Recovering a report renormalizes and re-renders from
+stored evidence and never calls the audit stage.
+
+Archiving is a lifecycle field (`archivedAt`), not a status. It keeps the
+prospect, its enrichment and origins, scans, reports, outreach history,
+events, and directory link; it changes no status, suppression, preview,
+draft, or thread; archive and restore each record an event and are
+idempotent. Archived prospects leave the portfolio, Results, counts, and
+À traiter, and restore on the same `prospectId`. Directory adds claim the
+entry atomically with a pre-minted id, so repeated clicks cannot create a
+duplicate, and source refreshes never write the link. Permanent deletion
+keeps the existing cascade under the explicit name
+`deleteProspectPermanently`, behind a confirmation that states the counts it
+will remove; suppression is always retained.
+
+Rejected: an automatic scan expiry (the operator sees the date and decides),
+rescanning or rewriting data as a migration, writing operator enrichment back
+into directory source records, and modelling archive as a `lost`-like status,
+which would have rewritten outreach history.
