@@ -535,7 +535,7 @@ function FailedCard({ job }: { job: ScanJobDetail }): JSX.Element {
           them; this is the direct link. */}
       {isCoverageGateFailure(job.error) ? (
         <Link
-          to="/scans/new#new-scan-delay-ms"
+          to="/scans/new#new-scan-delay-seconds"
           className="mt-2 inline-block text-sm text-accent-bright underline underline-offset-2"
         >
           {strings.progress.coverageGateFieldsLink}

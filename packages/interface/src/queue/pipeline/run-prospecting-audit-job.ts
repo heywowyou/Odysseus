@@ -7,6 +7,7 @@
 import { completeJob, ensureJobRunIdentity, type JobDocument } from '@odysseus/store';
 import { deleteCrawlCheckpoint, deleteCrawlStateFile, type PageWorkGuard } from '@odysseus/scanner';
 import { runAuditStage } from '../../pipeline/audit-stage.js';
+import { crawlOptionsFromJob } from './job-crawl-options.js';
 import { finalizeProspectScan } from '../../pipeline/finalize-prospect-scan.js';
 import type { PipelineContext } from '../job-queue.js';
 import { JobCancelledError } from '../cancellation.js';
@@ -40,6 +41,7 @@ export async function runProspectingAuditJob(
       url,
       {
         ...(job.options.prospectId === undefined ? {} : { prospectId: job.options.prospectId }),
+        ...crawlOptionsFromJob(job.options),
         scanIntent: 'prospecting-audit',
         onProgress,
         onGuardReady,

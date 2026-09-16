@@ -6,6 +6,7 @@
 import { completeJob, ensureJobRunIdentity, type JobDocument } from '@odysseus/store';
 import { deleteCrawlCheckpoint, deleteCrawlStateFile, type PageWorkGuard } from '@odysseus/scanner';
 import { runAuditStage } from '../../pipeline/audit-stage.js';
+import { crawlOptionsFromJob } from './job-crawl-options.js';
 import { finalizeProspectScan } from '../../pipeline/finalize-prospect-scan.js';
 import type { PipelineContext } from '../job-queue.js';
 import { JobCancelledError } from '../cancellation.js';
@@ -36,6 +37,9 @@ export async function runQuickCheckJob(job: JobDocument, ctx: PipelineContext): 
       url,
       {
         ...(job.options.prospectId === undefined ? {} : { prospectId: job.options.prospectId }),
+        ...crawlOptionsFromJob(job.options),
+        // Spread after the operator's options: a Quick Check is one page by
+        // definition, whatever a stored row says.
         maxPages: 1,
         skipLighthouse: true,
         sitemapMode: 'inspect',

@@ -1,7 +1,10 @@
-/** Options block of a full-audit POST /api/scans body. Keys use the API's
- *  persisted contract names (routes/scans.ts); every key is optional and
- *  absent means "server default applies", never "zero". */
-export interface FullAuditScanOptions {
+/** Crawl-shaping options every single-site scan intent shares. Keys use the
+ *  API's persisted contract names (routes/scans.ts, JobOptionsSnapshot);
+ *  every key is optional and absent means "server default applies", never
+ *  "zero". `delayMs` stays in milliseconds on the wire and in storage: the
+ *  form collects seconds and converts at this boundary, so no stored value
+ *  ever changes meaning. */
+export interface ScanCrawlOptions {
   maxPages?: number;
   maxDepth?: number;
   delayMs?: number;
@@ -9,12 +12,17 @@ export interface FullAuditScanOptions {
    *  configured default downward, so this option can only reduce the load
    *  on the scanned site, never increase it. */
   scanConcurrency?: number;
-  siren?: string;
-  transactionalFlow?: boolean;
-  transactionalFlowReason?: string;
   seeds?: string[];
   exclusions?: string[];
   bookingEngineUrl?: string;
+}
+
+/** Options block of a full-audit POST /api/scans body: the shared crawl
+ *  options plus the obligation inputs only a client report uses. */
+export interface FullAuditScanOptions extends ScanCrawlOptions {
+  siren?: string;
+  transactionalFlow?: boolean;
+  transactionalFlowReason?: string;
 }
 
 /** Body of POST /api/scans, shaped exactly as routes/scans.ts validates it.
@@ -35,6 +43,7 @@ export interface ProspectScanRequest {
   type: 'quick-check' | 'prospecting-audit';
   url: string;
   prospectId?: string;
+  options: ScanCrawlOptions;
 }
 
 export interface ProspectingScanRequest {
@@ -44,9 +53,40 @@ export interface ProspectingScanRequest {
 
 export type ScanRequest = FullAuditScanRequest | ProspectScanRequest | ProspectingScanRequest;
 
+export type AdvancedScanField = keyof ScanCrawlOptions;
+
+/** Which advanced options each intent offers. One table drives both the
+ *  form and the request body, so a field is never shown without being sent
+ *  or sent without being shown. Quick Check scans exactly one page (the
+ *  server pins maxPages to 1), so the crawl-scope options could not change
+ *  anything there; its pacing controls still matter on a site that blocks
+ *  rapid requests. */
+export const ADVANCED_SCAN_FIELDS: Record<NewScanType, readonly AdvancedScanField[]> = {
+  'full-audit': [
+    'maxPages',
+    'maxDepth',
+    'delayMs',
+    'scanConcurrency',
+    'seeds',
+    'exclusions',
+    'bookingEngineUrl',
+  ],
+  'prospecting-audit': [
+    'maxPages',
+    'maxDepth',
+    'delayMs',
+    'scanConcurrency',
+    'seeds',
+    'exclusions',
+    'bookingEngineUrl',
+  ],
+  'quick-check': ['delayMs', 'scanConcurrency'],
+};
+
 /** Controlled state of the new-scan form. Numeric advanced options are kept
  *  as raw strings so the input stays editable between valid values; they are
- *  parsed only when the request is built. */
+ *  parsed only when the request is built. The page-load pause is entered in
+ *  seconds (`delaySeconds`) and becomes the API's `delayMs` only there. */
 export interface NewScanFormValues {
   type: NewScanType;
   url: string;
@@ -56,7 +96,7 @@ export interface NewScanFormValues {
   transactionalFlowReason: string;
   maxPages: string;
   maxDepth: string;
-  delayMs: string;
+  delaySeconds: string;
   scanConcurrency: string;
   seeds: string;
   exclusions: string;
@@ -73,7 +113,7 @@ export function createEmptyFormValues(): NewScanFormValues {
     transactionalFlowReason: '',
     maxPages: '',
     maxDepth: '',
-    delayMs: '',
+    delaySeconds: '',
     scanConcurrency: '',
     seeds: '',
     exclusions: '',
@@ -171,45 +211,71 @@ function parsePositiveIntOption(raw: string): number | undefined {
   return parsed;
 }
 
-/** Builds the POST /api/scans body from the form state, replicating the old
- *  public/app-new-scan.ts body construction exactly (old file used
- *  JSON.stringify to drop undefined keys; here the keys are omitted up
- *  front, which produces the same wire body). */
-export function buildScanRequest(form: NewScanFormValues): ScanRequest {
-  if (form.type !== 'full-audit') {
-    const prospectId = form.prospectId.trim();
-    return {
-      type: form.type,
-      url: form.url.trim(),
-      ...(prospectId !== '' ? { prospectId } : {}),
-    };
-  }
+/** Seconds as the operator types them (a comma decimal separator is
+ *  accepted, as French keyboards produce it) converted to the API's whole
+ *  milliseconds. Anything that is not a positive duration of at least one
+ *  millisecond is dropped, the same "omit rather than send" rule as the
+ *  other numeric options. */
+export function parseDelaySecondsToMs(raw: string): number | undefined {
+  const trimmed = raw.trim().replace(',', '.');
+  if (trimmed === '') return undefined;
+  const seconds = Number(trimmed);
+  if (!Number.isFinite(seconds) || seconds <= 0) return undefined;
+  const ms = Math.round(seconds * 1000);
+  return ms >= 1 ? ms : undefined;
+}
 
-  const maxPages = parsePositiveIntOption(form.maxPages);
-  const maxDepth = parsePositiveIntOption(form.maxDepth);
-  const delayMs = parsePositiveIntOption(form.delayMs);
-  const scanConcurrency = parsePositiveIntOption(form.scanConcurrency);
-  const siren = form.siren.trim();
-  const transactionalFlow = form.transactionalFlow;
-  const transactionalFlowReason = form.transactionalFlowReason.trim();
-  const seeds = splitLines(form.seeds);
-  const exclusions = splitLines(form.exclusions);
-  const bookingEngineUrl = form.bookingEngineUrl.trim();
-  const options: FullAuditScanOptions = {
+/** The shared crawl options for one intent, restricted to the fields that
+ *  intent offers (ADVANCED_SCAN_FIELDS), so a value typed while another
+ *  intent was selected never leaks into the request. */
+function buildCrawlOptions(form: NewScanFormValues): ScanCrawlOptions {
+  const offered = new Set<AdvancedScanField>(ADVANCED_SCAN_FIELDS[form.type]);
+  const maxPages = offered.has('maxPages') ? parsePositiveIntOption(form.maxPages) : undefined;
+  const maxDepth = offered.has('maxDepth') ? parsePositiveIntOption(form.maxDepth) : undefined;
+  const delayMs = offered.has('delayMs') ? parseDelaySecondsToMs(form.delaySeconds) : undefined;
+  const scanConcurrency = offered.has('scanConcurrency')
+    ? parsePositiveIntOption(form.scanConcurrency)
+    : undefined;
+  const seeds = offered.has('seeds') ? splitLines(form.seeds) : [];
+  const exclusions = offered.has('exclusions') ? splitLines(form.exclusions) : [];
+  const bookingEngineUrl = offered.has('bookingEngineUrl') ? form.bookingEngineUrl.trim() : '';
+  return {
     ...(maxPages !== undefined ? { maxPages } : {}),
     ...(maxDepth !== undefined ? { maxDepth } : {}),
     ...(delayMs !== undefined ? { delayMs } : {}),
     ...(scanConcurrency !== undefined ? { scanConcurrency } : {}),
+    ...(seeds.length > 0 ? { seeds } : {}),
+    ...(exclusions.length > 0 ? { exclusions } : {}),
+    ...(bookingEngineUrl !== '' ? { bookingEngineUrl } : {}),
+  };
+}
+
+/** Builds the POST /api/scans body from the form state. Keys are omitted
+ *  up front rather than sent undefined, which produces the same wire body
+ *  as the old page's JSON.stringify. */
+export function buildScanRequest(form: NewScanFormValues): ScanRequest {
+  const prospectId = form.prospectId.trim();
+  const crawlOptions = buildCrawlOptions(form);
+  if (form.type !== 'full-audit') {
+    return {
+      type: form.type,
+      url: form.url.trim(),
+      ...(prospectId !== '' ? { prospectId } : {}),
+      options: crawlOptions,
+    };
+  }
+
+  const siren = form.siren.trim();
+  const transactionalFlow = form.transactionalFlow;
+  const transactionalFlowReason = form.transactionalFlowReason.trim();
+  const options: FullAuditScanOptions = {
+    ...crawlOptions,
     ...(siren !== '' ? { siren: siren.replace(/\s/g, '') } : {}),
     ...(transactionalFlow !== '' ? { transactionalFlow: transactionalFlow === 'true' } : {}),
     ...(transactionalFlow !== '' && transactionalFlowReason !== ''
       ? { transactionalFlowReason }
       : {}),
-    ...(seeds.length > 0 ? { seeds } : {}),
-    ...(exclusions.length > 0 ? { exclusions } : {}),
-    ...(bookingEngineUrl !== '' ? { bookingEngineUrl } : {}),
   };
-  const prospectId = form.prospectId.trim();
   return {
     type: 'full-audit',
     url: form.url.trim(),

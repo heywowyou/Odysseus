@@ -6,6 +6,7 @@ import {
   initialScanTypeFromQuery,
   isValidSiren,
   NEW_SCAN_TYPES,
+  parseDelaySecondsToMs,
   prefillUrlFromQuery,
   validateSiren,
 } from './new-scan-model';
@@ -119,7 +120,7 @@ describe('buildScanRequest', () => {
         transactionalFlowReason: '  Moteur de reservation dedie  ',
         maxPages: '50',
         maxDepth: '3',
-        delayMs: '700',
+        delaySeconds: '0,7',
         scanConcurrency: '2',
         seeds: ' https://exemple.fr/a \n\n https://exemple.fr/b ',
         exclusions: 'https://exemple.fr/blog/*',
@@ -179,7 +180,7 @@ describe('buildScanRequest', () => {
         url: 'https://exemple.fr',
         maxPages: '25',
         maxDepth: '0',
-        delayMs: 'not-a-number',
+        delaySeconds: 'not-a-number',
         scanConcurrency: 'nope',
       }),
     );
@@ -214,6 +215,69 @@ describe('buildScanRequest', () => {
       type: 'prospecting-audit',
       url: 'https://hotel.example.fr',
       prospectId: 'prospect-1',
+      options: {},
     });
+  });
+
+  it('sends the same advanced crawl options for Prepare outreach as for a client report', () => {
+    const advanced = {
+      url: 'https://hotel.example.fr',
+      maxPages: '40',
+      maxDepth: '2',
+      delaySeconds: '60',
+      scanConcurrency: '1',
+      seeds: 'https://hotel.example.fr/a',
+      exclusions: 'https://hotel.example.fr/blog/*',
+      bookingEngineUrl: 'https://booking.example.fr/x',
+    };
+    const outreach = buildScanRequest(formValues({ ...advanced, type: 'prospecting-audit' }));
+    const report = buildScanRequest(formValues(advanced));
+    if (outreach.type !== 'prospecting-audit' || report.type !== 'full-audit') {
+      throw new Error('unexpected request types');
+    }
+    expect(outreach.options).toEqual({
+      maxPages: 40,
+      maxDepth: 2,
+      delayMs: 60_000,
+      scanConcurrency: 1,
+      seeds: ['https://hotel.example.fr/a'],
+      exclusions: ['https://hotel.example.fr/blog/*'],
+      bookingEngineUrl: 'https://booking.example.fr/x',
+    });
+    expect(report.options).toEqual(outreach.options);
+  });
+
+  it('sends only the pacing options for a one-page Quick Check', () => {
+    const request = buildScanRequest(
+      formValues({
+        type: 'quick-check',
+        url: 'https://hotel.example.fr',
+        maxPages: '40',
+        maxDepth: '2',
+        delaySeconds: '5',
+        scanConcurrency: '1',
+        seeds: 'https://hotel.example.fr/a',
+      }),
+    );
+    expect(request).toEqual({
+      type: 'quick-check',
+      url: 'https://hotel.example.fr',
+      options: { delayMs: 5000, scanConcurrency: 1 },
+    });
+  });
+});
+
+describe('parseDelaySecondsToMs', () => {
+  it('reads the operator value as seconds, so 60 is a one-minute pause', () => {
+    expect(parseDelaySecondsToMs('1')).toBe(1000);
+    expect(parseDelaySecondsToMs('60')).toBe(60_000);
+    expect(parseDelaySecondsToMs(' 1.5 ')).toBe(1500);
+    expect(parseDelaySecondsToMs('2,5')).toBe(2500);
+  });
+
+  it('omits empty, zero, negative, sub-millisecond and non-numeric values', () => {
+    for (const raw of ['', '   ', '0', '-3', '0.0001', 'soon']) {
+      expect(parseDelaySecondsToMs(raw)).toBeUndefined();
+    }
   });
 });

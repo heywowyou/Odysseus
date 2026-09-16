@@ -16,6 +16,7 @@ import type { ScanCreated } from '../lib/api-types';
 import { ApiError, fetchJson, sendJson } from '../lib/api';
 import { cn } from '../lib/cn';
 import {
+  ADVANCED_SCAN_FIELDS,
   buildScanRequest,
   createEmptyFormValues,
   initialScanTypeFromQuery,
@@ -24,7 +25,7 @@ import {
   prefillUrlFromQuery,
   validateSiren,
 } from './new-scan-model';
-import type { NewScanFormValues, NewScanType } from './new-scan-model';
+import type { AdvancedScanField, NewScanFormValues, NewScanType } from './new-scan-model';
 import type { ProspectHubListResponse } from './prospect-hub-model';
 
 interface ProspectMatch {
@@ -70,7 +71,7 @@ export function NewScanPage() {
   const [creatingProspect, setCreatingProspect] = useState(false);
 
   // Issue #187: a scan-failure card can link straight here to the crawl
-  // delay / scan concurrency fields (e.g. #new-scan-delay-ms); since they
+  // delay / scan concurrency fields (e.g. #new-scan-delay-seconds); since they
   // only exist in the DOM once the advanced section is open, a plain hash
   // link would otherwise land on the page with nothing to scroll to.
   useEffect(() => {
@@ -84,6 +85,8 @@ export function NewScanPage() {
   }, []);
 
   const isFullAudit = form.type === 'full-audit';
+  const offersField = (field: AdvancedScanField): boolean =>
+    ADVANCED_SCAN_FIELDS[form.type].includes(field);
   const sirenError = validateSiren(form.siren, copy.sirenInvalidError);
   const trimmedUrl = form.url.trim();
   const urlError =
@@ -373,24 +376,24 @@ export function NewScanPage() {
             ) : null}
           </Field>
 
-          {isFullAudit ? (
-            <div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setAdvancedOpen((open) => !open)}
-                aria-expanded={advancedOpen}
-              >
-                <ChevronDown
-                  className={cn('size-4 transition-transform', advancedOpen && 'rotate-180')}
-                  aria-hidden="true"
-                />
-                {copy.advancedOptions}
-              </Button>
-              {advancedOpen ? (
-                <div className="mt-4 flex flex-col gap-4">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setAdvancedOpen((open) => !open)}
+              aria-expanded={advancedOpen}
+            >
+              <ChevronDown
+                className={cn('size-4 transition-transform', advancedOpen && 'rotate-180')}
+                aria-hidden="true"
+              />
+              {copy.advancedOptions}
+            </Button>
+            {advancedOpen ? (
+              <div className="mt-4 flex flex-col gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {offersField('maxPages') ? (
                     <Field
                       label={copy.maxPagesLabel}
                       htmlFor="new-scan-max-pages"
@@ -404,6 +407,8 @@ export function NewScanPage() {
                         onChange={(event) => setField('maxPages', event.target.value)}
                       />
                     </Field>
+                  ) : null}
+                  {offersField('maxDepth') ? (
                     <Field label={copy.maxDepthLabel} htmlFor="new-scan-max-depth">
                       <Input
                         id="new-scan-max-depth"
@@ -413,33 +418,37 @@ export function NewScanPage() {
                         onChange={(event) => setField('maxDepth', event.target.value)}
                       />
                     </Field>
-                    <Field
-                      label={copy.delayLabel}
-                      htmlFor="new-scan-delay-ms"
-                      hint={copy.delayHint}
-                    >
-                      <Input
-                        id="new-scan-delay-ms"
-                        type="number"
-                        min={0}
-                        value={form.delayMs}
-                        onChange={(event) => setField('delayMs', event.target.value)}
-                      />
-                    </Field>
-                    <Field
-                      label={copy.scanConcurrencyLabel}
-                      htmlFor="new-scan-scan-concurrency"
-                      hint={copy.scanConcurrencyHint}
-                    >
-                      <Input
-                        id="new-scan-scan-concurrency"
-                        type="number"
-                        min={1}
-                        value={form.scanConcurrency}
-                        onChange={(event) => setField('scanConcurrency', event.target.value)}
-                      />
-                    </Field>
-                  </div>
+                  ) : null}
+                  <Field
+                    label={copy.delayLabel}
+                    htmlFor="new-scan-delay-seconds"
+                    hint={copy.delayHint}
+                  >
+                    <Input
+                      id="new-scan-delay-seconds"
+                      type="number"
+                      min={0}
+                      step="any"
+                      inputMode="decimal"
+                      value={form.delaySeconds}
+                      onChange={(event) => setField('delaySeconds', event.target.value)}
+                    />
+                  </Field>
+                  <Field
+                    label={copy.scanConcurrencyLabel}
+                    htmlFor="new-scan-scan-concurrency"
+                    hint={copy.scanConcurrencyHint}
+                  >
+                    <Input
+                      id="new-scan-scan-concurrency"
+                      type="number"
+                      min={1}
+                      value={form.scanConcurrency}
+                      onChange={(event) => setField('scanConcurrency', event.target.value)}
+                    />
+                  </Field>
+                </div>
+                {offersField('seeds') ? (
                   <Field label={copy.seedsLabel} htmlFor="new-scan-seeds">
                     <Textarea
                       id="new-scan-seeds"
@@ -448,6 +457,8 @@ export function NewScanPage() {
                       placeholder={copy.seedsPlaceholder}
                     />
                   </Field>
+                ) : null}
+                {offersField('exclusions') ? (
                   <Field label={copy.exclusionsLabel} htmlFor="new-scan-exclusions">
                     <Textarea
                       id="new-scan-exclusions"
@@ -456,6 +467,8 @@ export function NewScanPage() {
                       placeholder={copy.exclusionsPlaceholder}
                     />
                   </Field>
+                ) : null}
+                {offersField('bookingEngineUrl') ? (
                   <Field label={copy.bookingEngineUrlLabel} htmlFor="new-scan-booking-engine-url">
                     <Input
                       id="new-scan-booking-engine-url"
@@ -465,10 +478,10 @@ export function NewScanPage() {
                       placeholder={copy.bookingEngineUrlPlaceholder}
                     />
                   </Field>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+                ) : null}
+              </div>
+            ) : null}
+          </div>
 
           <Button type="submit" className="w-full" isLoading={isSubmitting}>
             {copy.submitButton}

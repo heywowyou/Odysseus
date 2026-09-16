@@ -159,9 +159,9 @@ export const en: DashboardStrings = {
     maxPagesHint:
       'Leave empty to explore the whole site: a large site can take several hours. For a quick trial, set a page limit.',
     maxDepthLabel: 'How many clicks from the home page to follow',
-    delayLabel: 'Pause between page loads (ms)',
+    delayLabel: 'Pause between page loads (seconds)',
     delayHint:
-      'Leave empty for the default. Values below the default are raised to it, so this can only slow the crawl down.',
+      'In seconds: 60 is one minute. Leave empty for the default. Values below the default are raised to it, so this can only slow the crawl down.',
     scanConcurrencyLabel: 'Pages scanned at once',
     scanConcurrencyHint:
       'Leave empty for the default. Values above the default are lowered to it, so this can only reduce the load on the site. Useful for sites that reject bursts of requests.',

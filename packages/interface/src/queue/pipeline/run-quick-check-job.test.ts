@@ -59,6 +59,16 @@ beforeEach(() => {
 });
 
 describe('runQuickCheckJob', () => {
+  it('forwards the operator pacing options and keeps the one-page cap', async () => {
+    await runQuickCheckJob(fakeJob({ delayMs: 60_000, scanConcurrency: 1, maxPages: 40 }), ctx);
+
+    expect(runAuditStage).toHaveBeenCalledWith(
+      'https://example.fr/',
+      expect.objectContaining({ delayMs: 60_000, scanConcurrency: 1, maxPages: 1 }),
+      fakeConnection,
+    );
+  });
+
   it('runs one bounded audit and no analysis or report stage', async () => {
     await runQuickCheckJob(fakeJob(), ctx);
 

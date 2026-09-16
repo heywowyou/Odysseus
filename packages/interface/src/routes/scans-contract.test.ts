@@ -96,4 +96,30 @@ describe('POST /api/scans runtime contract', () => {
       }
     },
   );
+
+  it.each([
+    ['quick-check', { maxPages: 1 }],
+    ['prospecting-audit', {}],
+  ] as const)(
+    'stores the advanced pacing options sent with a %s scan',
+    async (type, pinnedOptions) => {
+      const response = await post({
+        type,
+        url: 'https://example.fr/',
+        options: { delayMs: 60_000, scanConcurrency: 1 },
+      });
+
+      expect(response.statusCode).toBe(201);
+      expect(createJob).toHaveBeenCalledWith(fakeConnection, {
+        type,
+        siteUrl: 'https://example.fr/',
+        options: {
+          prospectId: 'prospect-1',
+          delayMs: 60_000,
+          scanConcurrency: 1,
+          ...pinnedOptions,
+        },
+      });
+    },
+  );
 });

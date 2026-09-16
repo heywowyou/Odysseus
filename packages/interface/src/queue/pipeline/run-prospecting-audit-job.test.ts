@@ -59,6 +59,25 @@ beforeEach(() => {
 });
 
 describe('runProspectingAuditJob', () => {
+  it('forwards the operator advanced crawl options to the audit stage', async () => {
+    const options = {
+      maxPages: 40,
+      maxDepth: 2,
+      delayMs: 60_000,
+      scanConcurrency: 1,
+      seeds: ['https://example.fr/a'],
+      exclusions: ['https://example.fr/blog/*'],
+      bookingEngineUrl: 'https://booking.example.fr/x',
+    };
+    await runProspectingAuditJob(fakeJob(options), ctx);
+
+    expect(runAuditStage).toHaveBeenCalledWith(
+      'https://example.fr/',
+      expect.objectContaining({ ...options, scanIntent: 'prospecting-audit' }),
+      fakeConnection,
+    );
+  });
+
   it('runs the normal audit stage and stops before analysis/report generation', async () => {
     await runProspectingAuditJob(fakeJob(), ctx);
 

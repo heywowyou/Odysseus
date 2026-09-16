@@ -17,6 +17,7 @@ import { hasMeasuredCoreWebVitals } from '@odysseus/report';
 import { pauseBetweenLanguagePasses } from '@odysseus/llm';
 import { runAnalysisStage } from '../../pipeline/analysis-stage.js';
 import { runAuditStage } from '../../pipeline/audit-stage.js';
+import { crawlOptionsFromJob } from './job-crawl-options.js';
 import { finalizeProspectScan } from '../../pipeline/finalize-prospect-scan.js';
 import { runAllReportsStage } from '../../pipeline/report-stage.js';
 import { JobCancelledError } from '../cancellation.js';
@@ -72,21 +73,11 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
     const auditResult = await runAuditStage(
       url,
       {
-        ...(job.options.maxPages !== undefined ? { maxPages: job.options.maxPages } : {}),
-        ...(job.options.maxDepth !== undefined ? { maxDepth: job.options.maxDepth } : {}),
-        ...(job.options.delayMs !== undefined ? { delayMs: job.options.delayMs } : {}),
-        ...(job.options.scanConcurrency !== undefined
-          ? { scanConcurrency: job.options.scanConcurrency }
-          : {}),
+        ...crawlOptionsFromJob(job.options),
         ...(job.options.siren !== undefined ? { manualSiren: job.options.siren } : {}),
         ...(siteSignalOverrides !== undefined ? { siteSignalOverrides } : {}),
         ...(job.options.prospectId !== undefined ? { prospectId: job.options.prospectId } : {}),
         scanIntent: 'full-audit',
-        ...(job.options.seeds !== undefined ? { seeds: job.options.seeds } : {}),
-        ...(job.options.exclusions !== undefined ? { exclusions: job.options.exclusions } : {}),
-        ...(job.options.bookingEngineUrl !== undefined
-          ? { bookingEngineUrl: job.options.bookingEngineUrl }
-          : {}),
         onProgress,
         onGuardReady,
         runIdentity,
