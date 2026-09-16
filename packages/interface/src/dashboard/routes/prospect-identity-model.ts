@@ -11,7 +11,7 @@ import { isValidSiren } from './audit-detail-model';
 
 type DetailCopy = DashboardStrings['prospectHub']['detail'];
 
-export const PROSPECT_IDENTITY_FIELDS = ['siren', 'tradingName', 'legalName'] as const;
+const PROSPECT_IDENTITY_FIELDS = ['siren', 'tradingName', 'legalName'] as const;
 export type ProspectIdentityField = (typeof PROSPECT_IDENTITY_FIELDS)[number];
 
 export interface ProspectIdentityValues {
