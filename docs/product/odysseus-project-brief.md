@@ -109,8 +109,9 @@ PDF report only, no video walkthrough, rendered from `findings.json`.
 2026-08-27 operator decision supersedes the earlier e-commerce-first plan.
 Atout France's classified-accommodation export is the sole catalogue, joined
 to the shipped Sirene machinery. DATAtourisme was evaluated and removed after
-measurement. The complete source, qualification, and rollout decisions are in
-`plans/README.md`.
+measurement. The original 9c source, qualification, and rollout decisions are
+in `plans/archive/9c-plans-index-history.md`; the current prospecting workflow
+is the prospect hub described in Stage 6.
 
 **Deliberate non-targets.**
 
@@ -282,21 +283,22 @@ and a limitations statement (see 6.6).
 
 **Tier concept dropped 2026-08-16 (originally added 2026-08-07, shipped 2026-08-08).** This stage used to take a `tier: 'screening' | 'full'` argument controlling section inclusion and detail depth, with a lighter screening render and a full render sharing one `findings.json`. The paid screening tier is gone, so is the parameter: `@odysseus/report`'s `renderHtml`/`generateReportPdf` and `runReportStage` no longer take a tier argument, there is exactly one report body (`render-html.ts`'s single `renderBody`), the `odysseus report --tier` CLI flag is removed, and stored report documents (`ReportDocumentFields`) no longer carry a `tier` field (historical documents still have one on disk; it is simply not read). The free outreach preview that replaces screening is not a lighter render of this same template; it has its own render path, its own document, and its own content rules in `docs/rules/outreach-rules.md`, not a tier flag on this one.
 
-**Stage 6: Internal bounded prospecting pipeline.**
-This is a distinct bounded batch path, not a mode of the paid-audit pipeline
-and not the dashboard's Full scan intent. It
-starts with cheap HTTP qualification, then prescans at most the homepage, one
-same-site booking page, and one room or content page. It reuses low-level
-scanner primitives for axe, render diff, direct browser metrics, and booking
-fingerprints, but never calls Lighthouse, the paid-audit orchestration, or the
-LLM. Immutable prescan facts feed deterministic evidence selection and a
-versioned score. Only prospects that pass the explicit gates can proceed to
-the separately governed preview and outreach stages. The execution contract
-and rollout order live in `plans/README.md`. Prescan v2 reduces its
-temporary browser captures to one content-addressed raw/rendered composite,
-one content-addressed measured failure crop, and three to five fixed bilingual
-summaries. Generic screenshots are deleted, and incomplete evidence cannot
-enter scoring selection.
+**Stage 6: Prospect hub and outreach.**
+Prospecting runs through one durable prospect hub (plan 047), not a separate
+prescan and scoring pipeline. The operator adds a prospect from the imported
+Atout France directory; every scan, preview, mailbox draft, thread, outcome,
+and status change links to it by `prospectId`. A prospect is scanned with one
+of the two dashboard intents described above: a Quick check for an
+informational one-page probe, or a Full scan whose stored findings feed both
+the outreach preview and the client report (plan 050). A stored scan
+qualifies for outreach on eligible purpose plus complete coverage; its
+normalization fingerprint is advisory provenance, not a gate. Legal and safety
+checks (suppression, opt-out, findings provenance) are the only blockers;
+there is no outreach score, cohort, or wave. Prospects are archived and
+restored rather than deleted. The preview and outreach stages keep their own
+rules in `docs/rules/outreach-rules.md`. The milestone 9c hotel prescan and
+versioned score this stage used to describe were removed by plan 047; their
+history is in `plans/archive/9c-plans-index-history.md`.
 
 **Personalized outreach email generation (2026-08-03).** For prospects that clear the gate, the tool generates the cold email itself, not just a one-sentence hook, personalized to that site's specific findings. Evidence selection stays deterministic: the LLM does not choose which finding to feature, that choice is already made by the brokenness scoring and evidence selection above. The LLM's role is narrowly to write the email around evidence already selected. Output is a draft into a queue, never sent automatically, both because the manual review step is what keeps EU AI Act exposure low for the LLM layer (see 8.4) and because CNIL B2B email rules require clear identification and an opt-out in every message, which a human should confirm is present before send. The anti-hallucination guard carries over explicitly: state the WCAG criterion, never assert the EAA applies to this specific business. Email language follows the prospect's own site language, not a French default.
 
@@ -330,10 +332,11 @@ job queue.
 - `clients`: name, contacts, language preference, sector, size bracket, notes.
 - `audits`: as built in milestone 4. Site URL, timestamps, config snapshot, crawl statistics and page list, per-phase errors, and self-reported tool versions. The same type is written to `manifest.json` on disk, which is what lets normalization re-run offline against any artifacts folder with no database attached.
 - `findings`: as specified in 6.2 stage 3, linked to auditId.
-- `prospects`: insert-only qualification events with domain, entity evidence,
-  qualification facts, and expiry.
-- Future 9c catalogue, prescan, evidence, score, preview, draft, and outcome
-  records stay separate as defined by `plans/README.md`.
+- `prospects`: the durable, editable prospect hub record (plan 047), with
+  `prospect_events` as its append-only history. Directory entries, scans,
+  previews, drafts, threads, and outcomes link to it by `prospectId`. The
+  earlier insert-only qualification events and the 9c prescan and score
+  records were removed with that plan.
 - `reports`: auditId, language, version, file reference, generated timestamp.
 
 Version the findings model from day one. Reports will need regenerating and comparing over time, especially for monitoring clients.
@@ -473,12 +476,14 @@ preservation. Full reasoning is in the charter's build-order section and
 
 **Milestone 9c: outreach generation.** Draft assembly per `docs/rules/outreach-rules.md`: deterministic evidence, deterministic facts block, generated connective prose, validator confirming the block survived unmodified and that identity, data origin, and opt-out are present (`docs/rules/llm-layer-rules.md` section 11). Draft queue, follow-up state machine keyed on reply detection, suppression check at draft time. Drafts created in the mailbox through the Gmail API, never sent. Separate sending domain with SPF, DKIM, DMARC.
 
-**9c reconciled into execution plans, 2026-08-27.** The 14 numbered plans in
-`plans/README.md` replace the earlier proposal drafts. They cover the
-hotel catalogue, exact identity resolution, cheap qualification, distinct
-prescan, evidence, versioned scoring, role contacts, safe previews, validated
-prose, Gmail drafts without send, reply/suppression handling, operator views,
-and the controlled first-100 rollout.
+**9c reconciled into execution plans, 2026-08-27.** The 14 numbered 9c plans
+replaced the earlier proposal drafts. They covered the hotel catalogue, exact
+identity resolution, cheap qualification, distinct prescan, evidence,
+versioned scoring, role contacts, safe previews, validated prose, Gmail drafts
+without send, reply/suppression handling, operator views, and the controlled
+first-100 rollout. Plan 047 later removed the prescan, scoring, and cohort
+parts in favour of the prospect hub (Stage 6); the plans are archived under
+`plans/archive/`.
 
 **9c plan 016: hosted operator dashboard.** Completed 2026-08-31, including
 the live provisioning and backup restore drill. The dashboard serves from a
@@ -653,7 +658,7 @@ Full detail in the five companion docs listed at the top of this brief.
 - **The send stays manual, and telephone prospecting is closed** by the rules in force since 11 August 2026. No sequencer integration. See `docs/rules/outreach-rules.md` section 8 and `docs/rules/operator-obligations.md` section 5.
 - **First vertical was originally e-commerce. Superseded 2026-08-27:** hotels
   rated at least three stars are the first campaign. See section 4 and
-  `plans/README.md`.
+  `plans/archive/9c-plans-index-history.md`.
 - **Second channel opened: accessibility agencies and freelances**, run in parallel from week one, five conversations to settle whether it is real. See section 4 and `docs/rules/offer-positioning.md` section 5.
 - **Free public scanner, still not now.** Milestone 12 is the conditional revisit, gated on milestone 10 producing traffic. See "No free public scanner" under Settled 2026-08-02 above, now qualified by this later decision.
 - **The benchmark study is LLM-generated like everything else**, with a one-line AI-assistance disclosure added for AI Act article 50(4). Client reports and outreach are confirmed out of scope for article 50 entirely, being private single-recipient documents, and need no disclosure and no pipeline change. See `docs/rules/operator-obligations.md` section 3.

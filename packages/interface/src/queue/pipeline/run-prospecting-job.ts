@@ -7,11 +7,10 @@
  * (cost-gating/brokenness.ts), isAuditFallbackEligible is wired into the
  * audit analysis stage as of issue #162 (see the trade-off 23
  * amendment), while computeBrokennessScore and isProspectingWorthy
- * remain unwired by decision (trade-off 23). The hotel prospecting
- * path's real worthiness gate is isHotelOutreachWorthy and
- * computeHotelOutreachScore in prospecting/hotel-outreach-score.ts,
- * which scores prescan facts instead of findings. Outreach email drafts
- * remain milestone 9c.
+ * remain unwired by decision (trade-off 23). There is no outreach
+ * worthiness score: plan 047 removed hotel scoring, and outreach
+ * qualification is eligible scan purpose plus complete coverage on the
+ * prospect hub.
  *
  * Milestone 9b: the serial for-loop became a bounded worker pool
  * (PROSPECTING_JOB_CONCURRENCY workers pulling from a shared cursor)

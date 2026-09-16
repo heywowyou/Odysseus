@@ -134,7 +134,8 @@ Reuse the existing full-audit pipeline; do not build a new one.
 `@odysseus/interface` (`packages/cli/src/commands/audit.ts:3`) and results land
 in the `audits` and `findings` collections (`packages/store/src/audits.ts:2-9`).
 The benchmark batch is a thin runner over that pipeline adding what binding
-decision 18 requires (`plans/README.md:96-103`):
+decision 18 of the milestone 9c plans index requires
+(`plans/archive/9c-plans-index-history.md`, "Binding decisions"):
 
 - Dry-run mode: prints the exact cohort, per-site cap, and planned page counts,
   crawls nothing.

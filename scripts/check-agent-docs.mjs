@@ -160,8 +160,26 @@ for (const removedLedger of ['plans/findings.md', 'plans/report-findings.md']) {
     errors.push(`${removedLedger} is a retired finding ledger.`);
   }
 }
-if (!existsSync(resolve(repoRoot, 'plans/README.md'))) {
+const plansIndexPath = resolve(repoRoot, 'plans/README.md');
+if (!existsSync(plansIndexPath)) {
   errors.push('plans/README.md must exist: it is the single index of executable plans.');
+} else {
+  // Every executor is routed here, so its context cost is paid every session.
+  // Narrative belongs in the plan file or its archive, not in a status cell.
+  const plansIndexMaxBytes = 24 * 1024;
+  const plansIndexMaxRowChars = 400;
+  if (statSync(plansIndexPath).size > plansIndexMaxBytes) {
+    errors.push('plans/README.md exceeds its 24 KiB index limit; move narrative into the plans.');
+  }
+  readFileSync(plansIndexPath, 'utf8')
+    .split(/\r?\n/)
+    .forEach((line, index) => {
+      if (line.startsWith('|') && line.length > plansIndexMaxRowChars) {
+        errors.push(
+          `plans/README.md:${index + 1} table row exceeds ${plansIndexMaxRowChars} characters; keep status to one sentence plus a link.`,
+        );
+      }
+    });
 }
 const advisorPlansReference = /advisor-plans\//;
 const migrationRecordPath = resolve(repoRoot, 'plans/archive/015-consolidate-work-tracking.md');

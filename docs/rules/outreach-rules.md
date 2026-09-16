@@ -371,7 +371,8 @@ deadline in that window, and it is direct competition for attention.
 produces a draft that could be sent by reflex.
 
 **Reconciling "no sequencer" with automated follow-up scheduling**, added
-with milestone 9c plan 012. `plans/README.md` binding decision 14 forbids
+with milestone 9c plan 012. Binding decision 14 of the milestone 9c plans index
+(now `plans/archive/9c-plans-index-history.md`) forbids
 "automatic follow-ups"; read together with the automation boundary above,
 that means a system that sends on a timer, which this is not. Scheduling
 and drafting a follow-up are automated (bounded, operator-invoked, and

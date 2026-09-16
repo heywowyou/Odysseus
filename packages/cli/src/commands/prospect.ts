@@ -1,18 +1,14 @@
 /**
- * Milestone 9a CLI surface: a convenience for enqueuing an ingestion
- * batch from a terminal/cron rather than the dashboard route
- * (registerProspectingRoutes, packages/interface), and the minimal
- * intake path for the suppression collection - without it, that
- * collection exists but nothing in 9a can ever populate it (automated
- * opt-out processing from replies is milestone 9c's job).
+ * Prospect CLI surface: a terminal/cron convenience for the one operation
+ * that does not run from the dashboard, importing the hotel directory the
+ * prospect hub adds from.
  *
- * The commander wiring here is a thin layer: each subcommand group
- * (ingest, hotel-qualify, prescan, score, hotel-review, contacts,
- * preview, draft, outreach) lives in its own module under `prospect/`,
- * mirroring how `audit.ts` and `scan.ts` stay small. Real logic for each
- * pass lives in `@odysseus/interface` and `@odysseus/store`; see each
- * module's own header for the reasoning behind its shape (queued vs
- * inline, grouped `run` subcommand vs flat action).
+ * The commander wiring here is a thin layer: the one registered
+ * subcommand, `directory-import`, lives in `prospect/ingest.ts`, mirroring
+ * how `audit.ts` and `scan.ts` stay small. The prescan, scoring, contact,
+ * preview, and draft command groups were removed with plan 047; those flows
+ * now run from the prospect hub in the dashboard. Real logic lives in
+ * `@odysseus/interface` and `@odysseus/store`.
  */
 
 import type { Command } from 'commander';
@@ -21,10 +17,7 @@ import { registerIngestCommands } from './prospect/ingest.js';
 export function registerProspectCommand(program: Command): void {
   const prospect = program
     .command('prospect')
-    .description(
-      'Prospect acquisition and qualification. Milestone 9a against AFNIC + Sirene stock data, ' +
-        'milestone 9c against the Atout France hotel catalogue.',
-    );
+    .description('Prospect directory maintenance: import the Atout France hotel catalogue.');
 
   registerIngestCommands(prospect);
 }

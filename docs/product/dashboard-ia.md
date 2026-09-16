@@ -215,7 +215,7 @@ ledger records browser rehearsals and compares observed counts against them.
 
 French is the source variant and English mirrors every user-facing key. Tests
 cover FR/EN string parity, route and model contracts, render/axe coverage for
-Directory, Prospects, Results, and prospect detail, three scan intents, and the
+Directory, Prospects, Results, and prospect detail, the two scan intents, and the
 stubbed prospect workflow. No test calls a live model or scans a live
 third-party site.
 
