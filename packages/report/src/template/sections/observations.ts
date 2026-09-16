@@ -64,7 +64,14 @@ export function renderObservations(
         <div>
           <h5>${escapeHtml(strings.accessibilityStatementGuidance.heading)}</h5>
           <p style="font-size:13.5px;opacity:0.85;max-width:64ch">${escapeHtml(statementGuidance.observation)} ${escapeHtml(statementGuidance.recommendation)}</p>
-          <p class="text-muted" style="font-size:11px">${escapeHtml(formatFindingIdRefs(regimeDependentIds))}</p>
+          <p class="text-muted" style="font-size:11px">${escapeHtml(
+            fillTemplate(
+              regimeDependentIds.length === 1
+                ? o.relatedFindingSingularTemplate
+                : o.relatedFindingPluralTemplate,
+              { findingIds: formatFindingIdRefs(regimeDependentIds) },
+            ),
+          )}</p>
         </div>
       `
       : '';

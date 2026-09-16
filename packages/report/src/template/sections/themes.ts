@@ -31,6 +31,7 @@ import {
 import { CATEGORY, LEVEL_COLOR, SEVERITY } from '../design-tokens.js';
 import { detectFindingVendor, isThirdPartyFinding } from '../third-party-attribution.js';
 import { sectionTitle } from '../section-registry.js';
+import { resolveFindingDisplayLabel } from '../rule-translations.js';
 import {
   buildLegacyPriority,
   type PriorityEvidence,
@@ -520,10 +521,18 @@ function renderTheme(
   );
   const deterministicActionsBox = renderThemeList(
     t.reviewedRemediationLabel,
-    (priority?.remediations ?? []).map(
-      (item) =>
-        `<span class="mono theme-rule">${escapeHtml(item.ruleId)}</span>${labelSeparator(language)}${escapeHtml(item.text)}${renderThemeFixSnippet(item.snippet, t)}`,
-    ),
+    // Issue #325: each line used to open on the raw rule id
+    // ("structured-data-invalid: ...") next to French titles. It now opens
+    // on the rule's reviewed display label, the same one the annex uses,
+    // with the id kept as a quiet reference after the action.
+    (priority?.remediations ?? []).map((item) => {
+      const label = resolveFindingDisplayLabel(
+        language,
+        item.ruleId,
+        priority?.findings.find((finding) => finding.ruleId === item.ruleId)?.title,
+      );
+      return `<span class="theme-rule">${escapeHtml(label)}</span>${labelSeparator(language)}${escapeHtml(item.text)} <span class="mono theme-rule-id">${escapeHtml(item.ruleId)}</span>${renderThemeFixSnippet(item.snippet, t)}`;
+    }),
   );
   const ownershipSentence = priority
     ? renderOwnershipSentence(strings, language, priority.ownershipCounts)

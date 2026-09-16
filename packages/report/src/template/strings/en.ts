@@ -164,6 +164,8 @@ export const en: ReportStrings = {
     legalTitle: 'Legal pages excluded from indexing',
     legalBodyTemplate:
       'These pages (terms and conditions, cookie policy, privacy policy, or similar) are of a kind usually excluded from indexing (noindex). This is a common and often deliberate setup for this kind of page: no corrective action is recommended by default, just confirm the choice is intentional and that a noindex directive is actually in place. Findings involved: {findingIds}.',
+    relatedFindingSingularTemplate: 'Related finding: {findingIds}',
+    relatedFindingPluralTemplate: 'Related findings: {findingIds}',
   },
   remainingWork: {
     eyebrow: 'Still to address',
@@ -759,7 +761,8 @@ export const en: ReportStrings = {
     reauditPricingTemplate:
       'Indicative price: EUR {price} excl. VAT, within {days} business days of confirming fixes are live. To request one, write to {email}.',
     authorshipTemplate:
-      'Report produced by {producer}, rendered on {renderDate} ({renderQualifier}), from the scan completed on {scanDate}{scanQualifier}, report ID {reportId}.',
+      'Report produced by {producer}, rendered on {renderDate} from the scan completed on {scanDate}, report ID {reportId}.',
+    provenanceTemplate: 'Technical provenance: {details}.',
     renderQualifierTemplate: 'render build {renderBuild}, template {templateVersion}',
     renderQualifierWithoutBuildTemplate: 'template {templateVersion}',
     scanQualifierTemplate: 'scan build {scanBuild}',
@@ -819,7 +822,7 @@ export const en: ReportStrings = {
     pageSingular: 'page',
     pagePlural: 'pages',
     wcagLabel: 'WCAG',
-    observationsCrossRefLabel: 'see Observations',
+    observationsCrossRefLabel: 'Details in the Observations section',
     splitGroupThirdPartyNoteTemplate:
       '{count} more occurrences of this rule affect a third-party component; see "{thirdPartyHeading}".',
     splitGroupThirdPartyNoteSingularTemplate:

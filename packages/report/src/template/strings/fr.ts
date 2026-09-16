@@ -185,6 +185,8 @@ export const fr: ReportStrings = {
     legalTitle: "Pages légales exclues de l'indexation",
     legalBodyTemplate:
       "Ces pages (conditions générales, politique de cookies, politique de confidentialité, ou similaire) sont d'un type généralement exclu de l'indexation (noindex). C'est une configuration fréquente et souvent volontaire pour ce type de page : aucune action corrective n'est recommandée par défaut, vérifiez simplement que ce choix est assumé et que la directive noindex est bien en place. Constats concernés : {findingIds}.",
+    relatedFindingSingularTemplate: 'Constat concerné : {findingIds}',
+    relatedFindingPluralTemplate: 'Constats concernés : {findingIds}',
   },
   remainingWork: {
     eyebrow: 'Reste \u00e0 traiter',
@@ -863,10 +865,11 @@ export const fr: ReportStrings = {
     reauditPricingTemplate:
       'Tarif indicatif : {price} € HT, sous {days} jours ouvrés après confirmation des correctifs. Pour en faire la demande, écrivez à {email}.',
     authorshipTemplate:
-      'Rapport produit par {producer}, rendu le {renderDate} ({renderQualifier}), à partir du scan achevé le {scanDate}{scanQualifier}, identifiant de rapport {reportId}.',
-    renderQualifierTemplate: 'build de rendu {renderBuild}, modèle {templateVersion}',
+      'Rapport produit par {producer}, rendu le {renderDate} à partir du scan achevé le {scanDate}, identifiant de rapport {reportId}.',
+    provenanceTemplate: 'Traçabilité technique : {details}.',
+    renderQualifierTemplate: 'version de rendu {renderBuild}, modèle {templateVersion}',
     renderQualifierWithoutBuildTemplate: 'modèle {templateVersion}',
-    scanQualifierTemplate: 'build de scan {scanBuild}',
+    scanQualifierTemplate: 'version de scan {scanBuild}',
     issuerBlockTemplate: 'Signataire : {signatory}. SIRET : {registrationNumber}.',
     liabilityStatement:
       "Ce rapport reproduit des constats techniques détectés par des outils automatisés, accompagnés d'explications et de priorisations. Il ne constitue pas un avis juridique ; voir la section « Cadre réglementaire » et la méthodologie pour les limites de couverture. Odysseus ne saurait être tenu responsable des décisions prises sur la seule base de ce document.",
@@ -932,7 +935,7 @@ export const fr: ReportStrings = {
     pageSingular: 'page',
     pagePlural: 'pages',
     wcagLabel: 'WCAG',
-    observationsCrossRefLabel: 'voir Observations',
+    observationsCrossRefLabel: 'Détail dans la section « Observations »',
     splitGroupThirdPartyNoteTemplate:
       'Encore {count} occurrences de cette règle concernent un composant tiers ; voir « {thirdPartyHeading} ».',
     splitGroupThirdPartyNoteSingularTemplate:

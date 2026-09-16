@@ -127,6 +127,24 @@ describe('item 31: authorship and liability block', () => {
     expect(html).toContain('a1b2c3');
   });
 
+  // Issue #325: "(build de rendu 28fd0b8, modèle 3) … (build de scan
+  // 28fd0b8)" sat inside the client-facing authorship sentence.
+  it('keeps build identifiers out of the authorship sentence, on a discreet provenance line', () => {
+    const html = renderNextSteps(getStrings('fr'), 14, fakeManifest(), 'fr', {
+      reportId: 'report-123',
+      renderedAt: new Date('2026-08-29T00:00:00.000Z'),
+      rendererBuild: 'render-abc',
+      templateVersion: 2,
+    });
+    const authorship = html.slice(html.indexOf('Rapport produit par'));
+    expect(authorship.slice(0, authorship.indexOf('</p>'))).not.toContain('render-abc');
+    const provenance = html.slice(html.indexOf('data-provenance'));
+    expect(provenance).toContain(
+      'Traçabilité technique\u00a0: version de rendu render-abc, modèle 2\u00a0; version de scan 0.5.2.',
+    );
+    expect(html).not.toContain('build de');
+  });
+
   it('labels scan and render provenance separately', () => {
     const html = renderNextSteps(getStrings('en'), 14, fakeManifest(), 'en', {
       reportId: 'report-123',

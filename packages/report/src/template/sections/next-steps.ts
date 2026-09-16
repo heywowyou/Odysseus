@@ -77,15 +77,20 @@ export function renderNextSteps(
     ? fillTemplate(n.renderQualifierTemplate, { renderBuild, templateVersion })
     : fillTemplate(n.renderQualifierWithoutBuildTemplate, { templateVersion });
   const scanQualifier = isKnownBuildId(scanBuild)
-    ? ` (${fillTemplate(n.scanQualifierTemplate, { scanBuild })})`
-    : '';
+    ? fillTemplate(n.scanQualifierTemplate, { scanBuild })
+    : undefined;
   const authorship = fillTemplate(n.authorshipTemplate, {
     producer: ODYSSEUS_PRODUCER_NAME,
     scanDate: formatDate(auditDate(manifest), language),
     renderDate: formatDate(renderMetadata?.renderedAt ?? auditDate(manifest), language),
-    renderQualifier,
-    scanQualifier,
     reportId: renderMetadata?.reportId ?? manifest.auditId,
+  });
+  // Issue #325: build identifiers are for us, not the client's reading, so
+  // they leave the authorship sentence for a quieter line of their own.
+  const provenance = fillTemplate(n.provenanceTemplate, {
+    details: [renderQualifier, scanQualifier]
+      .filter((part): part is string => part !== undefined)
+      .join(language === 'fr' ? ' ; ' : '; '),
   });
   const issuerBlock = fillTemplate(n.issuerBlockTemplate, {
     signatory: ODYSSEUS_SIGNATORY_NAME,
@@ -138,6 +143,7 @@ export function renderNextSteps(
     <p style="font-size:11px;opacity:0.55;margin-top:var(--space-4)">${escapeHtml(authorship)}</p>
     <p style="font-size:11px;opacity:0.55;margin-top:4px">${escapeHtml(issuerBlock)}</p>
     <p style="font-size:11px;opacity:0.55;margin-top:4px;max-width:70ch">${escapeHtml(n.liabilityStatement)}</p>
+    <p data-provenance style="font-size:9px;opacity:0.4;margin-top:var(--space-3)">${escapeHtml(provenance)}</p>
   `,
     '',
     'section-14',

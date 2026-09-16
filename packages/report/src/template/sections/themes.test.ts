@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { buildStressFixture } from '../../stress-fixture.js';
+import { buildRenderedPriorities } from '../rendered-priorities.js';
 import type { Finding, Theme } from '@odysseus/core';
 import { selectReferenceStats, SEVERITY_ORDER } from '@odysseus/core';
 import {
@@ -2209,5 +2211,31 @@ describe('plan 018 step 6: priority card order and the deterministic observation
     expect(html).toContain(
       'found on https://example.com/. In total, it affects 1 page and 1 occurrence.',
     );
+  });
+});
+
+// Issue #325: reviewed-remediation lines opened on raw rule ids
+// ("structured-data-invalid:") beside French titles.
+describe('reviewed remediation lines lead with the rule label (issue #325)', () => {
+  it('opens each line on the display label and keeps the id as a quiet reference', () => {
+    const { analysis, findings, manifest } = buildStressFixture();
+    const priorities = buildRenderedPriorities(analysis.themes, findings, manifest, 'fr');
+    const html = renderThemes(
+      getStrings('fr'),
+      4,
+      analysis,
+      findings,
+      manifest,
+      undefined,
+      undefined,
+      priorities,
+    );
+    const lines = [...html.matchAll(/<span class="theme-rule">([^<]*)<\/span>/g)];
+    expect(lines.length).toBeGreaterThan(0);
+    expect(html).toContain('class="mono theme-rule-id"');
+    expect(html).not.toContain('class="mono theme-rule"');
+    for (const [, label] of lines) {
+      expect(label).not.toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)+$/);
+    }
   });
 });

@@ -71,4 +71,33 @@ describe('renderObservations against the real small-site.test scan', () => {
     expect(html).not.toContain('portent une directive noindex');
     expect(html).toContain('généralement exclu de l’indexation');
   });
+
+  // Issue #325: the accessibility-statement block printed a bare "f066".
+  it('labels the finding reference under the accessibility-statement block', () => {
+    const finding: Finding = {
+      auditId: 'a1',
+      schemaVersion: 1,
+      source: 'custom',
+      findingId: 'f066',
+      ruleId: 'accessibility-statement-missing',
+      category: 'accessibility',
+      severity: 'minor',
+      wcagCriteria: [],
+      title: 'No accessibility statement',
+      description: 'description',
+      pageUrls: ['https://example.com/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: 'dk-66',
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+    const diverted: DivertedFinding[] = [{ finding, reason: 'regime-dependent' }];
+
+    expect(renderObservations(getStrings('fr'), 6, diverted)).toContain(
+      'Constat concerné\u00a0: f066',
+    );
+    expect(renderObservations(getStrings('en'), 6, diverted)).toContain('Related finding: f066');
+  });
 });

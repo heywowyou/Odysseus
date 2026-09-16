@@ -603,9 +603,9 @@ function renderRuleGroup(
         </span>
         <span class="mono rule-code" style="font-size:10px;opacity:0.5">${escapeHtml(ruleCodeDisplay)}</span>
         ${gloss}
-        ${obsTag}
         ${vendorTag}
         <span style="font-size:11px;opacity:0.6">${renderRuleSum(strings, language, group)}</span>
+        ${obsTag}
       </div>
       <table style="${APPENDIX_TABLE_STYLE}" data-appendix-rule-id="${escapeHtml(group.ruleId)}">
         <colgroup>${APPENDIX_COLUMN_WIDTHS.map((w) => `<col style="width:${w}">`).join('')}</colgroup>

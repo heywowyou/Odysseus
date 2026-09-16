@@ -84,13 +84,19 @@ describe('renderFindingsAppendix against the real small-site.test findings', () 
     // which matches the legal-page pattern - real diversion, not a
     // contrived fixture. Its single-finding rule-group must be tagged.
     const linkInTextBlockGroup = html.split('>link-in-text-block</span>')[1] ?? '';
-    expect(linkInTextBlockGroup.slice(0, 200)).toContain('class="obs-tag"');
+    // Issue #325: the tag now closes the group header, after the counts.
+    const linkInTextBlockHead = linkInTextBlockGroup.split('<table')[0] ?? '';
+    expect(linkInTextBlockHead).toContain('class="obs-tag"');
+    expect(linkInTextBlockHead).toContain('Détail dans la section «\u00a0Observations\u00a0»');
+    expect(linkInTextBlockHead.indexOf('class="obs-tag"')).toBeGreaterThan(
+      linkInTextBlockHead.search(/\d+ constats?/),
+    );
 
     // color-contrast's group mixes f012 (legal-confined) with f010/f011/f015
     // (ordinary pages), so the group as a whole must not be tagged - only
     // a fully-diverted group is.
     const colorContrastGroup = html.split('>color-contrast</span>')[1] ?? '';
-    expect(colorContrastGroup.slice(0, 200)).not.toContain('class="obs-tag"');
+    expect(colorContrastGroup.split('<table')[0]).not.toContain('class="obs-tag"');
   });
 
   it('B1: suppresses the geo citation when its statistic id is already in the shared citedStatIds Set', () => {

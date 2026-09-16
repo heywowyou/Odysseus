@@ -287,6 +287,10 @@ export interface ReportStrings {
     legalTitle: string;
     /** Template: {findingIds}. */
     legalBodyTemplate: string;
+    /** Issue #325: the accessibility-statement block printed a bare "f066"
+     *  under its paragraph. Template: {findingIds}. */
+    relatedFindingSingularTemplate: string;
+    relatedFindingPluralTemplate: string;
   };
   remainingWork: {
     eyebrow: string;
@@ -1052,16 +1056,21 @@ export interface ReportStrings {
      *  a build is fit to print is a decision and not a formatting
      *  detail. */
     authorshipTemplate: string;
-    /** Parenthesised detail after the render date, when the render build
-     *  is known. Template: {renderBuild}, {templateVersion}. */
+    /** Issue #325: build and template identifiers used to sit inside the
+     *  authorship sentence ("build de rendu 28fd0b8, modèle 3"). They now
+     *  render on their own discreet line after it. Template: {details},
+     *  the render qualifier and, when known, the scan qualifier. */
+    provenanceTemplate: string;
+    /** Render detail on the provenance line, when the render build is
+     *  known. Template: {renderBuild}, {templateVersion}. */
     renderQualifierTemplate: string;
     /** Same position, when the render build could not be resolved. The
-     *  template version is always known, so the parenthesis still earns
-     *  its place. Template: {templateVersion}. */
+     *  template version is always known, so the line still has something
+     *  to say. Template: {templateVersion}. */
     renderQualifierWithoutBuildTemplate: string;
-    /** Parenthesised detail after the scan date, when the scan build is
-     *  known. Omitted entirely otherwise: unlike the render qualifier
-     *  there is nothing else in it. Template: {scanBuild}. */
+    /** Scan detail on the provenance line, when the scan build is known.
+     *  Omitted entirely otherwise: unlike the render qualifier there is
+     *  nothing else in it. Template: {scanBuild}. */
     scanQualifierTemplate: string;
     /** item 3.13: no issuer identity (legal entity, signatory,
      *  registration number) anywhere in the document - a professionalism

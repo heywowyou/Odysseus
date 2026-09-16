@@ -916,8 +916,13 @@ textarea.input {
   color: var(--color-neutral-500);
 }
 .theme-rule {
-  font-size: 12px;
+  font-weight: 500;
   color: var(--color-neutral-100);
+}
+.theme-rule-id {
+  font-size: 9.5px;
+  white-space: nowrap;
+  color: var(--color-neutral-500);
 }
 .theme-note {
   margin: var(--space-3) 0 0;
