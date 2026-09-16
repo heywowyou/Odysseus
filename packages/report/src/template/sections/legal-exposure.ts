@@ -327,8 +327,8 @@ function renderLcenBlock(
   if (!regime) return '';
 
   const l = strings.legalExposure;
-  // regime.authorityPrefixFr exists for methodology.ts's "sous le contrôle
-  // {prefix} {authority}" construction. This label is a nominative
+  // regime.authorityPrefixFr exists for methodology.ts's "dont le contrôle
+  // relève {prefix} {authority}" construction. This label is a nominative
   // ("Autorité compétente : ..."), which takes no preposition - prepending
   // it here produced "Autorité compétente : de la Direction générale".
   const authorityDisplay = regime.authority;

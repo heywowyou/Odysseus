@@ -116,6 +116,17 @@ describe('the inconclusive transactional-flow resolution in section 03 (issue #4
     expect(html).not.toContain('Des contrôles de réservation');
   });
 
+  // Issue #306: the note repeated the paragraph's own booking-controls
+  // sentence word for word in the small print below it.
+  it('states the booking-controls finding once per language', () => {
+    const fr = render('fr', villaFochAssessment());
+    expect(fr.match(/leur destination n.a pas pu être établie/g)).toHaveLength(1);
+    expect(fr).toContain('Pages où ces contrôles de réservation ont été relevés');
+    const en = render('en', villaFochAssessment());
+    expect(en.match(/Booking controls were found/g)).toHaveLength(1);
+    expect(en).toContain('Pages where these booking controls were found include');
+  });
+
   it('renders the general EAA reference, which a clean negative withholds', () => {
     // The delivered Villas Foch report stated "Seuil ou parcours non
     // observé" and carried no EAA reference at all; the inconclusive

@@ -313,9 +313,9 @@ export const en: ReportStrings = {
     // than a routine "requires verification" - booking controls were
     // actually seen, only their destination could not be established.
     transactionalFlowInconclusiveTemplate:
-      'Booking controls were found on the visited pages (for example: {examplePages}), but their destination could not be reliably established. An online booking flow may therefore exist: have it confirmed before relying on this status.',
+      'Pages where these booking controls were found include {examplePages}. An online booking flow may therefore exist: have it confirmed before relying on this status.',
     transactionalFlowInconclusiveNoExample:
-      'Booking controls were found on the visited pages, but their destination could not be reliably established. An online booking flow may therefore exist: have it confirmed before relying on this status.',
+      'An online booking flow may therefore exist: have it confirmed before relying on this status.',
     disclaimerNote:
       'Generated from the existing obligation assessment; no additional legal interpretation has been added. A review by qualified legal counsel remains necessary.',
     undeterminedActionNote:
@@ -809,13 +809,13 @@ export const en: ReportStrings = {
     privacySecurityChecksUnavailable:
       'The automated security-header and cookie-consent checks did not both produce a usable result for this audit. No conclusion is drawn for this scope.',
     legalCitationInScopeTemplate:
-      'Published criteria for {regimeName}, overseen by {authority} ({legalCitation}). Facts verified for this audit: {facts}',
+      'Published criteria for the {regimeName} ({legalCitation}), overseen by {authority}. Facts verified for this audit: {facts}',
     legalCitationLikelyInScopeTemplate:
-      'Published criteria for {regimeName}, overseen by {authority} ({legalCitation}). Facts verified for this audit: {facts}',
+      'Published criteria for the {regimeName} ({legalCitation}), overseen by {authority}. Facts verified for this audit: {facts}',
     legalCitationOutOfScopeParagraph:
-      'Published criteria for {regimeName}, overseen by {authority} ({legalCitation}). Facts verified for this audit: {facts}',
+      'Published criteria for the {regimeName} ({legalCitation}), overseen by {authority}. Facts verified for this audit: {facts}',
     legalCitationUndeterminedParagraph:
-      'Published criteria for {regimeName}, overseen by {authority} ({legalCitation}). Data available for this audit: {facts}',
+      'Published criteria for the {regimeName} ({legalCitation}), overseen by {authority}. Data available for this audit: {facts}',
     legalCitationEffectifFactTemplate: 'The company has {label} according to the Sirene registry.',
     legalCitationTurnoverFactTemplate:
       'Recorded annual turnover is {amount}; the published threshold is {threshold}.',

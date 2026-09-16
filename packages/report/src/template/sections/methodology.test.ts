@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { ObligationAssessment } from '@odysseus/core';
-import { renderLegalCitationParagraph, renderMethodology } from './methodology.js';
+import {
+  lowercaseInitial,
+  renderLegalCitationParagraph,
+  renderMethodology,
+} from './methodology.js';
 import { getStrings } from '../strings/i18n.js';
 import { loadSmallSiteManifest } from '../../test-fixtures.js';
 import { escapeCopy } from '../html-utils.js';
@@ -213,7 +217,9 @@ describe('renderLegalCitationParagraph', () => {
   it('renders criteria and the missing observed input when obligationAssessment is absent', () => {
     const html = renderLegalCitationParagraph(getStrings('fr'), undefined, 'fr');
     expect(html).toContain('Critères publiés pour');
-    expect(html).toContain('Aucun identifiant SIREN n’a été trouvé sur les pages visitées');
+    expect(html).toContain(
+      'audit\u00a0: aucun identifiant SIREN n’a été trouvé sur les pages visitées',
+    );
   });
 
   it('renders the verified missing input for status undetermined', () => {
@@ -223,7 +229,9 @@ describe('renderLegalCitationParagraph', () => {
     };
     const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
     expect(html).toContain('Données disponibles pour cet audit');
-    expect(html).toContain('Aucun identifiant SIREN n’a été trouvé sur les pages visitées');
+    expect(html).toContain(
+      'audit\u00a0: aucun identifiant SIREN n’a été trouvé sur les pages visitées',
+    );
   });
 
   it('renders criteria and registry facts without an out-of-scope conclusion', () => {
@@ -237,7 +245,7 @@ describe('renderLegalCitationParagraph', () => {
       ],
     };
     const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
-    expect(html).toContain('Loi n° 2023-171');
+    expect(html).toContain('loi n° 2023-171');
     expect(html).toContain('tranche d’effectif 02');
     expect(html).toContain('500 000 €');
     expect(html).not.toContain('ne relève pas de');
@@ -257,7 +265,7 @@ describe('renderLegalCitationParagraph', () => {
       ],
     };
     const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
-    expect(html).toContain('Obligation d’accessibilité numérique');
+    expect(html).toContain('pour l’obligation d’accessibilité numérique');
     expect(html).toContain('DGCCRF');
     // End-to-end regression: packages/interface's sirene-client.ts used to
     // hand this fact's label in without accents ("100 a 199 salaries"),
@@ -299,14 +307,14 @@ describe('renderLegalCitationParagraph', () => {
   });
 
   // item 3.15: "sous le contrôle de Direction générale..." was missing
-  // "la" - the authority string is a single canonical value shared with
-  // English (regimes.ts's own convention), so the fix prepends "de la"/
-  // "du" at fill time, per regime, in French only. Two regimes use two
+  // "la" - the authority string is also a nominative label elsewhere, so
+  // the fix prepends "de la"/"du" at fill time, per regime, in French
+  // only. Two regimes use two
   // different authorities with different grammatical gender ("de la
   // Direction générale..." vs "du Défenseur des droits" - "de le" is not
   // valid French), so both must be checked, not just one.
   describe('item 3.15: the authority is grammatically correct in French for every regime', () => {
-    it('DGCCRF (EAA route): "sous le contrôle de la Direction générale"', () => {
+    it('DGCCRF (EAA route): "relève de la Direction générale"', () => {
       const assessment: ObligationAssessment = {
         status: 'in_scope',
         basis: [
@@ -320,11 +328,11 @@ describe('renderLegalCitationParagraph', () => {
         ],
       };
       const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
-      expect(html).toContain('sous le contrôle de la Direction générale');
-      expect(html).not.toContain('sous le contrôle de Direction générale');
+      expect(html).toContain('dont le contrôle relève de la Direction générale');
+      expect(html).not.toContain('relève Direction générale');
     });
 
-    it('Défenseur des droits (article 47 route): "sous le contrôle du Défenseur des droits"', () => {
+    it('Défenseur des droits (article 47 route): "relève du Défenseur des droits"', () => {
       const assessment: ObligationAssessment = {
         status: 'in_scope',
         basis: [
@@ -342,9 +350,9 @@ describe('renderLegalCitationParagraph', () => {
         ],
       };
       const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
-      expect(html).toContain('sous le contrôle du Défenseur des droits');
-      expect(html).not.toContain('sous le contrôle de Défenseur des droits');
-      expect(html).not.toContain('sous le contrôle de le Défenseur');
+      expect(html).toContain('dont le contrôle relève du Défenseur des droits');
+      expect(html).not.toContain('relève Défenseur des droits');
+      expect(html).not.toContain('relève de le Défenseur');
     });
 
     it('never prepends a French article/preposition in an English report', () => {
@@ -361,8 +369,51 @@ describe('renderLegalCitationParagraph', () => {
         ],
       };
       const html = renderLegalCitationParagraph(getStrings('en'), assessment, 'en');
-      expect(html).toContain('overseen by Direction générale');
+      expect(html).toContain("overseen by France's consumer protection authority");
       expect(html).not.toContain('overseen by de la');
+    });
+  });
+
+  // Issue #306: the paragraph named the law inside the regime name and
+  // again as the citation, took no article before the regime name, put a
+  // capital after the colon, and left the citation and authority in French
+  // inside the English report.
+  describe('issue #306: one clean sentence per fact, one citation', () => {
+    const inScope: ObligationAssessment = {
+      status: 'in_scope',
+      basis: [
+        {
+          regimeId: 'eaa-loi-2023-171',
+          facts: [
+            { kind: 'effectif-band', code: '22', label: '100 à 199 salariés' },
+            { kind: 'transactional-flow', evidence: [] },
+          ],
+        },
+      ],
+    };
+
+    it('cites the law once and reads as French prose', () => {
+      const html = renderLegalCitationParagraph(getStrings('fr'), inScope, 'fr');
+      expect(html.match(/2023-171/g)).toHaveLength(1);
+      expect(html).toContain('Critères publiés pour l’obligation d’accessibilité numérique');
+      expect(html).toContain('Faits vérifiés pour cet audit\u00a0: l’entreprise compte');
+    });
+
+    it('writes the citation and the authority in English in the English report', () => {
+      const html = renderLegalCitationParagraph(getStrings('en'), inScope, 'en');
+      expect(html.match(/2023-171/g)).toHaveLength(1);
+      expect(html).toContain(
+        'Published criteria for the digital accessibility obligation under the European Accessibility Act (French Law No. 2023-171 of 9 March 2023, articles 16 to 19)',
+      );
+      expect(html).toContain('Facts verified for this audit: the company has');
+      expect(html).not.toContain('Loi n°');
+      expect(html).not.toContain('articles 16 à 19');
+    });
+
+    it('never lowers an acronym at the start of a fact', () => {
+      expect(lowercaseInitial('SIREN absent')).toBe('SIREN absent');
+      expect(lowercaseInitial('L’entreprise')).toBe('l’entreprise');
+      expect(lowercaseInitial("L'entreprise")).toBe("l'entreprise");
     });
   });
 

@@ -359,9 +359,9 @@ export const fr: ReportStrings = {
     // than a routine "à confirmer" - booking controls were actually seen,
     // only their destination could not be established.
     transactionalFlowInconclusiveTemplate:
-      "Des contrôles de réservation ont été relevés sur les pages visitées (par exemple : {examplePages}), mais leur destination n'a pas pu être établie de manière fiable. Un parcours de réservation en ligne existe donc peut-être : faites-le confirmer avant de vous appuyer sur ce statut.",
+      'Pages où ces contrôles de réservation ont été relevés, par exemple : {examplePages}. Un parcours de réservation en ligne existe donc peut-être : faites-le confirmer avant de vous appuyer sur ce statut.',
     transactionalFlowInconclusiveNoExample:
-      "Des contrôles de réservation ont été relevés sur les pages visitées, mais leur destination n'a pas pu être établie de manière fiable. Un parcours de réservation en ligne existe donc peut-être : faites-le confirmer avant de vous appuyer sur ce statut.",
+      'Un parcours de réservation en ligne existe donc peut-être : faites-le confirmer avant de vous appuyer sur ce statut.',
     disclaimerNote:
       'Cette section reproduit des critères réglementaires et des données publiques de votre entreprise, sans interprétation juridique supplémentaire. Une confirmation par un conseil juridique reste nécessaire avant toute décision.',
     undeterminedActionNote:
@@ -929,13 +929,13 @@ export const fr: ReportStrings = {
     privacySecurityChecksUnavailable:
       'Les contrôles automatisés des en-têtes de sécurité et du consentement aux cookies n’ont pas tous produit de résultat exploitable pour cet audit. Aucune conclusion n’est tirée sur ce périmètre.',
     legalCitationInScopeTemplate:
-      'Critères publiés pour {regimeName}, sous le contrôle {authority} ({legalCitation}). Faits vérifiés pour cet audit : {facts}',
+      "Critères publiés pour l'{regimeName} ({legalCitation}), dont le contrôle relève {authority}. Faits vérifiés pour cet audit : {facts}",
     legalCitationLikelyInScopeTemplate:
-      'Critères publiés pour {regimeName}, sous le contrôle {authority} ({legalCitation}). Faits vérifiés pour cet audit : {facts}',
+      "Critères publiés pour l'{regimeName} ({legalCitation}), dont le contrôle relève {authority}. Faits vérifiés pour cet audit : {facts}",
     legalCitationOutOfScopeParagraph:
-      'Critères publiés pour {regimeName}, sous le contrôle {authority} ({legalCitation}). Faits vérifiés pour cet audit : {facts}',
+      "Critères publiés pour l'{regimeName} ({legalCitation}), dont le contrôle relève {authority}. Faits vérifiés pour cet audit : {facts}",
     legalCitationUndeterminedParagraph:
-      'Critères publiés pour {regimeName}, sous le contrôle {authority} ({legalCitation}). Données disponibles pour cet audit : {facts}',
+      "Critères publiés pour l'{regimeName} ({legalCitation}), dont le contrôle relève {authority}. Données disponibles pour cet audit : {facts}",
     legalCitationEffectifFactTemplate: "L'entreprise compte {label} d'après le répertoire Sirene.",
     legalCitationTurnoverFactTemplate:
       "Le chiffre d'affaires annuel enregistré est de {amount} ; le seuil publié est de {threshold}.",

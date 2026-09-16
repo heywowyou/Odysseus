@@ -16,17 +16,13 @@ export interface Regime {
   name: string;
   thresholdDescription: string;
   authority: string;
-  /** item 3.15: `authority` is deliberately kept as a single canonical
-   *  string shared between French and English (regimes.ts's own
-   *  documented convention - official body names are not translated).
-   *  French grammar still needs "de la"/"du" in front of it ("sous le
-   *  contrôle de la Direction générale...", "... du Défenseur des
-   *  droits") - "de le" is not valid French, it contracts to "du" - which
-   *  an undecorated shared string cannot carry without either
-   *  duplicating `authority` per language or leaking a French
-   *  preposition into the English report. Holds the full French
-   *  preposition+article prefix to prepend before `authority`; English
-   *  templates never read this field. */
+  /** item 3.15: French grammar needs "de la"/"du" in front of
+   *  `authority` ("relève de la Direction générale...", "... du Défenseur
+   *  des droits") - "de le" is not valid French, it contracts to "du" -
+   *  and the nominative uses of `authority` (a "Autorité compétente :"
+   *  label) must not carry it. Holds the full French preposition+article
+   *  prefix to prepend before the French `authority`; English templates
+   *  never read this field. */
   authorityPrefixFr: 'de la' | 'du';
   sanctionCeiling: string;
   legalCitation: string;

@@ -291,6 +291,30 @@ The distinction is between informing and advising, and it is thinner
 than it looks, which is why the wording lives in template code rather
 than in a prompt.
 
+### 7.1 Legal paragraph shape
+
+The report's legal paragraph (`renderLegalCitationParagraph`, spliced from
+`packages/core/src/compliance/regimes.ts`) has this shape, since issue #306:
+
+- FR: « Critères publiés pour l'{obligation} ({citation}), dont le contrôle
+  relève {de la/du} {autorité}. Faits vérifiés pour cet audit : {faits} »
+- EN: "Published criteria for the {obligation} ({citation}), overseen by
+  {authority}. Facts verified for this audit: {facts}"
+
+Rules that hold it to one clean sentence per fact:
+
+- The law is cited once, in `legalCitation`. A regime `name` is the
+  obligation alone and never carries its own citation.
+- The name and the first fact are lowered at their initial where they land
+  mid-sentence. An acronym is never lowered.
+- English wording describes the law and the authority in English. It keeps
+  the official French name only as a parenthetical, for example "France's
+  consumer protection authority (DGCCRF, Direction générale de la
+  concurrence, de la consommation et de la répression des fraudes)" and
+  "French Law No. 2023-171 of 9 March 2023, articles 16 to 19".
+- A note printed under the paragraph adds to it (example pages, the
+  confirmation step) and never repeats one of its fact sentences.
+
 ---
 
 ## 8. Statistics

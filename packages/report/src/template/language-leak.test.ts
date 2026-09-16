@@ -15,6 +15,7 @@ import { REFERENCE_STAT_TABLE, REGIME_TABLE, getRegime } from '@odysseus/core';
 import { frenchCopy } from './french-typography.js';
 import { renderHtml } from './render-html.js';
 import { escapeHtml } from './html-utils.js';
+import { lowercaseInitial } from './sections/methodology.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
 import { en } from './strings/en.js';
 import { fr } from './strings/fr.js';
@@ -97,7 +98,14 @@ function stripRegimeProperNouns(html: string): string {
     for (const language of ['fr', 'en'] as const) {
       const regime = getRegime(regimeId, language);
       if (!regime) continue;
-      for (const value of [regime.name, regime.legalCitation, regime.authority]) {
+      // Issue #306: the legal paragraph prints the name mid-sentence, with
+      // its initial lowered.
+      for (const value of [
+        regime.name,
+        lowercaseInitial(regime.name),
+        regime.legalCitation,
+        regime.authority,
+      ]) {
         if (value === '') continue;
         stripped = stripped.split(escapeHtml(frenchCopy(value, language))).join('');
       }

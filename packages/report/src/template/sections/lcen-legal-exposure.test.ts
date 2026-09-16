@@ -130,7 +130,8 @@ describe('the LCEN identification obligation in section 03', () => {
   it('renders in English too, with no French leaking in', () => {
     const html = render('en', [lcenFinding()]);
     expect(html).toContain(escapeHtml(en.legalExposure.lcenKicker));
-    expect(html).toContain('Publisher identification obligation');
+    expect(html).toContain('Website publisher identification obligation');
+    expect(html).not.toContain('Loi n°');
     expect(html).not.toContain('Autre obligation applicable');
   });
 });

@@ -140,6 +140,16 @@ function renderFacts(
     .join(' ');
 }
 
+/** Issue #306: the regime name and the first fact are sentence-initial on
+ *  their own ("Obligation d'accessibilité...", "L'entreprise compte...")
+ *  but land mid-sentence in the legal paragraph, after "pour l'" and after
+ *  a colon, where French and English both take a lowercase letter. Only a
+ *  capital followed by a lowercase letter or an apostrophe is lowered, so
+ *  an acronym such as "SIREN" or "DGCCRF" is never touched. */
+export function lowercaseInitial(text: string): string {
+  return /^\p{Lu}[\p{Ll}'’]/u.test(text) ? text.charAt(0).toLowerCase() + text.slice(1) : text;
+}
+
 /** EAA "owns" the merged status only when its own facts actually justify
  *  it: a confirmed transactional flow means EAA's own gate is in_scope,
  *  an unconfirmed one means likely_in_scope, anything else (exemption or
@@ -192,10 +202,10 @@ export function renderLegalCitationParagraph(
       language === 'fr' ? `${regime.authorityPrefixFr} ${regime.authority}` : regime.authority;
     return frenchCopy(
       fillTemplate(m.legalCitationUndeterminedParagraph, {
-        regimeName: regime.name,
+        regimeName: lowercaseInitial(regime.name),
         authority: authorityDisplay,
         legalCitation: regime.legalCitation,
-        facts: m.legalCitationSirenMissingFact,
+        facts: lowercaseInitial(m.legalCitationSirenMissingFact),
       }),
       language,
     );
@@ -221,22 +231,19 @@ export function renderLegalCitationParagraph(
     undetermined: m.legalCitationUndeterminedParagraph,
   }[assessment.status];
   // item 3.15: "sous le contrôle de {authority}" produced "sous le
-  // contrôle de Direction générale..." (missing "la") because `authority`
-  // is a single canonical string shared with English (regimes.ts's own
-  // documented convention), which cannot carry a French article without
-  // either duplicating it per language or leaking a French word into the
-  // English report. French prepends "de la"/"du" (from
+  // contrôle de Direction générale..." (missing "la"). `authority` is also
+  // read as a nominative label ("Autorité compétente : ..."), so it cannot
+  // carry the article itself. French prepends "de la"/"du" (from
   // regime.authorityPrefixFr, since "de le" is not valid French - it
-  // contracts to "du") here, at fill time, language-scoped; English's
-  // template has no preposition to prepend at all ("overseen by
-  // {authority}").
+  // contracts to "du") here, at fill time; English's authority carries its
+  // own wording ("overseen by {authority}").
   const authorityDisplay =
     language === 'fr' ? `${regime.authorityPrefixFr} ${regime.authority}` : regime.authority;
   const paragraph = fillTemplate(template, {
-    regimeName: regime.name,
+    regimeName: lowercaseInitial(regime.name),
     authority: authorityDisplay,
     legalCitation: regime.legalCitation,
-    facts,
+    facts: lowercaseInitial(facts),
   });
 
   // Issue #323: regime.name, regime.authority and regime.legalCitation are
