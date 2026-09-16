@@ -744,16 +744,15 @@ function transactionalFlowPageUrls(analysis: StoredAnalysis): ReadonlySet<string
   return urls;
 }
 
-/** item 1.1: a stat's `category` tag can be broader than its real topic
- *  (the Pew AI-overview stats are tagged 'seo' for a slot to attach to,
- *  but are really only about search-result click behavior) -
- *  `eligibleRuleIds`, when present, narrows attachment to themes whose
- *  own findings are actually about that topic, checked here rather than
- *  in selectReferenceStats (core has no notion of a "theme" to check
- *  against). */
-function isStatEligibleForRuleIds(stat: ReferenceStat, themeFindings: readonly Finding[]): boolean {
-  if (!stat.eligibleRuleIds) return true;
-  return themeFindings.some((finding) => stat.eligibleRuleIds!.includes(finding.ruleId));
+/** item 1.1, generalised by issue #298: a stat's `category` tag is a slot,
+ *  not a topic. Every row now declares its own scope (ReferenceStat.scope)
+ *  and a rule-scoped stat only attaches to a theme whose own findings are
+ *  actually about it - checked here rather than in selectReferenceStats,
+ *  since core has no notion of a "theme" to check against. */
+function isStatInThemeScope(stat: ReferenceStat, themeFindings: readonly Finding[]): boolean {
+  if (stat.scope.kind === 'category') return true;
+  const ruleIds = stat.scope.ruleIds;
+  return themeFindings.some((finding) => ruleIds.includes(finding.ruleId));
 }
 
 /** item 1.1: no statistic in REFERENCE_STAT_TABLE is about legal-notice
@@ -791,7 +790,7 @@ function isStatEligibleForTheme(
   themeFindings: readonly Finding[],
   transactionalPageUrls: ReadonlySet<string>,
 ): boolean {
-  if (!isStatEligibleForRuleIds(stat, themeFindings)) return false;
+  if (!isStatInThemeScope(stat, themeFindings)) return false;
   if (!stat.ratio || !RATIO_KINDS_REQUIRING_TRANSACTIONAL_CONTEXT.has(stat.ratio.kind)) return true;
   return themeFindings.some((finding) =>
     finding.pageUrls.some((url) => transactionalPageUrls.has(url)),

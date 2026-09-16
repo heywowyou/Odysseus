@@ -53,6 +53,10 @@ export interface Bilingual {
   en: string;
 }
 
+/** Issue #298: see ReferenceStat.scope. */
+export type StatScope =
+  { readonly kind: 'rules'; readonly ruleIds: readonly string[] } | { readonly kind: 'category' };
+
 export interface ReferenceStat {
   id: string;
   /** Non-empty. Some stats (Deloitte, Baymard, Pew) double as anchors
@@ -83,20 +87,25 @@ export interface ReferenceStat {
   /** Present only when scalability === 'scales-down'. Stored as a
    *  decimal fraction, e.g. 0.101 for 10.1%. */
   ratio?: { kind: RatioKind; value: number };
-  /** report-feedback-la-corniche.md item 1.1: category alone is too
-   *  coarse a match for a stat whose real topic is narrower than the
-   *  whole category it's tagged into - a real report cited the Pew
-   *  AI-overview click-through-rate stat (category includes 'seo') on a
-   *  "mentions légales manquantes" (missing SIREN) priority, because
-   *  that theme happened to be the highest-ranked 'seo' theme and
-   *  selectReferenceStats has no way to know the stat is about search
-   *  click behavior, not legal notices. Present only on stats whose
-   *  relevance is confirmed narrower than their category tag; absent
-   *  (the common case) means category match alone is trusted, as
-   *  before. Checked only by packages/report's theme-citation path
-   *  (themes.ts's isStatEligibleForTheme) against the rule IDs of the
-   *  specific theme's own findings - the geo findings-appendix section
+  /** Issue #298: what this statistic is actually about, declared rather
+   *  than inferred from `category`. A category tag is a slot, not a topic:
+   *  a real hotel report cited Baymard's e-commerce cart-abandonment rate
+   *  on an accessibility priority about link and image text, a checkout
+   *  design uplift on an indexing-blockers priority, and Nestle's
+   *  rich-results click-through rate on a priority about broken internal
+   *  links, purely because each happened to rank first inside a matching
+   *  category with no topical check at all.
+   *
+   *  `{ kind: 'rules' }` names the rule ids the statistic can speak to.
+   *  `{ kind: 'category' }` says the claim really is about the whole
+   *  category - a survey about disabled travellers avoiding inaccessible
+   *  venues is not about one WCAG rule - and is a decision a reviewer
+   *  makes on the record, which is the point of requiring the field.
+   *
+   *  Checked by packages/report's theme-citation path (themes.ts's
+   *  isStatEligibleForTheme) against the rule ids of the specific theme's
+   *  own findings. The geo findings-appendix block
    *  (findings-appendix.ts's renderGeoCitationBlock) anchors to a whole
    *  category section rather than one narrow theme and is unaffected. */
-  eligibleRuleIds?: readonly string[];
+  scope: StatScope;
 }

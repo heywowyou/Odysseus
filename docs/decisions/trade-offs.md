@@ -447,6 +447,26 @@ cap instead; that decision is the operator's.
     riding along with citation wiring, since turnover is only
     inconsistently available from `ObligationAssessment`'s basis facts.
 
+    **Revised 2026-09-16 (issue #298): a category tag is a slot, not a
+    topic.** Category matching alone put Baymard's e-commerce
+    cart-abandonment rate on a hotel's accessibility priority about link
+    and image text, a checkout-design uplift on its indexing-blockers
+    priority, and Nestle's rich-results click-through rate on a priority
+    about broken internal links. Item 1.1 had already fixed one instance
+    of this by adding `eligibleRuleIds` to two Pew rows, but absence of
+    the field still meant "trust the category", so the next unfiltered
+    row took the slot.
+
+    Every row now carries a required `ReferenceStat.scope`: either
+    `{ kind: 'rules', ruleIds }`, naming the defects the figure can speak
+    to, or `{ kind: 'category' }` for a claim that genuinely is about the
+    whole category - a survey about disabled travellers avoiding
+    inaccessible venues is not about one WCAG rule. Making it required
+    rather than optional is the point: adding a statistic is now a
+    decision about what it is evidence for, recorded in the diff. A
+    priority matching nothing gets no citation, which was already the
+    rule for an unmatched sector.
+
 17. **No annex group in the PDF report is ever forced onto one page with
     `break-inside: avoid`, regardless of how few findings it has**,
     decided 2026-08-19 during the La Corniche feedback-fix session

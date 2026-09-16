@@ -54,15 +54,133 @@
  * is deliberately stricter than the paid report path.
  */
 
-import type { ReferenceStat } from './types.js';
+import type { ReferenceStat, StatScope } from './types.js';
 
 function bilingual(fr: string, en: string): { fr: string; en: string } {
   return { fr, en };
 }
 
+/** Issue #298: the rule ids a statistic about page loading speed can
+ *  speak to - everything a report can tell a client to change that makes
+ *  the page appear sooner. Named once so the three Deloitte rows cannot
+ *  drift apart from each other. */
+const LOADING_SPEED_RULES: readonly string[] = [
+  'bf-cache',
+  'bootup-time',
+  'cache-insight',
+  'crux-lcp-poor',
+  'document-latency-insight',
+  'dom-size',
+  'dom-size-insight',
+  'duplicated-javascript-insight',
+  'first-contentful-paint',
+  'font-display',
+  'font-display-insight',
+  'forced-reflow-insight',
+  'image-delivery-insight',
+  'image-legacy-format',
+  'image-oversized',
+  'largest-contentful-paint',
+  'largest-contentful-paint-element',
+  'lcp-breakdown-insight',
+  'lcp-discovery-insight',
+  'lcp-lazy-loaded',
+  'legacy-javascript',
+  'legacy-javascript-insight',
+  'long-tasks',
+  'mainthread-work-breakdown',
+  'max-potential-fid',
+  'modern-http-insight',
+  'modern-image-formats',
+  'network-dependency-tree-insight',
+  'offscreen-images',
+  'prioritize-lcp-image',
+  'redirect-chain-excessive',
+  'render-blocking-insight',
+  'render-blocking-resources',
+  'server-response-time',
+  'speed-index',
+  'third-parties-insight',
+  'third-party-facades',
+  'third-party-summary',
+  'total-blocking-time',
+  'total-byte-weight',
+  'unminified-css',
+  'unminified-javascript',
+  'unsized-images',
+  'unused-css-rules',
+  'unused-javascript',
+  'uses-http2',
+  'uses-long-cache-ttl',
+  'uses-optimized-images',
+  'uses-rel-preconnect',
+  'uses-responsive-images',
+  'uses-text-compression',
+];
+
+/** Issue #298: defects that stop a visitor completing a booking or a
+ *  purchase - the only kind a cart-abandonment or checkout-design figure
+ *  can speak to. Deliberately not every accessibility rule: a missing
+ *  image alternative is a real failure, and it is not what an abandoned
+ *  checkout measures. The transactional-page gate in themes.ts still
+ *  applies on top, so these also have to be observed on a page the scan
+ *  found a real transactional flow on. */
+const BOOKING_JOURNEY_RULES: readonly string[] = [
+  'aria-command-name',
+  'aria-input-field-name',
+  'aria-required-attr',
+  'aria-required-children',
+  'aria-required-parent',
+  'aria-toggle-field-name',
+  'autocomplete-valid',
+  'button-name',
+  'focus-order-mismatch',
+  'form-error-not-associated',
+  'form-field-multiple-labels',
+  'input-button-name',
+  'keyboard-trap',
+  'label-content-name-mismatch',
+  'nested-interactive',
+  'select-name',
+  'target-size',
+];
+
+/** Issue #298: how a page competes for a click in a results page - its
+ *  title and description snippet, and whether it can be indexed at all.
+ *  Carried over from item 1.1's original rule list on the two Pew
+ *  rows. */
+const SERP_APPEARANCE_RULES: readonly string[] = [
+  'canonical-conflicting',
+  'is-crawlable',
+  'jsonld-invalid',
+  'jsonld-missing',
+  'meta-description',
+  'meta-description-length',
+  'meta-description-missing',
+  'meta-title-length',
+  'meta-title-missing',
+  'noindex-on-public-page',
+];
+
+/** Issue #298: rich-result eligibility. A click-through case study about
+ *  structured data cannot speak to a broken internal link or a missing
+ *  canonical, which is what a real Villas Foch priority cited it on. */
+const RICH_RESULT_RULES: readonly string[] = [
+  'entity-data-incomplete',
+  'faq-content-without-schema',
+  'jsonld-invalid',
+  'jsonld-missing',
+  'structured-data',
+  'structured-data-entity-missing',
+  'structured-data-invalid',
+];
+
+const CATEGORY_WIDE: StatScope = { kind: 'category' };
+
 export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
   {
     id: 'deloitte-speed-conversion-retail-2020',
+    scope: { kind: 'rules', ruleIds: LOADING_SPEED_RULES },
     // B1: retagged from ['accessibility', 'seo'] - this stat is about
     // page speed and conversion, not accessibility or SEO. It was
     // originally tagged that way only because those were the two
@@ -81,6 +199,7 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
   },
   {
     id: 'deloitte-speed-conversion-travel-2020',
+    scope: { kind: 'rules', ruleIds: LOADING_SPEED_RULES },
     // B1: same retag as deloitte-speed-conversion-retail-2020 above.
     category: ['performance'],
     sector: 'hospitality',
@@ -96,6 +215,7 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
   },
   {
     id: 'deloitte-aov-retail-2020',
+    scope: { kind: 'rules', ruleIds: LOADING_SPEED_RULES },
     // B1: same retag as deloitte-speed-conversion-retail-2020 above.
     category: ['performance'],
     sector: 'general',
@@ -111,6 +231,7 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
   },
   {
     id: 'baymard-cart-abandonment-2025',
+    scope: { kind: 'rules', ruleIds: BOOKING_JOURNEY_RULES },
     category: ['accessibility', 'seo'],
     sector: 'general',
     confidence: 'established',
@@ -125,6 +246,7 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
   },
   {
     id: 'baymard-checkout-uplift-2025',
+    scope: { kind: 'rules', ruleIds: BOOKING_JOURNEY_RULES },
     category: ['accessibility', 'seo'],
     sector: 'general',
     confidence: 'established',
@@ -132,7 +254,7 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
     source: 'Baymard Institute',
     year: 2025,
     citation: bilingual(
-      "Une conception optimisée du tunnel de paiement peut augmenter les conversions jusqu'à 35,26 % sur un site e-commerce de grande taille moyen (Baymard Institute, 2025).",
+      'Une conception optimisée du tunnel de paiement peut augmenter les conversions de 35,26 % en moyenne sur les sites e-commerce de grande taille (Baymard Institute, 2025).',
       'Best-practice checkout design can lift conversions by up to 35.26% on the average large e-commerce site (Baymard Institute, 2025).',
     ),
     ratio: { kind: 'checkout-uplift', value: 0.3526 },
@@ -149,6 +271,7 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
   // behaviour here (report, don't fabricate a comparison).
   {
     id: 'pew-ai-overviews-ctr-2025',
+    scope: { kind: 'rules', ruleIds: SERP_APPEARANCE_RULES },
     category: ['seo', 'geo'],
     sector: 'general',
     confidence: 'established',
@@ -160,23 +283,10 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
       'Google users who encountered an AI summary clicked a traditional search result link in 8% of visits, versus nearly twice as often (15%) for those who did not (Pew Research Center, July 2025, based on 68,879 Google searches by 900 US adults).',
     ),
     ratio: { kind: 'ctr-with-ai-summary', value: 0.08 },
-    // item 1.1: this stat is about how a result competes for a click in a
-    // search results page - relevant to the SERP-appearance rule
-    // families (a page's title/description snippet, its rich-result
-    // eligibility), never to a legal-notice or registry defect that has
-    // nothing to do with how the page shows up in search. A real report
-    // attached it to "mentions légales manquantes" (a missing SIREN)
-    // purely because that theme happened to be the top-ranked 'seo'
-    // theme with no topical check at all.
-    eligibleRuleIds: [
-      'meta-title-length',
-      'meta-description-length',
-      'jsonld-invalid',
-      'jsonld-missing',
-    ],
   },
   {
     id: 'pew-ai-overviews-zero-click-2025',
+    scope: { kind: 'rules', ruleIds: SERP_APPEARANCE_RULES },
     category: ['seo', 'geo'],
     sector: 'general',
     confidence: 'established',
@@ -187,16 +297,10 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
       "La part des sessions se terminant sans aucun clic (« zero-click ») est passée à 26 % lorsqu'un résumé IA apparaissait, contre 16 % en son absence (Pew Research Center, juillet 2025).",
       "Sessions ending without any click ('zero-click') rose to 26% when an AI summary appeared, versus 16% when it did not (Pew Research Center, July 2025).",
     ),
-    // item 1.1, same reasoning as the CTR stat above.
-    eligibleRuleIds: [
-      'meta-title-length',
-      'meta-description-length',
-      'jsonld-invalid',
-      'jsonld-missing',
-    ],
   },
   {
     id: 'nestle-rich-results-ctr',
+    scope: { kind: 'rules', ruleIds: RICH_RESULT_RULES },
     category: ['seo'],
     sector: 'general',
     confidence: 'established',
@@ -209,6 +313,7 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
   },
   {
     id: 'rotten-tomatoes-rich-results-ctr',
+    scope: { kind: 'rules', ruleIds: RICH_RESULT_RULES },
     category: ['seo'],
     sector: 'general',
     confidence: 'established',
@@ -221,6 +326,7 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
   },
   {
     id: 'princeton-geo-visibility-2024',
+    scope: CATEGORY_WIDE,
     category: ['geo'],
     sector: 'general',
     confidence: 'emerging',
@@ -235,6 +341,7 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
   },
   {
     id: 'phocuswright-ai-trip-planning-2026',
+    scope: CATEGORY_WIDE,
     category: ['geo'],
     sector: 'hospitality',
     confidence: 'emerging',
@@ -251,6 +358,7 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
   // not 'established'.
   {
     id: 'accessable-avoidance-2023',
+    scope: CATEGORY_WIDE,
     category: ['accessibility'],
     sector: 'hospitality',
     confidence: 'emerging',
@@ -268,6 +376,7 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
   // hospitality.md entry 6 for why DREES's figure was not used instead).
   {
     id: 'dcms-holiday-participation-gap-2024',
+    scope: CATEGORY_WIDE,
     category: ['accessibility'],
     sector: 'hospitality',
     confidence: 'established',
@@ -285,6 +394,7 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
   // source document was deliberately dropped, not encoded here.
   {
     id: 'dge-accesmetrie-booking-rare-2019',
+    scope: CATEGORY_WIDE,
     category: ['accessibility'],
     sector: 'hospitality',
     confidence: 'emerging',
@@ -301,6 +411,7 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
   // hotel population -> 'established'.
   {
     id: 'teixeira-hotel-accessibility-portugal-2022',
+    scope: CATEGORY_WIDE,
     category: ['accessibility'],
     sector: 'hospitality',
     confidence: 'established',
@@ -318,6 +429,7 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
   // standing alone.
   {
     id: 'singh-hotel-accessibility-top100-2025',
+    scope: CATEGORY_WIDE,
     category: ['accessibility'],
     sector: 'hospitality',
     confidence: 'emerging',
@@ -337,6 +449,7 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
   // specific defect type.
   {
     id: 'siteminder-digital-experience-abandonment-2025',
+    scope: CATEGORY_WIDE,
     category: ['performance'],
     sector: 'hospitality',
     confidence: 'established',

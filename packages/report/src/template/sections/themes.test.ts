@@ -189,7 +189,10 @@ describe('B1: reference-stat citation eligibility and cross-document dedupe', ()
       loadSmallSiteFindings(),
       loadSmallSiteManifest(),
     ]);
-    const findingId = findings[0]!.findingId;
+    // Issue #298: a loading-speed finding, since a speed-to-conversion
+    // statistic is scoped to loading-speed rules - findings[0] is a
+    // layout-stability metric, which that statistic cannot speak to.
+    const findingId = findings.find((f) => f.ruleId === 'largest-contentful-paint')!.findingId;
     const performanceOnly = {
       ...analysis,
       themes: [
@@ -218,7 +221,7 @@ describe('B1: reference-stat citation eligibility and cross-document dedupe', ()
       loadSmallSiteFindings(),
       loadSmallSiteManifest(),
     ]);
-    const findingId = findings[0]!.findingId;
+    const findingId = findings.find((f) => f.ruleId === 'largest-contentful-paint')!.findingId;
     const twoPerformanceThemes = {
       ...analysis,
       themes: [
@@ -268,7 +271,10 @@ describe('B1: reference-stat citation eligibility and cross-document dedupe', ()
       loadSmallSiteFindings(),
       loadSmallSiteManifest(),
     ]);
-    const findingId = findings[0]!.findingId;
+    // Issue #298: a loading-speed finding, since a speed-to-conversion
+    // statistic is scoped to loading-speed rules - findings[0] is a
+    // layout-stability metric, which that statistic cannot speak to.
+    const findingId = findings.find((f) => f.ruleId === 'largest-contentful-paint')!.findingId;
     const performanceOnly = {
       ...analysis,
       themes: [
