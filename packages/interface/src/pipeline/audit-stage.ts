@@ -45,7 +45,10 @@ import {
   type AuditCoverageSummary,
 } from '@odysseus/core';
 import {
+  confirmedIdentityFromManualFields,
+  fillMissingProspectIdentity,
   getProspectHub,
+  getAuditManualFields,
   persistAudit,
   prefillAuditManualFields,
   replaceDetectedManualFields,
@@ -404,6 +407,27 @@ export async function runAuditStage(
         ? { raisonSociale: coverPrefill.raisonSociale }
         : {}),
     });
+
+    // Issue #289: a scan launched from the prospect page seeds the
+    // prospect record's still-missing identity fields from this audit:
+    // the checksum-validated SIREN the mentions-legales check extracted,
+    // plus any identity field the operator confirmed on a previous run of
+    // this audit. Fill-if-absent only (see fillMissingProspectIdentity):
+    // what the operator typed before the scan is never overwritten, and
+    // the audit's own unconfirmed name guesses stay audit-local until a
+    // human confirms them.
+    if (options.prospectId !== undefined) {
+      const manualFields = await getAuditManualFields(connection, artifacts.auditId);
+      await fillMissingProspectIdentity(
+        connection,
+        options.prospectId,
+        {
+          siren: artifacts.manifest.siteSignals?.siren,
+          ...confirmedIdentityFromManualFields(manualFields),
+        },
+        'scan',
+      );
+    }
 
     return {
       auditId: artifacts.auditId,

@@ -77,6 +77,7 @@ import {
   setOutreachProspectEmail,
   setPrimaryProspectWebsite,
   setProspectStatus,
+  updateProspect,
   withdrawProspectOutreach,
   type ProspectTodoRow,
 } from '@odysseus/store';
@@ -298,6 +299,22 @@ describe('prospect hub routes', () => {
     const deleted = await handle('/api/prospects/p-1', 'DELETE');
     expect(deleted.statusCode).toBe(200);
     expect(deleteProspect).toHaveBeenCalledWith(fakeConnection, 'p-1');
+  });
+
+  // Issue #289: an invalid patch (a SIREN failing the 9-digit checksum) is
+  // reported as a client error by the record PATCH route, not a 500.
+  it('answers 400 when the record patch is rejected by the store', async () => {
+    vi.mocked(updateProspect).mockRejectedValueOnce(
+      new Error('siren must be a valid 9-digit SIREN'),
+    );
+    const response = await handle('/api/prospects/p-1', 'PATCH', { siren: '732829321' });
+    expect(response.statusCode).toBe(400);
+    expect(response.body).toMatchObject({ error: 'siren must be a valid 9-digit SIREN' });
+
+    vi.mocked(updateProspect).mockResolvedValueOnce({ prospectId: 'p-1' } as never);
+    const valid = await handle('/api/prospects/p-1', 'PATCH', { siren: '732 829 320' });
+    expect(valid.statusCode).toBe(200);
+    expect(updateProspect).toHaveBeenCalledWith(fakeConnection, 'p-1', { siren: '732 829 320' });
   });
 
   it('routes website and email corrections through the explicit contact endpoints', async () => {

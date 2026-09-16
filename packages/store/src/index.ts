@@ -111,6 +111,7 @@ export {
   createProspectHub,
   deleteProspect,
   directoryEntryToProspectInput,
+  fillMissingProspectIdentity,
   getProspectHub,
   findProspectsByDomain,
   findProspectsByEmail,
@@ -128,6 +129,15 @@ export {
   updateProspectRecord,
   withdrawProspectOutreach,
 } from './prospect-hub.js';
+export {
+  confirmedIdentityFromManualFields,
+  DETECTED_IDENTITY_ORIGIN,
+  missingProspectIdentityFill,
+  normalizeSirenInput,
+  PROSPECT_IDENTITY_FIELDS,
+  withNormalizedSiren,
+} from './prospect-identity.js';
+export type { ProspectIdentityField, ProspectIdentityValues } from './prospect-identity.js';
 export {
   AUTOMATIC_PROGRESS_RANK,
   TERMINAL_PROSPECT_STATUSES,

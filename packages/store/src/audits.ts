@@ -16,7 +16,13 @@ import {
 import { createAuditModel, type AuditDocument } from './schemas/audit.schema.js';
 import { createJobModel } from './schemas/job.schema.js';
 import { createFindingModel, type FindingDocument } from './schemas/finding.schema.js';
-import { advanceProspectStatus, appendProspectEvent, getProspectHub } from './prospect-hub.js';
+import {
+  advanceProspectStatus,
+  appendProspectEvent,
+  fillMissingProspectIdentity,
+  getProspectHub,
+} from './prospect-hub.js';
+import { confirmedIdentityFromManualFields } from './prospect-identity.js';
 import {
   effectiveAuditScanIntent,
   isOutreachQualifyingAudit,
@@ -76,6 +82,20 @@ export async function attachAuditToProspect(
     if (isOutreachQualifyingAudit({ ...current, ...(scanIntent ? { scanIntent } : {}) })) {
       await advanceProspectStatus(connection, prospectId, 'audited');
     }
+    // Issue #289: the audit being attached may already know part of the
+    // prospect's identity - the scan's checksum-validated SIREN from the
+    // mentions légales, and any identity field the operator confirmed on
+    // the audit (plan 045). Fill only the fields the prospect is missing;
+    // a manual value is never overwritten here.
+    await fillMissingProspectIdentity(
+      connection,
+      prospectId,
+      {
+        siren: current.siteSignals?.siren,
+        ...confirmedIdentityFromManualFields(current.manualFields),
+      },
+      actor,
+    );
   }
   return { ...current, ...(prospectId === null ? {} : { prospectId }) };
 }

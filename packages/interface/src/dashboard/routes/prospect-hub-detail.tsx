@@ -22,6 +22,12 @@ import {
   type ContactRemoval,
   type ProspectStakeholder,
 } from './prospect-contact-model';
+import {
+  identityOriginNotes,
+  sirenDraftError,
+  type ProspectIdentityValues,
+} from './prospect-identity-model';
+import { normalizeSiren } from './audit-detail-model';
 import { formatDateTime } from '../lib/format';
 
 interface ProspectEvent {
@@ -105,6 +111,9 @@ interface ProspectHubDetail extends ProspectHubRow {
   phone?: string;
   siren?: string;
   siret?: string;
+  /** Issue #289: prospect-level identity, editable before any scan. */
+  tradingName?: string;
+  legalName?: string;
   notes?: string;
   outreachLanguage?: 'fr' | 'en';
   stakeholders?: ProspectStakeholder[];
@@ -173,7 +182,17 @@ export function ProspectHubDetailPage(): JSX.Element {
   const [editedFields, setEditedFields] = useState<
     Partial<
       Record<
-        'name' | 'sector' | 'address' | 'postcode' | 'commune' | 'department' | 'phone' | 'notes',
+        | 'name'
+        | 'sector'
+        | 'address'
+        | 'postcode'
+        | 'commune'
+        | 'department'
+        | 'phone'
+        | 'siren'
+        | 'tradingName'
+        | 'legalName'
+        | 'notes',
         string
       >
     >
@@ -376,9 +395,35 @@ export function ProspectHubDetailPage(): JSX.Element {
   const fieldValue = (key: keyof typeof editedFields): string =>
     editedFields[key] ?? String(prospect[key] ?? '');
 
+  // Issue #289: the stored identity the summary and edit form reflect,
+  // whatever its origin (operator, directory, or a scan's fill).
+  const identityValues: ProspectIdentityValues = {
+    siren: prospect.siren,
+    tradingName: prospect.tradingName,
+    legalName: prospect.legalName,
+  };
+  // A draft SIREN blocks the save until it passes the checksum, exactly
+  // like the new-scan page's field; the server re-validates on PATCH.
+  const sirenError =
+    editedFields.siren !== undefined
+      ? sirenDraftError(editedFields.siren, copy.sirenInvalidError)
+      : null;
+  const identityNotes = identityOriginNotes(
+    identityValues,
+    prospect.fieldOrigins,
+    copy,
+    strings.common.vocabularyFallback,
+  );
+
   const saveDetails = async (): Promise<void> => {
+    if (sirenError !== null) return;
     const patch = Object.fromEntries(
-      Object.entries(editedFields).map(([key, value]) => [key, value?.trim() || undefined]),
+      Object.entries(editedFields).map(([key, value]) => [
+        key,
+        key === 'siren'
+          ? normalizeSiren(value?.trim() ?? '') || undefined
+          : value?.trim() || undefined,
+      ]),
     );
     if (Object.keys(patch).length === 0) return;
     setSaving(true);
@@ -739,6 +784,12 @@ export function ProspectHubDetailPage(): JSX.Element {
                 copy.notProvided
               }
             />
+            <SummaryField label={copy.siren} value={prospect.siren || copy.notProvided} />
+            <SummaryField
+              label={copy.tradingName}
+              value={prospect.tradingName || copy.notProvided}
+            />
+            <SummaryField label={copy.legalName} value={prospect.legalName || copy.notProvided} />
             <div className="sm:col-span-2">
               <dt className="text-xs text-ink-muted">{copy.site}</dt>
               <dd className="mt-1">
@@ -797,6 +848,8 @@ export function ProspectHubDetailPage(): JSX.Element {
                     ['commune', copy.commune],
                     ['department', copy.department],
                     ['phone', copy.phone],
+                    ['tradingName', copy.tradingName],
+                    ['legalName', copy.legalName],
                   ] as const
                 ).map(([key, title]) => (
                   <label key={key} className="grid gap-1">
@@ -809,6 +862,22 @@ export function ProspectHubDetailPage(): JSX.Element {
                     />
                   </label>
                 ))}
+                <label className="grid gap-1">
+                  <span className="text-xs text-ink-muted">{copy.siren}</span>
+                  <Input
+                    value={fieldValue('siren')}
+                    inputMode="numeric"
+                    placeholder="123 456 789"
+                    onChange={(event) =>
+                      setEditedFields((current) => ({ ...current, siren: event.target.value }))
+                    }
+                  />
+                  {sirenError !== null ? (
+                    <p className="text-xs text-danger" role="alert">
+                      {sirenError}
+                    </p>
+                  ) : null}
+                </label>
                 <label className="grid gap-1 md:col-span-2">
                   <span className="text-xs text-ink-muted">{copy.notes}</span>
                   <Input
@@ -819,11 +888,16 @@ export function ProspectHubDetailPage(): JSX.Element {
                   />
                 </label>
               </div>
+              {identityNotes.length > 0 ? (
+                <p className="text-xs text-ink-muted">
+                  {identityNotes.map(({ field, note }) => `${copy[field]} — ${note}`).join(' · ')}
+                </p>
+              ) : null}
               <div className="flex justify-end">
                 <Button
                   variant="secondary"
                   isLoading={saving}
-                  disabled={Object.keys(editedFields).length === 0}
+                  disabled={Object.keys(editedFields).length === 0 || sirenError !== null}
                   onClick={() => void saveDetails()}
                 >
                   {copy.saveDetails}

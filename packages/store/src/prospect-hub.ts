@@ -29,6 +29,13 @@ import { deleteAuditCascade, type AuditCascadeCounts } from './delete-audit.js';
 import { addSuppressionEntry } from './suppression.js';
 import { loadProspectWork, type ProspectTodoRow } from './prospect-work.js';
 import { decideAutomaticStatus } from './prospect-status-policy.js';
+import {
+  DETECTED_IDENTITY_ORIGIN,
+  missingProspectIdentityFill,
+  withNormalizedSiren,
+  type ProspectIdentityField,
+  type ProspectIdentityValues,
+} from './prospect-identity.js';
 
 export interface NewProspectHubInput {
   sector: string;
@@ -42,6 +49,8 @@ export interface NewProspectHubInput {
   emails?: Prospect['emails'] | undefined;
   siren?: string | undefined;
   siret?: string | undefined;
+  tradingName?: string | undefined;
+  legalName?: string | undefined;
   notes?: string | undefined;
   status?: ProspectStatus | undefined;
   hotel?: Prospect['hotel'] | undefined;
@@ -185,9 +194,10 @@ function escapeRegex(value: string): string {
 
 export async function createProspectHub(
   connection: Connection,
-  input: NewProspectHubInput,
+  rawInput: NewProspectHubInput,
   actor = 'operator',
 ): Promise<ProspectHubDocument> {
+  const input = withNormalizedSiren(rawInput);
   const now = new Date();
   const websites = (input.websites ?? []).map((website) => {
     const resolution = normalizeDeclaredWebsite(website.url);
@@ -212,6 +222,8 @@ export async function createProspectHub(
     emails: input.emails ?? [],
     siren: input.siren,
     siret: input.siret,
+    tradingName: input.tradingName,
+    legalName: input.legalName,
     notes: input.notes,
     status: input.status ?? 'new',
     hotel: input.hotel,
@@ -324,17 +336,30 @@ export async function listProspectTodo(connection: Connection): Promise<Prospect
     .sort((left, right) => Date.parse(right.since) - Date.parse(left.since));
 }
 
+export interface UpdateProspectOptions {
+  /** Per-field overrides of the default 'operator' origin marking, used
+   *  by fillMissingProspectIdentity to stamp detected values as
+   *  'site-discovery' (issue #289). */
+  fieldOrigins?: Prospect['fieldOrigins'];
+}
+
 export async function updateProspect(
   connection: Connection,
   prospectId: string,
-  patch: Partial<Omit<Prospect, 'prospectId' | 'createdAt' | 'updatedAt' | 'lastActivityAt'>>,
+  rawPatch: Partial<Omit<Prospect, 'prospectId' | 'createdAt' | 'updatedAt' | 'lastActivityAt'>>,
   actor = 'operator',
+  options: UpdateProspectOptions = {},
 ): Promise<ProspectHubDocument | null> {
   const Model = createProspectHubModel(connection);
   const current = await Model.findOne({ prospectId })
     .select({ _id: 0, __v: 0 })
     .lean<ProspectHubDocument>();
   if (!current) return null;
+  // Issue #289: a SIREN present in the patch is normalized (printed
+  // spacing, or a full SIRET) and checksum-validated before it can reach
+  // the stored record; an invalid one refuses the whole save. An absent
+  // one (clearing the field) passes through untouched.
+  const patch = withNormalizedSiren(rawPatch);
   const normalizedPatch =
     patch.websites === undefined
       ? patch
@@ -361,8 +386,12 @@ export async function updateProspect(
   for (const key of Object.keys(patch)) {
     if (key !== 'fieldOrigins') editedOrigins[key] = 'operator';
   }
-  if (Object.keys(editedOrigins).length > 0) {
-    next.fieldOrigins = { ...current.fieldOrigins, ...editedOrigins };
+  if (Object.keys(editedOrigins).length > 0 || options.fieldOrigins !== undefined) {
+    next.fieldOrigins = {
+      ...current.fieldOrigins,
+      ...editedOrigins,
+      ...options.fieldOrigins,
+    };
   }
   // Mongoose may add its version key to the replacement object while it is
   // persisted. Keep the service return value in the strict domain shape that
@@ -804,6 +833,35 @@ export async function recordProspectOutcome(
 }
 
 export const updateProspectRecord = updateProspect;
+
+/**
+ * Issue #289: fill the prospect's identity fields (SIREN, trading name,
+ * legal name) that nobody has set yet from scan-detected candidates. An
+ * existing value - manual or previously detected - is never replaced
+ * here; replacement is always an explicit operator edit through
+ * updateProspect. Every field actually written is stamped 'site-discovery'
+ * in fieldOrigins, so manual vs detected stays readable, and a 'field-
+ * edited' event records the change. Writes nothing and returns the
+ * unchanged prospect when there is nothing to fill. Detectors feed this
+ * seam (see prospect-identity.ts); no network lookups live here.
+ */
+export async function fillMissingProspectIdentity(
+  connection: Connection,
+  prospectId: string,
+  detected: ProspectIdentityValues,
+  actor = 'scan',
+): Promise<ProspectHubDocument | null> {
+  const current = await getProspectHub(connection, prospectId);
+  if (current === null) return null;
+  const fill = missingProspectIdentityFill(current, detected);
+  const fields = Object.keys(fill) as ProspectIdentityField[];
+  if (fields.length === 0) return current;
+  return updateProspect(connection, prospectId, fill, actor, {
+    fieldOrigins: Object.fromEntries(
+      fields.map((field) => [field, DETECTED_IDENTITY_ORIGIN]),
+    ) as Prospect['fieldOrigins'],
+  });
+}
 
 export async function upsertDirectoryEntries(
   connection: Connection,

@@ -2,6 +2,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { departmentFromPostcodeForTest } from './prospect-hub.js';
 import {
   createProspectHub,
+  fillMissingProspectIdentity,
   getProspectHub,
   setProspectStatus,
   updateProspect,
@@ -28,6 +29,88 @@ describe('prospect hub pure helpers', () => {
     expect(departmentFromPostcodeForTest('92100')).toBe('92');
     expect(departmentFromPostcodeForTest('20000')).toBe('2A');
     expect(departmentFromPostcodeForTest('20200')).toBe('2B');
+  });
+});
+
+describe.skipIf(!mongoAvailable)('prospect identity fields (issue #289)', () => {
+  it('creates a prospect with identity, preserves it on reload, and marks the origin operator on edit', async () => {
+    const created = await createProspectHub(connection!, {
+      sector: 'hotel',
+      name: 'Identity Fixture',
+      siren: '732 829 320',
+      tradingName: 'Hôtel du Midi',
+      legalName: 'SARL Hôtel du Midi',
+    });
+    expect(created.siren).toBe('732829320');
+    expect(created.tradingName).toBe('Hôtel du Midi');
+    expect(created.legalName).toBe('SARL Hôtel du Midi');
+
+    const reloaded = await getProspectHub(connection!, created.prospectId);
+    expect(reloaded?.siren).toBe('732829320');
+    expect(reloaded?.tradingName).toBe('Hôtel du Midi');
+    expect(reloaded?.legalName).toBe('SARL Hôtel du Midi');
+
+    await updateProspect(connection!, created.prospectId, { tradingName: 'Le Midi' });
+    const afterEdit = await getProspectHub(connection!, created.prospectId);
+    expect(afterEdit?.tradingName).toBe('Le Midi');
+    expect(afterEdit?.fieldOrigins['tradingName']).toBe('operator');
+  });
+
+  it('normalizes a spaced SIREN on update and refuses an invalid one', async () => {
+    const created = await createProspectHub(connection!, {
+      sector: 'hotel',
+      name: 'Siren Validation Fixture',
+    });
+    const updated = await updateProspect(connection!, created.prospectId, {
+      siren: '732 829 320',
+    });
+    expect(updated?.siren).toBe('732829320');
+
+    await expect(
+      updateProspect(connection!, created.prospectId, { siren: '732829321' }),
+    ).rejects.toThrow('siren must be a valid 9-digit SIREN');
+    // The refused save left the stored value untouched.
+    expect((await getProspectHub(connection!, created.prospectId))?.siren).toBe('732829320');
+  });
+
+  it('fills only missing identity fields, stamping them site-discovery', async () => {
+    const created = await createProspectHub(connection!, {
+      sector: 'hotel',
+      name: 'Fill Fixture',
+      tradingName: 'Typed by hand',
+    });
+    await updateProspect(connection!, created.prospectId, { tradingName: 'Typed by hand' });
+
+    const filled = await fillMissingProspectIdentity(connection!, created.prospectId, {
+      siren: '732829320',
+      tradingName: 'Scan guess, ignored',
+      legalName: 'SARL du Fill',
+    });
+    expect(filled?.siren).toBe('732829320');
+    expect(filled?.tradingName).toBe('Typed by hand');
+    expect(filled?.legalName).toBe('SARL du Fill');
+    expect(filled?.fieldOrigins['siren']).toBe('site-discovery');
+    expect(filled?.fieldOrigins['tradingName']).toBe('operator');
+    expect(filled?.fieldOrigins['legalName']).toBe('site-discovery');
+
+    // Nothing left to fill: a no-op that writes nothing new.
+    const again = await fillMissingProspectIdentity(connection!, created.prospectId, {
+      siren: '951266360',
+    });
+    expect(again?.siren).toBe('732829320');
+  });
+
+  it('keeps prospects without identity fields loadable and editable (backward compatibility)', async () => {
+    const created = await createProspectHub(connection!, {
+      sector: 'hotel',
+      name: 'Legacy Fixture',
+    });
+    expect(created.siren).toBeUndefined();
+    expect(created.tradingName).toBeUndefined();
+    expect(created.legalName).toBeUndefined();
+    expect((await getProspectHub(connection!, created.prospectId))?.tradingName).toBeUndefined();
+    const updated = await updateProspect(connection!, created.prospectId, { notes: 'Still works' });
+    expect(updated?.notes).toBe('Still works');
   });
 });
 

@@ -75,6 +75,14 @@ export const prospectSchema = z
     stakeholders: z.array(stakeholderSchema).max(50).optional(),
     siren: z.string().optional(),
     siret: z.string().optional(),
+    /** Issue #289: prospect-level company identity, independent of any
+     *  scan. tradingName is the nom commercial, legalName the dénomination
+     *  sociale. Optional and absent on prospects created before the fields
+     *  existed; the SIREN itself is normalized and checksum-validated by
+     *  the store service on save, not here, so legacy rows with a bad
+     *  stored value keep loading and keep being editable. */
+    tradingName: z.string().trim().min(1).max(200).optional(),
+    legalName: z.string().trim().min(1).max(200).optional(),
     notes: z.string().optional(),
     /** Issue #275: the language client-facing outreach is written in. Absent
      *  means French, the default for French prospects; never the dashboard's

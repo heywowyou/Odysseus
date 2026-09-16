@@ -798,6 +798,12 @@ export interface DashboardStrings {
       department: string;
       phone: string;
       notes: string;
+      /** Issue #289: prospect-level company identity, shown in the summary
+       *  and editable in the record before any scan exists. */
+      siren: string;
+      tradingName: string;
+      legalName: string;
+      sirenInvalidError: string;
       saveDetails: string;
       preview: string;
       firstEmail: string;

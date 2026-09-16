@@ -66,6 +66,11 @@ const prospectSchema = new Schema<ProspectHubDocument>(
     stakeholders: { type: [stakeholderSchema], default: undefined },
     siren: { type: String },
     siret: { type: String },
+    // Issue #289: prospect-level identity (nom commercial, dénomination
+    // sociale), independent of any scan. Absent on prospects created
+    // before the fields existed - no migration needed for optional keys.
+    tradingName: { type: String },
+    legalName: { type: String },
     notes: { type: String },
     outreachLanguage: { type: String, enum: ['fr', 'en'] },
     status: {

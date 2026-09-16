@@ -512,9 +512,15 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
       sendError(res, 400, 'use the status endpoint to change status');
       return;
     }
-    const prospect = await updateProspect(connection, params['prospectId']!, body as never);
-    if (prospect === null) sendError(res, 404, 'prospect not found');
-    else sendJson(res, 200, prospect);
+    try {
+      const prospect = await updateProspect(connection, params['prospectId']!, body as never);
+      if (prospect === null) sendError(res, 404, 'prospect not found');
+      else sendJson(res, 200, prospect);
+    } catch (error) {
+      // Issue #289: an invalid patch (a SIREN that fails the 9-digit
+      // checksum, for instance) is a client error, not a server one.
+      sendError(res, 400, error instanceof Error ? error.message : 'invalid prospect patch');
+    }
   });
 
   // Issues #270/#271: explicit contact corrections, so the server enforces a
