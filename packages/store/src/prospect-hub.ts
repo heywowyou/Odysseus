@@ -766,10 +766,15 @@ export async function listDirectory(
       prospect.archivedAt === undefined ? 'active' : 'archived',
     ]),
   );
-  const rows = entries.map((entry) => {
-    const prospectState =
-      entry.prospectId === undefined ? undefined : stateById.get(entry.prospectId);
-    return prospectState === undefined ? entry : { ...entry, prospectState };
+  const rows = entries.map((entry): DirectoryListRow => {
+    if (entry.prospectId === undefined) return entry;
+    const prospectState = stateById.get(entry.prospectId);
+    if (prospectState !== undefined) return { ...entry, prospectState };
+    // A link to a prospect that does not exist (an add interrupted between
+    // its claim and the insert) is shown as unlinked, so the directory
+    // offers Add, which repairs it, instead of an Open that 404s.
+    const { prospectId: _dangling, ...unlinked } = entry;
+    return unlinked;
   });
   return { rows, page, pageSize, total };
 }
@@ -790,9 +795,11 @@ export async function addDirectoryEntriesToProspects(
   connection: Connection,
   directoryIds: readonly string[],
   actor = 'operator',
+  now: Date = new Date(),
 ): Promise<ProspectHubDocument[]> {
   if (directoryIds.length === 0) return [];
   const Directory = createDirectoryEntryModel(connection);
+  await releaseDanglingDirectoryClaims(connection, directoryIds, now);
   const entries = await Directory.find({
     directoryId: { $in: directoryIds },
     prospectId: { $exists: false },
@@ -850,15 +857,61 @@ export async function addDirectoryEntriesToProspects(
       );
       created.push(prospect);
     } catch (error) {
-      // Release the claim so the entry is not left pointing at nothing.
-      await Directory.updateOne(
-        { directoryId: entry.directoryId, prospectId },
-        { $unset: { prospectId: '' }, $set: { updatedAt: new Date() } },
-      );
+      // Release the claim only when the prospect was never inserted, so the
+      // entry is not left pointing at nothing. When the insert landed and a
+      // later write (its creation event) failed, the prospect exists: keep
+      // the link, or the next Add would create a second prospect.
+      if ((await getProspectHub(connection, prospectId)) === null) {
+        await Directory.updateOne(
+          { directoryId: entry.directoryId, prospectId },
+          { $unset: { prospectId: '' }, $set: { updatedAt: new Date() } },
+        );
+      }
       throw error;
     }
   }
   return created;
+}
+
+/** How old a claim on a directory entry must be before a link to a missing
+ *  prospect counts as abandoned. An add in flight holds its claim for
+ *  milliseconds before inserting; anything this old was interrupted. */
+export const DANGLING_DIRECTORY_CLAIM_AGE_MS = 5 * 60 * 1000;
+
+/** Unlinks requested entries whose prospectId names no prospect, left by an
+ *  add that crashed between its claim and the insert, so Add can take them
+ *  again. Recent claims are left alone: they may belong to an add that is
+ *  about to insert. The unlink is conditional on the same stale link. */
+async function releaseDanglingDirectoryClaims(
+  connection: Connection,
+  directoryIds: readonly string[],
+  now: Date,
+): Promise<void> {
+  const Directory = createDirectoryEntryModel(connection);
+  const staleBefore = new Date(now.getTime() - DANGLING_DIRECTORY_CLAIM_AGE_MS);
+  const linked = await Directory.find({
+    directoryId: { $in: directoryIds },
+    prospectId: { $exists: true },
+    updatedAt: { $lt: staleBefore },
+  })
+    .select({ directoryId: 1, prospectId: 1, _id: 0 })
+    .lean<{ directoryId: string; prospectId: string }[]>();
+  if (linked.length === 0) return;
+  const existing = new Set(
+    (
+      await createProspectHubModel(connection)
+        .find({ prospectId: { $in: linked.map((entry) => entry.prospectId) } })
+        .select({ prospectId: 1, _id: 0 })
+        .lean<{ prospectId: string }[]>()
+    ).map((prospect) => prospect.prospectId),
+  );
+  for (const entry of linked) {
+    if (existing.has(entry.prospectId)) continue;
+    await Directory.updateOne(
+      { directoryId: entry.directoryId, prospectId: entry.prospectId },
+      { $unset: { prospectId: '' }, $set: { updatedAt: now } },
+    );
+  }
 }
 
 export interface ProspectCascadeCounts extends AuditCascadeCounts {
