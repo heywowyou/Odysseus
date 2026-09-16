@@ -4,8 +4,11 @@ import {
   archiveProspect,
   createProspectHub,
   getProspectHub,
+  listProspectEvents,
+  restoreProspect,
   updateProspect,
 } from './prospect-hub.js';
+import { createProspectEventModel } from './schemas/prospect-event.schema.js';
 import { createProspectHubModel, type ProspectHubDocument } from './schemas/prospect-hub.schema.js';
 import { probeMongoAvailability, scopedMongoTestUri } from './test-support.js';
 
@@ -90,5 +93,49 @@ describe.skipIf(!available)('prospect record integrity', () => {
     const stored = await getProspectHub(connection!, prospect.prospectId);
     expect(stored).not.toHaveProperty('notes');
     expect(stored?.phone).toBe('0102030405');
+  });
+
+  it('records a lifecycle event lost to a failed write when the operator retries', async () => {
+    const prospect = await newProspect('Lost Archive Event');
+    const Events = createProspectEventModel(connection!);
+    const originalCreate = Events.create;
+    Events.create = (async () => {
+      throw new Error('event write failed');
+    }) as never;
+    try {
+      await expect(archiveProspect(connection!, prospect.prospectId)).rejects.toThrow(
+        'event write failed',
+      );
+    } finally {
+      Events.create = originalCreate;
+    }
+
+    const retry = await archiveProspect(connection!, prospect.prospectId);
+    expect(retry?.changed).toBe(false);
+    const again = await archiveProspect(connection!, prospect.prospectId);
+    expect(again?.changed).toBe(false);
+    const types = (await listProspectEvents(connection!, prospect.prospectId)).map((e) => e.type);
+    expect(types.filter((type) => type === 'prospect-archived')).toHaveLength(1);
+
+    Events.create = (async () => {
+      throw new Error('event write failed');
+    }) as never;
+    try {
+      await expect(restoreProspect(connection!, prospect.prospectId)).rejects.toThrow();
+    } finally {
+      Events.create = originalCreate;
+    }
+    await restoreProspect(connection!, prospect.prospectId);
+    await restoreProspect(connection!, prospect.prospectId);
+    const after = (await listProspectEvents(connection!, prospect.prospectId)).map((e) => e.type);
+    expect(after.filter((type) => type === 'prospect-restored')).toHaveLength(1);
+    expect(after[0]).toBe('prospect-restored');
+  });
+
+  it('records no lifecycle event when restoring a prospect that was never archived', async () => {
+    const prospect = await newProspect('Never Archived');
+    await restoreProspect(connection!, prospect.prospectId);
+    const types = (await listProspectEvents(connection!, prospect.prospectId)).map((e) => e.type);
+    expect(types).not.toContain('prospect-restored');
   });
 });

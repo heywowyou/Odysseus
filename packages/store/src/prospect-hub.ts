@@ -532,10 +532,41 @@ export async function archiveProspect(
     .lean<ProspectHubDocument>();
   if (archived === null) {
     const current = await getProspectHub(connection, prospectId);
-    return current === null ? null : { prospect: current, changed: false };
+    if (current === null) return null;
+    if (current.archivedAt !== undefined) {
+      await ensureLatestLifecycleEvent(connection, prospectId, 'prospect-archived', actor);
+    }
+    return { prospect: current, changed: false };
   }
   await recordEvent(connection, event(prospectId, 'prospect-archived', {}, actor));
   return { prospect: archived, changed: true };
+}
+
+type LifecycleEventType = 'prospect-archived' | 'prospect-restored';
+
+/**
+ * State and event are two writes without a shared transaction, so an event
+ * write can fail after the state change landed. The operator's retry then
+ * finds nothing to change; this is where it repairs the history instead of
+ * returning with the entry still missing. The newest lifecycle event must
+ * agree with the state: an archived prospect's is an archive, and a restored
+ * one's is a restore. A prospect never archived has no lifecycle events and
+ * needs none.
+ */
+async function ensureLatestLifecycleEvent(
+  connection: Connection,
+  prospectId: string,
+  expected: LifecycleEventType,
+  actor: string,
+): Promise<void> {
+  const latest = await createProspectEventModel(connection)
+    .findOne({ prospectId, type: { $in: ['prospect-archived', 'prospect-restored'] } })
+    .sort({ at: -1 })
+    .select({ type: 1, _id: 0 })
+    .lean<{ type: LifecycleEventType }>();
+  if (latest?.type === expected) return;
+  if (latest === null && expected === 'prospect-restored') return;
+  await recordEvent(connection, event(prospectId, expected, { repaired: true }, actor));
 }
 
 /** Returns an archived prospect to active work on the same prospectId, with
@@ -555,7 +586,11 @@ export async function restoreProspect(
     .lean<ProspectHubDocument>();
   if (restored === null) {
     const current = await getProspectHub(connection, prospectId);
-    return current === null ? null : { prospect: current, changed: false };
+    if (current === null) return null;
+    if (current.archivedAt === undefined) {
+      await ensureLatestLifecycleEvent(connection, prospectId, 'prospect-restored', actor);
+    }
+    return { prospect: current, changed: false };
   }
   await recordEvent(connection, event(prospectId, 'prospect-restored', {}, actor));
   return { prospect: restored, changed: true };
