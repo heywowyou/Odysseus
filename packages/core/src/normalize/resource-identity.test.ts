@@ -134,7 +134,7 @@ describe('site-wide collapse of resource-identified Lighthouse audits', () => {
 
   it('leaves an element-scoped audit alone: distinct selectors stay distinct findings', () => {
     // dom-size is not in the allowlist, so it keeps selector identity. Two
-    // pages rather than one, because aggregateSamePageOccurrences (trade-off
+    // pages rather than one, because aggregateSharedScopeOccurrences (trade-off
     // 3's second pass) deliberately collapses distinct selectors confined to
     // a single page - that is pre-existing behaviour this change must not be
     // credited or blamed for, so the assertion is set up to avoid it.

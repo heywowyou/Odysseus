@@ -76,17 +76,28 @@ cap instead; that decision is the operator's.
    `computeDedupeKey` (`source|ruleId|selector`) collapses the _same
    selector across pages_, so a footer contrast failure appearing on
    eleven pages becomes one finding with a count.
-   `aggregateSamePageOccurrences` collapses _different selectors within a
-   single page_ for the same source and rule, because axe emits distinct
-   positional selectors for rules like `link-in-text-block`, and sixty
-   nine instances of one defect on one page otherwise become sixty nine
-   separate findings each with `occurrences: 1`.
+   `aggregateSharedScopeOccurrences` collapses _different selectors
+   covering the same pages_ for the same source and rule, because axe
+   emits distinct positional selectors for rules like `link-in-text-block`,
+   and sixty nine instances of one defect on one page otherwise become
+   sixty nine separate findings each with `occurrences: 1`.
 
-   Aggregation runs only on fine groups confined to exactly one page.
-   Multi-page groups pass through untouched with their original
-   `dedupeKey`. Do not merge the two passes: they use different keys for
-   different reasons, and cross-run identity for the monitoring tier is
-   `dedupeKey`, so it matters which pass produced it.
+   Aggregation runs on fine groups covering an identical set of canonical
+   pages. Groups covering different scopes pass through untouched with
+   their original `dedupeKey`. Do not merge the two passes: they use
+   different keys for different reasons, and cross-run identity for the
+   monitoring tier is `dedupeKey`, so it matters which pass produced it.
+
+   Amended 2026-09-16 (issue #292). The second pass compared "exactly one
+   page" until then, which was an accident of the first case it was
+   written for. A 24-page Villas Foch audit reported 232 findings and 176
+   critical ones because every gallery image sat on all 24 pages -
+   identical rule, identical remediation, identical scope, and the
+   one-page condition let none of them meet, so the annex spent about 30
+   pages printing them. The scope is now compared at any size. This
+   widens an accepted trade-off rather than making a new one: per-element
+   detail beyond the stored element sample was already dropped by this
+   pass whenever the scope happened to be a single page.
 
    Selector normalization was considered and rejected. Stripping
    `:nth-child()` would merge genuinely distinct elements, and a real
@@ -954,8 +965,8 @@ cap instead; that decision is the operator's.
     to tell one defect on one template from five separate defects.
     `packages/core/src/normalize/translation-clusters.ts` builds clusters
     with a disjoint set over each page's `hreflangLinks`, and
-    `aggregateSamePageOccurrences` (trade-off 3's second pass) then takes
-    a `canonicalPageUrl` mapper so the existing same-page collapse does
+    `aggregateSharedScopeOccurrences` (trade-off 3's second pass) then
+    takes a `canonicalPageUrl` mapper so the existing scope collapse does
     the actual work. No selector rewriting, no third dedupe pass, no
     change to `computeDedupeKey`: trade-off 3's two passes stay two
     passes, and cross-run identity for the monitoring tier is unaffected.

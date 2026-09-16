@@ -174,20 +174,16 @@ describe('D4b: target-size collapses per control group', () => {
     expect(findings).toHaveLength(2);
   });
 
-  it('never merges on a missing container', () => {
+  it('never merges on a missing container across different scopes', () => {
     // axe sometimes emits a bare selector with no ancestor path. Collapsing
     // those onto a shared empty identity would merge unrelated controls, the
     // same "never merge on absent data" rule the Lighthouse resource path
-    // follows.
+    // follows. Two bare controls seen on two different pages are two
+    // findings: neither the element's own markup nor its scope says they
+    // are the same thing.
     const findings = normalize([
-      axePage('https://example.com/', [
-        { selector: 'span[aria-label="Go to slide 18"]' },
-        { selector: 'span[aria-label="Go to slide 19"]' },
-      ]),
-      axePage('https://example.com/about', [
-        { selector: 'span[aria-label="Go to slide 18"]' },
-        { selector: 'span[aria-label="Go to slide 19"]' },
-      ]),
+      axePage('https://example.com/', [{ selector: 'span[aria-label="Go to slide 18"]' }]),
+      axePage('https://example.com/about', [{ selector: 'span[aria-label="Go to slide 19"]' }]),
     ]).filter((f) => f.ruleId === 'target-size');
 
     expect(findings).toHaveLength(2);
@@ -200,5 +196,103 @@ describe('D4b: target-size collapses per control group', () => {
     ]).filter((f) => f.ruleId === 'link-name');
 
     expect(findings).toHaveLength(2);
+  });
+});
+
+function imagePage(
+  url: string,
+  images: Array<{ selector: string; src: string }>,
+): NormalizePageInput {
+  return {
+    url,
+    axe: {
+      violations: [
+        {
+          id: 'image-alt',
+          impact: 'critical',
+          tags: ['wcag2a', 'wcag111'],
+          help: 'Images must have alternate text',
+          description: 'Ensures <img> elements have alternate text',
+          nodes: images.map((image) => ({
+            target: [image.selector],
+            html: `<img src="${image.src}">`,
+            impact: 'critical',
+          })),
+        },
+      ],
+    },
+  } as unknown as NormalizePageInput;
+}
+
+/**
+ * Issue #292. A 24-page Villas Foch audit reported 232 findings, 176 of them
+ * critical, because a gallery present on every page produced one image-alt
+ * finding per image. The annex then spent about 30 pages on the near-identical
+ * rows, 168 of which ended by pointing at the first one's page list - the
+ * report's own evidence that they all covered the same scope.
+ */
+describe('findings covering the same scope for one rule are one problem (issue #292)', () => {
+  const gallery = [
+    { selector: '#gallery > img:nth-child(1)', src: '/img/one.jpg' },
+    { selector: '#gallery > img:nth-child(2)', src: '/img/two.jpg' },
+    { selector: '#gallery > img:nth-child(3)', src: '/img/three.jpg' },
+  ];
+
+  it('collapses one rule repeated over the same pages, and counts every occurrence', () => {
+    const findings = normalize([
+      imagePage('https://example.com/', gallery),
+      imagePage('https://example.com/about', gallery),
+      imagePage('https://example.com/contact', gallery),
+    ]).filter((f) => f.ruleId === 'image-alt');
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.occurrences).toBe(9);
+    expect(findings[0]?.pageUrls).toHaveLength(3);
+  });
+
+  it('names the image files, since one row now stands for every image', () => {
+    const findings = normalize([
+      imagePage('https://example.com/', gallery),
+      imagePage('https://example.com/about', gallery),
+    ]).filter((f) => f.ruleId === 'image-alt');
+
+    expect(findings[0]?.rawEvidence).toMatchObject({
+      resourceUrls: [
+        'https://example.com/img/one.jpg',
+        'https://example.com/img/three.jpg',
+        'https://example.com/img/two.jpg',
+      ],
+    });
+  });
+
+  it('keeps a different scope apart, so a one-page defect is not folded into a site-wide one', () => {
+    const findings = normalize([
+      imagePage('https://example.com/', [
+        ...gallery,
+        { selector: '#hero > img', src: '/img/hero.jpg' },
+      ]),
+      imagePage('https://example.com/about', gallery),
+    ]).filter((f) => f.ruleId === 'image-alt');
+
+    expect(findings).toHaveLength(2);
+    expect(findings.map((f) => f.pageUrls.length).sort()).toEqual([1, 2]);
+  });
+
+  it('collapses one rule split per control, where each control sits on the same pages', () => {
+    // Haaitza: target-size reported thirty times, one per menu item
+    // (.menu-item-8267 > a, .menu-item-7780 > a...), each on the same two
+    // pages. Thirty distinct containers, one menu, one size rule to apply.
+    const menu = [
+      { selector: '.menu-item-8267 > a' },
+      { selector: '.menu-item-7780 > a' },
+      { selector: '.menu-item-4021 > a' },
+    ];
+    const findings = normalize([
+      axePage('https://example.com/', menu),
+      axePage('https://example.com/about', menu),
+    ]).filter((f) => f.ruleId === 'target-size');
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.occurrences).toBe(6);
   });
 });

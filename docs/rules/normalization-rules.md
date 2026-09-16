@@ -140,17 +140,36 @@ and defended.
 
 `selector` is the empty string for page-scoped findings.
 
-**Coarse pass, `aggregateSamePageOccurrences`.** Collapses _different
-selectors within one page_ for the same source and rule. axe emits
-distinct positional selectors for some rules, so on a real site 69
+**Coarse pass, `aggregateSharedScopeOccurrences`.** Collapses _different
+selectors covering the same pages_ for the same source and rule. axe
+emits distinct positional selectors for some rules, so on a real site 69
 instances of one body-text link defect on a single page produced 69
 separate findings, each with `occurrences: 1`.
 
-Aggregation runs only on fine groups confined to exactly one page, and
-only when two or more of them land in the same bucket. Multi-page groups
-pass through untouched with their original `dedupeKey`, as do single-page
-groups that are the only occupant of their bucket, which is the common
-case.
+Aggregation runs on fine groups that cover the identical set of canonical
+pages, and only when two or more of them land in the same bucket. A group
+that is the only occupant of its bucket passes through untouched with its
+original `dedupeKey`, which is the common case.
+
+The compared scope was "exactly one page" until issue #292, which was an
+accident of the first case this pass was written for rather than a
+principle. A 24-page Villas Foch audit reported 232 findings and 176
+critical ones because every gallery image sat on all 24 pages: identical
+rule, identical remediation, identical scope, and the one-page condition
+let none of them meet. The annex spent about 30 pages on the rows, 168 of
+which ended by pointing back at the first one's page list. Haaitza split
+`target-size` into 30 findings the same way, one per menu item, each on
+the same 2 pages.
+
+The scope is therefore compared at any size. Groups covering different
+scopes still stay apart, which is what keeps two sliders on two different
+pages two findings, and this widens an already-accepted trade-off rather
+than making a new one: per-element detail beyond the stored element
+sample was already dropped by this pass whenever the scope happened to be
+a single page. Because one row now stands for many elements, a merged
+element-scoped finding also lifts each element's `resourceUrl` into
+`rawEvidence.resourceUrls`, so the client still gets the list of files to
+fix.
 
 **Do not merge the two passes.** They key on different things for
 different reasons. Cross-run identity for the monitoring tier is

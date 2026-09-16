@@ -170,7 +170,7 @@
   "notes": "Aucun contexte métier n'a été fourni pour ce site : ni type d'activité, ni objectif principal, ni marchés ou langues visés. Le classement des priorités reflète donc uniquement la gravité technique des constats et le risque commercial générique associé, et non des objectifs commerciaux exprimés par vous. La page Devis a été placée haut dans les priorités parce que la présence d'un formulaire de demande suggère une page importante pour la prise de contact, mais il s'agit d'une inférence à confirmer de votre côté. Aucune estimation de trafic, de chiffre d'affaires ou de valeur relative des pages n'a été utilisée. Un court échange sur vos objectifs permettrait d'affiner ce classement, notamment pour arbitrer entre les chantiers de performance (effort élevé) et les corrections rapides d'accessibilité et de référencement.",
   "findingsProvenance": {
     "findingsSchemaVersion": 1,
-    "normalizationFingerprint": "98b0f2c195856ac4",
+    "normalizationFingerprint": "b41dd6631d6b7c17",
     "findingsDigest": "sha256:e6ab48337f18360cc9cb11673d3ded01c70716f7a56be74d46fd2ff3513110c6"
   },
   "analysisId": "81f77d6b-c098-4b97-8252-da53a80f485b"

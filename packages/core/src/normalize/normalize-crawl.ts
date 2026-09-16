@@ -148,7 +148,7 @@ export function extractCrawlCandidates(input: NormalizeCrawlInput): FindingCandi
         // identifier, never a sentinel" reasoning broken-internal-link's
         // own element comment gives, needed here so distinct agents stay
         // distinct fine groups (dedupeKey includes selector) before
-        // aggregateSamePageOccurrences collapses same-page occurrences
+        // aggregateSharedScopeOccurrences collapses same-page occurrences
         // of this rule back into one finding with per-agent evidence.
         selector: `robots.txt: User-agent: ${block.agent}`,
         snippet: `Disallow: ${block.disallowPattern}`,

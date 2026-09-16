@@ -354,7 +354,12 @@ function mergeGroup(
       group.flatMap((c) => {
         const single = c.rawEvidenceForPage['resourceUrl'];
         const many = c.rawEvidenceForPage['resourceUrls'];
-        const values = Array.isArray(many) ? many : [single];
+        // Issue #292: axe records the file on the element rather than in
+        // the per-page evidence, and collapsing a rule over a shared page
+        // scope is exactly when that list stops being derivable from the
+        // capped element sample - one image-alt row now stands for every
+        // image, so it has to name them.
+        const values = Array.isArray(many) ? many : [single, c.element?.resourceUrl];
         return values.filter((url): url is string => typeof url === 'string' && url.length > 0);
       }),
     ),
@@ -392,50 +397,72 @@ function mergeGroup(
 /**
  * Some axe rules (link-in-text-block is the confirmed case, from a real
  * scan of sas-fernande.fr) hand out a distinct positional selector per
- * node even when every node is the same underlying defect repeated many
- * times on one page. The fine per-selector groups above are correct and
- * stay untouched: a selector genuinely repeated across pages must still
- * collapse into one finding, and genuinely different selectors must stay
- * distinct. This second pass only catches the case that fine grouping
- * cannot: two or more fine groups that are each confined to the exact
- * same single page for the same source and rule. Only then are they
- * combined into one finding, with a new dedupeKey computed from the page
- * instead of a selector (reusing computeDedupeKey unchanged, the same way
- * page-scoped candidates already reuse it with an empty-string selector).
- * A fine group that is the only occupant of its coarse bucket (the common
- * case: one selector, one occurrence) or that already spans multiple
- * pages passes through with its original dedupeKey, unchanged.
+ * node even when every node is the same underlying defect repeated
+ * across the same set of pages. The fine per-selector groups above are
+ * correct and stay untouched: a selector genuinely repeated across pages
+ * must still collapse into one finding, and genuinely different
+ * selectors must stay distinct. This second pass only catches the case
+ * that fine grouping cannot: two or more fine groups that each cover the
+ * exact same page scope for the same source and rule. Only then are they
+ * combined into one finding, with a new dedupeKey computed from that
+ * scope instead of a selector (reusing computeDedupeKey unchanged, the
+ * same way page-scoped candidates already reuse it with an empty-string
+ * selector). A fine group that is the only occupant of its coarse bucket
+ * (the common case: one selector, one occurrence) passes through with
+ * its original dedupeKey, unchanged.
  *
- * B2 (2026-08-24): "the same single page" is now judged after mapping
- * each page onto its translation cluster's canonical URL. A real Haaitza
- * audit had 182 of its 265 link-name findings each spanning exactly five
- * pages, and those five were always the fr/en/it/es/pt-pt variants of one
- * gallery page - one defect in one shared template, reported five times,
- * which alone drove a 265-entry finding-id list and most of an 81-page
- * report. Those groups are one page once the variants are recognised as
- * one place, so this existing pass handles them with no second mechanism
- * and no selector rewriting (which CLAUDE.md trade-off 3 rejected, for
- * reasons that still hold - nothing here touches a selector).
+ * B2 (2026-08-24): page scope is judged after mapping each page onto its
+ * translation cluster's canonical URL. A real Haaitza audit had 182 of
+ * its 265 link-name findings each spanning exactly five pages, and those
+ * five were always the fr/en/it/es/pt-pt variants of one gallery page -
+ * one defect in one shared template, reported five times, which alone
+ * drove a 265-entry finding-id list and most of an 81-page report. Those
+ * groups are one page once the variants are recognised as one place, so
+ * this existing pass handles them with no second mechanism and no
+ * selector rewriting (which CLAUDE.md trade-off 3 rejected, for reasons
+ * that still hold - nothing here touches a selector).
+ *
+ * Issue #292: the scope this pass compares used to be "exactly one
+ * canonical page", which was an accident of the first case it was
+ * written for rather than a principle. A Villas Foch audit produced 164
+ * image-alt findings and 176 "critique" totals off a 24-page site,
+ * because every gallery image sat on all 24 pages: identical rule,
+ * identical remediation, identical page scope, and the one-page
+ * condition let none of them meet. The annex then spent about 30 pages
+ * printing them, 168 of the rows ending in "the same pages as f001" -
+ * the report's own evidence that the scope was shared. Haaitza split
+ * target-size into 30 findings the same way, one per menu item, each on
+ * the same 2 pages.
+ *
+ * The condition is therefore the scope itself, at any size: fine groups
+ * covering exactly the same canonical pages for the same rule are one
+ * problem with many occurrences. Groups covering different scopes still
+ * stay apart, which is what keeps two sliders on two different pages two
+ * findings. This widens an accepted trade-off rather than making a new
+ * one - per-element detail beyond the stored element sample was already
+ * being dropped by this pass whenever the scope happened to be a single
+ * page.
  *
  * The merged Finding still carries every real page URL it was seen on:
  * canonicalization decides grouping only, never what is recorded. On a
- * monolingual site the map is empty and every page maps to itself, so the
- * behaviour is byte-identical to before - confirmed against the real
- * 23-page Palais Gallien scan, which produces the same 97 findings.
+ * monolingual site the map is empty and every page maps to itself.
  */
-function aggregateSamePageOccurrences(
+function aggregateSharedScopeOccurrences(
   fineGroups: Map<string, FindingCandidate[]>,
   canonicalPageUrl: (pageUrl: string) => string,
 ): Map<string, FindingCandidate[]> {
-  const coarseKeyByFineKey = new Map<string, string>();
   const fineKeysByCoarseKey = new Map<string, string[]>();
+  const scopeByCoarseKey = new Map<string, string>();
 
   for (const [fineKey, group] of fineGroups) {
     const first = group[0];
     if (!first) continue;
 
-    const pageUrls = new Set(group.map((c) => canonicalPageUrl(c.pageUrl)));
-    if (pageUrls.size !== 1) continue;
+    // The canonical pages, sorted, so the scope - and the dedupeKey
+    // derived from it - is stable across runs even if the crawl reaches
+    // the pages in a different order. Cross-run identity for the
+    // monitoring tier is dedupeKey (CLAUDE.md trade-off 3).
+    const scope = [...new Set(group.map((c) => canonicalPageUrl(c.pageUrl)))].sort().join(' ');
 
     // D4 (2026-08-25): aggregating purely on source and rule undid the
     // deliberate identities introduced the same day. For the alt-text
@@ -444,9 +471,9 @@ function aggregateSamePageOccurrences(
     // finding carrying only one of the two titles.
     //
     // The title is what separates them, and it is the honest test: this pass
-    // exists to collapse one rule's positional selectors on one page, and two
-    // candidates that would print different titles are not that. Keying on
-    // dedupeIdentity was tried first and is subtly wrong - it also splits
+    // exists to collapse one rule's positional selectors over one scope, and
+    // two candidates that would print different titles are not that. Keying
+    // on dedupeIdentity was tried first and is subtly wrong - it also splits
     // candidates that differ only in which template emitted them while saying
     // exactly the same thing, which cost a real sas-fernande.fr carousel its
     // merge (a "previous slide" and a "next slide" arrow, one component, one
@@ -458,8 +485,8 @@ function aggregateSamePageOccurrences(
     // instructions back into one finding. coarseGroupIdentity is how a rule
     // with a deliberately broad title says so explicitly, instead of the
     // separation depending on title wording nobody realises is load-bearing.
-    const coarseKey = `${first.source}|${first.ruleId}|${first.title}|${first.coarseGroupIdentity ?? ''}|${[...pageUrls][0]}`;
-    coarseKeyByFineKey.set(fineKey, coarseKey);
+    const coarseKey = `${first.source}|${first.ruleId}|${first.title}|${first.coarseGroupIdentity ?? ''}|${scope}`;
+    scopeByCoarseKey.set(coarseKey, scope);
     const fineKeys = fineKeysByCoarseKey.get(coarseKey);
     if (fineKeys) {
       fineKeys.push(fineKey);
@@ -471,7 +498,7 @@ function aggregateSamePageOccurrences(
   const result = new Map<string, FindingCandidate[]>();
   const consumedFineKeys = new Set<string>();
 
-  for (const [, fineKeys] of fineKeysByCoarseKey) {
+  for (const [coarseKey, fineKeys] of fineKeysByCoarseKey) {
     if (fineKeys.length < 2) continue;
 
     const combined: FindingCandidate[] = [];
@@ -482,12 +509,11 @@ function aggregateSamePageOccurrences(
 
     const first = combined[0];
     if (!first) continue;
-    // The canonical URL, not an arbitrary variant, so the dedupeKey is
-    // stable across runs even if the crawl reaches the variants in a
-    // different order - cross-run identity for the monitoring tier is
-    // dedupeKey (CLAUDE.md trade-off 3).
-    const pageUrl = [...new Set(combined.map((c) => canonicalPageUrl(c.pageUrl)))][0] ?? '';
-    const dedupeKey = computeDedupeKey(first.source, first.ruleId, pageUrl);
+    const dedupeKey = computeDedupeKey(
+      first.source,
+      first.ruleId,
+      scopeByCoarseKey.get(coarseKey) ?? '',
+    );
     result.set(dedupeKey, combined);
   }
 
@@ -517,7 +543,7 @@ export function normalizeAudit(input: NormalizeAuditInput): Finding[] {
   }
 
   const canonicalByPageUrl = buildCanonicalPageUrlMap(input.translationClusters ?? []);
-  const groups = aggregateSamePageOccurrences(
+  const groups = aggregateSharedScopeOccurrences(
     fineGroups,
     (pageUrl) => canonicalByPageUrl.get(pageUrl) ?? pageUrl,
   );
