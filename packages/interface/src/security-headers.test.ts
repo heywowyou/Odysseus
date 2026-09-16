@@ -1,23 +1,47 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { ServerResponse } from 'node:http';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
   applyBaseSecurityHeaders,
   isHtmlContentType,
   SPA_CONTENT_SECURITY_POLICY,
+  STRICT_TRANSPORT_SECURITY,
 } from './security-headers.js';
+
+function fakeReq(headers: Record<string, string> = {}): IncomingMessage {
+  return { headers } as never;
+}
 
 function fakeRes(): ServerResponse & { setHeader: ReturnType<typeof vi.fn> } {
   return { setHeader: vi.fn() } as never;
 }
 
 describe('security headers helpers', () => {
-  it('applies exactly the two baseline headers', () => {
+  it('applies exactly the two baseline headers to a plain HTTP request', () => {
     const res = fakeRes();
-    applyBaseSecurityHeaders(res);
+    applyBaseSecurityHeaders(res, fakeReq());
 
     expect(res.setHeader).toHaveBeenCalledTimes(2);
     expect(res.setHeader).toHaveBeenCalledWith('x-content-type-options', 'nosniff');
     expect(res.setHeader).toHaveBeenCalledWith('referrer-policy', 'no-referrer');
+  });
+
+  it('adds HSTS only when the proxy reports the request arrived over HTTPS', () => {
+    const res = fakeRes();
+    applyBaseSecurityHeaders(res, fakeReq({ 'x-forwarded-proto': 'https' }));
+
+    expect(res.setHeader).toHaveBeenCalledTimes(3);
+    expect(res.setHeader).toHaveBeenCalledWith(
+      'strict-transport-security',
+      STRICT_TRANSPORT_SECURITY,
+    );
+    expect(STRICT_TRANSPORT_SECURITY).toMatch(/^max-age=\d{8,}$/);
+
+    const plain = fakeRes();
+    applyBaseSecurityHeaders(plain, fakeReq({ 'x-forwarded-proto': 'http' }));
+    expect(plain.setHeader).not.toHaveBeenCalledWith(
+      'strict-transport-security',
+      expect.anything(),
+    );
   });
 
   it('keeps the CSP aligned with the shell and preview constraints', () => {

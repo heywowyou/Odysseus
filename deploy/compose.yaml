@@ -74,11 +74,8 @@ services:
     # tini as PID 1: reaps Chromium children (node does not) and forwards
     # signals, so the queue's SIGTERM shutdown actually runs.
     init: true
-    # Local smoke only (deploy/runbook.md section 10): lets the container
-    # reach the repo's test Mongo on host port 27018 through
-    # host.docker.internal. Keep commented out on the server.
-    # extra_hosts:
-    #   - 'host.docker.internal:host-gateway'
+    # The local smoke's test-Mongo host mapping and plain-HTTP Caddyfile are
+    # in compose.smoke.yaml (deploy/runbook.md section 10), never here.
 
   caddy:
     image: caddy:2

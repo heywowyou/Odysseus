@@ -135,7 +135,7 @@ export async function startInterfaceServer(
   const server = createServer((req, res) => {
     // Baseline hardening before anything else, so guard rejections and the
     // catch-handler 500 carry the same headers as routed responses.
-    applyBaseSecurityHeaders(res);
+    applyBaseSecurityHeaders(res, req);
     attachRequestContext(req, res);
     void (async () => {
       if (guard !== undefined && !(await guard(req, res))) return;

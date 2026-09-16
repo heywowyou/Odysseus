@@ -3,6 +3,7 @@ import type { Router } from '../router.js';
 import { readJsonBody, sendError, sendJson } from '../http-utils.js';
 import { logger } from '../logger.js';
 import { verifyDashboardPassword } from './password.js';
+import { requestArrivedOverHttps } from '../security-headers.js';
 import type { LoginRateLimiter } from './rate-limit.js';
 import {
   SESSION_COOKIE_NAME,
@@ -38,13 +39,6 @@ export function clientIpFor(req: IncomingMessage): string {
     if (last) return last;
   }
   return req.socket.remoteAddress ?? 'unknown';
-}
-
-/** Caddy terminates TLS and forwards X-Forwarded-Proto, so "arrived over
- *  https" is exactly that header; plain-HTTP local compose traffic lacks it
- *  and still gets a working cookie, just without Secure. */
-function requestArrivedOverHttps(req: IncomingMessage): boolean {
-  return req.headers['x-forwarded-proto'] === 'https';
 }
 
 function sessionCookie(token: string, secure: boolean): string {

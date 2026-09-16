@@ -3,17 +3,15 @@
 #
 # Caddy passes the client's Host header through unchanged and sets
 # X-Forwarded-For / X-Forwarded-Proto by default. The app depends on both:
-# its CSRF check compares the request's Origin against Host, and the
-# session cookie's Secure flag is set from X-Forwarded-Proto: https.
+# its CSRF check compares the request's Origin against Host, the session
+# cookie's Secure flag is set from X-Forwarded-Proto: https, and so is the
+# Strict-Transport-Security header (packages/interface/src/security-headers.ts).
+#
+# Production serves this one HTTPS site and nothing else. The plain-HTTP
+# localhost site the local smoke needs lives in Caddyfile.smoke, mounted only
+# by compose.smoke.yaml, so no plaintext listener that proxies to the app
+# ships to the server.
 
 app.odysseusaudit.com {
-	reverse_proxy app:4600
-}
-
-# Local smoke only (deploy/runbook.md section 10): plain HTTP for the stack
-# on a dev machine. On the server no real session can travel through it,
-# because a browser's Host: localhost never resolves to the VPS; only
-# hand-crafted requests reach it, and the app's own guard still applies.
-http://localhost {
 	reverse_proxy app:4600
 }

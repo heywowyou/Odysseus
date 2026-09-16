@@ -1,0 +1,16 @@
+# Local smoke overlay (deploy/runbook.md section 10). Never used on a server:
+#   docker compose -f deploy/compose.yaml -f deploy/compose.smoke.yaml up -d --build
+#
+# Compose merges service volumes by container path, so the Caddyfile mount
+# below replaces the production one rather than adding a second.
+
+services:
+  app:
+    # Lets the container reach the repo's test Mongo on host port 27018
+    # through host.docker.internal.
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+
+  caddy:
+    volumes:
+      - ./Caddyfile.smoke:/etc/caddy/Caddyfile:ro

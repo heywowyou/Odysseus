@@ -606,15 +606,16 @@ Then open `glyph-smoke.pdf` on your local machine (scp it over first).
 Run the whole stack on your machine against the repo's test Mongo. This is
 the dry run for sections 7 and 9.
 
-First, uncomment the two `extra_hosts` lines under the `app` service in
-`deploy/compose.yaml` (they let the container reach the host-published test
-Mongo port). Then:
+The smoke adds `deploy/compose.smoke.yaml` on top of the production compose
+file. That overlay lets the container reach the host-published test Mongo port
+and swaps in `deploy/Caddyfile.smoke`, the plain-HTTP `localhost` site, which
+the production `deploy/Caddyfile` deliberately does not contain:
 
 ```sh
 cd /path/to/your/odysseus
 docker compose up -d mongo-test
 cp deploy/.env.smoke.example .env.smoke
-docker compose -f deploy/compose.yaml up -d --build
+docker compose -f deploy/compose.yaml -f deploy/compose.smoke.yaml up -d --build
 ```
 
 `.env.smoke` (gitignored by convention, deleted in the teardown below)
@@ -654,15 +655,14 @@ returns `401` with a JSON error.
 Teardown, exactly, so nothing survives on the host:
 
 ```sh
-docker compose -f deploy/compose.yaml down -v
+docker compose -f deploy/compose.yaml -f deploy/compose.smoke.yaml down -v
 docker compose down
 rm .env.smoke
 pgrep -af 'vite|tsx|odysseus serve'
 ```
 
 The `pgrep` line must print NOTHING (no fixture server, no dashboard dev
-process left running). Re-comment the `extra_hosts` lines in
-`deploy/compose.yaml` before committing anything.
+process left running).
 
 ## 11. Rollback / teardown
 

@@ -121,7 +121,7 @@ export class Router {
     // Every routed response, the fallback, and the bare 404 get the baseline
     // headers here; the server applies them too so guard and error paths,
     // which never reach this method, are covered as well.
-    applyBaseSecurityHeaders(res);
+    applyBaseSecurityHeaders(res, req);
     const url = new URL(req.url ?? '/', 'http://internal');
     const pathSegments = splitPath(url.pathname);
     const method = req.method ?? 'GET';
