@@ -1,9 +1,11 @@
 # Odysseus
 
-Internal command-line tool for a productized web audit service sold to
+Internal tooling for a productized web audit service sold to
 French small and mid-size businesses: technical/SPA-SEO and accessibility
 (WCAG 2.2 AA / EN 301 549) audits, deterministic scanners plus an LLM
-layer that explains and prioritizes but never detects.
+layer that explains and prioritizes but never detects. The main operator
+surface is the private hosted dashboard (`packages/interface`); the
+command-line entry points in `packages/cli` stay thin.
 
 The shared engineering charter lives in [CLAUDE.md](CLAUDE.md), regardless
 of which coding agent is used. Codex additionally reads [AGENTS.md](AGENTS.md)
@@ -33,7 +35,8 @@ This is a pnpm workspace covering `packages/*` and `fixtures/*` (the
 `spa-demo` fixture used by scanner/crawler tests).
 
 Enable the repo's git hooks once per clone. `pre-push` runs `pnpm run check`
-(docs links, formatting, lint, typecheck) locally instead of failing for the
+(docs links, formatting, lint, typecheck, dependency-cruiser architecture
+rules, and fallow dead-code audit) locally instead of failing for the
 first time in CI, and `commit-msg` rejects a commit message that credits an
 LLM (`docs/agents/coding-conventions.md`, "Authorship and attribution"):
 
@@ -58,12 +61,12 @@ real audit end to end. The other variables have documented defaults in
 ```bash
 pnpm run test:store:up    # starts the local mongo-test container
 pnpm run test             # runs the unit Vitest project (excludes browser e2e)
-pnpm run test:e2e         # runs the browser e2e project; needs Chromium (below) and mongo-test
-pnpm run test:all         # runs both projects; this is what CI gates on
+pnpm run test:e2e         # runs the e2e and e2e-serial projects; needs Chromium (below) and mongo-test
+pnpm run test:all         # runs all three projects (unit, e2e, e2e-serial); this is what CI gates on
 pnpm run test:store:down  # stops it again
 ```
 
-The `test:e2e` and `test:all` projects are what drive a real Chromium via
+The `test:e2e` and `test:all` commands are what drive a real Chromium via
 Playwright. Some tests spin up the `fixtures/spa-demo` fixture themselves;
 run `pnpm exec playwright install chromium` once if you haven't already.
 
@@ -80,7 +83,7 @@ pnpm run build        # tsc -b
 pnpm run format        # format maintained source with Prettier
 pnpm run format:check  # verify the formatter baseline without writing
 pnpm run lint          # run ESLint across JavaScript and TypeScript source
-pnpm run check         # docs, formatting, lint, and workspace typecheck
+pnpm run check         # docs, formatting, lint, typecheck, architecture and dead-code checks
 ```
 
 ## Running the dashboard
@@ -95,6 +98,9 @@ Starts the job queue and the private single-user dashboard described in
 
 ## Learn more
 
-`CLAUDE.md` is the source of truth for architecture, locked contracts,
-non-negotiable rules, and the full list of documented trade-offs — read it
-before proposing any structural change.
+`CLAUDE.md` is the compact project charter: working contract, non-negotiable
+product rules, protected contracts, and package boundaries. The
+[documentation map](docs/agents/documentation-map.md) routes each kind of work
+to its canonical focused document, and the full numbered decision record lives
+in [`docs/decisions/trade-offs.md`](docs/decisions/trade-offs.md). Read the
+narrowest source that owns the work before proposing any structural change.

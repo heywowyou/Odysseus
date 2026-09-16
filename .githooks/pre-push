@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Runs the same fast gate CI runs (docs links, formatting, lint, typecheck)
+# Runs the same fast gate CI runs (docs links, formatting, lint, typecheck,
+# dependency-cruiser architecture rules, fallow dead-code audit)
 # before a push leaves this machine. Skips the test suites deliberately:
 # they need Docker Mongo and Playwright Chromium, which not every push
 # should have to pay for locally, and CI still runs them as the real gate.
@@ -8,7 +9,7 @@
 #   git config core.hooksPath .githooks
 set -euo pipefail
 
-echo "pre-push: running pnpm run check (docs, format, lint, typecheck)..."
+echo "pre-push: running pnpm run check (docs, format, lint, typecheck, architecture, dead code)..."
 if ! pnpm run check; then
   echo
   echo "pre-push: pnpm run check failed. Fix the issue above, or skip this" \

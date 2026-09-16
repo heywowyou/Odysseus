@@ -1,11 +1,12 @@
 # Trade-offs and decision history
 
 This doc holds the full write-ups behind Odysseus's "do not silently
-reverse" guardrails. `CLAUDE.md` holds only the compact index and the one
-governing sentence per entry; the incident narrative, root-cause evidence,
-and rejected alternatives for each one live here. Numbering matches
-CLAUDE.md's index exactly, so a cross-reference like "per trade-off 24"
-resolves to the same entry in both places.
+reverse" guardrails: the incident narrative, root-cause evidence, and
+rejected alternatives for each decision. Entries are numbered once, here, and
+focused documents, plans, and code comments reference them by number, so "per
+trade-off 24" always resolves to the entry with that number in this file.
+`CLAUDE.md` keeps only a short list of cross-cutting guardrails and does not
+carry a numbered index.
 
 ## Non-negotiable rule 5 amendment (2026-08-24)
 
@@ -23,10 +24,17 @@ robots.txt `Crawl-delay` that still wins when stricter, and the
 per-page timeout. A page cap limited total work, not request rate.
 
 The risk this knowingly accepts is an effectively unbounded URL space
-(calendars, faceted filters, session ids), which nothing currently
-detects. Crawl a site of unknown shape with an explicit `--max-pages`
-until a trap detector exists. Do not silently reintroduce a default
-cap instead; that decision is the operator's.
+(calendars, faceted filters, session ids). When this amendment was written
+nothing detected one. The continuation-family guard
+(`packages/scanner/src/continuation-guard.ts`, described under trade-off 64)
+now bounds link-discovered continuation depth from structural evidence
+(`rel=next`, numbered pagination controls, repeated query-key families inside
+a confirmed listing) and discloses what it omitted. Its remaining gap is a
+trap that carries none of those structural signals, such as session ids
+minted into ordinary links or a generated space declared in the sitemap,
+which the guard deliberately never trims. An explicit `--max-pages` remains
+the tool for a site suspected of that shape. Do not silently reintroduce a
+default cap instead; that decision is the operator's.
 
 ## Known trade-offs, do not silently reverse
 
