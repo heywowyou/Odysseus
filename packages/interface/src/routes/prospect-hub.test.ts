@@ -7,7 +7,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { deletePreview } = vi.hoisted(() => ({ deletePreview: vi.fn() }));
 
-vi.mock('@odysseus/store', () => ({
+vi.mock('@odysseus/store', async (importOriginal) => ({
+  isEditableProspectField: (await importOriginal<typeof import('@odysseus/store')>())
+    .isEditableProspectField,
   addDirectoryEntriesToProspects: vi.fn(),
   appendProspectEvent: vi.fn(),
   attachAuditToProspect: vi.fn(),
@@ -338,6 +340,19 @@ describe('prospect hub routes', () => {
       expect.objectContaining({ archived: true }),
     );
     expect((await handle('/api/prospects?archived=maybe')).statusCode).toBe(400);
+  });
+
+  it('refuses a record patch naming identity or bookkeeping fields', async () => {
+    for (const body of [
+      { prospectId: 'p-2' },
+      { createdAt: '2020-01-01' },
+      { directoryRef: { source: 'x', sourceId: 'y' } },
+      { notes: 'ok', fieldOrigins: {} },
+    ]) {
+      const response = await handle('/api/prospects/p-1', 'PATCH', body);
+      expect(response.statusCode).toBe(400);
+    }
+    expect(updateProspect).not.toHaveBeenCalled();
   });
 
   // Issue #289: an invalid patch (a SIREN failing the 9-digit checksum) is

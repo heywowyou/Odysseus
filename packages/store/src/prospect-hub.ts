@@ -361,12 +361,50 @@ export interface UpdateProspectOptions {
   fieldOrigins?: Prospect['fieldOrigins'];
 }
 
+/** Record fields an edit may change. Identity (`prospectId`, `createdAt`,
+ *  `directoryRef`), lifecycle (`status`, `archivedAt`), and bookkeeping
+ *  (`fieldOrigins`, timestamps) have their own dedicated writers, so a patch
+ *  naming them could only ever undo those writers' work. */
+export const EDITABLE_PROSPECT_FIELDS = [
+  'sector',
+  'name',
+  'websites',
+  'address',
+  'postcode',
+  'commune',
+  'department',
+  'phone',
+  'emails',
+  'stakeholders',
+  'siren',
+  'siret',
+  'tradingName',
+  'legalName',
+  'notes',
+  'outreachLanguage',
+  'hotel',
+] as const satisfies readonly (keyof Prospect)[];
+
+export type EditableProspectField = (typeof EDITABLE_PROSPECT_FIELDS)[number];
+export type ProspectPatch = Partial<Pick<Prospect, EditableProspectField>>;
+
+const EDITABLE_PROSPECT_FIELD_SET: ReadonlySet<string> = new Set(EDITABLE_PROSPECT_FIELDS);
+
+export function isEditableProspectField(key: string): key is EditableProspectField {
+  return EDITABLE_PROSPECT_FIELD_SET.has(key);
+}
+
+/**
+ * Applies an edit as a targeted `$set`/`$unset` of the patched fields only,
+ * never a replacement of the whole record. A replace written from a copy
+ * read a moment earlier would silently undo anything that landed in
+ * between: an archive, a status change, an opt-out. Fields outside
+ * EDITABLE_PROSPECT_FIELDS are ignored.
+ */
 export async function updateProspect(
   connection: Connection,
   prospectId: string,
-  rawPatch: Partial<
-    Omit<Prospect, 'prospectId' | 'archivedAt' | 'createdAt' | 'updatedAt' | 'lastActivityAt'>
-  >,
+  rawPatch: ProspectPatch,
   actor = 'operator',
   options: UpdateProspectOptions = {},
 ): Promise<ProspectHubDocument | null> {
@@ -375,11 +413,14 @@ export async function updateProspect(
     .select({ _id: 0, __v: 0 })
     .lean<ProspectHubDocument>();
   if (!current) return null;
+  const editable = Object.fromEntries(
+    Object.entries(rawPatch).filter(([key]) => isEditableProspectField(key)),
+  ) as ProspectPatch;
   // Issue #289: a SIREN present in the patch is normalized (printed
   // spacing, or a full SIRET) and checksum-validated before it can reach
   // the stored record; an invalid one refuses the whole save. An absent
   // one (clearing the field) passes through untouched.
-  const patch = withNormalizedSiren(rawPatch);
+  const patch = withNormalizedSiren(editable);
   const normalizedPatch =
     patch.websites === undefined
       ? patch
@@ -413,11 +454,24 @@ export async function updateProspect(
       ...options.fieldOrigins,
     };
   }
-  // Mongoose may add its version key to the replacement object while it is
-  // persisted. Keep the service return value in the strict domain shape that
-  // callers validated above rather than leaking that storage metadata.
-  const returned = { ...next };
-  await Model.replaceOne({ prospectId }, next);
+  // The merged record above is only validation; what is written is the
+  // patched fields, so concurrent writers of other fields are preserved.
+  const $set: Record<string, unknown> = {
+    updatedAt: next.updatedAt,
+    lastActivityAt: next.lastActivityAt,
+    fieldOrigins: next.fieldOrigins,
+  };
+  const $unset: Record<string, 1> = {};
+  for (const key of Object.keys(patch) as EditableProspectField[]) {
+    if (next[key] === undefined) $unset[key] = 1;
+    else $set[key] = next[key];
+  }
+  const written = await Model.findOneAndUpdate(
+    { prospectId },
+    Object.keys($unset).length > 0 ? { $set, $unset } : { $set },
+    { returnDocument: 'after', projection: { _id: 0, __v: 0 } },
+  ).lean<ProspectHubDocument>();
+  if (written === null) return null;
   const changedFields = Object.keys(patch).filter(
     (key) =>
       JSON.stringify(current[key as keyof Prospect]) !==
@@ -427,7 +481,7 @@ export async function updateProspect(
     connection,
     event(prospectId, 'field-edited', { fields: changedFields }, actor),
   );
-  return returned;
+  return written;
 }
 
 export async function setProspectStatus(

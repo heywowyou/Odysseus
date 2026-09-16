@@ -31,11 +31,13 @@ import {
   setOutreachProspectEmail,
   setPrimaryProspectWebsite,
   setProspectStatus,
+  isEditableProspectField,
   updateProspect,
   type DirectoryFilter,
   type NewProspectHubInput,
   type ProspectHubFilter,
 } from '@odysseus/store';
+import type { ProspectPatch } from '@odysseus/store';
 import type { ProspectStatus, ProspectWebsiteKind } from '@odysseus/core';
 import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import type { Router } from '../router.js';
@@ -521,8 +523,17 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
       sendError(res, 400, 'use the archive and restore endpoints to change the archive state');
       return;
     }
+    const refused = Object.keys(body).filter((key) => !isEditableProspectField(key));
+    if (refused.length > 0) {
+      sendError(res, 400, `these fields cannot be edited here: ${refused.join(', ')}`);
+      return;
+    }
     try {
-      const prospect = await updateProspect(connection, params['prospectId']!, body as never);
+      const prospect = await updateProspect(
+        connection,
+        params['prospectId']!,
+        body as ProspectPatch,
+      );
       if (prospect === null) sendError(res, 404, 'prospect not found');
       else sendJson(res, 200, prospect);
     } catch (error) {
