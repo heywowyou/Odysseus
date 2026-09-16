@@ -1209,3 +1209,46 @@ describe('issue #318: long evidence lists stay readable', () => {
     expect(block.indexOf('>/</p>')).toBeLessThan(block.indexOf('>/en/</p>'));
   });
 });
+
+// Issue #308: f100 (unsized-images) read "Les images n'ont pas de
+// largeur/hauteur explicites" in "Reste à traiter" but sat under "Images trop
+// lourdes ou mal optimisées" in the annex, next to a second group of that
+// same title for another image rule at a different severity.
+describe('issue #308: an image finding keeps its own rule title in the annex', () => {
+  it('titles each image rule group by its rule, never by a shared family title', () => {
+    const manifest = buildManifest();
+    const image = (findingId: string, ruleId: string, severity: Finding['severity']): Finding => ({
+      findingId,
+      auditId: 'audit-1',
+      schemaVersion: 1,
+      source: 'lighthouse',
+      ruleId,
+      category: 'performance',
+      severity,
+      wcagCriteria: [],
+      title: ruleId,
+      description: 'd',
+      pageUrls: ['https://example.com/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: findingId,
+      firstSeenAt: new Date('2026-08-02T00:00:00Z'),
+      lastSeenAt: new Date('2026-08-02T00:00:00Z'),
+    });
+    const html = renderFindingsAppendix(
+      getStrings('fr'),
+      12,
+      'fr',
+      [
+        image('f100', 'unsized-images', 'moderate'),
+        image('f111', 'image-delivery-insight', 'minor'),
+      ],
+      manifest,
+      'general',
+    );
+    expect(html).not.toContain('Images trop lourdes ou mal optimisées');
+    expect(html).toContain('data-appendix-rule-id="unsized-images"');
+    expect(html).toContain('data-appendix-rule-id="image-delivery-insight"');
+  });
+});

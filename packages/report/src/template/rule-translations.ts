@@ -1080,18 +1080,6 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
       gloss:
         "L'image utilise un format plus lourd que les formats modernes équivalents, à qualité visuelle comparable.",
     },
-    // item 1.3: not a real scanner ruleId - the synthetic family key
-    // appendix-grouping.ts's RULE_FAMILIES assigns to 7 separate Lighthouse
-    // rules ("your images are heavy" read as seven problems instead of
-    // one). rule-translations.test.ts's coverage check iterates real
-    // fixture ruleIds only, so this entry is not required by that
-    // enforcement, but findings-appendix.ts looks it up the same way as
-    // any other entry when rendering a clustered group's title.
-    'image-weight': {
-      label: 'Images trop lourdes ou mal optimisées',
-      gloss:
-        'Plusieurs constats Lighthouse distincts (poids, format, dimensionnement, chargement) qui décrivent le même chantier de travail : optimiser les images du site.',
-    },
   });
 
 /** Plan 018 step 6: one shared display-label resolver for a finding's rule,

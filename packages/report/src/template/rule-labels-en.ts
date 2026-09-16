@@ -214,5 +214,4 @@ export const RULE_LABELS_EN: Readonly<Record<string, string>> = {
   'http-error-status': 'The page returns an HTTP error',
   'image-oversized': 'Image served larger than its display size',
   'image-legacy-format': 'Image in an old format',
-  'image-weight': 'Images too heavy or poorly optimized',
 };

@@ -24,39 +24,7 @@ export interface RuleGroup {
   pages: number;
   /** Union across the group, numerically sorted. */
   wcagCriteria: string[];
-  /** item 1.3: the actual rule ids folded into this group when it's a
-   *  rule-family cluster (RULE_FAMILIES below) - always includes at least
-   *  `ruleId` itself, sorted, deduplicated. A group with exactly one
-   *  member here is the ordinary, non-clustered case; the renderer uses
-   *  this length to decide whether to show a family title with a list of
-   *  machine codes underneath, or the single rule-code badge it already
-   *  showed before clustering existed. */
-  memberRuleIds: string[];
 }
-
-/** item 1.3: seven separate Lighthouse rules ("your images are heavy",
- *  report-feedback-palais-gallien-v2.md's own framing) that read as seven
- *  distinct problems to a client when they are one remediation job -
- *  confirmed as the correct scope by that feedback pass specifically
- *  (image-delivery-insight/uses-optimized-images was deliberately left
- *  OUT of the Lighthouse dedupe list in constants.ts for the opposite
- *  reason: it is not a clean audit-pair duplicate, it genuinely measures
- *  something different, so both survive as findings and get clustered
- *  for *presentation* here instead of one being suppressed at the data
- *  layer). A small, explicit map, not an inferred pattern match - only
- *  add a rule id here once it is confirmed to belong to the same
- *  remediation job as the rest of its family, the same "confirmed against
- *  real scanner output, not assumed" bar constants.ts's own dedupe list
- *  documents. */
-const RULE_FAMILIES: Readonly<Record<string, string>> = {
-  'unsized-images': 'image-weight',
-  'modern-image-formats': 'image-weight',
-  'offscreen-images': 'image-weight',
-  'uses-responsive-images': 'image-weight',
-  'uses-optimized-images': 'image-weight',
-  'image-delivery-insight': 'image-weight',
-  'prioritize-lcp-image': 'image-weight',
-};
 
 /** report-feedback-palais-gallien.md item 26: every severity, minor
  *  included, groups and renders through this one function now - the
@@ -76,7 +44,16 @@ const RULE_FAMILIES: Readonly<Record<string, string>> = {
  *  raw union can exceed the analysed-page total (a real report claimed
  *  206 pages out of 140). Findings and occurrences are unchanged: pages
  *  are counted, occurrences are not page counts. Undefined keeps the
- *  pre-#291 raw union; findings-appendix.ts always passes the scope. */
+ *  pre-#291 raw union; findings-appendix.ts always passes the scope.
+ *
+ *  Issue #308: seven Lighthouse image rules used to be folded into one
+ *  synthetic "image-weight" group here (item 1.3), so the annex titled a
+ *  finding "Images trop lourdes ou mal optimisées" while "Reste à traiter"
+ *  and the priority cards, which group by rule, gave the same finding its
+ *  own rule's title. A family split across two severities also printed two
+ *  groups under one title. Groups are now per rule, like every other
+ *  section, so a reader following a finding id lands on the title they
+ *  followed. */
 export function groupAppendix(
   findings: readonly Finding[],
   scopePageUrls?: ReadonlySet<string>,
@@ -85,22 +62,14 @@ export function groupAppendix(
   const pageSets = new Map<string, Set<string>>();
 
   for (const finding of findings) {
-    // item 1.3: a family member groups under its family key, still
-    // separately per severity - a family with both a moderate and a
-    // minor member produces two group rows, not a merged severity, since
-    // deciding how to pick one representative severity across mixed
-    // members is a different, bigger question than clustering the
-    // annex's presentation.
-    const familyKey = RULE_FAMILIES[finding.ruleId] ?? finding.ruleId;
-    const key = `${familyKey}::${finding.severity}`;
+    const key = `${finding.ruleId}::${finding.severity}`;
     const group = map.get(key) ?? {
-      ruleId: familyKey,
+      ruleId: finding.ruleId,
       severity: finding.severity,
       findings: [],
       totalOccurrences: 0,
       pages: 0,
       wcagCriteria: [],
-      memberRuleIds: [],
     };
     group.findings.push(finding);
     group.totalOccurrences += finding.occurrences;
@@ -115,9 +84,6 @@ export function groupAppendix(
       group.wcagCriteria = [...new Set([...group.wcagCriteria, ...finding.wcagCriteria])].sort(
         compareCriteria,
       );
-    }
-    if (!group.memberRuleIds.includes(finding.ruleId)) {
-      group.memberRuleIds = [...group.memberRuleIds, finding.ruleId].sort();
     }
     map.set(key, group);
   }

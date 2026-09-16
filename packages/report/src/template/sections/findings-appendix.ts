@@ -477,14 +477,7 @@ function renderRuleGroup(
   const gloss = translation
     ? `<span style="font-size:10px;opacity:0.5">${escapeHtml(translation.gloss)}</span>`
     : '';
-  // item 1.3: a clustered group's `ruleId` is a synthetic family key
-  // (e.g. "image-weight"), not a real scanner rule a developer could grep
-  // for - showing it in the same "machine rule code" badge style as an
-  // ordinary group would misrepresent it as one. List every actual member
-  // rule id instead, comma-separated, same visual weight as the ordinary
-  // single-code badge.
-  const ruleCodeDisplay =
-    group.memberRuleIds.length > 1 ? group.memberRuleIds.join(', ') : group.ruleId;
+  const ruleCodeDisplay = group.ruleId;
   const sortedFindings = [...group.findings].sort((x, y) => x.findingId.localeCompare(y.findingId));
   // 2026-08-22, La Corniche report review: findings are already visited
   // in findingId order, so the first finding to carry a given page-URL
@@ -747,8 +740,8 @@ function renderCategorySection(
       const isFullyDiverted = group.findings.every(
         (f) => classifyDiversion(f, missingPercentByUrl) !== null,
       );
-      const thirdPartyCrossRefCount = thirdPartyFindings.filter((f) =>
-        group.memberRuleIds.includes(f.ruleId),
+      const thirdPartyCrossRefCount = thirdPartyFindings.filter(
+        (f) => f.ruleId === group.ruleId,
       ).length;
       return renderRuleGroup(
         strings,
