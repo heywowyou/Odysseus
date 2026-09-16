@@ -111,6 +111,42 @@ function compactPagePath(url: string): string {
   }
 }
 
+/** Issue #334: how many times the real-user LCP the lab median may reach
+ *  before the report stops presenting it as the site's typical page. The
+ *  throttled lab run is expected to be slower than visitors' experience -
+ *  roughly two to three times on an ordinary site - but a real report
+ *  showed a 20.9 s lab median against a 2.4 s "good" field p75, and a gap
+ *  that size comes from the measurement (a late hero image or carousel, a
+ *  run waiting out a slow third party) rather than from anything a visitor
+ *  lives through. */
+export const LAB_FIELD_LCP_DIVERGENCE_FACTOR = 4;
+
+/** The lab and field LCP values to flag, or null when the lab median is
+ *  within LAB_FIELD_LCP_DIVERGENCE_FACTOR of the real-user p75 (or either
+ *  side is missing). Only fires when visitors' own LCP is rated good: when
+ *  the field value is itself slow, a slow lab value corroborates it and
+ *  there is nothing to warn about. */
+export function divergentLabLcp(
+  manifest: AuditManifest,
+): { labMedianMs: number; fieldP75Ms: number } | null {
+  const field = manifest.cruxFieldData;
+  if (!field?.available || field.lcp === undefined) return null;
+  const lcpThreshold = CORE_WEB_VITAL_THRESHOLDS.find((t) => t.key === 'lcp')!;
+  if (
+    rateCoreWebVital(field.lcp.p75, lcpThreshold.good, lcpThreshold.needsImprovement) !== 'good'
+  ) {
+    return null;
+  }
+  const labMedianMs = medianForMetric(
+    manifest.pages.map((page) => page.coreWebVitals),
+    'lcp',
+  );
+  if (labMedianMs === null) return null;
+  return labMedianMs >= field.lcp.p75 * LAB_FIELD_LCP_DIVERGENCE_FACTOR
+    ? { labMedianMs, fieldP75Ms: field.lcp.p75 }
+    : null;
+}
+
 /** INP has no lab equivalent (TBT is Lighthouse's lab-only proxy for it),
  *  so it is not in @odysseus/core's shared CoreWebVitalMetricKey /
  *  CORE_WEB_VITAL_THRESHOLDS - those are consumed by both this table and
@@ -321,6 +357,17 @@ export function renderCoreWebVitalsTable(
     );
   }
 
+  const divergence = divergentLabLcp(manifest);
+  const labLcpFlag =
+    divergence === null
+      ? ''
+      : `<p data-lab-lcp-divergence style="font-size:12px;margin-top:var(--space-3);max-width:64ch;padding-left:var(--space-3);border-left:2px solid var(--color-accent-300)">${escapeHtml(
+          fillTemplate(c.labLcpDivergenceTemplate, {
+            lab: formatMetricValue(divergence.labMedianMs, 'ms-to-s', language),
+            field: formatMetricValue(divergence.fieldP75Ms, 'ms-to-s', language),
+          }),
+        )}</p>`;
+
   const rows = CORE_WEB_VITAL_THRESHOLDS.map((metric) => {
     const unit = METRIC_UNITS[metric.key];
     const value = medianForMetric(vitalsList, metric.key);
@@ -336,6 +383,7 @@ export function renderCoreWebVitalsTable(
       `;
     }
     const rating = rateCoreWebVital(value, metric.good, metric.needsImprovement);
+    const isFlaggedLcp = metric.key === 'lcp' && divergence !== null;
     const worst = worstForMetric(manifest.pages, metric.key);
     const worstCell =
       worst !== null && worst.value > value
@@ -346,8 +394,8 @@ export function renderCoreWebVitalsTable(
         : cell(escapeHtml(c.worstPageSameAsMedian), 'opacity:0.55;font-size:12px');
     return `
       <tr>
-        ${cell(escapeHtml(metricLabels[metric.key]), rating === 'poor' ? `border-left:3px solid ${SEVERITY.critical.color}` : '')}
-        ${cell(formatMetricValue(value, unit, language))}
+        ${cell(escapeHtml(metricLabels[metric.key]), rating === 'poor' && !isFlaggedLcp ? `border-left:3px solid ${SEVERITY.critical.color}` : '')}
+        ${cell(formatMetricValue(value, unit, language) + (isFlaggedLcp ? ' *' : ''))}
         ${worstCell}
         ${cell(`${'≤'} ${formatMetricValue(metric.good, unit, language)}`)}
         ${cell(ratingTag(strings, rating))}
@@ -385,6 +433,7 @@ export function renderCoreWebVitalsTable(
         ${rows}
       </tbody>
     </table>
+    ${labLcpFlag}
     <p style="font-size:11px;opacity:0.5;margin-top:var(--space-3)">${escapeHtml(c.worstPageFootnote)}</p>
   `,
     '',

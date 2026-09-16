@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AuditManifest } from '@odysseus/core';
 import {
   hasMeasuredCoreWebVitals,
+  divergentLabLcp,
   renderCoreWebVitalsTable,
   worstForMetric,
 } from './core-web-vitals-table.js';
@@ -400,6 +401,29 @@ describe('renderCoreWebVitalsTable', () => {
       });
       const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
       expect(html).toContain('A large gap between the values above and below is expected');
+    });
+
+    // Issue #334: a real report printed a 20.9 s lab LCP median as the
+    // site's typical page while visitors' own p75 was 2.4 s, rated good.
+    it('flags a lab LCP median far above a good real-user LCP instead of presenting it plainly', () => {
+      const manifest = measuredManifestWith({ available: true, lcp: { p75: 400 } });
+      expect(divergentLabLcp(manifest)).toEqual({ labMedianMs: 1800, fieldP75Ms: 400 });
+      const fr = renderCoreWebVitalsTable(getStrings('fr'), 9, 'fr', manifest);
+      expect(fr).toContain('data-lab-lcp-divergence');
+      expect(fr).toContain('1,8 s *');
+      const en = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
+      expect(en).toContain('more than four times the value measured for your real visitors');
+    });
+
+    it('does not flag an ordinary lab-versus-field gap, or a slow real-user LCP', () => {
+      expect(divergentLabLcp(measuredManifestWith({ available: true, lcp: { p75: 1200 } }))).toBe(
+        null,
+      );
+      const slowField = measuredManifestWith({ available: true, lcp: { p75: 5000 } });
+      expect(divergentLabLcp(slowField)).toBe(null);
+      expect(renderCoreWebVitalsTable(getStrings('fr'), 9, 'fr', slowField)).not.toContain(
+        'data-lab-lcp-divergence',
+      );
     });
 
     // Issue #104: the field-data intro pointed at "the lab measurements

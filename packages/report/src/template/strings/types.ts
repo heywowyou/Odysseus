@@ -881,6 +881,11 @@ export interface ReportStrings {
      *  CrUX has a public record) - the gap only exists to explain once
      *  both numbers are on the page together. */
     realUserGapNote: string;
+    /** Issue #334: under the lab table when the lab LCP median is at least
+     *  LAB_FIELD_LCP_DIVERGENCE_FACTOR times a good real-user p75. The
+     *  lab median carries a " *" pointing here. `{lab}` and `{field}` are
+     *  formatted durations. */
+    labLcpDivergenceTemplate: string;
     inpLabel: string;
   };
   /** Milestone 10. A deterministic splice comparing this site's own

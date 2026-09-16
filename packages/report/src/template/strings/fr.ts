@@ -554,6 +554,8 @@ export const fr: ReportStrings = {
       "Aucune donnée Chrome UX Report publique n'existe pour ce site, le plus souvent parce qu'il ne reçoit pas encore assez de trafic Chrome pour atteindre le seuil de publication de Google. Ce n'est ni un succès ni un échec, cela signifie simplement qu'aucune comparaison avec des utilisateurs réels n'est disponible pour cet audit.",
     realUserGapNote:
       'Un écart important entre les valeurs ci-dessus et ci-dessous est normal : la mesure de laboratoire simule volontairement des conditions difficiles (limitation CPU et réseau, un seul passage), tandis que les données réelles reflètent des visiteurs sur des appareils et connexions variés. Les deux mesures répondent à des questions différentes, elles ne se contredisent pas.',
+    labLcpDivergenceTemplate:
+      "* La médiane de laboratoire du LCP ({lab}) dépasse de plus de quatre fois la valeur mesurée chez vos visiteurs réels ({field}, jugée bonne). Un tel écart va au-delà de ce qu'expliquent les conditions simulées : il provient le plus souvent de la mesure elle-même (image principale ou carrousel chargé tardivement, attente d'un service tiers). Cette médiane ne décrit donc pas l'expérience de vos visiteurs ; pour décider, fiez-vous à la valeur réelle.",
     inpLabel: 'INP, réactivité',
   },
   benchmarkPercentile: {
