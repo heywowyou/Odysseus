@@ -450,7 +450,10 @@ export interface AppendixTableSplitPoint {
   continuationRowId: string;
 }
 
-const MAX_APPENDIX_LAYOUT_REPAIR_PASSES = 3;
+/** Issue #312 raised this from 3: a pass that merges a stale continuation
+ *  back (mergeStaleAppendixContinuationsIntoHtml) lets the natural split
+ *  land somewhere else, which the next pass repairs. */
+const MAX_APPENDIX_LAYOUT_REPAIR_PASSES = 5;
 
 /** Reads the live, post-layout DOM for any appendix table Paged.js split
  *  across pages without repeating the header on a continuation fragment.
@@ -637,6 +640,96 @@ export function insertRepeatedTheadsIntoHtml(
     !result.includes(`table[${APPENDIX_CONTINUATION_ATTR}]`)
   ) {
     result = `${result.slice(0, headClose)}<style>${APPENDIX_CONTINUATION_BREAK_RULE}</style>${result.slice(headClose)}`;
+  }
+  return result;
+}
+
+/** Issue #312. A table the repair reopened (insertRepeatedTheadsIntoHtml)
+ *  whose reason to exist no longer holds in the current layout. Every repair
+ *  pass re-lays the document out, so a split repaired in one pass can move:
+ *  a later strand repair or an earlier reopened table shifts the rows, and
+ *  the reopened table then either sits mid-page right under the previous
+ *  fragment of its own group (the column header printed again between two
+ *  rows) or keeps forcing a page break the rows no longer need (a delivered
+ *  report showed two rows, then a page about 60% blank). */
+interface StaleAppendixContinuation {
+  ruleId: string;
+  /** The `annexref-<id>` id of the reopened table's first finding row. */
+  continuationRowId: string;
+}
+
+/** Reads the live, post-layout DOM for reopened appendix tables that are
+ *  stale in the sense above. A reopened table is any table of a rule group,
+ *  after the group's first, that still carries a `<thead>` (Paged.js drops
+ *  the header from its own continuation fragments, so a header there came
+ *  from the source). It is stale when the previous fragment of the same
+ *  group ends on the same physical page, or when it was forced onto a fresh
+ *  page although its first row would have fit below that previous fragment.
+ *  Pure detection, no mutation. */
+async function detectStaleAppendixContinuations(page: Page): Promise<StaleAppendixContinuation[]> {
+  return page.evaluate((continuationAttr) => {
+    const tables = Array.from(document.querySelectorAll('table[data-appendix-rule-id]'));
+    const byRuleId = new Map<string, Element[]>();
+    for (const table of tables) {
+      const ruleId = table.getAttribute('data-appendix-rule-id') ?? '';
+      byRuleId.set(ruleId, [...(byRuleId.get(ruleId) ?? []), table]);
+    }
+    const stale: { ruleId: string; continuationRowId: string }[] = [];
+    for (const [ruleId, fragments] of byRuleId) {
+      for (let i = 1; i < fragments.length; i++) {
+        const table = fragments[i];
+        const previous = fragments[i - 1];
+        if (!table || !previous || !table.querySelector('thead')) continue;
+        const firstRow = table.querySelector('tr[id^="annexref-"]');
+        // A header-only ghost is removeEmptyAppendixTableGhosts's to delete,
+        // and a previous ghost says nothing about where rows ended.
+        if (!firstRow?.id || !previous.querySelector('tr[id^="annexref-"]')) continue;
+        const pageEl = table.closest('.pagedjs_page');
+        const previousPageEl = previous.closest('.pagedjs_page');
+        if (pageEl !== null && pageEl === previousPageEl) {
+          stale.push({ ruleId, continuationRowId: firstRow.id });
+          continue;
+        }
+        if (!table.hasAttribute(continuationAttr)) continue;
+        const area = previousPageEl?.querySelector('.pagedjs_page_content');
+        if (!area) continue;
+        const room = area.getBoundingClientRect().bottom - previous.getBoundingClientRect().bottom;
+        if (room > firstRow.getBoundingClientRect().height + 1) {
+          stale.push({ ruleId, continuationRowId: firstRow.id });
+        }
+      }
+    }
+    return stale;
+  }, APPENDIX_CONTINUATION_ATTR);
+}
+
+/** Pure string transform, the inverse of insertRepeatedTheadsIntoHtml for
+ *  the given rows: removes the `</tbody></table>` plus reopened preamble
+ *  sitting directly before each continuation row, so the rows flow on in
+ *  the table before them and Paged.js decides the split afresh. A row not
+ *  preceded by a reopened table of its own rule group is left untouched. */
+export function mergeStaleAppendixContinuationsIntoHtml(
+  html: string,
+  stale: readonly StaleAppendixContinuation[],
+): string {
+  let result = html;
+  for (const { ruleId, continuationRowId } of stale) {
+    const rowIndex = result.indexOf(`<tr id="${continuationRowId}"`);
+    if (rowIndex === -1) continue;
+    const closeIndex = result.lastIndexOf('</tbody></table>', rowIndex);
+    if (closeIndex === -1) continue;
+    const reopened = result.slice(closeIndex + '</tbody></table>'.length, rowIndex);
+    const isReopenedPreamble =
+      reopened.startsWith('<table') &&
+      reopened.includes(`data-appendix-rule-id="${ruleId}"`) &&
+      reopened.trimEnd().endsWith('<tbody>') &&
+      !reopened.includes('<tr id="annexref-');
+    // The table being closed must belong to the same group, or this is a
+    // group's own first table directly after another group's.
+    const closedTableTag = result.slice(result.lastIndexOf('<table', closeIndex), closeIndex);
+    const closesSameGroup = closedTableTag.includes(`data-appendix-rule-id="${ruleId}"`);
+    if (!isReopenedPreamble || !closesSameGroup) continue;
+    result = `${result.slice(0, closeIndex)}${result.slice(rowIndex)}`;
   }
   return result;
 }
@@ -991,7 +1084,26 @@ export async function renderPdfWithPageCountFromHtml(
     // gates below and aborts: a persistent duplication fails the structural
     // gate (the selector now covers .appendix-rule-head), so a client PDF
     // can never ship a duplicated rule heading.
+    const mergedContinuationRowIds = new Set<string>();
     for (let attempt = 0; attempt < MAX_APPENDIX_LAYOUT_REPAIR_PASSES; attempt++) {
+      // Issue #312: a stale reopened table is merged back on its own pass,
+      // before any other repair reads this layout, since the merge moves
+      // the rows every other detection would be measuring.
+      // A row is merged at most once and never on the last pass, so a
+      // measurement Paged.js disagrees with cannot oscillate, and the pass
+      // after a merge is always there to repair the split it re-exposes.
+      const stale = (await detectStaleAppendixContinuations(page)).filter(
+        (item) => !mergedContinuationRowIds.has(item.continuationRowId),
+      );
+      if (stale.length > 0 && attempt < MAX_APPENDIX_LAYOUT_REPAIR_PASSES - 1) {
+        const merged = mergeStaleAppendixContinuationsIntoHtml(currentHtml, stale);
+        if (merged !== currentHtml) {
+          for (const item of stale) mergedContinuationRowIds.add(item.continuationRowId);
+          currentHtml = merged;
+          await runPagedjsPreview(currentHtml);
+          continue;
+        }
+      }
       const splits = await detectAppendixTableSplits(page);
       const stranded = findStrandedAppendixRuleIds(await detectStrandedAppendixRuleHeadings(page));
       const duplicated = findDuplicatedAppendixHeadingRuleIds(

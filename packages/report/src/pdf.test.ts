@@ -10,6 +10,7 @@ import {
   findStrandedAppendixRuleIds,
   forceBreakBeforeAppendixRuleGroups,
   insertRepeatedTheadsIntoHtml,
+  mergeStaleAppendixContinuationsIntoHtml,
   PAGEDJS_NEGLIGIBLE_BOX_PX,
   PAGEDJS_OVERFLOW_TOLERANCE_PX,
   reportPageCountWarning,
@@ -669,5 +670,67 @@ describe('overflow description names the appendix finding', () => {
     ).toBe(
       'Painted content <div> extends past the printable content rectangle on physical page 32 at right by 1793.7px in finding f052.',
     );
+  });
+});
+
+// Issue #312: a reopened table from an earlier repair pass can go stale once
+// later passes move the rows: it repeats the header mid-page, or forces a
+// page break that leaves most of a page blank. Merging it back is the exact
+// inverse of the reopening.
+describe('mergeStaleAppendixContinuationsIntoHtml', () => {
+  it('restores the single table a reopening split, byte for byte', () => {
+    const html = `<html><head></head><body>${buildAppendixTableHtml('rule-a', ['f001', 'f002', 'f003'])}</body></html>`;
+    const preambles = extractAppendixTablePreambles(html);
+    const reopened = insertRepeatedTheadsIntoHtml(
+      html,
+      [{ ruleId: 'rule-a', continuationRowId: 'annexref-f002' }],
+      preambles,
+    );
+    const withoutBreakRule = reopened.replace(/<style>[^<]*<\/style>/u, '');
+
+    const merged = mergeStaleAppendixContinuationsIntoHtml(withoutBreakRule, [
+      { ruleId: 'rule-a', continuationRowId: 'annexref-f002' },
+    ]);
+
+    expect(merged).toBe(html);
+  });
+
+  it('merges only the named continuation of a table reopened twice', () => {
+    const html = buildAppendixTableHtml('rule-a', ['f001', 'f002', 'f003']);
+    const preambles = extractAppendixTablePreambles(html);
+    const reopened = insertRepeatedTheadsIntoHtml(
+      html,
+      [
+        { ruleId: 'rule-a', continuationRowId: 'annexref-f002' },
+        { ruleId: 'rule-a', continuationRowId: 'annexref-f003' },
+      ],
+      preambles,
+    );
+
+    const merged = mergeStaleAppendixContinuationsIntoHtml(reopened, [
+      { ruleId: 'rule-a', continuationRowId: 'annexref-f003' },
+    ]);
+
+    expect(merged.match(/<table /gu)).toHaveLength(2);
+    const secondTableStart = merged.indexOf('<table ', merged.indexOf('<table ') + 1);
+    expect(merged.indexOf('annexref-f002')).toBeGreaterThan(secondTableStart);
+    expect(merged.indexOf('annexref-f003')).toBeGreaterThan(secondTableStart);
+  });
+
+  it('leaves a row that does not open a reopened table of its own rule untouched', () => {
+    const html = buildAppendixTableHtml('rule-a', ['f001', 'f002']);
+    expect(
+      mergeStaleAppendixContinuationsIntoHtml(html, [
+        { ruleId: 'rule-a', continuationRowId: 'annexref-f002' },
+      ]),
+    ).toBe(html);
+
+    const twoGroups =
+      buildAppendixTableHtml('rule-a', ['f001']) + buildAppendixTableHtml('rule-b', ['f002']);
+    expect(
+      mergeStaleAppendixContinuationsIntoHtml(twoGroups, [
+        { ruleId: 'rule-b', continuationRowId: 'annexref-f002' },
+      ]),
+    ).toBe(twoGroups);
   });
 });
