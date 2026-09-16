@@ -82,6 +82,10 @@ pnpm run test:all         # runs all three projects (unit, e2e, e2e-serial); thi
 pnpm run test:store:down  # stops it again
 ```
 
+Mongo-backed integration suites skip when the test database is unreachable,
+so a machine without Docker still runs the rest. In CI, or locally with
+`REQUIRE_MONGO_TESTS=1`, an unreachable database fails the run instead.
+
 The `test:e2e` and `test:all` commands are what drive a real Chromium via
 Playwright. Some tests spin up the `fixtures/spa-demo` fixture themselves;
 run `pnpm exec playwright install chromium` once if you haven't already.

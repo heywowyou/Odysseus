@@ -13,6 +13,13 @@ jobs:
         image: mongo:7.0.39
         ports:
           - 27018:27017
+        # The job waits for a healthy service before its first step, so the
+        # Mongo-backed suites never race a still-starting database.
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
 
     steps:
       - uses: actions/checkout@v4
@@ -86,6 +93,9 @@ jobs:
         run: pnpm run test:all
         env:
           MONGODB_TEST_URI: mongodb://localhost:27018/odysseus_test
+          # CI is already set by GitHub Actions; this names the intent: an
+          # unreachable test database fails the run instead of skipping.
+          REQUIRE_MONGO_TESTS: '1'
 
   security-scan:
     name: Security scan (Trivy)

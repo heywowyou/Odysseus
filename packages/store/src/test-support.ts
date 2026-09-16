@@ -83,6 +83,28 @@ function markMongoUnavailable(uri: string): void {
   }
 }
 
+/** True when an unreachable test database must fail the run instead of
+ *  skipping: always in CI, where the mongo-test service is part of the job
+ *  and a silent skip would turn every Mongo-backed suite green unexercised,
+ *  and locally on request with REQUIRE_MONGO_TESTS=1. */
+export function isMongoTestRequired(env: NodeJS.ProcessEnv = process.env): boolean {
+  const truthy = (value: string | undefined): boolean =>
+    value !== undefined && value !== '' && value !== '0' && value.toLowerCase() !== 'false';
+  return truthy(env['REQUIRE_MONGO_TESTS']) || truthy(env['CI']);
+}
+
+function unavailable(uri: string, cause?: unknown): MongoProbeResult {
+  if (isMongoTestRequired()) {
+    throw new Error(
+      `Test MongoDB not reachable at ${uri}, and Mongo integration tests are required here ` +
+        '(CI or REQUIRE_MONGO_TESTS is set). Refusing to skip them.',
+      { cause },
+    );
+  }
+  markMongoUnavailable(uri);
+  return { available: false };
+}
+
 /** Attempts a short-timeout connection so callers can decide
  *  describe.skipIf during test collection (top-level await), rather than
  *  discovering unavailability inside a beforeAll hook, which runs too
@@ -90,17 +112,13 @@ function markMongoUnavailable(uri: string): void {
 export async function probeMongoAvailability(
   uri: string = getWorkerMongoUri(MONGODB_TEST_URI),
 ): Promise<MongoProbeResult> {
-  if (!(await isTcpPortReachable(uri))) {
-    markMongoUnavailable(uri);
-    return { available: false };
-  }
+  if (!(await isTcpPortReachable(uri))) return unavailable(uri);
   try {
     const connection = await mongoose
       .createConnection(uri, { serverSelectionTimeoutMS: 2000 })
       .asPromise();
     return { available: true, connection };
-  } catch {
-    markMongoUnavailable(uri);
-    return { available: false };
+  } catch (error) {
+    return unavailable(uri, error);
   }
 }
