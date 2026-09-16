@@ -27,6 +27,7 @@ import type { ReportRenderMetadata, StoredAnalysis } from '../types.js';
 import type { RenderDiffEvidencePage } from '../screenshots.js';
 import { getStrings } from './strings/i18n.js';
 import { resolveLcenFinding } from './lcen-resolution.js';
+import { withPriorityConformance } from './priority-conformance.js';
 import { SECTION_IDS, computeSectionNumbers, type SectionId } from './section-registry.js';
 import { renderCover } from './sections/cover.js';
 import { renderMetadataSheet } from './sections/metadata-sheet.js';
@@ -357,13 +358,14 @@ export async function renderHtml(input: RenderHtmlInput): Promise<string> {
   const {
     manifest,
     findings,
-    analysis,
     renderDiffEvidencePages,
     manualFields,
     renderMetadata,
     preparation,
     gradeOverride,
   } = input;
+  // Issue #310: every priority's conformance line derives from its findings.
+  const analysis = withPriorityConformance(input.analysis, findings);
   const renderDiffTotalEligible = input.renderDiffTotalEligible ?? renderDiffEvidencePages.length;
   const renderDiffWrapperOrLegalExcludedCount = input.renderDiffWrapperOrLegalExcludedCount ?? 0;
   const strings = getStrings(analysis.language);

@@ -1,4 +1,3 @@
-import { compareCriteria } from '@odysseus/core';
 import type { AuditManifest, AuditManualFields, Finding, ReportLanguage } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
@@ -17,6 +16,7 @@ import {
 import { selectRenderedThemes } from './themes.js';
 import { LEVEL_COLOR } from '../design-tokens.js';
 import type { RenderedPriority } from '../rendered-priorities.js';
+import { priorityConformanceCriteria } from '../priority-conformance.js';
 
 function headCell(label: string): string {
   // white-space:nowrap (issue #48): a header label is a single word in both
@@ -106,9 +106,8 @@ export function renderChecklist(
       const uniquePages = new Set(
         themeFindings.flatMap((f) => f.pageUrls).filter((url) => scopePageUrls.has(url)),
       ).size;
-      const wcagCriteria = [...new Set(themeFindings.flatMap((f) => f.wcagCriteria))].sort(
-        compareCriteria,
-      );
+      // Issue #310: the same criteria the priority card's conformance line states.
+      const wcagCriteria = priorityConformanceCriteria(themeFindings);
 
       return `
         <div class="row-atomic">
