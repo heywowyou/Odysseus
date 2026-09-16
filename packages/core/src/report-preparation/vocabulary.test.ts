@@ -9,12 +9,12 @@ describe('preparation copy tables', () => {
     }
   });
 
-  it('keeps one canonical decision-oriented French fallback question', () => {
+  it('keeps one canonical decision-oriented French fallback question and its English translation (issue #331)', () => {
     expect(resolveGenericDecisionQuestion('fr')).toBe(
-      'Quels points de votre site faut-il corriger en priorité pour améliorer son accessibilité, sa visibilité et son utilisation ?',
+      'Quels points de votre site faut-il corriger en priorité pour améliorer son accessibilité, sa visibilité et son utilisation\u00a0?',
     );
     expect(resolveGenericDecisionQuestion('en')).toBe(
-      'What is the current state of your site, and where should you start?',
+      'Which parts of your site should be fixed as a priority to improve its accessibility, visibility, and usability?',
     );
   });
 

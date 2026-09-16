@@ -686,6 +686,16 @@ textarea.input {
   text-transform: uppercase;
   color: var(--color-accent);
 } /* item 6, see h6 above */
+/* Issue #316 (Haaitza p23): the render-diff evidence cards put the page URL
+   in the .card-kicker slot, and this file's eyebrow uppercase carried over to
+   it, printing "HTTPS://HAAITZA.COM/EN/PASTRIES/...". A URL's path is
+   case-sensitive, so the printed form is not the address a reader can type;
+   only the rendering-proof cards carry a URL in this slot, so the transform
+   is scoped to them and every other kicker keeps its eyebrow styling. CSS
+   only: the section markup is untouched. */
+.render-card .card-kicker {
+  text-transform: none;
+}
 .card-title {
   font-family: var(--font-heading);
   font-weight: var(--font-heading-weight);

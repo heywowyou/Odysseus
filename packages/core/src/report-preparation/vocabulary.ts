@@ -30,15 +30,17 @@ export const MAX_CUSTOM_COVER_QUESTION_LENGTH = 200;
 
 /**
  * The canonical generic decision question shared by preparation previews and
- * report rendering. Plan 046 replaces the old state-of-the-site wording with a
+ * report rendering. Plan 046 replaced the old state-of-the-site wording with a
  * decision-oriented French question while keeping this as the single source of
- * truth so prepared and directly rendered reports cannot drift.
+ * truth so prepared and directly rendered reports cannot drift. Issue #331:
+ * the English copy had been left at the old state-of-the-site wording, which
+ * is not a translation of the French; it now mirrors the French question.
  */
 const GENERIC_DECISION_QUESTION_FR =
   'Quels points de votre site faut-il corriger en priorité pour améliorer son accessibilité, sa visibilité et son utilisation ?';
 
 const GENERIC_DECISION_QUESTION_EN =
-  'What is the current state of your site, and where should you start?';
+  'Which parts of your site should be fixed as a priority to improve its accessibility, visibility, and usability?';
 
 export function resolveGenericDecisionQuestion(language: ReportLanguage): string {
   return language === 'fr' ? GENERIC_DECISION_QUESTION_FR : GENERIC_DECISION_QUESTION_EN;

@@ -58,8 +58,12 @@ export function applyEnglishClientFacingCopy(strings: ReportStrings): ReportStri
       ...strings.metadata,
       eyebrow: 'Diagnostic information',
       heading: 'Scope and severity scale',
-      riskSmallLabel: 'Overall findings level',
-      scorecardLabel: 'Overall findings level',
+      // Issue #313: both fields on the second sheet used to share the same
+      // label, printing "OVERALL FINDINGS LEVEL" twice - once over the letter
+      // grade, once over the Low/Medium/High bar. The grade and the severity
+      // level are different objects; keep the two labels distinct.
+      riskSmallLabel: 'Severity level',
+      scorecardLabel: 'Overall grade',
       scorecardDisclaimer:
         'This grade summarizes the severity of measured findings; it is not a legal assessment.',
     },

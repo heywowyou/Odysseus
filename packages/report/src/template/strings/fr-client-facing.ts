@@ -65,8 +65,12 @@ export function applyFrenchClientFacingCopy(strings: ReportStrings): ReportStrin
       ...strings.metadata,
       eyebrow: 'Informations sur le diagnostic',
       heading: 'Périmètre et échelle de gravité',
-      riskSmallLabel: 'Niveau global des constats',
-      scorecardLabel: 'Niveau global des constats',
+      // Issue #313: both fields on the second sheet used to share the same
+      // label, printing "NIVEAU GLOBAL DES CONSTATS" twice - once over the
+      // letter grade, once over the Faible/Moyen/Élevé bar. The grade is a
+      // note, the bar is a severity level; keep the two labels distinct.
+      riskSmallLabel: 'Niveau de gravité',
+      scorecardLabel: 'Note globale',
       scorecardDisclaimer:
         'Cette note synthétise la gravité des constats mesurés ; elle ne constitue pas une ' +
         'évaluation juridique.',

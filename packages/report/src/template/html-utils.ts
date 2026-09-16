@@ -321,6 +321,16 @@ export interface AndNMoreStrings {
   readonly andNMoreSingularTemplate: string;
 }
 
+/** Issue #321: a plain U+0020 between the capped list and its "et N autres" /
+ *  "and N more" tail sat on a text-run boundary (after a link, or at a
+ *  line-break opportunity in a narrow grid cell) and Chromium's print-to-PDF
+ *  text layer dropped it, printing "f030et 20 autres" / "f011and 154 more".
+ *  A no-break space is a real, non-collapsible glyph in every text run and
+ *  additionally keeps the tail glued to the last id, so the pair never splits
+ *  across lines. Written as an escape, never a literal, so the source stays
+ *  free of invisible characters. */
+const AND_N_MORE_SEPARATOR = '\u00a0';
+
 export function formatAndNMore(
   remaining: number,
   language: 'fr' | 'en',
@@ -341,7 +351,7 @@ export function formatCappedFindingIdRefs(
 ): string {
   const { shown, remaining } = capFindingIds(findingIds);
   if (remaining === 0) return shown.join(', ');
-  return `${shown.join(', ')} ${formatAndNMore(remaining, language, strings)}`;
+  return `${shown.join(', ')}${AND_N_MORE_SEPARATOR}${formatAndNMore(remaining, language, strings)}`;
 }
 
 /** Generic capped join, for any short-token list rendered inside a
@@ -360,12 +370,14 @@ export function formatCappedList(
 ): string {
   if (values.length <= cap) return values.join(', ');
   const remaining = values.length - cap;
-  return `${values.slice(0, cap).join(', ')} ${formatAndNMore(remaining, language, strings)}`;
+  return `${values.slice(0, cap).join(', ')}${AND_N_MORE_SEPARATOR}${formatAndNMore(remaining, language, strings)}`;
 }
 
 /** Linked capped variant. Returns raw HTML - do not escapeHtml() again.
  *  The "et N autres" tail is escaped here since it comes from the string
- *  files, which are trusted but templated. */
+ *  files, which are trusted but templated. The separator stays OUTSIDE the
+ *  muted span (issue #321) and is a no-break space, so the tail can never
+ *  render or extract as glued to the last id ("f030et 20 autres"). */
 export function formatCappedFindingIdLinks(
   findingIds: readonly string[],
   language: 'fr' | 'en',
@@ -375,5 +387,5 @@ export function formatCappedFindingIdLinks(
   const links = formatFindingIdLinks(shown);
   if (remaining === 0) return links;
   const tail = formatAndNMore(remaining, language, strings);
-  return `${links} <span class="text-muted">${escapeHtml(tail)}</span>`;
+  return `${links}${AND_N_MORE_SEPARATOR}<span class="text-muted">${escapeHtml(tail)}</span>`;
 }

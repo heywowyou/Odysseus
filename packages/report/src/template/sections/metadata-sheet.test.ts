@@ -11,6 +11,7 @@ import { escapeHtml } from '../html-utils.js';
 import { renderHtml } from '../render-html.js';
 import { fr } from '../strings/fr.js';
 import { en } from '../strings/en.js';
+import { getStrings } from '../strings/i18n.js';
 import { METADATA_SHEET_ID, renderMetadataSheet } from './metadata-sheet.js';
 import { resolveRenderDiffEvidence } from '../../screenshots.js';
 import {
@@ -173,6 +174,42 @@ describe('renderMetadataSheet carries the severity scale and its basis note', ()
     const html = renderMetadataSheet(fr, manifest, analysis, findings);
 
     expect(html).toMatch(/Basé sur \d+ constats critiques et \d+ constats sérieux/);
+  });
+});
+
+// Issue #313: the client-facing layers gave the grade field and the
+// severity-bar field the same label, so page 2 printed "NIVEAU GLOBAL DES
+// CONSTATS" (EN: "OVERALL FINDINGS LEVEL") twice - once over the letter
+// grade, once over the Faible/Moyen/Élevé bar. The composed strings (what
+// the report actually renders via getStrings) must keep the two labels
+// distinct, in both languages.
+describe('the grade and the severity bar carry distinct labels (issue #313)', () => {
+  it('in the composed client-facing French strings and the rendered sheet', async () => {
+    const strings = getStrings('fr');
+    expect(strings.metadata.scorecardLabel).toBe('Note globale');
+    expect(strings.metadata.riskSmallLabel).toBe('Niveau de gravité');
+    expect(strings.metadata.scorecardLabel).not.toBe(strings.metadata.riskSmallLabel);
+
+    const manifest = await loadSmallSiteManifest();
+    const analysis = await loadSmallSiteAnalysis('fr');
+    const html = renderMetadataSheet(strings, manifest, analysis);
+    expect(html).toContain('Note globale');
+    expect(html).toContain('Niveau de gravité');
+    expect(html).not.toContain('Niveau global des constats');
+  });
+
+  it('in the composed client-facing English strings and the rendered sheet', async () => {
+    const strings = getStrings('en');
+    expect(strings.metadata.scorecardLabel).toBe('Overall grade');
+    expect(strings.metadata.riskSmallLabel).toBe('Severity level');
+    expect(strings.metadata.scorecardLabel).not.toBe(strings.metadata.riskSmallLabel);
+
+    const manifest = await loadSmallSiteManifest();
+    const analysis = await loadSmallSiteAnalysis('en');
+    const html = renderMetadataSheet(strings, manifest, analysis);
+    expect(html).toContain('Overall grade');
+    expect(html).toContain('Severity level');
+    expect(html).not.toContain('Overall findings level');
   });
 });
 

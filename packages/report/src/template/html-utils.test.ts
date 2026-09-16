@@ -3,10 +3,15 @@ import {
   escapeHtml,
   fillTemplate,
   formatDate,
+  formatCappedFindingIdLinks,
+  formatCappedFindingIdRefs,
+  formatCappedList,
   formatFindingIdLinks,
   formatFindingIdRefs,
   formatNumber,
 } from './html-utils.js';
+import { en } from './strings/en.js';
+import { fr } from './strings/fr.js';
 
 describe('escapeHtml', () => {
   it('escapes tags and quotes so injected markup cannot execute', () => {
@@ -106,6 +111,57 @@ describe('formatFindingIdLinks', () => {
 
   it('returns an empty string for no IDs', () => {
     expect(formatFindingIdLinks([])).toBe('');
+  });
+});
+
+// Issue #321: the separator before the capped list's "et N autres" /
+// "and N more" tail used to be a plain space on a text-run boundary, which
+// print-to-PDF dropped ("f030et 20 autres", "f011and 154 more"). These tests
+// pin a no-break space in the exact reported shapes, outside every linked or
+// muted span.
+describe('capped lists keep a rendered space before the "and N more" tail', () => {
+  /** f001..f{n}, unsorted input included on purpose (helpers sort). */
+  function ids(count: number): string[] {
+    return Array.from({ length: count }, (_, i) => `f${String(i + 1).padStart(3, '0')}`).reverse();
+  }
+
+  it('formatCappedFindingIdRefs separates the French tail with a no-break space (the reported "f030 et 20 autres" shape)', () => {
+    expect(formatCappedFindingIdRefs(ids(30), 'fr', fr.findingsAppendix)).toBe(
+      'f001, f002, f003, f004, f005, f006, f007, f008, f009, f010\u00a0et 20 autres',
+    );
+  });
+
+  it('formatCappedFindingIdRefs separates the English singular tail with a no-break space', () => {
+    expect(formatCappedFindingIdRefs(ids(11), 'en', en.findingsAppendix)).toBe(
+      'f001, f002, f003, f004, f005, f006, f007, f008, f009, f010\u00a0and 1 more',
+    );
+  });
+
+  it('formatCappedList separates the tail with a no-break space', () => {
+    expect(formatCappedList(['A', 'B', 'C', 'D'], 3, 'fr', fr.findingsAppendix)).toBe(
+      'A, B, C\u00a0et 1 autre',
+    );
+  });
+
+  it('formatCappedFindingIdLinks puts the no-break space outside the anchor and the muted span (the reported "f011 and 154 more" shape)', () => {
+    const html = formatCappedFindingIdLinks(ids(164), 'en', en.findingsAppendix);
+    expect(html).toContain('>f010</a>\u00a0<span class="text-muted">and 154 more</span>');
+    // No plain space may sit on the link-to-tail boundary, and the tail may
+    // never ride inside a linked or underlined span.
+    expect(html).not.toContain('</a> <span');
+    expect(html).not.toContain('more</a>');
+  });
+
+  it('formatCappedFindingIdLinks renders the French tail verbatim after the last link', () => {
+    const html = formatCappedFindingIdLinks(ids(30), 'fr', fr.findingsAppendix);
+    expect(html).toContain('>f010</a>\u00a0<span class="text-muted">et 20 autres</span>');
+  });
+
+  it('leaves an uncapped list untouched by any tail', () => {
+    expect(formatCappedFindingIdRefs(['f002', 'f001'], 'fr', fr.findingsAppendix)).toBe(
+      'f001, f002',
+    );
+    expect(formatCappedList(['A', 'B'], 3, 'fr', fr.findingsAppendix)).toBe('A, B');
   });
 });
 

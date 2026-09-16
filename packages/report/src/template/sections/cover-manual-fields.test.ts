@@ -139,7 +139,7 @@ describe('the cover carries the canonical generic decision question, byte for by
 
   it('the resolver returns the canonical English bytes', () => {
     expect(resolveGenericDecisionQuestion('en')).toBe(
-      'What is the current state of your site, and where should you start?',
+      'Which parts of your site should be fixed as a priority to improve its accessibility, visibility, and usability?',
     );
   });
 
