@@ -43,6 +43,7 @@ export type {
   UrlResultStatus,
 } from './schemas/job.schema.js';
 export {
+  ActiveJobSlotTakenError,
   cancelJob,
   cancelQueuedJobs,
   claimNextQueuedJob,

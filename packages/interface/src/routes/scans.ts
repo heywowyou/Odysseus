@@ -1,7 +1,9 @@
+import type { ServerResponse } from 'node:http';
 import type { Connection } from 'mongoose';
 import { promises as fs } from 'node:fs';
 import { isHttpUrlWithoutCredentials, isValidSiren } from '@odysseus/core';
 import {
+  ActiveJobSlotTakenError,
   cancelJob,
   cancelQueuedJobs,
   createJob,
@@ -15,7 +17,9 @@ import {
   listJobs,
   canonicalJobTypeForScanIntent,
   displayJobIntent,
+  type JobDocument,
   type JobOptionsSnapshot,
+  type NewJobInput,
   registrableDomainForScan,
 } from '@odysseus/store';
 import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
@@ -146,6 +150,23 @@ async function autoAttachProspect(
 /** Registers the job-creation and job-status endpoints. `queue.notify()`
  *  is called after every successful create so a submitted scan starts
  *  promptly rather than waiting out the queue's poll interval. */
+/** createJob, answering a lost launch race the way the read-side conflict
+ *  check answers: a concurrent launch for the same prospect slot is refused
+ *  as host-busy instead of surfacing as a server error. */
+async function createJobOrRefuse(
+  connection: Connection,
+  res: ServerResponse,
+  input: NewJobInput,
+): Promise<JobDocument | null> {
+  try {
+    return await createJob(connection, input);
+  } catch (error) {
+    if (!(error instanceof ActiveJobSlotTakenError)) throw error;
+    sendJson(res, 200, { started: false, refusal: 'host-busy' });
+    return null;
+  }
+}
+
 export function registerScanRoutes(router: Router, connection: Connection, queue: JobQueue): void {
   router.post('/api/scans', async ({ req, res }) => {
     const body = await readJsonBodyOrRespond(req, res);
@@ -200,11 +221,12 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
         sendJson(res, 200, { started: false, refusal: check.refusal });
         return;
       }
-      const job = await createJob(connection, {
+      const job = await createJobOrRefuse(connection, res, {
         type: canonicalJobTypeForScanIntent('quick-check'),
         siteUrl: url,
         options: { ...options, maxPages: 1 },
       });
+      if (job === null) return;
       logJobCreated(req, job.jobId, job.type);
       queue.notify();
       sendJson(res, 201, { started: true, jobId: job.jobId, type: 'quick-check' });
@@ -243,11 +265,12 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
         return;
       }
 
-      const job = await createJob(connection, {
+      const job = await createJobOrRefuse(connection, res, {
         type: canonicalJobTypeForScanIntent('full-audit'),
         siteUrl: url,
         options,
       });
+      if (job === null) return;
       logJobCreated(req, job.jobId, job.type);
       queue.notify();
       sendJson(res, 201, { started: true, jobId: job.jobId, type: 'full-audit' });

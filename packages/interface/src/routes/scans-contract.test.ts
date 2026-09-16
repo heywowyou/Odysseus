@@ -14,6 +14,7 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
 }));
 
 import {
+  ActiveJobSlotTakenError,
   checkScanLaunch,
   createJob,
   deleteAuditCascade,
@@ -174,5 +175,16 @@ describe('DELETE /api/scans/:jobId', () => {
     expect(await remove(false)).toBe(200);
     expect(deleteAuditCascade).toHaveBeenCalledWith(fakeConnection, 'audit-1');
     expect(deleteJob).toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/scans launch race', () => {
+  it('refuses as host-busy when a concurrent launch took the prospect slot first', async () => {
+    vi.mocked(createJob).mockRejectedValueOnce(new ActiveJobSlotTakenError('job-other'));
+    const response = await post({ type: 'full-audit', url: 'https://example.fr/', options: {} });
+    expect(response).toEqual({
+      statusCode: 200,
+      body: { started: false, refusal: 'host-busy' },
+    });
   });
 });

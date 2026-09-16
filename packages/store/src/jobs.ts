@@ -17,6 +17,7 @@ import {
   type JobPhase,
   type JobProgress,
   type JobRunIdentity,
+  type JobStatus,
   type JobType,
   type OutreachBatchResult,
   type UrlResult,
@@ -29,8 +30,53 @@ export interface NewJobInput {
   options: JobOptionsSnapshot;
 }
 
+/** Thrown by createJob when another unfinished job already holds the
+ *  prospect scan slot the new job needs. */
+export class ActiveJobSlotTakenError extends Error {
+  constructor(readonly conflictingJobId: string) {
+    super(`an unfinished job (${conflictingJobId}) already holds this prospect scan slot`);
+    this.name = 'ActiveJobSlotTakenError';
+  }
+}
+
+const UNFINISHED_JOB_STATUSES: JobStatus[] = ['queued', 'running', 'needs-input'];
+
+/** The per-prospect slot a new job occupies: one complete crawl (Full scan,
+ *  or the historical prospecting-audit and outreach full-scan types) and
+ *  one Quick Check at a time. Jobs with no prospect take no slot. */
+function activeSlotForNewJob(input: NewJobInput): string | undefined {
+  const prospectId = input.options.prospectId;
+  if (prospectId === undefined) return undefined;
+  switch (input.type) {
+    case 'full-audit':
+    case 'prospecting-audit':
+    case 'outreach-full-scan':
+      return `${prospectId}:complete-crawl`;
+    case 'quick-check':
+      return `${prospectId}:quick-check`;
+    case 'prospecting':
+      if (input.options.scanType === 'quick-check') return `${prospectId}:quick-check`;
+      if (input.options.scanType === 'prospecting-audit') return `${prospectId}:complete-crawl`;
+      return undefined;
+    default:
+      return undefined;
+  }
+}
+
+function isDuplicateKeyError(error: unknown): boolean {
+  return (
+    typeof error === 'object' && error !== null && (error as { code?: unknown }).code === 11000
+  );
+}
+
+/** Inserts a queued job. A prospect scan takes its slot in the same insert,
+ *  so two launches racing past the read-side conflict check cannot both
+ *  create a job: the second insert fails on the unique slot and this throws
+ *  ActiveJobSlotTakenError. A slot still held by a finished job is released
+ *  and the insert retried. */
 export async function createJob(connection: Connection, input: NewJobInput): Promise<JobDocument> {
   const JobModel = createJobModel(connection);
+  const activeSlot = activeSlotForNewJob(input);
   const doc: JobDocumentFields = {
     jobId: randomUUID(),
     type: input.type,
@@ -41,9 +87,33 @@ export async function createJob(connection: Connection, input: NewJobInput): Pro
     progress: {},
     ...(input.siteUrl !== undefined ? { siteUrl: input.siteUrl } : {}),
     ...(input.urls !== undefined ? { urls: input.urls } : {}),
+    ...(activeSlot !== undefined ? { activeSlot } : {}),
   };
-  await JobModel.create(doc);
-  return doc;
+  if (activeSlot === undefined) {
+    await JobModel.create(doc);
+    return doc;
+  }
+  await JobModel.init();
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await JobModel.create(doc);
+      return doc;
+    } catch (error) {
+      if (!isDuplicateKeyError(error) || attempt >= 2) throw error;
+    }
+    const holder = await JobModel.findOne({ activeSlot })
+      .select({ jobId: 1, status: 1, _id: 0 })
+      .lean<{ jobId: string; status: string }>();
+    if (holder !== null && UNFINISHED_JOB_STATUSES.includes(holder.status as JobStatus)) {
+      throw new ActiveJobSlotTakenError(holder.jobId);
+    }
+    if (holder !== null) {
+      await JobModel.updateOne(
+        { jobId: holder.jobId, activeSlot, status: { $nin: UNFINISHED_JOB_STATUSES } },
+        { $unset: { activeSlot: '' } },
+      );
+    }
+  }
 }
 
 /** Atomic claim: the oldest queued job is marked running in one operation,

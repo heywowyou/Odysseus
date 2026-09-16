@@ -198,6 +198,12 @@ export interface JobDocumentFields {
    *  link straight to the awaited fields instead of reading the error
    *  string. */
   needsInputFields?: JobNeedsInputField[];
+  /** The prospect scan slot this job took at creation, e.g.
+   *  `<prospectId>:complete-crawl`. A unique index makes the insert itself
+   *  refuse a second job for the same slot, which a read-then-insert launch
+   *  check cannot. It stays on the row after the job ends; createJob frees
+   *  it from a finished holder when a new job needs the slot. */
+  activeSlot?: string;
   /** Diagnostic only, not artifact provenance: the build revision of the
    *  worker that claimed this job, stamped by claimNextQueuedJob so a
    *  surprising result can be checked against a stale worker rather than
@@ -388,6 +394,7 @@ const jobSchema = new Schema<JobDocument>(
     needsReview: { type: String },
     needsInputFields: { type: [jobNeedsInputFieldSchema] },
     workerRevision: { type: String },
+    activeSlot: { type: String },
   },
   { collection: 'jobs' },
 );
@@ -395,6 +402,10 @@ const jobSchema = new Schema<JobDocument>(
 jobSchema.index({ status: 1, createdAt: 1 });
 jobSchema.index({ createdAt: -1 });
 jobSchema.index({ 'options.prospectId': 1, createdAt: -1 });
+jobSchema.index(
+  { activeSlot: 1 },
+  { unique: true, partialFilterExpression: { activeSlot: { $exists: true } } },
+);
 
 export function createJobModel(connection: Connection): Model<JobDocument> {
   return connection.models['Job'] ?? connection.model<JobDocument>('Job', jobSchema);
