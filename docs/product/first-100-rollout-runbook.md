@@ -1,5 +1,8 @@
 # First-100 rollout runbook (plan 014)
 
+> Plan 014 is superseded. The redesigned experiment on the prospect hub is
+> proposed in [outreach-experiment-design.md](outreach-experiment-design.md).
+
 Operational record for
 [plan 014](../../plans/archive/014-first-100-hotel-rollout.md), opened 2026-09-08.
 Plan 014 owns the rules; this runbook owns the recorded evidence: the Step 1
