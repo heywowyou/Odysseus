@@ -20,7 +20,13 @@ const WITHOUT_CONTENT_REASON_ORDER: readonly PageWithoutContentAnalysisReason[] 
 ];
 
 export interface CoverageDisclosure {
+  /** The full pass-by-pass breakdown. Issue #324: printed only in the
+   *  methodology section - it used to open four other sections verbatim. */
   summary: string;
+  /** Issue #324: the one plain scope line for the metadata sheet ("140
+   *  pages analysées sur 217 adresses trouvées"), with none of the pass
+   *  vocabulary. */
+  plainSummary: string;
   details: readonly string[];
 }
 
@@ -45,14 +51,14 @@ export function buildCoverageDisclosure(
     `${n(count)} ${pluralize(language, count, singular, plural)}`;
 
   if (coverage.kind === 'legacy-unknown') {
+    const inventory = phrase(
+      coverage.inventoriedUrlCount,
+      cov.inventoriedUrlSingular,
+      cov.inventoriedUrlPlural,
+    );
     return {
-      summary: fillTemplate(strings.coverage.legacyUnknownTemplate, {
-        inventory: phrase(
-          coverage.inventoriedUrlCount,
-          cov.inventoriedUrlSingular,
-          cov.inventoriedUrlPlural,
-        ),
-      }),
+      summary: fillTemplate(strings.coverage.legacyUnknownTemplate, { inventory }),
+      plainSummary: inventory,
       details: [],
     };
   }
@@ -82,6 +88,10 @@ export function buildCoverageDisclosure(
   }
 
   return {
+    plainSummary: fillTemplate(strings.coverage.plainSummaryTemplate, {
+      analysed: phrase(contentCompleted, cov.analysedPageSingular, cov.analysedPagePlural),
+      found: phrase(coverage.inventoriedUrlCount, cov.foundAddressSingular, cov.foundAddressPlural),
+    }),
     summary: fillTemplate(strings.coverage.summaryTemplate, {
       inventory: phrase(
         coverage.inventoriedUrlCount,

@@ -18,7 +18,6 @@ import {
 } from '../html-utils.js';
 import { preserveFrenchOrdinalCase } from '../french-typography.js';
 import { SEVERITY } from '../design-tokens.js';
-import { buildCoverageDisclosure } from '../coverage-disclosure.js';
 
 /** Threshold values (good/needsImprovement) now live in
  *  `@odysseus/core`'s cwv-thresholds.ts, shared with normalize-
@@ -344,7 +343,6 @@ export function renderCoreWebVitalsTable(
   // aggregate over.
   const pagesScanned = manifest.pages.filter((page) => page.coreWebVitals !== undefined).length;
   const c = strings.coreWebVitals;
-  const coverage = buildCoverageDisclosure(strings, manifest, language);
   const metricLabels: Record<CoreWebVitalMetricKey, string> = {
     lcp: c.lcpLabel,
     tbt: c.tbtLabel,
@@ -365,7 +363,6 @@ export function renderCoreWebVitalsTable(
       `
       ${renderSheetHeader(ordinal, c.eyebrow, c.heading, 'var(--space-2)')}
       <p style="font-size:13.5px;opacity:0.85;max-width:64ch">${escapeHtml(c.allUnmeasuredNote)}</p>
-      <p style="font-size:12px;opacity:0.65;max-width:64ch">${escapeHtml(coverage.summary)}</p>
       ${renderRealUserDataBlock(strings, language, manifest.cruxFieldData, false)}
     `,
       '',
@@ -434,7 +431,6 @@ export function renderCoreWebVitalsTable(
     ${renderRealUserDataBlock(strings, language, manifest.cruxFieldData, true)}
     <h3 style="font-size:14px;margin-top:var(--space-6);margin-bottom:var(--space-2)">${escapeHtml(c.labHeading)}</h3>
     <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(fillTemplate(c.labIntroTemplate, { pages: `${formatNumber(pagesScanned, language)} ${pluralize(language, pagesScanned, c.pageSingular, c.pagePlural)}` }))}</p>
-    <p style="font-size:11px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(coverage.summary)}</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px">
       <thead>
         <tr>

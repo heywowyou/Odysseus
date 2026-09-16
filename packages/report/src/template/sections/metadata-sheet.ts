@@ -154,7 +154,7 @@ export function renderMetadataSheet(
   const pagesScanned = manifest.pages.filter((page) => page.status === 'visited').length;
   const coverage = buildCoverageDisclosure(strings, manifest, analysis.language);
   const scopeValue = manifest.pages.some((page) => page.analysisCoverage !== undefined)
-    ? coverage.summary
+    ? coverage.plainSummary
     : `${formatNumber(pagesScanned, analysis.language)} ${pluralize(analysis.language, pagesScanned, strings.metadata.pagesScannedSingular, strings.metadata.pagesScannedPlural)}`;
   const raisonSociale = manualFields?.raisonSociale?.value;
 

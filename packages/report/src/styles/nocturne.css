@@ -212,13 +212,6 @@ h4 {
   line-height: 1.08;
   letter-spacing: -0.025em;
 }
-.statistics-coverage {
-  max-width: 68ch;
-  margin-bottom: calc(var(--space-4) * 1.02);
-  color: var(--color-neutral-300);
-  font-size: 12px;
-  line-height: 1.5;
-}
 .statistics-number-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);

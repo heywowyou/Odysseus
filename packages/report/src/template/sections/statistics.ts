@@ -18,7 +18,6 @@ import { type RenderedPriority, summarizePriorityOwnership } from '../rendered-p
 import { renderPriorityOwnershipSentence } from '../priority-ownership-note.js';
 import { computeStatistics } from '../statistics.js';
 import { RULE_TRANSLATIONS_FR } from '../rule-translations.js';
-import { buildCoverageDisclosure } from '../coverage-disclosure.js';
 
 /** item 1.10 (La Corniche pass): "N/N pages avec au moins un constat
  *  critique" reads as an alarming, broad finding, but on a real report
@@ -107,7 +106,6 @@ export function renderStatistics(
   const stats = computeStatistics(findings, manifest);
   const s = strings.statistics;
   const n = (value: number): string => formatNumber(value, language);
-  const coverage = buildCoverageDisclosure(strings, manifest, language);
 
   const numberTiles = [
     renderNumberTile(
@@ -246,9 +244,6 @@ export function renderStatistics(
   return sheet(
     `
     ${renderSheetHeader(ordinal, s.eyebrow, s.heading, 'var(--space-6)')}
-    <p class="statistics-coverage">${escapeHtml(
-      [coverage.summary, ...coverage.details].join(' '),
-    )}</p>
     <div class="stat-tile-row statistics-number-grid">
       ${numberTiles}
     </div>

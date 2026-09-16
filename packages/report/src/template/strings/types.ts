@@ -230,6 +230,13 @@ export interface ReportStrings {
     sameFindingsAsTemplate: string;
   };
   coverage: {
+    /** Issue #324: the plain scope line, {analysed} and {found} being full
+     *  "N word(s)" phrases. */
+    plainSummaryTemplate: string;
+    analysedPageSingular: string;
+    analysedPagePlural: string;
+    foundAddressSingular: string;
+    foundAddressPlural: string;
     /** Templates: {inventory}, {content}, {contentCompleted},
      *  {contentPartial}, {contentFailed}, {lighthouse}, {lighthousePartial},
      *  {lighthouseFailed}, {lighthouseNotPlanned} - each a full composed

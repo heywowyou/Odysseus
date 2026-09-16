@@ -50,31 +50,50 @@ function withCoverage(manifest: AuditManifest): AuditManifest {
   };
 }
 
-describe('current coverage reaches every report scope surface', () => {
-  it('uses the shared pass-specific summary in English', async () => {
+// Issue #324: the pass-by-pass breakdown opened the metadata sheet, the
+// statistics, the performance page and the annex verbatim. It now lives in
+// the methodology section alone, and the metadata sheet carries one plain
+// scope line.
+describe('coverage disclosure placement (issue #324)', () => {
+  it('prints the full breakdown in methodology only, and a plain line on the metadata sheet', async () => {
     const manifest = withCoverage(await loadSmallSiteManifest());
     const findings = await loadSmallSiteFindings();
     const analysis = await loadSmallSiteAnalysis('en');
     const strings = getStrings('en');
     const summaryNeedle = '11 URLs inventoried; content-sensitive results on 2 pages';
-    const surfaces = [
-      renderMetadataSheet(strings, manifest, analysis, findings),
+
+    const methodology = renderMethodology(strings, 11, manifest, 'en');
+    expect(methodology).toContain(summaryNeedle);
+    expect(methodology).toContain('7 additional continuation URLs');
+    expect(methodology).toContain('8 coverage records unavailable');
+
+    const metadata = renderMetadataSheet(strings, manifest, analysis, findings);
+    expect(metadata).toContain('2 pages analysed out of 11 addresses found');
+    expect(metadata).not.toContain('content-sensitive');
+
+    for (const html of [
+      metadata,
       renderStatistics(strings, 3, 'en', findings, manifest),
       renderCoreWebVitalsTable(strings, 9, 'en', manifest),
-      renderMethodology(strings, 11, manifest, 'en'),
       renderFindingsAppendix(strings, 12, 'en', findings, manifest, 'general'),
-    ];
-
-    for (const html of surfaces) expect(html).toContain(summaryNeedle);
-    expect(surfaces[3]).toContain('7 additional continuation URLs');
-    expect(surfaces[4]).toContain('8 coverage records unavailable');
+    ]) {
+      expect(html).not.toContain(summaryNeedle);
+    }
   });
 
-  it('renders the shared summary in French without inventing family reach', async () => {
+  it('writes the plain scope line in French', async () => {
     const manifest = withCoverage(await loadSmallSiteManifest());
     const findings = await loadSmallSiteFindings();
-    const strings = getStrings('fr');
-    const html = renderFindingsAppendix(strings, 12, 'fr', findings, manifest, 'general');
+    const analysis = await loadSmallSiteAnalysis('fr');
+    const html = renderMetadataSheet(getStrings('fr'), manifest, analysis, findings);
+
+    expect(html).toContain('2 pages analysées sur 11 adresses trouvées');
+    expect(html).not.toContain('URL inventoriées');
+  });
+
+  it('renders the French breakdown in methodology without inventing family reach', async () => {
+    const manifest = withCoverage(await loadSmallSiteManifest());
+    const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr');
 
     expect(html).toContain('11 URL inventoriées');
     expect(html).toContain('7 URL de continuation');

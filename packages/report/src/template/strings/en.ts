@@ -113,6 +113,11 @@ export const en: ReportStrings = {
   coverage: {
     summaryTemplate:
       '{inventory}; content-sensitive results on {content} ({contentCompleted}, {contentPartial}, {contentFailed} failed); Lighthouse: {lighthouse}, {lighthousePartial}, {lighthouseFailed} failed, {lighthouseNotPlanned}.',
+    plainSummaryTemplate: '{analysed} out of {found}',
+    analysedPageSingular: 'page analysed',
+    analysedPagePlural: 'pages analysed',
+    foundAddressSingular: 'address found',
+    foundAddressPlural: 'addresses found',
     inventoriedUrlSingular: 'URL inventoried',
     inventoriedUrlPlural: 'URLs inventoried',
     pageSingular: 'page',

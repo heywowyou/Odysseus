@@ -29,7 +29,6 @@ import { renderReferenceStatNote } from '../reference-stat-note.js';
 import { groupAppendix, type RuleGroup } from '../appendix-grouping.js';
 import { resolveFindingDisplayLabel, RULE_TRANSLATIONS_FR } from '../rule-translations.js';
 import { detectFindingVendor, isThirdPartyFinding } from '../third-party-attribution.js';
-import { buildCoverageDisclosure } from '../coverage-disclosure.js';
 
 function renderRuleSum(strings: ReportStrings, language: ReportLanguage, group: RuleGroup): string {
   const a = strings.findingsAppendix;
@@ -849,7 +848,6 @@ export function renderFindingsAppendix(
     })
     .map((page) => page.url)
     .sort();
-  const coverage = buildCoverageDisclosure(strings, manifest, language);
 
   // item 1.4: split once, up front, so every downstream section (the
   // four category listings plus the new third-party block) reads from
@@ -920,9 +918,6 @@ export function renderFindingsAppendix(
     `
     ${renderSheetHeader(ordinal, strings.findingsAppendix.eyebrow, strings.findingsAppendix.heading, 'var(--space-2)')}
     <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(strings.findingsAppendix.intro)}</p>
-    <p style="font-size:11px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(
-      [coverage.summary, ...coverage.details].join(' '),
-    )}</p>
     ${legend}
     ${crawledPagesBlock}
     ${sections}
