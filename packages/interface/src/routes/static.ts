@@ -12,7 +12,17 @@ const CONTENT_TYPES: Record<string, string> = {
   '.js': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.woff2': 'font/woff2',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+  '.png': 'image/png',
 };
+
+/** Every response carries `x-content-type-options: nosniff`, so a file the
+ *  SPA loads by URL (such as the favicon) is only usable when it is served
+ *  with its real type rather than application/octet-stream. */
+export function contentTypeForPath(filePath: string): string {
+  return CONTENT_TYPES[path.extname(filePath)] ?? 'application/octet-stream';
+}
 
 const APP_ROUTE_PATTERN = new RegExp(`^/(${APP_ROUTE_PREFIXES.join('|')})(/|$)`);
 
@@ -92,8 +102,7 @@ export function registerStaticFallback(router: Router): void {
       return;
     }
 
-    const contentType =
-      CONTENT_TYPES[path.extname(resolution.filePath)] ?? 'application/octet-stream';
+    const contentType = contentTypeForPath(resolution.filePath);
     res.statusCode = 200;
     res.setHeader('content-type', contentType);
     // The CSP belongs on the SPA shell only; hashed assets and unknown

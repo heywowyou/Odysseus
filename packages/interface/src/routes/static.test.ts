@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { resolveStaticPath } from './static.js';
+import { contentTypeForPath, resolveStaticPath } from './static.js';
 import { isHtmlContentType, SPA_CONTENT_SECURITY_POLICY } from '../security-headers.js';
 
 let publicDir: string;
@@ -117,6 +117,17 @@ describe('resolveStaticPath', () => {
   it('refuses traversal outside publicDir', async () => {
     const resolution = await resolveStaticPath(publicDir, '/../secrets.txt');
     expect(resolution).toEqual({ kind: 'forbidden' });
+  });
+});
+
+describe('contentTypeForPath', () => {
+  it('serves the favicon files with image types so nosniff browsers accept them', () => {
+    expect(contentTypeForPath('/public/assets/favicon-abc.svg')).toBe('image/svg+xml');
+    expect(contentTypeForPath('/public/assets/favicon-abc.ico')).toBe('image/x-icon');
+  });
+
+  it('keeps unknown extensions as opaque binaries', () => {
+    expect(contentTypeForPath('/public/assets/data.bin')).toBe('application/octet-stream');
   });
 });
 
