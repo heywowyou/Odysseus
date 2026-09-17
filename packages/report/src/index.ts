@@ -146,6 +146,7 @@ export async function generateReportPdf(
       ...(input.preparation !== undefined ? { preparation: input.preparation } : {}),
       ...(input.gradeOverride !== undefined ? { gradeOverride: input.gradeOverride } : {}),
       ...(input.delta !== undefined ? { delta: input.delta } : {}),
+      ...(input.qualityLimitations !== undefined ? { qualityLimitations: input.qualityLimitations } : {}),
     });
 
     const lintViolations = findRenderLintViolations(html);
@@ -161,3 +162,12 @@ export async function generateReportPdf(
     if (ownsBrowser) await browser.close();
   }
 }
+
+// Plan 058 fail-closed report-quality primitives.
+export { canonicalJson, reportQualityDigest, bytesDigest } from './quality/digest.js';
+export { EvidenceBoundContentError, sanitizeModelText, assertNoFreehandExactScalar, validateEvidenceBoundContent, resolveEvidenceBoundContent } from './quality/evidence-bound-content.js';
+export { buildReportFactRegistry, buildInitialCoverageLedger, buildReportEvidenceDossier, reconcileCoverageLedger, assertCoverageLedgerComplete, assertMandatoryDisclosures } from './quality/dossier.js';
+export { assertSeniorReportPlan, assertNoBlockingReviewIssues, assertCoverageAndPlan, deterministicProseViolations, assertReauditComparabilityLanguage } from './quality/plan-guards.js';
+export { REQUIRED_PDF_TOOLS, preflightPdfQualityToolchain, canonicalPostProcessPdf, runExactPdfQa } from './quality/pdf-quality.js';
+export type { PdfQualityToolVersions, ExactPdfQaResult } from './quality/pdf-quality.js';
+export { reportRendererAssetFingerprints } from './quality/renderer-fingerprint.js';
