@@ -44,7 +44,13 @@ export type OutreachActionRefusal =
 export type OutreachAction = 'preview' | 'first-email' | 'follow-up';
 
 export type ScanLaunchCheck =
-  { allowed: true; registrableDomain: string } | { allowed: false; refusal: ScanLaunchRefusal };
+  | { allowed: true; registrableDomain: string }
+  | {
+      allowed: false;
+      refusal: ScanLaunchRefusal;
+      /** With 'host-busy': the queued or running job holding the slot. */
+      conflictingJobId?: string;
+    };
 export type OutreachActionCheck =
   | {
       allowed: true;
@@ -93,7 +99,9 @@ export async function checkScanLaunch(
     hostname: parsed.hostname,
     ...(input.prospectId === undefined ? {} : { prospectId: input.prospectId }),
   });
-  if (!launch.allowed) return { allowed: false, refusal: 'host-busy' };
+  if (!launch.allowed) {
+    return { allowed: false, refusal: 'host-busy', conflictingJobId: launch.conflictingJobId };
+  }
   return { allowed: true, registrableDomain: domain };
 }
 

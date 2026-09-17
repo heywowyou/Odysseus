@@ -160,6 +160,8 @@ type ScanLaunchOutcome =
   | {
       started: false;
       refusal: 'invalid-url' | 'suppressed' | 'host-busy' | 'prospect-unavailable';
+      /** With 'host-busy', when known: the job holding the slot. */
+      conflictingJobId?: string;
     };
 
 /** The one launch path behind both the single and the batch endpoint: attach
@@ -190,7 +192,13 @@ async function launchScan(
     kind: type,
     ...(options.prospectId === undefined ? {} : { prospectId: options.prospectId }),
   });
-  if (!check.allowed) return { started: false, refusal: check.refusal };
+  if (!check.allowed) {
+    return {
+      started: false,
+      refusal: check.refusal,
+      ...(check.conflictingJobId === undefined ? {} : { conflictingJobId: check.conflictingJobId }),
+    };
+  }
   try {
     const job = await createJob(connection, {
       type: canonicalJobTypeForScanIntent(type),
@@ -201,7 +209,7 @@ async function launchScan(
     return { started: true, job };
   } catch (error) {
     if (!(error instanceof ActiveJobSlotTakenError)) throw error;
-    return { started: false, refusal: 'host-busy' };
+    return { started: false, refusal: 'host-busy', conflictingJobId: error.conflictingJobId };
   }
 }
 
@@ -280,7 +288,13 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       }
       const outcome = await launchScan(connection, type, url, requested);
       if (!outcome.started) {
-        sendJson(res, 200, { started: false, refusal: outcome.refusal });
+        sendJson(res, 200, {
+          started: false,
+          refusal: outcome.refusal,
+          ...(outcome.conflictingJobId === undefined
+            ? {}
+            : { conflictingJobId: outcome.conflictingJobId }),
+        });
         return;
       }
       logJobCreated(req, outcome.job.jobId, outcome.job.type);

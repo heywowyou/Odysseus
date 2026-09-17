@@ -160,7 +160,7 @@ describe('central prospect guards', () => {
     });
     await expect(
       checkScanLaunch(fakeConnection, { url: 'https://example.com', kind: 'full-audit' }),
-    ).resolves.toEqual({ allowed: false, refusal: 'host-busy' });
+    ).resolves.toEqual({ allowed: false, refusal: 'host-busy', conflictingJobId: 'busy-job' });
   });
 
   it('does not block a follow-up merely because the prospect is vendor-hosted', async () => {

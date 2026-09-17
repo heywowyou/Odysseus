@@ -25,6 +25,7 @@ import {
   type AuditIntentSourceJob,
 } from './prospect-audit-qualification.js';
 import { createReportModel } from './schemas/report.schema.js';
+import { displayJobIntent } from './scan-intents.js';
 import {
   READINESS_REPORT_PROJECTION,
   resolveOutreachReportReadiness,
@@ -95,6 +96,7 @@ export type ProspectWorkThread = Pick<
 export type ProspectWorkJob = Pick<JobDocumentFields, 'jobId' | 'createdAt'> &
   Partial<Pick<JobDocumentFields, 'auditId' | 'auditIds' | 'status' | 'type'>> & {
     options?: { prospectId?: string; scanType?: 'quick-check' | 'prospecting-audit' };
+    phase?: string;
   };
 
 export type ProspectWorkReport = ReadinessReport;
@@ -109,6 +111,9 @@ export interface ProspectWorkSources {
   failedJobs: readonly ProspectWorkJob[];
   /** Report rows of the prospect's audits (readiness projection only). */
   reports: readonly ProspectWorkReport[];
+  /** Issue #390: queued or running scans linked to the prospect. A running
+   *  scan replaces the prepare-audit recommendation. */
+  activeJobs?: readonly ProspectWorkJob[];
   suppressedDomains: ReadonlySet<string>;
   suppressedAddresses: ReadonlySet<string>;
 }
@@ -119,8 +124,17 @@ export interface ProspectWorkRecommendation {
   reason?: ProspectWorkReason;
 }
 
+/** Issue #390: the prospect's newest queued or running scan. */
+export interface ProspectWorkActiveScan {
+  jobId: string;
+  status: 'queued' | 'running';
+  scanIntent?: string;
+  phase?: string;
+}
+
 export interface ProspectWorkResult {
   prospectId: string;
+  activeScan?: ProspectWorkActiveScan;
   items: ProspectTodoRow[];
   recommendation?: ProspectWorkRecommendation;
   auditState: ProspectAuditQualificationState;
@@ -220,6 +234,7 @@ function recommendation(
   auditState: ProspectAuditQualificationState,
   websiteSuppressed: boolean,
   emailSuppressed: boolean,
+  scanActive = false,
 ): ProspectWorkRecommendation | undefined {
   if (TERMINAL_PROSPECT_STATUSES.has(prospect.status)) return undefined;
   if (item !== undefined) {
@@ -233,6 +248,8 @@ function recommendation(
     };
   }
   if (auditState !== 'qualifying') {
+    // Issue #390: the scan that would prepare the audit is already under way.
+    if (scanActive) return undefined;
     return {
       action: 'prepare-audit',
       href: encodedProspectHref(prospect.prospectId, 'actions'),
@@ -280,6 +297,24 @@ export function deriveProspectWork(
       (job.auditId !== undefined && prospectAuditIds.has(job.auditId)),
   );
   const qualification = selectNewestQualifyingAudit(prospectAudits);
+  const activeJob = (sources.activeJobs ?? [])
+    .filter(
+      (job) =>
+        job.options?.prospectId === prospect.prospectId &&
+        (job.status === 'queued' || job.status === 'running'),
+    )
+    .sort((left, right) => asTime(right.createdAt) - asTime(left.createdAt))[0];
+  const activeScan: ProspectWorkActiveScan | undefined =
+    activeJob === undefined
+      ? undefined
+      : {
+          jobId: activeJob.jobId,
+          status: activeJob.status as 'queued' | 'running',
+          ...(activeJob.type === undefined
+            ? {}
+            : { scanIntent: displayJobIntent(activeJob.type, activeJob.options?.scanType) }),
+          ...(activeJob.phase === undefined ? {} : { phase: activeJob.phase }),
+        };
   const { websiteSuppressed, emailSuppressed } = prospectContactSuppression(prospect, sources);
   const items: ProspectTodoRow[] = [];
 
@@ -388,9 +423,17 @@ export function deriveProspectWork(
   const nextRecommendation =
     prospect.archivedAt !== undefined
       ? undefined
-      : recommendation(prospect, items[0], qualification.state, websiteSuppressed, emailSuppressed);
+      : recommendation(
+          prospect,
+          items[0],
+          qualification.state,
+          websiteSuppressed,
+          emailSuppressed,
+          activeScan !== undefined,
+        );
   return {
     prospectId: prospect.prospectId,
+    ...(activeScan === undefined || prospect.archivedAt !== undefined ? {} : { activeScan }),
     items,
     ...(nextRecommendation === undefined ? {} : { recommendation: nextRecommendation }),
     auditState: qualification.state,
@@ -507,6 +550,7 @@ export async function loadProspectWork(
       auditId: 1,
       auditIds: 1,
       createdAt: 1,
+      phase: 1,
       'options.prospectId': 1,
       'options.scanType': 1,
     })
@@ -522,6 +566,7 @@ export async function loadProspectWork(
   });
   const needsInputJobs = scanJobs.filter((job) => job.status === 'needs-input');
   const failedJobs = scanJobs.filter((job) => job.status === 'failed');
+  const activeJobs = scanJobs.filter((job) => job.status === 'queued' || job.status === 'running');
   const reports =
     auditIds.length === 0
       ? []
@@ -537,6 +582,7 @@ export async function loadProspectWork(
     needsInputJobs,
     failedJobs,
     reports,
+    activeJobs,
     suppressedDomains: suppression.domains,
     suppressedAddresses: suppression.addresses,
   };
@@ -546,6 +592,10 @@ export async function loadProspectWork(
   const draftsByProspect = groupByProspect(sources.drafts, (draft) => draft.prospectId);
   const threadsByProspect = groupByProspect(sources.threads, (thread) => thread.prospectId);
   const jobsByProspect = groupByProspect(sources.needsInputJobs, (job) => job.options?.prospectId);
+  const activeJobsByProspect = groupByProspect(
+    sources.activeJobs ?? [],
+    (job) => job.options?.prospectId,
+  );
   const prospectByAudit = new Map(
     sources.audits.flatMap((audit) =>
       audit.prospectId === undefined ? [] : [[audit.auditId, audit.prospectId] as const],
@@ -571,6 +621,7 @@ export async function loadProspectWork(
         needsInputJobs: jobsByProspect.get(prospect.prospectId) ?? [],
         failedJobs: failedJobsByProspect.get(prospect.prospectId) ?? [],
         reports: reportsByProspect.get(prospect.prospectId) ?? [],
+        activeJobs: activeJobsByProspect.get(prospect.prospectId) ?? [],
       },
       now,
     ),

@@ -335,7 +335,21 @@ describe('POST /api/scans launch race', () => {
     const response = await post({ type: 'full-audit', url: 'https://example.fr/', options: {} });
     expect(response).toEqual({
       statusCode: 200,
-      body: { started: false, refusal: 'host-busy' },
+      body: { started: false, refusal: 'host-busy', conflictingJobId: 'job-other' },
+    });
+  });
+
+  it('names the job holding the site when the launch guard refuses as host-busy', async () => {
+    vi.mocked(checkScanLaunch).mockResolvedValueOnce({
+      allowed: false,
+      refusal: 'host-busy',
+      conflictingJobId: 'job-running',
+    });
+    const response = await post({ type: 'full-audit', url: 'https://example.fr/', options: {} });
+    expect(response.body).toEqual({
+      started: false,
+      refusal: 'host-busy',
+      conflictingJobId: 'job-running',
     });
   });
 });

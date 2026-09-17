@@ -171,6 +171,9 @@ export interface ProspectHubStrings {
     recommended: string;
     completed: string;
     noRecommendation: string;
+    activeScanRunning: string;
+    activeScanQueued: string;
+    viewRunningScan: string;
     recommendationActions: Record<string, string>;
     recommendationReasons: Record<string, string>;
     quick: string;
@@ -559,6 +562,9 @@ export const prospectHub = {
       recommended: 'Prochaine action recommandée',
       completed: 'Prospect traité',
       noRecommendation: 'Aucune action recommandée pour le moment.',
+      activeScanRunning: '{scan} en cours sur ce site. Attendez qu’il se termine.',
+      activeScanQueued: '{scan} en file d’attente pour ce site. Attendez qu’il se termine.',
+      viewRunningScan: 'Voir le scan en cours',
       recommendationActions: {
         'review-audit': 'Confirmer les informations',
         'regenerate-report': 'Régénérer le rapport',
@@ -1066,6 +1072,9 @@ export const prospectHub = {
       recommended: 'Recommended next action',
       completed: 'Prospect handled',
       noRecommendation: 'No recommended action at this time.',
+      activeScanRunning: '{scan} running on this site. Wait for it to finish.',
+      activeScanQueued: '{scan} queued for this site. Wait for it to finish.',
+      viewRunningScan: 'View running scan',
       recommendationActions: {
         'review-audit': 'Confirm the details',
         'regenerate-report': 'Regenerate the report',

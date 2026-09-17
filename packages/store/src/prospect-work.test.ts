@@ -131,6 +131,29 @@ describe('prospect work model', () => {
     ]);
   });
 
+  it('issue #390: a running scan replaces the prepare-audit recommendation', () => {
+    const running = {
+      jobId: 'job-running',
+      type: 'full-audit' as const,
+      status: 'running' as const,
+      phase: 'crawl',
+      createdAt: new Date('2026-09-14T10:00:00.000Z'),
+      options: { prospectId: prospect.prospectId },
+    };
+    const idle = deriveProspectWork(prospect, emptySources);
+    expect(idle.recommendation).toMatchObject({ action: 'prepare-audit' });
+    expect(idle.activeScan).toBeUndefined();
+
+    const work = deriveProspectWork(prospect, { ...emptySources, activeJobs: [running] });
+    expect(work.recommendation).toBeUndefined();
+    expect(work.activeScan).toEqual({
+      jobId: 'job-running',
+      status: 'running',
+      scanIntent: 'full-audit',
+      phase: 'crawl',
+    });
+  });
+
   describe('issue #378: audit blockers gate initial outreach', () => {
     const blockedJob = {
       jobId: 'job-blocked',

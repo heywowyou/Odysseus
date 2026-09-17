@@ -119,6 +119,8 @@ interface ProspectWorkSummary {
   };
   auditState: string;
   qualifyingAuditId?: string;
+  /** Issue #390: the prospect's queued or running scan. */
+  activeScan?: { jobId: string; status: 'queued' | 'running'; scanIntent?: string };
   /** Advisory provenance of the qualifying audit; never a blocker. */
   dataVersionState?: 'current' | 'older' | 'unknown';
   websiteSuppressed: boolean;
@@ -268,6 +270,13 @@ export function ProspectHubDetailPage(): JSX.Element {
   const [archiveImpact, setArchiveImpact] = useState<ProspectDeletionImpact | null>(null);
   const [lifecycleNotice, setLifecycleNotice] = useState<string | null>(null);
   const [outreachNotice, setOutreachNotice] = useState<string | null>(null);
+  // Issue #390: a scan refusal shows next to the scan buttons, with the job
+  // that holds the site when the server names it.
+  const [scanNotice, setScanNotice] = useState<{
+    message: string;
+    jobId?: string;
+    from: 'recommended' | 'actions';
+  } | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<ContactRemoval | null>(null);
   const [newStakeholder, setNewStakeholder] = useState({ name: '', position: '' });
   const [stakeholderEdit, setStakeholderEdit] = useState<{
@@ -315,6 +324,7 @@ export function ProspectHubDetailPage(): JSX.Element {
   const drafts = prospect.drafts ?? [];
   const work = prospect.work;
   const recommendation = work?.recommendation;
+  const activeScan = work?.activeScan;
   const auditState = work?.auditState ?? 'missing';
   const auditStateLabel = copy.auditStateLabels[auditState] ?? strings.common.vocabularyFallback;
   const recentEvents = prospect.events.slice(0, 3);
@@ -476,29 +486,35 @@ export function ProspectHubDetailPage(): JSX.Element {
     }
   };
 
-  const launchScan = async (type: 'quick-check' | 'full-audit'): Promise<void> => {
+  const launchScan = async (
+    type: 'quick-check' | 'full-audit',
+    from: 'recommended' | 'actions',
+  ): Promise<void> => {
     if (!primaryWebsite) return;
     setOutreachBusy(`scan-${type}`);
-    setOutreachNotice(null);
+    setScanNotice(null);
     try {
-      const result = await sendJson<{ started?: boolean; jobId?: string; refusal?: string }>(
-        '/api/scans',
-        'POST',
-        {
-          type,
-          url: primaryWebsite.url,
-          options: { prospectId: prospect.prospectId },
-        },
-      );
+      const result = await sendJson<{
+        started?: boolean;
+        jobId?: string;
+        refusal?: string;
+        conflictingJobId?: string;
+      }>('/api/scans', 'POST', {
+        type,
+        url: primaryWebsite.url,
+        options: { prospectId: prospect.prospectId },
+      });
       if (result.jobId) {
         navigate(`/scans/${result.jobId}`);
       } else {
-        setOutreachNotice(
-          scanRefusalNotice(copy, strings.common.vocabularyFallback, result.refusal),
-        );
+        setScanNotice({
+          from,
+          message: scanRefusalNotice(copy, strings.common.vocabularyFallback, result.refusal),
+          ...(result.conflictingJobId === undefined ? {} : { jobId: result.conflictingJobId }),
+        });
       }
     } catch {
-      setOutreachNotice(copy.actionFailed);
+      setScanNotice({ from, message: copy.actionFailed });
     } finally {
       setOutreachBusy(null);
     }
@@ -767,6 +783,24 @@ export function ProspectHubDetailPage(): JSX.Element {
     }
   };
 
+  const renderScanNotice = (from: 'recommended' | 'actions'): JSX.Element | null =>
+    scanNotice === null || scanNotice.from !== from ? null : (
+      <p className="mt-2 text-sm text-ink-muted" role="status">
+        {scanNotice.message}
+        {scanNotice.jobId === undefined ? null : (
+          <>
+            {' '}
+            <Link
+              className="font-medium text-ink underline"
+              to={`/scans/${encodeURIComponent(scanNotice.jobId)}`}
+            >
+              {copy.viewRunningScan}
+            </Link>
+          </>
+        )}
+      </p>
+    );
+
   const renderRecommendationAction = (): JSX.Element | null => {
     if (recommendation === undefined) return null;
     const actionLabel =
@@ -788,7 +822,7 @@ export function ProspectHubDetailPage(): JSX.Element {
     ) {
       const onClick =
         recommendation.action === 'prepare-audit'
-          ? () => void launchScan('full-audit')
+          ? () => void launchScan('full-audit', 'recommended')
           : recommendation.action === 'create-first-email'
             ? () => void runFirstEmail()
             : () => void runFollowUp();
@@ -936,6 +970,25 @@ export function ProspectHubDetailPage(): JSX.Element {
                 <p className="text-sm text-ink-muted">{gateReason('follow-up')}</p>
               ) : null}
               {renderRecommendationAction()}
+              {renderScanNotice('recommended')}
+            </div>
+          ) : activeScan !== undefined ? (
+            <div className="flex flex-col items-start gap-3">
+              <p className="text-sm font-medium text-ink">
+                {(activeScan.status === 'queued'
+                  ? copy.activeScanQueued
+                  : copy.activeScanRunning
+                ).replace(
+                  '{scan}',
+                  activeScan.scanIntent === 'quick-check' ? copy.quick : copy.fullAudit,
+                )}
+              </p>
+              <Link
+                className={buttonStyles('secondary')}
+                to={`/scans/${encodeURIComponent(activeScan.jobId)}`}
+              >
+                {copy.viewRunningScan}
+              </Link>
             </div>
           ) : (
             <p className="text-sm text-ink-muted">
@@ -1609,7 +1662,7 @@ export function ProspectHubDetailPage(): JSX.Element {
                     size="sm"
                     disabled={!primaryWebsite || outreachBusy !== null}
                     isLoading={outreachBusy === 'scan-quick-check'}
-                    onClick={() => void launchScan('quick-check')}
+                    onClick={() => void launchScan('quick-check', 'actions')}
                   >
                     {copy.quick}
                   </Button>
@@ -1617,11 +1670,12 @@ export function ProspectHubDetailPage(): JSX.Element {
                     size="sm"
                     disabled={!primaryWebsite || outreachBusy !== null}
                     isLoading={outreachBusy === 'scan-full-audit'}
-                    onClick={() => void launchScan('full-audit')}
+                    onClick={() => void launchScan('full-audit', 'actions')}
                   >
                     {copy.fullAudit}
                   </Button>
                 </div>
+                {renderScanNotice('actions')}
               </div>
               <div className="border-t border-line pt-4">
                 <p className="text-sm font-medium text-ink">{copy.outreach}</p>
