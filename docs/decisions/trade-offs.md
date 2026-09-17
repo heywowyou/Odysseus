@@ -4744,7 +4744,8 @@ and an address-only write never narrows a domain-wide one. The site route
 also refuses cross-site posts and bounds submissions per client. Rejected:
 keeping domain reach for anonymous requests on non-free-mail domains (the
 abuse path), and refusing anonymous requests (an opt-out must never need
-proof).
+proof). Opting the matching prospect out does not widen that reach (issue #341
+follow-up, 2026-09-17), and no path suppresses a free-mail domain wholesale.
 
 
 ### 90. A live preview keeps its public link on the private record (operator request, 2026-09-15, issue #288)

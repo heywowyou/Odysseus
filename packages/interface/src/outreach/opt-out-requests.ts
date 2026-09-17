@@ -14,7 +14,8 @@
  * Otherwise only the address is: an anonymous form post must not let anyone
  * block a business they do not speak for, and one objection from a Gmail
  * user must not silence every prospect whose contact uses Gmail. A matching
- * prospect is still opted out, its previews revoked and its threads closed.
+ * prospect is still opted out, its previews revoked and its threads closed,
+ * without widening suppression beyond the reach decided above.
  */
 
 import {
@@ -92,7 +93,9 @@ async function applyOptOut(
 
   for (const prospect of await findProspectsByEmail(connection, address)) {
     try {
-      await recordProspectOutcome(connection, prospect.prospectId, 'opt-out', ACTOR);
+      await recordProspectOutcome(connection, prospect.prospectId, 'opt-out', ACTOR, {
+        suppression: 'already-applied',
+      });
     } catch (error) {
       // A won or lost prospect keeps its result; the suppression above
       // already stops any further contact.

@@ -136,6 +136,58 @@ describe.skipIf(!mongoAvailable)('processing opt-out requests', () => {
     expect(result.applied).toBe(1);
   }
 
+  it("keeps an anonymous opt-out for a known prospect's address to that address", async () => {
+    const prospect = await createProspectHub(connection!, {
+      sector: 'hotel',
+      name: 'Anon Prospect',
+      websites: [
+        {
+          url: 'https://anon-prospect.fr/',
+          registrableDomain: 'anon-prospect.fr',
+          kind: 'own',
+          primary: true,
+        },
+      ],
+      emails: [{ address: 'contact@anon-prospect.fr', origin: 'atout-france' }],
+    });
+
+    await submit('contact@anon-prospect.fr');
+
+    expect((await getProspectHub(connection!, prospect.prospectId))?.status).toBe('opted-out');
+    await expect(
+      isSuppressed(connection!, 'anon-prospect.fr', 'contact@anon-prospect.fr'),
+    ).resolves.toBe(true);
+    await expect(isSuppressed(connection!, 'anon-prospect.fr')).resolves.toBe(false);
+    await expect(
+      isSuppressed(connection!, 'anon-prospect.fr', 'direction@anon-prospect.fr'),
+    ).resolves.toBe(false);
+  });
+
+  it("never suppresses a free-mail provider when a prospect's contact uses it", async () => {
+    await createProspectHub(connection!, {
+      sector: 'gite',
+      name: 'Gîte Freemail',
+      websites: [
+        {
+          url: 'https://gite-freemail.fr/',
+          registrableDomain: 'gite-freemail.fr',
+          kind: 'own',
+          primary: true,
+        },
+      ],
+      emails: [{ address: 'gite.owner@gmail.com', origin: 'atout-france' }],
+    });
+
+    await submit('gite.owner@gmail.com', createOptOutLink('https://www.odysseusaudit.com').token);
+
+    await expect(isSuppressed(connection!, 'gmail.com', 'another.person@gmail.com')).resolves.toBe(
+      false,
+    );
+    await expect(isSuppressed(connection!, 'gmail.com', 'gite.owner@gmail.com')).resolves.toBe(
+      true,
+    );
+  });
+
   it('suppresses only the address for an anonymous request, never the business domain', async () => {
     await submit('reservation@anonymous-target.fr');
 

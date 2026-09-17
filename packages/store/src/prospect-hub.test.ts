@@ -14,6 +14,7 @@ import {
   directoryEntryToProspectInput,
   fillMissingProspectIdentity,
   getProspectHub,
+  recordProspectOutcome,
   setProspectStatus,
   updateProspect,
   withdrawProspectOutreach,
@@ -23,6 +24,7 @@ import { createOutreachDraftModel } from './schemas/outreach-draft.schema.js';
 import { createOutreachPreviewModel } from './schemas/outreach-preview.schema.js';
 import { createOutreachThreadModel } from './schemas/outreach-thread.schema.js';
 import { createProspectHubModel } from './schemas/prospect-hub.schema.js';
+import { isSuppressed } from './suppression.js';
 import { probeMongoAvailability } from './test-support.js';
 
 const { available: mongoAvailable, connection } = await probeMongoAvailability();
@@ -398,5 +400,32 @@ describe.skipIf(!mongoAvailable)('draft creation and confirmed sends', () => {
       threadId: 't-sent',
     });
     expect(draft).toMatchObject({ status: 'deleted', reviewOutcome: 'approved' });
+  });
+});
+
+describe.skipIf(!mongoAvailable)('operator-recorded opt-out suppression (issue #341)', () => {
+  it('an operator-recorded opt-out suppresses the business domains but never a free-mail domain', async () => {
+    const prospect = await createProspectHub(connection!, {
+      sector: 'hotel',
+      name: 'Hôtel Opérateur',
+      websites: [
+        {
+          url: 'https://hotel-op.fr/',
+          registrableDomain: 'hotel-op.fr',
+          kind: 'own',
+          primary: true,
+        },
+      ],
+      emails: [
+        { address: 'contact@hotel-op.fr', origin: 'atout-france' },
+        { address: 'owner@orange.fr', origin: 'atout-france' },
+      ],
+    });
+
+    await recordProspectOutcome(connection!, prospect.prospectId, 'opt-out');
+
+    await expect(isSuppressed(connection!, 'hotel-op.fr')).resolves.toBe(true);
+    await expect(isSuppressed(connection!, 'orange.fr', 'owner@orange.fr')).resolves.toBe(true);
+    await expect(isSuppressed(connection!, 'orange.fr', 'someone@orange.fr')).resolves.toBe(false);
   });
 });

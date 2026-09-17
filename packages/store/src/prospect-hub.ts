@@ -11,6 +11,7 @@ import {
   ACTIVE_OUTREACH_THREAD_STATES,
   normalizeDeclaredWebsite,
   emailDomain,
+  isFreeMailDomain,
   primaryWebsite,
 } from '@odysseus/core';
 import { directoryEntrySchema, prospectEventSchema, prospectSchema } from '@odysseus/core';
@@ -679,12 +680,14 @@ async function suppressProspect(
 ): Promise<void> {
   const website = primaryWebsite(prospect.websites);
   const domains = new Set<string>();
-  if (website?.registrableDomain !== undefined) {
+  // Issue #341: one prospect's objection must never silence a free-mail
+  // provider for every other prospect whose contact uses it.
+  if (website?.registrableDomain !== undefined && !isFreeMailDomain(website.registrableDomain)) {
     domains.add(website.registrableDomain);
   }
   for (const email of prospect.emails) {
     const domain = emailDomain(email.address);
-    if (domain !== undefined) domains.add(domain);
+    if (domain !== undefined && !isFreeMailDomain(domain)) domains.add(domain);
   }
   await Promise.all(
     [...domains].map((domain) =>
@@ -702,6 +705,7 @@ async function suppressProspect(
       return addSuppressionEntry(connection, {
         domain,
         address: email.address,
+        addressOnly: isFreeMailDomain(domain),
         reasonCode: 'objection',
         reason: 'opt-out recorded on the prospect',
       });
@@ -712,18 +716,28 @@ async function suppressProspect(
 /** Applies a workflow status requested by an automated outcome or scan
  *  effect. Unlike setProspectStatus, this refuses terminal sibling changes
  *  and regressions so callers cannot silently overwrite a manual result. */
+export interface ProspectStatusSuppressionOptions {
+  /** 'already-applied' means the caller has already written the suppression
+   *  reach the rules allow (the public opt-out, trade-off 89), so opting the
+   *  prospect out must not widen it. */
+  suppression?: 'apply' | 'already-applied';
+}
+
 export async function applyAutomaticProspectStatus(
   connection: Connection,
   prospectId: string,
   status: Exclude<ProspectStatus, 'new'>,
   actor = 'automation',
+  options: ProspectStatusSuppressionOptions = {},
 ): Promise<ProspectHubDocument | null> {
   const current = await getProspectHub(connection, prospectId);
   if (current === null) return null;
   const decision = decideAutomaticStatus(current.status, status);
   if (!decision.allowed) throw new AutomaticStatusTransitionError(current.status, status);
   if (!decision.changed) return current;
-  if (status === 'opted-out') await suppressProspect(connection, current);
+  if (status === 'opted-out' && options.suppression !== 'already-applied') {
+    await suppressProspect(connection, current);
+  }
   return setProspectStatus(connection, prospectId, status, actor);
 }
 
@@ -1249,6 +1263,7 @@ export async function recordProspectOutcome(
   prospectId: string,
   outcome: string,
   actor = 'operator',
+  options: ProspectStatusSuppressionOptions = {},
 ): Promise<ProspectHubDocument | null> {
   const status: Exclude<ProspectStatus, 'new'> | undefined = {
     'reply-positive': 'replied',
@@ -1265,7 +1280,7 @@ export async function recordProspectOutcome(
   const prospect =
     status === undefined
       ? current
-      : await applyAutomaticProspectStatus(connection, prospectId, status, actor);
+      : await applyAutomaticProspectStatus(connection, prospectId, status, actor, options);
   if (prospect === null) return null;
   await recordEvent(
     connection,
