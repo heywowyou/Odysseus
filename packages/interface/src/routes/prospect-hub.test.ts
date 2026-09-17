@@ -30,6 +30,7 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   listOutreachPreviews: vi.fn(),
   listDirectory: vi.fn(),
   listProspectAudits: vi.fn(),
+  listProspectScopeJobIds: vi.fn(),
   listProspectEvents: vi.fn(),
   listProspectTodo: vi.fn(),
   listProspects: vi.fn(),
@@ -90,6 +91,7 @@ import {
   listOutreachPreviews,
   listDirectory,
   listProspectAudits,
+  listProspectScopeJobIds,
   listProspectEvents,
   listProspectTodo,
   loadProspectWork,
@@ -107,6 +109,10 @@ import {
   type ProspectTodoRow,
 } from '@odysseus/store';
 import { buildAuditDir } from '@odysseus/scanner';
+import {
+  releaseReportProduction,
+  tryAcquireReportProduction,
+} from '../pipeline/report-production-lock.js';
 import {
   createFirstEmailForProspect,
   createFollowUpForProspect,
@@ -158,9 +164,11 @@ const emptyPage = {
   },
 };
 
+const fakeQueue = { isJobInFlight: vi.fn((_jobId: string) => false) };
+
 async function handle(url: string, method: Method = 'GET', body?: unknown) {
   const router = new Router();
-  registerProspectHubRoutes(router, fakeConnection);
+  registerProspectHubRoutes(router, fakeConnection, fakeQueue);
   const res = fakeRes();
   await router.handle(fakeReq(url, method, body), res);
   return { statusCode: res.statusCode, body: JSON.parse(res.body ?? '{}') as unknown };
@@ -188,6 +196,8 @@ beforeEach(() => {
   vi.mocked(listOutreachDrafts).mockResolvedValue([]);
   vi.mocked(listOutreachPreviews).mockResolvedValue([] as never);
   vi.mocked(listProspectAudits).mockResolvedValue([]);
+  vi.mocked(listProspectScopeJobIds).mockResolvedValue([]);
+  fakeQueue.isJobInFlight.mockReturnValue(false);
   vi.mocked(listProspectEvents).mockResolvedValue([]);
   vi.mocked(loadProspectWork).mockResolvedValue([]);
   vi.mocked(createFirstEmailForProspect).mockResolvedValue({
@@ -342,6 +352,27 @@ describe('prospect hub routes', () => {
     artifactStore.list.mockRejectedValueOnce(new Error('provider down'));
     expect((await handle('/api/prospects/p-1/archive', 'POST')).statusCode).toBe(503);
     expect(deleteAuditCascade).not.toHaveBeenCalled();
+  });
+
+  it('refuses archive and delete while a stopped job is still finishing its stage', async () => {
+    vi.mocked(listProspectScopeJobIds).mockResolvedValue(['job-9']);
+    fakeQueue.isJobInFlight.mockImplementation((jobId) => jobId === 'job-9');
+
+    expect((await handle('/api/prospects/p-1/archive', 'POST')).statusCode).toBe(409);
+    expect(archiveProspect).not.toHaveBeenCalled();
+    expect((await handle('/api/prospects/p-1', 'DELETE')).statusCode).toBe(409);
+    expect(deleteProspectPermanently).not.toHaveBeenCalled();
+  });
+
+  it('refuses archive while one of the prospect audits is in report production', async () => {
+    vi.mocked(listProspectAudits).mockResolvedValue([{ auditId: 'audit-7' }] as never);
+    expect(tryAcquireReportProduction('audit-7', 'writing')).toBe(true);
+    try {
+      expect((await handle('/api/prospects/p-1/archive', 'POST')).statusCode).toBe(409);
+      expect(archiveProspect).not.toHaveBeenCalled();
+    } finally {
+      releaseReportProduction('audit-7', 'writing');
+    }
   });
 
   it('purges each audit bucket prefix before the records, keeping them on failure (issue #384)', async () => {

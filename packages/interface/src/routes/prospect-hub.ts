@@ -15,6 +15,7 @@ import {
   loadProspectWork,
   listProspectTodo,
   listProspectAudits,
+  listProspectScopeJobIds,
   listProspectEvents,
   listProspects,
   listOutreachPreviews,
@@ -41,6 +42,11 @@ import type { ProspectPatch } from '@odysseus/store';
 import { emailDomain, type ProspectStatus, type ProspectWebsiteKind } from '@odysseus/core';
 import { getArtifactsRoot } from '@odysseus/scanner';
 import type { Router } from '../router.js';
+import type { JobQueue } from '../queue/job-queue.js';
+import {
+  isAnyReportProductionInFlight,
+  isReportProductionInFlight,
+} from '../pipeline/report-production-lock.js';
 import {
   AuditArtifactDeletionError,
   deleteAuditArtifacts,
@@ -159,7 +165,21 @@ function languageFromBody(body: unknown, fallback: 'fr' | 'en'): 'fr' | 'en' | n
   return language === 'fr' || language === 'en' ? language : null;
 }
 
-export function registerProspectHubRoutes(router: Router, connection: Connection): void {
+export function registerProspectHubRoutes(
+  router: Router,
+  connection: Connection,
+  queue: Pick<JobQueue, 'isJobInFlight'>,
+): void {
+  /** Work that can still write this prospect's audits although no job row is
+   *  queued or running: a stopped job finishing its stage, or report production. */
+  async function prospectWorkInFlight(prospectId: string): Promise<boolean> {
+    const jobIds = await listProspectScopeJobIds(connection, prospectId);
+    if (jobIds.some((jobId) => queue.isJobInFlight(jobId))) return true;
+    if (!isAnyReportProductionInFlight()) return false;
+    const audits = await listProspectAudits(connection, prospectId);
+    return audits.some((audit) => isReportProductionInFlight(audit.auditId));
+  }
+
   router.get('/api/prospect-hub/todo', async ({ res }) => {
     sendJson(res, 200, { rows: await listProspectTodo(connection) });
   });
@@ -710,8 +730,10 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
   // prospect out of active work. It keeps the CRM record, correspondence,
   // suppression and directory link, and never withdraws outreach, but it
   // permanently removes the prospect's audits and their stored files. It
-  // refuses while a job for the prospect is queued or running (that job
-  // could recreate the audits), archives, then purges. A storage failure
+  // refuses while a job for the prospect is queued or running, while a
+  // stopped job is still finishing its stage in this process, or while one of
+  // its audits is in report production (any of those could recreate the
+  // audits or their files), archives, then purges. A storage failure
   // answers 503 with the prospect archived and the remaining audits still
   // attached; repeating the archive resumes the purge.
   router.post('/api/prospects/:prospectId/archive', async ({ res, params }) => {
@@ -722,6 +744,10 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
     }
     if ((await countActiveProspectDeletionJobs(connection, prospectId)) > 0) {
       sendError(res, 409, 'prospect has an unfinished job; cancel it or wait for it to end');
+      return;
+    }
+    if (await prospectWorkInFlight(prospectId)) {
+      sendError(res, 409, 'work for this prospect is still finishing; try again shortly');
       return;
     }
     const result = await archiveProspect(connection, prospectId);
@@ -755,8 +781,10 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
 
   // Permanent deletion is the exceptional path (duplicates, test records,
   // bad imports). The dashboard asks for it only behind an impact summary.
-  // It refuses while a job for the prospect is unfinished: the job's later
-  // stages would recreate the audit and artifact folder being removed.
+  // It refuses while a job for the prospect is unfinished, a stopped job is
+  // still finishing its stage, or report production is running for one of its
+  // audits: that work would recreate the audit and artifact folder being
+  // removed.
   // Order: outreach withdrawal (external, may fail), then every audit's
   // local and bucket artifacts (issue #384), then the store cascade
   // (retry-safe, prospect record last). A storage failure answers 503 before
@@ -771,6 +799,10 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
     }
     if ((await countActiveProspectDeletionJobs(connection, prospectId)) > 0) {
       sendError(res, 409, 'prospect has an unfinished job; cancel it or wait for it to end');
+      return;
+    }
+    if (await prospectWorkInFlight(prospectId)) {
+      sendError(res, 409, 'work for this prospect is still finishing; try again shortly');
       return;
     }
     const audits = await listProspectAudits(connection, prospectId);

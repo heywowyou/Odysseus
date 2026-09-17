@@ -29,6 +29,7 @@ import {
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
 import type { JobQueue } from '../queue/job-queue.js';
+import { isReportProductionInFlight } from '../pipeline/report-production-lock.js';
 import { getSeverityRollupsForPoll } from './severity-rollup-cache.js';
 import { logJobCreated } from '../request-context.js';
 
@@ -566,6 +567,11 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
     for (const id of job.auditIds ?? []) auditIds.add(id);
     for (const row of job.urlResults ?? []) {
       if (row.auditId !== undefined) auditIds.add(row.auditId);
+    }
+
+    if ([...auditIds].some((auditId) => isReportProductionInFlight(auditId))) {
+      sendError(res, 409, "a report is being produced for this job's audit; try again shortly");
+      return;
     }
 
     const artifactStore = createConfiguredArtifactStore();

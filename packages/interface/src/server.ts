@@ -121,7 +121,7 @@ export async function startInterfaceServer(
   registerScanRoutes(router, connection, queue);
   registerAuditRoutes(router, connection);
   registerReportPreparationRoutes(router, connection);
-  registerProspectHubRoutes(router, connection);
+  registerProspectHubRoutes(router, connection, queue);
   registerSessionRoutes(router, { getPasswordHash, sessionStore, rateLimiter });
   registerStaticFallback(router);
 

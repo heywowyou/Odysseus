@@ -37,6 +37,7 @@ import type { ArtifactStore } from '../artifacts/artifact-store.js';
 import { runAnalysisStage } from './analysis-stage.js';
 import { readAuditEvidence } from './audit-evidence.js';
 import { RegenerationConflictError } from './regeneration-conflict-error.js';
+import { releaseReportProduction, tryAcquireReportProduction } from './report-production-lock.js';
 import {
   markReportProductionCompleted,
   markReportProductionFailed,
@@ -50,12 +51,7 @@ import {
 } from './regenerate-reports.js';
 
 export { RegenerationConflictError } from './regeneration-conflict-error.js';
-
-const inFlight = new Set<string>();
-
-export function isWritingRegenerationInFlight(auditId: string): boolean {
-  return inFlight.has(auditId);
-}
+export { isWritingRegenerationInFlight } from './report-production-lock.js';
 
 /** Issue #281: how the last background run for an audit ended, kept in
  *  memory so the dashboard can report it after polling. */
@@ -106,17 +102,16 @@ export async function regenerateWriting(
   artifactStore: ArtifactStore | undefined,
 ): Promise<RegenerateWritingResult> {
   const auditId = audit.auditId;
-  if (inFlight.has(auditId)) {
+  // The lock is checked and taken in one synchronous call with no await
+  // before it: Node serves requests concurrently, and the previous
+  // check-then-await-then-add ordering let two simultaneous submits pass the
+  // guard, race on the writing candidate, and insert duplicate analysis
+  // versions (issue #143). The lock is shared with makeReportReady.
+  if (!tryAcquireReportProduction(auditId, 'writing')) {
     throw new RegenerationConflictError(
-      'odysseus: a writing regeneration is already running for this audit',
+      'odysseus: the PDFs or the writing for this audit are already being produced',
     );
   }
-  // The add must stay adjacent to the has check with no await in between:
-  // Node serves requests concurrently, and the previous check-then-await-
-  // then-add ordering let two simultaneous submits pass the guard, race on
-  // the writing candidate, and insert duplicate analysis versions
-  // (issue #143).
-  inFlight.add(auditId);
   markReportProductionStage(auditId, 'writing');
 
   // Pre-flight: load the evidence and note whether an approved pair already
@@ -131,9 +126,9 @@ export async function regenerateWriting(
     const preparation = await getReportPreparation(connection, auditId);
     replacedApprovedSelection = preparation.writingSelection?.selected !== undefined;
   } catch (error) {
-    // Set.delete is idempotent, so a delete of an already absent marker
-    // changes nothing.
-    inFlight.delete(auditId);
+    // Release is idempotent, so releasing an already free lock changes
+    // nothing.
+    releaseReportProduction(auditId, 'writing');
     markReportProductionFailed(auditId, error);
     throw error;
   }
@@ -263,6 +258,6 @@ export async function regenerateWriting(
     await recordFailedWritingCandidate(connection, auditId, reason, partialPair);
     throw new WritingRegenerationFailedError(reason);
   } finally {
-    inFlight.delete(auditId);
+    releaseReportProduction(auditId, 'writing');
   }
 }

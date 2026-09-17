@@ -13,7 +13,6 @@ vi.mock('@odysseus/store', () => ({
   recordReadyWritingCandidate: vi.fn(),
   resolveSelectedAnalysisPairForAudit: vi.fn(),
 }));
-vi.mock('./regenerate-writing.js', () => ({ isWritingRegenerationInFlight: vi.fn(() => false) }));
 vi.mock('@odysseus/llm', () => ({ pauseBetweenLanguagePasses: vi.fn() }));
 vi.mock('../artifacts/sync-audit-artifacts.js', () => ({ syncAuditDirToBucket: vi.fn() }));
 vi.mock('./backfill-audit-row.js', () => ({ backfillAuditRow: vi.fn() }));

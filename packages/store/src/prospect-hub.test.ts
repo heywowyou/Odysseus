@@ -9,11 +9,13 @@ import {
   syncProspectIdentityIntoAudit,
 } from './audits.js';
 import { createAuditModel } from './schemas/audit.schema.js';
+import { createJobModel } from './schemas/job.schema.js';
 import {
   createProspectHub,
   directoryEntryToProspectInput,
   fillMissingProspectIdentity,
   getProspectHub,
+  listProspectScopeJobIds,
   recordProspectOutcome,
   setProspectStatus,
   updateProspect,
@@ -427,5 +429,27 @@ describe.skipIf(!mongoAvailable)('operator-recorded opt-out suppression (issue #
     await expect(isSuppressed(connection!, 'hotel-op.fr')).resolves.toBe(true);
     await expect(isSuppressed(connection!, 'orange.fr', 'owner@orange.fr')).resolves.toBe(true);
     await expect(isSuppressed(connection!, 'orange.fr', 'someone@orange.fr')).resolves.toBe(false);
+  });
+});
+
+describe.skipIf(!mongoAvailable)('prospect scope job listing', () => {
+  it('lists jobs started for the prospect and jobs linked through its audits, any status', async () => {
+    const prospect = await createProspectHub(connection!, { sector: 'hotel', name: 'Scope Jobs' });
+    const auditId = randomUUID();
+    await createAuditModel(connection!).collection.insertOne({
+      auditId,
+      prospectId: prospect.prospectId,
+    });
+    const startedFor = randomUUID();
+    const linkedByAudit = randomUUID();
+    await createJobModel(connection!).collection.insertMany([
+      { jobId: startedFor, status: 'cancelled', options: { prospectId: prospect.prospectId } },
+      { jobId: linkedByAudit, status: 'complete', auditId },
+      { jobId: randomUUID(), status: 'running', options: { prospectId: 'someone-else' } },
+    ]);
+
+    expect((await listProspectScopeJobIds(connection!, prospect.prospectId)).sort()).toEqual(
+      [startedFor, linkedByAudit].sort(),
+    );
   });
 });

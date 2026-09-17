@@ -78,6 +78,10 @@ import {
   lastWritingRunOutcome,
 } from '../pipeline/regenerate-writing.js';
 import { regenerateReportsForAudit } from '../pipeline/regenerate-reports.js';
+import {
+  releaseReportProduction,
+  tryAcquireReportProduction,
+} from '../pipeline/report-production-lock.js';
 import { pauseBetweenLanguagePasses } from '@odysseus/llm';
 import { Router } from '../router.js';
 import { registerReportPreparationRoutes } from './report-preparation.js';
@@ -441,7 +445,7 @@ describe('POST /api/audits/:auditId/report-preparation/regenerate-writing', () =
       secondRes,
     );
     expect(secondRes.statusCode).toBe(409);
-    expect(secondRes.body).toContain('already running');
+    expect(secondRes.body).toContain('already being produced');
 
     releaseFr();
     await first;
@@ -490,6 +494,27 @@ describe('POST /api/audits/:auditId/report-preparation/regenerate-writing', () =
     await vi.waitFor(() =>
       expect(lastWritingRunOutcome('audit-1')).toMatchObject({ status: 'succeeded' }),
     );
+  });
+
+  it('refuses an async writing run while the PDFs are being produced for the audit', async () => {
+    expect(tryAcquireReportProduction('audit-1', 'report-ready')).toBe(true);
+    try {
+      const router = new Router();
+      registerReportPreparationRoutes(router, fakeConnection);
+      const res = fakeRes();
+      await router.handle(
+        fakeReq(
+          '/api/audits/audit-1/report-preparation/regenerate-writing?async=true',
+          undefined,
+          'POST',
+        ),
+        res,
+      );
+      expect(res.statusCode).toBe(409);
+      expect(runAnalysisStage).not.toHaveBeenCalled();
+    } finally {
+      releaseReportProduction('audit-1', 'report-ready');
+    }
   });
 
   it('releases the in-flight marker when a pre-flight read fails', async () => {

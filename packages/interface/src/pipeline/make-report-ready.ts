@@ -39,7 +39,7 @@ import { backfillAuditRow } from './backfill-audit-row.js';
 import { renormalizeAudit } from './renormalize-audit.js';
 import { runAnalysisStage } from './analysis-stage.js';
 import { RegenerationConflictError } from './regeneration-conflict-error.js';
-import { isWritingRegenerationInFlight } from './regenerate-writing.js';
+import { releaseReportProduction, tryAcquireReportProduction } from './report-production-lock.js';
 import {
   clearReportProduction,
   markReportProductionCompleted,
@@ -105,11 +105,6 @@ async function selectedPairIsStale(
     findingsAreStale(resolution.en.findingsProvenance, findings)
   );
 }
-
-/** Audits with a report production running in this process. Two runs on one
- *  audit would renormalize the same directory and pay for the analysis
- *  passes twice. */
-const inFlight = new Set<string>();
 
 async function refreshWritingCandidate(
   connection: Connection,
@@ -194,13 +189,14 @@ export async function makeReportReady(
   artifactStore: ArtifactStore | undefined,
 ): Promise<MakeReportReadyOutcome> {
   // Checked and taken with no await in between, so two concurrent requests
-  // cannot both pass.
-  if (inFlight.has(auditId) || isWritingRegenerationInFlight(auditId)) {
+  // cannot both pass. The lock is shared with writing regeneration: two runs
+  // on one audit would renormalize the same directory and pay for the
+  // analysis passes twice.
+  if (!tryAcquireReportProduction(auditId, 'report-ready')) {
     throw new RegenerationConflictError(
       'odysseus: the PDFs or the writing for this audit are already being produced',
     );
   }
-  inFlight.add(auditId);
   try {
     const outcome = await produceReports(connection, auditId, artifactStore);
     if (outcome.kind === 'ready') markReportProductionCompleted(auditId);
@@ -210,7 +206,7 @@ export async function makeReportReady(
     markReportProductionFailed(auditId, error);
     throw error;
   } finally {
-    inFlight.delete(auditId);
+    releaseReportProduction(auditId, 'report-ready');
   }
 }
 

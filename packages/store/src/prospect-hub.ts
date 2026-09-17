@@ -1075,6 +1075,21 @@ export async function countActiveProspectDeletionJobs(
   });
 }
 
+/** Every job in the prospect's deletion scope, any status. The interface
+ *  checks these against its in-process queue: a stopped job is already
+ *  `cancelled` while its pipeline finishes the current stage. */
+export async function listProspectScopeJobIds(
+  connection: Connection,
+  prospectId: string,
+): Promise<string[]> {
+  const scope = await prospectDeletionScope(connection, prospectId);
+  const jobs = await createJobModel(connection)
+    .find(scope.job)
+    .select({ jobId: 1, _id: 0 })
+    .lean<{ jobId: string }[]>();
+  return jobs.map((job) => job.jobId);
+}
+
 /** What deleteProspectPermanently would remove, counted without removing
  *  anything, so the confirmation can state the scope before the operator
  *  commits to it. */

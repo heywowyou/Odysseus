@@ -38,6 +38,10 @@ import {
   getProspectHub,
   type NewJobInput,
 } from '@odysseus/store';
+import {
+  releaseReportProduction,
+  tryAcquireReportProduction,
+} from '../pipeline/report-production-lock.js';
 import { Router } from '../router.js';
 import { MAX_SCAN_BATCH_SIZE, registerScanRoutes } from './scans.js';
 
@@ -220,6 +224,17 @@ describe('DELETE /api/scans/:jobId', () => {
     siteUrl: 'https://hotel.example/',
     startedAt: new Date('2026-09-16T10:00:00Z'),
   };
+
+  it("refuses while a report is being produced for the job's audit", async () => {
+    expect(tryAcquireReportProduction('audit-1', 'report-ready')).toBe(true);
+    try {
+      expect(await remove(false, storedAudit)).toBe(409);
+      expect(artifactStore.list).not.toHaveBeenCalled();
+      expect(deleteAuditCascade).not.toHaveBeenCalled();
+    } finally {
+      releaseReportProduction('audit-1', 'report-ready');
+    }
+  });
 
   it('removes the audit bucket objects before its records (issue #384)', async () => {
     vi.mocked(deleteJob).mockResolvedValue(true as never);

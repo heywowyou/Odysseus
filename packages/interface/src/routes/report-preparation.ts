@@ -25,6 +25,7 @@ import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import type { Router } from '../router.js';
 import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
+import { isReportProductionInFlight } from '../pipeline/report-production-lock.js';
 import {
   regenerateWriting,
   RegenerationConflictError,
@@ -144,8 +145,12 @@ export function registerReportPreparationRoutes(router: Router, connection: Conn
       // work: the in-flight marker is taken before the first await, the page
       // polls the preparation view, and the outcome is kept for it to read.
       if (query.get('async') === 'true') {
-        if (isWritingRegenerationInFlight(auditId)) {
-          sendError(res, 409, 'odysseus: a writing regeneration is already running for this audit');
+        if (isReportProductionInFlight(auditId)) {
+          sendError(
+            res,
+            409,
+            'odysseus: the PDFs or the writing for this audit are already being produced',
+          );
           return;
         }
         const run = regenerateWriting(connection, audit, artifactStore);

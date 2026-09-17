@@ -13,7 +13,9 @@
  * Outreach previews are untouched: a published preview is a self-contained
  * document in the previews bucket and does not read audit artifacts.
  * The caller must refuse first while a job for the prospect is queued or
- * running, since that job could recreate what is removed here.
+ * running, while a stopped job is still finishing its stage in this
+ * process, or while one of its audits is in report production, since any of
+ * that work could recreate what is removed here.
  */
 
 import type { Connection } from 'mongoose';
