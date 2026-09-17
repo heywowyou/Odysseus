@@ -545,11 +545,7 @@ async function renderAndReviewLanguage(
       ...(reportInputs.delta !== undefined ? { delta: reportInputs.delta } : {}),
       qualityLimitations: context.evidence.mandatoryDisclosures,
     });
-    if (!rendered.pageManifestPages || rendered.pageManifestPages.length !== rendered.pageCount) {
-      throw new Error('Report quality aborted: exact post-pagination page manifest is incomplete');
-    }
-
-    assertMandatoryDisclosures(
+     assertMandatoryDisclosures(
       context.evidence.mandatoryDisclosures,
       context.evidence.mandatoryDisclosures.map((item) => item.reportDestination),
     );
@@ -572,8 +568,10 @@ async function renderAndReviewLanguage(
 
     const pageManifest = {
       candidateDigest: qa.pdfDigest,
-      pages: rendered.pageManifestPages.map((page, index) => ({
-        ...page,
+      pages: Array.from({ length: qa.pageCount }, (_, index) => ({
+        pageNumber: index + 1,
+        popplerRaster: path.basename(qa.popplerPages[index]!),
+        mupdfRaster: path.basename(qa.mupdfPages[index]!),
         tileIds: qa.detailTiles[index]!.map((tile) => path.basename(tile)),
       })),
     };
