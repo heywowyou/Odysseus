@@ -119,7 +119,7 @@ function decodeXmlText(value: string): string {
 /** The two things a ListObjectsV2 page carries that deletion needs. The
  *  response is a flat, provider-generated document, so a tag match is
  *  enough and no XML dependency is added for it. */
-export function parseListObjectsV2(xml: string): {
+function parseListObjectsV2(xml: string): {
   keys: string[];
   nextContinuationToken?: string;
 } {
