@@ -20,6 +20,7 @@ import type {
   FindingsDelta,
   AuditManifest,
   AuditManualFields,
+  EvidenceLimitation,
   Finding,
   GradeOverride,
   PreparationPreviewLanguage,
@@ -124,6 +125,7 @@ export interface RenderHtmlInput {
    *  layer. Absent on every report without a delivered baseline audit,
    *  which then renders exactly as before. */
   delta?: FindingsDelta;
+  qualityLimitations?: EvidenceLimitation[];
 }
 
 /** Single-tier report body, since the 2026-08-16 commercial model drop of
@@ -152,6 +154,7 @@ function renderBody(
   preparation: PreparationPreviewLanguage | undefined,
   gradeOverride: GradeOverride | undefined,
   delta: FindingsDelta | undefined,
+  qualityLimitations: readonly EvidenceLimitation[],
 ): string {
   // B1: one Set shared by every reference-stat citation render site
   // (renderThemes, then renderFindingsAppendix's geo section), so the same
@@ -341,6 +344,7 @@ function renderBody(
       analysis.obligationAssessment,
       resolvedFindings,
       resolvedSirenSourceUrl,
+      qualityLimitations,
     ),
     renderFindingsAppendix(
       strings,
@@ -375,6 +379,7 @@ export async function renderHtml(input: RenderHtmlInput): Promise<string> {
     preparation,
     gradeOverride,
     delta,
+    qualityLimitations = [],
   } = input;
   // Issue #310: every priority's conformance line derives from its findings.
   const analysis = withPriorityConformance(input.analysis, findings);
@@ -396,6 +401,7 @@ export async function renderHtml(input: RenderHtmlInput): Promise<string> {
     preparation,
     gradeOverride,
     delta,
+    qualityLimitations,
   );
 
   return `<!doctype html>
