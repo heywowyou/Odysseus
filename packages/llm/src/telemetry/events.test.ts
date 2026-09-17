@@ -53,3 +53,57 @@ describe('redactLlmCallTelemetryEvent', () => {
     expect(Object.keys(redacted)).not.toContain('siteUrl');
   });
 });
+
+// Issue #409: the rejection event's guard names are the one payload field
+// whose value is a string rather than a number, a boolean or a code-owned
+// literal, so the value is filtered as well as the key.
+describe('the writing-pass rejection event', () => {
+  it('keeps the guard names it was given', () => {
+    const event: LlmCallTelemetryEvent = {
+      kind: 'call-rejected',
+      pass: 'writing',
+      model: 'test-model',
+      language: 'fr',
+      attemptCount: 2,
+      durationMs: 1200,
+      guards: ['severity-vocabulary', 'provider-placement'],
+      styleOnly: false,
+    };
+
+    expect(redactLlmCallTelemetryEvent(event)).toEqual(event);
+  });
+
+  it('drops anything in the guard list that is not a guard name', () => {
+    const withProse = {
+      kind: 'call-rejected',
+      pass: 'writing',
+      model: 'test-model',
+      language: 'fr',
+      attemptCount: 3,
+      durationMs: 1200,
+      // What a careless call site might pass: the violating text, which is
+      // model prose about a client's site and must never reach a sink.
+      guards: ['prose-register', 'Les canonicals renvoient les visiteurs ailleurs.'],
+      styleOnly: true,
+    } as unknown as LlmCallTelemetryEvent;
+
+    const redacted = redactLlmCallTelemetryEvent(withProse) as { guards: readonly string[] };
+
+    expect(redacted.guards).toEqual(['prose-register']);
+  });
+
+  it('drops a guard list that is not a list at all', () => {
+    const wrongShape = {
+      kind: 'style-violation-shipped',
+      pass: 'writing',
+      model: 'test-model',
+      attemptCount: 3,
+      durationMs: 1200,
+      guards: 'provider-placement and some prose',
+    } as unknown as LlmCallTelemetryEvent;
+
+    expect(
+      (redactLlmCallTelemetryEvent(wrongShape) as { guards: readonly string[] }).guards,
+    ).toEqual([]);
+  });
+});

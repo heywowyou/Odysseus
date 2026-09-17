@@ -212,6 +212,57 @@ changes, retry budget and guards still unchanged:
   writing + review) is what drains the window the English pass then
   enters. A standalone `analyze --language X` run pauses nothing.
 
+**Amended 2026-09-17 (issue #406): one attempt is rejected once, with every
+guard that failed.** The writing pass's guards used to run in sequence, each
+ending the attempt, so the correction sent to the model named exactly one
+defect. With three attempts, a response carrying three independent defects
+could not be corrected inside the budget however perfectly the model fixed
+each defect it was told about: attempt 2 learned about the first, attempt 3
+about the second, and the run was exhausted before the third was ever
+mentioned. The guards now live in a table (`writing-guards.ts`); every guard
+runs on every attempt, and the attempt is rejected once with the full list.
+The table's order is the order a failure is reported, so a substantive breach
+still leads the reason when a response trips a substantive and a style guard
+together. Measured: a 2026-09-17 English full scan of a real site
+(www.atlantichotel.fr) exhausted all three attempts and stored no analysis, so
+the audit reached "Scanned" with no report.
+
+**Amended 2026-09-17 (issue #407): the last attempt may ship a style-guard
+violation rather than lose the report.** This qualifies the "fail loudly" rule
+above, and only for the guards named here. Each guard is classified:
+
+- **blocking** - theme keys, language compliance, severity vocabulary, legal
+  consequence, page count, finding count, WCAG citation, business claim,
+  transactional flow, executive-summary digit, positional reference. These
+  reject to exhaustion, unchanged. A rule 1 or rule 6 breach shipping is worse
+  than no report, which is exactly what the paragraph above says.
+- **style** - provider placement, provider phrase, prose register. On the
+  **final** attempt only, if every remaining violation is style, the response
+  is accepted, each escaped violation is logged, and the escape is recorded.
+  Earlier attempts still reject on style guards, so the model is still asked
+  to fix the wording while there is budget to do so.
+
+What this accepts: a wording defect can reach a rendered PDF. The control is
+the operator's review of every report before approval, which already exists.
+Measured: three attempts of a real ten-theme report (www.atlantichotel.fr, EN,
+2026-09-17) were all rejected by the provider-placement guard alone, every
+mention correctly placed as the agent of its main clause - six themes simply
+named the provider in two actions rather than one. Raising `MAX_RETRIES` was
+considered and rejected: it buys attempts rather than removing the failure
+mode, and costs two more generations on every bad run. See trade-off 97.
+
+**Amended 2026-09-17 (issue #409): a rejection is recorded, not only logged.**
+Each rejected attempt emits a `call-rejected` telemetry event naming the
+guards that failed and the attempt number, and each escape under #407 emits a
+`style-violation-shipped` event. Guard *names* only: the violating text is
+model prose about a client's site and stays in the analysis artifact, so the
+redaction step filters the guard list against the closed name union as well as
+filtering the key (`telemetry/events.ts`, and
+`docs/rules/telemetry-rules.md` for the metadata-only contract, disabled by
+default and never load-bearing). The same per-attempt record is stored on the
+failed writing candidate, so the audit page shows every attempt rather than
+only the last message.
+
 ---
 
 ## 3. Determinism and provenance

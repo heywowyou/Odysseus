@@ -11,7 +11,10 @@ import type { DashboardLanguage } from '../i18n/types';
 import { en } from '../i18n/en';
 import { fr } from '../i18n/fr';
 import type { AuditLifecycle, ReportStatusResponse } from './audit-detail-types';
-import type { ReportProductionStateResponse } from './prepare-report-types';
+import type {
+  ReportProductionStateResponse,
+  WritingCandidateResponse,
+} from './prepare-report-types';
 
 export type AuditReportPanelRowKey = 'findings' | 'identity' | 'writing' | 'produce' | 'delivery';
 
@@ -232,5 +235,31 @@ export function canApproveReportPair(reports: readonly ReportStatusResponse[]): 
     reports.some(
       (report) => report.language === language && report.pdfAvailable && report.status === 'fresh',
     ),
+  );
+}
+
+/**
+ * The per-attempt guard lines shown under a failed writing candidate.
+ *
+ * Issue #409: the candidate's `reason` carries the last attempt's message
+ * only, so a run that burned three attempts on three different guards was
+ * indistinguishable from one that failed once. Listing every attempt is what
+ * lets the operator tell "blocked on the same guard three times" (retrying
+ * will not help; the prompt or the guard is wrong) from "a new defect each
+ * time" (a retry might). Empty for any other candidate state, and for a
+ * failure that was not a guard exhaustion - a provider outage has no guard to
+ * name.
+ */
+export function describeWritingGuardRejections(
+  candidate: WritingCandidateResponse | undefined,
+  language: DashboardLanguage,
+): readonly string[] {
+  if (candidate?.status !== 'failed') return [];
+  const strings = (language === 'fr' ? fr : en).prepareReport;
+  return (candidate.guardRejections ?? []).map((rejection) =>
+    strings.candidateAttemptRejectedTemplate
+      .replace('{attempt}', String(rejection.attempt))
+      .replace('{total}', String(rejection.totalAttempts))
+      .replace('{guards}', rejection.guards.join(', ')),
   );
 }

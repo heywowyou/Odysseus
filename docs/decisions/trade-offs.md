@@ -4980,3 +4980,47 @@ depend on the figure.
 
 The Stripe payment link amount is updated by hand outside the repository, the
 same as in trade-off 13.
+
+### 97. A style-guard violation may ship on the last writing attempt; a substantive one never may (issue #407, 2026-09-17)
+
+Every writing guard used to be a hard reject. When the retry budget ran
+out the whole language pass threw, no analysis was stored, and the audit
+had no deliverable - whatever the guard was protecting against.
+
+That is the right posture for a rule 1 or rule 6 breach: an invented
+finding count, a legal-consequence claim, a severity word contradicting
+the deterministic mapping. It is the wrong trade for a rule about where a
+word may sit in a sentence. Measured on 2026-09-17: three attempts of a
+real ten-theme English report (www.atlantichotel.fr) were all rejected by
+`findProviderPlacementViolations` alone. Every mention was correctly
+placed as the agent of its main clause; six themes simply named the
+provider in two actions instead of one. A paid scan, both analyses and the
+day's deliverable were lost over how often an approved phrase appears.
+
+So the guards are classified. `blocking` guards reject to exhaustion,
+unchanged. The three `style` guards - provider placement, provider phrase,
+prose register - reject on every attempt but the last; on the last, if
+nothing blocking is left, the response ships and the escape is logged and
+counted.
+
+**What this accepts:** a wording defect can reach a rendered PDF. The
+control is the operator's review of every report before approval, which
+already exists and is the step this failure mode was wasting. The escape
+is recorded per issue #409, so it is visible at review time rather than
+something to notice by reading.
+
+**Rejected: raising `MAX_RETRIES` from 2 to 4.** One line, and it would
+have made this particular run pass. It buys attempts rather than removing
+the failure mode - the next report with one more stubborn theme fails the
+same way - and it costs two more generations on every bad run.
+
+**Rejected: dropping the style guards.** They catch a real defect and they
+catch it early, while there is budget to correct it. The problem was never
+that they fire; it was what firing cost on the last attempt.
+
+Related, and landed together: issue #406 made an attempt report every
+failing guard at once rather than the first, which is what makes a
+three-attempt budget enough to correct three defects; and issue #409 made
+a rejection measurable, which is what turns "50% of reports have issues at
+the end" from an estimate into a number. The guard table introduced by
+#406 is what carries the classification.

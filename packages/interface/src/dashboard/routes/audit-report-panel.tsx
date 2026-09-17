@@ -19,6 +19,7 @@ import { useApi } from '../lib/use-api';
 import {
   auditReportPanelRows,
   describeProduceFailure,
+  describeWritingGuardRejections,
   findPanelRow,
   produceButtonState,
   reportProductionView,
@@ -244,9 +245,22 @@ export function AuditReportPanel(props: {
               </p>
             ) : null}
             {candidate?.status === 'failed' ? (
-              <p className="text-ink-muted">
-                {strings.prepareReport.candidateFailedLabel} · {candidate.reason}
-              </p>
+              <>
+                <p className="text-ink-muted">
+                  {strings.prepareReport.candidateFailedLabel} · {candidate.reason}
+                </p>
+                {/* Issue #409: the reason above carries only the last
+                    attempt's message, so a run that burned three attempts on
+                    three different guards used to look like a single failure.
+                    Each attempt is listed, so the operator can tell a run
+                    blocked on one guard from one failing a new way each
+                    time. */}
+                {describeWritingGuardRejections(candidate, language).map((line) => (
+                  <p key={line} className="text-ink-muted">
+                    {line}
+                  </p>
+                ))}
+              </>
             ) : null}
           </div>
         </section>

@@ -25,6 +25,24 @@ export interface AnalysisPairRef {
 }
 
 /**
+ * One rejected writing attempt, kept so a failed run says which guards
+ * rejected it and when, not only what the last message was.
+ *
+ * Issue #409: a run that burned three attempts on three different guards left
+ * the two earlier reasons nowhere the operator could reach without reading the
+ * server's logs, so "which guards reject most often" had no answer but an
+ * anecdote. Guard names only: the violating text is model prose about a
+ * client's site and belongs in the analysis artifact, not in this aggregate.
+ * The human-readable reasons stay on the candidate's `reason`.
+ */
+export interface WritingGuardRejection {
+  /** 1-based, matching the attempt numbering the writing pass logs. */
+  attempt: number;
+  totalAttempts: number;
+  guards: readonly string[];
+}
+
+/**
  * Candidate state, discriminated so invalid combinations are
  * unrepresentable. `generating` is deliberately not persistable: it lives
  * only in the interface process while a regeneration request is in flight,
@@ -41,6 +59,7 @@ export type WritingCandidateState =
       reason: string;
       createdAt: string;
       partialPair?: Partial<AnalysisPairRef> | undefined;
+      guardRejections?: readonly WritingGuardRejection[] | undefined;
     }
   | { status: 'selected'; pair: AnalysisPairRef; approvedAt: string };
 

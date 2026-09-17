@@ -384,5 +384,5 @@ export function buildWritingUserPrompt(input: WritingInput, previousRejection?: 
  * undershoot.
  */
 export function buildWritingRetryFeedback(reason: string): string {
-  return `Your previous response was rejected by the automated guard: ${reason}. Write a new response that fixes exactly this problem. Every other requirement still applies.`;
+  return `Your previous response was rejected by the automated guards for the following reason or reasons: ${reason}. Write a new response that fixes every problem listed, and only those. Every other requirement still applies.`;
 }

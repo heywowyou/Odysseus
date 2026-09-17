@@ -350,6 +350,38 @@ describe.skipIf(!mongoAvailable)('writing selection', () => {
     }
   });
 
+  // The candidate's partialPair used to be declared in the Mongoose schema as
+  // two flat `partial*AnalysisId` keys that nothing ever wrote, so strict mode
+  // dropped the nested object on every write and the selection fallback's
+  // partial exclusion never fired on stored data. Issue #409 added
+  // guardRejections beside it, so both are asserted through a real round trip
+  // rather than against the in-memory return value.
+  it('stores what a failed run knows: its partials and the guards that rejected it', async () => {
+    await insertAudit('prep-failure-detail');
+    await recordFailedWritingCandidate(
+      connection!,
+      'prep-failure-detail',
+      'exhausted 3 attempts',
+      { frAnalysisId: 'fr-partial' },
+      [
+        { attempt: 1, totalAttempts: 2, guards: ['severity-vocabulary'] },
+        { attempt: 2, totalAttempts: 2, guards: ['prose-register', 'provider-placement'] },
+      ],
+    );
+
+    const reread = await getReportPreparation(connection!, 'prep-failure-detail');
+    const candidate = reread.writingSelection?.candidate;
+
+    expect(candidate).toMatchObject({ status: 'failed', reason: 'exhausted 3 attempts' });
+    expect(candidate?.status === 'failed' ? candidate.partialPair : undefined).toEqual({
+      frAnalysisId: 'fr-partial',
+    });
+    expect(candidate?.status === 'failed' ? candidate.guardRejections : undefined).toEqual([
+      { attempt: 1, totalAttempts: 2, guards: ['severity-vocabulary'] },
+      { attempt: 2, totalAttempts: 2, guards: ['prose-register', 'provider-placement'] },
+    ]);
+  });
+
   it('resolves the legacy latest complete pair deterministically', async () => {
     await insertAudit('prep-legacy');
     // Newest overall: a run whose English half never arrived. Must be ignored.

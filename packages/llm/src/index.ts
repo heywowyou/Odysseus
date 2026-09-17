@@ -40,7 +40,11 @@ export {
 
 export { analyzeStructure } from './analyze-structure.js';
 export type { AnalyzeStructureResult } from './analyze-structure.js';
-export { analyzeWriting } from './analyze-writing.js';
+export {
+  analyzeWriting,
+  WritingPassExhaustedError,
+  type WritingAttemptRejection,
+} from './analyze-writing.js';
 export type { AnalyzeWritingResult } from './analyze-writing.js';
 export { analyzeReview, summarizeUnsupportedReviews } from './analyze-review.js';
 export type { ReviewOutcome } from './analyze-review.js';

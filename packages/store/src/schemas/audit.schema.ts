@@ -458,9 +458,39 @@ const writingCandidateStateSchema = new Schema(
     approvedAt: { type: String },
     reason: { type: String },
     // A failed run may have persisted one language before failing; the
-    // selection fallback must be able to exclude those partials.
-    partialFrAnalysisId: { type: String },
-    partialEnAnalysisId: { type: String },
+    // selection fallback must be able to exclude those partials
+    // (`resolveWritingSelection`, core). The field is the nested object the
+    // core type declares: it was previously declared here as two flat
+    // `partial*AnalysisId` keys nobody ever wrote, so strict mode silently
+    // dropped every partial on its way to disk and the exclusion never fired
+    // on stored data.
+    partialPair: {
+      _id: false,
+      type: {
+        frAnalysisId: { type: String },
+        enAnalysisId: { type: String },
+      },
+    },
+    // Issue #409: which guards rejected each attempt of the failed run, so
+    // the audit page can say "attempt 2 of 3 rejected by the prose-register
+    // guard" instead of only showing the last message. Guard names only; the
+    // violating prose stays out of this aggregate.
+    guardRejections: {
+      // `default: undefined` so an ordinary failure stores no key at all:
+      // Mongoose otherwise defaults every array path to `[]`, which would
+      // put an empty list on every failed candidate ever written.
+      default: undefined,
+      type: [
+        new Schema(
+          {
+            attempt: { type: Number, required: true },
+            totalAttempts: { type: Number, required: true },
+            guards: { type: [String], required: true },
+          },
+          { _id: false },
+        ),
+      ],
+    },
   },
   { _id: false },
 );

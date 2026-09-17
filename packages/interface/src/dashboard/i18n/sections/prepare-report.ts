@@ -15,6 +15,8 @@ export interface PrepareReportStrings {
   writingHeading: string;
   selectedWritingLabel: string;
   candidateFailedLabel: string;
+  /** Issue #409: one rejected attempt. {attempt}, {total}, {guards}. */
+  candidateAttemptRejectedTemplate: string;
   regenerateButton: string;
   writeButton: string;
   writingInProgress: string;
@@ -44,6 +46,7 @@ export const prepareReport = {
     writingHeading: 'Versions de rédaction du rapport',
     selectedWritingLabel: 'Version actuelle',
     candidateFailedLabel: 'Échec de la nouvelle version',
+    candidateAttemptRejectedTemplate: 'Tentative {attempt} sur {total} refusée par : {guards}',
     regenerateButton: 'Réécrire le rapport',
     writeButton: 'Rédiger le rapport',
     writingInProgress:
@@ -71,6 +74,7 @@ export const prepareReport = {
     writingHeading: 'Report writing versions',
     selectedWritingLabel: 'Current version',
     candidateFailedLabel: 'New version failed',
+    candidateAttemptRejectedTemplate: 'Attempt {attempt} of {total} rejected by: {guards}',
     regenerateButton: 'Rewrite the report',
     writeButton: 'Write the report',
     writingInProgress:

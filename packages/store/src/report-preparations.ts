@@ -19,6 +19,7 @@ import {
   type ReportPreparation,
   type ReportPreparationPatch,
   type SelectedAnalysisPairResolution,
+  type WritingGuardRejection,
 } from '@odysseus/core';
 import { createAuditModel, type AuditDocument } from './schemas/audit.schema.js';
 import { createAnalysisModel, type AnalysisDocument } from './schemas/analysis.schema.js';
@@ -123,6 +124,7 @@ export async function recordFailedWritingCandidate(
   auditId: string,
   reason: string,
   partialPair: { frAnalysisId?: string; enAnalysisId?: string } = {},
+  guardRejections: readonly WritingGuardRejection[] = [],
 ): Promise<ReportPreparation> {
   const current = await getReportPreparation(connection, auditId);
   const next: ReportPreparation = {
@@ -136,6 +138,7 @@ export async function recordFailedWritingCandidate(
         reason,
         createdAt: new Date().toISOString(),
         ...(partialPair.frAnalysisId || partialPair.enAnalysisId ? { partialPair } : {}),
+        ...(guardRejections.length > 0 ? { guardRejections } : {}),
       },
     },
     updatedAt: new Date().toISOString(),

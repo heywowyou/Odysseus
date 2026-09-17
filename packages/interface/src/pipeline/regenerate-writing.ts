@@ -22,7 +22,12 @@
  */
 
 import type { Connection } from 'mongoose';
-import type { AnalysisPairRef, AuditManifest, Finding } from '@odysseus/core';
+import type {
+  AnalysisPairRef,
+  AuditManifest,
+  Finding,
+  WritingGuardRejection,
+} from '@odysseus/core';
 import { buildFindingsProvenance } from '@odysseus/core';
 import {
   approveWritingCandidate,
@@ -31,7 +36,7 @@ import {
   recordReadyWritingCandidate,
   type AuditDocument,
 } from '@odysseus/store';
-import { pauseBetweenLanguagePasses } from '@odysseus/llm';
+import { pauseBetweenLanguagePasses, WritingPassExhaustedError } from '@odysseus/llm';
 import { ReportIdentityUnconfirmedError } from '@odysseus/report';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
 import { runAnalysisStage } from './analysis-stage.js';
@@ -255,9 +260,30 @@ export async function regenerateWriting(
     // One language may have succeeded before the failure; recording the
     // partial lets the selection fallback exclude the half-generated
     // content instead of adopting it as current.
-    await recordFailedWritingCandidate(connection, auditId, reason, partialPair);
+    await recordFailedWritingCandidate(
+      connection,
+      auditId,
+      reason,
+      partialPair,
+      // Issue #409: when the writing pass exhausted its budget, record which
+      // guards rejected each attempt, not only the reason the last one gave.
+      describeGuardRejections(error),
+    );
     throw new WritingRegenerationFailedError(reason);
   } finally {
     releaseReportProduction(auditId, 'writing');
   }
+}
+
+/** The per-attempt guard record of an exhausted writing pass, or nothing for
+ *  any other failure (a provider outage, a missing artifact). Guard names
+ *  only - the violating prose belongs in the analysis artifact. */
+function describeGuardRejections(error: unknown): readonly WritingGuardRejection[] {
+  if (!(error instanceof WritingPassExhaustedError)) return [];
+  const totalAttempts = error.rejections.length;
+  return error.rejections.map((rejection) => ({
+    attempt: rejection.attempt,
+    totalAttempts,
+    guards: [...rejection.guards],
+  }));
 }

@@ -1,34 +1,53 @@
 import { callOpenAiForWriting } from './client.js';
 import { OPENAI_MODEL, WRITING_OPENAI_TEMPERATURE, MAX_RETRIES } from './constants.js';
-import { findBusinessClaimViolations } from './business-claim-guard.js';
-import { findExecutiveSummaryDigitViolations } from './executive-summary-digit-guard.js';
-import { findFindingCountViolations } from './finding-count-guard.js';
-import { findLanguageComplianceViolations } from './language-guard.js';
-import { findLegalConsequenceViolations, excerptAroundMatch } from './legal-consequence-guard.js';
-import { findPageCountViolations } from './page-count-guard.js';
-import { findPositionalReferenceViolations } from './positional-reference-guard.js';
-import { PROSE_REGISTER_RETRY_HINT, findProseRegisterViolations } from './prose-register-guard.js';
-import {
-  findProviderPhraseViolations,
-  findProviderPlacementViolations,
-  providerPlacementRetryHint,
-  providerPhraseRetryHint,
-  selectProviderPhrase,
-} from './provider-phrase-guard.js';
-import { findSeverityVocabularyViolations } from './severity-vocabulary-guard.js';
+import { selectProviderPhrase } from './provider-phrase-guard.js';
 import { buildWritingRetryFeedback } from './writing-prompt.js';
 import { normalizeWritingOutputTypography } from './typography.js';
-import { findThemeKeyMismatches, isThemeKeyMismatchEmpty } from './theme-key-guard.js';
-import { findTransactionalFlowViolations } from './transactional-flow-guard.js';
-import { findWcagCitationViolations } from './wcag-citation-guard.js';
+import {
+  buildWritingGuards,
+  runWritingGuards,
+  type WritingGuardFailure,
+} from './writing-guards.js';
 import { paceRateLimitedRetry } from './rate-limit-pacing.js';
 import { captureLlmCallTelemetry } from './telemetry/llm-telemetry.js';
+import type { WritingGuardName } from './telemetry/events.js';
 import type { WritingInput, WritingPassOutput } from './writing-schema.js';
+
+/** One rejected attempt, kept so the operator can see the whole run rather
+ *  than only its last message. Issue #409: a run that burned three attempts
+ *  on three different guards left the two earlier reasons nowhere the
+ *  operator could reach without SSHing to read logs. */
+export interface WritingAttemptRejection {
+  /** 1-based, matching the "attempt n/N" the loop logs. */
+  attempt: number;
+  guards: readonly WritingGuardName[];
+  reason: string;
+}
 
 export interface AnalyzeWritingResult {
   output: WritingPassOutput;
   model: string;
   temperature: number;
+  /** Every attempt that was rejected before this one succeeded; empty on a
+   *  clean first pass. */
+  rejections: readonly WritingAttemptRejection[];
+  /** Issue #407: style guards the final attempt was allowed to ship with.
+   *  Non-empty means a wording defect reached the report and the operator's
+   *  review is the control that catches it. */
+  shippedStyleViolations: readonly WritingAttemptRejection[];
+}
+
+/** Thrown when every attempt was rejected. Carries each attempt's reason, not
+ *  just the last one, so the dashboard can show the whole run. */
+export class WritingPassExhaustedError extends Error {
+  constructor(
+    message: string,
+    readonly language: 'fr' | 'en',
+    readonly rejections: readonly WritingAttemptRejection[],
+  ) {
+    super(message);
+    this.name = 'WritingPassExhaustedError';
+  }
 }
 
 /** Retry-and-guard orchestration for the writing pass, independent of
@@ -44,236 +63,96 @@ export interface AnalyzeWritingResult {
  *  rejection reason into the next call (issue #21): at the configured
  *  low temperature an identical conversation reproduced the same
  *  violation on every attempt, so a retry has to be a correction. Same
- *  mechanism as the outreach loop (issue #12). */
+ *  mechanism as the outreach loop (issue #12).
+ *
+ *  The guards themselves live in `writing-guards.ts` as a table. Every guard
+ *  runs on every attempt and the attempt is rejected once with all of them
+ *  (issue #406), because reporting one defect per attempt meant three
+ *  independent defects could not be corrected inside a three-attempt budget.
+ *  On the final attempt, an output whose remaining failures are all style
+ *  guards is accepted rather than lost (issue #407). */
 export async function analyzeWriting(
   input: WritingInput,
   expectedThemeKeys: readonly string[],
   usedFallbackContext: boolean,
 ): Promise<AnalyzeWritingResult> {
-  let lastFailureReason = '';
   let previousRejection: string | undefined;
+  const rejections: WritingAttemptRejection[] = [];
   const startedAtMs = Date.now();
   // Resolved once rather than per attempt: the retry feedback must name the
   // same phrase across every attempt, or a retry contradicts its predecessor.
   const assignedProviderPhrase = input.providerPhrase ?? selectProviderPhrase(input.language);
+  const guards = buildWritingGuards(input, expectedThemeKeys, assignedProviderPhrase);
+  const totalAttempts = MAX_RETRIES + 1;
 
-  for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
+  const recordRejection = (
+    attempt: number,
+    guardNames: readonly WritingGuardName[],
+    reason: string,
+    styleOnly: boolean,
+  ): void => {
+    rejections.push({ attempt, guards: guardNames, reason });
+    previousRejection = buildWritingRetryFeedback(reason);
+    console.error(
+      `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${totalAttempts} rejected by [${guardNames.join(', ')}] - ${reason}`,
+    );
+    captureLlmCallTelemetry({
+      kind: 'call-rejected',
+      pass: 'writing',
+      model: OPENAI_MODEL,
+      language: input.language,
+      attemptCount: attempt,
+      durationMs: Date.now() - startedAtMs,
+      guards: guardNames,
+      styleOnly,
+    });
+  };
+
+  for (let attempt = 1; attempt <= totalAttempts; attempt++) {
     let result: Awaited<ReturnType<typeof callOpenAiForWriting>>;
     try {
       result = await callOpenAiForWriting(input, usedFallbackContext, previousRejection);
     } catch (error) {
       // See analyzeStructure's identical comment - a parse/validation
       // failure or provider refusal is retried like any other rejected attempt.
-      lastFailureReason = error instanceof Error ? error.message : String(error);
-      previousRejection = buildWritingRetryFeedback(lastFailureReason);
-      console.error(
-        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} failed - ${lastFailureReason}`,
-      );
-      await paceRateLimitedRetry(attempt, lastFailureReason);
+      const reason = error instanceof Error ? error.message : String(error);
+      recordRejection(attempt, ['response-invalid'], reason, false);
+      await paceRateLimitedRetry(attempt, reason);
       continue;
     }
 
-    const mismatch = findThemeKeyMismatches(expectedThemeKeys, result.output);
-    if (!isThemeKeyMismatchEmpty(mismatch)) {
-      lastFailureReason = `theme key mismatch - missing: [${mismatch.missing.join(', ')}], extra: [${mismatch.extra.join(', ')}], duplicate: [${mismatch.duplicate.join(', ')}]`;
-      previousRejection = buildWritingRetryFeedback(lastFailureReason);
-      console.error(
-        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
-      );
+    const failures = runWritingGuards(guards, result.output);
+    if (failures.length > 0) {
+      const guardNames = failures.map((failure) => failure.guard);
+      const reason = describeFailures(failures);
+      const styleOnly = failures.every((failure) => failure.severity === 'style');
+
+      // Issue #407: the budget is spent and nothing substantive is wrong.
+      // Shipping a wording defect the operator will see in review beats
+      // throwing away the scan, both analyses and the day's deliverable.
+      if (attempt === totalAttempts && styleOnly) {
+        console.error(
+          `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${totalAttempts} shipped with unfixed style violations from [${guardNames.join(', ')}] - ${reason}`,
+        );
+        captureLlmCallTelemetry({
+          kind: 'style-violation-shipped',
+          pass: 'writing',
+          model: OPENAI_MODEL,
+          language: input.language,
+          attemptCount: attempt,
+          durationMs: Date.now() - startedAtMs,
+          guards: guardNames,
+        });
+        return succeed(input, result, attempt, startedAtMs, rejections, [
+          { attempt, guards: guardNames, reason },
+        ]);
+      }
+
+      recordRejection(attempt, guardNames, reason, styleOnly);
       continue;
     }
 
-    const violations = findLanguageComplianceViolations(result.output, input.language);
-    if (violations.length > 0) {
-      lastFailureReason = `language compliance violations in field(s): ${violations.map((v) => v.field).join(', ')}`;
-      previousRejection = buildWritingRetryFeedback(lastFailureReason);
-      console.error(
-        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
-      );
-      continue;
-    }
-
-    const severityViolations = findSeverityVocabularyViolations(result.output, input.language);
-    if (severityViolations.length > 0) {
-      lastFailureReason = `severity vocabulary violations in field(s): ${severityViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
-      previousRejection = buildWritingRetryFeedback(lastFailureReason);
-      console.error(
-        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
-      );
-      continue;
-    }
-
-    // Ahead of the digit guard deliberately: a sanction claim is a rule 6
-    // breach, not a style drift, so it should be the reason recorded when a
-    // response trips both.
-    const legalViolations = findLegalConsequenceViolations(result.output, input.language);
-    if (legalViolations.length > 0) {
-      lastFailureReason = `legal-consequence claim in field(s): ${legalViolations.map((v) => `${v.field} ("${v.matched}" in "${excerptAroundMatch(v.text, v.matched)}")`).join(', ')}`;
-      previousRejection = buildWritingRetryFeedback(lastFailureReason);
-      console.error(
-        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
-      );
-      continue;
-    }
-
-    const pageCountViolations = findPageCountViolations(result.output, input.language);
-    if (pageCountViolations.length > 0) {
-      lastFailureReason = `invented page count in field(s): ${pageCountViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
-      previousRejection = buildWritingRetryFeedback(lastFailureReason);
-      console.error(
-        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
-      );
-      continue;
-    }
-
-    // Same reasoning as the page-count guard above, generalized to the
-    // finding noun and severity words: audit-rehearsal notes recorded
-    // reports contradicting their own finding counts in prose, which the
-    // report template already owns and renders correctly.
-    const findingCountViolations = findFindingCountViolations(result.output, input.language);
-    if (findingCountViolations.length > 0) {
-      lastFailureReason = `invented finding count in field(s): ${findingCountViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
-      previousRejection = buildWritingRetryFeedback(lastFailureReason);
-      console.error(
-        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
-      );
-      continue;
-    }
-
-    // Audit-rehearsal notes recorded "la priorité 1 ci-dessus" pointing
-    // at content that rendered below it - the writing pass has no
-    // visibility into final page layout.
-    const positionalReferenceViolations = findPositionalReferenceViolations(
-      result.output,
-      input.language,
-    );
-    if (positionalReferenceViolations.length > 0) {
-      lastFailureReason = `positional reference to other report content in field(s): ${positionalReferenceViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
-      previousRejection = buildWritingRetryFeedback(lastFailureReason);
-      console.error(
-        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
-      );
-      continue;
-    }
-
-    const wcagViolations = findWcagCitationViolations(result.output);
-    if (wcagViolations.length > 0) {
-      lastFailureReason = `outdated WCAG version citation in field(s): ${wcagViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
-      previousRejection = buildWritingRetryFeedback(lastFailureReason);
-      console.error(
-        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
-      );
-      continue;
-    }
-
-    const businessViolations = findBusinessClaimViolations(result.output, input.language);
-    if (businessViolations.length > 0) {
-      lastFailureReason = `unhedged business-value claim in field(s): ${businessViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
-      previousRejection = buildWritingRetryFeedback(lastFailureReason);
-      console.error(
-        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
-      );
-      continue;
-    }
-
-    const transactionalFlowViolations = findTransactionalFlowViolations(
-      result.output,
-      input.language,
-      input.transactionalFlowStatus ?? 'unknown',
-    );
-    if (transactionalFlowViolations.length > 0) {
-      lastFailureReason = `transactional-flow claim conflicts with the deterministic signal in field(s): ${transactionalFlowViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
-      previousRejection = buildWritingRetryFeedback(lastFailureReason);
-      console.error(
-        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
-      );
-      continue;
-    }
-
-    const digitViolations = findExecutiveSummaryDigitViolations(result.output);
-    if (digitViolations.length > 0) {
-      lastFailureReason = `executiveSummary contains a digit, which the report template now owns: "${digitViolations[0]!.text}"`;
-      previousRejection = buildWritingRetryFeedback(lastFailureReason);
-      console.error(
-        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
-      );
-      continue;
-    }
-
-    // Issue #309: untranslated jargon in French prose and subjective
-    // impressions of the site that no finding measures.
-    const registerViolations = findProseRegisterViolations(result.output, input.language);
-    if (registerViolations.length > 0) {
-      lastFailureReason = `prose register defect in field(s): ${registerViolations.map((v) => `${v.field} (${v.matched})`).join(', ')}. ${PROSE_REGISTER_RETRY_HINT}`;
-      previousRejection = buildWritingRetryFeedback(lastFailureReason);
-      console.error(
-        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
-      );
-      continue;
-    }
-
-    // Issue #309: the provider bolted onto the end of every action.
-    const providerPlacementViolations = findProviderPlacementViolations(
-      result.output,
-      input.language,
-      assignedProviderPhrase,
-    );
-    if (providerPlacementViolations.length > 0) {
-      lastFailureReason = `provider named in the wrong place: ${providerPlacementViolations.map((v) => `${v.field} (${v.matched})`).join(', ')}. ${providerPlacementRetryHint(assignedProviderPhrase)}`;
-      previousRejection = buildWritingRetryFeedback(lastFailureReason);
-      console.error(
-        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
-      );
-      continue;
-    }
-
-    // Last of the rejecting guards deliberately: naming the provider two
-    // ways is a presentation defect, not a claim the report should not be
-    // making, so a response tripping this and a substantive guard records
-    // the substantive reason. Since the phrase is now assigned in code and
-    // the prompt shows only that one, this should be a guard that never
-    // fires; it stays because the model can still reach for an approved
-    // synonym it was never shown (see provider-phrase-guard.ts).
-    const providerPhraseViolations = findProviderPhraseViolations(
-      result.output,
-      input.language,
-      assignedProviderPhrase,
-    );
-    if (providerPhraseViolations.length > 0) {
-      lastFailureReason = `provider phrasing does not match the one assigned to this report: ${providerPhraseViolations.map((v) => `${v.field} (${v.matched})`).join(', ')}. ${providerPhraseRetryHint(assignedProviderPhrase)}`;
-      previousRejection = buildWritingRetryFeedback(lastFailureReason);
-      console.error(
-        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
-      );
-      continue;
-    }
-
-    // Normalization, not validation: applied after every rejecting guard
-    // has passed, so a guard never inspects text this rewrote.
-    captureLlmCallTelemetry({
-      kind: 'call-succeeded',
-      pass: 'writing',
-      model: OPENAI_MODEL,
-      language: input.language,
-      attemptCount: attempt,
-      durationMs: Date.now() - startedAtMs,
-      schemaValidFirstAttempt: attempt === 1,
-      ...(result.usage !== undefined
-        ? {
-            promptTokens: result.usage.promptTokens,
-            completionTokens: result.usage.completionTokens,
-            totalTokens: result.usage.totalTokens,
-            ...(result.usage.reasoningTokens !== undefined
-              ? { reasoningTokens: result.usage.reasoningTokens }
-              : {}),
-          }
-        : {}),
-    });
-    return {
-      output: normalizeWritingOutputTypography(result.output, input.language),
-      model: OPENAI_MODEL,
-      temperature: WRITING_OPENAI_TEMPERATURE,
-    };
+    return succeed(input, result, attempt, startedAtMs, rejections, []);
   }
 
   captureLlmCallTelemetry({
@@ -281,10 +160,65 @@ export async function analyzeWriting(
     pass: 'writing',
     model: OPENAI_MODEL,
     language: input.language,
-    attemptCount: MAX_RETRIES + 1,
+    attemptCount: totalAttempts,
     durationMs: Date.now() - startedAtMs,
   });
-  throw new Error(
-    `odysseus analyze (writing pass, language=${input.language}): exhausted ${MAX_RETRIES + 1} attempts without a valid response. Last failure: ${lastFailureReason}`,
+  throw new WritingPassExhaustedError(
+    `odysseus analyze (writing pass, language=${input.language}): exhausted ${totalAttempts} attempts without a valid response. ${describeRejections(rejections)}`,
+    input.language,
+    rejections,
   );
+}
+
+/** One rejection naming every guard that failed. `buildWritingRetryFeedback`
+ *  asks the model to fix "these problems", so the list has to read as a list
+ *  even when it holds one entry. */
+function describeFailures(failures: readonly WritingGuardFailure[]): string {
+  if (failures.length === 1) return failures[0]!.reason;
+  return failures.map((failure, i) => `(${i + 1}) ${failure.reason}`).join(' ');
+}
+
+function describeRejections(rejections: readonly WritingAttemptRejection[]): string {
+  if (rejections.length === 0) return 'No attempt was recorded.';
+  return rejections
+    .map((rejection) => `Attempt ${rejection.attempt}: ${rejection.reason}`)
+    .join(' | ');
+}
+
+function succeed(
+  input: WritingInput,
+  result: Awaited<ReturnType<typeof callOpenAiForWriting>>,
+  attempt: number,
+  startedAtMs: number,
+  rejections: readonly WritingAttemptRejection[],
+  shippedStyleViolations: readonly WritingAttemptRejection[],
+): AnalyzeWritingResult {
+  captureLlmCallTelemetry({
+    kind: 'call-succeeded',
+    pass: 'writing',
+    model: OPENAI_MODEL,
+    language: input.language,
+    attemptCount: attempt,
+    durationMs: Date.now() - startedAtMs,
+    schemaValidFirstAttempt: attempt === 1,
+    ...(result.usage !== undefined
+      ? {
+          promptTokens: result.usage.promptTokens,
+          completionTokens: result.usage.completionTokens,
+          totalTokens: result.usage.totalTokens,
+          ...(result.usage.reasoningTokens !== undefined
+            ? { reasoningTokens: result.usage.reasoningTokens }
+            : {}),
+        }
+      : {}),
+  });
+  return {
+    // Normalization, not validation: applied after every rejecting guard has
+    // passed, so a guard never inspects text this rewrote.
+    output: normalizeWritingOutputTypography(result.output, input.language),
+    model: OPENAI_MODEL,
+    temperature: WRITING_OPENAI_TEMPERATURE,
+    rejections,
+    shippedStyleViolations,
+  };
 }

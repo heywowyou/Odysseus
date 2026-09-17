@@ -4,9 +4,11 @@ import {
   auditReportPanelRows,
   canApproveReportPair,
   describeProduceFailure,
+  describeWritingGuardRejections,
   findPanelRow,
   produceButtonState,
 } from './audit-report-panel-model';
+import type { WritingCandidateResponse } from './prepare-report-types';
 
 const baseInput = {
   findingsStale: false,
@@ -244,5 +246,63 @@ describe('canApproveReportPair', () => {
     ).toBe(false);
     expect(canApproveReportPair([fresh('fr'), { ...fresh('en'), status: 'stale' }])).toBe(false);
     expect(canApproveReportPair([fresh('fr')])).toBe(false);
+  });
+});
+
+// Issue #409: an exhausted writing run used to show one message - the last
+// attempt's - so three attempts lost to three different guards looked like a
+// single failure, and the two earlier reasons existed only in the server's
+// logs.
+describe('describeWritingGuardRejections', () => {
+  const failed = (
+    guardRejections?: { attempt: number; totalAttempts: number; guards: string[] }[],
+  ): WritingCandidateResponse => ({
+    status: 'failed',
+    reason: 'exhausted 3 attempts',
+    createdAt: '2026-09-17T10:00:00.000Z',
+    ...(guardRejections ? { guardRejections } : {}),
+  });
+
+  it('names every attempt and the guards that rejected it', () => {
+    expect(
+      describeWritingGuardRejections(
+        failed([
+          { attempt: 1, totalAttempts: 3, guards: ['severity-vocabulary'] },
+          { attempt: 2, totalAttempts: 3, guards: ['prose-register'] },
+          { attempt: 3, totalAttempts: 3, guards: ['provider-placement', 'prose-register'] },
+        ]),
+        'fr',
+      ),
+    ).toEqual([
+      'Tentative 1 sur 3 refusée par : severity-vocabulary',
+      'Tentative 2 sur 3 refusée par : prose-register',
+      'Tentative 3 sur 3 refusée par : provider-placement, prose-register',
+    ]);
+  });
+
+  it('renders in English too', () => {
+    expect(
+      describeWritingGuardRejections(
+        failed([{ attempt: 2, totalAttempts: 3, guards: ['wcag-citation'] }]),
+        'en',
+      ),
+    ).toEqual(['Attempt 2 of 3 rejected by: wcag-citation']);
+  });
+
+  it('says nothing for a failure with no guard record, such as a provider outage', () => {
+    expect(describeWritingGuardRejections(failed(), 'fr')).toEqual([]);
+  });
+
+  it('says nothing for a candidate that did not fail', () => {
+    expect(
+      describeWritingGuardRejections(
+        {
+          status: 'ready',
+          pair: { frAnalysisId: 'a', enAnalysisId: 'b' },
+          createdAt: '2026-09-17T10:00:00.000Z',
+        },
+        'fr',
+      ),
+    ).toEqual([]);
   });
 });

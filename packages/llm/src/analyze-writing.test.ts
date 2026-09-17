@@ -172,14 +172,20 @@ describe('analyzeWriting', () => {
 
     await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow();
 
-    expect(sink.events).toEqual([
+    // Issue #409: every rejected attempt is now reported too, so the run's
+    // shape is measurable and not only its last message.
+    expect(sink.events.map((event) => event.kind)).toEqual([
+      ...Array.from({ length: MAX_RETRIES + 1 }, () => 'call-rejected'),
+      'call-exhausted',
+    ]);
+    expect(sink.events.at(-1)).toEqual(
       expect.objectContaining({
         kind: 'call-exhausted',
         pass: 'writing',
         language: 'fr',
         attemptCount: MAX_RETRIES + 1,
       }),
-    ]);
+    );
     const allowedKeys = new Set([
       'kind',
       'pass',
@@ -192,6 +198,8 @@ describe('analyzeWriting', () => {
       'completionTokens',
       'totalTokens',
       'reasoningTokens',
+      'guards',
+      'styleOnly',
     ]);
     for (const event of sink.events) {
       for (const key of Object.keys(event)) {
@@ -466,7 +474,7 @@ describe('analyzeWriting retry feedback (issue #21)', () => {
     expect(calls).toHaveLength(2);
     expect(calls[1]![2]).toContain('rejected by the automated guard');
     expect(calls[1]![2]).toContain('"graves"');
-    expect(calls[1]![2]).toContain('fixes exactly this problem');
+    expect(calls[1]![2]).toContain('fixes every problem listed');
   });
 
   it('carries the latest failure reason across a thrown attempt', async () => {
@@ -498,5 +506,179 @@ describe('analyzeWriting retry feedback (issue #21)', () => {
     const calls = vi.mocked(callOpenAiForWriting).mock.calls;
     expect(calls[1]![2]).toContain('rejected by the automated guard');
     expect(calls[1]![2]).toContain('risques juridiques');
+  });
+});
+
+// Issue #406: the guards used to run in sequence, each ending the attempt, so
+// one attempt reported one defect. With three attempts and three independent
+// defects, the budget ran out before the third was ever mentioned - even if
+// the model fixed every defect it was told about. Measured on a real EN full
+// scan (www.atlantichotel.fr, 2026-09-17) that reached "Scanned" with no
+// report.
+describe('analyzeWriting reports every failing guard at once (issue #406)', () => {
+  function buildThreeDefectOutput(): WritingPassOutput {
+    const output = buildCleanFrenchOutput();
+    // One substantive guard and two style guards, so the ordering assertion
+    // below has something to order.
+    output.executiveSummary = 'Nous avons identifié des problèmes majeurs sur votre site.';
+    output.themes[0]!.businessImpact =
+      'Les canonicals renvoient les visiteurs vers une autre page.';
+    output.themes[0]!.recommendedActions = [
+      'Le contraste des boutons doit être relevé, et votre prestataire technique peut ajuster les couleurs.',
+    ];
+    return output;
+  }
+
+  it('names every failed guard in the one correction it sends', async () => {
+    vi.mocked(callOpenAiForWriting)
+      .mockReset()
+      .mockResolvedValueOnce({ output: buildThreeDefectOutput() })
+      .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
+
+    await analyzeWriting(input, ['t1'], false);
+
+    const correction = vi.mocked(callOpenAiForWriting).mock.calls[1]![2]!;
+    expect(correction).toContain('severity vocabulary violations');
+    expect(correction).toContain('prose register defect');
+    expect(correction).toContain('provider named in the wrong place');
+    expect(correction).toContain('fixes every problem listed');
+  });
+
+  it('leads the reason with the substantive guard when a style guard fails too', async () => {
+    vi.mocked(callOpenAiForWriting)
+      .mockReset()
+      .mockResolvedValueOnce({ output: buildThreeDefectOutput() })
+      .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
+
+    const result = await analyzeWriting(input, ['t1'], false);
+
+    const [rejection] = result.rejections;
+    expect(rejection?.guards).toEqual([
+      'severity-vocabulary',
+      'prose-register',
+      'provider-placement',
+    ]);
+    expect(rejection?.reason.indexOf('severity vocabulary')).toBeLessThan(
+      rejection!.reason.indexOf('prose register'),
+    );
+  });
+});
+
+// Issue #407: three attempts of a real ten-theme report were all rejected by
+// the provider-placement guard alone, every mention correctly placed. The
+// report was lost over how often an approved phrase appears, and the operator
+// reviews every report before approving it anyway.
+describe('analyzeWriting and a style guard on the last attempt (issue #407)', () => {
+  function buildStyleOnlyOutput(): WritingPassOutput {
+    const output = buildCleanFrenchOutput();
+    output.themes[0]!.businessImpact =
+      'Les canonicals renvoient les visiteurs vers une autre page.';
+    return output;
+  }
+
+  it('ships the final attempt and records what escaped', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(callOpenAiForWriting)
+      .mockReset()
+      .mockResolvedValue({ output: buildStyleOnlyOutput() });
+
+    const result = await analyzeWriting(input, ['t1'], false);
+
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+    expect(result.output.themes[0]!.businessImpact).toContain('canonicals');
+    expect(result.shippedStyleViolations).toHaveLength(1);
+    expect(result.shippedStyleViolations[0]!.guards).toEqual(['prose-register']);
+    expect(errors.mock.calls.flat().join(' ')).toContain('shipped with unfixed style violations');
+    errors.mockRestore();
+  });
+
+  it('still throws when the final attempt fails a blocking guard', async () => {
+    vi.mocked(callOpenAiForWriting)
+      .mockReset()
+      .mockResolvedValue({ output: buildNonCanonicalSeverityWordOutput() });
+
+    await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(/exhausted \d+ attempts/);
+  });
+
+  it('still throws when a style guard fails alongside a blocking one on the last attempt', async () => {
+    const output = buildStyleOnlyOutput();
+    output.executiveSummary = 'Nous avons identifié des problèmes majeurs sur votre site.';
+    vi.mocked(callOpenAiForWriting).mockReset().mockResolvedValue({ output });
+
+    await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(/exhausted \d+ attempts/);
+  });
+
+  it('still retries a style guard while there is budget left', async () => {
+    vi.mocked(callOpenAiForWriting)
+      .mockReset()
+      .mockResolvedValueOnce({ output: buildStyleOnlyOutput() })
+      .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
+
+    const result = await analyzeWriting(input, ['t1'], false);
+
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(2);
+    expect(result.shippedStyleViolations).toEqual([]);
+    expect(result.output.themes[0]!.businessImpact).not.toContain('canonicals');
+  });
+});
+
+// Issue #409: a rejection used to exist only as a console line on the VPS and
+// as the last failure reason on the thrown error, so "which guards reject most
+// often" had no answer but an anecdote.
+describe('analyzeWriting records which guard rejected each attempt (issue #409)', () => {
+  const sink = new RecordingLlmTelemetrySink();
+
+  afterEach(() => {
+    sink.events.length = 0;
+    configureLlmTelemetrySink(new NullLlmTelemetrySink());
+  });
+
+  it('captures a rejection event per failed attempt, naming the guards', async () => {
+    configureLlmTelemetrySink(sink);
+    vi.mocked(callOpenAiForWriting)
+      .mockReset()
+      .mockResolvedValueOnce({ output: buildNonCanonicalSeverityWordOutput() })
+      .mockResolvedValueOnce({ output: buildWcag21CitationOutput() })
+      .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
+
+    await analyzeWriting(input, ['t1'], false);
+
+    // The first fixture trips three guards at once, which is the whole point
+    // of issue #406: before it, this attempt reported only the first.
+    expect(sink.events.filter((event) => event.kind === 'call-rejected')).toEqual([
+      expect.objectContaining({
+        attemptCount: 1,
+        guards: ['severity-vocabulary', 'finding-count', 'executive-summary-digit'],
+        styleOnly: false,
+      }),
+      expect.objectContaining({ attemptCount: 2, guards: ['wcag-citation'], styleOnly: false }),
+    ]);
+  });
+
+  it('keeps every attempt reason on the exhaustion error, not only the last', async () => {
+    vi.mocked(callOpenAiForWriting)
+      .mockReset()
+      .mockResolvedValueOnce({ output: buildNonCanonicalSeverityWordOutput() })
+      .mockResolvedValueOnce({ output: buildWcag21CitationOutput() })
+      .mockResolvedValueOnce({ output: buildViolatingThemeTitleOutput() });
+
+    await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(
+      /Attempt 1:.*Attempt 2:.*Attempt 3:/s,
+    );
+  });
+
+  it('marks a run exhausted purely on style guards, which is the case issue #407 removes', async () => {
+    configureLlmTelemetrySink(sink);
+    const styleOnly = buildCleanFrenchOutput();
+    styleOnly.themes[0]!.businessImpact = 'Les canonicals renvoient vers une autre page.';
+    vi.mocked(callOpenAiForWriting).mockReset().mockResolvedValue({ output: styleOnly });
+
+    await analyzeWriting(input, ['t1'], false);
+
+    const rejected = sink.events.filter((event) => event.kind === 'call-rejected');
+    expect(rejected.every((event) => 'styleOnly' in event && event.styleOnly)).toBe(true);
+    expect(sink.events.at(-2)).toEqual(
+      expect.objectContaining({ kind: 'style-violation-shipped', guards: ['prose-register'] }),
+    );
   });
 });

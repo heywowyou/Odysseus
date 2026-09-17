@@ -17,7 +17,14 @@ export interface AnalysisPairRefResponse {
 
 export type WritingCandidateResponse =
   | { status: 'ready'; pair: AnalysisPairRefResponse; createdAt: string }
-  | { status: 'failed'; reason: string; createdAt: string }
+  | {
+      status: 'failed';
+      reason: string;
+      createdAt: string;
+      /** Issue #409: which guards rejected each attempt of the failed run.
+       *  Optional so an older server's response still reads. */
+      guardRejections?: { attempt: number; totalAttempts: number; guards: string[] }[];
+    }
   | { status: 'selected'; pair: AnalysisPairRefResponse; approvedAt: string };
 
 export interface PreparationResponse {

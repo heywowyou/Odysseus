@@ -492,7 +492,7 @@ describe('buildWritingRetryFeedback and the user-prompt correction', () => {
     expect(corrected.startsWith(base)).toBe(true);
     expect(corrected).toContain('rejected by the automated guard');
     expect(corrected).toContain('"graves"');
-    expect(corrected).toContain('fixes exactly this problem');
+    expect(corrected).toContain('fixes every problem listed');
   });
 });
 
