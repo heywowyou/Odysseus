@@ -131,7 +131,7 @@ export function AppShell() {
 
   return (
     <div className="min-h-dvh bg-base text-ink">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-line bg-panel md:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-line bg-panel md:flex">
         <div className="px-5 pb-6 pt-5">
           <Brand layout="sidebar" />
           <p className="mt-1 px-2 text-xs text-ink-muted">{strings.shell.tagline}</p>
@@ -177,7 +177,7 @@ export function AppShell() {
         </div>
       ) : null}
 
-      <div className="md:pl-60">
+      <div className="md:pl-64">
         {/* Keyed by pathname so each navigation remounts the page container
             and replays the entrance animation. */}
         <main key={pathname} className="animate-page-in px-4 pb-16 pt-16 md:px-8 md:pt-10">
