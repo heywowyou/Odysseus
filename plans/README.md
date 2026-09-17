@@ -92,6 +92,13 @@ The canonical sources for this behavior are `docs/product/odysseus-project-brief
 | [057](archive/057-prospect-owns-linked-audit-identity.md) | Make the prospect the single source of a linked audit's name and SIREN; edits on the audit save to the prospect | P2 | M | none | DONE (2026-09-17) |
 | [058](058-fail-closed-senior-report-quality-pipeline.md) | Make the paid report fail closed on content and PDF quality | P1 | XL | 027, 033, 039, 050, 051; 059 before production promotion | TODO |
 | [059](059-fail-closed-audit-evidence-quality.md) | Make full-audit evidence fail closed before report generation | P1 | XL | 021, 035, 050, 051; gates 058 promotion | TODO |
+| [060](060-application-quality-control-room.md) | Make the dashboard a truthful quality control room over evidence, reports and operator attention | P1 | XL | 058, 059; 035, 050-057 semantics | TODO |
+| [061](061-durable-work-state-capabilities-and-queue.md) | Make long-running work, action safety, cancellation and scan queue state durable and truthful | P1 | XL | 060; 035, 050, 055, 056; 058/059 run contracts | TODO |
+| [062](062-audit-control-room-lineage-and-approval.md) | Make audit detail the evidence/report lineage workspace with explicit exact-bundle approval | P1 | XL | 058, 059, 060, 061; 050, 051/054, 057 | TODO |
+| [063](063-dashboard-data-contracts-and-large-audit-performance.md) | Bound dashboard read models and keep global state truthful at Point-France scale | P1 | L | 060, 061; coordinates 062 | TODO |
+| [064](064-dashboard-accessibility-and-design-system.md) | Make the operator dashboard exemplary in accessibility and interaction consistency | P1 | L | 060; consumes 061-063 | TODO |
+| [065](065-operational-observability-and-recovery.md) | Make routine failures typed, diagnosable and recoverable without log archaeology | P1 | L | 060, 061; integrates 058/059 | TODO |
+| [066](066-operator-security-privacy-and-browser-isolation.md) | Harden hostile-input, confidential-artifact and browser-isolation boundaries for the quality pipelines | P1 | XL | 060; early isolation preflight, later 061 + 058/059 ownership | TODO |
 
 Status values: `TODO`, `IN PROGRESS`, `IMPLEMENTED`, `DONE`,
 `BLOCKED: <reason>`, or `REJECTED: <reason>`. `IMPLEMENTED` means every done
