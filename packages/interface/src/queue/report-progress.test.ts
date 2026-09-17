@@ -101,6 +101,23 @@ describe('createScanProgressReporter staged full-audit progress', () => {
     });
   });
 
+  it('persists crawl exclusions without changing the phase', async () => {
+    const report = createScanProgressReporter({} as never, 'job-1', 'full-audit');
+    const excluded = {
+      discoveryOnly: 0,
+      externalRedirect: 12,
+      nonHtml: 20,
+      httpError: 4,
+      error: 1,
+    };
+    report({ type: 'crawl-exclusions', excluded });
+
+    await vi.waitFor(() => expect(updateJobProgress).toHaveBeenCalledOnce());
+    expect(updateJobProgress).toHaveBeenCalledWith({} as never, 'job-1', {
+      progress: { crawlExclusions: excluded },
+    });
+  });
+
   it('leaves the queued phase at setup, before the paced robots and sitemap fetches finish', async () => {
     // Issue #121: a slow-profile job used to sit on phase queued for the
     // whole robots.txt plus sitemap window because the first event only

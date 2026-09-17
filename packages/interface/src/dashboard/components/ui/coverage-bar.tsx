@@ -21,7 +21,8 @@ import { cn } from '../../lib/cn';
  * the legend below it, so the meaning survives with images off, at any zoom,
  * and in a screen reader.
  */
-export type CoverageSegmentKind = 'measured' | 'checked' | 'reached' | 'failed' | 'omitted';
+export type CoverageSegmentKind =
+  'measured' | 'checked' | 'excluded' | 'reached' | 'failed' | 'omitted';
 
 export interface CoverageSegment {
   kind: CoverageSegmentKind;
@@ -40,6 +41,7 @@ export interface CoverageSegment {
 const FILL_STYLES: Record<CoverageSegmentKind, string> = {
   measured: 'bg-accent',
   checked: 'bg-ink-soft',
+  excluded: 'bg-line',
   reached: 'bg-line-strong',
   failed: 'bg-sev-critical/70',
   omitted: 'hatched bg-raised border border-dashed border-line-strong',
@@ -48,6 +50,7 @@ const FILL_STYLES: Record<CoverageSegmentKind, string> = {
 const SWATCH_STYLES: Record<CoverageSegmentKind, string> = {
   measured: 'bg-accent',
   checked: 'bg-ink-soft',
+  excluded: 'bg-line',
   reached: 'bg-line-strong',
   failed: 'bg-sev-critical/70',
   omitted: 'hatched bg-raised border border-dashed border-line-strong',

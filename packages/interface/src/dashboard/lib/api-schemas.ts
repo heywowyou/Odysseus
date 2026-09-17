@@ -76,6 +76,15 @@ const scanJobProgressSchema = z.object({
   continuationGuard: z
     .object({ omittedUrlCount: z.number(), omittedFamilyCount: z.number() })
     .optional(),
+  crawlExclusions: z
+    .object({
+      discoveryOnly: z.number(),
+      externalRedirect: z.number(),
+      nonHtml: z.number(),
+      httpError: z.number(),
+      error: z.number(),
+    })
+    .optional(),
   message: z.string().optional(),
 });
 

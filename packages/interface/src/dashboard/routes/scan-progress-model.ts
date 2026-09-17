@@ -94,7 +94,18 @@ export function coverageSegments(
   const checked = job.progress.contentScan?.completed ?? job.progress.scan?.scanned ?? 0;
   const measured = job.progress.lighthouse?.completed ?? 0;
   const omitted = job.progress.continuationGuard?.omittedUrlCount ?? 0;
-  return [
+  // Issue #393: navigated URLs that were never going to be content-checked
+  // get their own band, so inventoried = checked target + excluded.
+  const exclusions = job.progress.crawlExclusions;
+  const excluded =
+    exclusions === undefined
+      ? 0
+      : exclusions.discoveryOnly +
+        exclusions.externalRedirect +
+        exclusions.nonHtml +
+        exclusions.httpError +
+        exclusions.error;
+  const segments: CoverageSegment[] = [
     { kind: 'measured', label: labels.measured, value: measured, displayValue: measured },
     {
       kind: 'checked',
@@ -102,20 +113,26 @@ export function coverageSegments(
       value: Math.max(0, checked - measured),
       displayValue: checked,
     },
+    { kind: 'excluded', label: labels.excluded, value: excluded, displayValue: excluded },
     {
       kind: 'reached',
       label: labels.reached,
-      value: Math.max(0, visited - checked),
+      value: Math.max(0, visited - checked - excluded),
       displayValue: visited,
     },
     { kind: 'omitted', label: labels.omitted, value: omitted, displayValue: omitted },
   ];
+  // Jobs from before the exclusion counter keep their original legend.
+  return exclusions === undefined
+    ? segments.filter((segment) => segment.kind !== 'excluded')
+    : segments;
 }
 
 const EMPTY_COVERAGE_LABELS: DashboardStrings['common']['coverage'] = {
   caption: '',
   measured: '',
   checked: '',
+  excluded: '',
   reached: '',
   failed: '',
   omitted: '',

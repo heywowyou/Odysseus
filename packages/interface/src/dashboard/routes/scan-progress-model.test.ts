@@ -47,6 +47,31 @@ function job(
 }
 
 describe('coverageSegments', () => {
+  // Issue #393: atlantichotel.fr showed Inventoried 378 against a content
+  // target of 341 with nothing explaining the 37 other URLs.
+  it('gives navigated-but-unchecked URLs their own band so the counts reconcile', () => {
+    const segments = coverageSegments(
+      job({
+        progress: {
+          crawl: { visited: 378, target: 378 },
+          contentScan: { completed: 341, target: 341, etaMs: 0 },
+          crawlExclusions: {
+            discoveryOnly: 0,
+            externalRedirect: 9,
+            nonHtml: 20,
+            httpError: 7,
+            error: 1,
+          },
+        },
+      }),
+      en.common.coverage,
+    );
+    const byKind = Object.fromEntries(segments.map((segment) => [segment.kind, segment]));
+    expect(byKind['checked']).toMatchObject({ displayValue: 341 });
+    expect(byKind['excluded']).toMatchObject({ value: 37, displayValue: 37 });
+    expect(byKind['reached']).toMatchObject({ value: 0, displayValue: 378 });
+  });
+
   // Captured job record from GitHub issue #33 (www.villasfoch.fr, job
   // 3ec80395-1070-4d55-8ea7-7c7701ba3d31, 2026-09-03): 32 URLs visited, 28
   // content-checked, 28 performance-measured, none omitted. The strip used

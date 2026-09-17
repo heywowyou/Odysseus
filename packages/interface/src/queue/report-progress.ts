@@ -140,6 +140,13 @@ export function createScanProgressReporter(
       return;
     }
 
+    if (event.type === 'crawl-exclusions') {
+      await reportJobPhase(connection, jobId, jobType, {
+        progress: { crawlExclusions: event.excluded },
+      });
+      return;
+    }
+
     if (event.type === 'content-scan-start') {
       contentScanConcurrency = event.concurrency;
       // Issue #223: seeded from the reused count, but no timing sample is

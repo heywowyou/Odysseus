@@ -50,6 +50,9 @@ export interface CommonStrings {
     caption: string;
     measured: string;
     checked: string;
+    /** Issue #393: inventoried URLs that are not pages to check
+     *  (redirects away, non-HTML, error statuses). */
+    excluded: string;
     reached: string;
     failed: string;
     omitted: string;
@@ -103,6 +106,7 @@ export const common = {
       caption: 'Couverture des URLs de cet audit',
       measured: 'Performances mesurées',
       checked: 'Contenu vérifié',
+      excluded: 'Exclues (redirections, non HTML, erreurs)',
       reached: 'Inventoriées',
       failed: 'En échec',
       omitted: 'Écartées',
@@ -154,6 +158,7 @@ export const common = {
       caption: 'URL coverage of this audit',
       measured: 'Performance measured',
       checked: 'Content checked',
+      excluded: 'Excluded (redirects, non-HTML, errors)',
       reached: 'Inventoried',
       failed: 'Failed',
       omitted: 'Left out',

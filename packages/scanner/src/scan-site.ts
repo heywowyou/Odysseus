@@ -63,6 +63,35 @@ import {
 } from './artifacts/crawl-frontier-io.js';
 import { createPageWorkGuard, type PageWorkGuard } from './page-work-guard.js';
 
+export interface CrawlExclusionCounts {
+  discoveryOnly: number;
+  externalRedirect: number;
+  nonHtml: number;
+  httpError: number;
+  error: number;
+}
+
+/** Counts the navigated pages that are not content-checked, by reason. */
+export function countCrawlExclusions(
+  pages: readonly { status: CrawledPage['status'] }[],
+): CrawlExclusionCounts {
+  const counts: CrawlExclusionCounts = {
+    discoveryOnly: 0,
+    externalRedirect: 0,
+    nonHtml: 0,
+    httpError: 0,
+    error: 0,
+  };
+  for (const page of pages) {
+    if (page.status === 'discovered-not-scanned') counts.discoveryOnly += 1;
+    else if (page.status === 'skipped-external-redirect') counts.externalRedirect += 1;
+    else if (page.status === 'skipped-non-html') counts.nonHtml += 1;
+    else if (page.status === 'http-error-status') counts.httpError += 1;
+    else if (page.status === 'error') counts.error += 1;
+  }
+  return counts;
+}
+
 /** Extends crawl's own events with the scan phase's. scan-start fires
  *  once, after the crawl finishes (the total page count isn't known
  *  until then). scan-page fires once per completed scanPage call, not
@@ -92,6 +121,10 @@ export type ScanProgressEvent =
       url: string;
       durationMs: number;
     }
+  /** Issue #393: crawled URLs that were navigated but will not be
+   *  content-checked, by reason, so inventoried and checked counts
+   *  reconcile. Robots-skipped URLs are never navigated and are not here. */
+  | { type: 'crawl-exclusions'; excluded: CrawlExclusionCounts }
   | { type: 'select-performance' }
   | {
       type: 'lighthouse-start';
@@ -1076,6 +1109,7 @@ export async function scanSite(
   }
 
   const pagesToScan = crawl.pages.filter((page) => page.status === 'visited');
+  options.onProgress?.({ type: 'crawl-exclusions', excluded: countCrawlExclusions(crawl.pages) });
 
   // When no URL matched the mentions-legales heuristic, the LCEN check
   // must still run somewhere - otherwise a site with no legal notice page

@@ -119,12 +119,22 @@ export interface JobProgressContinuationGuard {
   omittedFamilyCount: number;
 }
 
+/** Issue #393: navigated crawl URLs that are not content-checked, by reason. */
+export interface JobProgressCrawlExclusions {
+  discoveryOnly: number;
+  externalRedirect: number;
+  nonHtml: number;
+  httpError: number;
+  error: number;
+}
+
 export interface JobProgress {
   crawl?: JobProgressCrawl;
   scan?: JobProgressScan;
   contentScan?: JobProgressAnalysisStage;
   lighthouse?: JobProgressAnalysisStage;
   continuationGuard?: JobProgressContinuationGuard;
+  crawlExclusions?: JobProgressCrawlExclusions;
   message?: string;
 }
 
@@ -287,6 +297,17 @@ const jobProgressContinuationGuardSchema = new Schema(
   { _id: false },
 );
 
+const jobProgressCrawlExclusionsSchema = new Schema(
+  {
+    discoveryOnly: { type: Number, required: true },
+    externalRedirect: { type: Number, required: true },
+    nonHtml: { type: Number, required: true },
+    httpError: { type: Number, required: true },
+    error: { type: Number, required: true },
+  },
+  { _id: false },
+);
+
 const jobProgressSchema = new Schema(
   {
     crawl: { type: jobProgressCrawlSchema },
@@ -294,6 +315,7 @@ const jobProgressSchema = new Schema(
     contentScan: { type: jobProgressAnalysisStageSchema },
     lighthouse: { type: jobProgressAnalysisStageSchema },
     continuationGuard: { type: jobProgressContinuationGuardSchema },
+    crawlExclusions: { type: jobProgressCrawlExclusionsSchema },
     message: { type: String },
   },
   { _id: false },
