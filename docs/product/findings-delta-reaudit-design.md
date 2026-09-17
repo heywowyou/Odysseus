@@ -126,6 +126,17 @@ stored per run:
   `packages/core/src/normalize/findings-provenance.ts:37`); the delta must
   consume only provenance-stamped findings sets from both runs.
 
+**Rescoped findings (2026-09-17).** Normalization merges same-rule selectors
+that cover the same pages into one finding keyed on its sorted page list, so
+the key moves whenever that page set changes: the re-audit reaches one more or
+one fewer page, or the client fixed the defect on some pages only. After
+pairing on `dedupeKey`, the delta therefore pairs leftover resolved and new
+findings of the same rule, category and title on overlapping pages, greedily
+by overlap, before classifying them. Such a row carries the re-audit's key. In
+rare cases this can merge a fixed defect and a new one of the same rule on the
+same pages; that was accepted because normalization already treats same-rule,
+same-scope selectors as one problem.
+
 Comparability boundary, on record: if `computeDedupeKey` ever changes (inputs,
 length, or pre-hash normalization), keys stop being comparable across that
 boundary for all historical runs. This document is the record of that.

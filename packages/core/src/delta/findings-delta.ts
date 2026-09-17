@@ -4,9 +4,15 @@
  * two stored runs of one site go in, and the classified comparison comes
  * out. The model never sees or words any of it.
  *
- * Findings are paired on `dedupeKey`, which normalization emits once per
- * finding and computes the same way on every run, so a key present in both
- * runs is the same rule on the same identity.
+ * Findings are paired in two passes. First on `dedupeKey`, which
+ * normalization emits once per finding and computes the same way on every
+ * run, so a key present in both runs is the same rule on the same identity.
+ * Then the leftovers: a baseline finding and a re-audit finding of the same
+ * rule, category and title on overlapping pages are the same defect, paired
+ * greedily by overlap. Shared-scope merging hashes the page list into the
+ * key, so a change in the pages reached or still affected moves the key
+ * without the site's defect changing; without this pass the delta would call
+ * one ongoing defect both fixed and new.
  */
 
 import type { FindingsProvenance } from '../normalize/findings-provenance.js';
@@ -40,6 +46,9 @@ export interface FindingsDeltaSide {
 
 export interface FindingsDeltaRow {
   class: FindingsDeltaClass;
+  /** The re-audit's key whenever the row has a current side. A persistent
+   *  or changed-severity row paired by rule, title and page overlap has a
+   *  baseline finding under a different key. */
   dedupeKey: string;
   ruleId: string;
   category: Finding['category'];
@@ -123,6 +132,56 @@ function side(finding: DeltaFinding): FindingsDeltaSide {
   };
 }
 
+function pageOverlap(a: DeltaFinding, b: DeltaFinding): number {
+  const pages = new Set(a.pageUrls);
+  return new Set(b.pageUrls.filter((page) => pages.has(page))).size;
+}
+
+/** Second pairing pass over findings the exact-key pass left unpaired: same
+ *  rule, category and title with at least one page in common. Candidates
+ *  are accepted greedily by overlap, ties broken on the two keys, so the
+ *  result never depends on input order and a finding pairs at most once. */
+function pairRescopedFindings(
+  unpairedBaseline: readonly DeltaFinding[],
+  unpairedCurrent: readonly DeltaFinding[],
+): Array<[DeltaFinding, DeltaFinding]> {
+  const candidates: Array<{ prior: DeltaFinding; finding: DeltaFinding; overlap: number }> = [];
+  for (const prior of unpairedBaseline) {
+    for (const finding of unpairedCurrent) {
+      if (
+        prior.ruleId !== finding.ruleId ||
+        prior.category !== finding.category ||
+        prior.title !== finding.title
+      ) {
+        continue;
+      }
+      const overlap = pageOverlap(prior, finding);
+      if (overlap > 0) candidates.push({ prior, finding, overlap });
+    }
+  }
+  candidates.sort(
+    (a, b) =>
+      b.overlap - a.overlap ||
+      compareKeys(a.prior.dedupeKey, b.prior.dedupeKey) ||
+      compareKeys(a.finding.dedupeKey, b.finding.dedupeKey),
+  );
+
+  const usedBaseline = new Set<string>();
+  const usedCurrent = new Set<string>();
+  const pairs: Array<[DeltaFinding, DeltaFinding]> = [];
+  for (const { prior, finding } of candidates) {
+    if (usedBaseline.has(prior.dedupeKey) || usedCurrent.has(finding.dedupeKey)) continue;
+    usedBaseline.add(prior.dedupeKey);
+    usedCurrent.add(finding.dedupeKey);
+    pairs.push([prior, finding]);
+  }
+  return pairs;
+}
+
+function compareKeys(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
 function versionText(value: string | number | null): string | null {
   return value === null ? null : String(value);
 }
@@ -173,27 +232,47 @@ export function computeFindingsDelta(
   const after = indexByKey(current, 're-audit');
   const rows: FindingsDeltaRow[] = [];
 
+  const currentRow = (finding: DeltaFinding) => ({
+    dedupeKey: finding.dedupeKey,
+    ruleId: finding.ruleId,
+    category: finding.category,
+    title: finding.title,
+    current: side(finding),
+  });
+  const pushPaired = (prior: DeltaFinding, finding: DeltaFinding): void => {
+    const moved = prior.severity !== finding.severity && !changedSeveritySuppressed;
+    rows.push({
+      class: moved ? 'changed-severity' : 'persistent',
+      ...currentRow(finding),
+      baseline: side(prior),
+    });
+  };
+
+  const unpairedCurrent: DeltaFinding[] = [];
   for (const [key, finding] of after) {
     const prior = before.get(key);
-    const base = {
-      dedupeKey: key,
-      ruleId: finding.ruleId,
-      category: finding.category,
-      title: finding.title,
-      current: side(finding),
-    };
-    if (prior === undefined) {
-      rows.push({ class: 'new', ...base });
-      continue;
-    }
-    const moved = prior.severity !== finding.severity && !changedSeveritySuppressed;
-    rows.push({ class: moved ? 'changed-severity' : 'persistent', ...base, baseline: side(prior) });
+    if (prior === undefined) unpairedCurrent.push(finding);
+    else pushPaired(prior, finding);
   }
-  for (const [key, prior] of before) {
-    if (after.has(key)) continue;
+  const unpairedBaseline = [...before.values()].filter((prior) => !after.has(prior.dedupeKey));
+
+  const rescopedBaseline = new Set<string>();
+  const rescopedCurrent = new Set<string>();
+  for (const [prior, finding] of pairRescopedFindings(unpairedBaseline, unpairedCurrent)) {
+    rescopedBaseline.add(prior.dedupeKey);
+    rescopedCurrent.add(finding.dedupeKey);
+    pushPaired(prior, finding);
+  }
+
+  for (const finding of unpairedCurrent) {
+    if (!rescopedCurrent.has(finding.dedupeKey))
+      rows.push({ class: 'new', ...currentRow(finding) });
+  }
+  for (const prior of unpairedBaseline) {
+    if (rescopedBaseline.has(prior.dedupeKey)) continue;
     rows.push({
       class: 'resolved',
-      dedupeKey: key,
+      dedupeKey: prior.dedupeKey,
       ruleId: prior.ruleId,
       category: prior.category,
       title: prior.title,

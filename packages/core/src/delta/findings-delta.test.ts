@@ -166,3 +166,105 @@ describe('computeFindingsDelta', () => {
     ).toThrow(/two findings with dedupe key dup/);
   });
 });
+
+describe('rescoped findings', () => {
+  const HOME = 'https://hotel.fr/';
+  const A = 'https://hotel.fr/a';
+  const B = 'https://hotel.fr/b';
+
+  function contrast(
+    key: string,
+    severity: DeltaFinding['severity'],
+    pages: string[],
+    title = 'Contrast',
+  ): DeltaFinding {
+    return { ...finding(key, severity, pages), ruleId: 'color-contrast', title };
+  }
+
+  it('keeps one defect as persistent when its page set grew and its key moved', () => {
+    const delta = computeFindingsDelta(
+      run('before', [contrast('b1', 'serious', [HOME, A])]),
+      run('after', [contrast('c1', 'serious', [HOME, A, B])]),
+    );
+
+    expect(delta.counts).toEqual({ new: 0, resolved: 0, persistent: 1, 'changed-severity': 0 });
+    expect(delta.rows).toHaveLength(1);
+    expect(delta.rows[0]).toMatchObject({
+      class: 'persistent',
+      dedupeKey: 'c1',
+      baseline: { findingId: 'f-b1', pageCount: 2 },
+      current: { findingId: 'f-c1', pageCount: 3 },
+    });
+  });
+
+  it('reports a severity move on a rescoped pair as changed-severity', () => {
+    const delta = computeFindingsDelta(
+      run('before', [contrast('b1', 'moderate', [HOME, A])]),
+      run('after', [contrast('c1', 'serious', [HOME])]),
+    );
+
+    expect(delta.counts).toEqual({ new: 0, resolved: 0, persistent: 0, 'changed-severity': 1 });
+  });
+
+  it('counts a rescoped severity move as persistent when normalization changed', () => {
+    const delta = computeFindingsDelta(
+      run('before', [contrast('b1', 'moderate', [HOME, A])]),
+      run('after', [contrast('c1', 'serious', [HOME])], {
+        findingsProvenance: {
+          findingsSchemaVersion: 1 as never,
+          normalizationFingerprint: 'other',
+          findingsDigest: 'sha256:after',
+        },
+      }),
+    );
+
+    expect(delta.counts).toEqual({ new: 0, resolved: 0, persistent: 1, 'changed-severity': 0 });
+  });
+
+  it('never pairs findings of the same rule with different titles', () => {
+    const delta = computeFindingsDelta(
+      run('before', [contrast('b1', 'serious', [HOME, A])]),
+      run('after', [contrast('c1', 'serious', [HOME, A, B], 'Other title')]),
+    );
+
+    expect(delta.counts).toEqual({ new: 1, resolved: 1, persistent: 0, 'changed-severity': 0 });
+  });
+
+  it('never pairs findings of the same rule and title on disjoint pages', () => {
+    const delta = computeFindingsDelta(
+      run('before', [contrast('b1', 'serious', [HOME, A])]),
+      run('after', [contrast('c1', 'serious', [B])]),
+    );
+
+    expect(delta.counts).toEqual({ new: 1, resolved: 1, persistent: 0, 'changed-severity': 0 });
+  });
+
+  it('pairs with the largest page overlap whatever the input order', () => {
+    const wide = contrast('c-wide', 'serious', [HOME, A]);
+    const narrow = contrast('c-narrow', 'serious', [B]);
+    for (const findings of [
+      [wide, narrow],
+      [narrow, wide],
+    ]) {
+      const delta = computeFindingsDelta(
+        run('before', [contrast('b1', 'serious', [HOME, A, B])]),
+        run('after', findings),
+      );
+
+      expect(delta.rows.map((row) => [row.class, row.dedupeKey, row.baseline?.findingId])).toEqual([
+        ['new', 'c-narrow', undefined],
+        ['persistent', 'c-wide', 'f-b1'],
+      ]);
+    }
+  });
+
+  it('never reuses a finding already paired by dedupe key', () => {
+    const delta = computeFindingsDelta(
+      run('before', [contrast('same', 'serious', [HOME, A])]),
+      run('after', [contrast('same', 'serious', [HOME, A]), contrast('c2', 'serious', [HOME])]),
+    );
+
+    expect(delta.counts).toEqual({ new: 1, resolved: 0, persistent: 1, 'changed-severity': 0 });
+    expect(delta.rows.find((row) => row.class === 'persistent')?.dedupeKey).toBe('same');
+  });
+});
