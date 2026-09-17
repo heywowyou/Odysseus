@@ -3,6 +3,7 @@ import type {
   AuditManifest,
   AuditManualFields,
   AnalysisSiteContext,
+  EvidenceLimitation,
   Finding,
   FindingsDelta,
   FindingsProvenance,
@@ -114,6 +115,8 @@ export interface GenerateReportInput {
    *  here from a second findings file. Absent on every report without a
    *  delivered baseline, which renders unchanged. */
   delta?: FindingsDelta;
+  /** Plan 058 deterministic evidence-quality disclosures. */
+  qualityLimitations?: EvidenceLimitation[];
   /** Issue #6: a caller generating both language reports for the same
    *  audit back to back (packages/interface's report-stage.ts) launches
    *  Chromium once and passes it here for both passes, instead of paying a
