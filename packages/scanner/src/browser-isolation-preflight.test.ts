@@ -45,12 +45,28 @@ describe('the sandbox attestation', () => {
     const result = assessBrowserIsolation(
       input({
         chromiumArgs: ['--no-sandbox'],
-        declaredIsolationProfile: 'rootless-userns-container',
+        declaredIsolationProfile: 'secretless-scan-container',
       }),
     );
 
     expect(result.ok).toBe(true);
     expect(result.profile).toBe('approved-equivalent');
+  });
+
+  it('refuses what production declares today, since a shared container is not a second layer', () => {
+    // Trade-off 92: Chromium runs as the same unprivileged user, in the same
+    // container, as the process holding every secret. Naming that arrangement
+    // must not clear the gate.
+    const result = assessBrowserIsolation(
+      input({
+        chromiumArgs: ['--no-sandbox', '--disable-dev-shm-usage'],
+        declaredIsolationProfile: 'rootless-userns-container',
+      }),
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.profile).toBe('none');
+    expect(result.findings[0]?.code).toBe('unapproved-isolation-profile');
   });
 
   it('refuses a profile name nobody evaluated, so the attestation cannot be self-issued', () => {

@@ -62,11 +62,24 @@ export interface BrowserIsolationPreflightResult {
  * is a deployment decision that belongs in `deploy/runbook.md`, not a value a
  * job payload supplies: the point of the list is that a person evaluated the
  * profile, so an open-ended string would defeat it.
+ *
+ * The current production deployment satisfies NEITHER of these. Trade-off 92
+ * records that Chromium runs with `--no-sandbox` as the same unprivileged user,
+ * in the same container, as `odysseus serve`, and states plainly that there is
+ * no second layer. Running as a non-root user in a shared container is not an
+ * isolation profile; it is the configuration the accepted risk is about. So
+ * this list deliberately does not contain an entry today's compose file could
+ * truthfully declare, and wiring this preflight into scan start will refuse to
+ * scan until trade-off 92's own first remedy - a scan container holding no
+ * secrets - is actually built.
  */
 export const APPROVED_ISOLATION_PROFILES: readonly string[] = [
-  // Rootless container with a dedicated user namespace, which is what the
-  // Hostinger deployment runs and why --no-sandbox is needed there at all.
-  'rootless-userns-container',
+  // Trade-off 92's preferred remedy: scanning and PDF rendering in their own
+  // container, with the artifacts volume and a narrow job channel and none of
+  // the mailbox, bucket, model or database credentials. This removes the blast
+  // radius without needing the sandbox at all.
+  'secretless-scan-container',
+  // A kernel-level sandbox substituting for Chromium's own.
   'gvisor',
 ];
 

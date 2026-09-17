@@ -488,6 +488,33 @@ editing the compose file and deploying:
 If Chromium fails to start after a change here, every scan and PDF fails;
 roll back by restoring the flag.
 
+### Isolation preflight (plan 059)
+
+`assessBrowserIsolation` in `packages/scanner` refuses to start a scan when
+Chromium's sandbox is disabled and no evaluated container isolation profile is
+declared in `ODYSSEUS_BROWSER_ISOLATION_PROFILE`. The approved values are
+`secretless-scan-container` and `gvisor`.
+
+Today's deployment can declare neither, on purpose. Trade-off 92 records that
+Chromium runs as the same unprivileged user, in the same container, as the
+process holding every secret, and that there is no second layer; a non-root
+user in a shared container is the accepted risk, not a mitigation of it. Do not
+add a profile name to the approved list to make the deployment pass - that
+empties the gate of its only content.
+
+The preflight is therefore **not yet called at scan start**. Wiring it is
+blocked on trade-off 92's first remedy: splitting scanning and PDF rendering
+into their own container with the artifacts volume and a job channel and none
+of the mailbox, bucket, model or database credentials. When that container
+exists, set `ODYSSEUS_BROWSER_ISOLATION_PROFILE=secretless-scan-container` on
+it and wire the preflight in.
+
+Chromium is already launched with credential-shaped environment variables
+stripped (`buildSanitizedBrowserEnv`), so the browser process no longer carries
+`MONGODB_URI`, the model key or the bucket keys. That narrows the blast radius
+of a renderer exploit; it does not close it, since the same uid can still read
+`/srv/odysseus/.env`.
+
 ## 8. Backups
 
 The nightly job tars the artifacts volume and copies it to the existing

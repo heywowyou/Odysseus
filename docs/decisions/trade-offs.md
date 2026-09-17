@@ -5066,3 +5066,64 @@ structure pass over the same findings do not have to agree.
 Related: issue #407 reduces how often the budget is exhausted at all, and #406
 makes the three attempts enough to correct three defects. This one changes what
 it costs when exhaustion still happens.
+
+### 99. Scan evidence gets a frozen scope, a versioned robots policy, one host scheduler, and a browser gate (build decisions, 2026-09-18, Plan 059 Phase A)
+
+Plan 059 makes a paid full audit fail closed on the quality of its own
+evidence. Phase A lays the four contracts the rest of it stands on. Four
+choices in it are worth not silently reversing.
+
+**A scope bound records who set it.** `AuditConfigSnapshot` already stored the
+effective `maxPages` and `maxDepth`, which turns out not to answer the question
+that matters. When a crawl leaves eligible pages unscanned at a bound, the
+audit is either a smaller one the operator deliberately asked for or a paid
+audit the shipped default quietly truncated. The first is disclosable; the
+second is the defect this plan exists to prevent. By the time the crawl stops
+both look identical, so `AuditScopeSnapshot` records each bound's origin at the
+moment scope is frozen. Depth is treated exactly like page count: a page left
+unscanned at the depth bound is no less unscanned than one left at the cap, and
+the plan lists excusing depth omissions among its rejected alternatives.
+
+**The robots chain is an intersection, not "obey the latest".** A long audit
+revalidates robots.txt, and a revalidation that tightens must stop further
+requests. A revalidation that *loosens* deliberately does not widen the audit.
+Admitting pages halfway through under rules the earlier pages were never
+eligible for would produce a coverage set no single policy explains, and the
+next epoch picks the wider scope up cleanly. Evaluating every snapshot in the
+epoch and requiring all of them to allow a path also avoids having to decide
+which of two robots files is "stricter" in general, which has no total ordering
+- a file can tighten one subtree while loosening another.
+
+**Request spacing is global, not per lane.** The crawl already slept between
+pages, but plan 059 adds mobile surfaces, hydration sweeps, isolated retries
+and diagnostics, and each of those written with its own timer is another lane
+the site feels at once. Three lanes each politely waiting a second is three
+requests a second. The shared scheduler spaces request *starts* across all
+lanes; concurrency still buys overlapping render and axe work, it just stops
+buying request pressure. A concurrency-3 crawl gets slower when the crawl loop
+is wired through it in Phase B, which is the intended direction.
+
+**Amends trade-off 92.** Chromium no longer inherits this process's
+environment. Entry 92 records that a renderer exploit would reach the LLM key,
+mailbox credentials, bucket keys and the Mongo URI because the browser runs as
+the same user in the same container as `odysseus serve`; those variables are
+now stripped from the browser process's environment, verified against the real
+end-to-end browser test. **This narrows the blast radius, it does not close
+it.** The secrets remain in the parent process's memory and in
+`/srv/odysseus/.env` on disk, both readable at the same uid, so entry 92's
+remedies stand unchanged and in the same order.
+
+**The isolation preflight will refuse today's production configuration, and
+that is the correct answer.** An unattested `--no-sandbox` now fails the
+preflight, and the approved-profile list deliberately contains nothing today's
+compose file could truthfully declare: running as a non-root user in a
+container shared with every secret is not an isolation profile, it is the
+arrangement entry 92 is an accepted risk *about*. The approved entries are
+entry 92's own first remedy, a scan container holding no secrets, and a
+kernel-level sandbox. The preflight is not yet wired into scan start; wiring it
+is blocked on building one of those, and the gate must not be widened with a
+profile name invented to make the deployment pass.
+
+**Rejected: an open-ended isolation profile string.** The value of the
+attestation is that a person evaluated the profile. Any string a deployment
+could supply would let the deployment attest to itself.
