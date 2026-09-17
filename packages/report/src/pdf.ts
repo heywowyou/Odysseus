@@ -455,6 +455,17 @@ export interface AppendixTableSplitPoint {
  *  land somewhere else, which the next pass repairs. */
 const MAX_APPENDIX_LAYOUT_REPAIR_PASSES = 5;
 
+/** Issue #387: stale-continuation merges have their own budget and no longer
+ *  spend the repair passes above. The Cap d'Antibes French report merged one
+ *  reopened color-contrast table per pass for three passes (each merge exposed
+ *  the next), and Paged.js re-split all three at the very same rows: the
+ *  room check measured the row fitting (108px of room for a 71px row) where
+ *  the layout would not place it. That left one repair pass, whose own
+ *  patch stranded the unused-javascript heading with nothing left to repair
+ *  it, and the gate refused the PDF. Each row is still merged at most once,
+ *  so this cap only bounds the extra layouts. */
+const MAX_STALE_CONTINUATION_MERGE_PASSES = 5;
+
 /** Reads the live, post-layout DOM for any appendix table Paged.js split
  *  across pages without repeating the header on a continuation fragment.
  *  Pure detection, no mutation - the fix is applied to the pre-pagination
@@ -1184,7 +1195,8 @@ export async function renderPdfWithPageCountFromHtml(
     // group's boundary away from the heading Paged.js kept re-cloning.
     // Reports with none of the defects pay nothing extra - detection finds
     // nothing and the loop exits after the very first pass, exactly as
-    // before these fixes. Bounded per MAX_APPENDIX_LAYOUT_REPAIR_PASSES:
+    // before these fixes. Bounded per MAX_APPENDIX_LAYOUT_REPAIR_PASSES (and
+    // MAX_STALE_CONTINUATION_MERGE_PASSES for the #312 merges):
     // each pass only ever pushes content downward (a repeated header adds
     // markup at an existing row boundary; a break rule moves a group start
     // to a fresh page), so one pass can expose a strand, a split or a
@@ -1194,21 +1206,25 @@ export async function renderPdfWithPageCountFromHtml(
     // gate (the selector now covers .appendix-rule-head), so a client PDF
     // can never ship a duplicated rule heading.
     const mergedContinuationRowIds = new Set<string>();
-    for (let attempt = 0; attempt < MAX_APPENDIX_LAYOUT_REPAIR_PASSES; attempt++) {
+    let repairPasses = 0;
+    let mergePasses = 0;
+    while (repairPasses < MAX_APPENDIX_LAYOUT_REPAIR_PASSES) {
       // Issue #312: a stale reopened table is merged back on its own pass,
       // before any other repair reads this layout, since the merge moves
       // the rows every other detection would be measuring.
-      // A row is merged at most once and never on the last pass, so a
-      // measurement Paged.js disagrees with cannot oscillate, and the pass
-      // after a merge is always there to repair the split it re-exposes.
+      // A row is merged at most once, so a measurement Paged.js disagrees
+      // with cannot oscillate. Issue #387: a merge does not spend a repair
+      // pass, so the repair passes after it are all still there to repair
+      // the split it re-exposes and whatever that repair moves in turn.
       const stale = (await detectStaleAppendixContinuations(page)).filter(
         (item) => !mergedContinuationRowIds.has(item.continuationRowId),
       );
-      if (stale.length > 0 && attempt < MAX_APPENDIX_LAYOUT_REPAIR_PASSES - 1) {
+      if (stale.length > 0 && mergePasses < MAX_STALE_CONTINUATION_MERGE_PASSES) {
         const merged = mergeStaleAppendixContinuationsIntoHtml(currentHtml, stale);
         if (merged !== currentHtml) {
           for (const item of stale) mergedContinuationRowIds.add(item.continuationRowId);
           currentHtml = merged;
+          mergePasses++;
           await runPagedjsPreview(currentHtml);
           continue;
         }
@@ -1227,6 +1243,7 @@ export async function renderPdfWithPageCountFromHtml(
       );
       if (patched === currentHtml) break;
       currentHtml = patched;
+      repairPasses++;
       await runPagedjsPreview(currentHtml);
     }
     await removeEmptyAppendixTableGhosts(page);
@@ -1243,6 +1260,11 @@ export async function renderPdfWithPageCountFromHtml(
       findStrandedAppendixRuleIds(await detectStrandedAppendixRuleHeadings(page)),
     );
     if (strandedFailure !== undefined) {
+      if (process.env['TMP387'])
+        require('node:fs').writeFileSync(
+          '/tmp/claude-1000/-home-heywow-code-odysseus/ad7d6fd3-19c0-4f0b-a931-728a0f41657b/scratchpad/dump.html',
+          await page.content(),
+        );
       throw new Error(`Report generation aborted: ${strandedFailure} Never shipped to a client.`);
     }
 

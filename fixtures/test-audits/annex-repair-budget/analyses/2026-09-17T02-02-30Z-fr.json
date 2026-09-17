@@ -1,0 +1,204 @@
+{
+  "executiveSummary": "Le site présente un ensemble de constats répartis entre accessibilité, performance, référencement et confidentialité, avec une concentration nette sur la lisibilité, la stabilité d’affichage et l’usage sur mobile. Les constats les plus sensibles touchent l’accès à l’information et la facilité d’interaction, ce qui peut ralentir la consultation, créer des hésitations et diminuer la probabilité qu’un visiteur aille au bout de sa démarche. Les constats de performance montrent aussi un affichage trop lent et des déplacements visuels encore présents pendant le chargement, deux signaux qui dégradent la fluidité perçue. Enfin, les constats de référencement et de confidentialité indiquent que la structure du site et le déclenchement de certains traceurs peuvent être mieux encadrés pour soutenir la confiance et la lisibilité du site. Vous gagnerez à traiter en premier les constats qui touchent directement la lecture, l’appui et l’affichage du contenu principal, puis à stabiliser la description du site pour les moteurs et les visiteurs.",
+  "overallRisk": "high",
+  "themes": [
+    {
+      "title": "Corriger les contrastes pour rendre les textes lisibles",
+      "category": "accessibility",
+      "businessImpact": "Un visiteur qui consulte ces pages peut peiner à lire certains textes lorsque le contraste avec le fond est trop faible. Cette difficulté touche directement la compréhension des informations présentées, ce qui peut freiner une demande de réservation, de contact ou de consultation d’un contenu de service. Sur un site d’hébergement et de restauration, une lecture moins fluide réduit la capacité du visiteur à comparer les offres et à passer à l’action. Le constat est d’autant plus sensible sur mobile, où une forte luminosité accentue la gêne de lecture.",
+      "legalRelevance": "Critère 1.4.3 (Contraste minimum), WCAG 2.2 niveau AA, référencé par la norme EN 301 549.",
+      "effort": "high",
+      "impact": "high",
+      "priorityRank": 1,
+      "findingIds": [
+        "f003",
+        "f006",
+        "f007",
+        "f008",
+        "f009",
+        "f011",
+        "f012",
+        "f013",
+        "f014",
+        "f016",
+        "f017",
+        "f019",
+        "f020",
+        "f021",
+        "f022",
+        "f025",
+        "f027",
+        "f028",
+        "f029",
+        "f030",
+        "f031",
+        "f033",
+        "f034",
+        "f037",
+        "f039",
+        "f040",
+        "f042",
+        "f044",
+        "f045",
+        "f046",
+        "f047",
+        "f049",
+        "f050"
+      ],
+      "recommendedActions": [
+        "Faites corriger par l'équipe technique en charge de votre site les couleurs de texte et de fond qui ne respectent pas les seuils attendus, afin que les contenus restent lisibles dans des conditions variées.",
+        "Les styles visuels appliqués aux zones de texte concernées doivent être revus de façon cohérente sur les modèles de pages touchés, ce qui évitera des corrections ponctuelles dispersées.",
+        "Demandez une vérification systématique des éléments de navigation, des boutons et des blocs éditoriaux où le contraste s’avère trop faible, pour que l’ensemble du parcours reste lisible.",
+        "Lors de la mise à jour des maquettes, privilégiez des combinaisons de couleurs plus contrastées pour les textes de premier niveau et les libellés d’action, afin de limiter les abandons de lecture."
+      ]
+    },
+    {
+      "title": "Agrandir les zones tactiles pour faciliter l’usage sur mobile",
+      "category": "accessibility",
+      "businessImpact": "Un visiteur qui utilise un téléphone peut avoir du mal à appuyer avec précision sur des éléments trop petits ou trop proches les uns des autres. Cette gêne allonge le temps nécessaire pour ouvrir une page, choisir une option ou lancer une demande, ce qui peut interrompre un parcours déjà fragile. Pour un site où la consultation se fait souvent en mobilité, une interaction moins confortable réduit la fluidité commerciale. Le constat compte aussi pour les visiteurs moins à l’aise avec les gestes précis, qui abandonnent plus vite lorsqu’un appui demande plusieurs essais.",
+      "legalRelevance": "Critère 2.5.8 (Taille de la cible, minimum), WCAG 2.2 niveau AA, référencé par la norme EN 301 549.",
+      "effort": "medium",
+      "impact": "high",
+      "priorityRank": 2,
+      "findingIds": [
+        "f010",
+        "f015",
+        "f018",
+        "f024",
+        "f032",
+        "f035",
+        "f038",
+        "f041",
+        "f043",
+        "f048"
+      ],
+      "recommendedActions": [
+        "Faites agrandir par l'équipe technique en charge de votre site les zones d’appui trop petites ou trop serrées, afin que chaque interaction puisse se faire sans hésitation.",
+        "Les éléments interactifs concernés doivent recevoir un espacement suffisant autour d’eux, ce qui limitera les appuis involontaires sur l’élément voisin.",
+        "Demandez que les icônes, liens d’action et commandes de navigation soient revus dans les gabarits mobiles, pour que l’usage reste simple du premier au dernier écran.",
+        "Sans cette correction, les visiteurs sur téléphone continueront à rencontrer des gestes imprécis, ce qui peut réduire le nombre d’actions engagées."
+      ]
+    },
+    {
+      "title": "Ajouter des données structurées pour mieux décrire le site aux moteurs",
+      "category": "seo",
+      "businessImpact": "Les pages concernées sont moins faciles à interpréter automatiquement lorsque des données structurées sont absentes. Cela limite la manière dont les moteurs de recherche comprennent le contenu et peut réduire la visibilité de pages de présentation ou de services dans les résultats. Pour un établissement comme le vôtre, cette information technique aide aussi à faire reconnaître plus clairement l’entité derrière le site. L’absence de plan de site accentue encore la difficulté de découverte des pages par les robots d’exploration.",
+      "effort": "medium",
+      "impact": "medium",
+      "priorityRank": 3,
+      "findingIds": ["f051", "f052", "f053", "f061"],
+      "recommendedActions": [
+        "Faites ajouter par l'équipe technique en charge de votre site des données structurées décrivant l’établissement, afin que les moteurs disposent d’une lecture plus claire de l’entité et de ses services.",
+        "Le site doit également déclarer une adresse canonique sur les pages concernées, ce qui aidera à éviter les hésitations sur la version de référence à indexer.",
+        "Demandez la mise en place d’un fichier sitemap.xml accessible, pour faciliter la découverte des pages importantes par les robots d’exploration.",
+        "Lorsque cela est pertinent, complétez ces données avec des blocs adaptés au type d’établissement, afin de rendre les informations du site plus exploitables dans les résultats."
+      ]
+    },
+    {
+      "title": "Nommer clairement les champs et les titres de page",
+      "category": "accessibility",
+      "businessImpact": "Un formulaire sans libellé explicite est difficile à utiliser, surtout lorsqu’un visiteur revient en arrière pour corriger une saisie. Cette ambiguïté ralentit la prise de contact et augmente le risque d’abandon avant l’envoi. Le manque de titre principal sur de nombreuses pages prive aussi le visiteur d’un repère immédiat sur le sujet de la page. Sur une page de service ou de présentation, cette absence rend l’information moins claire pour le visiteur comme pour les moteurs de recherche.",
+      "legalRelevance": "Critères 1.3.1 (Information et relations), 2.4.4 (Fonction du lien selon le contexte) et 4.1.2 (Nom, rôle et valeur), WCAG 2.2 niveau AA, référencés par la norme EN 301 549.",
+      "effort": "medium",
+      "impact": "high",
+      "priorityRank": 4,
+      "findingIds": ["f002", "f036", "f055"],
+      "recommendedActions": [
+        "Les champs de formulaire concernés doivent recevoir un libellé visible et explicite, afin que chaque saisie soit comprise sans ambiguïté.",
+        "Faites associer par l'équipe technique en charge de votre site un titre principal à chaque page qui en est dépourvue, ce qui donnera un repère immédiat sur son contenu.",
+        "Le lien dépourvu de texte discernable doit être remplacé par un libellé descriptif, pour que son usage soit compréhensible sans contexte visuel.",
+        "Lors des prochaines mises à jour des gabarits, vérifiez que les intitulés de champs, les titres de section et les liens restent compréhensibles hors contexte."
+      ]
+    },
+    {
+      "title": "Réduire les déplacements visuels pendant le chargement des pages",
+      "category": "performance",
+      "businessImpact": "Quand des éléments se déplacent pendant l’affichage, le visiteur doit réajuster son regard ou son appui au moment même où il essaie de lire ou de cliquer. Cette instabilité gêne la consultation et peut conduire à des erreurs de sélection, surtout sur les pages où plusieurs éléments apparaissent progressivement. Pour un site commercial, ce type de mouvement fragilise la confiance et perturbe les parcours qui demandent de la concentration. Les constats mesurés montrent aussi que cette instabilité est ressentie par de vrais visiteurs, ce qui confirme son impact dans des conditions réelles.",
+      "effort": "high",
+      "impact": "high",
+      "priorityRank": 5,
+      "findingIds": ["f001", "f004"],
+      "recommendedActions": [
+        "Faites stabiliser par l'équipe technique en charge de votre site les blocs qui bougent pendant le chargement, afin que l’affichage reste fixe lorsque la page apparaît.",
+        "Les images, encarts et zones de contenu dynamiques doivent réserver leur espace à l’avance, ce qui évitera les décalages à l’écran.",
+        "Demandez une revue des composants injectés tardivement dans la page, pour que leur apparition ne pousse plus le contenu déjà visible.",
+        "Quand des éléments externes sont utilisés, prévoyez un espace de substitution adapté, afin de préserver la lisibilité et la précision des appuis."
+      ]
+    },
+    {
+      "title": "Accélérer l’affichage du contenu principal",
+      "category": "performance",
+      "businessImpact": "Un contenu principal qui s’affiche lentement retarde la première lecture utile de la page et allonge l’attente avant que le visiteur puisse se décider. Cette lenteur pèse sur la perception de fluidité, surtout sur des pages où l’on compare des chambres, des services ou des lieux. Le constat est associé à plusieurs mesures de chargement moins favorables, ce qui indique un affichage encore trop lent sur des pages importantes du parcours. Dans un contexte de consultation sur mobile, ce délai peut suffire à faire perdre l’attention du visiteur avant l’action attendue.",
+      "effort": "medium",
+      "impact": "medium",
+      "priorityRank": 6,
+      "findingIds": ["f057", "f059", "f060"],
+      "recommendedActions": [
+        "Faites traiter en priorité par l'équipe technique en charge de votre site l’affichage du contenu principal, car c’est le point qui retarde le plus la perception de la page.",
+        "Les éléments qui bloquent l’apparition de la partie visible au premier écran doivent être réduits ou différés, afin que le visiteur voie plus vite l’essentiel.",
+        "Demandez ensuite une revue du poids des médias et des styles associés, pour alléger ce qui reste chargé avant l’affichage utile.",
+        "Lorsque des scripts ralentissent la mise en page, ils doivent être déplacés ou chargés plus tard, ce qui permettra de rendre les pages plus réactives."
+      ]
+    },
+    {
+      "title": "Attendre le consentement avant de déposer ou contacter des traceurs",
+      "category": "privacy",
+      "businessImpact": "Un premier passage sur le site déclenche déjà des traceurs de mesure ou de publicité, avant toute action du visiteur. Cette séquence réduit la maîtrise que le visiteur attend sur ses données de navigation et peut affaiblir la confiance dès l’arrivée sur le site. Pour une entreprise qui reçoit des demandes via son site, cette impression de collecte anticipée n’aide pas à sécuriser le départ du parcours. Elle peut aussi compliquer la cohérence du pilotage des mesures internes si le consentement n’est pas posé au bon moment.",
+      "effort": "medium",
+      "impact": "high",
+      "priorityRank": 7,
+      "findingIds": ["f023", "f026", "f056", "f058"],
+      "recommendedActions": [
+        "Faites ajuster par l'équipe technique en charge de votre site le déclenchement des traceurs, afin qu’aucun dépôt ni aucun appel ne parte avant le consentement.",
+        "Les outils de mesure et de publicité concernés doivent rester inactifs tant que le visiteur n’a pas exprimé son choix, ce qui préservera un fonctionnement conforme aux attentes de consentement.",
+        "Demandez une vérification du bandeau et des tags associés pour que chaque catégorie soit activée au bon moment, sans contact prématuré avec des tiers.",
+        "Lorsque des traceurs sont indispensables au pilotage, chargez-les seulement après l’accord de l’utilisateur, afin de garder une collecte maîtrisée."
+      ]
+    }
+  ],
+  "quickWins": ["f052", "f056", "f058", "f061"],
+  "notes": "Aucun contexte d’intake n’a été fourni pour ce site. Les priorités reflètent donc uniquement la sévérité des constats mesurés, sans objectif commercial déclaré à arbitrer. Les exemples de pages cités dans les constats ne constituent pas une liste exhaustive des pages touchées.",
+  "analysisId": "f525ec4b-8e2f-45e2-8bc4-33e28fc64db5",
+  "auditId": "8f1bdb1a-0c59-4d5c-882c-aa35d4036a37",
+  "findingsProvenance": {
+    "findingsSchemaVersion": 1,
+    "normalizationFingerprint": "d3e7566e15352410",
+    "findingsDigest": "sha256:706215c79ac1a8ac6f2b7c17a5ceca8a661b2df2650d206bea2051f476333b44"
+  },
+  "language": "fr",
+  "model": "gpt-5.4-mini",
+  "temperature": 1,
+  "generatedAt": "2026-09-17T02:02:30.979Z",
+  "obligationAssessment": {
+    "status": "likely_in_scope",
+    "basis": [
+      {
+        "regimeId": "eaa-loi-2023-171",
+        "facts": [
+          {
+            "kind": "effectif-band",
+            "code": "11",
+            "label": "10 à 19 salariés"
+          },
+          {
+            "kind": "transactional-flow-inconclusive"
+          }
+        ]
+      }
+    ],
+    "siteSignalResolutions": {
+      "hasTransactionalFlow": {
+        "value": false,
+        "source": "detected"
+      }
+    },
+    "sirenSource": "extracted",
+    "sector": "hospitality",
+    "registrySnapshot": {
+      "denomination": "LES Riviera Plage Hôtel 24",
+      "effectifBandLabel": "10 à 19 salariés",
+      "retrievedAt": "2026-09-16T22:59:45.111Z",
+      "source": "siren:extracted"
+    }
+  }
+}

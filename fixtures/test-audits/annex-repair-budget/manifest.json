@@ -1,0 +1,1801 @@
+{
+  "auditId": "8f1bdb1a-0c59-4d5c-882c-aa35d4036a37",
+  "kind": "audit",
+  "siteUrl": "https://riviera-plage-hotel.test/",
+  "startedAt": "2026-09-17T01:56:18.416Z",
+  "finishedAt": "2026-09-17T02:02:25.230Z",
+  "tool": {
+    "odysseusVersion": "38a516f2",
+    "findingsSchemaVersion": 1,
+    "axeCoreVersion": "4.12.1",
+    "lighthouseVersion": "13.4.1",
+    "playwrightVersion": "1.62.1",
+    "chromiumVersion": "151.0.7922.34"
+  },
+  "config": {
+    "maxPages": 9007199254740991,
+    "maxDepth": 5,
+    "crawlDelayMs": 1000,
+    "pageTimeoutMs": 30000,
+    "lighthouseTimeoutMs": 120000,
+    "renderSettleTimeoutMs": 8000,
+    "userAgent": "OdysseusBot/1.0 (+https://odysseusaudit.com/bot)",
+    "scanConcurrency": 6,
+    "sitemapMode": "supplement"
+  },
+  "crawl": {
+    "startUrl": "https://riviera-plage-hotel.test/",
+    "visitedCount": 21,
+    "maxPages": 9007199254740991,
+    "maxDepth": 5,
+    "robotsTxtFound": false,
+    "effectiveDelayMs": 1000,
+    "robotsDisallowMatches": [],
+    "aiCrawlerBlocks": [],
+    "sitemapCoverage": {
+      "declaredPageCount": 0,
+      "eligiblePageCount": 0,
+      "scannedPageCount": 0,
+      "filteredPageCount": 0,
+      "capOmittedPageCount": 0,
+      "failedSitemapCount": 1
+    }
+  },
+  "pages": [
+    {
+      "url": "https://riviera-plage-hotel.test/",
+      "pageDir": "pages/root-d9973f",
+      "depth": 0,
+      "status": "visited",
+      "discoveryMethod": "link",
+      "language": "fr",
+      "httpStatus": 200,
+      "discoveredFrom": "https://riviera-plage-hotel.test/restaurant-riviera-plage-hotel-10",
+      "analysisCoverage": {
+        "plannerVersion": "v1",
+        "role": "unknown",
+        "confidence": "fallback",
+        "templateFamilyId": "v1:e54b4306fd88f911",
+        "reasonCodes": [
+          "insufficient-listing-signals",
+          "homepage-url-present",
+          "family-representative-cost-outlier",
+          "family-representative-stable",
+          "homepage"
+        ],
+        "passes": {
+          "rendered": {
+            "outcome": "completed"
+          },
+          "axe": {
+            "outcome": "completed"
+          },
+          "extended": {
+            "outcome": "completed"
+          },
+          "lighthouse": {
+            "outcome": "completed"
+          }
+        }
+      },
+      "renderDiffMissingPercent": 0,
+      "renderDiffRawDocument": {
+        "markupLength": 75493,
+        "textSignature": "6da5ec82997a9ba7",
+        "interstitialMarkers": []
+      },
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": null,
+        "bestPractices": null
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0,
+          "numericValue": 18972.941000000003,
+          "displayValue": "19.0 s"
+        },
+        "cls": {
+          "score": 0.21,
+          "numericValue": 0.4411071835105244,
+          "displayValue": "0.441"
+        },
+        "tbt": {
+          "score": 0.2,
+          "numericValue": 1218.9999999999982,
+          "displayValue": "1,220 ms"
+        },
+        "fcp": {
+          "score": 1,
+          "numericValue": 764.5010000000001,
+          "displayValue": "0.8 s"
+        },
+        "speedIndex": {
+          "score": 0.78,
+          "numericValue": 4173.281633576844,
+          "displayValue": "4.2 s"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://riviera-plage-hotel.test/riviera-plage-hotel-2",
+      "pageDir": "pages/riviera-plage-hotel-2-10a9ec",
+      "depth": 1,
+      "status": "visited",
+      "discoveryMethod": "link",
+      "language": "fr",
+      "httpStatus": 200,
+      "discoveredFrom": "https://riviera-plage-hotel.test/",
+      "analysisCoverage": {
+        "plannerVersion": "v1",
+        "role": "unknown",
+        "confidence": "fallback",
+        "templateFamilyId": "v1:e54b4306fd88f911",
+        "reasonCodes": ["insufficient-listing-signals", "unknown-or-fallback-role"],
+        "passes": {
+          "rendered": {
+            "outcome": "completed"
+          },
+          "axe": {
+            "outcome": "completed"
+          },
+          "extended": {
+            "outcome": "completed"
+          },
+          "lighthouse": {
+            "outcome": "completed"
+          }
+        }
+      },
+      "renderDiffMissingPercent": 0,
+      "renderDiffRawDocument": {
+        "markupLength": 64354,
+        "textSignature": "7caf0b3b92ade008",
+        "interstitialMarkers": []
+      },
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": null,
+        "bestPractices": null
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0.06,
+          "numericValue": 6942.4163499999995,
+          "displayValue": "6.9 s"
+        },
+        "cls": {
+          "score": 0.21,
+          "numericValue": 0.44412999443401946,
+          "displayValue": "0.444"
+        },
+        "tbt": {
+          "score": 0.24,
+          "numericValue": 1072,
+          "displayValue": "1,070 ms"
+        },
+        "fcp": {
+          "score": 1,
+          "numericValue": 767.2621000000001,
+          "displayValue": "0.8 s"
+        },
+        "speedIndex": {
+          "score": 0.87,
+          "numericValue": 3572.3772241552188,
+          "displayValue": "3.6 s"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://riviera-plage-hotel.test/localisation",
+      "pageDir": "pages/localisation-014cda",
+      "depth": 1,
+      "status": "visited",
+      "discoveryMethod": "link",
+      "language": "fr",
+      "httpStatus": 200,
+      "discoveredFrom": "https://riviera-plage-hotel.test/",
+      "analysisCoverage": {
+        "plannerVersion": "v1",
+        "role": "unknown",
+        "confidence": "fallback",
+        "templateFamilyId": "v1:e54b4306fd88f911",
+        "reasonCodes": ["insufficient-listing-signals", "unknown-or-fallback-role"],
+        "passes": {
+          "rendered": {
+            "outcome": "completed"
+          },
+          "axe": {
+            "outcome": "completed"
+          },
+          "extended": {
+            "outcome": "completed"
+          },
+          "lighthouse": {
+            "outcome": "completed"
+          }
+        }
+      },
+      "renderDiffMissingPercent": 0,
+      "renderDiffRawDocument": {
+        "markupLength": 59231,
+        "textSignature": "a0323600e90a4e53",
+        "interstitialMarkers": []
+      },
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": null,
+        "bestPractices": null
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0.91,
+          "numericValue": 2407.5969000000005,
+          "displayValue": "2.4 s"
+        },
+        "cls": {
+          "score": 0.3,
+          "numericValue": 0.3588653475762815,
+          "displayValue": "0.359"
+        },
+        "tbt": {
+          "score": 0.07,
+          "numericValue": 2023.500000000001,
+          "displayValue": "2,020 ms"
+        },
+        "fcp": {
+          "score": 1,
+          "numericValue": 766.3989000000001,
+          "displayValue": "0.8 s"
+        },
+        "speedIndex": {
+          "score": 0.98,
+          "numericValue": 2525.4928980281143,
+          "displayValue": "2.5 s"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://riviera-plage-hotel.test/la-collection",
+      "pageDir": "pages/la-collection-ac82a7",
+      "depth": 1,
+      "status": "visited",
+      "discoveryMethod": "link",
+      "language": "fr",
+      "httpStatus": 200,
+      "discoveredFrom": "https://riviera-plage-hotel.test/",
+      "analysisCoverage": {
+        "plannerVersion": "v1",
+        "role": "unknown",
+        "confidence": "fallback",
+        "templateFamilyId": "v1:e54b4306fd88f911",
+        "reasonCodes": ["insufficient-listing-signals", "unknown-or-fallback-role"],
+        "passes": {
+          "rendered": {
+            "outcome": "completed"
+          },
+          "axe": {
+            "outcome": "completed"
+          },
+          "extended": {
+            "outcome": "completed"
+          },
+          "lighthouse": {
+            "outcome": "completed"
+          }
+        }
+      },
+      "renderDiffMissingPercent": 0,
+      "renderDiffRawDocument": {
+        "markupLength": 61735,
+        "textSignature": "8e3abf4d22434db1",
+        "interstitialMarkers": []
+      },
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": null,
+        "bestPractices": null
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0,
+          "numericValue": 34794.27719999998,
+          "displayValue": "34.8 s"
+        },
+        "cls": {
+          "score": 0.87,
+          "numericValue": 0.10998218738604135,
+          "displayValue": "0.11"
+        },
+        "tbt": {
+          "score": 0.14,
+          "numericValue": 1500.0000000000036,
+          "displayValue": "1,500 ms"
+        },
+        "fcp": {
+          "score": 1,
+          "numericValue": 766.2995999999999,
+          "displayValue": "0.8 s"
+        },
+        "speedIndex": {
+          "score": 0,
+          "numericValue": 17140.4502955289,
+          "displayValue": "17.1 s"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://riviera-plage-hotel.test/chambre-deluxe",
+      "pageDir": "pages/chambre-deluxe-e26ae7",
+      "depth": 1,
+      "status": "visited",
+      "discoveryMethod": "link",
+      "language": "fr",
+      "httpStatus": 200,
+      "discoveredFrom": "https://riviera-plage-hotel.test/",
+      "analysisCoverage": {
+        "plannerVersion": "v1",
+        "role": "unknown",
+        "confidence": "fallback",
+        "templateFamilyId": "v1:e54b4306fd88f911",
+        "reasonCodes": ["insufficient-listing-signals", "unknown-or-fallback-role"],
+        "passes": {
+          "rendered": {
+            "outcome": "completed"
+          },
+          "axe": {
+            "outcome": "completed"
+          },
+          "extended": {
+            "outcome": "completed"
+          },
+          "lighthouse": {
+            "outcome": "completed"
+          }
+        }
+      },
+      "renderDiffMissingPercent": 0,
+      "renderDiffRawDocument": {
+        "markupLength": 72937,
+        "textSignature": "e2a6f2beb055ebfa",
+        "interstitialMarkers": []
+      },
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": null,
+        "bestPractices": null
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0.96,
+          "numericValue": 2108.5840000000003,
+          "displayValue": "2.1 s"
+        },
+        "cls": {
+          "score": 0.62,
+          "numericValue": 0.19911552522384934,
+          "displayValue": "0.199"
+        },
+        "tbt": {
+          "score": 0.1,
+          "numericValue": 1717.5,
+          "displayValue": "1,720 ms"
+        },
+        "fcp": {
+          "score": 1,
+          "numericValue": 759.6425999999999,
+          "displayValue": "0.8 s"
+        },
+        "speedIndex": {
+          "score": 1,
+          "numericValue": 1196.8398403867566,
+          "displayValue": "1.2 s"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://riviera-plage-hotel.test/chambre-deluxe-jardin",
+      "pageDir": "pages/chambre-deluxe-jardin-3be544",
+      "depth": 1,
+      "status": "visited",
+      "discoveryMethod": "link",
+      "language": "fr",
+      "httpStatus": 200,
+      "discoveredFrom": "https://riviera-plage-hotel.test/",
+      "analysisCoverage": {
+        "plannerVersion": "v1",
+        "role": "unknown",
+        "confidence": "fallback",
+        "templateFamilyId": "v1:e54b4306fd88f911",
+        "reasonCodes": ["insufficient-listing-signals", "unknown-or-fallback-role"],
+        "passes": {
+          "rendered": {
+            "outcome": "completed"
+          },
+          "axe": {
+            "outcome": "completed"
+          },
+          "extended": {
+            "outcome": "completed"
+          },
+          "lighthouse": {
+            "outcome": "completed"
+          }
+        }
+      },
+      "renderDiffMissingPercent": 0,
+      "renderDiffRawDocument": {
+        "markupLength": 72225,
+        "textSignature": "2b32b65cdf94042c",
+        "interstitialMarkers": []
+      },
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": null,
+        "bestPractices": null
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0.94,
+          "numericValue": 2223.27625,
+          "displayValue": "2.2 s"
+        },
+        "cls": {
+          "score": 0.59,
+          "numericValue": 0.21229085015037724,
+          "displayValue": "0.212"
+        },
+        "tbt": {
+          "score": 0.1,
+          "numericValue": 1742,
+          "displayValue": "1,740 ms"
+        },
+        "fcp": {
+          "score": 1,
+          "numericValue": 767.1271,
+          "displayValue": "0.8 s"
+        },
+        "speedIndex": {
+          "score": 1,
+          "numericValue": 1157.7645200728914,
+          "displayValue": "1.2 s"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://riviera-plage-hotel.test/chambre-privilege",
+      "pageDir": "pages/chambre-privilege-446706",
+      "depth": 1,
+      "status": "visited",
+      "discoveryMethod": "link",
+      "language": "fr",
+      "httpStatus": 200,
+      "discoveredFrom": "https://riviera-plage-hotel.test/",
+      "analysisCoverage": {
+        "plannerVersion": "v1",
+        "role": "unknown",
+        "confidence": "fallback",
+        "templateFamilyId": "v1:e54b4306fd88f911",
+        "reasonCodes": ["insufficient-listing-signals", "unknown-or-fallback-role"],
+        "passes": {
+          "rendered": {
+            "outcome": "completed"
+          },
+          "axe": {
+            "outcome": "completed"
+          },
+          "extended": {
+            "outcome": "completed"
+          },
+          "lighthouse": {
+            "outcome": "completed"
+          }
+        }
+      },
+      "renderDiffMissingPercent": 0,
+      "renderDiffRawDocument": {
+        "markupLength": 73391,
+        "textSignature": "213e1e20811884da",
+        "interstitialMarkers": []
+      },
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": null,
+        "bestPractices": null
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0.96,
+          "numericValue": 2106.7902999999997,
+          "displayValue": "2.1 s"
+        },
+        "cls": {
+          "score": 0.62,
+          "numericValue": 0.19911552522384934,
+          "displayValue": "0.199"
+        },
+        "tbt": {
+          "score": 0.18,
+          "numericValue": 1284.4999999999998,
+          "displayValue": "1,280 ms"
+        },
+        "fcp": {
+          "score": 1,
+          "numericValue": 758.7057,
+          "displayValue": "0.8 s"
+        },
+        "speedIndex": {
+          "score": 1,
+          "numericValue": 816.371174968898,
+          "displayValue": "0.8 s"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://riviera-plage-hotel.test/chambre-privilege-vue-mer",
+      "pageDir": "pages/chambre-privilege-vue-mer-f87f7a",
+      "depth": 1,
+      "status": "visited",
+      "discoveryMethod": "link",
+      "language": "fr",
+      "httpStatus": 200,
+      "discoveredFrom": "https://riviera-plage-hotel.test/",
+      "analysisCoverage": {
+        "plannerVersion": "v1",
+        "role": "unknown",
+        "confidence": "fallback",
+        "templateFamilyId": "v1:e54b4306fd88f911",
+        "reasonCodes": ["insufficient-listing-signals", "unknown-or-fallback-role"],
+        "passes": {
+          "rendered": {
+            "outcome": "completed"
+          },
+          "axe": {
+            "outcome": "completed"
+          },
+          "extended": {
+            "outcome": "completed"
+          },
+          "lighthouse": {
+            "outcome": "completed"
+          }
+        }
+      },
+      "renderDiffMissingPercent": 0,
+      "renderDiffRawDocument": {
+        "markupLength": 73392,
+        "textSignature": "72eb80c4a63b0176",
+        "interstitialMarkers": []
+      },
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": null,
+        "bestPractices": null
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0.99,
+          "numericValue": 1658.6126,
+          "displayValue": "1.7 s"
+        },
+        "cls": {
+          "score": 0.59,
+          "numericValue": 0.21229085015037724,
+          "displayValue": "0.212"
+        },
+        "tbt": {
+          "score": 0.16,
+          "numericValue": 1388,
+          "displayValue": "1,390 ms"
+        },
+        "fcp": {
+          "score": 1,
+          "numericValue": 761.5244,
+          "displayValue": "0.8 s"
+        },
+        "speedIndex": {
+          "score": 1,
+          "numericValue": 991.6745166884209,
+          "displayValue": "1.0 s"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://riviera-plage-hotel.test/suite",
+      "pageDir": "pages/suite-a0b388",
+      "depth": 1,
+      "status": "visited",
+      "discoveryMethod": "link",
+      "language": "fr",
+      "httpStatus": 200,
+      "discoveredFrom": "https://riviera-plage-hotel.test/",
+      "analysisCoverage": {
+        "plannerVersion": "v1",
+        "role": "unknown",
+        "confidence": "fallback",
+        "templateFamilyId": "v1:e54b4306fd88f911",
+        "reasonCodes": ["insufficient-listing-signals", "unknown-or-fallback-role"],
+        "passes": {
+          "rendered": {
+            "outcome": "completed"
+          },
+          "axe": {
+            "outcome": "completed"
+          },
+          "extended": {
+            "outcome": "completed"
+          },
+          "lighthouse": {
+            "outcome": "completed"
+          }
+        }
+      },
+      "renderDiffMissingPercent": 0,
+      "renderDiffRawDocument": {
+        "markupLength": 73349,
+        "textSignature": "328ea78b6fc3b636",
+        "interstitialMarkers": []
+      },
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": null,
+        "bestPractices": null
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0.02,
+          "numericValue": 8490.3334,
+          "displayValue": "8.5 s"
+        },
+        "cls": {
+          "score": 0.59,
+          "numericValue": 0.2113285284365185,
+          "displayValue": "0.211"
+        },
+        "tbt": {
+          "score": 0.19,
+          "numericValue": 1261.999999999999,
+          "displayValue": "1,260 ms"
+        },
+        "fcp": {
+          "score": 0.94,
+          "numericValue": 1605.3692,
+          "displayValue": "1.6 s"
+        },
+        "speedIndex": {
+          "score": 0.89,
+          "numericValue": 3461.077708027143,
+          "displayValue": "3.5 s"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://riviera-plage-hotel.test/suite-vue-mer",
+      "pageDir": "pages/suite-vue-mer-12b72b",
+      "depth": 1,
+      "status": "visited",
+      "discoveryMethod": "link",
+      "language": "fr",
+      "httpStatus": 200,
+      "discoveredFrom": "https://riviera-plage-hotel.test/",
+      "analysisCoverage": {
+        "plannerVersion": "v1",
+        "role": "unknown",
+        "confidence": "fallback",
+        "templateFamilyId": "v1:e54b4306fd88f911",
+        "reasonCodes": ["insufficient-listing-signals", "unknown-or-fallback-role"],
+        "passes": {
+          "rendered": {
+            "outcome": "completed"
+          },
+          "axe": {
+            "outcome": "completed"
+          },
+          "extended": {
+            "outcome": "completed"
+          },
+          "lighthouse": {
+            "outcome": "completed"
+          }
+        }
+      },
+      "renderDiffMissingPercent": 0,
+      "renderDiffRawDocument": {
+        "markupLength": 72947,
+        "textSignature": "70446131e58e84b9",
+        "interstitialMarkers": []
+      },
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": null,
+        "bestPractices": null
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0.95,
+          "numericValue": 2183.6714,
+          "displayValue": "2.2 s"
+        },
+        "cls": {
+          "score": 0.58,
+          "numericValue": 0.21582274887795624,
+          "displayValue": "0.216"
+        },
+        "tbt": {
+          "score": 0.11,
+          "numericValue": 1714.499999999999,
+          "displayValue": "1,710 ms"
+        },
+        "fcp": {
+          "score": 1,
+          "numericValue": 761.4928000000001,
+          "displayValue": "0.8 s"
+        },
+        "speedIndex": {
+          "score": 1,
+          "numericValue": 1204.3377823811043,
+          "displayValue": "1.2 s"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://riviera-plage-hotel.test/riviera-plage-hotel-11",
+      "pageDir": "pages/riviera-plage-hotel-11-2e2c77",
+      "depth": 1,
+      "status": "visited",
+      "discoveryMethod": "link",
+      "language": "fr",
+      "httpStatus": 200,
+      "discoveredFrom": "https://riviera-plage-hotel.test/",
+      "analysisCoverage": {
+        "plannerVersion": "v1",
+        "role": "unknown",
+        "confidence": "fallback",
+        "templateFamilyId": "v1:e54b4306fd88f911",
+        "reasonCodes": ["insufficient-listing-signals", "unknown-or-fallback-role"],
+        "passes": {
+          "rendered": {
+            "outcome": "completed"
+          },
+          "axe": {
+            "outcome": "completed"
+          },
+          "extended": {
+            "outcome": "completed"
+          },
+          "lighthouse": {
+            "outcome": "completed"
+          }
+        }
+      },
+      "renderDiffMissingPercent": 0,
+      "renderDiffRawDocument": {
+        "markupLength": 73306,
+        "textSignature": "8a1c41ea95ebfd6e",
+        "interstitialMarkers": []
+      },
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": null,
+        "bestPractices": null
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0.95,
+          "numericValue": 2184.4248,
+          "displayValue": "2.2 s"
+        },
+        "cls": {
+          "score": 0.61,
+          "numericValue": 0.20256167108462456,
+          "displayValue": "0.203"
+        },
+        "tbt": {
+          "score": 0.08,
+          "numericValue": 1914.500000000001,
+          "displayValue": "1,910 ms"
+        },
+        "fcp": {
+          "score": 1,
+          "numericValue": 762.2139,
+          "displayValue": "0.8 s"
+        },
+        "speedIndex": {
+          "score": 1,
+          "numericValue": 1200.587875201972,
+          "displayValue": "1.2 s"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://riviera-plage-hotel.test/chambres-communicantes",
+      "pageDir": "pages/chambres-communicantes-04bc4c",
+      "depth": 1,
+      "status": "visited",
+      "discoveryMethod": "link",
+      "language": "fr",
+      "httpStatus": 200,
+      "discoveredFrom": "https://riviera-plage-hotel.test/",
+      "analysisCoverage": {
+        "plannerVersion": "v1",
+        "role": "unknown",
+        "confidence": "fallback",
+        "templateFamilyId": "v1:e54b4306fd88f911",
+        "reasonCodes": ["insufficient-listing-signals", "unknown-or-fallback-role"],
+        "passes": {
+          "rendered": {
+            "outcome": "completed"
+          },
+          "axe": {
+            "outcome": "completed"
+          },
+          "extended": {
+            "outcome": "completed"
+          },
+          "lighthouse": {
+            "outcome": "completed"
+          }
+        }
+      },
+      "renderDiffMissingPercent": 0,
+      "renderDiffRawDocument": {
+        "markupLength": 73244,
+        "textSignature": "1da288586794d71e",
+        "interstitialMarkers": []
+      },
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": null,
+        "bestPractices": null
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0.94,
+          "numericValue": 2258.3965,
+          "displayValue": "2.3 s"
+        },
+        "cls": {
+          "score": 0.58,
+          "numericValue": 0.21392324031858606,
+          "displayValue": "0.214"
+        },
+        "tbt": {
+          "score": 0.13,
+          "numericValue": 1549.499999999999,
+          "displayValue": "1,550 ms"
+        },
+        "fcp": {
+          "score": 0.98,
+          "numericValue": 1286.2439,
+          "displayValue": "1.3 s"
+        },
+        "speedIndex": {
+          "score": 1,
+          "numericValue": 1589.5862486389797,
+          "displayValue": "1.6 s"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://riviera-plage-hotel.test/restaurants-bar",
+      "pageDir": "pages/restaurants-bar-428529",
+      "depth": 1,
+      "status": "visited",
+      "discoveryMethod": "link",
+      "language": "fr",
+      "httpStatus": 200,
+      "discoveredFrom": "https://riviera-plage-hotel.test/",
+      "analysisCoverage": {
+        "plannerVersion": "v1",
+        "role": "unknown",
+        "confidence": "fallback",
+        "templateFamilyId": "v1:e54b4306fd88f911",
+        "reasonCodes": ["insufficient-listing-signals", "unknown-or-fallback-role"],
+        "passes": {
+          "rendered": {
+            "outcome": "completed"
+          },
+          "axe": {
+            "outcome": "completed"
+          },
+          "extended": {
+            "outcome": "completed"
+          },
+          "lighthouse": {
+            "outcome": "completed"
+          }
+        }
+      },
+      "renderDiffMissingPercent": 0,
+      "renderDiffRawDocument": {
+        "markupLength": 71434,
+        "textSignature": "85634a9e085bf4d4",
+        "interstitialMarkers": []
+      },
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": null,
+        "bestPractices": null
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0.46,
+          "numericValue": 4125.7561,
+          "displayValue": "4.1 s"
+        },
+        "cls": {
+          "score": 0.21,
+          "numericValue": 0.44412999443401946,
+          "displayValue": "0.444"
+        },
+        "tbt": {
+          "score": 0.17,
+          "numericValue": 1352,
+          "displayValue": "1,350 ms"
+        },
+        "fcp": {
+          "score": 1,
+          "numericValue": 760.8027,
+          "displayValue": "0.8 s"
+        },
+        "speedIndex": {
+          "score": 0.94,
+          "numericValue": 2983.1560380276783,
+          "displayValue": "3.0 s"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://riviera-plage-hotel.test/restaurant-riviera-plage-hotel-10",
+      "pageDir": "pages/restaurant-riviera-plage-hotel-10-ebcb9b",
+      "depth": 1,
+      "status": "visited",
+      "discoveryMethod": "link",
+      "language": "fr",
+      "httpStatus": 200,
+      "discoveredFrom": "https://riviera-plage-hotel.test/",
+      "analysisCoverage": {
+        "plannerVersion": "v1",
+        "role": "unknown",
+        "confidence": "fallback",
+        "templateFamilyId": "v1:e54b4306fd88f911",
+        "reasonCodes": ["insufficient-listing-signals", "unknown-or-fallback-role"],
+        "passes": {
+          "rendered": {
+            "outcome": "completed"
+          },
+          "axe": {
+            "outcome": "completed"
+          },
+          "extended": {
+            "outcome": "completed"
+          },
+          "lighthouse": {
+            "outcome": "completed"
+          }
+        }
+      },
+      "renderDiffMissingPercent": 0,
+      "renderDiffRawDocument": {
+        "markupLength": 63845,
+        "textSignature": "15d030c5ba4843be",
+        "interstitialMarkers": []
+      },
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": null,
+        "bestPractices": null
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0.91,
+          "numericValue": 2407.6957,
+          "displayValue": "2.4 s"
+        },
+        "cls": {
+          "score": 0.05,
+          "numericValue": 0.7657093933899369,
+          "displayValue": "0.766"
+        },
+        "tbt": {
+          "score": 0.11,
+          "numericValue": 1658.0000000000016,
+          "displayValue": "1,660 ms"
+        },
+        "fcp": {
+          "score": 1,
+          "numericValue": 771.3767,
+          "displayValue": "0.8 s"
+        },
+        "speedIndex": {
+          "score": 0.97,
+          "numericValue": 2665.9770512548275,
+          "displayValue": "2.7 s"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://riviera-plage-hotel.test/restaurant-riviera-plage-hotel-36",
+      "pageDir": "pages/restaurant-riviera-plage-hotel-36-67096c",
+      "depth": 1,
+      "status": "visited",
+      "discoveryMethod": "link",
+      "language": "fr",
+      "httpStatus": 200,
+      "discoveredFrom": "https://riviera-plage-hotel.test/",
+      "analysisCoverage": {
+        "plannerVersion": "v1",
+        "role": "unknown",
+        "confidence": "fallback",
+        "templateFamilyId": "v1:e54b4306fd88f911",
+        "reasonCodes": ["insufficient-listing-signals", "unknown-or-fallback-role"],
+        "passes": {
+          "rendered": {
+            "outcome": "completed"
+          },
+          "axe": {
+            "outcome": "completed"
+          },
+          "extended": {
+            "outcome": "completed"
+          },
+          "lighthouse": {
+            "outcome": "completed"
+          }
+        }
+      },
+      "renderDiffMissingPercent": 0,
+      "renderDiffRawDocument": {
+        "markupLength": 71846,
+        "textSignature": "b1b5c5f5c8e8d441",
+        "interstitialMarkers": []
+      },
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": null,
+        "bestPractices": null
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0.86,
+          "numericValue": 2680.6133999999993,
+          "displayValue": "2.7 s"
+        },
+        "cls": {
+          "score": 0.21,
+          "numericValue": 0.44412999443401935,
+          "displayValue": "0.444"
+        },
+        "tbt": {
+          "score": 0.01,
+          "numericValue": 3543.999999999999,
+          "displayValue": "3,540 ms"
+        },
+        "fcp": {
+          "score": 1,
+          "numericValue": 764.032,
+          "displayValue": "0.8 s"
+        },
+        "speedIndex": {
+          "score": 0.84,
+          "numericValue": 3767.5916170466253,
+          "displayValue": "3.8 s"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://riviera-plage-hotel.test/farniente",
+      "pageDir": "pages/farniente-53d3d5",
+      "depth": 1,
+      "status": "visited",
+      "discoveryMethod": "link",
+      "language": "fr",
+      "httpStatus": 200,
+      "discoveredFrom": "https://riviera-plage-hotel.test/",
+      "analysisCoverage": {
+        "plannerVersion": "v1",
+        "role": "unknown",
+        "confidence": "fallback",
+        "templateFamilyId": "v1:e54b4306fd88f911",
+        "reasonCodes": ["insufficient-listing-signals", "unknown-or-fallback-role"],
+        "passes": {
+          "rendered": {
+            "outcome": "completed"
+          },
+          "axe": {
+            "outcome": "completed"
+          },
+          "extended": {
+            "outcome": "completed"
+          },
+          "lighthouse": {
+            "outcome": "completed"
+          }
+        }
+      },
+      "renderDiffMissingPercent": 0,
+      "renderDiffRawDocument": {
+        "markupLength": 70049,
+        "textSignature": "f0a2f5a7efdb4990",
+        "interstitialMarkers": []
+      },
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": null,
+        "bestPractices": null
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0,
+          "numericValue": 30419.350850000006,
+          "displayValue": "30.4 s"
+        },
+        "cls": {
+          "score": 0.21,
+          "numericValue": 0.4441299944340195,
+          "displayValue": "0.444"
+        },
+        "tbt": {
+          "score": 0.22,
+          "numericValue": 1143.500000000001,
+          "displayValue": "1,140 ms"
+        },
+        "fcp": {
+          "score": 1,
+          "numericValue": 765.8878,
+          "displayValue": "0.8 s"
+        },
+        "speedIndex": {
+          "score": 0.91,
+          "numericValue": 3267.1930175314947,
+          "displayValue": "3.3 s"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://riviera-plage-hotel.test/bien-etre",
+      "pageDir": "pages/bien-etre-47ae3f",
+      "depth": 1,
+      "status": "visited",
+      "discoveryMethod": "link",
+      "language": "fr",
+      "httpStatus": 200,
+      "discoveredFrom": "https://riviera-plage-hotel.test/",
+      "analysisCoverage": {
+        "plannerVersion": "v1",
+        "role": "unknown",
+        "confidence": "fallback",
+        "templateFamilyId": "v1:e54b4306fd88f911",
+        "reasonCodes": ["insufficient-listing-signals", "unknown-or-fallback-role"],
+        "passes": {
+          "rendered": {
+            "outcome": "completed"
+          },
+          "axe": {
+            "outcome": "completed"
+          },
+          "extended": {
+            "outcome": "completed"
+          },
+          "lighthouse": {
+            "outcome": "completed"
+          }
+        }
+      },
+      "renderDiffMissingPercent": 0,
+      "renderDiffRawDocument": {
+        "markupLength": 64161,
+        "textSignature": "e6aee2de73969f73",
+        "interstitialMarkers": []
+      },
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": null,
+        "bestPractices": null
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0,
+          "numericValue": 30769.66550000001,
+          "displayValue": "30.8 s"
+        },
+        "cls": {
+          "score": 0.92,
+          "numericValue": 0.08842540996841292,
+          "displayValue": "0.088"
+        },
+        "tbt": {
+          "score": 0.1,
+          "numericValue": 1763.5,
+          "displayValue": "1,760 ms"
+        },
+        "fcp": {
+          "score": 1,
+          "numericValue": 762.6055000000001,
+          "displayValue": "0.8 s"
+        },
+        "speedIndex": {
+          "score": 1,
+          "numericValue": 1456.3644002644728,
+          "displayValue": "1.5 s"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://riviera-plage-hotel.test/privatisation",
+      "pageDir": "pages/privatisation-9b1d98",
+      "depth": 1,
+      "status": "visited",
+      "discoveryMethod": "link",
+      "language": "fr",
+      "httpStatus": 200,
+      "discoveredFrom": "https://riviera-plage-hotel.test/",
+      "analysisCoverage": {
+        "plannerVersion": "v1",
+        "role": "transactional",
+        "confidence": "high",
+        "templateFamilyId": "v1:e54b4306fd88f911",
+        "reasonCodes": ["transactional-link-out-detected", "transactional-role"],
+        "passes": {
+          "rendered": {
+            "outcome": "completed"
+          },
+          "axe": {
+            "outcome": "completed"
+          },
+          "extended": {
+            "outcome": "completed"
+          },
+          "lighthouse": {
+            "outcome": "completed"
+          }
+        }
+      },
+      "renderDiffMissingPercent": 0,
+      "renderDiffRawDocument": {
+        "markupLength": 66590,
+        "textSignature": "a9cc13cf17f15c5f",
+        "interstitialMarkers": []
+      },
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": null,
+        "bestPractices": null
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0.93,
+          "numericValue": 2334.8417500000005,
+          "displayValue": "2.3 s"
+        },
+        "cls": {
+          "score": 0.89,
+          "numericValue": 0.10128107070717396,
+          "displayValue": "0.101"
+        },
+        "tbt": {
+          "score": 0.24,
+          "numericValue": 1073.499999999999,
+          "displayValue": "1,070 ms"
+        },
+        "fcp": {
+          "score": 1,
+          "numericValue": 769.6643,
+          "displayValue": "0.8 s"
+        },
+        "speedIndex": {
+          "score": 1,
+          "numericValue": 1114.8972060014487,
+          "displayValue": "1.1 s"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://riviera-plage-hotel.test/la-galerie",
+      "pageDir": "pages/la-galerie-95972f",
+      "depth": 1,
+      "status": "visited",
+      "discoveryMethod": "link",
+      "language": "fr",
+      "httpStatus": 200,
+      "discoveredFrom": "https://riviera-plage-hotel.test/",
+      "analysisCoverage": {
+        "plannerVersion": "v1",
+        "role": "unknown",
+        "confidence": "fallback",
+        "templateFamilyId": "v1:e54b4306fd88f911",
+        "reasonCodes": ["insufficient-listing-signals", "unknown-or-fallback-role"],
+        "passes": {
+          "rendered": {
+            "outcome": "completed"
+          },
+          "axe": {
+            "outcome": "completed"
+          },
+          "extended": {
+            "outcome": "completed"
+          },
+          "lighthouse": {
+            "outcome": "completed"
+          }
+        }
+      },
+      "renderDiffMissingPercent": 0,
+      "renderDiffRawDocument": {
+        "markupLength": 67183,
+        "textSignature": "f116b7ed1d1f515a",
+        "interstitialMarkers": []
+      },
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": null,
+        "bestPractices": null
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0.27,
+          "numericValue": 4960.858900000001,
+          "displayValue": "5.0 s"
+        },
+        "cls": {
+          "score": 0.74,
+          "numericValue": 0.15750666816460254,
+          "displayValue": "0.158"
+        },
+        "tbt": {
+          "score": 0.08,
+          "numericValue": 1950.999999999999,
+          "displayValue": "1,950 ms"
+        },
+        "fcp": {
+          "score": 1,
+          "numericValue": 774.1869000000002,
+          "displayValue": "0.8 s"
+        },
+        "speedIndex": {
+          "score": 0.94,
+          "numericValue": 2954.260968155363,
+          "displayValue": "3.0 s"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://riviera-plage-hotel.test/chambre-et-suites",
+      "pageDir": "pages/chambre-et-suites-4038c7",
+      "depth": 1,
+      "status": "visited",
+      "discoveryMethod": "link",
+      "language": "fr",
+      "httpStatus": 200,
+      "discoveredFrom": "https://riviera-plage-hotel.test/",
+      "analysisCoverage": {
+        "plannerVersion": "v1",
+        "role": "unknown",
+        "confidence": "fallback",
+        "templateFamilyId": "v1:e54b4306fd88f911",
+        "reasonCodes": ["insufficient-listing-signals", "unknown-or-fallback-role"],
+        "passes": {
+          "rendered": {
+            "outcome": "completed"
+          },
+          "axe": {
+            "outcome": "completed"
+          },
+          "extended": {
+            "outcome": "completed"
+          },
+          "lighthouse": {
+            "outcome": "completed"
+          }
+        }
+      },
+      "renderDiffMissingPercent": 0,
+      "renderDiffRawDocument": {
+        "markupLength": 76688,
+        "textSignature": "4ef5471a6a5e6276",
+        "interstitialMarkers": []
+      },
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": null,
+        "bestPractices": null
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0.01,
+          "numericValue": 9010.498800000001,
+          "displayValue": "9.0 s"
+        },
+        "cls": {
+          "score": 0.67,
+          "numericValue": 0.18135105214398534,
+          "displayValue": "0.181"
+        },
+        "tbt": {
+          "score": 0.25,
+          "numericValue": 1045.0000000000018,
+          "displayValue": "1,050 ms"
+        },
+        "fcp": {
+          "score": 1,
+          "numericValue": 762.9972999999999,
+          "displayValue": "0.8 s"
+        },
+        "speedIndex": {
+          "score": 1,
+          "numericValue": 797.2711800188256,
+          "displayValue": "0.8 s"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://riviera-plage-hotel.test/mentions-legales",
+      "pageDir": "pages/mentions-legales-d1a080",
+      "depth": 1,
+      "status": "visited",
+      "discoveryMethod": "link",
+      "language": "fr",
+      "httpStatus": 200,
+      "discoveredFrom": "https://riviera-plage-hotel.test/",
+      "analysisCoverage": {
+        "plannerVersion": "v1",
+        "role": "unknown",
+        "confidence": "fallback",
+        "templateFamilyId": "v1:e54b4306fd88f911",
+        "reasonCodes": ["insufficient-listing-signals", "unknown-or-fallback-role"],
+        "passes": {
+          "rendered": {
+            "outcome": "completed"
+          },
+          "axe": {
+            "outcome": "completed"
+          },
+          "extended": {
+            "outcome": "completed"
+          },
+          "lighthouse": {
+            "outcome": "completed"
+          }
+        }
+      },
+      "renderDiffMissingPercent": 0,
+      "renderDiffRawDocument": {
+        "markupLength": 75798,
+        "textSignature": "c3a053324fee56c4",
+        "interstitialMarkers": []
+      },
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": null,
+        "bestPractices": null
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0.91,
+          "numericValue": 2407.9613,
+          "displayValue": "2.4 s"
+        },
+        "cls": {
+          "score": 0.98,
+          "numericValue": 0.056897980101992436,
+          "displayValue": "0.057"
+        },
+        "tbt": {
+          "score": 0.1,
+          "numericValue": 1784.4999999999982,
+          "displayValue": "1,780 ms"
+        },
+        "fcp": {
+          "score": 1,
+          "numericValue": 911.7043,
+          "displayValue": "0.9 s"
+        },
+        "speedIndex": {
+          "score": 1,
+          "numericValue": 911.7043,
+          "displayValue": "0.9 s"
+        }
+      },
+      "errors": {}
+    }
+  ],
+  "siteSignals": {
+    "hasTransactionalFlow": false,
+    "transactionalFlowEvidence": [],
+    "transactionalFlowRedirectChecks": [
+      {
+        "linkUrl": "https://www.secure-hotel-booking.com/Cap-d-riviera-plage-hotel-26-riviera-plage-hotel-17/JK7H/fr?hotelId=13829",
+        "destinationUrl": "https://www.secure-hotel-booking.com/d-edge/Cap-d-riviera-plage-hotel-26-riviera-plage-hotel-17/JK7H/fr-FR",
+        "resolution": "undetermined",
+        "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
+        "pageUrl": "https://riviera-plage-hotel.test/chambre-deluxe"
+      },
+      {
+        "linkUrl": "https://www.secure-hotel-booking.com/Cap-d-riviera-plage-hotel-26-riviera-plage-hotel-17/JK7H/fr?hotelId=13829",
+        "destinationUrl": "https://www.secure-hotel-booking.com/d-edge/Cap-d-riviera-plage-hotel-26-riviera-plage-hotel-17/JK7H/fr-FR",
+        "resolution": "undetermined",
+        "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
+        "pageUrl": "https://riviera-plage-hotel.test/chambre-deluxe-jardin"
+      },
+      {
+        "linkUrl": "https://www.secure-hotel-booking.com/Cap-d-riviera-plage-hotel-26-riviera-plage-hotel-17/JK7H/fr?hotelId=13829",
+        "destinationUrl": "https://www.secure-hotel-booking.com/d-edge/Cap-d-riviera-plage-hotel-26-riviera-plage-hotel-17/JK7H/fr-FR",
+        "resolution": "undetermined",
+        "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
+        "pageUrl": "https://riviera-plage-hotel.test/chambre-privilege"
+      },
+      {
+        "linkUrl": "https://www.secure-hotel-booking.com/Cap-d-riviera-plage-hotel-26-riviera-plage-hotel-17/JK7H/fr?hotelId=13829",
+        "destinationUrl": "https://www.secure-hotel-booking.com/d-edge/Cap-d-riviera-plage-hotel-26-riviera-plage-hotel-17/JK7H/fr-FR",
+        "resolution": "undetermined",
+        "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
+        "pageUrl": "https://riviera-plage-hotel.test/chambre-privilege-vue-mer"
+      },
+      {
+        "linkUrl": "https://www.secure-hotel-booking.com/Cap-d-riviera-plage-hotel-26-riviera-plage-hotel-17/JK7H/fr?hotelId=13829",
+        "destinationUrl": "https://www.secure-hotel-booking.com/d-edge/Cap-d-riviera-plage-hotel-26-riviera-plage-hotel-17/JK7H/fr-FR",
+        "resolution": "undetermined",
+        "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
+        "pageUrl": "https://riviera-plage-hotel.test/suite"
+      },
+      {
+        "linkUrl": "https://www.secure-hotel-booking.com/Cap-d-riviera-plage-hotel-26-riviera-plage-hotel-17/JK7H/fr?hotelId=13829",
+        "destinationUrl": "https://www.secure-hotel-booking.com/d-edge/Cap-d-riviera-plage-hotel-26-riviera-plage-hotel-17/JK7H/fr-FR",
+        "resolution": "undetermined",
+        "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
+        "pageUrl": "https://riviera-plage-hotel.test/suite-vue-mer"
+      },
+      {
+        "linkUrl": "https://www.secure-hotel-booking.com/Cap-d-riviera-plage-hotel-26-riviera-plage-hotel-17/JK7H/fr?hotelId=13829",
+        "destinationUrl": "https://www.secure-hotel-booking.com/d-edge/Cap-d-riviera-plage-hotel-26-riviera-plage-hotel-17/JK7H/fr-FR",
+        "resolution": "undetermined",
+        "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
+        "pageUrl": "https://riviera-plage-hotel.test/riviera-plage-hotel-11"
+      },
+      {
+        "linkUrl": "https://www.secure-hotel-booking.com/Cap-d-riviera-plage-hotel-26-riviera-plage-hotel-17/JK7H/fr?hotelId=13829",
+        "destinationUrl": "https://www.secure-hotel-booking.com/d-edge/Cap-d-riviera-plage-hotel-26-riviera-plage-hotel-17/JK7H/fr-FR",
+        "resolution": "undetermined",
+        "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
+        "pageUrl": "https://riviera-plage-hotel.test/chambres-communicantes"
+      },
+      {
+        "linkUrl": "https://widget.thefork.com/fr/4f8f3a24-777a-493f-85b8-6bb924475606",
+        "destinationUrl": "https://widget.thefork.com/fr/4f8f3a24-777a-493f-85b8-6bb924475606",
+        "resolution": "undetermined",
+        "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
+        "pageUrl": "https://riviera-plage-hotel.test/restaurants-bar"
+      },
+      {
+        "linkUrl": "https://bookings.zenchef.com/results?rid=361599&pid=1001",
+        "destinationUrl": "https://bookings.zenchef.com/results?rid=361599&pid=1001",
+        "resolution": "undetermined",
+        "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
+        "pageUrl": "https://riviera-plage-hotel.test/restaurants-bar"
+      },
+      {
+        "linkUrl": "https://widget.thefork.com/fr/4f8f3a24-777a-493f-85b8-6bb924475606",
+        "destinationUrl": "https://widget.thefork.com/fr/4f8f3a24-777a-493f-85b8-6bb924475606",
+        "resolution": "undetermined",
+        "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
+        "pageUrl": "https://riviera-plage-hotel.test/restaurant-riviera-plage-hotel-10"
+      },
+      {
+        "linkUrl": "https://bookings.zenchef.com/results?rid=361599&pid=1001",
+        "destinationUrl": "https://bookings.zenchef.com/results?rid=361599&pid=1001",
+        "resolution": "undetermined",
+        "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
+        "pageUrl": "https://riviera-plage-hotel.test/restaurant-riviera-plage-hotel-36"
+      },
+      {
+        "linkUrl": "https://app.riviera-plage-hotel-32.fr/client/riviera-plage-hotel-35-riviera-plage-hotel-32?lang=fr",
+        "destinationUrl": "https://app.riviera-plage-hotel-32.fr/client/riviera-plage-hotel-35-riviera-plage-hotel-32?lang=fr",
+        "resolution": "undetermined",
+        "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
+        "pageUrl": "https://riviera-plage-hotel.test/bien-etre"
+      },
+      {
+        "linkUrl": "https://www.secure-hotel-booking.com/Cap-d-riviera-plage-hotel-26-riviera-plage-hotel-17/JK7H/fr?hotelId=13829",
+        "destinationUrl": "https://www.secure-hotel-booking.com/d-edge/Cap-d-riviera-plage-hotel-26-riviera-plage-hotel-17/JK7H/fr-FR",
+        "resolution": "undetermined",
+        "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
+        "pageUrl": "https://riviera-plage-hotel.test/chambre-et-suites"
+      }
+    ],
+    "siren": "443583133",
+    "mentionsLegalesPageUrl": "https://riviera-plage-hotel.test/mentions-legales",
+    "siteName": "Riviera Plage Hôtel 3 Riviera Plage Hôtel 16"
+  },
+  "cruxFieldData": {
+    "available": true,
+    "lcp": {
+      "p75": 1505
+    },
+    "cls": {
+      "p75": 0.44
+    },
+    "inp": {
+      "p75": 86
+    }
+  },
+  "privacySecurityCoverage": {
+    "securityHeaders": "completed",
+    "cookieConsent": "completed"
+  },
+  "translationClusters": [
+    {
+      "canonicalPageUrl": "https://riviera-plage-hotel.test/",
+      "members": [
+        {
+          "pageUrl": "https://riviera-plage-hotel.test/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://riviera-plage-hotel.test/bien-etre",
+      "members": [
+        {
+          "pageUrl": "https://riviera-plage-hotel.test/bien-etre"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://riviera-plage-hotel.test/chambre-deluxe",
+      "members": [
+        {
+          "pageUrl": "https://riviera-plage-hotel.test/chambre-deluxe"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://riviera-plage-hotel.test/chambre-deluxe-jardin",
+      "members": [
+        {
+          "pageUrl": "https://riviera-plage-hotel.test/chambre-deluxe-jardin"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://riviera-plage-hotel.test/chambre-et-suites",
+      "members": [
+        {
+          "pageUrl": "https://riviera-plage-hotel.test/chambre-et-suites"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://riviera-plage-hotel.test/chambre-privilege",
+      "members": [
+        {
+          "pageUrl": "https://riviera-plage-hotel.test/chambre-privilege"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://riviera-plage-hotel.test/chambre-privilege-vue-mer",
+      "members": [
+        {
+          "pageUrl": "https://riviera-plage-hotel.test/chambre-privilege-vue-mer"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://riviera-plage-hotel.test/chambres-communicantes",
+      "members": [
+        {
+          "pageUrl": "https://riviera-plage-hotel.test/chambres-communicantes"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://riviera-plage-hotel.test/farniente",
+      "members": [
+        {
+          "pageUrl": "https://riviera-plage-hotel.test/farniente"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://riviera-plage-hotel.test/riviera-plage-hotel-2",
+      "members": [
+        {
+          "pageUrl": "https://riviera-plage-hotel.test/riviera-plage-hotel-2"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://riviera-plage-hotel.test/la-collection",
+      "members": [
+        {
+          "pageUrl": "https://riviera-plage-hotel.test/la-collection"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://riviera-plage-hotel.test/la-galerie",
+      "members": [
+        {
+          "pageUrl": "https://riviera-plage-hotel.test/la-galerie"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://riviera-plage-hotel.test/localisation",
+      "members": [
+        {
+          "pageUrl": "https://riviera-plage-hotel.test/localisation"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://riviera-plage-hotel.test/mentions-legales",
+      "members": [
+        {
+          "pageUrl": "https://riviera-plage-hotel.test/mentions-legales"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://riviera-plage-hotel.test/privatisation",
+      "members": [
+        {
+          "pageUrl": "https://riviera-plage-hotel.test/privatisation"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://riviera-plage-hotel.test/restaurant-riviera-plage-hotel-36",
+      "members": [
+        {
+          "pageUrl": "https://riviera-plage-hotel.test/restaurant-riviera-plage-hotel-36"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://riviera-plage-hotel.test/restaurant-riviera-plage-hotel-10",
+      "members": [
+        {
+          "pageUrl": "https://riviera-plage-hotel.test/restaurant-riviera-plage-hotel-10"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://riviera-plage-hotel.test/restaurants-bar",
+      "members": [
+        {
+          "pageUrl": "https://riviera-plage-hotel.test/restaurants-bar"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://riviera-plage-hotel.test/suite",
+      "members": [
+        {
+          "pageUrl": "https://riviera-plage-hotel.test/suite"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://riviera-plage-hotel.test/riviera-plage-hotel-11",
+      "members": [
+        {
+          "pageUrl": "https://riviera-plage-hotel.test/riviera-plage-hotel-11"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://riviera-plage-hotel.test/suite-vue-mer",
+      "members": [
+        {
+          "pageUrl": "https://riviera-plage-hotel.test/suite-vue-mer"
+        }
+      ]
+    }
+  ],
+  "findingsProvenance": {
+    "findingsSchemaVersion": 1,
+    "normalizationFingerprint": "d3e7566e15352410",
+    "findingsDigest": "sha256:706215c79ac1a8ac6f2b7c17a5ceca8a661b2df2650d206bea2051f476333b44"
+  },
+  "prospectId": "1b2dccc2-6cb6-433f-92fb-33e0b0284b0e",
+  "scanIntent": "full-audit"
+}

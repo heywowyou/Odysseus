@@ -1,0 +1,172 @@
+{
+  "auditId": "8f1bdb1a-0c59-4d5c-882c-aa35d4036a37",
+  "analysisId": "7a917731-9035-4a8a-898b-033b57130578",
+  "language": "en",
+  "model": "gpt-5.4-mini",
+  "temperature": 0.2,
+  "generatedAt": "2026-09-17T02:03:08.124Z",
+  "reviews": {
+    "themes": [
+      {
+        "themeKey": "t3",
+        "businessImpact": {
+          "verdict": "supported",
+          "reason": "Matches finding f003 and related color-contrast findings on multiple pages; the statements about visitors struggling to read content and potentially missing calls to action are generic consequences."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Matches the color-contrast findings (f003, f006, f007, f008, etc.) and the provider phrase 'the technical team managing your site'; no unsupported site-specific fact is asserted."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Matches the WCAG 2.2 contrast-threshold guidance in the recommendation and the underlying color-contrast findings; this is grounded in the scanner evidence."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Matches the affected pages in the color-contrast findings and is generic advice about prioritizing text over images/gradients."
+          }
+        ]
+      },
+      {
+        "themeKey": "t4",
+        "businessImpact": {
+          "verdict": "supported",
+          "reason": "Matches the target-size findings (f010, f015, f018, f024, f032, f035, f038, f041, f043, f048); the usability and abandonment consequences are generic."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Matches the target-size findings and the provider phrase; enlarging targets or adding spacing is directly supported by the issue described."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic prioritization advice consistent with the target-size findings; no site-specific unsupported claim."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic layout advice derived from the target-size issue and the affected pages in the findings."
+          }
+        ]
+      },
+      {
+        "themeKey": "t6",
+        "businessImpact": {
+          "verdict": "supported",
+          "reason": "Matches the SEO findings f051 (missing JSON-LD), f052 (missing sitemap.xml), f053 (missing canonical URL), and f061 (missing business entity structured data); the visibility/discovery consequences are generic and allowed."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Matches the structured-data findings f051 and f061; adding JSON-LD for business/website/page types is supported by the missing structured data evidence."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Matches finding f052 about no sitemap.xml found."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Matches finding f053 about no canonical URL declared."
+          }
+        ]
+      },
+      {
+        "themeKey": "t2",
+        "businessImpact": {
+          "verdict": "supported",
+          "reason": "Matches the accessibility findings f002 (missing form labels), f036 (links without discernible text), and f055 (no h1); the navigation and completion consequences are generic."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Matches finding f002 about form elements lacking labels."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Matches finding f036 about links lacking discernible text."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Matches finding f055 about no <h1> heading found."
+          }
+        ]
+      },
+      {
+        "themeKey": "t5",
+        "businessImpact": {
+          "verdict": "supported",
+          "reason": "Matches performance findings f001 (CLS) and f004 (real visitors experience poor CLS); the click/misread/confidence consequences are generic."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Matches the CLS findings f001 and f004; reserving space for late-loading elements is standard remediation for layout shift."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic prioritization advice consistent with the layout-shift findings."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic advice consistent with the CLS issue; no unsupported site-specific fact."
+          }
+        ]
+      },
+      {
+        "themeKey": "t7",
+        "businessImpact": {
+          "verdict": "supported",
+          "reason": "Matches performance findings f057 (TBT), f059 (LCP), and f060 (Speed Index); the statements about slow loading affecting browsing are generic consequences."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Matches the performance findings, especially f059 for LCP and f057 for blocking time; reducing main-content delay is supported by the metrics."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic performance advice consistent with the LCP and Speed Index findings."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic performance advice consistent with the blocking-time finding."
+          }
+        ]
+      },
+      {
+        "themeKey": "t1",
+        "businessImpact": {
+          "verdict": "supported",
+          "reason": "Matches privacy findings f023 and f026 about cookies/trackers before consent, plus f056 and f058 about missing security headers; the trust and exposure consequences are generic."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Matches finding f023 about non-essential cookies before consent."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Matches finding f026 about third-party trackers contacted before consent."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Matches finding f056 about no X-Frame-Options header."
+          }
+        ]
+      }
+    ],
+    "executiveSummary": {
+      "verdict": "supported",
+      "reason": "Summarizes the supported findings across themes t1, t2, t3, t4, t5, t6, and t7; it does not assert unsupported site-specific facts beyond the measured issues and generic consequences."
+    },
+    "notes": {
+      "verdict": "supported",
+      "reason": "Accurately reflects the input: no site context was provided, and the findings/recommendations are based on measured pages. This is directly supported by the writerInput siteContext and the findings data."
+    }
+  },
+  "findingsProvenance": {
+    "findingsSchemaVersion": 1,
+    "normalizationFingerprint": "d3e7566e15352410",
+    "findingsDigest": "sha256:706215c79ac1a8ac6f2b7c17a5ceca8a661b2df2650d206bea2051f476333b44"
+  }
+}

@@ -1,0 +1,117 @@
+{
+  "auditId": "8f1bdb1a-0c59-4d5c-882c-aa35d4036a37",
+  "themes": [
+    {
+      "findingIds": [
+        "f003",
+        "f006",
+        "f007",
+        "f008",
+        "f009",
+        "f011",
+        "f012",
+        "f013",
+        "f014",
+        "f016",
+        "f017",
+        "f019",
+        "f020",
+        "f021",
+        "f022",
+        "f025",
+        "f027",
+        "f028",
+        "f029",
+        "f030",
+        "f031",
+        "f033",
+        "f034",
+        "f037",
+        "f039",
+        "f040",
+        "f042",
+        "f044",
+        "f045",
+        "f046",
+        "f047",
+        "f049",
+        "f050"
+      ],
+      "category": "accessibility",
+      "effort": "high",
+      "impact": "high",
+      "priorityRank": 1,
+      "themeKey": "t3"
+    },
+    {
+      "findingIds": [
+        "f010",
+        "f015",
+        "f018",
+        "f024",
+        "f032",
+        "f035",
+        "f038",
+        "f041",
+        "f043",
+        "f048"
+      ],
+      "category": "accessibility",
+      "effort": "medium",
+      "impact": "high",
+      "priorityRank": 2,
+      "themeKey": "t4"
+    },
+    {
+      "findingIds": ["f051", "f052", "f053", "f061"],
+      "category": "seo",
+      "effort": "medium",
+      "impact": "medium",
+      "priorityRank": 3,
+      "themeKey": "t6"
+    },
+    {
+      "findingIds": ["f002", "f036", "f055"],
+      "category": "accessibility",
+      "effort": "medium",
+      "impact": "high",
+      "priorityRank": 4,
+      "themeKey": "t2"
+    },
+    {
+      "findingIds": ["f001", "f004"],
+      "category": "performance",
+      "effort": "high",
+      "impact": "high",
+      "priorityRank": 5,
+      "themeKey": "t5"
+    },
+    {
+      "findingIds": ["f057", "f059", "f060"],
+      "category": "performance",
+      "effort": "medium",
+      "impact": "medium",
+      "priorityRank": 6,
+      "themeKey": "t7"
+    },
+    {
+      "findingIds": ["f023", "f026", "f056", "f058"],
+      "category": "privacy",
+      "effort": "medium",
+      "impact": "high",
+      "priorityRank": 7,
+      "themeKey": "t1"
+    }
+  ],
+  "quickWins": ["f052", "f056", "f058", "f061"],
+  "overallRisk": "high",
+  "model": "gpt-5.4-mini",
+  "temperature": 0.2,
+  "generatedAt": "2026-09-17T02:02:30.975Z",
+  "findingsProvenance": {
+    "findingsSchemaVersion": 1,
+    "normalizationFingerprint": "d3e7566e15352410",
+    "findingsDigest": "sha256:706215c79ac1a8ac6f2b7c17a5ceca8a661b2df2650d206bea2051f476333b44"
+  },
+  "analysisId": "fc2e6bd0-53eb-432e-8d1b-a1565bf99639"
+}

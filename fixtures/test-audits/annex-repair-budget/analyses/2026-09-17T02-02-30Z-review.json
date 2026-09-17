@@ -1,0 +1,172 @@
+{
+  "auditId": "8f1bdb1a-0c59-4d5c-882c-aa35d4036a37",
+  "analysisId": "89d7e415-c94b-4346-8d17-40aa27fee97b",
+  "language": "fr",
+  "model": "gpt-5.4-mini",
+  "temperature": 0.2,
+  "generatedAt": "2026-09-17T02:02:30.979Z",
+  "reviews": {
+    "themes": [
+      {
+        "themeKey": "t3",
+        "businessImpact": {
+          "verdict": "supported",
+          "reason": "Matches findings f003, f006, f007, f008, f009, f011, f012, f013, f014, f016, f017, f019, f020, f021, f022, f025, f027, f028, f029, f030, f031, f033, f034, f037, f039, f040, f042, f044, f045, f046, f047, f049, f050 about color-contrast on multiple pages; the impact statements about readability and generic commercial consequences are supported."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Supported by the color-contrast findings on the affected pages; it is a generic remediation to adjust text/background colors."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Supported by the repeated color-contrast findings across multiple page templates; reviewing styles coherently is a reasonable generic action."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Supported by the color-contrast findings affecting navigation, buttons, and editorial blocks in general; this is generic advice based on the issue type."
+          }
+        ]
+      },
+      {
+        "themeKey": "t4",
+        "businessImpact": {
+          "verdict": "supported",
+          "reason": "Matches findings f010, f015, f018, f024, f032, f035, f038, f041, f043, f048 about touch target size/spacing; the usability and generic commercial consequences are supported."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Supported by the target-size findings; enlarging small or crowded touch targets is the direct remediation."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Supported by the target-size findings; adding spacing around interactive elements follows from the issue."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Supported by the target-size findings on mobile-facing pages; reviewing icons, links, and navigation controls is generic remediation."
+          }
+        ]
+      },
+      {
+        "themeKey": "t6",
+        "businessImpact": {
+          "verdict": "supported",
+          "reason": "Matches findings f051, f052, f053, and f061 about missing JSON-LD, sitemap, canonical URL, and entity structured data; the statements about search engines understanding content and generic visibility consequences are supported."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Supported by f061 and f051; adding structured data describing the establishment is directly aligned with the findings."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Supported by f053; declaring a canonical URL is directly recommended by the missing-canonical finding."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Supported by f052; adding an accessible sitemap.xml is directly aligned with the missing-sitemap finding."
+          }
+        ]
+      },
+      {
+        "themeKey": "t2",
+        "businessImpact": {
+          "verdict": "supported",
+          "reason": "Matches findings f002, f036, and f055 about missing form labels, discernible link text, and missing H1 headings; the usability and generic commercial consequences are supported."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Supported by f002; adding visible, explicit labels to form fields is the direct remediation."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Supported by f055; adding a main heading to pages that lack one is directly aligned with the finding."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Supported by f036; replacing the link with discernible descriptive text is directly aligned with the finding."
+          }
+        ]
+      },
+      {
+        "themeKey": "t5",
+        "businessImpact": {
+          "verdict": "supported",
+          "reason": "Matches findings f001 and f004 about CLS and poor real-user CLS; the statements about elements moving during load and the generic trust/conversion consequences are supported."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Supported by f001 and f004; stabilizing moving blocks during load is the direct remediation."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Supported by f001; reserving space for images, encarts, and dynamic content is a standard CLS fix."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Supported by f001; reviewing late-injected components to prevent pushing content is directly related to the finding."
+          }
+        ]
+      },
+      {
+        "themeKey": "t7",
+        "businessImpact": {
+          "verdict": "supported",
+          "reason": "Matches findings f057, f059, and f060 about TBT, LCP, and Speed Index; the statements about slow main content and generic commercial consequences are supported."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Supported by the performance findings, especially f059 on LCP; prioritizing main-content rendering is a generic remediation."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Supported by f057 and f059; reducing or deferring render-blocking elements is directly aligned with the issue."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Supported by f060 and f057; reviewing media, styles, and scripts to reduce load cost is generic performance advice."
+          }
+        ]
+      },
+      {
+        "themeKey": "t1",
+        "businessImpact": {
+          "verdict": "supported",
+          "reason": "Matches findings f023, f026, f056, and f058 about cookies/trackers before consent and missing security headers; the trust and consent-related consequences are supported."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Supported by f023 and f026; delaying tracker/cookie activation until consent is the direct remediation."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Supported by f023 and f026; keeping measurement and advertising tools inactive until choice is expressed follows from the findings."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Supported by f023 and f026; verifying the banner and tags so categories activate at the right time is directly related."
+          }
+        ]
+      }
+    ],
+    "executiveSummary": {
+      "verdict": "supported",
+      "reason": "Summarizes the input themes and findings: accessibility issues (t2, t3, t4), performance issues (t5, t7), SEO issues (t6), and privacy issues (t1). The references to readability, mobile interaction, slow loading, site structure for search engines, and trust are all supported by the listed findings and generic consequences."
+    },
+    "notes": {
+      "verdict": "supported",
+      "reason": "Matches the provided siteInput: no intake context was provided, priorities reflect severity, and the cited pages are not exhaustive. These are direct restatements of the input notes."
+    }
+  },
+  "findingsProvenance": {
+    "findingsSchemaVersion": 1,
+    "normalizationFingerprint": "d3e7566e15352410",
+    "findingsDigest": "sha256:706215c79ac1a8ac6f2b7c17a5ceca8a661b2df2650d206bea2051f476333b44"
+  }
+}

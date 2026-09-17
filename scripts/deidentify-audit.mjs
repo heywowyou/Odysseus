@@ -211,7 +211,12 @@ let analysisCount = 0;
 if (existsSync(sourceAnalyses)) {
   mkdirSync(path.join(targetDir, 'analyses'), { recursive: true });
   for (const file of readdirSync(sourceAnalyses).sort()) {
-    if (!file.endsWith('.json')) continue;
+    // Issue #387: the review and structure documents share their analysis's
+    // generatedAt and language, so naming the copy from those fields wrote
+    // the French review over the French analysis. Keep the source's own
+    // artifacts-layout name instead. Correction-review files carry a run id
+    // in their name and nothing a report render reads, so they stay behind.
+    if (!/^[0-9TZ-]+-(fr|en|review|structure)\.json$/u.test(file)) continue;
     const analysis = {
       ...finalize(JSON.parse(readFileSync(path.join(sourceAnalyses, file), 'utf-8'))),
       // Same reason as the manifest: an analysis binds to the findings it
@@ -222,11 +227,7 @@ if (existsSync(sourceAnalyses)) {
     // The artifacts layout, because report-env-loading.e2e.test.ts copies this
     // fixture and runs the real CLI against it, and the CLI resolves an
     // analysis by that name.
-    const stamp = String(analysis.generatedAt).replace(/[:.]/gu, '-');
-    writeFileSync(
-      path.join(targetDir, 'analyses', `${stamp}-${analysis.language}.json`),
-      `${JSON.stringify(analysis, null, 2)}\n`,
-    );
+    writeFileSync(path.join(targetDir, 'analyses', file), `${JSON.stringify(analysis, null, 2)}\n`);
     analysisCount += 1;
   }
 }
