@@ -26,6 +26,38 @@ export {
   type NetworkTargetPolicy,
   type NetworkTargetVerdict,
 } from './network-target-policy.js';
+export {
+  assertBrowserIsolation,
+  assessBrowserIsolation,
+  buildSanitizedBrowserEnv,
+  describeCurrentBrowserEnvironment,
+  isSecretEnvName,
+  APPROVED_ISOLATION_PROFILES,
+  type BrowserIsolationInput,
+  type BrowserIsolationPreflightResult,
+  type BrowserIsolationProfile,
+  type IsolationFinding,
+  type IsolationFindingCode,
+} from './browser-isolation-preflight.js';
+export {
+  HostRequestScheduler,
+  type HostRequestSchedulerOptions,
+} from './host-request-scheduler.js';
+export {
+  buildRobotsPolicySnapshot,
+  describeRobotsPolicyTransition,
+  effectiveCrawlDelayMs,
+  epochSitemapUrls,
+  isPathAllowedForEpoch,
+  shouldRevalidateRobots,
+  ROBOTS_POLICY_SNAPSHOT_VERSION,
+  type RobotsPolicyChain,
+  type RobotsPolicySnapshot,
+  type RobotsPolicySnapshotInput,
+  type RobotsPolicyTransition,
+  type RobotsRevalidationDecision,
+  type RobotsRevalidationOptions,
+} from './robots-policy-snapshot.js';
 export type {
   CrawlOptions,
   CrawlProgressEvent,

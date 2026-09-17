@@ -1,5 +1,6 @@
 import { createServer } from 'node:net';
 import { chromium, type Browser } from 'playwright';
+import { buildSanitizedBrowserEnv } from './browser-isolation-preflight.js';
 
 /**
  * Identifies Odysseus per the crawling-politeness rule. config.ts's
@@ -90,6 +91,13 @@ export async function launchBrowser(options: LaunchBrowserOptions = {}): Promise
           ...(options.extraArgs ?? []),
           ...parseChromiumExtraArgs(process.env['ODYSSEUS_CHROMIUM_EXTRA_ARGS']),
         ],
+        // Chromium otherwise inherits this process's whole environment, so
+        // every renderer running a scanned site's JavaScript would sit next to
+        // MONGODB_URI and the model API key. Nothing Chromium needs is
+        // credential-shaped, and page JavaScript cannot read the process
+        // environment in any case; this removes the reason to rely on that
+        // (plan 059 section 3.10).
+        env: buildSanitizedBrowserEnv(process.env),
       });
       return { browser, debugPort };
     } catch (error) {
