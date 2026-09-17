@@ -1260,11 +1260,6 @@ export async function renderPdfWithPageCountFromHtml(
       findStrandedAppendixRuleIds(await detectStrandedAppendixRuleHeadings(page)),
     );
     if (strandedFailure !== undefined) {
-      if (process.env['TMP387'])
-        require('node:fs').writeFileSync(
-          '/tmp/claude-1000/-home-heywow-code-odysseus/ad7d6fd3-19c0-4f0b-a931-728a0f41657b/scratchpad/dump.html',
-          await page.content(),
-        );
       throw new Error(`Report generation aborted: ${strandedFailure} Never shipped to a client.`);
     }
 
