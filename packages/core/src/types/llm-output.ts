@@ -32,7 +32,7 @@ export const themeSchema = z.object({
    *  appears in the findings appendix; nothing in this change disturbs
    *  that reasoning. Widening an enum is backward compatible: analyses
    *  stored before this date still parse. */
-  category: z.enum(['accessibility', 'seo', 'performance', 'rendering', 'privacy']),
+  category: z.enum(['accessibility', 'seo', 'geo', 'performance', 'rendering', 'privacy']),
   /** Why this matters commercially, in plain language, no jargon. */
   businessImpact: z.string().min(1),
   /** Populated for accessibility themes only. States the relevant
@@ -50,7 +50,7 @@ export const themeSchema = z.object({
 export const llmOutputSchema = z.object({
   executiveSummary: z.string().min(1),
   overallRisk: z.enum(['low', 'medium', 'high']),
-  themes: z.array(themeSchema).min(1).max(20),
+  themes: z.array(themeSchema).min(1),
   quickWins: z.array(z.string()),
   notes: z.string(),
 });
