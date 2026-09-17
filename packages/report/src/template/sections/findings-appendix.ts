@@ -424,6 +424,9 @@ function renderRuleGroup(
    *  finding row's own count). Declared before the optional count below so
    *  a required parameter never trails an optional one. */
   scopePageUrls: ReadonlySet<string>,
+  /** The annex block this group renders in: its finding category, or
+   *  'third-party'. Part of the group's layout identity below. */
+  partition: string,
   vendorLabel?: string,
   /** Fix #6, 2026-08-25 report review: the number of this same rule's
    *  occurrences that landed in the third-party section instead (item 1.4's
@@ -592,9 +595,17 @@ function renderRuleGroup(
   // paged.css's issue #170 note for why no CSS-only keep-with-next can hold
   // here. The attribute mirrors the table below, whose own
   // data-appendix-rule-id the thead-repair pass already keys on.
+  // Despite the attribute's name, its value identifies the GROUP, not the
+  // rule: one rule id heads several groups (one per severity, and again in
+  // the third-party block or another category), and every repair keys on
+  // this value. With a bare rule id, repairing one stranded group forced
+  // every same-id group onto a fresh page, and a category whose first group
+  // shared the id was left with its heading alone at a page foot, which
+  // issue #303's gate refuses to ship.
+  const groupId = escapeHtml(`${partition}--${group.ruleId}--${group.severity}`);
   return `
-    <div class="appendix-rule-group" data-appendix-rule-id="${escapeHtml(group.ruleId)}" style="margin-bottom:var(--space-4)">
-      <div class="appendix-rule-head" data-appendix-rule-id="${escapeHtml(group.ruleId)}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px">
+    <div class="appendix-rule-group" data-appendix-rule-id="${groupId}" style="margin-bottom:var(--space-4)">
+      <div class="appendix-rule-head" data-appendix-rule-id="${groupId}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px">
         <span style="display:inline">
           ${renderSeverityBadge(strings, group.severity)}
           <span style="font-size:14px;font-weight:500">${escapeHtml(representativeTitle)}</span>
@@ -605,7 +616,7 @@ function renderRuleGroup(
         <span style="font-size:11px;opacity:0.6">${renderRuleSum(strings, language, group)}</span>
         ${obsTag}
       </div>
-      <table style="${APPENDIX_TABLE_STYLE}" data-appendix-rule-id="${escapeHtml(group.ruleId)}">
+      <table style="${APPENDIX_TABLE_STYLE}" data-appendix-rule-id="${groupId}">
         <colgroup>${APPENDIX_COLUMN_WIDTHS.map((w) => `<col style="width:${w}">`).join('')}</colgroup>
         <thead>
           <tr>
@@ -695,6 +706,7 @@ function renderThirdPartySection(
         totalPagesScanned,
         clusterLookup,
         scopePageUrls,
+        'third-party',
         vendorLabel,
       );
     })
@@ -752,6 +764,7 @@ function renderCategorySection(
         totalPagesScanned,
         clusterLookup,
         scopePageUrls,
+        category,
         undefined,
         thirdPartyCrossRefCount,
       );

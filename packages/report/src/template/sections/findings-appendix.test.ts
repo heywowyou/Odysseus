@@ -1248,7 +1248,52 @@ describe('issue #308: an image finding keeps its own rule title in the annex', (
       'general',
     );
     expect(html).not.toContain('Images trop lourdes ou mal optimisées');
-    expect(html).toContain('data-appendix-rule-id="unsized-images"');
-    expect(html).toContain('data-appendix-rule-id="image-delivery-insight"');
+    expect(html).toContain('--unsized-images--moderate"');
+    expect(html).toContain('--image-delivery-insight--minor"');
+  });
+});
+
+describe('issue #303: every annex rule group carries its own layout identity', () => {
+  it('gives groups that share a rule id distinct data-appendix-rule-id values', () => {
+    const finding = (
+      findingId: string,
+      category: Finding['category'],
+      severity: Finding['severity'],
+    ): Finding => ({
+      findingId,
+      auditId: 'audit-1',
+      schemaVersion: 1,
+      source: 'axe',
+      ruleId: 'color-contrast',
+      category,
+      severity,
+      wcagCriteria: [],
+      title: 'color-contrast',
+      description: 'd',
+      pageUrls: ['https://example.com/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: findingId,
+      firstSeenAt: new Date('2026-08-02T00:00:00Z'),
+      lastSeenAt: new Date('2026-08-02T00:00:00Z'),
+    });
+    const html = renderFindingsAppendix(
+      getStrings('fr'),
+      12,
+      'fr',
+      [
+        finding('f001', 'accessibility', 'serious'),
+        finding('f002', 'accessibility', 'moderate'),
+        finding('f003', 'performance', 'serious'),
+      ],
+      buildManifest(),
+      'general',
+    );
+    const ids = [
+      ...html.matchAll(/class="appendix-rule-group" data-appendix-rule-id="([^"]+)"/gu),
+    ].map((m) => m[1]);
+    expect(ids).toHaveLength(3);
+    expect(new Set(ids).size).toBe(3);
   });
 });
