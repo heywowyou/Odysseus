@@ -21,6 +21,7 @@ import {
 import { sendJson } from '../lib/api';
 import { useApi } from '../lib/use-api';
 import { useI18n } from '../i18n/provider';
+import { formatCommune, formatDate, formatSector } from '../lib/format';
 import {
   buildHubProspectsPath,
   PROSPECT_RESULT_STATUSES,
@@ -64,7 +65,7 @@ const OUTCOMES = [
 ] as const;
 
 export function ProspectHubListPage(): JSX.Element {
-  const { strings } = useI18n();
+  const { strings, language } = useI18n();
   const copy = strings.prospectHub.list;
   const resultsCopy = strings.prospectHub.results;
   const detailCopy = strings.prospectHub.detail;
@@ -377,7 +378,9 @@ export function ProspectHubListPage(): JSX.Element {
                         >
                           {row.name}
                         </Link>
-                        <div className="text-xs text-ink-muted">{row.sector}</div>
+                        <div className="text-xs text-ink-muted">
+                          {formatSector(row.sector, strings.common.sectorLabels)}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge tone="neutral">
@@ -425,7 +428,9 @@ export function ProspectHubListPage(): JSX.Element {
                         >
                           {row.name}
                         </Link>
-                        <div className="text-xs text-ink-muted">{row.sector}</div>
+                        <div className="text-xs text-ink-muted">
+                          {formatSector(row.sector, strings.common.sectorLabels)}
+                        </div>
                       </TableCell>
                       <TableCell>
                         {strings.prospectHub.directory.websiteKindLabels[
@@ -433,11 +438,12 @@ export function ProspectHubListPage(): JSX.Element {
                         ] ?? copy.unknown}
                       </TableCell>
                       <TableCell>
-                        {[row.commune, row.department].filter(Boolean).join(' · ') ||
-                          copy.notProvided}
+                        {[row.commune && formatCommune(row.commune), row.department]
+                          .filter(Boolean)
+                          .join(' · ') || copy.notProvided}
                       </TableCell>
                       <TableCell>{detailCopy.statusLabels[row.status] ?? row.status}</TableCell>
-                      <TableCell>{new Date(row.lastActivityAt).toLocaleDateString()}</TableCell>
+                      <TableCell>{formatDate(row.lastActivityAt, language)}</TableCell>
                     </>
                   )}
                 </TableRow>

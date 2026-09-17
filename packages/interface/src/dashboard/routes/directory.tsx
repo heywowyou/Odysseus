@@ -16,6 +16,7 @@ import {
   TableRow,
 } from '../components/ui/table';
 import { sendJson } from '../lib/api';
+import { formatCommune } from '../lib/format';
 import { useApi } from '../lib/use-api';
 import { useI18n } from '../i18n/provider';
 import {
@@ -189,8 +190,9 @@ export function DirectoryPage(): JSX.Element {
                       ) : null}
                     </TableCell>
                     <TableCell>
-                      {[row.commune, row.department, row.postcode].filter(Boolean).join(' · ') ||
-                        copy.notProvided}
+                      {[row.commune && formatCommune(row.commune), row.department, row.postcode]
+                        .filter(Boolean)
+                        .join(' · ') || copy.notProvided}
                     </TableCell>
                     <TableCell>
                       {[

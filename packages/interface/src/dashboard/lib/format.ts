@@ -6,6 +6,56 @@ function toDate(value: string | Date): Date {
   return typeof value === 'string' ? new Date(value) : value;
 }
 
+/** Date only, in the dashboard language rather than the browser's. */
+export function formatDate(value: string | Date, language: DashboardLanguage): string {
+  return new Intl.DateTimeFormat(language === 'fr' ? 'fr-FR' : 'en-GB', {
+    dateStyle: 'medium',
+  }).format(toDate(value));
+}
+
+/** A stored sector code through the label map. Legacy records stored the
+ *  label itself (`Hôtel`), which matches case- and accent-insensitively. */
+export function formatSector(sector: string, labels: Record<string, string>): string {
+  const key = sector
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .trim()
+    .toLowerCase();
+  return labels[key] ?? sector;
+}
+
+const COMMUNE_PARTICLES = new Set([
+  'de',
+  'du',
+  'des',
+  'la',
+  'le',
+  'les',
+  'sur',
+  'sous',
+  'en',
+  'et',
+  'aux',
+  'au',
+  'd',
+  'l',
+]);
+
+/** Issue #397: directory sources store communes in capitals (`ANTIBES`)
+ *  while operator records use ordinary casing. An all-capitals value is
+ *  recased the French way (`LA TESTE-DE-BUCH` -> `La Teste-de-Buch`); any
+ *  value with lowercase letters is left exactly as entered. */
+export function formatCommune(commune: string): string {
+  if (commune !== commune.toUpperCase()) return commune;
+  let index = 0;
+  return commune.toLowerCase().replace(/[\p{L}]+/gu, (word) => {
+    const first = index === 0;
+    index += 1;
+    if (!first && COMMUNE_PARTICLES.has(word)) return word;
+    return word.charAt(0).toUpperCase() + word.slice(1);
+  });
+}
+
 export function formatDateTime(value: string | Date, language: DashboardLanguage): string {
   return new Intl.DateTimeFormat(language === 'fr' ? 'fr-FR' : 'en-GB', {
     dateStyle: 'medium',

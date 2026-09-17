@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { fr } from '../i18n/fr';
-import { formatDateTime, formatRelativeTime } from './format';
+import {
+  formatCommune,
+  formatDate,
+  formatDateTime,
+  formatRelativeTime,
+  formatSector,
+} from './format';
 
 const NOW = Date.parse('2026-08-30T14:00:00Z');
 
@@ -27,5 +33,25 @@ describe('formatDateTime', () => {
     const value = new Date('2026-08-30T14:05:00Z');
     expect(formatDateTime(value, 'en')).toMatch(/2026/);
     expect(formatDateTime(value, 'fr')).toMatch(/2026/);
+  });
+});
+
+describe('prospect display formatting', () => {
+  it('formats a date in the dashboard language, not the browser locale', () => {
+    expect(formatDate('2026-09-17T12:00:00.000Z', 'fr')).toBe('17 sept. 2026');
+    expect(formatDate('2026-09-17T12:00:00.000Z', 'en')).toBe('17 Sept 2026');
+  });
+
+  it('labels stored and legacy sector values', () => {
+    expect(formatSector('hotel', fr.common.sectorLabels)).toBe('Hôtel');
+    expect(formatSector('Hôtel', fr.common.sectorLabels)).toBe('Hôtel');
+    expect(formatSector('Camping', fr.common.sectorLabels)).toBe('Camping');
+  });
+
+  it('recases capitalised communes and leaves typed casing alone', () => {
+    expect(formatCommune('ANTIBES')).toBe('Antibes');
+    expect(formatCommune('LA TESTE-DE-BUCH')).toBe('La Teste-de-Buch');
+    expect(formatCommune("L'ÎLE-ROUSSE")).toBe("L'Île-Rousse");
+    expect(formatCommune('La Teste-de-Buch')).toBe('La Teste-de-Buch');
   });
 });

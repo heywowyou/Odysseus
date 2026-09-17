@@ -56,7 +56,7 @@ import {
   scanRefusalNotice,
   websiteAddition,
 } from './prospect-hub-detail-model';
-import { formatDateTime } from '../lib/format';
+import { formatCommune, formatDateTime, formatSector } from '../lib/format';
 
 interface ProspectEvent {
   eventId: string;
@@ -947,7 +947,10 @@ export function ProspectHubDetailPage(): JSX.Element {
         <Card title={copy.summary} description={copy.info}>
           <dl className="grid gap-3 text-sm sm:grid-cols-2">
             <SummaryField label={copy.name} value={prospect.name} />
-            <SummaryField label={copy.sector} value={prospect.sector} />
+            <SummaryField
+              label={copy.sector}
+              value={formatSector(prospect.sector, strings.common.sectorLabels)}
+            />
             <SummaryField
               label={copy.email}
               value={prospect.emails[0]?.address ?? copy.notProvided}
@@ -955,8 +958,9 @@ export function ProspectHubDetailPage(): JSX.Element {
             <SummaryField
               label={copy.commune}
               value={
-                [prospect.commune, prospect.department].filter(Boolean).join(' · ') ||
-                copy.notProvided
+                [prospect.commune && formatCommune(prospect.commune), prospect.department]
+                  .filter(Boolean)
+                  .join(' · ') || copy.notProvided
               }
             />
             <SummaryField label={copy.siren} value={prospect.siren || copy.notProvided} />

@@ -24,6 +24,9 @@ export interface CommonStrings {
   requestFailed: string;
   /** Catch-all shown instead of an unrecognized vocabulary code. */
   vocabularyFallback: string;
+  /** Issue #397: stored prospect sector codes (`hotel`) as display labels;
+   *  an unknown free-text sector is shown as typed. */
+  sectorLabels: Record<string, string>;
   /** {minutes}, {hours} and {days} are replaced with counts by
    *  lib/format.ts's formatRelativeTime. */
   relativeTime: {
@@ -87,6 +90,7 @@ export const common = {
     requestFailed: 'La requête a échoué. Réessayez.',
     /** Terme général affiché à la place d’un code de vocabulaire inconnu. */
     vocabularyFallback: 'Autre',
+    sectorLabels: { hotel: 'Hôtel', restaurant: 'Restaurant', other: 'Autre' },
     relativeTime: {
       justNow: 'à l’instant',
       minutesAgo: 'il y a {minutes} min',
@@ -137,6 +141,7 @@ export const common = {
     requestFailed: 'The request failed. Try again.',
     /** Catch-all shown instead of an unrecognized vocabulary code. */
     vocabularyFallback: 'Other',
+    sectorLabels: { hotel: 'Hotel', restaurant: 'Restaurant', other: 'Other' },
     relativeTime: {
       justNow: 'just now',
       minutesAgo: '{minutes} min ago',
