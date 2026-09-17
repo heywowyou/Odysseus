@@ -46,6 +46,7 @@ import {
   deleteAuditArtifacts,
 } from '../artifacts/delete-audit-artifacts.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
+import { purgeProspectAuditStorage } from '../artifacts/purge-prospect-audit-storage.js';
 import { readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
 import { getPreviewPublicBaseUrl } from '../config.js';
 import { createConfiguredMailboxDraftAdapter } from '../outreach/configured-mailbox-draft-adapter.js';
@@ -705,13 +706,39 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
     }
   });
 
-  // Plan 050: archive is the ordinary way to take a prospect out of active
-  // work. It keeps every attached record and the directory link, and never
-  // withdraws outreach or touches artifacts; both calls are idempotent.
+  // Plan 050, amended by issue #381: archive is the ordinary way to take a
+  // prospect out of active work. It keeps the CRM record, correspondence,
+  // suppression and directory link, and never withdraws outreach, but it
+  // permanently removes the prospect's audits and their stored files. It
+  // refuses while a job for the prospect is queued or running (that job
+  // could recreate the audits), archives, then purges. A storage failure
+  // answers 503 with the prospect archived and the remaining audits still
+  // attached; repeating the archive resumes the purge.
   router.post('/api/prospects/:prospectId/archive', async ({ res, params }) => {
-    const result = await archiveProspect(connection, params['prospectId']!);
-    if (result === null) sendError(res, 404, 'prospect not found');
-    else sendJson(res, 200, result);
+    const prospectId = params['prospectId']!;
+    if ((await getProspectHub(connection, prospectId)) === null) {
+      sendError(res, 404, 'prospect not found');
+      return;
+    }
+    if ((await countActiveProspectDeletionJobs(connection, prospectId)) > 0) {
+      sendError(res, 409, 'prospect has an unfinished job; cancel it or wait for it to end');
+      return;
+    }
+    const result = await archiveProspect(connection, prospectId);
+    if (result === null) {
+      sendError(res, 404, 'prospect not found');
+      return;
+    }
+    try {
+      const purged = await purgeProspectAuditStorage(connection, prospectId, {
+        artifactsRoot: getArtifactsRoot(),
+        store: createConfiguredArtifactStore(),
+      });
+      sendJson(res, 200, { ...result, purged });
+    } catch (error) {
+      if (!(error instanceof AuditArtifactDeletionError)) throw error;
+      sendError(res, 503, `prospect archived but ${error.message}; archive again to finish`);
+    }
   });
 
   router.post('/api/prospects/:prospectId/restore', async ({ res, params }) => {

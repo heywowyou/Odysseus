@@ -4787,9 +4787,16 @@ its audit remains stale. Recovering a report renormalizes and re-renders from
 stored evidence and never calls the audit stage.
 
 Archiving is a lifecycle field (`archivedAt`), not a status. It keeps the
-prospect, its enrichment and origins, scans, reports, outreach history,
-events, and directory link; it changes no status, suppression, preview,
-draft, or thread; archive and restore each record an event and are
+prospect, its enrichment and origins, outreach history, events, and directory
+link. *Amended 2026-09-17, issue #381:* archive also permanently deletes the
+prospect's audits with their derived records, finished scan jobs, and local
+and bucket files, because scan evidence is large and recapturable while the
+relationship record is small and durable. The action confirms with counts,
+refuses while a job is active, deletes files before records per audit so a
+failed purge is retried by archiving again (an archived prospect still owning
+audits is the incomplete state), and `odysseus artifacts archived-prospects`
+reconciles prospects archived earlier. Archive otherwise changes no status,
+suppression, preview, draft, or thread; archive and restore each record an event and are
 idempotent. Archived prospects leave the portfolio, Results, counts, and
 À traiter, and restore on the same `prospectId`. Directory adds claim the
 entry atomically with a pre-minted id, so repeated clicks cannot create a

@@ -101,6 +101,26 @@ export function deletionImpactSummary(
     .map((key) => labels[key].replace('{count}', String(impact[key])));
 }
 
+/** Issue #381: what archiving permanently removes - the audit side of the
+ *  deletion impact only. The prospect, correspondence, events, jobs outside
+ *  those audits and the directory link are kept. */
+const ARCHIVE_PURGED_KEYS = [
+  'audits',
+  'findings',
+  'analyses',
+  'reports',
+  'reportApprovals',
+] as const;
+
+export function archiveImpactSummary(
+  impact: ProspectDeletionImpact,
+  labels: Record<keyof ProspectDeletionImpact, string>,
+): string[] {
+  return ARCHIVE_PURGED_KEYS.filter((key) => impact[key] > 0).map((key) =>
+    labels[key].replace('{count}', String(impact[key])),
+  );
+}
+
 export function buildHubProspectsPath(state: ProspectFilterState): string {
   return `/api/prospects?${buildProspectApiQuery(state, 'prospects').toString()}`;
 }

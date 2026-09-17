@@ -19,6 +19,8 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   countActiveProspectDeletionJobs: vi.fn(),
   countProspectDeletionImpact: vi.fn(),
   deleteProspectPermanently: vi.fn(),
+  deleteAuditCascade: vi.fn(),
+  deleteFinishedScanJobsForAudit: vi.fn(),
   restoreProspect: vi.fn(),
   findProspectsByDomain: vi.fn(),
   findOutreachThreadByProspect: vi.fn(),
@@ -78,6 +80,8 @@ import {
   countActiveProspectDeletionJobs,
   countProspectDeletionImpact,
   deleteProspectPermanently,
+  deleteAuditCascade,
+  deleteFinishedScanJobsForAudit,
   restoreProspect,
   findOutreachThreadByProspect,
   getProspectHub,
@@ -323,6 +327,23 @@ describe('prospect hub routes', () => {
     expect(deleteProspectPermanently).toHaveBeenCalledWith(fakeConnection, 'p-1');
   });
 
+  it('refuses to archive while a job is active, and reports an incomplete purge (issue #381)', async () => {
+    vi.mocked(countActiveProspectDeletionJobs).mockResolvedValueOnce(1);
+    expect((await handle('/api/prospects/p-1/archive', 'POST')).statusCode).toBe(409);
+    expect(archiveProspect).not.toHaveBeenCalled();
+
+    vi.mocked(archiveProspect).mockResolvedValueOnce({
+      prospect: { prospectId: 'p-1' },
+      changed: true,
+    } as never);
+    vi.mocked(listProspectAudits).mockResolvedValueOnce([
+      { auditId: 'audit-1', siteUrl: 'https://hotel.example/', startedAt: new Date() },
+    ] as never);
+    artifactStore.list.mockRejectedValueOnce(new Error('provider down'));
+    expect((await handle('/api/prospects/p-1/archive', 'POST')).statusCode).toBe(503);
+    expect(deleteAuditCascade).not.toHaveBeenCalled();
+  });
+
   it('purges each audit bucket prefix before the records, keeping them on failure (issue #384)', async () => {
     vi.mocked(listProspectAudits).mockResolvedValue([
       { siteUrl: 'https://hotel.example/', startedAt: new Date('2026-09-16T10:00:00Z') },
@@ -343,14 +364,32 @@ describe('prospect hub routes', () => {
     expect(deleteProspectPermanently).toHaveBeenCalledWith(fakeConnection, 'p-1');
   });
 
-  it('archives and restores through explicit, non-destructive endpoints', async () => {
-    vi.mocked(archiveProspect).mockResolvedValueOnce({
+  it('archives by purging audits but keeping the prospect, and restores it (issue #381)', async () => {
+    vi.mocked(archiveProspect).mockResolvedValue({
       prospect: { prospectId: 'p-1' },
       changed: true,
     } as never);
+    vi.mocked(listProspectAudits).mockResolvedValueOnce([
+      {
+        auditId: 'audit-1',
+        siteUrl: 'https://hotel.example/',
+        startedAt: new Date('2026-09-16T10:00:00Z'),
+      },
+    ] as never);
+    artifactStore.list
+      .mockResolvedValueOnce(['hotel.example/2026-09-16T10-00-00Z/report.pdf'])
+      .mockResolvedValueOnce([]);
     const archived = await handle('/api/prospects/p-1/archive', 'POST');
-    expect(archived.statusCode).toBe(200);
+    expect(archived).toMatchObject({
+      statusCode: 200,
+      body: { changed: true, purged: { audits: 1, remoteObjectsDeleted: 1 } },
+    });
     expect(archiveProspect).toHaveBeenCalledWith(fakeConnection, 'p-1');
+    expect(artifactStore.delete).toHaveBeenCalledWith(
+      'hotel.example/2026-09-16T10-00-00Z/report.pdf',
+    );
+    expect(deleteAuditCascade).toHaveBeenCalledWith(fakeConnection, 'audit-1');
+    expect(deleteFinishedScanJobsForAudit).toHaveBeenCalledWith(fakeConnection, 'audit-1');
     expect(withdrawProspectOutreach).not.toHaveBeenCalled();
     expect(deleteProspectPermanently).not.toHaveBeenCalled();
 

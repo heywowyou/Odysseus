@@ -221,6 +221,15 @@ export interface ProspectHubStrings {
     archivedBadge: string;
     archivedNotice: string;
     archivedNoRecommendation: string;
+    archiveTitle: string;
+    archiveKeeps: string;
+    archiveDeletes: string;
+    archiveDeletesCounts: string;
+    archiveRestoreNote: string;
+    archiveBlockedByJob: string;
+    archiveCleanupIncomplete: string;
+    archiveCleanupPending: string;
+    finishArchiveCleanup: string;
     dangerZone: string;
     deletePermanently: string;
     deletePermanentlyHint: string;
@@ -421,7 +430,7 @@ export const prospectHub = {
       archivedView: 'Archivés',
       archivedEmptyTitle: 'Aucun prospect archivé',
       archivedEmptyDescription:
-        'Un prospect archivé quitte le travail en cours et conserve ses scans, rapports et échanges.',
+        'Un prospect archivé quitte le travail en cours. Ses coordonnées, son identité, ses notes et l’historique des échanges sont conservés ; ses fichiers de scan et ses rapports sont supprimés.',
     },
     directory: {
       eyebrow: 'Annuaire',
@@ -608,8 +617,23 @@ export const prospectHub = {
       restore: 'Restaurer le prospect',
       archivedBadge: 'Archivé',
       archivedNotice:
-        'Prospect archivé le {date}. Ses scans, rapports, contacts, notes et échanges sont conservés ; restaurez-le pour le remettre dans le travail en cours.',
+        'Prospect archivé le {date}. Ses contacts, notes et échanges sont conservés, ses scans et rapports ont été supprimés ; restaurez-le pour le remettre dans le travail en cours.',
       archivedNoRecommendation: 'Prospect archivé : aucune action recommandée.',
+      archiveTitle: 'Archiver ce prospect ?',
+      archiveKeeps:
+        'Les coordonnées, l’identité de l’entreprise, les notes et l’historique des échanges sont conservés.',
+      archiveDeletes:
+        'Ses scans, constats, rapports et fichiers associés seront définitivement supprimés.',
+      archiveDeletesCounts:
+        'Ses scans, constats, rapports et fichiers associés seront définitivement supprimés : {impact}.',
+      archiveRestoreNote: 'Restaurer le prospect plus tard ne restaurera pas ces audits.',
+      archiveBlockedByJob:
+        'Un scan de ce prospect est encore en cours. Annulez-le ou attendez sa fin, puis archivez.',
+      archiveCleanupIncomplete:
+        'Le prospect est archivé, mais certains fichiers de scan n’ont pas pu être supprimés. Relancez la suppression pour terminer.',
+      archiveCleanupPending:
+        'Ce prospect archivé conserve encore des scans : leur suppression ne s’est pas terminée.',
+      finishArchiveCleanup: 'Terminer la suppression des scans',
       dangerZone: 'Suppression définitive',
       deletePermanentlyHint:
         'Réservée aux doublons, fiches de test et imports erronés. Pour retirer un prospect du travail en cours, archivez-le plutôt.',
@@ -903,7 +927,7 @@ export const prospectHub = {
       archivedView: 'Archived',
       archivedEmptyTitle: 'No archived prospects',
       archivedEmptyDescription:
-        'An archived prospect leaves active work and keeps its scans, reports, and correspondence.',
+        'An archived prospect leaves active work. Contact details, identity, notes, and outreach history are kept; scan and report files are removed.',
     },
     directory: {
       eyebrow: 'Directory',
@@ -1088,8 +1112,23 @@ export const prospectHub = {
       restore: 'Restore prospect',
       archivedBadge: 'Archived',
       archivedNotice:
-        'Prospect archived on {date}. Its scans, reports, contacts, notes, and correspondence are kept; restore it to return it to active work.',
+        'Prospect archived on {date}. Its contacts, notes, and correspondence are kept, and its scans and reports were deleted; restore it to return it to active work.',
       archivedNoRecommendation: 'Archived prospect: no recommended action.',
+      archiveTitle: 'Archive this prospect?',
+      archiveKeeps:
+        'The prospect’s contact details, company identity, notes, and outreach history will be kept.',
+      archiveDeletes:
+        'Its scans, findings, reports, and associated files will be permanently deleted.',
+      archiveDeletesCounts:
+        'Its scans, findings, reports, and associated files will be permanently deleted: {impact}.',
+      archiveRestoreNote: 'Restoring the prospect later will not restore those audits.',
+      archiveBlockedByJob:
+        'A scan for this prospect is still running. Cancel it or wait for it to finish, then archive.',
+      archiveCleanupIncomplete:
+        'The prospect is archived, but some scan files could not be deleted. Retry the cleanup to finish.',
+      archiveCleanupPending:
+        'This archived prospect still has scans: their deletion did not finish.',
+      finishArchiveCleanup: 'Finish deleting scans',
       dangerZone: 'Permanent deletion',
       deletePermanentlyHint:
         'For duplicates, test records, and bad imports only. To take a prospect out of active work, archive it instead.',

@@ -558,10 +558,12 @@ export interface ProspectLifecycleResult {
 }
 
 /**
- * Plan 050: takes a prospect out of active work without touching anything
- * attached to it. The prospect document, its enrichment and field origins,
- * audits and their derivatives, outreach history, events, jobs, and the
- * directory link all stay exactly where they are. Archiving is not an
+ * Plan 050: takes a prospect out of active work. This write touches only the
+ * lifecycle field: the prospect document, its enrichment and field origins,
+ * outreach history, events, and the directory link stay where they are.
+ * Issue #381: the archive action then purges the prospect's audits and their
+ * stored files through the interface's `purgeProspectAuditStorage`, which
+ * owns filesystem and bucket access this package does not have. Archiving is not an
  * outreach outcome either: no status, suppression, preview, or draft is
  * changed. The conditional update makes a repeated archive a no-op.
  */
@@ -618,7 +620,9 @@ async function ensureLatestLifecycleEvent(
 }
 
 /** Returns an archived prospect to active work on the same prospectId, with
- *  every attached record as it was. Restoring an active prospect is a no-op. */
+ *  its CRM record and correspondence as they were. Audits purged at archive
+ *  (issue #381) do not come back; a new Full scan recaptures the evidence.
+ *  Restoring an active prospect is a no-op. */
 export async function restoreProspect(
   connection: Connection,
   prospectId: string,

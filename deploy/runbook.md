@@ -405,7 +405,16 @@ node packages/cli/dist/index.js artifacts orphans           # dry run
 node packages/cli/dist/index.js artifacts orphans --delete  # removes listed orphans
 ```
 
-Only `<hostname>/<YYYY-MM-DDTHH-MM-SSZ>/` prefixes with no matching audit row
+Archived prospects that still own audits (archived before issue #381 made
+archive purge scans, or left part-way by a storage failure) are reconciled the
+same way, through the purge the archive action itself runs:
+
+```sh
+node packages/cli/dist/index.js artifacts archived-prospects          # dry run
+node packages/cli/dist/index.js artifacts archived-prospects --apply  # purge
+```
+
+For `artifacts orphans`, only `<hostname>/<YYYY-MM-DDTHH-MM-SSZ>/` prefixes with no matching audit row
 and older than 24 hours count as orphans. Any other key is printed as
 unidentified and never deleted.
 

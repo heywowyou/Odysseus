@@ -1,5 +1,9 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import { deleteAuditCascade } from './delete-audit.js';
+import {
+  deleteAuditCascade,
+  deleteFinishedScanJobsForAudit,
+  listArchivedProspectsWithAudits,
+} from './delete-audit.js';
 import { probeMongoAvailability } from './test-support.js';
 
 const { available: mongoAvailable, connection } = await probeMongoAvailability();
@@ -98,5 +102,84 @@ describe.skipIf(!mongoAvailable)('deleteAuditCascade', () => {
       reports: 0,
       reportApprovals: 0,
     });
+  });
+});
+
+describe.skipIf(!mongoAvailable)('archive retention helpers (issue #381)', () => {
+  it('deletes only finished single-site scan jobs for the audit', async () => {
+    const db = connection!.db!;
+    const jobs = db.collection('jobs');
+    const auditId = `retention-audit-${Date.now()}`;
+    const tag = `retention-job-${Date.now()}`;
+    await jobs.insertOne({ jobId: `${tag}-done`, type: 'full-audit', status: 'complete', auditId });
+    await jobs.insertOne({
+      jobId: `${tag}-input`,
+      type: 'full-audit',
+      status: 'needs-input',
+      auditId,
+    });
+    await jobs.insertOne({
+      jobId: `${tag}-running`,
+      type: 'full-audit',
+      status: 'running',
+      auditId,
+    });
+    await jobs.insertOne({
+      jobId: `${tag}-batch`,
+      type: 'prospecting',
+      status: 'complete',
+      auditId,
+    });
+    await jobs.insertOne({
+      jobId: `${tag}-other`,
+      type: 'full-audit',
+      status: 'complete',
+      auditId: `${auditId}-other`,
+    });
+
+    expect(await deleteFinishedScanJobsForAudit(connection!, auditId)).toBe(2);
+    const left = await jobs
+      .find({ jobId: { $regex: `^${tag}` } })
+      .map((job) => job['jobId'] as string)
+      .toArray();
+    expect(left.sort()).toEqual([`${tag}-batch`, `${tag}-other`, `${tag}-running`]);
+    await jobs.deleteMany({ jobId: { $regex: `^${tag}` } });
+  });
+
+  it('lists archived prospects that still own audits', async () => {
+    const db = connection!.db!;
+    const tag = `retention-prospect-${Date.now()}`;
+    const prospects = db.collection('prospects');
+    const audits = db.collection('audits');
+    await prospects.insertOne({
+      prospectId: `${tag}-a`,
+      name: 'Archived with audits',
+      archivedAt: new Date(),
+    });
+    await prospects.insertOne({
+      prospectId: `${tag}-b`,
+      name: 'Archived, purged',
+      archivedAt: new Date(),
+    });
+    await prospects.insertOne({ prospectId: `${tag}-c`, name: 'Active with audits' });
+    for (const [prospectId, n] of [
+      [`${tag}-a`, 2],
+      [`${tag}-c`, 1],
+    ] as const) {
+      for (let i = 0; i < n; i += 1) {
+        await audits.insertOne({
+          auditId: `${prospectId}-${i}`,
+          prospectId,
+          siteUrl: 'https://x.example/',
+        });
+      }
+    }
+
+    const rows = (await listArchivedProspectsWithAudits(connection!)).filter((row) =>
+      row.prospectId.startsWith(tag),
+    );
+    expect(rows).toEqual([{ prospectId: `${tag}-a`, name: 'Archived with audits', audits: 2 }]);
+    await prospects.deleteMany({ prospectId: { $regex: `^${tag}` } });
+    await audits.deleteMany({ prospectId: { $regex: `^${tag}` } });
   });
 });

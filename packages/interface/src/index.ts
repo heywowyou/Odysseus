@@ -34,6 +34,10 @@ export {
   findRemoteArtifactOrphans,
   type RemoteArtifactOrphanReport,
 } from './artifacts/remote-artifact-orphans.js';
+export {
+  purgeProspectAuditStorage,
+  type ProspectAuditPurge,
+} from './artifacts/purge-prospect-audit-storage.js';
 export { resolveArtifactFile } from './artifacts/resolve-artifact.js';
 export {
   syncAuditDirToBucket,

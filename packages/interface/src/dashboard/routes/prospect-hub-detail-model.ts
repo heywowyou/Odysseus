@@ -145,6 +145,32 @@ export function deleteFailureNotice(copy: DetailCopy, error: unknown): string {
     : copy.actionFailed;
 }
 
+/** Issue #381: notice when archiving fails. 409: a job for the prospect is
+ *  still active, nothing changed. 503: the prospect is archived but some
+ *  scan files could not be removed; archiving again finishes the purge. */
+export function archiveFailureNotice(copy: DetailCopy, error: unknown): string {
+  if (error instanceof ApiError && error.status === 409) return copy.archiveBlockedByJob;
+  if (error instanceof ApiError && error.status === 503) return copy.archiveCleanupIncomplete;
+  return copy.actionFailed;
+}
+
+/** The archive confirmation: what is kept, what is permanently deleted
+ *  (with counts when there is anything), and that restoring does not bring
+ *  the deleted audits back. */
+export function archiveConfirmDescription(
+  impact: readonly string[],
+  copy: Pick<
+    DetailCopy,
+    'archiveKeeps' | 'archiveDeletes' | 'archiveDeletesCounts' | 'archiveRestoreNote'
+  >,
+): string {
+  const deletes =
+    impact.length === 0
+      ? copy.archiveDeletes
+      : copy.archiveDeletesCounts.replace('{impact}', impact.join(', '));
+  return `${copy.archiveKeeps} ${deletes} ${copy.archiveRestoreNote}`;
+}
+
 /** Notice when recording an outcome fails: a 409 means the server refused
  *  the transition. */
 export function outcomeFailureNotice(copy: DetailCopy, error: unknown): string {

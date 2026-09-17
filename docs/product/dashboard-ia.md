@@ -88,10 +88,19 @@ a second time, and a directory source refresh never touches the link.
 `Archiver le prospect` / `Archive prospect` is the ordinary way to take a
 prospect out of active work. It is record lifecycle, not a sales status: it
 changes no status, suppression, preview, draft, or thread, and keeps the
-record's enrichment, field origins, scans, reports, outreach history, events,
-and directory link. An archived prospect stays reachable directly, shows an
-`Archivé` / `Archived` badge, opens no work, and recommends nothing until
-`Restaurer le prospect` / `Restore prospect` returns it on the same record.
+record's enrichment, field origins, outreach history, events, and directory
+link. Since issue #381 it also permanently deletes the prospect's audits
+(findings, analyses, reports, approvals, their finished scan jobs, and the
+local and bucket artifact files), so it asks first: the confirmation states
+what is kept, the counts of what is deleted, and that restoring does not bring
+the audits back. It is refused while a job for the prospect is queued or
+running. If file deletion fails part-way, the prospect is archived, the
+remaining audits stay attached, and the detail page offers
+`Terminer la suppression des scans` / `Finish deleting scans`. Published
+previews are separate documents and keep working. An archived prospect stays
+reachable directly, shows an `Archivé` / `Archived` badge, opens no work, and
+recommends nothing until `Restaurer le prospect` / `Restore prospect` returns
+it on the same record; a new Full scan recaptures current evidence.
 
 `Supprimer définitivement` / `Delete permanently` remains for duplicates, test
 records, and bad imports. It sits in a collapsed destructive area under All

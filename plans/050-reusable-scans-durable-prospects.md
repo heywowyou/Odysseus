@@ -541,6 +541,13 @@ archivedAt absent = active
 
 ## 11. Archive preserves the prospect and everything attached to it
 
+> **Amended by issue #381 (2026-09-17).** Archive now keeps the CRM record,
+> correspondence, suppression, events, and directory link, but permanently
+> deletes the prospect's audits, their derived records, and their local and
+> bucket files. Where sections 11, 13, and 14 require archive to preserve
+> audits and reports, trade-off 91 and `docs/product/dashboard-ia.md` are
+> now authoritative.
+
 Normal removal from the active prospect workflow becomes:
 
 ```text

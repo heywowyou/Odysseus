@@ -3,6 +3,8 @@ import { en } from '../i18n/en';
 import { fr } from '../i18n/fr';
 import { ApiError } from '../lib/api';
 import {
+  archiveConfirmDescription,
+  archiveFailureNotice,
   deleteFailureNotice,
   detailsPatch,
   emailAddition,
@@ -133,5 +135,25 @@ describe('notices', () => {
     expect(deleteFailureNotice(copy, new Error('network'))).toBe(copy.actionFailed);
     expect(outcomeFailureNotice(copy, conflict)).toBe(copy.outcomeRefused);
     expect(outcomeFailureNotice(copy, other)).toBe(copy.actionFailed);
+  });
+});
+
+describe('archive confirmation and failure (issue #381)', () => {
+  it('states what is kept, what is deleted with counts, and that restore does not bring audits back', () => {
+    const description = archiveConfirmDescription(['2 scan(s)', '40 constat(s)'], copy);
+    expect(description).toContain(copy.archiveKeeps);
+    expect(description).toContain('supprimés : 2 scan(s), 40 constat(s).');
+    expect(description).toContain(copy.archiveRestoreNote);
+    expect(archiveConfirmDescription([], en.prospectHub.detail)).toBe(
+      `${en.prospectHub.detail.archiveKeeps} ${en.prospectHub.detail.archiveDeletes} ${en.prospectHub.detail.archiveRestoreNote}`,
+    );
+  });
+
+  it('distinguishes an active-job refusal from an incomplete purge', () => {
+    expect(archiveFailureNotice(copy, new ApiError('busy', 409))).toBe(copy.archiveBlockedByJob);
+    expect(archiveFailureNotice(copy, new ApiError('storage', 503))).toBe(
+      copy.archiveCleanupIncomplete,
+    );
+    expect(archiveFailureNotice(copy, new Error('network'))).toBe(copy.actionFailed);
   });
 });

@@ -24,6 +24,7 @@ import { useI18n } from '../i18n/provider';
 import { fetchJson, sendJson } from '../lib/api';
 import { useApi } from '../lib/use-api';
 import {
+  archiveImpactSummary,
   deletionImpactSummary,
   type ProspectDeletionImpact,
   type ProspectHubRow,
@@ -43,6 +44,8 @@ import {
   type ProspectIdentityValues,
 } from './prospect-identity-model';
 import {
+  archiveConfirmDescription,
+  archiveFailureNotice,
   deleteFailureNotice,
   detailsPatch,
   emailAddition,
@@ -252,6 +255,8 @@ export function ProspectHubDetailPage(): JSX.Element {
   const [outreachBusy, setOutreachBusy] = useState<string | null>(null);
   const [lifecycleBusy, setLifecycleBusy] = useState(false);
   const [deletionImpact, setDeletionImpact] = useState<ProspectDeletionImpact | null>(null);
+  const [archiveImpact, setArchiveImpact] = useState<ProspectDeletionImpact | null>(null);
+  const [lifecycleNotice, setLifecycleNotice] = useState<string | null>(null);
   const [outreachNotice, setOutreachNotice] = useState<string | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<ContactRemoval | null>(null);
   const [newStakeholder, setNewStakeholder] = useState({ name: '', position: '' });
@@ -486,22 +491,58 @@ export function ProspectHubDetailPage(): JSX.Element {
     }
   };
 
-  // Plan 050: archive is the ordinary removal from active work and keeps
-  // everything; permanent deletion is a separate, impact-confirmed action.
-  const setArchived = async (archived: boolean): Promise<void> => {
+  // Plan 050: archive is the ordinary removal from active work. Issue #381:
+  // it keeps the CRM record and correspondence but permanently deletes the
+  // prospect's scans, so it asks first with the counts it will remove.
+  // Restore returns the record only.
+  const restore = async (): Promise<void> => {
     setLifecycleBusy(true);
-    setOutreachNotice(null);
+    setLifecycleNotice(null);
     try {
       await sendJson(
-        `/api/prospects/${encodeURIComponent(prospect.prospectId)}/${archived ? 'archive' : 'restore'}`,
+        `/api/prospects/${encodeURIComponent(prospect.prospectId)}/restore`,
         'POST',
         {},
       );
       refreshAll();
     } catch {
-      setOutreachNotice(copy.actionFailed);
+      setLifecycleNotice(copy.actionFailed);
     } finally {
       setLifecycleBusy(false);
+    }
+  };
+
+  const requestArchive = async (): Promise<void> => {
+    setLifecycleBusy(true);
+    setLifecycleNotice(null);
+    try {
+      setArchiveImpact(
+        await fetchJson<ProspectDeletionImpact>(
+          `/api/prospects/${encodeURIComponent(prospect.prospectId)}/deletion-impact`,
+        ),
+      );
+    } catch {
+      setLifecycleNotice(copy.actionFailed);
+    } finally {
+      setLifecycleBusy(false);
+    }
+  };
+
+  // Also the retry when an earlier archive left scans behind: the archive
+  // endpoint is idempotent and resumes the purge.
+  const archive = async (): Promise<void> => {
+    setLifecycleBusy(true);
+    try {
+      await sendJson(
+        `/api/prospects/${encodeURIComponent(prospect.prospectId)}/archive`,
+        'POST',
+        {},
+      );
+    } catch (error) {
+      setLifecycleNotice(archiveFailureNotice(copy, error));
+    } finally {
+      setLifecycleBusy(false);
+      refreshAll();
     }
   };
 
@@ -782,7 +823,7 @@ export function ProspectHubDetailPage(): JSX.Element {
               {label(prospect.status, copy.statusLabels)}
             </Badge>
             {archived ? (
-              <Button size="sm" isLoading={lifecycleBusy} onClick={() => void setArchived(false)}>
+              <Button size="sm" isLoading={lifecycleBusy} onClick={() => void restore()}>
                 <ArchiveRestore className="size-4" aria-hidden="true" />
                 {copy.restore}
               </Button>
@@ -791,7 +832,7 @@ export function ProspectHubDetailPage(): JSX.Element {
                 size="sm"
                 variant="secondary"
                 isLoading={lifecycleBusy}
-                onClick={() => void setArchived(true)}
+                onClick={() => void requestArchive()}
               >
                 <Archive className="size-4" aria-hidden="true" />
                 {copy.archive}
@@ -804,6 +845,43 @@ export function ProspectHubDetailPage(): JSX.Element {
         <p className="mb-5 rounded-lg border border-line bg-raised px-4 py-3 text-sm text-ink-soft">
           {copy.archivedNotice.replace('{date}', formatDate(prospect.archivedAt!))}
         </p>
+      ) : null}
+      {lifecycleNotice ? (
+        <p
+          role="status"
+          className="mb-5 rounded-lg border border-line bg-raised px-4 py-3 text-sm text-ink"
+        >
+          {lifecycleNotice}
+        </p>
+      ) : null}
+      {archived && audits.length > 0 ? (
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-raised px-4 py-3 text-sm text-ink-soft">
+          <p>{copy.archiveCleanupPending}</p>
+          <Button
+            size="sm"
+            variant="secondary"
+            isLoading={lifecycleBusy}
+            onClick={() => void archive()}
+          >
+            {copy.finishArchiveCleanup}
+          </Button>
+        </div>
+      ) : null}
+      {archiveImpact !== null ? (
+        <ConfirmDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setArchiveImpact(null);
+          }}
+          title={copy.archiveTitle}
+          description={archiveConfirmDescription(
+            archiveImpactSummary(archiveImpact, copy.deletionImpactLabels),
+            copy,
+          )}
+          confirmLabel={copy.archive}
+          cancelLabel={strings.common.cancel}
+          onConfirm={archive}
+        />
       ) : null}
       {deletionImpact !== null ? (
         <ConfirmDialog
