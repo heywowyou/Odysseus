@@ -261,7 +261,7 @@ export function AuditsPage(): JSX.Element {
                             className="mt-0.5 block text-xs text-ink-soft hover:text-accent-bright"
                             onClick={(event) => event.stopPropagation()}
                           >
-                            {strings.nav.prospects}
+                            {summary.prospectName ?? strings.nav.prospects}
                           </Link>
                         ) : null}
                       </TableCell>

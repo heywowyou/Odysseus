@@ -128,8 +128,8 @@ export const scanSummarySchema = z.object({
   /** Issue #382: typed operator-input fields exist on the job. */
   awaitsInput: z.boolean().optional(),
   prospectId: z.string().optional(),
-  /** Present on queued and running rows linked to a prospect, for the scan
-   *  queue's labels. */
+  /** Present on rows linked to a prospect: the scan queue's labels and the
+   *  Audits table's hotel link. */
   prospectName: z.string().optional(),
 });
 

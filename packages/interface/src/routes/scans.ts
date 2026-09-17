@@ -421,14 +421,11 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
 
     const auditIds = jobs.map((job) => job.auditId).filter((id): id is string => id !== undefined);
     const rollups = await getSeverityRollupsForPoll(connection, auditIds);
-    // Only the scan queue names its jobs, so only waiting and running jobs
-    // pay for the prospect lookup.
+    // The scan queue and the Audits table both name the linked hotel, so
+    // every prospect-linked row pays for the (single, batched) lookup.
     const prospectNames = await getProspectNames(
       connection,
-      jobs
-        .filter((job) => job.status === 'queued' || job.status === 'running')
-        .map((job) => job.prospectId)
-        .filter((id): id is string => id !== undefined),
+      jobs.map((job) => job.prospectId).filter((id): id is string => id !== undefined),
     );
 
     const summaries = jobs.map((job) => ({
