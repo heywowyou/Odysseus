@@ -76,7 +76,9 @@ describe('auth guard', () => {
       const calls = (res.setHeader as ReturnType<typeof vi.fn>).mock.calls as Array<
         [string, string]
       >;
-      expect(calls.find(([name]) => name === 'location')?.[1], page).toBe('/login');
+      expect(calls.find(([name]) => name === 'location')?.[1], page).toBe(
+        page === '/' ? '/login' : `/login?next=${encodeURIComponent(page)}`,
+      );
     }
   });
 
@@ -108,7 +110,9 @@ describe('auth guard', () => {
       const calls = (res.setHeader as ReturnType<typeof vi.fn>).mock.calls as Array<
         [string, string]
       >;
-      expect(calls.find(([name]) => name === 'location')?.[1], path).toBe('/login');
+      expect(calls.find(([name]) => name === 'location')?.[1], path).toBe(
+        `/login?next=${encodeURIComponent(path)}`,
+      );
     }
   });
 

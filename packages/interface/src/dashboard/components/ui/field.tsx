@@ -16,7 +16,11 @@ export function Field(props: {
       {children}
       {hint ? <p className="mt-1.5 text-xs text-ink-muted">{hint}</p> : null}
       {error ? (
-        <p className="mt-1.5 text-xs text-danger" role="alert">
+        <p
+          {...(htmlFor !== undefined ? { id: `${htmlFor}-error` } : {})}
+          className="mt-1.5 text-xs text-danger"
+          role="alert"
+        >
           {error}
         </p>
       ) : null}

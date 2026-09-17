@@ -6,6 +6,7 @@ import { Field } from '../components/ui/field';
 import { Input } from '../components/ui/input';
 import { useI18n } from '../i18n/provider';
 import { fetchWithTimeout } from '../lib/api';
+import { safeReturnPath } from '../lib/login-return';
 import type { DashboardStrings } from '../i18n/types';
 
 /** Human wait ("3 min 20 s") substituted into errorLocked's {wait} slot,
@@ -54,8 +55,10 @@ export function LoginPage(): JSX.Element {
         body: JSON.stringify({ password }),
       });
       if (response.status === 204) {
-        // Hard navigation so the app remounts with the session cookie.
-        window.location.assign('/');
+        // Hard navigation so the app remounts with the session cookie, back
+        // to the page the expired session interrupted (issue #401).
+        const next = new URLSearchParams(window.location.search).get('next');
+        window.location.assign(safeReturnPath(next));
         return;
       }
       const body: unknown = await response.json().catch(() => null);
@@ -107,6 +110,8 @@ export function LoginPage(): JSX.Element {
                 id="login-password"
                 type="password"
                 autoComplete="current-password"
+                aria-invalid={errorText !== null}
+                {...(errorText !== null ? { 'aria-describedby': 'login-password-error' } : {})}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
               />

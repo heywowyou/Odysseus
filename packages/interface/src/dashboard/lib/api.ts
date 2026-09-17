@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import { loginUrlReturningTo } from './login-return';
 
 /** Error surfaced by the dashboard API layer: carries the HTTP status and
  *  the server's error string so pages can distinguish a 404 (unknown job)
@@ -42,7 +43,8 @@ let isRedirectingToLogin = false;
 function redirectToLogin(): void {
   if (isRedirectingToLogin) return;
   isRedirectingToLogin = true;
-  window.location.assign('/login');
+  const { pathname, search, hash } = window.location;
+  window.location.assign(loginUrlReturningTo(`${pathname}${search}${hash}`));
 }
 
 /** Bounded fetch primitive for same-origin responses that are not JSON, such

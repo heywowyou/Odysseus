@@ -55,7 +55,13 @@ export function createAuthGuard(deps: { sessionStore: SessionStore }): AuthGuard
     }
 
     res.statusCode = 302;
-    res.setHeader('location', '/login');
+    // Issue #401: a deep link survives the sign-in. The login page accepts
+    // only same-origin in-app paths back from `next`.
+    const requested = `${pathname}${url.search}`;
+    res.setHeader(
+      'location',
+      pathname === '/' ? '/login' : `/login?next=${encodeURIComponent(requested)}`,
+    );
     res.end();
     return false;
   };
