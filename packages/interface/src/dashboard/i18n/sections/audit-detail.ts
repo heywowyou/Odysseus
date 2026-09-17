@@ -55,6 +55,8 @@ export interface AuditDetailStrings {
   sirenSourceUrlLabel: string;
   raisonSocialeLabel: string;
   nomCommercialLabel: string;
+  /** Template: {name}, the linked prospect's name. */
+  identitySavedOnProspect: string;
   detectedFieldHint: string;
   /** Plan 045 slice 1.3: the inline Confirm button next to a detected
    *  identity field, used both in the stepper's first step and in
@@ -331,6 +333,8 @@ export const auditDetail = {
     raisonSocialeLabel: 'Dénomination sociale',
     detectedFieldHint: 'Détecté automatiquement, à confirmer.',
     nomCommercialLabel: 'Nom commercial',
+    identitySavedOnProspect:
+      'La raison sociale, le nom commercial et le SIREN sont enregistrés sur le prospect « {name} » et s’appliquent à tous ses audits.',
     identityConfirmButton: 'Confirmer',
     identityConfirmedGeneratedMessage: 'Confirmé ; les PDF sont produits.',
     identityConfirmedWaitingMessage:
@@ -596,6 +600,8 @@ export const auditDetail = {
     raisonSocialeLabel: 'Legal name',
     detectedFieldHint: 'Detected automatically, to be confirmed.',
     nomCommercialLabel: 'Trading name',
+    identitySavedOnProspect:
+      'Legal name, trading name and SIREN are saved on the prospect "{name}" and apply to all its audits.',
     identityConfirmButton: 'Confirm',
     identityConfirmedGeneratedMessage: 'Confirmed; the PDFs are being produced.',
     identityConfirmedWaitingMessage:

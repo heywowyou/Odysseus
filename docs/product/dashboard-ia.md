@@ -148,6 +148,15 @@ The direct anchors `#emails`, `#actions`, `#outcome`, and `#history` remain
 stable so work-queue links and deep links open the relevant control. Returning
 to Prospects or its Results view preserves the originating query string.
 
+For an audit linked to a prospect, the prospect is the single source of the
+trading name, legal name and SIREN (operator decision, 2026-09-17, plan 057).
+The audit copies the prospect's operator-confirmed values at every sync, so a
+correction on the prospect reaches every linked audit. Editing those three
+fields on a linked audit saves them on the prospect, and the audit's hotel
+form says so. When an audit moves to another prospect or is detached, it drops
+the previous prospect's values instead of keeping them or seeding the new
+prospect with them. Unlinked audits keep their identity on the audit.
+
 ## Scan vocabulary
 
 The ordinary dashboard exposes exactly two scan intents:

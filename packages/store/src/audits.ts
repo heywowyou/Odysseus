@@ -21,6 +21,7 @@ import {
   appendProspectEvent,
   fillMissingProspectIdentity,
   getProspectHub,
+  updateProspect,
 } from './prospect-hub.js';
 import {
   auditIdentityFromProspect,
@@ -32,6 +33,9 @@ import {
   isOutreachQualifyingAudit,
   type AuditIntentSourceJob,
 } from './prospect-audit-qualification.js';
+
+/** The audit manual fields a linked prospect owns (plan 057). */
+const IDENTITY_FIELDS = ['nomCommercial', 'raisonSociale', 'siren'] as const;
 
 export async function getAudit(
   connection: Connection,
@@ -69,6 +73,30 @@ export async function attachAuditToProspect(
   )
     return current;
   const now = new Date();
+  let manualFieldsAfterClear = current.manualFields;
+  if (current.prospectId !== undefined) {
+    // Plan 057: the previous prospect owned these values; they must neither stay on the audit nor seed the new prospect.
+    const previous = await getProspectHub(connection, current.prospectId);
+    if (previous !== null && current.manualFields !== undefined) {
+      const owned = auditIdentityFromProspect(previous).confirmed;
+      const cleared = IDENTITY_FIELDS.filter(
+        (field) =>
+          owned[field] !== undefined && current.manualFields?.[field]?.value === owned[field],
+      );
+      if (cleared.length > 0) {
+        await AuditModel.updateOne(
+          { auditId },
+          {
+            $unset: Object.fromEntries(cleared.map((field) => [`manualFields.${field}`, ''])),
+            $set: { 'manualFields.updatedAt': now },
+          },
+        );
+        const remaining = { ...current.manualFields };
+        for (const field of cleared) delete remaining[field];
+        manualFieldsAfterClear = remaining;
+      }
+    }
+  }
   const update = prospectId === null ? { $unset: { prospectId: '' } } : { $set: { prospectId } };
   await AuditModel.updateOne({ auditId }, update);
   if (current.prospectId !== undefined) {
@@ -108,7 +136,7 @@ export async function attachAuditToProspect(
       prospectId,
       {
         siren: current.siteSignals?.siren,
-        ...confirmedIdentityFromManualFields(current.manualFields),
+        ...confirmedIdentityFromManualFields(manualFieldsAfterClear),
       },
       actor,
     );
@@ -137,7 +165,7 @@ export async function getAuditManualFields(
  *  `_id: 0` keeps the returned object exactly this shape, no stray key. */
 export type AuditRuntimeFields = Pick<
   AuditDocument,
-  'auditId' | 'siteUrl' | 'startedAt' | 'findingsProvenance'
+  'auditId' | 'siteUrl' | 'startedAt' | 'findingsProvenance' | 'prospectId'
 >;
 
 export async function getAuditRuntimeFields(
@@ -147,7 +175,7 @@ export async function getAuditRuntimeFields(
   const AuditModel = createAuditModel(connection);
   return AuditModel.findOne(
     { auditId },
-    { _id: 0, auditId: 1, siteUrl: 1, startedAt: 1, findingsProvenance: 1 },
+    { _id: 0, auditId: 1, siteUrl: 1, startedAt: 1, findingsProvenance: 1, prospectId: 1 },
   ).lean<AuditRuntimeFields | null>();
 }
 
@@ -340,9 +368,12 @@ export async function replaceDetectedManualFields(
  * audit with provenance 'operator', so the report's identity gate accepts
  * it without a second confirmation. Deliberately not
  * replaceDetectedManualFields, which stamps everything it writes as
- * 'detected'. An audit field the operator already confirmed on the audit
- * itself is kept: both are human decisions, and the audit-level one is the
- * more specific. Returns the fields written.
+ * 'detected'. For a linked audit the prospect is the single source of these
+ * three fields (operator decision 2026-09-17, plan 057), so a confirmed
+ * prospect value replaces whatever the audit holds, including a value typed
+ * on the audit; a correction on the prospect therefore always reaches it.
+ * Fields the prospect has not confirmed are left alone. Returns the fields
+ * written.
  */
 export async function applyConfirmedProspectIdentity(
   connection: Connection,
@@ -352,10 +383,10 @@ export async function applyConfirmedProspectIdentity(
   const existing = await getAuditManualFields(connection, auditId);
   const toWrite: Partial<Omit<AuditManualFields, 'updatedAt'>> = {};
   const written: AuditIdentityValues = {};
-  for (const field of ['nomCommercial', 'raisonSociale', 'siren'] as const) {
+  for (const field of IDENTITY_FIELDS) {
     const value = confirmed[field];
     if (value === undefined) continue;
-    if (existing?.[field]?.provenance === 'operator') continue;
+    if (existing?.[field]?.provenance === 'operator' && existing[field]?.value === value) continue;
     toWrite[field] = { value, provenance: 'operator' };
     written[field] = value;
   }
@@ -389,6 +420,27 @@ export async function syncProspectIdentityIntoAudit(
   const identity = auditIdentityFromProspect(prospect);
   await applyConfirmedProspectIdentity(connection, auditId, identity.confirmed);
   return identity;
+}
+
+/** Plan 057: for an audit linked to a prospect, the prospect owns the
+ *  trading name, legal name and SIREN. An edit made on the audit is saved
+ *  on the prospect (origin 'operator', so it applies to every audit of that
+ *  prospect) and then synced back onto this audit. */
+export async function saveLinkedAuditIdentity(
+  connection: Connection,
+  auditId: string,
+  prospectId: string,
+  values: AuditIdentityValues,
+  actor = 'operator',
+): Promise<AuditManualFields | undefined> {
+  const patch: Record<string, string> = {};
+  if (values.nomCommercial !== undefined) patch['tradingName'] = values.nomCommercial;
+  if (values.raisonSociale !== undefined) patch['legalName'] = values.raisonSociale;
+  if (values.siren !== undefined) patch['siren'] = values.siren;
+  const updated = await updateProspect(connection, prospectId, patch, actor);
+  if (updated === null) throw new Error('odysseus: the linked prospect no longer exists');
+  await syncProspectIdentityIntoAudit(connection, auditId, prospectId);
+  return getAuditManualFields(connection, auditId);
 }
 
 export async function getFindingsForAudit(

@@ -297,6 +297,7 @@ export function AuditReportPanel(props: {
           auditId={auditId}
           manualFields={detail.manualFields}
           detectedTransactionalFlow={detail.detectedTransactionalFlow}
+          linkedProspectName={detail.prospect?.name ?? null}
           preparation={preparation}
           preparationError={preparationError}
           onSaved={handleAfterSave}

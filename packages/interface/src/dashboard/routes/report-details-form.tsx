@@ -27,6 +27,8 @@ interface ReportDetailsFormProps {
   auditId: string;
   manualFields: ManualFieldsResponse | null;
   detectedTransactionalFlow: boolean | undefined;
+  /** Name of the prospect the audit is linked to, or null when unlinked. */
+  linkedProspectName: string | null;
   preparation: PreparationViewResponse | undefined;
   preparationError: string | undefined;
   /** Refetches both the preparation view and the audit detail after a
@@ -39,6 +41,7 @@ export function ReportDetailsForm(props: ReportDetailsFormProps): JSX.Element {
     auditId,
     manualFields,
     detectedTransactionalFlow,
+    linkedProspectName,
     preparation,
     preparationError,
     onSaved,
@@ -75,6 +78,7 @@ export function ReportDetailsForm(props: ReportDetailsFormProps): JSX.Element {
           auditId={auditId}
           manualFields={manualFields}
           detectedTransactionalFlow={detectedTransactionalFlow}
+          linkedProspectName={linkedProspectName}
         />
         {preparation === undefined ? (
           <div className="flex flex-col gap-1">

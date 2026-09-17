@@ -80,6 +80,7 @@ export {
   replaceDetectedManualFields,
   applyConfirmedProspectIdentity,
   syncProspectIdentityIntoAudit,
+  saveLinkedAuditIdentity,
   getAuditGradeOverride,
   setAuditGradeOverride,
   clearAuditGradeOverride,
@@ -161,7 +162,11 @@ export {
   PROSPECT_IDENTITY_FIELDS,
   withNormalizedSiren,
 } from './prospect-identity.js';
-export type { ProspectIdentityField, ProspectIdentityValues } from './prospect-identity.js';
+export type {
+  AuditIdentityValues,
+  ProspectIdentityField,
+  ProspectIdentityValues,
+} from './prospect-identity.js';
 export {
   AUTOMATIC_PROGRESS_RANK,
   TERMINAL_PROSPECT_STATUSES,

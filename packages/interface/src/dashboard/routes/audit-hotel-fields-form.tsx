@@ -77,10 +77,16 @@ interface HotelFieldsFormProps {
   auditId: string;
   manualFields: ManualFieldsResponse | null;
   detectedTransactionalFlow: boolean | undefined;
+  /** Plan 057: set when the audit is linked to a prospect, which owns the
+   *  legal name, trading name and SIREN edited here. */
+  linkedProspectName: string | null;
 }
 
 export const HotelFieldsForm = forwardRef<HotelFieldsFormHandle, HotelFieldsFormProps>(
-  function HotelFieldsForm({ auditId, manualFields, detectedTransactionalFlow }, ref): JSX.Element {
+  function HotelFieldsForm(
+    { auditId, manualFields, detectedTransactionalFlow, linkedProspectName },
+    ref,
+  ): JSX.Element {
     const { strings } = useI18n();
     const baseline = useMemo(() => manualFieldValuesFromResponse(manualFields), [manualFields]);
     const [values, setValues] = useState<ManualFieldValues>(baseline);
@@ -238,6 +244,11 @@ export const HotelFieldsForm = forwardRef<HotelFieldsFormHandle, HotelFieldsForm
 
     const renderTextField = (def: TextFieldDef): JSX.Element => (
       <div key={def.key}>
+        {def.key === 'raisonSociale' && linkedProspectName !== null ? (
+          <p className="mb-1.5 text-xs text-ink-muted">
+            {strings.auditDetail.identitySavedOnProspect.replace('{name}', linkedProspectName)}
+          </p>
+        ) : null}
         <Field label={strings.auditDetail[def.label]} htmlFor={`mf-${def.key}`}>
           <Input
             id={`mf-${def.key}`}

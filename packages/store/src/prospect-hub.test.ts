@@ -5,6 +5,7 @@ import {
   attachAuditToProspect,
   getAuditManualFields,
   replaceDetectedManualFields,
+  saveLinkedAuditIdentity,
   setAuditManualFields,
   syncProspectIdentityIntoAudit,
 } from './audits.js';
@@ -219,7 +220,7 @@ describe.skipIf(!mongoAvailable)('operator identity reaches linked audits (issue
     expect(fields?.raisonSociale?.provenance).toBe('operator');
   });
 
-  it('leaves site-discovered prospect identity unconfirmed and protects audit-level operator edits', async () => {
+  it('leaves site-discovered prospect identity unconfirmed and lets confirmed prospect identity win', async () => {
     const prospect = await createProspectHub(connection!, {
       sector: 'hotel',
       name: 'Discovered',
@@ -237,7 +238,95 @@ describe.skipIf(!mongoAvailable)('operator identity reaches linked audits (issue
     expect(identity?.suggested).toEqual({ nomCommercial: 'Discovered Name' });
     const fields = await getAuditManualFields(connection!, auditId);
     expect(fields?.nomCommercial).toBeUndefined();
-    expect(fields?.raisonSociale).toEqual({ value: 'AUDIT CONFIRMED SAS', provenance: 'operator' });
+    expect(fields?.raisonSociale).toEqual({ value: 'PROSPECT LEGAL SAS', provenance: 'operator' });
+  });
+
+  it("a prospect correction replaces the linked audit's identity", async () => {
+    const prospect = await createProspectHub(connection!, {
+      sector: 'hotel',
+      name: 'Correction',
+      tradingName: 'Hotel Typo',
+    });
+    const auditId = await seedAudit(prospect.prospectId);
+    await syncProspectIdentityIntoAudit(connection!, auditId);
+
+    await updateProspect(connection!, prospect.prospectId, { tradingName: 'Hôtel Juste' });
+    await syncProspectIdentityIntoAudit(connection!, auditId);
+
+    expect((await getAuditManualFields(connection!, auditId))?.nomCommercial).toEqual({
+      value: 'Hôtel Juste',
+      provenance: 'operator',
+    });
+  });
+
+  it('the prospect wins over a name set on the linked audit', async () => {
+    const prospect = await createProspectHub(connection!, {
+      sector: 'hotel',
+      name: 'Winner',
+      tradingName: 'Prospect Name',
+    });
+    const auditId = await seedAudit(prospect.prospectId);
+    await setAuditManualFields(connection!, auditId, {
+      nomCommercial: { value: 'Audit Choice', provenance: 'operator' },
+    });
+
+    await syncProspectIdentityIntoAudit(connection!, auditId);
+
+    expect((await getAuditManualFields(connection!, auditId))?.nomCommercial?.value).toBe(
+      'Prospect Name',
+    );
+  });
+
+  it("reattaching drops the previous prospect's identity instead of copying it", async () => {
+    const a = await createProspectHub(connection!, {
+      sector: 'hotel',
+      name: 'Prospect A',
+      tradingName: 'Hôtel A',
+    });
+    const b = await createProspectHub(connection!, { sector: 'hotel', name: 'Prospect B' });
+    const auditId = await seedAudit();
+
+    await attachAuditToProspect(connection!, auditId, a.prospectId);
+    await attachAuditToProspect(connection!, auditId, b.prospectId);
+
+    expect((await getAuditManualFields(connection!, auditId))?.nomCommercial).toBeUndefined();
+    expect((await getProspectHub(connection!, b.prospectId))?.tradingName).toBeUndefined();
+  });
+
+  it("detaching drops the prospect's identity but keeps other audit names", async () => {
+    const a = await createProspectHub(connection!, {
+      sector: 'hotel',
+      name: 'Prospect Detach',
+      tradingName: 'Hôtel A',
+    });
+    const auditId = await seedAudit();
+    await attachAuditToProspect(connection!, auditId, a.prospectId);
+    await setAuditManualFields(connection!, auditId, {
+      raisonSociale: { value: 'AUDIT SAS', provenance: 'operator' },
+    });
+
+    await attachAuditToProspect(connection!, auditId, null);
+
+    const fields = await getAuditManualFields(connection!, auditId);
+    expect(fields?.nomCommercial).toBeUndefined();
+    expect(fields?.raisonSociale).toEqual({ value: 'AUDIT SAS', provenance: 'operator' });
+  });
+
+  it('saving identity on a linked audit writes the prospect and syncs back', async () => {
+    const prospect = await createProspectHub(connection!, { sector: 'hotel', name: 'Save Back' });
+    const auditId = await seedAudit(prospect.prospectId);
+
+    await saveLinkedAuditIdentity(connection!, auditId, prospect.prospectId, {
+      nomCommercial: 'Nouveau Nom',
+    });
+
+    const saved = await getProspectHub(connection!, prospect.prospectId);
+    expect(saved?.tradingName).toBe('Nouveau Nom');
+    expect(saved?.fieldOrigins.tradingName).toBe('operator');
+    expect((await getAuditManualFields(connection!, auditId))?.nomCommercial).toEqual({
+      value: 'Nouveau Nom',
+      provenance: 'operator',
+    });
   });
 
   it('applies the prospect identity when an existing audit is attached', async () => {

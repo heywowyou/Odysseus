@@ -18,6 +18,7 @@ import {
   clearAuditGradeOverride,
   createJobModel,
   getAudit,
+  getAuditManualFields,
   getAuditRuntimeFields,
   getFindingsForAudit,
   getLatestReport,
@@ -29,9 +30,11 @@ import {
   listReportLanguages,
   persistReportApproval,
   resolveSelectedAnalysisPairForAudit,
+  saveLinkedAuditIdentity,
   setAuditGradeOverride,
   setAuditManualFields,
   type AuditDocumentFields,
+  type AuditIdentityValues,
   type JobDocument,
   type ReportDocument,
   type SelectedAuditAnalysisPairResolution,
@@ -633,8 +636,24 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     }
 
     try {
-      const manualFields = await setAuditManualFields(connection, auditId, partial);
-      sendJson(res, 200, { manualFields });
+      // Plan 057: a linked audit's trading name, legal name and SIREN belong
+      // to its prospect, so those edits are saved there and synced back.
+      const identity: AuditIdentityValues = {};
+      if (audit.prospectId !== undefined) {
+        for (const field of ['nomCommercial', 'raisonSociale', 'siren'] as const) {
+          const entry = partial[field];
+          if (entry === undefined) continue;
+          identity[field] = entry.value;
+          delete partial[field];
+        }
+      }
+      if (audit.prospectId !== undefined && Object.keys(identity).length > 0) {
+        await saveLinkedAuditIdentity(connection, auditId, audit.prospectId, identity);
+      }
+      if (Object.keys(partial).length > 0) {
+        await setAuditManualFields(connection, auditId, partial);
+      }
+      sendJson(res, 200, { manualFields: await getAuditManualFields(connection, auditId) });
     } catch (error) {
       sendError(res, 400, error instanceof Error ? error.message : 'could not save manual fields');
     }
@@ -740,9 +759,15 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       return;
     }
 
-    const manualFields = await setAuditManualFields(connection, auditId, {
-      [field]: { value: value.trim(), provenance: 'operator' },
-    });
+    // Plan 057: on a linked audit the confirmed name is saved on the prospect.
+    const manualFields =
+      audit.prospectId === undefined
+        ? await setAuditManualFields(connection, auditId, {
+            [field]: { value: value.trim(), provenance: 'operator' },
+          })
+        : await saveLinkedAuditIdentity(connection, auditId, audit.prospectId, {
+            [field]: value.trim(),
+          });
 
     if (findUnconfirmedIdentityFields(manualFields).length > 0) {
       // The other identity field is still a detected, unconfirmed guess:

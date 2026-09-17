@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@odysseus/store', () => ({
   getAuditRuntimeFields: vi.fn(),
+  saveLinkedAuditIdentity: vi.fn(),
   setAuditManualFields: vi.fn(),
 }));
 
@@ -28,7 +29,11 @@ vi.mock('../pipeline/make-report-ready.js', async (importOriginal) => ({
   makeReportReady: vi.fn(),
 }));
 
-import { getAuditRuntimeFields, setAuditManualFields } from '@odysseus/store';
+import {
+  getAuditRuntimeFields,
+  saveLinkedAuditIdentity,
+  setAuditManualFields,
+} from '@odysseus/store';
 import { makeReportReady } from '../pipeline/make-report-ready.js';
 import { Router } from '../router.js';
 import { registerAuditRoutes } from './audits.js';
@@ -94,6 +99,46 @@ describe('POST /api/audits/:auditId/manual-fields/confirm', () => {
     const res = await post({ field: 'nomCommercial', value: '   ' });
     expect(res.statusCode).toBe(400);
     expect(setAuditManualFields).not.toHaveBeenCalled();
+  });
+
+  it('saves a confirmed name on the linked prospect instead of the audit', async () => {
+    vi.mocked(getAuditRuntimeFields).mockResolvedValue({
+      auditId: 'audit-1',
+      siteUrl: 'https://example.com/',
+      startedAt: new Date('2026-08-08T10:00:00.000Z'),
+      prospectId: 'prospect-1',
+    } as never);
+    vi.mocked(saveLinkedAuditIdentity).mockResolvedValue(
+      manualFieldsWith({
+        nomCommercial: { value: 'Nouveau Nom', provenance: 'operator' },
+        raisonSociale: { value: 'O2SWITCH', provenance: 'detected' },
+      }),
+    );
+
+    const res = await post({ field: 'nomCommercial', value: ' Nouveau Nom ' });
+
+    expect(res.statusCode).toBe(200);
+    expect(saveLinkedAuditIdentity).toHaveBeenCalledWith(fakeConnection, 'audit-1', 'prospect-1', {
+      nomCommercial: 'Nouveau Nom',
+    });
+    expect(setAuditManualFields).not.toHaveBeenCalled();
+    expect(JSON.parse(res.body ?? '{}')).toMatchObject({
+      manualFields: { nomCommercial: { value: 'Nouveau Nom' } },
+    });
+  });
+
+  it('keeps saving a confirmed name on an unlinked audit', async () => {
+    vi.mocked(setAuditManualFields).mockResolvedValue(
+      manualFieldsWith({
+        nomCommercial: { value: 'Les Flots Bleus', provenance: 'operator' },
+        raisonSociale: { value: 'O2SWITCH', provenance: 'detected' },
+      }),
+    );
+
+    await post({ field: 'nomCommercial', value: 'Les Flots Bleus' });
+
+    expect(setAuditManualFields).toHaveBeenCalled();
+    expect(saveLinkedAuditIdentity).not.toHaveBeenCalled();
   });
 
   it('waits when the other identity field is still a detected, unconfirmed guess', async () => {
