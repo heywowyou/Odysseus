@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router';
@@ -44,7 +44,14 @@ export function DirectoryPage(): JSX.Element {
   };
   const [selected, setSelected] = useState<string[]>([]);
   const response = useApi<DirectoryResponse>(buildDirectoryPath(filterState));
-  const rows = response.data?.rows ?? [];
+  // Issue #399: a filter change refetches under a new key, which clears the
+  // data; the previous page stays on screen, dimmed, until the answer
+  // arrives, so the count never asserts 0 before the server has spoken.
+  const lastDataRef = useRef<DirectoryResponse | undefined>(undefined);
+  if (response.data !== undefined) lastDataRef.current = response.data;
+  const shown = response.data ?? lastDataRef.current;
+  const isStale = response.data === undefined && response.isLoading;
+  const rows = shown?.rows ?? [];
   const toggle = (id: string): void =>
     setSelected((current) =>
       current.includes(id) ? current.filter((value) => value !== id) : [...current, id],
@@ -98,100 +105,113 @@ export function DirectoryPage(): JSX.Element {
         <EmptyState title={copy.errorTitle} description={response.error} />
       ) : (
         <Card
-          title={copy.count.replace('{count}', String(response.data?.total ?? 0))}
+          title={
+            shown === undefined
+              ? strings.common.loading
+              : copy.count.replace('{count}', String(shown.total))
+          }
           actions={
             <Button disabled={selected.length === 0} isLoading={adding} onClick={() => void add()}>
               {copy.addSelected.replace('{count}', String(selected.length))}
             </Button>
           }
         >
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableHeaderCell>
-                  <span className="sr-only">{copy.columns.select}</span>
-                </TableHeaderCell>
-                <TableHeaderCell>{copy.columns.name}</TableHeaderCell>
-                <TableHeaderCell>{copy.columns.site}</TableHeaderCell>
-                <TableHeaderCell>{copy.columns.location}</TableHeaderCell>
-                <TableHeaderCell>{copy.columns.property}</TableHeaderCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {rows.map((row: DirectoryRow) => (
-                <TableRow key={row.directoryId}>
-                  <TableCell>
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(row.directoryId)}
-                      disabled={row.prospectId !== undefined}
-                      onChange={() => toggle(row.directoryId)}
-                      aria-label={
-                        row.prospectId ? copy.alreadyAdded : copy.addOne.replace('{name}', row.name)
-                      }
-                    />
-                  </TableCell>
-                  <TableCell>
-                    {row.prospectId ? (
-                      <Link
-                        className="font-medium text-ink hover:underline"
-                        to={`/prospects/${encodeURIComponent(row.prospectId)}`}
-                      >
-                        {row.name}
-                      </Link>
-                    ) : (
-                      <span className="font-medium">{row.name}</span>
-                    )}
-                    {row.prospectId !== undefined && row.prospectState === 'archived' ? (
-                      <div className="mt-1 flex flex-wrap items-center gap-2">
-                        <Badge tone="neutral">{copy.archivedProspect}</Badge>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          isLoading={restoring === row.prospectId}
-                          onClick={() => void restore(row.prospectId!)}
-                        >
-                          {copy.restoreProspect}
-                        </Button>
-                      </div>
-                    ) : row.prospectId !== undefined ? (
-                      <div className="mt-1">
+          <div
+            className={isStale ? 'opacity-60 transition-opacity' : undefined}
+            aria-busy={isStale}
+          >
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableHeaderCell>
+                    <span className="sr-only">{copy.columns.select}</span>
+                  </TableHeaderCell>
+                  <TableHeaderCell>{copy.columns.name}</TableHeaderCell>
+                  <TableHeaderCell>{copy.columns.site}</TableHeaderCell>
+                  <TableHeaderCell>{copy.columns.location}</TableHeaderCell>
+                  <TableHeaderCell>{copy.columns.property}</TableHeaderCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {rows.map((row: DirectoryRow) => (
+                  <TableRow key={row.directoryId}>
+                    <TableCell>
+                      <input
+                        type="checkbox"
+                        checked={selected.includes(row.directoryId)}
+                        disabled={row.prospectId !== undefined}
+                        onChange={() => toggle(row.directoryId)}
+                        aria-label={
+                          row.prospectId
+                            ? copy.alreadyAdded
+                            : copy.addOne.replace('{name}', row.name)
+                        }
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {row.prospectId ? (
                         <Link
-                          className="text-xs text-ink-muted hover:underline"
+                          className="font-medium text-ink hover:underline"
                           to={`/prospects/${encodeURIComponent(row.prospectId)}`}
                         >
-                          {copy.openProspect}
+                          {row.name}
                         </Link>
-                      </div>
-                    ) : null}
-                  </TableCell>
-                  <TableCell>
-                    {copy.websiteKindLabels[row.websiteKind] ?? strings.common.vocabularyFallback}
-                    {row.registrableDomain ? (
-                      <div className="text-xs text-ink-muted">{row.registrableDomain}</div>
-                    ) : null}
-                  </TableCell>
-                  <TableCell>
-                    {[row.commune, row.department, row.postcode].filter(Boolean).join(' · ') ||
-                      copy.notProvided}
-                  </TableCell>
-                  <TableCell>
-                    {[
-                      row.stars ? copy.starOption.replace('{count}', String(row.stars)) : undefined,
-                      row.rooms
-                        ? copy.roomsOption.replace('{count}', String(row.rooms))
-                        : undefined,
-                      row.groupStatus
-                        ? (copy.groupLabels[row.groupStatus] ?? strings.common.vocabularyFallback)
-                        : undefined,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ') || copy.noFacets}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                      ) : (
+                        <span className="font-medium">{row.name}</span>
+                      )}
+                      {row.prospectId !== undefined && row.prospectState === 'archived' ? (
+                        <div className="mt-1 flex flex-wrap items-center gap-2">
+                          <Badge tone="neutral">{copy.archivedProspect}</Badge>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            isLoading={restoring === row.prospectId}
+                            onClick={() => void restore(row.prospectId!)}
+                          >
+                            {copy.restoreProspect}
+                          </Button>
+                        </div>
+                      ) : row.prospectId !== undefined ? (
+                        <div className="mt-1">
+                          <Link
+                            className="text-xs text-ink-muted hover:underline"
+                            to={`/prospects/${encodeURIComponent(row.prospectId)}`}
+                          >
+                            {copy.openProspect}
+                          </Link>
+                        </div>
+                      ) : null}
+                    </TableCell>
+                    <TableCell>
+                      {copy.websiteKindLabels[row.websiteKind] ?? strings.common.vocabularyFallback}
+                      {row.registrableDomain ? (
+                        <div className="text-xs text-ink-muted">{row.registrableDomain}</div>
+                      ) : null}
+                    </TableCell>
+                    <TableCell>
+                      {[row.commune, row.department, row.postcode].filter(Boolean).join(' · ') ||
+                        copy.notProvided}
+                    </TableCell>
+                    <TableCell>
+                      {[
+                        row.stars
+                          ? copy.starOption.replace('{count}', String(row.stars))
+                          : undefined,
+                        row.rooms
+                          ? copy.roomsOption.replace('{count}', String(row.rooms))
+                          : undefined,
+                        row.groupStatus
+                          ? (copy.groupLabels[row.groupStatus] ?? strings.common.vocabularyFallback)
+                          : undefined,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ') || copy.noFacets}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
           <div className="mt-4 flex justify-end gap-2">
             <Button
               size="sm"
@@ -205,7 +225,7 @@ export function DirectoryPage(): JSX.Element {
               size="sm"
               variant="secondary"
               disabled={
-                filterState.page * (response.data?.pageSize ?? 50) >= (response.data?.total ?? 0)
+                isStale || filterState.page * (shown?.pageSize ?? 50) >= (shown?.total ?? 0)
               }
               onClick={() => setPage(filterState.page + 1)}
             >
