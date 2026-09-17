@@ -1,454 +1,276 @@
-# Plan 058: Make the paid report fail closed on content and exact-PDF quality
+# Plan 058: Fail-closed senior report quality pipeline
 
-> **Executor instructions**: Follow this plan in order. The objective is not
-> “better on average”. A paid report is deliverable only when the **exact PDF
-> bytes** that will be delivered have passed the deterministic, editorial,
-> visual, cross-renderer, bilingual, and final-approval gates below. Cost and
-> model-call count are explicitly not optimization targets. Never downgrade a
-> required model, skip pages, lower image fidelity, shorten review, or ship the
-> least-bad iteration to save money. If the pipeline cannot converge to a clean
-> candidate, stop in `needs-operator-review`. Preserve unrelated work. When
-> complete, move this file to `plans/archive/`, update `plans/README.md`, and
-> record the durable decisions in the owning canonical docs.
+> **Executor instructions**: implement this plan as a quality contract, not as a menu of optional improvements. A paid Odysseus report is deliverable only when the **exact bilingual PDF bundle** the operator will approve and the client will receive has passed the evidence, editorial, deterministic, exact-PDF, visual, parity, storage and delivery gates below. Cost and model-call count are not optimization targets. Never weaken a required review, skip a page, lower raster fidelity, accept an unresolved objective defect, or publish the least-bad iteration because time or money has already been spent. If the pipeline cannot converge, stop in `needs-operator-review`.
 >
-> **Drift check (run first)**:
-> `git diff --stat 1899499c2f3d14c19cc350b248008e971d62bb16..HEAD -- CLAUDE.md docs/rules/llm-layer-rules.md docs/rules/report-writing-style.md docs/report/report-design-system.md docs/report/report-design-tokens.md docs/report/report-workbench.md packages/core/src packages/llm/src packages/report/src packages/interface/src/pipeline packages/interface/src/queue packages/interface/src/dashboard packages/store/src scripts/report-workbench.ts deploy`
-> If any in-scope file changed, compare this plan with live code first. Preserve
-> the outcomes and contracts below; update stale seams rather than blindly
-> applying old line numbers.
+> Plan 059 owns whether the audit evidence is trustworthy. Plan 058 owns whether that approved evidence is interpreted, written, rendered and delivered without known defect. Plan 058 **must consume `ApprovedAuditEvidence` from Plan 059 as its only scan-evidence authority**; it must not independently reconstruct a second competing view of scan truth from loose manifest/findings files.
+>
+> Historical reports remain historical. This contract governs newly generated or regenerated paid reports after production promotion.
 
 ## Status
 
 - **Priority**: P1
 - **Effort**: XL
-- **Risk**: HIGH — paid-report production, model contracts, pagination, job
-  phases, artifact persistence, and final delivery all change and must fail
-  closed.
-- **Depends on**: plans 027, 033, 039, 050, 051 (already delivered)
-- **Category**: paid-report quality, senior LLM pipeline, exact-PDF QA
-- **Planned at**: commit `1899499c2f3d14c19cc350b248008e971d62bb16`,
-  2026-09-17
-- **Revised**: six independent hardening passes, 2026-09-17
+- **Risk**: HIGH — paid-report analysis, model orchestration, rendering, PDF QA, persistence, approval and delivery all change.
+- **Depends on**: delivered plans 027, 033, 039, 050 and 051; **Plan 059 evidence approval before production promotion**.
+- **Category**: paid-report quality, senior reasoning pipeline, exact-PDF QA, bilingual delivery integrity.
+- **Final review state**: original design + six hardening passes + final convergence reviews. The final architecture pass produced no additional substantive change; freeze speculative design and let implementation/evaluation evidence drive later amendments.
 
-## Scope
+---
 
-**In scope**: the paid full-audit FR/EN report pair, its analysis, review,
-rendering, exact-PDF QA, quality artifacts, operator approval, and delivery.
+# 1. Binding product decisions
 
-**Out of scope**: the outreach preview, outreach emails, new scanner rules, a
-new legal-conformity claim, and using a model to discover website findings from
-screenshots. Existing scanners remain the finding authority.
+1. **Quality is the objective; cost is not.** Optimize inference/runtime only after the shipped quality contract is measured unchanged.
+2. **Content and visuals are equally blocking.** Excellent prose in a broken PDF is a failed report; a beautiful PDF with wrong facts or weak interpretation is also failed.
+3. **Plan 059 is the scan authority.** Report production starts only from an immutable `ApprovedAuditEvidence` handoff. Models cannot edit scanner findings, accepted measurements, evidence-quality verdicts or provenance.
+4. **The exact delivered bytes are the review artifact.** JSON, HTML, Paged.js DOM and pre-PDF screenshots are intermediate artifacts only.
+5. **FR and EN are one commercial deliverable.** They may be produced/repaired independently, but automated approval and operator promotion happen on one atomic bilingual `ReportBundleCandidate` whose digest commits to both exact PDFs and their provenance.
+6. **No whole-report reroll after the first accepted draft.** Repairs are targeted to exact semantic addresses. Good material is not re-randomized to fix an unrelated defect.
+7. **No “ship after N tries”.** A loop ceiling only prevents runaway execution. Exhaustion means `needs-operator-review`.
+8. **Every accepted objective defect blocks approval, regardless of severity label.** `blocking/major/minor` controls routing and urgency, not whether a known defect may remain. Subjective preferences are classified separately and do not cause infinite polish loops.
+9. **Report page images may be model input only for report QA.** They are never website evidence and may not create new website findings.
+10. **No arbitrary model-authored CSS/HTML/JS.** Models may select only tested layout variants and exact prose/plan patches.
+11. **No post-QA mutation.** Compression, metadata repair, tagging, optimization, encryption or other PDF post-processing must occur **before** the candidate digest and all final QA. The approved bytes are never mutated afterward.
+12. **Automated approval does not replace the operator.** Automated success produces a private exact-digest candidate bundle. Operator approval promotes those same bytes atomically.
+13. **Confidential report data crosses only approved provider boundaries.** Cross-provider diversity is allowed only where explicitly approved; otherwise independence comes from stateless contexts, complementary prompts and separate reviewer roles.
+14. **No fallback to the legacy unreviewed report path.** If a required quality dependency is unavailable, the report remains unavailable.
 
-Historical reports remain historical. Plan 058 governs every newly generated
-or regenerated paid report after promotion; it does not retroactively mark old
-reports invalid.
+---
 
-## Binding operator decisions
+# 2. Operational definition of “perfect”
 
-1. **Quality is the objective; cost is not.** Optimize inference or compute
-   only after the shipped quality contract is measured unchanged.
-2. **Content and visuals are equally blocking.** Good prose over a broken page
-   is a failed report. Beautiful pages with wrong interpretation or data are a
-   failed report.
-3. **The exact PDF is the review artifact.** JSON, HTML and the post-Paged.js
-   DOM are intermediate evidence. Every page of the emitted PDF is reviewed.
-4. **Scanner evidence remains authoritative.** Models can identify a likely
-   mismatch, misleading synthesis, or conditional interpretation, but cannot
-   silently rewrite findings, Lighthouse measurements, legal facts, identity,
-   or deterministic counts.
-5. **No whole-document reroll after the first accepted draft.** Repairs are
-   patches to exact structure/prose/layout addresses. Already-good work must
-   not be re-randomized to fix an unrelated defect.
-6. **No “ship after N tries”.** A loop ceiling only prevents runaway work.
-   Reaching it means `needs-operator-review`.
-7. **Report page images may be model input only for report QA.** Website raw
-   HTML/full page content remains forbidden. A report image is never evidence
-   from which a reviewer may invent a new website finding.
-8. **No arbitrary runtime CSS/HTML from a model.** Models may select only
-   predeclared layout variants. Unknown layout defects stop for a source fix.
-9. **Automated approval does not replace the operator.** The quality pipeline
-   ends in `awaiting-operator-approval`. The operator approves the exact digest;
-   that action promotes the already-reviewed bytes without rerendering.
-10. **Confidential report data is not sprayed across providers.** Cross-provider
-    diversity is allowed only for providers explicitly approved for this client
-    data boundary. Otherwise use independent stateless calls on the approved
-    provider; never trade privacy for nominal model diversity.
+No system can prove that no human will ever prefer a different aesthetic. For Odysseus, a perfect paid-report result means:
 
-## What “perfect” means operationally
+> **zero known objective defect in the exact FR/EN bundle at approval time, with multiple independent attempts to falsify both the content and the physical PDF output.**
 
-No software can prove that no human will ever prefer a different aesthetic.
-For Odysseus, “perfect” means **zero known material defect in the exact bytes at
-approval time**, with independent attempts to falsify that result.
+A bundle may reach `quality-approved` only when all of the following are true:
 
-A candidate may reach `quality-approved` only if all of these hold:
-
-- every report finding traces to current findings provenance;
-- all exact quantities are deterministically bound to canonical facts, not
-  typed freehand by a model;
-- no unsupported site-specific claim remains;
-- no remediation project mixes materially different work;
-- systemic repetition is synthesized when evidence shows concentration;
+- its upstream `ApprovedAuditEvidence` is current and digest-verified;
+- every report finding/remediation statement traces to approved evidence;
+- every mandatory limitation/disclosure from Plan 059 is present in the required report location and cannot be omitted by a writer;
+- all exact scalar facts that should be deterministic — numbers, percentages, dates, URLs, company identity, SIREN, standards references, enumerated statuses and other exact tokens — are code-bound rather than retyped from model memory;
+- unsupported site-specific claims are absent;
+- facts are clearly distinguished from root-cause inference;
+- finding concentration/systemic repetition is synthesized when evidence supports it;
+- each remediation project is one coherent job;
 - conditional evidence remains conditional;
-- French is native, restrained, concise consulting prose and English preserves
-  the same meaning;
-- every deterministic content and legal guard passes;
-- every existing Paged.js/render gate passes;
-- the final PDF passes post-PDF text geometry, font, structure, page-size,
-  extractability and cross-renderer checks;
-- no visible text is overlapped, clipped, hidden, duplicated, stranded,
-  unreadably dense, or outside its intended semantic block;
-- every physical page is reviewed by two independent visual reviewers, and a
-  fresh final visual sweep reviews every page again after the last change;
-- a whole-document visual review sees no blocking/major rhythm or hierarchy
-  problem;
+- re-audit states such as `newly-observable` and `not-comparable` are not rewritten as client regressions or proven fixes;
+- performance terminology distinguishes Lighthouse lab measurements from CrUX field data and never calls TBT/Speed Index Core Web Vitals;
+- business-impact language is bounded by evidence and never asserts lost bookings/revenue/conversion causality without actual supporting data;
+- French reads like restrained native consulting prose and English preserves the same meaning naturally;
+- every accepted content-review defect is repaired;
+- deterministic content/legal/reference guards pass;
+- every Paged.js/DOM gate passes;
+- all canonical PDF post-processing is complete before final hashing;
+- exact-PDF structure, fonts, text geometry, metadata, annotations, links and active-content safety pass;
+- no visible text is overlapped, clipped, hidden, duplicated, stranded, unreadably dense or visually malformed;
+- every physical page is reviewed in full-page context **and at readable-detail tile/crop scale** by two independent visual roles;
+- a fresh final visual reviewer inspects every page again after the last change;
+- no accepted visual defect remains;
 - bilingual parity passes;
-- the final independent arbiter approves with zero unresolved blocking/major
-  issue;
-- the exact approved bytes survive private storage and operator promotion with
-  the same SHA-256 digest;
-- no client-facing input changed after the quality run snapshot.
-
-Overlap, clipping, fallback fonts, wrong numbers, mixed remediation, unsupported
-claims, misleading conditionality, unreadable density, broken page fragments,
-and stale content are never “minor”.
+- the final independent document arbiter approves;
+- the bundle survives private-object storage/read-back with identical digests;
+- operator approval references the exact current bundle digest;
+- promotion activates FR and EN atomically with no window in which mismatched revisions can be served;
+- client download resolves to immutable content-addressed objects and cannot silently serve a stale overwritten file.
 
 ---
 
-# Six-pass hardening review
+# 3. Final convergence review — issues that supersede earlier drafts
 
-This revision was produced by six deliberately different reviews of the first
-version of plan 058. The findings below are binding changes, not commentary.
+## 3.1 Upstream authority was duplicated
 
-## Pass 1 — Evidence authority, arithmetic and context completeness
+Earlier versions of Plan 058 still described constructing report facts directly from manifest/findings/measurement artifacts. Plan 059 now defines the evidence authority. Duplicating derivation would create two places that can disagree.
 
-### Defects found
+**Correction:** `ReportInputSnapshot` references the exact `ApprovedAuditEvidence` / `AuditEvidenceSnapshot` digest from Plan 059. Report code may deterministically derive presentation facts from that approved graph, but cannot choose alternate raw attempts or bypass the evidence-quality verdict.
 
-The first plan still let the model emit free-form quantities and then proposed
-a verifier to discover whether they matched the fact registry. That is weaker
-than preventing numeric drift. It also proposed feeding every finding to one
-senior call, which can dilute attention or exceed practical context on very
-large audits. Finally, approval invalidation did not have one canonical digest
-covering **all** client-facing upstream inputs.
+## 3.2 “EvidenceBoundText” was too narrow
 
-### Required correction
+Binding only quantities still lets a model mistype an exact hotel name, URL, date, SIREN, WCAG reference or enumerated status.
 
-- Introduce a `ReportInputSnapshot` covering every client-facing input.
-- Introduce `EvidenceBoundText`: exact quantities enter prose through typed
-  fact-reference segments/placeholders and are formatted by code.
-- Use hierarchical evidence packets for large audits; never rely on one giant
-  prompt containing thousands of repetitive rows.
-- Maintain a deterministic `CoverageLedger` proving every relevant finding was
-  considered even when model input is aggregated.
-- Treat page-role classification as a bounded signal with provenance and
-  confidence, not unquestioned fact.
+**Correction:** replace the narrow concept with `EvidenceBoundContent`. Exact factual tokens are typed references inserted by code. Free prose surrounds them; factual scalar values are not regenerated by the model when deterministic binding is practical.
 
-## Pass 2 — Model independence, false positives and prompt-injection safety
+## 3.3 FR/EN approval was not atomic enough
 
-### Defects found
+Two individually perfect PDFs can still form a bad commercial deliverable if they come from different plan/input revisions.
 
-Two critics can improve recall but can also hallucinate problems and damage a
-correct draft if every isolated criticism automatically causes a rewrite. The
-first plan also protected text evidence from prompt injection but did not
-explicitly protect **visual** reviewers from instruction-shaped text rendered
-inside the report itself.
+**Correction:** introduce a `ReportBundleCandidate` containing FR digest, EN digest, shared plan/input digests, language-specific analysis digests and bundle digest. Automated approval, operator approval and promotion are bundle-level transactions.
 
-### Required correction
+## 3.4 “Minor” defects could survive
 
-- A critic never mutates output.
-- Issues agreed by both critics or backed by a deterministic gate are accepted.
-- A blocking/major issue raised by only one critic goes to an independent issue
-  adjudicator before any patch. `unsure` blocks rather than causes speculative
-  rewriting.
-- Every model that sees scanner text or report images receives the untrusted
-  evidence notice. Text visible inside a PDF image is data, never an instruction
-  to the reviewer.
-- Model roles have no external tools/actions during report review.
-- Every patch has a machine-enforced semantic diff: only declared addresses may
-  change.
-- Requested model alias **and provider-returned resolved model identifier** are
-  persisted so silent provider repointing is visible.
+Earlier approval gates emphasized zero unresolved blocking/major issues. That is inconsistent with the requirement that the delivered PDF be perfect.
 
-## Pass 3 — Exact-PDF geometry, fonts, portability and accessibility
+**Correction:** reviewer output distinguishes `objective-defect` from `preference`. Every accepted objective defect — even typographic/minor — blocks quality approval until verified repaired. Preferences may be rejected without patching.
 
-### Defects found
+## 3.5 Full-page visual input can hide small defects
 
-DOM geometry can be clean while the emitted PDF has a glyph/text-layer defect.
-A single Poppler raster is also not enough to prove broad PDF-reader
-portability. The first plan did not explicitly validate font embedding or the
-accessibility/reading-order quality of the report PDF itself.
+A 300-DPI A4 raster rescaled to fit a model input may make ordinary body text too small to judge reliably.
 
-### Required correction
+**Correction:** every page receives both a full-page image and deterministic high-resolution tiling/semantic crops. Dense/flagged regions may receive additional crops, but detail review is not restricted to already-suspicious pages. Review may be batched for context limits only when a machine coverage manifest proves every required page/tile was reviewed exactly as required.
 
-- Add post-PDF text bounding-box checks from the emitted bytes, not only DOM
-  rectangles.
-- Assert expected fonts are embedded and reject unexpected fallback/unembedded
-  fonts.
-- Run a structural PDF checker and verify page size/rotation/count.
-- Raster every final page through **two independent PDF renderers** (Poppler
-  plus MuPDF or an approved equivalent). Material divergence is blocking.
-- Keep a 300-DPI canonical raster; reviewers may receive a provider-sized
-  derivative only when input limits require it, with automatic high-resolution
-  crops for dense regions.
-- Verify tagging/language/bookmarks/selectable text/reading order. Do not claim
-  PDF/UA unless a dedicated conformance tool proves it; nevertheless the report
-  must not regress into an inaccessible or image-only PDF.
+## 3.6 PDF semantic safety needed a closed rule
 
-## Pass 4 — Concurrency, crash recovery and exact delivery
+A generated PDF can contain broken hyperlink annotations, unexpected active actions, attachments or a postprocessor that changes bytes after review even when page pixels look fine.
 
-### Defects found
+**Correction:** exact-PDF QA validates annotations and destinations, rejects JavaScript/Launch/embedded-file/unsafe action classes unless explicitly allowlisted, and includes every required postprocessor before hashing/review.
 
-A multi-pass run can last long enough for redeploys, cancellation or stale
-workers. A normal lock alone is insufficient if an old worker resumes and
-persists after a newer run has replaced it. The first plan also ended exactness
-at local persistence rather than proving the stored/downloaded object is the
-same file.
+## 3.7 Model independence needed complementary roles, not duplicate prompts
 
-### Required correction
+Two identical critics can share the same blind spots.
 
-- Every quality run gets an immutable `qualityRunId`, input snapshot digest,
-  lease token and monotonic generation/epoch.
-- Only the current lease/epoch may patch, approve or promote a candidate.
-- Cancellation invalidates the lease; late model responses are discarded.
-- Quality artifacts form a content-addressed dependency DAG. Reuse is allowed
-  only when every dependency digest still matches.
-- Candidate storage is private and not addressable by report download routes.
-- After upload, verify stored object checksum/read-back before exposing the
-  report. The public/operator download path serves the approved object; it
-  never rerenders on download.
-- Runtime/browser/font/tool versions and font-file hashes become part of the
-  render fingerprint.
+**Correction:** reviewer A and B are independent **and orthogonal**. Content A prioritizes evidence/factual/technical integrity; Content B prioritizes editorial/client usefulness/conditionality/coherence while still checking facts. Visual A prioritizes physical defects/geometry/readability; Visual B prioritizes design hierarchy/typography/continuity while still reporting physical breakage. Correlation/adjudication remains evidence-based.
 
-## Pass 5 — Evaluation, fault injection and model-change regression
+## 3.8 Reference freshness can invalidate otherwise excellent prose
 
-### Defects found
+External legal/reference/benchmark claims may become stale without any scanner change.
 
-Twelve real audits are useful but cannot cover the combinatorial layout surface
-or prove that critics catch known bad content without damaging known-good
-content. One successful evaluation run is also vulnerable to model
-nondeterminism.
+**Correction:** client-facing deterministic reference data has source/version/retrieval metadata and a freshness policy. Stale or unverifiable reference claims are refreshed, omitted or explicitly downgraded before report approval; the model never fills the gap from memory.
 
-### Required correction
+## 3.9 Delivery caching can violate exact-byte approval
 
-- Add deterministic property/fuzz generation over report shapes and content
-  lengths with committed seeds.
-- Add a **content fault-injection corpus**: wrong count, stale identity, mixed
-  remediation, unsupported business claim, unconditional noindex, wrong WCAG
-  version, bilingual drift, missing priority and duplicated finding.
-- Add visual fault injection: overlap, clipping, fallback font, corrupted text
-  layer, missing tag/bookmark, duplicate fragment and cross-renderer divergence.
-- Include known-good control reports. Reviewers must not force changes to clean
-  controls.
-- Run repeated live evaluations on the same benchmark audits to expose unstable
-  model behavior. Exact prose may vary; facts, plan coherence and gate outcome
-  may not.
-- Any model, prompt, schema, design-token or renderer change that can affect
-  client output reruns the relevant acceptance corpus before promotion.
+Overwriting a stable object path can leave a CDN/browser serving an older PDF after a new approval.
 
-## Pass 6 — Design intent, typography, operator approval and final-byte UX
+**Correction:** approved PDFs use immutable content-addressed object keys. After both objects verify, a **single atomic active-bundle pointer/CAS** switches client delivery to the new pair. Do not overwrite approved PDF objects in place and do not rely on a multi-document transaction for correctness.
 
-### Defects found
+## 3.10 Re-audit comparability must survive editorial rewriting
 
-A generic visual reviewer can mistake intentional white space or the light
-print insert for a bug unless it receives machine-readable page intent. The
-first plan also left French typographic polish largely to taste and promoted an
-automatically approved file too early.
+Plan 059 correctly distinguishes scanner-coverage change from site change, but the report writer could accidentally flatten those states.
 
-### Required correction
-
-- Add a machine-readable `ReportVisualContract` and per-section
-  `VisualIntent`, tied to real template/token constants; do not parse Markdown
-  docs at runtime.
-- Add deterministic French/English typography lint/normalization where safe
-  (spacing around punctuation, non-breaking units/percentages, quotation
-  marks, orphan punctuation, malformed line-breaking tokens) before render.
-- Automated success produces a private `quality-approved` candidate.
-- The dashboard shows that exact candidate and digest to the operator.
-- Operator approval promotes **the same bytes**, without rerender or mutation,
-  to the client report record.
-- Any requested edit creates a new quality iteration and invalidates the old
-  automated approval.
+**Correction:** re-audit comparability is an exact structured input to the report; deterministic/critic guards reject language that describes `newly-observable` as newly introduced or `not-comparable` as resolved.
 
 ---
 
-# Current state to preserve or intentionally supersede
-
-## LLM
-
-- Current production uses one global model constant and constrained structure +
-  writing passes.
-- Structure and writing are already separate — retain that separation.
-- Existing schemas, local Zod validation, invented-ID guards, language/legal
-  guards, retry pacing and provenance are valuable and remain.
-- Existing shadow/correction reviewers are advisory; plan 058 introduces a new
-  required paid-report quality path rather than pretending the old advisory
-  artifact is sufficient.
-
-## Renderer
-
-- Paged.js remains the canonical pagination engine.
-- Existing hard gates for layout-repeated, blank interior pages, duplicate
-  fragments, bounded-unit splits and element-box overflow remain.
-- `docs/report/report-design-system.md` remains the human visual authority.
-- `docs/report/report-workbench.md` already establishes the correct diagnostic
-  principle: inspect pages rasterized from the production PDF.
-
-## Job/UI
-
-- Current full-audit flow ends with analysis then immediate report generation.
-- Plan 058 inserts an explicit private candidate/quality/approval lifecycle.
-- Existing in-flight report locks remain and are strengthened with a quality
-  run lease/epoch rather than replaced.
-
----
-
-# Target architecture
+# 4. Target architecture
 
 ```text
-SCAN ONCE
-   │
-   ▼
-canonical findings / measurements / manifest
-   │
-   ▼
-A. ReportInputSnapshot + FactRegistry + CoverageLedger
-   │
-   ▼
-B. hierarchical Evidence Dossier / Evidence Packets
-   │
-   ▼
-C. SeniorReportPlan (language neutral)
-   │
-   ▼
-D. FR + EN evidence-bound first drafts
-   │
-   ▼
-E. two independent content critics
-   │
-   ├─ disagreement -> issue adjudicator
-   ▼
-F. targeted patches only
-   │
-   ▼
-G. deterministic content reconciliation
-   │
-   ▼
-H. private full candidate render
-   │
-   ▼
-I. DOM/Paged.js deterministic gates
-   │
-   ▼
-J. exact-PDF structural/font/text-geometry gates
-   │
-   ▼
-K. 300-DPI raster through Poppler + second renderer
-   │
-   ▼
-L. two independent all-page visual reviews
-   │
-   ├─ disagreement -> visual issue adjudicator
-   ▼
-M. bounded prose/layout repair -> full rerender -> repeat H-L
-   │
-   ▼
-N. bilingual parity
-   │
-   ▼
-O. fresh FINAL all-page visual sweep
-   │
-   ▼
-P. independent final document arbiter
-   │
-   ▼
-quality-approved private candidate
-   │
-   ▼
-OPERATOR APPROVES EXACT DIGEST
-   │
-   ▼
-checksum-verified promotion of EXACT bytes
-   │
-   ▼
-client report record
+PLAN 059
+ApprovedAuditEvidence
+  evidenceSnapshotDigest
+  evidenceQualityAssessment
+  EvidenceCoverageSignature
+  mandatory limitations / capability registry
+        │
+        ▼
+A. ReportInputSnapshot
+   approvedEvidenceDigest + report-only inputs + re-audit comparability
+        │
+        ▼
+B. ReportFactRegistry + ReportCoverageLedger
+        │
+        ▼
+C. hierarchical ReportEvidenceDossier / packets
+        │
+        ▼
+D. SeniorReportPlan (language-neutral)
+        │
+        ▼
+E. FR + EN evidence-bound first drafts
+        │
+        ▼
+F. complementary dual content critics
+   disagreement -> issue adjudicator
+        │
+        ▼
+G. targeted patches only
+        │
+        ▼
+H. deterministic content/parity reconciliation
+        │
+        ▼
+I. render FR/EN private candidates
+        │
+        ▼
+J. Paged.js / DOM deterministic gates
+        │
+        ▼
+K. canonical PDF post-processing, if any
+        │
+        ▼
+L. exact-PDF structural/font/text/link/security gates
+        │
+        ▼
+M. two independent PDF renderers
+   canonical full-page + detail tiles/crops
+        │
+        ▼
+N. complementary dual all-page visual review
+   disagreement -> visual adjudicator
+        │
+        ▼
+O. accepted defect repair -> rerender -> repeat I-N
+        │
+        ▼
+P. bilingual parity
+        │
+        ▼
+Q. fresh final all-page visual sweep
+        │
+        ▼
+R. independent final document arbiter
+        │
+        ▼
+ReportBundleCandidate
+quality-approved (private)
+        │
+        ▼
+OPERATOR APPROVES bundleDigest
+        │
+        ▼
+checksum-verified exact FR+EN objects
+        │
+        ▼
+atomic active-bundle pointer/CAS
+        │
+        ▼
+client-facing active report bundle
 ```
 
-The website is never rescanned because report QA found a report defect. Quality
-iterations consume saved canonical audit evidence.
+No report-QA defect causes a website rescan. Only a proven upstream evidence defect routes back to Plan 059/operator review.
 
 ---
 
-# Canonical data contracts
+# 5. Canonical contracts
 
-## `ReportInputSnapshot`
+## 5.1 `ReportInputSnapshot`
 
-One deterministic, canonical snapshot taken at quality-run start. It includes
-or hashes every client-facing input:
+One immutable snapshot at quality-run start. It contains hashes/references for:
 
-- audit id, site URL, findings provenance, scanner/tool/build versions;
-- manifest/crawl/render/Lighthouse artifacts used by report facts;
-- prospect-linked trading/legal name and SIREN snapshot;
-- manual fields and origins;
+- `ApprovedAuditEvidence` and its exact evidence snapshot digest;
+- audit/site identity;
+- current prospect-linked commercial/legal name and SIREN/manual-field origins;
 - grade override;
-- obligation assessment inputs/result;
+- current obligation assessment inputs/result;
 - report preparation data;
-- verified site context;
-- reference-stat version(s);
-- report languages;
-- report template version, design-contract version, renderer/browser build;
-- font filenames + content hashes;
-- deterministic quality-tool versions.
+- verified report-only site context;
+- mandatory evidence limitations/disclosures from Plan 059;
+- optional re-audit delta + coverage-comparability classification;
+- reference/legal/benchmark registry versions and freshness state;
+- requested languages;
+- report template/design-contract versions;
+- renderer/browser/Paged.js/PDF-tool versions;
+- font filenames + hashes;
+- model-profile configuration/prompt/schema hashes relevant to output;
+- quality-tool versions.
 
-`inputSnapshotDigest` is a dependency of every downstream artifact. If a
-client-facing input changes, the current quality approval becomes stale.
+If any client-facing dependency changes, downstream approval is stale. Selective reuse requires explicit dependency declarations; never guess that a change “probably does not matter”.
 
-Selective reuse is allowed only through explicit dependency declarations; never
-infer that an edit “probably does not matter”.
+## 5.2 `ReportFactRegistry`
 
-## `AuditEvidenceDossier`
+Typed deterministic facts derived only from `ApprovedAuditEvidence` and approved report-only inputs.
 
-Deterministically produced:
+Supported fact classes include:
 
-- distinct page-scope facts with unambiguous names;
-- severity/category totals;
-- normalized finding inventory;
-- finding families using a **conservative** remediation-relevant signature;
-- occurrences, distinct findings, affected pages and coverage;
-- WCAG references;
-- concentration at 50/80/90% by findings and occurrences;
-- performance distribution over exactly measured rows;
-- render completeness;
-- page-role signals with `source`, `confidence` and `unknown` fallback;
-- diverted/heuristic flags;
-- verified legal/business context already allowed by existing rules.
+- integer/decimal/percentage/duration/bytes;
+- string identity values;
+- URL;
+- date/datetime;
+- enum/status/comparability state;
+- standard/reference ID;
+- language-specific formatting metadata.
 
-A family signature must not merge two contexts solely because they share a rule
-ID. Use rule/category/severity plus the stable remediation/component/page-role
-features available from normalization. When safe grouping cannot be established,
-keep families separate.
-
-## `EvidencePacket` and `CoverageLedger`
-
-Large audits use hierarchical context rather than one huge prompt:
-
-- global packet: facts, concentration, family index, performance and site context;
-- one detailed packet per finding family/remediation signature;
-- each packet contains representative evidence plus the exact finding IDs it
-  covers;
-- deterministic code records every eligible finding ID in `CoverageLedger` and
-  proves each is either assigned to a project, intentionally appendix-only, or
-  explicitly unresolved.
-
-A model never gets to “forget” findings because a context window was crowded.
-The global planner may work over family packets; a verification pass checks
-project membership against detailed packets before the plan is accepted.
-
-## `FactRegistry`
-
-Stable typed facts, for example:
+Example IDs:
 
 ```text
 scope.urlsInventoried
-scope.pagesCrawled
 scope.contentPagesAnalysed
 scope.axePagesMeasured
 scope.lighthousePagesMeasured
@@ -459,953 +281,880 @@ family.<key>.occurrences
 family.<key>.pages
 performance.lcp.medianMs
 performance.tbt.medianMs
+client.commercialName
+client.legalName
+client.siren
+report.auditDate
+reaudit.<row>.comparability
 ```
 
-Every fact includes type, unit, source artifact/digest and optional formatting
-metadata.
+Every fact has type, source digest/ref and formatting policy.
 
-## `EvidenceBoundText`
+## 5.3 `EvidenceBoundContent`
 
-Do not ask a verifier to rediscover whether free-form numbers are correct.
-Model-owned quantitative prose uses structured segments:
+Model-owned report fields use structured segments rather than freehand exact facts:
 
 ```text
 text("...")
 fact(factId, format)
-standard(referenceId)
+reference(referenceId)
 text("...")
 ```
 
-Code renders `fact(...)` values from `FactRegistry`; the model never emits the
-number itself. `standard(...)` similarly owns versioned references such as WCAG
-where appropriate. Free-text exact quantities outside allowlisted identifiers
-are rejected.
+Rules:
 
-This contract applies to executive summaries, impacts, actions, notes and any
-other model-owned prose that states exact quantities. Renderer-owned template
-numbers continue to come directly from code.
+- code resolves facts/references after model validation;
+- identity, exact dates, exact URLs, counts, percentages, measured values, comparability states and standards use bindings where they appear in model prose;
+- free-form exact scalars outside a deliberately small allowlist are rejected;
+- URLs/selectors/code identifiers are escaped and preserved, not interpreted as markup;
+- bidi/control characters and unsafe invisible formatting are rejected or safely normalized under a deterministic policy;
+- model text is rendered as text/structured primitives, never trusted raw HTML/JS; Markdown, if supported, is parsed only through an allowlisted renderer.
 
-## `SeniorReportPlan`
+## 5.4 `ReportEvidenceDossier`
+
+Deterministically produced from approved evidence:
+
+- distinct page-scope semantics;
+- severity/category totals;
+- normalized finding inventory;
+- Plan-059 `PatternEvidence` and conservative finding families;
+- occurrence/finding/page counts;
+- WCAG references;
+- concentration at useful thresholds by findings and occurrences;
+- performance distributions and confidence sets over exactly measured pages;
+- render/content completeness;
+- semantic page-role evidence with confidence;
+- heuristic/review-signal separation;
+- evidence-quality limitations/capabilities;
+- mandatory disclosure objects;
+- re-audit comparability classes;
+- approved business/legal context.
+
+Do not independently reinvent a root-cause grouping when Plan 059 already provides pattern evidence. Report grouping can combine evidence into remediation projects, but never rewrite underlying finding identity.
+
+## 5.5 `ReportEvidencePacket` / `ReportCoverageLedger`
+
+Large audits are packetized hierarchically:
+
+- global packet;
+- one detailed packet per family/pattern/remediation candidate;
+- exact finding/observation refs covered by each packet;
+- representative evidence selected deterministically.
+
+`ReportCoverageLedger` proves every eligible finding is either:
+
+- assigned to a remediation project;
+- intentionally appendix-only with reason;
+- explicitly unresolved, which blocks final approval if material.
+
+It also proves every mandatory limitation/disclosure has a deterministic rendered destination.
+
+This is distinct from Plan 059's `EvidenceCoverageLedger`, which describes what the scanner measured.
+
+## 5.6 `SeniorReportPlan`
 
 Language-neutral:
 
-- exhaustive `remediationProjects[]`; **no target count**;
-- project key, finding/family IDs, category, evidence/fact refs;
-- likely root cause explicitly labelled as inference with confidence;
-- conditionality and reason;
-- effort/impact/rationale;
-- `executivePriorityKeys[]` selecting only the projects deserving front matter;
-- dependencies between projects where order matters.
+- exhaustive `remediationProjects[]`, no target count;
+- project key/category/finding-family/observation refs;
+- evidence/fact refs;
+- likely root cause explicitly marked as inference + confidence;
+- conditionality/reason;
+- impact/effort/rationale;
+- dependencies/shared dependencies;
+- `executivePriorityKeys[]` selecting only genuinely front-matter-worthy projects.
 
-One project = one coherent remediation job. A finding may belong to more than
-one project only through an explicit `sharedDependency` edge validated by code;
-default duplicate membership is rejected.
+One project = one coherent remediation job. Duplicate finding membership is rejected unless represented by an explicit shared dependency.
 
-## `ReportVisualContract` / `VisualIntent`
-
-Runtime machine-readable contract under `packages/report`, updated with the
-human design docs and tested against section registry/tokens. It describes, per
-page/component type:
-
-- intended background/world;
-- alignment/margins/measure;
-- allowed intentional whitespace;
-- expected density band;
-- whether a component may split;
-- whether a value must stay one line;
-- allowed intentional overlays/decorations;
-- checklist print inversion;
-- typography role and minimum readable size;
-- known compact variants.
-
-Visual reviewers receive this contract. They do not invent a visual direction.
-
-## `ReviewIssue`
+## 5.7 `ReviewIssue`
 
 Closed schema:
 
-- `issueId`;
-- `severity: blocking | major | minor`;
-- domain: evidence-integrity, structure, priority, unsupported-claim,
-  conditionality, language, typography, repetition, translation-parity,
-  layout, overlap, clipping, density, pagination, table, code, font,
-  cross-renderer, pdf-structure, accessibility, template;
-- exact field/page/node target;
-- evidence/fact/page/raster refs;
-- reason;
-- repair route;
-- reviewer profile and resolved model ID;
-- source artifact digest;
-- `status: proposed | accepted | rejected | unsure | repaired | verified`.
+```text
+issueId
+kind: objective-defect | preference
+severity: blocking | major | minor
+sourceRole
+artifactDigest
+field/page/node target
+domain
+supporting evidence/fact/page/raster refs
+reason
+repairRoute
+status: proposed | accepted | rejected | unsure | repaired | verified
+```
 
-## `ReportPatch`
+An accepted `objective-defect` of any severity prevents `quality-approved`. A `preference` may be rejected without repair. `unsure` on a potentially objective major/blocking issue routes to operator review rather than speculative rewriting.
 
-A patch contains only exact changed addresses and the accepted issue IDs that
-justify them. Application code computes a semantic before/after diff and rejects
-any undeclared change.
+## 5.8 `ReportPatch`
 
-Allowed changes:
+Contains only declared target addresses + accepted issue IDs. Application code computes a semantic before/after diff and rejects collateral changes.
 
-- specific plan fields;
-- specific prose fields/segments;
-- specific predeclared layout hints.
+Allowed:
 
-Never allowed:
+- exact plan fields;
+- exact prose segments;
+- tested layout hints.
 
-- scanner findings/evidence;
-- deterministic facts/legal text;
+Forbidden:
+
+- scanner evidence/facts;
 - design tokens;
-- arbitrary CSS/HTML/JS;
-- client identity except through the normal upstream input layer.
+- arbitrary HTML/CSS/JS;
+- identity outside normal upstream input layer;
+- PDF-byte patching.
 
-## `ReportPageManifest`
+## 5.9 `ReportVisualContract` / `VisualIntent`
 
-Collected after final Paged.js layout and bound to candidate digest:
+Machine-readable code-owned contract tied to real design tokens/templates. Per page/component it defines:
+
+- background/world;
+- margins/measure/alignment;
+- expected density;
+- intentional whitespace;
+- split/no-split rules;
+- single-line values;
+- allowed decoration/overlap;
+- typography roles/minimum readable sizes;
+- print/checklist inversion;
+- approved compact variants.
+
+Visual reviewers judge against this contract rather than inventing a redesign.
+
+## 5.10 `ReportPageManifest`
+
+Bound to one candidate digest:
 
 - physical page number/dimensions;
-- page/section type + visual intent;
-- stable logical `data-report-node` IDs;
-- physical fragment IDs for Paged.js continuations;
-- node rectangles;
-- leaf text-line rectangles from `Range.getClientRects()`;
-- font family/size/line-height where relevant;
-- semantic invariants such as `single-line`, `no-split`, `table-header`;
-- short text excerpts for diagnosis only.
+- section/page type + visual intent;
+- stable logical node IDs;
+- Paged.js fragment IDs;
+- node and leaf text-line rectangles;
+- relevant font/line-height info;
+- semantic invariants;
+- bounded diagnosis excerpts;
+- deterministic tiling/crop coordinates.
 
-## `ReportQualityRun`
+## 5.11 `LanguageReportCandidate`
+
+Per language:
+
+- exact PDF bytes digest;
+- input/plan/draft/render digests;
+- page manifest digest;
+- deterministic gate digest;
+- raster/tiles hashes for each renderer;
+- review coverage + verdicts;
+- terminal per-language quality state.
+
+## 5.12 `ReportBundleCandidate`
+
+Atomic commercial artifact:
+
+```text
+qualityRunId
+epoch
+inputSnapshotDigest
+approvedEvidenceDigest
+seniorPlanDigest
+frCandidateDigest
+enCandidateDigest
+parityVerdictDigest
+finalArbiterVerdictDigest
+bundleManifestDigest
+bundleDigest
+state
+```
+
+Bundle digest is canonical serialization over both language candidate digests and shared dependencies. Operator approval names `qualityRunId + bundleDigest`.
+
+## 5.13 `ReportQualityRun`
 
 Append-only lineage:
 
-- qualityRunId, epoch, lease token hash;
-- input snapshot/dossier/fact/coverage digests;
-- every role/model/requested alias/resolved model/reasoning effort/prompt/schema;
+- run ID/epoch/lease-token hash;
+- all dependency digests;
+- requested model alias, provider-returned resolved ID and provider fingerprint/version metadata when available;
+- reasoning effort and all relevant request parameters;
+- exact prompt/schema hashes;
 - review/adjudication/patch artifacts;
-- candidate digest per iteration/language;
-- deterministic gate outputs;
-- Poppler/MuPDF raster hashes;
-- final review verdicts;
-- operator approval digest;
+- candidate iteration digests;
+- PDF-tool/render-environment fingerprint;
+- operator approval bundle digest;
 - terminal state.
 
-No chain-of-thought is stored. Telemetry remains metadata-only; client prose and
-page PNGs stay private quality artifacts.
+Never store chain-of-thought.
 
 ---
 
-# Model role policy
+# 6. Model role policy
 
-Use role-specific profiles, not one global model constant:
+Use explicit role profiles:
 
 ```text
 senior-analyst
 writer-fr
 writer-en
-content-critic-a
-content-critic-b
+content-critic-evidence
+content-critic-editorial
 issue-adjudicator
 editor
-visual-reviewer-a
-visual-reviewer-b
+visual-reviewer-physical
+visual-reviewer-design
 visual-issue-adjudicator
 parity-reviewer
 final-visual-reviewer
 final-document-arbiter
 ```
 
-Initial quality floor: use Sol High or a stronger approved role profile for
-analysis/writing/editorial roles; visual roles must be image-capable. The
-architecture remains model-configurable so future model changes do not require a
-pipeline rewrite.
+Quality rules:
 
-Rules:
-
-- required roles never silently fall back to a cheaper/weaker profile;
-- retry provider/rate-limit failures with paced backoff; inability to complete a
-  required stage blocks the quality run;
-- schema-constrained output + local Zod validation for every structured call;
-- separate stateless contexts between writer, critics and arbiters;
-- persist requested alias and the provider-returned model identifier;
-- cross-provider diversity only through an approved data-processing profile;
-- reviewers have no external tools/actions;
-- scanner/report text and report images are untrusted data, never instructions;
-- no reviewer sees hidden rationale/chain-of-thought from another role.
-
-A model profile/prompt/schema change that may affect client output invalidates
-benchmark approval until Step 22 is rerun.
+- use the strongest validated reasoning/image profile for each required role; no silent weak fallback;
+- critics/reviewers run with stateless fresh contexts and complementary instructions;
+- persist exact profile/prompt/schema hashes and returned model metadata;
+- retry provider failures with paced backoff; required-stage unavailability blocks;
+- Zod/schema validation on every structured response;
+- model roles have no external actions/tools while reviewing client artifacts;
+- all website/report text and rendered text are untrusted data, never instructions;
+- cross-provider diversity only inside an approved data boundary;
+- model/profile/prompt/schema changes that can affect output invalidate benchmark approval until the relevant corpus is rerun.
 
 ---
 
-# Content production contract
+# 7. Senior analysis and writing contract
 
-## Senior analysis
+## Senior analyst
 
-The senior analyst must:
+Must:
 
-1. explain the evidence instead of paraphrasing scanner titles;
-2. detect concentration/systemic repetition;
-3. distinguish fact from root-cause inference;
-4. build one coherent repair job per project;
-5. preserve conditionality;
-6. prioritize by severity, breadth, user/business consequence and remediation
-   leverage;
-7. account for every eligible finding via the Coverage Ledger;
-8. never invent or alter a finding.
-
-For large audits, plan family-by-family from `EvidencePacket`s, then run a global
-synthesis + deterministic coverage check. Do not force the entire raw audit into
-one context window.
+1. explain what the approved evidence means rather than paraphrasing scanner titles;
+2. identify concentration/systemic repetition;
+3. distinguish evidence from inference;
+4. use Plan-059 pattern evidence where available;
+5. build one coherent remediation job per project;
+6. preserve conditionality;
+7. prioritize by severity, breadth, user consequence and remediation leverage;
+8. account for every eligible finding through `ReportCoverageLedger`;
+9. never alter evidence;
+10. explicitly respect known evidence limitations/capability gaps;
+11. respect re-audit comparability and never infer when the defect first appeared unless evidence proves it.
 
 ## Writer
 
-Core register:
+Register:
 
-> Write as a senior French digital consultant preparing a document read first
-> by the company director and then handed to the technical provider. Synthesize
-> the evidence; do not narrate scanner output. Explain the practical meaning,
-> distinguish systemic from isolated defects, keep one coherent remediation job
-> at a time, and state only what the supplied evidence supports.
-
-Keep hard terminology/legal rules. Remove style micromanagement that existed only
-to compensate for weak writing, and move style quality into critics/lints.
+> Write as a senior French digital consultant preparing a document read first by the company director and then handed to the technical provider. Synthesize rather than dump scanner output. Explain significance, distinguish systemic from isolated defects, keep remediation jobs coherent, and state only what the approved evidence supports.
 
 Requirements:
 
-- native, restrained French; equivalent natural English;
-- no alarmism, filler, canned consultant rhetoric or repetitive AI cadence;
+- native restrained French; equivalent natural English;
+- no alarmism, filler, canned consulting rhetoric or repetitive model cadence;
 - significance first, technical action second;
-- no fixed sentence quota when fewer sentences are complete;
-- no worked runtime prose examples that invite copying;
-- exact quantities through `EvidenceBoundText`, never hand-typed;
-- clear fact/inference wording;
-- actions concrete enough for a technical provider;
-- no legal verdict beyond approved deterministic language.
+- no mandatory sentence quota;
+- no example prose in prompts that invites imitation;
+- exact facts via `EvidenceBoundContent`;
+- explicit fact/inference wording;
+- concrete developer actions;
+- no legal conclusion beyond deterministic approved language;
+- no unsupported booking/revenue/conversion-loss claim;
+- no incorrect performance terminology: Lighthouse lab metrics and CrUX field metrics stay distinct;
+- `newly-observable` means current defect newly observable under broader coverage, not proof of client regression;
+- `not-comparable` is never rewritten as resolved.
 
-## Deterministic typography polish
+## Typography/content sanitization
 
-Before render, apply or lint safe language-specific typography without changing
-meaning:
+Before rendering:
 
-- French non-breaking spacing for punctuation/units/percentages where the
-  design requires it;
-- approved French quotation marks/apostrophes;
-- no line beginning with stranded punctuation or unit where a non-breaking
-  token can prevent it;
-- preserve URLs, selectors, code and identifiers byte-for-byte;
-- English punctuation rules remain separate;
-- any transformation that could change semantics is a lint/review issue, not an
-  automatic rewrite.
+- apply safe language-specific punctuation/non-breaking rules;
+- preserve URLs/selectors/code byte-for-byte after safe escaping;
+- reject/sanitize unsafe control/bidi characters according to closed rules;
+- prevent raw HTML/JS injection;
+- do not automatically rewrite semantics.
 
-## Critics and issue adjudication
+---
 
-Both content critics see dossier/facts/plan/draft and independently look for:
+# 8. Review/adjudication contract
 
-- data/scope conflicts;
-- misleading concentration presentation;
-- mixed remediation;
-- bad priority order or omitted high-leverage work;
-- unsupported causality/site-specific claims;
-- conditional noindex/legal/third-party/heuristic/wrapper errors;
-- WCAG/severity/legal vocabulary contradictions;
-- language quality/repetition/verbosity;
-- weak or technically vague actions;
-- parity defects when reviewing the pair.
+## Evidence critic
 
-They return issues only.
+Primary emphasis:
+
+- data/scope/fact conflicts;
+- unsupported causality;
+- evidence limitation misuse;
+- mandatory-disclosure presence;
+- re-audit comparability wording;
+- conditionality;
+- WCAG/severity/legal/reference correctness;
+- remediation membership;
+- performance terminology;
+- omitted high-leverage evidence.
+
+## Editorial critic
+
+Primary emphasis:
+
+- native language quality;
+- clarity for director and technical provider;
+- priority coherence;
+- overstatement/understatement;
+- repetition/AI cadence;
+- vague actions;
+- misleading presentation of large repeated counts.
+
+Both may report any objective defect they notice.
 
 Issue acceptance:
 
-- deterministic failure -> accepted;
-- same blocking/major issue independently found by both critics -> accepted;
-- issue found by one critic only -> independent adjudicator checks exact
-  evidence/field; `accepted` may patch, `rejected` may not, `unsure` blocks for
-  operator review rather than triggering speculative edits.
+- deterministic gate failure -> accepted objective defect;
+- independently corroborated objective issue -> accepted;
+- unilateral major/blocking objective issue -> adjudicator evaluates exact evidence;
+- unilateral minor objective issue may use a focused deterministic/model adjudicator where validated; otherwise review;
+- preference -> does not block unless operator explicitly requests change;
+- `unsure` on material correctness -> operator review.
 
-No automatic “majority vote” can make unsupported output true.
+After patching, verification must prove the issue is actually gone.
 
 ---
 
-# Closed repair router
+# 9. Closed repair router
 
-| Route | Used for | Allowed action |
+| Route | Use | Allowed action |
 | --- | --- | --- |
-| `recompute-fact` | derived canonical mismatch | recompute in code; model cannot supply replacement |
-| `patch-plan` | project membership/priority/conditionality | targeted plan patch + dependent prose rewrite only |
-| `patch-prose` | unsupported/weak/repetitive language | exact field/segment patch |
-| `layout-hint` | known shape problem | choose tested, predeclared variant |
-| `rerender` | accepted content/layout change | whole candidate render from canonical state |
-| `template-defect` | no safe bounded repair exists | stop, fix source globally, add regression |
+| `recompute-report-fact` | derived report fact disagrees with approved evidence | recompute deterministically |
+| `upstream-evidence-defect` | approved evidence itself appears inconsistent | stop; route to Plan 059/operator; no report-side replacement |
+| `patch-plan` | project membership/priority/conditionality | targeted plan patch + dependent prose only |
+| `patch-prose` | unsupported/weak/incorrect language | exact field/segment patch |
+| `layout-hint` | known shape issue | tested predeclared variant |
+| `rerender` | accepted content/layout change | complete affected language candidate render |
+| `template-defect` | no bounded repair | fix canonical source globally + add regression |
 
-Every patch runs semantic diff validation and all downstream guards again.
+Every patch reruns all affected deterministic and downstream review gates.
 
 ---
 
-# Bounded layout hints
+# 10. Bounded layout hints
 
-Add `ReportLayoutHints` keyed by stable report node. Initial safe variants:
+Only code-owned, fixture-tested variants, for example:
 
 - `breakBefore`;
-- `keepWithNext` for bounded groups;
-- `density: normal | compact` only on components with a designed compact form;
+- `keepWithNext`;
+- `density: normal | compact` on components designed for both;
 - `statValue: normal | compact`;
 - `titleMeasure: normal | compact`;
-- `disableFlow` for the short-section optimization;
-- safe split marker selection for model-owned lists/cards whose template
-  explicitly exposes split points.
+- safe split markers;
+- short-section flow variant.
 
-Every variant is canonical source + fixture coverage. A model may select a
-variant, never author one.
+Models may select, never author variants.
 
 ---
 
-# Exact-PDF deterministic quality contract
+# 11. Exact-PDF production and deterministic QA
 
-## Pre-PDF / Paged.js gates
+## 11.1 Pre-PDF / Paged.js gates
 
-Retain all existing gates and add semantic text geometry:
+Retain existing gates and add:
 
-1. cross-node text overlap with narrow tolerance;
-2. clipped text inside bounded/overflow containers;
-3. single-line invariants for KPI values/counters/marked labels;
-4. sibling/foreign-node collision;
-5. heading/lead keep integrity;
-6. normal long-token wrapping for URLs/selectors/code;
-7. existing blank/duplicate/split-atomic/overflow/layout-repeated failures.
+- cross-node text overlap with narrow tolerance;
+- clipping in bounded containers;
+- single-line KPI/counter invariants;
+- sibling/foreign-node collisions;
+- heading/lead/orphan integrity;
+- long-token wrapping for URLs/selectors/code;
+- duplicate fragments/blank interiors/atomic splits/overflow/layout repetition.
 
-Use semantic markers to avoid broad false positives.
+Use semantic markers to avoid false positives.
 
-## Post-PDF structural/text gates on the exact bytes
+## 11.2 Canonical PDF post-processing boundary
 
-After PDF emission and before any model visual review:
+If the product requires metadata/tagging/bookmark/accessibility fixes or deterministic optimization that Chromium/Paged.js cannot emit directly, apply them here through a code-owned toolchain.
 
-- `qpdf --check` or an approved structural equivalent;
-- `pdfinfo`: page count, A4 dimensions/allowed metadata, no unexpected rotation;
-- `pdffonts`: expected Avenir Next variants embedded; no unexpected fallback,
-  unembedded or Type3 font unless explicitly allowlisted;
-- `pdftotext`: expected deterministic strings/section titles extract;
-- `pdftotext -bbox-layout` (or equivalent) supplies **PDF-space text boxes**;
-  reject material text-box overlaps/clipping inconsistent with semantic intent;
-- verify page text order against section order and page manifest anchors;
-- verify document language, outline/bookmarks and tagged/selectable text
-  invariants supported by the renderer;
-- never claim PDF/UA unless separately proven by a dedicated conformance tool.
+Rules:
 
-This second geometry layer matters because DOM geometry cannot prove emitted
-font/text-layer geometry.
+- postprocessor/tool/version/config is part of render fingerprint;
+- no content invention;
+- output becomes the candidate bytes;
+- **all exact-PDF and visual review occurs after this stage**;
+- nothing mutates the PDF after candidate hashing except byte-for-byte copy.
 
-## Cross-renderer portability
+## 11.3 Exact-byte PDF checks
 
-Raster the exact same candidate with:
+On candidate bytes:
 
-1. Poppler;
-2. MuPDF (`mutool draw`) or another approved independent PDF renderer.
+- structural checker (`qpdf --check` or approved equivalent);
+- page count/dimensions/rotation;
+- expected embedded fonts; unexpected fallback/unembedded/Type3 only if explicitly approved;
+- deterministic key text extraction;
+- PDF-space bbox overlap/clipping checks;
+- logical text order/section anchors;
+- language/title/author/subject metadata policy;
+- bookmarks/outlines where required;
+- selectable text and report accessibility invariants supported by the toolchain;
+- hyperlink annotations: destination exists/URL is syntactically valid and intended;
+- reject `javascript:`, Launch actions, unexpected embedded files, executable/unsafe actions and other active content;
+- no encryption/password restriction unless product deliberately adds it before QA;
+- no unexpected forms/annotations.
 
-Requirements:
+Do not claim PDF/UA unless a dedicated conformance checker proves it. If an accessible tagged PDF becomes a product requirement, implement the tagging/postprocessing before the final QA boundary rather than merely noting its absence.
 
-- same page count and dimensions;
-- each page maps one-to-one;
-- material pixel/layout divergence outside bounded antialiasing tolerance is
-  blocking and produces a `cross-renderer` issue;
-- a divergence is diagnosed before delivery rather than choosing whichever
-  renderer looks better.
+## 11.4 Cross-renderer portability
 
-Add the required packages and startup preflight in `deploy/`. No fallback to a
-browser screenshot.
+Raster the exact same candidate through two independent engines (for example Poppler + MuPDF):
 
-## Raster resolution and zoom
+- same page count/dimensions;
+- material layout divergence blocks;
+- diagnose rather than pick whichever renderer looks better;
+- divergence tolerances are established from known-good fixtures/corpus, not adjusted per report until it passes.
 
-- produce a **300-DPI canonical raster** for every page from the final exact
-  PDF;
-- if a provider input limit would rescale a full A4 page, send the highest
-  lossless/full-page derivative allowed **plus** automatic 300-DPI crops of
-  dense text/table/code/KPI areas;
-- every flagged page is re-reviewed with 300-DPI crops after repair;
-- keep raster hashes bound to candidate digest;
-- quality PNGs are private temporary artifacts.
+## 11.5 Raster/detail policy
+
+For every page:
+
+- keep a canonical 300-DPI raster;
+- create one full-page review derivative;
+- create deterministic detail tiles/semantic crops at sufficient native resolution for normal body text to be legible to the visual reviewer;
+- dense tables/code/KPI/flagged regions may get additional crops;
+- all images/hashes bind to candidate digest;
+- batching for provider/context limits is allowed only when a machine coverage manifest proves every required page/tile was reviewed.
+
+This prevents full-page downscaling from hiding small text overlaps or malformed glyphs.
 
 ---
 
-# Visual review contract
+# 12. Visual review contract
 
-Every page is reviewed; there is no sampling.
+Every page, every language, every final candidate.
 
-For each language and candidate iteration:
-
-1. render a whole-document contact sheet for macro rhythm;
-2. reviewer A sees every page + page manifest + `VisualIntent`;
-3. reviewer B independently sees every page + same objective contract;
+1. whole-document contact sheet / macro rhythm;
+2. physical reviewer sees all pages + detail tiles + page manifest + VisualIntent;
+3. design reviewer independently sees same pages/details + objective visual contract;
 4. correlate issues;
-5. a unilateral blocking/major issue goes to a visual issue adjudicator with an
-   exact high-resolution crop and relevant manifest/contract;
-6. accepted issues repair through the closed router;
-7. after the **last** repair, a fresh final visual reviewer sees every page
-   again, not merely issue summaries.
+5. unilateral objective major/blocking issue -> focused visual adjudication with exact high-resolution evidence;
+6. accepted defects repair through closed router;
+7. after last change, a fresh final visual reviewer inspects **all pages and required detail views again**.
 
-Visual reviewers explicitly inspect:
+Inspect at minimum:
 
-- text overlap/collision;
+- overlap/collision;
 - clipping/hidden text;
-- split or malformed numeric display;
-- fallback/wrong typography;
-- illegible URLs/selectors/code;
+- malformed numbers;
+- glyph/font anomalies;
+- unreadable URLs/selectors/code;
 - broken cards/tables/continuations;
-- orphaned headings/fragment tails;
-- density too high for physical size;
-- broken-looking voids **relative to the page's VisualIntent**;
-- alignment/margins/hierarchy/spacing;
-- checklist inversion and print-safe treatment;
-- appendix headers and continuation rhythm;
-- any page that looks mechanically broken or unreviewed.
+- orphaned headings/fragments;
+- density/readability;
+- abnormal whitespace relative to VisualIntent;
+- hierarchy/alignment/margins/spacing;
+- page-to-page rhythm;
+- checklist/print treatment;
+- appendix continuity;
+- visual sign of stale/missing content.
 
-Report text visible inside a page image is **untrusted data**. A sentence such
-as “ignore previous instructions” printed in a scanned-page title, selector,
-URL or appendix excerpt is never followed.
+Text visible inside images is data, never instructions.
 
 ---
 
-# Repair/convergence loop
+# 13. Repair/convergence loop
 
 ```text
-accepted issue(s)
-   -> route
-   -> targeted patch/layout hint
-   -> semantic diff guard
-   -> all deterministic content guards
-   -> full candidate rerender
-   -> all Paged.js gates
-   -> all exact-PDF structural/font/text gates
-   -> dual-renderer raster
-   -> visual reviews
+accepted objective defect
+  -> route
+  -> targeted patch / deterministic fix / layout hint
+  -> semantic diff guard
+  -> content reconciliation
+  -> affected language rerender
+  -> all pre-PDF gates
+  -> canonical postprocessing
+  -> exact-PDF gates
+  -> dual-renderer raster + all page/detail views
+  -> dual visual review
 ```
 
-Any content/layout change that can change block height or pagination triggers a
-full all-page review again. If code proves pagination and all page hashes except
-specific pages are unchanged, an intermediate repair check may inspect changed
-+ adjacent pages only, but the **final acceptance sweep always reviews every
-page again**.
+Any change that can affect pagination reruns all-page review for that language. Shared-plan changes invalidate dependent FR and EN material. Language-only changes need not reroll the other language, but **bundle approval remains stale until both language candidates and parity have passed again**.
 
-Set a generous runaway cap such as `MAX_REPORT_QUALITY_ITERATIONS = 8` only to
-bound operations. Exhaustion -> `needs-operator-review`.
+A generous operational ceiling (for example 8 iterations) prevents runaway execution. Reaching it never means “good enough”; it means operator review.
 
 ---
 
-# Exact-byte and state machine contract
+# 14. Bilingual parity and atomic bundle contract
 
-## Candidate lifecycle
+Parity checks:
+
+- same SeniorReportPlan project coverage;
+- same fact/reference coverage;
+- same mandatory limitations/disclosures;
+- same re-audit comparability meaning;
+- same priority meaning;
+- equivalent conditions/caveats;
+- same legal/reference conclusions;
+- equivalent technical actions;
+- language-specific naturalness allowed; literal translation not required.
+
+`ReportBundleCandidate` is created only when both current language candidates are individually clean and parity-clean.
+
+Atomic promotion:
+
+1. calculate FR and EN candidate digests;
+2. calculate bundle digest over both + shared dependencies;
+3. automated final arbiter approves the bundle digest;
+4. operator sees both exact PDFs + bundle digest and approves that digest;
+5. upload/copy both PDFs to immutable content-addressed object keys;
+6. read back/hash both objects and verify exact candidate digests;
+7. create the immutable bundle manifest/record referencing both verified objects;
+8. perform **one atomic compare-and-set/pointer update** making that bundle active for the audit/client;
+9. only after pointer activation may client downloads resolve to the new pair;
+10. prior approved bundle remains intact until the new pointer update succeeds.
+
+No half-promoted FR/EN revision is ever client-visible.
+
+---
+
+# 15. State, concurrency, crash and delivery contract
+
+## State machine
 
 ```text
 running
  -> content-clean
- -> candidate-rendered
- -> pdf-clean
- -> visual-clean
+ -> fr-candidate-clean / en-candidate-clean
  -> parity-clean
+ -> bundle-final-review
  -> quality-approved
  -> awaiting-operator-approval
  -> operator-approved
  -> promoted
 ```
 
-Any stale input or accepted edit moves back to the appropriate earlier state
-and invalidates downstream approval.
+Any accepted edit or stale dependency returns to the appropriate earlier state.
 
 ## Lease/epoch
 
-- one active report quality run per audit/report pair;
-- quality run owns a renewable lease token + epoch;
-- every write/patch/approval/promotion is conditional on current lease/epoch;
-- cancelling or superseding the run revokes the lease;
-- late model/provider responses from a revoked worker are discarded;
-- a stale worker can never promote a report.
+- one active quality run per audit/report bundle;
+- immutable `qualityRunId`, renewable lease token and monotonic epoch;
+- every patch/approval/promotion conditional on current lease/epoch;
+- cancellation/supersession revokes lease;
+- late provider responses discarded;
+- stale workers cannot promote.
 
-## Content-addressed dependency DAG
+## Content-addressed DAG
 
-Each artifact records exact parent digests. Resume may reuse an artifact only
-when all dependencies match. Model/prompt/schema/template/render-environment
-versions are dependencies where they affect output.
+Every artifact stores parent digests. Resume may reuse only nodes whose dependencies still match.
 
-## Exact promotion
+## Storage/delivery
 
-Automated approval does **not** rerender.
-
-1. candidate bytes -> SHA-256;
-2. all gates/reviews reference that digest;
-3. `quality-approved` exposes that exact private candidate to the operator;
-4. operator approves `qualityRunId + digest`;
-5. promotion copies/writes the same bytes to the approved report location;
-6. read back or verify object-store checksum against SHA-256;
-7. only then create/activate the client report record;
-8. download route serves the approved object and never generates a fresh PDF.
-
-If object storage cannot provide a trustworthy checksum, perform an authenticated
-read-back and hash before promotion completes.
-
-## Candidate privacy/retention
-
-- private bucket/prefix and authenticated operator routes only;
-- never public preview URLs;
-- rejected superseded candidates cleaned after a short diagnostic retention
-  window defined in canonical ops docs;
-- failed-run page images retained only as long as needed for operator diagnosis;
-- no page images/client prose in metadata telemetry.
+- candidate objects private and unaddressable by client routes;
+- approved FR/EN objects stored under immutable content-addressed keys;
+- storage read-back/hash verified;
+- one atomic active-bundle pointer selects both languages together;
+- client route serves the active immutable object, never rerenders;
+- ETag/digest headers derive from approved object; no overwrite-in-place cache ambiguity;
+- rejected candidate images/prose follow short private diagnostic retention;
+- no client prose/page PNGs in general telemetry.
 
 ---
 
-# Implementation plan
+# 16. Reference/legal freshness contract
 
-## Step 1 — Freeze contracts and build negative fixtures first
+Any deterministic client-facing external claim carries:
 
-Update canonical docs for:
+- reference ID;
+- authoritative source metadata;
+- version/publication/retrieval date where applicable;
+- source hash or registry version;
+- allowed freshness window or explicit “stable until changed” policy.
 
-- report-image QA exception;
-- fact authority and exact quantities;
-- candidate/approved lifecycle;
-- visual contract and exact-PDF rule;
-- fail-closed reviewer semantics.
+Before `ReportInputSnapshot` freezes:
 
-Build de-identified negative fixtures **before** production code for:
+- stale time-sensitive claims are refreshed or removed;
+- unavailable source does not authorize a model-memory substitute;
+- legal wording remains deterministic and scoped to what Odysseus can support;
+- model reviewers may flag apparent inconsistency, but code/reference registry supplies corrections.
 
-- cross-node collision the old gate misses;
+---
+
+# 17. Implementation sequence
+
+Implementation is sliced, but **no intermediate partial pipeline is marketed as quality-approved**. Keep the old production path until the new path passes its promotion corpus, or feature-flag new work privately.
+
+## Phase A — contracts and fixtures
+
+1. Update canonical docs for Plan-059 handoff, exact-fact authority, bilingual bundle, defect-vs-preference semantics, re-audit comparability and PDF QA boundary.
+2. Build known-bad/known-good content and PDF fixtures first.
+3. Add `ReportInputSnapshot`, `ReportFactRegistry`, `ReportCoverageLedger` and dependency digests.
+4. Add `EvidenceBoundContent` and safe model-text rendering/sanitization.
+5. Add role-based model profiles with exact prompt/schema hashes and returned model metadata.
+
+## Phase B — analysis/writing/review
+
+6. Build deterministic dossier/packets from `ApprovedAuditEvidence`, including PatternEvidence, mandatory limitations and re-audit comparability.
+7. Implement `SeniorReportPlan` without arbitrary project count.
+8. Replace FR/EN writer prompts with senior-quality contracts.
+9. Implement complementary dual content critics + issue adjudication.
+10. Implement targeted patch engine + semantic diff guard.
+11. Implement deterministic content/legal/reference/re-audit/performance-terminology/typography reconciliation.
+
+## Phase C — exact candidate production
+
+12. Split candidate rendering from approved persistence.
+13. Add runtime VisualContract/VisualIntent/stable node/page manifests.
+14. Add pre-PDF overlap/clipping/single-line/fragment gates.
+15. Install/preflight exact-PDF toolchain.
+16. Add canonical post-processing boundary if required.
+17. Add exact-PDF structure/font/text/metadata/link/active-content gates.
+18. Add dual-renderer 300-DPI raster + universal detail tiling + coverage manifest.
+
+## Phase D — visual/parity/final review
+
+19. Implement complementary dual all-page visual review.
+20. Implement visual adjudication + bounded repair/rerender.
+21. Implement bilingual parity including limitations and re-audit semantics.
+22. Implement fresh final all-page/detail visual sweep.
+23. Implement final document arbiter over exact current bundle.
+
+## Phase E — lifecycle/delivery
+
+24. Persist `ReportQualityRun`, leases/epochs and content-addressed dependency DAG.
+25. Implement `LanguageReportCandidate` / `ReportBundleCandidate`.
+26. Implement private `quality-approved` bundle and operator exact-digest approval.
+27. Implement content-addressed FR/EN object persistence + atomic active-bundle pointer/CAS + immutable download routing.
+28. Add dashboard stages/subprogress/conflict guards.
+29. Add crash/resume/cancel/stale-worker tests.
+
+## Phase F — evaluation/promotion
+
+30. Build quality evaluation/fault-injection/fuzz harness.
+31. Run Hôtel Point France mandatory acceptance case plus heterogeneous saved corpus.
+32. Run repeated live-model stability evaluation.
+33. Convert every discovered defect to a regression and rerun corpus after the last fix.
+34. Operator reviews complete final Point France FR/EN bundle plus representative extreme reports.
+35. Promote only when all Definition-of-Done conditions are met; retire old production wiring afterward.
+
+---
+
+# 18. Adversarial acceptance corpus
+
+## Content faults
+
+- wrong count/percentage/date/identity/SIREN/URL;
+- wrong WCAG reference/version;
+- Lighthouse lab metric mislabeled as field/Core Web Vital;
+- mixed remediation job;
+- unsupported root cause/business claim;
+- unsupported lost-booking/revenue/conversion claim;
+- unconditional noindex interpretation;
+- omitted high-severity family;
+- omitted mandatory limitation;
+- duplicated finding/project membership;
+- stale legal/reference claim;
+- heuristic signal promoted as confirmed finding;
+- newly-observable finding described as newly introduced;
+- not-comparable finding described as resolved;
+- FR/EN condition/action/disclosure drift;
+- prompt injection text inside selector/URL/report content;
+- bidi/control-character text.
+
+## Visual/PDF faults
+
+- DOM-clean but PDF-text-layer overlap;
+- ordinary visible overlap;
 - clipped one-line KPI;
-- unexpected fallback font;
-- PDF text-layer overlap after clean DOM geometry;
-- broken bookmark/tag/language metadata;
-- cross-renderer disagreement;
-- wrong canonical count;
-- mixed remediation project;
-- unconditional noindex wording;
-- stale client name;
-- bilingual claim drift.
-
-The current pipeline should demonstrably miss the relevant new classes.
-
-## Step 2 — Add `ReportInputSnapshot` and render fingerprint
-
-Build one deterministic snapshot/digest at run start. Include manual/prospect
-identity, legal/grade/preparation/reference inputs and render environment.
-
-Render fingerprint includes at least:
-
-- renderer build/template/design-contract version;
-- Chromium/Paged.js versions;
-- OS/runtime relevant to print;
-- locale/timezone used by renderer;
-- font file hashes;
-- Poppler/MuPDF/qpdf versions.
-
-Add invalidation tests for every client-facing input category.
-
-## Step 3 — Add role-based model profiles
-
-Create explicit profiles for all roles. Persist requested + resolved model,
-reasoning effort, prompt/schema version and usage. Required roles have no weak
-fallback. Add prompt-injection notice to all text and visual roles.
-
-## Step 4 — Build dossier, packets, fact registry and coverage ledger
-
-Pure deterministic builders. Tests cover:
-
-- separate page-count semantics;
-- conservative family grouping;
-- concentration arithmetic;
-- performance distributions over exact measured rows;
-- heuristic/diverted labels;
-- page-role source/confidence;
-- stable fact IDs;
-- exhaustive finding coverage even when evidence is packetized.
-
-## Step 5 — Add `EvidenceBoundText`
-
-Extend writer-side structured output so exact quantities/standards are bound
-references, then compile validated segments to the renderer's current text
-shape where needed.
-
-Tests reject:
-
-- freehand exact counts/percentages outside allowlist;
-- unknown fact IDs;
-- unit/format mismatch;
-- stale fact registry digest;
-- model attempt to replace a fact's value.
-
-## Step 6 — Implement `SeniorReportPlan`
-
-Remove all “8-15 themes” targets. Plan coherent projects from hierarchical
-evidence. Global synthesis runs after packet-level analysis.
-
-Hard guards:
-
-- all finding/family refs exist;
-- Coverage Ledger complete;
-- root cause marked inference;
-- project category compatible;
-- duplicate membership rejected unless explicit shared dependency;
-- executive priorities are project keys;
-- no eligible critical/serious/moderate finding silently disappears.
-
-## Step 7 — Rewrite FR/EN writer prompts for senior quality
-
-Use same language-neutral plan. Keep truth/legal terminology guards, simplify
-anti-slop generation rules, remove worked runtime prose examples, generate
-supporting refs per field and apply typography lint.
-
-Successful language work is persisted independently; the other language never
-forces a reroll.
-
-## Step 8 — Required dual content critics + adjudicator
-
-Replace paid-report reliance on advisory review with required critics. Implement
-issue correlation/adjudication and accepted/rejected/unsure states. Provider or
-schema failure is blocking, not `skipped`.
-
-## Step 9 — Targeted patch engine + semantic diff guard
-
-Patches receive only issue, target, necessary evidence and immutable neighbor
-context. Apply to a copy, compute semantic diff, reject undeclared changes, then
-validate whole result.
-
-## Step 10 — Deterministic content reconciliation
-
-Before rendering verify:
-
-- provenance/snapshot digests;
-- all IDs/keys/coverage;
-- fact/standard bindings;
-- page-scope terminology;
-- WCAG references/severity vocabulary;
-- legal deterministic splices;
-- identity/manual fields;
-- conditionality;
-- priority completeness;
-- structural FR/EN parity.
-
-## Step 11 — Split candidate rendering from approved persistence
-
-Refactor report stage into:
-
-- `renderReportCandidate(...)` -> private candidate + digest + manifest;
-- quality pipeline;
-- `promoteApprovedReport(...)` -> exact-byte copy after operator approval.
-
-No candidate creates an approved/client report row.
-
-## Step 12 — Add runtime visual contract and node manifests
-
-Add stable `data-report-node`, physical fragment IDs and page `VisualIntent`.
-Runtime contract is code-owned and tested against section registry/tokens; docs
-remain human-readable authority but are not parsed at runtime.
-
-## Step 13 — Add pre-PDF overlap/clipping/single-line gates
-
-Implement pure reducers + Paged.js e2e collection for semantic text geometry.
-Negative fixtures must fail for the intended reason; normal stress fixtures
-must stay clean.
-
-## Step 14 — Add exact-PDF toolchain/preflight
-
-Production preflight installs/checks:
-
-- qpdf (or approved structural checker);
-- Poppler: `pdfinfo`, `pdffonts`, `pdftotext`, `pdftoppm`;
-- MuPDF/second renderer.
-
-No missing-tool fallback.
-
-## Step 15 — Add PDF-space text/font/accessibility gates
-
-Implement exact-byte checks for:
-
-- structure/page dimensions/rotation;
-- font embedding/fallback;
-- text bbox overlap/clipping;
-- section/key-string extraction;
-- reading order anchors;
-- language/outline/tagging/selectable text.
-
-Keep accessibility claims precise: test what is actually supported; do not label
-the PDF PDF/UA compliant without a dedicated conformance result.
-
-## Step 16 — Dual-renderer 300-DPI raster pipeline
-
-Raster every page through both engines, correlate page counts and images, hash
-outputs and flag material rendering divergence. Generate high-resolution dense
-region crops automatically from manifest geometry.
-
-## Step 17 — Required dual all-page visual review
-
-Each reviewer returns exactly one per-page record plus issues. Correlation
-rejects missing/duplicate/unknown pages/nodes. Contact-sheet review checks macro
-rhythm. Unilateral major/blocking issues are adjudicated before patching.
-
-## Step 18 — Bounded visual repair/rerender
-
-Route accepted visual issues through prose/layout/template paths. Never patch
-PDF bytes. Template defects stop until canonical source + regression are fixed.
-
-## Step 19 — Bilingual parity review
-
-Compare plan/project/fact/action coverage, not literal sentence identity. A
-shared-plan change invalidates both languages' dependent work. A language-only
-patch invalidates that language's render/visual approval.
-
-## Step 20 — Fresh final all-page visual sweep
-
-After the last content/layout change, use a **fresh reviewer context** to inspect
-all pages again. This pass does not inherit “we already fixed it” assumptions.
-Any new major/blocking issue reopens the loop.
-
-## Step 21 — Final document arbiter
-
-Fresh context. Receives:
-
-- snapshot/dossier/fact/coverage digests + relevant high-level data;
-- final plan;
-- final evidence-bound prose;
-- deterministic gate results;
-- all accepted/repaired/rejected/remaining issues;
-- final PDF digest;
-- final page-review coverage manifest;
-- full contact sheet and exact page/crop evidence for any risk area.
-
-Returns `approve` or structured blocking/major issues only. No edits.
-
-## Step 22 — Build the quality evaluation harness
-
-Read-only over saved audits; never rescans/publishes. Record role/model, usage,
-iterations, elapsed time, issues and outcomes.
-
-### Real acceptance corpus
-
-- Hôtel Point France mandatory;
-- every heterogeneous saved audit available up to at least 12 initially;
-- clean/small, huge appendix, long names, performance-heavy,
-  accessibility-heavy, archive-heavy SEO, multilingual/long prose shapes.
-
-### Known-bad fault corpus
-
-Inject and prove detection of every content/visual failure class named in this
-plan.
-
-### Known-good controls
-
-Include clean approved fixtures. Critics/adjudicators must not force material
-changes merely because they are asked to find something.
-
-### Property/fuzz layout corpus
-
-Deterministically generate many combinations (committed seeds), including:
-
-- extreme client/title lengths;
-- 1/4/5/7-digit and decimal/percentage/unit values;
+- fallback/unembedded font;
+- malformed glyph run;
+- broken table/card continuation;
+- duplicate fragment;
+- blank/interior page;
+- poor orphan handling;
+- huge unexpected void;
+- unreadably dense body text;
+- cross-renderer divergence;
+- broken/missing internal destination;
+- malformed external hyperlink;
+- PDF JavaScript/Launch/embedded file injection;
+- corrupted metadata/language/outline;
+- postprocessor changing layout;
+- full-page image appearing fine while detail tile reveals defect.
+
+## Shape/fuzz cases
+
+Committed deterministic seeds covering thousands of rendered pages:
+
+- extreme names/titles;
 - 0/few/hundreds/thousands of findings;
 - 1/3/6/12/20+ projects;
-- long URLs/selectors/code/Unicode/combining marks/bidi-control sanitization;
-- cards split at page boundaries;
-- table/header continuation at every plausible boundary;
+- varied digit lengths/percentages/units/dates;
+- long URLs/selectors/code/Unicode/combining marks;
 - 100+ page appendices;
-- flow/no-flow section boundaries;
-- checklist at capacity;
-- glossary continuation;
-- all negative render cases.
+- cards/tables at every page boundary;
+- checklist/glossary capacity;
+- flow/no-flow section transitions.
 
-Run enough stable seeds to exercise thousands of rendered pages before
-promotion. Failures become committed regressions.
+## Known-good controls
 
-### Repeated live-model stability runs
+Clean fixtures/reports must stay unchanged except for explicitly allowed nondeterministic prose differences. Reviewers may not manufacture defects because they are asked to critique.
 
-Run the same representative audits multiple times with the candidate model
-profiles. Prose may vary, but facts, project coherence, conditionality, severity,
-coverage and pass/fail outcome must remain materially stable. If a role exhibits
-quality oscillation, strengthen contract/prompt/adjudication or choose a more
-stable model.
+---
 
-### Promotion rule
+# 19. Evaluation policy
 
-- corpus green after the last fix;
-- zero unresolved blocking/major issues;
-- every page reviewed as specified;
-- operator reads the complete Point France pair plus several extreme complete
-  reports and accepts content **and** visual quality;
-- no known-good control was degraded by reviewer pressure;
-- model/profile choice is made on quality, not price.
+Before production promotion:
 
-## Step 23 — Job phases, progress UI and conflict guards
+- Hôtel Point France is mandatory when saved evidence is available;
+- include every suitable heterogeneous saved audit up to at least 12 initially;
+- include clean/small, large/theme-heavy, performance-heavy, accessibility-heavy, archive-heavy SEO, multilingual, long-name and prior-failure cases;
+- repeatedly run representative audits with candidate model profiles;
+- facts, remediation coherence, conditionality, parity and gate outcome must remain materially stable even if wording varies;
+- any model/prompt/schema/template/token/font/renderer/PDF-tool change that can affect client output reruns the relevant corpus;
+- PDF/render divergence tolerances come from known-good fixtures/corpus and are not relaxed per-client to force a pass;
+- no known-good control is materially degraded by reviewer pressure;
+- after the **last** discovered defect, rerun the complete applicable corpus clean.
 
-Use manageable top-level phases with detailed subprogress rather than exploding
-`JobPhase` for every call. At minimum:
+No live third-party scan is performed merely to fill a benchmark slot; use saved evidence unless the operator has current permission for the named site.
+
+---
+
+# 20. Dashboard/progress contract
+
+Top-level phases remain understandable while detailed subprogress exposes real work:
 
 ```text
-dossier
-plan-report
+evidence-ready
+report-plan
 write-fr
-review-content-fr
+review-fr
 write-en
-review-content-en
+review-en
+content-reconciliation
+render-fr
+pdf-qa-fr
+visual-qa-fr
+render-en
+pdf-qa-en
+visual-qa-en
 parity
-quality-pdf-fr
-quality-pdf-en
-final-review
+final-bundle-review
 awaiting-operator-approval
 complete
 ```
 
-Subprogress can show iteration, reviewer and `page 47 / 103` without client
-prose or chain-of-thought.
-
-The report-production lock/lease remains active through automated quality work.
-Regenerate/archive/delete controls that conflict stay disabled with the exact
-current stage.
-
-## Step 24 — Crash/resume/cancel/exact promotion
-
-Checkpoint every artifact + dependency digest. Resume only matching DAG nodes.
-Cancellation revokes lease. Old workers cannot write after epoch changes.
-
-Automated final success -> private `quality-approved` candidate ->
-`awaiting-operator-approval`.
-
-Operator approval verifies `qualityRunId`, digest and current snapshot, then
-promotes exact bytes and verifies storage checksum/read-back. **No render occurs
-inside the approval action.**
-
-## Step 25 — Update canonical documentation and retire obsolete wiring
-
-Update:
-
-- `CLAUDE.md`;
-- `docs/rules/llm-layer-rules.md`;
-- `docs/rules/report-writing-style.md`;
-- `docs/report/report-design-system.md`;
-- `docs/report/report-workbench.md`;
-- `docs/decisions/trade-offs.md`;
-- product brief/dashboard IA where visible stages changed;
-- deploy runbook for exact-PDF toolchain.
-
-Mark old advisory reviewers historical/measurement-only or remove dead
-production wiring after migration.
+Show iteration/page/tile counts and current stage, not chain-of-thought or confidential prose. Regenerate/archive/delete controls remain disabled while conflicting work owns the audit/report bundle.
 
 ---
 
-# Verification matrix
+# 21. Fail-closed conditions
 
-| Area | Required proof |
-| --- | --- |
-| Input snapshot | digest changes for every client-facing input, render/tool/font fingerprint tests |
-| Dossier/facts | aggregate/concentration/page-scope/performance/unit/stable-ID tests |
-| Coverage | every eligible finding resolved to project/appendix/unresolved state |
-| EvidenceBoundText | unknown/freehand/stale/unit-mismatch claims rejected |
-| LLM outputs | Zod/schema mirror, prompt injection, correlation, adjudication, patch diff tests |
-| Typography | language-specific safe transforms + identifier/code preservation |
-| Report DOM geometry | Paged.js overlap/clipping/single-line/overflow/atomic tests |
-| Exact PDF | qpdf/pdfinfo/pdffonts/pdftotext bbox/reading order/tag/language checks |
-| Portability | Poppler vs second renderer page count + material render-diff tests |
-| Visual roles | every page exactly once per required reviewer; crops/contract/node correlation |
-| Candidate lifecycle | no report row before operator promotion; stale digest blocked |
-| Lease/epoch | stale/cancelled worker cannot patch/approve/promote |
-| Storage | promoted object read-back/hash equals approved digest |
-| Dashboard | phase/subprogress/conflict locks/operator digest approval |
-| Store | Mongo integration for quality-run/candidate/report state |
-| Full repo | format, check, unit, relevant e2e, then full test suite |
+Never quality-approve/promote when any of these remains:
 
-Tests do not call live models. Step 22 is the explicit live-model evaluation.
-
----
-
-# Fail-closed conditions
-
-Never promote a report when any of these is true:
-
-- stale/missing input snapshot or findings provenance;
-- conflicting canonical facts code cannot reconcile;
-- incomplete Coverage Ledger;
-- unknown/freehand exact quantitative claim;
-- required high-quality model unavailable after paced retries;
+- Plan-059 evidence not approved/current;
+- input/evidence/reference digest stale;
+- conflicting deterministic facts;
+- incomplete ReportCoverageLedger or missing mandatory disclosure;
+- unbound exact factual scalar where binding is required;
+- required model/reviewer unavailable;
 - malformed/unvalidated model output;
-- unresolved or `unsure` blocking/major issue;
-- semantic patch diff exceeds declared targets;
-- content reconciliation failure;
-- Paged.js/DOM geometry failure;
-- PDF structural/font/text-geometry/accessibility invariant failure;
-- required exact-PDF tool unavailable;
+- unresolved accepted objective defect of **any** severity;
+- material `unsure` correctness issue;
+- semantic patch diff outside declared target;
+- unsupported/stale legal/reference claim;
+- incorrect re-audit comparability language;
+- content/parity reconciliation failure;
+- DOM/Paged.js geometry failure;
+- required postprocessor/tool missing;
+- exact-PDF structure/font/text/metadata/link/security failure;
 - cross-renderer material divergence;
-- any physical page missing any required visual review result;
-- unresolved blocking/major visual issue;
-- bilingual parity failure;
-- final all-page sweep failure;
+- any physical page/detail region missing required review coverage;
+- final visual sweep defect;
 - final arbiter rejection;
-- candidate digest/input snapshot changed after review;
+- FR/EN candidates not derived from same current shared plan/input state;
+- bundle digest/input snapshot changes after review;
 - lease/epoch lost;
-- storage read-back/checksum differs from approved digest;
-- iteration ceiling reached;
-- operator has not approved the exact digest.
+- storage read-back mismatch;
+- atomic active-bundle pointer cannot safely switch both languages;
+- operator has not approved the exact current bundle digest;
+- iteration ceiling reached.
 
-Outcome: `needs-operator-review`, `cancelled`, or `failed`. Never fall back to the
-old unreviewed report path.
+Outcome is `needs-operator-review`, `cancelled` or `failed`, never silent fallback.
 
 ---
 
-# Explicitly rejected alternatives
+# 22. Explicitly rejected alternatives
 
-- One Sol High “polish” call at the end.
-- Letting a model correct scanner data directly.
+- One strong-model “polish” call at the end.
+- Letting a model correct scanner evidence directly.
+- Reconstructing scan truth independently from loose raw files after Plan 059 approval.
 - Reviewing only JSON/HTML/pre-PDF DOM.
 - Reviewing only executive pages.
-- One PDF renderer/rasterizer as the only visual truth.
-- A model writing per-client CSS/HTML.
-- Whole-report rerolls until a model says it likes the result.
-- Automatically patching every unilateral critic opinion.
-- Pushing all raw findings into one giant prompt regardless of audit size.
-- Freehand model-generated numbers followed by best-effort checking.
-- Shipping on the last retry because time/money was spent.
-- Rerendering after operator approval.
-- Cross-provider review without explicit data-boundary approval.
+- Full-page-only vision review with tiny unreadable text.
+- One PDF renderer as the only visual truth.
+- Model-authored per-client CSS/HTML.
+- Whole-report rerolls until a model claims satisfaction.
+- Automatically patching every unilateral criticism.
+- Treating accepted minor defects as shippable.
+- Treating subjective preferences as defects that loop forever.
+- Letting FR and EN be promoted independently.
+- Overwriting stable report object paths and trusting caches.
+- Performing PDF optimization/tagging after final QA.
+- Freehand model-generated exact facts followed by best-effort checking.
+- Flattening `newly-observable`/`not-comparable` into ordinary delta language.
+- Shipping because time/money has already been spent.
+- Rerendering or mutating after operator approval.
+- Cross-provider review without approved data boundary.
 - Optimizing cost before the quality corpus is clean.
 
 ---
 
-# Definition of done
+# 23. Definition of done
 
-Plan 058 is complete only when all are true:
+Plan 058 is implemented only when all are true:
 
-1. one canonical `ReportInputSnapshot` and render fingerprint govern staleness;
-2. hierarchical evidence, Fact Registry and Coverage Ledger are deterministic;
-3. exact quantities in model prose are evidence-bound, not hand-typed;
-4. senior remediation planning has no arbitrary theme count;
-5. required dual content critics + issue adjudication + targeted patching ship;
-6. semantic patch diffs prevent collateral rewrites;
-7. deterministic content/typography reconciliation passes before render;
-8. candidate rendering is private and separate from approved persistence;
-9. machine-readable VisualIntent/node/page manifests exist;
-10. pre-PDF overlap/clipping/single-line gates block bad geometry;
-11. exact-PDF structural, font and text-bbox gates block emitted-byte defects;
-12. PDF semantic/accessibility invariants are checked without false conformance
-    claims;
-13. every page is rasterized through two independent PDF renderers;
-14. every page is reviewed by both primary visual reviewers;
-15. visual disagreements are adjudicated rather than blindly patched;
-16. the final fresh visual reviewer examines every page again after the last
-    change;
-17. bilingual parity and independent final arbiter are required;
-18. automated success produces a private exact-digest quality-approved file;
-19. operator approval promotes those same bytes with storage hash/read-back
-    verification and no rerender;
-20. quality run lease/epoch prevents stale workers from publishing;
-21. crash/resume reuses only content-addressed matching artifacts;
-22. adversarial content/visual fault injection is green;
-23. property/fuzz rendering exercises thousands of pages with committed
-    regressions for every discovered bug;
-24. known-good controls are not degraded by reviewer pressure;
-25. repeated live-model evaluations show materially stable quality;
-26. Hôtel Point France and the heterogeneous real corpus rerun clean after the
-    final fix;
-27. the operator accepts the final complete Point France report pair and
-    representative extreme reports visually and editorially;
-28. dashboard stages make the quality process visible and prevent conflicting
-    actions;
-29. canonical docs/deployment tooling describe the shipped contract;
-30. full repository validation is green.
+1. production report generation accepts only current `ApprovedAuditEvidence` or a Plan-059 approved legacy adapter result;
+2. one canonical `ReportInputSnapshot` governs all report-only inputs and staleness;
+3. every mandatory evidence limitation/disclosure has a deterministic report destination and omission is blocking;
+4. re-audit coverage-comparability state is a structured report input and cannot be flattened into false regression/resolution language;
+5. `ReportFactRegistry` binds exact numbers, identity/date/URL/enum/reference facts used in model prose;
+6. `EvidenceBoundContent` rejects freehand exact facts outside the closed allowlist;
+7. model content is safely escaped/sanitized and cannot inject HTML/JS/bidi/control-layout tricks;
+8. hierarchical evidence packets and `ReportCoverageLedger` are deterministic and exhaustive;
+9. SeniorReportPlan uses coherent remediation projects with no arbitrary target count;
+10. Plan-059 PatternEvidence/limitations are correctly consumed;
+11. complementary dual content critics, adjudication and targeted patching ship;
+12. accepted objective defects of any severity block approval until verified repaired;
+13. preferences are distinct from objective defects and cannot force endless polishing;
+14. deterministic content/legal/reference/re-audit/performance-terminology/typography reconciliation passes;
+15. candidate rendering is private and separate from approved persistence;
+16. runtime VisualContract/VisualIntent/page manifests exist;
+17. pre-PDF overlap/clipping/single-line/fragment gates block bad DOM geometry;
+18. any PDF post-processing happens before candidate hashing and final QA;
+19. exact-PDF structure/font/text-bbox/metadata/link/active-content gates block emitted-byte defects;
+20. report PDF accessibility invariants are checked without false PDF/UA claims;
+21. every page is rasterized by two independent PDF engines;
+22. every page has full-page **and readable-detail** visual-review coverage with exact batching/coverage manifests;
+23. both complementary primary visual reviewers cover every page;
+24. visual disagreements are adjudicated;
+25. fresh final visual reviewer covers every page/detail view after the last change;
+26. bilingual parity includes limitations and re-audit semantics;
+27. FR and EN are bound into one atomic `ReportBundleCandidate`;
+28. final independent arbiter approves the exact current bundle;
+29. automated success yields a private exact-digest bundle only;
+30. operator approves `qualityRunId + bundleDigest` after viewing both exact PDFs;
+31. promotion stores immutable content-addressed FR/EN objects, verifies both read-back hashes, then atomically switches one active-bundle pointer/CAS;
+32. download routes never rerender and cannot expose half-updated/cached stale language revisions;
+33. quality-run leases/epochs prevent stale workers from writing or promoting;
+34. crash/resume reuses only content-addressed matching DAG nodes;
+35. reference/legal source freshness/provenance is enforced;
+36. adversarial content/PDF fault injection is green;
+37. deterministic layout fuzzing exercises thousands of pages;
+38. known-good controls are not degraded;
+39. repeated live-model evaluations show materially stable truth/quality outcomes;
+40. Hôtel Point France and heterogeneous saved corpus rerun clean after the final discovered defect;
+41. operator accepts the complete Point France pair and representative extreme reports editorially and visually;
+42. dashboard/progress/conflict controls reflect the real pipeline;
+43. canonical docs/deploy tooling describe the shipped contract;
+44. full repository validation and relevant e2e/store/toolchain tests are green.
 
-The intended client-facing invariant is simple: **a paid Odysseus PDF can exist
-as an approved report only when its evidence, interpretation, writing,
-quantities, typography, pagination, fonts, exact PDF geometry, cross-reader
-rendering and every physical page have been checked against the exact bytes the
-operator approves and the client receives.**
+## Freeze criterion
+
+The final architecture review was run specifically against evidence authority, content truth, re-audit semantics, visual coverage, concurrency, privacy, delivery, cache behavior and evaluation. After the corrections above, it produced **no further substantive architectural change**. Freeze Plan 058 here. Later amendments should be triggered by implementation evidence, corpus failures, model/tool changes or a real delivered-report defect — not speculative expansion.
+
+The client-facing invariant is simple:
+
+> **An approved Odysseus audit report is one atomically versioned FR/EN bundle whose exact evidence, interpretation, factual tokens, limitations, re-audit semantics, writing, typography, pagination, fonts, PDF structure, links, rendering and every physical page have been checked against the same immutable upstream evidence and the exact bytes the operator approves and the client receives.**
