@@ -228,6 +228,13 @@ export interface AuditDetailStrings {
    *  real data from the stored finding; the gloss and remediation lines
    *  render only when the API supplied reviewed copy for that rule. */
   findingDetailsToggle: string;
+  /** Issue #392: badge on a finding confined to third-party markup;
+   *  `{vendor}` is the named vendor when known. */
+  thirdPartyBadge: string;
+  thirdPartyVendorBadge: string;
+  thirdPartyBadgeHint: string;
+  /** `{count}` of the severity's findings are third-party. */
+  thirdPartyShare: string;
   findingGlossLabel: string;
   findingRemediationLabel: string;
   findingElementsLabel: string;
@@ -394,6 +401,11 @@ export const auditDetail = {
     reportUnavailableError:
       'Ce PDF n’est pas disponible depuis cette machine. Régénérez le rapport, puis réessayez.',
     findingDetailsToggle: 'Afficher le détail du constat',
+    thirdPartyBadge: 'Tiers',
+    thirdPartyVendorBadge: 'Tiers · {vendor}',
+    thirdPartyBadgeHint:
+      'Constat situé entièrement dans un contenu tiers intégré ; le site ne peut pas le corriger directement.',
+    thirdPartyShare: 'dont {count} tiers',
     findingGlossLabel: 'De quoi il s’agit',
     findingRemediationLabel: 'Piste de correction',
     findingElementsLabel: 'Éléments concernés',
@@ -664,6 +676,11 @@ export const auditDetail = {
     reportUnavailableError:
       'This PDF is not available from this machine. Regenerate the report, then try again.',
     findingDetailsToggle: 'Show the finding details',
+    thirdPartyBadge: 'Third party',
+    thirdPartyVendorBadge: 'Third party · {vendor}',
+    thirdPartyBadgeHint:
+      'This finding sits entirely inside embedded third-party content; the site cannot fix it directly.',
+    thirdPartyShare: '{count} third-party',
     findingGlossLabel: 'What this means',
     findingRemediationLabel: 'How to fix it',
     findingElementsLabel: 'Affected elements',

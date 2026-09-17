@@ -44,6 +44,7 @@ import {
   classifyReportFreshness,
   reportUsesCurrentTemplate,
   computeAutomaticGrade,
+  summarizeThirdPartyFindings,
   findUnconfirmedIdentityFields,
   generateOutreachPreviewHtmlV2,
   generateOutreachPreviewPdf,
@@ -489,6 +490,10 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     // AuditManifest (see audit.schema.ts's own doc comment).
     const automaticGrade = computeAutomaticGrade(findings, audit as unknown as AuditManifest);
     const effectiveGrade = resolveEffectiveGrade(automaticGrade, audit.gradeOverride);
+    // Issue #392: findings wholly inside third-party markup (an embedded
+    // player, a vendor widget) are labelled as such, and the header says
+    // how many of each severity they account for.
+    const thirdParty = summarizeThirdPartyFindings(findings);
 
     sendJson(res, 200, {
       auditId: audit.auditId,
@@ -500,7 +505,9 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       pagesVisited: audit.crawl.visitedCount,
       coverageSummary: summarizeAuditCoverage(audit),
       severityRollup,
+      thirdPartySeverityRollup: thirdParty.severityRollup,
       findings,
+      thirdPartyFindings: thirdParty.byFindingId,
       // Issue #93: reviewed FR/EN copy per rule id referenced by the
       // findings above.
       ruleCopy: buildRuleCopy(findings),

@@ -85,8 +85,12 @@ function useAuditDetail(auditId: string | undefined, intervalMs: number): AuditD
  *  Four same-sized numbers make a hundred minor issues look like the four
  *  critical ones; the whole point of the mix is its proportion. Every count
  *  is still written out beside its swatch, so nothing depends on the bar. */
-function SeverityBar(props: { rollup: SeverityRollup; strings: DashboardStrings }): JSX.Element {
-  const { rollup, strings } = props;
+function SeverityBar(props: {
+  rollup: SeverityRollup;
+  thirdParty: SeverityRollup | undefined;
+  strings: DashboardStrings;
+}): JSX.Element {
+  const { rollup, thirdParty, strings } = props;
   const total = SEVERITIES.reduce((sum, severity) => sum + rollup[severity], 0);
   return (
     <figure className="m-0">
@@ -110,7 +114,19 @@ function SeverityBar(props: { rollup: SeverityRollup; strings: DashboardStrings 
                 aria-hidden="true"
               />
               <dt className="text-xs text-ink-muted">{strings.common.severityLabels[severity]}</dt>
-              <dd className="numeric text-sm font-medium text-ink">{rollup[severity]}</dd>
+              <dd className="numeric text-sm font-medium text-ink">
+                {rollup[severity]}
+                {thirdParty !== undefined && thirdParty[severity] > 0 ? (
+                  <span className="ml-1 text-xs font-normal text-ink-muted">
+                    (
+                    {strings.auditDetail.thirdPartyShare.replace(
+                      '{count}',
+                      String(thirdParty[severity]),
+                    )}
+                    )
+                  </span>
+                ) : null}
+              </dd>
             </div>
           ))}
         </dl>
@@ -221,7 +237,11 @@ export function AuditDetailPage(): JSX.Element {
                 <dd className="numeric text-ink">{data.pagesVisited}</dd>
               </div>
             </dl>
-            <SeverityBar rollup={data.severityRollup} strings={strings} />
+            <SeverityBar
+              rollup={data.severityRollup}
+              thirdParty={data.thirdPartySeverityRollup}
+              strings={strings}
+            />
             <AuditProspectLinkPanel
               auditId={data.auditId}
               prospect={prospect}
@@ -253,6 +273,7 @@ export function AuditDetailPage(): JSX.Element {
         ) : null}
         <FindingsCard
           findings={data.findings}
+          thirdPartyFindings={data.thirdPartyFindings}
           ruleCopy={data.ruleCopy}
           language={language}
           expandedFindingId={expandedFindingId}

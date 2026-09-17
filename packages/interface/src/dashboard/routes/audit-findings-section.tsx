@@ -43,12 +43,20 @@ const FINDINGS_PREVIEW_COUNT = 6;
 
 export function FindingsCard(props: {
   findings: FindingResponse[];
+  thirdPartyFindings: Record<string, { vendor: string | null }> | undefined;
   ruleCopy: RuleCopyMap | undefined;
   language: DashboardLanguage;
   expandedFindingId: string | null;
   onExpandedFindingChange: (findingId: string | null) => void;
 }): JSX.Element {
-  const { findings, ruleCopy, language, expandedFindingId, onExpandedFindingChange } = props;
+  const {
+    findings,
+    thirdPartyFindings,
+    ruleCopy,
+    language,
+    expandedFindingId,
+    onExpandedFindingChange,
+  } = props;
   const { strings } = useI18n();
   const [filter, setFilter] = useState<SeverityFilter>('');
   const [isListExpanded, setIsListExpanded] = useState(false);
@@ -131,6 +139,7 @@ export function FindingsCard(props: {
                   <FindingRowGroup
                     key={finding.findingId}
                     finding={finding}
+                    thirdParty={thirdPartyFindings?.[finding.findingId]}
                     ruleCopy={ruleCopy}
                     language={language}
                     isExpanded={isExpanded}
@@ -172,13 +181,14 @@ export function FindingsCard(props: {
  *  (selector, snippet, page). */
 function FindingRowGroup(props: {
   finding: FindingResponse;
+  thirdParty: { vendor: string | null } | undefined;
   ruleCopy: RuleCopyMap | undefined;
   language: DashboardLanguage;
   isExpanded: boolean;
   selector: string | undefined;
   onToggle: () => void;
 }): JSX.Element {
-  const { finding, ruleCopy, language, isExpanded, selector, onToggle } = props;
+  const { finding, thirdParty, ruleCopy, language, isExpanded, selector, onToggle } = props;
   const { strings } = useI18n();
   const expansion = isExpanded ? findingExpansionView(finding, ruleCopy, language) : undefined;
   return (
@@ -212,6 +222,19 @@ function FindingRowGroup(props: {
               <span className="block text-ink">
                 {findingDisplayTitle(finding, ruleCopy, language)}
               </span>
+              {thirdParty !== undefined ? (
+                <span className="mt-0.5 block" title={strings.auditDetail.thirdPartyBadgeHint}>
+                  <Badge tone="neutral">
+                    {thirdParty.vendor === null
+                      ? strings.auditDetail.thirdPartyBadge
+                      : strings.auditDetail.thirdPartyVendorBadge.replace(
+                          '{vendor}',
+                          thirdParty.vendor,
+                        )}
+                  </Badge>
+                  <span className="sr-only">{strings.auditDetail.thirdPartyBadgeHint}</span>
+                </span>
+              ) : null}
               {selector !== undefined ? (
                 <span className="block max-w-72 truncate font-mono text-xs text-ink-muted">
                   {selector}

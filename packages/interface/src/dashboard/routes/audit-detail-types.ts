@@ -195,7 +195,11 @@ export interface AuditDetailResponse {
   finishedAt: string;
   pagesVisited: number;
   severityRollup: SeverityRollup;
+  /** Issue #392: the part of severityRollup confined to third-party markup. */
+  thirdPartySeverityRollup?: SeverityRollup;
   findings: FindingResponse[];
+  /** Issue #392: findings wholly inside third-party markup, by finding id. */
+  thirdPartyFindings?: Record<string, { vendor: string | null }>;
   /** Issue #93: reviewed copy per rule id referenced by `findings`. */
   ruleCopy?: Record<string, RuleCopyResponse>;
   reportLanguages: ReportLanguage[];

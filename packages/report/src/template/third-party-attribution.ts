@@ -43,6 +43,12 @@ const VENDOR_SELECTOR_PATTERNS: ReadonlyArray<{ pattern: RegExp; vendor: string 
   { pattern: /diadao[-_]?(widget|hsc)/i, vendor: 'Diadao' },
   { pattern: /cmplz/i, vendor: 'Complianz' },
   { pattern: /ZC_sdk|zc-iframe|zenchef/i, vendor: 'ZenChef' },
+  // Issue #392: YouTube's embedded player markup (atlantichotel.fr,
+  // `iframe[frameborder="0"] >>> .ytmVideoInfoChannelAvatar`). The `ytm`
+  // prefix is matched case-sensitively with its capital so an ordinary
+  // class such as `.ytmenu` never reads as YouTube.
+  { pattern: /(^|[\s.#>])(ytp-|ytm[A-Z])|youtube(-nocookie)?\.com/, vendor: 'YouTube' },
+  { pattern: /player\.vimeo\.com|vp-(controls|player)/i, vendor: 'Vimeo' },
 ];
 
 /** A shadow-piercing selector (Playwright's `>>>` combinator) means the
@@ -85,6 +91,19 @@ export function isThirdPartyFinding(finding: Pick<Finding, 'elements'>): boolean
   );
 }
 
+/** Issue #392: every captured element of the finding sits in third-party
+ *  markup, so the finding is not one of the site's own defects at all (as
+ *  opposed to isThirdPartyFinding, where one element is enough). A finding
+ *  with no captured element is never confined. */
+export function isConfinedToThirdParty(finding: Pick<Finding, 'elements'>): boolean {
+  return (
+    finding.elements.length > 0 &&
+    finding.elements.every(
+      (el) => detectVendor(el.selector) !== undefined || crossesFrameBoundary(el.selector),
+    )
+  );
+}
+
 /** The vendor name for a third-party finding, when one of the known
  *  prefixes matched; undefined for a frame-crossing selector matching no
  *  named vendor (still third-party, just not attributable to a specific
@@ -95,4 +114,23 @@ export function detectFindingVendor(finding: Pick<Finding, 'elements'>): string 
     if (vendor) return vendor;
   }
   return undefined;
+}
+
+/** Issue #392: the operator dashboard's view of third-party findings: each
+ *  confined finding with its vendor (null when only the frame boundary
+ *  identifies it), and how many of each severity they account for. */
+export function summarizeThirdPartyFindings(
+  findings: readonly Pick<Finding, 'findingId' | 'severity' | 'elements'>[],
+): {
+  byFindingId: Record<string, { vendor: string | null }>;
+  severityRollup: Record<Finding['severity'], number>;
+} {
+  const byFindingId: Record<string, { vendor: string | null }> = {};
+  const severityRollup = { critical: 0, serious: 0, moderate: 0, minor: 0 };
+  for (const finding of findings) {
+    if (!isConfinedToThirdParty(finding)) continue;
+    byFindingId[finding.findingId] = { vendor: detectFindingVendor(finding) ?? null };
+    severityRollup[finding.severity] += 1;
+  }
+  return { byFindingId, severityRollup };
 }
