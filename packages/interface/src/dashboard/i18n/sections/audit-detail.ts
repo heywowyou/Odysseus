@@ -174,6 +174,7 @@ export interface AuditDetailStrings {
     produceFailedOverflowFinding: string;
     /** {section}: the report section heading the overflowing box sits in. */
     produceFailedOverflowSection: string;
+    produceFailedOverflowBlock: string;
     /** A different layout-safety refusal from the PDF renderer. */
     produceFailedStaleData: string;
     produceFailedIdentity: string;
@@ -533,6 +534,7 @@ export const auditDetail = {
         'Un contenu de la page {page} sort de la zone imprimable (dépassement de {amount} px). Deux causes sont connues : un bloc que la mise en page n’a pas pu couper entre deux pages, ou un texte très long sans espace (adresse, sélecteur, URL). Aucun PDF n’a été livré.',
       produceFailedOverflowFinding: 'Constat en cause : {finding}.',
       produceFailedOverflowSection: 'Section en cause : « {section} ».',
+      produceFailedOverflowBlock: 'Passage en cause : « {excerpt} ».',
       produceFailedStaleData:
         'Le format des données du scan a changé depuis la rédaction. Relancez la production : les constats et la rédaction sont d’abord actualisés. Aucun PDF n’a été livré.',
       produceFailedIdentity:
@@ -804,6 +806,7 @@ export const auditDetail = {
         'Content on page {page} extends outside the printable area (overflow of {amount} px). Two causes are known: a block the layout could not split across two pages, or a very long text without spaces (address, selector, URL). No PDF was delivered.',
       produceFailedOverflowFinding: 'Finding involved: {finding}.',
       produceFailedOverflowSection: 'Section involved: “{section}”.',
+      produceFailedOverflowBlock: 'Passage involved: “{excerpt}”.',
       produceFailedStaleData:
         'The scan data changed format since this writing was produced. Produce the PDFs again: the findings and the writing are refreshed first. No PDF was delivered.',
       produceFailedIdentity:

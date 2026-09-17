@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  elideLongTokens,
   escapeHtml,
+  MAX_PROSE_TOKEN_LENGTH,
   fillTemplate,
   formatDate,
   formatCappedFindingIdLinks,
@@ -183,5 +185,19 @@ describe('report issuer configuration', () => {
       else process.env['ODYSSEUS_SIRET'] = originalOdysseusSiret;
       vi.resetModules();
     }
+  });
+});
+
+describe('elideLongTokens (issue #276)', () => {
+  it('keeps ordinary prose and elides the middle of an oversized token', () => {
+    const url = `https://cdn.hotel-widget.example/loader.js?${'k'.repeat(700)}=end`;
+    expect(elideLongTokens('Un texte ordinaire.')).toBe('Un texte ordinaire.');
+    const elided = elideLongTokens(`Le script ${url} ralentit la page.`);
+    const token = elided.split(' ')[2]!;
+    expect(Array.from(token)).toHaveLength(MAX_PROSE_TOKEN_LENGTH);
+    expect(token.startsWith('https://cdn.hotel-widget.example/')).toBe(true);
+    expect(token.endsWith('kkkkkkkkkkkkkkk=end')).toBe(true);
+    expect(elided.startsWith('Le script ')).toBe(true);
+    expect(elided.endsWith(' ralentit la page.')).toBe(true);
   });
 });

@@ -111,7 +111,7 @@ export function describeProduceFailure(
     ...(detail ? { technicalDetail: detail } : {}),
   };
   const overflow = detail?.match(
-    /printable content rectangle on physical page (\d+) at \w+ by ([\d.]+)px(?: in finding ([^\s.]+))?(?: in section "([^"]*)")?\./u,
+    /printable content rectangle on physical page (\d+) at \w+ by ([\d.]+)px(?: in finding ([^\s.]+))?(?: in section "([^"]*)")?(?:, block starting "([^"]*)")?\./u,
   );
   if (overflow) {
     const amount = String(Math.round(Number(overflow[2])));
@@ -124,7 +124,10 @@ export function describeProduceFailure(
           : ` ${copy.produceFailedOverflowFinding.replace('{finding}', overflow[3])}`) +
         (overflow[4] === undefined
           ? ''
-          : ` ${copy.produceFailedOverflowSection.replace('{section}', overflow[4])}`),
+          : ` ${copy.produceFailedOverflowSection.replace('{section}', overflow[4])}`) +
+        (overflow[5] === undefined
+          ? ''
+          : ` ${copy.produceFailedOverflowBlock.replace('{excerpt}', overflow[5])}`),
     };
   }
   // Every refusal shares the "Report generation aborted:" prefix, so the

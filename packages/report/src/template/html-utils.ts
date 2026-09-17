@@ -60,7 +60,26 @@ export function stripInlineMarkdown(value: string): string {
  *  typographic ones. Model prose is the third French source in the
  *  document and goes through the same pass as the other two. */
 export function escapeProse(value: string, language: 'fr' | 'en'): string {
-  return escapeCopy(stripInlineMarkdown(value), language);
+  return escapeCopy(elideLongTokens(stripInlineMarkdown(value)), language);
+}
+
+/** Longest unbroken run of non-space characters prose prints whole. */
+export const MAX_PROSE_TOKEN_LENGTH = 80;
+
+/** Issue #276: model prose can quote a third-party URL hundreds of
+ *  characters long. Wrapped, it still has no word boundary, and Paged.js
+ *  cannot split a paragraph at a page break that falls inside it: the
+ *  fragment spills a whole page width past the margin and the PDF gate
+ *  refuses the report. The middle of such a token is elided, keeping its
+ *  start (the host) and its end, which no reader could type anyway. */
+export function elideLongTokens(value: string, max = MAX_PROSE_TOKEN_LENGTH): string {
+  return value.replace(/\S+/gu, (token) => {
+    const characters = Array.from(token);
+    if (characters.length <= max) return token;
+    const tail = Math.floor((max - 1) / 4);
+    const head = max - 1 - tail;
+    return `${characters.slice(0, head).join('')}…${characters.slice(-tail).join('')}`;
+  });
 }
 
 /** Escapes French display copy that did not come from the report's own

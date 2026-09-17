@@ -3,7 +3,9 @@
  * unbroken third-party script URL in its findings, and the paid report
  * aborted on the overflow gate. Every string a finding carries is replaced
  * with such a URL here, so any report surface that prints finding evidence
- * without wrapping it fails this suite.
+ * without wrapping it fails this suite. The written analysis gets the same
+ * URL appended to its prose: a page break inside such a token left a
+ * paragraph fragment a whole page width past the margin.
  */
 
 import { promises as fs } from 'node:fs';
@@ -14,7 +16,11 @@ import type { Browser } from 'playwright';
 import type { Finding } from '@odysseus/core';
 import { launchBrowser } from '@odysseus/scanner';
 import { renderHtml } from './render-html.js';
-import { analyzePagedjsOverflow, collectPagedjsOverflowModels } from '../pdf.js';
+import {
+  analyzePagedjsOverflow,
+  collectPagedjsOverflowModels,
+  describePagedjsOverflow,
+} from '../pdf.js';
 import { REPORT_PDF_CHROMIUM_ARGS } from '../index.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
 import {
@@ -44,6 +50,21 @@ function withLongUrls(value: unknown, key = ''): unknown {
   return value;
 }
 
+/** The written analysis can quote the same URL in its prose. Appends it to
+ *  every sentence-shaped string, leaving identifiers and enums intact. */
+function withLongUrlProse(value: unknown): unknown {
+  if (typeof value === 'string') {
+    return value.includes(' ') ? `${value} ${LONG_SCRIPT_URL}` : value;
+  }
+  if (Array.isArray(value)) return value.map((item) => withLongUrlProse(item));
+  if (value !== null && typeof value === 'object' && !(value instanceof Date)) {
+    return Object.fromEntries(
+      Object.entries(value).map(([entryKey, entry]) => [entryKey, withLongUrlProse(entry)]),
+    );
+  }
+  return value;
+}
+
 let browser: Browser;
 let pagedjsSource: string;
 let html: string;
@@ -66,7 +87,7 @@ beforeAll(async () => {
   html = await renderHtml({
     manifest,
     findings: longFindings,
-    analysis,
+    analysis: withLongUrlProse(analysis) as typeof analysis,
     renderDiffEvidencePages,
   });
   const entryPath = require.resolve('pagedjs');
@@ -96,7 +117,9 @@ describe('long unbroken evidence strings in the paid report', () => {
         await new Paged.Previewer().preview();
       });
       const violation = analyzePagedjsOverflow(await collectPagedjsOverflowModels(page));
-      expect(violation).toBeUndefined();
+      expect(
+        violation === undefined ? undefined : describePagedjsOverflow(violation),
+      ).toBeUndefined();
     } finally {
       await context.close();
     }

@@ -686,6 +686,20 @@ describe('overflow description names the appendix finding', () => {
       'Painted content <div> extends past the printable content rectangle on physical page 18 at right by 1793.7px in section "Autres constats".',
     );
   });
+
+  it('names the start of the block when it sits outside any titled section (issue #276)', () => {
+    expect(
+      describePagedjsOverflow({
+        pageIndex: 10,
+        tag: 'DIV',
+        side: 'right',
+        amountPx: 1793.7,
+        textExcerpt: 'Sur la page "Devis", un menu déroulant…',
+      }),
+    ).toBe(
+      'Painted content <div> extends past the printable content rectangle on physical page 11 at right by 1793.7px, block starting "Sur la page \'Devis\', un menu déroulant…".',
+    );
+  });
 });
 
 // Issue #312: a reopened table from an earlier repair pass can go stale once

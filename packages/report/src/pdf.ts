@@ -266,6 +266,9 @@ export interface PagedOverflowCandidate {
   /** The heading of the report section the box sits in, for the same
    *  reason: most overflowing boxes are not in an annex row. */
   sectionTitle?: string;
+  /** The start of the box's own text, so a refusal outside any titled
+   *  section still names the block to look at. */
+  textExcerpt?: string;
 }
 
 export interface PagedPageOverflowModel {
@@ -287,6 +290,7 @@ export interface PagedjsOverflowViolation {
   amountPx: number;
   findingId?: string;
   sectionTitle?: string;
+  textExcerpt?: string;
 }
 
 /** Fixed side order so a box wider than the whole sheet reports its
@@ -336,6 +340,7 @@ export function analyzePagedjsOverflow(
           ...overflow,
           ...(candidate.findingId === undefined ? {} : { findingId: candidate.findingId }),
           ...(candidate.sectionTitle === undefined ? {} : { sectionTitle: candidate.sectionTitle }),
+          ...(candidate.textExcerpt === undefined ? {} : { textExcerpt: candidate.textExcerpt }),
         };
       }
     }
@@ -349,8 +354,11 @@ export function describePagedjsOverflow(violation: PagedjsOverflowViolation): st
     `on physical page ${violation.pageIndex + 1} at ${violation.side} by ${violation.amountPx}px` +
     (violation.findingId === undefined ? '' : ` in finding ${violation.findingId}`) +
     (violation.sectionTitle === undefined
+      ? ''
+      : ` in section "${violation.sectionTitle.replace(/"/gu, "'")}"`) +
+    (violation.textExcerpt === undefined
       ? '.'
-      : ` in section "${violation.sectionTitle.replace(/"/gu, "'")}".`)
+      : `, block starting "${violation.textExcerpt.replace(/"/gu, "'")}".`)
   );
 }
 
@@ -405,11 +413,15 @@ export async function collectPagedjsOverflowModels(page: Page): Promise<PagedPag
           const annexRow = el.closest('[id^="annexref-"]');
           const sectionId = el.closest('section.sheet[id]')?.id;
           const sectionTitle = sectionId === undefined ? undefined : sectionTitles.get(sectionId);
+          const text = el.textContent?.replace(/\s+/gu, ' ').trim() ?? '';
+          const textExcerpt =
+            text === '' ? undefined : text.length > 60 ? `${text.slice(0, 60)}…` : text;
           candidates.push({
             tag: el.tagName,
             painted,
             ...(annexRow === null ? {} : { findingId: annexRow.id.slice('annexref-'.length) }),
             ...(sectionTitle === undefined ? {} : { sectionTitle }),
+            ...(textExcerpt === undefined ? {} : { textExcerpt }),
             rect: {
               left: r.left,
               top: r.top,

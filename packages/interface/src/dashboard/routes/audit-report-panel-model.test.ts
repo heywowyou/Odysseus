@@ -125,6 +125,15 @@ describe('describeProduceFailure', () => {
     expect(result.explanation).not.toContain('Constat en cause');
   });
 
+  it('names the passage when the overflow sits outside any titled section (issue #276)', () => {
+    const result = describeProduceFailure(
+      'Report generation aborted: Painted content <div> extends past the printable content rectangle on physical page 11 at right by 1793.7px, block starting "Sur la page Devis, un menu…".',
+      'fr',
+    );
+    expect(result.explanation).toContain('page 11');
+    expect(result.explanation).toContain('Passage en cause : « Sur la page Devis, un menu… ».');
+  });
+
   it('explains a stale-data refusal as a format change, not a layout failure', () => {
     const stale =
       'Report generation aborted: stale analysis uses normalization fingerprint 5d6066235a290ca9; current findings use d3e7566e15352410. Run normalize and regenerate the analyses.';
