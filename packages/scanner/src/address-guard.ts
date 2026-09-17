@@ -24,14 +24,25 @@
  *
  * Residual risk, accepted in docs/research/interface-probe-address-posture.md:
  * DNS rebinding between this resolve step and the connect that follows is
- * out of scope. Closing it means pinning the connection to the resolved
- * address with a custom dispatcher.
+ * out of scope here. Closing it means pinning the connection to the resolved
+ * address with a custom dispatcher. For full-audit scanning, plan 059 raises
+ * that from accepted risk to a requirement: `network-target-policy.ts` layers
+ * pinning and redirect revalidation on top of this classifier, and the
+ * prospecting probes continue to run with the residual risk their own posture
+ * document accepted.
  */
 
 import { lookup } from 'node:dns/promises';
 
 export type RefusedAddressReason =
-  'loopback' | 'private' | 'link-local' | 'unique-local' | 'unspecified' | 'unparseable';
+  | 'loopback'
+  | 'private'
+  | 'link-local'
+  | 'unique-local'
+  | 'unspecified'
+  | 'multicast'
+  | 'reserved'
+  | 'unparseable';
 
 export type AddressClassification =
   { kind: 'allowed' } | { kind: 'refused'; reason: RefusedAddressReason };
@@ -74,7 +85,21 @@ function classifyIpv4Octets([o0, o1]: readonly [
   if (o0 === 169 && o1 === 254) return { kind: 'refused', reason: 'link-local' };
   if (o0 === 172 && (o1 & 0xf0) === 16) return { kind: 'refused', reason: 'private' }; // 172.16.0.0/12
   if (o0 === 192 && o1 === 168) return { kind: 'refused', reason: 'private' }; // 192.168.0.0/16
+  // 224.0.0.0/4 multicast and 240.0.0.0/4 reserved, which includes the
+  // 255.255.255.255 broadcast address. Plan 059 section 5.2 names these
+  // explicitly rather than leaving them to the transport: the earlier posture
+  // reasoned that no HTTP fetch to them can succeed, but "the connection will
+  // fail anyway" is a prediction about the network stack, not a refusal this
+  // guard made, and it produces no auditable network-safety disposition when
+  // a scanned page points at one.
+  if ((o0 & 0xf0) === 224) return { kind: 'refused', reason: 'multicast' };
+  if ((o0 & 0xf0) === 240) return { kind: 'refused', reason: 'reserved' };
   return { kind: 'allowed' };
+}
+
+/** The IPv4 address embedded in the final two hextets of an IPv6 address. */
+function embeddedIpv4Octets(high: number, low: number): [number, number, number, number] {
+  return [(high >> 8) & 0xff, high & 0xff, (low >> 8) & 0xff, low & 0xff];
 }
 
 /** Parses an IPv6 literal into its 8 hextets, compressing '::' and decoding
@@ -145,19 +170,41 @@ function classifyIpv6Groups(groups: readonly number[]): AddressClassification {
   // Classifying through the IPv4 rules keeps the mapped spelling of a
   // private range from walking past the guard.
   if (g0 === 0 && g1 === 0 && g2 === 0 && g3 === 0 && g4 === 0 && g5 === 0xffff) {
-    return classifyIpv4Octets([(g6 >> 8) & 0xff, g6 & 0xff, (g7 >> 8) & 0xff, g7 & 0xff]);
+    return classifyIpv4Octets(embeddedIpv4Octets(g6, g7));
   }
+  // Every remaining IPv6 form that carries an IPv4 address inside it is
+  // classified through the IPv4 rules, for the reason the mapped case gives:
+  // the spelling changes, the host reached does not. Without these, '::127.0.0.1',
+  // '64:ff9b::127.0.0.1' and '2002:7f00:0001::' are three ways to write
+  // loopback that walk straight past a guard that only knows '::ffff:'.
+  //
+  // ::/96 IPv4-compatible, deprecated but still parsed by getaddrinfo. The ::
+  // and ::1 cases above already returned, so anything left here is a genuine
+  // embedded address.
+  if (g0 === 0 && g1 === 0 && g2 === 0 && g3 === 0 && g4 === 0 && g5 === 0) {
+    return classifyIpv4Octets(embeddedIpv4Octets(g6, g7));
+  }
+  // 64:ff9b::/96, the well-known NAT64 translation prefix.
+  if (g0 === 0x0064 && g1 === 0xff9b && g2 === 0 && g3 === 0 && g4 === 0 && g5 === 0) {
+    return classifyIpv4Octets(embeddedIpv4Octets(g6, g7));
+  }
+  // 2002::/16 6to4, whose embedded IPv4 sits in the second and third hextets.
+  if (g0 === 0x2002) return classifyIpv4Octets(embeddedIpv4Octets(g1, g2));
   // fc00::/7 unique-local (fc00 through fdff).
   if ((g0 & 0xfe00) === 0xfc00) return { kind: 'refused', reason: 'unique-local' };
   // fe80::/10 link-local (fe80 through febf).
   if ((g0 & 0xffc0) === 0xfe80) return { kind: 'refused', reason: 'link-local' };
+  // ff00::/8 multicast, refused for the same reason as its IPv4 counterpart.
+  if ((g0 & 0xff00) === 0xff00) return { kind: 'refused', reason: 'multicast' };
   return { kind: 'allowed' };
 }
 
-/** Classifies one address as it came back from resolution. Multicast and
- *  other reserved ranges are deliberately left to the transport to refuse:
- *  no HTTP fetch to them can succeed, so spelling them out would add
- *  classifier surface without closing a reachable path. */
+/** Classifies one address as it came back from resolution. Refuses every
+ *  range that is not public-routable, including the multicast and reserved
+ *  ranges an earlier posture left to the transport, and classifies each IPv6
+ *  form that embeds an IPv4 address through the IPv4 rules so an alternative
+ *  spelling cannot reach a host the dotted-quad form would have been refused
+ *  for (plan 059 section 5.2). */
 export function classifyIpAddress(address: string): AddressClassification {
   const octets = parseIpv4Octets(address);
   if (octets !== null) return classifyIpv4Octets(octets);

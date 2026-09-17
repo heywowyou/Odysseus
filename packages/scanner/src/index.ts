@@ -11,6 +11,21 @@ export {
   type LookupAddresses,
   type ResolvedAddress,
 } from './address-guard.js';
+export {
+  assertPinnedAddress,
+  checkNetworkTarget,
+  checkRedirectTarget,
+  createTestOnlyLoopbackPolicy,
+  resolveNetworkTargetPolicyForJob,
+  PUBLIC_SITE_NETWORK_POLICY,
+  PUBLIC_SITE_NETWORK_POLICY_ID,
+  TEST_ONLY_LOOPBACK_NETWORK_POLICY_ID,
+  type CheckNetworkTargetOptions,
+  type NetworkSafetyDisposition,
+  type NetworkSafetyRefusalReason,
+  type NetworkTargetPolicy,
+  type NetworkTargetVerdict,
+} from './network-target-policy.js';
 export type {
   CrawlOptions,
   CrawlProgressEvent,
