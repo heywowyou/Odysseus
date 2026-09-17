@@ -8,7 +8,7 @@
  * regenerate the PDFs.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { Link } from 'react-router';
 import { toast } from 'sonner';
@@ -196,6 +196,17 @@ export function ReportsCard(props: {
   const { detail, onApproved } = props;
   const { language, strings } = useI18n();
   const [isLoadingReport, setIsLoadingReport] = useState(false);
+  const [qualityBundle, setQualityBundle] = useState<{ bundleId: string; qualityRunId: string; epoch: number; bundleDigest: string; state: string; evidenceApprovalMode: string } | null>(null);
+  const [qualityLoading, setQualityLoading] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void fetchWithTimeout(`/api/audits/${encodeURIComponent(detail.auditId)}/report-quality`).then(async (response) => {
+      if (!response.ok) return;
+      const body = await response.json() as { candidate?: unknown };
+      if (!cancelled && body.candidate && typeof body.candidate === 'object') setQualityBundle(body.candidate as typeof qualityBundle);
+    }).catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [detail.auditId]);
   const hasReports = detail.reportLanguages.length > 0 && detail.reports.length > 0;
   const reportBase = `/api/audits/${encodeURIComponent(detail.auditId)}/report`;
   const isApproved = detail.lifecycle === 'approved';
@@ -233,8 +244,50 @@ export function ReportsCard(props: {
     }
   };
 
+  const approveQualityBundle = async (): Promise<void> => {
+    if (!qualityBundle) return;
+    setQualityLoading(true);
+    try {
+      const response = await fetchWithTimeout(`/api/audits/${encodeURIComponent(detail.auditId)}/report-quality/approve`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ qualityRunId: qualityBundle.qualityRunId, epoch: qualityBundle.epoch, bundleDigest: qualityBundle.bundleDigest }),
+      });
+      if (!response.ok) { const body = await response.json().catch(() => ({})) as { error?: string }; throw new Error(body.error ?? String(response.status)); }
+      setQualityBundle({ ...qualityBundle, state: 'promoted' });
+      onApproved();
+    } catch (error) {
+      toast.error(language === 'fr' ? "L’approbation du rapport a échoué" : 'Report approval failed', { description: error instanceof Error ? error.message : undefined });
+    } finally { setQualityLoading(false); }
+  };
+
   return (
     <Card title={strings.auditDetail.reportsHeading}>
+      {qualityBundle ? (
+        <div className="mb-4 rounded-lg border border-line bg-raised p-4">
+          <p className="text-sm font-medium text-ink">{language === 'fr' ? 'Bundle qualité Plan 058' : 'Plan 058 quality bundle'}</p>
+          <p className="mt-1 text-xs text-ink-muted">
+            {qualityBundle.state === 'awaiting-operator-approval'
+              ? (language === 'fr' ? 'Les contrôles automatiques sont terminés. Prévisualisez les deux PDF exacts avant d’approuver ce bundle.' : 'Automated quality gates are complete. Preview both exact PDFs before approving this bundle.')
+              : (language === 'fr' ? `État : ${qualityBundle.state}` : `State: ${qualityBundle.state}`)}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {(['fr','en'] as const).map((reportLanguage) => (
+              <a key={reportLanguage} className={buttonStyles('ghost','sm')} href={`/api/audits/${encodeURIComponent(detail.auditId)}/report-quality/${encodeURIComponent(qualityBundle.bundleDigest)}/${reportLanguage}`} target="_blank" rel="noreferrer">
+                {language === 'fr' ? `Prévisualiser ${reportLanguage.toUpperCase()}` : `Preview ${reportLanguage.toUpperCase()}`}
+              </a>
+            ))}
+            {qualityBundle.state === 'awaiting-operator-approval' ? (
+              <Button size="sm" disabled={qualityLoading || qualityBundle.evidenceApprovalMode === 'legacy-adapter'} onClick={() => void approveQualityBundle()}>
+                {language === 'fr' ? 'Approuver ce bundle exact' : 'Approve this exact bundle'}
+              </Button>
+            ) : null}
+          </div>
+          {qualityBundle.evidenceApprovalMode === 'legacy-adapter' ? (
+            <p className="mt-2 text-xs text-ink-muted">{language === 'fr' ? 'Évaluation uniquement : la promotion client reste bloquée jusqu’à la preuve canonique du Plan 059.' : 'Evaluation only: client promotion remains blocked until Plan 059 canonical evidence exists.'}</p>
+          ) : null}
+        </div>
+      ) : null>
       {staticFallbackNotice !== undefined ? (
         <p className="mb-3 max-w-reading text-xs text-ink-muted">{staticFallbackNotice}</p>
       ) : null}
