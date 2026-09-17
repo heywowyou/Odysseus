@@ -19,6 +19,7 @@ import {
   getFindingsForAudit,
   getProspectHub,
   listOutreachDrafts,
+  loadOutreachReportReadiness,
   openOutreachThread,
   recordFailedOutreachDraft,
   recordOutreachDraft,
@@ -153,9 +154,16 @@ async function resolvePreview(connection: Connection, prospectId: string, token:
         return scanIntent === undefined ? audit : { ...audit, scanIntent };
       });
       const selected = selectNewestQualifyingAudit(classifiedAudits);
-      return selected.audit === undefined
-        ? { state: 'refused' as const }
-        : { state: 'resolved' as const, audit: { auditId: selected.audit.auditId } };
+      if (selected.audit === undefined) return { state: 'refused' as const };
+      // Issue #388: the first email cites a preview built on this audit's
+      // client reports; same readiness rule as the outreach guard.
+      const readiness = await loadOutreachReportReadiness(connection, {
+        auditId: selected.audit.auditId,
+        prospectId: id,
+      });
+      return readiness.state === 'ready'
+        ? { state: 'resolved' as const, audit: { auditId: selected.audit.auditId } }
+        : { state: 'refused' as const };
     },
     findingsForAudit: (auditId) => getFindingsForAudit(connection, auditId),
     prospectId,
@@ -359,7 +367,8 @@ export type CreateFirstEmailRefusal =
   | 'no-mailbox-configured'
   | 'insufficient-safe-cards'
   | 'no-audit'
-  | 'coverage-incomplete';
+  | 'coverage-incomplete'
+  | 'report-not-ready';
 export type CreateFirstEmailResult =
   | { configured: false; refusal: 'no-preview-bucket-configured' }
   | ({ configured: true; created: boolean; refusal?: CreateFirstEmailRefusal } & Partial<{

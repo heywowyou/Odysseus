@@ -35,6 +35,7 @@ export type PublishPreviewV2Refusal =
   | 'prospect-unknown'
   | 'no-audit'
   | 'coverage-incomplete'
+  | 'report-not-ready'
   | 'domain-mismatch'
   | 'suppressed'
   | 'insufficient-safe-cards';

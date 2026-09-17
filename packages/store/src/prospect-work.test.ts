@@ -6,17 +6,20 @@ vi.mock('./schemas/job.schema.js', () => ({ createJobModel: vi.fn() }));
 vi.mock('./schemas/outreach-draft.schema.js', () => ({ createOutreachDraftModel: vi.fn() }));
 vi.mock('./schemas/outreach-thread.schema.js', () => ({ createOutreachThreadModel: vi.fn() }));
 vi.mock('./suppression.js', () => ({ findSuppressionMatches: vi.fn() }));
+vi.mock('./schemas/report.schema.js', () => ({ createReportModel: vi.fn() }));
 
 import { createAuditModel } from './schemas/audit.schema.js';
 import { createJobModel } from './schemas/job.schema.js';
 import { createOutreachDraftModel } from './schemas/outreach-draft.schema.js';
 import { createOutreachThreadModel } from './schemas/outreach-thread.schema.js';
 import { findSuppressionMatches } from './suppression.js';
+import { createReportModel } from './schemas/report.schema.js';
 import {
   deriveProspectWork,
   loadProspectWork,
   selectNewestQualifyingAudit,
   type ProspectWorkAudit,
+  type ProspectWorkReport,
 } from './prospect-work.js';
 
 const prospect = {
@@ -50,9 +53,29 @@ function audit(overrides: Record<string, unknown> = {}): ProspectWorkAudit {
     pages: [{ status: 'visited', url: 'https://example.fr/' }],
     crawl: {},
     scanIntent: 'prospecting-audit',
-    findingsProvenance: { normalizationFingerprint: NORMALIZATION_FINGERPRINT },
+    findingsProvenance: currentProvenance,
     ...overrides,
   } as ProspectWorkAudit;
+}
+
+const currentProvenance = {
+  findingsSchemaVersion: 1 as const,
+  normalizationFingerprint: NORMALIZATION_FINGERPRINT,
+  findingsDigest: 'digest-current',
+};
+
+/** A current FR+EN report pair: the issue #388 prerequisite of initial
+ *  outreach. */
+function readyReports(
+  auditId = 'audit-old',
+  findingsProvenance: Record<string, unknown> = currentProvenance,
+): ProspectWorkReport[] {
+  return (['fr', 'en'] as const).map((language) => ({
+    auditId,
+    language,
+    generatedAt: new Date('2026-09-01T11:00:00.000Z'),
+    findingsProvenance,
+  }));
 }
 
 const emptySources = {
@@ -60,6 +83,8 @@ const emptySources = {
   drafts: [],
   threads: [],
   needsInputJobs: [],
+  failedJobs: [],
+  reports: readyReports(),
   suppressedDomains: new Set<string>(),
   suppressedAddresses: new Set<string>(),
 };
@@ -168,6 +193,60 @@ describe('prospect work model', () => {
       expect(work.items.map((item) => item.kind).sort()).toEqual(['audit-input', 'first-email']);
     });
 
+    it('replaces the first email with a report task while the report failed (issue #388)', () => {
+      const failedJob = {
+        jobId: 'job-pdf',
+        auditId: 'audit-old',
+        status: 'failed' as const,
+        createdAt: new Date('2026-09-01T09:59:00.000Z'),
+        options: { prospectId: prospect.prospectId },
+      };
+      const work = deriveProspectWork(
+        prospect,
+        { ...emptySources, audits: [audit()], reports: [], failedJobs: [failedJob] },
+        new Date('2026-09-15T00:00:00.000Z'),
+      );
+
+      expect(work.items).toEqual([
+        expect.objectContaining({
+          kind: 'audit-report',
+          action: 'regenerate-report',
+          href: '/audits/audit-old',
+        }),
+      ]);
+      expect(work.recommendation).toEqual({
+        action: 'regenerate-report',
+        href: '/audits/audit-old',
+      });
+      expect(work.reportReadiness).toEqual({ state: 'not-ready', reason: 'failed' });
+    });
+
+    it('waits on regeneration when the report pair is stale', () => {
+      const work = deriveProspectWork(
+        prospect,
+        {
+          ...emptySources,
+          audits: [audit()],
+          reports: readyReports('audit-old', { ...currentProvenance, findingsDigest: 'before' }),
+        },
+        new Date('2026-09-15T00:00:00.000Z'),
+      );
+
+      expect(work.items.map((item) => item.kind)).toEqual(['audit-report']);
+      expect(work.reportReadiness).toEqual({ state: 'not-ready', reason: 'stale' });
+    });
+
+    it('asks a historical audit without reports for regeneration, never a rescan', () => {
+      const work = deriveProspectWork(
+        prospect,
+        { ...emptySources, audits: [audit()], reports: [] },
+        new Date('2026-09-15T00:00:00.000Z'),
+      );
+
+      expect(work.items.map((item) => item.kind)).toEqual(['audit-report']);
+      expect(work.recommendation).toMatchObject({ action: 'regenerate-report' });
+    });
+
     it('keeps reply work for an already-contacted prospect', () => {
       const work = deriveProspectWork(
         prospect,
@@ -195,7 +274,8 @@ describe('prospect work model', () => {
   });
 
   it('recommends the first email, not a rescan, for a complete audit from older code', () => {
-    const older = audit({ findingsProvenance: { normalizationFingerprint: 'older-release' } });
+    const olderProvenance = { ...currentProvenance, normalizationFingerprint: 'older-release' };
+    const older = audit({ findingsProvenance: olderProvenance });
     expect(selectNewestQualifyingAudit([older])).toEqual({
       state: 'qualifying',
       audit: older,
@@ -204,7 +284,7 @@ describe('prospect work model', () => {
 
     const work = deriveProspectWork(
       prospect,
-      { ...emptySources, audits: [older] },
+      { ...emptySources, audits: [older], reports: readyReports('audit-old', olderProvenance) },
       new Date('2026-09-15T00:00:00.000Z'),
     );
     expect(work.auditState).toBe('qualifying');
@@ -433,6 +513,10 @@ describe('prospect work model', () => {
     vi.mocked(createJobModel).mockReturnValue({
       find: vi.fn().mockReturnValue(jobCursor),
     } as never);
+    const reportCursor = chain([]);
+    vi.mocked(createReportModel).mockReturnValue({
+      find: vi.fn().mockReturnValue(reportCursor),
+    } as never);
     vi.mocked(findSuppressionMatches).mockResolvedValue({
       domains: new Set(),
       addresses: new Set(),
@@ -447,7 +531,12 @@ describe('prospect work model', () => {
     expect(createOutreachDraftModel).toHaveBeenCalledTimes(1);
     expect(createOutreachThreadModel).toHaveBeenCalledTimes(1);
     expect(createJobModel).toHaveBeenCalledTimes(1);
+    expect(createReportModel).toHaveBeenCalledTimes(1);
     expect(findSuppressionMatches).toHaveBeenCalledTimes(1);
+    const reportProjection = reportCursor.select.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(Object.keys(reportProjection).sort()).toEqual(
+      ['_id', 'auditId', 'findingsProvenance', 'generatedAt', 'language'].sort(),
+    );
     const auditProjection = auditCursor.select.mock.calls[0]?.[0] as Record<string, unknown>;
     // Only the per-page fields qualification reads, never the whole manifest.
     expect(auditProjection).not.toHaveProperty('pages');
@@ -456,7 +545,7 @@ describe('prospect work model', () => {
     expect(auditProjection).not.toHaveProperty('analysis');
   });
 
-  it('opens audit-input work only for needs-input jobs, never a technical failure (issue #382)', async () => {
+  it('opens audit-input work only for needs-input jobs, never a technical failure (issues #382, #388)', async () => {
     const createdAt = new Date('2026-09-02T10:00:00.000Z');
     const jobCursor = chain([
       {
@@ -480,6 +569,9 @@ describe('prospect work model', () => {
     vi.mocked(createJobModel).mockReturnValue({
       find: vi.fn().mockReturnValue(jobCursor),
     } as never);
+    vi.mocked(createReportModel).mockReturnValue({
+      find: vi.fn().mockReturnValue(chain([])),
+    } as never);
     vi.mocked(findSuppressionMatches).mockResolvedValue({
       domains: new Set(),
       addresses: new Set(),
@@ -488,5 +580,8 @@ describe('prospect work model', () => {
     const [work] = await loadProspectWork({} as never, [prospect]);
 
     expect(work?.items.some((item) => item.kind === 'audit-input')).toBe(false);
+    // The technical failure still gates initial outreach, as a report task.
+    expect(work?.items.map((item) => item.kind)).toEqual(['audit-report']);
+    expect(work?.reportReadiness).toEqual({ state: 'not-ready', reason: 'failed' });
   });
 });

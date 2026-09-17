@@ -93,6 +93,7 @@ interface ProspectActionability {
 
 type ProspectRecommendationAction =
   | 'review-audit'
+  | 'regenerate-report'
   | 'review-draft'
   | 'record-outcome'
   | 'create-follow-up'

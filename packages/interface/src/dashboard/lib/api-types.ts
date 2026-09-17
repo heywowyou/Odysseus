@@ -27,9 +27,15 @@ export interface ScanCreated {
 /** Prospect-only sources returned by GET /api/prospect-hub/todo. `action` is
  * stable code, never ready-made text, so FR/EN copy stays in the client's own
  * i18n table (aTraiter.actions). */
-export type TodoRowKind = 'draft' | 'reply' | 'follow-up' | 'first-email' | 'audit-input';
+export type TodoRowKind =
+  'draft' | 'reply' | 'follow-up' | 'first-email' | 'audit-input' | 'audit-report';
 export type TodoRowAction =
-  'review-draft' | 'record-outcome' | 'create-follow-up' | 'create-first-email' | 'review-audit';
+  | 'review-draft'
+  | 'record-outcome'
+  | 'create-follow-up'
+  | 'create-first-email'
+  | 'review-audit'
+  | 'regenerate-report';
 
 /** One row of GET /api/prospect-hub/todo (routes/prospect-hub.ts). Field names are the API's
  *  persisted contract, not UI vocabulary; never respell them. */

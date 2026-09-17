@@ -427,6 +427,8 @@ export const auditDetail = {
         'address-suppressed': 'Cette adresse figure sur la liste à ne pas contacter.',
         'coverage-incomplete':
           'L’exploration du site est incomplète : la synthèse refuse d’inventer des chiffres.',
+        'report-not-ready':
+          'Les rapports client de cet audit ne sont pas prêts : régénérez le rapport avant de publier l’aperçu ou de rédiger le premier email.',
         'insufficient-safe-cards':
           'Pas assez de constats vérifiés pour construire une synthèse fiable.',
         'not-an-outreach-audit': 'Cet audit n’est pas lié à un prospect de la campagne.',
@@ -694,6 +696,8 @@ export const auditDetail = {
         'address-suppressed': 'This address is on the do-not-contact list.',
         'coverage-incomplete':
           'The site crawl is incomplete, so the scorecard refuses to invent numbers.',
+        'report-not-ready':
+          'This audit’s client reports are not ready: regenerate the report before publishing the preview or drafting the first email.',
         'insufficient-safe-cards': 'Too few verified findings to build a reliable scorecard.',
         'not-an-outreach-audit': 'This audit is not linked to a campaign prospect.',
         'preview-not-published': 'No published preview matches: publish the preview first.',

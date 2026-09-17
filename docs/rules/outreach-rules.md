@@ -204,8 +204,12 @@ conclusion. Touch 3 remains the first place where those facts are spelled out.
 
 **Added 2026-09-11, plan 037; email reuse clarified 2026-09-14.** The preview
 sent at touch 1 is a versioned v2 document built from one candidate-linked
-**outreach full scan**: a full audit run with the paid audit's content-coverage
-policy, stopped before the model analysis. Cheap qualification, the prescan,
+**outreach full scan**: since trade-off 91 this is the prospect's one Full
+scan, the same audit that produces the FR and EN client reports. *Amended
+2026-09-17, issue #388 (trade-off 95):* the preview and the first email are
+built only once that audit has a current FR and EN report pair; until then
+the prospect's next action is regenerating the report from stored evidence,
+never a rescan. Cheap qualification, the prescan,
 immutable scoring, and cohort selection remain the cost gate; only selected
 cohort members receive one. It is started by the operator from a selected
 prospect, never automatically.
@@ -249,8 +253,11 @@ Lifecycle rules:
 - Nothing publishes automatically, and no first-touch draft exists before an
   explicit publication. Suppression blocks publication and revokes every live
   preview for the domain.
-- A paid audit is always a fresh scan; the preview's scan is dated
-  prospecting evidence, never a deliverable held back.
+- The preview and the paid report come from the same Full scan (trade-off
+  91). The preview is a thinner document of that scan, never the report held
+  back, and it is published only after the scan's FR and EN reports are
+  ready (trade-off 95). Replies and follow-ups on an existing thread are not
+  gated, and a preview published earlier is not revoked by this rule.
 - Changing the published price revokes and reissues every live v2 preview,
   so no live link ever shows a stale amount.
 - A full-scan preview is built only after the audit's coverage gate passes;

@@ -34,6 +34,7 @@ const KIND_TONE: Record<TodoRowKind, BadgeTone> = {
   'follow-up': 'neutral',
   'first-email': 'accent',
   'audit-input': 'serious',
+  'audit-report': 'serious',
 };
 
 /** The dashboard's landing page and the operator's inbox: every row is derived

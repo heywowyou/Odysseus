@@ -553,7 +553,8 @@ export const prospectHub = {
       completed: 'Prospect traité',
       noRecommendation: 'Aucune action recommandée pour le moment.',
       recommendationActions: {
-        'review-audit': 'Compléter l’audit',
+        'review-audit': 'Confirmer les informations',
+        'regenerate-report': 'Régénérer le rapport',
         'review-draft': 'Relire le brouillon',
         'record-outcome': 'Enregistrer le résultat',
         'create-follow-up': 'Rédiger la relance',
@@ -754,6 +755,8 @@ export const prospectHub = {
         suppressed: 'contact supprimé de la prospection ; aucune action n’est possible',
         'no-contact': 'aucun email disponible ; ajoutez une adresse dans la fiche',
         'no-complete-audit': 'aucun scan complet exploitable ; lancez un scan complet',
+        'report-not-ready':
+          'les rapports client de l’audit ne sont pas prêts ; régénérez le rapport depuis la page de l’audit',
         'candidate-unknown': 'prospect introuvable',
         'thread-unknown':
           'aucun premier email n’a encore été rédigé ; commencez par le premier email',
@@ -1050,7 +1053,8 @@ export const prospectHub = {
       completed: 'Prospect handled',
       noRecommendation: 'No recommended action at this time.',
       recommendationActions: {
-        'review-audit': 'Complete the audit',
+        'review-audit': 'Confirm the details',
+        'regenerate-report': 'Regenerate the report',
         'review-draft': 'Review the draft',
         'record-outcome': 'Record the outcome',
         'create-follow-up': 'Draft the follow-up',
@@ -1248,6 +1252,8 @@ export const prospectHub = {
         suppressed: 'contact is suppressed from outreach; no action is possible',
         'no-contact': 'no email available; add an address on the record',
         'no-complete-audit': 'no usable full scan; run a full scan',
+        'report-not-ready':
+          'the audit’s client reports are not ready; regenerate the report from the audit page',
         'candidate-unknown': 'prospect not found',
         'thread-unknown': 'no first email has been drafted yet; start with the first email',
         'thread-already-started': 'the first email was already sent; use the follow-up',

@@ -10,6 +10,7 @@ import {
   getProspectHub,
   isSuppressed,
   listLivePreviewsForDomain,
+  loadOutreachReportReadiness,
   recordOutreachPreview,
   revokeOutreachPreview,
   selectNewestQualifyingAudit,
@@ -76,6 +77,12 @@ export function createMongoOutreachPreviewStoreV2(
           refused: qualification.state === 'missing' ? 'no-audit' : 'coverage-incomplete',
         };
       }
+      // Issue #388: the preview stands on the audit's client reports.
+      const readiness = await loadOutreachReportReadiness(connection, {
+        auditId: qualification.audit.auditId,
+        prospectId,
+      });
+      if (readiness.state !== 'ready') return { refused: 'report-not-ready' };
 
       const website = primaryWebsite(prospect.websites);
       if (website === undefined) return { refused: 'domain-mismatch' };

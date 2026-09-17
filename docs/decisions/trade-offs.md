@@ -4905,3 +4905,32 @@ empty paid audit. A missing robots.txt (4xx) is allow-all under the RFC too.
 Rejected: an environment override with a warning, refusing to start on an
 unexpected name, retrying then skipping the site, and retrying then scanning
 only the home page.
+
+### 95. Initial outreach waits for the Full scan's client reports (issue #388, 2026-09-17)
+
+Since trade-off 91 one Full scan feeds audit, FR/EN analysis, FR/EN report,
+the outreach preview and the first email. Qualification (eligible purpose and
+complete coverage) says nothing about the reports, so a scan whose PDF
+production failed still offered the first email. Preview publication and
+first-email creation now also need a current FR and EN report for the
+qualifying audit, whose findings provenance matches the audit's: the test
+`reconcileFailedAuditJobs` already uses to call a failed job done.
+
+- **Reports that exist, not job statuses.** One pure resolver
+  (`resolveOutreachReportReadiness`, store) covers needs-input stops, writing
+  and PDF failures, stale reports after renormalization, and audits that never
+  had reports. Jobs only name the reason (`needs-input`, `failed`, `stale`,
+  `missing`); the issue #378 needs-input blocker is folded into it.
+- **One rule on every surface.** The To do derivation, `checkOutreachAction`
+  (refusal `report-not-ready`), the preview store and the draft runtime all
+  use it. A not-ready audit replaces the Premier email row with a Rapport à
+  corriger row that recommends regenerating from the audit page.
+- **Historical prospecting audits** qualified without reports; they now need
+  report regeneration from stored evidence before outreach. Accepted: it costs
+  no crawl.
+- **No retroactive revocation.** Live previews and open threads created before
+  this rule stay as they are; replies and follow-ups are never gated.
+
+Rejected: gating on the latest job status (a failure the operator later fixed
+by regeneration, or reports built outside the queue, would read wrong), and a
+rescan as the remedy.

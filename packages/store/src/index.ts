@@ -355,6 +355,15 @@ export {
   loadProspectWork,
   selectNewestQualifyingAudit,
 } from './prospect-work.js';
+export {
+  findingsProvenanceMatches,
+  loadOutreachReportReadiness,
+  resolveOutreachReportReadiness,
+} from './outreach-report-readiness.js';
+export type {
+  OutreachReportNotReadyReason,
+  OutreachReportReadiness,
+} from './outreach-report-readiness.js';
 export type {
   NewestQualifyingAuditResult,
   ProspectAuditQualificationState,
@@ -365,6 +374,7 @@ export type {
   ProspectWorkDraft,
   ProspectWorkJob,
   ProspectWorkReason,
+  ProspectWorkReport,
   ProspectWorkResult,
   ProspectWorkSources,
   ProspectWorkThread,

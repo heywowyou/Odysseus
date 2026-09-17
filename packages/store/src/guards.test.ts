@@ -22,6 +22,9 @@ vi.mock('./schemas/outreach-preview.schema.js', () => ({
 vi.mock('./outreach-drafts.js', () => ({
   findLiveOutreachDraft: vi.fn(),
 }));
+vi.mock('./outreach-report-readiness.js', () => ({
+  loadOutreachReportReadiness: vi.fn(),
+}));
 
 import { planProspectJobLaunch } from './active-jobs.js';
 import { findLiveOutreachDraft } from './outreach-drafts.js';
@@ -30,6 +33,7 @@ import { checkOutreachAction, checkScanLaunch } from './guards.js';
 import { isSuppressed } from './suppression.js';
 import { createAuditModel } from './schemas/audit.schema.js';
 import { createJobModel } from './schemas/job.schema.js';
+import { loadOutreachReportReadiness } from './outreach-report-readiness.js';
 
 const fakeConnection = {} as never;
 
@@ -97,6 +101,7 @@ describe('central prospect guards', () => {
     mockJobRows();
     vi.mocked(findOutreachThreadByProspect).mockResolvedValue(null);
     vi.mocked(findLiveOutreachDraft).mockResolvedValue(null);
+    vi.mocked(loadOutreachReportReadiness).mockResolvedValue({ state: 'ready' });
   });
 
   it('refuses a follow-up the draft runtime would refuse', async () => {
@@ -261,5 +266,44 @@ describe('central prospect guards', () => {
       refusal: 'no-complete-audit',
       auditState: 'incomplete',
     });
+  });
+  // Issue #388: Cap d'Antibes' PDF production failed, yet the first email was
+  // offered. Preview and first email need the qualifying audit's reports.
+  it('refuses the preview and the first email while the reports are not ready', async () => {
+    mockAuditRows([audit()]);
+    vi.mocked(loadOutreachReportReadiness).mockResolvedValue({
+      state: 'not-ready',
+      reason: 'failed',
+    });
+
+    for (const action of ['preview', 'first-email'] as const) {
+      await expect(
+        checkOutreachAction(fakeConnection, { prospect: vendorHostedProspect, action }),
+      ).resolves.toEqual({
+        allowed: false,
+        refusal: 'report-not-ready',
+        reportState: 'failed',
+        auditId: 'audit-1',
+      });
+    }
+    expect(loadOutreachReportReadiness).toHaveBeenCalledWith(fakeConnection, {
+      auditId: 'audit-1',
+      prospectId: vendorHostedProspect.prospectId,
+    });
+  });
+
+  it('never gates a follow-up on report readiness', async () => {
+    vi.mocked(loadOutreachReportReadiness).mockResolvedValue({
+      state: 'not-ready',
+      reason: 'stale',
+    });
+    vi.mocked(findOutreachThreadByProspect).mockResolvedValue({
+      threadId: 'thread-1',
+      state: 'e1-sent',
+    } as never);
+    await expect(
+      checkOutreachAction(fakeConnection, { prospect: vendorHostedProspect, action: 'follow-up' }),
+    ).resolves.toEqual({ allowed: true });
+    expect(loadOutreachReportReadiness).not.toHaveBeenCalled();
   });
 });

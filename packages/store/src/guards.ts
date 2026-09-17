@@ -24,12 +24,17 @@ import { TERMINAL_OUTREACH_THREAD_STATES } from '@odysseus/core';
 import { findLiveOutreachDraft } from './outreach-drafts.js';
 import { findOutreachThreadByProspect } from './outreach-threads.js';
 import { createOutreachPreviewModel } from './schemas/outreach-preview.schema.js';
+import {
+  loadOutreachReportReadiness,
+  type OutreachReportNotReadyReason,
+} from './outreach-report-readiness.js';
 
 export type ScanLaunchRefusal = 'invalid-url' | 'suppressed' | 'host-busy';
 export type OutreachActionRefusal =
   | 'suppressed'
   | 'no-contact'
   | 'no-complete-audit'
+  | 'report-not-ready'
   | 'draft-already-live'
   | 'thread-closed'
   | 'thread-unknown'
@@ -51,6 +56,10 @@ export type OutreachActionCheck =
       allowed: false;
       refusal: OutreachActionRefusal;
       auditState?: ProspectAuditQualificationState;
+      /** With 'report-not-ready': why, so the caller names the remedy. */
+      reportState?: OutreachReportNotReadyReason;
+      /** With 'report-not-ready': the qualifying audit to regenerate. */
+      auditId?: string;
     };
 
 export function registrableDomainForScan(url: string): string | null {
@@ -176,6 +185,21 @@ export async function checkOutreachAction(
   const qualification = selectNewestQualifyingAudit(classifiedAudits);
   if (qualification.audit === undefined) {
     return { allowed: false, refusal: 'no-complete-audit', auditState: qualification.state };
+  }
+  // Issue #388: the preview and the first email both stand on the audit's
+  // client reports, so initial outreach waits for a current FR+EN pair.
+  // The same resolver decides the To do rows, so the API cannot bypass them.
+  const readiness = await loadOutreachReportReadiness(connection, {
+    auditId: qualification.audit.auditId,
+    prospectId: input.prospect.prospectId,
+  });
+  if (readiness.state === 'not-ready') {
+    return {
+      allowed: false,
+      refusal: 'report-not-ready',
+      reportState: readiness.reason,
+      auditId: qualification.audit.auditId,
+    };
   }
   return {
     allowed: true,

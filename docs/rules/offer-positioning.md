@@ -44,7 +44,7 @@ to EUR 300 HT are likewise superseded here, the canonical source.
 | Deliverable | Price | Delivery |
 |---|---|---|
 | Outreach preview | Free | built from a candidate-linked full outreach scan, published by the operator from the audit page as an expiring token page; content rules in `docs/rules/outreach-rules.md` section 6bis |
-| Full audit | EUR 1,600 HT flat, published | automated PDF, no risk band, no freehand quote, always a fresh scan |
+| Full audit | EUR 1,600 HT flat, published | automated PDF, no risk band, no freehand quote, from the prospect's Full scan (trade-off 91) |
 | Re-audit | EUR 450 HT flat | 5 business days, a verification pass narrower in scope than a full re-scan |
 
 **Re-audit price confirmed 2026-08-19** (La Corniche review follow-up,
@@ -217,8 +217,10 @@ thinner document, not a lighter tier of this one. It is an aggregate scorecard
 of a candidate-linked full outreach scan: coverage counts, distinct-finding
 and affected-page totals, four severity totals, and three public-safe text
 proof cards. It never contains screenshots, selectors, finding IDs, exact
-page locations, remediation, or a conformity rate, and the paid audit is
-always a fresh scan rather than a release of the preview's own.
+page locations, remediation, or a conformity rate. Since trade-off 91 both
+come from the prospect's one Full scan, and the preview is published only
+once that scan's FR and EN reports are ready (trade-off 95), so the preview
+never describes evidence the paid report could not deliver.
 
 ---
 

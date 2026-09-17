@@ -25,27 +25,14 @@
  */
 
 import type { Connection } from 'mongoose';
-import type { FindingsProvenance } from '@odysseus/core';
 import { createAuditModel } from './schemas/audit.schema.js';
 import { createJobModel } from './schemas/job.schema.js';
 import { createReportModel } from './schemas/report.schema.js';
+import { findingsProvenanceMatches } from './outreach-report-readiness.js';
 
 /** Upper bound on failed jobs examined per pass, so a pathological jobs
  *  collection cannot turn startup into an unbounded scan. */
 const MAX_JOBS_PER_PASS = 500;
-
-function provenanceMatches(
-  a: FindingsProvenance | undefined,
-  b: FindingsProvenance | undefined,
-): boolean {
-  return (
-    a !== undefined &&
-    b !== undefined &&
-    a.findingsSchemaVersion === b.findingsSchemaVersion &&
-    a.normalizationFingerprint === b.normalizationFingerprint &&
-    a.findingsDigest === b.findingsDigest
-  );
-}
 
 /**
  * Advances every failed or needs-input full-audit job whose audit now
@@ -88,8 +75,8 @@ export async function reconcileFailedAuditJobs(connection: Connection): Promise<
       .lean();
     if (!fr || !en) continue;
     if (
-      !provenanceMatches(fr.findingsProvenance, audit.findingsProvenance) ||
-      !provenanceMatches(en.findingsProvenance, audit.findingsProvenance)
+      !findingsProvenanceMatches(fr.findingsProvenance, audit.findingsProvenance) ||
+      !findingsProvenanceMatches(en.findingsProvenance, audit.findingsProvenance)
     ) {
       continue;
     }

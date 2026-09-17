@@ -24,8 +24,16 @@ import {
   type AuditDataVersionState,
   type AuditIntentSourceJob,
 } from './prospect-audit-qualification.js';
+import { createReportModel } from './schemas/report.schema.js';
+import {
+  READINESS_REPORT_PROJECTION,
+  resolveOutreachReportReadiness,
+  type OutreachReportReadiness,
+  type ReadinessReport,
+} from './outreach-report-readiness.js';
 
-export type ProspectTodoKind = 'draft' | 'reply' | 'follow-up' | 'first-email' | 'audit-input';
+export type ProspectTodoKind =
+  'draft' | 'reply' | 'follow-up' | 'first-email' | 'audit-input' | 'audit-report';
 
 export interface ProspectTodoRow {
   kind: ProspectTodoKind;
@@ -38,6 +46,7 @@ export interface ProspectTodoRow {
 
 export type ProspectWorkAction =
   | 'review-audit'
+  | 'regenerate-report'
   | 'review-draft'
   | 'record-outcome'
   | 'create-follow-up'
@@ -88,11 +97,18 @@ export type ProspectWorkJob = Pick<JobDocumentFields, 'jobId' | 'createdAt'> &
     options?: { prospectId?: string; scanType?: 'quick-check' | 'prospecting-audit' };
   };
 
+export type ProspectWorkReport = ReadinessReport;
+
 export interface ProspectWorkSources {
   audits: readonly ProspectWorkAudit[];
   drafts: readonly ProspectWorkDraft[];
   threads: readonly ProspectWorkThread[];
   needsInputJobs: readonly ProspectWorkJob[];
+  /** Issue #388: failed jobs linked to the prospect's audits. They only name
+   *  why reports are not ready; they never decide readiness on their own. */
+  failedJobs: readonly ProspectWorkJob[];
+  /** Report rows of the prospect's audits (readiness projection only). */
+  reports: readonly ProspectWorkReport[];
   suppressedDomains: ReadonlySet<string>;
   suppressedAddresses: ReadonlySet<string>;
 }
@@ -111,6 +127,9 @@ export interface ProspectWorkResult {
   qualifyingAudit?: ProspectWorkAudit;
   /** Advisory only; present with a qualifying audit. Never open work. */
   dataVersionState?: AuditDataVersionState;
+  /** Issue #388: present with a qualifying audit. Initial outreach waits
+   *  until it is ready. */
+  reportReadiness?: OutreachReportReadiness;
   websiteSuppressed: boolean;
   emailSuppressed: boolean;
 }
@@ -241,24 +260,6 @@ function recommendation(
 /** Purely derives open work from already-loaded rows. No collection access is
  * allowed here: a caller cannot quietly recalculate only one side of the hub
  * contract by adding a bespoke per-prospect query. */
-/** Whether a needs-input job still stands between the qualifying audit and
- *  the first email: it stopped on that audit, or it is a newer run the
- *  operator has not resolved. A needs-input job older than the qualifying
- *  audit belongs to a superseded run and blocks nothing, although it still
- *  shows as its own audit-input row. Once the operator confirms the fields
- *  and the reports are regenerated, reconcileFailedAuditJobs advances the
- *  job to complete and the first email becomes available again. */
-function blocksInitialOutreach(
-  needsInputJobs: readonly ProspectWorkJob[],
-  qualifyingAudit: ProspectWorkAudit,
-): boolean {
-  return needsInputJobs.some(
-    (job) =>
-      job.auditId === qualifyingAudit.auditId ||
-      asTime(job.createdAt) >= asTime(qualifyingAudit.startedAt),
-  );
-}
-
 export function deriveProspectWork(
   prospect: Prospect,
   sources: ProspectWorkSources,
@@ -271,6 +272,12 @@ export function deriveProspectWork(
   const thread = sources.threads.find((candidate) => candidate.prospectId === prospect.prospectId);
   const needsInputJobs = sources.needsInputJobs.filter(
     (job) => job.options?.prospectId === prospect.prospectId,
+  );
+  const prospectAuditIds = new Set(prospectAudits.map((audit) => audit.auditId));
+  const failedJobs = sources.failedJobs.filter(
+    (job) =>
+      job.options?.prospectId === prospect.prospectId ||
+      (job.auditId !== undefined && prospectAuditIds.has(job.auditId)),
   );
   const qualification = selectNewestQualifyingAudit(prospectAudits);
   const { websiteSuppressed, emailSuppressed } = prospectContactSuppression(prospect, sources);
@@ -328,28 +335,49 @@ export function deriveProspectWork(
       });
     }
   }
-  // Issue #378: an unresolved audit blocker is a prerequisite of initial
-  // outreach, not a parallel task. Only first-email work waits; replies and
-  // follow-ups on an existing thread are unaffected.
-  const auditBlocksInitialOutreach =
-    qualification.audit !== undefined && blocksInitialOutreach(needsInputJobs, qualification.audit);
+  // Issues #378 and #388: ready client reports are a prerequisite of
+  // initial outreach, not a parallel task. Only first-email work waits;
+  // replies and follow-ups on an existing thread are unaffected. A
+  // needs-input stop already has its audit-input row; any other not-ready
+  // reason takes the first email's place with a report row, which becomes
+  // the first email once regeneration produces a current FR+EN pair.
+  const reportReadiness =
+    qualification.audit === undefined
+      ? undefined
+      : resolveOutreachReportReadiness(qualification.audit, sources.reports, [
+          ...needsInputJobs.map((job) => ({ ...job, status: 'needs-input' as const })),
+          ...failedJobs.map((job) => ({ ...job, status: 'failed' as const })),
+        ]);
   if (
     qualification.audit !== undefined &&
-    !auditBlocksInitialOutreach &&
+    reportReadiness !== undefined &&
     thread === undefined &&
     prospectDrafts.length === 0 &&
     prospect.emails.length > 0 &&
     !websiteSuppressed &&
     !emailSuppressed
   ) {
-    items.push({
-      kind: 'first-email',
-      subject: prospect.name,
-      action: 'create-first-email',
-      prospectId: prospect.prospectId,
-      href: encodedProspectHref(prospect.prospectId, 'emails'),
-      since: new Date(qualification.audit.startedAt).toISOString(),
-    });
+    if (reportReadiness.state === 'ready') {
+      items.push({
+        kind: 'first-email',
+        subject: prospect.name,
+        action: 'create-first-email',
+        prospectId: prospect.prospectId,
+        href: encodedProspectHref(prospect.prospectId, 'emails'),
+        since: new Date(qualification.audit.startedAt).toISOString(),
+      });
+    } else if (reportReadiness.reason !== 'needs-input') {
+      items.push({
+        kind: 'audit-report',
+        subject: prospect.name,
+        action: 'regenerate-report',
+        prospectId: prospect.prospectId,
+        href: `/audits/${encodeURIComponent(qualification.audit.auditId)}`,
+        since: new Date(
+          qualification.audit.finishedAt ?? qualification.audit.startedAt,
+        ).toISOString(),
+      });
+    }
   }
 
   items.sort((left, right) => asTime(right.since) - asTime(left.since));
@@ -372,6 +400,7 @@ export function deriveProspectWork(
           qualifyingAudit: qualification.audit,
           dataVersionState: qualification.dataVersionState,
         }),
+    ...(reportReadiness === undefined ? {} : { reportReadiness }),
     websiteSuppressed,
     emailSuppressed,
   };
@@ -425,7 +454,8 @@ export async function loadProspectWork(
         'pages.status': 1,
         'pages.httpStatus': 1,
         'crawl.sitemapCoverage': 1,
-        'findingsProvenance.normalizationFingerprint': 1,
+        // Whole provenance: report readiness compares every field of it.
+        findingsProvenance: 1,
       })
       .sort({ startedAt: -1, auditId: -1 })
       .lean<ProspectWorkAudit[]>(),
@@ -491,12 +521,22 @@ export async function loadProspectWork(
     return scanIntent === undefined ? audit : { ...audit, scanIntent };
   });
   const needsInputJobs = scanJobs.filter((job) => job.status === 'needs-input');
+  const failedJobs = scanJobs.filter((job) => job.status === 'failed');
+  const reports =
+    auditIds.length === 0
+      ? []
+      : await createReportModel(connection)
+          .find({ auditId: { $in: auditIds } })
+          .select(READINESS_REPORT_PROJECTION)
+          .lean<ProspectWorkReport[]>();
 
   const sources: ProspectWorkSources = {
     audits: classifiedAudits,
     drafts,
     threads,
     needsInputJobs,
+    failedJobs,
+    reports,
     suppressedDomains: suppression.domains,
     suppressedAddresses: suppression.addresses,
   };
@@ -506,6 +546,20 @@ export async function loadProspectWork(
   const draftsByProspect = groupByProspect(sources.drafts, (draft) => draft.prospectId);
   const threadsByProspect = groupByProspect(sources.threads, (thread) => thread.prospectId);
   const jobsByProspect = groupByProspect(sources.needsInputJobs, (job) => job.options?.prospectId);
+  const prospectByAudit = new Map(
+    sources.audits.flatMap((audit) =>
+      audit.prospectId === undefined ? [] : [[audit.auditId, audit.prospectId] as const],
+    ),
+  );
+  const failedJobsByProspect = groupByProspect(
+    sources.failedJobs,
+    (job) =>
+      job.options?.prospectId ??
+      (job.auditId === undefined ? undefined : prospectByAudit.get(job.auditId)),
+  );
+  const reportsByProspect = groupByProspect(sources.reports, (report) =>
+    prospectByAudit.get(report.auditId),
+  );
   return prospects.map((prospect) =>
     deriveProspectWork(
       prospect,
@@ -515,6 +569,8 @@ export async function loadProspectWork(
         drafts: draftsByProspect.get(prospect.prospectId) ?? [],
         threads: threadsByProspect.get(prospect.prospectId) ?? [],
         needsInputJobs: jobsByProspect.get(prospect.prospectId) ?? [],
+        failedJobs: failedJobsByProspect.get(prospect.prospectId) ?? [],
+        reports: reportsByProspect.get(prospect.prospectId) ?? [],
       },
       now,
     ),
