@@ -814,6 +814,8 @@ export const prospectHub = {
       eventLabels: {
         'status-changed': 'Statut modifié',
         'field-edited': 'Fiche modifiée',
+        'prospect-created': 'Prospect créé',
+        'prospect-created-directory': 'Ajouté depuis l’annuaire',
         'scan-attached': 'Audit rattaché',
         'scan-detached': 'Audit détaché',
         'preview-published': 'Aperçu publié',
@@ -1307,6 +1309,8 @@ export const prospectHub = {
       eventLabels: {
         'status-changed': 'Status changed',
         'field-edited': 'Record edited',
+        'prospect-created': 'Prospect created',
+        'prospect-created-directory': 'Added from the directory',
         'scan-attached': 'Audit attached',
         'scan-detached': 'Audit detached',
         'preview-published': 'Preview published',

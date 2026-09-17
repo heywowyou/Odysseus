@@ -66,6 +66,14 @@ interface ProspectEvent {
   payload: Record<string, unknown>;
 }
 
+/** A creation from the directory reads as its origin, not as a plain
+ *  creation (issue #398). */
+function eventLabelKey(event: ProspectEvent): string {
+  return event.type === 'prospect-created' && event.payload['origin'] === 'directory'
+    ? 'prospect-created-directory'
+    : event.type;
+}
+
 interface ProspectAudit {
   auditId: string;
   siteUrl: string;
@@ -1728,7 +1736,7 @@ export function ProspectHubDetailPage(): JSX.Element {
               {recentEvents.map((event) => (
                 <li key={event.eventId} className="border-l-2 border-line pl-3 text-sm">
                   <p className="font-medium">
-                    {copy.eventLabels[event.type] ?? strings.common.vocabularyFallback}
+                    {copy.eventLabels[eventLabelKey(event)] ?? strings.common.vocabularyFallback}
                   </p>
                   <p className="text-xs text-ink-muted">
                     {formatDate(event.at)} · {actorLabel(event.actor)}
@@ -1857,7 +1865,8 @@ export function ProspectHubDetailPage(): JSX.Element {
                     {prospect.events.map((event) => (
                       <li key={event.eventId} className="border-l-2 border-line pl-3 text-sm">
                         <p className="font-medium">
-                          {copy.eventLabels[event.type] ?? strings.common.vocabularyFallback}
+                          {copy.eventLabels[eventLabelKey(event)] ??
+                            strings.common.vocabularyFallback}
                         </p>
                         <p className="text-xs text-ink-muted">
                           {formatDate(event.at)} · {actorLabel(event.actor)}

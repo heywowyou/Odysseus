@@ -110,6 +110,9 @@ export type Prospect = z.infer<typeof prospectSchema>;
 export const prospectEventTypeSchema = z.enum([
   'status-changed',
   'field-edited',
+  /** Issue #398: the record's first event, carrying its origin (`directory`
+   *  or `operator`). Records created before it start with `field-edited`. */
+  'prospect-created',
   'scan-attached',
   'scan-detached',
   'preview-published',

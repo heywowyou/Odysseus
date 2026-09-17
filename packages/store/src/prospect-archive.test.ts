@@ -145,6 +145,9 @@ describe.skipIf(!mongoAvailable)('prospect archive lifecycle', () => {
     await upsertDirectoryEntries(connection!, [directoryEntry(directoryId, 'dir-link.example')]);
     const [created] = await addDirectoryEntriesToProspects(connection!, [directoryId]);
     expect(created).toBeDefined();
+    const [creation] = await listProspectEvents(connection!, created!.prospectId);
+    expect(creation?.type).toBe('prospect-created');
+    expect(creation?.payload).toMatchObject({ origin: 'directory', source: 'atout-france' });
     await archiveProspect(connection!, created!.prospectId);
 
     await upsertDirectoryEntries(connection!, [

@@ -279,7 +279,16 @@ export async function createProspectHub(
   await createProspectHubModel(connection).create(value);
   await recordEvent(
     connection,
-    event(value.prospectId, 'field-edited', { fields: Object.keys(input) }, actor),
+    event(
+      value.prospectId,
+      'prospect-created',
+      {
+        fields: Object.keys(input),
+        origin: input.directoryRef !== undefined ? 'directory' : 'operator',
+        ...(input.directoryRef !== undefined ? { source: input.directoryRef.source } : {}),
+      },
+      actor,
+    ),
   );
   return value;
 }
