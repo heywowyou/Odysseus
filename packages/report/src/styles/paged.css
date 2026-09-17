@@ -282,6 +282,7 @@ html {
    2, but the report states it rather than inheriting it, the same way the
    appendix tables state their own 3 above. */
 .theme-row,
+.theme-row-tail,
 .theme-row-text {
   orphans: 2;
   widows: 2;

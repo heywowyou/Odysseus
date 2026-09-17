@@ -153,6 +153,22 @@ function addThemeContextBoundaryPressure(html: string): string {
   );
 }
 
+/** Makes the first priority card's action row nearly a page tall by
+ * adding short items to its body just above its tail (themes.ts renderActionRow). A real
+ * English report had that shape: #304's keep-with-previous carried the
+ * whole row to the next page with the footer, the pair no longer fit, and
+ * the overflow gate refused the report. */
+function addTallActionRowPressure(html: string, extraItems: number): string {
+  const items = Array.from(
+    { length: extraItems },
+    (_, i) => `<li data-action-row-pressure>Action ${i + 1}</li>`,
+  ).join('');
+  return html.replace(
+    /(\s*<\/div>\s*<div class="theme-row-tail">)/u,
+    `<ul class="theme-list theme-list-continued">${items}</ul>$1`,
+  );
+}
+
 /** Undoes paged.css's issue #304 rule, for the same reason
  * withoutAppendixCategoryPageBreak exists: with the rule in place the
  * defect cannot be produced, so the assertion needs the unfixed document to
@@ -174,8 +190,9 @@ async function countOrphanedThemeContextRows(page: Page): Promise<number> {
           const cardFragment = context.closest('.theme-card');
           return (
             cardFragment !== null &&
-            cardFragment.querySelector('.theme-card-header, .theme-row:not(.theme-row-context)') ===
-              null
+            cardFragment.querySelector(
+              '.theme-card-header, .theme-row:not(.theme-row-context), .theme-row-tail',
+            ) === null
           );
         }),
       ).length,
@@ -444,6 +461,30 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
       await unfixed.page.context().close();
     }
   }, 60_000);
+
+  it('issue #304: a near page-tall action row never drags the footer off the page', async () => {
+    expect(stressHtml).toContain('class="theme-row-tail"');
+    for (let extraItems = 18; extraItems <= 34; extraItems += 1) {
+      const pressured = await paginate(
+        browser,
+        addTallActionRowPressure(stressHtml, extraItems),
+        pagedjsSource,
+      );
+      try {
+        const violation = analyzePagedjsOverflow(
+          await collectPagedjsOverflowModels(pressured.page),
+        );
+        const orphaned = await countOrphanedThemeContextRows(pressured.page);
+        expect({ extraItems, violation, orphaned }).toEqual({
+          extraItems,
+          violation: undefined,
+          orphaned: 0,
+        });
+      } finally {
+        await pressured.page.context().close();
+      }
+    }
+  }, 600_000);
 
   it('invariant 6a: the bounded start-here panel never fragments across physical pages', async () => {
     const pressured = await paginate(

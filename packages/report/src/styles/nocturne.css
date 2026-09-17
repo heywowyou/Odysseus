@@ -870,6 +870,16 @@ textarea.input {
 .theme-card-header + .theme-row {
   margin-top: var(--space-6);
 }
+/* themes.ts renderActionRow: the action row's last item sits in a sibling
+   so the card footer's keep-with-previous carries only that item. The pair
+   reads as one row: no padding between them, the row's bottom padding moves
+   to the tail. */
+.theme-row.theme-row-has-tail {
+  padding-bottom: 0;
+}
+.theme-row-tail {
+  padding: 0 0 var(--space-6) calc(var(--theme-rail) + var(--theme-rail-gap));
+}
 .theme-row-lead {
   position: relative;
   break-inside: avoid;

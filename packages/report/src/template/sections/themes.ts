@@ -516,25 +516,26 @@ function renderTheme(
   // recommendedActions on every theme (writing-schema.ts, capped at 3,
   // language/severity-vocabulary validated), it was simply never
   // rendered.
-  const recommendedActionsBox = renderThemeList(
-    t.recommendedActionsLabel,
-    theme.recommendedActions.map((action) => escapeProse(action, language)),
-  );
-  const deterministicActionsBox = renderThemeList(
-    t.reviewedRemediationLabel,
-    // Issue #325: each line used to open on the raw rule id
-    // ("structured-data-invalid: ...") next to French titles. It now opens
-    // on the rule's reviewed display label, the same one the annex uses,
-    // with the id kept as a quiet reference after the action.
-    (priority?.remediations ?? []).map((item) => {
-      const label = resolveFindingDisplayLabel(
-        language,
-        item.ruleId,
-        priority?.findings.find((finding) => finding.ruleId === item.ruleId)?.title,
-      );
-      return `<span class="theme-rule">${escapeHtml(label)}</span>${labelSeparator(language)}${escapeHtml(item.text)} <span class="mono theme-rule-id">${escapeHtml(item.ruleId)}</span>${renderThemeFixSnippet(item.snippet, t)}`;
-    }),
-  );
+  const recommendedActions: ThemeListGroup = {
+    label: t.recommendedActionsLabel,
+    items: theme.recommendedActions.map((action) => escapeProse(action, language)),
+  };
+  const reviewedRemediations: ThemeListGroup = {
+    label: t.reviewedRemediationLabel,
+    items:
+      // Issue #325: each line used to open on the raw rule id
+      // ("structured-data-invalid: ...") next to French titles. It now opens
+      // on the rule's reviewed display label, the same one the annex uses,
+      // with the id kept as a quiet reference after the action.
+      (priority?.remediations ?? []).map((item) => {
+        const label = resolveFindingDisplayLabel(
+          language,
+          item.ruleId,
+          priority?.findings.find((finding) => finding.ruleId === item.ruleId)?.title,
+        );
+        return `<span class="theme-rule">${escapeHtml(label)}</span>${labelSeparator(language)}${escapeHtml(item.text)} <span class="mono theme-rule-id">${escapeHtml(item.ruleId)}</span>${renderThemeFixSnippet(item.snippet, t)}`;
+      }),
+  };
   const ownershipSentence = priority
     ? renderOwnershipSentence(strings, language, priority.ownershipCounts)
     : undefined;
@@ -584,19 +585,10 @@ function renderTheme(
     renderOwnershipSplitNote(strings, language, themeFindings, scopePageUrls),
     renderThirdPartyOnlyNote(strings, themeFindings),
   ].join('');
-  const [actionLead, actionRest] = recommendedActionsBox
-    ? [
-        recommendedActionsBox.lead,
-        recommendedActionsBox.rest + (deterministicActionsBox?.all ?? ''),
-      ]
-    : deterministicActionsBox
-      ? [deterministicActionsBox.lead, deterministicActionsBox.rest]
-      : [trailingActionNotes, ''];
-  const whatYouCanDoBox = renderRow(
-    'action',
+  const whatYouCanDoBox = renderActionRow(
     t.whatYouCanDoLabel,
-    actionLead,
-    recommendedActionsBox || deterministicActionsBox ? actionRest + trailingActionNotes : '',
+    [recommendedActions, reviewedRemediations],
+    trailingActionNotes,
   );
   const contextBox = `
       <div class="theme-row theme-row-context">
@@ -673,29 +665,76 @@ function renderRow(
   label: string,
   leadHtml: string,
   restHtml = '',
+  modifierClass = '',
 ): string {
   return `
-      <div class="theme-row theme-row-${kind}">
+      <div class="theme-row theme-row-${kind}${modifierClass ? ` ${modifierClass}` : ''}">
         <div class="theme-row-lead"><div class="theme-row-label">${escapeHtml(label)}</div>${leadHtml}</div>
         ${restHtml}
       </div>`;
 }
 
-/** A labelled list split so its subhead and first item form the row's
- *  unbreakable lead block (see renderRow) and the remaining items flow as a
- *  second, visually continuous list. */
-function renderThemeList(
+interface ThemeListGroup {
+  label: string;
+  items: readonly string[];
+}
+
+/** A labelled list's subhead and first item: the row's unbreakable lead
+ *  block (see renderRow) when the list opens the row. */
+function renderThemeListLead(group: ThemeListGroup): string {
+  return `<p class="theme-subhead">${escapeHtml(group.label)}</p><ul class="theme-list"><li>${group.items[0]}</li></ul>`;
+}
+
+/** Items that continue a list already opened above, as a second, visually
+ *  continuous list. */
+function renderContinuedThemeList(items: readonly string[]): string {
+  return items.length > 0
+    ? `<ul class="theme-list theme-list-continued">${items.map((item) => `<li>${item}</li>`).join('')}</ul>`
+    : '';
+}
+
+function renderThemeListGroup(group: ThemeListGroup): string {
+  return `<div class="theme-list-group">${renderThemeListLead(group)}${renderContinuedThemeList(group.items.slice(1))}</div>`;
+}
+
+/** The "What you can do" row: the first non-empty list opens the row, the
+ *  rest follow it, and the ownership notes close it.
+ *
+ *  The card footer is glued to whatever precedes it (issue #304), and
+ *  Paged.js honours that glue by carrying the footer's whole preceding
+ *  sibling to the next page. This row is that sibling and has no size
+ *  bound: on a real report it filled most of a page, so it moved whole,
+ *  left the page before it nearly empty, and with the footer no longer fit
+ *  the next page either. The overflow went to Paged.js's off-page column
+ *  and the issue #118 gate refused the report. The row's last item (with
+ *  its subhead when it is the only item of its list) and the notes are
+ *  therefore a separate .theme-row-tail sibling: the glue carries one
+ *  bounded item, and the row above it breaks between items as usual. */
+function renderActionRow(
   label: string,
-  itemsHtml: readonly string[],
-): { lead: string; rest: string; all: string } | undefined {
-  if (itemsHtml.length === 0) return undefined;
-  const [first, ...others] = itemsHtml;
-  const lead = `<p class="theme-subhead">${escapeHtml(label)}</p><ul class="theme-list"><li>${first}</li></ul>`;
-  const rest =
-    others.length > 0
-      ? `<ul class="theme-list theme-list-continued">${others.map((item) => `<li>${item}</li>`).join('')}</ul>`
-      : '';
-  return { lead, rest, all: `<div class="theme-list-group">${lead}${rest}</div>` };
+  groups: readonly ThemeListGroup[],
+  notesHtml: string,
+): string {
+  const lists = groups.filter((group) => group.items.length > 0);
+  const [first] = lists;
+  if (first === undefined) return renderRow('action', label, notesHtml);
+  const itemCount = lists.reduce((count, group) => count + group.items.length, 0);
+  if (itemCount === 1) return renderRow('action', label, renderThemeListLead(first), notesHtml);
+
+  const last = lists[lists.length - 1]!;
+  const splitsLastItem = last.items.length > 1 || last === first;
+  const tailHtml = splitsLastItem
+    ? renderContinuedThemeList(last.items.slice(-1))
+    : renderThemeListGroup(last);
+  const bodyLists = splitsLastItem
+    ? [...lists.slice(0, -1), { ...last, items: last.items.slice(0, -1) }]
+    : lists.slice(0, -1);
+  const [bodyFirst, ...bodyLater] = bodyLists as [ThemeListGroup, ...ThemeListGroup[]];
+  const restHtml =
+    renderContinuedThemeList(bodyFirst.items.slice(1)) +
+    bodyLater.map(renderThemeListGroup).join('');
+  return `${renderRow('action', label, renderThemeListLead(bodyFirst), restHtml, 'theme-row-has-tail')}
+      <div class="theme-row-tail">${tailHtml}${notesHtml}</div>`;
 }
 
 function renderContextItem(label: string, valueHtml: string): string {
