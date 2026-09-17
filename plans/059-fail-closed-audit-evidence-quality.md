@@ -15,7 +15,7 @@
 > to the report model.
 >
 > **Drift check (run first)**:
-> `git diff --stat 2316109d9b8bc0eb2e054e04edbc6a7483e86c70..HEAD -- CLAUDE.md docs/rules/normalization-rules.md docs/rules/manual-accessibility-checklist.md docs/decisions/trade-offs.md packages/core/src packages/scanner/src packages/store/src packages/interface/src/pipeline packages/interface/src/queue packages/interface/src/dashboard deploy scripts plans/058-fail-closed-senior-report-quality-pipeline.md`
+> `git diff --stat 2316109d9b8bc0eb2e054e04edbc6a7483e86c70..HEAD -- CLAUDE.md docs/rules/normalization-rules.md docs/rules/manual-accessibility-checklist.md docs/product/findings-delta-reaudit-design.md docs/decisions/trade-offs.md packages/core/src packages/scanner/src packages/store/src packages/interface/src/pipeline packages/interface/src/queue packages/interface/src/dashboard deploy scripts plans/058-fail-closed-senior-report-quality-pipeline.md`
 > If any in-scope seam changed, compare this plan with live code before editing.
 > Preserve the outcomes and invariants below; update stale module seams rather
 > than applying an old excerpt mechanically.
@@ -25,8 +25,8 @@
 - **Priority**: P1
 - **Effort**: XL
 - **Risk**: HIGH — crawl inventory, browser measurement, pass coverage,
-  normalization, persistence, checkpoint/resume, and the contract consumed by
-  Plan 058 all change.
+  normalization, persistence, checkpoint/resume, re-audit comparability, and the
+  contract consumed by Plan 058 all change.
 - **Depends on**: plans 021, 035, 050 and 051 (delivered/implemented as noted in
   the plan index). Coordinates with Plan 058; **058 must not be promoted to
   production until this plan's evidence-approval contract is available.**
@@ -35,7 +35,7 @@
 - **Planned at**: commit `2316109d9b8bc0eb2e054e04edbc6a7483e86c70`,
   2026-09-17
 - **Review state**: initial design hardened through **ten distinct review
-  passes** before implementation.
+  passes**, then reconciled against plans 050/051 before implementation.
 
 ## Scope
 
@@ -44,7 +44,8 @@ normalization and evidence approval; page/site/performance coverage; selective
 retries; browser-state isolation; mobile/hydrated coverage; performance
 repeatability; evidence provenance; observation retention; page classification;
 systemic-pattern evidence; temporal coherence; crash/resume; evidence-quality
-UI; and the exact upstream contract consumed by Plan 058.
+UI; re-audit comparability; and the exact upstream contract consumed by Plan
+058.
 
 **Out of scope**:
 
@@ -108,6 +109,18 @@ UI; and the exact upstream contract consumed by Plan 058.
     generated with explicitly known site-controlled limitations only under the
     verdict rules below; unexplained scanner uncertainty stops for operator
     review.
+16. **New scanner coverage is not a fake client regression.** A re-audit finding
+    observed only because Plan 059 added a mobile surface, new check, wider
+    inventory, or stronger state coverage must be labelled non-comparable/newly
+    observable rather than presented as proof the client introduced the defect.
+17. **Evidence storage stays minimized and untrusted text stays untrusted.** Do
+    not turn this quality plan into a raw-HTML archive. Persist only bounded
+    evidence required for traceability; redact secrets/session tokens and never
+    feed arbitrary page snippets to an LLM merely because they exist in the
+    ledger.
+18. **New quality work shares the crawler's politeness budget.** Mobile
+    surfaces, retries, hydration and diagnostics must pass through the same
+    host-wide pacing/robots contract; they are not hidden extra request lanes.
 
 ## Operational definition of perfect evidence
 
@@ -147,6 +160,8 @@ Before Plan 058 may consume an audit:
   confidence;
 - the known automated-accessibility capability/gap registry matches what
   actually ran;
+- re-audit delta comparability is derived from both scans' coverage signatures,
+  not inferred only from `dedupeKey` presence/absence;
 - the final `EvidenceQualityAssessment` is `reportable-complete` or
   `reportable-with-known-limitations`; otherwise 058 is blocked.
 
@@ -267,6 +282,8 @@ click arbitrary booking/payment links merely to increase coverage.
 
 Multi-surface observations must not inflate occurrence counts. Attempts and
 viewports are observation dimensions, not automatically separate defects.
+Every new surface/retry uses the same shared host pacing scheduler so quality
+work never bypasses the production crawl-delay contract.
 
 ## Pass 4 — Performance measurement repeatability and host calibration
 
@@ -301,7 +318,7 @@ Do **not** triple every Lighthouse page merely because cost is available. Extra
 measurements must increase confidence rather than multiply crawl time without
 an uncertainty question.
 
-## Pass 5 — End-to-end evidence provenance and artifact integrity
+## Pass 5 — End-to-end evidence provenance, privacy and artifact integrity
 
 ### Defects found
 
@@ -310,6 +327,10 @@ normalization fingerprint. Plan 058 also relies on facts that never become
 findings: pass coverage, good metrics, CrUX, site signals, page roles, sitemap
 facts and below-threshold render/performance values. A findings digest alone
 cannot prove that entire input stayed unchanged.
+
+A naive "store everything" response would introduce a different defect:
+query/session tokens, cookie values, raw HTML or arbitrary page text do not
+become safer merely because they are useful to debugging.
 
 ### Hardening decision
 
@@ -333,6 +354,12 @@ private artifact-store sync by digest/read-back rather than trusting a write
 return. Plan 058's `ReportInputSnapshot` references this root digest. Any
 upstream mutation invalidates downstream report approval.
 
+Add one evidence redaction policy for URLs/snippets/headers before new ledger
+fields are persisted: strip or hash known secret/session/query values; never
+persist cookie/auth tokens merely for provenance. Page text/snippets are bounded,
+marked untrusted, and are not default LLM input. If 058 explicitly needs a
+snippet, its input builder must select/escape it through a closed field list.
+
 Version mismatch alone does not invalidate an old scan. A compatibility adapter
 can construct a legacy evidence snapshot when the required facts exist; missing
 facts become explicit legacy limitations rather than forcing every historical
@@ -354,8 +381,8 @@ Add a private, derived `ObservationLedger` (compressed NDJSON is sufficient;
 no new database megadocument) that indexes every normalized scanner observation
 without storing full raw HTML. Each observation carries source/check, page,
 surface, accepted attempt, selector/resource identifier where applicable,
-bounded snippet/value evidence, native severity, timestamps and source artifact
-hash.
+bounded/redacted snippet/value evidence, native severity, timestamps and source
+artifact hash.
 
 `Finding` remains the bounded confirmed-remediation contract. Add separate
 `AuditSignal` for heuristic/conditional review signals. Do not inflate the
@@ -374,6 +401,7 @@ Add a global `EvidenceConsistencyGate` that verifies at minimum:
 - site-level conclusions have site-level acquisition provenance;
 - category/severity/WCAG totals recompute exactly;
 - heuristics/signals do not leak into confirmed totals;
+- translation/language clustering never erases its source observations;
 - normalization over the same approved raw snapshot is deterministic and
   digest-stable.
 
@@ -476,7 +504,7 @@ plan. Semantic alt-text quality, visual reading order and other genuinely human
 judgments remain explicit gaps or operator review signals until a separate
 approved methodology exists.
 
-## Pass 10 — Falsification, operations and Plan 058 handoff
+## Pass 10 — Falsification, cross-run truth, operations and Plan 058 handoff
 
 ### Defects found
 
@@ -485,6 +513,13 @@ negative fixtures would teach it to reject bad audits; it also needs known-good
 controls so it does not block valid paid audits or manufacture uncertainty. The
 handoff to 058 must also be one immutable contract rather than another loose set
 of files.
+
+A second blind spot appears only when comparing audits: Plan 059 deliberately
+widens coverage (mobile/hydrated surfaces and potentially new deterministic
+checks). Plan 051's existing delta is finding-based. Without a coverage-aware
+comparison, a newly observable pre-existing defect can be presented as a new
+client regression, and a removed/changed check can look like a resolved defect.
+That would make a more accurate scanner produce a less truthful re-audit.
 
 ### Hardening decision
 
@@ -497,6 +532,27 @@ Build a read-only evidence-quality evaluation harness with:
 - explicit false-positive/false-negative review for new gates;
 - no live third-party crawl without current named-site permission.
 
+Add an `EvidenceCoverageSignature` to every approved snapshot, containing the
+check/capability versions, relevant surfaces, inventory scope signature and
+normalization contract needed to determine whether two findings were
+comparable. Extend re-audit delta semantics:
+
+- comparable finding present before/after -> current Plan 051 behavior;
+- current finding from a check/surface absent in the baseline ->
+  `newly-observable`, not "new regression";
+- baseline finding whose check/surface no longer exists or is not comparable ->
+  `not-comparable`, not "resolved";
+- inventory/scope expansion or contraction is disclosed alongside rescoped
+  finding pairing;
+- `dedupeKey` remains the finding identity primitive; the coverage signature
+  decides whether absence/presence can be interpreted as site change.
+
+Plan 050 reuse eligibility also reads the evidence verdict/signature. A stored
+scan remains reusable when it supports the requested output; it is not rejected
+only because current scanner breadth is newer. Conversely, the UI must not call
+an old scan "equivalent to current full evidence" when a required current claim
+needs a surface/check it never captured.
+
 Plan 058 may start only with:
 
 ```text
@@ -506,6 +562,7 @@ ApprovedAuditEvidence {
   evidenceQualityVerdict
   limitations[]
   coverageLedgerDigest
+  evidenceCoverageSignature
   capabilityRegistryVersion
   normalizedFindingsDigest
   signalsDigest
@@ -549,6 +606,9 @@ from scratch:
   for known automation gaps.
 - Plan 050's old-data policy is advisory compatibility, not automatic
   invalidation after every tool release.
+- Plan 051/054's re-audit delta uses `dedupeKey` plus rescoped overlap pairing;
+  Plan 059 preserves that identity and adds **coverage comparability**, not a
+  second competing finding identity.
 
 ---
 
@@ -608,8 +668,10 @@ operator scope + full-audit config
               ▼
  14. ApprovedAuditEvidence
               │
-              ▼
-        PLAN 058 starts
+       ┌──────┴───────┐
+       ▼              ▼
+  re-audit delta   PLAN 058 starts
+  comparability
 ```
 
 The website is crawled once per evidence epoch. Recovery reuses accepted work
@@ -735,7 +797,7 @@ Required dimensions:
 - surface(s);
 - accepted attempt(s);
 - selector/element/resource identity where applicable;
-- bounded snippet/value evidence;
+- bounded, redacted snippet/value evidence;
 - native severity/measurement;
 - observation timestamp;
 - source artifact digest;
@@ -793,11 +855,30 @@ At minimum:
 - CPU/logical-core/memory class;
 - Playwright/Chromium/axe/Lighthouse versions;
 - browser flags;
-- viewport profiles;
-- locale/timezone;
+- viewport/device-scale/media profiles;
+- locale, `Accept-Language`, timezone and configured network/egress profile ID;
 - Lighthouse configuration/throttling;
 - important timeout/settle settings;
 - capability/check-registry version.
+
+Do not persist secret infrastructure identifiers merely for reproducibility.
+Use stable environment/profile IDs where raw values would be sensitive.
+
+## `EvidenceCoverageSignature`
+
+Compact cross-run comparability contract:
+
+- scope/inventory signature;
+- check registry + relevant rule versions;
+- enabled surfaces/states;
+- capability registry version;
+- normalization contract;
+- semantic-classifier version only where it changes conditional finding
+  eligibility;
+- digest.
+
+This is **not** a second finding ID. It tells Plan 051 whether absence/presence
+of an otherwise comparable `dedupeKey` can legitimately mean site change.
 
 ## `AuditEvidenceSnapshot`
 
@@ -870,9 +951,9 @@ Implement retry profiles centrally rather than ad hoc inside every check.
 4. **Stop/escalate** — anti-bot/rate-limit, deterministic site exclusion,
    repeated contradictory evidence, or exhausted safe recovery.
 
-All profiles continue to respect robots/crawl-delay. A rate-limit response
-reduces request pressure. There is no "try harder" mode that increases
-concurrency.
+All profiles continue to respect robots/crawl-delay and the same host-wide
+request scheduler. A rate-limit response reduces request pressure. There is no
+"try harder" mode that increases concurrency.
 
 Retry eligibility is typed per failure class. Never retry a 404 three times
 because the generic page status contains the word "failed".
@@ -884,7 +965,10 @@ because the generic page status contains the word "failed".
 ## Baseline isolation
 
 Collect immutable baseline DOM/a11y/head/resource evidence before any mutating
-behavioral routine. Axe and baseline metadata use that state.
+behavioral routine. Axe and baseline metadata use that state. New contexts use a
+fresh browser-storage profile unless the check explicitly requires a persisted
+same-page state; cookies/localStorage from one page must not accidentally
+personalize another page's evidence.
 
 ## Mobile surface
 
@@ -958,6 +1042,9 @@ refresh the affected families/epoch when it can be bounded. If the site changed
 so broadly that old/new evidence cannot be separated defensibly, stop and ask
 for a fresh evidence epoch.
 
+A/B/personalized variation that produces materially contradictory observations
+is `unstable-result`, not permission to choose the more convenient variant.
+
 ---
 
 # Accessibility capability contract
@@ -981,6 +1068,44 @@ own evidence and false-positive methodology first.
 
 ---
 
+# Cross-run, reuse and delta truth contract
+
+Plan 059 changes scanner breadth. That must not corrupt Plans 050/051.
+
+## Reusable scans
+
+A saved audit is reusable according to what evidence it actually contains and
+what the requested action needs. `currentScannerVersion !== capturedVersion` is
+never sufficient reason to rescan. The legacy adapter produces a quality
+assessment and explicit missing dimensions.
+
+Examples:
+
+- old full scan contains all facts needed for a regenerated historical-style
+  report -> reusable;
+- old scan lacks mobile evidence but the report is allowed to disclose that
+  legacy limitation -> reusable-qualified;
+- current requested report makes a claim requiring a new surface/check the old
+  scan never captured -> needs rescan for that claim, not because of version age
+  alone.
+
+## Re-audit delta
+
+Before calling a finding `new`, `resolved` or `persistent`, compare the relevant
+`EvidenceCoverageSignature` slice.
+
+A new scanner capability can create a **newly observable** finding. It is a real
+current defect, but not evidence that the client made the site worse. Likewise,
+a baseline-only finding is not proven fixed when the current scanner no longer
+ran a comparable check/surface.
+
+Extend the delta data model/report with a comparability classification while
+preserving `dedupeKey` and Plan 054's rescoped pairing. Version differences are
+not merely a footnote; they participate in the classification when they change
+observability.
+
+---
+
 # Implementation steps
 
 ## Step 1 — Freeze evidence-quality terminology and negative/positive fixtures
@@ -990,8 +1115,9 @@ Update canonical docs first:
 - `docs/rules/normalization-rules.md` — evidence layers, confirmed finding vs
   review signal, new coverage terms;
 - `docs/rules/manual-accessibility-checklist.md` — point to capability registry;
-- `docs/decisions/trade-offs.md` — fail-closed evidence, retry and no-bypass
-  rationale;
+- `docs/product/findings-delta-reaudit-design.md` — coverage-aware comparability;
+- `docs/decisions/trade-offs.md` — fail-closed evidence, retry/no-bypass and
+  cross-run rationale;
 - `CLAUDE.md` — scanner/model authority and evidence snapshot handoff;
 - Plan 058 — consume approved evidence snapshot, not loosely assembled inputs.
 
@@ -1047,7 +1173,8 @@ infinite-scroll safety bounds.
 
 Define the first versioned viewport/state set. Run only checks that gain real
 coverage from that surface. Add occurrence-identity logic so repeated
-observations do not double-count findings.
+observations do not double-count findings. Route every added navigation through
+the shared host-wide politeness scheduler.
 
 ## Step 10 — Add scan side-effect guard
 
@@ -1083,9 +1210,10 @@ coverage until the saved-audit corpus proves that change independently.
 
 ## Step 15 — Build the private `ObservationLedger`
 
-Derive from accepted attempt artifacts after recovery. Use bounded snippets and
-hashes; no full HTML dump. Ensure it can reconstruct the page/rule/occurrence
-scope behind every current `Finding` while retaining multi-surface evidence.
+Derive from accepted attempt artifacts after recovery. Use bounded/redacted
+snippets and hashes; no full HTML dump. Ensure it can reconstruct the
+page/rule/occurrence scope behind every current `Finding` while retaining
+multi-surface evidence.
 
 ## Step 16 — Separate review signals from confirmed findings
 
@@ -1136,14 +1264,23 @@ Persist findings/signals digests into the snapshot. Add deterministic
 re-normalization/idempotency tests. A normalization rerun cannot silently switch
 to a rejected scan attempt.
 
-## Step 24 — Add legacy-evidence adapter consistent with Plan 050
+## Step 24 — Add legacy evidence adapter consistent with Plan 050
 
 For stored audits predating 059, derive as much of the snapshot/coverage ledger
 as their persisted artifacts support. Label unavailable dimensions. Do not force
 a rescan just because the current scanner version is newer. Block only when the
 requested current report cannot be supported honestly.
 
-## Step 25 — Build the evidence-quality evaluation/fault-injection harness
+## Step 25 — Make re-audit delta coverage-aware
+
+Add `EvidenceCoverageSignature` to new/legacy-compatible snapshots and extend
+Plan 051/054 delta classification with `newly-observable` / `not-comparable`
+(or equivalent closed vocabulary). Preserve `dedupeKey` and rescoped overlap
+pairing for comparable findings. Tests must cover new mobile/check coverage,
+removed coverage, inventory expansion, normalization-version change and truly
+new/resolved defects.
+
+## Step 26 — Build the evidence-quality evaluation/fault-injection harness
 
 Run without publication. Measure:
 
@@ -1153,13 +1290,14 @@ Run without publication. Measure:
 - classifier confidence;
 - temporal-coherence decisions;
 - consistency-gate failures;
+- delta comparability decisions;
 - runtime and resource use (for operations only, not acceptance price).
 
 Use results to set empirical tolerances such as performance-calibration drift or
-geometry/stability windows. Do not invent thresholds in code before this
+readiness/stability windows. Do not invent thresholds in code before this
 measurement.
 
-## Step 26 — Add evidence quality to job phases/dashboard
+## Step 27 — Add evidence quality to job phases/dashboard
 
 Extend progress after primary scan with meaningful states such as:
 
@@ -1175,27 +1313,27 @@ evidence approved
 Show counts and current stage, not raw client evidence. Conflicting regenerate,
 archive or delete actions stay disabled through evidence approval and Plan 058.
 
-## Step 27 — Make crash/resume quality-aware
+## Step 28 — Make crash/resume quality-aware
 
 Checkpoint accepted attempts, evidence epoch and dependency digests. On resume,
 reuse only compatible immutable evidence. Late/stale workers cannot overwrite a
 newer epoch or accepted attempt. Selective repair resumes where it stopped.
 
-## Step 28 — Harden artifact-store persistence and cleanup
+## Step 29 — Harden artifact-store persistence and cleanup
 
 Keep page attempts/evidence private. Verify digest on sync/read-back. Define
 retention for rejected diagnostic attempts and large temporary surface assets;
 keep canonical accepted evidence required for future report regeneration and
-re-normalization.
+re-normalization. Apply the evidence redaction policy before persistence.
 
-## Step 29 — Bind Plan 058 to `ApprovedAuditEvidence`
+## Step 30 — Bind Plan 058 to `ApprovedAuditEvidence`
 
 Change 058's dossier/input builder to accept the single approved handoff. It
-must consume coverage limitations, capability registry version and evidence
-snapshot digest directly. Any upstream change invalidates the report-quality
-run.
+must consume coverage limitations, capability registry version,
+`EvidenceCoverageSignature` and evidence snapshot digest directly. Any upstream
+change invalidates the report-quality run.
 
-## Step 30 — Promote only after corpus + real-site rehearsal
+## Step 31 — Promote only after corpus + real-site rehearsal
 
 Run the complete evaluation matrix. Convert every newly discovered defect into
 a fixture/invariant before rerunning. Then, with current operator permission,
@@ -1247,7 +1385,9 @@ At minimum cover these cases with known expected outcomes:
 - form-validation state mutation;
 - safe local accordion/dialog state;
 - control that would trigger navigation/submission and must not be explored;
-- same defect observed on desktop+mobile without double counting.
+- same defect observed on desktop+mobile without double counting;
+- fresh context/storage isolation prevents one page's consent/session state from
+  altering another page.
 
 ### Performance
 
@@ -1261,7 +1401,7 @@ At minimum cover these cases with known expected outcomes:
 - selected Lighthouse failure;
 - sampled family member with no propagation to siblings.
 
-### Provenance/normalization
+### Provenance/normalization/privacy
 
 - changed page artifact after snapshot hash;
 - changed normalization fingerprint;
@@ -1272,7 +1412,9 @@ At minimum cover these cases with known expected outcomes:
 - stale legacy audit with sufficient evidence;
 - legacy audit genuinely missing required current evidence;
 - object-store corruption/read-back mismatch;
-- normalization rerun over identical snapshot producing identical digest.
+- normalization rerun over identical snapshot producing identical digest;
+- secret/session query parameter is redacted from new evidence artifacts;
+- raw untrusted page snippet is not automatically copied into LLM input.
 
 ### Classification/patterns
 
@@ -1293,7 +1435,9 @@ At minimum cover these cases with known expected outcomes:
 - one isolated dynamic timestamp that must not cause false deployment alarm;
 - CSS/asset version change across a template family;
 - selective retry after deployment;
-- broad deployment requiring new evidence epoch.
+- broad deployment requiring new evidence epoch;
+- A/B variant produces contradictory accepted observations and becomes
+  `unstable-result` rather than cherry-picked evidence.
 
 ### Accessibility capability
 
@@ -1302,6 +1446,19 @@ At minimum cover these cases with known expected outcomes:
 - mobile/reflow surface coverage is disclosed;
 - known manual gap appears in methodology;
 - no wording implies formal conformity or complete manual WCAG coverage.
+
+### Cross-run/re-audit
+
+- identical comparable finding remains persistent;
+- genuinely fixed comparable finding is resolved;
+- genuinely new comparable finding is new;
+- mobile-only finding against pre-059 baseline is newly observable;
+- finding from a removed/non-run check is not-comparable, not resolved;
+- expanded inventory causes rescoped finding without pretending the site
+  regressed;
+- old compatible full scan remains reusable despite newer scanner version;
+- old scan lacking evidence required by a new requested claim is explicitly
+  insufficient for that claim.
 
 ---
 
@@ -1318,7 +1475,9 @@ Before production promotion:
 4. build compatibility snapshots for older audits rather than silently
    excluding them from testing;
 5. run known-good controls after every gate/tolerance change;
-6. rerun the entire corpus clean after the final discovered defect.
+6. exercise re-audit delta between old/new coverage contracts so scanner
+   improvements do not masquerade as client regressions;
+7. rerun the entire corpus clean after the final discovered defect.
 
 No live site is scanned merely to fill a corpus slot. Use saved evidence unless
 the operator explicitly authorizes a named site in that session.
@@ -1336,11 +1495,12 @@ the operator explicitly authorizes a named site in that session.
 | Site coverage | explicit completed/failed/not-applicable/unavailable tests for site-scope checks |
 | Performance | repeated-run reducer, calibration handling, CrUX no-data/error distinction |
 | Profiles/patterns | persisted role signals, classifier fixtures, conservative pattern false-merge tests |
-| Observations/signals | complete observation lineage, bounded snippets, legacy heuristic adapter |
+| Observations/signals | complete observation lineage, bounded/redacted snippets, legacy heuristic adapter |
 | Normalization | existing normalize suite + idempotency/digest + consistency-gate invariants |
 | Temporal coherence | stable/dynamic/deployment fixtures and selective refresh decisions |
-| Provenance | file/root digest, mutation detection, object-store read-back verification |
+| Provenance/privacy | file/root digest, mutation detection, object-store read-back, secret redaction |
 | Legacy reuse | current-vs-old version advisory behavior and genuinely missing evidence block |
+| Re-audit delta | coverage-aware comparability plus existing dedupe/rescoped behavior |
 | Pipeline/store | evidence-approved handoff only, crash/resume epochs, stale-worker rejection |
 | 058 integration | report input digest equals approved evidence digest; upstream mutation invalidates report run |
 | Full repo | `pnpm run format && pnpm run check && pnpm run test` plus relevant e2e/store suites |
@@ -1375,6 +1535,10 @@ Do not create `ApprovedAuditEvidence` when any of these remains unresolved:
 Do not degrade to "generate the report with what we have" merely because the
 scan already consumed hours.
 
+A current evidence snapshot can still be approved even when its comparison to
+an older baseline is non-comparable; comparability affects the **delta claim**,
+not whether the current audit evidence itself is valid.
+
 ---
 
 # Explicitly rejected alternatives
@@ -1407,8 +1571,13 @@ scan already consumed hours.
   methodology.
 - **Treat every scanner-version mismatch as stale evidence requiring a rescan.**
   Conflicts with Plan 050 and wastes valid multi-hour scans.
+- **Call all current-only findings "new" after expanding scanner coverage.**
+  Confuses improved observability with site regression; compare coverage
+  signatures first.
 - **Ignore a possible mid-scan deployment.** Individually valid measurements can
   still form an incoherent bundle when the site changed underneath them.
+- **Store full HTML, cookies or session-bearing URLs for completeness.** Quality
+  provenance does not require collecting secrets or whole pages.
 - **Approve evidence before private artifact sync, then trust the upload.** The
   stored bytes are part of the provenance chain and must verify.
 
@@ -1425,55 +1594,64 @@ Plan 059 is implemented only when all are true:
 4. every registered check has append-only attempt lineage and typed failure
    classification;
 5. safe targeted recovery exists and never bypasses user-agent/robots/pacing;
-6. homepage/start and operator seeds have explicit required-evidence gates;
-7. baseline checks are isolated from mutating behavioral checks;
-8. page readiness/hydration outcomes are persisted;
-9. mobile/dynamic surface coverage is versioned and cross-surface observations
-   do not double-count defects;
-10. scanner-initiated behavioral checks cannot perform destructive submissions
+6. all extra quality surfaces/retries share the host-wide politeness scheduler;
+7. homepage/start and operator seeds have explicit required-evidence gates;
+8. baseline checks are isolated from mutating behavioral checks;
+9. fresh-context/storage isolation prevents cross-page state contamination;
+10. page readiness/hydration outcomes are persisted;
+11. mobile/dynamic surface coverage is versioned and cross-surface observations
+    do not double-count defects;
+12. scanner-initiated behavioral checks cannot perform destructive submissions
     or transactions;
-11. site-level checks have first-class coverage/provenance;
-12. key performance pages use repeated measurement sets and all reportable
+13. site-level checks have first-class coverage/provenance;
+14. key performance pages use repeated measurement sets and all reportable
     performance claims carry stability/confidence metadata;
-13. pre/post performance calibration and environment fingerprinting are
+15. pre/post performance calibration and environment fingerprinting are
     implemented and empirically tuned;
-14. CrUX no-data and acquisition failure are distinct;
-15. full page-audit role signals/profile provenance are persisted;
-16. report-facing semantic roles are versioned, evidence-backed and cannot yet
+16. CrUX no-data and acquisition failure are distinct;
+17. full page-audit role signals/profile provenance are persisted;
+18. report-facing semantic roles are versioned, evidence-backed and cannot yet
     reduce scan coverage without separate measured approval;
-17. private `ObservationLedger` preserves occurrence evidence beyond the
-    bounded `Finding.elements` sample;
-18. heuristic/conditional `AuditSignal`s are separate from confirmed finding
+19. private `ObservationLedger` preserves occurrence evidence beyond the
+    bounded `Finding.elements` sample without becoming a raw-HTML archive;
+20. evidence redaction prevents secret/session values from entering new
+    provenance artifacts or default LLM inputs;
+21. heuristic/conditional `AuditSignal`s are separate from confirmed finding
     totals, with legacy compatibility;
-19. conservative `PatternEvidence` supports systemic synthesis without changing
+22. conservative `PatternEvidence` supports systemic synthesis without changing
     finding identity/counts;
-20. long scans run temporal-coherence checks and cannot silently mix broad
+23. long scans run temporal-coherence checks and cannot silently mix broad
     deployments;
-21. `AuditEnvironmentFingerprint` and scanner/build/check-registry fingerprints
+24. `AuditEnvironmentFingerprint` and scanner/build/check-registry fingerprints
     exist;
-22. the entire canonical evidence bundle has one content-addressed
+25. the entire canonical evidence bundle has one content-addressed
     `AuditEvidenceSnapshot` root digest;
-23. local/private-store artifact bytes verify against the snapshot;
-24. `EvidenceConsistencyGate` proves coverage/finding/observation invariants;
-25. normalization is deterministic/idempotent over an approved evidence
+26. local/private-store artifact bytes verify against the snapshot;
+27. `EvidenceConsistencyGate` proves coverage/finding/observation invariants;
+28. normalization is deterministic/idempotent over an approved evidence
     snapshot;
-26. `EvidenceQualityAssessment` produces only the four documented terminal
+29. `EvidenceQualityAssessment` produces only the four documented terminal
     verdicts with exact reason/disclosure objects;
-27. legacy audits remain reusable when their evidence is genuinely sufficient;
-28. job resume cannot reuse or overwrite stale incompatible evidence epochs;
-29. dashboard progress exposes verification/repair instead of hiding it behind
+30. `EvidenceCoverageSignature` exists and Plan 051/054 deltas distinguish
+    comparable changes from newly observable/not-comparable evidence;
+31. `dedupeKey` remains the cross-run finding identity; no competing identity is
+    introduced by Plan 059;
+32. legacy audits remain reusable when their evidence is genuinely sufficient;
+33. job resume cannot reuse or overwrite stale incompatible evidence epochs;
+34. dashboard progress exposes verification/repair instead of hiding it behind
     one scan state;
-30. Plan 058 consumes only `ApprovedAuditEvidence` and binds its report input
+35. Plan 058 consumes only `ApprovedAuditEvidence` and binds its report input
     to the evidence snapshot digest;
-31. adversarial negative fixtures and known-good controls are green;
-32. saved-audit evaluation corpus is rerun clean after the last discovered
-    defect;
-33. at least one operator-authorized real full-audit rehearsal proves the 059 ->
+36. adversarial negative fixtures and known-good controls are green;
+37. saved-audit evaluation corpus, including cross-version delta cases, is
+    rerun clean after the last discovered defect;
+38. at least one operator-authorized real full-audit rehearsal proves the 059 ->
     058 chain end to end;
-34. canonical docs/trade-offs describe the shipped evidence-quality contract;
-35. full repository validation is green.
+39. canonical docs/trade-offs describe the shipped evidence-quality contract;
+40. full repository validation is green.
 
 The intended end state is simple: **before Odysseus spends frontier-model effort
 making a report perfect, it has already proved that the dataset being explained
 is the strongest, internally consistent, reproducible evidence the scanner can
-safely obtain for that declared site scope.**
+safely obtain for that declared site scope — and future re-audits can tell the
+difference between a changed website and a more capable scanner.**
