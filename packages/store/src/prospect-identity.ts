@@ -99,3 +99,39 @@ export function confirmedIdentityFromManualFields(
     legalName: confirmedString(manualFields?.raisonSociale),
   };
 }
+
+/** The audit manual fields a prospect's identity maps onto. */
+export interface AuditIdentityValues {
+  nomCommercial?: string;
+  raisonSociale?: string;
+  siren?: string;
+}
+
+/**
+ * Issue #379: the prospect's identity as the audit sees it, split by
+ * provenance. A field the operator typed on the prospect is already human-
+ * confirmed and crosses into the audit as confirmed identity, so the report
+ * gate never asks for it again. A field any other origin wrote
+ * (site-discovery, a directory import) is only a suggestion and keeps its
+ * weaker provenance. An invalid SIREN is dropped from both.
+ */
+export function auditIdentityFromProspect(
+  prospect: Pick<Prospect, 'siren' | 'tradingName' | 'legalName' | 'fieldOrigins'>,
+): { confirmed: AuditIdentityValues; suggested: AuditIdentityValues } {
+  const confirmed: AuditIdentityValues = {};
+  const suggested: AuditIdentityValues = {};
+  const mapping = [
+    ['tradingName', 'nomCommercial'],
+    ['legalName', 'raisonSociale'],
+    ['siren', 'siren'],
+  ] as const;
+  for (const [prospectField, auditField] of mapping) {
+    const raw = prospect[prospectField]?.trim();
+    if (raw === undefined || raw === '') continue;
+    const value = prospectField === 'siren' ? normalizeSirenInput(raw) : raw;
+    if (value === null) continue;
+    const target = prospect.fieldOrigins[prospectField] === 'operator' ? confirmed : suggested;
+    target[auditField] = value;
+  }
+  return { confirmed, suggested };
+}

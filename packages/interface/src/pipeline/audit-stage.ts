@@ -45,10 +45,12 @@ import {
   type AuditCoverageSummary,
 } from '@odysseus/core';
 import {
+  auditIdentityFromProspect,
   confirmedIdentityFromManualFields,
   fillMissingProspectIdentity,
   getProspectHub,
   getAuditManualFields,
+  syncProspectIdentityIntoAudit,
   persistAudit,
   prefillAuditManualFields,
   replaceDetectedManualFields,
@@ -290,10 +292,18 @@ export async function runAuditStage(
     // siteSignals (populated by writeAuditArtifacts above), never
     // findings.json, so a failed or slow Sirene lookup can never block
     // normalization.
+    // Issue #379: the linked prospect is read once. A SIREN the operator
+    // typed on it is the manual SIREN whenever the launch did not supply
+    // one, so it is never asked for twice.
+    const prospect =
+      options.prospectId === undefined
+        ? null
+        : await getProspectHub(connection, options.prospectId);
+    const prospectIdentity = prospect === null ? undefined : auditIdentityFromProspect(prospect);
     const obligationAssessment = await runObligationStage(
       artifacts.manifest,
       connection,
-      options.manualSiren,
+      options.manualSiren ?? prospectIdentity?.confirmed.siren,
       options.siteSignalOverrides,
     );
 
@@ -369,6 +379,12 @@ export async function runAuditStage(
     // plain fill-if-absent, per prefillAuditManualFields's own doc
     // comment: it never overwrites a manual field an operator already
     // entered, detected or not, and there is only one detector for it.
+    // Issue #379: operator-confirmed prospect identity lands first, as
+    // operator provenance, so the detected fills below can never replace or
+    // downgrade it.
+    if (options.prospectId !== undefined) {
+      await syncProspectIdentityIntoAudit(connection, artifacts.auditId, options.prospectId);
+    }
     await prefillAuditManualFields(connection, artifacts.auditId, {
       ...(artifacts.manifest.siteSignals?.siren !== undefined
         ? { siren: artifacts.manifest.siteSignals.siren }
@@ -393,19 +409,17 @@ export async function runAuditStage(
       obligationAssessment,
       artifacts.manifest.siteSignals?.siteName,
     );
-    // A linked prospect's name was chosen by a person; the page title often
-    // carries ratings or "Site Officiel" boilerplate.
-    const prospectName =
-      options.prospectId === undefined
-        ? undefined
-        : (await getProspectHub(connection, options.prospectId))?.name;
+    // Detected tier only (issue #379 precedence): a non-operator prospect
+    // identity value, then the audit's own site/registry guesses, then the
+    // prospect's generic name. Operator values were written above and
+    // replaceDetectedManualFields never touches them.
     const preferredNomCommercial =
-      coverPrefill.nomCommercial ?? prospectName ?? artifacts.manifest.siteSignals?.siteName;
+      prospectIdentity?.suggested.nomCommercial ?? coverPrefill.nomCommercial ?? prospect?.name;
+    const preferredRaisonSociale =
+      coverPrefill.raisonSociale ?? prospectIdentity?.suggested.raisonSociale;
     await replaceDetectedManualFields(connection, artifacts.auditId, {
       ...(preferredNomCommercial !== undefined ? { nomCommercial: preferredNomCommercial } : {}),
-      ...(coverPrefill.raisonSociale !== undefined
-        ? { raisonSociale: coverPrefill.raisonSociale }
-        : {}),
+      ...(preferredRaisonSociale !== undefined ? { raisonSociale: preferredRaisonSociale } : {}),
     });
 
     // Issue #289: a scan launched from the prospect page seeds the

@@ -22,7 +22,11 @@ import {
   fillMissingProspectIdentity,
   getProspectHub,
 } from './prospect-hub.js';
-import { confirmedIdentityFromManualFields } from './prospect-identity.js';
+import {
+  auditIdentityFromProspect,
+  confirmedIdentityFromManualFields,
+  type AuditIdentityValues,
+} from './prospect-identity.js';
 import {
   effectiveAuditScanIntent,
   isOutreachQualifyingAudit,
@@ -96,6 +100,9 @@ export async function attachAuditToProspect(
       },
       actor,
     );
+    // Issue #379: and the other direction - identity the operator typed on
+    // the prospect is confirmed identity for the attached audit.
+    await syncProspectIdentityIntoAudit(connection, auditId, prospectId);
   }
   return { ...current, ...(prospectId === null ? {} : { prospectId }) };
 }
@@ -314,6 +321,62 @@ export async function replaceDetectedManualFields(
 
   await setAuditManualFields(connection, auditId, provenancedPartial);
   return toWrite;
+}
+
+/**
+ * Issue #379: writes the operator-confirmed prospect identity onto the
+ * audit with provenance 'operator', so the report's identity gate accepts
+ * it without a second confirmation. Deliberately not
+ * replaceDetectedManualFields, which stamps everything it writes as
+ * 'detected'. An audit field the operator already confirmed on the audit
+ * itself is kept: both are human decisions, and the audit-level one is the
+ * more specific. Returns the fields written.
+ */
+export async function applyConfirmedProspectIdentity(
+  connection: Connection,
+  auditId: string,
+  confirmed: AuditIdentityValues,
+): Promise<AuditIdentityValues> {
+  const existing = await getAuditManualFields(connection, auditId);
+  const toWrite: Partial<Omit<AuditManualFields, 'updatedAt'>> = {};
+  const written: AuditIdentityValues = {};
+  for (const field of ['nomCommercial', 'raisonSociale', 'siren'] as const) {
+    const value = confirmed[field];
+    if (value === undefined) continue;
+    if (existing?.[field]?.provenance === 'operator') continue;
+    toWrite[field] = { value, provenance: 'operator' };
+    written[field] = value;
+  }
+  if (Object.keys(toWrite).length > 0) await setAuditManualFields(connection, auditId, toWrite);
+  return written;
+}
+
+/**
+ * Issue #379: the one resolver every stage that consumes an audit's identity
+ * runs first - the scan's audit stage, report production and regeneration,
+ * and attaching an audit to a prospect - so none of them can fall back to a
+ * detected guess the operator already answered on the prospect. Returns the
+ * prospect's split identity (the suggestions feed the audit stage's
+ * detected prefill), or undefined for an audit with no linked prospect.
+ */
+export async function syncProspectIdentityIntoAudit(
+  connection: Connection,
+  auditId: string,
+  prospectId?: string,
+): Promise<ReturnType<typeof auditIdentityFromProspect> | undefined> {
+  const linkedProspectId =
+    prospectId ??
+    (
+      await createAuditModel(connection)
+        .findOne({ auditId }, { prospectId: 1 })
+        .lean<Pick<AuditDocument, 'prospectId'>>()
+    )?.prospectId;
+  if (linkedProspectId === undefined) return undefined;
+  const prospect = await getProspectHub(connection, linkedProspectId);
+  if (prospect === null) return undefined;
+  const identity = auditIdentityFromProspect(prospect);
+  await applyConfirmedProspectIdentity(connection, auditId, identity.confirmed);
+  return identity;
 }
 
 export async function getFindingsForAudit(

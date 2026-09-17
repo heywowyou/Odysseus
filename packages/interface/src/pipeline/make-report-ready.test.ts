@@ -6,6 +6,7 @@ vi.mock('@odysseus/scanner', () => ({
 }));
 vi.mock('@odysseus/store', () => ({
   getAuditManualFields: vi.fn(),
+  syncProspectIdentityIntoAudit: vi.fn(),
   getAuditRuntimeFields: vi.fn(),
   reconcileFailedAuditJobs: vi.fn(),
   approveWritingCandidate: vi.fn(),

@@ -74,6 +74,8 @@ export {
   setAuditManualFields,
   prefillAuditManualFields,
   replaceDetectedManualFields,
+  applyConfirmedProspectIdentity,
+  syncProspectIdentityIntoAudit,
   getAuditGradeOverride,
   setAuditGradeOverride,
   clearAuditGradeOverride,
@@ -145,6 +147,7 @@ export {
   withdrawProspectOutreach,
 } from './prospect-hub.js';
 export {
+  auditIdentityFromProspect,
   confirmedIdentityFromManualFields,
   DETECTED_IDENTITY_ORIGIN,
   missingProspectIdentityFill,

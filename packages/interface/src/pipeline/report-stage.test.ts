@@ -18,6 +18,7 @@ vi.mock('@odysseus/store', () => ({
   persistReport: vi.fn(),
   findDeltaBaseline: vi.fn().mockResolvedValue(null),
   getAuditManualFields: vi.fn().mockResolvedValue(undefined),
+  syncProspectIdentityIntoAudit: vi.fn(),
   getAuditGradeOverride: vi.fn().mockResolvedValue(undefined),
   getReportPreparation: vi.fn().mockResolvedValue({
     updatedAt: '2026-09-01T00:00:00.000Z',

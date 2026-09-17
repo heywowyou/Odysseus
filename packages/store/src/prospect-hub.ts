@@ -214,6 +214,25 @@ function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/** Fields that are not operator-entered facts and so carry no origin. */
+const ORIGINLESS_CREATE_FIELDS = new Set(['fieldOrigins', 'directoryRef', 'status', 'sector']);
+
+/** Issue #379: every field supplied at creation gets an origin, the same rule
+ *  updateProspect applies to an edit. An explicit origin from the caller
+ *  (a directory import's 'atout-france', a discovery path) is kept; any
+ *  other supplied field was entered by the operator. Before this, a manual
+ *  create stamped only the name, so a SIREN or legal name typed in the
+ *  create flow carried no provenance and read as unconfirmed downstream. */
+function creationFieldOrigins(input: NewProspectHubInput): Prospect['fieldOrigins'] {
+  const origins: Prospect['fieldOrigins'] = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (ORIGINLESS_CREATE_FIELDS.has(key) || value === undefined) continue;
+    if (Array.isArray(value) && value.length === 0) continue;
+    origins[key] = 'operator';
+  }
+  return { ...origins, ...input.fieldOrigins };
+}
+
 export async function createProspectHub(
   connection: Connection,
   rawInput: NewProspectHubInput,
@@ -250,7 +269,7 @@ export async function createProspectHub(
     notes: input.notes,
     status: input.status ?? 'new',
     hotel: input.hotel,
-    fieldOrigins: input.fieldOrigins ?? { name: 'operator' },
+    fieldOrigins: creationFieldOrigins(input),
     directoryRef: input.directoryRef,
     createdAt: now,
     updatedAt: now,
@@ -872,6 +891,10 @@ export async function addDirectoryEntriesToProspects(
           fieldOrigins: {
             name: 'atout-france',
             address: 'atout-france',
+            postcode: 'atout-france',
+            commune: 'atout-france',
+            department: 'atout-france',
+            phone: 'atout-france',
             hotel: 'atout-france',
             websites: 'atout-france',
           },
@@ -1359,7 +1382,16 @@ export function directoryEntryToProspectInput(entry: DirectoryEntry): NewProspec
       groupStatus: entry.groupStatus,
       groupDomain: entry.groupDomain,
     },
-    fieldOrigins: { name: 'atout-france' },
+    fieldOrigins: {
+      name: 'atout-france',
+      address: 'atout-france',
+      postcode: 'atout-france',
+      commune: 'atout-france',
+      department: 'atout-france',
+      phone: 'atout-france',
+      hotel: 'atout-france',
+      websites: 'atout-france',
+    },
     directoryRef: {
       source: entry.sourceRefs[0]?.source ?? 'atout-france',
       sourceId: entry.sourceRefs[0]?.sourceId ?? entry.directoryId,

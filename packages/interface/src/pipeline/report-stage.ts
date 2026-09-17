@@ -37,6 +37,7 @@ import {
   getAuditManualFields,
   getReportPreparation,
   persistReport,
+  syncProspectIdentityIntoAudit,
 } from '@odysseus/store';
 import { runObligationStage } from './obligation-stage.js';
 import { pdfDigestOf } from './pdf-digest.js';
@@ -131,6 +132,11 @@ export async function runReportStage(
   // scan - resolveEffectiveSiren's existing extracted-vs-manual precedence
   // is reused unchanged, "manual" now just means "freshest at render
   // time" instead of "given at job creation."
+  // Issue #379: a regeneration resolves the linked prospect's operator
+  // identity first, so it never renders against a detected guess the
+  // operator already answered on the prospect (this is also what unsticks
+  // an audit that stopped on the identity gate before the fix).
+  await syncProspectIdentityIntoAudit(connection, manifest.auditId);
   const manualFields = await getAuditManualFields(connection, manifest.auditId);
   // Issue: operator-reviewed overall grade override, read fresh at render
   // time exactly like manualFields above - the operator can review the

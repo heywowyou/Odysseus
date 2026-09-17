@@ -1,7 +1,17 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { departmentFromPostcodeForTest } from './prospect-hub.js';
+import { randomUUID } from 'node:crypto';
+import {
+  attachAuditToProspect,
+  getAuditManualFields,
+  replaceDetectedManualFields,
+  setAuditManualFields,
+  syncProspectIdentityIntoAudit,
+} from './audits.js';
+import { createAuditModel } from './schemas/audit.schema.js';
 import {
   createProspectHub,
+  directoryEntryToProspectInput,
   fillMissingProspectIdentity,
   getProspectHub,
   setProspectStatus,
@@ -111,6 +121,135 @@ describe.skipIf(!mongoAvailable)('prospect identity fields (issue #289)', () => 
     expect((await getProspectHub(connection!, created.prospectId))?.tradingName).toBeUndefined();
     const updated = await updateProspect(connection!, created.prospectId, { notes: 'Still works' });
     expect(updated?.notes).toBe('Still works');
+  });
+});
+
+describe.skipIf(!mongoAvailable)('operator identity reaches linked audits (issue #379)', () => {
+  const VALID_SIREN = '732829320';
+
+  async function seedAudit(prospectId?: string): Promise<string> {
+    const auditId = randomUUID();
+    await createAuditModel(connection!).collection.insertOne({
+      auditId,
+      ...(prospectId === undefined ? {} : { prospectId }),
+    });
+    return auditId;
+  }
+
+  it('stamps every field typed in the create flow as operator', async () => {
+    const created = await createProspectHub(connection!, {
+      sector: 'hotel',
+      name: 'Grand Hôtel des Alpes',
+      siren: VALID_SIREN,
+      tradingName: 'Grand Hôtel des Alpes',
+      legalName: 'GRAND HOTEL DES ALPES SAS',
+      phone: '+33 4 00 00 00 00',
+      emails: [{ address: 'contact@alpes.example', origin: 'operator' }],
+    });
+
+    expect(created.fieldOrigins).toMatchObject({
+      name: 'operator',
+      siren: 'operator',
+      tradingName: 'operator',
+      legalName: 'operator',
+      phone: 'operator',
+      emails: 'operator',
+    });
+  });
+
+  it('keeps explicit import origins', async () => {
+    const created = await createProspectHub(connection!, {
+      sector: 'hotel',
+      name: 'Imported',
+      legalName: 'IMPORTED SAS',
+      fieldOrigins: { name: 'atout-france', legalName: 'sirene' },
+    });
+    expect(created.fieldOrigins).toMatchObject({ name: 'atout-france', legalName: 'sirene' });
+
+    const fromDirectory = directoryEntryToProspectInput({
+      directoryId: 'dir-1',
+      sector: 'hotel',
+      name: 'Directory Hotel',
+      postcode: '06000',
+      phone: '+33 4 11 11 11 11',
+      sourceRefs: [{ source: 'atout-france', sourceId: 'af-1' }],
+    } as never);
+    expect(fromDirectory.fieldOrigins).toMatchObject({
+      name: 'atout-france',
+      postcode: 'atout-france',
+      phone: 'atout-france',
+    });
+  });
+
+  it('confirms operator prospect identity on the audit so the report gate passes, even over detected guesses', async () => {
+    const prospect = await createProspectHub(connection!, {
+      sector: 'hotel',
+      name: 'Grand Hôtel des Alpes',
+      siren: VALID_SIREN,
+      tradingName: 'Grand Hôtel des Alpes',
+      legalName: 'GRAND HOTEL DES ALPES SAS',
+    });
+    const auditId = await seedAudit(prospect.prospectId);
+    // The scan's own worse guesses were already written as detected.
+    await replaceDetectedManualFields(connection!, auditId, {
+      nomCommercial: 'Grand Hotel Des Alpes',
+      raisonSociale: 'GRAND HOTEL DES ALPES',
+    });
+
+    await syncProspectIdentityIntoAudit(connection!, auditId);
+    // A later detected refresh cannot downgrade them again.
+    await replaceDetectedManualFields(connection!, auditId, {
+      nomCommercial: 'Grand Hotel Des Alpes',
+      raisonSociale: 'GRAND HOTEL DES ALPES',
+    });
+
+    const fields = await getAuditManualFields(connection!, auditId);
+    expect(fields).toMatchObject({
+      nomCommercial: { value: 'Grand Hôtel des Alpes', provenance: 'operator' },
+      raisonSociale: { value: 'GRAND HOTEL DES ALPES SAS', provenance: 'operator' },
+      siren: { value: VALID_SIREN, provenance: 'operator' },
+    });
+    // The report's identity gate refuses only a printed field that is not
+    // operator-confirmed (report/src/template/unconfirmed-fields.ts).
+    expect(fields?.nomCommercial?.provenance).toBe('operator');
+    expect(fields?.raisonSociale?.provenance).toBe('operator');
+  });
+
+  it('leaves site-discovered prospect identity unconfirmed and protects audit-level operator edits', async () => {
+    const prospect = await createProspectHub(connection!, {
+      sector: 'hotel',
+      name: 'Discovered',
+      tradingName: 'Discovered Name',
+      legalName: 'PROSPECT LEGAL SAS',
+      fieldOrigins: { name: 'operator', tradingName: 'site-discovery', legalName: 'operator' },
+    });
+    const auditId = await seedAudit(prospect.prospectId);
+    await setAuditManualFields(connection!, auditId, {
+      raisonSociale: { value: 'AUDIT CONFIRMED SAS', provenance: 'operator' },
+    });
+
+    const identity = await syncProspectIdentityIntoAudit(connection!, auditId);
+
+    expect(identity?.suggested).toEqual({ nomCommercial: 'Discovered Name' });
+    const fields = await getAuditManualFields(connection!, auditId);
+    expect(fields?.nomCommercial).toBeUndefined();
+    expect(fields?.raisonSociale).toEqual({ value: 'AUDIT CONFIRMED SAS', provenance: 'operator' });
+  });
+
+  it('applies the prospect identity when an existing audit is attached', async () => {
+    const prospect = await createProspectHub(connection!, {
+      sector: 'hotel',
+      name: 'Attach Target',
+      tradingName: 'Attach Target Hôtel',
+    });
+    const auditId = await seedAudit();
+
+    await attachAuditToProspect(connection!, auditId, prospect.prospectId);
+
+    expect((await getAuditManualFields(connection!, auditId))?.nomCommercial).toEqual({
+      value: 'Attach Target Hôtel',
+      provenance: 'operator',
+    });
   });
 });
 

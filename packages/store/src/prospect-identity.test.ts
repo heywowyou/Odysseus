@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  auditIdentityFromProspect,
   confirmedIdentityFromManualFields,
   missingProspectIdentityFill,
   normalizeSirenInput,
@@ -108,5 +109,31 @@ describe('confirmedIdentityFromManualFields', () => {
       tradingName: undefined,
       legalName: undefined,
     });
+  });
+});
+
+describe('auditIdentityFromProspect (issue #379)', () => {
+  it('confirms operator-origin identity and only suggests every other origin', () => {
+    expect(
+      auditIdentityFromProspect({
+        siren: '732 829 320',
+        tradingName: 'Grand Hôtel des Alpes',
+        legalName: 'GRAND HOTEL DES ALPES SAS',
+        fieldOrigins: { tradingName: 'operator', legalName: 'site-discovery', siren: 'operator' },
+      }),
+    ).toEqual({
+      confirmed: { nomCommercial: 'Grand Hôtel des Alpes', siren: VALID_SIREN },
+      suggested: { raisonSociale: 'GRAND HOTEL DES ALPES SAS' },
+    });
+  });
+
+  it('drops blank values and an invalid SIREN, whatever their origin', () => {
+    expect(
+      auditIdentityFromProspect({
+        siren: '732829321',
+        tradingName: '  ',
+        fieldOrigins: { siren: 'operator', tradingName: 'operator' },
+      }),
+    ).toEqual({ confirmed: {}, suggested: {} });
   });
 });

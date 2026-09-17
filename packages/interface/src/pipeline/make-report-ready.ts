@@ -28,6 +28,7 @@ import {
   recordReadyWritingCandidate,
   resolveSelectedAnalysisPairForAudit,
   type AuditRuntimeFields,
+  syncProspectIdentityIntoAudit,
 } from '@odysseus/store';
 import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import { pauseBetweenLanguagePasses } from '@odysseus/llm';
@@ -110,6 +111,7 @@ async function refreshWritingCandidate(
   audit: AuditRuntimeFields,
   artifactStore: ArtifactStore | undefined,
 ): Promise<void> {
+  await syncProspectIdentityIntoAudit(connection, audit.auditId);
   const manualFields = await getAuditManualFields(connection, audit.auditId);
   const { manifest, findings } = await readAuditArtifacts(
     auditDir,
