@@ -146,8 +146,17 @@ export function ScanProgressPage(): JSX.Element {
 
   let body: ReactNode;
   if (data === null) {
-    // Unknown job: a quiet dead end on purpose, no retry action.
-    body = <EmptyState title={strings.progress.notFound} />;
+    // Unknown job: no retry action, but a way back to scan history.
+    body = (
+      <EmptyState
+        title={strings.progress.notFound}
+        action={
+          <Link to="/audits" className={buttonStyles('secondary', 'sm')}>
+            {strings.progress.notFoundAction}
+          </Link>
+        }
+      />
+    );
   } else if (job === undefined) {
     body =
       error !== undefined ? (
@@ -357,7 +366,10 @@ function FullAuditView({
   const staged = hasStagedAnalysisProgress(job);
   const content = job.progress.contentScan;
   const lighthouse = job.progress.lighthouse;
-  const stagedSummary =
+  // Issue #400: each progress sentence sits under the phase it describes;
+  // performance selection and measurement belong to the performance row,
+  // everything else about checked pages to the content row.
+  const performanceNote =
     job.phase === 'select-performance' && content !== undefined
       ? fillProgressCopy(strings.progress.performanceSelectionMessage, {
           target: content.target,
@@ -368,12 +380,14 @@ function FullAuditView({
             completed: lighthouse.completed,
             target: lighthouse.target,
           })
-        : content !== undefined
-          ? fillProgressCopy(strings.progress.contentProgressMessage, {
-              completed: content.completed,
-              target: content.target,
-            })
-          : undefined;
+        : undefined;
+  const contentNote =
+    performanceNote === undefined && content !== undefined
+      ? fillProgressCopy(strings.progress.contentProgressMessage, {
+          completed: content.completed,
+          target: content.target,
+        })
+      : undefined;
 
   return (
     <Card>
@@ -399,6 +413,7 @@ function FullAuditView({
               etaCalculatedAt={contentEtaCalculatedAt}
               nowMs={nowMs}
               rough
+              note={contentNote}
               running={job.phase === 'content-scan'}
             />
             <PhaseRow
@@ -409,7 +424,7 @@ function FullAuditView({
               etaCalculatedAt={lighthouseEtaCalculatedAt}
               nowMs={nowMs}
               rough
-              note={stagedSummary}
+              note={performanceNote}
               running={job.phase === 'lighthouse' || job.phase === 'select-performance'}
             />
           </>
