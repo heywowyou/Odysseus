@@ -20,6 +20,44 @@ reconciliation properly). History is never deleted.
 | 4 | 2026-09-15 | `15bc280` | 0 | 15 | 0 | 0 | local synthetic browser fixture + stateful dashboard fixture, FR/EN surface pass | yes (surface copy) |
 | 5 | 2026-09-15 | `Plan 048 closeout` | 0 | 15 | 0 | 0 | isolated local stateful browser fixture + real prospecting queue scan, FR detail state pass | yes (FR stateful; EN surface run 4) |
 | 6 | 2026-09-15 | `13b65ea` | 14 | 16 | 0 | 0 | local stateful, authorized real site, real mailbox draft + preview bucket, FR+EN; journeys 1-5 and 7 partial, 6 blocked | no |
+| 7 | 2026-09-17 | `11e5cf71` | 16 | 1 regressed + 26 not re-verified | 2 | 1 (UX-020) | production observation with operator-authorized writes, FR+EN; journeys 2, 3 (to scan launch/progress), 7 partial; 4, 5, 6 not reached (session lost) | no |
+
+## Run 7 notes (production, operator-authorized writes)
+
+- Mode and boundary: deployed dashboard `https://app.odysseusaudit.com`,
+  build `11e5cf71`. The operator explicitly moved the run from local to the
+  VPS and authorized adding a four-star catalogue hotel, scanning it, and
+  every step short of sending email. Login used the repository credential
+  without printing it.
+- Records created: prospect ATLANTIC HÔTEL (atlantichotel.fr, from the
+  Annuaire), one quick check (audit `f2323b11…`, 1 page, 26 findings, grade
+  D), one full scan (job `74940988…`, 378 URLs inventoried, content phase
+  started; completion not observed). One PDF regeneration attempt on the
+  existing Hôtel Ha(a)ïtza audit (failed, no state change). No preview
+  published, no draft created, no email sent. All records retained.
+- Journey 1 (directory → prospect): search, star filter, add and "Ouvrir le
+  prospect" worked; facet, loading, provenance and label issues UX-035,
+  UX-036, UX-037, UX-038, UX-039, UX-040.
+- Journey 2 (quick check): full proof chain - one POST, 13 s, 1 page
+  crawled and scanned, audit attached, prospect recommendation advanced to
+  full scan. UX-033 found in its findings.
+- Journey 3 (full scan): double click produced one job; a second launch
+  from the hub was refused `host-busy` (UX-031). Progress polling recovered
+  from a network failure. Coverage accounting UX-034, layout UX-041.
+- Journey 5 (paid report, existing audit): regeneration reproduces the
+  page-11 overflow - UX-020 regression; approve gating UX-032; Audits list
+  disagreement UX-030.
+- Journey 7 (recovery): invalid URL rejected client-side; bare domain
+  rejected (UX-044); unknown prospect handled; unknown scan dead end
+  (UX-043); expired session and wrong password (UX-042); 375 px To-do had
+  no horizontal overflow.
+- Fixed and verified live: UX-018 (lookup answers, POST 200), UX-026 (quick
+  check audit titled with the hotel and says it is not a client report).
+- Coverage gaps: the session cookie was cleared while testing expiry and
+  re-login was blocked by the host permission layer, so the full scan's
+  terminal state, preview, first draft, follow-up/reply and outcome
+  journeys (4, 6) were not run; the other older findings were not
+  re-verified.
 
 ## Run 6 notes (local stateful, operator-authorized real prospect)
 
@@ -372,14 +410,6 @@ plan 045 section 1.9) is pending the operator's deploy.
 - Suggested UX fix: An opt-out (and a deletion) withdraws every pending draft in the mailbox, revokes live previews, closes the thread, and removes the work item; the operator sees what was withdrawn.
 - Issue: #273.
 
-### UX-018 (P1) "Vérifier une adresse" suppression lookup always fails with 404
-
-- Status: OPEN. First seen: run 6. Last seen: run 6.
-- Where: local dashboard, prospect journey, FR+EN as noted.
-- Evidence: `packages/interface/src/dashboard/routes/suppressions.tsx:33` POSTs `/api/outreach/suppression-check`; that route no longer exists (removed with the Plan 047 hub, `6580e22`). Repro (local, run 6): open `/ne-pas-contacter`, check any address -> network `POST /api/outreach/suppression-check 404`, UI "L'action a échoué. Réessayez." Retrying cannot help.
-- Suggested UX fix: The footer lookup answers whether an address is suppressed, or the page is removed from navigation.
-- Issue: #274.
-
 ### UX-019 (P1) Client email and preview language follow the operator's dashboard language
 
 - Status: OPEN. First seen: run 6. Last seen: run 6.
@@ -390,9 +420,10 @@ plan 045 section 1.9) is pending the operator's deploy.
 
 ### UX-020 (P1) Paid report PDFs fail reproducibly on a long third-party URL with no operator remedy
 
-- Status: OPEN. First seen: run 6. Last seen: run 6.
-- Where: local dashboard, prospect journey, FR+EN as noted.
-- Evidence: Repro (local, run 6): 31-page prospecting audit of a real 5-star hotel -> confirm identity -> "Réécrire le rapport" (writing succeeds, FR+EN analyses stored) -> PDF production aborts: "Painted content <div> extends past the printable content rectangle on physical page 2 at right by 1793.7px". "Régénérer les PDF" reproduces it. Likely cause: `findings.json` contains a 771-character unbroken third-party script URL (hotel-widget CDN) that the report renders without wrapping. The operator has no way to fix it from the dashboard, so the paid report is blocked. The raw English exception is also still displayed next to the translated explanation.
+- Status: REGRESSION (issue closed 2026-09-15, reproduced run 7). First seen: run 6. Last seen: run 7.
+- Where: local dashboard, prospect journey, FR+EN as noted; production audit page run 7.
+- Evidence (run 7, production `11e5cf71`): Hôtel Ha(a)ïtza audit -> "Regenerate the PDFs" -> 409 "…on physical page 11 at right by 1793.7px". The `11e5cf71` section naming does not apply because the box is outside any titled `section.sheet[id]` (`packages/report/src/pdf.ts`). No operator remedy beyond an identical retry.
+- Evidence (run 6): Repro (local, run 6): 31-page prospecting audit of a real 5-star hotel -> confirm identity -> "Réécrire le rapport" (writing succeeds, FR+EN analyses stored) -> PDF production aborts: "Painted content <div> extends past the printable content rectangle on physical page 2 at right by 1793.7px". "Régénérer les PDF" reproduces it. Likely cause: `findings.json` contains a 771-character unbroken third-party script URL (hotel-widget CDN) that the report renders without wrapping. The operator has no way to fix it from the dashboard, so the paid report is blocked. The raw English exception is also still displayed next to the translated explanation.
 - Suggested UX fix: Report rendering wraps or truncates unbreakable evidence strings so PDFs always fit; failures that still occur name the offending finding.
 - Issue: #276.
 
@@ -436,14 +467,6 @@ plan 045 section 1.9) is pending the operator's deploy.
 - Suggested UX fix: Writing runs as tracked background work with visible progress, a disabled launch while running, and automatic refresh on completion.
 - Issue: #281.
 
-### UX-026 (P2) Audit detail is always titled "Préparer le rapport client" and offers report work on quick checks
-
-- Status: OPEN. First seen: run 6. Last seen: run 6.
-- Where: local dashboard, prospect journey, FR+EN as noted.
-- Evidence: `packages/interface/src/dashboard/routes/audit-detail.tsx:192` hard-codes `typeLabels.fullAudit` as the eyebrow. Repro (local, run 6): a one-page quick check and a prospecting audit both show "PRÉPARER LE RAPPORT CLIENT" and an enabled "Réécrire le rapport". Outreach previews built from a prospecting audit are stored with `sourceKind: full-audit`. Separately, after a quick check the prospect page says the audit is "incomplet / ne contient pas encore toutes ses données", which reads as a failure.
-- Suggested UX fix: The audit page names its real intent (quick check / outreach / client report) and only offers report work for eligible audits; the prospect page explains that a quick check is not outreach-grade instead of calling it incomplete.
-- Issue: #282.
-
 ### UX-027 (P2) Scan visits the page publishing the contact email but the operator must find and type it manually
 
 - Status: OPEN. First seen: run 6. Last seen: run 6.
@@ -468,6 +491,134 @@ plan 045 section 1.9) is pending the operator's deploy.
 - Suggested UX fix: One main landmark per page; links styled as buttons instead of nested controls.
 - Issue: #285.
 
+### UX-030 (P2) Audits list shows Complete and zero report issues for an audit whose report production failed
+
+- Status: OPEN. First seen: run 7. Last seen: run 7.
+- Where: production `/audits` vs `/audits/:id` vs `/a-traiter`, EN.
+- Evidence: Hôtel Ha(a)ïtza audit reads Complete / "Report issues 0" while its page says report production failed and À traiter says Rapport à corriger. Status derives from the scan job only (`packages/interface/src/dashboard/routes/audits-model.ts:76`, `lib/job-outcome.ts`), so post-job regeneration failures never surface.
+- Suggested UX fix: The Audits row, KPI and filter reflect the audit's current report-production state.
+- Issue: #389.
+
+### UX-031 (P2) Prospect page recommends a full scan while one is already running and hides the running job
+
+- Status: OPEN. First seen: run 7. Last seen: run 7.
+- Where: production prospect hub during full scan, FR.
+- Evidence: Recommendation stays "Lancer un scan complet"; clicking returns `200 {started:false, refusal:"host-busy"}`, shown under outreach preparation with no link; response has no job id.
+- Suggested UX fix: Show the in-flight scan with a progress link; refusals link to the blocking job next to the refused action.
+- Issue: #390.
+
+### UX-032 (P2) Approve-and-download is offered while the other language has no usable PDF
+
+- Status: OPEN. First seen: run 7. Last seen: run 7.
+- Where: production audit report panel, EN.
+- Evidence: FR row offers "Approve (both languages) and download" while EN is Unverified; `audit-reports-section.tsx` gates on the row's own PDF only; server 409 would surface raw English (traced from source, not clicked on a client record).
+- Suggested UX fix: Disable approval with a localized reason until both languages are fresh and verified.
+- Issue: #391.
+
+### UX-033 (P2) Findings inside a YouTube embed read as the site's own critical accessibility defects
+
+- Status: OPEN. First seen: run 7. Last seen: run 7.
+- Where: production quick-check audit page, FR.
+- Evidence: Critique findings on `iframe[frameborder="0"] >>> .ytmVideoInfo…`; report-only `third-party-attribution.ts` table has no YouTube entry and the dashboard does not use it.
+- Suggested UX fix: Attribute third-party embed findings in the dashboard and totals; decide grade treatment.
+- Issue: #392.
+
+### UX-034 (P2) Scan coverage counts do not reconcile: inventoried URLs vanish before the content check
+
+- Status: OPEN. First seen: run 7. Last seen: run 7.
+- Where: production `/scans/:id`, EN.
+- Evidence: Inventoried 378, Left out 0, content target 341; `scan-progress-model.ts` "Left out" only counts the continuation guard. Terminal numbers not captured.
+- Suggested UX fix: Every inventoried URL is in a visible bucket and counts reconcile.
+- Issue: #393.
+
+### UX-035 (P3) Directory marks chain portal sites as own websites and brand hotels as independent
+
+- Status: OPEN. First seen: run 7. Last seen: run 7.
+- Where: production `/annuaire`, FR.
+- Evidence: marriott.fr, accor.com, hotel-bb.com rows show Site propre; MGallery and 25hours rows show Indépendant; `hotel-sources/directory-entry.ts:19`.
+- Suggested UX fix: Chain portal domains get their own kind; brand names are not asserted independent.
+- Issue: #394.
+
+### UX-036 (P3) Outreach gates report a missing email before the missing full scan
+
+- Status: OPEN. First seen: run 7. Last seen: run 7.
+- Where: production prospect hub, new prospect, FR.
+- Evidence: Preview/first email/follow-up all "aucun email disponible" before any scan; `packages/store/src/guards.ts:119` checks contact first.
+- Suggested UX fix: Name the earliest missing prerequisite or all blockers.
+- Issue: #395.
+
+### UX-037 (P3) Outreach preparation says the primary site is not provided when it means no audit yet
+
+- Status: OPEN. First seen: run 7. Last seen: run 7.
+- Where: production prospect hub, FR.
+- Evidence: "Site principal — Non renseigné" beside a Résumé that shows the URL; later "il y a 0 jour(s)".
+- Suggested UX fix: Say "no audit of the primary site"; natural relative dates.
+- Issue: #396.
+
+### UX-038 (P3) Raw sector value, browser-locale dates and mixed commune casing on prospect surfaces
+
+- Status: OPEN. First seen: run 7. Last seen: run 7.
+- Where: production prospects list and hub, FR+EN.
+- Evidence: Secteur `hotel` for directory adds; list dates `9/17/2026` in FR (`prospect-hub-list.tsx:440`); "ANTIBES" vs "La Teste-de-Buch". Follow-up to UX-028.
+- Suggested UX fix: Localized sector labels, dashboard-language dates, consistent commune casing.
+- Issue: #397.
+
+### UX-039 (P3) Adding a prospect from the directory is logged as a record edit
+
+- Status: OPEN. First seen: run 7. Last seen: run 7.
+- Where: production prospect hub, FR.
+- Evidence: First event "Fiche modifiée · Opérateur" after Annuaire add (`addDirectoryEntriesToProspects`, `field-edited`).
+- Suggested UX fix: Creation event names its directory origin.
+- Issue: #398.
+
+### UX-040 (P3) Directory shows 0 establishments while a filter change is loading
+
+- Status: OPEN. First seen: run 7. Last seen: run 7.
+- Where: production `/annuaire`, FR.
+- Evidence: "0 établissement(s)" before "2735" (`directory.tsx:101`).
+- Suggested UX fix: Loading state or previous results while fetching.
+- Issue: #399.
+
+### UX-041 (P3) Content-check progress text renders under the performance phase
+
+- Status: OPEN. First seen: run 7. Last seen: run 7.
+- Where: production `/scans/:id`, EN.
+- Evidence: "Content pages checked: 34/341." under Performance measurement (`scan-progress.tsx` stagedSummary placement).
+- Suggested UX fix: Phase text sits under its phase.
+- Issue: #400.
+
+### UX-042 (P3) Login drops the requested page and does not associate the wrong-password error
+
+- Status: OPEN. First seen: run 7. Last seen: run 7.
+- Where: production `/login`, EN.
+- Evidence: Expired session on `/prospects/:id` → `/login` with no return path (`lib/api.ts:45`); wrong password message without `aria-invalid`/`aria-describedby`.
+- Suggested UX fix: Return to the requested same-origin path; associate the error.
+- Issue: #401.
+
+### UX-043 (P3) Unknown scan page is a dead end
+
+- Status: OPEN. First seen: run 7. Last seen: run 7.
+- Where: production `/scans/<unknown>`, EN.
+- Evidence: "Scan not found." with no link (`scan-progress.tsx:150`).
+- Suggested UX fix: Link to Audits.
+- Issue: #402.
+
+### UX-044 (P3) New scan rejects a bare domain instead of normalizing it
+
+- Status: OPEN. First seen: run 7. Last seen: run 7.
+- Where: production `/scans/new`, EN.
+- Evidence: `atlantichotel.fr` rejected (`new-scan-model.ts:~152`).
+- Suggested UX fix: Normalize to https and show the result.
+- Issue: #403.
+
+### UX-045 (P3) Audits table labels every prospect link Prospects instead of the hotel name
+
+- Status: OPEN. First seen: run 7. Last seen: run 7.
+- Where: production `/audits`, EN.
+- Evidence: Link text is `strings.nav.prospects` (`audits.tsx:~258`) though summaries carry `prospectName`.
+- Suggested UX fix: Link text is the prospect name.
+- Issue: #404.
+
 ## Fixed register
 
 ### UX-012 (was P1) Superseded report pair shown as ready after failed regeneration - fixed in plan 045 closeout
@@ -480,6 +631,16 @@ plan 045 section 1.9) is pending the operator's deploy.
   suite, axe coverage, FR/EN parity, and repository check pass. Live
   re-verification remains part of the next recurring dashboard audit.
 - Issue: #214.
+
+### UX-018 (was P1) Suppression lookup always failed with 404 - fixed, verified run 7
+
+- Proof: production `11e5cf71`, `/ne-pas-contacter`, checking a test address -> `POST /api/outreach/suppression-check 200`, "This address is not on the do-not-contact list."
+- Issue: #274.
+
+### UX-026 (was P2) Audit detail always titled as client-report work - fixed, verified run 7
+
+- Proof: production quick-check audit page shows eyebrow "Contrôle rapide", the hotel name as heading, and "Contrôle rapide : il sert à trier les prospects et ne couvre pas assez le site pour un rapport client"; the prospect hub says a quick check is not enough for outreach.
+- Issue: #282.
 
 ## Deliberate register
 
