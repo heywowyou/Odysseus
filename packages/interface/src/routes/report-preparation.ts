@@ -144,6 +144,11 @@ export function registerReportPreparationRoutes(router: Router, connection: Conn
       // request may stay open. In async mode it runs as tracked background
       // work: the in-flight marker is taken before the first await, the page
       // polls the preparation view, and the outcome is kept for it to read.
+      // Issue #410: the default reuses a language whose writing already
+      // succeeded against this structure and these findings. `fresh=true` is
+      // the operator's way to write both languages again, the same role
+      // regenerateStructure plays one level up.
+      const regenerateBoth = query.get('fresh') === 'true';
       if (query.get('async') === 'true') {
         if (isReportProductionInFlight(auditId)) {
           sendError(
@@ -153,7 +158,9 @@ export function registerReportPreparationRoutes(router: Router, connection: Conn
           );
           return;
         }
-        const run = regenerateWriting(connection, audit, artifactStore);
+        const run = regenerateWriting(connection, audit, artifactStore, {
+          regenerateWriting: regenerateBoth,
+        });
         run.then(
           (result) =>
             recordWritingRunOutcome(auditId, {
@@ -174,7 +181,9 @@ export function registerReportPreparationRoutes(router: Router, connection: Conn
       }
 
       try {
-        const result = await regenerateWriting(connection, audit, artifactStore);
+        const result = await regenerateWriting(connection, audit, artifactStore, {
+          regenerateWriting: regenerateBoth,
+        });
         sendJson(res, 201, result);
       } catch (error) {
         if (

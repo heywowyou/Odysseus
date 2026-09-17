@@ -5024,3 +5024,45 @@ three-attempt budget enough to correct three defects; and issue #409 made
 a rejection measurable, which is what turns "50% of reports have issues at
 the end" from an estimate into a number. The guard table introduced by
 #406 is what carries the classification.
+
+### 98. A language whose writing pass succeeded is reused rather than re-rolled (issue #410, 2026-09-17)
+
+`runAnalysisStage` persists each language's analysis as it completes, but the
+deliverable is the bilingual pair, and every caller runs French then English in
+sequence. So when the English writing pass exhausted its retries, the French
+pass that had already succeeded was left without a pair, and the operator's
+only route forward regenerated French from scratch.
+
+That cost two things, not one. The wasted generation - measured 2026-09-17 on a
+378-page audit - and the variance: the re-rolled French prose is not the French
+prose that was produced, so any review already done on it was void.
+
+A writing run now reuses the newest stored analysis for a language when the
+audit, the findings provenance and the structure document all match what the
+pass about to run will use, and the operator has not asked for a fresh
+generation. It is deliberately the same shape as the structure pass's existing
+reuse, one level down, including the override.
+
+**What made it possible:** a stored analysis now records the `generatedAt` of
+the structure document its writing pass was given. Without that, "the same
+structure" was not a question the artifacts could answer, and reusing on
+provenance alone would have paired prose written against one set of themes with
+a merge onto another.
+
+**Fail closed, as everywhere else provenance is involved.** An analysis with no
+provenance, no structure link, or no id is not reusable. Absent is not
+"probably fine"; it is "regenerate". Every analysis written before this change
+therefore regenerates once, which is correct and costs one run.
+
+**The override is not optional.** `regenerateWriting` (dashboard *Rewrite
+both*, `?fresh=true`) exists because a reused analysis the operator did not
+choose is the failure this decision could introduce - stale prose shipping
+because nothing said it was old.
+
+**Rejected: reusing on findings provenance alone.** Simpler, and wrong: the
+structure document decides the themes prose is merged onto, and two runs of the
+structure pass over the same findings do not have to agree.
+
+Related: issue #407 reduces how often the budget is exhausted at all, and #406
+makes the three attempts enough to correct three defects. This one changes what
+it costs when exhaustion still happens.

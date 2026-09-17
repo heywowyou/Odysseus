@@ -80,6 +80,7 @@ function fakeAnalysisResult(language: 'fr' | 'en') {
     analysisPath: `/artifacts/example.com/dir/analyses/x-${language}.json`,
     structurePath: '/artifacts/example.com/dir/analyses/x-structure.json',
     structureReused: language === 'en',
+    writingReused: false,
     unreferencedFindingCount: 0,
     usedFallbackContext: true,
     // Issue #145: the runner settles this field after the report stage, so

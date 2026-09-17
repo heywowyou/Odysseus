@@ -140,12 +140,16 @@ export function AuditReportPanel(props: {
     wasInFlight.current = running;
   }, [preparation, refresh, onBusy, strings]);
 
-  const handleRewrite = async (): Promise<void> => {
+  /** Issue #410: the default run reuses a language whose writing already
+   *  succeeded against this structure and these findings, so a run after a
+   *  half-failed pair pays only for the language that is missing. `fresh`
+   *  writes both again, which is the operator's call, not a silent one. */
+  const handleRewrite = async (fresh = false): Promise<void> => {
     if (productionBusy) return;
     setIsRewriting(true);
     onBusy(true);
     try {
-      await postEmpty(`${basePath}/regenerate-writing?async=true`);
+      await postEmpty(`${basePath}/regenerate-writing?async=true${fresh ? '&fresh=true' : ''}`);
       wasInFlight.current = true;
       refreshPreparation();
     } catch (rewriteError) {
@@ -219,18 +223,29 @@ export function AuditReportPanel(props: {
         >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-sm font-semibold text-ink">{copy.writingHeading}</h3>
-            <Button
-              variant="secondary"
-              size="sm"
-              isLoading={productionBusy}
-              disabled={productionBusy}
-              onClick={() => void handleRewrite()}
-            >
-              {production.busyLabel ??
-                (selected === undefined
-                  ? strings.prepareReport.writeButton
-                  : strings.prepareReport.regenerateButton)}
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                isLoading={productionBusy}
+                disabled={productionBusy}
+                onClick={() => void handleRewrite()}
+              >
+                {production.busyLabel ??
+                  (selected === undefined
+                    ? strings.prepareReport.writeButton
+                    : strings.prepareReport.regenerateButton)}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={productionBusy}
+                title={strings.prepareReport.regenerateBothFreshHint}
+                onClick={() => void handleRewrite(true)}
+              >
+                {strings.prepareReport.regenerateBothFreshButton}
+              </Button>
+            </div>
           </div>
           {writingInFlight && !production.busy ? (
             <p className="text-[13px] text-ink-muted" role="status">

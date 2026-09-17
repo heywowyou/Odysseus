@@ -54,6 +54,7 @@ import {
 import { persistAnalysis } from '@odysseus/store';
 import { getStrings, type VerifiedStoredAnalysis } from '@odysseus/report';
 import { runObligationStage } from './obligation-stage.js';
+import { findReusableAnalysis } from './analysis-reuse.js';
 
 export interface RunAnalysisStageOptions {
   language: ReportLanguage;
@@ -88,6 +89,12 @@ export interface RunAnalysisStageOptions {
    *  instead of twice per job. Omitted means the standalone CLI path,
    *  which computes it here exactly as before. */
   findingsProvenance?: FindingsProvenance;
+  /** Issue #410: force a fresh writing pass even when a compatible stored
+   *  analysis exists for this language. Default (false) reuses it, the same
+   *  way `regenerateStructure` defaults to reusing the newest compatible
+   *  structure document one level up. The operator needs this because a
+   *  reused analysis must never be silently stale. */
+  regenerateWriting?: boolean;
 }
 
 export interface AnalysisStageResult {
@@ -95,6 +102,10 @@ export interface AnalysisStageResult {
   analysisPath: string;
   structurePath: string;
   structureReused: boolean;
+  /** Issue #410: true when this language's analysis was taken from disk
+   *  rather than generated, so the caller can report that no model call was
+   *  made for it. */
+  writingReused: boolean;
   unreferencedFindingCount: number;
   usedFallbackContext: boolean;
   /** The two advisory passes (correction review, shadow reviewer), started
@@ -288,6 +299,35 @@ export async function runAnalysisStage(
       options.siteSignalOverrides,
     ));
 
+  // Issue #410: before spending a generation, see whether this language
+  // already has one that a fresh run would reproduce. Only on the model path -
+  // the static fallback makes no model call to save.
+  if (structureDoc !== undefined && !(options.regenerateWriting ?? false)) {
+    const reusable = await findReusableAnalysis(analysesDir, options.language, {
+      auditId: manifest.auditId,
+      findingsProvenance,
+      structureGeneratedAt: structureDoc.generatedAt,
+    });
+    if (reusable) {
+      console.log(
+        `odysseus analyze (writing pass, language=${options.language}): reusing ${path.basename(reusable.analysisPath)}, generated against the same structure document and the same findings`,
+      );
+      return {
+        analysis: reusable.analysis,
+        analysisPath: reusable.analysisPath,
+        structurePath,
+        structureReused,
+        writingReused: true,
+        unreferencedFindingCount: findUnreferencedStructureFindingIds(structureDoc, forModel)
+          .length,
+        usedFallbackContext,
+        // Nothing was generated, so there is nothing new to review: the
+        // advisory passes already ran for this analysis when it was written.
+        advisoryPasses: [],
+      };
+    }
+  }
+
   const analysisId = randomUUID();
   let analysis: VerifiedStoredAnalysis;
   let unreferencedFindingCount = 0;
@@ -372,6 +412,9 @@ export async function runAnalysisStage(
       temperature: writingResult.temperature,
       generatedAt,
       obligationAssessment,
+      // Issue #410: what a later run checks before reusing this analysis
+      // instead of generating it again.
+      structureGeneratedAt: doc.generatedAt,
       ...(persistsSiteContext ? { siteContext: writingSiteContext } : {}),
     };
   }
@@ -401,6 +444,9 @@ export async function runAnalysisStage(
       ? { obligationAssessment: analysis.obligationAssessment }
       : {}),
     ...(analysis.generationMode !== undefined ? { generationMode: analysis.generationMode } : {}),
+    ...(analysis.structureGeneratedAt !== undefined
+      ? { structureGeneratedAt: analysis.structureGeneratedAt }
+      : {}),
   });
 
   // Both advisory passes live inside the not-eligible path (modelPasses is
@@ -531,6 +577,7 @@ export async function runAnalysisStage(
     analysisPath,
     structurePath,
     structureReused,
+    writingReused: false,
     unreferencedFindingCount,
     usedFallbackContext,
     advisoryPasses,

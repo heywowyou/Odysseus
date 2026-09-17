@@ -47,6 +47,12 @@ export interface AnalysisDocumentFields {
    *  writing passes never ran for this document. Absent on every
    *  model-generated analysis, including all legacy artifacts. */
   generationMode?: 'static-fallback';
+  /** Issue #410: the `generatedAt` of the structure document this analysis's
+   *  writing pass was given. A later run reuses a stored analysis only when
+   *  this matches the structure it is about to use, so the bilingual pair is
+   *  merged onto one set of themes. Absent on the static-fallback path and on
+   *  analyses written before this was recorded; absent means "not reusable". */
+  structureGeneratedAt?: string;
 }
 
 export type AnalysisDocument = AnalysisDocumentFields;
@@ -181,6 +187,7 @@ const analysisSchema = new Schema<AnalysisDocument>(
     obligationAssessment: { type: obligationAssessmentSchemaMongo },
     siteContext: { type: analysisSiteContextSchemaMongo },
     generationMode: { type: String, enum: ['static-fallback'] },
+    structureGeneratedAt: { type: String },
   },
   { collection: 'analyses' },
 );

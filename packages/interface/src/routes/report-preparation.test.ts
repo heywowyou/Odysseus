@@ -275,6 +275,73 @@ describe('PATCH /api/audits/:auditId/report-preparation', () => {
   });
 });
 
+// Issue #410: a run after a half-failed pair reuses the language whose
+// writing already succeeded and pays only for the missing one, so the
+// operator needs an explicit way to write both again - a reused analysis must
+// never be silently stale. Same role `regenerateStructure` plays one level up.
+describe('POST regenerate-writing and the reuse of a succeeded language', () => {
+  const stubStage = (): void => {
+    vi.mocked(runAnalysisStage).mockImplementation(
+      async (_dir, _manifest, _findings, options) =>
+        ({
+          analysis: {
+            analysisId: `analysis-${options.language}`,
+            auditId: 'audit-1',
+            findingsProvenance: {
+              findingsSchemaVersion: 1 as const,
+              normalizationFingerprint: 'fp',
+              findingsDigest: 'sha256:digest',
+            },
+            language: options.language,
+          },
+          analysisPath: `/tmp/${options.language}.json`,
+          structurePath: '/tmp/structure.json',
+          structureReused: true,
+          writingReused: false,
+          unreferencedFindingCount: 0,
+          usedFallbackContext: true,
+          advisoryPasses: [],
+        }) as never,
+    );
+  };
+
+  it('reuses by default, so an ordinary regeneration does not re-roll a good language', async () => {
+    await writeEvidence();
+    stubStage();
+    const router = new Router();
+    registerReportPreparationRoutes(router, fakeConnection);
+    await router.handle(
+      fakeReq('/api/audits/audit-1/report-preparation/regenerate-writing', undefined, 'POST'),
+      fakeRes(),
+    );
+
+    for (const call of vi.mocked(runAnalysisStage).mock.calls) {
+      expect(call[3].regenerateWriting).toBe(false);
+    }
+  });
+
+  it('writes both languages again when the operator asks for a fresh run', async () => {
+    await writeEvidence();
+    stubStage();
+    const router = new Router();
+    registerReportPreparationRoutes(router, fakeConnection);
+    await router.handle(
+      fakeReq(
+        '/api/audits/audit-1/report-preparation/regenerate-writing?fresh=true',
+        undefined,
+        'POST',
+      ),
+      fakeRes(),
+    );
+
+    const languages = vi.mocked(runAnalysisStage).mock.calls.map((call) => call[3].language);
+    expect(languages).toEqual(['fr', 'en']);
+    for (const call of vi.mocked(runAnalysisStage).mock.calls) {
+      expect(call[3].regenerateWriting).toBe(true);
+    }
+  });
+});
+
 describe('POST /api/audits/:auditId/report-preparation/regenerate-writing', () => {
   it('returns 409 when the artifacts are missing, without requiring any body', async () => {
     const router = new Router();

@@ -14,6 +14,10 @@ export interface PrepareReportStrings {
   savedMessage: string;
   writingHeading: string;
   selectedWritingLabel: string;
+  /** Issue #410: writes both languages again instead of reusing the one
+   *  whose pass already succeeded. */
+  regenerateBothFreshButton: string;
+  regenerateBothFreshHint: string;
   candidateFailedLabel: string;
   /** Issue #409: one rejected attempt. {attempt}, {total}, {guards}. */
   candidateAttemptRejectedTemplate: string;
@@ -45,6 +49,9 @@ export const prepareReport = {
     savedMessage: 'Préparation enregistrée.',
     writingHeading: 'Versions de rédaction du rapport',
     selectedWritingLabel: 'Version actuelle',
+    regenerateBothFreshButton: 'Tout réécrire',
+    regenerateBothFreshHint:
+      "Réécrit le français et l'anglais, sans réutiliser la version déjà produite pour une langue.",
     candidateFailedLabel: 'Échec de la nouvelle version',
     candidateAttemptRejectedTemplate: 'Tentative {attempt} sur {total} refusée par : {guards}',
     regenerateButton: 'Réécrire le rapport',
@@ -73,6 +80,9 @@ export const prepareReport = {
     savedMessage: 'Preparation saved.',
     writingHeading: 'Report writing versions',
     selectedWritingLabel: 'Current version',
+    regenerateBothFreshButton: 'Rewrite both',
+    regenerateBothFreshHint:
+      'Rewrites French and English, reusing neither language whose pass already succeeded.',
     candidateFailedLabel: 'New version failed',
     candidateAttemptRejectedTemplate: 'Attempt {attempt} of {total} rejected by: {guards}',
     regenerateButton: 'Rewrite the report',

@@ -105,6 +105,12 @@ export async function regenerateWriting(
   connection: Connection,
   audit: AuditDocument,
   artifactStore: ArtifactStore | undefined,
+  /** Issue #410: by default a language whose writing already succeeded
+   *  against this structure and these findings is reused, so a run after a
+   *  half-failed pair only pays for the language that is missing. Set this
+   *  when the operator wants both languages written again - a reused analysis
+   *  must be the operator's choice, never a silent one. */
+  options: { regenerateWriting?: boolean } = {},
 ): Promise<RegenerateWritingResult> {
   const auditId = audit.auditId;
   // The lock is checked and taken in one synchronous call with no await
@@ -153,6 +159,7 @@ export async function regenerateWriting(
       {
         language: 'fr',
         findingsProvenance,
+        regenerateWriting: options.regenerateWriting ?? false,
         ...(audit.manualFields?.siren !== undefined
           ? { manualSiren: audit.manualFields.siren.value }
           : {}),
@@ -177,6 +184,7 @@ export async function regenerateWriting(
       {
         language: 'en',
         findingsProvenance,
+        regenerateWriting: options.regenerateWriting ?? false,
         ...(audit.manualFields?.siren !== undefined
           ? { manualSiren: audit.manualFields.siren.value }
           : {}),

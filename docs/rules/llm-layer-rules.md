@@ -251,6 +251,32 @@ named the provider in two actions rather than one. Raising `MAX_RETRIES` was
 considered and rejected: it buys attempts rather than removing the failure
 mode, and costs two more generations on every bad run. See trade-off 97.
 
+**Amended 2026-09-17 (issue #410): a language whose writing already succeeded
+is reused, not re-rolled.** The deliverable is the bilingual pair, and the
+callers run French then English in sequence, so an English pass that exhausted
+its retries left an already-successful French pass without a pair and the only
+route forward regenerated French from scratch. Measured on a real 378-page
+audit (2026-09-17): the French generation was paid for and discarded, and
+because a re-roll is not the prose that was produced, any review done on it was
+void too.
+
+A run now reuses the newest stored analysis for a language when **all** of
+these hold, and regenerates otherwise:
+
+- the same audit;
+- the same findings provenance (fail closed when absent or stale, per the
+  standing provenance guardrail);
+- generated from the same structure document as the pass about to run - this
+  is what the new `structureGeneratedAt` on a stored analysis records;
+- a model-generated analysis, never a static-fallback one;
+- the operator has not asked for a fresh generation.
+
+This is the mechanism the structure pass already has, applied one level down,
+including the operator's override: `regenerateWriting` (dashboard: *Rewrite
+both*, HTTP: `?fresh=true`) writes both languages again, exactly as
+`regenerateStructure` does above. A reused analysis must never be silently
+stale, which is why the conditions are all required and the override exists.
+
 **Amended 2026-09-17 (issue #409): a rejection is recorded, not only logged.**
 Each rejected attempt emits a `call-rejected` telemetry event naming the
 guards that failed and the attempt number, and each escape under #407 emits a

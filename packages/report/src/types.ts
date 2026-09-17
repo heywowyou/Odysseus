@@ -40,6 +40,16 @@ export interface StoredAnalysis extends LlmOutput {
   /** The exact intake or catalogue facts shown to the writing pass. Optional
    * for analyses created before writing-context provenance was recorded. */
   siteContext?: AnalysisSiteContext;
+  /** The `generatedAt` of the structure document this analysis's writing
+   *  pass was given, which identifies that document uniquely (it names its
+   *  file). Issue #410: it is what lets a later run tell that a stored
+   *  analysis was written against the same structure the run about to
+   *  happen will use, and therefore that reusing it produces the same
+   *  bilingual pair rather than a mismatched one. Absent on the static
+   *  fallback path, which has no structure document, and on analyses
+   *  generated before this was recorded; absent means "not reusable",
+   *  never "assume compatible". */
+  structureGeneratedAt?: string;
   /** Present only on analyses produced by the audit fallback gate
    *  (docs/rules/llm-layer-rules.md section 10): the structure and
    *  writing passes never ran for this document. Absent on every
