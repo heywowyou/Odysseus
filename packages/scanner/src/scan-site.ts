@@ -8,7 +8,12 @@ import {
   type PageAnalysisCoverage,
   type SitemapMode,
 } from '@odysseus/core';
-import { getCruxApiKey, getPageTimeoutMs, getScanConcurrency } from './config.js';
+import {
+  getCrawlerUserAgent,
+  getCruxApiKey,
+  getPageTimeoutMs,
+  getScanConcurrency,
+} from './config.js';
 import type { RedirectHostCache } from './checks/transactional-flow.js';
 import type { SitemapCheckResult } from './checks/sitemap.js';
 import { checkLlmsTxt, type LlmsTxtCheckResult } from './checks/llms-txt.js';
@@ -1122,6 +1127,7 @@ export async function scanSite(
   const llmsTxtCheck = await checkLlmsTxt(
     new URL(crawl.startUrl).origin,
     options.timeoutMs ?? getPageTimeoutMs(),
+    options.userAgent ?? getCrawlerUserAgent(),
   );
   const llmsTxtCheckForScan = homepageWasVisited ? llmsTxtCheck : undefined;
 
@@ -1132,6 +1138,7 @@ export async function scanSite(
   const securityHeadersCheck = await checkSecurityHeaders(
     new URL(crawl.startUrl).origin,
     options.timeoutMs ?? getPageTimeoutMs(),
+    options.userAgent ?? getCrawlerUserAgent(),
   );
   const securityHeadersCheckForScan = homepageWasVisited ? securityHeadersCheck : undefined;
 

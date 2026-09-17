@@ -4,7 +4,20 @@ import {
   findBlockingPattern,
   isAllowedByRobots,
   parseRobotsTxt,
+  robotsProductToken,
 } from './robots.js';
+
+describe('robotsProductToken', () => {
+  it('keeps the part before the version and lower-cases it', () => {
+    expect(robotsProductToken('OdysseusBot/1.0 (+https://odysseusaudit.com/bot)')).toBe(
+      'odysseusbot',
+    );
+  });
+
+  it('leaves a bare token unchanged apart from case', () => {
+    expect(robotsProductToken('GPTBot')).toBe('gptbot');
+  });
+});
 
 describe('parseRobotsTxt', () => {
   it('returns allow-all when the text has no matching group', () => {
@@ -31,6 +44,54 @@ describe('parseRobotsTxt', () => {
     ].join('\n');
     const rules = parseRobotsTxt(text, 'OdysseusAuditBot');
     expect(rules.disallow).toEqual(['/private']);
+  });
+
+  it('matches a group by the product token of a full user-agent header', () => {
+    const rules = parseRobotsTxt(
+      'User-agent: OdysseusBot\nDisallow: /\n',
+      'OdysseusBot/1.0 (+https://odysseusaudit.com/bot)',
+    );
+    expect(rules.disallow).toEqual(['/']);
+  });
+
+  it('honours a group written for the legacy OdysseusAuditBot token', () => {
+    const rules = parseRobotsTxt(
+      'User-agent: odysseusauditbot\nDisallow: /\n',
+      'OdysseusAuditBot/0.1 (+https://odysseusaudit.com/bot)',
+    );
+    expect(rules.disallow).toEqual(['/']);
+    expect(
+      parseRobotsTxt(
+        'User-agent: OdysseusAuditBot\nDisallow: /legacy\n',
+        'OdysseusBot/1.0 (+https://odysseusaudit.com/bot)',
+      ).disallow,
+    ).toEqual(['/legacy']);
+  });
+
+  it('uses only the bot-specific group when a wildcard group also exists', () => {
+    const text = 'User-agent: *\nDisallow: /admin\n\nUser-agent: OdysseusBot\nDisallow: /private\n';
+    const rules = parseRobotsTxt(text, 'OdysseusBot/1.0 (+https://odysseusaudit.com/bot)');
+    expect(rules.disallow).toEqual(['/private']);
+  });
+
+  it('merges every group that names the bot', () => {
+    const text = [
+      'User-agent: OdysseusBot',
+      'Disallow: /a',
+      'Crawl-delay: 1',
+      '',
+      'User-agent: Other',
+      'Disallow: /other',
+      '',
+      'User-agent: OdysseusBot',
+      'Disallow: /b',
+      'Allow: /b/open',
+      'Crawl-delay: 3',
+    ].join('\n');
+    const rules = parseRobotsTxt(text, 'OdysseusBot/1.0 (+https://odysseusaudit.com/bot)');
+    expect(rules.disallow).toEqual(['/a', '/b']);
+    expect(rules.allow).toEqual(['/b/open']);
+    expect(rules.crawlDelayMs).toBe(3000);
   });
 
   it('falls back to the wildcard group when there is no exact match', () => {

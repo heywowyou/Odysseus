@@ -32,6 +32,7 @@
  */
 
 import type { Browser } from 'playwright';
+import { getCrawlerUserAgent } from '../config.js';
 import type { PageWorkGuard } from '../page-work-guard.js';
 
 /** Cookie names, or name prefixes, that belong to a measurement or
@@ -251,9 +252,9 @@ export async function checkCookieConsent(
   // A brand-new context is the whole point: no storage state carries over
   // from the crawl's own passes, so nothing that happened earlier in this
   // audit can be mistaken for the visitor having consented.
-  const context = await browser.newContext(
-    options.userAgent !== undefined ? { userAgent: options.userAgent } : {},
-  );
+  const context = await browser.newContext({
+    userAgent: options.userAgent ?? getCrawlerUserAgent(),
+  });
   options.guard?.track(context);
   try {
     const trackerRequests = new Map<string, ObservedTrackerRequest>();

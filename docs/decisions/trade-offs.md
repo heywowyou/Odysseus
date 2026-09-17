@@ -4885,3 +4885,22 @@ Rejected: a dashboard-chosen baseline (the design rules out hand-picking), a
 stored delta document (it adds persistence for a value that is cheap to
 recompute), and listing still-present findings in the section (the appendix
 already lists every current finding).
+
+### 94. The crawler's identity is fixed in code, and an unreachable robots.txt still allows crawling (operator decision, 2026-09-17)
+
+The crawler sends `OdysseusBot/1.0 (+https://odysseusaudit.com/bot)`, the name
+the public `/bot` page and `/llms.txt` tell site owners to target. robots.txt
+groups are matched by product token, as RFC 9309 specifies, and every group
+naming the bot is merged. A group written for `OdysseusAuditBot`, the name the
+crawler sent before, is honoured as an alias. There is no environment
+override, so a server setting can't send a name that owners' rules miss.
+Changing the name means changing the public page in the same release.
+
+When robots.txt answers 5xx or 429, or the request fails, the crawl proceeds as
+if no rules exist. RFC 9309 recommends treating that as disallow-all; the
+operator chose coverage, because a flaky robots.txt would otherwise produce an
+empty paid audit. A missing robots.txt (4xx) is allow-all under the RFC too.
+
+Rejected: an environment override with a warning, refusing to start on an
+unexpected name, retrying then skipping the site, and retrying then scanning
+only the home page.

@@ -1,3 +1,5 @@
+import { getCrawlerUserAgent } from './config.js';
+
 export interface RobotsRules {
   /** Whether robots.txt was actually reachable. false implies allow-all. */
   found: boolean;
@@ -16,8 +18,7 @@ export interface RobotsRules {
  * Translates a robots.txt path pattern into a matcher. Supports the
  * commonly-relied-on subset: literal prefix matching, '*' as a wildcard
  * for any sequence of characters, and a trailing '$' as an end-of-string
- * anchor. Full RFC 9309 edge cases (group merging across records with
- * identical user-agents, etc.) are out of scope.
+ * anchor.
  */
 function patternToRegExp(pattern: string): RegExp {
   const hasEndAnchor = pattern.endsWith('$');
@@ -36,13 +37,31 @@ interface RobotsGroup {
   crawlDelayMs?: number;
 }
 
+/** RFC 9309 matches a group by the crawler's product token, case-insensitively:
+ *  the part of the User-Agent before the first '/' or whitespace. A bare
+ *  token (the AI crawler list passes these) is its own product token. */
+export function robotsProductToken(userAgent: string): string {
+  return userAgent.trim().split(/[/\s]/, 1)[0]!.toLowerCase();
+}
+
+/** The bot was published as OdysseusBot but crawled for a while as
+ *  OdysseusAuditBot. A site owner may have blocked either name (the one on
+ *  our /bot page or the one in their logs), so both are honoured. */
+const ODYSSEUS_TOKEN_ALIASES = ['odysseusbot', 'odysseusauditbot'];
+
+function robotsMatchTokens(userAgent: string): Set<string> {
+  const token = robotsProductToken(userAgent);
+  return new Set(ODYSSEUS_TOKEN_ALIASES.includes(token) ? ODYSSEUS_TOKEN_ALIASES : [token]);
+}
+
 /**
  * Pure parser: given robots.txt text and the crawler's own user agent,
- * returns the rules from the most specific matching group (exact
- * user-agent match, falling back to '*'). Consecutive User-agent lines
- * with no intervening directive share one group, per the standard
- * grouping rule; a directive line closes the group for subsequent
- * User-agent lines.
+ * returns the rules of every group naming the crawler's product token
+ * (RFC 9309 merges them: allow and disallow lists concatenate, the largest
+ * crawl-delay wins), falling back to the merged '*' groups only when no
+ * group names the crawler. Consecutive User-agent lines with no
+ * intervening directive share one group, per the standard grouping rule;
+ * a directive line closes the group for subsequent User-agent lines.
  */
 export function parseRobotsTxt(text: string, userAgent: string): RobotsRules {
   const groups: RobotsGroup[] = [];
@@ -91,19 +110,18 @@ export function parseRobotsTxt(text: string, userAgent: string): RobotsRules {
     }
   }
 
-  const ua = userAgent.toLowerCase();
-  const matched =
-    groups.find((g) => g.agents.includes(ua)) ?? groups.find((g) => g.agents.includes('*'));
-
-  if (!matched) return { found: true, disallow: [], allow: [], sitemapUrls };
+  const tokens = robotsMatchTokens(userAgent);
+  const specific = groups.filter((g) => g.agents.some((agent) => tokens.has(agent)));
+  const matched = specific.length > 0 ? specific : groups.filter((g) => g.agents.includes('*'));
 
   const result: RobotsRules = {
     found: true,
-    disallow: matched.disallow,
-    allow: matched.allow,
+    disallow: matched.flatMap((g) => g.disallow),
+    allow: matched.flatMap((g) => g.allow),
     sitemapUrls,
   };
-  if (matched.crawlDelayMs !== undefined) result.crawlDelayMs = matched.crawlDelayMs;
+  const delays = matched.flatMap((g) => (g.crawlDelayMs === undefined ? [] : [g.crawlDelayMs]));
+  if (delays.length > 0) result.crawlDelayMs = Math.max(...delays);
   return result;
 }
 
@@ -156,9 +174,14 @@ export function isAllowedByRobots(rules: RobotsRules, pathname: string): boolean
  * to a clean 404) is logged, since that's a real problem rather than an
  * expected absence.
  */
-export async function fetchRobotsText(origin: string, timeoutMs: number): Promise<string | null> {
+export async function fetchRobotsText(
+  origin: string,
+  timeoutMs: number,
+  userAgent: string = getCrawlerUserAgent(),
+): Promise<string | null> {
   try {
     const response = await fetch(new URL('/robots.txt', origin), {
+      headers: { 'user-agent': userAgent },
       signal: AbortSignal.timeout(timeoutMs),
     });
     if (!response.ok) return null;
@@ -179,7 +202,7 @@ export async function fetchRobotsRules(
   userAgent: string,
   timeoutMs: number,
 ): Promise<RobotsRules> {
-  const text = await fetchRobotsText(origin, timeoutMs);
+  const text = await fetchRobotsText(origin, timeoutMs, userAgent);
   if (text === null) return { found: false, disallow: [], allow: [], sitemapUrls: [] };
   return parseRobotsTxt(text, userAgent);
 }

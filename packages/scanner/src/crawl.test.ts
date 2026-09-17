@@ -86,7 +86,10 @@ function fakeAnchorElement(spec: FakeAnchorSpec): Record<string, unknown> {
   };
 }
 
-function makeFakeBrowser(anchorsFor: (url: string) => FakeAnchorSpec[]): Browser {
+function makeFakeBrowser(
+  anchorsFor: (url: string) => FakeAnchorSpec[],
+  redirects: Record<string, string> = {},
+): Browser {
   const context = {
     setDefaultTimeout: () => {},
     setDefaultNavigationTimeout: () => {},
@@ -94,7 +97,7 @@ function makeFakeBrowser(anchorsFor: (url: string) => FakeAnchorSpec[]): Browser
       let currentUrl = 'about:blank';
       return {
         goto: async (url: string) => {
-          currentUrl = url;
+          currentUrl = redirects[url] ?? url;
           return {
             status: () => 200,
             headers: () => ({ 'content-type': 'text/html; charset=utf-8' }),
@@ -348,6 +351,61 @@ describe('crawlSite continuation-family guard wiring', () => {
  *  presented in the delivered report as pages analysed, complete with
  *  findings emitted against them. The crawl fact is real and stays
  *  inventoried; the page status must say so. */
+describe('crawlSite robots.txt enforcement', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('applies a rule that matches the query string', async () => {
+    installFetchStub({ 'https://example.com/robots.txt': 'User-agent: *\nDisallow: /*?sort=\n' });
+    const result = await crawlSite('https://example.com', {
+      browser: makeFakeBrowser((url) =>
+        url === 'https://example.com/' ? [{ href: 'https://example.com/rooms?sort=price' }] : [],
+      ),
+      maxPages: 10,
+      maxDepth: 5,
+      delayMs: 0,
+    });
+
+    const sorted = result.pages.find((page) => page.url.includes('sort=price'));
+    expect(sorted?.status).toBe('skipped-robots');
+  });
+
+  it('obeys a group written for the published bot name when no user agent is passed', async () => {
+    installFetchStub({
+      'https://example.com/robots.txt': 'User-agent: OdysseusBot\nDisallow: /\n',
+    });
+    const result = await crawlSite('https://example.com', {
+      browser: makeFakeBrowser(() => []),
+      maxPages: 10,
+      maxDepth: 5,
+      delayMs: 0,
+    });
+
+    expect(result.pages.find((page) => page.url === 'https://example.com/')?.status).toBe(
+      'skipped-robots',
+    );
+    expect(result.visitedCount).toBe(0);
+  });
+
+  it('skips a page whose redirect lands on a disallowed path', async () => {
+    installFetchStub({ 'https://example.com/robots.txt': 'User-agent: *\nDisallow: /private\n' });
+    const result = await crawlSite('https://example.com', {
+      browser: makeFakeBrowser(
+        (url) => (url === 'https://example.com/' ? [{ href: '/old' }] : []),
+        { 'https://example.com/old': 'https://example.com/private/new' },
+      ),
+      maxPages: 10,
+      maxDepth: 5,
+      delayMs: 0,
+    });
+
+    const old = result.pages.find((page) => page.url === 'https://example.com/old');
+    expect(old?.status).toBe('skipped-robots');
+    expect(old?.httpStatus).toBe(200);
+  });
+});
+
 describe('crawlSite non-2xx responses (issue #39)', () => {
   afterEach(() => {
     vi.unstubAllGlobals();

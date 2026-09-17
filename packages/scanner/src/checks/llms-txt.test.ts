@@ -3,11 +3,14 @@ import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
 import { checkLlmsTxt } from './llms-txt.js';
 
+let lastUserAgent: string | undefined;
+
 function startServer(
   routes: Record<string, { status: number; body: string }>,
 ): Promise<{ server: Server; origin: string }> {
   return new Promise((resolve) => {
     const server = createServer((req, res) => {
+      lastUserAgent = req.headers['user-agent'];
       const route = routes[req.url ?? '/'];
       if (!route) {
         res.writeHead(404).end('not found');
@@ -38,6 +41,24 @@ describe('checkLlmsTxt', () => {
 
     expect(result.found).toBe(true);
     expect(result.url).toBe(`${started.origin}/llms.txt`);
+  });
+
+  it('identifies itself with the crawler user agent by default', async () => {
+    const started = await startServer({ '/llms.txt': { status: 200, body: '# Example\n' } });
+    server = started.server;
+
+    await checkLlmsTxt(started.origin, 5000);
+
+    expect(lastUserAgent?.startsWith('OdysseusBot/')).toBe(true);
+  });
+
+  it('sends a user agent passed by the caller', async () => {
+    const started = await startServer({ '/llms.txt': { status: 200, body: '# Example\n' } });
+    server = started.server;
+
+    await checkLlmsTxt(started.origin, 5000, 'CustomBot/2.0');
+
+    expect(lastUserAgent).toBe('CustomBot/2.0');
   });
 
   it('reports found: false without throwing when /llms.txt is absent', async () => {

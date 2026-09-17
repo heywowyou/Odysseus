@@ -2,13 +2,13 @@ import { createServer } from 'node:net';
 import { chromium, type Browser } from 'playwright';
 
 /**
- * Identifies Odysseus per the crawling-politeness rule. This is the
- * fallback config.ts's getCrawlerUserAgent() returns when CRAWLER_USER_AGENT
- * is unset, so it is the identity that actually goes out on the wire by
- * default. Points at packages/site's /bot route, which explains the bot to
- * anyone who checks their logs.
+ * Identifies Odysseus per the crawling-politeness rule. config.ts's
+ * getCrawlerUserAgent() returns exactly this, so it is the identity that
+ * goes out on the wire. Points at packages/site's /bot route, which
+ * explains the bot to anyone who checks their logs.
  */
-export const ODYSSEUS_USER_AGENT = 'OdysseusAuditBot/0.1 (+https://odysseusaudit.com/bot)';
+// Must match the token published on the public /bot page and /llms.txt.
+export const ODYSSEUS_USER_AGENT = 'OdysseusBot/1.0 (+https://odysseusaudit.com/bot)';
 
 /** Hard per-page timeout in ms, applied independently to each pass. */
 export const DEFAULT_TIMEOUT_MS = 30_000;

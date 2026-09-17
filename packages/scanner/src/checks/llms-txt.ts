@@ -12,16 +12,25 @@
  * grade" posture the rest of the scanner holds to.
  */
 
+import { getCrawlerUserAgent } from '../config.js';
+
 export interface LlmsTxtCheckResult {
   found: boolean;
   url?: string;
   fetchError?: string;
 }
 
-export async function checkLlmsTxt(origin: string, timeoutMs: number): Promise<LlmsTxtCheckResult> {
+export async function checkLlmsTxt(
+  origin: string,
+  timeoutMs: number,
+  userAgent: string = getCrawlerUserAgent(),
+): Promise<LlmsTxtCheckResult> {
   const url = new URL('/llms.txt', origin).href;
   try {
-    const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+    const response = await fetch(url, {
+      headers: { 'user-agent': userAgent },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
     if (!response.ok) {
       return { found: false, fetchError: `HTTP ${response.status}` };
     }

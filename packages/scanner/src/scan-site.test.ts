@@ -17,6 +17,7 @@ vi.mock('./checks/accessibility-statement.js', () => ({
 }));
 vi.mock('./crux.js', () => ({ fetchCruxFieldData: vi.fn() }));
 vi.mock('./config.js', () => ({
+  getCrawlerUserAgent: vi.fn(() => 'OdysseusBot/1.0 (+https://odysseusaudit.com/bot)'),
   getCruxApiKey: vi.fn(() => undefined),
   getPageTimeoutMs: vi.fn(() => 30_000),
   getScanConcurrency: vi.fn(() => 3),

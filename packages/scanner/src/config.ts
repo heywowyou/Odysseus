@@ -139,13 +139,14 @@ export function getScanConcurrency(): number {
 }
 
 /**
- * Single source of truth for the bot's identity. render-diff and the
- * crawler both call this rather than reading ODYSSEUS_USER_AGENT
- * directly, so one env var controls what every scan sends.
+ * Single source of truth for the bot's identity. The identity is fixed in
+ * code on purpose (trade-offs): site owners write robots.txt rules against
+ * the name the public /bot page publishes, so an environment override could
+ * silently send a name their rules miss. Changing it means changing the
+ * public /bot page and /llms.txt in the same release.
  */
 export function getCrawlerUserAgent(): string {
-  ensureEnvLoaded();
-  return process.env.CRAWLER_USER_AGENT || ODYSSEUS_USER_AGENT;
+  return ODYSSEUS_USER_AGENT;
 }
 
 /** Milestone 8.6. Returns undefined (not empty string) when unset, so

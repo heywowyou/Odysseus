@@ -325,6 +325,13 @@ function safeHostname(url: string): string | null {
   }
 }
 
+/** robots.txt patterns apply to the path plus query string (RFC 9309), so a
+ *  rule such as `Disallow: /*?sort=` can match. */
+function robotsTarget(url: string): string {
+  const parsed = new URL(url);
+  return parsed.pathname + parsed.search;
+}
+
 /**
  * Breadth-first crawl from startUrl, following only same-origin links.
  * Reuses one BrowserContext for the whole crawl (a fresh Page per URL,
@@ -385,7 +392,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   let robotsText: string | null;
   let robotsRules: RobotsRules;
   if (resumeState === undefined) {
-    robotsText = await fetchRobotsText(start.origin, timeoutMs);
+    robotsText = await fetchRobotsText(start.origin, timeoutMs, userAgent);
     robotsRules =
       robotsText === null
         ? { found: false, disallow: [], allow: [], sitemapUrls: [] }
@@ -544,7 +551,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
         const discoveryMethod = linkDiscoveredUrls.has(item.url) ? 'link' : item.discoveryMethod;
         const discoveredFrom = item.discoveredFrom ?? linkDiscoveredFrom.get(item.url);
 
-        if (!isAllowedByRobots(robotsRules, new URL(item.url).pathname)) {
+        if (!isAllowedByRobots(robotsRules, robotsTarget(item.url))) {
           recordPage({
             url: item.url,
             depth: item.depth,
@@ -592,6 +599,21 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
               url: item.url,
               depth: item.depth,
               status: 'skipped-external-redirect',
+              discoveryMethod,
+              ...(httpStatus !== undefined ? { httpStatus } : {}),
+              ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+            });
+          } else if (
+            finalHost !== null &&
+            !isAllowedByRobots(robotsRules, robotsTarget(browserPage.url()))
+          ) {
+            // A redirect can land on a path robots.txt disallows even though
+            // the requested URL was allowed; the landed page is then treated
+            // exactly like a disallowed link and never analysed.
+            recordPage({
+              url: item.url,
+              depth: item.depth,
+              status: 'skipped-robots',
               discoveryMethod,
               ...(httpStatus !== undefined ? { httpStatus } : {}),
               ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
@@ -859,7 +881,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   const disallowMatchCounts = new Map<string, number>();
   for (const page of pages) {
     if (page.discoveryMethod !== 'link') continue;
-    const blockingPattern = findBlockingPattern(robotsRules, new URL(page.url).pathname);
+    const blockingPattern = findBlockingPattern(robotsRules, robotsTarget(page.url));
     if (blockingPattern === undefined) continue;
     disallowMatchCounts.set(blockingPattern, (disallowMatchCounts.get(blockingPattern) ?? 0) + 1);
   }

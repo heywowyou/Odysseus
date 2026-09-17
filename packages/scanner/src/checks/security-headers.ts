@@ -13,6 +13,8 @@
  * problem than judging absence and is out of scope for this pass.
  */
 
+import { getCrawlerUserAgent } from '../config.js';
+
 export interface SecurityHeadersCheckResult {
   fetched: boolean;
   isHttps: boolean;
@@ -27,10 +29,14 @@ export interface SecurityHeadersCheckResult {
 export async function checkSecurityHeaders(
   origin: string,
   timeoutMs: number,
+  userAgent: string = getCrawlerUserAgent(),
 ): Promise<SecurityHeadersCheckResult> {
   const isHttps = new URL(origin).protocol === 'https:';
   try {
-    const response = await fetch(origin, { signal: AbortSignal.timeout(timeoutMs) });
+    const response = await fetch(origin, {
+      headers: { 'user-agent': userAgent },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
     return {
       fetched: true,
       isHttps,

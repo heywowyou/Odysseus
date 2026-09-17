@@ -3,9 +3,12 @@ import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
 import { checkSecurityHeaders } from './security-headers.js';
 
+let lastUserAgent: string | undefined;
+
 function startServer(headers: Record<string, string>): Promise<{ server: Server; origin: string }> {
   return new Promise((resolve) => {
-    const server = createServer((_req, res) => {
+    const server = createServer((req, res) => {
+      lastUserAgent = req.headers['user-agent'];
       res.writeHead(200, headers).end('ok');
     });
     server.listen(0, '127.0.0.1', () => {
@@ -43,6 +46,24 @@ describe('checkSecurityHeaders', () => {
       hasReferrerPolicy: true,
       hasPermissionsPolicy: true,
     });
+  });
+
+  it('identifies itself with the crawler user agent by default', async () => {
+    const started = await startServer({});
+    server = started.server;
+
+    await checkSecurityHeaders(started.origin, 5000);
+
+    expect(lastUserAgent?.startsWith('OdysseusBot/')).toBe(true);
+  });
+
+  it('sends a user agent passed by the caller', async () => {
+    const started = await startServer({});
+    server = started.server;
+
+    await checkSecurityHeaders(started.origin, 5000, 'CustomBot/2.0');
+
+    expect(lastUserAgent).toBe('CustomBot/2.0');
   });
 
   it('reports every header absent when the response sends none', async () => {
