@@ -90,7 +90,8 @@ The canonical sources for this behavior are `docs/product/odysseus-project-brief
 | [055](archive/055-scan-launch-and-job-delete-integrity.md) | Refuse scans for archived prospects and close the queued-job delete race | P1 | S | none | DONE (2026-09-17) |
 | [056](archive/056-in-flight-work-guards.md) | Share one report production lock and refuse archive or delete while work is still in flight | P2 | M | after 055 (both edit the job delete route) | DONE (2026-09-17) |
 | [057](archive/057-prospect-owns-linked-audit-identity.md) | Make the prospect the single source of a linked audit's name and SIREN; edits on the audit save to the prospect | P2 | M | none | DONE (2026-09-17) |
-| [058](058-fail-closed-senior-report-quality-pipeline.md) | Make the paid report fail closed on content and PDF quality | P1 | XL | 027, 033, 039, 050, 051 | TODO |
+| [058](058-fail-closed-senior-report-quality-pipeline.md) | Make the paid report fail closed on content and PDF quality | P1 | XL | 027, 033, 039, 050, 051; 059 before production promotion | TODO |
+| [059](059-fail-closed-audit-evidence-quality.md) | Make full-audit evidence fail closed before report generation | P1 | XL | 021, 035, 050, 051; gates 058 promotion | TODO |
 
 Status values: `TODO`, `IN PROGRESS`, `IMPLEMENTED`, `DONE`,
 `BLOCKED: <reason>`, or `REJECTED: <reason>`. `IMPLEMENTED` means every done
