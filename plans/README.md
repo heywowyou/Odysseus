@@ -84,12 +84,26 @@ The canonical sources for this behavior are `docs/product/odysseus-project-brief
 | [049](archive/049-simplified-workflow-behaviorally-truthful.md) | Make the simplified workflow behaviorally truthful | P1 | L | 048 | DONE (2026-09-15) |
 | [050](050-reusable-scans-durable-prospects.md) | Make scans reusable and prospects durable: two scan intents, advisory data version, archive instead of ordinary deletion | P1 | XL | 049 | IMPLEMENTED (2026-09-16) |
 | [051](051-findings-delta-reaudit.md) | Add the findings delta to the re-audit report | P2 | L | 050 | IMPLEMENTED (2026-09-16) |
+| [052](archive/052-crawler-honours-its-published-identity.md) | Make the crawler obey robots groups for its published bot name and send its user agent on every request | P1 | M | none | DONE (2026-09-17) |
+| [053](archive/053-opt-out-reach-survives-prospect-status.md) | Keep a public opt-out from widening into domain-wide suppression through the prospect status | P1 | S | none | DONE (2026-09-17) |
+| [054](archive/054-reaudit-delta-pairs-rescoped-findings.md) | Pair re-audit findings whose merged page set changed instead of showing resolved plus new | P1 | M | none; before the 050/051 rehearsal | DONE (2026-09-17) |
+| [055](archive/055-scan-launch-and-job-delete-integrity.md) | Refuse scans for archived prospects and close the queued-job delete race | P1 | S | none | DONE (2026-09-17) |
+| [056](archive/056-in-flight-work-guards.md) | Share one report production lock and refuse archive or delete while work is still in flight | P2 | M | after 055 (both edit the job delete route) | DONE (2026-09-17) |
+| [057](archive/057-prospect-owns-linked-audit-identity.md) | Make the prospect the single source of a linked audit's name and SIREN; edits on the audit save to the prospect | P2 | M | none | DONE (2026-09-17) |
 
 Status values: `TODO`, `IN PROGRESS`, `IMPLEMENTED`, `DONE`,
 `BLOCKED: <reason>`, or `REJECTED: <reason>`. `IMPLEMENTED` means every done
 criterion is met and the suite is green, but a verification step still needs a
 person, typically a post-deploy rehearsal or a first read against a live
 operator-named site.
+
+Audit of 2026-09-17 (commit `38a516f2`): recommended order 052, 053, 054, 055,
+056, 057. Found but not planned: the needs-input first-email hold misses
+audit-linked jobs; `POST /api/prospects` accepts `status`, `fieldOrigins` and
+`directoryRef`; duplicate directory-to-prospect mapping; unused dashboard i18n
+sections; `README.md` says `serve` needs no build. Considered and rejected:
+merging the address guards (already delegate); `operator-views` findings (the
+directory is untracked and empty).
 
 ## Work lifecycle
 
