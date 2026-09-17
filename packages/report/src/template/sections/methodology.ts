@@ -10,6 +10,7 @@ import {
   getRegime,
   summarizeAuditCoverage,
   type AuditManifest,
+  type EvidenceLimitation,
   type Finding,
   type ObligationAssessment,
   type ObligationBasis,
@@ -486,6 +487,7 @@ export function renderMethodology(
   findings: readonly (Pick<Finding, 'findingId' | 'ruleId'> &
     Partial<Pick<Finding, 'category' | 'pageUrls' | 'rawEvidence'>>)[] = [],
   resolvedSirenSourceUrl?: string,
+  qualityLimitations: readonly EvidenceLimitation[] = [],
 ): string {
   const m = strings.methodology;
   const eyebrow = m.eyebrow;
@@ -598,6 +600,14 @@ export function renderMethodology(
       ? fillTemplate(m.crawlCapDisclosureTemplate, { maxPages: manifest.crawl.maxPages })
       : undefined;
 
+  const qualityLimitationsNote =
+    qualityLimitations.length === 0
+      ? ''
+      : `<div data-quality-limitations="true" style="font-size:12.5px;margin-top:var(--space-2);max-width:var(--measure-prose)">
+          <p><strong>${escapeHtml(language === 'fr' ? "Limites de preuve à conserver à la lecture" : 'Evidence limitations to retain when reading')}</strong></p>
+          <ul>${qualityLimitations.map((limitation) => `<li data-quality-limitation-id="${escapeHtml(limitation.limitationId)}">${escapeHtml(limitation.summary[language])}</li>`).join('')}</ul>
+        </div>`;
+
   // B9: the full legal-citation paragraph used to be rendered here a
   // second time, verbatim, duplicating legal-exposure.ts's own copy of
   // the same paragraph on a different page. Kept once there; this section
@@ -607,6 +617,7 @@ export function renderMethodology(
     ${renderSheetHeader(ordinal, eyebrow, m.heading)}
     <p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(toolingParagraph)}</p>
     ${coverageNote}
+    ${qualityLimitationsNote}
     ${languageCoverageNote}
     ${sitemapCoverageNote}
     ${sitemapIncompleteNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(sitemapIncompleteNote)}</p>` : ''}
