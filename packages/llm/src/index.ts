@@ -113,3 +113,8 @@ export {
   RecordingLlmTelemetrySink,
 } from './telemetry/llm-telemetry.js';
 export type { LlmTelemetrySink } from './telemetry/llm-telemetry.js';
+
+export { getReportQualityModel, callReportQualityRole } from './report-quality-client.js';
+export type { QualityRoleResult } from './report-quality-client.js';
+export { evidenceBoundContentSchema, seniorPlanOutputSchema, qualityWriterOutputSchema, qualityReviewOutputSchema, issueAdjudicationOutputSchema, editorOutputSchema, finalArbiterOutputSchema, SENIOR_PLAN_JSON_SCHEMA, QUALITY_WRITER_JSON_SCHEMA, QUALITY_REVIEW_JSON_SCHEMA, ADJUDICATION_JSON_SCHEMA, EDITOR_JSON_SCHEMA, FINAL_ARBITER_JSON_SCHEMA } from './report-quality-schema.js';
+export type { SeniorPlanOutput, QualityWriterOutput, QualityReviewOutput, IssueAdjudicationOutput, EditorOutput, FinalArbiterOutput } from './report-quality-schema.js';
