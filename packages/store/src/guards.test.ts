@@ -267,6 +267,24 @@ describe('central prospect guards', () => {
       auditState: 'incomplete',
     });
   });
+  it('names the missing full scan before the missing email on a fresh prospect', async () => {
+    mockAuditRows([]);
+    const fresh = { ...vendorHostedProspect, emails: [] };
+    for (const action of ['preview', 'first-email'] as const) {
+      await expect(
+        checkOutreachAction(fakeConnection, { prospect: fresh, action }),
+      ).resolves.toMatchObject({ allowed: false, refusal: 'no-complete-audit' });
+    }
+    await expect(
+      checkOutreachAction(fakeConnection, { prospect: fresh, action: 'follow-up' }),
+    ).resolves.toMatchObject({ allowed: false, refusal: 'thread-unknown' });
+
+    mockAuditRows([audit()]);
+    await expect(
+      checkOutreachAction(fakeConnection, { prospect: fresh, action: 'preview' }),
+    ).resolves.toMatchObject({ allowed: false, refusal: 'no-contact' });
+  });
+
   // Issue #388: Cap d'Antibes' PDF production failed, yet the first email was
   // offered. Preview and first email need the qualifying audit's reports.
   it('refuses the preview and the first email while the reports are not ready', async () => {

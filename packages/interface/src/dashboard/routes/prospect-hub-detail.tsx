@@ -334,7 +334,10 @@ export function ProspectHubDetailPage(): JSX.Element {
   const gateReason = (action: ProspectOutreachAction): string => {
     const check = gateFor(action);
     if (check?.reason !== undefined) {
-      return copy.refusalLabels[check.reason] ?? strings.common.vocabularyFallback;
+      // Labels are sentence fragments for "Action refusée : {reason}"; shown
+      // alone they start with a capital (issue #395).
+      const label = copy.refusalLabels[check.reason] ?? strings.common.vocabularyFallback;
+      return label.charAt(0).toUpperCase() + label.slice(1);
     }
     return actionability.error ?? copy.loading;
   };

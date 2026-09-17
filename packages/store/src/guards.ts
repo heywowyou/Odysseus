@@ -116,7 +116,10 @@ export async function checkOutreachAction(
   if (websiteSuppressed || addressSuppressed) {
     return { allowed: false, refusal: 'suppressed' };
   }
-  if (input.prospect.emails.length === 0) return { allowed: false, refusal: 'no-contact' };
+  // Issue #395: refusals follow the workflow order (scan, then email, then
+  // preview or draft), so the operator is told the earliest missing
+  // prerequisite rather than the cheapest field to fill.
+  const hasContact = input.prospect.emails.length > 0;
   // Issue #279: the thread facts the draft runtime refuses on are checked
   // here too, so a gate never shows an action as ready that the server
   // would then refuse.
@@ -126,31 +129,13 @@ export async function checkOutreachAction(
   }
   if (input.action === 'follow-up') {
     if (thread === null) return { allowed: false, refusal: 'thread-unknown' };
+    if (!hasContact) return { allowed: false, refusal: 'no-contact' };
     const touch = thread.state === 'e1-sent' ? 2 : thread.state === 'e2-sent' ? 3 : undefined;
     if (touch === undefined) return { allowed: false, refusal: 'thread-not-eligible' };
     if ((await findLiveOutreachDraft(connection, thread.threadId, touch)) !== null) {
       return { allowed: false, refusal: 'draft-already-live' };
     }
     return { allowed: true };
-  }
-  // Issue #280: one live preview per outreach attempt. Publishing another
-  // would silently supersede the link the operator already copied.
-  if (
-    input.action === 'preview' &&
-    (await createOutreachPreviewModel(connection).exists({
-      prospectId: input.prospect.prospectId,
-      status: 'live',
-    })) !== null
-  ) {
-    return { allowed: false, refusal: 'preview-already-live' };
-  }
-  if (input.action === 'first-email' && thread !== null) {
-    if ((await findLiveOutreachDraft(connection, thread.threadId, 1)) !== null) {
-      return { allowed: false, refusal: 'draft-already-live' };
-    }
-    if (thread.state !== 'open' && thread.state !== 'e1-drafted') {
-      return { allowed: false, refusal: 'thread-already-started' };
-    }
   }
   const audits = await createAuditModel(connection)
     .find({ prospectId: input.prospect.prospectId })
@@ -185,6 +170,26 @@ export async function checkOutreachAction(
   const qualification = selectNewestQualifyingAudit(classifiedAudits);
   if (qualification.audit === undefined) {
     return { allowed: false, refusal: 'no-complete-audit', auditState: qualification.state };
+  }
+  if (!hasContact) return { allowed: false, refusal: 'no-contact' };
+  // Issue #280: one live preview per outreach attempt. Publishing another
+  // would silently supersede the link the operator already copied.
+  if (
+    input.action === 'preview' &&
+    (await createOutreachPreviewModel(connection).exists({
+      prospectId: input.prospect.prospectId,
+      status: 'live',
+    })) !== null
+  ) {
+    return { allowed: false, refusal: 'preview-already-live' };
+  }
+  if (input.action === 'first-email' && thread !== null) {
+    if ((await findLiveOutreachDraft(connection, thread.threadId, 1)) !== null) {
+      return { allowed: false, refusal: 'draft-already-live' };
+    }
+    if (thread.state !== 'open' && thread.state !== 'e1-drafted') {
+      return { allowed: false, refusal: 'thread-already-started' };
+    }
   }
   // Issue #388: the preview and the first email both stand on the audit's
   // client reports, so initial outreach waits for a current FR+EN pair.
