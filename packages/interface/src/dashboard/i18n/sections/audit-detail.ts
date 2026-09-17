@@ -166,9 +166,12 @@ export interface AuditDetailStrings {
     produceRefreshFirstHint: string;
     /** Persistent failure block after "regenerate the PDFs" is refused. */
     produceFailedHeading: string;
-    /** {page} and {amount}: the print gate found content wider than the page. */
+    /** {page} and {amount}: the print gate found content outside the
+     *  printable area of that page. */
     produceFailedOverflow: string;
     produceFailedOverflowFinding: string;
+    /** {section}: the report section heading the overflowing box sits in. */
+    produceFailedOverflowSection: string;
     /** A different layout-safety refusal from the PDF renderer. */
     produceFailedStaleData: string;
     produceFailedIdentity: string;
@@ -511,8 +514,9 @@ export const auditDetail = {
       produceButtonRefreshFirst: 'Actualiser les constats puis régénérer les PDF',
       produceFailedHeading: 'Les PDF n’ont pas pu être produits',
       produceFailedOverflow:
-        'Un contenu de la page {page} est trop large pour tenir sur la page (dépassement de {amount} px). Le plus souvent, un texte très long sans espace (adresse, sélecteur, URL) en est la cause. Aucun PDF n’a été livré.',
+        'Un contenu de la page {page} sort de la zone imprimable (dépassement de {amount} px). Deux causes sont connues : un bloc que la mise en page n’a pas pu couper entre deux pages, ou un texte très long sans espace (adresse, sélecteur, URL). Aucun PDF n’a été livré.',
       produceFailedOverflowFinding: 'Constat en cause : {finding}.',
+      produceFailedOverflowSection: 'Section en cause : « {section} ».',
       produceFailedStaleData:
         'Le format des données du scan a changé depuis la rédaction. Relancez la production : les constats et la rédaction sont d’abord actualisés. Aucun PDF n’a été livré.',
       produceFailedIdentity:
@@ -774,8 +778,9 @@ export const auditDetail = {
       produceButtonRefreshFirst: 'Refresh findings then regenerate the PDFs',
       produceFailedHeading: 'The PDFs could not be produced',
       produceFailedOverflow:
-        'Content on page {page} is too wide to fit on the page (overflow of {amount} px). This usually means one very long text without spaces (address, selector, URL). No PDF was delivered.',
+        'Content on page {page} extends outside the printable area (overflow of {amount} px). Two causes are known: a block the layout could not split across two pages, or a very long text without spaces (address, selector, URL). No PDF was delivered.',
       produceFailedOverflowFinding: 'Finding involved: {finding}.',
+      produceFailedOverflowSection: 'Section involved: “{section}”.',
       produceFailedStaleData:
         'The scan data changed format since this writing was produced. Produce the PDFs again: the findings and the writing are refreshed first. No PDF was delivered.',
       produceFailedIdentity:

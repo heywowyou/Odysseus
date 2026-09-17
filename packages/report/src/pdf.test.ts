@@ -672,6 +672,20 @@ describe('overflow description names the appendix finding', () => {
       'Painted content <div> extends past the printable content rectangle on physical page 32 at right by 1793.7px in finding f052.',
     );
   });
+
+  it('appends the section heading the overflowing box sits in', () => {
+    expect(
+      describePagedjsOverflow({
+        pageIndex: 17,
+        tag: 'DIV',
+        side: 'right',
+        amountPx: 1793.7,
+        sectionTitle: 'Autres constats',
+      }),
+    ).toBe(
+      'Painted content <div> extends past the printable content rectangle on physical page 18 at right by 1793.7px in section "Autres constats".',
+    );
+  });
 });
 
 // Issue #312: a reopened table from an earlier repair pass can go stale once

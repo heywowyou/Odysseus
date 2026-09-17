@@ -263,6 +263,9 @@ export interface PagedOverflowCandidate {
   /** Issue #276: the appendix finding the box sits in, when there is one,
    *  so a refused report names what to look at. */
   findingId?: string;
+  /** The heading of the report section the box sits in, for the same
+   *  reason: most overflowing boxes are not in an annex row. */
+  sectionTitle?: string;
 }
 
 export interface PagedPageOverflowModel {
@@ -283,6 +286,7 @@ export interface PagedjsOverflowViolation {
   side: PagedOverflowSide;
   amountPx: number;
   findingId?: string;
+  sectionTitle?: string;
 }
 
 /** Fixed side order so a box wider than the whole sheet reports its
@@ -331,6 +335,7 @@ export function analyzePagedjsOverflow(
           tag: candidate.tag,
           ...overflow,
           ...(candidate.findingId === undefined ? {} : { findingId: candidate.findingId }),
+          ...(candidate.sectionTitle === undefined ? {} : { sectionTitle: candidate.sectionTitle }),
         };
       }
     }
@@ -342,7 +347,10 @@ export function describePagedjsOverflow(violation: PagedjsOverflowViolation): st
   return (
     `Painted content <${violation.tag.toLowerCase()}> extends past the printable content rectangle ` +
     `on physical page ${violation.pageIndex + 1} at ${violation.side} by ${violation.amountPx}px` +
-    (violation.findingId === undefined ? '.' : ` in finding ${violation.findingId}.`)
+    (violation.findingId === undefined ? '' : ` in finding ${violation.findingId}`) +
+    (violation.sectionTitle === undefined
+      ? '.'
+      : ` in section "${violation.sectionTitle.replace(/"/gu, "'")}".`)
   );
 }
 
@@ -359,6 +367,15 @@ export async function collectPagedjsOverflowModels(page: Page): Promise<PagedPag
     const sheetStyle = firstSheet === null ? null : getComputedStyle(firstSheet);
     const padLeft = sheetStyle === null ? 0 : Number.parseFloat(sheetStyle.paddingLeft) || 0;
     const padRight = sheetStyle === null ? 0 : Number.parseFloat(sheetStyle.paddingRight) || 0;
+
+    // A section split across pages keeps its id on every fragment but its
+    // heading only on the first, so titles are read once per id up front.
+    const sectionTitles = new Map<string, string>();
+    for (const section of Array.from(document.querySelectorAll('section.sheet[id]'))) {
+      const heading = section.querySelector('h1, h2');
+      const title = heading?.textContent?.replace(/\s+/gu, ' ').trim();
+      if (title && !sectionTitles.has(section.id)) sectionTitles.set(section.id, title);
+    }
 
     return Array.from(document.querySelectorAll('.pagedjs_page')).map((pageEl, pageIndex) => {
       const contentEl = pageEl.querySelector('.pagedjs_page_content');
@@ -386,10 +403,13 @@ export async function collectPagedjsOverflowModels(page: Page): Promise<PagedPag
             (Number.isNaN(opacity) || opacity > 0);
           const r = el.getBoundingClientRect();
           const annexRow = el.closest('[id^="annexref-"]');
+          const sectionId = el.closest('section.sheet[id]')?.id;
+          const sectionTitle = sectionId === undefined ? undefined : sectionTitles.get(sectionId);
           candidates.push({
             tag: el.tagName,
             painted,
             ...(annexRow === null ? {} : { findingId: annexRow.id.slice('annexref-'.length) }),
+            ...(sectionTitle === undefined ? {} : { sectionTitle }),
             rect: {
               left: r.left,
               top: r.top,

@@ -114,6 +114,16 @@ describe('describeProduceFailure', () => {
     expect(result.explanation).toContain('Constat en cause : f052.');
   });
 
+  it('names the report section involved when the renderer reports one', () => {
+    const result = describeProduceFailure(
+      'Report generation aborted: Painted content <div> extends past the printable content rectangle on physical page 18 at right by 1793.7px in section "Autres constats". Never shipped to a client.',
+      'fr',
+    );
+    expect(result.explanation).toContain('page 18');
+    expect(result.explanation).toContain('Section en cause : « Autres constats ».');
+    expect(result.explanation).not.toContain('Constat en cause');
+  });
+
   it('explains a stale-data refusal as a format change, not a layout failure', () => {
     const stale =
       'Report generation aborted: stale analysis uses normalization fingerprint 5d6066235a290ca9; current findings use d3e7566e15352410. Run normalize and regenerate the analyses.';

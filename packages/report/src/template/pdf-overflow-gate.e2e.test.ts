@@ -126,12 +126,13 @@ describe('the issue #118 overflow gate against the real Paged.js pipeline', () =
     try {
       const violation = analyzePagedjsOverflow(await collectPagedjsOverflowModels(page));
       if (violation === undefined) throw new Error('expected the gate to report a violation');
-      expect(violation).toEqual({
+      expect(violation).toMatchObject({
         pageIndex: 1,
         tag: 'DIV',
         side: 'right',
         amountPx: expect.any(Number),
       });
+      expect(violation.findingId).toBeUndefined();
       expect(describePagedjsOverflow(violation)).toContain('physical page 2 at right');
     } finally {
       await page.context().close();

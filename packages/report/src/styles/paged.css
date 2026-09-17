@@ -484,6 +484,19 @@ h5 {
   break-inside: avoid;
 }
 
+/* A fix snippet (label, code block, fill-in note) moves to the next page
+   whole. Paged.js split a four-line pre-wrap <pre> between two pages on a
+   real report: the first fragment kept the text node's trailing newline,
+   outgrew its page and was pushed into the off-page overflow column, which
+   the issue #118 gate reads as a box ~1794px past the right edge. The
+   snippet is bounded by construction (code-owned templates of at most four
+   lines, plus one interpolated selector or resource URL), so atomicity
+   cannot produce a fragment taller than a page. */
+.fix-snippet,
+.theme-snippet {
+  break-inside: avoid;
+}
+
 /* A CSS grid row built from display:contents cannot be kept together by the
    engine. Rows that must not split are wrapped in .row-atomic instead. */
 .row-atomic {
