@@ -20,6 +20,7 @@ import { useI18n } from '../i18n/provider';
 import type { DashboardStrings } from '../i18n/types';
 import { fetchWithTimeout, postEmpty } from '../lib/api';
 import { failureReasonKind, fallbackNoticeText, hasPageCountWarning } from './audit-detail-model';
+import { canApproveReportPair } from './audit-report-panel-model';
 import type {
   AuditDetailResponse,
   AuditFailureResponse,
@@ -197,6 +198,8 @@ export function ReportsCard(props: {
   const [isLoadingReport, setIsLoadingReport] = useState(false);
   const hasReports = detail.reportLanguages.length > 0 && detail.reports.length > 0;
   const reportBase = `/api/audits/${encodeURIComponent(detail.auditId)}/report`;
+  const isApproved = detail.lifecycle === 'approved';
+  const canApprove = isApproved || canApproveReportPair(detail.reports);
   // Plan 032 (issue #162): the selected pair came from the audit fallback
   // gate, so the card says why the report has no model-written themes
   // instead of leaving the absence to be read as a failure.
@@ -275,20 +278,39 @@ export function ReportsCard(props: {
                   >
                     {strings.auditDetail.previewReport}
                   </a>
-                  <a
-                    className={buttonStyles('ghost', 'sm')}
-                    href={`${reportBase}/${report.language}`}
-                    download
-                    aria-disabled={isLoadingReport}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      void openReport(report.language, 'download');
-                    }}
-                  >
-                    {detail.lifecycle === 'approved'
-                      ? strings.auditDetail.approvedDownload
-                      : strings.auditDetail.approveAndDownload}
-                  </a>
+                  {canApprove ? (
+                    <a
+                      className={buttonStyles('ghost', 'sm')}
+                      href={`${reportBase}/${report.language}`}
+                      download
+                      aria-disabled={isLoadingReport}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        void openReport(report.language, 'download');
+                      }}
+                    >
+                      {isApproved
+                        ? strings.auditDetail.approvedDownload
+                        : strings.auditDetail.approveAndDownload}
+                    </a>
+                  ) : (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled
+                        aria-describedby={`approve-unavailable-${report.language}`}
+                      >
+                        {strings.auditDetail.approveAndDownload}
+                      </Button>
+                      <p
+                        id={`approve-unavailable-${report.language}`}
+                        className="w-full text-xs text-ink-muted"
+                      >
+                        {strings.auditDetail.approveUnavailableReason}
+                      </p>
+                    </>
+                  )}
                 </>
               ) : (
                 <>

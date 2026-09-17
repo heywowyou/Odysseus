@@ -38,6 +38,8 @@ export interface AuditDetailStrings {
   /** Plan 045 section 2.3: the download link's label before the pair is
    *  approved - clicking it approves both languages, then downloads. */
   approveAndDownload: string;
+  /** Issue #391: why approval is greyed out while the pair is incomplete. */
+  approveUnavailableReason: string;
   /** Shown when a mutation (save, regenerate, approve) fails. */
   actionError: string;
   manualFieldsHeading: string;
@@ -330,6 +332,8 @@ export const auditDetail = {
     previewReport: 'Prévisualiser',
     approvedDownload: 'Télécharger la version approuvée',
     approveAndDownload: 'Approuver (les deux langues) et télécharger',
+    approveUnavailableReason:
+      'L’approbation demande un PDF à jour et vérifié en français et en anglais. Utilisez « Régénérer les PDF ».',
     actionError: 'L’action a échoué. Réessayez.',
     manualFieldsHeading: 'Informations sur l’hôtel',
     manualFieldsHint: 'Champs optionnels, modifiables à tout moment sans relancer le scan.',
@@ -605,6 +609,8 @@ export const auditDetail = {
     previewReport: 'Preview',
     approvedDownload: 'Download the approved version',
     approveAndDownload: 'Approve (both languages) and download',
+    approveUnavailableReason:
+      'Approval needs a fresh, verified PDF in both French and English. Use “Regenerate the PDFs”.',
     actionError: 'The action failed. Try again.',
     manualFieldsHeading: 'Hotel details',
     manualFieldsHint: 'Optional fields, editable at any time without rerunning the scan.',

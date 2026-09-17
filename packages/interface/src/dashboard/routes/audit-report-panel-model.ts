@@ -10,7 +10,7 @@
 import type { DashboardLanguage } from '../i18n/types';
 import { en } from '../i18n/en';
 import { fr } from '../i18n/fr';
-import type { AuditLifecycle } from './audit-detail-types';
+import type { AuditLifecycle, ReportStatusResponse } from './audit-detail-types';
 import type { ReportProductionStateResponse } from './prepare-report-types';
 
 export type AuditReportPanelRowKey = 'findings' | 'identity' | 'writing' | 'produce' | 'delivery';
@@ -218,4 +218,16 @@ export function reportProductionView(
         busy: false,
       };
   }
+}
+
+/** Issue #391: approval covers the French and English pair, and the server
+ *  refuses it unless both are fresh and their PDFs verify. The approve
+ *  action is offered only when that holds, so it never fails with a raw
+ *  server message. */
+export function canApproveReportPair(reports: readonly ReportStatusResponse[]): boolean {
+  return (['fr', 'en'] as const).every((language) =>
+    reports.some(
+      (report) => report.language === language && report.pdfAvailable && report.status === 'fresh',
+    ),
+  );
 }

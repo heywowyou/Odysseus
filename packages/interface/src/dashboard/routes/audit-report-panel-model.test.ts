@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   reportProductionView,
   auditReportPanelRows,
+  canApproveReportPair,
   describeProduceFailure,
   findPanelRow,
   produceButtonState,
@@ -214,5 +215,25 @@ describe('reportProductionView (issue #376)', () => {
     );
     expect(pdf.banner?.description).toContain('génération des PDF');
     expect(pdf.steps.map((step) => step.state)).toEqual(['done', 'done', 'failed', 'pending']);
+  });
+});
+
+describe('canApproveReportPair', () => {
+  const fresh = (language: 'fr' | 'en') => ({
+    language,
+    status: 'fresh' as const,
+    pdfAvailable: true,
+  });
+
+  it('allows approval only when both languages have a fresh, verified PDF', () => {
+    expect(canApproveReportPair([fresh('fr'), fresh('en')])).toBe(true);
+    expect(
+      canApproveReportPair([
+        fresh('fr'),
+        { language: 'en', status: 'unverified', pdfAvailable: false },
+      ]),
+    ).toBe(false);
+    expect(canApproveReportPair([fresh('fr'), { ...fresh('en'), status: 'stale' }])).toBe(false);
+    expect(canApproveReportPair([fresh('fr')])).toBe(false);
   });
 });
