@@ -20,4 +20,22 @@ describe('directoryEntryFromHotelSource', () => {
     expect(entry.registrableDomain).toBe('octosite.net');
     expect(entry.directoryId).toBe('atout-france:ark');
   });
+
+  it('marks a chain booking portal as a chain website', () => {
+    const entry = directoryEntryFromHotelSource({
+      source: 'atout-france',
+      sourceId: 'mercure',
+      sourceVersion: 'fixture',
+      retrievedAt: new Date(),
+      licence: 'fr-lo',
+      name: 'MERCURE BORDEAUX GARE ATLANTIC',
+      declaredWebsite: 'https://all.accor.com/hotel/B4Z0/index.fr.shtml',
+      accommodationType: 'HÔTEL DE TOURISME',
+      starRating: 4,
+      roomCount: 120,
+      warnings: [],
+    });
+    expect(entry.websiteKind).toBe('chain');
+    expect(entry.registrableDomain).toBe('accor.com');
+  });
 });

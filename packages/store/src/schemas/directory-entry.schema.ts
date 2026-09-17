@@ -19,7 +19,11 @@ const directoryEntrySchema = new Schema<DirectoryEntryDocument>(
     phone: { type: String },
     websiteUrl: { type: String },
     registrableDomain: { type: String },
-    websiteKind: { type: String, required: true, enum: ['own', 'vendor-hosted', 'unknown'] },
+    websiteKind: {
+      type: String,
+      required: true,
+      enum: ['own', 'vendor-hosted', 'chain', 'unknown'],
+    },
     stars: { type: Number, min: 1, max: 5 },
     rooms: { type: Number, min: 0 },
     capacity: { type: Number, min: 0 },

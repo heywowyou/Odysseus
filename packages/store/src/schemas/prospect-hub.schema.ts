@@ -8,7 +8,7 @@ const websiteSchema = new Schema(
   {
     url: { type: String, required: true },
     registrableDomain: { type: String, required: true },
-    kind: { type: String, required: true, enum: ['own', 'vendor-hosted', 'unknown'] },
+    kind: { type: String, required: true, enum: ['own', 'vendor-hosted', 'chain', 'unknown'] },
     primary: { type: Boolean, required: true },
   },
   { _id: false },

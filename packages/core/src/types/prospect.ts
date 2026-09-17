@@ -14,7 +14,9 @@ export const prospectStatusSchema = z.enum([
 ]);
 export type ProspectStatus = z.infer<typeof prospectStatusSchema>;
 
-export const prospectWebsiteKindSchema = z.enum(['own', 'vendor-hosted', 'unknown']);
+/** `chain` (issue #394): a corporate chain's booking portal declared as the
+ *  establishment's website; see prospecting/hotel-chain-portals.ts. */
+export const prospectWebsiteKindSchema = z.enum(['own', 'vendor-hosted', 'chain', 'unknown']);
 export type ProspectWebsiteKind = z.infer<typeof prospectWebsiteKindSchema>;
 
 export const prospectEmailOriginSchema = z.enum([

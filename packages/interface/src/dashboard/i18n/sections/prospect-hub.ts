@@ -489,6 +489,7 @@ export const prospectHub = {
       websiteKindLabels: {
         own: 'Site propre',
         'vendor-hosted': 'Hébergé par un prestataire',
+        chain: 'Site de chaîne',
         unknown: 'Inconnu',
       },
     },
@@ -995,6 +996,7 @@ export const prospectHub = {
       websiteKindLabels: {
         own: 'Own website',
         'vendor-hosted': 'Vendor-hosted',
+        chain: 'Chain website',
         unknown: 'Unknown',
       },
     },

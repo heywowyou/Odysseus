@@ -52,6 +52,7 @@ export * from './prospecting/naf-allowlist.js';
 export * from './prospecting/hotel-star-rating.js';
 export * from './prospecting/hotel-vendor-hosts.js';
 export * from './prospecting/hotel-domain.js';
+export * from './prospecting/hotel-chain-portals.js';
 export * from './prospecting/redirect-target.js';
 export * from './prospecting/outreach-thread-state.js';
 export * from './prospecting/outreach-outcome.js';

@@ -170,6 +170,26 @@ describe.skipIf(!mongoAvailable)('prospect archive lifecycle', () => {
     );
   });
 
+  it('marks chain portals as group members and branded lone sites as unknown, not independent', async () => {
+    const chainId = `dir-${randomUUID()}`;
+    const brandedId = `dir-${randomUUID()}`;
+    const plainId = `dir-${randomUUID()}`;
+    await upsertDirectoryEntries(connection!, [
+      { ...directoryEntry(chainId, 'accor.com'), websiteKind: 'chain' as const },
+      {
+        ...directoryEntry(brandedId, `mgallery-${randomUUID()}.example`),
+        name: '5 TERRES HÔTEL & SPA MGALLERY BY SOFITEL',
+      },
+      directoryEntry(plainId, `plain-${randomUUID()}.example`),
+    ]);
+    const Directory = createDirectoryEntryModel(connection!);
+    const status = async (directoryId: string) =>
+      (await Directory.findOne({ directoryId }).lean())?.groupStatus;
+    expect(await status(chainId)).toBe('group-member');
+    expect(await status(brandedId)).toBe('unknown');
+    expect(await status(plainId)).toBe('independent');
+  });
+
   it('creates exactly one prospect when the same entry is added concurrently', async () => {
     const directoryId = `dir-${randomUUID()}`;
     await upsertDirectoryEntries(connection!, [directoryEntry(directoryId, 'dir-race.example')]);

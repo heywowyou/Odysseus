@@ -9,7 +9,9 @@ import type {
 } from '@odysseus/core';
 import {
   ACTIVE_OUTREACH_THREAD_STATES,
+  hasHotelChainBrandName,
   normalizeDeclaredWebsite,
+  websiteKindForResolution,
   emailDomain,
   isFreeMailDomain,
   primaryWebsite,
@@ -249,7 +251,7 @@ export async function createProspectHub(
       : {
           ...website,
           registrableDomain: resolution.registrableDomain,
-          kind: resolution.kind === 'own-domain' ? 'own' : 'vendor-hosted',
+          kind: websiteKindForResolution(resolution),
         };
   });
   const value = prospectSchema.parse({
@@ -491,7 +493,7 @@ export async function updateProspect(
               : {
                   ...website,
                   registrableDomain: resolution.registrableDomain,
-                  kind: resolution.kind === 'own-domain' ? 'own' : 'vendor-hosted',
+                  kind: websiteKindForResolution(resolution),
                 };
           }),
         };
@@ -1386,14 +1388,33 @@ export async function upsertDirectoryEntries(
       websiteKind: 'own',
     });
     await Model.updateMany(
-      { registrableDomain: domain, websiteKind: 'own' },
-      ownCount > 1
-        ? { $set: { groupStatus: 'group-member', groupDomain: domain, updatedAt: now } }
-        : {
-            $set: { groupStatus: 'independent', updatedAt: now },
-            $unset: { groupDomain: 1 },
-          },
+      { registrableDomain: domain, websiteKind: 'chain' },
+      { $set: { groupStatus: 'group-member', groupDomain: domain, updatedAt: now } },
     );
+    if (ownCount > 1) {
+      await Model.updateMany(
+        { registrableDomain: domain, websiteKind: 'own' },
+        { $set: { groupStatus: 'group-member', groupDomain: domain, updatedAt: now } },
+      );
+      continue;
+    }
+    // A lone own domain reads as independent unless the name carries a
+    // corporate brand, which stays unknown for review (issue #394).
+    const singles = await Model.find({ registrableDomain: domain, websiteKind: 'own' })
+      .select({ directoryId: 1, name: 1, _id: 0 })
+      .lean<Pick<DirectoryEntry, 'directoryId' | 'name'>[]>();
+    for (const single of singles) {
+      await Model.updateOne(
+        { directoryId: single.directoryId },
+        {
+          $set: {
+            groupStatus: hasHotelChainBrandName(single.name) ? 'unknown' : 'independent',
+            updatedAt: now,
+          },
+          $unset: { groupDomain: 1 },
+        },
+      );
+    }
   }
   return { created: result.upsertedCount, updated: result.modifiedCount };
 }

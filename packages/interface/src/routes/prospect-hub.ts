@@ -78,7 +78,7 @@ const STATUSES: readonly ProspectStatus[] = [
   'lost',
   'opted-out',
 ];
-const WEBSITE_KINDS: readonly ProspectWebsiteKind[] = ['own', 'vendor-hosted', 'unknown'];
+const WEBSITE_KINDS: readonly ProspectWebsiteKind[] = ['own', 'vendor-hosted', 'chain', 'unknown'];
 const GROUP_STATUSES = ['independent', 'group-member', 'vendor-hosted', 'unknown'] as const;
 
 function optionalText(query: URLSearchParams, key: string): string | undefined {

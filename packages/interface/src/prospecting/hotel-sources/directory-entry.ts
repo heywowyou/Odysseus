@@ -1,5 +1,6 @@
 import {
   normalizeDeclaredWebsite,
+  websiteKindForResolution,
   type DirectoryEntry,
   type HotelSourceRecord,
 } from '@odysseus/core';
@@ -17,11 +18,7 @@ export function directoryEntryFromHotelSource(record: HotelSourceRecord): Direct
   const registrableDomain =
     website && website.kind !== 'unusable' ? website.registrableDomain : undefined;
   const websiteKind =
-    website?.kind === 'own-domain'
-      ? 'own'
-      : website?.kind === 'vendor-hosted'
-        ? 'vendor-hosted'
-        : 'unknown';
+    website === null || website.kind === 'unusable' ? 'unknown' : websiteKindForResolution(website);
   const now = new Date();
   const postcode = record.postcode;
   const digits = postcode?.replace(/\D/g, '');
