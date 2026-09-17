@@ -201,10 +201,17 @@ function escapeRegExp(text: string): string {
  * recommendedActions entry while forbidding an action to open on it, and the
  * model met both by bolting the provider onto the end of each sentence
  * ("..., et l'équipe technique en charge de votre site peut..."). The
- * prompt now asks for the provider at most once per theme, as the agent of
- * the main clause; this asserts both halves, since a prompt rule on
- * sentence shape alone has repeatedly not held (see the plan 027 notes
- * above).
+ * prompt asks for the provider at most once per theme, as the agent of the
+ * main clause. The trailing clause is rejected in every action, since a
+ * prompt rule on sentence shape alone has repeatedly not held (see the plan
+ * 027 notes above).
+ *
+ * The count is enforced report-wide, not per theme. A per-theme cap of one
+ * exhausted every retry on a real 10-theme report (Atlantic Hôtel EN,
+ * 2026-09-17): six themes named a well-placed provider in two actions on
+ * all three attempts. Two mentions in one theme is not the #309 defect;
+ * the provider in almost every action is, so the guard rejects only when
+ * more than half of all actions name it.
  */
 export function findProviderPlacementViolations(
   output: WritingPassOutput,
@@ -217,21 +224,17 @@ export function findProviderPlacementViolations(
     'u',
   );
   const violations: ProviderPhraseViolation[] = [];
+  let actionCount = 0;
+  const naming: string[] = [];
 
   output.themes.forEach((theme, i) => {
     const prefix = `themes[${i}](${theme.themeKey})`;
-    const naming = theme.recommendedActions
-      .map((action, j) => ({ action, j }))
-      .filter(({ action }) => straighten(action).includes(phrase));
-    if (naming.length > 1) {
-      violations.push({
-        field: `${prefix}.recommendedActions`,
-        text: naming.map(({ action }) => action).join(' | '),
-        matched: `"${selectedPhrase}" named in ${naming.length} actions of one theme`,
-      });
-    }
-    for (const { action, j } of naming) {
-      const clause = straighten(action).match(trailingClause);
+    theme.recommendedActions.forEach((action, j) => {
+      actionCount++;
+      const text = straighten(action);
+      if (!text.includes(phrase)) return;
+      naming.push(action);
+      const clause = text.match(trailingClause);
       if (clause) {
         violations.push({
           field: `${prefix}.recommendedActions[${j}]`,
@@ -239,12 +242,20 @@ export function findProviderPlacementViolations(
           matched: `provider attached after a comma ("${clause[0]}")`,
         });
       }
-    }
+    });
   });
+
+  if (naming.length > 1 && naming.length * 2 > actionCount) {
+    violations.push({
+      field: 'recommendedActions',
+      text: naming.join(' | '),
+      matched: `"${selectedPhrase}" named in ${naming.length} of ${actionCount} actions`,
+    });
+  }
 
   return violations;
 }
 
 export function providerPlacementRetryHint(selectedPhrase: string): string {
-  return `Name "${selectedPhrase}" in at most one recommendedActions entry per theme, and only as the agent of the main clause, never in a clause added after a comma. The other actions do not need to name the provider at all.`;
+  return `Name "${selectedPhrase}" in at most one recommendedActions entry per theme, and in fewer than half of all actions, only as the agent of the main clause, never in a clause added after a comma. The other actions do not need to name the provider at all.`;
 }

@@ -76,10 +76,15 @@ const FORBIDDEN_PATTERNS: readonly { label: string; pattern: RegExp }[] = [
   // boundary check above lets it through. Excluding "/" from the
   // underscore alternatives' interior rejects any path-like span; a
   // genuine emphasis span in this report's prose never contains a slash.
+  //
+  // A Umbraco image path ("/media/840/_import_/721/_import_/...") put a
+  // whole underscore pair inside one path segment, so the interior
+  // exclusion never applied. A delimiter touching a slash is a path
+  // segment's edge, never emphasis, so "/" joins the outer boundary too.
   {
     label: 'leaked markdown emphasis in rendered prose',
     pattern:
-      /(?:\*\*(?=\S)[^*\n<>]{1,80}(?<=\S)\*\*|\*(?=\S)[^*\n<>]{1,80}(?<=\S)\*|(?<![\w-])__(?=\S)[^_\n<>/]{1,80}(?<=\S)__(?![\w-])|(?<![\w-])_(?=\S)[^_\n<>/]{1,80}(?<=\S)_(?![\w-]))/,
+      /(?:\*\*(?=\S)[^*\n<>]{1,80}(?<=\S)\*\*|\*(?=\S)[^*\n<>]{1,80}(?<=\S)\*|(?<![\w/-])__(?=\S)[^_\n<>/]{1,80}(?<=\S)__(?![\w/-])|(?<![\w/-])_(?=\S)[^_\n<>/]{1,80}(?<=\S)_(?![\w/-]))/,
   },
 ];
 

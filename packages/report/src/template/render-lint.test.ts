@@ -130,6 +130,20 @@ describe('A6: leaked markdown emphasis', () => {
       ),
     ).toEqual([]);
   });
+
+  // A real hotel site's Umbraco media paths wrap a segment in underscores.
+  it('does not flag an underscore pair that is a whole path segment', () => {
+    const clean = (html: string) =>
+      findRenderLintViolations(html).filter(
+        (v) => v.label === 'leaked markdown emphasis in rendered prose',
+      );
+    expect(
+      clean(
+        '<p>/media/840/_import_/721/_import_/838/7_7512266302033527624_n.jpg, /media/_x_/a.jpg</p>',
+      ),
+    ).toEqual([]);
+    expect(clean('<p>un point _important_ ici</p>')).not.toEqual([]);
+  });
 });
 
 describe('A6: prose rules never scan style or script bodies', () => {

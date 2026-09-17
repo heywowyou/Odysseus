@@ -135,8 +135,12 @@ en interdisant d'ouvrir dessus, et le modèle a satisfait les deux en la
 reléguant en fin de phrase dans presque toutes les actions des deux rapports
 de production du 2026-09-15/16, avec des liens de cause absurdes (« Chaque
 page doit déclarer une adresse canonique cohérente, car l'équipe technique…
-évite ainsi… »). `findProviderPlacementViolations` rejette désormais les deux
-écarts (issue #309). La variété d'ouverture décrite en section 3 reste la
+évite ainsi… »). `findProviderPlacementViolations` rejette désormais toute
+accroche après une virgule et une réponse qui nomme le prestataire dans plus
+de la moitié de ses actions (issue #309). Le plafond d'une mention par thème
+reste la consigne, pas un motif de rejet : appliqué thème par thème, il a
+épuisé les trois tentatives d'un rapport réel de dix thèmes (Atlantic Hôtel,
+2026-09-17) sur des secondes mentions correctement placées. La variété d'ouverture décrite en section 3 reste la
 règle, y compris dans la réponse écrite après un rejet.
 
 ## 5. Longueur des champs

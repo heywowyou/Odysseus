@@ -215,17 +215,35 @@ describe('issue #309: provider placement', () => {
     expect(findProviderPlacementViolations(withActions([action]), 'fr', phrase)).toHaveLength(1);
   });
 
-  it('rejects naming the provider in two actions of one theme', () => {
+  it('rejects naming the provider in more than half of all actions', () => {
     const violations = findProviderPlacementViolations(
       withActions([
         `Faites vérifier par ${phrase} le libellé de chaque bouton.`,
         `Confiez à ${phrase} la correction des titres.`,
+        'Les images doivent recevoir un texte de remplacement.',
       ]),
       'fr',
       phrase,
     );
     expect(violations).toHaveLength(1);
-    expect(violations[0]!.field).toBe('themes[0](t1).recommendedActions');
+    expect(violations[0]!.matched).toContain('2 of 3 actions');
+  });
+
+  // Atlantic Hôtel EN, 2026-09-17: a per-theme cap of one exhausted every
+  // retry on well-placed second mentions.
+  it('accepts two well-placed mentions in one theme when most actions omit the provider', () => {
+    expect(
+      findProviderPlacementViolations(
+        withActions([
+          `Faites vérifier par ${phrase} le libellé de chaque bouton.`,
+          `Confiez à ${phrase} la correction des titres.`,
+          'Les images doivent recevoir un texte de remplacement.',
+          'Sans cette correction, le formulaire reste inutilisable au clavier.',
+        ]),
+        'fr',
+        phrase,
+      ),
+    ).toEqual([]);
   });
 
   it('accepts one mention per theme as the agent of the main clause', () => {
