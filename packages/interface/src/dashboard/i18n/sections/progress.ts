@@ -30,6 +30,8 @@ export interface ProgressStrings {
   goToAuditLink: string;
   urlResultsHeading: string;
   notFound: string;
+  /** Issue #402: the unknown-scan page's way forward to scan history. */
+  notFoundAction: string;
   /** Stop control of the live progress page and its confirmation and
    *  terminal states (a cancelled job keeps finished phases). */
   stopButton: string;
@@ -95,6 +97,7 @@ export const progress = {
     goToProspectLink: 'Aller au prospect',
     urlResultsHeading: 'Résultat par site',
     notFound: 'Scan introuvable.',
+    notFoundAction: 'Voir les audits',
     stopButton: 'Arrêter le scan',
     confirmStopTitle: 'Arrêter ce scan ?',
     confirmStopBody:
@@ -151,6 +154,7 @@ export const progress = {
     goToProspectLink: 'Go to the prospect',
     urlResultsHeading: 'Per-site results',
     notFound: 'Scan not found.',
+    notFoundAction: 'View audits',
     stopButton: 'Stop the scan',
     confirmStopTitle: 'Stop this scan?',
     confirmStopBody:
