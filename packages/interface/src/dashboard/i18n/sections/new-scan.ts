@@ -8,6 +8,8 @@ export interface NewScanStrings {
   typeQuickCheckHint: string;
   urlLabel: string;
   urlPlaceholder: string;
+  /** Issue #403: `{url}` is the completed address of a bare domain. */
+  urlNormalizedHint: string;
   prospectLabel: string;
   noProspectOption: string;
   prospectMatchHint: string;
@@ -79,6 +81,7 @@ export const newScan = {
     typeQuickCheckHint: 'Contrôle informatif d’une page, sans analyse ni rapport client.',
     urlLabel: 'Adresse du site',
     urlPlaceholder: 'https://exemple.fr',
+    urlNormalizedHint: 'Adresse analysée : {url}',
     prospectLabel: 'Rattacher à un prospect (facultatif)',
     noProspectOption: 'Ne pas rattacher',
     prospectMatchHint: 'Le domaine est proposé automatiquement quand un prospect correspond.',
@@ -137,6 +140,7 @@ export const newScan = {
     typeQuickCheckHint: 'A one-page informational check with no analysis or client report.',
     urlLabel: 'Site URL',
     urlPlaceholder: 'https://example.co.uk',
+    urlNormalizedHint: 'Address to scan: {url}',
     prospectLabel: 'Attach to a prospect (optional)',
     noProspectOption: 'Do not attach',
     prospectMatchHint: 'A matching prospect is suggested automatically for this domain.',

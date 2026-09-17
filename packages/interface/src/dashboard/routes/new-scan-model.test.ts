@@ -8,6 +8,7 @@ import {
   planBatchScan,
   createEmptyFormValues,
   isValidAbsoluteHttpUrl,
+  normalizeScanUrl,
   initialScanTypeFromQuery,
   isValidSiren,
   NEW_SCAN_TYPES,
@@ -360,5 +361,19 @@ describe('batch scan submission', () => {
       [{ prospectId: 'p-a', name: 'a', url: 'https://a.fr/' }],
     );
     expect(request.options).toEqual({ scanConcurrency: 2 });
+  });
+});
+
+describe('normalizeScanUrl', () => {
+  it('completes a bare domain the directory displays into an https address', () => {
+    expect(normalizeScanUrl(' atlantichotel.fr ')).toBe('https://atlantichotel.fr/');
+    expect(normalizeScanUrl('www.exemple.fr/chambres')).toBe('https://www.exemple.fr/chambres');
+  });
+
+  it('leaves full addresses and invalid input for the validator', () => {
+    expect(normalizeScanUrl('http://exemple.fr')).toBe('http://exemple.fr');
+    expect(normalizeScanUrl('not a site')).toBe('not a site');
+    expect(normalizeScanUrl('/blog')).toBe('/blog');
+    expect(isValidAbsoluteHttpUrl(normalizeScanUrl('localhost'))).toBe(false);
   });
 });

@@ -160,6 +160,18 @@ export function isValidAbsoluteHttpUrl(value: string): boolean {
   }
 }
 
+const BARE_HOST_PATTERN = /^[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}(:\d+)?(\/\S*)?$/i;
+
+/** Issue #403: the directory displays sites as bare domains, so a pasted
+ *  `exemple.fr` (optionally with a path) becomes `https://exemple.fr/`. Any
+ *  other input, valid or not, is returned trimmed and left to the
+ *  validator, so real invalid input is still rejected. */
+export function normalizeScanUrl(value: string): string {
+  const trimmed = value.trim();
+  if (!BARE_HOST_PATTERN.test(trimmed)) return trimmed;
+  return new URL(`https://${trimmed}`).href;
+}
+
 /** Initial url field value from the ?url= query parameter (the prospect
  *  detail page's launch-audit link). The prefill is a convenience, not a
  *  gate: the route boundary (routes/scans.ts) revalidates whatever is
@@ -272,7 +284,7 @@ export function buildScanRequest(form: NewScanFormValues): ScanRequest {
   if (form.type !== 'full-audit') {
     return {
       type: form.type,
-      url: form.url.trim(),
+      url: normalizeScanUrl(form.url),
       ...(prospectId !== '' ? { prospectId } : {}),
       options: crawlOptions,
     };
@@ -291,7 +303,7 @@ export function buildScanRequest(form: NewScanFormValues): ScanRequest {
   };
   return {
     type: 'full-audit',
-    url: form.url.trim(),
+    url: normalizeScanUrl(form.url),
     ...(prospectId !== '' ? { prospectId } : {}),
     options,
   };

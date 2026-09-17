@@ -21,6 +21,7 @@ import {
   createEmptyFormValues,
   initialScanTypeFromQuery,
   isValidAbsoluteHttpUrl,
+  normalizeScanUrl,
   NEW_SCAN_TYPES,
   prefillUrlFromQuery,
   validateSiren,
@@ -86,7 +87,13 @@ export function NewScanPage() {
   const offersField = (field: AdvancedScanField): boolean =>
     ADVANCED_SCAN_FIELDS[form.type].includes(field);
   const sirenError = validateSiren(form.siren, copy.sirenInvalidError);
-  const trimmedUrl = form.url.trim();
+  const trimmedUrl = normalizeScanUrl(form.url);
+  // Shown under the field when a bare domain was completed, so the operator
+  // sees the exact address that will be scanned before launching.
+  const normalizedUrlHint =
+    trimmedUrl !== form.url.trim() && isValidAbsoluteHttpUrl(trimmedUrl)
+      ? copy.urlNormalizedHint.replace('{url}', trimmedUrl)
+      : undefined;
   const urlError =
     trimmedUrl === '' || isValidAbsoluteHttpUrl(trimmedUrl) ? null : copy.urlInvalidError;
   const showTransactionalFlowReason = form.transactionalFlow !== '';
@@ -240,10 +247,12 @@ export function NewScanPage() {
                 label={copy.urlLabel}
                 htmlFor="new-scan-url"
                 {...(urlError !== null ? { error: urlError } : {})}
+                {...(normalizedUrlHint !== undefined ? { hint: normalizedUrlHint } : {})}
               >
                 <Input
                   id="new-scan-url"
-                  type="url"
+                  type="text"
+                  inputMode="url"
                   required
                   value={form.url}
                   onChange={(event) => setField('url', event.target.value)}
@@ -301,10 +310,12 @@ export function NewScanPage() {
               label={copy.urlLabel}
               htmlFor="new-scan-url"
               {...(urlError !== null ? { error: urlError } : {})}
+              {...(normalizedUrlHint !== undefined ? { hint: normalizedUrlHint } : {})}
             >
               <Input
                 id="new-scan-url"
-                type="url"
+                type="text"
+                inputMode="url"
                 required
                 value={form.url}
                 onChange={(event) => setField('url', event.target.value)}
