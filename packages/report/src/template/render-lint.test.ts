@@ -46,6 +46,35 @@ describe('findRenderLintViolations', () => {
     expect(violations.map((v) => v.label)).toContain('unfilled "[... à renseigner]" placeholder');
   });
 
+  it('flags a "?" standing in for an unmeasured number next to a unit', () => {
+    const label = 'placeholder "?" in place of an unmeasured number';
+    for (const text of [
+      'HTML brut - ? caractères',
+      'Occurrences : ? occurrences',
+      'Constats : ? constats',
+      'Pages : ? pages',
+      'Couverture : ?%',
+      'Couverture : ? %',
+    ]) {
+      expect(findRenderLintViolations(`<p>${text}</p>`).map((v) => v.label)).toContain(label);
+    }
+  });
+
+  // Issue #385: a URL query string is not a numeric placeholder.
+  it('does not mistake a URL query string or a real question for a "?" placeholder', () => {
+    for (const text of [
+      'https://www.hotelchateauroyal.nc/en?page_id=15968',
+      'https://example.com/?page=2',
+      'https://example.com/?pages=2',
+      'https://example.com/search?page=hotel',
+      'https://example.com/?%C3%A9t%C3%A9=1',
+      'https://example.com/? pagesjaunes',
+      'Une question ?',
+    ]) {
+      expect(findRenderLintViolations(`<p>${text}</p>`)).toEqual([]);
+    }
+  });
+
   it('finds nothing wrong with clean, complete French copy', () => {
     expect(
       findRenderLintViolations(

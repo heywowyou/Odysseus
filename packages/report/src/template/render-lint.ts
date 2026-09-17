@@ -24,9 +24,16 @@ const FORBIDDEN_PATTERNS: readonly { label: string; pattern: RegExp }[] = [
   // directly in front of a unit noun like this. Scoped to the specific
   // units this report renders numbers next to, so it doesn't flag a
   // genuine "Une question ?".
+  //
+  // Issue #385: a word unit needs real whitespace after the "?" and a word
+  // boundary after the unit. Without both, a URL's query string
+  // ("/en?page_id=15968") matched as "?page" and blocked a valid report.
+  // "?%" stays accepted with or without a space, but not when the "%"
+  // opens a percent-encoded octet ("?%C3%A9=...") in a URL.
   {
     label: 'placeholder "?" in place of an unmeasured number',
-    pattern: /\?\s*(caractères|occurrences?|constats?|pages?|%)/i,
+    pattern:
+      /\?(?:\s+(?:caractères|occurrences?|constats?|pages?)(?![\p{L}\p{N}_])|\s*%(?![0-9a-f]{2}))/iu,
   },
   // item 3.2: a real report shipped "1 page(s) ont été exclues" - a
   // pluralisation placeholder left unresolved (a French/English word
