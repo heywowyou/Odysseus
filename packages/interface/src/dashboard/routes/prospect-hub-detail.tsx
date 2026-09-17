@@ -53,6 +53,7 @@ import {
   outcomeFailureNotice,
   outcomeNotice,
   outreachResultNotice,
+  scanAgeLabel,
   scanRefusalNotice,
   websiteAddition,
 } from './prospect-hub-detail-model';
@@ -1422,7 +1423,7 @@ export function ProspectHubDetailPage(): JSX.Element {
                   <p className="mt-1 text-xs text-ink-muted">
                     {copy.scanDate
                       .replace('{date}', formatDate(qualifyingAudit.startedAt))
-                      .replace('{days}', String(daysSince(qualifyingAudit.startedAt)))}
+                      .replace('{age}', scanAgeLabel(daysSince(qualifyingAudit.startedAt), copy))}
                   </p>
                   {qualifyingAudit.auditId === work?.qualifyingAuditId &&
                   work.dataVersionState === 'older' ? (
@@ -1430,7 +1431,7 @@ export function ProspectHubDetailPage(): JSX.Element {
                   ) : null}
                 </>
               ) : (
-                <p className="mt-1 text-ink-muted">{copy.notProvided}</p>
+                <p className="mt-1 text-ink-muted">{copy.noPrimarySiteAudit}</p>
               )}
             </div>
           </div>

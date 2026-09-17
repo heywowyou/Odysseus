@@ -300,7 +300,13 @@ export interface ProspectHubStrings {
     draftDiscarded: string;
     noDraft: string;
     auditState: string;
+    /** `{date}` and `{age}`, the latter one of the scanAge* phrases. */
     scanDate: string;
+    scanAgeToday: string;
+    scanAgeOneDay: string;
+    scanAgeDays: string;
+    /** Issue #396: the primary site exists but has no qualifying audit. */
+    noPrimarySiteAudit: string;
     olderDataVersion: string;
     eventLabel: string;
     noEvents: string;
@@ -708,7 +714,11 @@ export const prospectHub = {
       draftDiscarded: 'Brouillon supprimé. Vous pouvez en rédiger un nouveau.',
       noDraft: 'Aucun brouillon en attente.',
       auditState: 'État de l’audit : {state}',
-      scanDate: 'Scanné le {date}, il y a {days} jour(s)',
+      scanDate: 'Scanné le {date}, {age}',
+      scanAgeToday: 'aujourd’hui',
+      scanAgeOneDay: 'il y a 1 jour',
+      scanAgeDays: 'il y a {days} jours',
+      noPrimarySiteAudit: 'Aucun audit du site principal',
       olderDataVersion:
         'Ce scan a été produit avec une version antérieure des données d’Odysseus. Ses résultats enregistrés restent utilisables.',
       eventLabel: 'Événement',
@@ -1208,7 +1218,11 @@ export const prospectHub = {
       draftDiscarded: 'Draft discarded. You can draft a new one.',
       noDraft: 'No pending draft.',
       auditState: 'Audit state: {state}',
-      scanDate: 'Scanned {date}, {days} day(s) ago',
+      scanDate: 'Scanned {date}, {age}',
+      scanAgeToday: 'today',
+      scanAgeOneDay: '1 day ago',
+      scanAgeDays: '{days} days ago',
+      noPrimarySiteAudit: 'No audit of the primary site yet',
       olderDataVersion:
         'This scan was produced with an older Odysseus data version. Its stored results remain usable.',
       eventLabel: 'Event',

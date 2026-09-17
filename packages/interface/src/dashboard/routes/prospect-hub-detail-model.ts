@@ -178,3 +178,11 @@ export function outcomeFailureNotice(copy: DetailCopy, error: unknown): string {
     ? copy.outcomeRefused
     : copy.actionFailed;
 }
+
+/** A scan's age as natural words ("aujourd'hui", "il y a 1 jour",
+ *  "il y a 3 jours") rather than "il y a 0 jour(s)" (issue #396). */
+export function scanAgeLabel(days: number, copy: DetailCopy): string {
+  if (days <= 0) return copy.scanAgeToday;
+  if (days === 1) return copy.scanAgeOneDay;
+  return copy.scanAgeDays.replace('{days}', String(days));
+}

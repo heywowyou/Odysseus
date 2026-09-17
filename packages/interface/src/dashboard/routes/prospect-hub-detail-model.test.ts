@@ -12,6 +12,7 @@ import {
   outcomeFailureNotice,
   outcomeNotice,
   outreachResultNotice,
+  scanAgeLabel,
   scanRefusalNotice,
   websiteAddition,
 } from './prospect-hub-detail-model';
@@ -155,5 +156,20 @@ describe('archive confirmation and failure (issue #381)', () => {
       copy.archiveCleanupIncomplete,
     );
     expect(archiveFailureNotice(copy, new Error('network'))).toBe(copy.actionFailed);
+  });
+});
+
+describe('scanAgeLabel', () => {
+  it('reads a scan age naturally in both languages', () => {
+    expect([0, 1, 3].map((days) => scanAgeLabel(days, copy))).toEqual([
+      'aujourd’hui',
+      'il y a 1 jour',
+      'il y a 3 jours',
+    ]);
+    expect([0, 1, 3].map((days) => scanAgeLabel(days, en.prospectHub.detail))).toEqual([
+      'today',
+      '1 day ago',
+      '3 days ago',
+    ]);
   });
 });
