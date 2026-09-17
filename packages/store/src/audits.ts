@@ -41,6 +41,18 @@ export async function getAudit(
   return AuditModel.findOne({ auditId }).lean<AuditDocument>();
 }
 
+/** Issue #384: the storage identity of every stored audit (the hostname
+ *  and startedAt its artifact directory and bucket prefix derive from), so
+ *  orphan reconciliation can prove a bucket prefix still has an owner. */
+export async function listAuditStorageIdentities(
+  connection: Connection,
+): Promise<{ siteUrl: string; startedAt: Date }[]> {
+  return createAuditModel(connection)
+    .find({})
+    .select({ siteUrl: 1, startedAt: 1, _id: 0 })
+    .lean<{ siteUrl: string; startedAt: Date }[]>();
+}
+
 export async function attachAuditToProspect(
   connection: Connection,
   auditId: string,

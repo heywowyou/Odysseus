@@ -64,6 +64,37 @@ export function createScalewayArtifactStore(options: ScalewayArtifactStoreOption
       return Buffer.from(await response.arrayBuffer());
     },
 
+    async list(prefix: string): Promise<string[]> {
+      const keys: string[] = [];
+      let continuationToken: string | undefined;
+      do {
+        const url = new URL(`${origin}/`);
+        url.searchParams.set('list-type', '2');
+        url.searchParams.set('prefix', prefix);
+        if (continuationToken !== undefined) {
+          url.searchParams.set('continuation-token', continuationToken);
+        }
+        const response = await send(url.toString(), { method: 'GET' });
+        if (!response.ok) {
+          throw new Error(`artifact object listing failed with status ${response.status}`);
+        }
+        const page = parseListObjectsV2(await response.text());
+        keys.push(...page.keys);
+        continuationToken = page.nextContinuationToken;
+      } while (continuationToken !== undefined);
+      return keys;
+    },
+
+    async delete(key: string): Promise<void> {
+      const response = await send(objectUrl(key), { method: 'DELETE' });
+      // S3 answers 204 for a deleted and for an absent key; 404 is accepted
+      // too so a provider that reports absence still reads as done.
+      if (response.status === 404) return;
+      if (!response.ok) {
+        throw new Error(`artifact object delete failed with status ${response.status}`);
+      }
+    },
+
     async put(key: string, bytes: Buffer): Promise<void> {
       const response = await send(objectUrl(key), { method: 'PUT', body: bytes });
       if (!response.ok) {
@@ -73,4 +104,31 @@ export function createScalewayArtifactStore(options: ScalewayArtifactStoreOption
       }
     },
   };
+}
+
+function decodeXmlText(value: string): string {
+  return value
+    .replace(/&lt;/gu, '<')
+    .replace(/&gt;/gu, '>')
+    .replace(/&quot;/gu, '"')
+    .replace(/&apos;/gu, "'")
+    .replace(/&#(\d+);/gu, (_match, code: string) => String.fromCodePoint(Number(code)))
+    .replace(/&amp;/gu, '&');
+}
+
+/** The two things a ListObjectsV2 page carries that deletion needs. The
+ *  response is a flat, provider-generated document, so a tag match is
+ *  enough and no XML dependency is added for it. */
+export function parseListObjectsV2(xml: string): {
+  keys: string[];
+  nextContinuationToken?: string;
+} {
+  const keys = [...xml.matchAll(/<Key>([\s\S]*?)<\/Key>/gu)].map((match) =>
+    decodeXmlText(match[1]!),
+  );
+  const truncated = /<IsTruncated>\s*true\s*<\/IsTruncated>/u.test(xml);
+  const token = xml.match(/<NextContinuationToken>([\s\S]*?)<\/NextContinuationToken>/u)?.[1];
+  return truncated && token !== undefined
+    ? { keys, nextContinuationToken: decodeXmlText(token) }
+    : { keys };
 }

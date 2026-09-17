@@ -98,6 +98,7 @@ export {
   buildPageDir,
   buildAuditDir,
   buildArtifactBucketKey,
+  buildAuditArtifactBucketPrefix,
   parseAuditTimestampDir,
 } from './artifacts/paths.js';
 export { toAuditRelativeRefs } from './artifacts/relativize.js';

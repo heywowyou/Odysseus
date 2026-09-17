@@ -392,6 +392,23 @@ df -h /
 A deploy can then be re-run from Actions. Never prune volumes: the artifacts
 volume is the data of record on this box (see section 11).
 
+### Artifact bucket orphans
+
+Deleting an audit, a scan or a prospect removes the audit's local directory
+and its bucket prefix before its database records (issue #384); a storage
+failure answers 503 and keeps the records so the deletion can be retried.
+Audits deleted before that change may have left bucket objects behind. To
+find them, run from the app container:
+
+```sh
+node packages/cli/dist/index.js artifacts orphans           # dry run
+node packages/cli/dist/index.js artifacts orphans --delete  # removes listed orphans
+```
+
+Only `<hostname>/<YYYY-MM-DDTHH-MM-SSZ>/` prefixes with no matching audit row
+and older than 24 hours count as orphans. Any other key is printed as
+unidentified and never deleted.
+
 ## 7B. Routine local deployments
 
 > Operator decision, 2026-09-09 (trade-off 77): production on the Hostinger

@@ -53,6 +53,17 @@ const { deleteMailboxDraft } = vi.hoisted(() => ({ deleteMailboxDraft: vi.fn() }
 vi.mock('../outreach/configured-mailbox-draft-adapter.js', () => ({
   createConfiguredMailboxDraftAdapter: vi.fn(() => ({ deleteDraft: deleteMailboxDraft })),
 }));
+const { artifactStore } = vi.hoisted(() => ({
+  artifactStore: {
+    get: vi.fn(),
+    put: vi.fn(),
+    list: vi.fn(async (): Promise<string[]> => []),
+    delete: vi.fn(),
+  },
+}));
+vi.mock('../artifacts/configured-artifact-store.js', () => ({
+  createConfiguredArtifactStore: vi.fn(() => artifactStore),
+}));
 vi.mock('../outreach/configured-preview-publisher.js', () => ({
   createConfiguredPreviewPublisher: vi.fn(() => ({
     delete: deletePreview,
@@ -309,6 +320,26 @@ describe('prospect hub routes', () => {
 
     const deleted = await handle('/api/prospects/p-1', 'DELETE');
     expect(deleted.statusCode).toBe(200);
+    expect(deleteProspectPermanently).toHaveBeenCalledWith(fakeConnection, 'p-1');
+  });
+
+  it('purges each audit bucket prefix before the records, keeping them on failure (issue #384)', async () => {
+    vi.mocked(listProspectAudits).mockResolvedValue([
+      { siteUrl: 'https://hotel.example/', startedAt: new Date('2026-09-16T10:00:00Z') },
+    ] as never);
+    artifactStore.list.mockRejectedValueOnce(new Error('provider down'));
+    const failed = await handle('/api/prospects/p-1', 'DELETE');
+    expect(failed.statusCode).toBe(503);
+    expect(deleteProspectPermanently).not.toHaveBeenCalled();
+
+    artifactStore.list
+      .mockResolvedValueOnce(['hotel.example/2026-09-16T10-00-00Z/manifest.json'])
+      .mockResolvedValueOnce([]);
+    const retried = await handle('/api/prospects/p-1', 'DELETE');
+    expect(retried.statusCode).toBe(200);
+    expect(artifactStore.delete).toHaveBeenCalledWith(
+      'hotel.example/2026-09-16T10-00-00Z/manifest.json',
+    );
     expect(deleteProspectPermanently).toHaveBeenCalledWith(fakeConnection, 'p-1');
   });
 

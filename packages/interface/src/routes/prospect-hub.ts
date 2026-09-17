@@ -1,6 +1,5 @@
 import type { Connection } from 'mongoose';
 import { randomUUID } from 'node:crypto';
-import { promises as fs } from 'node:fs';
 import {
   addDirectoryEntriesToProspects,
   appendProspectEvent,
@@ -40,8 +39,13 @@ import {
 } from '@odysseus/store';
 import type { ProspectPatch } from '@odysseus/store';
 import { emailDomain, type ProspectStatus, type ProspectWebsiteKind } from '@odysseus/core';
-import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
+import { getArtifactsRoot } from '@odysseus/scanner';
 import type { Router } from '../router.js';
+import {
+  AuditArtifactDeletionError,
+  deleteAuditArtifacts,
+} from '../artifacts/delete-audit-artifacts.js';
+import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
 import { getPreviewPublicBaseUrl } from '../config.js';
 import { createConfiguredMailboxDraftAdapter } from '../outreach/configured-mailbox-draft-adapter.js';
@@ -726,9 +730,12 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
   // bad imports). The dashboard asks for it only behind an impact summary.
   // It refuses while a job for the prospect is unfinished: the job's later
   // stages would recreate the audit and artifact folder being removed.
-  // Order: outreach withdrawal (external, may fail), then the store cascade
-  // (retry-safe, prospect record last), then the artifact folders, so a
-  // failure never removes files while the records that point at them stay.
+  // Order: outreach withdrawal (external, may fail), then every audit's
+  // local and bucket artifacts (issue #384), then the store cascade
+  // (retry-safe, prospect record last). A storage failure answers 503 before
+  // any record is removed, so the prospect and its audits stay listed and
+  // the deletion can be retried; the reverse order would lose the only
+  // record naming the objects left behind.
   router.delete('/api/prospects/:prospectId', async ({ res, params }) => {
     const prospectId = params['prospectId']!;
     if ((await getProspectHub(connection, prospectId)) === null) {
@@ -752,17 +759,25 @@ export function registerProspectHubRoutes(router: Router, connection: Connection
       return;
     }
 
+    const artifactStore = createConfiguredArtifactStore();
+    try {
+      for (const audit of audits) {
+        await deleteAuditArtifacts(audit, {
+          artifactsRoot: getArtifactsRoot(),
+          store: artifactStore,
+        });
+      }
+    } catch (error) {
+      if (!(error instanceof AuditArtifactDeletionError)) throw error;
+      sendError(res, 503, `${error.message}; the prospect was kept, retry the deletion`);
+      return;
+    }
+
     const deleted = await deleteProspectPermanently(connection, prospectId);
     if (deleted === null) {
       sendError(res, 404, 'prospect not found');
       return;
     }
-    const auditDirs = audits.map((audit) =>
-      buildAuditDir(getArtifactsRoot(), new URL(audit.siteUrl).hostname, audit.startedAt),
-    );
-    await Promise.all(
-      auditDirs.map((auditDir) => fs.rm(auditDir, { recursive: true, force: true })),
-    );
     sendJson(res, 200, deleted);
   });
 }

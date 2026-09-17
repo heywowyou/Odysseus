@@ -1,5 +1,4 @@
 import type { Connection } from 'mongoose';
-import { promises as fs } from 'node:fs';
 import { isHttpUrlWithoutCredentials, isValidSiren } from '@odysseus/core';
 import {
   ActiveJobSlotTakenError,
@@ -21,8 +20,13 @@ import {
   type JobOptionsSnapshot,
   registrableDomainForScan,
 } from '@odysseus/store';
-import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
+import { getArtifactsRoot } from '@odysseus/scanner';
 import type { Router } from '../router.js';
+import {
+  AuditArtifactDeletionError,
+  deleteAuditArtifacts,
+} from '../artifacts/delete-audit-artifacts.js';
+import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
 import type { JobQueue } from '../queue/job-queue.js';
 import { getSeverityRollupsForPoll } from './severity-rollup-cache.js';
@@ -502,7 +506,9 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
 
   /** Deletes one job row and, when the job produced audits, every audit it
    *  produced: documents across all five audit-linked collections plus the
-   *  artifacts directory. Running jobs are refused (stop first), so a
+   *  artifacts directory and its bucket copy (issue #384). Storage goes
+   *  first and a storage failure answers 503 with the audit rows kept, so
+   *  the operator can retry instead of being told the space was reclaimed. Running jobs are refused (stop first), so a
    *  deleted job can never keep consuming the server invisibly. */
   router.delete('/api/scans/:jobId', async ({ res, params }) => {
     const jobId = params['jobId']!;
@@ -534,17 +540,20 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       if (row.auditId !== undefined) auditIds.add(row.auditId);
     }
 
+    const artifactStore = createConfiguredArtifactStore();
     for (const auditId of auditIds) {
       const audit = await getAudit(connection, auditId);
       if (audit !== null) {
-        const auditDir = buildAuditDir(
-          getArtifactsRoot(),
-          new URL(audit.siteUrl).hostname,
-          audit.startedAt,
-        );
-        // force: artifacts may already be gone (retention sweep, or the
-        // pre-move audits that never left the old machine).
-        await fs.rm(auditDir, { recursive: true, force: true });
+        try {
+          await deleteAuditArtifacts(audit, {
+            artifactsRoot: getArtifactsRoot(),
+            store: artifactStore,
+          });
+        } catch (error) {
+          if (!(error instanceof AuditArtifactDeletionError)) throw error;
+          sendError(res, 503, `${error.message}; nothing else was deleted for it, retry`);
+          return;
+        }
       }
       await deleteAuditCascade(connection, auditId);
     }

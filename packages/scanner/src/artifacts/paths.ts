@@ -95,6 +95,15 @@ export function buildAuditDir(artifactsRoot: string, hostname: string, startedAt
  *  agree on where a given artifact lives, just under a different root.
  *  Forward slashes always, since a bucket key is not a filesystem path
  *  even when built on Windows. */
+/** Issue #384: the bucket prefix owning every object of one audit. The
+ *  trailing slash is what isolates it: without it, a prefix for one
+ *  timestamp would also match any longer directory name that starts with
+ *  it. Never a hostname-only prefix. */
+export function buildAuditArtifactBucketPrefix(hostname: string, startedAt: Date): string {
+  requirePlausibleHostname(hostname);
+  return `${hostname}/${buildAuditTimestampDir(startedAt)}/`;
+}
+
 export function buildArtifactBucketKey(
   hostname: string,
   startedAt: Date,

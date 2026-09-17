@@ -9,15 +9,37 @@ const BYTES = Buffer.from('%PDF-1.7 fake report bytes');
  *  a hand-rolled in-memory store would be, with no credentials and no
  *  network, and every signed request is recorded for the signing
  *  assertions below. */
-function fakeS3(): { fetchImpl: typeof globalThis.fetch; requests: Request[] } {
+function fakeS3(options: { pageSize?: number; failDeleteStatus?: number } = {}): {
+  fetchImpl: typeof globalThis.fetch;
+  requests: Request[];
+  objects: Map<string, Buffer>;
+} {
   const objects = new Map<string, Buffer>();
   const requests: Request[] = [];
+  const pageSize = options.pageSize ?? 1000;
 
   const fetchImpl = (async (input: unknown): Promise<Response> => {
     const request = input as Request;
     requests.push(request.clone());
-    const key = new URL(request.url).pathname;
+    const url = new URL(request.url);
+    const key = url.pathname.slice(1).split('/').map(decodeURIComponent).join('/');
 
+    if (request.method === 'GET' && url.searchParams.get('list-type') === '2') {
+      const prefix = url.searchParams.get('prefix') ?? '';
+      const matching = [...objects.keys()].filter((k) => k.startsWith(prefix)).sort();
+      const start = Number(url.searchParams.get('continuation-token') ?? '0');
+      const page = matching.slice(start, start + pageSize);
+      const truncated = start + pageSize < matching.length;
+      const escape = (value: string) => value.replace(/&/gu, '&amp;').replace(/</gu, '&lt;');
+      const body = [
+        '<ListBucketResult>',
+        ...page.map((k) => `<Contents><Key>${escape(k)}</Key></Contents>`),
+        `<IsTruncated>${truncated}</IsTruncated>`,
+        truncated ? `<NextContinuationToken>${start + pageSize}</NextContinuationToken>` : '',
+        '</ListBucketResult>',
+      ].join('');
+      return new Response(body, { status: 200 });
+    }
     if (request.method === 'PUT') {
       objects.set(key, Buffer.from(await request.arrayBuffer()));
       return new Response(null, { status: 200 });
@@ -27,10 +49,17 @@ function fakeS3(): { fetchImpl: typeof globalThis.fetch; requests: Request[] } {
       if (stored === undefined) return new Response('', { status: 404 });
       return new Response(stored, { status: 200 });
     }
+    if (request.method === 'DELETE') {
+      if (options.failDeleteStatus !== undefined) {
+        return new Response('<Error>internal detail</Error>', { status: options.failDeleteStatus });
+      }
+      objects.delete(key);
+      return new Response(null, { status: 204 });
+    }
     return new Response(null, { status: 405 });
   }) as typeof globalThis.fetch;
 
-  return { fetchImpl, requests };
+  return { fetchImpl, requests, objects };
 }
 
 function scalewayUnderTest(fetchImpl: typeof globalThis.fetch): ArtifactStore {
@@ -67,6 +96,38 @@ describe('ArtifactStore contract: scaleway', () => {
     await store.put(key, second);
     const stored = await store.get(key);
     expect(Buffer.compare(stored!, second)).toBe(0);
+  });
+});
+
+describe('ArtifactStore list and delete: scaleway (issue #384)', () => {
+  it('lists every key under a prefix across continuation pages', async () => {
+    const s3 = fakeS3({ pageSize: 2 });
+    const store = scalewayUnderTest(s3.fetchImpl);
+    const prefix = 'hotel.example/2026-09-16T10-00-00Z/';
+    const keys = ['a.json', 'b & c.json', 'pages/p1/scan.json', 'shots/x.png', 'z.json'].map(
+      (rel) => `${prefix}${rel}`,
+    );
+    for (const k of keys) await store.put(k, BYTES);
+    await store.put('hotel.example/2026-09-16T10-00-00Z-copy/other.json', BYTES);
+
+    await expect(store.list(prefix)).resolves.toEqual([...keys].sort());
+  });
+
+  it('deletes a key, and deleting an absent key still succeeds', async () => {
+    const s3 = fakeS3();
+    const store = scalewayUnderTest(s3.fetchImpl);
+    const key = 'hotel.example/2026-09-16T10-00-00Z/report.pdf';
+    await store.put(key, BYTES);
+    await store.delete(key);
+    await expect(store.get(key)).resolves.toBeNull();
+    await expect(store.delete(key)).resolves.toBeUndefined();
+  });
+
+  it('throws on a provider failure without quoting the provider body', async () => {
+    const store = scalewayUnderTest(fakeS3({ failDeleteStatus: 500 }).fetchImpl);
+    const failure = store.delete('hotel.example/2026-09-16T10-00-00Z/report.pdf');
+    await expect(failure).rejects.toThrow('artifact object delete failed with status 500');
+    await expect(failure).rejects.not.toThrow(/internal detail/u);
   });
 });
 

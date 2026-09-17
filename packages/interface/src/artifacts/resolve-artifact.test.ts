@@ -17,6 +17,12 @@ function fakeStore(seed: Record<string, Buffer> = {}): ArtifactStore & { calls: 
     async put(key: string, bytes: Buffer): Promise<void> {
       objects.set(key, bytes);
     },
+    async list(prefix: string): Promise<string[]> {
+      return [...objects.keys()].filter((key) => key.startsWith(prefix));
+    },
+    async delete(key: string): Promise<void> {
+      objects.delete(key);
+    },
   };
 }
 

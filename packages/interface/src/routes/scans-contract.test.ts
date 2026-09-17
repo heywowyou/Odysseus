@@ -13,6 +13,18 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   deleteJob: vi.fn(),
 }));
 
+const { artifactStore } = vi.hoisted(() => ({
+  artifactStore: {
+    get: vi.fn(),
+    put: vi.fn(),
+    list: vi.fn(async (): Promise<string[]> => []),
+    delete: vi.fn(),
+  },
+}));
+vi.mock('../artifacts/configured-artifact-store.js', () => ({
+  createConfiguredArtifactStore: vi.fn(() => artifactStore),
+}));
+
 import {
   ActiveJobSlotTakenError,
   checkScanLaunch,
@@ -148,13 +160,13 @@ describe('POST /api/scans runtime contract', () => {
 });
 
 describe('DELETE /api/scans/:jobId', () => {
-  async function remove(inFlight: boolean): Promise<number> {
+  async function remove(inFlight: boolean, audit: unknown = null): Promise<number> {
     vi.mocked(getJob).mockResolvedValue({
       jobId: 'job-1',
       status: 'cancelled',
       auditId: 'audit-1',
     } as never);
-    vi.mocked(getAudit).mockResolvedValue(null);
+    vi.mocked(getAudit).mockResolvedValue(audit as never);
     const queue = { notify: vi.fn(), isJobInFlight: vi.fn().mockReturnValue(inFlight) } as never;
     const router = new Router();
     registerScanRoutes(router, fakeConnection, queue);
@@ -178,6 +190,32 @@ describe('DELETE /api/scans/:jobId', () => {
     expect(await remove(false)).toBe(200);
     expect(deleteAuditCascade).toHaveBeenCalledWith(fakeConnection, 'audit-1');
     expect(deleteJob).toHaveBeenCalled();
+  });
+
+  const storedAudit = {
+    auditId: 'audit-1',
+    siteUrl: 'https://hotel.example/',
+    startedAt: new Date('2026-09-16T10:00:00Z'),
+  };
+
+  it('removes the audit bucket objects before its records (issue #384)', async () => {
+    vi.mocked(deleteJob).mockResolvedValue(true as never);
+    artifactStore.list
+      .mockResolvedValueOnce(['hotel.example/2026-09-16T10-00-00Z/manifest.json'])
+      .mockResolvedValueOnce([]);
+    expect(await remove(false, storedAudit)).toBe(200);
+    expect(artifactStore.list).toHaveBeenCalledWith('hotel.example/2026-09-16T10-00-00Z/');
+    expect(artifactStore.delete).toHaveBeenCalledWith(
+      'hotel.example/2026-09-16T10-00-00Z/manifest.json',
+    );
+    expect(deleteAuditCascade).toHaveBeenCalled();
+  });
+
+  it('keeps the records and answers 503 when bucket cleanup fails (issue #384)', async () => {
+    artifactStore.list.mockRejectedValueOnce(new Error('provider down'));
+    expect(await remove(false, storedAudit)).toBe(503);
+    expect(deleteAuditCascade).not.toHaveBeenCalled();
+    expect(deleteJob).not.toHaveBeenCalled();
   });
 });
 

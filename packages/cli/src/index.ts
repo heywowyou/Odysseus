@@ -17,6 +17,7 @@ import { registerServeCommand } from './commands/serve.js';
 import { registerProspectCommand } from './commands/prospect.js';
 import { registerBenchmarkCommand } from './commands/benchmark.js';
 import { registerVerifyReportsCommand } from './commands/verify-reports.js';
+import { registerArtifactsCommand } from './commands/artifacts.js';
 
 // Loaded once, unconditionally, here rather than left as a side effect of
 // whichever command happens to import @odysseus/scanner or @odysseus/llm
@@ -43,5 +44,6 @@ registerServeCommand(program);
 registerProspectCommand(program);
 registerBenchmarkCommand(program);
 registerVerifyReportsCommand(program);
+registerArtifactsCommand(program);
 
 program.parse(process.argv);

@@ -25,6 +25,15 @@ export type { ArtifactStore } from './artifacts/artifact-store.js';
 export { createScalewayArtifactStore } from './artifacts/scaleway-artifact-store.js';
 export type { ScalewayArtifactStoreOptions } from './artifacts/scaleway-artifact-store.js';
 export { createConfiguredArtifactStore } from './artifacts/configured-artifact-store.js';
+export {
+  AuditArtifactDeletionError,
+  deleteAuditArtifacts,
+} from './artifacts/delete-audit-artifacts.js';
+export {
+  DEFAULT_ORPHAN_MIN_AGE_MS,
+  findRemoteArtifactOrphans,
+  type RemoteArtifactOrphanReport,
+} from './artifacts/remote-artifact-orphans.js';
 export { resolveArtifactFile } from './artifacts/resolve-artifact.js';
 export {
   syncAuditDirToBucket,

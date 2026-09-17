@@ -79,6 +79,7 @@ export {
   getAuditGradeOverride,
   setAuditGradeOverride,
   clearAuditGradeOverride,
+  listAuditStorageIdentities,
 } from './audits.js';
 export type { AuditRuntimeFields } from './audits.js';
 

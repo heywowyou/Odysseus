@@ -10,13 +10,21 @@
  * answer - the bucket is a fallback and a sync target, never the primary
  * copy `resolveArtifactFile` reads from first.
  *
- * Two methods only, unlike `PreviewPublisher`'s three: an artifact is never
- * deleted through this port (screenshots are pruned locally by
- * `pruneScreenshots`, and nothing here mirrors that deletion into the
- * bucket - out of scope for this issue, see the plan).
+ * Issue #384 added listing and deletion: deleting an audit to reclaim
+ * storage has to remove the bucket copy too, not only the local directory
+ * and the database rows. Callers delete one audit's objects through
+ * `deleteAuditArtifacts` (delete-audit-artifacts.ts), which scopes the
+ * listing to that audit's own `<hostname>/<timestamp>/` prefix, never
+ * through ad-hoc provider calls.
  */
 
 export interface ArtifactStore {
   get(key: string): Promise<Buffer | null>;
   put(key: string, bytes: Buffer): Promise<void>;
+  /** Every key starting with `prefix`, in provider order. An empty result is
+   *  not an error. */
+  list(prefix: string): Promise<string[]>;
+  /** Deleting a key that does not exist succeeds, so a retried cleanup is
+   *  idempotent. A provider failure throws. */
+  delete(key: string): Promise<void>;
 }
