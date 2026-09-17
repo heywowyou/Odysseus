@@ -750,6 +750,7 @@ export const prospectHub = {
       refusalLabels: {
         'invalid-url': 'adresse de site invalide',
         'host-busy': 'un autre scan utilise déjà ce site',
+        'prospect-unavailable': 'ce prospect est archivé ; restaurez-le pour lancer un scan',
         suppressed: 'contact supprimé de la prospection ; aucune action n’est possible',
         'no-contact': 'aucun email disponible ; ajoutez une adresse dans la fiche',
         'no-complete-audit': 'aucun scan complet exploitable ; lancez un scan complet',
@@ -1243,6 +1244,7 @@ export const prospectHub = {
       refusalLabels: {
         'invalid-url': 'site URL is invalid',
         'host-busy': 'another scan is already using this site',
+        'prospect-unavailable': 'this prospect is archived; restore it to start a scan',
         suppressed: 'contact is suppressed from outreach; no action is possible',
         'no-contact': 'no email available; add an address on the record',
         'no-complete-audit': 'no usable full scan; run a full scan',

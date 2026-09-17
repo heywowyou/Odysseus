@@ -91,9 +91,14 @@ export function QueueScansDialog(props: {
   const outcomeText = (entry: BatchScanResult): string => {
     if (entry.outcome === 'queued') return copy.outcomeQueued;
     if (entry.outcome === 'skipped') return copy.outcomeSkippedActive;
-    return entry.reason === 'suppressed'
-      ? copy.outcomeRejectedSuppressed
-      : copy.outcomeRejectedInvalidUrl;
+    switch (entry.reason) {
+      case 'suppressed':
+        return copy.outcomeRejectedSuppressed;
+      case 'prospect-unavailable':
+        return copy.outcomeRejectedProspectUnavailable;
+      case 'invalid-url':
+        return copy.outcomeRejectedInvalidUrl;
+    }
   };
 
   return (

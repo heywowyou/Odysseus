@@ -324,9 +324,19 @@ export async function cancelQueuedJobs(connection: Connection, error: string): P
 /** Removes one job document outright (audits-page delete). Callers decide
  *  whether the job's linked audits are cascaded first; this only unlinks
  *  the queue history row itself. */
-export async function deleteJob(connection: Connection, jobId: string): Promise<boolean> {
+export async function deleteJob(
+  connection: Connection,
+  jobId: string,
+  options: { onlyIfStatusNot?: readonly JobStatus[] } = {},
+): Promise<boolean> {
   const JobModel = createJobModel(connection);
-  const result = await JobModel.deleteOne({ jobId });
+  const result = await JobModel.deleteOne({
+    jobId,
+    // Lets a caller delete atomically against a claim or requeue racing it.
+    ...(options.onlyIfStatusNot === undefined
+      ? {}
+      : { status: { $nin: [...options.onlyIfStatusNot] } }),
+  });
   return result.deletedCount > 0;
 }
 

@@ -382,7 +382,7 @@ export type BatchScanResult =
       url: string;
       prospectId?: string;
       outcome: 'rejected';
-      reason: 'invalid-url' | 'suppressed';
+      reason: 'invalid-url' | 'suppressed' | 'prospect-unavailable';
     };
 
 export interface BatchScanResponse {

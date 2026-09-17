@@ -30,6 +30,7 @@ export interface ScanQueueStrings {
   outcomeSkippedActive: string;
   outcomeRejectedInvalidUrl: string;
   outcomeRejectedSuppressed: string;
+  outcomeRejectedProspectUnavailable: string;
   openQueueAction: string;
   closeAction: string;
   /** Audits page queue section. */
@@ -73,6 +74,8 @@ export const scanQueue = {
     outcomeSkippedActive: 'Ignoré : un scan est déjà en file ou en cours pour ce site.',
     outcomeRejectedInvalidUrl: 'Refusé : l’adresse du site n’est pas valide.',
     outcomeRejectedSuppressed: 'Refusé : ce site figure sur la liste à ne pas contacter.',
+    outcomeRejectedProspectUnavailable:
+      'Refusé : ce prospect est archivé ou introuvable ; restaurez-le avant de lancer un scan.',
     openQueueAction: 'Voir la file',
     closeAction: 'Fermer',
     sectionTitle: 'File de scans',
@@ -113,6 +116,8 @@ export const scanQueue = {
     outcomeSkippedActive: 'Skipped: a scan is already queued or running for this site.',
     outcomeRejectedInvalidUrl: 'Rejected: the website address is not valid.',
     outcomeRejectedSuppressed: 'Rejected: this site is on the do-not-contact list.',
+    outcomeRejectedProspectUnavailable:
+      'Rejected: this prospect is archived or missing; restore it before scanning.',
     openQueueAction: 'Open the queue',
     closeAction: 'Close',
     sectionTitle: 'Scan queue',

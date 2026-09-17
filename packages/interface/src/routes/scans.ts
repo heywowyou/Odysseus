@@ -146,7 +146,9 @@ async function autoAttachProspect(
   registrableDomain: string,
 ): Promise<JobOptionsSnapshot> {
   if (options.prospectId !== undefined) return options;
-  const matches = await findProspectsByDomain(connection, registrableDomain);
+  const matches = (await findProspectsByDomain(connection, registrableDomain)).filter(
+    (prospect) => prospect.archivedAt === undefined,
+  );
   return matches.length === 1 ? { ...options, prospectId: matches[0]!.prospectId } : options;
 }
 
@@ -154,7 +156,10 @@ type LaunchableScanType = 'quick-check' | 'full-audit';
 
 type ScanLaunchOutcome =
   | { started: true; job: JobDocument }
-  | { started: false; refusal: 'invalid-url' | 'suppressed' | 'host-busy' };
+  | {
+      started: false;
+      refusal: 'invalid-url' | 'suppressed' | 'host-busy' | 'prospect-unavailable';
+    };
 
 /** The one launch path behind both the single and the batch endpoint: attach
  *  a prospect, run the launch guard, then create the ordinary job. Throws
@@ -170,6 +175,15 @@ async function launchScan(
   const domain = registrableDomainForScan(url);
   if (domain === null) return { started: false, refusal: 'invalid-url' };
   const options = await autoAttachProspect(connection, requested, domain);
+  if (options.prospectId !== undefined) {
+    // Archive retention purges any audit linked to an archived prospect
+    // (issue #381), so a scan must never link to one, nor to a prospect
+    // that does not exist.
+    const prospect = await getProspectHub(connection, options.prospectId);
+    if (prospect === null || prospect.archivedAt !== undefined) {
+      return { started: false, refusal: 'prospect-unavailable' };
+    }
+  }
   const check = await checkScanLaunch(connection, {
     url,
     kind: type,
@@ -220,7 +234,7 @@ type BatchItemResult =
       url: string;
       prospectId?: string;
       outcome: 'rejected';
-      reason: 'invalid-url' | 'suppressed';
+      reason: 'invalid-url' | 'suppressed' | 'prospect-unavailable';
     };
 
 /** Registers the job-creation and job-status endpoints. `queue.notify()`
@@ -533,6 +547,20 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       return;
     }
 
+    // A queued job has produced no audits. Deleting it only while it is
+    // still unclaimed closes the race where the worker claims it between the
+    // read above and the delete, which would leave a running pipeline with
+    // no job row to report into.
+    if (job.status === 'queued') {
+      const deleted = await deleteJob(connection, jobId, { onlyIfStatusNot: ['running'] });
+      if (!deleted) {
+        sendError(res, 409, 'the job has just started; stop it before deleting it');
+        return;
+      }
+      sendJson(res, 200, { jobId, deleted: true, auditsDeleted: 0 });
+      return;
+    }
+
     const auditIds = new Set<string>();
     if (job.auditId !== undefined) auditIds.add(job.auditId);
     for (const id of job.auditIds ?? []) auditIds.add(id);
@@ -558,7 +586,7 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       await deleteAuditCascade(connection, auditId);
     }
 
-    const deleted = await deleteJob(connection, jobId);
+    const deleted = await deleteJob(connection, jobId, { onlyIfStatusNot: ['queued', 'running'] });
     sendJson(res, 200, { jobId, deleted, auditsDeleted: auditIds.size });
   });
 }

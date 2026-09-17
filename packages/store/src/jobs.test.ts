@@ -4,6 +4,7 @@ import {
   claimNextQueuedJob,
   completeJob,
   createJob,
+  deleteJob,
   failJob,
   getJob,
   listJobs,
@@ -37,6 +38,19 @@ async function queuedJob(createdAt: Date): Promise<string> {
 describe.skipIf(!available)('job queue persistence', () => {
   beforeEach(async () => {
     await createJobModel(connection!).deleteMany({});
+  });
+
+  describe('deleteJob', () => {
+    it('keeps a job the worker claimed when the delete excludes running jobs', async () => {
+      const jobId = await queuedJob(new Date('2026-09-01T10:00:00Z'));
+      const claimed = await claimNextQueuedJob(connection!, { workerRevision: 'rev-a' });
+      expect(claimed?.jobId).toBe(jobId);
+
+      await expect(deleteJob(connection!, jobId, { onlyIfStatusNot: ['running'] })).resolves.toBe(
+        false,
+      );
+      expect(await getJob(connection!, jobId)).not.toBeNull();
+    });
   });
 
   describe('claimNextQueuedJob', () => {

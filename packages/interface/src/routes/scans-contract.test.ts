@@ -8,6 +8,7 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   createJob: vi.fn(),
   findProspectsByDomain: vi.fn(),
   getJob: vi.fn(),
+  getProspectHub: vi.fn(),
   getAudit: vi.fn(),
   deleteAuditCascade: vi.fn(),
   deleteJob: vi.fn(),
@@ -34,6 +35,7 @@ import {
   findProspectsByDomain,
   getAudit,
   getJob,
+  getProspectHub,
   type NewJobInput,
 } from '@odysseus/store';
 import { Router } from '../router.js';
@@ -84,6 +86,7 @@ beforeEach(() => {
     registrableDomain: 'example.fr',
   });
   vi.mocked(findProspectsByDomain).mockResolvedValue([{ prospectId: 'prospect-1' }] as never);
+  vi.mocked(getProspectHub).mockResolvedValue({ prospectId: 'prospect-1' } as never);
   vi.mocked(createJob).mockImplementation(
     async (_connection, input: NewJobInput) =>
       ({
@@ -160,10 +163,14 @@ describe('POST /api/scans runtime contract', () => {
 });
 
 describe('DELETE /api/scans/:jobId', () => {
-  async function remove(inFlight: boolean, audit: unknown = null): Promise<number> {
+  async function remove(
+    inFlight: boolean,
+    audit: unknown = null,
+    status = 'cancelled',
+  ): Promise<number> {
     vi.mocked(getJob).mockResolvedValue({
       jobId: 'job-1',
-      status: 'cancelled',
+      status,
       auditId: 'audit-1',
     } as never);
     vi.mocked(getAudit).mockResolvedValue(audit as never);
@@ -192,6 +199,22 @@ describe('DELETE /api/scans/:jobId', () => {
     expect(deleteJob).toHaveBeenCalled();
   });
 
+  it('refuses a queued job the worker claimed before the delete landed', async () => {
+    vi.mocked(deleteJob).mockResolvedValue(false as never);
+    expect(await remove(false, null, 'queued')).toBe(409);
+    expect(deleteJob).toHaveBeenCalledWith(fakeConnection, 'job-1', {
+      onlyIfStatusNot: ['running'],
+    });
+    expect(deleteAuditCascade).not.toHaveBeenCalled();
+  });
+
+  it('deletes a still-queued job without touching any audit', async () => {
+    vi.mocked(deleteJob).mockResolvedValue(true as never);
+    expect(await remove(false, null, 'queued')).toBe(200);
+    expect(deleteAuditCascade).not.toHaveBeenCalled();
+    expect(getAudit).not.toHaveBeenCalled();
+  });
+
   const storedAudit = {
     auditId: 'audit-1',
     siteUrl: 'https://hotel.example/',
@@ -216,6 +239,78 @@ describe('DELETE /api/scans/:jobId', () => {
     expect(await remove(false, storedAudit)).toBe(503);
     expect(deleteAuditCascade).not.toHaveBeenCalled();
     expect(deleteJob).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/scans prospect availability', () => {
+  it('refuses a scan for an archived prospect', async () => {
+    vi.mocked(getProspectHub).mockResolvedValue({
+      prospectId: 'p-archived',
+      archivedAt: new Date(),
+    } as never);
+    const response = await post({
+      type: 'full-audit',
+      url: 'https://example.fr/',
+      prospectId: 'p-archived',
+    });
+    expect(response.body).toEqual({ started: false, refusal: 'prospect-unavailable' });
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
+  it('refuses a scan for a prospect that does not exist', async () => {
+    vi.mocked(getProspectHub).mockResolvedValue(null);
+    const response = await post({
+      type: 'full-audit',
+      url: 'https://example.fr/',
+      prospectId: 'p-missing',
+    });
+    expect(response.body).toEqual({ started: false, refusal: 'prospect-unavailable' });
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
+  it('auto-attaches the one active prospect when an archived one shares the domain', async () => {
+    vi.mocked(findProspectsByDomain).mockResolvedValue([
+      { prospectId: 'p-active' },
+      { prospectId: 'p-old', archivedAt: new Date() },
+    ] as never);
+    vi.mocked(getProspectHub).mockResolvedValue({ prospectId: 'p-active' } as never);
+    await post({ type: 'full-audit', url: 'https://example.fr/' });
+    expect(vi.mocked(createJob).mock.calls[0]?.[1].options?.prospectId).toBe('p-active');
+  });
+
+  it('never auto-attaches an archived prospect', async () => {
+    vi.mocked(findProspectsByDomain).mockResolvedValue([
+      { prospectId: 'p-old', archivedAt: new Date() },
+    ] as never);
+    const response = await post({ type: 'full-audit', url: 'https://example.fr/' });
+    expect(response.statusCode).toBe(201);
+    expect(createJob).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(createJob).mock.calls[0]?.[1].options).not.toHaveProperty('prospectId');
+  });
+
+  it('rejects only the batch site whose prospect is archived', async () => {
+    vi.mocked(getProspectHub).mockImplementation(
+      async (_connection, prospectId) =>
+        (prospectId === 'p-b' ? { prospectId, archivedAt: new Date() } : { prospectId }) as never,
+    );
+    const response = await post(
+      {
+        type: 'full-audit',
+        items: [
+          { prospectId: 'p-a', url: 'https://a.fr/' },
+          { prospectId: 'p-b', url: 'https://b.fr/' },
+        ],
+      },
+      '/api/scans/batch',
+    );
+    expect(response.body).toMatchObject({
+      queued: 1,
+      rejected: 1,
+      results: [
+        { index: 0, outcome: 'queued' },
+        { index: 1, outcome: 'rejected', reason: 'prospect-unavailable' },
+      ],
+    });
   });
 });
 
