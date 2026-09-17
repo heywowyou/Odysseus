@@ -41,6 +41,12 @@ import { runAnalysisStage } from './analysis-stage.js';
 import { RegenerationConflictError } from './regeneration-conflict-error.js';
 import { isWritingRegenerationInFlight } from './regenerate-writing.js';
 import {
+  clearReportProduction,
+  markReportProductionCompleted,
+  markReportProductionFailed,
+  markReportProductionStage,
+} from './report-production-state.js';
+import {
   readAuditArtifacts,
   regenerateReportsForAudit,
   AuditArtifactsUnavailableError,
@@ -196,7 +202,13 @@ export async function makeReportReady(
   }
   inFlight.add(auditId);
   try {
-    return await produceReports(connection, auditId, artifactStore);
+    const outcome = await produceReports(connection, auditId, artifactStore);
+    if (outcome.kind === 'ready') markReportProductionCompleted(auditId);
+    else clearReportProduction(auditId);
+    return outcome;
+  } catch (error) {
+    markReportProductionFailed(auditId, error);
+    throw error;
   } finally {
     inFlight.delete(auditId);
   }
@@ -222,12 +234,14 @@ async function produceReports(
       artifactStore,
     );
     if (findingsAreStale(manifest.findingsProvenance, findings)) {
+      markReportProductionStage(auditId, 'writing');
       await renormalizeAudit(auditDir, artifactStore);
       await backfillAuditRow(auditDir, connection);
       await syncAuditDirToBucket(artifactStore, auditDir, hostname, audit.startedAt);
       await refreshWritingCandidate(connection, auditDir, audit, artifactStore);
       findingsWereRefreshed = true;
     } else if (await selectedPairIsStale(connection, auditId, findings)) {
+      markReportProductionStage(auditId, 'writing');
       await refreshWritingCandidate(connection, auditDir, audit, artifactStore);
       findingsWereRefreshed = true;
     }
@@ -238,6 +252,7 @@ async function produceReports(
     throw error;
   }
 
+  markReportProductionStage(auditId, 'pdf-generation');
   try {
     const reports = await regenerateReportsForAudit(connection, audit, artifactStore);
     await reconcileFailedAuditJobs(connection);

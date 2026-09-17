@@ -34,6 +34,10 @@ import {
   type WritingRunOutcome,
   WritingRegenerationFailedError,
 } from '../pipeline/regenerate-writing.js';
+import {
+  reportProductionState,
+  type ReportProductionState,
+} from '../pipeline/report-production-state.js';
 
 function lastWritingRunField(auditId: string): { lastWritingRun?: WritingRunOutcome } {
   const outcome = lastWritingRunOutcome(auditId);
@@ -45,6 +49,8 @@ interface PreparationView {
   preview: ReportPreparationPreview;
   regenerationInFlight: boolean;
   lastWritingRun?: WritingRunOutcome;
+  /** Issue #376: the canonical production stage every panel control reads. */
+  production: ReportProductionState;
 }
 
 /** The one place assembling the preparation view: preparation plus its
@@ -80,6 +86,7 @@ async function buildPreparationView(
     preview,
     regenerationInFlight: isWritingRegenerationInFlight(auditId),
     ...lastWritingRunField(auditId),
+    production: reportProductionState(auditId),
   };
 }
 

@@ -722,6 +722,35 @@ describe('audit report panel (plan 045 stage 3.1)', () => {
     root.unmount();
   });
 
+  it('restores a running PDF stage on load and replaces both production actions (issue #376)', async () => {
+    stubRoutes({
+      '/api/audits/audit-1/report-preparation': preparationView({
+        production: {
+          status: 'pdf-generation',
+          startedAt: '2026-09-17T10:00:00.000Z',
+          updatedAt: '2026-09-17T10:02:00.000Z',
+        },
+      }),
+      '/api/audits/audit-1': analysedAudit,
+    });
+    const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
+    await settle(container, 'Le contenu du rapport est prêt');
+    const busyButtons = [...container.querySelectorAll('button')].filter((button) =>
+      button.textContent?.includes('Génération des PDF…'),
+    );
+    expect(busyButtons).toHaveLength(2);
+    expect(busyButtons.every((button) => button.disabled)).toBe(true);
+    expect(
+      [...container.querySelectorAll('button')].some(
+        (button) => button.textContent === 'Régénérer les PDF',
+      ),
+    ).toBe(false);
+    expect(container.querySelector('[aria-current="step"]')?.textContent).toContain(
+      'Génération des PDF',
+    );
+    root.unmount();
+  });
+
   it('shows a stale writing failure but no preview or approve action for a legacy ready candidate', async () => {
     // A candidate left 'ready' by a pre-plan-045-2.1 run: every regeneration
     // from this build already approves inline, so the preview and approve

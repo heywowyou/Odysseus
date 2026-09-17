@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  reportProductionView,
   auditReportPanelRows,
   describeProduceFailure,
   findPanelRow,
@@ -143,5 +144,65 @@ describe('describeProduceFailure', () => {
     const generic = describeProduceFailure(undefined, 'en');
     expect(generic.explanation).toBe('Producing the PDFs was refused. No PDF was delivered.');
     expect(generic.technicalDetail).toBeUndefined();
+  });
+});
+
+describe('reportProductionView (issue #376)', () => {
+  const at = '2026-09-17T10:00:00.000Z';
+
+  it('shows nothing and leaves every action available when idle', () => {
+    for (const state of [undefined, { status: 'idle' as const }]) {
+      const view = reportProductionView(state, 'en');
+      expect(view.banner).toBeNull();
+      expect(view.busy).toBe(false);
+      expect(view.busyLabel).toBeUndefined();
+    }
+  });
+
+  it('marks writing current and replaces the actions with a writing label', () => {
+    const view = reportProductionView({ status: 'writing', startedAt: at, updatedAt: at }, 'en');
+    expect(view.busy).toBe(true);
+    expect(view.busyLabel).toBe('Writing report…');
+    expect(view.banner).toMatchObject({ tone: 'active', title: 'Writing report…' });
+    expect(view.steps.map((step) => step.state)).toEqual(['done', 'current', 'pending', 'pending']);
+  });
+
+  it('marks PDF generation current and keeps Regenerate PDFs unavailable', () => {
+    const view = reportProductionView(
+      { status: 'pdf-generation', startedAt: at, updatedAt: at },
+      'fr',
+    );
+    expect(view.busy).toBe(true);
+    expect(view.busyLabel).toBe('Génération des PDF…');
+    expect(view.steps.map((step) => step.state)).toEqual(['done', 'done', 'current', 'pending']);
+  });
+
+  it('shows ready and frees the actions once completed', () => {
+    const view = reportProductionView({ status: 'completed', finishedAt: at }, 'en');
+    expect(view.busy).toBe(false);
+    expect(view.banner).toMatchObject({ tone: 'ready', title: 'Report ready' });
+    expect(view.steps.every((step) => step.state === 'done')).toBe(true);
+  });
+
+  it('names the failed stage, keeps the message, and allows a retry', () => {
+    const writing = reportProductionView(
+      { status: 'failed', stage: 'writing', message: 'quota', finishedAt: at },
+      'en',
+    );
+    expect(writing.busy).toBe(false);
+    expect(writing.banner).toMatchObject({ tone: 'failed', technicalDetail: 'quota' });
+    expect(writing.steps.map((step) => step.state)).toEqual([
+      'done',
+      'failed',
+      'pending',
+      'pending',
+    ]);
+
+    const pdf = reportProductionView(
+      { status: 'failed', stage: 'pdf-generation', message: 'overflow', finishedAt: at },
+      'fr',
+    );
+    expect(pdf.banner?.description).toContain('génération des PDF');
+    expect(pdf.steps.map((step) => step.state)).toEqual(['done', 'done', 'failed', 'pending']);
   });
 });

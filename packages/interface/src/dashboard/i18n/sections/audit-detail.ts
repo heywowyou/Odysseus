@@ -138,6 +138,23 @@ export interface AuditDetailStrings {
     /** The preparation view (report-details-form.tsx) could not be
      *  loaded (never created, or a failed request). */
     preparationUnavailable: string;
+    /** Issue #376: the persistent production status and the busy labels
+     *  that replace conflicting actions while a stage runs. */
+    production: {
+      heading: string;
+      steps: { confirmed: string; writing: string; pdf: string; ready: string };
+      writingTitle: string;
+      writingDescription: string;
+      pdfTitle: string;
+      pdfDescription: string;
+      readyTitle: string;
+      readyDescription: string;
+      failedTitle: string;
+      failedWritingDescription: string;
+      failedPdfDescription: string;
+      writingBusyLabel: string;
+      pdfBusyLabel: string;
+    };
     /** The produce action's button. */
     produceButton: string;
     /** Plan 045 slice 1.2: the button label when findings will be
@@ -462,6 +479,28 @@ export const auditDetail = {
       produceHeading: 'Produire les PDF',
       deliveryHeading: 'Approuver et livrer',
       preparationUnavailable: 'La préparation n’est pas disponible pour cet audit.',
+      production: {
+        heading: 'Production du rapport',
+        steps: {
+          confirmed: 'Données confirmées',
+          writing: 'Rédaction',
+          pdf: 'Génération des PDF',
+          ready: 'Prêt',
+        },
+        writingTitle: 'Rédaction du rapport…',
+        writingDescription: 'Rédaction du texte du rapport et des recommandations.',
+        pdfTitle: 'Génération des PDF…',
+        pdfDescription: 'Le contenu du rapport est prêt. Création des PDF finaux.',
+        readyTitle: 'Rapport prêt',
+        readyDescription: 'Les PDF ont été générés.',
+        failedTitle: 'La production du rapport a échoué',
+        failedWritingDescription:
+          'La rédaction n’a pas abouti. Relancez la rédaction pour réessayer.',
+        failedPdfDescription:
+          'La génération des PDF n’a pas abouti. Relancez la génération des PDF pour réessayer.',
+        writingBusyLabel: 'Rédaction du rapport…',
+        pdfBusyLabel: 'Génération des PDF…',
+      },
       produceButton: 'Régénérer les PDF',
       produceButtonRefreshFirst: 'Actualiser les constats puis régénérer les PDF',
       produceFailedHeading: 'Les PDF n’ont pas pu être produits',
@@ -701,6 +740,26 @@ export const auditDetail = {
       produceHeading: 'Produce the PDFs',
       deliveryHeading: 'Approve and deliver',
       preparationUnavailable: 'Preparation is not available for this audit.',
+      production: {
+        heading: 'Report production',
+        steps: {
+          confirmed: 'Data confirmed',
+          writing: 'Writing',
+          pdf: 'Generating PDFs',
+          ready: 'Ready',
+        },
+        writingTitle: 'Writing report…',
+        writingDescription: 'Generating the report narrative and recommendations.',
+        pdfTitle: 'Generating PDFs…',
+        pdfDescription: 'The report content is complete. Creating the final PDFs.',
+        readyTitle: 'Report ready',
+        readyDescription: 'The PDFs were generated.',
+        failedTitle: 'Report production failed',
+        failedWritingDescription: 'Writing did not finish. Run the writing again to retry.',
+        failedPdfDescription: 'PDF generation did not finish. Regenerate the PDFs to retry.',
+        writingBusyLabel: 'Writing report…',
+        pdfBusyLabel: 'Generating PDFs…',
+      },
       produceButton: 'Regenerate the PDFs',
       produceButtonRefreshFirst: 'Refresh findings then regenerate the PDFs',
       produceFailedHeading: 'The PDFs could not be produced',

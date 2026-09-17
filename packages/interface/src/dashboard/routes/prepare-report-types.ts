@@ -60,4 +60,18 @@ export interface PreparationViewResponse {
         finishedAt: string;
       }
     | { status: 'failed'; message: string; finishedAt: string };
+  /** Issue #376: the server's canonical report production state. Optional
+   *  so an older server's response still reads as idle. */
+  production?: ReportProductionStateResponse;
 }
+
+export type ReportProductionStateResponse =
+  | { status: 'idle' }
+  | { status: 'writing' | 'pdf-generation'; startedAt: string; updatedAt: string }
+  | { status: 'completed'; finishedAt: string }
+  | {
+      status: 'failed';
+      stage: 'writing' | 'pdf-generation';
+      message: string;
+      finishedAt: string;
+    };

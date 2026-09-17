@@ -49,6 +49,7 @@ import {
 } from './regenerate-reports.js';
 import { makeReportReady } from './make-report-ready.js';
 import { RegenerationConflictError } from './regeneration-conflict-error.js';
+import { reportProductionState } from './report-production-state.js';
 
 const fakeConnection = {} as never;
 
@@ -245,5 +246,44 @@ describe('makeReportReady', () => {
     await expect(makeReportReady(fakeConnection, 'audit-1', undefined)).resolves.toMatchObject({
       kind: 'ready',
     });
+  });
+
+  it('exposes the PDF stage while rendering, then completed (issue #376)', async () => {
+    vi.mocked(readAuditArtifacts).mockResolvedValue({
+      manifest: { findingsProvenance: freshProvenance } as never,
+      findings: [],
+    });
+    let finish: (value: never) => void = () => undefined;
+    vi.mocked(regenerateReportsForAudit).mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+
+    const run = makeReportReady(fakeConnection, 'audit-stages', undefined);
+    await vi.waitFor(() =>
+      expect(reportProductionState('audit-stages').status).toBe('pdf-generation'),
+    );
+    finish([] as never);
+    await run;
+    expect(reportProductionState('audit-stages').status).toBe('completed');
+  });
+
+  it('records a failed PDF stage with its message, and a refusal as idle (issue #376)', async () => {
+    vi.mocked(readAuditArtifacts).mockResolvedValue({
+      manifest: { findingsProvenance: freshProvenance } as never,
+      findings: [],
+    });
+    vi.mocked(regenerateReportsForAudit).mockRejectedValueOnce(new Error('renderer crashed'));
+    await expect(makeReportReady(fakeConnection, 'audit-failed', undefined)).rejects.toThrow();
+    expect(reportProductionState('audit-failed')).toMatchObject({
+      status: 'failed',
+      stage: 'pdf-generation',
+      message: 'renderer crashed',
+    });
+
+    vi.mocked(regenerateReportsForAudit).mockRejectedValueOnce(new NoAnalysisPairError());
+    await makeReportReady(fakeConnection, 'audit-failed', undefined);
+    expect(reportProductionState('audit-failed')).toEqual({ status: 'idle' });
   });
 });

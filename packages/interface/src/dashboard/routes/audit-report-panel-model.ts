@@ -11,6 +11,7 @@ import type { DashboardLanguage } from '../i18n/types';
 import { en } from '../i18n/en';
 import { fr } from '../i18n/fr';
 import type { AuditLifecycle } from './audit-detail-types';
+import type { ReportProductionStateResponse } from './prepare-report-types';
 
 export type AuditReportPanelRowKey = 'findings' | 'identity' | 'writing' | 'produce' | 'delivery';
 
@@ -136,4 +137,82 @@ export function describeProduceFailure(
     return { ...base, explanation: copy.produceFailedLayout };
   }
   return { ...base, explanation: copy.produceFailedGeneric };
+}
+
+export type ProductionStepKey = 'confirmed' | 'writing' | 'pdf' | 'ready';
+export type ProductionStepState = 'done' | 'current' | 'pending' | 'failed';
+
+export interface ReportProductionView {
+  /** Null when nothing is running and no run ended in this server session:
+   *  the panel then shows no production banner. */
+  banner: {
+    tone: 'active' | 'ready' | 'failed';
+    title: string;
+    description: string;
+    technicalDetail?: string;
+  } | null;
+  steps: { key: ProductionStepKey; label: string; state: ProductionStepState }[];
+  /** True while any stage runs: every production-starting action is off. */
+  busy: boolean;
+  /** Replaces both action labels while busy, naming the running stage. */
+  busyLabel?: string;
+}
+
+/** Issue #376: every production control and the status banner derive from
+ *  the server's one production state, never from a local loading flag, so a
+ *  refresh mid-run restores the same view. */
+export function reportProductionView(
+  state: ReportProductionStateResponse | undefined,
+  language: DashboardLanguage,
+): ReportProductionView {
+  const copy = (language === 'fr' ? fr : en).auditDetail.panel.production;
+  const current = state ?? { status: 'idle' as const };
+  const order: ProductionStepKey[] = ['confirmed', 'writing', 'pdf', 'ready'];
+  const stepsWith = (states: ProductionStepState[]): ReportProductionView['steps'] =>
+    order.map((key, index) => ({ key, label: copy.steps[key], state: states[index]! }));
+
+  switch (current.status) {
+    case 'writing':
+      return {
+        banner: { tone: 'active', title: copy.writingTitle, description: copy.writingDescription },
+        steps: stepsWith(['done', 'current', 'pending', 'pending']),
+        busy: true,
+        busyLabel: copy.writingBusyLabel,
+      };
+    case 'pdf-generation':
+      return {
+        banner: { tone: 'active', title: copy.pdfTitle, description: copy.pdfDescription },
+        steps: stepsWith(['done', 'done', 'current', 'pending']),
+        busy: true,
+        busyLabel: copy.pdfBusyLabel,
+      };
+    case 'completed':
+      return {
+        banner: { tone: 'ready', title: copy.readyTitle, description: copy.readyDescription },
+        steps: stepsWith(['done', 'done', 'done', 'done']),
+        busy: false,
+      };
+    case 'failed':
+      return {
+        banner: {
+          tone: 'failed',
+          title: copy.failedTitle,
+          description:
+            current.stage === 'writing' ? copy.failedWritingDescription : copy.failedPdfDescription,
+          technicalDetail: current.message,
+        },
+        steps: stepsWith(
+          current.stage === 'writing'
+            ? ['done', 'failed', 'pending', 'pending']
+            : ['done', 'done', 'failed', 'pending'],
+        ),
+        busy: false,
+      };
+    default:
+      return {
+        banner: null,
+        steps: stepsWith(['done', 'pending', 'pending', 'pending']),
+        busy: false,
+      };
+  }
 }

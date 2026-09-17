@@ -38,6 +38,11 @@ import { runAnalysisStage } from './analysis-stage.js';
 import { readAuditEvidence } from './audit-evidence.js';
 import { RegenerationConflictError } from './regeneration-conflict-error.js';
 import {
+  markReportProductionCompleted,
+  markReportProductionFailed,
+  markReportProductionStage,
+} from './report-production-state.js';
+import {
   regenerateReportsForAudit,
   AuditArtifactsUnavailableError,
   NoAnalysisPairError,
@@ -112,6 +117,7 @@ export async function regenerateWriting(
   // the writing candidate, and insert duplicate analysis versions
   // (issue #143).
   inFlight.add(auditId);
+  markReportProductionStage(auditId, 'writing');
 
   // Pre-flight: load the evidence and note whether an approved pair already
   // exists (the "replaced" signal). Nothing is generated yet, so a failure
@@ -128,6 +134,7 @@ export async function regenerateWriting(
     // Set.delete is idempotent, so a delete of an already absent marker
     // changes nothing.
     inFlight.delete(auditId);
+    markReportProductionFailed(auditId, error);
     throw error;
   }
 
@@ -216,9 +223,11 @@ export async function regenerateWriting(
     }
 
     let pdfs: RegeneratedReportsOutcome;
+    markReportProductionStage(auditId, 'pdf-generation');
     try {
       const reports = await regenerateReportsForAudit(connection, audit, artifactStore);
       pdfs = { kind: 'generated', reports };
+      markReportProductionCompleted(auditId);
     } catch (renderError) {
       // The writing pair is already generated and selected; a render
       // refusal at this point is reported back rather than thrown, so it is
@@ -230,6 +239,7 @@ export async function regenerateWriting(
         renderError instanceof ReportIdentityUnconfirmedError
       ) {
         pdfs = { kind: 'refused', reason: renderError.message };
+        markReportProductionFailed(auditId, renderError);
       } else {
         throw renderError;
       }
@@ -245,6 +255,7 @@ export async function regenerateWriting(
     if (error instanceof RegenerationConflictError) {
       throw error;
     }
+    markReportProductionFailed(auditId, error);
     const reason = error instanceof Error ? error.message : String(error);
     // One language may have succeeded before the failure; recording the
     // partial lets the selection fallback exclude the half-generated

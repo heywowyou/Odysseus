@@ -21,6 +21,8 @@ import {
   describeProduceFailure,
   findPanelRow,
   produceButtonState,
+  reportProductionView,
+  type ReportProductionView,
 } from './audit-report-panel-model';
 import { unconfirmedIdentityFields } from './audit-detail-model';
 import type { AuditDetailResponse } from './audit-detail-types';
@@ -101,12 +103,23 @@ export function AuditReportPanel(props: {
   // the preparation view while the server reports a run in flight, keeps
   // the launch disabled, and refreshes the page once the run has ended.
   const writingInFlight = isRewriting || preparation?.regenerationInFlight === true;
+  // Issue #376: the server's production state decides what is running, so
+  // a refresh mid-run restores the stage; the local flags only cover the
+  // moment between a click and the server's first answer.
+  const production = reportProductionView(preparation?.production, language);
+  const productionBusy = production.busy || writingInFlight || isRegenerating;
   const wasInFlight = useRef(false);
   useEffect(() => {
-    if (!writingInFlight) return;
+    if (!productionBusy) return;
     const timer = setInterval(refreshPreparation, 5_000);
     return () => clearInterval(timer);
-  }, [writingInFlight, refreshPreparation]);
+  }, [productionBusy, refreshPreparation]);
+  const wasProducing = useRef(false);
+  useEffect(() => {
+    if (preparation === undefined) return;
+    if (wasProducing.current && !production.busy) refresh();
+    wasProducing.current = production.busy;
+  }, [preparation, production.busy, refresh]);
   useEffect(() => {
     const running = preparation?.regenerationInFlight === true;
     if (wasInFlight.current && !running) {
@@ -127,7 +140,7 @@ export function AuditReportPanel(props: {
   }, [preparation, refresh, onBusy, strings]);
 
   const handleRewrite = async (): Promise<void> => {
-    if (writingInFlight) return;
+    if (productionBusy) return;
     setIsRewriting(true);
     onBusy(true);
     try {
@@ -145,11 +158,12 @@ export function AuditReportPanel(props: {
   };
 
   const handleProduce = async (): Promise<void> => {
-    if (isRegenerating || !produceState.enabled) return;
+    if (productionBusy || !produceState.enabled) return;
     setIsRegenerating(true);
     onBusy(true);
     setProduceFailure(null);
     toast(strings.auditDetail.regeneratingMessage);
+    setTimeout(refreshPreparation, 1_000);
     try {
       // Producing may first refresh stale findings and rewrite both analyses
       // before rendering, which takes minutes, not the default request bound.
@@ -158,10 +172,12 @@ export function AuditReportPanel(props: {
       });
       toast.success(strings.auditDetail.regeneratedMessage);
       refresh();
+      refreshPreparation();
     } catch (produceError) {
       const message = produceError instanceof Error ? produceError.message : '';
       setProduceFailure(message);
       toast.error(describeProduceFailure(message, language).heading);
+      refreshPreparation();
     } finally {
       setIsRegenerating(false);
       onBusy(false);
@@ -171,6 +187,11 @@ export function AuditReportPanel(props: {
   return (
     <Card title={copy.heading} description={copy.description}>
       <div className="flex flex-col gap-6">
+        <ProductionStatus
+          view={production}
+          heading={copy.production.heading}
+          technicalLabel={copy.produceFailedTechnicalLabel}
+        />
         <section id={AUDIT_PANEL_ANCHORS.identity}>
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-sm font-semibold text-ink">{copy.identityHeading}</h3>
@@ -200,16 +221,17 @@ export function AuditReportPanel(props: {
             <Button
               variant="secondary"
               size="sm"
-              isLoading={writingInFlight}
-              disabled={writingInFlight}
+              isLoading={productionBusy}
+              disabled={productionBusy}
               onClick={() => void handleRewrite()}
             >
-              {selected === undefined
-                ? strings.prepareReport.writeButton
-                : strings.prepareReport.regenerateButton}
+              {production.busyLabel ??
+                (selected === undefined
+                  ? strings.prepareReport.writeButton
+                  : strings.prepareReport.regenerateButton)}
             </Button>
           </div>
-          {writingInFlight ? (
+          {writingInFlight && !production.busy ? (
             <p className="text-[13px] text-ink-muted" role="status">
               {strings.prepareReport.writingInProgress}
             </p>
@@ -242,11 +264,11 @@ export function AuditReportPanel(props: {
           <div>
             <Button
               size="sm"
-              disabled={!produceState.enabled}
-              isLoading={isRegenerating}
+              disabled={!produceState.enabled || productionBusy}
+              isLoading={productionBusy}
               onClick={() => void handleProduce()}
             >
-              {produceState.label}
+              {production.busyLabel ?? produceState.label}
             </Button>
           </div>
           {!produceState.enabled ? (
@@ -307,5 +329,64 @@ function ProduceFailureNotice(props: {
         </details>
       ) : null}
     </div>
+  );
+}
+
+const STEP_MARK: Record<ReportProductionView['steps'][number]['state'], string> = {
+  done: '✓',
+  current: '•',
+  pending: '',
+  failed: '✕',
+};
+
+/** Issue #376: the persistent production status. Discrete stages only, no
+ *  percentage: the server knows which stage runs, not how far along it is. */
+function ProductionStatus(props: {
+  view: ReportProductionView;
+  heading: string;
+  technicalLabel: string;
+}): JSX.Element | null {
+  const { banner, steps } = props.view;
+  if (banner === null) return null;
+  return (
+    <section
+      aria-label={props.heading}
+      role={banner.tone === 'failed' ? 'alert' : 'status'}
+      className="flex flex-col gap-3 rounded-md border border-line p-3 text-[13px]"
+    >
+      <ol className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        {steps.map((step, index) => (
+          <li key={step.key} className="flex items-center gap-2">
+            {index > 0 ? (
+              <span aria-hidden="true" className="text-ink-muted">
+                →
+              </span>
+            ) : null}
+            <span
+              aria-current={step.state === 'current' ? 'step' : undefined}
+              className={
+                step.state === 'current' || step.state === 'failed'
+                  ? 'font-semibold text-ink'
+                  : step.state === 'done'
+                    ? 'text-ink'
+                    : 'text-ink-muted'
+              }
+            >
+              {STEP_MARK[step.state] === '' ? step.label : `${step.label} ${STEP_MARK[step.state]}`}
+            </span>
+          </li>
+        ))}
+      </ol>
+      <div>
+        <p className="font-semibold text-ink">{banner.title}</p>
+        <p>{banner.description}</p>
+      </div>
+      {banner.technicalDetail !== undefined ? (
+        <details className="text-xs text-ink-muted">
+          <summary>{props.technicalLabel}</summary>
+          <p className="mt-1 break-words font-mono">{banner.technicalDetail}</p>
+        </details>
+      ) : null}
+    </section>
   );
 }
