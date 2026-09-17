@@ -129,6 +129,33 @@ export const READINESS_REPORT_PROJECTION = {
   findingsProvenance: 1,
 } as const;
 
+/** Issue #389: the audits, among `auditIds`, whose client reports are not
+ *  ready (missing, or built from findings the audit no longer carries). The
+ *  Audits list reads it so a completed scan whose later report production
+ *  failed reads as a report issue, the same fact To do shows. An audit
+ *  without findings provenance predates the rule and is never flagged. */
+export async function findAuditsWithUnreadyReports(
+  connection: Connection,
+  auditIds: readonly string[],
+): Promise<Set<string>> {
+  if (auditIds.length === 0) return new Set();
+  const [audits, reports] = await Promise.all([
+    createAuditModel(connection)
+      .find({ auditId: { $in: auditIds }, 'findingsProvenance.findingsDigest': { $exists: true } })
+      .select({ _id: 0, auditId: 1, startedAt: 1, findingsProvenance: 1 })
+      .lean<ReadinessAudit[]>(),
+    createReportModel(connection)
+      .find({ auditId: { $in: auditIds } })
+      .select(READINESS_REPORT_PROJECTION)
+      .lean<ReadinessReport[]>(),
+  ]);
+  return new Set(
+    audits
+      .filter((audit) => resolveOutreachReportReadiness(audit, reports, []).state !== 'ready')
+      .map((audit) => audit.auditId),
+  );
+}
+
 /** Loads what one audit's readiness needs: its current provenance, its report
  *  rows and the prospect's blocking job rows. */
 export async function loadOutreachReportReadiness(

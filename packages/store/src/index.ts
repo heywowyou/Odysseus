@@ -356,6 +356,7 @@ export {
   selectNewestQualifyingAudit,
 } from './prospect-work.js';
 export {
+  findAuditsWithUnreadyReports,
   findingsProvenanceMatches,
   loadOutreachReportReadiness,
   resolveOutreachReportReadiness,

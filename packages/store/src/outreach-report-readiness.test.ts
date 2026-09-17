@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import {
+  findAuditsWithUnreadyReports,
   loadOutreachReportReadiness,
   resolveOutreachReportReadiness,
   type ReadinessReport,
@@ -126,6 +127,38 @@ afterAll(async () => {
   if (!connection) return;
   await connection.dropDatabase();
   await connection.close();
+});
+
+describe.skipIf(!available)('findAuditsWithUnreadyReports (issue #389)', () => {
+  beforeEach(async () => {
+    for (const name of ['audits', 'reports', 'jobs']) {
+      await connection!.collection(name).deleteMany({});
+    }
+    await connection!
+      .collection('audits')
+      .insertMany([
+        audit,
+        { ...audit, auditId: 'audit-ready' },
+        { auditId: 'audit-legacy', startedAt: audit.startedAt },
+      ]);
+    await connection!
+      .collection('reports')
+      .insertMany([
+        report('fr', { auditId: 'audit-ready' }),
+        report('en', { auditId: 'audit-ready' }),
+        report('fr', { findingsProvenance: staleProvenance }),
+      ]);
+  });
+
+  it('flags audits whose reports are missing or stale, never legacy audits', async () => {
+    const unready = await findAuditsWithUnreadyReports(connection!, [
+      audit.auditId,
+      'audit-ready',
+      'audit-legacy',
+    ]);
+    expect([...unready]).toEqual([audit.auditId]);
+    await expect(findAuditsWithUnreadyReports(connection!, [])).resolves.toEqual(new Set());
+  });
 });
 
 describe.skipIf(!available)('loadOutreachReportReadiness', () => {

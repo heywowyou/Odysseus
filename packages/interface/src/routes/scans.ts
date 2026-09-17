@@ -12,6 +12,7 @@ import {
   getAudit,
   getProspectHub,
   getProspectNames,
+  findAuditsWithUnreadyReports,
   getJob,
   listJobs,
   canonicalJobTypeForScanIntent,
@@ -30,6 +31,7 @@ import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-
 import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
 import type { JobQueue } from '../queue/job-queue.js';
 import { isReportProductionInFlight } from '../pipeline/report-production-lock.js';
+import { reportProductionState } from '../pipeline/report-production-state.js';
 import { getSeverityRollupsForPoll } from './severity-rollup-cache.js';
 import { logJobCreated } from '../request-context.js';
 
@@ -442,6 +444,15 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       jobs.map((job) => job.prospectId).filter((id): id is string => id !== undefined),
     );
 
+    // Issue #389: a completed Full scan whose reports were later lost to a
+    // failed regeneration, or never became current, is a report issue. Only
+    // Full scans produce client reports; a run in flight is not judged.
+    const reportedAuditIds = jobs
+      .filter((job) => job.type === 'full-audit' && job.status === 'complete')
+      .map((job) => job.auditId)
+      .filter((id): id is string => id !== undefined && !isReportProductionInFlight(id));
+    const unreadyReports = await findAuditsWithUnreadyReports(connection, reportedAuditIds);
+
     const summaries = jobs.map((job) => ({
       prospectId: job.prospectId,
       prospectName: job.prospectId === undefined ? undefined : prospectNames.get(job.prospectId),
@@ -459,6 +470,12 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       needsReview: job.needsReview,
       failedPhase: job.failedPhase,
       awaitsInput: job.awaitsInput,
+      reportNotReady:
+        job.auditId !== undefined &&
+        reportedAuditIds.includes(job.auditId) &&
+        (unreadyReports.has(job.auditId) || reportProductionState(job.auditId).status === 'failed')
+          ? true
+          : undefined,
     }));
 
     sendJson(res, 200, summaries);

@@ -136,6 +136,9 @@ export const scanSummarySchema = z.object({
   failedPhase: z.string().optional(),
   /** Issue #382: typed operator-input fields exist on the job. */
   awaitsInput: z.boolean().optional(),
+  /** Issue #389: the scan completed but its audit's client reports are not
+   *  ready now, for example after a failed regeneration. */
+  reportNotReady: z.boolean().optional(),
   prospectId: z.string().optional(),
   /** Present on rows linked to a prospect: the scan queue's labels and the
    *  Audits table's hotel link. */

@@ -37,10 +37,16 @@ export function reportFailureStage(job: JobOutcomeFields): ReportFailureStage | 
 }
 
 export function displayJobStatus(
-  job: JobOutcomeFields & { awaitsInput?: boolean | undefined },
+  job: JobOutcomeFields & {
+    awaitsInput?: boolean | undefined;
+    reportNotReady?: boolean | undefined;
+  },
 ): DisplayJobStatus {
   // Issue #382: a legacy failed row written with typed input fields.
   if (job.status === 'failed' && job.awaitsInput === true) return 'needs-input';
   if (reportFailureStage(job) !== null) return 'report-issue';
+  // Issue #389: a failure after the job finished (a regeneration) lives on
+  // the audit, not the job; the server reports it on the summary.
+  if (job.status === 'complete' && job.reportNotReady === true) return 'report-issue';
   return job.status;
 }

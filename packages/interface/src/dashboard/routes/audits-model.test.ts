@@ -120,6 +120,16 @@ describe('filterSummaries', () => {
 });
 
 describe('listStatus', () => {
+  it('shows a completed scan whose reports are no longer ready as a report issue (issue #389)', () => {
+    const summaries = [
+      makeSummary({ jobId: 'a', status: 'complete', auditId: 'audit-1', reportNotReady: true }),
+      makeSummary({ jobId: 'b', status: 'complete', auditId: 'audit-2' }),
+    ];
+    expect(summaries.map(listStatus)).toEqual(['report-issue', 'complete']);
+    expect(computeKpis(summaries)).toMatchObject({ complete: 1, reportIssue: 1 });
+    expect(rowTarget(summaries[0]!)).toBe('/audits/audit-1');
+  });
+
   it('shows a job stopped on the identity gate as needing input', () => {
     expect(
       listStatus(makeSummary({ status: 'needs-input', auditId: 'audit-1', awaitsInput: true })),
