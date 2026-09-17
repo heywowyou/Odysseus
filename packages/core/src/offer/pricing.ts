@@ -22,7 +22,7 @@
 
 /** EUR, excluding VAT. Flat and published; see `docs/rules/offer-positioning.md`
  *  section 1, and trade-off 13 for why it is not a range or a risk band. */
-export const ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT = 1600;
+export const ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT = 990;
 
 const NARROW_NO_BREAK_SPACE = ' ';
 const NO_BREAK_SPACE = ' ';

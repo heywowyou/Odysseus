@@ -124,7 +124,7 @@ function HomeFr() {
                 Comprendre le diagnostic
               </a>
             </div>
-            <p className="small muted mt-4 md:hidden">Tarif fixe&#160;: 1&#160;600&#160;€ HT.</p>
+            <p className="small muted mt-4 md:hidden">Tarif fixe&#160;: 990&#160;€ HT.</p>
           </div>
 
           <Dossier lang="fr" />
@@ -309,7 +309,7 @@ function HomeFr() {
           <h2 id="tarif" className="heading">
             Un tarif fixe
           </h2>
-          <p className="price numeric mt-5">1&#160;600&#160;€ HT</p>
+          <p className="price numeric mt-5">990&#160;€ HT</p>
           <p className="soft mt-4">
             Le tarif ne dépend ni de la taille du site ni du nombre de constats. Il vous est
             confirmé par écrit avant tout engagement.
@@ -370,7 +370,7 @@ function HomeEn() {
                 Understand the diagnostic
               </a>
             </div>
-            <p className="small muted mt-4 md:hidden">Fixed price: EUR 1,600 excl. VAT.</p>
+            <p className="small muted mt-4 md:hidden">Fixed price: EUR 990 excl. VAT.</p>
           </div>
 
           <Dossier lang="en" />
@@ -548,7 +548,7 @@ function HomeEn() {
           <h2 id="price-en" className="heading">
             One fixed price
           </h2>
-          <p className="price numeric mt-5">EUR 1,600 excl. VAT</p>
+          <p className="price numeric mt-5">EUR 990 excl. VAT</p>
           <p className="soft mt-4">
             The price does not depend on the size of the site or the number of findings. It is
             confirmed in writing before you commit to anything.

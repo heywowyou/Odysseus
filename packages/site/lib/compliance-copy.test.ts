@@ -155,8 +155,8 @@ describe('offer page', () => {
   });
 
   it('publishes the one price, matching what the preview quotes', () => {
-    expect(page('offre').replaceAll('&#160;', '\u00a0')).toContain('1\u00a0600\u00a0\u20ac HT');
-    expect(page('offre')).toContain('EUR 1,600 excl. VAT');
+    expect(page('offre').replaceAll('&#160;', '\u00a0')).toContain('990\u00a0\u20ac HT');
+    expect(page('offre')).toContain('EUR 990 excl. VAT');
   });
 
   it('says the price does not vary, because a prospect will ask', () => {

@@ -231,7 +231,7 @@ What the preview shows, and nothing more:
   an operator-approved bilingual copy catalog
 - the deterministic facts block when the sources permit it (same
   `buildOutreachFactsBlock` path as touch 3)
-- the code-owned EUR 1,600 HT price, with the ask being to reply and request
+- the code-owned EUR 990 HT price, with the ask being to reply and request
   the audit, not a checkout link
 - the article 14 disclosures: identity, data origins, purpose, opt-out, and
   the 30-day link expiry

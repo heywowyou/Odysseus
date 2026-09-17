@@ -141,9 +141,11 @@ export const ODYSSEUS_REGISTRATION_NUMBER =
  *  verification with no price, no lead time, and no way to order -
  *  the one page in the report with commercial upside converted nothing.
  *  Reasoned originally as roughly 28% of the EUR 1,600 HT full-audit
- *  price, a verification pass being narrower in scope than a full
- *  re-scan. Confirmed by Jules 2026-08-19 as the canonical re-audit
- *  price and lead time; documented alongside the full-audit price in
+ *  price of the time, a verification pass being narrower in scope than
+ *  a full re-scan. Confirmed by Jules 2026-08-19 as the canonical
+ *  re-audit price and lead time, and held at 450 when the full audit
+ *  moved to EUR 990 HT: it is an approved figure in its own right, not
+ *  a percentage that recomputes; documented alongside the full-audit price in
  *  docs/rules/offer-positioning.md section 1. No longer a placeholder. */
 export const ODYSSEUS_REAUDIT_PRICE_EUR_HT = 450;
 export const ODYSSEUS_REAUDIT_LEAD_TIME_DAYS = 5;

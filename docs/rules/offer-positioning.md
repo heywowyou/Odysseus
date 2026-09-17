@@ -4,6 +4,16 @@ What is sold, at what price, and what it explicitly is not. Written
 2026-08-15. Supersedes the pricing subsections of brief section 3.2
 where they conflict.
 
+**Revised 2026-09-17: flat price lowered from EUR 1,600 HT to EUR 990
+HT** (issue #405, trade-off 96). The figure is the only thing that
+changed: still one offer, one full audit, one report, no tier, package,
+discount, range or add-on. Section 1's table below is current. Every
+EUR 1,600 HT mention elsewhere in the repository describes the
+2026-08-16 to 2026-09-17 period and is history. The EUR 450 HT re-audit
+price is unchanged and is not a percentage of the full audit price. The
+code-owned figure is `ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT` in
+`packages/core/src/offer/pricing.ts`.
+
 **Revised 2026-08-16: single-tier commercial model, flat price.** The
 paid EUR 290 screening tier is dropped entirely, not narrowed. The full
 audit is now the only paid deliverable, and its price is a flat,
@@ -44,11 +54,13 @@ to EUR 300 HT are likewise superseded here, the canonical source.
 | Deliverable | Price | Delivery |
 |---|---|---|
 | Outreach preview | Free | built from a candidate-linked full outreach scan, published by the operator from the audit page as an expiring token page; content rules in `docs/rules/outreach-rules.md` section 6bis |
-| Full audit | EUR 1,600 HT flat, published | automated PDF, no risk band, no freehand quote, from the prospect's Full scan (trade-off 91) |
+| Full audit | EUR 990 HT flat, published | automated PDF, no risk band, no freehand quote, from the prospect's Full scan (trade-off 91) |
 | Re-audit | EUR 450 HT flat | 5 business days, a verification pass narrower in scope than a full re-scan |
 
 **Re-audit price confirmed 2026-08-19** (La Corniche review follow-up,
-retained in Git history), roughly 28% of the full audit price. This is the
+retained in Git history), roughly 28% of the full audit price as it then
+stood. It is an approved flat figure, not a percentage, and stays at EUR
+450 HT now that the full audit is EUR 990 HT. This is the
 canonical source for
 `ODYSSEUS_REAUDIT_PRICE_EUR_HT` / `ODYSSEUS_REAUDIT_LEAD_TIME_DAYS` in
 `packages/report/src/template/html-utils.ts`.
@@ -140,7 +152,7 @@ than the one being delivered.
 The artifact the French market treats as having legal value is a taux de
 conformité computed over the 106 RGAA criteria on a representative
 sample of gabarits per the DINUM grid, feeding a declaration. Odysseus
-does not produce that, and a prospect placing a EUR 1,600 Odysseus
+does not produce that, and a prospect placing a EUR 990 Odysseus
 report next to a EUR 2,500 audit RGAA will conclude the cheaper one is
 missing something. They will be right, if the comparison is "which one
 is the audit." It is the wrong comparison: Odysseus is priced and built

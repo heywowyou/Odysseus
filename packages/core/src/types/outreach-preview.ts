@@ -302,9 +302,15 @@ export function containsProhibitedPreviewContent(text: string): string | null {
     ],
     ['deadline', /avant le \d|by \d{1,2} [A-Za-z]+ \d{4}|d'ici (?:le )?\d/iu],
     ['sanction', /amende|sanction|penalt(?:y|ies)|mise en demeure/iu],
-    // Superseded offer copy. Both spellings shipped in earlier positioning and
-    // must never reappear beside the current price.
-    ['stale-offer', /sur devis|EUR ?300|EUR ?290|1 ?200 ?(?:à|to) ?1 ?900/iu],
+    // Superseded offer copy. Every spelling here shipped in earlier
+    // positioning and must never reappear beside the current price. The
+    // EUR 1,600 HT figure held from 2026-08-16 to 2026-09-17 (trade-off 96);
+    // it is named explicitly so a stale document is rejected as stale offer
+    // copy rather than as an anonymous currency amount.
+    [
+      'stale-offer',
+      /sur devis|EUR ?300|EUR ?290|1 ?200 ?(?:à|to) ?1 ?900|1[\s,\u00a0\u202f]?600/iu,
+    ],
   ];
 
   for (const [name, pattern] of rules) {

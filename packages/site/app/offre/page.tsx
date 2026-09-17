@@ -5,7 +5,7 @@ import { Reveal } from '../../lib/reveal';
 import { Steps, type Step } from '../../lib/steps';
 
 const description =
-  'Les contrôles réalisés, le contenu du rapport, le délai et le tarif fixe de 1 600 € HT du diagnostic technique Odysseus.';
+  'Les contrôles réalisés, le contenu du rapport, le délai et le tarif fixe de 990 € HT du diagnostic technique Odysseus.';
 
 export const metadata: Metadata = {
   title: 'Le diagnostic technique Odysseus',
@@ -82,7 +82,7 @@ export default function OfferPage() {
               </Reveal>
 
               <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
-                <p className="price numeric">1&#160;600&#160;€ HT</p>
+                <p className="price numeric">990&#160;€ HT</p>
                 <a className="btn btn-primary" href="mailto:contact@odysseusaudit.fr">
                   Nous contacter
                 </a>
@@ -236,7 +236,7 @@ export default function OfferPage() {
               <h2 id="tarif-offre" className="heading">
                 Un tarif fixe
               </h2>
-              <p className="price numeric mt-5">1&#160;600&#160;€ HT</p>
+              <p className="price numeric mt-5">990&#160;€ HT</p>
               <p className="soft mt-4">
                 Le tarif ne dépend ni de la taille du site ni du nombre de constats. Il vous est
                 confirmé par écrit avant tout engagement.
@@ -282,7 +282,7 @@ export default function OfferPage() {
               </Reveal>
 
               <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
-                <p className="price numeric">EUR 1,600 excl. VAT</p>
+                <p className="price numeric">EUR 990 excl. VAT</p>
                 <a className="btn btn-primary" href="mailto:contact@odysseusaudit.fr">
                   Contact us
                 </a>
@@ -426,7 +426,7 @@ export default function OfferPage() {
               <h2 id="price-offre-en" className="heading">
                 One fixed price
               </h2>
-              <p className="price numeric mt-5">EUR 1,600 excl. VAT</p>
+              <p className="price numeric mt-5">EUR 990 excl. VAT</p>
               <p className="soft mt-4">
                 The price does not depend on the size of the site or the number of findings. It is
                 confirmed in writing before you commit to anything.

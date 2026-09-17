@@ -270,8 +270,9 @@ default cap instead; that decision is the operator's.
     (`docs/rules/offer-positioning.md`). The paid EUR 290 screening tier from
     milestone 8 is dropped entirely, not narrowed or renamed. The full
     audit is now the only paid deliverable, at a flat, published price
-    (EUR 1,600 HT as of trade-off 13 below; originally EUR 300 HT on
-    2026-08-16), replacing the risk-banded EUR 1,200 to 1,900 range. `ReportTier`
+    (EUR 990 HT as of trade-off 96 below; EUR 1,600 HT from trade-off 13;
+    originally EUR 300 HT on 2026-08-16), replacing the risk-banded
+    EUR 1,200 to 1,900 range. `ReportTier`
     is gone from `packages/report` (`renderHtml`/`generateReportPdf` take
     no tier argument, there is exactly one report body), from
     `packages/store` (`ReportDocumentFields` has no `tier` field; historical
@@ -291,7 +292,8 @@ default cap instead; that decision is the operator's.
     first-contact message, not assume an accompanying email carries them.
 
 13. **Full audit price raised from EUR 300 HT to EUR 1,600 HT**, decided
-    2026-08-16, same day as trade-off 12 (`docs/rules/offer-positioning.md`,
+    2026-08-16, same day as trade-off 12 (the figure was lowered again to
+    EUR 990 HT on 2026-09-17; see trade-off 96) (`docs/rules/offer-positioning.md`,
     canonical pricing source). Pricing decision only, not a scope change:
     the product and deliverables are unchanged; milestone 8.5 will add
     substance to justify the tier separately. Reasoning: EUR 300 HT read
@@ -2356,7 +2358,8 @@ the first outreach send, which is the only check that distinguishes a configured
 address from a delivering one.
 
 **The published price is guarded from the side that owns it.** `/offre` states
-`1 600 EUR HT`, matching what a preview quotes. The site imports nothing from
+the published price (EUR 990 HT since 2026-09-17), matching what a preview
+quotes. The site imports nothing from
 the workspace, so the figure is literal text; `packages/core/src/offer/
 pricing.test.ts` reads the page and compares it with `formatFullAuditPrice`, so
 a price change cannot go stale on the one page a prospect is sent to. The
@@ -3333,7 +3336,7 @@ reached roughly 80 percent of the site's declared content, mostly the
 French-language subtree, because nothing links to it from the English
 pages the crawler found.
 
-The operator's call: for a flat EUR 1,600 full audit, the report must do
+The operator's call: for a flat-price full audit, the report must do
 both jobs, not pick one. State discoverability honestly (a page a site's
 own navigation cannot reach is a real defect, and folding sitemap URLs
 into the crawl queue would destroy the signal that currently detects it)
@@ -4934,3 +4937,46 @@ qualifying audit, whose findings provenance matches the audit's: the test
 Rejected: gating on the latest job status (a failure the operator later fixed
 by regeneration, or reports built outside the queue, would read wrong), and a
 rescan as the remedy.
+
+### 96. Full audit price lowered from EUR 1,600 HT to EUR 990 HT (operator decision, 2026-09-17, issue #405)
+
+The single published offer is unchanged: one full audit, one detailed
+report, one prioritized corrections list. Only the figure moves, from
+EUR 1,600 HT to **EUR 990 HT**. No tier, package, discount, range or
+add-on is introduced by this change, and trade-off 12's single-tier model
+stands.
+
+The mechanism was already right and is not touched.
+`ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT` in `packages/core/src/offer/pricing.ts`
+stays the one place the number lives, and `formatFullAuditPrice` stays the
+one way it is spelled (`990 € HT`, `EUR 990 excl. VAT`). Every consumer in
+the workspace derives both from there, so the code change is the constant
+and the tests that assert its rendered bytes.
+
+`packages/site` is the exception by design: it imports nothing from the
+workspace (trade-off 30's note above), so its price is literal text on
+`/offre`, `/`, the metadata descriptions and `llms.txt`. The guard for that
+lives in `packages/core/src/offer/pricing.test.ts`, which reads the page and
+compares it with the formatter. It is what made this change safe to make in
+one pass, and it is why the site literals are updated here rather than left
+to drift.
+
+The EUR 450 HT re-audit price is **not** recomputed. It was originally
+reasoned as roughly 28% of the full audit price, but it was confirmed as a
+canonical flat figure on 2026-08-19 and is published as such; treating that
+percentage as a live formula would change a second published price nobody
+decided to change. The comments in `packages/report/src/template/
+html-utils.ts` and `docs/rules/offer-positioning.md` section 1 now say so
+explicitly, so the next price move does not reopen the question.
+
+Historical references are kept as history, not rewritten: trade-off 13, the
+superseded-pricing notes in `docs/product/odysseus-project-brief.md`, and the
+archived plans still name EUR 1,600 HT as the price of their time. What was
+corrected is every sentence that read as a statement of the *current* price.
+`docs/product/outreach-strategy-recommendations.md`'s revenue arithmetic is
+explicitly dated to the price it was computed at and is left standing with
+that qualifier rather than recomputed, since the ratios it argues from do not
+depend on the figure.
+
+The Stripe payment link amount is updated by hand outside the repository, the
+same as in trade-off 13.

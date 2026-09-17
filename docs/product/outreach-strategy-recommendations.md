@@ -60,6 +60,12 @@ These are planning assumptions, not measured Odysseus conversion rates.
 
 ### Revenue equivalent at the 2026-09-13 full-audit price of EUR 1,600 HT
 
+**The full-audit price is EUR 990 HT since 2026-09-17 (issue #405,
+trade-off 96).** The figures in this section and in the per-100-touches
+table below are left at the price they were computed against, because the
+argument they support is about conversion ratios and sending volume, not
+about the price level. Multiply by 0.62 for the current price.
+
 | New prospects/day | Conservative | Standard | Optimistic |
 | ---: | ---: | ---: | ---: |
 | 3/day | ~EUR 1,600 HT | ~EUR 3,200 HT | ~EUR 6,400 HT |

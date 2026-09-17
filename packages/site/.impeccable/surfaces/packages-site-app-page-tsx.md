@@ -20,7 +20,7 @@ Constraints:
 - Never break the /apercu/[token] route contract: hash-token serving and the RGPD article 14 disclosures stay intact (trade-offs 42 and 43).
 - No new dependency; the site stays isolated from the workspace packages (no imports). Its typeface is self-hosted independently: Avenir Next as of 2026-09-11 (operator-licensed for the site; see PRODUCT.md, Evidence on Hand), not shared with the dashboard/report's Inter.
 - Accessibility floor: WCAG 2.2 AA (operator decision, 2026-09-11), verified with axe-core against the live DOM.
-- The euro-figure guard in `packages/core/src/offer/pricing.test.ts` reads offre's literal text and fails on any third figure: the full-audit price (1 600 EUR HT) and the re-audit price (450 EUR HT) are the only two allowed.
+- The euro-figure guard in `packages/core/src/offer/pricing.test.ts` reads offre's literal text and fails on any third figure: the full-audit price (990 EUR HT since 2026-09-17) and the re-audit price (450 EUR HT) are the only two allowed.
 
 Resolved (refreshed 2026-09-11, impeccable fix plan, steps 1 to 2):
 - Home leads with the correction handoff, not a construction placeholder (settled by plan 038, 2026-09-11).

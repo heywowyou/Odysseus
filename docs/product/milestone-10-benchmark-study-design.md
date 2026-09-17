@@ -97,7 +97,7 @@ The smallest honest scope is two slices, in this order.
 
 Deliberately descoped: per-site drill-downs in the study, multi-vertical
 comparison, any interactive element (charts, filters, calculators), any change
-to the offer or the EUR 1,600 HT published price (`PRODUCT.md:87`), and any
+to the offer or the published price (`PRODUCT.md:87`), and any
 imagery (`PRODUCT.md:83`).
 
 ## Cohort definition
@@ -268,7 +268,7 @@ to 7 in section 1 cannot wait past this week.
 - Interactions with milestone 12 (free scope check): if it is ever revisited,
   its percentile and disclosure mechanics are read together with this
   document.
-- Any pricing or offer claim: the EUR 1,600 HT published price is untouched
+- Any pricing or offer claim: the published price is untouched
   (`PRODUCT.md:87`).
 - If 22 September passes without operator sign-off, section 2's descope ladder
   is the record of what was cut; the scope is not silently reshaped afterwards.

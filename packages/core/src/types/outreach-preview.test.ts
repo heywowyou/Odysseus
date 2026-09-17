@@ -73,7 +73,7 @@ describe('the outreach preview input contract', () => {
       ['a selector', { selector: 'main > div:nth-child(3)' }],
       ['an exact affected URL', { affectedUrl: 'https://hotel-exemple.fr/reserver' }],
       ['a statistic', { conversionUplift: 0.23 }],
-      ['an offer price', { priceEur: 1600 }],
+      ['an offer price', { priceEur: 990 }],
       ['a rule id', { ruleId: 'color-contrast' }],
     ])('rejects %s, because the shape has nowhere to put it', (_label, extra) => {
       expect(reject({ ...input(), ...extra })).toContain('unrecognized');
@@ -203,6 +203,15 @@ describe('containsProhibitedPreviewContent', () => {
   ])('fires the %s rule', (rule, text) => {
     expect(containsProhibitedPreviewContent(text)).toBe(rule);
   });
+
+  // Issue #405: the price moved to EUR 990 HT, so a document still quoting
+  // the previous figure is stale offer copy, not merely an unapproved amount.
+  it.each(['1 600 \u20ac HT', '1\u00a0600\u00a0\u20ac HT', 'EUR 1,600 excl. VAT'])(
+    'rejects the superseded price spelled %j',
+    (price) => {
+      expect(containsProhibitedPreviewContent(`Audit: ${price}.`)).toBe('stale-offer');
+    },
+  );
 
   it('permits the offer price in both languages', () => {
     // Built from the formatter, not typed here: the French price carries a

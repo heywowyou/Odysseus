@@ -6,17 +6,17 @@ import { ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT, formatFullAuditPrice } from './pricin
 
 describe('the full-audit price', () => {
   it('is the one published figure', () => {
-    expect(ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT).toBe(1600);
+    expect(ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT).toBe(990);
   });
 
   // Exact bytes, because a downstream validator has to recognise this string
   // and because these are the bytes a prospect reads.
   it('renders the French form', () => {
-    expect(formatFullAuditPrice('fr')).toBe('1 600 € HT');
+    expect(formatFullAuditPrice('fr')).toBe('990 € HT');
   });
 
   it('renders the English form', () => {
-    expect(formatFullAuditPrice('en')).toBe('EUR 1,600 excl. VAT');
+    expect(formatFullAuditPrice('en')).toBe('EUR 990 excl. VAT');
   });
 
   it('never emits the narrow no-break space ICU would default to', () => {
@@ -61,6 +61,6 @@ describe('the price published on the public offer page', () => {
   it('quotes only the two published figures, never a third that could contradict them', () => {
     const figures = rendered.match(/[\d\u00a0\u202f,. ]*\d(?:\s?(?:€|EUR))/gu) ?? [];
     const distinct = new Set(figures.map((figure) => figure.trim()));
-    expect([...distinct].sort()).toEqual(['1\u00a0600\u00a0€', '450\u00a0€'].sort());
+    expect([...distinct].sort()).toEqual(['990\u00a0€', '450\u00a0€'].sort());
   });
 });

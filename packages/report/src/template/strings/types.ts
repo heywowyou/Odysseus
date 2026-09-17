@@ -1127,7 +1127,7 @@ export interface ReportStrings {
     scanQualifierTemplate: string;
     /** item 3.13: no issuer identity (legal entity, signatory,
      *  registration number) anywhere in the document - a professionalism
-     *  and liability-exposure gap for a EUR 1,600 HT French deliverable.
+     *  and liability-exposure gap for a paid French deliverable.
      *  Template: {signatory}, {registrationNumber}. A3 (2026-08-24): the
      *  placeholder is filled; the label says SIRET now that the full
      *  fourteen-digit number is known - see ODYSSEUS_REGISTRATION_NUMBER

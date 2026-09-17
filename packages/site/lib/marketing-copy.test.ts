@@ -61,8 +61,8 @@ describe('both commercial pages', () => {
   });
 
   it.each(commercialSources)('%s publishes the fixed price in both spellings', (_name, source) => {
-    expect(priced(source)).toContain('1\u00a0600\u00a0\u20ac HT');
-    expect(priced(source)).toContain('EUR 1,600 excl. VAT');
+    expect(priced(source)).toContain('990\u00a0\u20ac HT');
+    expect(priced(source)).toContain('EUR 990 excl. VAT');
   });
 
   it.each(commercialSources)(

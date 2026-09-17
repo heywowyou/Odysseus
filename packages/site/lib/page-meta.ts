@@ -15,24 +15,24 @@ export const PAGE_META: Record<
       // and "tarif fixe" wording (see lib/marketing-copy.test.ts). Must
       // match app/layout.tsx's FR description exactly.
       description:
-        'Diagnostic technique de site : accessibilité, référencement, rendu JavaScript, performance, signaux techniques liés aux assistants IA, tarif fixe 1 600 € HT.',
+        'Diagnostic technique de site : accessibilité, référencement, rendu JavaScript, performance, signaux techniques liés aux assistants IA, tarif fixe 990 € HT.',
     },
     en: {
       title: 'Odysseus, technical website diagnostic',
       description:
-        'Technical website diagnostic: accessibility, search, JavaScript rendering, performance and AI-assistant signals. Prioritised report, EUR 1,600 excl. VAT.',
+        'Technical website diagnostic: accessibility, search, JavaScript rendering, performance and AI-assistant signals. Prioritised report, EUR 990 excl. VAT.',
     },
   },
   '/offre': {
     fr: {
       title: 'Le diagnostic technique Odysseus | Odysseus',
       description:
-        'Les contrôles réalisés, le contenu du rapport, le délai et le tarif fixe de 1 600 € HT du diagnostic technique Odysseus.',
+        'Les contrôles réalisés, le contenu du rapport, le délai et le tarif fixe de 990 € HT du diagnostic technique Odysseus.',
     },
     en: {
       title: 'The Odysseus technical diagnostic | Odysseus',
       description:
-        'The checks performed, report contents, delivery process and fixed EUR 1,600 excl. VAT price of the Odysseus technical diagnostic.',
+        'The checks performed, report contents, delivery process and fixed EUR 990 excl. VAT price of the Odysseus technical diagnostic.',
     },
   },
   '/bot': {
