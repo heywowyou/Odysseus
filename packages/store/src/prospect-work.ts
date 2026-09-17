@@ -241,6 +241,24 @@ function recommendation(
 /** Purely derives open work from already-loaded rows. No collection access is
  * allowed here: a caller cannot quietly recalculate only one side of the hub
  * contract by adding a bespoke per-prospect query. */
+/** Whether a needs-input job still stands between the qualifying audit and
+ *  the first email: it stopped on that audit, or it is a newer run the
+ *  operator has not resolved. A needs-input job older than the qualifying
+ *  audit belongs to a superseded run and blocks nothing, although it still
+ *  shows as its own audit-input row. Once the operator confirms the fields
+ *  and the reports are regenerated, reconcileFailedAuditJobs advances the
+ *  job to complete and the first email becomes available again. */
+function blocksInitialOutreach(
+  needsInputJobs: readonly ProspectWorkJob[],
+  qualifyingAudit: ProspectWorkAudit,
+): boolean {
+  return needsInputJobs.some(
+    (job) =>
+      job.auditId === qualifyingAudit.auditId ||
+      asTime(job.createdAt) >= asTime(qualifyingAudit.startedAt),
+  );
+}
+
 export function deriveProspectWork(
   prospect: Prospect,
   sources: ProspectWorkSources,
@@ -310,8 +328,14 @@ export function deriveProspectWork(
       });
     }
   }
+  // Issue #378: an unresolved audit blocker is a prerequisite of initial
+  // outreach, not a parallel task. Only first-email work waits; replies and
+  // follow-ups on an existing thread are unaffected.
+  const auditBlocksInitialOutreach =
+    qualification.audit !== undefined && blocksInitialOutreach(needsInputJobs, qualification.audit);
   if (
     qualification.audit !== undefined &&
+    !auditBlocksInitialOutreach &&
     thread === undefined &&
     prospectDrafts.length === 0 &&
     prospect.emails.length > 0 &&

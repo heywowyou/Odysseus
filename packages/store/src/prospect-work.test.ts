@@ -106,6 +106,94 @@ describe('prospect work model', () => {
     ]);
   });
 
+  describe('issue #378: audit blockers gate initial outreach', () => {
+    const blockedJob = {
+      jobId: 'job-blocked',
+      auditId: 'audit-old',
+      status: 'needs-input' as const,
+      createdAt: new Date('2026-09-01T09:59:00.000Z'),
+      options: { prospectId: prospect.prospectId },
+    };
+
+    it('shows only the audit task while the qualifying audit waits for input', () => {
+      const work = deriveProspectWork(
+        prospect,
+        { ...emptySources, audits: [audit()], needsInputJobs: [blockedJob] },
+        new Date('2026-09-15T00:00:00.000Z'),
+      );
+
+      expect(work.items.map((item) => item.kind)).toEqual(['audit-input']);
+      expect(work.recommendation).toMatchObject({ action: 'review-audit' });
+    });
+
+    it('also waits on a newer unresolved run of the same prospect', () => {
+      const newerRun = {
+        ...blockedJob,
+        jobId: 'job-newer',
+        auditId: 'audit-newer',
+        createdAt: new Date('2026-09-10T10:00:00.000Z'),
+      };
+      const work = deriveProspectWork(
+        prospect,
+        { ...emptySources, audits: [audit()], needsInputJobs: [newerRun] },
+        new Date('2026-09-15T00:00:00.000Z'),
+      );
+
+      expect(work.items.some((item) => item.kind === 'first-email')).toBe(false);
+    });
+
+    it('offers the first email again once the blocker is resolved', () => {
+      const work = deriveProspectWork(
+        prospect,
+        { ...emptySources, audits: [audit()], needsInputJobs: [] },
+        new Date('2026-09-15T00:00:00.000Z'),
+      );
+
+      expect(work.items.map((item) => item.kind)).toEqual(['first-email']);
+      expect(work.recommendation).toMatchObject({ action: 'create-first-email' });
+    });
+
+    it('is not blocked by a needs-input job from a run superseded by the qualifying audit', () => {
+      const superseded = {
+        ...blockedJob,
+        auditId: 'audit-ancient',
+        createdAt: new Date('2026-08-01T10:00:00.000Z'),
+      };
+      const work = deriveProspectWork(
+        prospect,
+        { ...emptySources, audits: [audit()], needsInputJobs: [superseded] },
+        new Date('2026-09-15T00:00:00.000Z'),
+      );
+
+      expect(work.items.map((item) => item.kind).sort()).toEqual(['audit-input', 'first-email']);
+    });
+
+    it('keeps reply work for an already-contacted prospect', () => {
+      const work = deriveProspectWork(
+        prospect,
+        {
+          ...emptySources,
+          audits: [audit()],
+          needsInputJobs: [blockedJob],
+          threads: [
+            {
+              threadId: 'thread-replied',
+              prospectId: prospect.prospectId,
+              state: 'replied',
+              currentTouch: 1,
+              touches: [],
+              spacing: { touch2AfterDays: 3, touch3AfterDays: 7, replyWindowDays: 14 },
+              updatedAt: new Date('2026-09-12T00:00:00.000Z'),
+            },
+          ] as never,
+        },
+        new Date('2026-09-15T00:00:00.000Z'),
+      );
+
+      expect(work.items.map((item) => item.kind).sort()).toEqual(['audit-input', 'reply']);
+    });
+  });
+
   it('recommends the first email, not a rescan, for a complete audit from older code', () => {
     const older = audit({ findingsProvenance: { normalizationFingerprint: 'older-release' } });
     expect(selectNewestQualifyingAudit([older])).toEqual({
@@ -366,5 +454,39 @@ describe('prospect work model', () => {
     expect(auditProjection).toMatchObject({ 'pages.status': 1, 'pages.httpStatus': 1 });
     expect(auditProjection).not.toHaveProperty('findings');
     expect(auditProjection).not.toHaveProperty('analysis');
+  });
+
+  it('opens audit-input work only for needs-input jobs, never a technical failure (issue #382)', async () => {
+    const createdAt = new Date('2026-09-02T10:00:00.000Z');
+    const jobCursor = chain([
+      {
+        jobId: 'job-render-lint',
+        type: 'full-audit',
+        status: 'failed',
+        auditId: 'audit-old',
+        createdAt,
+        options: { prospectId: prospect.prospectId },
+      },
+    ]);
+    vi.mocked(createAuditModel).mockReturnValue({
+      find: vi.fn().mockReturnValue(chain([audit()])),
+    } as never);
+    vi.mocked(createOutreachDraftModel).mockReturnValue({
+      find: vi.fn().mockReturnValue(chain([])),
+    } as never);
+    vi.mocked(createOutreachThreadModel).mockReturnValue({
+      find: vi.fn().mockReturnValue(chain([])),
+    } as never);
+    vi.mocked(createJobModel).mockReturnValue({
+      find: vi.fn().mockReturnValue(jobCursor),
+    } as never);
+    vi.mocked(findSuppressionMatches).mockResolvedValue({
+      domains: new Set(),
+      addresses: new Set(),
+    });
+
+    const [work] = await loadProspectWork({} as never, [prospect]);
+
+    expect(work?.items.some((item) => item.kind === 'audit-input')).toBe(false);
   });
 });
