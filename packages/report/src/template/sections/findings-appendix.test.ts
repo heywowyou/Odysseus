@@ -3,7 +3,16 @@ import type { AuditManifest, Finding } from '@odysseus/core';
 import { selectReferenceStats } from '@odysseus/core';
 import { renderFindingsAppendix } from './findings-appendix.js';
 import { getStrings } from '../strings/i18n.js';
+import { VERBATIM_EVIDENCE_ATTRIBUTE } from '../render-lint.js';
 import { loadSmallSiteFindings, loadSmallSiteManifest } from '../../test-fixtures.js';
+
+/** Issue #408: the URL text of an appendix cell is wrapped in a marked span
+ *  so render-lint's prose rules skip it, while the renderer-composed label
+ *  prefix outside the span stays scanned. Asserting through this keeps these
+ *  tests pinned to the real markup rather than to a looser substring. */
+function evidence(text: string): string {
+  return `<span ${VERBATIM_EVIDENCE_ATTRIBUTE}>${text}</span>`;
+}
 
 function buildManifest(): AuditManifest {
   return {
@@ -331,8 +340,8 @@ describe('item 3.1: repeated URL lists collapse instead of reprinting every page
     // Scoped to "Pages : ..." (the per-finding url-cell prefix), not the
     // separate "Pages explorées (N)" crawled-pages block above it, which
     // legitimately lists every page-N URL regardless of this collapse.
-    expect(html).toContain('Pages : Toutes les pages analysées (8)');
-    expect(html).not.toContain('Pages : https://example.com/page-0');
+    expect(html).toContain(`Pages : ${evidence('Toutes les pages analysées (8)')}`);
+    expect(html).not.toContain(`Pages : ${evidence('https://example.com/page-0')}`);
   });
 
   it('caps the list and names the remainder when a finding hits many, but not all, pages', () => {
@@ -412,7 +421,7 @@ describe('2026-08-22: findings sharing an identical page-URL set within one rule
     const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
 
     // f001 (the first in id order) prints the real list.
-    expect(html).toContain(`Pages : ${sharedUrls.join(', ')}`);
+    expect(html).toContain(`Pages : ${evidence(sharedUrls.join(', '))}`);
     // f002 and f003 reference f001 instead of repeating it.
     const referenceCount = html.split('Mêmes pages que f001').length - 1;
     expect(referenceCount).toBe(2);
@@ -477,7 +486,7 @@ describe('2026-08-22: findings sharing an identical page-URL set within one rule
 
     const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
     expect(html).not.toContain('Mêmes pages que f001');
-    expect(html.split(`Pages : ${onePage[0]}`).length - 1).toBe(2);
+    expect(html.split(`Pages : ${evidence(onePage[0]!)}`).length - 1).toBe(2);
   });
 });
 
@@ -539,7 +548,7 @@ describe('issue #85: a redirect-interstitial page is absent from the crawled-pag
 
     // Issue #318: the list prints paths, the origin being on the cover.
     expect(html).toContain('Pages analysées (1)');
-    expect(html).toContain('<li style="break-inside:avoid">/</li>');
+    expect(html).toContain(`<li style="break-inside:avoid" ${VERBATIM_EVIDENCE_ATTRIBUTE}>/</li>`);
     expect(html).not.toContain('/fr</li>');
     expect(html).not.toContain(redirect);
   });
@@ -1202,7 +1211,9 @@ describe('issue #318: long evidence lists stay readable', () => {
     const block = html.slice(html.indexOf('Pages analysées (6)'));
 
     expect(block).not.toContain('https://example.com/, ');
-    expect(block).toContain('<li style="break-inside:avoid">/fr/chambres</li>');
+    expect(block).toContain(
+      `<li style="break-inside:avoid" ${VERBATIM_EVIDENCE_ATTRIBUTE}>/fr/chambres</li>`,
+    );
     for (const heading of ['>/en/</p>', '>/fr/</p>']) expect(block).toContain(heading);
     // A lone top-level page joins the root group rather than heading its own.
     expect(block).not.toContain('>/contact/</p>');

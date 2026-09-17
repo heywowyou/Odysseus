@@ -189,3 +189,49 @@ describe('issue #377: verbatim scanner evidence', () => {
     expect(findRenderLintViolations(html).map((v) => v.label)).toEqual(['stringified object']);
   });
 });
+
+// Issue #408: the appendix cells quote the audited site's own URLs. They are
+// not prose this renderer composed, and they tripped a prose rule three times
+// in production - a query string read as a placeholder before a unit (#385),
+// a chunk filename read as underscore emphasis (#70), and an Umbraco media
+// path whose whole segment was wrapped in underscores. Each was fixed by
+// widening a regex after a report was already blocked at the last step, with
+// the scan and both analyses already paid for.
+describe('A6: appendix URL evidence is not scanned as prose', () => {
+  const hostile = [
+    '/media/840/_import_/721/_import_/838/photo.jpg',
+    'https://exemple.fr/?page_id=15968',
+    'https://exemple.fr/_next/static/chunks/0vw0c0r7hvkh_.js',
+    'https://exemple.fr/a--b/[object Object]/null',
+  ].join(', ');
+
+  it('passes a pages cell whose URLs would trip several rules', () => {
+    const html = `<div class="url-cell">Pages : <span ${VERBATIM_EVIDENCE_ATTRIBUTE}>${hostile}</span></div>`;
+    expect(findRenderLintViolations(html)).toEqual([]);
+  });
+
+  it('passes an affected-files cell the same way', () => {
+    const html = `<div class="url-cell">Fichiers affectés : <span ${VERBATIM_EVIDENCE_ATTRIBUTE}>${hostile}</span></div>`;
+    expect(findRenderLintViolations(html)).toEqual([]);
+  });
+
+  it('passes a crawled-pages list, whose items are marked one by one', () => {
+    const items = hostile
+      .split(', ')
+      .map((url) => `<li ${VERBATIM_EVIDENCE_ATTRIBUTE}>${url}</li>`)
+      .join('');
+    expect(findRenderLintViolations(`<ul class="url-cell">${items}</ul>`)).toEqual([]);
+  });
+
+  // The whole point of splitting the label out of the marked element: the
+  // prefix is renderer-composed and a leak there is still this renderer's bug.
+  it('still catches a leak in the label next to a marked cell', () => {
+    const html = `<div class="url-cell">Pages *importantes* : <span ${VERBATIM_EVIDENCE_ATTRIBUTE}>${hostile}</span></div>`;
+    expect(findRenderLintViolations(html)).not.toEqual([]);
+  });
+
+  it('never lets a marker hide template markup that follows it', () => {
+    const html = `<div class="url-cell">Pages : <span ${VERBATIM_EVIDENCE_ATTRIBUTE}>https://exemple.fr/a</span></div><p>un point _important_ ici</p>`;
+    expect(findRenderLintViolations(html)).not.toEqual([]);
+  });
+});

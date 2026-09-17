@@ -191,7 +191,14 @@ function renderPageUrlList(
   // grid - the old separate continuation <tr> could be stranded alone at
   // the top of a page, opening 15 of 26 pages of a real delivered PDF
   // mid-row with no finding id, rule or column header in sight.
-  return `<div class="url-cell" style="padding-top:6px;font-size:10.5px;opacity:0.6">${escapeHtml(a.pagesColumnLabel)}${labelSeparator(language)}${escapeHtml(urlsText)}</div>`;
+  // Issue #408: the URLs are the audited site's own, quoted verbatim, and
+  // they kept tripping prose rules written for prose this renderer composed -
+  // a query string read as a placeholder before a unit, a path segment
+  // wrapped in underscores read as emphasis. Each one was fixed by widening
+  // a regex against text that should never have been scanned as prose. The
+  // label prefix IS renderer-composed, so it stays outside the marked span
+  // and stays scanned.
+  return `<div class="url-cell" style="padding-top:6px;font-size:10.5px;opacity:0.6">${escapeHtml(a.pagesColumnLabel)}${labelSeparator(language)}<span ${VERBATIM_EVIDENCE_ATTRIBUTE}>${escapeHtml(urlsText)}</span></div>`;
 }
 
 /** item 3.1's own suggested cap. */
@@ -300,7 +307,9 @@ function renderResourceUrlList(
 
   // Issue #45: rendered inside the finding's own atomic <tr>, like the
   // pages line above (see renderSubTableRow).
-  return `<div class="url-cell" style="padding-top:6px;font-size:10.5px;opacity:0.6">${escapeHtml(label)}${labelSeparator(language)}${escapeHtml(text)}</div>`;
+  // Issue #408, same reasoning as the pages line above: file paths captured
+  // from the site are evidence, the label is prose.
+  return `<div class="url-cell" style="padding-top:6px;font-size:10.5px;opacity:0.6">${escapeHtml(label)}${labelSeparator(language)}<span ${VERBATIM_EVIDENCE_ATTRIBUTE}>${escapeHtml(text)}</span></div>`;
 }
 
 /** item 3.3: the anchor formatFindingIdLinks (html-utils.ts) links to from
@@ -847,7 +856,14 @@ function renderCrawledPageGroups(pageUrls: readonly string[]): string {
   return orderedKeys
     .map((key) => {
       const items = (groups.get(key) ?? [])
-        .map((display) => `<li style="break-inside:avoid">${escapeHtml(display)}</li>`)
+        // Issue #408: each <li> is marked rather than the <ul>, because the
+        // stripper's marked-element pattern matches only an element's own
+        // text and deliberately cannot span nested tags - that is what keeps
+        // a marker from ever hiding template markup.
+        .map(
+          (display) =>
+            `<li style="break-inside:avoid" ${VERBATIM_EVIDENCE_ATTRIBUTE}>${escapeHtml(display)}</li>`,
+        )
         .join('');
       const heading = showHeadings
         ? `<p class="mono" style="font-size:10px;font-weight:600;opacity:0.8;margin:var(--space-2) 0 2px">${escapeHtml(key)}</p>`
