@@ -252,11 +252,35 @@ export async function completeJob(
   );
 }
 
+/** Issue #386: the running phase is kept as `failedPhase` in the same write
+ *  that overwrites it, so the dashboard can tell a scan that never produced
+ *  an audit from one that failed while writing or rendering its reports.
+ *  An update pipeline reads the phase atomically; a second failJob on an
+ *  already failed row keeps the first recorded phase. */
 export async function failJob(connection: Connection, jobId: string, error: string): Promise<void> {
   const JobModel = createJobModel(connection);
   await JobModel.updateOne(
     { jobId, status: { $ne: 'cancelled' } },
-    { $set: { status: 'failed', phase: 'failed', finishedAt: new Date(), error } },
+    [
+      {
+        $set: {
+          failedPhase: {
+            $cond: [{ $eq: ['$phase', 'failed'] }, '$failedPhase', '$phase'],
+          },
+        },
+      },
+      {
+        $set: {
+          status: 'failed',
+          phase: 'failed',
+          finishedAt: new Date(),
+          // $literal: an error message starting with "$" must stay text,
+          // never be read as a field path.
+          error: { $literal: error },
+        },
+      },
+    ],
+    { updatePipeline: true },
   );
 }
 
@@ -357,6 +381,7 @@ export type JobSummaryFields = Pick<
   | 'auditId'
   | 'auditIds'
   | 'needsReview'
+  | 'failedPhase'
 > & {
   prospectId?: string;
   /** Issue #382: the job carries typed fields an operator must confirm.
@@ -387,6 +412,7 @@ export async function listJobs(connection: Connection, limit = 200): Promise<Job
       auditId: 1,
       auditIds: 1,
       needsReview: 1,
+      failedPhase: 1,
       needsInputFields: 1,
       'options.prospectId': 1,
       'options.scanType': 1,

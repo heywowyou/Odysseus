@@ -206,7 +206,7 @@ describe('audits header KPIs (issue #269)', () => {
   });
 });
 
-describe('audits list report-stage failure display (issues #90, #382)', () => {
+describe('audits list report-stage failure display (issues #90, #382, #386)', () => {
   beforeEach(() => {
     stubRoutes({});
   });
@@ -216,7 +216,7 @@ describe('audits list report-stage failure display (issues #90, #382)', () => {
     document.body.innerHTML = '';
   });
 
-  it('reads Échoué, not Action requise, for a technical failure after the audit was persisted', async () => {
+  it('reads Rapport à corriger, not Échoué or Action requise, when only the report failed', async () => {
     stubRoutes({
       '/api/scans?limit=200': [
         {
@@ -224,9 +224,19 @@ describe('audits list report-stage failure display (issues #90, #382)', () => {
           type: 'full-audit',
           status: 'failed',
           phase: 'failed',
+          failedPhase: 'report-fr',
           siteUrl: 'https://exemple.fr',
           createdAt: '2026-09-05T13:09:00.000Z',
           auditId: 'audit-1',
+        },
+        {
+          jobId: 'job-2',
+          type: 'full-audit',
+          status: 'failed',
+          phase: 'failed',
+          failedPhase: 'crawl',
+          siteUrl: 'https://autre.fr',
+          createdAt: '2026-09-05T12:09:00.000Z',
         },
       ],
     });
@@ -235,10 +245,17 @@ describe('audits list report-stage failure display (issues #90, #382)', () => {
     // Assert inside the table: the status filter select carries every
     // status label as an option, so the whole-document text cannot
     // discriminate.
-    const tableText = container.querySelector('tbody')?.textContent ?? '';
-    expect(tableText).toContain('Échoué');
-    expect(tableText).not.toContain('Action requise');
-    expect(container.querySelector('dl')?.textContent).toContain('Action requise0');
+    const rows = [...container.querySelectorAll('tbody tr')].map((row) => row.textContent ?? '');
+    const reportRow = rows.find((text) => text.includes('exemple.fr')) ?? '';
+    const crawlRow = rows.find((text) => text.includes('autre.fr')) ?? '';
+    expect(reportRow).toContain('Rapport à corriger');
+    expect(reportRow).not.toContain('Échoué');
+    expect(reportRow).not.toContain('Action requise');
+    expect(crawlRow).toContain('Échoué');
+    const kpis = container.querySelector('dl')?.textContent ?? '';
+    expect(kpis).toContain('Action requise0');
+    expect(kpis).toContain('Rapports à corriger1');
+    expect(kpis).toContain('Échecs1');
     root.unmount();
   });
 });

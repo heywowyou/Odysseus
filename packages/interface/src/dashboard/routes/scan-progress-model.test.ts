@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { en } from '../i18n/en';
 import type { ScanJobDetail, ScanUrlResult } from '../lib/api-types';
 import {
+  terminalCardKind,
   agedEtaMs,
   crawlProgress,
   contentScanProgress,
@@ -29,6 +30,7 @@ function job(
     auditId?: string;
     urlResults?: ScanUrlResult[];
     error?: string;
+    failedPhase?: string;
   } = {},
 ): ScanJobDetail {
   return {
@@ -40,6 +42,7 @@ function job(
     ...(fields.auditId !== undefined ? { auditId: fields.auditId } : {}),
     ...(fields.urlResults !== undefined ? { urlResults: fields.urlResults } : {}),
     ...(fields.error !== undefined ? { error: fields.error } : {}),
+    ...(fields.failedPhase !== undefined ? { failedPhase: fields.failedPhase } : {}),
   };
 }
 
@@ -67,6 +70,48 @@ describe('coverageSegments', () => {
     expect(byKind['checked']).toMatchObject({ value: 0, displayValue: 28 });
     expect(byKind['reached']).toMatchObject({ value: 4, displayValue: 32 });
     expect(byKind['omitted']).toMatchObject({ value: 0, displayValue: 0 });
+  });
+});
+
+describe('terminalCardKind', () => {
+  // Issue #386: Cap d'Antibes saved its audit, then the PDF gate refused the
+  // French render; the progress page must not call that a failed scan.
+  it('shows a completed scan with a report failure for a report-stage failure', () => {
+    for (const failedPhase of ['analyze-fr', 'analyze-en', 'report-fr', 'report-en']) {
+      expect(
+        terminalCardKind(
+          job({ status: 'failed', phase: 'failed', auditId: 'audit-1', failedPhase }),
+        ),
+      ).toBe('report-issue');
+    }
+    expect(terminalCardKind(job({ status: 'failed', phase: 'failed', auditId: 'audit-1' }))).toBe(
+      'report-issue',
+    );
+  });
+
+  it('keeps crawl, coverage-gate and audit-stage failures as a failed scan', () => {
+    expect(terminalCardKind(job({ status: 'failed', phase: 'failed', failedPhase: 'crawl' }))).toBe(
+      'failed',
+    );
+    expect(
+      terminalCardKind(
+        job({
+          status: 'failed',
+          phase: 'failed',
+          failedPhase: 'scan',
+          error: 'crawl delay and scan concurrency',
+        }),
+      ),
+    ).toBe('failed');
+    expect(terminalCardKind(job({ status: 'failed', phase: 'failed' }))).toBe('failed');
+  });
+
+  it('leaves cancelled, needs-input and complete jobs unchanged', () => {
+    expect(terminalCardKind(job({ status: 'cancelled', auditId: 'audit-1' }))).toBe('cancelled');
+    expect(terminalCardKind(job({ status: 'needs-input', auditId: 'audit-1' }))).toBe(
+      'needs-input',
+    );
+    expect(terminalCardKind(job({ status: 'complete', auditId: 'audit-1' }))).toBe('complete');
   });
 });
 

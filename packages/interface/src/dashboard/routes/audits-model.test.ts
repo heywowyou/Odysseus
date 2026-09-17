@@ -45,24 +45,39 @@ describe('computeKpis', () => {
         severityRollup: { critical: 3, serious: 0, moderate: 0, minor: 0 },
       }),
     ];
-    expect(computeKpis(summaries)).toEqual({ running: 2, needsInput: 0, complete: 2, failed: 1 });
+    expect(computeKpis(summaries)).toEqual({
+      running: 2,
+      needsInput: 0,
+      complete: 2,
+      reportIssue: 0,
+      failed: 1,
+    });
   });
 
   it('returns zeros for an empty list', () => {
-    expect(computeKpis([])).toEqual({ running: 0, needsInput: 0, complete: 0, failed: 0 });
+    expect(computeKpis([])).toEqual({
+      running: 0,
+      needsInput: 0,
+      complete: 0,
+      reportIssue: 0,
+      failed: 0,
+    });
   });
 
-  it('counts the displayed status, so the header matches the rows and filter (issues #380, #382)', () => {
+  it('counts the displayed status, so the header matches the rows and filter (issues #380, #382, #386)', () => {
     const summaries = [
       makeSummary({ jobId: 'a', status: 'needs-input', auditId: 'audit-a', awaitsInput: true }),
       makeSummary({ jobId: 'b', status: 'failed', auditId: 'audit-b', awaitsInput: true }),
       makeSummary({ jobId: 'c', status: 'failed', auditId: 'audit-c' }),
       makeSummary({ jobId: 'd', status: 'failed' }),
       makeSummary({ jobId: 'e', status: 'cancelled' }),
+      makeSummary({ jobId: 'f', status: 'failed', auditId: 'audit-f', failedPhase: 'report-fr' }),
+      makeSummary({ jobId: 'g', status: 'failed', failedPhase: 'crawl' }),
     ];
     const kpis = computeKpis(summaries);
-    expect(kpis).toEqual({ running: 0, needsInput: 2, complete: 0, failed: 2 });
+    expect(kpis).toEqual({ running: 0, needsInput: 2, complete: 0, reportIssue: 2, failed: 2 });
     expect(filterSummaries(summaries, 'needs-input')).toHaveLength(kpis.needsInput);
+    expect(filterSummaries(summaries, 'report-issue')).toHaveLength(kpis.reportIssue);
     expect(filterSummaries(summaries, 'failed')).toHaveLength(kpis.failed);
   });
 });
@@ -96,10 +111,11 @@ describe('filterSummaries', () => {
     expect(filterSummaries(summaries, 'needs-input').map((summary) => summary.jobId)).toEqual([
       'c',
     ]);
-    expect(filterSummaries(summaries, 'failed').map((summary) => summary.jobId)).toEqual([
+    // Issue #386: the failed row with a saved audit is a report issue.
+    expect(filterSummaries(summaries, 'report-issue').map((summary) => summary.jobId)).toEqual([
       'a',
-      'b',
     ]);
+    expect(filterSummaries(summaries, 'failed').map((summary) => summary.jobId)).toEqual(['b']);
   });
 });
 
@@ -110,11 +126,33 @@ describe('listStatus', () => {
     ).toBe('needs-input');
   });
 
-  it('keeps a technical failure with a persisted audit as failed, still linking to the audit (issue #382)', () => {
+  it('shows a report-stage failure as a report issue, linking to the audit (issue #386)', () => {
+    for (const failedPhase of ['analyze-fr', 'analyze-en', 'report-fr', 'report-en']) {
+      const summary = makeSummary({ status: 'failed', auditId: 'audit-1', failedPhase });
+      expect(listStatus(summary)).toBe('report-issue');
+      expect(rowTarget(summary)).toBe('/audits/audit-1');
+    }
+  });
+
+  it('shows a legacy failed full-audit row with a saved audit as a report issue', () => {
     // The render-lint refusal of issue #377 is a failed job with an auditId.
-    const summary = makeSummary({ status: 'failed', auditId: 'audit-1' });
-    expect(listStatus(summary)).toBe('failed');
-    expect(rowTarget(summary)).toBe('/audits/audit-1');
+    expect(listStatus(makeSummary({ status: 'failed', auditId: 'audit-1' }))).toBe('report-issue');
+  });
+
+  it('keeps crawl, coverage-gate and audit-stage failures as failed', () => {
+    for (const failedPhase of [
+      'queued',
+      'crawl',
+      'scan',
+      'content-scan',
+      'lighthouse',
+      'normalize',
+    ]) {
+      expect(listStatus(makeSummary({ status: 'failed', failedPhase }))).toBe('failed');
+    }
+    expect(
+      listStatus(makeSummary({ type: 'quick-check', status: 'failed', auditId: 'audit-1' })),
+    ).toBe('failed');
   });
 
   it('shows a legacy failed row carrying typed input fields as needing input', () => {

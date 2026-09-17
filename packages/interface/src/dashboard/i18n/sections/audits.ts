@@ -21,6 +21,8 @@ export interface AuditsStrings {
   /** Issue #380: same wording as the row status label. */
   kpiNeedsInput: string;
   kpiComplete: string;
+  /** Issue #386: same wording as the row status label. */
+  kpiReportIssue: string;
   kpiFailed: string;
   /** {time} is replaced by a formatted clock time (lib/format.ts). */
   updatedAt: string;
@@ -70,6 +72,7 @@ export const audits = {
     kpiRunning: 'En cours',
     kpiNeedsInput: 'Action requise',
     kpiComplete: 'Terminés',
+    kpiReportIssue: 'Rapports à corriger',
     kpiFailed: 'Échecs',
     updatedAt: 'Actualisé à {time}',
     emptyFilter: 'Aucun audit ne correspond à ces filtres.',
@@ -109,6 +112,7 @@ export const audits = {
     kpiRunning: 'Running',
     kpiNeedsInput: 'Needs input',
     kpiComplete: 'Complete',
+    kpiReportIssue: 'Report issues',
     kpiFailed: 'Failed',
     updatedAt: 'Updated at {time}',
     emptyFilter: 'No audits match these filters.',

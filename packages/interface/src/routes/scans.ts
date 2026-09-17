@@ -446,6 +446,7 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       auditIds: job.auditIds,
       severityRollup: job.auditId ? rollups.get(job.auditId) : undefined,
       needsReview: job.needsReview,
+      failedPhase: job.failedPhase,
       awaitsInput: job.awaitsInput,
     }));
 

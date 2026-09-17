@@ -245,6 +245,31 @@ describe.skipIf(!available)('job queue persistence', () => {
     });
   });
 
+  describe('failJob', () => {
+    it('keeps the phase that was running when the job failed (issue #386)', async () => {
+      const jobId = await queuedJob(new Date('2026-09-17T10:00:00Z'));
+      await claimNextQueuedJob(connection!);
+      await updateJobProgress(connection!, jobId, { phase: 'report-fr', auditId: 'audit-pdf' });
+
+      await failJob(connection!, jobId, '$not a field path: PDF gate refused');
+      await failJob(connection!, jobId, 'second failure report');
+
+      const job = await getJob(connection!, jobId);
+      expect(job).toMatchObject({ status: 'failed', phase: 'failed', failedPhase: 'report-fr' });
+      expect(job?.error).toBe('second failure report');
+      expect((await listJobs(connection!))[0]).toMatchObject({ failedPhase: 'report-fr' });
+    });
+
+    it('stores an error text that starts with "$" verbatim', async () => {
+      const jobId = await queuedJob(new Date('2026-09-17T10:00:00Z'));
+      await failJob(connection!, jobId, '$phase');
+      expect(await getJob(connection!, jobId)).toMatchObject({
+        error: '$phase',
+        failedPhase: 'queued',
+      });
+    });
+  });
+
   describe('cancelJob', () => {
     it('cancels queued and running jobs', async () => {
       const queued = await queuedJob(new Date('2026-09-16T10:00:00Z'));

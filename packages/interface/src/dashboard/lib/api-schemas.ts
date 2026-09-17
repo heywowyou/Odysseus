@@ -104,6 +104,7 @@ export const scanJobDetailSchema = z.object({
   urlResults: z.array(scanUrlResultSchema).optional(),
   progress: scanJobProgressSchema,
   error: z.string().optional(),
+  failedPhase: z.string().optional(),
   needsInputFields: z.array(scanJobNeedsInputFieldSchema).optional(),
   prospectId: z.string().optional(),
 });
@@ -122,6 +123,8 @@ export const scanSummarySchema = z.object({
   auditIds: z.array(z.string()).optional(),
   severityRollup: severityRollupSchema.optional(),
   needsReview: z.boolean().optional(),
+  /** Issue #386: the phase a failed job was running when it failed. */
+  failedPhase: z.string().optional(),
   /** Issue #382: typed operator-input fields exist on the job. */
   awaitsInput: z.boolean().optional(),
   prospectId: z.string().optional(),

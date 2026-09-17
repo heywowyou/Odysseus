@@ -19,6 +19,7 @@ import { scanJobDetailSchema } from '../lib/api-schemas';
 import type { ScanJobDetail, ScanUrlResult } from '../lib/api-types';
 import { canStop } from '../lib/job-actions';
 import { cn } from '../lib/cn';
+import { reportFailureStage } from '../lib/job-outcome';
 import { usePolling } from '../lib/use-polling';
 import { hostnameOf } from './audit-detail-model';
 import { IdentityConfirmField } from './identity-confirm-field';
@@ -36,6 +37,7 @@ import {
   isTerminal,
   lighthouseProgress,
   scanProgress,
+  terminalCardKind,
   urlResultState,
   type UrlResultState,
 } from './scan-progress-model';
@@ -204,7 +206,10 @@ export function ScanProgressPage(): JSX.Element {
               <div className="flex items-center gap-2 text-sm">
                 {isTerminal(job.status) ? null : <StatusDot status="running" />}
                 <span className="text-ink-soft">
-                  {currentPhaseLabel(job.phase, strings.progress.phaseLabels)}
+                  {/* Issue #386: a report-stage failure never reads "Failed". */}
+                  {terminalCardKind(job) === 'report-issue'
+                    ? strings.common.statusLabels['report-issue']
+                    : currentPhaseLabel(job.phase, strings.progress.phaseLabels)}
                 </span>
               </div>
               {hasCoverage(job) ? (
@@ -327,9 +332,11 @@ function FullAuditView({
   // cancelled keeps its own quiet card so a stopped job never reads as
   // failed or complete.
   if (terminal) {
-    if (job.status === 'failed') return <FailedCard job={job} />;
-    if (job.status === 'cancelled') return <CancelledCard />;
-    if (job.status === 'needs-input') return <NeedsInputCard job={job} refresh={refresh} />;
+    const kind = terminalCardKind(job);
+    if (kind === 'failed') return <FailedCard job={job} />;
+    if (kind === 'report-issue') return <ReportIssueCard job={job} />;
+    if (kind === 'cancelled') return <CancelledCard />;
+    if (kind === 'needs-input') return <NeedsInputCard job={job} refresh={refresh} />;
     return <CompleteCard job={job} />;
   }
 
@@ -518,6 +525,30 @@ function CompleteCard({ job }: { job: ScanJobDetail }): JSX.Element {
             className={buttonStyles(job.auditId !== undefined ? 'secondary' : 'primary', 'sm')}
           >
             {strings.progress.goToProspectLink}
+          </Link>
+        ) : null}
+      </div>
+    </Card>
+  );
+}
+
+/** Issue #386: the scan finished and its audit was saved; only the report
+ *  failed. Reads as a completed scan, with the report failure as its own
+ *  block, so the operator regenerates from the audit page instead of
+ *  rescanning a site that is already captured. */
+function ReportIssueCard({ job }: { job: ScanJobDetail }): JSX.Element {
+  const { strings } = useI18n();
+  const stage = reportFailureStage(job) ?? 'unknown';
+  return (
+    <Card title={strings.progress.completeHeading} className="border-sev-serious/40">
+      <div className="mt-1 flex flex-col items-start gap-2">
+        <h3 className="text-sm font-semibold text-ink">{strings.progress.reportFailedHeading}</h3>
+        <p className="text-sm text-ink-soft">{strings.progress.reportFailedStages[stage]}</p>
+        {job.error !== undefined ? <p className="text-sm text-ink-soft">{job.error}</p> : null}
+        <p className="text-xs text-ink-muted">{strings.progress.failedRescanHint}</p>
+        {job.auditId !== undefined ? (
+          <Link to={`/audits/${job.auditId}`} className={buttonStyles('primary', 'sm')}>
+            {strings.progress.goToAuditLink}
           </Link>
         ) : null}
       </div>

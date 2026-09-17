@@ -1,6 +1,7 @@
 import type { CoverageSegment } from '../components/ui/coverage-bar';
 import type { DashboardStrings } from '../i18n/types';
 import type { JobStatus, ScanJobDetail } from '../lib/api-types';
+import { reportFailureStage } from '../lib/job-outcome';
 import {
   AFTER_CONTENT_PHASES,
   AFTER_LIGHTHOUSE_PHASES,
@@ -50,6 +51,19 @@ export function isTerminal(status: JobStatus | undefined): boolean {
     status === 'cancelled' ||
     status === 'needs-input'
   );
+}
+
+/** The result card a terminal job shows. Issue #386: a failed job that
+ *  stopped in report writing or PDF production is a completed scan with a
+ *  report failure, classified by the same rule as the audits list. */
+export type TerminalCardKind = 'complete' | 'report-issue' | 'failed' | 'cancelled' | 'needs-input';
+
+export function terminalCardKind(job: ScanJobDetail): TerminalCardKind {
+  if (job.status === 'failed') {
+    return reportFailureStage(job) !== null ? 'report-issue' : 'failed';
+  }
+  if (job.status === 'cancelled' || job.status === 'needs-input') return job.status;
+  return 'complete';
 }
 
 function clampPercent(value: number): number {

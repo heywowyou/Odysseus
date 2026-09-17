@@ -27,7 +27,8 @@ import {
 import { useI18n } from '../i18n/provider';
 import type { DashboardStrings } from '../i18n/types';
 import { fetchJson, postEmpty, sendDelete } from '../lib/api';
-import type { JobStatus, ScanSummary } from '../lib/api-types';
+import type { ScanSummary } from '../lib/api-types';
+import type { DisplayJobStatus } from '../lib/job-outcome';
 import { canDelete, canStop } from '../lib/job-actions';
 import { formatDateTime, formatRelativeTime } from '../lib/format';
 import { usePolling } from '../lib/use-polling';
@@ -56,10 +57,11 @@ import type {
 const POLL_INTERVAL_MS = 10_000;
 const SKELETON_ROW_COUNT = 8;
 
-const STATUS_OPTIONS: readonly JobStatus[] = [
+const STATUS_OPTIONS: readonly DisplayJobStatus[] = [
   'queued',
   'running',
   'complete',
+  'report-issue',
   'failed',
   'needs-input',
   'cancelled',
@@ -270,9 +272,9 @@ export function AuditsPage(): JSX.Element {
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         <span className="inline-flex items-center gap-2">
-                          {/* Issue #90: the displayed status, not the raw one:
-                              a failed post-scan job reads as needing operator
-                              action, since the fix lives on the audit page. */}
+                          {/* The displayed status, not the raw one: a failed
+                              job whose audit was saved reads as a report issue
+                              (issue #386). */}
                           <StatusDot status={listStatus(summary)} />
                           {strings.common.statusLabels[listStatus(summary)]}
                         </span>
@@ -564,7 +566,7 @@ function QueueRow(props: {
 }
 
 /** The run list's own state, read as one line rather than as separate boxes.
- *  Running, needs input, complete and failed are four states of the same list, so they sit
+ *  Running, needs input, complete, report issue and failed are states of the same list, so they sit
  *  together and separated only by spacing. */
 function QueueReadout(props: {
   kpis: AuditsKpis;
@@ -577,6 +579,7 @@ function QueueReadout(props: {
     { key: 'running', label: strings.audits.kpiRunning, value: kpis.running },
     { key: 'needs-input', label: strings.audits.kpiNeedsInput, value: kpis.needsInput },
     { key: 'complete', label: strings.audits.kpiComplete, value: kpis.complete },
+    { key: 'report-issue', label: strings.audits.kpiReportIssue, value: kpis.reportIssue },
     { key: 'failed', label: strings.audits.kpiFailed, value: kpis.failed },
   ];
   return (

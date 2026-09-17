@@ -181,6 +181,12 @@ export interface JobDocumentFields {
   outreachBatchResults?: OutreachBatchResult[];
   progress: JobProgress;
   error?: string;
+  /** Issue #386: the phase a failed job was running when it failed.
+   *  failJob overwrites `phase` with 'failed', so without this nothing
+   *  could tell a crawl failure from a report-writing or PDF failure on a
+   *  job whose audit was already saved. Absent on rows failed before it
+   *  existed. */
+  failedPhase?: JobPhase;
   orphaned?: boolean;
   /** P0.1 (2026-08-21 La Corniche feedback pass): a completed full-audit
    *  job whose report advertises a pillar (performance) it has zero data
@@ -390,6 +396,7 @@ const jobSchema = new Schema<JobDocument>(
     outreachBatchResults: { type: [outreachBatchResultSchema] },
     progress: { type: jobProgressSchema, required: true, default: {} },
     error: { type: String },
+    failedPhase: { type: String },
     orphaned: { type: Boolean },
     needsReview: { type: String },
     needsInputFields: { type: [jobNeedsInputFieldSchema] },

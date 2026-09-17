@@ -1,18 +1,21 @@
 import type { DashboardStrings } from '../i18n/types';
-import type { JobStatus, ScanSummary, SeverityRollup } from '../lib/api-types';
+import type { ScanSummary, SeverityRollup } from '../lib/api-types';
+import { displayJobStatus, type DisplayJobStatus } from '../lib/job-outcome';
 
 /** Sort order of the audits list; newest is the default so the operator
  *  sees fresh scans first. */
 export type SortOrder = 'newest' | 'oldest';
 
 /** Value of the status filter select; the empty string means every status. */
-export type StatusFilter = JobStatus | '';
+export type StatusFilter = DisplayJobStatus | '';
 
 /** Header KPIs of the audits page, derived from the polled summaries. */
 export interface AuditsKpis {
   running: number;
   needsInput: number;
   complete: number;
+  /** Issue #386: scans whose audit was saved but whose report failed. */
+  reportIssue: number;
   failed: number;
 }
 
@@ -25,14 +28,14 @@ export interface SeverityBadge {
   count: number;
 }
 
-const RUNNING_STATUSES: readonly JobStatus[] = ['queued', 'running'];
+const RUNNING_STATUSES: readonly DisplayJobStatus[] = ['queued', 'running'];
 
 /** Header status KPIs in one pass so a 200-row poll stays trivially cheap.
  *  Issue #380: counted on the displayed status (listStatus), the same
  *  classification the rows and the status filter use, so the header can
  *  never disagree with the table. */
 export function computeKpis(summaries: ScanSummary[]): AuditsKpis {
-  const kpis: AuditsKpis = { running: 0, needsInput: 0, complete: 0, failed: 0 };
+  const kpis: AuditsKpis = { running: 0, needsInput: 0, complete: 0, reportIssue: 0, failed: 0 };
   for (const summary of summaries) {
     const status = listStatus(summary);
     if (RUNNING_STATUSES.includes(status)) {
@@ -41,6 +44,8 @@ export function computeKpis(summaries: ScanSummary[]): AuditsKpis {
       kpis.needsInput += 1;
     } else if (status === 'complete') {
       kpis.complete += 1;
+    } else if (status === 'report-issue') {
+      kpis.reportIssue += 1;
     } else if (status === 'failed') {
       kpis.failed += 1;
     }
@@ -63,15 +68,13 @@ export function filterSummaries(summaries: ScanSummary[], status: StatusFilter):
  *  cannot continue until the operator confirms typed fields. Issue #382
  *  removed the issue #90 rule that also showed every failed job with a
  *  persisted audit that way - a render crash or lint refusal is a technical
- *  failure, not missing data. Such a row still reads "Failed" and still
- *  links to its audit page (rowTarget), where the failure and its retry
- *  path live. The one reclassification left is a legacy failed row that was
- *  written with typed input fields, never a match on its error text. */
-export function listStatus(summary: ScanSummary): JobStatus {
-  if (summary.status === 'failed' && summary.awaitsInput === true) {
-    return 'needs-input';
-  }
-  return summary.status;
+ *  failure, not missing data. Issue #386: such a row reads "Report issue",
+ *  not "Failed", because the scan itself succeeded; it links to its audit
+ *  page (rowTarget), where the failure and its regeneration path live.
+ *  "Failed" keeps only scans that produced no usable audit. The shared
+ *  classifier is lib/job-outcome.ts, also read by the progress page. */
+export function listStatus(summary: ScanSummary): DisplayJobStatus {
+  return displayJobStatus(summary);
 }
 
 /** Hostname of a site URL for display and search. A malformed URL falls back

@@ -41,6 +41,11 @@ export interface ProgressStrings {
    *  persisted, so the operator opens the audit instead of re-scanning.
    *  The link label reuses goToAuditLink. */
   failedRescanHint: string;
+  /** Issue #386: a Full Scan whose audit was saved but whose report
+   *  writing or PDF production failed reads completeHeading, then this
+   *  separate block naming the failed step, never failedHeading. */
+  reportFailedHeading: string;
+  reportFailedStages: { writing: string; pdf: string; unknown: string };
   /** Issue #187: links a coverage-gate failure to the crawl delay / scan
    *  concurrency fields on /scans/new that its own message names as the
    *  remedy. */
@@ -99,6 +104,12 @@ export const progress = {
     failedRescanHint:
       'Le site a déjà été exploré et analysé. Ouvrez l’audit pour corriger la cause puis régénérer le rapport : inutile de relancer un scan.',
     coverageGateFieldsLink: 'Régler le délai et la concurrence du scan sur un nouvel audit',
+    reportFailedHeading: 'Rapport non généré',
+    reportFailedStages: {
+      writing: 'La rédaction du rapport a échoué.',
+      pdf: 'La production des PDF a échoué.',
+      unknown: 'La rédaction du rapport ou la production des PDF a échoué.',
+    },
   },
   en: {
     title: 'Scan progress',
@@ -149,5 +160,11 @@ export const progress = {
     failedRescanHint:
       'The site has already been crawled and analysed. Open the audit to fix the cause and regenerate the report; a new scan is not needed.',
     coverageGateFieldsLink: 'Adjust the crawl delay and scan concurrency on a new audit',
+    reportFailedHeading: 'Report not generated',
+    reportFailedStages: {
+      writing: 'Writing the report failed.',
+      pdf: 'Producing the PDFs failed.',
+      unknown: 'Writing the report or producing the PDFs failed.',
+    },
   },
 } satisfies { fr: ProgressStrings; en: ProgressStrings };

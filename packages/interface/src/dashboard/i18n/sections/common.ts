@@ -1,8 +1,8 @@
-import type { JobStatus } from '../../lib/api-types';
+import type { DisplayJobStatus } from '../../lib/job-outcome';
 
 export interface CommonStrings {
   severityLabels: { critical: string; serious: string; moderate: string; minor: string };
-  statusLabels: Record<JobStatus, string>;
+  statusLabels: Record<DisplayJobStatus, string>;
   /** camelCase keys mirror the API job types displayed by the dashboard.
    *  Internal batch jobs keep a neutral label if opened directly; the
    *  ordinary scan form exposes only the three public intents. */
@@ -68,6 +68,7 @@ export const common = {
       failed: 'Échoué',
       cancelled: 'Arrêté',
       'needs-input': 'Action requise',
+      'report-issue': 'Rapport à corriger',
     },
     typeLabels: {
       fullAudit: 'Scan complet',
@@ -117,6 +118,7 @@ export const common = {
       failed: 'Failed',
       cancelled: 'Cancelled',
       'needs-input': 'Needs input',
+      'report-issue': 'Report issue',
     },
     typeLabels: {
       fullAudit: 'Full scan',
