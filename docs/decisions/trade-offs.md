@@ -5127,3 +5127,53 @@ profile name invented to make the deployment pass.
 **Rejected: an open-ended isolation profile string.** The value of the
 attestation is that a person evaluated the profile. Any string a deployment
 could supply would let the deployment attest to itself.
+
+### 100. A stored theme may be `geo`; the model-facing theme schema stays narrow (build decision, 2026-09-18, Plan 058 repair)
+
+Plan 058's commit widened `themeSchema.category` in
+`packages/core/src/types/llm-output.ts` to include `'geo'` and dropped the
+`.max(20)` theme cap. Both edits were collateral: the commit's own message
+does not mention them, and the first one broke the exhaustiveness guard in
+`packages/store/src/schemas/analysis.schema.ts`, which exists precisely to
+fail the build when the persisted category set and its Mongoose mirror drift
+apart. The repository did not compile on `main` as a result.
+
+**The tension is real, and both sides of it are right.** Trade-off 16
+excluded `'geo'` from the theme schema so an LLM-synthesized theme can never
+be geo and a geo citation only ever appears in the findings appendix. Plan
+058's evidence-bound pipeline does not ask a model for a category at all: a
+`SeniorRemediationProject` inherits the category of the findings it groups,
+deterministically, and a geo remediation project is a legitimate thing to
+group. Widening the locked model contract would have quietly reversed
+trade-off 16; refusing to widen anything would have forced 058 to relabel a
+geo project as `seo`, which is exactly trade-off 16's own B1 defect.
+
+**Resolution: split the type rather than pick a side.** `themeSchema` and
+`Theme` stay narrow and remain what a model's output is validated against.
+`StoredTheme`/`StoredLlmOutput` carry the full `FindingCategory` and are what
+a persisted analysis, the Mongoose schema and the whole report-rendering path
+use. Trade-off 16 is preserved where it applies - to model-written themes -
+and the deterministic path stays truthful about what it grouped. Reference
+citations were already keyed off the findings' own categories and filtered
+through `isCitableThemeCategory`, so a geo theme simply carries no citation;
+no new suppression was needed.
+
+`.max(20)` was restored. Nothing in Plan 058 reaches `llmOutputSchema.parse`
+- that is the legacy merge path - so removing the cap bought 058 nothing and
+silently relaxed a locked contract that `packages/llm/src/constants.ts` still
+sizes its token budget against.
+
+**Also repaired in the same pass**, all from the same commit and all blocking
+the build or the suite: a JSX syntax error in the dashboard's audit-reports
+section that also blinded the dead-code audit's parser; a `privateObjectKey`
+/ `evidenceApprovalMode` / `markReportQualityRunFromOperator` contract that
+the pipeline called for and the store never defined; two thrown errors with
+no `cause`; two exports with no consumers; and a fake-timer leak in
+`scan-site.test.ts` left by the Phase A host-scheduler wiring, where one
+failing test turned into ten indistinguishable 20-second timeouts.
+
+**The durable lesson is about verification, not about geo.** Plan 058 shipped
+2701 lines across 27 files with no tests and without `pnpm run check` or
+`pnpm run test` passing, and it was pushed. The plan's own definition of done
+requires a green suite. A plan is not implemented when its code is written;
+it is implemented when the repository proves it.

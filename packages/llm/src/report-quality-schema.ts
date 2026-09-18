@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const evidenceBoundSegmentSchema = z.discriminatedUnion('kind', [
+const evidenceBoundSegmentSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('text'), text: z.string().min(1) }).strict(),
   z
     .object({

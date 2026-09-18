@@ -212,6 +212,7 @@ export async function recordQualityApprovedBundle(
     bundleDigest: Sha256Digest;
     inputSnapshotDigest: Sha256Digest;
     approvedEvidenceDigest: Sha256Digest;
+    evidenceApprovalMode: 'system' | 'operator' | 'legacy-adapter';
     fr: StoredLanguageCandidate;
     en: StoredLanguageCandidate;
   },
@@ -273,6 +274,36 @@ export async function approveExactReportBundle(
   return bundle;
 }
 
+/**
+ * The operator-driven half of the bundle lifecycle. The quality run's lease
+ * is released the moment the run finishes, so approval and promotion happen
+ * hours or days later with no lease to assert; the exact quality run, epoch
+ * and bundle digest are the authority instead. A no-match is a stale
+ * approval attempt against a superseded run, not a lost race to recover.
+ */
+export async function markReportQualityRunFromOperator(
+  connection: Connection,
+  input: {
+    auditId: string;
+    qualityRunId: string;
+    epoch: number;
+    bundleDigest: Sha256Digest;
+    state: Extract<ReportBundleState, 'operator-approved' | 'promoted'>;
+  },
+): Promise<void> {
+  const result = await createReportQualityRunModel(connection).updateOne(
+    { qualityRunId: input.qualityRunId, auditId: input.auditId, epoch: input.epoch },
+    {
+      $set: {
+        state: input.state,
+        operatorApprovalBundleDigest: input.bundleDigest,
+        updatedAt: new Date(),
+      },
+    },
+  );
+  if (result.matchedCount !== 1) throw new StaleReportQualityRunError();
+}
+
 async function activateInsideSession(
   connection: Connection,
   session: ClientSession,
@@ -306,7 +337,9 @@ async function activateInsideSession(
         .then((rows) => rows[0]!.toObject());
     } catch (error) {
       if (isDuplicateKey(error)) {
-        throw new Error('odysseus: active report bundle changed before atomic promotion');
+        throw new Error('odysseus: active report bundle changed before atomic promotion', {
+          cause: error,
+        });
       }
       throw error;
     }

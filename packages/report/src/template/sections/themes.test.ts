@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildStressFixture } from '../../stress-fixture.js';
 import { buildRenderedPriorities } from '../rendered-priorities.js';
-import type { Finding, Theme } from '@odysseus/core';
+import type { Finding, StoredTheme } from '@odysseus/core';
 import { selectReferenceStats, SEVERITY_ORDER } from '@odysseus/core';
 import {
   isQuickWinTheme,
@@ -128,7 +128,7 @@ describe('renderThemes against the real small-site.test analysis', () => {
 // priorities" grid. Every non-accessibility theme now gets the same box,
 // stating plainly that no such requirement applies rather than a fake one.
 describe('item 3.9: every theme card gets the "Exigence de conformité" box, accessibility or not', () => {
-  function seoTheme(): Theme {
+  function seoTheme(): StoredTheme {
     return {
       title: 'Données structurées invalides',
       category: 'seo' as const,
@@ -857,7 +857,7 @@ describe('isQuickWinTheme', () => {
 // et par impact") the data gave no evidence of - the badge distinguished
 // nothing. Rendered only when not every rendered theme is a quick win.
 describe('item 1.5: the quick-win badge does not render when every rendered theme would carry it', () => {
-  function quickWinTheme(rank: number, findingId: string): Theme {
+  function quickWinTheme(rank: number, findingId: string): StoredTheme {
     return {
       title: `Chantier ${rank}`,
       category: 'accessibility' as const,
@@ -870,7 +870,7 @@ describe('item 1.5: the quick-win badge does not render when every rendered them
     };
   }
 
-  function buildAnalysis(themes: Theme[]) {
+  function buildAnalysis(themes: StoredTheme[]) {
     return {
       auditId: 'a1',
       language: 'fr' as const,
@@ -944,7 +944,7 @@ describe('item 1.5: the quick-win badge does not render when every rendered them
 // lcen-resolution.ts's resolveLcenFinding after a manual SIREN
 // confirmation, leaving a dangling theme that still won a top-6 slot.
 describe('item 0.6: a theme with no resolved findings is never selected as a rendered priority', () => {
-  function themeWithFindingIds(rank: number, findingIds: string[]): Theme {
+  function themeWithFindingIds(rank: number, findingIds: string[]): StoredTheme {
     return {
       title: `Chantier ${rank}`,
       category: 'seo' as const,
@@ -1333,7 +1333,7 @@ describe('P1.5: the aggregate effort estimate sentence', () => {
       overallRisk: 'medium' as const,
       executiveSummary: 'summary',
       themes: efforts.map((effort, i) => ({
-        title: `Theme ${i + 1}`,
+        title: `StoredTheme ${i + 1}`,
         category: 'accessibility' as const,
         businessImpact: 'Impact',
         effort,
@@ -1485,7 +1485,7 @@ describe('2026-08-22: Impact commercial and Conformité are colour-coded, Effort
       executiveSummary: 'summary',
       themes: [
         {
-          title: 'Theme one',
+          title: 'StoredTheme one',
           category,
           businessImpact: 'Impact',
           effort: 'high' as const,
@@ -1684,7 +1684,7 @@ describe('B2.2: theme category and reference-stat citations', () => {
     privacyFinding('f2', 'security-header-missing-hsts'),
   ];
 
-  async function analysisWithCategory(category: Theme['category']) {
+  async function analysisWithCategory(category: StoredTheme['category']) {
     const analysis = await loadSmallSiteAnalysis('fr');
     return {
       ...analysis,
@@ -1720,7 +1720,7 @@ describe('B2.2: theme category and reference-stat citations', () => {
     expect(html).not.toContain('Deloitte');
   });
 
-  // 'privacy' became a valid Theme category on 2026-08-24 (approved change
+  // 'privacy' became a valid StoredTheme category on 2026-08-24 (approved change
   // to the locked llm-output.ts contract), so the model now has a correct
   // answer available for exactly this theme.
   it('accepts privacy as a theme category and renders it', async () => {
@@ -1765,9 +1765,13 @@ describe('B2.1: a category with critical findings always gets a rendered priorit
     };
   }
 
-  function theme(priorityRank: number, category: Theme['category'], findingIds: string[]): Theme {
+  function theme(
+    priorityRank: number,
+    category: StoredTheme['category'],
+    findingIds: string[],
+  ): StoredTheme {
     return {
-      title: `Theme ${priorityRank}`,
+      title: `StoredTheme ${priorityRank}`,
       category,
       businessImpact: 'Impact.',
       effort: 'low',
@@ -2051,7 +2055,7 @@ describe('plan 018 step 6: priority card order and the deterministic observation
     };
   }
 
-  function buildTheme(findingIds: string[], overrides: Partial<Theme> = {}): Theme {
+  function buildTheme(findingIds: string[], overrides: Partial<StoredTheme> = {}): StoredTheme {
     return {
       title: 'Contraste insuffisant sur les pages clés',
       category: 'accessibility',
@@ -2066,7 +2070,7 @@ describe('plan 018 step 6: priority card order and the deterministic observation
     };
   }
 
-  function buildAnalysis(themes: Theme[]) {
+  function buildAnalysis(themes: StoredTheme[]) {
     return {
       auditId: 'a1',
       language: 'fr' as const,

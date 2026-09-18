@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AuditManifest, Finding, Theme } from '@odysseus/core';
+import type { AuditManifest, Finding, StoredTheme } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import { renderRemainingWork, selectRemainingFindings } from './remaining-work.js';
 import { selectRenderedThemes } from './themes.js';
@@ -144,7 +144,7 @@ function buildScenarioFinding(
   };
 }
 
-function buildScenarioTheme(findingIds: string[]): Theme {
+function buildScenarioTheme(findingIds: string[]): StoredTheme {
   return {
     title: 'Images sans alternative',
     category: 'accessibility',

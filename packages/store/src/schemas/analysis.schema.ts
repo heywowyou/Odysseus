@@ -12,7 +12,7 @@ import type {
   AnalysisSiteContext,
   ObligationAssessment,
   ReportLanguage,
-  Theme,
+  StoredTheme,
 } from '@odysseus/core';
 
 export interface AnalysisDocumentFields {
@@ -32,7 +32,7 @@ export interface AnalysisDocumentFields {
   generatedAt: Date;
   executiveSummary: string;
   overallRisk: 'low' | 'medium' | 'high';
-  themes: Theme[];
+  themes: StoredTheme[];
   quickWins: string[];
   notes: string;
   /** Computed once per audit by @odysseus/core's assessObligations, not
@@ -58,23 +58,30 @@ export interface AnalysisDocumentFields {
 export type AnalysisDocument = AnalysisDocumentFields;
 
 /**
- * Mirrors llm-output.ts's themeSchema.category, which is a narrower set
- * than FindingCategory: 'geo' is deliberately excluded so a model-written
- * theme can never be geo (trade-off 16), while 'privacy' was added
- * 2026-08-24 (trade-off 31). The Exclude below fails the build if the Zod
- * enum gains a value this list does not have - the drift that made a real
- * analysis unpersistable after 'privacy' was added to the Zod schema and
- * its hand-mirror but not here.
+ * Mirrors llm-output.ts's StoredTheme.category, which is what a persisted
+ * analysis may actually carry. That is wider than the model-facing
+ * themeSchema.category: trade-off 16 still forbids a model from
+ * synthesizing a 'geo' theme, but Plan 058's evidence-bound pipeline
+ * derives a project's category from the findings it groups, so a stored
+ * geo theme is legitimate and must persist. 'privacy' was added
+ * 2026-08-24 (trade-off 31). The Exclude below fails the build if the
+ * stored category type gains a value this list does not have - the drift
+ * that made a real analysis unpersistable after 'privacy' was added to
+ * the Zod schema and its hand-mirror but not here.
  */
 const THEME_CATEGORY_VALUES = [
   'accessibility',
   'seo',
+  'geo',
   'performance',
   'rendering',
   'privacy',
-] as const satisfies readonly Theme['category'][];
+] as const satisfies readonly StoredTheme['category'][];
 
-type UnlistedThemeCategory = Exclude<Theme['category'], (typeof THEME_CATEGORY_VALUES)[number]>;
+type UnlistedThemeCategory = Exclude<
+  StoredTheme['category'],
+  (typeof THEME_CATEGORY_VALUES)[number]
+>;
 const _themeCategoriesAreExhaustive: UnlistedThemeCategory extends never ? true : never = true;
 void _themeCategoriesAreExhaustive;
 

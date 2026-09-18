@@ -8,7 +8,7 @@ import type {
   FindingsDelta,
   FindingsProvenance,
   GradeOverride,
-  LlmOutput,
+  StoredLlmOutput,
   ObligationAssessment,
   PreparationPreviewLanguage,
   ReportLanguage,
@@ -22,7 +22,7 @@ import type {
  * Finding.firstSeenAt/lastSeenAt: parsing the string is the caller's job
  * at the boundary, not this package's.
  */
-export interface StoredAnalysis extends LlmOutput {
+export interface StoredAnalysis extends StoredLlmOutput {
   /** Absent only on legacy artifacts, which report generation rejects. */
   analysisId?: string;
   auditId: string;

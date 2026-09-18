@@ -21,6 +21,7 @@ vi.mock('./config.js', () => ({
   getCruxApiKey: vi.fn(() => undefined),
   getPageTimeoutMs: vi.fn(() => 30_000),
   getScanConcurrency: vi.fn(() => 3),
+  getCrawlDelayMs: vi.fn(() => 333),
 }));
 
 import { crawlSite } from './crawl.js';
@@ -42,6 +43,11 @@ async function makeTempAuditDir(prefix: string): Promise<{ auditDir: string; pag
 }
 
 afterEach(async () => {
+  // Restored here rather than at the end of each fake-timer test: a failing
+  // assertion skips the in-test restore, and every later test then waits on
+  // the shared host scheduler's setTimeout, which fake timers never fire.
+  // One real failure became ten indistinguishable 20s timeouts that way.
+  vi.useRealTimers();
   await Promise.all(writtenTempDirs.map((dir) => fs.rm(dir, { recursive: true, force: true })));
   writtenTempDirs = [];
 });
@@ -101,12 +107,15 @@ describe('scanSite characterization', () => {
       onProgress: (event) => events.push(event),
     });
 
+    // Plan 059 decision 18: request starts are spaced by the run's one host
+    // scheduler, not by a per-lane stagger, so concurrency 2 still means only
+    // the first page may begin at t=0.
     await vi.advanceTimersByTimeAsync(0);
     expect(vi.mocked(scanPage).mock.calls.map((call) => call[2])).toEqual([startUrl]);
-    await vi.advanceTimersByTimeAsync(100);
-    await vi.advanceTimersByTimeAsync(100);
-    const result = await pending;
-    vi.useRealTimers();
+    // Generous enough to cover every remaining paced start (4 pages plus the
+    // site-level checks at the crawl's 100ms effective delay) without pinning
+    // the assertion to an exact number of scheduler sleeps.
+    const [result] = await Promise.all([pending, vi.advanceTimersByTimeAsync(5_000)]);
 
     expect(result.pages).toHaveLength(4);
     expect(

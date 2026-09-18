@@ -7,7 +7,7 @@
  * doc's exact counts (120 findings, 95+ minor, 8 themes, 12 render-diff
  * failures, specific pathological strings) is easier to keep correct in
  * code than in a hand-edited fixture file, and it type-checks against the
- * locked Finding/AuditManifest/LlmOutput contracts.
+ * locked Finding/AuditManifest/StoredLlmOutput contracts.
  *
  * "If the stress fixture renders correctly, haaitza and hotel-palais-
  * gallien render correctly. The reverse has never been true." - this
@@ -19,11 +19,11 @@ import {
   type AuditManifest,
   type Finding,
   type FindingCategory,
-  type LlmOutput,
+  type StoredLlmOutput,
   type ManifestPageEntry,
   type ObligationAssessment,
   type Severity,
-  type Theme,
+  type StoredTheme,
 } from '@odysseus/core';
 import type { StoredAnalysis } from './types.js';
 
@@ -259,11 +259,16 @@ function buildMinorFindings(count: number): Finding[] {
   return findings;
 }
 
-function buildThemes(findings: readonly Finding[]): Theme[] {
+function buildThemes(findings: readonly Finding[]): StoredTheme[] {
   const nonMinor = findings.filter((f) => f.severity !== 'minor');
-  const categories: Theme['category'][] = ['accessibility', 'seo', 'performance', 'rendering'];
-  const effortLevels: Theme['effort'][] = ['low', 'medium', 'high'];
-  const impactLevels: Theme['impact'][] = ['low', 'medium', 'high'];
+  const categories: StoredTheme['category'][] = [
+    'accessibility',
+    'seo',
+    'performance',
+    'rendering',
+  ];
+  const effortLevels: StoredTheme['effort'][] = ['low', 'medium', 'high'];
+  const impactLevels: StoredTheme['impact'][] = ['low', 'medium', 'high'];
 
   return Array.from({ length: THEME_COUNT }, (_, i) => {
     const themeFindings = nonMinor.filter((_, idx) => idx % THEME_COUNT === i);
@@ -351,7 +356,7 @@ export function buildStressFixture(): StressFixture {
   const findings = [...renderDiffFindings, ...otherNonMinorFindings, ...minorFindings];
 
   const themes = buildThemes(findings);
-  const llmOutput: LlmOutput = {
+  const llmOutput: StoredLlmOutput = {
     executiveSummary:
       'Ce site présente un nombre élevé de constats répartis entre accessibilité, référencement et performance, avec plusieurs priorités à fort impact commercial identifiées ci-dessous.',
     overallRisk: 'high',

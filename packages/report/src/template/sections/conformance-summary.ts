@@ -101,7 +101,7 @@ function renderRollupTable(
 }
 
 /** R2: the conformance flag is computed here, in template code, never
- *  asked of the LLM and never added to the locked Theme schema. A WCAG
+ *  asked of the LLM and never added to the locked StoredTheme schema. A WCAG
  *  failure is a different kind of fact from a slow image (C20/C21).
  *
  *  item 8: this table only ever sources rows from buildConformanceRollup,

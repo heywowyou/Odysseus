@@ -37,6 +37,7 @@ async function run(command: string, args: string[]): Promise<string> {
   } catch (error) {
     throw new Error(
       `Required PDF quality tool failed: ${command}: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
     );
   }
 }

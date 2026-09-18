@@ -103,7 +103,7 @@ export interface ReportInputSnapshot {
   auditIdentityDigest: Sha256Digest;
   reportOnlyInputsDigest: Sha256Digest;
   referenceRegistryDigest: Sha256Digest;
-  reportTemplateVersion: string;
+  reportTemplateVersion: number;
   rendererBuild: string;
   rendererFingerprint: Sha256Digest;
   fontFingerprint: Sha256Digest;
@@ -115,7 +115,7 @@ export interface ReportInputSnapshot {
 
 export type EvidenceBoundSegment =
   | { kind: 'text'; text: string }
-  | { kind: 'fact'; factId: string; format?: string | null }
+  | { kind: 'fact'; factId: string; format?: string | undefined }
   | { kind: 'reference'; referenceId: string };
 
 export interface EvidenceBoundContent {

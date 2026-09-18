@@ -12,7 +12,7 @@
  */
 
 import { z } from 'zod';
-import type { Finding } from './findings.js';
+import type { Finding, FindingCategory } from './findings.js';
 
 export const effortSchema = z.enum(['low', 'medium', 'high']);
 export const impactSchema = z.enum(['low', 'medium', 'high']);
@@ -32,7 +32,7 @@ export const themeSchema = z.object({
    *  appears in the findings appendix; nothing in this change disturbs
    *  that reasoning. Widening an enum is backward compatible: analyses
    *  stored before this date still parse. */
-  category: z.enum(['accessibility', 'seo', 'geo', 'performance', 'rendering', 'privacy']),
+  category: z.enum(['accessibility', 'seo', 'performance', 'rendering', 'privacy']),
   /** Why this matters commercially, in plain language, no jargon. */
   businessImpact: z.string().min(1),
   /** Populated for accessibility themes only. States the relevant
@@ -50,13 +50,36 @@ export const themeSchema = z.object({
 export const llmOutputSchema = z.object({
   executiveSummary: z.string().min(1),
   overallRisk: z.enum(['low', 'medium', 'high']),
-  themes: z.array(themeSchema).min(1),
+  themes: z.array(themeSchema).min(1).max(20),
   quickWins: z.array(z.string()),
   notes: z.string(),
 });
 
 export type LlmOutput = z.infer<typeof llmOutputSchema>;
 export type Theme = z.infer<typeof themeSchema>;
+
+/**
+ * The theme category a *stored* analysis may carry, which is wider than
+ * the model-facing enum above.
+ *
+ * Plan 058's evidence-bound pipeline does not ask a model for a category
+ * at all: a remediation project inherits the category of the findings it
+ * groups, deterministically. A geo project is therefore a legitimate
+ * stored theme even though trade-off 16 still forbids a model from
+ * *synthesizing* a geo theme. Keeping the two types apart is what lets
+ * the locked contract above stay narrow while the deterministic path
+ * stays truthful about what it grouped.
+ */
+export type StoredThemeCategory = FindingCategory;
+
+export interface StoredTheme extends Omit<Theme, 'category'> {
+  category: StoredThemeCategory;
+}
+
+/** `LlmOutput` as it is persisted and rendered, with the wider category. */
+export interface StoredLlmOutput extends Omit<LlmOutput, 'themes'> {
+  themes: StoredTheme[];
+}
 
 /**
  * Hard guard against invented findings.

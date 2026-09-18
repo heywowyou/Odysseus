@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Finding, Theme } from '@odysseus/core';
+import type { Finding, StoredTheme } from '@odysseus/core';
 import { LCEN_MENTIONS_LEGALES_RULE_ID } from '@odysseus/core';
 import {
   loadSmallSiteAnalysis,
@@ -32,7 +32,7 @@ function buildFinding(overrides: Partial<Finding> & { findingId: string }): Find
   };
 }
 
-function buildTheme(findingIds: string[]): Theme {
+function buildTheme(findingIds: string[]): StoredTheme {
   return {
     title: 'Contraste insuffisant',
     category: 'accessibility',

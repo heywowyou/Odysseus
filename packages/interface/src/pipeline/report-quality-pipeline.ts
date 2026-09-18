@@ -11,6 +11,7 @@ import {
   type AuditManifest,
   type Finding,
   type ReportBundleCandidate,
+  type ReportQualityModelCall,
   type ReportFactRegistry,
   type ReportInputSnapshot,
   type ReportLanguage,
@@ -81,7 +82,7 @@ import { putImmutableJson, putPrivateCandidatePdf } from './report-quality-stora
 const MAX_CONTENT_REPAIR_ITERATIONS = 8;
 const VISUAL_REVIEW_PAGE_BATCH = 1;
 
-export class ReportQualityNeedsOperatorReviewError extends Error {
+class ReportQualityNeedsOperatorReviewError extends Error {
   readonly reasonCode: string;
 
   constructor(reasonCode: string, message: string) {
@@ -132,7 +133,7 @@ interface QualityRunContext {
 
 async function recordModelCall(
   context: QualityRunContext,
-  provenance: Parameters<typeof transitionReportQualityRun>[4]['modelCall'],
+  provenance: ReportQualityModelCall,
 ): Promise<void> {
   await transitionReportQualityRun(
     context.connection,

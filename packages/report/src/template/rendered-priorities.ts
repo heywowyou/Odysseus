@@ -4,7 +4,7 @@ import {
   type AuditManifest,
   type Finding,
   type ReportLanguage,
-  type Theme,
+  type StoredTheme,
 } from '@odysseus/core';
 import { buildMissingPercentIndex, classifyDiversion } from '@odysseus/llm';
 import { interpolateSnippet, remediationFor, snippetFor } from './remediation/index.js';
@@ -58,7 +58,7 @@ export interface PriorityEvidence {
 }
 
 export interface RenderedPriority {
-  theme: Theme;
+  theme: StoredTheme;
   /** Contiguous client-facing position. The model rank remains on theme. */
   displayRank: number;
   /** Issue #293: every finding of each (source, ruleId) pair the theme
@@ -71,9 +71,9 @@ export interface RenderedPriority {
 }
 
 function selectThemes(
-  themes: readonly Theme[],
+  themes: readonly StoredTheme[],
   findingsById: ReadonlyMap<string, Finding>,
-): Theme[] {
+): StoredTheme[] {
   const withResolvedFindings = themes.filter((theme) =>
     theme.findingIds.some((id) => findingsById.has(id)),
   );
@@ -81,7 +81,7 @@ function selectThemes(
   const selected = byRank.slice(0, MAX_RENDERED_THEMES);
   if (selected.length < MAX_RENDERED_THEMES) return selected;
 
-  const themeFindings = (theme: Theme): Finding[] =>
+  const themeFindings = (theme: StoredTheme): Finding[] =>
     theme.findingIds.map((id) => findingsById.get(id)).filter((f): f is Finding => f !== undefined);
   const criticalCategories = new Set<string>();
   for (const theme of byRank) {
@@ -194,7 +194,7 @@ function buildPriorityEvidence(
    *  computed over the card's full resolved finding set. Falls back to the
    *  full finding set only when the theme has no same-category
    *  finding at all, which should not normally happen but must not throw. */
-  category: Theme['category'],
+  category: StoredTheme['category'],
 ): PriorityEvidence {
   if (findings.length === 0) {
     // Unreachable through buildRenderedPriorities (selectThemes only keeps
@@ -288,7 +288,7 @@ function buildPriorityEvidence(
  *  every finding that cites a page, never a count from an unstated
  *  population. */
 export function buildLegacyPriority(
-  theme: Theme,
+  theme: StoredTheme,
   displayRank: number,
   findingsById: ReadonlyMap<string, Finding>,
   language: ReportLanguage,
@@ -313,7 +313,7 @@ export function buildLegacyPriority(
 
 /** Builds the one report view model consumed by every priority surface. */
 export function buildRenderedPriorities(
-  themes: readonly Theme[],
+  themes: readonly StoredTheme[],
   findings: readonly Finding[],
   manifest: AuditManifest,
   language: ReportLanguage,
@@ -366,7 +366,7 @@ export function buildRenderedPriorities(
     const ruleKeys = [
       ...new Set(resolvedFindings.map((finding) => `${finding.source}::${finding.ruleId}`)),
     ];
-    // Theme order first (the model's own picking order), then the rule's
+    // StoredTheme order first (the model's own picking order), then the rule's
     // remaining findings in stored findings order; deduped by findingId so
     // a doubled id in the theme can never double-count.
     const expandedFindings = [
@@ -377,7 +377,10 @@ export function buildRenderedPriorities(
       ).values(),
     ];
     const priorityFindings = expandedFindings;
-    const priorityTheme: Theme = { ...theme, findingIds: expandedFindings.map((f) => f.findingId) };
+    const priorityTheme: StoredTheme = {
+      ...theme,
+      findingIds: expandedFindings.map((f) => f.findingId),
+    };
     const ownershipCounts: Record<PriorityOwnership, number> = {
       'first-party-action': 0,
       'third-party-escalation': 0,
@@ -447,9 +450,9 @@ export function buildRenderedPriorities(
 /** Compatibility helper for focused section tests. New report assembly uses
  * buildRenderedPriorities once and passes the result through. */
 export function selectRenderedThemes(
-  themes: readonly Theme[],
+  themes: readonly StoredTheme[],
   findingsById: ReadonlyMap<string, Finding>,
-): Theme[] {
+): StoredTheme[] {
   return selectThemes(themes, findingsById);
 }
 

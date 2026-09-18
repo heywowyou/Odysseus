@@ -46,7 +46,10 @@ const reportQualityRunSchema = new Schema<ReportQualityRunDocument>(
     state: { type: String, required: true },
     inputSnapshotDigest: { type: String },
     approvedEvidenceDigest: { type: String },
-    modelCalls: { type: [Schema.Types.Mixed], default: [] },
+    // Mixed: the model-call provenance record is a closed core contract
+    // whose shape this schema deliberately does not re-declare, so a new
+    // provenance field never needs a matching Mongoose edit to persist.
+    modelCalls: { type: [Schema.Types.Mixed], default: [] } as never,
     candidateDigests: { type: [String], default: [] },
     operatorApprovalBundleDigest: { type: String },
     errorCode: { type: String },
@@ -60,9 +63,11 @@ reportQualityRunSchema.index({ auditId: 1, createdAt: -1 });
 
 export interface StoredLanguageCandidate {
   pdfDigest: Sha256Digest;
-  candidatePath: string;
+  /** The private, content-addressed object the exact candidate PDF was
+   *  written to. Promotion copies from here; nothing serves it publicly
+   *  before the operator approves that exact bundle. */
+  privateObjectKey: string;
   pageCount: number;
-  objectKey?: string;
 }
 
 export interface ReportBundleDocument {
@@ -73,6 +78,10 @@ export interface ReportBundleDocument {
   bundleDigest: Sha256Digest;
   inputSnapshotDigest: Sha256Digest;
   approvedEvidenceDigest: Sha256Digest;
+  /** Plan 058 records which authority approved the evidence this bundle was
+   *  written from. `legacy-adapter` bundles are evaluation-only: promotion
+   *  refuses them until Plan 059 canonical evidence exists. */
+  evidenceApprovalMode: 'system' | 'operator' | 'legacy-adapter';
   fr: StoredLanguageCandidate;
   en: StoredLanguageCandidate;
   state: Extract<
@@ -87,9 +96,8 @@ export interface ReportBundleDocument {
 const languageCandidateSchema = new Schema<StoredLanguageCandidate>(
   {
     pdfDigest: { type: String, required: true },
-    candidatePath: { type: String, required: true },
+    privateObjectKey: { type: String, required: true },
     pageCount: { type: Number, required: true },
-    objectKey: { type: String },
   },
   { _id: false },
 );
@@ -103,6 +111,7 @@ const reportBundleSchema = new Schema<ReportBundleDocument>(
     bundleDigest: { type: String, required: true },
     inputSnapshotDigest: { type: String, required: true },
     approvedEvidenceDigest: { type: String, required: true },
+    evidenceApprovalMode: { type: String, required: true },
     fr: { type: languageCandidateSchema, required: true },
     en: { type: languageCandidateSchema, required: true },
     state: { type: String, required: true },

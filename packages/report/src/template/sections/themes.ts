@@ -5,7 +5,7 @@ import type {
   ReferenceStat,
   ReportLanguage,
   StatSector,
-  Theme,
+  StoredTheme,
 } from '@odysseus/core';
 import {
   AUDIT_ID_TO_CWV_KEY,
@@ -49,7 +49,7 @@ export { MAX_RENDERED_THEMES, selectRenderedThemes } from '../rendered-prioritie
  *  concept: individual quick-fix findings, not whole themes). Verified
  *  against docs/report-v2-prototype-haaitza-fr.html: exactly the four
  *  low-effort themes (ranks 3, 4, 6, 7) carry the badge there. */
-export function isQuickWinTheme(theme: Pick<Theme, 'effort' | 'impact'>): boolean {
+export function isQuickWinTheme(theme: Pick<StoredTheme, 'effort' | 'impact'>): boolean {
   return theme.effort === 'low' && theme.impact !== 'low';
 }
 
@@ -404,7 +404,7 @@ function renderLcenCrossReferenceNote(
 function renderTheme(
   strings: ReportStrings,
   language: ReportLanguage,
-  theme: Theme,
+  theme: StoredTheme,
   findingsById: Map<string, Finding>,
   totalPagesScanned: number,
   citationStat: ReferenceStat | undefined,
@@ -757,7 +757,9 @@ function renderThemeFixSnippet(
  *  gets no citation: no row in packages/core/src/reference-stats/stats.ts
  *  is tagged for it, and showing nothing is honest, not a bug. */
 type CitableThemeCategory = 'accessibility' | 'seo' | 'performance';
-function isCitableThemeCategory(category: Theme['category']): category is CitableThemeCategory {
+function isCitableThemeCategory(
+  category: StoredTheme['category'],
+): category is CitableThemeCategory {
   return category === 'accessibility' || category === 'seo' || category === 'performance';
 }
 

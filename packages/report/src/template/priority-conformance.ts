@@ -1,5 +1,5 @@
 import { compareCriteria, isAuditedConformanceLevel } from '@odysseus/core';
-import type { Finding, Theme } from '@odysseus/core';
+import type { Finding, StoredTheme } from '@odysseus/core';
 import { buildLegalRelevance } from '@odysseus/llm';
 import type { StoredAnalysis } from '../types.js';
 
@@ -33,7 +33,7 @@ export function withPriorityConformance(
   findings: readonly Finding[],
 ): StoredAnalysis {
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
-  const themes = analysis.themes.map((theme): Theme => {
+  const themes = analysis.themes.map((theme): StoredTheme => {
     const themeFindings = theme.findingIds
       .map((id) => findingsById.get(id))
       .filter((finding): finding is Finding => finding !== undefined);

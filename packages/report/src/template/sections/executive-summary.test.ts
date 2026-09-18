@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AuditManifest, Finding, Theme } from '@odysseus/core';
+import type { AuditManifest, Finding, StoredTheme } from '@odysseus/core';
 import { renderExecutiveSummary } from './executive-summary.js';
 import { getStrings } from '../strings/i18n.js';
 import { escapeHtml } from '../html-utils.js';
@@ -146,7 +146,7 @@ describe('item 16: a non-legal top priority is acknowledged in the executive sum
     recommendedActions: ['Action'],
   };
 
-  function buildAnalysis(themes: Theme[]) {
+  function buildAnalysis(themes: StoredTheme[]) {
     return {
       auditId: 'a1',
       language: 'fr' as const,
@@ -322,7 +322,7 @@ describe('item 16: a non-legal top priority is acknowledged in the executive sum
 });
 
 describe('fix #1 (2026-08-25 report review): the covered-by-priorities bridging sentence', () => {
-  function buildAnalysis(themes: Theme[]) {
+  function buildAnalysis(themes: StoredTheme[]) {
     return {
       auditId: 'a1',
       language: 'fr' as const,
@@ -371,7 +371,7 @@ describe('fix #1 (2026-08-25 report review): the covered-by-priorities bridging 
     pages: [{ url: 'https://example.com/', depth: 0, status: 'visited', errors: {} }],
   };
 
-  const theme: Theme = {
+  const theme: StoredTheme = {
     title: 'Priorité 1',
     category: 'accessibility',
     businessImpact: 'Impact',
@@ -425,7 +425,7 @@ describe('P2.4: the category-imbalance note', () => {
     generatedAt: new Date(),
     overallRisk: 'medium' as const,
     executiveSummary: 'summary',
-    themes: [] as Theme[],
+    themes: [] as StoredTheme[],
     quickWins: [],
     notes: '',
   };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AuditManifest, Finding, Theme } from '@odysseus/core';
+import type { AuditManifest, Finding, StoredTheme } from '@odysseus/core';
 import { renderNextSteps } from './next-steps.js';
 import { getStrings } from '../strings/i18n.js';
 import {
@@ -66,10 +66,10 @@ function buildFinding(overrides: Partial<Finding> & { findingId: string }): Find
 
 function buildTheme(
   findingIds: string[],
-  effort: Theme['effort'],
-  impact: Theme['impact'],
+  effort: StoredTheme['effort'],
+  impact: StoredTheme['impact'],
   priorityRank: number,
-): Theme {
+): StoredTheme {
   return {
     title: 'Contraste insuffisant',
     category: 'accessibility',
@@ -86,8 +86,8 @@ function buildPriorities(
   specs: Array<{
     findingId: string;
     severity: Finding['severity'];
-    effort: Theme['effort'];
-    impact: Theme['impact'];
+    effort: StoredTheme['effort'];
+    impact: StoredTheme['impact'];
   }>,
 ): RenderedPriority[] {
   const byId = new Map(specs.map((spec) => [spec.findingId, buildFinding(spec)]));

@@ -644,7 +644,7 @@ function renderRuleGroup(
   `;
 }
 
-/** Geo findings never reach the curated themes section (Theme.category's
+/** Geo findings never reach the curated themes section (StoredTheme.category's
  *  locked schema has no 'geo' option - see CLAUDE.md trade-off 16), so
  *  this is the only place a reader sees geo business-impact context. The
  *  citation is quarantined with an "emerging" badge per the source
