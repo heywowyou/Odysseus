@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fetchCruxFieldData } from './crux.js';
+import { fetchCruxFieldData, fetchCruxFieldDataAcquisition } from './crux.js';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -53,5 +53,24 @@ describe('fetchCruxFieldData', () => {
 
     expect(result.available).toBe(false);
     expect(result.fetchError).toBeDefined();
+  });
+
+  it('distinguishes no public data from provider failure', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ error: { code: 404 } }, 404)));
+
+    const noData = await fetchCruxFieldDataAcquisition('https://tiny-site.example', 'fake-key');
+    expect(noData).toEqual({
+      status: 'no-public-data',
+      granularity: 'origin',
+      fieldData: { available: false },
+    });
+
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('provider unavailable')));
+    const failed = await fetchCruxFieldDataAcquisition('https://example.com', 'fake-key');
+    expect(failed.status).toBe('provider-error');
+    expect(failed.granularity).toBe('origin');
+    expect(failed.fieldData.available).toBe(false);
+    expect(failed.providerError).toContain('provider unavailable');
+    expect(failed.fieldData.fetchError).toContain('provider unavailable');
   });
 });
