@@ -21,6 +21,22 @@ export type {
   BackfillAuditRowResult,
 } from './pipeline/backfill-audit-row.js';
 export type { ReportStageResult, AllReportsStageResult } from './pipeline/report-stage.js';
+export {
+  loadCorpusManifest,
+  runReportQualityCorpus,
+  dryRunReportQualityCorpus,
+} from './pipeline/report-quality-benchmark.js';
+export type {
+  ReportQualityCorpusManifest,
+  ReportQualityCorpusEntry,
+  ReportQualityCorpusOutcome,
+  ReportQualityCorpusEntryState,
+  ReportQualityCorpusSummary,
+  ReportQualityCorpusProgress,
+  ReportQualityCorpusDryRunPlan,
+  ReportQualityCorpusDryRunEntry,
+  RunReportQualityCorpusOptions,
+} from './pipeline/report-quality-benchmark.js';
 export type { ArtifactStore } from './artifacts/artifact-store.js';
 export { createScalewayArtifactStore } from './artifacts/scaleway-artifact-store.js';
 export type { ScalewayArtifactStoreOptions } from './artifacts/scaleway-artifact-store.js';
