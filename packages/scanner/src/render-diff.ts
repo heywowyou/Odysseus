@@ -9,6 +9,11 @@ import { analyzeRawDocument } from './raw-document-signals.js';
 import { buildPageDir } from './artifacts/paths.js';
 import { couldEverBeKept } from './artifacts/prune-screenshots.js';
 import type { PageWorkGuard } from './page-work-guard.js';
+import {
+  installBrowserNetworkSafety,
+  type NetworkSafetyBlockHandler,
+} from './browser-network-safety.js';
+import type { NetworkTargetPolicy } from './network-target-policy.js';
 
 /** RenderDiffResult (packages/core) is a locked contract; this widens it
  *  with a scanner-only fact rather than touching that file. renderedUrl
@@ -70,6 +75,8 @@ export interface RenderDiffOptions {
    *  Absent for callers with no watchdog (the standalone render-diff CLI,
    *  most tests), which get today's behavior unchanged. */
   guard?: PageWorkGuard;
+  networkPolicy?: NetworkTargetPolicy;
+  onNetworkSafetyBlocked?: NetworkSafetyBlockHandler;
 }
 
 /**
@@ -105,6 +112,13 @@ export async function renderDiff(
   // small next to writing two full-page PNGs that get deleted at the end
   // of the scan. See couldEverBeKept in artifacts/prune-screenshots.ts.
   const rawContext = await browser.newContext({ javaScriptEnabled: false, userAgent });
+  if (options.networkPolicy !== undefined) {
+    await installBrowserNetworkSafety(
+      rawContext,
+      options.networkPolicy,
+      options.onNetworkSafetyBlocked,
+    );
+  }
   options.guard?.track(rawContext);
   let rawTextLength: number;
   let rawDocument: RawDocumentSignals;
@@ -131,6 +145,13 @@ export async function renderDiff(
     }
 
     const renderedContext = await browser.newContext({ userAgent });
+    if (options.networkPolicy !== undefined) {
+      await installBrowserNetworkSafety(
+        renderedContext,
+        options.networkPolicy,
+        options.onNetworkSafetyBlocked,
+      );
+    }
     options.guard?.track(renderedContext);
     try {
       renderedContext.setDefaultTimeout(timeoutMs);
