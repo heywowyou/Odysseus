@@ -17,11 +17,11 @@ import {
 } from '../evidence-snapshots.js';
 
 export const EVIDENCE_GRAPH_DIRNAME = 'evidence';
-export const RAW_EVIDENCE_SNAPSHOT_FILENAME = 'raw-evidence-snapshot.json';
-export const OBSERVATION_LEDGER_FILENAME = 'observation-ledger.json';
-export const AUDIT_EVIDENCE_SNAPSHOT_FILENAME = 'audit-evidence-snapshot.json';
-export const EVIDENCE_QUALITY_ASSESSMENT_FILENAME = 'evidence-quality-assessment.json';
-export const APPROVED_AUDIT_EVIDENCE_FILENAME = 'approved-audit-evidence.json';
+const RAW_EVIDENCE_SNAPSHOT_FILENAME = 'raw-evidence-snapshot.json';
+const OBSERVATION_LEDGER_FILENAME = 'observation-ledger.json';
+const AUDIT_EVIDENCE_SNAPSHOT_FILENAME = 'audit-evidence-snapshot.json';
+const EVIDENCE_QUALITY_ASSESSMENT_FILENAME = 'evidence-quality-assessment.json';
+const APPROVED_AUDIT_EVIDENCE_FILENAME = 'approved-audit-evidence.json';
 
 export interface EvidenceGraphRoots {
   raw: RawEvidenceSnapshot;

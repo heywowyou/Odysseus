@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import path from 'node:path';
 import type { RobotsPolicyChain } from '../robots-policy-snapshot.js';
 
-export const ROBOTS_POLICY_CHAIN_FILENAME = 'robots-policy-chain.json';
+const ROBOTS_POLICY_CHAIN_FILENAME = 'robots-policy-chain.json';
 
 export function writeRobotsPolicyChain(auditDir: string, chain: RobotsPolicyChain): void {
   const evidenceDir = path.join(auditDir, 'evidence');

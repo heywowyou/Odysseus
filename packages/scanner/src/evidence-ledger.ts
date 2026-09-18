@@ -117,7 +117,7 @@ export function buildEvidenceCoverageLedger(
 
 const SECRET_PAIR =
   /\b(token|session|sessionid|auth|authorization|apikey|api_key|key|secret|password)=([^\s&]+)/giu;
-const BEARER_VALUE = /\bBearer\s+[A-Za-z0-9._~+\/-]+=*/giu;
+const BEARER_VALUE = /\bBearer\s+[A-Za-z0-9._~+/-]+=*/giu;
 
 export function redactEvidenceText(value: string, maxLength = 320): string {
   const redacted = value
@@ -246,13 +246,7 @@ export function buildAuditSignal(input: AuditSignalInput): AuditSignal {
 }
 
 export type PageSemanticRole =
-  | 'commercial'
-  | 'transactional'
-  | 'archive'
-  | 'legal'
-  | 'content'
-  | 'unknown'
-  | 'conflicting';
+  'commercial' | 'transactional' | 'archive' | 'legal' | 'content' | 'unknown' | 'conflicting';
 
 export interface PageSemanticProfileInput {
   pageIdentity: string;
@@ -308,7 +302,7 @@ export function buildPatternEvidenceRecord(
     ...input,
     observationIds: uniqueSorted(input.observationIds),
     affectedPageIdentities: uniqueSorted(input.affectedPageIdentities),
-    version: PATTERN_EVIDENCE_VERSION,
+    version: PATTERN_EVIDENCE_VERSION as typeof PATTERN_EVIDENCE_VERSION,
     authoritativeForFindingIdentity: false as const,
   };
   const digest = canonicalDigest(body);

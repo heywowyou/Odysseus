@@ -13,10 +13,7 @@
  */
 
 import { getCrawlerUserAgent } from '../config.js';
-import type {
-  NetworkSafetyDisposition,
-  NetworkTargetPolicy,
-} from '../network-target-policy.js';
+import type { NetworkSafetyDisposition, NetworkTargetPolicy } from '../network-target-policy.js';
 import { fetchWithNetworkPolicy, NetworkSafetyBlockedError } from '../safe-fetch.js';
 
 export interface LlmsTxtCheckResult {

@@ -17,10 +17,7 @@ import {
   installBrowserNetworkSafety,
   type NetworkSafetyBlockHandler,
 } from './browser-network-safety.js';
-import {
-  checkNetworkTarget,
-  type NetworkTargetPolicy,
-} from './network-target-policy.js';
+import { checkNetworkTarget, type NetworkTargetPolicy } from './network-target-policy.js';
 import {
   globToRegExp,
   isLanguageHomepagePath,
@@ -56,10 +53,7 @@ import {
 } from './continuation-guard.js';
 import { isConfirmedListing } from './full-audit-plan.js';
 import type { ScanToolIdentity } from './artifacts/crawl-checkpoint-io.js';
-import {
-  buildRobotsPolicySnapshot,
-  type RobotsPolicySnapshot,
-} from './robots-policy-snapshot.js';
+import { buildRobotsPolicySnapshot, type RobotsPolicySnapshot } from './robots-policy-snapshot.js';
 import {
   InventoryLedger,
   type InventoryDiscoverySource,
@@ -459,13 +453,13 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     robotsText =
       options.scheduler === undefined
         ? await fetchRobotsText(start.origin, timeoutMs, userAgent, {
-              ...(options.networkPolicy !== undefined
-                ? { networkPolicy: options.networkPolicy }
-                : {}),
-              ...(options.onNetworkSafetyBlocked !== undefined
-                ? { onNetworkSafetyBlocked: options.onNetworkSafetyBlocked }
-                : {}),
-            })
+            ...(options.networkPolicy !== undefined
+              ? { networkPolicy: options.networkPolicy }
+              : {}),
+            ...(options.onNetworkSafetyBlocked !== undefined
+              ? { onNetworkSafetyBlocked: options.onNetworkSafetyBlocked }
+              : {}),
+          })
         : await options.scheduler.schedule(() =>
             fetchRobotsText(start.origin, timeoutMs, userAgent, {
               ...(options.networkPolicy !== undefined
@@ -1090,11 +1084,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
                   existingPage.discoveryMethod = 'link';
                   existingPage.discoveredFrom ??= item.url;
                 }
-                if (
-                  item.depth >= maxDepth &&
-                  existingPage === undefined &&
-                  !enqueued.has(link)
-                ) {
+                if (item.depth >= maxDepth && existingPage === undefined && !enqueued.has(link)) {
                   disposeInventory(link, 'depth-bound', {
                     detail: `discovered from depth ${item.depth}; maxDepth is ${maxDepth}`,
                   });

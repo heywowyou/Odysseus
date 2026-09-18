@@ -118,9 +118,9 @@ export default function BotInfoPage() {
             </pre>
 
             <p id="frequence-bot">
-              Rythme des requêtes&#160;: OdysseusBot espace d&apos;au moins 333 ms le démarrage
-              des requêtes qu&apos;il initie vers votre site. Si votre fichier robots.txt définit
-              une directive Crawl-delay plus longue, c&apos;est elle qui s&apos;applique. Les
+              Rythme des requêtes&#160;: OdysseusBot espace d&apos;au moins 333 ms le démarrage des
+              requêtes qu&apos;il initie vers votre site. Si votre fichier robots.txt définit une
+              directive Crawl-delay plus longue, c&apos;est elle qui s&apos;applique. Les
               sous-ressources chargées par une page ne sont pas comptées comme des démarrages
               indépendants par ce rythme. Le fichier robots.txt est lu avant toute visite et les
               pages interdites ne sont jamais chargées.
@@ -239,11 +239,11 @@ export default function BotInfoPage() {
             </pre>
 
             <p id="pacing-bot-en">
-              Request pacing: OdysseusBot spaces crawler-initiated request starts to your site by
-              at least 333 ms. If your robots.txt file specifies a longer Crawl-delay, that value
-              takes precedence. Subresources loaded by a page are not counted as independent starts
-              by this pacing rule. robots.txt is read before any page is visited, and disallowed
-              pages are never loaded.
+              Request pacing: OdysseusBot spaces crawler-initiated request starts to your site by at
+              least 333 ms. If your robots.txt file specifies a longer Crawl-delay, that value takes
+              precedence. Subresources loaded by a page are not counted as independent starts by
+              this pacing rule. robots.txt is read before any page is visited, and disallowed pages
+              are never loaded.
             </p>
 
             <p id="retention-bot-en">

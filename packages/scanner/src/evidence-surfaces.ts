@@ -11,10 +11,7 @@ export const FRAME_COVERAGE_RECORD_VERSION = 'frame-coverage-v1';
 export const ACCESSIBILITY_CAPABILITY_REGISTRY_VERSION = 'accessibility-capability-v1';
 
 export type SurfaceInteractionState =
-  | 'baseline'
-  | 'hydrated'
-  | 'consent-rejected'
-  | `local-state:${string}`;
+  'baseline' | 'hydrated' | 'consent-rejected' | `local-state:${string}`;
 
 export type SurfaceReadinessOutcome = 'ready' | 'timeout' | 'unstable' | 'blocked';
 
@@ -80,7 +77,9 @@ export interface PageReadinessRecord extends PageReadinessRecordInput {
 
 export function buildPageReadinessRecord(input: PageReadinessRecordInput): PageReadinessRecord {
   if (input.outcome === 'ready' && (!input.domReady || !input.networkQuiet)) {
-    throw new Error('buildPageReadinessRecord: ready requires DOM readiness and bounded network quiet');
+    throw new Error(
+      'buildPageReadinessRecord: ready requires DOM readiness and bounded network quiet',
+    );
   }
   const body = {
     ...input,
@@ -91,10 +90,7 @@ export function buildPageReadinessRecord(input: PageReadinessRecordInput): PageR
 }
 
 export type FrameTraversalCapability =
-  | 'document-only'
-  | 'open-shadow'
-  | 'same-origin-frames'
-  | 'cross-origin-frames';
+  'document-only' | 'open-shadow' | 'same-origin-frames' | 'cross-origin-frames';
 
 export interface FrameCoverageRecordInput {
   evidenceEpoch: number;

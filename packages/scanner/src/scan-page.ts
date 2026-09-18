@@ -60,10 +60,7 @@ import { findPublishedRoleContact, type PublishedRoleContact } from './role-cont
 import type { CheckExecutionOutcome, CheckId } from './check-scope-coverage.js';
 import type { PageWorkGuard } from './page-work-guard.js';
 import type { HostRequestScheduler } from './host-request-scheduler.js';
-import type {
-  NetworkSafetyDisposition,
-  NetworkTargetPolicy,
-} from './network-target-policy.js';
+import type { NetworkSafetyDisposition, NetworkTargetPolicy } from './network-target-policy.js';
 
 export interface ScanPageOptions {
   /** Politeness delay applied between the raw/rendered/Lighthouse passes. */

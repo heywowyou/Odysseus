@@ -146,10 +146,7 @@ export interface EvidenceQualityIssue {
 }
 
 export type EvidenceQualityVerdict =
-  | 'reportable-complete'
-  | 'reportable-with-known-limitations'
-  | 'needs-operator-review'
-  | 'failed';
+  'reportable-complete' | 'reportable-with-known-limitations' | 'needs-operator-review' | 'failed';
 
 export interface EvidenceQualityAssessmentInput {
   auditId: string;
@@ -158,8 +155,7 @@ export interface EvidenceQualityAssessmentInput {
   issues: readonly EvidenceQualityIssue[];
 }
 
-export interface EvidenceQualityAssessment
-  extends Omit<EvidenceQualityAssessmentInput, 'issues'> {
+export interface EvidenceQualityAssessment extends Omit<EvidenceQualityAssessmentInput, 'issues'> {
   version: typeof EVIDENCE_QUALITY_ASSESSMENT_VERSION;
   issues: readonly EvidenceQualityIssue[];
   mandatoryDisclosures: readonly EvidenceLimitation[];
@@ -177,14 +173,15 @@ export function buildEvidenceQualityAssessment(
       return byCode === 0 ? a.summary.localeCompare(b.summary) : byCode;
     });
   const blockers = issues.filter((issue) => issue.severity === 'blocking');
-  const verdict: EvidenceQualityVerdict =
-    blockers.some((issue) => issue.resolution === 'impossible' || issue.resolution === 'system')
-      ? 'failed'
-      : blockers.length > 0
-        ? 'needs-operator-review'
-        : issues.length > 0
-          ? 'reportable-with-known-limitations'
-          : 'reportable-complete';
+  const verdict: EvidenceQualityVerdict = blockers.some(
+    (issue) => issue.resolution === 'impossible' || issue.resolution === 'system',
+  )
+    ? 'failed'
+    : blockers.length > 0
+      ? 'needs-operator-review'
+      : issues.length > 0
+        ? 'reportable-with-known-limitations'
+        : 'reportable-complete';
 
   const mandatoryDisclosures = issues
     .map((issue) => issue.disclosure)
@@ -249,7 +246,10 @@ export function runEvidenceConsistencyGate(
     });
   }
   if (input.audit.auditId !== input.raw.auditId) {
-    violations.push({ code: 'audit-id-mismatch', detail: 'Audit root and raw root name different audits.' });
+    violations.push({
+      code: 'audit-id-mismatch',
+      detail: 'Audit root and raw root name different audits.',
+    });
   }
   if (
     input.audit.evidenceEpoch !== input.raw.evidenceEpoch ||
@@ -336,7 +336,9 @@ export function produceApprovedAuditEvidence(
     input.assessment.auditId !== input.audit.auditId ||
     input.assessment.evidenceEpoch !== input.audit.evidenceEpoch
   ) {
-    throw new Error('produceApprovedAuditEvidence: assessment names another audit or evidence epoch');
+    throw new Error(
+      'produceApprovedAuditEvidence: assessment names another audit or evidence epoch',
+    );
   }
   if (input.assessment.auditEvidenceSnapshotDigest !== input.audit.digest) {
     throw new Error('produceApprovedAuditEvidence: assessment does not approve this audit root');
@@ -346,13 +348,14 @@ export function produceApprovedAuditEvidence(
   }
   if (input.approvalMode === 'operator') {
     if (input.operatorDecisionId === undefined || input.operatorDecisionDigest === undefined) {
-      throw new Error('produceApprovedAuditEvidence: operator approval requires decision provenance');
+      throw new Error(
+        'produceApprovedAuditEvidence: operator approval requires decision provenance',
+      );
     }
-  } else if (
-    input.operatorDecisionId !== undefined ||
-    input.operatorDecisionDigest !== undefined
-  ) {
-    throw new Error('produceApprovedAuditEvidence: system approval cannot carry operator provenance');
+  } else if (input.operatorDecisionId !== undefined || input.operatorDecisionDigest !== undefined) {
+    throw new Error(
+      'produceApprovedAuditEvidence: system approval cannot carry operator provenance',
+    );
   }
 
   return {

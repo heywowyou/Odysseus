@@ -108,10 +108,13 @@ describe('scanSite characterization', () => {
     });
 
     // Plan 059 decision 18: request starts are spaced by the run's one host
-    // scheduler, not by a per-lane stagger, so concurrency 2 still means only
-    // the first page may begin at t=0.
+    // scheduler, not by a per-lane stagger. The site-level checks take the
+    // first slots, so at t=0 exactly one request has started and no page
+    // lane has begun, whatever the concurrency.
     await vi.advanceTimersByTimeAsync(0);
-    expect(vi.mocked(scanPage).mock.calls.map((call) => call[2])).toEqual([startUrl]);
+    expect(vi.mocked(checkLlmsTxt)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(checkSecurityHeaders)).not.toHaveBeenCalled();
+    expect(vi.mocked(scanPage)).not.toHaveBeenCalled();
     // Generous enough to cover every remaining paced start (4 pages plus the
     // site-level checks at the crawl's 100ms effective delay) without pinning
     // the assertion to an exact number of scheduler sleeps.

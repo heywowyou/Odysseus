@@ -55,7 +55,7 @@ import {
   reportRendererAssetFingerprints,
   runExactPdfQa,
 } from '@odysseus/report';
-import { readOdysseusBuildId } from '@odysseus/scanner';
+import { readApprovedAuditEvidence, readOdysseusBuildId } from '@odysseus/scanner';
 import {
   acquireReportQualityLease,
   findDeltaBaseline,
@@ -72,7 +72,10 @@ import {
 } from '@odysseus/store';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
 import { runObligationStage } from './obligation-stage.js';
-import { adaptLegacyAuditEvidence } from './report-quality-evidence.js';
+import {
+  adaptLegacyAuditEvidence,
+  buildApprovedAuditEvidencePayload,
+} from './report-quality-evidence.js';
 import {
   applyTargetedWriterPatches,
   resolveQualityDraft,
@@ -730,6 +733,27 @@ async function assertParity(
   return reportQualityDigest({ artifactDigest, adjudicated });
 }
 
+/**
+ * Plan 059 step 36: a canonical approval written by the evidence pipeline is
+ * the scan handoff. Only an audit that predates that pipeline falls back to
+ * the legacy adapter, whose approval mode production promotion refuses.
+ */
+function loadAuditEvidence(input: {
+  auditDir: string;
+  manifest: AuditManifest;
+  findings: Finding[];
+}): ApprovedAuditEvidencePayload {
+  const approval = readApprovedAuditEvidence(input.auditDir);
+  if (approval === undefined) {
+    return adaptLegacyAuditEvidence({ manifest: input.manifest, findings: input.findings });
+  }
+  return buildApprovedAuditEvidencePayload({
+    approval,
+    manifest: input.manifest,
+    findings: input.findings,
+  });
+}
+
 export async function runReportQualityPipeline(input: {
   connection: Connection;
   auditDir: string;
@@ -745,9 +769,7 @@ export async function runReportQualityPipeline(input: {
   }
 
   const lease = await acquireReportQualityLease(input.connection, input.manifest.auditId);
-  const evidence =
-    input.approvedEvidence ??
-    adaptLegacyAuditEvidence({ manifest: input.manifest, findings: input.findings });
+  const evidence = input.approvedEvidence ?? loadAuditEvidence(input);
   const context: QualityRunContext = {
     connection: input.connection,
     auditDir: input.auditDir,

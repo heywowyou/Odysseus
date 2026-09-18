@@ -71,10 +71,7 @@ import {
 import { createPageWorkGuard, type PageWorkGuard } from './page-work-guard.js';
 import { RobotsPolicyRuntime } from './robots-policy-runtime.js';
 import { writeRobotsPolicyChain } from './artifacts/robots-policy-io.js';
-import {
-  InventoryLedger,
-  type InventoryLedgerSnapshot,
-} from './inventory-ledger.js';
+import { InventoryLedger, type InventoryLedgerSnapshot } from './inventory-ledger.js';
 import { writeInventoryLedger } from './artifacts/inventory-ledger-io.js';
 
 export interface CrawlExclusionCounts {
@@ -558,9 +555,7 @@ async function runRenderedAnalysisLane(
           ...(context.bookingEngineUrl !== undefined
             ? { bookingEngineUrl: context.bookingEngineUrl }
             : {}),
-          ...(context.networkPolicy !== undefined
-            ? { networkPolicy: context.networkPolicy }
-            : {}),
+          ...(context.networkPolicy !== undefined ? { networkPolicy: context.networkPolicy } : {}),
           ...(context.onNetworkSafetyBlocked !== undefined
             ? { onNetworkSafetyBlocked: context.onNetworkSafetyBlocked }
             : {}),
@@ -1080,9 +1075,7 @@ export async function scanSite(
     const verdict = await checkNetworkTarget(url, options.networkPolicy);
     if (verdict.kind === 'allowed') return;
     onNetworkSafetyBlocked?.(verdict.disposition);
-    throw new Error(
-      `scanSite: network safety blocked ${url} (${verdict.disposition.reason})`,
-    );
+    throw new Error(`scanSite: network safety blocked ${url} (${verdict.disposition.reason})`);
   };
   const sitemapMode = options.sitemapMode ?? 'supplement';
   const crawlOptions = (frontier: CrawlOptions['frontier']): CrawlOptions => ({
@@ -1358,9 +1351,7 @@ export async function scanSite(
           timeoutMs: options.timeoutMs ?? getPageTimeoutMs(),
           guard: runGuard,
           ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
-          ...(options.networkPolicy !== undefined
-            ? { networkPolicy: options.networkPolicy }
-            : {}),
+          ...(options.networkPolicy !== undefined ? { networkPolicy: options.networkPolicy } : {}),
           ...(onNetworkSafetyBlocked !== undefined ? { onNetworkSafetyBlocked } : {}),
         }),
       )

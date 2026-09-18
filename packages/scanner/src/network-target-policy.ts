@@ -32,6 +32,7 @@
  *    and plan 059 section 22 rejects both.
  */
 
+import { isIP } from 'node:net';
 import {
   classifyIpAddress,
   type LookupAddresses,
@@ -210,10 +211,17 @@ export async function checkNetworkTarget(
     return { kind: 'allowed', pinnedAddresses: [] };
   }
 
+  // An IP literal is its own answer. Handing it to a resolver would let an
+  // injected or misbehaving lookup vouch for an address the connection will
+  // use verbatim anyway.
+  const literalFamily = isIP(host);
   const lookupAddresses = options.lookupAddresses ?? defaultLookupAddresses;
   let answers: readonly ResolvedAddress[];
   try {
-    answers = await lookupAddresses(host);
+    answers =
+      literalFamily === 0
+        ? await lookupAddresses(host)
+        : [{ address: host, family: literalFamily }];
   } catch {
     return refuse(url, policy, 'unresolvable-host', `host ${host} did not resolve`);
   }

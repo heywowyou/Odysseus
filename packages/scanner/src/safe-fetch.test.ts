@@ -6,14 +6,12 @@ const publicLookup = async () => [{ address: '93.184.216.34', family: 4 as const
 
 describe('fetchWithNetworkPolicy', () => {
   it('checks a redirect target before fetching it', async () => {
-    const fetchImpl = vi
-      .fn<typeof fetch>()
-      .mockResolvedValueOnce(
-        new Response(null, {
-          status: 302,
-          headers: { location: 'http://127.0.0.1/private' },
-        }),
-      );
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValueOnce(
+      new Response(null, {
+        status: 302,
+        headers: { location: 'http://127.0.0.1/private' },
+      }),
+    );
 
     const blocked: string[] = [];
     await expect(

@@ -47,5 +47,3 @@ export const evidenceQualityFixtures = {
     },
   },
 } as const;
-
-export type EvidenceQualityFixtureName = keyof typeof evidenceQualityFixtures;

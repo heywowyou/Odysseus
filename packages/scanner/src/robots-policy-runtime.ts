@@ -1,8 +1,5 @@
 import type { HostRequestScheduler } from './host-request-scheduler.js';
-import type {
-  NetworkSafetyDisposition,
-  NetworkTargetPolicy,
-} from './network-target-policy.js';
+import type { NetworkSafetyDisposition, NetworkTargetPolicy } from './network-target-policy.js';
 import {
   buildRobotsPolicySnapshot,
   describeRobotsPolicyTransition,
@@ -15,7 +12,7 @@ import {
 } from './robots-policy-snapshot.js';
 import { fetchRobotsText, parseRobotsTxt, type RobotsRules } from './robots.js';
 
-export const DEFAULT_ROBOTS_REVALIDATION_INTERVAL_MS = 15 * 60 * 1000;
+const DEFAULT_ROBOTS_REVALIDATION_INTERVAL_MS = 15 * 60 * 1000;
 
 function robotsTarget(url: string): string {
   const parsed = new URL(url);
@@ -96,19 +93,14 @@ export class RobotsPolicyRuntime {
 
   private async performRefresh(plannedUrls: readonly string[]): Promise<RobotsPolicyRefreshResult> {
     const robotsText = await this.options.scheduler.schedule(() =>
-      fetchRobotsText(
-        this.options.origin,
-        this.options.timeoutMs,
-        this.options.userAgent,
-        {
-          ...(this.options.networkPolicy !== undefined
-            ? { networkPolicy: this.options.networkPolicy }
-            : {}),
-          ...(this.options.onNetworkSafetyBlocked !== undefined
-            ? { onNetworkSafetyBlocked: this.options.onNetworkSafetyBlocked }
-            : {}),
-        },
-      ),
+      fetchRobotsText(this.options.origin, this.options.timeoutMs, this.options.userAgent, {
+        ...(this.options.networkPolicy !== undefined
+          ? { networkPolicy: this.options.networkPolicy }
+          : {}),
+        ...(this.options.onNetworkSafetyBlocked !== undefined
+          ? { onNetworkSafetyBlocked: this.options.onNetworkSafetyBlocked }
+          : {}),
+      }),
     );
     const rules: RobotsRules =
       robotsText === null
