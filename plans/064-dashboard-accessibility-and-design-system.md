@@ -538,8 +538,8 @@ bar for the named control-room workflows:
 - target **WCAG 2.2 A/AA** for operator UI behavior in scope;
 - axe: zero unexplained serious/critical violations in the named automated
   workflow fixtures;
-- IBM Equal Access checker: zero unwaived Level 1/2 violations in the same
-  rendered fixtures once the tool is integrated; any waiver is committed with
+- IBM Equal Access checker (`deploy/equal-access-ci.sh` + `.achecker.yml`): zero unwaived Level 1/2 violations in the same
+  rendered fixtures; any waiver is committed with
   rule, rationale, owner and expiry/review date;
 - manual keyboard: every named primary workflow completes without pointer;
 - focus: dialogs/drawers/mobile nav have scripted open/trap/Escape/return
