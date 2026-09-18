@@ -106,23 +106,16 @@ export const DEFAULT_MAX_CRAWL_DEPTH = UNLIMITED_MAX_CRAWL_DEPTH;
  *  that answers one navigation with eighty asset requests still receives
  *  eighty asset requests.
  *
- *  HELD AT 1000ms UNTIL THE SCHEDULER OWNS EVERY NAVIGATION. The reasoning
- *  above is sound and the 333ms value is the intended destination, but it is
- *  only safe once every request path goes through the scheduler, and three do
- *  not yet: the rendered pass's second navigation inside `scanPage`, the
- *  sequential Lighthouse loop, and the robots/sitemap setup fetches. Each of
- *  those is still paced by the raw delay value, so lowering this number today
- *  would leave the scan phase at its current rate while making those three
- *  paths three times faster than they have ever run against a real client
- *  site - the opposite of what this change is for, and a politeness regression
- *  rather than the neutral one intended.
+ *  Plan 059 wiring now routes the raw page start, rendered navigation,
+ *  serialized Lighthouse navigation, robots/sitemap setup, llms.txt, security
+ *  headers and the consent homepage navigation through the same scheduler.
+ *  Inner navigations use `pace()` so they do not deadlock by trying to acquire
+ *  a second lane while their page already owns one.
  *
- *  `HostRequestScheduler.pace()` exists to close this: it waits for a request
- *  slot without taking a lane, which is what those inner navigations need,
- *  since a nested `schedule()` from inside a held lane deadlocks once every
- *  lane is held. Route those three call sites through `pace()`, confirm the
- *  observed rate against a fixture site, and then lower this to 333. */
-export const DEFAULT_CRAWL_DELAY_MS = 1000;
+ *  The 333ms floor therefore applies once, globally, to scanner-initiated
+ *  requests against the audited host. A stricter robots Crawl-delay still
+ *  raises the scheduler and rate-limit feedback can only slow it further. */
+export const DEFAULT_CRAWL_DELAY_MS = 333;
 export const DEFAULT_PAGE_TIMEOUT_MS = 30_000;
 /** How long the rendered pass waits for the network to fall idle *after*
  *  `load` has already fired, before giving up and measuring anyway.
