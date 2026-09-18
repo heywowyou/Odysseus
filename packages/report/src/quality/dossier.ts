@@ -8,6 +8,7 @@ import type {
   ReportOnlyInputs,
   SeniorReportPlan,
 } from '@odysseus/core';
+import { reportQualityDigest } from './digest.js';
 
 export function buildReportFactRegistry(
   evidence: ApprovedAuditEvidencePayload,
@@ -112,13 +113,39 @@ export function reconcileCoverageLedger(
     ),
   };
 }
-export function assertCoverageLedgerComplete(ledger: CoverageLedger): void {
-  const missing = ledger.entries.filter(
+export function assertCoverageLedgerComplete(
+  ledger: CoverageLedger,
+  evidence?: ApprovedAuditEvidencePayload,
+): void {
+  if (evidence) {
+    // The ledger must be the ledger of THIS approved evidence payload: bound
+    // to its snapshot digest and accounting for every finding exactly once,
+    // otherwise an omitted finding would silently escape the disposition
+    // check below.
+    if (ledger.inputSnapshotDigest !== reportQualityDigest(evidence.approval))
+      throw new Error(
+        'Coverage ledger input snapshot digest does not match the approved evidence payload',
+      );
+    const membership = new Map<string, number>();
+    for (const entry of ledger.entries)
+      membership.set(entry.findingId, (membership.get(entry.findingId) ?? 0) + 1);
+    const absent = evidence.findings.filter((finding) => !membership.has(finding.findingId));
+    const duplicated = [...membership.entries()]
+      .filter(([, count]) => count > 1)
+      .map(([findingId]) => findingId);
+    if (absent.length || duplicated.length)
+      throw new Error(
+        `Coverage ledger does not account for the approved evidence (missing: ${
+          absent.map((finding) => finding.findingId).join(', ') || 'none'
+        }; duplicated: ${duplicated.join(', ') || 'none'})`,
+      );
+  }
+  const unassigned = ledger.entries.filter(
     (entry) => entry.eligible && entry.disposition !== 'project',
   );
-  if (missing.length)
+  if (unassigned.length)
     throw new Error(
-      `Senior report plan omitted eligible finding(s): ${missing.map((x) => x.findingId).join(', ')}`,
+      `Senior report plan omitted eligible finding(s): ${unassigned.map((x) => x.findingId).join(', ')}`,
     );
 }
 export function assertMandatoryDisclosures(
