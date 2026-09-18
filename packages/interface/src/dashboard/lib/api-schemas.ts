@@ -216,7 +216,7 @@ export const scanQueueSchema = z.object({
 /** GET /api/audits/:auditId `evidence` (Plan 059 step 37): the full audit's
  *  evidence-quality summary. Validated because the page gates the Plan 058
  *  bundle approval on the approval state it carries. */
-export const auditEvidenceQualitySchema = z.object({
+const auditEvidenceQualitySchema = z.object({
   verdict: z.enum([
     'reportable-complete',
     'reportable-with-known-limitations',
