@@ -34,6 +34,9 @@ export interface RenderDiffOptions {
    *  rendered pass opens. Unset by default so the standalone render-diff
    *  CLI keeps its existing back-to-back timing. */
   preRenderedDelayMs?: number;
+  /** Plan 059: shared host scheduler slot before the rendered navigation.
+   *  When provided this replaces preRenderedDelayMs; callers must never apply both. */
+  beforeRenderedNavigation?: () => Promise<void>;
   /** Invoked once against the fully rendered page, before its context
    *  closes, so callers (the scanner orchestration) can run additional
    *  analysis (axe-core) against the exact same navigation instead of
@@ -121,7 +124,9 @@ export async function renderDiff(
     rawTextLength = extractTextFromHtml(rawHtml).length;
     rawDocument = analyzeRawDocument(rawHtml);
 
-    if (options.preRenderedDelayMs) {
+    if (options.beforeRenderedNavigation !== undefined) {
+      await options.beforeRenderedNavigation();
+    } else if (options.preRenderedDelayMs) {
       await new Promise((resolve) => setTimeout(resolve, options.preRenderedDelayMs));
     }
 
