@@ -13,6 +13,40 @@ as a historical record in
 [`archive/9c-plans-index-history.md`](archive/9c-plans-index-history.md). It
 is not binding.
 
+## Plan closure standard
+
+Every active/root plan is a quality contract, not merely design prose. A plan
+must not be marked implemented/done because an implementation can be
+interpreted as satisfying an adjective such as "strongest", "bounded",
+"truthful", "clear", "safe", "responsive", "durable", or "accessible".
+
+For every binding requirement, the plan's closure evidence must identify:
+
+1. the concrete implementation owner/seam;
+2. the exact persisted/API/type/config artifact that embodies the requirement;
+3. a machine-verifiable test, invariant, budget, or fault fixture where the
+   requirement is mechanically testable;
+4. a named manual acceptance record only for properties that genuinely require
+   human judgment;
+5. the provenance/version of external models, tools, browsers, renderers, or
+   security profiles that materially affect the result.
+
+Each active plan must maintain a requirement-to-proof closure ledger (inline or
+in a named canonical document). **No binding row may be blank, mapped only to
+"code review", or closed by prose interpretation.** Unknown/unproven means the
+plan remains open.
+
+When a requirement says "best/strongest/fast/bounded/complete/safe" or similar,
+the plan must also name the comparison set or numeric/structural acceptance
+criterion. When a requirement names a role or state, the implementation must
+have an exhaustive typed registry/inventory and a test proving there is no
+silent default/fallback path.
+
+A later implementation discovery that exposes a missing proof reopens the
+owning plan as a completion defect; it is not automatically deferred to a new
+plan number.
+
+
 ## Current outcome
 
 Odysseus prospects from one durable, editable prospect hub. The operator adds
