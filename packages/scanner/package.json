@@ -20,7 +20,8 @@
     "crux-api": "^4.1.0",
     "html-validate": "^11.9.0",
     "lighthouse": "^13.4.1",
-    "playwright": "^1.62.1"
+    "playwright": "^1.62.1",
+    "undici": "^8.10.0"
   },
   "devDependencies": {
     "jsdom": "^30.0.1"

@@ -29,3 +29,34 @@ describe('launchBrowser', () => {
     browser = undefined;
   }, 30_000);
 });
+
+describe('launchBrowser with a network policy', () => {
+  it('refuses loopback navigation through the egress proxy', async () => {
+    const { createServer } = await import('node:http');
+    const { PUBLIC_SITE_NETWORK_POLICY } = await import('./network-target-policy.js');
+    const hits: string[] = [];
+    const server = createServer((request, response) => {
+      hits.push(request.url ?? '');
+      response.end('internal');
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()));
+    const port = (server.address() as import('node:net').AddressInfo).port;
+    const blocked: string[] = [];
+    try {
+      const launched = await launchBrowser({
+        networkPolicy: PUBLIC_SITE_NETWORK_POLICY,
+        onNetworkSafetyBlocked: (disposition) => blocked.push(disposition.url),
+      });
+      browser = launched.browser;
+      const page = await browser.newPage();
+      for (const host of ['127.0.0.1', 'localhost']) {
+        const response = await page.goto(`http://${host}:${port}/`).catch(() => null);
+        expect(response?.status() ?? 403).toBe(403);
+      }
+      expect(hits).toEqual([]);
+      expect(blocked.length).toBeGreaterThanOrEqual(2);
+    } finally {
+      server.close();
+    }
+  }, 30_000);
+});

@@ -167,7 +167,10 @@ export async function runAuditStage(
   // path) is the audit's timestamp end to end: directory name, manifest,
   // and normalize input all come from this one value.
   const startedAt = options.runIdentity?.startedAt ?? new Date();
-  const { browser, debugPort } = await launchBrowser();
+  // Plan 059: the browser dials only through the policy-enforcing egress
+  // proxy, so Lighthouse and every subresource obey the same address rule
+  // as the page routes.
+  const { browser, debugPort } = await launchBrowser({ networkPolicy: PUBLIC_SITE_NETWORK_POLICY });
 
   try {
     const hostname = new URL(url).hostname;
