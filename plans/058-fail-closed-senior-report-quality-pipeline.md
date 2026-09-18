@@ -8,6 +8,18 @@
 
 ## Status
 
+> **Scale-down, 2026-09-18 (operator decision).** The multi-role pipeline
+> below stays dormant, unchanged and unwired to paid delivery. It is frozen
+> until a first report sells; its measured cost (about $8-15 per report on
+> GPT-5.6 Sol) is out of proportion before then. Paid reports stay on the
+> existing report path, improved in small steps instead: every pass now runs
+> GPT-5.6 Luna at `xhigh` (trade-off 102, about $0.18 per bilingual report),
+> and the finished PDF passes an in-process file gate for fonts, language,
+> title, tagging, links, page geometry and active content
+> (`packages/report/src/pdf-integrity.ts`) on top of plan 033's layout gates,
+> followed by the operator's own read of both PDFs. Plans 061-066 are
+> frozen with it. Reopen this contract only by explicit operator decision.
+
 - **Priority**: P1
 - **Effort**: XL
 - **Risk**: HIGH — paid-report analysis, model orchestration, rendering, PDF QA, persistence, approval and delivery all change.
