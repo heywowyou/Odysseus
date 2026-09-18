@@ -214,12 +214,16 @@ export interface ReviewIssue {
   artifactDigest: Sha256Digest;
 }
 
+export type ReportQualityReasoningEffort = 'high' | 'xhigh';
+
 export interface ReportQualityModelCall {
   role: ReportQualityRole;
+  profileId: string;
+  profileDigest: Sha256Digest;
   requestedModel: string;
   resolvedModel: string;
   providerFingerprint?: string;
-  reasoningEffort: 'high';
+  reasoningEffort: ReportQualityReasoningEffort;
   promptDigest: Sha256Digest;
   schemaDigest: Sha256Digest;
 }
