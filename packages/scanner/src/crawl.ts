@@ -432,9 +432,23 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     }
     robotsText =
       options.scheduler === undefined
-        ? await fetchRobotsText(start.origin, timeoutMs, userAgent)
+        ? await fetchRobotsText(start.origin, timeoutMs, userAgent, {
+              ...(options.networkPolicy !== undefined
+                ? { networkPolicy: options.networkPolicy }
+                : {}),
+              ...(options.onNetworkSafetyBlocked !== undefined
+                ? { onNetworkSafetyBlocked: options.onNetworkSafetyBlocked }
+                : {}),
+            })
         : await options.scheduler.schedule(() =>
-            fetchRobotsText(start.origin, timeoutMs, userAgent),
+            fetchRobotsText(start.origin, timeoutMs, userAgent, {
+              ...(options.networkPolicy !== undefined
+                ? { networkPolicy: options.networkPolicy }
+                : {}),
+              ...(options.onNetworkSafetyBlocked !== undefined
+                ? { onNetworkSafetyBlocked: options.onNetworkSafetyBlocked }
+                : {}),
+            }),
           );
     robotsRules =
       robotsText === null
