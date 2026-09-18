@@ -637,6 +637,89 @@ describe('reports card PDF availability (issue #91)', () => {
   });
 });
 
+describe('report approval is explicit (plan 060 §2.4)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  const approvableAudit = {
+    ...emptyAudit,
+    lifecycle: 'analysed',
+    reportLanguages: ['fr', 'en'],
+    analysisPair: 'selected',
+    reports: [
+      { language: 'fr', status: 'fresh', pdfAvailable: true },
+      { language: 'en', status: 'fresh', pdfAvailable: true },
+    ],
+  };
+
+  function recordingFetchStub(): ReturnType<typeof vi.fn> {
+    return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : '';
+      if (url.includes('/report/') || url.includes('/report-quality/')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({}),
+          blob: async () => new Blob(['pdf']),
+        } as unknown as Response;
+      }
+      if (url.includes('report-preparation')) return notFoundResponse();
+      return jsonResponse(approvableAudit);
+    });
+  }
+
+  function spyObjectUrls(): void {
+    (URL as unknown as Record<string, unknown>).createObjectURL = vi.fn(() => 'blob:test');
+    (URL as unknown as Record<string, unknown>).revokeObjectURL = vi.fn();
+  }
+
+  it('downloads a language without approving the pair', async () => {
+    spyObjectUrls();
+    const fetchMock = recordingFetchStub();
+    vi.stubGlobal('fetch', fetchMock);
+    const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
+    await settle(container, 'Télécharger le PDF');
+    const downloadAnchor = container.querySelector<HTMLAnchorElement>(
+      'a[href="/api/audits/audit-1/report/fr"]',
+    );
+    expect(downloadAnchor).not.toBeNull();
+    await act(async () => {
+      downloadAnchor?.click();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+    const calledUrls = fetchMock.mock.calls.map((call) =>
+      typeof call[0] === 'string' ? call[0] : String(call[0]),
+    );
+    expect(calledUrls.some((url) => url.includes('/approve-reports'))).toBe(false);
+    root.unmount();
+  });
+
+  it('approves only through the explicit pair control', async () => {
+    spyObjectUrls();
+    const fetchMock = recordingFetchStub();
+    vi.stubGlobal('fetch', fetchMock);
+    const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
+    await settle(container, 'Approuver le rapport (les deux langues)');
+    const approveButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Approuver le rapport (les deux langues)',
+    );
+    expect(approveButton).toBeDefined();
+    await act(async () => {
+      approveButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+    const approveCall = fetchMock.mock.calls.find((call) =>
+      (typeof call[0] === 'string' ? call[0] : String(call[0])).includes('/approve-reports'),
+    );
+    expect(approveCall).toBeDefined();
+    expect(approveCall?.[1]?.method).toBe('POST');
+    root.unmount();
+  });
+});
+
 describe('preview note on the audit page (plan 040 slice 5)', () => {
   afterEach(() => {
     vi.unstubAllGlobals();

@@ -187,10 +187,8 @@ const FRESHNESS_TONES: Record<ReportFreshness, BadgeTone> = {
 
 export function ReportsCard(props: {
   detail: AuditDetailResponse;
-  /** Plan 045 section 2.3: a download approves the current pair first when
-   *  it is not already approved, so this refetches the audit detail
-   *  afterwards (the lifecycle badge and the other language's button both
-   *  depend on it). */
+  /** Refetches the audit detail after an explicit approval (the lifecycle
+   *  badge and the quality bundle both depend on it). */
   onApproved: () => void;
 }): JSX.Element {
   const { detail, onApproved } = props;
@@ -234,14 +232,8 @@ export function ReportsCard(props: {
   ): Promise<void> => {
     setIsLoadingReport(true);
     try {
-      // One-click approve & download (plan 045 section 2.3, trade-off 44
-      // unchanged): approval still gates the actual download, but the
-      // operator no longer has to find the separate approve step first -
-      // clicking download approves both languages when needed.
-      if (mode === 'download' && detail.lifecycle !== 'approved') {
-        await postEmpty(`/api/audits/${encodeURIComponent(detail.auditId)}/approve-reports`);
-        onApproved();
-      }
+      // Plan 060 §2.4: downloading a language is never an approval. The
+      // stored pair is approved only through the explicit control below.
       await openReportPdf(
         mode === 'preview' ? `${reportBase}/${language}/preview` : `${reportBase}/${language}`,
         mode,
@@ -249,6 +241,20 @@ export function ReportsCard(props: {
       );
     } catch (error) {
       toast.error(strings.auditDetail.reportUnavailableError, {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setIsLoadingReport(false);
+    }
+  };
+
+  const approvePair = async (): Promise<void> => {
+    setIsLoadingReport(true);
+    try {
+      await postEmpty(`/api/audits/${encodeURIComponent(detail.auditId)}/approve-reports`);
+      onApproved();
+    } catch (error) {
+      toast.error(strings.auditDetail.actionError, {
         description: error instanceof Error ? error.message : undefined,
       });
     } finally {
@@ -380,39 +386,18 @@ export function ReportsCard(props: {
                   >
                     {strings.auditDetail.previewReport}
                   </a>
-                  {canApprove ? (
-                    <a
-                      className={buttonStyles('ghost', 'sm')}
-                      href={`${reportBase}/${report.language}`}
-                      download
-                      aria-disabled={isLoadingReport}
-                      onClick={(event) => {
-                        event.preventDefault();
-                        void openReport(report.language, 'download');
-                      }}
-                    >
-                      {isApproved
-                        ? strings.auditDetail.approvedDownload
-                        : strings.auditDetail.approveAndDownload}
-                    </a>
-                  ) : (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled
-                        aria-describedby={`approve-unavailable-${report.language}`}
-                      >
-                        {strings.auditDetail.approveAndDownload}
-                      </Button>
-                      <p
-                        id={`approve-unavailable-${report.language}`}
-                        className="w-full text-xs text-ink-muted"
-                      >
-                        {strings.auditDetail.approveUnavailableReason}
-                      </p>
-                    </>
-                  )}
+                  <a
+                    className={buttonStyles('ghost', 'sm')}
+                    href={`${reportBase}/${report.language}`}
+                    download
+                    aria-disabled={isLoadingReport}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      void openReport(report.language, 'download');
+                    }}
+                  >
+                    {strings.auditDetail.downloadReport}
+                  </a>
                 </>
               ) : (
                 <>
@@ -437,6 +422,38 @@ export function ReportsCard(props: {
           ))}
         </ul>
       )}
+      {/* Plan 060 §2.4/DoD 9: approval is an explicit command on the exact
+          verified pair, never a side effect of downloading. */}
+      {hasReports && !isApproved ? (
+        <div className="mt-3 flex flex-col gap-1">
+          {canApprove ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="self-start"
+              disabled={isLoadingReport}
+              onClick={() => void approvePair()}
+            >
+              {strings.auditDetail.approveReports}
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="self-start"
+                disabled
+                aria-describedby="approve-reports-unavailable"
+              >
+                {strings.auditDetail.approveReports}
+              </Button>
+              <p id="approve-reports-unavailable" className="text-xs text-ink-muted">
+                {strings.auditDetail.approveUnavailableReason}
+              </p>
+            </>
+          )}
+        </div>
+      ) : null}
     </Card>
   );
 }

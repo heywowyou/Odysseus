@@ -34,10 +34,10 @@ export interface AuditDetailStrings {
   lifecycleLabel: string;
   lifecycle: Record<'scanned' | 'analysed' | 'rendered' | 'approved', string>;
   previewReport: string;
-  approvedDownload: string;
-  /** Plan 045 section 2.3: the download link's label before the pair is
-   *  approved - clicking it approves both languages, then downloads. */
-  approveAndDownload: string;
+  downloadReport: string;
+  /** Plan 060 §2.4: downloading a language is not approval; approving the
+   *  exact pair is its own explicit control. */
+  approveReports: string;
   /** Issue #391: why approval is greyed out while the pair is incomplete. */
   approveUnavailableReason: string;
   /** Shown when a mutation (save, regenerate, approve) fails. */
@@ -331,8 +331,8 @@ export const auditDetail = {
       approved: 'Approuvé',
     },
     previewReport: 'Prévisualiser',
-    approvedDownload: 'Télécharger la version approuvée',
-    approveAndDownload: 'Approuver (les deux langues) et télécharger',
+    downloadReport: 'Télécharger le PDF',
+    approveReports: 'Approuver le rapport (les deux langues)',
     approveUnavailableReason:
       'L’approbation demande un PDF à jour et vérifié en français et en anglais. Utilisez « Régénérer les PDF ».',
     actionError: 'L’action a échoué. Réessayez.',
@@ -609,8 +609,8 @@ export const auditDetail = {
       approved: 'Approved',
     },
     previewReport: 'Preview',
-    approvedDownload: 'Download the approved version',
-    approveAndDownload: 'Approve (both languages) and download',
+    downloadReport: 'Download the PDF',
+    approveReports: 'Approve the report (both languages)',
     approveUnavailableReason:
       'Approval needs a fresh, verified PDF in both French and English. Use “Regenerate the PDFs”.',
     actionError: 'The action failed. Try again.',
