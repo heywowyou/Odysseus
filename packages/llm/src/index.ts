@@ -120,11 +120,19 @@ export { configureLlmTelemetryFromEnv } from './telemetry/configure.js';
 export { callReportQualityRole } from './report-quality-client.js';
 export {
   REPORT_MODEL_PROFILES,
+  ReportModelProfileMissingError,
   getReportModelProfile,
   getReportModelProfileDigest,
   getReportModelProfileMatrixDigest,
 } from './report-model-profiles.js';
 export type { ReportModelProfile } from './report-model-profiles.js';
+export {
+  REPORT_PROFILE_BENCHMARK_MANIFEST,
+  ReportProfileBenchmarkNotCurrentError,
+  assertProductionProfileBenchmarksCurrent,
+  findStaleReportProfileBenchmarks,
+} from './report-profile-benchmarks.js';
+export type { ReportProfileBenchmarkApproval } from './report-profile-benchmarks.js';
 export type { QualityRoleResult } from './report-quality-client.js';
 export {
   evidenceBoundContentSchema,

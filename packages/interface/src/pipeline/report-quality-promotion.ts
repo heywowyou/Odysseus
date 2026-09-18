@@ -1,5 +1,6 @@
 import type { Connection } from 'mongoose';
 import type { Sha256Digest } from '@odysseus/core';
+import { assertProductionProfileBenchmarksCurrent } from '@odysseus/llm';
 import {
   approveExactReportBundle,
   atomicallyActivateReportBundle,
@@ -14,6 +15,9 @@ export async function approveAndPromoteReportQualityBundle(
   input: { auditId: string; qualityRunId: string; epoch: number; bundleDigest: Sha256Digest },
 ) {
   if (!artifactStore) throw new Error('Promotion requires configured artifact store');
+  // Plan 058 §6.1: production promotion also requires every role's corpus
+  // benchmark approval to be current, not merely a configured model string.
+  assertProductionProfileBenchmarksCurrent();
   const current = await getReportBundleByDigest(connection, input.auditId, input.bundleDigest);
   if (!current || current.qualityRunId !== input.qualityRunId || current.epoch !== input.epoch)
     throw new Error('Exact quality run/epoch/bundle digest is not current');

@@ -224,6 +224,8 @@ export interface ReportQualityModelCall {
   resolvedModel: string;
   providerFingerprint?: string;
   reasoningEffort: ReportQualityReasoningEffort;
+  promptVersion: string;
+  schemaVersion: string;
   promptDigest: Sha256Digest;
   schemaDigest: Sha256Digest;
 }

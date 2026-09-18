@@ -123,6 +123,8 @@ export async function callReportQualityRole<T>(input: {
       resolvedModel: response.model,
       ...(response.system_fingerprint ? { providerFingerprint: response.system_fingerprint } : {}),
       reasoningEffort: profile.reasoningEffort,
+      promptVersion: profile.promptVersion,
+      schemaVersion: profile.schemaVersion,
       promptDigest: digest(system + '\n\n' + userText),
       schemaDigest: digest(JSON.stringify(input.jsonSchema)),
     },
