@@ -60,6 +60,10 @@ import { findPublishedRoleContact, type PublishedRoleContact } from './role-cont
 import type { CheckExecutionOutcome, CheckId } from './check-scope-coverage.js';
 import type { PageWorkGuard } from './page-work-guard.js';
 import type { HostRequestScheduler } from './host-request-scheduler.js';
+import type {
+  NetworkSafetyDisposition,
+  NetworkTargetPolicy,
+} from './network-target-policy.js';
 
 export interface ScanPageOptions {
   /** Politeness delay applied between the raw/rendered/Lighthouse passes. */
@@ -131,6 +135,8 @@ export interface ScanPageOptions {
    *  scan-site.ts's per-page watchdog can force-close them if this call
    *  never returns on its own. */
   guard?: PageWorkGuard;
+  networkPolicy?: NetworkTargetPolicy;
+  onNetworkSafetyBlocked?: (disposition: NetworkSafetyDisposition) => void;
 }
 
 /**
@@ -382,6 +388,10 @@ export async function runRenderedAnalysis(
           ? { preRenderedDelayMs: options.delayMs }
           : {}),
       ...(options.guard !== undefined ? { guard: options.guard } : {}),
+      ...(options.networkPolicy !== undefined ? { networkPolicy: options.networkPolicy } : {}),
+      ...(options.onNetworkSafetyBlocked !== undefined
+        ? { onNetworkSafetyBlocked: options.onNetworkSafetyBlocked }
+        : {}),
       onRenderedPageCreated: async (page) => {
         // Must be attached before navigation - see
         // rendered-cost-profile.ts's own doc comment.
