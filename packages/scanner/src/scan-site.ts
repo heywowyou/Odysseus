@@ -69,6 +69,8 @@ import {
   writeCrawlFrontierState,
 } from './artifacts/crawl-frontier-io.js';
 import { createPageWorkGuard, type PageWorkGuard } from './page-work-guard.js';
+import { RobotsPolicyRuntime } from './robots-policy-runtime.js';
+import { writeRobotsPolicyChain } from './artifacts/robots-policy-io.js';
 
 export interface CrawlExclusionCounts {
   discoveryOnly: number;
@@ -488,6 +490,7 @@ interface StagedScanContext {
   runGuard: PageWorkGuard | undefined;
   networkPolicy: NetworkTargetPolicy | undefined;
   onNetworkSafetyBlocked: ((disposition: NetworkSafetyDisposition) => void) | undefined;
+  robotsPolicyRuntime: RobotsPolicyRuntime | undefined;
 }
 
 /**
@@ -506,6 +509,10 @@ async function runRenderedAnalysisLane(
   onPageDone: (url: string, result: RenderedAnalysisResult, durationMs: number) => void,
 ): Promise<void> {
   for (const url of laneUrls) {
+    if (context.robotsPolicyRuntime !== undefined) {
+      await context.robotsPolicyRuntime.refresh(laneUrls);
+      context.robotsPolicyRuntime.assertAllowed(url);
+    }
     // Issue #200: same per-page-guard-mirrored-into-run-wide-guard shape
     // as runScanLane above.
     const pageGuard = createPageWorkGuard(context.runGuard);
@@ -759,6 +766,10 @@ async function runStagedFullAuditScan(
   // progress and over-report the ETA's remaining work.
   let lighthouseAlreadyCompleted = 0;
   for (const url of selectedUrls) {
+    if (context.robotsPolicyRuntime !== undefined) {
+      await context.robotsPolicyRuntime.refresh([...selectedUrls]);
+      context.robotsPolicyRuntime.assertAllowed(url);
+    }
     const decision = decisionByUrl.get(url);
     const reusedScanJson = completedByUrl.get(url);
     if (
