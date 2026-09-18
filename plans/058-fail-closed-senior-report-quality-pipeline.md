@@ -13,6 +13,7 @@
 - **Risk**: HIGH — paid-report analysis, model orchestration, rendering, PDF QA, persistence, approval and delivery all change.
 - **Depends on**: delivered plans 027, 033, 039, 050 and 051; **Plan 059 evidence approval before production promotion**.
 - **Category**: paid-report quality, senior reasoning pipeline, exact-PDF QA, bilingual delivery integrity.
+- **Execution status**: core pipeline implementation landed 2026-09-18 and remains dormant behind Plan 059; **corrective closure reopened 2026-09-18** because the implementation used one generic report-quality model instead of the required validated per-role profiles.
 - **Final review state**: original design + six hardening passes + final convergence reviews. The final architecture pass produced no additional substantive change; freeze speculative design and let implementation/evaluation evidence drive later amendments.
 
 ---
