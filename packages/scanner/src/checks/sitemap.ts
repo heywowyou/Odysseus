@@ -11,6 +11,7 @@ import {
   type NetworkSafetyDisposition,
   type NetworkTargetPolicy,
 } from '../network-target-policy.js';
+import { fetchWithNetworkPolicy } from '../safe-fetch.js';
 
 const LOC_PATTERN = /<loc>\s*([^<]+?)\s*<\/loc>/gi;
 const LASTMOD_PATTERN = /<lastmod>\s*([^<]+?)\s*<\/lastmod>/i;
@@ -103,12 +104,22 @@ async function tryFetchSitemap(
   url: string,
   timeoutMs: number,
   userAgent: string | undefined,
+  options: SitemapCheckOptions,
 ): Promise<{ xml: string; finalUrl: string } | { error: string }> {
   try {
-    const response = await fetch(url, {
+    const request = {
       signal: AbortSignal.timeout(timeoutMs),
       ...(userAgent !== undefined ? { headers: { 'user-agent': userAgent } } : {}),
-    });
+    };
+    const response =
+      options.networkPolicy === undefined
+        ? await fetch(url, request)
+        : await fetchWithNetworkPolicy(url, request, {
+            policy: options.networkPolicy,
+            ...(options.onNetworkSafetyBlocked !== undefined
+              ? { onBlocked: options.onNetworkSafetyBlocked }
+              : {}),
+          });
     if (!response.ok) return { error: `HTTP ${response.status}` };
     return { xml: await response.text(), finalUrl: response.url || url };
   } catch (error) {
@@ -191,11 +202,11 @@ export async function checkSitemap(
     let fetched: Awaited<ReturnType<typeof tryFetchSitemap>>;
     if (options.scheduler !== undefined) {
       fetched = await options.scheduler.schedule(() =>
-        tryFetchSitemap(documentUrl, timeoutMs, options.userAgent),
+        tryFetchSitemap(documentUrl, timeoutMs, options.userAgent, options),
       );
     } else {
       if (hasFetched) await sleep(options.delayMs ?? 0);
-      fetched = await tryFetchSitemap(documentUrl, timeoutMs, options.userAgent);
+      fetched = await tryFetchSitemap(documentUrl, timeoutMs, options.userAgent, options);
     }
     hasFetched = true;
     if ('error' in fetched) {
