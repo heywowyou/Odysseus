@@ -64,8 +64,8 @@ describe('Plan 058 report model profiles', () => {
 
     for (const source of criticalSources) {
       expect(source).not.toContain('ODYSSEUS_REPORT_QUALITY_MODEL');
-      expect(source).not.toContain("OPENAI_MODEL");
-      expect(source).not.toContain("gpt-5.4-mini");
+      expect(source).not.toContain('OPENAI_MODEL');
+      expect(source).not.toContain('gpt-5.4-mini');
     }
   });
 });

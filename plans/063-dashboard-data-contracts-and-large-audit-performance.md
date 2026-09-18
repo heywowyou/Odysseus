@@ -690,7 +690,7 @@ Before implementation may be called complete, freeze numeric budgets in this pla
 
 - audit control-summary JSON: **<= 200 KiB** for the Point-France fixture;
 - global list/attention endpoints: **<= 25 database queries** per request and **zero N+1 growth** with item count;
-- findings/occurrence page size: **<= 100 rows** returned per page by default, with a hard server maximum of **250**;
+- findings/occurrence page size: **<= 100 rows** returned per page by default, with a hard server maximum of **<= 250** rows;
 - audit summary path: **zero object-store/PDF byte reads**;
 - browser interaction on the Point-France fixture: primary filter/pagination action settles within **500 ms p95 locally** excluding artificial network delay;
 - active polling payload: **<= 100 KiB** with 8 active jobs;

@@ -5,10 +5,7 @@ import type { ReportQualityModelCall, ReportQualityRole, Sha256Digest } from '@o
 import type { ZodType } from 'zod';
 import { ensureEnvLoaded, getOpenAiApiKey, getOpenAiBaseUrl } from './config.js';
 import { extractProviderRetryAfterMs } from './rate-limit-pacing.js';
-import {
-  getReportModelProfile,
-  getReportModelProfileDigest,
-} from './report-model-profiles.js';
+import { getReportModelProfile, getReportModelProfileDigest } from './report-model-profiles.js';
 function digest(value: string): Sha256Digest {
   return `sha256:${createHash('sha256').update(value).digest('hex')}`;
 }

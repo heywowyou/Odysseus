@@ -1,9 +1,5 @@
 import { createHash } from 'node:crypto';
-import type {
-  ReportQualityReasoningEffort,
-  ReportQualityRole,
-  Sha256Digest,
-} from '@odysseus/core';
+import type { ReportQualityReasoningEffort, ReportQualityRole, Sha256Digest } from '@odysseus/core';
 
 export interface ReportModelProfile {
   profileId: string;

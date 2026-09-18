@@ -28,7 +28,9 @@ for (const name of rootPlanNames) {
     errors.push(`${path} must require a requirement-to-proof closure artifact.`);
   }
 
-  const statusMatch = contents.match(/(?:^|\n)(?:Status:\s*|[-*]\s*\*\*Execution status:\*\*\s*)([^\n]+)/i);
+  const statusMatch = contents.match(
+    /(?:^|\n)(?:Status:\s*|[-*]\s*\*\*Execution status:\*\*\s*)([^\n]+)/i,
+  );
   if (statusMatch?.[1]?.includes('DONE') && !/Closure evidence:/i.test(contents)) {
     errors.push(`${path} is DONE but has no committed "Closure evidence:" record.`);
   }
@@ -46,13 +48,19 @@ for (const required of [
     errors.push(`Plan 058 must retain its model-profile ratchet: missing "${required}".`);
   }
 }
-if (/single generic report-quality model setting is not a role-profile implementation/.test(plan058) === false) {
+if (
+  /single generic report-quality model setting is not a role-profile implementation/.test(
+    plan058,
+  ) === false
+) {
   errors.push('Plan 058 must explicitly reject a single generic report-quality model setting.');
 }
 
 const reportProfileSource = read('packages/llm/src/report-model-profiles.ts');
 const reportQualityClientSource = read('packages/llm/src/report-quality-client.ts');
-const reportQualityPipelineSource = read('packages/interface/src/pipeline/report-quality-pipeline.ts');
+const reportQualityPipelineSource = read(
+  'packages/interface/src/pipeline/report-quality-pipeline.ts',
+);
 const reportProfileTestSource = read('packages/llm/src/report-model-profiles.test.ts');
 
 for (const [sourceName, source] of [
@@ -66,7 +74,10 @@ for (const [sourceName, source] of [
     }
   }
 }
-if (!reportProfileSource.includes("model: 'gpt-5.6-sol'") && !reportProfileSource.includes('model: SOL')) {
+if (
+  !reportProfileSource.includes("model: 'gpt-5.6-sol'") &&
+  !reportProfileSource.includes('model: SOL')
+) {
   errors.push('Plan-058 model profiles must retain the gpt-5.6-sol quality-first candidate.');
 }
 if (!reportProfileSource.includes('satisfies Record<ReportQualityRole, ReportModelProfile>')) {
@@ -82,7 +93,13 @@ if (!plan051.includes('@odysseus/llm') || !/no import or call edge/i.test(plan05
 }
 
 const plan063 = read('plans/063-dashboard-data-contracts-and-large-audit-performance.md');
-for (const budget of ['<= 200 KiB', '<= 25 database queries', '<= 100 rows', '<= 250', '500 ms p95']) {
+for (const budget of [
+  '<= 200 KiB',
+  '<= 25 database queries',
+  '<= 100 rows',
+  '<= 250',
+  '500 ms p95',
+]) {
   if (!plan063.includes(budget)) {
     errors.push(`Plan 063 must retain numeric performance budget "${budget}".`);
   }
@@ -96,7 +113,11 @@ for (const required of ['WCAG 2.2 AA', 'manual acceptance artifact', '400% zoom'
 }
 
 const plan066 = read('plans/066-operator-security-privacy-and-browser-isolation.md');
-for (const required of ['browser-isolation proof record', 'negative tests prove', 'arbitrary external network access']) {
+for (const required of [
+  'browser-isolation proof record',
+  'negative tests prove',
+  'arbitrary external network access',
+]) {
   if (!plan066.includes(required)) {
     errors.push(`Plan 066 must retain security closure requirement "${required}".`);
   }
