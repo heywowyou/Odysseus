@@ -3,7 +3,10 @@ import { LangfuseLlmTelemetrySink } from './langfuse-sink.js';
 
 describe('LangfuseLlmTelemetrySink', () => {
   it('exports only metadata through OTLP and never prompt/output fields', async () => {
-    const fetchImpl = vi.fn(async () => new Response(null, { status: 200 }));
+    const fetchImpl = vi.fn(
+      async (_url: string | URL | Request, _init?: RequestInit) =>
+        new Response(null, { status: 200 }),
+    );
     const sink = new LangfuseLlmTelemetrySink({
       baseUrl: 'https://cloud.langfuse.com/',
       publicKey: 'pk-test',
@@ -36,8 +39,17 @@ describe('LangfuseLlmTelemetrySink', () => {
     const body = String(init?.body);
     expect(body).toContain('odysseus.llm.pass');
     expect(body).toContain('test-model');
-    expect(body).not.toContain('prompt');
-    expect(body).not.toContain('output');
+    // Every span attribute is a metadata key. Token counts use the OTel
+    // gen_ai.usage.* names; content attributes (gen_ai.prompt/completion,
+    // input/output values) never appear.
+    const keys = [...body.matchAll(/"key":"([^"]+)"/g)].map((match) => match[1]!);
+    expect(keys.length).toBeGreaterThan(0);
+    for (const key of keys) {
+      expect(key).toMatch(
+        /^(?:odysseus\.llm\.|odysseus\.telemetry\.|gen_ai\.usage\.|gen_ai\.request\.|gen_ai\.system$|service\.|langfuse\.)/,
+      );
+      expect(key).not.toMatch(/prompt|completion|input\.value|output\.value|message/);
+    }
     expect(body).not.toContain('finding');
     expect(body).not.toContain('http://');
   });

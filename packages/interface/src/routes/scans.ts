@@ -2,8 +2,8 @@ import type { Connection } from 'mongoose';
 import { isHttpUrlWithoutCredentials, isValidSiren } from '@odysseus/core';
 import {
   ActiveJobSlotTakenError,
-  cancelJob,
   cancelQueuedJobs,
+  requestJobCancellation,
   createJob,
   deleteAuditCascade,
   deleteJob,
@@ -15,6 +15,8 @@ import {
   findAuditsWithUnreadyReports,
   getJob,
   listJobs,
+  readScanQueue,
+  reorderScanQueue,
   canonicalJobTypeForScanIntent,
   displayJobIntent,
   type JobDocument,
@@ -28,7 +30,21 @@ import {
   deleteAuditArtifacts,
 } from '../artifacts/delete-audit-artifacts.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
-import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
+import {
+  jsonBodyNotRead,
+  readJsonBodyOrRespond,
+  sendError,
+  sendJson,
+  sendProblem,
+} from '../http-utils.js';
+import type { ActionCapability } from '../operator/contract.js';
+import {
+  cancelJobCapability,
+  deleteJobCapability,
+  jobCapabilities,
+  type JobCapabilityInputs,
+} from '../operator/job-capabilities.js';
+import { projectLegacyJob } from '../operator/legacy-job-projection.js';
 import type { JobQueue } from '../queue/job-queue.js';
 import { isReportProductionInFlight } from '../pipeline/report-production-lock.js';
 import { reportProductionState } from '../pipeline/report-production-state.js';
@@ -247,6 +263,66 @@ type BatchItemResult =
       outcome: 'rejected';
       reason: 'invalid-url' | 'suppressed' | 'prospect-unavailable';
     };
+
+/** The non-default options a waiting scan carries, as closed flags for the
+ *  queue row; the full options stay on the job detail read. */
+function queuedOptionsSummary(options: JobOptionsSnapshot): string[] {
+  const flags: string[] = [];
+  if (options.maxPages !== undefined && options.maxPages > 1) flags.push('page-limit');
+  if (options.maxDepth !== undefined) flags.push('depth-limit');
+  if (options.delayMs !== undefined) flags.push('custom-delay');
+  if (options.scanConcurrency !== undefined) flags.push('custom-concurrency');
+  if ((options.seeds?.length ?? 0) > 0) flags.push('extra-seeds');
+  if ((options.exclusions?.length ?? 0) > 0) flags.push('exclusions');
+  if (options.siren !== undefined) flags.push('manual-siren');
+  if (options.bookingEngineUrl !== undefined) flags.push('booking-engine');
+  if (options.transactionalFlow !== undefined) flags.push('transactional-flow');
+  return flags;
+}
+
+function capabilityInputs(job: JobCapabilityInputs['job'], queue: JobQueue): JobCapabilityInputs {
+  const auditIds = [...(job.auditId === undefined ? [] : [job.auditId]), ...(job.auditIds ?? [])];
+  return {
+    job,
+    inFlight: queue.isJobInFlight(job.jobId),
+    reportProductionInFlight: auditIds.some((auditId) => isReportProductionInFlight(auditId)),
+  };
+}
+
+/** Plan 061 §8.2 steps 4-5: the capability recomputed from freshly loaded
+ *  state must still be available and still carry the token the client saw.
+ *  Answers the typed problem and returns false otherwise. */
+function recheckCapability(
+  res: Parameters<typeof sendProblem>[0],
+  capability: ActionCapability,
+  presentedToken: unknown,
+): boolean {
+  if (typeof presentedToken !== 'string' || presentedToken === '') {
+    sendProblem(res, 400, {
+      code: 'invalid-request',
+      message: 'stateToken is required; reload the current state first',
+    });
+    return false;
+  }
+  if (capability.stateToken !== presentedToken) {
+    sendProblem(res, 409, {
+      code: 'state-changed',
+      message: 'the job changed since this page loaded; refresh and try again',
+      retryable: true,
+    });
+    return false;
+  }
+  if (capability.state === 'blocked') {
+    sendProblem(res, 409, {
+      code: 'action-blocked',
+      message: `action blocked: ${capability.reasonCode}`,
+      reasonCode: capability.reasonCode,
+      ...(capability.blockingRef === undefined ? {} : { blockingRef: capability.blockingRef }),
+    });
+    return false;
+  }
+  return true;
+}
 
 /** Registers the job-creation and job-status endpoints. `queue.notify()`
  *  is called after every successful create so a submitted scan starts
@@ -476,9 +552,89 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
         (unreadyReports.has(job.auditId) || reportProductionState(job.auditId).status === 'failed')
           ? true
           : undefined,
+      capabilities: jobCapabilities(capabilityInputs(job, queue)),
     }));
 
     sendJson(res, 200, summaries);
+  });
+
+  /** Plan 061 §6.2 and §11: the waiting scans in durable claim order, with
+   *  the revision a reorder must name. Registered before the :jobId read so
+   *  the literal segment wins. */
+  router.get('/api/scans/queue', async ({ res }) => {
+    const snapshot = await readScanQueue(connection);
+    const prospectNames = await getProspectNames(
+      connection,
+      snapshot.jobs
+        .map((job) => job.options.prospectId)
+        .filter((id): id is string => id !== undefined),
+    );
+    sendJson(res, 200, {
+      queueRevision: snapshot.queueRevision,
+      truncated: snapshot.truncated,
+      jobs: snapshot.jobs.map((job, index) => ({
+        jobId: job.jobId,
+        type: displayJobIntent(job.type, job.options.scanType),
+        siteUrl: job.siteUrl,
+        prospectId: job.options.prospectId,
+        prospectName:
+          job.options.prospectId === undefined
+            ? undefined
+            : prospectNames.get(job.options.prospectId),
+        createdAt: job.createdAt,
+        position: index + 1,
+        options: queuedOptionsSummary(job.options),
+        cancel: cancelJobCapability(
+          capabilityInputs({ jobId: job.jobId, type: job.type, status: 'queued' }, queue),
+        ),
+      })),
+    });
+  });
+
+  /** Plan 061 §6.2: applies an operator reorder of the waiting scans. The
+   *  body names the queue revision it was computed from and the complete new
+   *  order; a stale revision answers the typed state-changed problem with
+   *  the current order so the client can refresh without a second read. */
+  router.post('/api/scans/queue/reorder', async ({ req, res }) => {
+    const body = await readJsonBodyOrRespond(req, res);
+    if (body === jsonBodyNotRead) return;
+    const record = (body ?? {}) as Record<string, unknown>;
+    const queueRevision = record['queueRevision'];
+    const orderedJobIds = record['orderedJobIds'];
+    if (
+      typeof queueRevision !== 'string' ||
+      !Array.isArray(orderedJobIds) ||
+      !orderedJobIds.every((id): id is string => typeof id === 'string')
+    ) {
+      sendProblem(res, 400, {
+        code: 'invalid-request',
+        message: 'queueRevision (string) and orderedJobIds (string[]) are required',
+      });
+      return;
+    }
+    const result = await reorderScanQueue(connection, {
+      expectedRevision: queueRevision,
+      orderedJobIds,
+    });
+    if (result.outcome === 'state-changed') {
+      sendProblem(res, 409, {
+        code: 'state-changed',
+        message: 'the queue changed since this page loaded; refresh and try again',
+        retryable: true,
+      });
+      return;
+    }
+    if (result.outcome === 'invalid-order') {
+      sendProblem(res, 400, {
+        code: 'invalid-request',
+        message: 'orderedJobIds must list every waiting scan exactly once',
+      });
+      return;
+    }
+    sendJson(res, 200, {
+      queueRevision: result.snapshot.queueRevision,
+      orderedJobIds: result.snapshot.jobs.map((job) => job.jobId),
+    });
   });
 
   router.get('/api/scans/:jobId', async ({ res, params }) => {
@@ -496,6 +652,8 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       type: displayJobIntent(job.type, job.options.scanType),
       prospectId: job.options.prospectId,
       prospectName: prospect?.name,
+      work: projectLegacyJob(job),
+      capabilities: jobCapabilities(capabilityInputs(job, queue)),
     });
   });
 
@@ -507,45 +665,36 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
     sendJson(res, 200, { cleared });
   });
 
-  /** Operator stop for one job. The document is terminal from this moment
-   *  (so the dashboard and the claim filter both react at once). The stop
-   *  is registered for any non-terminal read, queued or running, so a
-   *  queued-to-running claim transition between the read and the
-   *  registration still aborts the in-flight pipeline work at its next
-   *  safe boundary via the queue's cancellation registry. */
-  router.post('/api/scans/:jobId/cancel', async ({ res, params }) => {
+  /** Operator stop for one job (plan 061 §7). The body carries the cancel
+   *  capability's stateToken; a queued-to-running transition since the page
+   *  loaded changes the token, because removing a waiting scan and stopping
+   *  a running one preserve different work. A queued job is cancelled at
+   *  once; a running one becomes cancel-requested until its worker lets go
+   *  at the next safe boundary. */
+  router.post('/api/scans/:jobId/cancel', async ({ req, res, params }) => {
+    const body = await readJsonBodyOrRespond(req, res);
+    if (body === jsonBodyNotRead) return;
     const jobId = params['jobId']!;
     const job = await getJob(connection, jobId);
     if (!job) {
-      sendError(res, 404, 'job not found');
+      sendProblem(res, 404, { code: 'not-found', message: 'job not found' });
       return;
     }
-    if (job.status !== 'queued' && job.status !== 'running') {
-      sendError(res, 409, `job is already ${job.status}`);
+    const presented = (body as Record<string, unknown> | undefined)?.['stateToken'];
+    if (!recheckCapability(res, cancelJobCapability(capabilityInputs(job, queue)), presented)) {
       return;
     }
-    if (
-      job.status === 'running' &&
-      job.type !== 'full-audit' &&
-      job.type !== 'quick-check' &&
-      job.type !== 'prospecting-audit' &&
-      job.type !== 'prospecting' &&
-      job.type !== 'outreach-full-scan'
-    ) {
-      sendError(
-        res,
-        409,
-        `running ${job.type} jobs cannot be stopped and will finish on their own`,
-      );
+    const cancellation = await requestJobCancellation(connection, jobId, 'cancelled by operator');
+    if (cancellation === 'not-cancellable') {
+      sendProblem(res, 409, {
+        code: 'state-changed',
+        message: 'job is no longer queued or running',
+        retryable: true,
+      });
       return;
     }
-    queue.requestCancel(jobId);
-    const cancelled = await cancelJob(connection, jobId, 'cancelled by operator');
-    if (!cancelled) {
-      sendError(res, 409, 'job is no longer queued or running');
-      return;
-    }
-    sendJson(res, 200, { jobId, status: 'cancelled' });
+    if (cancellation === 'cancel-requested') queue.requestCancel(jobId);
+    sendJson(res, 200, { jobId, status: cancellation });
   });
 
   /** Deletes one job row and, when the job produced audits, every audit it
@@ -554,28 +703,19 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
    *  first and a storage failure answers 503 with the audit rows kept, so
    *  the operator can retry instead of being told the space was reclaimed. Running jobs are refused (stop first), so a
    *  deleted job can never keep consuming the server invisibly. */
-  router.delete('/api/scans/:jobId', async ({ res, params }) => {
+  router.delete('/api/scans/:jobId', async ({ res, params, query }) => {
     const jobId = params['jobId']!;
     const job = await getJob(connection, jobId);
     if (!job) {
-      sendError(res, 404, 'job not found');
+      sendProblem(res, 404, { code: 'not-found', message: 'job not found' });
       return;
     }
-    if (job.status === 'running') {
-      sendError(res, 409, 'a running job must be stopped before it can be deleted');
-      return;
-    }
-    // A stopped job is marked cancelled at once, but its pipeline only
-    // aborts at the next stage boundary. Deleting before then would let the
-    // remaining stages write an audit, analyses and reports nothing links to.
-    if (queue.isJobInFlight(jobId)) {
-      sendError(
-        res,
-        409,
-        'the stopped job is still finishing its current stage; try again shortly',
-      );
-      return;
-    }
+    // Running, cancel-requested and still-finishing work (a stopped job's
+    // pipeline only lets go at its next stage boundary) are all blocked by
+    // the capability, so remaining stages can never write an audit, analyses
+    // or reports that nothing links to.
+    const capability = deleteJobCapability(capabilityInputs(job, queue));
+    if (!recheckCapability(res, capability, query.get('stateToken'))) return;
 
     // A queued job has produced no audits. Deleting it only while it is
     // still unclaimed closes the race where the worker claims it between the
@@ -584,7 +724,11 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
     if (job.status === 'queued') {
       const deleted = await deleteJob(connection, jobId, { onlyIfStatusNot: ['running'] });
       if (!deleted) {
-        sendError(res, 409, 'the job has just started; stop it before deleting it');
+        sendProblem(res, 409, {
+          code: 'state-changed',
+          message: 'the job has just started; stop it before deleting it',
+          retryable: true,
+        });
         return;
       }
       sendJson(res, 200, { jobId, deleted: true, auditsDeleted: 0 });
@@ -599,7 +743,12 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
     }
 
     if ([...auditIds].some((auditId) => isReportProductionInFlight(auditId))) {
-      sendError(res, 409, "a report is being produced for this job's audit; try again shortly");
+      sendProblem(res, 409, {
+        code: 'action-blocked',
+        message: "a report is being produced for this job's audit; try again shortly",
+        reasonCode: 'report-production-in-flight',
+        retryable: true,
+      });
       return;
     }
 
@@ -614,7 +763,11 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
           });
         } catch (error) {
           if (!(error instanceof AuditArtifactDeletionError)) throw error;
-          sendError(res, 503, `${error.message}; nothing else was deleted for it, retry`);
+          sendProblem(res, 503, {
+            code: 'storage-unavailable',
+            message: `${error.message}; nothing else was deleted for it, retry`,
+            retryable: true,
+          });
           return;
         }
       }

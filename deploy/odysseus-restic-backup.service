@@ -7,4 +7,4 @@ Wants=network-online.target docker.service
 Type=oneshot
 User=deploy
 Group=deploy
-ExecStart=/srv/odysseus/deploy/restic-backup.sh
+ExecStart=/usr/bin/bash /srv/odysseus/deploy/restic-backup.sh

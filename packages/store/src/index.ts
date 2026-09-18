@@ -56,10 +56,20 @@ export {
   getJob,
   listJobs,
   markJobNeedsInput,
+  requestJobCancellation,
   resetOrphanedRunningJobs,
+  settleCancelRequestedJobsOnStartup,
   updateJobProgress,
 } from './jobs.js';
-export type { CompleteJobPatch, JobProgressPatch, JobSummaryFields, NewJobInput } from './jobs.js';
+export type {
+  CompleteJobPatch,
+  JobCancellationRequestResult,
+  JobProgressPatch,
+  JobSummaryFields,
+  NewJobInput,
+} from './jobs.js';
+export { backfillQueueOrder, readScanQueue, reorderScanQueue } from './job-queue-order.js';
+export type { QueueReorderResult, QueuedJobRow, ScanQueueSnapshot } from './job-queue-order.js';
 export { reconcileFailedAuditJobs } from './reconcile-jobs.js';
 export {
   deleteAuditCascade,

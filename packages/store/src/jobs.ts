@@ -22,6 +22,7 @@ import {
   type OutreachBatchResult,
   type UrlResult,
 } from './schemas/job.schema.js';
+import { QUEUE_CLAIM_SORT, nextQueueOrder } from './job-queue-order.js';
 
 export interface NewJobInput {
   type: JobType;
@@ -43,7 +44,7 @@ export class ActiveJobSlotTakenError extends Error {
  *  'needs-input' job is terminal - the runner has already thrown and
  *  returned - so it waits for a person, not for Chromium, and must not
  *  block a new scan of the same prospect. */
-const UNFINISHED_JOB_STATUSES: JobStatus[] = ['queued', 'running'];
+const UNFINISHED_JOB_STATUSES: JobStatus[] = ['queued', 'running', 'cancel-requested'];
 
 /** The per-prospect slot a new job occupies: one complete crawl (Full scan,
  *  or the historical prospecting-audit and outreach full-scan types) and
@@ -89,6 +90,7 @@ export async function createJob(connection: Connection, input: NewJobInput): Pro
     options: input.options,
     createdAt: new Date(),
     progress: {},
+    queueOrder: await nextQueueOrder(connection),
     ...(input.siteUrl !== undefined ? { siteUrl: input.siteUrl } : {}),
     ...(input.urls !== undefined ? { urls: input.urls } : {}),
     ...(activeSlot !== undefined ? { activeSlot } : {}),
@@ -120,7 +122,8 @@ export async function createJob(connection: Connection, input: NewJobInput): Pro
   }
 }
 
-/** Atomic claim: the oldest queued job is marked running in one operation,
+/** Atomic claim: the first job in durable queue order (plan 061 §6) is
+ *  marked running in one operation,
  *  so two worker slots racing to dequeue never claim the same job twice.
  *  workerRevision is diagnostic build-provenance (issue: worker/job
  *  provenance), stamped here rather than at completion because the same
@@ -143,10 +146,9 @@ export async function claimNextQueuedJob(
         ...(options.workerRevision !== undefined ? { workerRevision: options.workerRevision } : {}),
       },
     },
-    // _id breaks createdAt ties: a batch submission creates its jobs within
-    // the same millisecond, and ObjectIds generated in one process increase
-    // in creation order, so submission order is still the processing order.
-    { sort: { createdAt: 1, _id: 1 }, returnDocument: 'after' },
+    // queueOrder is unique per enqueue; createdAt and _id only order a
+    // legacy row the startup backfill has not reached yet.
+    { sort: QUEUE_CLAIM_SORT, returnDocument: 'after' },
   ).lean<JobDocument>();
 }
 
@@ -249,7 +251,7 @@ export async function completeJob(
 ): Promise<void> {
   const JobModel = createJobModel(connection);
   await JobModel.updateOne(
-    { jobId, status: { $ne: 'cancelled' } },
+    { jobId, status: { $nin: ['cancelled', 'cancel-requested'] } },
     { $set: { status: 'complete', phase: 'complete', finishedAt: new Date(), ...patch } },
   );
 }
@@ -262,7 +264,7 @@ export async function completeJob(
 export async function failJob(connection: Connection, jobId: string, error: string): Promise<void> {
   const JobModel = createJobModel(connection);
   await JobModel.updateOne(
-    { jobId, status: { $ne: 'cancelled' } },
+    { jobId, status: { $nin: ['cancelled', 'cancel-requested'] } },
     [
       {
         $set: {
@@ -299,7 +301,7 @@ export async function markJobNeedsInput(
 ): Promise<void> {
   const JobModel = createJobModel(connection);
   await JobModel.updateOne(
-    { jobId, status: { $ne: 'cancelled' } },
+    { jobId, status: { $nin: ['cancelled', 'cancel-requested'] } },
     {
       $set: {
         status: 'needs-input',
@@ -316,13 +318,50 @@ export async function markJobNeedsInput(
   );
 }
 
-/** Operator stop request, written immediately so the dashboard reflects it
- *  and the claim filter (status 'queued') can never pick the job up again.
- *  A running job's runner learns about the stop through the interface
- *  package's in-process registry and throws at the next page boundary; the
- *  terminal write is idempotent against this one because it only matches
- *  documents still queued or running. Returns false when the job was
- *  already terminal, so the route layer can answer 409 instead of lying. */
+export type JobCancellationRequestResult = 'cancelled' | 'cancel-requested' | 'not-cancellable';
+
+/**
+ * Persist an operator stop request without claiming a running worker has
+ * already stopped.
+ *
+ * A queued job has no worker, so it can become terminal immediately. A
+ * running job keeps its current phase and active slot while the durable
+ * status becomes cancel-requested. The worker finalizes it through
+ * cancelJob only after cooperative cancellation reaches a safe boundary.
+ */
+export async function requestJobCancellation(
+  connection: Connection,
+  jobId: string,
+  error: string,
+): Promise<JobCancellationRequestResult> {
+  const JobModel = createJobModel(connection);
+
+  const queued = await JobModel.updateOne(
+    { jobId, status: 'queued' },
+    {
+      $set: { status: 'cancelled', phase: 'cancelled', finishedAt: new Date(), error },
+      $unset: { activeSlot: '' },
+    },
+  );
+  if (queued.modifiedCount > 0) return 'cancelled';
+
+  const running = await JobModel.updateOne(
+    { jobId, status: 'running' },
+    { $set: { status: 'cancel-requested', error } },
+  );
+  if (running.modifiedCount > 0) return 'cancel-requested';
+
+  const existing = await JobModel.findOne({ jobId }, { status: 1, _id: 0 }).lean<{
+    status: JobStatus;
+  }>();
+  return existing?.status === 'cancel-requested' ? 'cancel-requested' : 'not-cancellable';
+}
+
+/**
+ * Confirm that execution has actually stopped. The running case covers the
+ * narrow race where a worker observes the in-process cancellation signal
+ * before the durable request write becomes visible.
+ */
 export async function cancelJob(
   connection: Connection,
   jobId: string,
@@ -330,8 +369,11 @@ export async function cancelJob(
 ): Promise<boolean> {
   const JobModel = createJobModel(connection);
   const result = await JobModel.updateOne(
-    { jobId, status: { $in: ['queued', 'running'] } },
-    { $set: { status: 'cancelled', phase: 'cancelled', finishedAt: new Date(), error } },
+    { jobId, status: { $in: ['queued', 'running', 'cancel-requested'] } },
+    {
+      $set: { status: 'cancelled', phase: 'cancelled', finishedAt: new Date(), error },
+      $unset: { activeSlot: '' },
+    },
   );
   return result.modifiedCount > 0;
 }
@@ -342,7 +384,10 @@ export async function cancelQueuedJobs(connection: Connection, error: string): P
   const JobModel = createJobModel(connection);
   const result = await JobModel.updateMany(
     { status: 'queued' },
-    { $set: { status: 'cancelled', phase: 'cancelled', finishedAt: new Date(), error } },
+    {
+      $set: { status: 'cancelled', phase: 'cancelled', finishedAt: new Date(), error },
+      $unset: { activeSlot: '' },
+    },
   );
   return result.modifiedCount;
 }
@@ -451,12 +496,34 @@ export async function getJob(connection: Connection, jobId: string): Promise<Job
  *  slow but live browser is never reclaimed by a second worker. */
 const ORPHANED_JOB_TIMEOUT_MS = 10 * 60 * 1000;
 
+/**
+ * Finalize durable stop requests left behind by the previous process.
+ *
+ * JobQueue.start uses this only in the current single-container deployment:
+ * after process replacement no previous worker can still own the row, so
+ * requeueing cancel-requested work would violate the operator's durable stop.
+ */
+export async function settleCancelRequestedJobsOnStartup(
+  connection: Connection,
+  now = new Date(),
+): Promise<number> {
+  const JobModel = createJobModel(connection);
+  const result = await JobModel.updateMany(
+    { status: 'cancel-requested' },
+    {
+      $set: { status: 'cancelled', phase: 'cancelled', finishedAt: now },
+      $unset: { activeSlot: '' },
+    },
+  );
+  return result.modifiedCount;
+}
+
 /** Called once at server startup, before the worker loop starts. A job that
  *  has been silent past ORPHANED_JOB_TIMEOUT_MS was left running by an
  *  unclean shutdown, so reset it to 'queued'. A fresh heartbeat means a live
- *  worker owns it and must never be reclaimed. createdAt is untouched, so
- *  claimNextQueuedJob's createdAt-ascending sort restores the original FIFO
- *  position rather than requeuing it to the back. Returns the number reset.
+ *  worker owns it and must never be reclaimed. queueOrder is untouched, so
+ *  the claim restores the job's original queue position rather than
+ *  requeuing it to the back. Returns the number reset.
  *
  *  includeFreshHeartbeats drops the staleness guard and requeues every
  *  'running' job. It exists for JobQueue.start() in the single-container

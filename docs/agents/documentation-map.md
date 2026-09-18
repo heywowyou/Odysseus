@@ -76,7 +76,7 @@ mismatch is evidence to resolve, not a reason to freeze the task.
 | `docs/rules/prospect-qualification.md` | Sourcing, qualification, retention, and contact rules |
 | `docs/rules/outreach-rules.md` | Outreach and preview assembly rules |
 | `docs/rules/offer-positioning.md` | Pricing, scope, sales claims, offer framing |
-| `docs/rules/telemetry-rules.md` | Job telemetry event contract, sink behavior, pilot scope, production-enablement checklist |
+| `docs/rules/telemetry-rules.md` | Metadata-only job/LLM telemetry contracts, Sentry/Langfuse sink behavior, production-enablement boundaries |
 | `docs/report/report-design-system.md` and `docs/report/report-design-tokens.md` | Report visual language and implementation tokens |
 | `docs/report/report-workbench.md` | PDF-native Impeccable iteration, acceptance, verification, and commit workflow |
 | `docs/rules/manual-accessibility-checklist.md` | Known limits of automated accessibility detection |
@@ -84,6 +84,7 @@ mismatch is evidence to resolve, not a reason to freeze the task.
 | `docs/adr/` and package ADR directories | Accepted architecture decisions at their documented scope |
 | `docs/agents/coding-conventions.md` | Shared source, test, prose, interaction, and attribution conventions |
 | `docs/agents/model-prompting.md` | Small host-specific model and effort deltas |
+| `docs/agents/tooling-integrations.md` | Implementation register for repository tooling/integration hardening |
 
 ## Planned work and active queues
 

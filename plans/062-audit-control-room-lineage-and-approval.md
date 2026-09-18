@@ -763,7 +763,25 @@ required input.
 
 ---
 
-# 21. Definition of done
+# 21. Executable closure contract
+
+“Clearly separates”, “current”, “exact” and “honestly usable” require one lineage/capability contract rather than UI interpretation.
+
+Before closure:
+
+- a committed lineage matrix enumerates every visible evidence/report state and its authoritative record/digest;
+- every approval/download/edit action has a typed capability and exact dependency set;
+- tests prove candidate view/download are read-only and cannot mutate approval state;
+- tests prove approval binds `qualityRunId + bundleDigest` and fails after any dependency/supersession change;
+- legacy adapter fixtures enumerate every supported/unknown state; there is no generic “best effort” legacy branch;
+- Point-France scale acceptance records concrete payload/query budgets inherited from Plan 063;
+- the requirement-to-proof table maps every binding decision, verification row and fail-closed condition to code plus focused proof.
+
+A screenshot showing the right labels is not lineage proof.
+
+---
+
+# 22. Definition of done Definition of done
 
 Plan 062 is implemented when:
 

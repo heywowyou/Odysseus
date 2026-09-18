@@ -39,6 +39,19 @@ function job(
     status: fields.status ?? 'running',
     phase: fields.phase ?? 'queued',
     progress: fields.progress ?? {},
+    work: {
+      workId: 'job-1',
+      owner: 'legacy-job',
+      purpose: 'full-scan',
+      state: 'running',
+      subject: {},
+      createdAt: '2026-09-18T10:00:00.000Z',
+      updatedAt: '2026-09-18T10:00:00.000Z',
+    },
+    capabilities: {
+      cancel: { state: 'available', stateToken: 't-cancel' },
+      delete: { state: 'blocked', stateToken: 't-delete', reasonCode: 'work-running' },
+    },
     ...(fields.auditId !== undefined ? { auditId: fields.auditId } : {}),
     ...(fields.urlResults !== undefined ? { urlResults: fields.urlResults } : {}),
     ...(fields.error !== undefined ? { error: fields.error } : {}),
@@ -145,6 +158,7 @@ describe('isTerminal', () => {
     expect(isTerminal(undefined)).toBe(false);
     expect(isTerminal('queued')).toBe(false);
     expect(isTerminal('running')).toBe(false);
+    expect(isTerminal('cancel-requested')).toBe(false);
   });
 
   it('is true once the job reached complete, failed, or cancelled', () => {

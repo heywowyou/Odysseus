@@ -36,6 +36,12 @@ function notFoundResponse(): Response {
   } as unknown as Response;
 }
 
+/** Plan 061: every GET /api/scans row carries its server capabilities. */
+const FINISHED_ROW_CAPABILITIES = {
+  cancel: { state: 'blocked', stateToken: 't-cancel', reasonCode: 'already-terminal' },
+  delete: { state: 'available', stateToken: 't-delete' },
+};
+
 function stubRoutes(table: Record<string, unknown>): void {
   vi.stubGlobal(
     'fetch',
@@ -155,6 +161,7 @@ describe('audits list prospect link', () => {
           phase: 'complete',
           siteUrl: 'https://exemple.fr',
           createdAt: '2026-09-05T13:09:00.000Z',
+          capabilities: FINISHED_ROW_CAPABILITIES,
           auditId: 'audit-1',
           prospectId: 'prospect-1',
         },
@@ -192,6 +199,7 @@ describe('audits header KPIs (issue #269)', () => {
           phase: 'complete',
           siteUrl: 'https://exemple.fr',
           createdAt: '2026-09-05T13:09:00.000Z',
+          capabilities: FINISHED_ROW_CAPABILITIES,
           auditId: 'audit-1',
           severityRollup: { critical: 4, serious: 0, moderate: 0, minor: 0 },
         },
@@ -227,6 +235,7 @@ describe('audits list report-stage failure display (issues #90, #382, #386)', ()
           failedPhase: 'report-fr',
           siteUrl: 'https://exemple.fr',
           createdAt: '2026-09-05T13:09:00.000Z',
+          capabilities: FINISHED_ROW_CAPABILITIES,
           auditId: 'audit-1',
         },
         {
@@ -237,6 +246,7 @@ describe('audits list report-stage failure display (issues #90, #382, #386)', ()
           failedPhase: 'crawl',
           siteUrl: 'https://autre.fr',
           createdAt: '2026-09-05T12:09:00.000Z',
+          capabilities: FINISHED_ROW_CAPABILITIES,
         },
       ],
     });

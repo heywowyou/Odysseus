@@ -6,7 +6,7 @@ plan, and no code, type, or schema changes here.
 
 Status: **APPROVED 2026-09-10.** The operator approved all six defaults, so
 every decision below applies as its default states it. **Built 2026-09-16** by
-[plan 051](../../plans/051-findings-delta-reaudit.md) (issue #371). The
+[plan 051](../../plans/archive/051-findings-delta-reaudit.md) (issue #371). The
 decisions this design left to the build are recorded in trade-off 93.
 
 Drift check, run first per the plan: over `71da99a..HEAD` the plan's five

@@ -101,6 +101,23 @@ architectureRules.push(
       dependencyTypesNot: ['type-only'],
     },
   },
+  {
+    // Plan 051: the re-audit findings delta is deterministic. Its core
+    // computation, baseline lookup and report section must have no import
+    // edge, direct or transitive, into @odysseus/llm or a model client. The
+    // orchestration in report-stage.ts only calls these modules.
+    name: 'findings-delta-has-no-model-path',
+    severity: 'error',
+    comment:
+      'The findings delta is deterministic (Plan 051): no model may classify, order or word it.',
+    from: {
+      path: '^packages/(?:core/src/delta/findings-delta|store/src/findings-delta-baseline|report/src/template/sections/findings-delta)[.]ts$',
+    },
+    to: {
+      path: '^packages/llm/|(^|/)node_modules/(?:openai|@langfuse)/',
+      reachable: true,
+    },
+  },
 );
 
 /** @type {import('dependency-cruiser').IConfiguration} */

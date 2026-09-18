@@ -1617,6 +1617,31 @@ A code search alone is supporting evidence, not sufficient proof for a runtime
 invariant.
 
 
+## Executable closure contract
+
+Because this plan is already implemented, closure must be based on a retroactive requirement-to-proof audit rather than its implementation summary alone.
+
+Before changing status from `IMPLEMENTED` to `DONE`, record a compact table mapping every binding lifecycle rule in this plan to:
+
+```text
+rule / invariant
+owning code seam
+focused automated proof
+real-data acceptance proof where the plan requires it
+```
+
+Mandatory negative proofs:
+
+- derived report/outreach actions cannot reach a website-crawl launch path;
+- an older normalization fingerprint alone cannot produce a mandatory-rescan capability;
+- archive/restore preserves the same prospect identity and enrichment;
+- source refresh cannot overwrite the durable prospect link;
+- no new ordinary dashboard producer can create `prospecting-audit` or `outreach-full-scan`.
+
+A broad green suite is supporting evidence, not a substitute for these focused proofs. The already-declared post-deploy rehearsal remains required before `DONE`.
+
+---
+
 ## Definition of done
 
 Plan 050 is complete only when all of the following are true:

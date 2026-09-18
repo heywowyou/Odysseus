@@ -359,6 +359,7 @@ describe('runReportStage', () => {
 
     await runReportStage(auditDir, manifest, [], fakeAnalysis(), fakeConnection);
 
+    expect(findDeltaBaseline).toHaveBeenCalledTimes(1);
     const passedInput = vi.mocked(generateReportPdf).mock.calls[0]?.[0];
     expect(passedInput?.delta).toMatchObject({
       baseline: { auditId: 'audit-0' },

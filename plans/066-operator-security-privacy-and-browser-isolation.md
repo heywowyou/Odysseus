@@ -580,7 +580,26 @@ Do not production-promote the new evidence/report pipelines when:
 
 ---
 
-# 20. Definition of done
+# 20. Executable closure contract
+
+“Verified sandbox”, “approved equivalent isolation”, “private” and “least privilege” require a concrete production proof artifact.
+
+Before production promotion and before closure:
+
+- commit a browser-isolation proof record containing deployment/build fingerprint, Chromium version, sandbox/equivalent profile, container uid/capabilities/seccomp/namespace facts, secret mounts/env visible to the browser worker, egress policy and the exact preflight result;
+- negative tests prove the browser execution boundary cannot read database, mailbox, dashboard-session, model or master object-store credentials;
+- scanner egress tests cover start URL, redirect, DNS rebinding and browser subresource attempts to loopback/private/link-local/metadata targets;
+- report/PDF renderer tests prove arbitrary external network access is disabled unless an explicit allowlist is required;
+- artifact-route tests cover unauthenticated access, stale/superseded keys, cache headers and digest mismatch;
+- stale-worker/mixed-build tests prove an isolated worker cannot promote current evidence/report state directly;
+- backup/restore rehearsal records digest verification of the new content-addressed object graph;
+- the requirement-to-proof table maps every threat-model item, binding decision and fail-closed condition to mitigation plus test/proof.
+
+Merely removing `--no-sandbox` or naming an isolation profile is not proof.
+
+---
+
+# 21. Definition of done Definition of done
 
 Plan 066 is implemented when:
 

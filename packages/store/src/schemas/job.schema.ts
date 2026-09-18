@@ -18,7 +18,8 @@ export type JobType =
   | 'outreach-draft-batch'
   | 'outreach-followup-batch'
   | 'outreach-full-scan';
-export type JobStatus = 'queued' | 'running' | 'complete' | 'failed' | 'cancelled' | 'needs-input';
+export type JobStatus =
+  'queued' | 'running' | 'cancel-requested' | 'complete' | 'failed' | 'cancelled' | 'needs-input';
 export type JobPhase =
   | 'queued'
   | 'crawl'
@@ -220,6 +221,13 @@ export interface JobDocumentFields {
    *  check cannot. It stays on the row after the job ends; createJob frees
    *  it from a finished holder when a new job needs the slot. */
   activeSlot?: string;
+  /** Plan 061 §6: the job's durable position in the scan queue, unique and
+   *  assigned from the queue-state counter at enqueue (or by the startup
+   *  backfill for a row queued before the field existed). The claim takes
+   *  the lowest queued value; an operator reorder permutes the values among
+   *  the queued jobs only. Kept after the claim, so a job requeued by
+   *  restart recovery returns to its original place. */
+  queueOrder?: number;
   /** Diagnostic only, not artifact provenance: the build revision of the
    *  worker that claimed this job, stamped by claimNextQueuedJob so a
    *  surprising result can be checked against a stale worker rather than
@@ -379,7 +387,15 @@ const jobSchema = new Schema<JobDocument>(
     status: {
       type: String,
       required: true,
-      enum: ['queued', 'running', 'complete', 'failed', 'cancelled', 'needs-input'],
+      enum: [
+        'queued',
+        'running',
+        'cancel-requested',
+        'complete',
+        'failed',
+        'cancelled',
+        'needs-input',
+      ],
     },
     phase: {
       type: String,
@@ -424,11 +440,13 @@ const jobSchema = new Schema<JobDocument>(
     needsInputFields: { type: [jobNeedsInputFieldSchema] },
     workerRevision: { type: String },
     activeSlot: { type: String },
+    queueOrder: { type: Number },
   },
   { collection: 'jobs' },
 );
 
 jobSchema.index({ status: 1, createdAt: 1 });
+jobSchema.index({ status: 1, queueOrder: 1, _id: 1 });
 jobSchema.index({ createdAt: -1 });
 jobSchema.index({ 'options.prospectId': 1, createdAt: -1 });
 // The prospect hub and deletion scopes also reach jobs through the audits

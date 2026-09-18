@@ -14,10 +14,10 @@ import { ProgressBar } from '../components/ui/progress-bar';
 import { Spinner } from '../components/ui/spinner';
 import { StatusDot } from '../components/ui/status-dot';
 import { useI18n } from '../i18n/provider';
-import { ApiError, fetchJsonValidated, postEmpty } from '../lib/api';
+import { ApiError, fetchJsonValidated, sendJson } from '../lib/api';
 import { scanJobDetailSchema } from '../lib/api-schemas';
 import type { ScanJobDetail, ScanUrlResult } from '../lib/api-types';
-import { canStop } from '../lib/job-actions';
+import { isStateChanged, problemCopy } from '../lib/operator-copy';
 import { cn } from '../lib/cn';
 import { reportFailureStage } from '../lib/job-outcome';
 import { usePolling } from '../lib/use-polling';
@@ -122,25 +122,24 @@ export function ScanProgressPage(): JSX.Element {
   // A live job can be stopped; the confirm dialog carries the consequence,
   // so the header control itself stays quiet.
   const [confirmStopOpen, setConfirmStopOpen] = useState(false);
-  const stoppable =
-    job !== undefined &&
-    !isTerminal(job.status) &&
-    (job.type === 'full-audit' ||
-      job.type === 'prospecting' ||
-      job.type === 'quick-check' ||
-      job.type === 'prospecting-audit') &&
-    canStop(job.status);
+  // Plan 061: the server decides whether Stop is available and hands the
+  // state token the command must present.
+  const stopCapability = job?.capabilities.cancel;
+  const stoppable = stopCapability?.state === 'available';
 
   const stopJob = async (): Promise<void> => {
-    if (jobId === undefined) return;
+    if (jobId === undefined || stopCapability === undefined) return;
     try {
-      await postEmpty(`/api/scans/${encodeURIComponent(jobId)}/cancel`);
-      // Once the fetched document reads terminal the fetcher settles and
-      // polling stops; refresh surfaces the cancelled card on this tick
-      // instead of waiting for a poll that will no longer happen.
+      await sendJson(`/api/scans/${encodeURIComponent(jobId)}/cancel`, 'POST', {
+        stateToken: stopCapability.stateToken,
+      });
+      // Running work first becomes cancel-requested, so keep polling until
+      // the worker confirms the terminal cancelled state. A queued job may
+      // already be terminal on this refresh.
       refresh();
-    } catch {
-      toast.error(strings.audits.actionFailed);
+    } catch (error) {
+      toast.error(problemCopy(error, strings.workState) ?? strings.audits.actionFailed);
+      if (isStateChanged(error)) refresh();
     }
   };
 
@@ -213,12 +212,17 @@ export function ScanProgressPage(): JSX.Element {
                   (normalizing, writing, rendering the PDFs) are otherwise
                   invisible while they run. */}
               <div className="flex items-center gap-2 text-sm">
-                {isTerminal(job.status) ? null : <StatusDot status="running" />}
+                {isTerminal(job.status) ? null : (
+                  <StatusDot
+                    status={job.status === 'cancel-requested' ? 'cancel-requested' : 'running'}
+                  />
+                )}
                 <span className="text-ink-soft">
-                  {/* Issue #386: a report-stage failure never reads "Failed". */}
-                  {terminalCardKind(job) === 'report-issue'
-                    ? strings.common.statusLabels['report-issue']
-                    : currentPhaseLabel(job.phase, strings.progress.phaseLabels)}
+                  {job.status === 'cancel-requested'
+                    ? strings.common.statusLabels['cancel-requested']
+                    : terminalCardKind(job) === 'report-issue'
+                      ? strings.common.statusLabels['report-issue']
+                      : currentPhaseLabel(job.phase, strings.progress.phaseLabels)}
                 </span>
               </div>
               {hasCoverage(job) ? (

@@ -5,7 +5,7 @@ import {
   hostnameOf,
   listStatus,
   rowTarget,
-  scanQueue,
+  runningScans,
   searchMatches,
   severityBadges,
   siteLabel,
@@ -24,6 +24,10 @@ function makeSummary(overrides: Partial<ScanSummary> = {}): ScanSummary {
     status: 'complete',
     phase: 'done',
     createdAt: '2026-08-29T10:00:00.000Z',
+    capabilities: {
+      cancel: { state: 'blocked', stateToken: 't-cancel', reasonCode: 'already-terminal' },
+      delete: { state: 'available', stateToken: 't-delete' },
+    },
     ...overrides,
   };
 }
@@ -33,6 +37,7 @@ describe('computeKpis', () => {
     const summaries = [
       makeSummary({ jobId: 'a', status: 'queued' }),
       makeSummary({ jobId: 'b', status: 'running' }),
+      makeSummary({ jobId: 'stopping', status: 'cancel-requested' }),
       makeSummary({
         jobId: 'c',
         status: 'complete',
@@ -46,7 +51,7 @@ describe('computeKpis', () => {
       }),
     ];
     expect(computeKpis(summaries)).toEqual({
-      running: 2,
+      running: 3,
       needsInput: 0,
       complete: 2,
       reportIssue: 0,
@@ -181,6 +186,7 @@ describe('listStatus', () => {
     );
     expect(listStatus(makeSummary({ status: 'complete', auditId: 'audit-1' }))).toBe('complete');
     expect(listStatus(makeSummary({ status: 'queued' }))).toBe('queued');
+    expect(listStatus(makeSummary({ status: 'cancel-requested' }))).toBe('cancel-requested');
   });
 });
 
@@ -287,36 +293,20 @@ describe('rowTarget', () => {
   });
 });
 
-describe('scanQueue', () => {
-  it('separates running work from waiting work and ignores history', () => {
-    const queue = scanQueue([
+describe('runningScans', () => {
+  it('keeps running and stopping work, oldest first, and ignores waiting work and history', () => {
+    const running = runningScans([
       makeSummary({ jobId: 'done', status: 'complete' }),
       makeSummary({ jobId: 'failed', status: 'failed' }),
       makeSummary({ jobId: 'input', status: 'needs-input' }),
       makeSummary({ jobId: 'next', status: 'queued' }),
-      makeSummary({ jobId: 'now', status: 'running' }),
+      makeSummary({ jobId: 'now', status: 'running', createdAt: '2026-09-16T22:05:00.000Z' }),
+      makeSummary({
+        jobId: 'stopping',
+        status: 'cancel-requested',
+        createdAt: '2026-09-16T21:00:00.000Z',
+      }),
     ]);
-    expect(queue.running.map((row) => row.jobId)).toEqual(['now']);
-    expect(queue.upNext.map((row) => row.jobId)).toEqual(['next']);
-  });
-
-  it('lists waiting jobs in the order the queue will claim them', () => {
-    // The poll's own order: newest first, and a batch's jobs share one
-    // createdAt, listed in reverse queue order.
-    const batchInstant = '2026-09-16T22:00:00.000Z';
-    const queue = scanQueue([
-      makeSummary({ jobId: 'later', status: 'queued', createdAt: '2026-09-16T22:05:00.000Z' }),
-      makeSummary({ jobId: 'batch-3', status: 'queued', createdAt: batchInstant }),
-      makeSummary({ jobId: 'batch-2', status: 'queued', createdAt: batchInstant }),
-      makeSummary({ jobId: 'batch-1', status: 'queued', createdAt: batchInstant }),
-      makeSummary({ jobId: 'earlier', status: 'queued', createdAt: '2026-09-16T21:00:00.000Z' }),
-    ]);
-    expect(queue.upNext.map((row) => row.jobId)).toEqual([
-      'earlier',
-      'batch-1',
-      'batch-2',
-      'batch-3',
-      'later',
-    ]);
+    expect(running.map((row) => row.jobId)).toEqual(['stopping', 'now']);
   });
 });

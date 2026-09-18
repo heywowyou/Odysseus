@@ -2,6 +2,7 @@ import type { z } from 'zod';
 import type {
   jobStatusSchema,
   scanJobDetailSchema,
+  scanQueueSchema,
   scanSummarySchema,
   scanUrlResultSchema,
   severityRollupSchema,
@@ -18,6 +19,10 @@ export type SeverityRollup = z.infer<typeof severityRollupSchema>;
 /** One row of GET /api/scans (routes/scans.ts). Field names are the API's
  *  persisted contract, not UI vocabulary; never respell them. */
 export type ScanSummary = z.infer<typeof scanSummarySchema>;
+
+/** GET /api/scans/queue (plan 061 §6.2). */
+export type ScanQueue = z.infer<typeof scanQueueSchema>;
+export type QueuedScan = ScanQueue['jobs'][number];
 
 /** Response of POST /api/scans. */
 export interface ScanCreated {

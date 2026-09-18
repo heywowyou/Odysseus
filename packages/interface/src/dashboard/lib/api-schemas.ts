@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { actionCapabilitySchema, operatorWorkViewSchema } from '../../operator/contract';
 
 /**
  * Issue #229: runtime schemas for the dashboard's critical operator
@@ -16,6 +17,7 @@ import { z } from 'zod';
 export const jobStatusSchema = z.enum([
   'queued',
   'running',
+  'cancel-requested',
   'complete',
   'failed',
   'cancelled',
@@ -100,6 +102,13 @@ const scanJobNeedsInputFieldSchema = z.object({
   value: z.string(),
 });
 
+/** Plan 061 §8.1: server-derived row actions, each with the state token its
+ *  command must present. */
+const jobCapabilitiesSchema = z.object({
+  cancel: actionCapabilitySchema,
+  delete: actionCapabilitySchema,
+});
+
 /** GET /api/scans/:jobId. */
 export const scanJobDetailSchema = z.object({
   jobId: z.string(),
@@ -116,6 +125,8 @@ export const scanJobDetailSchema = z.object({
   failedPhase: z.string().optional(),
   needsInputFields: z.array(scanJobNeedsInputFieldSchema).optional(),
   prospectId: z.string().optional(),
+  work: operatorWorkViewSchema,
+  capabilities: jobCapabilitiesSchema,
 });
 
 /** GET /api/scans, one row. */
@@ -143,6 +154,26 @@ export const scanSummarySchema = z.object({
   /** Present on rows linked to a prospect: the scan queue's labels and the
    *  Audits table's hotel link. */
   prospectName: z.string().optional(),
+  capabilities: jobCapabilitiesSchema,
+});
+
+/** GET /api/scans/queue: waiting scans in durable claim order. */
+export const scanQueueSchema = z.object({
+  queueRevision: z.string(),
+  truncated: z.boolean(),
+  jobs: z.array(
+    z.object({
+      jobId: z.string(),
+      type: jobTypeSchema,
+      siteUrl: z.string().optional(),
+      prospectId: z.string().optional(),
+      prospectName: z.string().optional(),
+      createdAt: z.string(),
+      position: z.number().int().positive(),
+      options: z.array(z.string()),
+      cancel: actionCapabilitySchema,
+    }),
+  ),
 });
 
 /** GET /api/audits/:auditId. Strictly validates the identity/lifecycle

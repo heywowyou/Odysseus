@@ -1,17 +1,41 @@
 import type { z } from 'zod';
+import { problemEnvelopeSchema, type ProblemEnvelope } from '../../operator/contract';
 import { loginUrlReturningTo } from './login-return';
 
 /** Error surfaced by the dashboard API layer: carries the HTTP status and
  *  the server's error string so pages can distinguish a 404 (unknown job)
- *  from a 409 (unmet action precondition) without matching on text. */
+ *  from a 409 (unmet action precondition) without matching on text. A
+ *  route migrated to plan 061's typed problem envelope also fills
+ *  `problem`, which is what recovery copy is chosen from. */
 export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    readonly problem?: ProblemEnvelope['error'],
   ) {
     super(message);
     this.name = 'ApiError';
   }
+}
+
+/** Reads either error body the server sends during the plan 061
+ *  migration: the typed envelope `{ error: { code, message, ... } }` or the
+ *  legacy `{ error: string }`. */
+export function parseApiErrorBody(
+  body: unknown,
+  fallback: string,
+): { message: string; problem?: ProblemEnvelope['error'] } {
+  const typed = problemEnvelopeSchema.safeParse(body);
+  if (typed.success) return { message: typed.data.error.message, problem: typed.data.error };
+  if (
+    body !== null &&
+    typeof body === 'object' &&
+    'error' in body &&
+    typeof (body as { error: unknown }).error === 'string'
+  ) {
+    return { message: (body as { error: string }).error };
+  }
+  return { message: fallback };
 }
 
 /** Same-origin dashboard requests should return promptly, even when the
@@ -80,14 +104,11 @@ export async function fetchJson<T>(url: string, init: ApiRequestInit = {}): Prom
   if (!response.ok) {
     if (response.status === 401) redirectToLogin();
     const body: unknown = await response.json().catch(() => ({}));
-    const message =
-      body !== null &&
-      typeof body === 'object' &&
-      'error' in body &&
-      typeof (body as { error: unknown }).error === 'string'
-        ? (body as { error: string }).error
-        : `Request to ${url} failed (${response.status})`;
-    throw new ApiError(message, response.status);
+    const { message, problem } = parseApiErrorBody(
+      body,
+      `Request to ${url} failed (${response.status})`,
+    );
+    throw new ApiError(message, response.status, problem);
   }
   return (await response.json()) as T;
 }
@@ -158,8 +179,9 @@ export function postEmpty<T>(
   });
 }
 
-/** DELETE mutations (cancel a scan, clear the queue, delete a scan). The
- *  body-less sibling of postEmpty, so pages never hand-roll fetch calls. */
+/** DELETE mutations (delete a scan). The body-less sibling of postEmpty,
+ *  so pages never hand-roll fetch calls; a state token travels as a query
+ *  parameter. */
 export function sendDelete<T>(url: string): Promise<T> {
   return fetchJson<T>(url, { method: 'DELETE' });
 }

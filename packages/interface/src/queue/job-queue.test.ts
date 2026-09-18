@@ -1,12 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@odysseus/store', () => ({
+  backfillQueueOrder: vi.fn().mockResolvedValue(0),
   cancelJob: vi.fn(),
   claimNextQueuedJob: vi.fn(),
   failJob: vi.fn(),
   markJobNeedsInput: vi.fn(),
   reconcileFailedAuditJobs: vi.fn(),
   resetOrphanedRunningJobs: vi.fn(),
+  settleCancelRequestedJobsOnStartup: vi.fn(),
 }));
 vi.mock('@odysseus/scanner', () => ({
   OriginLock: class {},
@@ -35,6 +37,7 @@ import {
   markJobNeedsInput,
   reconcileFailedAuditJobs,
   resetOrphanedRunningJobs,
+  settleCancelRequestedJobsOnStartup,
   type JobDocument,
   type JobType,
 } from '@odysseus/store';
@@ -66,6 +69,7 @@ let queue: JobQueue | undefined;
 
 beforeEach(() => {
   vi.mocked(resetOrphanedRunningJobs).mockResolvedValue(0);
+  vi.mocked(settleCancelRequestedJobsOnStartup).mockResolvedValue(0);
   vi.mocked(reconcileFailedAuditJobs).mockResolvedValue(0);
 });
 
@@ -91,9 +95,18 @@ describe('JobQueue', () => {
     vi.mocked(resetOrphanedRunningJobs).mockResolvedValue(2);
     queue = queueWith(vi.fn());
     expect(await queue.start()).toBe(2);
+    expect(settleCancelRequestedJobsOnStartup).toHaveBeenCalledWith(connection);
     expect(resetOrphanedRunningJobs).toHaveBeenCalledWith(connection, expect.any(Date), {
       includeFreshHeartbeats: true,
     });
+  });
+
+  it('starts even when cancellation recovery throws', async () => {
+    vi.mocked(claimNextQueuedJob).mockResolvedValue(null);
+    vi.mocked(settleCancelRequestedJobsOnStartup).mockRejectedValue(new Error('store unavailable'));
+    queue = queueWith(vi.fn());
+    await queue.start();
+    expect(queue.isReady()).toBe(true);
   });
 
   it('starts even when failed-job reconciliation throws', async () => {

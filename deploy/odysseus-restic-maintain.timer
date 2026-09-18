@@ -1,0 +1,10 @@
+[Unit]
+Description=Maintain the Odysseus restic repository weekly
+
+[Timer]
+OnCalendar=Sun *-*-* 05:20:00 Europe/Paris
+Persistent=true
+RandomizedDelaySec=20m
+
+[Install]
+WantedBy=timers.target

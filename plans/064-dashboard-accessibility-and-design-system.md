@@ -590,7 +590,25 @@ Do not consider a migrated control-room workflow complete when:
 
 ---
 
-# 22. Definition of done
+# 22. Executable closure contract
+
+“Exemplary”, “usable” and “no substantive defect” require a named accessibility acceptance record.
+
+Before closure:
+
+- migrated operator workflows target **WCAG 2.2 AA** for applicable web UI success criteria;
+- automated axe coverage is paired with named manual checks for keyboard-only use, focus order/return, 200% and 400% zoom, reflow, reduced motion and screen-reader announcements;
+- the manual acceptance artifact records browser/OS, viewport/zoom, screen reader when used, routes exercised, FR/EN coverage, defects and disposition;
+- every shared dialog/menu/table/pagination/status primitive has focused accessibility tests so page tests are not the only protection;
+- serious/critical axe findings are zero; any lower-severity accepted exception must have a documented rationale and owner rather than “looks fine”;
+- a closed-code/i18n parity test prevents raw status/reason leakage in either language;
+- the requirement-to-proof table maps every binding accessibility/design-system rule to a component seam and automated/manual proof.
+
+Screenshot review alone is never completion evidence.
+
+---
+
+# 23. Definition of done Definition of done
 
 Plan 064 is implemented when:
 

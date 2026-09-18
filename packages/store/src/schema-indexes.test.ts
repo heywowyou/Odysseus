@@ -6,6 +6,7 @@ import { createBenchmarkCandidateModel } from './schemas/benchmark-candidate.sch
 import { createDirectoryEntryModel } from './schemas/directory-entry.schema.js';
 import { createFindingModel } from './schemas/finding.schema.js';
 import { createJobModel } from './schemas/job.schema.js';
+import { createJobQueueStateModel } from './schemas/job-queue-state.schema.js';
 import { createOutreachDraftModel } from './schemas/outreach-draft.schema.js';
 import { createOutreachOutcomeModel } from './schemas/outreach-outcome.schema.js';
 import { createOutreachPreviewModel } from './schemas/outreach-preview.schema.js';
@@ -29,6 +30,7 @@ const MODEL_FACTORIES: ReadonlyArray<(connection: Connection) => Model<never>> =
   createDirectoryEntryModel,
   createFindingModel,
   createJobModel,
+  createJobQueueStateModel,
   createOutreachDraftModel,
   createOutreachOutcomeModel,
   createOutreachPreviewModel,

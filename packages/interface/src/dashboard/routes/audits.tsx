@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { JSX } from 'react';
-import { ChevronRight, Radar, Square, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronRight, Radar, Square, Trash2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { PAGE_WIDTH, PageHeader } from '../components/page-header';
@@ -26,10 +26,12 @@ import {
 } from '../components/ui/table';
 import { useI18n } from '../i18n/provider';
 import type { DashboardStrings } from '../i18n/types';
-import { fetchJson, postEmpty, sendDelete } from '../lib/api';
-import type { ScanSummary } from '../lib/api-types';
+import { fetchJson, fetchJsonValidated, postEmpty, sendDelete, sendJson } from '../lib/api';
+import { scanQueueSchema } from '../lib/api-schemas';
+import type { QueuedScan, ScanQueue, ScanSummary } from '../lib/api-types';
 import type { DisplayJobStatus } from '../lib/job-outcome';
-import { canDelete, canStop } from '../lib/job-actions';
+import { blockedReasonCopy, isStateChanged, problemCopy } from '../lib/operator-copy';
+import { moveInOrder } from '../lib/queue-order';
 import { formatDateTime, formatRelativeTime } from '../lib/format';
 import { usePolling } from '../lib/use-polling';
 import { currentPhaseLabel } from './scan-progress-model';
@@ -38,7 +40,7 @@ import {
   filterSummaries,
   listStatus,
   rowTarget,
-  scanQueue,
+  runningScans,
   searchMatches,
   severityBadges,
   siteLabel,
@@ -55,11 +57,14 @@ import type {
 // Plan 040 poll policy: lists refresh every 10s (usePolling also pauses
 // every poll while the tab is hidden).
 const POLL_INTERVAL_MS = 10_000;
+// Plan 061 §10.3: the queue is an active list, polled in the 5-10s class.
+const QUEUE_POLL_INTERVAL_MS = 5_000;
 const SKELETON_ROW_COUNT = 8;
 
 const STATUS_OPTIONS: readonly DisplayJobStatus[] = [
   'queued',
   'running',
+  'cancel-requested',
   'complete',
   'report-issue',
   'failed',
@@ -68,14 +73,15 @@ const STATUS_OPTIONS: readonly DisplayJobStatus[] = [
 ];
 
 /** The one confirm dialog this page can open: at most a single action is
- *  ever pending, so a row button replaces whatever the dialog showed. */
-interface PendingScanAction {
-  kind: 'stop' | 'delete' | 'remove' | 'clear-queue';
-  row?: ScanSummary;
-}
+ *  ever pending, so a row button replaces whatever the dialog showed. Row
+ *  actions carry the state token of the server capability they were
+ *  rendered from (plan 061 §8). */
+type PendingScanAction =
+  | { kind: 'stop' | 'delete' | 'remove'; jobId: string; site: string; stateToken: string }
+  | { kind: 'clear-queue' };
 
 function typeBadge(
-  summary: ScanSummary,
+  summary: Pick<ScanSummary, 'type'>,
   strings: DashboardStrings,
 ): { tone: BadgeTone; label: string } {
   if (summary.type === 'full-audit') {
@@ -122,48 +128,100 @@ export function AuditsPage(): JSX.Element {
   // unavailable marker, never a zero that would read as "nothing ran".
   const kpiState: KpiValueState =
     data !== undefined ? 'loaded' : error !== undefined ? 'unavailable' : 'loading';
-  const queue = useMemo(() => scanQueue(data ?? []), [data]);
-  const queuedCount = queue.upNext.length;
+  const running = useMemo(() => runningScans(data ?? []), [data]);
+  const { data: queueData, refresh: refreshQueue } = usePolling(
+    (signal) => fetchJsonValidated('/api/scans/queue', scanQueueSchema, { signal }),
+    QUEUE_POLL_INTERVAL_MS,
+    { key: 'scan-queue' },
+  );
+  const upNext = queueData?.jobs ?? [];
+  const queuedCount = upNext.length;
+  const [reorderBusy, setReorderBusy] = useState(false);
+  const [announcement, setAnnouncement] = useState('');
+  const refreshAll = (): void => {
+    refresh();
+    refreshQueue();
+  };
 
-  /** One mutation wrapper for stop and delete: the distinction between a 409
-   *  (the job just went terminal) and a network blip carries no different
-   *  copy, and the refreshed list carries the truth either way. */
+  /** One mutation wrapper for stop, remove and delete. A typed problem
+   *  picks its own recovery copy; a stale view refreshes at once. */
   const runRowAction = async (
-    row: ScanSummary,
-    kind: 'stop' | 'delete' | 'remove',
+    action: Extract<PendingScanAction, { jobId: string }>,
   ): Promise<void> => {
+    const path = `/api/scans/${encodeURIComponent(action.jobId)}`;
     try {
-      if (kind === 'stop' || kind === 'remove') {
+      if (action.kind === 'stop' || action.kind === 'remove') {
         // Removing a waiting scan is the same cancel as stopping one; only
         // the wording differs, since nothing has started yet.
-        await postEmpty(`/api/scans/${encodeURIComponent(row.jobId)}/cancel`);
+        await sendJson(`${path}/cancel`, 'POST', { stateToken: action.stateToken });
         toast.success(
-          kind === 'remove' ? strings.scanQueue.removedMessage : strings.audits.stoppedMessage,
+          action.kind === 'remove'
+            ? strings.scanQueue.removedMessage
+            : strings.audits.stoppedMessage,
         );
       } else {
-        await sendDelete(`/api/scans/${encodeURIComponent(row.jobId)}`);
+        await sendDelete(`${path}?stateToken=${encodeURIComponent(action.stateToken)}`);
         toast.success(strings.audits.deletedMessage);
       }
-      // The poll keeps last good data for seconds; refresh shows the new
-      // status now.
-      refresh();
-    } catch {
-      toast.error(strings.audits.actionFailed);
+    } catch (error) {
+      toast.error(problemCopy(error, strings.workState) ?? strings.audits.actionFailed);
     }
+    // The poll keeps last good data for seconds; refresh shows the new
+    // status now, and after a conflict it is the recovery.
+    refreshAll();
   };
 
   const clearQueue = async (): Promise<void> => {
     try {
       const result = await postEmpty<{ cleared: number }>('/api/scans/queue/clear');
       toast.success(strings.audits.queueClearedMessage.replace('{count}', String(result.cleared)));
-      refresh();
+      refreshAll();
     } catch {
       toast.error(strings.audits.actionFailed);
     }
   };
 
-  const pendingRow = pendingAction?.row;
-  const pendingSite = pendingRow === undefined ? '' : siteLabel(pendingRow, strings.audits);
+  /** Plan 061 §6.2: a one-step move sends the complete new order with the
+   *  revision it was computed from; a stale revision refreshes the queue. */
+  const moveQueued = async (
+    queue: ScanQueue,
+    row: QueuedScan,
+    direction: 'up' | 'down',
+  ): Promise<void> => {
+    const ids = queue.jobs.map((job) => job.jobId);
+    const orderedJobIds = moveInOrder(ids, row.jobId, direction);
+    if (orderedJobIds === undefined || reorderBusy) return;
+    setReorderBusy(true);
+    const name = queuedName(row);
+    try {
+      await sendJson('/api/scans/queue/reorder', 'POST', {
+        queueRevision: queue.queueRevision,
+        orderedJobIds,
+      });
+      setAnnouncement(
+        strings.workState.movedAnnouncement
+          .replace('{name}', name)
+          .replace('{position}', String(orderedJobIds.indexOf(row.jobId) + 1)),
+      );
+    } catch (error) {
+      toast.error(
+        isStateChanged(error)
+          ? strings.workState.queueChanged
+          : (problemCopy(error, strings.workState) ?? strings.audits.actionFailed),
+      );
+    } finally {
+      setReorderBusy(false);
+      refreshQueue();
+    }
+  };
+
+  const queuedName = (row: QueuedScan): string => {
+    const site = siteLabel(row, strings.audits);
+    return row.prospectName ?? (site === '' ? strings.common.unknownSite : site);
+  };
+
+  const pendingSite =
+    pendingAction === null || pendingAction.kind === 'clear-queue' ? '' : pendingAction.site;
 
   let body: JSX.Element;
   if (data === undefined && error !== undefined) {
@@ -287,7 +345,7 @@ export function AuditsPage(): JSX.Element {
                             stop or delete never navigates by accident; the
                             chevron stays the row's own navigation affordance. */}
                         <div className="flex items-center justify-end gap-1">
-                          {canStop(summary.status) ? (
+                          {summary.capabilities.cancel.state === 'available' ? (
                             <Button
                               variant="danger"
                               size="sm"
@@ -296,28 +354,29 @@ export function AuditsPage(): JSX.Element {
                               title={strings.audits.stopAction}
                               onClick={(event) => {
                                 event.stopPropagation();
-                                setPendingAction({ kind: 'stop', row: summary });
+                                setPendingAction({
+                                  kind: summary.status === 'queued' ? 'remove' : 'stop',
+                                  jobId: summary.jobId,
+                                  site,
+                                  stateToken: summary.capabilities.cancel.stateToken,
+                                });
                               }}
                             >
                               <Square className="size-3 fill-current" aria-hidden="true" />
                               <span className="text-xs">{strings.audits.stopAction}</span>
                             </Button>
                           ) : null}
-                          {canDelete(summary.status) ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="px-2"
-                              aria-label={strings.audits.deleteAction}
-                              title={strings.audits.deleteAction}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setPendingAction({ kind: 'delete', row: summary });
-                              }}
-                            >
-                              <Trash2 className="size-4" aria-hidden="true" />
-                            </Button>
-                          ) : null}
+                          <DeleteControl
+                            summary={summary}
+                            onDelete={(stateToken) =>
+                              setPendingAction({
+                                kind: 'delete',
+                                jobId: summary.jobId,
+                                site,
+                                stateToken,
+                              })
+                            }
+                          />
                           <ChevronRight className="size-4 text-ink-muted" aria-hidden="true" />
                         </div>
                       </TableCell>
@@ -369,7 +428,12 @@ export function AuditsPage(): JSX.Element {
         }
       />
 
-      {data !== undefined && (queue.running.length > 0 || queue.upNext.length > 0) ? (
+      {/* Polite, throttled to meaningful transitions: only a reorder the
+          operator made is announced, never a poll tick. */}
+      <p className="sr-only" role="status" aria-live="polite">
+        {announcement}
+      </p>
+      {running.length > 0 || upNext.length > 0 ? (
         <Card
           className="mb-4"
           title={strings.scanQueue.sectionTitle}
@@ -380,39 +444,94 @@ export function AuditsPage(): JSX.Element {
               <h3 id="scan-queue-running" className="mb-2 text-xs font-medium text-ink-soft">
                 {strings.scanQueue.runningHeading}
               </h3>
-              {queue.running.length === 0 ? (
+              {running.length === 0 ? (
                 <p className="text-sm text-ink-muted">{strings.scanQueue.noRunning}</p>
               ) : (
                 <ul className="flex flex-col gap-2">
-                  {queue.running.map((row) => (
-                    <QueueRow
-                      key={row.jobId}
-                      row={row}
-                      detail={currentPhaseLabel(row.phase, strings.progress.phaseLabels)}
-                      actionLabel={strings.audits.stopAction}
-                      onAction={() => setPendingAction({ kind: 'stop', row })}
-                    />
-                  ))}
+                  {running.map((row) => {
+                    const site = siteLabel(row, strings.audits);
+                    const cancel = row.capabilities.cancel;
+                    return (
+                      <QueueRow
+                        key={row.jobId}
+                        name={row.prospectName ?? (site === '' ? strings.common.unknownSite : site)}
+                        site={row.prospectName !== undefined ? site : ''}
+                        target={rowTarget(row)}
+                        type={typeBadge(row, strings)}
+                        status={row.status}
+                        detail={
+                          row.status === 'cancel-requested'
+                            ? strings.workState.states['cancel-requested']
+                            : currentPhaseLabel(row.phase, strings.progress.phaseLabels)
+                        }
+                        {...(cancel.state === 'available'
+                          ? {
+                              actionLabel: strings.audits.stopAction,
+                              onAction: () =>
+                                setPendingAction({
+                                  kind: 'stop',
+                                  jobId: row.jobId,
+                                  site,
+                                  stateToken: cancel.stateToken,
+                                }),
+                            }
+                          : {})}
+                      />
+                    );
+                  })}
                 </ul>
               )}
             </section>
             <section aria-labelledby="scan-queue-up-next">
               <h3 id="scan-queue-up-next" className="mb-2 text-xs font-medium text-ink-soft">
-                {strings.scanQueue.upNextHeading.replace('{count}', String(queue.upNext.length))}
+                {strings.scanQueue.upNextHeading.replace('{count}', String(upNext.length))}
               </h3>
-              {queue.upNext.length === 0 ? (
+              {upNext.length === 0 || queueData === undefined ? (
                 <p className="text-sm text-ink-muted">{strings.scanQueue.noWaiting}</p>
               ) : (
                 <ol className="flex flex-col gap-2">
-                  {queue.upNext.map((row, index) => (
-                    <QueueRow
-                      key={row.jobId}
-                      row={row}
-                      position={index + 1}
-                      actionLabel={strings.scanQueue.removeAction}
-                      onAction={() => setPendingAction({ kind: 'remove', row })}
-                    />
-                  ))}
+                  {upNext.map((row, index) => {
+                    const site = siteLabel(row, strings.audits);
+                    const name = queuedName(row);
+                    return (
+                      <QueueRow
+                        key={row.jobId}
+                        name={name}
+                        site={row.prospectName !== undefined ? site : ''}
+                        target={`/scans/${encodeURIComponent(row.jobId)}`}
+                        type={typeBadge(row, strings)}
+                        status="queued"
+                        position={row.position}
+                        {...(row.cancel.state === 'available'
+                          ? {
+                              actionLabel: strings.scanQueue.removeAction,
+                              onAction: () =>
+                                setPendingAction({
+                                  kind: 'remove',
+                                  jobId: row.jobId,
+                                  site,
+                                  stateToken: row.cancel.stateToken,
+                                }),
+                            }
+                          : {})}
+                        reorder={
+                          queueData.truncated
+                            ? undefined
+                            : {
+                                busy: reorderBusy,
+                                canMoveUp: index > 0,
+                                canMoveDown: index < upNext.length - 1,
+                                moveUpLabel: strings.workState.moveUpAria.replace('{name}', name),
+                                moveDownLabel: strings.workState.moveDownAria.replace(
+                                  '{name}',
+                                  name,
+                                ),
+                                onMove: (direction) => void moveQueued(queueData, row, direction),
+                              }
+                        }
+                      />
+                    );
+                  })}
                 </ol>
               )}
             </section>
@@ -501,8 +620,8 @@ export function AuditsPage(): JSX.Element {
         onConfirm={async () => {
           const action = pendingAction;
           if (action === null) return;
-          if (action.kind !== 'clear-queue' && action.row !== undefined) {
-            await runRowAction(action.row, action.kind);
+          if (action.kind !== 'clear-queue') {
+            await runRowAction(action);
             return;
           }
           await clearQueue();
@@ -513,19 +632,31 @@ export function AuditsPage(): JSX.Element {
 }
 
 /** One line of the scan queue: the prospect (or the site when the scan is not
- *  linked to one), the scan type, the phase of a running scan, and its one
- *  action. */
+ *  linked to one), the scan type, the phase of a running scan, its one
+ *  action, and for a waiting scan the keyboard-operable reorder buttons. */
 function QueueRow(props: {
-  row: ScanSummary;
+  name: string;
+  site: string;
+  target: string;
+  type: { tone: BadgeTone; label: string };
+  status: ScanSummary['status'];
   position?: number;
   detail?: string;
-  actionLabel: string;
-  onAction: () => void;
+  actionLabel?: string;
+  onAction?: () => void;
+  reorder?:
+    | {
+        busy: boolean;
+        canMoveUp: boolean;
+        canMoveDown: boolean;
+        moveUpLabel: string;
+        moveDownLabel: string;
+        onMove: (direction: 'up' | 'down') => void;
+      }
+    | undefined;
 }): JSX.Element {
-  const { strings } = useI18n();
-  const { row, position, detail, actionLabel, onAction } = props;
-  const site = siteLabel(row, strings.audits);
-  const type = typeBadge(row, strings);
+  const { name, site, target, type, status, position, detail, actionLabel, onAction, reorder } =
+    props;
   return (
     <li className="flex items-center justify-between gap-3 rounded-lg border border-line bg-raised px-3 py-2">
       <div className="min-w-0">
@@ -534,34 +665,123 @@ function QueueRow(props: {
             <span className="numeric text-xs text-ink-muted">{position}.</span>
           ) : null}
           <Link
-            to={rowTarget(row)}
+            to={target}
             className="truncate text-sm font-medium text-ink hover:text-accent-bright"
           >
-            {row.prospectName ?? (site === '' ? strings.common.unknownSite : site)}
+            {name}
           </Link>
           <Badge tone={type.tone} className="whitespace-nowrap">
             {type.label}
           </Badge>
         </div>
         <div className="ident truncate text-xs text-ink-muted">
-          {row.prospectName !== undefined && site !== '' ? site : null}
+          {site !== '' ? site : null}
           {detail !== undefined ? (
             <span className="ml-2 inline-flex items-center gap-1.5 text-ink-soft">
-              <StatusDot status={row.status} />
+              <StatusDot status={status} />
               {detail}
             </span>
           ) : null}
         </div>
       </div>
-      <Button
-        variant={row.status === 'running' ? 'danger' : 'ghost'}
-        size="sm"
-        className="shrink-0"
-        onClick={onAction}
-      >
-        {actionLabel}
-      </Button>
+      <div className="flex shrink-0 items-center gap-1">
+        {reorder !== undefined ? (
+          <>
+            <ReorderButton
+              label={reorder.moveUpLabel}
+              enabled={reorder.canMoveUp && !reorder.busy}
+              onClick={() => reorder.onMove('up')}
+            >
+              <ArrowUp className="size-4" aria-hidden="true" />
+            </ReorderButton>
+            <ReorderButton
+              label={reorder.moveDownLabel}
+              enabled={reorder.canMoveDown && !reorder.busy}
+              onClick={() => reorder.onMove('down')}
+            >
+              <ArrowDown className="size-4" aria-hidden="true" />
+            </ReorderButton>
+          </>
+        ) : null}
+        {actionLabel !== undefined && onAction !== undefined ? (
+          <Button variant={status === 'running' ? 'danger' : 'ghost'} size="sm" onClick={onAction}>
+            {actionLabel}
+          </Button>
+        ) : null}
+      </div>
     </li>
+  );
+}
+
+/** aria-disabled rather than disabled, so the control stays in the tab order
+ *  at the ends of the queue and keeps its position among its siblings. */
+function ReorderButton(props: {
+  label: string;
+  enabled: boolean;
+  onClick: () => void;
+  children: JSX.Element;
+}): JSX.Element {
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className={cn('px-2', props.enabled ? undefined : 'opacity-40')}
+      aria-label={props.label}
+      title={props.label}
+      aria-disabled={props.enabled ? undefined : true}
+      onClick={() => {
+        if (props.enabled) props.onClick();
+      }}
+    >
+      {props.children}
+    </Button>
+  );
+}
+
+/** Delete for one history row, driven by the server capability. A running
+ *  row offers Stop instead; a row the server blocks for a transient reason
+ *  (a stopped job still finishing, a report in production) keeps a focusable
+ *  aria-disabled control whose description says why. */
+function DeleteControl(props: {
+  summary: ScanSummary;
+  onDelete: (stateToken: string) => void;
+}): JSX.Element | null {
+  const { strings } = useI18n();
+  const capability = props.summary.capabilities.delete;
+  if (capability.state === 'available') {
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        className="px-2"
+        aria-label={strings.audits.deleteAction}
+        title={strings.audits.deleteAction}
+        onClick={(event) => {
+          event.stopPropagation();
+          props.onDelete(capability.stateToken);
+        }}
+      >
+        <Trash2 className="size-4" aria-hidden="true" />
+      </Button>
+    );
+  }
+  if (capability.reasonCode === 'work-running') return null;
+  const reason = blockedReasonCopy(capability, strings.workState) ?? '';
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="px-2 opacity-40"
+      aria-disabled={true}
+      aria-label={`${strings.audits.deleteAction} : ${reason}`}
+      title={reason}
+      onClick={(event) => {
+        event.stopPropagation();
+        toast.info(reason);
+      }}
+    >
+      <Trash2 className="size-4" aria-hidden="true" />
+    </Button>
   );
 }
 

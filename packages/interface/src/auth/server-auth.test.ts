@@ -30,6 +30,8 @@ vi.mock('@odysseus/store', async (importOriginal) => {
   return {
     ...actual,
     resetOrphanedRunningJobs: vi.fn(async () => 0),
+    settleCancelRequestedJobsOnStartup: vi.fn(async () => 0),
+    backfillQueueOrder: vi.fn(async () => 0),
     reconcileFailedAuditJobs: vi.fn(async () => 0),
     claimNextQueuedJob: vi.fn(async () => null),
     getAudit: vi.fn(async () => ({

@@ -13,7 +13,7 @@
 - **Risk**: HIGH — paid-report analysis, model orchestration, rendering, PDF QA, persistence, approval and delivery all change.
 - **Depends on**: delivered plans 027, 033, 039, 050 and 051; **Plan 059 evidence approval before production promotion**.
 - **Category**: paid-report quality, senior reasoning pipeline, exact-PDF QA, bilingual delivery integrity.
-- **Execution status**: core pipeline implementation landed 2026-09-18 and remains dormant behind Plan 059; **corrective closure reopened 2026-09-18** because the implementation used one generic report-quality model instead of the required validated per-role profiles.
+- **Execution status**: core pipeline implementation landed 2026-09-18 and remains dormant behind Plan 059; **corrective closure reopened 2026-09-18** because the implementation used one generic report-quality model instead of the required validated per-role profiles. The code now routes every Plan-058 role through an exhaustive `ReportModelProfile` matrix using the `gpt-5.6-sol` quality-first candidate with `high`/`xhigh` reasoning and persists profile provenance; closure still requires the saved-corpus benchmark and requirement-to-proof audit.
 - **Final review state**: original design + six hardening passes + final convergence reviews. The final architecture pass produced no additional substantive change; freeze speculative design and let implementation/evaluation evidence drive later amendments.
 
 ---
@@ -510,9 +510,14 @@ final-document-arbiter
 
 Quality rules:
 
-- use the strongest validated reasoning/image profile for each required role; no silent weak fallback;
+- use an explicit `ReportModelProfile` for **every** required role; a single generic report-quality model setting is not a role-profile implementation;
+- the initial quality-first candidate profile for every role is `gpt-5.6-sol`; use `high` reasoning for writers/critics/editors/visual review and `xhigh` for senior analysis, adjudication and final arbitration until the corpus proves a different profile equal or better;
+- no Plan-058 role may resolve through the legacy `OPENAI_MODEL`, `gpt-5.4-mini`, a wildcard/default profile or an environment-only catch-all such as `ODYSSEUS_REPORT_QUALITY_MODEL`;
+- each role profile has a stable profile ID and records model, reasoning effort, modality requirements and profile-contract version;
+- profile resolution is exhaustive over `ReportQualityRole`; adding a role without a profile is a compile/test failure;
+- use the strongest **validated** reasoning/image profile for each required role; a cheaper/smaller profile may replace the candidate only after the same applicable evaluation corpus shows no material regression;
 - critics/reviewers run with stateless fresh contexts and complementary instructions;
-- persist exact profile/prompt/schema hashes and returned model metadata;
+- persist exact profile ID/profile digest/prompt/schema hashes and returned model metadata;
 - retry provider failures with paced backoff; required-stage unavailability blocks;
 - Zod/schema validation on every structured response;
 - model roles have no external actions/tools while reviewing client artifacts;
@@ -949,7 +954,7 @@ Implementation is sliced, but **no intermediate partial pipeline is marketed as 
 2. Build known-bad/known-good content and PDF fixtures first.
 3. Add `ReportInputSnapshot`, `ReportFactRegistry`, `ReportCoverageLedger` and dependency digests.
 4. Add `EvidenceBoundContent` and safe model-text rendering/sanitization.
-5. Add role-based model profiles with exact prompt/schema hashes and returned model metadata.
+5. Add the exhaustive `ReportModelProfile` registry and role resolver. Remove the generic report-quality-model seam from the Plan-058 path, make `gpt-5.6-sol` the initial quality-first candidate, persist profile IDs/digests/reasoning metadata, and add static/runtime tests proving no role can fall back to the legacy `OPENAI_MODEL`/`gpt-5.4-mini` path.
 
 ## Phase B — analysis/writing/review
 
@@ -1169,7 +1174,32 @@ Outcome is `needs-operator-review`, `cancelled` or `failed`, never silent fallba
 
 ---
 
-# 23. Definition of done
+# 23. Executable closure contract
+
+Plan 058 cannot be closed from prose review alone. Before its status may become `DONE`, maintain a requirement-to-proof table in this file or a linked committed verification artifact covering every binding section (1-21). Every row must name:
+
+```text
+requirement / invariant
+owning implementation artifact
+automated test or deterministic check
+manual/corpus proof only where automation cannot decide quality
+result / commit or artifact reference
+```
+
+A row is incomplete if the implementation or proof column is blank, says only “reviewed”, or points only to a broad `pnpm run check` without a test that exercises the invariant.
+
+Additional mandatory closure proofs:
+
+- a role-profile coverage test enumerates every `ReportQualityRole` and proves each resolves to an explicit profile;
+- a negative test proves Plan 058 cannot use `OPENAI_MODEL`, `gpt-5.4-mini`, a wildcard profile, or a generic report-quality fallback;
+- the selected profile matrix and reasoning efforts are included in the benchmark artifact;
+- the benchmark compares the candidate profile matrix against the prior production baseline on the saved corpus and records factual, coverage, parity, schema/retry and editorial outcomes;
+- any profile/model/reasoning change after that artifact invalidates closure until the applicable corpus is rerun;
+- the final source trace searches every binding “must”, “never”, “only”, “blocking”, “required” and “fail-closed” statement and accounts for it in the requirement-to-proof table.
+
+---
+
+# 24. Definition of done
 
 Plan 058 is implemented only when all are true:
 
