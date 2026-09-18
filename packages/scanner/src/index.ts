@@ -196,6 +196,7 @@ export {
   APPROVED_AUDIT_EVIDENCE_PATH,
   approveAuditEvidence,
   EVIDENCE_READ_BACK_PATHS,
+  hasAssessedEvidenceGraph,
   readApprovedAuditEvidence,
   readAuditEvidenceSnapshot,
   readEvidenceQualityAssessment,

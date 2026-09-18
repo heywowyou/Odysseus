@@ -87,6 +87,20 @@ export function readApprovedAuditEvidence(auditDir: string): ApprovedAuditEviden
 }
 
 /**
+ * Whether this audit directory carries an assembled evidence graph, judged
+ * by the presence of its quality assessment alone. Plan 060's operator
+ * projections need exactly this fact and nothing else: no evidence payload,
+ * no report bytes. `writeAuditEvidenceGraph` writes the assessment only
+ * when a run actually assembled and assessed the graph, so its presence is
+ * the honest assessed marker.
+ */
+export function hasAssessedEvidenceGraph(auditDir: string): boolean {
+  return fs.existsSync(
+    path.join(auditDir, EVIDENCE_GRAPH_DIRNAME, EVIDENCE_QUALITY_ASSESSMENT_FILENAME),
+  );
+}
+
+/**
  * Persists a whole assembled graph without its approval. The supporting
  * ledgers the raw root digests are written first, then the roots. Any
  * approval left by an earlier run of the same audit directory is removed

@@ -36,6 +36,7 @@ import {
 import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import { Router } from '../router.js';
 import { registerAuditRoutes } from './audits.js';
+import { operatorSnapshotSchema } from '../operator/contract.js';
 import { probeMongoAvailability, scopedMongoTestUri } from '@odysseus/store/test-support.js';
 
 const { available: mongoAvailable, connection } = await probeMongoAvailability(
@@ -226,6 +227,15 @@ async function getViaRoute(auditId: string, language: string): Promise<FakeRes> 
   return res;
 }
 
+async function getDetailViaRoute(auditId: string): Promise<FakeRes> {
+  const router = new Router();
+  registerAuditRoutes(router, connection!);
+  const req = fakeReq(`/api/audits/${auditId}`);
+  const res = fakeRes();
+  await router.handle(req, res);
+  return res;
+}
+
 let artifactsRoot: string | undefined;
 let previousArtifactsRoot: string | undefined;
 
@@ -303,5 +313,33 @@ describe.skipIf(!mongoAvailable)('audit routes against real mongo', () => {
     // can never be served silently.
     expect(res.statusCode).toBe(409);
     expect(res.body).toContain('not been approved');
+  });
+
+  it('audit detail carries an operator snapshot projected from store truth', async () => {
+    const chain = await seedApprovedChain();
+    const res = await getDetailViaRoute(chain.auditId);
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body as string) as { snapshot: unknown };
+    expect(operatorSnapshotSchema.parse(body.snapshot)).toEqual(body.snapshot);
+    const snapshot = body.snapshot as {
+      subject: { auditId?: string };
+      work: unknown[];
+      evidence: { readiness: string; legacyAdvisory?: boolean };
+      report: { readiness: string };
+      capabilities: Record<string, unknown>;
+      attention: unknown[];
+      stateVersion: string;
+    };
+    expect(snapshot.subject.auditId).toBe(chain.auditId);
+    // The seeded audit has no Plan-059 evidence graph and no Plan-058
+    // quality rows: the axes stay honest - legacy-unknown evidence with its
+    // advisory, absent report - never a guessed pass.
+    expect(snapshot.evidence).toEqual({ readiness: 'legacy-unknown', legacyAdvisory: true });
+    expect(snapshot.report).toEqual({ readiness: 'absent' });
+    expect(snapshot.work).toEqual([]);
+    expect(snapshot.capabilities).toEqual({});
+    expect(snapshot.attention).toEqual([]);
+    expect(snapshot.stateVersion).toMatch(/^[\w-]{22}$/);
   });
 });

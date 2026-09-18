@@ -7,6 +7,7 @@ import {
   isGrade,
   isValidSiren,
   summarizeAuditCoverage,
+  type ApprovedAuditEvidence,
   type AuditManifest,
   type AuditManualFields,
   type Finding,
@@ -17,6 +18,7 @@ import {
 import {
   clearAuditGradeOverride,
   createJobModel,
+  createReportQualityRunModel,
   getAudit,
   getAuditManualFields,
   getAuditRuntimeFields,
@@ -36,13 +38,22 @@ import {
   saveLinkedAuditIdentity,
   setAuditGradeOverride,
   setAuditManualFields,
+  type ActiveReportBundleDocument,
   type AuditDocumentFields,
   type AuditIdentityValues,
   type JobDocument,
+  type ReportBundleDocument,
   type ReportDocument,
+  type ReportQualityRunDocument,
   type SelectedAuditAnalysisPairResolution,
 } from '@odysseus/store';
-import { buildArtifactBucketKey, buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
+import {
+  buildArtifactBucketKey,
+  buildAuditDir,
+  getArtifactsRoot,
+  hasAssessedEvidenceGraph,
+  readApprovedAuditEvidence,
+} from '@odysseus/scanner';
 import {
   classifyReportFreshness,
   reportUsesCurrentTemplate,
@@ -74,6 +85,13 @@ import { findingsAreStale, makeReportReady } from '../pipeline/make-report-ready
 import { runReportQualityForAudit } from '../pipeline/regenerate-reports.js';
 import { approveAndPromoteReportQualityBundle } from '../pipeline/report-quality-promotion.js';
 import { readVerifiedImmutablePdf } from '../pipeline/report-quality-storage.js';
+import {
+  reportProductionState,
+  type ReportProductionState,
+} from '../pipeline/report-production-state.js';
+import type { EvidenceFacts, ReportQualityFacts } from '../operator/audit-readiness.js';
+import { buildAuditSnapshot } from '../operator/audit-snapshot.js';
+import { projectLegacyJob } from '../operator/legacy-job-projection.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { resolveArtifactFile } from '../artifacts/resolve-artifact.js';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
@@ -297,6 +315,74 @@ async function getFailedJobForAudit(
     .lean<JobDocument | null>();
 }
 
+/** Plan 060 §5.2: the audit's latest Plan-058 quality run, for the operator
+ *  snapshot's readiness axes. Bounded read: the projection needs only the
+ *  run's state and id, never its provenance arrays. */
+async function getLatestReportQualityRun(
+  connection: Connection,
+  auditId: string,
+): Promise<ReportQualityRunDocument | null> {
+  return createReportQualityRunModel(connection)
+    .findOne({ auditId })
+    .sort({ createdAt: -1 })
+    .lean<ReportQualityRunDocument | null>();
+}
+
+/** Evidence facts for the operator snapshot. The only evidence bytes read
+ *  are the two cheap markers beside the audit: the approval file's content
+ *  (digests and limitation codes, never page content or report bytes) and
+ *  the assembled graph's existence. An audit with neither marker predates
+ *  the evidence graph or lost its graph assembly - an honest unknown either
+ *  way - while quick-check and prospecting scans never assemble a graph and
+ *  are absent, not legacy. */
+function evidenceFactsForAudit(
+  audit: Pick<AuditDocumentFields, 'scanIntent'>,
+  approval: ApprovedAuditEvidence | undefined,
+  graphAssessed: boolean,
+): EvidenceFacts {
+  const assessed = approval !== undefined || graphAssessed;
+  if (approval !== undefined) {
+    return {
+      graphAssessed,
+      approved: true,
+      ...(approval.verdict === 'reportable-with-known-limitations'
+        ? { approvedWithLimitations: true }
+        : {}),
+      limitationCodes: approval.limitations.map((limitation) => limitation.code),
+      digestRef: approval.auditEvidenceSnapshotDigest,
+    };
+  }
+  const legacyAudit =
+    !assessed && audit.scanIntent !== 'quick-check' && audit.scanIntent !== 'prospecting-audit';
+  return { graphAssessed: assessed, ...(legacyAudit ? { legacyAudit: true } : {}) };
+}
+
+/** Report facts for the operator snapshot, from the Plan-058 authority's
+ *  durable rows plus the in-memory production registry. A rerun starts a new
+ *  run document, so a latest bundle whose run is not the latest run came
+ *  from an earlier iteration; the bundle row only reaches
+ *  operator-approved/promoted through the exact-digest approval path. */
+function reportFactsForAudit(input: {
+  run: ReportQualityRunDocument | null;
+  latestBundle: ReportBundleDocument | null;
+  activeBundle: ActiveReportBundleDocument | null;
+  production: ReportProductionState;
+}): ReportQualityFacts {
+  const { run, latestBundle, activeBundle, production } = input;
+  return {
+    ...(run !== null ? { runState: run.state, runRef: run.qualityRunId } : {}),
+    ...(latestBundle !== null ? { candidateDigest: latestBundle.bundleDigest } : {}),
+    ...(activeBundle !== null ? { activeDigest: activeBundle.bundleDigest } : {}),
+    ...(latestBundle !== null && run !== null && run.qualityRunId !== latestBundle.qualityRunId
+      ? { candidateSuperseded: true }
+      : {}),
+    operatorApprovalMatchesCurrentBundle:
+      latestBundle !== null &&
+      (latestBundle.state === 'operator-approved' || latestBundle.state === 'promoted'),
+    producing: production.status === 'writing' || production.status === 'pdf-generation',
+  };
+}
+
 /** Plan 037 slice 5: the outreach preview section of the audit detail page.
  *  One build path for both the on-page render and the operator PDF: a
  *  prospect-linked audit goes through the exact summary build publication
@@ -376,6 +462,9 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       frReport,
       enReport,
       failureJob,
+      latestQualityBundle,
+      activeQualityBundle,
+      latestQualityRun,
     ] = await Promise.all([
       getFindingsForAudit(connection, auditId),
       getSeverityRollup(connection, auditId),
@@ -385,6 +474,9 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       getLatestReport(connection, auditId, 'fr'),
       getLatestReport(connection, auditId, 'en'),
       getFailedJobForAudit(connection, auditId),
+      getLatestReportBundle(connection, auditId),
+      getActiveReportBundle(connection, auditId),
+      getLatestReportQualityRun(connection, auditId),
     ]);
     // A failed regeneration advances the selected writing pair before PDF
     // rendering. Keep older report documents as history, but never advertise
@@ -401,6 +493,11 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         : null;
     const hostname = new URL(audit.siteUrl).hostname;
     const auditDir = buildAuditDir(getArtifactsRoot(), hostname, audit.startedAt);
+    // Plan 060 §5.2 evidence facts: the approval file (digests and
+    // limitation codes) plus the graph's assessed marker - bounded,
+    // no page payload, no report bytes.
+    const evidenceApproval = readApprovedAuditEvidence(auditDir);
+    const graphAssessed = hasAssessedEvidenceGraph(auditDir);
     // Issue #91: resolve each language's PDF availability up front, so the
     // dashboard can render report rows that tell "the report is fine but
     // elsewhere" apart from "the report is gone" instead of asserting a
@@ -501,6 +598,29 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     // how many of each severity they account for.
     const thirdParty = summarizeThirdPartyFindings(findings);
 
+    // Plan 060 §5.2/§5.3: the server-produced operator snapshot. The server
+    // is the semantic boundary: readiness is projected here from the owning
+    // authorities' rows, and the browser only translates codes. Work,
+    // capabilities and attention projections beyond the failure job below
+    // arrive with later slices, so they stay honestly empty.
+    const snapshot = buildAuditSnapshot({
+      subject: {
+        ...(audit.prospectId !== undefined ? { prospectId: audit.prospectId } : {}),
+        auditId: audit.auditId,
+        ...(prospect !== null ? { siteLabel: prospect.name } : {}),
+      },
+      work: failureJob !== null ? [projectLegacyJob(failureJob)] : [],
+      evidenceFacts: evidenceFactsForAudit(audit, evidenceApproval, graphAssessed),
+      reportFacts: reportFactsForAudit({
+        run: latestQualityRun,
+        latestBundle: latestQualityBundle,
+        activeBundle: activeQualityBundle,
+        production: reportProductionState(auditId),
+      }),
+      capabilities: {},
+      attention: [],
+    });
+
     sendJson(res, 200, {
       auditId: audit.auditId,
       prospectId: audit.prospectId,
@@ -536,6 +656,9 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       gradeOverride: audit.gradeOverride ?? null,
       outreach: { prospectId: outreachProspectId, hasLiveV2Preview },
       prospect: prospect === null ? null : { prospectId: prospect.prospectId, name: prospect.name },
+      // Plan 060 §5.2: additive operator snapshot; the dashboard schema is
+      // passthrough, so existing fields are untouched.
+      snapshot,
       canAttachProspect: true,
       // Issue #90: the failed job's own record, so the audit pages can show
       // the reason and its prescribed fix instead of a bare failed badge.

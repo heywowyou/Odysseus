@@ -7,6 +7,7 @@ import { cleanInput } from '../evidence-graph-fixtures.js';
 import {
   approveAuditEvidence,
   EVIDENCE_GRAPH_DIRNAME,
+  hasAssessedEvidenceGraph,
   readApprovedAuditEvidence,
   readAuditEvidenceSnapshot,
   readEvidenceQualityAssessment,
@@ -99,5 +100,12 @@ describe('Plan 059 evidence graph persistence', () => {
     removeApprovedAuditEvidence(dir);
     expect(readApprovedAuditEvidence(dir)).toBeUndefined();
     expect(() => removeApprovedAuditEvidence(dir)).not.toThrow();
+  });
+
+  it('judges assessed-ness from the quality assessment alone', () => {
+    const dir = auditDir();
+    expect(hasAssessedEvidenceGraph(dir)).toBe(false);
+    writeAuditEvidenceGraph(dir, assembleAuditEvidenceGraph(cleanInput()));
+    expect(hasAssessedEvidenceGraph(dir)).toBe(true);
   });
 });
