@@ -52,6 +52,16 @@ vi.mock('@odysseus/store', async (importOriginal) => {
     })),
     getLatestReport: vi.fn(async () => null),
     getLatestReportApproval: vi.fn(async () => null),
+    // Plan 060 snapshot reads (audit-readiness axes): nothing recorded.
+    getLatestReportBundle: vi.fn(async () => null),
+    getActiveReportBundle: vi.fn(async () => null),
+    createReportQualityRunModel: vi.fn(() => ({
+      findOne: vi.fn(() => ({
+        sort: vi.fn(() => ({
+          lean: vi.fn(async () => null),
+        })),
+      })),
+    })),
     createJobModel: vi.fn(() => ({
       findOne: vi.fn(() => ({
         sort: vi.fn(() => ({
