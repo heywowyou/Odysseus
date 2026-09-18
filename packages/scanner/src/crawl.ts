@@ -59,6 +59,11 @@ import {
   buildRobotsPolicySnapshot,
   type RobotsPolicySnapshot,
 } from './robots-policy-snapshot.js';
+import {
+  InventoryLedger,
+  type InventoryDisposition,
+  type InventoryLedgerSnapshot,
+} from './inventory-ledger.js';
 
 export { isSameSiteHostname } from './links.js';
 
@@ -123,6 +128,8 @@ export interface CrawlOptions {
   onNetworkSafetyBlocked?: NetworkSafetyBlockHandler;
   /** Plan 059 evidence epoch owning this crawl's robots policy chain. */
   evidenceEpoch?: number;
+  /** Frozen AuditScopeSnapshot digest. Enables the private inventory ledger. */
+  scopeDigest?: string;
 }
 
 /** Per-iteration loop state the resumable crawl must survive a process
@@ -136,6 +143,8 @@ export interface CrawlFrontierSnapshot {
   robotsText: string | null;
   /** Plan 059 policy history. Optional only for pre-059/frontier test fixtures. */
   robotsPolicyChain?: RobotsPolicySnapshot[];
+  /** Private Plan 059 inventory state, checkpointed with the crawl frontier. */
+  inventoryLedger?: InventoryLedgerSnapshot;
   supplementalPhaseStarted: boolean;
   queue: QueueItem[];
   visited: string[];
@@ -229,6 +238,8 @@ export interface CrawlResult {
   robotsTxtFound: boolean;
   /** Exact versioned robots policy history for this evidence epoch. */
   robotsPolicyChain?: RobotsPolicySnapshot[];
+  /** Private Plan 059 inventory; omitted for callers that did not supply scope. */
+  inventoryLedger?: InventoryLedgerSnapshot;
   /** The stricter-of-config-and-robots delay actually used between
    *  requests, so later stages (the scanner passes) can reuse the exact
    *  same politeness pacing without re-fetching robots.txt. */
