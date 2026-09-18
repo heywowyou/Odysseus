@@ -409,7 +409,12 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   let robotsText: string | null;
   let robotsRules: RobotsRules;
   if (resumeState === undefined) {
-    robotsText = await fetchRobotsText(start.origin, timeoutMs, userAgent);
+    robotsText =
+      options.scheduler === undefined
+        ? await fetchRobotsText(start.origin, timeoutMs, userAgent)
+        : await options.scheduler.schedule(() =>
+            fetchRobotsText(start.origin, timeoutMs, userAgent),
+          );
     robotsRules =
       robotsText === null
         ? { found: false, disallow: [], allow: [], sitemapUrls: [] }
@@ -443,6 +448,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
         : await checkSitemap(start.origin, robotsRules.sitemapUrls, timeoutMs, {
             userAgent,
             delayMs: effectiveDelayMs,
+            ...(options.scheduler !== undefined ? { scheduler: options.scheduler } : {}),
           });
     if (sitemap !== undefined) {
       for (const entry of sitemap.pageEntries) {
