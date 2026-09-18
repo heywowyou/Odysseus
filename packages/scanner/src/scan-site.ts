@@ -780,6 +780,12 @@ async function runStagedFullAuditScan(
       lighthouseAlreadyCompleted += 1;
     }
   }
+  if (context.robotsPolicyRuntime !== undefined && selectedUrls.size > 0) {
+    const plannedPerformanceUrls = [...selectedUrls];
+    await context.robotsPolicyRuntime.refresh(plannedPerformanceUrls, { phaseBoundary: true });
+    for (const url of plannedPerformanceUrls) context.robotsPolicyRuntime.assertAllowed(url);
+  }
+
   onProgress?.({
     type: 'lighthouse-start',
     totalPages: selectedUrls.size,
