@@ -74,7 +74,7 @@ would materially help. Keep these limits:
 - the MCP remains disabled by default for agent startup so it adds no ambient
   latency or external dependency to ordinary work.
 
-The server is invoked through the official `@upstash/context7-mcp` package.
+The server is invoked through the official `@upstash/context7-mcp` package, pinned to `4.1.1` in `.mcp.json` and tracked by Renovate.
 An API key may be configured at the host level for higher limits, but no key is
 stored in the repository.
 
