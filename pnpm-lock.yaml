@@ -393,6 +393,9 @@ importers:
       playwright:
         specifier: ^1.62.1
         version: 1.62.1
+      undici:
+        specifier: ^8.10.0
+        version: 8.10.0
     devDependencies:
       jsdom:
         specifier: ^30.0.1

@@ -47,6 +47,9 @@ export * from './inventory-ledger.js';
 export * from './check-attempt-ledger.js';
 export * from './performance-measurement-set.js';
 export * from './audit-environment-fingerprint.js';
+export * from './evidence-surfaces.js';
+export * from './evidence-ledger.js';
+export * from './evidence-snapshots.js';
 export {
   buildRobotsPolicySnapshot,
   describeRobotsPolicyTransition,
@@ -184,6 +187,9 @@ export {
 } from './artifacts/crawl-frontier-io.js';
 export type { CrawlFrontierReuseVerdict } from './artifacts/crawl-frontier-io.js';
 export { buildManifest, readOdysseusBuildId } from './artifacts/manifest.js';
+export { readApprovedAuditEvidence } from './artifacts/evidence-graph-io.js';
+export { collectAcquisitionAttempts } from './artifacts/acquisition-attempts-io.js';
+export { assembleCheckAttemptLedger } from './evidence-acquisition.js';
 export type { BuildManifestInput } from './artifacts/manifest.js';
 export {
   SCREENSHOT_PRUNE_KEEP_TOP_N,

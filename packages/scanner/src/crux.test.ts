@@ -46,12 +46,11 @@ describe('fetchCruxFieldData', () => {
     expect(result).toEqual({ available: false });
   });
 
-  it('reports available: false with a fetchError on a network failure, without throwing', async () => {
+  it('fails closed on provider/network failure instead of reporting no public data', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network unreachable')));
 
-    const result = await fetchCruxFieldData('https://example.com', 'fake-key');
-
-    expect(result.available).toBe(false);
-    expect(result.fetchError).toBeDefined();
+    await expect(fetchCruxFieldData('https://example.com', 'fake-key')).rejects.toThrow(
+      'CrUX acquisition failed: network unreachable',
+    );
   });
 });

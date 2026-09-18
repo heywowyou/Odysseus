@@ -2,14 +2,41 @@ import {
   assertFindingsProvenance,
   assertSufficientCrawlCoverage,
   buildFindingsProvenance,
+  type ApprovedAuditEvidence,
   type ApprovedAuditEvidencePayload,
   type AuditManifest,
   type EvidenceLimitation,
   type Finding,
+  type PatternEvidence,
 } from '@odysseus/core';
 import { reportQualityDigest } from '@odysseus/report';
 import { readOdysseusBuildId } from '@odysseus/scanner';
 const VERSION = 'legacy-page-analysis-coverage-v1';
+
+export function buildApprovedAuditEvidencePayload(input: {
+  approval: ApprovedAuditEvidence;
+  manifest: AuditManifest;
+  findings: Finding[];
+  patternEvidence?: PatternEvidence[];
+}): ApprovedAuditEvidencePayload {
+  const { approval, manifest, findings } = input;
+  if (approval.approvalMode === 'legacy-adapter') {
+    throw new Error('Canonical evidence payload cannot use the legacy adapter approval mode');
+  }
+  if (approval.auditId !== manifest.auditId) {
+    throw new Error('Canonical evidence rejected: approval belongs to another audit');
+  }
+  if (findings.some((finding) => finding.auditId !== manifest.auditId)) {
+    throw new Error('Canonical evidence rejected: finding belongs to another audit');
+  }
+  return {
+    approval,
+    manifest,
+    findings,
+    ...(input.patternEvidence !== undefined ? { patternEvidence: input.patternEvidence } : {}),
+    mandatoryDisclosures: [...approval.limitations],
+  };
+}
 function limitation(
   limitationId: string,
   code: string,

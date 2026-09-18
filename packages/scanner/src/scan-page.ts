@@ -59,10 +59,21 @@ import type { RenderedCostProfile } from './full-audit-plan.js';
 import { findPublishedRoleContact, type PublishedRoleContact } from './role-contact.js';
 import type { CheckExecutionOutcome, CheckId } from './check-scope-coverage.js';
 import type { PageWorkGuard } from './page-work-guard.js';
+import type { AcquisitionAttemptRecord } from './check-attempt-ledger.js';
+import type { HostRequestScheduler } from './host-request-scheduler.js';
+import type { NetworkSafetyDisposition, NetworkTargetPolicy } from './network-target-policy.js';
+import {
+  observeFrames,
+  type FrameObservation,
+  type RenderedReadinessObservation,
+} from './page-readiness.js';
 
 export interface ScanPageOptions {
   /** Politeness delay applied between the raw/rendered/Lighthouse passes. */
   delayMs?: number;
+  /** Plan 059: run-wide host scheduler. The outer lane owns the first
+   *  navigation; inner rendered/Lighthouse navigations use scheduler.pace(). */
+  scheduler?: HostRequestScheduler;
   timeoutMs?: number;
   userAgent?: string;
   /** Milestone 9b: skips the Lighthouse pass (and the pre-Lighthouse
@@ -127,6 +138,8 @@ export interface ScanPageOptions {
    *  scan-site.ts's per-page watchdog can force-close them if this call
    *  never returns on its own. */
   guard?: PageWorkGuard;
+  networkPolicy?: NetworkTargetPolicy;
+  onNetworkSafetyBlocked?: (disposition: NetworkSafetyDisposition) => void;
 }
 
 /**
@@ -188,6 +201,15 @@ export interface PageScanResult {
    *  planner replay needs every page's rendered-cost profile, so a
    *  completed page without one is never trusted on resume. */
   renderedCostProfile?: RenderedCostProfile;
+  /** Plan 059: every check attempt made against this page, including
+   *  failed and retried ones. Persisted with the page so a resumed run keeps
+   *  the full lineage; the site ledger is assembled from these records. */
+  acquisitionAttempts?: AcquisitionAttemptRecord[];
+  /** Plan 059: how settled the rendered page was when checks read it. */
+  readiness?: RenderedReadinessObservation;
+  /** Plan 059: every child frame on the rendered page and whether axe
+   *  reached it. */
+  frames?: FrameObservation[];
 }
 
 /**
@@ -216,8 +238,10 @@ export interface RenderedAnalysisResult extends Omit<
 }
 
 export interface LighthouseAnalysisOptions {
-  /** Politeness delay applied before this Lighthouse call. */
+  /** Fallback politeness delay for standalone callers without a run scheduler. */
   delayMs?: number;
+  /** Plan 059: waits for a request slot without acquiring another lane. */
+  scheduler?: HostRequestScheduler;
 }
 
 export interface LighthouseAnalysisResult {
@@ -260,8 +284,15 @@ async function sleep(ms: number): Promise<void> {
  */
 let lighthouseQueue: Promise<unknown> = Promise.resolve();
 
-async function runLighthouseSerialized(url: string, debugPort: number): Promise<LighthouseResult> {
-  const run = lighthouseQueue.then(() => runLighthouseIsolated(url, debugPort));
+async function runLighthouseSerialized(
+  url: string,
+  debugPort: number,
+  beforeRun?: () => Promise<void>,
+): Promise<LighthouseResult> {
+  const run = lighthouseQueue.then(async () => {
+    await beforeRun?.();
+    return runLighthouseIsolated(url, debugPort);
+  });
   lighthouseQueue = run.catch(() => undefined);
   return run;
 }
@@ -363,8 +394,19 @@ export async function runRenderedAnalysis(
       isHomepage: url === options.homepageUrl,
       ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
       ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
-      ...(options.delayMs !== undefined ? { preRenderedDelayMs: options.delayMs } : {}),
+      ...(options.scheduler !== undefined
+        ? { beforeRenderedNavigation: () => options.scheduler!.pace() }
+        : options.delayMs !== undefined
+          ? { preRenderedDelayMs: options.delayMs }
+          : {}),
       ...(options.guard !== undefined ? { guard: options.guard } : {}),
+      ...(options.networkPolicy !== undefined ? { networkPolicy: options.networkPolicy } : {}),
+      ...(options.onNetworkSafetyBlocked !== undefined
+        ? { onNetworkSafetyBlocked: options.onNetworkSafetyBlocked }
+        : {}),
+      onReadinessObserved: (observation) => {
+        result.readiness = observation;
+      },
       onRenderedPageCreated: async (page) => {
         // Must be attached before navigation - see
         // rendered-cost-profile.ts's own doc comment.
@@ -377,6 +419,13 @@ export async function runRenderedAnalysis(
         } catch (error) {
           axeError = toErrorMessage(error);
           checkOutcomes.axe = 'failed';
+        }
+        try {
+          result.frames = await observeFrames(page, url);
+        } catch {
+          // No frame record is itself recorded: the evidence graph treats a
+          // page without one as frame coverage unknown, never as frame-free.
+          delete result.frames;
         }
 
         if (options.mentionsLegalesUrl !== undefined && url === options.mentionsLegalesUrl) {
@@ -687,12 +736,15 @@ export async function runLighthouseAnalysis(
   debugPort: number,
   options: LighthouseAnalysisOptions = {},
 ): Promise<LighthouseAnalysisResult> {
-  if (options.delayMs !== undefined && options.delayMs > 0) {
-    await sleep(options.delayMs);
-  }
+  const beforeRun =
+    options.scheduler !== undefined
+      ? () => options.scheduler!.pace()
+      : options.delayMs !== undefined && options.delayMs > 0
+        ? () => sleep(options.delayMs!)
+        : undefined;
 
   try {
-    return { lighthouse: await runLighthouseSerialized(url, debugPort) };
+    return { lighthouse: await runLighthouseSerialized(url, debugPort, beforeRun) };
   } catch (error) {
     return { lighthouseError: toErrorMessage(error) };
   }
@@ -722,7 +774,10 @@ export async function scanPage(
 
   if (!options.skipLighthouse) {
     const lighthouseResult = await runLighthouseAnalysis(url, debugPort, {
-      ...(options.delayMs !== undefined ? { delayMs: options.delayMs } : {}),
+      ...(options.scheduler !== undefined ? { scheduler: options.scheduler } : {}),
+      ...(options.scheduler === undefined && options.delayMs !== undefined
+        ? { delayMs: options.delayMs }
+        : {}),
     });
     if (lighthouseResult.lighthouse !== undefined) result.lighthouse = lighthouseResult.lighthouse;
     if (lighthouseResult.lighthouseError !== undefined)

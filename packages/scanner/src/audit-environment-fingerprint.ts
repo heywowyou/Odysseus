@@ -55,6 +55,7 @@ import {
 import { readOdysseusBuildId } from './artifacts/manifest.js';
 import type { CollectedToolVersions } from './artifacts/versions.js';
 import type { BrowserIsolationProfile } from './browser-isolation-preflight.js';
+import type { FrameTraversalCapability } from './evidence-surfaces.js';
 
 export const AUDIT_ENVIRONMENT_FINGERPRINT_VERSION = 'audit-environment-v1';
 export const EVIDENCE_COVERAGE_SIGNATURE_VERSION = 'evidence-coverage-signature-v1';
@@ -398,12 +399,9 @@ export function describeCurrentBuildProfile(): OdysseusBuildProfile {
  * enter a same-origin frame cannot report what is inside one, so its silence
  * about that region means nothing.
  *
- * The vocabulary belongs to `AccessibilityCapabilityRegistry` (section 5.16).
- * Declared here so this module does not depend on the registry's shape;
- * re-point it at the registry once that lands.
+ * The vocabulary belongs to `AccessibilityCapabilityRegistry` (section 5.16)
+ * and is re-exported from there.
  */
-export type FrameTraversalCapability =
-  'document-only' | 'open-shadow' | 'same-origin-frames' | 'cross-origin-frames';
 
 /** What one check was able to observe in one run. */
 export interface CheckObservability {

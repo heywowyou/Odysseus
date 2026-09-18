@@ -34,6 +34,11 @@
 import type { Browser } from 'playwright';
 import { getCrawlerUserAgent } from '../config.js';
 import type { PageWorkGuard } from '../page-work-guard.js';
+import {
+  installBrowserNetworkSafety,
+  type NetworkSafetyBlockHandler,
+} from '../browser-network-safety.js';
+import type { NetworkTargetPolicy } from '../network-target-policy.js';
 
 /** Cookie names, or name prefixes, that belong to a measurement or
  *  advertising product and are therefore never "strictly necessary" for
@@ -242,6 +247,8 @@ export interface CookieConsentCheckOptions {
   /** Issue #200: tracks this call's context so an external watchdog can
    *  force-close it if it never returns on its own. */
   guard?: PageWorkGuard;
+  networkPolicy?: NetworkTargetPolicy;
+  onNetworkSafetyBlocked?: NetworkSafetyBlockHandler;
 }
 
 export async function checkCookieConsent(
@@ -255,6 +262,13 @@ export async function checkCookieConsent(
   const context = await browser.newContext({
     userAgent: options.userAgent ?? getCrawlerUserAgent(),
   });
+  if (options.networkPolicy !== undefined) {
+    await installBrowserNetworkSafety(
+      context,
+      options.networkPolicy,
+      options.onNetworkSafetyBlocked,
+    );
+  }
   options.guard?.track(context);
   try {
     const trackerRequests = new Map<string, ObservedTrackerRequest>();

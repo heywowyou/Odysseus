@@ -9,6 +9,16 @@ import { analyzeRawDocument } from './raw-document-signals.js';
 import { buildPageDir } from './artifacts/paths.js';
 import { couldEverBeKept } from './artifacts/prune-screenshots.js';
 import type { PageWorkGuard } from './page-work-guard.js';
+import {
+  installBrowserNetworkSafety,
+  type NetworkSafetyBlockHandler,
+} from './browser-network-safety.js';
+import type { NetworkTargetPolicy } from './network-target-policy.js';
+import {
+  observeRenderedReadiness,
+  watchSignificantResourceFailures,
+  type RenderedReadinessObservation,
+} from './page-readiness.js';
 
 /** RenderDiffResult (packages/core) is a locked contract; this widens it
  *  with a scanner-only fact rather than touching that file. renderedUrl
@@ -34,6 +44,9 @@ export interface RenderDiffOptions {
    *  rendered pass opens. Unset by default so the standalone render-diff
    *  CLI keeps its existing back-to-back timing. */
   preRenderedDelayMs?: number;
+  /** Plan 059: shared host scheduler slot before the rendered navigation.
+   *  When provided this replaces preRenderedDelayMs; callers must never apply both. */
+  beforeRenderedNavigation?: () => Promise<void>;
   /** Invoked once against the fully rendered page, before its context
    *  closes, so callers (the scanner orchestration) can run additional
    *  analysis (axe-core) against the exact same navigation instead of
@@ -67,6 +80,11 @@ export interface RenderDiffOptions {
    *  Absent for callers with no watchdog (the standalone render-diff CLI,
    *  most tests), which get today's behavior unchanged. */
   guard?: PageWorkGuard;
+  networkPolicy?: NetworkTargetPolicy;
+  onNetworkSafetyBlocked?: NetworkSafetyBlockHandler;
+  /** Plan 059: receives the rendered page's readiness, observed after the
+   *  settle wait and before any check reads or mutates the page. */
+  onReadinessObserved?: (observation: RenderedReadinessObservation) => void;
 }
 
 /**
@@ -102,6 +120,13 @@ export async function renderDiff(
   // small next to writing two full-page PNGs that get deleted at the end
   // of the scan. See couldEverBeKept in artifacts/prune-screenshots.ts.
   const rawContext = await browser.newContext({ javaScriptEnabled: false, userAgent });
+  if (options.networkPolicy !== undefined) {
+    await installBrowserNetworkSafety(
+      rawContext,
+      options.networkPolicy,
+      options.onNetworkSafetyBlocked,
+    );
+  }
   options.guard?.track(rawContext);
   let rawTextLength: number;
   let rawDocument: RawDocumentSignals;
@@ -121,11 +146,20 @@ export async function renderDiff(
     rawTextLength = extractTextFromHtml(rawHtml).length;
     rawDocument = analyzeRawDocument(rawHtml);
 
-    if (options.preRenderedDelayMs) {
+    if (options.beforeRenderedNavigation !== undefined) {
+      await options.beforeRenderedNavigation();
+    } else if (options.preRenderedDelayMs) {
       await new Promise((resolve) => setTimeout(resolve, options.preRenderedDelayMs));
     }
 
     const renderedContext = await browser.newContext({ userAgent });
+    if (options.networkPolicy !== undefined) {
+      await installBrowserNetworkSafety(
+        renderedContext,
+        options.networkPolicy,
+        options.onNetworkSafetyBlocked,
+      );
+    }
     options.guard?.track(renderedContext);
     try {
       renderedContext.setDefaultTimeout(timeoutMs);
@@ -138,6 +172,10 @@ export async function renderDiff(
         consoleErrors.push(err.message);
       });
       await options.onRenderedPageCreated?.(renderedPage);
+      const readFailures =
+        options.onReadinessObserved !== undefined
+          ? watchSignificantResourceFailures(renderedPage)
+          : undefined;
       // 'load' rather than 'networkidle', with idle demoted to a bounded,
       // best-effort settle below. networkidle is unreachable on real sites
       // that hold a request open forever (chat widget, analytics heartbeat,
@@ -147,10 +185,12 @@ export async function renderDiff(
       // single navigation. Measured on www.lagnonu.fr (2026-08-24): idle
       // never arrived in 120s, while the rendered text was already complete
       // and byte-identical in length at 4.3s under 'load'.
-      await renderedPage.goto(url, { waitUntil: 'load' });
+      const renderedResponse = await renderedPage.goto(url, { waitUntil: 'load' });
+      let networkQuiet = true;
       try {
         await renderedPage.waitForLoadState('networkidle', { timeout: settleTimeoutMs });
       } catch {
+        networkQuiet = false;
         // Deliberately swallowed. A page that never falls idle is still
         // fully rendered and worth scanning; losing the accessibility pass
         // over it is the worse outcome. Timing out here is not recorded as
@@ -163,6 +203,15 @@ export async function renderDiff(
       // reliably settled by the time the best-effort idle wait above
       // returns or times out.
       renderedLandedUrl = renderedPage.url();
+      if (options.onReadinessObserved !== undefined && readFailures !== undefined) {
+        options.onReadinessObserved(
+          await observeRenderedReadiness(renderedPage, {
+            response: renderedResponse,
+            networkQuiet,
+            readFailures,
+          }),
+        );
+      }
       const renderedText = await renderedPage.evaluate(() => document.body.innerText);
       renderedTextLength = renderedText.trim().length;
 

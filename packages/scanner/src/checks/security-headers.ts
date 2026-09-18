@@ -14,6 +14,8 @@
  */
 
 import { getCrawlerUserAgent } from '../config.js';
+import type { NetworkSafetyDisposition, NetworkTargetPolicy } from '../network-target-policy.js';
+import { fetchWithNetworkPolicy, NetworkSafetyBlockedError } from '../safe-fetch.js';
 
 export interface SecurityHeadersCheckResult {
   fetched: boolean;
@@ -26,17 +28,32 @@ export interface SecurityHeadersCheckResult {
   fetchError?: string;
 }
 
+export interface SecurityHeadersCheckOptions {
+  networkPolicy?: NetworkTargetPolicy;
+  onNetworkSafetyBlocked?: (disposition: NetworkSafetyDisposition) => void;
+}
+
 export async function checkSecurityHeaders(
   origin: string,
   timeoutMs: number,
   userAgent: string = getCrawlerUserAgent(),
+  options: SecurityHeadersCheckOptions = {},
 ): Promise<SecurityHeadersCheckResult> {
   const isHttps = new URL(origin).protocol === 'https:';
   try {
-    const response = await fetch(origin, {
+    const request = {
       headers: { 'user-agent': userAgent },
       signal: AbortSignal.timeout(timeoutMs),
-    });
+    };
+    const response =
+      options.networkPolicy === undefined
+        ? await fetch(origin, request)
+        : await fetchWithNetworkPolicy(origin, request, {
+            policy: options.networkPolicy,
+            ...(options.onNetworkSafetyBlocked !== undefined
+              ? { onBlocked: options.onNetworkSafetyBlocked }
+              : {}),
+          });
     return {
       fetched: true,
       isHttps,
@@ -47,6 +64,7 @@ export async function checkSecurityHeaders(
       hasPermissionsPolicy: response.headers.has('permissions-policy'),
     };
   } catch (error) {
+    if (error instanceof NetworkSafetyBlockedError) throw error;
     return {
       fetched: false,
       isHttps,

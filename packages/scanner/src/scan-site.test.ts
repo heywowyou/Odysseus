@@ -15,7 +15,7 @@ vi.mock('./checks/cookie-consent.js', () => ({ checkCookieConsent: vi.fn() }));
 vi.mock('./checks/accessibility-statement.js', () => ({
   checkAccessibilityStatement: vi.fn(() => ({ found: false })),
 }));
-vi.mock('./crux.js', () => ({ fetchCruxFieldData: vi.fn() }));
+vi.mock('./crux.js', () => ({ fetchCruxFieldDataAcquisition: vi.fn() }));
 vi.mock('./config.js', () => ({
   getCrawlerUserAgent: vi.fn(() => 'OdysseusBot/1.0 (+https://odysseusaudit.com/bot)'),
   getCruxApiKey: vi.fn(() => undefined),
@@ -108,10 +108,13 @@ describe('scanSite characterization', () => {
     });
 
     // Plan 059 decision 18: request starts are spaced by the run's one host
-    // scheduler, not by a per-lane stagger, so concurrency 2 still means only
-    // the first page may begin at t=0.
+    // scheduler, not by a per-lane stagger. The site-level checks take the
+    // first slots, so at t=0 exactly one request has started and no page
+    // lane has begun, whatever the concurrency.
     await vi.advanceTimersByTimeAsync(0);
-    expect(vi.mocked(scanPage).mock.calls.map((call) => call[2])).toEqual([startUrl]);
+    expect(vi.mocked(checkLlmsTxt)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(checkSecurityHeaders)).not.toHaveBeenCalled();
+    expect(vi.mocked(scanPage)).not.toHaveBeenCalled();
     // Generous enough to cover every remaining paced start (4 pages plus the
     // site-level checks at the crawl's 100ms effective delay) without pinning
     // the assertion to an exact number of scheduler sleeps.
@@ -542,6 +545,269 @@ describe('scanSite with fullAuditPlanning', () => {
       expect(written?.checkOutcomes).toEqual({ 'render-diff': 'completed', axe: 'completed' });
       expect(written?.renderedCostProfile?.url).toBeDefined();
     }
+  });
+});
+
+describe('scanSite Plan 059 attempt recording and targeted recovery', () => {
+  const pageA = `${startUrl}a`;
+  const scopeDigest = `sha256:${'a'.repeat(64)}`;
+  const everyPageCheck = (overrides: Record<string, string> = {}) => ({
+    'render-diff': 'completed',
+    axe: 'completed',
+    'mentions-legales': 'not-applicable',
+    'transactional-flow-evidence': 'completed',
+    'transactional-flow-redirect-checks': 'completed',
+    'transactional-flow-ambiguities': 'completed',
+    'head-metadata': 'completed',
+    'canonical-target': 'not-applicable',
+    'mixed-content': 'completed',
+    'keyboard-navigation': 'completed',
+    'form-error-handling': 'completed',
+    'video-captions': 'completed',
+    'placeholder-labels': 'completed',
+    'alt-text': 'completed',
+    'nap-consistency': 'not-applicable',
+    reflow: 'completed',
+    'html-validity': 'completed',
+    'structured-data': 'completed',
+    ...overrides,
+  });
+
+  beforeEach(() => {
+    vi.mocked(crawlSite).mockResolvedValue({
+      startUrl,
+      pages: [
+        {
+          url: startUrl,
+          status: 'visited',
+          discoveryMethod: 'link',
+          auditProfile: {
+            url: startUrl,
+            profileVersion: 'v1',
+            roleSignals: [{ kind: 'homepage-url', detail: startUrl }],
+          },
+        },
+        {
+          url: pageA,
+          status: 'visited',
+          discoveryMethod: 'link',
+          auditProfile: { url: pageA, profileVersion: 'v1', roleSignals: [] },
+        },
+      ],
+      effectiveDelayMs: 0,
+      visitedCount: 2,
+      maxPages: 10,
+      maxDepth: 2,
+      robotsTxtFound: true,
+      robotsDisallowMatches: [],
+      aiCrawlerBlocks: [],
+      linkDiscoveredUrls: [pageA],
+    } as never);
+    vi.mocked(runLighthouseAnalysis).mockResolvedValue({ lighthouse: { categories: {} } as never });
+  });
+
+  it('retries only the failed check in a fresh context and keeps every attempt', async () => {
+    let pageARuns = 0;
+    vi.mocked(runRenderedAnalysis).mockImplementation(async (_browser, url, options) => {
+      if (url !== pageA) return { url, checkOutcomes: everyPageCheck() } as never;
+      pageARuns += 1;
+      if (pageARuns === 1) {
+        return {
+          url,
+          headMetadata: { title: 'first' },
+          keyboardNavigationError: 'keyboard probe threw',
+          checkOutcomes: everyPageCheck({ 'keyboard-navigation': 'failed' }),
+        } as never;
+      }
+      expect(options.screenshotDir).toBe(path.join('/tmp', 'recovery', 'isolated-retry'));
+      return {
+        url,
+        headMetadata: { title: 'second' },
+        keyboardNavigation: { focusableCount: 3 },
+        checkOutcomes: everyPageCheck(),
+      } as never;
+    });
+
+    const result = await scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: '/tmp/pages',
+      concurrency: 1,
+      fullAuditPlanning: true,
+      skipLighthouse: true,
+      scopeDigest,
+    });
+
+    expect(pageARuns).toBe(2);
+    const a = result.pages.find((page) => page.url === pageA)!;
+    // The retried check takes the retry's result; everything that already
+    // succeeded keeps its first observation.
+    expect(a.keyboardNavigation).toEqual({ focusableCount: 3 });
+    expect(a.keyboardNavigationError).toBeUndefined();
+    expect(a.headMetadata).toEqual({ title: 'first' });
+    const keyboardAttempts = a.acquisitionAttempts!.filter(
+      (attempt) => attempt.checkId === 'keyboard-navigation',
+    );
+    expect(keyboardAttempts.map((attempt) => [attempt.executionProfile, attempt.outcome])).toEqual([
+      ['normal', 'failed'],
+      ['isolated-retry', 'succeeded'],
+    ]);
+    expect(
+      a.acquisitionAttempts!.filter((attempt) => attempt.checkId === 'head-metadata'),
+    ).toHaveLength(1);
+    expect(result.analysisCoverageByUrl?.get(pageA)?.passes.extended).toEqual({
+      outcome: 'completed',
+    });
+  });
+
+  it('never retries a definitive site answer', async () => {
+    vi.mocked(runRenderedAnalysis).mockImplementation(async (_browser, url) =>
+      url === pageA
+        ? ({
+            url,
+            renderDiffError: 'navigation answered HTTP 404',
+            checkOutcomes: { 'render-diff': 'failed', axe: 'not-applicable' },
+          } as never)
+        : ({ url, checkOutcomes: everyPageCheck() } as never),
+    );
+
+    const result = await scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: '/tmp/pages',
+      concurrency: 1,
+      fullAuditPlanning: true,
+      skipLighthouse: true,
+      scopeDigest,
+    });
+
+    expect(
+      vi.mocked(runRenderedAnalysis).mock.calls.filter((call) => call[1] === pageA),
+    ).toHaveLength(1);
+    const a = result.pages.find((page) => page.url === pageA)!;
+    const axe = a.acquisitionAttempts!.find((attempt) => attempt.checkId === 'axe')!;
+    // axe reported not-applicable because the navigation never happened;
+    // the ledger records why, instead of a check that simply did not apply.
+    expect(axe).toMatchObject({
+      outcome: 'failed',
+      failureClass: 'site-http-state',
+      diagnosticCode: 'navigation-failed',
+    });
+  });
+
+  it('runs a timed-out page again in a fresh browser with a doubled bound, and closes it', async () => {
+    const recoveryBrowser = { close: vi.fn(async () => undefined) };
+    const launchRecoveryBrowser = vi.fn(async () => ({
+      browser: recoveryBrowser as never,
+      debugPort: 9333,
+    }));
+    let pageARuns = 0;
+    vi.mocked(runRenderedAnalysis).mockImplementation(async (browser, url, options) => {
+      if (url !== pageA) return { url, checkOutcomes: everyPageCheck() } as never;
+      pageARuns += 1;
+      if (pageARuns === 1) {
+        return {
+          url,
+          renderDiffError: 'page.goto: Timeout 30000ms exceeded',
+          checkOutcomes: { 'render-diff': 'failed', axe: 'not-applicable' },
+        } as never;
+      }
+      expect(browser).toBe(recoveryBrowser);
+      expect(options.timeoutMs).toBe(60_000);
+      return { url, checkOutcomes: everyPageCheck() } as never;
+    });
+
+    const result = await scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: '/tmp/pages',
+      concurrency: 1,
+      fullAuditPlanning: true,
+      skipLighthouse: true,
+      scopeDigest,
+      launchRecoveryBrowser,
+    });
+
+    expect(launchRecoveryBrowser).toHaveBeenCalledTimes(1);
+    expect(recoveryBrowser.close).toHaveBeenCalledTimes(1);
+    const a = result.pages.find((page) => page.url === pageA)!;
+    const renderDiff = a.acquisitionAttempts!.filter(
+      (attempt) => attempt.checkId === 'render-diff',
+    );
+    expect(renderDiff.map((attempt) => attempt.executionProfile)).toEqual([
+      'normal',
+      'diagnostic-retry',
+    ]);
+    expect(a.renderDiffError).toBeUndefined();
+  });
+
+  it('leaves a timeout as a recorded gap when no fresh browser can be launched', async () => {
+    vi.mocked(runRenderedAnalysis).mockImplementation(async (_browser, url) =>
+      url === pageA
+        ? ({
+            url,
+            renderDiffError: 'page.goto: Timeout 30000ms exceeded',
+            checkOutcomes: { 'render-diff': 'failed', axe: 'not-applicable' },
+          } as never)
+        : ({ url, checkOutcomes: everyPageCheck() } as never),
+    );
+
+    const result = await scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: '/tmp/pages',
+      concurrency: 1,
+      fullAuditPlanning: true,
+      skipLighthouse: true,
+      scopeDigest,
+    });
+
+    expect(
+      vi.mocked(runRenderedAnalysis).mock.calls.filter((call) => call[1] === pageA),
+    ).toHaveLength(1);
+    const a = result.pages.find((page) => page.url === pageA)!;
+    expect(
+      a.acquisitionAttempts!.find((attempt) => attempt.checkId === 'render-diff'),
+    ).toMatchObject({ outcome: 'failed', failureClass: 'scanner-timeout' });
+  });
+
+  it('records Lighthouse as a performance target and site checks against the origin', async () => {
+    const { auditDir, pagesDir } = await makeTempAuditDir('scan-site-attempts-');
+    vi.mocked(runRenderedAnalysis).mockImplementation(
+      async (_browser, url) => ({ url, checkOutcomes: everyPageCheck() }) as never,
+    );
+    vi.mocked(checkLlmsTxt).mockResolvedValue({ found: false, fetchError: 'HTTP 404' } as never);
+    vi.mocked(checkSecurityHeaders).mockResolvedValue({ fetched: true } as never);
+
+    await scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: pagesDir,
+      auditDir,
+      writePagesAsScanned: true,
+      concurrency: 1,
+      fullAuditPlanning: true,
+      scopeDigest,
+    });
+
+    const home = readPageScanJson(pagesDir, startUrl)!;
+    expect(
+      home.acquisitionAttempts!.find((attempt) => attempt.checkId === 'lighthouse'),
+    ).toMatchObject({
+      outcome: 'succeeded',
+      target: { kind: 'performance', url: startUrl, performanceProfile: 'lab-run-1' },
+    });
+    const siteAttempts = JSON.parse(
+      await fs.readFile(path.join(auditDir, 'evidence', 'site-acquisition-attempts.json'), 'utf8'),
+    ) as Array<{ checkId: string; outcome: string; target: unknown }>;
+    // A 404 llms.txt is the site's answer, so it is usable evidence.
+    expect(siteAttempts.find((attempt) => attempt.checkId === 'llms-txt-check')).toMatchObject({
+      outcome: 'succeeded',
+      target: { kind: 'site', origin: 'https://example.com' },
+    });
+    expect(siteAttempts.map((attempt) => attempt.checkId).sort()).toEqual(
+      ['accessibility-statement', 'cookie-consent', 'llms-txt-check', 'security-headers'].sort(),
+    );
   });
 });
 

@@ -14,6 +14,12 @@ import {
 } from './config.js';
 import type { HostRequestScheduler } from './host-request-scheduler.js';
 import {
+  installBrowserNetworkSafety,
+  type NetworkSafetyBlockHandler,
+} from './browser-network-safety.js';
+import { checkNetworkTarget, type NetworkTargetPolicy } from './network-target-policy.js';
+import {
+  globToRegExp,
   isLanguageHomepagePath,
   isSameSiteHostname,
   normalizeInternalLinks,
@@ -47,6 +53,13 @@ import {
 } from './continuation-guard.js';
 import { isConfirmedListing } from './full-audit-plan.js';
 import type { ScanToolIdentity } from './artifacts/crawl-checkpoint-io.js';
+import { buildRobotsPolicySnapshot, type RobotsPolicySnapshot } from './robots-policy-snapshot.js';
+import {
+  InventoryLedger,
+  type InventoryDiscoverySource,
+  type InventoryDisposition,
+  type InventoryLedgerSnapshot,
+} from './inventory-ledger.js';
 
 export { isSameSiteHostname } from './links.js';
 
@@ -106,6 +119,13 @@ export interface CrawlOptions {
    *  crawl test) has no run to share a scheduler with. Absent, the crawl
    *  paces itself exactly as it did before this option existed. */
   scheduler?: HostRequestScheduler;
+  /** Plan 059 production network policy. Omitted by standalone/test callers. */
+  networkPolicy?: NetworkTargetPolicy;
+  onNetworkSafetyBlocked?: NetworkSafetyBlockHandler;
+  /** Plan 059 evidence epoch owning this crawl's robots policy chain. */
+  evidenceEpoch?: number;
+  /** Frozen AuditScopeSnapshot digest. Enables the private inventory ledger. */
+  scopeDigest?: string;
 }
 
 /** Per-iteration loop state the resumable crawl must survive a process
@@ -117,6 +137,10 @@ export interface CrawlFrontierSnapshot {
    *  (robotsDisallowMatches, aiCrawlerBlocks) and the sitemap directive
    *  passthrough are identical on resume without re-fetching. */
   robotsText: string | null;
+  /** Plan 059 policy history. Optional only for pre-059/frontier test fixtures. */
+  robotsPolicyChain?: RobotsPolicySnapshot[];
+  /** Private Plan 059 inventory state, checkpointed with the crawl frontier. */
+  inventoryLedger?: InventoryLedgerSnapshot;
   supplementalPhaseStarted: boolean;
   queue: QueueItem[];
   visited: string[];
@@ -208,6 +232,10 @@ export interface CrawlResult {
   maxPages: number;
   maxDepth: number;
   robotsTxtFound: boolean;
+  /** Exact versioned robots policy history for this evidence epoch. */
+  robotsPolicyChain?: RobotsPolicySnapshot[];
+  /** Private Plan 059 inventory; omitted for callers that did not supply scope. */
+  inventoryLedger?: InventoryLedgerSnapshot;
   /** The stricter-of-config-and-robots delay actually used between
    *  requests, so later stages (the scanner passes) can reuse the exact
    *  same politeness pacing without re-fetching robots.txt. */
@@ -376,6 +404,8 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   const delayMs = options.delayMs ?? getCrawlDelayMs();
   const timeoutMs = options.timeoutMs ?? getPageTimeoutMs();
   const userAgent = options.userAgent ?? getCrawlerUserAgent();
+  const exclusionRegexes = (options.exclusions ?? []).map(globToRegExp);
+  const sitemapOperatorExclusions: string[] = [];
 
   const start = new URL(startUrl);
   // Issue #102: the start URL goes through the same page-identity rule as
@@ -408,18 +438,61 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   // the sitemap directive passthrough are identical without a request.
   let robotsText: string | null;
   let robotsRules: RobotsRules;
+  let robotsPolicyChain: RobotsPolicySnapshot[];
   if (resumeState === undefined) {
-    robotsText = await fetchRobotsText(start.origin, timeoutMs, userAgent);
+    const robotsUrl = new URL('/robots.txt', start.origin).href;
+    if (options.networkPolicy !== undefined) {
+      const networkVerdict = await checkNetworkTarget(robotsUrl, options.networkPolicy);
+      if (networkVerdict.kind === 'refused') {
+        options.onNetworkSafetyBlocked?.(networkVerdict.disposition);
+        throw new Error(
+          `crawlSite: network safety blocked robots target (${networkVerdict.disposition.reason})`,
+        );
+      }
+    }
+    robotsText =
+      options.scheduler === undefined
+        ? await fetchRobotsText(start.origin, timeoutMs, userAgent, {
+            ...(options.networkPolicy !== undefined
+              ? { networkPolicy: options.networkPolicy }
+              : {}),
+            ...(options.onNetworkSafetyBlocked !== undefined
+              ? { onNetworkSafetyBlocked: options.onNetworkSafetyBlocked }
+              : {}),
+          })
+        : await options.scheduler.schedule(() =>
+            fetchRobotsText(start.origin, timeoutMs, userAgent, {
+              ...(options.networkPolicy !== undefined
+                ? { networkPolicy: options.networkPolicy }
+                : {}),
+              ...(options.onNetworkSafetyBlocked !== undefined
+                ? { onNetworkSafetyBlocked: options.onNetworkSafetyBlocked }
+                : {}),
+            }),
+          );
     robotsRules =
       robotsText === null
         ? { found: false, disallow: [], allow: [], sitemapUrls: [] }
         : parseRobotsTxt(robotsText, userAgent);
+    robotsPolicyChain = [
+      buildRobotsPolicySnapshot({
+        evidenceEpoch: options.evidenceEpoch ?? 1,
+        revision: 0,
+        origin: start.origin,
+        userAgent,
+        robotsText,
+        retrievedAt: new Date(),
+        rules: robotsRules,
+        configuredDelayMs: delayMs,
+      }),
+    ];
   } else {
     robotsText = resumeState.robotsText;
     robotsRules =
       robotsText === null
         ? { found: false, disallow: [], allow: [], sitemapUrls: [] }
         : parseRobotsTxt(robotsText, userAgent);
+    robotsPolicyChain = [...(resumeState.robotsPolicyChain ?? [])];
   }
   // Never persisted: recomputed from the restored robotsText with the
   // same parse the fresh path uses, under a config the resume validation
@@ -443,15 +516,34 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
         : await checkSitemap(start.origin, robotsRules.sitemapUrls, timeoutMs, {
             userAgent,
             delayMs: effectiveDelayMs,
+            ...(options.scheduler !== undefined ? { scheduler: options.scheduler } : {}),
+            ...(options.networkPolicy !== undefined
+              ? { networkPolicy: options.networkPolicy }
+              : {}),
+            ...(options.onNetworkSafetyBlocked !== undefined
+              ? { onNetworkSafetyBlocked: options.onNetworkSafetyBlocked }
+              : {}),
           });
     if (sitemap !== undefined) {
       for (const entry of sitemap.pageEntries) {
+        const normalizedWithoutExclusion = normalizePageUrl(entry.url, startUrlIdentity, {
+          allowWwwApex: true,
+        });
         const normalized = normalizePageUrl(entry.url, startUrlIdentity, {
           allowWwwApex: true,
           exclusionPatterns: options.exclusions ?? [],
         });
-        if (normalized === undefined) filteredSitemapPageCount += 1;
-        else eligibleSitemapUrls.add(normalized);
+        if (normalized === undefined) {
+          filteredSitemapPageCount += 1;
+          if (
+            normalizedWithoutExclusion !== undefined &&
+            exclusionRegexes.some((pattern) => pattern.test(normalizedWithoutExclusion))
+          ) {
+            sitemapOperatorExclusions.push(normalizedWithoutExclusion);
+          }
+        } else {
+          eligibleSitemapUrls.add(normalized);
+        }
       }
     }
   } else {
@@ -488,6 +580,116 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   // state instead, so it cannot re-admit URLs a family had exhausted.
   const continuationGuard = restored?.guard ?? new ContinuationGuard();
 
+  const inventorySourceFor = (
+    url: string,
+    discoveryMethod: PageDiscoveryMethod,
+  ): InventoryDiscoverySource => {
+    if (url === startUrlIdentity) return 'start';
+    if (discoveryMethod === 'seed') return 'seed';
+    if (discoveryMethod === 'sitemap-only') return 'sitemap';
+    return 'link';
+  };
+  const inventoryLedger = (() => {
+    if (options.scopeDigest === undefined) return undefined;
+    if (resumeState?.inventoryLedger !== undefined) {
+      if (
+        resumeState.inventoryLedger.scopeDigest !== options.scopeDigest ||
+        resumeState.inventoryLedger.evidenceEpoch !== (options.evidenceEpoch ?? 1)
+      ) {
+        throw new Error('crawlSite: inventory frontier belongs to another scope or evidence epoch');
+      }
+      return InventoryLedger.fromSnapshot(resumeState.inventoryLedger);
+    }
+    return new InventoryLedger({
+      evidenceEpoch: options.evidenceEpoch ?? 1,
+      scopeDigest: options.scopeDigest,
+    });
+  })();
+
+  const ensureInventoryDiscovery = (
+    url: string,
+    discoveryMethod: PageDiscoveryMethod,
+    depth: number,
+    discoveredFrom?: string,
+  ): void => {
+    if (inventoryLedger === undefined) return;
+    inventoryLedger.recordDiscovery({
+      url,
+      source: inventorySourceFor(url, discoveryMethod),
+      discoveredAt: new Date(),
+      depth,
+      ...(discoveredFrom !== undefined ? { referrer: discoveredFrom } : {}),
+    });
+  };
+
+  const disposeInventory = (
+    url: string,
+    disposition: InventoryDisposition,
+    details: { finalUrl?: string; httpStatus?: number; detail?: string } = {},
+  ): void => {
+    if (inventoryLedger === undefined) return;
+    const candidate = inventoryLedger.candidate(url);
+    if (candidate === undefined) {
+      throw new Error(`crawlSite: cannot dispose undiscovered inventory target ${url}`);
+    }
+    if (candidate.disposition !== undefined) return;
+    inventoryLedger.recordDisposition({
+      url,
+      disposition,
+      decidedAt: new Date(),
+      ...details,
+    });
+  };
+
+  if (inventoryLedger !== undefined && resumeState?.inventoryLedger === undefined) {
+    ensureInventoryDiscovery(startUrlIdentity, 'link', 0);
+    for (const url of eligibleSitemapUrls) {
+      inventoryLedger.recordDiscovery({
+        url,
+        source: 'sitemap',
+        discoveredAt: new Date(),
+        depth: 0,
+      });
+    }
+    for (const url of sitemapOperatorExclusions) {
+      inventoryLedger.recordDiscovery({
+        url,
+        source: 'sitemap',
+        discoveredAt: new Date(),
+        depth: 0,
+      });
+      disposeInventory(url, 'operator-excluded', {
+        detail: 'matched an operator-supplied crawl exclusion',
+      });
+    }
+    for (const page of pages) {
+      ensureInventoryDiscovery(page.url, page.discoveryMethod, page.depth, page.discoveredFrom);
+      const disposition: InventoryDisposition | undefined =
+        page.status === 'discovered-not-scanned'
+          ? 'link-discovery-only'
+          : page.status === 'skipped-robots'
+            ? 'robots'
+            : page.status === 'skipped-non-html'
+              ? 'non-html'
+              : page.status === 'skipped-external-redirect'
+                ? 'external'
+                : page.status === 'http-error-status'
+                  ? 'http-error-status'
+                  : page.status === 'error'
+                    ? 'error'
+                    : undefined;
+      if (disposition !== undefined) {
+        disposeInventory(page.url, disposition, {
+          ...(page.httpStatus !== undefined ? { httpStatus: page.httpStatus } : {}),
+          ...(page.error !== undefined ? { detail: page.error } : {}),
+        });
+      }
+    }
+    for (const item of queue) {
+      ensureInventoryDiscovery(item.url, item.discoveryMethod, item.depth, item.discoveredFrom);
+    }
+  }
+
   // Manual-input-layer milestone: extra seed URLs are enqueued at depth 0,
   // same as the start URL, before the crawl loop begins. Off-origin seeds
   // are silently dropped (this crawler only ever audits one origin, same
@@ -509,18 +711,47 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
       continue;
     }
     if (resolvedSeed.origin !== start.origin) continue;
+    ensureInventoryDiscovery(normalizedSeed, 'seed', 0);
     if (enqueued.has(normalizedSeed)) continue;
     enqueued.add(normalizedSeed);
     queue.push({ url: normalizedSeed, depth: 0, discoveryMethod: 'seed' });
   }
 
   const context = await options.browser.newContext({ userAgent });
+  if (options.networkPolicy !== undefined) {
+    await installBrowserNetworkSafety(
+      context,
+      options.networkPolicy,
+      options.onNetworkSafetyBlocked,
+    );
+  }
   context.setDefaultTimeout(timeoutMs);
   context.setDefaultNavigationTimeout(timeoutMs);
 
   const recordPage = (page: CrawledPage): void => {
     pages.push(page);
     pagesByUrl.set(page.url, page);
+    ensureInventoryDiscovery(page.url, page.discoveryMethod, page.depth, page.discoveredFrom);
+    const disposition: InventoryDisposition | undefined =
+      page.status === 'discovered-not-scanned'
+        ? 'link-discovery-only'
+        : page.status === 'skipped-robots'
+          ? 'robots'
+          : page.status === 'skipped-non-html'
+            ? 'non-html'
+            : page.status === 'skipped-external-redirect'
+              ? 'external'
+              : page.status === 'http-error-status'
+                ? 'http-error-status'
+                : page.status === 'error'
+                  ? 'error'
+                  : undefined;
+    if (disposition !== undefined) {
+      disposeInventory(page.url, disposition, {
+        ...(page.httpStatus !== undefined ? { httpStatus: page.httpStatus } : {}),
+        ...(page.error !== undefined ? { detail: page.error } : {}),
+      });
+    }
   };
 
   // Frontier snapshot cadence (plan 035): a snapshot fires only once at
@@ -538,6 +769,8 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   const buildFrontierSnapshot = (): CrawlFrontierSnapshot => ({
     startUrlIdentity,
     robotsText,
+    ...(robotsPolicyChain.length > 0 ? { robotsPolicyChain: [...robotsPolicyChain] } : {}),
+    ...(inventoryLedger !== undefined ? { inventoryLedger: inventoryLedger.snapshot() } : {}),
     supplementalPhaseStarted,
     queue: queue.map((item) => ({ ...item })),
     visited: [...visited],
@@ -766,7 +999,10 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
               ...(auditProfile !== undefined ? { auditProfile } : {}),
             });
 
-            if (discoveryMethod !== 'sitemap-only' && item.depth < maxDepth) {
+            if (
+              discoveryMethod !== 'sitemap-only' &&
+              (item.depth < maxDepth || inventoryLedger !== undefined)
+            ) {
               // Per-anchor structural evidence (plan 021 Step 6), read at
               // discovery time before URL normalization discards rel and
               // context: the anchor's own rel token and whether it sits in
@@ -805,10 +1041,30 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
               >();
               for (const anchor of anchors) {
                 if (anchor.href === null) continue;
+                const normalizedWithoutExclusion = normalizePageUrl(anchor.href, landedUrl);
                 const normalized = normalizePageUrl(anchor.href, landedUrl, {
                   exclusionPatterns: options.exclusions ?? [],
                 });
-                if (normalized === undefined) continue;
+                if (normalized === undefined) {
+                  if (
+                    inventoryLedger !== undefined &&
+                    normalizedWithoutExclusion !== undefined &&
+                    exclusionRegexes.some((pattern) => pattern.test(normalizedWithoutExclusion))
+                  ) {
+                    inventoryLedger.recordDiscovery({
+                      url: normalizedWithoutExclusion,
+                      source: 'link',
+                      discoveredAt: new Date(),
+                      referrer: item.url,
+                      depth: item.depth + 1,
+                      observedUrl: anchor.href,
+                    });
+                    disposeInventory(normalizedWithoutExclusion, 'operator-excluded', {
+                      detail: 'matched an operator-supplied crawl exclusion',
+                    });
+                  }
+                  continue;
+                }
                 const existing = anchorEvidenceByUrl.get(normalized);
                 anchorEvidenceByUrl.set(normalized, {
                   relNext: (existing?.relNext ?? false) || anchor.relNext,
@@ -822,10 +1078,17 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
               for (const link of links) {
                 linkDiscoveredUrls.add(link);
                 if (!linkDiscoveredFrom.has(link)) linkDiscoveredFrom.set(link, item.url);
+                ensureInventoryDiscovery(link, 'link', item.depth + 1, item.url);
                 const existingPage = pagesByUrl.get(link);
                 if (existingPage !== undefined) {
                   existingPage.discoveryMethod = 'link';
                   existingPage.discoveredFrom ??= item.url;
+                }
+                if (item.depth >= maxDepth && existingPage === undefined && !enqueued.has(link)) {
+                  disposeInventory(link, 'depth-bound', {
+                    detail: `discovered from depth ${item.depth}; maxDepth is ${maxDepth}`,
+                  });
+                  continue;
                 }
                 // Only a continuation-classified link is governed: the guard
                 // never sees an ordinary link, and returning false here omits
@@ -846,6 +1109,11 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
                     classification.isContinuation &&
                     !continuationGuard.admit(classification, link)
                   ) {
+                    if (existingPage === undefined && !enqueued.has(link)) {
+                      disposeInventory(link, 'continuation-guard', {
+                        detail: `continuation family ${classification.familyKey} reached its bound`,
+                      });
+                    }
                     continue;
                   }
                 }
@@ -912,6 +1180,20 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     }
   } finally {
     await context.close();
+  }
+
+  if (inventoryLedger !== undefined && queue.length > 0) {
+    for (const item of queue) {
+      ensureInventoryDiscovery(item.url, item.discoveryMethod, item.depth, item.discoveredFrom);
+      if (inventoryLedger.candidate(item.url)?.disposition !== undefined) continue;
+      if (!isAllowedByRobots(robotsRules, robotsTarget(item.url))) {
+        disposeInventory(item.url, 'robots');
+      } else {
+        disposeInventory(item.url, 'page-cap', {
+          detail: `crawl stopped after reaching maxPages=${maxPages}`,
+        });
+      }
+    }
   }
 
   // A broken link (e.g. a malformed href) can still land on a URL whose
@@ -985,6 +1267,8 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     maxPages,
     maxDepth,
     robotsTxtFound: robotsRules.found,
+    ...(robotsPolicyChain.length > 0 ? { robotsPolicyChain } : {}),
+    ...(inventoryLedger !== undefined ? { inventoryLedger: inventoryLedger.snapshot() } : {}),
     effectiveDelayMs,
     ...(mentionsLegalesPageUrl !== undefined ? { mentionsLegalesPageUrl } : {}),
     mentionsLegalesSearchedUrls: resolvedUrls,

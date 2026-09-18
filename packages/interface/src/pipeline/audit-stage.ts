@@ -23,6 +23,7 @@ import {
   getScanConcurrency,
   launchBrowser,
   pruneScreenshots,
+  PUBLIC_SITE_NETWORK_POLICY,
   scanSite,
   writeAuditArtifacts,
   writeFindingsFile,
@@ -56,6 +57,7 @@ import {
   replaceDetectedManualFields,
 } from '@odysseus/store';
 import { runObligationStage } from './obligation-stage.js';
+import { buildRunAuditScope } from './audit-scope-stage.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { syncAuditDirToBucket } from '../artifacts/sync-audit-artifacts.js';
 import { logger } from '../logger.js';
@@ -165,7 +167,10 @@ export async function runAuditStage(
   // path) is the audit's timestamp end to end: directory name, manifest,
   // and normalize input all come from this one value.
   const startedAt = options.runIdentity?.startedAt ?? new Date();
-  const { browser, debugPort } = await launchBrowser();
+  // Plan 059: the browser dials only through the policy-enforcing egress
+  // proxy, so Lighthouse and every subresource obey the same address rule
+  // as the page routes.
+  const { browser, debugPort } = await launchBrowser({ networkPolicy: PUBLIC_SITE_NETWORK_POLICY });
 
   try {
     const hostname = new URL(url).hostname;
@@ -208,6 +213,24 @@ export async function runAuditStage(
       sitemapMode: options.sitemapMode ?? 'supplement',
     };
 
+    const auditScope = buildRunAuditScope({
+      url,
+      scanIntent: options.scanIntent ?? (options.skipLighthouse ? 'quick-check' : 'full-audit'),
+      config,
+      maxPagesWasExplicit: options.maxPages !== undefined,
+      maxDepthWasExplicit: options.maxDepth !== undefined,
+      ...(options.seeds !== undefined ? { seeds: options.seeds } : {}),
+      ...(options.exclusions !== undefined ? { exclusions: options.exclusions } : {}),
+      ...(options.bookingEngineUrl !== undefined
+        ? { bookingEngineUrl: options.bookingEngineUrl }
+        : {}),
+    });
+    fs.writeFileSync(
+      path.join(auditDir, 'audit-scope.json'),
+      `${JSON.stringify(auditScope, null, 2)}\n`,
+      'utf8',
+    );
+
     const siteResult = await scanSite(url, {
       browser,
       debugPort,
@@ -242,6 +265,16 @@ export async function runAuditStage(
       // Lighthouse never fires anyway" reasoning is a weaker guarantee
       // than simply never entering that code path at all.
       fullAuditPlanning: !options.skipLighthouse,
+      networkPolicy: PUBLIC_SITE_NETWORK_POLICY,
+      ...(!options.skipLighthouse ? { scopeDigest: auditScope.digest } : {}),
+      // Plan 059: a diagnostic retry runs in a browser of its own, under the
+      // same connection-time network policy as the main one.
+      ...(!options.skipLighthouse
+        ? {
+            launchRecoveryBrowser: () =>
+              launchBrowser({ networkPolicy: PUBLIC_SITE_NETWORK_POLICY }),
+          }
+        : {}),
       // Plan 035: full audits stamp the crawl checkpoint with this run's
       // identity and config, and resume from one when a previous attempt
       // left it behind. Never set on the prospecting path.

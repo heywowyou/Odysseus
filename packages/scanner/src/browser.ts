@@ -1,6 +1,8 @@
 import { createServer } from 'node:net';
 import { chromium, type Browser } from 'playwright';
 import { buildSanitizedBrowserEnv } from './browser-isolation-preflight.js';
+import { startEgressProxy, type EgressProxy } from './egress-proxy.js';
+import type { NetworkSafetyDisposition, NetworkTargetPolicy } from './network-target-policy.js';
 
 /**
  * Identifies Odysseus per the crawling-politeness rule. config.ts's
@@ -62,6 +64,12 @@ export interface LaunchBrowserOptions {
    *  print-to-PDF path, which needs `--font-render-hinting=none` (see
    *  the call site in packages/report/src/index.ts for why). */
   extraArgs?: readonly string[];
+  /** Plan 059: when set, every connection the browser opens (pages,
+   *  subresources, service workers and Lighthouse's own CDP target) goes
+   *  through a loopback egress proxy that dials only policy-approved
+   *  addresses. See egress-proxy.ts for why a context route is not enough. */
+  networkPolicy?: NetworkTargetPolicy;
+  onNetworkSafetyBlocked?: (disposition: NetworkSafetyDisposition) => void;
 }
 
 /**
@@ -82,12 +90,22 @@ export function parseChromiumExtraArgs(raw: string | undefined): string[] {
 
 export async function launchBrowser(options: LaunchBrowserOptions = {}): Promise<LaunchedBrowser> {
   let lastError: unknown;
+  const proxy: EgressProxy | undefined =
+    options.networkPolicy === undefined
+      ? undefined
+      : await startEgressProxy({
+          policy: options.networkPolicy,
+          ...(options.onNetworkSafetyBlocked !== undefined
+            ? { onBlocked: options.onNetworkSafetyBlocked }
+            : {}),
+        });
   for (let attempt = 0; attempt < LAUNCH_PORT_ATTEMPTS; attempt++) {
     const debugPort = await getFreePort();
     try {
       const browser = await chromium.launch({
         args: [
           `--remote-debugging-port=${debugPort}`,
+          ...(proxy?.chromiumArgs ?? []),
           ...(options.extraArgs ?? []),
           ...parseChromiumExtraArgs(process.env['ODYSSEUS_CHROMIUM_EXTRA_ARGS']),
         ],
@@ -99,11 +117,15 @@ export async function launchBrowser(options: LaunchBrowserOptions = {}): Promise
         // (plan 059 section 3.10).
         env: buildSanitizedBrowserEnv(process.env),
       });
+      if (proxy !== undefined) {
+        browser.on('disconnected', () => void proxy.close());
+      }
       return { browser, debugPort };
     } catch (error) {
       lastError = error;
     }
   }
+  await proxy?.close();
   throw new Error(
     `launchBrowser: failed to launch Chromium with a debug port after ${LAUNCH_PORT_ATTEMPTS} attempts`,
     { cause: lastError },

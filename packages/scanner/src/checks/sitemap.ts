@@ -5,6 +5,13 @@
  */
 
 import { isSameSiteHostname } from '../links.js';
+import type { HostRequestScheduler } from '../host-request-scheduler.js';
+import {
+  checkNetworkTarget,
+  type NetworkSafetyDisposition,
+  type NetworkTargetPolicy,
+} from '../network-target-policy.js';
+import { fetchWithNetworkPolicy } from '../safe-fetch.js';
 
 const LOC_PATTERN = /<loc>\s*([^<]+?)\s*<\/loc>/gi;
 const LASTMOD_PATTERN = /<lastmod>\s*([^<]+?)\s*<\/lastmod>/i;
@@ -48,7 +55,12 @@ export interface SitemapCheckResult {
 
 export interface SitemapCheckOptions {
   userAgent?: string;
+  /** Fallback pacing for standalone callers without a shared scheduler. */
   delayMs?: number;
+  /** Plan 059: run-wide host scheduler for every sitemap document request. */
+  scheduler?: HostRequestScheduler;
+  networkPolicy?: NetworkTargetPolicy;
+  onNetworkSafetyBlocked?: (disposition: NetworkSafetyDisposition) => void;
 }
 
 function decodeXmlText(value: string): string {
@@ -92,12 +104,22 @@ async function tryFetchSitemap(
   url: string,
   timeoutMs: number,
   userAgent: string | undefined,
+  options: SitemapCheckOptions,
 ): Promise<{ xml: string; finalUrl: string } | { error: string }> {
   try {
-    const response = await fetch(url, {
+    const request = {
       signal: AbortSignal.timeout(timeoutMs),
       ...(userAgent !== undefined ? { headers: { 'user-agent': userAgent } } : {}),
-    });
+    };
+    const response =
+      options.networkPolicy === undefined
+        ? await fetch(url, request)
+        : await fetchWithNetworkPolicy(url, request, {
+            policy: options.networkPolicy,
+            ...(options.onNetworkSafetyBlocked !== undefined
+              ? { onBlocked: options.onNetworkSafetyBlocked }
+              : {}),
+          });
     if (!response.ok) return { error: `HTTP ${response.status}` };
     return { xml: await response.text(), finalUrl: response.url || url };
   } catch (error) {
@@ -165,9 +187,28 @@ export async function checkSitemap(
     if (visitedDocuments.has(documentUrl)) continue;
     visitedDocuments.add(documentUrl);
 
-    if (hasFetched) await sleep(options.delayMs ?? 0);
+    if (options.networkPolicy !== undefined) {
+      const networkVerdict = await checkNetworkTarget(documentUrl, options.networkPolicy);
+      if (networkVerdict.kind === 'refused') {
+        options.onNetworkSafetyBlocked?.(networkVerdict.disposition);
+        fetchErrors.push({
+          url: documentUrl,
+          error: `network-safety: ${networkVerdict.disposition.reason}`,
+        });
+        continue;
+      }
+    }
+
+    let fetched: Awaited<ReturnType<typeof tryFetchSitemap>>;
+    if (options.scheduler !== undefined) {
+      fetched = await options.scheduler.schedule(() =>
+        tryFetchSitemap(documentUrl, timeoutMs, options.userAgent, options),
+      );
+    } else {
+      if (hasFetched) await sleep(options.delayMs ?? 0);
+      fetched = await tryFetchSitemap(documentUrl, timeoutMs, options.userAgent, options);
+    }
     hasFetched = true;
-    const fetched = await tryFetchSitemap(documentUrl, timeoutMs, options.userAgent);
     if ('error' in fetched) {
       fetchErrors.push({ url: documentUrl, error: fetched.error });
       continue;
