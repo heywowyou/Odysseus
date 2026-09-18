@@ -22,6 +22,7 @@ import {
   type OutreachBatchResult,
   type UrlResult,
 } from './schemas/job.schema.js';
+import { QUEUE_CLAIM_SORT, nextQueueOrder } from './job-queue-order.js';
 
 export interface NewJobInput {
   type: JobType;
@@ -89,6 +90,7 @@ export async function createJob(connection: Connection, input: NewJobInput): Pro
     options: input.options,
     createdAt: new Date(),
     progress: {},
+    queueOrder: await nextQueueOrder(connection),
     ...(input.siteUrl !== undefined ? { siteUrl: input.siteUrl } : {}),
     ...(input.urls !== undefined ? { urls: input.urls } : {}),
     ...(activeSlot !== undefined ? { activeSlot } : {}),
@@ -120,7 +122,8 @@ export async function createJob(connection: Connection, input: NewJobInput): Pro
   }
 }
 
-/** Atomic claim: the oldest queued job is marked running in one operation,
+/** Atomic claim: the first job in durable queue order (plan 061 §6) is
+ *  marked running in one operation,
  *  so two worker slots racing to dequeue never claim the same job twice.
  *  workerRevision is diagnostic build-provenance (issue: worker/job
  *  provenance), stamped here rather than at completion because the same
@@ -143,10 +146,9 @@ export async function claimNextQueuedJob(
         ...(options.workerRevision !== undefined ? { workerRevision: options.workerRevision } : {}),
       },
     },
-    // _id breaks createdAt ties: a batch submission creates its jobs within
-    // the same millisecond, and ObjectIds generated in one process increase
-    // in creation order, so submission order is still the processing order.
-    { sort: { createdAt: 1, _id: 1 }, returnDocument: 'after' },
+    // queueOrder is unique per enqueue; createdAt and _id only order a
+    // legacy row the startup backfill has not reached yet.
+    { sort: QUEUE_CLAIM_SORT, returnDocument: 'after' },
   ).lean<JobDocument>();
 }
 
@@ -316,10 +318,7 @@ export async function markJobNeedsInput(
   );
 }
 
-export type JobCancellationRequestResult =
-  | 'cancelled'
-  | 'cancel-requested'
-  | 'not-cancellable';
+export type JobCancellationRequestResult = 'cancelled' | 'cancel-requested' | 'not-cancellable';
 
 /**
  * Persist an operator stop request without claiming a running worker has
@@ -522,9 +521,9 @@ export async function settleCancelRequestedJobsOnStartup(
 /** Called once at server startup, before the worker loop starts. A job that
  *  has been silent past ORPHANED_JOB_TIMEOUT_MS was left running by an
  *  unclean shutdown, so reset it to 'queued'. A fresh heartbeat means a live
- *  worker owns it and must never be reclaimed. createdAt is untouched, so
- *  claimNextQueuedJob's createdAt-ascending sort restores the original FIFO
- *  position rather than requeuing it to the back. Returns the number reset.
+ *  worker owns it and must never be reclaimed. queueOrder is untouched, so
+ *  the claim restores the job's original queue position rather than
+ *  requeuing it to the back. Returns the number reset.
  *
  *  includeFreshHeartbeats drops the staleness guard and requeues every
  *  'running' job. It exists for JobQueue.start() in the single-container

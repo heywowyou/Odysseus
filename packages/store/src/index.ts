@@ -68,6 +68,8 @@ export type {
   JobSummaryFields,
   NewJobInput,
 } from './jobs.js';
+export { backfillQueueOrder, readScanQueue, reorderScanQueue } from './job-queue-order.js';
+export type { QueueReorderResult, QueuedJobRow, ScanQueueSnapshot } from './job-queue-order.js';
 export { reconcileFailedAuditJobs } from './reconcile-jobs.js';
 export {
   deleteAuditCascade,

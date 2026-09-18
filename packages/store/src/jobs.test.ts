@@ -78,9 +78,9 @@ describe.skipIf(!available)('job queue persistence', () => {
       expect(stored?.lastHeartbeatAt).toBeInstanceOf(Date);
     });
 
-    it('claims in createdAt order one at a time', async () => {
-      const second = await queuedJob(new Date('2026-09-01T11:00:00Z'));
-      const first = await queuedJob(new Date('2026-09-01T10:00:00Z'));
+    it('claims in durable queue order, not createdAt order', async () => {
+      const first = await queuedJob(new Date('2026-09-01T11:00:00Z'));
+      const second = await queuedJob(new Date('2026-09-01T10:00:00Z'));
       expect((await claimNextQueuedJob(connection!))?.jobId).toBe(first);
       expect((await claimNextQueuedJob(connection!))?.jobId).toBe(second);
       expect(await claimNextQueuedJob(connection!)).toBeNull();
@@ -365,9 +365,9 @@ describe.skipIf(!available)('job queue persistence', () => {
       const stored = await getJob(connection!, jobId);
       expect(stored?.status).toBe('cancelled');
       expect(stored?.finishedAt).toEqual(now);
-      await expect(resetOrphanedRunningJobs(connection!, now, { includeFreshHeartbeats: true }))
-        .resolves.toBe(0);
+      await expect(
+        resetOrphanedRunningJobs(connection!, now, { includeFreshHeartbeats: true }),
+      ).resolves.toBe(0);
     });
   });
-
 });

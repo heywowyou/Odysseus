@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@odysseus/store', () => ({
+  backfillQueueOrder: vi.fn().mockResolvedValue(0),
   cancelJob: vi.fn(),
   claimNextQueuedJob: vi.fn(),
   failJob: vi.fn(),

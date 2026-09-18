@@ -1,9 +1,10 @@
 /**
- * FIFO queue: a single background loop claims the oldest queued job via
- * store's claimNextQueuedJob (an atomic findOneAndUpdate sorted by
- * createdAt), so FIFO order and safe concurrent claiming both come
- * straight from Mongo rather than a hand-rolled in-memory mirror that
- * would need to stay in sync with it. No queue-priority system, per 7.1.
+ * Ordered queue: a single background loop claims the first queued job via
+ * store's claimNextQueuedJob (an atomic findOneAndUpdate sorted by the
+ * durable queueOrder, plan 061 §6), so order and safe concurrent claiming
+ * both come straight from Mongo rather than a hand-rolled in-memory mirror
+ * that would need to stay in sync with it. The operator may reorder waiting
+ * scans; there are no priority classes.
  *
  * Per-origin coordination is a single shared OriginLock instance (see
  * @odysseus/scanner) held across every job this queue runs, so two jobs
@@ -14,6 +15,7 @@ import type { Connection } from 'mongoose';
 import { OriginLock, readOdysseusBuildId } from '@odysseus/scanner';
 import { ReportIdentityUnconfirmedError } from '@odysseus/report';
 import {
+  backfillQueueOrder,
   cancelJob,
   claimNextQueuedJob,
   failJob,
@@ -104,6 +106,10 @@ export class JobQueue {
     const orphanedCount = await resetOrphanedRunningJobs(this.connection, new Date(), {
       includeFreshHeartbeats: true,
     });
+    // Before the first claim, so a row queued by an older build keeps the
+    // position its createdAt gave it instead of jumping the ordered queue.
+    const backfilled = await backfillQueueOrder(this.connection);
+    if (backfilled > 0) logger.info({ backfilled }, 'gave legacy queued jobs a durable order');
     try {
       const reconciled = await reconcileFailedAuditJobs(this.connection);
       if (reconciled > 0) {
