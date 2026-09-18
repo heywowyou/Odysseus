@@ -912,7 +912,12 @@ export async function runReportQualityPipeline(input: {
             'Text segments never contain digits, percentages, dates, units or URLs — every ' +
             'exact scalar belongs in a fact segment bound to a factRegistry factId, and every ' +
             'named source in a reference segment. Freehand exact scalars are rejected ' +
-            'deterministically.',
+            'deterministically. Performance wording keeps Lighthouse lab measurements distinct ' +
+            'from CrUX field data; TBT and Speed Index are never called Core Web Vitals and lab ' +
+            'metrics never describe real user experience. No lost-booking, revenue or ' +
+            'conversion causality. A newly-observable finding is never a regression and a ' +
+            'not-comparable finding is never a resolution. Unsupported-certainty wording is ' +
+            'rejected deterministically.',
         },
         parser: qualityWriterOutputSchema,
         jsonSchema: QUALITY_WRITER_JSON_SCHEMA,
@@ -955,7 +960,11 @@ export async function runReportQualityPipeline(input: {
             writingRules:
               'Text segments never contain digits, percentages, dates, units or URLs — every ' +
               'exact scalar belongs in a fact segment bound to a factRegistry factId, and every ' +
-              'named source in a reference segment.',
+              'named source in a reference segment. Performance wording keeps Lighthouse lab ' +
+              'measurements distinct from CrUX field data; TBT and Speed Index are never called ' +
+              'Core Web Vitals. No lost-booking, revenue or conversion causality. A ' +
+              'newly-observable finding is never a regression and a not-comparable finding is ' +
+              'never a resolution. Unsupported-certainty wording is rejected deterministically.',
             previousDraftRejections: writerRejections,
             repairInstruction:
               'Your previous draft was refused by the deterministic evidence-binding gates. ' +

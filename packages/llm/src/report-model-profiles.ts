@@ -24,7 +24,7 @@ export interface ReportModelProfile {
 }
 
 const SOL = 'gpt-5.6-sol' as const;
-const PROMPT_VERSION = '058-prompt-v2';
+const PROMPT_VERSION = '058-prompt-v3';
 const SCHEMA_VERSION = '058-schema-v1';
 const BENCHMARK_APPROVAL_ID = '058-saved-corpus-2026-09';
 
