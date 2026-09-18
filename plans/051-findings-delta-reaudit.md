@@ -58,6 +58,21 @@ As the design states: scheduled re-scans, deltas across more than two runs,
 dashboard surfacing, a standalone delta document, pricing or marketing copy,
 and baselines across a site URL change.
 
+## Executable closure contract
+
+This deterministic feature must have proof that matches its claim. Before `DONE`:
+
+- a dependency/static test proves the delta computation/render path has no import or call edge into `@odysseus/llm` or any model client;
+- tests prove the baseline query uses the exact delivered/provenance contract described above rather than “latest audit” heuristics;
+- every delta class, suppression rule, changed-scope pairing rule and duplicate-key failure has a named focused test;
+- a report regression test proves “no baseline” is byte/structure neutral apart from already accepted nondeterminism;
+- FR/EN section parity is exhaustive over the closed delta states;
+- a requirement-to-proof table maps each Build-time decision and Slice to its owning code and test.
+
+A prose statement that the feature is deterministic is not closure evidence.
+
+---
+
 ## Verification
 
 Focused unit tests per slice, then `pnpm run check` and the report and
