@@ -979,7 +979,10 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
               ...(auditProfile !== undefined ? { auditProfile } : {}),
             });
 
-            if (discoveryMethod !== 'sitemap-only' && item.depth < maxDepth) {
+            if (
+              discoveryMethod !== 'sitemap-only' &&
+              (item.depth < maxDepth || inventoryLedger !== undefined)
+            ) {
               // Per-anchor structural evidence (plan 021 Step 6), read at
               // discovery time before URL normalization discards rel and
               // context: the anchor's own rel token and whether it sits in
@@ -1035,10 +1038,21 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
               for (const link of links) {
                 linkDiscoveredUrls.add(link);
                 if (!linkDiscoveredFrom.has(link)) linkDiscoveredFrom.set(link, item.url);
+                ensureInventoryDiscovery(link, 'link', item.depth + 1, item.url);
                 const existingPage = pagesByUrl.get(link);
                 if (existingPage !== undefined) {
                   existingPage.discoveryMethod = 'link';
                   existingPage.discoveredFrom ??= item.url;
+                }
+                if (
+                  item.depth >= maxDepth &&
+                  existingPage === undefined &&
+                  !enqueued.has(link)
+                ) {
+                  disposeInventory(link, 'depth-bound', {
+                    detail: `discovered from depth ${item.depth}; maxDepth is ${maxDepth}`,
+                  });
+                  continue;
                 }
                 // Only a continuation-classified link is governed: the guard
                 // never sees an ordinary link, and returning false here omits
@@ -1059,6 +1073,11 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
                     classification.isContinuation &&
                     !continuationGuard.admit(classification, link)
                   ) {
+                    if (existingPage === undefined && !enqueued.has(link)) {
+                      disposeInventory(link, 'continuation-guard', {
+                        detail: `continuation family ${classification.familyKey} reached its bound`,
+                      });
+                    }
                     continue;
                   }
                 }
@@ -1125,6 +1144,20 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     }
   } finally {
     await context.close();
+  }
+
+  if (inventoryLedger !== undefined && queue.length > 0) {
+    for (const item of queue) {
+      ensureInventoryDiscovery(item.url, item.discoveryMethod, item.depth, item.discoveredFrom);
+      if (inventoryLedger.candidate(item.url)?.disposition !== undefined) continue;
+      if (!isAllowedByRobots(robotsRules, robotsTarget(item.url))) {
+        disposeInventory(item.url, 'robots');
+      } else {
+        disposeInventory(item.url, 'page-cap', {
+          detail: `crawl stopped after reaching maxPages=${maxPages}`,
+        });
+      }
+    }
   }
 
   // A broken link (e.g. a malformed href) can still land on a URL whose
