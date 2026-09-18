@@ -1186,10 +1186,12 @@ export async function scanSite(
   // comparisons to), and attached to the homepage's scan.json below only
   // when the homepage was actually visited, the same attribution pattern
   // every other site-level check here uses.
-  const llmsTxtCheck = await checkLlmsTxt(
-    new URL(crawl.startUrl).origin,
-    options.timeoutMs ?? getPageTimeoutMs(),
-    options.userAgent ?? getCrawlerUserAgent(),
+  const llmsTxtCheck = await scheduler.schedule(() =>
+    checkLlmsTxt(
+      new URL(crawl.startUrl).origin,
+      options.timeoutMs ?? getPageTimeoutMs(),
+      options.userAgent ?? getCrawlerUserAgent(),
+    ),
   );
   const llmsTxtCheckForScan = homepageWasVisited ? llmsTxtCheck : undefined;
 
@@ -1197,10 +1199,12 @@ export async function scanSite(
   // llms.txt/sitemap above: near-always identical across every page on a
   // site, so one request here (attached only to the homepage's scan.json
   // when it was visited) rather than repeating the same answer per page.
-  const securityHeadersCheck = await checkSecurityHeaders(
-    new URL(crawl.startUrl).origin,
-    options.timeoutMs ?? getPageTimeoutMs(),
-    options.userAgent ?? getCrawlerUserAgent(),
+  const securityHeadersCheck = await scheduler.schedule(() =>
+    checkSecurityHeaders(
+      new URL(crawl.startUrl).origin,
+      options.timeoutMs ?? getPageTimeoutMs(),
+      options.userAgent ?? getCrawlerUserAgent(),
+    ),
   );
   const securityHeadersCheckForScan = homepageWasVisited ? securityHeadersCheck : undefined;
 
@@ -1212,11 +1216,13 @@ export async function scanSite(
   // and skipped entirely when the homepage was never visited, since
   // there would be no page to attribute the finding to.
   const cookieConsentCheck = homepageWasVisited
-    ? await checkCookieConsent(options.browser, crawl.startUrl, {
-        timeoutMs: options.timeoutMs ?? getPageTimeoutMs(),
-        guard: runGuard,
-        ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
-      })
+    ? await scheduler.schedule(() =>
+        checkCookieConsent(options.browser, crawl.startUrl, {
+          timeoutMs: options.timeoutMs ?? getPageTimeoutMs(),
+          guard: runGuard,
+          ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
+        }),
+      )
     : undefined;
 
   // C4: URL-pattern only, over the pages this crawl actually reached, so
