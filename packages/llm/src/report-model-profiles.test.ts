@@ -2,7 +2,6 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ReportQualityRole } from '@odysseus/core';
-import type { ReportProfileBenchmarkApproval } from './report-profile-benchmarks.js';
 import {
   REPORT_MODEL_PROFILES,
   ReportModelProfileMissingError,
@@ -10,6 +9,7 @@ import {
   getReportModelProfileDigest,
   getReportModelProfileMatrixDigest,
 } from './report-model-profiles.js';
+import type { ReportProfileBenchmarkApproval } from './report-profile-benchmarks.js';
 import {
   REPORT_PROFILE_BENCHMARK_MANIFEST,
   ReportProfileBenchmarkNotCurrentError,

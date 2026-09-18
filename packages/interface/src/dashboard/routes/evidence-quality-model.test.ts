@@ -214,9 +214,8 @@ describe('qualityBundlePromotionBlock (plan 059 section 20 conflict guard)', () 
     expect(
       qualityBundlePromotionBlock(
         { evidenceApprovalMode: 'system', approvedEvidenceDigest: 'sha256:approved' },
-        summary({
-          approval: 'stale',
-        }),
+        // No approvalDigest: the stored approval carries no digest to match.
+        summary({ approval: 'stale' }),
       ),
     ).toBe('changed');
   });
