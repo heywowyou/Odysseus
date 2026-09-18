@@ -54,6 +54,21 @@ describe('Plan 059 evidence graph persistence', () => {
     expect(readApprovedAuditEvidence(dir)).toBeUndefined();
   });
 
+  it('refuses to approve when a digest-bound supporting ledger was edited', () => {
+    const dir = auditDir();
+    const graph = assembleAuditEvidenceGraph(cleanInput());
+    writeAuditEvidenceGraph(dir, graph);
+    fs.writeFileSync(
+      path.join(dir, EVIDENCE_GRAPH_DIRNAME, 'page-readiness-records.json'),
+      `${JSON.stringify([], null, 2)}\n`,
+      'utf8',
+    );
+    expect(() => approveAuditEvidence(dir, graph)).toThrow(
+      /page-readiness-records\.json does not read back as assembled/,
+    );
+    expect(readApprovedAuditEvidence(dir)).toBeUndefined();
+  });
+
   it('refuses to approve a graph that carries no approval', () => {
     const dir = auditDir();
     const blocked = assembleAuditEvidenceGraph(cleanInput({ robotsChain: [] }));

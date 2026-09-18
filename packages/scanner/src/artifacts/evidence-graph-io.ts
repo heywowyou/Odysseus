@@ -160,13 +160,20 @@ export function approveAuditEvidence(auditDir: string, graph: AuditEvidenceGraph
   const roots = { ...graph, approval };
   assertApprovalMatchesRoots(roots);
   const evidenceDir = path.join(auditDir, EVIDENCE_GRAPH_DIRNAME);
+  // Every evidence file writeAuditEvidenceGraph persisted, not just the six
+  // digest roots: the readiness, frame and signal ledgers are digest-bound in
+  // the raw root, so a local edit to them must block approval exactly where
+  // no artifact store exists to catch it on the bucket path.
   const persistedRoots: [string, unknown][] = [
+    [CHECK_ATTEMPT_LEDGER_FILENAME, graph.attemptLedger],
+    [EVIDENCE_COVERAGE_LEDGER_FILENAME, graph.coverage],
+    [READINESS_RECORDS_FILENAME, graph.readinessRecords],
+    [FRAME_COVERAGE_RECORDS_FILENAME, graph.frameRecords],
+    [AUDIT_SIGNALS_FILENAME, graph.signals],
     [RAW_EVIDENCE_SNAPSHOT_FILENAME, graph.raw],
     [OBSERVATION_LEDGER_FILENAME, graph.observations],
     [AUDIT_EVIDENCE_SNAPSHOT_FILENAME, graph.audit],
     [EVIDENCE_QUALITY_ASSESSMENT_FILENAME, graph.quality],
-    [CHECK_ATTEMPT_LEDGER_FILENAME, graph.attemptLedger],
-    [EVIDENCE_COVERAGE_LEDGER_FILENAME, graph.coverage],
   ];
   for (const [name, expected] of persistedRoots) {
     if (!readsBackAs(path.join(evidenceDir, name), expected)) {
