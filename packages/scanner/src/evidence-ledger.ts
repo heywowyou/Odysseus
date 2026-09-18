@@ -173,7 +173,10 @@ export function buildObservationRecord(input: ObservationRecordInput): Observati
   };
   return {
     ...body,
-    observationId: `observation:${canonicalDigest(body).slice('sha256:'.length, 'sha256:'.length + 20)}`,
+    observationId: `observation:${canonicalDigest(body).slice(
+      'sha256:'.length,
+      'sha256:'.length + 20,
+    )}`,
   };
 }
 
@@ -193,7 +196,9 @@ export function buildObservationLedger(input: ObservationLedgerInput): Observati
   const observations = [...input.observations]
     .map((observation) => {
       if (ids.has(observation.observationId)) {
-        throw new Error(`buildObservationLedger: duplicate observation ${observation.observationId}`);
+        throw new Error(
+          `buildObservationLedger: duplicate observation ${observation.observationId}`,
+        );
       }
       ids.add(observation.observationId);
       return observation;
