@@ -98,7 +98,11 @@ import {
   labMetricsFromLighthouse,
   representativeRunId,
 } from './performance-acquisition.js';
-import type { PageAuditProfile } from './page-audit-profile.js';
+import {
+  buildPageAuditProfile,
+  type PageAuditProfile,
+  type RawPageAuditFacts,
+} from './page-audit-profile.js';
 import { derivePageAnalysisCoverage } from './analysis-coverage.js';
 import { readPageScanJson, writePageScanJson } from './artifacts/page-scan-io.js';
 import { assertAcquisitionLease } from './artifacts/acquisition-lease-io.js';
@@ -119,7 +123,11 @@ import {
 import { createPageWorkGuard, type PageWorkGuard } from './page-work-guard.js';
 import { RobotsPolicyRuntime } from './robots-policy-runtime.js';
 import { writeRobotsPolicyChain } from './artifacts/robots-policy-io.js';
-import { InventoryLedger, type InventoryLedgerSnapshot } from './inventory-ledger.js';
+import {
+  InventoryLedger,
+  type InventoryDisposition,
+  type InventoryLedgerSnapshot,
+} from './inventory-ledger.js';
 import { writeInventoryLedger } from './artifacts/inventory-ledger-io.js';
 
 export interface CrawlExclusionCounts {
@@ -571,6 +579,9 @@ interface StagedScanContext {
   /** Plan 059 step 10: run the mobile surface pass for every staged page.
    *  On exactly when this is a Plan 059 scoped full audit. */
   mobileSurfaces: boolean;
+  /** Plan 059 step 11: run the bounded hydration sweep as the last step of
+   *  each page's rendered pass. On alongside mobileSurfaces. */
+  hydrationSweep: boolean;
   /** Operator crawl exclusions, applied to every surface-discovered link. */
   exclusionPatterns: readonly string[];
   /** Links first seen on a state surface, in completion order, with the
@@ -578,6 +589,17 @@ interface StagedScanContext {
    *  reconciles them against. Kept at run level because the persisted
    *  page results are trimmed under writePagesAsScanned. */
   surfaceLinks: (SurfaceLinkDiscovery & { referrer: string; depth?: number })[];
+  /** Plan 059 step 11: the private inventory ledger, when this run keeps
+   *  one. Surface-discovered URLs are recorded into it at admission so the
+   *  fixed point reconciles every candidate it has ever heard of. */
+  inventory: InventoryLedger | undefined;
+  /** The crawl's effective page and depth bounds, applied to wave
+   *  admission exactly as the crawl applied them to its own frontier. */
+  maxPages: number;
+  maxDepth: number;
+  /** Refuses (and records the refusal for) a URL the network policy
+   *  blocks; wired from scanSite's policy-checked direct-target helper. */
+  assertSafeUrl: (url: string) => Promise<void>;
 }
 
 /**
@@ -687,8 +709,8 @@ function recordPageRun(
   durationMs: number,
   executionProfile: AttemptExecutionProfile,
   checkIds: readonly (typeof PAGE_CHECK_IDS)[number][],
-): AcquisitionAttemptRecord[] {
-  if (context.scopeDigest === undefined) return [];
+): { records: AcquisitionAttemptRecord[]; baselineSurfaceId: string | undefined } {
+  if (context.scopeDigest === undefined) return { records: [], baselineSurfaceId: undefined };
   const finishedAt = new Date();
   const surface = baselineDesktopSurface({
     evidenceEpoch: context.evidenceEpoch,
@@ -698,7 +720,7 @@ function recordPageRun(
       result.readiness?.outcome ??
       (result.checkOutcomes['render-diff'] === 'completed' ? 'unstable' : 'timeout'),
   });
-  return pageAttemptRecords(
+  const records = pageAttemptRecords(
     result,
     result.checkOutcomes,
     {
@@ -712,6 +734,7 @@ function recordPageRun(
     },
     checkIds,
   );
+  return { records, baselineSurfaceId: surface.surfaceId };
 }
 
 /** Section 10's diagnostic profile: twice the bounded settle, never unbounded. */
@@ -815,6 +838,25 @@ async function attachMobileSurface(
  *  every visited page being planned; silently skipping one would be
  *  exactly the "quietly under-report the site" failure class this plan
  *  exists to close, so this throws instead. */
+/** The same all-empty fact set crawl.ts falls back to when its own
+ *  extraction fails, used here as a wave page's planning profile: a
+ *  surface-discovered page was never crawl-extracted, so the planner
+ *  honestly knows nothing about it. */
+function emptyRawPageAuditFacts(): RawPageAuditFacts {
+  return {
+    metaRobotsNoindex: false,
+    jsonLdTypes: [],
+    paginationRelNext: false,
+    paginationRelPrev: false,
+    numberedPaginationControlCount: 0,
+    bodyClassTokens: [],
+    transactionalFormSignalCount: 0,
+    externalTransactionalLinkCount: 0,
+    repeatedTeaserLinkGroupSize: 0,
+    structuralTokens: [],
+  };
+}
+
 function toPlanProfile(page: CrawledPage): PageAuditProfile {
   if (page.auditProfile === undefined) {
     throw new Error(
@@ -963,7 +1005,7 @@ async function recoverFailedChecks(
         await recovery?.browser.close();
       }
       const original = pages.load(url);
-      const attempts = recordPageRun(
+      const { records: attempts } = recordPageRun(
         context,
         url,
         outcome.result,
@@ -1133,6 +1175,173 @@ async function acquirePerformanceMeasurement(
   return { result, records, measurementSet };
 }
 
+/** Section 6 bounds the fixed point: a documented wave budget stops the
+ *  loop, and anything still unadmitted then carries a terminal
+ *  continuation-bound disposition rather than sitting undispositioned. */
+const MAX_SURFACE_DISCOVERY_WAVES = 3;
+
+/** A page whose hydrated/state content exposes more than this many new
+ *  links is an effectively infinite family (calendar, faceted listing);
+ *  the surplus is bounded the way the crawl bounds its own repetitive
+ *  families and disclosed through the same disposition. */
+const MAX_SURFACE_LINKS_PER_REFERRER = 50;
+
+/**
+ * Plan 059 step 11/14: the bounded discovery fixed point over the links
+ * the state surfaces discovered. Every candidate is first recorded into
+ * the inventory with its surface provenance (the route is evidence even
+ * when the candidate ends up bounded), then either admitted and scanned by
+ * a wave of the same rendered-analysis lanes the initial inventory used,
+ * or given a terminal disposition naming the bound that stopped it —
+ * depth, page cap, continuation bound, robots, or network safety. The
+ * loop stops when a wave produces no new eligible candidate (the section 6
+ * fixed point) or at the wave budget, with the remainder disposed and
+ * disclosed rather than silently dropped.
+ *
+ * A wave page is a real page of the site: it takes its turns from the same
+ * scheduler, gets the same surfaces (mobile, hydration), feeds the same
+ * retry queue, and its own discoveries feed the next wave.
+ */
+async function runDiscoveryWaves(args: {
+  browser: Browser;
+  delayMs: number;
+  concurrency: number;
+  scheduler: HostRequestScheduler;
+  context: StagedScanContext;
+  onLanePageDone: (
+    url: string,
+    result: RenderedAnalysisResult,
+    durationMs: number,
+  ) => Promise<void>;
+  retryQueue: Map<string, RetryRequest[]>;
+  initialUrls: ReadonlySet<string>;
+  depthByUrl: Map<string, number>;
+  growTotalPages: (count: number) => void;
+}): Promise<readonly string[]> {
+  const { context } = args;
+  const inventory = context.inventory;
+  const dispose = (
+    link: SurfaceLinkDiscovery & { referrer: string; depth?: number },
+    disposition: InventoryDisposition,
+    detail: string,
+  ): void => {
+    inventory?.recordDisposition({ url: link.url, disposition, decidedAt: new Date(), detail });
+  };
+  const processed = new Set<string>();
+  const admitted: string[] = [];
+  const admittedPerReferrer = new Map<string, number>();
+
+  // Records every unprocessed surface link into the inventory (additive,
+  // idempotent per route) and returns those that may still be admitted.
+  const collectPending = (): (SurfaceLinkDiscovery & {
+    referrer: string;
+    depth?: number;
+  })[] => {
+    const pending: (SurfaceLinkDiscovery & { referrer: string; depth?: number })[] = [];
+    for (const link of context.surfaceLinks) {
+      if (processed.has(link.url)) continue;
+      processed.add(link.url);
+      inventory?.recordDiscovery({
+        url: link.url,
+        source: link.source,
+        discoveredAt: new Date(),
+        referrer: link.referrer,
+        ...(link.surfaceId !== undefined ? { surfaceId: link.surfaceId } : {}),
+        ...(link.depth !== undefined ? { depth: link.depth } : {}),
+      });
+      if (args.initialUrls.has(link.url)) continue;
+      if (inventory?.candidate(link.url)?.disposition !== undefined) continue;
+      pending.push(link);
+    }
+    return pending;
+  };
+
+  for (let wave = 0; wave < MAX_SURFACE_DISCOVERY_WAVES; wave += 1) {
+    const pending = collectPending();
+    if (pending.length === 0) return admitted;
+    const wavePages: CrawledPage[] = [];
+    for (const link of pending) {
+      const depth = link.depth ?? 0;
+      if (depth > context.maxDepth) {
+        dispose(
+          link,
+          'depth-bound',
+          `discovered at depth ${depth}; maxDepth is ${context.maxDepth}`,
+        );
+        continue;
+      }
+      if (args.initialUrls.size + admitted.length >= context.maxPages) {
+        dispose(link, 'page-cap', `crawl stopped after reaching maxPages=${context.maxPages}`);
+        continue;
+      }
+      const referrerCount = admittedPerReferrer.get(link.referrer) ?? 0;
+      if (referrerCount >= MAX_SURFACE_LINKS_PER_REFERRER) {
+        dispose(
+          link,
+          'continuation-guard',
+          `surface discovery from ${link.referrer} reached its ${MAX_SURFACE_LINKS_PER_REFERRER}-link bound`,
+        );
+        continue;
+      }
+      try {
+        context.robotsPolicyRuntime?.assertAllowed(link.url);
+      } catch (error) {
+        dispose(
+          link,
+          'robots',
+          error instanceof Error ? error.message : 'disallowed by the current robots policy',
+        );
+        continue;
+      }
+      try {
+        await context.assertSafeUrl(link.url);
+      } catch (error) {
+        dispose(
+          link,
+          'network-safety',
+          error instanceof Error ? error.message : 'blocked by the network target policy',
+        );
+        continue;
+      }
+      admittedPerReferrer.set(link.referrer, referrerCount + 1);
+      admitted.push(link.url);
+      args.depthByUrl.set(link.url, depth);
+      wavePages.push({ url: link.url, depth, status: 'visited', discoveryMethod: 'link' });
+    }
+    if (wavePages.length === 0) continue;
+    args.growTotalPages(wavePages.length);
+    const lanes: string[][] = Array.from({ length: args.concurrency }, () => []);
+    wavePages.forEach((page, index) => {
+      lanes[index % args.concurrency]!.push(page.url);
+    });
+    await Promise.all(
+      lanes
+        .filter((laneUrls) => laneUrls.length > 0)
+        .map((laneUrls) =>
+          runRenderedAnalysisLane(
+            laneUrls,
+            args.browser,
+            args.delayMs,
+            args.scheduler,
+            context,
+            args.onLanePageDone,
+          ),
+        ),
+    );
+  }
+  // The wave budget, not the frontier, ended the loop: whatever is still
+  // unprocessed is a known candidate and must not sit undispositioned.
+  const bounded = collectPending();
+  for (const link of bounded) {
+    dispose(
+      link,
+      'continuation-guard',
+      `surface discovery reached its ${MAX_SURFACE_DISCOVERY_WAVES}-wave bound`,
+    );
+  }
+  return admitted;
+}
+
 /**
  * Runs the plan 021 staged pipeline: build the content plan from every
  * visited page's audit profile, run rendered analysis for all of them
@@ -1157,9 +1366,13 @@ async function runStagedFullAuditScan(
   pages: PageScanResult[];
   fullAuditPlan: FullAuditPlan;
   analysisCoverageByUrl: ReadonlyMap<string, PageAnalysisCoverage>;
+  /** Plan 059 step 11: pages admitted by the bounded discovery fixed point
+   *  and scanned by this run, so the inventory can disposition them. */
+  discoveryAdmittedUrls: readonly string[];
 }> {
-  const profiles = pagesToScan.map(toPlanProfile);
-  const contentPlan = buildContentAuditPlan(profiles);
+  // Plan 059 step 11: the content plan is built after the discovery waves,
+  // because a wave page is a real page of the site and joins planning (and
+  // therefore Lighthouse selection) exactly like a crawled one.
 
   // Plan 035 (issue #124): on a validated resume, pages whose scan.json is
   // already on disk (with a rendered cost profile) skip the content lanes
@@ -1228,6 +1441,105 @@ async function runStagedFullAuditScan(
     if (retries.length > 0) retryQueue.set(url, retries);
   }
 
+  // Total page count the staged progress events report against. The
+  // discovery waves (step 11) grow it as they admit pages, so the counts
+  // never promise work that does not exist nor hide work that does.
+  let totalPages = pagesToScan.length;
+
+  /** The per-page completion path shared by the initial content lanes and
+   *  every discovery wave: attempts, surfaces, discovery collection,
+   *  persistence, progress. */
+  const onLanePageDone = async (
+    url: string,
+    laneResult: RenderedAnalysisResult,
+    durationMs: number,
+  ): Promise<void> => {
+    const { records: attempts, baselineSurfaceId } = recordPageRun(
+      context,
+      url,
+      laneResult,
+      durationMs,
+      'normal',
+      PAGE_CHECK_IDS,
+    );
+    let result: RenderedAnalysisResult =
+      attempts.length > 0 ? { ...laneResult, acquisitionAttempts: attempts } : laneResult;
+    const retries = retryRequestsFor(attempts);
+    if (retries.length > 0) retryQueue.set(url, retries);
+    // Plan 059 step 11: links that existed only after the sweep
+    // carry `hydrated-link` provenance on the baseline surface.
+    const hydratedLinks = laneResult.hydrationSweep?.discoveredLinks ?? [];
+    if (hydratedLinks.length > 0 && baselineSurfaceId !== undefined) {
+      result = {
+        ...result,
+        surfaceLinks: [
+          ...(result.surfaceLinks ?? []),
+          ...hydratedLinks.map((link): SurfaceLinkDiscovery => ({
+            url: link,
+            source: 'hydrated-link',
+            surfaceId: baselineSurfaceId,
+          })),
+        ],
+      };
+    }
+    // Plan 059 step 10: the mobile surface runs only after this
+    // page's immutable baseline capture is complete, and in a
+    // context of its own (section 9).
+    if (context.mobileSurfaces) {
+      result = await attachMobileSurface(url, result, browser, scheduler, context);
+    }
+    if (result.surfaceLinks !== undefined && result.surfaceLinks.length > 0) {
+      context.surfaceLinks.push(
+        ...result.surfaceLinks.map((link) => ({
+          ...link,
+          referrer: url,
+          depth: (depthByUrl.get(url) ?? 0) + 1,
+        })),
+      );
+    }
+    const { checkOutcomes, renderedCostProfile, ...content } = result;
+    if (context.writePagesAsScanned) {
+      // Issue #64: the content-scan phase must wait for every
+      // lane's rendered result before Lighthouse selection can
+      // run (finalizeLighthousePlan needs every renderedCosts
+      // entry), so this map would otherwise hold every page's
+      // full rendered payload (axe/headMetadata/evidence, the
+      // bulk of a page's size) simultaneously for as long as the
+      // content-scan phase takes - the actual accumulator behind
+      // the reported OOM, since this phase covers every page, not
+      // just the Lighthouse-selected minority. Write the rendered
+      // content to disk now and keep only what emit() needs
+      // in-memory (checkOutcomes, for analysisCoverage) - emit()
+      // reads the content back from disk once Lighthouse
+      // selection is known. Plan 035: the persisted scan.json
+      // also carries checkOutcomes and renderedCostProfile so a
+      // resumed run can rebuild every planner input from disk.
+      if (context.auditDir === undefined) {
+        throw new Error('scanSite: writePagesAsScanned requires auditDir to be set.');
+      }
+      context.holdLease();
+      writePageScanJson(context.screenshotDir, context.auditDir, {
+        ...content,
+        checkOutcomes,
+        ...(renderedCostProfile !== undefined ? { renderedCostProfile } : {}),
+      });
+      renderedResults.set(url, { url, checkOutcomes } as RenderedAnalysisResult);
+    } else {
+      renderedResults.set(url, result);
+    }
+    if (renderedCostProfile !== undefined) {
+      renderedCosts.set(url, renderedCostProfile);
+    }
+    contentCompleted += 1;
+    onProgress?.({
+      type: 'content-scan-page',
+      completed: contentCompleted,
+      totalPages,
+      url,
+      durationMs,
+    });
+  };
+
   const lanes: string[][] = Array.from({ length: concurrency }, () => []);
   pendingPages.forEach((page, index) => {
     lanes[index % concurrency]!.push(page.url);
@@ -1237,85 +1549,31 @@ async function runStagedFullAuditScan(
     lanes
       .filter((laneUrls) => laneUrls.length > 0)
       .map((laneUrls) =>
-        runRenderedAnalysisLane(
-          laneUrls,
-          browser,
-          delayMs,
-          scheduler,
-          context,
-          async (url, laneResult, durationMs) => {
-            const attempts = recordPageRun(
-              context,
-              url,
-              laneResult,
-              durationMs,
-              'normal',
-              PAGE_CHECK_IDS,
-            );
-            let result: RenderedAnalysisResult =
-              attempts.length > 0 ? { ...laneResult, acquisitionAttempts: attempts } : laneResult;
-            const retries = retryRequestsFor(attempts);
-            if (retries.length > 0) retryQueue.set(url, retries);
-            // Plan 059 step 10: the mobile surface runs only after this
-            // page's immutable baseline capture is complete, and in a
-            // context of its own (section 9).
-            if (context.mobileSurfaces) {
-              result = await attachMobileSurface(url, result, browser, scheduler, context);
-            }
-            if (result.surfaceLinks !== undefined && result.surfaceLinks.length > 0) {
-              context.surfaceLinks.push(
-                ...result.surfaceLinks.map((link) => ({
-                  ...link,
-                  referrer: url,
-                  depth: (depthByUrl.get(url) ?? 0) + 1,
-                })),
-              );
-            }
-            const { checkOutcomes, renderedCostProfile, ...content } = result;
-            if (context.writePagesAsScanned) {
-              // Issue #64: the content-scan phase must wait for every
-              // lane's rendered result before Lighthouse selection can
-              // run (finalizeLighthousePlan needs every renderedCosts
-              // entry), so this map would otherwise hold every page's
-              // full rendered payload (axe/headMetadata/evidence, the
-              // bulk of a page's size) simultaneously for as long as the
-              // content-scan phase takes - the actual accumulator behind
-              // the reported OOM, since this phase covers every page, not
-              // just the Lighthouse-selected minority. Write the rendered
-              // content to disk now and keep only what emit() needs
-              // in-memory (checkOutcomes, for analysisCoverage) - emit()
-              // reads the content back from disk once Lighthouse
-              // selection is known. Plan 035: the persisted scan.json
-              // also carries checkOutcomes and renderedCostProfile so a
-              // resumed run can rebuild every planner input from disk.
-              if (context.auditDir === undefined) {
-                throw new Error('scanSite: writePagesAsScanned requires auditDir to be set.');
-              }
-              context.holdLease();
-              writePageScanJson(context.screenshotDir, context.auditDir, {
-                ...content,
-                checkOutcomes,
-                ...(renderedCostProfile !== undefined ? { renderedCostProfile } : {}),
-              });
-              renderedResults.set(url, { url, checkOutcomes } as RenderedAnalysisResult);
-            } else {
-              renderedResults.set(url, result);
-            }
-            if (renderedCostProfile !== undefined) {
-              renderedCosts.set(url, renderedCostProfile);
-            }
-            contentCompleted += 1;
-            onProgress?.({
-              type: 'content-scan-page',
-              completed: contentCompleted,
-              totalPages: pagesToScan.length,
-              url,
-              durationMs,
-            });
-          },
-        ),
+        runRenderedAnalysisLane(laneUrls, browser, delayMs, scheduler, context, onLanePageDone),
       ),
   );
+
+  /* ---- Plan 059 step 11/14: the bounded discovery fixed point ------ */
+  // Links first seen on a state surface (hydrated now; consent and
+  // local-state join later) re-enter the frontier here. Every candidate is
+  // recorded into the inventory with its surface provenance, then either
+  // admitted and scanned by a wave of the same lanes, or given a terminal
+  // disposition naming the bound that stopped it. The loop stops only at
+  // the section 6 stops: no new eligible candidate, or a documented bound.
+  const admittedWaveUrls = await runDiscoveryWaves({
+    browser,
+    delayMs,
+    concurrency,
+    scheduler,
+    context,
+    onLanePageDone,
+    retryQueue,
+    initialUrls: new Set(pagesToScan.map((page) => page.url)),
+    depthByUrl,
+    growTotalPages: (count) => {
+      totalPages += count;
+    },
+  });
 
   if (retryQueue.size > 0) {
     await recoverFailedChecks(retryQueue, browser, delayMs, scheduler, context, {
@@ -1350,6 +1608,20 @@ async function runStagedFullAuditScan(
     });
   }
 
+  // Plan 021 content planning happens here, after the discovery waves, so
+  // a wave page is planned (and therefore Lighthouse-selected or not)
+  // exactly like a crawled one. A wave page carries the crawl's own
+  // extraction-failure fallback profile: its facts were never crawl-
+  // extracted, so the planner honestly knows nothing about it and classifies
+  // it as unknown rather than pretending otherwise.
+  const waveProfiles = admittedWaveUrls.map((url) =>
+    buildPageAuditProfile(emptyRawPageAuditFacts(), {
+      url,
+      isHomepage: false,
+      isOperatorSeed: false,
+    }),
+  );
+  const contentPlan = buildContentAuditPlan([...pagesToScan.map(toPlanProfile), ...waveProfiles]);
   const finalizedPlan = finalizeLighthousePlan(contentPlan, renderedCosts);
   onProgress?.({ type: 'select-performance' });
   const selectedUrls = new Set(
@@ -1475,7 +1747,7 @@ async function runStagedFullAuditScan(
     );
     if (kept !== undefined) pages.push(kept);
     scanned += 1;
-    onProgress?.({ type: 'scan-page', scanned, totalPages: pagesToScan.length, url, durationMs });
+    onProgress?.({ type: 'scan-page', scanned, totalPages, url, durationMs });
   };
 
   // Pages not selected for Lighthouse are already fully done once the
@@ -1548,7 +1820,12 @@ async function runStagedFullAuditScan(
 
   onProgress?.({ type: 'analysis-complete' });
 
-  return { pages, fullAuditPlan: finalizedPlan, analysisCoverageByUrl };
+  return {
+    pages,
+    fullAuditPlan: finalizedPlan,
+    analysisCoverageByUrl,
+    discoveryAdmittedUrls: admittedWaveUrls,
+  };
 }
 
 /**
@@ -1884,16 +2161,19 @@ export async function scanSite(
     holdLease(options);
     writeInventoryLedger(options.auditDir, inventoryLedger.snapshot());
   }
-  const finalizeInventoryLedger = (): InventoryLedgerSnapshot | undefined => {
+  const finalizeInventoryLedger = (
+    ...extraScannedUrlGroups: readonly (readonly string[])[]
+  ): InventoryLedgerSnapshot | undefined => {
     if (inventoryLedger === undefined) return undefined;
-    for (const page of pagesToScan) {
-      const candidate = inventoryLedger.candidate(page.url);
+    const scannedUrls = [...pagesToScan.map((page) => page.url), ...extraScannedUrlGroups.flat()];
+    for (const url of scannedUrls) {
+      const candidate = inventoryLedger.candidate(url);
       if (candidate === undefined) {
-        throw new Error(`scanSite: visited page ${page.url} is missing from the inventory ledger`);
+        throw new Error(`scanSite: visited page ${url} is missing from the inventory ledger`);
       }
       if (candidate.disposition === undefined) {
         inventoryLedger.recordDisposition({
-          url: page.url,
+          url,
           disposition: 'scanned',
           decidedAt: new Date(),
         });
@@ -2197,24 +2477,30 @@ export async function scanSite(
       evidenceEpoch: 1,
       launchRecoveryBrowser: options.launchRecoveryBrowser,
       holdLease: () => holdLease(options),
-      // Plan 059 step 10: mobile surfaces run on the Plan 059 scoped
+      // Plan 059 step 10/11: state surfaces run on the Plan 059 scoped
       // full-audit path only; the legacy/CLI path keeps its exact shape.
       mobileSurfaces: options.scopeDigest !== undefined,
+      hydrationSweep: options.scopeDigest !== undefined,
       exclusionPatterns: options.exclusions ?? [],
       surfaceLinks: [],
+      inventory: inventoryLedger ?? undefined,
+      maxPages: crawl.maxPages,
+      maxDepth: crawl.maxDepth,
+      assertSafeUrl: assertSafeDirectTarget,
     };
-    const { pages, fullAuditPlan, analysisCoverageByUrl } = await runStagedFullAuditScan(
-      pagesToScan,
-      options.browser,
-      options.debugPort,
-      crawl.effectiveDelayMs,
-      concurrency,
-      scheduler,
-      options.skipLighthouse ?? false,
-      context,
-      options.onProgress,
-    );
-    const finalInventory = finalizeInventoryLedger();
+    const { pages, fullAuditPlan, analysisCoverageByUrl, discoveryAdmittedUrls } =
+      await runStagedFullAuditScan(
+        pagesToScan,
+        options.browser,
+        options.debugPort,
+        crawl.effectiveDelayMs,
+        concurrency,
+        scheduler,
+        options.skipLighthouse ?? false,
+        context,
+        options.onProgress,
+      );
+    const finalInventory = finalizeInventoryLedger(discoveryAdmittedUrls);
     if (captureTemporalAnchors) {
       await closeTemporalWindow(
         crawl,

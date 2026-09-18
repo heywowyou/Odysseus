@@ -86,6 +86,7 @@ import {
   type PageReadinessRecord,
   type ScanSurface,
 } from './evidence-surfaces.js';
+import { HYDRATION_BOUND_LIMITATION, type HydrationSweepRecord } from './hydration-sweep.js';
 import {
   inventoryLedgerDigest,
   InventoryLedger,
@@ -115,6 +116,8 @@ export interface EvidencePageObservation {
    *  predated the surface contract or the surface could not run, which the
    *  page's own surfaceLimitations disclose. */
   surfaces?: readonly ScanSurface[];
+  /** Plan 059 step 11: the page's bounded hydration sweep, when one ran. */
+  hydration?: HydrationSweepRecord;
 }
 
 export interface AuditEvidenceGraphInput {
@@ -863,7 +866,7 @@ export function assembleAuditEvidenceGraph(input: AuditEvidenceGraphInput): Audi
           fontsReady: readiness.fontsReady,
           networkQuiet: readiness.networkQuiet,
           mutationQuiescent: readiness.mutationQuiescent,
-          hydrationProgress: 'not-run',
+          hydrationProgress: readiness.hydrationProgress ?? 'not-run',
           significantResourceFailures: readiness.significantResourceFailures,
           outcome: readiness.outcome,
         }),
@@ -944,6 +947,37 @@ export function assembleAuditEvidenceGraph(input: AuditEvidenceGraphInput): Audi
   ].sort((a, b) => a.surfaceId.localeCompare(b.surfaceId));
   for (const surface of surfaces) {
     acceptedArtifactDigests.push(surface.surfaceFingerprint);
+  }
+  // Section 9: content that kept expanding past the sweep bound is an
+  // explicit surface limitation, never an implicit truncation.
+  const hydrationBoundPages = input.pages
+    .filter((page) => page.hydration?.continuedExpansionAtBound === true)
+    .map((page) => page.url)
+    .sort();
+  if (hydrationBoundPages.length > 0) {
+    issues.add({
+      code: 'disclosed-scope-limitation',
+      severity: 'limitation',
+      resolution: 'operator',
+      summary: 'Content kept loading past the hydration sweep bound on some pages.',
+      evidenceRefs: hydrationBoundPages,
+      disclosure: disclosure(
+        HYDRATION_BOUND_LIMITATION.code,
+        byCount(
+          hydrationBoundPages.length,
+          "Le contenu d'une page continuait de s'afficher pendant le défilement de notre robot : la page n'a été analysée que jusqu'à la limite de ce balayage.",
+          (n) =>
+            `Le contenu de ${n} pages continuait de s'afficher pendant le défilement de notre robot : ces pages n'ont été analysées que jusqu'à la limite de ce balayage.`,
+        ),
+        byCount(
+          hydrationBoundPages.length,
+          "One page's content kept loading while our crawler scrolled: the page was analysed only up to the bound of that sweep.",
+          (n) =>
+            `${n} pages' content kept loading while our crawler scrolled: those pages were analysed only up to the bound of that sweep.`,
+        ),
+        hydrationBoundPages,
+      ),
+    });
   }
   const mobileSurfaces = surfaces.filter((surface) => surface.hasTouch);
   if (mobileSurfaces.length > 0) {

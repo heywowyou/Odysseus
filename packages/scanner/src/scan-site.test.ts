@@ -45,6 +45,10 @@ import { createPageWorkGuard } from './page-work-guard.js';
 import { mobileSurface } from './evidence-surfaces.js';
 import type { RenderedAnalysisResult } from './scan-page.js';
 import type { RenderedReadinessObservation } from './page-readiness.js';
+import { InventoryLedger } from './inventory-ledger.js';
+import { buildRobotsPolicySnapshot, type RobotsPolicySnapshot } from './robots-policy-snapshot.js';
+import { PUBLIC_SITE_NETWORK_POLICY } from './network-target-policy.js';
+import type { HydrationSweepRecord } from './hydration-sweep.js';
 
 let writtenTempDirs: string[] = [];
 
@@ -901,10 +905,13 @@ describe('scanSite mobile surfaces (plan 059 step 10)', () => {
       aiCrawlerBlocks: [],
       linkDiscoveredUrls: [pageA],
     } as never);
-    vi.mocked(runRenderedAnalysis).mockImplementation(async (_browser, url) => ({
-      url,
-      checkOutcomes: everyPageCheck(),
-    }));
+    vi.mocked(runRenderedAnalysis).mockImplementation(
+      async (_browser, url) =>
+        ({
+          url,
+          checkOutcomes: everyPageCheck(),
+        }) as never,
+    );
     vi.mocked(runLighthouseAnalysis).mockResolvedValue({
       lighthouse: { categories: {} } as never,
     });
@@ -918,7 +925,9 @@ describe('scanSite mobile surfaces (plan 059 step 10)', () => {
     });
     vi.mocked(runMobileSurfaceAnalysis).mockImplementation(async (_browser, url) => {
       order.push(`mobile:${url}`);
-      return mobileRecordFor(url, [`${url}mobile-only`] as string[]) as never;
+      // No links discovered here: this test pins lane ordering, not the
+      // discovery fixed point (covered by the step 11 tests).
+      return mobileRecordFor(url, []) as never;
     });
 
     const result = await scanSite(startUrl, {
@@ -946,13 +955,6 @@ describe('scanSite mobile surfaces (plan 059 step 10)', () => {
       expect(page.surfaces?.map((surface) => surface.surfaceId)).toEqual([
         page.mobileSurface!.surface.surfaceId,
       ]);
-      expect(page.surfaceLinks).toEqual([
-        {
-          url: `${url}mobile-only`,
-          source: 'rendered-link',
-          surfaceId: page.mobileSurface!.surface.surfaceId,
-        },
-      ]);
     }
   });
 
@@ -972,7 +974,13 @@ describe('scanSite mobile surfaces (plan 059 step 10)', () => {
   it('persists the mobile surface, its surface record and its discovered links on scan.json', async () => {
     const { auditDir, pagesDir } = await makeTempAuditDir('scan-site-mobile-');
     vi.mocked(runMobileSurfaceAnalysis).mockImplementation(
-      async (_browser, url) => mobileRecordFor(url, [`${url}mobile-only`]) as never,
+      async (_browser, url) =>
+        // Only the crawl's own pages discover a mobile-only link, so the
+        // discovery fixed point converges after one bounded wave.
+        mobileRecordFor(
+          url,
+          url === startUrl || url === pageA ? [`${url}mobile-only`] : [],
+        ) as never,
     );
 
     await scanSite(startUrl, {
@@ -1050,6 +1058,362 @@ describe('scanSite mobile surfaces (plan 059 step 10)', () => {
     expect(result.analysisCoverageByUrl?.get(startUrl)?.passes.rendered).toEqual({
       outcome: 'completed',
     });
+  });
+});
+
+describe('scanSite hydration sweep and discovery waves (plan 059 step 11)', () => {
+  const scopeDigest = `sha256:${'c'.repeat(64)}`;
+  const crawlerUa = 'OdysseusBot/1.0 (+https://odysseusaudit.com/bot)';
+
+  const hydrationSweep = (links: string[]): HydrationSweepRecord => ({
+    startScrollHeight: 800,
+    endScrollHeight: 1600,
+    startDomNodeCount: 200,
+    endDomNodeCount: 400,
+    startResourceCount: 10,
+    endResourceCount: 10,
+    steps: 3,
+    quiescent: true,
+    continuedExpansionAtBound: false,
+    progress: 'bounded-expansion',
+    discoveredLinks: links,
+  });
+
+  const everyPageCheck = () => ({
+    'render-diff': 'completed',
+    axe: 'completed',
+    'mentions-legales': 'not-applicable',
+    'transactional-flow-evidence': 'completed',
+    'transactional-flow-redirect-checks': 'completed',
+    'transactional-flow-ambiguities': 'completed',
+    'head-metadata': 'completed',
+    'canonical-target': 'not-applicable',
+    'mixed-content': 'completed',
+    'keyboard-navigation': 'completed',
+    'form-error-handling': 'completed',
+    'video-captions': 'completed',
+    'placeholder-labels': 'completed',
+    'alt-text': 'completed',
+    'nap-consistency': 'not-applicable',
+    reflow: 'completed',
+    'html-validity': 'completed',
+    'structured-data': 'completed',
+  });
+
+  const initialCrawl = (overrides: Record<string, unknown> = {}) => {
+    const ledger = new InventoryLedger({ evidenceEpoch: 1, scopeDigest });
+    ledger.recordDiscovery({ url: startUrl, source: 'start', discoveredAt: new Date() });
+    return {
+      startUrl,
+      pages: [
+        {
+          url: startUrl,
+          depth: 0,
+          status: 'visited',
+          discoveryMethod: 'link',
+          auditProfile: {
+            url: startUrl,
+            profileVersion: 'v1',
+            roleSignals: [{ kind: 'homepage-url', detail: startUrl }],
+          },
+        },
+      ],
+      effectiveDelayMs: 0,
+      visitedCount: 1,
+      maxPages: 10,
+      maxDepth: 5,
+      robotsTxtFound: true,
+      robotsPolicyChain: [
+        buildRobotsPolicySnapshot({
+          evidenceEpoch: 1,
+          revision: 0,
+          origin: 'https://example.com',
+          userAgent: crawlerUa,
+          robotsText: 'User-agent: *\nAllow: /',
+          retrievedAt: new Date(),
+          rules: { found: true, disallow: [], allow: ['/'], sitemapUrls: [] },
+          configuredDelayMs: 0,
+        }),
+      ],
+      inventoryLedger: ledger.snapshot(),
+      robotsDisallowMatches: [],
+      aiCrawlerBlocks: [],
+      linkDiscoveredUrls: [],
+      ...overrides,
+    } as never;
+  };
+
+  beforeEach(() => {
+    vi.mocked(crawlSite).mockReset();
+    vi.mocked(runLighthouseAnalysis).mockResolvedValue({
+      lighthouse: { categories: {} } as never,
+    });
+  });
+
+  const scan = async () =>
+    scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: '/tmp/pages',
+      concurrency: 2,
+      fullAuditPlanning: true,
+      skipLighthouse: true,
+      scopeDigest,
+    });
+
+  it('scans a hydrated-only link and enters it in the inventory with provenance', async () => {
+    vi.mocked(crawlSite).mockResolvedValue(initialCrawl());
+    vi.mocked(runRenderedAnalysis).mockImplementation(
+      async (_browser, url) =>
+        ({
+          url,
+          checkOutcomes: everyPageCheck(),
+          readiness: {
+            navigationMilestone: 'load',
+            httpStatus: 200,
+            domReady: true,
+            fontsReady: true,
+            networkQuiet: true,
+            mutationQuiescent: true,
+            significantResourceFailures: [],
+            outcome: 'ready',
+            hydrationProgress: 'bounded-expansion',
+          },
+          hydrationSweep: hydrationSweep(
+            url === startUrl ? ['https://example.com/hydrated-only'] : [],
+          ),
+        }) as never,
+    );
+
+    const result = await scan();
+
+    const scannedUrls = vi.mocked(runRenderedAnalysis).mock.calls.map((call) => call[1]);
+    expect(scannedUrls).toEqual([startUrl, 'https://example.com/hydrated-only']);
+    const candidate = result.inventoryLedger?.candidates.find(
+      (entry) => entry.url === 'https://example.com/hydrated-only',
+    );
+    expect(candidate?.discoveries).toHaveLength(1);
+    expect(candidate?.discoveries[0]).toMatchObject({
+      source: 'hydrated-link',
+      referrer: startUrl,
+    });
+    expect(candidate?.discoveries[0]?.surfaceId).toMatch(/^surface:/);
+    expect(candidate?.disposition?.disposition).toBe('scanned');
+    // The page that ran the sweep keeps real hydration readiness.
+    const home = result.pages.find((page) => page.url === startUrl);
+    expect(home?.readiness?.hydrationProgress).toBe('bounded-expansion');
+  });
+
+  it('inventories a depth-bound hydrated link instead of scanning it', async () => {
+    vi.mocked(crawlSite).mockResolvedValue(initialCrawl({ maxDepth: 0 }));
+    vi.mocked(runRenderedAnalysis).mockImplementation(
+      async (_browser, url) =>
+        ({
+          url,
+          checkOutcomes: everyPageCheck(),
+          hydrationSweep: hydrationSweep(
+            url === startUrl ? ['https://example.com/below-the-bound'] : [],
+          ),
+        }) as never,
+    );
+
+    const result = await scan();
+
+    expect(vi.mocked(runRenderedAnalysis).mock.calls.map((call) => call[1])).toEqual([startUrl]);
+    const candidate = result.inventoryLedger?.candidates.find(
+      (entry) => entry.url === 'https://example.com/below-the-bound',
+    );
+    expect(candidate?.disposition?.disposition).toBe('depth-bound');
+  });
+
+  it('keeps the page cap truthful for hydrated links and disposes the surplus', async () => {
+    vi.mocked(crawlSite).mockResolvedValue(initialCrawl({ maxPages: 1 }));
+    vi.mocked(runRenderedAnalysis).mockImplementation(
+      async (_browser, url) =>
+        ({
+          url,
+          checkOutcomes: everyPageCheck(),
+          hydrationSweep: hydrationSweep(
+            url === startUrl
+              ? ['https://example.com/would-fit', 'https://example.com/never-scanned']
+              : [],
+          ),
+        }) as never,
+    );
+
+    const result = await scan();
+
+    expect(vi.mocked(runRenderedAnalysis).mock.calls.map((call) => call[1])).toEqual([startUrl]);
+    const dispositionOf = (url: string) =>
+      result.inventoryLedger?.candidates.find((entry) => entry.url === url)?.disposition
+        ?.disposition;
+    expect(dispositionOf('https://example.com/would-fit')).toBe('page-cap');
+    expect(dispositionOf('https://example.com/never-scanned')).toBe('page-cap');
+  });
+
+  it('honors the robots policy for a hydrated link', async () => {
+    const disallowingChain: RobotsPolicySnapshot[] = [
+      buildRobotsPolicySnapshot({
+        evidenceEpoch: 1,
+        revision: 0,
+        origin: 'https://example.com',
+        userAgent: crawlerUa,
+        robotsText: 'User-agent: *\nDisallow: /admin',
+        retrievedAt: new Date(),
+        rules: { found: true, disallow: ['/admin'], allow: [], sitemapUrls: [] },
+        configuredDelayMs: 0,
+      }),
+    ];
+    vi.mocked(crawlSite).mockResolvedValue(initialCrawl({ robotsPolicyChain: disallowingChain }));
+    vi.mocked(runRenderedAnalysis).mockImplementation(
+      async (_browser, url) =>
+        ({
+          url,
+          checkOutcomes: everyPageCheck(),
+          hydrationSweep: hydrationSweep(
+            url === startUrl ? ['https://example.com/admin/secret'] : [],
+          ),
+        }) as never,
+    );
+
+    const result = await scan();
+
+    expect(vi.mocked(runRenderedAnalysis).mock.calls.map((call) => call[1])).toEqual([startUrl]);
+    const candidate = result.inventoryLedger?.candidates.find(
+      (entry) => entry.url === 'https://example.com/admin/secret',
+    );
+    expect(candidate?.disposition?.disposition).toBe('robots');
+  });
+
+  it('disposes a private-address hydrated link as network-unsafe, never scans it', async () => {
+    vi.mocked(crawlSite).mockResolvedValue(initialCrawl());
+    vi.mocked(runRenderedAnalysis).mockImplementation(
+      async (_browser, url) =>
+        ({
+          url,
+          checkOutcomes: everyPageCheck(),
+          hydrationSweep: hydrationSweep(
+            url === startUrl ? ['http://127.0.0.1:8080/metadata'] : [],
+          ),
+        }) as never,
+    );
+
+    const result = await scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: '/tmp/pages',
+      concurrency: 1,
+      fullAuditPlanning: true,
+      skipLighthouse: true,
+      scopeDigest,
+      networkPolicy: PUBLIC_SITE_NETWORK_POLICY,
+    });
+
+    expect(vi.mocked(runRenderedAnalysis).mock.calls.map((call) => call[1])).toEqual([startUrl]);
+    const candidate = result.inventoryLedger?.candidates.find(
+      (entry) => entry.url === 'http://127.0.0.1:8080/metadata',
+    );
+    expect(candidate?.disposition?.disposition).toBe('network-safety');
+  });
+
+  it('reaches the fixed point when a wave discovers nothing new', async () => {
+    vi.mocked(crawlSite).mockResolvedValue(initialCrawl());
+    vi.mocked(runRenderedAnalysis).mockImplementation(
+      async (_browser, url) =>
+        ({
+          url,
+          checkOutcomes: everyPageCheck(),
+          hydrationSweep: hydrationSweep(
+            url === startUrl ? ['https://example.com/terminal-link'] : [],
+          ),
+        }) as never,
+    );
+
+    const result = await scan();
+
+    expect(
+      vi
+        .mocked(runRenderedAnalysis)
+        .mock.calls.map((call) => call[1])
+        .sort(),
+    ).toEqual([startUrl, 'https://example.com/terminal-link'].sort());
+    const candidate = result.inventoryLedger?.candidates.find(
+      (entry) => entry.url === 'https://example.com/terminal-link',
+    );
+    expect(candidate?.disposition?.disposition).toBe('scanned');
+    expect(result.inventoryLedger?.candidates.every((entry) => entry.disposition)).toBe(true);
+  });
+
+  it('bounds cascading discovery at the wave budget and discloses the bound', async () => {
+    vi.mocked(crawlSite).mockResolvedValue(initialCrawl());
+    vi.mocked(runRenderedAnalysis).mockImplementation(async (_browser, url) => {
+      const match = url.match(/cascade-(\d+)/);
+      const next = match === null ? 1 : Number(match[1]) + 1;
+      return {
+        url,
+        checkOutcomes: everyPageCheck(),
+        hydrationSweep: hydrationSweep(
+          match !== null && Number(match[1]) >= 4 ? [] : [`https://example.com/cascade-${next}`],
+        ),
+      } as never;
+    });
+
+    const result = await scan();
+
+    const dispositionOf = (url: string) =>
+      result.inventoryLedger?.candidates.find((entry) => entry.url === url)?.disposition
+        ?.disposition;
+    // Three waves are admitted and scanned; the fourth-level link the last
+    // wave discovered is bounded, disclosed, never silently dropped.
+    expect(dispositionOf('https://example.com/cascade-1')).toBe('scanned');
+    expect(dispositionOf('https://example.com/cascade-2')).toBe('scanned');
+    expect(dispositionOf('https://example.com/cascade-3')).toBe('scanned');
+    expect(dispositionOf('https://example.com/cascade-4')).toBe('continuation-guard');
+    expect(
+      vi
+        .mocked(runRenderedAnalysis)
+        .mock.calls.some((call) => call[1] === 'https://example.com/cascade-4'),
+    ).toBe(false);
+  });
+
+  it('persists the sweep and real hydration readiness on scan.json', async () => {
+    const { auditDir, pagesDir } = await makeTempAuditDir('scan-site-hydration-');
+    vi.mocked(crawlSite).mockResolvedValue(initialCrawl());
+    vi.mocked(runRenderedAnalysis).mockImplementation(
+      async (_browser, url) =>
+        ({
+          url,
+          checkOutcomes: everyPageCheck(),
+          readiness: {
+            navigationMilestone: 'load',
+            httpStatus: 200,
+            domReady: true,
+            fontsReady: true,
+            networkQuiet: true,
+            mutationQuiescent: true,
+            significantResourceFailures: [],
+            outcome: 'ready',
+            hydrationProgress: 'bounded-expansion',
+          },
+          hydrationSweep: hydrationSweep([]),
+        }) as never,
+    );
+
+    await scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: pagesDir,
+      auditDir,
+      writePagesAsScanned: true,
+      concurrency: 1,
+      fullAuditPlanning: true,
+      skipLighthouse: true,
+      scopeDigest,
+    });
+
+    const home = readPageScanJson(pagesDir, startUrl)!;
+    expect(home.hydrationSweep?.progress).toBe('bounded-expansion');
+    expect(home.readiness?.hydrationProgress).toBe('bounded-expansion');
   });
 });
 

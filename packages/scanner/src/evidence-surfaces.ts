@@ -15,6 +15,10 @@ export type SurfaceInteractionState =
 
 export type SurfaceReadinessOutcome = 'ready' | 'timeout' | 'unstable' | 'blocked';
 
+/** How far the bounded hydration sweep got on this surface (section 9).
+ *  `not-run` is the honest value for a sweep that was never asked for. */
+export type HydrationProgress = 'not-run' | 'stable' | 'bounded-expansion' | 'failed';
+
 export interface ScanSurfaceInput {
   evidenceEpoch: number;
   pageIdentity: string;
@@ -69,7 +73,7 @@ export interface PageReadinessRecordInput {
   fontsReady: boolean | null;
   networkQuiet: boolean;
   mutationQuiescent: boolean;
-  hydrationProgress: 'not-run' | 'stable' | 'bounded-expansion' | 'failed';
+  hydrationProgress: HydrationProgress;
   significantResourceFailures: readonly string[];
   outcome: SurfaceReadinessOutcome;
   diagnosticCode?: string;

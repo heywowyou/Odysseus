@@ -71,6 +71,12 @@ import { extractStructuralAnchor, type StructuralAnchor } from './temporal-ancho
 import type { PerformanceMeasurementSet } from './performance-measurement-set.js';
 import type { MobileSurfaceRecord } from './mobile-surface.js';
 import type { SurfaceLinkDiscovery } from './surface-discovery.js';
+import { collectSurfaceLinks } from './surface-discovery.js';
+import {
+  runHydrationSweep,
+  HYDRATION_SWEEP_UNAVAILABLE,
+  type HydrationSweepRecord,
+} from './hydration-sweep.js';
 import type { ScanSurface, SurfaceLimitationRecord } from './evidence-surfaces.js';
 
 export interface ScanPageOptions {
@@ -145,6 +151,15 @@ export interface ScanPageOptions {
   guard?: PageWorkGuard;
   networkPolicy?: NetworkTargetPolicy;
   onNetworkSafetyBlocked?: (disposition: NetworkSafetyDisposition) => void;
+  /** Plan 059 step 11: run the bounded hydration sweep as the very last
+   *  step on the rendered page, after every check (including the mutating
+   *  ones) has finished, so lazy content is seen and its links discovered
+   *  without ever contaminating the baseline evidence. Off by default; the
+   *  Plan 059 full-audit path turns it on. */
+  hydrationSweep?: boolean;
+  /** Operator crawl exclusions, applied to links the hydration sweep
+   *  discovers. */
+  exclusionPatterns?: readonly string[];
 }
 
 /**
@@ -238,6 +253,10 @@ export interface PageScanResult {
    *  their profile claims, disclosed on this page's evidence instead of
    *  being silently omitted. */
   surfaceLimitations?: SurfaceLimitationRecord[];
+  /** Plan 059 step 11: the bounded hydration sweep taken after every
+   *  check finished with the rendered page, with the links the hydrated
+   *  document exposed. Absent when the caller did not ask for a sweep. */
+  hydrationSweep?: HydrationSweepRecord;
 }
 
 /**
@@ -692,8 +711,8 @@ export async function runRenderedAnalysis(
           checkOutcomes['form-error-handling'] = 'failed';
         }
 
-        // C3: genuinely last. This is the only check that changes the
-        // viewport, which re-runs every media query and any resize
+        // C3: genuinely last of the checks. This is the only check that
+        // changes the viewport, which re-runs every media query and any resize
         // listener on the page - far more disruptive to a later check
         // than the Tab walk or the form-validation trigger above. It
         // restores the original viewport in its own finally block, but
@@ -704,6 +723,40 @@ export async function runRenderedAnalysis(
         } catch {
           reflowResult = undefined;
           checkOutcomes.reflow = 'failed';
+        }
+
+        // Plan 059 step 11: the hydration sweep runs after every check,
+        // read-only or mutating, has finished with this page. Scrolling
+        // pulls in lazy content, so it would contaminate any evidence
+        // taken before it (section 9, "Baseline first"); placed here it
+        // can only extend what the page's own artifacts record afterwards.
+        if (options.hydrationSweep === true) {
+          try {
+            const sweep = await runHydrationSweep(page);
+            sweep.discoveredLinks = await collectSurfaceLinks(page, {
+              baseUrl: page.url(),
+              ...(options.exclusionPatterns !== undefined
+                ? { exclusionPatterns: options.exclusionPatterns }
+                : {}),
+            }).catch(() => []);
+            result.hydrationSweep = sweep;
+            if (result.readiness !== undefined) {
+              result.readiness = { ...result.readiness, hydrationProgress: sweep.progress };
+            }
+          } catch (error) {
+            // A sweep that cannot even run leaves the page's readiness
+            // honestly saying the hydration dimension was not measured.
+            if (result.readiness !== undefined) {
+              result.readiness = { ...result.readiness, hydrationProgress: 'failed' };
+            }
+            result.surfaceLimitations = [
+              ...(result.surfaceLimitations ?? []),
+              {
+                ...HYDRATION_SWEEP_UNAVAILABLE,
+                detail: error instanceof Error ? error.message : String(error),
+              },
+            ];
+          }
         }
       },
     });

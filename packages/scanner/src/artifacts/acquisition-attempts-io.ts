@@ -100,6 +100,7 @@ export function readPersistedEvidenceInputs(
         ? { performanceMeasurement: scan.performanceMeasurement }
         : {}),
       ...(scan.surfaces !== undefined ? { surfaces: scan.surfaces } : {}),
+      ...(scan.hydrationSweep !== undefined ? { hydration: scan.hydrationSweep } : {}),
     });
     if (scan.structuralAnchor !== undefined) pageAnchors.push(scan.structuralAnchor);
   }

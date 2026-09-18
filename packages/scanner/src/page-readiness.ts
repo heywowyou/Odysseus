@@ -11,7 +11,7 @@
  * of its evidence.
  */
 import type { Frame, Page, Response } from 'playwright';
-import type { SurfaceReadinessOutcome } from './evidence-surfaces.js';
+import type { HydrationProgress, SurfaceReadinessOutcome } from './evidence-surfaces.js';
 
 /** Resource types whose failure can change what a check sees. An image or a
  *  beacon failing does not; a stylesheet or a script can. */
@@ -36,6 +36,10 @@ export interface RenderedReadinessObservation {
    *  never reaches stored evidence. Bounded and sorted. */
   significantResourceFailures: string[];
   outcome: SurfaceReadinessOutcome;
+  /** Plan 059 step 11: how far the bounded hydration sweep got after the
+   *  checks finished with the page. Absent means the sweep was never
+   *  asked for (legacy runs); the readiness record then says `not-run`. */
+  hydrationProgress?: HydrationProgress;
 }
 
 export interface FrameObservation {

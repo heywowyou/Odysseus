@@ -399,3 +399,95 @@ describe('mobile surfaces in the evidence graph (plan 059 step 10)', () => {
     ).toBe(false);
   });
 });
+
+describe('hydration readiness in the evidence graph (plan 059 step 11)', () => {
+  it('persists real hydration progress instead of a constant not-run', () => {
+    const graph = assembleAuditEvidenceGraph(
+      cleanInput({
+        pages: [
+          {
+            ...page(HOME),
+            readiness: {
+              navigationMilestone: 'load',
+              httpStatus: 200,
+              domReady: true,
+              fontsReady: true,
+              networkQuiet: true,
+              mutationQuiescent: true,
+              significantResourceFailures: [],
+              outcome: 'ready',
+              hydrationProgress: 'bounded-expansion',
+            },
+          },
+          page(ROOMS),
+        ],
+      }),
+    );
+
+    const home = graph.readinessRecords.find((record) => record.pageIdentity === HOME);
+    const rooms = graph.readinessRecords.find((record) => record.pageIdentity === ROOMS);
+    expect(home?.hydrationProgress).toBe('bounded-expansion');
+    expect(rooms?.hydrationProgress).toBe('not-run');
+  });
+
+  it('discloses pages whose content kept expanding past the sweep bound', () => {
+    const graph = assembleAuditEvidenceGraph(
+      cleanInput({
+        pages: [
+          {
+            ...page(HOME),
+            hydration: {
+              startScrollHeight: 800,
+              endScrollHeight: 30800,
+              startDomNodeCount: 200,
+              endDomNodeCount: 6200,
+              startResourceCount: 10,
+              endResourceCount: 10,
+              steps: 30,
+              quiescent: false,
+              continuedExpansionAtBound: true,
+              progress: 'bounded-expansion',
+            },
+          },
+          page(ROOMS),
+        ],
+      }),
+    );
+
+    const limitation = graph.quality.issues.find(
+      (issue) => issue.disclosure?.code === 'hydration-bound-reached',
+    );
+    expect(limitation).toBeDefined();
+    expect(limitation?.severity).toBe('limitation');
+    expect(limitation?.evidenceRefs).toEqual([HOME]);
+  });
+
+  it('emits no hydration-bound limitation when every sweep settled', () => {
+    const graph = assembleAuditEvidenceGraph(
+      cleanInput({
+        pages: [
+          {
+            ...page(HOME),
+            hydration: {
+              startScrollHeight: 800,
+              endScrollHeight: 1600,
+              startDomNodeCount: 200,
+              endDomNodeCount: 400,
+              startResourceCount: 10,
+              endResourceCount: 12,
+              steps: 4,
+              quiescent: true,
+              continuedExpansionAtBound: false,
+              progress: 'bounded-expansion',
+            },
+          },
+          page(ROOMS),
+        ],
+      }),
+    );
+
+    expect(
+      graph.quality.issues.some((issue) => issue.disclosure?.code === 'hydration-bound-reached'),
+    ).toBe(false);
+  });
+});

@@ -123,6 +123,9 @@ export function buildScanJson(
     ...(scanResult.surfaceLimitations !== undefined
       ? { surfaceLimitations: scanResult.surfaceLimitations }
       : {}),
+    ...(scanResult.hydrationSweep !== undefined
+      ? { hydrationSweep: scanResult.hydrationSweep }
+      : {}),
   };
 }
 
