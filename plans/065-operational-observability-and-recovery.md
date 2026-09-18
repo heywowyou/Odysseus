@@ -630,7 +630,26 @@ failure into success.
 
 ---
 
-# 21. Definition of done
+# 21. Executable closure contract
+
+“Diagnosable”, “understandable” and “recoverable” require exhaustive mappings, not better error prose.
+
+Before closure:
+
+- one closed issue-code registry is exhaustive over every surfaced 058/059/legacy nonautomatic failure;
+- a compile/runtime exhaustive map binds each code to category, retryability, attention policy, recovery class and safe operator action;
+- adding an issue code without that mapping fails tests;
+- every recovery class has at least one fault-injection test proving preserved work and the smallest safe action;
+- privacy canaries include prompt text, report prose, scanned HTML, credentials, email/phone and signed URLs and assert absence from default diagnostics/telemetry;
+- system-status fields have explicit freshness/source semantics; “green” cannot be synthesized from missing data;
+- operator E2E acceptance records whether the seeded failure can be understood and recovered without logs/SSH;
+- the requirement-to-proof table maps every reason-code family, recovery class and fail-closed rule to implementation and proof.
+
+A generic `error.message` plus a Retry button cannot satisfy this contract.
+
+---
+
+# 22. Definition of done Definition of done
 
 Plan 065 is implemented when:
 
