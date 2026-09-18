@@ -56,10 +56,18 @@ export {
   getJob,
   listJobs,
   markJobNeedsInput,
+  requestJobCancellation,
   resetOrphanedRunningJobs,
+  settleCancelRequestedJobsOnStartup,
   updateJobProgress,
 } from './jobs.js';
-export type { CompleteJobPatch, JobProgressPatch, JobSummaryFields, NewJobInput } from './jobs.js';
+export type {
+  CompleteJobPatch,
+  JobCancellationRequestResult,
+  JobProgressPatch,
+  JobSummaryFields,
+  NewJobInput,
+} from './jobs.js';
 export { reconcileFailedAuditJobs } from './reconcile-jobs.js';
 export {
   deleteAuditCascade,

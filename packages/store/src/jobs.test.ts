@@ -9,7 +9,9 @@ import {
   getJob,
   listJobs,
   markJobNeedsInput,
+  requestJobCancellation,
   resetOrphanedRunningJobs,
+  settleCancelRequestedJobsOnStartup,
   updateJobProgress,
 } from './jobs.js';
 import { createJobModel } from './schemas/job.schema.js';
@@ -304,4 +306,68 @@ describe.skipIf(!available)('job queue persistence', () => {
       expect((await getJob(connection!, jobId))?.status).toBe('cancelled');
     });
   });
+  describe('durable cancellation requests', () => {
+    it('cancels queued work immediately because no worker owns it', async () => {
+      const jobId = await queuedJob(new Date());
+
+      await expect(
+        requestJobCancellation(connection!, jobId, 'cancelled by operator'),
+      ).resolves.toBe('cancelled');
+
+      const stored = await getJob(connection!, jobId);
+      expect(stored?.status).toBe('cancelled');
+      expect(stored?.phase).toBe('cancelled');
+      expect(stored?.finishedAt).toBeInstanceOf(Date);
+    });
+
+    it('keeps running work non-terminal until the worker confirms it stopped', async () => {
+      const created = await createJob(connection!, {
+        type: 'full-audit',
+        siteUrl: 'https://example.com/',
+        options: { prospectId: 'prospect-cancel' },
+      });
+      await claimNextQueuedJob(connection!);
+      await updateJobProgress(connection!, created.jobId, { phase: 'crawl' });
+
+      await expect(
+        requestJobCancellation(connection!, created.jobId, 'cancelled by operator'),
+      ).resolves.toBe('cancel-requested');
+      await expect(
+        requestJobCancellation(connection!, created.jobId, 'cancelled by operator'),
+      ).resolves.toBe('cancel-requested');
+
+      const requested = await getJob(connection!, created.jobId);
+      expect(requested?.status).toBe('cancel-requested');
+      expect(requested?.phase).toBe('crawl');
+      expect(requested?.finishedAt).toBeUndefined();
+      expect(requested?.activeSlot).toBe('prospect-cancel:complete-crawl');
+
+      await completeJob(connection!, created.jobId);
+      await failJob(connection!, created.jobId, 'late failure');
+      expect((await getJob(connection!, created.jobId))?.status).toBe('cancel-requested');
+
+      await cancelJob(connection!, created.jobId, 'cancelled by operator');
+      const stopped = await getJob(connection!, created.jobId);
+      expect(stopped?.status).toBe('cancelled');
+      expect(stopped?.phase).toBe('cancelled');
+      expect(stopped?.finishedAt).toBeInstanceOf(Date);
+      expect(stopped?.activeSlot).toBeUndefined();
+    });
+
+    it('finalizes persisted stop requests instead of requeueing them on startup', async () => {
+      const jobId = await queuedJob(new Date());
+      await claimNextQueuedJob(connection!);
+      await requestJobCancellation(connection!, jobId, 'cancelled by operator');
+
+      const now = new Date('2026-09-18T01:00:00.000Z');
+      await expect(settleCancelRequestedJobsOnStartup(connection!, now)).resolves.toBe(1);
+
+      const stored = await getJob(connection!, jobId);
+      expect(stored?.status).toBe('cancelled');
+      expect(stored?.finishedAt).toEqual(now);
+      await expect(resetOrphanedRunningJobs(connection!, now, { includeFreshHeartbeats: true }))
+        .resolves.toBe(0);
+    });
+  });
+
 });

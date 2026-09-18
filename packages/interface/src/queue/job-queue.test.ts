@@ -7,6 +7,7 @@ vi.mock('@odysseus/store', () => ({
   markJobNeedsInput: vi.fn(),
   reconcileFailedAuditJobs: vi.fn(),
   resetOrphanedRunningJobs: vi.fn(),
+  settleCancelRequestedJobsOnStartup: vi.fn(),
 }));
 vi.mock('@odysseus/scanner', () => ({
   OriginLock: class {},
@@ -35,6 +36,7 @@ import {
   markJobNeedsInput,
   reconcileFailedAuditJobs,
   resetOrphanedRunningJobs,
+  settleCancelRequestedJobsOnStartup,
   type JobDocument,
   type JobType,
 } from '@odysseus/store';
@@ -66,6 +68,7 @@ let queue: JobQueue | undefined;
 
 beforeEach(() => {
   vi.mocked(resetOrphanedRunningJobs).mockResolvedValue(0);
+  vi.mocked(settleCancelRequestedJobsOnStartup).mockResolvedValue(0);
   vi.mocked(reconcileFailedAuditJobs).mockResolvedValue(0);
 });
 
@@ -91,6 +94,7 @@ describe('JobQueue', () => {
     vi.mocked(resetOrphanedRunningJobs).mockResolvedValue(2);
     queue = queueWith(vi.fn());
     expect(await queue.start()).toBe(2);
+    expect(settleCancelRequestedJobsOnStartup).toHaveBeenCalledWith(connection);
     expect(resetOrphanedRunningJobs).toHaveBeenCalledWith(connection, expect.any(Date), {
       includeFreshHeartbeats: true,
     });

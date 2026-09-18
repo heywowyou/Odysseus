@@ -3,10 +3,10 @@
  * handlers share one process, so a stop request needs no database polling
  * loop: the cancel route registers the jobId here, and each runner checks
  * the registry at its natural page boundaries (the scan progress reporter
- * for full audits, the worker loop for prospecting). The job document is
- * marked 'cancelled' in the same request, so the dashboard reflects the
- * stop immediately; the registry only decides when the in-flight pipeline
- * work itself aborts.
+ * for full audits, the worker loop for prospecting). Durable state becomes
+ * 'cancel-requested' first; only the worker reaching a safe boundary confirms
+ * terminal 'cancelled'. The registry is the process-local delivery mechanism
+ * for that already-persisted intent.
  */
 
 /** Thrown by a runner once its stop request is seen. The queue's own

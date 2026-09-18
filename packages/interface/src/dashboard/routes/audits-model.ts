@@ -28,7 +28,7 @@ export interface SeverityBadge {
   count: number;
 }
 
-const RUNNING_STATUSES: readonly DisplayJobStatus[] = ['queued', 'running'];
+const RUNNING_STATUSES: readonly DisplayJobStatus[] = ['queued', 'running', 'cancel-requested'];
 
 /** Header status KPIs in one pass so a 200-row poll stays trivially cheap.
  *  Issue #380: counted on the displayed status (listStatus), the same
@@ -161,7 +161,9 @@ export function scanQueue(summaries: readonly ScanSummary[]): {
   // ties in queue order.
   const byCreation = sortSummaries([...summaries].reverse(), 'oldest');
   return {
-    running: byCreation.filter((summary) => summary.status === 'running'),
+    running: byCreation.filter(
+      (summary) => summary.status === 'running' || summary.status === 'cancel-requested',
+    ),
     upNext: byCreation.filter((summary) => summary.status === 'queued'),
   };
 }

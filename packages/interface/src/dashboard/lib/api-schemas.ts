@@ -16,6 +16,7 @@ import { z } from 'zod';
 export const jobStatusSchema = z.enum([
   'queued',
   'running',
+  'cancel-requested',
   'complete',
   'failed',
   'cancelled',

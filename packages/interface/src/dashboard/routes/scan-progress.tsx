@@ -135,9 +135,9 @@ export function ScanProgressPage(): JSX.Element {
     if (jobId === undefined) return;
     try {
       await postEmpty(`/api/scans/${encodeURIComponent(jobId)}/cancel`);
-      // Once the fetched document reads terminal the fetcher settles and
-      // polling stops; refresh surfaces the cancelled card on this tick
-      // instead of waiting for a poll that will no longer happen.
+      // Running work first becomes cancel-requested, so keep polling until
+      // the worker confirms the terminal cancelled state. A queued job may
+      // already be terminal on this refresh.
       refresh();
     } catch {
       toast.error(strings.audits.actionFailed);
@@ -213,12 +213,17 @@ export function ScanProgressPage(): JSX.Element {
                   (normalizing, writing, rendering the PDFs) are otherwise
                   invisible while they run. */}
               <div className="flex items-center gap-2 text-sm">
-                {isTerminal(job.status) ? null : <StatusDot status="running" />}
+                {isTerminal(job.status) ? null : (
+                  <StatusDot
+                    status={job.status === 'cancel-requested' ? 'cancel-requested' : 'running'}
+                  />
+                )}
                 <span className="text-ink-soft">
-                  {/* Issue #386: a report-stage failure never reads "Failed". */}
-                  {terminalCardKind(job) === 'report-issue'
-                    ? strings.common.statusLabels['report-issue']
-                    : currentPhaseLabel(job.phase, strings.progress.phaseLabels)}
+                  {job.status === 'cancel-requested'
+                    ? strings.common.statusLabels['cancel-requested']
+                    : terminalCardKind(job) === 'report-issue'
+                      ? strings.common.statusLabels['report-issue']
+                      : currentPhaseLabel(job.phase, strings.progress.phaseLabels)}
                 </span>
               </div>
               {hasCoverage(job) ? (

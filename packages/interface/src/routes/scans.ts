@@ -2,8 +2,8 @@ import type { Connection } from 'mongoose';
 import { isHttpUrlWithoutCredentials, isValidSiren } from '@odysseus/core';
 import {
   ActiveJobSlotTakenError,
-  cancelJob,
   cancelQueuedJobs,
+  requestJobCancellation,
   createJob,
   deleteAuditCascade,
   deleteJob,
@@ -539,13 +539,17 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       );
       return;
     }
-    queue.requestCancel(jobId);
-    const cancelled = await cancelJob(connection, jobId, 'cancelled by operator');
-    if (!cancelled) {
+    const cancellation = await requestJobCancellation(
+      connection,
+      jobId,
+      'cancelled by operator',
+    );
+    if (cancellation === 'not-cancellable') {
       sendError(res, 409, 'job is no longer queued or running');
       return;
     }
-    sendJson(res, 200, { jobId, status: 'cancelled' });
+    if (cancellation === 'cancel-requested') queue.requestCancel(jobId);
+    sendJson(res, 200, { jobId, status: cancellation });
   });
 
   /** Deletes one job row and, when the job produced audits, every audit it
@@ -561,7 +565,7 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       sendError(res, 404, 'job not found');
       return;
     }
-    if (job.status === 'running') {
+    if (job.status === 'running' || job.status === 'cancel-requested') {
       sendError(res, 409, 'a running job must be stopped before it can be deleted');
       return;
     }

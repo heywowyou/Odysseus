@@ -60,6 +60,7 @@ const SKELETON_ROW_COUNT = 8;
 const STATUS_OPTIONS: readonly DisplayJobStatus[] = [
   'queued',
   'running',
+  'cancel-requested',
   'complete',
   'report-issue',
   'failed',
@@ -388,9 +389,19 @@ export function AuditsPage(): JSX.Element {
                     <QueueRow
                       key={row.jobId}
                       row={row}
-                      detail={currentPhaseLabel(row.phase, strings.progress.phaseLabels)}
-                      actionLabel={strings.audits.stopAction}
-                      onAction={() => setPendingAction({ kind: 'stop', row })}
+                      detail={
+                        row.status === 'cancel-requested'
+                          ? strings.common.statusLabels['cancel-requested']
+                          : currentPhaseLabel(row.phase, strings.progress.phaseLabels)
+                      }
+                      actionLabel={
+                        row.status === 'cancel-requested' ? undefined : strings.audits.stopAction
+                      }
+                      onAction={
+                        row.status === 'cancel-requested'
+                          ? undefined
+                          : () => setPendingAction({ kind: 'stop', row })
+                      }
                     />
                   ))}
                 </ul>
@@ -519,8 +530,8 @@ function QueueRow(props: {
   row: ScanSummary;
   position?: number;
   detail?: string;
-  actionLabel: string;
-  onAction: () => void;
+  actionLabel?: string;
+  onAction?: () => void;
 }): JSX.Element {
   const { strings } = useI18n();
   const { row, position, detail, actionLabel, onAction } = props;
@@ -553,14 +564,16 @@ function QueueRow(props: {
           ) : null}
         </div>
       </div>
-      <Button
-        variant={row.status === 'running' ? 'danger' : 'ghost'}
-        size="sm"
-        className="shrink-0"
-        onClick={onAction}
-      >
-        {actionLabel}
-      </Button>
+      {actionLabel !== undefined && onAction !== undefined ? (
+        <Button
+          variant={row.status === 'running' ? 'danger' : 'ghost'}
+          size="sm"
+          className="shrink-0"
+          onClick={onAction}
+        >
+          {actionLabel}
+        </Button>
+      ) : null}
     </li>
   );
 }

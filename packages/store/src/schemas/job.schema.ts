@@ -18,7 +18,14 @@ export type JobType =
   | 'outreach-draft-batch'
   | 'outreach-followup-batch'
   | 'outreach-full-scan';
-export type JobStatus = 'queued' | 'running' | 'complete' | 'failed' | 'cancelled' | 'needs-input';
+export type JobStatus =
+  | 'queued'
+  | 'running'
+  | 'cancel-requested'
+  | 'complete'
+  | 'failed'
+  | 'cancelled'
+  | 'needs-input';
 export type JobPhase =
   | 'queued'
   | 'crawl'
@@ -379,7 +386,7 @@ const jobSchema = new Schema<JobDocument>(
     status: {
       type: String,
       required: true,
-      enum: ['queued', 'running', 'complete', 'failed', 'cancelled', 'needs-input'],
+      enum: ['queued', 'running', 'cancel-requested', 'complete', 'failed', 'cancelled', 'needs-input'],
     },
     phase: {
       type: String,

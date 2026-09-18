@@ -20,6 +20,7 @@ import {
   markJobNeedsInput,
   reconcileFailedAuditJobs,
   resetOrphanedRunningJobs,
+  settleCancelRequestedJobsOnStartup,
   type JobDocument,
   type JobType,
 } from '@odysseus/store';
@@ -95,6 +96,7 @@ export class JobQueue {
    *  Neither bookkeeping pass may ever keep the queue from starting: each
    *  is maintenance, not a prerequisite for work. */
   async start(): Promise<number> {
+    await settleCancelRequestedJobsOnStartup(this.connection);
     const orphanedCount = await resetOrphanedRunningJobs(this.connection, new Date(), {
       includeFreshHeartbeats: true,
     });

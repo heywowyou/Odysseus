@@ -43,7 +43,7 @@ export class ActiveJobSlotTakenError extends Error {
  *  'needs-input' job is terminal - the runner has already thrown and
  *  returned - so it waits for a person, not for Chromium, and must not
  *  block a new scan of the same prospect. */
-const UNFINISHED_JOB_STATUSES: JobStatus[] = ['queued', 'running'];
+const UNFINISHED_JOB_STATUSES: JobStatus[] = ['queued', 'running', 'cancel-requested'];
 
 /** The per-prospect slot a new job occupies: one complete crawl (Full scan,
  *  or the historical prospecting-audit and outreach full-scan types) and
@@ -249,7 +249,7 @@ export async function completeJob(
 ): Promise<void> {
   const JobModel = createJobModel(connection);
   await JobModel.updateOne(
-    { jobId, status: { $ne: 'cancelled' } },
+    { jobId, status: { $nin: ['cancelled', 'cancel-requested'] } },
     { $set: { status: 'complete', phase: 'complete', finishedAt: new Date(), ...patch } },
   );
 }
@@ -262,7 +262,7 @@ export async function completeJob(
 export async function failJob(connection: Connection, jobId: string, error: string): Promise<void> {
   const JobModel = createJobModel(connection);
   await JobModel.updateOne(
-    { jobId, status: { $ne: 'cancelled' } },
+    { jobId, status: { $nin: ['cancelled', 'cancel-requested'] } },
     [
       {
         $set: {
@@ -299,7 +299,7 @@ export async function markJobNeedsInput(
 ): Promise<void> {
   const JobModel = createJobModel(connection);
   await JobModel.updateOne(
-    { jobId, status: { $ne: 'cancelled' } },
+    { jobId, status: { $nin: ['cancelled', 'cancel-requested'] } },
     {
       $set: {
         status: 'needs-input',
@@ -316,13 +316,53 @@ export async function markJobNeedsInput(
   );
 }
 
-/** Operator stop request, written immediately so the dashboard reflects it
- *  and the claim filter (status 'queued') can never pick the job up again.
- *  A running job's runner learns about the stop through the interface
- *  package's in-process registry and throws at the next page boundary; the
- *  terminal write is idempotent against this one because it only matches
- *  documents still queued or running. Returns false when the job was
- *  already terminal, so the route layer can answer 409 instead of lying. */
+export type JobCancellationRequestResult =
+  | 'cancelled'
+  | 'cancel-requested'
+  | 'not-cancellable';
+
+/**
+ * Persist an operator stop request without claiming a running worker has
+ * already stopped.
+ *
+ * A queued job has no worker, so it can become terminal immediately. A
+ * running job keeps its current phase and active slot while the durable
+ * status becomes cancel-requested. The worker finalizes it through
+ * cancelJob only after cooperative cancellation reaches a safe boundary.
+ */
+export async function requestJobCancellation(
+  connection: Connection,
+  jobId: string,
+  error: string,
+): Promise<JobCancellationRequestResult> {
+  const JobModel = createJobModel(connection);
+
+  const queued = await JobModel.updateOne(
+    { jobId, status: 'queued' },
+    {
+      $set: { status: 'cancelled', phase: 'cancelled', finishedAt: new Date(), error },
+      $unset: { activeSlot: '' },
+    },
+  );
+  if (queued.modifiedCount > 0) return 'cancelled';
+
+  const running = await JobModel.updateOne(
+    { jobId, status: 'running' },
+    { $set: { status: 'cancel-requested', error } },
+  );
+  if (running.modifiedCount > 0) return 'cancel-requested';
+
+  const existing = await JobModel.findOne({ jobId }, { status: 1, _id: 0 }).lean<{
+    status: JobStatus;
+  }>();
+  return existing?.status === 'cancel-requested' ? 'cancel-requested' : 'not-cancellable';
+}
+
+/**
+ * Confirm that execution has actually stopped. The running case covers the
+ * narrow race where a worker observes the in-process cancellation signal
+ * before the durable request write becomes visible.
+ */
 export async function cancelJob(
   connection: Connection,
   jobId: string,
@@ -330,8 +370,11 @@ export async function cancelJob(
 ): Promise<boolean> {
   const JobModel = createJobModel(connection);
   const result = await JobModel.updateOne(
-    { jobId, status: { $in: ['queued', 'running'] } },
-    { $set: { status: 'cancelled', phase: 'cancelled', finishedAt: new Date(), error } },
+    { jobId, status: { $in: ['queued', 'running', 'cancel-requested'] } },
+    {
+      $set: { status: 'cancelled', phase: 'cancelled', finishedAt: new Date(), error },
+      $unset: { activeSlot: '' },
+    },
   );
   return result.modifiedCount > 0;
 }
@@ -342,7 +385,10 @@ export async function cancelQueuedJobs(connection: Connection, error: string): P
   const JobModel = createJobModel(connection);
   const result = await JobModel.updateMany(
     { status: 'queued' },
-    { $set: { status: 'cancelled', phase: 'cancelled', finishedAt: new Date(), error } },
+    {
+      $set: { status: 'cancelled', phase: 'cancelled', finishedAt: new Date(), error },
+      $unset: { activeSlot: '' },
+    },
   );
   return result.modifiedCount;
 }
@@ -467,6 +513,28 @@ const ORPHANED_JOB_TIMEOUT_MS = 10 * 60 * 1000;
  *  another restart past the timeout. The stale-only default stays correct
  *  for any future multi-worker caller, where a live worker may legitimately
  *  hold a fresh-heartbeat job. */
+/**
+ * Finalize durable stop requests left behind by the previous process.
+ *
+ * JobQueue.start uses this only in the current single-container deployment:
+ * after process replacement no previous worker can still own the row, so
+ * requeueing cancel-requested work would violate the operator's durable stop.
+ */
+export async function settleCancelRequestedJobsOnStartup(
+  connection: Connection,
+  now = new Date(),
+): Promise<number> {
+  const JobModel = createJobModel(connection);
+  const result = await JobModel.updateMany(
+    { status: 'cancel-requested' },
+    {
+      $set: { status: 'cancelled', phase: 'cancelled', finishedAt: now },
+      $unset: { activeSlot: '' },
+    },
+  );
+  return result.modifiedCount;
+}
+
 export async function resetOrphanedRunningJobs(
   connection: Connection,
   now = new Date(),

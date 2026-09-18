@@ -33,6 +33,7 @@ describe('computeKpis', () => {
     const summaries = [
       makeSummary({ jobId: 'a', status: 'queued' }),
       makeSummary({ jobId: 'b', status: 'running' }),
+      makeSummary({ jobId: 'stopping', status: 'cancel-requested' }),
       makeSummary({
         jobId: 'c',
         status: 'complete',
@@ -46,7 +47,7 @@ describe('computeKpis', () => {
       }),
     ];
     expect(computeKpis(summaries)).toEqual({
-      running: 2,
+      running: 3,
       needsInput: 0,
       complete: 2,
       reportIssue: 0,
@@ -181,6 +182,7 @@ describe('listStatus', () => {
     );
     expect(listStatus(makeSummary({ status: 'complete', auditId: 'audit-1' }))).toBe('complete');
     expect(listStatus(makeSummary({ status: 'queued' }))).toBe('queued');
+    expect(listStatus(makeSummary({ status: 'cancel-requested' }))).toBe('cancel-requested');
   });
 });
 
@@ -295,8 +297,9 @@ describe('scanQueue', () => {
       makeSummary({ jobId: 'input', status: 'needs-input' }),
       makeSummary({ jobId: 'next', status: 'queued' }),
       makeSummary({ jobId: 'now', status: 'running' }),
+      makeSummary({ jobId: 'stopping', status: 'cancel-requested' }),
     ]);
-    expect(queue.running.map((row) => row.jobId)).toEqual(['now']);
+    expect(queue.running.map((row) => row.jobId)).toEqual(['now', 'stopping']);
     expect(queue.upNext.map((row) => row.jobId)).toEqual(['next']);
   });
 

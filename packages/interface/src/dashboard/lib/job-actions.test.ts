@@ -10,16 +10,18 @@ describe('canStop', () => {
   it('is false once the job reached a final status', () => {
     expect(canStop('complete')).toBe(false);
     expect(canStop('failed')).toBe(false);
+    expect(canStop('cancel-requested')).toBe(false);
     expect(canStop('cancelled')).toBe(false);
   });
 });
 
 describe('canDelete', () => {
-  it('is false only while the job is running', () => {
+  it('is false while work is running or stopping', () => {
     expect(canDelete('running')).toBe(false);
+    expect(canDelete('cancel-requested')).toBe(false);
   });
 
-  it('is true for every other status', () => {
+  it('is true once work is not running or stopping', () => {
     expect(canDelete('queued')).toBe(true);
     expect(canDelete('complete')).toBe(true);
     expect(canDelete('failed')).toBe(true);

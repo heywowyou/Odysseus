@@ -145,6 +145,7 @@ describe('isTerminal', () => {
     expect(isTerminal(undefined)).toBe(false);
     expect(isTerminal('queued')).toBe(false);
     expect(isTerminal('running')).toBe(false);
+    expect(isTerminal('cancel-requested')).toBe(false);
   });
 
   it('is true once the job reached complete, failed, or cancelled', () => {

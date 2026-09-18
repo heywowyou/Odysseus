@@ -8,6 +8,7 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   createJob: vi.fn(),
   findProspectsByDomain: vi.fn(),
   getJob: vi.fn(),
+  requestJobCancellation: vi.fn(),
   getProspectHub: vi.fn(),
   getAudit: vi.fn(),
   deleteAuditCascade: vi.fn(),
@@ -36,6 +37,7 @@ import {
   getAudit,
   getJob,
   getProspectHub,
+  requestJobCancellation,
   type NewJobInput,
 } from '@odysseus/store';
 import {
@@ -70,7 +72,11 @@ function fakeRes(): ServerResponse & { statusCode: number; body: string | undefi
 }
 
 const fakeConnection = {} as never;
-const fakeQueue = { notify: vi.fn() } as never;
+const fakeQueue = {
+  notify: vi.fn(),
+  requestCancel: vi.fn(),
+  isJobInFlight: vi.fn(() => false),
+} as never;
 
 async function post(
   body: unknown,
@@ -91,6 +97,7 @@ beforeEach(() => {
   });
   vi.mocked(findProspectsByDomain).mockResolvedValue([{ prospectId: 'prospect-1' }] as never);
   vi.mocked(getProspectHub).mockResolvedValue({ prospectId: 'prospect-1' } as never);
+  vi.mocked(requestJobCancellation).mockResolvedValue('cancel-requested');
   vi.mocked(createJob).mockImplementation(
     async (_connection, input: NewJobInput) =>
       ({
@@ -164,6 +171,64 @@ describe('POST /api/scans runtime contract', () => {
       expect(checkScanLaunch).not.toHaveBeenCalled();
     },
   );
+});
+
+describe('POST /api/scans/:jobId/cancel', () => {
+  it('persists a running stop request before signalling the local worker', async () => {
+    vi.mocked(getJob).mockResolvedValue({
+      jobId: 'job-1',
+      type: 'full-audit',
+      status: 'running',
+    } as never);
+    vi.mocked(requestJobCancellation).mockResolvedValueOnce('cancel-requested');
+
+    const response = await post({}, '/api/scans/job-1/cancel');
+
+    expect(response).toEqual({
+      statusCode: 200,
+      body: { jobId: 'job-1', status: 'cancel-requested' },
+    });
+    expect(requestJobCancellation).toHaveBeenCalledWith(
+      fakeConnection,
+      'job-1',
+      'cancelled by operator',
+    );
+    expect(
+      vi.mocked(fakeQueue as unknown as { requestCancel: (jobId: string) => void }).requestCancel,
+    ).toHaveBeenCalledWith('job-1');
+  });
+
+  it('cancels queued work without registering an in-process worker signal', async () => {
+    vi.mocked(getJob).mockResolvedValue({
+      jobId: 'job-queued',
+      type: 'full-audit',
+      status: 'queued',
+    } as never);
+    vi.mocked(requestJobCancellation).mockResolvedValueOnce('cancelled');
+
+    const response = await post({}, '/api/scans/job-queued/cancel');
+
+    expect(response).toEqual({
+      statusCode: 200,
+      body: { jobId: 'job-queued', status: 'cancelled' },
+    });
+    expect(
+      vi.mocked(fakeQueue as unknown as { requestCancel: (jobId: string) => void }).requestCancel,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('returns a conflict when the durable state became terminal first', async () => {
+    vi.mocked(getJob).mockResolvedValue({
+      jobId: 'job-1',
+      type: 'full-audit',
+      status: 'running',
+    } as never);
+    vi.mocked(requestJobCancellation).mockResolvedValueOnce('not-cancellable');
+
+    const response = await post({}, '/api/scans/job-1/cancel');
+
+    expect(response.statusCode).toBe(409);
+  });
 });
 
 describe('DELETE /api/scans/:jobId', () => {

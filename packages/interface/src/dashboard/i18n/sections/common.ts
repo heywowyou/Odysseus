@@ -70,6 +70,7 @@ export const common = {
     statusLabels: {
       queued: 'En attente',
       running: 'En cours',
+      'cancel-requested': 'Arrêt en cours',
       complete: 'Terminé',
       failed: 'Échoué',
       cancelled: 'Arrêté',
@@ -122,6 +123,7 @@ export const common = {
     statusLabels: {
       queued: 'Queued',
       running: 'Running',
+      'cancel-requested': 'Stopping',
       complete: 'Complete',
       failed: 'Failed',
       cancelled: 'Cancelled',
