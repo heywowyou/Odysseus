@@ -136,15 +136,58 @@ export function resolveQualityDraft(input: {
   };
   return { analysis, writer: input.writer, draftDigest };
 }
+const ADDRESS =
+  /^(?:executiveSummary|notes|projects\.[^.\s,;]+\.(?:title|businessImpact|recommendedActions(?:\.\d+)?))$/;
+
+/** Every semantic address a model-authored draft exposes, in draft order.
+ *  Critics name their targets from this list so the editor's patch can be
+ *  held to exactly what was adjudicated. */
+export function writerPatchAddresses(writer: QualityWriterOutput): string[] {
+  return [
+    'executiveSummary',
+    'notes',
+    ...writer.projects.flatMap((p) => [
+      `projects.${p.projectKey}.title`,
+      `projects.${p.projectKey}.businessImpact`,
+      ...p.recommendedActions.map((_, i) => `projects.${p.projectKey}.recommendedActions.${i}`),
+    ]),
+  ];
+}
+
+/** The patch addresses a review issue declares. A critic may name several,
+ *  separated by commas, semicolons or whitespace; anything that is not an
+ *  address is ignored, so an issue with none cannot authorize a patch. */
+export function declaredPatchTargets(target: string): string[] {
+  return target.split(/[\s,;]+/).filter((part) => ADDRESS.test(part));
+}
+
+function withinDeclared(target: string, declared: readonly string[]): boolean {
+  return declared.some(
+    (address) =>
+      address === target ||
+      (address.endsWith('.recommendedActions') && target.startsWith(`${address}.`)),
+  );
+}
+
+/** Plan 058 §5.8: a patch carries an accepted issue id and may touch only a
+ *  target that issue declared; anything else is collateral change and the
+ *  whole edit is refused before the draft is touched. */
 export function applyTargetedWriterPatches(
   current: QualityWriterOutput,
   editor: EditorOutput,
-  accepted: ReadonlySet<string>,
+  accepted: ReadonlyMap<string, readonly string[]>,
 ): QualityWriterOutput {
+  for (const patch of editor.patches) {
+    const declared = accepted.get(patch.issueId);
+    if (declared === undefined)
+      throw new Error(`Patch references unaccepted issue ${patch.issueId}`);
+    if (!withinDeclared(patch.target, declared))
+      throw new Error(
+        `Patch target ${patch.target} is outside the targets issue ${patch.issueId} declared`,
+      );
+  }
   const copy = structuredClone(current);
   for (const patch of editor.patches) {
-    if (!accepted.has(patch.issueId))
-      throw new Error(`Patch references unaccepted issue ${patch.issueId}`);
     if (patch.target === 'executiveSummary') {
       copy.executiveSummary = patch.replacement;
       continue;
@@ -161,7 +204,12 @@ export function applyTargetedWriterPatches(
     if (!p) throw new Error('Unknown patch project');
     if (m[2] === 'title') p.title = patch.replacement;
     else if (m[2] === 'businessImpact') p.businessImpact = patch.replacement;
-    else p.recommendedActions[Number(m[3])] = patch.replacement;
+    else {
+      const index = Number(m[3]);
+      if (index >= p.recommendedActions.length)
+        throw new Error(`Unknown patch action ${patch.target}`);
+      p.recommendedActions[index] = patch.replacement;
+    }
   }
   return copy;
 }

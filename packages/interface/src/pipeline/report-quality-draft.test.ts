@@ -8,7 +8,9 @@ import {
 import { EvidenceBoundContentError, reportQualityDigest } from '@odysseus/report';
 import {
   applyTargetedWriterPatches,
+  declaredPatchTargets,
   resolveQualityDraft,
+  writerPatchAddresses,
   validateQualityWriterOutput,
 } from './report-quality-draft.js';
 import {
@@ -407,7 +409,7 @@ describe('applyTargetedWriterPatches', () => {
         },
       ],
     };
-    const accepted = new Set(editor.patches.map((patch) => patch.issueId));
+    const accepted = new Map(editor.patches.map((patch) => [patch.issueId, [patch.target]]));
 
     const patched = applyTargetedWriterPatches(current, editor, accepted);
 
@@ -430,10 +432,71 @@ describe('applyTargetedWriterPatches', () => {
         { issueId: 'i-collateral', target: 'executiveSummary', replacement: text('Injecté.') },
       ],
     };
-    expect(() => applyTargetedWriterPatches(current, editor, new Set(['i-accepted']))).toThrow(
-      'Patch references unaccepted issue i-collateral',
-    );
+    expect(() =>
+      applyTargetedWriterPatches(current, editor, new Map([['i-accepted', ['notes']]])),
+    ).toThrow('Patch references unaccepted issue i-collateral');
     expect(current).toEqual(writerFixture());
+  });
+
+  it('refuses a patch outside the targets its accepted issue declared', () => {
+    const current = writerFixture();
+    const editor: EditorOutput = {
+      patches: [{ issueId: 'i-notes', target: 'executiveSummary', replacement: text('x') }],
+    };
+    expect(() =>
+      applyTargetedWriterPatches(current, editor, new Map([['i-notes', ['notes']]])),
+    ).toThrow('Patch target executiveSummary is outside the targets issue i-notes declared');
+    expect(current).toEqual(writerFixture());
+  });
+
+  it('lets a whole-list declaration cover an existing action but never a new one', () => {
+    const current = writerFixture();
+    const declared = new Map([['i-a', [`projects.${PROJECT_KEY}.recommendedActions`]]]);
+    const patched = applyTargetedWriterPatches(
+      current,
+      {
+        patches: [
+          {
+            issueId: 'i-a',
+            target: `projects.${PROJECT_KEY}.recommendedActions.0`,
+            replacement: text('Action.'),
+          },
+        ],
+      },
+      declared,
+    );
+    expect(patched.projects[0]!.recommendedActions).toEqual([text('Action.')]);
+    expect(() =>
+      applyTargetedWriterPatches(
+        current,
+        {
+          patches: [
+            {
+              issueId: 'i-a',
+              target: `projects.${PROJECT_KEY}.recommendedActions.4`,
+              replacement: text('Action.'),
+            },
+          ],
+        },
+        declared,
+      ),
+    ).toThrow('Unknown patch action');
+  });
+
+  it('extracts declared addresses from a free-form issue target', () => {
+    expect(
+      declaredPatchTargets(
+        `executiveSummary, projects.${PROJECT_KEY}.title; the tone overall notes`,
+      ),
+    ).toEqual(['executiveSummary', `projects.${PROJECT_KEY}.title`, 'notes']);
+    expect(declaredPatchTargets('page 3 heading')).toEqual([]);
+    expect(writerPatchAddresses(writerFixture())).toEqual([
+      'executiveSummary',
+      'notes',
+      `projects.${PROJECT_KEY}.title`,
+      `projects.${PROJECT_KEY}.businessImpact`,
+      `projects.${PROJECT_KEY}.recommendedActions.0`,
+    ]);
   });
 
   it('refuses unsupported patch target formats and unknown projects', () => {
@@ -442,7 +505,7 @@ describe('applyTargetedWriterPatches', () => {
       applyTargetedWriterPatches(
         current,
         { patches: [{ issueId: 'i1', target: 'executive-summary', replacement: text('x') }] },
-        new Set(['i1']),
+        new Map([['i1', ['executive-summary']]]),
       ),
     ).toThrow('Unsupported patch target executive-summary');
 
@@ -454,7 +517,7 @@ describe('applyTargetedWriterPatches', () => {
             { issueId: 'i2', target: 'projects.chantier-inconnu.title', replacement: text('x') },
           ],
         },
-        new Set(['i2']),
+        new Map([['i2', ['projects.chantier-inconnu.title']]]),
       ),
     ).toThrow('Unknown patch project');
   });

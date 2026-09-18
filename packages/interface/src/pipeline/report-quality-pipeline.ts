@@ -76,8 +76,10 @@ import { runObligationStage } from './obligation-stage.js';
 import { loadAuditEvidencePayload } from './report-quality-evidence.js';
 import {
   applyTargetedWriterPatches,
+  declaredPatchTargets,
   resolveQualityDraft,
   validateQualityWriterOutput,
+  writerPatchAddresses,
 } from './report-quality-draft.js';
 import { putImmutableJson, putPrivateCandidatePdf } from './report-quality-storage.js';
 
@@ -90,6 +92,38 @@ const MAX_WRITER_ATTEMPTS = 3;
  *  the run goes to operator review. */
 const MAX_PLAN_ATTEMPTS = 2;
 const VISUAL_REVIEW_PAGE_BATCH = 1;
+
+/** What code renders around the model-authored fields. Critics and the
+ *  adjudicator judge the fields in this context; without it they reported
+ *  content the template already carries (a finding appendix, the
+ *  limitations) as missing from the draft. */
+const DETERMINISTIC_REPORT_CONTEXT =
+  'Only executiveSummary, notes and each project title/businessImpact/recommendedActions are ' +
+  'model-authored. Code renders the rest deterministically from approved evidence: severity and ' +
+  'category statistics; the ranked priority themes built from these project fields in the ' +
+  'deterministic presentation order; a remediation checklist; an observations section for ' +
+  'heuristic review signals; a WCAG conformance summary; JavaScript-rendering evidence; ' +
+  'Lighthouse lab and CrUX field metric tables; accessibility-statement guidance; the legal ' +
+  'reference section in approved deterministic wording; the methodology section, which prints ' +
+  'every mandatory limitation at its declared destination; a technical appendix listing every ' +
+  'finding with its title, severity, category, WCAG criteria, affected pages and occurrences; ' +
+  'and a glossary. Do not report as missing what these sections carry; do report model prose ' +
+  'that contradicts them or omits significance the reader needs.';
+
+/** The deterministic prose contract every writer and the editor receive. */
+const WRITING_RULES =
+  'Text segments never contain digits, percentages, dates, units or URLs — every exact ' +
+  'scalar belongs in a fact segment bound to a factRegistry factId (each fact carries a label ' +
+  'saying what it measures and a display the reader sees). A reference segment names only a ' +
+  'factRegistry fact of kind "reference" (WCAG criteria, standards, legal citations); finding ' +
+  'ids, digests and URLs are never references and never appear in prose. Put a space in the ' +
+  'text around each bound value. Freehand exact scalars are rejected deterministically. ' +
+  'Performance wording keeps Lighthouse lab measurements distinct from CrUX field data; TBT ' +
+  'and Speed Index are never called Core Web Vitals and lab metrics never describe real user ' +
+  'experience. No lost-booking, revenue or conversion causality. A newly-observable finding ' +
+  'is never a regression and a not-comparable finding is never a resolution. ' +
+  'Unsupported-certainty wording is rejected deterministically. Likely root causes marked as ' +
+  'inference in the plan stay worded as hypotheses.';
 
 class ReportQualityNeedsOperatorReviewError extends Error {
   readonly reasonCode: string;
@@ -359,6 +393,28 @@ function materialUnsure(issues: readonly ReviewIssue[]): ReviewIssue[] {
   );
 }
 
+function resolveDraft(
+  context: QualityRunContext,
+  language: ReportLanguage,
+  writer: QualityWriterOutput,
+  plan: SeniorReportPlan,
+  registry: ReportFactRegistry,
+  reportInputs: ReportOnlyInputs,
+) {
+  return resolveQualityDraft({
+    language,
+    writer,
+    plan,
+    registry,
+    evidence: context.evidence,
+    requestedModel: getReportModelProfile(language === 'fr' ? 'writer-fr' : 'writer-en').model,
+    generatedAt: new Date(),
+    ...(reportInputs.obligationAssessment !== undefined
+      ? { obligationAssessment: reportInputs.obligationAssessment }
+      : {}),
+  });
+}
+
 async function cleanContentDraft(
   context: QualityRunContext,
   language: ReportLanguage,
@@ -376,19 +432,13 @@ async function cleanContentDraft(
       language,
       draft,
     });
-    const resolved = resolveQualityDraft({
-      language,
-      writer: draft,
-      plan,
-      registry,
-      evidence: context.evidence,
-      requestedModel: getReportModelProfile(language === 'fr' ? 'writer-fr' : 'writer-en').model,
-      generatedAt: new Date(),
-      ...(reportInputs.obligationAssessment !== undefined
-        ? { obligationAssessment: reportInputs.obligationAssessment }
-        : {}),
-    });
+    const resolved = resolveDraft(context, language, draft, plan, registry, reportInputs);
 
+    const resolvedDraft = {
+      executiveSummary: resolved.analysis.executiveSummary,
+      notes: resolved.analysis.notes,
+      themes: resolved.analysis.themes,
+    };
     const issues: ReviewIssue[] = [];
     for (const role of ['content-critic-evidence', 'content-critic-editorial'] as const) {
       await keepLease(context);
@@ -399,12 +449,14 @@ async function cleanContentDraft(
           seniorPlan: plan,
           factRegistry: registry,
           evidence: compactEvidence(context.evidence),
+          deterministicReportContext: DETERMINISTIC_REPORT_CONTEXT,
           structuredDraft: draft,
-          resolvedDraft: {
-            executiveSummary: resolved.analysis.executiveSummary,
-            notes: resolved.analysis.notes,
-            themes: resolved.analysis.themes,
-          },
+          resolvedDraft,
+          patchAddresses: writerPatchAddresses(draft),
+          instruction:
+            'Set each issue target to one or more exact entries of patchAddresses, separated ' +
+            'by commas. An objective defect whose repair needs no draft change is not a draft ' +
+            'defect.',
         },
         parser: qualityReviewOutputSchema,
         jsonSchema: QUALITY_REVIEW_JSON_SCHEMA,
@@ -413,10 +465,16 @@ async function cleanContentDraft(
       issues.push(...reviewIssues(call.output, role, artifact.digest));
     }
 
+    // The adjudicator judges each issue against the exact draft it names;
+    // without the draft it could only answer unsure (live pilot: 18 of 26).
     const adjudicated = await adjudicateIssues(context, issues, {
+      language,
       factRegistry: registry,
       evidence: compactEvidence(context.evidence),
       seniorPlan: plan,
+      deterministicReportContext: DETERMINISTIC_REPORT_CONTEXT,
+      structuredDraft: draft,
+      resolvedDraft,
     });
     await recordReviewIssues(context, adjudicated);
     const unsure = materialUnsure(adjudicated);
@@ -437,28 +495,61 @@ async function cleanContentDraft(
           .join(', ')}`,
       );
     }
-
-    await keepLease(context);
-    const edit = await callReportQualityRole({
-      role: 'editor',
-      userPayload: {
-        language,
-        acceptedIssues: defects,
-        currentDraft: draft,
-        factRegistry: registry,
-        seniorPlan: plan,
-        instruction:
-          'Patch only the accepted semantic targets. Preserve every other field byte-for-byte.',
-      },
-      parser: editorOutputSchema,
-      jsonSchema: EDITOR_JSON_SCHEMA,
-    });
-    await recordModelCall(context, edit.provenance);
-    draft = applyTargetedWriterPatches(
-      draft,
-      edit.output,
-      new Set(defects.map((issue) => issue.issueId)),
+    const declared = new Map(
+      defects.map((issue) => [issue.issueId, declaredPatchTargets(issue.target)] as const),
     );
+    const unaddressable = defects.filter((issue) => declared.get(issue.issueId)!.length === 0);
+    if (unaddressable.length > 0) {
+      throw new ReportQualityNeedsOperatorReviewError(
+        'content-target-unaddressable',
+        `Accepted content defect names no patchable draft address: ${unaddressable
+          .map((issue) => `${issue.issueId}:${issue.target}`)
+          .join(', ')}`,
+      );
+    }
+
+    // Plan 058 §9/§13: an edit that breaks the patch contract or the
+    // deterministic prose rules is re-issued with every rejection named,
+    // within the same bounded ceiling as a writer draft.
+    const editorRejections: string[] = [];
+    for (let attempt = 1; ; attempt += 1) {
+      await keepLease(context);
+      const edit = await callReportQualityRole({
+        role: 'editor',
+        userPayload: {
+          language,
+          acceptedIssues: defects.map((issue) => ({
+            ...issue,
+            declaredTargets: declared.get(issue.issueId),
+          })),
+          currentDraft: draft,
+          factRegistry: registry,
+          seniorPlan: plan,
+          writingRules: WRITING_RULES,
+          instruction:
+            'Patch only the declaredTargets of each accepted issue. Preserve every other field ' +
+            'byte-for-byte.',
+          ...(editorRejections.length > 0 ? { previousEditRejections: editorRejections } : {}),
+        },
+        parser: editorOutputSchema,
+        jsonSchema: EDITOR_JSON_SCHEMA,
+      });
+      await recordModelCall(context, edit.provenance);
+      try {
+        const patched = applyTargetedWriterPatches(draft, edit.output, declared);
+        resolveDraft(context, language, patched, plan, registry, reportInputs);
+        draft = patched;
+        break;
+      } catch (error) {
+        editorRejections.push(error instanceof Error ? error.message : String(error));
+        if (attempt >= MAX_WRITER_ATTEMPTS) {
+          throw new ReportQualityNeedsOperatorReviewError(
+            'editor-repair-limit',
+            `Editor patch failed its deterministic gates after ${String(attempt)} attempts: ${editorRejections.join(' | ')}`,
+          );
+        }
+      }
+    }
   }
 
   throw new ReportQualityNeedsOperatorReviewError(
@@ -541,18 +632,7 @@ async function renderAndReviewLanguage(
   snapshotDigest: Sha256Digest,
   reportInputs: ReportOnlyInputs,
 ): Promise<QualityLanguageCandidateResult> {
-  const resolved = resolveQualityDraft({
-    language,
-    writer: draft,
-    plan,
-    registry,
-    evidence: context.evidence,
-    requestedModel: getReportModelProfile(language === 'fr' ? 'writer-fr' : 'writer-en').model,
-    generatedAt: new Date(),
-    ...(reportInputs.obligationAssessment !== undefined
-      ? { obligationAssessment: reportInputs.obligationAssessment }
-      : {}),
-  });
+  const resolved = resolveDraft(context, language, draft, plan, registry, reportInputs);
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), `odysseus-058-${language}-`));
   try {
     const rendered = await generateReportPdf({
@@ -911,16 +991,7 @@ export async function runReportQualityPipeline(input: {
           evidenceDossier: dossier,
           factRegistry: registry,
           mandatoryDisclosures: evidence.mandatoryDisclosures,
-          writingRules:
-            'Text segments never contain digits, percentages, dates, units or URLs — every ' +
-            'exact scalar belongs in a fact segment bound to a factRegistry factId, and every ' +
-            'named source in a reference segment. Freehand exact scalars are rejected ' +
-            'deterministically. Performance wording keeps Lighthouse lab measurements distinct ' +
-            'from CrUX field data; TBT and Speed Index are never called Core Web Vitals and lab ' +
-            'metrics never describe real user experience. No lost-booking, revenue or ' +
-            'conversion causality. A newly-observable finding is never a regression and a ' +
-            'not-comparable finding is never a resolution. Unsupported-certainty wording is ' +
-            'rejected deterministically.',
+          writingRules: WRITING_RULES,
         },
         parser: qualityWriterOutputSchema,
         jsonSchema: QUALITY_WRITER_JSON_SCHEMA,
@@ -931,19 +1002,7 @@ export async function runReportQualityPipeline(input: {
       // accumulating across a bounded attempt ceiling (§13); exhausting it
       // goes to operator review, never a silently accepted draft.
       const bindableWriterDraft = (): void => {
-        resolveQualityDraft({
-          language,
-          writer: writerCall.output,
-          plan,
-          registry,
-          evidence,
-          requestedModel: getReportModelProfile(language === 'fr' ? 'writer-fr' : 'writer-en')
-            .model,
-          generatedAt: new Date(),
-          ...(reportInputs.obligationAssessment !== undefined
-            ? { obligationAssessment: reportInputs.obligationAssessment }
-            : {}),
-        });
+        resolveDraft(context, language, writerCall.output, plan, registry, reportInputs);
       };
       const writerRejections: string[] = [];
       for (let attempt = 1; ; attempt += 1) {
@@ -968,14 +1027,7 @@ export async function runReportQualityPipeline(input: {
               evidenceDossier: dossier,
               factRegistry: registry,
               mandatoryDisclosures: evidence.mandatoryDisclosures,
-              writingRules:
-                'Text segments never contain digits, percentages, dates, units or URLs — every ' +
-                'exact scalar belongs in a fact segment bound to a factRegistry factId, and every ' +
-                'named source in a reference segment. Performance wording keeps Lighthouse lab ' +
-                'measurements distinct from CrUX field data; TBT and Speed Index are never called ' +
-                'Core Web Vitals. No lost-booking, revenue or conversion causality. A ' +
-                'newly-observable finding is never a regression and a not-comparable finding is ' +
-                'never a resolution. Unsupported-certainty wording is rejected deterministically.',
+              writingRules: WRITING_RULES,
               previousDraftRejections: writerRejections,
               repairInstruction:
                 'Your previous draft was refused by the deterministic evidence-binding gates. ' +

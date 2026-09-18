@@ -19,6 +19,7 @@ import {
   InMemoryArtifactStore,
   makeLlmScript,
   manifestFixture,
+  PROJECT_KEY,
   seniorPlanOutputFor,
   writerOutputFor,
   type LlmScriptHandler,
@@ -519,6 +520,95 @@ describe('runReportQualityPipeline (Plan 058 fail-closed behavior)', () => {
     expect(finalTransition().state).toBe('needs-operator-review');
     expect(finalTransition().patch.errorCode).toBe('content-review-unsure');
     expect(states()).not.toContain('quality-approved');
+  });
+
+  it('gives the content adjudicator the exact structured and resolved draft it judges', async () => {
+    // Live pilot regression: the adjudicator saw evidence and plan but not
+    // the draft, so it answered unsure on 18 of 26 issues about prose it
+    // could not read.
+    harness.llm = makeLlmScript({
+      findings: DEFAULT_FINDINGS,
+      issues: {
+        'content-critic-evidence': (call) =>
+          call === 1 ? [criticIssue({ issueId: 'draft-1', kind: 'preference' })] : [],
+      },
+      adjudicate: () => 'rejected',
+    });
+    await runReportQualityPipeline(makePipelineInput());
+    const critic = harness.llmLog.find((call) => call.role === 'content-critic-evidence');
+    const adjudicator = harness.llmLog.find((call) => call.role === 'issue-adjudicator');
+    const criticPayload = critic!.userPayload as Record<string, unknown>;
+    const evidence = (adjudicator!.userPayload as { evidence: Record<string, unknown> }).evidence;
+    expect(evidence.structuredDraft).toEqual(criticPayload.structuredDraft);
+    expect(evidence.resolvedDraft).toEqual(criticPayload.resolvedDraft);
+    expect(evidence.language).toBe('fr');
+    expect(evidence.deterministicReportContext).toBe(criticPayload.deterministicReportContext);
+    expect(String(criticPayload.deterministicReportContext)).toMatch(/technical appendix/);
+  });
+
+  it('re-issues an editor patch that breaks a prose rule instead of failing the run', async () => {
+    harness.llm = makeLlmScript({
+      findings: DEFAULT_FINDINGS,
+      issues: {
+        'content-critic-evidence': (call) => (call === 1 ? [criticIssue({ issueId: 'e1' })] : []),
+      },
+      editor: (ctx) => {
+        const payload = ctx.userPayload as { previousEditRejections?: string[] };
+        const text = payload.previousEditRejections
+          ? 'Un titre corrigé et aligné sur le registre de faits.'
+          : 'Un titre corrigé sur 12 pages.';
+        return {
+          patches: [
+            {
+              issueId: 'content-critic-evidence:e1',
+              target: `projects.${PROJECT_KEY}.title`,
+              replacement: { segments: [{ kind: 'text', text }] },
+            },
+          ],
+        };
+      },
+    });
+    const result = await runReportQualityPipeline(makePipelineInput());
+    expect(result.state).toBe('awaiting-operator-approval');
+    expect(harness.llmCalls['editor']).toBe(2);
+    const retry = harness.llmLog.filter((call) => call.role === 'editor')[1]!;
+    expect(
+      (retry.userPayload as { previousEditRejections: string[] }).previousEditRejections[0],
+    ).toMatch(/Exact scalar\/URL/);
+  });
+
+  it('refuses an editor patch outside the declared target and exhausts to operator review', async () => {
+    harness.llm = makeLlmScript({
+      findings: DEFAULT_FINDINGS,
+      issues: { 'content-critic-evidence': [criticIssue({ issueId: 'e2' })] },
+      editor: {
+        patches: [
+          {
+            issueId: 'content-critic-evidence:e2',
+            target: 'executiveSummary',
+            replacement: { segments: [{ kind: 'text', text: 'Synthèse réécrite.' }] },
+          },
+        ],
+      },
+    });
+    await expect(runReportQualityPipeline(makePipelineInput())).rejects.toThrow(
+      'outside the targets issue content-critic-evidence:e2 declared',
+    );
+    expect(finalTransition().patch.errorCode).toBe('editor-repair-limit');
+  });
+
+  it('routes an accepted defect with no patchable address to operator review', async () => {
+    harness.llm = makeLlmScript({
+      findings: DEFAULT_FINDINGS,
+      issues: {
+        'content-critic-evidence': [criticIssue({ issueId: 'e3', target: 'the whole report' })],
+      },
+    });
+    await expect(runReportQualityPipeline(makePipelineInput())).rejects.toThrow(
+      'names no patchable draft address',
+    );
+    expect(harness.llmCalls['editor']).toBeUndefined();
+    expect(finalTransition().patch.errorCode).toBe('content-target-unaddressable');
   });
 
   it('treats a rejected preference as non-blocking and still approves', async () => {
