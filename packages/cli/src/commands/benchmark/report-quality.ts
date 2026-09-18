@@ -24,6 +24,7 @@ import {
   createConfiguredArtifactStore,
   dryRunReportQualityCorpus,
   loadCorpusManifest,
+  LocalDirArtifactStore,
   runReportQualityCorpus,
   type ReportQualityCorpusManifest,
 } from '@odysseus/interface';
@@ -67,8 +68,19 @@ export function registerBenchmarkReportQualityCommand(benchmark: Command): void 
       'Directory for outcome files and summary.json (default: a timestamped directory ' +
         'under the artifacts root, which is gitignored)',
     )
+    .option(
+      '--store-dir <path>',
+      'Root of a local-directory artifact store, instead of the configured private bucket ' +
+        '(for local corpus runs on this machine)',
+    )
     .action(
-      async (opts: { manifest: string; dryRun: boolean; concurrency: number; out?: string }) => {
+      async (opts: {
+        manifest: string;
+        dryRun: boolean;
+        concurrency: number;
+        out?: string;
+        storeDir?: string;
+      }) => {
         try {
           const corpus: ReportQualityCorpusManifest = await loadCorpusManifest(opts.manifest);
 
@@ -84,11 +96,14 @@ export function registerBenchmarkReportQualityCommand(benchmark: Command): void 
             return;
           }
 
-          const artifactStore = createConfiguredArtifactStore();
+          const artifactStore = opts.storeDir
+            ? new LocalDirArtifactStore(path.resolve(opts.storeDir))
+            : createConfiguredArtifactStore();
           if (!artifactStore) {
             throw new Error(
               'report-quality corpus runs require the configured private artifact store ' +
-                '(ODYSSEUS_ARTIFACTS_BUCKET_*); the pipeline refuses local-disk-only candidates',
+                '(ODYSSEUS_ARTIFACTS_BUCKET_*), or pass --store-dir for a local-directory ' +
+                'store; the pipeline refuses local-disk-only candidates',
             );
           }
 

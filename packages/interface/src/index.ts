@@ -41,6 +41,7 @@ export type { ArtifactStore } from './artifacts/artifact-store.js';
 export { createScalewayArtifactStore } from './artifacts/scaleway-artifact-store.js';
 export type { ScalewayArtifactStoreOptions } from './artifacts/scaleway-artifact-store.js';
 export { createConfiguredArtifactStore } from './artifacts/configured-artifact-store.js';
+export { LocalDirArtifactStore } from './artifacts/local-dir-artifact-store.js';
 export {
   AuditArtifactDeletionError,
   deleteAuditArtifacts,
