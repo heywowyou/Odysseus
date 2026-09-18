@@ -50,6 +50,32 @@ if (/single generic report-quality model setting is not a role-profile implement
   errors.push('Plan 058 must explicitly reject a single generic report-quality model setting.');
 }
 
+const reportProfileSource = read('packages/llm/src/report-model-profiles.ts');
+const reportQualityClientSource = read('packages/llm/src/report-quality-client.ts');
+const reportQualityPipelineSource = read('packages/interface/src/pipeline/report-quality-pipeline.ts');
+const reportProfileTestSource = read('packages/llm/src/report-model-profiles.test.ts');
+
+for (const [sourceName, source] of [
+  ['report-model-profiles.ts', reportProfileSource],
+  ['report-quality-client.ts', reportQualityClientSource],
+  ['report-quality-pipeline.ts', reportQualityPipelineSource],
+]) {
+  for (const forbidden of ['ODYSSEUS_REPORT_QUALITY_MODEL', 'OPENAI_MODEL', 'gpt-5.4-mini']) {
+    if (source.includes(forbidden)) {
+      errors.push(`${sourceName} reintroduces forbidden Plan-058 fallback "${forbidden}".`);
+    }
+  }
+}
+if (!reportProfileSource.includes("model: 'gpt-5.6-sol'") && !reportProfileSource.includes('model: SOL')) {
+  errors.push('Plan-058 model profiles must retain the gpt-5.6-sol quality-first candidate.');
+}
+if (!reportProfileSource.includes('satisfies Record<ReportQualityRole, ReportModelProfile>')) {
+  errors.push('Plan-058 role/profile registry must remain compile-time exhaustive.');
+}
+if (!reportProfileTestSource.includes('covers every report-quality role')) {
+  errors.push('Plan-058 role-profile coverage test must remain present.');
+}
+
 const plan051 = read('plans/051-findings-delta-reaudit.md');
 if (!plan051.includes('@odysseus/llm') || !/no import or call edge/i.test(plan051)) {
   errors.push('Plan 051 must retain the static no-LLM dependency proof.');
