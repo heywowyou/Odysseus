@@ -175,6 +175,11 @@ If you judge this too large to land safely unattended, **build everything else
 and leave this one blocked with a written analysis.** Do not soften the
 preflight to make a deploy green.
 
+**The written analysis exists**: [059-scan-container-design.md](059-scan-container-design.md)
+(2026-09-18) — topology, the scan-service contract, lease/checkpoint/cancel
+survival, failure dispositions, isolation wiring, compose posture, and a
+five-slice offline-testable rollout. Build from it; do not re-derive.
+
 ### 4.2 Pacing
 
 Done. Every request path goes through `HostRequestScheduler` and the floor is
