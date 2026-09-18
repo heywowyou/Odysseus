@@ -59,6 +59,10 @@ import { renderHtml } from './template/render-html.js';
 import { findRenderLintViolations } from './template/render-lint.js';
 import { findUnconfirmedIdentityFields } from './template/unconfirmed-fields.js';
 import { renderPdfWithPageCountFromHtml } from './pdf.js';
+import {
+  describeReportPdfIntegrityDefects,
+  findReportPdfIntegrityDefects,
+} from './pdf-integrity.js';
 import type { RenderedPdfWithPageCount } from './pdf.js';
 import { ReportIdentityUnconfirmedError } from './errors.js';
 
@@ -159,11 +163,25 @@ export async function generateReportPdf(
       );
     }
 
-    return await renderPdfWithPageCountFromHtml(html, browser);
+    const rendered = await renderPdfWithPageCountFromHtml(html, browser);
+    // The layout gates judged the Paged.js DOM; this judges the file the
+    // client opens (fonts, language, title, tagging, links, active content).
+    const defects = findReportPdfIntegrityDefects(rendered.pdf, {
+      language: input.analysis.language,
+      pageCount: rendered.pageCount,
+    });
+    if (defects.length > 0) throw new Error(describeReportPdfIntegrityDefects(defects));
+    return rendered;
   } finally {
     if (ownsBrowser) await browser.close();
   }
 }
+
+export {
+  REPORT_EMBEDDED_FONT_FAMILIES,
+  describeReportPdfIntegrityDefects,
+  findReportPdfIntegrityDefects,
+} from './pdf-integrity.js';
 
 // Plan 058 fail-closed report-quality primitives.
 export { canonicalJson, reportQualityDigest, bytesDigest } from './quality/digest.js';
