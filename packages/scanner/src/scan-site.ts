@@ -71,6 +71,11 @@ import {
 import { createPageWorkGuard, type PageWorkGuard } from './page-work-guard.js';
 import { RobotsPolicyRuntime } from './robots-policy-runtime.js';
 import { writeRobotsPolicyChain } from './artifacts/robots-policy-io.js';
+import {
+  InventoryLedger,
+  type InventoryLedgerSnapshot,
+} from './inventory-ledger.js';
+import { writeInventoryLedger } from './artifacts/inventory-ledger-io.js';
 
 export interface CrawlExclusionCounts {
   discoveryOnly: number;
@@ -287,6 +292,8 @@ export interface SiteScanResult {
   analysisCoverageByUrl?: ReadonlyMap<string, PageAnalysisCoverage>;
   /** Every request the browser/network policy refused during this run. */
   networkSafetyDispositions?: readonly NetworkSafetyDisposition[];
+  /** Scope-bound private Plan 059 inventory after all content work succeeds. */
+  inventoryLedger?: InventoryLedgerSnapshot;
 }
 
 /**
@@ -1200,6 +1207,39 @@ export async function scanSite(
   const pagesToScan = crawl.pages.filter((page) => page.status === 'visited');
   options.onProgress?.({ type: 'crawl-exclusions', excluded: countCrawlExclusions(crawl.pages) });
 
+  const inventoryLedger =
+    crawl.inventoryLedger === undefined
+      ? undefined
+      : InventoryLedger.fromSnapshot(crawl.inventoryLedger);
+  if (inventoryLedger !== undefined && options.auditDir !== undefined) {
+    writeInventoryLedger(options.auditDir, inventoryLedger.snapshot());
+  }
+  const finalizeInventoryLedger = (): InventoryLedgerSnapshot | undefined => {
+    if (inventoryLedger === undefined) return undefined;
+    for (const page of pagesToScan) {
+      const candidate = inventoryLedger.candidate(page.url);
+      if (candidate === undefined) {
+        throw new Error(`scanSite: visited page ${page.url} is missing from the inventory ledger`);
+      }
+      if (candidate.disposition === undefined) {
+        inventoryLedger.recordDisposition({
+          url: page.url,
+          disposition: 'scanned',
+          decidedAt: new Date(),
+        });
+      }
+    }
+    const reconciliation = inventoryLedger.reconcile();
+    if (!reconciliation.reconciled) {
+      throw new Error(
+        `scanSite: inventory remains unreconciled after content scan: ${reconciliation.unreconciledUrls.join(', ')}`,
+      );
+    }
+    const snapshot = inventoryLedger.snapshot();
+    if (options.auditDir !== undefined) writeInventoryLedger(options.auditDir, snapshot);
+    return snapshot;
+  };
+
   const robotsPolicyRuntime = options.fullAuditPlanning
     ? new RobotsPolicyRuntime({
         evidenceEpoch: 1,
@@ -1386,6 +1426,7 @@ export async function scanSite(
       context,
       options.onProgress,
     );
+    const finalInventory = finalizeInventoryLedger();
     return {
       crawl,
       pages,
@@ -1393,6 +1434,7 @@ export async function scanSite(
       analysisCoverageByUrl,
       ...(cruxFieldData !== undefined ? { cruxFieldData } : {}),
       ...(networkSafetyDispositions.length > 0 ? { networkSafetyDispositions } : {}),
+      ...(finalInventory !== undefined ? { inventoryLedger: finalInventory } : {}),
     };
   }
 
@@ -1456,10 +1498,12 @@ export async function scanSite(
       ),
   );
 
+  const finalInventory = finalizeInventoryLedger();
   return {
     crawl,
     pages,
     ...(cruxFieldData !== undefined ? { cruxFieldData } : {}),
     ...(networkSafetyDispositions.length > 0 ? { networkSafetyDispositions } : {}),
+    ...(finalInventory !== undefined ? { inventoryLedger: finalInventory } : {}),
   };
 }
