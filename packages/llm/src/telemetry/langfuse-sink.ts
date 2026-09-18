@@ -44,7 +44,7 @@ export class LangfuseLlmTelemetrySink implements LlmTelemetrySink {
     const end = BigInt(Date.now()) * 1_000_000n;
     const start = end - BigInt(Math.max(0, event.durationMs)) * 1_000_000n;
 
-    const attributes: Array<{ key: string; value: { stringValue: string } }> = [
+    const attributePairs: ReadonlyArray<readonly [string, string]> = [
       ['langfuse.observation.type', 'generation'],
       ['gen_ai.system', 'openai'],
       ['gen_ai.request.model', event.model],
@@ -52,7 +52,11 @@ export class LangfuseLlmTelemetrySink implements LlmTelemetrySink {
       ['odysseus.llm.pass', event.pass],
       ['odysseus.llm.attempt_count', String(event.attemptCount)],
       ['odysseus.llm.duration_ms', String(event.durationMs)],
-    ].map(([key, value]) => ({ key, value: { stringValue: value } }));
+    ];
+    const attributes = attributePairs.map(([key, value]) => ({
+      key,
+      value: { stringValue: value },
+    }));
 
     if (event.language) {
       attributes.push({
