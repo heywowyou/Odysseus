@@ -1,6 +1,6 @@
 # Plan 051: findings delta in the re-audit report
 
-Status: IMPLEMENTED (2026-09-16, issue #371).
+Status: IMPLEMENTED (2026-09-16, issue #371); **closure proof reopened 2026-09-18** for deterministic/no-model architecture evidence.
 
 Source design: [`docs/product/findings-delta-reaudit-design.md`](../docs/product/findings-delta-reaudit-design.md),
 approved 2026-09-10 with all six defaults. This plan fixes the questions that
@@ -62,3 +62,26 @@ and baselines across a site URL change.
 
 Focused unit tests per slice, then `pnpm run check` and the report and
 interface test suites.
+
+
+## Closure-proof amendment (2026-09-18)
+
+The outcome says the delta is deterministic and that no model writes or ranks
+it. That is a binding architecture property, not descriptive prose. Keep these
+proofs green:
+
+- dependency-cruiser/static architecture rules prevent the delta core,
+  baseline lookup, delta renderer, and report-stage delta orchestration from
+  importing `@odysseus/llm` or any model client;
+- an integration test installs a failing/spying LLM client and proves rendering
+  a re-audit delta makes **zero** model calls for delta classification,
+  ordering, wording, or severity;
+- committed golden fixtures cover FR/EN output for new/resolved/persistent/
+  severity-changed plus suppression/comparability disclosures;
+- the baseline query has a store test proving "most recent eligible approved
+  earlier audit" over multiple misleading candidates;
+- a requirement-to-proof ledger maps every build-time decision above to the
+  named implementation and test.
+
+The plan remains open as a completion defect if any of these properties can
+only be established by reading the code and agreeing with its intent.

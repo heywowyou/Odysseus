@@ -131,7 +131,7 @@ CycloneDX SBOM artifact.
   docker run --rm -v "$PWD":/repo:ro -w /repo aquasec/trivy:0.74.0 fs \
     --scanners vuln,secret,misconfig \
     --skip-dirs node_modules,.agents,.claude,.codex,.zcode,data,artifacts,reports,coverage,.pnpm-store \
-    --skip-files .env,.env.smoke \
+    --skip-files .env,.env.smoke,.restic.env,.restic-password \
     --severity HIGH,CRITICAL --ignore-unfixed \
     --trivyignores .trivyignore.yaml /repo
   ```
@@ -208,6 +208,20 @@ failure means the rule regressed, not that product code did.
   fixtures plus a `stage-path` file naming the directory the fixture should
   be scanned as if it lived in (so `paths.include`/`paths.exclude` behave the
   same in the fixture as in the real repo), then run `test-rules.py`.
+
+
+### Secondary accessibility engine
+
+CI runs IBM Equal Access `accessibility-checker` in addition to the existing
+axe/browser tests. The wrapper is `deploy/equal-access-ci.sh`, the checker is
+pinned to `4.0.34`, and `.achecker.yml` pins its rule archive to the
+tool-versioned archive with the WCAG 2.2 policy. IBM telemetry is explicitly
+disabled in CI.
+
+This is an independent regression signal, not a replacement for axe or manual
+keyboard/screen-reader/zoom testing. A checker disagreement is investigated;
+do not weaken either engine merely to make the dashboard green. Renovate owns
+the checker pin through the regex custom manager in `renovate.json`.
 
 ## Dependency maintenance
 

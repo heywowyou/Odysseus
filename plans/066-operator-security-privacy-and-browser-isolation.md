@@ -510,6 +510,41 @@ Security UI must remain accessible:
 
 ---
 
+# 17.1 Required production isolation proof artifact
+
+"Verified sandbox or approved equivalent" must produce a concrete,
+versioned `BrowserIsolationProfile` release artifact before promotion. It
+records:
+
+- deployment/build/container fingerprint;
+- Chromium binary/version and effective launch arguments;
+- positive evidence that the renderer sandbox/equivalent boundary is enabled;
+- process UID/GID/capabilities/seccomp/namespace facts available on the host;
+- CPU/memory/pid/temp-profile limits;
+- exact secret allowlist/denylist visible to browser execution;
+- scanner egress policy and report-render egress policy;
+- cleanup behavior for browser profiles/temp artifacts;
+- preflight command/test version and timestamp.
+
+Required negative tests:
+
+1. promoted browser process cannot read representative app/database/mailbox/
+   object-store/session/model secrets outside its minimum task contract;
+2. report renderer cannot reach an arbitrary external HTTP target;
+3. scanner browser navigation/subresource attempts to loopback, private,
+   link-local and metadata targets are blocked, including redirect/rebinding
+   fixtures;
+4. stale/mixed-version worker cannot write/promote after lease loss;
+5. candidate/evidence routes reject unauthenticated access and do not leak
+   permanent public object URLs;
+6. source tree/deploy config has no promoted `--no-sandbox` path unless the
+   separately approved equivalent isolation profile explicitly requires and
+   proves a stronger external boundary.
+
+The profile plus negative-test results are required deployment evidence, not a
+runbook assertion. A requirement-to-proof closure ledger must map every
+binding security decision to its enforcement point and test.
+
 # 18. Fail-closed conditions
 
 Do not production-promote the new evidence/report pipelines when:
@@ -561,4 +596,6 @@ Plan 066 is implemented when:
 10. session/same-origin/security-header behavior is regression-tested;
 11. archive/delete/backup/restore semantics cover the new content-addressed object graphs safely;
 12. stale/mixed-version browser workers cannot promote or overwrite current evidence/reports;
-13. production-like security/fault tests and restore rehearsal pass before pipeline promotion.
+13. production-like security/fault tests and restore rehearsal pass before pipeline promotion;
+14. the current BrowserIsolationProfile plus all required negative tests and
+    security closure-ledger rows are present and green for the promoted build.

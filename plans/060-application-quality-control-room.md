@@ -624,6 +624,27 @@ new guarantee before its owning backend contract is authoritative.
 
 ---
 
+# 16.1 Closure-proof contract
+
+"Truthful", "semantic", "single inbox" and "common vocabulary" are not
+sufficiently testable by inspection. The implementation must commit:
+
+- one canonical typed `OperatorStateVocabulary` exported from the owning
+  server/domain layer; browser code consumes it and cannot redefine equivalent
+  enums locally;
+- one `ConsequentialActionRegistry` covering every scan/report/archive/
+  delete/approval/recovery mutation exposed by the control room, with owning
+  capability code, token inputs and command route;
+- an exhaustive contract test proving every registry action has a server
+  recheck and every closed state/reason has FR/EN copy;
+- an architecture test/code-search allowlist proving migrated screens do not
+  infer evidence/report readiness from raw Job/Mongoose fields;
+- a requirement-to-proof ledger for every binding decision in this plan.
+
+Adding a new action/state without updating the corresponding registry and
+proof must fail CI rather than silently inherit a default.
+
+
 # 17. Fail-closed conditions
 
 The control room must not present an action as available when:
@@ -677,7 +698,9 @@ Plan 060 is implemented when:
 9. report approval is explicitly separated from report download;
 10. the 061-066 contracts are implemented without contradictory duplicate authorities;
 11. integrated regression tests cover the adversarial matrix above;
-12. the final cross-plan review finds no screen or command that can claim a stronger state than 058/059/store truth proves.
+12. the final cross-plan review finds no screen or command that can claim a stronger state than 058/059/store truth proves;
+13. the canonical state/action registries are exhaustive and their closure
+    ledger has no prose-only or unverified row.
 
 ---
 

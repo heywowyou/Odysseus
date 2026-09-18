@@ -13,6 +13,7 @@
 - **Risk**: HIGH — paid-report analysis, model orchestration, rendering, PDF QA, persistence, approval and delivery all change.
 - **Depends on**: delivered plans 027, 033, 039, 050 and 051; **Plan 059 evidence approval before production promotion**.
 - **Category**: paid-report quality, senior reasoning pipeline, exact-PDF QA, bilingual delivery integrity.
+- **Execution status**: core pipeline implementation landed 2026-09-18 and remains dormant behind Plan 059; **corrective closure reopened 2026-09-18** because the implementation used one generic report-quality model instead of the required validated per-role profiles.
 - **Final review state**: original design + six hardening passes + final convergence reviews. The final architecture pass produced no additional substantive change; freeze speculative design and let implementation/evaluation evidence drive later amendments.
 
 ---
@@ -520,6 +521,72 @@ Quality rules:
 - model/profile/prompt/schema changes that can affect output invalidate benchmark approval until the relevant corpus is rerun.
 
 ---
+
+## 6.1 Corrective requirement: executable per-role model profiles (2026-09-18)
+
+A completion review found that "use the strongest validated profile for each
+role" was too implicit: one generic `ODYSSEUS_REPORT_QUALITY_MODEL` can
+mechanically satisfy configurability while violating the intended quality
+contract. This is a **Plan-058 completion defect**, not a future optimization.
+
+Implement a closed `ReportModelProfileRegistry` keyed exhaustively by every
+`ReportQualityRole`. There is no wildcard/default profile. Every entry
+contains, at minimum:
+
+```ts
+type ReportModelProfile = {
+  role: ReportQualityRole;
+  provider: 'openai';
+  model: string;
+  reasoningEffort: 'none' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+  requiresVision: boolean;
+  requiresStructuredOutput: true;
+  promptVersion: string;
+  schemaVersion: string;
+  benchmarkApprovalId: string;
+};
+```
+
+Binding rules:
+
+- `getReportQualityModel()` as one model for all roles is not the final
+  architecture; callers resolve an explicit profile by role;
+- no Plan-058 role may fall back to legacy `OPENAI_MODEL`,
+  `gpt-5.4-mini`, or an environment-wide generic model when its profile is
+  missing; missing/unapproved profile is a fail-closed configuration error;
+- requested profile, reasoning effort, prompt/schema versions, provider
+  resolved model ID and profile digest are persisted in run lineage;
+- production startup/preflight proves every role has exactly one approved
+  profile and that required vision/structured-output capabilities exist;
+- the initial quality-first candidate set uses OpenAI `gpt-5.6-sol` for all
+  Plan-058 reasoning/writing/review roles. Start at `high` for writers,
+  critics, editor, parity and visual reviewers; start at `xhigh` for the
+  senior analyst, issue/visual adjudicators and final document arbiter.
+  `max` is evaluated only where the corpus demonstrates a material quality
+  gain;
+- a cheaper/lower-capability profile may replace Sol for a role only after
+  the same relevant Plan-058 corpus demonstrates no material degradation in
+  factuality, coverage, remediation coherence, language quality, parity,
+  reviewer recall/precision and gate stability;
+- profile/model/reasoning changes invalidate that role's
+  `benchmarkApprovalId` until the applicable corpus is rerun.
+
+Required tests:
+
+1. exhaustive role-registry coverage test (adding a role without a profile
+   fails compilation/test);
+2. missing-profile/no-default-fallback test;
+3. static reachability test proving the promoted Plan-058 path cannot use the
+   legacy `OPENAI_MODEL`;
+4. provenance persistence/read-back test for requested/resolved model,
+   reasoning effort and profile digest;
+5. benchmark manifest test proving every production profile names a current
+   corpus approval.
+
+The model-profile matrix and benchmark manifest are release artifacts. A
+quality run is not production-promotable merely because a model string is
+configured.
+
 
 # 7. Senior analysis and writing contract
 
@@ -1149,7 +1216,15 @@ Plan 058 is implemented only when all are true:
 41. operator accepts the complete Point France pair and representative extreme reports editorially and visually;
 42. dashboard/progress/conflict controls reflect the real pipeline;
 43. canonical docs/deploy tooling describe the shipped contract;
-44. full repository validation and relevant e2e/store/toolchain tests are green.
+44. full repository validation and relevant e2e/store/toolchain tests are green;
+45. every Plan-058 model role resolves through the exhaustive approved
+    `ReportModelProfileRegistry`, with no generic/legacy fallback;
+46. the production model-profile benchmark manifest is current for every role
+    and the relevant corpus has been rerun after the last profile/model/
+    reasoning change;
+47. a requirement-to-proof closure ledger maps every binding Plan-058
+    requirement to implementation plus machine/manual acceptance evidence, with
+    no prose-only closure.
 
 ## Freeze criterion
 

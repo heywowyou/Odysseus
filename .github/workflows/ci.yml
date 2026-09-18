@@ -82,6 +82,12 @@ jobs:
       - name: Build site
         run: pnpm --filter @odysseus/site run build
 
+      - name: IBM Equal Access secondary accessibility gate
+        run: bash deploy/equal-access-ci.sh
+        env:
+          MONGODB_TEST_URI: mongodb://localhost:27018/odysseus_test
+          IBM_TELEMETRY_DISABLED: 'true'
+
       - name: Test production release controller
         run: pnpm run test:deploy
 
@@ -131,7 +137,7 @@ jobs:
           scan-ref: .
           scanners: vuln,secret,misconfig
           skip-dirs: node_modules,.agents,.claude,.codex,.zcode,data,artifacts,reports,coverage,.pnpm-store
-          skip-files: .env,.env.smoke
+          skip-files: .env,.env.smoke,.restic.env,.restic-password
           severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
 
       - name: Trivy gate (HIGH/CRITICAL with a known fix)
@@ -142,7 +148,7 @@ jobs:
           scan-ref: .
           scanners: vuln,secret,misconfig
           skip-dirs: node_modules,.agents,.claude,.codex,.zcode,data,artifacts,reports,coverage,.pnpm-store
-          skip-files: .env,.env.smoke
+          skip-files: .env,.env.smoke,.restic.env,.restic-password
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: '1'

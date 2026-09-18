@@ -14,7 +14,7 @@
 - **Depends on:** Plan 049 DONE
 - **Category:** product architecture / workflow simplification / data durability
 - **Planned:** 2026-09-16
-- **Execution status:** IMPLEMENTED (2026-09-16), post-deploy acceptance rehearsal pending operator authorization.
+- **Execution status:** IMPLEMENTED (2026-09-16); **closure proof reopened 2026-09-18**. Post-deploy acceptance rehearsal and the new closure-proof amendment remain required before final closure.
   - Steps 1–7 (`1c7636a`): New scan and the prospect page offer only Quick check and Full scan; the scans API refuses `prospecting-audit`/`outreach-full-scan` as new work while stored rows and queued jobs stay readable and drain through the compatibility runner; outreach qualification is purpose plus complete coverage, with the normalization fingerprint reported as advisory `current`/`older`/`unknown`; report delivery depends only on matching findings provenance, template age is a neutral badge; `makeReportReady` is proven never to call the audit stage. Step 3 needed no runtime change: an identity-unconfirmed Full scan already persists and advances the prospect.
   - Steps 8–12 (`2597b4d`): `archivedAt` lifecycle with idempotent `archiveProspect`/`restoreProspect` and events; archived prospects leave lists, counts, and To-do; archived view; directory rows show Open/Restore, adds claim the entry atomically, source refresh never writes the link; `deleteProspectPermanently` behind a counted impact confirmation. Mongo-backed regression tests cover every archive/directory case the plan lists.
   - Step 13: copy and docs (`dashboard-ia.md`, project brief, outreach rules, trade-off 91, trade-off 88 note). Remaining `prospecting-audit`/"prospecting audit" matches are historical-compatibility code, tests of the retirement, legacy display labels, archived plans/UX-ledger history, and the unreferenced legacy `prospects`/`prospectDetail`/`hub` i18n namespaces.
@@ -1593,6 +1593,30 @@ Removing a prospect from active work archives it.
 Permanent deletion is explicit and exceptional.
 ```
 
+## Closure-proof amendment (2026-09-18)
+
+Plan 050's lifecycle statements are now subject to the root plan-closure
+standard. Before this plan can be considered fully accepted (rather than code
+implemented with a pending rehearsal), retain the following concrete proofs:
+
+- a **scan-producer inventory** enumerating every route/CLI/queue producer of
+  new scan jobs and proving ordinary dashboard work can create only
+  `quick-check` or `full-audit`; any remaining legacy purpose producer must
+  be explicitly classified;
+- a **no-network-on-derived-output regression** that instruments the scanner
+  network boundary and proves report regeneration, outreach generation,
+  renormalization, archive/restore, and compatible historical reuse cannot
+  initiate website acquisition;
+- an **archive/restore identity fixture** that asserts the exact
+  `prospectId` plus operator-owned enrichment/history references survive the
+  round trip rather than merely checking that a row reappears;
+- a closure ledger mapping every binding product-contract item in this plan to
+  its implementation seam and test/rehearsal evidence.
+
+A code search alone is supporting evidence, not sufficient proof for a runtime
+invariant.
+
+
 ## Definition of done
 
 Plan 050 is complete only when all of the following are true:
@@ -1607,4 +1631,5 @@ Plan 050 is complete only when all of the following are true:
 - directory-derived archived prospects restore rather than duplicate;
 - permanent deletion remains available but is no longer the normal removal action;
 - full tests and documentation checks pass;
-- the post-deploy acceptance rehearsal confirms the behavior against real existing data.
+- the post-deploy acceptance rehearsal confirms the behavior against real existing data;
+- the closure-proof amendment above has no unproven binding row.

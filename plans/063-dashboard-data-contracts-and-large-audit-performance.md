@@ -626,6 +626,32 @@ Plan 064 owns detailed tests.
 
 ---
 
+# 19.1 Numeric performance budgets
+
+"Bounded", "small" and "responsive" are not acceptance criteria. These are the
+initial hard budgets for the Point-France-scale committed fixture; tightening
+is allowed, loosening requires a plan amendment with measured evidence:
+
+- audit control-summary JSON: **<= 256 KiB** serialized;
+- active-work/attention polling response: **<= 128 KiB** serialized per
+  endpoint;
+- finding/occurrence/history page: **<= 100 rows** and **<= 256 KiB**
+  serialized;
+- audit control-summary/list read: **<= 20 database queries** per request on
+  the scale fixture, with **zero N+1 growth** as row count increases;
+- summary/list paths: **zero object-store/PDF byte reads**;
+- browser renders at most the requested server page; it may not fetch hidden
+  remainder pages merely to compute totals/search locally.
+
+Store these thresholds in one committed
+`dashboard-performance-budgets` artifact consumed by tests rather than
+copying magic numbers across suites. CI fails on a budget regression.
+
+Wall-clock latency is recorded for comparison but is not a hard CI threshold
+because shared-runner timing is noisy; query count, bytes, rows and forbidden
+I/O are the deterministic closure gates.
+
+
 # 20. Fail-closed conditions
 
 A control surface must not claim a global count/state when:
@@ -671,4 +697,6 @@ Plan 063 is implemented when:
 9. query counts and response sizes are bounded by contract and regression-tested;
 10. Point-France and small-site fixtures both remain clear/responsive;
 11. pagination/filter UX is keyboard-accessible and preserves state;
-12. no endpoint hides truncation behind a global-looking number.
+12. no endpoint hides truncation behind a global-looking number;
+13. every scale-critical endpoint satisfies the committed numeric query/
+    payload/page/I-O budgets and the requirement-to-proof ledger is complete.

@@ -530,6 +530,33 @@ incrementally as their consuming pages migrate.
 
 ---
 
+# 19.1 Accessibility acceptance record
+
+"Exemplary" and "no substantive defect" are replaced by a concrete closure
+bar for the named control-room workflows:
+
+- target **WCAG 2.2 A/AA** for operator UI behavior in scope;
+- axe: zero unexplained serious/critical violations in the named automated
+  workflow fixtures;
+- IBM Equal Access checker (`deploy/equal-access-ci.sh` + `.achecker.yml`): zero unwaived Level 1/2 violations in the same
+  rendered fixtures; any waiver is committed with
+  rule, rationale, owner and expiry/review date;
+- manual keyboard: every named primary workflow completes without pointer;
+- focus: dialogs/drawers/mobile nav have scripted open/trap/Escape/return
+  assertions;
+- zoom: 200% and 400% checks preserve every core state and consequential
+  action without document-level horizontal loss;
+- screen reader: commit a manual acceptance record for at least one supported
+  Windows pairing (NVDA + current Firefox or Chrome) covering shell nav,
+  attention table, audit summary, dialog, error/recovery and report approval;
+- FR/EN closed-state/reason/action parity is exhaustive.
+
+Record manual results in a dated canonical dashboard-accessibility acceptance
+document. Plan closure requires **no known WCAG 2.2 A/AA failure** in the named
+workflows; preference/cosmetic issues may remain only when explicitly
+classified as non-conformance-neutral.
+
+
 # 20. Fail-closed conditions
 
 Do not consider a migrated control-room workflow complete when:
@@ -578,4 +605,7 @@ Plan 064 is implemented when:
 9. long URLs/identifiers cannot break core layout;
 10. FR/EN closed-code parity prevents raw status/reason leakage;
 11. existing visual design is more consistent without unnecessary new palette/components;
-12. a final manual keyboard/screen-reader/zoom pass finds no substantive accessibility defect.
+12. the dated manual acceptance record contains no known WCAG 2.2 A/AA
+    failure in the named workflows;
+13. axe + IBM Equal Access + keyboard/focus/zoom regression gates and the
+    requirement-to-proof ledger are green.

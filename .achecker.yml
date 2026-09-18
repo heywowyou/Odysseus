@@ -1,0 +1,19 @@
+# IBM Equal Access secondary accessibility checker.
+# Pinned invocation lives in deploy/equal-access-ci.sh. "versioned" keeps the
+# ruleset coupled to the installed checker version instead of silently changing
+# underneath a green commit.
+ruleArchive: versioned
+policies:
+  - WCAG_2_2
+failLevels:
+  - violation
+reportLevels:
+  - violation
+  - potentialviolation
+  - recommendation
+  - potentialrecommendation
+  - manual
+outputFormat:
+  - json
+cacheFolder: /tmp/odysseus-equal-access-cache
+outputFolder: /tmp/odysseus-equal-access-results

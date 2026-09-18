@@ -13,6 +13,40 @@ as a historical record in
 [`archive/9c-plans-index-history.md`](archive/9c-plans-index-history.md). It
 is not binding.
 
+## Plan closure standard
+
+Every active/root plan is a quality contract, not merely design prose. A plan
+must not be marked implemented/done because an implementation can be
+interpreted as satisfying an adjective such as "strongest", "bounded",
+"truthful", "clear", "safe", "responsive", "durable", or "accessible".
+
+For every binding requirement, the plan's closure evidence must identify:
+
+1. the concrete implementation owner/seam;
+2. the exact persisted/API/type/config artifact that embodies the requirement;
+3. a machine-verifiable test, invariant, budget, or fault fixture where the
+   requirement is mechanically testable;
+4. a named manual acceptance record only for properties that genuinely require
+   human judgment;
+5. the provenance/version of external models, tools, browsers, renderers, or
+   security profiles that materially affect the result.
+
+Each active plan must maintain a requirement-to-proof closure ledger (inline or
+in a named canonical document). **No binding row may be blank, mapped only to
+"code review", or closed by prose interpretation.** Unknown/unproven means the
+plan remains open.
+
+When a requirement says "best/strongest/fast/bounded/complete/safe" or similar,
+the plan must also name the comparison set or numeric/structural acceptance
+criterion. When a requirement names a role or state, the implementation must
+have an exhaustive typed registry/inventory and a test proving there is no
+silent default/fallback path.
+
+A later implementation discovery that exposes a missing proof reopens the
+owning plan as a completion defect; it is not automatically deferred to a new
+plan number.
+
+
 ## Current outcome
 
 Odysseus prospects from one durable, editable prospect hub. The operator adds
@@ -82,15 +116,15 @@ The canonical sources for this behavior are `docs/product/odysseus-project-brief
 | [047](archive/047-prospect-hub.md) | Make the prospect the durable, editable central hub | P1 | L | none | DONE (2026-09-15) |
 | [048](archive/048-dashboard-workflow-consolidation.md) | Reduce the dashboard to one operator workflow | P1 | L | 047 | DONE (2026-09-15) |
 | [049](archive/049-simplified-workflow-behaviorally-truthful.md) | Make the simplified workflow behaviorally truthful | P1 | L | 048 | DONE (2026-09-15) |
-| [050](050-reusable-scans-durable-prospects.md) | Make scans reusable and prospects durable: two scan intents, advisory data version, archive instead of ordinary deletion | P1 | XL | 049 | IMPLEMENTED (2026-09-16) |
-| [051](051-findings-delta-reaudit.md) | Add the findings delta to the re-audit report | P2 | L | 050 | IMPLEMENTED (2026-09-16) |
+| [050](050-reusable-scans-durable-prospects.md) | Make scans reusable and prospects durable: two scan intents, advisory data version, archive instead of ordinary deletion | P1 | XL | 049 | IMPLEMENTED; CLOSURE PROOF REOPENED (2026-09-18) |
+| [051](051-findings-delta-reaudit.md) | Add the findings delta to the re-audit report | P2 | L | 050 | IMPLEMENTED; CLOSURE PROOF REOPENED (2026-09-18) |
 | [052](archive/052-crawler-honours-its-published-identity.md) | Make the crawler obey robots groups for its published bot name and send its user agent on every request | P1 | M | none | DONE (2026-09-17) |
 | [053](archive/053-opt-out-reach-survives-prospect-status.md) | Keep a public opt-out from widening into domain-wide suppression through the prospect status | P1 | S | none | DONE (2026-09-17) |
 | [054](archive/054-reaudit-delta-pairs-rescoped-findings.md) | Pair re-audit findings whose merged page set changed instead of showing resolved plus new | P1 | M | none; before the 050/051 rehearsal | DONE (2026-09-17) |
 | [055](archive/055-scan-launch-and-job-delete-integrity.md) | Refuse scans for archived prospects and close the queued-job delete race | P1 | S | none | DONE (2026-09-17) |
 | [056](archive/056-in-flight-work-guards.md) | Share one report production lock and refuse archive or delete while work is still in flight | P2 | M | after 055 (both edit the job delete route) | DONE (2026-09-17) |
 | [057](archive/057-prospect-owns-linked-audit-identity.md) | Make the prospect the single source of a linked audit's name and SIREN; edits on the audit save to the prospect | P2 | M | none | DONE (2026-09-17) |
-| [058](058-fail-closed-senior-report-quality-pipeline.md) | Make the paid report fail closed on content and PDF quality | P1 | XL | 027, 033, 039, 050, 051; 059 before production promotion | TODO |
+| [058](058-fail-closed-senior-report-quality-pipeline.md) | Make the paid report fail closed on content and PDF quality | P1 | XL | 027, 033, 039, 050, 051; 059 before production promotion | IMPLEMENTED DORMANT; CORRECTIVE REOPENED: model profiles + closure proof |
 | [059](059-fail-closed-audit-evidence-quality.md) | Make full-audit evidence fail closed before report generation | P1 | XL | 021, 035, 050, 051; gates 058 promotion | IN PROGRESS: Phase A shipped as dormant contract modules; execution state, operator decisions and blockers in [059-execution-handoff.md](059-execution-handoff.md) |
 | [060](060-application-quality-control-room.md) | Make the dashboard a truthful quality control room over evidence, reports and operator attention | P1 | XL | 058, 059; 035, 050-057 semantics | TODO |
 | [061](061-durable-work-state-capabilities-and-queue.md) | Make long-running work, action safety, cancellation and scan queue state durable and truthful | P1 | XL | 060; 035, 050, 055, 056; 058/059 run contracts | TODO |

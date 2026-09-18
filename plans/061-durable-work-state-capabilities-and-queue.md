@@ -716,6 +716,31 @@ operator projection.
 
 ---
 
+# 17.1 Closure-proof contract
+
+The "every active long-running process" and "every consequential action"
+requirements require exhaustive inventories, not a best-effort migration.
+
+Commit a typed `WorkOwnerRegistry` whose entry for every long-running producer
+names its owner, durable state store, lease/epoch authority, cancellation
+policy, resume policy, progress projector and capability namespace. Commit a
+typed `CommandCapabilityRegistry` for every consequential migrated mutation.
+
+CI must prove:
+
+- all registered producers have durable ownership and restart tests;
+- no promoted 058/059/report/scan correctness decision depends on a
+  process-local lock/map/boolean;
+- every command route is represented in the capability registry and performs a
+  command-time token/state recheck;
+- adding a queueable producer or consequential route without registration
+  fails an inventory test;
+- crash/restart tests cover every owner class, not only representative jobs;
+- the requirement-to-proof ledger has no unowned binding requirement.
+
+The registries are architecture artifacts, not dashboard convenience maps.
+
+
 # 18. Fail-closed conditions
 
 Do not execute a state-sensitive command when:
@@ -764,4 +789,6 @@ Plan 061 is implemented when:
 9. browser recovery logic no longer depends on parsing raw exception strings for migrated work;
 10. old jobs remain readable without fabricated history;
 11. crash/deploy/concurrency tests prove stale workers cannot become current;
-12. queue and progress UX remains usable with both one job and an overnight batch.
+12. queue and progress UX remains usable with both one job and an overnight batch;
+13. every long-running producer and consequential command is present in the
+    exhaustive owner/capability registries and the closure ledger is complete.

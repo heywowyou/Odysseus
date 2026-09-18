@@ -1,0 +1,10 @@
+[Unit]
+Description=Run the Odysseus restic backup nightly
+
+[Timer]
+OnCalendar=*-*-* 04:20:00 Europe/Paris
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target
