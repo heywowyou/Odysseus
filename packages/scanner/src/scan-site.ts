@@ -926,11 +926,12 @@ async function runStagedFullAuditScan(
  * observing the delay privately. Concurrency adds parallel lanes under that one
  * rate; it never buys a lane a request rate of its own.
  *
- * What the scheduler does not cover, and should not be read as covering: the
- * second navigation render-diff makes within a page, the navigation a
- * Lighthouse run performs, and every subresource a loading page pulls. Those
- * are still spaced by the same delay value passed down to them, so the ceiling
- * here is on page-level requests the scanner initiates, not on total traffic.
+ * Inner crawler-initiated requests now draw from the same start-rate budget:
+ * render-diff's second navigation and the serialized Lighthouse navigation use
+ * scheduler.pace(), while robots/sitemap and site-level fetches are scheduled
+ * directly. Browser subresources are network-policy checked but are not paced
+ * individually; the scheduler is therefore a ceiling on crawler-initiated
+ * request starts, not on the total asset traffic one loaded page may generate.
  *
  * The crawl phase itself stays fully sequential (unaffected by
  * concurrency): it is the phase CLAUDE.md's politeness rule names most
