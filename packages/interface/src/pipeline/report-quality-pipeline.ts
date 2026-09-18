@@ -30,7 +30,8 @@ import {
   callReportQualityRole,
   editorOutputSchema,
   finalArbiterOutputSchema,
-  getReportQualityModel,
+  getReportModelProfile,
+  getReportModelProfileMatrixDigest,
   issueAdjudicationOutputSchema,
   qualityReviewOutputSchema,
   qualityWriterOutputSchema,
@@ -350,7 +351,7 @@ async function cleanContentDraft(
       plan,
       registry,
       evidence: context.evidence,
-      requestedModel: getReportQualityModel(),
+      requestedModel: getReportModelProfile(language === 'fr' ? 'writer-fr' : 'writer-en').model,
       generatedAt: new Date(),
       ...(reportInputs.obligationAssessment !== undefined
         ? { obligationAssessment: reportInputs.obligationAssessment }
@@ -514,7 +515,7 @@ async function renderAndReviewLanguage(
     plan,
     registry,
     evidence: context.evidence,
-    requestedModel: getReportQualityModel(),
+    requestedModel: getReportModelProfile(language === 'fr' ? 'writer-fr' : 'writer-en').model,
     generatedAt: new Date(),
     ...(reportInputs.obligationAssessment !== undefined
       ? { obligationAssessment: reportInputs.obligationAssessment }
@@ -771,7 +772,6 @@ export async function runReportQualityPipeline(input: {
       qualityTools,
       divergenceThreshold: process.env['ODYSSEUS_PDF_RENDER_DIVERGENCE_MAX_RATIO'] ?? null,
     });
-    const model = getReportQualityModel();
     const approvedEvidenceDigest = reportQualityDigest(evidence.approval);
     const reportOnlyInputsDigest = reportQualityDigest(reportInputs);
     const referenceRegistryDigest = reportQualityDigest({
@@ -794,11 +794,7 @@ export async function runReportQualityPipeline(input: {
       rendererBuild: readOdysseusBuildId(),
       rendererFingerprint: renderer.rendererAssets,
       fontFingerprint: renderer.fonts,
-      modelProfileDigest: reportQualityDigest({
-        model,
-        reasoningEffort: 'high',
-        roleContract: '058-v1',
-      }),
+      modelProfileDigest: getReportModelProfileMatrixDigest(),
       qualityToolFingerprint,
       requestedLanguages: ['fr', 'en'],
       createdAt: new Date().toISOString(),
