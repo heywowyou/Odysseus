@@ -1322,7 +1322,16 @@ package typechecks and every suite above are green at the closing commit.
    heterogeneous saved audits, repeated stability, comparison against the
    prior production baseline), recorded in a committed artifact that flips the
    benchmark manifest approval `current` — needs the operator's authorization
-   for live model spend;
+   for live model spend. **Corpus feasibility was measured on 2026-09-18** with
+   the harness dry-run (no model calls): of the 14 saved audits on this
+   machine, only **6** load (3 direct legacy-adapter + 3 recovered by offline
+   renormalization); the other 8 are refused by the fail-closed evidence gate
+   because the saved scans themselves carry coverage defects (5 partial page
+   renders, 3 unresolved sitemap failures — including the mandatory Hôtel
+   Point France save). §19 forbids live rescans merely to fill benchmark
+   slots, so reaching ≥12 requires operator-authorized rescans of named sites,
+   accumulation of new saved audits, or a dated plan amendment accepting a
+   smaller corpus;
 2. the operator's editorial/visual acceptance of the resulting Point France
    FR/EN pair (DoD 41);
 3. the OPEN rows: §16 reference registry decision, §10 layout variants + visual
