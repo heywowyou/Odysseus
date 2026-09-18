@@ -60,11 +60,15 @@ const SCANNER_NON_ACQUISITION = new Set([
   // no website (report-stage.ts).
   'launchBrowser',
   // Read the persisted Plan 059 evidence graph and hash stored findings;
-  // none of them fetches (report-quality-evidence.ts).
+  // none of them fetches (report-quality-evidence.ts, audit-evidence-quality.ts).
   'readApprovedAuditEvidence',
   'readAuditEvidenceSnapshot',
   'readEvidenceQualityAssessment',
   'confirmedFindingsDigest',
+  'hasAssessedEvidenceGraph',
+  'APPROVED_AUDIT_EVIDENCE_PATH',
+  'AUDIT_EVIDENCE_SNAPSHOT_PATH',
+  'EVIDENCE_QUALITY_ASSESSMENT_PATH',
 ]);
 
 /** The store's only scan-job producer. */
