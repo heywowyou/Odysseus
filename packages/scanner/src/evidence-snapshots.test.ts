@@ -7,10 +7,12 @@ import {
   runEvidenceConsistencyGate,
 } from './evidence-snapshots.js';
 import { buildObservationLedger } from './evidence-ledger.js';
+import { evidenceQualityFixtures } from './evidence-quality-fixtures.js';
 
 const D = 'sha256:0000000000000000000000000000000000000000000000000000000000000000';
 
 describe('evidence snapshot contracts', () => {
+  void evidenceQualityFixtures;
   it('binds one coherent evidence epoch into a system approval', () => {
     const raw = buildRawEvidenceSnapshot({
       auditId: 'audit-1',
