@@ -6,6 +6,11 @@
 
 import { isSameSiteHostname } from '../links.js';
 import type { HostRequestScheduler } from '../host-request-scheduler.js';
+import {
+  checkNetworkTarget,
+  type NetworkSafetyDisposition,
+  type NetworkTargetPolicy,
+} from '../network-target-policy.js';
 
 const LOC_PATTERN = /<loc>\s*([^<]+?)\s*<\/loc>/gi;
 const LASTMOD_PATTERN = /<lastmod>\s*([^<]+?)\s*<\/lastmod>/i;
@@ -53,6 +58,8 @@ export interface SitemapCheckOptions {
   delayMs?: number;
   /** Plan 059: run-wide host scheduler for every sitemap document request. */
   scheduler?: HostRequestScheduler;
+  networkPolicy?: NetworkTargetPolicy;
+  onNetworkSafetyBlocked?: (disposition: NetworkSafetyDisposition) => void;
 }
 
 function decodeXmlText(value: string): string {
@@ -168,6 +175,18 @@ export async function checkSitemap(
     }
     if (visitedDocuments.has(documentUrl)) continue;
     visitedDocuments.add(documentUrl);
+
+    if (options.networkPolicy !== undefined) {
+      const networkVerdict = await checkNetworkTarget(documentUrl, options.networkPolicy);
+      if (networkVerdict.kind === 'refused') {
+        options.onNetworkSafetyBlocked?.(networkVerdict.disposition);
+        fetchErrors.push({
+          url: documentUrl,
+          error: `network-safety: ${networkVerdict.disposition.reason}`,
+        });
+        continue;
+      }
+    }
 
     let fetched: Awaited<ReturnType<typeof tryFetchSitemap>>;
     if (options.scheduler !== undefined) {
