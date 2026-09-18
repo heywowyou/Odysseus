@@ -68,6 +68,10 @@ export interface StoredLanguageCandidate {
    *  before the operator approves that exact bundle. */
   privateObjectKey: string;
   pageCount: number;
+  /** Set only when the bundle is promoted: the public content-addressed
+   *  object the active pointer serves. Declared so the promotion $set
+   *  survives mongoose strict mode instead of being silently dropped. */
+  objectKey?: string;
 }
 
 export interface ReportBundleDocument {
@@ -98,6 +102,7 @@ const languageCandidateSchema = new Schema<StoredLanguageCandidate>(
     pdfDigest: { type: String, required: true },
     privateObjectKey: { type: String, required: true },
     pageCount: { type: Number, required: true },
+    objectKey: { type: String },
   },
   { _id: false },
 );

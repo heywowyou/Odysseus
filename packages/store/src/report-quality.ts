@@ -52,6 +52,11 @@ export async function acquireReportQualityLease(
   leaseMs = 30 * 60 * 1000,
 ): Promise<ReportQualityLease> {
   const model = createReportQualityLeaseModel(connection);
+  // The unique auditId index is what turns a conflicting insert into the
+  // duplicate-key conflict below, so it must exist before the first write:
+  // a fresh database would otherwise let two leases for one audit coexist
+  // during the async index build window.
+  await model.init();
   const qualityRunId = randomUUID();
   const token = randomBytes(32).toString('base64url');
   const tokenHash = digest(token);
@@ -62,10 +67,10 @@ export async function acquireReportQualityLease(
   try {
     row = await model
       .findOneAndUpdate(
-        {
-          auditId,
-          $or: [{ leaseExpiresAt: { $lte: now } }, { qualityRunId }],
-        },
+        // Only an expired lease row may be taken over; a live lease must
+        // match nothing (upsert then races on the unique auditId index,
+        // whose loser surfaces as the duplicate-key conflict below).
+        { auditId, leaseExpiresAt: { $lte: now } },
         {
           $set: { qualityRunId, leaseTokenHash: tokenHash, leaseExpiresAt: expiresAt },
           $inc: { epoch: 1 },
@@ -142,6 +147,49 @@ export async function releaseReportQualityLease(
   });
 }
 
+/**
+ * Plan 058 §15 run state machine, encoded as from-state -> allowed to-states.
+ * Self-transitions are legal because recordModelCall re-writes the current
+ * state when persisting provenance mid-phase, and `failed` /
+ * `needs-operator-review` are reachable from every production phase because a
+ * discarded run ends there; a rerun starts a new run document at `running`
+ * under a fresh lease epoch. The operator-driven `operator-approved` /
+ * `promoted` states are written by markReportQualityRunFromOperator, which is
+ * deliberately lease-free, so this table refuses them here. The phase order
+ * (parity before the per-language candidate gates) matches the shipped
+ * report-quality pipeline in @odysseus/interface, not the §15 diagram's
+ * sketch order.
+ */
+const REPORT_QUALITY_RUN_TRANSITIONS: Record<ReportBundleState, readonly ReportBundleState[]> = {
+  running: ['running', 'content-clean', 'needs-operator-review', 'failed'],
+  'content-clean': ['content-clean', 'parity-clean', 'needs-operator-review', 'failed'],
+  'parity-clean': ['parity-clean', 'fr-candidate-clean', 'needs-operator-review', 'failed'],
+  'fr-candidate-clean': [
+    'fr-candidate-clean',
+    'en-candidate-clean',
+    'needs-operator-review',
+    'failed',
+  ],
+  'en-candidate-clean': [
+    'en-candidate-clean',
+    'bundle-final-review',
+    'needs-operator-review',
+    'failed',
+  ],
+  'bundle-final-review': [
+    'bundle-final-review',
+    'quality-approved',
+    'needs-operator-review',
+    'failed',
+  ],
+  'quality-approved': ['awaiting-operator-approval', 'needs-operator-review', 'failed'],
+  'awaiting-operator-approval': ['needs-operator-review', 'failed'],
+  'operator-approved': [],
+  promoted: [],
+  'needs-operator-review': [],
+  failed: [],
+};
+
 export async function startReportQualityRun(
   connection: Connection,
   auditId: string,
@@ -176,6 +224,18 @@ export async function transitionReportQualityRun(
   } = {},
 ): Promise<void> {
   await assertReportQualityLease(connection, auditId, lease);
+  const runs = createReportQualityRunModel(connection);
+  // Read the current state and keep it in the update filter, so two writers
+  // sharing one lease cannot interleave transitions past each other.
+  const run = await runs
+    .findOne({ qualityRunId: lease.qualityRunId, auditId, epoch: lease.epoch }, { state: 1 })
+    .lean<{ state: ReportBundleState } | null>();
+  if (!run) throw new StaleReportQualityRunError();
+  if (!REPORT_QUALITY_RUN_TRANSITIONS[run.state]?.includes(state)) {
+    throw new Error(
+      `odysseus: report quality run state transition from '${run.state}' to '${state}' is not allowed`,
+    );
+  }
   const update: Record<string, unknown> = {
     $set: {
       state,
@@ -195,8 +255,8 @@ export async function transitionReportQualityRun(
   if (patch.candidateDigest) push.candidateDigests = patch.candidateDigest;
   if (Object.keys(push).length > 0) update.$push = push;
 
-  const result = await createReportQualityRunModel(connection).updateOne(
-    { qualityRunId: lease.qualityRunId, auditId, epoch: lease.epoch },
+  const result = await runs.updateOne(
+    { qualityRunId: lease.qualityRunId, auditId, epoch: lease.epoch, state: run.state },
     update,
   );
   if (result.matchedCount !== 1) throw new StaleReportQualityRunError();
