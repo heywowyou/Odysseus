@@ -57,6 +57,9 @@ export interface RunAnalysisStageOptions {
    *  docs/rules/llm-layer-rules.md section 4). */
   siteContext?: SiteContextInput;
   regenerateStructure?: boolean;
+  /** Plan 067: reuse this exact persisted structure. On-demand English uses
+   * this so it cannot silently bind to a newer structure than French. */
+  requiredStructureGeneratedAt?: string;
   /** Computed once per audit by runAuditStage and passed through by the
    *  queued pipeline (run-full-audit-job.ts), so both languages reuse the
    *  same, language-neutral determination rather than looking it up
@@ -147,6 +150,28 @@ async function findLatestStructureFile(analysesDir: string): Promise<string | un
   return latest ? path.join(analysesDir, latest) : undefined;
 }
 
+async function findStructureFileByGeneratedAt(
+  analysesDir: string,
+  generatedAt: string,
+): Promise<string | undefined> {
+  let entries: string[];
+  try {
+    entries = await fs.readdir(analysesDir);
+  } catch {
+    return undefined;
+  }
+  for (const name of entries.filter((entry) => entry.endsWith('-structure.json')).sort().reverse()) {
+    const candidate = path.join(analysesDir, name);
+    try {
+      const parsed = parseStructureDocument(JSON.parse(await fs.readFile(candidate, 'utf-8')));
+      if (parsed.generatedAt === generatedAt) return candidate;
+    } catch {
+      // Ignore unrelated malformed historical files while locating the selected structure.
+    }
+  }
+  return undefined;
+}
+
 /** The one thing that decides findingIds/category/effort/impact/
  *  priorityRank/quickWins/overallRisk for this audit, shared across every
  *  language. Reused by default (newest existing *-structure.json);
@@ -164,10 +189,19 @@ async function loadOrGenerateStructure(
   usedFallback: boolean,
   regenerate: boolean,
   manifest: AuditManifest,
+  requiredStructureGeneratedAt: string | undefined,
   findingsProvenance: ReturnType<typeof buildFindingsProvenance>,
 ): Promise<{ structureDoc: StructureDocument; reused: boolean; structurePath: string }> {
+  if (requiredStructureGeneratedAt !== undefined && regenerate) {
+    throw new Error('odysseus analyze: cannot regenerate structure while requiring an exact stored structure');
+  }
   if (!regenerate) {
-    const existingPath = await findLatestStructureFile(analysesDir);
+    const existingPath = requiredStructureGeneratedAt === undefined
+      ? await findLatestStructureFile(analysesDir)
+      : await findStructureFileByGeneratedAt(analysesDir, requiredStructureGeneratedAt);
+    if (requiredStructureGeneratedAt !== undefined && existingPath === undefined) {
+      throw new Error('odysseus analyze: the selected French structure is unavailable; English cannot be attached safely');
+    }
     if (existingPath) {
       const raw = JSON.parse(await fs.readFile(existingPath, 'utf-8'));
       const structureDoc = parseStructureDocument(raw);
@@ -270,6 +304,7 @@ export async function runAnalysisStage(
       usedFallbackContext,
       options.regenerateStructure ?? false,
       manifest,
+      options.requiredStructureGeneratedAt,
       findingsProvenance,
     );
     structureDoc = structure.structureDoc;
