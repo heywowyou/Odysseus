@@ -663,10 +663,17 @@ Install the restic timer:
 
 ```sh
 sudo cp /srv/odysseus/deploy/odysseus-restic-backup.service \
-        /srv/odysseus/deploy/odysseus-restic-backup.timer /etc/systemd/system/
+        /srv/odysseus/deploy/odysseus-restic-backup.timer \
+        /srv/odysseus/deploy/odysseus-restic-maintain.service \
+        /srv/odysseus/deploy/odysseus-restic-maintain.timer /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now odysseus-restic-backup.timer
+sudo systemctl enable --now odysseus-restic-backup.timer odysseus-restic-maintain.timer
 ```
+
+The maintenance timer retains 30 daily, 8 weekly and 12 monthly snapshots,
+then prunes unreachable pack data and runs `restic check`. Retention is
+scoped to the production host/tag so another repository user is not
+accidentally pruned.
 
 The default artifact volume is `odysseus_artifacts` (the Hostinger compose
 project). Override `ODYSSEUS_RESTIC_ARTIFACT_VOLUME` in the systemd service
