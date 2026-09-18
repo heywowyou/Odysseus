@@ -99,6 +99,7 @@ export function readPersistedEvidenceInputs(
       ...(scan.performanceMeasurement !== undefined
         ? { performanceMeasurement: scan.performanceMeasurement }
         : {}),
+      ...(scan.surfaces !== undefined ? { surfaces: scan.surfaces } : {}),
     });
     if (scan.structuralAnchor !== undefined) pageAnchors.push(scan.structuralAnchor);
   }

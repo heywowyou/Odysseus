@@ -69,6 +69,9 @@ import {
 } from './page-readiness.js';
 import { extractStructuralAnchor, type StructuralAnchor } from './temporal-anchors.js';
 import type { PerformanceMeasurementSet } from './performance-measurement-set.js';
+import type { MobileSurfaceRecord } from './mobile-surface.js';
+import type { SurfaceLinkDiscovery } from './surface-discovery.js';
+import type { ScanSurface, SurfaceLimitationRecord } from './evidence-surfaces.js';
 
 export interface ScanPageOptions {
   /** Politeness delay applied between the raw/rendered/Lighthouse passes. */
@@ -219,6 +222,22 @@ export interface PageScanResult {
    *  representative drawn from them. `lighthouse` is that representative
    *  run's full report. */
   performanceMeasurement?: PerformanceMeasurementSet;
+  /** Plan 059 step 10: the page's mobile surface — a second rendered pass
+   *  in the stable mobile profile under the unchanged crawler identity —
+   *  with its own readiness observation and bounded axe summary. Absent
+   *  when the caller did not ask for mobile surfaces. */
+  mobileSurface?: MobileSurfaceRecord;
+  /** Plan 059: every non-baseline ScanSurface built for this page (mobile
+   *  now; the consent/local-state surfaces join in step 13). Persisted so
+   *  the evidence graph digests the exact surface set that ran. */
+  surfaces?: ScanSurface[];
+  /** Plan 059 steps 10-13: anchors exposed only on a state surface, with
+   *  the discovery source and surface the fixed-point rule needs. */
+  surfaceLinks?: SurfaceLinkDiscovery[];
+  /** Plan 059: state surfaces that could not run or could not prove what
+   *  their profile claims, disclosed on this page's evidence instead of
+   *  being silently omitted. */
+  surfaceLimitations?: SurfaceLimitationRecord[];
 }
 
 /**

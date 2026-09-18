@@ -206,6 +206,81 @@ export function capabilityTraversalLevel(
  *  what every baseline rendered pass runs under. */
 export const BASELINE_DESKTOP_VIEWPORT = { width: 1280, height: 720 } as const;
 
+/** Stable identifier of the mobile surface profile (plan 059 sections 5.5
+ *  and 9, correction 3.8). The profile changes what the page can observe
+ *  about the device — viewport, device scale, touch, media — and never the
+ *  published Odysseus identity, which stays on the wire byte for byte. */
+export const MOBILE_SURFACE_PROFILE_ID = 'mobile-ua-preserving-v1';
+
+/**
+ * The one mobile profile every mobile surface runs under, kept stable for
+ * the whole evidence epoch so surfaces are comparable across pages and runs.
+ * A phones-class viewport (390x844), a 3x device scale and touch, with the
+ * same light/no-reduced-motion media defaults the desktop baseline gets.
+ */
+export const MOBILE_SURFACE_PROFILE = {
+  viewport: { width: 390, height: 844 },
+  deviceScaleFactor: 3,
+  hasTouch: true,
+  media: { colorScheme: 'light', reducedMotion: 'no-preference' },
+} as const;
+
+/** Thrown before any navigation happens when a mobile surface would have to
+ *  change the crawler identity to run. Fail closed: a mobile audit that
+ *  requires impersonating a phone browser is refused, never attempted. */
+export class SurfaceIdentityError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SurfaceIdentityError';
+  }
+}
+
+/**
+ * Client-facing capability/coverage language for what the mobile surface
+ * proves (plan 059 correction 3.8: "The capability registry states this
+ * limitation explicitly"). The mobile surface renders in a phone-class
+ * viewport with touch; it does not send a phone vendor's user agent, so a
+ * server that adapts its HTML to the User-Agent header serves the crawler
+ * the same desktop variant as always, and that variant is what was checked.
+ */
+export interface SurfaceCapabilityStatement {
+  code: string;
+  fr: string;
+  en: string;
+}
+
+/** A capability statement bound to the page it applies to: a surface that
+ *  could not run, or cannot prove what its profile claims, is disclosed on
+ *  the page's own evidence rather than silently omitted. */
+export interface SurfaceLimitationRecord extends SurfaceCapabilityStatement {
+  surfaceId?: string;
+  detail?: string;
+}
+
+export const MOBILE_UA_NEGOTIATION_LIMITATION: SurfaceCapabilityStatement = {
+  code: 'mobile-ua-negotiated-variant-untested',
+  fr: "L'analyse mobile conserve l'identité de notre robot d'analyse : seules la fenêtre d'affichage et les capacités tactiles changent. Les variantes du site servies uniquement à un navigateur mobile identifié par son user-agent ne sont pas testées.",
+  en: 'The mobile analysis keeps our published crawler identity: only the viewport and touch capabilities change. Variants of the site served only to a mobile browser identified by its user agent are not tested.',
+};
+
+/** The statement recorded on a page whose mobile surface could not run at
+ *  all. A scanner failure is disclosed as such — it is never folded into a
+ *  statement about the site. */
+export const MOBILE_SURFACE_UNAVAILABLE: SurfaceCapabilityStatement = {
+  code: 'mobile-surface-unavailable',
+  fr: "La surface mobile d'une page n'a pas pu être analysée : la page n'a été vérifiée que dans le rendu de bureau.",
+  en: "One page's mobile surface could not be analysed: the page was only verified in the desktop rendering.",
+};
+
+/** The statement recorded when the mobile surface was refused because the
+ *  run's user agent is not the published crawler identity (fail closed —
+ *  no impersonation, no partial mobile evidence). */
+export const MOBILE_SURFACE_IDENTITY_REFUSED: SurfaceCapabilityStatement = {
+  code: 'mobile-ua-identity-refused',
+  fr: "La surface mobile a été refusée pour cette page : elle exige l'identité publiée de notre robot et une autre identité était configurée.",
+  en: "One page's mobile surface was refused: it requires our published crawler identity and a different identity was configured.",
+};
+
 /**
  * The desktop baseline surface one page's rendered pass ran on: default
  * viewport, published crawler identity, a fresh context per page (render-diff
@@ -225,6 +300,43 @@ export function baselineDesktopSurface(input: {
     hasTouch: false,
     media: { colorScheme: 'light', reducedMotion: 'no-preference' },
     userAgent: input.userAgent,
+    interactionState: 'baseline',
+    storageIsolationGroup: 'fresh-context-per-page',
+    readinessOutcome: input.readinessOutcome,
+  });
+}
+
+/**
+ * The mobile surface for one page (plan 059 sections 5.5 and 9): the stable
+ * mobile profile, the unchanged crawler identity, baseline interaction, and
+ * the same fresh-context-per-page storage isolation as the desktop pass.
+ *
+ * `crawlerUserAgent` is the published identity and `userAgent` is what the
+ * run would put on the wire; the two must be byte-for-byte equal or this
+ * throws before any navigation, so a caller can never quietly impersonate a
+ * phone browser to reach a UA-negotiated variant (rejected alternative,
+ * section 22).
+ */
+export function mobileSurface(input: {
+  evidenceEpoch: number;
+  pageIdentity: string;
+  userAgent: string;
+  crawlerUserAgent: string;
+  readinessOutcome: SurfaceReadinessOutcome;
+}): ScanSurface {
+  if (input.userAgent !== input.crawlerUserAgent) {
+    throw new SurfaceIdentityError(
+      'mobileSurface: the mobile surface must keep the published crawler user agent; refusing to impersonate a mobile browser.',
+    );
+  }
+  return buildScanSurface({
+    evidenceEpoch: input.evidenceEpoch,
+    pageIdentity: input.pageIdentity,
+    viewport: MOBILE_SURFACE_PROFILE.viewport,
+    deviceScaleFactor: MOBILE_SURFACE_PROFILE.deviceScaleFactor,
+    hasTouch: MOBILE_SURFACE_PROFILE.hasTouch,
+    media: { ...MOBILE_SURFACE_PROFILE.media },
+    userAgent: input.crawlerUserAgent,
     interactionState: 'baseline',
     storageIsolationGroup: 'fresh-context-per-page',
     readinessOutcome: input.readinessOutcome,

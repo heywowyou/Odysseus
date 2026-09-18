@@ -9,6 +9,15 @@ vi.mock('./scan-page.js', () => ({
   runRenderedAnalysis: vi.fn(),
   runLighthouseAnalysis: vi.fn(),
 }));
+vi.mock('./mobile-surface.js', async () => {
+  // The real identity error class, so the refusal path is exercised against
+  // the actual fail-closed contract rather than a stand-in.
+  const { SurfaceIdentityError } = await import('./evidence-surfaces.js');
+  return {
+    SurfaceIdentityError,
+    runMobileSurfaceAnalysis: vi.fn(),
+  };
+});
 vi.mock('./checks/llms-txt.js', () => ({ checkLlmsTxt: vi.fn() }));
 vi.mock('./checks/security-headers.js', () => ({ checkSecurityHeaders: vi.fn() }));
 vi.mock('./checks/cookie-consent.js', () => ({ checkCookieConsent: vi.fn() }));
@@ -26,13 +35,16 @@ vi.mock('./config.js', () => ({
 
 import { crawlSite } from './crawl.js';
 import { scanPage, runRenderedAnalysis, runLighthouseAnalysis } from './scan-page.js';
+import { runMobileSurfaceAnalysis } from './mobile-surface.js';
 import { checkLlmsTxt } from './checks/llms-txt.js';
 import { checkSecurityHeaders } from './checks/security-headers.js';
 import { checkCookieConsent } from './checks/cookie-consent.js';
 import { scanSite, withPageWatchdog, type ScanProgressEvent } from './scan-site.js';
 import { readPageScanJson } from './artifacts/page-scan-io.js';
 import { createPageWorkGuard } from './page-work-guard.js';
+import { mobileSurface } from './evidence-surfaces.js';
 import type { RenderedAnalysisResult } from './scan-page.js';
+import type { RenderedReadinessObservation } from './page-readiness.js';
 
 let writtenTempDirs: string[] = [];
 
@@ -808,6 +820,236 @@ describe('scanSite Plan 059 attempt recording and targeted recovery', () => {
     expect(siteAttempts.map((attempt) => attempt.checkId).sort()).toEqual(
       ['accessibility-statement', 'cookie-consent', 'llms-txt-check', 'security-headers'].sort(),
     );
+  });
+});
+
+describe('scanSite mobile surfaces (plan 059 step 10)', () => {
+  const pageA = `${startUrl}a`;
+  const scopeDigest = `sha256:${'b'.repeat(64)}`;
+  const everyPageCheck = () => ({
+    'render-diff': 'completed',
+    axe: 'completed',
+    'mentions-legales': 'not-applicable',
+    'transactional-flow-evidence': 'completed',
+    'transactional-flow-redirect-checks': 'completed',
+    'transactional-flow-ambiguities': 'completed',
+    'head-metadata': 'completed',
+    'canonical-target': 'not-applicable',
+    'mixed-content': 'completed',
+    'keyboard-navigation': 'completed',
+    'form-error-handling': 'completed',
+    'video-captions': 'completed',
+    'placeholder-labels': 'completed',
+    'alt-text': 'completed',
+    'nap-consistency': 'not-applicable',
+    reflow: 'completed',
+    'html-validity': 'completed',
+    'structured-data': 'completed',
+  });
+  const mobileRecordFor = (url: string, links: string[]) => ({
+    surface: mobileSurface({
+      evidenceEpoch: 1,
+      pageIdentity: url,
+      userAgent: 'OdysseusBot/1.0 (+https://odysseusaudit.com/bot)',
+      crawlerUserAgent: 'OdysseusBot/1.0 (+https://odysseusaudit.com/bot)',
+      readinessOutcome: 'ready',
+    }),
+    readiness: {
+      navigationMilestone: 'load',
+      httpStatus: 200,
+      domReady: true,
+      fontsReady: true,
+      networkQuiet: true,
+      mutationQuiescent: true,
+      significantResourceFailures: [],
+      outcome: 'ready',
+    } satisfies RenderedReadinessObservation,
+    axeViolations: [{ ruleId: 'target-size', impact: 'serious', nodeCount: 2 }],
+    uaVerified: true,
+    links,
+  });
+
+  beforeEach(() => {
+    vi.mocked(crawlSite).mockResolvedValue({
+      startUrl,
+      pages: [
+        {
+          url: startUrl,
+          depth: 0,
+          status: 'visited',
+          discoveryMethod: 'link',
+          auditProfile: {
+            url: startUrl,
+            profileVersion: 'v1',
+            roleSignals: [{ kind: 'homepage-url', detail: startUrl }],
+          },
+        },
+        {
+          url: pageA,
+          depth: 1,
+          status: 'visited',
+          discoveryMethod: 'link',
+          auditProfile: { url: pageA, profileVersion: 'v1', roleSignals: [] },
+        },
+      ],
+      effectiveDelayMs: 0,
+      visitedCount: 2,
+      maxPages: 10,
+      maxDepth: 5,
+      robotsTxtFound: true,
+      robotsDisallowMatches: [],
+      aiCrawlerBlocks: [],
+      linkDiscoveredUrls: [pageA],
+    } as never);
+    vi.mocked(runRenderedAnalysis).mockImplementation(async (_browser, url) => ({
+      url,
+      checkOutcomes: everyPageCheck(),
+    }));
+    vi.mocked(runLighthouseAnalysis).mockResolvedValue({
+      lighthouse: { categories: {} } as never,
+    });
+  });
+
+  it('runs the mobile surface after the baseline capture of the same page, in lane order', async () => {
+    const order: string[] = [];
+    vi.mocked(runRenderedAnalysis).mockImplementation(async (_browser, url) => {
+      order.push(`baseline:${url}`);
+      return { url, checkOutcomes: everyPageCheck() } as never;
+    });
+    vi.mocked(runMobileSurfaceAnalysis).mockImplementation(async (_browser, url) => {
+      order.push(`mobile:${url}`);
+      return mobileRecordFor(url, [`${url}mobile-only`] as string[]) as never;
+    });
+
+    const result = await scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: '/tmp/pages',
+      concurrency: 1,
+      fullAuditPlanning: true,
+      skipLighthouse: true,
+      scopeDigest,
+    });
+
+    expect(order).toEqual([
+      `baseline:${startUrl}`,
+      `mobile:${startUrl}`,
+      `baseline:${pageA}`,
+      `mobile:${pageA}`,
+    ]);
+    for (const url of [startUrl, pageA]) {
+      const page = result.pages.find((candidate) => candidate.url === url)!;
+      expect(page.mobileSurface?.uaVerified).toBe(true);
+      expect(page.mobileSurface?.axeViolations).toEqual([
+        { ruleId: 'target-size', impact: 'serious', nodeCount: 2 },
+      ]);
+      expect(page.surfaces?.map((surface) => surface.surfaceId)).toEqual([
+        page.mobileSurface!.surface.surfaceId,
+      ]);
+      expect(page.surfaceLinks).toEqual([
+        {
+          url: `${url}mobile-only`,
+          source: 'rendered-link',
+          surfaceId: page.mobileSurface!.surface.surfaceId,
+        },
+      ]);
+    }
+  });
+
+  it('never runs the mobile surface outside the Plan 059 scoped path', async () => {
+    vi.mocked(runMobileSurfaceAnalysis).mockResolvedValue(mobileRecordFor(startUrl, []) as never);
+    await scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: '/tmp/pages',
+      concurrency: 2,
+      fullAuditPlanning: true,
+      skipLighthouse: true,
+    });
+    expect(runMobileSurfaceAnalysis).not.toHaveBeenCalled();
+  });
+
+  it('persists the mobile surface, its surface record and its discovered links on scan.json', async () => {
+    const { auditDir, pagesDir } = await makeTempAuditDir('scan-site-mobile-');
+    vi.mocked(runMobileSurfaceAnalysis).mockImplementation(
+      async (_browser, url) => mobileRecordFor(url, [`${url}mobile-only`]) as never,
+    );
+
+    await scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: pagesDir,
+      auditDir,
+      writePagesAsScanned: true,
+      concurrency: 1,
+      fullAuditPlanning: true,
+      skipLighthouse: true,
+      scopeDigest,
+    });
+
+    const home = readPageScanJson(pagesDir, startUrl)!;
+    expect(home.mobileSurface?.surface.hasTouch).toBe(true);
+    expect(home.surfaces).toHaveLength(1);
+    expect(home.surfaceLinks).toEqual([
+      {
+        url: `${startUrl}mobile-only`,
+        source: 'rendered-link',
+        surfaceId: home.mobileSurface!.surface.surfaceId,
+      },
+    ]);
+  });
+
+  it('discloses a refused mobile surface instead of impersonating when the identity cannot be proven', async () => {
+    const { SurfaceIdentityError } = await import('./evidence-surfaces.js');
+    vi.mocked(runMobileSurfaceAnalysis).mockRejectedValue(
+      new SurfaceIdentityError(
+        'mobileSurface: the mobile surface must keep the published crawler user agent.',
+      ),
+    );
+
+    const result = await scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: '/tmp/pages',
+      concurrency: 1,
+      fullAuditPlanning: true,
+      skipLighthouse: true,
+      scopeDigest,
+    });
+
+    const home = result.pages.find((candidate) => candidate.url === startUrl)!;
+    expect(home.mobileSurface).toBeUndefined();
+    expect(home.surfaceLimitations).toEqual([
+      expect.objectContaining({ code: 'mobile-ua-identity-refused' }),
+    ]);
+  });
+
+  it('records a crashed mobile pass as a disclosed scanner limitation, never as site evidence', async () => {
+    vi.mocked(runMobileSurfaceAnalysis).mockRejectedValue(new Error('browser context died'));
+
+    const result = await scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: '/tmp/pages',
+      concurrency: 1,
+      fullAuditPlanning: true,
+      skipLighthouse: true,
+      scopeDigest,
+    });
+
+    const home = result.pages.find((candidate) => candidate.url === startUrl)!;
+    expect(home.mobileSurface).toBeUndefined();
+    expect(home.surfaceLimitations).toEqual([
+      expect.objectContaining({
+        code: 'mobile-surface-unavailable',
+        detail: 'browser context died',
+      }),
+    ]);
+    // The page's baseline evidence is untouched by the surface failure
+    // (checkOutcomes live on the analysis coverage in the in-memory path).
+    expect(result.analysisCoverageByUrl?.get(startUrl)?.passes.rendered).toEqual({
+      outcome: 'completed',
+    });
   });
 });
 

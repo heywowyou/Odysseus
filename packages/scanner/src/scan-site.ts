@@ -51,7 +51,15 @@ import {
   type AcquisitionAttemptRecord,
   type AttemptExecutionProfile,
 } from './check-attempt-ledger.js';
-import { baselineDesktopSurface } from './evidence-surfaces.js';
+import {
+  baselineDesktopSurface,
+  MOBILE_SURFACE_IDENTITY_REFUSED,
+  MOBILE_SURFACE_UNAVAILABLE,
+  SurfaceIdentityError,
+  type SurfaceLimitationRecord,
+} from './evidence-surfaces.js';
+import { runMobileSurfaceAnalysis, type MobileSurfaceRecord } from './mobile-surface.js';
+import type { SurfaceLinkDiscovery } from './surface-discovery.js';
 import {
   appendSiteAcquisitionAttempts,
   writeTemporalAnchors,
@@ -560,6 +568,16 @@ interface StagedScanContext {
   launchRecoveryBrowser: (() => Promise<{ browser: Browser; debugPort: number }>) | undefined;
   /** Throws when this worker no longer holds the audit directory's lease. */
   holdLease: () => void;
+  /** Plan 059 step 10: run the mobile surface pass for every staged page.
+   *  On exactly when this is a Plan 059 scoped full audit. */
+  mobileSurfaces: boolean;
+  /** Operator crawl exclusions, applied to every surface-discovered link. */
+  exclusionPatterns: readonly string[];
+  /** Links first seen on a state surface, in completion order, with the
+   *  referring page and the depth the fixed-point admission (step 14)
+   *  reconciles them against. Kept at run level because the persisted
+   *  page results are trimmed under writePagesAsScanned. */
+  surfaceLinks: (SurfaceLinkDiscovery & { referrer: string; depth?: number })[];
 }
 
 /**
@@ -575,7 +593,7 @@ async function runRenderedAnalysisLane(
   delayMs: number,
   scheduler: HostRequestScheduler,
   context: StagedScanContext,
-  onPageDone: (url: string, result: RenderedAnalysisResult, durationMs: number) => void,
+  onPageDone: (url: string, result: RenderedAnalysisResult, durationMs: number) => Promise<void>,
 ): Promise<void> {
   for (const url of laneUrls) {
     const { result, durationMs } = await analyzePageInTurn(
@@ -587,7 +605,7 @@ async function runRenderedAnalysisLane(
       context.timeoutMs,
       laneUrls,
     );
-    onPageDone(url, result, durationMs);
+    await onPageDone(url, result, durationMs);
   }
 }
 
@@ -699,6 +717,94 @@ function recordPageRun(
 /** Section 10's diagnostic profile: twice the bounded settle, never unbounded. */
 function diagnosticTimeoutMs(context: StagedScanContext): number {
   return (context.timeoutMs ?? getPageTimeoutMs()) * 2;
+}
+
+/**
+ * Plan 059 step 10: one page's mobile surface, taken in its own turn from
+ * the shared scheduler after the page's immutable baseline capture is
+ * complete (section 9: baseline first, fresh storage per surface — the
+ * mobile pass never runs in the baseline's context and never ahead of it).
+ * The navigation inside is paced with `pace()` against the same scheduler,
+ * so the mobile surface is one more consumer of the run's single request
+ * rate, never a hidden second lane.
+ *
+ * A pass that cannot prove the crawler identity on the wire, or that fails,
+ * leaves a surface limitation on the page instead of a half-recorded
+ * surface: the gap is disclosed where the page's evidence lives.
+ */
+async function attachMobileSurface(
+  url: string,
+  result: RenderedAnalysisResult,
+  browser: Browser,
+  scheduler: HostRequestScheduler,
+  context: StagedScanContext,
+): Promise<RenderedAnalysisResult> {
+  const surfaceRecord = await scheduler
+    .schedule(() =>
+      runMobileSurfaceAnalysis(browser, url, {
+        evidenceEpoch: context.evidenceEpoch,
+        ...(context.userAgent !== undefined ? { userAgent: context.userAgent } : {}),
+        ...(context.timeoutMs !== undefined ? { timeoutMs: context.timeoutMs } : {}),
+        beforeNavigation: () => scheduler.pace(),
+        ...(context.runGuard !== undefined ? { guard: context.runGuard } : {}),
+        ...(context.networkPolicy !== undefined ? { networkPolicy: context.networkPolicy } : {}),
+        ...(context.onNetworkSafetyBlocked !== undefined
+          ? { onNetworkSafetyBlocked: context.onNetworkSafetyBlocked }
+          : {}),
+        exclusionPatterns: context.exclusionPatterns,
+      }),
+    )
+    .then((record: MobileSurfaceRecord) => ({
+      result: {
+        ...result,
+        mobileSurface: record,
+        surfaces: [...(result.surfaces ?? []), record.surface],
+        surfaceLinks: [
+          ...(result.surfaceLinks ?? []),
+          ...record.links.map((link): SurfaceLinkDiscovery => ({
+            url: link,
+            source: 'rendered-link',
+            surfaceId: record.surface.surfaceId,
+          })),
+        ],
+      },
+      limitation: undefined as SurfaceLimitationRecord | undefined,
+    }))
+    .catch(
+      (
+        error: unknown,
+      ): {
+        result: RenderedAnalysisResult;
+        limitation: SurfaceLimitationRecord | undefined;
+      } => {
+        // A mobile surface that cannot keep the published identity must
+        // never degrade into a desktop-only audit silently; and a crashed
+        // pass must be a recorded scanner fact, never an invisible one.
+        const statement =
+          error instanceof SurfaceIdentityError
+            ? MOBILE_SURFACE_IDENTITY_REFUSED
+            : MOBILE_SURFACE_UNAVAILABLE;
+        return {
+          result,
+          limitation: {
+            ...statement,
+            detail: error instanceof Error ? error.message : String(error),
+          },
+        };
+      },
+    );
+  const withSurface: RenderedAnalysisResult = {
+    ...surfaceRecord.result,
+    ...(surfaceRecord.limitation !== undefined
+      ? {
+          surfaceLimitations: [
+            ...(surfaceRecord.result.surfaceLimitations ?? []),
+            surfaceRecord.limitation,
+          ],
+        }
+      : {}),
+  };
+  return withSurface;
 }
 
 /** `crawlSite` (via Step 3's wiring) always attaches an audit profile to
@@ -1076,6 +1182,10 @@ async function runStagedFullAuditScan(
 
   const renderedResults = new Map<string, RenderedAnalysisResult>();
   const renderedCosts = new Map<string, RenderedCostProfile>();
+  // Surface-discovered links keep their referring page's frontier depth so
+  // the fixed-point admission (step 14) can apply the same depth bound the
+  // crawl did.
+  const depthByUrl = new Map(pagesToScan.map((page) => [page.url, page.depth]));
   // Seed the resumed base from disk: the same { url, checkOutcomes } shape
   // the writePagesAsScanned lane keeps in memory, plus the persisted cost
   // profile, so finalizeLighthousePlan sees the union of the interrupted
@@ -1085,6 +1195,17 @@ async function runStagedFullAuditScan(
     const costProfile = scanJson.renderedCostProfile;
     if (costProfile !== undefined) {
       renderedCosts.set(url, costProfile);
+    }
+    // A resumed page's surface discoveries were collected by the attempt
+    // that scanned it; they feed this run's fixed point too.
+    if (scanJson.surfaceLinks !== undefined && scanJson.surfaceLinks.length > 0) {
+      context.surfaceLinks.push(
+        ...scanJson.surfaceLinks.map((link) => ({
+          ...link,
+          referrer: url,
+          depth: (depthByUrl.get(url) ?? 0) + 1,
+        })),
+      );
     }
   }
   // Starts at the reused count so content-scan-page progress stays
@@ -1122,7 +1243,7 @@ async function runStagedFullAuditScan(
           delayMs,
           scheduler,
           context,
-          (url, laneResult, durationMs) => {
+          async (url, laneResult, durationMs) => {
             const attempts = recordPageRun(
               context,
               url,
@@ -1131,10 +1252,25 @@ async function runStagedFullAuditScan(
               'normal',
               PAGE_CHECK_IDS,
             );
-            const result: RenderedAnalysisResult =
+            let result: RenderedAnalysisResult =
               attempts.length > 0 ? { ...laneResult, acquisitionAttempts: attempts } : laneResult;
             const retries = retryRequestsFor(attempts);
             if (retries.length > 0) retryQueue.set(url, retries);
+            // Plan 059 step 10: the mobile surface runs only after this
+            // page's immutable baseline capture is complete, and in a
+            // context of its own (section 9).
+            if (context.mobileSurfaces) {
+              result = await attachMobileSurface(url, result, browser, scheduler, context);
+            }
+            if (result.surfaceLinks !== undefined && result.surfaceLinks.length > 0) {
+              context.surfaceLinks.push(
+                ...result.surfaceLinks.map((link) => ({
+                  ...link,
+                  referrer: url,
+                  depth: (depthByUrl.get(url) ?? 0) + 1,
+                })),
+              );
+            }
             const { checkOutcomes, renderedCostProfile, ...content } = result;
             if (context.writePagesAsScanned) {
               // Issue #64: the content-scan phase must wait for every
@@ -2061,6 +2197,11 @@ export async function scanSite(
       evidenceEpoch: 1,
       launchRecoveryBrowser: options.launchRecoveryBrowser,
       holdLease: () => holdLease(options),
+      // Plan 059 step 10: mobile surfaces run on the Plan 059 scoped
+      // full-audit path only; the legacy/CLI path keeps its exact shape.
+      mobileSurfaces: options.scopeDigest !== undefined,
+      exclusionPatterns: options.exclusions ?? [],
+      surfaceLinks: [],
     };
     const { pages, fullAuditPlan, analysisCoverageByUrl } = await runStagedFullAuditScan(
       pagesToScan,

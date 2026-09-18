@@ -117,6 +117,12 @@ export function buildScanJson(
     ...(scanResult.performanceMeasurement !== undefined
       ? { performanceMeasurement: scanResult.performanceMeasurement }
       : {}),
+    ...(scanResult.mobileSurface !== undefined ? { mobileSurface: scanResult.mobileSurface } : {}),
+    ...(scanResult.surfaces !== undefined ? { surfaces: scanResult.surfaces } : {}),
+    ...(scanResult.surfaceLinks !== undefined ? { surfaceLinks: scanResult.surfaceLinks } : {}),
+    ...(scanResult.surfaceLimitations !== undefined
+      ? { surfaceLimitations: scanResult.surfaceLimitations }
+      : {}),
   };
 }
 

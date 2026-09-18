@@ -81,8 +81,10 @@ import {
   buildFrameCoverageRecord,
   buildPageReadinessRecord,
   capabilityTraversalLevel,
+  MOBILE_UA_NEGOTIATION_LIMITATION,
   type FrameCoverageRecord,
   type PageReadinessRecord,
+  type ScanSurface,
 } from './evidence-surfaces.js';
 import {
   inventoryLedgerDigest,
@@ -108,6 +110,11 @@ export interface EvidencePageObservation {
   readiness?: RenderedReadinessObservation;
   frames?: readonly FrameObservation[];
   performanceMeasurement?: PerformanceMeasurementSet;
+  /** Plan 059 step 10: every non-baseline ScanSurface built for this page
+   *  (mobile first; consent and local-state follow). Absent means the run
+   *  predated the surface contract or the surface could not run, which the
+   *  page's own surfaceLimitations disclose. */
+  surfaces?: readonly ScanSurface[];
 }
 
 export interface AuditEvidenceGraphInput {
@@ -927,6 +934,37 @@ export function assembleAuditEvidenceGraph(input: AuditEvidenceGraphInput): Audi
     });
   }
 
+  /* ---- state surfaces (plan 059 sections 5.5 and 9) ---------------- */
+  const surfaces = [
+    ...new Map(
+      input.pages
+        .flatMap((page) => page.surfaces ?? [])
+        .map((surface) => [surface.surfaceId, surface]),
+    ).values(),
+  ].sort((a, b) => a.surfaceId.localeCompare(b.surfaceId));
+  for (const surface of surfaces) {
+    acceptedArtifactDigests.push(surface.surfaceFingerprint);
+  }
+  const mobileSurfaces = surfaces.filter((surface) => surface.hasTouch);
+  if (mobileSurfaces.length > 0) {
+    // Correction 3.8: the capability language must state, wherever mobile
+    // coverage is claimed, that UA-negotiated server-side variants are not
+    // tested — the crawler identity never changes.
+    issues.add({
+      code: 'disclosed-scope-limitation',
+      severity: 'limitation',
+      resolution: 'operator',
+      summary: 'Mobile coverage keeps the crawler identity; UA-negotiated variants are untested.',
+      evidenceRefs: mobileSurfaces.map((surface) => surface.surfaceId),
+      disclosure: disclosure(
+        MOBILE_UA_NEGOTIATION_LIMITATION.code,
+        MOBILE_UA_NEGOTIATION_LIMITATION.fr,
+        MOBILE_UA_NEGOTIATION_LIMITATION.en,
+        mobileSurfaces.map((surface) => surface.surfaceId),
+      ),
+    });
+  }
+
   if (unrecordedPages.length > 0) {
     issues.add({
       code: 'unresolved-material-gap',
@@ -1203,7 +1241,12 @@ export function assembleAuditEvidenceGraph(input: AuditEvidenceGraphInput): Audi
       findingsSchemaVersion: input.environment.build.findingsSchemaVersion,
       normalizationFingerprint: input.environment.build.normalizationFingerprint,
     },
-    enabledSurfaces: ['baseline-desktop'],
+    // The surfaces this audit actually rendered: the desktop baseline every
+    // page got, plus the stable profiles observed on at least one page.
+    enabledSurfaces: [
+      'baseline-desktop',
+      ...(mobileSurfaces.length > 0 ? ['mobile-ua-preserving'] : []),
+    ],
     checks: checkObservability,
   });
   const evidenceCoverageSignature: ReportEvidenceCoverageSignature = {

@@ -10,6 +10,7 @@ import {
   PROVISIONAL_STABILITY_TOLERANCES,
   type PerformanceMeasurementSet,
 } from './performance-measurement-set.js';
+import { MOBILE_SURFACE_PROFILE, buildScanSurface } from './evidence-surfaces.js';
 import {
   attempt,
   AXE_FINDING,
@@ -337,5 +338,64 @@ describe('assembleAuditEvidenceGraph', () => {
       (edited.accepted.metrics[0] as { value: number }).value = 0.99;
       expect(blockingCodes(withSet(edited))).toContain('performance-confidence-insufficient');
     });
+  });
+});
+
+describe('mobile surfaces in the evidence graph (plan 059 step 10)', () => {
+  const mobileSurface = (pageIdentity: string) =>
+    buildScanSurface({
+      evidenceEpoch: 1,
+      pageIdentity,
+      viewport: MOBILE_SURFACE_PROFILE.viewport,
+      deviceScaleFactor: MOBILE_SURFACE_PROFILE.deviceScaleFactor,
+      hasTouch: true,
+      media: { colorScheme: 'light', reducedMotion: 'no-preference' },
+      userAgent: 'OdysseusBot/1.0 (+https://odysseusaudit.com/bot)',
+      interactionState: 'baseline',
+      storageIsolationGroup: 'fresh-context-per-page',
+      readinessOutcome: 'ready',
+    });
+
+  const withMobileSurfaces = (): AuditEvidenceGraphInput => {
+    const home = mobileSurface(HOME);
+    const rooms = mobileSurface(ROOMS);
+    return cleanInput({
+      pages: [
+        { ...page(HOME), surfaces: [home] },
+        { ...page(ROOMS), surfaces: [rooms] },
+      ],
+    });
+  };
+
+  it('binds the exact surface fingerprints that ran into the raw root', () => {
+    const graph = assembleAuditEvidenceGraph(withMobileSurfaces());
+    const homeFingerprint = mobileSurface(HOME).surfaceFingerprint;
+    expect(graph.raw.acceptedArtifactDigests).toContain(homeFingerprint);
+  });
+
+  it('discloses the UA-negotiated-variant limitation wherever mobile coverage is claimed', () => {
+    const graph = assembleAuditEvidenceGraph(withMobileSurfaces());
+    const limitation = graph.quality.issues.find(
+      (issue) => issue.disclosure?.code === 'mobile-ua-negotiated-variant-untested',
+    );
+    expect(limitation).toBeDefined();
+    expect(limitation?.severity).toBe('limitation');
+  });
+
+  it('changes the coverage signature digest when a mobile surface joins the audit', () => {
+    const withoutMobile = assembleAuditEvidenceGraph(cleanInput());
+    const withMobile = assembleAuditEvidenceGraph(withMobileSurfaces());
+    expect(withMobile.audit.evidenceCoverageSignature.digest).not.toBe(
+      withoutMobile.audit.evidenceCoverageSignature.digest,
+    );
+  });
+
+  it('emits no mobile limitation when no mobile surface ran', () => {
+    const graph = assembleAuditEvidenceGraph(cleanInput());
+    expect(
+      graph.quality.issues.some(
+        (issue) => issue.disclosure?.code === 'mobile-ua-negotiated-variant-untested',
+      ),
+    ).toBe(false);
   });
 });
