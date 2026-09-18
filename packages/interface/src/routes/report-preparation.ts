@@ -1,8 +1,8 @@
 /**
  * The Prepare report workflow's endpoints, plan 019 step 5. One audit-
- * scoped surface: read the preparation with its resolved bilingual
+ * scoped surface: read the preparation with its resolved report
  * preview, patch the bounded operator inputs, and start a cost-warned
- * writing regeneration (which approves and renders inline - plan 045
+ * French writing regeneration (which approves and renders inline - plan 045
  * section 2.1). All persistence goes through the store service functions;
  * validation goes through the preparation module's parse function, so an
  * unknown option, an oversized text, or a malformed shape is rejected here
@@ -26,6 +26,7 @@ import type { Router } from '../router.js';
 import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { isReportProductionInFlight } from '../pipeline/report-production-lock.js';
+import { generateEnglishVersion, EnglishGenerationUnavailableError } from '../pipeline/generate-english-version.js';
 import {
   regenerateWriting,
   RegenerationConflictError,
@@ -197,4 +198,27 @@ export function registerReportPreparationRoutes(router: Router, connection: Conn
       }
     },
   );
+
+  router.post(
+    '/api/audits/:auditId/report-preparation/generate-english-version',
+    async ({ res, params }) => {
+      const auditId = params['auditId']!;
+      const audit = await readAudit(connection, auditId, res);
+      if (!audit) return;
+      try {
+        const result = await generateEnglishVersion(connection, audit, artifactStore);
+        sendJson(res, 201, result);
+      } catch (error) {
+        if (
+          error instanceof RegenerationConflictError ||
+          error instanceof EnglishGenerationUnavailableError
+        ) {
+          sendError(res, 409, error.message);
+          return;
+        }
+        sendError(res, 500, 'could not generate English version');
+      }
+    },
+  );
+
 }
