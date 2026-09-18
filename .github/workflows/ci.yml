@@ -82,6 +82,12 @@ jobs:
       - name: Build site
         run: pnpm --filter @odysseus/site run build
 
+      - name: IBM Equal Access secondary accessibility gate
+        run: bash deploy/equal-access-ci.sh
+        env:
+          MONGODB_TEST_URI: mongodb://localhost:27018/odysseus_test
+          IBM_TELEMETRY_DISABLED: 'true'
+
       - name: Test production release controller
         run: pnpm run test:deploy
 
