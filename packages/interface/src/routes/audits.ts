@@ -50,6 +50,7 @@ import {
 import {
   buildArtifactBucketKey,
   buildAuditDir,
+  confirmedFindingsDigest,
   getArtifactsRoot,
   hasAssessedEvidenceGraph,
   readApprovedAuditEvidence,
@@ -95,6 +96,7 @@ import { projectLegacyJob } from '../operator/legacy-job-projection.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { resolveArtifactFile } from '../artifacts/resolve-artifact.js';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
+import { readAuditEvidenceQualitySummary } from '../pipeline/audit-evidence-quality.js';
 
 function isReportLanguage(value: string): value is ReportLanguage {
   return value === 'fr' || value === 'en';
@@ -566,6 +568,21 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         : analysed
           ? 'analysed'
           : 'scanned';
+    // Plan 059 step 37: the evidence graph's verdict and approval state for
+    // the audit detail view, counts and stable codes only. Quick checks and
+    // prospecting scans never assemble a graph, so they skip the read and
+    // keep answering exactly as before; `undefined` removes the field and
+    // the dashboard renders no evidence card.
+    const evidence =
+      audit.scanIntent === 'quick-check' || audit.scanIntent === 'prospecting-audit'
+        ? undefined
+        : await readAuditEvidenceQualitySummary({
+            auditDir,
+            hostname,
+            startedAt: audit.startedAt,
+            store: artifactStore,
+            confirmedFindingsDigest: confirmedFindingsDigest(findings),
+          });
     // Plan 047: prospect provenance and current preview state come from the
     // durable prospect identity; no legacy candidate link is consulted.
     const outreachProspectId = audit.prospectId ?? null;
@@ -654,6 +671,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       automaticGrade,
       effectiveGrade,
       gradeOverride: audit.gradeOverride ?? null,
+      ...(evidence !== undefined ? { evidence } : {}),
       outreach: { prospectId: outreachProspectId, hasLiveV2Preview },
       prospect: prospect === null ? null : { prospectId: prospect.prospectId, name: prospect.name },
       // Plan 060 §5.2: additive operator snapshot; the dashboard schema is

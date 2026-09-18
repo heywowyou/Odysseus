@@ -195,6 +195,8 @@ export { buildManifest, readOdysseusBuildId } from './artifacts/manifest.js';
 export {
   APPROVED_AUDIT_EVIDENCE_PATH,
   approveAuditEvidence,
+  AUDIT_EVIDENCE_SNAPSHOT_PATH,
+  EVIDENCE_QUALITY_ASSESSMENT_PATH,
   EVIDENCE_READ_BACK_PATHS,
   hasAssessedEvidenceGraph,
   readApprovedAuditEvidence,

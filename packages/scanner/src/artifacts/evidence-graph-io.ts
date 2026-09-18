@@ -156,6 +156,18 @@ export const APPROVED_AUDIT_EVIDENCE_PATH = path.join(
   APPROVED_AUDIT_EVIDENCE_FILENAME,
 );
 
+/** The two digest roots an approval references, relative to the audit
+ *  directory, so a dashboard reader names the same files the writer wrote
+ *  instead of duplicating the paths. */
+export const AUDIT_EVIDENCE_SNAPSHOT_PATH = path.join(
+  EVIDENCE_GRAPH_DIRNAME,
+  AUDIT_EVIDENCE_SNAPSHOT_FILENAME,
+);
+export const EVIDENCE_QUALITY_ASSESSMENT_PATH = path.join(
+  EVIDENCE_GRAPH_DIRNAME,
+  EVIDENCE_QUALITY_ASSESSMENT_FILENAME,
+);
+
 /** Whether a persisted root is the one assembled, compared as JSON so the
  *  check reads what a later consumer will read. */
 function readsBackAs(filePath: string, expected: unknown): boolean {
