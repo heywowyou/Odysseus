@@ -61,6 +61,7 @@ import {
 } from './robots-policy-snapshot.js';
 import {
   InventoryLedger,
+  type InventoryDiscoverySource,
   type InventoryDisposition,
   type InventoryLedgerSnapshot,
 } from './inventory-ledger.js';
@@ -570,6 +571,105 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   // state instead, so it cannot re-admit URLs a family had exhausted.
   const continuationGuard = restored?.guard ?? new ContinuationGuard();
 
+  const inventorySourceFor = (
+    url: string,
+    discoveryMethod: PageDiscoveryMethod,
+  ): InventoryDiscoverySource => {
+    if (url === startUrlIdentity) return 'start';
+    if (discoveryMethod === 'seed') return 'seed';
+    if (discoveryMethod === 'sitemap-only') return 'sitemap';
+    return 'link';
+  };
+  const inventoryLedger = (() => {
+    if (options.scopeDigest === undefined) return undefined;
+    if (resumeState?.inventoryLedger !== undefined) {
+      if (
+        resumeState.inventoryLedger.scopeDigest !== options.scopeDigest ||
+        resumeState.inventoryLedger.evidenceEpoch !== (options.evidenceEpoch ?? 1)
+      ) {
+        throw new Error('crawlSite: inventory frontier belongs to another scope or evidence epoch');
+      }
+      return InventoryLedger.fromSnapshot(resumeState.inventoryLedger);
+    }
+    return new InventoryLedger({
+      evidenceEpoch: options.evidenceEpoch ?? 1,
+      scopeDigest: options.scopeDigest,
+    });
+  })();
+
+  const ensureInventoryDiscovery = (
+    url: string,
+    discoveryMethod: PageDiscoveryMethod,
+    depth: number,
+    discoveredFrom?: string,
+  ): void => {
+    if (inventoryLedger === undefined) return;
+    inventoryLedger.recordDiscovery({
+      url,
+      source: inventorySourceFor(url, discoveryMethod),
+      discoveredAt: new Date(),
+      depth,
+      ...(discoveredFrom !== undefined ? { referrer: discoveredFrom } : {}),
+    });
+  };
+
+  const disposeInventory = (
+    url: string,
+    disposition: InventoryDisposition,
+    details: { finalUrl?: string; httpStatus?: number; detail?: string } = {},
+  ): void => {
+    if (inventoryLedger === undefined) return;
+    const candidate = inventoryLedger.candidate(url);
+    if (candidate === undefined) {
+      throw new Error(`crawlSite: cannot dispose undiscovered inventory target ${url}`);
+    }
+    if (candidate.disposition !== undefined) return;
+    inventoryLedger.recordDisposition({
+      url,
+      disposition,
+      decidedAt: new Date(),
+      ...details,
+    });
+  };
+
+  if (inventoryLedger !== undefined && resumeState?.inventoryLedger === undefined) {
+    ensureInventoryDiscovery(startUrlIdentity, 'link', 0);
+    for (const url of eligibleSitemapUrls) {
+      inventoryLedger.recordDiscovery({
+        url,
+        source: 'sitemap',
+        discoveredAt: new Date(),
+        depth: 0,
+      });
+    }
+    for (const page of pages) {
+      ensureInventoryDiscovery(page.url, page.discoveryMethod, page.depth, page.discoveredFrom);
+      const disposition: InventoryDisposition | undefined =
+        page.status === 'discovered-not-scanned'
+          ? 'link-discovery-only'
+          : page.status === 'skipped-robots'
+            ? 'robots'
+            : page.status === 'skipped-non-html'
+              ? 'non-html'
+              : page.status === 'skipped-external-redirect'
+                ? 'external'
+                : page.status === 'http-error-status'
+                  ? 'http-error-status'
+                  : page.status === 'error'
+                    ? 'error'
+                    : undefined;
+      if (disposition !== undefined) {
+        disposeInventory(page.url, disposition, {
+          ...(page.httpStatus !== undefined ? { httpStatus: page.httpStatus } : {}),
+          ...(page.error !== undefined ? { detail: page.error } : {}),
+        });
+      }
+    }
+    for (const item of queue) {
+      ensureInventoryDiscovery(item.url, item.discoveryMethod, item.depth, item.discoveredFrom);
+    }
+  }
+
   // Manual-input-layer milestone: extra seed URLs are enqueued at depth 0,
   // same as the start URL, before the crawl loop begins. Off-origin seeds
   // are silently dropped (this crawler only ever audits one origin, same
@@ -591,6 +691,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
       continue;
     }
     if (resolvedSeed.origin !== start.origin) continue;
+    ensureInventoryDiscovery(normalizedSeed, 'seed', 0);
     if (enqueued.has(normalizedSeed)) continue;
     enqueued.add(normalizedSeed);
     queue.push({ url: normalizedSeed, depth: 0, discoveryMethod: 'seed' });
@@ -610,6 +711,27 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   const recordPage = (page: CrawledPage): void => {
     pages.push(page);
     pagesByUrl.set(page.url, page);
+    ensureInventoryDiscovery(page.url, page.discoveryMethod, page.depth, page.discoveredFrom);
+    const disposition: InventoryDisposition | undefined =
+      page.status === 'discovered-not-scanned'
+        ? 'link-discovery-only'
+        : page.status === 'skipped-robots'
+          ? 'robots'
+          : page.status === 'skipped-non-html'
+            ? 'non-html'
+            : page.status === 'skipped-external-redirect'
+              ? 'external'
+              : page.status === 'http-error-status'
+                ? 'http-error-status'
+                : page.status === 'error'
+                  ? 'error'
+                  : undefined;
+    if (disposition !== undefined) {
+      disposeInventory(page.url, disposition, {
+        ...(page.httpStatus !== undefined ? { httpStatus: page.httpStatus } : {}),
+        ...(page.error !== undefined ? { detail: page.error } : {}),
+      });
+    }
   };
 
   // Frontier snapshot cadence (plan 035): a snapshot fires only once at
