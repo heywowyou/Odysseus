@@ -1593,6 +1593,30 @@ Removing a prospect from active work archives it.
 Permanent deletion is explicit and exceptional.
 ```
 
+## Closure-proof amendment (2026-09-18)
+
+Plan 050's lifecycle statements are now subject to the root plan-closure
+standard. Before this plan can be considered fully accepted (rather than code
+implemented with a pending rehearsal), retain the following concrete proofs:
+
+- a **scan-producer inventory** enumerating every route/CLI/queue producer of
+  new scan jobs and proving ordinary dashboard work can create only
+  `quick-check` or `full-audit`; any remaining legacy purpose producer must
+  be explicitly classified;
+- a **no-network-on-derived-output regression** that instruments the scanner
+  network boundary and proves report regeneration, outreach generation,
+  renormalization, archive/restore, and compatible historical reuse cannot
+  initiate website acquisition;
+- an **archive/restore identity fixture** that asserts the exact
+  `prospectId` plus operator-owned enrichment/history references survive the
+  round trip rather than merely checking that a row reappears;
+- a closure ledger mapping every binding product-contract item in this plan to
+  its implementation seam and test/rehearsal evidence.
+
+A code search alone is supporting evidence, not sufficient proof for a runtime
+invariant.
+
+
 ## Definition of done
 
 Plan 050 is complete only when all of the following are true:
@@ -1607,4 +1631,5 @@ Plan 050 is complete only when all of the following are true:
 - directory-derived archived prospects restore rather than duplicate;
 - permanent deletion remains available but is no longer the normal removal action;
 - full tests and documentation checks pass;
-- the post-deploy acceptance rehearsal confirms the behavior against real existing data.
+- the post-deploy acceptance rehearsal confirms the behavior against real existing data;
+- the closure-proof amendment above has no unproven binding row.
