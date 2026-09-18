@@ -45,3 +45,8 @@ coverage/
 # Issue #261's CI Semgrep step writes its SARIF report here; only the CI
 # workflow's own artifact upload needs it, never the repo.
 /semgrep-odysseus.sarif.json
+
+# Restic backup repository credentials and encryption password live beside the
+# production checkout but are never repository content.
+/.restic.env
+/.restic-password
