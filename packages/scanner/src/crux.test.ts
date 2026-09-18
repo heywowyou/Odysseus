@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fetchCruxFieldData, fetchCruxFieldDataAcquisition } from './crux.js';
+import { fetchCruxFieldData } from './crux.js';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -46,31 +46,11 @@ describe('fetchCruxFieldData', () => {
     expect(result).toEqual({ available: false });
   });
 
-  it('reports available: false with a fetchError on a network failure, without throwing', async () => {
+  it('fails closed on provider/network failure instead of reporting no public data', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network unreachable')));
 
-    const result = await fetchCruxFieldData('https://example.com', 'fake-key');
-
-    expect(result.available).toBe(false);
-    expect(result.fetchError).toBeDefined();
-  });
-
-  it('distinguishes no public data from provider failure', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ error: { code: 404 } }, 404)));
-
-    const noData = await fetchCruxFieldDataAcquisition('https://tiny-site.example', 'fake-key');
-    expect(noData).toEqual({
-      status: 'no-public-data',
-      granularity: 'origin',
-      fieldData: { available: false },
-    });
-
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('provider unavailable')));
-    const failed = await fetchCruxFieldDataAcquisition('https://example.com', 'fake-key');
-    expect(failed.status).toBe('provider-error');
-    expect(failed.granularity).toBe('origin');
-    expect(failed.fieldData.available).toBe(false);
-    expect(failed.providerError).toContain('provider unavailable');
-    expect(failed.fieldData.fetchError).toContain('provider unavailable');
+    await expect(fetchCruxFieldData('https://example.com', 'fake-key')).rejects.toThrow(
+      'CrUX acquisition failed: network unreachable',
+    );
   });
 });
