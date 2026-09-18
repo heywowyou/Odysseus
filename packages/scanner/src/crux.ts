@@ -50,7 +50,7 @@ export interface CruxFieldDataAcquisition {
  * transport, authentication or quota failure. The compatibility field-data
  * payload remains unchanged for existing manifest/report consumers.
  */
-export async function fetchCruxFieldDataAcquisition(
+async function fetchCruxFieldDataAcquisition(
   origin: string,
   apiKey: string,
 ): Promise<CruxFieldDataAcquisition> {
@@ -94,5 +94,9 @@ export async function fetchCruxFieldData(
   origin: string,
   apiKey: string,
 ): Promise<CruxFieldDataResult> {
-  return (await fetchCruxFieldDataAcquisition(origin, apiKey)).fieldData;
+  const acquisition = await fetchCruxFieldDataAcquisition(origin, apiKey);
+  if (acquisition.status === 'provider-error') {
+    throw new Error(`CrUX acquisition failed: ${acquisition.providerError ?? 'unknown provider error'}`);
+  }
+  return acquisition.fieldData;
 }
