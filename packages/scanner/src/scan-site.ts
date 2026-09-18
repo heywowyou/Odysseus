@@ -1073,6 +1073,7 @@ export async function scanSite(
   const crawlOptions = (frontier: CrawlOptions['frontier']): CrawlOptions => ({
     scheduler,
     browser: options.browser,
+    evidenceEpoch: 1,
     ...(options.networkPolicy !== undefined ? { networkPolicy: options.networkPolicy } : {}),
     ...(onNetworkSafetyBlocked !== undefined ? { onNetworkSafetyBlocked } : {}),
     ...(options.maxPages !== undefined ? { maxPages: options.maxPages } : {}),
@@ -1190,6 +1191,31 @@ export async function scanSite(
   const pagesToScan = crawl.pages.filter((page) => page.status === 'visited');
   options.onProgress?.({ type: 'crawl-exclusions', excluded: countCrawlExclusions(crawl.pages) });
 
+  const robotsPolicyRuntime = options.fullAuditPlanning
+    ? new RobotsPolicyRuntime({
+        evidenceEpoch: 1,
+        origin: new URL(crawl.startUrl).origin,
+        userAgent: options.userAgent ?? getCrawlerUserAgent(),
+        configuredDelayMs: options.delayMs ?? getCrawlDelayMs(),
+        timeoutMs: options.timeoutMs ?? getPageTimeoutMs(),
+        scheduler,
+        initialChain: crawl.robotsPolicyChain ?? [],
+        ...(options.networkPolicy !== undefined ? { networkPolicy: options.networkPolicy } : {}),
+        ...(onNetworkSafetyBlocked !== undefined ? { onNetworkSafetyBlocked } : {}),
+        ...(options.auditDir !== undefined
+          ? { onChainChanged: (chain) => writeRobotsPolicyChain(options.auditDir!, chain) }
+          : {}),
+      })
+    : undefined;
+  if (robotsPolicyRuntime !== undefined) {
+    if (options.auditDir !== undefined && robotsPolicyRuntime.chain.length > 0) {
+      writeRobotsPolicyChain(options.auditDir, robotsPolicyRuntime.chain);
+    }
+    const plannedUrls = pagesToScan.map((page) => page.url);
+    await robotsPolicyRuntime.refresh(plannedUrls, { phaseBoundary: true });
+    for (const url of plannedUrls) robotsPolicyRuntime.assertAllowed(url);
+  }
+
   // When no URL matched the mentions-legales heuristic, the LCEN check
   // must still run somewhere - otherwise a site with no legal notice page
   // at all silently never gets the missing-SIREN finding, exactly the
@@ -1283,8 +1309,10 @@ export async function scanSite(
           timeoutMs: options.timeoutMs ?? getPageTimeoutMs(),
           guard: runGuard,
           ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
-        ...(options.networkPolicy !== undefined ? { networkPolicy: options.networkPolicy } : {}),
-        ...(onNetworkSafetyBlocked !== undefined ? { onNetworkSafetyBlocked } : {}),
+          ...(options.networkPolicy !== undefined
+            ? { networkPolicy: options.networkPolicy }
+            : {}),
+          ...(onNetworkSafetyBlocked !== undefined ? { onNetworkSafetyBlocked } : {}),
         }),
       )
     : undefined;
@@ -1336,6 +1364,7 @@ export async function scanSite(
       runGuard,
       networkPolicy: options.networkPolicy,
       onNetworkSafetyBlocked,
+      robotsPolicyRuntime,
     };
     const { pages, fullAuditPlan, analysisCoverageByUrl } = await runStagedFullAuditScan(
       pagesToScan,
