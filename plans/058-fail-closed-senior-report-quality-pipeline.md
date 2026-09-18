@@ -1316,6 +1316,20 @@ prose-fault detectors (business causality, re-audit comparability), the lease
 double-acquire hole, and the promotion benchmark gate. `pnpm run plans:check`,
 package typechecks and every suite above are green at the closing commit.
 
+**Live pilot (2026-09-18, grandhotelchicago.paris, legacy-adapter evidence).**
+Seven harness runs drove five contract fixes, each proven by a focused test:
+role-output schemas now normalize explicit nulls for optional fields; the
+senior plan gets the §9 patch-plan repair with the deterministic rejection
+fed back; the analyst payload names the legal evidence-reference sets; the
+writer payload states the full prose ruleset and runs a three-attempt
+patch-prose loop with accumulated rejection history. The final pilot state is
+`needs-operator-review` with 22 adjudicated issues (2 blocking, 12 major,
+8 minor; 20 accepted, 2 unsure) — fail-closed held at every layer. The unsure
+pair exposed a **new OPEN row: theme `priorityRank` values are inconsistent
+with the presented project count (ranks 10→28→46 over 23 projects) and can
+contradict declared dependencies; no deterministic gate covers rank/count
+consistency or dependency ordering of presentation ranks.**
+
 **Still required before `DONE`:**
 
 1. the mandatory saved-corpus benchmark run (§19: Hôtel Point France + ≥12
