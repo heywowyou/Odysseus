@@ -146,8 +146,10 @@ class ReportQualityNeedsOperatorReviewError extends Error {
 }
 
 /** A replay-only run reached the end of the recorded DAG with every gate
- *  passing. It is recorded as failed so it can never be approved. */
-export class ReportQualityReplayCompleteError extends Error {
+ *  passing. It is recorded as failed so it can never be approved. Thrown
+ *  and handled within this module's run path only, so it stays
+ *  module-private. */
+class ReportQualityReplayCompleteError extends Error {
   readonly reasonCode = 'replay-only-no-qualification';
   constructor() {
     super('Replay-only run passed every recorded stage; replays never qualify a bundle');

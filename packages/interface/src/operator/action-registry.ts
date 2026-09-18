@@ -349,11 +349,3 @@ export const REGISTRY_ACTIONS = [
  *  derived from it — the same pattern as contract.ts's own vocabularies. */
 export const CONSEQUENTIAL_ACTION_CODES: readonly ConsequentialAction['action'][] =
   REGISTRY_ACTIONS.map((row) => row.action);
-export type ConsequentialActionCode = (typeof CONSEQUENTIAL_ACTION_CODES)[number];
-
-export type ConsequentialActionRegistry = Record<ConsequentialActionCode, ConsequentialAction>;
-
-/** The same rows keyed by action code, for capability-record consumers. */
-export const ACTION_REGISTRY: ConsequentialActionRegistry = Object.fromEntries(
-  REGISTRY_ACTIONS.map((row) => [row.action, row]),
-) as ConsequentialActionRegistry;
