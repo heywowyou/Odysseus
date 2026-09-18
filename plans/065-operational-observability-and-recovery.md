@@ -572,6 +572,30 @@ terminal.
 
 ---
 
+# 18.1 Closure-proof contract
+
+The operational taxonomy must be exhaustive enough that "recoverable" is not a
+UI interpretation. Commit a closed `OperationalIssueCode` registry in which
+every code maps exactly once to category, retryability, attention policy,
+recovery class, safe operator copy key and owning domain.
+
+CI must prove:
+
+- every emitted nonautomatic issue code exists in the registry;
+- every registry code has a deterministic fault fixture or owner-state fixture;
+- every operator recovery action maps to a real command/capability and has a
+  success + stale/conflict test;
+- no browser branch chooses recovery by matching free-form exception text;
+- automatic-retry codes can never project into À traiter before policy
+  exhaustion;
+- every diagnostics field passes the privacy canary/redaction suite;
+- a requirement-to-proof ledger maps all binding observability/recovery
+  requirements to implementation and evidence.
+
+An issue that lacks a closed mapping is an internal correctness failure, not
+"unknown retry".
+
+
 # 19. Fail-closed conditions
 
 Do not allow recovery/promotion when:
@@ -621,4 +645,6 @@ Plan 065 is implemented when:
 9. fault injection covers scanner, provider, normalization, renderer, visual QA, storage, DB, lease and deployment failures;
 10. privacy canaries prove confidential content does not leak into telemetry/default diagnostics;
 11. forced restart/deploy leaves a comprehensible recovery trail;
-12. a routine overnight failure can be understood and recovered without SSH/log archaeology.
+12. a routine overnight failure can be understood and recovered without SSH/log archaeology;
+13. every emitted issue/recovery path is covered by the closed registry,
+    fault/recovery tests and complete closure ledger.
