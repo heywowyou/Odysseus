@@ -263,6 +263,7 @@ export async function runAuditStage(
       // than simply never entering that code path at all.
       fullAuditPlanning: !options.skipLighthouse,
       networkPolicy: PUBLIC_SITE_NETWORK_POLICY,
+      ...(!options.skipLighthouse ? { scopeDigest: auditScope.digest } : {}),
       // Plan 035: full audits stamp the crawl checkpoint with this run's
       // identity and config, and resume from one when a previous attempt
       // left it behind. Never set on the prospecting path.
