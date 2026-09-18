@@ -87,7 +87,7 @@ if (!reportProfileTestSource.includes('covers every report-quality role')) {
   errors.push('Plan-058 role-profile coverage test must remain present.');
 }
 
-const plan051 = read('plans/051-findings-delta-reaudit.md');
+const plan051 = read('plans/archive/051-findings-delta-reaudit.md');
 if (!plan051.includes('@odysseus/llm') || !/no import or call edge/i.test(plan051)) {
   errors.push('Plan 051 must retain the static no-LLM dependency proof.');
 }

@@ -30,6 +30,8 @@ docs/report/design/*.flat.html
 # Preserve dependency-lock and external fixture serialization.
 pnpm-lock.yaml
 fixtures/**/*.csv
+# Byte-exact renderer goldens compared by toMatchFileSnapshot.
+**/__golden__/**
 
 # Binary and environment-specific files
 **/*.pdf
