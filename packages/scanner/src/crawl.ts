@@ -17,7 +17,10 @@ import {
   installBrowserNetworkSafety,
   type NetworkSafetyBlockHandler,
 } from './browser-network-safety.js';
-import type { NetworkTargetPolicy } from './network-target-policy.js';
+import {
+  checkNetworkTarget,
+  type NetworkTargetPolicy,
+} from './network-target-policy.js';
 import {
   isLanguageHomepagePath,
   isSameSiteHostname,
@@ -417,6 +420,16 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   let robotsText: string | null;
   let robotsRules: RobotsRules;
   if (resumeState === undefined) {
+    const robotsUrl = new URL('/robots.txt', start.origin).href;
+    if (options.networkPolicy !== undefined) {
+      const networkVerdict = await checkNetworkTarget(robotsUrl, options.networkPolicy);
+      if (networkVerdict.kind === 'refused') {
+        options.onNetworkSafetyBlocked?.(networkVerdict.disposition);
+        throw new Error(
+          `crawlSite: network safety blocked robots target (${networkVerdict.disposition.reason})`,
+        );
+      }
+    }
     robotsText =
       options.scheduler === undefined
         ? await fetchRobotsText(start.origin, timeoutMs, userAgent)
@@ -457,6 +470,12 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
             userAgent,
             delayMs: effectiveDelayMs,
             ...(options.scheduler !== undefined ? { scheduler: options.scheduler } : {}),
+            ...(options.networkPolicy !== undefined
+              ? { networkPolicy: options.networkPolicy }
+              : {}),
+            ...(options.onNetworkSafetyBlocked !== undefined
+              ? { onNetworkSafetyBlocked: options.onNetworkSafetyBlocked }
+              : {}),
           });
     if (sitemap !== undefined) {
       for (const entry of sitemap.pageEntries) {
