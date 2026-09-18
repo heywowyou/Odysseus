@@ -13,6 +13,7 @@
  * set up keeps behaving exactly as it did before this issue.
  */
 
+import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { buildArtifactBucketKey } from '@odysseus/scanner';
@@ -63,6 +64,33 @@ export async function syncArtifactFilesToBucket(
       const bytes = await fs.readFile(filePath);
       const relativePath = path.relative(auditDir, filePath);
       await store.put(buildArtifactBucketKey(hostname, startedAt, relativePath), bytes);
+    }),
+  );
+}
+
+function sha256(bytes: Buffer): string {
+  return createHash('sha256').update(bytes).digest('hex');
+}
+
+/** Plan 059 step 38: reads each listed file back from the bucket and throws
+ *  unless it is byte-identical to the local copy. Evidence is approved only
+ *  once the private store is shown to hold what was assessed. A no-op when no
+ *  store is configured: the local read-back then stands alone. */
+export async function verifyBucketReadBack(
+  store: ArtifactStore | undefined,
+  auditDir: string,
+  hostname: string,
+  startedAt: Date,
+  relativePaths: readonly string[],
+): Promise<void> {
+  if (!store) return;
+  await Promise.all(
+    relativePaths.map(async (relativePath) => {
+      const local = await fs.readFile(path.join(auditDir, relativePath));
+      const remote = await store.get(buildArtifactBucketKey(hostname, startedAt, relativePath));
+      if (remote === null || sha256(remote) !== sha256(local)) {
+        throw new Error(`artifact store read-back mismatch for ${relativePath}`);
+      }
     }),
   );
 }

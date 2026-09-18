@@ -11,7 +11,13 @@ import * as fs from 'node:fs';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
 import {
+  approveAuditEvidence,
+  APPROVED_AUDIT_EVIDENCE_PATH,
+  assertAcquisitionLease,
+  buildArtifactBucketKey,
   buildAuditDir,
+  type AuditEvidenceGraph,
+  EVIDENCE_READ_BACK_PATHS,
   getArtifactsRoot,
   getCrawlDelayMs,
   getCrawlerUserAgent,
@@ -28,7 +34,6 @@ import {
   runEvidenceGraphStage,
   scanSite,
   StaleAcquisitionLeaseError,
-  assertAcquisitionLease,
   writeAcquisitionLease,
   writeAuditArtifacts,
   writeFindingsFile,
@@ -64,7 +69,11 @@ import {
 import { runObligationStage } from './obligation-stage.js';
 import { buildRunAuditScope } from './audit-scope-stage.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
-import { syncAuditDirToBucket } from '../artifacts/sync-audit-artifacts.js';
+import {
+  syncArtifactFilesToBucket,
+  syncAuditDirToBucket,
+  verifyBucketReadBack,
+} from '../artifacts/sync-audit-artifacts.js';
 import { logger } from '../logger.js';
 
 export interface RunAuditStageOptions {
@@ -412,11 +421,14 @@ export async function runAuditStage(
     // Plan 058 consumes that approval and nothing else. A failure here must
     // not cost an audit that took hours, so it is logged and leaves the
     // audit without an approval (removing any from an earlier run of this
-    // directory), which Plan 058 then refuses to promote.
+    // directory), which Plan 058 then refuses to promote. The graph is kept
+    // so the approval gate after the bucket sync can write it once the
+    // private store has proven it holds this evidence.
+    let evidenceGraph: AuditEvidenceGraph | undefined;
     if (!options.skipLighthouse) {
       await holdClaim();
       try {
-        const graph = runEvidenceGraphStage({
+        evidenceGraph = runEvidenceGraphStage({
           auditDir: artifacts.auditDir,
           auditId: artifacts.auditId,
           scannedUrls: manifest.pages
@@ -437,14 +449,14 @@ export async function runAuditStage(
           userAgent: config.userAgent,
           assessedAt: new Date(),
         });
-        if (graph !== undefined) {
+        if (evidenceGraph !== undefined) {
           logger.info(
             {
               auditId: artifacts.auditId,
-              verdict: graph.quality.verdict,
+              verdict: evidenceGraph.quality.verdict,
               blocking: [
                 ...new Set(
-                  graph.quality.issues
+                  evidenceGraph.quality.issues
                     .filter((issue) => issue.severity === 'blocking')
                     .map((issue) => issue.code),
                 ),
@@ -484,12 +496,61 @@ export async function runAuditStage(
     // never before - a bucket failure must not block an already-valid
     // local deliverable. Runs after pruneScreenshots so a pruned page's
     // screenshot is never uploaded only to be orphaned in the bucket.
-    await syncAuditDirToBucket(
-      createConfiguredArtifactStore(),
-      artifacts.auditDir,
-      hostname,
-      startedAt,
-    );
+    // Plan 059 step 38: one store instance serves the whole-directory sync
+    // and the evidence read-back the approval below is gated on.
+    const artifactStore = createConfiguredArtifactStore();
+    await syncAuditDirToBucket(artifactStore, artifacts.auditDir, hostname, startedAt);
+
+    // Plan 059 step 38: the approval stands only once every file it approves
+    // has been synced and read back from the artifact store byte for byte,
+    // and the approval itself travels to the bucket and back. Anything else
+    // leaves the audit unapproved locally and in the bucket rather than
+    // approving evidence the private store cannot reproduce. Only a stale
+    // lease rethrows: a superseded worker must stop writing entirely instead
+    // of "failing" an approval on behalf of the worker that superseded it.
+    if (!options.skipLighthouse) {
+      const approvalBucketKey = buildArtifactBucketKey(
+        hostname,
+        startedAt,
+        APPROVED_AUDIT_EVIDENCE_PATH,
+      );
+      const discardApproval = async (): Promise<void> => {
+        removeApprovedAuditEvidence(artifacts.auditDir);
+        await artifactStore?.delete(approvalBucketKey);
+      };
+      try {
+        const graph = evidenceGraph;
+        if (graph?.approval !== undefined) {
+          await verifyBucketReadBack(artifactStore, artifacts.auditDir, hostname, startedAt, [
+            ...EVIDENCE_READ_BACK_PATHS,
+            'findings.json',
+            'manifest.json',
+            'audit-scope.json',
+          ]);
+          await holdClaim();
+          approveAuditEvidence(artifacts.auditDir, graph);
+          await syncArtifactFilesToBucket(artifactStore, artifacts.auditDir, hostname, startedAt, [
+            path.join(artifacts.auditDir, APPROVED_AUDIT_EVIDENCE_PATH),
+          ]);
+          await verifyBucketReadBack(artifactStore, artifacts.auditDir, hostname, startedAt, [
+            APPROVED_AUDIT_EVIDENCE_PATH,
+          ]);
+        } else {
+          await discardApproval();
+          logger.info(
+            { auditId: artifacts.auditId },
+            'full audit evidence was not approved; any earlier approval was removed',
+          );
+        }
+      } catch (error) {
+        if (error instanceof StaleAcquisitionLeaseError) throw error;
+        await discardApproval();
+        logger.error(
+          { auditId: artifacts.auditId, err: error },
+          'the evidence approval failed its artifact-store read-back; the audit stays unapproved',
+        );
+      }
+    }
 
     // 2026-08-22, La Corniche report review: the audit doc must exist
     // before this (persistAudit upserts by auditId above). siren is a

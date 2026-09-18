@@ -193,13 +193,16 @@ export {
 export type { CrawlFrontierReuseVerdict } from './artifacts/crawl-frontier-io.js';
 export { buildManifest, readOdysseusBuildId } from './artifacts/manifest.js';
 export {
+  APPROVED_AUDIT_EVIDENCE_PATH,
+  approveAuditEvidence,
+  EVIDENCE_READ_BACK_PATHS,
   readApprovedAuditEvidence,
   readAuditEvidenceSnapshot,
   readEvidenceQualityAssessment,
   removeApprovedAuditEvidence,
 } from './artifacts/evidence-graph-io.js';
 export { runEvidenceGraphStage } from './artifacts/evidence-graph-stage.js';
-export { confirmedFindingsDigest } from './evidence-graph.js';
+export { confirmedFindingsDigest, type AuditEvidenceGraph } from './evidence-graph.js';
 export type { BuildManifestInput } from './artifacts/manifest.js';
 export {
   SCREENSHOT_PRUNE_KEEP_TOP_N,
