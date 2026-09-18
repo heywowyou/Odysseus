@@ -42,7 +42,7 @@ export const HYDRATION_MAX_STEPS = 30;
 
 /** How long one step waits for the document to react to the scroll before
  *  measuring. Short and fixed: the sweep is a probe, not a settle wait. */
-export const HYDRATION_STEP_SETTLE_MS = 250;
+const HYDRATION_STEP_SETTLE_MS = 250;
 
 /** Consecutive no-growth steps that count as quiescence. */
 export const HYDRATION_STABLE_STEPS_FOR_QUIESCENCE = 2;
@@ -76,12 +76,6 @@ export interface HydrationSweepObservation {
   scrollHeight: number;
   domNodeCount: number;
   resourceCount: number;
-}
-
-export interface SummarizeHydrationSweepInput {
-  start: HydrationSweepObservation;
-  observations: HydrationSweepObservation[];
-  abortReason?: string;
 }
 
 /**

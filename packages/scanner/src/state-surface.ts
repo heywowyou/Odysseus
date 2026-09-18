@@ -47,7 +47,7 @@ import {
 import type { NetworkTargetPolicy } from './network-target-policy.js';
 
 /** Per-page budget for safe local-state exploration (section 9). */
-export const LOCAL_STATE_BUDGET_PER_PAGE = 8;
+const LOCAL_STATE_BUDGET_PER_PAGE = 8;
 
 /** How long a clicked control has to show its effect before the guard
  *  compares page state. Bounded: the scanner never waits indefinitely on a
@@ -60,7 +60,7 @@ const MAX_SUMMARIZED_CONTROLS = 40;
 /** One interactive element summarized from the live DOM. Attribute-level
  *  only: what crosses into stored evidence is element identity, never
  *  visitor-facing text. */
-export async function collectStateControlCandidates(page: Page): Promise<{
+async function collectStateControlCandidates(page: Page): Promise<{
   consent: StateControlCandidate[];
   localState: StateControlCandidate[];
   containerRef?: string;
