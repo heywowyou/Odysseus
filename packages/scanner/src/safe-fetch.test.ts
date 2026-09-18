@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { PUBLIC_SITE_NETWORK_POLICY } from './network-target-policy.js';
 import { fetchWithNetworkPolicy, NetworkSafetyBlockedError } from './safe-fetch.js';
 
-const publicLookup = async () => [{ address: '203.0.113.10', family: 4 as const }];
+const publicLookup = async () => [{ address: '93.184.216.34', family: 4 as const }];
 
 describe('fetchWithNetworkPolicy', () => {
   it('checks a redirect target before fetching it', async () => {
