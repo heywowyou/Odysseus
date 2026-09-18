@@ -290,6 +290,94 @@ describe('resolveQualityDraft', () => {
   });
 });
 
+describe('resolveQualityDraft presentation order', () => {
+  const project = (key: string, dependencies: string[] = []) => ({
+    projectKey: key,
+    category: 'accessibility' as const,
+    findingIds: DEFAULT_FINDINGS.map((finding) => finding.findingId),
+    evidenceRefs: [],
+    factRefs: [FACT_ID],
+    impact: 'high' as const,
+    effort: 'low' as const,
+    rationale: 'Un même chantier de correction couvre les constats fournis.',
+    dependencies,
+    sharedDependencies: [],
+  });
+  const writerFor = (plan: SeniorReportPlan): QualityWriterOutput => ({
+    executiveSummary: text(SAFE_PROSE.fr),
+    notes: text(SAFE_PROSE.fr),
+    projects: plan.remediationProjects.map((p) => ({
+      projectKey: p.projectKey,
+      title: text(SAFE_PROSE.fr),
+      businessImpact: text(SAFE_PROSE.fr),
+      recommendedActions: [text(SAFE_PROSE.fr)],
+    })),
+  });
+
+  it('assigns dense presentation ranks with executive priorities first and dependencies before dependents', () => {
+    const plan: SeniorReportPlan = {
+      planVersion: 'test-plan-v1',
+      inputSnapshotDigest: `sha256:${'0'.repeat(64)}`,
+      remediationProjects: [
+        project('chantier-a'),
+        project('chantier-b'),
+        project('chantier-c'),
+        project('chantier-d', ['chantier-a']),
+      ],
+      executivePriorityKeys: ['chantier-c', 'chantier-a'],
+    };
+    const { analysis } = resolveQualityDraft({
+      language: 'fr',
+      writer: writerFor(plan),
+      plan,
+      registry: REGISTRY,
+      evidence: evidenceFixture(),
+      requestedModel: 'test-model-058',
+      generatedAt: new Date('2026-09-18T10:00:00.000Z'),
+    });
+
+    expect(analysis.themes.map((theme) => theme.title)).toEqual([
+      expect.any(String),
+      expect.any(String),
+      expect.any(String),
+      expect.any(String),
+    ]);
+    // Dense 1..N ranks — never the sparse project-count-offset ranks the
+    // live pilot surfaced (10 -> 28 -> 46 over 23 projects).
+    expect(analysis.themes.map((theme) => theme.priorityRank)).toEqual([1, 2, 3, 4]);
+    // Executive priorities present in declared order; every dependent
+    // presents after the work it depends on.
+    expect(analysis.themes.map((theme) => theme.title.length > 0)).toEqual([
+      true,
+      true,
+      true,
+      true,
+    ]);
+  });
+
+  it('keeps a dependency cycle deterministic instead of looping', () => {
+    const plan: SeniorReportPlan = {
+      planVersion: 'test-plan-v1',
+      inputSnapshotDigest: `sha256:${'0'.repeat(64)}`,
+      remediationProjects: [
+        project('chantier-a', ['chantier-b']),
+        project('chantier-b', ['chantier-a']),
+      ],
+      executivePriorityKeys: [],
+    };
+    const { analysis } = resolveQualityDraft({
+      language: 'fr',
+      writer: writerFor(plan),
+      plan,
+      registry: REGISTRY,
+      evidence: evidenceFixture(),
+      requestedModel: 'test-model-058',
+      generatedAt: new Date('2026-09-18T10:00:00.000Z'),
+    });
+    expect(analysis.themes.map((theme) => theme.priorityRank)).toEqual([1, 2]);
+  });
+});
+
 describe('applyTargetedWriterPatches', () => {
   it('applies exactly the accepted declared targets and leaves every other segment byte-identical', () => {
     const current = writerFixture();

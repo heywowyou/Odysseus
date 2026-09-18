@@ -51,29 +51,65 @@ export function resolveQualityDraft(input: {
   validateQualityWriterOutput(input.writer, input.plan, input.registry);
   const prose = new Map(input.writer.projects.map((p) => [p.projectKey, p] as const));
   const priority = new Map(input.plan.executivePriorityKeys.map((k, i) => [k, i] as const));
+  // Presentation order is deterministic and code-bound (Plan 058 §5.6):
+  // executive priorities first in their declared order, remaining projects
+  // in plan order, and every dependency placed before its dependent — so a
+  // dependent never presents before the work it assumes. Ranks are dense
+  // 1..N; sparse or off-by-count ranks read as broken ordinals to clients.
+  const knownKeys = new Set(input.plan.remediationProjects.map((p) => p.projectKey));
+  const sortKey = new Map(
+    input.plan.remediationProjects.map(
+      (p, i) =>
+        [
+          p.projectKey,
+          (priority.get(p.projectKey) ?? input.plan.remediationProjects.length) * 1000 + i,
+        ] as const,
+    ),
+  );
+  const ordered: SeniorReportPlan['remediationProjects'] = [];
+  const placed = new Set<string>();
+  const remaining = [...input.plan.remediationProjects];
+  while (remaining.length > 0) {
+    let best = -1;
+    for (let i = 0; i < remaining.length; i += 1) {
+      const candidate = remaining[i]!;
+      const ready = candidate.dependencies.every((d) => !knownKeys.has(d) || placed.has(d));
+      if (
+        ready &&
+        (best === -1 ||
+          sortKey.get(candidate.projectKey)! < sortKey.get(remaining[best]!.projectKey)!)
+      ) {
+        best = i;
+      }
+    }
+    // A dependency cycle cannot satisfy the ready rule; take the first
+    // remaining project so the order stays deterministic.
+    if (best === -1) best = 0;
+    const next = remaining.splice(best, 1)[0]!;
+    placed.add(next.projectKey);
+    ordered.push(next);
+  }
   const resolve = (c: QualityWriterOutput['executiveSummary'], target: string) => {
     const text = resolveEvidenceBoundContent(c, input.registry, input.language);
     const v = deterministicProseViolations(text);
     if (v.length) throw new Error(`Deterministic prose violation at ${target}: ${v.join(',')}`);
     return text;
   };
-  const themes = input.plan.remediationProjects
-    .map((p, i) => {
-      const w = prose.get(p.projectKey)!;
-      return {
-        title: resolve(w.title, p.projectKey + '.title'),
-        category: p.category,
-        businessImpact: resolve(w.businessImpact, p.projectKey + '.impact'),
-        effort: p.effort,
-        impact: p.impact,
-        priorityRank: (priority.get(p.projectKey) ?? input.plan.remediationProjects.length + i) + 1,
-        findingIds: p.findingIds,
-        recommendedActions: w.recommendedActions.map((a, j) =>
-          resolve(a, `${p.projectKey}.action.${j}`),
-        ),
-      };
-    })
-    .sort((a, b) => a.priorityRank - b.priorityRank);
+  const themes = ordered.map((p, i) => {
+    const w = prose.get(p.projectKey)!;
+    return {
+      title: resolve(w.title, p.projectKey + '.title'),
+      category: p.category,
+      businessImpact: resolve(w.businessImpact, p.projectKey + '.impact'),
+      effort: p.effort,
+      impact: p.impact,
+      priorityRank: i + 1,
+      findingIds: p.findingIds,
+      recommendedActions: w.recommendedActions.map((a, j) =>
+        resolve(a, `${p.projectKey}.action.${j}`),
+      ),
+    };
+  });
   const seed = {
       language: input.language,
       writer: input.writer,
