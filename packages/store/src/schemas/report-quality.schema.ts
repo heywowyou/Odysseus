@@ -1,6 +1,7 @@
 import { Schema, type Connection, type Model } from 'mongoose';
 import type {
   ReportBundleState,
+  ReportQualityDagNodeRef,
   ReportQualityModelCall,
   ReviewIssue,
   Sha256Digest,
@@ -35,6 +36,10 @@ export interface ReportQualityRunDocument {
   inputSnapshotDigest?: Sha256Digest;
   approvedEvidenceDigest?: Sha256Digest;
   modelCalls: ReportQualityModelCall[];
+  /** Plan 058 §15: every DAG node the run computed or reused, in order. */
+  dagNodes?: ReportQualityDagNodeRef[];
+  /** A replay-only run never called a provider and never qualifies. */
+  modelMode?: 'live' | 'replay-only';
   issues: ReviewIssue[];
   candidateDigests: Sha256Digest[];
   operatorApprovalBundleDigest?: Sha256Digest;
@@ -56,6 +61,8 @@ const reportQualityRunSchema = new Schema<ReportQualityRunDocument>(
     // whose shape this schema deliberately does not re-declare, so a new
     // provenance field never needs a matching Mongoose edit to persist.
     modelCalls: { type: [Schema.Types.Mixed], default: [] } as never,
+    dagNodes: { type: [Schema.Types.Mixed], default: [] } as never,
+    modelMode: { type: String },
     // Same closed-contract rationale: adjudicated ReviewIssue records feed
     // the corpus benchmark's editorial outcome tallies.
     issues: { type: [Schema.Types.Mixed], default: [] } as never,

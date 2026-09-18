@@ -46,6 +46,9 @@ const harness = vi.hoisted(() => ({
   llmLog: [] as Array<{ role: string; userPayload: unknown; imagePaths?: readonly string[] }>,
   pdfQa: { pageCount: 1, extractedText: '' },
   generateReportPdfCalls: 0,
+  /** Per-role salt standing in for an edited system prompt / model profile. */
+  promptSalt: {} as Record<string, string | undefined>,
+  profileSalt: {} as Record<string, string | undefined>,
 }));
 
 const storeState = vi.hoisted(() => ({
@@ -91,6 +94,14 @@ vi.mock('@odysseus/llm', async (importOriginal) => {
     `sha256:${createHash('sha256').update(JSON.stringify(value)).digest('hex')}` as Sha256Digest;
   return {
     ...actual,
+    reportQualitySystemPromptDigest: (role: Parameters<typeof actual.getReportModelProfile>[0]) =>
+      harness.promptSalt[role]
+        ? digest([actual.reportQualitySystemPromptDigest(role), harness.promptSalt[role]])
+        : actual.reportQualitySystemPromptDigest(role),
+    getReportModelProfileDigest: (role: Parameters<typeof actual.getReportModelProfile>[0]) =>
+      harness.profileSalt[role]
+        ? digest([actual.getReportModelProfileDigest(role), harness.profileSalt[role]])
+        : actual.getReportModelProfileDigest(role),
     callReportQualityRole: async (input: {
       role: Parameters<typeof actual.getReportModelProfile>[0];
       userPayload: unknown;
@@ -310,6 +321,8 @@ beforeEach(() => {
   harness.llmCalls = {};
   harness.llmLog = [];
   harness.generateReportPdfCalls = 0;
+  harness.promptSalt = {};
+  harness.profileSalt = {};
   harness.pdfQa = {
     pageCount: 1,
     extractedText: `${DISCLOSURE.summary.fr}\n${DISCLOSURE.summary.en}`,
@@ -423,17 +436,15 @@ describe('runReportQualityPipeline (Plan 058 fail-closed behavior)', () => {
     expect(snapshot.auditId).toBe(evidence.approval.auditId);
 
     // The recorded snapshot digest is the digest of exactly these bytes and
-    // is what every model call is bound to.
+    // binds the run lineage and the stored plan. Model payloads leave it out:
+    // it carries the run's creation time, so it would make every §15 model
+    // node unique to one run and no resume could ever reuse it.
     const snapshotDigest = reportQualityDigest(snapshot);
     expect(result.inputSnapshotDigest).toBe(snapshotDigest);
     expect(storeState.transitions[0]!.patch.inputSnapshotDigest).toBe(snapshotDigest);
-    const seniorCall = harness.llmLog.find((call) => call.role === 'senior-analyst');
-    expect(
-      (seniorCall!.userPayload as { inputSnapshotDigest: Sha256Digest }).inputSnapshotDigest,
-    ).toBe(snapshotDigest);
-    for (const role of ['writer-fr', 'writer-en']) {
-      const call = harness.llmLog.find((entry) => entry.role === role);
-      expect((call!.userPayload as { inputSnapshotDigest: Sha256Digest }).inputSnapshotDigest).toBe(
+    // Only the final arbiter, which approves this exact bundle, is bound to it.
+    for (const call of harness.llmLog.filter((entry) => entry.role !== 'final-document-arbiter')) {
+      expect(JSON.stringify(call.userPayload), `${call.role} payload`).not.toContain(
         snapshotDigest,
       );
     }
@@ -455,6 +466,105 @@ describe('runReportQualityPipeline (Plan 058 fail-closed behavior)', () => {
     expect(changed.inputSnapshotDigest).not.toBe(snapshotDigest);
     const snapshotKeys = await store.list('report-quality/objects/input-snapshot/');
     expect(snapshotKeys).toHaveLength(2);
+  });
+
+  describe('§15 content-addressed resume', () => {
+    async function liveRun(store: InMemoryArtifactStore, overrides: Partial<PipelineInput> = {}) {
+      harness.llmCalls = {};
+      harness.generateReportPdfCalls = 0;
+      return runReportQualityPipeline(makePipelineInput({ artifactStore: store, ...overrides }));
+    }
+
+    function lastRunNodes() {
+      const run = storeState.runs.at(-1)!;
+      return run.patches
+        .map((patch) => patch.dagNode as { node: string; outcome: string } | undefined)
+        .filter((node) => node !== undefined);
+    }
+
+    it('reuses every matching node on a rerun: no provider call and no re-render', async () => {
+      const store = new InMemoryArtifactStore();
+      const first = await liveRun(store);
+      const firstCalls = modelCalls().length;
+      expect(firstCalls).toBeGreaterThan(0);
+
+      const second = await liveRun(store);
+      expect(harness.llmCalls).toEqual({});
+      expect(harness.generateReportPdfCalls).toBe(0);
+      expect(second.fr.pdfDigest).toBe(first.fr.pdfDigest);
+      expect(second.en.pdfDigest).toBe(first.en.pdfDigest);
+      expect(storeState.runs.at(-1)!.modelCalls).toHaveLength(0);
+      const nodes = lastRunNodes();
+      expect(nodes.length).toBe(firstCalls);
+      expect(nodes.every((node) => node.outcome === 'reused')).toBe(true);
+    });
+
+    it('recomputes exactly the role whose system prompt changed', async () => {
+      const store = new InMemoryArtifactStore();
+      await liveRun(store);
+      harness.promptSalt['writer-en'] = 'edited prompt';
+      await liveRun(store);
+      // The scripted writer returns the same draft, so everything downstream
+      // of it is content-identical and stays reused.
+      expect(harness.llmCalls).toEqual({ 'writer-en': 1 });
+    });
+
+    it('recomputes a role whose model profile changed', async () => {
+      const store = new InMemoryArtifactStore();
+      await liveRun(store);
+      harness.profileSalt['senior-analyst'] = 'new effort';
+      await liveRun(store);
+      expect(harness.llmCalls).toEqual({ 'senior-analyst': 1 });
+    });
+
+    it('recomputes the plan, drafts and render when approved evidence changes', async () => {
+      const store = new InMemoryArtifactStore();
+      await liveRun(store);
+      const changed = [findingFixture('finding-contrastes', { title: 'Contraste insuffisant' })];
+      await liveRun(store, {
+        findings: changed,
+        approvedEvidence: evidenceFixture(changed),
+      });
+      expect(harness.llmCalls['senior-analyst']).toBe(1);
+      expect(harness.llmCalls['writer-fr']).toBe(1);
+      expect(harness.generateReportPdfCalls).toBe(2);
+    });
+
+    it('pays every call again with reuse off', async () => {
+      const store = new InMemoryArtifactStore();
+      await liveRun(store);
+      const firstCalls = modelCalls().length;
+      await liveRun(store, { dagReuse: false });
+      expect(storeState.runs.at(-1)!.modelCalls).toHaveLength(firstCalls);
+      expect(harness.generateReportPdfCalls).toBe(2);
+    });
+
+    it('replays a recorded run without any provider call and never qualifies it', async () => {
+      const store = new InMemoryArtifactStore();
+      await liveRun(store);
+      const bundlesBefore = storeState.bundles.length;
+      await expect(liveRun(store, { modelMode: 'replay-only' })).rejects.toThrow(
+        'replays never qualify a bundle',
+      );
+      expect(harness.llmCalls).toEqual({});
+      expect(storeState.bundles).toHaveLength(bundlesBefore);
+      const replay = storeState.runs.at(-1)!;
+      const replayStates = storeState.transitions
+        .filter((transition) => transition.qualityRunId === replay.qualityRunId)
+        .map((transition) => transition.state);
+      expect(replayStates.at(-1)).toBe('failed');
+      expect(replayStates).not.toContain('quality-approved');
+      expect(finalTransition().patch.errorCode).toBe('replay-only-no-qualification');
+      expect(replay.patches[0]).toEqual({ modelMode: 'replay-only' });
+    });
+
+    it('stops a replay at the first unrecorded node', async () => {
+      await expect(
+        liveRun(new InMemoryArtifactStore(), { modelMode: 'replay-only' }),
+      ).rejects.toThrow('Replay-only run has no recorded model-senior-analyst node');
+      expect(harness.llmCalls).toEqual({});
+      expect(finalTransition().patch.errorCode).toBe('replay-miss');
+    });
   });
 
   it('refuses evidence that changed after approval when loading from the audit directory', async () => {
@@ -493,7 +603,17 @@ describe('runReportQualityPipeline (Plan 058 fail-closed behavior)', () => {
     await expect(runReportQualityPipeline(makePipelineInput())).rejects.toThrow(
       'within 8 targeted repair iterations',
     );
-    expect(harness.llmCalls['editor']).toBe(8);
+    // The editor returns the same patch every iteration, so from the second
+    // iteration on the draft and every payload repeat: the §15 DAG pays the
+    // provider once per distinct request and reuses it afterwards.
+    expect(harness.llmCalls['editor']).toBe(2);
+    const editorNodes = storeState.transitions
+      .map(
+        (transition) => transition.patch.dagNode as { node: string; outcome: string } | undefined,
+      )
+      .filter((node) => node?.node === 'model-editor');
+    expect(editorNodes).toHaveLength(8);
+    expect(editorNodes.filter((node) => node!.outcome === 'reused')).toHaveLength(6);
     // The French draft failed first: the English writer never ran and the
     // run never reached approval.
     expect(harness.llmCalls['writer-en']).toBeUndefined();

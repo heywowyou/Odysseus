@@ -117,7 +117,7 @@ export { LangfuseLlmTelemetrySink } from './telemetry/langfuse-sink.js';
 export type { LangfuseTelemetryConfig } from './telemetry/langfuse-sink.js';
 export { configureLlmTelemetryFromEnv } from './telemetry/configure.js';
 
-export { callReportQualityRole } from './report-quality-client.js';
+export { callReportQualityRole, reportQualitySystemPromptDigest } from './report-quality-client.js';
 export {
   REPORT_MODEL_PROFILES,
   ReportModelProfileMissingError,

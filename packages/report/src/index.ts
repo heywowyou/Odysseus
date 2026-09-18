@@ -196,4 +196,7 @@ export {
   runExactPdfQa,
 } from './quality/pdf-quality.js';
 export type { PdfQualityToolVersions, ExactPdfQaResult } from './quality/pdf-quality.js';
-export { reportRendererAssetFingerprints } from './quality/renderer-fingerprint.js';
+export {
+  reportRendererAssetFingerprints,
+  reportRendererCodeFingerprint,
+} from './quality/renderer-fingerprint.js';

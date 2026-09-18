@@ -11,7 +11,8 @@ import {
   type AuditManifest,
   type Finding,
   type ReportBundleCandidate,
-  type ReportQualityModelCall,
+  type ReportEvidenceDossier,
+  type ReportQualityRole,
   type ReportFactRegistry,
   type ReportInputSnapshot,
   type ReportLanguage,
@@ -31,10 +32,12 @@ import {
   editorOutputSchema,
   finalArbiterOutputSchema,
   getReportModelProfile,
+  getReportModelProfileDigest,
   getReportModelProfileMatrixDigest,
   issueAdjudicationOutputSchema,
   qualityReviewOutputSchema,
   qualityWriterOutputSchema,
+  reportQualitySystemPromptDigest,
   seniorPlanOutputSchema,
   type QualityReviewOutput,
   type QualityWriterOutput,
@@ -53,6 +56,7 @@ import {
   reconcileCoverageLedger,
   reportQualityDigest,
   reportRendererAssetFingerprints,
+  reportRendererCodeFingerprint,
   runExactPdfQa,
 } from '@odysseus/report';
 import { readOdysseusBuildId } from '@odysseus/scanner';
@@ -71,6 +75,7 @@ import {
   transitionReportQualityRun,
   type ReportQualityLease,
 } from '@odysseus/store';
+import type { ZodType } from 'zod';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
 import { runObligationStage } from './obligation-stage.js';
 import { loadAuditEvidencePayload } from './report-quality-evidence.js';
@@ -81,6 +86,11 @@ import {
   validateQualityWriterOutput,
   writerPatchAddresses,
 } from './report-quality-draft.js';
+import {
+  ReportQualityDag,
+  ReportQualityReplayMissError,
+  type ReportQualityModelMode,
+} from './report-quality-dag.js';
 import { putImmutableJson, putPrivateCandidatePdf } from './report-quality-storage.js';
 
 const MAX_CONTENT_REPAIR_ITERATIONS = 8;
@@ -135,6 +145,16 @@ class ReportQualityNeedsOperatorReviewError extends Error {
   }
 }
 
+/** A replay-only run reached the end of the recorded DAG with every gate
+ *  passing. It is recorded as failed so it can never be approved. */
+export class ReportQualityReplayCompleteError extends Error {
+  readonly reasonCode = 'replay-only-no-qualification';
+  constructor() {
+    super('Replay-only run passed every recorded stage; replays never qualify a bundle');
+    this.name = 'ReportQualityReplayCompleteError';
+  }
+}
+
 export interface QualityLanguageCandidateResult {
   language: ReportLanguage;
   pdfDigest: Sha256Digest;
@@ -165,6 +185,9 @@ interface QualityRunContext {
   artifactStore: ArtifactStore;
   evidence: ApprovedAuditEvidencePayload;
   lease: ReportQualityLease;
+  dag: ReportQualityDag;
+  /** Declared parents shared by every render/QA node of this run. */
+  renderParents: Record<string, unknown>;
   state:
     | 'running'
     | 'content-clean'
@@ -174,17 +197,71 @@ interface QualityRunContext {
     | 'bundle-final-review';
 }
 
-async function recordModelCall(
+/**
+ * Every model call is a §15 DAG node keyed on the exact request: role, model
+ * profile, system prompt, response schema, the serialized user payload and
+ * each attached image's bytes. A matching recorded node is reused (and
+ * re-parsed through the same schema); any changed parent is a new node. Only
+ * a computed call is a provider call, so only it is appended to modelCalls.
+ */
+async function callRole<T>(
   context: QualityRunContext,
-  provenance: ReportQualityModelCall,
-): Promise<void> {
+  input: {
+    role: ReportQualityRole;
+    userPayload: unknown;
+    parser: ZodType<T>;
+    jsonSchema: Record<string, unknown>;
+    imagePaths?: readonly string[];
+  },
+): Promise<{ output: T }> {
+  await keepLease(context);
+  const imageDigests = await Promise.all(
+    (input.imagePaths ?? []).map(async (file) => bytesDigest(await fs.readFile(file))),
+  );
+  const result = await context.dag.run(
+    `model-${input.role}`,
+    {
+      role: input.role,
+      profileDigest: getReportModelProfileDigest(input.role),
+      systemPromptDigest: reportQualitySystemPromptDigest(input.role),
+      schemaDigest: reportQualityDigest(input.jsonSchema),
+      payloadDigest: bytesDigest(Buffer.from(JSON.stringify(input.userPayload), 'utf8')),
+      imageDigests,
+    },
+    () => callReportQualityRole(input),
+    (value) => input.parser.parse(value),
+  );
   await transitionReportQualityRun(
     context.connection,
     context.manifest.auditId,
     context.lease,
     context.state,
-    { modelCall: provenance },
+    {
+      ...(result.outcome === 'computed' && result.provenance
+        ? { modelCall: result.provenance }
+        : {}),
+      dagNode: { node: `model-${input.role}`, nodeKey: result.nodeKey, outcome: result.outcome },
+    },
   );
+  return { output: result.output };
+}
+
+/** Model-facing views drop the run-scoped snapshot binding: the snapshot
+ *  digest carries the run's creation time and build, so leaving it in a
+ *  payload would make every model node unique to one run. The binding stays
+ *  on the stored artifacts and the run lineage. */
+function modelPlan(plan: SeniorReportPlan) {
+  const { inputSnapshotDigest: _snapshot, ...rest } = plan;
+  return rest;
+}
+function modelRegistry(registry: ReportFactRegistry) {
+  const { inputSnapshotDigest: _snapshot, ...rest } = registry;
+  return rest;
+}
+function modelDossier(dossier: ReportEvidenceDossier) {
+  const { inputSnapshotDigest: _snapshot, coverageLedger, ...rest } = dossier;
+  const { inputSnapshotDigest: _ledgerSnapshot, ...ledger } = coverageLedger;
+  return { ...rest, coverageLedger: ledger };
 }
 
 /** Appends the adjudicated review issues to the run lineage. The corpus
@@ -214,8 +291,11 @@ async function keepLease(context: QualityRunContext): Promise<void> {
 }
 
 function compactEvidence(evidence: ApprovedAuditEvidencePayload): unknown {
+  // When and by which build the evidence was approved is lineage, not
+  // evidence; a re-approval of identical evidence must not change payloads.
+  const { approvedAt: _at, approvedBySystemVersion: _by, ...approval } = evidence.approval;
   return {
-    approval: evidence.approval,
+    approval,
     findings: evidence.findings.map((finding) => ({
       findingId: finding.findingId,
       ruleId: finding.ruleId,
@@ -363,14 +443,12 @@ async function adjudicateIssues(
   evidence: unknown,
 ): Promise<ReviewIssue[]> {
   if (issues.length === 0) return [];
-  await keepLease(context);
-  const call = await callReportQualityRole({
+  const call = await callRole(context, {
     role: 'issue-adjudicator',
     userPayload: { issues, evidence },
     parser: issueAdjudicationOutputSchema,
     jsonSchema: ADJUDICATION_JSON_SCHEMA,
   });
-  await recordModelCall(context, call.provenance);
   const decisions = new Map(call.output.decisions.map((decision) => [decision.issueId, decision]));
   if (decisions.size !== issues.length || issues.some((issue) => !decisions.has(issue.issueId))) {
     throw new Error('Report issue adjudication rejected: decision coverage is incomplete');
@@ -441,13 +519,12 @@ async function cleanContentDraft(
     };
     const issues: ReviewIssue[] = [];
     for (const role of ['content-critic-evidence', 'content-critic-editorial'] as const) {
-      await keepLease(context);
-      const call = await callReportQualityRole({
+      const call = await callRole(context, {
         role,
         userPayload: {
           language,
-          seniorPlan: plan,
-          factRegistry: registry,
+          seniorPlan: modelPlan(plan),
+          factRegistry: modelRegistry(registry),
           evidence: compactEvidence(context.evidence),
           deterministicReportContext: DETERMINISTIC_REPORT_CONTEXT,
           structuredDraft: draft,
@@ -461,7 +538,6 @@ async function cleanContentDraft(
         parser: qualityReviewOutputSchema,
         jsonSchema: QUALITY_REVIEW_JSON_SCHEMA,
       });
-      await recordModelCall(context, call.provenance);
       issues.push(...reviewIssues(call.output, role, artifact.digest));
     }
 
@@ -469,9 +545,9 @@ async function cleanContentDraft(
     // without the draft it could only answer unsure (live pilot: 18 of 26).
     const adjudicated = await adjudicateIssues(context, issues, {
       language,
-      factRegistry: registry,
+      factRegistry: modelRegistry(registry),
       evidence: compactEvidence(context.evidence),
-      seniorPlan: plan,
+      seniorPlan: modelPlan(plan),
       deterministicReportContext: DETERMINISTIC_REPORT_CONTEXT,
       structuredDraft: draft,
       resolvedDraft,
@@ -513,8 +589,7 @@ async function cleanContentDraft(
     // within the same bounded ceiling as a writer draft.
     const editorRejections: string[] = [];
     for (let attempt = 1; ; attempt += 1) {
-      await keepLease(context);
-      const edit = await callReportQualityRole({
+      const edit = await callRole(context, {
         role: 'editor',
         userPayload: {
           language,
@@ -523,8 +598,8 @@ async function cleanContentDraft(
             declaredTargets: declared.get(issue.issueId),
           })),
           currentDraft: draft,
-          factRegistry: registry,
-          seniorPlan: plan,
+          factRegistry: modelRegistry(registry),
+          seniorPlan: modelPlan(plan),
           writingRules: WRITING_RULES,
           instruction:
             'Patch only the declaredTargets of each accepted issue. Preserve every other field ' +
@@ -534,7 +609,6 @@ async function cleanContentDraft(
         parser: editorOutputSchema,
         jsonSchema: EDITOR_JSON_SCHEMA,
       });
-      await recordModelCall(context, edit.provenance);
       try {
         const patched = applyTargetedWriterPatches(draft, edit.output, declared);
         resolveDraft(context, language, patched, plan, registry, reportInputs);
@@ -580,8 +654,7 @@ async function visualReview(
         ...detailTiles[index]!.map((_, tile) => `page ${index + 1} detail tile ${tile + 1}`),
       );
     }
-    await keepLease(context);
-    const call = await callReportQualityRole({
+    const call = await callRole(context, {
       role,
       userPayload: {
         candidateDigest,
@@ -595,7 +668,6 @@ async function visualReview(
       jsonSchema: QUALITY_REVIEW_JSON_SCHEMA,
       imagePaths,
     });
-    await recordModelCall(context, call.provenance);
     issues.push(...reviewIssues(call.output, role, candidateDigest));
   }
   return issues;
@@ -623,6 +695,73 @@ async function assertPhysicalLimitations(
   }
 }
 
+interface RenderOutput {
+  pdfDigest: Sha256Digest;
+  key: string;
+  pageCount: number;
+}
+
+function parseRenderOutput(value: unknown): RenderOutput {
+  const output = value as Partial<RenderOutput> | null;
+  if (
+    !output ||
+    typeof output.pdfDigest !== 'string' ||
+    !/^sha256:[0-9a-f]{64}$/.test(output.pdfDigest) ||
+    typeof output.key !== 'string' ||
+    typeof output.pageCount !== 'number' ||
+    !Number.isInteger(output.pageCount) ||
+    output.pageCount < 1
+  )
+    throw new Error('Render DAG record is malformed');
+  return { pdfDigest: output.pdfDigest, key: output.key, pageCount: output.pageCount };
+}
+
+/** Renders and canonically post-processes one language candidate. Its
+ *  bytes are stored content-addressed so a resumed run reviews the exact
+ *  same candidate instead of a re-render with a new timestamp and id. */
+async function renderCandidate(
+  context: QualityRunContext,
+  language: ReportLanguage,
+  analysis: ReturnType<typeof resolveDraft>['analysis'],
+  reportInputs: ReportOnlyInputs,
+  workDir: string,
+): Promise<RenderOutput> {
+  const rendered = await generateReportPdf({
+    auditDir: context.auditDir,
+    manifest: context.manifest,
+    findings: context.findings,
+    renderMetadata: {
+      reportId: randomUUID(),
+      renderedAt: new Date(),
+      rendererBuild: readOdysseusBuildId(),
+      templateVersion: REPORT_TEMPLATE_VERSION,
+    },
+    analysis,
+    ...(reportInputs.manualFields !== undefined ? { manualFields: reportInputs.manualFields } : {}),
+    preparation: reportInputs.preparation[language],
+    ...(reportInputs.gradeOverride !== undefined
+      ? { gradeOverride: reportInputs.gradeOverride }
+      : {}),
+    ...(reportInputs.delta !== undefined ? { delta: reportInputs.delta } : {}),
+    qualityLimitations: context.evidence.mandatoryDisclosures,
+  });
+  assertMandatoryDisclosures(
+    context.evidence.mandatoryDisclosures,
+    context.evidence.mandatoryDisclosures.map((item) => item.reportDestination),
+  );
+  const rawPath = path.join(workDir, 'chromium.pdf');
+  const postPath = path.join(workDir, 'postprocessed.pdf');
+  await fs.writeFile(rawPath, rendered.pdf);
+  await canonicalPostProcessPdf(
+    rawPath,
+    postPath,
+    language,
+    language === 'fr' ? "Rapport d'audit Odysseus" : 'Odysseus audit report',
+  );
+  const stored = await context.dag.putBytes('candidate-pdf', await fs.readFile(postPath));
+  return { pdfDigest: stored.digest, key: stored.key, pageCount: rendered.pageCount };
+}
+
 async function renderAndReviewLanguage(
   context: QualityRunContext,
   language: ReportLanguage,
@@ -635,47 +774,45 @@ async function renderAndReviewLanguage(
   const resolved = resolveDraft(context, language, draft, plan, registry, reportInputs);
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), `odysseus-058-${language}-`));
   try {
-    const rendered = await generateReportPdf({
-      auditDir: context.auditDir,
-      manifest: context.manifest,
-      findings: context.findings,
-      renderMetadata: {
-        reportId: randomUUID(),
-        renderedAt: new Date(),
-        rendererBuild: readOdysseusBuildId(),
-        templateVersion: REPORT_TEMPLATE_VERSION,
-      },
-      analysis: resolved.analysis,
-      ...(reportInputs.manualFields !== undefined
-        ? { manualFields: reportInputs.manualFields }
-        : {}),
-      preparation: reportInputs.preparation[language],
-      ...(reportInputs.gradeOverride !== undefined
-        ? { gradeOverride: reportInputs.gradeOverride }
-        : {}),
-      ...(reportInputs.delta !== undefined ? { delta: reportInputs.delta } : {}),
-      qualityLimitations: context.evidence.mandatoryDisclosures,
-    });
-    assertMandatoryDisclosures(
-      context.evidence.mandatoryDisclosures,
-      context.evidence.mandatoryDisclosures.map((item) => item.reportDestination),
-    );
-    const rawPath = path.join(workDir, 'chromium.pdf');
     const finalPath = path.join(workDir, 'candidate.pdf');
-    await fs.writeFile(rawPath, rendered.pdf);
-    await canonicalPostProcessPdf(
-      rawPath,
+    const render = await context.dag.run(
+      `render-${language}`,
+      {
+        ...context.renderParents,
+        language,
+        draftDigest: reportQualityDigest(draft),
+        planDigest: reportQualityDigest(modelPlan(plan)),
+        registryDigest: reportQualityDigest(modelRegistry(registry)),
+        reportOnlyInputsDigest: reportQualityDigest(reportInputs),
+      },
+      async () => ({
+        output: await renderCandidate(context, language, resolved.analysis, reportInputs, workDir),
+      }),
+      parseRenderOutput,
+    );
+    await fs.writeFile(
       finalPath,
-      language,
-      language === 'fr' ? "Rapport d'audit Odysseus" : 'Odysseus audit report',
+      await context.dag.getBytes(render.output.key, render.output.pdfDigest),
     );
 
     const qa = await runExactPdfQa({
       pdfPath: finalPath,
       workDir: path.join(workDir, 'qa'),
-      expectedPageCount: rendered.pageCount,
+      expectedPageCount: render.output.pageCount,
     });
     await assertPhysicalLimitations(path.join(workDir, 'qa'), context.evidence, language);
+    // Exact-PDF QA is always recomputed; a different result for the same
+    // candidate, tools and code is nondeterminism and fails the run.
+    await context.dag.assertDeterministic(
+      `pdf-qa-${language}`,
+      { ...context.renderParents, pdfDigest: render.output.pdfDigest },
+      {
+        pdfDigest: qa.pdfDigest,
+        pageCount: qa.pageCount,
+        extractedTextDigest: qa.extractedTextDigest,
+        gateDigest: qa.gateDigest,
+      },
+    );
 
     const pageManifest = {
       candidateDigest: qa.pdfDigest,
@@ -805,6 +942,16 @@ async function renderAndReviewLanguage(
   }
 }
 
+function arbiterCandidateView(candidate: QualityLanguageCandidateResult) {
+  return {
+    language: candidate.language,
+    pdfDigest: candidate.pdfDigest,
+    pageCount: candidate.pageCount,
+    qaDigest: candidate.qaDigest,
+    pageManifestDigest: candidate.pageManifestDigest,
+  };
+}
+
 async function assertParity(
   context: QualityRunContext,
   plan: SeniorReportPlan,
@@ -812,13 +959,17 @@ async function assertParity(
   fr: QualityWriterOutput,
   en: QualityWriterOutput,
 ): Promise<Sha256Digest> {
-  const artifactDigest = reportQualityDigest({ plan, fr, en, registry });
-  await keepLease(context);
-  const call = await callReportQualityRole({
+  const artifactDigest = reportQualityDigest({
+    plan: modelPlan(plan),
+    fr,
+    en,
+    registry: modelRegistry(registry),
+  });
+  const call = await callRole(context, {
     role: 'parity-reviewer',
     userPayload: {
-      seniorPlan: plan,
-      factRegistry: registry,
+      seniorPlan: modelPlan(plan),
+      factRegistry: modelRegistry(registry),
       mandatoryDisclosures: context.evidence.mandatoryDisclosures,
       fr,
       en,
@@ -826,11 +977,10 @@ async function assertParity(
     parser: qualityReviewOutputSchema,
     jsonSchema: QUALITY_REVIEW_JSON_SCHEMA,
   });
-  await recordModelCall(context, call.provenance);
   const issues = reviewIssues(call.output, 'parity-reviewer', artifactDigest);
   const adjudicated = await adjudicateIssues(context, issues, {
-    seniorPlan: plan,
-    factRegistry: registry,
+    seniorPlan: modelPlan(plan),
+    factRegistry: modelRegistry(registry),
     mandatoryDisclosures: context.evidence.mandatoryDisclosures,
     fr,
     en,
@@ -851,6 +1001,12 @@ export async function runReportQualityPipeline(input: {
   findings: Finding[];
   artifactStore: ArtifactStore | undefined;
   approvedEvidence?: ApprovedAuditEvidencePayload;
+  /** Plan 058 §15 resume: reuse DAG nodes whose declared parents all match.
+   *  Off for §19 stability runs, which must pay every call fresh. */
+  dagReuse?: boolean;
+  /** `replay-only` never calls a provider: a node without a matching record
+   *  stops the run, and a replay never produces a qualifying bundle. */
+  modelMode?: ReportQualityModelMode;
 }): Promise<ReportQualityPipelineResult> {
   if (!input.artifactStore) {
     throw new Error(
@@ -868,11 +1024,20 @@ export async function runReportQualityPipeline(input: {
     artifactStore: input.artifactStore,
     evidence,
     lease,
+    dag: new ReportQualityDag(input.artifactStore, {
+      reuse: input.dagReuse ?? true,
+      mode: input.modelMode ?? 'live',
+    }),
+    renderParents: {},
     state: 'running',
   };
 
   await startReportQualityRun(input.connection, input.manifest.auditId, lease);
   try {
+    if (context.dag.mode === 'replay-only')
+      await transitionReportQualityRun(input.connection, input.manifest.auditId, lease, 'running', {
+        modelMode: 'replay-only',
+      });
     const reportInputs = await buildReportOnlyInputs(
       input.connection,
       input.manifest,
@@ -884,6 +1049,17 @@ export async function runReportQualityPipeline(input: {
       qualityTools,
       divergenceThreshold: process.env['ODYSSEUS_PDF_RENDER_DIVERGENCE_MAX_RATIO'] ?? null,
     });
+    context.renderParents = {
+      templateVersion: REPORT_TEMPLATE_VERSION,
+      rendererBuild: readOdysseusBuildId(),
+      rendererAssets: renderer.rendererAssets,
+      fonts: renderer.fonts,
+      rendererCode: await reportRendererCodeFingerprint(),
+      qualityToolFingerprint,
+      manifestDigest: reportQualityDigest(input.manifest),
+      findingsDigest: reportQualityDigest(input.findings),
+      mandatoryDisclosuresDigest: reportQualityDigest(evidence.mandatoryDisclosures),
+    };
     const approvedEvidenceDigest = reportQualityDigest(evidence.approval);
     const reportOnlyInputsDigest = reportQualityDigest(reportInputs);
     const referenceRegistryDigest = reportQualityDigest({
@@ -926,14 +1102,12 @@ export async function runReportQualityPipeline(input: {
     let plan: SeniorReportPlan | undefined;
     const planRejections: string[] = [];
     for (let attempt = 1; !plan; attempt += 1) {
-      await keepLease(context);
-      const planCall = await callReportQualityRole({
+      const planCall = await callRole(context, {
         role: 'senior-analyst',
         userPayload: {
-          inputSnapshotDigest: snapshotObject.digest,
           evidence: compactEvidence(evidence),
-          dossier,
-          factRegistry: registry,
+          dossier: modelDossier(dossier),
+          factRegistry: modelRegistry(registry),
           instruction:
             'Account for every non-minor finding in exactly one coherent remediation project; ' +
             'minor findings may remain appendix-only. There is no target project count. ' +
@@ -955,7 +1129,6 @@ export async function runReportQualityPipeline(input: {
         parser: seniorPlanOutputSchema,
         jsonSchema: SENIOR_PLAN_JSON_SCHEMA,
       });
-      await recordModelCall(context, planCall.provenance);
       const candidate = normalizeSeniorPlan(planCall.output, snapshotObject.digest);
       try {
         assertPlanBindings(candidate, registry, evidence, dossier);
@@ -981,22 +1154,22 @@ export async function runReportQualityPipeline(input: {
 
     const cleanedWriters = {} as Record<ReportLanguage, QualityWriterOutput>;
     for (const language of ['fr', 'en'] as const) {
-      await keepLease(context);
-      let writerCall = await callReportQualityRole({
+      let writerCall = await callRole(context, {
         role: language === 'fr' ? 'writer-fr' : 'writer-en',
         userPayload: {
-          inputSnapshotDigest: snapshotObject.digest,
           language,
-          seniorPlan: plan,
-          evidenceDossier: dossier,
-          factRegistry: registry,
+          seniorPlan: modelPlan(plan),
+          // The findings themselves: a plan names finding ids, and concrete
+          // developer actions need what each finding is and where it occurs.
+          evidence: compactEvidence(evidence),
+          evidenceDossier: modelDossier(dossier),
+          factRegistry: modelRegistry(registry),
           mandatoryDisclosures: evidence.mandatoryDisclosures,
           writingRules: WRITING_RULES,
         },
         parser: qualityWriterOutputSchema,
         jsonSchema: QUALITY_WRITER_JSON_SCHEMA,
       });
-      await recordModelCall(context, writerCall.provenance);
       // Plan 058 §9 patch-prose: a writer draft that fails the evidence-
       // binding gates is re-issued with every deterministic rejection named,
       // accumulating across a bounded attempt ceiling (§13); exhausting it
@@ -1017,15 +1190,14 @@ export async function runReportQualityPipeline(input: {
               `Writer draft failed its evidence-binding gates after ${String(attempt)} attempts: ${writerRejections.join(' | ')}`,
             );
           }
-          await keepLease(context);
-          writerCall = await callReportQualityRole({
+          writerCall = await callRole(context, {
             role: language === 'fr' ? 'writer-fr' : 'writer-en',
             userPayload: {
-              inputSnapshotDigest: snapshotObject.digest,
               language,
-              seniorPlan: plan,
-              evidenceDossier: dossier,
-              factRegistry: registry,
+              seniorPlan: modelPlan(plan),
+              evidence: compactEvidence(evidence),
+              evidenceDossier: modelDossier(dossier),
+              factRegistry: modelRegistry(registry),
               mandatoryDisclosures: evidence.mandatoryDisclosures,
               writingRules: WRITING_RULES,
               previousDraftRejections: writerRejections,
@@ -1038,7 +1210,6 @@ export async function runReportQualityPipeline(input: {
             parser: qualityWriterOutputSchema,
             jsonSchema: QUALITY_WRITER_JSON_SCHEMA,
           });
-          await recordModelCall(context, writerCall.provenance);
         }
       }
       cleanedWriters[language] = await cleanContentDraft(
@@ -1101,16 +1272,17 @@ export async function runReportQualityPipeline(input: {
       lease,
       'bundle-final-review',
     );
-    await keepLease(context);
-    const arbiterCall = await callReportQualityRole({
+    const arbiterCall = await callRole(context, {
       role: 'final-document-arbiter',
+      // Content identities only: the snapshot, evidence approval and private
+      // object keys are run lineage that code binds into the bundle below;
+      // as opaque run-scoped digests they give the arbiter nothing to judge
+      // and would make this node unique to one run.
       userPayload: {
-        inputSnapshotDigest: snapshotObject.digest,
-        approvedEvidenceDigest,
-        seniorPlanDigest: planObject.digest,
+        seniorPlanDigest: reportQualityDigest(modelPlan(plan)),
         parityDigest,
-        fr,
-        en,
+        fr: arbiterCandidateView(fr),
+        en: arbiterCandidateView(en),
         deterministicGates: {
           frPdfQa: fr.qaDigest,
           enPdfQa: en.qaDigest,
@@ -1124,7 +1296,6 @@ export async function runReportQualityPipeline(input: {
       parser: finalArbiterOutputSchema,
       jsonSchema: FINAL_ARBITER_JSON_SCHEMA,
     });
-    await recordModelCall(context, arbiterCall.provenance);
     const finalIssues = reviewIssues(
       { issues: arbiterCall.output.issues },
       'final-document-arbiter',
@@ -1138,6 +1309,11 @@ export async function runReportQualityPipeline(input: {
         'final-arbiter',
         'Final document arbiter did not approve the exact bilingual bundle',
       );
+    }
+    if (context.dag.mode === 'replay-only') {
+      // Replay proves the recorded stages still pass today's deterministic
+      // gates; it never stands in for a live, qualifying run.
+      throw new ReportQualityReplayCompleteError();
     }
     const finalArbiterVerdictDigest = reportQualityDigest(arbiterCall.output);
     const bundleId = randomUUID();
@@ -1223,9 +1399,12 @@ export async function runReportQualityPipeline(input: {
     try {
       await transitionReportQualityRun(input.connection, input.manifest.auditId, lease, state, {
         errorCode:
-          error instanceof ReportQualityNeedsOperatorReviewError
+          error instanceof ReportQualityNeedsOperatorReviewError ||
+          error instanceof ReportQualityReplayCompleteError
             ? error.reasonCode
-            : 'report-quality-failed',
+            : error instanceof ReportQualityReplayMissError
+              ? 'replay-miss'
+              : 'report-quality-failed',
       });
     } catch {
       // A lost lease is itself the authority to discard this worker's late result.

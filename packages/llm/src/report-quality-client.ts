@@ -41,6 +41,14 @@ const ROLE: Record<ReportQualityRole, string> = {
   'final-document-arbiter':
     'Independently approve only when all supplied deterministic gates and review coverage are complete and no objective content, parity or visual defect remains.',
 };
+function systemPrompt(role: ReportQualityRole): string {
+  return `${BASE}\n\nRole: ${role}\n${ROLE[role]}`;
+}
+/** Digest of the exact system prompt a role is called with. A report-quality
+ *  DAG node keys on it, so a prompt edit can never reuse an older output. */
+export function reportQualitySystemPromptDigest(role: ReportQualityRole): Sha256Digest {
+  return digest(systemPrompt(role));
+}
 async function sleep(ms: number) {
   await new Promise((r) => setTimeout(r, ms));
 }
@@ -71,7 +79,7 @@ export async function callReportQualityRole<T>(input: {
   ensureEnvLoaded();
   const profile = getReportModelProfile(input.role);
   const model = profile.model;
-  const system = `${BASE}\n\nRole: ${input.role}\n${ROLE[input.role]}`;
+  const system = systemPrompt(input.role);
   const userText = JSON.stringify(input.userPayload);
   const images = await Promise.all(
     (input.imagePaths ?? []).map(async (file) => ({
@@ -82,6 +90,7 @@ export async function callReportQualityRole<T>(input: {
       },
     })),
   );
+  const startedAt = Date.now();
   const response = await retry(() =>
     client().chat.completions.create({
       model,
@@ -106,6 +115,7 @@ export async function callReportQualityRole<T>(input: {
       },
     }),
   );
+  const durationMs = Date.now() - startedAt;
   const choice = response.choices?.[0];
   if (!choice) throw new Error(`${input.role}: no response`);
   if (choice.finish_reason === 'length')
@@ -127,6 +137,22 @@ export async function callReportQualityRole<T>(input: {
       schemaVersion: profile.schemaVersion,
       promptDigest: digest(system + '\n\n' + userText),
       schemaDigest: digest(JSON.stringify(input.jsonSchema)),
+      ...(response.usage
+        ? {
+            usage: {
+              inputTokens: response.usage.prompt_tokens,
+              outputTokens: response.usage.completion_tokens,
+              ...(response.usage.completion_tokens_details?.reasoning_tokens !== undefined
+                ? { reasoningTokens: response.usage.completion_tokens_details.reasoning_tokens }
+                : {}),
+              ...(response.usage.prompt_tokens_details?.cached_tokens !== undefined
+                ? { cachedInputTokens: response.usage.prompt_tokens_details.cached_tokens }
+                : {}),
+            },
+          }
+        : {}),
+      durationMs,
+      imageCount: images.length,
     },
   };
 }

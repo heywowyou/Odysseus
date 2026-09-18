@@ -231,6 +231,28 @@ export interface ReportQualityModelCall {
   schemaVersion: string;
   promptDigest: Sha256Digest;
   schemaDigest: Sha256Digest;
+  /** Provider-reported token accounting, when the response carries it. */
+  usage?: ReportQualityModelUsage;
+  /** Wall-clock time of the provider call, retries included. */
+  durationMs?: number;
+  /** Images attached to the request (vision roles). */
+  imageCount?: number;
+}
+
+export interface ReportQualityModelUsage {
+  inputTokens: number;
+  outputTokens: number;
+  reasoningTokens?: number;
+  cachedInputTokens?: number;
+}
+
+/** Plan 058 §15: one content-addressed DAG node the run either computed or
+ *  reused. `nodeKey` is the digest over every declared parent, so a record
+ *  can only be reused by a run whose parents match exactly. */
+export interface ReportQualityDagNodeRef {
+  node: string;
+  nodeKey: Sha256Digest;
+  outcome: 'computed' | 'reused';
 }
 
 export interface ReportBundleCandidate {

@@ -2,6 +2,7 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { Connection, ClientSession } from 'mongoose';
 import type {
   ReportBundleState,
+  ReportQualityDagNodeRef,
   ReportQualityModelCall,
   ReviewIssue,
   Sha256Digest,
@@ -253,6 +254,7 @@ export async function startReportQualityRun(
     leaseTokenHash: lease.tokenHash,
     state: 'running',
     modelCalls: [],
+    dagNodes: [],
     issues: [],
     candidateDigests: [],
     createdAt: now,
@@ -269,6 +271,8 @@ export async function transitionReportQualityRun(
     inputSnapshotDigest?: Sha256Digest;
     approvedEvidenceDigest?: Sha256Digest;
     modelCall?: ReportQualityModelCall;
+    dagNode?: ReportQualityDagNodeRef;
+    modelMode?: 'live' | 'replay-only';
     reviewIssues?: ReviewIssue[];
     candidateDigest?: Sha256Digest;
     operatorApprovalBundleDigest?: Sha256Digest;
@@ -300,10 +304,12 @@ export async function transitionReportQualityRun(
         ? { operatorApprovalBundleDigest: patch.operatorApprovalBundleDigest }
         : {}),
       ...(patch.errorCode ? { errorCode: patch.errorCode } : {}),
+      ...(patch.modelMode ? { modelMode: patch.modelMode } : {}),
     },
   };
   const push: Record<string, unknown> = {};
   if (patch.modelCall) push.modelCalls = patch.modelCall;
+  if (patch.dagNode) push.dagNodes = patch.dagNode;
   if (patch.reviewIssues && patch.reviewIssues.length > 0)
     push.issues = { $each: patch.reviewIssues };
   if (patch.candidateDigest) push.candidateDigests = patch.candidateDigest;
