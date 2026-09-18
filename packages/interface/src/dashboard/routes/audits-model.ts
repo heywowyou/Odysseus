@@ -1,6 +1,6 @@
 import type { DashboardStrings } from '../i18n/types';
 import type { ScanSummary, SeverityRollup } from '../lib/api-types';
-import { displayJobStatus, type DisplayJobStatus } from '../lib/job-outcome';
+import type { DisplayJobStatus } from '../lib/job-outcome';
 
 /** Sort order of the audits list; newest is the default so the operator
  *  sees fresh scans first. */
@@ -64,17 +64,17 @@ export function filterSummaries(summaries: ScanSummary[], status: StatusFilter):
   return summaries.filter((summary) => listStatus(summary) === status);
 }
 
-/** The status a list row shows. "Needs input" is an instruction: Odysseus
- *  cannot continue until the operator confirms typed fields. Issue #382
- *  removed the issue #90 rule that also showed every failed job with a
- *  persisted audit that way - a render crash or lint refusal is a technical
- *  failure, not missing data. Issue #386: such a row reads "Report issue",
- *  not "Failed", because the scan itself succeeded; it links to its audit
- *  page (rowTarget), where the failure and its regeneration path live.
- *  "Failed" keeps only scans that produced no usable audit. The shared
- *  classifier is lib/job-outcome.ts, also read by the progress page. */
+/** The status a list row shows: the server's `outcomeCode`, verbatim. The
+ *  classification itself lives server-side (routes/scan-outcome.ts, plan
+ *  060 §5.3) so the list, its KPIs, and the filter cannot disagree with
+ *  each other or with the progress page, and "Needs input" keeps its
+ *  meaning as an instruction: Odysseus cannot continue until the operator
+ *  confirms typed fields. A "Report issue" row is a scan that succeeded -
+ *  it links to its audit page (rowTarget), where the failure and its
+ *  regeneration path live; "Failed" keeps only scans that produced no
+ *  usable audit. */
 export function listStatus(summary: ScanSummary): DisplayJobStatus {
-  return displayJobStatus(summary);
+  return summary.outcomeCode;
 }
 
 /** Hostname of a site URL for display and search. A malformed URL falls back
@@ -152,9 +152,10 @@ export function rowTarget(summary: ScanSummary): string {
 /** Issue #375: the work that is happening now. Waiting work is not derived
  *  here: plan 061 made queue order durable and server-owned, so the page
  *  reads it from GET /api/scans/queue instead of reconstructing it from
- *  creation times. */
+ *  creation times. Classified on the server's outcomeCode, like every
+ *  other reader of a row's display state. */
 export function runningScans(summaries: readonly ScanSummary[]): ScanSummary[] {
   return sortSummaries([...summaries], 'oldest').filter(
-    (summary) => summary.status === 'running' || summary.status === 'cancel-requested',
+    (summary) => summary.outcomeCode === 'running' || summary.outcomeCode === 'cancel-requested',
   );
 }

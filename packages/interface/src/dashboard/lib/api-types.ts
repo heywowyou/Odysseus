@@ -3,7 +3,9 @@ import type { AttentionKind, AttentionSeverity } from '../../operator/contract';
 import type {
   jobStatusSchema,
   scanJobDetailSchema,
+  scanOutcomeCodeSchema,
   scanQueueSchema,
+  scanReportFailureStageSchema,
   scanSummarySchema,
   scanUrlResultSchema,
   severityRollupSchema,
@@ -16,6 +18,12 @@ import type {
  *  edit independently. */
 export type JobStatus = z.infer<typeof jobStatusSchema>;
 export type SeverityRollup = z.infer<typeof severityRollupSchema>;
+
+/** Plan 060 §5.3: the server-declared display classification of a scan row
+ *  or job detail. */
+export type ScanOutcomeCode = z.infer<typeof scanOutcomeCodeSchema>;
+/** The failed report step of a `report-issue` scan; null otherwise. */
+export type ScanReportFailureStage = z.infer<typeof scanReportFailureStageSchema>;
 
 /** One row of GET /api/scans (routes/scans.ts). Field names are the API's
  *  persisted contract, not UI vocabulary; never respell them. */

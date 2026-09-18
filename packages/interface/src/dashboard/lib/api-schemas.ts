@@ -109,11 +109,44 @@ const jobCapabilitiesSchema = z.object({
   delete: actionCapabilitySchema,
 });
 
+/** Plan 060 §5.3: the server's closed display classification for a scan.
+ *  `queued` / `running` / `cancel-requested` / `complete` / `failed` /
+ *  `cancelled` / `needs-input` are the job's run state verbatim;
+ *  `needs-input` also covers a failed job carrying typed operator-input
+ *  fields (issue #382), and `report-issue` marks a scan that succeeded but
+ *  whose client report is broken or no longer ready (issues #386, #389).
+ *  The dashboard translates these codes; it never re-derives them from raw
+ *  persistence fields. */
+export const scanOutcomeCodeSchema = z.enum([
+  'queued',
+  'running',
+  'cancel-requested',
+  'complete',
+  'failed',
+  'cancelled',
+  'needs-input',
+  'report-issue',
+]);
+
+/** The report step a `report-issue` failure stopped in; null when the scan
+ *  is not a report-stage failure. `unknown` is a legacy row failed before
+ *  the job kept its failed phase. */
+export const scanReportFailureStageSchema = z.enum(['writing', 'pdf', 'unknown']);
+
 /** GET /api/scans/:jobId. */
 export const scanJobDetailSchema = z.object({
   jobId: z.string(),
   type: jobTypeSchema,
   status: jobStatusSchema,
+  /** Required so a server that stops declaring the display classification
+   *  fails validation loudly instead of silently pushing the derivation
+   *  back into the browser (plan 060 §5.3). */
+  outcomeCode: scanOutcomeCodeSchema,
+  /** Non-null exactly when outcomeCode is 'report-issue'. */
+  reportFailureStage: scanReportFailureStageSchema.nullable(),
+  /** The stored failure is a crawl-coverage-gate stop; the failure card
+   *  links the remedy the message names instead of parsing the sentence. */
+  coverageGateBlocked: z.boolean(),
   phase: z.string(),
   siteUrl: z.string().optional(),
   createdAt: z.string().optional(),
@@ -134,6 +167,10 @@ export const scanSummarySchema = z.object({
   jobId: z.string(),
   type: jobTypeSchema,
   status: jobStatusSchema,
+  /** Required so a server that stops declaring the display classification
+   *  fails validation loudly instead of silently pushing the derivation
+   *  back into the browser (plan 060 §5.3). */
+  outcomeCode: scanOutcomeCodeSchema,
   phase: z.string(),
   siteUrl: z.string().optional(),
   urls: z.array(z.string()).optional(),

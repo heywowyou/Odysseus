@@ -1,7 +1,6 @@
 import type { CoverageSegment } from '../components/ui/coverage-bar';
 import type { DashboardStrings } from '../i18n/types';
 import type { JobStatus, ScanJobDetail } from '../lib/api-types';
-import { reportFailureStage } from '../lib/job-outcome';
 import {
   AFTER_CONTENT_PHASES,
   AFTER_LIGHTHOUSE_PHASES,
@@ -18,16 +17,6 @@ export type ProgressPhaseLabels = DashboardStrings['progress']['phaseLabels'];
 
 export function isKnownPhase(phase: string): phase is ProgressPhase {
   return (PHASE_KEYS as readonly string[]).includes(phase);
-}
-
-/** Issue #187: the coverage gate's own failure text
- *  (packages/core/src/crawl-coverage-gate.ts) names the crawl delay and
- *  scan concurrency fields on /scans/new as the remedy, with no link to
- *  them; this detects that specific message by its stable phrasing so the
- *  failure card can add one. Detection only, never a rewrite of the
- *  message itself. */
-export function isCoverageGateFailure(error: string | undefined): boolean {
-  return error !== undefined && error.includes('crawl delay and scan concurrency');
 }
 
 /** Current phase as operator copy; an unknown phase falls back to its raw
@@ -55,15 +44,23 @@ export function isTerminal(status: JobStatus | undefined): boolean {
 
 /** The result card a terminal job shows. Issue #386: a failed job that
  *  stopped in report writing or PDF production is a completed scan with a
- *  report failure, classified by the same rule as the audits list. */
+ *  report failure. Plan 060 §5.3: the kind reads the server's
+ *  `outcomeCode` instead of re-deriving it from raw persistence fields. */
 export type TerminalCardKind = 'complete' | 'report-issue' | 'failed' | 'cancelled' | 'needs-input';
 
 export function terminalCardKind(job: ScanJobDetail): TerminalCardKind {
-  if (job.status === 'failed') {
-    return reportFailureStage(job) !== null ? 'report-issue' : 'failed';
+  switch (job.outcomeCode) {
+    case 'failed':
+      return 'failed';
+    case 'report-issue':
+      return 'report-issue';
+    case 'cancelled':
+      return 'cancelled';
+    case 'needs-input':
+      return 'needs-input';
+    default:
+      return 'complete';
   }
-  if (job.status === 'cancelled' || job.status === 'needs-input') return job.status;
-  return 'complete';
 }
 
 function clampPercent(value: number): number {

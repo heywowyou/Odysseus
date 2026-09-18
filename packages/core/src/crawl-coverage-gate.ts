@@ -86,6 +86,11 @@ function formatHttpStatusCounts(counts: ReadonlyMap<number, number>): string | u
     .join(', ');
 }
 
+/** The stable opening of a coverage-gate failure message, shared by the
+ * error constructor and its stored-message recognizer below so the two
+ * cannot drift. */
+const GATE_MESSAGE_PREFIX = 'Audit coverage is too incomplete to generate a report: ';
+
 /** Deliberate stop, not a scanner crash. Its message gives the operator the
  * factual reason and the safe next actions without suggesting a bypass. */
 export class CrawlCoverageInsufficientError extends Error {
@@ -98,11 +103,21 @@ export class CrawlCoverageInsufficientError extends Error {
       ? ' The sitemap also shows that the crawl reached too little of the site it declares.'
       : '';
     super(
-      `Audit coverage is too incomplete to generate a report: ${failureDetail}${httpDetail ? `, including ${httpDetail}` : ''}.${sitemapDetail} The site appears to be rejecting the crawl. Do not use this partial audit. Slow the crawl, request an allowlist, then run a new audit. The per-job crawl delay and scan concurrency options exist for this; they can only slow a crawl down, never speed it up.`,
+      `${GATE_MESSAGE_PREFIX}${failureDetail}${httpDetail ? `, including ${httpDetail}` : ''}.${sitemapDetail} The site appears to be rejecting the crawl. Do not use this partial audit. Slow the crawl, request an allowlist, then run a new audit. The per-job crawl delay and scan concurrency options exist for this; they can only slow a crawl down, never speed it up.`,
     );
     this.name = 'CrawlCoverageInsufficientError';
     this.assessment = assessment;
   }
+}
+
+/** A job row persists a failed pipeline's message text only (store's
+ * failJob), never the error class, so a stored coverage-gate stop is
+ * recognizable only through this prefix. The pipeline classifies with
+ * instanceof; this predicate exists for the server-side readers of a
+ * stored row (plan 060 §5.3: the browser never parses an error sentence
+ * itself). */
+export function isCrawlCoverageGateMessage(message: string | undefined): boolean {
+  return message !== undefined && message.startsWith(GATE_MESSAGE_PREFIX);
 }
 
 export function assertSufficientCrawlCoverage(input: CrawlCoverageGateInput): void {

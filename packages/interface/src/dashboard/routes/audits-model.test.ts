@@ -22,6 +22,9 @@ function makeSummary(overrides: Partial<ScanSummary> = {}): ScanSummary {
     jobId: 'job-1',
     type: 'full-audit',
     status: 'complete',
+    // Plan 060 §5.3: the classification is server-declared, so fixtures pin
+    // the code the server would send for the case they model.
+    outcomeCode: 'complete',
     phase: 'done',
     createdAt: '2026-08-29T10:00:00.000Z',
     capabilities: {
@@ -35,9 +38,13 @@ function makeSummary(overrides: Partial<ScanSummary> = {}): ScanSummary {
 describe('computeKpis', () => {
   it('counts run statuses', () => {
     const summaries = [
-      makeSummary({ jobId: 'a', status: 'queued' }),
-      makeSummary({ jobId: 'b', status: 'running' }),
-      makeSummary({ jobId: 'stopping', status: 'cancel-requested' }),
+      makeSummary({ jobId: 'a', status: 'queued', outcomeCode: 'queued' }),
+      makeSummary({ jobId: 'b', status: 'running', outcomeCode: 'running' }),
+      makeSummary({
+        jobId: 'stopping',
+        status: 'cancel-requested',
+        outcomeCode: 'cancel-requested',
+      }),
       makeSummary({
         jobId: 'c',
         status: 'complete',
@@ -47,6 +54,7 @@ describe('computeKpis', () => {
       makeSummary({
         jobId: 'e',
         status: 'failed',
+        outcomeCode: 'failed',
         severityRollup: { critical: 3, serious: 0, moderate: 0, minor: 0 },
       }),
     ];
@@ -71,13 +79,13 @@ describe('computeKpis', () => {
 
   it('counts the displayed status, so the header matches the rows and filter (issues #380, #382, #386)', () => {
     const summaries = [
-      makeSummary({ jobId: 'a', status: 'needs-input', auditId: 'audit-a', awaitsInput: true }),
-      makeSummary({ jobId: 'b', status: 'failed', auditId: 'audit-b', awaitsInput: true }),
-      makeSummary({ jobId: 'c', status: 'failed', auditId: 'audit-c' }),
-      makeSummary({ jobId: 'd', status: 'failed' }),
-      makeSummary({ jobId: 'e', status: 'cancelled' }),
-      makeSummary({ jobId: 'f', status: 'failed', auditId: 'audit-f', failedPhase: 'report-fr' }),
-      makeSummary({ jobId: 'g', status: 'failed', failedPhase: 'crawl' }),
+      makeSummary({ jobId: 'a', status: 'needs-input', outcomeCode: 'needs-input' }),
+      makeSummary({ jobId: 'b', status: 'failed', outcomeCode: 'needs-input' }),
+      makeSummary({ jobId: 'c', status: 'failed', outcomeCode: 'report-issue' }),
+      makeSummary({ jobId: 'd', status: 'failed', outcomeCode: 'failed' }),
+      makeSummary({ jobId: 'e', status: 'cancelled', outcomeCode: 'cancelled' }),
+      makeSummary({ jobId: 'f', status: 'failed', outcomeCode: 'report-issue' }),
+      makeSummary({ jobId: 'g', status: 'failed', outcomeCode: 'failed' }),
     ];
     const kpis = computeKpis(summaries);
     expect(kpis).toEqual({ running: 0, needsInput: 2, complete: 0, reportIssue: 2, failed: 2 });
@@ -89,8 +97,8 @@ describe('computeKpis', () => {
 
 describe('filterSummaries', () => {
   const summaries = [
-    makeSummary({ jobId: 'a', status: 'queued' }),
-    makeSummary({ jobId: 'b', status: 'running' }),
+    makeSummary({ jobId: 'a', status: 'queued', outcomeCode: 'queued' }),
+    makeSummary({ jobId: 'b', status: 'running', outcomeCode: 'running' }),
     makeSummary({ jobId: 'c', status: 'complete' }),
   ];
 
@@ -109,9 +117,9 @@ describe('filterSummaries', () => {
 
   it('files only a typed input request under the needs-input filter (issue #382)', () => {
     const summaries = [
-      makeSummary({ jobId: 'a', status: 'failed', auditId: 'audit-a' }),
-      makeSummary({ jobId: 'b', status: 'failed' }),
-      makeSummary({ jobId: 'c', status: 'needs-input', auditId: 'audit-c', awaitsInput: true }),
+      makeSummary({ jobId: 'a', status: 'failed', outcomeCode: 'report-issue' }),
+      makeSummary({ jobId: 'b', status: 'failed', outcomeCode: 'failed' }),
+      makeSummary({ jobId: 'c', status: 'needs-input', outcomeCode: 'needs-input' }),
     ];
     expect(filterSummaries(summaries, 'needs-input').map((summary) => summary.jobId)).toEqual([
       'c',
@@ -125,68 +133,39 @@ describe('filterSummaries', () => {
 });
 
 describe('listStatus', () => {
+  // Plan 060 §5.3: the display status is the server's outcomeCode,
+  // verbatim - the cases that produce each code are pinned server-side in
+  // routes/scans-contract.test.ts.
+  it('passes the server-declared outcome code through without local flips', () => {
+    for (const outcomeCode of [
+      'queued',
+      'running',
+      'cancel-requested',
+      'complete',
+      'failed',
+      'cancelled',
+      'needs-input',
+      'report-issue',
+    ] as const) {
+      expect(listStatus(makeSummary({ status: 'failed', outcomeCode }))).toBe(outcomeCode);
+    }
+  });
+
   it('shows a completed scan whose reports are no longer ready as a report issue (issue #389)', () => {
     const summaries = [
-      makeSummary({ jobId: 'a', status: 'complete', auditId: 'audit-1', reportNotReady: true }),
-      makeSummary({ jobId: 'b', status: 'complete', auditId: 'audit-2' }),
+      makeSummary({
+        jobId: 'a',
+        status: 'complete',
+        outcomeCode: 'report-issue',
+        auditId: 'audit-1',
+      }),
+      makeSummary({ jobId: 'b', status: 'complete' }),
     ];
     expect(summaries.map(listStatus)).toEqual(['report-issue', 'complete']);
     expect(computeKpis(summaries)).toMatchObject({ complete: 1, reportIssue: 1 });
+    // The row's own link opens the audit, where the failure and its
+    // regeneration path live.
     expect(rowTarget(summaries[0]!)).toBe('/audits/audit-1');
-  });
-
-  it('shows a job stopped on the identity gate as needing input', () => {
-    expect(
-      listStatus(makeSummary({ status: 'needs-input', auditId: 'audit-1', awaitsInput: true })),
-    ).toBe('needs-input');
-  });
-
-  it('shows a report-stage failure as a report issue, linking to the audit (issue #386)', () => {
-    for (const failedPhase of ['analyze-fr', 'analyze-en', 'report-fr', 'report-en']) {
-      const summary = makeSummary({ status: 'failed', auditId: 'audit-1', failedPhase });
-      expect(listStatus(summary)).toBe('report-issue');
-      expect(rowTarget(summary)).toBe('/audits/audit-1');
-    }
-  });
-
-  it('shows a legacy failed full-audit row with a saved audit as a report issue', () => {
-    // The render-lint refusal of issue #377 is a failed job with an auditId.
-    expect(listStatus(makeSummary({ status: 'failed', auditId: 'audit-1' }))).toBe('report-issue');
-  });
-
-  it('keeps crawl, coverage-gate and audit-stage failures as failed', () => {
-    for (const failedPhase of [
-      'queued',
-      'crawl',
-      'scan',
-      'content-scan',
-      'lighthouse',
-      'normalize',
-    ]) {
-      expect(listStatus(makeSummary({ status: 'failed', failedPhase }))).toBe('failed');
-    }
-    expect(
-      listStatus(makeSummary({ type: 'quick-check', status: 'failed', auditId: 'audit-1' })),
-    ).toBe('failed');
-  });
-
-  it('shows a legacy failed row carrying typed input fields as needing input', () => {
-    expect(
-      listStatus(makeSummary({ status: 'failed', auditId: 'audit-1', awaitsInput: true })),
-    ).toBe('needs-input');
-  });
-
-  it('leaves a failed job without an audit as failed', () => {
-    expect(listStatus(makeSummary({ status: 'failed' }))).toBe('failed');
-  });
-
-  it('leaves every other status untouched', () => {
-    expect(listStatus(makeSummary({ status: 'needs-input', auditId: 'audit-1' }))).toBe(
-      'needs-input',
-    );
-    expect(listStatus(makeSummary({ status: 'complete', auditId: 'audit-1' }))).toBe('complete');
-    expect(listStatus(makeSummary({ status: 'queued' }))).toBe('queued');
-    expect(listStatus(makeSummary({ status: 'cancel-requested' }))).toBe('cancel-requested');
   });
 });
 
@@ -289,24 +268,40 @@ describe('rowTarget', () => {
   });
 
   it('links a running job to the scan progress page', () => {
-    expect(rowTarget(makeSummary({ status: 'running' }))).toBe('/scans/job-1');
+    expect(rowTarget(makeSummary({ status: 'running', outcomeCode: 'running' }))).toBe(
+      '/scans/job-1',
+    );
   });
 });
 
 describe('runningScans', () => {
   it('keeps running and stopping work, oldest first, and ignores waiting work and history', () => {
     const running = runningScans([
-      makeSummary({ jobId: 'done', status: 'complete' }),
-      makeSummary({ jobId: 'failed', status: 'failed' }),
-      makeSummary({ jobId: 'input', status: 'needs-input' }),
-      makeSummary({ jobId: 'next', status: 'queued' }),
-      makeSummary({ jobId: 'now', status: 'running', createdAt: '2026-09-16T22:05:00.000Z' }),
+      makeSummary({ jobId: 'done' }),
+      makeSummary({ jobId: 'failed', status: 'failed', outcomeCode: 'failed' }),
+      makeSummary({ jobId: 'input', status: 'needs-input', outcomeCode: 'needs-input' }),
+      makeSummary({ jobId: 'next', status: 'queued', outcomeCode: 'queued' }),
+      makeSummary({
+        jobId: 'now',
+        status: 'running',
+        outcomeCode: 'running',
+        createdAt: '2026-09-16T22:05:00.000Z',
+      }),
       makeSummary({
         jobId: 'stopping',
         status: 'cancel-requested',
+        outcomeCode: 'cancel-requested',
         createdAt: '2026-09-16T21:00:00.000Z',
       }),
     ]);
     expect(running.map((row) => row.jobId)).toEqual(['stopping', 'now']);
+  });
+
+  it('classifies on the server-declared outcome code, never the raw status', () => {
+    const running = runningScans([
+      makeSummary({ jobId: 'coded-running', status: 'failed', outcomeCode: 'running' }),
+      makeSummary({ jobId: 'raw-running', status: 'running', outcomeCode: 'failed' }),
+    ]);
+    expect(running.map((row) => row.jobId)).toEqual(['coded-running']);
   });
 });

@@ -19,7 +19,6 @@ import { scanJobDetailSchema } from '../lib/api-schemas';
 import type { ScanJobDetail, ScanUrlResult } from '../lib/api-types';
 import { isStateChanged, problemCopy } from '../lib/operator-copy';
 import { cn } from '../lib/cn';
-import { reportFailureStage } from '../lib/job-outcome';
 import { usePolling } from '../lib/use-polling';
 import { hostnameOf } from './audit-detail-model';
 import { IdentityConfirmField } from './identity-confirm-field';
@@ -33,7 +32,6 @@ import {
   formatEta,
   hasCoverage,
   hasStagedAnalysisProgress,
-  isCoverageGateFailure,
   isTerminal,
   lighthouseProgress,
   scanProgress,
@@ -557,7 +555,9 @@ function CompleteCard({ job }: { job: ScanJobDetail }): JSX.Element {
  *  rescanning a site that is already captured. */
 function ReportIssueCard({ job }: { job: ScanJobDetail }): JSX.Element {
   const { strings } = useI18n();
-  const stage = reportFailureStage(job) ?? 'unknown';
+  // Server-declared (routes/scan-outcome.ts); non-null whenever this card
+  // renders, so the fallback only satisfies the type.
+  const stage = job.reportFailureStage ?? 'unknown';
   return (
     <Card title={strings.progress.completeHeading} className="border-sev-serious/40">
       <div className="mt-1 flex flex-col items-start gap-2">
@@ -582,8 +582,9 @@ function FailedCard({ job }: { job: ScanJobDetail }): JSX.Element {
       {job.error !== undefined ? <p className="text-sm text-ink-soft">{job.error}</p> : null}
       {/* Issue #187: the coverage gate's failure text names the crawl delay
           and scan concurrency fields as the remedy but had no link to
-          them; this is the direct link. */}
-      {isCoverageGateFailure(job.error) ? (
+          them; the server declares the gate case (`coverageGateBlocked`)
+          so the link does not depend on matching the sentence here. */}
+      {job.coverageGateBlocked ? (
         <Link
           to="/scans/new#new-scan-delay-seconds"
           className="mt-2 inline-block text-sm text-accent-bright underline underline-offset-2"

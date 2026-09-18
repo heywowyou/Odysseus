@@ -16,6 +16,9 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   readScanQueue: vi.fn(),
   reorderScanQueue: vi.fn(),
   getProspectNames: vi.fn(async () => new Map()),
+  listJobs: vi.fn(async () => []),
+  findAuditsWithUnreadyReports: vi.fn(async () => new Set<string>()),
+  getSeverityRollups: vi.fn(async () => new Map()),
 }));
 
 const { artifactStore } = vi.hoisted(() => ({
@@ -36,15 +39,18 @@ import {
   createJob,
   deleteAuditCascade,
   deleteJob,
+  findAuditsWithUnreadyReports,
   findProspectsByDomain,
   getAudit,
   getJob,
   getProspectHub,
+  listJobs,
   readScanQueue,
   reorderScanQueue,
   requestJobCancellation,
   type NewJobInput,
 } from '@odysseus/store';
+import { CrawlCoverageInsufficientError } from '@odysseus/core';
 import { cancelJobCapability, deleteJobCapability } from '../operator/job-capabilities.js';
 import {
   releaseReportProduction,
@@ -92,6 +98,18 @@ async function post(
   registerScanRoutes(router, fakeConnection, fakeQueue);
   const res = fakeRes();
   await router.handle(fakeReq(body, path), res);
+  return { statusCode: res.statusCode, body: JSON.parse(res.body ?? '{}') as unknown };
+}
+
+async function get(path: string): Promise<{ statusCode: number; body: unknown }> {
+  const router = new Router();
+  registerScanRoutes(router, fakeConnection, fakeQueue);
+  const req = Readable.from([]) as unknown as IncomingMessage;
+  req.method = 'GET';
+  req.url = path;
+  req.headers = {};
+  const res = fakeRes();
+  await router.handle(req, res);
   return { statusCode: res.statusCode, body: JSON.parse(res.body ?? '{}') as unknown };
 }
 
@@ -723,5 +741,185 @@ describe('POST /api/scans/batch', () => {
     const response = await postBatch({ type: 'full-audit', items: [site('a')] });
     expect(response.body).toMatchObject({ queued: 0, skipped: 1 });
     expect(vi.mocked(fakeQueue as { notify: () => void }).notify).not.toHaveBeenCalled();
+  });
+});
+
+/** A lean job row shaped like store's listJobs projection. Optional fields
+ *  are spread in so an absent field stays absent on the wire. */
+function summaryRow(
+  overrides: Partial<{
+    jobId: string;
+    type: string;
+    status: string;
+    phase: string;
+    auditId: string;
+    failedPhase: string;
+    awaitsInput: boolean;
+  }> = {},
+): Record<string, unknown> {
+  return {
+    jobId: 'job-1',
+    type: 'full-audit',
+    status: 'queued',
+    phase: 'queued',
+    createdAt: new Date('2026-09-18T10:00:00Z'),
+    ...(overrides.jobId !== undefined ? { jobId: overrides.jobId } : {}),
+    ...(overrides.type !== undefined ? { type: overrides.type } : {}),
+    ...(overrides.status !== undefined ? { status: overrides.status } : {}),
+    ...(overrides.phase !== undefined ? { phase: overrides.phase } : {}),
+    ...(overrides.auditId !== undefined ? { auditId: overrides.auditId } : {}),
+    ...(overrides.failedPhase !== undefined ? { failedPhase: overrides.failedPhase } : {}),
+    ...(overrides.awaitsInput !== undefined ? { awaitsInput: overrides.awaitsInput } : {}),
+  };
+}
+
+describe('GET /api/scans declares the display outcome code (plan 060 §5.3)', () => {
+  it.each([
+    {
+      name: 'running scans keep their run-state code',
+      row: summaryRow({ jobId: 'job-run', status: 'running', phase: 'crawl' }),
+      outcomeCode: 'running',
+    },
+    {
+      name: 'a plain failed scan stays failed',
+      row: summaryRow({
+        jobId: 'job-crawl',
+        status: 'failed',
+        phase: 'failed',
+        failedPhase: 'crawl',
+      }),
+      outcomeCode: 'failed',
+    },
+    {
+      name: 'a failed job in a report phase is a report issue, not a failed scan (issue #386)',
+      row: summaryRow({
+        jobId: 'job-pdf',
+        status: 'failed',
+        phase: 'failed',
+        failedPhase: 'report-fr',
+        auditId: 'audit-1',
+      }),
+      outcomeCode: 'report-issue',
+    },
+    {
+      name: 'a failed job in a writing phase is a report issue too',
+      row: summaryRow({
+        jobId: 'job-writing',
+        status: 'failed',
+        phase: 'failed',
+        failedPhase: 'analyze-en',
+        auditId: 'audit-2',
+      }),
+      outcomeCode: 'report-issue',
+    },
+    {
+      name: 'a legacy failed full-audit row with a saved audit is a report issue',
+      row: summaryRow({
+        jobId: 'job-legacy',
+        status: 'failed',
+        phase: 'failed',
+        auditId: 'audit-3',
+      }),
+      outcomeCode: 'report-issue',
+    },
+    {
+      name: 'a failed job carrying typed input fields needs input, not debugging (issue #382)',
+      row: summaryRow({
+        jobId: 'job-input',
+        status: 'failed',
+        phase: 'failed',
+        awaitsInput: true,
+        auditId: 'audit-4',
+      }),
+      outcomeCode: 'needs-input',
+    },
+  ])('$name', async ({ row, outcomeCode }) => {
+    vi.mocked(listJobs).mockResolvedValue([row] as never);
+    const response = await get('/api/scans');
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toMatchObject([{ jobId: row.jobId, outcomeCode }]);
+  });
+
+  it('marks a complete scan whose reports are no longer ready as a report issue (issue #389)', async () => {
+    vi.mocked(listJobs).mockResolvedValue([
+      summaryRow({ jobId: 'job-done', status: 'complete', phase: 'complete', auditId: 'audit-9' }),
+    ] as never);
+    vi.mocked(findAuditsWithUnreadyReports).mockResolvedValue(new Set(['audit-9']));
+    const response = await get('/api/scans');
+    expect(response.body).toMatchObject([
+      { jobId: 'job-done', reportNotReady: true, outcomeCode: 'report-issue' },
+    ]);
+  });
+
+  it('leaves a complete scan with ready reports at complete', async () => {
+    vi.mocked(listJobs).mockResolvedValue([
+      summaryRow({ jobId: 'job-done', status: 'complete', phase: 'complete', auditId: 'audit-9' }),
+    ] as never);
+    vi.mocked(findAuditsWithUnreadyReports).mockResolvedValue(new Set());
+    const response = await get('/api/scans');
+    const rows = response.body as Record<string, unknown>[];
+    expect(rows[0]).toMatchObject({ jobId: 'job-done', outcomeCode: 'complete' });
+    expect(rows[0]).not.toHaveProperty('reportNotReady');
+  });
+});
+
+describe('GET /api/scans/:jobId declares the display outcome codes (plan 060 §5.3)', () => {
+  const detailJob = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+    jobId: 'job-1',
+    type: 'full-audit',
+    status: 'failed',
+    phase: 'failed',
+    createdAt: new Date('2026-09-18T10:00:00Z'),
+    progress: {},
+    options: {},
+    ...overrides,
+  });
+
+  it('declares the coverage gate structurally instead of the browser parsing the sentence (issue #187)', async () => {
+    const gateError = new CrawlCoverageInsufficientError({
+      inventoriedUrlCount: 10,
+      failedUrlCount: 8,
+      failureShare: 0.8,
+      failedHttpStatusCounts: new Map([[503, 8]]),
+      reasonCodes: ['crawl-failure-share'],
+    });
+    vi.mocked(getJob).mockResolvedValue(detailJob({ error: gateError.message }) as never);
+    const response = await get('/api/scans/job-1');
+    expect(response.body).toMatchObject({
+      outcomeCode: 'failed',
+      reportFailureStage: null,
+      coverageGateBlocked: true,
+    });
+  });
+
+  it('declares a report-stage failure with its stage for the failure card', async () => {
+    vi.mocked(getJob).mockResolvedValue(
+      detailJob({ failedPhase: 'report-en', auditId: 'audit-1' }) as never,
+    );
+    const response = await get('/api/scans/job-1');
+    expect(response.body).toMatchObject({
+      outcomeCode: 'report-issue',
+      reportFailureStage: 'pdf',
+      coverageGateBlocked: false,
+    });
+  });
+
+  it('declares the legacy saved-audit failure as an unknown report stage', async () => {
+    vi.mocked(getJob).mockResolvedValue(detailJob({ auditId: 'audit-1' }) as never);
+    const response = await get('/api/scans/job-1');
+    expect(response.body).toMatchObject({
+      outcomeCode: 'report-issue',
+      reportFailureStage: 'unknown',
+    });
+  });
+
+  it('reads a failed row with typed input fields as needing input, like the list', async () => {
+    vi.mocked(getJob).mockResolvedValue(
+      detailJob({
+        needsInputFields: [{ field: 'nomCommercial', value: 'Le Grand Hôtel' }],
+      }) as never,
+    );
+    const response = await get('/api/scans/job-1');
+    expect(response.body).toMatchObject({ outcomeCode: 'needs-input', reportFailureStage: null });
   });
 });

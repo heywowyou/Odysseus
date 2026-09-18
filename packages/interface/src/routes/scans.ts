@@ -1,5 +1,9 @@
 import type { Connection } from 'mongoose';
-import { isHttpUrlWithoutCredentials, isValidSiren } from '@odysseus/core';
+import {
+  isCrawlCoverageGateMessage,
+  isHttpUrlWithoutCredentials,
+  isValidSiren,
+} from '@odysseus/core';
 import {
   ActiveJobSlotTakenError,
   cancelQueuedJobs,
@@ -48,6 +52,7 @@ import { projectLegacyJob } from '../operator/legacy-job-projection.js';
 import type { JobQueue } from '../queue/job-queue.js';
 import { isReportProductionInFlight } from '../pipeline/report-production-lock.js';
 import { reportProductionState } from '../pipeline/report-production-state.js';
+import { scanOutcomeCode, reportFailureStageOf } from './scan-outcome.js';
 import { getSeverityRollupsForPoll } from './severity-rollup-cache.js';
 import { logJobCreated } from '../request-context.js';
 
@@ -529,31 +534,43 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       .filter((id): id is string => id !== undefined && !isReportProductionInFlight(id));
     const unreadyReports = await findAuditsWithUnreadyReports(connection, reportedAuditIds);
 
-    const summaries = jobs.map((job) => ({
-      prospectId: job.prospectId,
-      prospectName: job.prospectId === undefined ? undefined : prospectNames.get(job.prospectId),
-      jobId: job.jobId,
-      type: displayJobIntent(job.type, job.scanType),
-      status: job.status,
-      phase: job.phase,
-      siteUrl: job.siteUrl,
-      urls: job.urls,
-      createdAt: job.createdAt,
-      finishedAt: job.finishedAt,
-      auditId: job.auditId,
-      auditIds: job.auditIds,
-      severityRollup: job.auditId ? rollups.get(job.auditId) : undefined,
-      needsReview: job.needsReview,
-      failedPhase: job.failedPhase,
-      awaitsInput: job.awaitsInput,
-      reportNotReady:
+    const summaries = jobs.map((job) => {
+      // The per-row verdict of the unready-reports query above (issue #389).
+      const reportNotReady =
         job.auditId !== undefined &&
         reportedAuditIds.includes(job.auditId) &&
-        (unreadyReports.has(job.auditId) || reportProductionState(job.auditId).status === 'failed')
-          ? true
-          : undefined,
-      capabilities: jobCapabilities(capabilityInputs(job, queue)),
-    }));
+        (unreadyReports.has(job.auditId) || reportProductionState(job.auditId).status === 'failed');
+      return {
+        prospectId: job.prospectId,
+        prospectName: job.prospectId === undefined ? undefined : prospectNames.get(job.prospectId),
+        jobId: job.jobId,
+        type: displayJobIntent(job.type, job.scanType),
+        status: job.status,
+        phase: job.phase,
+        siteUrl: job.siteUrl,
+        urls: job.urls,
+        createdAt: job.createdAt,
+        finishedAt: job.finishedAt,
+        auditId: job.auditId,
+        auditIds: job.auditIds,
+        severityRollup: job.auditId ? rollups.get(job.auditId) : undefined,
+        needsReview: job.needsReview,
+        failedPhase: job.failedPhase,
+        awaitsInput: job.awaitsInput,
+        reportNotReady: reportNotReady ? true : undefined,
+        // Plan 060 §5.3: the display classification travels with the row as
+        // a closed code, so the browser never re-derives it from raw fields.
+        outcomeCode: scanOutcomeCode({
+          type: job.type,
+          status: job.status,
+          ...(job.auditId === undefined ? {} : { auditId: job.auditId }),
+          ...(job.failedPhase === undefined ? {} : { failedPhase: job.failedPhase }),
+          ...(job.awaitsInput === undefined ? {} : { awaitsInput: job.awaitsInput }),
+          ...(reportNotReady ? { reportNotReady: true } : {}),
+        }),
+        capabilities: jobCapabilities(capabilityInputs(job, queue)),
+      };
+    });
 
     sendJson(res, 200, summaries);
   });
@@ -650,6 +667,23 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
     sendJson(res, 200, {
       ...job,
       type: displayJobIntent(job.type, job.options.scanType),
+      // Plan 060 §5.3: same server-computed display codes the list rows
+      // carry. The document itself has no unready-report read, so a
+      // complete row keeps its run-state code here; report readiness on a
+      // finished audit is the audit page's contract.
+      outcomeCode: scanOutcomeCode({
+        type: job.type,
+        status: job.status,
+        ...(job.auditId === undefined ? {} : { auditId: job.auditId }),
+        ...(job.failedPhase === undefined ? {} : { failedPhase: job.failedPhase }),
+        awaitsInput: (job.needsInputFields?.length ?? 0) > 0,
+      }),
+      // Non-null exactly when outcomeCode is 'report-issue'; the failure
+      // card uses it to name the failed report step.
+      reportFailureStage: reportFailureStageOf(job),
+      // The coverage gate's remedy link, declared structurally instead of
+      // the browser matching the stored failure sentence (plan 060 §5.3).
+      coverageGateBlocked: isCrawlCoverageGateMessage(job.error),
       prospectId: job.options.prospectId,
       prospectName: prospect?.name,
       work: projectLegacyJob(job),

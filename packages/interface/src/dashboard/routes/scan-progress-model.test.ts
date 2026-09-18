@@ -20,11 +20,16 @@ import {
 /** Fixture shaped like the GET /api/scans/:jobId document (store Job).
  *  Optional fields are spread in rather than set to undefined so the
  *  fixture matches the exactOptionalPropertyTypes contract of the wire
- *  shape, where an absent field is simply absent. */
+ *  shape, where an absent field is simply absent. The server-declared
+ *  display fields (plan 060 §5.3) default to the running case and are
+ *  pinned per test. */
 function job(
   fields: {
     type?: ScanJobDetail['type'];
     status?: ScanJobDetail['status'];
+    outcomeCode?: ScanJobDetail['outcomeCode'];
+    reportFailureStage?: ScanJobDetail['reportFailureStage'];
+    coverageGateBlocked?: boolean;
     phase?: ScanJobDetail['phase'];
     progress?: ScanJobDetail['progress'];
     auditId?: string;
@@ -37,6 +42,9 @@ function job(
     jobId: 'job-1',
     type: fields.type ?? 'full-audit',
     status: fields.status ?? 'running',
+    outcomeCode: fields.outcomeCode ?? 'running',
+    reportFailureStage: fields.reportFailureStage ?? null,
+    coverageGateBlocked: fields.coverageGateBlocked ?? false,
     phase: fields.phase ?? 'queued',
     progress: fields.progress ?? {},
     work: {
@@ -113,43 +121,44 @@ describe('coverageSegments', () => {
 
 describe('terminalCardKind', () => {
   // Issue #386: Cap d'Antibes saved its audit, then the PDF gate refused the
-  // French render; the progress page must not call that a failed scan.
-  it('shows a completed scan with a report failure for a report-stage failure', () => {
-    for (const failedPhase of ['analyze-fr', 'analyze-en', 'report-fr', 'report-en']) {
-      expect(
-        terminalCardKind(
-          job({ status: 'failed', phase: 'failed', auditId: 'audit-1', failedPhase }),
-        ),
-      ).toBe('report-issue');
-    }
-    expect(terminalCardKind(job({ status: 'failed', phase: 'failed', auditId: 'audit-1' }))).toBe(
-      'report-issue',
-    );
-  });
-
-  it('keeps crawl, coverage-gate and audit-stage failures as a failed scan', () => {
-    expect(terminalCardKind(job({ status: 'failed', phase: 'failed', failedPhase: 'crawl' }))).toBe(
-      'failed',
-    );
+  // French render; the progress page must not call that a failed scan. The
+  // card kind reads the server's outcomeCode (plan 060 §5.3) - the cases
+  // that produce each code are pinned server-side in
+  // routes/scans-contract.test.ts.
+  it('shows a completed scan with a report failure for the report-issue code', () => {
     expect(
       terminalCardKind(
         job({
           status: 'failed',
           phase: 'failed',
-          failedPhase: 'scan',
-          error: 'crawl delay and scan concurrency',
+          outcomeCode: 'report-issue',
+          reportFailureStage: 'pdf',
+          auditId: 'audit-1',
         }),
       ),
+    ).toBe('report-issue');
+  });
+
+  it('keeps a plain failed scan failed', () => {
+    expect(
+      terminalCardKind(job({ status: 'failed', phase: 'failed', outcomeCode: 'failed' })),
     ).toBe('failed');
-    expect(terminalCardKind(job({ status: 'failed', phase: 'failed' }))).toBe('failed');
+  });
+
+  it('shows a failed row awaiting typed input as needing input, like the list', () => {
+    expect(
+      terminalCardKind(job({ status: 'failed', phase: 'failed', outcomeCode: 'needs-input' })),
+    ).toBe('needs-input');
   });
 
   it('leaves cancelled, needs-input and complete jobs unchanged', () => {
-    expect(terminalCardKind(job({ status: 'cancelled', auditId: 'audit-1' }))).toBe('cancelled');
-    expect(terminalCardKind(job({ status: 'needs-input', auditId: 'audit-1' }))).toBe(
+    expect(terminalCardKind(job({ status: 'cancelled', outcomeCode: 'cancelled' }))).toBe(
+      'cancelled',
+    );
+    expect(terminalCardKind(job({ status: 'needs-input', outcomeCode: 'needs-input' }))).toBe(
       'needs-input',
     );
-    expect(terminalCardKind(job({ status: 'complete', auditId: 'audit-1' }))).toBe('complete');
+    expect(terminalCardKind(job({ status: 'complete', outcomeCode: 'complete' }))).toBe('complete');
   });
 });
 
