@@ -214,7 +214,9 @@ export type EvidenceConsistencyViolationCode =
   | 'audit-id-mismatch'
   | 'evidence-epoch-mismatch'
   | 'observation-root-mismatch'
+  | 'audit-observation-ledger-mismatch'
   | 'audit-root-mismatch'
+  | 'quality-identity-mismatch'
   | 'quality-root-mismatch';
 
 export interface EvidenceConsistencyViolation {
@@ -264,10 +266,26 @@ export function runEvidenceConsistencyGate(
       detail: 'Observation ledger was not derived from this raw evidence root.',
     });
   }
+  if (input.audit.observationLedgerDigest !== input.observations.digest) {
+    violations.push({
+      code: 'audit-observation-ledger-mismatch',
+      detail: 'Audit evidence snapshot references a different observation ledger.',
+    });
+  }
   if (input.audit.rawEvidenceSnapshotDigest !== input.raw.digest) {
     violations.push({
       code: 'audit-root-mismatch',
       detail: 'Audit evidence snapshot references a different raw evidence root.',
+    });
+  }
+  if (
+    input.quality !== undefined &&
+    (input.quality.auditId !== input.audit.auditId ||
+      input.quality.evidenceEpoch !== input.audit.evidenceEpoch)
+  ) {
+    violations.push({
+      code: 'quality-identity-mismatch',
+      detail: 'Evidence quality assessment names a different audit or evidence epoch.',
     });
   }
   if (
@@ -313,6 +331,12 @@ export function produceApprovedAuditEvidence(
     throw new Error(
       `produceApprovedAuditEvidence: evidence verdict ${input.assessment.verdict} is not reportable`,
     );
+  }
+  if (
+    input.assessment.auditId !== input.audit.auditId ||
+    input.assessment.evidenceEpoch !== input.audit.evidenceEpoch
+  ) {
+    throw new Error('produceApprovedAuditEvidence: assessment names another audit or evidence epoch');
   }
   if (input.assessment.auditEvidenceSnapshotDigest !== input.audit.digest) {
     throw new Error('produceApprovedAuditEvidence: assessment does not approve this audit root');
