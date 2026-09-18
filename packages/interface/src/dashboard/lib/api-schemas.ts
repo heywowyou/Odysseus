@@ -176,6 +176,23 @@ export const scanQueueSchema = z.object({
   ),
 });
 
+/** GET /api/audits/:auditId `evidence` (Plan 059 step 37): the full audit's
+ *  evidence-quality summary. Validated because the page gates the Plan 058
+ *  bundle approval on the approval state it carries. */
+export const auditEvidenceQualitySchema = z.object({
+  verdict: z.enum([
+    'reportable-complete',
+    'reportable-with-known-limitations',
+    'needs-operator-review',
+    'failed',
+  ]),
+  approval: z.enum(['approved', 'stale', 'missing']),
+  approvalDigest: z.string().optional(),
+  blockingCodes: z.array(z.string()),
+  blockingCounts: z.record(z.string(), z.number().int().nonnegative()),
+  limitationCount: z.number().int().nonnegative(),
+});
+
 /** GET /api/audits/:auditId. Strictly validates the identity/lifecycle
  *  fields the page's control flow depends on (which audit, its stage in
  *  scanned/analysed/rendered/approved, severity totals shown in the
@@ -188,5 +205,6 @@ export const auditDetailSchema = z
     lifecycle: z.enum(['scanned', 'analysed', 'rendered', 'approved']),
     severityRollup: severityRollupSchema,
     findingsStale: z.boolean(),
+    evidence: auditEvidenceQualitySchema.optional(),
   })
   .passthrough();

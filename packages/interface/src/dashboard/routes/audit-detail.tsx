@@ -35,6 +35,7 @@ import {
 } from './audit-detail-model';
 import { FailureCard } from './audit-reports-section';
 import { FindingsCard, PublisherIdentificationAlert } from './audit-findings-section';
+import { EvidenceQualityCard } from './evidence-quality-section';
 import type { AuditDetailResponse, Severity, SeverityRollup } from './audit-detail-types';
 
 interface AuditDetailState {
@@ -279,6 +280,10 @@ export function AuditDetailPage(): JSX.Element {
           expandedFindingId={expandedFindingId}
           onExpandedFindingChange={setExpandedFindingId}
         />
+        {/* Plan 059 step 37: the evidence graph's verdict and stages, where
+            the graph exists. Absent for quick checks, prospecting scans and
+            pre-059 audits, which keep rendering exactly as before. */}
+        <EvidenceQualityCard detail={data} />
         {/* Plan 042 slice 3: the panel stays always visible here, even
             though the hub shows it only once the hotel is sold. A
             standalone audit (started from /scans/new, or a paying client

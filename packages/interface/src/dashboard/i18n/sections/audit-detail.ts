@@ -191,6 +191,65 @@ export interface AuditDetailStrings {
      *  disclosure (report-details-form.tsx). */
     reportDetailsSummary: string;
   };
+  /** Plan 059 step 37: the evidence-quality card. The graph's verdict and
+   *  approval state, then the contract's stages with counts and states
+   *  only — never raw evidence. Blocking reason codes are stable API
+   *  strings: `blockingReasons` maps the known codes to one sentence and an
+   *  unknown code falls back to `unknownBlockingReason` carrying the raw
+   *  code, deliberately untranslated. */
+  evidenceQuality: {
+    heading: string;
+    description: string;
+    verdictLabel: string;
+    verdicts: Record<
+      | 'reportable-complete'
+      | 'reportable-with-known-limitations'
+      | 'needs-operator-review'
+      | 'failed',
+      string
+    >;
+    approvalLabel: string;
+    approvalStates: Record<'approved' | 'stale' | 'missing', string>;
+    stagesHeading: string;
+    stageStates: Record<'complete' | 'partial' | 'blocked', string>;
+    stageNames: Record<
+      | 'scope-network-safety'
+      | 'inventory-discovery'
+      | 'content-acquisition'
+      | 'surface-discovery'
+      | 'inventory-reconciliation'
+      | 'content-evidence-repair'
+      | 'performance-verification'
+      | 'temporal-coherence'
+      | 'raw-evidence-snapshot'
+      | 'normalization-verification'
+      | 'evidence-approved',
+      string
+    >;
+    /** Shown on the performance stage while the calibration tolerances are
+     *  not empirically established yet (plan 059 step 41 pending). */
+    performanceCalibrationNote: string;
+    /** {count} templates for the per-stage counts. */
+    countPagesVisited: string;
+    countFindings: string;
+    countDisclosures: string;
+    blockingHeading: string;
+    noBlockingReasons: string;
+    /** {count} is the number of evidence references behind one reason. */
+    blockingRefCount: string;
+    /** One sentence per stable blocking issue code of the quality
+     *  assessment; an unknown code renders via unknownBlockingReason. */
+    blockingReasons: Record<string, string>;
+    /** {code} is the raw stable code. */
+    unknownBlockingReason: string;
+    /** Stage "evidence approved" when the graph was assessed unapproved. */
+    approvalMissingNote: string;
+    /** Stage "evidence approved" when the approval no longer matches. */
+    approvalStaleNote: string;
+    /** Plan 058 bundle box: approval state blocks promotion. */
+    promotionBlockedUnapproved: string;
+    promotionBlockedChanged: string;
+  };
   /** Issue: operator-reviewed overall grade override. Shown as its own
    *  section of the report panel: the automatic grade the report would
    *  render, and, when the operator has overridden it, the override's
@@ -552,6 +611,88 @@ export const auditDetail = {
         'Aucun rapport à jour n’est encore disponible pour l’approbation et le téléchargement.',
       reportDetailsSummary: 'Détails du rapport (optionnel)',
     },
+    evidenceQuality: {
+      heading: 'Qualité de la preuve',
+      description:
+        'Ce que l’analyse complète a réellement vérifié, étape par étape, avant toute approbation.',
+      verdictLabel: 'Évaluation',
+      verdicts: {
+        'reportable-complete': 'Preuve complète',
+        'reportable-with-known-limitations': 'Preuve exploitable, limites connues',
+        'needs-operator-review': 'Révision opérateur requise',
+        failed: 'Preuve non approuvable',
+      },
+      approvalLabel: 'Approbation',
+      approvalStates: {
+        approved: 'Approuvée',
+        missing: 'Non approuvée',
+        stale: 'Ne correspond plus',
+      },
+      stagesHeading: 'Étapes de la preuve',
+      stageStates: { complete: 'Terminée', partial: 'Partielle', blocked: 'Bloquée' },
+      stageNames: {
+        'scope-network-safety': 'Périmètre et sécurité réseau',
+        'inventory-discovery': 'Découverte de l’inventaire',
+        'content-acquisition': 'Acquisition du contenu',
+        'surface-discovery': 'Découverte des surfaces',
+        'inventory-reconciliation': 'Réconciliation de l’inventaire',
+        'content-evidence-repair': 'Réparation des preuves de contenu',
+        'performance-verification': 'Vérification des performances',
+        'temporal-coherence': 'Cohérence temporelle',
+        'raw-evidence-snapshot': 'Instantané des preuves brutes',
+        'normalization-verification': 'Vérification de la normalisation',
+        'evidence-approved': 'Preuve approuvée',
+      },
+      performanceCalibrationNote:
+        'Les tolérances de calibration ne sont pas encore établies : les valeurs chiffrées restent provisoires.',
+      countPagesVisited: '{count} pages visitées',
+      countFindings: '{count} constats enregistrés',
+      countDisclosures: '{count} divulgations obligatoires',
+      blockingHeading: 'Raisons de blocage',
+      noBlockingReasons: 'Aucun blocage relevé.',
+      blockingRefCount: '{count} références',
+      blockingReasons: {
+        'raw-evidence-invalid':
+          'Des artefacts enregistrés n’appartiennent pas à un périmètre et à une époque de preuve cohérents.',
+        'inventory-unreconciled':
+          'Des pages connues n’ont pas de disposition finale dans l’inventaire.',
+        'unresolved-material-gap':
+          'Des vérifications importantes n’ont aucune preuve acceptée après la récupération.',
+        'unstable-material-result':
+          'Des observations répétées d’une même vérification se contredisent.',
+        'temporal-drift':
+          'Le site a changé pendant l’audit : les preuves ne peuvent pas être rattachées à une seule version du site.',
+        'temporal-coherence-unverified':
+          'L’audit ne peut pas démontrer que toutes ses preuves proviennent d’une même version du site.',
+        'disclosed-scope-limitation':
+          'Une limite du périmètre est documentée et sera divulguée dans le rapport.',
+        'performance-confidence-insufficient':
+          'Les mesures de performance retenues n’atteignent pas la politique de stabilité et de confiance.',
+        'capability-gap-undisclosed':
+          'Un contenu intégré important n’a pas pu être inspecté par l’analyse.',
+        'site-level-unknown': 'Une vérification au niveau du site n’a aucune preuve acceptée.',
+        'robots-policy-unresolved':
+          'Aucun instantané de la politique robots n’a été enregistré pour cet audit.',
+        'network-safety-preflight-failed': 'Le contrôle préalable de sécurité réseau a échoué.',
+        'environment-unapproved':
+          'Le navigateur a fonctionné sans bac à sable ni profil d’isolation approuvé : l’environnement d’exécution n’est pas approuvé.',
+        'consistency-gate-failed':
+          'Des constats normalisés ne se raccordent pas à une preuve de scan acceptée.',
+        'operator-resolution-required':
+          'Le site a limité ou bloqué le robot : une décision d’opérationnaire (ralentissement, liste autorisée) est nécessaire.',
+        'legacy-evidence-insufficient':
+          'La preuve héritée est insuffisante pour ce chemin de rapport.',
+      },
+      unknownBlockingReason: 'Raison de blocage inconnue ({code}).',
+      approvalMissingNote:
+        'La preuve a été évaluée sans être approuvée : le chemin de rapport client refusera cet audit tant que l’approbation manque.',
+      approvalStaleNote:
+        'L’approbation ne correspond plus aux racines de la preuve : une nouvelle analyse est nécessaire pour réapprouver.',
+      promotionBlockedUnapproved:
+        'La preuve de cet audit a été évaluée sans être approuvée : la promotion de ce bundle reste bloquée.',
+      promotionBlockedChanged:
+        'L’approbation de la preuve dont ce bundle dépend n’est plus en vigueur : relancez le pipeline qualité.',
+    },
     gradeOverride: {
       heading: 'Note globale',
       description:
@@ -821,6 +962,82 @@ export const auditDetail = {
         'No bilingual writing is available yet: write the report above before producing the PDFs.',
       deliveryUnavailableReason: 'No fresh report is available yet for approval and download.',
       reportDetailsSummary: 'Report details (optional)',
+    },
+    evidenceQuality: {
+      heading: 'Evidence quality',
+      description: 'What the full audit actually verified, stage by stage, before any approval.',
+      verdictLabel: 'Assessment',
+      verdicts: {
+        'reportable-complete': 'Evidence complete',
+        'reportable-with-known-limitations': 'Reportable, known limitations',
+        'needs-operator-review': 'Operator review required',
+        failed: 'Evidence not approvable',
+      },
+      approvalLabel: 'Approval',
+      approvalStates: {
+        approved: 'Approved',
+        missing: 'Not approved',
+        stale: 'No longer matching',
+      },
+      stagesHeading: 'Evidence stages',
+      stageStates: { complete: 'Complete', partial: 'Partial', blocked: 'Blocked' },
+      stageNames: {
+        'scope-network-safety': 'Scope and network safety',
+        'inventory-discovery': 'Inventory discovery',
+        'content-acquisition': 'Content acquisition',
+        'surface-discovery': 'Surface discovery',
+        'inventory-reconciliation': 'Inventory reconciliation',
+        'content-evidence-repair': 'Content evidence repair',
+        'performance-verification': 'Performance verification',
+        'temporal-coherence': 'Temporal coherence',
+        'raw-evidence-snapshot': 'Raw evidence snapshot',
+        'normalization-verification': 'Normalization verification',
+        'evidence-approved': 'Evidence approved',
+      },
+      performanceCalibrationNote:
+        'Calibration tolerances are not established yet: measured values remain provisional.',
+      countPagesVisited: '{count} pages visited',
+      countFindings: '{count} findings recorded',
+      countDisclosures: '{count} mandatory disclosures',
+      blockingHeading: 'Blocking reasons',
+      noBlockingReasons: 'Nothing blocking recorded.',
+      blockingRefCount: '{count} references',
+      blockingReasons: {
+        'raw-evidence-invalid':
+          'Persisted artifacts do not belong to one consistent scope and evidence epoch.',
+        'inventory-unreconciled': 'Known pages have no final inventory disposition.',
+        'unresolved-material-gap':
+          'Material checks have no accepted evidence after the recovery ladder.',
+        'unstable-material-result': 'Repeated observations of one check disagree.',
+        'temporal-drift':
+          'The site changed during the audit: evidence cannot be tied to one site version.',
+        'temporal-coherence-unverified':
+          'The audit cannot show that all of its evidence comes from one version of the site.',
+        'disclosed-scope-limitation':
+          'A scope limitation is documented and will be disclosed in the report.',
+        'performance-confidence-insufficient':
+          'The selected performance measurements fail the stability and confidence policy.',
+        'capability-gap-undisclosed': 'Material embedded content could not be inspected.',
+        'site-level-unknown': 'A site-level check has no accepted evidence.',
+        'robots-policy-unresolved': 'No robots policy snapshot was persisted for this audit.',
+        'network-safety-preflight-failed': 'The network-safety preflight failed.',
+        'environment-unapproved':
+          'The browser ran without a sandbox or an approved isolation profile: the execution environment is not approved.',
+        'consistency-gate-failed':
+          'Some normalized findings do not reconcile to accepted scan evidence.',
+        'operator-resolution-required':
+          'The site rate-limited or walled the crawler: an operator decision (pacing, allowlisting) is needed.',
+        'legacy-evidence-insufficient': 'Legacy evidence is insufficient for this report path.',
+      },
+      unknownBlockingReason: 'Unknown blocking reason ({code}).',
+      approvalMissingNote:
+        'The evidence was assessed without being approved: the client report path will refuse this audit until an approval exists.',
+      approvalStaleNote:
+        'The approval no longer matches the evidence roots: a new audit is needed to approve again.',
+      promotionBlockedUnapproved:
+        'This audit’s evidence was assessed without being approved: promoting this bundle stays blocked.',
+      promotionBlockedChanged:
+        'The evidence approval this bundle was produced from no longer stands: rerun the quality pipeline.',
     },
     gradeOverride: {
       heading: 'Overall grade',
