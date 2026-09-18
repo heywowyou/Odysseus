@@ -14,10 +14,10 @@ import { ProgressBar } from '../components/ui/progress-bar';
 import { Spinner } from '../components/ui/spinner';
 import { StatusDot } from '../components/ui/status-dot';
 import { useI18n } from '../i18n/provider';
-import { ApiError, fetchJsonValidated, postEmpty } from '../lib/api';
+import { ApiError, fetchJsonValidated, sendJson } from '../lib/api';
 import { scanJobDetailSchema } from '../lib/api-schemas';
 import type { ScanJobDetail, ScanUrlResult } from '../lib/api-types';
-import { canStop } from '../lib/job-actions';
+import { isStateChanged, problemCopy } from '../lib/operator-copy';
 import { cn } from '../lib/cn';
 import { reportFailureStage } from '../lib/job-outcome';
 import { usePolling } from '../lib/use-polling';
@@ -122,25 +122,24 @@ export function ScanProgressPage(): JSX.Element {
   // A live job can be stopped; the confirm dialog carries the consequence,
   // so the header control itself stays quiet.
   const [confirmStopOpen, setConfirmStopOpen] = useState(false);
-  const stoppable =
-    job !== undefined &&
-    !isTerminal(job.status) &&
-    (job.type === 'full-audit' ||
-      job.type === 'prospecting' ||
-      job.type === 'quick-check' ||
-      job.type === 'prospecting-audit') &&
-    canStop(job.status);
+  // Plan 061: the server decides whether Stop is available and hands the
+  // state token the command must present.
+  const stopCapability = job?.capabilities.cancel;
+  const stoppable = stopCapability?.state === 'available';
 
   const stopJob = async (): Promise<void> => {
-    if (jobId === undefined) return;
+    if (jobId === undefined || stopCapability === undefined) return;
     try {
-      await postEmpty(`/api/scans/${encodeURIComponent(jobId)}/cancel`);
+      await sendJson(`/api/scans/${encodeURIComponent(jobId)}/cancel`, 'POST', {
+        stateToken: stopCapability.stateToken,
+      });
       // Running work first becomes cancel-requested, so keep polling until
       // the worker confirms the terminal cancelled state. A queued job may
       // already be terminal on this refresh.
       refresh();
-    } catch {
-      toast.error(strings.audits.actionFailed);
+    } catch (error) {
+      toast.error(problemCopy(error, strings.workState) ?? strings.audits.actionFailed);
+      if (isStateChanged(error)) refresh();
     }
   };
 

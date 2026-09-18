@@ -13,6 +13,9 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   getAudit: vi.fn(),
   deleteAuditCascade: vi.fn(),
   deleteJob: vi.fn(),
+  readScanQueue: vi.fn(),
+  reorderScanQueue: vi.fn(),
+  getProspectNames: vi.fn(async () => new Map()),
 }));
 
 const { artifactStore } = vi.hoisted(() => ({
@@ -37,9 +40,12 @@ import {
   getAudit,
   getJob,
   getProspectHub,
+  readScanQueue,
+  reorderScanQueue,
   requestJobCancellation,
   type NewJobInput,
 } from '@odysseus/store';
+import { cancelJobCapability, deleteJobCapability } from '../operator/job-capabilities.js';
 import {
   releaseReportProduction,
   tryAcquireReportProduction,
@@ -173,6 +179,14 @@ describe('POST /api/scans runtime contract', () => {
   );
 });
 
+function cancelToken(job: { jobId: string; type: string; status: string }): string {
+  return cancelJobCapability({
+    job: job as never,
+    inFlight: false,
+    reportProductionInFlight: false,
+  }).stateToken;
+}
+
 describe('POST /api/scans/:jobId/cancel', () => {
   it('persists a running stop request before signalling the local worker', async () => {
     vi.mocked(getJob).mockResolvedValue({
@@ -182,7 +196,10 @@ describe('POST /api/scans/:jobId/cancel', () => {
     } as never);
     vi.mocked(requestJobCancellation).mockResolvedValueOnce('cancel-requested');
 
-    const response = await post({}, '/api/scans/job-1/cancel');
+    const response = await post(
+      { stateToken: cancelToken({ jobId: 'job-1', type: 'full-audit', status: 'running' }) },
+      '/api/scans/job-1/cancel',
+    );
 
     expect(response).toEqual({
       statusCode: 200,
@@ -206,7 +223,10 @@ describe('POST /api/scans/:jobId/cancel', () => {
     } as never);
     vi.mocked(requestJobCancellation).mockResolvedValueOnce('cancelled');
 
-    const response = await post({}, '/api/scans/job-queued/cancel');
+    const response = await post(
+      { stateToken: cancelToken({ jobId: 'job-queued', type: 'full-audit', status: 'queued' }) },
+      '/api/scans/job-queued/cancel',
+    );
 
     expect(response).toEqual({
       statusCode: 200,
@@ -225,9 +245,156 @@ describe('POST /api/scans/:jobId/cancel', () => {
     } as never);
     vi.mocked(requestJobCancellation).mockResolvedValueOnce('not-cancellable');
 
-    const response = await post({}, '/api/scans/job-1/cancel');
+    const response = await post(
+      { stateToken: cancelToken({ jobId: 'job-1', type: 'full-audit', status: 'running' }) },
+      '/api/scans/job-1/cancel',
+    );
 
-    expect(response.statusCode).toBe(409);
+    expect(response).toMatchObject({
+      statusCode: 409,
+      body: { error: { code: 'state-changed' } },
+    });
+  });
+
+  it('refuses a stop computed from a state that has since changed', async () => {
+    // The page rendered the job as queued ("remove from queue"); the worker
+    // claimed it meanwhile, so the consequence of the click changed.
+    vi.mocked(getJob).mockResolvedValue({
+      jobId: 'job-1',
+      type: 'full-audit',
+      status: 'running',
+    } as never);
+
+    const response = await post(
+      { stateToken: cancelToken({ jobId: 'job-1', type: 'full-audit', status: 'queued' }) },
+      '/api/scans/job-1/cancel',
+    );
+
+    expect(response).toMatchObject({
+      statusCode: 409,
+      body: { error: { code: 'state-changed', retryable: true } },
+    });
+    expect(requestJobCancellation).not.toHaveBeenCalled();
+  });
+
+  it('refuses a stop without a state token', async () => {
+    vi.mocked(getJob).mockResolvedValue({
+      jobId: 'job-1',
+      type: 'full-audit',
+      status: 'running',
+    } as never);
+    const response = await post({}, '/api/scans/job-1/cancel');
+    expect(response).toMatchObject({
+      statusCode: 400,
+      body: { error: { code: 'invalid-request' } },
+    });
+    expect(requestJobCancellation).not.toHaveBeenCalled();
+  });
+
+  it('answers a typed blocked problem for a stop already requested', async () => {
+    const job = { jobId: 'job-1', type: 'full-audit', status: 'cancel-requested' };
+    vi.mocked(getJob).mockResolvedValue(job as never);
+    const response = await post({ stateToken: cancelToken(job) }, '/api/scans/job-1/cancel');
+    expect(response).toMatchObject({
+      statusCode: 409,
+      body: { error: { code: 'action-blocked', reasonCode: 'cancel-already-requested' } },
+    });
+  });
+
+  it('answers a typed not-found problem', async () => {
+    vi.mocked(getJob).mockResolvedValue(null);
+    const response = await post({ stateToken: 'x' }, '/api/scans/missing/cancel');
+    expect(response).toMatchObject({ statusCode: 404, body: { error: { code: 'not-found' } } });
+  });
+});
+
+describe('scan queue routes', () => {
+  const queuedRow = (jobId: string, prospectId?: string) => ({
+    jobId,
+    type: 'full-audit',
+    siteUrl: `https://${jobId}.example/`,
+    createdAt: new Date('2026-09-18T10:00:00Z'),
+    options: prospectId === undefined ? { maxDepth: 2 } : { prospectId },
+    queueOrder: 1,
+  });
+
+  async function get(path: string): Promise<{ statusCode: number; body: unknown }> {
+    const router = new Router();
+    registerScanRoutes(router, fakeConnection, fakeQueue);
+    const req = Readable.from([]) as unknown as IncomingMessage;
+    req.method = 'GET';
+    req.url = path;
+    req.headers = {};
+    const res = fakeRes();
+    await router.handle(req, res);
+    return { statusCode: res.statusCode, body: JSON.parse(res.body ?? '{}') as unknown };
+  }
+
+  it('lists waiting scans in durable order with the revision and a remove capability', async () => {
+    vi.mocked(readScanQueue).mockResolvedValue({
+      queueRevision: 'rev-1',
+      truncated: false,
+      jobs: [queuedRow('b'), queuedRow('a', 'prospect-1')] as never,
+    });
+    const response = await get('/api/scans/queue');
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toMatchObject({
+      queueRevision: 'rev-1',
+      truncated: false,
+      jobs: [
+        {
+          jobId: 'b',
+          position: 1,
+          options: ['depth-limit'],
+          cancel: { state: 'available', consequenceCode: 'removes-from-queue' },
+        },
+        { jobId: 'a', position: 2, prospectId: 'prospect-1', options: [] },
+      ],
+    });
+  });
+
+  it('applies a reorder and returns the new revision', async () => {
+    vi.mocked(reorderScanQueue).mockResolvedValue({
+      outcome: 'reordered',
+      snapshot: {
+        queueRevision: 'rev-2',
+        truncated: false,
+        jobs: [queuedRow('a'), queuedRow('b')],
+      },
+    } as never);
+    const response = await post(
+      { queueRevision: 'rev-1', orderedJobIds: ['a', 'b'] },
+      '/api/scans/queue/reorder',
+    );
+    expect(response).toEqual({
+      statusCode: 200,
+      body: { queueRevision: 'rev-2', orderedJobIds: ['a', 'b'] },
+    });
+    expect(reorderScanQueue).toHaveBeenCalledWith(fakeConnection, {
+      expectedRevision: 'rev-1',
+      orderedJobIds: ['a', 'b'],
+    });
+  });
+
+  it('answers a stale reorder with a typed state-changed problem', async () => {
+    vi.mocked(reorderScanQueue).mockResolvedValue({
+      outcome: 'state-changed',
+      snapshot: { queueRevision: 'rev-3', truncated: false, jobs: [] },
+    } as never);
+    const response = await post(
+      { queueRevision: 'rev-1', orderedJobIds: ['a'] },
+      '/api/scans/queue/reorder',
+    );
+    expect(response).toMatchObject({ statusCode: 409, body: { error: { code: 'state-changed' } } });
+  });
+
+  it('refuses a malformed reorder before touching the queue', async () => {
+    const response = await post({ orderedJobIds: 'a' }, '/api/scans/queue/reorder');
+    expect(response).toMatchObject({
+      statusCode: 400,
+      body: { error: { code: 'invalid-request' } },
+    });
+    expect(reorderScanQueue).not.toHaveBeenCalled();
   });
 });
 
@@ -236,19 +403,23 @@ describe('DELETE /api/scans/:jobId', () => {
     inFlight: boolean,
     audit: unknown = null,
     status = 'cancelled',
+    options: { tokenFrom?: { status: string; inFlight: boolean } } = {},
   ): Promise<number> {
-    vi.mocked(getJob).mockResolvedValue({
-      jobId: 'job-1',
-      status,
-      auditId: 'audit-1',
-    } as never);
+    const job = { jobId: 'job-1', type: 'full-audit', status, auditId: 'audit-1' };
+    vi.mocked(getJob).mockResolvedValue(job as never);
     vi.mocked(getAudit).mockResolvedValue(audit as never);
+    const seen = options.tokenFrom ?? { status, inFlight };
+    const stateToken = deleteJobCapability({
+      job: { ...job, status: seen.status } as never,
+      inFlight: seen.inFlight,
+      reportProductionInFlight: false,
+    }).stateToken;
     const queue = { notify: vi.fn(), isJobInFlight: vi.fn().mockReturnValue(inFlight) } as never;
     const router = new Router();
     registerScanRoutes(router, fakeConnection, queue);
     const req = Readable.from([]) as unknown as IncomingMessage;
     req.method = 'DELETE';
-    req.url = '/api/scans/job-1';
+    req.url = `/api/scans/job-1?stateToken=${encodeURIComponent(stateToken)}`;
     req.headers = {};
     const res = fakeRes();
     await router.handle(req, res);
@@ -258,6 +429,15 @@ describe('DELETE /api/scans/:jobId', () => {
   it('refuses a stopped job whose pipeline is still finishing its stage', async () => {
     expect(await remove(true)).toBe(409);
     expect(deleteAuditCascade).not.toHaveBeenCalled();
+    expect(deleteJob).not.toHaveBeenCalled();
+  });
+
+  it('refuses a delete rendered before the job changed state', async () => {
+    expect(
+      await remove(false, null, 'cancelled', {
+        tokenFrom: { status: 'cancelled', inFlight: true },
+      }),
+    ).toBe(409);
     expect(deleteJob).not.toHaveBeenCalled();
   });
 

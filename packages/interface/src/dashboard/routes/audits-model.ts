@@ -94,7 +94,7 @@ export function hostnameOf(siteUrl: string): string {
  *  i18n (audits.siteCountSingular / siteCountPlural) so a one-URL job reads
  *  "1 site" rather than a hardcoded plural, in both French and English. */
 export function siteLabel(
-  summary: ScanSummary,
+  summary: Pick<ScanSummary, 'siteUrl' | 'urls'>,
   labels: Pick<DashboardStrings['audits'], 'siteCountSingular' | 'siteCountPlural'>,
 ): string {
   if (summary.siteUrl !== undefined) {
@@ -149,21 +149,12 @@ export function rowTarget(summary: ScanSummary): string {
   return summary.auditId !== undefined ? `/audits/${summary.auditId}` : `/scans/${summary.jobId}`;
 }
 
-/** Issue #375: the work that will happen, apart from the work that happened.
- *  Running jobs first; waiting jobs oldest first, which is the order the
- *  queue claims them in. */
-export function scanQueue(summaries: readonly ScanSummary[]): {
-  running: ScanSummary[];
-  upNext: ScanSummary[];
-} {
-  // The poll lists newest first, jobs of one batch sharing a createdAt in
-  // reverse queue order. Reversing first lets the stable sort keep those
-  // ties in queue order.
-  const byCreation = sortSummaries([...summaries].reverse(), 'oldest');
-  return {
-    running: byCreation.filter(
-      (summary) => summary.status === 'running' || summary.status === 'cancel-requested',
-    ),
-    upNext: byCreation.filter((summary) => summary.status === 'queued'),
-  };
+/** Issue #375: the work that is happening now. Waiting work is not derived
+ *  here: plan 061 made queue order durable and server-owned, so the page
+ *  reads it from GET /api/scans/queue instead of reconstructing it from
+ *  creation times. */
+export function runningScans(summaries: readonly ScanSummary[]): ScanSummary[] {
+  return sortSummaries([...summaries], 'oldest').filter(
+    (summary) => summary.status === 'running' || summary.status === 'cancel-requested',
+  );
 }

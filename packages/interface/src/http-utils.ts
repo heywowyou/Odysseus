@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { ProblemEnvelope } from './operator/contract.js';
 
 /** Generous for this app's small JSON bodies - readJsonBody previously
  *  buffered an unbounded request body, so a request that never stopped
@@ -65,4 +66,15 @@ export function sendJson(res: ServerResponse, statusCode: number, body: unknown)
 
 export function sendError(res: ServerResponse, statusCode: number, message: string): void {
   sendJson(res, statusCode, { error: message });
+}
+
+/** Plan 061 §8.3: the typed problem envelope of migrated command routes.
+ *  `message` is a safe English fallback; the dashboard renders from `code`
+ *  and `reasonCode`. */
+export function sendProblem(
+  res: ServerResponse,
+  statusCode: number,
+  problem: ProblemEnvelope['error'],
+): void {
+  sendJson(res, statusCode, { error: problem } satisfies ProblemEnvelope);
 }
