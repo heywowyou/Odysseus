@@ -8,9 +8,13 @@ import {
   FINDINGS_SCHEMA_VERSION,
   NORMALIZATION_FINGERPRINT,
   type AuditScopeSnapshot,
+  type AuditScopeSnapshotInput,
   type Finding,
 } from '@odysseus/core';
-import { buildAuditEnvironmentFingerprint } from './audit-environment-fingerprint.js';
+import {
+  buildAuditEnvironmentFingerprint,
+  type AuditEnvironmentFingerprintInput,
+} from './audit-environment-fingerprint.js';
 import type { AcquisitionAttemptRecord } from './check-attempt-ledger.js';
 import {
   PAGE_CHECK_IDS,
@@ -30,7 +34,10 @@ const AUDIT_ID = 'audit-graph-test';
 const AT = new Date('2026-09-18T09:00:00.000Z');
 const SURFACE = 'surface:baseline-desktop';
 
-export function scope(): AuditScopeSnapshot {
+/** The frozen scope, with optional input overrides for cases that need an
+ *  operator-set bound, a seed or an exclusion. Overrides are full input
+ *  fields: spread `scope().bounds` to widen one bound. */
+export function scope(overrides: Partial<AuditScopeSnapshotInput> = {}): AuditScopeSnapshot {
   return buildAuditScopeSnapshot({
     evidenceEpoch: 1,
     startUrl: HOME,
@@ -51,6 +58,7 @@ export function scope(): AuditScopeSnapshot {
     sitemapMode: 'supplement',
     expectedLanguages: [],
     networkPolicyId: PUBLIC_SITE_NETWORK_POLICY.id,
+    ...overrides,
   });
 }
 
@@ -158,8 +166,11 @@ export const HEURISTIC_FINDING = finding({
   severity: 'minor',
 });
 
-function environment() {
-  return buildAuditEnvironmentFingerprint({
+/** The environment fingerprint's raw input, exported so a fault case can
+ *  re-fingerprint one field (a normalization or tool version change) and have
+ *  the digest recomputed honestly rather than patched in place. */
+export function environmentInput(): AuditEnvironmentFingerprintInput {
+  return {
     build: {
       odysseusBuildId: 'test-build',
       findingsSchemaVersion: FINDINGS_SCHEMA_VERSION,
@@ -212,7 +223,7 @@ function environment() {
       scanConcurrency: 1,
     },
     registries: { capabilityRegistryVersion: 'test', checkRegistryVersion: 'test' },
-  });
+  };
 }
 
 export function cleanInput(
@@ -239,7 +250,7 @@ export function cleanInput(
     attempts: cleanAttempts(),
     pages: [page(HOME), page(ROOMS)],
     findings: [AXE_FINDING],
-    environment: environment(),
+    environment: buildAuditEnvironmentFingerprint(environmentInput()),
     isolation: { ok: true, profile: 'chromium-sandbox', findings: [] },
     configDigest: 'sha256:config',
     temporalCoherence: {
