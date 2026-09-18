@@ -682,7 +682,27 @@ Show unavailable/stale/partial explicitly rather than zero/ready.
 
 ---
 
-# 22. Definition of done
+# 22. Executable closure contract
+
+“Bounded”, “small”, “fast” and “responsive” are invalid completion criteria without thresholds.
+
+Before implementation may be called complete, freeze numeric budgets in this plan (adjust only through a dated amendment backed by measurement). Initial budgets:
+
+- audit control-summary JSON: **<= 200 KiB** for the Point-France fixture;
+- global list/attention endpoints: **<= 25 database queries** per request and **zero N+1 growth** with item count;
+- findings/occurrence page size: **<= 100 rows** returned per page by default, with a hard server maximum of **250**;
+- audit summary path: **zero object-store/PDF byte reads**;
+- browser interaction on the Point-France fixture: primary filter/pagination action settles within **500 ms p95 locally** excluding artificial network delay;
+- active polling payload: **<= 100 KiB** with 8 active jobs;
+- every global-looking count is exact or explicitly marked unavailable/partial; capped-source counts are forbidden.
+
+Store/API/browser tests must assert these budgets. If real measurements justify different numbers, amend the plan and tests together; do not leave the adjective while deleting the threshold.
+
+The requirement-to-proof table must map every performance/data-contract invariant to its query/DTO owner and budget test.
+
+---
+
+# 23. Definition of done Definition of done
 
 Plan 063 is implemented when:
 
