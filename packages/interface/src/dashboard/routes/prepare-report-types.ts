@@ -12,7 +12,7 @@ export interface LocalizedTextResponse {
 
 export interface AnalysisPairRefResponse {
   frAnalysisId: string;
-  enAnalysisId: string;
+  enAnalysisId?: string;
 }
 
 export type WritingCandidateResponse =
