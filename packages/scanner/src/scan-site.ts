@@ -71,10 +71,25 @@ import {
 import {
   buildContentAuditPlan,
   finalizeLighthousePlan,
+  performancePageClassOf,
   type FullAuditPlan,
   type PageAuditDecision,
   type RenderedCostProfile,
 } from './full-audit-plan.js';
+import {
+  buildPerformanceMeasurementSet,
+  PROVISIONAL_STABILITY_TOLERANCES,
+  repeatTriggersFromAssessment,
+  runsOwedForPage,
+  type LighthouseRunInput,
+  type PerformanceMeasurementSet,
+  type RepeatTrigger,
+} from './performance-measurement-set.js';
+import {
+  gradingRepeatTriggers,
+  labMetricsFromLighthouse,
+  representativeRunId,
+} from './performance-acquisition.js';
 import type { PageAuditProfile } from './page-audit-profile.js';
 import { derivePageAnalysisCoverage } from './analysis-coverage.js';
 import { readPageScanJson, writePageScanJson } from './artifacts/page-scan-io.js';
@@ -875,6 +890,7 @@ async function acquireLighthouseRun(
   debugPort: number,
   scheduler: HostRequestScheduler,
   context: StagedScanContext,
+  runIndex: number,
 ): Promise<{ result: LighthouseAnalysisResult; records: AcquisitionAttemptRecord[] }> {
   const records: AcquisitionAttemptRecord[] = [];
   let profile: AttemptExecutionProfile = 'normal';
@@ -893,7 +909,7 @@ async function acquireLighthouseRun(
     if (context.scopeDigest === undefined) return { result, records };
     const record = lighthouseAttemptRecord({
       url,
-      runIndex: 1,
+      runIndex,
       scopeDigest: context.scopeDigest,
       evidenceEpoch: context.evidenceEpoch,
       startedAt,
@@ -914,6 +930,101 @@ async function acquireLighthouseRun(
     }
     profile = next.nextProfile;
   }
+}
+
+/** Every run of one audit is taken under the audit's single environment
+ *  fingerprint, which the evidence graph records. */
+const AUDIT_ENVIRONMENT_REF = 'audit-environment';
+
+/** Section 12 never owes more than three runs; this only bounds the loop. */
+const MAX_LIGHTHOUSE_RUNS_PER_PAGE = 3;
+
+/**
+ * Plan 059 section 12: the Lighthouse runs one selected page is owed, taken
+ * one after another, each with its own recovery ladder. The homepage,
+ * transactional pages and operator seeds get three runs; any other page one,
+ * plus a second when that run is severe, near a grade boundary, or the set
+ * turns out unstable. A run whose ladder ends in failure closes the set: the
+ * set then records the shortfall instead of retrying without bound.
+ *
+ * The page keeps the full report of its representative run (the median
+ * performance score, never the best). Outside the Plan 059 path, or for a
+ * page the planner has no decision for, the historical single run stands.
+ */
+async function acquirePerformanceMeasurement(
+  url: string,
+  decision: PageAuditDecision | undefined,
+  debugPort: number,
+  scheduler: HostRequestScheduler,
+  context: StagedScanContext,
+): Promise<{
+  result: LighthouseAnalysisResult;
+  records: AcquisitionAttemptRecord[];
+  measurementSet?: PerformanceMeasurementSet;
+}> {
+  if (context.scopeDigest === undefined || decision === undefined) {
+    return acquireLighthouseRun(url, debugPort, scheduler, context, 1);
+  }
+  const pageClass = performancePageClassOf(decision);
+  const runs: LighthouseRunInput[] = [];
+  const reports = new Map<string, LighthouseAnalysisResult>();
+  const records: AcquisitionAttemptRecord[] = [];
+  const triggers = new Set<RepeatTrigger>();
+  let lastResult: LighthouseAnalysisResult = {};
+  const buildSet = (): PerformanceMeasurementSet =>
+    buildPerformanceMeasurementSet({
+      url,
+      profile: 'mobile',
+      pageClass,
+      selectionReasons: decision.reasonCodes,
+      runs,
+      repeatTriggers: [...triggers],
+      tolerances: PROVISIONAL_STABILITY_TOLERANCES,
+    });
+
+  for (let runIndex = 1; runIndex <= MAX_LIGHTHOUSE_RUNS_PER_PAGE; runIndex += 1) {
+    const measuredRunCount = reports.size;
+    if (measuredRunCount >= 2) {
+      for (const trigger of repeatTriggersFromAssessment(buildSet().confidence)) {
+        triggers.add(trigger);
+      }
+    }
+    const allowance = runsOwedForPage({
+      pageClass,
+      measuredRunCount,
+      repeatTriggers: [...triggers],
+    });
+    if (allowance.runsOutstanding === 0) break;
+
+    const run = await acquireLighthouseRun(url, debugPort, scheduler, context, runIndex);
+    records.push(...run.records);
+    lastResult = run.result;
+    const runId = `lab-run-${runIndex}`;
+    const observedAt = new Date(run.records.at(-1)?.finishedAt ?? Date.now());
+    if (run.result.lighthouse === undefined) {
+      runs.push({
+        runId,
+        observedAt,
+        environmentFingerprintRef: AUDIT_ENVIRONMENT_REF,
+        outcome: { kind: 'failed', reason: run.result.lighthouseError ?? 'no report' },
+      });
+      break;
+    }
+    const metrics = labMetricsFromLighthouse(run.result.lighthouse);
+    runs.push({
+      runId,
+      observedAt,
+      environmentFingerprintRef: AUDIT_ENVIRONMENT_REF,
+      outcome: { kind: 'measured', metrics },
+    });
+    reports.set(runId, run.result);
+    for (const trigger of gradingRepeatTriggers(metrics)) triggers.add(trigger);
+  }
+
+  const measurementSet = buildSet();
+  const representative = representativeRunId(measurementSet);
+  const result = representative === undefined ? lastResult : reports.get(representative)!;
+  return { result, records, measurementSet };
 }
 
 /**
@@ -1150,6 +1261,7 @@ async function runStagedFullAuditScan(
   const pages: PageScanResult[] = [];
   const analysisCoverageByUrl = new Map<string, PageAnalysisCoverage>();
   const lighthouseAttemptsByUrl = new Map<string, AcquisitionAttemptRecord[]>();
+  const measurementSetsByUrl = new Map<string, PerformanceMeasurementSet>();
   // Plan 035: counts only newly performed work on top of the reused base,
   // so a resumed run's scan-page progress stays truthful.
   let scanned = completedByUrl.size;
@@ -1209,6 +1321,8 @@ async function runStagedFullAuditScan(
       pageResult.lighthouse = lighthouseResult.lighthouse;
     if (lighthouseResult?.lighthouseError !== undefined)
       pageResult.lighthouseError = lighthouseResult.lighthouseError;
+    const measurementSet = measurementSetsByUrl.get(url);
+    if (measurementSet !== undefined) pageResult.performanceMeasurement = measurementSet;
     const performanceAttempts = lighthouseAttemptsByUrl.get(url);
     if (performanceAttempts !== undefined && performanceAttempts.length > 0) {
       pageResult = {
@@ -1277,13 +1391,13 @@ async function runStagedFullAuditScan(
       continue;
     }
     const workStartedAtMs = Date.now();
-    const { result: lighthouseResult, records } = await acquireLighthouseRun(
-      url,
-      debugPort,
-      scheduler,
-      context,
-    );
+    const {
+      result: lighthouseResult,
+      records,
+      measurementSet,
+    } = await acquirePerformanceMeasurement(url, decision, debugPort, scheduler, context);
     lighthouseAttemptsByUrl.set(url, records);
+    if (measurementSet !== undefined) measurementSetsByUrl.set(url, measurementSet);
     const durationMs = Date.now() - workStartedAtMs;
     emit(url, lighthouseResult, true, durationMs);
     lighthouseCompleted += 1;

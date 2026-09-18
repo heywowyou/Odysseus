@@ -95,6 +95,7 @@ import {
   SITE_OBSERVATION_CHECK_IDS,
 } from './observation-checks.js';
 import type { FrameObservation, RenderedReadinessObservation } from './page-readiness.js';
+import type { PerformanceMeasurementSet } from './performance-measurement-set.js';
 import type { RobotsPolicyChain } from './robots-policy-snapshot.js';
 
 /** The page-level observations a scan persisted on each scan.json. */
@@ -102,6 +103,7 @@ export interface EvidencePageObservation {
   url: string;
   readiness?: RenderedReadinessObservation;
   frames?: readonly FrameObservation[];
+  performanceMeasurement?: PerformanceMeasurementSet;
 }
 
 export interface AuditEvidenceGraphInput {
@@ -150,6 +152,24 @@ function digestOf(value: unknown): Sha256Digest {
 /* ------------------------------------------------------------------ *
  * Mandatory client disclosures
  * ------------------------------------------------------------------ */
+
+/** A set is intact when it belongs to this page, names exactly the
+ *  Lighthouse runs the ledger recorded for it, and still hashes to the digest
+ *  it was built with. */
+function isIntactMeasurementSet(
+  set: PerformanceMeasurementSet,
+  url: string,
+  ledgerRunIds: ReadonlySet<string>,
+): boolean {
+  const { digest, ...body } = set;
+  const runIds = new Set(set.runs.map((run) => run.runId));
+  return (
+    set.url === url &&
+    runIds.size === ledgerRunIds.size &&
+    [...runIds].every((runId) => ledgerRunIds.has(runId)) &&
+    canonicalDigest(body) === digest
+  );
+}
 
 function disclosure(
   code: string,
@@ -869,6 +889,36 @@ export function assembleAuditEvidenceGraph(input: AuditEvidenceGraphInput): Audi
       }
     }
   }
+  /* ---- performance measurement sets ------------------------------ */
+  // Every page Lighthouse ran on carries one set naming exactly the runs the
+  // ledger holds for it, unaltered since it was built. The raw root binds the
+  // set, so the representative and its spread are as fixed as the runs.
+  const performanceRunsByUrl = new Map<string, Set<string>>();
+  for (const attempt of ledger.attempts) {
+    if (attempt.target.kind !== 'performance') continue;
+    const runs = performanceRunsByUrl.get(attempt.target.url) ?? new Set<string>();
+    runs.add(attempt.target.performanceProfile);
+    performanceRunsByUrl.set(attempt.target.url, runs);
+  }
+  const unboundPerformancePages: string[] = [];
+  for (const [url, runIds] of [...performanceRunsByUrl].sort(([a], [b]) => a.localeCompare(b))) {
+    const set = pagesByUrl.get(url)?.performanceMeasurement;
+    if (set === undefined || !isIntactMeasurementSet(set, url, runIds)) {
+      unboundPerformancePages.push(url);
+      continue;
+    }
+    acceptedArtifactDigests.push(set.digest);
+  }
+  if (unboundPerformancePages.length > 0) {
+    issues.add({
+      code: 'performance-confidence-insufficient',
+      severity: 'blocking',
+      resolution: 'system',
+      summary: 'A measured page has no intact measurement set covering all of its Lighthouse runs.',
+      evidenceRefs: unboundPerformancePages,
+    });
+  }
+
   if (unrecordedPages.length > 0) {
     issues.add({
       code: 'unresolved-material-gap',

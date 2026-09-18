@@ -68,6 +68,7 @@ import {
   type RenderedReadinessObservation,
 } from './page-readiness.js';
 import { extractStructuralAnchor, type StructuralAnchor } from './temporal-anchors.js';
+import type { PerformanceMeasurementSet } from './performance-measurement-set.js';
 
 export interface ScanPageOptions {
   /** Politeness delay applied between the raw/rendered/Lighthouse passes. */
@@ -214,6 +215,10 @@ export interface PageScanResult {
   /** Plan 059: the served document's structure at the raw pass, for the
    *  audit's temporal-coherence verdict. */
   structuralAnchor?: StructuralAnchor;
+  /** Plan 059 section 12: every Lighthouse run taken on this page and the
+   *  representative drawn from them. `lighthouse` is that representative
+   *  run's full report. */
+  performanceMeasurement?: PerformanceMeasurementSet;
 }
 
 /**

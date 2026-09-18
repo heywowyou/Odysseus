@@ -191,6 +191,18 @@ function sortByUrl<T extends { url: string }>(items: readonly T[]): T[] {
   return [...items].sort((a, b) => a.url.localeCompare(b.url));
 }
 
+/** Plan 059 section 12: which run-count class a Lighthouse-selected page
+ *  belongs to. The homepage, transactional pages and operator seeds are owed
+ *  three runs; every other representative a primary run. */
+export function performancePageClassOf(
+  decision: PageAuditDecision,
+): 'homepage' | 'transactional' | 'operator-seed' | 'selected' {
+  if (decision.reasonCodes.includes(HOMEPAGE_MARKER)) return 'homepage';
+  if (decision.role === 'transactional') return 'transactional';
+  if (decision.reasonCodes.includes(OPERATOR_SEED_MARKER)) return 'operator-seed';
+  return 'selected';
+}
+
 function isMandatoryRegardlessOfFamily(
   decision: PageAuditDecision,
 ): { mandatory: true; reasonCode: string } | { mandatory: false } {

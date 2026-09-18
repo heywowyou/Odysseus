@@ -96,6 +96,9 @@ export function readPersistedEvidenceInputs(
       url,
       ...(scan.readiness !== undefined ? { readiness: scan.readiness } : {}),
       ...(scan.frames !== undefined ? { frames: scan.frames } : {}),
+      ...(scan.performanceMeasurement !== undefined
+        ? { performanceMeasurement: scan.performanceMeasurement }
+        : {}),
     });
     if (scan.structuralAnchor !== undefined) pageAnchors.push(scan.structuralAnchor);
   }

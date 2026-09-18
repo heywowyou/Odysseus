@@ -7,6 +7,7 @@ import { normalizeAudit } from '@odysseus/core';
 import { launchBrowser } from './browser.js';
 import { scanSite, type ScanProgressEvent } from './scan-site.js';
 import { assessTemporalCoherence, type TemporalAnchorSet } from './temporal-anchors.js';
+import { readPageScanJson } from './artifacts/page-scan-io.js';
 
 // Origin of the shared fixtures/spa-demo dev server started once per e2e
 // run by scripts/vitest-e2e-global-setup.mjs.
@@ -254,5 +255,21 @@ describe('scanSite against fixtures/spa-demo', () => {
     expect(
       assessTemporalCoherence({ startUrl: result.crawl.startUrl, anchors, pageAnchors }).status,
     ).toBe('coherent');
-  }, 180_000);
+
+    // Plan 059 section 12: the homepage is owed three Lighthouse runs, all of
+    // which stay on record, and the page keeps its representative's report.
+    const home = readPageScanJson(path.join(auditDir, 'pages'), result.crawl.startUrl)!;
+    const measurement = home.performanceMeasurement!;
+    expect(measurement.pageClass).toBe('homepage');
+    expect(measurement.runs.map((run) => run.runId)).toEqual([
+      'lab-run-1',
+      'lab-run-2',
+      'lab-run-3',
+    ]);
+    expect(measurement.runs.every((run) => run.outcome.kind === 'measured')).toBe(true);
+    const score = measurement.accepted.metrics.find(
+      (metric) => metric.metric === 'performanceScore',
+    );
+    expect(home.lighthouse?.categories['performance']?.score).toBe(score?.value);
+  }, 420_000);
 });

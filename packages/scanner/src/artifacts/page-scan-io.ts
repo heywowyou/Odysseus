@@ -114,6 +114,9 @@ export function buildScanJson(
     ...(scanResult.acquisitionAttempts !== undefined
       ? { acquisitionAttempts: scanResult.acquisitionAttempts }
       : {}),
+    ...(scanResult.performanceMeasurement !== undefined
+      ? { performanceMeasurement: scanResult.performanceMeasurement }
+      : {}),
   };
 }
 

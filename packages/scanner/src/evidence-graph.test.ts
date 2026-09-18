@@ -6,6 +6,11 @@ import {
   type AuditEvidenceGraphInput,
 } from './evidence-graph.js';
 import {
+  buildPerformanceMeasurementSet,
+  PROVISIONAL_STABILITY_TOLERANCES,
+  type PerformanceMeasurementSet,
+} from './performance-measurement-set.js';
+import {
   attempt,
   AXE_FINDING,
   cleanAttempts,
@@ -253,5 +258,65 @@ describe('assembleAuditEvidenceGraph', () => {
 
   it('blocks when no robots policy was persisted', () => {
     expect(blockingCodes(cleanInput({ robotsChain: [] }))).toContain('robots-policy-unresolved');
+  });
+
+  describe('performance measurement sets', () => {
+    const labRun = (n: number) =>
+      attempt(
+        'lighthouse',
+        { kind: 'performance', url: HOME, performanceProfile: `lab-run-${n}` },
+        { surfaceId: 'surface:lighthouse-default-lab' },
+      );
+    const attempts = [...cleanAttempts(), labRun(1), labRun(2), labRun(3)];
+    const measured = (n: number, lcp: number) => ({
+      runId: `lab-run-${n}`,
+      observedAt: new Date(`2026-09-18T09:0${n}:00.000Z`),
+      environmentFingerprintRef: 'audit-environment',
+      outcome: { kind: 'measured' as const, metrics: { performanceScore: 0.7, lcp } },
+    });
+    // Persisted and read back, as the evidence stage sees it.
+    const measurementSet = (runs = [measured(1, 3000), measured(2, 3100), measured(3, 3050)]) =>
+      JSON.parse(
+        JSON.stringify(
+          buildPerformanceMeasurementSet({
+            url: HOME,
+            profile: 'mobile',
+            pageClass: 'homepage',
+            selectionReasons: ['homepage-url-present'],
+            runs,
+            tolerances: PROVISIONAL_STABILITY_TOLERANCES,
+          }),
+        ),
+      ) as PerformanceMeasurementSet;
+    const withSet = (set: PerformanceMeasurementSet | undefined) =>
+      cleanInput({
+        attempts,
+        pages: [
+          { ...page(HOME), ...(set !== undefined ? { performanceMeasurement: set } : {}) },
+          page(ROOMS),
+        ],
+      });
+
+    it('binds an intact set into the raw root and approves', () => {
+      const set = measurementSet();
+      const graph = assembleAuditEvidenceGraph(withSet(set));
+      expect(graph.quality.verdict).toBe('reportable-complete');
+      expect(graph.raw.acceptedArtifactDigests).toContain(set.digest);
+    });
+
+    it('blocks a measured page without a set', () => {
+      expect(blockingCodes(withSet(undefined))).toContain('performance-confidence-insufficient');
+    });
+
+    it('blocks a set that leaves out one of the recorded runs', () => {
+      const partial = measurementSet([measured(1, 3000), measured(2, 3100)]);
+      expect(blockingCodes(withSet(partial))).toContain('performance-confidence-insufficient');
+    });
+
+    it('blocks a set edited after it was built', () => {
+      const edited = measurementSet();
+      (edited.accepted.metrics[0] as { value: number }).value = 0.99;
+      expect(blockingCodes(withSet(edited))).toContain('performance-confidence-insufficient');
+    });
   });
 });
