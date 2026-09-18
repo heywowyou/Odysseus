@@ -43,6 +43,10 @@ export {
   HostRequestScheduler,
   type HostRequestSchedulerOptions,
 } from './host-request-scheduler.js';
+export * from './inventory-ledger.js';
+export * from './check-attempt-ledger.js';
+export * from './performance-measurement-set.js';
+export * from './audit-environment-fingerprint.js';
 export {
   buildRobotsPolicySnapshot,
   describeRobotsPolicyTransition,

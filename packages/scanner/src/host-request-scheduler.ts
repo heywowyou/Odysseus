@@ -106,13 +106,33 @@ export class HostRequestScheduler {
   async schedule<T>(run: () => Promise<T>): Promise<T> {
     await this.#acquireLane();
     try {
-      const waitMs = this.#nextStartAt - this.#now();
-      if (waitMs > 0) await this.#sleep(waitMs);
-      this.#nextStartAt = Math.max(this.#now(), this.#nextStartAt) + this.#delayMs;
+      await this.pace();
       return await run();
     } finally {
       this.#releaseLane();
     }
+  }
+
+  /**
+   * Waits for the next request slot without taking a lane.
+   *
+   * This exists because `schedule` holds a lane for the whole of a page's work,
+   * which is what lets a rate-limit response shed a lane, but a page's work is
+   * not one request. The rendered pass navigates a second time, Lighthouse
+   * navigates again, and a nested `schedule` from inside a held lane deadlocks
+   * as soon as every lane is held by a caller waiting for a lane. Separating
+   * the spacing from the lane makes those inner navigations pace correctly
+   * against every other request in the run rather than against nothing.
+   *
+   * The distinction is worth stating plainly, because getting it wrong is how
+   * the ceiling silently stops meaning anything: `schedule` answers "may this
+   * unit of work begin", and `pace` answers "may this request leave now".
+   * Anything that touches the audited host over the network calls one of them.
+   */
+  async pace(): Promise<void> {
+    const waitMs = this.#nextStartAt - this.#now();
+    if (waitMs > 0) await this.#sleep(waitMs);
+    this.#nextStartAt = Math.max(this.#now(), this.#nextStartAt) + this.#delayMs;
   }
 
   async #acquireLane(): Promise<void> {

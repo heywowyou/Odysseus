@@ -12,6 +12,7 @@ import {
   getMaxPages,
   getPageTimeoutMs,
 } from './config.js';
+import type { HostRequestScheduler } from './host-request-scheduler.js';
 import {
   isLanguageHomepagePath,
   isSameSiteHostname,
@@ -92,6 +93,19 @@ export interface CrawlOptions {
    *  a restart. Absent (the default) leaves the crawl's behavior exactly
    *  as it was before this option existed. */
   frontier?: CrawlFrontierOptions;
+  /** Plan 059 decision 18: the run's single host-wide politeness scheduler.
+   *  When supplied, every navigation this crawl makes takes its turn from it
+   *  instead of from the crawl's own sleep, so the crawl phase and everything
+   *  the scan phase later does share one request rate rather than each
+   *  observing the delay privately. The crawl still owns the *value*: it
+   *  computes the stricter-of-config-and-robots delay and raises the
+   *  scheduler's floor to it, so a robots `Crawl-delay` slows the whole run
+   *  and not merely the crawl.
+   *
+   *  Optional because the standalone crawl (the `crawl` CLI command, every
+   *  crawl test) has no run to share a scheduler with. Absent, the crawl
+   *  paces itself exactly as it did before this option existed. */
+  scheduler?: HostRequestScheduler;
 }
 
 /** Per-iteration loop state the resumable crawl must survive a process
@@ -340,7 +354,10 @@ function robotsTarget(url: string): string {
  * disallowed URLs are recorded but never navigated to. The politeness
  * delay is the larger of the configured delay and the site's own
  * Crawl-delay, since a site's stated preference should never be
- * overridden downward by local config.
+ * overridden downward by local config. Who waits that delay depends on
+ * `scheduler`: given one, the crawl takes each navigation's turn from the
+ * run's shared host scheduler and only contributes the delay value to it;
+ * given none, it sleeps between its own navigations as it always did.
  *
  * Plan 035 (issue #124): with `frontier` set the loop state (queue,
  * visited set, recorded pages, guard counters, robots/sitemap facts) is
@@ -408,6 +425,12 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   // same parse the fresh path uses, under a config the resume validation
   // has already pinned.
   const effectiveDelayMs = Math.max(delayMs, robotsRules.crawlDelayMs ?? 0);
+  // Plan 059 decision 18: the shared scheduler is constructed before robots.txt
+  // has been read, so this is where the site's own Crawl-delay reaches it. The
+  // raise is one-way inside the scheduler, so handing it the same value on a
+  // resume (where the delay is recomputed rather than restored) is a no-op
+  // rather than a way to walk a backed-off run's pacing back down.
+  options.scheduler?.raiseDelayTo(effectiveDelayMs);
   const sitemapMode = options.sitemapMode ?? 'none';
   const eligibleSitemapUrls = new Set<string>();
   let filteredSitemapPageCount = 0;
@@ -539,11 +562,36 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     lastFrontierSnapshotMs = Date.now();
   };
 
+  const scheduler = options.scheduler;
+
   try {
     // A resumed crawl starts false on purpose: the first resumed fetch
     // must pay the politeness delay, since a fast restart would otherwise
     // fire immediately at a site that may be rejecting crawls.
     let isFirstNavigation = resumeState === undefined;
+    if (scheduler !== undefined && resumeState !== undefined) {
+      // The same rule, expressed against a scheduler that has no memory of the
+      // interrupted attempt and would therefore hand the first resumed
+      // navigation a free opening slot. Claiming an empty turn charges that
+      // slot to the requests the previous attempt already made, so the first
+      // real resumed navigation waits exactly like every later one.
+      await scheduler.schedule(async () => {});
+    }
+
+    /** One place decides how a navigation earns its turn, because exactly one
+     *  pacer may apply to a given request: with the run's shared scheduler the
+     *  wait is global and the crawl competes for the same request rate as every
+     *  later phase, and without one the crawl keeps the private
+     *  sleep-between-pages it has always had. Running both would pay the
+     *  politeness delay twice for every page. */
+    const paceNavigation = async <T>(navigate: () => Promise<T>): Promise<T> => {
+      if (scheduler !== undefined) return scheduler.schedule(navigate);
+      if (!isFirstNavigation) {
+        await new Promise((resolve) => setTimeout(resolve, effectiveDelayMs));
+      }
+      isFirstNavigation = false;
+      return navigate();
+    };
 
     while (true) {
       while (queue.length > 0 && visited.size < maxPages) {
@@ -563,10 +611,6 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
           continue;
         }
 
-        if (!isFirstNavigation) {
-          await new Promise((resolve) => setTimeout(resolve, effectiveDelayMs));
-        }
-        isFirstNavigation = false;
         visited.add(item.url);
         options.onProgress?.({
           type: 'crawl-page',
@@ -577,7 +621,14 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
 
         const browserPage = await context.newPage();
         try {
-          const response = await browserPage.goto(item.url, { waitUntil: 'load' });
+          // The politeness wait now sits around the navigation itself rather
+          // than ahead of the whole iteration, so that a shared scheduler
+          // measures the gap between the requests a site actually receives and
+          // not between bookkeeping steps. Opening a Playwright page is local
+          // work and sends nothing, so it is free to happen inside the gap.
+          const response = await paceNavigation(() =>
+            browserPage.goto(item.url, { waitUntil: 'load' }),
+          );
           const httpStatus = response?.status();
           const contentType = response?.headers()['content-type'];
 

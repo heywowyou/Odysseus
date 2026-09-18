@@ -91,7 +91,7 @@ The canonical sources for this behavior are `docs/product/odysseus-project-brief
 | [056](archive/056-in-flight-work-guards.md) | Share one report production lock and refuse archive or delete while work is still in flight | P2 | M | after 055 (both edit the job delete route) | DONE (2026-09-17) |
 | [057](archive/057-prospect-owns-linked-audit-identity.md) | Make the prospect the single source of a linked audit's name and SIREN; edits on the audit save to the prospect | P2 | M | none | DONE (2026-09-17) |
 | [058](058-fail-closed-senior-report-quality-pipeline.md) | Make the paid report fail closed on content and PDF quality | P1 | XL | 027, 033, 039, 050, 051; 059 before production promotion | TODO |
-| [059](059-fail-closed-audit-evidence-quality.md) | Make full-audit evidence fail closed before report generation | P1 | XL | 021, 035, 050, 051; gates 058 promotion | TODO |
+| [059](059-fail-closed-audit-evidence-quality.md) | Make full-audit evidence fail closed before report generation | P1 | XL | 021, 035, 050, 051; gates 058 promotion | IN PROGRESS: Phase A done |
 | [060](060-application-quality-control-room.md) | Make the dashboard a truthful quality control room over evidence, reports and operator attention | P1 | XL | 058, 059; 035, 050-057 semantics | TODO |
 | [061](061-durable-work-state-capabilities-and-queue.md) | Make long-running work, action safety, cancellation and scan queue state durable and truthful | P1 | XL | 060; 035, 050, 055, 056; 058/059 run contracts | TODO |
 | [062](062-audit-control-room-lineage-and-approval.md) | Make audit detail the evidence/report lineage workspace with explicit exact-bundle approval | P1 | XL | 058, 059, 060, 061; 050, 051/054, 057 | TODO |

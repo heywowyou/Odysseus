@@ -9,6 +9,7 @@ import {
   getLighthouseTimeoutMs,
   getMaxCrawlDepth,
   getMaxPages,
+  UNLIMITED_MAX_CRAWL_DEPTH,
 } from './config.js';
 
 const ENV_KEYS = [
@@ -89,7 +90,16 @@ describe('positive-int env getters', () => {
   it('getMaxCrawlDepth reads MAX_CRAWL_DEPTH independently of MAX_PAGES', () => {
     delete process.env.MAX_CRAWL_DEPTH;
     process.env.MAX_PAGES = '99';
-    expect(getMaxCrawlDepth()).toBe(5);
+    // Unbounded by default since the depth cap was removed for the same
+    // reason the page cap was: a page missing because the frontier stopped
+    // at depth 5 is just as absent from a paid audit as one missing at page
+    // 20, and it went unmentioned where a page cap is disclosed.
+    expect(getMaxCrawlDepth()).toBe(UNLIMITED_MAX_CRAWL_DEPTH);
+  });
+
+  it('getMaxCrawlDepth still honours an explicit operator bound', () => {
+    process.env.MAX_CRAWL_DEPTH = '3';
+    expect(getMaxCrawlDepth()).toBe(3);
   });
 
   it('getLighthouseTimeoutMs falls back to the default when unset', () => {

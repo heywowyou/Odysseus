@@ -57,7 +57,71 @@ export const UNLIMITED_MAX_PAGES = Number.MAX_SAFE_INTEGER;
  *  no trap detector currently guards against - crawl a site of unknown
  *  shape with an explicit --max-pages until one exists. */
 export const DEFAULT_MAX_PAGES = UNLIMITED_MAX_PAGES;
-export const DEFAULT_MAX_CRAWL_DEPTH = 5;
+
+/** The depth counterpart of UNLIMITED_MAX_PAGES, and the same sentinel trick
+ *  for the same JSON/Mongoose reason. */
+export const UNLIMITED_MAX_CRAWL_DEPTH = Number.MAX_SAFE_INTEGER;
+
+/** Changed 2026-09-18 from a hard 5 to no default limit, for exactly the
+ *  reason the page cap was removed above, and as an operator decision taken
+ *  while implementing plan 059.
+ *
+ *  Removing the page cap in August closed one door and left this one open. A
+ *  page omitted because the frontier reached depth 5 is just as missing from a
+ *  paid audit as one omitted at page 20, and it was missing more quietly,
+ *  because nothing disclosed a depth bound the way crawlCapDisclosureTemplate
+ *  discloses a page cap. Plan 059 section 3.3 makes the two the same truth
+ *  problem and refuses to call an audit complete when either bound cut it.
+ *
+ *  Keeping the default at 5 would have meant a deep site producing no report
+ *  at all once that rule is enforced, which is honest but useless. A limit is
+ *  now opt-in via --max-depth or MAX_CRAWL_DEPTH, and a bound the operator
+ *  actually set is disclosable rather than blocking (see
+ *  isScopeTruncationDisclosable in @odysseus/core).
+ *
+ *  This inherits the page cap's residual risk unchanged and makes it slightly
+ *  sharper: an effectively infinite URL space is now bounded only by the
+ *  continuation guard. Crawl a site of unknown shape with an explicit bound. */
+export const DEFAULT_MAX_CRAWL_DEPTH = UNLIMITED_MAX_CRAWL_DEPTH;
+/** Changed 2026-09-18 from 1000 as part of plan 059 decision 18, which makes
+ *  one host-wide scheduler (host-request-scheduler.ts) the only thing allowed
+ *  to start a request against the audited site. The number moved because its
+ *  meaning moved: it used to be a delay each pacer applied to its own lane,
+ *  and it is now a single global ceiling on how often any lane may start.
+ *
+ *  333ms is chosen to keep the host's experience unchanged, not to be politer
+ *  or faster. The scan phase already ran DEFAULT_SCAN_CONCURRENCY = 3 lanes,
+ *  each sleeping its own 1000ms, so a site already saw roughly three
+ *  navigations a second during the phase that dominates an audit. One global
+ *  ceiling of 333ms reproduces that same ~3/s and nothing more. Keeping 1000ms
+ *  as a global ceiling would have silently made every audit three times slower
+ *  than the one that has been running against real client sites, which is a
+ *  different decision from the one this plan asked for.
+ *
+ *  Be clear about what this does and does not bound. The scheduler paces
+ *  navigations the scanner itself initiates. It does not pace the subresources
+ *  a page pulls once it is loading, nor the requests a Lighthouse run issues
+ *  inside its own navigation, so this is a ceiling on crawler-initiated
+ *  requests and never a ceiling on total traffic reaching the host. A site
+ *  that answers one navigation with eighty asset requests still receives
+ *  eighty asset requests.
+ *
+ *  HELD AT 1000ms UNTIL THE SCHEDULER OWNS EVERY NAVIGATION. The reasoning
+ *  above is sound and the 333ms value is the intended destination, but it is
+ *  only safe once every request path goes through the scheduler, and three do
+ *  not yet: the rendered pass's second navigation inside `scanPage`, the
+ *  sequential Lighthouse loop, and the robots/sitemap setup fetches. Each of
+ *  those is still paced by the raw delay value, so lowering this number today
+ *  would leave the scan phase at its current rate while making those three
+ *  paths three times faster than they have ever run against a real client
+ *  site - the opposite of what this change is for, and a politeness regression
+ *  rather than the neutral one intended.
+ *
+ *  `HostRequestScheduler.pace()` exists to close this: it waits for a request
+ *  slot without taking a lane, which is what those inner navigations need,
+ *  since a nested `schedule()` from inside a held lane deadlocks once every
+ *  lane is held. Route those three call sites through `pace()`, confirm the
+ *  observed rate against a fixture site, and then lower this to 333. */
 export const DEFAULT_CRAWL_DELAY_MS = 1000;
 export const DEFAULT_PAGE_TIMEOUT_MS = 30_000;
 /** How long the rendered pass waits for the network to fall idle *after*
@@ -84,9 +148,12 @@ export const DEFAULT_RENDER_SETTLE_TIMEOUT_MS = 8_000;
  *  runs, not just broken ones. */
 export const DEFAULT_LIGHTHOUSE_TIMEOUT_MS = 120_000;
 /** Number of pages the scan phase (render-diff + axe + Lighthouse) processes
- *  at once. Each lane keeps the same CRAWL_DELAY_MS pacing it always had;
- *  this only adds lanes, it never shortens the delay between requests. The
- *  crawl (link-discovery) phase is unaffected and stays sequential. */
+ *  at once. Since plan 059 decision 18 the lanes no longer carry their own
+ *  pacing: they all take their turn from the run's single HostRequestScheduler,
+ *  so raising this buys overlapping render/axe/Lighthouse work and never buys
+ *  a higher request rate. It is also the scheduler's concurrency bound, which
+ *  the scheduler may lower on its own after a rate-limit signal. The crawl
+ *  (link-discovery) phase is unaffected and stays sequential. */
 export const DEFAULT_SCAN_CONCURRENCY = 3;
 
 /**

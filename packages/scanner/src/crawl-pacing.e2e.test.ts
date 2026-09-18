@@ -174,7 +174,7 @@ describe('crawlSite paces requests by delayMs', () => {
   }, 45_000);
 });
 
-describe('scanSite staggers lane starts by laneIndex * delayMs', () => {
+describe('scanSite paces every phase through one host scheduler', () => {
   const PAGE_PATHS = ['/', '/p1.html', '/p2.html', '/p3.html'];
   let recording: RecordingServer;
   let screenshotDir: string;
@@ -189,7 +189,7 @@ describe('scanSite staggers lane starts by laneIndex * delayMs', () => {
     if (screenshotDir) await fs.rm(screenshotDir, { recursive: true, force: true });
   });
 
-  it("starts the two lanes' first requests at least one delay apart", async () => {
+  it('spaces both the crawl phase and the scan lanes by at least one delay', async () => {
     const startedAt = Date.now();
     const result = await scanSite(recording.origin, {
       browser,
@@ -211,8 +211,10 @@ describe('scanSite staggers lane starts by laneIndex * delayMs', () => {
     // navigates a raw pass and a rendered pass. The site-level fetches (the
     // security-headers request and the cookie-consent navigation, which both
     // hit the start URL) all finish before the lanes start, so each path's
-    // LAST two requests are always renderDiff's raw and rendered pair.
+    // FIRST request is always the crawl's and its LAST two are always
+    // renderDiff's raw and rendered pair.
     const timesByUrl = pageRequestTimesByUrl(recording.requests, PAGE_PATHS);
+    const crawlPhaseTimes: number[] = [];
     const lanePhaseTimes: number[] = [];
     for (const pagePath of PAGE_PATHS) {
       const times = timesByUrl.get(pagePath);
@@ -220,19 +222,33 @@ describe('scanSite staggers lane starts by laneIndex * delayMs', () => {
       // that the site was scanned less.
       expect(times).toBeDefined();
       expect(times!.length).toBeGreaterThanOrEqual(3);
+      crawlPhaseTimes.push(times![0]!);
       lanePhaseTimes.push(...times!.slice(-2));
     }
     expect(lanePhaseTimes).toHaveLength(8);
+    crawlPhaseTimes.sort((a, b) => a - b);
     lanePhaseTimes.sort((a, b) => a - b);
+
+    // Plan 059 decision 18 moved the crawl phase onto the same scheduler the
+    // scan lanes use, so its navigations are spaced by that scheduler instead
+    // of by a sleep crawlSite owns. These four gaps are what proves the
+    // handover kept the pacing: a crawl wired to a scheduler but never waiting
+    // on it would fetch the whole frontier back to back.
+    for (let index = 1; index < crawlPhaseTimes.length; index += 1) {
+      expect(crawlPhaseTimes[index]! - crawlPhaseTimes[index - 1]!).toBeGreaterThanOrEqual(200);
+    }
 
     // The earliest lane-phase request is lane 0's first raw navigation; the
     // next is at least one 250 ms delay later, whether it is lane 1's own
-    // first navigation (the lanes start laneIndex * effectiveDelayMs apart)
-    // or lane 0's rendered pass (renderDiff sleeps delayMs between its two
-    // navigations). A regression that drops the stagger collapses this gap
-    // to near zero; that collapse is the failure this test exists to catch.
-    // A 200 ms floor for a 250 ms setting leaves ordinary timer jitter while
-    // remaining observable when the full suite heavily contends for CPU.
+    // first navigation (the scheduler spaces request starts globally, so a
+    // second lane can never open at the same instant as the first) or lane 0's
+    // rendered pass (renderDiff still sleeps delayMs between its two
+    // navigations). The lanes used to be staggered by laneIndex * delayMs and
+    // now simply queue behind the shared scheduler; either way a regression
+    // that lets both lanes fire at once collapses this gap to near zero, and
+    // that collapse is the failure this test exists to catch. A 200 ms floor
+    // for a 250 ms setting leaves ordinary timer jitter while remaining
+    // observable when the full suite heavily contends for CPU.
     expect(lanePhaseTimes[1]! - lanePhaseTimes[0]!).toBeGreaterThanOrEqual(200);
 
     // Generous ceiling: crawl phase plus scan phase, over a dozen

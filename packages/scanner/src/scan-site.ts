@@ -9,11 +9,13 @@ import {
   type SitemapMode,
 } from '@odysseus/core';
 import {
+  getCrawlDelayMs,
   getCrawlerUserAgent,
   getCruxApiKey,
   getPageTimeoutMs,
   getScanConcurrency,
 } from './config.js';
+import { HostRequestScheduler } from './host-request-scheduler.js';
 import type { RedirectHostCache } from './checks/transactional-flow.js';
 import type { SitemapCheckResult } from './checks/sitemap.js';
 import { checkLlmsTxt, type LlmsTxtCheckResult } from './checks/llms-txt.js';
@@ -176,10 +178,11 @@ export interface ScanSiteOptions {
   delayMs?: number;
   timeoutMs?: number;
   userAgent?: string;
-  /** Number of pages scanned at once. Each lane keeps the exact same
-   *  delayMs pacing a single sequential run always had; this only adds
-   *  lanes, it does not shorten the delay between requests. Defaults to
-   *  getScanConcurrency() (SCAN_CONCURRENCY env var, default 3). */
+  /** Number of pages scanned at once, and the concurrency bound of the run's
+   *  single host scheduler (plan 059 decision 18). Lanes no longer pace
+   *  themselves, so raising this overlaps more render/axe/Lighthouse work
+   *  without raising the rate at which the site is asked for pages. Defaults
+   *  to getScanConcurrency() (SCAN_CONCURRENCY env var, default 3). */
   concurrency?: number;
   /** The `pages/` parent directory every scanned page's screenshots are
    *  written under; renderDiff appends its own <slug>-<hash> subdirectory
@@ -271,10 +274,6 @@ export interface SiteScanResult {
    *  writing can join crawl inventory to pass provenance without relying on
    *  completion order. */
   analysisCoverageByUrl?: ReadonlyMap<string, PageAnalysisCoverage>;
-}
-
-async function sleep(ms: number): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -369,21 +368,25 @@ export async function withPageWatchdog<T extends RenderedAnalysisResult | PageSc
 }
 
 /**
- * Runs one lane of the scan phase: a sequential slice of pagesToScan,
- * pacing itself with the exact same delayMs sleep-between-pages a single
- * sequential scan always used. `startDelayMs` staggers this lane's very
- * first request (laneIndex * delayMs) so N lanes don't all fire their
- * opening request in the same instant; every request after that is spaced
- * by the ordinary delayMs within the lane. Multiple lanes running
- * concurrently is what raises throughput; no lane's own request cadence
- * changes.
+ * Runs one lane of the scan phase: a sequential slice of pagesToScan, each
+ * page taking its turn from the run's shared `scheduler` rather than from a
+ * sleep of its own (plan 059 decision 18). The lane no longer knows anything
+ * about pacing: the scheduler decides when this page may start, and holding
+ * its slot for the whole page means the scheduler's concurrency bound is the
+ * real bound on overlapping work, so a rate-limited site shedding a lane
+ * actually sheds one.
+ *
+ * `delayMs` survives only because `scanPage` still spaces the two navigations
+ * render-diff makes inside a single page with it. That is a different request
+ * from the one scheduled here, so the two are not stacked on the same
+ * navigation.
  */
 async function runScanLane(
   laneUrls: string[],
   browser: Browser,
   debugPort: number,
   delayMs: number,
-  startDelayMs: number,
+  scheduler: HostRequestScheduler,
   screenshotDir: string,
   timeoutMs: number | undefined,
   userAgent: string | undefined,
@@ -403,50 +406,45 @@ async function runScanLane(
   runGuard: PageWorkGuard | undefined,
   onPageDone: (pageResult: PageScanResult, durationMs: number) => void,
 ): Promise<void> {
-  let nextDelayMs = startDelayMs;
-
   for (const url of laneUrls) {
-    if (nextDelayMs > 0) {
-      await sleep(nextDelayMs);
-    }
-    nextDelayMs = delayMs;
-
     // Issue #200: a fresh guard per page, mirrored into the run-wide
     // guard, so the watchdog below can force-close only this page's
     // contexts on timeout without touching other lanes' still-legitimate
     // work.
     const pageGuard = createPageWorkGuard(runGuard);
 
-    // Issue #223: timed around the actual page work only (not the
-    // pre-page pacing sleep above, and not job-progress persistence),
-    // since that is what the ETA's per-page duration estimator needs to
-    // reflect the real cost of a page.
-    const workStartedAtMs = Date.now();
-    const pageResult = await withPageWatchdog(
-      url,
-      scanPage(browser, debugPort, url, {
-        delayMs,
-        screenshotDir,
-        redirectHostCache,
-        guard: pageGuard,
-        ...(timeoutMs !== undefined ? { timeoutMs } : {}),
-        ...(userAgent !== undefined ? { userAgent } : {}),
-        ...(mentionsLegalesUrl !== undefined ? { mentionsLegalesUrl } : {}),
-        ...(mentionsLegalesSearchedUrls !== undefined ? { mentionsLegalesSearchedUrls } : {}),
-        ...(mentionsLegalesHomepageFallback ? { mentionsLegalesHomepageFallback } : {}),
-        ...(homepageUrl !== undefined ? { homepageUrl } : {}),
-        ...(sitemapCheck !== undefined ? { sitemapCheck } : {}),
-        ...(llmsTxtCheck !== undefined ? { llmsTxtCheck } : {}),
-        ...(securityHeadersCheck !== undefined ? { securityHeadersCheck } : {}),
-        ...(cookieConsentCheck !== undefined ? { cookieConsentCheck } : {}),
-        ...(accessibilityStatementCheck !== undefined ? { accessibilityStatementCheck } : {}),
-        ...(bookingEngineUrl !== undefined ? { bookingEngineUrl } : {}),
-        ...(skipLighthouse ? { skipLighthouse } : {}),
-      }),
-      FULL_SCAN_PAGE_WATCHDOG_MS,
-      pageGuard,
-    );
-    onPageDone(pageResult as PageScanResult, Date.now() - workStartedAtMs);
+    const { pageResult, durationMs } = await scheduler.schedule(async () => {
+      // Issue #223: timed inside the scheduled turn, so the wait for that turn
+      // is excluded exactly the way the lane's own pre-page sleep used to be,
+      // and the ETA's per-page estimator still sees the real cost of a page.
+      const workStartedAtMs = Date.now();
+      const result = await withPageWatchdog(
+        url,
+        scanPage(browser, debugPort, url, {
+          delayMs,
+          screenshotDir,
+          redirectHostCache,
+          guard: pageGuard,
+          ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+          ...(userAgent !== undefined ? { userAgent } : {}),
+          ...(mentionsLegalesUrl !== undefined ? { mentionsLegalesUrl } : {}),
+          ...(mentionsLegalesSearchedUrls !== undefined ? { mentionsLegalesSearchedUrls } : {}),
+          ...(mentionsLegalesHomepageFallback ? { mentionsLegalesHomepageFallback } : {}),
+          ...(homepageUrl !== undefined ? { homepageUrl } : {}),
+          ...(sitemapCheck !== undefined ? { sitemapCheck } : {}),
+          ...(llmsTxtCheck !== undefined ? { llmsTxtCheck } : {}),
+          ...(securityHeadersCheck !== undefined ? { securityHeadersCheck } : {}),
+          ...(cookieConsentCheck !== undefined ? { cookieConsentCheck } : {}),
+          ...(accessibilityStatementCheck !== undefined ? { accessibilityStatementCheck } : {}),
+          ...(bookingEngineUrl !== undefined ? { bookingEngineUrl } : {}),
+          ...(skipLighthouse ? { skipLighthouse } : {}),
+        }),
+        FULL_SCAN_PAGE_WATCHDOG_MS,
+        pageGuard,
+      );
+      return { pageResult: result, durationMs: Date.now() - workStartedAtMs };
+    });
+    onPageDone(pageResult as PageScanResult, durationMs);
   }
 }
 
@@ -477,8 +475,8 @@ interface StagedScanContext {
 }
 
 /**
- * Rendered-analysis equivalent of `runScanLane`: same sequential,
- * staggered-start, delay-paced lane shape, but calling
+ * Rendered-analysis equivalent of `runScanLane`: same sequential lane shape
+ * taking each page's turn from the same shared scheduler, but calling
  * `runRenderedAnalysis` (no Lighthouse) instead of the all-in-one
  * `scanPage`, since the full-audit planner's Lighthouse selection cannot
  * be decided until every lane's rendered-cost facts exist.
@@ -487,57 +485,53 @@ async function runRenderedAnalysisLane(
   laneUrls: string[],
   browser: Browser,
   delayMs: number,
-  startDelayMs: number,
+  scheduler: HostRequestScheduler,
   context: StagedScanContext,
   onPageDone: (url: string, result: RenderedAnalysisResult, durationMs: number) => void,
 ): Promise<void> {
-  let nextDelayMs = startDelayMs;
-
   for (const url of laneUrls) {
-    if (nextDelayMs > 0) {
-      await sleep(nextDelayMs);
-    }
-    nextDelayMs = delayMs;
-
     // Issue #200: same per-page-guard-mirrored-into-run-wide-guard shape
     // as runScanLane above.
     const pageGuard = createPageWorkGuard(context.runGuard);
 
-    // Issue #223: same "actual page work only" timing window as
-    // runScanLane above.
-    const workStartedAtMs = Date.now();
-    const result = await withPageWatchdog(
-      url,
-      runRenderedAnalysis(browser, url, {
-        delayMs,
-        screenshotDir: context.screenshotDir,
-        redirectHostCache: context.redirectHostCache,
-        guard: pageGuard,
-        ...(context.timeoutMs !== undefined ? { timeoutMs: context.timeoutMs } : {}),
-        ...(context.userAgent !== undefined ? { userAgent: context.userAgent } : {}),
-        ...(context.mentionsLegalesUrl !== undefined
-          ? { mentionsLegalesUrl: context.mentionsLegalesUrl }
-          : {}),
-        ...(context.homepageUrl !== undefined ? { homepageUrl: context.homepageUrl } : {}),
-        ...(context.sitemapCheck !== undefined ? { sitemapCheck: context.sitemapCheck } : {}),
-        ...(context.llmsTxtCheck !== undefined ? { llmsTxtCheck: context.llmsTxtCheck } : {}),
-        ...(context.securityHeadersCheck !== undefined
-          ? { securityHeadersCheck: context.securityHeadersCheck }
-          : {}),
-        ...(context.cookieConsentCheck !== undefined
-          ? { cookieConsentCheck: context.cookieConsentCheck }
-          : {}),
-        ...(context.accessibilityStatementCheck !== undefined
-          ? { accessibilityStatementCheck: context.accessibilityStatementCheck }
-          : {}),
-        ...(context.bookingEngineUrl !== undefined
-          ? { bookingEngineUrl: context.bookingEngineUrl }
-          : {}),
-      }),
-      RENDERED_ANALYSIS_WATCHDOG_MS,
-      pageGuard,
-    );
-    onPageDone(url, result as RenderedAnalysisResult, Date.now() - workStartedAtMs);
+    const { result, durationMs } = await scheduler.schedule(async () => {
+      // Issue #223: same "actual page work only" timing window as
+      // runScanLane above, measured once the turn has been granted.
+      const workStartedAtMs = Date.now();
+      const analysis = await withPageWatchdog(
+        url,
+        runRenderedAnalysis(browser, url, {
+          delayMs,
+          screenshotDir: context.screenshotDir,
+          redirectHostCache: context.redirectHostCache,
+          guard: pageGuard,
+          ...(context.timeoutMs !== undefined ? { timeoutMs: context.timeoutMs } : {}),
+          ...(context.userAgent !== undefined ? { userAgent: context.userAgent } : {}),
+          ...(context.mentionsLegalesUrl !== undefined
+            ? { mentionsLegalesUrl: context.mentionsLegalesUrl }
+            : {}),
+          ...(context.homepageUrl !== undefined ? { homepageUrl: context.homepageUrl } : {}),
+          ...(context.sitemapCheck !== undefined ? { sitemapCheck: context.sitemapCheck } : {}),
+          ...(context.llmsTxtCheck !== undefined ? { llmsTxtCheck: context.llmsTxtCheck } : {}),
+          ...(context.securityHeadersCheck !== undefined
+            ? { securityHeadersCheck: context.securityHeadersCheck }
+            : {}),
+          ...(context.cookieConsentCheck !== undefined
+            ? { cookieConsentCheck: context.cookieConsentCheck }
+            : {}),
+          ...(context.accessibilityStatementCheck !== undefined
+            ? { accessibilityStatementCheck: context.accessibilityStatementCheck }
+            : {}),
+          ...(context.bookingEngineUrl !== undefined
+            ? { bookingEngineUrl: context.bookingEngineUrl }
+            : {}),
+        }),
+        RENDERED_ANALYSIS_WATCHDOG_MS,
+        pageGuard,
+      );
+      return { result: analysis, durationMs: Date.now() - workStartedAtMs };
+    });
+    onPageDone(url, result as RenderedAnalysisResult, durationMs);
   }
 }
 
@@ -615,6 +609,7 @@ async function runStagedFullAuditScan(
   debugPort: number,
   delayMs: number,
   concurrency: number,
+  scheduler: HostRequestScheduler,
   skipLighthouse: boolean,
   context: StagedScanContext,
   onProgress: ((event: ScanProgressEvent) => void) | undefined,
@@ -670,12 +665,12 @@ async function runStagedFullAuditScan(
   await Promise.all(
     lanes
       .filter((laneUrls) => laneUrls.length > 0)
-      .map((laneUrls, laneIndex) =>
+      .map((laneUrls) =>
         runRenderedAnalysisLane(
           laneUrls,
           browser,
           delayMs,
-          laneIndex * delayMs,
+          scheduler,
           context,
           (url, result, durationMs) => {
             const { checkOutcomes, renderedCostProfile, ...content } = result;
@@ -899,10 +894,18 @@ async function runStagedFullAuditScan(
 /**
  * Crawls a site, then scans every page the crawl actually visited (skipping
  * robots-disallowed and errored pages, since there is nothing rendered to
- * scan there). Reuses crawlSite's own stricter-of-config-and-robots delay
- * for pacing between pages, so the scanning phase's ~3x request volume per
- * page stays exactly as polite as the crawl phase - concurrency only adds
- * parallel lanes, it never shortens that delay.
+ * scan there). Both phases take their turns from one HostRequestScheduler
+ * created for the run (plan 059 decision 18), seeded with the configured delay
+ * and raised to crawlSite's stricter-of-config-and-robots value, so the crawl
+ * phase and the scan lanes share a single request rate instead of each
+ * observing the delay privately. Concurrency adds parallel lanes under that one
+ * rate; it never buys a lane a request rate of its own.
+ *
+ * What the scheduler does not cover, and should not be read as covering: the
+ * second navigation render-diff makes within a page, the navigation a
+ * Lighthouse run performs, and every subresource a loading page pulls. Those
+ * are still spaced by the same delay value passed down to them, so the ceiling
+ * here is on page-level requests the scanner initiates, not on total traffic.
  *
  * The crawl phase itself stays fully sequential (unaffected by
  * concurrency): it is the phase CLAUDE.md's politeness rule names most
@@ -999,8 +1002,23 @@ export async function scanSite(
       );
     }
   }
+  // Plan 059 decision 18: one scheduler for the whole run, created before the
+  // first request of any kind, so the crawl phase and every scan lane draw
+  // their turns from the same rate instead of each observing the delay
+  // privately. Its floor starts at the configured delay because robots.txt has
+  // not been read yet; crawlSite raises it to the stricter-of-config-and-robots
+  // value as soon as it has one, and the checkpoint-resume path below raises it
+  // from the checkpointed crawl, which is the branch where no crawl runs at all.
+  // Concurrency comes from the configured bound rather than the clamped one
+  // further down, since that clamp only exists to avoid creating idle lanes for
+  // a site with fewer pages than lanes.
+  const scheduler = new HostRequestScheduler({
+    floorDelayMs: options.delayMs ?? getCrawlDelayMs(),
+    maxConcurrency: options.concurrency ?? getScanConcurrency(),
+  });
   const sitemapMode = options.sitemapMode ?? 'supplement';
   const crawlOptions = (frontier: CrawlOptions['frontier']): CrawlOptions => ({
+    scheduler,
     browser: options.browser,
     ...(options.maxPages !== undefined ? { maxPages: options.maxPages } : {}),
     ...(options.maxDepth !== undefined ? { maxDepth: options.maxDepth } : {}),
@@ -1107,6 +1125,12 @@ export async function scanSite(
       deleteCrawlFrontierState(options.auditDir);
     }
   }
+
+  // The crawl reports the delay it actually used, including a robots
+  // Crawl-delay. On the checkpoint-resume path that value comes off disk and
+  // crawlSite never ran, so this is the only place the scheduler can learn it;
+  // on every other path the raise is a no-op because crawlSite already made it.
+  scheduler.raiseDelayTo(crawl.effectiveDelayMs);
 
   const pagesToScan = crawl.pages.filter((page) => page.status === 'visited');
   options.onProgress?.({ type: 'crawl-exclusions', excluded: countCrawlExclusions(crawl.pages) });
@@ -1243,6 +1267,7 @@ export async function scanSite(
       options.debugPort,
       crawl.effectiveDelayMs,
       concurrency,
+      scheduler,
       options.skipLighthouse ?? false,
       context,
       options.onProgress,
@@ -1286,13 +1311,13 @@ export async function scanSite(
   await Promise.all(
     lanes
       .filter((laneUrls) => laneUrls.length > 0)
-      .map((laneUrls, laneIndex) =>
+      .map((laneUrls) =>
         runScanLane(
           laneUrls,
           options.browser,
           options.debugPort,
           crawl.effectiveDelayMs,
-          laneIndex * crawl.effectiveDelayMs,
+          scheduler,
           options.screenshotDir,
           options.timeoutMs,
           options.userAgent,
