@@ -36,9 +36,9 @@ interface CruxRecordMetrics {
   interaction_to_next_paint?: { percentiles?: { p75?: number | string } };
 }
 
-export type CruxAcquisitionStatus = 'available' | 'no-public-data' | 'provider-error';
+type CruxAcquisitionStatus = 'available' | 'no-public-data' | 'provider-error';
 
-export interface CruxFieldDataAcquisition {
+interface CruxFieldDataAcquisition {
   status: CruxAcquisitionStatus;
   granularity: 'origin';
   fieldData: CruxFieldDataResult;
