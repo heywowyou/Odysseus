@@ -412,6 +412,8 @@ async function runScanLane(
   bookingEngineUrl: string | undefined,
   skipLighthouse: boolean,
   runGuard: PageWorkGuard | undefined,
+  networkPolicy: NetworkTargetPolicy | undefined,
+  onNetworkSafetyBlocked: ((disposition: NetworkSafetyDisposition) => void) | undefined,
   onPageDone: (pageResult: PageScanResult, durationMs: number) => void,
 ): Promise<void> {
   for (const url of laneUrls) {
@@ -447,6 +449,8 @@ async function runScanLane(
           ...(accessibilityStatementCheck !== undefined ? { accessibilityStatementCheck } : {}),
           ...(bookingEngineUrl !== undefined ? { bookingEngineUrl } : {}),
           ...(skipLighthouse ? { skipLighthouse } : {}),
+          ...(networkPolicy !== undefined ? { networkPolicy } : {}),
+          ...(onNetworkSafetyBlocked !== undefined ? { onNetworkSafetyBlocked } : {}),
         }),
         FULL_SCAN_PAGE_WATCHDOG_MS,
         pageGuard,
@@ -481,6 +485,8 @@ interface StagedScanContext {
   bookingEngineUrl: string | undefined;
   /** Issue #200: the run-wide guard every page's own guard mirrors into. */
   runGuard: PageWorkGuard | undefined;
+  networkPolicy: NetworkTargetPolicy | undefined;
+  onNetworkSafetyBlocked: ((disposition: NetworkSafetyDisposition) => void) | undefined;
 }
 
 /**
@@ -534,6 +540,12 @@ async function runRenderedAnalysisLane(
             : {}),
           ...(context.bookingEngineUrl !== undefined
             ? { bookingEngineUrl: context.bookingEngineUrl }
+            : {}),
+          ...(context.networkPolicy !== undefined
+            ? { networkPolicy: context.networkPolicy }
+            : {}),
+          ...(context.onNetworkSafetyBlocked !== undefined
+            ? { onNetworkSafetyBlocked: context.onNetworkSafetyBlocked }
             : {}),
         }),
         RENDERED_ANALYSIS_WATCHDOG_MS,
