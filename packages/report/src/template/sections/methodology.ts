@@ -604,7 +604,7 @@ export function renderMethodology(
     qualityLimitations.length === 0
       ? ''
       : `<div data-quality-limitations="true" style="font-size:12.5px;margin-top:var(--space-2);max-width:var(--measure-prose)">
-          <p><strong>${escapeHtml(language === 'fr' ? "Limites de preuve à conserver à la lecture" : 'Evidence limitations to retain when reading')}</strong></p>
+          <p><strong>${escapeHtml(language === 'fr' ? 'Limites de preuve à conserver à la lecture' : 'Evidence limitations to retain when reading')}</strong></p>
           <ul>${qualityLimitations.map((limitation) => `<li data-quality-limitation-id="${escapeHtml(limitation.limitationId)}">${escapeHtml(limitation.summary[language])}</li>`).join('')}</ul>
         </div>`;
 

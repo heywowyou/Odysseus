@@ -1,9 +1,5 @@
 import { Schema, type Connection, type Model } from 'mongoose';
-import type {
-  ReportBundleState,
-  ReportQualityModelCall,
-  Sha256Digest,
-} from '@odysseus/core';
+import type { ReportBundleState, ReportQualityModelCall, Sha256Digest } from '@odysseus/core';
 
 export interface ReportQualityLeaseDocument {
   auditId: string;

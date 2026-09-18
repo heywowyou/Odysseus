@@ -1,10 +1,6 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { Connection, ClientSession } from 'mongoose';
-import type {
-  ReportBundleState,
-  ReportQualityModelCall,
-  Sha256Digest,
-} from '@odysseus/core';
+import type { ReportBundleState, ReportQualityModelCall, Sha256Digest } from '@odysseus/core';
 import {
   createActiveReportBundleModel,
   createReportBundleModel,
@@ -44,9 +40,9 @@ export class StaleReportQualityRunError extends Error {
 function isDuplicateKey(error: unknown): boolean {
   return Boolean(
     error &&
-      typeof error === 'object' &&
-      'code' in error &&
-      Number((error as { code?: unknown }).code) === 11000,
+    typeof error === 'object' &&
+    'code' in error &&
+    Number((error as { code?: unknown }).code) === 11000,
   );
 }
 
@@ -68,10 +64,7 @@ export async function acquireReportQualityLease(
       .findOneAndUpdate(
         {
           auditId,
-          $or: [
-            { leaseExpiresAt: { $lte: now } },
-            { qualityRunId },
-          ],
+          $or: [{ leaseExpiresAt: { $lte: now } }, { qualityRunId }],
         },
         {
           $set: { qualityRunId, leaseTokenHash: tokenHash, leaseExpiresAt: expiresAt },
@@ -188,7 +181,9 @@ export async function transitionReportQualityRun(
       state,
       updatedAt: new Date(),
       ...(patch.inputSnapshotDigest ? { inputSnapshotDigest: patch.inputSnapshotDigest } : {}),
-      ...(patch.approvedEvidenceDigest ? { approvedEvidenceDigest: patch.approvedEvidenceDigest } : {}),
+      ...(patch.approvedEvidenceDigest
+        ? { approvedEvidenceDigest: patch.approvedEvidenceDigest }
+        : {}),
       ...(patch.operatorApprovalBundleDigest
         ? { operatorApprovalBundleDigest: patch.operatorApprovalBundleDigest }
         : {}),
@@ -306,7 +301,9 @@ async function activateInsideSession(
   let active: ActiveReportBundleDocument | null;
   if (input.expectedRevision === 0) {
     try {
-      active = await activeModel.create([replacement], { session }).then((rows) => rows[0]!.toObject());
+      active = await activeModel
+        .create([replacement], { session })
+        .then((rows) => rows[0]!.toObject());
     } catch (error) {
       if (isDuplicateKey(error)) {
         throw new Error('odysseus: active report bundle changed before atomic promotion');

@@ -851,29 +851,108 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
   router.post('/api/audits/:auditId/report-quality', async ({ res, params }) => {
     const auditId = params['auditId']!;
     const audit = await getAuditRuntimeFields(connection, auditId);
-    if (!audit) { sendError(res, 404, 'audit not found'); return; }
-    try { sendJson(res, 201, { reportQuality: await runReportQualityForAudit(connection, audit, artifactStore) }); }
-    catch (error) { sendError(res, error instanceof Error && error.name === 'ReportQualityLeaseConflictError' ? 409 : 422, error instanceof Error ? error.message : 'report quality run failed'); }
+    if (!audit) {
+      sendError(res, 404, 'audit not found');
+      return;
+    }
+    try {
+      sendJson(res, 201, {
+        reportQuality: await runReportQualityForAudit(connection, audit, artifactStore),
+      });
+    } catch (error) {
+      sendError(
+        res,
+        error instanceof Error && error.name === 'ReportQualityLeaseConflictError' ? 409 : 422,
+        error instanceof Error ? error.message : 'report quality run failed',
+      );
+    }
   });
   router.get('/api/audits/:auditId/report-quality', async ({ res, params }) => {
     const auditId = params['auditId']!;
-    if (!(await getAuditRuntimeFields(connection, auditId))) { sendError(res, 404, 'audit not found'); return; }
-    const [candidate, active] = await Promise.all([getLatestReportBundle(connection, auditId), getActiveReportBundle(connection, auditId)]);
+    if (!(await getAuditRuntimeFields(connection, auditId))) {
+      sendError(res, 404, 'audit not found');
+      return;
+    }
+    const [candidate, active] = await Promise.all([
+      getLatestReportBundle(connection, auditId),
+      getActiveReportBundle(connection, auditId),
+    ]);
     sendJson(res, 200, { candidate, active });
   });
-  router.get('/api/audits/:auditId/report-quality/:bundleDigest/:language', async ({ res, params }) => {
-    const auditId=params['auditId']!, language=params['language']!, bundleDigest=params['bundleDigest']!;
-    if(!isReportLanguage(language)||!/^sha256:[a-f0-9]{64}$/u.test(bundleDigest)){sendError(res,400,'valid bundle digest and language are required');return;}
-    if(!artifactStore){sendError(res,503,'artifact store is not configured');return;}
-    const bundle=await getReportBundleByDigest(connection,auditId,bundleDigest as `sha256:${string}`);if(!bundle){sendError(res,404,'report quality bundle not found');return;}
-    try{const candidate=bundle[language];const pdf=await readVerifiedImmutablePdf(artifactStore,candidate.privateObjectKey,candidate.pdfDigest);res.statusCode=200;res.setHeader('content-type','application/pdf');res.setHeader('etag',`"${candidate.pdfDigest}"`);res.setHeader('cache-control','private, no-store');res.end(pdf);}catch(error){sendError(res,409,error instanceof Error?error.message:'candidate bytes unavailable');}
-  });
+  router.get(
+    '/api/audits/:auditId/report-quality/:bundleDigest/:language',
+    async ({ res, params }) => {
+      const auditId = params['auditId']!,
+        language = params['language']!,
+        bundleDigest = params['bundleDigest']!;
+      if (!isReportLanguage(language) || !/^sha256:[a-f0-9]{64}$/u.test(bundleDigest)) {
+        sendError(res, 400, 'valid bundle digest and language are required');
+        return;
+      }
+      if (!artifactStore) {
+        sendError(res, 503, 'artifact store is not configured');
+        return;
+      }
+      const bundle = await getReportBundleByDigest(
+        connection,
+        auditId,
+        bundleDigest as `sha256:${string}`,
+      );
+      if (!bundle) {
+        sendError(res, 404, 'report quality bundle not found');
+        return;
+      }
+      try {
+        const candidate = bundle[language];
+        const pdf = await readVerifiedImmutablePdf(
+          artifactStore,
+          candidate.privateObjectKey,
+          candidate.pdfDigest,
+        );
+        res.statusCode = 200;
+        res.setHeader('content-type', 'application/pdf');
+        res.setHeader('etag', `"${candidate.pdfDigest}"`);
+        res.setHeader('cache-control', 'private, no-store');
+        res.end(pdf);
+      } catch (error) {
+        sendError(res, 409, error instanceof Error ? error.message : 'candidate bytes unavailable');
+      }
+    },
+  );
   router.post('/api/audits/:auditId/report-quality/approve', async ({ req, res, params }) => {
-    const auditId=params['auditId']!, body=await readJsonBodyOrRespond(req,res);if(body===jsonBodyNotRead)return;
-    if(body===null||typeof body!=='object'){sendError(res,400,'request body must be a JSON object');return;}
-    const record=body as Record<string,unknown>,qualityRunId=record['qualityRunId'],epoch=record['epoch'],bundleDigest=record['bundleDigest'];
-    if(typeof qualityRunId!=='string'||typeof epoch!=='number'||!Number.isInteger(epoch)||typeof bundleDigest!=='string'||!/^sha256:[a-f0-9]{64}$/u.test(bundleDigest)){sendError(res,400,'qualityRunId, integer epoch, and exact bundleDigest are required');return;}
-    try{sendJson(res,201,{promoted:await approveAndPromoteReportQualityBundle(connection,artifactStore,{auditId,qualityRunId,epoch,bundleDigest:bundleDigest as `sha256:${string}`})});}catch(error){sendError(res,409,error instanceof Error?error.message:'bundle could not be promoted');}
+    const auditId = params['auditId']!,
+      body = await readJsonBodyOrRespond(req, res);
+    if (body === jsonBodyNotRead) return;
+    if (body === null || typeof body !== 'object') {
+      sendError(res, 400, 'request body must be a JSON object');
+      return;
+    }
+    const record = body as Record<string, unknown>,
+      qualityRunId = record['qualityRunId'],
+      epoch = record['epoch'],
+      bundleDigest = record['bundleDigest'];
+    if (
+      typeof qualityRunId !== 'string' ||
+      typeof epoch !== 'number' ||
+      !Number.isInteger(epoch) ||
+      typeof bundleDigest !== 'string' ||
+      !/^sha256:[a-f0-9]{64}$/u.test(bundleDigest)
+    ) {
+      sendError(res, 400, 'qualityRunId, integer epoch, and exact bundleDigest are required');
+      return;
+    }
+    try {
+      sendJson(res, 201, {
+        promoted: await approveAndPromoteReportQualityBundle(connection, artifactStore, {
+          auditId,
+          qualityRunId,
+          epoch,
+          bundleDigest: bundleDigest as `sha256:${string}`,
+        }),
+      });
+    } catch (error) {
+      sendError(res, 409, error instanceof Error ? error.message : 'bundle could not be promoted');
+    }
   });
 
   router.post('/api/audits/:auditId/approve-reports', async ({ res, params }) => {
@@ -991,16 +1070,38 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
 
     const activeBundle = await getActiveReportBundle(connection, auditId);
     if (activeBundle) {
-      if (!artifactStore) { sendError(res, 503, 'artifact store is not configured for the active immutable report'); return; }
+      if (!artifactStore) {
+        sendError(res, 503, 'artifact store is not configured for the active immutable report');
+        return;
+      }
       const activeLanguage = activeBundle[language];
       try {
-        const pdf = await readVerifiedImmutablePdf(artifactStore, activeLanguage.objectKey, activeLanguage.pdfDigest);
-        res.statusCode = 200; res.setHeader('content-type', 'application/pdf'); res.setHeader('etag', `"${activeLanguage.pdfDigest}"`); res.setHeader('cache-control', 'private, no-transform'); res.end(pdf);
-      } catch (error) { sendError(res, 409, error instanceof Error ? error.message : 'active report bytes failed integrity verification'); }
+        const pdf = await readVerifiedImmutablePdf(
+          artifactStore,
+          activeLanguage.objectKey,
+          activeLanguage.pdfDigest,
+        );
+        res.statusCode = 200;
+        res.setHeader('content-type', 'application/pdf');
+        res.setHeader('etag', `"${activeLanguage.pdfDigest}"`);
+        res.setHeader('cache-control', 'private, no-transform');
+        res.end(pdf);
+      } catch (error) {
+        sendError(
+          res,
+          409,
+          error instanceof Error
+            ? error.message
+            : 'active report bytes failed integrity verification',
+        );
+      }
       return;
     }
     const report = await getLatestReport(connection, auditId, language);
-    if (!report) { sendError(res, 404, `no ${language} report generated yet for this audit`); return; }
+    if (!report) {
+      sendError(res, 404, `no ${language} report generated yet for this audit`);
+      return;
+    }
 
     const freshness = classifyReportFreshness(report, audit.findingsProvenance);
     if (freshness !== 'fresh') {

@@ -76,10 +76,7 @@ import {
   resolveQualityDraft,
   validateQualityWriterOutput,
 } from './report-quality-draft.js';
-import {
-  putImmutableJson,
-  putPrivateCandidatePdf,
-} from './report-quality-storage.js';
+import { putImmutableJson, putPrivateCandidatePdf } from './report-quality-storage.js';
 
 const MAX_CONTENT_REPAIR_ITERATIONS = 8;
 const VISUAL_REVIEW_PAGE_BATCH = 1;
@@ -124,7 +121,13 @@ interface QualityRunContext {
   artifactStore: ArtifactStore;
   evidence: ApprovedAuditEvidencePayload;
   lease: ReportQualityLease;
-  state: 'running' | 'content-clean' | 'fr-candidate-clean' | 'en-candidate-clean' | 'parity-clean' | 'bundle-final-review';
+  state:
+    | 'running'
+    | 'content-clean'
+    | 'fr-candidate-clean'
+    | 'en-candidate-clean'
+    | 'parity-clean'
+    | 'bundle-final-review';
 }
 
 async function recordModelCall(
@@ -180,9 +183,7 @@ function normalizeSeniorPlan(
       findingIds: project.findingIds,
       evidenceRefs: project.evidenceRefs,
       factRefs: project.factRefs,
-      ...(project.likelyRootCause
-        ? { likelyRootCause: project.likelyRootCause }
-        : {}),
+      ...(project.likelyRootCause ? { likelyRootCause: project.likelyRootCause } : {}),
       ...(project.conditionality ? { conditionality: project.conditionality } : {}),
       impact: project.impact,
       effort: project.effort,
@@ -207,10 +208,7 @@ function assertPlanBindings(
     evidence.approval.auditEvidenceSnapshotDigest,
     evidence.approval.evidenceQualityAssessmentDigest,
     ...evidence.findings.map((finding) => finding.findingId),
-    ...dossier.packets.flatMap((packet) => [
-      packet.packetId,
-      ...packet.representativeEvidenceRefs,
-    ]),
+    ...dossier.packets.flatMap((packet) => [packet.packetId, ...packet.representativeEvidenceRefs]),
     ...dossier.patterns.map((pattern) => pattern.patternId),
   ]);
   for (const project of plan.remediationProjects) {
@@ -318,16 +316,13 @@ async function adjudicateIssues(
 }
 
 function acceptedObjective(issues: readonly ReviewIssue[]): ReviewIssue[] {
-  return issues.filter(
-    (issue) => issue.kind === 'objective-defect' && issue.status === 'accepted',
-  );
+  return issues.filter((issue) => issue.kind === 'objective-defect' && issue.status === 'accepted');
 }
 
 function materialUnsure(issues: readonly ReviewIssue[]): ReviewIssue[] {
   return issues.filter(
     (issue) =>
-      issue.status === 'unsure' &&
-      (issue.severity === 'blocking' || issue.severity === 'major'),
+      issue.status === 'unsure' && (issue.severity === 'blocking' || issue.severity === 'major'),
   );
 }
 
@@ -343,11 +338,11 @@ async function cleanContentDraft(
   let draft = initial;
   for (let iteration = 0; iteration < MAX_CONTENT_REPAIR_ITERATIONS; iteration += 1) {
     validateQualityWriterOutput(draft, plan, registry);
-    const artifact = await putImmutableJson(
-      context.artifactStore,
-      `draft-${language}`,
-      { snapshotDigest, language, draft },
-    );
+    const artifact = await putImmutableJson(context.artifactStore, `draft-${language}`, {
+      snapshotDigest,
+      language,
+      draft,
+    });
     const resolved = resolveQualityDraft({
       language,
       writer: draft,
@@ -490,7 +485,9 @@ async function assertPhysicalLimitations(
   evidence: ApprovedAuditEvidencePayload,
   language: ReportLanguage,
 ): Promise<void> {
-  const extracted = normalizeExtractedText(await fs.readFile(path.join(workDir, 'extracted.txt'), 'utf8'));
+  const extracted = normalizeExtractedText(
+    await fs.readFile(path.join(workDir, 'extracted.txt'), 'utf8'),
+  );
   for (const limitation of evidence.mandatoryDisclosures) {
     const expected = normalizeExtractedText(limitation.summary[language]);
     if (!extracted.includes(expected)) {
@@ -545,7 +542,7 @@ async function renderAndReviewLanguage(
       ...(reportInputs.delta !== undefined ? { delta: reportInputs.delta } : {}),
       qualityLimitations: context.evidence.mandatoryDisclosures,
     });
-     assertMandatoryDisclosures(
+    assertMandatoryDisclosures(
       context.evidence.mandatoryDisclosures,
       context.evidence.mandatoryDisclosures.map((item) => item.reportDestination),
     );
@@ -665,7 +662,9 @@ async function renderAndReviewLanguage(
       pdf,
     });
     if (candidate.digest !== qa.pdfDigest) {
-      throw new Error('Report quality aborted: private candidate digest differs from reviewed bytes');
+      throw new Error(
+        'Report quality aborted: private candidate digest differs from reviewed bytes',
+      );
     }
     await transitionReportQualityRun(
       context.connection,
@@ -804,16 +803,10 @@ export async function runReportQualityPipeline(input: {
       createdAt: new Date().toISOString(),
     };
     const snapshotObject = await putImmutableJson(input.artifactStore, 'input-snapshot', snapshot);
-    await transitionReportQualityRun(
-      input.connection,
-      input.manifest.auditId,
-      lease,
-      'running',
-      {
-        inputSnapshotDigest: snapshotObject.digest,
-        approvedEvidenceDigest,
-      },
-    );
+    await transitionReportQualityRun(input.connection, input.manifest.auditId, lease, 'running', {
+      inputSnapshotDigest: snapshotObject.digest,
+      approvedEvidenceDigest,
+    });
 
     const registry = buildReportFactRegistry(evidence, snapshot, reportInputs);
     const dossier = buildReportEvidenceDossier(evidence, snapshot);
@@ -1039,22 +1032,14 @@ export async function runReportQualityPipeline(input: {
     };
   } catch (error) {
     const state =
-      error instanceof ReportQualityNeedsOperatorReviewError
-        ? 'needs-operator-review'
-        : 'failed';
+      error instanceof ReportQualityNeedsOperatorReviewError ? 'needs-operator-review' : 'failed';
     try {
-      await transitionReportQualityRun(
-        input.connection,
-        input.manifest.auditId,
-        lease,
-        state,
-        {
-          errorCode:
-            error instanceof ReportQualityNeedsOperatorReviewError
-              ? error.reasonCode
-              : 'report-quality-failed',
-        },
-      );
+      await transitionReportQualityRun(input.connection, input.manifest.auditId, lease, state, {
+        errorCode:
+          error instanceof ReportQualityNeedsOperatorReviewError
+            ? error.reasonCode
+            : 'report-quality-failed',
+      });
     } catch {
       // A lost lease is itself the authority to discard this worker's late result.
     }

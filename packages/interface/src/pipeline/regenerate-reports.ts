@@ -17,7 +17,10 @@ import type { StoredAnalysis } from '@odysseus/report';
 import { resolveArtifactFile } from '../artifacts/resolve-artifact.js';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
 import { runAllReportsStage, type AllReportsStageResult } from './report-stage.js';
-import { runReportQualityPipeline, type ReportQualityPipelineResult } from './report-quality-pipeline.js';
+import {
+  runReportQualityPipeline,
+  type ReportQualityPipelineResult,
+} from './report-quality-pipeline.js';
 
 export type { AllReportsStageResult } from './report-stage.js';
 
@@ -115,9 +118,18 @@ export async function regenerateReportsForAudit(
   );
 }
 
-export async function runReportQualityForAudit(connection: Connection, audit: AuditRuntimeFields, artifactStore: ArtifactStore | undefined): Promise<ReportQualityPipelineResult> {
+export async function runReportQualityForAudit(
+  connection: Connection,
+  audit: AuditRuntimeFields,
+  artifactStore: ArtifactStore | undefined,
+): Promise<ReportQualityPipelineResult> {
   const hostname = new URL(audit.siteUrl).hostname;
   const auditDir = buildAuditDir(getArtifactsRoot(), hostname, audit.startedAt);
-  const { manifest, findings } = await readAuditArtifacts(auditDir, hostname, audit.startedAt, artifactStore);
+  const { manifest, findings } = await readAuditArtifacts(
+    auditDir,
+    hostname,
+    audit.startedAt,
+    artifactStore,
+  );
   return runReportQualityPipeline({ connection, auditDir, manifest, findings, artifactStore });
 }

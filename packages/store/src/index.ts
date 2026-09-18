@@ -393,7 +393,34 @@ export type {
   RemoveProspectEmailOptions,
 } from './prospect-contacts.js';
 
-export type { ReportQualityLeaseDocument, ReportQualityRunDocument, ReportBundleDocument, ActiveReportBundleDocument, StoredLanguageCandidate } from './schemas/report-quality.schema.js';
-export { createReportQualityLeaseModel, createReportQualityRunModel, createReportBundleModel, createActiveReportBundleModel } from './schemas/report-quality.schema.js';
-export { acquireReportQualityLease, assertReportQualityLease, renewReportQualityLease, releaseReportQualityLease, startReportQualityRun, transitionReportQualityRun, recordQualityApprovedBundle, getLatestReportBundle, getReportBundleByDigest, approveExactReportBundle, markReportQualityRunFromOperator, getActiveReportBundle, atomicallyActivateReportBundle, ReportQualityLeaseConflictError, StaleReportQualityRunError } from './report-quality.js';
+export type {
+  ReportQualityLeaseDocument,
+  ReportQualityRunDocument,
+  ReportBundleDocument,
+  ActiveReportBundleDocument,
+  StoredLanguageCandidate,
+} from './schemas/report-quality.schema.js';
+export {
+  createReportQualityLeaseModel,
+  createReportQualityRunModel,
+  createReportBundleModel,
+  createActiveReportBundleModel,
+} from './schemas/report-quality.schema.js';
+export {
+  acquireReportQualityLease,
+  assertReportQualityLease,
+  renewReportQualityLease,
+  releaseReportQualityLease,
+  startReportQualityRun,
+  transitionReportQualityRun,
+  recordQualityApprovedBundle,
+  getLatestReportBundle,
+  getReportBundleByDigest,
+  approveExactReportBundle,
+  markReportQualityRunFromOperator,
+  getActiveReportBundle,
+  atomicallyActivateReportBundle,
+  ReportQualityLeaseConflictError,
+  StaleReportQualityRunError,
+} from './report-quality.js';
 export type { ReportQualityLease } from './report-quality.js';
