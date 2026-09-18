@@ -12,9 +12,11 @@
 >
 > Delete this file when Plan 059 reaches DONE.
 
-**Written 2026-09-18, updated 2026-09-18 at `ac629ec4`.** Original baseline
-commit: `f02649c9`. All work now lands directly on `main` (operator decision,
-2026-09-18); there is no Plan 059 branch.
+**Written 2026-09-18, updated 2026-09-18 after the step 10–14, 18, 21, 22, 26,
+27, 35, 37, 38 and 39 implementation wave.** Original baseline commit:
+`f02649c9`. All work lands directly on `main` (operator decision, 2026-09-18);
+there is no Plan 059 branch. A parallel operator session also committed Plan
+058/060 work to `main` on the same day; the histories interleave.
 
 ---
 
@@ -26,13 +28,17 @@ commit: `f02649c9`. All work now lands directly on `main` (operator decision,
    persisted scope, inventory, robots chain and per-page attempt/readiness/
    frame records, assembles the graph (`packages/scanner/src/evidence-graph.ts`)
    and writes it under `<auditDir>/evidence/`. Approval
-   (`approved-audit-evidence.json`) is written only for a reportable verdict.
-2. **Production approval is currently impossible, truthfully.** Two blocking
-   conditions are unmet by construction: browser isolation (no scan container,
-   §4.1) and temporal coherence (no anchors captured, plan step 21). Every real
-   audit is therefore assessed `failed` with `environment-unapproved` and
-   `temporal-coherence-unverified`. That is the intended fail-closed outcome,
-   not a bug to route around.
+   (`approved-audit-evidence.json`) is written only by `approveAuditEvidence`,
+   and only after every persisted evidence file reads back from disk exactly as
+   assembled and — when an artifact store is configured — the same files read
+   back byte for byte from the bucket, including the approval itself (step 38).
+2. **Production approval is currently impossible, truthfully.** Browser
+   isolation (no scan container, §4.1) is unmet by construction, so every real
+   audit is assessed `failed` with `environment-unapproved`. That is the
+   intended fail-closed outcome, not a bug to route around. Temporal coherence
+   is no longer a second by-construction blocker: step 21 wired structural
+   anchors (start-page probes at crawl start and end, one anchor per page), and
+   the graph measures coherence instead of assuming `unknown`.
 3. **Plan 058 consumes the graph.** `loadAuditEvidencePayload`
    (`packages/interface/src/pipeline/report-quality-evidence.ts`) refuses an
    assessed-but-unapproved audit, an approval whose roots or findings digest
@@ -100,33 +106,33 @@ synthetic clean audit in `evidence-graph-fixtures.ts`),
 | 1 docs | done | |
 | 2 fixtures | done (synthetic) | `evidence-quality-fixtures.ts`, `evidence-graph-fixtures.ts`. |
 | 3–5 | done, wired | |
-| 6 isolation preflight | assessed, **not asserted** | The graph records the isolation verdict and blocks approval; scan start does not refuse. Asserting waits on §4.1. |
-| 7 inventory | done except hydrated/hreflang provenance | Link, sitemap, start, seed provenance recorded. |
-| 8 page profiles | partial | |
+| 6 isolation preflight | assessed, **not asserted** | The graph records the isolation verdict and blocks approval; scan start does not refuse. Asserting waits on §4.1 (the design doc's slice 3 wires it on the scan-service path only). |
+| 7 inventory | done | Link, sitemap, start, seed, `hydrated-link`, post-consent/local-state and `hreflang` provenance recorded. |
+| 8 page profiles | done | Persisted per page and consumed by the step 26 classifier. |
 | 9 baseline desktop + readiness | done | |
-| 10 mobile surface | **not started** | |
-| 11 hydration sweep | **not started** | Readiness records `hydrationProgress: 'not-run'`. |
+| 10 mobile surface | done | `mobile-surface.ts`: stable mobile profile, crawler UA asserted twice, refusals become `surfaceLimitations`, same scheduler lanes. |
+| 11 hydration sweep | done | `hydration-sweep.ts`: bounded scroll record, real `hydrationProgress`, `hydrated-link` discovery, `hydration-bound-reached` disclosure. |
 | 12 frame coverage | done | |
-| 13 consent/local-state surfaces | **not started** | |
-| 14 discovery fixed point | **not started** | |
+| 13 consent/local-state surfaces | done | `consent-state.ts` (attribute-identity CMP table, never text guessing) + `state-surface.ts` (bounded `details`/`aria-controls`, side-effect guard). |
+| 14 discovery fixed point | done | Bounded discovery waves to a fixed point or a documented disposition; hreflang head discovery; cap/depth truncation still blocks. |
 | 15–17 attempts, recovery, site checks | done | |
-| 18 Lighthouse measurement sets | module only | `performance-measurement-set.ts` is not fed by the pipeline. |
-| 19 CrUX distinction | done | Calibration part not started. |
+| 18 Lighthouse measurement sets | done | Repeat policy per §12; the page keeps its median run; sets bound into the raw root and gate approval. |
+| 19 CrUX distinction | done | Calibration part not started (step 41, blocked §5.1). |
 | 20 environment fingerprint | done, wired | `containerProfileId: 'undeclared'` until §4.1. |
-| 21 temporal anchors | **not started** | Graph input is always `unknown`, which blocks approval. |
-| 22 epoch-aware resume / stale workers | **not started** | |
+| 21 temporal anchors | done | Structural anchors + start/end probes; coherence measured, not assumed. |
+| 22 epoch-aware resume / stale workers | done | Scope-digest-bound checkpoints, per-claim `claimId` + `acquisition-lease.json` checked on every evidence write; superseded workers stop without `failJob`. |
 | 23–25 raw root, observations, signals | done | |
-| 26 `PageSemanticProfile` | **not started** | Audit root binds `digest([])`. |
-| 27 `PatternEvidence` | **not started** | Audit root binds `digest([])`. |
+| 26 `PageSemanticProfile` | done | `page-semantic-profile.ts`; digest bound in the audit root; classifier version in the coverage signature. |
+| 27 `PatternEvidence` | done | `pattern-evidence.ts`; ≥2-page groups only; never touches finding identity/totals. |
 | 28 capability registry | done | |
 | 29 normalize from accepted raw only | **blocked at `normalize/` boundary** | §4.4. The graph instead rejects any finding without an accepted attempt (consistency gate), which enforces the same invariant from outside `normalize/`. |
 | 30–33 roots, gate, assessment, approval | done | |
 | 34 legacy adapter | done | |
-| 35 coverage signature / delta | signature done; delta semantics **not started** | Core's `EvidenceCoverageSignature` is canonical; the scanner signature is projected onto it. |
-| 36 058 binding | done | |
-| 37 dashboard phases | **not started** | |
-| 38 artifact-store read-back | **not started** | |
-| 39 fault-injection harness | **not started** | |
+| 35 coverage signature / delta | done | `newly-observable` / `not-comparable` semantics in `core/src/delta` + `deltaCoverage` on the graph; `dedupeKey` identity untouched; legacy baselines degrade honestly. |
+| 36 058 binding | done | Promotion additionally gated on the approval still matching (step 37). |
+| 37 dashboard phases | done | Evidence-quality card (11 §20 stages, honest states), promotion/058 conflict guards, bilingual. |
+| 38 artifact-store read-back | read-back done; **retention review open** | All nine evidence files verified locally + from the bucket before approval; the retention part of plan step 38 is not separately audited. |
+| 39 fault-injection harness | done | 42 offline cases through the real assemble→persist→approve path; browser/live-corpus rows deferred, not faked. |
 | 40–44 | blocked | §5. |
 
 ---
@@ -244,12 +250,13 @@ fixture-freshness and provenance tests here (§4.4).
 get green.** De-identified real-scan fixtures are rebuilt through the
 repository scripts, never hand-written. If you need the corpus, say so.
 
-### 5.2 Plan 058 has no tests
+### 5.2 Plan 058 still has only partial tests
 
-Not a 059 blocker, but it gates anything you would call "promoted". Its
-definition of done requires a green suite proving its behavior; today the
-suite proves only that its code compiles. Flag it; do not quietly treat 058 as
-finished because 059 now feeds it.
+Not a 059 blocker, but it gates anything you would call "promoted". Loader,
+model-profile and promotion-gate unit tests now exist (some from the parallel
+058/060 session), but the pipeline and promotion paths are not proven
+end-to-end by a green suite covering its definition of done. Flag it; do not
+quietly treat 058 as finished because 059 now feeds it.
 
 ### 5.3 The live rehearsal is not authorized in your session
 
@@ -263,19 +270,22 @@ that 44 awaits the operator re-confirming `www.villasfoch.fr`.
 
 ---
 
-## 6. Suggested next order
+## 6. What is left, in order
 
-1. **Temporal anchors (step 21)**: capture structural anchors at scan start
-   and end and compare, so coherence stops being `unknown`.
-2. **Epoch-aware resume (step 22)**.
-3. **Lighthouse measurement sets (step 18)** fed from the real runs.
-4. **Browser surfaces (steps 10, 11, 13, 14)**: mobile, hydration, consent,
-   fixed point. Largest remaining scanner volume.
-5. **Semantic profiles and patterns (26, 27)**, delta semantics (35),
-   dashboard phases (37), artifact-store read-back (38), fault-injection
-   harness (39).
-6. **Scan container (§4.1)**, or a written analysis if it cannot land safely.
-7. **Report** criteria 43/44 as blocked.
+1. **Build the secretless scan container (§4.1)** from
+   [059-scan-container-design.md](059-scan-container-design.md): five
+   offline-testable slices, then the live-environment verification slice.
+2. **Graph-integration follow-ups from the surfaces wave** (deliberate
+   leftovers, not defects): approval does not yet *require* per-page
+   mobile/hydration/consent records — it still approves a desktop-only audit
+   honestly rather than blocking it — and per-page `surfaceLimitations` are
+   persisted but only partly lifted into graph disclosures.
+3. **Step 38 retention review**: the digest/read-back/redaction halves are in
+   (the harness asserts snippet redaction); audit the artifact-store retention
+   policy against plan §5/§19 expectations.
+4. **Steps 40–43 (corpus, tolerances, fixture round)**: blocked §5.1.
+5. **Criterion 44 (live rehearsal)**: blocked §5.3.
+6. **Plan 058 promotion** stays off until §5.2 clears.
 
 ## 7. Verification
 
