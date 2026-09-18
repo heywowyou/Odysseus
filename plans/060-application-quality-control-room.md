@@ -683,7 +683,35 @@ The UI may display an unavailable/unknown state, but it may not guess “ready�
 
 ---
 
-# 19. Definition of done
+# 19. Executable closure contract
+
+The words “truthful”, “clear”, “single”, “bounded” and “server-owned” are not acceptance tests by themselves.
+
+Before closure, maintain an exhaustive control-surface inventory covering every consequential dashboard action. Each row must name:
+
+```text
+surface/action
+owning domain authority
+semantic read contract
+typed capability
+state-token inputs
+command-time recheck
+blocked/unknown code
+FR/EN presentation
+focused test
+```
+
+Closure additionally requires:
+
+- one canonical exported operator-state vocabulary consumed by the migrated surfaces; no page-local shadow enums for the same meaning;
+- a route/action inventory test that fails when a consequential mutation is added without a capability/recheck entry;
+- a state-combination fixture matrix proving work/evidence/report/attention axes remain independent;
+- a negative test proving browser code cannot derive readiness from raw Job/Mongoose persistence shapes on migrated surfaces;
+- the final cross-plan review to produce a committed requirement-to-proof artifact, not only a narrative sign-off.
+
+---
+
+# 20. Definition of done Definition of done
 
 Plan 060 is implemented when:
 
