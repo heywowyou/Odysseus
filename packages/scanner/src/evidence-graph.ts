@@ -1280,6 +1280,12 @@ export function assembleAuditEvidenceGraph(input: AuditEvidenceGraphInput): Audi
     enabledSurfaces: [
       'baseline-desktop',
       ...(mobileSurfaces.length > 0 ? ['mobile-ua-preserving'] : []),
+      ...(surfaces.some((surface) => surface.interactionState === 'consent-rejected')
+        ? ['consent-rejected']
+        : []),
+      ...(surfaces.some((surface) => surface.interactionState.startsWith('local-state:'))
+        ? ['local-state']
+        : []),
     ],
     checks: checkObservability,
   });

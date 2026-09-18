@@ -126,6 +126,13 @@ export function buildScanJson(
     ...(scanResult.hydrationSweep !== undefined
       ? { hydrationSweep: scanResult.hydrationSweep }
       : {}),
+    ...(scanResult.consentBaseline !== undefined
+      ? { consentBaseline: scanResult.consentBaseline }
+      : {}),
+    ...(scanResult.consentSurface !== undefined
+      ? { consentSurface: scanResult.consentSurface }
+      : {}),
+    ...(scanResult.localStates !== undefined ? { localStates: scanResult.localStates } : {}),
   };
 }
 

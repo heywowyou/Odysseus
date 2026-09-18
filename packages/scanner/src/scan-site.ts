@@ -59,6 +59,9 @@ import {
   type SurfaceLimitationRecord,
 } from './evidence-surfaces.js';
 import { runMobileSurfaceAnalysis, type MobileSurfaceRecord } from './mobile-surface.js';
+import { runConsentSurfaceAnalysis, type ConsentSurfaceOutcome } from './state-surface.js';
+import { CONSENT_SURFACE_INEFFECTIVE, CONSENT_SURFACE_UNAVAILABLE } from './consent-state.js';
+import { localStateSurface } from './evidence-surfaces.js';
 import type { SurfaceLinkDiscovery } from './surface-discovery.js';
 import {
   appendSiteAcquisitionAttempts,
@@ -582,6 +585,10 @@ interface StagedScanContext {
   /** Plan 059 step 11: run the bounded hydration sweep as the last step of
    *  each page's rendered pass. On alongside mobileSurfaces. */
   hydrationSweep: boolean;
+  /** Plan 059 step 13: record the delivered consent state, run the
+   *  consent-rejected surface where a safe rejection exists, and explore
+   *  safe local-state toggles. On alongside mobileSurfaces. */
+  stateSurfaces: boolean;
   /** Operator crawl exclusions, applied to every surface-discovered link. */
   exclusionPatterns: readonly string[];
   /** Links first seen on a state surface, in completion order, with the
@@ -664,6 +671,9 @@ async function analyzePageInTurn(
         delayMs,
         scheduler,
         screenshotDir: context.screenshotDir,
+        hydrationSweep: context.hydrationSweep,
+        stateSurfaces: context.stateSurfaces,
+        exclusionPatterns: context.exclusionPatterns,
         redirectHostCache: context.redirectHostCache,
         guard: pageGuard,
         ...(timeoutMs !== undefined ? { timeoutMs } : {}),
@@ -828,6 +838,78 @@ async function attachMobileSurface(
       : {}),
   };
   return withSurface;
+}
+
+/**
+ * Plan 059 step 13: one page's consent surface, taken in its own turn from
+ * the shared scheduler in a storage-fresh context. The runner clicks only
+ * what the deterministic selection proved safe; every refusal or failed
+ * dismissal is disclosed on the page as a surface limitation.
+ */
+async function attachConsentSurface(
+  url: string,
+  result: RenderedAnalysisResult,
+  browser: Browser,
+  scheduler: HostRequestScheduler,
+  context: StagedScanContext,
+): Promise<RenderedAnalysisResult> {
+  const outcome = await scheduler
+    .schedule(() =>
+      runConsentSurfaceAnalysis(browser, url, {
+        evidenceEpoch: context.evidenceEpoch,
+        ...(context.userAgent !== undefined ? { userAgent: context.userAgent } : {}),
+        ...(context.timeoutMs !== undefined ? { timeoutMs: context.timeoutMs } : {}),
+        beforeNavigation: () => scheduler.pace(),
+        ...(context.runGuard !== undefined ? { guard: context.runGuard } : {}),
+        ...(context.networkPolicy !== undefined ? { networkPolicy: context.networkPolicy } : {}),
+        ...(context.onNetworkSafetyBlocked !== undefined
+          ? { onNetworkSafetyBlocked: context.onNetworkSafetyBlocked }
+          : {}),
+        exclusionPatterns: context.exclusionPatterns,
+      }),
+    )
+    .catch((error: unknown): ConsentSurfaceOutcome => ({
+      baseline: result.consentBaseline ?? { state: 'undetermined', controlCount: 0 },
+      dismissed: false,
+      links: [],
+      limitation: {
+        ...CONSENT_SURFACE_UNAVAILABLE,
+        detail: error instanceof Error ? error.message : String(error),
+      },
+    }));
+  // A dismissal that did not take effect (guard abort, failed click) is a
+  // recorded scanner fact on the page, never an invisible shortfall.
+  const limitations = [...(result.surfaceLimitations ?? [])];
+  if (outcome.limitation !== undefined) limitations.push(outcome.limitation);
+  else if (outcome.dismissed === false && outcome.transition !== undefined) {
+    limitations.push({
+      ...CONSENT_SURFACE_INEFFECTIVE,
+      detail: outcome.transition.guardReason ?? 'the rejection did not dismiss the banner',
+    });
+  }
+  const consentLinks =
+    outcome.surface !== undefined && outcome.links.length > 0
+      ? [
+          ...(result.surfaceLinks ?? []),
+          ...outcome.links.map((link): SurfaceLinkDiscovery => ({
+            url: link,
+            source: 'rendered-link',
+            surfaceId: outcome.surface!.surfaceId,
+          })),
+        ]
+      : undefined;
+  return {
+    ...result,
+    consentSurface: outcome,
+    surfaces: [
+      ...(result.surfaces ?? []),
+      ...(outcome.surface !== undefined ? [outcome.surface] : []),
+    ],
+    ...(consentLinks !== undefined ? { surfaceLinks: consentLinks } : {}),
+    ...(limitations.length > (result.surfaceLimitations ?? []).length
+      ? { surfaceLimitations: limitations }
+      : {}),
+  };
 }
 
 /** `crawlSite` (via Step 3's wiring) always attaches an audit profile to
@@ -1480,6 +1562,39 @@ async function runStagedFullAuditScan(
             surfaceId: baselineSurfaceId,
           })),
         ],
+      };
+    }
+    // Plan 059 step 13: the consent-rejected surface runs where the
+    // delivered baseline carried consent controls, in a storage-fresh
+    // context of its own (section 9).
+    if (context.stateSurfaces && result.consentBaseline?.state === 'consent-controls-detected') {
+      result = await attachConsentSurface(url, result, browser, scheduler, context);
+    }
+    // Plan 059 step 13: the local-state surface is registered when the
+    // page's bounded disclosure exploration actually ran; links seen only
+    // in the opened states are discovered under that surface's identity.
+    const localStates = result.localStates;
+    if (context.stateSurfaces && (localStates?.transitions.length ?? 0) > 0) {
+      const stateSurface = localStateSurface({
+        evidenceEpoch: context.evidenceEpoch,
+        pageIdentity: url,
+        userAgent: context.userAgent ?? getCrawlerUserAgent(),
+      });
+      const stateLinks =
+        localStates !== undefined && localStates.links.length > 0
+          ? [
+              ...(result.surfaceLinks ?? []),
+              ...localStates.links.map((link): SurfaceLinkDiscovery => ({
+                url: link,
+                source: 'rendered-link',
+                surfaceId: stateSurface.surfaceId,
+              })),
+            ]
+          : undefined;
+      result = {
+        ...result,
+        surfaces: [...(result.surfaces ?? []), stateSurface],
+        ...(stateLinks !== undefined ? { surfaceLinks: stateLinks } : {}),
       };
     }
     // Plan 059 step 10: the mobile surface runs only after this
@@ -2481,6 +2596,7 @@ export async function scanSite(
       // full-audit path only; the legacy/CLI path keeps its exact shape.
       mobileSurfaces: options.scopeDigest !== undefined,
       hydrationSweep: options.scopeDigest !== undefined,
+      stateSurfaces: options.scopeDigest !== undefined,
       exclusionPatterns: options.exclusions ?? [],
       surfaceLinks: [],
       inventory: inventoryLedger ?? undefined,

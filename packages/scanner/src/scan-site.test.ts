@@ -18,6 +18,11 @@ vi.mock('./mobile-surface.js', async () => {
     runMobileSurfaceAnalysis: vi.fn(),
   };
 });
+vi.mock('./state-surface.js', () => ({
+  observeBaselineConsentState: vi.fn(),
+  runConsentSurfaceAnalysis: vi.fn(),
+  runLocalStateExploration: vi.fn(),
+}));
 vi.mock('./checks/llms-txt.js', () => ({ checkLlmsTxt: vi.fn() }));
 vi.mock('./checks/security-headers.js', () => ({ checkSecurityHeaders: vi.fn() }));
 vi.mock('./checks/cookie-consent.js', () => ({ checkCookieConsent: vi.fn() }));
@@ -36,6 +41,8 @@ vi.mock('./config.js', () => ({
 import { crawlSite } from './crawl.js';
 import { scanPage, runRenderedAnalysis, runLighthouseAnalysis } from './scan-page.js';
 import { runMobileSurfaceAnalysis } from './mobile-surface.js';
+import { runConsentSurfaceAnalysis, runLocalStateExploration } from './state-surface.js';
+import { consentSurface } from './evidence-surfaces.js';
 import { checkLlmsTxt } from './checks/llms-txt.js';
 import { checkSecurityHeaders } from './checks/security-headers.js';
 import { checkCookieConsent } from './checks/cookie-consent.js';
@@ -1414,6 +1421,267 @@ describe('scanSite hydration sweep and discovery waves (plan 059 step 11)', () =
     const home = readPageScanJson(pagesDir, startUrl)!;
     expect(home.hydrationSweep?.progress).toBe('bounded-expansion');
     expect(home.readiness?.hydrationProgress).toBe('bounded-expansion');
+  });
+});
+
+describe('scanSite consent and local-state surfaces (plan 059 step 13)', () => {
+  const scopeDigest = `sha256:${'d'.repeat(64)}`;
+  const crawlerUa = 'OdysseusBot/1.0 (+https://odysseusaudit.com/bot)';
+
+  const singlePageCrawl = () => {
+    const ledger = new InventoryLedger({ evidenceEpoch: 1, scopeDigest });
+    ledger.recordDiscovery({ url: startUrl, source: 'start', discoveredAt: new Date() });
+    return {
+      startUrl,
+      pages: [
+        {
+          url: startUrl,
+          depth: 0,
+          status: 'visited',
+          discoveryMethod: 'link',
+          auditProfile: {
+            url: startUrl,
+            profileVersion: 'v1',
+            roleSignals: [{ kind: 'homepage-url', detail: startUrl }],
+          },
+        },
+      ],
+      effectiveDelayMs: 0,
+      visitedCount: 1,
+      maxPages: 10,
+      maxDepth: 5,
+      robotsTxtFound: true,
+      inventoryLedger: ledger.snapshot(),
+      robotsDisallowMatches: [],
+      aiCrawlerBlocks: [],
+      linkDiscoveredUrls: [],
+    } as never;
+  };
+
+  beforeEach(() => {
+    vi.mocked(crawlSite).mockReset();
+    vi.mocked(crawlSite).mockResolvedValue(singlePageCrawl());
+    vi.mocked(runRenderedAnalysis).mockImplementation(async (_browser, url) => ({
+      url,
+      checkOutcomes: { 'render-diff': 'completed', axe: 'completed' },
+    }));
+    vi.mocked(runLighthouseAnalysis).mockResolvedValue({
+      lighthouse: { categories: {} } as never,
+    });
+    // The mobile pass runs on this path too; give it a bounded, link-free
+    // record so these tests pin consent/local-state behavior only.
+    vi.mocked(runMobileSurfaceAnalysis).mockReset();
+    vi.mocked(runMobileSurfaceAnalysis).mockImplementation(async (_browser, url) => ({
+      surface: mobileSurface({
+        evidenceEpoch: 1,
+        pageIdentity: url,
+        userAgent: crawlerUa,
+        crawlerUserAgent: crawlerUa,
+        readinessOutcome: 'ready',
+      }),
+      readiness: {
+        navigationMilestone: 'load',
+        httpStatus: 200,
+        domReady: true,
+        fontsReady: true,
+        networkQuiet: true,
+        mutationQuiescent: true,
+        significantResourceFailures: [],
+        outcome: 'ready',
+      },
+      axeViolations: [],
+      uaVerified: true,
+      links: [],
+    }));
+  });
+
+  const scan = () =>
+    scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: '/tmp/pages',
+      concurrency: 1,
+      fullAuditPlanning: true,
+      skipLighthouse: true,
+      scopeDigest,
+    });
+
+  it('runs the consent-rejected surface where the delivered baseline carries consent controls', async () => {
+    const surface = consentSurface({
+      evidenceEpoch: 1,
+      pageIdentity: startUrl,
+      userAgent: crawlerUa,
+    });
+    // The baseline observation is produced inside the real
+    // runRenderedAnalysis; the mock carries its result directly. Only the
+    // crawl's own page carries a delivered banner, so the wave converges.
+    vi.mocked(runRenderedAnalysis).mockImplementation(async (_browser, url) => ({
+      url,
+      checkOutcomes: { 'render-diff': 'completed', axe: 'completed' },
+      ...(url === startUrl
+        ? {
+            consentBaseline: {
+              state: 'consent-controls-detected',
+              controlCount: 2,
+              containerRef: '#cmp',
+            },
+          }
+        : {}),
+    }));
+    vi.mocked(runConsentSurfaceAnalysis).mockResolvedValue({
+      surface,
+      baseline: { state: 'consent-controls-detected', controlCount: 2, containerRef: '#cmp' },
+      dismissed: true,
+      axeViolations: [{ ruleId: 'target-size', impact: 'serious', nodeCount: 1 }],
+      links: ['https://example.com/post-consent'],
+      transition: { controlKey: 'control:abcd', matchedPattern: 'cmp-reject-all' },
+    } as never);
+    vi.mocked(runLocalStateExploration).mockResolvedValue({ transitions: [], links: [] });
+
+    const result = await scan();
+
+    const home = result.pages.find((page) => page.url === startUrl)!;
+    expect(runConsentSurfaceAnalysis).toHaveBeenCalledOnce();
+    expect(home.consentSurface?.dismissed).toBe(true);
+    expect(home.surfaces?.map((candidate) => candidate.interactionState)).toContain(
+      'consent-rejected',
+    );
+    expect(home.surfaceLinks).toEqual([
+      {
+        url: 'https://example.com/post-consent',
+        source: 'rendered-link',
+        surfaceId: surface.surfaceId,
+      },
+    ]);
+    // The post-consent link enters the inventory with the surface provenance.
+    const candidate = result.inventoryLedger?.candidates.find(
+      (entry) => entry.url === 'https://example.com/post-consent',
+    );
+    expect(candidate?.discoveries[0]).toMatchObject({
+      source: 'rendered-link',
+      surfaceId: surface.surfaceId,
+    });
+    expect(candidate?.disposition?.disposition).toBe('scanned');
+  });
+
+  it('discloses an ambiguous consent overlay instead of guessing, and never runs a surface', async () => {
+    vi.mocked(runRenderedAnalysis).mockImplementation(async (_browser, url) => ({
+      url,
+      checkOutcomes: { 'render-diff': 'completed', axe: 'completed' },
+      ...(url === startUrl
+        ? {
+            consentBaseline: {
+              state: 'consent-controls-detected',
+              controlCount: 4,
+              containerRef: '#cmp',
+            },
+          }
+        : {}),
+    }));
+    vi.mocked(runConsentSurfaceAnalysis).mockResolvedValue({
+      baseline: { state: 'consent-controls-detected', controlCount: 4, containerRef: '#cmp' },
+      dismissed: false,
+      links: [],
+      limitation: {
+        code: 'consent-interaction-ambiguous',
+        fr: 'fr',
+        en: 'en',
+        detail: '2 consent controls matched',
+      },
+    } as never);
+    vi.mocked(runLocalStateExploration).mockResolvedValue({ transitions: [], links: [] });
+
+    const result = await scan();
+
+    const home = result.pages.find((page) => page.url === startUrl)!;
+    expect(home.consentSurface?.surface).toBeUndefined();
+    expect(home.consentSurface?.dismissed).toBe(false);
+    expect(home.surfaceLimitations).toEqual([
+      expect.objectContaining({ code: 'consent-interaction-ambiguous' }),
+    ]);
+  });
+
+  it('registers the local-state surface when disclosure exploration ran', async () => {
+    // localStates are attached inside the real runRenderedAnalysis; the
+    // mock carries them on the crawl's own page only.
+    vi.mocked(runRenderedAnalysis).mockImplementation(async (_browser, url) => ({
+      url,
+      checkOutcomes: { 'render-diff': 'completed', axe: 'completed' },
+      ...(url === startUrl
+        ? {
+            localStates: {
+              transitions: [
+                {
+                  kind: 'details',
+                  controlKey: 'control:abcd',
+                  selector: 'main > details:nth-of-type(1)',
+                  before: 'closed',
+                  after: 'open',
+                },
+              ],
+              links: ['https://example.com/accordion-panel-link'],
+            },
+          }
+        : {}),
+    }));
+
+    const result = await scan();
+
+    const home = result.pages.find((page) => page.url === startUrl)!;
+    expect(home.consentSurface).toBeUndefined();
+    expect(home.surfaces?.map((candidate) => candidate.interactionState)).toContain(
+      'local-state:disclosures',
+    );
+    expect(home.surfaceLinks).toEqual([
+      {
+        url: 'https://example.com/accordion-panel-link',
+        source: 'rendered-link',
+        surfaceId: home.surfaces![0]!.surfaceId,
+      },
+    ]);
+  });
+
+  it('never runs state surfaces outside the Plan 059 scoped path, even with a delivered banner', async () => {
+    vi.mocked(runRenderedAnalysis).mockImplementation(async (_browser, url) => ({
+      url,
+      checkOutcomes: { 'render-diff': 'completed', axe: 'completed' },
+      consentBaseline: { state: 'consent-controls-detected', controlCount: 2 },
+    }));
+    vi.mocked(crawlSite).mockResolvedValue({
+      startUrl,
+      pages: [
+        {
+          url: startUrl,
+          depth: 0,
+          status: 'visited',
+          discoveryMethod: 'link',
+          auditProfile: {
+            url: startUrl,
+            profileVersion: 'v1',
+            roleSignals: [{ kind: 'homepage-url', detail: startUrl }],
+          },
+        },
+      ],
+      effectiveDelayMs: 0,
+      visitedCount: 1,
+      maxPages: 10,
+      maxDepth: 5,
+      robotsTxtFound: true,
+      robotsDisallowMatches: [],
+      aiCrawlerBlocks: [],
+      linkDiscoveredUrls: [],
+    } as never);
+    await scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: '/tmp/pages',
+      concurrency: 1,
+      fullAuditPlanning: true,
+      skipLighthouse: true,
+    });
+
+    expect(runConsentSurfaceAnalysis).not.toHaveBeenCalled();
+    expect(runLocalStateExploration).not.toHaveBeenCalled();
   });
 });
 

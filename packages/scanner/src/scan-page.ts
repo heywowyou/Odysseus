@@ -77,6 +77,13 @@ import {
   HYDRATION_SWEEP_UNAVAILABLE,
   type HydrationSweepRecord,
 } from './hydration-sweep.js';
+import {
+  observeBaselineConsentState,
+  runLocalStateExploration,
+  type ConsentSurfaceOutcome,
+  type LocalStateExplorationRecord,
+} from './state-surface.js';
+import type { ConsentBaselineObservation } from './consent-state.js';
 import type { ScanSurface, SurfaceLimitationRecord } from './evidence-surfaces.js';
 
 export interface ScanPageOptions {
@@ -160,6 +167,11 @@ export interface ScanPageOptions {
   /** Operator crawl exclusions, applied to links the hydration sweep
    *  discovers. */
   exclusionPatterns?: readonly string[];
+  /** Plan 059 step 13: record the delivered consent state and explore the
+   *  page's safe local-state toggles (bounded, provably same-document).
+   *  Read-only except for the disclosure toggles, which run after every
+   *  check like the hydration sweep. Off by default. */
+  stateSurfaces?: boolean;
 }
 
 /**
@@ -257,6 +269,15 @@ export interface PageScanResult {
    *  check finished with the rendered page, with the links the hydrated
    *  document exposed. Absent when the caller did not ask for a sweep. */
   hydrationSweep?: HydrationSweepRecord;
+  /** Plan 059 step 13: the consent/overlay state as delivered on the
+   *  baseline rendering, before any interaction. */
+  consentBaseline?: ConsentBaselineObservation;
+  /** Plan 059 step 13: the consent-rejected surface outcome for this page,
+   *  present only when a safe deterministic rejection existed. */
+  consentSurface?: ConsentSurfaceOutcome;
+  /** Plan 059 step 13: transitions of the page's bounded safe local-state
+   *  exploration, with the links the opened states exposed. */
+  localStates?: LocalStateExplorationRecord;
 }
 
 /**
@@ -725,6 +746,17 @@ export async function runRenderedAnalysis(
           checkOutcomes.reflow = 'failed';
         }
 
+        // Plan 059 step 13: the delivered consent/overlay state is read
+        // off the page exactly as delivered, before anything (the sweep,
+        // a toggle) changes it.
+        if (options.stateSurfaces === true) {
+          try {
+            result.consentBaseline = await observeBaselineConsentState(page);
+          } catch {
+            result.consentBaseline = { state: 'undetermined', controlCount: 0 };
+          }
+        }
+
         // Plan 059 step 11: the hydration sweep runs after every check,
         // read-only or mutating, has finished with this page. Scrolling
         // pulls in lazy content, so it would contaminate any evidence
@@ -753,6 +785,28 @@ export async function runRenderedAnalysis(
               ...(result.surfaceLimitations ?? []),
               {
                 ...HYDRATION_SWEEP_UNAVAILABLE,
+                detail: error instanceof Error ? error.message : String(error),
+              },
+            ];
+          }
+        }
+
+        // Plan 059 step 13: bounded safe local-state exploration, after
+        // the sweep so both mutating passes are strictly post-baseline.
+        if (options.stateSurfaces === true) {
+          try {
+            result.localStates = await runLocalStateExploration(page, {
+              ...(options.exclusionPatterns !== undefined
+                ? { exclusionPatterns: options.exclusionPatterns }
+                : {}),
+            });
+          } catch (error) {
+            result.surfaceLimitations = [
+              ...(result.surfaceLimitations ?? []),
+              {
+                code: 'local-state-exploration-unavailable',
+                fr: "L'exploration sûre des états locaux d'une page n'a pas pu être effectuée.",
+                en: "One page's safe local-state exploration could not be performed.",
                 detail: error instanceof Error ? error.message : String(error),
               },
             ];

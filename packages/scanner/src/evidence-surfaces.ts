@@ -311,6 +311,56 @@ export function baselineDesktopSurface(input: {
 }
 
 /**
+ * The consent-rejected surface of one page (section 9): the desktop
+ * profile, the unchanged crawler identity, and the recorded interaction
+ * state. Built before the click so the record exists whatever the click
+ * does; its readiness outcome is finalized from what actually happened.
+ */
+export function consentSurface(input: {
+  evidenceEpoch: number;
+  pageIdentity: string;
+  userAgent: string;
+}): ScanSurface {
+  return buildScanSurface({
+    evidenceEpoch: input.evidenceEpoch,
+    pageIdentity: input.pageIdentity,
+    viewport: BASELINE_DESKTOP_VIEWPORT,
+    deviceScaleFactor: 1,
+    hasTouch: false,
+    media: { colorScheme: 'light', reducedMotion: 'no-preference' },
+    userAgent: input.userAgent,
+    interactionState: 'consent-rejected',
+    storageIsolationGroup: 'fresh-context-per-page',
+    readinessOutcome: 'ready',
+  });
+}
+
+/**
+ * The local-state surface of one page: the desktop rendering with the
+ * page's bounded disclosure toggles opened (section 9, safe local state).
+ * One surface per page, whatever the number of toggles, under the stable
+ * `local-state:disclosures` interaction label.
+ */
+export function localStateSurface(input: {
+  evidenceEpoch: number;
+  pageIdentity: string;
+  userAgent: string;
+}): ScanSurface {
+  return buildScanSurface({
+    evidenceEpoch: input.evidenceEpoch,
+    pageIdentity: input.pageIdentity,
+    viewport: BASELINE_DESKTOP_VIEWPORT,
+    deviceScaleFactor: 1,
+    hasTouch: false,
+    media: { colorScheme: 'light', reducedMotion: 'no-preference' },
+    userAgent: input.userAgent,
+    interactionState: 'local-state:disclosures',
+    storageIsolationGroup: 'same-page-post-baseline',
+    readinessOutcome: 'ready',
+  });
+}
+
+/**
  * The mobile surface for one page (plan 059 sections 5.5 and 9): the stable
  * mobile profile, the unchanged crawler identity, baseline interaction, and
  * the same fresh-context-per-page storage isolation as the desktop pass.
