@@ -11,19 +11,22 @@ import {
   type PerformanceMeasurementSet,
 } from './performance-measurement-set.js';
 import { MOBILE_SURFACE_PROFILE, buildScanSurface } from './evidence-surfaces.js';
-import { buildAuditScopeSnapshot } from '@odysseus/core';
+import { buildAuditScopeSnapshot, canonicalDigest } from '@odysseus/core';
 import {
   attempt,
+  auditProfile,
   AXE_FINDING,
   cleanAttempts,
   cleanInput,
   finding,
   HEURISTIC_FINDING,
   HOME,
+  HOME_PROFILE,
   inventory,
   ORIGIN,
   page,
   ROOMS,
+  ROOMS_PROFILE,
   scope,
 } from './evidence-graph-fixtures.js';
 
@@ -535,5 +538,61 @@ describe('page and depth truncation blocks a full audit (plan 059 step 14)', () 
     expect(
       graph.quality.issues.some((issue) => issue.disclosure?.code === 'scope-bound-truncation'),
     ).toBe(true);
+  });
+});
+
+describe('page semantic profiles in the evidence graph (plan 059 step 26)', () => {
+  it('binds one classified profile per scanned page into the audit root', () => {
+    const graph = assembleAuditEvidenceGraph(cleanInput());
+    expect(graph.semanticProfiles.map((profile) => profile.pageIdentity)).toEqual([HOME, ROOMS]);
+    expect(
+      graph.semanticProfiles.find((profile) => profile.pageIdentity === ROOMS)?.semanticRole,
+    ).toBe('commercial');
+    expect(
+      graph.semanticProfiles.find((profile) => profile.pageIdentity === HOME)?.semanticRole,
+    ).toBe('unknown');
+    expect(graph.audit.pageSemanticProfilesDigest).toBe(
+      canonicalDigest(graph.semanticProfiles.map((profile) => profile.digest).sort()),
+    );
+  });
+
+  it('records the running classifier in the delta coverage', () => {
+    const graph = assembleAuditEvidenceGraph(cleanInput());
+    expect(graph.deltaCoverage.semanticClassifierVersion).toBe(
+      graph.semanticProfiles[0]?.classifierVersion,
+    );
+    expect(graph.deltaCoverage.semanticClassifierVersion).not.toBe('semantic-classifier-not-run');
+  });
+
+  it('never lets an unknown or absent semantic role gate or suppress anything', () => {
+    // Every page without an extracted profile classifies as unknown, and
+    // the audit stays reportable-complete: the profile is report-facing.
+    const graph = assembleAuditEvidenceGraph(cleanInput({ pages: [page(HOME), page(ROOMS)] }));
+    expect(graph.semanticProfiles.map((profile) => profile.semanticRole)).toEqual([
+      'unknown',
+      'unknown',
+    ]);
+    expect(graph.semanticProfiles.every((profile) => profile.reasonCodes.length > 0)).toBe(true);
+    expect(graph.quality.verdict).toBe('reportable-complete');
+    expect(graph.quality.issues).toEqual([]);
+    expect(graph.approval).toBeDefined();
+  });
+
+  it('changes the audit root when a page carries different signals, but not the findings', () => {
+    const before = assembleAuditEvidenceGraph(cleanInput());
+    const retyped = cleanInput({
+      pages: [
+        page(HOME, [], HOME_PROFILE),
+        page(ROOMS, [], auditProfile(ROOMS, [{ kind: 'transactional-form', detail: '1 form(s)' }])),
+      ],
+    });
+    const after = assembleAuditEvidenceGraph(retyped);
+    expect(
+      after.semanticProfiles.find((profile) => profile.pageIdentity === ROOMS)?.semanticRole,
+    ).toBe('transactional');
+    expect(after.audit.digest).not.toBe(before.audit.digest);
+    expect(after.raw.digest).toBe(before.raw.digest);
+    expect(after.audit.confirmedFindingsDigest).toBe(before.audit.confirmedFindingsDigest);
+    expect(after.observations.digest).toBe(before.observations.digest);
   });
 });

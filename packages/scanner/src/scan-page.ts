@@ -85,6 +85,7 @@ import {
 } from './state-surface.js';
 import type { ConsentBaselineObservation } from './consent-state.js';
 import type { ScanSurface, SurfaceLimitationRecord } from './evidence-surfaces.js';
+import type { PageAuditProfile } from './page-audit-profile.js';
 
 export interface ScanPageOptions {
   /** Politeness delay applied between the raw/rendered/Lighthouse passes. */
@@ -245,6 +246,13 @@ export interface PageScanResult {
   /** Plan 059: the served document's structure at the raw pass, for the
    *  audit's temporal-coherence verdict. */
   structuralAnchor?: StructuralAnchor;
+  /** Plan 059 steps 8 and 26: the scheduling-side audit profile the crawl
+   *  extracted from this same navigation, persisted so the evidence graph's
+   *  report-facing semantic classifier reads persisted signals instead of
+   *  re-deriving them. Absent for pages whose facts were never extracted
+   *  (discovery-wave pages), which the semantic profile discloses as an
+   *  explicit unknown role rather than guessing. */
+  auditProfile?: PageAuditProfile;
   /** Plan 059 section 12: every Lighthouse run taken on this page and the
    *  representative drawn from them. `lighthouse` is that representative
    *  run's full report. */

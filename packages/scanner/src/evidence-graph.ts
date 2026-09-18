@@ -63,6 +63,7 @@ import {
   type EvidenceCoverageOutcome,
   type ObservationLedger,
   type ObservationRecord,
+  type PageSemanticProfile,
 } from './evidence-ledger.js';
 import {
   buildAuditEvidenceSnapshot,
@@ -102,6 +103,11 @@ import {
   SITE_OBSERVATION_CHECK_IDS,
 } from './observation-checks.js';
 import type { FrameObservation, RenderedReadinessObservation } from './page-readiness.js';
+import {
+  semanticProfileForPage,
+  PAGE_SEMANTIC_CLASSIFIER_VERSION,
+} from './page-semantic-profile.js';
+import type { PageAuditProfile } from './page-audit-profile.js';
 import type { PerformanceMeasurementSet } from './performance-measurement-set.js';
 import type { RobotsPolicyChain } from './robots-policy-snapshot.js';
 
@@ -118,6 +124,10 @@ export interface EvidencePageObservation {
   surfaces?: readonly ScanSurface[];
   /** Plan 059 step 11: the page's bounded hydration sweep, when one ran. */
   hydration?: HydrationSweepRecord;
+  /** Plan 059 step 26: the page's persisted scheduling-side audit profile,
+   *  whose signals the report-facing semantic classifier reads. Absent for
+   *  a page whose facts were never extracted, classified as unknown. */
+  auditProfile?: PageAuditProfile;
 }
 
 export interface AuditEvidenceGraphInput {
@@ -144,6 +154,10 @@ export interface AuditEvidenceGraph {
   readinessRecords: readonly PageReadinessRecord[];
   frameRecords: readonly FrameCoverageRecord[];
   signals: readonly AuditSignal[];
+  /** Plan 059 step 26: one report-facing semantic profile per scanned page,
+   *  classified from the page's persisted audit-profile signals. Unknown is
+   *  a valid role and gates nothing. */
+  semanticProfiles: readonly PageSemanticProfile[];
   raw: RawEvidenceSnapshot;
   observations: ObservationLedger;
   audit: AuditEvidenceSnapshot;
@@ -159,7 +173,10 @@ export interface AuditEvidenceGraph {
 /** Bumped whenever a rule below changes what the system will approve. */
 const EVIDENCE_APPROVAL_POLICY_VERSION = 'evidence-approval-policy-v1';
 
-const SEMANTIC_CLASSIFIER_VERSION = 'semantic-classifier-not-run';
+/** Plan 059 step 26: the graph carries the page semantic profiles this
+ *  classifier produced, so the coverage signature and the findings delta
+ *  name it instead of claiming no classifier ran. */
+const SEMANTIC_CLASSIFIER_VERSION = PAGE_SEMANTIC_CLASSIFIER_VERSION;
 const SURFACE_REGISTRY_VERSION = 'surfaces-baseline-desktop-v1';
 const REPORT_DESTINATION = 'section-11';
 
@@ -1080,6 +1097,15 @@ export function assembleAuditEvidenceGraph(input: AuditEvidenceGraphInput): Audi
     });
   }
 
+  /* ---- report-facing semantic profiles (plan 059 step 26) ---------- */
+  // One per scanned page, classified deterministically from the page's own
+  // persisted audit-profile signals. This is an interpretation aid for the
+  // report: it produces no issue, gates nothing, and never feeds back into
+  // scheduling, which keeps using the PageAuditProfile directly.
+  const semanticProfiles = scannedUrls.map((url) =>
+    semanticProfileForPage(url, pagesByUrl.get(url)?.auditProfile),
+  );
+
   const coverage = buildEvidenceCoverageLedger({
     evidenceEpoch,
     inventoryDigest,
@@ -1338,7 +1364,7 @@ export function assembleAuditEvidenceGraph(input: AuditEvidenceGraphInput): Audi
     observationLedgerDigest: observations.digest,
     confirmedFindingsDigest: confirmedFindingsDigest(confirmed),
     signalsDigest: digestOf(signals.map((signal) => signal.digest).sort()),
-    pageSemanticProfilesDigest: digestOf([]),
+    pageSemanticProfilesDigest: digestOf(semanticProfiles.map((profile) => profile.digest).sort()),
     patternEvidenceDigest: digestOf([]),
     capabilityRegistryVersion: ACCESSIBILITY_CAPABILITY_REGISTRY.version,
     capabilityRegistryDigest: ACCESSIBILITY_CAPABILITY_REGISTRY.digest,
@@ -1383,6 +1409,7 @@ export function assembleAuditEvidenceGraph(input: AuditEvidenceGraphInput): Audi
     readinessRecords,
     frameRecords,
     signals,
+    semanticProfiles,
     raw,
     observations,
     audit,

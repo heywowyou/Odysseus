@@ -108,4 +108,24 @@ describe('Plan 059 evidence graph persistence', () => {
     writeAuditEvidenceGraph(dir, assembleAuditEvidenceGraph(cleanInput()));
     expect(hasAssessedEvidenceGraph(dir)).toBe(true);
   });
+
+  it('persists the page semantic profiles and refuses approval when they are edited', () => {
+    const dir = auditDir();
+    const graph = assembleAuditEvidenceGraph(cleanInput());
+    writeAuditEvidenceGraph(dir, graph);
+    const profilesPath = path.join(dir, EVIDENCE_GRAPH_DIRNAME, 'page-semantic-profiles.json');
+    expect(fs.readFileSync(profilesPath, 'utf8')).toContain('page-semantic-profile-v1');
+    fs.writeFileSync(
+      profilesPath,
+      JSON.stringify(
+        graph.semanticProfiles.map((profile) => ({ ...profile, semanticRole: 'content' })),
+        null,
+        2,
+      ),
+    );
+    expect(() => approveAuditEvidence(dir, graph)).toThrow(
+      /page-semantic-profiles\.json does not read back as assembled/,
+    );
+    expect(readApprovedAuditEvidence(dir)).toBeUndefined();
+  });
 });

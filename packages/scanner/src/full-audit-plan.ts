@@ -59,7 +59,10 @@ export interface FullAuditPlan {
   decisions: readonly PageAuditDecision[];
 }
 
-const LISTING_SIGNAL_KINDS: readonly PageRoleSignalKind[] = [
+/** Exported so the report-facing semantic classifier
+ *  (`page-semantic-profile.ts`, plan 059 step 26) reads the exact same
+ *  listing evidence vocabulary as the scheduler instead of redefining it. */
+export const LISTING_SIGNAL_KINDS: readonly PageRoleSignalKind[] = [
   'pagination-relation',
   'numbered-pagination-control',
   'listing-structural-class',

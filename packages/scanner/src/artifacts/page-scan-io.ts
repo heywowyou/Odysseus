@@ -111,6 +111,9 @@ export function buildScanJson(
     ...(scanResult.structuralAnchor !== undefined
       ? { structuralAnchor: scanResult.structuralAnchor }
       : {}),
+    // Plan 059 steps 8/26: the page's own scheduling-side audit profile,
+    // so the semantic classifier reads persisted signals at graph time.
+    ...(scanResult.auditProfile !== undefined ? { auditProfile: scanResult.auditProfile } : {}),
     ...(scanResult.acquisitionAttempts !== undefined
       ? { acquisitionAttempts: scanResult.acquisitionAttempts }
       : {}),

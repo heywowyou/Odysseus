@@ -23,6 +23,7 @@ import {
 } from './evidence-acquisition.js';
 import type { AuditEvidenceGraphInput, EvidencePageObservation } from './evidence-graph.js';
 import { InventoryLedger, type InventoryDisposition } from './inventory-ledger.js';
+import type { PageAuditProfile, PageRoleSignal } from './page-audit-profile.js';
 import { PUBLIC_SITE_NETWORK_POLICY } from './network-target-policy.js';
 import type { FrameObservation } from './page-readiness.js';
 import { buildRobotsPolicySnapshot } from './robots-policy-snapshot.js';
@@ -120,7 +121,26 @@ export function cleanAttempts(urls: readonly string[] = [HOME, ROOMS]): Acquisit
   ];
 }
 
-export function page(url: string, frames: FrameObservation[] = []): EvidencePageObservation {
+/** A scheduling-side audit profile as the crawl would persist it on the
+ *  page's scan.json, so semantic-role tests can vary the signals. */
+export function auditProfile(
+  url: string,
+  roleSignals: readonly PageRoleSignal[] = [],
+  overrides: Partial<Pick<PageAuditProfile, 'language' | 'templateFamilyId'>> = {},
+): PageAuditProfile {
+  return {
+    url,
+    profileVersion: 'v1',
+    roleSignals,
+    ...overrides,
+  };
+}
+
+export function page(
+  url: string,
+  frames: FrameObservation[] = [],
+  profile?: PageAuditProfile,
+): EvidencePageObservation {
   return {
     url,
     readiness: {
@@ -134,8 +154,17 @@ export function page(url: string, frames: FrameObservation[] = []): EvidencePage
       outcome: 'ready',
     },
     frames,
+    ...(profile !== undefined ? { auditProfile: profile } : {}),
   };
 }
+
+/** The clean audit's page profiles: a homepage with no content signal of
+ *  its own (role unknown) and a rooms page carrying the site's commercial
+ *  JSON-LD (role commercial). */
+export const HOME_PROFILE = auditProfile(HOME, [{ kind: 'homepage-url', detail: HOME }]);
+export const ROOMS_PROFILE = auditProfile(ROOMS, [
+  { kind: 'content-json-ld-type', detail: 'Hotel' },
+]);
 
 export function finding(overrides: Partial<Finding> & Pick<Finding, 'ruleId'>): Finding {
   return {
@@ -248,7 +277,7 @@ export function cleanInput(
     ],
     inventory: inventory(frozen),
     attempts: cleanAttempts(),
-    pages: [page(HOME), page(ROOMS)],
+    pages: [page(HOME, [], HOME_PROFILE), page(ROOMS, [], ROOMS_PROFILE)],
     findings: [AXE_FINDING],
     environment: buildAuditEnvironmentFingerprint(environmentInput()),
     isolation: { ok: true, profile: 'chromium-sandbox', findings: [] },

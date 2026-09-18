@@ -46,4 +46,55 @@ export const evidenceQualityFixtures = {
       evidenceRefs: ['attempt:a', 'attempt:b'],
     },
   },
+  /**
+   * Plan 059 section 18, "Classification/pattern": one page per semantic
+   * role the report-facing classifier must name, given the audit-profile
+   * signals a scan.json persists. Signals are scheduling-side facts only;
+   * no fixture stands in for a real scanned site.
+   */
+  semanticRoles: {
+    transactional: {
+      url: 'https://site-exemple.fr/reservation',
+      signals: [{ kind: 'transactional-form', detail: '2 form(s)' }],
+      expectedRole: 'transactional',
+      expectedConfidence: 'high',
+    },
+    archive: {
+      url: 'https://site-exemple.fr/blog',
+      signals: [
+        { kind: 'pagination-relation', detail: 'next' },
+        { kind: 'repeated-teaser-links', detail: '9' },
+      ],
+      expectedRole: 'archive',
+      expectedConfidence: 'high',
+    },
+    commercial: {
+      url: 'https://site-exemple.fr/chambres',
+      signals: [{ kind: 'content-json-ld-type', detail: 'Hotel' }],
+      expectedRole: 'commercial',
+      expectedConfidence: 'high',
+    },
+    legal: {
+      url: 'https://site-exemple.fr/mentions-legales',
+      signals: [],
+      expectedRole: 'legal',
+      expectedConfidence: 'medium',
+    },
+    unknown: {
+      url: 'https://site-exemple.fr/a-propos',
+      signals: [],
+      expectedRole: 'unknown',
+      expectedConfidence: 'low',
+    },
+    conflicting: {
+      url: 'https://site-exemple.fr/blog/actu',
+      signals: [
+        { kind: 'numbered-pagination-control', detail: '3' },
+        { kind: 'repeated-teaser-links', detail: '8' },
+        { kind: 'content-json-ld-type', detail: 'Article' },
+      ],
+      expectedRole: 'conflicting',
+      expectedConfidence: 'low',
+    },
+  },
 } as const;

@@ -1528,6 +1528,15 @@ async function runStagedFullAuditScan(
   // never promise work that does not exist nor hide work that does.
   let totalPages = pagesToScan.length;
 
+  // Plan 059 steps 8/26: each crawled page's audit profile joins its scan
+  // result here so scan.json persists the signals the evidence graph's
+  // semantic classifier reads. Wave pages have no crawl profile and stay
+  // absent, which the classifier discloses as an explicit unknown role.
+  const auditProfileByUrl = new Map<string, PageAuditProfile>();
+  for (const page of pagesToScan) {
+    if (page.auditProfile !== undefined) auditProfileByUrl.set(page.url, page.auditProfile);
+  }
+
   /** The per-page completion path shared by the initial content lanes and
    *  every discovery wave: attempts, surfaces, discovery collection,
    *  persistence, progress. */
@@ -1546,6 +1555,8 @@ async function runStagedFullAuditScan(
     );
     let result: RenderedAnalysisResult =
       attempts.length > 0 ? { ...laneResult, acquisitionAttempts: attempts } : laneResult;
+    const crawlAuditProfile = auditProfileByUrl.get(url);
+    if (crawlAuditProfile !== undefined) result = { ...result, auditProfile: crawlAuditProfile };
     const retries = retryRequestsFor(attempts);
     if (retries.length > 0) retryQueue.set(url, retries);
     // Plan 059 step 11: links that existed only after the sweep
