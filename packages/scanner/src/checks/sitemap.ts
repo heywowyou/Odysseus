@@ -5,6 +5,7 @@
  */
 
 import { isSameSiteHostname } from '../links.js';
+import type { HostRequestScheduler } from '../host-request-scheduler.js';
 
 const LOC_PATTERN = /<loc>\s*([^<]+?)\s*<\/loc>/gi;
 const LASTMOD_PATTERN = /<lastmod>\s*([^<]+?)\s*<\/lastmod>/i;
@@ -48,7 +49,10 @@ export interface SitemapCheckResult {
 
 export interface SitemapCheckOptions {
   userAgent?: string;
+  /** Fallback pacing for standalone callers without a shared scheduler. */
   delayMs?: number;
+  /** Plan 059: run-wide host scheduler for every sitemap document request. */
+  scheduler?: HostRequestScheduler;
 }
 
 function decodeXmlText(value: string): string {
@@ -165,9 +169,16 @@ export async function checkSitemap(
     if (visitedDocuments.has(documentUrl)) continue;
     visitedDocuments.add(documentUrl);
 
-    if (hasFetched) await sleep(options.delayMs ?? 0);
+    let fetched: Awaited<ReturnType<typeof tryFetchSitemap>>;
+    if (options.scheduler !== undefined) {
+      fetched = await options.scheduler.schedule(() =>
+        tryFetchSitemap(documentUrl, timeoutMs, options.userAgent),
+      );
+    } else {
+      if (hasFetched) await sleep(options.delayMs ?? 0);
+      fetched = await tryFetchSitemap(documentUrl, timeoutMs, options.userAgent);
+    }
     hasFetched = true;
-    const fetched = await tryFetchSitemap(documentUrl, timeoutMs, options.userAgent);
     if ('error' in fetched) {
       fetchErrors.push({ url: documentUrl, error: fetched.error });
       continue;
