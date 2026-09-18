@@ -14,6 +14,11 @@ import {
 } from './config.js';
 import type { HostRequestScheduler } from './host-request-scheduler.js';
 import {
+  installBrowserNetworkSafety,
+  type NetworkSafetyBlockHandler,
+} from './browser-network-safety.js';
+import type { NetworkTargetPolicy } from './network-target-policy.js';
+import {
   isLanguageHomepagePath,
   isSameSiteHostname,
   normalizeInternalLinks,
@@ -106,6 +111,9 @@ export interface CrawlOptions {
    *  crawl test) has no run to share a scheduler with. Absent, the crawl
    *  paces itself exactly as it did before this option existed. */
   scheduler?: HostRequestScheduler;
+  /** Plan 059 production network policy. Omitted by standalone/test callers. */
+  networkPolicy?: NetworkTargetPolicy;
+  onNetworkSafetyBlocked?: NetworkSafetyBlockHandler;
 }
 
 /** Per-iteration loop state the resumable crawl must survive a process
@@ -521,6 +529,13 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   }
 
   const context = await options.browser.newContext({ userAgent });
+  if (options.networkPolicy !== undefined) {
+    await installBrowserNetworkSafety(
+      context,
+      options.networkPolicy,
+      options.onNetworkSafetyBlocked,
+    );
+  }
   context.setDefaultTimeout(timeoutMs);
   context.setDefaultNavigationTimeout(timeoutMs);
 
