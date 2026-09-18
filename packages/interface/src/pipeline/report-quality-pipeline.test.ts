@@ -587,6 +587,60 @@ describe('runReportQualityPipeline (Plan 058 fail-closed behavior)', () => {
     expect(storeState.bundles).toHaveLength(0);
   });
 
+  it('re-plans once with the deterministic rejection named when the first plan binds unknown evidence', async () => {
+    const badPlan = seniorPlanOutputFor(DEFAULT_FINDINGS);
+    const first = badPlan.remediationProjects[0];
+    if (!first) throw new Error('fixture must include a remediation project');
+    badPlan.remediationProjects[0] = {
+      ...first,
+      evidenceRefs: ['sha256:eaa91b64e008058560cc0dce0aa1642f8c4b91a6b4852897fdfacb51a02b318e'],
+    };
+    const seniorPayloads: Array<Record<string, unknown>> = [];
+    harness.llm = makeLlmScript({
+      findings: DEFAULT_FINDINGS,
+      roles: {
+        'senior-analyst': (ctx, callNumber) => {
+          seniorPayloads.push(ctx.userPayload as Record<string, unknown>);
+          return callNumber === 1 ? badPlan : seniorPlanOutputFor(DEFAULT_FINDINGS);
+        },
+      },
+    });
+    const result = await runReportQualityPipeline(makePipelineInput());
+
+    expect(result.state).toBe('awaiting-operator-approval');
+    expect(harness.llmCalls['senior-analyst']).toBe(2);
+    // The §9 patch-plan repair names the exact gate rejection for the
+    // second attempt and demands a targeted fix.
+    const feedback = seniorPayloads[1]?.['previousAttemptRejections'] as string[];
+    expect(feedback).toHaveLength(1);
+    expect(feedback[0]).toContain('references unknown evidence');
+    expect(seniorPayloads[1]?.['repairInstruction']).toContain('Repair exactly the named');
+    expect(states()).toContain('quality-approved');
+  });
+
+  it('exhausts the bounded plan repair into operator review instead of accepting an unbound plan', async () => {
+    const badPlan = seniorPlanOutputFor(DEFAULT_FINDINGS);
+    const first = badPlan.remediationProjects[0];
+    if (!first) throw new Error('fixture must include a remediation project');
+    badPlan.remediationProjects[0] = {
+      ...first,
+      evidenceRefs: ['sha256:eaa91b64e008058560cc0dce0aa1642f8c4b91a6b4852897fdfacb51a02b318e'],
+    };
+    harness.llm = makeLlmScript({
+      findings: DEFAULT_FINDINGS,
+      roles: { 'senior-analyst': () => badPlan },
+    });
+    await expect(runReportQualityPipeline(makePipelineInput())).rejects.toThrow(
+      /binding gates after 2 attempts/,
+    );
+    expect(harness.llmCalls['senior-analyst']).toBe(2);
+    expect(harness.llmCalls['writer-fr']).toBeUndefined();
+    expect(finalTransition().state).toBe('needs-operator-review');
+    expect(finalTransition().patch.errorCode).toBe('plan-repair-limit');
+    expect(storeState.bundles).toHaveLength(0);
+    expect(storeState.released).toHaveLength(1);
+  });
+
   it('sends an accepted first-pass visual defect to operator review without looping visual repairs', async () => {
     harness.llm = makeLlmScript({
       findings: DEFAULT_FINDINGS,

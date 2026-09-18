@@ -81,6 +81,10 @@ import {
 import { putImmutableJson, putPrivateCandidatePdf } from './report-quality-storage.js';
 
 const MAX_CONTENT_REPAIR_ITERATIONS = 8;
+/** Plan 058 §9/§13: the senior plan gets one bounded patch-plan repair — the
+ *  deterministic rejection is named and the role re-issues the plan — before
+ *  the run goes to operator review. */
+const MAX_PLAN_ATTEMPTS = 2;
 const VISUAL_REVIEW_PAGE_BATCH = 1;
 
 class ReportQualityNeedsOperatorReviewError extends Error {
@@ -830,22 +834,49 @@ export async function runReportQualityPipeline(input: {
     await putImmutableJson(input.artifactStore, 'evidence-dossier', dossier);
 
     await keepLease(context);
-    const planCall = await callReportQualityRole({
-      role: 'senior-analyst',
-      userPayload: {
-        inputSnapshotDigest: snapshotObject.digest,
-        evidence: compactEvidence(evidence),
-        dossier,
-        factRegistry: registry,
-        instruction:
-          'Account for every non-minor finding in exactly one coherent remediation project; minor findings may remain appendix-only. There is no target project count.',
-      },
-      parser: seniorPlanOutputSchema,
-      jsonSchema: SENIOR_PLAN_JSON_SCHEMA,
-    });
-    await recordModelCall(context, planCall.provenance);
-    const plan = normalizeSeniorPlan(planCall.output, snapshotObject.digest);
-    assertPlanBindings(plan, registry, evidence, dossier);
+    let plan: SeniorReportPlan | undefined;
+    let planRejections: string[] = [];
+    for (let attempt = 1; !plan; attempt += 1) {
+      await keepLease(context);
+      const planCall = await callReportQualityRole({
+        role: 'senior-analyst',
+        userPayload: {
+          inputSnapshotDigest: snapshotObject.digest,
+          evidence: compactEvidence(evidence),
+          dossier,
+          factRegistry: registry,
+          instruction:
+            'Account for every non-minor finding in exactly one coherent remediation project; minor findings may remain appendix-only. There is no target project count.',
+          ...(planRejections.length > 0
+            ? {
+                previousAttemptRejections: planRejections,
+                repairInstruction:
+                  'Your previous plan was refused by the deterministic evidence-binding gates. ' +
+                  'Repair exactly the named rejections — replace or drop unknown references — ' +
+                  'and keep every other field identical.',
+              }
+            : {}),
+        },
+        parser: seniorPlanOutputSchema,
+        jsonSchema: SENIOR_PLAN_JSON_SCHEMA,
+      });
+      await recordModelCall(context, planCall.provenance);
+      const candidate = normalizeSeniorPlan(planCall.output, snapshotObject.digest);
+      try {
+        assertPlanBindings(candidate, registry, evidence, dossier);
+        plan = candidate;
+      } catch (error) {
+        planRejections.push(error instanceof Error ? error.message : String(error));
+        if (attempt >= MAX_PLAN_ATTEMPTS) {
+          // Plan 058 §13: exhausting the ceiling is operator review, never
+          // a silently accepted plan.
+          throw new ReportQualityNeedsOperatorReviewError(
+            'plan-repair-limit',
+            `Senior report plan failed its binding gates after ${String(MAX_PLAN_ATTEMPTS)} attempts: ${planRejections.join(' | ')}`,
+          );
+        }
+      }
+    }
     const coverage = reconcileCoverageLedger(dossier.coverageLedger, plan);
     assertCoverageLedgerComplete(coverage);
     const planObject = await putImmutableJson(input.artifactStore, 'senior-plan', {

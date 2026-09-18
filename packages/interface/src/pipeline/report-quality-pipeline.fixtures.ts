@@ -7,7 +7,12 @@ import {
   type ReportQualityRole,
   type Sha256Digest,
 } from '@odysseus/core';
-import type { EditorOutput, QualityReviewOutput, QualityWriterOutput } from '@odysseus/llm';
+import type {
+  EditorOutput,
+  QualityReviewOutput,
+  QualityWriterOutput,
+  SeniorPlanOutput,
+} from '@odysseus/llm';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
 
 /**
@@ -117,7 +122,7 @@ export function evidenceFixture(
 
 /** Raw senior-analyst output (pre-normalization, seniorPlanOutputSchema shape)
  *  covering every supplied finding with exactly one remediation project. */
-export function seniorPlanOutputFor(findings: Finding[]) {
+export function seniorPlanOutputFor(findings: Finding[]): SeniorPlanOutput {
   return {
     remediationProjects: [
       {
