@@ -103,6 +103,7 @@ export type { AuditRuntimeFields } from './audits.js';
 // go through these service functions; handlers never issue raw updates.
 export {
   approveWritingCandidate,
+  attachEnglishAnalysisToSelection,
   getAnalysisById,
   getReportPreparation,
   patchReportPreparationInputs,
