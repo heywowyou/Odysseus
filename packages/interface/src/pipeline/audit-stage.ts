@@ -23,6 +23,7 @@ import {
   getScanConcurrency,
   launchBrowser,
   pruneScreenshots,
+  PUBLIC_SITE_NETWORK_POLICY,
   scanSite,
   writeAuditArtifacts,
   writeFindingsFile,
@@ -261,6 +262,7 @@ export async function runAuditStage(
       // Lighthouse never fires anyway" reasoning is a weaker guarantee
       // than simply never entering that code path at all.
       fullAuditPlanning: !options.skipLighthouse,
+      networkPolicy: PUBLIC_SITE_NETWORK_POLICY,
       // Plan 035: full audits stamp the crawl checkpoint with this run's
       // identity and config, and resume from one when a previous attempt
       // left it behind. Never set on the prospecting path.
