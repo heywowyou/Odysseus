@@ -26,6 +26,13 @@ const registry: ReportFactRegistry = {
       display: { fr: '12 pages visitées', en: '12 pages visited' },
       sourceRefs: [],
     },
+    {
+      factId: 'wcag.1.4.3',
+      kind: 'reference',
+      value: '1.4.3',
+      display: { fr: 'critère WCAG 1.4.3', en: 'WCAG criterion 1.4.3' },
+      sourceRefs: [],
+    },
   ],
 };
 
@@ -61,17 +68,34 @@ describe('assertNoFreehandExactScalar enforces the closed scalar allowlist', () 
 });
 
 describe('validateEvidenceBoundContent', () => {
-  it('accepts text, bound facts and reference segments', () => {
+  it('accepts text, bound facts and registry reference segments', () => {
     const content: EvidenceBoundContent = {
       segments: [
         { kind: 'text', text: 'Audit mené sur ' },
         { kind: 'fact', factId: 'audit.pagesVisited' },
-        { kind: 'text', text: ' ; preuve visuelle en ' },
-        { kind: 'reference', referenceId: 'screenshot:home' },
+        { kind: 'text', text: ' ; exigence du ' },
+        { kind: 'reference', referenceId: 'wcag.1.4.3' },
         { kind: 'text', text: '.' },
       ],
     };
     expect(() => validateEvidenceBoundContent(content, registry)).not.toThrow();
+  });
+
+  it('refuses a reference the registry does not declare, so raw ids never print', () => {
+    // Live pilot regression: finding ids and digests used as references were
+    // printed raw into client prose ("f001f002", a bare sha256).
+    for (const referenceId of ['f001', `sha256:${'b'.repeat(64)}`, 'screenshot:home']) {
+      expect(() =>
+        validateEvidenceBoundContent({ segments: [{ kind: 'reference', referenceId }] }, registry),
+      ).toThrow(`Unknown reference binding: ${referenceId}`);
+    }
+    // A number fact is not a reference, even though its id exists.
+    expect(() =>
+      validateEvidenceBoundContent(
+        { segments: [{ kind: 'reference', referenceId: 'audit.pagesVisited' }] },
+        registry,
+      ),
+    ).toThrow(EvidenceBoundContentError);
   });
 
   it('rejects a fact segment naming a fact outside the registry', () => {
@@ -97,10 +121,12 @@ describe('validateEvidenceBoundContent', () => {
 });
 
 describe('sanitizeModelText safely normalizes unsafe formatting', () => {
-  it('strips angle brackets, replaces control characters with spaces and trims', () => {
+  it('strips angle brackets, replaces control characters and collapses whitespace', () => {
     expect(sanitizeModelText('<script>alert(1)</script>')).toBe('scriptalert(1)/script');
     expect(sanitizeModelText('contraste\u0007insuffisant')).toBe('contraste insuffisant');
-    expect(sanitizeModelText('  ligne\nsaut\u007f  ')).toBe('ligne saut');
+    // Edge whitespace separates a segment from its bound neighbour, so it is
+    // collapsed, not trimmed.
+    expect(sanitizeModelText('  ligne\nsaut\u007f  ')).toBe(' ligne saut ');
   });
 
   it('leaves safe prose byte-for-byte unchanged', () => {
@@ -117,20 +143,35 @@ describe('resolveEvidenceBoundContent', () => {
       { kind: 'fact', factId: 'audit.pagesVisited' },
       { kind: 'text', text: ' — détail : ' },
       { kind: 'fact', factId: 'audit.siteUrl' },
-      { kind: 'text', text: ' ; preuve : ' },
-      { kind: 'reference', referenceId: 'screenshot:home' },
+      { kind: 'text', text: ' ; exigence : ' },
+      { kind: 'reference', referenceId: 'wcag.1.4.3' },
       { kind: 'text', text: '.' },
     ],
   };
 
-  it('resolves fact segments through the registry display for the requested language', () => {
-    // sanitizeModelText trims every text segment, so inter-segment spacing
-    // only survives inside fact displays - the module's stated policy.
+  it('resolves facts and references through the registry display, keeping segment spacing', () => {
     expect(resolveEvidenceBoundContent(content, registry, 'fr')).toBe(
-      'Audit mené sur12 pages visitées— détail :https://site.test; preuve :screenshot:home.',
+      'Audit mené sur 12 pages visitées — détail : https://site.test ; exigence : critère WCAG 1.4.3.',
     );
     expect(resolveEvidenceBoundContent(content, registry, 'en')).toBe(
-      'Audit mené sur12 pages visited— détail :https://site.test; preuve :screenshot:home.',
+      'Audit mené sur 12 pages visited — détail : https://site.test ; exigence : WCAG criterion 1.4.3.',
+    );
+  });
+
+  it('separates a bound value from an adjacent word when the writer omitted the space', () => {
+    // Live pilot regression: the resolver printed "sur38pages" and
+    // "74constats" when segments abutted without whitespace.
+    const abutting: EvidenceBoundContent = {
+      segments: [
+        { kind: 'text', text: 'Audit sur' },
+        { kind: 'fact', factId: 'audit.pagesVisited' },
+        { kind: 'text', text: 'au total, voir' },
+        { kind: 'reference', referenceId: 'wcag.1.4.3' },
+        { kind: 'text', text: '.' },
+      ],
+    };
+    expect(resolveEvidenceBoundContent(abutting, registry, 'fr')).toBe(
+      'Audit sur 12 pages visitées au total, voir critère WCAG 1.4.3.',
     );
   });
 
@@ -142,7 +183,7 @@ describe('resolveEvidenceBoundContent', () => {
       ],
     };
     expect(resolveEvidenceBoundContent(risky, registry, 'en')).toBe(
-      'bConstat/b surhttps://site.test',
+      'bConstat/b sur https://site.test',
     );
   });
 

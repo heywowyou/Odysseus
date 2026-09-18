@@ -151,7 +151,7 @@ describe('validateQualityWriterOutput', () => {
 });
 
 describe('resolveQualityDraft', () => {
-  it('binds fact segments to registry display values and reference segments to their reference id', () => {
+  it('binds fact segments to registry display values and refuses references outside the registry', () => {
     const writer = writerFixture();
     writer.executiveSummary = {
       segments: [
@@ -166,20 +166,20 @@ describe('resolveQualityDraft', () => {
       ],
     };
 
-    const { analysis } = resolveQualityDraft({
-      language: 'fr',
-      writer,
-      plan: planFixture(),
-      registry: REGISTRY,
-      evidence: evidenceFixture(),
-      requestedModel: 'test-model-058',
-      generatedAt: new Date('2026-09-18T10:00:00.000Z'),
-    });
+    const resolve = () =>
+      resolveQualityDraft({
+        language: 'fr',
+        writer,
+        plan: planFixture(),
+        registry: REGISTRY,
+        evidence: evidenceFixture(),
+        requestedModel: 'test-model-058',
+        generatedAt: new Date('2026-09-18T10:00:00.000Z'),
+      });
+    expect(resolve).toThrow('Unknown reference binding: ref:robots-disallowed-pages');
 
-    expect(analysis.executiveSummary).toBe('Obstacles confirmés sur ce site :4');
-    // Each text segment is sanitized (trimmed) before the join, so the
-    // trailing space of the text segment does not survive resolution.
-    expect(analysis.notes).toBe('Limites documentées dansref:robots-disallowed-pages');
+    writer.notes = text(SAFE_PROSE.fr);
+    expect(resolve().analysis.executiveSummary).toBe('Obstacles confirmés sur ce site : 4');
   });
 
   it('derives analysis provenance from the plan and approved evidence, never from free prose', () => {
