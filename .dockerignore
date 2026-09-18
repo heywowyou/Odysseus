@@ -48,3 +48,6 @@ plans
 # must stay: the workspace importer list and the lockfile include it.
 packages/site/*
 !packages/site/package.json
+
+.restic.env
+.restic-password
