@@ -19,9 +19,9 @@ import {
 } from '../components/ui/table';
 import { useI18n } from '../i18n/provider';
 import { ApiError, fetchJson, sendJson } from '../lib/api';
-import { formatRelativeTime } from '../lib/format';
+import { formatDateTime, formatRelativeTime } from '../lib/format';
 import { usePolling } from '../lib/use-polling';
-import type { TodoPage, TodoRow, TodoRowKind } from '../lib/api-types';
+import type { AttentionTodoRow, TodoPage, TodoRow, TodoRowKind } from '../lib/api-types';
 
 // Plan 040 poll policy: lists refresh every 10s (usePolling also pauses
 // every poll while the tab is hidden).
@@ -35,12 +35,20 @@ const KIND_TONE: Record<TodoRowKind, BadgeTone> = {
   'first-email': 'accent',
   'audit-input': 'serious',
   'audit-report': 'serious',
+  'report-quality-review': 'serious',
 };
+
+/** Plan 060 §8: attention rows are exactly the rows carrying the stable
+ *  attention id; they reuse the attention copy tables for their decision
+ *  label and severity chip instead of the prospect-work kind labels. */
+function isAttentionRow(row: TodoRow): row is AttentionTodoRow {
+  return 'attentionId' in row;
+}
 
 /** The dashboard's landing page and the operator's inbox: every row is derived
  * from a durable prospect and opens that prospect's actionable page. */
 export function ATraiterPage(): JSX.Element {
-  const { strings } = useI18n();
+  const { strings, language } = useI18n();
   const navigate = useNavigate();
   const { data, error, refresh } = usePolling(
     (signal) => fetchJson<TodoPage>('/api/prospect-hub/todo', { signal }),
@@ -118,26 +126,43 @@ export function ATraiterPage(): JSX.Element {
             </TableRow>
           </TableHead>
           <TableBody>
-            {data.rows.map((row: TodoRow) => (
-              <TableRow key={`${row.kind}-${row.href}`} onClick={() => navigate(row.href)}>
-                <TableCell>
-                  <span className="mb-1 inline-block">
-                    <Badge tone={KIND_TONE[row.kind]}>{strings.aTraiter.kinds[row.kind]}</Badge>
-                  </span>
-                  <Link
-                    to={row.href}
-                    className="block font-medium text-ink hover:text-accent-bright"
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    {row.subject}
-                  </Link>
-                </TableCell>
-                <TableCell>{strings.aTraiter.actions[row.action]}</TableCell>
-                <TableCell className="numeric whitespace-nowrap text-xs text-ink-muted">
-                  {formatRelativeTime(row.since, strings.common.relativeTime)}
-                </TableCell>
-              </TableRow>
-            ))}
+            {data.rows.map((row: TodoRow) => {
+              const kindLabel = isAttentionRow(row)
+                ? strings.attention.kinds[row.kind]
+                : strings.aTraiter.kinds[row.kind];
+              return (
+                <TableRow key={`${row.kind}-${row.href}`} onClick={() => navigate(row.href)}>
+                  <TableCell>
+                    <span className="mb-1 inline-block">
+                      {isAttentionRow(row) ? (
+                        <Badge tone="serious">{strings.attention.severities[row.severity]}</Badge>
+                      ) : (
+                        <Badge tone={KIND_TONE[row.kind]}>{kindLabel}</Badge>
+                      )}
+                    </span>
+                    {isAttentionRow(row) ? (
+                      <span className="mb-1 block text-sm font-medium text-ink">{kindLabel}</span>
+                    ) : null}
+                    <Link
+                      to={row.href}
+                      className="block font-medium text-ink hover:text-accent-bright"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      {row.subject}
+                    </Link>
+                  </TableCell>
+                  <TableCell>{strings.aTraiter.actions[row.action]}</TableCell>
+                  <TableCell className="numeric whitespace-nowrap text-xs text-ink-muted">
+                    {isAttentionRow(row)
+                      ? strings.attention.since.replace(
+                          '{since}',
+                          formatDateTime(row.since, language),
+                        )
+                      : formatRelativeTime(row.since, strings.common.relativeTime)}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

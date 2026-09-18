@@ -32,9 +32,21 @@ import {
   type OutreachReportReadiness,
   type ReadinessReport,
 } from './outreach-report-readiness.js';
+import { listNewestReportQualityRuns, type NewestReportQualityRun } from './report-quality.js';
 
 export type ProspectTodoKind =
-  'draft' | 'reply' | 'follow-up' | 'first-email' | 'audit-input' | 'audit-report';
+  | 'draft'
+  | 'reply'
+  | 'follow-up'
+  | 'first-email'
+  | 'audit-input'
+  | 'audit-report'
+  | 'report-quality-review';
+
+/** Plan 060 §8: severity of a human-attention row. Kept as a literal union
+ *  here because the store cannot import the interface package's operator
+ *  contract, which owns the same closed vocabulary. */
+export type ProspectAttentionSeverity = 'action-required' | 'blocking';
 
 export interface ProspectTodoRow {
   kind: ProspectTodoKind;
@@ -43,6 +55,15 @@ export interface ProspectTodoRow {
   prospectId: string;
   href: string;
   since: string;
+  /** Plan 060 §8 attention fields, present only on rows derived from the
+   *  human-attention contract: a stable condition id, the severity, the
+   *  audit subject, the closed reason code and the condition's last
+   *  update. Classic prospect-work rows leave them undefined. */
+  attentionId?: string;
+  severity?: ProspectAttentionSeverity;
+  auditId?: string;
+  reasonCode?: string;
+  updatedAt?: string;
 }
 
 export type ProspectWorkAction =
@@ -111,6 +132,10 @@ export interface ProspectWorkSources {
   failedJobs: readonly ProspectWorkJob[];
   /** Report rows of the prospect's audits (readiness projection only). */
   reports: readonly ProspectWorkReport[];
+  /** Plan 060 §7.1: the newest Plan-058 quality run of each of the
+   *  prospect's audits, whatever its state, so the derivation can prove
+   *  which run — if any — genuinely needs an operator review. */
+  qualityRuns?: readonly NewestReportQualityRun[];
   /** Issue #390: queued or running scans linked to the prospect. A running
    *  scan replaces the prepare-audit recommendation. */
   activeJobs?: readonly ProspectWorkJob[];
@@ -161,6 +186,10 @@ export type NewestQualifyingAuditResult =
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TERMINAL_PROSPECT_STATUSES = new Set<Prospect['status']>(['won', 'lost', 'opted-out']);
+
+/** The one closed reason the report-quality attention kind carries today:
+ *  the Plan-058 authority stopped the run for an operator review. */
+const QUALITY_RUN_REVIEW_REASON = 'quality-run-needs-operator-review';
 
 function encodedProspectHref(
   prospectId: string,
@@ -415,17 +444,42 @@ export function deriveProspectWork(
     }
   }
 
+  // Plan 060 §7.1: a quality run the Plan-058 authority stopped for an
+  // operator review is attention. Every other run state — producing,
+  // quality-approved, failed, promoted — opens none, and an unknown state
+  // fabricates nothing (fail closed).
+  for (const run of sources.qualityRuns ?? []) {
+    if (run.state !== 'needs-operator-review') continue;
+    if (!prospectAuditIds.has(run.auditId)) continue;
+    items.push({
+      kind: 'report-quality-review',
+      subject: prospect.name,
+      action: 'review-report',
+      prospectId: prospect.prospectId,
+      href: `/audits/${encodeURIComponent(run.auditId)}`,
+      since: new Date(run.createdAt).toISOString(),
+      attentionId: `report-quality-review:${run.auditId}:${run.qualityRunId}`,
+      severity: 'action-required',
+      auditId: run.auditId,
+      reasonCode: QUALITY_RUN_REVIEW_REASON,
+      updatedAt: new Date(run.updatedAt).toISOString(),
+    });
+  }
+
   items.sort((left, right) => asTime(right.since) - asTime(left.since));
   // Plan 050: an archived prospect is out of active work. Its audit state
   // stays visible on the detail page, but it opens no work and recommends
   // nothing until the operator restores it.
   if (prospect.archivedAt !== undefined) items.length = 0;
+  // Attention rows name an audit-quality decision, not the prospect's next
+  // commercial action, so they never become the recommendation.
+  const recommendedItem = items.find((item) => item.attentionId === undefined);
   const nextRecommendation =
     prospect.archivedAt !== undefined
       ? undefined
       : recommendation(
           prospect,
-          items[0],
+          recommendedItem,
           qualification.state,
           websiteSuppressed,
           emailSuppressed,
@@ -567,13 +621,15 @@ export async function loadProspectWork(
   const needsInputJobs = scanJobs.filter((job) => job.status === 'needs-input');
   const failedJobs = scanJobs.filter((job) => job.status === 'failed');
   const activeJobs = scanJobs.filter((job) => job.status === 'queued' || job.status === 'running');
-  const reports =
+  const [reports, qualityRunMap] = await Promise.all([
     auditIds.length === 0
-      ? []
-      : await createReportModel(connection)
+      ? Promise.resolve([])
+      : createReportModel(connection)
           .find({ auditId: { $in: auditIds } })
           .select(READINESS_REPORT_PROJECTION)
-          .lean<ProspectWorkReport[]>();
+          .lean<ProspectWorkReport[]>(),
+    listNewestReportQualityRuns(connection, auditIds),
+  ]);
 
   const sources: ProspectWorkSources = {
     audits: classifiedAudits,
@@ -582,6 +638,7 @@ export async function loadProspectWork(
     needsInputJobs,
     failedJobs,
     reports,
+    qualityRuns: [...qualityRunMap.values()],
     activeJobs,
     suppressedDomains: suppression.domains,
     suppressedAddresses: suppression.addresses,
@@ -610,6 +667,9 @@ export async function loadProspectWork(
   const reportsByProspect = groupByProspect(sources.reports, (report) =>
     prospectByAudit.get(report.auditId),
   );
+  const qualityRunsByProspect = groupByProspect(sources.qualityRuns ?? [], (run) =>
+    prospectByAudit.get(run.auditId),
+  );
   return prospects.map((prospect) =>
     deriveProspectWork(
       prospect,
@@ -621,6 +681,7 @@ export async function loadProspectWork(
         needsInputJobs: jobsByProspect.get(prospect.prospectId) ?? [],
         failedJobs: failedJobsByProspect.get(prospect.prospectId) ?? [],
         reports: reportsByProspect.get(prospect.prospectId) ?? [],
+        qualityRuns: qualityRunsByProspect.get(prospect.prospectId) ?? [],
         activeJobs: activeJobsByProspect.get(prospect.prospectId) ?? [],
       },
       now,

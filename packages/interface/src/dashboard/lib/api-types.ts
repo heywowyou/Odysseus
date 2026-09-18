@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import type { AttentionKind, AttentionSeverity } from '../../operator/contract';
 import type {
   jobStatusSchema,
   scanJobDetailSchema,
@@ -33,28 +34,62 @@ export interface ScanCreated {
  * stable code, never ready-made text, so FR/EN copy stays in the client's own
  * i18n table (aTraiter.actions). */
 export type TodoRowKind =
-  'draft' | 'reply' | 'follow-up' | 'first-email' | 'audit-input' | 'audit-report';
+  | 'draft'
+  | 'reply'
+  | 'follow-up'
+  | 'first-email'
+  | 'audit-input'
+  | 'audit-report'
+  | 'report-quality-review';
 export type TodoRowAction =
   | 'review-draft'
   | 'record-outcome'
   | 'create-follow-up'
   | 'create-first-email'
   | 'review-audit'
-  | 'regenerate-report';
+  | 'regenerate-report'
+  | 'review-report';
 
-/** One row of GET /api/prospect-hub/todo (routes/prospect-hub.ts). Field names are the API's
- *  persisted contract, not UI vocabulary; never respell them. */
-export interface TodoRow {
-  kind: TodoRowKind;
+/** TodoRow kinds derived from the plan 060 §8 human-attention contract; their
+ *  decision copy lives in strings.attention, not in aTraiter.kinds. */
+export type AttentionTodoRowKind = Extract<TodoRowKind, AttentionKind>;
+/** The classic prospect-work kinds. */
+export type ProspectWorkTodoKind = Exclude<TodoRowKind, AttentionTodoRowKind>;
+
+/** Shared columns of GET /api/prospect-hub/todo rows (routes/prospect-hub.ts).
+ *  Field names are the API's persisted contract, not UI vocabulary; never
+ *  respell them. */
+interface TodoRowColumns {
   subject: string;
   action: TodoRowAction;
   href: string;
   since: string;
 }
 
+/** A classic prospect-work row. */
+export interface ProspectWorkTodoRow extends TodoRowColumns {
+  kind: ProspectWorkTodoKind;
+}
+
+/** Plan 060 §8: an attention row, carrying the human-attention contract
+ *  fields in full. */
+export interface AttentionTodoRow extends TodoRowColumns {
+  kind: AttentionTodoRowKind;
+  attentionId: string;
+  severity: AttentionSeverity;
+  auditId: string;
+  reasonCode: string;
+  updatedAt: string;
+}
+
+export type TodoRow = ProspectWorkTodoRow | AttentionTodoRow;
+
 /** Response of GET /api/prospect-hub/todo. */
 export interface TodoPage {
   rows: TodoRow[];
+  /** Plan 060 §8: the server-provided attention count the shell badge
+   *  renders. */
+  attentionCount: number;
 }
 
 /** One per-URL row of a prospecting job (store's UrlResult). status stays

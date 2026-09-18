@@ -195,6 +195,51 @@ const REPORT_QUALITY_RUN_TRANSITIONS: Record<ReportBundleState, readonly ReportB
   failed: [],
 };
 
+/** Attention-projection fields of one quality run (plan 060 §7.1): exactly
+ *  what the À traiter derivation reads, never the run's full provenance. */
+export interface NewestReportQualityRun {
+  qualityRunId: string;
+  auditId: string;
+  state: ReportBundleState;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * The newest quality run of each given audit, whatever its state. Returning
+ * the newest run rather than only the attention-worthy one lets the caller
+ * fail closed: a re-run supersedes an older run's needs-operator-review, and
+ * the caller proves that from state it can see. The `{ auditId: 1,
+ * createdAt: -1 }` index answers the match and sort, and `$group`/`$first`
+ * keeps exactly one row per audit, so the read stays bounded by the audit
+ * set whatever the run history holds.
+ */
+export async function listNewestReportQualityRuns(
+  connection: Connection,
+  auditIds: readonly string[],
+): Promise<Map<string, NewestReportQualityRun>> {
+  if (auditIds.length === 0) return new Map();
+  const runs = await createReportQualityRunModel(connection)
+    .aggregate<NewestReportQualityRun>([
+      { $match: { auditId: { $in: [...auditIds] } } },
+      { $sort: { auditId: 1, createdAt: -1 } },
+      { $group: { _id: '$auditId', run: { $first: '$$ROOT' } } },
+      { $replaceRoot: { newRoot: '$run' } },
+      {
+        $project: {
+          _id: 0,
+          qualityRunId: 1,
+          auditId: 1,
+          state: 1,
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      },
+    ])
+    .exec();
+  return new Map(runs.map((run) => [run.auditId, run]));
+}
+
 export async function startReportQualityRun(
   connection: Connection,
   auditId: string,

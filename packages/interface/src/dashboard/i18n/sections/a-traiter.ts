@@ -1,4 +1,8 @@
-import type { TodoRowAction, TodoRowKind } from '../../lib/api-types';
+import type { AttentionTodoRowKind, TodoRowAction, TodoRowKind } from '../../lib/api-types';
+
+/** Kinds the plan 060 §8 attention contract owns reuse strings.attention
+ *  copy; this section names only the classic prospect-work kinds. */
+type ProspectWorkTodoKind = Exclude<TodoRowKind, AttentionTodoRowKind>;
 
 export interface ATraiterStrings {
   title: string;
@@ -10,7 +14,7 @@ export interface ATraiterStrings {
     sinceHeader: string;
   };
   /** Badge label naming which prospect queue a row comes from. */
-  kinds: Record<TodoRowKind, string>;
+  kinds: Record<ProspectWorkTodoKind, string>;
   /** One concrete action per stable code the server returns; never a
    *  ready-made sentence from the API. */
   actions: Record<TodoRowAction, string>;
@@ -38,7 +42,7 @@ export const aTraiter = {
   fr: {
     title: 'À traiter',
     description:
-      'Ce qui attend une décision : brouillons, réponses et relances. Chaque ligne ouvre la fiche du prospect.',
+      'Ce qui attend une décision : brouillons, réponses, relances et revues de rapports. Chaque ligne ouvre la fiche du prospect ou l’audit concerné.',
     table: {
       subjectHeader: 'Sujet',
       actionHeader: 'Action',
@@ -59,6 +63,7 @@ export const aTraiter = {
       'create-first-email': 'Rédiger le premier email',
       'review-audit': 'Confirmer les informations',
       'regenerate-report': 'Régénérer le rapport',
+      'review-report': 'Relire le rapport',
     },
     empty: 'Rien n’attend de décision.',
     syncMailbox: 'Synchroniser la boîte mail',
@@ -79,7 +84,7 @@ export const aTraiter = {
   en: {
     title: 'To do',
     description:
-      'What waits for a decision: drafts, replies, and follow-ups. Every row opens the prospect page.',
+      'What waits for a decision: drafts, replies, follow-ups and report reviews. Every row opens the prospect page or audit it belongs to.',
     table: {
       subjectHeader: 'Subject',
       actionHeader: 'Action',
@@ -100,6 +105,7 @@ export const aTraiter = {
       'create-first-email': 'Draft the first email',
       'review-audit': 'Confirm the details',
       'regenerate-report': 'Regenerate the report',
+      'review-report': 'Review the report',
     },
     empty: 'Nothing is waiting for a decision.',
     syncMailbox: 'Sync mailbox',

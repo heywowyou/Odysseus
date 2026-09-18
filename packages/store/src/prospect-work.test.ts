@@ -7,6 +7,7 @@ vi.mock('./schemas/outreach-draft.schema.js', () => ({ createOutreachDraftModel:
 vi.mock('./schemas/outreach-thread.schema.js', () => ({ createOutreachThreadModel: vi.fn() }));
 vi.mock('./suppression.js', () => ({ findSuppressionMatches: vi.fn() }));
 vi.mock('./schemas/report.schema.js', () => ({ createReportModel: vi.fn() }));
+vi.mock('./report-quality.js', () => ({ listNewestReportQualityRuns: vi.fn() }));
 
 import { createAuditModel } from './schemas/audit.schema.js';
 import { createJobModel } from './schemas/job.schema.js';
@@ -14,6 +15,7 @@ import { createOutreachDraftModel } from './schemas/outreach-draft.schema.js';
 import { createOutreachThreadModel } from './schemas/outreach-thread.schema.js';
 import { findSuppressionMatches } from './suppression.js';
 import { createReportModel } from './schemas/report.schema.js';
+import { listNewestReportQualityRuns, type NewestReportQualityRun } from './report-quality.js';
 import {
   deriveProspectWork,
   loadProspectWork,
@@ -76,6 +78,19 @@ function readyReports(
     generatedAt: new Date('2026-09-01T11:00:00.000Z'),
     findingsProvenance,
   }));
+}
+
+/** Plan 058: the newest quality run of the prospect's qualifying audit, as
+ *  listNewestReportQualityRuns would project it. */
+function qualityRun(overrides: Record<string, unknown> = {}): NewestReportQualityRun {
+  return {
+    qualityRunId: 'run-1',
+    auditId: 'audit-old',
+    state: 'needs-operator-review',
+    createdAt: new Date('2026-09-14T09:00:00.000Z'),
+    updatedAt: new Date('2026-09-14T09:30:00.000Z'),
+    ...overrides,
+  } as NewestReportQualityRun;
 }
 
 const emptySources = {
@@ -293,6 +308,159 @@ describe('prospect work model', () => {
       );
 
       expect(work.items.map((item) => item.kind).sort()).toEqual(['audit-input', 'reply']);
+    });
+  });
+
+  describe('plan 060 §7.1: human-attention rows', () => {
+    it('opens exactly one stable attention row for a needs-operator-review quality run', () => {
+      const sources = { ...emptySources, audits: [audit()], qualityRuns: [qualityRun()] };
+      const first = deriveProspectWork(prospect, sources, new Date('2026-09-15T00:00:00.000Z'));
+      const second = deriveProspectWork(prospect, sources, new Date('2026-09-15T00:05:00.000Z'));
+
+      const rows = first.items.filter((item) => item.kind === 'report-quality-review');
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        attentionId: 'report-quality-review:audit-old:run-1',
+        severity: 'action-required',
+        subject: prospect.name,
+        auditId: 'audit-old',
+        prospectId: prospect.prospectId,
+        action: 'review-report',
+        href: '/audits/audit-old',
+        reasonCode: 'quality-run-needs-operator-review',
+        since: '2026-09-14T09:00:00.000Z',
+        updatedAt: '2026-09-14T09:30:00.000Z',
+      });
+      // The attention id is stable across recomputations, so refreshes and
+      // history see one condition, not a new row per poll.
+      expect(second.items.find((item) => item.kind === 'report-quality-review')?.attentionId).toBe(
+        'report-quality-review:audit-old:run-1',
+      );
+    });
+
+    it('opens no attention for producing, approved, failed or superseded quality work', () => {
+      const states = [
+        'running',
+        'content-clean',
+        'parity-clean',
+        'fr-candidate-clean',
+        'en-candidate-clean',
+        'bundle-final-review',
+        'quality-approved',
+        'awaiting-operator-approval',
+        'operator-approved',
+        'promoted',
+        'failed',
+        // An unknown state fabricates nothing: fail closed.
+        'some-future-state',
+      ] as const;
+      const work = deriveProspectWork(
+        prospect,
+        {
+          ...emptySources,
+          audits: [audit()],
+          qualityRuns: states.map((state, index) =>
+            qualityRun({ qualityRunId: `run-${index}`, state: state as string }),
+          ),
+        },
+        new Date('2026-09-15T00:00:00.000Z'),
+      );
+
+      expect(work.items.filter((item) => item.kind === 'report-quality-review')).toEqual([]);
+      expect(work.items.some((item) => item.attentionId !== undefined)).toBe(false);
+    });
+
+    it('opens no attention for a quality-approved bundle the operator never brought to review', () => {
+      const work = deriveProspectWork(
+        prospect,
+        {
+          ...emptySources,
+          audits: [audit()],
+          qualityRuns: [qualityRun({ state: 'quality-approved' })],
+        },
+        new Date('2026-09-15T00:00:00.000Z'),
+      );
+
+      expect(work.items.some((item) => item.attentionId !== undefined)).toBe(false);
+      expect(work.recommendation).toMatchObject({ action: 'create-first-email' });
+    });
+
+    it('never derives evidence-operator-resolution without durable proof', () => {
+      const work = deriveProspectWork(
+        prospect,
+        {
+          ...emptySources,
+          audits: [audit()],
+          qualityRuns: [qualityRun()],
+        },
+        new Date('2026-09-15T00:00:00.000Z'),
+      );
+
+      // The store keeps no queryable Plan-059 evidence authority, so no
+      // source can prove an operator resolution; the kind stays unwired.
+      expect(work.items.map((item) => item.kind)).not.toContain('evidence-operator-resolution');
+    });
+
+    it('keeps attention rows out of the prospect recommendation', () => {
+      const work = deriveProspectWork(
+        prospect,
+        {
+          ...emptySources,
+          audits: [audit()],
+          needsInputJobs: [
+            {
+              jobId: 'job-blocked',
+              auditId: 'audit-old',
+              status: 'needs-input' as const,
+              createdAt: new Date('2026-09-13T00:00:00.000Z'),
+              options: { prospectId: prospect.prospectId },
+            },
+          ],
+          qualityRuns: [qualityRun()],
+        },
+        new Date('2026-09-15T00:00:00.000Z'),
+      );
+
+      expect(work.items[0]?.kind).toBe('report-quality-review');
+      expect(work.recommendation).toMatchObject({ action: 'review-audit' });
+    });
+
+    it('loads the newest quality runs with one bounded query per load', async () => {
+      // Both load tests assert absolute call counts, so each starts from a
+      // clean slate.
+      vi.clearAllMocks();
+      const auditCursor = chain([audit()]);
+      vi.mocked(createAuditModel).mockReturnValue({
+        find: vi.fn().mockReturnValue(auditCursor),
+      } as never);
+      vi.mocked(createOutreachDraftModel).mockReturnValue({
+        find: vi.fn().mockReturnValue(chain([])),
+      } as never);
+      vi.mocked(createOutreachThreadModel).mockReturnValue({
+        find: vi.fn().mockReturnValue(chain([])),
+      } as never);
+      vi.mocked(createJobModel).mockReturnValue({
+        find: vi.fn().mockReturnValue(chain([])),
+      } as never);
+      vi.mocked(createReportModel).mockReturnValue({
+        find: vi.fn().mockReturnValue(chain([])),
+      } as never);
+      vi.mocked(findSuppressionMatches).mockResolvedValue({
+        domains: new Set(),
+        addresses: new Set(),
+      });
+      vi.mocked(listNewestReportQualityRuns).mockResolvedValue(
+        new Map([['audit-old', qualityRun()]]),
+      );
+
+      const [work] = await loadProspectWork({} as never, [prospect]);
+
+      expect(listNewestReportQualityRuns).toHaveBeenCalledTimes(1);
+      expect(listNewestReportQualityRuns).toHaveBeenCalledWith(
+        {} as never,
+        expect.arrayContaining(['audit-old']),
+      );
+      expect(work?.items.some((item) => item.kind === 'report-quality-review')).toBe(true);
     });
   });
 
@@ -520,6 +688,9 @@ describe('prospect work model', () => {
   });
 
   it('loads all work sources with one bounded query per collection', async () => {
+    // Both load tests assert absolute call counts, so each starts from a
+    // clean slate.
+    vi.clearAllMocks();
     const auditCursor = chain([audit()]);
     const draftCursor = chain([]);
     const threadCursor = chain([]);
@@ -544,6 +715,7 @@ describe('prospect work model', () => {
       domains: new Set(),
       addresses: new Set(),
     });
+    vi.mocked(listNewestReportQualityRuns).mockResolvedValue(new Map());
 
     const work = await loadProspectWork({} as never, [
       prospect,
@@ -555,6 +727,7 @@ describe('prospect work model', () => {
     expect(createOutreachThreadModel).toHaveBeenCalledTimes(1);
     expect(createJobModel).toHaveBeenCalledTimes(1);
     expect(createReportModel).toHaveBeenCalledTimes(1);
+    expect(listNewestReportQualityRuns).toHaveBeenCalledTimes(1);
     expect(findSuppressionMatches).toHaveBeenCalledTimes(1);
     const reportProjection = reportCursor.select.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(Object.keys(reportProjection).sort()).toEqual(
@@ -599,6 +772,7 @@ describe('prospect work model', () => {
       domains: new Set(),
       addresses: new Set(),
     });
+    vi.mocked(listNewestReportQualityRuns).mockResolvedValue(new Map());
 
     const [work] = await loadProspectWork({} as never, [prospect]);
 

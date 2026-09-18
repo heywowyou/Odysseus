@@ -283,7 +283,8 @@ describe('prospect hub routes', () => {
     const response = await handle('/api/prospect-hub/todo');
 
     expect(response.statusCode).toBe(200);
-    expect(response.body).toEqual({ rows });
+    // Plan 060 §8: the badge count is computed server-side, next to the rows.
+    expect(response.body).toEqual({ rows, attentionCount: 1 });
     expect(listProspectTodo).toHaveBeenCalledWith(fakeConnection);
   });
 

@@ -17,10 +17,11 @@ export function AppShell() {
   const { pathname } = useLocation();
 
   // Plan 047 addendum: the shell badge and the To-do page consume the same
-  // prospect work model. No polling: the count refreshes when the shell
+  // endpoint. Plan 060 §8: the count is server-provided, not the length of a
+  // client-side array. No polling: the count refreshes when the shell
   // remounts. Hidden on error or zero, so the badge never invents work.
   const todo = useApi<TodoPage>('/api/prospect-hub/todo');
-  const inboxCount = todo.data?.rows.length;
+  const inboxCount = todo.data?.attentionCount ?? 0;
   const refreshTodo = todo.refresh;
   const previousPathname = useRef(pathname);
 
@@ -48,7 +49,7 @@ export function AppShell() {
           label: strings.nav.outreach,
           icon: Mail,
           end: false,
-          badge: inboxCount !== undefined && inboxCount > 0 ? inboxCount : undefined,
+          badge: inboxCount > 0 ? inboxCount : undefined,
         },
         { to: '/prospects', label: strings.nav.prospects, icon: Mail, end: false },
       ],

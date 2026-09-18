@@ -21,6 +21,7 @@ import {
   atomicallyActivateReportBundle,
   getActiveReportBundle,
   getReportBundleByDigest,
+  listNewestReportQualityRuns,
   recordQualityApprovedBundle,
   releaseReportQualityLease,
   renewReportQualityLease,
@@ -363,6 +364,68 @@ describe.skipIf(!mongoAvailable)('report quality store', () => {
         repairRoute: 'patch-prose',
       });
       expect(run?.issues[1]?.status).toBe('accepted');
+    });
+  });
+
+  describe('newest run projection (plan 060 §7.1)', () => {
+    it('returns exactly the newest run per audit with the attention projection only', async () => {
+      const base = uniqueAuditId('newest-run');
+      const auditA = `${base}-a`;
+      const auditB = `${base}-b`;
+      await createReportQualityRunModel(connection!).create([
+        {
+          qualityRunId: `${base}-a-superseded`,
+          auditId: auditA,
+          epoch: 1,
+          leaseTokenHash: sha('lease-a-superseded'),
+          state: 'needs-operator-review',
+          createdAt: new Date('2026-09-10T10:00:00.000Z'),
+          updatedAt: new Date('2026-09-10T10:05:00.000Z'),
+        },
+        {
+          qualityRunId: `${base}-a-newest`,
+          auditId: auditA,
+          epoch: 2,
+          leaseTokenHash: sha('lease-a-newest'),
+          state: 'running',
+          createdAt: new Date('2026-09-12T10:00:00.000Z'),
+          updatedAt: new Date('2026-09-12T10:05:00.000Z'),
+        },
+        {
+          qualityRunId: `${base}-b-newest`,
+          auditId: auditB,
+          epoch: 1,
+          leaseTokenHash: sha('lease-b-newest'),
+          state: 'needs-operator-review',
+          createdAt: new Date('2026-09-11T10:00:00.000Z'),
+          updatedAt: new Date('2026-09-11T10:30:00.000Z'),
+        },
+      ]);
+
+      const newest = await listNewestReportQualityRuns(connection!, [auditA, auditB]);
+
+      expect(newest.size).toBe(2);
+      // The superseded run never surfaces: a re-run is itself the proof the
+      // older review stopped being current.
+      expect(newest.get(auditA)).toMatchObject({
+        qualityRunId: `${base}-a-newest`,
+        auditId: auditA,
+        state: 'running',
+      });
+      expect(newest.get(auditB)).toMatchObject({
+        qualityRunId: `${base}-b-newest`,
+        state: 'needs-operator-review',
+        updatedAt: new Date('2026-09-11T10:30:00.000Z'),
+      });
+      // Provenance arrays stay behind: the projection is bounded on purpose.
+      expect(newest.get(auditA)).not.toHaveProperty('modelCalls');
+      expect(newest.get(auditA)).not.toHaveProperty('issues');
+    });
+
+    it('answers an empty audit set with an empty map', async () => {
+      await expect(listNewestReportQualityRuns(connection!, []).then((m) => m.size)).resolves.toBe(
+        0,
+      );
     });
   });
 

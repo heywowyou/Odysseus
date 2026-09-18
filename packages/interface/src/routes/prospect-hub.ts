@@ -181,7 +181,10 @@ export function registerProspectHubRoutes(
   }
 
   router.get('/api/prospect-hub/todo', async ({ res }) => {
-    sendJson(res, 200, { rows: await listProspectTodo(connection) });
+    // Plan 060 §8: the sidebar badge is the server-provided attention count,
+    // not the length of a client-side array.
+    const rows = await listProspectTodo(connection);
+    sendJson(res, 200, { rows, attentionCount: rows.length });
   });
 
   // Check one entered address against suppression. Hashing happens inside
