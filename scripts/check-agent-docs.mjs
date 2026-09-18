@@ -15,6 +15,7 @@ const requiredPaths = [
   'docs/agents/documentation-map.md',
   'docs/agents/handoff.md',
   'docs/agents/model-prompting.md',
+  'docs/agents/plan-quality-gates.md',
   'docs/agents/session-template.md',
   'eslint.config.mjs',
 ];
@@ -146,7 +147,7 @@ if (!gitignore.split(/\r?\n/).includes('/docs/session/current-session.md')) {
 }
 
 const packageJson = JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), 'utf8'));
-for (const scriptName of ['check', 'docs:check', 'format', 'format:check', 'lint', 'typecheck']) {
+for (const scriptName of ['check', 'docs:check', 'plans:check', 'format', 'format:check', 'lint', 'typecheck']) {
   if (!packageJson.scripts?.[scriptName]) {
     errors.push(`package.json must define the shared ${scriptName} script.`);
   }
