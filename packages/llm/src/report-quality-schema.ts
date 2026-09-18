@@ -1,12 +1,23 @@
 import { z } from 'zod';
 
+/** Model JSON frequently emits an explicit null for a field the contract
+ *  treats as absent. The core report-quality contracts use plain optional
+ *  fields, so accept null and normalize it away — never pass a null
+ *  optional through as a value. */
+function absentable<T extends z.ZodTypeAny>(schema: T) {
+  return z.preprocess(
+    (value) => (value === null ? undefined : value),
+    schema.optional(),
+  ) as z.ZodType<z.infer<T> | undefined>;
+}
+
 const evidenceBoundSegmentSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('text'), text: z.string().min(1) }).strict(),
   z
     .object({
       kind: z.literal('fact'),
       factId: z.string().min(1),
-      format: z.string().min(1).optional(),
+      format: absentable(z.string().min(1)),
     })
     .strict(),
   z.object({ kind: z.literal('reference'), referenceId: z.string().min(1) }).strict(),
@@ -37,15 +48,16 @@ export const seniorPlanOutputSchema = z
             findingIds: z.array(z.string().min(1)).min(1),
             evidenceRefs: z.array(z.string()),
             factRefs: z.array(z.string()),
-            likelyRootCause: z
-              .object({
-                text: z.string().min(1),
-                confidence: confidenceSchema,
-                inference: z.literal(true),
-              })
-              .strict()
-              .optional(),
-            conditionality: z.string().min(1).optional(),
+            likelyRootCause: absentable(
+              z
+                .object({
+                  text: z.string().min(1),
+                  confidence: confidenceSchema,
+                  inference: z.literal(true),
+                })
+                .strict(),
+            ),
+            conditionality: absentable(z.string().min(1)),
             impact: z.enum(['low', 'medium', 'high']),
             effort: z.enum(['low', 'medium', 'high']),
             rationale: z.string().min(1),
