@@ -75,6 +75,38 @@ This issue's acceptance criteria require documenting the following before
   the deployment environment - not an automatic consequence of this pilot
   landing.
 
+
+## LLM telemetry and Langfuse
+
+The LLM package has a separate but intentionally equivalent metadata-only
+telemetry seam in `packages/llm/src/telemetry/`. It records model alias,
+pass/language, attempt count, duration, schema outcome, token counts and closed
+guard codes. It has no prompt, response, finding text, URL, site context or
+report-prose field.
+
+Langfuse is supported only through
+`LangfuseLlmTelemetrySink`, which sends that already-redacted event shape as
+one OTLP/HTTP span. It does **not** use Langfuse's OpenAI wrapper or automatic
+instrumentation, because those paths can capture prompt/response content.
+
+Production export is explicit opt-in and all-or-nothing:
+
+```text
+LANGFUSE_BASE_URL
+LANGFUSE_PUBLIC_KEY
+LANGFUSE_SECRET_KEY
+```
+
+With none set, the sink remains `NullLlmTelemetrySink`. Partial configuration
+fails startup so a deployment cannot accidentally choose an implicit endpoint
+or region. Exporter/network failure is swallowed after redaction and can never
+fail the model call it describes.
+
+The recommended hosted EU base URL is `https://cloud.langfuse.com`. Enabling
+it is an operator deployment decision just like Sentry. It does not authorize
+future prompt/response tracing; exporting client/site/report content requires a
+separate privacy decision and contract change.
+
 ## Extending the pilot
 
 A new job type gets telemetry by having its runner call
