@@ -162,13 +162,15 @@ export function evidenceStageViews(
     }
     const blockedCode = STAGE_BLOCKING_CODES[id].find((code) => blocking.has(code));
     if (blockedCode !== undefined) {
-      return {
+      const count = stageCount(id, evidence, counts, language);
+      const view: EvidenceStageView = {
         id,
         label,
         state: 'blocked',
-        count: stageCount(id, evidence, counts, language),
         note: evidenceBlockingReason(blockedCode, language),
       };
+      if (count !== undefined) view.count = count;
+      return view;
     }
     // The calibration part of performance verification is not built yet:
     // measurements and their stability policy are real, the empirical
@@ -176,7 +178,10 @@ export function evidenceStageViews(
     if (id === 'performance-verification') {
       return { id, label, state: 'partial', note: table.performanceCalibrationNote };
     }
-    return { id, label, state: 'complete', count: stageCount(id, evidence, counts, language) };
+    const count = stageCount(id, evidence, counts, language);
+    const view: EvidenceStageView = { id, label, state: 'complete' };
+    if (count !== undefined) view.count = count;
+    return view;
   });
 }
 
