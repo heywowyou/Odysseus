@@ -47,4 +47,4 @@ fi
 # HTML rather than a synthetic accessibility fixture.
 printf '%s\n' "${BASE}/" >"${TARGETS}"
 
-npx --yes accessibility-checker@4.0.34 "${TARGETS}"
+npx --yes --package accessibility-checker@4.0.34 achecker "${TARGETS}"
