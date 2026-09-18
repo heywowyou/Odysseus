@@ -104,8 +104,12 @@ function makeFakeBrowser(
           };
         },
         url: () => currentUrl,
-        $$eval: async (_selector: string, fn: (elements: unknown[]) => unknown) =>
-          fn(anchorsFor(currentUrl).map(fakeAnchorElement)),
+        $$eval: async (selector: string, fn: (elements: unknown[]) => unknown) => {
+          // The hreflang head read (plan 059 section 6) sees no declared
+          // alternates unless a test says otherwise.
+          if (selector.includes('rel="alternate"')) return fn([]);
+          return fn(anchorsFor(currentUrl).map(fakeAnchorElement));
+        },
         evaluate: async () => {
           throw new Error('no DOM in unit mock');
         },
@@ -154,8 +158,12 @@ function makeStatusFakeBrowser(
           };
         },
         url: () => currentUrl,
-        $$eval: async (_selector: string, fn: (elements: unknown[]) => unknown) =>
-          fn(anchorsFor(currentUrl).map(fakeAnchorElement)),
+        $$eval: async (selector: string, fn: (elements: unknown[]) => unknown) => {
+          // The hreflang head read (plan 059 section 6) sees no declared
+          // alternates unless a test says otherwise.
+          if (selector.includes('rel="alternate"')) return fn([]);
+          return fn(anchorsFor(currentUrl).map(fakeAnchorElement));
+        },
         evaluate: async () => {
           throw new Error('no DOM in unit mock');
         },
@@ -541,8 +549,10 @@ describe('crawlSite trailing-slash page identity (issue #102)', () => {
             };
           },
           url: () => currentUrl,
-          $$eval: async (_selector: string, fn: (elements: unknown[]) => unknown) =>
-            fn(anchorsFor(currentUrl).map(fakeAnchorElement)),
+          $$eval: async (selector: string, fn: (elements: unknown[]) => unknown) => {
+            if (selector.includes('rel="alternate"')) return fn([]);
+            return fn(anchorsFor(currentUrl).map(fakeAnchorElement));
+          },
           evaluate: async () => {
             throw new Error('no DOM in unit mock');
           },
@@ -801,8 +811,10 @@ describe('crawlSite frontier snapshots and resume', () => {
             };
           },
           url: () => currentUrl,
-          $$eval: async (_selector: string, fn: (elements: unknown[]) => unknown) =>
-            fn(anchorsFor(currentUrl).map(fakeAnchorElement)),
+          $$eval: async (selector: string, fn: (elements: unknown[]) => unknown) => {
+            if (selector.includes('rel="alternate"')) return fn([]);
+            return fn(anchorsFor(currentUrl).map(fakeAnchorElement));
+          },
           evaluate: async () => {
             throw new Error('no DOM in unit mock');
           },
@@ -925,5 +937,123 @@ describe('crawlSite frontier snapshots and resume', () => {
         },
       }),
     ).rejects.toThrow(/different start URL/);
+  });
+});
+
+/** Plan 059 step 14: hreflang discovery from the document head. The fake
+ *  browser answers each $$eval selector separately, so the crawl's own
+ *  anchor read and the hreflang head read are exercised for real. */
+describe('crawlSite hreflang head discovery (plan 059 section 6)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const scopeDigest = `sha256:${'e'.repeat(64)}`;
+
+  function makeHreflangBrowser(
+    anchorsFor: (url: string) => FakeAnchorSpec[],
+    hreflangFor: (url: string) => string[],
+  ): Browser {
+    const context = {
+      setDefaultTimeout: () => {},
+      setDefaultNavigationTimeout: () => {},
+      newPage: async () => {
+        let currentUrl = 'about:blank';
+        return {
+          goto: async (url: string) => {
+            currentUrl = url;
+            return {
+              status: () => 200,
+              headers: () => ({ 'content-type': 'text/html; charset=utf-8' }),
+            };
+          },
+          url: () => currentUrl,
+          $$eval: async (selector: string, fn: (elements: unknown[]) => unknown) => {
+            if (selector.includes('rel="alternate"')) {
+              return fn(hreflangFor(currentUrl).map((href) => ({ getAttribute: () => href })));
+            }
+            return fn(anchorsFor(currentUrl).map(fakeAnchorElement));
+          },
+          evaluate: async () => {
+            throw new Error('no DOM in unit mock');
+          },
+          close: async () => {},
+        };
+      },
+      close: async () => {},
+    };
+    return { newContext: async () => context } as unknown as Browser;
+  }
+
+  it('admits an hreflang-only language page with explicit hreflang provenance', async () => {
+    installFetchStub({ 'https://example.com/robots.txt': ROBOTS_BODY });
+    // The homepage carries no visible anchor to /en — only the head
+    // declaration. The /en page declares its own hreflang, so it is a
+    // real scanned page rather than a bare language homepage.
+    const result = await crawlSite('https://example.com', {
+      browser: makeHreflangBrowser(
+        () => [],
+        (url) => (url === 'https://example.com/' ? ['/en'] : ['/en']),
+      ),
+      maxPages: 10,
+      maxDepth: 5,
+      delayMs: 0,
+      scopeDigest,
+    });
+
+    const enPage = result.pages.find((page) => page.url === 'https://example.com/en');
+    expect(enPage?.status).toBe('visited');
+    const candidate = result.inventoryLedger?.candidates.find(
+      (entry) => entry.url === 'https://example.com/en',
+    );
+    // The first route to the page is the head declaration itself (the page
+    // also declares its own alternate and is later recorded as visited,
+    // which add further routes; discovery order is preserved).
+    expect(candidate?.discoveries[0]).toMatchObject({
+      source: 'hreflang',
+      referrer: 'https://example.com/',
+      depth: 1,
+    });
+    expect(result.visitedCount).toBe(2);
+  });
+
+  it('keeps the depth-bound rule for an hreflang declaration past the bound', async () => {
+    installFetchStub({ 'https://example.com/robots.txt': ROBOTS_BODY });
+    const result = await crawlSite('https://example.com', {
+      browser: makeHreflangBrowser(
+        () => [],
+        (url) => (url === 'https://example.com/' ? ['/en'] : []),
+      ),
+      maxPages: 10,
+      maxDepth: 0,
+      delayMs: 0,
+      scopeDigest,
+    });
+
+    expect(result.pages.find((page) => page.url === 'https://example.com/en')).toBeUndefined();
+    const candidate = result.inventoryLedger?.candidates.find(
+      (entry) => entry.url === 'https://example.com/en',
+    );
+    expect(candidate?.discoveries[0]?.source).toBe('hreflang');
+    expect(candidate?.disposition?.disposition).toBe('depth-bound');
+  });
+
+  it('records no hreflang route when the head names an out-of-scope page', async () => {
+    installFetchStub({ 'https://example.com/robots.txt': ROBOTS_BODY });
+    const result = await crawlSite('https://example.com', {
+      browser: makeHreflangBrowser(
+        () => [],
+        (url) => (url === 'https://example.com/' ? ['https://other.example/en'] : []),
+      ),
+      maxPages: 10,
+      maxDepth: 5,
+      delayMs: 0,
+      scopeDigest,
+    });
+
+    expect(result.visitedCount).toBe(1);
+    expect(
+      result.inventoryLedger?.candidates.some((entry) => entry.url.includes('other.example')),
+    ).toBe(false);
   });
 });

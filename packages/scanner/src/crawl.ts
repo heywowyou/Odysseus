@@ -1170,6 +1170,59 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
                   discoveryMethod: 'link',
                 });
               }
+
+              // Plan 059 section 6: deterministic hreflang discovery from
+              // the document head. A <link rel="alternate" hreflang> that
+              // names an in-scope page is an explicit declaration of that
+              // page even when no visible anchor links it, so it enters
+              // the frontier with its own discovery provenance. Normalized
+              // by the same admission policy as anchors (origin, non-HTML
+              // extensions, operator exclusions); the continuation guard
+              // does not apply, because a page's declared alternates are a
+              // finite set the site itself controls.
+              const hreflangTargets = await browserPage
+                .$$eval('link[rel="alternate"][hreflang]', (links) =>
+                  links.map((link) => link.getAttribute('href')),
+                )
+                .catch(() => [] as (string | null)[]);
+              const hreflangLinks = normalizeInternalLinks(
+                hreflangTargets,
+                landedUrl,
+                options.exclusions ?? [],
+              );
+              for (const link of hreflangLinks) {
+                if (inventoryLedger !== undefined) {
+                  inventoryLedger.recordDiscovery({
+                    url: link,
+                    source: 'hreflang',
+                    discoveredAt: new Date(),
+                    referrer: item.url,
+                    depth: item.depth + 1,
+                  });
+                }
+                if (enqueued.has(link) || pagesByUrl.has(link)) continue;
+                if (item.depth >= maxDepth) {
+                  if (inventoryLedger !== undefined) {
+                    const candidate = inventoryLedger.candidate(link);
+                    if (candidate !== undefined && candidate.disposition === undefined) {
+                      inventoryLedger.recordDisposition({
+                        url: link,
+                        disposition: 'depth-bound',
+                        decidedAt: new Date(),
+                        detail: `hreflang discovery from depth ${item.depth}; maxDepth is ${maxDepth}`,
+                      });
+                    }
+                  }
+                  continue;
+                }
+                enqueued.add(link);
+                queue.push({
+                  url: link,
+                  depth: item.depth + 1,
+                  discoveredFrom: item.url,
+                  discoveryMethod: 'link',
+                });
+              }
             }
           }
         } catch (error) {

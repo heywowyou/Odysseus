@@ -1639,6 +1639,16 @@ describe('scanSite consent and local-state surfaces (plan 059 step 13)', () => {
         surfaceId: home.surfaces![0]!.surfaceId,
       },
     ]);
+    // A link visible only in an opened local state is a real page: it is
+    // admitted by the fixed point and scanned like any other.
+    const candidate = result.inventoryLedger?.candidates.find(
+      (entry) => entry.url === 'https://example.com/accordion-panel-link',
+    );
+    expect(candidate?.discoveries[0]).toMatchObject({
+      source: 'rendered-link',
+      surfaceId: home.surfaces![0]!.surfaceId,
+    });
+    expect(candidate?.disposition?.disposition).toBe('scanned');
   });
 
   it('never runs state surfaces outside the Plan 059 scoped path, even with a delivered banner', async () => {

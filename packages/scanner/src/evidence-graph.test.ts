@@ -11,6 +11,7 @@ import {
   type PerformanceMeasurementSet,
 } from './performance-measurement-set.js';
 import { MOBILE_SURFACE_PROFILE, buildScanSurface } from './evidence-surfaces.js';
+import { buildAuditScopeSnapshot } from '@odysseus/core';
 import {
   attempt,
   AXE_FINDING,
@@ -489,5 +490,50 @@ describe('hydration readiness in the evidence graph (plan 059 step 11)', () => {
     expect(
       graph.quality.issues.some((issue) => issue.disclosure?.code === 'hydration-bound-reached'),
     ).toBe(false);
+  });
+});
+
+describe('page and depth truncation blocks a full audit (plan 059 step 14)', () => {
+  const withOmitted = (disposition: 'page-cap' | 'depth-bound') =>
+    cleanInput({
+      inventory: inventory(scope(), [{ url: `${ORIGIN}/omitted`, disposition }]),
+    });
+
+  it('keeps a default page-cap truncation of an otherwise eligible page blocking', () => {
+    expect(blockingCodes(withOmitted('page-cap'))).toContain('inventory-unreconciled');
+  });
+
+  it('keeps a default depth-bound truncation of an otherwise eligible page blocking', () => {
+    expect(blockingCodes(withOmitted('depth-bound'))).toContain('inventory-unreconciled');
+  });
+
+  it('downgrades an operator-set bound to the disclosed scope limitation', () => {
+    const frozen = scope();
+    const operatorFrozen = buildAuditScopeSnapshot({
+      evidenceEpoch: frozen.evidenceEpoch,
+      startUrl: frozen.startUrl,
+      hostAliases: frozen.hostAliases,
+      scanIntent: frozen.scanIntent,
+      seeds: frozen.seeds,
+      exclusions: frozen.exclusions,
+      externalTransactionalFlows: frozen.externalTransactionalFlows,
+      bounds: {
+        ...frozen.bounds,
+        maxPages: { value: frozen.bounds.maxPages.value, origin: 'operator' },
+      },
+      sitemapMode: frozen.sitemapMode,
+      expectedLanguages: frozen.expectedLanguages,
+      networkPolicyId: frozen.networkPolicyId,
+    });
+    const input = cleanInput({
+      scope: operatorFrozen,
+      inventory: inventory(operatorFrozen, [{ url: `${ORIGIN}/omitted`, disposition: 'page-cap' }]),
+    });
+
+    expect(blockingCodes(input)).not.toContain('inventory-unreconciled');
+    const graph = assembleAuditEvidenceGraph(input);
+    expect(
+      graph.quality.issues.some((issue) => issue.disclosure?.code === 'scope-bound-truncation'),
+    ).toBe(true);
   });
 });

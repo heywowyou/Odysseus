@@ -210,12 +210,6 @@ export function capabilityTraversalLevel(
  *  what every baseline rendered pass runs under. */
 export const BASELINE_DESKTOP_VIEWPORT = { width: 1280, height: 720 } as const;
 
-/** Stable identifier of the mobile surface profile (plan 059 sections 5.5
- *  and 9, correction 3.8). The profile changes what the page can observe
- *  about the device — viewport, device scale, touch, media — and never the
- *  published Odysseus identity, which stays on the wire byte for byte. */
-export const MOBILE_SURFACE_PROFILE_ID = 'mobile-ua-preserving-v1';
-
 /**
  * The one mobile profile every mobile surface runs under, kept stable for
  * the whole evidence epoch so surfaces are comparable across pages and runs.
