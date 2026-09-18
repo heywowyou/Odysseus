@@ -24,6 +24,8 @@ import {
   launchBrowser,
   pruneScreenshots,
   PUBLIC_SITE_NETWORK_POLICY,
+  removeApprovedAuditEvidence,
+  runEvidenceGraphStage,
   scanSite,
   writeAuditArtifacts,
   writeFindingsFile,
@@ -170,7 +172,9 @@ export async function runAuditStage(
   // Plan 059: the browser dials only through the policy-enforcing egress
   // proxy, so Lighthouse and every subresource obey the same address rule
   // as the page routes.
-  const { browser, debugPort } = await launchBrowser({ networkPolicy: PUBLIC_SITE_NETWORK_POLICY });
+  const { browser, debugPort, launchArgs } = await launchBrowser({
+    networkPolicy: PUBLIC_SITE_NETWORK_POLICY,
+  });
 
   try {
     const hostname = new URL(url).hostname;
@@ -378,6 +382,60 @@ export async function runAuditStage(
       ...(options.scanIntent !== undefined ? { scanIntent: options.scanIntent } : {}),
     };
     await writeManifestFile(artifacts.auditDir, manifest);
+
+    // Plan 059: full audits assemble their evidence graph from what the scan
+    // persisted and approve it only when every blocking condition clears.
+    // Plan 058 consumes that approval and nothing else. A failure here must
+    // not cost an audit that took hours, so it is logged and leaves the
+    // audit without an approval (removing any from an earlier run of this
+    // directory), which Plan 058 then refuses to promote.
+    if (!options.skipLighthouse) {
+      try {
+        const graph = runEvidenceGraphStage({
+          auditDir: artifacts.auditDir,
+          auditId: artifacts.auditId,
+          scannedUrls: manifest.pages
+            .filter((page) => page.status === 'visited')
+            .map((page) => page.url),
+          findings,
+          config,
+          timings: {
+            pageTimeoutMs: config.pageTimeoutMs,
+            renderSettleTimeoutMs: config.renderSettleTimeoutMs ?? 0,
+            lighthouseTimeoutMs: config.lighthouseTimeoutMs,
+            crawlDelayMs: config.crawlDelayMs,
+            scanConcurrency: config.scanConcurrency,
+          },
+          tool: manifest.tool,
+          launchArgs,
+          networkPolicy: PUBLIC_SITE_NETWORK_POLICY,
+          userAgent: config.userAgent,
+          assessedAt: new Date(),
+        });
+        if (graph !== undefined) {
+          logger.info(
+            {
+              auditId: artifacts.auditId,
+              verdict: graph.quality.verdict,
+              blocking: [
+                ...new Set(
+                  graph.quality.issues
+                    .filter((issue) => issue.severity === 'blocking')
+                    .map((issue) => issue.code),
+                ),
+              ],
+            },
+            'full audit evidence assessed',
+          );
+        }
+      } catch (error) {
+        removeApprovedAuditEvidence(artifacts.auditDir);
+        logger.error(
+          { auditId: artifacts.auditId, err: error },
+          'full audit evidence graph could not be assembled; the audit has no evidence approval',
+        );
+      }
+    }
 
     const { prunedPageDirs } = await pruneScreenshots(
       artifacts.auditDir,

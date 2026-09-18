@@ -59,6 +59,12 @@ const SCANNER_NON_ACQUISITION = new Set([
   // Prints the locally rendered report HTML to PDF; the report page loads
   // no website (report-stage.ts).
   'launchBrowser',
+  // Read the persisted Plan 059 evidence graph and hash stored findings;
+  // none of them fetches (report-quality-evidence.ts).
+  'readApprovedAuditEvidence',
+  'readAuditEvidenceSnapshot',
+  'readEvidenceQualityAssessment',
+  'confirmedFindingsDigest',
 ]);
 
 /** The store's only scan-job producer. */

@@ -10,10 +10,16 @@ import {
   type PatternEvidence,
 } from '@odysseus/core';
 import { reportQualityDigest } from '@odysseus/report';
-import { readOdysseusBuildId } from '@odysseus/scanner';
+import {
+  confirmedFindingsDigest,
+  readApprovedAuditEvidence,
+  readAuditEvidenceSnapshot,
+  readEvidenceQualityAssessment,
+  readOdysseusBuildId,
+} from '@odysseus/scanner';
 const VERSION = 'legacy-page-analysis-coverage-v1';
 
-export function buildApprovedAuditEvidencePayload(input: {
+function buildApprovedAuditEvidencePayload(input: {
   approval: ApprovedAuditEvidence;
   manifest: AuditManifest;
   findings: Finding[];
@@ -46,7 +52,7 @@ function limitation(
 ): EvidenceLimitation {
   return { limitationId, code, summary: { fr, en }, reportDestination: 'section-11', evidenceRefs };
 }
-export function adaptLegacyAuditEvidence(input: {
+function adaptLegacyAuditEvidence(input: {
   manifest: AuditManifest;
   findings: Finding[];
 }): ApprovedAuditEvidencePayload {
@@ -139,4 +145,57 @@ export function adaptLegacyAuditEvidence(input: {
     findings,
     mandatoryDisclosures: limitations,
   };
+}
+
+/**
+ * Plan 059 step 36: the scan handoff Plan 058 accepts.
+ *
+ * An audit with a canonical approval gets it, but only after the approval is
+ * checked against the roots beside it and against the findings being
+ * reported: an approval whose audit root or quality assessment was replaced,
+ * or whose confirmed findings no longer match the findings file, approved
+ * something else. An audit whose evidence graph exists but was not approved
+ * is refused with its blocking reasons; handing it to the legacy adapter would
+ * print a disclosure claiming the audit predates Plan 059, which is false.
+ * Only an audit with no graph at all takes the legacy path, whose approval
+ * mode production promotion refuses.
+ */
+export function loadAuditEvidencePayload(input: {
+  auditDir: string;
+  manifest: AuditManifest;
+  findings: Finding[];
+}): ApprovedAuditEvidencePayload {
+  const approval = readApprovedAuditEvidence(input.auditDir);
+  const quality = readEvidenceQualityAssessment(input.auditDir);
+  if (approval === undefined) {
+    if (quality !== undefined) {
+      const blocking = [
+        ...new Set(
+          quality.issues
+            .filter((issue) => issue.severity === 'blocking')
+            .map((issue) => issue.code),
+        ),
+      ];
+      throw new Error(
+        `Plan 059 evidence was assessed ${quality.verdict} and not approved` +
+          (blocking.length > 0 ? `: ${blocking.join(', ')}` : ''),
+      );
+    }
+    return adaptLegacyAuditEvidence({ manifest: input.manifest, findings: input.findings });
+  }
+  const audit = readAuditEvidenceSnapshot(input.auditDir);
+  if (audit === undefined || audit.digest !== approval.auditEvidenceSnapshotDigest) {
+    throw new Error('Canonical evidence rejected: approval does not match the audit evidence root');
+  }
+  if (quality === undefined || quality.digest !== approval.evidenceQualityAssessmentDigest) {
+    throw new Error('Canonical evidence rejected: approval does not match the quality assessment');
+  }
+  if (audit.confirmedFindingsDigest !== confirmedFindingsDigest(input.findings)) {
+    throw new Error('Canonical evidence rejected: findings changed after evidence approval');
+  }
+  return buildApprovedAuditEvidencePayload({
+    approval,
+    manifest: input.manifest,
+    findings: input.findings,
+  });
 }

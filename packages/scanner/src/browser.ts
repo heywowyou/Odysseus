@@ -22,6 +22,9 @@ export interface LaunchedBrowser {
   browser: Browser;
   /** CDP debug port Lighthouse connects to independently of Playwright. */
   debugPort: number;
+  /** Every Chromium flag this launch used, for the isolation assessment and
+   *  environment fingerprint, which record flag names and never values. */
+  launchArgs: readonly string[];
 }
 
 /**
@@ -102,13 +105,14 @@ export async function launchBrowser(options: LaunchBrowserOptions = {}): Promise
   for (let attempt = 0; attempt < LAUNCH_PORT_ATTEMPTS; attempt++) {
     const debugPort = await getFreePort();
     try {
+      const launchArgs = [
+        `--remote-debugging-port=${debugPort}`,
+        ...(proxy?.chromiumArgs ?? []),
+        ...(options.extraArgs ?? []),
+        ...parseChromiumExtraArgs(process.env['ODYSSEUS_CHROMIUM_EXTRA_ARGS']),
+      ];
       const browser = await chromium.launch({
-        args: [
-          `--remote-debugging-port=${debugPort}`,
-          ...(proxy?.chromiumArgs ?? []),
-          ...(options.extraArgs ?? []),
-          ...parseChromiumExtraArgs(process.env['ODYSSEUS_CHROMIUM_EXTRA_ARGS']),
-        ],
+        args: launchArgs,
         // Chromium otherwise inherits this process's whole environment, so
         // every renderer running a scanned site's JavaScript would sit next to
         // MONGODB_URI and the model API key. Nothing Chromium needs is
@@ -120,7 +124,7 @@ export async function launchBrowser(options: LaunchBrowserOptions = {}): Promise
       if (proxy !== undefined) {
         browser.on('disconnected', () => void proxy.close());
       }
-      return { browser, debugPort };
+      return { browser, debugPort, launchArgs };
     } catch (error) {
       lastError = error;
     }

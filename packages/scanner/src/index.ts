@@ -187,9 +187,14 @@ export {
 } from './artifacts/crawl-frontier-io.js';
 export type { CrawlFrontierReuseVerdict } from './artifacts/crawl-frontier-io.js';
 export { buildManifest, readOdysseusBuildId } from './artifacts/manifest.js';
-export { readApprovedAuditEvidence } from './artifacts/evidence-graph-io.js';
-export { collectAcquisitionAttempts } from './artifacts/acquisition-attempts-io.js';
-export { assembleCheckAttemptLedger } from './evidence-acquisition.js';
+export {
+  readApprovedAuditEvidence,
+  readAuditEvidenceSnapshot,
+  readEvidenceQualityAssessment,
+  removeApprovedAuditEvidence,
+} from './artifacts/evidence-graph-io.js';
+export { runEvidenceGraphStage } from './artifacts/evidence-graph-stage.js';
+export { confirmedFindingsDigest } from './evidence-graph.js';
 export type { BuildManifestInput } from './artifacts/manifest.js';
 export {
   SCREENSHOT_PRUNE_KEEP_TOP_N,

@@ -1,5 +1,6 @@
 /**
- * Persistence for Plan 059 check attempts that do not belong to one page.
+ * Persistence for Plan 059 check attempts that do not belong to one page,
+ * and the reader that gathers every persisted evidence-graph input.
  *
  * Page attempts live on each page's scan.json, next to the evidence they
  * describe. Site-level attempts (robots-independent origin fetches, the
@@ -9,7 +10,11 @@
  */
 import * as fs from 'node:fs';
 import path from 'node:path';
+import type { AuditScopeSnapshot } from '@odysseus/core';
 import type { AcquisitionAttemptRecord } from '../check-attempt-ledger.js';
+import type { EvidencePageObservation } from '../evidence-graph.js';
+import type { InventoryLedgerSnapshot } from '../inventory-ledger.js';
+import type { RobotsPolicyChain } from '../robots-policy-snapshot.js';
 import { readPageScanJson } from './page-scan-io.js';
 
 const SITE_ATTEMPTS_FILENAME = 'site-acquisition-attempts.json';
@@ -37,20 +42,55 @@ export function appendSiteAcquisitionAttempts(
   fs.renameSync(temporary, filePath);
 }
 
+/** The persisted per-audit inputs the evidence graph is assembled from. */
+export interface PersistedEvidenceInputs {
+  scope: AuditScopeSnapshot | undefined;
+  inventory: InventoryLedgerSnapshot | undefined;
+  robotsChain: RobotsPolicyChain;
+  attempts: AcquisitionAttemptRecord[];
+  pages: EvidencePageObservation[];
+}
+
+function readOptionalJson<T>(filePath: string): T | undefined {
+  if (!fs.existsSync(filePath)) return undefined;
+  return JSON.parse(fs.readFileSync(filePath, 'utf8')) as T;
+}
+
 /**
- * Every attempt of one audit: the site file plus each scanned page's
- * persisted records. A scanned page whose scan.json is missing or unreadable
- * contributes nothing, which the coverage ledger then reports as a page with
+ * Reads what a full audit persisted for its evidence graph: the frozen scope,
+ * the inventory and robots chain, every attempt (the site file plus each
+ * scanned page's records) and each page's readiness and frame observations.
+ * Each scan.json is read once. A scanned page whose scan.json is missing or
+ * unreadable contributes nothing, which the graph then reports as a page with
  * no attempts rather than this reader inventing any.
  */
-export function collectAcquisitionAttempts(
+export function readPersistedEvidenceInputs(
   auditDir: string,
   scannedUrls: readonly string[],
-): AcquisitionAttemptRecord[] {
+): PersistedEvidenceInputs {
   const pagesDir = path.join(auditDir, 'pages');
-  const records = [...readSiteAcquisitionAttempts(auditDir)];
+  const attempts = [...readSiteAcquisitionAttempts(auditDir)];
+  const pages: EvidencePageObservation[] = [];
   for (const url of scannedUrls) {
-    records.push(...(readPageScanJson(pagesDir, url)?.acquisitionAttempts ?? []));
+    const scan = readPageScanJson(pagesDir, url);
+    if (scan === undefined) continue;
+    attempts.push(...(scan.acquisitionAttempts ?? []));
+    pages.push({
+      url,
+      ...(scan.readiness !== undefined ? { readiness: scan.readiness } : {}),
+      ...(scan.frames !== undefined ? { frames: scan.frames } : {}),
+    });
   }
-  return records;
+  return {
+    scope: readOptionalJson<AuditScopeSnapshot>(path.join(auditDir, 'audit-scope.json')),
+    inventory: readOptionalJson<InventoryLedgerSnapshot>(
+      path.join(auditDir, 'evidence', 'inventory-ledger.json'),
+    ),
+    robotsChain:
+      readOptionalJson<RobotsPolicyChain>(
+        path.join(auditDir, 'evidence', 'robots-policy-chain.json'),
+      ) ?? [],
+    attempts,
+    pages,
+  };
 }

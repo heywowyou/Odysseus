@@ -126,6 +126,8 @@ export type EvidenceQualityReasonCode =
   | 'unresolved-material-gap'
   | 'unstable-material-result'
   | 'temporal-drift'
+  | 'temporal-coherence-unverified'
+  | 'disclosed-scope-limitation'
   | 'performance-confidence-insufficient'
   | 'capability-gap-undisclosed'
   | 'site-level-unknown'

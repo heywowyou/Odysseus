@@ -449,6 +449,18 @@ const SITE_ATTACHED_CHECK_IDS: readonly CheckId[] = [
   'accessibility-statement',
 ];
 
+/**
+ * Site checks every full audit must hold accepted evidence for. The sitemap
+ * and CrUX site checks are conditional (no sitemap state to record, no CrUX
+ * key configured) and are judged only when they ran.
+ */
+export const REQUIRED_SITE_CHECK_IDS: readonly string[] = [
+  'llms-txt-check',
+  'security-headers',
+  'cookie-consent',
+  'accessibility-statement',
+];
+
 /** Page-target checks the rendered pass owns. */
 export const PAGE_CHECK_IDS: readonly CheckId[] = RENDERED_CHECK_IDS.filter(
   (checkId) => !SITE_ATTACHED_CHECK_IDS.includes(checkId),
