@@ -59,10 +59,14 @@ import type { RenderedCostProfile } from './full-audit-plan.js';
 import { findPublishedRoleContact, type PublishedRoleContact } from './role-contact.js';
 import type { CheckExecutionOutcome, CheckId } from './check-scope-coverage.js';
 import type { PageWorkGuard } from './page-work-guard.js';
+import type { HostRequestScheduler } from './host-request-scheduler.js';
 
 export interface ScanPageOptions {
   /** Politeness delay applied between the raw/rendered/Lighthouse passes. */
   delayMs?: number;
+  /** Plan 059: run-wide host scheduler. The outer lane owns the first
+   *  navigation; inner rendered/Lighthouse navigations use scheduler.pace(). */
+  scheduler?: HostRequestScheduler;
   timeoutMs?: number;
   userAgent?: string;
   /** Milestone 9b: skips the Lighthouse pass (and the pre-Lighthouse
@@ -216,8 +220,10 @@ export interface RenderedAnalysisResult extends Omit<
 }
 
 export interface LighthouseAnalysisOptions {
-  /** Politeness delay applied before this Lighthouse call. */
+  /** Fallback politeness delay for standalone callers without a run scheduler. */
   delayMs?: number;
+  /** Plan 059: waits for a request slot without acquiring another lane. */
+  scheduler?: HostRequestScheduler;
 }
 
 export interface LighthouseAnalysisResult {
@@ -363,7 +369,11 @@ export async function runRenderedAnalysis(
       isHomepage: url === options.homepageUrl,
       ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
       ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
-      ...(options.delayMs !== undefined ? { preRenderedDelayMs: options.delayMs } : {}),
+      ...(options.scheduler !== undefined
+        ? { beforeRenderedNavigation: () => options.scheduler!.pace() }
+        : options.delayMs !== undefined
+          ? { preRenderedDelayMs: options.delayMs }
+          : {}),
       ...(options.guard !== undefined ? { guard: options.guard } : {}),
       onRenderedPageCreated: async (page) => {
         // Must be attached before navigation - see
@@ -687,7 +697,9 @@ export async function runLighthouseAnalysis(
   debugPort: number,
   options: LighthouseAnalysisOptions = {},
 ): Promise<LighthouseAnalysisResult> {
-  if (options.delayMs !== undefined && options.delayMs > 0) {
+  if (options.scheduler !== undefined) {
+    await options.scheduler.pace();
+  } else if (options.delayMs !== undefined && options.delayMs > 0) {
     await sleep(options.delayMs);
   }
 
@@ -722,7 +734,10 @@ export async function scanPage(
 
   if (!options.skipLighthouse) {
     const lighthouseResult = await runLighthouseAnalysis(url, debugPort, {
-      ...(options.delayMs !== undefined ? { delayMs: options.delayMs } : {}),
+      ...(options.scheduler !== undefined ? { scheduler: options.scheduler } : {}),
+      ...(options.scheduler === undefined && options.delayMs !== undefined
+        ? { delayMs: options.delayMs }
+        : {}),
     });
     if (lighthouseResult.lighthouse !== undefined) result.lighthouse = lighthouseResult.lighthouse;
     if (lighthouseResult.lighthouseError !== undefined)
