@@ -13,6 +13,11 @@
  */
 
 import { getCrawlerUserAgent } from '../config.js';
+import type {
+  NetworkSafetyDisposition,
+  NetworkTargetPolicy,
+} from '../network-target-policy.js';
+import { fetchWithNetworkPolicy, NetworkSafetyBlockedError } from '../safe-fetch.js';
 
 export interface LlmsTxtCheckResult {
   found: boolean;
@@ -20,22 +25,38 @@ export interface LlmsTxtCheckResult {
   fetchError?: string;
 }
 
+export interface LlmsTxtCheckOptions {
+  networkPolicy?: NetworkTargetPolicy;
+  onNetworkSafetyBlocked?: (disposition: NetworkSafetyDisposition) => void;
+}
+
 export async function checkLlmsTxt(
   origin: string,
   timeoutMs: number,
   userAgent: string = getCrawlerUserAgent(),
+  options: LlmsTxtCheckOptions = {},
 ): Promise<LlmsTxtCheckResult> {
   const url = new URL('/llms.txt', origin).href;
   try {
-    const response = await fetch(url, {
+    const request = {
       headers: { 'user-agent': userAgent },
       signal: AbortSignal.timeout(timeoutMs),
-    });
+    };
+    const response =
+      options.networkPolicy === undefined
+        ? await fetch(url, request)
+        : await fetchWithNetworkPolicy(url, request, {
+            policy: options.networkPolicy,
+            ...(options.onNetworkSafetyBlocked !== undefined
+              ? { onBlocked: options.onNetworkSafetyBlocked }
+              : {}),
+          });
     if (!response.ok) {
       return { found: false, fetchError: `HTTP ${response.status}` };
     }
     return { found: true, url };
   } catch (error) {
+    if (error instanceof NetworkSafetyBlockedError) throw error;
     return { found: false, fetchError: error instanceof Error ? error.message : String(error) };
   }
 }
