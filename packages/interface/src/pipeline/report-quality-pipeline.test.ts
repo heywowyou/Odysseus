@@ -20,6 +20,7 @@ import {
   makeLlmScript,
   manifestFixture,
   seniorPlanOutputFor,
+  writerOutputFor,
   type LlmScriptHandler,
 } from './report-quality-pipeline.fixtures.js';
 import { runReportQualityPipeline } from './report-quality-pipeline.js';
@@ -637,6 +638,51 @@ describe('runReportQualityPipeline (Plan 058 fail-closed behavior)', () => {
     expect(harness.llmCalls['writer-fr']).toBeUndefined();
     expect(finalTransition().state).toBe('needs-operator-review');
     expect(finalTransition().patch.errorCode).toBe('plan-repair-limit');
+    expect(storeState.bundles).toHaveLength(0);
+    expect(storeState.released).toHaveLength(1);
+  });
+
+  it('re-issues a writer draft once when evidence-binding validation rejects freehand scalars', async () => {
+    const badWriter = writerOutputFor('fr');
+    badWriter.executiveSummary = {
+      segments: [{ kind: 'text', text: 'Des 12 obstacles concernent ce site.' }],
+    };
+    const writerPayloads: Array<Record<string, unknown>> = [];
+    harness.llm = makeLlmScript({
+      findings: DEFAULT_FINDINGS,
+      roles: {
+        'writer-fr': (ctx, callNumber) => {
+          writerPayloads.push(ctx.userPayload as Record<string, unknown>);
+          return callNumber === 1 ? badWriter : writerOutputFor('fr');
+        },
+      },
+    });
+    const result = await runReportQualityPipeline(makePipelineInput());
+
+    expect(result.state).toBe('awaiting-operator-approval');
+    expect(harness.llmCalls['writer-fr']).toBe(2);
+    const feedback = writerPayloads[1]?.['previousDraftRejections'] as string[];
+    expect(feedback).toHaveLength(1);
+    expect(feedback[0]).toContain('Exact scalar/URL');
+    expect(writerPayloads[1]?.['repairInstruction']).toContain('Repair exactly the named');
+    expect(states()).toContain('quality-approved');
+  });
+
+  it('exhausts the bounded writer repair into operator review instead of accepting freehand scalars', async () => {
+    const badWriter = writerOutputFor('fr');
+    badWriter.executiveSummary = {
+      segments: [{ kind: 'text', text: 'Des 12 obstacles concernent ce site.' }],
+    };
+    harness.llm = makeLlmScript({
+      findings: DEFAULT_FINDINGS,
+      roles: { 'writer-fr': () => badWriter },
+    });
+    await expect(runReportQualityPipeline(makePipelineInput())).rejects.toThrow(
+      /writer-repair-limit|evidence-binding gates after repair/,
+    );
+    expect(harness.llmCalls['writer-fr']).toBe(2);
+    expect(finalTransition().state).toBe('needs-operator-review');
+    expect(finalTransition().patch.errorCode).toBe('writer-repair-limit');
     expect(storeState.bundles).toHaveLength(0);
     expect(storeState.released).toHaveLength(1);
   });

@@ -144,7 +144,7 @@ export function seniorPlanOutputFor(findings: Finding[]): SeniorPlanOutput {
 
 /** Raw writer output whose project keys match seniorPlanOutputFor above and
  *  whose only fact binding is a registry fact (audit.findingCount). */
-function writerOutputFor(language: 'fr' | 'en'): QualityWriterOutput {
+export function writerOutputFor(language: 'fr' | 'en'): QualityWriterOutput {
   const text = () => ({ segments: [{ kind: 'text' as const, text: SAFE_PROSE[language] }] });
   return {
     executiveSummary: text(),

@@ -846,7 +846,13 @@ export async function runReportQualityPipeline(input: {
           dossier,
           factRegistry: registry,
           instruction:
-            'Account for every non-minor finding in exactly one coherent remediation project; minor findings may remain appendix-only. There is no target project count.',
+            'Account for every non-minor finding in exactly one coherent remediation project; ' +
+            'minor findings may remain appendix-only. There is no target project count. ' +
+            'Every evidenceRefs entry must be copied verbatim from the supplied evidence ' +
+            'universe: a findingId, a dossier packet packetId, a packet representativeEvidenceRefs ' +
+            'entry, or a pattern patternId. Every factRefs entry must be a factId from the ' +
+            'factRegistry. Never invent URLs, page addresses or digests — any reference outside ' +
+            'these sets is rejected deterministically.',
           ...(planRejections.length > 0
             ? {
                 previousAttemptRejections: planRejections,
@@ -887,7 +893,7 @@ export async function runReportQualityPipeline(input: {
     const cleanedWriters = {} as Record<ReportLanguage, QualityWriterOutput>;
     for (const language of ['fr', 'en'] as const) {
       await keepLease(context);
-      const writerCall = await callReportQualityRole({
+      let writerCall = await callReportQualityRole({
         role: language === 'fr' ? 'writer-fr' : 'writer-en',
         userPayload: {
           inputSnapshotDigest: snapshotObject.digest,
@@ -896,11 +902,75 @@ export async function runReportQualityPipeline(input: {
           evidenceDossier: dossier,
           factRegistry: registry,
           mandatoryDisclosures: evidence.mandatoryDisclosures,
+          writingRules:
+            'Text segments never contain digits, percentages, dates, units or URLs — every ' +
+            'exact scalar belongs in a fact segment bound to a factRegistry factId, and every ' +
+            'named source in a reference segment. Freehand exact scalars are rejected ' +
+            'deterministically.',
         },
         parser: qualityWriterOutputSchema,
         jsonSchema: QUALITY_WRITER_JSON_SCHEMA,
       });
       await recordModelCall(context, writerCall.provenance);
+      // Plan 058 §9 patch-prose: a writer draft that fails the evidence-
+      // binding gates is re-issued once with the rejection named before the
+      // run goes to operator review (§13 ceiling). The binding gate is the
+      // full draft resolution — the same path the content loop re-runs.
+      const bindableWriterDraft = (): void => {
+        resolveQualityDraft({
+          language,
+          writer: writerCall.output,
+          plan,
+          registry,
+          evidence,
+          requestedModel: getReportModelProfile(language === 'fr' ? 'writer-fr' : 'writer-en')
+            .model,
+          generatedAt: new Date(),
+          ...(reportInputs.obligationAssessment !== undefined
+            ? { obligationAssessment: reportInputs.obligationAssessment }
+            : {}),
+        });
+      };
+      let writerRejections: string[] = [];
+      try {
+        bindableWriterDraft();
+      } catch (error) {
+        writerRejections.push(error instanceof Error ? error.message : String(error));
+        await keepLease(context);
+        writerCall = await callReportQualityRole({
+          role: language === 'fr' ? 'writer-fr' : 'writer-en',
+          userPayload: {
+            inputSnapshotDigest: snapshotObject.digest,
+            language,
+            seniorPlan: plan,
+            evidenceDossier: dossier,
+            factRegistry: registry,
+            mandatoryDisclosures: evidence.mandatoryDisclosures,
+            writingRules:
+              'Text segments never contain digits, percentages, dates, units or URLs — every ' +
+              'exact scalar belongs in a fact segment bound to a factRegistry factId, and every ' +
+              'named source in a reference segment.',
+            previousDraftRejections: writerRejections,
+            repairInstruction:
+              'Your previous draft was refused by the deterministic evidence-binding gates. ' +
+              'Repair exactly the named rejections — move exact scalars into fact segments or ' +
+              'delete them — and keep every other field identical.',
+          },
+          parser: qualityWriterOutputSchema,
+          jsonSchema: QUALITY_WRITER_JSON_SCHEMA,
+        });
+        await recordModelCall(context, writerCall.provenance);
+        try {
+          bindableWriterDraft();
+        } catch (retryError) {
+          throw new ReportQualityNeedsOperatorReviewError(
+            'writer-repair-limit',
+            `Writer draft failed its evidence-binding gates after repair: ${
+              retryError instanceof Error ? retryError.message : String(retryError)
+            }`,
+          );
+        }
+      }
       cleanedWriters[language] = await cleanContentDraft(
         context,
         language,
