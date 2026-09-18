@@ -29,13 +29,16 @@ describe('Plan 058 report model profiles', () => {
   it('covers every report-quality role with an explicit Sol profile', () => {
     expect(Object.keys(REPORT_MODEL_PROFILES).sort()).toEqual([...ROLES].sort());
 
+    const profileIds = new Set<string>();
     for (const role of ROLES) {
       const profile = getReportModelProfile(role);
-      expect(profile.profileId).toContain(role === 'editor' ? 'editor' : role.replace('reviewer-', ''));
+      expect(profile.profileId).toMatch(/^058-.+-v1$/);
+      profileIds.add(profile.profileId);
       expect(profile.model).toBe('gpt-5.6-sol');
       expect(['high', 'xhigh']).toContain(profile.reasoningEffort);
       expect(getReportModelProfileDigest(role)).toMatch(/^sha256:[a-f0-9]{64}$/);
     }
+    expect(profileIds.size).toBe(ROLES.length);
     expect(getReportModelProfileMatrixDigest()).toMatch(/^sha256:[a-f0-9]{64}$/);
   });
 
