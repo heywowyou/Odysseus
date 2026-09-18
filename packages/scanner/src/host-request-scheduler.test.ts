@@ -32,6 +32,26 @@ describe('request spacing', () => {
     expect(startedAt).toEqual([0, 1000, 2000]);
   });
 
+  it('paces inner requests without acquiring a second lane', async () => {
+    const clock = fakeClock();
+    const scheduler = new HostRequestScheduler({
+      floorDelayMs: 333,
+      maxConcurrency: 1,
+      ...clock,
+    });
+
+    const startedAt: number[] = [];
+    await scheduler.schedule(async () => {
+      startedAt.push(clock.now());
+      await scheduler.pace();
+      startedAt.push(clock.now());
+      await scheduler.pace();
+      startedAt.push(clock.now());
+    });
+
+    expect(startedAt).toEqual([0, 333, 666]);
+  });
+
   it('spaces starts globally rather than per lane, so extra lanes add no pressure', async () => {
     const clock = fakeClock();
     const scheduler = new HostRequestScheduler({
