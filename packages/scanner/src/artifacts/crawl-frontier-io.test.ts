@@ -91,7 +91,7 @@ function frontierState(overrides: Partial<CrawlFrontierState> = {}): CrawlFronti
   };
 }
 
-const expected = { startedAt, config, toolIdentity };
+const expected = { startedAt, config, toolIdentity, scopeDigest: undefined };
 
 describe('crawl frontier io', () => {
   it('round trips a frontier state through write and read', async () => {
@@ -197,11 +197,10 @@ describe('crawl frontier io', () => {
 
     it('rejects a changed config value', () => {
       expect(
-        isReusableFrontierState(frontierState({ config: { ...config, crawlDelayMs: 999 } }), {
-          startedAt,
-          config,
-          toolIdentity,
-        }),
+        isReusableFrontierState(
+          frontierState({ config: { ...config, crawlDelayMs: 999 } }),
+          expected,
+        ),
       ).toEqual({ reusable: false, reason: 'config-mismatch' });
     });
 
@@ -218,6 +217,15 @@ describe('crawl frontier io', () => {
       expect(
         isReusableFrontierState(frontierState({ startedAt: '2026-09-08T00:00:00.000Z' }), expected),
       ).toEqual({ reusable: false, reason: 'started-at-mismatch' });
+    });
+
+    it('rejects a frontier crawled under another audit scope', () => {
+      expect(
+        isReusableFrontierState(
+          frontierState({ scopeDigest: `sha256:${'a'.repeat(64)}` }),
+          expected,
+        ),
+      ).toEqual({ reusable: false, reason: 'scope-mismatch' });
     });
   });
 });

@@ -143,6 +143,7 @@ export async function claimNextQueuedJob(
         status: 'running',
         startedAt: claimedAt,
         lastHeartbeatAt: claimedAt,
+        claimId: randomUUID(),
         ...(options.workerRevision !== undefined ? { workerRevision: options.workerRevision } : {}),
       },
     },
@@ -150,6 +151,18 @@ export async function claimNextQueuedJob(
     // legacy row the startup backfill has not reached yet.
     { sort: QUEUE_CLAIM_SORT, returnDocument: 'after' },
   ).lean<JobDocument>();
+}
+
+/** Plan 059 step 22: whether the worker that claimed a job under claimId
+ *  still holds it. False once the job was requeued, and so re-claimed or
+ *  about to be, or once the row is gone. */
+export async function isJobClaimCurrent(
+  connection: Connection,
+  jobId: string,
+  claimId: string,
+): Promise<boolean> {
+  const JobModel = createJobModel(connection);
+  return (await JobModel.exists({ jobId, claimId })) !== null;
 }
 
 export interface JobProgressPatch {
@@ -555,7 +568,7 @@ export async function resetOrphanedRunningJobs(
     },
     {
       $set: { status: 'queued', orphaned: true },
-      $unset: { startedAt: '', lastHeartbeatAt: '' },
+      $unset: { startedAt: '', lastHeartbeatAt: '', claimId: '' },
     },
   );
   return result.modifiedCount;

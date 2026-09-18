@@ -78,6 +78,7 @@ import {
 import type { PageAuditProfile } from './page-audit-profile.js';
 import { derivePageAnalysisCoverage } from './analysis-coverage.js';
 import { readPageScanJson, writePageScanJson } from './artifacts/page-scan-io.js';
+import { assertAcquisitionLease } from './artifacts/acquisition-lease-io.js';
 import {
   buildScanToolIdentity,
   deleteCrawlCheckpoint,
@@ -187,6 +188,7 @@ export type CrawlCheckpointFreshReason =
   | 'config-mismatch'
   | 'tool-mismatch'
   | 'started-at-mismatch'
+  | 'scope-mismatch'
   | 'version-mismatch';
 
 export type CrawlCheckpointResumeDecision =
@@ -273,6 +275,11 @@ export interface ScanSiteOptions {
    *  skipLighthouse, or without fullAuditPlanning, writePagesAsScanned, or
    *  auditDir, scanSite throws. */
   checkpointContext?: { startedAt: Date; config: AuditConfigSnapshot };
+  /** Plan 059 step 22: the claim id this worker wrote to auditDir's
+   *  acquisition lease. Every evidence write re-reads the lease first and
+   *  throws StaleAcquisitionLeaseError once another worker has taken the
+   *  directory over. Requires auditDir. */
+  acquisitionLeaseId?: string;
   /** Plan 035: reports how the crawl phase was sourced (resumed with the
    *  count of pages whose scan.json already existed, or fresh with the
    *  reason no checkpoint was reusable). */
@@ -536,6 +543,8 @@ interface StagedScanContext {
   scopeDigest: string | undefined;
   evidenceEpoch: number;
   launchRecoveryBrowser: (() => Promise<{ browser: Browser; debugPort: number }>) | undefined;
+  /** Throws when this worker no longer holds the audit directory's lease. */
+  holdLease: () => void;
 }
 
 /**
@@ -706,18 +715,48 @@ function toPlanProfile(page: CrawledPage): PageAuditProfile {
 export function partitionPagesForResume(
   pagesToScan: readonly CrawledPage[],
   readExisting: (url: string) => PageScanResult | undefined,
+  binding?: EvidenceBinding,
 ): { completedByUrl: Map<string, PageScanResult>; pending: CrawledPage[] } {
   const completedByUrl = new Map<string, PageScanResult>();
   const pending: CrawledPage[] = [];
   for (const page of pagesToScan) {
     const existing = readExisting(page.url);
-    if (existing !== undefined && existing.renderedCostProfile !== undefined) {
+    if (
+      existing !== undefined &&
+      existing.renderedCostProfile !== undefined &&
+      (binding === undefined || isBoundToEvidence(existing, binding))
+    ) {
       completedByUrl.set(page.url, existing);
     } else {
       pending.push(page);
     }
   }
   return { completedByUrl, pending };
+}
+
+/** The scope and epoch a resumed run's evidence must belong to. */
+interface EvidenceBinding {
+  scopeDigest: string;
+  evidenceEpoch: number;
+}
+
+/**
+ * Plan 059 step 22: a page result is reusable only when it carries attempts
+ * and every one of them was acquired under this run's scope and epoch. A
+ * result from another scope or epoch, or one written before attempts were
+ * recorded, is rescanned rather than handed to the evidence graph, which
+ * would only reject it later.
+ */
+function isBoundToEvidence(scanJson: PageScanResult, binding: EvidenceBinding): boolean {
+  const attempts = scanJson.acquisitionAttempts ?? [];
+  return (
+    attempts.length > 0 &&
+    attempts.every(
+      (attempt) =>
+        attempt.scopeDigest === binding.scopeDigest &&
+        attempt.evidenceEpoch === binding.evidenceEpoch,
+    )
+  );
 }
 
 /**
@@ -913,7 +952,13 @@ async function runStagedFullAuditScan(
   // is never active for a fresh run.
   const resumePartition =
     context.resumeActive && context.writePagesAsScanned === true && context.auditDir !== undefined
-      ? partitionPagesForResume(pagesToScan, (url) => readPageScanJson(context.screenshotDir, url))
+      ? partitionPagesForResume(
+          pagesToScan,
+          (url) => readPageScanJson(context.screenshotDir, url),
+          context.scopeDigest !== undefined
+            ? { scopeDigest: context.scopeDigest, evidenceEpoch: context.evidenceEpoch }
+            : undefined,
+        )
       : undefined;
   const completedByUrl = resumePartition?.completedByUrl ?? new Map<string, PageScanResult>();
   const pendingPages = resumePartition?.pending ?? pagesToScan;
@@ -999,6 +1044,7 @@ async function runStagedFullAuditScan(
               if (context.auditDir === undefined) {
                 throw new Error('scanSite: writePagesAsScanned requires auditDir to be set.');
               }
+              context.holdLease();
               writePageScanJson(context.screenshotDir, context.auditDir, {
                 ...content,
                 checkOutcomes,
@@ -1038,6 +1084,7 @@ async function runStagedFullAuditScan(
       },
       store: (url, page) => {
         if (context.writePagesAsScanned) {
+          context.holdLease();
           writePageScanJson(context.screenshotDir, context.auditDir!, page);
           renderedResults.set(url, {
             url,
@@ -1169,6 +1216,7 @@ async function runStagedFullAuditScan(
         acquisitionAttempts: [...(pageResult.acquisitionAttempts ?? []), ...performanceAttempts],
       };
     }
+    if (context.writePagesAsScanned) context.holdLease();
     const kept = persistPageIfConfigured(
       pageResult,
       context.screenshotDir,
@@ -1308,6 +1356,7 @@ function loadReusableCrawl(
     startedAt: checkpointContext.startedAt,
     config: checkpointContext.config,
     toolIdentity: buildScanToolIdentity(),
+    scopeDigest: options.scopeDigest,
   });
   if (checkpoint !== undefined && verdict.reusable) {
     const crawl = checkpoint.crawl;
@@ -1333,6 +1382,14 @@ function loadReusableCrawl(
     return { crawl: undefined, freshReason: verdict.reason };
   }
   return { crawl: undefined, freshReason: 'no-checkpoint' };
+}
+
+/** Plan 059 step 22: stops a superseded worker before it writes into an
+ *  audit directory another worker now holds. No lease, no check. */
+function holdLease(options: ScanSiteOptions): void {
+  if (options.acquisitionLeaseId !== undefined && options.auditDir !== undefined) {
+    assertAcquisitionLease(options.auditDir, options.acquisitionLeaseId);
+  }
 }
 
 /**
@@ -1368,6 +1425,7 @@ async function closeTemporalWindow(
   } catch {
     endProbe = undefined;
   }
+  holdLease(options);
   writeTemporalAnchors(auditDir, { startProbes, ...(endProbe !== undefined ? { endProbe } : {}) });
 }
 
@@ -1377,6 +1435,9 @@ export async function scanSite(
 ): Promise<SiteScanResult> {
   if (options.writePagesAsScanned && options.auditDir === undefined) {
     throw new Error('scanSite: writePagesAsScanned requires auditDir to be set.');
+  }
+  if (options.acquisitionLeaseId !== undefined && options.auditDir === undefined) {
+    throw new Error('scanSite: acquisitionLeaseId requires auditDir to be set.');
   }
   // Issue #200: created before any page work so onGuardReady's caller
   // (packages/interface's cancellation path) can force-close every
@@ -1478,14 +1539,17 @@ export async function scanSite(
         startedAt: checkpointContext.startedAt,
         config: checkpointContext.config,
         toolIdentity,
+        scopeDigest: options.scopeDigest,
       });
       const frontierResumed = frontierState !== undefined && frontierVerdict.reusable;
       const writeFrontierState = (state: CrawlFrontierSnapshot): void => {
+        holdLease(options);
         writeCrawlFrontierState(auditDir, {
           format: 'full-audit-crawl-frontier-v1',
           startedAt: checkpointContext.startedAt.toISOString(),
           config: checkpointContext.config,
           toolIdentity,
+          ...(options.scopeDigest !== undefined ? { scopeDigest: options.scopeDigest } : {}),
           state,
         });
       };
@@ -1536,11 +1600,13 @@ export async function scanSite(
       if (options.auditDir === undefined) {
         throw new Error('scanSite: checkpointContext requires auditDir to be set.');
       }
+      holdLease(options);
       writeCrawlCheckpoint(options.auditDir, {
         checkpointVersion: 'v1',
         startedAt: checkpointContext.startedAt.toISOString(),
         config: checkpointContext.config,
         toolIdentity: buildScanToolIdentity(),
+        ...(options.scopeDigest !== undefined ? { scopeDigest: options.scopeDigest } : {}),
         crawl,
       });
       // The checkpoint supersedes any frontier snapshot this run wrote or
@@ -1565,6 +1631,7 @@ export async function scanSite(
       ? undefined
       : InventoryLedger.fromSnapshot(crawl.inventoryLedger);
   if (inventoryLedger !== undefined && options.auditDir !== undefined) {
+    holdLease(options);
     writeInventoryLedger(options.auditDir, inventoryLedger.snapshot());
   }
   const finalizeInventoryLedger = (): InventoryLedgerSnapshot | undefined => {
@@ -1589,7 +1656,10 @@ export async function scanSite(
       );
     }
     const snapshot = inventoryLedger.snapshot();
-    if (options.auditDir !== undefined) writeInventoryLedger(options.auditDir, snapshot);
+    if (options.auditDir !== undefined) {
+      holdLease(options);
+      writeInventoryLedger(options.auditDir, snapshot);
+    }
     return snapshot;
   };
 
@@ -1605,12 +1675,18 @@ export async function scanSite(
         ...(options.networkPolicy !== undefined ? { networkPolicy: options.networkPolicy } : {}),
         ...(onNetworkSafetyBlocked !== undefined ? { onNetworkSafetyBlocked } : {}),
         ...(options.auditDir !== undefined
-          ? { onChainChanged: (chain) => writeRobotsPolicyChain(options.auditDir!, chain) }
+          ? {
+              onChainChanged: (chain) => {
+                holdLease(options);
+                writeRobotsPolicyChain(options.auditDir!, chain);
+              },
+            }
           : {}),
       })
     : undefined;
   if (robotsPolicyRuntime !== undefined) {
     if (options.auditDir !== undefined && robotsPolicyRuntime.chain.length > 0) {
+      holdLease(options);
       writeRobotsPolicyChain(options.auditDir, robotsPolicyRuntime.chain);
     }
     const plannedUrls = pagesToScan.map((page) => page.url);
@@ -1831,6 +1907,7 @@ export async function scanSite(
     }
   }
   if (siteAcquisition.retry && options.auditDir !== undefined) {
+    holdLease(options);
     appendSiteAcquisitionAttempts(options.auditDir, siteAttempts);
   }
 
@@ -1869,6 +1946,7 @@ export async function scanSite(
       scopeDigest: options.scopeDigest,
       evidenceEpoch: 1,
       launchRecoveryBrowser: options.launchRecoveryBrowser,
+      holdLease: () => holdLease(options),
     };
     const { pages, fullAuditPlan, analysisCoverageByUrl } = await runStagedFullAuditScan(
       pagesToScan,

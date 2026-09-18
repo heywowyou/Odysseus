@@ -17,7 +17,7 @@ import { hasMeasuredCoreWebVitals } from '@odysseus/report';
 import { pauseBetweenLanguagePasses } from '@odysseus/llm';
 import { runAnalysisStage } from '../../pipeline/analysis-stage.js';
 import { runAuditStage } from '../../pipeline/audit-stage.js';
-import { crawlOptionsFromJob } from './job-crawl-options.js';
+import { acquisitionClaimFor, crawlOptionsFromJob } from './job-crawl-options.js';
 import { finalizeProspectScan } from '../../pipeline/finalize-prospect-scan.js';
 import { runAllReportsStage } from '../../pipeline/report-stage.js';
 import { JobCancelledError } from '../cancellation.js';
@@ -88,6 +88,7 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
         onProgress,
         onGuardReady,
         runIdentity,
+        ...acquisitionClaimFor(connection, job),
       },
       connection,
     );

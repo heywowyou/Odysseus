@@ -145,7 +145,7 @@ describe('crawl checkpoint io', () => {
   });
 
   describe('isReusableCheckpoint', () => {
-    const expected = { startedAt, config, toolIdentity };
+    const expected = { startedAt, config, toolIdentity, scopeDigest: undefined };
 
     it('accepts a checkpoint whose everything matches', () => {
       expect(isReusableCheckpoint(checkpoint(), expected)).toEqual({ reusable: true });
@@ -192,6 +192,20 @@ describe('crawl checkpoint io', () => {
       expect(
         isReusableCheckpoint(checkpoint({ startedAt: '2026-09-08T00:00:00.000Z' }), expected),
       ).toEqual({ reusable: false, reason: 'started-at-mismatch' });
+    });
+
+    it('rejects a checkpoint crawled under another audit scope', () => {
+      const scoped = `sha256:${'a'.repeat(64)}`;
+      expect(isReusableCheckpoint(checkpoint({ scopeDigest: scoped }), expected)).toEqual({
+        reusable: false,
+        reason: 'scope-mismatch',
+      });
+      expect(
+        isReusableCheckpoint(checkpoint({ scopeDigest: scoped }), {
+          ...expected,
+          scopeDigest: scoped,
+        }),
+      ).toEqual({ reusable: true });
     });
   });
 

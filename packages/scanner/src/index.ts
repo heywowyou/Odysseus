@@ -169,6 +169,11 @@ export {
   readCrawlCheckpoint,
   writeCrawlCheckpoint,
 } from './artifacts/crawl-checkpoint-io.js';
+export {
+  StaleAcquisitionLeaseError,
+  assertAcquisitionLease,
+  writeAcquisitionLease,
+} from './artifacts/acquisition-lease-io.js';
 export type {
   CheckpointRejectionReason,
   CheckpointReuseVerdict,

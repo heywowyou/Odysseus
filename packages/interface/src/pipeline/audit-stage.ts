@@ -27,6 +27,9 @@ import {
   removeApprovedAuditEvidence,
   runEvidenceGraphStage,
   scanSite,
+  StaleAcquisitionLeaseError,
+  assertAcquisitionLease,
+  writeAcquisitionLease,
   writeAuditArtifacts,
   writeFindingsFile,
   writeManifestFile,
@@ -119,6 +122,17 @@ export interface RunAuditStageOptions {
    *  its auditId becomes the persisted audit's id. When absent (the CLI
    *  path) the stage mints a fresh startedAt exactly as before. */
   runIdentity?: { startedAt: Date; auditId: string };
+  /** Plan 059 step 22: the queue claim this run holds. Its id becomes the
+   *  audit directory's acquisition lease, and the run confirms both the lease
+   *  and the claim before each evidence write, so a worker whose job was
+   *  requeued and re-claimed stops instead of overwriting the new worker's
+   *  evidence. Absent on the CLI path, which has no queue. */
+  acquisitionClaim?: AcquisitionClaim;
+}
+
+export interface AcquisitionClaim {
+  claimId: string;
+  isCurrent: () => Promise<boolean>;
 }
 
 export interface AuditStageResult {
@@ -185,6 +199,13 @@ export async function runAuditStage(
     // writeAuditArtifacts runs. Create the stable run directory first so
     // its atomic temp-file write cannot fail on a fresh full audit (#129).
     fs.mkdirSync(auditDir, { recursive: true });
+    const claim = options.acquisitionClaim;
+    if (claim !== undefined) writeAcquisitionLease(auditDir, claim.claimId);
+    const holdClaim = async (): Promise<void> => {
+      if (claim === undefined) return;
+      assertAcquisitionLease(auditDir, claim.claimId);
+      if (!(await claim.isCurrent())) throw new StaleAcquisitionLeaseError(auditDir);
+    };
 
     // Issue #111: a per-job pacing option may only ever slow the crawl
     // down, so it can also serve as the coverage gate's "slow the crawl"
@@ -247,6 +268,7 @@ export async function runAuditStage(
       // entire run even though screenshots had already streamed to disk.
       // writeAuditArtifacts below reads pages back from disk instead.
       writePagesAsScanned: true,
+      ...(claim !== undefined ? { acquisitionLeaseId: claim.claimId } : {}),
       ...(options.maxPages !== undefined ? { maxPages: options.maxPages } : {}),
       ...(options.maxDepth !== undefined ? { maxDepth: options.maxDepth } : {}),
       ...(effectiveDelayMs !== undefined ? { delayMs: effectiveDelayMs } : {}),
@@ -312,6 +334,7 @@ export async function runAuditStage(
 
     const finishedAt = new Date();
 
+    await holdClaim();
     const artifacts = await writeAuditArtifacts({
       kind: 'audit',
       siteResult,
@@ -374,6 +397,7 @@ export async function runAuditStage(
         ? { cruxFieldData: artifacts.manifest.cruxFieldData }
         : {}),
     });
+    await holdClaim();
     await writeFindingsFile(artifacts.auditDir, findings);
     const manifest: AuditManifest = {
       ...artifacts.manifest,
@@ -390,6 +414,7 @@ export async function runAuditStage(
     // audit without an approval (removing any from an earlier run of this
     // directory), which Plan 058 then refuses to promote.
     if (!options.skipLighthouse) {
+      await holdClaim();
       try {
         const graph = runEvidenceGraphStage({
           auditDir: artifacts.auditDir,
@@ -437,6 +462,7 @@ export async function runAuditStage(
       }
     }
 
+    await holdClaim();
     const { prunedPageDirs } = await pruneScreenshots(
       artifacts.auditDir,
       prunePageInfoFromManifest(manifest),

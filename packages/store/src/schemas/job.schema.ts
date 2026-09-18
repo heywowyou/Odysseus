@@ -236,6 +236,10 @@ export interface JobDocumentFields {
    *  worker's revision - the field always answers "which worker most
    *  recently ran this", never a full history. */
   workerRevision?: string;
+  /** Plan 059 step 22: minted afresh by every claim and cleared when the job
+   *  is requeued, so a worker can tell whether it still holds the job it
+   *  started. A superseded worker's claim id no longer matches. */
+  claimId?: string;
 }
 
 export interface JobNeedsInputField {
@@ -439,6 +443,7 @@ const jobSchema = new Schema<JobDocument>(
     needsReview: { type: String },
     needsInputFields: { type: [jobNeedsInputFieldSchema] },
     workerRevision: { type: String },
+    claimId: { type: String },
     activeSlot: { type: String },
     queueOrder: { type: Number },
   },

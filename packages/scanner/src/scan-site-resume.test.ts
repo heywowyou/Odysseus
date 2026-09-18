@@ -88,6 +88,43 @@ describe('partitionPagesForResume', () => {
   });
 });
 
+describe('partitionPagesForResume with an evidence binding', () => {
+  const scopeDigest = `sha256:${'c'.repeat(64)}`;
+  const binding = { scopeDigest, evidenceEpoch: 1 };
+  const attempt = (overrides: { scopeDigest?: string; evidenceEpoch?: number } = {}) =>
+    ({ scopeDigest, evidenceEpoch: 1, ...overrides }) as never;
+  const current = crawledPage('https://example.com/current');
+  const otherScope = crawledPage('https://example.com/other-scope');
+  const otherEpoch = crawledPage('https://example.com/other-epoch');
+  const unrecorded = crawledPage('https://example.com/unrecorded');
+  const existing: Record<string, PageScanResult> = {
+    [current.url]: scanJson({ url: current.url, acquisitionAttempts: [attempt()] }),
+    [otherScope.url]: scanJson({
+      url: otherScope.url,
+      acquisitionAttempts: [attempt(), attempt({ scopeDigest: `sha256:${'d'.repeat(64)}` })],
+    }),
+    [otherEpoch.url]: scanJson({
+      url: otherEpoch.url,
+      acquisitionAttempts: [attempt({ evidenceEpoch: 2 })],
+    }),
+    [unrecorded.url]: scanJson({ url: unrecorded.url }),
+  };
+
+  it('reuses only results acquired under this scope and epoch', () => {
+    const { completedByUrl, pending } = partitionPagesForResume(
+      [current, otherScope, otherEpoch, unrecorded],
+      (url) => existing[url],
+      binding,
+    );
+    expect([...completedByUrl.keys()]).toEqual([current.url]);
+    expect(pending.map((page) => page.url)).toEqual([
+      otherScope.url,
+      otherEpoch.url,
+      unrecorded.url,
+    ]);
+  });
+});
+
 describe('needsLighthouseRun', () => {
   const url = 'https://example.com/a';
 

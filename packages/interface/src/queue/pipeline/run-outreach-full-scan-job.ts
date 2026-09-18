@@ -11,6 +11,7 @@ import {
 } from '@odysseus/store';
 import { deleteCrawlCheckpoint, deleteCrawlStateFile } from '@odysseus/scanner';
 import { runAuditStage } from '../../pipeline/audit-stage.js';
+import { acquisitionClaimFor } from './job-crawl-options.js';
 import { finalizeProspectScan } from '../../pipeline/finalize-prospect-scan.js';
 import type { PipelineContext } from '../job-queue.js';
 import { JobCancelledError } from '../cancellation.js';
@@ -35,6 +36,7 @@ export async function runOutreachFullScanJob(
         prospectId,
         scanIntent: 'prospecting-audit',
         runIdentity,
+        ...acquisitionClaimFor(connection, job),
         onProgress: createScanProgressReporter(connection, job.jobId, job.type, ctx.cancellation),
       },
       connection,

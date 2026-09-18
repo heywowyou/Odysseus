@@ -13,6 +13,7 @@ vi.mock('@odysseus/store', () => ({
 vi.mock('@odysseus/scanner', () => ({
   OriginLock: class {},
   readOdysseusBuildId: () => 'test-build',
+  StaleAcquisitionLeaseError: class extends Error {},
 }));
 vi.mock('@odysseus/report', () => ({
   ReportIdentityUnconfirmedError: class extends Error {
@@ -42,6 +43,7 @@ import {
   type JobType,
 } from '@odysseus/store';
 import { ReportIdentityUnconfirmedError } from '@odysseus/report';
+import { StaleAcquisitionLeaseError } from '@odysseus/scanner';
 import { captureJobTelemetry } from '../telemetry/job-telemetry.js';
 import { JobCancelledError } from './cancellation.js';
 import { JobQueue, type PipelineFn } from './job-queue.js';
@@ -136,6 +138,17 @@ describe('JobQueue', () => {
     expect(markJobNeedsInput).toHaveBeenCalledWith(connection, 'job-1', fields, 'confirm identity');
     expect(failJob).not.toHaveBeenCalled();
     expect(cancelJob).not.toHaveBeenCalled();
+  });
+
+  it('leaves a job to its new claim when the runner was superseded', async () => {
+    const runner = vi.fn(async () => {
+      throw new StaleAcquisitionLeaseError('lease moved');
+    });
+    await runOne(runner);
+    expect(failJob).not.toHaveBeenCalled();
+    expect(cancelJob).not.toHaveBeenCalled();
+    expect(markJobNeedsInput).not.toHaveBeenCalled();
+    expect(captureJobTelemetry).not.toHaveBeenCalled();
   });
 
   it('records any other error as a failure with telemetry', async () => {

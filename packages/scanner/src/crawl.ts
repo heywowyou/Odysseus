@@ -173,6 +173,8 @@ export interface CrawlFrontierState {
   startedAt: string;
   config: AuditConfigSnapshot;
   toolIdentity: ScanToolIdentity;
+  /** Plan 059: the frozen scope the frontier was crawled under. */
+  scopeDigest?: string;
   state: CrawlFrontierSnapshot;
 }
 

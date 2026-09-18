@@ -40,6 +40,10 @@ export interface CrawlCheckpoint {
   startedAt: string;
   config: AuditConfigSnapshot;
   toolIdentity: ScanToolIdentity;
+  /** Plan 059: the frozen audit scope the crawl ran under. Seeds,
+   *  exclusions and the booking-engine boundary live in the scope, not the
+   *  config, so a crawl is only ever reused under the same scope. */
+  scopeDigest?: string;
   crawl: CrawlResult;
 }
 
@@ -49,7 +53,16 @@ export type CheckpointRejectionReason =
   | 'config-mismatch'
   | 'tool-mismatch'
   | 'started-at-mismatch'
+  | 'scope-mismatch'
   | 'version-mismatch';
+
+/** What a resumed run expects a checkpoint or frontier file to carry. */
+export interface CheckpointIdentity {
+  startedAt: Date;
+  config: AuditConfigSnapshot;
+  toolIdentity: ScanToolIdentity;
+  scopeDigest: string | undefined;
+}
 
 export type CheckpointReuseVerdict =
   { reusable: true } | { reusable: false; reason: CheckpointRejectionReason };
@@ -144,7 +157,7 @@ function isWellFormedCheckpoint(value: unknown): value is CrawlCheckpoint {
  *  unreadable file must not be mistaken for a legitimate difference. */
 export function isReusableCheckpoint(
   checkpoint: CrawlCheckpoint | undefined,
-  expected: { startedAt: Date; config: AuditConfigSnapshot; toolIdentity: ScanToolIdentity },
+  expected: CheckpointIdentity,
 ): CheckpointReuseVerdict {
   if (checkpoint === undefined) return { reusable: false, reason: 'missing' };
   if (!isWellFormedCheckpoint(checkpoint)) return { reusable: false, reason: 'corrupt' };
@@ -159,6 +172,9 @@ export function isReusableCheckpoint(
   }
   if (checkpoint.startedAt !== expected.startedAt.toISOString()) {
     return { reusable: false, reason: 'started-at-mismatch' };
+  }
+  if (checkpoint.scopeDigest !== expected.scopeDigest) {
+    return { reusable: false, reason: 'scope-mismatch' };
   }
   return { reusable: true };
 }

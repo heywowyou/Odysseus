@@ -54,6 +54,7 @@ export {
   ensureJobRunIdentity,
   failJob,
   getJob,
+  isJobClaimCurrent,
   listJobs,
   markJobNeedsInput,
   requestJobCancellation,

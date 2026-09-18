@@ -7,6 +7,7 @@ import {
   deleteJob,
   failJob,
   getJob,
+  isJobClaimCurrent,
   listJobs,
   markJobNeedsInput,
   requestJobCancellation,
@@ -179,6 +180,23 @@ describe.skipIf(!available)('job queue persistence', () => {
       await queuedJob(new Date('2026-09-16T10:00:00Z'));
       await resetOrphanedRunningJobs(connection!, now);
       expect((await claimNextQueuedJob(connection!))?.jobId).toBe(orphan);
+    });
+  });
+
+  describe('isJobClaimCurrent', () => {
+    it('stops holding for the first claim once the job is requeued and re-claimed', async () => {
+      const jobId = await queuedJob(new Date('2026-09-18T10:00:00Z'));
+      const first = await claimNextQueuedJob(connection!);
+      expect(first?.claimId).toEqual(expect.any(String));
+      expect(await isJobClaimCurrent(connection!, jobId, first!.claimId!)).toBe(true);
+
+      await resetOrphanedRunningJobs(connection!, new Date(), { includeFreshHeartbeats: true });
+      expect(await isJobClaimCurrent(connection!, jobId, first!.claimId!)).toBe(false);
+
+      const second = await claimNextQueuedJob(connection!);
+      expect(second?.claimId).not.toBe(first?.claimId);
+      expect(await isJobClaimCurrent(connection!, jobId, first!.claimId!)).toBe(false);
+      expect(await isJobClaimCurrent(connection!, jobId, second!.claimId!)).toBe(true);
     });
   });
 

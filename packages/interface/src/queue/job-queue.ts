@@ -12,7 +12,7 @@
  */
 
 import type { Connection } from 'mongoose';
-import { OriginLock, readOdysseusBuildId } from '@odysseus/scanner';
+import { OriginLock, readOdysseusBuildId, StaleAcquisitionLeaseError } from '@odysseus/scanner';
 import { ReportIdentityUnconfirmedError } from '@odysseus/report';
 import {
   backfillQueueOrder,
@@ -237,6 +237,10 @@ export class JobQueue {
         // registry but the document write raced. failJob would mislabel a
         // stopped scan as a failure, so it must not run for this case.
         await cancelJob(this.connection, job.jobId, 'cancelled by operator');
+      } else if (error instanceof StaleAcquisitionLeaseError) {
+        // Plan 059 step 22: the job was requeued and another worker now holds
+        // it. Its row belongs to that worker, so this one writes nothing.
+        jobLog.warn({ err: error }, 'superseded worker stopped; the job belongs to another claim');
       } else if (error instanceof ReportIdentityUnconfirmedError) {
         // Issue #73: the pipeline finished and stopped deliberately on the
         // D8 identity-confirmation gate - not a crash. failJob would make

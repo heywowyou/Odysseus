@@ -7,6 +7,7 @@ vi.mock('@odysseus/store', () => ({
   completeJob: vi.fn(),
   updateJobProgress: vi.fn(),
   ensureJobRunIdentity: vi.fn(),
+  isJobClaimCurrent: vi.fn(),
 }));
 vi.mock('@odysseus/llm', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -16,7 +17,12 @@ vi.mock('@odysseus/llm', async (importOriginal) => ({
 import { runAuditStage } from '../../pipeline/audit-stage.js';
 import { runAnalysisStage } from '../../pipeline/analysis-stage.js';
 import { runAllReportsStage } from '../../pipeline/report-stage.js';
-import { completeJob, ensureJobRunIdentity, updateJobProgress } from '@odysseus/store';
+import {
+  completeJob,
+  ensureJobRunIdentity,
+  isJobClaimCurrent,
+  updateJobProgress,
+} from '@odysseus/store';
 import { pauseBetweenLanguagePasses } from '@odysseus/llm';
 import { runFullAuditJob } from './run-full-audit-job.js';
 import { CancellationRegistry, JobCancelledError } from '../cancellation.js';
@@ -234,6 +240,22 @@ describe('runFullAuditJob', () => {
       expect.objectContaining({ runIdentity }),
       fakeConnection,
     );
+  });
+
+  it('fences the audit stage on the claim this worker holds', async () => {
+    const job = { ...(fakeJob() as object), claimId: 'claim-1' } as never;
+    await runFullAuditJob(job, ctx);
+
+    const options = vi.mocked(runAuditStage).mock.calls[0]![1];
+    expect(options.acquisitionClaim?.claimId).toBe('claim-1');
+    vi.mocked(isJobClaimCurrent).mockResolvedValue(false);
+    await expect(options.acquisitionClaim?.isCurrent()).resolves.toBe(false);
+    expect(isJobClaimCurrent).toHaveBeenCalledWith(fakeConnection, 'job-1', 'claim-1');
+  });
+
+  it('runs unfenced for a job claimed before claim ids existed', async () => {
+    await runFullAuditJob(fakeJob(), ctx);
+    expect(vi.mocked(runAuditStage).mock.calls[0]![1]).not.toHaveProperty('acquisitionClaim');
   });
 
   it('completes the job with the produced auditId', async () => {

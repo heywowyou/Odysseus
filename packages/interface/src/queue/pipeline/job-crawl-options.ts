@@ -1,4 +1,5 @@
-import type { JobOptionsSnapshot } from '@odysseus/store';
+import type { Connection } from 'mongoose';
+import { isJobClaimCurrent, type JobDocument, type JobOptionsSnapshot } from '@odysseus/store';
 import type { RunAuditStageOptions } from '../../pipeline/audit-stage.js';
 
 /** The operator's advanced crawl options, as every single-site runner
@@ -29,5 +30,22 @@ export function crawlOptionsFromJob(
     ...(options.bookingEngineUrl !== undefined
       ? { bookingEngineUrl: options.bookingEngineUrl }
       : {}),
+  };
+}
+
+/** Plan 059 step 22: the claim a full-scan runner holds on its job, as the
+ *  audit stage checks it before each evidence write. A job claimed by a
+ *  build that predates claim ids has none, and runs unfenced as before. */
+export function acquisitionClaimFor(
+  connection: Connection,
+  job: Pick<JobDocument, 'jobId' | 'claimId'>,
+): Pick<RunAuditStageOptions, 'acquisitionClaim'> {
+  const claimId = job.claimId;
+  if (claimId === undefined) return {};
+  return {
+    acquisitionClaim: {
+      claimId,
+      isCurrent: () => isJobClaimCurrent(connection, job.jobId, claimId),
+    },
   };
 }

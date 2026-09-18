@@ -15,7 +15,6 @@
 
 import * as fs from 'node:fs';
 import path from 'node:path';
-import type { AuditConfigSnapshot } from '@odysseus/core';
 import {
   CONTINUATION_FAMILY_MAX_ENQUEUED,
   CONTINUATION_GUARD_VERSION,
@@ -24,8 +23,8 @@ import type { CrawlFrontierState } from '../crawl.js';
 import {
   CRAWL_STATE_FILENAME,
   jsonDeepEqual,
+  type CheckpointIdentity,
   type CheckpointRejectionReason,
-  type ScanToolIdentity,
 } from './crawl-checkpoint-io.js';
 
 export { CRAWL_STATE_FILENAME };
@@ -81,7 +80,7 @@ export function deleteCrawlFrontierState(auditDir: string): void {
  *  restore path re-validates them by construction. */
 export function isReusableFrontierState(
   state: CrawlFrontierState | undefined,
-  expected: { startedAt: Date; config: AuditConfigSnapshot; toolIdentity: ScanToolIdentity },
+  expected: CheckpointIdentity,
 ): CrawlFrontierReuseVerdict {
   if (state === undefined) return { reusable: false, reason: 'missing' };
   if (!isWellFormedFrontierState(state)) return { reusable: false, reason: 'corrupt' };
@@ -102,6 +101,9 @@ export function isReusableFrontierState(
   }
   if (state.startedAt !== expected.startedAt.toISOString()) {
     return { reusable: false, reason: 'started-at-mismatch' };
+  }
+  if (state.scopeDigest !== expected.scopeDigest) {
+    return { reusable: false, reason: 'scope-mismatch' };
   }
   return { reusable: true };
 }
