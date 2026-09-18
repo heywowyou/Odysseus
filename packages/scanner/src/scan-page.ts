@@ -266,8 +266,15 @@ async function sleep(ms: number): Promise<void> {
  */
 let lighthouseQueue: Promise<unknown> = Promise.resolve();
 
-async function runLighthouseSerialized(url: string, debugPort: number): Promise<LighthouseResult> {
-  const run = lighthouseQueue.then(() => runLighthouseIsolated(url, debugPort));
+async function runLighthouseSerialized(
+  url: string,
+  debugPort: number,
+  beforeRun?: () => Promise<void>,
+): Promise<LighthouseResult> {
+  const run = lighthouseQueue.then(async () => {
+    await beforeRun?.();
+    return runLighthouseIsolated(url, debugPort);
+  });
   lighthouseQueue = run.catch(() => undefined);
   return run;
 }
@@ -697,14 +704,15 @@ export async function runLighthouseAnalysis(
   debugPort: number,
   options: LighthouseAnalysisOptions = {},
 ): Promise<LighthouseAnalysisResult> {
-  if (options.scheduler !== undefined) {
-    await options.scheduler.pace();
-  } else if (options.delayMs !== undefined && options.delayMs > 0) {
-    await sleep(options.delayMs);
-  }
+  const beforeRun =
+    options.scheduler !== undefined
+      ? () => options.scheduler!.pace()
+      : options.delayMs !== undefined && options.delayMs > 0
+        ? () => sleep(options.delayMs!)
+        : undefined;
 
   try {
-    return { lighthouse: await runLighthouseSerialized(url, debugPort) };
+    return { lighthouse: await runLighthouseSerialized(url, debugPort, beforeRun) };
   } catch (error) {
     return { lighthouseError: toErrorMessage(error) };
   }
