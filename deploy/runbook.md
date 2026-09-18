@@ -623,6 +623,80 @@ Restore drill log (add one dated line per drill, never delete old ones):
   now stale — real audit artifacts exist there and were not migrated to the
   new box before cutover.
 
+
+### 8.1 Restic encrypted backup path (preferred)
+
+The repository now includes a restic 0.19.1 path for encrypted,
+content-deduplicated off-box backups. It is the preferred replacement for the
+legacy tar+rclone archive above once one successful backup, integrity check and
+restore drill have passed. Do not disable the existing timer before that proof.
+
+Create a dedicated private S3-compatible backup repository/bucket and copy the
+template:
+
+```sh
+sudo cp /srv/odysseus/deploy/.restic.env.example /srv/odysseus/.restic.env
+sudo chown deploy:deploy /srv/odysseus/.restic.env
+sudo chmod 600 /srv/odysseus/.restic.env
+sudo -u deploy nano /srv/odysseus/.restic.env
+```
+
+The restic repository password is separate from the application `.env` and
+from object-store credentials:
+
+```sh
+sudo -u deploy sh -c 'umask 077; cat > /srv/odysseus/.restic-password'
+# type/paste a long random password, then Ctrl-D
+```
+
+Initialize the repository once:
+
+```sh
+docker run --rm \
+  --env-file /srv/odysseus/.restic.env \
+  -e RESTIC_PASSWORD_FILE=/run/secrets/restic-password \
+  -v /srv/odysseus/.restic-password:/run/secrets/restic-password:ro \
+  restic/restic:0.19.1 init
+```
+
+Install the restic timer:
+
+```sh
+sudo cp /srv/odysseus/deploy/odysseus-restic-backup.service \
+        /srv/odysseus/deploy/odysseus-restic-backup.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now odysseus-restic-backup.timer
+```
+
+The default artifact volume is `odysseus_artifacts` (the Hostinger compose
+project). Override `ODYSSEUS_RESTIC_ARTIFACT_VOLUME` in the systemd service
+environment only if the deployed volume name differs.
+
+Before considering the path active, run all three:
+
+```sh
+sudo -u deploy /srv/odysseus/deploy/restic-backup.sh
+sudo -u deploy /srv/odysseus/deploy/restic-check.sh
+sudo -u deploy /srv/odysseus/deploy/restic-restore-drill.sh
+```
+
+The restore drill restores the latest production-host artifact snapshot into a
+temporary Docker volume, verifies that at least one file exists, and removes
+the drill volume. On an intentionally empty fresh deployment, seed a
+non-client synthetic artifact before the first drill rather than accepting an
+empty restore as proof.
+
+After a successful restic backup/check/restore drill, disable the old rclone
+timer to avoid paying for two independent retention systems:
+
+```sh
+sudo systemctl disable --now odysseus-backup.timer
+```
+
+Keep the legacy scripts until at least one real production restic restore has
+been recorded; they are rollback tooling during migration. The application
+`.env` is never mounted into the restic container.
+
 ## 9. In-container PDF glyph smoke
 
 > The `docker compose -f deploy/compose.yaml` commands in this section are
