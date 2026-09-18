@@ -19,7 +19,7 @@
     "test": "vitest run --project unit",
     "test:e2e": "vitest run --project \"e2e*\"",
     "test:all": "vitest run",
-    "test:deploy": "bash deploy/release.test.sh && bash deploy/render-server-compose.test.sh && bash deploy/odysseus-deploy.test.sh",
+    "test:deploy": "bash deploy/release.test.sh && bash deploy/render-server-compose.test.sh && bash deploy/odysseus-deploy.test.sh && bash deploy/restic-scripts.test.sh && bash -n deploy/equal-access-ci.sh",
     "test:watch": "vitest --project unit",
     "typecheck": "tsc -b --pretty && tsc -p packages/interface/tsconfig.dashboard.json --noEmit",
     "build": "tsc -b",
