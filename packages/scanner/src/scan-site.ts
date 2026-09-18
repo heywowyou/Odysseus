@@ -16,6 +16,10 @@ import {
   getScanConcurrency,
 } from './config.js';
 import { HostRequestScheduler } from './host-request-scheduler.js';
+import type {
+  NetworkSafetyDisposition,
+  NetworkTargetPolicy,
+} from './network-target-policy.js';
 import type { RedirectHostCache } from './checks/transactional-flow.js';
 import type { SitemapCheckResult } from './checks/sitemap.js';
 import { checkLlmsTxt, type LlmsTxtCheckResult } from './checks/llms-txt.js';
@@ -251,6 +255,8 @@ export interface ScanSiteOptions {
    *  still open for this audit, rather than waiting for a page-boundary
    *  progress event that a wedged page may never reach. */
   onGuardReady?: (guard: PageWorkGuard) => void;
+  /** Plan 059 production SSRF/egress policy. Direct helper callers may omit it. */
+  networkPolicy?: NetworkTargetPolicy;
 }
 
 export interface SiteScanResult {
@@ -274,6 +280,8 @@ export interface SiteScanResult {
    *  writing can join crawl inventory to pass provenance without relying on
    *  completion order. */
   analysisCoverageByUrl?: ReadonlyMap<string, PageAnalysisCoverage>;
+  /** Every request the browser/network policy refused during this run. */
+  networkSafetyDispositions?: readonly NetworkSafetyDisposition[];
 }
 
 /**
