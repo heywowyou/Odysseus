@@ -113,6 +113,9 @@ export {
   RecordingLlmTelemetrySink,
 } from './telemetry/llm-telemetry.js';
 export type { LlmTelemetrySink } from './telemetry/llm-telemetry.js';
+export { LangfuseLlmTelemetrySink } from './telemetry/langfuse-sink.js';
+export type { LangfuseTelemetryConfig } from './telemetry/langfuse-sink.js';
+export { configureLlmTelemetryFromEnv } from './telemetry/configure.js';
 
 export { getReportQualityModel, callReportQualityRole } from './report-quality-client.js';
 export type { QualityRoleResult } from './report-quality-client.js';
