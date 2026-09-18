@@ -1,6 +1,6 @@
 # Plan 051: findings delta in the re-audit report
 
-Status: IMPLEMENTED (2026-09-16, issue #371).
+Status: IMPLEMENTED (2026-09-16, issue #371); **closure proof reopened 2026-09-18** for deterministic/no-model architecture evidence.
 
 Source design: [`docs/product/findings-delta-reaudit-design.md`](../docs/product/findings-delta-reaudit-design.md),
 approved 2026-09-10 with all six defaults. This plan fixes the questions that
