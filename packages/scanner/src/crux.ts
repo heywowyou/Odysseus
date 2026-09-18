@@ -96,7 +96,9 @@ export async function fetchCruxFieldData(
 ): Promise<CruxFieldDataResult> {
   const acquisition = await fetchCruxFieldDataAcquisition(origin, apiKey);
   if (acquisition.status === 'provider-error') {
-    throw new Error(`CrUX acquisition failed: ${acquisition.providerError ?? 'unknown provider error'}`);
+    throw new Error(
+      `CrUX acquisition failed: ${acquisition.providerError ?? 'unknown provider error'}`,
+    );
   }
   return acquisition.fieldData;
 }
