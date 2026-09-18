@@ -73,7 +73,13 @@ const FONT_FILES = [
   'AvenirNextCyr-Medium.woff2',
   'AvenirNextCyr-Demi.woff2',
   'AvenirNextCyr-Bold.woff2',
+  // URLs, selectors and identifiers. Without an embedded face `monospace`
+  // resolved to whatever the rendering host had (a CJK fallback on the
+  // pilot machine), so the same report printed differently per host.
+  'DejaVuSansMono.ttf',
 ];
+
+const FONT_MIME: Record<string, string> = { woff2: 'font/woff2', ttf: 'font/ttf' };
 
 /** Resolves from this file's own __dirname the same way readReportCss used
  *  to (two levels below the package root whether run via tsx from src or
@@ -89,7 +95,9 @@ export async function readStylesInlined(): Promise<string> {
 
   for (const fontFile of FONT_FILES) {
     const buffer = await fs.readFile(path.join(fontsDir, fontFile));
-    const dataUri = `data:font/woff2;base64,${buffer.toString('base64')}`;
+    const mime = FONT_MIME[path.extname(fontFile).slice(1)];
+    if (!mime) throw new Error(`Unknown report font format: ${fontFile}`);
+    const dataUri = `data:${mime};base64,${buffer.toString('base64')}`;
     nocturne = nocturne.replace(`../fonts/${fontFile}`, dataUri);
   }
 

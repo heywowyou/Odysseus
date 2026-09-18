@@ -512,7 +512,7 @@ h5 {
 .mono,
 .selector-cell,
 .url-cell {
-  font-family: ui-monospace, monospace;
+  font-family: 'Odysseus Mono', ui-monospace, monospace;
   overflow-wrap: anywhere;
   /* Item 0.4: `word-break: break-word` in addition to `overflow-wrap:
      anywhere` was reported as dropping/merging characters at soft-wrap

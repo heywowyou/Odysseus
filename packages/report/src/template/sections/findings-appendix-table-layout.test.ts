@@ -100,7 +100,7 @@ describe('2026-08-24: annex finding ids never break mid-token across a page frag
     const html = await render();
     const idCells =
       html.match(
-        /<div style="font-family:ui-monospace,monospace;white-space:nowrap">f\d{3}<\/div>/gu,
+        /<div style="font-family:'Odysseus Mono',ui-monospace,monospace;white-space:nowrap">f\d{3}<\/div>/gu,
       ) ?? [];
     expect(idCells.length).toBeGreaterThan(0);
     for (const cell of idCells) {

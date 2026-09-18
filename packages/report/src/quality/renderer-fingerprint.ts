@@ -13,7 +13,7 @@ export async function reportRendererAssetFingerprints(): Promise<{
   fonts: Sha256Digest;
 }> {
   const styles = await readStylesInlined();
-  const fonts = [...styles.matchAll(/data:font\/woff2;base64,([A-Za-z0-9+/=]+)/g)]
+  const fonts = [...styles.matchAll(/data:font\/(?:woff2|ttf);base64,([A-Za-z0-9+/=]+)/g)]
     .map((m) => m[1] ?? '')
     .join('\n');
   if (!fonts)

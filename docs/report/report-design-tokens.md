@@ -157,6 +157,14 @@ binding decision 9). `font-display: block`; no CDN, no `swap`. With
 Inter retired, the `overused-font` ignore for `packages/report/**` in
 `.impeccable/config.json` is dead and is removed by plan 039.
 
+Mono: URLs, selectors and finding identifiers (`.mono`, `.selector-cell`,
+`.url-cell` and the appendix's inline mono styles) use **Odysseus Mono**,
+an unmodified DejaVu Sans Mono 400 (`DejaVuSansMono.ttf`, Bitstream Vera
+licence beside it) inlined the same way. A bare `ui-monospace, monospace`
+stack printed in whatever fixed font the rendering host had - a CJK
+fallback on the pilot machine - so the same report differed per host;
+Plan 058's exact-PDF gate now refuses any font the report does not embed.
+
 | Weight | Style | Used for |
 | --- | --- | --- |
 | 400 | normal | body copy, table cells |

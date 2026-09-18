@@ -42,6 +42,13 @@
   font-display: block;
   src: url('../fonts/AvenirNextCyr-Bold.woff2') format('woff2');
 }
+@font-face {
+  font-family: 'Odysseus Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('../fonts/DejaVuSansMono.ttf') format('truetype');
+}
 
 :root {
   /* plan 039: the ground, ink ladder, accent, hairline and card values

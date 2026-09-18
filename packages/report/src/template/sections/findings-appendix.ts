@@ -338,7 +338,7 @@ const LONG_SELECTOR_LENGTH_THRESHOLD = 50;
 
 function selectorCellStyle(selector: string): string {
   const fontSize = selector.length > LONG_SELECTOR_LENGTH_THRESHOLD ? '10px' : '12.5px';
-  return `font-family:ui-monospace,monospace;overflow-wrap:anywhere;word-break:normal;hyphens:none;opacity:0.8;font-size:${fontSize}`;
+  return `font-family:'Odysseus Mono',ui-monospace,monospace;overflow-wrap:anywhere;word-break:normal;hyphens:none;opacity:0.8;font-size:${fontSize}`;
 }
 
 /** Issue #45: one finding is ONE table row. The data cells and the
@@ -407,7 +407,7 @@ function renderSubTableRow(
     <tr id="annexref-${escapeHtml(finding.findingId)}" style="break-inside:avoid">
       <td colspan="4" style="padding:6px var(--space-2);border-bottom:1px solid var(--color-divider)">
         <div style="display:grid;grid-template-columns:${APPENDIX_COLUMN_WIDTHS.join(' ')}">
-          <div style="font-family:ui-monospace,monospace;white-space:nowrap">${escapeHtml(finding.findingId)}</div>
+          <div style="font-family:'Odysseus Mono',ui-monospace,monospace;white-space:nowrap">${escapeHtml(finding.findingId)}</div>
           <div>${formatNumber(inScopePageCount, language)}</div>
           <div>${formatNumber(finding.occurrences, language)}</div>
           <div ${VERBATIM_EVIDENCE_ATTRIBUTE} style="${selectorCellStyle(selector)}">${escapeHtml(selector)}</div>
