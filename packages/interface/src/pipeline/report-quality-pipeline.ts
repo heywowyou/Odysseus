@@ -82,6 +82,9 @@ import {
 import { putImmutableJson, putPrivateCandidatePdf } from './report-quality-storage.js';
 
 const MAX_CONTENT_REPAIR_ITERATIONS = 8;
+/** Plan 058 §9/§13: writer drafts get bounded patch-prose repairs with the
+ *  full accumulated rejection history before operator review. */
+const MAX_WRITER_ATTEMPTS = 3;
 /** Plan 058 §9/§13: the senior plan gets one bounded patch-plan repair — the
  *  deterministic rejection is named and the role re-issues the plan — before
  *  the run goes to operator review. */
@@ -924,9 +927,9 @@ export async function runReportQualityPipeline(input: {
       });
       await recordModelCall(context, writerCall.provenance);
       // Plan 058 §9 patch-prose: a writer draft that fails the evidence-
-      // binding gates is re-issued once with the rejection named before the
-      // run goes to operator review (§13 ceiling). The binding gate is the
-      // full draft resolution — the same path the content loop re-runs.
+      // binding gates is re-issued with every deterministic rejection named,
+      // accumulating across a bounded attempt ceiling (§13); exhausting it
+      // goes to operator review, never a silently accepted draft.
       const bindableWriterDraft = (): void => {
         resolveQualityDraft({
           language,
@@ -943,47 +946,47 @@ export async function runReportQualityPipeline(input: {
         });
       };
       let writerRejections: string[] = [];
-      try {
-        bindableWriterDraft();
-      } catch (error) {
-        writerRejections.push(error instanceof Error ? error.message : String(error));
-        await keepLease(context);
-        writerCall = await callReportQualityRole({
-          role: language === 'fr' ? 'writer-fr' : 'writer-en',
-          userPayload: {
-            inputSnapshotDigest: snapshotObject.digest,
-            language,
-            seniorPlan: plan,
-            evidenceDossier: dossier,
-            factRegistry: registry,
-            mandatoryDisclosures: evidence.mandatoryDisclosures,
-            writingRules:
-              'Text segments never contain digits, percentages, dates, units or URLs — every ' +
-              'exact scalar belongs in a fact segment bound to a factRegistry factId, and every ' +
-              'named source in a reference segment. Performance wording keeps Lighthouse lab ' +
-              'measurements distinct from CrUX field data; TBT and Speed Index are never called ' +
-              'Core Web Vitals. No lost-booking, revenue or conversion causality. A ' +
-              'newly-observable finding is never a regression and a not-comparable finding is ' +
-              'never a resolution. Unsupported-certainty wording is rejected deterministically.',
-            previousDraftRejections: writerRejections,
-            repairInstruction:
-              'Your previous draft was refused by the deterministic evidence-binding gates. ' +
-              'Repair exactly the named rejections — move exact scalars into fact segments or ' +
-              'delete them — and keep every other field identical.',
-          },
-          parser: qualityWriterOutputSchema,
-          jsonSchema: QUALITY_WRITER_JSON_SCHEMA,
-        });
-        await recordModelCall(context, writerCall.provenance);
+      for (let attempt = 1; ; attempt += 1) {
         try {
           bindableWriterDraft();
-        } catch (retryError) {
-          throw new ReportQualityNeedsOperatorReviewError(
-            'writer-repair-limit',
-            `Writer draft failed its evidence-binding gates after repair: ${
-              retryError instanceof Error ? retryError.message : String(retryError)
-            }`,
-          );
+          break;
+        } catch (error) {
+          writerRejections.push(error instanceof Error ? error.message : String(error));
+          if (attempt >= MAX_WRITER_ATTEMPTS) {
+            throw new ReportQualityNeedsOperatorReviewError(
+              'writer-repair-limit',
+              `Writer draft failed its evidence-binding gates after ${String(attempt)} attempts: ${writerRejections.join(' | ')}`,
+            );
+          }
+          await keepLease(context);
+          writerCall = await callReportQualityRole({
+            role: language === 'fr' ? 'writer-fr' : 'writer-en',
+            userPayload: {
+              inputSnapshotDigest: snapshotObject.digest,
+              language,
+              seniorPlan: plan,
+              evidenceDossier: dossier,
+              factRegistry: registry,
+              mandatoryDisclosures: evidence.mandatoryDisclosures,
+              writingRules:
+                'Text segments never contain digits, percentages, dates, units or URLs — every ' +
+                'exact scalar belongs in a fact segment bound to a factRegistry factId, and every ' +
+                'named source in a reference segment. Performance wording keeps Lighthouse lab ' +
+                'measurements distinct from CrUX field data; TBT and Speed Index are never called ' +
+                'Core Web Vitals. No lost-booking, revenue or conversion causality. A ' +
+                'newly-observable finding is never a regression and a not-comparable finding is ' +
+                'never a resolution. Unsupported-certainty wording is rejected deterministically.',
+              previousDraftRejections: writerRejections,
+              repairInstruction:
+                'Your previous draft was refused by the deterministic evidence-binding gates. ' +
+                'Repair exactly the named rejections — move exact scalars into fact segments, ' +
+                'reword causality into evidence-bounded impact, fix lab/field and Core Web Vitals ' +
+                'taxonomy, keep comparability wording — and keep every other field identical.',
+            },
+            parser: qualityWriterOutputSchema,
+            jsonSchema: QUALITY_WRITER_JSON_SCHEMA,
+          });
+          await recordModelCall(context, writerCall.provenance);
         }
       }
       cleanedWriters[language] = await cleanContentDraft(

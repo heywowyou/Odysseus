@@ -674,14 +674,30 @@ describe('runReportQualityPipeline (Plan 058 fail-closed behavior)', () => {
     badWriter.executiveSummary = {
       segments: [{ kind: 'text', text: 'Des 12 obstacles concernent ce site.' }],
     };
+    const writerPayloads: Array<Record<string, unknown>> = [];
     harness.llm = makeLlmScript({
       findings: DEFAULT_FINDINGS,
-      roles: { 'writer-fr': () => badWriter },
+      roles: {
+        'writer-fr': (ctx) => {
+          writerPayloads.push(ctx.userPayload as Record<string, unknown>);
+          return badWriter;
+        },
+      },
     });
     await expect(runReportQualityPipeline(makePipelineInput())).rejects.toThrow(
-      /writer-repair-limit|evidence-binding gates after repair/,
+      /evidence-binding gates after 3 attempts/,
     );
-    expect(harness.llmCalls['writer-fr']).toBe(2);
+    expect(harness.llmCalls['writer-fr']).toBe(3);
+    // Every retry carries the accumulated rejection history.
+    const retryPayloads = writerPayloads.slice(1);
+    expect(retryPayloads.length).toBeGreaterThanOrEqual(2);
+    for (const payload of retryPayloads) {
+      expect(
+        (payload['previousDraftRejections'] as string[]).every((rejection) =>
+          rejection.includes('Exact scalar/URL'),
+        ),
+      ).toBe(true);
+    }
     expect(finalTransition().state).toBe('needs-operator-review');
     expect(finalTransition().patch.errorCode).toBe('writer-repair-limit');
     expect(storeState.bundles).toHaveLength(0);
