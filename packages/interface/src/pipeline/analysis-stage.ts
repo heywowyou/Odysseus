@@ -29,8 +29,6 @@ import {
   isAuditFallbackEligible,
 } from '@odysseus/core';
 import {
-  analyzeReview,
-  analyzeCorrectionReview,
   analyzeStructure,
   analyzeWriting,
   buildFallbackSiteContext,
@@ -44,12 +42,8 @@ import {
   mergeAnalysisPasses,
   parseStructureDocument,
   partitionFindings,
-  summarizeUnsupportedReviews,
-  CORRECTION_REVIEW_PROMPT_VERSION,
-  type AnalyzeWritingResult,
   type SiteContextInput,
   type StructureDocument,
-  type WritingInput,
 } from '@odysseus/llm';
 import { persistAnalysis } from '@odysseus/store';
 import { getStrings, type VerifiedStoredAnalysis } from '@odysseus/report';
@@ -331,13 +325,6 @@ export async function runAnalysisStage(
   const analysisId = randomUUID();
   let analysis: VerifiedStoredAnalysis;
   let unreferencedFindingCount = 0;
-  // Only the model-generated path produces writer artifacts; the static
-  // fallback leaves this undefined so the advisory passes below have
-  // nothing to review and make zero provider calls.
-  let modelPasses:
-    | { writingInput: WritingInput; writingResult: AnalyzeWritingResult; generatedAt: Date }
-    | undefined;
-
   if (fallbackEligible) {
     // Static fallback analysis (issue #162): no structure pass, no writing
     // pass, no advisory pass. The bilingual sentences come from the report
@@ -401,7 +388,6 @@ export async function runAnalysisStage(
     const merged = mergeAnalysisPasses(doc, writingResult.output, forModel, options.language);
     unreferencedFindingCount = findUnreferencedStructureFindingIds(doc, forModel).length;
 
-    modelPasses = { writingInput, writingResult, generatedAt };
     analysis = {
       ...merged,
       analysisId,
@@ -449,129 +435,6 @@ export async function runAnalysisStage(
       : {}),
   });
 
-  // Both advisory passes live inside the not-eligible path (modelPasses is
-  // set exactly there): a static fallback analysis has no writer output to
-  // review, and zero provider calls is the point of the gate (issue #162).
-  // Each body keeps its own try/catch inside an async IIFE, so the promise
-  // can never reject; the stage starts both passes without awaiting them
-  // (issue #145) and callers settle the returned promises at their own
-  // boundary, so the two provider round trips overlap the report stage
-  // instead of serializing ahead of it.
-  let advisoryPasses: readonly Promise<void>[] = [];
-  if (modelPasses !== undefined) {
-    const { writingInput, writingResult, generatedAt } = modelPasses;
-    // Plan 033: a distinct advisory correction pass. It gets the exact writer
-    // input/output, never the merged analysis, HTML, PDF, screenshots, or a
-    // fetched page. The artifact is insert-only and intentionally has no path
-    // back into analysis selection or report rendering.
-    const correctionReviewPromise: Promise<void> = (async () => {
-      try {
-        const correctionReview = await analyzeCorrectionReview({
-          writingInput,
-          written: writingResult.output,
-        });
-        const correctionReviewPath = path.join(
-          analysesDir,
-          `${timestampForFilename(generatedAt)}-${analysisId}-correction-review.json`,
-        );
-        await fs.writeFile(
-          correctionReviewPath,
-          JSON.stringify(
-            {
-              auditId: manifest.auditId,
-              analysisId,
-              language: options.language,
-              generatedAt,
-              sourceAnalysisFilename: path.basename(analysisPath),
-              reviewSchemaVersion: '033-v1',
-              promptVersion: CORRECTION_REVIEW_PROMPT_VERSION,
-              model: correctionReview.model,
-              temperature: correctionReview.temperature,
-              outcome: correctionReview.status,
-              ...(correctionReview.status === 'ok'
-                ? { proposals: correctionReview.output.proposals }
-                : { skipReason: correctionReview.reason }),
-            },
-            null,
-            2,
-          ),
-          { flag: 'wx' },
-        );
-        console.warn(
-          correctionReview.status === 'ok'
-            ? `odysseus analyze (correction review, language=${options.language}): ${correctionReview.output.proposals.filter((proposal) => proposal.verdict === 'propose-change').length} proposal(s) recorded`
-            : `odysseus analyze (correction review, language=${options.language}): skipped`,
-        );
-      } catch {
-        // An advisory-artifact filesystem failure is no more allowed to alter a
-        // delivered analysis than a provider failure. Deliberately no reason is
-        // printed: this channel is summary-only and must not expose client prose.
-        console.warn(`odysseus analyze (correction review, language=${options.language}): skipped`);
-      }
-    })();
-
-    // Shadow reviewer (docs/rules/llm-layer-rules.md section 12): runs after the
-    // analysis is fully written and persisted, and its whole body is
-    // wrapped so a reviewer failure of any kind can never block, fail, or
-    // delay the analysis it reviews. One extra provider call per analysis
-    // by operator decision, always on; verdicts are data for a later
-    // promotion decision, not a gate.
-    const reviewPromise: Promise<void> = (async () => {
-      try {
-        const review = await analyzeReview({ writingInput, written: writingResult.output });
-        if (review.status === 'skipped') {
-          console.warn(
-            `odysseus analyze (review pass, language=${options.language}): skipped - ${review.reason}`,
-          );
-        } else {
-          // One line only. The validation campaign (2026-08-29) measured the
-          // medium-tier reviewer flagging every businessImpact field for
-          // stating the generic commercial consequences the writing prompt
-          // itself requires, so per-field console output would be a wall of
-          // misleading warnings; the per-field reasons live in the review
-          // file, where a human reads them with that bias in mind.
-          const unsupportedCount = summarizeUnsupportedReviews(review.output).length;
-          if (unsupportedCount > 0) {
-            console.warn(
-              `odysseus analyze (review pass, language=${options.language}): ${unsupportedCount} prose field(s) reviewed unsupported - see the -review.json file for the reasons`,
-            );
-          }
-          const reviewPath = path.join(
-            analysesDir,
-            `${timestampForFilename(generatedAt)}-review.json`,
-          );
-          await fs.writeFile(
-            reviewPath,
-            JSON.stringify(
-              {
-                auditId: manifest.auditId,
-                analysisId,
-                language: options.language,
-                model: review.model,
-                temperature: review.temperature,
-                generatedAt,
-                reviews: review.output,
-              },
-              null,
-              2,
-            ),
-          );
-        }
-      } catch (error) {
-        console.warn(
-          `odysseus analyze (review pass, language=${options.language}): skipped - ${error instanceof Error ? error.message : String(error)}`,
-        );
-      }
-    })();
-
-    // Same start order as before the deferral (correction review first), but
-    // the two starts now overlap: the reviewer's provider call no longer
-    // waits for the correction pass to finish. Neither pass reads the
-    // other's output and their artifact names never collide, so the
-    // overlap changes only when the stage waits, not what the passes do.
-    advisoryPasses = [correctionReviewPromise, reviewPromise];
-  }
-
   return {
     analysis,
     analysisPath,
@@ -580,6 +443,6 @@ export async function runAnalysisStage(
     writingReused: false,
     unreferencedFindingCount,
     usedFallbackContext,
-    advisoryPasses,
+    advisoryPasses: [],
   };
 }
