@@ -139,6 +139,18 @@
       ],
       "depNameTemplate": "accessibility-checker",
       "datasourceTemplate": "npm"
+    },
+    {
+      "description": "The restic Docker image is pinned in deployment scripts; Renovate keeps backup tooling updates reviewable.",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^deploy\\/restic-(?:backup|check|restore-drill|maintain)\\.sh$/"
+      ],
+      "matchStrings": [
+        "restic/restic:(?<currentValue>[0-9.]+)"
+      ],
+      "depNameTemplate": "restic/restic",
+      "datasourceTemplate": "docker"
     }
   ]
 }
