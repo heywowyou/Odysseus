@@ -1,4 +1,9 @@
 import { getCrawlerUserAgent } from './config.js';
+import type {
+  NetworkSafetyDisposition,
+  NetworkTargetPolicy,
+} from './network-target-policy.js';
+import { fetchWithNetworkPolicy, NetworkSafetyBlockedError } from './safe-fetch.js';
 
 export interface RobotsRules {
   /** Whether robots.txt was actually reachable. false implies allow-all. */
@@ -174,19 +179,36 @@ export function isAllowedByRobots(rules: RobotsRules, pathname: string): boolean
  * to a clean 404) is logged, since that's a real problem rather than an
  * expected absence.
  */
+export interface RobotsFetchOptions {
+  networkPolicy?: NetworkTargetPolicy;
+  onNetworkSafetyBlocked?: (disposition: NetworkSafetyDisposition) => void;
+}
+
 export async function fetchRobotsText(
   origin: string,
   timeoutMs: number,
   userAgent: string = getCrawlerUserAgent(),
+  options: RobotsFetchOptions = {},
 ): Promise<string | null> {
   try {
-    const response = await fetch(new URL('/robots.txt', origin), {
+    const url = new URL('/robots.txt', origin).href;
+    const request = {
       headers: { 'user-agent': userAgent },
       signal: AbortSignal.timeout(timeoutMs),
-    });
+    };
+    const response =
+      options.networkPolicy === undefined
+        ? await fetch(url, request)
+        : await fetchWithNetworkPolicy(url, request, {
+            policy: options.networkPolicy,
+            ...(options.onNetworkSafetyBlocked !== undefined
+              ? { onBlocked: options.onNetworkSafetyBlocked }
+              : {}),
+          });
     if (!response.ok) return null;
     return await response.text();
   } catch (error) {
+    if (error instanceof NetworkSafetyBlockedError) throw error;
     const message = error instanceof Error ? error.message : String(error);
     console.warn(`odysseus: failed to fetch robots.txt for ${origin}: ${message}`);
     return null;
