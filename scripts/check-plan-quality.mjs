@@ -6,9 +6,7 @@ const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 const plansDir = resolve(repoRoot, 'plans');
 const errors = [];
 
-const rootPlanNames = readdirSync(plansDir)
-  .filter((name) => /^\d{3}-.+\.md$/.test(name))
-  .filter((name) => !name.startsWith('059-'));
+const rootPlanNames = readdirSync(plansDir).filter((name) => /^\d{3}-.+\.md$/.test(name));
 
 function read(relativePath) {
   return readFileSync(resolve(repoRoot, relativePath), 'utf8');
@@ -36,7 +34,7 @@ for (const name of rootPlanNames) {
   }
 }
 
-const plan058 = read('plans/058-fail-closed-senior-report-quality-pipeline.md');
+const plan058 = read('plans/archive/058-fail-closed-senior-report-quality-pipeline.md');
 for (const required of [
   'ReportModelProfile',
   'gpt-5.6-sol',
@@ -144,6 +142,6 @@ if (errors.length) {
   process.exitCode = 1;
 } else {
   process.stdout.write(
-    `Plan quality check passed (${rootPlanNames.length} executable root plans; Plan 059 excluded by active handoff).\n`,
+    `Plan quality check passed (${rootPlanNames.length} executable root plans).\n`,
   );
 }

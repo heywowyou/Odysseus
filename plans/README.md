@@ -116,7 +116,7 @@ The canonical sources for this behavior are `docs/product/odysseus-project-brief
 | [047](archive/047-prospect-hub.md) | Make the prospect the durable, editable central hub | P1 | L | none | DONE (2026-09-15) |
 | [048](archive/048-dashboard-workflow-consolidation.md) | Reduce the dashboard to one operator workflow | P1 | L | 047 | DONE (2026-09-15) |
 | [049](archive/049-simplified-workflow-behaviorally-truthful.md) | Make the simplified workflow behaviorally truthful | P1 | L | 048 | DONE (2026-09-15) |
-| [050](050-reusable-scans-durable-prospects.md) | Make scans reusable and prospects durable: two scan intents, advisory data version, archive instead of ordinary deletion | P1 | XL | 049 | IMPLEMENTED — awaiting: post-deploy acceptance rehearsal A–C (closure ledger complete 2026-09-18) |
+| [050](archive/050-reusable-scans-durable-prospects.md) | Make scans reusable and prospects durable: two scan intents, advisory data version, archive instead of ordinary deletion | P1 | XL | 049 | IMPLEMENTED — awaiting: post-deploy acceptance rehearsal A–C (closure ledger complete 2026-09-18) |
 | [051](archive/051-findings-delta-reaudit.md) | Add the findings delta to the re-audit report | P2 | L | 050 | DONE (2026-09-18) |
 | [052](archive/052-crawler-honours-its-published-identity.md) | Make the crawler obey robots groups for its published bot name and send its user agent on every request | P1 | M | none | DONE (2026-09-17) |
 | [053](archive/053-opt-out-reach-survives-prospect-status.md) | Keep a public opt-out from widening into domain-wide suppression through the prospect status | P1 | S | none | DONE (2026-09-17) |
@@ -124,8 +124,8 @@ The canonical sources for this behavior are `docs/product/odysseus-project-brief
 | [055](archive/055-scan-launch-and-job-delete-integrity.md) | Refuse scans for archived prospects and close the queued-job delete race | P1 | S | none | DONE (2026-09-17) |
 | [056](archive/056-in-flight-work-guards.md) | Share one report production lock and refuse archive or delete while work is still in flight | P2 | M | after 055 (both edit the job delete route) | DONE (2026-09-17) |
 | [057](archive/057-prospect-owns-linked-audit-identity.md) | Make the prospect the single source of a linked audit's name and SIREN; edits on the audit save to the prospect | P2 | M | none | DONE (2026-09-17) |
-| [058](058-fail-closed-senior-report-quality-pipeline.md) | Make the paid report fail closed on content and PDF quality | P1 | XL | 027, 033, 039, 050, 051; 059 before production promotion | FROZEN (2026-09-18): pipeline dormant until a paid report sells; the existing path runs GPT-5.6 Luna xhigh plus a PDF file gate (trade-off 102) |
-| [059](059-fail-closed-audit-evidence-quality.md) | Make full-audit evidence fail closed before report generation | P1 | XL | 021, 035, 050, 051; gates 058 promotion | IN PROGRESS: Phase A shipped as dormant contract modules; execution state, operator decisions and blockers in [059-execution-handoff.md](059-execution-handoff.md) |
+| [058](archive/058-fail-closed-senior-report-quality-pipeline.md) | Make the paid report fail closed on content and PDF quality | P1 | XL | 027, 033, 039, 050, 051; 059 before production promotion | FROZEN (2026-09-18): pipeline dormant until a paid report sells; the existing path runs GPT-5.6 Luna xhigh plus a PDF file gate (trade-off 102) |
+| [059](archive/059-fail-closed-audit-evidence-quality.md) | Make full-audit evidence fail closed before report generation | P1 | XL | 021, 035, 050, 051; gates 058 promotion | FROZEN (2026-09-19): evidence graph runs on every full audit; approval waits on the scan container; state in [059-execution-handoff.md](archive/059-execution-handoff.md) |
 | [060](archive/060-application-quality-control-room.md) | Make the dashboard a truthful quality control room over evidence, reports and operator attention | P1 | XL | 058, 059; 035, 050-057 semantics | IMPLEMENTED (2026-09-18), archived with its closure ledger; remaining sequenced rows (full command tokens, lineage UX, bounded paging, a11y pass) live in the frozen 061-066 backlog |
 | [061](archive/061-durable-work-state-capabilities-and-queue.md) | Make long-running work, action safety, cancellation and scan queue state durable and truthful | P1 | XL | 060; 035, 050, 055, 056; 058/059 run contracts | FROZEN (2026-09-18): backlog until a paid report sells |
 | [062](archive/062-audit-control-room-lineage-and-approval.md) | Make audit detail the evidence/report lineage workspace with explicit exact-bundle approval | P1 | XL | 058, 059, 060, 061; 050, 051/054, 057 | FROZEN (2026-09-18): backlog until a paid report sells |
@@ -133,6 +133,10 @@ The canonical sources for this behavior are `docs/product/odysseus-project-brief
 | [064](archive/064-dashboard-accessibility-and-design-system.md) | Make the operator dashboard exemplary in accessibility and interaction consistency | P1 | L | 060; consumes 061-063 | FROZEN (2026-09-18): backlog until a paid report sells |
 | [065](archive/065-operational-observability-and-recovery.md) | Make routine failures typed, diagnosable and recoverable without log archaeology | P1 | L | 060, 061; integrates 058/059 | FROZEN (2026-09-18): backlog until a paid report sells |
 | [066](archive/066-operator-security-privacy-and-browser-isolation.md) | Harden hostile-input, confidential-artifact and browser-isolation boundaries for the quality pipelines | P1 | XL | 060; early isolation preflight, later 061 + 058/059 ownership | FROZEN (2026-09-18): backlog until a paid report sells |
+
+No plan is active as of 2026-09-19: every plan file lives under `archive/`.
+Frozen plans keep their contract and execution handoff there and reopen only
+by operator decision. New work starts from a new numbered plan.
 
 Status values: `TODO`, `IN PROGRESS`, `IMPLEMENTED`, `DONE`,
 `BLOCKED: <reason>`, `FROZEN` (parked backlog, file under

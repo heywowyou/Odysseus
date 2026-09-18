@@ -6,6 +6,7 @@
 
 ## Status
 
+- **Execution status:** FROZEN (2026-09-19) by operator decision, like plans 058 and 061-066. State and blockers are recorded in `059-execution-handoff.md` beside this file.
 - **Priority**: P1
 - **Effort**: XL
 - **Risk**: HIGH — crawl inventory, browser surfaces, check execution, retries, performance measurement, normalization, persistence, checkpoint/resume, cross-run comparison and the Plan-058 handoff all change.
