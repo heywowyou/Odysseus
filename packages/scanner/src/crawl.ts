@@ -55,6 +55,10 @@ import {
 } from './continuation-guard.js';
 import { isConfirmedListing } from './full-audit-plan.js';
 import type { ScanToolIdentity } from './artifacts/crawl-checkpoint-io.js';
+import {
+  buildRobotsPolicySnapshot,
+  type RobotsPolicySnapshot,
+} from './robots-policy-snapshot.js';
 
 export { isSameSiteHostname } from './links.js';
 
@@ -117,6 +121,8 @@ export interface CrawlOptions {
   /** Plan 059 production network policy. Omitted by standalone/test callers. */
   networkPolicy?: NetworkTargetPolicy;
   onNetworkSafetyBlocked?: NetworkSafetyBlockHandler;
+  /** Plan 059 evidence epoch owning this crawl's robots policy chain. */
+  evidenceEpoch?: number;
 }
 
 /** Per-iteration loop state the resumable crawl must survive a process
@@ -128,6 +134,8 @@ export interface CrawlFrontierSnapshot {
    *  (robotsDisallowMatches, aiCrawlerBlocks) and the sitemap directive
    *  passthrough are identical on resume without re-fetching. */
   robotsText: string | null;
+  /** Plan 059 policy history. Optional only for pre-059/frontier test fixtures. */
+  robotsPolicyChain?: RobotsPolicySnapshot[];
   supplementalPhaseStarted: boolean;
   queue: QueueItem[];
   visited: string[];
@@ -219,6 +227,8 @@ export interface CrawlResult {
   maxPages: number;
   maxDepth: number;
   robotsTxtFound: boolean;
+  /** Exact versioned robots policy history for this evidence epoch. */
+  robotsPolicyChain?: RobotsPolicySnapshot[];
   /** The stricter-of-config-and-robots delay actually used between
    *  requests, so later stages (the scanner passes) can reuse the exact
    *  same politeness pacing without re-fetching robots.txt. */
@@ -419,6 +429,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   // the sitemap directive passthrough are identical without a request.
   let robotsText: string | null;
   let robotsRules: RobotsRules;
+  let robotsPolicyChain: RobotsPolicySnapshot[];
   if (resumeState === undefined) {
     const robotsUrl = new URL('/robots.txt', start.origin).href;
     if (options.networkPolicy !== undefined) {
@@ -454,12 +465,25 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
       robotsText === null
         ? { found: false, disallow: [], allow: [], sitemapUrls: [] }
         : parseRobotsTxt(robotsText, userAgent);
+    robotsPolicyChain = [
+      buildRobotsPolicySnapshot({
+        evidenceEpoch: options.evidenceEpoch ?? 1,
+        revision: 0,
+        origin: start.origin,
+        userAgent,
+        robotsText,
+        retrievedAt: new Date(),
+        rules: robotsRules,
+        configuredDelayMs: delayMs,
+      }),
+    ];
   } else {
     robotsText = resumeState.robotsText;
     robotsRules =
       robotsText === null
         ? { found: false, disallow: [], allow: [], sitemapUrls: [] }
         : parseRobotsTxt(robotsText, userAgent);
+    robotsPolicyChain = [...(resumeState.robotsPolicyChain ?? [])];
   }
   // Never persisted: recomputed from the restored robotsText with the
   // same parse the fresh path uses, under a config the resume validation
@@ -592,6 +616,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   const buildFrontierSnapshot = (): CrawlFrontierSnapshot => ({
     startUrlIdentity,
     robotsText,
+    ...(robotsPolicyChain.length > 0 ? { robotsPolicyChain: [...robotsPolicyChain] } : {}),
     supplementalPhaseStarted,
     queue: queue.map((item) => ({ ...item })),
     visited: [...visited],
@@ -1039,6 +1064,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     maxPages,
     maxDepth,
     robotsTxtFound: robotsRules.found,
+    ...(robotsPolicyChain.length > 0 ? { robotsPolicyChain } : {}),
     effectiveDelayMs,
     ...(mentionsLegalesPageUrl !== undefined ? { mentionsLegalesPageUrl } : {}),
     mentionsLegalesSearchedUrls: resolvedUrls,
