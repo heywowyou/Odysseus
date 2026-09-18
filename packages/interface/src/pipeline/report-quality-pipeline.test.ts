@@ -259,6 +259,7 @@ vi.mock('@odysseus/store', () => ({
   getAuditGradeOverride: async () => undefined,
   getReportPreparation: async () => ({ updatedAt: new Date(0).toISOString() }),
   findDeltaBaseline: async () => null,
+  findAuditEvidenceCoverage: async () => undefined,
   // Stubs for module-scope imports elsewhere in the pipeline graph; never called.
   getCachedSireneProfile: async () => null,
   upsertSireneCache: async () => undefined,
