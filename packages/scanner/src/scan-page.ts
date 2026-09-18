@@ -62,6 +62,11 @@ import type { PageWorkGuard } from './page-work-guard.js';
 import type { AcquisitionAttemptRecord } from './check-attempt-ledger.js';
 import type { HostRequestScheduler } from './host-request-scheduler.js';
 import type { NetworkSafetyDisposition, NetworkTargetPolicy } from './network-target-policy.js';
+import {
+  observeFrames,
+  type FrameObservation,
+  type RenderedReadinessObservation,
+} from './page-readiness.js';
 
 export interface ScanPageOptions {
   /** Politeness delay applied between the raw/rendered/Lighthouse passes. */
@@ -200,6 +205,11 @@ export interface PageScanResult {
    *  failed and retried ones. Persisted with the page so a resumed run keeps
    *  the full lineage; the site ledger is assembled from these records. */
   acquisitionAttempts?: AcquisitionAttemptRecord[];
+  /** Plan 059: how settled the rendered page was when checks read it. */
+  readiness?: RenderedReadinessObservation;
+  /** Plan 059: every child frame on the rendered page and whether axe
+   *  reached it. */
+  frames?: FrameObservation[];
 }
 
 /**
@@ -394,6 +404,9 @@ export async function runRenderedAnalysis(
       ...(options.onNetworkSafetyBlocked !== undefined
         ? { onNetworkSafetyBlocked: options.onNetworkSafetyBlocked }
         : {}),
+      onReadinessObserved: (observation) => {
+        result.readiness = observation;
+      },
       onRenderedPageCreated: async (page) => {
         // Must be attached before navigation - see
         // rendered-cost-profile.ts's own doc comment.
@@ -406,6 +419,13 @@ export async function runRenderedAnalysis(
         } catch (error) {
           axeError = toErrorMessage(error);
           checkOutcomes.axe = 'failed';
+        }
+        try {
+          result.frames = await observeFrames(page, url);
+        } catch {
+          // No frame record is itself recorded: the evidence graph treats a
+          // page without one as frame coverage unknown, never as frame-free.
+          delete result.frames;
         }
 
         if (options.mentionsLegalesUrl !== undefined && url === options.mentionsLegalesUrl) {

@@ -14,6 +14,11 @@ import {
   type NetworkSafetyBlockHandler,
 } from './browser-network-safety.js';
 import type { NetworkTargetPolicy } from './network-target-policy.js';
+import {
+  observeRenderedReadiness,
+  watchSignificantResourceFailures,
+  type RenderedReadinessObservation,
+} from './page-readiness.js';
 
 /** RenderDiffResult (packages/core) is a locked contract; this widens it
  *  with a scanner-only fact rather than touching that file. renderedUrl
@@ -77,6 +82,9 @@ export interface RenderDiffOptions {
   guard?: PageWorkGuard;
   networkPolicy?: NetworkTargetPolicy;
   onNetworkSafetyBlocked?: NetworkSafetyBlockHandler;
+  /** Plan 059: receives the rendered page's readiness, observed after the
+   *  settle wait and before any check reads or mutates the page. */
+  onReadinessObserved?: (observation: RenderedReadinessObservation) => void;
 }
 
 /**
@@ -164,6 +172,10 @@ export async function renderDiff(
         consoleErrors.push(err.message);
       });
       await options.onRenderedPageCreated?.(renderedPage);
+      const readFailures =
+        options.onReadinessObserved !== undefined
+          ? watchSignificantResourceFailures(renderedPage)
+          : undefined;
       // 'load' rather than 'networkidle', with idle demoted to a bounded,
       // best-effort settle below. networkidle is unreachable on real sites
       // that hold a request open forever (chat widget, analytics heartbeat,
@@ -173,10 +185,12 @@ export async function renderDiff(
       // single navigation. Measured on www.lagnonu.fr (2026-08-24): idle
       // never arrived in 120s, while the rendered text was already complete
       // and byte-identical in length at 4.3s under 'load'.
-      await renderedPage.goto(url, { waitUntil: 'load' });
+      const renderedResponse = await renderedPage.goto(url, { waitUntil: 'load' });
+      let networkQuiet = true;
       try {
         await renderedPage.waitForLoadState('networkidle', { timeout: settleTimeoutMs });
       } catch {
+        networkQuiet = false;
         // Deliberately swallowed. A page that never falls idle is still
         // fully rendered and worth scanning; losing the accessibility pass
         // over it is the worse outcome. Timing out here is not recorded as
@@ -189,6 +203,15 @@ export async function renderDiff(
       // reliably settled by the time the best-effort idle wait above
       // returns or times out.
       renderedLandedUrl = renderedPage.url();
+      if (options.onReadinessObserved !== undefined && readFailures !== undefined) {
+        options.onReadinessObserved(
+          await observeRenderedReadiness(renderedPage, {
+            response: renderedResponse,
+            networkQuiet,
+            readFailures,
+          }),
+        );
+      }
       const renderedText = await renderedPage.evaluate(() => document.body.innerText);
       renderedTextLength = renderedText.trim().length;
 

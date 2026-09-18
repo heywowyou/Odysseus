@@ -647,7 +647,9 @@ function recordPageRun(
     evidenceEpoch: context.evidenceEpoch,
     pageIdentity: url,
     userAgent: context.userAgent ?? getCrawlerUserAgent(),
-    readinessOutcome: result.checkOutcomes['render-diff'] === 'completed' ? 'ready' : 'timeout',
+    readinessOutcome:
+      result.readiness?.outcome ??
+      (result.checkOutcomes['render-diff'] === 'completed' ? 'unstable' : 'timeout'),
   });
   return pageAttemptRecords(
     result,
