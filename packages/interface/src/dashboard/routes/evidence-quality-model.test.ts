@@ -216,7 +216,6 @@ describe('qualityBundlePromotionBlock (plan 059 section 20 conflict guard)', () 
         { evidenceApprovalMode: 'system', approvedEvidenceDigest: 'sha256:approved' },
         summary({
           approval: 'stale',
-          approvalDigest: undefined,
         }),
       ),
     ).toBe('changed');
