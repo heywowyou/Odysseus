@@ -92,7 +92,7 @@ if (!plan051.includes('@odysseus/llm') || !/no import or call edge/i.test(plan05
   errors.push('Plan 051 must retain the static no-LLM dependency proof.');
 }
 
-const plan063 = read('plans/063-dashboard-data-contracts-and-large-audit-performance.md');
+const plan063 = read('plans/archive/063-dashboard-data-contracts-and-large-audit-performance.md');
 for (const budget of [
   '<= 200 KiB',
   '<= 25 database queries',
@@ -105,14 +105,14 @@ for (const budget of [
   }
 }
 
-const plan064 = read('plans/064-dashboard-accessibility-and-design-system.md');
+const plan064 = read('plans/archive/064-dashboard-accessibility-and-design-system.md');
 for (const required of ['WCAG 2.2 AA', 'manual acceptance artifact', '400% zoom']) {
   if (!plan064.includes(required)) {
     errors.push(`Plan 064 must retain accessibility closure requirement "${required}".`);
   }
 }
 
-const plan066 = read('plans/066-operator-security-privacy-and-browser-isolation.md');
+const plan066 = read('plans/archive/066-operator-security-privacy-and-browser-isolation.md');
 for (const required of [
   'browser-isolation proof record',
   'negative tests prove',

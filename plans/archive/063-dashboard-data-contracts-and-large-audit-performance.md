@@ -4,6 +4,7 @@
 
 ## Status
 
+- **Execution status:** FROZEN (2026-09-18). Parked as backlog by operator decision: the priority is selling the first paid reports on the existing report path. Reopen only on a real incident or once a report has sold; the contract below is unchanged.
 - **Priority**: P1
 - **Effort**: L
 - **Depends on**: Plans 060 and 061; coordinates closely with 062.

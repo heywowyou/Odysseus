@@ -4,6 +4,7 @@
 
 ## Status
 
+- **Execution status:** FROZEN (2026-09-18). Parked as backlog by operator decision: the priority is selling the first paid reports on the existing report path. Reopen only on a real incident or once a report has sold; the contract below is unchanged.
 - **Priority**: P1
 - **Effort**: L/XL depending on production Chromium sandbox support.
 - **Depends on**: Plan 060 and current auth/security-header/session/artifact infrastructure for the isolation/preflight work. Later stale-command/audit-trail hardening consumes Plan 061; final promotion consumes the 058/059 durable ownership contracts.
