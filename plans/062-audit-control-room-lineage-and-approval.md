@@ -703,6 +703,27 @@ No migration auto-approves an old report pair.
 
 ---
 
+# 18.1 Closure-proof contract
+
+"Clearly separates" and "bundle-centric" must resolve to concrete server-owned
+contracts. Commit:
+
+- an `AuditControlSummarySchema` that carries independent work/evidence/
+  report/attention axes and cannot collapse them into one lifecycle enum;
+- an exhaustive `AuditActionRegistry` mapping every rendered action to its
+  061 capability/reason code;
+- a bundle-lineage fixture that contains prior active bundle, failed
+  replacement, approved-but-not-promoted replacement, stale candidate and
+  current candidate, with exact expected UI/action states;
+- side-effect tests proving candidate open/preview/download perform zero
+  approval/promotion mutations;
+- a requirement-to-proof ledger mapping every binding decision to its API/UI
+  seam and automated/manual proof.
+
+No React component may become the authority that decides whether evidence is
+approved, a bundle is quality-approved, or a command is safe.
+
+
 # 19. Fail-closed conditions
 
 Do not offer operator approval when:
@@ -759,4 +780,6 @@ Plan 062 is implemented when:
 11. historical/legacy scans remain honestly usable where their adapter proves sufficiency;
 12. Point-France-sized findings/report history do not inflate the control-room payload;
 13. no raw stack trace/error string is the primary operator experience;
-14. all state/action paths pass the 061 stale-state capability protocol.
+14. all state/action paths pass the 061 stale-state capability protocol;
+15. the control-summary/action registries and lineage fixture prove every
+    binding state/action combination without prose-only closure.
