@@ -22,6 +22,7 @@ import {
   type NetworkTargetPolicy,
 } from './network-target-policy.js';
 import {
+  globToRegExp,
   isLanguageHomepagePath,
   isSameSiteHostname,
   normalizeInternalLinks,
@@ -409,6 +410,8 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   const delayMs = options.delayMs ?? getCrawlDelayMs();
   const timeoutMs = options.timeoutMs ?? getPageTimeoutMs();
   const userAgent = options.userAgent ?? getCrawlerUserAgent();
+  const exclusionRegexes = (options.exclusions ?? []).map(globToRegExp);
+  const sitemapOperatorExclusions: string[] = [];
 
   const start = new URL(startUrl);
   // Issue #102: the start URL goes through the same page-identity rule as
@@ -529,12 +532,24 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
           });
     if (sitemap !== undefined) {
       for (const entry of sitemap.pageEntries) {
+        const normalizedWithoutExclusion = normalizePageUrl(entry.url, startUrlIdentity, {
+          allowWwwApex: true,
+        });
         const normalized = normalizePageUrl(entry.url, startUrlIdentity, {
           allowWwwApex: true,
           exclusionPatterns: options.exclusions ?? [],
         });
-        if (normalized === undefined) filteredSitemapPageCount += 1;
-        else eligibleSitemapUrls.add(normalized);
+        if (normalized === undefined) {
+          filteredSitemapPageCount += 1;
+          if (
+            normalizedWithoutExclusion !== undefined &&
+            exclusionRegexes.some((pattern) => pattern.test(normalizedWithoutExclusion))
+          ) {
+            sitemapOperatorExclusions.push(normalizedWithoutExclusion);
+          }
+        } else {
+          eligibleSitemapUrls.add(normalized);
+        }
       }
     }
   } else {
@@ -640,6 +655,17 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
         source: 'sitemap',
         discoveredAt: new Date(),
         depth: 0,
+      });
+    }
+    for (const url of sitemapOperatorExclusions) {
+      inventoryLedger.recordDiscovery({
+        url,
+        source: 'sitemap',
+        discoveredAt: new Date(),
+        depth: 0,
+      });
+      disposeInventory(url, 'operator-excluded', {
+        detail: 'matched an operator-supplied crawl exclusion',
       });
     }
     for (const page of pages) {
@@ -1021,10 +1047,30 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
               >();
               for (const anchor of anchors) {
                 if (anchor.href === null) continue;
+                const normalizedWithoutExclusion = normalizePageUrl(anchor.href, landedUrl);
                 const normalized = normalizePageUrl(anchor.href, landedUrl, {
                   exclusionPatterns: options.exclusions ?? [],
                 });
-                if (normalized === undefined) continue;
+                if (normalized === undefined) {
+                  if (
+                    inventoryLedger !== undefined &&
+                    normalizedWithoutExclusion !== undefined &&
+                    exclusionRegexes.some((pattern) => pattern.test(normalizedWithoutExclusion))
+                  ) {
+                    inventoryLedger.recordDiscovery({
+                      url: normalizedWithoutExclusion,
+                      source: 'link',
+                      discoveredAt: new Date(),
+                      referrer: item.url,
+                      depth: item.depth + 1,
+                      observedUrl: anchor.href,
+                    });
+                    disposeInventory(normalizedWithoutExclusion, 'operator-excluded', {
+                      detail: 'matched an operator-supplied crawl exclusion',
+                    });
+                  }
+                  continue;
+                }
                 const existing = anchorEvidenceByUrl.get(normalized);
                 anchorEvidenceByUrl.set(normalized, {
                   relNext: (existing?.relNext ?? false) || anchor.relNext,
