@@ -5,6 +5,12 @@ import { z } from 'zod';
  * long-running work owner projects into, the action capability shape, and
  * the typed problem envelope of migrated command routes.
  *
+ * Plan 060 adds the two artifact-readiness axes (Plan-059 evidence,
+ * Plan-058 report), the human-attention item shape and the composed
+ * operator snapshot for control-room surfaces. They are separate axes on
+ * purpose: work execution, evidence readiness and report readiness are
+ * independent authorities and must never flatten into one status.
+ *
  * This file is shared by the server and the dashboard bundle, so it depends
  * on zod only. The server derives its types from these schemas and the
  * dashboard validates responses against the same schemas at runtime; there
@@ -198,3 +204,137 @@ export const problemEnvelopeSchema = z.object({
   }),
 });
 export type ProblemEnvelope = z.infer<typeof problemEnvelopeSchema>;
+
+/**
+ * Plan 060 §5.1: evidence readiness is the Plan-059 authority, projected.
+ * It is deliberately not derivable from job success or finding counts.
+ * `legacy-unknown` marks an audit whose stored facts predate the evidence
+ * graph; it never means a guessed pass (plan 060 §9.2). States the dormant
+ * 059 authority cannot yet produce (approval is fail-closed by
+ * construction) stay in the vocabulary so nothing is renamed later.
+ */
+export const OPERATOR_EVIDENCE_READINESS = [
+  'absent',
+  'legacy-unknown',
+  'building',
+  'needs-attention',
+  'approved-with-limitations',
+  'approved-complete',
+  'superseded',
+] as const;
+const operatorEvidenceReadinessSchema = z.enum(OPERATOR_EVIDENCE_READINESS);
+export type OperatorEvidenceReadiness = z.infer<typeof operatorEvidenceReadinessSchema>;
+
+/**
+ * Plan 060 §5.1: report readiness is the Plan-058 authority, projected.
+ * A rendered legacy pair is not quality truth, so it maps to `absent`
+ * until the quality pipeline owns the audit; `quality-approved` never
+ * implies operator approval, and `awaiting-operator-approval` is reserved
+ * for a delivery the operator has explicitly brought to review.
+ */
+export const OPERATOR_REPORT_READINESS = [
+  'absent',
+  'producing',
+  'needs-attention',
+  'quality-approved',
+  'awaiting-operator-approval',
+  'operator-approved',
+  'active',
+  'failed',
+  'superseded',
+] as const;
+const operatorReportReadinessSchema = z.enum(OPERATOR_REPORT_READINESS);
+export type OperatorReportReadiness = z.infer<typeof operatorReportReadinessSchema>;
+
+/**
+ * Plan 060 §8: one durable attention item per condition that truly needs a
+ * human decision. It exists only while authoritative state proves the
+ * condition; there is no "mark read". Ordinary queued/running/waiting/
+ * retrying work and successful completions never produce one, and a
+ * quality-approved private bundle for an unsold prospect is not attention.
+ */
+export const ATTENTION_SEVERITIES = ['action-required', 'blocking'] as const;
+const attentionSeveritySchema = z.enum(ATTENTION_SEVERITIES);
+export type AttentionSeverity = z.infer<typeof attentionSeveritySchema>;
+
+export const ATTENTION_KINDS = [
+  /** The Plan-059 authority needs an operator resolution. */
+  'evidence-operator-resolution',
+  /** A Plan-058 quality run reached needs-operator-review. */
+  'report-quality-review',
+  /** A paid delivery was brought to review; its exact quality-approved
+   *  bundle awaits explicit approval. */
+  'report-delivery-approval',
+  /** A run failed in a way automatic retry cannot recover; the operator
+   *  chooses the smallest safe recovery. */
+  'work-recovery-choice',
+] as const;
+const attentionKindSchema = z.enum(ATTENTION_KINDS);
+export type AttentionKind = z.infer<typeof attentionKindSchema>;
+
+export const operatorAttentionItemSchema = z.object({
+  /** Stable for the underlying condition, so history and refreshes agree. */
+  attentionId: z.string(),
+  kind: attentionKindSchema,
+  severity: attentionSeveritySchema,
+  subject: z.object({ prospectId: z.string().optional(), auditId: z.string().optional() }),
+  /** When the condition first arose; displayed so the operator can tell
+   *  fresh work from a lingering decision. */
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  /** Closed reason code owning the copy; the dashboard maps it exhaustively. */
+  reasonCode: z.string().optional(),
+  /** The one safe next action and its destination. */
+  action: z.string(),
+  href: z.string(),
+});
+export type OperatorAttentionItem = z.infer<typeof operatorAttentionItemSchema>;
+
+const operatorSubjectSchema = z.object({
+  prospectId: z.string().optional(),
+  auditId: z.string().optional(),
+  /** Display identity the server vouches for (prospect-owned name/site). */
+  siteLabel: z.string().optional(),
+});
+
+/** Plan 060 §5.2 evidence view. Digests and versions are references for
+ *  the technical-details disclosure, never the primary explanation. */
+const operatorEvidenceViewSchema = z.object({
+  readiness: operatorEvidenceReadinessSchema,
+  digestRef: z.string().optional(),
+  /** Closed limitation codes for approved-with-limitations; explanations
+   *  are dashboard copy. */
+  limitationCodes: z.array(z.string()).optional(),
+  /** Advisory only: the observation came from an older producer. Never a
+   *  fabricated failure and never an automatic invalidation. */
+  legacyAdvisory: z.boolean().optional(),
+});
+
+/** Plan 060 §5.2 report view, projected from the Plan-058 authority. */
+const operatorReportViewSchema = z.object({
+  readiness: operatorReportReadinessSchema,
+  qualityRunRef: z.string().optional(),
+  candidateDigest: z.string().optional(),
+  activeDigest: z.string().optional(),
+});
+
+/**
+ * Plan 060 §5.2: the server-produced operator snapshot. The server is the
+ * semantic boundary — the browser translates codes, formats values and
+ * chooses presentation, but never re-derives readiness, approval or action
+ * safety from raw persistence fields. `stateVersion` commits only to the
+ * authoritative inputs of this subject; a command echoing a stale version
+ * gets the typed `state-changed` conflict.
+ */
+export const operatorSnapshotSchema = z.object({
+  subject: operatorSubjectSchema,
+  work: z.array(operatorWorkViewSchema),
+  evidence: operatorEvidenceViewSchema,
+  report: operatorReportViewSchema,
+  /** Keyed by the closed action codes of the consequential-action
+   *  registry (plan 060 §6.1). */
+  capabilities: z.record(z.string(), actionCapabilitySchema),
+  attention: z.array(operatorAttentionItemSchema),
+  stateVersion: z.string(),
+});
+export type OperatorSnapshot = z.infer<typeof operatorSnapshotSchema>;

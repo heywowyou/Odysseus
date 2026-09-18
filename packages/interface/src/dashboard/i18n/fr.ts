@@ -7,6 +7,8 @@ import { audits } from './sections/audits';
 import { newScan } from './sections/new-scan';
 import { scanQueue } from './sections/scan-queue';
 import { workState } from './sections/work-state';
+import { qualityReadiness } from './sections/quality-readiness';
+import { attention } from './sections/attention';
 import { progress } from './sections/progress';
 import { auditDetail } from './sections/audit-detail';
 import { prepareReport } from './sections/prepare-report';
@@ -38,6 +40,8 @@ export const fr: DashboardStrings = {
   newScan: newScan.fr,
   scanQueue: scanQueue.fr,
   workState: workState.fr,
+  qualityReadiness: qualityReadiness.fr,
+  attention: attention.fr,
   progress: progress.fr,
   auditDetail: auditDetail.fr,
   prepareReport: prepareReport.fr,

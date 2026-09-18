@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ATTENTION_KINDS,
+  ATTENTION_SEVERITIES,
   CAPABILITY_BLOCK_REASONS,
+  OPERATOR_EVIDENCE_READINESS,
+  OPERATOR_REPORT_READINESS,
   OPERATOR_WORK_STATES,
   PROBLEM_CODES,
 } from '../../operator/contract';
@@ -18,6 +22,32 @@ describe('operator vocabulary copy', () => {
       expect(Object.keys(strings.workState.problems).sort()).toEqual([...PROBLEM_CODES].sort());
       expect(Object.keys(strings.workState.blockReasons).sort()).toEqual(
         [...CAPABILITY_BLOCK_REASONS].sort(),
+      );
+    }
+  });
+
+  it('has FR and EN copy for every projected readiness state', () => {
+    for (const strings of [fr, en]) {
+      expect(Object.keys(strings.qualityReadiness.evidence).sort()).toEqual(
+        [...OPERATOR_EVIDENCE_READINESS].sort(),
+      );
+      expect(Object.keys(strings.qualityReadiness.report).sort()).toEqual(
+        [...OPERATOR_REPORT_READINESS].sort(),
+      );
+      for (const axis of [strings.qualityReadiness.evidence, strings.qualityReadiness.report]) {
+        for (const copy of Object.values(axis)) {
+          expect(copy.label.length).toBeGreaterThan(0);
+          expect(copy.description.length).toBeGreaterThan(0);
+        }
+      }
+    }
+  });
+
+  it('has FR and EN copy for every attention kind and severity', () => {
+    for (const strings of [fr, en]) {
+      expect(Object.keys(strings.attention.kinds).sort()).toEqual([...ATTENTION_KINDS].sort());
+      expect(Object.keys(strings.attention.severities).sort()).toEqual(
+        [...ATTENTION_SEVERITIES].sort(),
       );
     }
   });

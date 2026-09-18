@@ -13,6 +13,8 @@ import type { AuditsStrings } from './sections/audits';
 import type { NewScanStrings } from './sections/new-scan';
 import type { ScanQueueStrings } from './sections/scan-queue';
 import type { WorkStateStrings } from './sections/work-state';
+import type { QualityReadinessStrings } from './sections/quality-readiness';
+import type { AttentionStrings } from './sections/attention';
 import type { ProgressStrings } from './sections/progress';
 import type { AuditDetailStrings } from './sections/audit-detail';
 import type { PrepareReportStrings } from './sections/prepare-report';
@@ -50,6 +52,11 @@ export interface DashboardStrings {
   /** Plan 061: copy for the server's closed work-state, problem and
    *  capability vocabularies. */
   workState: WorkStateStrings;
+  /** Plan 060: copy for the server's projected evidence and report
+   *  readiness axes. */
+  qualityReadiness: QualityReadinessStrings;
+  /** Plan 060: copy for the server's human-attention items. */
+  attention: AttentionStrings;
   progress: ProgressStrings;
   auditDetail: AuditDetailStrings;
   /** Plan 019: the Prepare report card. The closed vocabulary option
