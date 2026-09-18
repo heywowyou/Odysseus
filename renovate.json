@@ -1,13 +1,19 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:best-practices"],
+  "extends": [
+    "config:best-practices"
+  ],
   "timezone": "Europe/Paris",
-  "schedule": ["before 6am every weekday"],
+  "schedule": [
+    "before 6am every weekday"
+  ],
   "prConcurrentLimit": 4,
   "prHourlyLimit": 2,
   "lockFileMaintenance": {
     "enabled": true,
-    "schedule": ["before 6am on monday"]
+    "schedule": [
+      "before 6am on monday"
+    ]
   },
   "packageRules": [
     {
@@ -37,12 +43,20 @@
     },
     {
       "description": "Playwright/browser tooling: kept in one reviewed group so the pinned Chromium build and the MCP server move together.",
-      "matchPackageNames": ["playwright", "@playwright/test", "@playwright/mcp"],
+      "matchPackageNames": [
+        "playwright",
+        "@playwright/test",
+        "@playwright/mcp"
+      ],
       "groupName": "playwright and browser tooling"
     },
     {
       "description": "Accessibility tooling: kept in one reviewed group.",
-      "matchPackageNames": ["@axe-core/playwright", "vitest-axe", "axe-core"],
+      "matchPackageNames": [
+        "@axe-core/playwright",
+        "vitest-axe",
+        "axe-core"
+      ],
       "groupName": "accessibility tooling"
     },
     {
@@ -57,22 +71,35 @@
         "@playwright/mcp",
         "pnpm"
       ],
-      "matchUpdateTypes": ["major"],
+      "matchUpdateTypes": [
+        "major"
+      ],
       "automerge": false,
-      "labels": ["renovate/manual-major-review"]
+      "labels": [
+        "renovate/manual-major-review"
+      ]
     },
     {
       "description": "Issue #252: automerge only dev-only patch updates, and only after every required CI check passes.",
-      "matchDepTypes": ["devDependencies"],
-      "matchUpdateTypes": ["patch"],
+      "matchDepTypes": [
+        "devDependencies"
+      ],
+      "matchUpdateTypes": [
+        "patch"
+      ],
       "automerge": true,
       "automergeType": "pr",
       "platformAutomerge": true
     },
     {
       "description": "Everything else (runtime deps, and every minor/major not covered above) stays a reviewed PR by default.",
-      "matchUpdateTypes": ["minor", "major"],
-      "matchDepTypes": ["dependencies"],
+      "matchUpdateTypes": [
+        "minor",
+        "major"
+      ],
+      "matchDepTypes": [
+        "dependencies"
+      ],
       "automerge": false
     }
   ],
@@ -80,9 +107,37 @@
     {
       "description": "Issue #252: .codex/config.toml pins the Playwright MCP server's own npm version instead of floating on @latest (docs/agents/coding-conventions.md, 'Dependency maintenance'). Renovate reads/writes that pin the same way it would a package.json dependency.",
       "customType": "regex",
-      "managerFilePatterns": ["/^\\.codex/config\\.toml$/"],
-      "matchStrings": ["\"@playwright/mcp@(?<currentValue>[^\"]+)\""],
+      "managerFilePatterns": [
+        "/^\\.codex/config\\.toml$/"
+      ],
+      "matchStrings": [
+        "\"@playwright/mcp@(?<currentValue>[^\"]+)\""
+      ],
       "depNameTemplate": "@playwright/mcp",
+      "datasourceTemplate": "npm"
+    },
+    {
+      "description": "Context7 MCP is pinned in .mcp.json so agent documentation behavior changes only through a reviewed diff.",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^\\.mcp\\.json$/"
+      ],
+      "matchStrings": [
+        "\"@upstash/context7-mcp@(?<currentValue>[^\"]+)\""
+      ],
+      "depNameTemplate": "@upstash/context7-mcp",
+      "datasourceTemplate": "npm"
+    },
+    {
+      "description": "IBM Equal Access CLI is pinned in the CI wrapper; Renovate keeps the secondary accessibility engine current through reviewed diffs.",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^deploy\\/equal-access-ci\\.sh$/"
+      ],
+      "matchStrings": [
+        "accessibility-checker@(?<currentValue>[0-9.]+)"
+      ],
+      "depNameTemplate": "accessibility-checker",
       "datasourceTemplate": "npm"
     }
   ]
