@@ -1040,10 +1040,19 @@ export async function scanSite(
     floorDelayMs: options.delayMs ?? getCrawlDelayMs(),
     maxConcurrency: options.concurrency ?? getScanConcurrency(),
   });
+  const networkSafetyDispositions: NetworkSafetyDisposition[] = [];
+  const onNetworkSafetyBlocked =
+    options.networkPolicy === undefined
+      ? undefined
+      : (disposition: NetworkSafetyDisposition): void => {
+          networkSafetyDispositions.push(disposition);
+        };
   const sitemapMode = options.sitemapMode ?? 'supplement';
   const crawlOptions = (frontier: CrawlOptions['frontier']): CrawlOptions => ({
     scheduler,
     browser: options.browser,
+    ...(options.networkPolicy !== undefined ? { networkPolicy: options.networkPolicy } : {}),
+    ...(onNetworkSafetyBlocked !== undefined ? { onNetworkSafetyBlocked } : {}),
     ...(options.maxPages !== undefined ? { maxPages: options.maxPages } : {}),
     ...(options.maxDepth !== undefined ? { maxDepth: options.maxDepth } : {}),
     ...(options.delayMs !== undefined ? { delayMs: options.delayMs } : {}),
@@ -1241,6 +1250,8 @@ export async function scanSite(
           timeoutMs: options.timeoutMs ?? getPageTimeoutMs(),
           guard: runGuard,
           ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
+        ...(options.networkPolicy !== undefined ? { networkPolicy: options.networkPolicy } : {}),
+        ...(onNetworkSafetyBlocked !== undefined ? { onNetworkSafetyBlocked } : {}),
         }),
       )
     : undefined;
@@ -1290,6 +1301,8 @@ export async function scanSite(
       accessibilityStatementCheck,
       bookingEngineUrl: options.bookingEngineUrl,
       runGuard,
+      networkPolicy: options.networkPolicy,
+      onNetworkSafetyBlocked,
     };
     const { pages, fullAuditPlan, analysisCoverageByUrl } = await runStagedFullAuditScan(
       pagesToScan,
@@ -1308,6 +1321,7 @@ export async function scanSite(
       fullAuditPlan,
       analysisCoverageByUrl,
       ...(cruxFieldData !== undefined ? { cruxFieldData } : {}),
+      ...(networkSafetyDispositions.length > 0 ? { networkSafetyDispositions } : {}),
     };
   }
 
@@ -1364,10 +1378,17 @@ export async function scanSite(
           options.bookingEngineUrl,
           options.skipLighthouse ?? false,
           runGuard,
+          options.networkPolicy,
+          onNetworkSafetyBlocked,
           onPageDone,
         ),
       ),
   );
 
-  return { crawl, pages, ...(cruxFieldData !== undefined ? { cruxFieldData } : {}) };
+  return {
+    crawl,
+    pages,
+    ...(cruxFieldData !== undefined ? { cruxFieldData } : {}),
+    ...(networkSafetyDispositions.length > 0 ? { networkSafetyDispositions } : {}),
+  };
 }
