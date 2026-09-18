@@ -48,7 +48,7 @@ const inputs: ReportOnlyInputs = {
 describe('buildReportFactRegistry binds exact scalar facts to the approved evidence only', () => {
   it('binds the site URL, visited-page count and finding count as scalar facts sourced from the approval digest', () => {
     const registry = buildReportFactRegistry(payload, snapshot, inputs);
-    expect(registry.registryVersion).toBe('058-v1');
+    expect(registry.registryVersion).toBe('058-v2');
     expect(registry.inputSnapshotDigest).toBe(snapshot.approvedEvidenceDigest);
 
     const siteUrl = registry.facts.find((fact) => fact.factId === 'audit.siteUrl');

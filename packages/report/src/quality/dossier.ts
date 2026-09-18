@@ -1,64 +1,12 @@
+export { buildReportFactRegistry } from './fact-registry.js';
 import type {
   ApprovedAuditEvidencePayload,
   CoverageLedger,
   ReportEvidenceDossier,
-  ReportFact,
-  ReportFactRegistry,
   ReportInputSnapshot,
-  ReportOnlyInputs,
   SeniorReportPlan,
 } from '@odysseus/core';
 import { reportQualityDigest } from './digest.js';
-
-export function buildReportFactRegistry(
-  evidence: ApprovedAuditEvidencePayload,
-  snapshot: ReportInputSnapshot,
-  inputs: ReportOnlyInputs,
-): ReportFactRegistry {
-  const facts: ReportFact[] = [];
-  const add = (fact: ReportFact) => {
-    if (!facts.some((item) => item.factId === fact.factId)) facts.push(fact);
-  };
-  add({
-    factId: 'audit.siteUrl',
-    kind: 'url',
-    value: evidence.manifest.siteUrl,
-    display: { fr: evidence.manifest.siteUrl, en: evidence.manifest.siteUrl },
-    sourceRefs: [evidence.approval.auditEvidenceSnapshotDigest],
-  });
-  add({
-    factId: 'audit.pagesVisited',
-    kind: 'number',
-    value: evidence.manifest.crawl.visitedCount,
-    display: {
-      fr: String(evidence.manifest.crawl.visitedCount),
-      en: String(evidence.manifest.crawl.visitedCount),
-    },
-    sourceRefs: [evidence.approval.auditEvidenceSnapshotDigest],
-  });
-  add({
-    factId: 'audit.findingCount',
-    kind: 'number',
-    value: evidence.findings.length,
-    display: { fr: String(evidence.findings.length), en: String(evidence.findings.length) },
-    sourceRefs: [evidence.approval.auditEvidenceSnapshotDigest],
-  });
-  if (inputs.manualFields?.siren?.value)
-    add({
-      factId: 'identity.siren',
-      kind: 'identifier',
-      value: inputs.manualFields.siren.value,
-      display: { fr: inputs.manualFields.siren.value, en: inputs.manualFields.siren.value },
-      sourceRefs: [snapshot.reportOnlyInputsDigest],
-    });
-  return {
-    registryVersion: '058-v1',
-    inputSnapshotDigest: snapshot.auditId
-      ? snapshot.approvedEvidenceDigest
-      : snapshot.approvedEvidenceDigest,
-    facts,
-  };
-}
 
 export function buildInitialCoverageLedger(
   evidence: ApprovedAuditEvidencePayload,

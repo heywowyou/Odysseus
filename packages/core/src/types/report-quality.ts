@@ -128,6 +128,9 @@ export interface ReportFact {
   value: string | number | boolean | null;
   display: Record<ReportLanguage, string>;
   sourceRefs: string[];
+  /** What the value measures, in English, for the model roles that bind it.
+   *  Never rendered; the display carries the client-facing token. */
+  label?: string;
 }
 
 export interface ReportFactRegistry {
