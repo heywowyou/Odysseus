@@ -100,3 +100,16 @@ proofs green:
 
 The plan remains open as a completion defect if any of these properties can
 only be established by reading the code and agreeing with its intent.
+
+
+## Definition of done
+
+Plan 051 may move from `IMPLEMENTED` to `DONE` only when:
+
+- every Build-time decision and Slice has a requirement-to-proof row;
+- the delta computation/render path has no LLM/model dependency;
+- baseline selection, all delta classes, changed-scope pairing, suppression and duplicate-key failure are covered by focused tests;
+- no-baseline rendering preserves the ordinary report contract;
+- FR/EN delta-state parity is exhaustive;
+- focused suites, `pnpm run plans:check`, `pnpm run check` and relevant report/interface tests are green;
+- any human acceptance required by the source design is recorded as `Closure evidence:`.
