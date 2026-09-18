@@ -140,10 +140,10 @@ describe('callOpenAiForStructure', () => {
     expect(result.output).toEqual(validStructureOutput);
     expect(completeMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: 'gpt-5.4-mini',
-        temperature: 0.2,
-        reasoning_effort: 'none',
-        max_completion_tokens: 16000,
+        model: 'gpt-5.6-luna',
+        temperature: 1,
+        reasoning_effort: 'xhigh',
+        max_completion_tokens: 64000,
         response_format: expect.objectContaining({
           type: 'json_schema',
           json_schema: expect.objectContaining({ strict: true }),
@@ -219,15 +219,20 @@ describe('callOpenAiForWriting', () => {
     expect(result.output).toEqual(validWritingOutput);
   });
 
-  // Plan 027: the writing pass uses its own, higher temperature than the
-  // structure pass above - prose has no repeatability requirement, and 0.2
-  // was measured to make near-verbatim example copying likely.
-  it("uses the writing pass's own temperature, not the structure pass's", async () => {
+  // Plan 027: the writing pass keeps its own temperature constant. With
+  // reasoning on, GPT-5.6 rejects any temperature but the default 1, so the
+  // production effort must travel with it.
+  it("uses the writing pass's own temperature at the production reasoning effort", async () => {
     completeMock.mockResolvedValue(choice({ content: JSON.stringify(validWritingResponse) }));
     await callOpenAiForWriting(writingInput, false);
     expect(completeMock).toHaveBeenCalledWith(
-      expect.objectContaining({ temperature: WRITING_OPENAI_TEMPERATURE }),
+      expect.objectContaining({
+        model: 'gpt-5.6-luna',
+        temperature: WRITING_OPENAI_TEMPERATURE,
+        reasoning_effort: 'xhigh',
+      }),
     );
+    expect(WRITING_OPENAI_TEMPERATURE).toBe(1);
   });
 
   it('asks the provider for a schema keyed by the theme keys it shows (issue #36)', async () => {

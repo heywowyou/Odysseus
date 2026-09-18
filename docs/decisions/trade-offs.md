@@ -5251,3 +5251,35 @@ as the in-process path is today: every audit stays
 `environment-unapproved`, production approved-evidence stays blocked, and
 trade-off 92's accepted risk still covers the app container's PDF-render
 Chromium.
+
+### 102. GPT-5.6 Luna at the highest reasoning effort writes the paid report (operator decision, 2026-09-18)
+
+Supersedes trade-off 67's model and `reasoning_effort: 'none'` choices; its
+provider, schema and guard decisions stand.
+
+The operator scaled Plan 058 down to "improve the existing report path":
+the multi-role quality pipeline's measured cost (roughly $8-15 per report on
+GPT-5.6 Sol) was out of proportion before a first sale. Every pass of the
+existing path (structure, writing FR/EN, reviewer, correction review) now
+calls `gpt-5.6-luna` with `reasoning_effort: 'xhigh'`. The API rejects `max`
+for GPT-5.6, and rejects any temperature but the default 1 when reasoning is
+on, so `OPENAI_TEMPERATURE` became 1; output budgets rose to 64000 because
+reasoning tokens count against them.
+
+Measured on the saved Grand Hotel Chicago audit (74 findings), both languages,
+same prompts and guards: GPT-5.4 Mini used 7 calls, 78k input and 13k output
+tokens, $0.12, about 1.5 minutes; Luna xhigh used 7 calls, 83k input and 137k
+output tokens (115k of them reasoning), $0.18, about 12 minutes, with no
+truncation, retry or guard failure. Luna names the site's actual defects
+where Mini summarized generically, explains jargon (JSON-LD, ARIA) inline,
+keeps severity and lab-versus-field provenance distinct, and grouped 15
+themes with 6 quick wins against Mini's 10 and 3. The operator judged it a
+large improvement. Known follow-ups: sentence-shaped theme titles, a
+repeated "Les constats … montrent que" opening, and whether 15 themes is too
+fragmented.
+
+Rejected: GPT-5.6 Sol at high effort (about ten times Luna's per-report cost
+at the promotional $4/$20 price, $5/$30 after it ends); keeping Mini (cheaper
+by $0.06 per report but visibly generic). Prices are those published for
+2026-09; a repricing or model repoint re-runs this saved-audit comparison.
+

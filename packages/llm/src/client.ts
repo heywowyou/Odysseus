@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import { getOpenAiApiKey, getOpenAiBaseUrl } from './config.js';
 import {
   OPENAI_MODEL,
+  OPENAI_REASONING_EFFORT,
   OPENAI_TEMPERATURE,
   WRITING_OPENAI_TEMPERATURE,
   MAX_OUTPUT_TOKENS,
@@ -79,10 +80,9 @@ export interface WritingCallUsage {
 }
 
 /** The reasoning_effort values the API accepts for the configured model.
- *  Production runs every pass at 'none' (trade-off 67); the raised values
- *  exist for plan 029 lever E's measurement script and are never set by
- *  the production path. */
-export type ReasoningEffort = 'none' | 'low' | 'medium' | 'high';
+ *  Production runs every pass at OPENAI_REASONING_EFFORT; the other values
+ *  exist for plan 029 lever E's measurement script. */
+export type ReasoningEffort = 'none' | 'low' | 'medium' | 'high' | 'xhigh';
 
 export interface RawWritingCallResult {
   output: WritingPassOutput;
@@ -113,7 +113,7 @@ export async function callOpenAiForStructure(
       model: OPENAI_MODEL,
       max_completion_tokens: MAX_OUTPUT_TOKENS,
       temperature: OPENAI_TEMPERATURE,
-      reasoning_effort: 'none',
+      reasoning_effort: OPENAI_REASONING_EFFORT,
       messages: [
         { role: 'system', content: buildStructureSystemPrompt(usedFallbackContext) },
         { role: 'user', content: buildStructureUserPrompt(input) },
@@ -198,9 +198,9 @@ export async function callOpenAiForWriting(
   input: WritingInput,
   usedFallbackContext: boolean,
   previousRejection?: string,
-  /** Plan 029 lever E measurement only; production keeps the trade-off 67
-   *  default of 'none', so every existing caller is unchanged. */
-  reasoningEffort: ReasoningEffort = 'none',
+  /** Production passes the configured effort; the plan 029 lever E
+   *  measurement script overrides it to compare settings. */
+  reasoningEffort: ReasoningEffort = OPENAI_REASONING_EFFORT,
 ): Promise<RawWritingCallResult> {
   const client = createClient();
   const themeKeys = input.themes.map((theme) => theme.themeKey);
@@ -305,7 +305,7 @@ export async function callOpenAiForReview(input: ReviewerInput): Promise<RawRevi
       model: OPENAI_MODEL,
       max_completion_tokens: REVIEWER_MAX_OUTPUT_TOKENS,
       temperature: OPENAI_TEMPERATURE,
-      reasoning_effort: 'none',
+      reasoning_effort: OPENAI_REASONING_EFFORT,
       messages: [
         { role: 'system', content: buildReviewerSystemPrompt() },
         { role: 'user', content: buildReviewerUserPrompt(input) },
@@ -367,7 +367,7 @@ export async function callOpenAiForCorrectionReview(
       model: OPENAI_MODEL,
       max_completion_tokens: CORRECTION_REVIEW_MAX_OUTPUT_TOKENS,
       temperature: OPENAI_TEMPERATURE,
-      reasoning_effort: 'none',
+      reasoning_effort: OPENAI_REASONING_EFFORT,
       messages: [
         { role: 'system', content: buildCorrectionReviewSystemPrompt() },
         { role: 'user', content: buildCorrectionReviewUserPrompt(input) },

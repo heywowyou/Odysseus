@@ -322,10 +322,13 @@ ranking - and (plan 027) uses its own `WRITING_OPENAI_TEMPERATURE` (1.0,
 raised from an initial 0.7 on 2026-09-07) instead, because 0.2 was
 measured to reproduce the prompt's own worked examples in the model's
 output almost verbatim. All three passes still
-share `OPENAI_MODEL`. Every call sets `reasoning_effort: 'none'`:
-report grouping and writing do not need hidden reasoning tokens sharing the
-same completion budget, the failure mode that already forced
-`MAX_OUTPUT_TOKENS` to 16000 once under an earlier provider (see constants.ts).
+share `OPENAI_MODEL` (GPT-5.6 Luna since 2026-09-18, trade-off 102). Every
+call sets `reasoning_effort` to `OPENAI_REASONING_EFFORT` (`'xhigh'`, the
+highest value the API accepts). With reasoning on, the provider accepts only
+the default temperature, so `OPENAI_TEMPERATURE` is 1 and the 0.2 rationale
+above no longer holds; repeatable priorities now rest on the reused structure
+pass and the guards. Hidden reasoning tokens share the completion budget, so
+every pass allows 64000 output tokens (see constants.ts).
 
 **Record the model identifier and temperature alongside the output**,
 for the same reason the audit manifest records axe and Lighthouse
