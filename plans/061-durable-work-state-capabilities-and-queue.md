@@ -774,7 +774,25 @@ Unknown becomes blocked with a typed reason; it never becomes “probably safe�
 
 ---
 
-# 20. Definition of done
+# 20. Executable closure contract
+
+“Durable”, “restart-safe” and “stale-state-safe” must be demonstrated by ownership artifacts and race tests.
+
+Before closure:
+
+- enumerate every long-running producer and every consequential command in a committed work/capability registry;
+- each producer row names its authoritative durable owner, lease/epoch/checkpoint seam, restart behavior and cancellation boundary;
+- each command row names its capability token inputs and command-time recheck;
+- property/concurrency tests cover claim/reorder/cancel/finish/restart interleavings for each owner class;
+- a negative architecture test proves correctness of promoted 058/059 work does not depend on process-local locks/maps;
+- an overnight-batch fixture has an explicit scale target (at least 6 queued Full scans plus active report-quality work) and browser test evidence;
+- the requirement-to-proof table maps every binding decision and fail-closed condition to focused proof.
+
+No “works after restart” manual observation alone can satisfy a durable-state requirement.
+
+---
+
+# 21. Definition of done Definition of done
 
 Plan 061 is implemented when:
 
