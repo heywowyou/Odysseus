@@ -48,6 +48,7 @@ export * from './check-attempt-ledger.js';
 export * from './performance-measurement-set.js';
 export * from './audit-environment-fingerprint.js';
 export * from './evidence-surfaces.js';
+export * from './evidence-ledger.js';
 export {
   buildRobotsPolicySnapshot,
   describeRobotsPolicyTransition,
