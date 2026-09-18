@@ -67,6 +67,7 @@ export function AuditReportPanel(props: {
 
   const [isRewriting, setIsRewriting] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isGeneratingEnglish, setIsGeneratingEnglish] = useState(false);
   // Kept until dismissed or the next attempt: a toast alone vanished before
   // the operator could read why the PDFs were refused.
   const [produceFailure, setProduceFailure] = useState<string | null>(null);
@@ -108,7 +109,7 @@ export function AuditReportPanel(props: {
   // a refresh mid-run restores the stage; the local flags only cover the
   // moment between a click and the server's first answer.
   const production = reportProductionView(preparation?.production, language);
-  const productionBusy = production.busy || writingInFlight || isRegenerating;
+  const productionBusy = production.busy || writingInFlight || isRegenerating || isGeneratingEnglish;
   const wasInFlight = useRef(false);
   useEffect(() => {
     if (!productionBusy) return;
@@ -159,6 +160,28 @@ export function AuditReportPanel(props: {
       });
     } finally {
       setIsRewriting(false);
+    }
+  };
+
+  const handleGenerateEnglish = async (): Promise<void> => {
+    if (productionBusy || selected === undefined) return;
+    setIsGeneratingEnglish(true);
+    onBusy(true);
+    try {
+      await postEmpty(`${basePath}/generate-english-version`, {
+        timeoutMs: PRODUCE_REPORT_TIMEOUT_MS,
+      });
+      toast.success(strings.prepareReport.generateEnglishSuccess);
+      refresh();
+      refreshPreparation();
+    } catch (englishError) {
+      toast.error(strings.auditDetail.actionError, {
+        description: englishError instanceof Error ? englishError.message : undefined,
+      });
+      refreshPreparation();
+    } finally {
+      setIsGeneratingEnglish(false);
+      onBusy(false);
     }
   };
 
@@ -245,6 +268,15 @@ export function AuditReportPanel(props: {
               >
                 {strings.prepareReport.regenerateBothFreshButton}
               </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={productionBusy || selected === undefined}
+                isLoading={isGeneratingEnglish}
+                onClick={() => void handleGenerateEnglish()}
+              >
+                {strings.prepareReport.generateEnglishButton}
+              </Button>
             </div>
           </div>
           {writingInFlight && !production.busy ? (
@@ -255,8 +287,8 @@ export function AuditReportPanel(props: {
           <div className="flex flex-col gap-1 text-[13px]">
             {selected !== undefined ? (
               <p>
-                {strings.prepareReport.selectedWritingLabel} · {selected.frAnalysisId.slice(0, 8)} /{' '}
-                {selected.enAnalysisId.slice(0, 8)}
+                {strings.prepareReport.selectedWritingLabel} · FR {selected.frAnalysisId.slice(0, 8)}
+                {selected.enAnalysisId !== undefined ? ` / EN ${selected.enAnalysisId.slice(0, 8)}` : ''}
               </p>
             ) : null}
             {candidate?.status === 'failed' ? (
