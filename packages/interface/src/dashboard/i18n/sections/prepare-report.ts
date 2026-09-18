@@ -18,6 +18,8 @@ export interface PrepareReportStrings {
    *  whose pass already succeeded. */
   regenerateBothFreshButton: string;
   regenerateBothFreshHint: string;
+  generateEnglishButton: string;
+  generateEnglishSuccess: string;
   candidateFailedLabel: string;
   /** Issue #409: one rejected attempt. {attempt}, {total}, {guards}. */
   candidateAttemptRejectedTemplate: string;
@@ -49,15 +51,17 @@ export const prepareReport = {
     savedMessage: 'Préparation enregistrée.',
     writingHeading: 'Versions de rédaction du rapport',
     selectedWritingLabel: 'Version actuelle',
-    regenerateBothFreshButton: 'Tout réécrire',
+    regenerateBothFreshButton: 'Réécrire à neuf',
     regenerateBothFreshHint:
-      "Réécrit le français et l'anglais, sans réutiliser la version déjà produite pour une langue.",
+      'Réécrit uniquement la version française sans réutiliser une rédaction existante.',
+    generateEnglishButton: 'Générer la version anglaise',
+    generateEnglishSuccess: 'Version anglaise générée à partir de la même structure.',
     candidateFailedLabel: 'Échec de la nouvelle version',
     candidateAttemptRejectedTemplate: 'Tentative {attempt} sur {total} refusée par : {guards}',
     regenerateButton: 'Réécrire le rapport',
     writeButton: 'Rédiger le rapport',
     writingInProgress:
-      'Rédaction en cours (français puis anglais). Cela prend plusieurs minutes ; cette page se met à jour toute seule.',
+      'Rédaction du rapport français en cours. Cette page se met à jour toute seule.',
     writingRegeneratedMessage: 'Nouvelle version rédigée, approuvée, et PDF régénérés.',
     writingApprovedPdfsPendingMessage:
       'Nouvelle version rédigée et approuvée ; les PDF n’ont pas été régénérés automatiquement.',
@@ -80,15 +84,17 @@ export const prepareReport = {
     savedMessage: 'Preparation saved.',
     writingHeading: 'Report writing versions',
     selectedWritingLabel: 'Current version',
-    regenerateBothFreshButton: 'Rewrite both',
+    regenerateBothFreshButton: 'Rewrite fresh',
     regenerateBothFreshHint:
-      'Rewrites French and English, reusing neither language whose pass already succeeded.',
+      'Rewrites only the French version without reusing an existing writing pass.',
+    generateEnglishButton: 'Generate English version',
+    generateEnglishSuccess: 'English version generated from the same structure.',
     candidateFailedLabel: 'New version failed',
     candidateAttemptRejectedTemplate: 'Attempt {attempt} of {total} rejected by: {guards}',
     regenerateButton: 'Rewrite the report',
     writeButton: 'Write the report',
     writingInProgress:
-      'Writing in progress (French, then English). This takes several minutes; this page updates on its own.',
+      'French report writing is in progress. This page updates on its own.',
     writingRegeneratedMessage: 'New version written, approved, and PDFs regenerated.',
     writingApprovedPdfsPendingMessage:
       'New version written and approved; PDFs were not regenerated automatically.',
