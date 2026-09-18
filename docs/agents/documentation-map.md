@@ -91,6 +91,15 @@ mismatch is evidence to resolve, not a reason to freeze the task.
 active plans. Plans specify scoped work and acceptance criteria; they do not
 create stronger permission boundaries than the current charter.
 
+A long plan whose execution spans sessions may carry a committed
+`plans/<nnn>-execution-handoff.md` beside it. That file holds execution state
+only - what shipped, which operator decisions are already settled, and where
+work is blocked - so a fresh context can continue without re-deriving it. The
+plan stays the contract; the handoff never amends it, and it is deleted when
+the plan reaches DONE. Unlike `docs/session/current-session.md`, it is
+committed, because an agent working from a fresh clone cannot read a gitignored
+file.
+
 GitHub issues are the system of record when the operator or an explicitly
 invoked audit/triage workflow chooses to track work there. Routine work does
 not create issues merely because a defect was noticed.
