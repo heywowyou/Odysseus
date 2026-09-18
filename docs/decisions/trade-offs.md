@@ -5177,3 +5177,77 @@ failing test turned into ten indistinguishable 20-second timeouts.
 `pnpm run test` passing, and it was pushed. The plan's own definition of done
 requires a green suite. A plan is not implemented when its code is written;
 it is implemented when the repository proves it.
+
+### 101. The scan container ships in compose, gated off, and attests nothing until the host proves the checklist (build decision, 2026-09-18, Plan 059 slice 4)
+
+Plan 059's design (section 2) fixed the topology: two services, one image,
+different command and environment. Slice 4 lands that topology as
+deployment artifacts. Three choices in it are worth not silently reversing.
+This amends trade-off 99's closing statement that the preflight is not yet
+wired into scan start: the container that wiring was blocked on now exists in
+the deployment artifacts, the wiring itself is plan 059 slices 2-3, and the
+attestation still waits on slice 5's host review below.
+
+**The flag gate is commented out, not defaulted to empty.** The app's
+`ODYSSEUS_SCAN_SERVICE_URL` appears in `deploy/compose.yaml` only as a
+commented line. An active entry holding an interpolated empty default would
+leave the variable *set but blank*, and "unset means in-process" (section 8)
+would then depend on every future gate implementation treating the empty
+string as unset - a contract enforced by convention, one `'in'` check away
+from dispatching scans to nowhere. A commented line is unset in the only
+sense compose has, so production behavior cannot change until an operator
+deletes two `#` characters and provisions the token. The scan service itself
+ships active, with an empty-token default that must fail closed; it is inert
+unless something calls it, which is exactly the design's own description of
+it.
+
+**The crawl-clamp ceilings moved from the operator's .env into one compose
+anchor.** After the cut-over the clamp ceiling lives in the scan container
+(section 2.1), and both services must carry identical values. Leaving the
+knobs unset in compose would let an `env_file` value reach only the app and
+silently split the two sides - the drift the design exists to prevent. So the
+seven knobs are defined once in a YAML anchor merged into both services'
+environments, which overrides any `.env` value by compose's own precedence.
+`MAX_PAGES` and `MAX_CRAWL_DEPTH` are pinned to the empty string rather than
+a number: an empty value makes `getPositiveIntEnv` fall back to the code
+default, the unlimited sentinel, so the bound stays owned by
+`packages/scanner/src/config.ts` while still being pinned identically on both
+sides. Raising a ceiling is an edit to one anchor that hits both services in
+the same deploy.
+
+**`CRUX_API_KEY` ships on the scan service, as section 2.1 recommended and
+this entry records.** `scanSite` fetches CrUX field data itself, so moving
+the fetch app-side would split manifest provenance across the trust boundary;
+the honest options were "pass it" or "lose CrUX". The key is read-only access
+to public data, is not a database/model/bucket/mailbox credential from
+trade-off 92's list, and never reaches the browser process because
+`isSecretEnvName` matches `_KEY$` and `buildSanitizedBrowserEnv` strips it at
+launch. It is empty until the operator copies the existing key into the
+compose-level env file at enablement (runbook section 7C), which degrades to
+"no CrUX data" exactly like any machine without the key. Any *new*
+credential-shaped variable proposed for this service remains a review stop,
+not a pattern extension.
+
+**Rejected: passing the operator `.env` to the scan service and subtracting
+from it.** Subtraction would have made the profile claim depend on a deny
+list that every future `.env` addition could silently break. The compose
+allow-list is short enough to review by eye and is the human-reviewed
+complement the preflight's shape checks lean on (section 5); the deployment
+gate diffs `docker inspect` against it.
+
+**Rejected: compose `profiles:` to keep the service opt-in.** The design's
+one production gate is the app-side URL flag; a second, compose-level gate
+would let the smoke rehearse a different topology than production runs and
+give the `scan` block a way to be silently absent where the review expects
+it.
+
+**Nothing here attests anything yet.** The compose file ships
+`cap_drop: [ALL]`, `no-new-privileges`, pids/memory/cpu limits and the
+unpublished port as configuration; the design's own rule (section 6, runbook
+7C) is prove it on the production host, never assume it. The security
+checklist runs on the real host as plan 059 slice 5, with results logged in
+the runbook, and until it passes the declared profile is unattested exactly
+as the in-process path is today: every audit stays
+`environment-unapproved`, production approved-evidence stays blocked, and
+trade-off 92's accepted risk still covers the app container's PDF-render
+Chromium.

@@ -1,5 +1,5 @@
-# Production deploy stack: app + Caddy on one host. Mongo is NOT here - the
-# app always uses the Atlas cluster named in MONGODB_URI (see .env).
+# Production deploy stack: app + scan + Caddy on one host. Mongo is NOT here -
+# the app always uses the Atlas cluster named in MONGODB_URI (see .env).
 #
 # Run everything from the repo root on the server:
 #   docker compose -f deploy/compose.yaml up -d --build
@@ -10,6 +10,28 @@
 # Release directories change on every deployment. Pinning the project name is
 # what keeps the artifacts and Caddy certificate volumes stable across them.
 name: deploy
+
+# Plan 059: the crawl-clamp ceilings are defined once, here, and shared by the
+# app and the scan service through this anchor, so the two sides of the
+# scan-service split cannot drift (plan 059 section 2.1). Once scans dispatch
+# over the service boundary, the scan side's values are the authoritative
+# clamp ceiling; the app-side copies exist only to stay identical. Raising or
+# lowering a ceiling is an edit to THIS anchor, which is what makes it hit
+# both services in the same deploy.
+#
+# MAX_PAGES and MAX_CRAWL_DEPTH are pinned to '' on purpose: an empty value
+# makes getPositiveIntEnv (packages/scanner/src/config.ts) fall back to the
+# code default, the unlimited sentinel, so the bound stays owned by code while
+# the explicit entry still overrides any .env value that would otherwise
+# reach only the app through env_file and silently split the two sides.
+x-crawl-knobs: &crawl-knobs
+  MAX_PAGES: ''
+  MAX_CRAWL_DEPTH: ''
+  CRAWL_DELAY_MS: '333'
+  SCAN_CONCURRENCY: '3'
+  PAGE_TIMEOUT_MS: '30000'
+  LIGHTHOUSE_TIMEOUT_MS: '120000'
+  RENDER_SETTLE_TIMEOUT_MS: '8000'
 
 services:
   app:
@@ -45,6 +67,9 @@ services:
       - path: ../.env.smoke
         required: false
     environment:
+      # Shared crawl-clamp ceilings, defined once in the anchor above so the
+      # app and the scan service cannot drift (plan 059 section 2.1).
+      <<: *crawl-knobs
       # Loopback (the local-dev default) would be unreachable from the
       # caddy container; inside the compose network 0.0.0.0 is private to
       # it, and Caddy remains the only path in from the internet.
@@ -65,6 +90,17 @@ services:
       # Deployment flags arrive via this env hook (parsed in
       # packages/scanner/src/browser.ts) so none are baked into the image.
       ODYSSEUS_CHROMIUM_EXTRA_ARGS: --no-sandbox --disable-dev-shm-usage
+      # Plan 059 flag gate (plans/059-scan-container-design.md section 8),
+      # deliberately commented out: with the URL unset every scan runs
+      # in-process, exactly as it did before this file grew a scan service,
+      # and production behavior does not change until an operator uncomments
+      # both lines AND provisions the shared token (runbook section 7C has
+      # the procedure). Never set ODYSSEUS_BROWSER_ISOLATION_PROFILE on app:
+      # the app must keep failing any preflight it were to run (plan 059
+      # sections 2.1 and 5), and it keeps its Chromium flags for the PDF
+      # render, which stays app-side by design (section 2.2).
+      # ODYSSEUS_SCAN_SERVICE_URL: http://scan:4700
+      # ODYSSEUS_SCAN_SERVICE_TOKEN: ${ODYSSEUS_SCAN_SERVICE_TOKEN}
     volumes:
       - artifacts:/data/artifacts
     # Never published. Publishing 4600 would let the world reach the app
@@ -78,6 +114,91 @@ services:
     init: true
     # The local smoke's test-Mongo host mapping and plain-HTTP Caddyfile are
     # in compose.smoke.yaml (deploy/runbook.md section 10), never here.
+
+  # Plan 059: the secretless scan container (plans/059-scan-container-design.md
+  # sections 2 and 6). Same image as the app; only the command and environment
+  # differ. It runs the audit browser and nothing else: no database, no
+  # bucket, no model key, no mailbox, no dashboard secret, and no env_file of
+  # any kind - the environment below is the complete allow-list, and any
+  # credential-shaped variable proposed for it is a deployment-review stop,
+  # not a pattern to extend (runbook section 7C). It is inert until the app's
+  # ODYSSEUS_SCAN_SERVICE_URL above is set: nothing publishes it, and with an
+  # empty token it must fail closed on every request.
+  scan:
+    # Deliberately no build section: this service IS the app image, so it can
+    # never drift from what the app runs. compose builds app; scan reuses the
+    # image that build produced.
+    image: odysseus-app:${ODYSSEUS_IMAGE_TAG:-latest}
+    command: ['node', 'packages/cli/dist/index.js', 'scan-service']
+    environment:
+      # Same crawl-clamp ceilings as app, from the same anchor: identity is
+      # the point (plan 059 section 2.1).
+      <<: *crawl-knobs
+      ODYSSEUS_ARTIFACTS_ROOT: /data/artifacts
+      # Same deployment Chromium flags as the app: a rootless container
+      # cannot create the sandbox namespaces. This flag is precisely why the
+      # profile attestation below is required at all (plan 059 section 2.1).
+      ODYSSEUS_CHROMIUM_EXTRA_ARGS: --no-sandbox --disable-dev-shm-usage
+      # The isolation attestation itself. Set ONLY here, never on app.
+      ODYSSEUS_BROWSER_ISOLATION_PROFILE: secretless-scan-container
+      # Shared bearer token: the app sends it, this service requires it on
+      # every request. It arrives through compose interpolation (runbook
+      # section 7C generates it into the compose-level env file), never
+      # through an env_file passthrough. Empty until an operator provisions
+      # it, which must fail closed: reject every request, trust none.
+      ODYSSEUS_SCAN_SERVICE_TOKEN: ${ODYSSEUS_SCAN_SERVICE_TOKEN:-}
+      # Binds the compose-internal interface only; nothing is published.
+      ODYSSEUS_SCAN_SERVICE_HOST: 0.0.0.0
+      ODYSSEUS_SCAN_SERVICE_PORT: '4700'
+      # Plan 059 section 2.1's flagged exception: scanSite fetches CrUX field
+      # data itself, so moving the fetch app-side would split manifest
+      # provenance across the trust boundary. The key is read-only access to
+      # public data, is not a database/model/bucket/mailbox credential, and
+      # never reaches the browser process (isSecretEnvName matches _KEY$ and
+      # buildSanitizedBrowserEnv strips it at launch). Recorded in runbook
+      # section 7C; empty here until the operator copies the key into the
+      # compose-level env file, which degrades to "no CrUX data" exactly like
+      # any machine without the key.
+      CRUX_API_KEY: ${CRUX_API_KEY:-}
+      # Also with the container, from the image rather than this file:
+      # PLAYWRIGHT_BROWSERS_PATH (/opt/ms-playwright) and the build stamps
+      # ODYSSEUS_BUILD_ID / ODYSSEUS_BUILT_AT are ENV in the Dockerfile.
+      # Listed here so a deployment review does not read their absence from
+      # this block as an omission (plan 059 section 2.1).
+    volumes:
+      # The SAME named volume as app: the acquisition lease and the plan-035
+      # crawl checkpoint are file protocols that assume both workers see the
+      # same audit directory (plan 059 sections 2, 3.4).
+      - artifacts:/data/artifacts
+    # Documentation only, exactly like app's expose: publishes nothing. The
+    # app reaches this service over the internal compose network; Caddy never
+    # routes to it and the host has no port for it (plan 059 section 6).
+    expose:
+      - '4700'
+    restart: unless-stopped
+    # tini as PID 1, for the same reason as app: this container spawns
+    # Chromium, and node does not reap it.
+    init: true
+    # Plan 059 section 6/7 posture. The caps and limits are the candidate
+    # hardening whose live proof belongs to the deployment review on the real
+    # host (runbook section 7C; plan 059 slice 5 owns running it). The
+    # direction of error is safe: the throttled or OOM-killed process is this
+    # container, never the host or the app.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # Chromium fans out renderer processes per page; sized above any one
+    # acquisition (the service runs one at a time), never at host scale.
+    pids_limit: 256
+    # Sized for a Lighthouse page under throttling. Observe a real scan at
+    # the deployment review and adjust there, not here (plan 059 section 6:
+    # size from observation, not hope).
+    mem_limit: 2g
+    cpus: 1.5
+    # --disable-dev-shm-usage keeps Chromium off /dev/shm; this only caps
+    # what is available if anything ever strays back onto it.
+    shm_size: 256m
 
   caddy:
     image: caddy:2
