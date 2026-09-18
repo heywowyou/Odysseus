@@ -58,6 +58,9 @@ jobs:
       - name: Check agent documentation
         run: pnpm run docs:check
 
+      - name: Check executable plan contracts
+        run: pnpm run plans:check
+
       - name: Check formatting
         run: pnpm run format:check
 
