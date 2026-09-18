@@ -260,6 +260,8 @@ export interface ScanSiteOptions {
   onGuardReady?: (guard: PageWorkGuard) => void;
   /** Plan 059 production SSRF/egress policy. Direct helper callers may omit it. */
   networkPolicy?: NetworkTargetPolicy;
+  /** Frozen AuditScopeSnapshot digest enabling the private inventory ledger. */
+  scopeDigest?: string;
 }
 
 export interface SiteScanResult {
@@ -1080,6 +1082,7 @@ export async function scanSite(
     scheduler,
     browser: options.browser,
     evidenceEpoch: 1,
+    ...(options.scopeDigest !== undefined ? { scopeDigest: options.scopeDigest } : {}),
     ...(options.networkPolicy !== undefined ? { networkPolicy: options.networkPolicy } : {}),
     ...(onNetworkSafetyBlocked !== undefined ? { onNetworkSafetyBlocked } : {}),
     ...(options.maxPages !== undefined ? { maxPages: options.maxPages } : {}),
