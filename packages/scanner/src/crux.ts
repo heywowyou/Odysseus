@@ -36,35 +36,63 @@ interface CruxRecordMetrics {
   interaction_to_next_paint?: { percentiles?: { p75?: number | string } };
 }
 
-export async function fetchCruxFieldData(
+export type CruxAcquisitionStatus = 'available' | 'no-public-data' | 'provider-error';
+
+export interface CruxFieldDataAcquisition {
+  status: CruxAcquisitionStatus;
+  granularity: 'origin';
+  fieldData: CruxFieldDataResult;
+  providerError?: string;
+}
+
+/**
+ * Plan 059: keep a genuine CrUX no-data response distinct from a provider,
+ * transport, authentication or quota failure. The compatibility field-data
+ * payload remains unchanged for existing manifest/report consumers.
+ */
+export async function fetchCruxFieldDataAcquisition(
   origin: string,
   apiKey: string,
-): Promise<CruxFieldDataResult> {
+): Promise<CruxFieldDataAcquisition> {
   try {
-    // crux-api's own default falls back to `window.fetch`, which does not
-    // exist in Node - confirmed by reading its source
-    // (createQueryCruxApi resolves `createOptions.fetch || window.fetch`
-    // synchronously at call time). Node has had a global `fetch` since
-    // v18, so passing it explicitly here avoids a ReferenceError on
-    // every call.
     const queryRecord = createQueryRecord({ key: apiKey, fetch: globalThis.fetch });
     const response = (await queryRecord({ origin })) as {
       record: { metrics: CruxRecordMetrics };
     } | null;
-    if (!response) return { available: false };
+    if (!response) {
+      return {
+        status: 'no-public-data',
+        granularity: 'origin',
+        fieldData: { available: false },
+      };
+    }
 
     const metrics = response.record.metrics;
     const lcp = metrics.largest_contentful_paint?.percentiles?.p75;
     const cls = metrics.cumulative_layout_shift?.percentiles?.p75;
     const inp = metrics.interaction_to_next_paint?.percentiles?.p75;
-
-    return {
+    const fieldData: CruxFieldDataResult = {
       available: true,
       ...(lcp !== undefined ? { lcp: { p75: Number(lcp) } } : {}),
       ...(cls !== undefined ? { cls: { p75: Number(cls) } } : {}),
       ...(inp !== undefined ? { inp: { p75: Number(inp) } } : {}),
     };
+    return { status: 'available', granularity: 'origin', fieldData };
   } catch (error) {
-    return { available: false, fetchError: error instanceof Error ? error.message : String(error) };
+    const providerError = error instanceof Error ? error.message : String(error);
+    return {
+      status: 'provider-error',
+      granularity: 'origin',
+      fieldData: { available: false, fetchError: providerError },
+      providerError,
+    };
   }
+}
+
+/** Compatibility wrapper for callers that only need the historical payload. */
+export async function fetchCruxFieldData(
+  origin: string,
+  apiKey: string,
+): Promise<CruxFieldDataResult> {
+  return (await fetchCruxFieldDataAcquisition(origin, apiKey)).fieldData;
 }
