@@ -188,6 +188,8 @@ export {
 export type { CrawlFrontierReuseVerdict } from './artifacts/crawl-frontier-io.js';
 export { buildManifest, readOdysseusBuildId } from './artifacts/manifest.js';
 export { readApprovedAuditEvidence } from './artifacts/evidence-graph-io.js';
+export { collectAcquisitionAttempts } from './artifacts/acquisition-attempts-io.js';
+export { assembleCheckAttemptLedger } from './evidence-acquisition.js';
 export type { BuildManifestInput } from './artifacts/manifest.js';
 export {
   SCREENSHOT_PRUNE_KEEP_TOP_N,

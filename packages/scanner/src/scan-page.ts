@@ -59,6 +59,7 @@ import type { RenderedCostProfile } from './full-audit-plan.js';
 import { findPublishedRoleContact, type PublishedRoleContact } from './role-contact.js';
 import type { CheckExecutionOutcome, CheckId } from './check-scope-coverage.js';
 import type { PageWorkGuard } from './page-work-guard.js';
+import type { AcquisitionAttemptRecord } from './check-attempt-ledger.js';
 import type { HostRequestScheduler } from './host-request-scheduler.js';
 import type { NetworkSafetyDisposition, NetworkTargetPolicy } from './network-target-policy.js';
 
@@ -195,6 +196,10 @@ export interface PageScanResult {
    *  planner replay needs every page's rendered-cost profile, so a
    *  completed page without one is never trusted on resume. */
   renderedCostProfile?: RenderedCostProfile;
+  /** Plan 059: every check attempt made against this page, including
+   *  failed and retried ones. Persisted with the page so a resumed run keeps
+   *  the full lineage; the site ledger is assembled from these records. */
+  acquisitionAttempts?: AcquisitionAttemptRecord[];
 }
 
 /**

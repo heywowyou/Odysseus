@@ -46,7 +46,12 @@ export function buildScanSurface(input: ScanSurfaceInput): ScanSurface {
     throw new Error('buildScanSurface: deviceScaleFactor must be positive');
   }
   const body = { ...input, version: SCAN_SURFACE_VERSION } as const;
-  const surfaceFingerprint = canonicalDigest(body);
+  // Readiness is what happened on the surface, not which surface it was. It
+  // stays on the record but out of the identity, so a retry that reached
+  // readiness competes with the attempt that timed out instead of becoming a
+  // different surface that never has to agree with it.
+  const { readinessOutcome: _readiness, ...identity } = body;
+  const surfaceFingerprint = canonicalDigest(identity);
   return {
     ...body,
     surfaceFingerprint,
@@ -195,4 +200,33 @@ export function capabilityTraversalLevel(
   if (capability.traversal.sameOriginFrames) return 'same-origin-frames';
   if (capability.traversal.openShadowRoots) return 'open-shadow';
   return 'document-only';
+}
+
+/** The viewport Playwright gives a context that does not set one, which is
+ *  what every baseline rendered pass runs under. */
+export const BASELINE_DESKTOP_VIEWPORT = { width: 1280, height: 720 } as const;
+
+/**
+ * The desktop baseline surface one page's rendered pass ran on: default
+ * viewport, published crawler identity, a fresh context per page (render-diff
+ * opens and closes its own), and no interaction beyond load.
+ */
+export function baselineDesktopSurface(input: {
+  evidenceEpoch: number;
+  pageIdentity: string;
+  userAgent: string;
+  readinessOutcome: SurfaceReadinessOutcome;
+}): ScanSurface {
+  return buildScanSurface({
+    evidenceEpoch: input.evidenceEpoch,
+    pageIdentity: input.pageIdentity,
+    viewport: BASELINE_DESKTOP_VIEWPORT,
+    deviceScaleFactor: 1,
+    hasTouch: false,
+    media: { colorScheme: 'light', reducedMotion: 'no-preference' },
+    userAgent: input.userAgent,
+    interactionState: 'baseline',
+    storageIsolationGroup: 'fresh-context-per-page',
+    readinessOutcome: input.readinessOutcome,
+  });
 }

@@ -204,6 +204,39 @@ export type SelectionDecisionInput = Omit<SelectionDecision, 'sequence' | 'decid
   decidedAt: Date;
 };
 
+/**
+ * One attempt as persisted on a page's scan.json (see evidence-acquisition.ts): the ledger's input shape
+ * with instants as ISO strings, since the record has to survive JSON.
+ */
+export type AcquisitionAttemptRecord =
+  | {
+      checkId: string;
+      target: AttemptTarget;
+      surfaceId: string;
+      scopeDigest: string;
+      evidenceEpoch: number;
+      startedAt: string;
+      finishedAt: string;
+      executionProfile: AttemptExecutionProfile;
+      sourceArtifactDigest: string | null;
+      outcome: 'succeeded';
+      materialResultDigest: string;
+    }
+  | {
+      checkId: string;
+      target: AttemptTarget;
+      surfaceId: string;
+      scopeDigest: string;
+      evidenceEpoch: number;
+      startedAt: string;
+      finishedAt: string;
+      executionProfile: AttemptExecutionProfile;
+      sourceArtifactDigest: string | null;
+      outcome: 'failed';
+      failureClass: AttemptFailureClass;
+      diagnosticCode: string;
+    };
+
 /** `pending` covers an attempt with no decision yet, which section 5.8's
  *  three-value list has no room for but every ledger passes through. */
 export type AttemptSelectionState = 'pending' | 'accepted' | 'rejected' | 'superseded';

@@ -267,6 +267,14 @@ export async function runAuditStage(
       fullAuditPlanning: !options.skipLighthouse,
       networkPolicy: PUBLIC_SITE_NETWORK_POLICY,
       ...(!options.skipLighthouse ? { scopeDigest: auditScope.digest } : {}),
+      // Plan 059: a diagnostic retry runs in a browser of its own, under the
+      // same connection-time network policy as the main one.
+      ...(!options.skipLighthouse
+        ? {
+            launchRecoveryBrowser: () =>
+              launchBrowser({ networkPolicy: PUBLIC_SITE_NETWORK_POLICY }),
+          }
+        : {}),
       // Plan 035: full audits stamp the crawl checkpoint with this run's
       // identity and config, and resume from one when a previous attempt
       // left it behind. Never set on the prospecting path.

@@ -106,6 +106,9 @@ export function buildScanJson(
     ...(scanResult.renderedCostProfile !== undefined
       ? { renderedCostProfile: scanResult.renderedCostProfile }
       : {}),
+    ...(scanResult.acquisitionAttempts !== undefined
+      ? { acquisitionAttempts: scanResult.acquisitionAttempts }
+      : {}),
   };
 }
 

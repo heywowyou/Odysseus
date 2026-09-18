@@ -36,9 +36,9 @@ interface CruxRecordMetrics {
   interaction_to_next_paint?: { percentiles?: { p75?: number | string } };
 }
 
-type CruxAcquisitionStatus = 'available' | 'no-public-data' | 'provider-error';
+export type CruxAcquisitionStatus = 'available' | 'no-public-data' | 'provider-error';
 
-interface CruxFieldDataAcquisition {
+export interface CruxFieldDataAcquisition {
   status: CruxAcquisitionStatus;
   granularity: 'origin';
   fieldData: CruxFieldDataResult;
@@ -50,7 +50,7 @@ interface CruxFieldDataAcquisition {
  * transport, authentication or quota failure. The compatibility field-data
  * payload remains unchanged for existing manifest/report consumers.
  */
-async function fetchCruxFieldDataAcquisition(
+export async function fetchCruxFieldDataAcquisition(
   origin: string,
   apiKey: string,
 ): Promise<CruxFieldDataAcquisition> {

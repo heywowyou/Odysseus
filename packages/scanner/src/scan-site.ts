@@ -33,7 +33,26 @@ import {
   checkAccessibilityStatement,
   type AccessibilityStatementCheckResult,
 } from './checks/accessibility-statement.js';
-import { fetchCruxFieldData } from './crux.js';
+import { fetchCruxFieldDataAcquisition, type CruxAcquisitionStatus } from './crux.js';
+import {
+  acquireSiteCheck,
+  CRUX_FIELD_DATA_CHECK_ID,
+  SITE_REQUEST_SURFACE_ID,
+  type SiteCheckRun,
+  lighthouseAttemptRecord,
+  mergeRetriedChecks,
+  PAGE_CHECK_IDS,
+  pageAttemptRecords,
+  retryRequestsFor,
+  type RetryRequest,
+} from './evidence-acquisition.js';
+import {
+  nextExecutionProfile,
+  type AcquisitionAttemptRecord,
+  type AttemptExecutionProfile,
+} from './check-attempt-ledger.js';
+import { baselineDesktopSurface } from './evidence-surfaces.js';
+import { appendSiteAcquisitionAttempts } from './artifacts/acquisition-attempts-io.js';
 import { type CrawledPage, type CrawlProgressEvent, type CrawlResult, crawlSite } from './crawl.js';
 import type { CrawlFrontierSnapshot, CrawlOptions } from './crawl.js';
 import {
@@ -262,8 +281,15 @@ export interface ScanSiteOptions {
   onGuardReady?: (guard: PageWorkGuard) => void;
   /** Plan 059 production SSRF/egress policy. Direct helper callers may omit it. */
   networkPolicy?: NetworkTargetPolicy;
-  /** Frozen AuditScopeSnapshot digest enabling the private inventory ledger. */
+  /** Frozen AuditScopeSnapshot digest enabling the private inventory ledger
+   *  and, on the full-audit path, Plan 059 attempt recording and targeted
+   *  recovery. */
   scopeDigest?: string;
+  /** Plan 059 section 10's diagnostic profile needs a fresh browser process.
+   *  The caller owns browser launch (it carries the egress policy), so it
+   *  supplies how to make another one. Without it a diagnostic retry reuses
+   *  the run's browser and is recorded as an isolated retry instead. */
+  launchRecoveryBrowser?: () => Promise<{ browser: Browser; debugPort: number }>;
 }
 
 export interface SiteScanResult {
@@ -291,6 +317,10 @@ export interface SiteScanResult {
   networkSafetyDispositions?: readonly NetworkSafetyDisposition[];
   /** Scope-bound private Plan 059 inventory after all content work succeeds. */
   inventoryLedger?: InventoryLedgerSnapshot;
+  /** Plan 059: whether CrUX answered, had no public data, or failed. Only set
+   *  when a CrUX key is configured; the legacy `cruxFieldData` payload cannot
+   *  tell the last two apart. */
+  cruxAcquisitionStatus?: CruxAcquisitionStatus;
 }
 
 /**
@@ -497,6 +527,10 @@ interface StagedScanContext {
   networkPolicy: NetworkTargetPolicy | undefined;
   onNetworkSafetyBlocked: ((disposition: NetworkSafetyDisposition) => void) | undefined;
   robotsPolicyRuntime: RobotsPolicyRuntime | undefined;
+  /** Plan 059 attempt recording is on exactly when a frozen scope exists. */
+  scopeDigest: string | undefined;
+  evidenceEpoch: number;
+  launchRecoveryBrowser: (() => Promise<{ browser: Browser; debugPort: number }>) | undefined;
 }
 
 /**
@@ -515,58 +549,125 @@ async function runRenderedAnalysisLane(
   onPageDone: (url: string, result: RenderedAnalysisResult, durationMs: number) => void,
 ): Promise<void> {
   for (const url of laneUrls) {
-    if (context.robotsPolicyRuntime !== undefined) {
-      await context.robotsPolicyRuntime.refresh(laneUrls);
-      context.robotsPolicyRuntime.assertAllowed(url);
-    }
-    // Issue #200: same per-page-guard-mirrored-into-run-wide-guard shape
-    // as runScanLane above.
-    const pageGuard = createPageWorkGuard(context.runGuard);
-
-    const { result, durationMs } = await scheduler.schedule(async () => {
-      // Issue #223: same "actual page work only" timing window as
-      // runScanLane above, measured once the turn has been granted.
-      const workStartedAtMs = Date.now();
-      const analysis = await withPageWatchdog(
-        url,
-        runRenderedAnalysis(browser, url, {
-          delayMs,
-          scheduler,
-          screenshotDir: context.screenshotDir,
-          redirectHostCache: context.redirectHostCache,
-          guard: pageGuard,
-          ...(context.timeoutMs !== undefined ? { timeoutMs: context.timeoutMs } : {}),
-          ...(context.userAgent !== undefined ? { userAgent: context.userAgent } : {}),
-          ...(context.mentionsLegalesUrl !== undefined
-            ? { mentionsLegalesUrl: context.mentionsLegalesUrl }
-            : {}),
-          ...(context.homepageUrl !== undefined ? { homepageUrl: context.homepageUrl } : {}),
-          ...(context.sitemapCheck !== undefined ? { sitemapCheck: context.sitemapCheck } : {}),
-          ...(context.llmsTxtCheck !== undefined ? { llmsTxtCheck: context.llmsTxtCheck } : {}),
-          ...(context.securityHeadersCheck !== undefined
-            ? { securityHeadersCheck: context.securityHeadersCheck }
-            : {}),
-          ...(context.cookieConsentCheck !== undefined
-            ? { cookieConsentCheck: context.cookieConsentCheck }
-            : {}),
-          ...(context.accessibilityStatementCheck !== undefined
-            ? { accessibilityStatementCheck: context.accessibilityStatementCheck }
-            : {}),
-          ...(context.bookingEngineUrl !== undefined
-            ? { bookingEngineUrl: context.bookingEngineUrl }
-            : {}),
-          ...(context.networkPolicy !== undefined ? { networkPolicy: context.networkPolicy } : {}),
-          ...(context.onNetworkSafetyBlocked !== undefined
-            ? { onNetworkSafetyBlocked: context.onNetworkSafetyBlocked }
-            : {}),
-        }),
-        RENDERED_ANALYSIS_WATCHDOG_MS,
-        pageGuard,
-      );
-      return { result: analysis, durationMs: Date.now() - workStartedAtMs };
-    });
-    onPageDone(url, result as RenderedAnalysisResult, durationMs);
+    const { result, durationMs } = await analyzePageInTurn(
+      url,
+      browser,
+      delayMs,
+      scheduler,
+      context,
+      context.timeoutMs,
+      laneUrls,
+    );
+    onPageDone(url, result, durationMs);
   }
+}
+
+/**
+ * One page's rendered analysis, taken in its turn from the shared scheduler
+ * and bounded by the watchdog. Shared by the content lanes and by targeted
+ * recovery, so a retry navigates exactly the way the first attempt did and
+ * differs only in the browser and timeout its profile calls for.
+ */
+async function analyzePageInTurn(
+  url: string,
+  browser: Browser,
+  delayMs: number,
+  scheduler: HostRequestScheduler,
+  context: StagedScanContext,
+  timeoutMs: number | undefined,
+  refreshUrls: readonly string[],
+): Promise<{ result: RenderedAnalysisResult; durationMs: number }> {
+  if (context.robotsPolicyRuntime !== undefined) {
+    await context.robotsPolicyRuntime.refresh([...refreshUrls]);
+    context.robotsPolicyRuntime.assertAllowed(url);
+  }
+  // Issue #200: same per-page-guard-mirrored-into-run-wide-guard shape
+  // as runScanLane above.
+  const pageGuard = createPageWorkGuard(context.runGuard);
+
+  return scheduler.schedule(async () => {
+    // Issue #223: same "actual page work only" timing window as
+    // runScanLane above, measured once the turn has been granted.
+    const workStartedAtMs = Date.now();
+    const analysis = await withPageWatchdog(
+      url,
+      runRenderedAnalysis(browser, url, {
+        delayMs,
+        scheduler,
+        screenshotDir: context.screenshotDir,
+        redirectHostCache: context.redirectHostCache,
+        guard: pageGuard,
+        ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+        ...(context.userAgent !== undefined ? { userAgent: context.userAgent } : {}),
+        ...(context.mentionsLegalesUrl !== undefined
+          ? { mentionsLegalesUrl: context.mentionsLegalesUrl }
+          : {}),
+        ...(context.homepageUrl !== undefined ? { homepageUrl: context.homepageUrl } : {}),
+        ...(context.sitemapCheck !== undefined ? { sitemapCheck: context.sitemapCheck } : {}),
+        ...(context.llmsTxtCheck !== undefined ? { llmsTxtCheck: context.llmsTxtCheck } : {}),
+        ...(context.securityHeadersCheck !== undefined
+          ? { securityHeadersCheck: context.securityHeadersCheck }
+          : {}),
+        ...(context.cookieConsentCheck !== undefined
+          ? { cookieConsentCheck: context.cookieConsentCheck }
+          : {}),
+        ...(context.accessibilityStatementCheck !== undefined
+          ? { accessibilityStatementCheck: context.accessibilityStatementCheck }
+          : {}),
+        ...(context.bookingEngineUrl !== undefined
+          ? { bookingEngineUrl: context.bookingEngineUrl }
+          : {}),
+        ...(context.networkPolicy !== undefined ? { networkPolicy: context.networkPolicy } : {}),
+        ...(context.onNetworkSafetyBlocked !== undefined
+          ? { onNetworkSafetyBlocked: context.onNetworkSafetyBlocked }
+          : {}),
+      }),
+      RENDERED_ANALYSIS_WATCHDOG_MS,
+      pageGuard,
+    );
+    return { result: analysis as RenderedAnalysisResult, durationMs: Date.now() - workStartedAtMs };
+  });
+}
+
+/**
+ * The page attempts one rendered-analysis run produced, or none when attempt
+ * recording is off for this scan.
+ */
+function recordPageRun(
+  context: StagedScanContext,
+  url: string,
+  result: RenderedAnalysisResult,
+  durationMs: number,
+  executionProfile: AttemptExecutionProfile,
+  checkIds: readonly (typeof PAGE_CHECK_IDS)[number][],
+): AcquisitionAttemptRecord[] {
+  if (context.scopeDigest === undefined) return [];
+  const finishedAt = new Date();
+  const surface = baselineDesktopSurface({
+    evidenceEpoch: context.evidenceEpoch,
+    pageIdentity: url,
+    userAgent: context.userAgent ?? getCrawlerUserAgent(),
+    readinessOutcome: result.checkOutcomes['render-diff'] === 'completed' ? 'ready' : 'timeout',
+  });
+  return pageAttemptRecords(
+    result,
+    result.checkOutcomes,
+    {
+      url,
+      surfaceId: surface.surfaceId,
+      scopeDigest: context.scopeDigest,
+      evidenceEpoch: context.evidenceEpoch,
+      startedAt: new Date(finishedAt.getTime() - durationMs),
+      finishedAt,
+      executionProfile,
+    },
+    checkIds,
+  );
+}
+
+/** Section 10's diagnostic profile: twice the bounded settle, never unbounded. */
+function diagnosticTimeoutMs(context: StagedScanContext): number {
+  return (context.timeoutMs ?? getPageTimeoutMs()) * 2;
 }
 
 /** `crawlSite` (via Step 3's wiring) always attaches an audit profile to
@@ -625,6 +726,148 @@ export function needsLighthouseRun(decision: PageAuditDecision, scanJson: PageSc
     scanJson.lighthouse === undefined &&
     scanJson.lighthouseError === undefined
   );
+}
+
+interface RecoveryPageStore {
+  load: (url: string) => PageScanResult;
+  store: (url: string, page: PageScanResult) => void;
+}
+
+const PROFILE_ORDER: readonly AttemptExecutionProfile[] = [
+  'normal',
+  'isolated-retry',
+  'diagnostic-retry',
+];
+
+/**
+ * Plan 059 section 10's targeted recovery: rerun only the pages that have a
+ * recoverably failed check, one page at a time through the shared scheduler,
+ * and keep only the retried checks' results. Everything that already
+ * succeeded stays exactly as first observed.
+ *
+ * The lowest pending rung runs first, so a check that a fresh context can fix
+ * never costs a browser launch. A diagnostic rung launches its own browser
+ * (through the caller's launcher, which carries the egress policy) with twice
+ * the bounded timeout, and closes it afterwards. Without a launcher a
+ * diagnostic rung cannot honestly run, so those checks stay recorded gaps.
+ * Screenshots from a retry land under `recovery/<profile>/` so a retry never
+ * overwrites the bytes an accepted first attempt still points at.
+ */
+async function recoverFailedChecks(
+  retryQueue: Map<string, RetryRequest[]>,
+  browser: Browser,
+  delayMs: number,
+  scheduler: HostRequestScheduler,
+  context: StagedScanContext,
+  pages: RecoveryPageStore,
+): Promise<void> {
+  const pendingUrls = [...retryQueue.keys()].sort();
+  for (const url of pendingUrls) {
+    let requests = retryQueue.get(url) ?? [];
+    for (;;) {
+      if (context.launchRecoveryBrowser === undefined) {
+        requests = requests.filter((request) => request.nextProfile !== 'diagnostic-retry');
+      }
+      if (requests.length === 0) break;
+      const profile = PROFILE_ORDER.find((candidate) =>
+        requests.some((request) => request.nextProfile === candidate),
+      )!;
+      const checkIds = requests
+        .filter((request) => request.nextProfile === profile)
+        .map((request) => request.checkId);
+      const recoveryContext: StagedScanContext = {
+        ...context,
+        screenshotDir: path.join(path.dirname(context.screenshotDir), 'recovery', profile),
+      };
+      const recovery =
+        profile === 'diagnostic-retry' ? await context.launchRecoveryBrowser!() : undefined;
+      let outcome: { result: RenderedAnalysisResult; durationMs: number };
+      try {
+        outcome = await analyzePageInTurn(
+          url,
+          recovery?.browser ?? browser,
+          delayMs,
+          scheduler,
+          recoveryContext,
+          profile === 'diagnostic-retry' ? diagnosticTimeoutMs(context) : context.timeoutMs,
+          [url],
+        );
+      } finally {
+        await recovery?.browser.close();
+      }
+      const original = pages.load(url);
+      const attempts = recordPageRun(
+        context,
+        url,
+        outcome.result,
+        outcome.durationMs,
+        profile,
+        checkIds,
+      );
+      const merged = mergeRetriedChecks(
+        original,
+        outcome.result,
+        outcome.result.checkOutcomes,
+        checkIds,
+      );
+      const allAttempts = [...(original.acquisitionAttempts ?? []), ...attempts];
+      pages.store(url, { ...merged.page, acquisitionAttempts: allAttempts });
+      requests = retryRequestsFor(allAttempts);
+    }
+  }
+}
+
+/**
+ * One Lighthouse measurement with its section 10 ladder. Each rung is a new
+ * isolated Lighthouse process already; the diagnostic rung additionally gets
+ * a fresh browser from the caller's launcher. Attempts are recorded only on
+ * the Plan 059 path, but the retry itself follows the same ladder there only,
+ * so every other caller keeps its historical single run.
+ */
+async function acquireLighthouseRun(
+  url: string,
+  debugPort: number,
+  scheduler: HostRequestScheduler,
+  context: StagedScanContext,
+): Promise<{ result: LighthouseAnalysisResult; records: AcquisitionAttemptRecord[] }> {
+  const records: AcquisitionAttemptRecord[] = [];
+  let profile: AttemptExecutionProfile = 'normal';
+  for (;;) {
+    const recovery =
+      profile === 'diagnostic-retry' && context.launchRecoveryBrowser !== undefined
+        ? await context.launchRecoveryBrowser()
+        : undefined;
+    const startedAt = new Date();
+    let result: LighthouseAnalysisResult;
+    try {
+      result = await runLighthouseAnalysis(url, recovery?.debugPort ?? debugPort, { scheduler });
+    } finally {
+      await recovery?.browser.close();
+    }
+    if (context.scopeDigest === undefined) return { result, records };
+    const record = lighthouseAttemptRecord({
+      url,
+      runIndex: 1,
+      scopeDigest: context.scopeDigest,
+      evidenceEpoch: context.evidenceEpoch,
+      startedAt,
+      finishedAt: new Date(),
+      executionProfile: profile,
+      lighthouse: result.lighthouse,
+      lighthouseError: result.lighthouseError,
+    });
+    records.push(record);
+    if (record.outcome === 'succeeded') return { result, records };
+    const next = nextExecutionProfile(record.failureClass, profile);
+    if (
+      !next.retryable ||
+      next.nextProfile === 'stop-escalate' ||
+      (next.nextProfile === 'diagnostic-retry' && context.launchRecoveryBrowser === undefined)
+    ) {
+      return { result, records };
+    }
+    profile = next.nextProfile;
+  }
 }
 
 /**
@@ -691,6 +934,16 @@ async function runStagedFullAuditScan(
     concurrency,
   });
 
+  // Plan 059 section 10: pages with a check that failed recoverably, and
+  // the profile each such check may retry under. Seeded from a resumed
+  // page's persisted attempts too, so a crash between the content lanes and
+  // recovery does not quietly turn a retryable gap into a final one.
+  const retryQueue = new Map<string, RetryRequest[]>();
+  for (const [url, scanJson] of completedByUrl) {
+    const retries = retryRequestsFor(scanJson.acquisitionAttempts ?? []);
+    if (retries.length > 0) retryQueue.set(url, retries);
+  }
+
   const lanes: string[][] = Array.from({ length: concurrency }, () => []);
   pendingPages.forEach((page, index) => {
     lanes[index % concurrency]!.push(page.url);
@@ -706,7 +959,19 @@ async function runStagedFullAuditScan(
           delayMs,
           scheduler,
           context,
-          (url, result, durationMs) => {
+          (url, laneResult, durationMs) => {
+            const attempts = recordPageRun(
+              context,
+              url,
+              laneResult,
+              durationMs,
+              'normal',
+              PAGE_CHECK_IDS,
+            );
+            const result: RenderedAnalysisResult =
+              attempts.length > 0 ? { ...laneResult, acquisitionAttempts: attempts } : laneResult;
+            const retries = retryRequestsFor(attempts);
+            if (retries.length > 0) retryQueue.set(url, retries);
             const { checkOutcomes, renderedCostProfile, ...content } = result;
             if (context.writePagesAsScanned) {
               // Issue #64: the content-scan phase must wait for every
@@ -751,6 +1016,38 @@ async function runStagedFullAuditScan(
         ),
       ),
   );
+
+  if (retryQueue.size > 0) {
+    await recoverFailedChecks(retryQueue, browser, delayMs, scheduler, context, {
+      load: (url) => {
+        if (context.writePagesAsScanned) {
+          const fromDisk = readPageScanJson(context.screenshotDir, url);
+          if (fromDisk === undefined) {
+            throw new Error(`recovery: expected a scan.json already written for ${url}.`);
+          }
+          return fromDisk;
+        }
+        return renderedResults.get(url)!;
+      },
+      store: (url, page) => {
+        if (context.writePagesAsScanned) {
+          writePageScanJson(context.screenshotDir, context.auditDir!, page);
+          renderedResults.set(url, {
+            url,
+            checkOutcomes: page.checkOutcomes ?? {},
+          } as RenderedAnalysisResult);
+        } else {
+          renderedResults.set(url, {
+            ...page,
+            checkOutcomes: page.checkOutcomes ?? {},
+          } as RenderedAnalysisResult);
+        }
+        if (page.renderedCostProfile !== undefined) {
+          renderedCosts.set(url, page.renderedCostProfile);
+        }
+      },
+    });
+  }
 
   const finalizedPlan = finalizeLighthousePlan(contentPlan, renderedCosts);
   onProgress?.({ type: 'select-performance' });
@@ -798,6 +1095,7 @@ async function runStagedFullAuditScan(
 
   const pages: PageScanResult[] = [];
   const analysisCoverageByUrl = new Map<string, PageAnalysisCoverage>();
+  const lighthouseAttemptsByUrl = new Map<string, AcquisitionAttemptRecord[]>();
   // Plan 035: counts only newly performed work on top of the reused base,
   // so a resumed run's scan-page progress stays truthful.
   let scanned = completedByUrl.size;
@@ -857,6 +1155,13 @@ async function runStagedFullAuditScan(
       pageResult.lighthouse = lighthouseResult.lighthouse;
     if (lighthouseResult?.lighthouseError !== undefined)
       pageResult.lighthouseError = lighthouseResult.lighthouseError;
+    const performanceAttempts = lighthouseAttemptsByUrl.get(url);
+    if (performanceAttempts !== undefined && performanceAttempts.length > 0) {
+      pageResult = {
+        ...pageResult,
+        acquisitionAttempts: [...(pageResult.acquisitionAttempts ?? []), ...performanceAttempts],
+      };
+    }
     const kept = persistPageIfConfigured(
       pageResult,
       context.screenshotDir,
@@ -917,9 +1222,13 @@ async function runStagedFullAuditScan(
       continue;
     }
     const workStartedAtMs = Date.now();
-    const lighthouseResult = await runLighthouseAnalysis(url, debugPort, {
+    const { result: lighthouseResult, records } = await acquireLighthouseRun(
+      url,
+      debugPort,
       scheduler,
-    });
+      context,
+    );
+    lighthouseAttemptsByUrl.set(url, records);
     const durationMs = Date.now() - workStartedAtMs;
     emit(url, lighthouseResult, true, durationMs);
     lighthouseCompleted += 1;
@@ -1306,18 +1615,63 @@ export async function scanSite(
   // when the homepage was actually visited, the same attribution pattern
   // every other site-level check here uses.
   const siteOrigin = new URL(crawl.startUrl).origin;
+  // Plan 059 step 17: site-level checks are first-class ledger entries with
+  // their own attempts and recovery ladder, recorded against the origin. Off
+  // (single request, no records) unless this is a scoped full audit.
+  const siteAcquisition = {
+    origin: siteOrigin,
+    surfaceId: SITE_REQUEST_SURFACE_ID,
+    scopeDigest: options.scopeDigest ?? '',
+    evidenceEpoch: 1,
+    retry: options.fullAuditPlanning === true && options.scopeDigest !== undefined,
+  };
+  const siteAttempts: AcquisitionAttemptRecord[] = [];
+  const pageTimeoutMs = options.timeoutMs ?? getPageTimeoutMs();
+  const boundFor = (profile: AttemptExecutionProfile): number =>
+    profile === 'diagnostic-retry' ? pageTimeoutMs * 2 : pageTimeoutMs;
+  const recordSite = async <T>(
+    checkId: string,
+    run: (profile: AttemptExecutionProfile) => Promise<SiteCheckRun<T>>,
+  ): Promise<T> => {
+    try {
+      const { value, records } = await acquireSiteCheck(checkId, siteAcquisition, run);
+      siteAttempts.push(...records);
+      return value;
+    } catch (error) {
+      siteAttempts.push(
+        ...((error as { acquisitionAttempts?: AcquisitionAttemptRecord[] }).acquisitionAttempts ??
+          []),
+      );
+      throw error;
+    }
+  };
+  const fetchFailure = (fetchError: string | undefined): string | undefined =>
+    // An HTTP answer is the site's answer (a 404 llms.txt is the finding
+    // itself), except a transient 5xx, which the ladder may ask again.
+    fetchError === undefined ||
+    (/^HTTP \d{3}$/u.test(fetchError) && !/^HTTP 5(0[0234789])$/u.test(fetchError))
+      ? undefined
+      : fetchError;
+
+  // llms.txt is a site-level fetch, same shape as sitemap.xml above -
+  // fetched once here regardless of whether the homepage itself was
+  // visited (unlike sitemapCheck, there is no per-page attribution
+  // question blocking it: this is a single unconditional GET at the
+  // site's origin, not something that needs a page to attach staleness
+  // comparisons to), and attached to the homepage's scan.json below only
+  // when the homepage was actually visited, the same attribution pattern
+  // every other site-level check here uses.
   await assertSafeDirectTarget(new URL('/llms.txt', siteOrigin).href);
-  const llmsTxtCheck = await scheduler.schedule(() =>
-    checkLlmsTxt(
-      siteOrigin,
-      options.timeoutMs ?? getPageTimeoutMs(),
-      options.userAgent ?? getCrawlerUserAgent(),
-      {
+  const llmsTxtCheck = await recordSite('llms-txt-check', async (profile) => {
+    const value = await scheduler.schedule(() =>
+      checkLlmsTxt(siteOrigin, boundFor(profile), options.userAgent ?? getCrawlerUserAgent(), {
         ...(options.networkPolicy !== undefined ? { networkPolicy: options.networkPolicy } : {}),
         ...(onNetworkSafetyBlocked !== undefined ? { onNetworkSafetyBlocked } : {}),
-      },
-    ),
-  );
+      }),
+    );
+    const failure = fetchFailure(value.fetchError);
+    return { value, material: value, ...(failure !== undefined ? { failure } : {}) };
+  });
   const llmsTxtCheckForScan = homepageWasVisited ? llmsTxtCheck : undefined;
 
   // Security response headers are a site-level fetch, same shape as
@@ -1325,17 +1679,24 @@ export async function scanSite(
   // site, so one request here (attached only to the homepage's scan.json
   // when it was visited) rather than repeating the same answer per page.
   await assertSafeDirectTarget(siteOrigin);
-  const securityHeadersCheck = await scheduler.schedule(() =>
-    checkSecurityHeaders(
-      siteOrigin,
-      options.timeoutMs ?? getPageTimeoutMs(),
-      options.userAgent ?? getCrawlerUserAgent(),
-      {
-        ...(options.networkPolicy !== undefined ? { networkPolicy: options.networkPolicy } : {}),
-        ...(onNetworkSafetyBlocked !== undefined ? { onNetworkSafetyBlocked } : {}),
-      },
-    ),
-  );
+  const securityHeadersCheck = await recordSite('security-headers', async (profile) => {
+    const value = await scheduler.schedule(() =>
+      checkSecurityHeaders(
+        siteOrigin,
+        boundFor(profile),
+        options.userAgent ?? getCrawlerUserAgent(),
+        {
+          ...(options.networkPolicy !== undefined ? { networkPolicy: options.networkPolicy } : {}),
+          ...(onNetworkSafetyBlocked !== undefined ? { onNetworkSafetyBlocked } : {}),
+        },
+      ),
+    );
+    return {
+      value,
+      material: value,
+      ...(value.fetched ? {} : { failure: value.fetchError ?? 'security headers not fetched' }),
+    };
+  });
   const securityHeadersCheckForScan = homepageWasVisited ? securityHeadersCheck : undefined;
 
   // C1: cookies and trackers active before consent. One extra navigation
@@ -1346,32 +1707,81 @@ export async function scanSite(
   // and skipped entirely when the homepage was never visited, since
   // there would be no page to attribute the finding to.
   const cookieConsentCheck = homepageWasVisited
-    ? await scheduler.schedule(() =>
-        checkCookieConsent(options.browser, crawl.startUrl, {
-          timeoutMs: options.timeoutMs ?? getPageTimeoutMs(),
-          guard: runGuard,
-          ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
-          ...(options.networkPolicy !== undefined ? { networkPolicy: options.networkPolicy } : {}),
-          ...(onNetworkSafetyBlocked !== undefined ? { onNetworkSafetyBlocked } : {}),
-        }),
-      )
+    ? await recordSite('cookie-consent', async (profile) => {
+        const value = await scheduler.schedule(() =>
+          checkCookieConsent(options.browser, crawl.startUrl, {
+            timeoutMs: boundFor(profile),
+            guard: runGuard,
+            ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
+            ...(options.networkPolicy !== undefined
+              ? { networkPolicy: options.networkPolicy }
+              : {}),
+            ...(onNetworkSafetyBlocked !== undefined ? { onNetworkSafetyBlocked } : {}),
+          }),
+        );
+        return {
+          value,
+          material: value,
+          ...(value.checkError !== undefined ? { failure: value.checkError } : {}),
+        };
+      })
     : undefined;
 
   // C4: URL-pattern only, over the pages this crawl actually reached, so
   // it costs no request at all. Skipped when the homepage was not
   // visited, for the same reason as the checks above.
   const accessibilityStatementCheck = homepageWasVisited
-    ? checkAccessibilityStatement(pagesToScan.map((page) => page.url))
+    ? await recordSite('accessibility-statement', async () => {
+        const value = checkAccessibilityStatement(pagesToScan.map((page) => page.url));
+        return { value, material: value };
+      })
     : undefined;
+
+  // Sitemap state comes from the crawl, which already fetched and parsed it
+  // under the same policy; recorded here so the site ledger names it.
+  if (sitemapCheck !== undefined) {
+    await recordSite('sitemap-check', async () => ({
+      value: sitemapCheck,
+      material: crawl.sitemap,
+    }));
+  }
 
   // CrUX is origin-level, not per-page, and only ever queried once per
   // audit regardless of page count - skipped entirely (not attempted and
   // failed) when no API key is configured, so a site without one never
-  // pays a doomed auth-error round trip.
+  // pays a doomed auth-error round trip. Plan 059 step 19: "no public data"
+  // is an answer and a provider failure is a gap; the two are recorded
+  // differently and only the second retries.
   const cruxApiKey = getCruxApiKey();
-  const cruxFieldData = cruxApiKey
-    ? await fetchCruxFieldData(new URL(crawl.startUrl).origin, cruxApiKey)
-    : undefined;
+  let cruxFieldData: CruxFieldDataResult | undefined;
+  let cruxAcquisitionStatus: CruxAcquisitionStatus | undefined;
+  if (cruxApiKey) {
+    const acquisition = await recordSite(CRUX_FIELD_DATA_CHECK_ID, async () => {
+      const value = await fetchCruxFieldDataAcquisition(siteOrigin, cruxApiKey);
+      return {
+        value,
+        material: { status: value.status, fieldData: value.fieldData },
+        ...(value.status === 'provider-error'
+          ? { failure: `dependency: ${value.providerError ?? 'CrUX provider error'}` }
+          : {}),
+      };
+    });
+    cruxAcquisitionStatus = acquisition.status;
+    if (acquisition.status === 'provider-error') {
+      // Scoped full audits keep going and let the evidence assessment block
+      // on the recorded gap; every other caller keeps the historical stop.
+      if (!siteAcquisition.retry) {
+        throw new Error(
+          `CrUX acquisition failed: ${acquisition.providerError ?? 'unknown provider error'}`,
+        );
+      }
+    } else {
+      cruxFieldData = acquisition.fieldData;
+    }
+  }
+  if (siteAcquisition.retry && options.auditDir !== undefined) {
+    appendSiteAcquisitionAttempts(options.auditDir, siteAttempts);
+  }
 
   const concurrency = Math.max(
     1,
@@ -1405,6 +1815,9 @@ export async function scanSite(
       networkPolicy: options.networkPolicy,
       onNetworkSafetyBlocked,
       robotsPolicyRuntime,
+      scopeDigest: options.scopeDigest,
+      evidenceEpoch: 1,
+      launchRecoveryBrowser: options.launchRecoveryBrowser,
     };
     const { pages, fullAuditPlan, analysisCoverageByUrl } = await runStagedFullAuditScan(
       pagesToScan,
@@ -1424,6 +1837,7 @@ export async function scanSite(
       fullAuditPlan,
       analysisCoverageByUrl,
       ...(cruxFieldData !== undefined ? { cruxFieldData } : {}),
+      ...(cruxAcquisitionStatus !== undefined ? { cruxAcquisitionStatus } : {}),
       ...(networkSafetyDispositions.length > 0 ? { networkSafetyDispositions } : {}),
       ...(finalInventory !== undefined ? { inventoryLedger: finalInventory } : {}),
     };
