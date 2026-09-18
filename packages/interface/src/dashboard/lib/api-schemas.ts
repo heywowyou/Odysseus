@@ -131,7 +131,7 @@ export const scanOutcomeCodeSchema = z.enum([
 /** The report step a `report-issue` failure stopped in; null when the scan
  *  is not a report-stage failure. `unknown` is a legacy row failed before
  *  the job kept its failed phase. */
-export const scanReportFailureStageSchema = z.enum(['writing', 'pdf', 'unknown']);
+const scanReportFailureStageSchema = z.enum(['writing', 'pdf', 'unknown']);
 
 /** GET /api/scans/:jobId. */
 export const scanJobDetailSchema = z.object({
