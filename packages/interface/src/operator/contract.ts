@@ -160,18 +160,23 @@ const blockingRefSchema = z.object({
   prospectId: z.string().optional(),
 });
 
-const CAPABILITY_CONSEQUENCES = [
+/** Closed consequence codes an available capability may declare. Exported
+ *  like every other closed vocabulary so the dashboard's FR/EN copy can be
+ *  proven exhaustive against it (plan 060 §16.1). */
+export const CAPABILITY_CONSEQUENCES = [
   'removes-from-queue',
   'stops-at-safe-boundary',
   'deletes-history-only',
   'deletes-audits',
 ] as const;
+const capabilityConsequenceSchema = z.enum(CAPABILITY_CONSEQUENCES);
+export type CapabilityConsequence = z.infer<typeof capabilityConsequenceSchema>;
 
 export const actionCapabilitySchema = z.discriminatedUnion('state', [
   z.object({
     state: z.literal('available'),
     stateToken: z.string(),
-    consequenceCode: z.enum(CAPABILITY_CONSEQUENCES).optional(),
+    consequenceCode: capabilityConsequenceSchema.optional(),
   }),
   z.object({
     state: z.literal('blocked'),

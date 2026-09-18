@@ -117,6 +117,16 @@ export class Router {
     this.fallback = handler;
   }
 
+  /** Plan 060 §16.1 route-inventory proof: every registered route as
+   *  METHOD + pattern, in registration order, so a test can enumerate the
+   *  real routing table instead of re-parsing registration source. */
+  routeTable(): { method: string; pattern: string }[] {
+    return this.routes.map((route) => ({
+      method: route.method,
+      pattern: `/${route.segments.join('/')}`,
+    }));
+  }
+
   async handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
     // Every routed response, the fallback, and the bare 404 get the baseline
     // headers here; the server applies them too so guard and error paths,

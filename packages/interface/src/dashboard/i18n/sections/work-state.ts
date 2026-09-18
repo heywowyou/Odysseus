@@ -1,5 +1,6 @@
 import type {
   CapabilityBlockReason,
+  CapabilityConsequence,
   OperatorWorkState,
   ProblemCode,
 } from '../../../operator/contract';
@@ -14,6 +15,9 @@ export interface WorkStateStrings {
   states: Record<OperatorWorkState, string>;
   problems: Record<ProblemCode, string>;
   blockReasons: Record<CapabilityBlockReason, string>;
+  /** Plan 060 §6.1: what an available action does, shown before the
+   *  operator commits (plan 060 §16: every capability code has copy). */
+  consequences: Record<CapabilityConsequence, string>;
   /** Queue reorder. {name} is the scan's prospect or site. */
   moveUpAria: string;
   moveDownAria: string;
@@ -60,6 +64,12 @@ export const workState = {
       'not-queued': 'Ce scan n’est plus en file.',
       'queue-too-long': 'La file est trop longue pour être réordonnée ici.',
     },
+    consequences: {
+      'removes-from-queue': 'Retire ce scan de la file d’attente.',
+      'stops-at-safe-boundary': 'Arrête ce scan à la prochaine étape sûre.',
+      'deletes-history-only': 'Supprime le scan ; aucun audit n’a été produit.',
+      'deletes-audits': 'Supprime le scan et tous les audits qu’il a produits.',
+    },
     moveUpAria: 'Avancer {name} dans la file',
     moveDownAria: 'Reculer {name} dans la file',
     movedAnnouncement: '{name} est maintenant en position {position}.',
@@ -100,6 +110,12 @@ export const workState = {
         'A report is being produced for this audit; try again shortly.',
       'not-queued': 'This scan is no longer queued.',
       'queue-too-long': 'The queue is too long to reorder here.',
+    },
+    consequences: {
+      'removes-from-queue': 'Removes this scan from the queue.',
+      'stops-at-safe-boundary': 'Stops this scan at its next safe step.',
+      'deletes-history-only': 'Deletes the scan; it produced no audits.',
+      'deletes-audits': 'Deletes the scan and every audit it produced.',
     },
     moveUpAria: 'Move {name} earlier in the queue',
     moveDownAria: 'Move {name} later in the queue',

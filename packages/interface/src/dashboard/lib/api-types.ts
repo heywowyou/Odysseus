@@ -37,23 +37,29 @@ export interface ScanCreated {
 
 /** Prospect-only sources returned by GET /api/prospect-hub/todo. `action` is
  * stable code, never ready-made text, so FR/EN copy stays in the client's own
- * i18n table (aTraiter.actions). */
-export type TodoRowKind =
-  | 'draft'
-  | 'reply'
-  | 'follow-up'
-  | 'first-email'
-  | 'audit-input'
-  | 'audit-report'
-  | 'report-quality-review';
-export type TodoRowAction =
-  | 'review-draft'
-  | 'record-outcome'
-  | 'create-follow-up'
-  | 'create-first-email'
-  | 'review-audit'
-  | 'regenerate-report'
-  | 'review-report';
+ * i18n table (aTraiter.actions). The runtime lists exist so the closure
+ * contract can prove the i18n tables cover exactly the codes (plan 060
+ * §16.1); the types stay the single vocabulary every consumer sees. */
+export const TODO_ROW_KINDS = [
+  'draft',
+  'reply',
+  'follow-up',
+  'first-email',
+  'audit-input',
+  'audit-report',
+  'report-quality-review',
+] as const;
+export type TodoRowKind = (typeof TODO_ROW_KINDS)[number];
+export const TODO_ROW_ACTIONS = [
+  'review-draft',
+  'record-outcome',
+  'create-follow-up',
+  'create-first-email',
+  'review-audit',
+  'regenerate-report',
+  'review-report',
+] as const;
+export type TodoRowAction = (typeof TODO_ROW_ACTIONS)[number];
 
 /** TodoRow kinds derived from the plan 060 §8 human-attention contract; their
  *  decision copy lives in strings.attention, not in aTraiter.kinds. */
