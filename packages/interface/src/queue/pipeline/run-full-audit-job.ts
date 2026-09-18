@@ -4,17 +4,15 @@
  * into. Calls the same stage functions cli's audit/analyze/report
  * commands call - see the stage files for the shared implementation.
  *
- * Both languages are always generated: bilingual delivery is a product
- * requirement (CLAUDE.md style rules) and LLM cost is negligible per the
- * brief's own engineering constraints, so there is no reason to make the
- * operator come back for a second language later.
+ * Plan 067: French is the canonical/default deliverable. English is never
+ * generated here; the dashboard can add it later with one explicit writing
+ * call against this exact structure and findings provenance.
  */
 
-import { completeJob, ensureJobRunIdentity, type JobDocument } from '@odysseus/store';
+import { approveWritingCandidate, completeJob, ensureJobRunIdentity, recordReadyWritingCandidate, type JobDocument } from '@odysseus/store';
 import { buildFindingsProvenance, type SiteSignalOverrides } from '@odysseus/core';
 import { deleteCrawlCheckpoint, deleteCrawlStateFile, type PageWorkGuard } from '@odysseus/scanner';
 import { hasMeasuredCoreWebVitals } from '@odysseus/report';
-import { pauseBetweenLanguagePasses } from '@odysseus/llm';
 import { runAnalysisStage } from '../../pipeline/analysis-stage.js';
 import { runAuditStage } from '../../pipeline/audit-stage.js';
 import { acquisitionClaimFor, crawlOptionsFromJob } from './job-crawl-options.js';
@@ -128,40 +126,23 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
       connection,
     );
 
-    // Issue #30: back to back, the English pass entered the provider quota
-    // window the French pass had just drained and 429ed through every
-    // retry. The pacing knowledge lives in @odysseus/llm with the rest of
-    // the rate-limit handling.
-    await pauseBetweenLanguagePasses();
-    throwIfCancelled();
+    await recordReadyWritingCandidate(connection, auditResult.auditId, {
+      frAnalysisId: frAnalysis.analysis.analysisId,
+      findingsProvenance: frAnalysis.analysis.findingsProvenance,
+    });
+    await approveWritingCandidate(connection, auditResult.auditId);
 
-    await reportJobPhase(connection, job.jobId, job.type, { phase: 'analyze-en' });
-    const enAnalysis = await runAnalysisStage(
-      auditResult.auditDir,
-      auditResult.manifest,
-      auditResult.findings,
-      {
-        language: 'en',
-        obligationAssessment: auditResult.obligationAssessment,
-        findingsProvenance,
-      },
-      connection,
-    );
-
-    // Renders both language reports (fr and en) from the two analyses
-    // already produced above. See runAllReportsStage's own doc comment:
-    // no re-scan, no second LLM call.
+    // Plan 067: render only the canonical French report on the normal path.
     throwIfCancelled();
     await reportJobPhase(connection, job.jobId, job.type, { phase: 'report-fr' });
     await runAllReportsStage(
       auditResult.auditDir,
       auditResult.manifest,
       auditResult.findings,
-      { fr: frAnalysis.analysis, en: enAnalysis.analysis },
+      { fr: frAnalysis.analysis },
       connection,
       findingsProvenance,
     );
-    await reportJobPhase(connection, job.jobId, job.type, { phase: 'report-en' });
 
     // P0.1 (2026-08-21 La Corniche feedback pass): a completed job whose
     // report advertises a pillar (performance) it has zero data for used
@@ -174,11 +155,6 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
       ? undefined
       : 'Performance measurement (Lighthouse) failed on every scanned page: the report has no Core Web Vitals data.';
 
-    // The advisory passes are pure advisory value and were started inside
-    // the analysis stages; settling them here keeps shutdown semantics (no
-    // silently dropped work) while no longer serializing four provider
-    // round trips ahead of the report stage.
-    await Promise.allSettled([...frAnalysis.advisoryPasses, ...enAnalysis.advisoryPasses]);
     // The registry is only forgotten in runJob's finally, after this runner
     // resolves, so a stop requested during the long analyze or report window
     // still gets observed here instead of being overwritten by 'complete'.

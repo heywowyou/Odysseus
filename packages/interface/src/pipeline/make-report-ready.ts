@@ -13,8 +13,8 @@
  *
  * makeReportReady is the single path that gets an audit from "confirmed
  * and analysed" to "reports on disk and the job no longer stuck": refresh
- * findings if stale, regenerate the writing pair if the refresh touched
- * them, regenerate both PDFs, then reconcile any failed/needs-input job
+ * findings if stale, regenerate the French writing if the refresh touched
+ * them, regenerate the selected report PDFs, then reconcile any failed/needs-input job
  * row this audit's fresher state now satisfies.
  */
 
@@ -31,7 +31,6 @@ import {
   syncProspectIdentityIntoAudit,
 } from '@odysseus/store';
 import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
-import { pauseBetweenLanguagePasses } from '@odysseus/llm';
 import { ReportIdentityUnconfirmedError, type UnconfirmedField } from '@odysseus/report';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
 import { syncAuditDirToBucket } from '../artifacts/sync-audit-artifacts.js';
@@ -102,7 +101,7 @@ async function selectedPairIsStale(
   if (resolution.kind === 'none') return false;
   return (
     findingsAreStale(resolution.fr.findingsProvenance, findings) ||
-    findingsAreStale(resolution.en.findingsProvenance, findings)
+    (resolution.en !== undefined && findingsAreStale(resolution.en.findingsProvenance, findings))
   );
 }
 
@@ -141,31 +140,8 @@ async function refreshWritingCandidate(
     },
     connection,
   );
-  await pauseBetweenLanguagePasses();
-  const enStage = await runAnalysisStage(
-    auditDir,
-    manifest,
-    findings,
-    {
-      language: 'en',
-      findingsProvenance,
-      regenerateStructure: true,
-      ...(manualFields?.siren !== undefined ? { manualSiren: manualFields.siren.value } : {}),
-      ...(manualFields?.transactionalFlowOverride !== undefined
-        ? {
-            siteSignalOverrides: {
-              hasTransactionalFlow: manualFields.transactionalFlowOverride,
-            },
-          }
-        : {}),
-    },
-    connection,
-  );
-  await Promise.allSettled([...frStage.advisoryPasses, ...enStage.advisoryPasses]);
-
   await recordReadyWritingCandidate(connection, audit.auditId, {
     frAnalysisId: frStage.analysis.analysisId,
-    enAnalysisId: enStage.analysis.analysisId,
     findingsProvenance: frStage.analysis.findingsProvenance,
   });
   // The auto-selection amendment (trade-off 62, plan 045 section 2.1):

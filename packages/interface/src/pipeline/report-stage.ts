@@ -1,5 +1,5 @@
 /**
- * Renders a stored analysis and the findings appendix into a bilingual
+ * Renders a stored analysis and the findings appendix into a report
  * PDF, exactly as the `odysseus report` CLI command does today -
  * extracted so `cli` and the queued pipeline share one implementation.
  * See audit-stage.ts's header for why this was extracted.
@@ -282,10 +282,9 @@ export interface AllReportsStageResult {
  * combinations for the two-tier commercial model. The paid screening
  * tier is dropped; every completed audit already has one StoredAnalysis
  * per language (analysis-stage.ts runs once per language), so this now
- * generates exactly the two full-audit report renders, one per language,
- * reusing runReportStage per language rather than duplicating its
- * PDF-generation and persistReport logic. No re-scan, no second LLM
- * call.
+ * Plan 067 makes French the canonical deliverable. This helper always
+ * renders French and renders English only when an explicit English analysis
+ * is supplied. No re-scan and no LLM call happen here.
  *
  * Sequential, matching runFullAuditJob's own report-fr-then-report-en
  * ordering, rather than Promise.all: bounds concurrent Chromium PDF
@@ -304,7 +303,7 @@ export async function runAllReportsStage(
   auditDir: string,
   manifest: AuditManifest,
   findings: Finding[],
-  analyses: { fr: StoredAnalysis; en: StoredAnalysis },
+  analyses: { fr: StoredAnalysis; en?: StoredAnalysis },
   connection: Connection,
   /** Threaded through to each runReportStage call so the fr and en passes
    *  share one provenance computation instead of hashing the same findings
@@ -316,12 +315,14 @@ export async function runAllReportsStage(
 
   const { browser } = await launchBrowser({ extraArgs: REPORT_PDF_CHROMIUM_ARGS });
   try {
-    for (const language of ['fr', 'en'] as const) {
+    const languages: ReportLanguage[] = analyses.en === undefined ? ['fr'] : ['fr', 'en'];
+    for (const language of languages) {
+      const analysis = language === 'fr' ? analyses.fr : analyses.en!;
       const { reportPath, generatedAt, pageCount, pageCountWarning } = await runReportStage(
         auditDir,
         manifest,
         findings,
-        analyses[language],
+        analysis,
         connection,
         browser,
         findingsProvenance,

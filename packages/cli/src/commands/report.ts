@@ -140,7 +140,7 @@ export function registerReportCommand(program: Command): void {
             );
             let fr: StoredAnalysis;
             let en: StoredAnalysis;
-            if (resolution.kind !== 'none') {
+            if (resolution.kind !== 'none' && resolution.en !== undefined) {
               fr = { ...resolution.fr };
               en = { ...resolution.en };
             } else {

@@ -33,10 +33,7 @@ export class AuditArtifactsUnavailableError extends Error {
 
 export class NoAnalysisPairError extends Error {
   constructor() {
-    super(
-      'a complete bilingual analysis pair is required before a report can be regenerated; ' +
-        'run the writing regeneration in the Prepare report card, then approve the candidate',
-    );
+    super('a selected French analysis is required before a report can be regenerated; run the writing regeneration in the Prepare report card');
     this.name = 'NoAnalysisPairError';
   }
 }
@@ -73,9 +70,8 @@ export async function readAuditArtifacts(
 }
 
 /**
- * Re-renders both language reports from the audit's selected analysis
- * pair, exactly what `odysseus report <dir> --all` does: no rescan, no new
- * LLM call. Throws AuditArtifactsUnavailableError, NoAnalysisPairError, or
+ * Re-renders the selected French report and, when the selection already
+ * carries one, its optional English attachment. No rescan and no new LLM call. Throws AuditArtifactsUnavailableError, NoAnalysisPairError, or
  * (propagated from generateReportPdf) ReportIdentityUnconfirmedError.
  */
 export async function regenerateReportsForAudit(
@@ -106,13 +102,13 @@ export async function regenerateReportsForAudit(
   const resolution = await resolveSelectedAnalysisPairForAudit(connection, audit.auditId);
   if (resolution.kind === 'none') throw new NoAnalysisPairError();
   const fr: StoredAnalysis = { ...resolution.fr };
-  const en: StoredAnalysis = { ...resolution.en };
+  const en: StoredAnalysis | undefined = resolution.en ? { ...resolution.en } : undefined;
 
   return runAllReportsStage(
     auditDir,
     manifest,
     findings,
-    { fr, en },
+    en === undefined ? { fr } : { fr, en },
     connection,
     findingsProvenance,
   );

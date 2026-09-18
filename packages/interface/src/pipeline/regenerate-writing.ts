@@ -1,8 +1,8 @@
 /**
  * Candidate-first writing regeneration, plan 019 step 6. Reuses the
  * audit's existing structural analysis (runAnalysisStage reuses the newest
- * compatible `-structure.json` by default), regenerates the French and
- * English writing passes, and persists both as new immutable analyses.
+ * compatible `-structure.json` by default), regenerates the canonical French
+ * writing pass, and persists it as a new immutable analysis.
  *
  * Plan 045 section 2.1 (trade-off 62 amendment): the pair is approved and
  * rendered automatically once ready. Regeneration is already an explicit
@@ -23,7 +23,7 @@
 
 import type { Connection } from 'mongoose';
 import type {
-  AnalysisPairRef,
+  AnalysisSelectionRef,
   AuditManifest,
   Finding,
   WritingGuardRejection,
@@ -36,7 +36,7 @@ import {
   recordReadyWritingCandidate,
   type AuditDocument,
 } from '@odysseus/store';
-import { pauseBetweenLanguagePasses, WritingPassExhaustedError } from '@odysseus/llm';
+import { WritingPassExhaustedError } from '@odysseus/llm';
 import { ReportIdentityUnconfirmedError } from '@odysseus/report';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
 import { runAnalysisStage } from './analysis-stage.js';
@@ -87,8 +87,8 @@ export type RegeneratedReportsOutcome =
   { kind: 'generated'; reports: AllReportsStageResult[] } | { kind: 'refused'; reason: string };
 
 export interface RegenerateWritingResult {
-  candidate: { status: 'selected'; pair: AnalysisPairRef; approvedAt: string };
-  analyses: { fr: string; en: string };
+  candidate: { status: 'selected'; pair: AnalysisSelectionRef; approvedAt: string };
+  analyses: { fr: string };
   pdfs: RegeneratedReportsOutcome;
   /** True when a previously approved (and possibly already delivered) pair
    *  existed before this regeneration replaced it - the client's cue for
@@ -105,11 +105,9 @@ export async function regenerateWriting(
   connection: Connection,
   audit: AuditDocument,
   artifactStore: ArtifactStore | undefined,
-  /** Issue #410: by default a language whose writing already succeeded
-   *  against this structure and these findings is reused, so a run after a
-   *  half-failed pair only pays for the language that is missing. Set this
-   *  when the operator wants both languages written again - a reused analysis
-   *  must be the operator's choice, never a silent one. */
+  /** Force a fresh French writing pass even when a compatible stored
+   *  French analysis exists. English is generated only by the explicit
+   *  Generate English version action (Plan 067). */
   options: { regenerateWriting?: boolean } = {},
 ): Promise<RegenerateWritingResult> {
   const auditId = audit.auditId;
@@ -174,44 +172,9 @@ export async function regenerateWriting(
       connection,
     );
     partialPair = { frAnalysisId: frStage.analysis.analysisId };
-    // Issue #30, same shape as run-full-audit-job: the English pass must
-    // not enter the quota window the French pass just drained.
-    await pauseBetweenLanguagePasses();
-    const enStage = await runAnalysisStage(
-      auditDir,
-      manifest,
-      findings,
-      {
-        language: 'en',
-        findingsProvenance,
-        regenerateWriting: options.regenerateWriting ?? false,
-        ...(audit.manualFields?.siren !== undefined
-          ? { manualSiren: audit.manualFields.siren.value }
-          : {}),
-        ...(audit.manualFields?.transactionalFlowOverride !== undefined
-          ? {
-              siteSignalOverrides: {
-                hasTransactionalFlow: audit.manualFields.transactionalFlowOverride,
-              },
-            }
-          : {}),
-      },
-      connection,
-    );
-    partialPair = {
-      frAnalysisId: frStage.analysis.analysisId,
-      enAnalysisId: enStage.analysis.analysisId,
-    };
-    // The route awaits the whole regeneration, and this function previously
-    // resolved only once the advisory passes were done (they were awaited
-    // inside the stage). The stages now start the passes without awaiting
-    // them (issue #145), so settling them here preserves that behaviour:
-    // the candidate is never recorded while advisory writes are pending.
-    await Promise.allSettled([...frStage.advisoryPasses, ...enStage.advisoryPasses]);
 
-    const pair: AnalysisPairRef = {
+    const pair: AnalysisSelectionRef = {
       frAnalysisId: frStage.analysis.analysisId,
-      enAnalysisId: enStage.analysis.analysisId,
       findingsProvenance: frStage.analysis.findingsProvenance,
     };
     const readied = await recordReadyWritingCandidate(connection, auditId, pair);
@@ -255,7 +218,7 @@ export async function regenerateWriting(
 
     return {
       candidate: { status: 'selected', pair, approvedAt: candidate.approvedAt },
-      analyses: { fr: frStage.analysis.analysisId, en: enStage.analysis.analysisId },
+      analyses: { fr: frStage.analysis.analysisId },
       pdfs,
       replacedApprovedSelection,
     };
