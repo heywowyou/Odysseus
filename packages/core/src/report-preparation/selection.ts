@@ -1,27 +1,26 @@
 import type { FindingsProvenance } from '../normalize/findings-provenance.js';
 import type { ReportLanguage } from '../types/llm-output.js';
-import type { AnalysisPairRef, WritingSelection } from './preparation.js';
+import type { AnalysisPairRef, AnalysisSelectionRef, WritingSelection } from './preparation.js';
 
 /**
- * Selected-analysis resolution, plan 019 step 2. One centralized decision:
- * an explicit selection is honoured when it still refers to a complete
- * compatible pair, otherwise selection fails closed with a typed reason;
- * only a legacy record with no explicit selection falls back to the latest
- * complete pair. Callers (store, CLI, report orchestration) must not
- * recover the old latest-record behaviour ad hoc.
+ * Plan 067 selected-analysis resolution. French is the canonical required
+ * analysis; English is optional. Historical bilingual selections remain
+ * readable because AnalysisSelectionRef keeps the old field names and only
+ * relaxes enAnalysisId.
  */
-
 export interface AnalysisRecordLike {
   analysisId: string;
   auditId: string;
   language: ReportLanguage;
   findingsProvenance: FindingsProvenance;
   generatedAt: Date | string;
+  /** Absent on legacy rows. New English attachment validates this strictly. */
+  structureGeneratedAt?: string;
 }
 
 export type SelectedAnalysisPairResolution<A extends AnalysisRecordLike> =
-  | { kind: 'selected'; fr: A; en: A }
-  | { kind: 'legacy-latest'; fr: A; en: A }
+  | { kind: 'selected'; fr: A; en?: A }
+  | { kind: 'legacy-latest'; fr: A; en?: A }
   | { kind: 'none'; reason: 'no-analyses' | 'no-complete-pair' | 'selection-incomplete' };
 
 function timestampOf(analysis: AnalysisRecordLike): number {
@@ -38,14 +37,6 @@ function provenanceKey(provenance: FindingsProvenance): string {
   ].join('\u0000');
 }
 
-/**
- * Trade-off 40 fail-closed, applied to the selector: analysis documents
- * written before the provenance milestone carry no stamp at all (the TS
- * type says required, but Mongoose only validates on write, so old rows in
- * a real database predate it). Such an analysis is never trusted and never
- * selectable; it is skipped, not crashed on. Found live on a real audit
- * whose stored analyses predated the stamp.
- */
 function hasCompleteProvenance(analysis: AnalysisRecordLike): boolean {
   const provenance = analysis.findingsProvenance as FindingsProvenance | undefined;
   return (
@@ -56,58 +47,94 @@ function hasCompleteProvenance(analysis: AnalysisRecordLike): boolean {
   );
 }
 
+function refMatchesAnalysis(ref: AnalysisSelectionRef, analysis: AnalysisRecordLike): boolean {
+  return (
+    hasCompleteProvenance(analysis) &&
+    provenanceKey(ref.findingsProvenance) === provenanceKey(analysis.findingsProvenance)
+  );
+}
+
+/** Compatibility predicate for an active selection. French alone is valid. */
+export function isCompatibleAnalysisSelection<A extends AnalysisRecordLike>(
+  fr: A | undefined,
+  en?: A,
+): boolean {
+  if (!fr || !hasCompleteProvenance(fr) || fr.language !== 'fr') return false;
+  if (!en) return true;
+  if (!hasCompleteProvenance(en)) return false;
+  return (
+    en.language === 'en' &&
+    fr.auditId === en.auditId &&
+    provenanceKey(fr.findingsProvenance) === provenanceKey(en.findingsProvenance)
+  );
+}
+
+/** Historical helper kept for explicit bilingual operations such as CLI --all. */
 export function isCompleteCompatiblePair<A extends AnalysisRecordLike>(
   fr: A | undefined,
   en: A | undefined,
 ): boolean {
-  if (!fr || !en) return false;
-  if (!hasCompleteProvenance(fr) || !hasCompleteProvenance(en)) return false;
-  if (fr.auditId !== en.auditId) return false;
-  if (fr.language !== 'fr' || en.language !== 'en') return false;
-  return provenanceKey(fr.findingsProvenance) === provenanceKey(en.findingsProvenance);
+  return Boolean(en && isCompatibleAnalysisSelection(fr, en));
 }
 
 /**
- * The legacy fallback for audits created before explicit selection: the
- * newest complete compatible pair, grouped by structural run. Within a
- * provenance group the latest French and English analyses are paired; the
- * group whose pair is newest wins, ties broken by provenance digest for
- * determinism. Analyses without a provenance stamp are skipped (they can
- * never form a compatible pair). Returns null when no complete pair exists
- * at all.
+ * Strict rule for a newly attached English analysis. Legacy bilingual rows
+ * are allowed to lack structureGeneratedAt when merely read, but new English
+ * writing must prove it used the exact same structure as the selected French.
  */
+export function isEnglishAttachableToFrench<A extends AnalysisRecordLike>(
+  fr: A | undefined,
+  en: A | undefined,
+): boolean {
+  return Boolean(
+    fr &&
+      en &&
+      isCompleteCompatiblePair(fr, en) &&
+      fr.structureGeneratedAt !== undefined &&
+      en.structureGeneratedAt !== undefined &&
+      fr.structureGeneratedAt === en.structureGeneratedAt,
+  );
+}
+
+/** Historical complete-pair fallback retained for callers that explicitly need two languages. */
 export function pickLegacyLatestPair<A extends AnalysisRecordLike>(
   analyses: readonly A[],
 ): { fr: A; en: A } | null {
-  const groups = new Map<string, { fr?: A; en?: A; latest: number }>();
-  for (const analysis of analyses) {
-    if (!hasCompleteProvenance(analysis)) continue;
-    const key = provenanceKey(analysis.findingsProvenance);
-    const group = groups.get(key) ?? { latest: 0 };
-    if (analysis.language === 'fr') {
-      const current = group.fr;
-      if (!current || timestampOf(analysis) > timestampOf(current)) group.fr = analysis;
-    } else {
-      const current = group.en;
-      if (!current || timestampOf(analysis) > timestampOf(current)) group.en = analysis;
-    }
-    groups.set(key, group);
-  }
+  const selection = pickLegacyLatestSelection(analyses);
+  return selection?.en ? { fr: selection.fr, en: selection.en } : null;
+}
 
-  let best: { fr: A; en: A; completedAt: number; key: string } | null = null;
-  for (const [key, group] of groups) {
-    const { fr, en } = group;
-    if (!isCompleteCompatiblePair(fr, en) || !fr || !en) continue;
-    const completedAt = Math.max(timestampOf(fr), timestampOf(en));
-    if (
-      !best ||
-      completedAt > best.completedAt ||
-      (completedAt === best.completedAt && key > best.key)
-    ) {
-      best = { fr, en, completedAt, key };
-    }
-  }
-  return best ? { fr: best.fr, en: best.en } : null;
+/**
+ * Legacy fallback for audits created before explicit selection. The newest
+ * compatible French analysis wins; a compatible English analysis is attached
+ * when one exists for the same findings provenance. This makes old bilingual
+ * records load unchanged while allowing historical French-only rows to become
+ * the canonical report without a migration.
+ */
+export function pickLegacyLatestSelection<A extends AnalysisRecordLike>(
+  analyses: readonly A[],
+): { fr: A; en?: A } | null {
+  const eligible = analyses.filter(hasCompleteProvenance);
+  const french = eligible
+    .filter((analysis) => analysis.language === 'fr')
+    .sort(
+      (a, b) =>
+        timestampOf(b) - timestampOf(a) ||
+        provenanceKey(b.findingsProvenance).localeCompare(provenanceKey(a.findingsProvenance)),
+    );
+  const fr = french[0];
+  if (!fr) return null;
+
+  const en = eligible
+    .filter(
+      (analysis) =>
+        analysis.language === 'en' &&
+        analysis.auditId === fr.auditId &&
+        provenanceKey(analysis.findingsProvenance) === provenanceKey(fr.findingsProvenance),
+    )
+    .sort((a, b) => timestampOf(b) - timestampOf(a))[0];
+
+  return en ? { fr, en } : { fr };
 }
 
 export function resolveSelectedAnalysisPair<A extends AnalysisRecordLike>(
@@ -119,29 +146,34 @@ export function resolveSelectedAnalysisPair<A extends AnalysisRecordLike>(
     const fr = analyses.find(
       (analysis) => analysis.analysisId === selected.frAnalysisId && analysis.language === 'fr',
     );
-    const en = analyses.find(
-      (analysis) => analysis.analysisId === selected.enAnalysisId && analysis.language === 'en',
-    );
-    if (!isCompleteCompatiblePair(fr, en) || !fr || !en) {
+    if (!fr || !refMatchesAnalysis(selected, fr)) {
       return { kind: 'none', reason: 'selection-incomplete' };
     }
-    return { kind: 'selected', fr, en };
+
+    const en =
+      selected.enAnalysisId === undefined
+        ? undefined
+        : analyses.find(
+            (analysis) =>
+              analysis.analysisId === selected.enAnalysisId && analysis.language === 'en',
+          );
+    if (
+      (selected.enAnalysisId !== undefined && !en) ||
+      !isCompatibleAnalysisSelection(fr, en) ||
+      (en !== undefined && !refMatchesAnalysis(selected, en))
+    ) {
+      return { kind: 'none', reason: 'selection-incomplete' };
+    }
+    return en ? { kind: 'selected', fr, en } : { kind: 'selected', fr };
   }
 
   if (analyses.length === 0) return { kind: 'none', reason: 'no-analyses' };
-  // A ready candidate must never become the current pair through this
-  // fallback: for a legacy audit without explicit selection, the newest
-  // analyses after a regeneration ARE the candidate's, and the fallback
-  // would silently make the candidate effective before approval (the
-  // exact failure the plan forbids, found live during the operator
-  // review). The partial analyses of a failed run are excluded for the
-  // same reason: one language succeeding while the other fails must not
-  // leave a half-generated pair looking current.
+
   const candidate = selection?.candidate;
   const excluded = new Set<string>();
   if (candidate?.status === 'ready') {
     excluded.add(candidate.pair.frAnalysisId);
-    excluded.add(candidate.pair.enAnalysisId);
+    if (candidate.pair.enAnalysisId) excluded.add(candidate.pair.enAnalysisId);
   }
   if (candidate?.status === 'failed' && candidate.partialPair) {
     if (candidate.partialPair.frAnalysisId) excluded.add(candidate.partialPair.frAnalysisId);
@@ -151,16 +183,25 @@ export function resolveSelectedAnalysisPair<A extends AnalysisRecordLike>(
     excluded.size > 0
       ? analyses.filter((analysis) => !excluded.has(analysis.analysisId))
       : analyses;
-  const legacy = pickLegacyLatestPair(eligible);
+  const legacy = pickLegacyLatestSelection(eligible);
   if (!legacy) return { kind: 'none', reason: 'no-complete-pair' };
-  return { kind: 'legacy-latest', fr: legacy.fr, en: legacy.en };
+  return legacy.en
+    ? { kind: 'legacy-latest', fr: legacy.fr, en: legacy.en }
+    : { kind: 'legacy-latest', fr: legacy.fr };
 }
 
-/** The pair reference a ready candidate or an approval stores. */
-export function analysisPairRefOf<A extends AnalysisRecordLike>(fr: A, en: A): AnalysisPairRef {
+export function analysisSelectionRefOf<A extends AnalysisRecordLike>(
+  fr: A,
+  en?: A,
+): AnalysisSelectionRef {
   return {
     frAnalysisId: fr.analysisId,
-    enAnalysisId: en.analysisId,
+    ...(en !== undefined ? { enAnalysisId: en.analysisId } : {}),
     findingsProvenance: fr.findingsProvenance,
   };
+}
+
+/** @deprecated Historical pair helper for callers explicitly holding both analyses. */
+export function analysisPairRefOf<A extends AnalysisRecordLike>(fr: A, en: A): AnalysisPairRef {
+  return analysisSelectionRefOf(fr, en);
 }

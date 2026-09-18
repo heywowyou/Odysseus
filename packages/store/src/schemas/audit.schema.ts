@@ -445,7 +445,7 @@ const localizedOptionalTextSchema = new Schema(
 const analysisPairRefSchema = new Schema(
   {
     frAnalysisId: { type: String, required: true },
-    enAnalysisId: { type: String, required: true },
+    enAnalysisId: { type: String },
     findingsProvenance: { type: findingsProvenanceSchema, required: true },
   },
   { _id: false },

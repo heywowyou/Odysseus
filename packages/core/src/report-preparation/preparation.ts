@@ -17,54 +17,45 @@ export interface LocalizedOptionalText {
   en?: string;
 }
 
-/** Reference to one persisted immutable French/English analysis pair. */
-export interface AnalysisPairRef {
+/**
+ * Plan 067: one selected writing version. French is canonical and required;
+ * English is an optional attachment generated only on explicit request.
+ *
+ * The field names intentionally stay compatible with the historical
+ * bilingual shape so old stored selections need no migration.
+ */
+export interface AnalysisSelectionRef {
   frAnalysisId: string;
-  enAnalysisId: string;
+  enAnalysisId?: string;
   findingsProvenance: FindingsProvenance;
 }
+
+/** @deprecated Historical name retained for source compatibility. */
+export type AnalysisPairRef = AnalysisSelectionRef;
 
 /**
  * One rejected writing attempt, kept so a failed run says which guards
  * rejected it and when, not only what the last message was.
- *
- * Issue #409: a run that burned three attempts on three different guards left
- * the two earlier reasons nowhere the operator could reach without reading the
- * server's logs, so "which guards reject most often" had no answer but an
- * anecdote. Guard names only: the violating text is model prose about a
- * client's site and belongs in the analysis artifact, not in this aggregate.
- * The human-readable reasons stay on the candidate's `reason`.
  */
 export interface WritingGuardRejection {
-  /** 1-based, matching the attempt numbering the writing pass logs. */
   attempt: number;
   totalAttempts: number;
   guards: readonly string[];
 }
 
-/**
- * Candidate state, discriminated so invalid combinations are
- * unrepresentable. `generating` is deliberately not persistable: it lives
- * only in the interface process while a regeneration request is in flight,
- * so a server restart can never strand a stuck generating candidate.
- * A `failed` candidate may carry the partial analyses its run managed to
- * persist before failing (one language succeeding while the other hits a
- * provider error, for example); the selection fallback must never adopt
- * them, exactly as it must never adopt a ready pair.
- */
 export type WritingCandidateState =
-  | { status: 'ready'; pair: AnalysisPairRef; createdAt: string }
+  | { status: 'ready'; pair: AnalysisSelectionRef; createdAt: string }
   | {
       status: 'failed';
       reason: string;
       createdAt: string;
-      partialPair?: Partial<AnalysisPairRef> | undefined;
+      partialPair?: Partial<AnalysisSelectionRef> | undefined;
       guardRejections?: readonly WritingGuardRejection[] | undefined;
     }
-  | { status: 'selected'; pair: AnalysisPairRef; approvedAt: string };
+  | { status: 'selected'; pair: AnalysisSelectionRef; approvedAt: string };
 
 export interface WritingSelection {
-  selected?: AnalysisPairRef;
+  selected?: AnalysisSelectionRef;
   candidate?: WritingCandidateState;
 }
 
@@ -78,7 +69,6 @@ export interface ReportPreparation {
   updatedAt: string;
 }
 
-/** A fresh aggregate with no operator input and no workflow metadata. */
 export function emptyReportPreparation(): ReportPreparation {
   return {
     updatedAt: new Date().toISOString(),
@@ -87,9 +77,6 @@ export function emptyReportPreparation(): ReportPreparation {
 
 const boundedText = (max: number) => z.string().trim().min(1).max(max);
 
-/** A localized optional text: each language independently present, bounded,
- *  or explicitly cleared with null. A missing language uses safe generic
- *  copy; it is never machine translated or copied from the other language. */
 export const localizedOptionalTextSchema = z
   .object({
     fr: boundedText(MAX_CUSTOM_COVER_QUESTION_LENGTH).nullable().optional(),
@@ -97,11 +84,6 @@ export const localizedOptionalTextSchema = z
   })
   .strict();
 
-/**
- * The bounded operator inputs, and the only body a preparation patch
- * accepts. Unknown keys are rejected (strict) and overlong text is
- * rejected rather than clamped. Absent means unchanged; null means clear.
- */
 export const reportPreparationPatchSchema = z
   .object({
     customCoverQuestion: localizedOptionalTextSchema.nullable().optional(),
@@ -110,12 +92,6 @@ export const reportPreparationPatchSchema = z
 
 export type ReportPreparationPatch = z.infer<typeof reportPreparationPatchSchema>;
 
-/**
- * Parse-and-normalize entry point for transport boundaries. Throws a Zod
- * error on any unknown option, oversized text, or malformed shape; callers
- * map that to their own bad-request response. Trimming is part of parsing,
- * so stored text is always trimmed.
- */
 export function parseReportPreparationPatch(body: unknown): ReportPreparationPatch {
   return reportPreparationPatchSchema.parse(body);
 }
@@ -132,10 +108,6 @@ function applyLocalizedText(
   return { ...(fr !== undefined ? { fr } : {}), ...(en !== undefined ? { en } : {}) };
 }
 
-/**
- * Apply a validated patch to the operator-owned inputs. Workflow metadata
- * (acknowledgement, writing selection) passes through untouched here.
- */
 export function applyPreparationPatch(
   current: ReportPreparation,
   patch: ReportPreparationPatch,

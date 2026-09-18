@@ -1,21 +1,15 @@
 /**
- * Report preparation and writing selection over the `audits` and
- * `analyses` collections (plan 019). Centralized here like every other
- * read/write helper: one place owns the query shape, handlers never issue
- * raw Mongoose updates, and the selection invariants are enforced at this
- * boundary before any atomic selection update.
- *
- * All policy decisions (patch shape, digest, pair compatibility, legacy
- * fallback) live in @odysseus/core's report-preparation module; this file
- * is the I/O boundary that applies them.
+ * Report preparation and writing selection over the audits and analyses
+ * collections. Plan 067 makes French canonical and English optional while
+ * preserving the historical stored field names at this boundary.
  */
-
 import type { Connection } from 'mongoose';
 import {
   applyPreparationPatch,
-  isCompleteCompatiblePair,
+  isCompatibleAnalysisSelection,
+  isEnglishAttachableToFrench,
   resolveSelectedAnalysisPair,
-  type AnalysisPairRef,
+  type AnalysisSelectionRef,
   type ReportPreparation,
   type ReportPreparationPatch,
   type SelectedAnalysisPairResolution,
@@ -24,10 +18,6 @@ import {
 import { createAuditModel, type AuditDocument } from './schemas/audit.schema.js';
 import { createAnalysisModel, type AnalysisDocument } from './schemas/analysis.schema.js';
 
-/** Thrown when a selection workflow step lost its precondition between the
- *  caller's read and this write, or never had it: approving a candidate
- *  that is no longer the ready one, or approving with no candidate at all.
- *  Routes map this to 409, not 500. */
 export class WritingSelectionConflictError extends Error {
   constructor(message: string) {
     super(message);
@@ -35,12 +25,6 @@ export class WritingSelectionConflictError extends Error {
   }
 }
 
-/**
- * A preparation read back from Mongo can lack keys whose subdocuments were
- * empty at write time, and a legacy one can still carry retired inputs.
- * Normalize at this boundary so callers only ever see the current core
- * aggregate shape.
- */
 function withStoredDefaults(raw: ReportPreparation | undefined): ReportPreparation {
   return {
     ...(raw?.customCoverQuestion ? { customCoverQuestion: raw.customCoverQuestion } : {}),
@@ -72,36 +56,30 @@ async function persistPreparation(
     { $set: { reportPreparation: next } },
     { returnDocument: 'after', projection: { reportPreparation: 1 }, runValidators: true },
   ).lean<Pick<AuditDocument, 'reportPreparation'>>();
-  if (!updated) {
-    throw new Error(`odysseus: audit ${auditId} not found`);
-  }
+  if (!updated) throw new Error(`odysseus: audit ${auditId} not found`);
   return withStoredDefaults(updated.reportPreparation ?? next);
 }
 
-/** Apply an already-validated operator patch (core's parse function ran at
- *  the transport boundary). Absent keys are unchanged, null clears;
- *  workflow metadata passes through untouched. */
 export async function patchReportPreparationInputs(
   connection: Connection,
   auditId: string,
   patch: ReportPreparationPatch,
 ): Promise<ReportPreparation> {
   const current = await getReportPreparation(connection, auditId);
-  const next = applyPreparationPatch(current, patch, new Date().toISOString());
-  return persistPreparation(connection, auditId, next);
+  return persistPreparation(
+    connection,
+    auditId,
+    applyPreparationPatch(current, patch, new Date().toISOString()),
+  );
 }
 
-/** Persist a finished French/English pair as the immutable ready candidate.
- *  Never touches `selected`: a candidate cannot become effective before the
- *  operator approves it, and a failed run must leave the current report
- *  alone. */
 export async function recordReadyWritingCandidate(
   connection: Connection,
   auditId: string,
-  pair: AnalysisPairRef,
+  pair: AnalysisSelectionRef,
 ): Promise<ReportPreparation> {
   const current = await getReportPreparation(connection, auditId);
-  const next: ReportPreparation = {
+  return persistPreparation(connection, auditId, {
     ...current,
     writingSelection: {
       ...(current.writingSelection?.selected
@@ -110,15 +88,9 @@ export async function recordReadyWritingCandidate(
       candidate: { status: 'ready', pair, createdAt: new Date().toISOString() },
     },
     updatedAt: new Date().toISOString(),
-  };
-  return persistPreparation(connection, auditId, next);
+  });
 }
 
-/** Persist a failed regeneration as a failed candidate. The previously
- *  selected references survive untouched, so the paid report is unchanged.
- *  When one language succeeded before the failure, its analysis id is
- *  recorded as a partial so the selection fallback can exclude the
- *  half-generated content. */
 export async function recordFailedWritingCandidate(
   connection: Connection,
   auditId: string,
@@ -127,7 +99,7 @@ export async function recordFailedWritingCandidate(
   guardRejections: readonly WritingGuardRejection[] = [],
 ): Promise<ReportPreparation> {
   const current = await getReportPreparation(connection, auditId);
-  const next: ReportPreparation = {
+  return persistPreparation(connection, auditId, {
     ...current,
     writingSelection: {
       ...(current.writingSelection?.selected
@@ -142,18 +114,9 @@ export async function recordFailedWritingCandidate(
       },
     },
     updatedAt: new Date().toISOString(),
-  };
-  return persistPreparation(connection, auditId, next);
+  });
 }
 
-/**
- * Atomically make the current ready candidate the selected pair. Before
- * the update, the referenced analyses are re-read and must form a complete
- * compatible bilingual pair of this audit; the update filter itself
- * requires that exact ready candidate to still be present, so racing an
- * approval against a newer regeneration loses safely (conflict) instead of
- * selecting the wrong pair.
- */
 export async function approveWritingCandidate(
   connection: Connection,
   auditId: string,
@@ -167,31 +130,44 @@ export async function approveWritingCandidate(
   }
 
   const fr = await getAnalysisById(connection, auditId, candidate.pair.frAnalysisId);
-  const en = await getAnalysisById(connection, auditId, candidate.pair.enAnalysisId);
-  if (!isCompleteCompatiblePair(fr ?? undefined, en ?? undefined)) {
+  const en =
+    candidate.pair.enAnalysisId === undefined
+      ? undefined
+      : await getAnalysisById(connection, auditId, candidate.pair.enAnalysisId);
+  if (
+    !isCompatibleAnalysisSelection(fr ?? undefined, en ?? undefined) ||
+    fr?.findingsProvenance.findingsDigest !== candidate.pair.findingsProvenance.findingsDigest ||
+    (candidate.pair.enAnalysisId !== undefined && !en)
+  ) {
     throw new WritingSelectionConflictError(
-      'odysseus: writing candidate no longer refers to a complete compatible bilingual pair',
+      'odysseus: writing candidate no longer refers to a compatible French-led selection',
     );
   }
 
-  const AuditModel = createAuditModel(connection);
-  const updated = await AuditModel.findOneAndUpdate(
-    {
-      auditId,
-      'reportPreparation.writingSelection.candidate.status': 'ready',
-      'reportPreparation.writingSelection.candidate.pair.frAnalysisId': candidate.pair.frAnalysisId,
-      'reportPreparation.writingSelection.candidate.pair.enAnalysisId': candidate.pair.enAnalysisId,
-    },
-    {
-      $set: {
-        'reportPreparation.writingSelection.selected': candidate.pair,
-        'reportPreparation.writingSelection.candidate.status': 'selected',
-        'reportPreparation.writingSelection.candidate.approvedAt': new Date().toISOString(),
-        'reportPreparation.updatedAt': new Date().toISOString(),
+  const filter: Record<string, unknown> = {
+    auditId,
+    'reportPreparation.writingSelection.candidate.status': 'ready',
+    'reportPreparation.writingSelection.candidate.pair.frAnalysisId': candidate.pair.frAnalysisId,
+  };
+  if (candidate.pair.enAnalysisId !== undefined) {
+    filter['reportPreparation.writingSelection.candidate.pair.enAnalysisId'] =
+      candidate.pair.enAnalysisId;
+  }
+
+  const updated = await createAuditModel(connection)
+    .findOneAndUpdate(
+      filter,
+      {
+        $set: {
+          'reportPreparation.writingSelection.selected': candidate.pair,
+          'reportPreparation.writingSelection.candidate.status': 'selected',
+          'reportPreparation.writingSelection.candidate.approvedAt': new Date().toISOString(),
+          'reportPreparation.updatedAt': new Date().toISOString(),
+        },
       },
-    },
-    { returnDocument: 'after', projection: { reportPreparation: 1 } },
-  ).lean<Pick<AuditDocument, 'reportPreparation'>>();
+      { returnDocument: 'after', projection: { reportPreparation: 1 } },
+    )
+    .lean<Pick<AuditDocument, 'reportPreparation'>>();
 
   if (!updated?.reportPreparation) {
     throw new WritingSelectionConflictError(
@@ -201,34 +177,80 @@ export async function approveWritingCandidate(
   return withStoredDefaults(updated.reportPreparation);
 }
 
-/** Exact-ID analysis read, scoped to one audit: a candidate reference from
- *  another audit can never resolve here, even with a valid analysisId. */
+/**
+ * Attach one explicitly requested English analysis to the selected French
+ * analysis. This never changes frAnalysisId. Both analyses must carry the
+ * same findings provenance and the same structureGeneratedAt, so a stale or
+ * independently structured English version cannot be spliced onto French.
+ */
+export async function attachEnglishAnalysisToSelection(
+  connection: Connection,
+  auditId: string,
+  enAnalysisId: string,
+): Promise<ReportPreparation> {
+  const current = await getReportPreparation(connection, auditId);
+  const selected = current.writingSelection?.selected;
+  if (!selected) {
+    throw new WritingSelectionConflictError(
+      'odysseus: a selected French analysis is required before English can be generated',
+    );
+  }
+  const [fr, en] = await Promise.all([
+    getAnalysisById(connection, auditId, selected.frAnalysisId),
+    getAnalysisById(connection, auditId, enAnalysisId),
+  ]);
+  if (!isEnglishAttachableToFrench(fr ?? undefined, en ?? undefined)) {
+    throw new WritingSelectionConflictError(
+      'odysseus: English analysis does not match the selected French findings and structure provenance',
+    );
+  }
+
+  const updated = await createAuditModel(connection)
+    .findOneAndUpdate(
+      {
+        auditId,
+        'reportPreparation.writingSelection.selected.frAnalysisId': selected.frAnalysisId,
+        ...(selected.enAnalysisId !== undefined
+          ? { 'reportPreparation.writingSelection.selected.enAnalysisId': selected.enAnalysisId }
+          : {}),
+      },
+      {
+        $set: {
+          'reportPreparation.writingSelection.selected.enAnalysisId': enAnalysisId,
+          'reportPreparation.updatedAt': new Date().toISOString(),
+        },
+      },
+      { returnDocument: 'after', projection: { reportPreparation: 1 }, runValidators: true },
+    )
+    .lean<Pick<AuditDocument, 'reportPreparation'>>();
+
+  if (!updated?.reportPreparation) {
+    throw new WritingSelectionConflictError(
+      'odysseus: selected French analysis changed while English was being attached',
+    );
+  }
+  return withStoredDefaults(updated.reportPreparation);
+}
+
 export async function getAnalysisById(
   connection: Connection,
   auditId: string,
   analysisId: string,
 ): Promise<AnalysisDocument | null> {
-  const AnalysisModel = createAnalysisModel(connection);
-  return AnalysisModel.findOne({ analysisId, auditId }).lean<AnalysisDocument>();
+  return createAnalysisModel(connection)
+    .findOne({ analysisId, auditId })
+    .lean<AnalysisDocument>();
 }
 
 async function listAnalysesForAudit(
   connection: Connection,
   auditId: string,
 ): Promise<AnalysisDocument[]> {
-  const AnalysisModel = createAnalysisModel(connection);
-  return AnalysisModel.find({ auditId }).lean<AnalysisDocument[]>();
+  return createAnalysisModel(connection).find({ auditId }).lean<AnalysisDocument[]>();
 }
 
 export type SelectedAuditAnalysisPairResolution = SelectedAnalysisPairResolution<AnalysisDocument>;
 
-/**
- * The one selected-pair selector, plan 019 step 2. Resolves the exact
- * selected pair when a selection exists, and otherwise falls back to the
- * latest complete pre-feature pair for legacy audits. Callers (report
- * orchestration, CLI, preview endpoints) must use this, not their own
- * latest-record query.
- */
 export function resolveSelectedAnalysisPairForAudit(
   connection: Connection,
   auditId: string,

@@ -24,20 +24,30 @@ export async function getLatestReportApproval(
     .lean<ReportApprovalDocument>();
 }
 
+/**
+ * French approval is sufficient for the canonical report. When the approval
+ * also contains English, that attachment must match too. Historical callers
+ * can keep using the old function name.
+ */
 export function approvalMatchesReportPair(
   approval: ReportApprovalDocument | null,
   reports: {
     fr: { reportId?: string; pdfDigest?: string };
-    en: { reportId?: string; pdfDigest?: string };
+    en?: { reportId?: string; pdfDigest?: string };
   },
 ): boolean {
+  if (
+    !approval ||
+    !reports.fr.reportId ||
+    approval.fr.reportId !== reports.fr.reportId ||
+    approval.fr.pdfDigest !== reports.fr.pdfDigest
+  ) {
+    return false;
+  }
+  if (approval.en === undefined) return true;
   return Boolean(
-    approval &&
-    reports.fr.reportId &&
-    reports.en.reportId &&
-    approval.fr.reportId === reports.fr.reportId &&
-    approval.fr.pdfDigest === reports.fr.pdfDigest &&
-    approval.en.reportId === reports.en.reportId &&
-    approval.en.pdfDigest === reports.en.pdfDigest,
+    reports.en?.reportId &&
+      approval.en.reportId === reports.en.reportId &&
+      approval.en.pdfDigest === reports.en.pdfDigest,
   );
 }

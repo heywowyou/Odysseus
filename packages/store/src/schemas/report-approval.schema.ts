@@ -8,8 +8,10 @@ export interface ApprovedReportRef {
 export interface ReportApprovalDocumentFields {
   approvalId: string;
   auditId: string;
+  /** French is the canonical deliverable. */
   fr: ApprovedReportRef;
-  en: ApprovedReportRef;
+  /** Optional English attachment, Plan 067. Legacy bilingual rows still populate it. */
+  en?: ApprovedReportRef;
   approvedAt: Date;
 }
 
@@ -28,7 +30,7 @@ const reportApprovalSchema = new Schema<ReportApprovalDocument>(
     approvalId: { type: String, required: true },
     auditId: { type: String, required: true },
     fr: { type: reportRefSchema, required: true },
-    en: { type: reportRefSchema, required: true },
+    en: { type: reportRefSchema },
     approvedAt: { type: Date, required: true },
   },
   { collection: 'reportApprovals' },
