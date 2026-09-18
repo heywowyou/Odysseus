@@ -1165,54 +1165,27 @@ environment, including every test run, is unaffected until a real sink is
 configured; no real sink exists yet, so today this only feeds
 `RecordingLlmTelemetrySink` in tests.
 
-**Decision: metadata-only telemetry, not Langfuse, for now.** Langfuse's
-incremental value over this metadata is prompt/response-level tracing:
-seeing the actual system prompt, the actual model output, and diffing them
-across runs. That is exactly the content sections 1, 4, and 6-9 above treat
-as needing to reach nowhere outside the retry loop and the on-disk
-`analyses/*.json` artifacts a client paid for - a hosted third-party tracer
-is a new place client site content and model output would leave this
-codebase, which none of the guards, redaction, or provenance rules above
-were designed to flow through. The questions this package actually needed
-answered while building the two-pass split and its guards (is a pass
-retrying, how often, on which failure, does a schema-shape change move
-attempt counts) are answered by attempt counts, durations, and
-`schemaValidFirstAttempt` alone, without ever holding a prompt or a
-finding. Langfuse's other advantages - cost dashboards, prompt versioning
-UI, dataset-based eval runs - are not problems this package currently has:
-`docs/archive/report-v2-refactor.md` and the trade-off log already carry
-prompt-change history and measured before/after evidence by hand, and the
-few-dozen-analyses-per-week volume here does not need a dashboard to stay
-legible.
+**Decision amended 2026-09-18: adopt Langfuse only as a metadata-only
+OTLP sink.** The original privacy objection remains binding: Odysseus does not
+use Langfuse's OpenAI wrapper or automatic prompt/response instrumentation.
+`LangfuseLlmTelemetrySink` serializes only the already-redacted closed
+`LlmCallTelemetryEvent` fields to Langfuse's OTLP/HTTP endpoint and never
+includes prompts, findings, URLs, site context, model output, or report prose.
 
-**Operating and privacy cost, if Langfuse were adopted instead:** a new
-hosted dependency in the call path of every structure/writing pass (self-
-hosting Langfuse was not evaluated as it trades the privacy cost for an
-operator-run service to maintain, a cost this single-operator project does
-not currently carry for anything else); prompt and response payloads -
-client site findings, business context, generated report prose - leaving
-the process boundary to a third party, which is a new fact for
-`docs/rules/obligation-basis.md`'s and `docs/rules/operator-obligations.md`'s
-client-facing claims to account for; and a second telemetry contract to keep
-redacted and reasoned about alongside the one this section already owns.
-None of that cost is justified by a need this package has actually hit.
+The sink is explicit opt-in. `LANGFUSE_BASE_URL`,
+`LANGFUSE_PUBLIC_KEY`, and `LANGFUSE_SECRET_KEY` must all be present or
+telemetry remains `NullLlmTelemetrySink`; partial configuration is a startup
+error rather than an accidental region/default choice. The recommended hosted
+EU endpoint is `https://cloud.langfuse.com`.
 
-**Production export stays off**, same posture as the job-telemetry pilot:
-no sink beyond `NullLlmTelemetrySink` and `RecordingLlmTelemetrySink` is
-wired to a live endpoint. Revisit only if a real, observed need appears for
-prompt/response-level tracing specifically (not just call-count metrics,
-which this section's events already cover) and only with an explicit data
-policy - client site content leaving this codebase is a materially
-different decision than the job-queue pilot's coarse stage names, and needs
-its own review of what a hosted tracer would receive, where it is hosted,
-and who can read it, before any DSN or API key is configured.
+Exporter failure is swallowed after the metadata event has been built:
+Langfuse is diagnostic, never load-bearing. The implementation uses the
+supported OTLP/HTTP trace endpoint with ingestion version 4 rather than the
+deprecated legacy ingestion API. Tests assert that the emitted payload contains
+only metadata and that exporter failure cannot fail analysis.
 
-**Extending this telemetry.** A new model-calling pass reports by calling
-`captureLlmCallTelemetry` at its own success-return and exhausted-retries
-exit points, adding its name to `LlmPass` (`events.ts`) and its allowed
-fields to `ALLOWED_KEYS` if it captures something the two existing passes
-do not. `analyzeReview` and `analyzeCorrectionReview` (sections 12, 12a)
-are advisory, single-attempt, never-blocking passes with materially
-different failure semantics (a `skipped` outcome, not a retry-then-throw);
-they were deliberately left uninstrumented rather than forced into a
-retry-shaped event they do not have.
+This gives the useful Langfuse cost/retry/model observability surface without
+creating a second store for client content. Any future proposal to export
+prompt/response content, traces containing website text, or report prose
+requires a separate explicit privacy decision and may not reuse this opt-in as
+authorization.
