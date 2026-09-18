@@ -12,8 +12,15 @@
 >
 > Delete this file when Plan 059 reaches DONE.
 
-**Written 2026-09-18, updated 2026-09-18 after the step 10–14, 18, 21, 22, 26,
-27, 35, 37, 38 and 39 implementation wave.** Original baseline commit:
+> **FROZEN 2026-09-19 by operator decision, like plans 061–066.** All
+> buildable work is on `main`; nothing is in progress. To thaw: the remaining
+> work is itemized in §6.1 (container slices 1–3 and 5), §5.1 (corpus
+> evaluation — the artifacts are now on this machine), and criterion 44
+> (rehearsal needs a fresh in-session authorization).
+
+**Written 2026-09-18, updated 2026-09-19 at freeze.** The step 10–14, 18, 21,
+22, 26, 27, 35, 37, 38 and 39 implementation wave plus the deploy-stack slice
+of §4.1 all landed before the freeze. Original baseline commit:
 `f02649c9`. All work lands directly on `main` (operator decision, 2026-09-18);
 there is no Plan 059 branch. A parallel operator session also committed Plan
 058/060 work to `main` on the same day; the histories interleave.
@@ -186,6 +193,14 @@ preflight to make a deploy green.
 survival, failure dispositions, isolation wiring, compose posture, and a
 five-slice offline-testable rollout. Build from it; do not re-derive.
 
+**Slice 4 landed at freeze** (`b5406af9`, gated off by default):
+`deploy/compose.yaml`'s `scan` service, smoke overlay, `compose.test.sh` in
+`test:deploy`, runbook §7C, trade-offs entry 101. Slices 1–3 (the acquisition
+seam, the `scan-service` command/channel, the preflight wiring) are NOT
+built — the compose block is inert until an operator sets
+`ODYSSEUS_SCAN_SERVICE_URL`, and the `scan-service` CLI command does not
+exist yet. Do not enable the flag before slices 1–3 land.
+
 ### 4.2 Pacing
 
 Done. Every request path goes through `HostRequestScheduler` and the floor is
@@ -235,12 +250,16 @@ editing `normalize/` and leaving a suite that cannot go green here.
 
 ## 5. Where you are blocked — stop, do not improvise
 
-### 5.1 No real-scan artifacts on this machine
+### 5.1 Corpus artifacts are on this machine; the evaluation never ran
 
 Plan §19 and done criterion 43 require rerunning a saved heterogeneous corpus
-of at least 12 audits, Point France mandatory when available. Those artifacts
-are not present locally, and the old Scaleway VPS artifacts were deliberately
-not migrated before decommission. `pnpm run fixtures:refresh` cannot run.
+of at least 12 audits, Point France mandatory when available. The operator
+imported the saved VPS scans on 2026-09-18: ~25 real audits under the default
+artifacts root (`artifacts/<host>/<timestamp>/`), including
+`www.hotelpointfrance.com` (446 pages, the largest) and five historical
+`www.villasfoch.fr` scans. What remains is building the offline corpus
+evaluation runner, deriving the step-41 tolerances from its real Lighthouse
+runs, and the final clean rerun — the work was frozen before it started.
 
 Consequences: plan steps 40–43 cannot complete, tolerances stay provisional
 (§4.3.1), and any change to `packages/core/src/normalize/` will fail the
@@ -265,8 +284,11 @@ named `www.villasfoch.fr` on 2026-09-17/18. **That authorization expired with
 that session.** CLAUDE.md is explicit: a live third-party browser audit is an
 external operation requiring current intent for that named site.
 
-So: **do not run a live scan.** Complete every other criterion, then report
-that 44 awaits the operator re-confirming `www.villasfoch.fr`.
+A clear for the rehearsal was given on 2026-09-18 but the session froze the
+plan (operator order) before the container slices 1–3 existed, so no live
+scan was ever run. **A new in-session authorization is required at thaw**, and
+the rehearsal still waits on §4.1 slices 1–3: without the container every real
+audit is truthfully `environment-unapproved` and 058 refuses it.
 
 ---
 
