@@ -30,7 +30,7 @@
      legible. */
   @top-right {
     content: 'Page ' counter(page) ' / ' counter(pages);
-    font-family: 'Avenir Next', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+    font-family: 'Avenir Next', 'Odysseus Mono', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
     font-size: 10px;
     letter-spacing: 0.02em;
     text-transform: uppercase;
@@ -46,7 +46,7 @@
      the URL that follows it. */
   @bottom-center {
     content: string(footer-text);
-    font-family: 'Avenir Next', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+    font-family: 'Avenir Next', 'Odysseus Mono', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
     font-size: 9px;
     letter-spacing: 0.02em;
     color: #75798c;
@@ -512,7 +512,7 @@ h5 {
 .mono,
 .selector-cell,
 .url-cell {
-  font-family: 'Odysseus Mono', ui-monospace, monospace;
+  font-family: var(--font-mono);
   overflow-wrap: anywhere;
   /* Item 0.4: `word-break: break-word` in addition to `overflow-wrap:
      anywhere` was reported as dropping/merging characters at soft-wrap

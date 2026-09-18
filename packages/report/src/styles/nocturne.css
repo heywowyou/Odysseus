@@ -109,9 +109,13 @@
   --color-mark-evidence: var(--color-accent); /* site --mark-evidence */
   --color-signal: #43aa8b; /* site --signal */
 
-  --font-heading: 'Avenir Next', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+  /* Each stack names both embedded faces before any host font, so a glyph
+     one face lacks is printed from the other instead of from whatever the
+     rendering host installed (the PDF file check refuses host fonts). */
+  --font-heading: 'Avenir Next', 'Odysseus Mono', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
   --font-heading-weight: 600; /* the site's heading weight */
-  --font-body: 'Avenir Next', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+  --font-body: 'Avenir Next', 'Odysseus Mono', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+  --font-mono: 'Odysseus Mono', 'Avenir Next', ui-monospace, monospace;
 
   --space-1: 2.8px;
   --space-2: 5.6px;
@@ -144,6 +148,14 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-body);
+}
+/* The user-agent stylesheet sets these to the generic `monospace`, which
+   is the host's font: a CJK face in the production container. */
+pre,
+code,
+kbd,
+samp {
+  font-family: var(--font-mono);
 }
 h1,
 h2,
