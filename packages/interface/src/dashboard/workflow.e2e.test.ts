@@ -15,6 +15,8 @@ type WorkflowStage = 'added' | 'audit' | 'draft' | 'won';
 interface WorkflowFixture {
   stage: WorkflowStage;
   directoryAdded: boolean;
+  /** The qualifying audit's findings came from older normalization code. */
+  olderDataVersion?: boolean;
   calls: { method: string; url: string }[];
   scanBodies: unknown[];
 }
@@ -86,6 +88,7 @@ function prospect(fixture: WorkflowFixture): Record<string, unknown> {
               },
               auditState: 'qualifying',
               qualifyingAuditId: 'audit-1',
+              ...(fixture.olderDataVersion ? { dataVersionState: 'older' } : {}),
             }
           : fixture.stage === 'draft'
             ? {
@@ -372,6 +375,26 @@ describe('dashboard prospect workflow', () => {
       fixture.calls.some(({ method, url }) => method === 'POST' && url.endsWith('/outcome')),
     ).toBe(true);
     expect(container.textContent).not.toContain('Rédiger le premier email');
+
+    root.unmount();
+  });
+
+  it('keeps an audit from older code usable: it warns, offers the first email and never rescans', async () => {
+    fixture.stage = 'audit';
+    fixture.directoryAdded = true;
+    fixture.olderDataVersion = true;
+    const { container, root } = await renderApp('/prospects/prospect-1');
+
+    expect(container.textContent).toContain(
+      'Ce scan a été produit avec une version antérieure des données d’Odysseus.',
+    );
+    await click(exactElement(container, 'button', 'Rédiger le premier email'));
+    await click(exactElement(container, 'a', 'Relire le brouillon'));
+    expect(container.textContent).toContain('Une question pour votre établissement');
+    expect(fixture.calls.some(({ method, url }) => method === 'POST' && url === '/api/scans')).toBe(
+      false,
+    );
+    expect(fixture.scanBodies).toEqual([]);
 
     root.unmount();
   });

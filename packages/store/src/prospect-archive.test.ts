@@ -16,6 +16,7 @@ import {
   upsertDirectoryEntries,
 } from './prospect-hub.js';
 import { createAuditModel } from './schemas/audit.schema.js';
+import { createProspectHubModel } from './schemas/prospect-hub.schema.js';
 import { createDirectoryEntryModel } from './schemas/directory-entry.schema.js';
 import { createFindingModel } from './schemas/finding.schema.js';
 import { createJobModel } from './schemas/job.schema.js';
@@ -109,6 +110,82 @@ describe.skipIf(!mongoAvailable)('prospect archive lifecycle', () => {
     expect(events.map((event) => event.type)).toEqual(
       expect.arrayContaining(['prospect-archived', 'prospect-restored']),
     );
+  });
+
+  // The store primitive alone. The operator's Archive action also purges the
+  // prospect's audits (issue #381); interface/src/routes/
+  // prospect-archive.integration.test.ts proves that route-level round trip.
+  it('restores the exact prospect record and leaves every attached record byte-identical', async () => {
+    const prospect = await createProspectHub(connection!, {
+      sector: 'hotel',
+      name: 'Hôtel identité',
+      websites: [
+        {
+          url: 'https://archive-identity.example/',
+          registrableDomain: 'archive-identity.example',
+          kind: 'own',
+          primary: true,
+        },
+      ],
+      address: '3 rue du Port',
+      postcode: '17000',
+      commune: 'La Rochelle',
+      phone: '+33 5 46 00 00 00',
+      emails: [{ address: 'direction@archive-identity.example', origin: 'operator' }],
+      siren: '552100554',
+      legalName: 'SAS Identité Hôtelière',
+      tradingName: 'Hôtel du Port',
+      notes: 'Préfère un appel le matin.',
+      status: 'contacted',
+    });
+    const { prospectId } = prospect;
+    const auditId = randomUUID();
+    const attached = [
+      [createAuditModel(connection!), { auditId, prospectId, siteUrl: 'https://x.example/' }],
+      [createFindingModel(connection!), { auditId, findingId: randomUUID(), severity: 'serious' }],
+      [createReportModel(connection!), { auditId, reportId: randomUUID(), language: 'fr' }],
+      [createReportApprovalModel(connection!), { auditId, approvalId: randomUUID() }],
+      [createOutreachThreadModel(connection!), { threadId: randomUUID(), prospectId }],
+      [createJobModel(connection!), { jobId: randomUUID(), auditId, status: 'complete' }],
+    ] as const;
+    for (const [model, doc] of attached) await model.collection.insertOne({ ...doc });
+    const snapshotAttached = () =>
+      Promise.all(
+        attached.map(([model, doc]) =>
+          model.collection
+            .find('prospectId' in doc && !('auditId' in doc) ? { prospectId } : { auditId })
+            .sort({ _id: 1 })
+            .toArray(),
+        ),
+      );
+    const rawProspect = () =>
+      createProspectHubModel(connection!).collection.findOne({ prospectId });
+
+    const beforeProspect = await rawProspect();
+    const beforeAttached = await snapshotAttached();
+    const beforeEvents = await listProspectEvents(connection!, prospectId);
+
+    await archiveProspect(connection!, prospectId);
+    await restoreProspect(connection!, prospectId);
+
+    const afterProspect = await rawProspect();
+    const { updatedAt: _b1, lastActivityAt: _b2, ...stableBefore } = beforeProspect!;
+    const { updatedAt: _a1, lastActivityAt: _a2, ...stableAfter } = afterProspect!;
+    expect(stableAfter).toStrictEqual(stableBefore);
+    expect(afterProspect).not.toHaveProperty('archivedAt');
+    expect(await snapshotAttached()).toStrictEqual(beforeAttached);
+
+    const afterEvents = await listProspectEvents(connection!, prospectId);
+    const beforeIds = beforeEvents.map((event) => event.eventId);
+    expect(afterEvents.filter((event) => beforeIds.includes(event.eventId))).toStrictEqual(
+      beforeEvents,
+    );
+    expect(
+      afterEvents
+        .filter((event) => !beforeIds.includes(event.eventId))
+        .map((event) => event.type)
+        .sort(),
+    ).toEqual(['prospect-archived', 'prospect-restored']);
   });
 
   it('is idempotent: a repeated archive or restore changes nothing and records no event', async () => {

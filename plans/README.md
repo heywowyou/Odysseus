@@ -116,7 +116,7 @@ The canonical sources for this behavior are `docs/product/odysseus-project-brief
 | [047](archive/047-prospect-hub.md) | Make the prospect the durable, editable central hub | P1 | L | none | DONE (2026-09-15) |
 | [048](archive/048-dashboard-workflow-consolidation.md) | Reduce the dashboard to one operator workflow | P1 | L | 047 | DONE (2026-09-15) |
 | [049](archive/049-simplified-workflow-behaviorally-truthful.md) | Make the simplified workflow behaviorally truthful | P1 | L | 048 | DONE (2026-09-15) |
-| [050](050-reusable-scans-durable-prospects.md) | Make scans reusable and prospects durable: two scan intents, advisory data version, archive instead of ordinary deletion | P1 | XL | 049 | IMPLEMENTED; CLOSURE PROOF REOPENED (2026-09-18) |
+| [050](050-reusable-scans-durable-prospects.md) | Make scans reusable and prospects durable: two scan intents, advisory data version, archive instead of ordinary deletion | P1 | XL | 049 | IMPLEMENTED — awaiting: post-deploy acceptance rehearsal A–C (closure ledger complete 2026-09-18) |
 | [051](archive/051-findings-delta-reaudit.md) | Add the findings delta to the re-audit report | P2 | L | 050 | DONE (2026-09-18) |
 | [052](archive/052-crawler-honours-its-published-identity.md) | Make the crawler obey robots groups for its published bot name and send its user agent on every request | P1 | M | none | DONE (2026-09-17) |
 | [053](archive/053-opt-out-reach-survives-prospect-status.md) | Keep a public opt-out from widening into domain-wide suppression through the prospect status | P1 | S | none | DONE (2026-09-17) |

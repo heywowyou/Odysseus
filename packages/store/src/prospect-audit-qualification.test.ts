@@ -63,6 +63,9 @@ describe('prospect audit qualification', () => {
       ]),
     ).toBeUndefined();
     expect(
+      classifyLegacyAuditScanIntent('audit-1', [{ type: 'prospecting', auditId: 'audit-1' }]),
+    ).toBeUndefined();
+    expect(
       classifyLegacyAuditScanIntent('audit-1', [
         { type: 'full-audit', auditId: 'audit-1' },
         { type: 'outreach-full-scan', auditId: 'audit-1' },
