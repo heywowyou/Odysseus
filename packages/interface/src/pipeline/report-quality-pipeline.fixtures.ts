@@ -23,8 +23,8 @@ import type { ArtifactStore } from '../artifacts/artifact-store.js';
  * so every string below is deliberately digit-free and hedged.
  */
 
-export const AUDIT_ID = 'audit-058-pipeline-test';
-export const SITE_URL = 'https://hotel-exemple.fr/';
+const AUDIT_ID = 'audit-058-pipeline-test';
+const SITE_URL = 'https://hotel-exemple.fr/';
 export const PROJECT_KEY = 'priorites';
 
 export const SAFE_PROSE: Record<'fr' | 'en', string> = {
@@ -32,7 +32,7 @@ export const SAFE_PROSE: Record<'fr' | 'en', string> = {
   en: 'Several serious obstacles require prompt corrections on this site.',
 };
 
-export const SAFE_PATCH_TEXT: Record<'fr' | 'en', string> = {
+const SAFE_PATCH_TEXT: Record<'fr' | 'en', string> = {
   fr: 'Un titre corrigé et aligné sur le registre de faits.',
   en: 'A corrected heading aligned with the fact registry.',
 };
@@ -84,9 +84,7 @@ export function manifestFixture(): AuditManifest {
   } as unknown as AuditManifest;
 }
 
-export function approvalFixture(
-  overrides: Partial<ApprovedAuditEvidence> = {},
-): ApprovedAuditEvidence {
+function approvalFixture(overrides: Partial<ApprovedAuditEvidence> = {}): ApprovedAuditEvidence {
   return {
     auditId: AUDIT_ID,
     evidenceEpoch: 1,
@@ -141,7 +139,7 @@ export function seniorPlanOutputFor(findings: Finding[]) {
 
 /** Raw writer output whose project keys match seniorPlanOutputFor above and
  *  whose only fact binding is a registry fact (audit.findingCount). */
-export function writerOutputFor(language: 'fr' | 'en'): QualityWriterOutput {
+function writerOutputFor(language: 'fr' | 'en'): QualityWriterOutput {
   const text = () => ({ segments: [{ kind: 'text' as const, text: SAFE_PROSE[language] }] });
   return {
     executiveSummary: text(),
@@ -185,7 +183,7 @@ export type AdjudicationStatus = 'accepted' | 'rejected' | 'unsure';
 
 export interface LlmCallInput {
   role: ReportQualityRole;
-  userPayload: any;
+  userPayload: unknown;
   jsonSchema: Record<string, unknown>;
   imagePaths?: readonly string[];
 }
@@ -257,27 +255,30 @@ export function makeLlmScript(options: LlmScriptOptions): LlmScriptHandler {
         return options.writers?.en ?? writerOutputFor('en');
       case 'final-document-arbiter':
         return options.arbiter ?? { approved: true, issues: [] };
-      case 'issue-adjudicator':
+      case 'issue-adjudicator': {
+        const payload = input.userPayload as { issues: Array<{ issueId: string; kind: string }> };
         return {
-          decisions: (input.userPayload.issues as Array<{ issueId: string; kind: string }>).map(
-            (issue) => ({
-              issueId: issue.issueId,
-              status: adjudicate(issue),
-              reason: 'Adjudicated against the supplied evidence.',
-            }),
-          ),
+          decisions: payload.issues.map((issue) => ({
+            issueId: issue.issueId,
+            status: adjudicate(issue),
+            reason: 'Adjudicated against the supplied evidence.',
+          })),
         };
+      }
       case 'editor': {
         if (typeof options.editor === 'function') return options.editor(input);
         if (options.editor) return options.editor;
-        const language: 'fr' | 'en' = input.userPayload.language;
+        const payload = input.userPayload as {
+          language: 'fr' | 'en';
+          acceptedIssues: Array<{ issueId: string; target: string }>;
+        };
         return {
-          patches: (
-            input.userPayload.acceptedIssues as Array<{ issueId: string; target: string }>
-          ).map((issue) => ({
+          patches: payload.acceptedIssues.map((issue) => ({
             issueId: issue.issueId,
             target: issue.target,
-            replacement: { segments: [{ kind: 'text' as const, text: SAFE_PATCH_TEXT[language] }] },
+            replacement: {
+              segments: [{ kind: 'text' as const, text: SAFE_PATCH_TEXT[payload.language] }],
+            },
           })),
         };
       }

@@ -79,8 +79,6 @@ function writerFixture(): QualityWriterOutput {
   };
 }
 
-const EDITOR_PATCH_TEXT = 'Un constat reformulé sans chiffre ni promesse.';
-
 describe('validateQualityWriterOutput', () => {
   it('accepts a writer whose projects cover the senior plan exactly and whose fact bindings resolve in the registry', () => {
     const writer = writerFixture();
@@ -168,7 +166,7 @@ describe('resolveQualityDraft', () => {
       ],
     };
 
-    const { analysis, draftDigest } = resolveQualityDraft({
+    const { analysis } = resolveQualityDraft({
       language: 'fr',
       writer,
       plan: planFixture(),

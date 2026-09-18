@@ -53,7 +53,7 @@ export interface ReportQualityCorpusManifest {
   entries: ReportQualityCorpusEntry[];
 }
 
-export const reportQualityCorpusEntrySchema = z
+const reportQualityCorpusEntrySchema = z
   .object({
     entryId: z
       .string()
@@ -71,7 +71,7 @@ export const reportQualityCorpusEntrySchema = z
   })
   .strict();
 
-export const reportQualityCorpusManifestSchema = z
+const reportQualityCorpusManifestSchema = z
   .object({
     corpusId: z.string().min(1),
     schemaVersion: z.number().int().min(1),
@@ -87,7 +87,7 @@ const outcomeCandidateSchema = z.object({
   pageCount: z.number().int().min(1),
 });
 
-export const reportQualityCorpusOutcomeSchema = z
+const reportQualityCorpusOutcomeSchema = z
   .object({
     schemaVersion: z.literal(1),
     corpusId: z.string().min(1),

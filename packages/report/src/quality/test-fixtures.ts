@@ -24,8 +24,7 @@ import { FINDINGS_SCHEMA_VERSION } from '@odysseus/core';
 import { reportQualityDigest } from './digest.js';
 
 const asDigest = (hex: string): Sha256Digest => `sha256:${hex}`;
-export const EVIDENCE_SNAPSHOT_HEX = 'a'.repeat(64);
-export const OTHER_DIGEST: Sha256Digest = asDigest('b'.repeat(64));
+const EVIDENCE_SNAPSHOT_HEX = 'a'.repeat(64);
 
 export interface FindingSpec {
   findingId: string;
@@ -77,7 +76,7 @@ export interface PayloadOptions {
   mandatoryDisclosures?: EvidenceLimitation[];
 }
 
-export function buildApproval(
+function buildApproval(
   auditId: string,
   overrides?: Partial<Omit<ApprovedAuditEvidence, 'auditId'>>,
 ): ApprovedAuditEvidence {

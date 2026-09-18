@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Connection } from 'mongoose';
-import {
-  type ReportBundleCandidate,
-  type ReportQualityModelCall,
-  type ReviewIssue,
-  type Sha256Digest,
+import type {
+  ReportBundleCandidate,
+  ReportQualityModelCall,
+  ReviewIssue,
+  Sha256Digest,
 } from '@odysseus/core';
 import { getReportModelProfile, getReportModelProfileMatrixDigest } from '@odysseus/llm';
 import { bytesDigest, reportQualityDigest } from '@odysseus/report';
@@ -293,10 +293,13 @@ function modelCalls(): ReportQualityModelCall[] {
   return storeState.runs.flatMap((run) => run.modelCalls);
 }
 
-async function artifactObject(store: InMemoryArtifactStore, kind: string): Promise<any> {
+async function artifactObject<T = Record<string, unknown>>(
+  store: InMemoryArtifactStore,
+  kind: string,
+): Promise<T> {
   const [key] = await store.list(`report-quality/objects/${kind}/`);
   expect(key, `expected a stored ${kind} artifact`).toBeDefined();
-  return JSON.parse((await store.get(key!))!.toString('utf8'));
+  return JSON.parse((await store.get(key!))!.toString('utf8')) as T;
 }
 
 beforeEach(() => {
@@ -431,7 +434,9 @@ describe('runReportQualityPipeline (Plan 058 fail-closed behavior)', () => {
         snapshotDigest,
       );
     }
-    const seniorPlanArtifact = await artifactObject(store, 'senior-plan');
+    const seniorPlanArtifact = await artifactObject<{
+      plan: { inputSnapshotDigest: Sha256Digest };
+    }>(store, 'senior-plan');
     expect(seniorPlanArtifact.plan.inputSnapshotDigest).toBe(snapshotDigest);
 
     // Changed evidence cannot masquerade as the same snapshot: a rerun with

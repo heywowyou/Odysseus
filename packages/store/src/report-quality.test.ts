@@ -30,7 +30,6 @@ import {
   StaleReportQualityRunError,
 } from './report-quality.js';
 import {
-  createActiveReportBundleModel,
   createReportQualityLeaseModel,
   createReportQualityRunModel,
 } from './schemas/report-quality.schema.js';
