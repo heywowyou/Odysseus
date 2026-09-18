@@ -25,6 +25,7 @@ import { CHECK_SCOPE_REGISTRY } from '../check-scope-coverage.js';
 import { assembleAuditEvidenceGraph, type AuditEvidenceGraph } from '../evidence-graph.js';
 import { BASELINE_DESKTOP_VIEWPORT } from '../evidence-surfaces.js';
 import type { NetworkTargetPolicy } from '../network-target-policy.js';
+import { assessTemporalCoherence } from '../temporal-anchors.js';
 import { readPersistedEvidenceInputs } from './acquisition-attempts-io.js';
 import { writeAuditEvidenceGraph } from './evidence-graph-io.js';
 import { readOdysseusBuildId } from './manifest.js';
@@ -116,9 +117,15 @@ export function runEvidenceGraphStage(
     environment,
     isolation,
     configDigest: canonicalDigest(input.config),
-    // No structural anchors are captured yet (plan step 21), so coherence
-    // cannot be shown and the assessment blocks on it.
-    temporalCoherence: { status: 'unknown', reasonCode: 'temporal-anchors-not-captured' },
+    temporalCoherence: assessTemporalCoherence({
+      // The crawl's own identity for the start page, which the probes use.
+      startUrl:
+        persisted.inventory.candidates.find((candidate) =>
+          candidate.discoveries.some((discovery) => discovery.source === 'start'),
+        )?.url ?? persisted.scope.startUrl,
+      anchors: persisted.temporalAnchors,
+      pageAnchors: persisted.pageAnchors,
+    }),
     assessedAt: input.assessedAt.toISOString(),
     systemVersion: readOdysseusBuildId(),
   });

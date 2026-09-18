@@ -14,8 +14,8 @@
  * quality assessment references the audit root; approval references all
  * three. Approval exists only when the assessment is reportable, and every
  * blocking condition in section 21 that this build can detect keeps it
- * absent. A condition this build cannot yet measure (temporal coherence
- * without anchors) is not assumed satisfied: its absence is itself blocking.
+ * absent. A condition that was not measured (temporal coherence without its
+ * anchors) is not assumed satisfied: its absence is itself blocking.
  */
 import {
   buildFindingsProvenance,
@@ -794,7 +794,7 @@ export function assembleAuditEvidenceGraph(input: AuditEvidenceGraphInput): Audi
       code: 'temporal-coherence-unverified',
       severity: 'blocking',
       resolution: 'system',
-      summary: 'This build cannot yet prove that all evidence comes from one site version.',
+      summary: 'The audit cannot show that all of its evidence comes from one site version.',
       evidenceRefs: [input.temporalCoherence.reasonCode],
     });
   }

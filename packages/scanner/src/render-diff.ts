@@ -85,6 +85,9 @@ export interface RenderDiffOptions {
   /** Plan 059: receives the rendered page's readiness, observed after the
    *  settle wait and before any check reads or mutates the page. */
   onReadinessObserved?: (observation: RenderedReadinessObservation) => void;
+  /** Plan 059: receives the served markup the raw pass read, for the page's
+   *  structural temporal anchor. */
+  onRawDocument?: (html: string) => void;
 }
 
 /**
@@ -145,6 +148,7 @@ export async function renderDiff(
     const rawHtml = await rawPage.content();
     rawTextLength = extractTextFromHtml(rawHtml).length;
     rawDocument = analyzeRawDocument(rawHtml);
+    options.onRawDocument?.(rawHtml);
 
     if (options.beforeRenderedNavigation !== undefined) {
       await options.beforeRenderedNavigation();

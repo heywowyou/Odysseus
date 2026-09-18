@@ -54,6 +54,7 @@ import {
 import { isConfirmedListing } from './full-audit-plan.js';
 import type { ScanToolIdentity } from './artifacts/crawl-checkpoint-io.js';
 import { buildRobotsPolicySnapshot, type RobotsPolicySnapshot } from './robots-policy-snapshot.js';
+import { captureStructuralAnchor, type StructuralAnchor } from './temporal-anchors.js';
 import {
   InventoryLedger,
   type InventoryDiscoverySource,
@@ -126,6 +127,11 @@ export interface CrawlOptions {
   evidenceEpoch?: number;
   /** Frozen AuditScopeSnapshot digest. Enables the private inventory ledger. */
   scopeDigest?: string;
+  /** Plan 059 section 13: probe the start page twice, back to back, before
+   *  the first crawl navigation, as the opening anchors of the audit's
+   *  temporal-coherence window. Only a full audit with a shared scheduler
+   *  asks for them; the probes are paced and robots-checked like any page. */
+  captureStartAnchors?: boolean;
 }
 
 /** Per-iteration loop state the resumable crawl must survive a process
@@ -141,6 +147,9 @@ export interface CrawlFrontierSnapshot {
   robotsPolicyChain?: RobotsPolicySnapshot[];
   /** Private Plan 059 inventory state, checkpointed with the crawl frontier. */
   inventoryLedger?: InventoryLedgerSnapshot;
+  /** Plan 059 opening temporal anchors, kept so a resumed crawl's window
+   *  still starts where the interrupted attempt's did. */
+  startAnchors?: StructuralAnchor[];
   supplementalPhaseStarted: boolean;
   queue: QueueItem[];
   visited: string[];
@@ -236,6 +245,9 @@ export interface CrawlResult {
   robotsPolicyChain?: RobotsPolicySnapshot[];
   /** Private Plan 059 inventory; omitted for callers that did not supply scope. */
   inventoryLedger?: InventoryLedgerSnapshot;
+  /** Plan 059 opening temporal anchors of the start page, when requested and
+   *  captured. Absent means the coherence window has no start. */
+  startAnchors?: StructuralAnchor[];
   /** The stricter-of-config-and-robots delay actually used between
    *  requests, so later stages (the scanner passes) can reuse the exact
    *  same politeness pacing without re-fetching robots.txt. */
@@ -504,6 +516,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   // resume (where the delay is recomputed rather than restored) is a no-op
   // rather than a way to walk a backed-off run's pacing back down.
   options.scheduler?.raiseDelayTo(effectiveDelayMs);
+  let startAnchors: StructuralAnchor[] | undefined = resumeState?.startAnchors;
   const sitemapMode = options.sitemapMode ?? 'none';
   const eligibleSitemapUrls = new Set<string>();
   let filteredSitemapPageCount = 0;
@@ -771,6 +784,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     robotsText,
     ...(robotsPolicyChain.length > 0 ? { robotsPolicyChain: [...robotsPolicyChain] } : {}),
     ...(inventoryLedger !== undefined ? { inventoryLedger: inventoryLedger.snapshot() } : {}),
+    ...(startAnchors !== undefined ? { startAnchors: [...startAnchors] } : {}),
     supplementalPhaseStarted,
     queue: queue.map((item) => ({ ...item })),
     visited: [...visited],
@@ -825,6 +839,34 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
       isFirstNavigation = false;
       return navigate();
     };
+
+    if (
+      options.captureStartAnchors === true &&
+      scheduler !== undefined &&
+      startAnchors === undefined &&
+      isAllowedByRobots(robotsRules, robotsTarget(startUrlIdentity))
+    ) {
+      const probe = () =>
+        paceNavigation(() =>
+          captureStructuralAnchor(options.browser, startUrlIdentity, {
+            userAgent,
+            timeoutMs,
+            ...(options.networkPolicy !== undefined
+              ? { networkPolicy: options.networkPolicy }
+              : {}),
+            ...(options.onNetworkSafetyBlocked !== undefined
+              ? { onNetworkSafetyBlocked: options.onNetworkSafetyBlocked }
+              : {}),
+          }),
+        );
+      try {
+        startAnchors = [await probe(), await probe()];
+      } catch {
+        // Left absent rather than retried into the crawl's budget: the
+        // coherence verdict then stays unknown, which blocks approval.
+        startAnchors = undefined;
+      }
+    }
 
     while (true) {
       while (queue.length > 0 && visited.size < maxPages) {
@@ -1269,6 +1311,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     robotsTxtFound: robotsRules.found,
     ...(robotsPolicyChain.length > 0 ? { robotsPolicyChain } : {}),
     ...(inventoryLedger !== undefined ? { inventoryLedger: inventoryLedger.snapshot() } : {}),
+    ...(startAnchors !== undefined ? { startAnchors } : {}),
     effectiveDelayMs,
     ...(mentionsLegalesPageUrl !== undefined ? { mentionsLegalesPageUrl } : {}),
     mentionsLegalesSearchedUrls: resolvedUrls,

@@ -155,6 +155,33 @@ describe('mergeRetriedChecks', () => {
     expect(merged.page.headMetadata).toEqual({ title: 'kept' });
     expect(merged.checkOutcomes).toMatchObject({ axe: 'completed', 'alt-text': 'failed' });
   });
+
+  it('takes the observations of a recovered navigation from the retry', () => {
+    const readiness = { outcome: 'ready' } as never;
+    const anchor = { digest: 'sha256:retry' } as never;
+    const frames = [{ frameUrl: 'https://booking.example/' }] as never;
+    const merged = mergeRetriedChecks(
+      {
+        url,
+        renderDiffError: 'nav-timeout',
+        axeError: 'nav-timeout',
+        checkOutcomes: { 'render-diff': 'failed', axe: 'failed' },
+      },
+      {
+        url,
+        renderDiff: {} as never,
+        axe: { violations: [] } as never,
+        readiness,
+        structuralAnchor: anchor,
+        frames,
+      },
+      { 'render-diff': 'completed', axe: 'completed' },
+      ['render-diff', 'axe'],
+    );
+    expect(merged.page.readiness).toBe(readiness);
+    expect(merged.page.structuralAnchor).toBe(anchor);
+    expect(merged.page.frames).toBe(frames);
+  });
 });
 
 function succeeded(minute: number, digest: string): AcquisitionAttemptRecord {

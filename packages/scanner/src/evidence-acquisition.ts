@@ -309,9 +309,18 @@ export function mergeRetriedChecks(
     else page[entry.resultField] = retried[entry.resultField];
     if (entry.errorField !== undefined) delete page[entry.errorField];
     checkOutcomes[checkId] = 'completed';
-    // A recovered navigation also recovers what it was measured from.
-    if (checkId === 'render-diff' && retry.renderedCostProfile !== undefined) {
-      page['renderedCostProfile'] = retry.renderedCostProfile;
+    // A recovered navigation also recovers what it was measured from and
+    // what was observed on it; leaving the original's (absent or failed)
+    // observations beside the retry's result would describe another load.
+    if (checkId === 'render-diff') {
+      for (const field of ['renderedCostProfile', 'readiness', 'structuralAnchor'] as const) {
+        if (retry[field] === undefined) delete page[field];
+        else page[field] = retry[field];
+      }
+    }
+    if (checkId === 'axe') {
+      if (retry.frames === undefined) delete page['frames'];
+      else page['frames'] = retry.frames;
     }
   }
   return { page: { ...(page as unknown as PageScanResult), checkOutcomes }, checkOutcomes };

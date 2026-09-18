@@ -52,7 +52,12 @@ import {
   type AttemptExecutionProfile,
 } from './check-attempt-ledger.js';
 import { baselineDesktopSurface } from './evidence-surfaces.js';
-import { appendSiteAcquisitionAttempts } from './artifacts/acquisition-attempts-io.js';
+import {
+  appendSiteAcquisitionAttempts,
+  writeTemporalAnchors,
+} from './artifacts/acquisition-attempts-io.js';
+import { captureStructuralAnchor, type StructuralAnchor } from './temporal-anchors.js';
+import type { NetworkSafetyBlockHandler } from './browser-network-safety.js';
 import { type CrawledPage, type CrawlProgressEvent, type CrawlResult, crawlSite } from './crawl.js';
 import type { CrawlFrontierSnapshot, CrawlOptions } from './crawl.js';
 import {
@@ -1330,6 +1335,42 @@ function loadReusableCrawl(
   return { crawl: undefined, freshReason: 'no-checkpoint' };
 }
 
+/**
+ * Plan 059 section 13: persists the crawl's opening anchors and takes the
+ * closing probe of the start page once every acquisition phase is done. A
+ * probe the robots policy now forbids, or that fails, is left out: the
+ * coherence verdict is then unknown, which blocks approval rather than
+ * pretending the window closed cleanly.
+ */
+async function closeTemporalWindow(
+  crawl: CrawlResult,
+  options: ScanSiteOptions,
+  scheduler: HostRequestScheduler,
+  robotsPolicyRuntime: RobotsPolicyRuntime | undefined,
+  onNetworkSafetyBlocked: NetworkSafetyBlockHandler | undefined,
+): Promise<void> {
+  const auditDir = options.auditDir!;
+  const startProbes = crawl.startAnchors ?? [];
+  let endProbe: StructuralAnchor | undefined;
+  try {
+    if (robotsPolicyRuntime !== undefined) {
+      await robotsPolicyRuntime.refresh([crawl.startUrl]);
+      robotsPolicyRuntime.assertAllowed(crawl.startUrl);
+    }
+    endProbe = await scheduler.schedule(() =>
+      captureStructuralAnchor(options.browser, crawl.startUrl, {
+        userAgent: options.userAgent ?? getCrawlerUserAgent(),
+        timeoutMs: options.timeoutMs ?? getPageTimeoutMs(),
+        ...(options.networkPolicy !== undefined ? { networkPolicy: options.networkPolicy } : {}),
+        ...(onNetworkSafetyBlocked !== undefined ? { onNetworkSafetyBlocked } : {}),
+      }),
+    );
+  } catch {
+    endProbe = undefined;
+  }
+  writeTemporalAnchors(auditDir, { startProbes, ...(endProbe !== undefined ? { endProbe } : {}) });
+}
+
 export async function scanSite(
   startUrl: string,
   options: ScanSiteOptions,
@@ -1389,11 +1430,19 @@ export async function scanSite(
     throw new Error(`scanSite: network safety blocked ${url} (${verdict.disposition.reason})`);
   };
   const sitemapMode = options.sitemapMode ?? 'supplement';
+  // Plan 059 section 13: only a scoped full audit that persists its evidence
+  // opens a temporal-coherence window; every other run has no graph to feed.
+  const captureTemporalAnchors =
+    options.fullAuditPlanning === true &&
+    options.scopeDigest !== undefined &&
+    options.auditDir !== undefined &&
+    options.skipLighthouse !== true;
   const crawlOptions = (frontier: CrawlOptions['frontier']): CrawlOptions => ({
     scheduler,
     browser: options.browser,
     evidenceEpoch: 1,
     ...(options.scopeDigest !== undefined ? { scopeDigest: options.scopeDigest } : {}),
+    ...(captureTemporalAnchors ? { captureStartAnchors: true } : {}),
     ...(options.networkPolicy !== undefined ? { networkPolicy: options.networkPolicy } : {}),
     ...(onNetworkSafetyBlocked !== undefined ? { onNetworkSafetyBlocked } : {}),
     ...(options.maxPages !== undefined ? { maxPages: options.maxPages } : {}),
@@ -1833,6 +1882,15 @@ export async function scanSite(
       options.onProgress,
     );
     const finalInventory = finalizeInventoryLedger();
+    if (captureTemporalAnchors) {
+      await closeTemporalWindow(
+        crawl,
+        options,
+        scheduler,
+        robotsPolicyRuntime,
+        onNetworkSafetyBlocked,
+      );
+    }
     return {
       crawl,
       pages,

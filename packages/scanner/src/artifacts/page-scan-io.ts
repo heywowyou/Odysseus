@@ -108,6 +108,9 @@ export function buildScanJson(
       : {}),
     ...(scanResult.readiness !== undefined ? { readiness: scanResult.readiness } : {}),
     ...(scanResult.frames !== undefined ? { frames: scanResult.frames } : {}),
+    ...(scanResult.structuralAnchor !== undefined
+      ? { structuralAnchor: scanResult.structuralAnchor }
+      : {}),
     ...(scanResult.acquisitionAttempts !== undefined
       ? { acquisitionAttempts: scanResult.acquisitionAttempts }
       : {}),

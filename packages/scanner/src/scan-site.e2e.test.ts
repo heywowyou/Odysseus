@@ -6,6 +6,7 @@ import type { Browser } from 'playwright';
 import { normalizeAudit } from '@odysseus/core';
 import { launchBrowser } from './browser.js';
 import { scanSite, type ScanProgressEvent } from './scan-site.js';
+import { assessTemporalCoherence, type TemporalAnchorSet } from './temporal-anchors.js';
 
 // Origin of the shared fixtures/spa-demo dev server started once per e2e
 // run by scripts/vitest-e2e-global-setup.mjs.
@@ -220,5 +221,38 @@ describe('scanSite against fixtures/spa-demo', () => {
     });
     const orphan = findings.find((finding) => finding.ruleId === 'sitemap-orphan-page');
     expect(orphan?.description).toContain(seededUrl);
+  }, 180_000);
+
+  it('opens and closes a temporal-coherence window around a scoped full audit', async () => {
+    scratchScreenshotDir = await fs.mkdtemp(path.join(os.tmpdir(), 'odysseus-scan-site-'));
+    const auditDir = path.join(scratchScreenshotDir, 'audit');
+    await fs.mkdir(auditDir, { recursive: true });
+    const result = await scanSite(TEST_URL, {
+      browser,
+      debugPort,
+      maxPages: 10,
+      maxDepth: 3,
+      delayMs: 0,
+      screenshotDir: path.join(auditDir, 'pages'),
+      auditDir,
+      writePagesAsScanned: true,
+      fullAuditPlanning: true,
+      scopeDigest: `sha256:${'e'.repeat(64)}`,
+    });
+
+    const anchors = JSON.parse(
+      await fs.readFile(path.join(auditDir, 'evidence', 'temporal-anchors.json'), 'utf8'),
+    ) as TemporalAnchorSet;
+    expect(anchors.startProbes).toHaveLength(2);
+    expect(anchors.endProbe?.pageUrl).toBe(result.crawl.startUrl);
+    expect(Date.parse(anchors.endProbe!.capturedAt)).toBeGreaterThan(
+      Date.parse(anchors.startProbes[1]!.capturedAt),
+    );
+
+    const pageAnchors = result.pages.map((page) => page.structuralAnchor!);
+    expect(pageAnchors.every((anchor) => anchor !== undefined)).toBe(true);
+    expect(
+      assessTemporalCoherence({ startUrl: result.crawl.startUrl, anchors, pageAnchors }).status,
+    ).toBe('coherent');
   }, 180_000);
 });

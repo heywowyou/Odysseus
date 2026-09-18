@@ -67,6 +67,7 @@ import {
   type FrameObservation,
   type RenderedReadinessObservation,
 } from './page-readiness.js';
+import { extractStructuralAnchor, type StructuralAnchor } from './temporal-anchors.js';
 
 export interface ScanPageOptions {
   /** Politeness delay applied between the raw/rendered/Lighthouse passes. */
@@ -210,6 +211,9 @@ export interface PageScanResult {
   /** Plan 059: every child frame on the rendered page and whether axe
    *  reached it. */
   frames?: FrameObservation[];
+  /** Plan 059: the served document's structure at the raw pass, for the
+   *  audit's temporal-coherence verdict. */
+  structuralAnchor?: StructuralAnchor;
 }
 
 /**
@@ -406,6 +410,9 @@ export async function runRenderedAnalysis(
         : {}),
       onReadinessObserved: (observation) => {
         result.readiness = observation;
+      },
+      onRawDocument: (html) => {
+        result.structuralAnchor = extractStructuralAnchor(html, url, new Date());
       },
       onRenderedPageCreated: async (page) => {
         // Must be attached before navigation - see
