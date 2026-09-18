@@ -656,7 +656,7 @@ describe('report approval is explicit (plan 060 §2.4)', () => {
   };
 
   function recordingFetchStub(): ReturnType<typeof vi.fn> {
-    return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    return vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : '';
       if (url.includes('/report/') || url.includes('/report-quality/')) {
         return {

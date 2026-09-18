@@ -26,7 +26,6 @@ import {
   ORIGIN,
   page,
   ROOMS,
-  ROOMS_PROFILE,
   scope,
 } from './evidence-graph-fixtures.js';
 

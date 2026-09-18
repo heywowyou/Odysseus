@@ -844,7 +844,7 @@ export async function runReportQualityPipeline(input: {
 
     await keepLease(context);
     let plan: SeniorReportPlan | undefined;
-    let planRejections: string[] = [];
+    const planRejections: string[] = [];
     for (let attempt = 1; !plan; attempt += 1) {
       await keepLease(context);
       const planCall = await callReportQualityRole({
@@ -945,7 +945,7 @@ export async function runReportQualityPipeline(input: {
             : {}),
         });
       };
-      let writerRejections: string[] = [];
+      const writerRejections: string[] = [];
       for (let attempt = 1; ; attempt += 1) {
         try {
           bindableWriterDraft();

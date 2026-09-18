@@ -86,7 +86,7 @@ function makeFakeBrowser(spec: FakePageSpec = {}): {
         waitForLoadState: async () => {},
         waitForTimeout: async () => {},
         url: () => currentUrl,
-        evaluate: async (fn: (...args: unknown[]) => unknown, arg?: unknown) => {
+        evaluate: async (fn: (...args: unknown[]) => unknown, _arg?: unknown) => {
           const source = fn.toString();
           if (source.includes('querySelectorAll')) {
             return {
