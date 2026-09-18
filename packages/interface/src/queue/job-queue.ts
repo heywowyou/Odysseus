@@ -96,7 +96,11 @@ export class JobQueue {
    *  Neither bookkeeping pass may ever keep the queue from starting: each
    *  is maintenance, not a prerequisite for work. */
   async start(): Promise<number> {
-    await settleCancelRequestedJobsOnStartup(this.connection);
+    try {
+      await settleCancelRequestedJobsOnStartup(this.connection);
+    } catch (error) {
+      logger.error({ err: error }, 'cancellation recovery skipped; the queue will still start');
+    }
     const orphanedCount = await resetOrphanedRunningJobs(this.connection, new Date(), {
       includeFreshHeartbeats: true,
     });

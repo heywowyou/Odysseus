@@ -497,22 +497,6 @@ export async function getJob(connection: Connection, jobId: string): Promise<Job
  *  slow but live browser is never reclaimed by a second worker. */
 const ORPHANED_JOB_TIMEOUT_MS = 10 * 60 * 1000;
 
-/** Called once at server startup, before the worker loop starts. A job that
- *  has been silent past ORPHANED_JOB_TIMEOUT_MS was left running by an
- *  unclean shutdown, so reset it to 'queued'. A fresh heartbeat means a live
- *  worker owns it and must never be reclaimed. createdAt is untouched, so
- *  claimNextQueuedJob's createdAt-ascending sort restores the original FIFO
- *  position rather than requeuing it to the back. Returns the number reset.
- *
- *  includeFreshHeartbeats drops the staleness guard and requeues every
- *  'running' job. It exists for JobQueue.start() in the single-container
- *  deployment: the app container was just recreated, so no worker can own
- *  any running job, and a heartbeat written by the previous container
- *  (issue #124: restart sooner than ORPHANED_JOB_TIMEOUT_MS after the kill)
- *  would otherwise wedge the job as 'running' forever, recoverable only by
- *  another restart past the timeout. The stale-only default stays correct
- *  for any future multi-worker caller, where a live worker may legitimately
- *  hold a fresh-heartbeat job. */
 /**
  * Finalize durable stop requests left behind by the previous process.
  *
@@ -535,6 +519,22 @@ export async function settleCancelRequestedJobsOnStartup(
   return result.modifiedCount;
 }
 
+/** Called once at server startup, before the worker loop starts. A job that
+ *  has been silent past ORPHANED_JOB_TIMEOUT_MS was left running by an
+ *  unclean shutdown, so reset it to 'queued'. A fresh heartbeat means a live
+ *  worker owns it and must never be reclaimed. createdAt is untouched, so
+ *  claimNextQueuedJob's createdAt-ascending sort restores the original FIFO
+ *  position rather than requeuing it to the back. Returns the number reset.
+ *
+ *  includeFreshHeartbeats drops the staleness guard and requeues every
+ *  'running' job. It exists for JobQueue.start() in the single-container
+ *  deployment: the app container was just recreated, so no worker can own
+ *  any running job, and a heartbeat written by the previous container
+ *  (issue #124: restart sooner than ORPHANED_JOB_TIMEOUT_MS after the kill)
+ *  would otherwise wedge the job as 'running' forever, recoverable only by
+ *  another restart past the timeout. The stale-only default stays correct
+ *  for any future multi-worker caller, where a live worker may legitimately
+ *  hold a fresh-heartbeat job. */
 export async function resetOrphanedRunningJobs(
   connection: Connection,
   now = new Date(),

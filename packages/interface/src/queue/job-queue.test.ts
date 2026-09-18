@@ -100,6 +100,14 @@ describe('JobQueue', () => {
     });
   });
 
+  it('starts even when cancellation recovery throws', async () => {
+    vi.mocked(claimNextQueuedJob).mockResolvedValue(null);
+    vi.mocked(settleCancelRequestedJobsOnStartup).mockRejectedValue(new Error('store unavailable'));
+    queue = queueWith(vi.fn());
+    await queue.start();
+    expect(queue.isReady()).toBe(true);
+  });
+
   it('starts even when failed-job reconciliation throws', async () => {
     vi.mocked(claimNextQueuedJob).mockResolvedValue(null);
     vi.mocked(reconcileFailedAuditJobs).mockRejectedValue(new Error('mongo hiccup'));
