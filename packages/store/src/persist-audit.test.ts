@@ -1,6 +1,13 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import { FINDINGS_SCHEMA_VERSION, type AuditManifest, type Finding } from '@odysseus/core';
+import {
+  FINDINGS_DELTA_COVERAGE_VERSION,
+  FINDINGS_SCHEMA_VERSION,
+  type AuditManifest,
+  type FindingsDeltaCoverage,
+  type Finding,
+} from '@odysseus/core';
 import { getAudit } from './audits.js';
+import { findAuditEvidenceCoverage } from './findings-delta-baseline.js';
 import { persistAudit } from './persist-audit.js';
 import { createAuditModel } from './schemas/audit.schema.js';
 import { createFindingModel } from './schemas/finding.schema.js';
@@ -94,6 +101,36 @@ describe.skipIf(!mongoAvailable)('persistAudit', () => {
     expect(storedFindings).toHaveLength(1);
     expect(storedFindings[0]?.siteUrl).toBe(manifest.siteUrl);
     expect(storedFindings[0]?.dedupeKey).toBe('p1p1p1p1p1p1p1p1');
+  });
+
+  it('stores the evidence coverage signature a re-audit delta will compare', async () => {
+    const manifest = buildManifest({ auditId: 'persist-coverage' });
+    const coverage: FindingsDeltaCoverage = {
+      version: FINDINGS_DELTA_COVERAGE_VERSION,
+      scopeSignature: 'sha256:scope',
+      inventorySignature: 'sha256:inventory',
+      capabilityRegistryVersion: 'cap-v1',
+      checks: [
+        {
+          checkId: 'axe',
+          version: '1',
+          surfaces: ['baseline-desktop'],
+          frameCapability: 'document-only',
+          semanticallyConditional: false,
+        },
+      ],
+      surfaces: ['baseline-desktop'],
+      observations: { p1p1p1p1p1p1p1p1: { checkId: 'axe', surfaceId: 'baseline-desktop' } },
+    };
+
+    await persistAudit(connection!, manifest, [], coverage);
+
+    expect(await findAuditEvidenceCoverage(connection!, 'persist-coverage')).toEqual(coverage);
+    /* A re-persist without a graph - the retried-stage case - removes any
+     * signature instead of leaving one the surviving evidence cannot show. */
+    await persistAudit(connection!, manifest, []);
+    expect(await findAuditEvidenceCoverage(connection!, 'persist-coverage')).toBeUndefined();
+    expect(await findAuditEvidenceCoverage(connection!, 'persist-test-1')).toBeUndefined();
   });
 
   it('is idempotent: persisting the same auditId twice does not duplicate documents', async () => {

@@ -6,7 +6,7 @@
  */
 
 import type { Connection } from 'mongoose';
-import type { AuditManifest, Finding } from '@odysseus/core';
+import type { AuditManifest, FindingsDeltaCoverage, Finding } from '@odysseus/core';
 import { createAuditModel, type AuditDocumentFields } from './schemas/audit.schema.js';
 import { createFindingModel } from './schemas/finding.schema.js';
 
@@ -24,13 +24,28 @@ export async function persistAudit(
   connection: Connection,
   manifest: AuditManifest,
   findings: readonly Finding[],
+  /** Plan 059 step 35: the run's evidence coverage signature, from the
+   *  audit's assembled evidence graph. Absent when the graph was never
+   *  assembled, which leaves the audit without a stored signature and the
+   *  re-audit delta with nothing to claim observability from. */
+  evidenceCoverage?: FindingsDeltaCoverage,
 ): Promise<void> {
   const AuditModel = createAuditModel(connection);
   const FindingModel = createFindingModel(connection);
 
   await AuditModel.findOneAndUpdate(
     { auditId: manifest.auditId },
-    { $set: toAuditDocumentFields(manifest) },
+    {
+      $set: {
+        ...toAuditDocumentFields(manifest),
+        ...(evidenceCoverage !== undefined ? { evidenceCoverage } : {}),
+      },
+      /* A retried stage that re-persists without a graph removes any
+       * signature from an earlier assembly: an audit whose record claims
+       * observability its surviving evidence cannot show would hand the
+       * re-audit delta a comparability nobody can verify. */
+      ...(evidenceCoverage === undefined ? { $unset: { evidenceCoverage: 1 } } : {}),
+    },
     { upsert: true },
   );
 

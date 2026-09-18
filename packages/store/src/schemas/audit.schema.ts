@@ -12,6 +12,7 @@ import { Schema, type Connection, type Model } from 'mongoose';
 import type {
   AuditManifest,
   AuditManualFields,
+  FindingsDeltaCoverage,
   GradeOverride,
   ReportPreparation,
 } from '@odysseus/core';
@@ -42,6 +43,12 @@ export interface AuditDocumentFields extends Omit<
    *  operator saves an override; cleared, not defaulted back to the
    *  automatic grade, when the operator removes it. */
   gradeOverride?: GradeOverride;
+  /** Plan 059 step 35: this run's evidence coverage signature in the shape
+   *  the findings delta compares, DB-only like manualFields above. The
+   *  stored shape is core's FindingsDeltaCoverage verbatim. Absent for
+   *  audits whose evidence graph was never assembled, which the delta
+   *  then treats as unknown-legacy rather than as invented comparability. */
+  evidenceCoverage?: FindingsDeltaCoverage;
 }
 
 export type AuditDocument = AuditDocumentFields;
@@ -561,6 +568,10 @@ export const auditSchema = new Schema<AuditDocument>(
     manualFields: { type: manualFieldsSchema },
     reportPreparation: { type: reportPreparationSchema },
     gradeOverride: { type: gradeOverrideSchema },
+    // Mixed: the delta coverage record is a closed core contract re-read
+    // verbatim by the findings delta, never queried by field (same
+    // reasoning as report-quality.schema.ts's modelCalls).
+    evidenceCoverage: { type: Schema.Types.Mixed } as never,
   },
   { collection: 'audits' },
 );

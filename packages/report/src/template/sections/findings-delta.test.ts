@@ -118,6 +118,101 @@ describe('renderFindingsDelta', () => {
     expect(html).toContain('1 finding from the previous audit is still present');
     expect(html).not.toContain('<table');
   });
+
+  it('renders newly observable findings as their own table, never as new', () => {
+    const mobile = 'https://hotel.fr/m';
+    const before = run('before', [finding('kept', 'minor')], {
+      coverage: {
+        version: 'findings-delta-coverage-v1',
+        capabilityRegistryVersion: 'unknown-legacy',
+        surfaces: ['baseline-desktop', 'surface:site-request'],
+      },
+    });
+    const after = run(
+      'after',
+      [finding('kept', 'minor'), finding('mobile-only', 'critical', 'image-alt')],
+      {
+        coverage: {
+          version: 'findings-delta-coverage-v1',
+          capabilityRegistryVersion: 'cap-v1',
+          surfaces: ['baseline-desktop', 'surface:site-request', 'mobile'],
+          observations: {
+            kept: { checkId: 'axe', surfaceId: 'baseline-desktop' },
+            'mobile-only': { checkId: 'axe', surfaceId: 'mobile' },
+          },
+        },
+      },
+    );
+    const delta = computeFindingsDelta(before, {
+      ...after,
+      findings: after.findings.map((f) =>
+        f.dedupeKey === 'mobile-only' ? { ...f, pageUrls: [mobile] } : f,
+      ),
+    });
+    const html = renderFindingsDelta(getStrings('fr'), 2, 'fr', delta);
+
+    expect(delta.rows.find((row) => row.dedupeKey === 'mobile-only')?.class).toBe(
+      'newly-observable',
+    );
+    expect(html).toContain('Constats rendus observables');
+    /* The rendered copy goes through the French typographic apostrophe. */
+    expect(html).toContain('Ces constats ne pouvaient pas être relevés');
+    expect(html).toContain('Rendus observables');
+  });
+
+  it('renders not-comparable findings as their own table, never as resolved', () => {
+    const before = run(
+      'before',
+      [finding('kept', 'minor'), finding('gone', 'critical', 'color-contrast')],
+      {
+        coverage: {
+          version: 'findings-delta-coverage-v1',
+          capabilityRegistryVersion: 'cap-v1',
+          surfaces: ['baseline-desktop'],
+          checks: [
+            {
+              checkId: 'axe',
+              version: '1',
+              surfaces: ['baseline-desktop'],
+              frameCapability: 'document-only',
+              semanticallyConditional: false,
+            },
+          ],
+          observations: {
+            kept: { checkId: 'axe', surfaceId: 'baseline-desktop' },
+            gone: { checkId: 'axe', surfaceId: 'baseline-desktop' },
+          },
+        },
+      },
+    );
+    const after = run('after', [finding('kept', 'minor')], {
+      coverage: {
+        version: 'findings-delta-coverage-v1',
+        capabilityRegistryVersion: 'cap-v1',
+        surfaces: ['baseline-desktop'],
+        checks: [],
+        observations: {},
+      },
+    });
+    const delta = computeFindingsDelta(before, after);
+    const html = renderFindingsDelta(getStrings('en'), 2, 'en', delta);
+
+    expect(delta.rows.find((row) => row.dedupeKey === 'gone')?.class).toBe('not-comparable');
+    expect(html).toContain('Findings that cannot be compared');
+    expect(html).toContain(
+      'This audit cannot settle these findings: the check or the surface involved was not comparable between the two audits',
+    );
+    expect(html).toContain('Not comparable');
+  });
+
+  it('shows only the four shipped counters for a legacy comparison without coverage', () => {
+    const delta = computeFindingsDelta(baseline, current);
+    expect(delta.coverage).toBeUndefined();
+    const html = renderFindingsDelta(getStrings('en'), 2, 'en', delta);
+    expect(html).toContain('New findings');
+    expect(html).not.toContain('Newly observable');
+    expect(html).not.toContain('Not comparable');
+  });
 });
 
 describe('findings delta in the composed report', () => {

@@ -24,8 +24,10 @@ import { renderSeverityBadge } from '../severity-badge.js';
 
 const COUNT_ORDER: readonly FindingsDeltaClass[] = [
   'new',
+  'newly-observable',
   'changed-severity',
   'resolved',
+  'not-comparable',
   'persistent',
 ];
 
@@ -128,6 +130,8 @@ function renderDisclosures(
   const parts: string[] = [];
   if (delta.changedSeveritySuppressed) parts.push(note(d.severitySuppressedNote));
   if (delta.normalizationChanged) parts.push(note(d.normalizationChangedNote));
+  if (delta.coverage?.scopeChanged === true) parts.push(note(d.scopeChangedNote));
+  if (delta.coverage?.inventoryChanged === true) parts.push(note(d.inventoryChangedNote));
   for (const difference of delta.configDifferences) {
     const template =
       difference.field === 'maxPages' ? d.maxPagesChangedTemplate : d.maxDepthChangedTemplate;
@@ -174,12 +178,20 @@ export function renderFindingsDelta(
   const byClass = (value: FindingsDeltaClass): FindingsDeltaRow[] =>
     delta.rows.filter((row) => row.class === value);
   const added = byClass('new');
+  const newlyObservable = byClass('newly-observable');
   const changed = byClass('changed-severity');
   const resolved = byClass('resolved');
+  const notComparable = byClass('not-comparable');
   const persistent = delta.counts.persistent;
 
+  /* The observability classes exist only when both runs carried coverage
+   * signatures; a legacy comparison shows the four shipped counters and
+   * not two permanent zeros implying a judgment it never made. */
+  const observabilityCounted = delta.coverage !== undefined;
   const counts = COUNT_ORDER.filter(
-    (value) => value !== 'changed-severity' || !delta.changedSeveritySuppressed,
+    (value) =>
+      (value !== 'changed-severity' || !delta.changedSeveritySuppressed) &&
+      (observabilityCounted || (value !== 'newly-observable' && value !== 'not-comparable')),
   )
     .map(
       (value) => `
@@ -194,9 +206,15 @@ export function renderFindingsDelta(
     added.length > 0
       ? renderSingleSideTable(strings, language, d.newHeading, added, 'current')
       : '',
+    newlyObservable.length > 0
+      ? `${renderSingleSideTable(strings, language, d.newlyObservableHeading, newlyObservable, 'current')}${note(d.newlyObservableNote)}`
+      : '',
     changed.length > 0 ? renderChangedSeverityTable(strings, language, changed) : '',
     resolved.length > 0
       ? `${renderSingleSideTable(strings, language, d.resolvedHeading, resolved, 'baseline')}${note(d.resolvedNote)}`
+      : '',
+    notComparable.length > 0
+      ? `${renderSingleSideTable(strings, language, d.notComparableHeading, notComparable, 'baseline')}${note(d.notComparableNote)}`
       : '',
   ].join('');
   const noChanges =

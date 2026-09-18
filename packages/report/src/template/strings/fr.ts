@@ -582,15 +582,27 @@ export const fr: ReportStrings = {
       "Cette section compare cet audit, constat par constat, à l'audit livré le {date}. Un constat est reconnu par sa règle et par l'élément ou la page qu'il concerne. La comparaison est calculée automatiquement, sans interprétation.",
     countLabels: {
       new: 'Nouveaux constats',
+      'newly-observable': 'Rendus observables',
       'changed-severity': 'Gravité modifiée',
       resolved: 'Constats plus détectés',
+      'not-comparable': 'Non comparables',
       persistent: 'Constats toujours présents',
     },
     newHeading: 'Nouveaux constats',
+    newlyObservableHeading: 'Constats rendus observables',
+    newlyObservableNote:
+      "Ces constats ne pouvaient pas être relevés lors de l'audit précédent : la vérification ou le support concerné n'était pas encore couvert. Le site n'a pas régressé entre les deux audits sur ces points.",
     changedSeverityHeading: 'Constats dont la gravité a changé',
     resolvedHeading: 'Constats plus détectés',
     resolvedNote:
       "Un constat qui n'est plus détecté a le plus souvent été corrigé. Il peut aussi avoir disparu parce que la page concernée n'a pas été analysée lors de cet audit.",
+    notComparableHeading: 'Constats non comparables',
+    notComparableNote:
+      "Cet audit ne permet pas de statuer sur ces constats : la vérification ou le support concerné n'était pas comparable d'un audit à l'autre. Ils ne sont comptés ni comme corrigés ni comme nouveaux.",
+    scopeChangedNote:
+      "Le périmètre demandé a changé depuis l'audit précédent. Les constats sont rapprochés à périmètre commun, et cette différence est signalée plutôt que comptée comme une régression ou une correction.",
+    inventoryChangedNote:
+      "Les pages explorées ont changé depuis l'audit précédent. Les constats sont rapprochés page par page, et cette différence est signalée plutôt que comptée comme une régression ou une correction.",
     findingColumnLabel: 'Constat',
     severityColumnLabel: 'Gravité',
     pagesColumnLabel: 'Pages',

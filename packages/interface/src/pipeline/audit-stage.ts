@@ -480,7 +480,11 @@ export async function runAuditStage(
       prunePageInfoFromManifest(manifest),
     );
 
-    await persistAudit(connection, manifest, findings);
+    // Plan 059 step 35: the run's coverage signature rides to the audit's
+    // persisted record, so a later re-audit's delta can judge what each
+    // run could observe. No graph, no signature: the delta then degrades
+    // to unknown-legacy instead of inventing comparability.
+    await persistAudit(connection, manifest, findings, evidenceGraph?.deltaCoverage);
 
     // Plan 002 (issue #132): no checkpoint deletion here. The checkpoint
     // must survive until the JOB reaches its terminal state, because a

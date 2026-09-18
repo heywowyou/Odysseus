@@ -32,6 +32,7 @@ import {
 } from '@odysseus/report';
 import { launchBrowser, readOdysseusBuildId } from '@odysseus/scanner';
 import {
+  findAuditEvidenceCoverage,
   findDeltaBaseline,
   getAuditGradeOverride,
   getAuditManualFields,
@@ -168,10 +169,13 @@ export async function runReportStage(
   // re-audit, and its report compares the two runs finding by finding. The
   // delta is computed here from stored data and passed in verbatim; the
   // template never reads a second findings set itself.
+  // Plan 059 step 35: both sides carry their persisted coverage signature,
+  // so observability differences are separated from site changes.
   const baseline = await findDeltaBaseline(connection, {
     siteUrl: manifest.siteUrl,
     startedAt: new Date(manifest.startedAt),
   });
+  const currentCoverage = await findAuditEvidenceCoverage(connection, manifest.auditId);
   const delta =
     baseline === null
       ? undefined
@@ -183,6 +187,7 @@ export async function runReportStage(
           config: manifest.config,
           findingsProvenance: resolvedFindingsProvenance,
           findings,
+          ...(currentCoverage !== undefined ? { coverage: currentCoverage } : {}),
         });
 
   const { pdf, pageCount } = await generateReportPdf({

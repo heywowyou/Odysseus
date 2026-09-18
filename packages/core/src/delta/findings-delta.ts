@@ -13,14 +13,31 @@
  * key, so a change in the pages reached or still affected moves the key
  * without the site's defect changing; without this pass the delta would call
  * one ongoing defect both fixed and new.
+ *
+ * Identity is one thing and observability is another (plan 059 sections
+ * 5.18 and 16). When both runs carry an `EvidenceCoverageSignature` (as
+ * `coverage`), every unpaired row is also judged on whether the baseline
+ * could have seen it at all: a current finding from a check or surface the
+ * baseline never had is `newly-observable`, not a client regression, and a
+ * baseline finding whose check or surface is no longer comparable is
+ * `not-comparable`, not resolved. Runs without signatures - every audit
+ * that predates the coverage graph - classify exactly as before.
  */
 
 import type { FindingsProvenance } from '../normalize/findings-provenance.js';
 import { SEVERITY_ORDER } from '../normalize/severity.js';
 import type { Finding, Severity } from '../types/findings.js';
 import type { AuditConfigSnapshot, ToolVersions } from '../types/manifest.js';
+import {
+  compareDeltaCoverageSlices,
+  compareDeltaObservationAcrossRuns,
+  FINDINGS_DELTA_COVERAGE_VERSION,
+  type DeltaCoverageSliceComparison,
+  type FindingsDeltaCoverage,
+} from './coverage-comparability.js';
 
-export type FindingsDeltaClass = 'new' | 'resolved' | 'persistent' | 'changed-severity';
+export type FindingsDeltaClass =
+  'new' | 'newly-observable' | 'resolved' | 'not-comparable' | 'persistent' | 'changed-severity';
 
 export type DeltaFinding = Pick<
   Finding,
@@ -36,6 +53,10 @@ export interface FindingsDeltaRun {
   config: Pick<AuditConfigSnapshot, 'maxPages' | 'maxDepth'>;
   findingsProvenance: FindingsProvenance;
   findings: readonly DeltaFinding[];
+  /** The run's coverage observability, from its persisted evidence. Absent
+   *  for an audit that predates the coverage graph; the delta then never
+   *  claims observability it cannot support. */
+  coverage?: FindingsDeltaCoverage;
 }
 
 export interface FindingsDeltaSide {
@@ -57,6 +78,13 @@ export interface FindingsDeltaRow {
   title: string;
   baseline?: FindingsDeltaSide;
   current?: FindingsDeltaSide;
+  /** Why the row's observability differs between the runs. Present only on
+   *  `newly-observable` and `not-comparable` rows, and only when both runs
+   *  carried a coverage signature. */
+  coverage?: {
+    kind: 'newly-observable' | 'not-comparable';
+    reason: string;
+  };
 }
 
 /** Versions whose difference can move findings or severities without the
@@ -88,8 +116,9 @@ export interface DeltaConfigDifference {
 
 export interface FindingsDelta {
   baseline: { auditId: string; startedAt: string };
-  /** Sorted: new, changed-severity, resolved, persistent; then severity
-   *  descending, then ruleId and dedupeKey. */
+  /** Sorted: new, newly-observable, changed-severity, resolved,
+   *  not-comparable, persistent; then severity descending, then ruleId and
+   *  dedupeKey. */
   rows: FindingsDeltaRow[];
   counts: Record<FindingsDeltaClass, number>;
   /** True when a gating version or the normalization changed between the
@@ -101,13 +130,19 @@ export interface FindingsDelta {
    *  some keys may have moved without the site changing. */
   normalizationChanged: boolean;
   configDifferences: DeltaConfigDifference[];
+  /** Scope, inventory and registry slices of both runs' coverage
+   *  signatures, compared for disclosure beside rescoped pairing. Present
+   *  only when both runs carried a coverage signature. */
+  coverage?: DeltaCoverageSliceComparison;
 }
 
 const CLASS_ORDER: Record<FindingsDeltaClass, number> = {
   new: 0,
-  'changed-severity': 1,
-  resolved: 2,
-  persistent: 3,
+  'newly-observable': 1,
+  'changed-severity': 2,
+  resolved: 3,
+  'not-comparable': 4,
+  persistent: 5,
 };
 
 function indexByKey(run: FindingsDeltaRun, label: string): Map<string, DeltaFinding> {
@@ -232,6 +267,37 @@ export function computeFindingsDelta(
   const after = indexByKey(current, 're-audit');
   const rows: FindingsDeltaRow[] = [];
 
+  /* A signature this build does not know is not a signature: an older
+   * comparison must never read a future shape and invent meaning for
+   * slices it cannot see. Unknown versions degrade to no coverage, which
+   * is the shipped Plan-051/054 behavior. */
+  const baselineCoverage =
+    baseline.coverage?.version === FINDINGS_DELTA_COVERAGE_VERSION ? baseline.coverage : undefined;
+  const currentCoverage =
+    current.coverage?.version === FINDINGS_DELTA_COVERAGE_VERSION ? current.coverage : undefined;
+  const coverageComparable =
+    baselineCoverage !== undefined && currentCoverage !== undefined
+      ? { baseline: baselineCoverage, current: currentCoverage }
+      : undefined;
+  const observationClass = (
+    finding: DeltaFinding,
+    run: 'baseline' | 'current',
+  ): FindingsDeltaRow['coverage'] => {
+    if (coverageComparable === undefined) return undefined;
+    const coordinates = (
+      run === 'baseline' ? coverageComparable.baseline : coverageComparable.current
+    ).observations?.[finding.dedupeKey];
+    if (coordinates === undefined) return undefined;
+    const comparability = compareDeltaObservationAcrossRuns(
+      coverageComparable.baseline,
+      coverageComparable.current,
+      coordinates,
+    );
+    return comparability.kind === 'comparable'
+      ? undefined
+      : { kind: comparability.kind, reason: comparability.reason };
+  };
+
   const currentRow = (finding: DeltaFinding) => ({
     dedupeKey: finding.dedupeKey,
     ruleId: finding.ruleId,
@@ -265,13 +331,30 @@ export function computeFindingsDelta(
   }
 
   for (const finding of unpairedCurrent) {
-    if (!rescopedCurrent.has(finding.dedupeKey))
-      rows.push({ class: 'new', ...currentRow(finding) });
+    if (rescopedCurrent.has(finding.dedupeKey)) continue;
+    /* A finding this run saw from a check or surface the baseline never
+     * had is Odysseus seeing further, not the site getting worse. One the
+     * current instruments can no longer support is not called new either. */
+    const observability = observationClass(finding, 'current');
+    rows.push({
+      class:
+        observability?.kind === 'newly-observable'
+          ? 'newly-observable'
+          : observability?.kind === 'not-comparable'
+            ? 'not-comparable'
+            : 'new',
+      ...(observability !== undefined ? { coverage: observability } : {}),
+      ...currentRow(finding),
+    });
   }
   for (const prior of unpairedBaseline) {
     if (rescopedBaseline.has(prior.dedupeKey)) continue;
+    /* A finding whose check or surface is no longer comparable is not a
+     * repair: the current run could not re-check it. */
+    const observability = observationClass(prior, 'baseline');
     rows.push({
-      class: 'resolved',
+      class: observability?.kind === 'not-comparable' ? 'not-comparable' : 'resolved',
+      ...(observability !== undefined ? { coverage: observability } : {}),
       dedupeKey: prior.dedupeKey,
       ruleId: prior.ruleId,
       category: prior.category,
@@ -290,7 +373,9 @@ export function computeFindingsDelta(
 
   const counts: Record<FindingsDeltaClass, number> = {
     new: 0,
+    'newly-observable': 0,
     resolved: 0,
+    'not-comparable': 0,
     persistent: 0,
     'changed-severity': 0,
   };
@@ -304,5 +389,13 @@ export function computeFindingsDelta(
     versionDifferences,
     normalizationChanged,
     configDifferences,
+    ...(coverageComparable !== undefined
+      ? {
+          coverage: compareDeltaCoverageSlices(
+            coverageComparable.baseline,
+            coverageComparable.current,
+          ),
+        }
+      : {}),
   };
 }

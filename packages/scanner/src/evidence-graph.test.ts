@@ -260,6 +260,25 @@ describe('assembleAuditEvidenceGraph', () => {
     expect(blockingCodes(cleanInput({ robotsChain: [] }))).toContain('robots-policy-unresolved');
   });
 
+  it('carries the findings-delta coverage with per-finding coordinates', () => {
+    const graph = assembleAuditEvidenceGraph(cleanInput());
+    expect(graph.deltaCoverage.version).toBe('findings-delta-coverage-v1');
+    expect(graph.deltaCoverage.scopeSignature).toBe(graph.raw.scopeDigest);
+    expect(graph.deltaCoverage.inventorySignature).toBe(graph.raw.inventoryDigest);
+    expect(graph.deltaCoverage.surfaces).toContain('baseline-desktop');
+    expect(graph.deltaCoverage.checks).toContainEqual(
+      expect.objectContaining({ checkId: 'axe', surfaces: ['baseline-desktop'] }),
+    );
+    /* The confirmed axe finding is pinned to the check and surface whose
+     * accepted evidence saw it; the heuristic signal is not confirmed and
+     * carries no coordinates. */
+    expect(graph.deltaCoverage.observations?.['dedupe-image-alt']).toEqual({
+      checkId: 'axe',
+      surfaceId: 'baseline-desktop',
+    });
+    expect(Object.keys(graph.deltaCoverage.observations ?? {})).toEqual(['dedupe-image-alt']);
+  });
+
   describe('performance measurement sets', () => {
     const labRun = (n: number) =>
       attempt(

@@ -489,15 +489,27 @@ export const en: ReportStrings = {
       'This section compares this audit, finding by finding, with the audit delivered on {date}. A finding is recognised by its rule and by the element or page it concerns. The comparison is computed automatically, with no interpretation.',
     countLabels: {
       new: 'New findings',
+      'newly-observable': 'Newly observable',
       'changed-severity': 'Severity changed',
       resolved: 'No longer detected',
+      'not-comparable': 'Not comparable',
       persistent: 'Still present',
     },
     newHeading: 'New findings',
+    newlyObservableHeading: 'Newly observable findings',
+    newlyObservableNote:
+      'These findings could not be detected in the previous audit: the check or the surface involved was not covered then. The site has not regressed between the two audits on these points.',
     changedSeverityHeading: 'Findings whose severity changed',
     resolvedHeading: 'Findings no longer detected',
     resolvedNote:
       'A finding that is no longer detected has most often been fixed. It may also have disappeared because the page it concerned was not analysed in this audit.',
+    notComparableHeading: 'Findings that cannot be compared',
+    notComparableNote:
+      'This audit cannot settle these findings: the check or the surface involved was not comparable between the two audits. They are counted neither as fixed nor as new.',
+    scopeChangedNote:
+      'The requested scope has changed since the previous audit. Findings are paired within the scope both audits covered, and this difference is disclosed rather than counted as a regression or a repair.',
+    inventoryChangedNote:
+      'The pages explored have changed since the previous audit. Findings are paired page by page, and this difference is disclosed rather than counted as a regression or a repair.',
     findingColumnLabel: 'Finding',
     severityColumnLabel: 'Severity',
     pagesColumnLabel: 'Pages',

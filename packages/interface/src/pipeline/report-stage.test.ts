@@ -17,6 +17,7 @@ vi.mock('@odysseus/report', async (importOriginal) => {
 vi.mock('@odysseus/store', () => ({
   persistReport: vi.fn(),
   findDeltaBaseline: vi.fn().mockResolvedValue(null),
+  findAuditEvidenceCoverage: vi.fn().mockResolvedValue(undefined),
   getAuditManualFields: vi.fn().mockResolvedValue(undefined),
   syncProspectIdentityIntoAudit: vi.fn(),
   getAuditGradeOverride: vi.fn().mockResolvedValue(undefined),

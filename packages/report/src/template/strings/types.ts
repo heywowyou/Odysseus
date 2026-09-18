@@ -935,16 +935,30 @@ export interface ReportStrings {
     introTemplate: string;
     countLabels: {
       new: string;
+      'newly-observable': string;
       'changed-severity': string;
       resolved: string;
+      'not-comparable': string;
       persistent: string;
     };
     newHeading: string;
+    /** Plan 059: findings from a check or surface the baseline audit could
+     *  not observe - never framed as a new regression. */
+    newlyObservableHeading: string;
+    newlyObservableNote: string;
     changedSeverityHeading: string;
     resolvedHeading: string;
     /** A finding no longer detected is not proof of a fix: the page may
      *  not have been analysed this time. Stated under the resolved table. */
     resolvedNote: string;
+    /** Plan 059: baseline findings whose check or surface is no longer
+     *  comparable - disclosed, never counted as resolved. */
+    notComparableHeading: string;
+    notComparableNote: string;
+    /** Plan 059: scope/inventory changes disclosed beside rescoped
+     *  pairing, only when both runs carried coverage signatures. */
+    scopeChangedNote: string;
+    inventoryChangedNote: string;
     findingColumnLabel: string;
     severityColumnLabel: string;
     pagesColumnLabel: string;

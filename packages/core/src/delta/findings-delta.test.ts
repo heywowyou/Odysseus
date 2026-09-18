@@ -64,7 +64,14 @@ describe('computeFindingsDelta', () => {
       ]),
     );
 
-    expect(delta.counts).toEqual({ new: 1, resolved: 1, persistent: 1, 'changed-severity': 1 });
+    expect(delta.counts).toEqual({
+      new: 1,
+      'newly-observable': 0,
+      resolved: 1,
+      'not-comparable': 0,
+      persistent: 1,
+      'changed-severity': 1,
+    });
     expect(delta.rows.map((row) => [row.class, row.dedupeKey])).toEqual([
       ['new', 'added'],
       ['changed-severity', 'moved'],
@@ -187,7 +194,14 @@ describe('rescoped findings', () => {
       run('after', [contrast('c1', 'serious', [HOME, A, B])]),
     );
 
-    expect(delta.counts).toEqual({ new: 0, resolved: 0, persistent: 1, 'changed-severity': 0 });
+    expect(delta.counts).toEqual({
+      new: 0,
+      'newly-observable': 0,
+      resolved: 0,
+      'not-comparable': 0,
+      persistent: 1,
+      'changed-severity': 0,
+    });
     expect(delta.rows).toHaveLength(1);
     expect(delta.rows[0]).toMatchObject({
       class: 'persistent',
@@ -203,7 +217,14 @@ describe('rescoped findings', () => {
       run('after', [contrast('c1', 'serious', [HOME])]),
     );
 
-    expect(delta.counts).toEqual({ new: 0, resolved: 0, persistent: 0, 'changed-severity': 1 });
+    expect(delta.counts).toEqual({
+      new: 0,
+      'newly-observable': 0,
+      resolved: 0,
+      'not-comparable': 0,
+      persistent: 0,
+      'changed-severity': 1,
+    });
   });
 
   it('counts a rescoped severity move as persistent when normalization changed', () => {
@@ -218,7 +239,14 @@ describe('rescoped findings', () => {
       }),
     );
 
-    expect(delta.counts).toEqual({ new: 0, resolved: 0, persistent: 1, 'changed-severity': 0 });
+    expect(delta.counts).toEqual({
+      new: 0,
+      'newly-observable': 0,
+      resolved: 0,
+      'not-comparable': 0,
+      persistent: 1,
+      'changed-severity': 0,
+    });
   });
 
   it('never pairs findings of the same rule with different titles', () => {
@@ -227,7 +255,14 @@ describe('rescoped findings', () => {
       run('after', [contrast('c1', 'serious', [HOME, A, B], 'Other title')]),
     );
 
-    expect(delta.counts).toEqual({ new: 1, resolved: 1, persistent: 0, 'changed-severity': 0 });
+    expect(delta.counts).toEqual({
+      new: 1,
+      'newly-observable': 0,
+      resolved: 1,
+      'not-comparable': 0,
+      persistent: 0,
+      'changed-severity': 0,
+    });
   });
 
   it('never pairs findings of the same rule and title on disjoint pages', () => {
@@ -236,7 +271,14 @@ describe('rescoped findings', () => {
       run('after', [contrast('c1', 'serious', [B])]),
     );
 
-    expect(delta.counts).toEqual({ new: 1, resolved: 1, persistent: 0, 'changed-severity': 0 });
+    expect(delta.counts).toEqual({
+      new: 1,
+      'newly-observable': 0,
+      resolved: 1,
+      'not-comparable': 0,
+      persistent: 0,
+      'changed-severity': 0,
+    });
   });
 
   it('pairs with the largest page overlap whatever the input order', () => {
@@ -264,7 +306,14 @@ describe('rescoped findings', () => {
       run('after', [contrast('same', 'serious', [HOME, A]), contrast('c2', 'serious', [HOME])]),
     );
 
-    expect(delta.counts).toEqual({ new: 1, resolved: 0, persistent: 1, 'changed-severity': 0 });
+    expect(delta.counts).toEqual({
+      new: 1,
+      'newly-observable': 0,
+      resolved: 0,
+      'not-comparable': 0,
+      persistent: 1,
+      'changed-severity': 0,
+    });
     expect(delta.rows.find((row) => row.class === 'persistent')?.dedupeKey).toBe('same');
   });
 });

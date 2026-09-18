@@ -58,6 +58,7 @@ import {
 import { readOdysseusBuildId } from '@odysseus/scanner';
 import {
   acquireReportQualityLease,
+  findAuditEvidenceCoverage,
   findDeltaBaseline,
   getAuditGradeOverride,
   getAuditManualFields,
@@ -268,6 +269,10 @@ async function buildReportOnlyInputs(
     siteUrl: manifest.siteUrl,
     startedAt: new Date(manifest.startedAt),
   });
+  // Plan 059 step 35: both sides of the comparison carry their persisted
+  // coverage signature, so rows whose observability changed are separated
+  // from genuine regressions and repairs.
+  const currentCoverage = await findAuditEvidenceCoverage(connection, manifest.auditId);
   const currentProvenance = buildFindingsProvenance(findings);
   const delta =
     baseline === null
@@ -280,6 +285,7 @@ async function buildReportOnlyInputs(
           config: manifest.config,
           findingsProvenance: currentProvenance,
           findings,
+          ...(currentCoverage !== undefined ? { coverage: currentCoverage } : {}),
         });
 
   let obligationAssessment;

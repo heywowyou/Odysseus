@@ -20,9 +20,12 @@
 import {
   buildFindingsProvenance,
   canonicalDigest,
+  FINDINGS_DELTA_COVERAGE_VERSION,
   type AuditScopeSnapshot,
+  type DeltaObservationCoordinates,
   type EvidenceCoverageSignature as ReportEvidenceCoverageSignature,
   type EvidenceLimitation,
+  type FindingsDeltaCoverage,
   type Finding,
   type Sha256Digest,
 } from '@odysseus/core';
@@ -45,6 +48,7 @@ import {
   assembleCheckAttemptLedger,
   PAGE_CHECK_IDS,
   REQUIRED_SITE_CHECK_IDS,
+  SITE_REQUEST_SURFACE_ID,
 } from './evidence-acquisition.js';
 import {
   buildAuditSignal,
@@ -134,6 +138,10 @@ export interface AuditEvidenceGraph {
   observations: ObservationLedger;
   audit: AuditEvidenceSnapshot;
   quality: EvidenceQualityAssessment;
+  /** Plan 059 step 35: this run's observability in the shape the findings
+   *  delta compares, carried to the audit's persisted record so a later
+   *  re-audit can judge comparability from both runs' evidence. */
+  deltaCoverage: FindingsDeltaCoverage;
   /** Present only when the quality verdict is reportable. */
   approval?: ProducedApprovedAuditEvidence;
 }
@@ -1209,6 +1217,36 @@ export function assembleAuditEvidenceGraph(input: AuditEvidenceGraphInput): Audi
     normalizationContract: input.environment.build.normalizationFingerprint,
   };
 
+  /* Plan 059 step 35: the same observability, in the shape the findings
+   * delta compares across runs. Each confirmed finding is pinned to the
+   * check and surface whose accepted evidence saw it, so the delta can
+   * tell a client regression from Odysseus seeing further than the
+   * baseline could. Site-level acquisitions observe on the site-request
+   * surface, everything else on the baseline desktop render. */
+  const deltaObservations: Record<string, DeltaObservationCoordinates> = {};
+  for (const finding of confirmed) {
+    const checkId = observationCheckId(finding);
+    if (checkId === undefined) continue;
+    deltaObservations[finding.dedupeKey] = {
+      checkId,
+      surfaceId: SITE_OBSERVATION_CHECK_IDS.has(checkId)
+        ? SITE_REQUEST_SURFACE_ID
+        : 'baseline-desktop',
+    };
+  }
+  const deltaCoverage: FindingsDeltaCoverage = {
+    version: FINDINGS_DELTA_COVERAGE_VERSION,
+    scopeSignature: input.scope.digest,
+    inventorySignature: inventoryDigest,
+    capabilityRegistryVersion: ACCESSIBILITY_CAPABILITY_REGISTRY.version,
+    semanticClassifierVersion: SEMANTIC_CLASSIFIER_VERSION,
+    checks: checkObservability,
+    surfaces: [
+      ...new Set(['baseline-desktop', ...checkObservability.flatMap((check) => check.surfaces)]),
+    ].sort((left, right) => left.localeCompare(right)),
+    observations: deltaObservations,
+  };
+
   /* ---- audit root, gate, assessment, approval ---------------------- */
   const audit = buildAuditEvidenceSnapshot({
     auditId: input.auditId,
@@ -1266,6 +1304,7 @@ export function assembleAuditEvidenceGraph(input: AuditEvidenceGraphInput): Audi
     observations,
     audit,
     quality,
+    deltaCoverage,
     ...(approval !== undefined ? { approval } : {}),
   };
 }

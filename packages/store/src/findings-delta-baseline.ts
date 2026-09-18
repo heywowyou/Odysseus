@@ -4,13 +4,32 @@
  * pair was approved for delivery and whose findings carry a provenance
  * stamp. An undelivered rerun is never a baseline, and an unstamped
  * findings set is never compared.
+ *
+ * Plan 059 step 35: each run's evidence coverage signature rides along, so
+ * the delta can judge observability and not only identity. An audit whose
+ * persisted record carries a current-version signature contributes it
+ * verbatim; one that predates the coverage graph - or whose signature was
+ * written by a future build - contributes only what such an audit can
+ * honestly claim, through `buildLegacyFindingsDeltaCoverage`: the surfaces
+ * it is known to have scanned and nothing else.
  */
 
 import type { Connection } from 'mongoose';
-import type { FindingsDeltaRun } from '@odysseus/core';
+import {
+  buildLegacyFindingsDeltaCoverage,
+  FINDINGS_DELTA_COVERAGE_VERSION,
+  type FindingsDeltaCoverage,
+  type FindingsDeltaRun,
+} from '@odysseus/core';
 import { createAuditModel, type AuditDocument } from './schemas/audit.schema.js';
 import { createFindingModel, type FindingDocument } from './schemas/finding.schema.js';
 import { createReportApprovalModel } from './schemas/report-approval.schema.js';
+
+function storedCoverage(coverage: FindingsDeltaCoverage | undefined): FindingsDeltaCoverage {
+  return coverage?.version === FINDINGS_DELTA_COVERAGE_VERSION
+    ? coverage
+    : buildLegacyFindingsDeltaCoverage();
+}
 
 export async function findDeltaBaseline(
   connection: Connection,
@@ -56,6 +75,7 @@ export async function findDeltaBaseline(
     tool: audit.tool,
     config: { maxPages: audit.config.maxPages, maxDepth: audit.config.maxDepth },
     findingsProvenance: audit.findingsProvenance,
+    coverage: storedCoverage(audit.evidenceCoverage),
     findings: findings.map((finding) => ({
       findingId: finding.findingId,
       ruleId: finding.ruleId,
@@ -66,4 +86,20 @@ export async function findDeltaBaseline(
       dedupeKey: finding.dedupeKey,
     })),
   };
+}
+
+/**
+ * The current audit's own coverage signature, read back from its persisted
+ * record for the delta's current side. Undefined when this audit has no
+ * stored signature, so the delta degrades instead of inventing one.
+ */
+export async function findAuditEvidenceCoverage(
+  connection: Connection,
+  auditId: string,
+): Promise<FindingsDeltaCoverage | undefined> {
+  const audit = await createAuditModel(connection)
+    .findOne({ auditId }, { evidenceCoverage: 1 })
+    .lean<Pick<AuditDocument, 'evidenceCoverage'>>();
+  const coverage = audit?.evidenceCoverage;
+  return coverage?.version === FINDINGS_DELTA_COVERAGE_VERSION ? coverage : undefined;
 }
