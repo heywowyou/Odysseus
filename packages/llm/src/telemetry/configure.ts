@@ -17,7 +17,5 @@ export function configureLlmTelemetryFromEnv(env: NodeJS.ProcessEnv = process.en
     );
   }
 
-  configureLlmTelemetrySink(
-    new LangfuseLlmTelemetrySink({ baseUrl, publicKey, secretKey }),
-  );
+  configureLlmTelemetrySink(new LangfuseLlmTelemetrySink({ baseUrl, publicKey, secretKey }));
 }
