@@ -116,8 +116,10 @@ describe('bot page', () => {
     expect(isBilingual(bot)).toBe(true);
     expect(bot).toContain('User-agent: OdysseusBot');
     expect(bot).toContain('Crawl-delay');
-    expect(bot).toContain('au moins une seconde');
-    expect(bot).toContain('at least one second');
+    expect(bot).toContain('au moins 333 ms');
+    expect(bot).toContain('at least 333 ms');
+    expect(bot).toContain('sous-ressources');
+    expect(bot).toContain('Subresources');
   });
 
   it('distinguishes commissioned diagnostics from outreach analysis', () => {
