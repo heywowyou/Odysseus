@@ -422,6 +422,7 @@ async function runScanLane(
         url,
         scanPage(browser, debugPort, url, {
           delayMs,
+          scheduler,
           screenshotDir,
           redirectHostCache,
           guard: pageGuard,
@@ -502,6 +503,7 @@ async function runRenderedAnalysisLane(
         url,
         runRenderedAnalysis(browser, url, {
           delayMs,
+          scheduler,
           screenshotDir: context.screenshotDir,
           redirectHostCache: context.redirectHostCache,
           guard: pageGuard,
@@ -873,7 +875,9 @@ async function runStagedFullAuditScan(
       continue;
     }
     const workStartedAtMs = Date.now();
-    const lighthouseResult = await runLighthouseAnalysis(url, debugPort, { delayMs });
+    const lighthouseResult = await runLighthouseAnalysis(url, debugPort, {
+      scheduler,
+    });
     const durationMs = Date.now() - workStartedAtMs;
     emit(url, lighthouseResult, true, durationMs);
     lighthouseCompleted += 1;
