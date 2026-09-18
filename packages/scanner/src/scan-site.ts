@@ -16,9 +16,10 @@ import {
   getScanConcurrency,
 } from './config.js';
 import { HostRequestScheduler } from './host-request-scheduler.js';
-import type {
-  NetworkSafetyDisposition,
-  NetworkTargetPolicy,
+import {
+  checkNetworkTarget,
+  type NetworkSafetyDisposition,
+  type NetworkTargetPolicy,
 } from './network-target-policy.js';
 import type { RedirectHostCache } from './checks/transactional-flow.js';
 import type { SitemapCheckResult } from './checks/sitemap.js';
@@ -1047,6 +1048,15 @@ export async function scanSite(
       : (disposition: NetworkSafetyDisposition): void => {
           networkSafetyDispositions.push(disposition);
         };
+  const assertSafeDirectTarget = async (url: string): Promise<void> => {
+    if (options.networkPolicy === undefined) return;
+    const verdict = await checkNetworkTarget(url, options.networkPolicy);
+    if (verdict.kind === 'allowed') return;
+    onNetworkSafetyBlocked?.(verdict.disposition);
+    throw new Error(
+      `scanSite: network safety blocked ${url} (${verdict.disposition.reason})`,
+    );
+  };
   const sitemapMode = options.sitemapMode ?? 'supplement';
   const crawlOptions = (frontier: CrawlOptions['frontier']): CrawlOptions => ({
     scheduler,
@@ -1215,9 +1225,11 @@ export async function scanSite(
   // comparisons to), and attached to the homepage's scan.json below only
   // when the homepage was actually visited, the same attribution pattern
   // every other site-level check here uses.
+  const siteOrigin = new URL(crawl.startUrl).origin;
+  await assertSafeDirectTarget(new URL('/llms.txt', siteOrigin).href);
   const llmsTxtCheck = await scheduler.schedule(() =>
     checkLlmsTxt(
-      new URL(crawl.startUrl).origin,
+      siteOrigin,
       options.timeoutMs ?? getPageTimeoutMs(),
       options.userAgent ?? getCrawlerUserAgent(),
     ),
@@ -1228,9 +1240,10 @@ export async function scanSite(
   // llms.txt/sitemap above: near-always identical across every page on a
   // site, so one request here (attached only to the homepage's scan.json
   // when it was visited) rather than repeating the same answer per page.
+  await assertSafeDirectTarget(siteOrigin);
   const securityHeadersCheck = await scheduler.schedule(() =>
     checkSecurityHeaders(
-      new URL(crawl.startUrl).origin,
+      siteOrigin,
       options.timeoutMs ?? getPageTimeoutMs(),
       options.userAgent ?? getCrawlerUserAgent(),
     ),
