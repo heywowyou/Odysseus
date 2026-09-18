@@ -675,9 +675,9 @@ environment only if the deployed volume name differs.
 Before considering the path active, run all three:
 
 ```sh
-sudo -u deploy /srv/odysseus/deploy/restic-backup.sh
-sudo -u deploy /srv/odysseus/deploy/restic-check.sh
-sudo -u deploy /srv/odysseus/deploy/restic-restore-drill.sh
+sudo -u deploy bash /srv/odysseus/deploy/restic-backup.sh
+sudo -u deploy bash /srv/odysseus/deploy/restic-check.sh
+sudo -u deploy bash /srv/odysseus/deploy/restic-restore-drill.sh
 ```
 
 The restore drill restores the latest production-host artifact snapshot into a
