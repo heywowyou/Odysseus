@@ -1232,6 +1232,10 @@ export async function scanSite(
       siteOrigin,
       options.timeoutMs ?? getPageTimeoutMs(),
       options.userAgent ?? getCrawlerUserAgent(),
+      {
+        ...(options.networkPolicy !== undefined ? { networkPolicy: options.networkPolicy } : {}),
+        ...(onNetworkSafetyBlocked !== undefined ? { onNetworkSafetyBlocked } : {}),
+      },
     ),
   );
   const llmsTxtCheckForScan = homepageWasVisited ? llmsTxtCheck : undefined;
@@ -1246,6 +1250,10 @@ export async function scanSite(
       siteOrigin,
       options.timeoutMs ?? getPageTimeoutMs(),
       options.userAgent ?? getCrawlerUserAgent(),
+      {
+        ...(options.networkPolicy !== undefined ? { networkPolicy: options.networkPolicy } : {}),
+        ...(onNetworkSafetyBlocked !== undefined ? { onNetworkSafetyBlocked } : {}),
+      },
     ),
   );
   const securityHeadersCheckForScan = homepageWasVisited ? securityHeadersCheck : undefined;
