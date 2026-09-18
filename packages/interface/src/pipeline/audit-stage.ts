@@ -56,6 +56,7 @@ import {
   replaceDetectedManualFields,
 } from '@odysseus/store';
 import { runObligationStage } from './obligation-stage.js';
+import { buildRunAuditScope } from './audit-scope-stage.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { syncAuditDirToBucket } from '../artifacts/sync-audit-artifacts.js';
 import { logger } from '../logger.js';
@@ -207,6 +208,24 @@ export async function runAuditStage(
       scanConcurrency: effectiveScanConcurrency ?? getScanConcurrency(),
       sitemapMode: options.sitemapMode ?? 'supplement',
     };
+
+    const auditScope = buildRunAuditScope({
+      url,
+      scanIntent: options.scanIntent ?? (options.skipLighthouse ? 'quick-check' : 'full-audit'),
+      config,
+      maxPagesWasExplicit: options.maxPages !== undefined,
+      maxDepthWasExplicit: options.maxDepth !== undefined,
+      ...(options.seeds !== undefined ? { seeds: options.seeds } : {}),
+      ...(options.exclusions !== undefined ? { exclusions: options.exclusions } : {}),
+      ...(options.bookingEngineUrl !== undefined
+        ? { bookingEngineUrl: options.bookingEngineUrl }
+        : {}),
+    });
+    fs.writeFileSync(
+      path.join(auditDir, 'audit-scope.json'),
+      `${JSON.stringify(auditScope, null, 2)}\n`,
+      'utf8',
+    );
 
     const siteResult = await scanSite(url, {
       browser,
