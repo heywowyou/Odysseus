@@ -13,7 +13,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
 import { Schema, type Connection } from 'mongoose';
-import type { ReportQualityModelCall, Sha256Digest } from '@odysseus/core';
+import type { ReportQualityModelCall, ReviewIssue, Sha256Digest } from '@odysseus/core';
 import {
   acquireReportQualityLease,
   approveExactReportBundle,
@@ -326,6 +326,44 @@ describe.skipIf(!mongoAvailable)('report quality store', () => {
       ).rejects.toThrow(StaleReportQualityRunError);
       await startReportQualityRun(connection!, auditId, currentLease);
       await transitionReportQualityRun(connection!, auditId, currentLease, 'content-clean');
+    });
+
+    it('adjudicated review issues append to the run lineage under the closed ReviewIssue contract', async () => {
+      const auditId = uniqueAuditId('lineage-review-issues');
+      const lease = await acquireReportQualityLease(connection!, auditId);
+      await startReportQualityRun(connection!, auditId, lease);
+      const baseIssue: ReviewIssue = {
+        issueId: 'iss-1',
+        kind: 'preference',
+        severity: 'minor',
+        target: 'fr.analysis.executiveSummary',
+        domain: 'editorial',
+        supportingRefs: [],
+        reason: 'register drift',
+        repairRoute: 'patch-prose',
+        status: 'rejected',
+        sourceRole: 'issue-adjudicator',
+        artifactDigest: `sha256:${'c'.repeat(64)}`,
+      };
+      await transitionReportQualityRun(connection!, auditId, lease, 'content-clean', {
+        reviewIssues: [baseIssue],
+      });
+      await transitionReportQualityRun(connection!, auditId, lease, 'content-clean', {
+        reviewIssues: [{ ...baseIssue, issueId: 'iss-2', status: 'accepted' }],
+      });
+
+      const run = await createReportQualityRunModel(connection!)
+        .findOne({ qualityRunId: lease.qualityRunId })
+        .lean();
+      expect(run?.issues.map((issue) => issue.issueId)).toEqual(['iss-1', 'iss-2']);
+      expect(run?.issues[0]).toMatchObject({
+        kind: 'preference',
+        severity: 'minor',
+        status: 'rejected',
+        sourceRole: 'issue-adjudicator',
+        repairRoute: 'patch-prose',
+      });
+      expect(run?.issues[1]?.status).toBe('accepted');
     });
   });
 

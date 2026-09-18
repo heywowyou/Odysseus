@@ -145,6 +145,24 @@ async function recordModelCall(
   );
 }
 
+/** Appends the adjudicated review issues to the run lineage. The corpus
+ *  benchmark tallies kind/severity/status from here; issue reasons are
+ *  review artifacts, not chain-of-thought, and stay inside the closed
+ *  ReviewIssue contract. */
+async function recordReviewIssues(
+  context: QualityRunContext,
+  issues: ReviewIssue[],
+): Promise<void> {
+  if (issues.length === 0) return;
+  await transitionReportQualityRun(
+    context.connection,
+    context.manifest.auditId,
+    context.lease,
+    context.state,
+    { reviewIssues: issues },
+  );
+}
+
 async function keepLease(context: QualityRunContext): Promise<void> {
   context.lease = await renewReportQualityLease(
     context.connection,
@@ -387,6 +405,7 @@ async function cleanContentDraft(
       evidence: compactEvidence(context.evidence),
       seniorPlan: plan,
     });
+    await recordReviewIssues(context, adjudicated);
     const unsure = materialUnsure(adjudicated);
     if (unsure.length > 0) {
       throw new ReportQualityNeedsOperatorReviewError(
@@ -617,6 +636,7 @@ async function renderAndReviewLanguage(
     });
     const visualUnsure = materialUnsure(adjudicated);
     const visualDefects = acceptedObjective(adjudicated);
+    await recordReviewIssues(context, adjudicated);
     if (visualUnsure.length > 0 || visualDefects.length > 0) {
       throw new ReportQualityNeedsOperatorReviewError(
         visualUnsure.length > 0 ? 'visual-review-unsure' : 'visual-defect',
@@ -643,6 +663,7 @@ async function renderAndReviewLanguage(
       pageManifest,
       qaDigest: qa.gateDigest,
     });
+    await recordReviewIssues(context, finalAdjudicated);
     if (
       acceptedObjective(finalAdjudicated).length > 0 ||
       materialUnsure(finalAdjudicated).length > 0

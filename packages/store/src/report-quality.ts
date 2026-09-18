@@ -1,6 +1,11 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { Connection, ClientSession } from 'mongoose';
-import type { ReportBundleState, ReportQualityModelCall, Sha256Digest } from '@odysseus/core';
+import type {
+  ReportBundleState,
+  ReportQualityModelCall,
+  ReviewIssue,
+  Sha256Digest,
+} from '@odysseus/core';
 import {
   createActiveReportBundleModel,
   createReportBundleModel,
@@ -203,6 +208,7 @@ export async function startReportQualityRun(
     leaseTokenHash: lease.tokenHash,
     state: 'running',
     modelCalls: [],
+    issues: [],
     candidateDigests: [],
     createdAt: now,
     updatedAt: now,
@@ -218,6 +224,7 @@ export async function transitionReportQualityRun(
     inputSnapshotDigest?: Sha256Digest;
     approvedEvidenceDigest?: Sha256Digest;
     modelCall?: ReportQualityModelCall;
+    reviewIssues?: ReviewIssue[];
     candidateDigest?: Sha256Digest;
     operatorApprovalBundleDigest?: Sha256Digest;
     errorCode?: string;
@@ -252,6 +259,8 @@ export async function transitionReportQualityRun(
   };
   const push: Record<string, unknown> = {};
   if (patch.modelCall) push.modelCalls = patch.modelCall;
+  if (patch.reviewIssues && patch.reviewIssues.length > 0)
+    push.issues = { $each: patch.reviewIssues };
   if (patch.candidateDigest) push.candidateDigests = patch.candidateDigest;
   if (Object.keys(push).length > 0) update.$push = push;
 

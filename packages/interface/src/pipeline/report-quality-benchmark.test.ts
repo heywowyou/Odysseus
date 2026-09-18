@@ -179,6 +179,7 @@ function runDoc(overrides: Partial<ReportQualityRunDocument> = {}): ReportQualit
     state: 'awaiting-operator-approval',
     inputSnapshotDigest: `sha256:${'e'.repeat(64)}`,
     approvedEvidenceDigest: `sha256:${'a'.repeat(64)}`,
+    issues: [],
     modelCalls: [
       { role: 'senior-analyst' },
       { role: 'writer-fr' },

@@ -1,5 +1,10 @@
 import { Schema, type Connection, type Model } from 'mongoose';
-import type { ReportBundleState, ReportQualityModelCall, Sha256Digest } from '@odysseus/core';
+import type {
+  ReportBundleState,
+  ReportQualityModelCall,
+  ReviewIssue,
+  Sha256Digest,
+} from '@odysseus/core';
 
 export interface ReportQualityLeaseDocument {
   auditId: string;
@@ -30,6 +35,7 @@ export interface ReportQualityRunDocument {
   inputSnapshotDigest?: Sha256Digest;
   approvedEvidenceDigest?: Sha256Digest;
   modelCalls: ReportQualityModelCall[];
+  issues: ReviewIssue[];
   candidateDigests: Sha256Digest[];
   operatorApprovalBundleDigest?: Sha256Digest;
   errorCode?: string;
@@ -50,6 +56,9 @@ const reportQualityRunSchema = new Schema<ReportQualityRunDocument>(
     // whose shape this schema deliberately does not re-declare, so a new
     // provenance field never needs a matching Mongoose edit to persist.
     modelCalls: { type: [Schema.Types.Mixed], default: [] } as never,
+    // Same closed-contract rationale: adjudicated ReviewIssue records feed
+    // the corpus benchmark's editorial outcome tallies.
+    issues: { type: [Schema.Types.Mixed], default: [] } as never,
     candidateDigests: { type: [String], default: [] },
     operatorApprovalBundleDigest: { type: String },
     errorCode: { type: String },

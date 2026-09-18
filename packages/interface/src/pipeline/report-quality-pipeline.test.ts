@@ -3,6 +3,7 @@ import type { Connection } from 'mongoose';
 import {
   type ReportBundleCandidate,
   type ReportQualityModelCall,
+  type ReviewIssue,
   type Sha256Digest,
 } from '@odysseus/core';
 import { getReportModelProfile, getReportModelProfileMatrixDigest } from '@odysseus/llm';
@@ -529,6 +530,14 @@ describe('runReportQualityPipeline (Plan 058 fail-closed behavior)', () => {
     // rejected both times, and never escalates: no editor call, no operator
     // review, full approval path completed.
     expect(harness.llmCalls['issue-adjudicator']).toBe(2);
+    // The adjudicated issues land in run lineage with their verdict intact,
+    // so the corpus benchmark can tally editorial outcomes.
+    const recordedIssues = storeState.transitions.flatMap(
+      (transition) => (transition.patch.reviewIssues as ReviewIssue[] | undefined) ?? [],
+    );
+    expect(recordedIssues).toHaveLength(2);
+    expect(recordedIssues.map((issue) => issue.kind)).toEqual(['preference', 'preference']);
+    expect(recordedIssues.every((issue) => issue.status === 'rejected')).toBe(true);
     expect(harness.llmCalls['editor']).toBeUndefined();
     expect(states()).toContain('quality-approved');
     expect(states()).toContain('awaiting-operator-approval');
