@@ -2,6 +2,7 @@ import {
   ARTICLE_47_REGIME_ID,
   EAA_REGIME_ID,
   LCEN_MENTIONS_LEGALES_REGIME_ID,
+  formatLocaleNumber,
   getRegime,
   type ApprovedAuditEvidencePayload,
   type Finding,
@@ -25,10 +26,10 @@ import {
 const LOCALE: Record<ReportLanguage, string> = { fr: 'fr-FR', en: 'en-GB' };
 
 function formatNumber(value: number, language: ReportLanguage, fractionDigits = 0): string {
-  return new Intl.NumberFormat(LOCALE[language], {
+  return formatLocaleNumber(value, LOCALE[language], {
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits,
-  }).format(value);
+  });
 }
 
 function bilingual(format: (language: ReportLanguage) => string): Record<ReportLanguage, string> {

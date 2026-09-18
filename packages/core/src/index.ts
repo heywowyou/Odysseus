@@ -27,6 +27,7 @@ export * from './compliance/enforcement-facts.js';
 export * from './compliance/registry-name.js';
 export * from './compliance/outreach-facts-block.js';
 export * from './offer/pricing.js';
+export * from './format/number.js';
 export * from './types/outreach-preview.js';
 export * from './types/hotel-prescan-evidence.js';
 export * from './prospecting/hotel-writing-site-context.js';

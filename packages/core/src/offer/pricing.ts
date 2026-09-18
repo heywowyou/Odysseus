@@ -20,19 +20,21 @@
  * exactly. Normalizing to U+00A0 fixes both problems at once.
  */
 
+import { formatLocaleNumber } from '../format/number.js';
+
 /** EUR, excluding VAT. Flat and published; see `docs/rules/offer-positioning.md`
  *  section 1, and trade-off 13 for why it is not a range or a risk band. */
 export const ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT = 990;
 
-const NARROW_NO_BREAK_SPACE = ' ';
 const NO_BREAK_SPACE = ' ';
 
 /** The full-audit price as a client would read it, in the same shape the paid
  *  report already uses for the re-audit price, so the two never disagree about
  *  how money is spelled. */
 export function formatFullAuditPrice(language: 'fr' | 'en'): string {
-  const amount = new Intl.NumberFormat(language === 'fr' ? 'fr-FR' : 'en-GB')
-    .format(ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT)
-    .replaceAll(NARROW_NO_BREAK_SPACE, NO_BREAK_SPACE);
+  const amount = formatLocaleNumber(
+    ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT,
+    language === 'fr' ? 'fr-FR' : 'en-GB',
+  );
   return language === 'fr' ? `${amount}${NO_BREAK_SPACE}€ HT` : `EUR ${amount} excl. VAT`;
 }

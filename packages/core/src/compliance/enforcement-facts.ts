@@ -22,6 +22,7 @@
  */
 
 import type { ReportLanguage } from '../types/llm-output.js';
+import { formatLocaleNumber } from '../format/number.js';
 
 /** Art. R451-4 code de la consommation: the fine for a contravention de
  *  5e classe applied to breaches of the D412-49 et seq. provisions,
@@ -56,12 +57,8 @@ const CASE_LAW_STATE = bilingual(
   'Two 2026 référé decisions on different sites went opposite ways: the Lille court dismissed a similar action on 5 May 2026 (appeal pending), while the Caen court granted an injunction on 4 June 2026 in a separate case. Whether this obligation applies at this scale is therefore contested and unsettled at first instance; no conclusion can be drawn from it for any particular case.',
 );
 
-/** French thousands grouping uses a narrow no-break space (U+202F), the
- *  same D27 rule packages/report's formatNumber applies - duplicated
- *  here rather than imported, since core has no dependency on report and
- *  this is the only number this file ever formats. */
 function formatEur(amount: number, language: ReportLanguage): string {
-  const formatted = new Intl.NumberFormat(language === 'fr' ? 'fr-FR' : 'en-US').format(amount);
+  const formatted = formatLocaleNumber(amount, language === 'fr' ? 'fr-FR' : 'en-US');
   return language === 'fr' ? `${formatted} €` : `EUR ${formatted}`;
 }
 

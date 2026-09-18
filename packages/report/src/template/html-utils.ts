@@ -6,6 +6,7 @@
  * client's own markup) from executing inside the report.
  */
 import { normalizeFrenchTypography } from './french-typography.js';
+import { formatLocaleNumber } from '@odysseus/core';
 
 export function escapeHtml(value: string): string {
   return value
@@ -189,14 +190,11 @@ export function formatElapsedDuration(from: Date, to: Date, language: 'fr' | 'en
 
 const NUMBER_LOCALES = { fr: 'fr-FR', en: 'en-US' } as const;
 
-/** French thousands grouping uses a narrow no-break space (U+202F), not a
- *  plain space or comma - "16,490 ms" in an otherwise-French report reads
- *  as a decimal to a French reader (D27). Node's fr-FR ICU data already
- *  produces U+202F for Intl.NumberFormat, matching
- *  docs/report-v2-prototype-haaitza-fr.html's own `&#8239;` (= U+202F)
- *  usage exactly - verified, not assumed. */
+/** French thousands grouping uses a space, not a comma - "16,490 ms" in an
+ *  otherwise-French report reads as a decimal to a French reader (D27). The
+ *  space is U+00A0 rather than ICU's U+202F, which the embedded fonts lack. */
 export function formatNumber(value: number, language: 'fr' | 'en'): string {
-  return new Intl.NumberFormat(NUMBER_LOCALES[language]).format(value);
+  return formatLocaleNumber(value, NUMBER_LOCALES[language]);
 }
 
 /** report-feedback-la-corniche.md item 3.2 [REGRESSION of report-

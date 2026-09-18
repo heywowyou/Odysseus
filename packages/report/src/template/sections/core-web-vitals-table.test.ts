@@ -230,7 +230,7 @@ describe('renderCoreWebVitalsTable', () => {
 
     const html = renderCoreWebVitalsTable(getStrings('fr'), 9, 'fr', manifest);
     expect(html).toContain('500 ms'); // median, in the value column
-    expect(html).toContain('3 900 ms'); // worst page, in its own column (fr narrow no-break space)
+    expect(html).toContain('3 900 ms'); // worst page, in its own column (fr no-break space)
     expect(html).toContain('href="https://example.com/3900"');
     expect(html).toContain('>/3900<');
     expect(html).toContain('Pire page');

@@ -44,9 +44,8 @@ describe('formatDate', () => {
 });
 
 describe('formatNumber', () => {
-  it('groups French thousands with a narrow no-break space (U+202F), matching the verified prototype (D27)', () => {
-    const formatted = formatNumber(16490, 'fr');
-    expect(formatted).toBe('16 490');
+  it('groups French thousands with a no-break space the embedded fonts can print (D27)', () => {
+    expect(formatNumber(16490, 'fr')).toBe('16\u00a0490');
   });
 
   it('groups English thousands with a comma', () => {

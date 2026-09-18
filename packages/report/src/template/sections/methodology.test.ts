@@ -247,7 +247,7 @@ describe('renderLegalCitationParagraph', () => {
     const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
     expect(html).toContain('loi n° 2023-171');
     expect(html).toContain('tranche d’effectif 02');
-    expect(html).toContain('500 000 €');
+    expect(html).toContain('500 000 €');
     expect(html).not.toContain('ne relève pas de');
   });
 

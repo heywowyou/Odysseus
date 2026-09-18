@@ -768,8 +768,8 @@ describe('2026-08-22 revenue-impact wiring: a scalable citation with known clien
     // floored to 2 significant figures -> 50 000 EUR. Intl.NumberFormat's
     // fr-FR grouping separator is U+202F (narrow no-break space), not a
     // plain space.
-    expect(html).toContain('500 000 €');
-    expect(html).toContain('50 000 €');
+    expect(html).toContain('500 000 €');
+    expect(html).toContain('50 000 €');
     expect(html).toContain('estimation indicative');
   });
 

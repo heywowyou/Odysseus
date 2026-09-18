@@ -36,6 +36,9 @@ describe('renderHtml against the real small-site.test audit', () => {
     expect(html).not.toContain('http://localhost'); // no CDN/external reference
     expect(html).not.toContain('../fonts/'); // fonts must be inlined as data URIs, never a relative path
     expect(html).toContain(escapeHtml(analysis.executiveSummary.slice(0, 20)));
+    // Neither embedded face has U+202F; Chromium would print it from a host
+    // font and the PDF file check would refuse the report.
+    expect(html).not.toContain('\u202f');
   });
 
   // item 3.3: a theme card's "Constats : f002, f003" link must resolve to
