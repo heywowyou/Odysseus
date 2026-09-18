@@ -5,6 +5,7 @@
 
 import { Command } from 'commander';
 import { ensureEnvLoaded } from '@odysseus/scanner';
+import { configureLlmTelemetryFromEnv } from '@odysseus/llm';
 import { registerRenderDiffCommand } from './commands/render-diff.js';
 import { registerCrawlCommand } from './commands/crawl.js';
 import { registerScanCommand } from './commands/scan.js';
@@ -24,6 +25,7 @@ import { registerArtifactsCommand } from './commands/artifacts.js';
 // first, so every command can read .env values regardless of which
 // packages it imports.
 ensureEnvLoaded();
+configureLlmTelemetryFromEnv();
 
 const program = new Command();
 
