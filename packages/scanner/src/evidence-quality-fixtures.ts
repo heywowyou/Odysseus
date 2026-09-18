@@ -97,4 +97,21 @@ export const evidenceQualityFixtures = {
       expectedConfidence: 'low',
     },
   },
+  /**
+   * Same rule, one stable selector component shared by many pages: the
+   * shape pattern inference must collapse into one non-authoritative
+   * pattern without touching the findings it points at.
+   */
+  sharedComponentDefect: {
+    ruleId: 'image-alt',
+    selector: 'img.card-visual',
+    pages: ['https://site-exemple.fr/a', 'https://site-exemple.fr/b', 'https://site-exemple.fr/c'],
+  },
+  /** Two components whose selectors share a shape but not a component:
+   *  evidence that must stay two patterns. */
+  similarSelectorsDifferentComponents: {
+    ruleId: 'link-name',
+    first: { pageUrl: 'https://site-exemple.fr/a', selector: '.card .title a' },
+    second: { pageUrl: 'https://site-exemple.fr/b', selector: '.panel .title a' },
+  },
 } as const;

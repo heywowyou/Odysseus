@@ -596,3 +596,136 @@ describe('page semantic profiles in the evidence graph (plan 059 step 26)', () =
     expect(after.observations.digest).toBe(before.observations.digest);
   });
 });
+
+describe('pattern evidence in the evidence graph (plan 059 step 27)', () => {
+  const url = (path: string) => `${ORIGIN}/${path}`;
+
+  /** A full audit input over the given scanned URLs, with every page
+   *  carrying the fixture page's clean readiness evidence. */
+  const inputWithPages = (urls: readonly string[]) => {
+    const frozen = scope();
+    const extras = urls
+      .filter((candidate) => candidate !== HOME && candidate !== ROOMS)
+      .map((candidate) => ({ url: candidate, disposition: 'scanned' as const }));
+    return cleanInput({
+      inventory: inventory(frozen, extras),
+      attempts: cleanAttempts(urls),
+      pages: urls.map((candidate) => page(candidate)),
+    });
+  };
+
+  it('yields one pattern with the right observation and page sets for a shared component', () => {
+    const shared = finding({
+      ruleId: 'image-alt',
+      findingId: 'finding-shared-card-visual',
+      dedupeKey: 'dedupe-shared-card-visual',
+      pageUrls: [HOME, ROOMS],
+      elements: [
+        { pageUrl: HOME, selector: 'img.card-visual', snippet: '<img class="card-visual">' },
+        { pageUrl: ROOMS, selector: 'img.card-visual', snippet: '<img class="card-visual">' },
+      ],
+    });
+    const graph = assembleAuditEvidenceGraph(cleanInput({ findings: [shared] }));
+    expect(graph.patterns).toHaveLength(1);
+    const pattern = graph.patterns[0]!;
+    expect(pattern.ruleId).toBe('image-alt');
+    expect(pattern.structuralSignature).toBe('img.card-visual');
+    expect(pattern.affectedPageIdentities).toEqual([HOME, ROOMS]);
+    expect(pattern.observationIds).toHaveLength(2);
+    expect(pattern.authoritativeForFindingIdentity).toBe(false);
+    expect(pattern.provesSourceCodeOwnership).toBe(false);
+    expect(graph.audit.patternEvidenceDigest).toBe(
+      canonicalDigest(graph.patterns.map((entry) => entry.digest).sort()),
+    );
+  });
+
+  it('does not merge similar selectors from different components', () => {
+    const card = url('chateau');
+    const spa = url('spa');
+    const cardFindingA = finding({
+      ruleId: 'link-name',
+      findingId: 'finding-card-home',
+      dedupeKey: 'dedupe-card-home',
+      pageUrls: [HOME],
+      elements: [{ pageUrl: HOME, selector: '.card .title a', snippet: '<a>' }],
+    });
+    const cardFindingB = finding({
+      ruleId: 'link-name',
+      findingId: 'finding-card-chateau',
+      dedupeKey: 'dedupe-card-chateau',
+      pageUrls: [card],
+      elements: [{ pageUrl: card, selector: '.card .title a', snippet: '<a>' }],
+    });
+    const panelFindingA = finding({
+      ruleId: 'link-name',
+      findingId: 'finding-panel-rooms',
+      dedupeKey: 'dedupe-panel-rooms',
+      pageUrls: [ROOMS],
+      elements: [{ pageUrl: ROOMS, selector: '.panel .title a', snippet: '<a>' }],
+    });
+    const panelFindingB = finding({
+      ruleId: 'link-name',
+      findingId: 'finding-panel-spa',
+      dedupeKey: 'dedupe-panel-spa',
+      pageUrls: [spa],
+      elements: [{ pageUrl: spa, selector: '.panel .title a', snippet: '<a>' }],
+    });
+    const input = inputWithPages([HOME, ROOMS, card, spa]);
+    input.findings = [cardFindingA, cardFindingB, panelFindingA, panelFindingB];
+    const graph = assembleAuditEvidenceGraph(input);
+
+    expect(graph.patterns).toHaveLength(2);
+    expect(graph.patterns.map((pattern) => pattern.structuralSignature).sort()).toEqual([
+      '.card > .title > a',
+      '.panel > .title > a',
+    ]);
+    // Each pattern carries exactly its own component's observations.
+    expect(graph.patterns.map((pattern) => pattern.observationIds.length)).toEqual([2, 2]);
+  });
+
+  it('leaves finding totals, dedupe and the verdict untouched', () => {
+    const shared = finding({
+      ruleId: 'image-alt',
+      findingId: 'finding-shared-card-visual',
+      dedupeKey: 'dedupe-shared-card-visual',
+      pageUrls: [HOME, ROOMS],
+      elements: [
+        { pageUrl: HOME, selector: 'img.card-visual', snippet: '<img class="card-visual">' },
+        { pageUrl: ROOMS, selector: 'img.card-visual', snippet: '<img class="card-visual">' },
+      ],
+    });
+    const graph = assembleAuditEvidenceGraph(cleanInput({ findings: [shared] }));
+
+    // The confirmed-findings digest binds the findings alone; pattern
+    // inference is not part of it, however many observations it groups.
+    expect(graph.audit.confirmedFindingsDigest).toBe(confirmedFindingsDigest([shared]));
+    // Delta coordinates stay exactly the confirmed findings' dedupe keys.
+    expect(Object.keys(graph.deltaCoverage.observations ?? {})).toEqual([
+      'dedupe-shared-card-visual',
+    ]);
+    // One finding means one total, whatever the pattern says about its reach.
+    expect(graph.observations.observations).toHaveLength(2);
+    expect(graph.quality.verdict).toBe('reportable-complete');
+    expect(graph.quality.issues).toEqual([]);
+    // And an audit with nothing shared keeps zero patterns.
+    const clean = assembleAuditEvidenceGraph(cleanInput());
+    expect(clean.patterns).toEqual([]);
+    expect(clean.audit.confirmedFindingsDigest).toBe(confirmedFindingsDigest([AXE_FINDING]));
+  });
+
+  it('never derives a pattern from a heuristic signal', () => {
+    const signal = finding({
+      ruleId: HEURISTIC_FINDING.ruleId,
+      findingId: 'finding-heuristic-shared',
+      dedupeKey: 'dedupe-heuristic-shared',
+      pageUrls: [HOME, ROOMS],
+      elements: [
+        { pageUrl: HOME, selector: 'img.card-visual', snippet: '<img class="card-visual">' },
+        { pageUrl: ROOMS, selector: 'img.card-visual', snippet: '<img class="card-visual">' },
+      ],
+    });
+    const graph = assembleAuditEvidenceGraph(cleanInput({ findings: [AXE_FINDING, signal] }));
+    expect(graph.signals).toHaveLength(1);
+    expect(graph.patterns).toEqual([]);
+  });
+});

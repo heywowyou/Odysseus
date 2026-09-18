@@ -128,4 +128,41 @@ describe('Plan 059 evidence graph persistence', () => {
     );
     expect(readApprovedAuditEvidence(dir)).toBeUndefined();
   });
+
+  it('persists pattern evidence when one exists and refuses approval when it is edited', () => {
+    const dir = auditDir();
+    const shared = { ...cleanInput().findings[0]! };
+    const graph = assembleAuditEvidenceGraph(
+      cleanInput({
+        findings: [
+          {
+            ...shared,
+            findingId: 'finding-shared',
+            pageUrls: ['https://hotel-exemple.fr/', 'https://hotel-exemple.fr/chambres'],
+            elements: [
+              {
+                pageUrl: 'https://hotel-exemple.fr/',
+                selector: 'img.card-visual',
+                snippet: '<img>',
+              },
+              {
+                pageUrl: 'https://hotel-exemple.fr/chambres',
+                selector: 'img.card-visual',
+                snippet: '<img>',
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    expect(graph.patterns.length).toBeGreaterThan(0);
+    writeAuditEvidenceGraph(dir, graph);
+    const patternsPath = path.join(dir, EVIDENCE_GRAPH_DIRNAME, 'pattern-evidence.json');
+    expect(fs.readFileSync(patternsPath, 'utf8')).toContain('pattern-evidence-v1');
+    fs.writeFileSync(patternsPath, `${JSON.stringify([], null, 2)}\n`);
+    expect(() => approveAuditEvidence(dir, graph)).toThrow(
+      /pattern-evidence\.json does not read back as assembled/,
+    );
+    expect(readApprovedAuditEvidence(dir)).toBeUndefined();
+  });
 });

@@ -64,6 +64,7 @@ import {
   type ObservationLedger,
   type ObservationRecord,
   type PageSemanticProfile,
+  type PatternEvidenceRecord,
 } from './evidence-ledger.js';
 import {
   buildAuditEvidenceSnapshot,
@@ -108,6 +109,7 @@ import {
   PAGE_SEMANTIC_CLASSIFIER_VERSION,
 } from './page-semantic-profile.js';
 import type { PageAuditProfile } from './page-audit-profile.js';
+import { createPatternEvidenceCollector, type PatternObservationRef } from './pattern-evidence.js';
 import type { PerformanceMeasurementSet } from './performance-measurement-set.js';
 import type { RobotsPolicyChain } from './robots-policy-snapshot.js';
 
@@ -158,6 +160,10 @@ export interface AuditEvidenceGraph {
    *  classified from the page's persisted audit-profile signals. Unknown is
    *  a valid role and gates nothing. */
   semanticProfiles: readonly PageSemanticProfile[];
+  /** Plan 059 step 27: non-authoritative shared-component patterns derived
+   *  from the observation ledger. Never merged into findings, never a
+   *  source-code ownership claim. */
+  patterns: readonly PatternEvidenceRecord[];
   raw: RawEvidenceSnapshot;
   observations: ObservationLedger;
   audit: AuditEvidenceSnapshot;
@@ -1143,6 +1149,10 @@ export function assembleAuditEvidenceGraph(input: AuditEvidenceGraphInput): Audi
   const confirmed: Finding[] = [];
   const scannedSet = new Set(scannedUrls);
   const robotsLatest = input.robotsChain[input.robotsChain.length - 1];
+  // Plan 059 step 27: shared-component patterns are derived from confirmed
+  // findings' observations only, after the loop, and are bound to the audit
+  // root as interpretation aid — they touch nothing below this line.
+  const patternCollector = createPatternEvidenceCollector();
 
   for (const finding of input.findings) {
     if (finding.auditId !== input.auditId) {
@@ -1168,6 +1178,7 @@ export function assembleAuditEvidenceGraph(input: AuditEvidenceGraphInput): Audi
     }
 
     const observationIds: string[] = [];
+    const patternRefs: PatternObservationRef[] = [];
     for (const occurrence of occurrences) {
       if (!candidateByUrl.has(occurrence.pageUrl)) {
         consistencyProblems.push(`finding-page-outside-inventory:${occurrence.pageUrl}`);
@@ -1229,6 +1240,11 @@ export function assembleAuditEvidenceGraph(input: AuditEvidenceGraphInput): Audi
       });
       records.set(record.observationId, record);
       observationIds.push(record.observationId);
+      patternRefs.push({
+        observationId: record.observationId,
+        pageUrl: occurrence.pageUrl,
+        ...(occurrence.selector !== undefined ? { selector: occurrence.selector } : {}),
+      });
     }
 
     if (findingDisposition(finding) === 'signal') {
@@ -1244,8 +1260,10 @@ export function assembleAuditEvidenceGraph(input: AuditEvidenceGraphInput): Audi
       );
     } else {
       confirmed.push(finding);
+      patternCollector.note(finding, patternRefs);
     }
   }
+  const patterns = patternCollector.build();
   if (consistencyProblems.length > 0) {
     issues.add({
       code: 'consistency-gate-failed',
@@ -1365,7 +1383,7 @@ export function assembleAuditEvidenceGraph(input: AuditEvidenceGraphInput): Audi
     confirmedFindingsDigest: confirmedFindingsDigest(confirmed),
     signalsDigest: digestOf(signals.map((signal) => signal.digest).sort()),
     pageSemanticProfilesDigest: digestOf(semanticProfiles.map((profile) => profile.digest).sort()),
-    patternEvidenceDigest: digestOf([]),
+    patternEvidenceDigest: digestOf(patterns.map((pattern) => pattern.digest).sort()),
     capabilityRegistryVersion: ACCESSIBILITY_CAPABILITY_REGISTRY.version,
     capabilityRegistryDigest: ACCESSIBILITY_CAPABILITY_REGISTRY.digest,
     evidenceCoverageSignature,
@@ -1410,6 +1428,7 @@ export function assembleAuditEvidenceGraph(input: AuditEvidenceGraphInput): Audi
     frameRecords,
     signals,
     semanticProfiles,
+    patterns,
     raw,
     observations,
     audit,

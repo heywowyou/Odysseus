@@ -29,6 +29,7 @@ const READINESS_RECORDS_FILENAME = 'page-readiness-records.json';
 const FRAME_COVERAGE_RECORDS_FILENAME = 'frame-coverage-records.json';
 const AUDIT_SIGNALS_FILENAME = 'audit-signals.json';
 const PAGE_SEMANTIC_PROFILES_FILENAME = 'page-semantic-profiles.json';
+const PATTERN_EVIDENCE_FILENAME = 'pattern-evidence.json';
 
 interface EvidenceGraphRoots {
   raw: RawEvidenceSnapshot;
@@ -126,6 +127,7 @@ export function writeAuditEvidenceGraph(auditDir: string, graph: AuditEvidenceGr
   writeJsonAtomic(path.join(evidenceDir, FRAME_COVERAGE_RECORDS_FILENAME), graph.frameRecords);
   writeJsonAtomic(path.join(evidenceDir, AUDIT_SIGNALS_FILENAME), graph.signals);
   writeJsonAtomic(path.join(evidenceDir, PAGE_SEMANTIC_PROFILES_FILENAME), graph.semanticProfiles);
+  writeJsonAtomic(path.join(evidenceDir, PATTERN_EVIDENCE_FILENAME), graph.patterns);
   writeJsonAtomic(path.join(evidenceDir, RAW_EVIDENCE_SNAPSHOT_FILENAME), graph.raw);
   writeJsonAtomic(path.join(evidenceDir, OBSERVATION_LEDGER_FILENAME), graph.observations);
   writeJsonAtomic(path.join(evidenceDir, AUDIT_EVIDENCE_SNAPSHOT_FILENAME), graph.audit);
@@ -141,6 +143,7 @@ export const EVIDENCE_READ_BACK_PATHS: readonly string[] = [
   FRAME_COVERAGE_RECORDS_FILENAME,
   AUDIT_SIGNALS_FILENAME,
   PAGE_SEMANTIC_PROFILES_FILENAME,
+  PATTERN_EVIDENCE_FILENAME,
   RAW_EVIDENCE_SNAPSHOT_FILENAME,
   OBSERVATION_LEDGER_FILENAME,
   AUDIT_EVIDENCE_SNAPSHOT_FILENAME,
@@ -188,6 +191,7 @@ export function approveAuditEvidence(auditDir: string, graph: AuditEvidenceGraph
     [FRAME_COVERAGE_RECORDS_FILENAME, graph.frameRecords],
     [AUDIT_SIGNALS_FILENAME, graph.signals],
     [PAGE_SEMANTIC_PROFILES_FILENAME, graph.semanticProfiles],
+    [PATTERN_EVIDENCE_FILENAME, graph.patterns],
     [RAW_EVIDENCE_SNAPSHOT_FILENAME, graph.raw],
     [OBSERVATION_LEDGER_FILENAME, graph.observations],
     [AUDIT_EVIDENCE_SNAPSHOT_FILENAME, graph.audit],

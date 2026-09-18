@@ -290,6 +290,10 @@ export interface PatternEvidenceRecord extends PatternEvidenceRecordInput {
   digest: string;
   /** Binding reminder: pattern evidence never changes finding identity/counts. */
   authoritativeForFindingIdentity: false;
+  /** Plan 059 section 5.15: a pattern names a recurring observed shape, not
+   *  a place in the client's source code. Ownership is claimed by nobody
+   *  here; the report may only ever phrase it as a hypothesis to check. */
+  provesSourceCodeOwnership: false;
 }
 
 export function buildPatternEvidenceRecord(
@@ -304,6 +308,7 @@ export function buildPatternEvidenceRecord(
     affectedPageIdentities: uniqueSorted(input.affectedPageIdentities),
     version: PATTERN_EVIDENCE_VERSION as typeof PATTERN_EVIDENCE_VERSION,
     authoritativeForFindingIdentity: false as const,
+    provesSourceCodeOwnership: false as const,
   };
   const digest = canonicalDigest(body);
   return {
