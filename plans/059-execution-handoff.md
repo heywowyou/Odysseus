@@ -12,134 +12,122 @@
 >
 > Delete this file when Plan 059 reaches DONE.
 
-**Written 2026-09-18.** Baseline commit: `f02649c9`.
+**Written 2026-09-18, updated 2026-09-18 at `ac629ec4`.** Original baseline
+commit: `f02649c9`. All work now lands directly on `main` (operator decision,
+2026-09-18); there is no Plan 059 branch.
 
 ---
 
 ## 0. Read this first
 
-Three facts change how you should read the plan:
-
-1. **Phase A shipped as libraries, not as behavior.** Nine contract modules
-   exist with passing unit tests and are exported from their packages. With
-   four exceptions listed in §2, *nothing calls them*. `scanSite` does not
-   build an `AuditScopeSnapshot`, does not open an `InventoryLedger`, does not
-   record a `CheckAttempt`, and does not run the isolation preflight. The
-   wiring is the work.
-2. **Plan 058 is implemented but was never verified.** Its commit
-   (`3fdefdc7`) shipped 2701 lines across 27 files with no tests, and left
-   `main` uncompilable. Commit `f02649c9` repaired it; see trade-off 100. Plan
-   058's status in `plans/README.md` is still `TODO` and its own definition of
-   done is **not** met — it has no test coverage. If you finish 059 and 058
-   still has no tests, say so plainly rather than promoting anything.
-3. **Two done criteria cannot be satisfied in an unattended session.**
-   Criteria 43 (saved heterogeneous corpus) and 44 (live named-hotel
-   rehearsal) are blocked on inputs that do not exist on this machine and on
-   an authorization that does not carry between sessions. See §5. Do
-   everything else, then stop and report those two.
+1. **The evidence graph now runs on every full audit.** After normalization,
+   `runAuditStage` calls `runEvidenceGraphStage`
+   (`packages/scanner/src/artifacts/evidence-graph-stage.ts`), which reads the
+   persisted scope, inventory, robots chain and per-page attempt/readiness/
+   frame records, assembles the graph (`packages/scanner/src/evidence-graph.ts`)
+   and writes it under `<auditDir>/evidence/`. Approval
+   (`approved-audit-evidence.json`) is written only for a reportable verdict.
+2. **Production approval is currently impossible, truthfully.** Two blocking
+   conditions are unmet by construction: browser isolation (no scan container,
+   §4.1) and temporal coherence (no anchors captured, plan step 21). Every real
+   audit is therefore assessed `failed` with `environment-unapproved` and
+   `temporal-coherence-unverified`. That is the intended fail-closed outcome,
+   not a bug to route around.
+3. **Plan 058 consumes the graph.** `loadAuditEvidencePayload`
+   (`packages/interface/src/pipeline/report-quality-evidence.ts`) refuses an
+   assessed-but-unapproved audit, an approval whose roots or findings digest
+   no longer match, and uses the legacy adapter only when no graph exists. The
+   normal report path (`runAllReportsStage`, regeneration) does not depend on
+   058 and is unaffected.
+4. **Plan 058 still has only partial tests** (loader tests exist; the pipeline
+   and promotion paths are untested). Say so; do not promote it.
+5. **Done criteria 43 and 44 remain blocked** (§5).
+6. **GitHub Actions does not run** (account billing). `pnpm run check` plus the
+   affected unit/e2e suites are the gate; the pre-push hook runs check.
 
 ---
 
 ## 1. Operator decisions already taken — do not re-ask
 
-These were asked and answered. Treat them as settled inputs.
-
 | Decision | Choice | Consequence for you |
 | --- | --- | --- |
-| Browser isolation (plan §3.10, §7) | **Build the secretless scan container.** Not "accept the risk", not gVisor. | §4.1. This is the largest single remaining item and it is an architecture change. |
-| Default crawl depth (plan §3.3) | **Remove the default depth bound**, matching the page cap removed in August. | Shipped. `DEFAULT_MAX_CRAWL_DEPTH = UNLIMITED_MAX_CRAWL_DEPTH`. |
-| Politeness pacing (plan §8, decision 18) | **One shared host scheduler with a lowered floor delay**, so total request pressure stays near today's rather than dropping. | Scheduler shipped; the floor is deliberately **still 1000ms**. See §4.2 for the exact condition under which you may lower it to 333. |
-| Scope of execution | **Everything, including the live rehearsal.** | The rehearsal is still blocked on a fresh authorization you do not have. See §5.3. |
-| Stored theme category (trade-off 100) | `StoredTheme`/`StoredLlmOutput` carry the full `FindingCategory`; the model-facing `Theme` stays narrow. | Already applied. Do not widen `themeSchema`. |
+| Browser isolation (plan §3.10, §7) | **Build the secretless scan container.** Not "accept the risk", not gVisor. | §4.1. Largest remaining item; an architecture change. |
+| Default crawl depth (plan §3.3) | **Remove the default depth bound.** | Shipped. |
+| Politeness pacing (plan §8, decision 18) | **One shared host scheduler with a lowered floor delay.** | Shipped: every request path goes through the scheduler and the floor is 333ms (`162e5bd1`). |
+| Scope of execution | **Everything, including the live rehearsal.** | Rehearsal still needs fresh authorization (§5.3). |
+| Stored theme category (trade-off 100) | `StoredTheme`/`StoredLlmOutput` carry the full `FindingCategory`. | Applied. Do not widen `themeSchema`. |
+| Branching | **Work on `main`.** | Commit coherent slices directly to `main` and push. |
 
-**Live rehearsal target: `www.villasfoch.fr`.** The operator named this site,
-for this scan, in the session of 2026-09-17/18. **Authorization does not carry
-to another session.** You do not have it. Never substitute another host, and
-never treat a fixture or a previously scanned domain as a stand-in.
+**Live rehearsal target: `www.villasfoch.fr`.** Authorization does not carry
+to another session. Never substitute another host.
 
 ---
 
-## 2. What is actually shipped
+## 2. What is shipped and wired
 
-### 2.1 Behavior changes live in the pipeline today
+- Scope freeze before acquisition (`audit-scope-stage.ts`), persisted
+  `audit-scope.json`.
+- Network target policy enforced at connection time for the browser and every
+  scanner fetch, including each redirect hop.
+- Robots snapshot at start, revalidation at phase boundaries, persisted chain,
+  stricter-policy stop.
+- Shared host scheduler on every request path at a 333ms floor.
+- Inventory ledger built from real discoveries with depth, continuation,
+  page-cap, robots, operator-exclusion and network-safety dispositions,
+  persisted atomically and reconciled.
+- Append-only check attempts per page, site and Lighthouse run, with the
+  isolated/diagnostic retry ladder.
+- Page readiness and per-frame axe coverage on every rendered page.
+- CrUX no-data vs provider-error distinction (fail closed on errors).
+- Evidence contracts: surfaces, readiness/frame records, coverage and
+  observation ledgers, signals, raw/audit roots, quality assessment,
+  consistency gate, approval producer, accessibility capability registry,
+  observation-check map (`observation-checks.ts`, complete over
+  `CUSTOM_CHECK_SEVERITY` by test).
+- The evidence graph and the 058 binding (§0).
 
-Only these four. Everything else in Phase A is dormant library code.
-
-- **Chromium no longer inherits the process environment.**
-  `packages/scanner/src/browser.ts` launches with
-  `env: buildSanitizedBrowserEnv(process.env)`. Before this, every renderer
-  running an audited site's JavaScript sat next to `MONGODB_URI`, the model key
-  and the bucket keys. Verified against the real browser e2e test. This
-  narrows the blast radius of trade-off 92; it does not close it.
-- **One shared `HostRequestScheduler`** paces the crawl loop and the scan
-  lanes (`crawl.ts`, `scan-site.ts`). Previously two unrelated pacers.
-- **The default depth bound is gone**, treated exactly like the page cap.
-- **The address classifier refuses multicast and reserved ranges**
-  (`address-guard.ts`), widened beyond the previous loopback/private set.
-
-### 2.2 Dormant contract modules — tested, exported, uncalled
-
-| Plan § | Module | Tests |
-| --- | --- | --- |
-| 5.1 | `packages/core/src/types/audit-scope.ts` | yes |
-| — | `packages/core/src/canonical-digest.ts` | via audit-scope |
-| 5.2 | `packages/scanner/src/network-target-policy.ts` | yes |
-| 5.3 | `packages/scanner/src/robots-policy-snapshot.ts` | yes |
-| 5.4 | `packages/scanner/src/inventory-ledger.ts` | 27 |
-| 5.8 | `packages/scanner/src/check-attempt-ledger.ts` | 38+ |
-| 5.10 | `packages/scanner/src/performance-measurement-set.ts` | 35+ |
-| 5.17, 5.18 | `packages/scanner/src/audit-environment-fingerprint.ts` | 28 |
-| 3.10, 7 | `packages/scanner/src/browser-isolation-preflight.ts` | yes |
-
-### 2.3 Contracts Plan 058 already defined for you
-
-`packages/core/src/types/report-quality.ts` already declares
-`ApprovedAuditEvidence`, `ApprovedAuditEvidencePayload`,
-`EvidenceCoverageSignature`, `EvidenceLimitation` and `PatternEvidence`, and
-the 058 pipeline already refuses production promotion when
-`approvalMode === 'legacy-adapter'`
-(`packages/interface/src/pipeline/report-quality-promotion.ts`).
-
-**So the consumer side of the 059→058 handoff exists.** Your job is to make
-`approvalMode` become `system` or `operator` for real, backed by a real
-evidence graph. Do not redefine these types in the scanner; produce them.
-
-Note one mismatch to resolve deliberately, not by accident:
-`audit-environment-fingerprint.ts` declares its own
-`EvidenceCoverageSignature` shape for the scanner's cross-run comparison,
-while core declares the 058-facing one. Decide which is canonical (core's, in
-all likelihood) and converge them when you implement plan step 35.
-
-### 2.4 Still missing entirely
-
-Plan §5 contracts with no implementation at all: `ScanSurface` (5.5),
-`PageReadinessRecord` (5.6), `FrameCoverageRecord` (5.7),
-`EvidenceCoverageLedger` (5.9), `RawEvidenceSnapshot` (5.11),
-`ObservationRecord`/`ObservationLedger` (5.12), `AuditSignal` (5.13),
-`PageSemanticProfile` (5.14), `PatternEvidence` producer (5.15),
-`AccessibilityCapabilityRegistry` (5.16), `AuditEvidenceSnapshot` (5.19),
-`EvidenceQualityAssessment` (5.20), `ApprovedAuditEvidence` producer (5.21),
-and `EvidenceConsistencyGate` (§14).
+Test coverage for the graph: `evidence-graph.test.ts` (18 cases over a
+synthetic clean audit in `evidence-graph-fixtures.ts`),
+`artifacts/evidence-graph-io.test.ts`, `observation-checks.test.ts`,
+`interface/src/pipeline/report-quality-evidence.test.ts`.
 
 ---
 
 ## 3. Step-by-step status against plan §17
 
-Plan steps 1–6 are Phase A. Steps 7–44 remain except where noted.
-
 | Step | State | Note |
 | --- | --- | --- |
-| 1 docs | done | trade-off 99, `deploy/runbook.md`. |
-| 2 fixtures before code | **not done** | Each module got unit tests; there is no shared positive/negative evidence fixture corpus. Build it before Phase D or you will retrofit it. |
-| 3 `AuditScopeSnapshot` | module done, **not wired** | Nothing builds one at scan start. |
-| 4 `NetworkTargetPolicy` | module done, **not wired** | Not enforced on crawl navigation, redirects, or Chromium subresources. Done criterion 2 is unmet. |
-| 5 `RobotsPolicySnapshot` + scheduler | scheduler wired; snapshot **not wired** | No revalidation runs. |
-| 6 isolation preflight | module done, **deliberately not wired** | Wiring it today refuses every production scan, correctly. Blocked on §4.1. |
-| 7–17 Phase B | not started | |
-| 18–22 Phase C | 18/20 partially exist as modules; 19, 21, 22 not started | See §4.3 for the CrUX defect blocking 19. |
-| 23–33 Phase D | not started | The core of the plan. |
-| 34–38 Phase E | not started | 36 is the 058 binding. |
-| 39–44 Phase F | not started | 43 and 44 blocked; see §5. |
+| 1 docs | done | |
+| 2 fixtures | done (synthetic) | `evidence-quality-fixtures.ts`, `evidence-graph-fixtures.ts`. |
+| 3–5 | done, wired | |
+| 6 isolation preflight | assessed, **not asserted** | The graph records the isolation verdict and blocks approval; scan start does not refuse. Asserting waits on §4.1. |
+| 7 inventory | done except hydrated/hreflang provenance | Link, sitemap, start, seed provenance recorded. |
+| 8 page profiles | partial | |
+| 9 baseline desktop + readiness | done | |
+| 10 mobile surface | **not started** | |
+| 11 hydration sweep | **not started** | Readiness records `hydrationProgress: 'not-run'`. |
+| 12 frame coverage | done | |
+| 13 consent/local-state surfaces | **not started** | |
+| 14 discovery fixed point | **not started** | |
+| 15–17 attempts, recovery, site checks | done | |
+| 18 Lighthouse measurement sets | module only | `performance-measurement-set.ts` is not fed by the pipeline. |
+| 19 CrUX distinction | done | Calibration part not started. |
+| 20 environment fingerprint | done, wired | `containerProfileId: 'undeclared'` until §4.1. |
+| 21 temporal anchors | **not started** | Graph input is always `unknown`, which blocks approval. |
+| 22 epoch-aware resume / stale workers | **not started** | |
+| 23–25 raw root, observations, signals | done | |
+| 26 `PageSemanticProfile` | **not started** | Audit root binds `digest([])`. |
+| 27 `PatternEvidence` | **not started** | Audit root binds `digest([])`. |
+| 28 capability registry | done | |
+| 29 normalize from accepted raw only | **blocked at `normalize/` boundary** | §4.4. The graph instead rejects any finding without an accepted attempt (consistency gate), which enforces the same invariant from outside `normalize/`. |
+| 30–33 roots, gate, assessment, approval | done | |
+| 34 legacy adapter | done | |
+| 35 coverage signature / delta | signature done; delta semantics **not started** | Core's `EvidenceCoverageSignature` is canonical; the scanner signature is projected onto it. |
+| 36 058 binding | done | |
+| 37 dashboard phases | **not started** | |
+| 38 artifact-store read-back | **not started** | |
+| 39 fault-injection harness | **not started** | |
+| 40–44 | blocked | §5. |
 
 ---
 
@@ -187,25 +175,10 @@ If you judge this too large to land safely unattended, **build everything else
 and leave this one blocked with a written analysis.** Do not soften the
 preflight to make a deploy green.
 
-### 4.2 The crawl delay is held at 1000ms on purpose
+### 4.2 Pacing
 
-`DEFAULT_CRAWL_DELAY_MS = 1000`. The operator's decision was 333ms, and 333 is
-the intended destination, but the constant's own doc comment records the exact
-precondition: **333 is only safe once every request path goes through the
-scheduler.** Three do not yet — the rendered pass's second navigation inside
-`scanPage`, the sequential Lighthouse loop, and the robots/sitemap setup
-fetches. Each is still paced by the raw delay value, so lowering the number
-today leaves the scan phase at its current rate while making those three paths
-three times faster than they have ever run against a real client site. That is
-a politeness regression, not the neutral change intended.
-
-`HostRequestScheduler.pace()` exists to close this: it waits for a request
-slot **without taking a lane**, which is what those inner navigations need,
-since a nested `schedule()` from inside a held lane deadlocks once every lane
-is held. Route those three call sites through `pace()`, confirm the observed
-rate against a fixture site, *then* lower the constant to 333 in the same
-change. `crawl-pacing.e2e.test.ts` is the test that catches a doubled or
-dropped delay.
+Done. Every request path goes through `HostRequestScheduler` and the floor is
+333ms. `crawl-pacing.e2e.test.ts` guards the rate.
 
 ### 4.3 Open judgement calls the operator has not reviewed
 
@@ -218,10 +191,7 @@ dropped delay.
    can quote an uncalibrated number as verified. Plan step 41 replaces them
    from the corpus — which is blocked (§5.1). **Do not delete the cap to make
    a number quotable.**
-2. **`packages/scanner/src/crux.ts` collapses provider-failure and no-data**
-   onto a single `available: false`. Plan step 19 and done criterion 23
-   require these distinguished. This is a small, self-contained fix and a good
-   early win.
+2. *(Resolved: CrUX no-data and provider error are now distinct.)*
 3. **`buildAuditEnvironmentFingerprint` throws** rather than redacts when a
    field looks like an absolute path or IP literal, because a redacted value
    would leave a digest disagreeing with the environment it claims to
@@ -288,34 +258,19 @@ that 44 awaits the operator re-confirming `www.villasfoch.fr`.
 
 ---
 
-## 6. Suggested execution order
+## 6. Suggested next order
 
-Sequenced so the riskiest unproven pieces land early and nothing is built on
-an unvalidated foundation.
-
-1. **Fix CrUX no-data vs error** (§4.3.2). Small, self-contained, closes done
-   criterion 23, proves your loop works end to end.
-2. **Build the evidence fixture corpus** (plan step 2) — synthetic positive
-   and negative cases for inventory gaps, failure classes, unstable results,
-   frame opacity, temporal drift. Everything after this leans on it.
-3. **Wire what already exists** (plan steps 3, 4, 5): scope snapshot at scan
-   start, network policy on navigation/redirect/subresource, robots
-   revalidation at phase boundaries. This turns dormant libraries into
-   behavior and closes done criteria 1, 2, 3, 5, 6.
-4. **Route the three unpaced call sites through `pace()`, then lower the
-   delay to 333** (§4.2), in one change with the e2e rate check.
-5. **Phase B** (steps 7–17): inventory, surfaces, attempts. Largest volume.
-6. **Phase C** (steps 18–22).
-7. **Phase D** (steps 23–33) — stop at the `normalize/` boundary (§4.4) and
-   report if you reach it.
-8. **Phase E** (steps 34–38), including the 058 binding.
-9. **Attempt the scan container** (§4.1) if time and confidence allow;
-   otherwise leave it blocked with written analysis.
-10. **Report**: what is green, what is blocked, and criteria 43/44 outstanding.
-
-Commit in coherent slices as you go — do not accumulate one enormous commit.
-
----
+1. **Temporal anchors (step 21)**: capture structural anchors at scan start
+   and end and compare, so coherence stops being `unknown`.
+2. **Epoch-aware resume (step 22)**.
+3. **Lighthouse measurement sets (step 18)** fed from the real runs.
+4. **Browser surfaces (steps 10, 11, 13, 14)**: mobile, hydration, consent,
+   fixed point. Largest remaining scanner volume.
+5. **Semantic profiles and patterns (26, 27)**, delta semantics (35),
+   dashboard phases (37), artifact-store read-back (38), fault-injection
+   harness (39).
+6. **Scan container (§4.1)**, or a written analysis if it cannot land safely.
+7. **Report** criteria 43/44 as blocked.
 
 ## 7. Verification
 
