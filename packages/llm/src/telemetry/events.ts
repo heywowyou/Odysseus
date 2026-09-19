@@ -25,6 +25,7 @@ export type LlmPass = 'structure' | 'writing' | 'review' | 'correction-review';
 const WRITING_GUARD_NAMES = [
   'response-invalid',
   'theme-key',
+  'theme-title',
   'language-compliance',
   'severity-vocabulary',
   'legal-consequence',
@@ -34,6 +35,7 @@ const WRITING_GUARD_NAMES = [
   'wcag-citation',
   'business-claim',
   'transactional-flow',
+  'performance-evidence',
   'executive-summary-digit',
   'prose-register',
   'provider-placement',
