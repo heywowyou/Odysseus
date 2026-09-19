@@ -15,11 +15,20 @@ export const MAX_RENDERED_THEMES = 6;
 
 export type PriorityOwnership = 'first-party-action' | 'third-party-escalation' | 'verify-intent';
 export type PriorityActionLevel = 'priority' | 'important' | 'improvement';
+export type RemainingActionLevel = Exclude<PriorityActionLevel, 'priority'>;
 
-export function actionLevelForDisplayRank(displayRank: number): PriorityActionLevel {
-  if (displayRank <= 2) return 'priority';
-  if (displayRank <= 4) return 'important';
-  return 'improvement';
+/** Plan 067: every theme admitted to the existing six-card main-priority
+ * section is a client-facing priority. Rank affects order, not level. */
+export function actionLevelForRenderedPriority(): 'priority' {
+  return 'priority';
+}
+
+/** Plan 067: only work outside the main priorities is split further, using
+ * the deterministic worst severity already owned by the remaining-work view. */
+export function actionLevelForRemainingSeverity(
+  severity: Finding['severity'],
+): RemainingActionLevel {
+  return severity === 'critical' || severity === 'serious' ? 'important' : 'improvement';
 }
 
 export interface PriorityRemediation {
@@ -68,7 +77,7 @@ export interface RenderedPriority {
   theme: StoredTheme;
   /** Contiguous client-facing position. The model rank remains on theme. */
   displayRank: number;
-  /** Plan 067: deterministic action level derived only from display rank. */
+  /** Plan 067: all themes admitted to the existing main-priority section are priority. */
   actionLevel: PriorityActionLevel;
   /** Issue #293: every finding of each (source, ruleId) pair the theme
    *  names - theme.findingIds is expanded to the same set - so a rule can
@@ -309,7 +318,7 @@ export function buildLegacyPriority(
   return {
     theme,
     displayRank,
-    actionLevel: actionLevelForDisplayRank(displayRank),
+    actionLevel: actionLevelForRenderedPriority(),
     findings,
     ownershipCounts: {
       'first-party-action': 0,
@@ -420,7 +429,7 @@ export function buildRenderedPriorities(
     return {
       theme: priorityTheme,
       displayRank: index + 1,
-      actionLevel: actionLevelForDisplayRank(index + 1),
+      actionLevel: actionLevelForRenderedPriority(),
       findings: priorityFindings,
       ownershipCounts,
       remediations,
