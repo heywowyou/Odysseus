@@ -173,6 +173,31 @@ async function seedApprovedChain(): Promise<SeededChain> {
   return { auditId, reportFrId: `report-fr-${auditId}`, pdf, pdfDigest };
 }
 
+/** Plan 067 canonical chain: French analysis/report only, no English row. */
+async function seedFrenchOnlyChain(): Promise<SeededChain> {
+  const auditId = `route-integration-fr-${randomUUID()}`;
+  const pdf = Buffer.from(`%PDF-integration-fr-${auditId}`);
+  const pdfDigest = `sha256:${createHash('sha256').update(pdf).digest('hex')}`;
+  const manifestDefaults = buildManifest();
+  const manifest = buildManifest({
+    auditId,
+    siteUrl: 'https://example.com/',
+    findingsProvenance: sharedProvenance,
+    crawl: { ...manifestDefaults.crawl, startUrl: 'https://example.com/' },
+  });
+  await persistAudit(connection!, manifest, []);
+  await persistAnalysis(connection!, buildAnalysisFields(auditId, 'fr'));
+  await persistReport(connection!, buildReportFields(auditId, 'fr', pdfDigest));
+
+  const hostname = new URL(manifest.siteUrl).hostname;
+  const auditDir = buildAuditDir(getArtifactsRoot(), hostname, new Date(manifest.startedAt));
+  await fs.mkdir(path.join(auditDir, 'reports'), { recursive: true });
+  await fs.writeFile(path.join(auditDir, 'reports', 'fr.pdf'), pdf);
+
+  seededAuditIds.push(auditId);
+  return { auditId, reportFrId: `report-fr-${auditId}`, pdf, pdfDigest };
+}
+
 function fakeReq(url: string): IncomingMessage {
   const req = Readable.from([]) as unknown as IncomingMessage;
   req.method = 'GET';
@@ -266,6 +291,21 @@ afterAll(async () => {
 });
 
 describe.skipIf(!mongoAvailable)('audit routes against real mongo', () => {
+  it('approves and delivers the canonical French report without requiring English', async () => {
+    const chain = await seedFrenchOnlyChain();
+    const approved = await approveViaRoute(chain.auditId);
+
+    expect(approved.statusCode).toBe(201);
+    const approval = await getLatestReportApproval(connection!, chain.auditId);
+    expect(approval?.fr.reportId).toBe(`report-fr-${chain.auditId}`);
+    expect(approval?.fr.pdfDigest).toBe(chain.pdfDigest);
+    expect(approval?.en).toBeUndefined();
+
+    const delivered = await getViaRoute(chain.auditId, 'fr');
+    expect(delivered.statusCode).toBe(200);
+    expect(delivered.body).toEqual(chain.pdf);
+  });
+
   it('approve-reports persists an approval for the verified pair', async () => {
     const chain = await seedApprovedChain();
     const res = await approveViaRoute(chain.auditId);
