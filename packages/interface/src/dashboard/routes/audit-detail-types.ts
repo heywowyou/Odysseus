@@ -142,7 +142,8 @@ export interface ReportApprovalResponse {
   approvalId: string;
   auditId: string;
   fr: ApprovedReportRefResponse;
-  en: ApprovedReportRefResponse;
+  /** Plan 067: English is attached and approved only when explicitly generated. */
+  en?: ApprovedReportRefResponse;
   approvedAt: string;
 }
 
@@ -234,12 +235,14 @@ export interface AuditDetailResponse {
   reportLanguages: ReportLanguage[];
   reports: ReportStatusResponse[];
   lifecycle: AuditLifecycle;
-  /** Plan 045 slice 1.2: whether a bilingual analysis pair resolves for
-   *  this audit at all, from resolveSelectedAnalysisPairForAudit's own
-   *  three outcomes - the fact the produce step actually needs to unlock,
-   *  since an approved candidate or an existing report row (what it used
-   *  to gate on) are not the only ways to reach a resolvable pair. */
+  /** Plan 045 slice 1.2: whether a selected/canonical analysis resolves.
+   *  Plan 067 keeps the legacy field name/value vocabulary for API
+   *  compatibility even though French alone is now a complete selection. */
   analysisPair: 'selected' | 'legacy-latest' | 'none';
+  /** Plan 067: languages carried by that resolved selection. The server
+   *  always sends this on current responses; optional only so a stale cached
+   *  payload from before Plan 067 remains conservatively renderable. */
+  analysisLanguages?: ReportLanguage[];
   /** Plan 045 slice 1.2: whether the audit's findings were normalized
    *  under a schema version or fingerprint the current code no longer
    *  produces (trade-off 40). True here means the produce step's own
