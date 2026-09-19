@@ -66,6 +66,23 @@ describe('renderRemainingWork against the real small-site.test scan', () => {
     expect(html).not.toContain('Reste');
   });
 
+  it('renders important for critical/serious remainder and improvement for moderate/minor remainder', async () => {
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('fr');
+    const html = renderRemainingWork(getStrings('fr'), 6, 'fr', analysis, findings);
+    const remaining = selectRemainingFindings(analysis, findings);
+
+    const hasImportant = remaining.some(
+      (finding) => finding.severity === 'critical' || finding.severity === 'serious',
+    );
+    const hasImprovement = remaining.some(
+      (finding) => finding.severity === 'moderate' || finding.severity === 'minor',
+    );
+
+    if (hasImportant) expect(html).toContain('Important');
+    if (hasImprovement) expect(html).toContain('Amélioration');
+  });
+
   it("fix #5 (2026-08-25 report review): shows each rule group's own worst severity, not a uniform blank list", async () => {
     const findings = await loadSmallSiteFindings();
     const analysis = await loadSmallSiteAnalysis('fr');
