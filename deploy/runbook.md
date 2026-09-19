@@ -332,14 +332,17 @@ unauthenticated request to return a 302 redirect to `/login`, which verifies the
 routing and authentication boundary rather than application readiness.
 
 Before recreating the app container, the controller asks the currently running
-container for the jobs whose status is `running`. The guard is fail-closed: any
-running job refuses the deploy, and so does a probe that fails or answers with
-anything unreadable, because an unknown queue state is not a safe state to
-restart in. When no app container is running at all the deploy proceeds;
-startup recovery requeues whatever Mongo still calls running. To deploy anyway,
-append the literal token `force-running` to the deploy command, or set
-`ODYSSEUS_DEPLOY_FORCE_RUNNING=1` for a manual SSH run; the controller then
-logs the running jobs and proceeds over them.
+container for the jobs whose status is `running`. Full-audit jobs are logged
+but do not block deployment: Plan 035 gives them a stable run identity,
+persistent crawl/content checkpoints, and startup re-claim, so a container
+restart resumes the same audit rather than forfeiting it. Other running job
+types still refuse the deploy because they do not all carry that resume
+contract. The probe itself remains fail-closed: a failure or unreadable answer
+refuses the deploy because an unknown queue state is not safe to guess about.
+When no app container is running at all the deploy proceeds. To deploy over a
+non-resumable running job anyway, append the literal token `force-running` to
+the deploy command, or set `ODYSSEUS_DEPLOY_FORCE_RUNNING=1` for a manual SSH
+run.
 
 To roll back intentionally, open Actions, `Deploy production`, Run workflow,
 and choose `rollback`. From a normal operator SSH session, the equivalent
