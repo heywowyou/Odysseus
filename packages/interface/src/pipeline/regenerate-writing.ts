@@ -177,7 +177,12 @@ export async function regenerateWriting(
       frAnalysisId: frStage.analysis.analysisId,
       findingsProvenance: frStage.analysis.findingsProvenance,
     };
-    const readied = await recordReadyWritingCandidate(connection, auditId, pair);
+    const readied = await recordReadyWritingCandidate(
+      connection,
+      auditId,
+      pair,
+      frStage.sanitizationWarnings,
+    );
     if (readied.writingSelection?.candidate?.status !== 'ready') {
       throw new WritingRegenerationFailedError(
         'odysseus: the ready writing candidate could not be recorded',
