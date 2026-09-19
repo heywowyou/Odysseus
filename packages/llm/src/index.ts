@@ -52,6 +52,7 @@ export { runWritingCritic } from './analyze-critic.js';
 export {
   buildCriticRepairFeedback,
   critiqueAndRepairWriting,
+  runCriticAndRepair,
   type CritiquedWritingResult,
   type WritingCriticOutcomeStatus,
   type WritingCriticRecord,

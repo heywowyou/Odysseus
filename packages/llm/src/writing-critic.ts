@@ -270,7 +270,18 @@ export async function critiqueAndRepairWriting(
   written: AnalyzeWritingResult,
 ): Promise<CritiquedWritingResult> {
   if (!WRITING_CRITIC_ENABLED) return written;
+  return runCriticAndRepair(input, expectedThemeKeys, usedFallbackContext, written);
+}
 
+/** The critic and repair regardless of the kill switch. Production reaches
+ *  it only through critiqueAndRepairWriting; the Plan 070 calibration tool
+ *  calls it directly to measure the critic before it is switched on. */
+export async function runCriticAndRepair(
+  input: WritingInput,
+  expectedThemeKeys: readonly string[],
+  usedFallbackContext: boolean,
+  written: AnalyzeWritingResult,
+): Promise<CritiquedWritingResult> {
   const critic = await runWritingCritic(input, written.output);
   if (critic.status === 'skipped') {
     return {

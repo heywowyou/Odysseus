@@ -46,6 +46,7 @@ import {
   type SiteContextInput,
   type StructureDocument,
   type WritingCriticSidecar,
+  type WritingInput,
 } from '@odysseus/llm';
 import { persistAnalysis } from '@odysseus/store';
 import {
@@ -122,6 +123,63 @@ export interface AnalysisStageResult {
    *  fallback path (issue #162), which makes zero model calls. */
   advisoryPasses: readonly Promise<void>[];
   sanitizationWarnings: readonly WritingSanitizationWarning[];
+}
+
+/**
+ * The exact writing input a model-backed analysis is written from: unfiltered
+ * site stats, the reconciled performance packet and client limitations from
+ * the audit's evidence diagnostics, trusted remediations, and the
+ * deterministic transactional-flow and obligation status. Exported so the
+ * Plan 070 calibration tool rebuilds the input through this code rather than
+ * a copy of it.
+ */
+export async function buildStageWritingInput(args: {
+  auditDir: string;
+  manifest: AuditManifest;
+  allFindings: readonly Finding[];
+  forModel: Finding[];
+  structureThemes: StructureDocument['themes'];
+  siteContext: SiteContextInput;
+  language: ReportLanguage;
+  obligationAssessment: ObligationAssessment;
+}): Promise<WritingInput> {
+  const { auditDir, manifest, allFindings, forModel, language, obligationAssessment } = args;
+  // siteStats is computed from allFindings (unfiltered), not forModel, so
+  // the executive summary cites the audit's true scope rather than only
+  // what the model was shown. See docs/archive/report-v2-refactor.md B10.
+  const siteStats = computeSiteStats(allFindings, manifest);
+  const diagnostics = await readAuditEvidenceDiagnostics({
+    auditDir,
+    hostname: new URL(manifest.siteUrl).hostname,
+    startedAt: new Date(manifest.startedAt),
+    store: createConfiguredArtifactStore(),
+  });
+  const performanceEvidence = buildWritingPerformanceEvidence(
+    manifest,
+    diagnostics.clientLimitations,
+  );
+  const trustedRemediationsByTheme = buildTrustedRemediationsByTheme(
+    args.structureThemes,
+    forModel,
+    language,
+  );
+  return buildWritingInput(
+    args.structureThemes,
+    forModel,
+    args.siteContext,
+    language,
+    siteStats,
+    performanceEvidence,
+    trustedRemediationsByTheme,
+    deriveTransactionalFlowStatus(obligationAssessment),
+    // Seeds the provider-phrase choice. The auditId is stable across a
+    // re-run and across both languages, so regenerating a report never
+    // renames the client's provider and an optional later English version
+    // stays consistent with French.
+    manifest.auditId,
+    obligationAssessment.status,
+    diagnostics.clientLimitations.map((limitation) => limitation.summary[language]),
+  );
 }
 
 /** `analyses/<timestamp>-<lang>-critic.json` beside
@@ -424,42 +482,16 @@ export async function runAnalysisStage(
     // Always assigned on this path: only the not-eligible branch reads it,
     // and the structure stage above runs exactly there.
     const doc = structureDoc!;
-    // siteStats is computed from allFindings (unfiltered), not forModel, so
-    // the executive summary cites the audit's true scope rather than only
-    // what the model was shown. See docs/archive/report-v2-refactor.md B10.
-    const siteStats = computeSiteStats(allFindings, manifest);
-    const diagnostics = await readAuditEvidenceDiagnostics({
+    const writingInput = await buildStageWritingInput({
       auditDir,
-      hostname: new URL(manifest.siteUrl).hostname,
-      startedAt: new Date(manifest.startedAt),
-      store: createConfiguredArtifactStore(),
-    });
-    const performanceEvidence = buildWritingPerformanceEvidence(
       manifest,
-      diagnostics.clientLimitations,
-    );
-    const trustedRemediationsByTheme = buildTrustedRemediationsByTheme(
-      doc.themes,
+      allFindings,
       forModel,
-      options.language,
-    );
-    const writingInput = buildWritingInput(
-      doc.themes,
-      forModel,
-      writingSiteContext,
-      options.language,
-      siteStats,
-      performanceEvidence,
-      trustedRemediationsByTheme,
-      deriveTransactionalFlowStatus(obligationAssessment),
-      // Seeds the provider-phrase choice. The auditId is stable across a
-      // re-run and across both languages, so regenerating a report never
-      // renames the client's provider and an optional later English version
-      // stays consistent with French.
-      manifest.auditId,
-      obligationAssessment.status,
-      diagnostics.clientLimitations.map((limitation) => limitation.summary[options.language]),
-    );
+      structureThemes: doc.themes,
+      siteContext: writingSiteContext,
+      language: options.language,
+      obligationAssessment,
+    });
     const generatedAt = new Date();
     const expectedThemeKeys = doc.themes.map((t) => t.themeKey);
     const written = await analyzeWriting(writingInput, expectedThemeKeys, usedFallbackContext);
