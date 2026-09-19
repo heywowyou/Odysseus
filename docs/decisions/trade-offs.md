@@ -2665,6 +2665,21 @@ a model-capability limit that survived a provider and prompt generation. The
 per-analysis inline call stays insert-only advisory; the full verdict
 worksheet is local-only under the artifacts root and must never be committed.
 
+**Plan 067 amendment, 2026-09-19 — supersedes the operating parts above.**
+The advisory experiment remains useful history and its code may remain as
+offline measurement tooling, but neither the shadow reviewer nor the
+correction-review pass is called by normal report production. French is the
+canonical report: a successful fresh model path uses one structure call plus
+one French writing call; compatible structure reuse uses one French writing
+call; English is an explicit later action that reuses the selected French
+structure/evidence for one additional writing call. The earlier hedge escape
+hatch is also retired: bookings, conversion, revenue, abandonment, demand,
+trust, reputation, and relative commercial importance are unsupported unless
+they are supplied as trusted evidence, and wording them as "may"/"could" does
+not make them evidence. Known semantic violations are repaired locally at the
+smallest sentence/action/field boundary with an operator-visible warning;
+they do not trigger another reviewer model or discard unrelated valid prose.
+
 
 ### 56. The tool cannot send, and the only thing making that true is the shape of the port
 
