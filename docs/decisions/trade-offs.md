@@ -4020,7 +4020,7 @@ Limit-bound prescan jobs are restart-safe only when their persisted candidate
 snapshot is present. A legacy job without it must be recreated rather than
 recovered.
 
-### 76. A full audit checkpoints its stages and resumes across re-claims; the release flow refuses to deploy over running jobs (plan 035, issue #124)
+### 76. A full audit checkpoints its stages and resumes across re-claims; deploys block only non-resumable running jobs (plan 035, issue #124)
 
 Every release recreates the app container, and the queue's SIGTERM drain can
 only mark the interruption, not preserve progress: a redeploy or crash
@@ -4104,17 +4104,24 @@ at `JobQueue.start()` every `running` job is by definition unowned; startup
 resets all of them (createdAt untouched, FIFO position preserved). The
 stale-only default remains for any future multi-worker caller.
 
-**The release flow refuses to recreate the container over running jobs.**
-Immediately before `compose up -d`, `release.sh` asks the currently running
-app container how many jobs are running. Any running job aborts the release
-naming them; a probe failure or unreadable answer aborts as unknown; a
-container that is not running at all has nothing live to protect and
-proceeds. The override is one explicit token on the deploy command
-(`force-running`, or the environment variable for manual SSH runs), keeping
-trade-off 61's posture intact: still CI-verified, operator-triggered,
-immutable releases. Fail-closed was chosen over warn-and-proceed because
-the deploy's whole purpose here is to not guess about hours of third-party
-site load.
+**Amended 2026-09-19, explicit operator decision: a running full audit no
+longer blocks deployment.** The original Plan-035 guard treated every
+`running` job as a hard stop even after the same plan had proved that a
+`full-audit` survives container recreation: startup requeues the orphan,
+the run identity remains stable, the crawl frontier/checkpoint remains on the
+artifacts volume, and the audit continues from durable work. Keeping that job
+as a deploy blocker therefore protected work that was already designed to
+resume and made routine releases unnecessarily depend on many-hour scans
+finishing first.
+
+Immediately before recreation, the deploy paths still probe the current app
+container and still fail closed when the queue state cannot be read. A running
+`full-audit` is logged as resumable and allowed through; any other running
+job remains a blocker because those job types do not all carry the same
+checkpoint/re-claim contract. The explicit `force-running` escape remains for
+an operator who intentionally wants to interrupt one of those non-resumable
+jobs. This changes only deploy gating; it does not weaken the checkpoint,
+identity, coverage-gate, or startup-recovery rules above.
 
 ### 77. Production deploys run locally through odysseus-deploy; the GitHub release workflow is retired unless the local path becomes a roadblock (operator decision, 2026-09-09)
 
