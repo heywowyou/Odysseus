@@ -357,7 +357,7 @@ export async function runAnalysisStage(
           .length,
         usedFallbackContext,
         // Nothing was generated, so there is nothing new to review: the
-        // advisory passes already ran for this analysis when it was written.
+        // Reused analyses require no provider-side follow-up.
         advisoryPasses: [],
         sanitizationWarnings: [],
       };
@@ -369,8 +369,8 @@ export async function runAnalysisStage(
   let unreferencedFindingCount = 0;
   let sanitizationWarnings: readonly WritingSanitizationWarning[] = [];
   if (fallbackEligible) {
-    // Static fallback analysis (issue #162): no structure pass, no writing
-    // pass, no advisory pass. The bilingual sentences come from the report
+    // Static fallback analysis (issue #162): no structure pass and no writing
+    // pass. The localized sentences come from the report
     // strings module so the stored artifact and the rendered note share one
     // source of truth. overallRisk is computed from allFindings
     // (fallbackOverallRisk), not hardcoded 'low': the
@@ -425,8 +425,10 @@ export async function runAnalysisStage(
       deriveTransactionalFlowStatus(obligationAssessment),
       // Seeds the provider-phrase choice. The auditId is stable across a
       // re-run and across both languages, so regenerating a report never
-      // renames the client's provider and the FR/EN pair stays consistent.
+      // renames the client's provider and an optional later English version
+      // stays consistent with French.
       manifest.auditId,
+      obligationAssessment.status,
     );
     const generatedAt = new Date();
     const writingResult = await analyzeWriting(
