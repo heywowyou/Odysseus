@@ -118,7 +118,12 @@ export async function generateEnglishVersion(
       connection,
     );
 
-    await attachEnglishAnalysisToSelection(connection, auditId, enStage.analysis.analysisId);
+    await attachEnglishAnalysisToSelection(
+      connection,
+      auditId,
+      enStage.analysis.analysisId,
+      enStage.sanitizationWarnings,
+    );
 
     markReportProductionStage(auditId, 'pdf-generation');
     const report = await runReportStage(
