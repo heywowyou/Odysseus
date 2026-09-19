@@ -346,7 +346,7 @@ describe('plan 020 general EAA reference placement, as amended 2026-09-04 (issue
       renderDiffEvidencePages: [],
     });
 
-    expect(html).toContain('Obligation d&#39;identification de l&#39;éditeur');
+    expect(html).toContain('Obligation d’identification de l’éditeur');
     expect(html).not.toContain(escapeCopy(eaaSanctionFigureSentence('fr'), 'fr'));
   });
 });

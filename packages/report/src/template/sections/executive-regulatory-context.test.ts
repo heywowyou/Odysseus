@@ -3,7 +3,7 @@ import { ARTICLE_47_REGIME_ID, EAA_REGIME_ID, type ObligationAssessment } from '
 import { eaaSanctionFigureSentence } from '@odysseus/core';
 import { renderExecutiveSummary } from './executive-summary.js';
 import { getStrings } from '../strings/i18n.js';
-import { escapeCopy, escapeHtml } from '../html-utils.js';
+import { escapeCopy } from '../html-utils.js';
 import {
   loadSmallSiteAnalysis,
   loadSmallSiteFindings,

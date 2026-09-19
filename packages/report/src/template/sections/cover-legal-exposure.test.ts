@@ -13,7 +13,7 @@ import {
 } from '@odysseus/core';
 import { renderMetadataSheet } from './metadata-sheet.js';
 import { renderLegalExposure } from './legal-exposure.js';
-import { escapeCopy, escapeHtml } from '../html-utils.js';
+import { escapeCopy } from '../html-utils.js';
 import { fr } from '../strings/fr.js';
 import { en } from '../strings/en.js';
 import {
