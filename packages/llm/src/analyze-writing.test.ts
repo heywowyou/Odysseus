@@ -59,14 +59,14 @@ function buildCleanFrenchOutput(): WritingPassOutput {
     themes: [
       {
         themeKey: 't1',
-        title: 'Contraste des couleurs insuffisant',
+        title: 'Contrastes et lisibilité',
         businessImpact:
-          'Vos visiteurs les plus âgés risquent de ne pas lire votre contenu correctement.',
-        recommendedActions: ['Augmenter le contraste des couleurs sur les boutons et le texte.'],
+          'Un contraste insuffisant rend certains textes difficiles à lire pour les visiteurs concernés.',
+        recommendedActions: ['Augmentez le contraste des couleurs sur les boutons et les textes concernés.'],
       },
     ],
     executiveSummary:
-      'Votre site présente plusieurs problèmes qui affectent son efficacité commerciale.',
+      'Les constats concernent principalement la lisibilité des éléments mesurés.',
     notes: '',
   };
 }
