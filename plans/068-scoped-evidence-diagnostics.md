@@ -11,9 +11,9 @@
 - Priority: P1
 - Effort: M
 - Depends on: 067
-- Execution status: TODO
+- Execution status: IN PROGRESS (2026-09-19) — implementation and focused proof fixtures are on `main`; repository-wide command execution and the saved-artifact Villas Foch acceptance are blocked by the same environment limitations recorded by Plan 067.
 - Plan 067 dependency: operator-confirmed complete/pushed/deployed 2026-09-19
-- Post-067 rebaseline: `13c3bb80cafc4749ce7bd8f4d87b843286073572`
+- Execution rebaseline: `b5bec99fa63532e7588c1b9091790058e80a4b08`
 
 ## Post-067 rebaseline
 
@@ -297,4 +297,63 @@ full repository validation are green, and the stored Foch acceptance succeeds.
 
 ### Closure evidence
 
-Planning rebaseline completed against `13c3bb80cafc4749ce7bd8f4d87b843286073572` after the operator confirmed Plan 067 was complete, pushed and deployed. Implementation evidence, focused test results and the dated Foch acceptance record remain to be populated during Plan 068 execution.
+Execution rebaselined against `b5bec99fa63532e7588c1b9091790058e80a4b08`;
+`main` had not moved when the implementation chain was fast-forwarded.
+
+Implementation landed in four slices:
+
+- `2a461eb4` — deterministic diagnostics registry/reader, Plan-067 summary and
+  methodology plumbing, performance scoping, and removal of approval-artifact
+  work from the normal full-scan stage;
+- `886258b6` — audit-detail API/runtime schema/card and operator readiness
+  moved to availability semantics;
+- `2ab02f03` — the dormant Plan-058 quality-bundle widget was removed from
+  the normal Reports card, leaving approval consumers isolated to the frozen
+  quality pipeline/scanner compatibility code;
+- `c31e7420` — focused proof fixtures for limitation plumbing and the
+  unchanged one-writer-call budget.
+
+The normal-path files
+`audit-stage.ts`, `analysis-stage.ts`, `report-stage.ts`,
+`generate-english-version.ts`, `routes/audits.ts`,
+`operator/audit-readiness.ts`, `evidence-quality-model.ts`,
+`evidence-quality-section.tsx` and `audit-reports-section.tsx` were read
+back from current `main` after the push and contain none of
+`ApprovedAuditEvidence`, `readApprovedAuditEvidence`,
+`approveAuditEvidence`, `evidenceApprovalMode` or `evidence-approved`.
+Remaining approval consumers are the scanner's historical artifact machinery
+and the frozen Plan-058 report-quality pipeline/tests.
+
+Focused proof now committed covers the Foch-shaped classification,
+environment-only operational warning, site/material/temporal limitations,
+historical no-disclosure compatibility, unavailable diagnostics,
+performance-evidence suppression, grounded-summary limitation input,
+deterministic Methodology input, availability readiness vocabulary, and
+approval-free evidence-card copy. The Plan-067 provider-budget test continues
+to assert exactly one writer call in the new limitation case and zero advisory
+reviewer calls.
+
+**Repository validation blocker recorded, not waived.** This session cannot
+execute the checkout: the local tool environment cannot resolve
+`github.com`, so it cannot clone the private repository, and the repository's
+GitHub Actions runner remains unavailable for command execution as already
+recorded in Plan 067/Plan 059. On `c31e7420` the only reported commit status
+visible here is the Vercel deployment check, which is green; that is not a
+substitute for `pnpm run format`, `pnpm run check` and `pnpm run test`.
+Those repository commands therefore remain unproven rather than being claimed
+green.
+
+**Villas Foch acceptance blocker recorded, not waived.** The required saved
+audit is `artifacts/www.villasfoch.fr/2026-09-03T20-44-46Z/`. A current
+GitHub fetch of its `manifest.json` returns 404 because the artifact is
+gitignored/runtime storage, and this session has no VPS/object-store/SSH
+connector. No rescan was attempted. The Foch-shaped diagnostic behavior is
+covered by the committed fixture, including environment warning separation,
+site-level/material/temporal limitations and performance scoping, but the
+required no-rescan PDF regeneration and confirmation of the stored 32-page /
+61-finding audit remain pending until that existing artifact is reachable.
+
+Accordingly the implementation is pushed but this plan stays **IN PROGRESS**:
+do not mark it `IMPLEMENTED` or `DONE` until the repository validation
+commands actually run green and the existing Villas Foch artifact completes
+the no-rescan acceptance.

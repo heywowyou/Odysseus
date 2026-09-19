@@ -212,6 +212,14 @@ groups and explains structured results already present in the API. Suppression,
 robots/pacing, complete-coverage, and manual-send rules remain unchanged; data
 version and template age are advisory (trade-off 91).
 
+Plan 068's audit-detail evidence surface is **Qualité des données du scan** /
+**Scan data quality**, not an approval gate. Full audits report one of
+`complete`, `limited` or `unavailable`; client-relevant limitations are
+shown separately from operational scanner/environment warnings. A limited audit
+remains usable, and an unavailable detailed diagnostic does not by itself
+disable report generation. The normal dashboard contains no evidence
+approve/reapprove action and no `evidence-approved` stage.
+
 ## Flow targets
 
 Clicks exclude typing and waiting; pages count distinct screens visited.

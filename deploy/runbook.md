@@ -584,8 +584,10 @@ check below after step 4, before declaring
 `ODYSSEUS_BROWSER_ISOLATION_PROFILE=secretless-scan-container` attested for
 the deployment, and add a dated line to the log at the end of this subsection
 recording the run. Until then, scans that dispatch to the container run
-unattested exactly as in-process scans do, and production
-approved-audit-evidence stays blocked.
+unattested exactly as in-process scans do, and the dormant Plan-058 compatibility path still cannot produce
+`ApprovedAuditEvidence`. Plan 068 deliberately does **not** use that artifact
+as a normal report gate: the same environment condition is surfaced as an
+operational scan diagnostic, separate from client-facing evidence limitations.
 
 - [ ] Runs as uid 10001, never root:
       `docker compose -p odysseus -f /docker/odysseus/docker-compose.yml exec scan id`
@@ -628,10 +630,14 @@ Deployment-gate log (add one dated line per run, never delete old ones):
 What stays blocked regardless of this section, until the gate above has
 actually passed on the production host: the preflight stays unwired on the
 in-process path (local dev, CLI, and any deployment that has not enabled the
-container keep assess-without-assert); production `ApprovedAuditEvidence`
-stays blocked, and every audit remains `environment-unapproved` while scans
-run beside secrets; and the app container keeps trade-off 92's accepted risk
-for its own Chromium, which still renders the PDFs.
+container keep assess-without-assert); the dormant Plan-058
+`ApprovedAuditEvidence` path stays blocked, and audits still record
+`environment-unapproved` while scans run beside secrets; and the app
+container keeps trade-off 92's accepted risk for its own Chromium, which still
+renders the PDFs. **Plan 068 changes the product consequence, not the security
+fact:** `environment-unapproved` is an operational warning in the normal
+Plan-067 report workflow and does not invalidate normalized findings or block a
+client report. The isolation work remains necessary on its own security merits.
 
 Chromium is already launched with credential-shaped environment variables
 stripped (`buildSanitizedBrowserEnv`), so the browser process no longer carries

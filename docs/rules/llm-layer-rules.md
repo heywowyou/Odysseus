@@ -994,6 +994,30 @@ The 2026-08-29 and 2026-09-11 reviewer campaigns remain in Git history as the
 reason these calls were not promoted: they added cost and false-positive
 review burden without becoming a trustworthy gate.
 
+---
+
+## 13. Evidence diagnostics narrow claims; they never create a model authority
+
+Plan 068 keeps the Plan 059 evidence graph as deterministic scan diagnostics
+but removes evidence approval from the normal report path. The writing layer
+receives only the client-relevant limitation text projected locally from that
+graph. Operational scanner/environment warnings never enter the prompt.
+
+The contract is deliberately one-way:
+
+- normalized findings remain the only finding authority;
+- `AuditEvidenceDiagnostics.clientLimitations` may narrow what the summary
+  can claim, but cannot add, remove, re-severity or re-rank a finding;
+- the same limitations feed the deterministic Methodology section;
+- insufficient or unstable performance evidence is removed from the measured
+  recommendation evidence before Luna sees it;
+- missing/unreadable diagnostics means `unavailable`, not a report veto;
+- this projection adds **zero provider calls** and does not revive the retired
+  reviewer/correction-review pipeline.
+
+Historical Plan 058/059 approval loaders may remain for the frozen quality
+pipeline and offline compatibility work. Normal French generation, optional
+English generation and the normal dashboard do not consult them.
 
 ---
 

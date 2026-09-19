@@ -5298,3 +5298,42 @@ at the promotional $4/$20 price, $5/$30 after it ends); keeping Mini (cheaper
 by $0.06 per report but visibly generic). Prices are those published for
 2026-09; a repricing or model repoint re-runs this saved-audit comparison.
 
+
+
+### 103. Evidence-quality defects narrow report claims instead of globally approving or rejecting the audit (build decision, 2026-09-19, Plan 068)
+
+Plan 059's evidence graph remains valuable: it records inventory, attempts,
+readiness, frame coverage, performance confidence, temporal coherence and
+environment diagnostics that the older scan artifacts could not express. What
+did not survive into the normal product is the conclusion that those facts
+must collapse into one global `ApprovedAuditEvidence` gate before a paid
+report may exist.
+
+Plan 068 projects the persisted assessment into three availability states:
+`complete`, `limited` and `unavailable`. Every emitted
+`EvidenceQualityReasonCode` is classified exhaustively in one deterministic
+registry. Conditions that change what the audit can truthfully claim become
+bounded bilingual `EvidenceLimitation` records; deployment/environment
+conditions such as `environment-unapproved` remain operational warnings;
+corrupt or mutually inconsistent diagnostic roots make the diagnostic layer
+itself unavailable. None of those states edits normalized findings.
+
+The same client limitations feed both places that need them: Luna's
+deterministic executive-summary evidence packet and the deterministic
+Methodology section. Performance-confidence limitations additionally remove
+unreliable lab measurements from the model-facing performance evidence before
+prioritisation. No reviewer, critic or other provider call was added.
+
+Missing diagnostics deliberately fail **open for audit usability and closed for
+claims about the diagnostics themselves**: a pre-059 audit or an unreadable
+diagnostic file is `unavailable`, never “approved by default”, but the normal
+report still proceeds under the existing manifest/findings provenance and
+schema guards. A limited audit is likewise not operator attention by default.
+
+The Plan-058/059 approval types and loaders remain only as dormant
+compatibility/internal quality-pipeline code. The normal full-scan stage no
+longer creates/removes/reads back an approval artifact, and the normal
+audit-detail/report UI has no dependency on evidence approval. This does not
+weaken browser-isolation policy: the same environment condition remains a
+security diagnostic and the scan-container work in trade-offs 92/99/101 is
+still required on its own merits.
