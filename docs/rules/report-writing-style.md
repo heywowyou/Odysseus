@@ -28,10 +28,14 @@ des champs. Concrètement :
   scan, aucune acronyme sans être développé au moins une fois.
 - Le ton reste mesuré et factuel, jamais alarmiste ni familier. On ne dramatise
   pas un constat mineur, on ne minimise pas un constat critique.
-- Chaque phrase relie une observation à une conséquence concrète pour
-  l'activité du client (clients perdus, réservations manquées, confiance
-  entamée), jamais à une conséquence légale (voir la règle non négociable 6
-  du plan de projet : on décrit le critère, jamais le verdict).
+- Chaque phrase reste dans la conséquence fonctionnelle directement soutenue
+  par les constats : ce qu'un visiteur peut ou ne peut pas lire, comprendre,
+  atteindre, utiliser ou accomplir dans l'interface. L'audit ne mesure pas
+  les réservations, la conversion, le chiffre d'affaires, l'abandon, la
+  demande, la confiance ou la réputation : ces résultats ne sont donc jamais
+  affirmés, même avec « peut », « pourrait », « semble » ou une autre
+  précaution grammaticale. Les conséquences légales restent également hors de
+  la passe de rédaction.
 - Le vouvoiement est la seule forme d'adresse. Le client n'est jamais
   tutoyé, jamais nommé par son prénom.
 - Le texte est écrit en français natif. Un terme technique anglais qui a un
@@ -44,18 +48,22 @@ des champs. Concrètement :
   site donne une impression de contenu riche mais insuffisamment cadré ».
   Le même contrôle rejette la tournure d'impression (issue #309).
 
-## 2. La règle de phrase complète
+## 2. Titres nominaux, prose en phrases complètes
 
-Toute phrase de prose (titre, impact commercial, action recommandée, synthèse,
-notes) s'écrit avec un sujet explicite, un verbe et un complément, jamais
-comme une liste de mots-clés juxtaposés. Les virgules séparent les
-propositions plutôt que de les laisser en fragments.
+Le titre d'un thème est l'exception : c'est un groupe nominal court,
+généralement de deux à sept mots, sans verbe conjugué ni ponctuation finale
+(« Contrastes et lisibilité », « Navigation au clavier », « Stabilité
+visuelle »). Il nomme le travail ; il ne promet pas un résultat.
 
-Préférer : « Le formulaire de réservation ne signale pas ses erreurs de
-saisie, si bien qu'un client qui se trompe de date ne comprend pas pourquoi
-sa demande échoue. »
+Les autres champs de prose (impact, action recommandée, synthèse, notes)
+s'écrivent avec un sujet explicite, un verbe et un complément, jamais comme
+une liste de mots-clés juxtaposés. Les virgules séparent les propositions
+plutôt que de les laisser en fragments.
 
-Éviter : « Formulaire sans retour d'erreur, client perdu. »
+Préférer : « Le formulaire ne signale pas ses erreurs de saisie, si bien
+qu'un visiteur qui se trompe ne comprend pas pourquoi sa demande échoue. »
+
+Éviter : « Formulaire sans retour d'erreur, action incomprise. »
 
 ## 3. Varier l'ouverture des phrases
 
@@ -68,11 +76,12 @@ C'est la règle qui corrige le défaut mesuré par le plan 027. Deux
 constructions ne doivent jamais devenir des tics répétés d'un thème à
 l'autre dans le même rapport :
 
-- **L'ouverture de l'impact commercial.** Ne commencez pas systématiquement
+- **L'ouverture de l'impact fonctionnel.** Ne commencez pas systématiquement
   par « Ces constats » ou « Les constats ». Un thème peut ouvrir sur le
-  client (« Un visiteur qui... »), sur la page concernée (« La page de
-  réservation... »), sur la conséquence directe (« Une partie des visiteurs
-  abandonne... »), ou sur le constat lui-même formulé autrement.
+  visiteur (« Un visiteur qui utilise ce formulaire... »), sur la page
+  concernée (« La page concernée... »), sur la conséquence directe (« Le
+  contrôle reste inaccessible au clavier... »), ou sur le constat lui-même
+  formulé autrement.
 - **L'ouverture de chaque action recommandée.** Le nom du prestataire (voir
   section 4) reste le même dans tout le rapport, mais la construction de la
   phrase qui y mène doit varier : une action peut commencer par le problème
@@ -145,107 +154,58 @@ règle, y compris dans la réponse écrite après un rejet.
 
 ## 5. Longueur des champs
 
-`businessImpact` : entre trois et cinq phrases complètes. `recommendedActions`
-: entre deux et cinq actions concrètes. Ce ne sont pas des objectifs à
-atteindre systématiquement au plafond : un thème simple peut légitimement
-tenir en trois phrases et deux actions, un thème qui touche plusieurs pages
-et plusieurs mécanismes peut avoir besoin de cinq. La longueur suit ce que le
-thème a réellement à dire, jamais un compte à remplir.
+`businessImpact` : entre une et quatre phrases complètes.
+`recommendedActions` : entre une et quatre actions concrètes.
 
-## 6. Quatre thèmes rédigés, quatre structures différentes
+Une seule phrase ou une seule action est une réponse complète quand le thème
+n'exige rien de plus. Il n'existe aucun minimum de remplissage au-delà de ce
+plancher sémantique. Le plafond évite au contraire qu'un thème absorbe de la
+prose qui appartient à un autre travail de correction.
 
-Ces exemples illustrent le registre attendu. Aucun ne doit être recopié tel
-quel : chaque rapport réel décrit des constats différents et doit trouver sa
-propre formulation.
+## 6. Exemples de forme
 
-### Exemple accessibilité — ouverture sur le client
+Ces exemples montrent uniquement la forme attendue ; ils ne sont jamais des
+phrases à recopier.
 
-**Titre.** Rendre le formulaire de contact utilisable au clavier
+### Accessibilité
 
-**Impact commercial.** Un visiteur qui navigue au clavier, parce qu'il utilise
-un lecteur d'écran ou ne peut pas manipuler une souris, ne parvient pas à
-atteindre le bouton d'envoi du formulaire de contact. Il abandonne alors sa
-demande sans qu'aucun message n'explique pourquoi. Cette catégorie de
-visiteurs représente une part significative des usages recensés en France, et
-chaque demande perdue de cette façon est une opportunité commerciale qui ne
-laisse aucune trace dans les statistiques habituelles.
+**Titre.** Navigation au clavier
 
-**Actions recommandées.**
+**Impact.** Un visiteur qui utilise uniquement le clavier ne peut pas
+atteindre le bouton concerné.
 
-1. Le focus clavier doit suivre l'ordre visuel du formulaire jusqu'au bouton
-   d'envoi : demandez à votre prestataire technique de corriger l'ordre de
-   tabulation.
-2. Un visiteur qui active le bouton doit recevoir une confirmation visible
-   sans avoir à quitter le clavier : faites ajouter un message de
-   confirmation accessible au clavier.
+**Action.** Faites corriger l'ordre de tabulation afin que le contrôle soit
+atteignable dans la séquence logique de la page.
 
-### Exemple performance — ouverture sur la page
+### Performance
 
-**Titre.** Accélérer le chargement de la page d'accueil
+**Titre.** Stabilité visuelle
 
-**Impact commercial.** La page d'accueil met plusieurs secondes à afficher
-son contenu principal sur une connexion mobile ordinaire. Une majorité de
-visiteurs quitte un site avant que la page ne devienne utilisable dans ces
-conditions, avant même d'avoir vu l'offre. Le référencement naturel tient
-également compte de ce délai, si bien que la lenteur mesurée ici joue contre
-la visibilité du site autant que contre l'expérience du visiteur qui arrive
-déjà sur la page.
+**Impact.** Des éléments se déplacent pendant le chargement, ce qui rend
+l'interface difficile à suivre au moment où le visiteur interagit avec elle.
 
-**Actions recommandées.**
+**Action.** Réservez l'espace nécessaire aux éléments qui apparaissent après
+le premier rendu afin d'éviter ces déplacements.
 
-1. Les images de la page d'accueil pèsent plus que nécessaire pour leur
-   taille d'affichage : votre prestataire technique peut les recompresser
-   sans perte visible de qualité.
-2. Un script tiers bloque l'affichage pendant son chargement : demandez à ce
-   qu'il soit chargé après le contenu principal plutôt qu'avant.
-3. Aucune consigne de mise en cache n'est actuellement transmise au
-   navigateur : faites ajouter les en-têtes correspondants pour que les
-   visiteurs récurrents chargent la page plus vite.
+### Référencement
 
-### Exemple référencement — ouverture sur la conséquence
+**Titre.** Titres de pages
 
-**Titre.** Corriger les balises de titre pour être mieux référencé
+**Impact.** Plusieurs pages utilisent le même titre, ce qui ne permet pas aux
+moteurs de distinguer clairement leur sujet respectif.
 
-**Impact commercial.** Une partie des pages du site partage la même balise de
-titre, si bien que les moteurs de recherche ne peuvent pas distinguer laquelle
-mettre en avant pour une recherche donnée. Le site perd alors de la
-visibilité sur des recherches où une page bien identifiée aurait pu apparaître
-en meilleure position. Ce constat touche aussi bien les visiteurs qui
-cherchent le site par son nom que ceux qui découvrent l'activité par une
-recherche plus générale.
+**Action.** Donnez à chaque page concernée un titre qui décrit son propre
+contenu.
 
-**Actions recommandées.**
+### Confidentialité
 
-1. Chaque page doit recevoir une balise de titre qui la décrit
-   spécifiquement : demandez à votre prestataire technique d'écrire un titre
-   distinct pour chacune.
-2. La structure des titres et sous-titres de contenu ne suit pas un ordre
-   logique sur plusieurs pages : faites réorganiser cette hiérarchie pour
-   qu'un lecteur, humain ou moteur de recherche, comprenne l'organisation du
-   contenu.
+**Titre.** Consentement aux cookies
 
-### Exemple confidentialité — ouverture sur le constat reformulé
+**Impact.** Des cookies non essentiels sont déposés avant que le visiteur ait
+exprimé son choix.
 
-**Titre.** Informer les visiteurs avant le dépôt de cookies
-
-**Impact commercial.** Des cookies de mesure d'audience se déposent sur
-l'appareil du visiteur dès l'arrivée sur le site, avant tout consentement
-recueilli. Un visiteur attentif à sa vie privée qui remarque ce
-fonctionnement peut perdre confiance dans le site avant même d'avoir consulté
-son contenu. La réglementation sur la protection des données encadre
-précisément ce moment du dépôt, ce qui expose le site à un contrôle sur un
-point facilement vérifiable par un visiteur ou une autorité.
-
-**Actions recommandées.**
-
-1. Le bandeau de consentement doit apparaître avant tout dépôt de cookie non
-   essentiel : demandez à votre prestataire technique de retarder le
-   chargement de la mesure d'audience jusqu'au consentement.
-2. Le refus doit être aussi simple que l'acceptation : faites ajouter un
-   bouton de refus aussi visible que le bouton d'acceptation.
-3. Le choix du visiteur doit être mémorisé pour ne pas lui reposer la
-   question à chaque page : demandez que ce choix soit conservé sur
-   l'ensemble du site.
+**Action.** Retardez le chargement des scripts non essentiels jusqu'au choix
+explicite du visiteur.
 
 ## 7. La phrase de clôture de la synthèse
 
@@ -274,6 +234,21 @@ reprendre l'une de ces trois formulations telle quelle.
 > vingt-trois mots d'affilée, y compris après l'ajout d'une interdiction
 > explicite de réutiliser leurs premiers mots. Le prompt indique désormais
 > qu'aucun modèle de phrase n'est fourni, et le tic a disparu.
+
+## 7 bis. Ancrage et réparation locale
+
+Chaque thème ne voit que ses propres constats et les corrections revues du
+registre de remédiation. La synthèse reçoit un paquet déterministe séparé
+(décomptes, catégories, performance réconciliée, limitations). Pour la
+performance, les données réelles utilisateurs priment sur un signal de
+laboratoire contradictoire ; un signal de laboratoire explicitement supprimé
+du paquet de recommandation ne doit pas réapparaître dans les priorités.
+
+Si une phrase ou une action contient malgré tout une affirmation commerciale,
+légale ou de performance non soutenue, elle est supprimée localement. Les
+autres champs valides ne sont ni réécrits ni régénérés. L'interface opérateur
+signale cette sanitation par un code et le chemin du champ, jamais en
+recopiant la prose client dans la métadonnée de workflow.
 
 ## 8. Ne jamais désigner un autre passage du rapport par sa position
 
