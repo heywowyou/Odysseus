@@ -13,7 +13,6 @@ vi.mock('@odysseus/store', () => ({
   recordReadyWritingCandidate: vi.fn(),
   resolveSelectedAnalysisPairForAudit: vi.fn(),
 }));
-vi.mock('@odysseus/llm', () => ({ pauseBetweenLanguagePasses: vi.fn() }));
 vi.mock('../artifacts/sync-audit-artifacts.js', () => ({ syncAuditDirToBucket: vi.fn() }));
 vi.mock('./backfill-audit-row.js', () => ({ backfillAuditRow: vi.fn() }));
 vi.mock('./renormalize-audit.js', () => ({ renormalizeAudit: vi.fn() }));
@@ -94,7 +93,7 @@ describe('makeReportReady', () => {
       manifest: { findingsProvenance: freshProvenance } as never,
       findings: [],
     });
-    const reports = [{ language: 'fr' }, { language: 'en' }] as never;
+    const reports = [{ language: 'fr' }] as never;
     vi.mocked(regenerateReportsForAudit).mockResolvedValue(reports);
 
     const outcome = await makeReportReady(fakeConnection, 'audit-1', undefined);
@@ -134,7 +133,7 @@ describe('makeReportReady', () => {
     });
   });
 
-  it('renormalizes, regenerates the writing pair, then renders, when findings are stale', async () => {
+  it('renormalizes, regenerates canonical French writing, then renders, when findings are stale', async () => {
     // Stamped fingerprint differs from what the current code would
     // compute from findings.json - the exact Les Flots Bleus scenario.
     vi.mocked(readAuditArtifacts).mockResolvedValue({
@@ -158,6 +157,7 @@ describe('makeReportReady', () => {
             findingsProvenance: freshProvenance,
           },
           advisoryPasses: [],
+          sanitizationWarnings: [],
         }) as never,
     );
     vi.mocked(recordReadyWritingCandidate).mockResolvedValue(undefined as never);
@@ -173,11 +173,12 @@ describe('makeReportReady', () => {
     );
     expect(backfillAuditRow).toHaveBeenCalled();
     expect(syncAuditDirToBucket).toHaveBeenCalled();
-    expect(runAnalysisStage).toHaveBeenCalledTimes(2);
+    expect(runAnalysisStage).toHaveBeenCalledTimes(1);
     expect(recordReadyWritingCandidate).toHaveBeenCalledWith(
       fakeConnection,
       'audit-1',
-      expect.objectContaining({ frAnalysisId: 'analysis-fr', enAnalysisId: 'analysis-en' }),
+      expect.objectContaining({ frAnalysisId: 'analysis-fr' }),
+      [],
     );
     expect(approveWritingCandidate).toHaveBeenCalledWith(fakeConnection, 'audit-1');
     expect(outcome).toEqual({ kind: 'ready', reports, findingsWereRefreshed: true });
@@ -187,7 +188,7 @@ describe('makeReportReady', () => {
     expect(runAuditStage).not.toHaveBeenCalled();
   });
 
-  it('rewrites a selected pair older than the already refreshed findings instead of rendering it', async () => {
+  it('rewrites stale selected French writing instead of rendering it', async () => {
     vi.mocked(readAuditArtifacts).mockResolvedValue({
       manifest: { findingsProvenance: freshProvenance } as never,
       findings: [],
@@ -206,6 +207,7 @@ describe('makeReportReady', () => {
             findingsProvenance: freshProvenance,
           },
           advisoryPasses: [],
+          sanitizationWarnings: [],
         }) as never,
     );
     const reports = [{ language: 'fr' }, { language: 'en' }] as never;
