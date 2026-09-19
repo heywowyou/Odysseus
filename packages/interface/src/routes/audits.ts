@@ -347,13 +347,10 @@ async function getLatestReportQualityRun(
     .lean<ReportQualityRunDocument | null>();
 }
 
-/** Evidence facts for the operator snapshot. The only evidence bytes read
- *  are the two cheap markers beside the audit: the approval file's content
- *  (digests and limitation codes, never page content or report bytes) and
- *  the assembled graph's existence. An audit with neither marker predates
- *  the evidence graph or lost its graph assembly - an honest unknown either
- *  way - while quick-check and prospecting scans never assemble a graph and
- *  are absent, not legacy. */
+/** Plan 068 evidence availability for the operator snapshot. The normal
+ * product reads the scoped diagnostic projection, never approval state.
+ * Graph existence is used only to distinguish a historical pre-diagnostics
+ * full audit from a current audit whose detailed diagnostics are unavailable. */
 function evidenceFactsForAudit(
   audit: Pick<AuditDocumentFields, 'scanIntent'>,
   diagnostics: AuditEvidenceDiagnostics | undefined,

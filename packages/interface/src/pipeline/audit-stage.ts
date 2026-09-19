@@ -407,14 +407,11 @@ export async function runAuditStage(
     };
     await writeManifestFile(artifacts.auditDir, manifest);
 
-    // Plan 059: full audits assemble their evidence graph from what the scan
-    // persisted and approve it only when every blocking condition clears.
-    // Plan 058 consumes that approval and nothing else. A failure here must
-    // not cost an audit that took hours, so it is logged and leaves the
-    // audit without an approval (removing any from an earlier run of this
-    // directory), which Plan 058 then refuses to promote. The graph is kept
-    // so the approval gate after the bucket sync can write it once the
-    // private store has proven it holds this evidence.
+    // Plan 068 keeps Plan 059's evidence graph as diagnostic material, not
+    // as global report approval. A failure here must not cost an audit that
+    // took hours: it is logged and the normal report path continues with
+    // detailed diagnostics unavailable. Normalized findings remain the
+    // finding authority.
     let evidenceGraph: AuditEvidenceGraph | undefined;
     if (!options.skipLighthouse) {
       await holdClaim();
@@ -490,8 +487,8 @@ export async function runAuditStage(
     // never before - a bucket failure must not block an already-valid
     // local deliverable. Runs after pruneScreenshots so a pruned page's
     // screenshot is never uploaded only to be orphaned in the bucket.
-    // Plan 059 step 38: one store instance serves the whole-directory sync
-    // and the evidence read-back the approval below is gated on.
+    // One store instance serves the whole-directory sync. Plan 068 removed
+    // approval read-back/write work from the normal scan path.
     const artifactStore = createConfiguredArtifactStore();
     await syncAuditDirToBucket(artifactStore, artifacts.auditDir, hostname, startedAt);
 
