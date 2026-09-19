@@ -497,7 +497,7 @@ const writingCandidateStateSchema = new Schema(
           { _id: false },
         ),
       ],
-    },,
+    },
     warnings: {
       default: undefined,
       type: [
@@ -517,7 +517,7 @@ const writingCandidateStateSchema = new Schema(
           { _id: false },
         ),
       ],
-    }
+    },
   },
   { _id: false },
 );
