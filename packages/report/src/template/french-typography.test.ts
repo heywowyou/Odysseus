@@ -3,6 +3,7 @@ import {
   frenchCopy,
   normalizeFrenchTypography,
   normalizeFrenchTypographyDeep,
+  setFrenchProseApostrophes,
   preserveFrenchOrdinalCase,
 } from './french-typography.js';
 
@@ -74,5 +75,33 @@ describe('frenchCopy', () => {
   it('normalizes French copy and leaves English copy verbatim', () => {
     expect(frenchCopy("l'audit", 'fr')).toBe('l’audit');
     expect(frenchCopy("the site's audit", 'en')).toBe("the site's audit");
+  });
+});
+
+describe('setFrenchProseApostrophes', () => {
+  it('sets escaped and raw straight apostrophes in prose text as ’', () => {
+    expect(setFrenchProseApostrophes("<p>SOCIETE DU GRAND HOTEL DE L&#39;OPERA, l'hôtel</p>")).toBe(
+      '<p>SOCIETE DU GRAND HOTEL DE L’OPERA, l’hôtel</p>',
+    );
+  });
+
+  it('leaves code, snippets, monospace and verbatim evidence as the site wrote them', () => {
+    const html =
+      '<pre><code>alt=&#39;l&#39;hôtel&#39;</code></pre><span class="mono theme-rule-id">d&#39;x</span><span data-render-lint="verbatim">l&#39;url</span><style>a[b=\'c\']{}</style>';
+    expect(setFrenchProseApostrophes(html)).toBe(html);
+  });
+
+  it('resumes after a verbatim element closes, and never touches attributes', () => {
+    expect(
+      setFrenchProseApostrophes(
+        '<div><code>d&#39;a</code> l&#39;accès <img alt="l&#39;hôtel" /> <br> d&#39;un</div>',
+      ),
+    ).toBe('<div><code>d&#39;a</code> l’accès <img alt="l&#39;hôtel" /> <br> d’un</div>');
+  });
+
+  it('keeps a quote delimiter that does not sit between two letters', () => {
+    expect(setFrenchProseApostrophes("<p>'Chambre' et l'hôtel</p>")).toBe(
+      "<p>'Chambre' et l’hôtel</p>",
+    );
   });
 });

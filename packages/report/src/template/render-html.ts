@@ -38,6 +38,7 @@ import { renderStatistics } from './sections/statistics.js';
 import { renderExecutiveSummary } from './sections/executive-summary.js';
 import { renderReportIntro } from './sections/report-intro.js';
 import { renderFallbackAnalysisNote } from './sections/fallback-analysis-note.js';
+import { setFrenchProseApostrophes } from './french-typography.js';
 import { renderLegalExposure } from './sections/legal-exposure.js';
 import { renderConformanceSummary } from './sections/conformance-summary.js';
 import { renderThemes } from './sections/themes.js';
@@ -412,7 +413,7 @@ export async function renderHtml(input: RenderHtmlInput): Promise<string> {
     qualityLimitations,
   );
 
-  return `<!doctype html>
+  const html = `<!doctype html>
 <html lang="${analysis.language}">
   <head>
     <meta charset="utf-8" />
@@ -425,4 +426,5 @@ export async function renderHtml(input: RenderHtmlInput): Promise<string> {
     </div>
   </body>
 </html>`;
+  return analysis.language === 'fr' ? setFrenchProseApostrophes(html) : html;
 }

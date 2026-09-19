@@ -92,3 +92,57 @@ export function normalizeFrenchTypographyDeep<T>(value: T): T {
 export function frenchCopy(value: string, language: 'fr' | 'en'): string {
   return language === 'fr' ? normalizeFrenchTypography(value) : value;
 }
+
+const VOID_ELEMENTS = new Set([
+  'area',
+  'base',
+  'br',
+  'col',
+  'embed',
+  'hr',
+  'img',
+  'input',
+  'link',
+  'meta',
+  'source',
+  'track',
+  'wbr',
+]);
+const VERBATIM_ELEMENTS = new Set(['pre', 'code', 'script', 'style', 'textarea']);
+const VERBATIM_ATTRIBUTES = /\bclass="[^"]*\bmono\b|\bdata-render-lint="verbatim"/;
+const ELISION_APOSTROPHE = /(\p{L})(?:'|&#39;)(?=\p{L})/gu;
+
+/** The last pass over a finished French document: every elision apostrophe
+ *  left straight in prose text becomes ’. Call sites normalise their own
+ *  copy with escapeCopy, but copy reaches the page from many places (a
+ *  registry name, a legal sentence from core), and a single missed one made
+ *  a real report mix both forms. Text inside code, preformatted snippets,
+ *  monospace evidence and verbatim-marked elements keeps what the site
+ *  wrote; attribute values are never touched. */
+export function setFrenchProseApostrophes(html: string): string {
+  const open: { name: string; verbatim: boolean }[] = [];
+  let verbatimDepth = 0;
+  return html.replace(
+    /<(\/?)([a-zA-Z][\w-]*)([^>]*)>|[^<]+|</g,
+    (token, closing, rawName, attrs) => {
+      if (rawName === undefined) {
+        return verbatimDepth > 0 || token === '<'
+          ? token
+          : token.replace(ELISION_APOSTROPHE, '$1’');
+      }
+      const name = (rawName as string).toLowerCase();
+      if (closing) {
+        const index = open.map((element) => element.name).lastIndexOf(name);
+        if (index >= 0) {
+          for (const element of open.splice(index)) if (element.verbatim) verbatimDepth--;
+        }
+        return token;
+      }
+      if (VOID_ELEMENTS.has(name) || (attrs as string).endsWith('/')) return token;
+      const verbatim = VERBATIM_ELEMENTS.has(name) || VERBATIM_ATTRIBUTES.test(attrs as string);
+      if (verbatim) verbatimDepth++;
+      open.push({ name, verbatim });
+      return token;
+    },
+  );
+}
