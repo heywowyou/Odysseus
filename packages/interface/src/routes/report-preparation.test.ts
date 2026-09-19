@@ -515,7 +515,6 @@ describe('POST /api/audits/:auditId/report-preparation/regenerate-writing', () =
   it('runs as tracked background work in async mode and records the outcome', async () => {
     await writeEvidence();
     storedPreparation = emptyReportPreparation();
-    vi.mocked(pauseBetweenLanguagePasses).mockResolvedValue(undefined);
     vi.mocked(runAnalysisStage).mockImplementation(
       async (_dir, _manifest, _findings, options) =>
         ({
