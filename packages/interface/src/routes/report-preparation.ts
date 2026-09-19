@@ -56,7 +56,7 @@ interface PreparationView {
 }
 
 /** The one place assembling the preparation view: preparation plus its
- *  resolved bilingual preview, computed from the on-disk findings. Artifacts
+ *  resolved preparation preview, computed from the on-disk findings. Artifacts
  *  are optional here (unlike regeneration): missing findings degrade the
  *  preview to evidence-unavailable instead of failing the read. */
 async function buildPreparationView(
@@ -145,11 +145,10 @@ export function registerReportPreparationRoutes(router: Router, connection: Conn
       // request may stay open. In async mode it runs as tracked background
       // work: the in-flight marker is taken before the first await, the page
       // polls the preparation view, and the outcome is kept for it to read.
-      // Issue #410: the default reuses a language whose writing already
-      // succeeded against this structure and these findings. `fresh=true` is
-      // the operator's way to write both languages again, the same role
-      // regenerateStructure plays one level up.
-      const regenerateBoth = query.get('fresh') === 'true';
+      // Issue #410 + Plan 067: the default may reuse compatible French
+      // writing. `fresh=true` forces one fresh French writer call; English is
+      // available only through the explicit generate-English-version route.
+      const regenerateFrenchFresh = query.get('fresh') === 'true';
       if (query.get('async') === 'true') {
         if (isReportProductionInFlight(auditId)) {
           sendError(
@@ -160,7 +159,7 @@ export function registerReportPreparationRoutes(router: Router, connection: Conn
           return;
         }
         const run = regenerateWriting(connection, audit, artifactStore, {
-          regenerateWriting: regenerateBoth,
+          regenerateWriting: regenerateFrenchFresh,
         });
         run.then(
           (result) =>
@@ -183,7 +182,7 @@ export function registerReportPreparationRoutes(router: Router, connection: Conn
 
       try {
         const result = await regenerateWriting(connection, audit, artifactStore, {
-          regenerateWriting: regenerateBoth,
+          regenerateWriting: regenerateFrenchFresh,
         });
         sendJson(res, 201, result);
       } catch (error) {
