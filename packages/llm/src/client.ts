@@ -217,7 +217,7 @@ export async function callOpenAiForWriting(
           content: buildWritingSystemPrompt(
             input.language,
             usedFallbackContext,
-            input.dominantPerformanceMetric,
+            input.performanceEvidence,
             input.providerPhrase,
             input.siteContext,
           ),
