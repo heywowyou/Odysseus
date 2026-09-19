@@ -493,7 +493,7 @@ describe('buildWritingRetryFeedback and the user-prompt correction', () => {
       categoriesPresent: [],
       performance: emptyWritingPerformanceEvidence(),
 
-      obligationStatus: 'unknown',
+      obligationStatus: 'unknown' as const,
       limitations: ['real-user-performance-unavailable'],
     },
   };
@@ -711,7 +711,7 @@ describe('plan 028: buildWritingUserPrompt grounds known-drift rule IDs in a sha
       categoriesPresent: ['accessibility' as const],
       performance: emptyWritingPerformanceEvidence(),
 
-      obligationStatus: 'unknown',
+      obligationStatus: 'unknown' as const,
       limitations: ['real-user-performance-unavailable'],
     },
   };
@@ -873,7 +873,7 @@ describe('plan 029 lever F: concrete site facts in the writing prompt', () => {
         categoriesPresent: [],
         performance: emptyWritingPerformanceEvidence(),
 
-        obligationStatus: 'unknown',
+        obligationStatus: 'unknown' as const,
         limitations: ['real-user-performance-unavailable'],
       },
     });
