@@ -25,11 +25,9 @@ function theme(overrides: { businessImpact?: string; recommendedActions?: string
   };
 }
 
-// plan 027 step 4: businessImpact's cap was raised from a hard 2 to a
-// floored-and-ceilinged 3..5 range, so both edges of the new range need
-// their own test - the old suite only ever tested the (now retired) 2-max
-// boundary.
-describe('plan 027: businessImpact sentence-count floor and ceiling', () => {
+// Plan 067: one concise sentence is valid; only an empty field or prose
+// above the four-sentence ceiling is rejected.
+describe('Plan 067: businessImpact 1..4 sentence bounds', () => {
   it(`rejects fewer than ${MIN_BUSINESS_IMPACT_SENTENCES} sentences`, () => {
     const result = writingThemeSchema.safeParse(
       theme({ businessImpact: sentences(MIN_BUSINESS_IMPACT_SENTENCES - 1) }),
@@ -59,9 +57,8 @@ describe('plan 027: businessImpact sentence-count floor and ceiling', () => {
   });
 });
 
-// plan 027 step 4: recommendedActions' cap was raised from a hard 3 to a
-// floored-and-ceilinged 2..5 range.
-describe('plan 027: recommendedActions count floor and ceiling', () => {
+// Plan 067: one concrete action is valid; padding is never required.
+describe('Plan 067: recommendedActions 1..4 bounds', () => {
   it(`rejects fewer than ${MIN_RECOMMENDED_ACTIONS} actions`, () => {
     const result = writingThemeSchema.safeParse(
       theme({ recommendedActions: actions(MIN_RECOMMENDED_ACTIONS - 1) }),
