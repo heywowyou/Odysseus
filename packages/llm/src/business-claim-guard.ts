@@ -11,28 +11,14 @@ export const BUSINESS_CLAIM_EXAMPLES: Record<ReportLanguage, string> = {
 };
 
 /**
- * The model's input contains no revenue, traffic, or conversion data, so
- * it can never know which page is the most commercially valuable one.
- * The first live run still wrote "la page la plus rentable du site"
- * (sas-fernande.fr, 2026-08-02), a reasonable-sounding ranking asserted
- * as knowledge. docs/rules/llm-layer-rules.md section 6 draws the exact line:
- * the model may say a page appears commercially important, which is
- * inference the client can weigh, but not assert relative page value.
+ * Plan 067: the writer has no measured evidence for commercial outcomes such
+ * as bookings, conversion, revenue, abandonment, demand, trust, or reputation.
+ * Those claims are unsupported whether categorical or hedged. Hedging changes
+ * confidence, not evidence, so "may reduce bookings" is rejected just like
+ * "reduces bookings".
  *
- * The fallbackNote in writing-prompt.ts already forbids this, but only
- * when no intake context was provided, and a prompt instruction is not a
- * guard (the standing reasoning of the language and severity-vocabulary
- * guards). This guard applies with or without site context.
- *
- * Scope is deliberately narrow, calibrated against every stored analysis:
- * only profitability and revenue superlatives are banned. Traffic
- * superlatives are not: real output legitimately uses them as generic
- * advice phrasing ("Prioriser les pages les plus visitées", "high-traffic
- * pages like activities, events"), with no specific page asserted and no
- * data claimed. A hedged sentence is never a violation, matching the
- * doctrine's own escape hatch: "semble être la page la plus rentable" is
- * inference the client can weigh, the unhedged form is a claim they would
- * have to correct.
+ * Direct functional consequences remain allowed: a visitor cannot read a
+ * label, reach a control, understand an error, or complete an interface step.
  */
 const BANNED_CLAIM_PATTERNS: Record<ReportLanguage, RegExp[]> = {
   fr: [
@@ -41,6 +27,10 @@ const BANNED_CLAIM_PATTERNS: Record<ReportLanguage, RegExp[]> = {
     /\bg[eéè]n[eéè]r\w*\s+le\s+plus\b/iu,
     /\brapporte(?:nt)?\s+le\s+plus\b/iu,
     /\bmeilleure\s+page\s+de\s+vente\b/iu,
+    /\bperte\s+(?:de|des|du)\s+(?:r[ée]servations?|clients?|conversion|revenus?|chiffre\s+d['’]affaires|demande|confiance|r[ée]putation)\b/iu,
+    /\b(?:r[ée]servations?|clients?|conversion|revenus?|chiffre\s+d['’]affaires|demande|confiance|r[ée]putation)\s+(?:perdu(?:e|es|s)?|manqu[ée](?:e|es|s)?|en\s+baisse)\b/iu,
+    /\b(?:perd\w*|manqu\w*|r[ée]dui\w*|augment\w*|am[ée]lior\w*|d[ée]grad\w*|nui\w*|menac\w*|comprom\w*|affect\w*|impact\w*|d[ée]courag\w*|abandonn\w*)\b[^.!?]{0,100}\b(?:r[ée]servations?|clients?|conversion|revenus?|chiffre\s+d['’]affaires|demande|confiance|r[ée]putation)\b/iu,
+    /\b(?:r[ée]servations?|clients?|conversion|revenus?|chiffre\s+d['’]affaires|demande|confiance|r[ée]putation)\b[^.!?]{0,100}\b(?:baiss\w*|augment\w*|diminu\w*|souffr\w*|p[âa]ti\w*|d[ée]grad\w*|menac\w*|comprom\w*)\b/iu,
   ],
   en: [
     /\bmost\s+profitable\b/iu,
@@ -49,36 +39,10 @@ const BANNED_CLAIM_PATTERNS: Record<ReportLanguage, RegExp[]> = {
     /\bbest[- ]selling\s+page\b/iu,
     /\bgenerates?\s+the\s+most\b/iu,
     /\bhighest[- ]revenue\b/iu,
-  ],
-};
-
-/** A hedge anywhere in the same sentence makes the claim inference rather
- *  than assertion, which the doctrine explicitly permits. Sentence-level
- *  rather than "hedge immediately before the match" so both orders work
- *  ("semble être la page la plus rentable", "la page la plus rentable,
- *  vraisemblablement"). */
-const HEDGE_MARKERS: Record<ReportLanguage, RegExp[]> = {
-  fr: [
-    /\bsemble(?:nt)?\b/iu,
-    /\bpara[îi]t\b/iu,
-    /\bappara[îi]t\b/iu,
-    /\bprobablement\b/iu,
-    /\bvraisemblablement\b/iu,
-    /\bsans\s+doute\b/iu,
-    /\bpeut[- ]être\b/iu,
-    /\bpourrait\b/iu,
-    /\bdevrait\b/iu,
-    /\bsusceptible\b/iu,
-  ],
-  en: [
-    /\bappears?\b/iu,
-    /\bseems?\b/iu,
-    /\bprobably\b/iu,
-    /\blikely\b/iu,
-    /\bperhaps\b/iu,
-    /\bpossibly\b/iu,
-    /\bmay\b/iu,
-    /\bmight\b/iu,
+    /\bloss\s+of\s+(?:bookings?|customers?|conversion|revenue|demand|trust|reputation)\b/iu,
+    /\b(?:lost|missed)\s+(?:bookings?|customers?|revenue|demand|trust)\b/iu,
+    /\b(?:lose|loses|lost|reduce|reduces|lower|lowers|increase|increases|improve|improves|harm|harms|hurt|hurts|threaten|threatens|damage|damages|affect|affects|impact|impacts|discourage|discourages|abandon|abandons)\b[^.!?]{0,100}\b(?:bookings?|customers?|conversion|revenue|demand|trust|reputation)\b/iu,
+    /\b(?:bookings?|customers?|conversion|revenue|demand|trust|reputation)\b[^.!?]{0,100}\b(?:drop|drops|fall|falls|decline|declines|suffer|suffers|improve|improves|increase|increases)\b/iu,
   ],
 };
 
@@ -106,8 +70,6 @@ export function findBusinessClaimViolationsInFields(
     for (const sentence of splitSentences(text)) {
       const claim = BANNED_CLAIM_PATTERNS[language].find((pattern) => pattern.test(sentence));
       if (!claim) continue;
-      const hedged = HEDGE_MARKERS[language].some((pattern) => pattern.test(sentence));
-      if (hedged) continue;
       violations.push({ field, text, matched: sentence.match(claim)![0] });
       break;
     }
