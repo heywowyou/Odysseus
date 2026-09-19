@@ -28,14 +28,12 @@ function extractWrittenPhases(path: URL): string[] {
 /** The fixture is read from disk rather than imported: the interface main
  *  project is composite and excludes src/dashboard, so a static import of
  *  the fixture fails to compile (TS6307) even though vitest would run it.
- *  The slice between the two exported names covers only the pipeline
- *  tuple's own entries. */
+ *  The slice up to the tuple's closing bracket covers only its own
+ *  entries. */
 function extractFixturePipelinePhases(): string[] {
   const source = readFileSync(FIXTURE_PATH, 'utf8');
-  const pipelineBlock = source.slice(
-    source.indexOf('FULL_AUDIT_PHASE_PIPELINE'),
-    source.indexOf('DASHBOARD_ONLY_PHASES'),
-  );
+  const start = source.indexOf('FULL_AUDIT_PHASE_PIPELINE');
+  const pipelineBlock = source.slice(start, source.indexOf('] as const', start));
   return extractLiterals(pipelineBlock, QUOTED_LITERAL_PATTERN);
 }
 

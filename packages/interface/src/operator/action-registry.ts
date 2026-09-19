@@ -199,6 +199,13 @@ export const REGISTRY_ACTIONS = [
     protocol: 'reload-recheck',
     pendingPlan061: true,
   },
+  {
+    action: 'generateEnglishVersion',
+    owner: 'report-preparation',
+    routes: ['POST /api/audits/:auditId/report-preparation/generate-english-version'],
+    protocol: 'reload-recheck',
+    pendingPlan061: true,
+  },
 
   // --- outreach (existing outreach policy) --------------------------------
   {

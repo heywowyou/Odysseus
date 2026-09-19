@@ -50,8 +50,10 @@ describe('Plan 068 evidence-quality model', () => {
   });
 
   it('contains no evidence approval or non-approval vocabulary in either locale', () => {
-    expect(JSON.stringify(fr.auditDetail.evidenceQuality).toLowerCase()).not.toContain('approb');
-    expect(JSON.stringify(en.auditDetail.evidenceQuality).toLowerCase()).not.toContain('approv');
+    // Displayed copy only: the scanner's own warning codes (for example
+    // 'environment-unapproved') stay as lookup keys and are never shown.
+    expect(displayedCopy(fr.auditDetail.evidenceQuality)).not.toContain('approb');
+    expect(displayedCopy(en.auditDetail.evidenceQuality)).not.toContain('approv');
   });
 
   it('falls back to the stable warning code when a future operational warning appears', () => {
@@ -64,3 +66,11 @@ describe('Plan 068 evidence-quality model', () => {
     );
   });
 });
+
+function displayedCopy(value: unknown): string {
+  if (typeof value === 'string') return value.toLowerCase();
+  if (value !== null && typeof value === 'object') {
+    return Object.values(value).map(displayedCopy).join('\n');
+  }
+  return '';
+}

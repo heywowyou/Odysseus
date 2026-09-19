@@ -76,9 +76,12 @@ describe('generateOutreachPreviewHtmlV3', () => {
     ].map((text) => html.indexOf(text));
     expect(headings.every((position) => position > 0)).toBe(true);
     expect([...headings].sort((a, b) => a - b)).toEqual(headings);
-    expect(html).not.toContain('preview-scorecard');
-    expect(html).not.toContain('preview-risk');
-    expect(html).not.toContain('data-grade=');
+    // v3 reuses the v2 stylesheet, whose unused scorecard rules are not
+    // rendered markup; only the page body must be free of the hero.
+    const markup = html.replace(/<style>[\s\S]*?<\/style>/, '');
+    expect(markup).not.toContain('preview-scorecard');
+    expect(markup).not.toContain('preview-risk');
+    expect(markup).not.toContain('data-grade=');
   });
 
   it('renders priority ranks and bounded reviewed copy only', () => {

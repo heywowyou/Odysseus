@@ -12,13 +12,16 @@ export const FULL_AUDIT_PHASE_PIPELINE = [
   'lighthouse',
   'normalize',
   'analyze-fr',
-  'analyze-en',
   'report-fr',
-  'report-en',
   'complete',
 ] as const;
 
+/** English phases older jobs still carry from before full audits became
+ *  French-only (Plan 067). No longer written, but they sit after the
+ *  lighthouse pass, so the progress bars treat them like the French ones. */
+export const LEGACY_ENGLISH_PHASES = ['analyze-en', 'report-en'] as const;
+
 /** Phases the dashboard has copy for that are not positions in the
- *  full-audit sequence: the prospecting phase, and the terminal failure
- *  phase. */
-export const DASHBOARD_ONLY_PHASES = ['scanning', 'failed'] as const;
+ *  full-audit sequence: the prospecting phase, the terminal failure
+ *  phase, and the legacy English phases. */
+export const DASHBOARD_ONLY_PHASES = ['scanning', 'failed', ...LEGACY_ENGLISH_PHASES] as const;

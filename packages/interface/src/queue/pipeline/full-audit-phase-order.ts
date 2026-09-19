@@ -14,8 +14,6 @@ export const FULL_AUDIT_PHASE_ORDER = [
   'lighthouse',
   'normalize',
   'analyze-fr',
-  'analyze-en',
   'report-fr',
-  'report-en',
   'complete',
 ] as const satisfies readonly JobPhase[];
