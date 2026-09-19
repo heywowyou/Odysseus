@@ -535,7 +535,11 @@ export function renderMethodology(
   ).length;
   const sitemapCoverageText = hasDiscoveryProvenance
     ? fillTemplate(
-        seededPages > 0 ? m.sitemapCoverageWithSeedsTemplate : m.sitemapCoverageTemplate,
+        linkedPages === analyzedPages.length
+          ? m.sitemapCoverageAllLinkedTemplate
+          : seededPages > 0
+            ? m.sitemapCoverageWithSeedsTemplate
+            : m.sitemapCoverageTemplate,
         {
           total: formatNumber(analyzedPages.length, language),
           linked: formatNumber(linkedPages, language),

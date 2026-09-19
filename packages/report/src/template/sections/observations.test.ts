@@ -69,7 +69,7 @@ describe('renderObservations against the real small-site.test scan', () => {
 
     expect(html).toContain('f1');
     expect(html).not.toContain('portent une directive noindex');
-    expect(html).toContain('généralement exclu de l’indexation');
+    expect(html).toContain('que l’on exclut souvent volontairement de l’indexation');
   });
 
   // Issue #325: the accessibility-statement block printed a bare "f066".

@@ -44,6 +44,16 @@ des champs. Concrètement :
   `FRENCH_TERM_GLOSSARY` de `prose-register-guard.ts`, que le prompt affiche
   et que le contrôle applique. Un nom d'attribut que le prestataire cherchera
   tel quel, comme hreflang, reste en l'état.
+- Le français natif ne se limite pas au vocabulaire : une phrase peut n'employer
+  que des mots français et suivre pourtant la charpente d'une phrase anglaise
+  (« les sujets de référencement complètent cette lecture », « un remplissage
+  visuel à accélérer », « servez ces images »). Pensez la phrase en français,
+  avec un sujet concret et un verbe précis (« Les mesures montrent… », « Le
+  navigateur détecte… »), plutôt qu'un enchaînement de noms abstraits. Les
+  tournures calquées relevées dans de vrais rapports sont listées dans la
+  table `FRENCH_CALQUE_GLOSSARY` du même fichier, que le prompt affiche et
+  que le contrôle applique. Les libellés fixes du rapport suivent la même
+  règle, vérifiée par `packages/report/src/template/french-calques.test.ts`.
 - Aucun jugement subjectif que les constats ne mesurent pas : jamais « le
   site donne une impression de contenu riche mais insuffisamment cadré ».
   Le même contrôle rejette la tournure d'impression (issue #309).

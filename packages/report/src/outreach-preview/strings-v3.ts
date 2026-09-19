@@ -60,7 +60,7 @@ const COPY = {
     lede:
       'Cet aperçu reprend les principaux résultats du diagnostic réalisé sur votre site. ' +
       'Le rapport complet détaille ensuite chaque constat, les priorités de correction et les éléments techniques utiles à votre prestataire.',
-    resultsHeading: 'Résultats mesurés',
+    resultsHeading: 'Principaux résultats',
     coverageSubheading: 'Périmètre analysé',
     coverageIntro:
       'Le diagnostic distingue les pages recensées, les pages analysées en détail et les pages mesurées pour la vitesse.',
@@ -71,8 +71,8 @@ const COPY = {
     priorityPageSingular: 'page concernée',
     priorityPagesPlural: 'pages concernées',
     prioritySiteWide: 'portée générale',
-    dataQualityHeading: 'Qualité des données du scan',
-    dataQualityIntro: 'Ce que le scan a pu vérifier et les limites à connaître.',
+    dataQualityHeading: 'Qualité des données de l’analyse',
+    dataQualityIntro: 'Ce que l’analyse a pu vérifier et les limites à connaître.',
     dataQualityStatus: {
       complete: 'Complet',
       limited: 'Exploitable avec limites',
@@ -80,7 +80,7 @@ const COPY = {
     },
     limitationsHeading: 'Limites à connaître',
     unavailableNote:
-      'Le diagnostic détaillé de la qualité des données n’est pas disponible pour ce scan. Les résultats restent limités aux mesures effectivement enregistrées.',
+      'Le diagnostic détaillé de la qualité des données n’est pas disponible pour cette analyse. Les résultats restent limités aux mesures effectivement enregistrées.',
     offerHeading: 'Le diagnostic complet',
     offerBody:
       'Le diagnostic technique complet, proposé à {price}, documente les constats, les pages et éléments concernés, leur ordre de priorité et les corrections recommandées. Pour le commander, répondez simplement à ce message.',

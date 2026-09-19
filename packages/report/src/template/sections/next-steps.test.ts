@@ -140,7 +140,7 @@ describe('item 31: authorship and liability block', () => {
     expect(authorship.slice(0, authorship.indexOf('</p>'))).not.toContain('render-abc');
     const provenance = html.slice(html.indexOf('data-provenance'));
     expect(provenance).toContain(
-      'Traçabilité technique\u00a0: version de rendu render-abc, modèle 2\u00a0; version de scan 0.5.2.',
+      'Traçabilité technique\u00a0: version de rendu render-abc, modèle 2\u00a0; version du moteur d’analyse 0.5.2.',
     );
     expect(html).not.toContain('build de');
   });
@@ -250,7 +250,7 @@ describe('item 3.12: re-audit pricing and lead time', () => {
   it('renders the price and lead time from the code constants in both languages', () => {
     const fr = renderNextSteps(getStrings('fr'), 14, fakeManifest(), 'fr');
     const en = renderNextSteps(getStrings('en'), 14, fakeManifest(), 'en');
-    expect(fr).toContain(`${ODYSSEUS_REAUDIT_PRICE_EUR_HT} € HT`);
+    expect(fr).toContain(`${ODYSSEUS_REAUDIT_PRICE_EUR_HT}\u00a0€ HT`);
     expect(fr).toContain(`${ODYSSEUS_REAUDIT_LEAD_TIME_DAYS} jours ouvrés`);
     expect(en).toContain(`EUR ${ODYSSEUS_REAUDIT_PRICE_EUR_HT}`);
     expect(en).toContain(`${ODYSSEUS_REAUDIT_LEAD_TIME_DAYS} business days`);
@@ -299,15 +299,15 @@ describe('plan 018 step 7: the ending is a synthesis, not three sales cards', ()
     expect(html).toContain('section-14');
     expect(html).toContain('point de contact direct avec vos visiteurs');
     expect(html).toContain(
-      'Le rapport retient 3 priorités. Parmi elles, 2 couvrent au moins un constat critique ou sérieux et 1 correspond à un gain rapide',
+      'Le rapport retient 3 priorités. Parmi elles, 2 regroupent au moins un constat critique ou sérieux et 1 correspond à une action rapide',
     );
     expect(html).toContain('La direction');
     expect(html).toContain('Le prestataire technique');
     expect(html).toContain('La communication');
     expect(html).toContain('le juridique');
     expect(html).toContain('trois à six mois');
-    expect(html).toContain(`${ODYSSEUS_REAUDIT_PRICE_EUR_HT} € HT`);
-    expect(html).toContain('Besoin de clarifier un point ?');
+    expect(html).toContain(`${ODYSSEUS_REAUDIT_PRICE_EUR_HT}\u00a0€ HT`);
+    expect(html).toContain('Questions sur ce rapport');
     expect(html).toContain(ODYSSEUS_CONTACT_EMAIL);
     expect(html).toContain('Rapport produit par');
     expect(html).toContain('a1b2c3');
@@ -355,7 +355,7 @@ describe('plan 018 step 7: the ending is a synthesis, not three sales cards', ()
 describe('plan 018 step 7: re-audit comparison copy follows CrUX availability', () => {
   it('names no field data when the manifest carries none', () => {
     const withoutFieldDataSentence = {
-      fr: 'les constats par gravité et les critères WCAG 2.2 AA en échec',
+      fr: 'le nombre et la gravité des constats ainsi que les critères WCAG 2.2 AA en échec',
       en: 'findings by severity and failing WCAG 2.2 AA criteria',
     } as const;
     for (const language of ['fr', 'en'] as const) {

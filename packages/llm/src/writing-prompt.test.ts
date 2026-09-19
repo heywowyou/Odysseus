@@ -392,7 +392,7 @@ describe('issue #55 / plan 027: the writing prompt varies the executive summary 
 
   it('grounds the closing sentence in measured findings instead of unmeasured abstractions, in French', () => {
     const prompt = buildWritingSystemPrompt('fr', false, null);
-    expect(prompt).toContain('des familles de constats présentes dans votre entrée');
+    expect(prompt).toContain('des types de constats présents dans votre entrée');
   });
 
   // Measured 2026-09-07: showing three example closings and forbidding

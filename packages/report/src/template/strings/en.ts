@@ -908,6 +908,8 @@ export const en: ReportStrings = {
       'Coverage detail: {total} pages visited, including {linked} reached from the homepage or internal links and {sitemapOnly} added from the sitemap.',
     sitemapCoverageWithSeedsTemplate:
       'Coverage detail: {total} pages visited, including {linked} reached from the homepage or internal links, {seeded} supplied explicitly, and {sitemapOnly} added from the sitemap.',
+    sitemapCoverageAllLinkedTemplate:
+      'Coverage detail: all {total} visited pages were reached from the homepage or internal links.',
     sitemapIncompleteTemplate:
       'Sitemap coverage was incomplete. Sitemap documents not read: {failed}. Declared page URLs outside the authorized scope or filtered by the audit rules: {filtered}. Eligible pages omitted by the configured cap: {omitted}.',
     toolingParagraphTemplate:

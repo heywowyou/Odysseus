@@ -120,7 +120,7 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
     {
       id: 'meta-description-missing-add-summary',
       text: {
-        fr: 'Ajoutez une balise meta description propre à cette page, résumant son contenu en une ou deux phrases.',
+        fr: 'Ajoutez une balise de méta-description propre à cette page, résumant son contenu en une ou deux phrases.',
         en: 'Add a meta description tag specific to this page, summarizing its content in one or two sentences.',
       },
     },
@@ -129,7 +129,7 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
     {
       id: 'meta-description-length-fit-display-width',
       text: {
-        fr: "Ajustez la longueur de la meta description pour qu'elle s'affiche entièrement dans les résultats de recherche, généralement entre 120 et 160 caractères.",
+        fr: "Ajustez la longueur de la méta-description pour qu'elle s'affiche entièrement dans les résultats de recherche, généralement entre 120 et 160 caractères.",
         en: 'Adjust the meta description length so it displays in full in search results, typically 120 to 160 characters.',
       },
     },
@@ -262,7 +262,7 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
     {
       id: 'image-oversized-serve-responsive',
       text: {
-        fr: 'Servez plusieurs tailles via srcset pour que chaque appareil télécharge une image adaptée à son écran.',
+        fr: 'Proposez plusieurs tailles via srcset pour que chaque appareil télécharge une image adaptée à son écran.',
         en: 'Serve multiple sizes via srcset so each device downloads an image sized for its own screen.',
       },
     },

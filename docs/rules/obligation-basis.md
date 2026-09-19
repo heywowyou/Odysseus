@@ -315,6 +315,25 @@ Rules that hold it to one clean sentence per fact:
 - A note printed under the paragraph adds to it (example pages, the
   confirmation step) and never repeats one of its fact sentences.
 
+
+### 7.2 French wording of the scope labels
+
+A native-speaker review of two delivered reports (2026-09-19) found the
+French scope wording translated from English. The following rewrites change
+the French only; the legal meaning, the facts cited and the "report, do not
+conclude" rule above are unchanged. They are recorded here for operator
+sign-off because they touch legal wording:
+
+| Before | After |
+| --- | --- |
+| « Statut d'obligation » (label) | « Applicabilité de l'obligation » |
+| « le statut d'obligation de ce site est traité séparément » | « l'applicabilité des obligations à ce site est traitée séparément » |
+| « obligations documentées à l'article D412-49 et suivants » | « obligations définies à l'article D412-49 et suivants » (not « prévues », which the same sentence repeats as « l'amende prévue ») |
+| « la section « Cadre réglementaire » rapproche ces critères des faits disponibles » | « … met ces critères en regard des informations disponibles » |
+| « faites-le confirmer avant de vous appuyer sur ce statut » | « faites confirmer ce point avant d'en tirer une conclusion sur l'applicabilité de l'obligation » |
+| « Les obligations sont donc déjà en vigueur, depuis {durée}, pas à venir. » | « Les obligations sont donc en vigueur depuis {durée} ; il ne s'agit pas d'une échéance à venir. » |
+| « parcours transactionnel » (status descriptions) | « parcours de réservation ou d'achat en ligne (« parcours transactionnel ») » on first use |
+
 ---
 
 ## 8. Statistics

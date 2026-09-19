@@ -934,7 +934,7 @@ describe('item 1.5: the quick-win badge does not render when every rendered them
 
     const html = renderThemes(getStrings('fr'), 4, analysis, findings, manifest);
 
-    expect((html.match(/Gain rapide/g) ?? []).length).toBe(2);
+    expect((html.match(/Action rapide/g) ?? []).length).toBe(2);
   });
 });
 
@@ -2124,7 +2124,7 @@ describe('plan 018 step 6: priority card order and the deterministic observation
       'class="tag qw"', // 1. quick-win marker
       'Contraste insuffisant sur les pages clés', // 1. stored technical title
       'class="theme-fact-label">Complexité', // 1. decision facts
-      'Pourquoi c’est important', // 2
+      'Enjeu', // 2
       'Ce que nous avons constaté', // 3
       'Comment le corriger', // 4
       'Exigence de conformité', // 5. context
@@ -2165,7 +2165,7 @@ describe('plan 018 step 6: priority card order and the deterministic observation
     // 2 + 3 = 5 occurrences, exact and never approximate. French guillemets
     // carry U+00A0 (never U+202F), per the canonical strings rule.
     expect(html).toContain(
-      'Ce chantier comprend notamment le constat «\u00a0Le contraste des couleurs est insuffisant\u00a0», relevé sur la page https://example.com/a-propos. Au total, il concerne 2 pages et 5 occurrences.',
+      'Cette priorité comprend notamment le constat «\u00a0Le contraste des couleurs est insuffisant\u00a0», relevé sur la page https://example.com/a-propos. Au total, elle concerne 2 pages et 5 occurrences.',
     );
   });
 
@@ -2176,7 +2176,7 @@ describe('plan 018 step 6: priority card order and the deterministic observation
     const html = renderThemes(getStrings('fr'), 4, analysis as never, findings, manifest);
 
     expect(html).toContain(
-      'Ce chantier comprend notamment le constat «\u00a0Le contraste des couleurs est insuffisant\u00a0». Au total, il concerne 0 pages et 4 occurrences.',
+      'Cette priorité comprend notamment le constat «\u00a0Le contraste des couleurs est insuffisant\u00a0». Au total, elle concerne 0 pages et 4 occurrences.',
     );
   });
 

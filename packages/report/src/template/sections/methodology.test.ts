@@ -73,7 +73,7 @@ describe('item 3.2: the social-exclusion disclosure agrees with a singular count
     };
     const html = renderMethodology(getStrings('fr'), 11, withOneExcluded, 'fr');
 
-    expect(html).toContain('1 page a été exclue de ce scan');
+    expect(html).toContain('1 page a été exclue de cette analyse');
     expect(html).not.toContain('page(s)');
   });
 
@@ -99,7 +99,7 @@ describe('item 3.2: the social-exclusion disclosure agrees with a singular count
     };
     const html = renderMethodology(getStrings('fr'), 11, withTwoExcluded, 'fr');
 
-    expect(html).toContain('2 pages ont été exclues de ce scan');
+    expect(html).toContain('2 pages ont été exclues de cette analyse');
     expect(html).not.toContain('page(s)');
   });
 });
@@ -702,7 +702,7 @@ describe('item 1.10/B8: the extended accessibility pass states its own result', 
   it('renders the "none found" note when no finding uses any of the four extended-pass rule ids', async () => {
     const manifest = await loadSmallSiteManifest();
     const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', undefined, []);
-    expect(html).toContain('Résultat de la passe d’accessibilité étendue');
+    expect(html).toContain('Résultat des contrôles d’accessibilité complémentaires');
   });
 
   // item 1.7 (Large Rule Families pass): the note used to be entirely suppressed
@@ -716,7 +716,7 @@ describe('item 1.10/B8: the extended accessibility pass states its own result', 
       { findingId: 'f1', ruleId: 'video-missing-captions' },
       { findingId: 'f2', ruleId: 'video-missing-captions' },
     ]);
-    expect(html).toContain('Résultat de la passe d’accessibilité étendue');
+    expect(html).toContain('Résultat des contrôles d’accessibilité complémentaires');
     expect(html).toContain('pièges au clavier (aucune anomalie détectée)');
     expect(html).toContain('ordre de focus (aucune anomalie détectée)');
     expect(html).toContain(
@@ -733,7 +733,7 @@ describe('item 1.10/B8: the extended accessibility pass states its own result', 
     const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', undefined, [
       { findingId: 'f1', ruleId: 'alt-text-quality-heuristic' },
     ]);
-    expect(html).toContain('Résultat de la passe d’accessibilité étendue');
+    expect(html).toContain('Résultat des contrôles d’accessibilité complémentaires');
   });
 });
 

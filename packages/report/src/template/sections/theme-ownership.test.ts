@@ -13,19 +13,19 @@ function counts(firstParty: number, thirdParty: number, verifyIntent: number) {
 describe('priority card correction ownership sentence', () => {
   it('names only the non-empty groups, joined as a French list', () => {
     expect(renderOwnershipSentence(getStrings('fr'), 'fr', counts(3, 0, 2))).toBe(
-      'Répartition des corrections : 3 à traiter directement et 2 à vérifier selon le contexte.',
+      'Répartition des corrections : 3 à corriger directement et 2 à vérifier au préalable.',
     );
     expect(renderOwnershipSentence(getStrings('fr'), 'fr', counts(3, 1, 2))).toBe(
-      'Répartition des corrections : 3 à traiter directement, 1 à transmettre à un tiers et 2 à vérifier selon le contexte.',
+      'Répartition des corrections : 3 à corriger directement, 1 à confier à un tiers et 2 à vérifier au préalable.',
     );
   });
 
   it('states a single group as a plain sentence instead of a one-item breakdown', () => {
     expect(renderOwnershipSentence(getStrings('fr'), 'fr', counts(4, 0, 0))).toBe(
-      'Les 4 corrections de ce chantier sont à traiter directement.',
+      'Ces 4 corrections peuvent être mises en œuvre directement.',
     );
     expect(renderOwnershipSentence(getStrings('fr'), 'fr', counts(0, 1, 0))).toBe(
-      'La correction de ce chantier est à transmettre à un tiers.',
+      'Cette correction est à confier à un tiers.',
     );
   });
 

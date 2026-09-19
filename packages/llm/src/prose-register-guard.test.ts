@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  FRENCH_CALQUE_GLOSSARY,
   FRENCH_TERM_GLOSSARY,
   findProseRegisterViolations,
   findProseRegisterViolationsInFields,
@@ -79,6 +80,38 @@ describe('issue #309: prose register guard', () => {
       const firstForm = entry.anglicism.split(/[,(]/)[0]!.trim();
       expect(firstForm, entry.anglicism).toMatch(entry.pattern);
       expect(entry.french, entry.anglicism).not.toMatch(entry.pattern);
+    }
+  });
+});
+
+// Native-speaker review of the Hôtel Point France and Villas Foch reports
+// (2026-09-19): French words arranged in English structure.
+describe('French calque guard', () => {
+  it('rejects the calques found in real executive summaries', () => {
+    for (const text of [
+      'Les sujets de référencement, de données structurées et de rendu complètent cette lecture.',
+      'Plusieurs constats touchent la découverte des contenus par les moteurs.',
+      "Les constats d'accessibilité structurent les priorités les plus élevées.",
+      'Sur la performance, les pages restent lentes à afficher.',
+      "L'audit relève un remplissage visuel à accélérer.",
+      'Servez ces images dans un format moderne.',
+      'La synthèse se limite aux familles de constats directement mesurées.',
+    ]) {
+      expect(findProseRegisterViolationsInFields(fields(text), 'fr'), text).toHaveLength(1);
+    }
+  });
+
+  it('keeps the natural phrasings and neighbouring words available', () => {
+    const text =
+      "En matière de performance, les mesures montrent un affichage progressif lent. Cette correction peut servir de référence, et la découverte des pages repose sur les liens internes. Une réservation sur la performance du site n'est pas formulée.";
+    expect(findProseRegisterViolationsInFields(fields(text), 'fr')).toEqual([]);
+  });
+
+  it('gives every calque a pattern that matches its own example and not its replacement', () => {
+    for (const entry of FRENCH_CALQUE_GLOSSARY) {
+      const example = entry.calque.replace(/, …$/u, '').replace(/, des images$/u, '');
+      expect(example, entry.calque).toMatch(entry.pattern);
+      expect(entry.french.replace(/, …$/u, ''), entry.calque).not.toMatch(entry.pattern);
     }
   });
 });

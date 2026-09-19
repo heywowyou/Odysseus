@@ -173,7 +173,7 @@ describe('renderMetadataSheet carries the severity scale and its basis note', ()
     const analysis = await loadSmallSiteAnalysis('fr');
     const html = renderMetadataSheet(fr, manifest, analysis, findings);
 
-    expect(html).toMatch(/Basé sur \d+ constats critiques et \d+ constats sérieux/);
+    expect(html).toMatch(/Évaluation fondée sur \d+ constats critiques et \d+ constats sérieux/);
   });
 });
 

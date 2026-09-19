@@ -78,7 +78,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'not-applicable' },
   },
   'aria-hidden-body': {
-    text: "Retirez l'attribut aria-hidden posé sur le corps de la page : en l'état, un lecteur d'écran ne voit aucun contenu.",
+    text: "Retirez l'attribut aria-hidden posé sur le corps de la page : en l'état, un lecteur d'écran ne voit aucun contenu.",
     snippet: { kind: 'fixed', template: '<body>' },
   },
   'aria-hidden-focus': {
@@ -107,7 +107,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     },
   },
   'aria-prohibited-attr': {
-    text: "Retirez cet attribut ARIA : il est interdit sur ce type d'élément et provoque une annonce incorrecte.",
+    text: "Retirez cet attribut ARIA : il est interdit sur ce type d'élément et provoque une annonce incorrecte.",
     snippet: { kind: 'not-applicable' },
   },
   'aria-required-attr': {
@@ -115,7 +115,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'fixed', template: '<div role="switch" aria-checked="false">...</div>' },
   },
   'aria-required-children': {
-    text: 'Corrigez la structure ARIA : un rôle de type menu ou liste doit contenir directement les rôles enfants que la spécification attend.',
+    text: 'Corrigez la structure ARIA : un rôle de type menu ou liste doit contenir directement les rôles enfants que la spécification attend.',
     snippet: {
       kind: 'fixed',
       template: '<ul role="listbox">\n  <li role="option">...</li>\n</ul>',
@@ -129,11 +129,11 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     },
   },
   'aria-roledescription': {
-    text: 'Donnez un rôle à cet élément, ou retirez la description de rôle : sans rôle, elle ne sera jamais annoncée.',
+    text: 'Donnez un rôle à cet élément, ou retirez la description de rôle : sans rôle, elle ne sera jamais annoncée.',
     snippet: { kind: 'not-applicable' },
   },
   'aria-roles': {
-    text: "Corrigez la valeur du rôle ARIA : celle indiquée n'existe pas dans la spécification, en général une faute de frappe.",
+    text: "Corrigez la valeur du rôle ARIA : celle indiquée n'existe pas dans la spécification, en général une faute de frappe.",
     snippet: { kind: 'not-applicable' },
   },
   'aria-tab-name': {
@@ -158,7 +158,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     },
   },
   'aria-valid-attr': {
-    text: "Corrigez le nom de cet attribut ARIA : il n'existe pas dans la spécification et il est donc ignoré.",
+    text: "Corrigez le nom de cet attribut ARIA : il n'existe pas dans la spécification et il est donc ignoré.",
     snippet: { kind: 'not-applicable' },
   },
   'aria-valid-attr-value': {
@@ -186,7 +186,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'not-applicable' },
   },
   blink: {
-    text: 'Supprimez le clignotement du contenu : aucun réglage ne rend cet effet conforme.',
+    text: 'Supprimez le clignotement du contenu : aucun réglage ne rend cet effet conforme.',
     snippet: { kind: 'not-applicable' },
   },
   'bootup-time': {
@@ -213,11 +213,11 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'not-applicable' },
   },
   canonical: {
-    text: 'Corrigez la balise canonique : elle doit contenir une adresse absolue et valide, pointant vers la version de référence de la page.',
+    text: 'Corrigez la balise canonique : elle doit contenir une adresse absolue et valide, pointant vers la version de référence de la page.',
     snippet: { kind: 'not-applicable' },
   },
   'canonical-conflicting': {
-    text: "Ne déclarez qu'une seule URL canonique par page : tant que plusieurs se contredisent, les moteurs de recherche en retiennent une au hasard.",
+    text: "Ne déclarez qu'une seule URL canonique par page : tant que plusieurs se contredisent, les moteurs de recherche en retiennent une au hasard.",
     snippet: { kind: 'not-applicable' },
   },
   'canonical-missing': {
@@ -232,7 +232,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'not-applicable' },
   },
   'canonical-target-unreachable': {
-    text: 'Corrigez ou retirez la balise canonique : elle pointe vers une page que les moteurs de recherche ne peuvent pas atteindre, qui ne peut donc pas servir de version de référence.',
+    text: 'Corrigez ou retirez la balise canonique : elle pointe vers une page que les moteurs de recherche ne peuvent pas atteindre, qui ne peut donc pas servir de version de référence.',
     snippet: { kind: 'not-applicable' },
   },
   'cls-culprits-insight': {
@@ -252,22 +252,22 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'not-applicable' },
   },
   'crawlable-anchors': {
-    text: "Rendez ces liens explorables : utilisez une balise a avec un attribut href, plutôt qu'un élément rendu cliquable par JavaScript.",
+    text: "Rendez ces liens explorables : utilisez une balise a avec un attribut href, plutôt qu'un élément rendu cliquable par JavaScript.",
     snippet: {
       kind: 'fill-in-blank',
       template: '<a href="<adresse de destination>">texte du lien</a>',
     },
   },
   'crux-cls-poor': {
-    text: "Stabilisez la mise en page pendant le chargement, en donnant des dimensions aux images et en réservant la place des bannières. Ces mesures viennent de vos visiteurs réels, pas d'une simulation.",
+    text: "Stabilisez la mise en page pendant le chargement, en donnant des dimensions aux images et en réservant la place des bannières. Ces données proviennent d'usages réels et non d'une simulation.",
     snippet: { kind: 'not-applicable' },
   },
   'crux-inp-poor': {
-    text: "Réduisez le travail que le navigateur effectue au moment des clics et des saisies. Ces mesures viennent de vos visiteurs réels, pas d'une simulation.",
+    text: "Réduisez le travail que le navigateur effectue au moment des clics et des saisies. Ces données proviennent d'usages réels et non d'une simulation.",
     snippet: { kind: 'not-applicable' },
   },
   'crux-lcp-poor': {
-    text: "Accélérez l'affichage du plus grand élément visible de la page, en général l'image principale. Ces mesures viennent de vos visiteurs réels.",
+    text: "Accélérez l'affichage du plus grand élément visible de la page, en général l'image principale. Ces données proviennent d'usages réels.",
     snippet: { kind: 'not-applicable' },
   },
   'css-orientation-lock': {
@@ -295,15 +295,15 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'fill-in-blank', template: '<title><titre décrivant cette page></title>' },
   },
   'dom-size': {
-    text: "Allégez la structure de la page : un nombre d'éléments très élevé ralentit chaque calcul de mise en page.",
+    text: "Allégez la structure de la page : un nombre d'éléments très élevé ralentit chaque calcul de mise en page.",
     snippet: { kind: 'not-applicable' },
   },
   'dom-size-insight': {
-    text: "Allégez la structure de la page : un nombre d'éléments très élevé ralentit chaque calcul de mise en page.",
+    text: "Allégez la structure de la page : un nombre d'éléments très élevé ralentit chaque calcul de mise en page.",
     snippet: { kind: 'not-applicable' },
   },
   'duplicate-id-aria': {
-    text: 'Rendez cet identifiant unique dans la page : une étiquette ou un attribut ARIA y fait référence, et la référence devient ambiguë.',
+    text: 'Rendez cet identifiant unique dans la page : une étiquette ou un attribut ARIA y fait référence, et la référence devient ambiguë.',
     snippet: { kind: 'not-applicable' },
   },
   'duplicated-javascript-insight': {
@@ -326,7 +326,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     },
   },
   'first-contentful-paint': {
-    text: 'Accélérez le premier affichage : réduisez ce qui bloque le rendu et allégez la réponse du serveur.',
+    text: 'Accélérez le premier affichage : réduisez ce qui bloque le rendu et allégez la réponse du serveur.',
     snippet: { kind: 'not-applicable' },
   },
   'focus-order-mismatch': {
@@ -385,11 +385,11 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'not-applicable' },
   },
   hreflang: {
-    text: 'Corrigez les annotations hreflang de la page : chaque code de langue doit être valide et chaque adresse déclarée complète.',
+    text: 'Corrigez les annotations hreflang de la page : chaque code de langue doit être valide et chaque adresse déclarée complète.',
     snippet: { kind: 'not-applicable' },
   },
   'hreflang-invalid': {
-    text: "Corrigez le code de langue ou de région de cette annotation hreflang : tel qu'il est écrit, il n'est pas reconnu et l'annotation est ignorée.",
+    text: "Corrigez le code de langue ou de région de cette annotation hreflang : tel qu'il est écrit, il n'est pas reconnu et l'annotation est ignorée.",
     snippet: { kind: 'not-applicable' },
   },
   'hreflang-missing': {
@@ -400,7 +400,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     },
   },
   'hreflang-no-return-link': {
-    text: 'Ajoutez le lien hreflang de retour : chaque version linguistique doit déclarer toutes les autres, y compris elle-même.',
+    text: 'Ajoutez le lien hreflang de retour : chaque version linguistique doit déclarer toutes les autres, y compris elle-même.',
     snippet: {
       kind: 'fill-in-blank',
       template: '<link rel="alternate" hreflang="fr" href="<adresse de cette page>">',
@@ -415,7 +415,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'fixed', template: '<html lang="fr">' },
   },
   'html-structural-validity': {
-    text: 'Corrigez le code HTML signalé : identifiants dupliqués, balises fermées dans le désordre, éléments placés dans un parent qui ne les accepte pas.',
+    text: 'Corrigez le code HTML signalé : identifiants dupliqués, balises fermées dans le désordre, éléments placés dans un parent qui ne les accepte pas.',
     snippet: { kind: 'not-applicable' },
   },
   'html-xml-lang-mismatch': {
@@ -427,7 +427,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'not-applicable' },
   },
   'http-status-code': {
-    text: 'Rétablissez une réponse normale pour cette page : tant que le serveur renvoie une erreur, elle ne sera pas indexée.',
+    text: 'Rétablissez une réponse normale pour cette page : tant que le serveur renvoie une erreur, elle ne sera pas indexée.',
     snippet: { kind: 'not-applicable' },
   },
   'image-alt': {
@@ -435,7 +435,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'fill-in-blank', template: 'alt="<ce que montre l\'image>"' },
   },
   'image-delivery-insight': {
-    text: "Servez ces images dans un format moderne et à la taille réellement affichée. C'est une seule opération à mener sur l'ensemble des fichiers listés.",
+    text: "Utilisez un format moderne pour ces images et adaptez-les à leur taille d'affichage. C'est une seule opération à mener sur l'ensemble des fichiers listés.",
     snippet: { kind: 'not-applicable' },
   },
   'image-legacy-format': {
@@ -443,7 +443,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'not-applicable' },
   },
   'image-oversized': {
-    text: "Servez ces images à la taille où elles sont réellement affichées, plutôt qu'en pleine résolution redimensionnée par le navigateur.",
+    text: "Fournissez ces images à la taille où elles sont réellement affichées, plutôt qu'en pleine résolution redimensionnée par le navigateur.",
     snippet: { kind: 'not-applicable' },
   },
   'input-button-name': {
@@ -470,7 +470,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'not-applicable' },
   },
   'jsonld-invalid': {
-    text: "Corrigez la syntaxe du bloc de données structurées : il n'est pas lisible en tant que JSON et est donc ignoré entièrement.",
+    text: "Corrigez la syntaxe du bloc de données structurées : il n'est pas lisible en tant que JSON et est donc ignoré entièrement.",
     snippet: { kind: 'not-applicable' },
   },
   'jsonld-missing': {
@@ -497,11 +497,11 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'not-applicable' },
   },
   'largest-contentful-paint': {
-    text: "Accélérez l'affichage du plus grand élément visible, en général l'image principale : préchargez-la et ne la chargez pas en différé.",
+    text: "Accélérez l'affichage du plus grand élément visible, en général l'image principale : préchargez-la et ne la chargez pas en différé.",
     snippet: { kind: 'not-applicable' },
   },
   'largest-contentful-paint-element': {
-    text: "Identifiez l'élément le plus lent à s'afficher et traitez-le en priorité : c'est lui qui détermine la mesure.",
+    text: "Identifiez l'élément le plus lent à s'afficher et traitez-le en priorité : c'est lui qui détermine la mesure.",
     snippet: { kind: 'not-applicable' },
   },
   'layout-shifts': {
@@ -509,31 +509,31 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'not-applicable' },
   },
   'lcen-mentions-legales-missing': {
-    text: "Publiez sur le site les informations d'identification de l'entreprise, dont le numéro SIREN ou RCS. Le critère exact et sa source figurent dans la section consacrée à l'exposition légale. Le contrôle automatique porte sur la page atteinte depuis le lien Mentions légales ; des informations légales peuvent exister ailleurs (page non visitée, document séparé, prestataire externe).",
+    text: "Publiez sur le site les informations d'identification de l'entreprise, dont le numéro SIREN ou RCS. Le critère exact et sa source figurent dans la section consacrée à l'exposition légale. Le contrôle automatique porte sur la page atteinte depuis le lien Mentions légales ; des informations légales peuvent exister ailleurs (page non visitée, document séparé, prestataire externe).",
     snippet: { kind: 'not-applicable' },
   },
   'inp-breakdown-insight': {
-    text: "Réduisez le délai entre le clic et la réponse visible de la page : allégez le code exécuté au moment de l'interaction et laissez le navigateur redessiner avant les traitements longs.",
+    text: "Réduisez le délai entre le clic et la réponse visible de la page : allégez le code exécuté au moment de l'interaction et laissez le navigateur redessiner avant les traitements longs.",
     snippet: { kind: 'not-applicable' },
   },
   'lcp-breakdown-insight': {
-    text: "Raccourcissez les étapes qui précèdent l'affichage du plus grand élément de la page : temps de réponse du serveur, découverte de l'image, puis son chargement.",
+    text: "Raccourcissez les étapes qui précèdent l'affichage du plus grand élément de la page : temps de réponse du serveur, découverte de l'image, puis son chargement.",
     snippet: { kind: 'not-applicable' },
   },
   'lcp-discovery-insight': {
-    text: "Faites en sorte que le navigateur découvre l'image principale au plus tôt : déclarez-la dans le HTML plutôt que via un script.",
+    text: "Faites en sorte que le navigateur découvre l'image principale au plus tôt : déclarez-la dans le HTML plutôt que via un script.",
     snippet: { kind: 'not-applicable' },
   },
   'lcp-lazy-loaded': {
-    text: "Retirez le chargement différé sur l'image principale : elle est visible immédiatement et le différé la retarde.",
+    text: "Retirez le chargement différé sur l'image principale : elle est visible immédiatement et le différé la retarde.",
     snippet: { kind: 'fixed', template: '<img src="..." loading="eager">' },
   },
   'legacy-javascript': {
-    text: 'Cessez de servir aux navigateurs récents le code de compatibilité destiné aux anciens : il est téléchargé et exécuté pour rien.',
+    text: 'Ne transmettez plus aux navigateurs récents le code de compatibilité destiné aux anciens : il est téléchargé et exécuté pour rien.',
     snippet: { kind: 'not-applicable' },
   },
   'legacy-javascript-insight': {
-    text: 'Cessez de servir aux navigateurs récents le code de compatibilité destiné aux anciens : il est téléchargé et exécuté pour rien.',
+    text: 'Ne transmettez plus aux navigateurs récents le code de compatibilité destiné aux anciens : il est téléchargé et exécuté pour rien.',
     snippet: { kind: 'not-applicable' },
   },
   'link-in-text-block': {
@@ -563,7 +563,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'fixed', template: '<ul>\n  <li>...</li>\n</ul>' },
   },
   'llms-txt-missing': {
-    text: "Publiez un fichier /llms.txt à la racine du site pour indiquer aux moteurs de réponse par IA ce qu'est le site et comment le référencer. Convention récente, pas encore un standard : une opportunité plutôt qu'un défaut.",
+    text: "Publiez un fichier /llms.txt à la racine du site pour indiquer aux moteurs de réponse par IA ce qu'est le site et comment le référencer. Convention récente, pas encore un standard : une opportunité plutôt qu'un défaut.",
     snippet: {
       kind: 'fill-in-blank',
       template: '# <nom du site>\n\n> <brève description du site>',
@@ -574,7 +574,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'not-applicable' },
   },
   'mainthread-work-breakdown': {
-    text: 'Réduisez le travail effectué par le navigateur au chargement : moins de scripts, moins de recalculs de style.',
+    text: 'Réduisez le travail effectué par le navigateur au chargement, notamment le nombre de scripts et les recalculs de style.',
     snippet: { kind: 'not-applicable' },
   },
   marquee: {
@@ -586,21 +586,21 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'not-applicable' },
   },
   'meta-description': {
-    text: "Ajoutez une meta description à chaque page : c'est le texte affiché sous le titre dans les résultats de recherche.",
+    text: "Ajoutez une méta-description à chaque page : c'est le texte affiché sous le titre dans les résultats de recherche.",
     snippet: {
       kind: 'fill-in-blank',
       template: '<meta name="description" content="<résumé de la page>">',
     },
   },
   'meta-description-length': {
-    text: "Ajustez la longueur de la meta description pour qu'elle reste lisible entière dans les résultats de recherche, autour de 120 à 160 caractères.",
+    text: "Ajustez la longueur de la méta-description pour qu'elle reste lisible entière dans les résultats de recherche, entre 120 et 160 caractères.",
     snippet: {
       kind: 'fill-in-blank',
       template: '<meta name="description" content="<résumé de 120 à 160 caractères>">',
     },
   },
   'meta-description-missing': {
-    text: 'Ajoutez une meta description à cette page, pour choisir vous-même le résumé affiché sous le titre dans les résultats de recherche.',
+    text: 'Ajoutez une méta-description à cette page, pour choisir vous-même le résumé affiché sous le titre dans les résultats de recherche.',
     snippet: {
       kind: 'fill-in-blank',
       template: '<meta name="description" content="<résumé de la page>">',
@@ -611,11 +611,11 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'not-applicable' },
   },
   'meta-title-length': {
-    text: "Ajustez la longueur du titre de la page pour qu'il ne soit pas tronqué dans les résultats de recherche, autour de 30 à 60 caractères.",
+    text: "Ajustez la longueur du titre de la page pour qu'il ne soit pas tronqué dans les résultats de recherche, entre 30 et 60 caractères.",
     snippet: { kind: 'fill-in-blank', template: '<title><titre de 30 à 60 caractères></title>' },
   },
   'meta-title-missing': {
-    text: "Donnez un titre à cette page : c'est le libellé affiché dans l'onglet du navigateur et en tête du résultat de recherche.",
+    text: "Donnez un titre à cette page : c'est le libellé affiché dans l'onglet du navigateur et en tête du résultat de recherche.",
     snippet: { kind: 'fill-in-blank', template: '<title><titre décrivant cette page></title>' },
   },
   'meta-viewport': {
@@ -626,7 +626,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     },
   },
   'mixed-content': {
-    text: 'Servez ces fichiers en HTTPS comme le reste de la page, ou retirez-les : en HTTP simple, les navigateurs les bloquent ou affichent un avertissement de sécurité.',
+    text: 'Chargez ces fichiers en HTTPS comme le reste de la page, ou retirez-les : en HTTP simple, les navigateurs les bloquent ou affichent un avertissement de sécurité.',
     snippet: { kind: 'not-applicable' },
   },
   'modern-http-insight': {
@@ -654,7 +654,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'not-applicable' },
   },
   'network-dependency-tree-insight': {
-    text: "Raccourcissez les chaînes de requêtes en cascade : chaque niveau supplémentaire ajoute un aller-retour avant l'affichage.",
+    text: "Raccourcissez les chaînes de requêtes en cascade : chaque niveau supplémentaire ajoute un aller-retour avant l'affichage.",
     snippet: { kind: 'not-applicable' },
   },
   'no-autoplay-audio': {
@@ -666,7 +666,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'fill-in-blank', template: '<h1><titre de la page></h1>' },
   },
   'noindex-on-public-page': {
-    text: "Retirez l'instruction d'exclusion sur cette page si elle doit apparaître dans les résultats de recherche.",
+    text: "Retirez l'instruction qui exclut cette page des résultats de recherche (noindex), si elle doit y apparaître.",
     snippet: { kind: 'not-applicable' },
   },
   'non-composited-animations': {
@@ -725,11 +725,11 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'not-applicable' },
   },
   'robots-disallow-broad': {
-    text: "Resserrez la règle du fichier robots.txt : telle qu'elle est écrite, elle bloque une part importante des pages du site.",
+    text: "Resserrez la règle du fichier robots.txt : telle qu'elle est écrite, elle bloque une part importante des pages du site.",
     snippet: { kind: 'not-applicable' },
   },
   'robots-txt': {
-    text: 'Corrigez la syntaxe du fichier robots.txt : telle quelle, une partie de son contenu est ignorée.',
+    text: 'Corrigez la syntaxe du fichier robots.txt : telle quelle, une partie de son contenu est ignorée.',
     snippet: { kind: 'not-applicable' },
   },
   'role-img-alt': {
@@ -800,11 +800,11 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'not-applicable' },
   },
   'speed-index': {
-    text: "Accélérez le remplissage visuel de la page, en traitant d'abord ce qui bloque le rendu et le poids des images.",
+    text: "Accélérez l'affichage progressif de la page, en traitant d'abord ce qui bloque le rendu et le poids des images.",
     snippet: { kind: 'not-applicable' },
   },
   'structured-data': {
-    text: "Faites valider les données structurées de la page avec un outil dédié : Lighthouse signale ce contrôle sans l'effectuer lui-même.",
+    text: "Faites valider les données structurées de la page avec un outil dédié : Lighthouse signale ce contrôle sans l'effectuer lui-même.",
     snippet: { kind: 'not-applicable' },
   },
   'structured-data-entity-missing': {
@@ -815,7 +815,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     },
   },
   'structured-data-invalid': {
-    text: "Complétez les champs manquants des données structurées : en l'état, Google les lit mais n'en tire pas tout ce qu'il pourrait afficher.",
+    text: "Complétez les champs manquants des données structurées : en l'état, Google les lit mais n'en tire pas tout ce qu'il pourrait afficher.",
     snippet: { kind: 'not-applicable' },
   },
   'summary-name': {
@@ -851,7 +851,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'fixed', template: '<td headers="en1 en2">' },
   },
   'td-headers-attr': {
-    text: "Corrigez les références d'en-tête de ces cellules : elles doivent pointer vers des en-têtes existants du même tableau.",
+    text: "Corrigez les références d'en-tête de ces cellules : elles doivent pointer vers des en-têtes existants du même tableau.",
     snippet: { kind: 'not-applicable' },
   },
   'text-missing-from-raw-html': {
@@ -930,7 +930,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'fill-in-blank', template: '<link rel="preconnect" href="<domaine tiers>">' },
   },
   'uses-responsive-images': {
-    text: "Servez ces images aux dimensions réellement affichées, plutôt qu'en pleine résolution redimensionnée par le navigateur.",
+    text: "Fournissez ces images aux dimensions réellement affichées, plutôt qu'en pleine résolution redimensionnée par le navigateur.",
     snippet: { kind: 'not-applicable' },
   },
   'uses-text-compression': {
@@ -965,7 +965,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     },
   },
   'youtube-tracking-embed': {
-    text: 'Remplacez le domaine youtube.com par youtube-nocookie.com dans le code de la vidéo : la même vidéo est servie, sans les cookies publicitaires déposés au chargement.',
+    text: 'Remplacez le domaine youtube.com par youtube-nocookie.com dans le code de la vidéo : la même vidéo est servie, sans les cookies publicitaires déposés au chargement.',
     snippet: {
       kind: 'fixed',
       template: '<iframe src="https://www.youtube-nocookie.com/embed/..."></iframe>',

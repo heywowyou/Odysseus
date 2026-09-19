@@ -41,6 +41,10 @@ export function registerAnalyzeCommand(program: Command): void {
       'Force a fresh structure pass (grouping and prioritization) even if one already exists for this audit',
     )
     .option(
+      '--regenerate-writing',
+      'Force a fresh writing pass for --language even if a reusable one already exists (for example after a prompt change)',
+    )
+    .option(
       '--siren <number>',
       "Manually supplied SIREN, same as `odysseus audit`'s flag of the same name. Only consulted when this " +
         'audit has no obligation determination already computed by `audit` in the same process (i.e. every ' +
@@ -65,6 +69,7 @@ export function registerAnalyzeCommand(program: Command): void {
           language: ReportLanguage;
           context?: string;
           regenerateStructure?: boolean;
+          regenerateWriting?: boolean;
           siren?: string;
           overrideTransactionalFlow?: boolean;
           overrideTransactionalFlowReason?: string;
@@ -104,6 +109,9 @@ export function registerAnalyzeCommand(program: Command): void {
               ...(usedFallback ? {} : { siteContext }),
               ...(opts.regenerateStructure !== undefined
                 ? { regenerateStructure: opts.regenerateStructure }
+                : {}),
+              ...(opts.regenerateWriting !== undefined
+                ? { regenerateWriting: opts.regenerateWriting }
                 : {}),
               ...(opts.siren !== undefined ? { manualSiren: opts.siren } : {}),
               ...(siteSignalOverrides !== undefined ? { siteSignalOverrides } : {}),

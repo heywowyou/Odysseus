@@ -68,9 +68,9 @@ describe('generateOutreachPreviewHtmlV3', () => {
   it('renders the report-aligned hierarchy and no independent grade or risk hero', () => {
     const html = generateOutreachPreviewHtmlV3(summary());
     const headings = [
-      'Résultats mesurés',
+      'Principaux résultats',
       'À traiter en premier',
-      'Qualité des données du scan',
+      'Qualité des données de l’analyse',
       'Le diagnostic complet',
       'À propos de vos données',
     ].map((text) => html.indexOf(text));
@@ -166,6 +166,6 @@ describe('generateOutreachPreviewHtmlV3', () => {
     expect(html).toContain('Measured results');
     expect(html).toContain('What to address first');
     expect(html).toContain('Scan data quality');
-    expect(html).not.toContain('Résultats mesurés');
+    expect(html).not.toContain('Principaux résultats');
   });
 });

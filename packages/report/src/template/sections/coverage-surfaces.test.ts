@@ -87,7 +87,7 @@ describe('coverage disclosure placement (issue #324)', () => {
     const analysis = await loadSmallSiteAnalysis('fr');
     const html = renderMetadataSheet(getStrings('fr'), manifest, analysis, findings);
 
-    expect(html).toContain('2 pages analysées sur 11 adresses trouvées');
+    expect(html).toContain('2 pages analysées sur 11 URL recensées');
     expect(html).not.toContain('URL inventoriées');
   });
 

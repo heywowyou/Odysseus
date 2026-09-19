@@ -74,7 +74,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
     'html-structural-validity': {
       label: "Le code HTML de la page n'est pas bien formé",
       gloss:
-        "Des identifiants dupliqués ou des balises mal imbriquées font que navigateur, moteur de recherche et lecteur d'écran ne reconstruisent pas tout à fait le même document.",
+        "Des identifiants dupliqués ou des balises mal imbriquées font que le navigateur, les moteurs de recherche et les lecteurs d'écran ne reconstruisent pas tout à fait le même document.",
     },
     // C1 (2026-08-24): cookie/consent detection. Wording states what was
     // observed on one load with no interaction, never that the client is in
@@ -99,7 +99,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
     'youtube-tracking-embed': {
       label: 'Une vidéo YouTube utilise le domaine avec traceurs',
       gloss:
-        'La vidéo est intégrée depuis youtube.com, qui dépose des cookies publicitaires au chargement ; youtube-nocookie.com sert la même vidéo sans ces cookies.',
+        'La vidéo est intégrée depuis youtube.com, qui dépose des cookies publicitaires au chargement ; youtube-nocookie.com sert la même vidéo sans ces cookies.',
     },
     // A5 (2026-08-24 three-site review): milestone 8.6's four detection
     // additions and three later rules shipped with no French entry, so a
@@ -150,12 +150,12 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
         'Les données de terrain Chrome placent le LCP de ce site au-dessus du seuil « insuffisant » publié par Google.',
     },
     'crux-cls-poor': {
-      label: 'Stabilité visuelle jugée insuffisante par les visiteurs réels',
+      label: 'Stabilité visuelle insuffisante selon les données de terrain',
       gloss:
         'Les données de terrain Chrome placent le CLS de ce site au-dessus du seuil « insuffisant » publié par Google.',
     },
     'crux-inp-poor': {
-      label: 'Réactivité jugée insuffisante par les visiteurs réels',
+      label: 'Réactivité insuffisante selon les données de terrain',
       gloss:
         "Les données de terrain Chrome placent l'INP de ce site au-dessus du seuil « insuffisant » publié par Google.",
     },
@@ -242,12 +242,12 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
         "Les informations d'identification de base de l'entreprise manquent dans les données structurées.",
     },
     'faq-content-without-schema': {
-      label: 'Contenu de questions-réponses sans balisage structuré correspondant',
+      label: 'Des questions-réponses sans le balisage structuré correspondant',
       gloss:
         "Une section FAQ n'utilise pas le balisage structuré (schema.org) qui la rendrait exploitable par les moteurs.",
     },
     'first-contentful-paint': {
-      label: "Le premier contenu met du temps à s'afficher (FCP)",
+      label: "Le premier élément de contenu tarde à s'afficher (FCP)",
       gloss: "Temps avant que le premier élément de contenu s'affiche à l'écran.",
     },
     'focus-order-mismatch': {
@@ -297,7 +297,8 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
     },
     'image-alt': {
       label: 'Les images doivent avoir un texte alternatif',
-      gloss: "Une image n'a pas de texte alternatif du tout, invisible pour un lecteur d'écran.",
+      gloss:
+        "Une image n'a aucun texte alternatif ; elle est donc invisible pour un lecteur d'écran.",
     },
     'image-delivery-insight': {
       label: 'Des images sont plus lourdes que nécessaire',
@@ -319,7 +320,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
     'jsonld-missing': {
       label: 'Aucune donnée structurée (JSON-LD) trouvée',
       gloss:
-        "La page n'a pas de balisage structuré, ce qui limite sa compréhension par les moteurs de recherche et d'IA.",
+        "La page n'a pas de balisage structuré, ce qui limite sa compréhension par les moteurs de recherche et les assistants IA.",
     },
     label: {
       label: 'Les champs de formulaire doivent avoir un libellé',
@@ -344,7 +345,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
         "Aucun identifiant SIREN, RCS ou TVA n'a été trouvé sur les pages visitées (LCEN, article 1-1, I, 2°).",
     },
     'lcp-discovery-insight': {
-      label: "L'image principale est découverte tardivement par le navigateur",
+      label: "Le navigateur détecte trop tard l'image principale",
       gloss:
         "Le navigateur met du temps à découvrir la ressource qui deviendra l'élément le plus visible (LCP).",
     },
@@ -442,7 +443,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
     'opengraph-missing': {
       label: 'Aucune balise Open Graph détectée',
       gloss:
-        "Les balises Open Graph (og:title, og:image, etc.) contrôlent l'aperçu de la page quand elle est partagée sur les réseaux sociaux ; aucune n'a été trouvée.",
+        "Les balises Open Graph (og:title, og:image, etc.) contrôlent l'aperçu de la page quand elle est partagée sur les réseaux sociaux ; aucune n'a été trouvée.",
     },
     'prioritize-lcp-image': {
       label: "L'image principale n'est pas préchargée",
@@ -483,13 +484,13 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
         "Une page du plan de site n'est reliée par aucun lien interne, ce qui complique sa découverte.",
     },
     'speed-index': {
-      label: 'Le contenu visible se remplit lentement (Speed Index)',
+      label: "L'affichage visible de la page se complète lentement (Speed Index)",
       gloss: "Vitesse à laquelle le contenu visible d'une page se remplit pendant le chargement.",
     },
     'structured-data-entity-missing': {
-      label: "Aucune donnée structurée n'identifie cette entreprise comme une entité",
+      label: "Aucune donnée structurée ne décrit explicitement l'entreprise",
       gloss:
-        "Absence de balisage identifiant clairement l'entreprise pour les moteurs de recherche et d'IA.",
+        "Absence de balisage identifiant clairement l'entreprise pour les moteurs de recherche et les assistants IA.",
     },
     'target-size': {
       label:
@@ -498,7 +499,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
         'Des boutons ou liens trop petits ou trop rapprochés sont difficiles à toucher sur mobile.',
     },
     'text-missing-from-raw-html': {
-      label: 'Contenu invisible pour un robot sans JavaScript',
+      label: 'Contenu que les moteurs ne voient pas sans JavaScript',
       gloss:
         "Du texte visible dans le navigateur est absent du HTML brut, invisible pour certains robots d'indexation.",
     },
@@ -512,7 +513,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
       gloss: 'Des scripts venant de services externes ralentissent la page.',
     },
     'total-blocking-time': {
-      label: 'La page ne répond pas pendant de longues périodes (TBT)',
+      label: 'La page reste longtemps non réactive (TBT)',
       gloss: "Durée pendant laquelle la page ne répond pas aux interactions de l'utilisateur.",
     },
     'total-byte-weight': {
@@ -598,7 +599,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
     'aria-allowed-attr': {
       label: 'Attribut ARIA non autorisé pour ce rôle',
       gloss:
-        "Un attribut ARIA est utilisé sur un élément dont le rôle ne l'accepte pas ; les technologies d'assistance peuvent alors l'ignorer ou mal l'interpréter.",
+        "Un attribut ARIA est utilisé sur un élément dont le rôle ne l'accepte pas ; les technologies d'assistance peuvent alors l'ignorer ou mal l'interpréter.",
     },
     'aria-braille-equivalent': {
       label: 'Étiquette braille sans équivalent texte',
@@ -623,7 +624,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
     'aria-hidden-focus': {
       label: 'Élément masqué mais toujours atteignable au clavier',
       gloss:
-        "Un élément est masqué aux lecteurs d'écran tout en restant accessible au clavier : la personne y arrive sans qu'on lui annonce où elle est.",
+        "Un élément est masqué aux lecteurs d'écran tout en restant accessible au clavier : la personne y arrive sans qu'on lui annonce où elle est.",
     },
     'aria-input-field-name': {
       label: 'Champ de saisie ARIA sans nom accessible',
@@ -648,12 +649,12 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
     'aria-required-attr': {
       label: 'Attribut ARIA obligatoire manquant',
       gloss:
-        "Un rôle ARIA exige certains attributs pour fonctionner ; l'un d'eux est absent, donc le composant est annoncé de façon incomplète.",
+        "Un rôle ARIA exige certains attributs pour fonctionner ; l'un d'eux est absent, donc le composant est annoncé de façon incomplète.",
     },
     'aria-required-parent': {
       label: 'Élément ARIA hors de son conteneur obligatoire',
       gloss:
-        "Ce rôle doit être placé dans un conteneur précis (par exemple une option dans une liste) ; hors de ce conteneur, la structure n'est pas comprise.",
+        "Ce rôle doit être placé dans un conteneur précis (par exemple une option dans une liste) ; hors de ce conteneur, la structure n'est pas comprise.",
     },
     'aria-roledescription': {
       label: 'Description de rôle sur un élément sans rôle',
@@ -728,7 +729,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
     'duplicate-id-aria': {
       label: 'Identifiant utilisé deux fois',
       gloss:
-        "Deux éléments portent le même identifiant alors qu'une étiquette ou un attribut ARIA y fait référence : la référence devient ambiguë.",
+        "Deux éléments portent le même identifiant alors qu'une étiquette ou un attribut ARIA y fait référence : la référence devient ambiguë.",
     },
     'form-field-multiple-labels': {
       label: 'Champ de formulaire avec plusieurs étiquettes',
@@ -903,7 +904,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
     'inp-breakdown-insight': {
       label: 'Des étapes ralentissent la réaction aux interactions',
       gloss:
-        'Décompose le temps de réaction de la page pour montrer quelle étape retarde le plus la réponse à un clic.',
+        'Cette mesure décompose le temps de réaction de la page pour montrer quelle étape retarde le plus la réponse à un clic.',
     },
     'interaction-to-next-paint': {
       label: 'La page réagit lentement aux interactions (INP)',
@@ -911,9 +912,9 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
         "Le temps entre le clic d'un visiteur et la réaction visible de la page est trop long, ce qui donne une impression de lenteur.",
     },
     'lcp-breakdown-insight': {
-      label: "Des étapes retardent l'affichage du contenu principal",
+      label: "Plusieurs étapes du chargement retardent l'affichage du contenu principal",
       gloss:
-        'Décompose le temps mis pour afficher le plus grand élément de la page, afin de montrer quelle étape domine.',
+        "Cette mesure décompose le temps nécessaire à l'affichage du plus grand élément de la page, afin de montrer quelle étape pèse le plus.",
     },
     'long-tasks': {
       label: 'De longs traitements bloquent la page',
@@ -933,7 +934,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
     'structured-data': {
       label: 'Les données structurées doivent être vérifiées',
       gloss:
-        'Les données structurées de la page doivent être validées avec un outil dédié ; Lighthouse ne les vérifie pas lui-même.',
+        'Les données structurées de la page doivent être validées avec un outil dédié ; Lighthouse ne les vérifie pas lui-même.',
     },
     'third-parties-insight': {
       label: 'Les services tiers alourdissent la page',
@@ -970,7 +971,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
     'document-title': {
       label: "La page n'a pas de balise titre",
       gloss:
-        "Le titre est le libellé affiché dans l'onglet du navigateur et lu en premier par un lecteur d'écran ; sans lui, la page est difficile à identifier parmi plusieurs onglets ou résultats de recherche.",
+        "Le titre est le libellé affiché dans l'onglet du navigateur et lu en premier par un lecteur d'écran ; sans lui, la page est difficile à identifier parmi plusieurs onglets ou résultats de recherche.",
     },
     // Coverage sweep (2026-08-24, Domaine Lagnonu). The fixture-driven test
     // below can only see a ruleId some committed scan happened to emit, so
@@ -999,27 +1000,27 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
     'mixed-content': {
       label: 'La page charge des ressources non sécurisées',
       gloss:
-        'Une page servie en HTTPS charge des fichiers en HTTP simple ; les navigateurs peuvent les bloquer ou afficher un avertissement de sécurité.',
+        'Une page servie en HTTPS charge des fichiers en HTTP simple ; les navigateurs peuvent les bloquer ou afficher un avertissement de sécurité.',
     },
     'sitemap-missing': {
       label: 'Aucun fichier sitemap.xml trouvé',
       gloss:
-        'Le sitemap est la liste des pages que le site déclare aux moteurs de recherche ; sans lui, la découverte des pages repose uniquement sur les liens internes.',
+        'Le sitemap est la liste des pages que le site déclare aux moteurs de recherche ; sans lui, la découverte des pages repose uniquement sur les liens internes.',
     },
     'sitemap-stale': {
       label: 'Le sitemap ne reflète pas le site actuel',
       gloss:
-        "Le sitemap déclare des pages qui n'existent plus, ou omet des pages réelles ; les moteurs de recherche suivent alors une carte périmée du site.",
+        "Le sitemap déclare des pages qui n'existent plus, ou omet des pages réelles ; les moteurs de recherche suivent alors une carte périmée du site.",
     },
     'llms-txt-missing': {
       label: 'Aucun fichier llms.txt trouvé',
       gloss:
-        "Le fichier llms.txt résume le contenu du site à destination des assistants IA ; il est facultatif et encore récent, mais son absence prive le site d'un résumé qu'il contrôle lui-même.",
+        "Le fichier llms.txt résume le contenu du site à destination des assistants IA ; il est facultatif et encore récent, mais son absence prive le site d'un résumé qu'il contrôle lui-même.",
     },
     'hreflang-missing': {
       label: 'Aucune annotation hreflang sur un site multilingue',
       gloss:
-        'Le site publie plusieurs versions linguistiques sans déclarer le lien entre elles ; les moteurs de recherche peuvent alors montrer la mauvaise langue à un visiteur, ou traiter les versions comme des doublons concurrents.',
+        'Le site publie plusieurs versions linguistiques sans déclarer le lien entre elles ; les moteurs de recherche peuvent alors montrer la mauvaise langue à un visiteur, ou traiter les versions comme des doublons concurrents.',
     },
     'hreflang-invalid': {
       label: 'Annotation hreflang invalide',
@@ -1029,7 +1030,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
     'canonical-conflicting': {
       label: 'Plusieurs balises canoniques contradictoires',
       gloss:
-        'La page déclare plusieurs URL canoniques différentes ; les moteurs de recherche en choisissent une arbitrairement, ce qui peut envoyer les signaux de référencement vers la mauvaise adresse.',
+        'La page déclare plusieurs URL canoniques différentes ; les moteurs de recherche en choisissent une arbitrairement, ce qui peut envoyer les signaux de référencement vers la mauvaise adresse.',
     },
     'canonical-missing': {
       label: 'Balise canonique absente',
@@ -1064,7 +1065,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
     'meta-description-missing': {
       label: 'Méta description absente',
       gloss:
-        'La page ne fournit pas de résumé court ; les moteurs de recherche en fabriquent alors un à partir du contenu, sans contrôle du site.',
+        'La page ne fournit pas de résumé court ; les moteurs de recherche en fabriquent alors un à partir du contenu, sans contrôle du site.',
     },
     'redirect-chain-excessive': {
       label: 'Chaîne de redirections trop longue',

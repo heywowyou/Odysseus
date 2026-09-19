@@ -1277,6 +1277,10 @@ export interface ReportStrings {
     /** Same disclosure when operator seeds contributed pages. Templates:
      *  {total}, {linked}, {seeded}, {sitemapOnly}. */
     sitemapCoverageWithSeedsTemplate: string;
+    /** Same disclosure when every visited page was reached through links,
+     *  so the sentence does not read "422 pages, including 422".
+     *  Templates: {total}. */
+    sitemapCoverageAllLinkedTemplate: string;
     /** Rendered when sitemap resolution or the configured cap prevented
      *  complete declared-page coverage. Templates: {failed}, {filtered},
      *  {omitted}. */

@@ -65,7 +65,7 @@ function formatEur(amount: number, language: ReportLanguage): string {
 export function eaaSanctionFigureSentence(language: ReportLanguage): string {
   const amount = formatEur(EAA_SANCTION_FIGURE_EUR, language);
   return language === 'fr'
-    ? `Le non-respect des obligations documentées à l'article D412-49 et suivants du code de la consommation est sanctionné par l'amende prévue pour une contravention de 5e classe, soit jusqu'à ${amount} par manquement constaté pour une personne morale, cumulable (art. R451-4 du code de la consommation).`
+    ? `Le non-respect des obligations définies à l'article D412-49 et suivants du code de la consommation est sanctionné par l'amende prévue pour une contravention de 5e classe, soit jusqu'à ${amount} par manquement constaté pour une personne morale, cumulable (art. R451-4 du code de la consommation).`
     : `Non-compliance with the obligations documented at article D412-49 et seq. of the consumer code is sanctioned by the fine for a 5th-class contravention, up to ${amount} per confirmed breach for a legal person, cumulable (art. R451-4 of the consumer code).`;
 }
 

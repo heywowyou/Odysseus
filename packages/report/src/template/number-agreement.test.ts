@@ -37,7 +37,7 @@ describe('the priority ownership sentence', () => {
       ),
     ).toBe(
       'Parmi les constats prioritaires, 1 peut être corrigé directement, 4 doivent être ' +
-        'transmis à un tiers et 2 demandent une vérification selon le contexte.',
+        'transmis à un tiers et 2 nécessitent une vérification préalable.',
     );
   });
 

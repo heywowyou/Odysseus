@@ -86,8 +86,8 @@ describe('item 42: the metadata-sheet badge shows its scale and its basis', () =
     const findings = await loadSmallSiteFindings();
     const analysis = await loadSmallSiteAnalysis('fr');
     const html = renderMetadataSheet(fr, manifest, { ...analysis, overallRisk: 'high' }, findings);
-    expect(html).toContain('Basé sur');
-    expect(html).toMatch(/Basé sur \d+ constats critiques et \d+ constats sérieux/);
+    expect(html).toContain('Évaluation fondée sur');
+    expect(html).toMatch(/Évaluation fondée sur \d+ constats critiques et \d+ constats sérieux/);
   });
 
   it('renders the undetermined action note when status is undetermined', () => {

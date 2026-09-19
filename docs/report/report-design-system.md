@@ -273,7 +273,7 @@ section IDs do not encode reading order.
 | toc | Sommaire | one row per section, grouped in document order (issue #336): Vue d'ensemble, Actions prioritaires, Résultats détaillés, then the self-named Cadre réglementaire and Prochaines étapes rows standing without a repeated group label (issue #333), then Annexes | 17 rows |
 | 01 | Présentation du diagnostic (situation, complication, question) | opening and reading guide; the question is the resolved preparation question or the safe generic fallback, no client-specific claim beyond what preparation explicitly provides | fixed |
 | 02 | Synthèse | prose + jump links | 3 links |
-| 03 | Résultats mesurés | editorial scoreboard with total findings as the lead measure, 3 supporting number tiles, disclosure notes, severity split, and category split | fixed |
+| 03 | Résultats du diagnostic | editorial scoreboard with total findings as the lead measure, 3 supporting number tiles, disclosure notes, severity split, and category split | fixed |
 | 04 | Priorités de correction | one card per theme; every theme admitted to this existing six-card section carries the deterministic action-level tag Priorité, using the existing tag treatment | 6 themes, may flow to 2 sheets |
 | 05 | Plan d'action | one row per theme, same 6 | 1 sheet |
 | 06 | Autres constats | findings outside the ranked priorities, grouped by domain and rule, linked to appendix ids; deterministic action level is Important for critical/serious rule groups and Amélioration for moderate/minor groups, alongside the existing severity label | flows |
