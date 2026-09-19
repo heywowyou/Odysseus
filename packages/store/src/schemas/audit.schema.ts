@@ -509,6 +509,7 @@ const writingCandidateStateSchema = new Schema(
               enum: [
                 'business-claim-removed',
                 'legal-claim-removed',
+                'deterministic-count-removed',
                 'performance-contradiction-removed',
               ],
             },
