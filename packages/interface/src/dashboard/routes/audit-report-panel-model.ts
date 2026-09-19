@@ -10,7 +10,7 @@
 import type { DashboardLanguage } from '../i18n/types';
 import { en } from '../i18n/en';
 import { fr } from '../i18n/fr';
-import type { AuditLifecycle, ReportStatusResponse } from './audit-detail-types';
+import type { AuditLifecycle, ReportLanguage, ReportStatusResponse } from './audit-detail-types';
 import type {
   ReportProductionStateResponse,
   WritingCandidateResponse,
@@ -31,13 +31,13 @@ export interface AuditReportPanelRow {
 export interface AuditReportPanelInput {
   findingsStale: boolean;
   hasUnconfirmedIdentityFields: boolean;
-  /** AuditDetailResponse.analysisPair: whether a bilingual writing pair
-   *  resolves at all, the fact that actually gates producing PDFs. */
+  /** AuditDetailResponse.analysisPair: whether a canonical French-led
+   *  writing selection resolves at all, the fact that gates producing PDFs. */
   analysisPair: 'selected' | 'legacy-latest' | 'none';
   lifecycle: AuditLifecycle;
 }
 
-/** A fresh, deliverable pair: lifecycle rendered or approved. */
+/** A fresh, deliverable selected report version: lifecycle rendered or approved. */
 function hasFreshReportPair(lifecycle: AuditLifecycle): boolean {
   return lifecycle === 'rendered' || lifecycle === 'approved';
 }
@@ -80,7 +80,7 @@ export function findPanelRow(
 }
 
 /** The produce button's label and whether it can be clicked: unavailable
- *  when no bilingual pair resolves yet, and its own text says up front when
+ *  when no canonical French writing resolves yet, and its own text says up front when
  *  clicking it will refresh stale findings first rather than the operator
  *  discovering that only after the click. */
 export function produceButtonState(
@@ -226,12 +226,19 @@ export function reportProductionView(
   }
 }
 
-/** Issue #391: approval covers the French and English pair, and the server
- *  refuses it unless both are fresh and their PDFs verify. The approve
- *  action is offered only when that holds, so it never fails with a raw
- *  server message. */
-export function canApproveReportPair(reports: readonly ReportStatusResponse[]): boolean {
-  return (['fr', 'en'] as const).every((language) =>
+/** Plan 067: French is the only universally required report. When the
+ * selected writing also carries an explicitly generated English attachment,
+ * that exact English PDF must be fresh and verified too, matching the server
+ * approval transaction. A missing analysisLanguages field is treated
+ * conservatively as the pre-067 bilingual contract. */
+export function canApproveReportPair(
+  reports: readonly ReportStatusResponse[],
+  analysisLanguages: readonly ReportLanguage[] = ['fr', 'en'],
+): boolean {
+  const requiredLanguages: readonly ReportLanguage[] = analysisLanguages.includes('en')
+    ? ['fr', 'en']
+    : ['fr'];
+  return requiredLanguages.every((language) =>
     reports.some(
       (report) => report.language === language && report.pdfAvailable && report.status === 'fresh',
     ),
