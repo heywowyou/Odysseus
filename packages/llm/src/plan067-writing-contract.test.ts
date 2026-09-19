@@ -100,6 +100,38 @@ describe('Plan 067 writing contract', () => {
     ]);
   });
 
+  it('enforces the exact 80-character / 10-word title ceiling and French obligation scaffolds', () => {
+    const tenWords = output();
+    tenWords.themes[0]!.title = 'Contrastes textes boutons liens menus formulaires titres images claviers';
+    expect(tenWords.themes[0]!.title.trim().split(/\s+/)).toHaveLength(10);
+    expect(findThemeTitleViolations(tenWords, 'fr')).toEqual([]);
+
+    const elevenWords = output();
+    elevenWords.themes[0]!.title =
+      'Contrastes textes boutons liens menus formulaires titres images claviers focus navigation';
+    expect(findThemeTitleViolations(elevenWords, 'fr')).toMatchObject([
+      { reason: 'too-long' },
+    ]);
+
+    const overEighty = output();
+    overEighty.themes[0]!.title = 'A'.repeat(81);
+    expect(findThemeTitleViolations(overEighty, 'fr')).toMatchObject([
+      { reason: 'too-long' },
+    ]);
+
+    for (const title of [
+      'Les contrastes doivent être corrigés',
+      'La navigation devrait être améliorée',
+      'Il faut corriger les libellés',
+    ]) {
+      const scaffold = output();
+      scaffold.themes[0]!.title = title;
+      expect(findThemeTitleViolations(scaffold, 'fr')).toMatchObject([
+        { reason: 'sentence-style' },
+      ]);
+    }
+  });
+
   it('rejects unsupported commercial claims even when hedged', () => {
     const hedged = output();
     hedged.themes[0]!.businessImpact =
