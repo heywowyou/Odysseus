@@ -96,6 +96,8 @@ export function buildWritingInput(
    *  offline tooling, which then all resolve to the first phrase. */
   providerPhraseSeed?: string,
   obligationStatus: ObligationAssessment['status'] | 'unknown' = 'unknown',
+  /** Plan 068: deterministic client-relevant evidence limitations. */
+  summaryLimitations: readonly string[] = [],
 ): WritingInput {
   const byId = new Map(filteredFindings.map((f) => [f.findingId, f]));
 
@@ -133,9 +135,10 @@ export function buildWritingInput(
       categoriesPresent: [...new Set(filteredFindings.map((finding) => finding.category))].sort(),
       performance: performanceEvidence,
       obligationStatus,
-      limitations: [
+      limitations: [...new Set([
         ...(performanceEvidence.fieldDataAvailable ? [] : ['real-user-performance-unavailable']),
-      ],
+        ...summaryLimitations,
+      ])].sort(),
     },
     transactionalFlowStatus,
     providerPhrase: selectProviderPhrase(language, providerPhraseSeed),

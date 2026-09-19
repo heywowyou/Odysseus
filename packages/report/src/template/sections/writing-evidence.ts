@@ -1,4 +1,4 @@
-import type { AuditManifest, Finding, ReportLanguage } from '@odysseus/core';
+import type { AuditManifest, EvidenceLimitation, Finding, ReportLanguage } from '@odysseus/core';
 import { CORE_WEB_VITAL_THRESHOLDS, rateCoreWebVital } from '@odysseus/core';
 import type {
   TrustedRemediationInput,
@@ -59,8 +59,15 @@ function concernOrder(a: WritingPerformanceObservation, b: WritingPerformanceObs
  */
 export function buildWritingPerformanceEvidence(
   manifest: AuditManifest,
+  qualityLimitations: readonly EvidenceLimitation[] = [],
 ): WritingPerformanceEvidence {
   const observations: WritingPerformanceObservation[] = [];
+  const labEvidenceLimited = qualityLimitations.some(
+    (limitation) =>
+      limitation.code === 'performance-confidence-insufficient' ||
+      (limitation.code === 'unstable-material-result' &&
+        limitation.evidenceRefs.some((ref) => ref.includes('performance:'))),
+  );
   const field = manifest.cruxFieldData;
   if (field?.available) {
     if (field.lcp !== undefined) {
@@ -91,16 +98,18 @@ export function buildWritingPerformanceEvidence(
     }
   }
 
-  for (const metric of ['lcp', 'cls', 'tbt'] as const) {
-    const value = labMedian(manifest, metric);
-    if (value === null) continue;
-    const t = threshold(metric);
-    observations.push({
-      metric,
-      source: 'lab',
-      value,
-      rating: rateCoreWebVital(value, t.good, t.needsImprovement),
-    });
+  if (!labEvidenceLimited) {
+    for (const metric of ['lcp', 'cls', 'tbt'] as const) {
+      const value = labMedian(manifest, metric);
+      if (value === null) continue;
+      const t = threshold(metric);
+      observations.push({
+        metric,
+        source: 'lab',
+        value,
+        rating: rateCoreWebVital(value, t.good, t.needsImprovement),
+      });
+    }
   }
 
   const suppressed = new Set<WritingPerformanceMetric>();

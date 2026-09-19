@@ -44,6 +44,7 @@ import { runObligationStage } from './obligation-stage.js';
 import { pdfDigestOf } from './pdf-digest.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { syncArtifactFilesToBucket } from '../artifacts/sync-audit-artifacts.js';
+import { readAuditEvidenceDiagnostics } from './audit-evidence-diagnostics.js';
 
 export interface ReportStageResult {
   reportId: string;
@@ -190,6 +191,14 @@ export async function runReportStage(
           ...(currentCoverage !== undefined ? { coverage: currentCoverage } : {}),
         });
 
+  const artifactStore = createConfiguredArtifactStore();
+  const diagnostics = await readAuditEvidenceDiagnostics({
+    auditDir,
+    hostname: new URL(manifest.siteUrl).hostname,
+    startedAt: new Date(manifest.startedAt),
+    store: artifactStore,
+  });
+
   const { pdf, pageCount } = await generateReportPdf({
     auditDir,
     manifest,
@@ -203,6 +212,9 @@ export async function runReportStage(
     preparation: preparationPreview[analysis.language],
     ...(gradeOverride !== undefined ? { gradeOverride } : {}),
     ...(delta !== undefined ? { delta } : {}),
+    ...(diagnostics.clientLimitations.length > 0
+      ? { qualityLimitations: diagnostics.clientLimitations }
+      : {}),
     ...(browser !== undefined ? { browser } : {}),
   });
 
@@ -248,7 +260,7 @@ export async function runReportStage(
   // Issue #63: after the local write and the DB row both succeeded, same
   // ordering rule as audit-stage.ts's own sync call.
   await syncArtifactFilesToBucket(
-    createConfiguredArtifactStore(),
+    artifactStore,
     auditDir,
     new URL(manifest.siteUrl).hostname,
     new Date(manifest.startedAt),

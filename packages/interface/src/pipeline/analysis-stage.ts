@@ -54,6 +54,8 @@ import {
 } from '@odysseus/report';
 import { runObligationStage } from './obligation-stage.js';
 import { findReusableAnalysis } from './analysis-reuse.js';
+import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
+import { readAuditEvidenceDiagnostics } from './audit-evidence-diagnostics.js';
 
 export interface RunAnalysisStageOptions {
   language: ReportLanguage;
@@ -408,7 +410,16 @@ export async function runAnalysisStage(
     // the executive summary cites the audit's true scope rather than only
     // what the model was shown. See docs/archive/report-v2-refactor.md B10.
     const siteStats = computeSiteStats(allFindings, manifest);
-    const performanceEvidence = buildWritingPerformanceEvidence(manifest);
+    const diagnostics = await readAuditEvidenceDiagnostics({
+      auditDir,
+      hostname: new URL(manifest.siteUrl).hostname,
+      startedAt: new Date(manifest.startedAt),
+      store: createConfiguredArtifactStore(),
+    });
+    const performanceEvidence = buildWritingPerformanceEvidence(
+      manifest,
+      diagnostics.clientLimitations,
+    );
     const trustedRemediationsByTheme = buildTrustedRemediationsByTheme(
       doc.themes,
       forModel,
@@ -429,6 +440,7 @@ export async function runAnalysisStage(
       // stays consistent with French.
       manifest.auditId,
       obligationAssessment.status,
+      diagnostics.clientLimitations.map((limitation) => limitation.summary[options.language]),
     );
     const generatedAt = new Date();
     const writingResult = await analyzeWriting(

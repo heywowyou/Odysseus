@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AuditManifest, Finding } from '@odysseus/core';
+import type { AuditManifest, EvidenceLimitation, Finding } from '@odysseus/core';
 import { remediationFor } from '../remediation/index.js';
 import {
   buildTrustedRemediationsByTheme,
@@ -57,6 +57,25 @@ describe('Plan 067 writing evidence', () => {
       rating: 'mid',
     });
     expect(evidence.primaryConcern?.metric).not.toBe('lcp');
+  });
+
+  it('does not turn unavailable Lighthouse evidence into a measured priority', () => {
+    const manifest = {
+      pages: [measuredPage('https://example.com/', 9_000, 0.3, 800)],
+      cruxFieldData: { available: false },
+    } as AuditManifest;
+    const limitation = {
+      limitationId: 'limitation:evidence-diagnostic:performance-confidence-insufficient',
+      code: 'performance-confidence-insufficient',
+      summary: { fr: 'Mesure instable.', en: 'Unstable measurement.' },
+      reportDestination: 'section-11',
+      evidenceRefs: ['lighthouse|performance:https://example.com/#mobile'],
+    } satisfies EvidenceLimitation;
+
+    const evidence = buildWritingPerformanceEvidence(manifest, [limitation]);
+
+    expect(evidence.observations).toEqual([]);
+    expect(evidence.primaryConcern).toBeNull();
   });
 
   it('builds trusted theme guidance only from the approved remediation registry and keeps themes isolated', () => {

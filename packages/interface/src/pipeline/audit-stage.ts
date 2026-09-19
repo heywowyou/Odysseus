@@ -11,13 +11,9 @@ import * as fs from 'node:fs';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
 import {
-  approveAuditEvidence,
-  APPROVED_AUDIT_EVIDENCE_PATH,
   assertAcquisitionLease,
-  buildArtifactBucketKey,
   buildAuditDir,
   type AuditEvidenceGraph,
-  EVIDENCE_READ_BACK_PATHS,
   getArtifactsRoot,
   getCrawlDelayMs,
   getCrawlerUserAgent,
@@ -30,7 +26,6 @@ import {
   launchBrowser,
   pruneScreenshots,
   PUBLIC_SITE_NETWORK_POLICY,
-  removeApprovedAuditEvidence,
   runEvidenceGraphStage,
   scanSite,
   StaleAcquisitionLeaseError,
@@ -69,11 +64,7 @@ import {
 import { runObligationStage } from './obligation-stage.js';
 import { buildRunAuditScope } from './audit-scope-stage.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
-import {
-  syncArtifactFilesToBucket,
-  syncAuditDirToBucket,
-  verifyBucketReadBack,
-} from '../artifacts/sync-audit-artifacts.js';
+import { syncAuditDirToBucket } from '../artifacts/sync-audit-artifacts.js';
 import { logger } from '../logger.js';
 
 export interface RunAuditStageOptions {
@@ -466,10 +457,9 @@ export async function runAuditStage(
           );
         }
       } catch (error) {
-        removeApprovedAuditEvidence(artifacts.auditDir);
         logger.error(
           { auditId: artifacts.auditId, err: error },
-          'full audit evidence graph could not be assembled; the audit has no evidence approval',
+          'full audit evidence diagnostics could not be assembled; the audit remains usable with detailed diagnostics unavailable',
         );
       }
     }
@@ -505,56 +495,10 @@ export async function runAuditStage(
     const artifactStore = createConfiguredArtifactStore();
     await syncAuditDirToBucket(artifactStore, artifacts.auditDir, hostname, startedAt);
 
-    // Plan 059 step 38: the approval stands only once every file it approves
-    // has been synced and read back from the artifact store byte for byte,
-    // and the approval itself travels to the bucket and back. Anything else
-    // leaves the audit unapproved locally and in the bucket rather than
-    // approving evidence the private store cannot reproduce. Only a stale
-    // lease rethrows: a superseded worker must stop writing entirely instead
-    // of "failing" an approval on behalf of the worker that superseded it.
-    if (!options.skipLighthouse) {
-      const approvalBucketKey = buildArtifactBucketKey(
-        hostname,
-        startedAt,
-        APPROVED_AUDIT_EVIDENCE_PATH,
-      );
-      const discardApproval = async (): Promise<void> => {
-        removeApprovedAuditEvidence(artifacts.auditDir);
-        await artifactStore?.delete(approvalBucketKey);
-      };
-      try {
-        const graph = evidenceGraph;
-        if (graph?.approval !== undefined) {
-          await verifyBucketReadBack(artifactStore, artifacts.auditDir, hostname, startedAt, [
-            ...EVIDENCE_READ_BACK_PATHS,
-            'findings.json',
-            'manifest.json',
-            'audit-scope.json',
-          ]);
-          await holdClaim();
-          approveAuditEvidence(artifacts.auditDir, graph);
-          await syncArtifactFilesToBucket(artifactStore, artifacts.auditDir, hostname, startedAt, [
-            path.join(artifacts.auditDir, APPROVED_AUDIT_EVIDENCE_PATH),
-          ]);
-          await verifyBucketReadBack(artifactStore, artifacts.auditDir, hostname, startedAt, [
-            APPROVED_AUDIT_EVIDENCE_PATH,
-          ]);
-        } else {
-          await discardApproval();
-          logger.info(
-            { auditId: artifacts.auditId },
-            'full audit evidence was not approved; any earlier approval was removed',
-          );
-        }
-      } catch (error) {
-        if (error instanceof StaleAcquisitionLeaseError) throw error;
-        await discardApproval();
-        logger.error(
-          { auditId: artifacts.auditId, err: error },
-          'the evidence approval failed its artifact-store read-back; the audit stays unapproved',
-        );
-      }
-    }
+    // Plan 068: the evidence graph and its diagnostic assessment remain durable,
+    // but the normal scan path performs no approval read-back/write/delete work.
+    // Report generation consumes scoped diagnostics directly; artifact sync above
+    // already preserves the graph for that deterministic projection.
 
     // 2026-08-22, La Corniche report review: the audit doc must exist
     // before this (persistAudit upserts by auditId above). siren is a
