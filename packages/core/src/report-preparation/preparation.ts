@@ -40,6 +40,7 @@ export type AnalysisPairRef = AnalysisSelectionRef;
 export type WritingSanitizationWarningCode =
   | 'business-claim-removed'
   | 'legal-claim-removed'
+  | 'deterministic-count-removed'
   | 'performance-contradiction-removed';
 
 export interface WritingSanitizationWarning {
