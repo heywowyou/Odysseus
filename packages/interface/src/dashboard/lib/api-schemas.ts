@@ -242,6 +242,7 @@ export const auditDetailSchema = z
     lifecycle: z.enum(['scanned', 'analysed', 'rendered', 'approved']),
     severityRollup: severityRollupSchema,
     findingsStale: z.boolean(),
+    analysisLanguages: z.array(z.enum(['fr', 'en'])).optional(),
     evidence: auditEvidenceQualitySchema.optional(),
   })
   .passthrough();
