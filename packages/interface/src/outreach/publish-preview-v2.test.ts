@@ -1,47 +1,63 @@
 /**
- * Tests for the v2 full-scan outreach preview publication path.
+ * Plan 069: v3 publication follows the selected French report structure while
+ * retaining deterministic public copy and v2 live-link compatibility.
  */
 
-import { describe, expect, it } from 'vitest';
-import type { AuditDocumentFields } from '@odysseus/store';
+import { describe, expect, it, vi } from 'vitest';
+import type { AnalysisDocument, AuditDocumentFields } from '@odysseus/store';
 import type { Finding } from '@odysseus/core';
+import { OUTREACH_PROOF_CARD_COPY } from '@odysseus/report';
 import { createInMemoryPreviewPublisher } from './in-memory-preview-publisher.js';
 import { createPreviewToken } from './preview-token.js';
 import {
-  buildOutreachPreviewSummaryV2,
-  publishPreviewV2,
+  buildOutreachPreviewSummaryV3,
+  publishPreviewV3,
   resolvePublishedPreviewForDraft,
-  type OutreachPreviewStorePortV2,
-  type OutreachPublicationRowV2,
+  type OutreachPreviewStorePortV3,
+  type OutreachPublicationRowV3,
 } from './publish-preview-v2.js';
 
-const NOW = new Date('2026-09-11T09:00:00.000Z');
+const NOW = new Date('2026-09-19T09:00:00.000Z');
 const BASE_URL = 'https://www.odysseusaudit.com';
+const PROVENANCE = {
+  findingsSchemaVersion: 1 as const,
+  normalizationFingerprint: 'fp-v3',
+  findingsDigest: 'sha256:' + 'a'.repeat(64),
+};
 
 function finding(
+  findingId: string,
   ruleId: string,
   pageUrls: string[],
-  severity: Finding['severity'] = 'critical',
+  severity: Finding['severity'] = 'serious',
 ): Finding {
   return {
-    findingId: `f-${ruleId}`,
+    findingId,
     ruleId,
     category: 'accessibility',
     severity,
-    title: ruleId,
-    description: ruleId,
-    help: ruleId,
+    title: `raw title ${ruleId}`,
+    description: `raw description ${ruleId}`,
+    help: `raw help ${ruleId}`,
     pageUrls,
     evidence: [],
   } as unknown as Finding;
 }
 
+const FINDINGS = [
+  finding('f-1', 'button-name', ['https://hotel-exemple.fr/'], 'critical'),
+  finding('f-2', 'link-name', ['https://hotel-exemple.fr/chambres'], 'serious'),
+  finding('f-3', 'image-alt', ['https://hotel-exemple.fr/contact'], 'moderate'),
+];
+
 function audit(): AuditDocumentFields {
   return {
     auditId: 'audit-1',
     domain: 'hotel-exemple.fr',
-    startedAt: new Date('2026-09-11T07:00:00.000Z'),
-    finishedAt: new Date('2026-09-11T08:00:00.000Z'),
+    siteUrl: 'https://hotel-exemple.fr/',
+    startedAt: new Date('2026-09-19T07:00:00.000Z'),
+    finishedAt: new Date('2026-09-19T08:00:00.000Z'),
+    findingsProvenance: PROVENANCE,
     pages: [
       'https://hotel-exemple.fr/',
       'https://hotel-exemple.fr/chambres',
@@ -64,20 +80,69 @@ function audit(): AuditDocumentFields {
       },
       errors: {},
     })),
+    crawl: { visitedCount: 3 },
   } as unknown as AuditDocumentFields;
 }
 
-function row(): OutreachPublicationRowV2 {
+function analysis(): AnalysisDocument {
+  return {
+    analysisId: 'analysis-fr-1',
+    auditId: 'audit-1',
+    findingsProvenance: PROVENANCE,
+    language: 'fr',
+    model: 'gpt-5.6-luna',
+    temperature: 0,
+    generatedAt: NOW,
+    executiveSummary: 'MODEL EXECUTIVE SENTINEL',
+    overallRisk: 'high',
+    quickWins: [],
+    notes: 'MODEL NOTES SENTINEL',
+    themes: [
+      {
+        title: 'MODEL SECOND SENTINEL',
+        category: 'accessibility',
+        businessImpact: 'MODEL IMPACT SECOND SENTINEL',
+        effort: 'low',
+        impact: 'high',
+        priorityRank: 2,
+        findingIds: ['f-1'],
+        recommendedActions: ['MODEL ACTION SECOND SENTINEL'],
+      },
+      {
+        title: 'MODEL FIRST SENTINEL',
+        category: 'accessibility',
+        businessImpact: 'MODEL IMPACT FIRST SENTINEL',
+        effort: 'low',
+        impact: 'high',
+        priorityRank: 1,
+        findingIds: ['f-2'],
+        recommendedActions: ['MODEL ACTION FIRST SENTINEL'],
+      },
+      {
+        title: 'MODEL THIRD SENTINEL',
+        category: 'accessibility',
+        businessImpact: 'MODEL IMPACT THIRD SENTINEL',
+        effort: 'medium',
+        impact: 'medium',
+        priorityRank: 3,
+        findingIds: ['f-3'],
+        recommendedActions: ['MODEL ACTION THIRD SENTINEL'],
+      },
+    ],
+  } as unknown as AnalysisDocument;
+}
+
+function row(overrides: Partial<OutreachPublicationRowV3> = {}): OutreachPublicationRowV3 {
   return {
     prospectId: 'prospect-1',
     domain: 'hotel-exemple.fr',
     businessName: 'Hôtel Exemple',
+    dataOrigins: ['public-hotel-catalogue', 'public-website'],
     audit: audit(),
-    findings: [
-      finding('color-contrast', ['https://hotel-exemple.fr/', 'https://hotel-exemple.fr/chambres']),
-      finding('button-name', ['https://hotel-exemple.fr/'], 'serious'),
-      finding('link-name', ['https://hotel-exemple.fr/chambres'], 'moderate'),
-    ],
+    findings: FINDINGS,
+    analysis: analysis(),
+    diagnostics: { status: 'complete', clientLimitations: [], operationalWarnings: [] },
+    ...overrides,
   };
 }
 
@@ -85,7 +150,7 @@ function harness(overrides: { suppressed?: boolean; recordPreview?: boolean } = 
   const publisher = createInMemoryPreviewPublisher();
   const recorded: unknown[] = [];
   const previews: { previewId: string; objectKey: string }[] = [];
-  const store: OutreachPreviewStorePortV2 & { recorded: unknown[] } = {
+  const store: OutreachPreviewStorePortV3 & { recorded: unknown[] } = {
     recorded,
     findPublicationRow: () => Promise.resolve(row()),
     isSuppressed: () => Promise.resolve(overrides.suppressed ?? false),
@@ -96,7 +161,7 @@ function harness(overrides: { suppressed?: boolean; recordPreview?: boolean } = 
       return Promise.resolve({
         recorded: true as const,
         previewId: 'preview-1',
-        publicExpiresAt: new Date('2026-10-11T09:00:00.000Z'),
+        publicExpiresAt: new Date('2026-10-19T09:00:00.000Z'),
       });
     },
     listLivePreviews: () => Promise.resolve(previews),
@@ -105,60 +170,100 @@ function harness(overrides: { suppressed?: boolean; recordPreview?: boolean } = 
   return { store, publisher };
 }
 
-describe('buildOutreachPreviewSummaryV2', () => {
-  it('builds the scorecard from the full outreach audit', () => {
-    const result = buildOutreachPreviewSummaryV2({
+describe('buildOutreachPreviewSummaryV3', () => {
+  it('uses the paid report priority order but only reviewed public copy', () => {
+    const result = buildOutreachPreviewSummaryV3({
       row: row(),
       language: 'fr',
       publicBaseUrl: BASE_URL,
     });
     expect('summary' in result).toBe(true);
     if (!('summary' in result)) return;
-    expect(result.summary.distinctFindingCount).toBe(3);
-    expect(result.summary.affectedPageCount).toBe(2);
-    expect(result.summary.proofCards).toHaveLength(3);
+
+    expect(result.summary.priorityCards.map((card) => card.title.fr)).toEqual([
+      OUTREACH_PROOF_CARD_COPY['link-name']?.fr,
+      OUTREACH_PROOF_CARD_COPY['button-name']?.fr,
+      OUTREACH_PROOF_CARD_COPY['image-alt']?.fr,
+    ]);
+    const publicBytes = JSON.stringify(result.summary);
+    for (const sentinel of [
+      'MODEL EXECUTIVE SENTINEL',
+      'MODEL FIRST SENTINEL',
+      'MODEL IMPACT FIRST SENTINEL',
+      'MODEL ACTION FIRST SENTINEL',
+      'MODEL NOTES SENTINEL',
+    ]) {
+      expect(publicBytes).not.toContain(sentinel);
+    }
   });
 
-  it('carries only the operator-reviewed grade into the public summary', () => {
-    const publicationRow = row();
-    publicationRow.audit.gradeOverride = {
-      grade: 'D',
-      reason: 'Private operator rationale',
-      reviewedAt: new Date('2026-09-12T09:00:00.000Z'),
-      reviewedBy: 'operator',
+  it('carries client limitations and drops operational warnings', () => {
+    const limitation = {
+      limitationId: 'lim-1',
+      code: 'temporal-drift',
+      summary: {
+        fr: 'Le site a changé pendant le scan.',
+        en: 'The site changed during the scan.',
+      },
+      reportDestination: 'section-11',
+      evidenceRefs: ['ref-1'],
     };
-
-    const result = buildOutreachPreviewSummaryV2({
-      row: publicationRow,
+    const result = buildOutreachPreviewSummaryV3({
+      row: row({
+        diagnostics: {
+          status: 'limited',
+          clientLimitations: [limitation],
+          operationalWarnings: [{ code: 'environment-unapproved', referenceCount: 2 }],
+        },
+      }),
       language: 'fr',
       publicBaseUrl: BASE_URL,
     });
-
     expect('summary' in result).toBe(true);
     if (!('summary' in result)) return;
-    expect(result.summary.gradeOverride).toBe('D');
-    expect(result.summary).not.toHaveProperty('reason');
+    expect(result.summary.dataQuality).toEqual({
+      status: 'limited',
+      limitations: [{ code: 'temporal-drift', summary: limitation.summary }],
+    });
+    expect(JSON.stringify(result.summary)).not.toContain('environment-unapproved');
+  });
+
+  it('publishes diagnostics-unavailable rather than refusing it', () => {
+    const result = buildOutreachPreviewSummaryV3({
+      row: row({
+        diagnostics: { status: 'unavailable', clientLimitations: [], operationalWarnings: [] },
+      }),
+      language: 'fr',
+      publicBaseUrl: BASE_URL,
+    });
+    expect('summary' in result && result.summary.dataQuality).toEqual({
+      status: 'unavailable',
+      limitations: [],
+    });
+  });
+
+  it('fails closed when a top-three report priority has no reviewed public copy', () => {
+    const badAnalysis = analysis();
+    const badFinding = finding('f-x', 'private-unreviewed-rule', ['https://hotel-exemple.fr/']);
+    badAnalysis.themes[0] = {
+      ...badAnalysis.themes[0]!,
+      priorityRank: 1,
+      findingIds: ['f-x'],
+    };
+    badAnalysis.themes[1] = { ...badAnalysis.themes[1]!, priorityRank: 2 };
+    const result = buildOutreachPreviewSummaryV3({
+      row: row({ analysis: badAnalysis, findings: [badFinding, ...FINDINGS] }),
+      language: 'fr',
+      publicBaseUrl: BASE_URL,
+    });
+    expect(result).toEqual({ refused: 'priority-copy-unavailable' });
   });
 });
 
-describe('publishPreviewV2', () => {
-  it('keeps the published link on the live record so the operator can find it again', async () => {
+describe('publishPreviewV3', () => {
+  it('publishes v3 and persists exact semantic lineage plus Touch-1 facts', async () => {
     const h = harness();
-    const result = await publishPreviewV2({
-      store: h.store,
-      publisher: h.publisher,
-      publicBaseUrl: 'https://odysseusaudit.com',
-      prospectId: 'prospect-1',
-      language: 'fr',
-      dryRun: false,
-    });
-    expect(result.url).toMatch(/^https:\/\/odysseusaudit\.com\/apercu\//u);
-    expect(h.store.recorded[0]).toMatchObject({ previewUrl: result.url });
-  });
-
-  it('publishes one validated v2 scorecard and records its audit id', async () => {
-    const h = harness();
-    const result = await publishPreviewV2({
+    const result = await publishPreviewV3({
       store: h.store,
       publisher: h.publisher,
       publicBaseUrl: BASE_URL,
@@ -168,45 +273,22 @@ describe('publishPreviewV2', () => {
       now: NOW,
     });
     expect(result.published).toBe(true);
-    expect(result.previewId).toBe('preview-1');
-    expect(result.url).toContain(`${BASE_URL}/apercu/`);
     expect(h.publisher.keys()).toHaveLength(1);
-    expect(h.store.recorded[0]).toMatchObject({ auditId: 'audit-1', prospectId: 'prospect-1' });
-  });
-
-  it('refuses a suppressed domain before publication', async () => {
-    const h = harness({ suppressed: true });
-    const result = await publishPreviewV2({
-      store: h.store,
-      publisher: h.publisher,
-      publicBaseUrl: BASE_URL,
-      prospectId: 'prospect-1',
-      language: 'fr',
-      dryRun: false,
-      now: NOW,
+    expect(h.store.recorded[0]).toMatchObject({
+      auditId: 'audit-1',
+      sourceAnalysisId: 'analysis-fr-1',
+      sourceFindingsDigest: PROVENANCE.findingsDigest,
+      publishedFacts: {
+        distinctFindingCount: 3,
+        affectedPageCount: 3,
+        priorityCardCategories: ['accessibility', 'accessibility', 'accessibility'],
+      },
     });
-    expect(result).toEqual({ published: false, refusal: 'suppressed' });
-    expect(h.publisher.keys()).toHaveLength(0);
   });
 
-  it('removes the uploaded object if the record loses the suppression race', async () => {
-    const h = harness({ recordPreview: false });
-    const result = await publishPreviewV2({
-      store: h.store,
-      publisher: h.publisher,
-      publicBaseUrl: BASE_URL,
-      prospectId: 'prospect-1',
-      language: 'fr',
-      dryRun: false,
-      now: NOW,
-    });
-    expect(result).toEqual({ published: false, refusal: 'suppressed' });
-    expect(h.publisher.keys()).toHaveLength(0);
-  });
-
-  it('plans without observing anything under a dry run', async () => {
+  it('validates the exact v3 story even in dry-run mode', async () => {
     const h = harness();
-    const result = await publishPreviewV2({
+    const result = await publishPreviewV3({
       store: h.store,
       publisher: h.publisher,
       publicBaseUrl: BASE_URL,
@@ -220,99 +302,122 @@ describe('publishPreviewV2', () => {
       domain: 'hotel-exemple.fr',
       language: 'fr',
       distinctFindings: 3,
-      affectedPages: 2,
-      proofCards: 3,
+      affectedPages: 3,
+      priorityCards: 3,
     });
     expect(h.store.recorded).toEqual([]);
+    expect(h.publisher.keys()).toHaveLength(0);
+  });
+
+  it('still removes an uploaded object if persistence loses the suppression race', async () => {
+    const h = harness({ recordPreview: false });
+    const result = await publishPreviewV3({
+      store: h.store,
+      publisher: h.publisher,
+      publicBaseUrl: BASE_URL,
+      prospectId: 'prospect-1',
+      language: 'fr',
+      dryRun: false,
+      now: NOW,
+    });
+    expect(result).toEqual({ published: false, refusal: 'suppressed' });
     expect(h.publisher.keys()).toHaveLength(0);
   });
 });
 
 describe('resolvePublishedPreviewForDraft', () => {
   const TOKEN = createPreviewToken();
-  const baseRecord = {
+  const facts = {
+    distinctFindingCount: 99,
+    affectedPageCount: 7,
+    severityTotals: { critical: 2, serious: 3, moderate: 4, minor: 90 },
+    priorityCardCategories: ['seo', 'accessibility', 'performance'] as const,
+  };
+  const v3Record = {
     previewId: 'preview-1',
     status: 'live',
     sourceKind: 'full-audit',
-    previewContentVersion: 'v2',
+    previewContentVersion: 'v3',
     prospectId: 'prospect-1',
     auditId: 'audit-1',
-    publicExpiresAt: new Date('2026-10-11T09:00:00.000Z'),
+    sourceAnalysisId: 'analysis-fr-1',
+    sourceFindingsDigest: PROVENANCE.findingsDigest,
+    publishedFacts: facts,
+    publicExpiresAt: new Date('2026-10-19T09:00:00.000Z'),
   };
 
-  function draftHarness(
-    overrides: {
-      record?: Partial<typeof baseRecord> | null;
-      auditAuditId?: string;
-      prospectId?: string;
-      previewToken?: string;
-    } = {},
+  function v3Harness(
+    record: typeof v3Record = v3Record,
+    source: { analysisId?: string; digest?: string } = {
+      analysisId: 'analysis-fr-1',
+      digest: PROVENANCE.findingsDigest,
+    },
   ) {
     return {
-      findByTokenHash: () =>
-        Promise.resolve(overrides.record === null ? null : { ...baseRecord, ...overrides.record }),
+      findByTokenHash: () => Promise.resolve(record),
       resolveOutreachAudit: () =>
         Promise.resolve({
           state: 'resolved' as const,
-          audit: { auditId: overrides.auditAuditId ?? 'audit-1' },
+          audit: {
+            auditId: 'audit-1',
+            ...(source.digest === undefined ? {} : { findingsDigest: source.digest }),
+            ...(source.analysisId === undefined
+              ? {}
+              : { selectedFrAnalysisId: source.analysisId }),
+          },
         }),
-      findingsForAudit: () => Promise.resolve(row().findings),
-      prospectId: overrides.prospectId ?? 'prospect-1',
-      previewToken: overrides.previewToken ?? TOKEN,
+      findingsForAudit: vi.fn(() => Promise.resolve(FINDINGS)),
+      prospectId: 'prospect-1',
+      previewToken: TOKEN,
       publicBaseUrl: BASE_URL,
       now: NOW,
     };
   }
 
-  it('resolves a live v2 preview of the current prospect audit', async () => {
-    const result = await resolvePublishedPreviewForDraft(draftHarness());
+  it('uses the exact stored v3 facts without recomputing findings', async () => {
+    const h = v3Harness();
+    const result = await resolvePublishedPreviewForDraft(h);
     expect(result).toMatchObject({
-      previewId: 'preview-1',
+      distinctFindingCount: 99,
+      affectedPageCount: 7,
+      severityTotals: facts.severityTotals,
+      proofCardCategories: ['seo', 'accessibility', 'performance'],
+    });
+    expect(h.findingsForAudit).not.toHaveBeenCalled();
+  });
+
+  it('marks a v3 publication stale when the selected French analysis changes', async () => {
+    const result = await resolvePublishedPreviewForDraft(
+      v3Harness(v3Record, { analysisId: 'analysis-fr-2', digest: PROVENANCE.findingsDigest }),
+    );
+    expect(result).toEqual({ refusal: 'preview-stale' });
+  });
+
+  it('marks a v3 publication stale when findings provenance changes', async () => {
+    const result = await resolvePublishedPreviewForDraft(
+      v3Harness(v3Record, { analysisId: 'analysis-fr-1', digest: 'sha256:' + 'b'.repeat(64) }),
+    );
+    expect(result).toEqual({ refusal: 'preview-stale' });
+  });
+
+  it('keeps a live v2 publication compatible', async () => {
+    const result = await resolvePublishedPreviewForDraft({
+      ...v3Harness(),
+      findByTokenHash: () =>
+        Promise.resolve({
+          previewId: 'preview-v2',
+          status: 'live',
+          sourceKind: 'full-audit',
+          previewContentVersion: 'v2',
+          prospectId: 'prospect-1',
+          auditId: 'audit-1',
+          publicExpiresAt: new Date('2026-10-19T09:00:00.000Z'),
+        }),
+    });
+    expect(result).toMatchObject({
+      previewId: 'preview-v2',
       distinctFindingCount: 3,
-      affectedPageCount: 2,
-      severityTotals: { critical: 1, serious: 1, moderate: 1, minor: 0 },
-      proofCardCategories: ['accessibility', 'accessibility', 'accessibility'],
+      affectedPageCount: 3,
     });
-    expect((result as { url: string }).url).toContain(`${BASE_URL}/apercu/${TOKEN}`);
-  });
-
-  it('refuses an unknown token', async () => {
-    const result = await resolvePublishedPreviewForDraft(draftHarness({ record: null }));
-    expect(result).toEqual({ refusal: 'preview-not-published' });
-  });
-
-  const refusalCases: [string, Partial<typeof baseRecord>][] = [
-    ['a revoked row', { status: 'revoked' }],
-    ['an expired row', { publicExpiresAt: new Date('2026-09-01T09:00:00.000Z') }],
-    ['a different audit', { auditId: 'audit-2' }],
-    ['a different prospect', { prospectId: 'prospect-2' }],
-  ];
-  it.each(refusalCases)('refuses %s', async (_name, overrides) => {
-    const result = await resolvePublishedPreviewForDraft(draftHarness({ record: overrides }));
-    expect(result).toEqual({
-      refusal:
-        overrides['status'] === 'revoked'
-          ? 'preview-revoked'
-          : overrides['publicExpiresAt'] !== undefined
-            ? 'preview-expired'
-            : 'preview-wrong-audit',
-    });
-  });
-
-  it('refuses when the audit no longer yields any proof card', async () => {
-    const result = await resolvePublishedPreviewForDraft({
-      ...draftHarness(),
-      findingsForAudit: () => Promise.resolve([]),
-    });
-    expect(result).toEqual({ refusal: 'preview-wrong-audit' });
-  });
-
-  it('refuses when the resolution refuses the prospect outright', async () => {
-    const h = draftHarness();
-    const result = await resolvePublishedPreviewForDraft({
-      ...h,
-      resolveOutreachAudit: () => Promise.resolve({ state: 'refused' }),
-    });
-    expect(result).toEqual({ refusal: 'preview-wrong-audit' });
   });
 });

@@ -469,7 +469,11 @@ export const auditDetail = {
         'report-not-ready':
           'Les rapports client de cet audit ne sont pas prêts : régénérez le rapport avant de publier l’aperçu ou de rédiger le premier email.',
         'insufficient-safe-cards':
-          'Pas assez de constats vérifiés pour construire une synthèse fiable.',
+          'Pas assez de priorités exploitables pour construire un aperçu fiable.',
+        'priority-copy-unavailable':
+          'Une des trois premières priorités ne dispose pas encore d’un libellé public validé ; l’aperçu n’est pas publié.',
+        'preview-stale':
+          'Le rapport sélectionné a changé depuis la publication de cet aperçu : réémettez le lien avant de rédiger un nouvel email.',
         'not-an-outreach-audit': 'Cet audit n’est pas lié à un prospect de la campagne.',
         'preview-not-published': 'Aucun aperçu publié ne correspond : publiez d’abord l’aperçu.',
         'preview-revoked': 'Le lien publié a été retiré : réémettez un lien depuis cet audit.',
@@ -750,7 +754,7 @@ export const auditDetail = {
     },
     outreachPreview: {
       title: 'Preview',
-      description: 'Inspect the scorecard built from this audit.',
+      description: 'Inspect the report-aligned preview built from this audit.',
       viewScorecard: 'View the preview',
       hideScorecard: 'Hide the preview',
       regenerateScorecard: 'Regenerate preview',
@@ -766,10 +770,14 @@ export const auditDetail = {
         suppressed: 'This domain is on the do-not-contact list.',
         'address-suppressed': 'This address is on the do-not-contact list.',
         'coverage-incomplete':
-          'The site crawl is incomplete, so the scorecard refuses to invent numbers.',
+          'The site crawl is incomplete, so the preview refuses to invent numbers.',
         'report-not-ready':
           'This audit’s client reports are not ready: regenerate the report before publishing the preview or drafting the first email.',
-        'insufficient-safe-cards': 'Too few verified findings to build a reliable scorecard.',
+        'insufficient-safe-cards': 'Too few usable priorities to build a reliable preview.',
+        'priority-copy-unavailable':
+          'One of the first three priorities does not yet have approved public copy, so the preview was not published.',
+        'preview-stale':
+          'The selected report changed after this preview was published: reissue the link before drafting a new email.',
         'not-an-outreach-audit': 'This audit is not linked to a campaign prospect.',
         'preview-not-published': 'No published preview matches: publish the preview first.',
         'preview-revoked': 'The published link was taken down: reissue a link from this audit.',

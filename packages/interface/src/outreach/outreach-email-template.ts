@@ -19,7 +19,8 @@ export interface OutreachScanSummary {
   distinctFindingCount: number;
   affectedPageCount: number;
   severityTotals: Record<OutreachPreviewSeverity, number>;
-  /** Categories of the published preview's three proof cards, in card order. */
+  /** Categories of the published preview's three cards, in their published order.
+   * For v3 this is the paid report's first-three priority order. */
   proofCardCategories: readonly OutreachCategory[];
 }
 

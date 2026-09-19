@@ -391,7 +391,7 @@ export function outreachRefusalSentence(refusal: string, language: DashboardLang
   );
 }
 
-/** Revoke enablement: a live v2 preview exists, or this session published
+/** Revoke enablement: a live full-scan preview exists, or this session published
  *  one and the detail fetch has not caught up yet. An audit with neither
  *  has nothing to take down. */
 export function canRevokeOutreachPreview(

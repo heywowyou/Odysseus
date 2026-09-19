@@ -3,7 +3,6 @@
 import type { Connection } from 'mongoose';
 import {
   primaryWebsite,
-  type AuditManifest,
   type Finding,
 } from '@odysseus/core';
 import {
