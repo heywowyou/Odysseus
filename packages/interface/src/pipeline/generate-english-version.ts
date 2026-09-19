@@ -118,13 +118,6 @@ export async function generateEnglishVersion(
       connection,
     );
 
-    await attachEnglishAnalysisToSelection(
-      connection,
-      auditId,
-      enStage.analysis.analysisId,
-      enStage.sanitizationWarnings,
-    );
-
     markReportProductionStage(auditId, 'pdf-generation');
     const report = await runReportStage(
       auditDir,
@@ -134,6 +127,16 @@ export async function generateEnglishVersion(
       connection,
       undefined,
       findingsProvenance,
+    );
+
+    // Promote English into the selected writing only after its PDF rendered
+    // successfully. A provider or renderer failure therefore leaves the
+    // selected French writing state byte-for-byte unchanged.
+    await attachEnglishAnalysisToSelection(
+      connection,
+      auditId,
+      enStage.analysis.analysisId,
+      enStage.sanitizationWarnings,
     );
     markReportProductionCompleted(auditId);
     return {
