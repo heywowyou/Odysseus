@@ -14,6 +14,7 @@ import type { AuditLifecycle, ReportLanguage, ReportStatusResponse } from './aud
 import type {
   ReportProductionStateResponse,
   WritingCandidateResponse,
+  WritingSanitizationWarningResponse,
 } from './prepare-report-types';
 
 export type AuditReportPanelRowKey = 'findings' | 'identity' | 'writing' | 'produce' | 'delivery';
@@ -270,4 +271,20 @@ export function describeWritingGuardRejections(
       .replace('{total}', String(rejection.totalAttempts))
       .replace('{guards}', rejection.guards.join(', ')),
   );
+}
+
+/** One writing warning as the operator reads it. Plan 070: a critic issue
+ *  the repair did not resolve is a different situation from sanitation (the
+ *  field shipped as written and needs a human look), so it has its own
+ *  sentence. Field path only, never client prose. */
+export function describeWritingWarning(
+  warning: WritingSanitizationWarningResponse,
+  language: DashboardLanguage,
+): string {
+  const strings = (language === 'fr' ? fr : en).prepareReport;
+  const template =
+    warning.code === 'critic-unresolved'
+      ? strings.criticUnresolvedWarningTemplate
+      : strings.sanitizationWarningTemplate;
+  return template.replace('{field}', warning.field).replace('{code}', warning.code);
 }

@@ -21,6 +21,8 @@ export interface PrepareReportStrings {
   generateEnglishButton: string;
   generateEnglishSuccess: string;
   sanitizationWarningTemplate: string;
+  /** Plan 070: a critic issue the targeted repair did not resolve. {field}. */
+  criticUnresolvedWarningTemplate: string;
   candidateFailedLabel: string;
   /** Issue #409: one rejected attempt. {attempt}, {total}, {guards}. */
   candidateAttemptRejectedTemplate: string;
@@ -59,6 +61,8 @@ export const prepareReport = {
     generateEnglishSuccess: 'Version anglaise générée à partir de la même structure.',
     sanitizationWarningTemplate:
       'Rédaction sécurisée automatiquement dans {field} ({code}) : le reste du contenu valide a été conservé.',
+    criticUnresolvedWarningTemplate:
+      'La relecture automatique signale un défaut possible dans {field}, qui n’a pas été corrigé : relisez ce passage avant d’approuver.',
     candidateFailedLabel: 'Échec de la nouvelle version',
     candidateAttemptRejectedTemplate: 'Tentative {attempt} sur {total} refusée par : {guards}',
     regenerateButton: 'Réécrire le rapport',
@@ -94,6 +98,8 @@ export const prepareReport = {
     generateEnglishSuccess: 'English version generated from the same structure.',
     sanitizationWarningTemplate:
       'Writing was sanitized automatically in {field} ({code}); unrelated valid content was preserved.',
+    criticUnresolvedWarningTemplate:
+      'The automatic review flagged a possible defect in {field} that was not repaired; read this passage before approving.',
     candidateFailedLabel: 'New version failed',
     candidateAttemptRejectedTemplate: 'Attempt {attempt} of {total} rejected by: {guards}',
     regenerateButton: 'Rewrite the report',

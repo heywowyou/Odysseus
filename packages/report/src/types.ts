@@ -1,4 +1,5 @@
 import type { Browser } from 'playwright';
+import type { WritingCriticRecord } from '@odysseus/llm';
 import type {
   AuditManifest,
   AuditManualFields,
@@ -56,6 +57,12 @@ export interface StoredAnalysis extends StoredLlmOutput {
    *  writing passes never ran for this document. Absent on every
    *  model-generated analysis, including all legacy artifacts. */
   generationMode?: 'static-fallback';
+  /** Plan 070 decision 10: whether the grounded critic ran on this
+   *  analysis's writing, how many issues it raised and accepted, and whether
+   *  the targeted repair replaced any field. Counts only; the critic's issue
+   *  text lives in the operator-only `<timestamp>-<lang>-critic.json` sidecar.
+   *  Absent when the critic is switched off and on every earlier analysis. */
+  writingCritic?: WritingCriticRecord;
 }
 
 export interface VerifiedStoredAnalysis extends StoredAnalysis {

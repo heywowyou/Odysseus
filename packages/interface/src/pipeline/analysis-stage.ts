@@ -36,6 +36,7 @@ import {
   buildStructureInput,
   buildWritingInput,
   computeSiteStats,
+  critiqueAndRepairWriting,
   deriveTransactionalFlowStatus,
   filterFindingsForLlm,
   findUnreferencedStructureFindingIds,
@@ -44,6 +45,7 @@ import {
   partitionFindings,
   type SiteContextInput,
   type StructureDocument,
+  type WritingCriticSidecar,
 } from '@odysseus/llm';
 import { persistAnalysis } from '@odysseus/store';
 import {
@@ -120,6 +122,13 @@ export interface AnalysisStageResult {
    *  fallback path (issue #162), which makes zero model calls. */
   advisoryPasses: readonly Promise<void>[];
   sanitizationWarnings: readonly WritingSanitizationWarning[];
+}
+
+/** `analyses/<timestamp>-<lang>-critic.json` beside
+ *  `analyses/<timestamp>-<lang>.json`. The `-critic` suffix keeps it out of
+ *  every `-<lang>.json` analysis lookup. */
+export function criticSidecarPath(analysisPath: string): string {
+  return analysisPath.replace(/\.json$/u, '-critic.json');
 }
 
 function timestampForFilename(date: Date): string {
@@ -378,6 +387,7 @@ export async function runAnalysisStage(
   let analysis: VerifiedStoredAnalysis;
   let unreferencedFindingCount = 0;
   let sanitizationWarnings: readonly WritingSanitizationWarning[] = [];
+  let criticSidecar: WritingCriticSidecar | undefined;
   if (fallbackEligible) {
     // Static fallback analysis (issue #162): no structure pass and no writing
     // pass. The localized sentences come from the report
@@ -451,12 +461,19 @@ export async function runAnalysisStage(
       diagnostics.clientLimitations.map((limitation) => limitation.summary[options.language]),
     );
     const generatedAt = new Date();
-    const writingResult = await analyzeWriting(
+    const expectedThemeKeys = doc.themes.map((t) => t.themeKey);
+    const written = await analyzeWriting(writingInput, expectedThemeKeys, usedFallbackContext);
+    // Plan 070: one code path for French and on-demand English. With
+    // WRITING_CRITIC_ENABLED off this returns `written` unchanged and makes
+    // no call; on, it is fail-open and can only replace flagged fields.
+    const writingResult = await critiqueAndRepairWriting(
       writingInput,
-      doc.themes.map((t) => t.themeKey),
+      expectedThemeKeys,
       usedFallbackContext,
+      written,
     );
     sanitizationWarnings = writingResult.sanitizationWarnings;
+    criticSidecar = writingResult.critic?.sidecar;
     const merged = mergeAnalysisPasses(doc, writingResult.output, forModel, options.language);
     unreferencedFindingCount = findUnreferencedStructureFindingIds(doc, forModel).length;
 
@@ -474,6 +491,7 @@ export async function runAnalysisStage(
       // instead of generating it again.
       structureGeneratedAt: doc.generatedAt,
       ...(persistsSiteContext ? { siteContext: writingSiteContext } : {}),
+      ...(writingResult.critic ? { writingCritic: writingResult.critic.record } : {}),
     };
   }
 
@@ -483,6 +501,18 @@ export async function runAnalysisStage(
     `${timestampForFilename(analysis.generatedAt)}-${options.language}.json`,
   );
   await fs.writeFile(analysisPath, JSON.stringify(analysis, null, 2));
+  if (criticSidecar !== undefined) {
+    // Operator-only (Plan 070 decision 8): the critic's problem text stays in
+    // this sidecar and is never merged into the analysis the report renders.
+    await fs.writeFile(
+      criticSidecarPath(analysisPath),
+      JSON.stringify(
+        { analysisId: analysis.analysisId, auditId: analysis.auditId, ...criticSidecar },
+        null,
+        2,
+      ),
+    );
+  }
 
   await persistAnalysis(connection, {
     analysisId: analysis.analysisId,
@@ -505,6 +535,7 @@ export async function runAnalysisStage(
     ...(analysis.structureGeneratedAt !== undefined
       ? { structureGeneratedAt: analysis.structureGeneratedAt }
       : {}),
+    ...(analysis.writingCritic !== undefined ? { writingCritic: analysis.writingCritic } : {}),
   });
 
   return {

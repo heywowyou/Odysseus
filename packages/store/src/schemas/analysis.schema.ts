@@ -53,6 +53,15 @@ export interface AnalysisDocumentFields {
    *  merged onto one set of themes. Absent on the static-fallback path and on
    *  analyses written before this was recorded; absent means "not reusable". */
   structureGeneratedAt?: string;
+  /** Plan 070: the grounded critic's counts for this analysis. Declared by
+   *  value (store does not depend on llm); mirrors WritingCriticRecord.
+   *  Absent when the critic is off and on every earlier analysis. */
+  writingCritic?: {
+    ran: boolean;
+    issuesRaised: number;
+    issuesAccepted: number;
+    repairApplied: boolean;
+  };
 }
 
 export type AnalysisDocument = AnalysisDocumentFields;
@@ -195,6 +204,18 @@ const analysisSchema = new Schema<AnalysisDocument>(
     siteContext: { type: analysisSiteContextSchemaMongo },
     generationMode: { type: String, enum: ['static-fallback'] },
     structureGeneratedAt: { type: String },
+    writingCritic: {
+      type: new Schema(
+        {
+          ran: { type: Boolean, required: true },
+          issuesRaised: { type: Number, required: true },
+          issuesAccepted: { type: Number, required: true },
+          repairApplied: { type: Boolean, required: true },
+        },
+        { _id: false },
+      ),
+      default: undefined,
+    },
   },
   { collection: 'analyses' },
 );

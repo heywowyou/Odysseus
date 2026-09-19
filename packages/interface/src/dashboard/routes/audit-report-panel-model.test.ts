@@ -5,6 +5,7 @@ import {
   canApproveReportPair,
   describeProduceFailure,
   describeWritingGuardRejections,
+  describeWritingWarning,
   findPanelRow,
   produceButtonState,
 } from './audit-report-panel-model';
@@ -318,5 +319,25 @@ describe('describeWritingGuardRejections', () => {
         'fr',
       ),
     ).toEqual([]);
+  });
+});
+
+describe('describeWritingWarning', () => {
+  it('asks the operator to read a passage the critic flagged and the repair left standing', () => {
+    const line = describeWritingWarning(
+      { code: 'critic-unresolved', field: 'themes[2](t3).businessImpact' },
+      'fr',
+    );
+    expect(line).toContain('themes[2](t3).businessImpact');
+    expect(line).toContain('relisez ce passage');
+    expect(line).not.toContain('critic-unresolved');
+  });
+
+  it('keeps the sanitation wording for a locally removed sentence', () => {
+    expect(
+      describeWritingWarning({ code: 'internal-reference-removed', field: 'notes' }, 'en'),
+    ).toBe(
+      'Writing was sanitized automatically in notes (internal-reference-removed); unrelated valid content was preserved.',
+    );
   });
 });

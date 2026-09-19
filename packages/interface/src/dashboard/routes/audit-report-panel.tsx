@@ -20,6 +20,7 @@ import {
   auditReportPanelRows,
   describeProduceFailure,
   describeWritingGuardRejections,
+  describeWritingWarning,
   findPanelRow,
   produceButtonState,
   reportProductionView,
@@ -303,9 +304,7 @@ export function AuditReportPanel(props: {
                     className="text-ink-muted"
                     role="status"
                   >
-                    {strings.prepareReport.sanitizationWarningTemplate
-                      .replace('{field}', warning.field)
-                      .replace('{code}', warning.code)}
+                    {describeWritingWarning(warning, language)}
                   </p>
                 ))
               : null}
