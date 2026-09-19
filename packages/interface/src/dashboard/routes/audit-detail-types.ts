@@ -165,7 +165,7 @@ export interface RuleCopyResponse {
 /** The audit's prospect link and current preview state. */
 export interface AuditOutreachStatusResponse {
   prospectId: string | null;
-  hasLiveV2Preview: boolean;
+  hasLivePreview: boolean;
 }
 
 /** The prospect this audit is attached to, when any. */

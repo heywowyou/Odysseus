@@ -395,8 +395,8 @@ export function outreachRefusalSentence(refusal: string, language: DashboardLang
  *  one and the detail fetch has not caught up yet. An audit with neither
  *  has nothing to take down. */
 export function canRevokeOutreachPreview(
-  hasLiveV2Preview: boolean,
+  hasLivePreview: boolean,
   sessionPublished: boolean,
 ): boolean {
-  return hasLiveV2Preview || sessionPublished;
+  return hasLivePreview || sessionPublished;
 }

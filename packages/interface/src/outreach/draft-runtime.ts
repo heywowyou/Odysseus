@@ -23,6 +23,7 @@ import {
   openOutreachThread,
   recordFailedOutreachDraft,
   recordOutreachDraft,
+  resolveSelectedAnalysisPairForAudit,
   selectNewestQualifyingAudit,
   type AuditIntentSourceJob,
   type ProspectWorkAudit,
@@ -45,11 +46,11 @@ import {
 import { createOptOutLink, storeOptOutLink } from './opt-out-bucket.js';
 import { createInMemoryMailboxDraftAdapter } from './in-memory-mailbox-draft-adapter.js';
 import { formatHotelName } from './hotel-name.js';
-import { createMongoOutreachPreviewStoreV2 } from './mongo-outreach-preview-store-v2.js';
+import { createMongoOutreachPreviewStoreV3 } from './mongo-outreach-preview-store-v2.js';
 import type { MailboxDraftAdapter } from './mailbox-draft-adapter.js';
 import {
   previewLinks,
-  publishPreviewV2,
+  publishPreviewV3,
   resolvePublishedPreviewForDraft,
 } from './publish-preview-v2.js';
 
@@ -67,6 +68,7 @@ type DraftRefusal =
   | 'preview-revoked'
   | 'preview-expired'
   | 'preview-wrong-audit'
+  | 'preview-stale'
   | 'domain-mismatch'
   | 'thread-closed'
   | 'draft-already-live'
@@ -118,6 +120,13 @@ async function resolvePreview(connection: Connection, prospectId: string, token:
         previewContentVersion: record.previewContentVersion,
         prospectId: record.prospectId,
         ...(record.auditId === undefined ? {} : { auditId: record.auditId }),
+        ...(record.sourceAnalysisId === undefined
+          ? {}
+          : { sourceAnalysisId: record.sourceAnalysisId }),
+        ...(record.sourceFindingsDigest === undefined
+          ? {}
+          : { sourceFindingsDigest: record.sourceFindingsDigest }),
+        ...(record.publishedFacts === undefined ? {} : { publishedFacts: record.publishedFacts }),
         publicExpiresAt: record.publicExpiresAt,
       };
     },
@@ -136,7 +145,7 @@ async function resolvePreview(connection: Connection, prospectId: string, token:
           pages: 1,
           crawl: 1,
           continuationGuardSummary: 1,
-          'findingsProvenance.normalizationFingerprint': 1,
+          findingsProvenance: 1,
         })
         .sort({ startedAt: -1, auditId: -1 })
         .lean<ProspectWorkAudit[]>();
@@ -161,9 +170,20 @@ async function resolvePreview(connection: Connection, prospectId: string, token:
         auditId: selected.audit.auditId,
         prospectId: id,
       });
-      return readiness.state === 'ready'
-        ? { state: 'resolved' as const, audit: { auditId: selected.audit.auditId } }
-        : { state: 'refused' as const };
+      if (readiness.state !== 'ready') return { state: 'refused' as const };
+      const selection = await resolveSelectedAnalysisPairForAudit(connection, selected.audit.auditId);
+      return {
+        state: 'resolved' as const,
+        audit: {
+          auditId: selected.audit.auditId,
+          ...(selected.audit.findingsProvenance?.findingsDigest === undefined
+            ? {}
+            : { findingsDigest: selected.audit.findingsProvenance.findingsDigest }),
+          ...(selection.kind === 'none'
+            ? {}
+            : { selectedFrAnalysisId: selection.fr.analysisId }),
+        },
+      };
     },
     findingsForAudit: (auditId) => getFindingsForAudit(connection, auditId),
     prospectId,
@@ -368,7 +388,9 @@ export type CreateFirstEmailRefusal =
   | 'insufficient-safe-cards'
   | 'no-audit'
   | 'coverage-incomplete'
-  | 'report-not-ready';
+  | 'report-not-ready'
+  | 'priority-copy-unavailable'
+  | 'preview-stale';
 export type CreateFirstEmailResult =
   | { configured: false; refusal: 'no-preview-bucket-configured' }
   | ({ configured: true; created: boolean; refusal?: CreateFirstEmailRefusal } & Partial<{
@@ -426,8 +448,8 @@ export async function createFirstEmailForProspect(
   } catch {
     return { configured: false, refusal: 'no-preview-bucket-configured' };
   }
-  const previewStore = createMongoOutreachPreviewStoreV2(connection, { prospectId });
-  const published = await publishPreviewV2({
+  const previewStore = createMongoOutreachPreviewStoreV3(connection, { prospectId });
+  const published = await publishPreviewV3({
     store: previewStore,
     publisher,
     publicBaseUrl: getPreviewPublicBaseUrl(),

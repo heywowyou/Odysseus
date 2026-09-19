@@ -2,8 +2,6 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
 import {
-  buildOutreachPreviewSummary,
-  coverageFactsFromAudit,
   isGrade,
   isValidSiren,
   summarizeAuditCoverage,
@@ -58,9 +56,8 @@ import {
   computeAutomaticGrade,
   summarizeThirdPartyFindings,
   findUnconfirmedIdentityFields,
-  generateOutreachPreviewHtmlV2,
+  generateOutreachPreviewHtmlV3,
   generateOutreachPreviewPdf,
-  OUTREACH_PROOF_CARD_COPY,
   remediationFor,
   resolveEffectiveGrade,
   RULE_TRANSLATIONS_FR,
@@ -68,12 +65,12 @@ import {
 } from '@odysseus/report';
 import { getPreviewPublicBaseUrl } from '../config.js';
 import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
-import { createMongoOutreachPreviewStoreV2 } from '../outreach/mongo-outreach-preview-store-v2.js';
+import { createMongoOutreachPreviewStoreV3 } from '../outreach/mongo-outreach-preview-store-v2.js';
 import { previewLinks } from '../outreach/publish-preview-v2.js';
 import {
-  buildOutreachPreviewSummaryV2,
-  publishPreviewV2,
-  type PublishPreviewV2Refusal,
+  buildOutreachPreviewSummaryV3,
+  publishPreviewV3,
+  type PublishPreviewV3Refusal,
 } from '../outreach/publish-preview-v2.js';
 import type { Router } from '../router.js';
 import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
@@ -405,51 +402,69 @@ function reportFactsForAudit(input: {
  *  facts). Refusal names are the stable API strings the store and the v2
  *  publish path already use; they are never translated. */
 type OutreachPreviewBuildOutcome =
-  { state: 'rendered'; html: string } | { state: 'refused'; refusal: PublishPreviewV2Refusal };
+  { state: 'rendered'; html: string } | { state: 'refused'; refusal: PublishPreviewV3Refusal };
 
 async function buildAuditOutreachPreviewHtml(
   connection: Connection,
   audit: AuditDocumentFields,
+  artifactStore: ArtifactStore | undefined,
 ): Promise<OutreachPreviewBuildOutcome> {
   const publicBaseUrl = getPreviewPublicBaseUrl();
   const prospectId = audit.prospectId;
 
   if (prospectId !== undefined) {
-    const store = createMongoOutreachPreviewStoreV2(connection, {
-      prospectId,
-    });
+    const store = createMongoOutreachPreviewStoreV3(connection, { prospectId });
     const row = await store.findPublicationRow(prospectId);
     if ('refused' in row) return { state: 'refused', refusal: row.refused };
-    const built = buildOutreachPreviewSummaryV2({ row, language: 'fr', publicBaseUrl });
+    const built = buildOutreachPreviewSummaryV3({ row, language: 'fr', publicBaseUrl });
     if ('refused' in built) return { state: 'refused', refusal: built.refused };
-    // Validates and lints; throws on either, so nothing half-formed is shown.
-    return { state: 'rendered', html: generateOutreachPreviewHtmlV2(built.summary) };
+    return { state: 'rendered', html: generateOutreachPreviewHtmlV3(built.summary) };
   }
 
-  const coverage = coverageFactsFromAudit(summarizeAuditCoverage(audit));
-  if (coverage === undefined) {
-    return { state: 'refused', refusal: 'coverage-incomplete' };
+  const [findings, selected, frReport] = await Promise.all([
+    getFindingsForAudit(connection, audit.auditId),
+    resolveSelectedAnalysisPairForAudit(connection, audit.auditId),
+    getLatestReport(connection, audit.auditId, 'fr'),
+  ]);
+  if (
+    selected.kind === 'none' ||
+    frReport === null ||
+    frReport.analysisId !== selected.fr.analysisId ||
+    !provenanceMatches(selected.fr.findingsProvenance, audit.findingsProvenance) ||
+    !provenanceMatches(frReport.findingsProvenance, audit.findingsProvenance) ||
+    audit.findingsProvenance?.findingsDigest === undefined
+  ) {
+    return { state: 'refused', refusal: 'report-not-ready' };
   }
-  const findings = await getFindingsForAudit(connection, audit.auditId);
-  const built = buildOutreachPreviewSummary({
-    auditId: audit.auditId,
-    observedAt: audit.finishedAt,
-    coverage,
-    findings,
-    recipient: {
-      businessName: audit.manualFields?.nomCommercial?.value ?? 'Le site audité',
-      dataOrigins: ['public-website'],
-    },
-    links: previewLinks(publicBaseUrl),
-    language: 'fr',
-    facts: { state: 'omitted' },
-    ...(audit.gradeOverride !== undefined ? { gradeOverride: audit.gradeOverride.grade } : {}),
-    proofCardCopy: (ruleId) => OUTREACH_PROOF_CARD_COPY[ruleId],
+  const hostname = new URL(audit.siteUrl).hostname;
+  const auditDir = buildAuditDir(getArtifactsRoot(), hostname, audit.startedAt);
+  const diagnostics = await readAuditEvidenceDiagnostics({
+    auditDir,
+    hostname,
+    startedAt: audit.startedAt,
+    store: artifactStore,
   });
-  if (built.state === 'refused') {
-    return { state: 'refused', refusal: built.reason };
-  }
-  return { state: 'rendered', html: generateOutreachPreviewHtmlV2(built.summary) };
+  const built = buildOutreachPreviewSummaryV3({
+    row: {
+      prospectId: '',
+      domain: hostname,
+      businessName: audit.manualFields?.nomCommercial?.value ?? hostname,
+      dataOrigins: [
+        'public-website',
+        ...(selected.fr.obligationAssessment?.registrySnapshot !== undefined
+          ? (['public-business-registry'] as const)
+          : []),
+      ],
+      audit,
+      findings,
+      analysis: selected.fr,
+      diagnostics,
+    },
+    language: 'fr',
+    publicBaseUrl,
+  });
+  if ('refused' in built) return { state: 'refused', refusal: built.refused };
+  return { state: 'rendered', html: generateOutreachPreviewHtmlV3(built.summary) };
 }
 
 export function registerAuditRoutes(router: Router, connection: Connection): void {
@@ -598,7 +613,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     const outreachProspectId = audit.prospectId ?? null;
     const prospect =
       outreachProspectId === null ? null : await getProspectHub(connection, outreachProspectId);
-    const hasLiveV2Preview =
+    const hasLivePreview =
       outreachProspectId !== null &&
       (
         await listOutreachPreviews(connection, {
@@ -609,7 +624,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       ).some(
         (preview) =>
           preview.sourceKind === 'full-audit' &&
-          preview.previewContentVersion === 'v2' &&
+          (preview.previewContentVersion === 'v2' || preview.previewContentVersion === 'v3') &&
           preview.publicExpiresAt.getTime() > Date.now(),
       );
 
@@ -688,7 +703,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       effectiveGrade,
       gradeOverride: audit.gradeOverride ?? null,
       ...(evidence !== undefined ? { evidence } : {}),
-      outreach: { prospectId: outreachProspectId, hasLiveV2Preview },
+      outreach: { prospectId: outreachProspectId, hasLivePreview },
       prospect: prospect === null ? null : { prospectId: prospect.prospectId, name: prospect.name },
       // Plan 060 §5.2: additive operator snapshot; the dashboard schema is
       // passthrough, so existing fields are untouched.
@@ -1334,7 +1349,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       sendError(res, 404, 'audit not found');
       return;
     }
-    const outcome = await buildAuditOutreachPreviewHtml(connection, audit);
+    const outcome = await buildAuditOutreachPreviewHtml(connection, audit, artifactStore);
     if (outcome.state === 'refused') {
       sendJson(res, 200, { rendered: false, refusal: outcome.refusal });
       return;
@@ -1349,7 +1364,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       sendError(res, 404, 'audit not found');
       return;
     }
-    const outcome = await buildAuditOutreachPreviewHtml(connection, audit);
+    const outcome = await buildAuditOutreachPreviewHtml(connection, audit, artifactStore);
     if (outcome.state === 'refused') {
       sendJson(res, 200, { rendered: false, refusal: outcome.refusal });
       return;
@@ -1383,8 +1398,8 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       sendError(res, 503, 'the preview bucket is not configured on this machine');
       return;
     }
-    const result = await publishPreviewV2({
-      store: createMongoOutreachPreviewStoreV2(connection, {
+    const result = await publishPreviewV3({
+      store: createMongoOutreachPreviewStoreV3(connection, {
         prospectId,
       }),
       publisher,

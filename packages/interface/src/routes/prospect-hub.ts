@@ -57,8 +57,8 @@ import { readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
 import { getPreviewPublicBaseUrl } from '../config.js';
 import { createConfiguredMailboxDraftAdapter } from '../outreach/configured-mailbox-draft-adapter.js';
 import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
-import { createMongoOutreachPreviewStoreV2 } from '../outreach/mongo-outreach-preview-store-v2.js';
-import { publishPreviewV2 } from '../outreach/publish-preview-v2.js';
+import { createMongoOutreachPreviewStoreV3 } from '../outreach/mongo-outreach-preview-store-v2.js';
+import { publishPreviewV3 } from '../outreach/publish-preview-v2.js';
 import { syncMailbox } from '../outreach/mailbox-sync.js';
 import { withdrawOutreachForProspect } from '../outreach/withdraw-prospect-outreach.js';
 import {
@@ -515,8 +515,8 @@ export function registerProspectHubRoutes(
       sendError(res, 503, 'the preview bucket is not configured on this machine');
       return;
     }
-    const result = await publishPreviewV2({
-      store: createMongoOutreachPreviewStoreV2(connection, {
+    const result = await publishPreviewV3({
+      store: createMongoOutreachPreviewStoreV3(connection, {
         qualificationVersion: 'prospect-hub',
         prospectId: prospect.prospectId,
       }),

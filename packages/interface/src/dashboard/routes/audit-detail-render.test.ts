@@ -738,7 +738,7 @@ describe('preview note on the audit page (plan 040 slice 5)', () => {
       '/api/audits/audit-1/report-preparation': null,
       '/api/audits/audit-1': {
         ...emptyAudit,
-        outreach: { prospectId: 'prospect-1', hasLiveV2Preview: false },
+        outreach: { prospectId: 'prospect-1', hasLivePreview: false },
       },
     });
     const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
@@ -762,7 +762,7 @@ describe('preview note on the audit page (plan 040 slice 5)', () => {
       '/api/audits/audit-1/report-preparation': null,
       '/api/audits/audit-1': {
         ...emptyAudit,
-        outreach: { prospectId: null, hasLiveV2Preview: false },
+        outreach: { prospectId: null, hasLivePreview: false },
       },
     });
     const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
