@@ -49,12 +49,12 @@ describe('auditReportPanelRows', () => {
     expect(findPanelRow(rows, 'writing').status).toBe('ready');
   });
 
-  it('blocks produce with a reason when no bilingual pair resolves', () => {
+  it('blocks produce with a reason when no French writing resolves', () => {
     const rows = auditReportPanelRows(baseInput, 'fr');
     const produce = findPanelRow(rows, 'produce');
     expect(produce.status).toBe('blocked');
     expect(produce.disabledReason).toBe(
-      'Aucune rédaction bilingue n’est encore disponible : rédigez le rapport ci-dessus avant de produire les PDF.',
+      'Aucune rédaction française n’est encore disponible : rédigez le rapport ci-dessus avant de produire le PDF.',
     );
   });
 
@@ -236,16 +236,32 @@ describe('canApproveReportPair', () => {
     pdfAvailable: true,
   });
 
-  it('allows approval only when both languages have a fresh, verified PDF', () => {
-    expect(canApproveReportPair([fresh('fr'), fresh('en')])).toBe(true);
+  it('allows a French-only selected report to be approved from one fresh verified French PDF', () => {
+    expect(canApproveReportPair([fresh('fr')], ['fr'])).toBe(true);
     expect(
-      canApproveReportPair([
-        fresh('fr'),
-        { language: 'en', status: 'unverified', pdfAvailable: false },
-      ]),
+      canApproveReportPair(
+        [{ language: 'fr', status: 'unverified', pdfAvailable: false }],
+        ['fr'],
+      ),
     ).toBe(false);
-    expect(canApproveReportPair([fresh('fr'), { ...fresh('en'), status: 'stale' }])).toBe(false);
+  });
+
+  it('requires English too only when the selected writing carries English', () => {
+    expect(canApproveReportPair([fresh('fr'), fresh('en')], ['fr', 'en'])).toBe(true);
+    expect(
+      canApproveReportPair(
+        [fresh('fr'), { language: 'en', status: 'unverified', pdfAvailable: false }],
+        ['fr', 'en'],
+      ),
+    ).toBe(false);
+    expect(
+      canApproveReportPair([fresh('fr'), { ...fresh('en'), status: 'stale' }], ['fr', 'en']),
+    ).toBe(false);
+  });
+
+  it('keeps old cached payloads conservative when selected languages are absent', () => {
     expect(canApproveReportPair([fresh('fr')])).toBe(false);
+    expect(canApproveReportPair([fresh('fr'), fresh('en')])).toBe(true);
   });
 });
 
