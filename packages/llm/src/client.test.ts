@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { emptyWritingPerformanceEvidence } from './writing-schema.js';
+import { emptyWritingPerformanceEvidence, type WritingInput } from './writing-schema.js';
 import { WRITING_OPENAI_TEMPERATURE } from './constants.js';
 
 const completeMock = vi.fn();
@@ -32,7 +32,7 @@ const structureInput = {
   findings: [],
 };
 
-const writingInput = {
+const writingInput: WritingInput = {
   language: 'fr' as const,
   siteContext: structureInput.siteContext,
   themes: [{ themeKey: 'theme-1', category: 'accessibility' as const, findings: [], trustedRemediations: [] }],
