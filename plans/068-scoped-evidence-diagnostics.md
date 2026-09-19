@@ -300,7 +300,7 @@ full repository validation are green, and the stored Foch acceptance succeeds.
 Execution rebaselined against `b5bec99fa63532e7588c1b9091790058e80a4b08`;
 `main` had not moved when the implementation chain was fast-forwarded.
 
-Implementation landed in four slices:
+Implementation landed in the following slices:
 
 - `2a461eb4` — deterministic diagnostics registry/reader, Plan-067 summary and
   methodology plumbing, performance scoping, and removal of approval-artifact
@@ -315,8 +315,8 @@ Implementation landed in four slices:
 - `6b5da99f` — restored the report failure-card locale binding found during
   the post-push static read-back;
 - `e9fd7c31` — verifies canonical diagnostic/root digests before projection
-  and gives `unavailable` diagnostics explicit non-clean UI copy.
-- `6b5da99f` — static post-push review fixed the Reports card locale binding (`language` was still used by the fallback notice after the dormant Plan-058 widget cleanup).
+  and gives `unavailable` diagnostics explicit non-clean UI copy;
+- `615c8e5a` — preserves the report locale binding after the concurrent integrity rebase.
 
 The normal-path files
 `audit-stage.ts`, `analysis-stage.ts`, `report-stage.ts`,
