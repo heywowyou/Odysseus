@@ -18,7 +18,7 @@ The tool itself has exactly one user: the solo operator. The dashboard is privat
 
 ## Product Purpose
 
-Odysseus sells standardized website audits to French SMBs, delivered as a prioritized, plain-language PDF report in French or English. Two audit types share one engine: technical and SPA-SEO audits (why a client-side-rendered site is effectively invisible to search crawlers, plus Core Web Vitals and structured data), and accessibility audits against WCAG 2.2 and EN 301 549. An AI visibility check (AEO/GEO) exists as a hook section inside the main report, deliberately not a standalone product.
+Odysseus sells standardized website audits to French SMBs, delivered as a prioritized, plain-language PDF report in French by default, with an English version generated explicitly on request from the same evidence and structure. Two audit types share one engine: technical and SPA-SEO audits (why a client-side-rendered site is effectively invisible to search crawlers, plus Core Web Vitals and structured data), and accessibility audits against WCAG 2.2 and EN 301 549. An AI visibility check (AEO/GEO) exists as a hook section inside the main report, deliberately not a standalone product.
 
 Detection is done entirely by deterministic scanners. The LLM is used only at the end, to explain, group, prioritize, and translate findings into business language. The same tool that produces the deliverable also runs unattended across prospect websites, ranks them by severity, and generates the evidence used to open cold outreach. The brief's own phrase: one tool, two jobs, finding the work and doing the work.
 
@@ -96,14 +96,14 @@ Resolved since the 2026-09-02 draft (operator-confirmed 2026-09-11 via impeccabl
 1. Deterministic scanners detect; the LLM only explains, groups, prioritizes, and translates. No finding exists without scanner provenance.
 2. Evidence must survive being checked. Every finding names a page and a selector; limits are stated first, not admitted later.
 3. One standardized engine, one flat published price. The tenth audit costs almost nothing to deliver and still ships the same fully automated report.
-4. Plain bilingual language for a non-technical decision maker.
+4. Plain French-first language for a non-technical decision maker; English remains an explicit on-demand version of the same report.
 5. Private leverage for a one-person service, not a product to open up. Success is paid audits, not user growth.
 
 ## Accessibility & Inclusion
 
 - WCAG 2.2 AA is the binding internal accessibility standard for every new surface, public site and dashboard alike, not only the client PDF (operator decision, 2026-09-11). Existing enforcement: the report's axe self-test, the site-wide axe sweep shipped with plan 038, and the dashboard v2 render axe e2e shipped with plan 037.
 - The client-facing PDF report is required to pass its own axe-core WCAG 2.2 AA self-test with zero violations (shipped in milestone 6.2 and enforced by a test). Report color tokens were lightened specifically to clear 4.5:1 contrast; do not revert them without re-running that test.
-- Bilingual French and English delivery is a product requirement, not a nice-to-have.
+- French delivery is the canonical product requirement. English remains supported as an explicit on-demand version generated from the same selected structure and evidence; it is not generated automatically.
 - Reports are written for readers who are not developers: business impact, effort, and priority in plain language, with code detail confined to the appendix.
 
-<!-- Drafted 2026-09-02 from repository documents (docs/product/odysseus-project-brief.md, docs/rules/offer-positioning.md); operator-confirmed as drafted 2026-09-02 (plan 022 steps 1 and 5). Refreshed 2026-09-11 via impeccable init (schema marker added): WCAG 2.2 AA confirmed binding on all new surfaces, build-path question closed for lack of image generation; the case-study choice stays held for the operator. All other content reconfirmed unchanged on 2026-09-11. -->
+<!-- Drafted 2026-09-02 from repository documents (docs/product/odysseus-project-brief.md, docs/rules/offer-positioning.md); operator-confirmed as drafted 2026-09-02 (plan 022 steps 1 and 5). Refreshed 2026-09-11 via impeccable init (schema marker added): WCAG 2.2 AA confirmed binding on all new surfaces, build-path question closed for lack of image generation; the case-study choice stays held for the operator. Plan 067 amended report language delivery on 2026-09-19: French canonical/default, English explicit on demand from the same structure/evidence. -->
