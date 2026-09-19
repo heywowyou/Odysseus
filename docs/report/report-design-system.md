@@ -271,9 +271,9 @@ section IDs do not encode reading order.
 | 01 | Présentation du diagnostic (situation, complication, question) | opening and reading guide; the question is the resolved preparation question or the safe generic fallback, no client-specific claim beyond what preparation explicitly provides | fixed |
 | 02 | Synthèse | prose + jump links | 3 links |
 | 03 | Résultats mesurés | editorial scoreboard with total findings as the lead measure, 3 supporting number tiles, disclosure notes, severity split, and category split | fixed |
-| 04 | Priorités de correction | one card per theme; deterministic action-level tag from display rank (1–2 Priorité, 3–4 Important, 5–6 Amélioration), using the existing tag treatment | 6 themes, may flow to 2 sheets |
+| 04 | Priorités de correction | one card per theme; every theme admitted to this existing six-card section carries the deterministic action-level tag Priorité, using the existing tag treatment | 6 themes, may flow to 2 sheets |
 | 05 | Plan d'action | one row per theme, same 6 | 1 sheet |
-| 06 | Autres constats | findings outside the ranked priorities, grouped by domain and rule, linked to appendix ids | flows |
+| 06 | Autres constats | findings outside the ranked priorities, grouped by domain and rule, linked to appendix ids; deterministic action level is Important for critical/serious rule groups and Amélioration for moderate/minor groups, alongside the existing severity label | flows |
 | 07 | Observations complémentaires | 2 prose blocks | fixed |
 | 08 | Conformité WCAG 2.2 AA | one row per failing WCAG criterion | flows |
 | 09 | Rendu sans JavaScript | **bars only, no screenshots** | 3 worst pages by `missingPct` |
