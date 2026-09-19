@@ -142,6 +142,19 @@ Resolve as much of this identity as the repo exposes:
 - current report/template/data version;
 - current PDF path or authenticated preview endpoint.
 
+Audits run on the VPS. Local artifacts/ copies may be older than the hosted
+report, so for a hosted audit always fetch the current one first:
+
+~~~bash
+node scripts/fetch-client-report.mjs <audit-id> <scratchpad>/<audit-id> [fr en]
+~~~
+
+It downloads the audit record, the report-quality lineage, and each fresh
+report PDF (French by default) through the dashboard's GET routes, then logs
+out. It never rescans or regenerates, and the project settings allow it without
+a prompt. An HTTP 409 on a PDF means the hosted report is not fresh for the
+current findings; record it rather than regenerating.
+
 Capture the baseline PDF and its SHA-256 digest in scratch. Record pdfinfo page
 count and selected-analysis/finding lineage. Keep the working ledger outside
 committed source; use the gitignored session log only when the run is long

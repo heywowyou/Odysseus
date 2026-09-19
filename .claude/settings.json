@@ -2,7 +2,12 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
-      "Read(/.env)"
+      "Read(/.env)",
+      "Bash(node scripts/fetch-client-report.mjs *)",
+      "Bash(pdfinfo *)",
+      "Bash(pdftotext *)",
+      "Bash(pdftoppm *)",
+      "Bash(sha256sum *)"
     ],
     "deny": [
       "Edit(/.env)"

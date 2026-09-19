@@ -365,7 +365,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
     },
     'link-in-text-block': {
       label: 'Les liens doivent être distinguables sans se fier uniquement à la couleur',
-      gloss: 'Un lien au milieu dun paragraphe ne se distingue du texte que par sa couleur.',
+      gloss: "Un lien au milieu d'un paragraphe ne se distingue du texte que par sa couleur.",
     },
     'link-name': {
       label: 'Les liens doivent avoir un texte identifiable',
