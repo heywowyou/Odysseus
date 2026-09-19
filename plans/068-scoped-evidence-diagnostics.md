@@ -312,6 +312,7 @@ Implementation landed in four slices:
   quality pipeline/scanner compatibility code;
 - `c31e7420` — focused proof fixtures for limitation plumbing and the
   unchanged one-writer-call budget.
+- `6b5da99f` — static post-push review fixed the Reports card locale binding (`language` was still used by the fallback notice after the dormant Plan-058 widget cleanup).
 
 The normal-path files
 `audit-stage.ts`, `analysis-stage.ts`, `report-stage.ts`,
@@ -337,9 +338,7 @@ reviewer calls.
 execute the checkout: the local tool environment cannot resolve
 `github.com`, so it cannot clone the private repository, and the repository's
 GitHub Actions runner remains unavailable for command execution as already
-recorded in Plan 067/Plan 059. On `c31e7420` the only reported commit status
-visible here is the Vercel deployment check, which is green; that is not a
-substitute for `pnpm run format`, `pnpm run check` and `pnpm run test`.
+recorded in Plan 067/Plan 059. On the current post-review head, GitHub Actions still exposes no runnable verification job from this session; the only reported external status is Vercel, currently failing on its build-rate-limit rather than a repository test. That is not a substitute for `pnpm run format`, `pnpm run check` and `pnpm run test`.
 Those repository commands therefore remain unproven rather than being claimed
 green.
 
