@@ -497,7 +497,27 @@ const writingCandidateStateSchema = new Schema(
           { _id: false },
         ),
       ],
-    },
+    },,
+    warnings: {
+      default: undefined,
+      type: [
+        new Schema(
+          {
+            code: {
+              type: String,
+              required: true,
+              enum: [
+                'business-claim-removed',
+                'legal-claim-removed',
+                'performance-contradiction-removed',
+              ],
+            },
+            field: { type: String, required: true },
+          },
+          { _id: false },
+        ),
+      ],
+    }
   },
   { _id: false },
 );
