@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { emptyWritingPerformanceEvidence } from './writing-schema.js';
 import type { CorrectionReviewInput, CorrectionReviewOutput } from './correction-review-schema.js';
 import {
   correctionReviewOutputSchema,
