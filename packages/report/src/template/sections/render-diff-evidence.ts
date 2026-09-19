@@ -1,6 +1,7 @@
 import type { ReportLanguage } from '@odysseus/core';
 import type { RenderDiffEvidencePage } from '../../screenshots.js';
 import type { ReportStrings } from '../strings/i18n.js';
+import { printableSelector } from '../printable-selector.js';
 import { escapeHtml, fillTemplate, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
 
 /** Doc §3: bars only, no screenshots - two proportional-width bars (raw
@@ -31,7 +32,7 @@ function renderPageCard(
   const caption = page.selector
     ? fillTemplate(r.missingCaptionTemplate, {
         percent: Math.round(page.missingPercent),
-        selector: page.selector,
+        selector: printableSelector(page.selector),
       })
     : fillTemplate(r.missingCaptionNoSelectorTemplate, {
         percent: Math.round(page.missingPercent),

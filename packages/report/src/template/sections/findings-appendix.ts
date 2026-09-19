@@ -24,6 +24,7 @@ import {
   sheet,
 } from '../html-utils.js';
 import { VERBATIM_EVIDENCE_ATTRIBUTE } from '../render-lint.js';
+import { printableSelector } from '../printable-selector.js';
 import { renderSeverityBadge } from '../severity-badge.js';
 import { CATEGORY, CATEGORY_ORDER } from '../design-tokens.js';
 import { renderReferenceStatNote } from '../reference-stat-note.js';
@@ -394,7 +395,7 @@ function renderSubTableRow(
           ),
           { count: formatNumber(resourceUrls.length, language) },
         )
-      : (finding.elements[0]?.selector ?? '');
+      : printableSelector(finding.elements[0]?.selector ?? '');
   // Issue #291: the row's page figure counts distinct visited-scope pages.
   // The "Pages :" URL list underneath still prints every recorded URL -
   // the item 25 detail promise covers URLs, not counts - but the figure

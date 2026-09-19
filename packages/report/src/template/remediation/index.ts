@@ -2,6 +2,7 @@ import type { FindingElement, ReportLanguage } from '@odysseus/core';
 import { REMEDIATION_FR } from './fr.js';
 import { REMEDIATION_EN } from './en.js';
 import type { FixSnippet } from './snippet.js';
+import { printableSelector } from '../printable-selector.js';
 
 /** The two FindingElement fields a fixed snippet may reference. A `Pick`
  *  rather than the full `FindingElement` so a caller with no element for a
@@ -64,8 +65,8 @@ export function interpolateSnippet(
   return snippet.template.replace(
     PLACEHOLDER_PATTERN,
     (_match, token: 'selector' | 'resourceUrl') => {
-      const value = token === 'selector' ? source.selector : source.resourceUrl;
-      return value ?? '';
+      if (token === 'selector') return printableSelector(source.selector ?? '');
+      return source.resourceUrl ?? '';
     },
   );
 }
