@@ -282,6 +282,44 @@ Tests use stubbed providers only.
 6. Trade-off entry and `llm-layer-rules.md` match runtime behavior.
 7. Typecheck, focused tests and `pnpm run plans:check` are green.
 
+## Execution record
+
+### A0.2 Stored-analysis lint (2026-09-19)
+
+`pnpm exec tsx packages/llm/src/lint-stored-analyses.ts` over `artifacts/`:
+111 stored analyses (all `gpt-5.4-mini`, written before the Luna switch).
+WCAG citation violations: 0. Business-claim matches: 391, all in analyses
+written before Plan 067's sentence-level sanitation, which now removes that
+class at claim level. Nothing new for slice A there.
+
+### A1 Measured guard gaps (2026-09-19)
+
+- **Numeric values with units: no gap, nothing built.** A scan of every
+  prose field in the 111 stored analyses for numbers followed by ms, s,
+  %, KB/MB/Ko/Mo, or px found two matches: "320 pixels" (the WCAG reflow
+  width, correct) and a false match on "t3 s’appuie". Page counts, finding
+  counts, and executive-summary digits are already owned by
+  `page-count-guard.ts`, `finding-count-guard.ts`, and
+  `executive-summary-digit-guard.ts`; the performance guard owns suppressed
+  metrics. There is no recorded case of an unmatched unit value.
+- **Internal theme-key references: gap found, closed.** One stored French
+  report (`www.grandhotelbellevue.com`, 2026-09-17) says "Le thème t3
+  s’appuie sur…" and "Le thème t8 est dominé par…" in `notes`. The theme key
+  is a code-assigned correlation handle that never reaches the report, and
+  no guard caught it. `internal-reference-guard.ts` detects a standalone
+  lowercase `t<digits>` token; `sanitizeWritingOutput` removes the sentence
+  at claim level with the new `internal-reference-removed` warning (067
+  decision 13), so no whole-writing retry is spent. It is not added to
+  `buildWritingGuards`: sanitation runs first, so a table entry could never
+  fire. The lint now logs it: 1 flagged field in 111 analyses, the real
+  leak, and zero false positives. Uppercase `T2` (a French apartment type)
+  is deliberately not matched.
+- **Axe rule IDs in prose (`color-contrast`): left to the critic.** Two
+  stored French `notes` fields name the rule ID. Whether that is jargon or a
+  useful anchor is judgment, and the bare-word rule IDs (`label`, `list`)
+  make a deterministic check false-positive prone; `unexplained-jargon`
+  covers it.
+
 ## Executable closure contract
 
 This plan moves to DONE only with a committed requirement-to-proof ledger below

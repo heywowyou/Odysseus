@@ -16,6 +16,7 @@ import type {
   GradeOverride,
   ReportPreparation,
 } from '@odysseus/core';
+import { WRITING_SANITIZATION_WARNING_CODES } from '@odysseus/core';
 
 export interface AuditDocumentFields extends Omit<
   AuditManifest,
@@ -506,12 +507,7 @@ const writingCandidateStateSchema = new Schema(
             code: {
               type: String,
               required: true,
-              enum: [
-                'business-claim-removed',
-                'legal-claim-removed',
-                'deterministic-count-removed',
-                'performance-contradiction-removed',
-              ],
+              enum: [...WRITING_SANITIZATION_WARNING_CODES],
             },
             field: { type: String, required: true },
           },

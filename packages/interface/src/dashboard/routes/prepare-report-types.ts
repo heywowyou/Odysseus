@@ -20,7 +20,9 @@ export interface WritingSanitizationWarningResponse {
     | 'business-claim-removed'
     | 'legal-claim-removed'
     | 'deterministic-count-removed'
-    | 'performance-contradiction-removed';
+    | 'performance-contradiction-removed'
+    | 'internal-reference-removed'
+    | 'critic-unresolved';
   field: string;
 }
 

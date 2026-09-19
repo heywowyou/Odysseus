@@ -37,11 +37,19 @@ export type AnalysisPairRef = AnalysisSelectionRef;
  * One rejected writing attempt, kept so a failed run says which guards
  * rejected it and when, not only what the last message was.
  */
-export type WritingSanitizationWarningCode =
-  | 'business-claim-removed'
-  | 'legal-claim-removed'
-  | 'deterministic-count-removed'
-  | 'performance-contradiction-removed';
+export const WRITING_SANITIZATION_WARNING_CODES = [
+  'business-claim-removed',
+  'legal-claim-removed',
+  'deterministic-count-removed',
+  'performance-contradiction-removed',
+  /** Plan 070: a sentence named a code-assigned theme key ("t3"). */
+  'internal-reference-removed',
+  /** Plan 070: the grounded critic flagged this field and no accepted repair
+   *  replaced it. Advisory: the field shipped as written. */
+  'critic-unresolved',
+] as const;
+
+export type WritingSanitizationWarningCode = (typeof WRITING_SANITIZATION_WARNING_CODES)[number];
 
 export interface WritingSanitizationWarning {
   code: WritingSanitizationWarningCode;

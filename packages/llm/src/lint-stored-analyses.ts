@@ -1,6 +1,6 @@
 /**
- * Dev validation tool, not library code: runs the WCAG-citation and
- * business-claim guards log-only over every stored analysis under
+ * Dev validation tool, not library code: runs the WCAG-citation,
+ * business-claim, and internal-reference checks log-only over every stored analysis under
  * artifacts/ (or a directory given as the first argument), so a new guard
  * can be measured against real output before it is promoted into
  * analyzeWriting's retry loop. Never rejects anything, always exits 0:
@@ -16,6 +16,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ReportLanguage } from '@odysseus/core';
 import { findBusinessClaimViolationsInFields } from './business-claim-guard.js';
+import { findInternalReferenceViolationsInFields } from './internal-reference-guard.js';
 import { findWcagCitationViolationsInFields } from './wcag-citation-guard.js';
 import {
   computeRepetitionMetrics,
@@ -59,7 +60,7 @@ async function main(): Promise<void> {
   const artifactsDir = process.argv[2] ?? path.resolve(moduleDir, '../../../artifacts');
 
   let filesScanned = 0;
-  const totals = { wcag: 0, business: 0 };
+  const totals = { wcag: 0, business: 0, internalReference: 0 };
   const repetitionTotals = {
     recommendedActionsTotal: 0,
     recommendedActionsSharingFirstFiveWords: 0,
@@ -82,6 +83,8 @@ async function main(): Promise<void> {
     const business = findBusinessClaimViolationsInFields(fields, reportLanguage);
     totals.wcag += wcag.length;
     totals.business += business.length;
+    const internalReference = findInternalReferenceViolationsInFields(fields);
+    totals.internalReference += internalReference.length;
 
     const repetition = computeRepetitionMetrics(fields, reportLanguage);
     repetitionTotals.recommendedActionsTotal += repetition.recommendedActionsTotal;
@@ -100,6 +103,7 @@ async function main(): Promise<void> {
     if (
       wcag.length > 0 ||
       business.length > 0 ||
+      internalReference.length > 0 ||
       repetition.verbatimPromptExampleMatches.length > 0 ||
       repetition.constructionRepetitionFlags.length > 0
     ) {
@@ -107,6 +111,7 @@ async function main(): Promise<void> {
         `${path.relative(artifactsDir, file)} (${language}):`,
         ...wcag.map((v) => `  [wcag-citation] ${v.field} matched "${v.matched}"`),
         ...business.map((v) => `  [business-claim] ${v.field} matched "${v.matched}"`),
+        ...internalReference.map((v) => `  [internal-reference] ${v.field} matched "${v.matched}"`),
         ...repetition.verbatimPromptExampleMatches.map((m) => `  [verbatim-example] ${m}`),
         ...repetition.constructionRepetitionFlags.map((m) => `  [construction] ${m}`),
       ];
@@ -118,6 +123,7 @@ async function main(): Promise<void> {
   console.log(`\nScanned ${filesScanned} analysis files under ${artifactsDir}`);
   console.log(`WCAG citation violations: ${totals.wcag}`);
   console.log(`Business claim violations: ${totals.business}`);
+  console.log(`Internal theme-key references: ${totals.internalReference}`);
   console.log(
     `recommendedActions sharing their first five words: ${repetitionTotals.recommendedActionsSharingFirstFiveWords}/${repetitionTotals.recommendedActionsTotal} (most common opening, per-file share summed)`,
   );

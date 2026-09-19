@@ -4,6 +4,7 @@ import { findLegalConsequenceViolationsInFields } from './legal-consequence-guar
 import { hasPageCountViolation } from './page-count-guard.js';
 import { hasFindingCountViolation } from './finding-count-guard.js';
 import { hasExecutiveSummaryDigitViolation } from './executive-summary-digit-guard.js';
+import { hasInternalThemeKeyReference } from './internal-reference-guard.js';
 import {
   writingPassOutputSchema,
   type WritingInput,
@@ -100,6 +101,10 @@ function sanitizeSentences(
       (field === 'executiveSummary' && hasExecutiveSummaryDigitViolation(sentence))
     ) {
       warning(warnings, 'deterministic-count-removed', field);
+      continue;
+    }
+    if (hasInternalThemeKeyReference(sentence)) {
+      warning(warnings, 'internal-reference-removed', field);
       continue;
     }
     kept.push(sentence);
