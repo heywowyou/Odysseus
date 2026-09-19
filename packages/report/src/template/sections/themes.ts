@@ -722,6 +722,19 @@ function renderActionRow(
   const lists = groups.filter((group) => group.items.length > 0);
   const [first] = lists;
   if (first === undefined) return renderRow('action', label, notesHtml);
+  // When the row closes on notes, the notes alone are the tail: a
+  // remediation item carries a code snippet and runs ~50mm, and carrying it
+  // with the footer left up to ~115mm blank at the foot of the page before
+  // (delivered Villas Foch report). The notes are one or two lines, so the
+  // glued block stays close to the footer's own height.
+  if (notesHtml !== '') {
+    const [firstList, ...laterLists] = lists;
+    const restHtml =
+      renderContinuedThemeList(firstList!.items.slice(1)) +
+      laterLists.map(renderThemeListGroup).join('');
+    return `${renderRow('action', label, renderThemeListLead(firstList!), restHtml, 'theme-row-has-tail')}
+      <div class="theme-row-tail">${notesHtml}</div>`;
+  }
   const itemCount = lists.reduce((count, group) => count + group.items.length, 0);
   if (itemCount === 1) return renderRow('action', label, renderThemeListLead(first), notesHtml);
 

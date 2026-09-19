@@ -199,6 +199,51 @@ async function countOrphanedThemeContextRows(page: Page): Promise<number> {
   );
 }
 
+/** Pushes the first priority card down the page by `mm`, so a sweep moves
+ * its page break through every block of the card in turn. */
+function addFirstThemeOffset(html: string, mm: number): string {
+  return html.replace(
+    '<div class="card elev-sm theme-card"',
+    `<div style="height:${mm}mm" data-theme-offset-pressure></div><div class="card elev-sm theme-card"`,
+  );
+}
+
+/** Makes the first priority card's last action item as tall as a real
+ * remediation with its code snippet (~50mm on the delivered Villas Foch
+ * report), wherever the template places that item. */
+function addSnippetSizedLastActionItem(html: string): string {
+  const contextAt = html.indexOf('<div class="theme-row theme-row-context">');
+  const lastItemEnd = html.lastIndexOf('</li>', contextAt);
+  return `${html.slice(0, lastItemEnd)}<div style="height:45mm" data-snippet-pressure></div>${html.slice(lastItemEnd)}`;
+}
+
+/** The largest blank band, in millimetres, that a priority card leaves at the
+ * foot of a page before continuing on the next one. A delivered Villas Foch
+ * report left ~105mm: the footer's keep-with-previous carried the atomic
+ * footer (conformity, sourced figure, finding references) and the atomic
+ * last remediation with its code snippet to the next page as one block. */
+async function largestThemeCardFootGapMm(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    let largest = 0;
+    for (const pageEl of Array.from(document.querySelectorAll('.pagedjs_page'))) {
+      const area = pageEl.querySelector('.pagedjs_page_content');
+      if (area === null) continue;
+      const areaBottom = area.getBoundingClientRect().bottom;
+      for (const card of Array.from(pageEl.querySelectorAll('.theme-card[data-split-to]'))) {
+        let contentBottom = card.getBoundingClientRect().top;
+        for (const el of Array.from(card.querySelectorAll('*'))) {
+          const rect = el.getBoundingClientRect();
+          if (rect.height > 0 && el.children.length === 0) {
+            contentBottom = Math.max(contentBottom, rect.bottom);
+          }
+        }
+        largest = Math.max(largest, ((areaBottom - contentBottom) * 25.4) / 96);
+      }
+    }
+    return largest;
+  });
+}
+
 /** Undoes paged.css's issue #303 rule, reproducing the layout the two
  * delivered reports shipped. Only a test uses this: it is what makes the
  * gate's own assertion meaningful, since with the rule in place the strand
@@ -484,6 +529,29 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
         await pressured.page.context().close();
       }
     }
+  }, 600_000);
+
+  it('a priority card that continues on the next page never leaves a large blank band behind it', async () => {
+    const worst: { offsetMm: number; gapMm: number }[] = [];
+    for (let offsetMm = 0; offsetMm <= 200; offsetMm += 10) {
+      const pressured = await paginate(
+        browser,
+        addFirstThemeOffset(addSnippetSizedLastActionItem(stressHtml), offsetMm),
+        pagedjsSource,
+      );
+      try {
+        worst.push({
+          offsetMm,
+          gapMm: Math.round(await largestThemeCardFootGapMm(pressured.page)),
+        });
+        expect(await countOrphanedThemeContextRows(pressured.page)).toBe(0);
+      } finally {
+        await pressured.page.context().close();
+      }
+    }
+    // One atomic snippet-sized item that does not fit leaves ~73mm; the
+    // footer dragging that item along (the shipped defect) left 99mm.
+    expect(worst.filter(({ gapMm }) => gapMm > 80)).toEqual([]);
   }, 600_000);
 
   it('invariant 6a: the bounded start-here panel never fragments across physical pages', async () => {
