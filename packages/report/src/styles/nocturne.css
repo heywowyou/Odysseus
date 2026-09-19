@@ -148,6 +148,11 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-body);
+  /* The mono face ships one weight. Without this, bold mono text is
+     synthesized, and Chromium writes synthesized glyphs as a Type 3 font
+     (pdf-integrity.ts rejects one). A missing weight renders at the nearest
+     real one instead. */
+  font-synthesis: none;
 }
 /* The user-agent stylesheet sets these to the generic `monospace`, which
    is the host's font: a CJK face in the production container. */

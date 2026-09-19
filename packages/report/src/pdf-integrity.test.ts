@@ -77,11 +77,13 @@ describe('findReportPdfIntegrityDefects', () => {
     expect(fr(fakePdf({ embedded: false }))).toEqual(['2 font(s) in the PDF are not embedded']);
   });
 
-  it('accepts a Type 3 font, whose glyphs are drawn inside the file', () => {
+  it('fails a Type 3 font, the synthesized-style glyphs some viewers draw poorly', () => {
     const type3 =
       '300 0 obj\n<< /Type /Font /Subtype /Type3 /FontDescriptor 301 0 R >>\nendobj\n' +
       '301 0 obj\n<< /Type /FontDescriptor /FontName /DAAAAA+DejaVuSansMono >>\nendobj';
-    expect(fr(fakePdf({ extra: type3 }))).toEqual([]);
+    expect(fr(fakePdf({ extra: type3 }))).toEqual([
+      'the PDF carries 1 Type 3 font(s): a style the embedded faces lack was synthesized',
+    ]);
   });
 
   it('requires the declared language to match the report', () => {

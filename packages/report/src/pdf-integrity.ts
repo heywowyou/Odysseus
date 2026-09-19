@@ -151,9 +151,12 @@ export function findReportPdfIntegrityDefects(
   ];
   if (foreign.length > 0)
     defects.push(`the PDF uses fonts the report does not embed: ${foreign.sort().join(', ')}`);
-  // A Type 3 font carries its glyphs as drawing procedures inside the file
-  // (Chromium writes one for synthesized styles such as a bold weight the
-  // embedded face lacks), so its descriptor legitimately has no font file.
+  // A Type 3 font carries its glyphs as drawing procedures inside the file.
+  // Chromium writes one only for a synthesized style (a bold weight the
+  // embedded face lacks): nocturne.css turns synthesis off, so one here is a
+  // defect. The delivered Villas Foch report carried one for the bold mono
+  // page-list headings. Its descriptor has no font file, so it is excluded
+  // from the embedding count below and reported on its own.
   const objects = new Map<string, string>();
   for (const m of latin1.matchAll(/(?:^|\s)(\d+)\s+0\s+obj\b([\s\S]*?)\bendobj\b/g))
     objects.set(m[1]!, m[2]!);
@@ -170,6 +173,10 @@ export function findReportPdfIntegrityDefects(
       !/\/FontFile[23]?\s+\d+\s+\d+\s+R/.test(body) &&
       !type3Descriptors.has(id),
   ).length;
+  if (type3Descriptors.size > 0)
+    defects.push(
+      `the PDF carries ${type3Descriptors.size} Type 3 font(s): a style the embedded faces lack was synthesized`,
+    );
   if (fontNames.length === 0) defects.push('the PDF names no fonts');
   else if (unembedded > 0) defects.push(`${unembedded} font(s) in the PDF are not embedded`);
 
