@@ -109,7 +109,7 @@ function sanitizeSentences(
 
 function fallbackImpact(language: ReportLanguage): string {
   return language === 'fr'
-    ? "Les constats de ce thème limitent directement l’utilisation des éléments concernés pour les visiteurs affectés."
+    ? 'Les constats de ce thème limitent directement l’utilisation des éléments concernés pour les visiteurs affectés.'
     : 'The findings in this theme directly limit use of the affected interface elements for impacted visitors.';
 }
 

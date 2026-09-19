@@ -187,7 +187,9 @@ function parseQuality(raw: unknown): ParsedQuality | undefined {
     const disclosure = parseDisclosure(rawIssue['disclosure']);
     issues.push({
       code: rawIssue['code'] as EvidenceQualityReasonCode,
-      evidenceRefs: rawIssue['evidenceRefs'].filter((ref): ref is string => typeof ref === 'string'),
+      evidenceRefs: rawIssue['evidenceRefs'].filter(
+        (ref): ref is string => typeof ref === 'string',
+      ),
       ...(disclosure !== undefined ? { disclosure } : {}),
     });
   }
@@ -222,17 +224,16 @@ function mergeLimitation(
     });
     return;
   }
-  existing.evidenceRefs = [...new Set([...existing.evidenceRefs, ...limitation.evidenceRefs])].sort();
+  existing.evidenceRefs = [
+    ...new Set([...existing.evidenceRefs, ...limitation.evidenceRefs]),
+  ].sort();
 }
 
 export function summarizeAuditEvidenceDiagnostics(input: {
   quality: unknown;
   auditRoot: unknown;
 }): AuditEvidenceDiagnostics {
-  if (
-    !hasValidCanonicalDigest(input.quality) ||
-    !hasValidCanonicalDigest(input.auditRoot)
-  ) {
+  if (!hasValidCanonicalDigest(input.quality) || !hasValidCanonicalDigest(input.auditRoot)) {
     return { status: 'unavailable', clientLimitations: [], operationalWarnings: [] };
   }
   const quality = parseQuality(input.quality);

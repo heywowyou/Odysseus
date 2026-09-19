@@ -88,11 +88,11 @@ export function isEnglishAttachableToFrench<A extends AnalysisRecordLike>(
 ): boolean {
   return Boolean(
     fr &&
-      en &&
-      isCompleteCompatiblePair(fr, en) &&
-      fr.structureGeneratedAt !== undefined &&
-      en.structureGeneratedAt !== undefined &&
-      fr.structureGeneratedAt === en.structureGeneratedAt,
+    en &&
+    isCompleteCompatiblePair(fr, en) &&
+    fr.structureGeneratedAt !== undefined &&
+    en.structureGeneratedAt !== undefined &&
+    fr.structureGeneratedAt === en.structureGeneratedAt,
   );
 }
 

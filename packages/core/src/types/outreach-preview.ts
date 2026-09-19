@@ -517,7 +517,6 @@ export const outreachPreviewSummarySchema: z.ZodType<OutreachPreviewSummary> = z
     }
   });
 
-
 // ---------------------------------------------------------------------------
 // v3: grounded report-aligned preview (plan 069)
 // ---------------------------------------------------------------------------
@@ -572,7 +571,11 @@ const outreachPriorityCardV3Schema = z
 
 const outreachPreviewLimitationSchema = z
   .object({
-    code: z.string().min(1).max(120).regex(/^[a-z0-9-]+$/u),
+    code: z
+      .string()
+      .min(1)
+      .max(120)
+      .regex(/^[a-z0-9-]+$/u),
     summary: bilingualSchema,
   })
   .strict();
@@ -666,10 +669,7 @@ export const outreachPreviewSummaryV3Schema: z.ZodType<OutreachPreviewSummaryV3>
         message: 'limited data quality requires at least one limitation',
       });
     }
-    if (
-      input.dataQuality.status !== 'limited' &&
-      input.dataQuality.limitations.length !== 0
-    ) {
+    if (input.dataQuality.status !== 'limited' && input.dataQuality.limitations.length !== 0) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'only limited data quality may carry client limitations',

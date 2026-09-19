@@ -89,10 +89,7 @@ describe('resolveSelectedAnalysisPair', () => {
 
   it('honours an explicit French-only selection', () => {
     const fr = analysis('fr-only', 'fr', '2026-09-01T00:00:00Z');
-    const resolution = resolveSelectedAnalysisPair(
-      { selected: analysisSelectionRefOf(fr) },
-      [fr],
-    );
+    const resolution = resolveSelectedAnalysisPair({ selected: analysisSelectionRefOf(fr) }, [fr]);
     expect(resolution).toEqual({ kind: 'selected', fr });
   });
 

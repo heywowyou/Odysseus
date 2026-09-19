@@ -27,7 +27,10 @@ const LANGUAGE_INSTRUCTION: Record<ReportLanguage, string> = {
   en: 'Write title, businessImpact, every entry in recommendedActions, executiveSummary, and notes entirely in English.',
 };
 
-const PERFORMANCE_METRIC_LABEL: Record<ReportLanguage, Record<'lcp' | 'cls' | 'inp' | 'tbt', string>> = {
+const PERFORMANCE_METRIC_LABEL: Record<
+  ReportLanguage,
+  Record<'lcp' | 'cls' | 'inp' | 'tbt', string>
+> = {
   fr: {
     lcp: 'Largest Contentful Paint (LCP)',
     cls: 'Cumulative Layout Shift (CLS)',
@@ -115,24 +118,28 @@ function performanceEvidenceNote(
     .map((metric) => PERFORMANCE_METRIC_LABEL[language][metric])
     .join(', ');
   if (language === 'fr') {
-    const concernText = concern === null
-      ? 'Aucune métrique de performance mesurée ne doit être présentée comme priorité de correction.'
-      : `La priorité de performance déterministe est ${PERFORMANCE_METRIC_LABEL.fr[concern.metric]} à partir des données ${concern.source === 'field' ? 'réelles utilisateurs' : 'de laboratoire'}.`;
-    const suppressedText = suppressed.length === 0
-      ? ''
-      : ` Les signaux de laboratoire suivants sont explicitement interdits comme moteur de recommandation : ${suppressed}.`;
+    const concernText =
+      concern === null
+        ? 'Aucune métrique de performance mesurée ne doit être présentée comme priorité de correction.'
+        : `La priorité de performance déterministe est ${PERFORMANCE_METRIC_LABEL.fr[concern.metric]} à partir des données ${concern.source === 'field' ? 'réelles utilisateurs' : 'de laboratoire'}.`;
+    const suppressedText =
+      suppressed.length === 0
+        ? ''
+        : ` Les signaux de laboratoire suivants sont explicitement interdits comme moteur de recommandation : ${suppressed}.`;
     const discordanceText =
       evidence.discordances.length === 0
         ? ''
         : ' Les entrées discordances décrivent des écarts champ/laboratoire déjà tranchés par la couche déterministe ; quand labNonRepresentativeForRecommendations vaut true, ne réinterprétez pas ce signal de laboratoire.';
     return `\n\nLe paquet performanceEvidence fourni dans l'entrée est l'autorité unique pour la prose de performance. ${concernText}${suppressedText}${discordanceText} Ne contredisez jamais une mesure réelle utilisateur avec une anomalie de laboratoire. Pour un thème performance, fondez la première recommandation sur primaryConcern uniquement quand il existe.`;
   }
-  const concernText = concern === null
-    ? 'No measured performance metric should be presented as a correction priority.'
-    : `The deterministic performance priority is ${PERFORMANCE_METRIC_LABEL.en[concern.metric]} from ${concern.source === 'field' ? 'real-user' : 'lab'} data.`;
-  const suppressedText = suppressed.length === 0
-    ? ''
-    : ` The following lab signals are explicitly forbidden as recommendation drivers: ${suppressed}.`;
+  const concernText =
+    concern === null
+      ? 'No measured performance metric should be presented as a correction priority.'
+      : `The deterministic performance priority is ${PERFORMANCE_METRIC_LABEL.en[concern.metric]} from ${concern.source === 'field' ? 'real-user' : 'lab'} data.`;
+  const suppressedText =
+    suppressed.length === 0
+      ? ''
+      : ` The following lab signals are explicitly forbidden as recommendation drivers: ${suppressed}.`;
   const discordanceText =
     evidence.discordances.length === 0
       ? ''
@@ -202,8 +209,7 @@ export function buildWritingSystemPrompt(
    *  the new fields, the prompt is byte-identical to before. */
   siteContext?: WritingSiteContext,
 ): string {
-  const resolvedPerformanceEvidence =
-    performanceEvidence ?? emptyWritingPerformanceEvidence();
+  const resolvedPerformanceEvidence = performanceEvidence ?? emptyWritingPerformanceEvidence();
   return language === 'fr'
     ? buildFrenchWritingSystemPrompt(
         usedFallbackContext,

@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { OPENAI_MODEL, WRITING_OPENAI_TEMPERATURE, MAX_RETRIES } from './constants.js';
-import { emptyWritingPerformanceEvidence, type WritingInput, type WritingPassOutput } from './writing-schema.js';
+import {
+  emptyWritingPerformanceEvidence,
+  type WritingInput,
+  type WritingPassOutput,
+} from './writing-schema.js';
 import {
   configureLlmTelemetrySink,
   NullLlmTelemetrySink,
@@ -46,7 +50,14 @@ const input: WritingInput = {
   siteStats: { pagesScanned: 1, totalFindings: 1, critical: 0, serious: 1, moderate: 0, minor: 0 },
   performanceEvidence: emptyWritingPerformanceEvidence(),
   summaryEvidence: {
-    siteStats: { pagesScanned: 1, totalFindings: 1, critical: 0, serious: 1, moderate: 0, minor: 0 },
+    siteStats: {
+      pagesScanned: 1,
+      totalFindings: 1,
+      critical: 0,
+      serious: 1,
+      moderate: 0,
+      minor: 0,
+    },
     rankedThemes: [{ themeKey: 't1', category: 'accessibility', priorityRank: 1 }],
 
     categoriesPresent: ['accessibility'],
@@ -66,11 +77,12 @@ function buildCleanFrenchOutput(): WritingPassOutput {
         title: 'Contrastes et lisibilité',
         businessImpact:
           'Un contraste insuffisant rend certains textes difficiles à lire pour les visiteurs concernés.',
-        recommendedActions: ['Augmentez le contraste des couleurs sur les boutons et les textes concernés.'],
+        recommendedActions: [
+          'Augmentez le contraste des couleurs sur les boutons et les textes concernés.',
+        ],
       },
     ],
-    executiveSummary:
-      'Les constats concernent principalement la lisibilité des éléments mesurés.',
+    executiveSummary: 'Les constats concernent principalement la lisibilité des éléments mesurés.',
     notes: '',
   };
 }

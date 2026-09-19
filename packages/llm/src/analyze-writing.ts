@@ -148,16 +148,32 @@ export async function analyzeWriting(
           durationMs: Date.now() - startedAtMs,
           guards: guardNames,
         });
-        return succeed(input, result, sanitized.output, sanitized.warnings, attempt, startedAtMs, rejections, [
-          { attempt, guards: guardNames, reason },
-        ]);
+        return succeed(
+          input,
+          result,
+          sanitized.output,
+          sanitized.warnings,
+          attempt,
+          startedAtMs,
+          rejections,
+          [{ attempt, guards: guardNames, reason }],
+        );
       }
 
       recordRejection(attempt, guardNames, reason, styleOnly);
       continue;
     }
 
-    return succeed(input, result, sanitized.output, sanitized.warnings, attempt, startedAtMs, rejections, []);
+    return succeed(
+      input,
+      result,
+      sanitized.output,
+      sanitized.warnings,
+      attempt,
+      startedAtMs,
+      rejections,
+      [],
+    );
   }
 
   captureLlmCallTelemetry({

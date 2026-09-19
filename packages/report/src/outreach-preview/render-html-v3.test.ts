@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  outreachPreviewSummaryV3Schema,
-  type OutreachPreviewSummaryV3,
-} from '@odysseus/core';
+import { outreachPreviewSummaryV3Schema, type OutreachPreviewSummaryV3 } from '@odysseus/core';
 import { formatFullAuditPrice } from '@odysseus/core';
 import { generateOutreachPreviewHtmlV3 } from './render-html-v3.js';
 import { lintOutreachPreviewHtml } from './preview-lint.js';
@@ -32,21 +29,30 @@ function summary(overrides: Partial<OutreachPreviewSummaryV3> = {}): OutreachPre
     priorityCards: [
       {
         rank: 1,
-        title: { fr: 'Certains liens ne sont pas clairement nommés.', en: 'Some links are not clearly named.' },
+        title: {
+          fr: 'Certains liens ne sont pas clairement nommés.',
+          en: 'Some links are not clearly named.',
+        },
         category: 'accessibility',
         severity: 'serious',
         affectedPageCount: 6,
       },
       {
         rank: 2,
-        title: { fr: 'Certaines images ne sont pas décrites.', en: 'Some images are not described.' },
+        title: {
+          fr: 'Certaines images ne sont pas décrites.',
+          en: 'Some images are not described.',
+        },
         category: 'accessibility',
         severity: 'moderate',
         affectedPageCount: 4,
       },
       {
         rank: 3,
-        title: { fr: 'Certaines pages sont difficiles à indexer.', en: 'Some pages are difficult to index.' },
+        title: {
+          fr: 'Certaines pages sont difficiles à indexer.',
+          en: 'Some pages are difficult to index.',
+        },
         category: 'seo',
         severity: 'minor',
         affectedPageCount: 2,

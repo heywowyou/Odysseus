@@ -9,7 +9,13 @@
  * call against this exact structure and findings provenance.
  */
 
-import { approveWritingCandidate, completeJob, ensureJobRunIdentity, recordReadyWritingCandidate, type JobDocument } from '@odysseus/store';
+import {
+  approveWritingCandidate,
+  completeJob,
+  ensureJobRunIdentity,
+  recordReadyWritingCandidate,
+  type JobDocument,
+} from '@odysseus/store';
 import { buildFindingsProvenance, type SiteSignalOverrides } from '@odysseus/core';
 import { deleteCrawlCheckpoint, deleteCrawlStateFile, type PageWorkGuard } from '@odysseus/scanner';
 import { hasMeasuredCoreWebVitals } from '@odysseus/report';

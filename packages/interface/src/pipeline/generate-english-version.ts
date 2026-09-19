@@ -16,7 +16,6 @@ import {
   resolveSelectedAnalysisPairForAudit,
   type AuditDocument,
 } from '@odysseus/store';
-import type { ArtifactStore } from '../artifacts/artifact-store.js';
 import { runAnalysisStage } from './analysis-stage.js';
 import { readAuditEvidence } from './audit-evidence.js';
 import { RegenerationConflictError } from './regeneration-conflict-error.js';
@@ -44,7 +43,6 @@ export interface GenerateEnglishVersionResult {
 export async function generateEnglishVersion(
   connection: Connection,
   audit: AuditDocument,
-  artifactStore: ArtifactStore | undefined,
 ): Promise<GenerateEnglishVersionResult> {
   const auditId = audit.auditId;
   if (!tryAcquireReportProduction(auditId, 'writing')) {

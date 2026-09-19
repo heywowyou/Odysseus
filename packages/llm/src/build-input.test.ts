@@ -199,9 +199,9 @@ describe('buildWritingInput', () => {
       trustedRemediations: [],
     });
     expect(input.themes[1]!.findings).toHaveLength(structureThemes[1]!.findingIds.length);
-    expect(input.themes[0]!.findings.some((finding) => finding.findingId === second.findingId)).toBe(
-      false,
-    );
+    expect(
+      input.themes[0]!.findings.some((finding) => finding.findingId === second.findingId),
+    ).toBe(false);
     expect(input.themes[1]!.findings.some((finding) => finding.findingId === first.findingId)).toBe(
       false,
     );

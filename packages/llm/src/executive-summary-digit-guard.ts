@@ -35,10 +35,7 @@ export interface ExecutiveSummaryDigitViolation {
 }
 
 export function hasExecutiveSummaryDigitViolation(text: string): boolean {
-  const withoutLocationOrdinals = text.replace(
-    ARRONDISSEMENT_ORDINAL_PATTERN,
-    'arrondissement',
-  );
+  const withoutLocationOrdinals = text.replace(ARRONDISSEMENT_ORDINAL_PATTERN, 'arrondissement');
   return DIGIT_PATTERN.test(withoutLocationOrdinals);
 }
 

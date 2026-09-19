@@ -1,10 +1,7 @@
 /** Mongo adapter for the current v3 prospect-native preview contract. */
 
 import type { Connection } from 'mongoose';
-import {
-  primaryWebsite,
-  type Finding,
-} from '@odysseus/core';
+import { primaryWebsite, type Finding } from '@odysseus/core';
 import {
   createAuditModel,
   createJobModel,

@@ -25,21 +25,57 @@ function summary(language: 'fr' | 'en'): OutreachPreviewSummaryV3 {
       privacy: 'https://odysseusaudit.com/confidentialite-prospection',
       optOut: 'https://odysseusaudit.com/desinscription',
     },
-    coverage: { inventoriedPageCount: 23, contentCheckedPageCount: 23, performanceMeasuredPageCount: 9 },
+    coverage: {
+      inventoriedPageCount: 23,
+      contentCheckedPageCount: 23,
+      performanceMeasuredPageCount: 9,
+    },
     distinctFindingCount: 5,
     affectedPageCount: 11,
     severityTotals: { critical: 1, serious: 1, moderate: 1, minor: 2 },
     priorityCards: [
-      { rank: 1, title: { fr: 'Certains liens ne sont pas clairement nommés.', en: 'Some links are not clearly named.' }, category: 'accessibility', severity: 'serious', affectedPageCount: 6 },
-      { rank: 2, title: { fr: 'Certaines images ne sont pas décrites.', en: 'Some images are not described.' }, category: 'accessibility', severity: 'moderate', affectedPageCount: 4 },
-      { rank: 3, title: { fr: 'Certaines pages sont difficiles à indexer.', en: 'Some pages are difficult to index.' }, category: 'seo', severity: 'minor', affectedPageCount: 2 },
+      {
+        rank: 1,
+        title: {
+          fr: 'Certains liens ne sont pas clairement nommés.',
+          en: 'Some links are not clearly named.',
+        },
+        category: 'accessibility',
+        severity: 'serious',
+        affectedPageCount: 6,
+      },
+      {
+        rank: 2,
+        title: {
+          fr: 'Certaines images ne sont pas décrites.',
+          en: 'Some images are not described.',
+        },
+        category: 'accessibility',
+        severity: 'moderate',
+        affectedPageCount: 4,
+      },
+      {
+        rank: 3,
+        title: {
+          fr: 'Certaines pages sont difficiles à indexer.',
+          en: 'Some pages are difficult to index.',
+        },
+        category: 'seo',
+        severity: 'minor',
+        affectedPageCount: 2,
+      },
     ],
     dataQuality: {
       status: 'limited',
-      limitations: [{
-        code: 'temporal-drift',
-        summary: { fr: 'Le site a changé pendant le scan.', en: 'The site changed during the scan.' },
-      }],
+      limitations: [
+        {
+          code: 'temporal-drift',
+          summary: {
+            fr: 'Le site a changé pendant le scan.',
+            en: 'The site changed during the scan.',
+          },
+        },
+      ],
     },
     facts: { state: 'omitted' },
   };
@@ -63,7 +99,9 @@ describe('the rendered v3 preview passes its accessibility contract', () => {
       for (const language of ['fr', 'en'] as const) {
         for (const viewport of VIEWPORTS) {
           await page.setViewportSize(viewport);
-          await page.setContent(generateOutreachPreviewHtmlV3(summary(language)), { waitUntil: 'load' });
+          await page.setContent(generateOutreachPreviewHtmlV3(summary(language)), {
+            waitUntil: 'load',
+          });
           const results = await new AxeBuilder({ page }).withTags(WCAG22AA_TAGS).analyze();
           expect(results.violations, `${language}/${viewport.width}`).toEqual([]);
         }

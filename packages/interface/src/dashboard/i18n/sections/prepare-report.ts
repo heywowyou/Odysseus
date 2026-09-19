@@ -98,8 +98,7 @@ export const prepareReport = {
     candidateAttemptRejectedTemplate: 'Attempt {attempt} of {total} rejected by: {guards}',
     regenerateButton: 'Rewrite the report',
     writeButton: 'Write the report',
-    writingInProgress:
-      'French report writing is in progress. This page updates on its own.',
+    writingInProgress: 'French report writing is in progress. This page updates on its own.',
     writingRegeneratedMessage: 'New French version written, approved, and PDF regenerated.',
     writingApprovedPdfsPendingMessage:
       'New version written and approved; PDFs were not regenerated automatically.',

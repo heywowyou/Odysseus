@@ -419,7 +419,7 @@ describe('POST /api/audits/:auditId/report-preparation/regenerate-writing', () =
         unreferencedFindingCount: 0,
         usedFallbackContext: true,
         advisoryPasses: [],
-          sanitizationWarnings: [],
+        sanitizationWarnings: [],
       } as never;
     });
 
@@ -479,7 +479,7 @@ describe('POST /api/audits/:auditId/report-preparation/regenerate-writing', () =
         unreferencedFindingCount: 0,
         usedFallbackContext: true,
         advisoryPasses: [],
-          sanitizationWarnings: [],
+        sanitizationWarnings: [],
       } as never;
     });
 

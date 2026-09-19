@@ -315,12 +315,16 @@ describe('the writing prompt states the WCAG version and business-claim rules th
   it('forbids unsupported commercial outcomes even when hedged, in French', () => {
     const prompt = buildWritingSystemPrompt('fr', false, null);
     expect(prompt).toContain("réservations, la conversion, le chiffre d'affaires");
-    expect(prompt).toContain('Une précaution grammaticale ne transforme pas une affirmation non mesurée en preuve');
+    expect(prompt).toContain(
+      'Une précaution grammaticale ne transforme pas une affirmation non mesurée en preuve',
+    );
   });
 
   it('forbids unsupported commercial outcomes even when hedged, in English', () => {
     const prompt = buildWritingSystemPrompt('en', false, null);
-    expect(prompt).toContain('bookings, conversion, revenue, abandonment, demand, trust, or reputation');
+    expect(prompt).toContain(
+      'bookings, conversion, revenue, abandonment, demand, trust, or reputation',
+    );
     expect(prompt).toContain('Hedging does not turn an unmeasured claim into evidence');
   });
 });

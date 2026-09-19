@@ -35,11 +35,25 @@ const structureInput = {
 const writingInput: WritingInput = {
   language: 'fr' as const,
   siteContext: structureInput.siteContext,
-  themes: [{ themeKey: 'theme-1', category: 'accessibility' as const, findings: [], trustedRemediations: [] }],
+  themes: [
+    {
+      themeKey: 'theme-1',
+      category: 'accessibility' as const,
+      findings: [],
+      trustedRemediations: [],
+    },
+  ],
   siteStats: { pagesScanned: 1, totalFindings: 0, critical: 0, serious: 0, moderate: 0, minor: 0 },
   performanceEvidence: emptyWritingPerformanceEvidence(),
   summaryEvidence: {
-    siteStats: { pagesScanned: 1, totalFindings: 0, critical: 0, serious: 0, moderate: 0, minor: 0 },
+    siteStats: {
+      pagesScanned: 1,
+      totalFindings: 0,
+      critical: 0,
+      serious: 0,
+      moderate: 0,
+      minor: 0,
+    },
     rankedThemes: [{ themeKey: 'theme-1', category: 'accessibility', priorityRank: 1 }],
 
     categoriesPresent: ['accessibility'],

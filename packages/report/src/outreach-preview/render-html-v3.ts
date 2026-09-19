@@ -181,7 +181,9 @@ function renderFacts(input: OutreachPreviewSummaryV3): string {
   return [
     '<section class="preview-section facts-section">',
     renderSectionHead(input.facts.heading),
-    criterion === undefined ? '' : `<div class="facts-reference"><p>${escapeHtml(criterion)}</p></div>`,
+    criterion === undefined
+      ? ''
+      : `<div class="facts-reference"><p>${escapeHtml(criterion)}</p></div>`,
     ...body.map((paragraph) => `<p class="facts-body">${escapeHtml(paragraph)}</p>`),
     caveat === undefined ? '' : `<p class="fineprint">${escapeHtml(caveat)}</p>`,
     '</section>',

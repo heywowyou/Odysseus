@@ -427,7 +427,7 @@ call or rescan is introduced; canonical docs are updated; focused tests and the
 repository validation suite are green; and the no-rescan stored-audit
 acceptance above is recorded.
 
-## Requirement-to-proof closure ledger
+## Executable closure contract: requirement-to-proof closure ledger
 
 | Requirement | Owner/seam | Proof |
 | --- | --- | --- |

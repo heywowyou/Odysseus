@@ -153,7 +153,6 @@ describe('runFullAuditJob', () => {
     expect(calls).toEqual(['audit', 'analyze-fr', 'report-all', 'complete']);
   });
 
-
   it('renders only the canonical French analysis on the normal path', async () => {
     const job = fakeJob();
     await runFullAuditJob(job, ctx);
@@ -335,6 +334,5 @@ describe('runFullAuditJob', () => {
       expect(runAnalysisStage).toHaveBeenCalledTimes(1);
       expect(runAllReportsStage).not.toHaveBeenCalled();
     });
-
   });
 });

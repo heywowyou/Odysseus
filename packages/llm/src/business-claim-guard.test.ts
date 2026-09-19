@@ -158,7 +158,7 @@ describe('findBusinessClaimViolations', () => {
       'Ce défaut pourrait réduire les réservations.',
       'Ce défaut pourrait réduire les ventes.',
       'Ce défaut pourrait réduire la conversion.',
-      "Ce défaut pourrait réduire le chiffre d’affaires.",
+      'Ce défaut pourrait réduire le chiffre d’affaires.',
       'Ce défaut pourrait réduire la demande.',
       'Ce défaut pourrait entamer la confiance.',
       'Ce défaut pourrait dégrader la réputation.',

@@ -33,7 +33,9 @@ export class AuditArtifactsUnavailableError extends Error {
 
 export class NoAnalysisPairError extends Error {
   constructor() {
-    super('a selected French analysis is required before a report can be regenerated; run the writing regeneration in the Prepare report card');
+    super(
+      'a selected French analysis is required before a report can be regenerated; run the writing regeneration in the Prepare report card',
+    );
     this.name = 'NoAnalysisPairError';
   }
 }

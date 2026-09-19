@@ -109,7 +109,8 @@ export function AuditReportPanel(props: {
   // a refresh mid-run restores the stage; the local flags only cover the
   // moment between a click and the server's first answer.
   const production = reportProductionView(preparation?.production, language);
-  const productionBusy = production.busy || writingInFlight || isRegenerating || isGeneratingEnglish;
+  const productionBusy =
+    production.busy || writingInFlight || isRegenerating || isGeneratingEnglish;
   const wasInFlight = useRef(false);
   useEffect(() => {
     if (!productionBusy) return;
@@ -286,8 +287,11 @@ export function AuditReportPanel(props: {
           <div className="flex flex-col gap-1 text-[13px]">
             {selected !== undefined ? (
               <p>
-                {strings.prepareReport.selectedWritingLabel} · FR {selected.frAnalysisId.slice(0, 8)}
-                {selected.enAnalysisId !== undefined ? ` / EN ${selected.enAnalysisId.slice(0, 8)}` : ''}
+                {strings.prepareReport.selectedWritingLabel} · FR{' '}
+                {selected.frAnalysisId.slice(0, 8)}
+                {selected.enAnalysisId !== undefined
+                  ? ` / EN ${selected.enAnalysisId.slice(0, 8)}`
+                  : ''}
               </p>
             ) : null}
             {candidate !== undefined &&

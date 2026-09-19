@@ -117,7 +117,9 @@ const COPY = {
   },
 } as const;
 
-export function outreachPreviewStringsV3(language: OutreachPreviewLanguage): OutreachPreviewStringsV3 {
+export function outreachPreviewStringsV3(
+  language: OutreachPreviewLanguage,
+): OutreachPreviewStringsV3 {
   const base = outreachPreviewStringsV2(language);
   const copy = COPY[language];
   return {

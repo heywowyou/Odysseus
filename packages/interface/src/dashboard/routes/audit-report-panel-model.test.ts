@@ -240,10 +240,7 @@ describe('canApproveReportPair', () => {
     expect(canApproveReportPair([fresh('fr')], ['fr'])).toBe(true);
     expect(canApproveReportPair([fresh('fr')], [])).toBe(false);
     expect(
-      canApproveReportPair(
-        [{ language: 'fr', status: 'unverified', pdfAvailable: false }],
-        ['fr'],
-      ),
+      canApproveReportPair([{ language: 'fr', status: 'unverified', pdfAvailable: false }], ['fr']),
     ).toBe(false);
   });
 

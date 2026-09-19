@@ -106,7 +106,8 @@ function writingResult() {
           recommendedActions: ['Augmentez le contraste des éléments concernés.'],
         },
       ],
-      executiveSummary: 'Les constats concernent principalement la lisibilité des contenus mesurés.',
+      executiveSummary:
+        'Les constats concernent principalement la lisibilité des contenus mesurés.',
       notes: '',
     },
     model: 'gpt-5.6-luna',
@@ -169,13 +170,7 @@ describe('Plan 067 analysis-stage provider budget', () => {
       operationalWarnings: [{ code: 'environment-unapproved', referenceCount: 1 }],
     });
 
-    await runAnalysisStage(
-      auditDir,
-      manifest(),
-      [finding],
-      { language: 'fr' },
-      {} as never,
-    );
+    await runAnalysisStage(auditDir, manifest(), [finding], { language: 'fr' }, {} as never);
 
     expect(analyzeWriting).toHaveBeenCalledTimes(1);
     const input = vi.mocked(analyzeWriting).mock.calls[0]?.[0];

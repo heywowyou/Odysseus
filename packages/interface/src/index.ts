@@ -7,7 +7,10 @@ export type { RunAuditStageOptions, AuditStageResult } from './pipeline/audit-st
 export { runAnalysisStage } from './pipeline/analysis-stage.js';
 export type { RunAnalysisStageOptions, AnalysisStageResult } from './pipeline/analysis-stage.js';
 export { runReportStage, runAllReportsStage } from './pipeline/report-stage.js';
-export { generateEnglishVersion, EnglishGenerationUnavailableError } from './pipeline/generate-english-version.js';
+export {
+  generateEnglishVersion,
+  EnglishGenerationUnavailableError,
+} from './pipeline/generate-english-version.js';
 export type { GenerateEnglishVersionResult } from './pipeline/generate-english-version.js';
 export { backfillAuditRow } from './pipeline/backfill-audit-row.js';
 export { renormalizeAudit } from './pipeline/renormalize-audit.js';

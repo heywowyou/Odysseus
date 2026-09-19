@@ -430,7 +430,11 @@ export const fr: ReportStrings = {
     revenueImpactTemplate:
       "Sur la base de votre chiffre d'affaires déclaré ({turnover} €), et si cette association se vérifiait pour votre activité, l'ordre de grandeur serait de jusqu'à {impact} € par an. Il s'agit d'une estimation indicative fondée sur une seule étude, pas d'une prévision garantie.",
     quickWinBadgeLabel: 'Gain rapide',
-    actionLevelLabels: { priority: 'Priorité', important: 'Important', improvement: 'Amélioration' },
+    actionLevelLabels: {
+      priority: 'Priorité',
+      important: 'Important',
+      improvement: 'Amélioration',
+    },
     recommendedActionsLabel: 'Actions recommandées',
     reviewedRemediationLabel: 'Remédiation technique vérifiée',
     fixSnippetLabel: 'Correctif type',

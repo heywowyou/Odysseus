@@ -56,7 +56,12 @@ export interface WritingGuardRejection {
 }
 
 export type WritingCandidateState =
-  | { status: 'ready'; pair: AnalysisSelectionRef; createdAt: string; warnings?: readonly WritingSanitizationWarning[] }
+  | {
+      status: 'ready';
+      pair: AnalysisSelectionRef;
+      createdAt: string;
+      warnings?: readonly WritingSanitizationWarning[];
+    }
   | {
       status: 'failed';
       reason: string;
@@ -64,7 +69,12 @@ export type WritingCandidateState =
       partialPair?: Partial<AnalysisSelectionRef> | undefined;
       guardRejections?: readonly WritingGuardRejection[] | undefined;
     }
-  | { status: 'selected'; pair: AnalysisSelectionRef; approvedAt: string; warnings?: readonly WritingSanitizationWarning[] };
+  | {
+      status: 'selected';
+      pair: AnalysisSelectionRef;
+      approvedAt: string;
+      warnings?: readonly WritingSanitizationWarning[];
+    };
 
 export interface WritingSelection {
   selected?: AnalysisSelectionRef;

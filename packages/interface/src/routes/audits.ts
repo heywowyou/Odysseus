@@ -66,7 +66,6 @@ import {
 import { getPreviewPublicBaseUrl } from '../config.js';
 import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
 import { createMongoOutreachPreviewStoreV3 } from '../outreach/mongo-outreach-preview-store-v2.js';
-import { previewLinks } from '../outreach/publish-preview-v2.js';
 import {
   buildOutreachPreviewSummaryV3,
   publishPreviewV3,
@@ -154,10 +153,7 @@ async function verifyFreshPair(
   startedAt: Date,
   store: ArtifactStore | undefined,
   preReadPdfs?: { fr: Buffer | undefined; en: Buffer | undefined },
-): Promise<
-  | { reports: CurrentReportPair; pdfs: { fr: Buffer; en?: Buffer } }
-  | undefined
-> {
+): Promise<{ reports: CurrentReportPair; pdfs: { fr: Buffer; en?: Buffer } } | undefined> {
   // Plan 067: French is the canonical required report. English participates
   // only when the selected writing version explicitly carries an English
   // analysis; an older unrelated English report must never make French
@@ -187,8 +183,7 @@ async function verifyFreshPair(
   }
 
   const frPdf =
-    preReadPdfs?.fr ??
-    (await readVerifiedReport(auditDir, fr, hostname, startedAt, store));
+    preReadPdfs?.fr ?? (await readVerifiedReport(auditDir, fr, hostname, startedAt, store));
   if (!frPdf) return undefined;
 
   if (enAnalysis === undefined) {
@@ -690,11 +685,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       // on, against findings already fetched above (no extra I/O).
       analysisPair: selectedPair.kind,
       analysisLanguages:
-        selectedPair.kind === 'none'
-          ? []
-          : selectedPair.en === undefined
-            ? ['fr']
-            : ['fr', 'en'],
+        selectedPair.kind === 'none' ? [] : selectedPair.en === undefined ? ['fr'] : ['fr', 'en'],
       findingsStale: findingsAreStale(audit.findingsProvenance, findings),
       analysisIsStaticFallback,
       approval: approved ? approval : null,
@@ -1146,11 +1137,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       artifactStore,
     );
     if (!pair) {
-      sendError(
-        res,
-        409,
-        'a fresh, digest-verified French report is required before approval',
-      );
+      sendError(res, 409, 'a fresh, digest-verified French report is required before approval');
       return;
     }
     const approval = {

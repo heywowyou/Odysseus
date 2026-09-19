@@ -81,8 +81,12 @@ describe('page-derived finding text sent to the model', () => {
   it('tells every pass that reads finding text to treat it as data', () => {
     expect(buildStructureSystemPrompt(false)).toContain(SCANNER_EVIDENCE_NOTICE);
     expect(buildStructureSystemPrompt(true)).toContain(SCANNER_EVIDENCE_NOTICE);
-    expect(buildWritingSystemPrompt('en', false, emptyWritingPerformanceEvidence())).toContain(SCANNER_EVIDENCE_NOTICE);
-    expect(buildWritingSystemPrompt('fr', false, emptyWritingPerformanceEvidence())).toContain(SCANNER_EVIDENCE_NOTICE_FR);
+    expect(buildWritingSystemPrompt('en', false, emptyWritingPerformanceEvidence())).toContain(
+      SCANNER_EVIDENCE_NOTICE,
+    );
+    expect(buildWritingSystemPrompt('fr', false, emptyWritingPerformanceEvidence())).toContain(
+      SCANNER_EVIDENCE_NOTICE_FR,
+    );
     expect(buildReviewerSystemPrompt()).toContain(SCANNER_EVIDENCE_NOTICE);
     expect(buildCorrectionReviewSystemPrompt()).toContain(SCANNER_EVIDENCE_NOTICE);
   });

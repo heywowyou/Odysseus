@@ -19,10 +19,7 @@ function median(values: readonly number[]): number | null {
   return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!;
 }
 
-function labMedian(
-  manifest: AuditManifest,
-  metric: 'lcp' | 'cls' | 'tbt',
-): number | null {
+function labMedian(manifest: AuditManifest, metric: 'lcp' | 'cls' | 'tbt'): number | null {
   const values = manifest.pages
     .map((page) => page.coreWebVitals?.[metric]?.numericValue)
     .filter((value): value is number => value !== null && value !== undefined);
@@ -45,8 +42,7 @@ const METRIC_PRIORITY: Record<WritingPerformanceMetric, number> = {
 function concernOrder(a: WritingPerformanceObservation, b: WritingPerformanceObservation): number {
   const severity = { poor: 0, mid: 1, good: 2 } as const;
   return (
-    severity[a.rating] - severity[b.rating] ||
-    METRIC_PRIORITY[a.metric] - METRIC_PRIORITY[b.metric]
+    severity[a.rating] - severity[b.rating] || METRIC_PRIORITY[a.metric] - METRIC_PRIORITY[b.metric]
   );
 }
 
@@ -151,10 +147,7 @@ export function buildWritingPerformanceEvidence(
     .sort(concernOrder);
   const weakLab = observations
     .filter(
-      (entry) =>
-        entry.source === 'lab' &&
-        entry.rating !== 'good' &&
-        !suppressed.has(entry.metric),
+      (entry) => entry.source === 'lab' && entry.rating !== 'good' && !suppressed.has(entry.metric),
     )
     .sort(concernOrder);
 

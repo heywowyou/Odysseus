@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { OPENAI_MODEL, OPENAI_TEMPERATURE } from './constants.js';
 import type { ReviewerInput, ReviewerPassOutput } from './reviewer-schema.js';
-import { emptyWritingPerformanceEvidence, type WritingInput, type WritingPassOutput } from './writing-schema.js';
+import {
+  emptyWritingPerformanceEvidence,
+  type WritingInput,
+  type WritingPassOutput,
+} from './writing-schema.js';
 
 vi.mock('./client.js', () => ({
   callOpenAiForReview: vi.fn(),
@@ -42,7 +46,14 @@ const writingInput: WritingInput = {
   siteStats: { pagesScanned: 1, totalFindings: 1, critical: 0, serious: 1, moderate: 0, minor: 0 },
   performanceEvidence: emptyWritingPerformanceEvidence(),
   summaryEvidence: {
-    siteStats: { pagesScanned: 1, totalFindings: 1, critical: 0, serious: 1, moderate: 0, minor: 0 },
+    siteStats: {
+      pagesScanned: 1,
+      totalFindings: 1,
+      critical: 0,
+      serious: 1,
+      moderate: 0,
+      minor: 0,
+    },
     rankedThemes: [{ themeKey: 't1', category: 'accessibility', priorityRank: 1 }],
 
     categoriesPresent: ['accessibility'],

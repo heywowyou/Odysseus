@@ -135,10 +135,12 @@ export function buildWritingInput(
       categoriesPresent: [...new Set(filteredFindings.map((finding) => finding.category))].sort(),
       performance: performanceEvidence,
       obligationStatus,
-      limitations: [...new Set([
-        ...(performanceEvidence.fieldDataAvailable ? [] : ['real-user-performance-unavailable']),
-        ...summaryLimitations,
-      ])].sort(),
+      limitations: [
+        ...new Set([
+          ...(performanceEvidence.fieldDataAvailable ? [] : ['real-user-performance-unavailable']),
+          ...summaryLimitations,
+        ]),
+      ].sort(),
     },
     transactionalFlowStatus,
     providerPhrase: selectProviderPhrase(language, providerPhraseSeed),

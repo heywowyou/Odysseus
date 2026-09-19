@@ -23,10 +23,7 @@ import { interpolateSnippet, remediationFor, snippetFor } from '../remediation/i
 import { renderFixSnippet } from '../remediation/render-fix-snippet.js';
 import { accessibilityStatementGuidance } from '../accessibility-statement-guidance.js';
 import { selectRenderedThemes } from './themes.js';
-import {
-  actionLevelForRemainingSeverity,
-  type RenderedPriority,
-} from '../rendered-priorities.js';
+import { actionLevelForRemainingSeverity, type RenderedPriority } from '../rendered-priorities.js';
 
 /**
  * "Reste a traiter": the findings no ranked priority covers, grouped by area

@@ -438,7 +438,11 @@ describe.skipIf(!mongoAvailable)('writing selection', () => {
       connection!,
       'prep-legacy-bilingual',
     );
-    expect(resolution).toEqual({ kind: 'legacy-latest', fr: expect.objectContaining({ analysisId: fr.analysisId }), en: expect.objectContaining({ analysisId: en.analysisId }) });
+    expect(resolution).toEqual({
+      kind: 'legacy-latest',
+      fr: expect.objectContaining({ analysisId: fr.analysisId }),
+      en: expect.objectContaining({ analysisId: en.analysisId }),
+    });
   });
 
   it('skips analyses stored before the provenance stamp instead of failing', async () => {

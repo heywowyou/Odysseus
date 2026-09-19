@@ -6,7 +6,12 @@ import {
   buildWritingPerformanceEvidence,
 } from './writing-evidence.js';
 
-function measuredPage(url: string, lcp: number, cls: number, tbt = 100): AuditManifest['pages'][number] {
+function measuredPage(
+  url: string,
+  lcp: number,
+  cls: number,
+  tbt = 100,
+): AuditManifest['pages'][number] {
   return {
     url,
     depth: 0,

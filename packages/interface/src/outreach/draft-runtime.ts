@@ -171,7 +171,10 @@ async function resolvePreview(connection: Connection, prospectId: string, token:
         prospectId: id,
       });
       if (readiness.state !== 'ready') return { state: 'refused' as const };
-      const selection = await resolveSelectedAnalysisPairForAudit(connection, selected.audit.auditId);
+      const selection = await resolveSelectedAnalysisPairForAudit(
+        connection,
+        selected.audit.auditId,
+      );
       return {
         state: 'resolved' as const,
         audit: {
@@ -179,9 +182,7 @@ async function resolvePreview(connection: Connection, prospectId: string, token:
           ...(selected.audit.findingsProvenance?.findingsDigest === undefined
             ? {}
             : { findingsDigest: selected.audit.findingsProvenance.findingsDigest }),
-          ...(selection.kind === 'none'
-            ? {}
-            : { selectedFrAnalysisId: selection.fr.analysisId }),
+          ...(selection.kind === 'none' ? {} : { selectedFrAnalysisId: selection.fr.analysisId }),
         },
       };
     },

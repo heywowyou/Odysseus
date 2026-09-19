@@ -82,7 +82,7 @@ beforeEach(() => {
 
 describe('Plan 067 on-demand English generation', () => {
   it('uses one English analysis stage against the exact French structure and leaves the French analysis ID unchanged', async () => {
-    const result = await generateEnglishVersion({} as never, audit, undefined);
+    const result = await generateEnglishVersion({} as never, audit);
 
     expect(runAnalysisStage).toHaveBeenCalledTimes(1);
     expect(runAnalysisStage).toHaveBeenCalledWith(
@@ -112,7 +112,7 @@ describe('Plan 067 on-demand English generation', () => {
   it('leaves the French report selection untouched when English writing fails', async () => {
     vi.mocked(runAnalysisStage).mockRejectedValueOnce(new Error('English provider failed'));
 
-    await expect(generateEnglishVersion({} as never, audit, undefined)).rejects.toThrow(
+    await expect(generateEnglishVersion({} as never, audit)).rejects.toThrow(
       'English provider failed',
     );
 
@@ -125,9 +125,7 @@ describe('Plan 067 on-demand English generation', () => {
   it('leaves the selected writing untouched when English PDF rendering fails', async () => {
     vi.mocked(runReportStage).mockRejectedValueOnce(new Error('English PDF failed'));
 
-    await expect(generateEnglishVersion({} as never, audit, undefined)).rejects.toThrow(
-      'English PDF failed',
-    );
+    await expect(generateEnglishVersion({} as never, audit)).rejects.toThrow('English PDF failed');
 
     expect(runAnalysisStage).toHaveBeenCalledTimes(1);
     expect(runReportStage).toHaveBeenCalledTimes(1);
@@ -137,7 +135,7 @@ describe('Plan 067 on-demand English generation', () => {
   });
 
   it('attaches English only after the English PDF has rendered successfully', async () => {
-    await generateEnglishVersion({} as never, audit, undefined);
+    await generateEnglishVersion({} as never, audit);
 
     expect(vi.mocked(runReportStage).mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(attachEnglishAnalysisToSelection).mock.invocationCallOrder[0]!,

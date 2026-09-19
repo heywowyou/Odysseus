@@ -100,7 +100,8 @@ function buildWritingOutputFor(language: 'fr' | 'en', themeKeys: string[]): Writ
         }
       : {
           title: 'Contrast and readability',
-          businessImpact: 'Some visitors may have difficulty reading text with insufficient contrast.',
+          businessImpact:
+            'Some visitors may have difficulty reading text with insufficient contrast.',
           executiveSummary:
             'The findings mainly concern readability and use of the measured interface elements.',
           action: 'Increase color contrast on the affected buttons and body text.',

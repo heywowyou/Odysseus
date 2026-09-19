@@ -424,9 +424,7 @@ describe('the v3 outreach preview summary contract', () => {
     };
   }
 
-  function summaryV3(
-    overrides: Partial<OutreachPreviewSummaryV3> = {},
-  ): OutreachPreviewSummaryV3 {
+  function summaryV3(overrides: Partial<OutreachPreviewSummaryV3> = {}): OutreachPreviewSummaryV3 {
     return {
       contentVersion: 'v3',
       observedAt: new Date('2026-09-19T08:00:00.000Z'),
@@ -535,4 +533,3 @@ describe('the v3 outreach preview summary contract', () => {
     ).toBe(false);
   });
 });
-

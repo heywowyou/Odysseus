@@ -276,7 +276,7 @@ Plan 067 consumes deterministic limitations without extra calls, all approval
 semantics are isolated to dormant compatibility code, focused tests and the
 full repository validation are green, and the stored Foch acceptance succeeds.
 
-## Requirement-to-proof closure ledger
+## Executable closure contract: requirement-to-proof closure ledger
 
 | Requirement | Owner | Focused proof |
 | --- | --- | --- |

@@ -26,7 +26,10 @@ import type { Router } from '../router.js';
 import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { isReportProductionInFlight } from '../pipeline/report-production-lock.js';
-import { generateEnglishVersion, EnglishGenerationUnavailableError } from '../pipeline/generate-english-version.js';
+import {
+  generateEnglishVersion,
+  EnglishGenerationUnavailableError,
+} from '../pipeline/generate-english-version.js';
 import {
   regenerateWriting,
   RegenerationConflictError,
@@ -205,7 +208,7 @@ export function registerReportPreparationRoutes(router: Router, connection: Conn
       const audit = await readAudit(connection, auditId, res);
       if (!audit) return;
       try {
-        const result = await generateEnglishVersion(connection, audit, artifactStore);
+        const result = await generateEnglishVersion(connection, audit);
         sendJson(res, 201, result);
       } catch (error) {
         if (
@@ -219,5 +222,4 @@ export function registerReportPreparationRoutes(router: Router, connection: Conn
       }
     },
   );
-
 }

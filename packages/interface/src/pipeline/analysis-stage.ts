@@ -168,7 +168,10 @@ async function findStructureFileByGeneratedAt(
   } catch {
     return undefined;
   }
-  for (const name of entries.filter((entry) => entry.endsWith('-structure.json')).sort().reverse()) {
+  for (const name of entries
+    .filter((entry) => entry.endsWith('-structure.json'))
+    .sort()
+    .reverse()) {
     const candidate = path.join(analysesDir, name);
     try {
       const parsed = parseStructureDocument(JSON.parse(await fs.readFile(candidate, 'utf-8')));
@@ -201,14 +204,19 @@ async function loadOrGenerateStructure(
   findingsProvenance: ReturnType<typeof buildFindingsProvenance>,
 ): Promise<{ structureDoc: StructureDocument; reused: boolean; structurePath: string }> {
   if (requiredStructureGeneratedAt !== undefined && regenerate) {
-    throw new Error('odysseus analyze: cannot regenerate structure while requiring an exact stored structure');
+    throw new Error(
+      'odysseus analyze: cannot regenerate structure while requiring an exact stored structure',
+    );
   }
   if (!regenerate) {
-    const existingPath = requiredStructureGeneratedAt === undefined
-      ? await findLatestStructureFile(analysesDir)
-      : await findStructureFileByGeneratedAt(analysesDir, requiredStructureGeneratedAt);
+    const existingPath =
+      requiredStructureGeneratedAt === undefined
+        ? await findLatestStructureFile(analysesDir)
+        : await findStructureFileByGeneratedAt(analysesDir, requiredStructureGeneratedAt);
     if (requiredStructureGeneratedAt !== undefined && existingPath === undefined) {
-      throw new Error('odysseus analyze: the selected French structure is unavailable; English cannot be attached safely');
+      throw new Error(
+        'odysseus analyze: the selected French structure is unavailable; English cannot be attached safely',
+      );
     }
     if (existingPath) {
       const raw = JSON.parse(await fs.readFile(existingPath, 'utf-8'));

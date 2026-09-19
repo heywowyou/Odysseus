@@ -47,7 +47,7 @@ export function approvalMatchesReportPair(
   if (approval.en === undefined) return true;
   return Boolean(
     reports.en?.reportId &&
-      approval.en.reportId === reports.en.reportId &&
-      approval.en.pdfDigest === reports.en.pdfDigest,
+    approval.en.reportId === reports.en.reportId &&
+    approval.en.pdfDigest === reports.en.pdfDigest,
   );
 }

@@ -40,7 +40,8 @@ export const qualityReadiness = {
       },
       complete: {
         label: 'Données complètes',
-        description: 'Le diagnostic ne signale aucune limite client connue pour les données du scan.',
+        description:
+          'Le diagnostic ne signale aucune limite client connue pour les données du scan.',
       },
       superseded: {
         label: 'Données remplacées',
