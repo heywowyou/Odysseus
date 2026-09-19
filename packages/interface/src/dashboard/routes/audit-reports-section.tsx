@@ -62,7 +62,7 @@ export function FailureCard(props: {
   lifecycle: AuditLifecycle;
 }): JSX.Element {
   const { failure, lifecycle } = props;
-  const { strings } = useI18n();
+  const { language, strings } = useI18n();
   const isIdentity = failureReasonKind(failure) === 'identity-confirmation';
   const hasPairToRegenerate = lifecycle !== 'scanned';
   const awaitingFields = failure.needsInputFields ?? [];
