@@ -238,6 +238,7 @@ describe('canApproveReportPair', () => {
 
   it('allows a French-only selected report to be approved from one fresh verified French PDF', () => {
     expect(canApproveReportPair([fresh('fr')], ['fr'])).toBe(true);
+    expect(canApproveReportPair([fresh('fr')], [])).toBe(false);
     expect(
       canApproveReportPair(
         [{ language: 'fr', status: 'unverified', pdfAvailable: false }],
