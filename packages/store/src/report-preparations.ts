@@ -213,13 +213,20 @@ export async function attachEnglishAnalysisToSelection(
     );
   }
 
-  const existingWarnings = current.writingSelection?.candidate?.warnings ?? [];
+  const candidate = current.writingSelection?.candidate;
+  const existingWarnings =
+    candidate?.status === 'ready' || candidate?.status === 'selected'
+      ? (candidate.warnings ?? [])
+      : [];
   const combinedWarnings = [...existingWarnings, ...warnings];
   const setFields: Record<string, unknown> = {
     'reportPreparation.writingSelection.selected.enAnalysisId': enAnalysisId,
     'reportPreparation.updatedAt': new Date().toISOString(),
   };
-  if (current.writingSelection?.candidate !== undefined && combinedWarnings.length > 0) {
+  if (
+    (candidate?.status === 'ready' || candidate?.status === 'selected') &&
+    combinedWarnings.length > 0
+  ) {
     setFields['reportPreparation.writingSelection.candidate.warnings'] = combinedWarnings;
   }
 
