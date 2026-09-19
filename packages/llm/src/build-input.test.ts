@@ -12,6 +12,7 @@ import {
   MAX_PAGE_URLS_FOR_LLM,
 } from './build-input.js';
 import type { StructureThemeWithKey } from './structure-schema.js';
+import { emptyWritingPerformanceEvidence } from './writing-schema.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -170,7 +171,8 @@ describe('buildWritingInput', () => {
       siteContext,
       'fr',
       siteStats,
-      null,
+      emptyWritingPerformanceEvidence(),
+      {},
       'unknown',
     );
 
@@ -194,6 +196,7 @@ describe('buildWritingInput', () => {
           occurrences: first.occurrences,
         },
       ],
+      trustedRemediations: [],
     });
     expect(input.themes[1]!.findings).toHaveLength(structureThemes[1]!.findingIds.length);
   });
@@ -214,7 +217,16 @@ describe('buildWritingInput', () => {
 
     const siteStats = computeSiteStats(loadSmallSiteFindings(), loadSmallSiteManifest());
     expect(() =>
-      buildWritingInput(staleThemes, filtered, siteContext, 'fr', siteStats, null, 'unknown'),
+      buildWritingInput(
+        staleThemes,
+        filtered,
+        siteContext,
+        'fr',
+        siteStats,
+        emptyWritingPerformanceEvidence(),
+        {},
+        'unknown',
+      ),
     ).toThrow(/references unknown findingId/);
   });
 });
