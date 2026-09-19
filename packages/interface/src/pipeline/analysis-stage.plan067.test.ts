@@ -11,6 +11,9 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
 vi.mock('./obligation-stage.js', () => ({
   runObligationStage: vi.fn(async () => ({ status: 'undetermined', basis: [] })),
 }));
+vi.mock('./audit-evidence-diagnostics.js', () => ({
+  readAuditEvidenceDiagnostics: vi.fn(),
+}));
 vi.mock('@odysseus/llm', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   analyzeStructure: vi.fn(),
@@ -26,6 +29,7 @@ import {
   analyzeWriting,
 } from '@odysseus/llm';
 import { persistAnalysis } from '@odysseus/store';
+import { readAuditEvidenceDiagnostics } from './audit-evidence-diagnostics.js';
 import { runAnalysisStage } from './analysis-stage.js';
 
 let auditDir: string;
@@ -119,6 +123,11 @@ beforeEach(async () => {
   vi.mocked(analyzeStructure).mockResolvedValue(structureResult() as never);
   vi.mocked(analyzeWriting).mockResolvedValue(writingResult() as never);
   vi.mocked(persistAnalysis).mockResolvedValue(undefined as never);
+  vi.mocked(readAuditEvidenceDiagnostics).mockResolvedValue({
+    status: 'complete',
+    clientLimitations: [],
+    operationalWarnings: [],
+  });
 });
 
 afterEach(async () => {
@@ -138,6 +147,42 @@ describe('Plan 067 analysis-stage provider budget', () => {
     expect(result.structureReused).toBe(false);
     expect(analyzeStructure).toHaveBeenCalledTimes(1);
     expect(analyzeWriting).toHaveBeenCalledTimes(1);
+    expect(analyzeReview).not.toHaveBeenCalled();
+    expect(analyzeCorrectionReview).not.toHaveBeenCalled();
+  });
+
+  it('threads deterministic limitations into the same single writer call', async () => {
+    vi.mocked(readAuditEvidenceDiagnostics).mockResolvedValue({
+      status: 'limited',
+      clientLimitations: [
+        {
+          limitationId: 'limitation:site-level',
+          code: 'site-level-unknown',
+          summary: {
+            fr: 'Une vérification au niveau du site est indisponible.',
+            en: 'A site-level check is unavailable.',
+          },
+          reportDestination: 'section-11',
+          evidenceRefs: ['site:security-headers'],
+        },
+      ],
+      operationalWarnings: [{ code: 'environment-unapproved', referenceCount: 1 }],
+    });
+
+    await runAnalysisStage(
+      auditDir,
+      manifest(),
+      [finding],
+      { language: 'fr' },
+      {} as never,
+    );
+
+    expect(analyzeWriting).toHaveBeenCalledTimes(1);
+    const input = vi.mocked(analyzeWriting).mock.calls[0]?.[0];
+    expect(input?.summaryEvidence.limitations).toContain(
+      'Une vérification au niveau du site est indisponible.',
+    );
+    expect(JSON.stringify(input?.summaryEvidence)).not.toContain('environment-unapproved');
     expect(analyzeReview).not.toHaveBeenCalled();
     expect(analyzeCorrectionReview).not.toHaveBeenCalled();
   });

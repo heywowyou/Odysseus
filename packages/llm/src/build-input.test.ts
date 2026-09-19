@@ -264,6 +264,7 @@ describe('buildWritingInput', () => {
       'unknown',
       'audit-1',
       'in_scope',
+      ['Certaines vérifications importantes sont indisponibles.'],
     );
 
     expect(input.summaryEvidence.siteStats).toEqual(siteStats);
@@ -275,7 +276,9 @@ describe('buildWritingInput', () => {
     expect(input.summaryEvidence.categoriesPresent).toEqual(
       [...new Set(filtered.map((finding) => finding.category))].sort(),
     );
-    expect(input.summaryEvidence.limitations).toEqual([]);
+    expect(input.summaryEvidence.limitations).toEqual([
+      'Certaines vérifications importantes sont indisponibles.',
+    ]);
   });
 
   it('throws when a structure theme references a findingId no longer in the current findings', () => {

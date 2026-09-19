@@ -49,6 +49,11 @@ describe('Plan 068 evidence-quality model', () => {
     );
   });
 
+  it('contains no evidence approval or non-approval vocabulary in either locale', () => {
+    expect(JSON.stringify(fr.auditDetail.evidenceQuality).toLowerCase()).not.toContain('approb');
+    expect(JSON.stringify(en.auditDetail.evidenceQuality).toLowerCase()).not.toContain('approv');
+  });
+
   it('falls back to the stable warning code when a future operational warning appears', () => {
     const future = {
       ...LIMITED,

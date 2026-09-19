@@ -39,6 +39,9 @@ vi.mock('@odysseus/scanner', () => ({
   findWorkspaceRoot: vi.fn(() => '/tmp'),
 }));
 vi.mock('./obligation-stage.js', () => ({ runObligationStage: vi.fn() }));
+vi.mock('./audit-evidence-diagnostics.js', () => ({
+  readAuditEvidenceDiagnostics: vi.fn(),
+}));
 /** Partial mock: buildFindingsProvenance stays a pass-through to the real
  *  implementation but its call count becomes observable, pinning that a
  *  supplied provenance is used as-is instead of recomputed. */
@@ -61,6 +64,7 @@ import {
   type FindingsProvenance,
 } from '@odysseus/core';
 import { runObligationStage } from './obligation-stage.js';
+import { readAuditEvidenceDiagnostics } from './audit-evidence-diagnostics.js';
 import { runAllReportsStage, runReportStage } from './report-stage.js';
 
 const fakeConnection = {} as never;
@@ -149,6 +153,11 @@ beforeEach(async () => {
     pageCount: 44,
   });
   vi.mocked(persistReport).mockResolvedValue(undefined);
+  vi.mocked(readAuditEvidenceDiagnostics).mockResolvedValue({
+    status: 'complete',
+    clientLimitations: [],
+    operationalWarnings: [],
+  });
 });
 
 afterEach(async () => {
@@ -217,6 +226,30 @@ describe('runReportStage', () => {
       // Issue #62: names the machine whose artifacts root holds the file.
       renderedOnHost: os.hostname(),
     });
+  });
+
+  it('passes client limitations to the deterministic methodology without an evidence approval gate', async () => {
+    const limitation = {
+      limitationId: 'limitation:site-level',
+      code: 'site-level-unknown',
+      summary: {
+        fr: 'Une vérification au niveau du site est indisponible.',
+        en: 'A site-level check is unavailable.',
+      },
+      reportDestination: 'section-11',
+      evidenceRefs: ['site:security-headers'],
+    };
+    vi.mocked(readAuditEvidenceDiagnostics).mockResolvedValue({
+      status: 'limited',
+      clientLimitations: [limitation],
+      operationalWarnings: [{ code: 'environment-unapproved', referenceCount: 1 }],
+    });
+
+    await runReportStage(auditDir, fakeManifest(), [], fakeAnalysis(), fakeConnection);
+
+    expect(generateReportPdf).toHaveBeenCalledWith(
+      expect.objectContaining({ qualityLimitations: [limitation] }),
+    );
   });
 
   it('recomputes the report legal assessment from a saved transactional-flow override', async () => {

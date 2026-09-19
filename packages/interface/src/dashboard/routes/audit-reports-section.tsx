@@ -187,12 +187,12 @@ const FRESHNESS_TONES: Record<ReportFreshness, BadgeTone> = {
 
 export function ReportsCard(props: {
   detail: AuditDetailResponse;
-  /** Refetches the audit detail after an explicit approval (the lifecycle
-   *  badge and the quality bundle both depend on it). */
+  /** Refetches the audit detail after explicit report approval so the
+   *  lifecycle badge and selected report state update. */
   onApproved: () => void;
 }): JSX.Element {
   const { detail, onApproved } = props;
-  const { language, strings } = useI18n();
+  const { strings } = useI18n();
   const [isLoadingReport, setIsLoadingReport] = useState(false);
   const hasReports = detail.reportLanguages.length > 0 && detail.reports.length > 0;
   const reportBase = `/api/audits/${encodeURIComponent(detail.auditId)}/report`;
