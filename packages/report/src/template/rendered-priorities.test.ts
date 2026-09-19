@@ -7,7 +7,8 @@ import {
   loadSmallSiteManifest,
 } from '../test-fixtures.js';
 import {
-  actionLevelForDisplayRank,
+  actionLevelForRemainingSeverity,
+  actionLevelForRenderedPriority,
   buildRenderedPriorities,
   summarizePriorityOwnership,
 } from './rendered-priorities.js';
@@ -50,15 +51,20 @@ function buildTheme(findingIds: string[]): StoredTheme {
 }
 
 describe('buildRenderedPriorities', () => {
-  it('maps the six displayed ranks to deterministic action levels without changing ranking', () => {
-    expect([1, 2, 3, 4, 5, 6].map(actionLevelForDisplayRank)).toEqual([
+  it('classifies all main priorities as priority and splits only remaining work by severity', () => {
+    expect([1, 2, 3, 4, 5, 6].map(() => actionLevelForRenderedPriority())).toEqual([
       'priority',
       'priority',
-      'important',
-      'important',
-      'improvement',
-      'improvement',
+      'priority',
+      'priority',
+      'priority',
+      'priority',
     ]);
+    expect(
+      ['critical', 'serious', 'moderate', 'minor'].map((severity) =>
+        actionLevelForRemainingSeverity(severity as Finding['severity']),
+      ),
+    ).toEqual(['important', 'important', 'improvement', 'improvement']);
   });
 
   it('assigns contiguous display ranks while preserving model ranks', async () => {
