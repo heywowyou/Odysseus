@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { emptyWritingPerformanceEvidence } from './writing-schema.js';
 import { WRITING_OPENAI_TEMPERATURE } from './constants.js';
 
 const completeMock = vi.fn();
@@ -34,9 +35,15 @@ const structureInput = {
 const writingInput = {
   language: 'fr' as const,
   siteContext: structureInput.siteContext,
-  themes: [{ themeKey: 'theme-1', category: 'accessibility' as const, findings: [] }],
+  themes: [{ themeKey: 'theme-1', category: 'accessibility' as const, findings: [], trustedRemediations: [] }],
   siteStats: { pagesScanned: 1, totalFindings: 0, critical: 0, serious: 0, moderate: 0, minor: 0 },
-  dominantPerformanceMetric: null,
+  performanceEvidence: emptyWritingPerformanceEvidence(),
+  summaryEvidence: {
+    siteStats: { pagesScanned: 1, totalFindings: 0, critical: 0, serious: 0, moderate: 0, minor: 0 },
+    categoriesPresent: ['accessibility'],
+    performance: emptyWritingPerformanceEvidence(),
+    limitations: ['real-user-performance-unavailable'],
+  },
 };
 
 const validStructureOutput = {
@@ -95,6 +102,7 @@ const validReviewOutput = {
         { verdict: 'supported', reason: 'The action addresses the supplied finding.' },
         { verdict: 'supported', reason: 'The action addresses the supplied finding.' },
       ],
+      trustedRemediations: [],
     },
   ],
   executiveSummary: { verdict: 'supported', reason: 'It summarizes the supplied finding.' },
