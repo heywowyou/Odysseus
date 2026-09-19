@@ -58,8 +58,12 @@ const baseInput: WritingInput = {
       moderate: 0,
       minor: 0,
     },
+    rankedThemes: [{ themeKey: 't1', category: 'accessibility', priorityRank: 1 }],
+
     categoriesPresent: ['accessibility'],
     performance: emptyWritingPerformanceEvidence(),
+
+    obligationStatus: 'unknown',
     limitations: ['real-user-performance-unavailable'],
   },
   transactionalFlowStatus: 'unknown',
