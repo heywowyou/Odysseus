@@ -153,6 +153,55 @@ describe('findBusinessClaimViolations', () => {
     expect(findBusinessClaimViolations(output, 'fr')).toHaveLength(1);
   });
 
+  it('rejects hedged French outcome claims for every commercial class named by Plan 067', () => {
+    for (const claim of [
+      'Ce défaut pourrait réduire les réservations.',
+      'Ce défaut pourrait réduire les ventes.',
+      'Ce défaut pourrait réduire la conversion.',
+      "Ce défaut pourrait réduire le chiffre d’affaires.",
+      'Ce défaut pourrait réduire la demande.',
+      'Ce défaut pourrait entamer la confiance.',
+      'Ce défaut pourrait dégrader la réputation.',
+    ]) {
+      expect(
+        findBusinessClaimViolations(buildOutput({ executiveSummary: claim }), 'fr'),
+        claim,
+      ).toHaveLength(1);
+    }
+  });
+
+  it('rejects hedged English outcome claims for every commercial class named by Plan 067', () => {
+    for (const claim of [
+      'This defect could reduce bookings.',
+      'This defect could reduce sales.',
+      'This defect could reduce conversion.',
+      'This defect could reduce revenue.',
+      'This defect could reduce demand.',
+      'This defect could erode trust.',
+      'This defect could damage reputation.',
+    ]) {
+      expect(
+        findBusinessClaimViolations(buildOutput({ executiveSummary: claim }), 'en'),
+        claim,
+      ).toHaveLength(1);
+    }
+  });
+
+  it('rejects relative commercial importance stated in either word order', () => {
+    expect(
+      findBusinessClaimViolations(
+        buildOutput({ executiveSummary: 'Cette page est la plus importante commercialement.' }),
+        'fr',
+      ),
+    ).toHaveLength(1);
+    expect(
+      findBusinessClaimViolations(
+        buildOutput({ executiveSummary: 'This is the most commercially important page.' }),
+        'en',
+      ),
+    ).toHaveLength(1);
+  });
+
   it('rejects unsupported abandonment without needing a revenue or booking noun', () => {
     const output = buildOutput({
       themes: [
