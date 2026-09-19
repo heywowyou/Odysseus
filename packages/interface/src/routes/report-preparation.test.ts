@@ -56,12 +56,10 @@ vi.mock('../pipeline/regenerate-reports.js', async (importOriginal) => ({
   regenerateReportsForAudit: vi.fn(),
 }));
 
-// Regeneration runs the fr and en stages back to back; the real inter-pass
-// pause would add a 20s sleep to this suite (issue #30).
-vi.mock('@odysseus/llm', async (importOriginal) => ({
-  ...(await importOriginal<Record<string, unknown>>()),
-  pauseBetweenLanguagePasses: vi.fn(),
-}));
+vi.mock('../pipeline/generate-english-version.js', () => {
+  class EnglishGenerationUnavailableError extends Error {}
+  return { generateEnglishVersion: vi.fn(), EnglishGenerationUnavailableError };
+});
 
 import {
   approveWritingCandidate,
@@ -82,7 +80,6 @@ import {
   releaseReportProduction,
   tryAcquireReportProduction,
 } from '../pipeline/report-production-lock.js';
-import { pauseBetweenLanguagePasses } from '@odysseus/llm';
 import { Router } from '../router.js';
 import { registerReportPreparationRoutes } from './report-preparation.js';
 
@@ -275,10 +272,8 @@ describe('PATCH /api/audits/:auditId/report-preparation', () => {
   });
 });
 
-// Issue #410: a run after a half-failed pair reuses the language whose
-// writing already succeeded and pays only for the missing one, so the
-// operator needs an explicit way to write both again - a reused analysis must
-// never be silently stale. Same role `regenerateStructure` plays one level up.
+// Plan 067: ordinary regeneration writes/reuses French only. `fresh=true`
+// forces a fresh French writing pass; English has its own explicit action.
 describe('POST regenerate-writing and the reuse of a succeeded language', () => {
   const stubStage = (): void => {
     vi.mocked(runAnalysisStage).mockImplementation(
@@ -301,6 +296,7 @@ describe('POST regenerate-writing and the reuse of a succeeded language', () => 
           unreferencedFindingCount: 0,
           usedFallbackContext: true,
           advisoryPasses: [],
+          sanitizationWarnings: [],
         }) as never,
     );
   };
@@ -320,7 +316,7 @@ describe('POST regenerate-writing and the reuse of a succeeded language', () => 
     }
   });
 
-  it('writes both languages again when the operator asks for a fresh run', async () => {
+  it('writes French fresh without invoking English when the operator asks for a fresh run', async () => {
     await writeEvidence();
     stubStage();
     const router = new Router();
@@ -335,7 +331,7 @@ describe('POST regenerate-writing and the reuse of a succeeded language', () => 
     );
 
     const languages = vi.mocked(runAnalysisStage).mock.calls.map((call) => call[3].language);
-    expect(languages).toEqual(['fr', 'en']);
+    expect(languages).toEqual(['fr']);
     for (const call of vi.mocked(runAnalysisStage).mock.calls) {
       expect(call[3].regenerateWriting).toBe(true);
     }
@@ -384,6 +380,7 @@ describe('POST /api/audits/:auditId/report-preparation/regenerate-writing', () =
           unreferencedFindingCount: 0,
           usedFallbackContext: true,
           advisoryPasses: [],
+          sanitizationWarnings: [],
         }) as never,
     );
 
@@ -398,13 +395,10 @@ describe('POST /api/audits/:auditId/report-preparation/regenerate-writing', () =
     expect(JSON.parse(res.body!).candidate.status).toBe('selected');
   });
 
-  it('regenerates both languages, approves the pair, and renders the reports', async () => {
+  it('regenerates French only, approves it, and renders the canonical report', async () => {
     await writeEvidence();
     storedPreparation = emptyReportPreparation();
     const callOrder: string[] = [];
-    vi.mocked(pauseBetweenLanguagePasses).mockImplementation(async () => {
-      callOrder.push('pause');
-    });
     vi.mocked(runAnalysisStage).mockImplementation(async (_dir, _manifest, _findings, options) => {
       const language = options.language;
       callOrder.push(`analyze-${language}`);
@@ -424,9 +418,8 @@ describe('POST /api/audits/:auditId/report-preparation/regenerate-writing', () =
         structureReused: true,
         unreferencedFindingCount: 0,
         usedFallbackContext: true,
-        // Issue #145: regenerateWriting settles this field before recording
-        // the candidate, so the mocked stage result has to carry it.
         advisoryPasses: [],
+          sanitizationWarnings: [],
       } as never;
     });
 
@@ -438,14 +431,13 @@ describe('POST /api/audits/:auditId/report-preparation/regenerate-writing', () =
       res,
     );
     expect(res.statusCode).toBe(201);
-    expect(runAnalysisStage).toHaveBeenCalledTimes(2);
-    expect(callOrder).toEqual(['analyze-fr', 'pause', 'analyze-en']);
+    expect(runAnalysisStage).toHaveBeenCalledTimes(1);
+    expect(callOrder).toEqual(['analyze-fr']);
     const body = JSON.parse(res.body!);
     expect(body.candidate.status).toBe('selected');
     expect(body.candidate.approvedAt).toBe('2026-09-01T12:00:00.000Z');
     expect(body.candidate.pair).toEqual({
       frAnalysisId: 'analysis-fr',
-      enAnalysisId: 'analysis-en',
       findingsProvenance: {
         findingsSchemaVersion: 1,
         normalizationFingerprint: 'fp',
@@ -463,7 +455,6 @@ describe('POST /api/audits/:auditId/report-preparation/regenerate-writing', () =
     const frGate = new Promise<void>((resolve) => {
       releaseFr = resolve;
     });
-    vi.mocked(pauseBetweenLanguagePasses).mockResolvedValue(undefined);
     vi.mocked(runAnalysisStage).mockImplementation(async (_dir, _manifest, _findings, options) => {
       // The French pass waits on the gate so the first run stays in flight
       // until the test releases it; a real second submit would arrive in
@@ -488,6 +479,7 @@ describe('POST /api/audits/:auditId/report-preparation/regenerate-writing', () =
         unreferencedFindingCount: 0,
         usedFallbackContext: true,
         advisoryPasses: [],
+          sanitizationWarnings: [],
       } as never;
     });
 
@@ -543,6 +535,7 @@ describe('POST /api/audits/:auditId/report-preparation/regenerate-writing', () =
           unreferencedFindingCount: 0,
           usedFallbackContext: true,
           advisoryPasses: [],
+          sanitizationWarnings: [],
         }) as never,
     );
     const router = new Router();
