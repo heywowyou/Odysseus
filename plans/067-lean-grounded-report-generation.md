@@ -15,7 +15,7 @@
 - **Depends on:** none; Plans 058-066 remain archived/frozen.
 - **Category:** report quality / product simplification
 - **Planned at:** `6fc6c03f3a1cedcddb29263bfb46e329ea45f9a5`, 2026-09-19
-- **Execution status:** TODO
+- **Execution status:** IN PROGRESS (2026-09-19) — implementation and focused proof fixtures landed on `main`; repository-wide command execution is blocked because GitHub Actions fails before any step on both the pre-plan baseline and current `main`, and the saved Villas Foch runtime artifact is not accessible from this session.
 
 ## Objective
 
@@ -595,6 +595,60 @@ that actually closes it.
 
 ### Closure evidence
 
-Not yet produced. When implementation is complete, replace this line with the commit(s),
-focused test results, provider-call count proof, and the dated Villas Foch acceptance
-record. Do not mark this plan DONE while any requirement-to-proof row is unproven.
+**Implementation state, 2026-09-19.** The Plan 067 implementation is on `main` from
+the French-first selection/orchestration work beginning at `673ca409` through the
+current product-contract amendments at `42e7bae4`. The mechanical requirements have
+focused proof fixtures committed, but this session cannot claim them green because the
+repository validation runner never starts a workflow step. The plan therefore remains
+`IN PROGRESS`, not `IMPLEMENTED` or `DONE`.
+
+| Requirement | Committed implementation / focused proof | Session result |
+| --- | --- | --- |
+| French-only default | `run-full-audit-job.ts`, `regenerate-writing.ts`; `run-full-audit-job.test.ts` (`e118a436`) plus report-preparation/make-report-ready French-only fixtures | proof committed; not executed in this session |
+| 2/1 call budget | `analysis-stage.plan067.test.ts` (`15919cdf`): fresh = structure + writer, reuse = writer only | proof committed; exact mocked call assertions present |
+| no advisory calls | production call edges removed from `analysis-stage.ts`; same provider-budget test asserts reviewer/correction-review zero calls | proof committed; static call-graph sweep found reviewer calls only in offline tooling/tests |
+| on-demand English | `generate-english-version.ts`, route + dashboard action; `generate-english-version.test.ts` (`1acb5e90`, `b1fe9db9`) | proof committed; provider and render failure both leave selected French untouched; attach occurs only after EN PDF succeeds |
+| optional EN selection | French-required `AnalysisSelectionRef`; `selection.test.ts` (`ecab1784`), `report-preparations.test.ts` (`c8a4ce25`), delivery/approval proof (`b18c29a2`) | proof committed; legacy bilingual reads remain supported |
+| grounded theme packets | `build-input.ts` + report `writing-evidence.ts`; `build-input.test.ts` (`ef6fd316`) and `writing-evidence.test.ts` (`62ca4732`) | proof committed; theme isolation and registry-only remediation asserted |
+| grounded summary | `WritingSummaryEvidence` now carries site stats, ranked themes, categories, reconciled performance, obligation status and limitations; `build-input.test.ts` (`d96720bd`) | proof committed; summary packet fields are deterministic inputs |
+| performance coherence | field/lab reconciliation in `writing-evidence.ts`; Villas-Foch-shaped regression in `writing-evidence.test.ts` (`62ca4732`) | proof committed; good field LCP + anomalous poor lab LCP suppresses LCP and weak field CLS becomes the concern |
+| 5-8 soft grouping | `structure-prompt.ts`; `structure-prompt.test.ts` (`a8c73660`) | proof committed; target is soft and defensive schema ceiling remains unchanged |
+| noun-phrase titles | style doc + writer prompt + `theme-title-guard.ts`; `plan067-writing-contract.test.ts` (`7eaded92`) | proof committed; <=80 chars, <=10 words, no terminal punctuation or obligation scaffolds |
+| no padding minima | writing Zod/output schema now 1-4 impact sentences and 1-4 actions; concise parse proof in `plan067-writing-contract.test.ts` (`808287e7`) | proof committed |
+| no unsupported commerce | broadened `business-claim-guard.ts`, no hedge escape; `business-claim-guard.test.ts` (`759dfb58`, `e14271ba`) | proof committed for bookings/conversion/trust/abandonment/demand and hedged forms |
+| local sanitation | `sanitize-writing-output.ts` plus persisted dashboard warnings; `plan067-writing-contract.test.ts` (`808287e7`, `fe50f4d1`) | proof committed; business/legal/count/performance defects are removed at sentence/action scope with deterministic fallback when a required field would empty |
+| deterministic priority backbone | existing `structure-ranking.ts` retained; existing ranking regression suite including Villas-Foch-shaped severity/reach fixture unchanged | implementation deliberately preserved |
+| action levels | main selected priorities => `priority`; remaining critical/serious => `important`; remaining moderate/minor => `improvement`; `rendered-priorities.test.ts` (`6d2d4f01`) and `remaining-work.test.ts` (`b9175166`) | proof committed; report design contract updated to the same mapping |
+| appendix preserved | no LLM dependency added to appendix; exhaustive fixture proof in `findings-appendix.test.ts` (`8196e130`) | proof committed |
+| design preserved | existing report sections/tokens retained; only existing tag treatment used for action levels | code/design-doc proof committed; subjective Foch render read still pending |
+| font/file integrity | existing report/PDF file and embedded-font gates were not weakened | broad/e2e execution pending because validation runner never starts |
+
+**Provider-call before/after characterization.** Before Plan 067, the normal fresh
+bilingual model path was structure + French writer + two French advisory calls + English
+writer + two English advisory calls: **7 provider calls** on the successful fresh path
+(**6** when structure was reused). Plan 067's successful normal model path is **2**
+(structure + French writer), or **1** with compatible structure reuse. Explicit English
+adds **1** English writer call against the exact selected French structure.
+
+**Validation blocker recorded, not waived.** The required commands
+`pnpm run plans:check`, `pnpm run typecheck`, `pnpm run test`, `pnpm run check`
+and the report/PDF e2e gates could not be executed from this session. The connected
+GitHub Actions workflow is configured for pushes to `main`, but run
+`35411664352` on `42e7bae4` terminated the test, Semgrep and Trivy jobs with
+`steps: []` before any workflow step ran. This is the same pre-step failure shape as
+baseline run `35406908849` on pre-implementation commit `741d9849`. The local
+container also cannot resolve `github.com`, so it cannot clone the checkout as a
+substitute. These are execution-environment failures, not green or red repository test
+results.
+
+**Villas Foch acceptance blocker recorded, not waived.** The named saved corpus is
+`artifacts/www.villasfoch.fr/2026-09-03T20-44-46Z/`; repository docs confirm it
+exists on runtime/bucket storage, but the artifact itself is gitignored/not committed and
+this session has no VPS/object-store connector. No rescan was attempted. The deterministic
+Foch LCP/CLS failure class is covered by the committed regression fixture, but the saved
+audit regeneration, 61-finding appendix count, PDF/font gates and subjective final read
+remain pending until that existing artifact is reachable.
+
+Do not move this plan to `IMPLEMENTED` until the repository commands above actually run
+green. Once they do, the saved-data Villas Foch regeneration/manual read is the remaining
+acceptance step; no new website scan is required.
