@@ -336,6 +336,5 @@ describe('runFullAuditJob', () => {
       expect(runAllReportsStage).not.toHaveBeenCalled();
     });
 
-;
   });
 });
