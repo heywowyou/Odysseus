@@ -100,8 +100,35 @@ export function isEnglishAttachableToFrench<A extends AnalysisRecordLike>(
 export function pickLegacyLatestPair<A extends AnalysisRecordLike>(
   analyses: readonly A[],
 ): { fr: A; en: A } | null {
-  const selection = pickLegacyLatestSelection(analyses);
-  return selection?.en ? { fr: selection.fr, en: selection.en } : null;
+  const groups = new Map<string, { fr?: A; en?: A; latest: number }>();
+  for (const analysis of analyses) {
+    if (!hasCompleteProvenance(analysis)) continue;
+    const key = provenanceKey(analysis.findingsProvenance);
+    const group = groups.get(key) ?? { latest: 0 };
+    const timestamp = timestampOf(analysis);
+    group.latest = Math.max(group.latest, timestamp);
+    if (analysis.language === 'fr') {
+      if (!group.fr || timestamp > timestampOf(group.fr)) group.fr = analysis;
+    } else if (!group.en || timestamp > timestampOf(group.en)) {
+      group.en = analysis;
+    }
+    groups.set(key, group);
+  }
+
+  let best: { fr: A; en: A; completedAt: number; key: string } | null = null;
+  for (const [key, group] of groups) {
+    const { fr, en } = group;
+    if (!fr || !en || !isCompleteCompatiblePair(fr, en)) continue;
+    const completedAt = Math.max(timestampOf(fr), timestampOf(en));
+    if (
+      !best ||
+      completedAt > best.completedAt ||
+      (completedAt === best.completedAt && key > best.key)
+    ) {
+      best = { fr, en, completedAt, key };
+    }
+  }
+  return best ? { fr: best.fr, en: best.en } : null;
 }
 
 /**
