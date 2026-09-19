@@ -1,5 +1,5 @@
 import type { ReferenceStat, ReportLanguage } from '@odysseus/core';
-import { escapeHtml, labelSeparator } from './html-utils.js';
+import { escapeCopy, escapeHtml, labelSeparator } from './html-utils.js';
 import { SEVERITY } from './design-tokens.js';
 
 /**
@@ -60,11 +60,11 @@ export function renderReferenceStatNote(
       ? ` <span class="tag" style="background:${SEVERITY.serious.bg};color:${SEVERITY.serious.color}">${escapeHtml(emergingBadgeText)}</span>`
       : '';
   const gapLine = measuredGapNote
-    ? `<p class="text-muted" style="font-size:12px;margin:0">${escapeHtml(measuredGapNote)}</p>`
+    ? `<p class="text-muted" style="font-size:12px;margin:0">${escapeCopy(measuredGapNote, language)}</p>`
     : '';
-  const citationLine = `<p class="text-muted" style="font-size:12px;margin:${gapLine ? '2px' : '0'} 0 0">${escapeHtml(labelText)}${labelSeparator(language)}${escapeHtml(stat.citation[language])}${badge}</p>`;
+  const citationLine = `<p class="text-muted" style="font-size:12px;margin:${gapLine ? '2px' : '0'} 0 0">${escapeHtml(labelText)}${labelSeparator(language)}${escapeCopy(stat.citation[language], language)}${badge}</p>`;
   const revenueLine = revenueImpactNote
-    ? `<p class="text-muted" style="font-size:12px;margin:2px 0 0">${escapeHtml(revenueImpactNote)}</p>`
+    ? `<p class="text-muted" style="font-size:12px;margin:2px 0 0">${escapeCopy(revenueImpactNote, language)}</p>`
     : '';
   return `${gapLine}${citationLine}${revenueLine}`;
 }

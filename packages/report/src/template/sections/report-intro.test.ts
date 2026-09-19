@@ -3,7 +3,7 @@ import type { Finding, PreparationPreviewLanguage } from '@odysseus/core';
 import { renderReportIntro } from './report-intro.js';
 import { getStrings } from '../strings/i18n.js';
 import { fr } from '../strings/fr.js';
-import { escapeHtml, fillTemplate } from '../html-utils.js';
+import { escapeCopy, escapeHtml, fillTemplate } from '../html-utils.js';
 import { resolveGenericDecisionQuestion } from '../generic-question.js';
 import { sectionTitle } from '../section-registry.js';
 import type { RenderedPriority } from '../rendered-priorities.js';
@@ -353,7 +353,7 @@ describe('plan 019: renderReportIntro consumes the preparation preview', () => {
       frPreview,
     );
     expect(html).toContain(
-      escapeHtml("L'accessibilité est le sujet le plus urgent de ce rapport."),
+      escapeCopy("L'accessibilité est le sujet le plus urgent de ce rapport.", 'fr'),
     );
   });
 

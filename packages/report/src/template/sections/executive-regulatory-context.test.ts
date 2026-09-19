@@ -3,7 +3,7 @@ import { ARTICLE_47_REGIME_ID, EAA_REGIME_ID, type ObligationAssessment } from '
 import { eaaSanctionFigureSentence } from '@odysseus/core';
 import { renderExecutiveSummary } from './executive-summary.js';
 import { getStrings } from '../strings/i18n.js';
-import { escapeHtml } from '../html-utils.js';
+import { escapeCopy, escapeHtml } from '../html-utils.js';
 import {
   loadSmallSiteAnalysis,
   loadSmallSiteFindings,
@@ -55,7 +55,7 @@ describe('the executive regulatory-context block (issue #57)', () => {
     expect(html).toContain('Cadre réglementaire');
     expect(html).toContain('plafond prévu par le texte');
     // Byte-identical splice from core, not a restated figure.
-    expect(html).toContain(escapeHtml(eaaSanctionFigureSentence('fr')));
+    expect(html).toContain(escapeCopy(eaaSanctionFigureSentence('fr'), 'fr'));
   });
 
   it('renders in English with no French leaking in', async () => {
@@ -65,7 +65,7 @@ describe('the executive regulatory-context block (issue #57)', () => {
     });
     expect(html).toContain('Regulatory point to verify');
     expect(html).toContain('Legal exposure');
-    expect(html).toContain(escapeHtml(eaaSanctionFigureSentence('en')));
+    expect(html).toContain(escapeCopy(eaaSanctionFigureSentence('en'), 'en'));
     expect(html).not.toContain('Point réglementaire à vérifier');
   });
 
@@ -105,7 +105,7 @@ describe('the executive regulatory-context block (issue #57)', () => {
       ],
     });
     expect(html).not.toContain('data-executive-regulatory-context');
-    expect(html).not.toContain(escapeHtml(eaaSanctionFigureSentence('fr')));
+    expect(html).not.toContain(escapeCopy(eaaSanctionFigureSentence('fr'), 'fr'));
   });
 
   it('renders nothing without an assessment', async () => {
@@ -124,6 +124,6 @@ describe('the executive regulatory-context block (issue #57)', () => {
       ],
     });
     expect(html).not.toContain('data-executive-regulatory-context');
-    expect(html).not.toContain(escapeHtml(eaaSanctionFigureSentence('fr')));
+    expect(html).not.toContain(escapeCopy(eaaSanctionFigureSentence('fr'), 'fr'));
   });
 });

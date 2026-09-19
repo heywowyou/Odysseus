@@ -135,5 +135,31 @@ export function findRenderLintViolations(rawHtml: string): RenderLintViolation[]
       violations.push({ label, context: html.slice(start, end) });
     }
   }
+  const frenchApostrophe = findFrenchStraightApostrophe(html);
+  if (frenchApostrophe !== undefined) violations.push(frenchApostrophe);
   return violations;
+}
+
+/** A French report set 52 straight apostrophes among 197 typographic ones
+ *  ("L'accessibilité" beside "l’obligation"): copy reached the page through
+ *  plain escapeHtml instead of escapeCopy. French prose uses ’ only; code,
+ *  selectors and URLs keep what the site wrote, so those are skipped. */
+const FRENCH_DOCUMENT = /<html\b[^>]*\blang="fr"/;
+const NON_PROSE_ELEMENTS: readonly RegExp[] = [
+  /<pre\b[\s\S]*?<\/pre>/giu,
+  /<code\b[\s\S]*?<\/code>/giu,
+  /<(\w+)\b[^>]*\bclass="[^"]*\bmono\b[^"]*"[^>]*>[^<]*<\/\1>/giu,
+];
+const STRAIGHT_APOSTROPHE_IN_TEXT = />[^<]*?\p{L}(?:'|&#39;)\p{L}/u;
+
+function findFrenchStraightApostrophe(html: string): RenderLintViolation | undefined {
+  if (!FRENCH_DOCUMENT.test(html)) return undefined;
+  const prose = NON_PROSE_ELEMENTS.reduce((acc, pattern) => acc.replace(pattern, ' '), html);
+  const match = STRAIGHT_APOSTROPHE_IN_TEXT.exec(prose);
+  if (match === null) return undefined;
+  const end = match.index + match[0].length;
+  return {
+    label: 'straight apostrophe in French prose (use ’)',
+    context: prose.slice(Math.max(end - 80, match.index), end + 40),
+  };
 }

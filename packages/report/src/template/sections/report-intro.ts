@@ -3,6 +3,7 @@ import type { Finding, PreparationPreviewLanguage } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import {
+  escapeCopy,
   escapeHtml,
   fillTemplate,
   formatNumber,
@@ -131,7 +132,7 @@ export function renderReportIntro(
       hookFamilyForCategory(topPriorityCategory) === preparation?.hook.family);
   const hookBlock =
     preparation && !preparation.hook.evidenceUnavailable && hookAgreesWithTopPriority
-      ? `<p style="font-size:14px;font-weight:500;margin:0 0 var(--space-4);max-width:var(--measure-prose)">${escapeHtml(preparation.hook.value)}</p>`
+      ? `<p style="font-size:14px;font-weight:500;margin:0 0 var(--space-4);max-width:var(--measure-prose)">${escapeCopy(preparation.hook.value, analysis.language)}</p>`
       : '';
 
   // Role labels from the canonical audience map.

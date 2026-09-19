@@ -19,6 +19,7 @@ import { VERBATIM_EVIDENCE_ATTRIBUTE } from '../render-lint.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import { formatMetricValue, METRIC_UNITS } from './core-web-vitals-table.js';
 import {
+  escapeCopy,
   escapeHtml,
   escapeProse,
   fillTemplate,
@@ -510,7 +511,7 @@ function renderTheme(
         t.impactCitationLabel,
         [gapNote, citationStat.citation[language], revenueImpactNote]
           .filter((line): line is string => line !== undefined)
-          .map((line) => `<p>${escapeHtml(line)}</p>`)
+          .map((line) => `<p>${escapeCopy(line, language)}</p>`)
           .join(''),
       )
     : '';
@@ -536,7 +537,7 @@ function renderTheme(
           item.ruleId,
           priority?.findings.find((finding) => finding.ruleId === item.ruleId)?.title,
         );
-        return `<span class="theme-rule">${escapeHtml(label)}</span>${labelSeparator(language)}${escapeHtml(item.text)} <span class="mono theme-rule-id">${escapeHtml(item.ruleId)}</span>${renderThemeFixSnippet(item.snippet, t)}`;
+        return `<span class="theme-rule">${escapeHtml(label)}</span>${labelSeparator(language)}${escapeCopy(item.text, language)} <span class="mono theme-rule-id">${escapeHtml(item.ruleId)}</span>${renderThemeFixSnippet(item.snippet, t)}`;
       }),
   };
   const ownershipSentence = priority

@@ -834,7 +834,7 @@ export const fr: ReportStrings = {
         id: 'parcours-transactionnel',
         term: 'Parcours transactionnel',
         definition:
-          "Fonctionnalité du site permettant de réserver, ajouter au panier ou payer directement en ligne - le critère qui déclenche l'obligation EAA.",
+          "Fonctionnalité du site permettant de réserver, ajouter au panier ou payer directement en ligne : l'un des critères examinés pour déterminer si l'EAA s'applique au site.",
       },
       {
         id: 'sans-objet',
@@ -846,7 +846,7 @@ export const fr: ReportStrings = {
         id: 'recherche-emergente',
         term: 'Recherche émergente',
         definition:
-          "Signale une statistique citée à titre indicatif, dont la méthodologie ou le corpus de preuves est encore jeune - à distinguer d'une statistique établie, citée sans cette réserve.",
+          "Signale une statistique citée à titre indicatif, dont la méthodologie ou le corpus de preuves est encore jeune, à distinguer d'une statistique établie, citée sans cette réserve.",
       },
       {
         id: 'signaux-a-verifier',
@@ -864,7 +864,7 @@ export const fr: ReportStrings = {
         id: 'rendu',
         term: 'Rendu',
         definition:
-          "Catégorie de constats liés à l'écart entre le contenu HTML brut d'une page et son contenu une fois le JavaScript exécuté - pertinent pour ce qu'un moteur de recherche ou un lecteur d'écran peut manquer.",
+          "Catégorie de constats liés à l'écart entre le contenu HTML brut d'une page et son contenu une fois le JavaScript exécuté, qui révèle ce qu'un moteur de recherche ou un lecteur d'écran peut manquer.",
       },
       {
         id: 'sirene',
@@ -876,13 +876,13 @@ export const fr: ReportStrings = {
         id: 'complexity',
         term: 'Complexité',
         definition:
-          "Estimation qualitative (Faible / Moyen / Élevé) de la complexité de correction d'un chantier prioritaire, dérivée de la famille de règles et de la concentration des occurrences.",
+          "Estimation qualitative (Faible / Moyenne / Élevée) de la complexité de correction d'un chantier prioritaire, dérivée de la famille de règles et de la concentration des occurrences.",
       },
       {
         id: 'impact-commercial',
         term: 'Impact commercial',
         definition:
-          "Estimation qualitative (Faible / Moyen / Élevé) de l'effet attendu d'un correctif sur l'expérience client, la conversion ou la visibilité - distincte de la sévérité technique du constat.",
+          "Estimation qualitative (Faible / Moyen / Élevé) de l'effet attendu d'un correctif sur l'expérience client, la conversion ou la visibilité, distincte de la sévérité technique du constat.",
       },
     ],
   },

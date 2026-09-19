@@ -730,7 +730,7 @@ export const en: ReportStrings = {
         id: 'parcours-transactionnel',
         term: 'Transactional flow',
         definition:
-          'A site feature allowing a booking, cart, or payment directly online - the criterion that triggers the EAA obligation.',
+          'A site feature allowing a booking, cart, or payment directly online: one of the criteria examined to determine whether the EAA applies to the site.',
       },
       {
         id: 'sans-objet',

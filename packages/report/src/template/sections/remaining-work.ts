@@ -8,6 +8,7 @@ import type {
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import {
+  escapeCopy,
   escapeHtml,
   fillTemplate,
   formatCappedFindingIdLinks,
@@ -160,7 +161,7 @@ function renderRuleBlock(
   const actionLine =
     remediation === undefined
       ? ''
-      : `<p class="remaining-action" style="font-size:13px;margin-top:4px;max-width:var(--measure-prose)">${escapeHtml(remediation)}</p>`;
+      : `<p class="remaining-action" style="font-size:13px;margin-top:4px;max-width:var(--measure-prose)">${escapeCopy(remediation, language)}</p>`;
 
   // Plan 041 Part A: same snippet computation as rendered-priorities.ts,
   // duplicated rather than shared because the two callers start from

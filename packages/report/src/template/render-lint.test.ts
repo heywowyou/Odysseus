@@ -235,3 +235,35 @@ describe('A6: appendix URL evidence is not scanned as prose', () => {
     expect(findRenderLintViolations(html)).not.toEqual([]);
   });
 });
+
+describe('straight apostrophes in French prose', () => {
+  const fr = (body: string) => `<html lang="fr"><body>${body}</body></html>`;
+
+  it('catches an escaped straight apostrophe in a French paragraph', () => {
+    const violations = findRenderLintViolations(fr('<p>L&#39;accessibilité ressort</p>'));
+    expect(violations.map((v) => v.label)).toEqual(['straight apostrophe in French prose (use ’)']);
+  });
+
+  it('catches one in text that follows a closing tag', () => {
+    const html = fr("<li><span>Texte alternatif</span> : ajoutez l'attribut</li>");
+    expect(findRenderLintViolations(html)).not.toEqual([]);
+  });
+
+  it('passes typographic apostrophes', () => {
+    expect(findRenderLintViolations(fr('<p>L’accessibilité de l’établissement</p>'))).toEqual([]);
+  });
+
+  it('passes code, preformatted snippets and monospace evidence', () => {
+    const html = fr(
+      '<pre><code>alt=&#39;Vue d&#39;ensemble&#39;</code></pre><span class="mono theme-rule-id">l&#39;id</span><code>aria-label=&#39;x&#39;</code>',
+    );
+    expect(findRenderLintViolations(html)).toEqual([]);
+  });
+
+  it('passes attribute values and English documents', () => {
+    expect(findRenderLintViolations(fr('<img alt="l&#39;hôtel" />'))).toEqual([]);
+    expect(
+      findRenderLintViolations('<html lang="en"><body><p>The site&#39;s pages</p></body></html>'),
+    ).toEqual([]);
+  });
+});

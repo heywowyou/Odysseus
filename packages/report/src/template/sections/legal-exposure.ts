@@ -14,6 +14,7 @@ import type {
 } from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
 import {
+  escapeCopy,
   escapeHtml,
   fillTemplate,
   formatDate,
@@ -337,8 +338,8 @@ function renderLcenBlock(
     <div class="card elev-sm" style="margin-top:var(--space-4)">
       <div class="card-kicker">${escapeHtml(l.lcenKicker)}</div>
       <div class="card-title">${escapeHtml(regime.name)}</div>
-      <p style="font-size:12.5px;margin-top:var(--space-2)">${escapeHtml(regime.thresholdDescription)}</p>
-      <p style="font-size:12.5px;margin-top:var(--space-2)">${escapeHtml(l.lcenObserved)}</p>
+      <p style="font-size:12.5px;margin-top:var(--space-2)">${escapeCopy(regime.thresholdDescription, language)}</p>
+      <p style="font-size:12.5px;margin-top:var(--space-2)">${escapeCopy(l.lcenObserved, language)}</p>
       <p style="font-size:11.5px;margin-top:var(--space-2)" class="text-muted">${escapeHtml(
         fillTemplate(l.lcenSourceTemplate, {
           citation: regime.legalCitation,
@@ -366,7 +367,7 @@ function renderGeneralEaaReference(
   return `
     <div class="card elev-sm" style="margin-top:var(--space-6)" data-general-eaa-reference>
       <div class="card-kicker">${escapeHtml(strings.legalExposure.generalEaaReferenceHeading)}</div>
-      <div class="card-body">${escapeHtml(eaaSanctionFigureSentence(language))}</div>
+      <div class="card-body">${escapeCopy(eaaSanctionFigureSentence(language), language)}</div>
     </div>
   `;
 }
@@ -408,12 +409,12 @@ export function renderLegalExposure(
       <div class="card elev-sm">
         <div class="card-kicker">${escapeHtml(l.eaaDeadlineLabel)}</div>
         <div class="card-title">${escapeHtml(l.eaaDeadlineValue)}</div>
-        <div class="card-body">${escapeHtml(eaaDeadlineNote)}</div>
+        <div class="card-body">${escapeCopy(eaaDeadlineNote, language)}</div>
       </div>
       <div class="card elev-sm">
         <div class="card-kicker">${escapeHtml(l.obligationStatusLabel)}</div>
         <div class="card-title">${escapeHtml(l.statusLabels[status])}</div>
-        <div class="card-body">${escapeHtml(l.statusShortDescriptions[status])}</div>
+        <div class="card-body">${escapeCopy(l.statusShortDescriptions[status], language)}</div>
         ${actionNote}
       </div>
     </div>

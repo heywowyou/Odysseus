@@ -3,6 +3,7 @@ import { EAA_REGIME_ID, eaaSanctionFigureSentence } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import {
+  escapeCopy,
   escapeHtml,
   escapeProse,
   fillTemplate,
@@ -244,8 +245,8 @@ function renderRegulatoryContextNote(
   return `
     <div class="card elev-sm" style="margin-top:var(--space-8);padding:var(--space-4);border-left:3px solid var(--color-accent);border-radius:0 var(--radius-lg) var(--radius-lg) 0" data-executive-regulatory-context>
       <div class="card-kicker" style="color:var(--color-accent-300);font-weight:600">${escapeHtml(e.regulatoryContextKicker)}</div>
-      <p style="font-size:12.5px;margin-top:var(--space-2)">${escapeHtml(e.regulatoryContextCriterion)}</p>
-      <p style="font-size:12.5px;margin-top:var(--space-2)">${escapeHtml(eaaSanctionFigureSentence(language))}</p>
+      <p style="font-size:12.5px;margin-top:var(--space-2)">${escapeCopy(e.regulatoryContextCriterion, language)}</p>
+      <p style="font-size:12.5px;margin-top:var(--space-2)">${escapeCopy(eaaSanctionFigureSentence(language), language)}</p>
       <p style="font-size:11.5px;margin-top:var(--space-2)" class="text-muted">${escapeHtml(e.regulatoryContextCounsel)}</p>
     </div>
   `;

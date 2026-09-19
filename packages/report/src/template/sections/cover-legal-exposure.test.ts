@@ -13,7 +13,7 @@ import {
 } from '@odysseus/core';
 import { renderMetadataSheet } from './metadata-sheet.js';
 import { renderLegalExposure } from './legal-exposure.js';
-import { escapeHtml } from '../html-utils.js';
+import { escapeCopy, escapeHtml } from '../html-utils.js';
 import { fr } from '../strings/fr.js';
 import { en } from '../strings/en.js';
 import {
@@ -151,7 +151,7 @@ describe('item 17: the EAA date reads as already in force, with a computed elaps
       fakeManifest(),
       [],
     );
-    expect(html).toContain('plus d&#39;un an');
+    expect(html).toContain('plus d’un an');
   });
 
   it('states the elapsed duration in months for a report generated shortly after the date', () => {
@@ -205,7 +205,7 @@ describe('RF-03: client-specific EAA sanctions are never rendered', () => {
       fakeManifest(),
       [],
     );
-    expect(html.split(escapeHtml(eaaSanctionFigureSentence('fr')))).toHaveLength(2);
+    expect(html.split(escapeCopy(eaaSanctionFigureSentence('fr'), 'fr'))).toHaveLength(2);
     expect(html).toContain('data-general-eaa-reference');
     expect(html).not.toContain('50 000');
   });
@@ -248,7 +248,7 @@ describe('RF-03: client-specific EAA sanctions are never rendered', () => {
       fakeManifest(),
       [],
     );
-    expect(html).not.toContain(escapeHtml(eaaSanctionFigureSentence('fr')));
+    expect(html).not.toContain(escapeCopy(eaaSanctionFigureSentence('fr'), 'fr'));
   });
 
   it('renders nothing for an undetermined status', () => {
@@ -261,7 +261,7 @@ describe('RF-03: client-specific EAA sanctions are never rendered', () => {
       fakeManifest(),
       [],
     );
-    expect(html).not.toContain(escapeHtml(eaaSanctionFigureSentence('fr')));
+    expect(html).not.toContain(escapeCopy(eaaSanctionFigureSentence('fr'), 'fr'));
   });
 
   it('renders nothing when article 47, not EAA, is the resolved regime', () => {
@@ -290,7 +290,7 @@ describe('RF-03: client-specific EAA sanctions are never rendered', () => {
       fakeManifest(),
       [],
     );
-    expect(html).not.toContain(escapeHtml(eaaSanctionFigureSentence('fr')));
+    expect(html).not.toContain(escapeCopy(eaaSanctionFigureSentence('fr'), 'fr'));
   });
 });
 
@@ -355,7 +355,7 @@ describe('RF-03: every assessment state is presented as observed inputs', () => 
           /Critères réunis|Criteria met|Hors champ|Out of scope|remplit les critères|meets the criteria|relève probablement|likely falls|does not fall|ne relève pas|Démarches Simplifiées/i,
         );
 
-        const sentence = escapeHtml(eaaSanctionFigureSentence(language));
+        const sentence = escapeCopy(eaaSanctionFigureSentence(language), language);
         const shouldRenderGeneralReference =
           assessment.status === 'in_scope' || assessment.status === 'likely_in_scope';
         expect(html.split(sentence)).toHaveLength(shouldRenderGeneralReference ? 2 : 1);

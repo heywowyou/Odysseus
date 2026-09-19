@@ -7,7 +7,7 @@ import {
 } from '@odysseus/core';
 import { partitionFindings } from '@odysseus/llm';
 import { renderHtml } from './render-html.js';
-import { escapeHtml } from './html-utils.js';
+import { escapeCopy, escapeHtml } from './html-utils.js';
 import { findRenderLintViolations } from './render-lint.js';
 import { selectRemainingFindings } from './sections/remaining-work.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
@@ -309,7 +309,7 @@ describe('plan 020 general EAA reference placement, as amended 2026-09-04 (issue
       };
 
       const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages: [] });
-      const sentence = escapeHtml(eaaSanctionFigureSentence(language));
+      const sentence = escapeCopy(eaaSanctionFigureSentence(language), language);
       const execStart = html.indexOf('id="section-01"');
       const legalStart = html.indexOf('id="section-02"');
       const legalEnd = html.indexOf('id="section-11"', legalStart);
@@ -347,6 +347,6 @@ describe('plan 020 general EAA reference placement, as amended 2026-09-04 (issue
     });
 
     expect(html).toContain('Obligation d&#39;identification de l&#39;éditeur');
-    expect(html).not.toContain(escapeHtml(eaaSanctionFigureSentence('fr')));
+    expect(html).not.toContain(escapeCopy(eaaSanctionFigureSentence('fr'), 'fr'));
   });
 });
