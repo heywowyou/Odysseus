@@ -3,6 +3,8 @@ import { OPENAI_MODEL, WRITING_OPENAI_TEMPERATURE, MAX_RETRIES } from './constan
 import { selectProviderPhrase } from './provider-phrase-guard.js';
 import { buildWritingRetryFeedback } from './writing-prompt.js';
 import { normalizeWritingOutputTypography } from './typography.js';
+import { sanitizeWritingOutput } from './sanitize-writing-output.js';
+import type { WritingSanitizationWarning } from '@odysseus/core';
 import {
   buildWritingGuards,
   runWritingGuards,
@@ -35,6 +37,8 @@ export interface AnalyzeWritingResult {
    *  Non-empty means a wording defect reached the report and the operator's
    *  review is the control that catches it. */
   shippedStyleViolations: readonly WritingAttemptRejection[];
+  /** Plan 067: semantic defects removed locally from the successful response. */
+  sanitizationWarnings: readonly WritingSanitizationWarning[];
 }
 
 /** Thrown when every attempt was rejected. Carries each attempt's reason, not
@@ -121,7 +125,8 @@ export async function analyzeWriting(
       continue;
     }
 
-    const failures = runWritingGuards(guards, result.output);
+    const sanitized = sanitizeWritingOutput(input, result.output);
+    const failures = runWritingGuards(guards, sanitized.output);
     if (failures.length > 0) {
       const guardNames = failures.map((failure) => failure.guard);
       const reason = describeFailures(failures);
@@ -143,7 +148,7 @@ export async function analyzeWriting(
           durationMs: Date.now() - startedAtMs,
           guards: guardNames,
         });
-        return succeed(input, result, attempt, startedAtMs, rejections, [
+        return succeed(input, result, sanitized.output, sanitized.warnings, attempt, startedAtMs, rejections, [
           { attempt, guards: guardNames, reason },
         ]);
       }
@@ -152,7 +157,7 @@ export async function analyzeWriting(
       continue;
     }
 
-    return succeed(input, result, attempt, startedAtMs, rejections, []);
+    return succeed(input, result, sanitized.output, sanitized.warnings, attempt, startedAtMs, rejections, []);
   }
 
   captureLlmCallTelemetry({
@@ -188,6 +193,8 @@ function describeRejections(rejections: readonly WritingAttemptRejection[]): str
 function succeed(
   input: WritingInput,
   result: Awaited<ReturnType<typeof callOpenAiForWriting>>,
+  sanitizedOutput: WritingPassOutput,
+  sanitizationWarnings: readonly WritingSanitizationWarning[],
   attempt: number,
   startedAtMs: number,
   rejections: readonly WritingAttemptRejection[],
@@ -215,10 +222,11 @@ function succeed(
   return {
     // Normalization, not validation: applied after every rejecting guard has
     // passed, so a guard never inspects text this rewrote.
-    output: normalizeWritingOutputTypography(result.output, input.language),
+    output: normalizeWritingOutputTypography(sanitizedOutput, input.language),
     model: OPENAI_MODEL,
     temperature: WRITING_OPENAI_TEMPERATURE,
     rejections,
     shippedStyleViolations,
+    sanitizationWarnings,
   };
 }
