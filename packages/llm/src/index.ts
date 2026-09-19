@@ -17,7 +17,6 @@ export {
 export type { SiteContextInput } from './build-input.js';
 
 export { buildLegalRelevance, getCriterionName } from './legal-relevance.js';
-export { computeDominantPerformanceMetric } from './dominant-metric.js';
 
 export {
   WRAPPER_PAGE_MISSING_PERCENT_THRESHOLD,
