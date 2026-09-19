@@ -19,6 +19,7 @@ export interface WritingSanitizationWarningResponse {
   code:
     | 'business-claim-removed'
     | 'legal-claim-removed'
+    | 'deterministic-count-removed'
     | 'performance-contradiction-removed';
   field: string;
 }
