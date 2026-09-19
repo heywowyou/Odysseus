@@ -46,6 +46,8 @@ export {
   type WritingAttemptRejection,
 } from './analyze-writing.js';
 export type { AnalyzeWritingResult } from './analyze-writing.js';
+export { sanitizeWritingOutput } from './sanitize-writing-output.js';
+export type { SanitizedWritingOutput } from './sanitize-writing-output.js';
 export { analyzeReview, summarizeUnsupportedReviews } from './analyze-review.js';
 export type { ReviewOutcome } from './analyze-review.js';
 export type { ReviewerInput, ReviewerPassOutput } from './reviewer-schema.js';
@@ -85,6 +87,11 @@ export type {
   WritingPassOutput,
   WritingTheme,
   WritingSiteStats,
+  TrustedRemediationInput,
+  WritingPerformanceEvidence,
+  WritingPerformanceMetric,
+  WritingPerformanceObservation,
+  WritingSummaryEvidence,
 } from './writing-schema.js';
 export {
   deriveTransactionalFlowStatus,
