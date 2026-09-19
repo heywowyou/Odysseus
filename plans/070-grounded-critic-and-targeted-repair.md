@@ -11,7 +11,7 @@
 - **Priority:** P1
 - **Effort:** M
 - **Depends on:** 067
-- **Execution status:** IN PROGRESS (2026-09-19): slices A and B built and tested with the switch off; calibration run on 7 saved audits meets the cost and latency thresholds; operator precision labels pending, so `WRITING_CRITIC_ENABLED` stays `false`
+- **Execution status:** IN PROGRESS (2026-09-19): slices A and B built and tested with the switch off; calibration run on 7 saved audits meets precision (95%), cost and latency but fails no-regression (4 of 7 reports worse), so `WRITING_CRITIC_ENABLED` stays `false` pending the one allowed tightening and re-run (see B6)
 - **Planning rebaseline:** `a95f4d65`
 - **Estimated build time (Claude Opus 5, high effort):** about one working day of
   wall-clock time. Slice A: 1-2 hours. Slice B code: 3-5 hours. Calibration:
@@ -391,6 +391,62 @@ is stale against the current normalization fingerprint).
 
 The switch stays `false` until the labels meet the thresholds.
 
+### B6 Labels (2026-09-19)
+
+The operator delegated labeling to Claude Opus 5 (high effort). Each register
+issue now carries `label`, `repairVerdict` and `labelNote`, and each register a
+`reportVerdict`. The judging standard is `report-writing-style.md`: no
+unexplained jargon, but an attribute name the provider will search for (such as
+hreflang) stays as written.
+
+- **Precision: met.** 54 of 57 accepted issues are real (95%). The three false
+  positives are one generic layout-shift consequence and two "redundancy"
+  flags between an accessibility link-name theme and an SEO link-text theme,
+  which address different audiences.
+- **Usefulness: met.** One genuine remedy error was caught (an `alt` placed on
+  the link instead of the image), plus three notes claiming a severity-only
+  ranking that the theme order contradicts.
+- **No regressions: failed.** Per-field repair verdicts: 18 better, 10 equal,
+  26 worse, 3 not comparable. Per report: capdantibes better; grandhotelchicago
+  and grandhoteldesalpes equal; haaitza, grand-hotel-opera, grandhotelbellevue
+  and villasfoch worse.
+
+Causes of the regressions, in order of weight:
+
+1. **Jargon repairs delete the technical term instead of glossing it** (about
+   20 fields): `hreflang`, `balise a` / `href`, `user-scalable=no`,
+   `aria-label`, `robots.txt`, `rendu côté serveur`. This contradicts the style
+   rule. The repairs that kept the term and added a gloss (hreflang at
+   bellevue and grandhoteldesalpes, `sitemap.xml`, `aria-label`, JavaScript)
+   were uniformly better.
+2. **A flagged summary is rewritten from a subset of the themes.**
+   `attemptRepair` sends only the flagged themes, so a flagged
+   `executiveSummary` is regenerated without the rest of the report. At
+   grandhotelbellevue this turned a specific summary into a generic one to fix
+   a single unexplained "JavaScript".
+3. **Whole-theme rewrites change unflagged fields.** The repair regenerates
+   every field of a flagged theme, so recommended actions reorder or disappear:
+   villasfoch lost the decorative-image instruction, and three register rows
+   (haaitza t9, grand-hotel-opera t11, grandhotelbellevue t2) compare against
+   an unrelated action at the same index. The byte-identity guarantee holds
+   for unflagged themes only, and the register's index-based comparison cannot
+   show these changes.
+4. **Minor drift introduced by the repair:** removed hedges ("peut déposer"
+   became "dépose"), and an unsupported "module de réservation" example.
+
+The allowed tightening, before one re-run:
+
+- the critic prompt and the repair feedback require keeping the technical term
+  and adding a short plain gloss for `unexplained-jargon`;
+- a flagged summary or notes is repaired with every theme as context;
+- the repair returns only the flagged fields, which are merged by field path
+  so unflagged sentences stay byte-identical;
+- the register records every field of a flagged theme before and after,
+  matched by field path.
+
+If the re-run still regresses any report, the switch stays off and slice A
+ships alone, as the acceptance thresholds require.
+
 ## Requirement-to-proof ledger
 
 | Requirement | Proof |
@@ -404,7 +460,7 @@ The switch stays `false` until the labels meet the thresholds.
 | targeted repair | `writing-critic.test.ts` byte-identity and summary-only cases |
 | operator warnings | `writing-critic.test.ts` field-path-only case; `analysis-stage.plan070.test.ts` sidecar and persistence; `audit-report-panel-model.test.ts` |
 | stored compatibility | `writing-critic-compat.test.ts` legacy analysis renders identically |
-| precision / regressions / cost / latency | B5 above: cost and latency met; precision and regressions pending operator labels |
+| precision / regressions / cost / latency | B5/B6 above: precision, usefulness, cost and latency met; no-regression failed on 4 of 7 reports |
 | documented decision | trade-off 105; `llm-layer-rules.md` section 15 |
 
 ## Executable closure contract
