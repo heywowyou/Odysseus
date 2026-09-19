@@ -1,6 +1,9 @@
 import type { ReportLanguage, WritingSanitizationWarning } from '@odysseus/core';
 import { findBusinessClaimViolationsInFields } from './business-claim-guard.js';
 import { findLegalConsequenceViolationsInFields } from './legal-consequence-guard.js';
+import { hasPageCountViolation } from './page-count-guard.js';
+import { hasFindingCountViolation } from './finding-count-guard.js';
+import { hasExecutiveSummaryDigitViolation } from './executive-summary-digit-guard.js';
 import {
   writingPassOutputSchema,
   type WritingInput,
@@ -89,6 +92,14 @@ function sanitizeSentences(
     }
     if (legalViolation(sentence, field, language)) {
       warning(warnings, 'legal-claim-removed', field);
+      continue;
+    }
+    if (
+      hasPageCountViolation(sentence, language) ||
+      hasFindingCountViolation(sentence, language) ||
+      (field === 'executiveSummary' && hasExecutiveSummaryDigitViolation(sentence))
+    ) {
+      warning(warnings, 'deterministic-count-removed', field);
       continue;
     }
     kept.push(sentence);
