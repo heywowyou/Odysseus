@@ -7,7 +7,12 @@ import {
   FINDING_NOUN_VOCABULARY,
   SEVERITY_VOCABULARY,
 } from './severity-vocabulary-guard.js';
-import type { WritingInput, WritingPerformanceEvidence, WritingSiteContext } from './writing-schema.js';
+import {
+  emptyWritingPerformanceEvidence,
+  type WritingInput,
+  type WritingPerformanceEvidence,
+  type WritingSiteContext,
+} from './writing-schema.js';
 import {
   MAX_BUSINESS_IMPACT_SENTENCES,
   MAX_RECOMMENDED_ACTIONS,
@@ -180,7 +185,7 @@ export function businessFactsNote(
 export function buildWritingSystemPrompt(
   language: ReportLanguage,
   usedFallbackContext: boolean,
-  performanceEvidence: WritingPerformanceEvidence,
+  performanceEvidence: WritingPerformanceEvidence | null,
   /** The phrase selectProviderPhrase assigned to this report. Omitted only
    *  by fixtures and offline tooling, which fall back to the first approved
    *  phrase for the language. */
@@ -189,16 +194,18 @@ export function buildWritingSystemPrompt(
    *  the new fields, the prompt is byte-identical to before. */
   siteContext?: WritingSiteContext,
 ): string {
+  const resolvedPerformanceEvidence =
+    performanceEvidence ?? emptyWritingPerformanceEvidence();
   return language === 'fr'
     ? buildFrenchWritingSystemPrompt(
         usedFallbackContext,
-        performanceEvidence,
+        resolvedPerformanceEvidence,
         assignedPhrase,
         siteContext,
       )
     : buildEnglishWritingSystemPrompt(
         usedFallbackContext,
-        performanceEvidence,
+        resolvedPerformanceEvidence,
         assignedPhrase,
         siteContext,
       );
