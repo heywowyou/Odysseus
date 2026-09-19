@@ -11,6 +11,7 @@ import {
   forceBreakBeforeAppendixRuleGroups,
   insertRepeatedTheadsIntoHtml,
   markFlowingBlocksInHtml,
+  markSnugBlocksInHtml,
   mergeStaleAppendixContinuationsIntoHtml,
   PAGEDJS_NEGLIGIBLE_BOX_PX,
   PAGEDJS_OVERFLOW_TOLERANCE_PX,
@@ -803,5 +804,40 @@ describe('markFlowingBlocksInHtml', () => {
 
   it('returns the html unchanged when nothing flows', () => {
     expect(markFlowingBlocksInHtml(html, { sectionIds: [], appendixCategories: [] })).toBe(html);
+  });
+});
+
+// A section or annex category that would leave a short tail alone on a page
+// is set again with the snug class; nothing else in the document changes.
+describe('markSnugBlocksInHtml', () => {
+  const html =
+    '<section class="sheet sheet-flow" id="section-07"><h6>07</h6></section>' +
+    '<section class="sheet" id="section-08"><h6>08</h6></section>' +
+    '<section class="sheet sheet-standalone" id="section-12">' +
+    '<div class="appendix-category appendix-category-flow" data-appendix-category="geo"></div>' +
+    '<div class="appendix-category" data-appendix-category="seo"></div>' +
+    '</section>';
+
+  it('adds the snug class to the named sections and categories only, keeping their classes', () => {
+    const marked = markSnugBlocksInHtml(html, {
+      sectionIds: ['section-07'],
+      appendixCategories: ['geo'],
+    });
+
+    expect(marked).toContain('<section class="sheet sheet-flow snug" id="section-07">');
+    expect(marked).toContain('<section class="sheet" id="section-08">');
+    expect(marked).toContain(
+      '<div class="appendix-category appendix-category-flow snug" data-appendix-category="geo"',
+    );
+    expect(marked).toContain('<div class="appendix-category" data-appendix-category="seo"');
+  });
+
+  it('ignores names that are not plain tokens', () => {
+    const marked = markSnugBlocksInHtml(html, {
+      sectionIds: ['section-08"><script>'],
+      appendixCategories: ['seo"><script>'],
+    });
+
+    expect(marked).toBe(html);
   });
 });

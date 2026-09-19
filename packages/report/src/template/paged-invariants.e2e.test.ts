@@ -30,6 +30,8 @@ import {
   collectPagedjsOverflowModels,
   describeTrailingHeadings,
   detectTrailingHeadings,
+  detectWidowedSheetTails,
+  markSnugBlocksInHtml,
   renderPdfWithPageCountFromHtml,
 } from '../pdf.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
@@ -553,6 +555,77 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
     // footer dragging that item along (the shipped defect) left 99mm.
     expect(worst.filter(({ gapMm }) => gapMm > 80)).toEqual([]);
   }, 600_000);
+
+  it('a section that spills two lines onto a page of its own pulls them back once set snug', async () => {
+    // A text section whose last page still has room: filling that room and
+    // two lines more reproduces the one-sentence page the Grand Hôtel des
+    // Alpes report ended a section with.
+    const target = await doc.page.evaluate(() => {
+      for (const first of Array.from(document.querySelectorAll('section.sheet[id]'))) {
+        if (first.matches('.sheet-cover, .sheet-metadata, .sheet-standalone')) continue;
+        const ref = first.getAttribute('data-ref');
+        const fragments = Array.from(document.querySelectorAll(`section.sheet[data-ref="${ref}"]`));
+        const last = fragments[fragments.length - 1];
+        const area = last?.closest('.pagedjs_page')?.querySelector('.pagedjs_page_content');
+        if (!last || !area || !last.querySelector(':scope > p')) continue;
+        const room = area.getBoundingClientRect().bottom - last.getBoundingClientRect().bottom;
+        if (room > 150) return { id: first.getAttribute('id') ?? '', room };
+      }
+      return undefined;
+    });
+    expect(target).toBeDefined();
+    const lineHeightPx = 15 * 1.55;
+    const lines = Math.floor(target!.room / lineHeightPx) + 2;
+    const filler = `<p>${Array.from({ length: lines }, (_, i) => `Ligne ${i + 1}`).join('<br>')}</p>`;
+    const open = stressHtml.indexOf(`id="${target!.id}"`);
+    const close = stressHtml.indexOf('</section>', open);
+    const widowedHtml = stressHtml.slice(0, close) + filler + stressHtml.slice(close);
+
+    const plain = await paginate(browser, widowedHtml, pagedjsSource);
+    expect((await detectWidowedSheetTails(plain.page)).sectionIds).toContain(target!.id);
+
+    const snugHtml = markSnugBlocksInHtml(widowedHtml, {
+      sectionIds: [target!.id],
+      appendixCategories: [],
+    });
+    const snug = await paginate(browser, snugHtml, pagedjsSource);
+    expect((await detectWidowedSheetTails(snug.page)).sectionIds).not.toContain(target!.id);
+    expect(snug.pageCount).toBe(plain.pageCount - 1);
+  }, 180_000);
+
+  it('the metadata sheet stays on one page when its facts run long', async () => {
+    // A two-line scope value plus the legal-name row pushed the Grand Hôtel
+    // de l'Opéra metadata sheet past its page, and Paged.js spilled the
+    // never-fragmenting sheet sideways.
+    const extraRows = Array.from(
+      { length: 3 },
+      (_, i) =>
+        `<div><h6>Rubrique ${i + 1}</h6><div>Société du Grand Hôtel de démonstration, établissement principal et dépendances</div></div>`,
+    ).join('');
+    expect(stressHtml).toMatch(/<div class="metadata-facts"/u);
+    const crowded = await paginate(
+      browser,
+      stressHtml.replace(/(<div class="metadata-facts"[^>]*>)/u, `$1${extraRows}`),
+      pagedjsSource,
+    );
+    try {
+      const layout = await crowded.page.evaluate(() => {
+        const fragments = Array.from(document.querySelectorAll('.sheet-metadata'));
+        const area = fragments[0]?.closest('.pagedjs_page')?.querySelector('.pagedjs_page_content');
+        const box = area?.getBoundingClientRect();
+        const overflowing = fragments[0]
+          ? Array.from(fragments[0].querySelectorAll('*')).some((el) => {
+              const r = el.getBoundingClientRect();
+              return box !== undefined && (r.right > box.right + 1 || r.bottom > box.bottom + 1);
+            })
+          : true;
+        return { fragments: fragments.length, overflowing };
+      });
+      expect(layout).toEqual({ fragments: 1, overflowing: false });
+    } finally {
+      await crowded.page.context().close();
+    }
+  }, 60_000);
 
   it('invariant 6a: the bounded start-here panel never fragments across physical pages', async () => {
     const pressured = await paginate(

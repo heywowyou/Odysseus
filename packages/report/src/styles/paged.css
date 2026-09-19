@@ -182,6 +182,23 @@ html {
   break-inside: avoid;
 }
 
+/* A section that would otherwise leave a line or two alone on its last
+   page or an annex category that would do the same (pdf.ts,
+   detectWidowedSheetTails) is set again with its spacing
+   scale and running line height tightened, enough to pull a short tail
+   back without visibly changing the page. */
+.sheet.snug,
+.appendix-category.snug {
+  --space-1: 2.4px;
+  --space-2: 4.4px;
+  --space-3: 6.4px;
+  --space-4: 8.4px;
+  --space-6: 12.6px;
+  --space-8: 16.8px;
+  --space-12: 25.2px;
+  line-height: 1.45;
+}
+
 /* Stated explicitly rather than left as the (identical) default, so the
    no-forced-break-after intent above reads directly from a rule instead
    of from the absence of one. */

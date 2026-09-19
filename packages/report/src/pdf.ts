@@ -873,6 +873,93 @@ export function markFlowingBlocksInHtml(html: string, blocks: FlowingBlocks): st
   return result;
 }
 
+/** A section tail no taller than this share of the page's content area,
+ *  alone on the section's last page, is a widow: the Grand Hôtel de l'Opéra
+ *  report ended its page list with two lines on an otherwise empty page, and
+ *  the Grand Hôtel des Alpes report did the same with one sentence. */
+const WIDOWED_TAIL_MAX_SHARE = 0.25;
+
+/** Tightening one block can move later breaks and expose a tail further
+ *  down; each round only tries blocks not tried before, so this bounds the
+ *  extra layouts and nothing can oscillate. */
+const MAX_WIDOWED_TAIL_ROUNDS = 3;
+
+/** Reads the post-layout DOM for sections that run over several pages and
+ *  leave only a short tail alone on their last page. Pure detection; the
+ *  repair tightens the section's vertical rhythm in the source HTML
+ *  (markSnugBlocksInHtml) and lays the document out again. */
+export async function detectWidowedSheetTails(page: Page): Promise<WidowedTails> {
+  return page.evaluate((maxShare) => {
+    const widowed = { sectionIds: [] as string[], appendixCategories: [] as string[] };
+    for (const pageEl of Array.from(document.querySelectorAll('.pagedjs_page'))) {
+      const area = pageEl.querySelector('.pagedjs_page_content');
+      if (!area) continue;
+      // Only a page that continues content from the page before can hold a
+      // widowed tail; a block that moved whole (the bounded start-here
+      // panel) is a deliberate choice.
+      // The whole-document wrapper is split on every page, so the check
+      // reads the section or annex category fragment itself.
+      const continued =
+        area.querySelector('.appendix-category[data-split-from]') ??
+        area.querySelector('section.sheet[data-split-from]');
+      if (!continued) continue;
+      const areaBox = area.getBoundingClientRect();
+      if (areaBox.height <= 0) continue;
+      let bottom = areaBox.top;
+      for (const el of Array.from(area.querySelectorAll('*'))) {
+        if (el.childElementCount > 0) continue;
+        const box = el.getBoundingClientRect();
+        if (box.height > 0 && box.bottom > bottom) bottom = box.bottom;
+      }
+      if ((bottom - areaBox.top) / areaBox.height > maxShare) continue;
+      // The tightened rhythm goes on the smallest block that opens its own
+      // page: an annex category when the tail is inside one, else the
+      // section. Paged.js keeps an id on a first fragment only, so the
+      // section's id is read from the fragment sharing its data-ref.
+      const category = continued.closest('.appendix-category[data-appendix-category]');
+      const categoryName = category?.getAttribute('data-appendix-category');
+      if (categoryName) {
+        if (!widowed.appendixCategories.includes(categoryName))
+          widowed.appendixCategories.push(categoryName);
+        continue;
+      }
+      const ref = continued.closest('section.sheet[data-ref]')?.getAttribute('data-ref');
+      const id = ref
+        ? document.querySelector(`section.sheet[data-ref="${ref}"][id]`)?.getAttribute('id')
+        : undefined;
+      if (id && !widowed.sectionIds.includes(id)) widowed.sectionIds.push(id);
+    }
+    return widowed;
+  }, WIDOWED_TAIL_MAX_SHARE);
+}
+
+export interface WidowedTails {
+  sectionIds: string[];
+  appendixCategories: string[];
+}
+
+/** Pure string transform: adds the snug class (paged.css) to each named
+ *  section's and annex category's opening tag, matched the way
+ *  markFlowingBlocksInHtml matches them. */
+export function markSnugBlocksInHtml(html: string, blocks: WidowedTails): string {
+  let result = html;
+  for (const id of blocks.sectionIds) {
+    if (!/^[a-z0-9-]+$/i.test(id)) continue;
+    result = result.replace(
+      new RegExp(`<section class="sheet([^"]*)" id="${id}"`),
+      `<section class="sheet$1 snug" id="${id}"`,
+    );
+  }
+  for (const category of blocks.appendixCategories) {
+    if (!/^[a-z0-9-]+$/i.test(category)) continue;
+    result = result.replace(
+      new RegExp(`<div class="appendix-category([^"]*)" data-appendix-category="${category}"`),
+      `<div class="appendix-category$1 snug" data-appendix-category="${category}"`,
+    );
+  }
+  return result;
+}
+
 /** Issue #170. One annex rule group heading's placement on the paginated
  *  page: `followedByRow` is true when the heading's own detail table sits
  *  directly after it on the SAME page fragment with at least one finding
@@ -1211,6 +1298,39 @@ export async function renderPdfWithPageCountFromHtml(
         currentHtml = flowed;
         await runPagedjsPreview(currentHtml);
       }
+    }
+
+    // A section that spills a line or two onto a page of its own is set
+    // again with a tighter vertical rhythm, which is usually enough to pull
+    // the tail back. A section the tighter rhythm does not rescue goes back
+    // to its normal spacing: the repair must never trade one defect for a
+    // denser page that still ends the same way.
+    const snugBlocks: WidowedTails = { sectionIds: [], appendixCategories: [] };
+    for (let round = 0; round < MAX_WIDOWED_TAIL_ROUNDS; round++) {
+      const found = await detectWidowedSheetTails(page);
+      const candidates: WidowedTails = {
+        sectionIds: found.sectionIds.filter((id) => !snugBlocks.sectionIds.includes(id)),
+        appendixCategories: found.appendixCategories.filter(
+          (category) => !snugBlocks.appendixCategories.includes(category),
+        ),
+      };
+      const candidateCount = candidates.sectionIds.length + candidates.appendixCategories.length;
+      if (candidateCount === 0) break;
+      const trial = markSnugBlocksInHtml(currentHtml, candidates);
+      if (trial === currentHtml) break;
+      await runPagedjsPreview(trial);
+      const still = await detectWidowedSheetTails(page);
+      const rescued: WidowedTails = {
+        sectionIds: candidates.sectionIds.filter((id) => !still.sectionIds.includes(id)),
+        appendixCategories: candidates.appendixCategories.filter(
+          (category) => !still.appendixCategories.includes(category),
+        ),
+      };
+      snugBlocks.sectionIds.push(...candidates.sectionIds);
+      snugBlocks.appendixCategories.push(...candidates.appendixCategories);
+      const kept = markSnugBlocksInHtml(currentHtml, rescued);
+      if (kept !== trial) await runPagedjsPreview(kept);
+      currentHtml = kept;
     }
 
     // Issue #45, second half + issue #170 + issue #171 + issue #179: repair,
