@@ -225,7 +225,12 @@ export function ReportsCard(props: {
   const hasReports = detail.reportLanguages.length > 0 && detail.reports.length > 0;
   const reportBase = `/api/audits/${encodeURIComponent(detail.auditId)}/report`;
   const isApproved = detail.lifecycle === 'approved';
-  const canApprove = isApproved || canApproveReportPair(detail.reports);
+  const canApprove =
+    isApproved ||
+    canApproveReportPair(
+      detail.reports,
+      detail.analysisLanguages ?? (detail.analysisPair === 'none' ? [] : ['fr', 'en']),
+    );
   // Plan 059 step 37: the bundle's approve action also respects the evidence
   // approval. A bundle produced from a canonical approval whose approval file
   // no longer stands (the audit was re-assessed, or the roots moved) is not
@@ -454,8 +459,9 @@ export function ReportsCard(props: {
           ))}
         </ul>
       )}
-      {/* Plan 060 §2.4/DoD 9: approval is an explicit command on the exact
-          verified pair, never a side effect of downloading. */}
+      {/* Plan 060 §2.4/DoD 9 + Plan 067: approval is an explicit command on
+          the exact selected report version (French plus optional attached
+          English), never a side effect of downloading. */}
       {hasReports && !isApproved ? (
         <div className="mt-3 flex flex-col gap-1">
           {canApprove ? (
