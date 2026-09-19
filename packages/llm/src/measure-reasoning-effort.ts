@@ -62,7 +62,11 @@ import { findTransactionalFlowViolations } from './transactional-flow-guard.js';
 import { findWcagCitationViolations } from './wcag-citation-guard.js';
 import { parseStructureDocument } from './structure-schema.js';
 import { normalizeWritingOutputTypography } from './typography.js';
-import type { WritingInput, WritingPassOutput } from './writing-schema.js';
+import {
+  emptyWritingPerformanceEvidence,
+  type WritingInput,
+  type WritingPassOutput,
+} from './writing-schema.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = path.resolve(moduleDir, '../../..');
