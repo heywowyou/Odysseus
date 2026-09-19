@@ -133,9 +133,22 @@ export interface WritingPerformanceObservation {
   rating: WritingPerformanceRating;
 }
 
+export interface WritingPerformanceDiscordance {
+  /** Authoritative real-user observation used to interpret the lab signal.
+   * For TBT, INP is the corresponding field responsiveness metric. */
+  field: WritingPerformanceObservation;
+  /** Laboratory observation that materially disagrees with the field signal. */
+  lab: WritingPerformanceObservation;
+  /** Plan 067: the deterministic layer, not Luna, decides that this lab
+   * value is non-representative for recommendation purposes. */
+  labNonRepresentativeForRecommendations: true;
+}
+
 export interface WritingPerformanceEvidence {
   fieldDataAvailable: boolean;
   observations: WritingPerformanceObservation[];
+  /** Material field-versus-lab disagreements, already reconciled in code. */
+  discordances: WritingPerformanceDiscordance[];
   /** Deterministic recommendation signal after field/lab reconciliation. */
   primaryConcern: WritingPerformanceObservation | null;
   /** Lab metrics that may be shown in the deterministic section but must not
@@ -149,6 +162,7 @@ export function emptyWritingPerformanceEvidence(): WritingPerformanceEvidence {
   return {
     fieldDataAvailable: false,
     observations: [],
+    discordances: [],
     primaryConcern: null,
     suppressedLabRecommendations: [],
   };
