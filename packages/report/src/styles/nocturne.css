@@ -316,7 +316,7 @@ h4 {
    round notation cannot drift away from the letter during PDF layout. */
 .metadata-signal {
   width: 100%;
-  margin-top: var(--space-4) !important;
+  margin-top: calc(var(--space-12) * 1.5) !important;
   break-inside: avoid;
 }
 .metadata-signal > .hr {
@@ -325,7 +325,7 @@ h4 {
 .metadata-signal-stack {
   flex-direction: column;
   align-items: center !important;
-  gap: var(--space-8) !important;
+  gap: calc(var(--space-12) * 1.5) !important;
 }
 .metadata-grade-field {
   order: -1;

@@ -171,7 +171,7 @@ export function renderMetadataSheet(
         ${field(strings.metadata.scorecardLabel, renderScorecard(strings, findings, manifest, gradeOverride), 'metadata-grade-field')}
       </div>
     </div>
-    <div class="metadata-facts" style="margin-top:var(--space-12);display:grid;grid-template-columns:1fr 1fr;row-gap:var(--space-8);column-gap:var(--space-8);font-size:13px">
+    <div class="metadata-facts" style="margin-top:calc(var(--space-12) * 2);display:grid;grid-template-columns:1fr 1fr;row-gap:var(--space-12);column-gap:var(--space-8);font-size:13px">
       ${field(strings.metadata.siteLabel, escapeHtml(manifest.siteUrl))}
       ${field(strings.metadata.dateLabel, escapeHtml(formatDate(auditDate(manifest), analysis.language)))}
       ${field(strings.metadata.pagesScannedLabel, escapeHtml(scopeValue))}
