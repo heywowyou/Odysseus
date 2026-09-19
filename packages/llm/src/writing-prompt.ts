@@ -121,7 +121,11 @@ function performanceEvidenceNote(
     const suppressedText = suppressed.length === 0
       ? ''
       : ` Les signaux de laboratoire suivants sont explicitement interdits comme moteur de recommandation : ${suppressed}.`;
-    return `\n\nLe paquet performanceEvidence fourni dans l'entrée est l'autorité unique pour la prose de performance. ${concernText}${suppressedText} Ne contredisez jamais une mesure réelle utilisateur avec une anomalie de laboratoire. Pour un thème performance, fondez la première recommandation sur primaryConcern uniquement quand il existe.`;
+    const discordanceText =
+      evidence.discordances.length === 0
+        ? ''
+        : ' Les entrées discordances décrivent des écarts champ/laboratoire déjà tranchés par la couche déterministe ; quand labNonRepresentativeForRecommendations vaut true, ne réinterprétez pas ce signal de laboratoire.';
+    return `\n\nLe paquet performanceEvidence fourni dans l'entrée est l'autorité unique pour la prose de performance. ${concernText}${suppressedText}${discordanceText} Ne contredisez jamais une mesure réelle utilisateur avec une anomalie de laboratoire. Pour un thème performance, fondez la première recommandation sur primaryConcern uniquement quand il existe.`;
   }
   const concernText = concern === null
     ? 'No measured performance metric should be presented as a correction priority.'
@@ -129,7 +133,11 @@ function performanceEvidenceNote(
   const suppressedText = suppressed.length === 0
     ? ''
     : ` The following lab signals are explicitly forbidden as recommendation drivers: ${suppressed}.`;
-  return `\n\nThe performanceEvidence packet in the input is the sole authority for performance prose. ${concernText}${suppressedText} Never contradict real-user measurements with a lab anomaly. For a performance theme, base the first recommendation on primaryConcern only when one exists.`;
+  const discordanceText =
+    evidence.discordances.length === 0
+      ? ''
+      : ' The discordances entries are field/lab disagreements already resolved by the deterministic layer; when labNonRepresentativeForRecommendations is true, do not reinterpret that lab signal.';
+  return `\n\nThe performanceEvidence packet in the input is the sole authority for performance prose. ${concernText}${suppressedText}${discordanceText} Never contradict real-user measurements with a lab anomaly. For a performance theme, base the first recommendation on primaryConcern only when one exists.`;
 }
 /** Plan 029 lever F: turns concrete, verified site facts into a prompt
  *  note. Returns an empty string when none are present, which keeps the
