@@ -103,8 +103,28 @@ export function buildWritingPerformanceEvidence(
     });
   }
 
-  const suppressedLabRecommendations: WritingPerformanceMetric[] =
-    divergentLabLcp(manifest) === null ? [] : ['lcp'];
+  const suppressed = new Set<WritingPerformanceMetric>();
+  const fieldFor = (metric: WritingPerformanceMetric): WritingPerformanceObservation | undefined =>
+    observations.find((entry) => entry.source === 'field' && entry.metric === metric);
+  const labFor = (metric: WritingPerformanceMetric): WritingPerformanceObservation | undefined =>
+    observations.find((entry) => entry.source === 'lab' && entry.metric === metric);
+
+  for (const metric of ['lcp', 'cls'] as const) {
+    const fieldMetric = fieldFor(metric);
+    const labMetric = labFor(metric);
+    if (fieldMetric?.rating === 'good' && labMetric !== undefined && labMetric.rating !== 'good') {
+      suppressed.add(metric);
+    }
+  }
+  if (fieldFor('inp')?.rating === 'good' && labFor('tbt')?.rating !== 'good') {
+    suppressed.add('tbt');
+  }
+  // Keep the existing deterministic divergence rule as an explicit backstop
+  // for the exact Villas Foch class even if the generic reconciliation above
+  // changes later.
+  if (divergentLabLcp(manifest) !== null) suppressed.add('lcp');
+
+  const suppressedLabRecommendations = [...suppressed];
   const weakField = observations
     .filter((entry) => entry.source === 'field' && entry.rating !== 'good')
     .sort(concernOrder);
@@ -113,7 +133,7 @@ export function buildWritingPerformanceEvidence(
       (entry) =>
         entry.source === 'lab' &&
         entry.rating !== 'good' &&
-        !suppressedLabRecommendations.includes(entry.metric),
+        !suppressed.has(entry.metric),
     )
     .sort(concernOrder);
 
