@@ -684,6 +684,12 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       // exact schema-version/fingerprint comparison makeReportReady acts
       // on, against findings already fetched above (no extra I/O).
       analysisPair: selectedPair.kind,
+      analysisLanguages:
+        selectedPair.kind === 'none'
+          ? []
+          : selectedPair.en === undefined
+            ? ['fr']
+            : ['fr', 'en'],
       findingsStale: findingsAreStale(audit.findingsProvenance, findings),
       analysisIsStaticFallback,
       approval: approved ? approval : null,
@@ -962,8 +968,8 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     }
   });
 
-  // Manual-input-layer milestone: re-renders both language reports from
-  // the audit's selected analysis pair (plan 019), exactly what
+  // Manual-input-layer milestone: re-renders the selected French report
+  // and, when explicitly attached, its English version, exactly what
   // `odysseus report <dir> --all` does. Plan 045 slice 1.1: routed through
   // makeReportReady, which refreshes stale findings and the writing pair
   // first when needed, instead of only ever rendering whatever pair is
@@ -985,7 +991,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
             sendError(
               res,
               409,
-              'a complete bilingual analysis pair is required before a report can be regenerated; ' +
+              'a selected French analysis is required before a report can be regenerated; ' +
                 'run the writing regeneration in the Prepare report card, then approve the candidate',
             );
             return;
