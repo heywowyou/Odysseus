@@ -354,14 +354,14 @@ describe('Plan 067: the writing prompt requests noun-phrase theme titles', () =>
   it('requires a short noun phrase and forbids a full sentence, in French', () => {
     const prompt = buildWritingSystemPrompt('fr', false, null);
     expect(prompt).toContain('un groupe nominal court');
-    expect(prompt).toContain('jamais une phrase complète');
+    expect(prompt).toContain('Jamais une phrase complète');
     expect(prompt).toContain('Contrastes et lisibilité');
   });
 
   it('requires a short noun phrase and forbids a full sentence, in English', () => {
     const prompt = buildWritingSystemPrompt('en', false, null);
     expect(prompt).toContain('a short noun phrase');
-    expect(prompt).toContain('never a full sentence');
+    expect(prompt).toContain('Never a full sentence');
     expect(prompt).toContain('Contrast and readability');
   });
 

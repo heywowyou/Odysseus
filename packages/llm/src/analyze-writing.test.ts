@@ -117,10 +117,12 @@ function buildNonCanonicalSeverityWordOutput(): WritingPassOutput {
   // 2026-08-08T11-07-43Z/analyses/2026-08-08T11-23-48Z-fr.json, except for
   // the word this asserts against: report-feedback-haaitza.md B3 found the
   // canonical label is "Sérieux" (docs/report/report-design-system.md), not
-  // "majeur" - the guard's banned word flipped accordingly.
+  // "majeur" - the guard's banned word flipped accordingly. The observed
+  // sentence also carried counts; Plan 067 now removes a count sentence
+  // locally before the guards run, so the counts are dropped here to keep
+  // this fixture on the severity guard.
   const output = buildCleanFrenchOutput();
-  output.executiveSummary =
-    'Nous avons identifié 130 problèmes, dont 8 critiques, 26 majeurs et 24 modérés.';
+  output.executiveSummary = 'Nous avons identifié des problèmes majeurs sur votre site.';
   return output;
 }
 
@@ -264,7 +266,7 @@ describe('analyzeWriting', () => {
 
     const result = await analyzeWriting(input, ['t1'], false);
 
-    expect(result.output.themes[0]!.title).toBe('Contraste des couleurs insuffisant');
+    expect(result.output.themes[0]!.title).toBe('Contrastes et lisibilité');
     expect(callOpenAiForWriting).toHaveBeenCalledTimes(2);
   });
 
@@ -342,46 +344,37 @@ describe('analyzeWriting', () => {
     expect(callOpenAiForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
 
-  it('retries once when the first response asserts an unhedged business claim, then succeeds', async () => {
+  // Plan 067 decision 13: an unsupported business claim, a digit in the
+  // executive summary, and an invented finding count are removed at sentence
+  // level with a field-path warning, not retried as a whole writing pass.
+  it('removes an unhedged business claim locally without a retry', async () => {
     vi.mocked(callOpenAiForWriting)
       .mockReset()
-      .mockResolvedValueOnce({ output: buildUnhedgedBusinessClaimOutput() })
-      .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
+      .mockResolvedValueOnce({ output: buildUnhedgedBusinessClaimOutput() });
 
     const result = await analyzeWriting(input, ['t1'], false);
 
     expect(result.output.themes[0]!.businessImpact).not.toMatch(/rentable/i);
-    expect(callOpenAiForWriting).toHaveBeenCalledTimes(2);
+    expect(result.sanitizationWarnings).toContainEqual({
+      code: 'business-claim-removed',
+      field: 'themes[0](t1).businessImpact',
+    });
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(1);
   });
 
-  it('throws after exhausting retries when every attempt asserts an unhedged business claim', async () => {
+  it('removes a digit sentence from executiveSummary locally without a retry', async () => {
     vi.mocked(callOpenAiForWriting)
       .mockReset()
-      .mockResolvedValue({ output: buildUnhedgedBusinessClaimOutput() });
-
-    await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(/exhausted \d+ attempts/);
-    expect(callOpenAiForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
-  });
-
-  it('retries once when executiveSummary contains a digit, then succeeds', async () => {
-    vi.mocked(callOpenAiForWriting)
-      .mockReset()
-      .mockResolvedValueOnce({ output: buildDigitInSummaryOutput() })
-      .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
+      .mockResolvedValueOnce({ output: buildDigitInSummaryOutput() });
 
     const result = await analyzeWriting(input, ['t1'], false);
 
     expect(result.output.executiveSummary).not.toMatch(/\d/);
-    expect(callOpenAiForWriting).toHaveBeenCalledTimes(2);
-  });
-
-  it('throws after exhausting retries when every attempt puts a digit in executiveSummary', async () => {
-    vi.mocked(callOpenAiForWriting)
-      .mockReset()
-      .mockResolvedValue({ output: buildDigitInSummaryOutput() });
-
-    await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(/exhausted \d+ attempts/);
-    expect(callOpenAiForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+    expect(result.sanitizationWarnings).toContainEqual({
+      code: 'deterministic-count-removed',
+      field: 'executiveSummary',
+    });
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(1);
   });
 
   it('retries once when the first response puts a legal claim in a theme title, then succeeds', async () => {
@@ -392,7 +385,7 @@ describe('analyzeWriting', () => {
 
     const result = await analyzeWriting(input, ['t1'], false);
 
-    expect(result.output.themes[0]!.title).toBe('Contraste des couleurs insuffisant');
+    expect(result.output.themes[0]!.title).toBe('Contrastes et lisibilité');
     expect(callOpenAiForWriting).toHaveBeenCalledTimes(2);
   });
 
@@ -407,31 +400,23 @@ describe('analyzeWriting', () => {
 
   // plan 028, lever L: audit-rehearsal notes recorded reports
   // contradicting their own finding counts in prose.
-  it('retries once when a recommended action states an invented finding count, then succeeds', async () => {
+  it('removes an invented finding count from a recommended action locally without a retry', async () => {
     const violating = buildCleanFrenchOutput();
     violating.themes[0]!.recommendedActions = [
       'Ce thème regroupe 12 constats modérés à corriger en priorité.',
+      'Augmentez le contraste des couleurs sur les boutons et les textes concernés.',
     ];
-    vi.mocked(callOpenAiForWriting)
-      .mockReset()
-      .mockResolvedValueOnce({ output: violating })
-      .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
+    vi.mocked(callOpenAiForWriting).mockReset().mockResolvedValueOnce({ output: violating });
 
     const result = await analyzeWriting(input, ['t1'], false);
 
-    expect(result.output.themes[0]!.recommendedActions[0]).not.toMatch(/\d/);
-    expect(callOpenAiForWriting).toHaveBeenCalledTimes(2);
-  });
-
-  it('throws after exhausting retries when every attempt states an invented finding count', async () => {
-    const violating = buildCleanFrenchOutput();
-    violating.themes[0]!.recommendedActions = [
-      'Ce thème regroupe 12 constats modérés à corriger en priorité.',
-    ];
-    vi.mocked(callOpenAiForWriting).mockReset().mockResolvedValue({ output: violating });
-
-    await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(/exhausted \d+ attempts/);
-    expect(callOpenAiForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+    for (const action of result.output.themes[0]!.recommendedActions) {
+      expect(action).not.toMatch(/\d/);
+    }
+    expect(result.sanitizationWarnings).toContainEqual(
+      expect.objectContaining({ code: 'deterministic-count-removed' }),
+    );
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(1);
   });
 
   // plan 028, lever J: audit-rehearsal notes recorded "la priorité 1
@@ -649,6 +634,13 @@ describe('analyzeWriting and a style guard on the last attempt (issue #407)', ()
 // as the last failure reason on the thrown error, so "which guards reject most
 // often" had no answer but an anecdote.
 describe('analyzeWriting records which guard rejected each attempt (issue #409)', () => {
+  function severityAndCitation(): WritingPassOutput {
+    const output = buildNonCanonicalSeverityWordOutput();
+    output.themes[0]!.recommendedActions =
+      buildWcag21CitationOutput().themes[0]!.recommendedActions;
+    return output;
+  }
+
   const sink = new RecordingLlmTelemetrySink();
 
   afterEach(() => {
@@ -660,18 +652,18 @@ describe('analyzeWriting records which guard rejected each attempt (issue #409)'
     configureLlmTelemetrySink(sink);
     vi.mocked(callOpenAiForWriting)
       .mockReset()
-      .mockResolvedValueOnce({ output: buildNonCanonicalSeverityWordOutput() })
+      .mockResolvedValueOnce({ output: severityAndCitation() })
       .mockResolvedValueOnce({ output: buildWcag21CitationOutput() })
       .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
 
     await analyzeWriting(input, ['t1'], false);
 
-    // The first fixture trips three guards at once, which is the whole point
+    // The first fixture trips two guards at once, which is the whole point
     // of issue #406: before it, this attempt reported only the first.
     expect(sink.events.filter((event) => event.kind === 'call-rejected')).toEqual([
       expect.objectContaining({
         attemptCount: 1,
-        guards: ['severity-vocabulary', 'finding-count', 'executive-summary-digit'],
+        guards: ['severity-vocabulary', 'wcag-citation'],
         styleOnly: false,
       }),
       expect.objectContaining({ attemptCount: 2, guards: ['wcag-citation'], styleOnly: false }),
