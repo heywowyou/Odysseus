@@ -125,6 +125,18 @@ export function buildWritingPerformanceEvidence(
   if (divergentLabLcp(manifest) !== null) suppressed.add('lcp');
 
   const suppressedLabRecommendations = [...suppressed];
+  const discordances = suppressedLabRecommendations.flatMap((metric) => {
+    const fieldMetric = metric === 'tbt' ? fieldFor('inp') : fieldFor(metric);
+    const labMetric = labFor(metric);
+    if (fieldMetric === undefined || labMetric === undefined) return [];
+    return [
+      {
+        field: fieldMetric,
+        lab: labMetric,
+        labNonRepresentativeForRecommendations: true as const,
+      },
+    ];
+  });
   const weakField = observations
     .filter((entry) => entry.source === 'field' && entry.rating !== 'good')
     .sort(concernOrder);
@@ -140,6 +152,7 @@ export function buildWritingPerformanceEvidence(
   return {
     fieldDataAvailable: field?.available === true,
     observations,
+    discordances,
     primaryConcern: weakField[0] ?? weakLab[0] ?? null,
     suppressedLabRecommendations,
   };
