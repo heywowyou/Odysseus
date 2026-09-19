@@ -1,4 +1,4 @@
-import type { EvidenceLimitation } from '@odysseus/core';
+import { canonicalDigest, type EvidenceLimitation } from '@odysseus/core';
 import {
   AUDIT_EVIDENCE_SNAPSHOT_PATH,
   buildArtifactBucketKey,
@@ -136,6 +136,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
+function hasValidCanonicalDigest(value: unknown): value is Record<string, unknown> {
+  if (!isRecord(value) || typeof value['digest'] !== 'string') return false;
+  const { digest, ...body } = value;
+  return canonicalDigest(body) === digest;
+}
+
 function parseDisclosure(value: unknown): EvidenceLimitation | undefined {
   if (!isRecord(value)) return undefined;
   if (
@@ -223,8 +229,14 @@ export function summarizeAuditEvidenceDiagnostics(input: {
   quality: unknown;
   auditRoot: unknown;
 }): AuditEvidenceDiagnostics {
+  if (
+    !hasValidCanonicalDigest(input.quality) ||
+    !hasValidCanonicalDigest(input.auditRoot)
+  ) {
+    return { status: 'unavailable', clientLimitations: [], operationalWarnings: [] };
+  }
   const quality = parseQuality(input.quality);
-  if (!quality || !isRecord(input.auditRoot)) {
+  if (!quality) {
     return { status: 'unavailable', clientLimitations: [], operationalWarnings: [] };
   }
   if (

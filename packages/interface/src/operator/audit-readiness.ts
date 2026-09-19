@@ -8,14 +8,11 @@ import type { OperatorEvidenceReadiness, OperatorReportReadiness } from './contr
  * durable rows and passes the narrow facts in; nothing here reads storage or
  * re-derives truth from job success.
  *
- * Fail closed (plan 060 §17): an input this module does not recognize is
- * ignored, never guessed into a pass. Unknown run states, absent facts and
- * pre-quality-pipeline history all land on `absent`; an audit whose stored
- * facts predate the evidence graph lands on `legacy-unknown` with an
- * advisory, never a fabricated verdict (plan 060 §9.2). Assessment failures
- * are NOT operator attention today (the Plan-059 dashboard phases are not
- * started), so assessed-but-unapproved evidence reads as `absent`, not
- * `needs-attention`.
+ * Unknown facts are never guessed into a pass. On the evidence axis,
+ * missing/unreadable diagnostics become `unavailable`, historical
+ * pre-diagnostics audits may be `legacy-unknown`, and a scoped limitation
+ * remains `limited` rather than turning into operator attention. The report
+ * axis below keeps its separate Plan-058 vocabulary.
  */
 
 /** What the caller knows about the audit's scoped evidence diagnostics. */

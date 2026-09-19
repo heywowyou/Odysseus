@@ -211,12 +211,10 @@ export const problemEnvelopeSchema = z.object({
 export type ProblemEnvelope = z.infer<typeof problemEnvelopeSchema>;
 
 /**
- * Plan 060 §5.1: evidence readiness is the Plan-059 authority, projected.
+ * Plan 068: evidence readiness is scan-data availability, not approval.
  * It is deliberately not derivable from job success or finding counts.
- * `legacy-unknown` marks an audit whose stored facts predate the evidence
- * graph; it never means a guessed pass (plan 060 §9.2). States the dormant
- * 059 authority cannot yet produce (approval is fail-closed by
- * construction) stay in the vocabulary so nothing is renamed later.
+ * `legacy-unknown` marks an audit whose stored facts predate detailed
+ * diagnostics; `limited` is usable and is not operator attention.
  */
 export const OPERATOR_EVIDENCE_READINESS = [
   'unavailable',

@@ -29,7 +29,9 @@ export function EvidenceQualityCard(props: { detail: AuditDetailResponse }): JSX
         <section aria-label={copy.limitationsHeading} className="flex flex-col gap-1">
           <h3 className="text-sm font-semibold text-ink">{copy.limitationsHeading}</h3>
           {limitations.length === 0 ? (
-            <p className="text-ink-muted">{copy.noLimitations}</p>
+            <p className="text-ink-muted">
+              {evidence.status === 'unavailable' ? copy.unavailableLimitations : copy.noLimitations}
+            </p>
           ) : (
             <ul className="flex flex-col gap-2">
               {limitations.map((limitation) => (

@@ -1,22 +1,25 @@
 import { describe, expect, it } from 'vitest';
+import { canonicalDigest } from '@odysseus/core';
 import {
   EVIDENCE_REASON_CLASSIFICATION,
   summarizeAuditEvidenceDiagnostics,
 } from './audit-evidence-diagnostics.js';
 
-const ROOT = {
+const ROOT_BODY = {
   auditId: 'foch',
   evidenceEpoch: 1,
-  digest: 'sha256:audit-root',
+  confirmedFindingsDigest: 'sha256:findings',
 };
+const ROOT = { ...ROOT_BODY, digest: canonicalDigest(ROOT_BODY) };
 
 function quality(issues: unknown[]) {
-  return {
+  const body = {
     auditId: 'foch',
     evidenceEpoch: 1,
     auditEvidenceSnapshotDigest: ROOT.digest,
     issues,
   };
+  return { ...body, digest: canonicalDigest(body) };
 }
 
 function issue(code: string, refs: string[] = ['ref-1'], disclosure?: unknown) {
@@ -127,6 +130,13 @@ describe('Plan 068 evidence diagnostics', () => {
       summarizeAuditEvidenceDiagnostics({
         quality: quality([]),
         auditRoot: { ...ROOT, digest: 'sha256:other-root' },
+      }).status,
+    ).toBe('unavailable');
+    const tampered = quality([issue('site-level-unknown')]);
+    expect(
+      summarizeAuditEvidenceDiagnostics({
+        quality: { ...tampered, issues: [issue('temporal-drift')] },
+        auditRoot: ROOT,
       }).status,
     ).toBe('unavailable');
     expect(

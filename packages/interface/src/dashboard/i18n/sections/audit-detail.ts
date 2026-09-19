@@ -202,6 +202,7 @@ export interface AuditDetailStrings {
     statuses: Record<'complete' | 'limited' | 'unavailable', string>;
     limitationsHeading: string;
     noLimitations: string;
+    unavailableLimitations: string;
     /** {count} is the number of evidence references behind the item. */
     referenceCount: string;
     operationalHeading: string;
@@ -581,6 +582,8 @@ export const auditDetail = {
       },
       limitationsHeading: 'Limites à connaître',
       noLimitations: 'Aucune limite de preuve client n’est signalée pour ce scan.',
+      unavailableLimitations:
+        'Le diagnostic détaillé n’est pas disponible : aucune conclusion de complétude n’est tirée de son absence.',
       referenceCount: '{count} références',
       operationalHeading: 'Diagnostics d’exploitation',
       operationalWarnings: {
@@ -872,6 +875,8 @@ export const auditDetail = {
       },
       limitationsHeading: 'Limitations to know about',
       noLimitations: 'No client evidence limitation is recorded for this scan.',
+      unavailableLimitations:
+        'Detailed diagnostics are unavailable: their absence is not treated as evidence of completeness.',
       referenceCount: '{count} references',
       operationalHeading: 'Operational diagnostics',
       operationalWarnings: {
