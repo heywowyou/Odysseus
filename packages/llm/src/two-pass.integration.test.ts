@@ -11,7 +11,7 @@ import {
   filterFindingsForLlm,
 } from './build-input.js';
 import type { StructurePassOutput } from './structure-schema.js';
-import type { WritingPassOutput } from './writing-schema.js';
+import { emptyWritingPerformanceEvidence, type WritingPassOutput } from './writing-schema.js';
 
 vi.mock('./client.js', () => ({
   callOpenAiForStructure: vi.fn(),
@@ -91,19 +91,19 @@ function buildWritingOutputFor(language: 'fr' | 'en', themeKeys: string[]): Writ
   const prose =
     language === 'fr'
       ? {
-          title: 'Contraste des couleurs insuffisant sur le site',
+          title: 'Contrastes et lisibilité',
           businessImpact:
-            'Vos visiteurs les plus âgés risquent de ne pas lire votre contenu correctement.',
+            'Certains visiteurs peuvent lire difficilement les textes dont le contraste est insuffisant.',
           executiveSummary:
-            'Votre site présente plusieurs problèmes qui affectent son efficacité commerciale.',
-          action: 'Augmenter le contraste des couleurs sur les boutons et le texte.',
+            'Les constats concernent principalement la lisibilité et l’utilisation des éléments mesurés.',
+          action: 'Augmentez le contraste des couleurs sur les boutons et les textes concernés.',
         }
       : {
-          title: 'Insufficient color contrast across the site',
-          businessImpact: 'Older visitors may find it difficult to browse your website easily.',
+          title: 'Contrast and readability',
+          businessImpact: 'Some visitors may have difficulty reading text with insufficient contrast.',
           executiveSummary:
-            'Your site has several issues that affect its commercial effectiveness.',
-          action: 'Increase the contrast ratio on buttons and body text.',
+            'The findings mainly concern readability and use of the measured interface elements.',
+          action: 'Increase color contrast on the affected buttons and body text.',
         };
 
   return {
@@ -161,7 +161,8 @@ describe('two-pass analysis produces identical structure across languages', () =
       siteContext,
       'fr',
       siteStats,
-      null,
+      emptyWritingPerformanceEvidence(),
+      {},
       'unknown',
     );
     const frWriting = await analyzeWriting(frWritingInput, themeKeys, false);
