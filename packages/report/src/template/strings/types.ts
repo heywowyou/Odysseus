@@ -708,6 +708,7 @@ export interface ReportStrings {
      *  unhedged euro figure was rejected as overclaiming. */
     revenueImpactTemplate: string;
     quickWinBadgeLabel: string;
+    actionLevelLabels: { priority: string; important: string; improvement: string };
     /** item 27: theme.recommendedActions (llm-output.ts, LLM-writable,
      *  already validated for language and severity vocabulary) was
      *  generated on every analysis but never rendered - a theme card
