@@ -37,6 +37,17 @@ export type AnalysisPairRef = AnalysisSelectionRef;
  * One rejected writing attempt, kept so a failed run says which guards
  * rejected it and when, not only what the last message was.
  */
+export type WritingSanitizationWarningCode =
+  | 'business-claim-removed'
+  | 'legal-claim-removed'
+  | 'performance-contradiction-removed';
+
+export interface WritingSanitizationWarning {
+  code: WritingSanitizationWarningCode;
+  /** Field path only; never client prose. Safe for operator UI/telemetry. */
+  field: string;
+}
+
 export interface WritingGuardRejection {
   attempt: number;
   totalAttempts: number;
@@ -44,7 +55,7 @@ export interface WritingGuardRejection {
 }
 
 export type WritingCandidateState =
-  | { status: 'ready'; pair: AnalysisSelectionRef; createdAt: string }
+  | { status: 'ready'; pair: AnalysisSelectionRef; createdAt: string; warnings?: readonly WritingSanitizationWarning[] }
   | {
       status: 'failed';
       reason: string;
@@ -52,7 +63,7 @@ export type WritingCandidateState =
       partialPair?: Partial<AnalysisSelectionRef> | undefined;
       guardRejections?: readonly WritingGuardRejection[] | undefined;
     }
-  | { status: 'selected'; pair: AnalysisSelectionRef; approvedAt: string };
+  | { status: 'selected'; pair: AnalysisSelectionRef; approvedAt: string; warnings?: readonly WritingSanitizationWarning[] };
 
 export interface WritingSelection {
   selected?: AnalysisSelectionRef;
