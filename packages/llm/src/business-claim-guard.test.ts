@@ -8,7 +8,7 @@ function buildOutput(overrides: Partial<WritingPassOutput> = {}): WritingPassOut
       {
         themeKey: 't1',
         title: 'Formulaire de devis inaccessible',
-        businessImpact: 'Certains visiteurs ne peuvent pas terminer l’envoi du formulaire.'
+        businessImpact: 'Certains visiteurs ne peuvent pas terminer l’envoi du formulaire.',
         recommendedActions: ['Simplifier le formulaire de devis.'],
         ...(overrides.themes?.[0] ?? {}),
       },
@@ -29,7 +29,7 @@ describe('findBusinessClaimViolations', () => {
         {
           themeKey: 't1',
           title: 'La page la plus rentable du site',
-          businessImpact: 'Certains visiteurs ne peuvent pas terminer l’envoi du formulaire.'
+          businessImpact: 'Certains visiteurs ne peuvent pas terminer l’envoi du formulaire.',
           recommendedActions: ['Simplifier le formulaire de devis.'],
         },
       ],
@@ -52,7 +52,7 @@ describe('findBusinessClaimViolations', () => {
           themeKey: 't1',
           title: 'Titre',
           businessImpact:
-            'Le visiteur abandonne. C’est une perte directe de demandes commerciales sur la page la plus rentable du site.',
+            'Le visiteur ne peut pas terminer l’envoi. C’est une perte directe de demandes commerciales sur la page la plus rentable du site.',
           recommendedActions: ['Agir.'],
         },
       ],
