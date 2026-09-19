@@ -108,6 +108,12 @@ import {
 } from './page-audit-profile.js';
 import { derivePageAnalysisCoverage } from './analysis-coverage.js';
 import { readPageScanJson, writePageScanJson } from './artifacts/page-scan-io.js';
+import {
+  buildContentStageMarker,
+  clearContentStageMarker,
+  readContentStageMarker,
+  writeContentStageMarker,
+} from './content-stage-marker.js';
 import { assertAcquisitionLease } from './artifacts/acquisition-lease-io.js';
 import {
   buildScanToolIdentity,
@@ -195,6 +201,9 @@ export type ScanProgressEvent =
    *  content-checked, by reason, so inventoried and checked counts
    *  reconcile. Robots-skipped URLs are never navigated and are not here. */
   | { type: 'crawl-exclusions'; excluded: CrawlExclusionCounts }
+  /** One page whose failed checks finished their retries. Recovery runs
+   *  pages one at a time and can take many minutes, so each page reports. */
+  | { type: 'content-recovery-page'; completed: number; totalPages: number; url: string }
   | { type: 'select-performance' }
   | {
       type: 'lighthouse-start';
@@ -1022,6 +1031,9 @@ export function needsLighthouseRun(decision: PageAuditDecision, scanJson: PageSc
 interface RecoveryPageStore {
   load: (url: string) => PageScanResult;
   store: (url: string, page: PageScanResult) => void;
+  /** Called once per page whose retries are finished, so the job keeps a
+   *  heartbeat through a stage that can run for many minutes. */
+  onPageDone?: (url: string) => void;
 }
 
 const PROFILE_ORDER: readonly AttemptExecutionProfile[] = [
@@ -1105,6 +1117,7 @@ async function recoverFailedChecks(
       pages.store(url, { ...merged.page, acquisitionAttempts: allAttempts });
       requests = retryRequestsFor(allAttempts);
     }
+    pages.onPageDone?.(url);
   }
 }
 
@@ -1475,6 +1488,36 @@ async function runStagedFullAuditScan(
   const completedByUrl = resumePartition?.completedByUrl ?? new Map<string, PageScanResult>();
   const pendingPages = resumePartition?.pending ?? pagesToScan;
 
+  // A resumed run whose content stage already finished (every crawled page
+  // reused, and the stage marker bound to this crawl, scope and epoch)
+  // restores the discovery-wave pages from disk and skips the waves and the
+  // failed-check recovery, which would otherwise replay silently before
+  // Lighthouse resumes. Any other run clears a stale marker first.
+  const markerDir = context.writePagesAsScanned === true ? context.auditDir : undefined;
+  const stageBinding = {
+    crawledUrls: pagesToScan.map((page) => page.url),
+    scopeDigest: context.scopeDigest,
+    evidenceEpoch: context.evidenceEpoch,
+  };
+  let resumedWaveUrls: readonly string[] | undefined;
+  if (resumePartition !== undefined && pendingPages.length === 0 && markerDir !== undefined) {
+    const waveUrls = readContentStageMarker(markerDir, stageBinding);
+    if (waveUrls !== undefined) {
+      const waves = partitionPagesForResume(
+        waveUrls.map((url) => ({ url, depth: 0, status: 'visited', discoveryMethod: 'link' })),
+        (url) => readPageScanJson(context.screenshotDir, url),
+        context.scopeDigest !== undefined
+          ? { scopeDigest: context.scopeDigest, evidenceEpoch: context.evidenceEpoch }
+          : undefined,
+      );
+      if (waves.pending.length === 0) {
+        for (const [url, scanJson] of waves.completedByUrl) completedByUrl.set(url, scanJson);
+        resumedWaveUrls = waveUrls;
+      }
+    }
+  }
+  if (resumedWaveUrls === undefined && markerDir !== undefined) clearContentStageMarker(markerDir);
+
   const renderedResults = new Map<string, RenderedAnalysisResult>();
   const renderedCosts = new Map<string, RenderedCostProfile>();
   // Surface-discovered links keep their referring page's frontier depth so
@@ -1508,7 +1551,7 @@ async function runStagedFullAuditScan(
   let contentCompleted = completedByUrl.size;
   onProgress?.({
     type: 'content-scan-start',
-    totalPages: pagesToScan.length,
+    totalPages: pagesToScan.length + (resumedWaveUrls?.length ?? 0),
     alreadyCompleted: completedByUrl.size,
     concurrency,
   });
@@ -1526,7 +1569,7 @@ async function runStagedFullAuditScan(
   // Total page count the staged progress events report against. The
   // discovery waves (step 11) grow it as they admit pages, so the counts
   // never promise work that does not exist nor hide work that does.
-  let totalPages = pagesToScan.length;
+  let totalPages = pagesToScan.length + (resumedWaveUrls?.length ?? 0);
 
   // Plan 059 steps 8/26: each crawled page's audit profile joins its scan
   // result here so scan.json persists the signals the evidence graph's
@@ -1686,23 +1729,36 @@ async function runStagedFullAuditScan(
   // admitted and scanned by a wave of the same lanes, or given a terminal
   // disposition naming the bound that stopped it. The loop stops only at
   // the section 6 stops: no new eligible candidate, or a documented bound.
-  const admittedWaveUrls = await runDiscoveryWaves({
-    browser,
-    delayMs,
-    concurrency,
-    scheduler,
-    context,
-    onLanePageDone,
-    retryQueue,
-    initialUrls: new Set(pagesToScan.map((page) => page.url)),
-    depthByUrl,
-    growTotalPages: (count) => {
-      totalPages += count;
-    },
-  });
+  const admittedWaveUrls =
+    resumedWaveUrls ??
+    (await runDiscoveryWaves({
+      browser,
+      delayMs,
+      concurrency,
+      scheduler,
+      context,
+      onLanePageDone,
+      retryQueue,
+      initialUrls: new Set(pagesToScan.map((page) => page.url)),
+      depthByUrl,
+      growTotalPages: (count) => {
+        totalPages += count;
+      },
+    }));
 
-  if (retryQueue.size > 0) {
+  if (resumedWaveUrls === undefined && retryQueue.size > 0) {
+    let recovered = 0;
+    const recoveryTotal = retryQueue.size;
     await recoverFailedChecks(retryQueue, browser, delayMs, scheduler, context, {
+      onPageDone: (url) => {
+        recovered += 1;
+        onProgress?.({
+          type: 'content-recovery-page',
+          completed: recovered,
+          totalPages: recoveryTotal,
+          url,
+        });
+      },
       load: (url) => {
         if (context.writePagesAsScanned) {
           const fromDisk = readPageScanJson(context.screenshotDir, url);
@@ -1749,6 +1805,9 @@ async function runStagedFullAuditScan(
   );
   const contentPlan = buildContentAuditPlan([...pagesToScan.map(toPlanProfile), ...waveProfiles]);
   const finalizedPlan = finalizeLighthousePlan(contentPlan, renderedCosts);
+  if (resumedWaveUrls === undefined && markerDir !== undefined) {
+    writeContentStageMarker(markerDir, buildContentStageMarker(stageBinding, admittedWaveUrls));
+  }
   onProgress?.({ type: 'select-performance' });
   const selectedUrls = new Set(
     skipLighthouse

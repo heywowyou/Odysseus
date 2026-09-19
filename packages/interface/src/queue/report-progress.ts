@@ -192,6 +192,13 @@ export function createScanProgressReporter(
       return;
     }
 
+    if (event.type === 'content-recovery-page') {
+      // Retries change no progress figure; writing the phase refreshes the
+      // job's heartbeat so a long recovery never looks like a dead job.
+      await reportJobPhase(connection, jobId, jobType, { phase: 'content-scan' });
+      return;
+    }
+
     if (event.type === 'select-performance') {
       await reportJobPhase(connection, jobId, jobType, { phase: 'select-performance' });
       return;

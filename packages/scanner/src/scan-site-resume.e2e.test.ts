@@ -14,6 +14,7 @@ import {
 } from './artifacts/crawl-checkpoint-io.js';
 import { buildPageDir } from './artifacts/paths.js';
 import { readPageScanJson } from './artifacts/page-scan-io.js';
+import { CONTENT_STAGE_MARKER_FILE } from './content-stage-marker.js';
 import {
   scanSite,
   type CrawlCheckpointResumeDecision,
@@ -112,10 +113,14 @@ describe('scanSite resumes a full audit from the crawl checkpoint (plan 035)', (
     expect(fs.existsSync(path.join(auditDir, CRAWL_CHECKPOINT_FILENAME))).toBe(true);
     // The checkpointed inventory is exactly the crawl this run performed.
     expect(readCrawlCheckpoint(auditDir)?.crawl).toEqual(result.crawl);
+    // The finished content stage is recorded for a later resume.
+    expect(fs.existsSync(path.join(auditDir, CONTENT_STAGE_MARKER_FILE))).toBe(true);
   }, 300_000);
 
   it('replays the checkpointed crawl and skips every completed page on the second run', async () => {
     const crawlsBefore = crawlSiteInvocations;
+    const markerPath = path.join(auditDir, CONTENT_STAGE_MARKER_FILE);
+    const markerBefore = fs.statSync(markerPath).mtimeMs;
     const decisions: CrawlCheckpointResumeDecision[] = [];
     const events: ScanProgressEvent[] = [];
     const result = await scanSite(TEST_URL, {
@@ -177,6 +182,10 @@ describe('scanSite resumes a full audit from the crawl checkpoint (plan 035)', (
     // free: see the fixtureRequestCount note at the top of the file for
     // the by-design per-audit consent navigation.)
     expect(crawlSiteInvocations).toBe(crawlsBefore);
+
+    // The content stage was restored from its marker rather than replayed:
+    // a replay clears the marker and writes a new one.
+    expect(fs.statSync(markerPath).mtimeMs).toBe(markerBefore);
 
     // Deletion is the interface stage's job, not scanSite's.
     expect(fs.existsSync(path.join(auditDir, CRAWL_CHECKPOINT_FILENAME))).toBe(true);
