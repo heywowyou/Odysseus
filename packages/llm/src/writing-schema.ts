@@ -6,21 +6,12 @@ import type {
   ReportLanguage,
 } from '@odysseus/core';
 
-/** Plan 027: raised from a hard 2-sentence ceiling, which was measured to
- *  force every businessImpact in every stored French analysis to exactly two
- *  sentences - the ceiling was doing the model's writing for it. A floor is
- *  added alongside the raised ceiling so the model doesn't simply keep
- *  writing two sentences out of habit; three to five gives room for
- *  consulting-length prose without inviting padding. See
- *  plans/027-french-report-prose-quality.md and
- *  docs/rules/report-writing-style.md section 5. */
-export const MIN_BUSINESS_IMPACT_SENTENCES = 3;
-export const MAX_BUSINESS_IMPACT_SENTENCES = 5;
-/** Plan 027: raised from a hard 3-item ceiling for the same reason as the
- *  sentence cap above, with a floor so a theme still gets at least two
- *  concrete next steps. */
-export const MIN_RECOMMENDED_ACTIONS = 2;
-export const MAX_RECOMMENDED_ACTIONS = 5;
+/** Plan 067: concise prose is valid; the schema prevents padding rather than
+ * forcing it. */
+export const MIN_BUSINESS_IMPACT_SENTENCES = 1;
+export const MAX_BUSINESS_IMPACT_SENTENCES = 4;
+export const MIN_RECOMMENDED_ACTIONS = 1;
+export const MAX_RECOMMENDED_ACTIONS = 4;
 
 /** Rough sentence count: splits on ./!/? followed by whitespace or end of
  *  string. Doesn't parse abbreviations, but businessImpact is short,
@@ -82,10 +73,18 @@ export type WritingPassOutput = z.infer<typeof writingPassOutputSchema>;
  *  its category (context for tone, even though legalRelevance is no
  *  longer written by the model), and the underlying finding records it
  *  needs to write from. */
+export interface TrustedRemediationInput {
+  ruleId: string;
+  guidance: string;
+}
+
 export interface WritingThemeInput {
   themeKey: string;
   category: FindingCategory;
+  /** Plan 067: only findings assigned to this theme. */
   findings: LlmInput['findings'];
+  /** Reviewed deterministic remediation copy from the report registry only. */
+  trustedRemediations: TrustedRemediationInput[];
 }
 
 /** Deterministic counts the executive summary must cite verbatim rather
@@ -122,16 +121,44 @@ export type TransactionalFlowStatus = 'present' | 'absent' | 'inconclusive' | 'u
  *  interfaces cannot carry members out of `LlmInput['siteContext']`. */
 export type WritingSiteContext = LlmInput['siteContext'] & HotelCatalogueWritingSiteContext;
 
+export type WritingPerformanceMetric = 'lcp' | 'cls' | 'inp' | 'tbt';
+export type WritingPerformanceSource = 'field' | 'lab';
+export type WritingPerformanceRating = 'good' | 'mid' | 'poor';
+
+export interface WritingPerformanceObservation {
+  metric: WritingPerformanceMetric;
+  source: WritingPerformanceSource;
+  value: number;
+  rating: WritingPerformanceRating;
+}
+
+export interface WritingPerformanceEvidence {
+  fieldDataAvailable: boolean;
+  observations: WritingPerformanceObservation[];
+  /** Deterministic recommendation signal after field/lab reconciliation. */
+  primaryConcern: WritingPerformanceObservation | null;
+  /** Lab metrics that may be shown in the deterministic section but must not
+   * drive generated recommendations because they contradict stronger field data. */
+  suppressedLabRecommendations: WritingPerformanceMetric[];
+}
+
+export interface WritingSummaryEvidence {
+  siteStats: WritingSiteStats;
+  categoriesPresent: FindingCategory[];
+  performance: WritingPerformanceEvidence;
+  limitations: string[];
+}
+
 export interface WritingInput {
   language: ReportLanguage;
   siteContext: WritingSiteContext;
   themes: WritingThemeInput[];
   siteStats: WritingSiteStats;
-  /** Which Core Web Vital dominates the site's performance problem, so
-   *  performance recommendedActions lead with the actual cause rather
-   *  than defaulting to image/CSS advice. null when no page is rated
-   *  poor on any metric. See docs/archive/report-v2-refactor.md A4. */
-  dominantPerformanceMetric: 'lcp' | 'cls' | 'tbt' | null;
+  /** Plan 067: reconciled evidence contract shared with the deterministic
+   * Performance section; replaces the lab-only dominant-metric shortcut. */
+  performanceEvidence: WritingPerformanceEvidence;
+  /** Deterministic packet for the executive summary. */
+  summaryEvidence: WritingSummaryEvidence;
   /** Optional only for compatibility with stored-analysis tooling and test
    * fixtures that predate the guard. New analysis-stage calls always set it. */
   transactionalFlowStatus?: TransactionalFlowStatus;
