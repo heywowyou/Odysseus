@@ -21,6 +21,10 @@ export type { ReportPageCountWarning, RenderedPdfWithPageCount } from './pdf.js'
  *  asks, rather than re-deriving "was performance measured" from the
  *  manifest a second time in a different package. */
 export { hasMeasuredCoreWebVitals } from './template/sections/core-web-vitals-table.js';
+export {
+  buildWritingPerformanceEvidence,
+  buildTrustedRemediationsByTheme,
+} from './template/sections/writing-evidence.js';
 
 /** The outreach preview. A separate document kind from the paid report, not a
  *  tier of it: synchronous, HTML only, no Chromium, and built from its own
