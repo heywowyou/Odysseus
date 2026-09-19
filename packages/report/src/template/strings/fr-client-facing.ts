@@ -188,7 +188,7 @@ export function applyFrenchClientFacingCopy(strings: ReportStrings): ReportStrin
           many: 'Les {count} corrections de ce chantier sont à vérifier selon le contexte.',
         },
       },
-      whyItMattersLabel: 'Pourquoi cela compte',
+      whyItMattersLabel: "Pourquoi c'est important",
       observationLabel: 'Ce que nous avons constaté',
       observationWithPageTemplate:
         'Ce chantier comprend notamment le constat « {defect} », relevé sur la page {page}. ' +

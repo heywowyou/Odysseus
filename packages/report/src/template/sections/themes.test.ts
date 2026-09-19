@@ -2124,7 +2124,7 @@ describe('plan 018 step 6: priority card order and the deterministic observation
       'class="tag qw"', // 1. quick-win marker
       'Contraste insuffisant sur les pages clés', // 1. stored technical title
       'class="theme-fact-label">Complexité', // 1. decision facts
-      'Pourquoi cela compte', // 2
+      'Pourquoi c’est important', // 2
       'Ce que nous avons constaté', // 3
       'Comment le corriger', // 4
       'Exigence de conformité', // 5. context
