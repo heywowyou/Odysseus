@@ -597,14 +597,14 @@ that actually closes it.
 
 **Implementation state, 2026-09-19.** The Plan 067 implementation is on `main` from
 the French-first selection/orchestration work beginning at `673ca409` through the
-current product-contract amendments at `c8e1ad45`. The mechanical requirements have
+current implementation/proof amendments at `ad0abc58`. The mechanical requirements have
 focused proof fixtures committed, but this session cannot claim them green because the
 repository validation runner never starts a workflow step. The plan therefore remains
 `IN PROGRESS`, not `IMPLEMENTED` or `DONE`.
 
 | Requirement | Committed implementation / focused proof | Session result |
 | --- | --- | --- |
-| French-only default | `run-full-audit-job.ts`, `regenerate-writing.ts`; `run-full-audit-job.test.ts` (`e118a436`) plus report-preparation/make-report-ready French-only fixtures | proof committed; not executed in this session |
+| French-only default | `run-full-audit-job.ts`, `regenerate-writing.ts`; `run-full-audit-job.test.ts` (`e118a436`) plus report-preparation/make-report-ready French-only fixtures, including stale legacy-pair refresh proof (`ad0abc58`) | proof committed; normal and stale-refresh paths contain no automatic English analysis/report expectation; not executed in this session |
 | 2/1 call budget | `analysis-stage.plan067.test.ts` (`15919cdf`): fresh = structure + writer, reuse = writer only | proof committed; exact mocked call assertions present |
 | no advisory calls | production call edges removed from `analysis-stage.ts`; same provider-budget test asserts reviewer/correction-review zero calls | proof committed; static call-graph sweep found reviewer calls only in offline tooling/tests |
 | on-demand English | `generate-english-version.ts`, route + dashboard action; `generate-english-version.test.ts` (`1acb5e90`, `b1fe9db9`) | proof committed; provider and render failure both leave selected French untouched; attach occurs only after EN PDF succeeds |
@@ -633,8 +633,8 @@ adds **1** English writer call against the exact selected French structure.
 **Validation blocker recorded, not waived.** The required commands
 `pnpm run plans:check`, `pnpm run typecheck`, `pnpm run test`, `pnpm run check`
 and the report/PDF e2e gates could not be executed from this session. The connected
-GitHub Actions workflow is configured for pushes to `main`, but latest run
-`35413417194` on `c8e1ad45` terminated the test, Semgrep and Trivy jobs with
+GitHub Actions workflow is configured for pushes to `main`, but latest code/proof run
+`35413532694` on `ad0abc58` terminated the test, Semgrep and Trivy jobs with
 `steps: null` before any workflow step ran. This is the same pre-step failure shape as
 baseline run `35406908849` on pre-implementation commit `741d9849`. The local
 container also cannot resolve `github.com`, so it cannot clone the checkout as a
@@ -644,7 +644,9 @@ results.
 **Villas Foch acceptance blocker recorded, not waived.** The named saved corpus is
 `artifacts/www.villasfoch.fr/2026-09-03T20-44-46Z/`; repository docs confirm it
 exists on runtime/bucket storage, but the artifact itself is gitignored/not committed and
-this session has no VPS/object-store connector. No rescan was attempted. The deterministic
+this session has no VPS/object-store/SSH connector. A direct repository fetch of that
+saved-artifact directory returned GitHub 404, while `docs/report/audit-rehearsal-notes.md`
+still records the same runtime path. No rescan was attempted. The deterministic
 Foch LCP/CLS failure class is covered by the committed regression fixture, but the saved
 audit regeneration, 61-finding appendix count, PDF/font gates and subjective final read
 remain pending until that existing artifact is reachable.
