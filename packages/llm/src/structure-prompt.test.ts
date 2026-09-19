@@ -5,8 +5,8 @@ import { buildStructureSystemPrompt } from './structure-prompt.js';
  * Issue #297: a real Haaitza report filed an automatic page reload under a
  * theme about link and image text, heading-structure findings under a theme
  * about language annotations, and a layout-stability metric under a theme
- * about loading time. The prompt asked only for "roughly 8 to 15 themes",
- * which reads as a size target; the grouping rule itself was never stated.
+ * about loading time. Plan 067 now uses a soft 5-8 target while keeping
+ * remediation coherence authoritative over the count.
  */
 describe('structure prompt theme coherence (issue #297)', () => {
   it('states that a theme is one remediation job', () => {
@@ -22,6 +22,15 @@ describe('structure prompt theme coherence (issue #297)', () => {
     expect(prompt).toContain('even when it means one finding gets a theme of its own');
     expect(prompt).toContain('Never pad a theme with unrelated rules to reach a size');
     expect(prompt).toContain('better left ungrouped than filed under one they contradict');
+  });
+
+  it('uses a soft 5 to 8 theme target with explicit exceptions instead of a quota', () => {
+    const prompt = buildStructureSystemPrompt(false);
+
+    expect(prompt).toContain('soft target of 5 to 8 themes');
+    expect(prompt).toContain('guidance, not a hard quota');
+    expect(prompt).toContain('use fewer');
+    expect(prompt).toContain('use more');
   });
 
   it('keeps the rule in both the fallback-context and normal variants', () => {
