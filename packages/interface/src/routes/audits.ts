@@ -7,7 +7,6 @@ import {
   isGrade,
   isValidSiren,
   summarizeAuditCoverage,
-  type ApprovedAuditEvidence,
   type AuditManifest,
   type AuditManualFields,
   type Finding,
@@ -50,10 +49,8 @@ import {
 import {
   buildArtifactBucketKey,
   buildAuditDir,
-  confirmedFindingsDigest,
   getArtifactsRoot,
   hasAssessedEvidenceGraph,
-  readApprovedAuditEvidence,
 } from '@odysseus/scanner';
 import {
   classifyReportFreshness,
@@ -96,7 +93,10 @@ import { projectLegacyJob } from '../operator/legacy-job-projection.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { resolveArtifactFile } from '../artifacts/resolve-artifact.js';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
-import { readAuditEvidenceQualitySummary } from '../pipeline/audit-evidence-quality.js';
+import {
+  readAuditEvidenceDiagnostics,
+  type AuditEvidenceDiagnostics,
+} from '../pipeline/audit-evidence-diagnostics.js';
 
 function isReportLanguage(value: string): value is ReportLanguage {
   return value === 'fr' || value === 'en';
@@ -356,24 +356,21 @@ async function getLatestReportQualityRun(
  *  are absent, not legacy. */
 function evidenceFactsForAudit(
   audit: Pick<AuditDocumentFields, 'scanIntent'>,
-  approval: ApprovedAuditEvidence | undefined,
+  diagnostics: AuditEvidenceDiagnostics | undefined,
   graphAssessed: boolean,
 ): EvidenceFacts {
-  const assessed = approval !== undefined || graphAssessed;
-  if (approval !== undefined) {
-    return {
-      graphAssessed,
-      approved: true,
-      ...(approval.verdict === 'reportable-with-known-limitations'
-        ? { approvedWithLimitations: true }
-        : {}),
-      limitationCodes: approval.limitations.map((limitation) => limitation.code),
-      digestRef: approval.auditEvidenceSnapshotDigest,
-    };
-  }
   const legacyAudit =
-    !assessed && audit.scanIntent !== 'quick-check' && audit.scanIntent !== 'prospecting-audit';
-  return { graphAssessed: assessed, ...(legacyAudit ? { legacyAudit: true } : {}) };
+    diagnostics?.status === 'unavailable' &&
+    !graphAssessed &&
+    audit.scanIntent !== 'quick-check' &&
+    audit.scanIntent !== 'prospecting-audit';
+  return {
+    ...(diagnostics !== undefined ? { diagnosticsStatus: diagnostics.status } : {}),
+    ...(diagnostics?.clientLimitations.length
+      ? { limitationCodes: diagnostics.clientLimitations.map((limitation) => limitation.code) }
+      : {}),
+    ...(legacyAudit ? { legacyAudit: true } : {}),
+  };
 }
 
 /** Report facts for the operator snapshot, from the Plan-058 authority's
@@ -514,10 +511,9 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         : null;
     const hostname = new URL(audit.siteUrl).hostname;
     const auditDir = buildAuditDir(getArtifactsRoot(), hostname, audit.startedAt);
-    // Plan 060 §5.2 evidence facts: the approval file (digests and
-    // limitation codes) plus the graph's assessed marker - bounded,
-    // no page payload, no report bytes.
-    const evidenceApproval = readApprovedAuditEvidence(auditDir);
+    // Plan 068: graph existence distinguishes a pre-diagnostics historical
+    // audit from a current diagnostics file that is unreadable. No approval
+    // artifact participates in normal product readiness.
     const graphAssessed = hasAssessedEvidenceGraph(auditDir);
     // Issue #91: resolve each language's PDF availability up front, so the
     // dashboard can render report rows that tell "the report is fine but
@@ -588,20 +584,17 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         : analysed
           ? 'analysed'
           : 'scanned';
-    // Plan 059 step 37: the evidence graph's verdict and approval state for
-    // the audit detail view, counts and stable codes only. Quick checks and
-    // prospecting scans never assemble a graph, so they skip the read and
-    // keep answering exactly as before; `undefined` removes the field and
-    // the dashboard renders no evidence card.
+    // Plan 068: full audits expose scoped diagnostics even when the detailed
+    // diagnostic artifact is unavailable. Quick/prospecting scans do not
+    // promise this layer and therefore keep the field absent.
     const evidence =
       audit.scanIntent === 'quick-check' || audit.scanIntent === 'prospecting-audit'
         ? undefined
-        : await readAuditEvidenceQualitySummary({
+        : await readAuditEvidenceDiagnostics({
             auditDir,
             hostname,
             startedAt: audit.startedAt,
             store: artifactStore,
-            confirmedFindingsDigest: confirmedFindingsDigest(findings),
           });
     // Plan 047: prospect provenance and current preview state come from the
     // durable prospect identity; no legacy candidate link is consulted.
@@ -647,7 +640,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         ...(prospect !== null ? { siteLabel: prospect.name } : {}),
       },
       work: failureJob !== null ? [projectLegacyJob(failureJob)] : [],
-      evidenceFacts: evidenceFactsForAudit(audit, evidenceApproval, graphAssessed),
+      evidenceFacts: evidenceFactsForAudit(audit, evidence, graphAssessed),
       reportFacts: reportFactsForAudit({
         run: latestQualityRun,
         latestBundle: latestQualityBundle,

@@ -8,11 +8,8 @@ import {
 import { buildAuditSnapshot, type AuditSnapshotInputs } from './audit-snapshot.js';
 import type { EvidenceFacts, ReportQualityFacts } from './audit-readiness.js';
 
-const EVIDENCE_ABSENT: EvidenceFacts = {};
-const EVIDENCE_APPROVED: EvidenceFacts = {
-  approved: true,
-  digestRef: 'sha256:' + 'a'.repeat(64),
-};
+const EVIDENCE_UNAVAILABLE: EvidenceFacts = {};
+const EVIDENCE_COMPLETE: EvidenceFacts = { diagnosticsStatus: 'complete' };
 const REPORT_IDLE: ReportQualityFacts = {};
 const REPORT_RUNNING: ReportQualityFacts = { runState: 'running', runRef: 'run-1' };
 
@@ -33,7 +30,7 @@ function snapshotInputs(overrides: Partial<AuditSnapshotInputs> = {}): AuditSnap
   return {
     subject: { prospectId: 'prospect-1', auditId: 'audit-1', siteLabel: 'Hôtel du Parc' },
     work: [workView()],
-    evidenceFacts: EVIDENCE_ABSENT,
+    evidenceFacts: EVIDENCE_UNAVAILABLE,
     reportFacts: REPORT_IDLE,
     capabilities: {},
     attention: [],
@@ -45,15 +42,12 @@ describe('buildAuditSnapshot', () => {
   it('composes a snapshot that validates against operatorSnapshotSchema', () => {
     const snapshot = buildAuditSnapshot(
       snapshotInputs({
-        evidenceFacts: EVIDENCE_APPROVED,
+        evidenceFacts: EVIDENCE_COMPLETE,
         reportFacts: { candidateDigest: 'sha256:' + 'b'.repeat(64) },
       }),
     );
     expect(operatorSnapshotSchema.parse(snapshot)).toEqual(snapshot);
-    expect(snapshot.evidence).toEqual({
-      readiness: 'approved-complete',
-      digestRef: EVIDENCE_APPROVED.digestRef,
-    });
+    expect(snapshot.evidence).toEqual({ readiness: 'complete' });
     expect(snapshot.report).toEqual({
       readiness: 'quality-approved',
       candidateDigest: 'sha256:' + 'b'.repeat(64),
@@ -106,9 +100,9 @@ describe('buildAuditSnapshot', () => {
     expect(after.stateVersion).not.toBe(before.stateVersion);
   });
 
-  it('changes stateVersion when evidence approval is recorded', () => {
-    const before = buildAuditSnapshot(snapshotInputs({ evidenceFacts: EVIDENCE_ABSENT }));
-    const after = buildAuditSnapshot(snapshotInputs({ evidenceFacts: EVIDENCE_APPROVED }));
+  it('changes stateVersion when evidence diagnostics become complete', () => {
+    const before = buildAuditSnapshot(snapshotInputs({ evidenceFacts: EVIDENCE_UNAVAILABLE }));
+    const after = buildAuditSnapshot(snapshotInputs({ evidenceFacts: EVIDENCE_COMPLETE }));
     expect(after.stateVersion).not.toBe(before.stateVersion);
   });
 

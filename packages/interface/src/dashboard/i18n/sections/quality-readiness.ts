@@ -19,38 +19,33 @@ export interface QualityReadinessStrings {
 export const qualityReadiness = {
   fr: {
     evidence: {
-      absent: {
-        label: 'Aucune preuve approuvée',
+      unavailable: {
+        label: 'Diagnostic indisponible',
         description:
-          'Aucune donnée probante approuvée n’existe pour cet audit. Les usages qui l’exigent restent indisponibles.',
+          'Le diagnostic détaillé des données de scan n’est pas disponible. Le rapport reste régi par ses constats et contrôles de provenance.',
       },
       'legacy-unknown': {
-        label: 'Preuves d’avant contrôle qualité',
+        label: 'Diagnostic historique inconnu',
         description:
-          'Cet audit date d’avant la vérification systématique des preuves : leur qualité n’est pas connue, ni validée ni invalidée.',
+          'Cet audit date d’avant le diagnostic détaillé : sa qualité n’est ni supposée complète ni invalidée.',
       },
       building: {
-        label: 'Preuves en cours de vérification',
-        description: 'Les preuves sont en cours de collecte et de vérification.',
+        label: 'Diagnostic en cours',
+        description: 'Les données du scan sont encore en cours d’assemblage et de diagnostic.',
       },
-      'needs-attention': {
-        label: 'Preuves à examiner',
+      limited: {
+        label: 'Données exploitables avec limites',
         description:
-          'La vérification des preuves a besoin d’une décision de votre part avant de pouvoir aboutir.',
+          'Le scan reste exploitable ; des limites explicites réduisent seulement les affirmations concernées.',
       },
-      'approved-with-limitations': {
-        label: 'Preuves approuvées avec limites',
-        description:
-          'Les preuves sont approuvées pour l’usage demandé, avec des limites explicites et connues.',
-      },
-      'approved-complete': {
-        label: 'Preuves approuvées',
-        description: 'Les preuves sont approuvées pour l’usage demandé, sans limite connue.',
+      complete: {
+        label: 'Données complètes',
+        description: 'Le diagnostic ne signale aucune limite client connue pour les données du scan.',
       },
       superseded: {
-        label: 'Preuves remplacées',
+        label: 'Données remplacées',
         description:
-          'Une observation plus récente remplace ces preuves ; elles restent consultables en historique.',
+          'Une observation plus récente remplace ces données ; elles restent consultables en historique.',
       },
     },
     report: {
@@ -101,36 +96,32 @@ export const qualityReadiness = {
   },
   en: {
     evidence: {
-      absent: {
-        label: 'No approved evidence',
+      unavailable: {
+        label: 'Diagnostic unavailable',
         description:
-          'No approved audit evidence exists for this audit. Uses that require it stay unavailable.',
+          'Detailed scan-data diagnostics are unavailable. The report remains governed by its findings and provenance checks.',
       },
       'legacy-unknown': {
-        label: 'Pre-quality evidence',
+        label: 'Historical diagnostic unknown',
         description:
-          'This audit predates systematic evidence verification: its quality is unknown — neither validated nor invalidated.',
+          'This audit predates detailed diagnostics: its quality is neither assumed complete nor invalidated.',
       },
       building: {
-        label: 'Evidence being verified',
-        description: 'Evidence is being collected and verified.',
+        label: 'Diagnostics building',
+        description: 'Scan data is still being assembled and diagnosed.',
       },
-      'needs-attention': {
-        label: 'Evidence needs review',
-        description: 'Evidence verification needs one of your decisions before it can conclude.',
-      },
-      'approved-with-limitations': {
-        label: 'Evidence approved with limitations',
+      limited: {
+        label: 'Usable with limitations',
         description:
-          'Evidence is approved for the requested use, with explicit, known limitations.',
+          'The scan remains usable; explicit limitations narrow only the claims they affect.',
       },
-      'approved-complete': {
-        label: 'Evidence approved',
-        description: 'Evidence is approved for the requested use with no known limitation.',
+      complete: {
+        label: 'Data complete',
+        description: 'Diagnostics report no known client limitation for the scan data.',
       },
       superseded: {
-        label: 'Evidence superseded',
-        description: 'A newer observation replaces this evidence; it remains readable in history.',
+        label: 'Data superseded',
+        description: 'A newer observation replaces this data; it remains readable in history.',
       },
     },
     report: {

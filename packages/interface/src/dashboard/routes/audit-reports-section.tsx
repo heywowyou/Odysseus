@@ -21,10 +21,6 @@ import type { DashboardStrings } from '../i18n/types';
 import { fetchWithTimeout, postEmpty } from '../lib/api';
 import { failureReasonKind, fallbackNoticeText, hasPageCountWarning } from './audit-detail-model';
 import { canApproveReportPair } from './audit-report-panel-model';
-import {
-  qualityBundlePromotionBlock,
-  qualityBundlePromotionBlockCopy,
-} from './evidence-quality-model';
 import type {
   AuditDetailResponse,
   AuditFailureResponse,
@@ -231,17 +227,6 @@ export function ReportsCard(props: {
       detail.reports,
       detail.analysisLanguages ?? (detail.analysisPair === 'none' ? [] : ['fr', 'en']),
     );
-  // Plan 059 step 37: the bundle's approve action also respects the evidence
-  // approval. A bundle produced from a canonical approval whose approval file
-  // no longer stands (the audit was re-assessed, or the roots moved) is not
-  // silently promoted; the server's own promotion gate refuses it too.
-  const promotionBlock = qualityBundle
-    ? qualityBundlePromotionBlock(qualityBundle, detail.evidence)
-    : undefined;
-  const promotionBlockCopy =
-    promotionBlock !== undefined
-      ? qualityBundlePromotionBlockCopy(promotionBlock, language)
-      : undefined;
   // Plan 032 (issue #162): the selected pair came from the audit fallback
   // gate, so the card says why the report has no model-written themes
   // instead of leaving the absence to be read as a failure.
@@ -348,37 +333,15 @@ export function ReportsCard(props: {
             {qualityBundle.state === 'awaiting-operator-approval' ? (
               <Button
                 size="sm"
-                disabled={
-                  qualityLoading ||
-                  qualityBundle.evidenceApprovalMode === 'legacy-adapter' ||
-                  promotionBlock !== undefined
-                }
-                aria-describedby={
-                  qualityBundle.evidenceApprovalMode === 'legacy-adapter'
-                    ? 'quality-bundle-legacy-note'
-                    : promotionBlock !== undefined
-                      ? 'quality-bundle-evidence-block'
-                      : undefined
-                }
+                disabled={qualityLoading}
                 onClick={() => void approveQualityBundle()}
               >
                 {language === 'fr' ? 'Approuver ce bundle exact' : 'Approve this exact bundle'}
               </Button>
             ) : null}
           </div>
-          {qualityBundle.evidenceApprovalMode === 'legacy-adapter' ? (
-            <p id="quality-bundle-legacy-note" className="mt-2 text-xs text-ink-muted">
-              {language === 'fr'
-                ? 'Évaluation uniquement : la promotion client reste bloquée jusqu’à la preuve canonique du Plan 059.'
-                : 'Evaluation only: client promotion remains blocked until Plan 059 canonical evidence exists.'}
-            </p>
-          ) : null}
-          {promotionBlockCopy !== undefined ? (
-            <p id="quality-bundle-evidence-block" className="mt-2 text-xs text-ink-muted">
-              {promotionBlockCopy}
-            </p>
-          ) : null}
         </div>
+      ) : null}        </div>
       ) : null}
       {staticFallbackNotice !== undefined ? (
         <p className="mb-3 max-w-reading text-xs text-ink-muted">{staticFallbackNotice}</p>

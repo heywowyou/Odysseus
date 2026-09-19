@@ -184,33 +184,22 @@ export interface GradeOverrideResponse {
   reviewedBy: 'operator';
 }
 
-/** The Plan 059 evidence graph's verdict (the persisted quality
- *  assessment's own vocabulary; codes are stable API strings the page
- *  turns into operator copy, never respelled). */
-export type EvidenceQualityVerdictResponse =
-  'reportable-complete' | 'reportable-with-known-limitations' | 'needs-operator-review' | 'failed';
+/** Plan 068 scoped evidence diagnostics. They describe claim limitations;
+ *  they are not a report approval state. */
+export type EvidenceDiagnosticStatusResponse = 'complete' | 'limited' | 'unavailable';
 
-/** `approved`: a canonical approval stands next to the roots it names.
- *  `missing`: the graph was assessed but not approved. `stale`: an approval
- *  file exists but no longer matches the roots or findings it approved. */
-export type EvidenceApprovalStateResponse = 'approved' | 'stale' | 'missing';
+export interface EvidenceLimitationResponse {
+  limitationId: string;
+  code: string;
+  summary: Record<ReportLanguage, string>;
+  reportDestination: string;
+  evidenceRefs: string[];
+}
 
-/** Plan 059 step 37: GET /api/audits/:auditId `evidence` — the full audit's
- *  evidence-quality summary, counts and stable codes only. Present only
- *  when the audit has an evidence graph; quick checks, prospecting scans
- *  and pre-059 audits omit the field entirely. */
 export interface AuditEvidenceQualityResponse {
-  verdict: EvidenceQualityVerdictResponse;
-  approval: EvidenceApprovalStateResponse;
-  /** Digest of the standing approval, comparable with a Plan 058 quality
-   *  bundle's `approvedEvidenceDigest`. Present only when approved. */
-  approvalDigest?: string;
-  /** Distinct blocking issue codes, sorted. */
-  blockingCodes: string[];
-  /** Evidence-reference count behind each blocking code. */
-  blockingCounts: Record<string, number>;
-  /** Number of mandatory disclosures the assessment carries. */
-  limitationCount: number;
+  status: EvidenceDiagnosticStatusResponse;
+  clientLimitations: EvidenceLimitationResponse[];
+  operationalWarnings: { code: string; referenceCount: number }[];
 }
 
 /** The whole GET /api/audits/:auditId body. */
@@ -274,9 +263,8 @@ export interface AuditDetailResponse {
   /** Issue #90: the failed pipeline run behind this audit, when there was
    *  one. Absent while the run is healthy. */
   failure?: AuditFailureResponse;
-  /** Plan 059 step 37: the evidence-quality summary. Optional here for the
-   *  same stale-cached-page tolerance as `outreach` above: an older cached
-   *  page tolerates a payload from before the field existed. */
+  /** Plan 068 scan-data-quality diagnostics. Optional only because quick
+   *  checks/prospecting scans do not produce this diagnostic layer. */
   evidence?: AuditEvidenceQualityResponse;
 }
 

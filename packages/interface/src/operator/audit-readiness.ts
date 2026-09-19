@@ -18,64 +18,42 @@ import type { OperatorEvidenceReadiness, OperatorReportReadiness } from './contr
  * `needs-attention`.
  */
 
-/** What the caller knows about the audit's Plan-059 evidence. Every field
- *  is optional: absent means "no such fact was fetched", and the derivation
- *  treats that as the fail-closed absence it is. */
+/** What the caller knows about the audit's scoped evidence diagnostics. */
 export interface EvidenceFacts {
-  /** The audit's evidence graph was assessed (a quality assessment exists). */
-  graphAssessed?: boolean;
-  /** An ApprovedAuditEvidence exists for the current graph. */
-  approved?: boolean;
-  /** The approval's verdict is reportable-with-known-limitations. */
-  approvedWithLimitations?: boolean;
-  /** Closed limitation codes carried by that approval. */
+  diagnosticsStatus?: 'complete' | 'limited' | 'unavailable';
   limitationCodes?: string[];
-  /** Digest reference of the approved evidence root. */
-  digestRef?: string;
-  /** The caller knows a graph build is genuinely in progress right now. */
+  /** The caller knows a diagnostics build is genuinely in progress right now. */
   building?: boolean;
   /** The caller knows this evidence was superseded (e.g. by a re-audit). */
   superseded?: boolean;
-  /** No graph exists and the audit predates the evidence graph. */
+  /** No detailed diagnostics exist because the audit predates that layer. */
   legacyAudit?: boolean;
 }
 
 export interface EvidenceReadinessView {
   readiness: OperatorEvidenceReadiness;
-  digestRef?: string;
   limitationCodes?: string[];
   legacyAdvisory?: boolean;
 }
 
 /**
- * Binding mapping (plan 060 §5.1), evaluated in this order:
- *   approved + with-limitations  -> approved-with-limitations
- *   approved                     -> approved-complete
- *   assessed but not approved    -> absent (fail-closed, see module comment)
- *   building                     -> building
- *   superseded                   -> superseded
- *   legacy audit, no graph       -> legacy-unknown (+legacyAdvisory)
- *   anything else                -> absent
+ * Plan 068 availability semantics. A limited audit is still usable and does
+ * not become operator attention by default.
  */
 export function deriveEvidenceReadiness(facts: EvidenceFacts): EvidenceReadinessView {
-  if (facts.approved === true) {
-    if (facts.approvedWithLimitations === true) {
-      return {
-        readiness: 'approved-with-limitations',
-        ...(facts.digestRef === undefined ? {} : { digestRef: facts.digestRef }),
-        ...(facts.limitationCodes === undefined ? {} : { limitationCodes: facts.limitationCodes }),
-      };
-    }
-    return {
-      readiness: 'approved-complete',
-      ...(facts.digestRef === undefined ? {} : { digestRef: facts.digestRef }),
-    };
-  }
-  if (facts.graphAssessed === true) return { readiness: 'absent' };
   if (facts.building === true) return { readiness: 'building' };
   if (facts.superseded === true) return { readiness: 'superseded' };
-  if (facts.legacyAudit === true) return { readiness: 'legacy-unknown', legacyAdvisory: true };
-  return { readiness: 'absent' };
+  if (facts.diagnosticsStatus === 'complete') return { readiness: 'complete' };
+  if (facts.diagnosticsStatus === 'limited') {
+    return {
+      readiness: 'limited',
+      ...(facts.limitationCodes === undefined ? {} : { limitationCodes: facts.limitationCodes }),
+    };
+  }
+  if (facts.legacyAudit === true) {
+    return { readiness: 'legacy-unknown', legacyAdvisory: true };
+  }
+  return { readiness: 'unavailable' };
 }
 
 /** What the caller knows about the audit's Plan-058 report quality. */

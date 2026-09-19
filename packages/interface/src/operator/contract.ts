@@ -219,12 +219,11 @@ export type ProblemEnvelope = z.infer<typeof problemEnvelopeSchema>;
  * construction) stay in the vocabulary so nothing is renamed later.
  */
 export const OPERATOR_EVIDENCE_READINESS = [
-  'absent',
+  'unavailable',
   'legacy-unknown',
   'building',
-  'needs-attention',
-  'approved-with-limitations',
-  'approved-complete',
+  'limited',
+  'complete',
   'superseded',
 ] as const;
 const operatorEvidenceReadinessSchema = z.enum(OPERATOR_EVIDENCE_READINESS);
@@ -302,16 +301,12 @@ const operatorSubjectSchema = z.object({
   siteLabel: z.string().optional(),
 });
 
-/** Plan 060 §5.2 evidence view. Digests and versions are references for
- *  the technical-details disclosure, never the primary explanation. */
+/** Plan 068 evidence availability view. Limitations describe the scope of
+ *  the diagnostic; they are not approval state and never gate a report. */
 const operatorEvidenceViewSchema = z.object({
   readiness: operatorEvidenceReadinessSchema,
-  digestRef: z.string().optional(),
-  /** Closed limitation codes for approved-with-limitations; explanations
-   *  are dashboard copy. */
   limitationCodes: z.array(z.string()).optional(),
-  /** Advisory only: the observation came from an older producer. Never a
-   *  fabricated failure and never an automatic invalidation. */
+  /** Advisory only: the observation predates the detailed diagnostic layer. */
   legacyAdvisory: z.boolean().optional(),
 });
 

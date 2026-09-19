@@ -14,30 +14,30 @@ import type { ReportBundleState } from '@odysseus/core';
  */
 
 describe('deriveEvidenceReadiness', () => {
-  it('maps an approval with limitations to approved-with-limitations and carries its codes', () => {
+  it('maps limited diagnostics to limited without creating operator attention', () => {
     const facts: EvidenceFacts = {
-      approved: true,
-      approvedWithLimitations: true,
-      limitationCodes: ['legacy-evidence-lineage'],
-      digestRef: 'sha256:' + 'a'.repeat(64),
+      diagnosticsStatus: 'limited',
+      limitationCodes: ['site-level-unknown'],
     };
     expect(deriveEvidenceReadiness(facts)).toEqual({
-      readiness: 'approved-with-limitations',
-      digestRef: 'sha256:' + 'a'.repeat(64),
-      limitationCodes: ['legacy-evidence-lineage'],
+      readiness: 'limited',
+      limitationCodes: ['site-level-unknown'],
     });
   });
 
-  it('maps a complete approval to approved-complete with its digest reference', () => {
-    const digest = 'sha256:' + 'b'.repeat(64);
-    const view = deriveEvidenceReadiness({ approved: true, digestRef: digest });
-    expect(view).toEqual({ readiness: 'approved-complete', digestRef: digest });
+  it('maps complete diagnostics to complete', () => {
+    expect(deriveEvidenceReadiness({ diagnosticsStatus: 'complete' })).toEqual({
+      readiness: 'complete',
+    });
   });
 
-  it('maps assessed-but-unapproved evidence to absent, not needs-attention', () => {
-    // The 059 dashboard phases are not started: assessment failures are not
-    // operator attention, and a refused graph must never read as a pass.
-    expect(deriveEvidenceReadiness({ graphAssessed: true })).toEqual({ readiness: 'absent' });
+  it('maps unavailable diagnostics directly, except historical audits stay legacy-unknown', () => {
+    expect(deriveEvidenceReadiness({ diagnosticsStatus: 'unavailable' })).toEqual({
+      readiness: 'unavailable',
+    });
+    expect(
+      deriveEvidenceReadiness({ diagnosticsStatus: 'unavailable', legacyAudit: true }),
+    ).toEqual({ readiness: 'legacy-unknown', legacyAdvisory: true });
   });
 
   it('maps building and superseded facts', () => {
@@ -45,28 +45,8 @@ describe('deriveEvidenceReadiness', () => {
     expect(deriveEvidenceReadiness({ superseded: true })).toEqual({ readiness: 'superseded' });
   });
 
-  it('maps a legacy audit to legacy-unknown with the advisory, never a guessed pass', () => {
-    expect(deriveEvidenceReadiness({ legacyAudit: true })).toEqual({
-      readiness: 'legacy-unknown',
-      legacyAdvisory: true,
-    });
-  });
-
-  it('maps a current audit whose graph is not built yet to absent', () => {
-    expect(deriveEvidenceReadiness({})).toEqual({ readiness: 'absent' });
-    expect(deriveEvidenceReadiness({ graphAssessed: false, legacyAudit: false })).toEqual({
-      readiness: 'absent',
-    });
-  });
-
-  it('keeps the binding row order: an approval stands over building or superseded flags', () => {
-    expect(
-      deriveEvidenceReadiness({ approved: true, building: true, superseded: true }).readiness,
-    ).toBe('approved-complete');
-    // And assessed-but-unapproved over a stale building flag from a rerun.
-    expect(
-      deriveEvidenceReadiness({ graphAssessed: true, approved: false, building: true }).readiness,
-    ).toBe('absent');
+  it('defaults to unavailable instead of inventing approval or failure', () => {
+    expect(deriveEvidenceReadiness({})).toEqual({ readiness: 'unavailable' });
   });
 });
 
@@ -211,28 +191,26 @@ describe('deriveReportReadiness over every schema run state', () => {
 });
 
 describe('plan 060 §19 independence matrix', () => {
-  it('failed report run + approved evidence keep both truths', () => {
+  it('failed report run + complete scan diagnostics keep both truths', () => {
     const report = deriveReportReadiness({ runState: 'failed' });
-    const evidence = deriveEvidenceReadiness({ approved: true });
+    const evidence = deriveEvidenceReadiness({ diagnosticsStatus: 'complete' });
     expect(report.readiness).toBe('failed');
-    expect(evidence.readiness).toBe('approved-complete');
+    expect(evidence.readiness).toBe('complete');
   });
 
-  it('producing report + absent evidence keep both truths', () => {
+  it('producing report + unavailable diagnostics keep both truths', () => {
     const report = deriveReportReadiness({ runState: 'running' });
     const evidence = deriveEvidenceReadiness({});
     expect(report.readiness).toBe('producing');
-    expect(evidence.readiness).toBe('absent');
+    expect(evidence.readiness).toBe('unavailable');
   });
 
-  it('quality-approved report + failed work keep both truths', () => {
-    // Work execution is a caller-provided axis; here it is failed while the
-    // report authority proves a quality-approved bundle.
+  it('quality-approved report + limited scan data + failed work keep all truths', () => {
     const report = deriveReportReadiness({ candidateDigest: 'sha256:' + '9'.repeat(64) });
-    const evidence = deriveEvidenceReadiness({ approved: true, approvedWithLimitations: true });
+    const evidence = deriveEvidenceReadiness({ diagnosticsStatus: 'limited' });
     const failedWorkState = 'failed' as const;
     expect(report.readiness).toBe('quality-approved');
-    expect(evidence.readiness).toBe('approved-with-limitations');
+    expect(evidence.readiness).toBe('limited');
     expect(failedWorkState).toBe('failed');
   });
 });

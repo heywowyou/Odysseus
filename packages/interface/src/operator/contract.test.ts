@@ -13,12 +13,11 @@ describe('plan 060 readiness axes', () => {
     // Plan 060 §5.1: the four authorities are never flattened into one
     // enum, so each axis carries its own closed values.
     expect([...OPERATOR_EVIDENCE_READINESS]).toEqual([
-      'absent',
+      'unavailable',
       'legacy-unknown',
       'building',
-      'needs-attention',
-      'approved-with-limitations',
-      'approved-complete',
+      'limited',
+      'complete',
       'superseded',
     ]);
     expect([...OPERATOR_REPORT_READINESS]).toEqual([
@@ -38,9 +37,9 @@ describe('plan 060 readiness axes', () => {
     const shared = (OPERATOR_EVIDENCE_READINESS as readonly string[]).filter((value) =>
       (OPERATOR_REPORT_READINESS as readonly string[]).includes(value),
     );
-    // Overlap is only in values whose meaning is identical on both axes
-    // (absent/needs-attention/superseded); no work state leaks into either.
-    expect(shared).toEqual(['absent', 'needs-attention', 'superseded']);
+    // Only the historical/supersession term is shared; approval language
+    // no longer exists on the evidence axis.
+    expect(shared).toEqual(['superseded']);
   });
 });
 
@@ -92,7 +91,7 @@ describe('operatorSnapshotSchema', () => {
           },
         },
       ],
-      evidence: { readiness: 'absent' },
+      evidence: { readiness: 'unavailable' },
       report: { readiness: 'failed' },
       capabilities: { startFullScan: { state: 'available', stateToken: 't1' } },
       attention: [],
@@ -102,7 +101,7 @@ describe('operatorSnapshotSchema', () => {
     // A failed report run sits next to independently declared evidence
     // readiness: run state and artifact readiness are different dimensions.
     expect(parsed.work[0]?.state).toBe('failed');
-    expect(parsed.evidence.readiness).toBe('absent');
+    expect(parsed.evidence.readiness).toBe('unavailable');
     expect(parsed.report.readiness).toBe('failed');
     expect(parsed.capabilities.startFullScan).toEqual({ state: 'available', stateToken: 't1' });
   });
@@ -112,7 +111,7 @@ describe('operatorSnapshotSchema', () => {
       operatorSnapshotSchema.safeParse({
         subject: {},
         work: [],
-        evidence: { readiness: 'absent' },
+        evidence: { readiness: 'unavailable' },
         report: { readiness: 'absent' },
         capabilities: { startFullScan: { state: 'available' } },
         attention: [],
@@ -127,7 +126,7 @@ describe('operatorSnapshotSchema', () => {
       operatorSnapshotSchema.safeParse({
         subject: {},
         work: [],
-        evidence: { readiness: 'absent' },
+        evidence: { readiness: 'unavailable' },
         report: { readiness: 'absent' },
         capabilities: {},
         attention: [],
