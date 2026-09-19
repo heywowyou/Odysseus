@@ -111,9 +111,11 @@ The prompt now states the grouping rule directly: two findings belong
 together when fixing one is the same task as fixing the other, a finding
 needing a different fix goes in a different theme even if that leaves the
 theme tiny, and a finding that fits nowhere coherent is better left
-ungrouped than filed under a theme it contradicts. This is prompt
-guidance, not a guard - the model still decides which findings belong
-together, and no deterministic rule-to-remediation taxonomy exists to
+ungrouped than filed under a theme it contradicts. Plan 067 adds a soft
+target of 5-8 coherent themes: fewer or more are explicitly allowed when
+coherence requires it, and the defensive schema maximum remains unchanged.
+This is prompt guidance, not a guard - the model still decides which findings
+belong together, and no deterministic rule-to-remediation taxonomy exists to
 check it against. The report's own defence is separate: the priority card
 draws its representative example from the rule carrying most of the
 priority's work rather than from its most severe single finding, so an
