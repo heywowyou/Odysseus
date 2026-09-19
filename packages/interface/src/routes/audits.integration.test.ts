@@ -291,10 +291,19 @@ afterAll(async () => {
 });
 
 describe.skipIf(!mongoAvailable)('audit routes against real mongo', () => {
-  it('approves and delivers the canonical French report without requiring English', async () => {
+  it('declares, approves and delivers the canonical French report without requiring English', async () => {
     const chain = await seedFrenchOnlyChain();
-    const approved = await approveViaRoute(chain.auditId);
 
+    const detail = await getDetailViaRoute(chain.auditId);
+    expect(detail.statusCode).toBe(200);
+    const detailBody = JSON.parse(detail.body as string) as {
+      analysisPair: string;
+      analysisLanguages: string[];
+    };
+    expect(detailBody.analysisPair).not.toBe('none');
+    expect(detailBody.analysisLanguages).toEqual(['fr']);
+
+    const approved = await approveViaRoute(chain.auditId);
     expect(approved.statusCode).toBe(201);
     const approval = await getLatestReportApproval(connection!, chain.auditId);
     expect(approval?.fr.reportId).toBe(`report-fr-${chain.auditId}`);
