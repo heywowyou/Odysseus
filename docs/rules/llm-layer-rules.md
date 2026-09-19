@@ -8,6 +8,15 @@ The contract itself is locked in `packages/core/src/types/llm-output.ts`
 and is not repeated here. This file covers the behaviour built on top of
 it.
 
+> **Current report-generation contract — Plan 067 (2026-09-19).**
+> French is the canonical report. A normal model-backed French generation is
+> one structure call plus one French writing call, or one French writing call
+> when the exact compatible structure is reused. English is generated only by
+> the explicit operator action and reuses that exact French structure for one
+> additional writing call. The shadow reviewer and correction-review calls are
+> not part of report production. Historical sections below remain useful as
+> incident rationale only where they are explicitly marked retired.
+
 Governing rule, restated because everything below serves it:
 **deterministic scanners detect; the LLM explains, groups, prioritizes,
 and translates.** The model may never introduce a finding absent from its
@@ -134,9 +143,12 @@ from the prompt's own instructions; no separate field was added.
 
 ## 2. Failure handling
 
-Since Milestone 6.1 (see section 9), a single analysis is two model
-calls, a structure pass and a writing pass, each with its own
-independent retry loop and its own budget. A structure-pass retry never
+Since Milestone 6.1 (see section 9), a model-backed analysis separates
+structure from writing. Under Plan 067 the normal French path is exactly two
+provider calls when structure must be generated and exactly one provider call
+when a compatible structure already exists. Each actual pass has its own
+retry loop and budget; retries are exceptional provider attempts, not extra
+review stages. A structure-pass retry never
 consumes writing-pass budget and vice versa.
 
 **Structure pass** (`analyzeStructure`): validate the response against
@@ -187,30 +199,13 @@ French pass succeeded and the English pass then exhausted all three
 immediate attempts inside one rate-limit window; with pacing the same
 flow completes. (`rate-limit-pacing.ts`, shared by both passes.)
 
-**Amended 2026-09-03 (issue #30): the pacing is provider-informed, and the
-two language passes no longer share one quota window.** After the
-plan-025 provider switch, a real scan's English writing pass still
-exhausted all three attempts inside the old 20s+40s budget. Three
-changes, retry budget and guards still unchanged:
+**Historical note — issue #30, superseded by Plan 067.** Rate-limit retries
+still honor provider Retry-After information and the pacing helper remains
+available for standalone tooling. Normal report production no longer runs
+French and English back-to-back, so it has no inter-language pause: French is
+generated alone; the optional English action happens only when the operator
+requests it later.
 
-- The backoff floor is now 60s times the attempt number (60s, then 120s).
-  The 20s figure was measured against the pre-plan-025 provider; the
-  current one demonstrably outlasted the whole 60s budget. Pacing delays
-  are only ever paid by a run that is already being throttled.
-- A `Retry-After` response header on the 429 is waited out in full, as a
-  floor over the base delay, never a shortcut under it. The header is read
-  off the error object (`client.ts` duck-types `status`/`headers`, because
-  the SDK's own message wording is not stable across major versions) and
-  travels to the pacing helper as a
-  `(provider retry-after: Ns)` marker appended to the failure message.
-  Whether the current provider sends the header at all is unconfirmed; if
-  it does not, the floor is the only protection, and a window longer than
-  roughly three minutes still fails loudly by design.
-- The queued full audit (`run-full-audit-job.ts`) and the dashboard's
-  writing regeneration (`regenerate-writing.ts`) pause 20s between the
-  French and English analysis stages, because the French pass (structure +
-  writing + review) is what drains the window the English pass then
-  enters. A standalone `analyze --language X` run pauses nothing.
 
 **Amended 2026-09-17 (issue #406): one attempt is rejected once, with every
 guard that failed.** The writing pass's guards used to run in sequence, each
@@ -251,43 +246,13 @@ named the provider in two actions rather than one. Raising `MAX_RETRIES` was
 considered and rejected: it buys attempts rather than removing the failure
 mode, and costs two more generations on every bad run. See trade-off 97.
 
-**Amended 2026-09-17 (issue #410): a language whose writing already succeeded
-is reused, not re-rolled.** The deliverable is the bilingual pair, and the
-callers run French then English in sequence, so an English pass that exhausted
-its retries left an already-successful French pass without a pair and the only
-route forward regenerated French from scratch. Measured on a real 378-page
-audit (2026-09-17): the French generation was paid for and discarded, and
-because a re-roll is not the prose that was produced, any review done on it was
-void too.
+**Amended by Plan 067:** compatible writing reuse remains, but the unit of
+normal delivery is no longer a bilingual pair. French may reuse an analysis
+only when audit, findings provenance, and `structureGeneratedAt` match. The
+explicit English action always binds to the selected French
+`structureGeneratedAt`; stale or mismatched provenance/structure is rejected
+and an English failure cannot replace or damage French.
 
-A run now reuses the newest stored analysis for a language when **all** of
-these hold, and regenerates otherwise:
-
-- the same audit;
-- the same findings provenance (fail closed when absent or stale, per the
-  standing provenance guardrail);
-- generated from the same structure document as the pass about to run - this
-  is what the new `structureGeneratedAt` on a stored analysis records;
-- a model-generated analysis, never a static-fallback one;
-- the operator has not asked for a fresh generation.
-
-This is the mechanism the structure pass already has, applied one level down,
-including the operator's override: `regenerateWriting` (dashboard: *Rewrite
-both*, HTTP: `?fresh=true`) writes both languages again, exactly as
-`regenerateStructure` does above. A reused analysis must never be silently
-stale, which is why the conditions are all required and the override exists.
-
-**Amended 2026-09-17 (issue #409): a rejection is recorded, not only logged.**
-Each rejected attempt emits a `call-rejected` telemetry event naming the
-guards that failed and the attempt number, and each escape under #407 emits a
-`style-violation-shipped` event. Guard *names* only: the violating text is
-model prose about a client's site and stays in the analysis artifact, so the
-redaction step filters the guard list against the closed name union as well as
-filtering the key (`telemetry/events.ts`, and
-`docs/rules/telemetry-rules.md` for the metadata-only contract, disabled by
-default and never load-bearing). The same per-attempt record is stored on the
-failed writing candidate, so the audit page shows every attempt rather than
-only the last message.
 
 ---
 
@@ -315,13 +280,13 @@ to trust implicitly.
 alternative groupings on a task that calls for a stable, repeatable
 answer over the same findings. This is a client deliverable, not a
 brainstorm, and two runs over the same findings should not produce
-materially different priorities. The structure and reviewer passes use
+materially different priorities. The structure pass and standalone historical reviewer tools use
 `OPENAI_TEMPERATURE` (0.2) for exactly that reason. The writing pass has
 no such repeatability requirement - it produces prose, not a priority
 ranking - and (plan 027) uses its own `WRITING_OPENAI_TEMPERATURE` (1.0,
 raised from an initial 0.7 on 2026-09-07) instead, because 0.2 was
 measured to reproduce the prompt's own worked examples in the model's
-output almost verbatim. All three passes still
+output almost verbatim. Production structure/writing calls and the standalone historical tools
 share `OPENAI_MODEL` (GPT-5.6 Luna since 2026-09-18, trade-off 102). Every
 call sets `reasoning_effort` to `OPENAI_REASONING_EFFORT` (`'xhigh'`, the
 highest value the API accepts). With reasoning on, the provider accepts only
@@ -361,9 +326,9 @@ and say so in the output, rather than inventing a business type or a
 primary goal. A model told the primary goal is "leads" when nobody said so
 will rank findings against a fiction.
 
-Language is a required parameter, not a default buried in code. French is
-the expected common case, but bilingual delivery is a product requirement
-and the parameter exists from the first call.
+Language remains explicit at the writing boundary. French is the canonical
+required report. English is optional and is generated only by the dashboard's
+explicit English action, never as an automatic companion to French.
 
 ---
 
@@ -485,18 +450,19 @@ run described the quote page as "la page la plus rentable du site". A
 reasonable inference, stated as knowledge, and nobody had said it. This
 extends section 4: without an intake file the model must not invent a
 business type, a primary goal, revenue attribution, traffic assumptions,
-or relative page value. It may say a page _appears_ commercially
-important and why, which is inference the client can weigh, not a claim
-they have to correct. Guarded since 2026-08-29:
-`findBusinessClaimViolations` (`business-claim-guard.ts`) runs inside
-`analyzeWriting`'s retry loop and rejects unhedged profitability and
-revenue superlatives ("plus rentable", "most profitable", "génère le
-plus"). Scope is calibrated against stored output: traffic superlatives
-("Prioriser les pages les plus visitées", "high-traffic pages") are
-legitimate generic advice phrasing and must keep passing, and a hedge
-anywhere in the same sentence ("semble", "appears") makes the claim
-permitted inference. The writing prompt names the fault phrase from the
-guard's `BUSINESS_CLAIM_EXAMPLES` constant.
+relative page value, or commercial outcomes the audit does not measure.
+Plan 067 makes the boundary explicit: bookings, conversion, revenue,
+abandonment, demand, trust, reputation, and equivalent outcomes are not
+licensed facts. Hedging does not make them acceptable — "may reduce
+bookings" is unsupported for exactly the same reason as "reduces bookings".
+`findBusinessClaimViolations` enforces this over every prose field.
+
+Direct functional consequences are allowed when the theme's own findings
+support them: a visitor cannot read a label, reach a control, understand an
+error, or complete an interface step. The writer sees only that theme's
+findings plus reviewed remediation-registry guidance, so another theme's
+evidence cannot license its prose.
+
 
 **Severity vocabulary must match the report's canonical labels, added
 2026-08-10 after a real manual review of a haaitza.com full audit.** The
@@ -554,9 +520,8 @@ had to be replaced. Offering three approved phrasings and then forbidding
 their mixture put two instructions in tension, and the model resolved that
 tension the wrong way on five of five live runs: the guard fired on the
 first attempt every time, and three of the five exhausted the retry budget
-and produced no analysis at all. Under trade-off 44 that means no
-deliverable, since the paid deliverable is the French and English pair, and
-neither stored audit could produce one.
+and produced no analysis at all. Historically that meant no bilingual deliverable. Plan 067 removes that
+coupling: French is independently deliverable and English is optional.
 
 `selectProviderPhrase(language, seed)` now picks the phrase before the call
 and `buildWritingSystemPrompt` shows only that one. The mixture is
@@ -565,8 +530,8 @@ per-call theme-key schema. The seed is the `auditId`, threaded through
 `buildWritingInput` and `WritingInput.providerPhrase`, so that:
 
 - regenerating a report never renames the client's provider, and
-- the French and English halves of one audit land on the same index, which
-  matters because they ship together.
+- a later English version receives the corresponding language-specific
+  phrase selection while reusing the same audit seed.
 
 The guard survives as the assertion that should now never fire, and its
 anchor changed with it. It used to treat whichever approved phrase appeared
@@ -1001,152 +966,32 @@ to the published page.
 
 ---
 
-## 12. The shadow reviewer pass
+## 12. Reviewer pipelines are retired from report production
 
-Added 2026-08-29. One extra model call per analysis, always on (operator
-decision), that reviews the writing pass's prose against exactly the input
-the writer was shown. It exists for the one fault class the deterministic
-guards cannot see: a fluent, unsupported assertion about this specific
-business that no pattern list anticipates.
+Plan 067 removes both historical advisory provider calls from
+`runAnalysisStage`: no shadow-review call and no correction-review call is
+started, awaited, or allowed to influence normal French or optional English
+generation. Their modules may remain as standalone measurement tools for
+historical experiments, but production orchestration has no edge to them.
 
-**Shape.** `analyzeReview` (`analyze-review.ts`) takes the same
-`WritingInput` the writer received plus the writer's `WritingPassOutput`,
-and returns one evidence-bound verdict per guarded prose field:
-`supported` / `unsupported` / `unsure`, each with a required reason
-naming or quoting what was checked (`reviewer-schema.ts`). It covers the
-same surface the deterministic guards scan (executiveSummary, notes,
-businessImpact, recommendedActions), excluding theme titles for the same
-reason. The theme-key correlation contract mirrors section 9: one review
-object per shown themeKey, echoed verbatim; a mismatched set is a skip,
-not a rejection.
+The replacement is deterministic and local:
 
-**It never blocks anything.** One attempt, no retry loop: API errors,
-malformed bodies, and correlation mismatches all become
-`{ status: 'skipped', reason }` and the analysis proceeds unchanged. The
-reviewer produces data for a later promotion decision; it is not a gate,
-and forcing verdicts with retries would contradict the reason it is
-shadow-mode. Verdicts persist insert-only to
-`analyses/<timestamp>-review.json`, next to the analysis they review, and
-the console gets a single summary line (per-field reasons live in the
-file).
+- each writing theme receives only its own findings;
+- reviewed remediation guidance comes only from the existing remediation
+  registry;
+- the executive summary receives a deterministic evidence packet;
+- performance prose receives reconciled field/lab evidence, with contradictory
+  lab signals explicitly suppressed from recommendations;
+- unsupported business/legal/performance sentences or actions are removed
+  locally, unrelated valid content is preserved, and metadata-only warnings
+  are surfaced to the operator;
+- remaining structural/semantic guards still fail closed through the normal
+  writing retry loop.
 
-**Promotion criteria, decided up front.** The reviewer enters the
-writing pass's retry loop only if the campaign data shows it catching
-real unsupported facts without false positives. It never re-judges what
-deterministic guards already answer exactly (language, severity
-vocabulary, page counts, digits, legal vocabulary): a second, flakier
-opinion on a question code answers perfectly is noise, not defense.
+The 2026-08-29 and 2026-09-11 reviewer campaigns remain in Git history as the
+reason these calls were not promoted: they added cost and false-positive
+review burden without becoming a trustworthy gate.
 
-**Validation campaign, 2026-08-29: the reviewer is NOT promoted.**
-Measured on real re-analyses (sas-fernande.fr fr and en, three runs on
-`mistral-medium-latest`; lacoorniche.com fr): the medium model flags
-essentially every `businessImpact` field `unsupported` for stating
-exactly the generic commercial consequences ("may cost customers and
-bookings", "losing leads and sales") the writing prompt itself requires
-- a systematic false-positive pattern on that field type. Two
-interventions failed to move it: an explicit carve-out rule (generic
-consequences are never unsupported), then explicit few-shot contrast
-examples ("may cost you customers": supported, every time; "your most
-profitable page": unsupported). The model contradicted the examples
-verbatim in its reasons. Conclusion: this is a model-capability limit,
-not a prompt bug. The prompt keeps the correct specification (see
-`reviewer-prompt.test.ts`, which pins both sides of it) so the same
-instrument can be re-measured after the OpenAI provider switch. Until that
-new evidence exists, the historical stream must be read knowing the bias:
-`unsupported` on a businessImpact field meant "states consequences", while
-the rare genuinely interesting catch
-(an unhedged "this directly harms your SEO") is real signal buried in
-it.
-
-**Same campaign, guard-side evidence.** The two new deterministic guards
-(section 6) fired zero times on three fresh real analyses and zero false
-positives across all 90 stored analyses (`packages/llm/src/
-lint-stored-analyses.ts`), matching the one historical fault each was
-built from. The pre-existing severity-vocabulary guard rejected a real
-lacoorniche.com first attempt ("graves") and the retry loop recovered -
-the reject-log-retry-fail-loud machinery working as designed on live
-output. Also noted in that Mistral campaign: rate limits (HTTP 429) on the medium tier
-are common enough that back-to-back analyze runs need spacing; a 429
-during retries fails the analysis loudly (by design), and a 429 on the
-reviewer skips it (also by design).
-
----
-
-### 12a. Advisory correction-review trial (plan 033)
-
-The correction reviewer is not the shadow reviewer. It receives exactly the
-accepted `WritingInput` and `WritingPassOutput`, returns one correlated record
-per eligible prose field, and writes an insert-only
-`*-correction-review.json` artifact. It has no access to HTML, PDFs,
-screenshots, fetched pages, the merged analysis, or report output, and no path
-to alter any of them.
-
-Its closed checklist is `unsupported-specific-claim`, `unhedged-causality`,
-`language-quality`, `repetition`, and `translation-parity`. Theme titles,
-finding facts, legal splices, priorities, and template text are excluded.
-Generic commercial consequences are explicitly not unsupported. Provider,
-schema, and correlation failures are a single `skipped` outcome with no retry;
-the analysis and the existing reviewer proceed unchanged.
-
-This is a measurement instrument, not a promotion. It cannot be assessed on
-stored client data until the operator gives current, audit-specific permission
-for named analysis paths. A later operator decision needs at least 20 paired
-French/English outputs, zero unsafe proposals, and a documented useful-catch
-rate that outweighs false-positive review burden. Until then it remains an
-advisory artifact only.
-
-**Measurement campaign, 2026-09-11: the correction reviewer is NOT promotable,
-and its `unsupported-specific-claim` stream reproduces the reviewer bias.**
-With current operator authorization for 10 named stored audits spanning low,
-medium, and high finding counts, 20 fresh French/English analyses were
-generated and re-measured with the read-only command
-`packages/llm/src/measure-correction-review.ts` (one call per file, no retry).
-Sample: 13 measured outputs plus 7 skipped by the pass (35 percent, all
-correlation mismatches where the model returned a strict subset of the
-eligible field set, extras none). The 13 measured outputs reviewed 444 prose
-fields and returned 151 propose-change verdicts and 0 unsure, for 282,106
-tokens and 5.4 to 19.6 seconds per call. Adjudication (performed by the
-measuring agent at the operator's explicit delegation of the same day,
-against the four step-6 categories): 5 true useful catches (3.3 percent of
-proposals: two causality hedges, one repetition reword, one wrong
-metric-related word, one missing article), 43 valid but not useful editorial
-preferences, 100 false positives, and 3 unsafe proposals. The zero-unsafe
-promotion threshold therefore fails, and the useful-catch rate does not
-outweigh the false-positive review burden: the pass stays advisory-only and
-no promotion wiring may be built from this evidence. The dominant failure
-repeats trade-off 55's 2026-08-29 finding on the current model: 70 of the 73
-`unsupported-specific-claim` proposals strike the hedged generic commercial
-consequences the writing prompt itself requires, including page-type and
-audience framing derived from the findings, despite the prompt's explicit
-carve-out; no prompt repair is attempted for the same reason as 2026-08-29
-(the carve-out was already present). Among the false positives, 26 proposals
-replace a field with text identical to the current prose. The 3 unsafe
-proposals, redacted: one rewrites the notes' WCAG 2.2 version statement into
-an unversioned wording, one rewrites a remediation's "WCAG 2.2 AA" into
-"WCAG 2 AA", and one deletes "visible" from a visible-labels remediation,
-each changing an audited fact or admitting a wrong implementation. Full
-per-entry verdicts live in a local, gitignored worksheet under the artifacts
-root; aggregate counts only are recorded here.
-
----
-
-## 13. GitHub issue lifecycle for model-driven work
-
-Issue lifecycle is a standard part of completing model-driven work, not
-optional administration. When a verified defect is found and will not be
-fixed in the current session, create a GitHub issue before the session ends
-or add the evidence to the existing issue. A local note, session log, or
-prompt is not a substitute for the issue tracker.
-
-The converse is equally binding. When a verified defect has been fixed,
-committed, and tested, close its GitHub issue in the same session. The
-closing comment names the commit and the verification commands with their
-results. Do not leave a confirmed fixed issue open for a later cleanup pass.
-
-`docs/agents/issue-tracker.md` owns the exact GitHub commands, uniqueness
-check, labels, and the full resolution lifecycle. This rule is repeated here
-because model-output guards and review work routinely expose defects: the
-discovery and resolution paths must be equally automatic.
 
 ---
 
