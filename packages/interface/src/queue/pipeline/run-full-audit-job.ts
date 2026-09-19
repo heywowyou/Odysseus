@@ -126,10 +126,15 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
       connection,
     );
 
-    await recordReadyWritingCandidate(connection, auditResult.auditId, {
-      frAnalysisId: frAnalysis.analysis.analysisId,
-      findingsProvenance: frAnalysis.analysis.findingsProvenance,
-    });
+    await recordReadyWritingCandidate(
+      connection,
+      auditResult.auditId,
+      {
+        frAnalysisId: frAnalysis.analysis.analysisId,
+        findingsProvenance: frAnalysis.analysis.findingsProvenance,
+      },
+      frAnalysis.sanitizationWarnings,
+    );
     await approveWritingCandidate(connection, auditResult.auditId);
 
     // Plan 067: render only the canonical French report on the normal path.
