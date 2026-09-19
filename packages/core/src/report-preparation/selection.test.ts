@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   analysisPairRefOf,
+  analysisSelectionRefOf,
   isCompleteCompatiblePair,
   pickLegacyLatestPair,
   resolveSelectedAnalysisPair,
@@ -86,7 +87,16 @@ describe('resolveSelectedAnalysisPair', () => {
     expect(resolution).toEqual({ kind: 'selected', fr, en });
   });
 
-  it('fails closed when the selection no longer refers to a complete pair', () => {
+  it('honours an explicit French-only selection', () => {
+    const fr = analysis('fr-only', 'fr', '2026-09-01T00:00:00Z');
+    const resolution = resolveSelectedAnalysisPair(
+      { selected: analysisSelectionRefOf(fr) },
+      [fr],
+    );
+    expect(resolution).toEqual({ kind: 'selected', fr });
+  });
+
+  it('fails closed when the selection no longer refers to its required French analysis', () => {
     const en = analysis('en-1', 'en', '2026-09-01T06:00:00Z');
     const resolution = resolveSelectedAnalysisPair(
       {
@@ -113,9 +123,10 @@ describe('resolveSelectedAnalysisPair', () => {
       kind: 'none',
       reason: 'no-analyses',
     });
-    expect(resolveSelectedAnalysisPair(undefined, [analysis('fr-1', 'fr', '2026-09-01')])).toEqual({
-      kind: 'none',
-      reason: 'no-complete-pair',
+    const frOnly = analysis('fr-1', 'fr', '2026-09-01');
+    expect(resolveSelectedAnalysisPair(undefined, [frOnly])).toEqual({
+      kind: 'legacy-latest',
+      fr: frOnly,
     });
   });
 });
@@ -195,7 +206,7 @@ describe('a ready candidate never becomes current through the fallback', () => {
     expect(resolution.kind).toBe('legacy-latest');
     if (resolution.kind === 'legacy-latest') {
       expect(resolution.fr.analysisId).toBe('old-fr');
-      expect(resolution.en.analysisId).toBe('old-en');
+      expect(resolution.en?.analysisId).toBe('old-en');
     }
   });
 
@@ -252,7 +263,7 @@ describe('a ready candidate never becomes current through the fallback', () => {
     expect(resolution.kind).toBe('legacy-latest');
     if (resolution.kind === 'legacy-latest') {
       expect(resolution.fr.analysisId).toBe('old-fr');
-      expect(resolution.en.analysisId).toBe('old-en');
+      expect(resolution.en?.analysisId).toBe('old-en');
     }
   });
 });
