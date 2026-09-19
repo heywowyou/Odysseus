@@ -14,6 +14,8 @@ import {
 } from './provider-phrase-guard.js';
 import { findSeverityVocabularyViolations } from './severity-vocabulary-guard.js';
 import { findThemeKeyMismatches, isThemeKeyMismatchEmpty } from './theme-key-guard.js';
+import { findThemeTitleViolations } from './theme-title-guard.js';
+import { findPerformanceEvidenceViolations } from './performance-evidence-guard.js';
 import { findTransactionalFlowViolations } from './transactional-flow-guard.js';
 import { findWcagCitationViolations } from './wcag-citation-guard.js';
 import type { WritingGuardName } from './telemetry/events.js';
@@ -73,6 +75,15 @@ export function buildWritingGuards(
         const mismatch = findThemeKeyMismatches(expectedThemeKeys, output);
         if (isThemeKeyMismatchEmpty(mismatch)) return null;
         return `theme key mismatch - missing: [${mismatch.missing.join(', ')}], extra: [${mismatch.extra.join(', ')}], duplicate: [${mismatch.duplicate.join(', ')}]`;
+      },
+    },
+    {
+      name: 'theme-title',
+      severity: 'blocking',
+      check: (output) => {
+        const violations = findThemeTitleViolations(output, language);
+        if (violations.length === 0) return null;
+        return `theme title must be a short noun phrase: ${violations.map((v) => `${v.field} (${v.reason})`).join(', ')}`;
       },
     },
     {
@@ -168,6 +179,15 @@ export function buildWritingGuards(
         );
         if (violations.length === 0) return null;
         return `transactional-flow claim conflicts with the deterministic signal in field(s): ${violations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
+      },
+    },
+    {
+      name: 'performance-evidence',
+      severity: 'blocking',
+      check: (output) => {
+        const violations = findPerformanceEvidenceViolations(input, output);
+        if (violations.length === 0) return null;
+        return `performance prose contradicts reconciled evidence in field(s): ${violations.map((v) => `${v.field} (${v.metric})`).join(', ')}`;
       },
     },
     {
