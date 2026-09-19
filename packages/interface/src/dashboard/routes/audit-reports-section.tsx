@@ -192,7 +192,7 @@ export function ReportsCard(props: {
   onApproved: () => void;
 }): JSX.Element {
   const { detail, onApproved } = props;
-  const { strings } = useI18n();
+  const { language, strings } = useI18n();
   const [isLoadingReport, setIsLoadingReport] = useState(false);
   const hasReports = detail.reportLanguages.length > 0 && detail.reports.length > 0;
   const reportBase = `/api/audits/${encodeURIComponent(detail.auditId)}/report`;
