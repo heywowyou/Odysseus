@@ -464,6 +464,9 @@ function renderTheme(
     showQuickWinBadge && isQuickWinTheme(theme)
       ? `<span class="tag qw" style="display:inline-flex;align-items:center;gap:4px">${QUICK_WIN_ICON}${escapeHtml(t.quickWinBadgeLabel)}</span>`
       : '';
+  const actionLevelBadge = priority
+    ? `<span class="tag">${escapeHtml(t.actionLevelLabels[priority.actionLevel])}</span>`
+    : '';
 
   const isNonConformant = theme.legalRelevance !== undefined;
   const conformityValue = isNonConformant ? t.conformityNonConformant : t.conformityNotApplicable;
@@ -605,6 +608,7 @@ function renderTheme(
         <span class="theme-rank">${displayRank}</span>
         <div class="theme-tags">
           ${categoryTag}
+          ${actionLevelBadge}
           ${quickWinBadge}
         </div>
         <div class="card-title">${escapeProse(theme.title, language)}</div>
