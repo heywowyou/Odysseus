@@ -291,6 +291,21 @@ export function AuditReportPanel(props: {
                 {selected.enAnalysisId !== undefined ? ` / EN ${selected.enAnalysisId.slice(0, 8)}` : ''}
               </p>
             ) : null}
+            {candidate !== undefined &&
+            candidate.status !== 'failed' &&
+            candidate.warnings !== undefined
+              ? candidate.warnings.map((warning) => (
+                  <p
+                    key={`${warning.code}:${warning.field}`}
+                    className="text-ink-muted"
+                    role="status"
+                  >
+                    {strings.prepareReport.sanitizationWarningTemplate
+                      .replace('{field}', warning.field)
+                      .replace('{code}', warning.code)}
+                  </p>
+                ))
+              : null}
             {candidate?.status === 'failed' ? (
               <>
                 <p className="text-ink-muted">
