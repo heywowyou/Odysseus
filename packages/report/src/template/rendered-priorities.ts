@@ -3,6 +3,7 @@ import {
   SEVERITY_ORDER,
   type AuditManifest,
   type Finding,
+  type ManifestPageEntry,
   type ReportLanguage,
   type StoredTheme,
 } from '@odysseus/core';
@@ -196,6 +197,36 @@ function classifyPriorityOwnership(finding: Finding, manifest: AuditManifest): P
  *    stored document. A finding citing no page at all cannot be placed
  *    outside the scope by anything in the document, so it keeps its
  *    occurrences. */
+/** The page the observation sentence names. The alphabetically first URL
+ *  used to be the example, and `/en/…` sorts before most French paths: seven
+ *  of nine French reports quoted an English page as the place a defect was
+ *  seen. A visited page in the report's language now comes first, then the
+ *  shallowest page, then URL order so two renders always agree. */
+function pickExamplePage(
+  pageUrls: readonly string[],
+  language: ReportLanguage,
+  pagesByUrl: ReadonlyMap<string, ManifestPageEntry>,
+): string | undefined {
+  const rank = (url: string): [number, number, number] => {
+    const page = pagesByUrl.get(url);
+    const pageLanguage = page?.language?.toLowerCase().split('-')[0];
+    return [
+      pageLanguage === language ? 0 : 1,
+      page?.status === 'visited' ? 0 : 1,
+      page?.depth ?? Number.MAX_SAFE_INTEGER,
+    ];
+  };
+  return [...new Set(pageUrls)]
+    .map((url) => ({ url, rank: rank(url) }))
+    .sort(
+      (a, b) =>
+        a.rank[0] - b.rank[0] ||
+        a.rank[1] - b.rank[1] ||
+        a.rank[2] - b.rank[2] ||
+        (a.url < b.url ? -1 : a.url > b.url ? 1 : 0),
+    )[0]?.url;
+}
+
 function buildPriorityEvidence(
   findings: readonly Finding[],
   language: ReportLanguage,
@@ -214,6 +245,8 @@ function buildPriorityEvidence(
    *  full finding set only when the theme has no same-category
    *  finding at all, which should not normally happen but must not throw. */
   category: StoredTheme['category'],
+  /** Manifest facts about each page, used to pick the example page. */
+  pagesByUrl: ReadonlyMap<string, ManifestPageEntry> = new Map(),
 ): PriorityEvidence {
   if (findings.length === 0) {
     // Unreachable through buildRenderedPriorities (selectThemes only keeps
@@ -290,7 +323,7 @@ function buildPriorityEvidence(
       representative.ruleId,
       representative.title,
     ),
-    representativePageUrl: [...new Set(representative.pageUrls)].sort()[0],
+    representativePageUrl: pickExamplePage(representative.pageUrls, language, pagesByUrl),
     uniquePageCount: pageUrls.length,
     occurrenceCount: inScope.reduce((total, finding) => total + finding.occurrences, 0),
   };
@@ -355,6 +388,7 @@ export function buildRenderedPriorities(
   const scopePageUrls = new Set(
     manifest.pages.filter((page) => page.status === 'visited').map((page) => page.url),
   );
+  const pagesByUrl = new Map(manifest.pages.map((page) => [page.url, page]));
 
   // Issue #293: a theme the model ranked names only a subset of a rule's
   // findings, so the remaining-work section - which excludes by findingId -
@@ -434,7 +468,13 @@ export function buildRenderedPriorities(
       findings: priorityFindings,
       ownershipCounts,
       remediations,
-      evidence: buildPriorityEvidence(priorityFindings, language, scopePageUrls, theme.category),
+      evidence: buildPriorityEvidence(
+        priorityFindings,
+        language,
+        scopePageUrls,
+        theme.category,
+        pagesByUrl,
+      ),
     };
   });
 

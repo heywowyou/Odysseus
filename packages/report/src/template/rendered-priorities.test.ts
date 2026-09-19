@@ -259,6 +259,36 @@ describe('plan 018 step 6: deterministic priority evidence', () => {
     );
   });
 
+  it('names a page in the report language, the shallowest first, as the example', () => {
+    const findings = [
+      buildFinding({
+        findingId: 'f001',
+        pageUrls: [
+          'https://example.com/en/rooms',
+          'https://example.com/fr/chambres/suite',
+          'https://example.com/fr/chambres',
+        ],
+      }),
+    ];
+    const manifest = {
+      pages: [
+        { url: 'https://example.com/en/rooms', status: 'visited', language: 'en', depth: 1 },
+        {
+          url: 'https://example.com/fr/chambres/suite',
+          status: 'visited',
+          language: 'fr-FR',
+          depth: 2,
+        },
+        { url: 'https://example.com/fr/chambres', status: 'visited', language: 'fr', depth: 1 },
+      ],
+    } as never;
+    const [fr] = buildRenderedPriorities([buildTheme(['f001'])], findings, manifest, 'fr');
+    const [en] = buildRenderedPriorities([buildTheme(['f001'])], findings, manifest, 'en');
+
+    expect(fr!.evidence.representativePageUrl).toBe('https://example.com/fr/chambres');
+    expect(en!.evidence.representativePageUrl).toBe('https://example.com/en/rooms');
+  });
+
   // Issue #41 invariant: a priority's page count renders against the
   // visited-page total ("N pages sur M"), so a URL outside the visited
   // scope (here, a discovered-but-not-scanned page an origin-level finding
