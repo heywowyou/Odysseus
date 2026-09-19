@@ -134,8 +134,9 @@ The canonical sources for this behavior are `docs/product/odysseus-project-brief
 | [065](archive/065-operational-observability-and-recovery.md) | Make routine failures typed, diagnosable and recoverable without log archaeology | P1 | L | 060, 061; integrates 058/059 | FROZEN (2026-09-18): backlog until a paid report sells |
 | [066](archive/066-operator-security-privacy-and-browser-isolation.md) | Harden hostile-input, confidential-artifact and browser-isolation boundaries for the quality pipelines | P1 | XL | 060; early isolation preflight, later 061 + 058/059 ownership | FROZEN (2026-09-18): backlog until a paid report sells |
 | [067](067-lean-grounded-report-generation.md) | Make paid reports grounded, French-first and cheap to regenerate | P1 | L | none | IN PROGRESS (2026-09-19): implementation + focused proof fixtures landed; broad validation is blocked by pre-step Actions failure and Villas Foch saved-artifact access remains pending |
+| [068](068-scoped-evidence-diagnostics.md) | Make evidence quality scoped diagnostics instead of global report approval | P1 | M | 067 | TODO |
 
-Plan 067 is the only active plan as of 2026-09-19; every earlier plan file lives under `archive/`.
+Plan 068 is the active execution plan as of 2026-09-19. Plan 067 was operator-confirmed complete, pushed and deployed; its existing root-plan closure text is left intact pending its own archival bookkeeping rather than being rewritten by Plan 068. Every plan before 067 lives under `archive/`.
 Frozen plans keep their contract and execution handoff there and reopen only
 by operator decision.
 
