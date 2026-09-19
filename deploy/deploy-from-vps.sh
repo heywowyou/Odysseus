@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One-command production deployment from the Odysseus VPS.
 # Pulls main into the VPS checkout, syncs the production tree, builds safely,
-# refuses to interrupt running jobs, preserves the current image for rollback,
+# refuses to interrupt non-resumable running jobs, preserves the current image for rollback,
 # rolls out app only, and automatically restores the previous image if
 # readiness verification fails.
 set -Eeuo pipefail
