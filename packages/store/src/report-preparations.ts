@@ -14,6 +14,7 @@ import {
   type ReportPreparationPatch,
   type SelectedAnalysisPairResolution,
   type WritingGuardRejection,
+  type WritingSanitizationWarning,
 } from '@odysseus/core';
 import { createAuditModel, type AuditDocument } from './schemas/audit.schema.js';
 import { createAnalysisModel, type AnalysisDocument } from './schemas/analysis.schema.js';
@@ -77,6 +78,7 @@ export async function recordReadyWritingCandidate(
   connection: Connection,
   auditId: string,
   pair: AnalysisSelectionRef,
+  warnings: readonly WritingSanitizationWarning[] = [],
 ): Promise<ReportPreparation> {
   const current = await getReportPreparation(connection, auditId);
   return persistPreparation(connection, auditId, {
@@ -85,7 +87,12 @@ export async function recordReadyWritingCandidate(
       ...(current.writingSelection?.selected
         ? { selected: current.writingSelection.selected }
         : {}),
-      candidate: { status: 'ready', pair, createdAt: new Date().toISOString() },
+      candidate: {
+        status: 'ready',
+        pair,
+        createdAt: new Date().toISOString(),
+        ...(warnings.length > 0 ? { warnings } : {}),
+      },
     },
     updatedAt: new Date().toISOString(),
   });
@@ -187,6 +194,7 @@ export async function attachEnglishAnalysisToSelection(
   connection: Connection,
   auditId: string,
   enAnalysisId: string,
+  warnings: readonly WritingSanitizationWarning[] = [],
 ): Promise<ReportPreparation> {
   const current = await getReportPreparation(connection, auditId);
   const selected = current.writingSelection?.selected;
@@ -205,6 +213,16 @@ export async function attachEnglishAnalysisToSelection(
     );
   }
 
+  const existingWarnings = current.writingSelection?.candidate?.warnings ?? [];
+  const combinedWarnings = [...existingWarnings, ...warnings];
+  const setFields: Record<string, unknown> = {
+    'reportPreparation.writingSelection.selected.enAnalysisId': enAnalysisId,
+    'reportPreparation.updatedAt': new Date().toISOString(),
+  };
+  if (current.writingSelection?.candidate !== undefined && combinedWarnings.length > 0) {
+    setFields['reportPreparation.writingSelection.candidate.warnings'] = combinedWarnings;
+  }
+
   const updated = await createAuditModel(connection)
     .findOneAndUpdate(
       {
@@ -214,12 +232,7 @@ export async function attachEnglishAnalysisToSelection(
           ? { 'reportPreparation.writingSelection.selected.enAnalysisId': selected.enAnalysisId }
           : {}),
       },
-      {
-        $set: {
-          'reportPreparation.writingSelection.selected.enAnalysisId': enAnalysisId,
-          'reportPreparation.updatedAt': new Date().toISOString(),
-        },
-      },
+      { $set: setFields },
       { returnDocument: 'after', projection: { reportPreparation: 1 }, runValidators: true },
     )
     .lean<Pick<AuditDocument, 'reportPreparation'>>();
