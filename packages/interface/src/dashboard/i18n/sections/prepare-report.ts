@@ -20,6 +20,7 @@ export interface PrepareReportStrings {
   regenerateBothFreshHint: string;
   generateEnglishButton: string;
   generateEnglishSuccess: string;
+  sanitizationWarningTemplate: string;
   candidateFailedLabel: string;
   /** Issue #409: one rejected attempt. {attempt}, {total}, {guards}. */
   candidateAttemptRejectedTemplate: string;
@@ -56,6 +57,8 @@ export const prepareReport = {
       'Réécrit uniquement la version française sans réutiliser une rédaction existante.',
     generateEnglishButton: 'Générer la version anglaise',
     generateEnglishSuccess: 'Version anglaise générée à partir de la même structure.',
+    sanitizationWarningTemplate:
+      'Rédaction sécurisée automatiquement dans {field} ({code}) : le reste du contenu valide a été conservé.',
     candidateFailedLabel: 'Échec de la nouvelle version',
     candidateAttemptRejectedTemplate: 'Tentative {attempt} sur {total} refusée par : {guards}',
     regenerateButton: 'Réécrire le rapport',
@@ -89,6 +92,8 @@ export const prepareReport = {
       'Rewrites only the French version without reusing an existing writing pass.',
     generateEnglishButton: 'Generate English version',
     generateEnglishSuccess: 'English version generated from the same structure.',
+    sanitizationWarningTemplate:
+      'Writing was sanitized automatically in {field} ({code}); unrelated valid content was preserved.',
     candidateFailedLabel: 'New version failed',
     candidateAttemptRejectedTemplate: 'Attempt {attempt} of {total} rejected by: {guards}',
     regenerateButton: 'Rewrite the report',
