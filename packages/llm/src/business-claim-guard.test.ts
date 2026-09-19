@@ -8,7 +8,7 @@ function buildOutput(overrides: Partial<WritingPassOutput> = {}): WritingPassOut
       {
         themeKey: 't1',
         title: 'Formulaire de devis inaccessible',
-        businessImpact: 'Vos visiteurs abandonnent avant d’envoyer leur demande.',
+        businessImpact: 'Certains visiteurs ne peuvent pas terminer l’envoi du formulaire.'
         recommendedActions: ['Simplifier le formulaire de devis.'],
         ...(overrides.themes?.[0] ?? {}),
       },
@@ -29,7 +29,7 @@ describe('findBusinessClaimViolations', () => {
         {
           themeKey: 't1',
           title: 'La page la plus rentable du site',
-          businessImpact: 'Vos visiteurs abandonnent avant d’envoyer leur demande.',
+          businessImpact: 'Certains visiteurs ne peuvent pas terminer l’envoi du formulaire.'
           recommendedActions: ['Simplifier le formulaire de devis.'],
         },
       ],
@@ -80,21 +80,21 @@ describe('findBusinessClaimViolations', () => {
     expect(findBusinessClaimViolations(output, 'fr')).toHaveLength(1);
   });
 
-  it('accepts the same claim when the sentence is hedged', () => {
+  it('rejects the same unsupported claim when the sentence is hedged', () => {
     const output = buildOutput({
       executiveSummary:
         'La page de devis semble être la page la plus rentable du site, à confirmer avec vos statistiques.',
     });
 
-    expect(findBusinessClaimViolations(output, 'fr')).toHaveLength(0);
+    expect(findBusinessClaimViolations(output, 'fr')).toHaveLength(1);
   });
 
-  it('accepts a hedge appearing after the claim in the same sentence', () => {
+  it('rejects a hedge appearing after the claim in the same sentence', () => {
     const output = buildOutput({
       executiveSummary: 'La page la plus rentable du site, vraisemblablement, est celle du devis.',
     });
 
-    expect(findBusinessClaimViolations(output, 'fr')).toHaveLength(0);
+    expect(findBusinessClaimViolations(output, 'fr')).toHaveLength(1);
   });
 
   // Both verbatim from real stored analyses: traffic superlatives used as
@@ -144,13 +144,28 @@ describe('findBusinessClaimViolations', () => {
     expect(findBusinessClaimViolations(output, 'fr')).toHaveLength(0);
   });
 
-  it('accepts the hedged appearance phrasing the doctrine permits', () => {
+  it('rejects an unsupported claim that a page is commercially important even when framed as appearance', () => {
     const output = buildOutput({
       executiveSummary:
         'La page de devis apparaît commerciale importante : c’est là que les demandes arrivent.',
     });
 
-    expect(findBusinessClaimViolations(output, 'fr')).toHaveLength(0);
+    expect(findBusinessClaimViolations(output, 'fr')).toHaveLength(1);
+  });
+
+  it('rejects unsupported abandonment without needing a revenue or booking noun', () => {
+    const output = buildOutput({
+      themes: [
+        {
+          themeKey: 't1',
+          title: 'Formulaire de devis',
+          businessImpact: 'Certains visiteurs pourraient abandonner avant la validation.',
+          recommendedActions: ['Corriger le retour d’erreur du formulaire.'],
+        },
+      ],
+    });
+
+    expect(findBusinessClaimViolations(output, 'fr')).toHaveLength(1);
   });
 
   it('does not flag an unhedged claim in a different sentence from the hedge', () => {
