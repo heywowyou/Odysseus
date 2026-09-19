@@ -48,3 +48,29 @@ export function captureLlmCallTelemetry(event: LlmCallTelemetryEvent): void {
     // swallowed deliberately - see doc comment above.
   }
 }
+
+/** Token counts from one provider call, spread into a `call-succeeded`
+ *  event. Empty when the provider reported no usage. */
+export function usageTelemetryFields(
+  usage:
+    | {
+        promptTokens: number;
+        completionTokens: number;
+        totalTokens: number;
+        reasoningTokens?: number;
+      }
+    | undefined,
+): {
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+  reasoningTokens?: number;
+} {
+  if (usage === undefined) return {};
+  return {
+    promptTokens: usage.promptTokens,
+    completionTokens: usage.completionTokens,
+    totalTokens: usage.totalTokens,
+    ...(usage.reasoningTokens !== undefined ? { reasoningTokens: usage.reasoningTokens } : {}),
+  };
+}

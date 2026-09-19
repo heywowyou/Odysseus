@@ -70,13 +70,19 @@ export const WRITING_OPENAI_TEMPERATURE = 1.0;
  *  GPT-5.6 counts hidden reasoning tokens against this same budget. */
 export const MAX_OUTPUT_TOKENS = 64000;
 
-/** Separate budget for the shadow reviewer pass (analyze-review.ts): it
- *  emits one short verdict-plus-reason object per prose field, never
- *  prose, so its worst case is roughly 20 themes times 4 fields times a
- *  bounded reason (reviewer-schema.ts), well under the writing pass's
- *  needs. Kept as its own constant so tuning the reviewer never silently
- *  retunes a production pass. Same value as MAX_OUTPUT_TOKENS today. */
-export const REVIEWER_MAX_OUTPUT_TOKENS = 64000;
+/** Separate budget for the Plan 070 grounded critic (analyze-critic.ts): it
+ *  emits at most MAX_WRITING_CRITIC_ISSUES short issues, never prose, but
+ *  GPT-5.6 counts hidden reasoning tokens against this same budget. Kept as
+ *  its own constant so tuning the critic never silently retunes a
+ *  production pass. */
+export const WRITING_CRITIC_MAX_OUTPUT_TOKENS = 64000;
+
+/** Plan 070 decision 2: the one kill switch for the grounded critic and its
+ *  targeted repair. Off, the writing path makes exactly Plan 067's calls and
+ *  produces exactly its output. There is deliberately no environment
+ *  variable or per-job option. It stays off until the plan's calibration
+ *  record meets every acceptance threshold. */
+export const WRITING_CRITIC_ENABLED: boolean = false;
 
 /** Advisory correction proposals are kept separate from the support-verdict
  * reviewer so their budget can be measured and tuned without retuning either

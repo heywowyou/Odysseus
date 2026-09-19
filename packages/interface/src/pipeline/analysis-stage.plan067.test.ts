@@ -18,13 +18,13 @@ vi.mock('@odysseus/llm', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   analyzeStructure: vi.fn(),
   analyzeWriting: vi.fn(),
-  analyzeReview: vi.fn(),
+  runWritingCritic: vi.fn(),
   analyzeCorrectionReview: vi.fn(),
 }));
 
 import {
   analyzeCorrectionReview,
-  analyzeReview,
+  runWritingCritic,
   analyzeStructure,
   analyzeWriting,
 } from '@odysseus/llm';
@@ -148,7 +148,7 @@ describe('Plan 067 analysis-stage provider budget', () => {
     expect(result.structureReused).toBe(false);
     expect(analyzeStructure).toHaveBeenCalledTimes(1);
     expect(analyzeWriting).toHaveBeenCalledTimes(1);
-    expect(analyzeReview).not.toHaveBeenCalled();
+    expect(runWritingCritic).not.toHaveBeenCalled();
     expect(analyzeCorrectionReview).not.toHaveBeenCalled();
   });
 
@@ -178,7 +178,7 @@ describe('Plan 067 analysis-stage provider budget', () => {
       'Une vérification au niveau du site est indisponible.',
     );
     expect(JSON.stringify(input?.summaryEvidence)).not.toContain('environment-unapproved');
-    expect(analyzeReview).not.toHaveBeenCalled();
+    expect(runWritingCritic).not.toHaveBeenCalled();
     expect(analyzeCorrectionReview).not.toHaveBeenCalled();
   });
 
@@ -207,7 +207,7 @@ describe('Plan 067 analysis-stage provider budget', () => {
     expect(result.structureReused).toBe(true);
     expect(analyzeStructure).not.toHaveBeenCalled();
     expect(analyzeWriting).toHaveBeenCalledTimes(1);
-    expect(analyzeReview).not.toHaveBeenCalled();
+    expect(runWritingCritic).not.toHaveBeenCalled();
     expect(analyzeCorrectionReview).not.toHaveBeenCalled();
   });
 });

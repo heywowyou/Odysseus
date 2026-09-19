@@ -6,7 +6,7 @@ import {
   OPENAI_TEMPERATURE,
   WRITING_OPENAI_TEMPERATURE,
   MAX_OUTPUT_TOKENS,
-  REVIEWER_MAX_OUTPUT_TOKENS,
+  WRITING_CRITIC_MAX_OUTPUT_TOKENS,
   CORRECTION_REVIEW_MAX_OUTPUT_TOKENS,
 } from './constants.js';
 import {
@@ -24,12 +24,12 @@ import {
 import { buildWritingOutputJsonSchema } from './writing-output-schema.js';
 import { buildWritingSystemPrompt, buildWritingUserPrompt } from './writing-prompt.js';
 import {
-  reviewerPassOutputSchema,
-  type ReviewerInput,
-  type ReviewerPassOutput,
-} from './reviewer-schema.js';
-import { REVIEWER_OUTPUT_JSON_SCHEMA } from './reviewer-output-schema.js';
-import { buildReviewerSystemPrompt, buildReviewerUserPrompt } from './reviewer-prompt.js';
+  writingCriticResponseSchema,
+  type WritingCriticInput,
+  type WritingCriticResponse,
+} from './critic-schema.js';
+import { WRITING_CRITIC_OUTPUT_JSON_SCHEMA } from './critic-output-schema.js';
+import { buildWritingCriticSystemPrompt, buildWritingCriticUserPrompt } from './critic-prompt.js';
 import {
   correctionReviewOutputSchema,
   eligibleCorrectionFields,
@@ -64,6 +64,7 @@ async function withProviderRetryAfterHint<T>(call: () => Promise<T>): Promise<T>
 
 export interface RawStructureCallResult {
   output: StructurePassOutput;
+  usage?: WritingCallUsage;
 }
 
 /** Token usage as reported by the provider for one call. Populated when
@@ -77,6 +78,20 @@ export interface WritingCallUsage {
   /** Tokens spent on reasoning above the visible completion, when the
    *  provider breaks them out; the whole point of lever E's comparison. */
   reasoningTokens?: number;
+}
+
+/** Reads the provider's token usage off a chat completion, when present. */
+function readUsage(response: OpenAI.Chat.Completions.ChatCompletion): WritingCallUsage | undefined {
+  const usage = response.usage;
+  if (!usage) return undefined;
+  return {
+    promptTokens: usage.prompt_tokens,
+    completionTokens: usage.completion_tokens,
+    totalTokens: usage.total_tokens,
+    ...(usage.completion_tokens_details?.reasoning_tokens !== undefined
+      ? { reasoningTokens: usage.completion_tokens_details.reasoning_tokens }
+      : {}),
+  };
 }
 
 /** The reasoning_effort values the API accepts for the configured model.
@@ -154,7 +169,8 @@ export async function callOpenAiForStructure(
   }
 
   const output = structurePassOutputSchema.parse(JSON.parse(content));
-  return { output };
+  const usage = readUsage(response);
+  return { output, ...(usage ? { usage } : {}) };
 }
 
 /** Turn the provider's theme map back into the array shape the rest of the
@@ -268,53 +284,38 @@ export async function callOpenAiForWriting(
       ? { ...raw, themes: toThemeArray(themeKeys, raw.themes) }
       : parsed,
   );
-  const usage = response.usage;
-  return {
-    output,
-    ...(usage
-      ? {
-          usage: {
-            promptTokens: usage.prompt_tokens,
-            completionTokens: usage.completion_tokens,
-            totalTokens: usage.total_tokens,
-            ...(usage.completion_tokens_details?.reasoning_tokens !== undefined
-              ? { reasoningTokens: usage.completion_tokens_details.reasoning_tokens }
-              : {}),
-          },
-        }
-      : {}),
-  };
+  const usage = readUsage(response);
+  return { output, ...(usage ? { usage } : {}) };
 }
 
-export interface RawReviewerCallResult {
-  output: ReviewerPassOutput;
+export interface RawWritingCriticCallResult {
+  output: WritingCriticResponse;
+  usage?: WritingCallUsage;
 }
 
-/** Single call to OpenAI for the shadow reviewer pass. Same posture as
- *  callOpenAiForWriting, against reviewerPassOutputSchema and
- *  REVIEWER_OUTPUT_JSON_SCHEMA instead, with the reviewer's own token
- *  budget. The reviewer is shadow-mode: any error this throws is caught
- *  by analyzeReview, which skips the review and never blocks the
- *  analysis, so unlike the two production passes nothing here feeds a
- *  retry loop. */
-export async function callOpenAiForReview(input: ReviewerInput): Promise<RawReviewerCallResult> {
+/** Plan 070: the grounded critic's single call. Same posture as
+ *  callOpenAiForWriting: every failure throws. runWritingCritic catches it
+ *  and skips the critic, so nothing here ever retries or fails a report. */
+export async function callOpenAiForCritic(
+  input: WritingCriticInput,
+): Promise<RawWritingCriticCallResult> {
   const client = createClient();
 
   const response = await withProviderRetryAfterHint(() =>
     client.chat.completions.create({
       model: OPENAI_MODEL,
-      max_completion_tokens: REVIEWER_MAX_OUTPUT_TOKENS,
+      max_completion_tokens: WRITING_CRITIC_MAX_OUTPUT_TOKENS,
       temperature: OPENAI_TEMPERATURE,
       reasoning_effort: OPENAI_REASONING_EFFORT,
       messages: [
-        { role: 'system', content: buildReviewerSystemPrompt() },
-        { role: 'user', content: buildReviewerUserPrompt(input) },
+        { role: 'system', content: buildWritingCriticSystemPrompt() },
+        { role: 'user', content: buildWritingCriticUserPrompt(input) },
       ],
       response_format: {
         type: 'json_schema',
         json_schema: {
-          name: 'reviewer_pass_output',
-          schema: REVIEWER_OUTPUT_JSON_SCHEMA,
+          name: 'writing_critic_output',
+          schema: WRITING_CRITIC_OUTPUT_JSON_SCHEMA,
           strict: true,
         },
       },
@@ -323,30 +324,31 @@ export async function callOpenAiForReview(input: ReviewerInput): Promise<RawRevi
 
   const choice = response.choices?.[0];
   if (!choice) {
-    throw new Error('odysseus analyze (review pass): OpenAI response contained no choices');
+    throw new Error('odysseus analyze (critic pass): OpenAI response contained no choices');
   }
 
   if (choice.finish_reason === 'length') {
     throw new Error(
-      'odysseus analyze (review pass): OpenAI response was truncated (finish_reason: length) - increase REVIEWER_MAX_OUTPUT_TOKENS',
+      'odysseus analyze (critic pass): OpenAI response was truncated (finish_reason: length) - increase WRITING_CRITIC_MAX_OUTPUT_TOKENS',
     );
   }
 
   if (choice.message.refusal) {
     throw new Error(
-      `odysseus analyze (review pass): OpenAI refused the request: ${choice.message.refusal}`,
+      `odysseus analyze (critic pass): OpenAI refused the request: ${choice.message.refusal}`,
     );
   }
 
   const content = choice.message.content;
   if (typeof content !== 'string') {
     throw new Error(
-      'odysseus analyze (review pass): OpenAI response content was not a plain string (unexpected shape)',
+      'odysseus analyze (critic pass): OpenAI response content was not a plain string (unexpected shape)',
     );
   }
 
-  const output = reviewerPassOutputSchema.parse(JSON.parse(content));
-  return { output };
+  const output = writingCriticResponseSchema.parse(JSON.parse(content));
+  const usage = readUsage(response);
+  return { output, ...(usage ? { usage } : {}) };
 }
 
 export interface RawCorrectionReviewCallResult {
@@ -405,20 +407,6 @@ export async function callOpenAiForCorrectionReview(
   const output = correctionReviewOutputSchema.parse(JSON.parse(content));
   // Plan 033 step 6: the measurement command records tokens, so this maps
   // the same usage fields the writing pass maps. The pass itself is unchanged.
-  const usage = response.usage;
-  return {
-    output,
-    ...(usage
-      ? {
-          usage: {
-            promptTokens: usage.prompt_tokens,
-            completionTokens: usage.completion_tokens,
-            totalTokens: usage.total_tokens,
-            ...(usage.completion_tokens_details?.reasoning_tokens !== undefined
-              ? { reasoningTokens: usage.completion_tokens_details.reasoning_tokens }
-              : {}),
-          },
-        }
-      : {}),
-  };
+  const usage = readUsage(response);
+  return { output, ...(usage ? { usage } : {}) };
 }

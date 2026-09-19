@@ -17,7 +17,7 @@ import {
   type StructureThemeWithKey,
 } from './structure-schema.js';
 import { paceRateLimitedRetry } from './rate-limit-pacing.js';
-import { captureLlmCallTelemetry } from './telemetry/llm-telemetry.js';
+import { captureLlmCallTelemetry, usageTelemetryFields } from './telemetry/llm-telemetry.js';
 
 export interface AnalyzeStructureResult {
   themes: StructureThemeWithKey[];
@@ -104,6 +104,7 @@ export async function analyzeStructure(
       attemptCount: attempt,
       durationMs: Date.now() - startedAtMs,
       schemaValidFirstAttempt: attempt === 1,
+      ...usageTelemetryFields(result.usage),
     });
     return {
       themes,

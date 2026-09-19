@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Finding } from '@odysseus/core';
 import { buildFallbackSiteContext, buildStructureInput, buildWritingInput } from './build-input.js';
 import { buildCorrectionReviewSystemPrompt } from './correction-review-prompt.js';
-import { buildReviewerSystemPrompt } from './reviewer-prompt.js';
+import { buildWritingCriticSystemPrompt } from './critic-prompt.js';
 import { buildStructureSystemPrompt, buildStructureUserPrompt } from './structure-prompt.js';
 import {
   boundScannerText,
@@ -87,7 +87,7 @@ describe('page-derived finding text sent to the model', () => {
     expect(buildWritingSystemPrompt('fr', false, emptyWritingPerformanceEvidence())).toContain(
       SCANNER_EVIDENCE_NOTICE_FR,
     );
-    expect(buildReviewerSystemPrompt()).toContain(SCANNER_EVIDENCE_NOTICE);
+    expect(buildWritingCriticSystemPrompt()).toContain(SCANNER_EVIDENCE_NOTICE);
     expect(buildCorrectionReviewSystemPrompt()).toContain(SCANNER_EVIDENCE_NOTICE);
   });
 });

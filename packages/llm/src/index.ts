@@ -5,7 +5,8 @@ export {
   OPENAI_TEMPERATURE,
   WRITING_OPENAI_TEMPERATURE,
   MAX_OUTPUT_TOKENS,
-  REVIEWER_MAX_OUTPUT_TOKENS,
+  WRITING_CRITIC_ENABLED,
+  WRITING_CRITIC_MAX_OUTPUT_TOKENS,
 } from './constants.js';
 export {
   filterFindingsForLlm,
@@ -47,9 +48,29 @@ export {
 export type { AnalyzeWritingResult } from './analyze-writing.js';
 export { sanitizeWritingOutput } from './sanitize-writing-output.js';
 export type { SanitizedWritingOutput } from './sanitize-writing-output.js';
-export { analyzeReview, summarizeUnsupportedReviews } from './analyze-review.js';
-export type { ReviewOutcome } from './analyze-review.js';
-export type { ReviewerInput, ReviewerPassOutput } from './reviewer-schema.js';
+export { runWritingCritic } from './analyze-critic.js';
+export {
+  buildCriticRepairFeedback,
+  critiqueAndRepairWriting,
+  type CritiquedWritingResult,
+  type WritingCriticOutcomeStatus,
+  type WritingCriticRecord,
+  type WritingCriticSidecar,
+} from './writing-critic.js';
+export type { WritingCriticOutcome } from './analyze-critic.js';
+export {
+  CRITIC_DROP_REASONS,
+  validateCriticIssues,
+  type CriticDropCounts,
+  type CriticDropReason,
+} from './critic-issues.js';
+export {
+  WRITING_CRITIC_CATEGORIES,
+  type WritingCriticCategory,
+  type WritingCriticInput,
+  type WritingCriticIssue,
+} from './critic-schema.js';
+export { listWritingProseFields, type WritingProseField } from './prose-fields.js';
 export { analyzeCorrectionReview } from './analyze-correction-review.js';
 export type { CorrectionReviewOutcome } from './analyze-correction-review.js';
 export {

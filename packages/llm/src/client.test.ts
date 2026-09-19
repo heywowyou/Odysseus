@@ -18,7 +18,7 @@ vi.mock('./config.js', () => ({
 const {
   callOpenAiForStructure,
   callOpenAiForWriting,
-  callOpenAiForReview,
+  callOpenAiForCritic,
   callOpenAiForCorrectionReview,
 } = await import('./client.js');
 
@@ -111,20 +111,15 @@ const validWritingOutput = {
 };
 
 const reviewInput = { writingInput, written: validWritingOutput };
-const validReviewOutput = {
-  themes: [
+const validCriticOutput = {
+  issues: [
     {
-      themeKey: 'theme-1',
-      businessImpact: { verdict: 'supported', reason: 'Supported by the supplied finding.' },
-      recommendedActions: [
-        { verdict: 'supported', reason: 'The action addresses the supplied finding.' },
-        { verdict: 'supported', reason: 'The action addresses the supplied finding.' },
-      ],
-      trustedRemediations: [],
+      field: 'themes[0](theme-1).recommendedActions[1]',
+      category: 'remedy-mismatch',
+      findingIds: ['f1'],
+      problem: 'The action reviews uploads instead of fixing the missing alternative text.',
     },
   ],
-  executiveSummary: { verdict: 'supported', reason: 'It summarizes the supplied finding.' },
-  notes: { verdict: 'supported', reason: 'The empty notes field makes no unsupported claim.' },
 };
 
 const validCorrectionReviewOutput = {
@@ -377,9 +372,9 @@ function responseValidationCases(
 }
 
 responseValidationCases(
-  'callOpenAiForReview',
-  () => callOpenAiForReview(reviewInput),
-  validReviewOutput,
+  'callOpenAiForCritic',
+  () => callOpenAiForCritic(reviewInput),
+  validCriticOutput,
 );
 
 responseValidationCases(
