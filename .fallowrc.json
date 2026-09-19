@@ -5,6 +5,7 @@
     "packages/interface/src/dashboard/main.tsx",
     "packages/llm/src/lint-stored-analyses.ts",
     "packages/llm/src/measure-reasoning-effort.ts",
+    "packages/interface/src/pipeline/measure-writing-critic.ts",
     // Plan 058 §11.4's cross-renderer comparator; lands unwired until the
     // divergence check that calls it exists.
     "packages/report/src/quality/raster-divergence.ts",
