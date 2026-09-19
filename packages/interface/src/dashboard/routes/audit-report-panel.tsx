@@ -32,8 +32,8 @@ import { ReportDetailsForm } from './report-details-form';
 import { ReportsCard } from './audit-reports-section';
 import type { PreparationViewResponse } from './prepare-report-types';
 
-/** Upper bound for one PDF production: a findings refresh, two analysis
- *  passes with the pacing pause between them, and both renders. */
+/** Upper bound for report production. Normal rewriting is French-only, but
+ *  a stale-data refresh and Chromium rendering can still take minutes. */
 const PRODUCE_REPORT_TIMEOUT_MS = 20 * 60 * 1000;
 
 /** DOM ids the failure card (audit-reports-section.tsx) scrolls to when it
@@ -141,10 +141,9 @@ export function AuditReportPanel(props: {
     wasInFlight.current = running;
   }, [preparation, refresh, onBusy, strings]);
 
-  /** Issue #410: the default run reuses a language whose writing already
-   *  succeeded against this structure and these findings, so a run after a
-   *  half-failed pair pays only for the language that is missing. `fresh`
-   *  writes both again, which is the operator's call, not a silent one. */
+  /** Issue #410 + Plan 067: the default run may reuse compatible French
+   *  writing; `fresh` forces a new French writing pass. English has its own
+   *  explicit action below and is never an implicit side effect here. */
   const handleRewrite = async (fresh = false): Promise<void> => {
     if (productionBusy) return;
     setIsRewriting(true);
@@ -193,8 +192,8 @@ export function AuditReportPanel(props: {
     toast(strings.auditDetail.regeneratingMessage);
     setTimeout(refreshPreparation, 1_000);
     try {
-      // Producing may first refresh stale findings and rewrite both analyses
-      // before rendering, which takes minutes, not the default request bound.
+      // Producing may first refresh stale findings and rewrite the French
+      // analysis before rendering, which takes minutes, not the default request bound.
       await postEmpty(`/api/audits/${encodeURIComponent(auditId)}/regenerate-report`, {
         timeoutMs: PRODUCE_REPORT_TIMEOUT_MS,
       });
