@@ -15,8 +15,21 @@ export interface AnalysisPairRefResponse {
   enAnalysisId?: string;
 }
 
+export interface WritingSanitizationWarningResponse {
+  code:
+    | 'business-claim-removed'
+    | 'legal-claim-removed'
+    | 'performance-contradiction-removed';
+  field: string;
+}
+
 export type WritingCandidateResponse =
-  | { status: 'ready'; pair: AnalysisPairRefResponse; createdAt: string }
+  | {
+      status: 'ready';
+      pair: AnalysisPairRefResponse;
+      createdAt: string;
+      warnings?: WritingSanitizationWarningResponse[];
+    }
   | {
       status: 'failed';
       reason: string;
@@ -25,7 +38,12 @@ export type WritingCandidateResponse =
        *  Optional so an older server's response still reads. */
       guardRejections?: { attempt: number; totalAttempts: number; guards: string[] }[];
     }
-  | { status: 'selected'; pair: AnalysisPairRefResponse; approvedAt: string };
+  | {
+      status: 'selected';
+      pair: AnalysisPairRefResponse;
+      approvedAt: string;
+      warnings?: WritingSanitizationWarningResponse[];
+    };
 
 export interface PreparationResponse {
   customCoverQuestion?: LocalizedTextResponse;
