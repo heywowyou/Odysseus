@@ -34,7 +34,6 @@ import {
   buildFallbackSiteContext,
   buildStructureInput,
   buildWritingInput,
-  computeDominantPerformanceMetric,
   computeSiteStats,
   deriveTransactionalFlowStatus,
   filterFindingsForLlm,
@@ -46,7 +45,12 @@ import {
   type StructureDocument,
 } from '@odysseus/llm';
 import { persistAnalysis } from '@odysseus/store';
-import { getStrings, type VerifiedStoredAnalysis } from '@odysseus/report';
+import {
+  buildTrustedRemediationsByTheme,
+  buildWritingPerformanceEvidence,
+  getStrings,
+  type VerifiedStoredAnalysis,
+} from '@odysseus/report';
 import { runObligationStage } from './obligation-stage.js';
 import { findReusableAnalysis } from './analysis-reuse.js';
 
@@ -400,14 +404,20 @@ export async function runAnalysisStage(
     // the executive summary cites the audit's true scope rather than only
     // what the model was shown. See docs/archive/report-v2-refactor.md B10.
     const siteStats = computeSiteStats(allFindings, manifest);
-    const dominantPerformanceMetric = computeDominantPerformanceMetric(manifest);
+    const performanceEvidence = buildWritingPerformanceEvidence(manifest);
+    const trustedRemediationsByTheme = buildTrustedRemediationsByTheme(
+      doc.themes,
+      forModel,
+      options.language,
+    );
     const writingInput = buildWritingInput(
       doc.themes,
       forModel,
       writingSiteContext,
       options.language,
       siteStats,
-      dominantPerformanceMetric,
+      performanceEvidence,
+      trustedRemediationsByTheme,
       deriveTransactionalFlowStatus(obligationAssessment),
       // Seeds the provider-phrase choice. The auditId is stable across a
       // re-run and across both languages, so regenerating a report never
