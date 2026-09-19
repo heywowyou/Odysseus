@@ -238,6 +238,13 @@ describe('Plan 067 writing contract', () => {
           { metric: 'cls', source: 'field', value: 0.18, rating: 'mid' },
           { metric: 'lcp', source: 'lab', value: 20_000, rating: 'poor' },
         ],
+        discordances: [
+          {
+            field: { metric: 'lcp', source: 'field', value: 2400, rating: 'good' },
+            lab: { metric: 'lcp', source: 'lab', value: 20_000, rating: 'poor' },
+            labNonRepresentativeForRecommendations: true,
+          },
+        ],
         primaryConcern: { metric: 'cls', source: 'field', value: 0.18, rating: 'mid' },
         suppressedLabRecommendations: ['lcp'],
       },
