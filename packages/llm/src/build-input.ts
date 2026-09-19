@@ -3,7 +3,9 @@ import { LLM_SEVERITY_FLOOR } from './constants.js';
 import type { StructureInput, StructureThemeWithKey } from './structure-schema.js';
 import type {
   TransactionalFlowStatus,
+  TrustedRemediationInput,
   WritingInput,
+  WritingPerformanceEvidence,
   WritingSiteContext,
   WritingSiteStats,
   WritingThemeInput,
@@ -86,7 +88,8 @@ export function buildWritingInput(
   siteContext: WritingSiteContext,
   language: ReportLanguage,
   siteStats: WritingSiteStats,
-  dominantPerformanceMetric: 'lcp' | 'cls' | 'tbt' | null,
+  performanceEvidence: WritingPerformanceEvidence,
+  trustedRemediationsByTheme: Readonly<Record<string, readonly TrustedRemediationInput[]>>,
   transactionalFlowStatus: TransactionalFlowStatus = 'unknown',
   /** Stable per-audit key (the auditId in the pipeline) that decides which
    *  approved provider phrasing this report uses. Omitted by fixtures and
@@ -108,6 +111,7 @@ export function buildWritingInput(
       }
       return toLlmFindingShape(finding);
     }),
+    trustedRemediations: [...(trustedRemediationsByTheme[theme.themeKey] ?? [])],
   }));
 
   return {
@@ -115,7 +119,15 @@ export function buildWritingInput(
     siteContext,
     themes,
     siteStats,
-    dominantPerformanceMetric,
+    performanceEvidence,
+    summaryEvidence: {
+      siteStats,
+      categoriesPresent: [...new Set(filteredFindings.map((finding) => finding.category))].sort(),
+      performance: performanceEvidence,
+      limitations: [
+        ...(performanceEvidence.fieldDataAvailable ? [] : ['real-user-performance-unavailable']),
+      ],
+    },
     transactionalFlowStatus,
     providerPhrase: selectProviderPhrase(language, providerPhraseSeed),
   };
