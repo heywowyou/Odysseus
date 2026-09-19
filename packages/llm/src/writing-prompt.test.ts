@@ -488,8 +488,12 @@ describe('buildWritingRetryFeedback and the user-prompt correction', () => {
         moderate: 0,
         minor: 0,
       },
+      rankedThemes: [],
+
       categoriesPresent: [],
       performance: emptyWritingPerformanceEvidence(),
+
+      obligationStatus: 'unknown',
       limitations: ['real-user-performance-unavailable'],
     },
   };
@@ -702,8 +706,12 @@ describe('plan 028: buildWritingUserPrompt grounds known-drift rule IDs in a sha
         moderate: 1,
         minor: 0,
       },
+      rankedThemes: [{ themeKey: 't1', category: 'accessibility' as const, priorityRank: 1 }],
+
       categoriesPresent: ['accessibility' as const],
       performance: emptyWritingPerformanceEvidence(),
+
+      obligationStatus: 'unknown',
       limitations: ['real-user-performance-unavailable'],
     },
   };
@@ -860,8 +868,12 @@ describe('plan 029 lever F: concrete site facts in the writing prompt', () => {
           moderate: 1,
           minor: 0,
         },
+        rankedThemes: [],
+
         categoriesPresent: [],
         performance: emptyWritingPerformanceEvidence(),
+
+        obligationStatus: 'unknown',
         limitations: ['real-user-performance-unavailable'],
       },
     });
