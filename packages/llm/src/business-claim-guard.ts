@@ -2,14 +2,6 @@ import type { ReportLanguage } from '@odysseus/core';
 import type { ProseField } from './prose-fields.js';
 import type { WritingPassOutput } from './writing-schema.js';
 
-/** The observed fault phrase per language, verbatim from the first live
- *  run. Shared with writing-prompt.ts's instruction so the prompt names
- *  the exact shape of claim the guard rejects. */
-export const BUSINESS_CLAIM_EXAMPLES: Record<ReportLanguage, string> = {
-  fr: 'la page la plus rentable',
-  en: 'the most profitable page',
-};
-
 /**
  * Plan 067: the writer has no measured evidence for commercial outcomes such
  * as bookings, conversion, revenue, abandonment, demand, trust, or reputation.
