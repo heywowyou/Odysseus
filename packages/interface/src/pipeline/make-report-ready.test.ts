@@ -210,7 +210,7 @@ describe('makeReportReady', () => {
           sanitizationWarnings: [],
         }) as never,
     );
-    const reports = [{ language: 'fr' }, { language: 'en' }] as never;
+    const reports = [{ language: 'fr' }] as never;
     vi.mocked(regenerateReportsForAudit).mockResolvedValue(reports);
 
     const outcome = await makeReportReady(fakeConnection, 'audit-1', undefined);
