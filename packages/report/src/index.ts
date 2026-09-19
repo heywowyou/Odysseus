@@ -25,6 +25,8 @@ export {
   buildWritingPerformanceEvidence,
   buildTrustedRemediationsByTheme,
 } from './template/sections/writing-evidence.js';
+export { buildRenderedPriorities } from './template/rendered-priorities.js';
+export type { RenderedPriority, PriorityEvidence } from './template/rendered-priorities.js';
 
 /** The outreach preview. A separate document kind from the paid report, not a
  *  tier of it: synchronous, HTML only, no Chromium, and built from its own
@@ -33,6 +35,7 @@ export {
  *  unsafe fields have nowhere to go. */
 export { generateOutreachPreviewHtml } from './outreach-preview/render-html.js';
 export { generateOutreachPreviewHtmlV2 } from './outreach-preview/render-html-v2.js';
+export { generateOutreachPreviewHtmlV3 } from './outreach-preview/render-html-v3.js';
 export type { OutreachProofCardCopyEntry } from './outreach-preview/proof-card-copy.js';
 export {
   OUTREACH_PROOF_CARD_CLIENT_COPY as OUTREACH_PROOF_CARD_COPY,

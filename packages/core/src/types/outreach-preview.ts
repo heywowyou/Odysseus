@@ -516,3 +516,177 @@ export const outreachPreviewSummarySchema: z.ZodType<OutreachPreviewSummary> = z
       }
     }
   });
+
+
+// ---------------------------------------------------------------------------
+// v3: grounded report-aligned preview (plan 069)
+// ---------------------------------------------------------------------------
+
+/** New publications use v3. Historical v1/v2 objects remain immutable and
+ * keep their original contracts. */
+export const OUTREACH_PREVIEW_CONTENT_VERSION_V3 = 'v3' as const;
+
+export type OutreachPreviewDiagnosticStatus = 'complete' | 'limited' | 'unavailable';
+
+export interface OutreachPreviewLimitation {
+  code: string;
+  summary: { fr: string; en: string };
+}
+
+export interface OutreachPriorityCard {
+  rank: 1 | 2 | 3;
+  title: { fr: string; en: string };
+  category: OutreachProofCard['category'];
+  severity: OutreachPreviewSeverity;
+  /** Zero is valid for a site-level priority that has no page-local URL. */
+  affectedPageCount: number;
+}
+
+export interface OutreachPreviewSummaryV3 {
+  contentVersion: typeof OUTREACH_PREVIEW_CONTENT_VERSION_V3;
+  observedAt: Date;
+  language: OutreachPreviewLanguage;
+  recipient: OutreachPreviewRecipientFacts;
+  links: { offer: string; privacy: string; optOut: string };
+  coverage: OutreachCoverageFacts;
+  distinctFindingCount: number;
+  affectedPageCount: number;
+  severityTotals: Record<OutreachPreviewSeverity, number>;
+  priorityCards: [OutreachPriorityCard, OutreachPriorityCard, OutreachPriorityCard];
+  dataQuality: {
+    status: OutreachPreviewDiagnosticStatus;
+    limitations: OutreachPreviewLimitation[];
+  };
+  facts: { state: 'omitted' } | { state: 'rendered'; heading: string; paragraphs: string[] };
+}
+
+const outreachPriorityCardV3Schema = z
+  .object({
+    rank: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+    title: bilingualSchema,
+    category: z.enum(['accessibility', 'seo', 'geo', 'performance', 'rendering', 'privacy']),
+    severity: z.enum(['critical', 'serious', 'moderate', 'minor']),
+    affectedPageCount: countSchema(MAX_TOTAL_PAGES),
+  })
+  .strict();
+
+const outreachPreviewLimitationSchema = z
+  .object({
+    code: z.string().min(1).max(120).regex(/^[a-z0-9-]+$/u),
+    summary: bilingualSchema,
+  })
+  .strict();
+
+export const outreachPreviewSummaryV3Schema: z.ZodType<OutreachPreviewSummaryV3> = z
+  .object({
+    contentVersion: z.literal(OUTREACH_PREVIEW_CONTENT_VERSION_V3),
+    observedAt: z.date(),
+    language: z.enum(['fr', 'en']),
+    recipient: z
+      .object({
+        businessName: z.string().min(1).max(MAX_BUSINESS_NAME_LENGTH),
+        dataOrigins: z
+          .array(z.enum(['public-hotel-catalogue', 'public-website', 'public-business-registry']))
+          .min(1),
+      })
+      .strict(),
+    links: z.object({ offer: linkSchema, privacy: linkSchema, optOut: linkSchema }).strict(),
+    coverage: z
+      .object({
+        inventoriedPageCount: countSchema(MAX_TOTAL_PAGES),
+        contentCheckedPageCount: countSchema(MAX_TOTAL_PAGES),
+        performanceMeasuredPageCount: countSchema(MAX_TOTAL_PAGES),
+      })
+      .strict(),
+    distinctFindingCount: countSchema(MAX_TOTAL_PAGES),
+    affectedPageCount: countSchema(MAX_TOTAL_PAGES),
+    severityTotals: severityTotalsSchema,
+    priorityCards: z.tuple([
+      outreachPriorityCardV3Schema,
+      outreachPriorityCardV3Schema,
+      outreachPriorityCardV3Schema,
+    ]),
+    dataQuality: z
+      .object({
+        status: z.enum(['complete', 'limited', 'unavailable']),
+        limitations: z.array(outreachPreviewLimitationSchema).max(32),
+      })
+      .strict(),
+    facts: factsSchema,
+  })
+  .strict()
+  .superRefine((input, context) => {
+    const { coverage } = input;
+    if (
+      coverage.contentCheckedPageCount > coverage.inventoriedPageCount ||
+      coverage.performanceMeasuredPageCount > coverage.inventoriedPageCount
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'coverage subsets cannot exceed the inventoried page count',
+      });
+    }
+    if (input.affectedPageCount > coverage.inventoriedPageCount) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'affected page count cannot exceed the inventoried page count',
+      });
+    }
+    const severityTotal = Object.values(input.severityTotals).reduce(
+      (total, count) => total + count,
+      0,
+    );
+    if (severityTotal !== input.distinctFindingCount) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'severity totals must equal the distinct finding count',
+      });
+    }
+    if (input.priorityCards.some((card, index) => card.rank !== index + 1)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'priority card ranks must be exactly 1, 2, 3',
+      });
+    }
+    if (input.priorityCards.some((card) => card.affectedPageCount > input.affectedPageCount)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'priority card page count cannot exceed the affected page count',
+      });
+    }
+    if (input.dataQuality.status === 'limited' && input.dataQuality.limitations.length === 0) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'limited data quality requires at least one limitation',
+      });
+    }
+    if (
+      input.dataQuality.status !== 'limited' &&
+      input.dataQuality.limitations.length !== 0
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'only limited data quality may carry client limitations',
+      });
+    }
+
+    const publicStrings: string[] = [input.recipient.businessName];
+    for (const card of input.priorityCards) {
+      publicStrings.push(card.title.fr, card.title.en);
+    }
+    for (const limitation of input.dataQuality.limitations) {
+      publicStrings.push(limitation.summary.fr, limitation.summary.en);
+    }
+    if (input.facts.state === 'rendered') {
+      publicStrings.push(input.facts.heading, ...input.facts.paragraphs);
+    }
+    for (const value of publicStrings) {
+      const hit = containsProhibitedPreviewContent(value);
+      if (hit !== null) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `public preview content contains prohibited content: ${hit}`,
+        });
+      }
+    }
+  });

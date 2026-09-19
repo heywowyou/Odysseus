@@ -80,9 +80,11 @@ export class OutreachPreviewLintError extends Error {
 }
 
 export interface OutreachPreviewLintOptions {
-  /** Enables the Plan 046 copy-quality contract for the current v2 sales
-   * document. Omitted for the historical v1 renderer. */
+  /** Enables the Plan 046 copy-quality contract for the historical v2 sales
+   * document. Omitted for v1. */
   editorialV2?: boolean;
+  /** Same French editorial contract for the current v3 sales document. */
+  editorialCurrent?: boolean;
 }
 
 /** Returns the name of the first rule that fired, or null for a clean
@@ -100,7 +102,7 @@ export function lintOutreachPreviewHtml(
   const prohibited = containsProhibitedPreviewContent(text);
   if (prohibited !== null) return prohibited;
 
-  if (options.editorialV2 && /<html\s+lang=["']fr["']/iu.test(html)) {
+  if ((options.editorialV2 || options.editorialCurrent) && /<html\s+lang=["']fr["']/iu.test(html)) {
     for (const [name, pattern] of EDITORIAL_RULES_FR) {
       if (pattern.test(text)) return name;
     }
