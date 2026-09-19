@@ -507,14 +507,14 @@ describe('static fallback analysis notice (issue #162)', () => {
   });
 
   // The reports list renders inside the production step, which unlocks
-  // whenever a bilingual analysis pair resolves at all (plan 045 slice
-  // 1.2): the fixture carries the report languages the fallback gate
-  // wrote, plus the resolved pair kind that fact now depends on.
+  // whenever a canonical French-led selection resolves (Plan 067): the
+  // fixture carries the language that selection actually contains.
   const analysedAudit = {
     ...emptyAudit,
     lifecycle: 'analysed',
-    reportLanguages: ['fr', 'en'],
+    reportLanguages: ['fr'],
     analysisPair: 'selected',
+    analysisLanguages: ['fr'],
   };
 
   it('shows the fallback notice on the reports card when the pair is a static fallback', async () => {
@@ -562,6 +562,7 @@ describe('reports card PDF availability (issue #91)', () => {
     lifecycle: 'analysed',
     reportLanguages: ['fr'],
     analysisPair: 'selected',
+    analysisLanguages: ['fr'],
     reports: [
       {
         language: 'fr',
@@ -652,11 +653,12 @@ describe('report approval is explicit (plan 060 §2.4)', () => {
   const approvableAudit = {
     ...emptyAudit,
     lifecycle: 'analysed',
-    reportLanguages: ['fr', 'en'],
+    reportLanguages: ['fr'],
     analysisPair: 'selected',
+    analysisLanguages: ['fr'],
     reports: [
       { language: 'fr', status: 'fresh', pdfAvailable: true },
-      { language: 'en', status: 'fresh', pdfAvailable: true },
+      { language: 'en', status: 'unverified', pdfAvailable: false },
     ],
   };
 
@@ -702,14 +704,14 @@ describe('report approval is explicit (plan 060 §2.4)', () => {
     root.unmount();
   });
 
-  it('approves only through the explicit pair control', async () => {
+  it('approves a French-only report only through the explicit approval control', async () => {
     spyObjectUrls();
     const fetchMock = recordingFetchStub();
     vi.stubGlobal('fetch', fetchMock);
     const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
-    await settle(container, 'Approuver le rapport (les deux langues)');
+    await settle(container, 'Approuver le rapport');
     const approveButton = [...container.querySelectorAll('button')].find(
-      (button) => button.textContent === 'Approuver le rapport (les deux langues)',
+      (button) => button.textContent === 'Approuver le rapport',
     );
     expect(approveButton).toBeDefined();
     await act(async () => {
@@ -793,8 +795,9 @@ describe('audit report panel (plan 045 stage 3.1)', () => {
   const analysedAudit = {
     ...emptyAudit,
     lifecycle: 'analysed',
-    reportLanguages: ['fr', 'en'],
+    reportLanguages: ['fr'],
     analysisPair: 'selected',
+    analysisLanguages: ['fr'],
   };
 
   it('renders every row always visible, with one save inside the collapsed report details', async () => {
