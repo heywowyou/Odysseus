@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { OPENAI_MODEL, OPENAI_TEMPERATURE } from './constants.js';
 import type { ReviewerInput, ReviewerPassOutput } from './reviewer-schema.js';
-import type { WritingInput, WritingPassOutput } from './writing-schema.js';
+import { emptyWritingPerformanceEvidence, type WritingInput, type WritingPassOutput } from './writing-schema.js';
 
 vi.mock('./client.js', () => ({
   callOpenAiForReview: vi.fn(),
@@ -36,10 +36,17 @@ const writingInput: WritingInput = {
           occurrences: 1,
         },
       ],
+      trustedRemediations: [],
     },
   ],
   siteStats: { pagesScanned: 1, totalFindings: 1, critical: 0, serious: 1, moderate: 0, minor: 0 },
-  dominantPerformanceMetric: null,
+  performanceEvidence: emptyWritingPerformanceEvidence(),
+  summaryEvidence: {
+    siteStats: { pagesScanned: 1, totalFindings: 1, critical: 0, serious: 1, moderate: 0, minor: 0 },
+    categoriesPresent: ['accessibility'],
+    performance: emptyWritingPerformanceEvidence(),
+    limitations: ['real-user-performance-unavailable'],
+  },
 };
 
 const written: WritingPassOutput = {
