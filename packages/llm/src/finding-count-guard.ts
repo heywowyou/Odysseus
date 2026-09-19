@@ -38,6 +38,10 @@ export interface FindingCountViolation {
   matched: string;
 }
 
+export function hasFindingCountViolation(text: string, language: ReportLanguage): boolean {
+  return FINDING_COUNT_PATTERNS[language].test(text);
+}
+
 function checkField(
   field: string,
   text: string,
