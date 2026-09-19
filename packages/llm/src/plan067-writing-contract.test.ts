@@ -169,6 +169,64 @@ describe('Plan 067 writing contract', () => {
     );
   });
 
+  it('removes only a bad executive-summary count sentence and preserves every theme unchanged', () => {
+    const unsafe = output();
+    unsafe.executiveSummary =
+      'Les constats concernent principalement la lisibilité. Le rapport couvre 12 pages analysées.';
+    const originalThemes = structuredClone(unsafe.themes);
+
+    const sanitized = sanitizeWritingOutput(baseInput, unsafe);
+
+    expect(sanitized.output.executiveSummary).toBe(
+      'Les constats concernent principalement la lisibilité.',
+    );
+    expect(sanitized.output.themes).toEqual(originalThemes);
+    expect(sanitized.warnings).toContainEqual({
+      code: 'deterministic-count-removed',
+      field: 'executiveSummary',
+    });
+  });
+
+  it('removes deterministic count and legal contradictions from individual actions', () => {
+    const unsafe = output();
+    unsafe.themes[0]!.recommendedActions = [
+      'Corrigez ce défaut sur les 18 pages concernées.',
+      'Cette correction évite une amende.',
+      'Augmentez le contraste des éléments concernés.',
+    ];
+
+    const sanitized = sanitizeWritingOutput(baseInput, unsafe);
+
+    expect(sanitized.output.themes[0]!.recommendedActions).toEqual([
+      'Augmentez le contraste des éléments concernés.',
+    ]);
+    expect(sanitized.warnings).toEqual(
+      expect.arrayContaining([
+        {
+          code: 'deterministic-count-removed',
+          field: 'themes[0](t1).recommendedActions[0]',
+        },
+        {
+          code: 'legal-claim-removed',
+          field: 'themes[0](t1).recommendedActions[1]',
+        },
+      ]),
+    );
+  });
+
+  it('never silently erases an entire required summary field', () => {
+    const unsafe = output({ executiveSummary: 'Le rapport couvre 12 pages.' });
+
+    const sanitized = sanitizeWritingOutput(baseInput, unsafe);
+
+    expect(sanitized.output.executiveSummary).toBeTruthy();
+    expect(sanitized.output.executiveSummary).not.toContain('12 pages');
+    expect(sanitized.warnings).toContainEqual({
+      code: 'deterministic-count-removed',
+      field: 'executiveSummary',
+    });
+  });
+
   it('removes a suppressed performance recommendation locally without changing valid neighboring prose', () => {
     const performanceInput: WritingInput = {
       ...baseInput,
