@@ -14,8 +14,8 @@ export interface PrepareReportStrings {
   savedMessage: string;
   writingHeading: string;
   selectedWritingLabel: string;
-  /** Issue #410: writes both languages again instead of reusing the one
-   *  whose pass already succeeded. */
+  /** Historical key name retained for compatibility. Plan 067: this forces
+   *  one fresh French writing pass instead of reusing existing French prose. */
   regenerateBothFreshButton: string;
   regenerateBothFreshHint: string;
   generateEnglishButton: string;
@@ -65,7 +65,7 @@ export const prepareReport = {
     writeButton: 'Rédiger le rapport',
     writingInProgress:
       'Rédaction du rapport français en cours. Cette page se met à jour toute seule.',
-    writingRegeneratedMessage: 'Nouvelle version rédigée, approuvée, et PDF régénérés.',
+    writingRegeneratedMessage: 'Nouvelle version française rédigée, approuvée et PDF régénéré.',
     writingApprovedPdfsPendingMessage:
       'Nouvelle version rédigée et approuvée ; les PDF n’ont pas été régénérés automatiquement.',
     writingReplacedDeliveredMessage: 'La version précédemment livrée a été remplacée.',
@@ -100,7 +100,7 @@ export const prepareReport = {
     writeButton: 'Write the report',
     writingInProgress:
       'French report writing is in progress. This page updates on its own.',
-    writingRegeneratedMessage: 'New version written, approved, and PDFs regenerated.',
+    writingRegeneratedMessage: 'New French version written, approved, and PDF regenerated.',
     writingApprovedPdfsPendingMessage:
       'New version written and approved; PDFs were not regenerated automatically.',
     writingReplacedDeliveredMessage: 'The previously delivered version was replaced.',
