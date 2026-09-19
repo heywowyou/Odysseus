@@ -404,9 +404,13 @@ h4 {
 .metadata-risk-basis {
   margin-top: var(--space-3) !important;
 }
+/* The spacer only takes the height the facts leave free on the sheet. A
+   fixed minimum pushed the sheet past its page once a long scope value and
+   the legal-name row were both present, and a never-fragmenting sheet that
+   is taller than its page overflows sideways. */
 .metadata-spacer {
-  min-height: 32mm !important;
-  flex: 1;
+  min-height: 0;
+  flex: 1 1 0;
 }
 
 /* Cover — accepted Impeccable polish direction, 2026-09-13.

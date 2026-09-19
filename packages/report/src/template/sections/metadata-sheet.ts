@@ -141,7 +141,7 @@ function renderScorecard(
  *  The sheet renders as a flex column (.sheet-metadata, paged.css). The
  *  grade and the risk scale open the page, because the level is what a
  *  reader looks for first; the audit facts follow as the reference block,
- *  with a quiet spacer after them. No field moves between languages and no
+ *  with a spacer after them that takes whatever height is left. No field moves between languages and no
  *  wording changes. */
 export function renderMetadataSheet(
   strings: ReportStrings,
@@ -185,7 +185,7 @@ export function renderMetadataSheet(
       )}
       ${raisonSociale ? field(strings.metadata.legalNameLabel, escapeHtml(raisonSociale)) : ''}
     </div>
-    <div class="metadata-spacer" style="min-height:60mm"></div>
+    <div class="metadata-spacer"></div>
   `,
     'sheet-metadata',
     METADATA_SHEET_ID,
