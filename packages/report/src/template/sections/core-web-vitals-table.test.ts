@@ -112,6 +112,37 @@ describe('renderCoreWebVitalsTable', () => {
     expect(html).not.toContain('aggregated across 4 pages');
   });
 
+  it('leaves a redirect out of the count, the medians and the worst page, since its target is already measured', () => {
+    const page = (url: string, status: string, lcpMs: number) => ({
+      url,
+      pageDir: `pages/${url.length}`,
+      depth: 0,
+      status,
+      errors: {},
+      coreWebVitals: {
+        lcp: buildMeasurement(lcpMs, ''),
+        cls: buildMeasurement(0, '0'),
+        tbt: buildMeasurement(0, '0 ms'),
+        fcp: buildMeasurement(0, '0 s'),
+        speedIndex: buildMeasurement(0, '0 s'),
+      },
+    });
+    const manifest = {
+      siteUrl: 'https://example.com/',
+      pages: [
+        page('https://example.com/fr/', 'visited', 2000),
+        page('https://example.com/fr/chambres', 'visited', 3000),
+        page('https://example.com/fr', 'redirect-interstitial', 9000),
+      ],
+    } as unknown as AuditManifest;
+
+    const html = renderCoreWebVitalsTable(getStrings('fr'), 9, 'fr', manifest);
+
+    expect(html).toContain('agrégées sur 2 pages.');
+    expect(html).toContain('2,5 s');
+    expect(html).not.toContain('9 s');
+  });
+
   // Issue #28: a single measured page used to print "aggregated across 1 pages".
   it('agrees the intro sentence for a single measured page, in both languages', () => {
     const manifest = {

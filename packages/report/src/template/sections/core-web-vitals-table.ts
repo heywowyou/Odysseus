@@ -53,6 +53,15 @@ export function formatMetricValue(value: number, unit: Unit, language: ReportLan
   return formatNumber(Math.round(value * factor) / factor, language);
 }
 
+/** The pages whose Lighthouse figures belong in the lab table. A redirect
+ *  interstitial is measured at the page it lands on, which is already in the
+ *  table under its own URL: counting it again stated "agrégées sur 176
+ *  pages" beside "Lighthouse : 173 mesurées" in the Grand Hôtel de l'Opéra
+ *  report, and weighted every redirect target twice in the medians. */
+function measuredPages(manifest: Pick<AuditManifest, 'pages'>): AuditManifest['pages'] {
+  return manifest.pages.filter((page) => page.status !== 'redirect-interstitial');
+}
+
 /** Plain median (not mean): a single very slow page must not be able to
  *  drag every page's aggregate number, matching how Lighthouse's own lab
  *  data is read elsewhere in this report (per-page, never averaged). */
@@ -153,7 +162,7 @@ export function divergentLabLcp(
     return null;
   }
   const labMedianMs = medianForMetric(
-    manifest.pages.map((page) => page.coreWebVitals),
+    measuredPages(manifest).map((page) => page.coreWebVitals),
     'lcp',
   );
   if (labMedianMs === null) return null;
@@ -318,7 +327,7 @@ function cell(html: string, extra = ''): string {
  *  page resolved; a report never needs every metric on every page to
  *  state that Performance measurement broadly succeeded. */
 export function hasMeasuredCoreWebVitals(manifest: AuditManifest): boolean {
-  return manifest.pages.some((page) => page.coreWebVitals !== undefined);
+  return measuredPages(manifest).some((page) => page.coreWebVitals !== undefined);
 }
 
 /** Doc §3 section 09: 5 aggregated medians (LCP, TBT, FCP, Speed Index,
@@ -331,7 +340,7 @@ export function renderCoreWebVitalsTable(
   language: ReportLanguage,
   manifest: AuditManifest,
 ): string {
-  const vitalsList = manifest.pages.map((page) => page.coreWebVitals);
+  const vitalsList = measuredPages(manifest).map((page) => page.coreWebVitals);
   // 2026-08-22, La Corniche report review: this used to count every
   // *visited* page, but medianForMetric/metricValues only average pages
   // that actually returned a numeric value - a page whose Lighthouse pass
@@ -341,7 +350,7 @@ export function renderCoreWebVitalsTable(
   // own disclosed failure count. Counts pages with at least one measured
   // Core Web Vital instead, matching what the medians below actually
   // aggregate over.
-  const pagesScanned = manifest.pages.filter((page) => page.coreWebVitals !== undefined).length;
+  const pagesScanned = vitalsList.filter((vitals) => vitals !== undefined).length;
   const c = strings.coreWebVitals;
   const metricLabels: Record<CoreWebVitalMetricKey, string> = {
     lcp: c.lcpLabel,
@@ -397,7 +406,7 @@ export function renderCoreWebVitalsTable(
     }
     const rating = rateCoreWebVital(value, metric.good, metric.needsImprovement);
     const isFlaggedLcp = metric.key === 'lcp' && divergence !== null;
-    const worst = worstForMetric(manifest.pages, metric.key);
+    const worst = worstForMetric(measuredPages(manifest), metric.key);
     const worstCell =
       worst !== null && worst.value > value
         ? cell(
