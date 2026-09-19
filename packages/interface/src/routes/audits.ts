@@ -102,7 +102,7 @@ function isReportLanguage(value: string): value is ReportLanguage {
   return value === 'fr' || value === 'en';
 }
 
-type CurrentReportPair = { fr: ReportDocument; en: ReportDocument };
+type CurrentReportPair = { fr: ReportDocument; en?: ReportDocument };
 
 function provenanceMatches(
   actual: FindingsProvenance | undefined,
@@ -157,34 +157,51 @@ async function verifyFreshPair(
   startedAt: Date,
   store: ArtifactStore | undefined,
   preReadPdfs?: { fr: Buffer | undefined; en: Buffer | undefined },
-): Promise<{ reports: CurrentReportPair; pdfs: { fr: Buffer; en: Buffer } } | undefined> {
-  // Plan 019: the current analysis pair is the selected one (or, for a
-  // legacy audit without a selection, the latest complete pair from the
-  // one centralized selector), never simply the newest persisted analysis
-  // - a finished candidate must not become effective before approval.
+): Promise<
+  | { reports: CurrentReportPair; pdfs: { fr: Buffer; en?: Buffer } }
+  | undefined
+> {
+  // Plan 067: French is the canonical required report. English participates
+  // only when the selected writing version explicitly carries an English
+  // analysis; an older unrelated English report must never make French
+  // readiness fail or be silently attached to it.
   if (resolution.kind === 'none') return undefined;
   const frAnalysis = resolution.fr;
   const enAnalysis = resolution.en;
   if (
     !fr ||
-    !en ||
     !fr.reportId ||
-    !en.reportId ||
     fr.analysisId !== frAnalysis.analysisId ||
-    en.analysisId !== enAnalysis.analysisId ||
     !provenanceMatches(frAnalysis.findingsProvenance, currentFindings) ||
-    !provenanceMatches(enAnalysis.findingsProvenance, currentFindings) ||
-    classifyReportFreshness(fr, currentFindings) !== 'fresh' ||
-    classifyReportFreshness(en, currentFindings) !== 'fresh'
-  )
+    classifyReportFreshness(fr, currentFindings) !== 'fresh'
+  ) {
     return undefined;
-  const [frPdf, enPdf] = preReadPdfs
-    ? [preReadPdfs.fr, preReadPdfs.en]
-    : await Promise.all([
-        readVerifiedReport(auditDir, fr, hostname, startedAt, store),
-        readVerifiedReport(auditDir, en, hostname, startedAt, store),
-      ]);
-  if (!frPdf || !enPdf) return undefined;
+  }
+
+  if (
+    enAnalysis !== undefined &&
+    (!en ||
+      !en.reportId ||
+      en.analysisId !== enAnalysis.analysisId ||
+      !provenanceMatches(enAnalysis.findingsProvenance, currentFindings) ||
+      classifyReportFreshness(en, currentFindings) !== 'fresh')
+  ) {
+    return undefined;
+  }
+
+  const frPdf =
+    preReadPdfs?.fr ??
+    (await readVerifiedReport(auditDir, fr, hostname, startedAt, store));
+  if (!frPdf) return undefined;
+
+  if (enAnalysis === undefined) {
+    return { reports: { fr }, pdfs: { fr: frPdf } };
+  }
+
+  const enPdf =
+    preReadPdfs?.en ??
+    (en ? await readVerifiedReport(auditDir, en, hostname, startedAt, store) : undefined);
+  if (!en || !enPdf) return undefined;
   return { reports: { fr, en }, pdfs: { fr: frPdf, en: enPdf } };
 }
 
@@ -201,7 +218,7 @@ async function getFreshVerifiedPair(
   hostname: string,
   startedAt: Date,
   store: ArtifactStore | undefined,
-): Promise<{ reports: CurrentReportPair; pdfs: { fr: Buffer; en: Buffer } } | undefined> {
+): Promise<{ reports: CurrentReportPair; pdfs: { fr: Buffer; en?: Buffer } } | undefined> {
   const [fr, en, resolution] = await Promise.all([
     getLatestReport(connection, auditId, 'fr'),
     getLatestReport(connection, auditId, 'en'),
@@ -490,7 +507,9 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         ? frReport
         : null;
     const currentEnReport =
-      selectedPair.kind !== 'none' && enReport?.analysisId === selectedPair.en.analysisId
+      selectedPair.kind !== 'none' &&
+      selectedPair.en !== undefined &&
+      enReport?.analysisId === selectedPair.en.analysisId
         ? enReport
         : null;
     const hostname = new URL(audit.siteUrl).hostname;
@@ -548,7 +567,8 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     const analysed = Boolean(
       selectedPair.kind !== 'none' &&
       provenanceMatches(selectedPair.fr.findingsProvenance, audit.findingsProvenance) &&
-      provenanceMatches(selectedPair.en.findingsProvenance, audit.findingsProvenance),
+      (selectedPair.en === undefined ||
+        provenanceMatches(selectedPair.en.findingsProvenance, audit.findingsProvenance)),
     ); // Plan 032 (issue #162): the selected pair was produced by the audit
     // fallback gate, so its reports carry no model-written analysis. The
     // operator sees why the report has no themes instead of reading the
@@ -557,7 +577,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     const analysisIsStaticFallback =
       selectedPair.kind !== 'none' &&
       (selectedPair.fr.generationMode === 'static-fallback' ||
-        selectedPair.en.generationMode === 'static-fallback');
+        selectedPair.en?.generationMode === 'static-fallback');
     const approved = Boolean(
       verifiedPair && approvalMatchesReportPair(approval, verifiedPair.reports),
     );
@@ -1118,7 +1138,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       sendError(
         res,
         409,
-        'a complete, fresh, digest-verified French and English report pair is required',
+        'a fresh, digest-verified French report is required before approval',
       );
       return;
     }
@@ -1126,7 +1146,14 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       approvalId: randomUUID(),
       auditId,
       fr: { reportId: pair.reports.fr.reportId!, pdfDigest: pair.reports.fr.pdfDigest! },
-      en: { reportId: pair.reports.en.reportId!, pdfDigest: pair.reports.en.pdfDigest! },
+      ...(pair.reports.en !== undefined
+        ? {
+            en: {
+              reportId: pair.reports.en.reportId!,
+              pdfDigest: pair.reports.en.pdfDigest!,
+            },
+          }
+        : {}),
       approvedAt: new Date(),
     };
     try {
@@ -1143,9 +1170,9 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         if (
           !current ||
           current.reports.fr.reportId !== pair.reports.fr.reportId ||
-          current.reports.en.reportId !== pair.reports.en.reportId
+          current.reports.en?.reportId !== pair.reports.en?.reportId
         ) {
-          throw new Error('report pair changed during approval');
+          throw new Error('selected report version changed during approval');
         }
         await persistReportApproval(connection, approval, session);
       });
@@ -1254,14 +1281,23 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       return;
     }
 
-    const pair = await Promise.all([
+    const [fr, en, approval] = await Promise.all([
       getLatestReport(connection, auditId, 'fr'),
       getLatestReport(connection, auditId, 'en'),
       getLatestReportApproval(connection, auditId),
     ]);
-    const [fr, en, approval] = pair;
-    if (!fr || !en || !approvalMatchesReportPair(approval, { fr, en })) {
-      sendError(res, 409, 'the current bilingual report pair has not been approved for delivery');
+    const deliveryApproved =
+      language === 'fr'
+        ? Boolean(fr && approvalMatchesReportPair(approval, { fr }))
+        : Boolean(en && approval?.en && fr && approvalMatchesReportPair(approval, { fr, en }));
+    if (!deliveryApproved) {
+      sendError(
+        res,
+        409,
+        language === 'fr'
+          ? 'the current French report has not been approved for delivery'
+          : 'the current English report has not been approved for delivery',
+      );
       return;
     }
 
