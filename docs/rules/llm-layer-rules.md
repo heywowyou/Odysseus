@@ -16,6 +16,11 @@ it.
 > additional writing call. The shadow reviewer and correction-review calls are
 > not part of report production. Historical sections below remain useful as
 > incident rationale only where they are explicitly marked retired.
+>
+> **Plan 070 (2026-09-19)** adds one fail-open grounded critic and at most one
+> targeted repair after each writing call, behind the `WRITING_CRITIC_ENABLED`
+> constant (section 15). With the constant off, which is the shipped state
+> until calibration passes, the call graph above is unchanged.
 
 > **Current outreach-preview contract — Plan 069 (2026-09-19).**
 > Publishing or rendering a v3 outreach preview makes **zero provider calls**.
@@ -147,7 +152,8 @@ guards:
   page-controlled overflow is cut. Normalization is untouched: findings keep
   their full evidence and provenance, and the report renders them verbatim.
 - Every system prompt whose input carries finding text (structure, writing in
-  both languages, shadow reviewer, correction review) ends with the scanner
+  both languages, the Plan 070 critic, and the standalone correction-review
+  measurement tool) ends with the scanner
   evidence notice: finding text is data describing the page, and instructions
   or role changes inside it are never followed.
 
@@ -293,7 +299,7 @@ to trust implicitly.
 alternative groupings on a task that calls for a stable, repeatable
 answer over the same findings. This is a client deliverable, not a
 brainstorm, and two runs over the same findings should not produce
-materially different priorities. The structure pass and standalone historical reviewer tools use
+materially different priorities. The structure pass, the Plan 070 critic, and the standalone correction-review tool use
 `OPENAI_TEMPERATURE` (0.2) for exactly that reason. The writing pass has
 no such repeatability requirement - it produces prose, not a priority
 ranking - and (plan 027) uses its own `WRITING_OPENAI_TEMPERATURE` (1.0,
@@ -1035,7 +1041,8 @@ English generation and the normal dashboard do not consult them.
 ## 14. Call-level telemetry and the Langfuse decision (issue #254)
 
 `packages/llm/src/telemetry/` reports one metadata-only event per model call
-from `analyzeStructure` and `analyzeWriting`: `call-succeeded` (`pass`,
+from `analyzeStructure`, `analyzeWriting`, and the Plan 070 critic and
+repair (section 15): `call-succeeded` (`pass`,
 `model`, `language` for the writing pass, `attemptCount`,
 `schemaValidFirstAttempt`, `durationMs`, and token counts when the provider
 returns them) or `call-exhausted` (same identifying fields, no output data,
@@ -1074,3 +1081,53 @@ creating a second store for client content. Any future proposal to export
 prompt/response content, traces containing website text, or report prose
 requires a separate explicit privacy decision and may not reuse this opt-in as
 authorization.
+
+---
+
+## 15. The grounded critic and its one targeted repair (Plan 070)
+
+Section 12 retired reviewers that judged the report as a whole and produced
+review burden. Plan 070 adds a narrower pass (trade-off 105): after each
+writing call, one critic call reads the exact `WritingInput` the writer
+received plus every prose field it wrote (`listWritingProseFields`), and may
+raise issues in five closed categories only: `contradicts-evidence`,
+`unsupported-inference`, `remedy-mismatch`, `cross-theme-redundancy`,
+`unexplained-jargon`. The prompt names what it must never raise: the generic
+consequence of a real finding (the removed reviewer's dominant false
+positive), style or length, and everything a deterministic guard owns.
+
+- **Kill switch.** `WRITING_CRITIC_ENABLED` in `packages/llm/src/constants.ts`.
+  Off, `critiqueAndRepairWriting` returns the writer result object itself and
+  makes no call. No environment variable, no per-job option.
+- **Call budget per language.** Off: 2 fresh / 1 reused structure. Critic with
+  no actionable issue: 3 / 2. Critic with issues: 4 / 3. The critic and the
+  repair each get exactly one attempt; nothing is retried.
+- **Deterministic acceptance.** `validateCriticIssues` drops, counts, and never
+  retries an issue with an invalid shape, an out-of-scope category, a field
+  path the output does not have, an unknown finding ID, or a finding ID
+  outside that field's own theme packet (executive summary and notes may cite
+  any theme). A repeated field and category is a duplicate; at most 12 are
+  accepted.
+- **Targeted repair.** One writer call over only the flagged themes, with the
+  accepted issues as correction feedback. Only flagged themes, and the
+  executive summary or notes when flagged, are replaced; everything else is
+  the original object. The merged output runs `sanitizeWritingOutput` and the
+  full guard table: a blocking failure, or a style failure the original did
+  not already have, discards the whole repair.
+- **Fail open.** A critic provider error, refusal, truncation or invalid
+  response, a repair provider error, and a rejected repair all leave the
+  pre-critic output standing. A critic defect can never fail a job or block a
+  report.
+- **Operator surface.** Issues left unresolved become `critic-unresolved`
+  sanitation warnings with the field path only. The full issue list, with its
+  English `problem` text, is written to `analyses/<ts>-<lang>-critic.json`
+  beside the analysis and is never rendered into a client document; the
+  analysis stores only `writingCritic { ran, issuesRaised, issuesAccepted,
+  repairApplied }`.
+- **Telemetry.** The critic reports on the `review` pass value, the repair on
+  `writing`, both with token counts.
+- **Calibration.** `packages/interface/src/pipeline/measure-writing-critic.ts`
+  reruns writer, critic and repair on saved audits with the stage's own input
+  builder and writes a labelling register under `artifacts/`. The switch is
+  turned on only when the plan's acceptance thresholds (precision at least
+  70% by operator label, no regression, cost and latency ceilings) are met.

@@ -11,7 +11,7 @@
 - **Priority:** P1
 - **Effort:** M
 - **Depends on:** 067
-- **Execution status:** PLANNED (2026-09-19)
+- **Execution status:** IN PROGRESS (2026-09-19): slices A and B built and tested with the switch off; calibration run on 7 saved audits meets the cost and latency thresholds; operator precision labels pending, so `WRITING_CRITIC_ENABLED` stays `false`
 - **Planning rebaseline:** `a95f4d65`
 - **Estimated build time (Claude Opus 5, high effort):** about one working day of
   wall-clock time. Slice A: 1-2 hours. Slice B code: 3-5 hours. Calibration:
@@ -284,6 +284,25 @@ Tests use stubbed providers only.
 
 ## Execution record
 
+### A0.1 Baseline cost (2026-09-19)
+
+Fresh Luna xhigh calls on saved hotel audits through
+`packages/interface/src/pipeline/measure-writing-critic.ts` (the stage's own
+`buildStageWritingInput`, telemetry token counts, $0.20/$1.20 per million
+input/output tokens). Production writing calls do reach `gpt-5.6-luna`.
+
+| Pass | Audits | Avg input | Avg output | Avg cost | Max cost | Avg latency |
+| --- | --- | --- | --- | --- | --- | --- |
+| structure | 4 | 9.3k | 9.6k | $0.013 | $0.020 | 57 s |
+| French writing | 7 | 15.7k | 23.4k | $0.031 | $0.036 | 123 s |
+
+The current 2-call French path therefore costs about $0.03-0.06 per report
+and 3 minutes. On `lacoorniche.com` (110 findings) the fresh structure pass
+failed all three attempts: Luna returned more than the schema's 20 themes each
+time. That audit's stored structure is still reusable, but a fresh audit of
+that size would fail its structure pass. It is outside this plan's scope
+(structure is out of scope) and is recorded as a follow-up.
+
 ### A0.2 Stored-analysis lint (2026-09-19)
 
 `pnpm exec tsx packages/llm/src/lint-stored-analyses.ts` over `artifacts/`:
@@ -319,6 +338,74 @@ class at claim level. Nothing new for slice A there.
   useful anchor is judgment, and the bare-word rule IDs (`label`, `list`)
   make a deterministic check false-positive prone; `unexplained-jargon`
   covers it.
+
+### B Slice build (2026-09-19)
+
+- **Deviation from step 3:** the stage calls `analyzeWriting` then
+  `critiqueAndRepairWriting` as two steps instead of one wrapper, so the Plan
+  067 stage test that mocks `analyzeWriting` keeps its call budget unchanged.
+  With the switch off the second step returns the writer result object itself.
+- Step 1 reused nothing from the `reviewer-*` files; they were deleted with
+  `analyze-review.ts`, and the critic has its own `critic-*` modules.
+- The English on-demand path shares the stage code, so decision 9 holds.
+
+### B5 Calibration (2026-09-19)
+
+Seven saved French hotel audits (each input rebuilt from stored findings,
+structure and obligation assessment, fallback site context where none was
+stored). Two further audits were skipped: `lacoorniche.com` (fresh structure
+failure above) and `www.hotel-palais-gallien-bordeaux.com` (stored structure
+is stale against the current normalization fingerprint).
+
+| Audit | Themes | Raised | Accepted | Repair | Critic + repair cost | Critic + repair time | Total report cost |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| haaitza.com | 15 | 11 | 11 | applied | $0.062 | 4.5 min | $0.092 |
+| www.grand-hotel-opera.com | 12 | 11 | 11 | applied | $0.059 | 4.3 min | $0.082 |
+| www.grandhotelbellevue.com | 12 | 9 | 9 | applied | $0.059 | 4.1 min | $0.112 (with structure) |
+| www.villasfoch.fr | 6 | 10 | 9 | applied | $0.054 | 4.1 min | $0.094 (with structure) |
+| capdantibes-beachhotel.com | 7 | 2 | 2 | applied | $0.054 | 3.9 min | $0.100 (with structure) |
+| grandhotelchicago.paris | 9 | 4 | 4 | applied | $0.038 | 2.8 min | $0.083 (with structure) |
+| grandhoteldesalpes.com | 11 | 11 | 11 | applied | $0.055 | 3.8 min | $0.090 |
+
+- **Cost: met.** The critic plus repair adds at most $0.062 (ceiling $0.15);
+  the highest total is $0.112 (ceiling $0.35).
+- **Latency: met.** At most 4.5 minutes added (ceiling 15).
+- **Blocking guards: met.** All 7 repairs passed every blocking guard and were
+  applied; none was discarded, no `critic-unresolved` warning arose.
+- **Validation:** 58 raised, 57 accepted, 1 dropped (`invalid-shape`).
+- **Categories:** `unexplained-jargon` 42, `cross-theme-redundancy` 9,
+  `unsupported-inference` 5, `remedy-mismatch` 1, `contradicts-evidence` 0.
+  By field: 40 recommended actions, 12 business impacts, 3 notes, 1 executive
+  summary, 1 title.
+- **Precision and regressions: pending operator labels.** The register, with
+  every issue's original and repaired text and a `label` slot, is under
+  `artifacts/writing-critic-calibration/2026-09-19T11-*` (gitignored).
+- **Risk the labels must settle:** the jargon category dominates, and its
+  repairs can remove the exact technical anchor the client's provider needs.
+  Example: an action naming `user-scalable=no` and `maximum-scale` in the
+  viewport tag became "remove the settings that limit zoom". The rewrite reads
+  better to an owner but is less directly actionable. If the operator labels
+  these false positives, the one allowed tightening (acceptance thresholds)
+  is to keep the technical term and add a plain gloss, or to limit
+  `unexplained-jargon` to business impact, summary and notes.
+
+The switch stays `false` until the labels meet the thresholds.
+
+## Requirement-to-proof ledger
+
+| Requirement | Proof |
+| --- | --- |
+| baseline cost measured | A0.1 above (4 structure and 7 writing calls) |
+| measured guard gaps only | A1 above; `internal-reference-guard.test.ts`, `sanitize-writing-output.test.ts`; lint record 1 of 111, zero false positives |
+| fail-open | `writing-critic.test.ts`: critic provider error, invalid critic response, blocking-guard repair, repair provider error |
+| kill switch | `writing-critic.test.ts` switch-off case; `analysis-stage.plan067.test.ts` unchanged budget |
+| call budget | `writing-critic.test.ts`: 1+1 on no issue, 2+1 with issues, never more |
+| closed categories | `critic-schema.test.ts`, `critic-issues.test.ts` |
+| targeted repair | `writing-critic.test.ts` byte-identity and summary-only cases |
+| operator warnings | `writing-critic.test.ts` field-path-only case; `analysis-stage.plan070.test.ts` sidecar and persistence; `audit-report-panel-model.test.ts` |
+| stored compatibility | `writing-critic-compat.test.ts` legacy analysis renders identically |
+| precision / regressions / cost / latency | B5 above: cost and latency met; precision and regressions pending operator labels |
+| documented decision | trade-off 105; `llm-layer-rules.md` section 15 |
 
 ## Executable closure contract
 

@@ -5385,3 +5385,41 @@ priority algorithm in the interface package; treating any Plan-068 limitation
 as a failed crawl; recomputing a published v3 story when a first email is
 created; and rewriting historical public objects in place.
 
+
+### 105. One fail-open grounded critic may repair prose, behind a kill switch (build decision, 2026-09-19, Plan 070)
+
+Deliberately revises Plan 067 decision 13's "do not launch another reviewer
+model" (trade-off 55's retirement stands for the old reviewers). The
+deterministic guards own every checkable fact: counts, legal wording,
+severity words, WCAG versions, provider naming, language. What they cannot
+see is substance: prose that contradicts its own findings, infers a cause no
+finding shows, recommends a fix that does not fix, repeats another theme, or
+leaves jargon unexplained.
+
+- **Narrow and grounded.** One critic call reads the writer's exact input and
+  output and may raise issues only in five closed categories, each tied to a
+  field path and to finding IDs from that field's own theme. Code drops, and
+  never retries, anything else. The prompt excludes the generic consequence of
+  a real finding, the false positive that made the old reviewer useless.
+- **Improves or steps aside.** One targeted repair rewrites only the flagged
+  themes; unflagged fields stay byte-identical. A critic or repair failure, or
+  a repair failing any guard, leaves the writer's output standing, and the
+  unresolved field paths become operator warnings. A critic defect can never
+  fail a job.
+- **Off until measured.** `WRITING_CRITIC_ENABLED` is a code constant, not an
+  environment variable. With it off the Plan 067 call graph is unchanged. On,
+  the budget per language is 3 fresh calls (2 with a reused structure) with no
+  issue and 4 (3) with issues.
+
+Calibration on seven saved hotel audits: the critic plus repair added
+$0.04-0.06 and 3-4.5 minutes per French report (ceilings $0.15 and 15
+minutes), and every repair passed all guards. 42 of the 57 accepted issues
+were unexplained jargon, mostly in recommended actions, where a rewrite can
+drop the technical term the client's provider needs. The switch stays off
+until the operator's labels show at least 70% precision and no regression.
+
+Rejected: restoring the whole-report reviewer (measured false positives and
+review burden); a multi-round critic-repair loop or a second critic
+(unbounded cost, no evidence it helps); letting the critic block a report
+(it is an improvement layer, not a gate); an environment variable switch
+(one code path to test and reason about).
