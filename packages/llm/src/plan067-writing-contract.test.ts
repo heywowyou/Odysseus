@@ -102,13 +102,13 @@ describe('Plan 067 writing contract', () => {
 
   it('enforces the exact 80-character / 10-word title ceiling and French obligation scaffolds', () => {
     const tenWords = output();
-    tenWords.themes[0]!.title = 'Contrastes textes boutons liens menus formulaires titres images claviers';
+    tenWords.themes[0]!.title = 'Contrastes textes boutons liens menus formulaires titres images claviers focus';
     expect(tenWords.themes[0]!.title.trim().split(/\s+/)).toHaveLength(10);
     expect(findThemeTitleViolations(tenWords, 'fr')).toEqual([]);
 
     const elevenWords = output();
     elevenWords.themes[0]!.title =
-      'Contrastes textes boutons liens menus formulaires titres images claviers focus navigation';
+      'Contrastes textes boutons liens menus formulaires titres images claviers focus navigation usages';
     expect(findThemeTitleViolations(elevenWords, 'fr')).toMatchObject([
       { reason: 'too-long' },
     ]);
