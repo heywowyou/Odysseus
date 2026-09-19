@@ -20,3 +20,18 @@ export class ReportIdentityUnconfirmedError extends Error {
     this.fields = fields;
   }
 }
+
+/**
+ * A selected priority names a rule with no reviewed remediation copy. Typed
+ * so the outreach preview can fail closed with a refusal instead of
+ * crashing, while the paid report keeps treating it as a hard stop.
+ */
+export class MissingReviewedRemediationError extends Error {
+  readonly ruleIds: string[];
+
+  constructor(ruleIds: string[]) {
+    super(`Missing reviewed report remediation for rule IDs: ${ruleIds.join(', ')}`);
+    this.name = 'MissingReviewedRemediationError';
+    this.ruleIds = ruleIds;
+  }
+}

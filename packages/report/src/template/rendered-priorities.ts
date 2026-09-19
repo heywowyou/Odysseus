@@ -10,6 +10,7 @@ import { buildMissingPercentIndex, classifyDiversion } from '@odysseus/llm';
 import { interpolateSnippet, remediationFor, snippetFor } from './remediation/index.js';
 import { resolveFindingDisplayLabel } from './rule-translations.js';
 import { isThirdPartyFinding } from './third-party-attribution.js';
+import { MissingReviewedRemediationError } from '../errors.js';
 
 export const MAX_RENDERED_THEMES = 6;
 
@@ -448,9 +449,7 @@ export function buildRenderedPriorities(
     ),
   ].sort();
   if (missingRuleIds.length > 0) {
-    throw new Error(
-      `Missing reviewed report remediation for rule IDs: ${missingRuleIds.join(', ')}`,
-    );
+    throw new MissingReviewedRemediationError(missingRuleIds);
   }
 
   // Issue #84's hard-fail safety net (two priorities quoting the identical

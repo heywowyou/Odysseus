@@ -15,6 +15,7 @@ import {
   resolvePublishedPreviewForDraft,
   type OutreachPreviewStorePortV3,
   type OutreachPublicationRowV3,
+  type PublishedPreviewFacts,
 } from './publish-preview-v2.js';
 
 const NOW = new Date('2026-09-19T09:00:00.000Z');
@@ -40,6 +41,7 @@ function finding(
     description: `raw description ${ruleId}`,
     help: `raw help ${ruleId}`,
     pageUrls,
+    elements: [],
     evidence: [],
   } as unknown as Finding;
 }
@@ -327,11 +329,11 @@ describe('publishPreviewV3', () => {
 
 describe('resolvePublishedPreviewForDraft', () => {
   const TOKEN = createPreviewToken();
-  const facts = {
+  const facts: PublishedPreviewFacts = {
     distinctFindingCount: 99,
     affectedPageCount: 7,
     severityTotals: { critical: 2, serious: 3, moderate: 4, minor: 90 },
-    priorityCardCategories: ['seo', 'accessibility', 'performance'] as const,
+    priorityCardCategories: ['seo', 'accessibility', 'performance'],
   };
   const v3Record = {
     previewId: 'preview-1',
@@ -361,9 +363,7 @@ describe('resolvePublishedPreviewForDraft', () => {
           audit: {
             auditId: 'audit-1',
             ...(source.digest === undefined ? {} : { findingsDigest: source.digest }),
-            ...(source.analysisId === undefined
-              ? {}
-              : { selectedFrAnalysisId: source.analysisId }),
+            ...(source.analysisId === undefined ? {} : { selectedFrAnalysisId: source.analysisId }),
           },
         }),
       findingsForAudit: vi.fn(() => Promise.resolve(FINDINGS)),

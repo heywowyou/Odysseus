@@ -44,7 +44,7 @@ export {
 export { generateOutreachPreviewPdf } from './outreach-preview/pdf-v2.js';
 export { embedOutreachEvidenceAsset } from './outreach-preview/evidence-input.js';
 export type { OutreachEvidenceSlot } from './outreach-preview/evidence-input.js';
-export { ReportIdentityUnconfirmedError } from './errors.js';
+export { MissingReviewedRemediationError, ReportIdentityUnconfirmedError } from './errors.js';
 export { findUnconfirmedIdentityFields } from './template/unconfirmed-fields.js';
 export type { UnconfirmedField } from './template/unconfirmed-fields.js';
 export {

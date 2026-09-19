@@ -17,7 +17,6 @@ import {
   type AuditManifest,
   type Finding,
   type OutreachPreviewSeverity,
-  type OutreachPreviewSummary,
   type OutreachPreviewSummaryV3,
   type OutreachProofCard,
 } from '@odysseus/core';
@@ -25,6 +24,7 @@ import type { AnalysisDocument, AuditDocumentFields } from '@odysseus/store';
 import {
   buildRenderedPriorities,
   generateOutreachPreviewHtmlV3,
+  MissingReviewedRemediationError,
   OUTREACH_PROOF_CARD_COPY,
 } from '@odysseus/report';
 import type { AuditEvidenceDiagnostics } from '../pipeline/audit-evidence-diagnostics.js';
@@ -163,7 +163,13 @@ export function buildOutreachPreviewSummaryV3(options: {
       sourceFindingsDigest: string;
       publishedFacts: PublishedPreviewFacts;
     }
-  | { refused: 'coverage-incomplete' | 'report-not-ready' | 'insufficient-safe-cards' | 'priority-copy-unavailable' } {
+  | {
+      refused:
+        | 'coverage-incomplete'
+        | 'report-not-ready'
+        | 'insufficient-safe-cards'
+        | 'priority-copy-unavailable';
+    } {
   const { row, language, publicBaseUrl } = options;
   const coverage = coverageFactsFromAudit(summarizeAuditCoverage(row.audit));
   if (coverage === undefined) return { refused: 'coverage-incomplete' };
@@ -171,12 +177,20 @@ export function buildOutreachPreviewSummaryV3(options: {
   const sourceFindingsDigest = row.audit.findingsProvenance?.findingsDigest;
   if (sourceFindingsDigest === undefined) return { refused: 'report-not-ready' };
 
-  const priorities = buildRenderedPriorities(
-    row.analysis.themes,
-    row.findings,
-    row.audit as unknown as AuditManifest,
-    'fr',
-  );
+  let priorities: ReturnType<typeof buildRenderedPriorities>;
+  try {
+    priorities = buildRenderedPriorities(
+      row.analysis.themes,
+      row.findings,
+      row.audit as unknown as AuditManifest,
+      'fr',
+    );
+  } catch (error) {
+    if (error instanceof MissingReviewedRemediationError) {
+      return { refused: 'priority-copy-unavailable' };
+    }
+    throw error;
+  }
   if (priorities.length < 3) return { refused: 'insufficient-safe-cards' };
 
   const priorityCards = priorities.slice(0, 3).map((priority, index) => {
@@ -273,9 +287,7 @@ export interface ResolvedPublishedPreview {
   proofCardCategories: OutreachProofCard['category'][];
 }
 
-function v2ProofCardCategoriesFor(
-  findings: readonly Finding[],
-): OutreachProofCard['category'][] {
+function v2ProofCardCategoriesFor(findings: readonly Finding[]): OutreachProofCard['category'][] {
   return selectOutreachProofCards(findings, (ruleId) => OUTREACH_PROOF_CARD_COPY[ruleId])
     .slice(0, 3)
     .map((card) => card.category);
@@ -296,9 +308,7 @@ export async function resolvePublishedPreviewForDraft(options: {
     sourceFindingsDigest?: string;
     publishedFacts?: PublishedPreviewFacts;
   } | null>;
-  resolveOutreachAudit: (
-    prospectId: string,
-  ) => Promise<
+  resolveOutreachAudit: (prospectId: string) => Promise<
     | {
         state: 'resolved';
         audit: {
