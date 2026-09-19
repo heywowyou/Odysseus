@@ -236,28 +236,34 @@ JOBS_PROBE='
     .find({ status: "running" })
     .project({ jobId: 1, phase: 1, type: 1, siteUrl: 1 })
     .toArray();
-  for (const job of running) {
+  const resumable = running.filter((job) => job.type === "full-audit");
+  const blocking = running.filter((job) => job.type !== "full-audit");
+  for (const job of resumable) {
     console.error(
-      "running job: jobId=" + job.jobId + " type=" + job.type +
+      "resumable running full-audit: jobId=" + job.jobId +
+        " phase=" + job.phase + " site=" + (job.siteUrl ?? "-"),
+    );
+  }
+  for (const job of blocking) {
+    console.error(
+      "blocking running job: jobId=" + job.jobId + " type=" + job.type +
         " phase=" + job.phase + " site=" + (job.siteUrl ?? "-"),
     );
   }
   await mongoose.disconnect();
-  process.stdout.write(JSON.stringify(running) + "\n", (error) => {
+  process.stdout.write(JSON.stringify(blocking) + "\n", (error) => {
     process.exit(error ? 1 : 0);
   });
 '
 
-# Issue #124: recreating the app container kills any job it is running (the
-# 2026-09-08 redeploy destroyed a five-hour audit mid-content-scan), so the
-# deploy refuses while the jobs collection still reports a running job. The
-# probe is deliberately fail-closed: a running container that cannot be
-# asked about the queue, or that answers with anything unreadable, refuses
-# the deploy rather than guessing. A container that is not running at all
-# has nothing live to protect; startup recovery requeues whatever Mongo
-# still calls running. ODYSSEUS_DEPLOY_FORCE_RUNNING lifts the refusal for
-# the operator who accepts interrupting the listed jobs.
-assert_no_running_jobs() {
+# Issue #124 / operator amendment 2026-09-19: full-audit jobs are explicitly
+# resumable across container recreation, so they are logged but do not block a
+# deployment. Other running job types still fail closed because they do not all
+# have that checkpoint/re-claim contract. A failed/unreadable probe still
+# refuses the deploy rather than guessing. ODYSSEUS_DEPLOY_FORCE_RUNNING lifts
+# the refusal for an operator who explicitly accepts interrupting those
+# non-resumable jobs.
+assert_no_blocking_running_jobs() {
   local previous_path="$1"
   local previous_tag ps_running probe_output job_count jobs_left
   previous_tag="$(release_tag_for "$previous_path")"
@@ -266,7 +272,7 @@ assert_no_running_jobs() {
     fail 'could not inspect the running app container; the job queue state is unknown, so the deploy is refused'
   fi
   if [[ -z "$ps_running" ]]; then
-    log 'no running app container; no live audit to protect'
+    log 'no running app container; no live job to protect'
     return 0
   fi
 
@@ -286,7 +292,7 @@ assert_no_running_jobs() {
     fail 'the running-jobs probe returned an unreadable answer; the job queue state is unknown, so recreating the app container is refused'
   fi
   if [[ "$probe_output" == '[]' ]]; then
-    log 'no jobs are running; the app container can be recreated safely'
+    log 'no non-resumable jobs are running; the app container can be recreated safely'
     return 0
   fi
 
@@ -298,11 +304,11 @@ assert_no_running_jobs() {
   done
 
   if [[ -n "${ODYSSEUS_DEPLOY_FORCE_RUNNING:-}" ]]; then
-    log "ODYSSEUS_DEPLOY_FORCE_RUNNING is set: recreating the app container over $job_count running job(s) at the operator's explicit request"
-    log 'the jobs listed above are interrupted by this deploy; a full-audit job resumes from its checkpoint on next startup'
+    log "ODYSSEUS_DEPLOY_FORCE_RUNNING is set: recreating the app container over $job_count non-resumable running job(s) at the operator's explicit request"
+    log 'the blocking jobs listed above are interrupted by this deploy'
     return 0
   fi
-  fail "$job_count job(s) are running; recreating the app container now would kill them. To deploy anyway, add the force-running token to the deploy command, or set ODYSSEUS_DEPLOY_FORCE_RUNNING=1 for this run"
+  fail "$job_count non-resumable job(s) are running; recreating the app container now would interrupt them. To deploy anyway, add the force-running token to the deploy command, or set ODYSSEUS_DEPLOY_FORCE_RUNNING=1 for this run"
 }
 
 deploy_release() {
@@ -320,7 +326,7 @@ deploy_release() {
 
   log "building release $release_id"
   compose "$release_path" "$release_id" build app
-  assert_no_running_jobs "$previous_path"
+  assert_no_blocking_running_jobs "$previous_path"
   log "starting release $release_id"
   compose "$release_path" "$release_id" up -d --remove-orphans
 
