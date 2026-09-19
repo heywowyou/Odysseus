@@ -92,11 +92,11 @@ const EXECUTIVE_SUMMARY_CLOSING_EXAMPLES: Record<ReportLanguage, readonly string
 export const PROMPT_EXAMPLE_SENTENCES: Record<ReportLanguage, readonly string[]> = {
   fr: [
     ...EXECUTIVE_SUMMARY_CLOSING_EXAMPLES.fr,
-    "Le formulaire de réservation ne signale pas ses erreurs de saisie, si bien qu'un client qui se trompe de date ne comprend pas pourquoi sa demande échoue",
+    "Le formulaire ne signale pas ses erreurs de saisie, si bien qu'un visiteur qui se trompe ne comprend pas pourquoi sa demande échoue",
   ],
   en: [
     ...EXECUTIVE_SUMMARY_CLOSING_EXAMPLES.en,
-    'The reservation form does not flag its input errors, so a customer who enters the wrong date does not understand why the request failed',
+    'The form does not flag its input errors, so a visitor who enters an invalid value does not understand why the request failed',
   ],
 };
 
