@@ -470,7 +470,7 @@ describe.skipIf(!mongoAvailable)('writing selection', () => {
     expect(mixed.kind).toBe('legacy-latest');
     if (mixed.kind === 'legacy-latest') {
       expect(mixed.fr.analysisId).toBe(fr.analysisId);
-      expect(mixed.en.analysisId).toBe(en.analysisId);
+      expect(mixed.en?.analysisId).toBe(en.analysisId);
     }
   });
 
