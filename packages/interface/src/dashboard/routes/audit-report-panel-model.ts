@@ -235,6 +235,7 @@ export function canApproveReportPair(
   reports: readonly ReportStatusResponse[],
   analysisLanguages: readonly ReportLanguage[] = ['fr', 'en'],
 ): boolean {
+  if (!analysisLanguages.includes('fr')) return false;
   const requiredLanguages: readonly ReportLanguage[] = analysisLanguages.includes('en')
     ? ['fr', 'en']
     : ['fr'];
