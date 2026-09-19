@@ -1,41 +1,56 @@
-/** Mongo adapter for the prospect-native full-audit preview contract. */
+/** Mongo adapter for the current v3 prospect-native preview contract. */
 
 import type { Connection } from 'mongoose';
-import { primaryWebsite, type Finding } from '@odysseus/core';
+import {
+  primaryWebsite,
+  type AuditManifest,
+  type Finding,
+} from '@odysseus/core';
 import {
   createAuditModel,
   createJobModel,
   effectiveAuditScanIntent,
+  findingsProvenanceMatches,
+  getAudit,
   getFindingsForAudit,
+  getLatestReport,
   getProspectHub,
   isSuppressed,
   listLivePreviewsForDomain,
   loadOutreachReportReadiness,
   recordOutreachPreview,
+  resolveSelectedAnalysisPairForAudit,
   revokeOutreachPreview,
   selectNewestQualifyingAudit,
+  type AuditDocumentFields,
   type AuditIntentSourceJob,
   type ProspectWorkAudit,
 } from '@odysseus/store';
+import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
+import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
+import { readAuditEvidenceDiagnostics } from '../pipeline/audit-evidence-diagnostics.js';
 import type {
   OutreachPublicationAudit,
-  OutreachPublicationRowV2,
-  OutreachPreviewStorePortV2,
-  PublishPreviewV2Refusal,
-  RecordPreviewV2Input,
+  OutreachPublicationRowV3,
+  OutreachPreviewStorePortV3,
+  PublishPreviewV3Refusal,
+  RecordPreviewV3Input,
 } from './publish-preview-v2.js';
 
-type PublicationAudit = ProspectWorkAudit & OutreachPublicationAudit;
+type PublicationAudit = ProspectWorkAudit &
+  Pick<AuditDocumentFields, 'crawl' | 'continuationGuardSummary'>;
 
-export function createMongoOutreachPreviewStoreV2(
+export function createMongoOutreachPreviewStoreV3(
   connection: Connection,
   options: { prospectId: string; qualificationVersion?: string },
-): OutreachPreviewStorePortV2 {
+): OutreachPreviewStorePortV3 {
   void options.qualificationVersion;
+  const artifactStore = createConfiguredArtifactStore();
+
   return {
     async findPublicationRow(
       prospectId: string,
-    ): Promise<OutreachPublicationRowV2 | { refused: PublishPreviewV2Refusal }> {
+    ): Promise<OutreachPublicationRowV3 | { refused: PublishPreviewV3Refusal }> {
       const prospect = await getProspectHub(connection, prospectId);
       if (prospect === null) return { refused: 'prospect-unknown' };
 
@@ -53,11 +68,11 @@ export function createMongoOutreachPreviewStoreV2(
           pages: 1,
           crawl: 1,
           continuationGuardSummary: 1,
-          'findingsProvenance.normalizationFingerprint': 1,
-          gradeOverride: 1,
+          findingsProvenance: 1,
         })
         .sort({ startedAt: -1, auditId: -1 })
         .lean<PublicationAudit[]>();
+
       const auditIds = audits.map((audit) => audit.auditId);
       const jobScope: Record<string, unknown>[] = [{ 'options.prospectId': prospectId }];
       if (auditIds.length > 0) {
@@ -77,25 +92,56 @@ export function createMongoOutreachPreviewStoreV2(
           refused: qualification.state === 'missing' ? 'no-audit' : 'coverage-incomplete',
         };
       }
-      // Issue #388: the preview stands on the audit's client reports.
-      const readiness = await loadOutreachReportReadiness(connection, {
-        auditId: qualification.audit.auditId,
-        prospectId,
-      });
+
+      const auditId = qualification.audit.auditId;
+      const readiness = await loadOutreachReportReadiness(connection, { auditId, prospectId });
       if (readiness.state !== 'ready') return { refused: 'report-not-ready' };
+
+      const [audit, findings, selected, frReport] = await Promise.all([
+        getAudit(connection, auditId),
+        getFindingsForAudit(connection, auditId),
+        resolveSelectedAnalysisPairForAudit(connection, auditId),
+        getLatestReport(connection, auditId, 'fr'),
+      ]);
+      if (
+        audit === null ||
+        selected.kind === 'none' ||
+        frReport === null ||
+        frReport.analysisId !== selected.fr.analysisId ||
+        !findingsProvenanceMatches(selected.fr.findingsProvenance, audit.findingsProvenance) ||
+        !findingsProvenanceMatches(frReport.findingsProvenance, audit.findingsProvenance) ||
+        audit.findingsProvenance?.findingsDigest === undefined
+      ) {
+        return { refused: 'report-not-ready' };
+      }
 
       const website = primaryWebsite(prospect.websites);
       if (website === undefined) return { refused: 'domain-mismatch' };
-      const findings: Finding[] = await getFindingsForAudit(
-        connection,
-        qualification.audit.auditId,
-      );
+      const hostname = new URL(audit.siteUrl).hostname;
+      const auditDir = buildAuditDir(getArtifactsRoot(), hostname, audit.startedAt);
+      const diagnostics = await readAuditEvidenceDiagnostics({
+        auditDir,
+        hostname,
+        startedAt: audit.startedAt,
+        store: artifactStore,
+      });
+      const dataOrigins: OutreachPublicationRowV3['dataOrigins'] = [
+        'public-hotel-catalogue',
+        'public-website',
+        ...(selected.fr.obligationAssessment?.registrySnapshot !== undefined
+          ? (['public-business-registry'] as const)
+          : []),
+      ];
+
       return {
         prospectId,
         domain: website.registrableDomain,
         businessName: prospect.name,
-        audit: qualification.audit,
-        findings,
+        dataOrigins,
+        audit: audit as OutreachPublicationAudit,
+        findings: findings as Finding[],
+        analysis: selected.fr,
+        diagnostics,
       };
     },
 
@@ -104,12 +150,12 @@ export function createMongoOutreachPreviewStoreV2(
     },
 
     async recordPreview(
-      input: RecordPreviewV2Input,
+      input: RecordPreviewV3Input,
     ): Promise<{ recorded: true; previewId: string; publicExpiresAt: Date } | { recorded: false }> {
       const outcome = await recordOutreachPreview(connection, {
         ...input,
         sourceKind: 'full-audit',
-        previewContentVersion: 'v2',
+        previewContentVersion: 'v3',
       });
       return outcome.outcome === 'recorded'
         ? { recorded: true, previewId: outcome.previewId, publicExpiresAt: outcome.publicExpiresAt }

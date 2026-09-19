@@ -31,11 +31,8 @@ import { Schema, type Connection, type Model } from 'mongoose';
 
 export type OutreachPreviewStatus = 'live' | 'revoked';
 
-/** Plan 037: which scan a preview was built from. v1 rows (all prescan)
- *  predate the field; absence reads as 'prescan', so every existing row
- *  keeps its required prescan fields and its list/revoke/expiry behaviour
- *  unchanged. New publications are always 'full-audit' with content
- *  version 'v2'. */
+/** Full-scan public previews. Historical v1/v2 rows keep their stored shape;
+ * Plan 069 adds optional semantic-lineage fields used only by v3 rows. */
 export type OutreachPreviewSourceKind = 'full-audit';
 
 export interface OutreachPreviewDocumentFields {
@@ -56,6 +53,22 @@ export interface OutreachPreviewDocumentFields {
   /** full-audit rows only: the one audit the document aggregates. A rerun
    *  or a later audit of the same domain can never substitute for it. */
   auditId?: string;
+  /** Plan 069 v3: private semantic lineage. Never rendered by the public site. */
+  sourceAnalysisId?: string;
+  sourceFindingsDigest?: string;
+  publishedFacts?: {
+    distinctFindingCount: number;
+    affectedPageCount: number;
+    severityTotals: {
+      critical: number;
+      serious: number;
+      moderate: number;
+      minor: number;
+    };
+    priorityCardCategories: Array<
+      'accessibility' | 'seo' | 'geo' | 'performance' | 'rendering' | 'privacy'
+    >;
+  };
   publishedAt: Date;
   publicExpiresAt: Date;
   expiresAt: Date;
@@ -79,6 +92,34 @@ const outreachPreviewSchema = new Schema<OutreachPreviewDocument>(
     previewContentVersion: { type: String, required: true },
     sourceKind: { type: String, required: true, enum: ['full-audit'] },
     auditId: { type: String },
+    sourceAnalysisId: { type: String },
+    sourceFindingsDigest: { type: String },
+    publishedFacts: {
+      type: new Schema(
+        {
+          distinctFindingCount: { type: Number, required: true },
+          affectedPageCount: { type: Number, required: true },
+          severityTotals: {
+            type: new Schema(
+              {
+                critical: { type: Number, required: true },
+                serious: { type: Number, required: true },
+                moderate: { type: Number, required: true },
+                minor: { type: Number, required: true },
+              },
+              { _id: false },
+            ),
+            required: true,
+          },
+          priorityCardCategories: {
+            type: [String],
+            required: true,
+            enum: ['accessibility', 'seo', 'geo', 'performance', 'rendering', 'privacy'],
+          },
+        },
+        { _id: false },
+      ),
+    },
     publishedAt: { type: Date, required: true },
     publicExpiresAt: { type: Date, required: true },
     expiresAt: { type: Date, required: true },

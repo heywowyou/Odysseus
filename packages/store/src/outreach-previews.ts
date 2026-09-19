@@ -41,6 +41,9 @@ export interface RecordOutreachPreviewInput {
   publishedAt: Date;
   sourceKind: OutreachPreviewSourceKind;
   auditId: string;
+  sourceAnalysisId?: string;
+  sourceFindingsDigest?: string;
+  publishedFacts?: OutreachPreviewDocument['publishedFacts'];
 }
 
 export interface RecordedOutreachPreview {
@@ -73,6 +76,16 @@ export async function recordOutreachPreview(
     throw new Error('outreach preview: only full-audit previews are supported');
   }
 
+  if (
+    input.previewContentVersion === 'v3' &&
+    (input.sourceAnalysisId === undefined ||
+      input.sourceFindingsDigest === undefined ||
+      input.publishedFacts === undefined ||
+      input.publishedFacts.priorityCardCategories.length !== 3)
+  ) {
+    throw new Error('outreach preview: v3 requires complete semantic lineage and published facts');
+  }
+
   await PreviewModel.create({
     previewId,
     prospectId: input.prospectId,
@@ -84,6 +97,11 @@ export async function recordOutreachPreview(
     previewContentVersion: input.previewContentVersion,
     sourceKind: input.sourceKind,
     auditId: input.auditId,
+    ...(input.sourceAnalysisId !== undefined ? { sourceAnalysisId: input.sourceAnalysisId } : {}),
+    ...(input.sourceFindingsDigest !== undefined
+      ? { sourceFindingsDigest: input.sourceFindingsDigest }
+      : {}),
+    ...(input.publishedFacts !== undefined ? { publishedFacts: input.publishedFacts } : {}),
     publishedAt: input.publishedAt,
     publicExpiresAt,
     expiresAt,

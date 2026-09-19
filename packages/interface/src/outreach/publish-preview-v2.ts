@@ -1,44 +1,46 @@
 /**
- * Publishing and withdrawing the v2 full-scan scorecard preview (plan 037).
+ * Current outreach-preview publication path.
  *
- * The safety shape is inherited unchanged from the v1 port
- * (`publish-preview.ts`): object first, record second; revoke deletes the
- * object before it marks anything; the raw token exists only in the publish
- * result and on the live record (issue #288); suppression is re-checked after the insert. What changes is the
- * source of the document: the aggregate scorecard of ONE candidate-linked,
- * coverage-complete outreach full audit, resolved exactly by
- * `resolveOutreachAuditForCandidate`, never by domain and never from a
- * later rerun.
- *
- * This port refuses the v1 path implicitly by being the only publish path
- * the product exposes: it has no field a prescan could satisfy, and its
- * gates are the full-audit gates.
+ * Plan 069 makes new publications v3: the public wording remains deterministic
+ * and reviewed, while card ORDER comes from the selected French report
+ * structure. Historical v2 rows remain resolvable for an already-published
+ * first-touch link; nothing creates new v2 rows.
  */
 
 import {
-  buildOutreachPreviewSummary,
+  buildOutreachFactsBlock,
+  containsProhibitedPreviewContent,
   coverageFactsFromAudit,
+  outreachPreviewSummaryV3Schema,
   selectOutreachProofCards,
   summarizeAuditCoverage,
+  type AuditManifest,
+  type Finding,
+  type OutreachPreviewSeverity,
   type OutreachPreviewSummary,
+  type OutreachPreviewSummaryV3,
   type OutreachProofCard,
 } from '@odysseus/core';
-import type { AuditDocumentFields } from '@odysseus/store';
-import type { Finding } from '@odysseus/core';
-import { generateOutreachPreviewHtmlV2, OUTREACH_PROOF_CARD_COPY } from '@odysseus/report';
+import type { AnalysisDocument, AuditDocumentFields } from '@odysseus/store';
+import {
+  buildRenderedPriorities,
+  generateOutreachPreviewHtmlV3,
+  OUTREACH_PROOF_CARD_COPY,
+} from '@odysseus/report';
+import type { AuditEvidenceDiagnostics } from '../pipeline/audit-evidence-diagnostics.js';
 import { createPreviewToken, deriveObjectKey, hashPreviewToken } from './preview-token.js';
 import type { PreviewPublisher } from './preview-publisher.js';
-import { buildOutreachFactsBlock } from '@odysseus/core';
 import { logger } from '../logger.js';
 
-export type PublishPreviewV2Refusal =
+export type PublishPreviewV3Refusal =
   | 'prospect-unknown'
   | 'no-audit'
   | 'coverage-incomplete'
   | 'report-not-ready'
   | 'domain-mismatch'
   | 'suppressed'
-  | 'insufficient-safe-cards';
+  | 'insufficient-safe-cards'
+  | 'priority-copy-unavailable';
 
 export function previewLinks(publicBaseUrl: string): {
   offer: string;
@@ -57,24 +59,27 @@ function previewUrl(publicBaseUrl: string, token: string): string {
   return `${publicBaseUrl.replace(/\/+$/u, '')}/apercu/${token}`;
 }
 
-/** Everything publication needs about one candidate's outreach audit, read
- *  in one go by the store adapter: the resolved audit itself, its findings,
- *  the catalogue name, and the qualification's stored Sirene join. No query
- *  is issued inside this module. */
-export type OutreachPublicationAudit = Pick<
-  AuditDocumentFields,
-  'auditId' | 'finishedAt' | 'pages' | 'continuationGuardSummary' | 'gradeOverride'
->;
+export type OutreachPublicationAudit = AuditDocumentFields;
 
-export interface OutreachPublicationRowV2 {
+export interface OutreachPublicationRowV3 {
   prospectId: string;
   domain: string;
   businessName: string;
+  dataOrigins: Array<'public-hotel-catalogue' | 'public-website' | 'public-business-registry'>;
   audit: OutreachPublicationAudit;
   findings: readonly Finding[];
+  analysis: AnalysisDocument;
+  diagnostics: AuditEvidenceDiagnostics;
 }
 
-export interface RecordPreviewV2Input {
+export interface PublishedPreviewFacts {
+  distinctFindingCount: number;
+  affectedPageCount: number;
+  severityTotals: Record<OutreachPreviewSeverity, number>;
+  priorityCardCategories: OutreachProofCard['category'][];
+}
+
+export interface RecordPreviewV3Input {
   tokenHash: string;
   objectKey: string;
   previewUrl: string;
@@ -83,24 +88,25 @@ export interface RecordPreviewV2Input {
   language: 'fr' | 'en';
   publishedAt: Date;
   auditId: string;
+  sourceAnalysisId: string;
+  sourceFindingsDigest: string;
+  publishedFacts: PublishedPreviewFacts;
 }
 
-export interface OutreachPreviewStorePortV2 {
+export interface OutreachPreviewStorePortV3 {
   findPublicationRow(
     prospectId: string,
-  ): Promise<OutreachPublicationRowV2 | { refused: PublishPreviewV2Refusal }>;
+  ): Promise<OutreachPublicationRowV3 | { refused: PublishPreviewV3Refusal }>;
   isSuppressed(domain: string): Promise<boolean>;
-  /** Same insert-then-recheck-suppression contract as the v1 port: a
-   *  `recorded: false` return means the object must come back down. */
   recordPreview(
-    input: RecordPreviewV2Input,
+    input: RecordPreviewV3Input,
   ): Promise<{ recorded: true; previewId: string; publicExpiresAt: Date } | { recorded: false }>;
   listLivePreviews(domain: string): Promise<{ previewId: string; objectKey: string }[]>;
   revokePreview(previewId: string, reason: string): Promise<{ changed: boolean }>;
 }
 
-export interface PublishPreviewV2Options {
-  store: OutreachPreviewStorePortV2;
+export interface PublishPreviewV3Options {
+  store: OutreachPreviewStorePortV3;
   publisher: PreviewPublisher;
   publicBaseUrl: string;
   prospectId: string;
@@ -109,11 +115,10 @@ export interface PublishPreviewV2Options {
   now?: Date;
 }
 
-export interface PublishPreviewV2Result {
+export interface PublishPreviewV3Result {
   published: boolean;
-  refusal?: PublishPreviewV2Refusal;
+  refusal?: PublishPreviewV3Refusal;
   previewId?: string;
-  /** The public link, also kept on the record while the preview is live. */
   url?: string;
   publicExpiresAt?: Date;
   plan?: {
@@ -122,84 +127,15 @@ export interface PublishPreviewV2Result {
     language: 'fr' | 'en';
     distinctFindings: number;
     affectedPages: number;
-    proofCards: 3;
+    priorityCards: 3;
   };
-}
-
-export function buildOutreachPreviewSummaryV2(options: {
-  row: OutreachPublicationRowV2;
-  language: 'fr' | 'en';
-  publicBaseUrl: string;
-}): { summary: OutreachPreviewSummary } | { refused: 'insufficient-safe-cards' } {
-  const { row, language, publicBaseUrl } = options;
-  const coverage = coverageFactsFromAudit(summarizeAuditCoverage(row.audit));
-  if (coverage === undefined) {
-    // A legacy-shaped audit carries no per-page coverage facts; the scorecard
-    // would have to invent the numbers, so it refuses instead.
-    return { refused: 'insufficient-safe-cards' };
-  }
-  // The prospect hub publication contract contains only the public audit
-  // facts. Keep the compliance block deterministic without a registry join.
-  const assessment = undefined;
-  const facts = buildOutreachFactsBlock({
-    assessment,
-    language,
-    capabilities: { argumentB: true },
-  });
-
-  const built = buildOutreachPreviewSummary({
-    auditId: row.audit.auditId,
-    observedAt: row.audit.finishedAt,
-    coverage,
-    findings: row.findings,
-    recipient: {
-      businessName: row.businessName,
-      dataOrigins: ['public-hotel-catalogue', 'public-website'],
-    },
-    links: previewLinks(publicBaseUrl),
-    language,
-    facts,
-    ...(row.audit.gradeOverride !== undefined
-      ? { gradeOverride: row.audit.gradeOverride.grade }
-      : {}),
-    proofCardCopy: (ruleId) => OUTREACH_PROOF_CARD_COPY[ruleId],
-  });
-  if (built.state === 'refused') return { refused: built.reason };
-  return { summary: built.summary };
-}
-
-function refuse(refusal: PublishPreviewV2Refusal): PublishPreviewV2Result {
-  return { published: false, refusal };
-}
-
-export type PublishedPreviewDraftRefusal =
-  'preview-not-published' | 'preview-revoked' | 'preview-expired' | 'preview-wrong-audit';
-
-export interface ResolvedPublishedPreview {
-  previewId: string;
-  url: string;
-  publicExpiresAt: Date;
-  /** The safe aggregate facts rendered by the scorecard and reused by Touch 1. */
-  distinctFindingCount: number;
-  affectedPageCount: number;
-  severityTotals: OutreachPreviewSummary['severityTotals'];
-  proofCardCategories: OutreachProofCard['category'][];
-}
-
-/** The categories of the three proof cards a preview of these findings
- *  shows, in card order. The same deterministic selection publication ran
- *  over the same audit, so the email names what the linked page names. */
-function proofCardCategoriesFor(findings: readonly Finding[]): OutreachProofCard['category'][] {
-  return selectOutreachProofCards(findings, (ruleId) => OUTREACH_PROOF_CARD_COPY[ruleId])
-    .slice(0, 3)
-    .map((card) => card.category);
 }
 
 function aggregateFacts(
   findings: readonly Finding[],
-): Pick<ResolvedPublishedPreview, 'distinctFindingCount' | 'affectedPageCount' | 'severityTotals'> {
+): Pick<PublishedPreviewFacts, 'distinctFindingCount' | 'affectedPageCount' | 'severityTotals'> {
   const affectedPages = new Set<string>();
-  const severityTotals: OutreachPreviewSummary['severityTotals'] = {
+  const severityTotals: Record<OutreachPreviewSeverity, number> = {
     critical: 0,
     serious: 0,
     moderate: 0,
@@ -216,12 +152,137 @@ function aggregateFacts(
   };
 }
 
-/** Validates the one-time token the operator copied at publication against
- *  the record, the candidate, and the candidate's CURRENT outreach audit.
- *  The draft flow consumes this instead of ever publishing on its own: a
- *  token that names nothing, a revoked row, an expired one, or a preview of
- *  a different audit all refuse, so the email can only ever carry a link
- *  the operator deliberately published for exactly this audit. */
+export function buildOutreachPreviewSummaryV3(options: {
+  row: OutreachPublicationRowV3;
+  language: 'fr' | 'en';
+  publicBaseUrl: string;
+}):
+  | {
+      summary: OutreachPreviewSummaryV3;
+      sourceAnalysisId: string;
+      sourceFindingsDigest: string;
+      publishedFacts: PublishedPreviewFacts;
+    }
+  | { refused: 'coverage-incomplete' | 'report-not-ready' | 'insufficient-safe-cards' | 'priority-copy-unavailable' } {
+  const { row, language, publicBaseUrl } = options;
+  const coverage = coverageFactsFromAudit(summarizeAuditCoverage(row.audit));
+  if (coverage === undefined) return { refused: 'coverage-incomplete' };
+
+  const sourceFindingsDigest = row.audit.findingsProvenance?.findingsDigest;
+  if (sourceFindingsDigest === undefined) return { refused: 'report-not-ready' };
+
+  const priorities = buildRenderedPriorities(
+    row.analysis.themes,
+    row.findings,
+    row.audit as unknown as AuditManifest,
+    'fr',
+  );
+  if (priorities.length < 3) return { refused: 'insufficient-safe-cards' };
+
+  const priorityCards = priorities.slice(0, 3).map((priority, index) => {
+    const representative = priority.evidence.representativeFinding;
+    const copy = OUTREACH_PROOF_CARD_COPY[representative.ruleId];
+    if (
+      copy === undefined ||
+      containsProhibitedPreviewContent(copy.fr) !== null ||
+      containsProhibitedPreviewContent(copy.en) !== null
+    ) {
+      return undefined;
+    }
+    return {
+      rank: (index + 1) as 1 | 2 | 3,
+      title: copy,
+      category: priority.theme.category,
+      severity: representative.severity,
+      affectedPageCount: priority.evidence.uniquePageCount,
+    };
+  });
+  if (priorityCards.some((card) => card === undefined)) {
+    return { refused: 'priority-copy-unavailable' };
+  }
+  const cards = priorityCards as [
+    NonNullable<(typeof priorityCards)[number]>,
+    NonNullable<(typeof priorityCards)[number]>,
+    NonNullable<(typeof priorityCards)[number]>,
+  ];
+
+  const aggregate = aggregateFacts(row.findings);
+  const facts = buildOutreachFactsBlock({
+    assessment: row.analysis.obligationAssessment,
+    language,
+    capabilities: { argumentB: true },
+  });
+  const summary: OutreachPreviewSummaryV3 = {
+    contentVersion: 'v3',
+    observedAt: row.audit.finishedAt,
+    language,
+    recipient: {
+      businessName: row.businessName,
+      dataOrigins: row.dataOrigins,
+    },
+    links: previewLinks(publicBaseUrl),
+    coverage,
+    ...aggregate,
+    priorityCards: cards,
+    dataQuality: {
+      status: row.diagnostics.status,
+      limitations:
+        row.diagnostics.status === 'limited'
+          ? row.diagnostics.clientLimitations.map((limitation) => ({
+              code: limitation.code,
+              summary: limitation.summary,
+            }))
+          : [],
+    },
+    facts,
+  };
+  outreachPreviewSummaryV3Schema.parse(summary);
+
+  const publishedFacts: PublishedPreviewFacts = {
+    ...aggregate,
+    priorityCardCategories: cards.map((card) => card.category),
+  };
+  return {
+    summary,
+    sourceAnalysisId: row.analysis.analysisId,
+    sourceFindingsDigest,
+    publishedFacts,
+  };
+}
+
+function refuse(refusal: PublishPreviewV3Refusal): PublishPreviewV3Result {
+  return { published: false, refusal };
+}
+
+export type PublishedPreviewDraftRefusal =
+  | 'preview-not-published'
+  | 'preview-revoked'
+  | 'preview-expired'
+  | 'preview-wrong-audit'
+  | 'preview-stale';
+
+export interface ResolvedPublishedPreview {
+  previewId: string;
+  url: string;
+  publicExpiresAt: Date;
+  distinctFindingCount: number;
+  affectedPageCount: number;
+  severityTotals: Record<OutreachPreviewSeverity, number>;
+  /** Compatibility name consumed by the deterministic Touch-1 template.
+   * V3 values are the published priority-card categories, in report order. */
+  proofCardCategories: OutreachProofCard['category'][];
+}
+
+function v2ProofCardCategoriesFor(
+  findings: readonly Finding[],
+): OutreachProofCard['category'][] {
+  return selectOutreachProofCards(findings, (ruleId) => OUTREACH_PROOF_CARD_COPY[ruleId])
+    .slice(0, 3)
+    .map((card) => card.category);
+}
+
+/** V3 uses the exact bounded facts persisted at publication. V2 remains
+ * resolvable for historical live links and keeps its old recomputation rule. */
 export async function resolvePublishedPreviewForDraft(options: {
   findByTokenHash: (tokenHash: string) => Promise<{
     previewId: string;
@@ -231,11 +292,23 @@ export async function resolvePublishedPreviewForDraft(options: {
     prospectId: string;
     auditId?: string;
     publicExpiresAt: Date;
+    sourceAnalysisId?: string;
+    sourceFindingsDigest?: string;
+    publishedFacts?: PublishedPreviewFacts;
   } | null>;
   resolveOutreachAudit: (
     prospectId: string,
-  ) => Promise<{ state: 'resolved'; audit: { auditId: string } } | { state: 'refused' }>;
-  /** The immutable audit findings used both for the preview and the email aggregates. */
+  ) => Promise<
+    | {
+        state: 'resolved';
+        audit: {
+          auditId: string;
+          findingsDigest?: string;
+          selectedFrAnalysisId?: string;
+        };
+      }
+    | { state: 'refused' }
+  >;
   findingsForAudit: (auditId: string) => Promise<readonly Finding[]>;
   prospectId: string;
   previewToken: string;
@@ -245,22 +318,48 @@ export async function resolvePublishedPreviewForDraft(options: {
   const record = await options.findByTokenHash(hashPreviewToken(options.previewToken));
   if (record === null) return { refusal: 'preview-not-published' };
   if (record.status !== 'live') return { refusal: 'preview-revoked' };
-  if (record.sourceKind !== 'full-audit' || record.previewContentVersion !== 'v2') {
-    return { refusal: 'preview-not-published' };
-  }
+  if (record.sourceKind !== 'full-audit') return { refusal: 'preview-not-published' };
   if ((options.now ?? new Date()).getTime() >= record.publicExpiresAt.getTime()) {
     return { refusal: 'preview-expired' };
   }
   if (record.prospectId !== options.prospectId) return { refusal: 'preview-wrong-audit' };
+
   const resolution = await options.resolveOutreachAudit(options.prospectId);
   if (resolution.state !== 'resolved' || resolution.audit.auditId !== record.auditId) {
     return { refusal: 'preview-wrong-audit' };
   }
+
+  if (record.previewContentVersion === 'v3') {
+    const facts = record.publishedFacts;
+    if (
+      record.sourceAnalysisId === undefined ||
+      record.sourceFindingsDigest === undefined ||
+      facts === undefined ||
+      facts.priorityCardCategories.length !== 3
+    ) {
+      return { refusal: 'preview-stale' };
+    }
+    if (
+      resolution.audit.selectedFrAnalysisId !== record.sourceAnalysisId ||
+      resolution.audit.findingsDigest !== record.sourceFindingsDigest
+    ) {
+      return { refusal: 'preview-stale' };
+    }
+    return {
+      previewId: record.previewId,
+      url: previewUrl(options.publicBaseUrl, options.previewToken),
+      publicExpiresAt: record.publicExpiresAt,
+      distinctFindingCount: facts.distinctFindingCount,
+      affectedPageCount: facts.affectedPageCount,
+      severityTotals: facts.severityTotals,
+      proofCardCategories: [...facts.priorityCardCategories],
+    };
+  }
+
+  if (record.previewContentVersion !== 'v2') return { refusal: 'preview-not-published' };
+
   const findings = await options.findingsForAudit(resolution.audit.auditId);
-  // A published v2 preview always had exactly three cards. If deterministic
-  // selection no longer yields three, the underlying audit data drifted and
-  // the draft must not claim numbers against the already-published page.
-  const proofCardCategories = proofCardCategoriesFor(findings);
+  const proofCardCategories = v2ProofCardCategoriesFor(findings);
   if (proofCardCategories.length !== 3) return { refusal: 'preview-wrong-audit' };
   return {
     previewId: record.previewId,
@@ -271,15 +370,22 @@ export async function resolvePublishedPreviewForDraft(options: {
   };
 }
 
-export async function publishPreviewV2(
-  options: PublishPreviewV2Options,
-): Promise<PublishPreviewV2Result> {
+export async function publishPreviewV3(
+  options: PublishPreviewV3Options,
+): Promise<PublishPreviewV3Result> {
   const now = options.now ?? new Date();
   const resolved = await options.store.findPublicationRow(options.prospectId);
   if ('refused' in resolved) return refuse(resolved.refused);
   const row = resolved;
 
   if (await options.store.isSuppressed(row.domain)) return refuse('suppressed');
+
+  const built = buildOutreachPreviewSummaryV3({
+    row,
+    language: options.language,
+    publicBaseUrl: options.publicBaseUrl,
+  });
+  if ('refused' in built) return refuse(built.refused);
 
   if (options.dryRun) {
     return {
@@ -288,23 +394,14 @@ export async function publishPreviewV2(
         wouldPublish: true,
         domain: row.domain,
         language: options.language,
-        distinctFindings: row.findings.length,
-        affectedPages: new Set(row.findings.flatMap((finding) => finding.pageUrls)).size,
-        proofCards: 3,
+        distinctFindings: built.publishedFacts.distinctFindingCount,
+        affectedPages: built.publishedFacts.affectedPageCount,
+        priorityCards: 3,
       },
     };
   }
 
-  const built = buildOutreachPreviewSummaryV2({
-    row,
-    language: options.language,
-    publicBaseUrl: options.publicBaseUrl,
-  });
-  if ('refused' in built) return refuse(built.refused);
-
-  // Validates and lints, and throws on either. Nothing is published if it does.
-  const html = generateOutreachPreviewHtmlV2(built.summary);
-
+  const html = generateOutreachPreviewHtmlV3(built.summary);
   const token = createPreviewToken();
   const tokenHash = hashPreviewToken(token);
   const objectKey = deriveObjectKey(tokenHash);
@@ -325,6 +422,9 @@ export async function publishPreviewV2(
       language: options.language,
       publishedAt,
       auditId: row.audit.auditId,
+      sourceAnalysisId: built.sourceAnalysisId,
+      sourceFindingsDigest: built.sourceFindingsDigest,
+      publishedFacts: built.publishedFacts,
     });
   } catch (error) {
     try {
@@ -336,7 +436,6 @@ export async function publishPreviewV2(
   }
 
   if (!recorded.recorded) {
-    // An objection landed between the suppression gate and this write.
     try {
       await options.publisher.delete(objectKey);
     } catch {
