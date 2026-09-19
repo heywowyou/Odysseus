@@ -23,7 +23,10 @@ import { interpolateSnippet, remediationFor, snippetFor } from '../remediation/i
 import { renderFixSnippet } from '../remediation/render-fix-snippet.js';
 import { accessibilityStatementGuidance } from '../accessibility-statement-guidance.js';
 import { selectRenderedThemes } from './themes.js';
-import type { RenderedPriority } from '../rendered-priorities.js';
+import {
+  actionLevelForRemainingSeverity,
+  type RenderedPriority,
+} from '../rendered-priorities.js';
 
 /**
  * "Reste a traiter": the findings no ranked priority covers, grouped by area
@@ -188,6 +191,8 @@ function renderRuleBlock(
   // the annex and stats tiles already use, not a new palette.
   const severityColor = SEVERITY[block.severity];
   const severityBadge = `<span style="display:inline-block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.02em;padding:1px 6px;border-radius:4px;margin-left:6px;color:${severityColor.color};background:${severityColor.bg}">${escapeHtml(strings.findingsAppendix.severityLabels[block.severity])}</span>`;
+  const actionLevel = actionLevelForRemainingSeverity(block.severity);
+  const actionLevelBadge = `<span class="tag" style="margin-left:6px">${escapeHtml(strings.themes.actionLevelLabels[actionLevel])}</span>`;
 
   // The ids are already anchor markup while the label around them is plain
   // text, so the template is split on its own placeholder and each half is
@@ -203,7 +208,7 @@ function renderRuleBlock(
 
   return `
     <div class="remaining-rule" style="margin-bottom:var(--space-3)">
-      <div style="font-size:13.5px;font-weight:500">${escapeHtml(block.title)}${severityBadge}</div>
+      <div style="font-size:13.5px;font-weight:500">${escapeHtml(block.title)}${actionLevelBadge}${severityBadge}</div>
       <div class="text-muted" style="font-size:11px;margin-top:2px">${escapeHtml(counts)}</div>
       ${actionLine}
       ${snippetBlock}
