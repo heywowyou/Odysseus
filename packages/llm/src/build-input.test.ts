@@ -243,10 +243,16 @@ describe('buildWritingInput', () => {
       performanceEvidence,
       {},
       'unknown',
+      'audit-1',
+      'in_scope',
     );
 
     expect(input.summaryEvidence.siteStats).toEqual(siteStats);
     expect(input.summaryEvidence.performance).toBe(performanceEvidence);
+    expect(input.summaryEvidence.rankedThemes).toEqual([
+      { themeKey: 't1', category: first.category, priorityRank: 1 },
+    ]);
+    expect(input.summaryEvidence.obligationStatus).toBe('in_scope');
     expect(input.summaryEvidence.categoriesPresent).toEqual(
       [...new Set(filtered.map((finding) => finding.category))].sort(),
     );
