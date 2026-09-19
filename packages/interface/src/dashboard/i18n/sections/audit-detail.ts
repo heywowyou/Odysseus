@@ -35,10 +35,11 @@ export interface AuditDetailStrings {
   lifecycle: Record<'scanned' | 'analysed' | 'rendered' | 'approved', string>;
   previewReport: string;
   downloadReport: string;
-  /** Plan 060 §2.4: downloading a language is not approval; approving the
-   *  exact pair is its own explicit control. */
+  /** Plan 060 §2.4 + Plan 067: downloading a language is not approval;
+   *  approving the selected French report (plus optional attached English)
+   *  is its own explicit control. */
   approveReports: string;
-  /** Issue #391: why approval is greyed out while the pair is incomplete. */
+  /** Why approval is greyed out while the selected required PDF(s) are not fresh. */
   approveUnavailableReason: string;
   /** Shown when a mutation (save, regenerate, approve) fails. */
   actionError: string;
@@ -112,8 +113,8 @@ export interface AuditDetailStrings {
   failureAwaitingFieldsLabel: string;
   failureHintIdentity: string;
   failureHintReportStage: string;
-  /** A failed audit whose lifecycle is still `scanned`: no bilingual
-   *  analysis pair exists, so the failure card points at the Prepare
+  /** A failed audit whose lifecycle is still `scanned`: no canonical
+   *  French analysis exists, so the failure card points at the Prepare
    *  report card instead of offering a regenerate that always 409s. */
   failureHintAnalysisStage: string;
   failureJobLink: string;
@@ -182,10 +183,10 @@ export interface AuditDetailStrings {
     produceFailedGeneric: string;
     produceFailedTechnicalLabel: string;
     produceFailedDismiss: string;
-    /** Why the produce action is greyed: no bilingual writing pair
+    /** Why the produce action is greyed: no canonical French writing
      *  resolves yet (AuditDetailResponse.analysisPair === 'none'). */
     produceUnavailableReason: string;
-    /** Why the delivery action is greyed: no fresh report pair yet. */
+    /** Why the delivery action is greyed: no fresh selected report yet. */
     deliveryUnavailableReason: string;
     /** Summary label of the collapsed "Report details (optional)"
      *  disclosure (report-details-form.tsx). */
@@ -391,9 +392,9 @@ export const auditDetail = {
     },
     previewReport: 'Prévisualiser',
     downloadReport: 'Télécharger le PDF',
-    approveReports: 'Approuver le rapport (les deux langues)',
+    approveReports: 'Approuver le rapport',
     approveUnavailableReason:
-      'L’approbation demande un PDF à jour et vérifié en français et en anglais. Utilisez « Régénérer les PDF ».',
+      'L’approbation demande un PDF français à jour et vérifié. Si une version anglaise est rattachée, elle doit également être à jour et vérifiée. Utilisez « Régénérer les PDF ».',
     actionError: 'L’action a échoué. Réessayez.',
     manualFieldsHeading: 'Informations sur l’hôtel',
     manualFieldsHint: 'Champs optionnels, modifiables à tout moment sans relancer le scan.',
@@ -451,7 +452,7 @@ export const auditDetail = {
     failureHintReportStage:
       'Le site a déjà été exploré et analysé : corrigez la cause puis régénérez le rapport depuis cette page. Inutile de relancer un scan.',
     failureHintAnalysisStage:
-      'Le scan est terminé, mais aucune analyse bilingue n’a encore été enregistrée : il n’y a donc aucun rapport à régénérer. Lancez la rédaction à l’étape « Rédiger » ci-dessous, puis approuvez le candidat.',
+      'Le scan est terminé, mais aucune analyse française n’a encore été enregistrée : il n’y a donc aucun rapport à régénérer. Lancez la rédaction à l’étape « Rédiger » ci-dessous, puis approuvez le candidat.',
     failureJobLink: 'Voir le détail du scan',
     failureScrollToFields: 'Aller aux champs à confirmer',
     failureScrollToRedact: 'Aller à Rédiger le rapport',
@@ -606,7 +607,7 @@ export const auditDetail = {
       produceRefreshFirstHint:
         'Les constats de cet audit ne sont plus à jour ; ils seront actualisés avant que les PDF ne soient produits.',
       produceUnavailableReason:
-        'Aucune rédaction bilingue n’est encore disponible : rédigez le rapport ci-dessus avant de produire les PDF.',
+        'Aucune rédaction française n’est encore disponible : rédigez le rapport ci-dessus avant de produire le PDF.',
       deliveryUnavailableReason:
         'Aucun rapport à jour n’est encore disponible pour l’approbation et le téléchargement.',
       reportDetailsSummary: 'Détails du rapport (optionnel)',
@@ -751,9 +752,9 @@ export const auditDetail = {
     },
     previewReport: 'Preview',
     downloadReport: 'Download the PDF',
-    approveReports: 'Approve the report (both languages)',
+    approveReports: 'Approve report',
     approveUnavailableReason:
-      'Approval needs a fresh, verified PDF in both French and English. Use “Regenerate the PDFs”.',
+      'Approval needs a fresh, verified French PDF. If an English version is attached, it must also be fresh and verified. Use “Regenerate the PDFs”.',
     actionError: 'The action failed. Try again.',
     manualFieldsHeading: 'Hotel details',
     manualFieldsHint: 'Optional fields, editable at any time without rerunning the scan.',
@@ -811,7 +812,7 @@ export const auditDetail = {
     failureHintReportStage:
       'The site has already been crawled and analysed: fix the cause and regenerate the report from this page. A new scan is not needed.',
     failureHintAnalysisStage:
-      'The scan finished, but no bilingual analysis was stored yet, so there is no report to regenerate. Run the writing in the “Write” step below, then approve the candidate.',
+      'The scan finished, but no French analysis was stored yet, so there is no report to regenerate. Run the writing in the “Write” step below, then approve the candidate.',
     failureJobLink: 'View scan details',
     failureScrollToFields: 'Go to the fields to confirm',
     failureScrollToRedact: 'Go to Write the report',
@@ -959,7 +960,7 @@ export const auditDetail = {
       produceRefreshFirstHint:
         'This audit’s findings are out of date; they will be refreshed before the PDFs are produced.',
       produceUnavailableReason:
-        'No bilingual writing is available yet: write the report above before producing the PDFs.',
+        'No French writing is available yet: write the report above before producing the PDF.',
       deliveryUnavailableReason: 'No fresh report is available yet for approval and download.',
       reportDetailsSummary: 'Report details (optional)',
     },
