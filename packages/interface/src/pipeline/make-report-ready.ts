@@ -140,10 +140,15 @@ async function refreshWritingCandidate(
     },
     connection,
   );
-  await recordReadyWritingCandidate(connection, audit.auditId, {
-    frAnalysisId: frStage.analysis.analysisId,
-    findingsProvenance: frStage.analysis.findingsProvenance,
-  });
+  await recordReadyWritingCandidate(
+    connection,
+    audit.auditId,
+    {
+      frAnalysisId: frStage.analysis.analysisId,
+      findingsProvenance: frStage.analysis.findingsProvenance,
+    },
+    frStage.sanitizationWarnings,
+  );
   // The auto-selection amendment (trade-off 62, plan 045 section 2.1):
   // makeReportReady is only ever invoked by an operator action already
   // downstream of confirming the fields that matter (identity, or simply
