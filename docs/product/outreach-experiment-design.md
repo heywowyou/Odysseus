@@ -99,13 +99,13 @@ Kept deliberately small, and none of it changes what the prospect receives:
    and run it before the first thread reaches its 90-day TTL.
 4. **Bridge assignment, only if D1 is approved.** Derive the bridge from a
    deterministic hash of campaign version and prospect ID instead of from
-   proof-card presence, and test that the groups are balanced.
+   priority-card category presence, and test that the groups are balanced.
 
 ## 5. Decisions only the operator can make
 
 | # | Decision | Options | Recommendation |
 | --- | --- | --- | --- |
-| D1 | Controlled test of the bridge? | a. Observational only (bridge follows the proof cards, as today); b. Hash-assign bridge on or off among prospects with an accessibility card | b. It is the only controlled variable left, and it is copy the operator already approved |
+| D1 | Controlled test of the bridge? | a. Observational only (bridge follows the published priority-card categories, as today); b. Hash-assign bridge on or off among prospects with an accessibility priority card | b. It is the only controlled variable left, and it is copy the operator already approved |
 | D2 | How the 100 are chosen, without a score | a. Hub filter (hotel, own website, role address found, not suppressed), then ordered by a hash of prospect ID; b. Operator hand-pick | a. Avoids the cherry-picking plan 014's freeze step ruled out |
 | D3 | Response window and freeze date | e.g. the configured 14-day reply window after touch 3, about 29 days after touch 1 with default spacing (touch 2 after 4 days, touch 3 after 11 more) | Fix it before the pilot. It must end well inside the 90-day retention |
 | D4 | Retention during the experiment | a. Keep 90 days and export aggregates; b. Lengthen thread and outcome retention | a. The retention was set for data minimisation (`docs/rules/prospect-qualification.md`) |

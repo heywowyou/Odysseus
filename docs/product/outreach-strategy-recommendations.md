@@ -135,12 +135,12 @@ report-aligned preview stable long enough to establish a baseline.
 
 The most important initial commercial question is:
 
-> Does the current prospect ranking predict reply quality and eventual
-> commercial outcome?
+> Do the current targeting rules and report-aligned evidence produce replies
+> that progress toward a commercial outcome?
 
 Track the chain:
 
-`rank / score -> delivered first touch -> reply -> positive reply -> substantive conversation -> sale`
+`targeting + published evidence -> delivered first touch -> reply -> positive reply -> substantive conversation -> sale`
 
 Do not change subject rules, body copy, priority-card selection/copy, targeting
 rules, and follow-up timing at the same time. A clean baseline is more valuable than a

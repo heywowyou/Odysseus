@@ -201,7 +201,7 @@ approved wording and names no new finding.
 The deterministic facts block appears on touch 3 only. Assembly refuses it on
 touches 1 and 2. Touch 1's fixed conditional bridge is deliberately narrower:
 it may say the observed findings "peuvent également relever du cadre légal
-applicable en matière d’accessibilité" when an accessibility proof card is
+applicable en matière d’accessibilité" when an accessibility priority card is
 present, but it never carries the legal criteria, registry facts or a scope
 conclusion. Touch 3 remains the first place where those facts are spelled out.
 
