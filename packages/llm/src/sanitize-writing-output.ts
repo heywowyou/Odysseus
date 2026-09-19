@@ -47,6 +47,24 @@ function hasSuppressedMetric(
   return suppressed.some((metric) => METRIC_PATTERNS[language][metric].test(text));
 }
 
+function sanitizePerformanceSentences(
+  text: string,
+  field: string,
+  language: ReportLanguage,
+  suppressed: readonly WritingPerformanceMetric[],
+  warnings: WritingSanitizationWarning[],
+): string {
+  const kept: string[] = [];
+  for (const sentence of sentences(text)) {
+    if (hasSuppressedMetric(sentence, language, suppressed)) {
+      warning(warnings, 'performance-contradiction-removed', field);
+      continue;
+    }
+    kept.push(sentence);
+  }
+  return kept.join(' ').trim();
+}
+
 function warning(
   warnings: WritingSanitizationWarning[],
   code: WritingSanitizationWarning['code'],
@@ -115,33 +133,54 @@ export function sanitizeWritingOutput(
   const warnings: WritingSanitizationWarning[] = [];
   const inputByKey = new Map(input.themes.map((theme) => [theme.themeKey, theme]));
 
+  const sanitizedSummary = sanitizeSentences(
+    raw.executiveSummary,
+    'executiveSummary',
+    input.language,
+    warnings,
+  );
   const executiveSummary =
-    sanitizeSentences(raw.executiveSummary, 'executiveSummary', input.language, warnings) ||
-    fallbackSummary(input.language);
+    sanitizePerformanceSentences(
+      sanitizedSummary,
+      'executiveSummary',
+      input.language,
+      input.performanceEvidence.suppressedLabRecommendations,
+      warnings,
+    ) || fallbackSummary(input.language);
   const notes = sanitizeSentences(raw.notes, 'notes', input.language, warnings);
 
   const themes = raw.themes.map((theme, themeIndex) => {
     const source = inputByKey.get(theme.themeKey);
     const impactField = `themes[${themeIndex}](${theme.themeKey}).businessImpact`;
+    const semanticImpact = sanitizeSentences(
+      theme.businessImpact,
+      impactField,
+      input.language,
+      warnings,
+    );
     const businessImpact =
-      sanitizeSentences(theme.businessImpact, impactField, input.language, warnings) ||
-      fallbackImpact(input.language);
+      (source?.category === 'performance'
+        ? sanitizePerformanceSentences(
+            semanticImpact,
+            impactField,
+            input.language,
+            input.performanceEvidence.suppressedLabRecommendations,
+            warnings,
+          )
+        : semanticImpact) || fallbackImpact(input.language);
 
     const recommendedActions: string[] = [];
     for (const [actionIndex, action] of theme.recommendedActions.entries()) {
       const field = `themes[${themeIndex}](${theme.themeKey}).recommendedActions[${actionIndex}]`;
       let sanitized = sanitizeSentences(action, field, input.language, warnings);
-      if (
-        sanitized &&
-        source?.category === 'performance' &&
-        hasSuppressedMetric(
+      if (sanitized && source?.category === 'performance') {
+        sanitized = sanitizePerformanceSentences(
           sanitized,
+          field,
           input.language,
           input.performanceEvidence.suppressedLabRecommendations,
-        )
-      ) {
-        warning(warnings, 'performance-contradiction-removed', field);
-        sanitized = '';
+          warnings,
+        );
       }
       if (sanitized) recommendedActions.push(sanitized);
     }
