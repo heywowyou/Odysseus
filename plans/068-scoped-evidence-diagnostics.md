@@ -311,7 +311,11 @@ Implementation landed in four slices:
   the normal Reports card, leaving approval consumers isolated to the frozen
   quality pipeline/scanner compatibility code;
 - `c31e7420` — focused proof fixtures for limitation plumbing and the
-  unchanged one-writer-call budget.
+  unchanged one-writer-call budget;
+- `6b5da99f` — restored the report failure-card locale binding found during
+  the post-push static read-back;
+- `e9fd7c31` — verifies canonical diagnostic/root digests before projection
+  and gives `unavailable` diagnostics explicit non-clean UI copy.
 - `6b5da99f` — static post-push review fixed the Reports card locale binding (`language` was still used by the fallback notice after the dormant Plan-058 widget cleanup).
 
 The normal-path files
@@ -327,7 +331,7 @@ and the frozen Plan-058 report-quality pipeline/tests.
 
 Focused proof now committed covers the Foch-shaped classification,
 environment-only operational warning, site/material/temporal limitations,
-historical no-disclosure compatibility, unavailable diagnostics,
+historical no-disclosure compatibility, unavailable/tampered diagnostics,
 performance-evidence suppression, grounded-summary limitation input,
 deterministic Methodology input, availability readiness vocabulary, and
 approval-free evidence-card copy. The Plan-067 provider-budget test continues
