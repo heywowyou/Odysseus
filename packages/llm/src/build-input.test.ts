@@ -216,6 +216,25 @@ describe('buildWritingInput', () => {
       fieldDataAvailable: true,
       observations: [
         { metric: 'cls' as const, source: 'field' as const, value: 0.18, rating: 'mid' as const },
+        { metric: 'lcp' as const, source: 'field' as const, value: 2400, rating: 'good' as const },
+        { metric: 'lcp' as const, source: 'lab' as const, value: 20_000, rating: 'poor' as const },
+      ],
+      discordances: [
+        {
+          field: {
+            metric: 'lcp' as const,
+            source: 'field' as const,
+            value: 2400,
+            rating: 'good' as const,
+          },
+          lab: {
+            metric: 'lcp' as const,
+            source: 'lab' as const,
+            value: 20_000,
+            rating: 'poor' as const,
+          },
+          labNonRepresentativeForRecommendations: true as const,
+        },
       ],
       primaryConcern: {
         metric: 'cls' as const,
