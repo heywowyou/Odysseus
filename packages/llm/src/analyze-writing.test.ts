@@ -47,8 +47,12 @@ const input: WritingInput = {
   performanceEvidence: emptyWritingPerformanceEvidence(),
   summaryEvidence: {
     siteStats: { pagesScanned: 1, totalFindings: 1, critical: 0, serious: 1, moderate: 0, minor: 0 },
+    rankedThemes: [{ themeKey: 't1', category: 'accessibility', priorityRank: 1 }],
+
     categoriesPresent: ['accessibility'],
     performance: emptyWritingPerformanceEvidence(),
+
+    obligationStatus: 'unknown',
     limitations: ['real-user-performance-unavailable'],
   },
   transactionalFlowStatus: 'unknown',
