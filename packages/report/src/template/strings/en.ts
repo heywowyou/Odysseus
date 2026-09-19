@@ -368,6 +368,7 @@ export const en: ReportStrings = {
     revenueImpactTemplate:
       'Based on your reported turnover ({turnover} EUR), and if this association held for your business, the order of magnitude would be up to {impact} EUR per year. This is an indicative estimate based on a single study, not a guaranteed forecast.',
     quickWinBadgeLabel: 'Quick win',
+    actionLevelLabels: { priority: 'Priority', important: 'Important', improvement: 'Improvement' },
     recommendedActionsLabel: 'Recommended actions',
     reviewedRemediationLabel: 'Reviewed technical remediation',
     fixSnippetLabel: 'Suggested fix',
