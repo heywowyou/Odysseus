@@ -95,6 +95,7 @@ export function buildWritingInput(
    *  approved provider phrasing this report uses. Omitted by fixtures and
    *  offline tooling, which then all resolve to the first phrase. */
   providerPhraseSeed?: string,
+  obligationStatus: ObligationAssessment['status'] | 'unknown' = 'unknown',
 ): WritingInput {
   const byId = new Map(filteredFindings.map((f) => [f.findingId, f]));
 
@@ -122,8 +123,16 @@ export function buildWritingInput(
     performanceEvidence,
     summaryEvidence: {
       siteStats,
+      rankedThemes: structureThemes
+        .map((theme) => ({
+          themeKey: theme.themeKey,
+          category: theme.category,
+          priorityRank: theme.priorityRank,
+        }))
+        .sort((a, b) => a.priorityRank - b.priorityRank),
       categoriesPresent: [...new Set(filteredFindings.map((finding) => finding.category))].sort(),
       performance: performanceEvidence,
+      obligationStatus,
       limitations: [
         ...(performanceEvidence.fieldDataAvailable ? [] : ['real-user-performance-unavailable']),
       ],
