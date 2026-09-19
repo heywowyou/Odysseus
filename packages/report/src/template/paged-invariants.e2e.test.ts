@@ -30,7 +30,9 @@ import {
   collectPagedjsOverflowModels,
   describeTrailingHeadings,
   detectTrailingHeadings,
+  detectSplitRemainingRules,
   detectWidowedSheetTails,
+  forceBreakBeforeRemainingRules,
   markSnugBlocksInHtml,
   renderPdfWithPageCountFromHtml,
 } from '../pdf.js';
@@ -592,6 +594,39 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
     expect((await detectWidowedSheetTails(snug.page)).sectionIds).not.toContain(target!.id);
     expect(snug.pageCount).toBe(plain.pageCount - 1);
   }, 180_000);
+
+  it('an "Autres constats" entry split across two pages is moved whole onto the next one', async () => {
+    // The Grand Hôtel de l'Opéra report printed one entry's "Constats : f049"
+    // line alone at the top of a page, although every entry is
+    // break-inside: avoid. Sliding the entries down the page finds that split.
+    expect(stressHtml).toMatch(/<div class="remaining-rule" data-remaining-rule="/u);
+    let found: { html: string; split: string[] } | undefined;
+    for (let offsetMm = 0; offsetMm <= 240 && !found; offsetMm += 6) {
+      const html = stressHtml.replace(
+        '<div class="remaining-rule"',
+        `<div style="height:${offsetMm}mm"></div><div class="remaining-rule"`,
+      );
+      const pressured = await paginate(browser, html, pagedjsSource);
+      try {
+        const split = await detectSplitRemainingRules(pressured.page);
+        if (split.length > 0) found = { html, split };
+      } finally {
+        await pressured.page.context().close();
+      }
+    }
+    expect(found).toBeDefined();
+
+    const moved = await paginate(
+      browser,
+      forceBreakBeforeRemainingRules(found!.html, found!.split),
+      pagedjsSource,
+    );
+    try {
+      expect(await detectSplitRemainingRules(moved.page)).toEqual([]);
+    } finally {
+      await moved.page.context().close();
+    }
+  }, 600_000);
 
   it('the metadata sheet stays on one page when its facts run long', async () => {
     // A two-line scope value plus the legal-name row pushed the Grand Hôtel

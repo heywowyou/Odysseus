@@ -205,7 +205,7 @@ function renderRuleBlock(
     escapeHtml(refsSuffix);
 
   return `
-    <div class="remaining-rule" style="margin-bottom:var(--space-3)">
+    <div class="remaining-rule" data-remaining-rule="${escapeHtml(block.ruleId)}" style="margin-bottom:var(--space-3)">
       <div style="font-size:13.5px;font-weight:500">${escapeHtml(block.title)}${actionLevelBadge}${severityBadge}</div>
       <div class="text-muted" style="font-size:11px;margin-top:2px">${escapeHtml(counts)}</div>
       ${actionLine}

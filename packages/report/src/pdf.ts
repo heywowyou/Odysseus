@@ -960,6 +960,46 @@ export function markSnugBlocksInHtml(html: string, blocks: WidowedTails): string
   return result;
 }
 
+/** Rounds of the split "Autres constats" entry repair: each round moves
+ *  the entries it finds split onto a fresh page and lays the document out
+ *  again, and an entry is moved at most once, so the loop always ends. */
+const MAX_SPLIT_REMAINING_RULE_ROUNDS = 3;
+
+/** "Autres constats" entries Paged.js split across two pages despite their
+ *  break-inside: avoid. It happens when an entry carries a fix snippet, which
+ *  is itself break-inside: avoid: a real French report left one entry's
+ *  "Constats : f049" line alone at the top of a page and another's title at
+ *  the foot of the previous one. Returns each split entry's rule id. */
+export async function detectSplitRemainingRules(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const ids = new Set<string>();
+    for (const fragment of Array.from(
+      document.querySelectorAll('.remaining-rule[data-split-from]'),
+    )) {
+      const id = fragment.getAttribute('data-remaining-rule');
+      if (id) ids.add(id);
+    }
+    return [...ids];
+  });
+}
+
+/** Starts each named "Autres constats" entry on a fresh page. An entry is
+ *  bounded far below a page, so the move always keeps it whole. */
+export function forceBreakBeforeRemainingRules(html: string, ruleIds: readonly string[]): string {
+  const pending = ruleIds.filter(
+    (ruleId) =>
+      /^[a-z0-9._-]+$/i.test(ruleId) &&
+      !html.includes(`.remaining-rule[data-remaining-rule="${ruleId}"]`),
+  );
+  if (pending.length === 0) return html;
+  const rules = pending
+    .map((ruleId) => `.remaining-rule[data-remaining-rule="${ruleId}"] { break-before: page; }`)
+    .join(' ');
+  const headClose = html.indexOf('</head>');
+  if (headClose === -1) return html;
+  return `${html.slice(0, headClose)}<style>${rules}</style>${html.slice(headClose)}`;
+}
+
 /** Issue #170. One annex rule group heading's placement on the paginated
  *  page: `followedByRow` is true when the heading's own detail table sits
  *  directly after it on the SAME page fragment with at least one finding
@@ -1331,6 +1371,15 @@ export async function renderPdfWithPageCountFromHtml(
       const kept = markSnugBlocksInHtml(currentHtml, rescued);
       if (kept !== trial) await runPagedjsPreview(kept);
       currentHtml = kept;
+    }
+
+    for (let round = 0; round < MAX_SPLIT_REMAINING_RULE_ROUNDS; round++) {
+      const split = await detectSplitRemainingRules(page);
+      if (split.length === 0) break;
+      const moved = forceBreakBeforeRemainingRules(currentHtml, split);
+      if (moved === currentHtml) break;
+      currentHtml = moved;
+      await runPagedjsPreview(currentHtml);
     }
 
     // Issue #45, second half + issue #170 + issue #171 + issue #179: repair,

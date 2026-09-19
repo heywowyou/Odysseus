@@ -9,6 +9,7 @@ import {
   findDuplicatedAppendixHeadingRuleIds,
   findStrandedAppendixRuleIds,
   forceBreakBeforeAppendixRuleGroups,
+  forceBreakBeforeRemainingRules,
   insertRepeatedTheadsIntoHtml,
   markFlowingBlocksInHtml,
   markSnugBlocksInHtml,
@@ -611,6 +612,23 @@ describe('findStrandedAppendixRuleIds', () => {
 
   it('reports a heading with an empty rule id so the gate can fail closed on markup drift', () => {
     expect(findStrandedAppendixRuleIds([{ ruleId: '', followedByRow: false }])).toEqual(['']);
+  });
+});
+
+describe('forceBreakBeforeRemainingRules', () => {
+  const doc =
+    '<html><head></head><body><div class="remaining-rule" data-remaining-rule="og-tags">entry</div></body></html>';
+
+  it('starts each split entry on a fresh page, once', () => {
+    const patched = forceBreakBeforeRemainingRules(doc, ['og-tags']);
+    expect(patched).toContain(
+      '<style>.remaining-rule[data-remaining-rule="og-tags"] { break-before: page; }</style></head>',
+    );
+    expect(forceBreakBeforeRemainingRules(patched, ['og-tags'])).toBe(patched);
+  });
+
+  it('skips ids a CSS attribute selector cannot carry', () => {
+    expect(forceBreakBeforeRemainingRules(doc, ['a"] body {'])).toBe(doc);
   });
 });
 
