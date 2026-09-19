@@ -315,8 +315,8 @@ describe.skipIf(!mongoAvailable)('audit routes against real mongo', () => {
     expect(approval).not.toBeNull();
     expect(approval?.fr.reportId).toBe(`report-fr-${chain.auditId}`);
     expect(approval?.fr.pdfDigest).toBe(chain.pdfDigest);
-    expect(approval?.en.reportId).toBe(`report-en-${chain.auditId}`);
-    expect(approval?.en.pdfDigest).toBe(chain.pdfDigest);
+    expect(approval?.en?.reportId).toBe(`report-en-${chain.auditId}`);
+    expect(approval?.en?.pdfDigest).toBe(chain.pdfDigest);
   });
 
   it('delivery serves the approved PDF with the recorded digest', async () => {
