@@ -103,7 +103,7 @@ describe('makeReportReady', () => {
     expect(reconcileFailedAuditJobs).toHaveBeenCalledWith(fakeConnection);
   });
 
-  it('refuses with no-analysis when there is no complete pair to render', async () => {
+  it('refuses with no-analysis when there is no selected French analysis to render', async () => {
     vi.mocked(readAuditArtifacts).mockResolvedValue({
       manifest: { findingsProvenance: freshProvenance } as never,
       findings: [],
@@ -162,7 +162,7 @@ describe('makeReportReady', () => {
     );
     vi.mocked(recordReadyWritingCandidate).mockResolvedValue(undefined as never);
     vi.mocked(approveWritingCandidate).mockResolvedValue(undefined as never);
-    const reports = [{ language: 'fr' }, { language: 'en' }] as never;
+    const reports = [{ language: 'fr' }] as never;
     vi.mocked(regenerateReportsForAudit).mockResolvedValue(reports);
 
     const outcome = await makeReportReady(fakeConnection, 'audit-1', undefined);
@@ -216,7 +216,14 @@ describe('makeReportReady', () => {
     const outcome = await makeReportReady(fakeConnection, 'audit-1', undefined);
 
     expect(renormalizeAudit).not.toHaveBeenCalled();
-    expect(runAnalysisStage).toHaveBeenCalledTimes(2);
+    expect(runAnalysisStage).toHaveBeenCalledTimes(1);
+    expect(runAnalysisStage).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ language: 'fr' }),
+      fakeConnection,
+    );
     expect(approveWritingCandidate).toHaveBeenCalledWith(fakeConnection, 'audit-1');
     expect(vi.mocked(approveWritingCandidate).mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(regenerateReportsForAudit).mock.invocationCallOrder[0]!,
