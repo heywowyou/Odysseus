@@ -42,6 +42,15 @@ describe('Plan 067 writing evidence', () => {
     const evidence = buildWritingPerformanceEvidence(manifest);
 
     expect(evidence.suppressedLabRecommendations).toContain('lcp');
+    expect(evidence.discordances).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: expect.objectContaining({ metric: 'lcp', source: 'field', rating: 'good' }),
+          lab: expect.objectContaining({ metric: 'lcp', source: 'lab', rating: 'poor' }),
+          labNonRepresentativeForRecommendations: true,
+        }),
+      ]),
+    );
     expect(evidence.primaryConcern).toMatchObject({
       metric: 'cls',
       source: 'field',
