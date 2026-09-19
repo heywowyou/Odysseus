@@ -116,6 +116,7 @@ const emptyAudit = {
   ],
   lifecycle: 'scanned',
   analysisPair: 'none',
+  analysisLanguages: [],
   findingsStale: false,
   approval: null,
   manualFields: null,
@@ -317,14 +318,14 @@ describe('audit detail report-stage failure card (issue #90)', () => {
     expect(fieldsLink).toBeDefined();
     expect(container.querySelector('#audit-hotel-fields')).not.toBeNull();
     // Plan 045 stage 3.1: the produce action stays visible, greyed with its
-    // reason - no bilingual pair resolves for this audit yet.
+    // reason - no French writing resolves for this audit yet.
     const produceButton = [...container.querySelectorAll('button')].find(
       (button) => button.textContent === 'Régénérer les PDF',
     );
     expect(produceButton).toBeDefined();
     expect(produceButton?.disabled).toBe(true);
     expect(container.textContent).toContain(
-      'Aucune rédaction bilingue n’est encore disponible : rédigez le rapport ci-dessus avant de produire les PDF.',
+      'Aucune rédaction française n’est encore disponible : rédigez le rapport ci-dessus avant de produire le PDF.',
     );
     root.unmount();
   });
@@ -348,7 +349,7 @@ describe('audit detail report-stage failure card (issue #90)', () => {
     });
     const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
     await settle(container, 'Le rapport n’a pas pu être généré');
-    expect(container.textContent).toContain('aucune analyse bilingue n’a encore été enregistrée');
+    expect(container.textContent).toContain('aucune analyse française n’a encore été enregistrée');
     const redactLink = [...container.querySelectorAll('button')].find(
       (button) => button.textContent === 'Aller à Rédiger le rapport',
     );
