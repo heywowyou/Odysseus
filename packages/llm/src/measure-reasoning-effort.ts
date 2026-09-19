@@ -43,7 +43,6 @@ import {
   computeSiteStats,
   filterFindingsForLlm,
 } from './build-input.js';
-import { computeDominantPerformanceMetric } from './dominant-metric.js';
 import {
   computeRepetitionMetrics,
   proseFieldsOf,
@@ -252,7 +251,6 @@ async function main(): Promise<void> {
     );
     const filteredFindings = filterFindingsForLlm(allFindings);
     const siteStats = computeSiteStats(allFindings, manifest);
-    const dominantPerformanceMetric = computeDominantPerformanceMetric(manifest);
     const expectedThemeKeys = structureDoc.themes.map((theme) => theme.themeKey);
     const hostLabel = path.basename(path.dirname(auditDir));
 
@@ -267,7 +265,8 @@ async function main(): Promise<void> {
         buildFallbackSiteContext(),
         language,
         siteStats,
-        dominantPerformanceMetric,
+        emptyWritingPerformanceEvidence(),
+        {},
         'unknown',
         manifest.auditId,
       );
