@@ -142,8 +142,8 @@ export function failureReasonKind(failure: AuditFailureResponse): FailureReasonK
 }
 
 /** Whether the audit detail page should render the failure card: only
- *  while the reports are not usable. Once a fresh bilingual pair exists
- *  (the operator confirmed the fields and regenerated), the failure
+ *  while the reports are not usable. Once the selected French report
+ *  (plus optional attached English) is fresh, the failure
  *  history stays in the API response but must not read as a current
  *  problem over a page whose reports are fine. */
 export function isReportStageFailure(detail: {
