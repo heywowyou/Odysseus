@@ -1,4 +1,4 @@
-import type { AuditManifest, Finding, ReportLanguage } from '@odysseus/core';
+import type { AuditManifest, Finding, ObligationAssessment, ReportLanguage } from '@odysseus/core';
 import { LLM_SEVERITY_FLOOR } from './constants.js';
 import type { StructureInput, StructureThemeWithKey } from './structure-schema.js';
 import type {
