@@ -7,6 +7,7 @@ import {
   MAX_RECOMMENDED_ACTIONS,
   MIN_BUSINESS_IMPACT_SENTENCES,
   MIN_RECOMMENDED_ACTIONS,
+  emptyWritingPerformanceEvidence,
 } from './writing-schema.js';
 import {
   buildWritingRetryFeedback,
@@ -480,7 +481,20 @@ describe('buildWritingRetryFeedback and the user-prompt correction', () => {
       moderate: 0,
       minor: 0,
     },
-    dominantPerformanceMetric: null,
+    performanceEvidence: emptyWritingPerformanceEvidence(),
+    summaryEvidence: {
+      siteStats: {
+        pagesScanned: 1,
+        totalFindings: 0,
+        critical: 0,
+        serious: 0,
+        moderate: 0,
+        minor: 0,
+      },
+      categoriesPresent: [],
+      performance: emptyWritingPerformanceEvidence(),
+      limitations: ['real-user-performance-unavailable'],
+    },
   };
 
   it('appends the rejection reason to the user prompt on retries only', () => {
@@ -681,7 +695,20 @@ describe('plan 028: buildWritingUserPrompt grounds known-drift rule IDs in a sha
       moderate: 1,
       minor: 0,
     },
-    dominantPerformanceMetric: null,
+    performanceEvidence: emptyWritingPerformanceEvidence(),
+    summaryEvidence: {
+      siteStats: {
+        pagesScanned: 1,
+        totalFindings: 1,
+        critical: 0,
+        serious: 0,
+        moderate: 1,
+        minor: 0,
+      },
+      categoriesPresent: ['accessibility' as const],
+      performance: emptyWritingPerformanceEvidence(),
+      limitations: ['real-user-performance-unavailable'],
+    },
   };
 
   function themeWithFinding(ruleId: string) {
@@ -703,6 +730,7 @@ describe('plan 028: buildWritingUserPrompt grounds known-drift rule IDs in a sha
             occurrences: 1,
           },
         ],
+        trustedRemediations: [],
       },
     ];
   }
@@ -825,7 +853,20 @@ describe('plan 029 lever F: concrete site facts in the writing prompt', () => {
         moderate: 1,
         minor: 0,
       },
-      dominantPerformanceMetric: null,
+      performanceEvidence: emptyWritingPerformanceEvidence(),
+      summaryEvidence: {
+        siteStats: {
+          pagesScanned: 1,
+          totalFindings: 1,
+          critical: 0,
+          serious: 0,
+          moderate: 1,
+          minor: 0,
+        },
+        categoriesPresent: [],
+        performance: emptyWritingPerformanceEvidence(),
+        limitations: ['real-user-performance-unavailable'],
+      },
     });
     expect(userPrompt).toContain('"city": "Bordeaux"');
     expect(userPrompt).not.toContain('roomCount');
