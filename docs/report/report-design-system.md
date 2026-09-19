@@ -271,7 +271,7 @@ section IDs do not encode reading order.
 | 01 | Présentation du diagnostic (situation, complication, question) | opening and reading guide; the question is the resolved preparation question or the safe generic fallback, no client-specific claim beyond what preparation explicitly provides | fixed |
 | 02 | Synthèse | prose + jump links | 3 links |
 | 03 | Résultats mesurés | editorial scoreboard with total findings as the lead measure, 3 supporting number tiles, disclosure notes, severity split, and category split | fixed |
-| 04 | Priorités de correction | one card per theme | 6 themes, may flow to 2 sheets |
+| 04 | Priorités de correction | one card per theme; deterministic action-level tag from display rank (1–2 Priorité, 3–4 Important, 5–6 Amélioration), using the existing tag treatment | 6 themes, may flow to 2 sheets |
 | 05 | Plan d'action | one row per theme, same 6 | 1 sheet |
 | 06 | Autres constats | findings outside the ranked priorities, grouped by domain and rule, linked to appendix ids | flows |
 | 07 | Observations complémentaires | 2 prose blocks | fixed |
@@ -475,11 +475,12 @@ preview; it never queries storage or derives preparation policy.
   question.
 - **The audience table lists roles only.** Named contacts belong to the
   prospect record, not the report.
-- **Writing versions are candidate-first.** A paid report renders the
-  selected French/English analysis pair resolved by the store selector;
-  regeneration produces a previewable candidate and selection changes only on
-  explicit approval. Existing stored titles are unchanged until that explicit
-  regeneration.
+- **French is the canonical writing selection (Plan 067).** A paid report
+  requires one selected French analysis. English is an optional attachment to
+  that same findings/structure provenance and is generated only by the
+  explicit operator action. Legacy bilingual selections remain readable. The
+  renderer and this design system are otherwise unchanged: English does not
+  introduce a second layout or a parallel report template.
 
 The full trade-off record, including rejected alternatives, is
 `docs/decisions/trade-offs.md` entry 62.
