@@ -12,6 +12,7 @@ import { createAnalysisModel } from './schemas/analysis.schema.js';
 import { createAuditModel } from './schemas/audit.schema.js';
 import {
   approveWritingCandidate,
+  attachEnglishAnalysisToSelection,
   getAnalysisById,
   getReportPreparation,
   patchReportPreparationInputs,
@@ -80,6 +81,7 @@ async function insertAnalysis(
   language: 'fr' | 'en',
   generatedAt: string,
   digest = 'sha256:run-a',
+  structureGeneratedAt?: string,
 ): Promise<AnalysisDocumentFields> {
   nextAnalysisId += 1;
   const fields: AnalysisDocumentFields = {
@@ -95,6 +97,7 @@ async function insertAnalysis(
     themes: [],
     quickWins: [],
     notes: 'Notes.',
+    ...(structureGeneratedAt !== undefined ? { structureGeneratedAt } : {}),
   };
   await persistAnalysis(connection!, fields);
   return fields;
@@ -346,7 +349,7 @@ describe.skipIf(!mongoAvailable)('writing selection', () => {
     expect(resolution.kind).toBe('selected');
     if (resolution.kind === 'selected') {
       expect(resolution.fr.analysisId).toBe(seeded.frAnalysisId);
-      expect(resolution.en.analysisId).toBe(seeded.enAnalysisId);
+      expect(resolution.en?.analysisId).toBe(seeded.enAnalysisId);
     }
   });
 
@@ -382,24 +385,35 @@ describe.skipIf(!mongoAvailable)('writing selection', () => {
     ]);
   });
 
-  it('resolves the legacy latest complete pair deterministically', async () => {
+  it('resolves legacy records French-first while still attaching a compatible English row', async () => {
     await insertAudit('prep-legacy');
-    // Newest overall: a run whose English half never arrived. Must be ignored.
-    await insertAnalysis('prep-legacy', 'fr', '2026-09-05T00:00:00Z', 'sha256:orphan');
-    // Older complete run: the expected fallback.
-    await insertAnalysis('prep-legacy', 'fr', '2026-09-01T00:00:00Z', 'sha256:run-a');
-    const enA1 = await insertAnalysis('prep-legacy', 'en', '2026-09-01T06:00:00Z', 'sha256:run-a');
-    const frA2 = await insertAnalysis('prep-legacy', 'fr', '2026-09-02T00:00:00Z', 'sha256:run-a');
-    // Even older complete run from a different structural generation. Ignored.
-    await insertAnalysis('prep-legacy', 'fr', '2026-08-30T00:00:00Z', 'sha256:run-0');
-    await insertAnalysis('prep-legacy', 'en', '2026-08-30T06:00:00Z', 'sha256:run-0');
+    const newestFrench = await insertAnalysis(
+      'prep-legacy',
+      'fr',
+      '2026-09-05T00:00:00Z',
+      'sha256:fr-only-newest',
+    );
+    await insertAnalysis('prep-legacy', 'fr', '2026-09-02T00:00:00Z', 'sha256:run-a');
+    await insertAnalysis('prep-legacy', 'en', '2026-09-02T06:00:00Z', 'sha256:run-a');
 
     const resolution = await resolveSelectedAnalysisPairForAudit(connection!, 'prep-legacy');
     expect(resolution.kind).toBe('legacy-latest');
     if (resolution.kind === 'legacy-latest') {
-      expect(resolution.fr.analysisId).toBe(frA2.analysisId);
-      expect(resolution.en.analysisId).toBe(enA1.analysisId);
+      expect(resolution.fr.analysisId).toBe(newestFrench.analysisId);
+      expect(resolution.en).toBeUndefined();
     }
+  });
+
+  it('keeps a legacy bilingual record readable when French and English remain compatible', async () => {
+    await insertAudit('prep-legacy-bilingual');
+    const fr = await insertAnalysis('prep-legacy-bilingual', 'fr', '2026-09-02T00:00:00Z');
+    const en = await insertAnalysis('prep-legacy-bilingual', 'en', '2026-09-02T06:00:00Z');
+
+    const resolution = await resolveSelectedAnalysisPairForAudit(
+      connection!,
+      'prep-legacy-bilingual',
+    );
+    expect(resolution).toEqual({ kind: 'legacy-latest', fr: expect.objectContaining({ analysisId: fr.analysisId }), en: expect.objectContaining({ analysisId: en.analysisId }) });
   });
 
   it('skips analyses stored before the provenance stamp instead of failing', async () => {
@@ -456,8 +470,71 @@ describe.skipIf(!mongoAvailable)('writing selection', () => {
     expect(resolution.kind).toBe('legacy-latest');
     if (resolution.kind === 'legacy-latest') {
       expect(resolution.fr.analysisId).toBe(oldFr.analysisId);
-      expect(resolution.en.analysisId).toBe(oldEn.analysisId);
+      expect(resolution.en?.analysisId).toBe(oldEn.analysisId);
     }
+  });
+
+  it('attaches English to the selected French analysis without changing the French ID', async () => {
+    await insertAudit('prep-attach-en');
+    const structureGeneratedAt = '2026-09-01T00:00:00.000Z';
+    const fr = await insertAnalysis(
+      'prep-attach-en',
+      'fr',
+      '2026-09-01T00:01:00Z',
+      'sha256:run-a',
+      structureGeneratedAt,
+    );
+    const en = await insertAnalysis(
+      'prep-attach-en',
+      'en',
+      '2026-09-01T00:02:00Z',
+      'sha256:run-a',
+      structureGeneratedAt,
+    );
+    await recordReadyWritingCandidate(connection!, 'prep-attach-en', {
+      frAnalysisId: fr.analysisId,
+      findingsProvenance: provenance('sha256:run-a'),
+    });
+    await approveWritingCandidate(connection!, 'prep-attach-en');
+
+    const updated = await attachEnglishAnalysisToSelection(
+      connection!,
+      'prep-attach-en',
+      en.analysisId,
+    );
+
+    expect(updated.writingSelection?.selected?.frAnalysisId).toBe(fr.analysisId);
+    expect(updated.writingSelection?.selected?.enAnalysisId).toBe(en.analysisId);
+  });
+
+  it('rejects an English attachment with mismatched structure and preserves French', async () => {
+    await insertAudit('prep-attach-en-mismatch');
+    const fr = await insertAnalysis(
+      'prep-attach-en-mismatch',
+      'fr',
+      '2026-09-01T00:01:00Z',
+      'sha256:run-a',
+      'structure-fr',
+    );
+    const en = await insertAnalysis(
+      'prep-attach-en-mismatch',
+      'en',
+      '2026-09-01T00:02:00Z',
+      'sha256:run-a',
+      'structure-en',
+    );
+    await recordReadyWritingCandidate(connection!, 'prep-attach-en-mismatch', {
+      frAnalysisId: fr.analysisId,
+      findingsProvenance: provenance('sha256:run-a'),
+    });
+    await approveWritingCandidate(connection!, 'prep-attach-en-mismatch');
+
+    await expect(
+      attachEnglishAnalysisToSelection(connection!, 'prep-attach-en-mismatch', en.analysisId),
+    ).rejects.toBeInstanceOf(WritingSelectionConflictError);
+    const unchanged = await getReportPreparation(connection!, 'prep-attach-en-mismatch');
+    expect(unchanged.writingSelection?.selected?.frAnalysisId).toBe(fr.analysisId);
+    expect(unchanged.writingSelection?.selected?.enAnalysisId).toBeUndefined();
   });
 
   it('reports none when an audit has no analyses at all', async () => {
