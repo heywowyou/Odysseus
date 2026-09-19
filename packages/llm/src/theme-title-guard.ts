@@ -13,14 +13,14 @@ const ACTION_OPENERS: Record<ReportLanguage, RegExp> = {
 };
 
 const FINITE_VERBS: Record<ReportLanguage, RegExp> = {
-  fr: /\b(?:doit|doivent|permet|permettent|am[eé]liore|am[eé]liorent|r[eé]duit|r[eé]duisent|garantit|garantissent|facilite|facilitent)\b/iu,
+  fr: /\b(?:doit|doivent|devrait|devraient|il\s+faut|permet|permettent|am[eé]liore|am[eé]liorent|r[eé]duit|r[eé]duisent|garantit|garantissent|facilite|facilitent)\b/iu,
   en: /\b(?:must|should|needs?|improves?|reduces?|ensures?|allows?|prevents?)\b/iu,
 };
 
 /**
  * Plan 067 theme titles are labels, not mini recommendations. The guard is
- * deliberately mechanical: compact word count, no terminal punctuation, and
- * no common sentence/action construction.
+ * deliberately mechanical: at most 80 characters and 10 whitespace-delimited
+ * words, no terminal punctuation, and no common sentence/action construction.
  */
 export function findThemeTitleViolations(
   output: WritingPassOutput,
@@ -31,7 +31,7 @@ export function findThemeTitleViolations(
     const field = `themes[${index}](${theme.themeKey}).title`;
     const title = theme.title.trim();
     const words = title.split(/\s+/).filter(Boolean);
-    if (words.length > 8) {
+    if (title.length > 80 || words.length > 10) {
       violations.push({ field, text: theme.title, reason: 'too-long' });
       continue;
     }
