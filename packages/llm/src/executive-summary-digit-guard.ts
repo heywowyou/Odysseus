@@ -34,14 +34,18 @@ export interface ExecutiveSummaryDigitViolation {
   text: string;
 }
 
-export function findExecutiveSummaryDigitViolations(
-  output: WritingPassOutput,
-): ExecutiveSummaryDigitViolation[] {
-  const withoutLocationOrdinals = output.executiveSummary.replace(
+export function hasExecutiveSummaryDigitViolation(text: string): boolean {
+  const withoutLocationOrdinals = text.replace(
     ARRONDISSEMENT_ORDINAL_PATTERN,
     'arrondissement',
   );
-  if (DIGIT_PATTERN.test(withoutLocationOrdinals)) {
+  return DIGIT_PATTERN.test(withoutLocationOrdinals);
+}
+
+export function findExecutiveSummaryDigitViolations(
+  output: WritingPassOutput,
+): ExecutiveSummaryDigitViolation[] {
+  if (hasExecutiveSummaryDigitViolation(output.executiveSummary)) {
     return [{ field: 'executiveSummary', text: output.executiveSummary }];
   }
   return [];
