@@ -75,6 +75,17 @@ describe('renderFindingsAppendix against the real small-site.test findings', () 
     expect(html).toContain(minorFinding?.ruleId ?? '__missing__');
   });
 
+  it('is exhaustive and model-independent: every finding id is represented from findings.json input alone', async () => {
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
+    const html = renderFindingsAppendix(getStrings('en'), 12, 'en', findings, manifest, 'general');
+
+    for (const finding of findings) {
+      expect(html).toContain(`id="annexref-${finding.findingId}"`);
+    }
+    expect((html.match(/id="annexref-/gu) ?? []).length).toBe(findings.length);
+  });
+
   it('groups findings under their category heading', async () => {
     const findings = await loadSmallSiteFindings();
     const manifest = await loadSmallSiteManifest();
