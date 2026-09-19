@@ -22,7 +22,7 @@ const input: CorrectionReviewInput = {
       languagesServed: ['fr'],
       targetMarkets: ['fr'],
     },
-    themes: [{ themeKey: 't1', category: 'accessibility', findings: [] }],
+    themes: [{ themeKey: 't1', category: 'accessibility', findings: [], trustedRemediations: [] }],
     siteStats: {
       pagesScanned: 1,
       totalFindings: 1,
@@ -31,7 +31,20 @@ const input: CorrectionReviewInput = {
       moderate: 0,
       minor: 0,
     },
-    dominantPerformanceMetric: null,
+    performanceEvidence: emptyWritingPerformanceEvidence(),
+    summaryEvidence: {
+      siteStats: {
+        pagesScanned: 1,
+        totalFindings: 1,
+        critical: 0,
+        serious: 1,
+        moderate: 0,
+        minor: 0,
+      },
+      categoriesPresent: ['accessibility'],
+      performance: emptyWritingPerformanceEvidence(),
+      limitations: ['real-user-performance-unavailable'],
+    },
   },
   written: {
     executiveSummary: 'Résumé.',
