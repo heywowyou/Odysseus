@@ -79,6 +79,7 @@ export type {
   StructureTheme,
   StructurePassOutput,
 } from './structure-schema.js';
+export { emptyWritingPerformanceEvidence } from './writing-schema.js';
 export type {
   TransactionalFlowStatus,
   WritingInput,
