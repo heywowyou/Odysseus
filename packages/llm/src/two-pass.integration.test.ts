@@ -179,7 +179,8 @@ describe('two-pass analysis produces identical structure across languages', () =
       siteContext,
       'en',
       siteStats,
-      null,
+      emptyWritingPerformanceEvidence(),
+      {},
       'unknown',
     );
     const enWriting = await analyzeWriting(enWritingInput, themeKeys, false);
