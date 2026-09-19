@@ -305,6 +305,31 @@ describe.skipIf(!mongoAvailable)('writing selection', () => {
     expect(preparation.writingSelection?.candidate?.status).toBe('ready');
   });
 
+  it('rejects a candidate whose stored provenance fingerprint differs even when the digest matches', async () => {
+    await insertAudit('prep-provenance-fingerprint');
+    const fr = await insertAnalysis(
+      'prep-provenance-fingerprint',
+      'fr',
+      '2026-09-01T00:00:00Z',
+      'sha256:run-a',
+    );
+    await recordReadyWritingCandidate(connection!, 'prep-provenance-fingerprint', {
+      frAnalysisId: fr.analysisId,
+      findingsProvenance: {
+        ...provenance('sha256:run-a'),
+        normalizationFingerprint: 'different-fingerprint',
+      },
+    });
+
+    await expect(
+      approveWritingCandidate(connection!, 'prep-provenance-fingerprint'),
+    ).rejects.toBeInstanceOf(WritingSelectionConflictError);
+    expect(
+      (await getReportPreparation(connection!, 'prep-provenance-fingerprint')).writingSelection
+        ?.selected,
+    ).toBeUndefined();
+  });
+
   it('conflicts when the ready candidate disappeared before approval', async () => {
     await insertAudit('prep-race');
     const fr = await insertAnalysis('prep-race', 'fr', '2026-09-01T00:00:00Z');
