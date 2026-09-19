@@ -199,6 +199,58 @@ describe('buildWritingInput', () => {
       trustedRemediations: [],
     });
     expect(input.themes[1]!.findings).toHaveLength(structureThemes[1]!.findingIds.length);
+    expect(input.themes[0]!.findings.some((finding) => finding.findingId === second.findingId)).toBe(
+      false,
+    );
+    expect(input.themes[1]!.findings.some((finding) => finding.findingId === first.findingId)).toBe(
+      false,
+    );
+  });
+
+  it('builds the executive-summary packet deterministically from site stats, categories, and reconciled performance evidence', () => {
+    const filtered = filterFindingsForLlm(loadSmallSiteFindings());
+    const [first] = filtered;
+    if (!first) throw new Error('expected at least one finding in the fixture');
+    const siteStats = computeSiteStats(loadSmallSiteFindings(), loadSmallSiteManifest());
+    const performanceEvidence = {
+      fieldDataAvailable: true,
+      observations: [
+        { metric: 'cls' as const, source: 'field' as const, value: 0.18, rating: 'mid' as const },
+      ],
+      primaryConcern: {
+        metric: 'cls' as const,
+        source: 'field' as const,
+        value: 0.18,
+        rating: 'mid' as const,
+      },
+      suppressedLabRecommendations: ['lcp' as const],
+    };
+    const input = buildWritingInput(
+      [
+        {
+          themeKey: 't1',
+          findingIds: [first.findingId],
+          category: first.category as StructureThemeWithKey['category'],
+          effort: 'low',
+          impact: 'high',
+          priorityRank: 1,
+        },
+      ],
+      filtered,
+      buildFallbackSiteContext(),
+      'fr',
+      siteStats,
+      performanceEvidence,
+      {},
+      'unknown',
+    );
+
+    expect(input.summaryEvidence.siteStats).toEqual(siteStats);
+    expect(input.summaryEvidence.performance).toBe(performanceEvidence);
+    expect(input.summaryEvidence.categoriesPresent).toEqual(
+      [...new Set(filtered.map((finding) => finding.category))].sort(),
+    );
+    expect(input.summaryEvidence.limitations).toEqual([]);
   });
 
   it('throws when a structure theme references a findingId no longer in the current findings', () => {
