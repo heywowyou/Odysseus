@@ -47,11 +47,11 @@ import {
   filterFindingsForLlm,
 } from './build-input.js';
 import type { CorrectionCheck, CorrectionProposal } from './correction-review-schema.js';
-import { computeDominantPerformanceMetric } from './dominant-metric.js';
 import { partitionFindings } from './diversion.js';
 import { parseStructureDocument, type StructureDocument } from './structure-schema.js';
 import { deriveTransactionalFlowStatus } from './transactional-flow-guard.js';
 import {
+  emptyWritingPerformanceEvidence,
   writingPassOutputSchema,
   type WritingInput,
   type WritingPassOutput,
@@ -245,7 +245,6 @@ export function assembleWritingInput(args: {
   const severityFiltered = filterFindingsForLlm(allFindings);
   const { forModel } = partitionFindings(severityFiltered, manifest);
   const siteStats = computeSiteStats(allFindings, manifest);
-  const dominantPerformanceMetric = computeDominantPerformanceMetric(manifest);
   const transactionalFlowStatus =
     stored.obligationAssessment === undefined
       ? 'unknown'
@@ -256,7 +255,8 @@ export function assembleWritingInput(args: {
     (stored.siteContext ?? buildFallbackSiteContext()) as WritingSiteContext,
     language,
     siteStats,
-    dominantPerformanceMetric,
+    emptyWritingPerformanceEvidence(),
+    {},
     transactionalFlowStatus,
     manifest.auditId,
   );
