@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type {
   FindingCategory,
   HotelCatalogueWritingSiteContext,
+  ObligationAssessment,
   LlmInput,
   ReportLanguage,
 } from '@odysseus/core';
@@ -153,10 +154,21 @@ export function emptyWritingPerformanceEvidence(): WritingPerformanceEvidence {
   };
 }
 
+export interface WritingSummaryThemeEvidence {
+  themeKey: string;
+  category: FindingCategory;
+  priorityRank: number;
+}
+
 export interface WritingSummaryEvidence {
   siteStats: WritingSiteStats;
+  /** Structure-pass order expressed explicitly, so the summary never infers
+   * what is important from raw findings. */
+  rankedThemes: WritingSummaryThemeEvidence[];
   categoriesPresent: FindingCategory[];
   performance: WritingPerformanceEvidence;
+  /** Deterministic obligation-engine status; no legal conclusion is model-owned. */
+  obligationStatus: ObligationAssessment['status'] | 'unknown';
   limitations: string[];
 }
 
