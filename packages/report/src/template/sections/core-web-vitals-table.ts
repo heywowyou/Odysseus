@@ -58,7 +58,7 @@ export function formatMetricValue(value: number, unit: Unit, language: ReportLan
  *  table under its own URL: counting it again stated "agrégées sur 176
  *  pages" beside "Lighthouse : 173 mesurées" in the Grand Hôtel de l'Opéra
  *  report, and weighted every redirect target twice in the medians. */
-function measuredPages(manifest: Pick<AuditManifest, 'pages'>): AuditManifest['pages'] {
+export function measuredPages(manifest: Pick<AuditManifest, 'pages'>): AuditManifest['pages'] {
   return manifest.pages.filter((page) => page.status !== 'redirect-interstitial');
 }
 

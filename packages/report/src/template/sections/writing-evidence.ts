@@ -6,7 +6,7 @@ import type {
   WritingPerformanceMetric,
   WritingPerformanceObservation,
 } from '@odysseus/llm';
-import { divergentLabLcp } from './core-web-vitals-table.js';
+import { divergentLabLcp, measuredPages } from './core-web-vitals-table.js';
 import { remediationFor } from '../remediation/index.js';
 
 const INP_GOOD_MS = 200;
@@ -20,7 +20,7 @@ function median(values: readonly number[]): number | null {
 }
 
 function labMedian(manifest: AuditManifest, metric: 'lcp' | 'cls' | 'tbt'): number | null {
-  const values = manifest.pages
+  const values = measuredPages(manifest)
     .map((page) => page.coreWebVitals?.[metric]?.numericValue)
     .filter((value): value is number => value !== null && value !== undefined);
   return median(values);

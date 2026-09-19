@@ -64,6 +64,21 @@ describe('Plan 067 writing evidence', () => {
     expect(evidence.primaryConcern?.metric).not.toBe('lcp');
   });
 
+  it('takes the lab median over the pages the report table counts, without redirects', () => {
+    const manifest = {
+      pages: [
+        measuredPage('https://example.com/fr/', 2_000, 0.01),
+        measuredPage('https://example.com/fr/chambres', 3_000, 0.01),
+        { ...measuredPage('https://example.com/fr', 9_000, 0.01), status: 'redirect-interstitial' },
+      ],
+      cruxFieldData: { available: false },
+    } as AuditManifest;
+
+    const evidence = buildWritingPerformanceEvidence(manifest);
+
+    expect(evidence.observations.find((entry) => entry.metric === 'lcp')?.value).toBe(2_500);
+  });
+
   it('does not turn unavailable Lighthouse evidence into a measured priority', () => {
     const manifest = {
       pages: [measuredPage('https://example.com/', 9_000, 0.3, 800)],

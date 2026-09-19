@@ -17,7 +17,7 @@ import {
 import type { StoredAnalysis } from '../../types.js';
 import { VERBATIM_EVIDENCE_ATTRIBUTE } from '../render-lint.js';
 import type { ReportStrings } from '../strings/i18n.js';
-import { formatMetricValue, METRIC_UNITS } from './core-web-vitals-table.js';
+import { formatMetricValue, measuredPages, METRIC_UNITS } from './core-web-vitals-table.js';
 import {
   escapeCopy,
   escapeHtml,
@@ -205,7 +205,7 @@ function measuredCoreWebVitalGapNote(
   if (metric === undefined) return undefined;
 
   const themePageUrls = new Set(themeFindings.flatMap((f) => f.pageUrls));
-  const values = manifest.pages
+  const values = measuredPages(manifest)
     .filter((page) => themePageUrls.has(page.url))
     .map((page) => page.coreWebVitals?.[metric]?.numericValue)
     .filter((value): value is number => value !== null && value !== undefined);
