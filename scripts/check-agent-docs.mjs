@@ -125,6 +125,7 @@ const explicitOnlySkills = [
   '.agents/skills/dashboard-ux-audit/SKILL.md',
   '.agents/skills/public-website-audit/SKILL.md',
   '.agents/skills/scan-report-audit/SKILL.md',
+  '.agents/skills/client-report-finalizer/SKILL.md',
   '.agents/skills/impeccable/SKILL.md',
 ];
 for (const skillPath of explicitOnlySkills) {
