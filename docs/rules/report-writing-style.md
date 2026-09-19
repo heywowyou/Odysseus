@@ -51,7 +51,10 @@ des champs. Concrètement :
 ## 2. Titres nominaux, prose en phrases complètes
 
 Le titre d'un thème est l'exception : c'est un groupe nominal court,
-généralement de deux à sept mots, sans verbe conjugué ni ponctuation finale
+généralement de deux à sept mots. Le contrôle automatique impose au maximum
+80 caractères et 10 mots séparés par des espaces, sans ponctuation finale,
+sans verbe conjugué et sans charpente d'obligation comme « doit »,
+« doivent », « devrait », « devraient » ou « il faut »
 (« Contrastes et lisibilité », « Navigation au clavier », « Stabilité
 visuelle »). Il nomme le travail ; il ne promet pas un résultat.
 
