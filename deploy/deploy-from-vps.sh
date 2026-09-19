@@ -17,17 +17,27 @@ LOCK_FILE="${ODYSSEUS_VPS_DEPLOY_LOCK:-/var/lock/odysseus-vps-deploy.lock}"
 log() { printf '%s odysseus-vps-deploy: %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$*" >&2; }
 fail() { log "error: $*"; exit 1; }
 
-exec 9>"$LOCK_FILE"
-flock -n 9 || fail "another VPS deployment is already running"
-
 [[ -d "$CHECKOUT/.git" ]] || fail "Git checkout missing at $CHECKOUT"
 [[ -r "$PROD_ROOT/.env" ]] || fail "production environment missing at $PROD_ROOT/.env"
 
-log "updating main"
-git -C "$CHECKOUT" diff --quiet && git -C "$CHECKOUT" diff --cached --quiet ||
-  fail "checkout has local changes; refusing to overwrite them"
-git -C "$CHECKOUT" checkout main >/dev/null
-git -C "$CHECKOUT" pull --ff-only
+# The /srv copy can overwrite itself during rsync. Bash keeps executing the
+# already-loaded old program, so a deploy-script fix otherwise takes effect
+# one invocation late. The outer invocation holds the deployment lock, updates
+# main, then hands the work to the freshly pulled checkout copy as a child.
+if [[ "${ODYSSEUS_VPS_DEPLOY_FRESH_SCRIPT:-0}" != "1" ]]; then
+  exec 9>"$LOCK_FILE"
+  flock -n 9 || fail "another VPS deployment is already running"
+
+  log "updating main"
+  git -C "$CHECKOUT" diff --quiet && git -C "$CHECKOUT" diff --cached --quiet ||
+    fail "checkout has local changes; refusing to overwrite them"
+  git -C "$CHECKOUT" checkout main >/dev/null
+  git -C "$CHECKOUT" pull --ff-only
+
+  ODYSSEUS_VPS_DEPLOY_FRESH_SCRIPT=1 "$CHECKOUT/deploy/deploy-from-vps.sh"
+  exit $?
+fi
+
 BUILD_ID="$(git -C "$CHECKOUT" rev-parse --short=8 HEAD)"
 BUILT_AT="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 log "deploying $BUILD_ID"
@@ -43,13 +53,24 @@ docker compose -p "$PROJECT" -f "$COMPOSE_TMP" config >/dev/null
 mv -f "$COMPOSE_TMP" "$COMPOSE_FILE"
 trap - EXIT
 
+# Resolve the live app directly from Docker labels. In the damaged state left by
+# the old deploy ordering, the container can still run even if its image object
+# is gone; docker compose may inspect that missing image before exec/ps.
+RUNNING_APP_ID="$(
+  docker ps \
+    --filter "label=com.docker.compose.project=$PROJECT" \
+    --filter "label=com.docker.compose.service=app" \
+    --filter "status=running" \
+    --format '{{.ID}}' | head -n 1
+)"
 # Full-audit jobs are restart-safe by design (Plan 035): startup recovery
 # requeues them and the stable run identity/checkpoints let them resume. Do not
 # block a deploy merely because one is running. Other job types keep the
 # fail-closed guard because they do not all have the same resume contract.
 log "checking for non-resumable running jobs"
-BLOCKING_JOBS="$(
-  docker compose -p "$PROJECT" -f "$COMPOSE_FILE"     exec -T -w /app/packages/store app     node --input-type=module --eval '
+if [[ -n "$RUNNING_APP_ID" ]]; then
+  BLOCKING_JOBS="$(
+    docker exec -w /app/packages/store "$RUNNING_APP_ID" node --input-type=module --eval '
 import mongoose from "mongoose";
 const options = {};
 if (process.env.MONGODB_DB_NAME) options.dbName = process.env.MONGODB_DB_NAME;
@@ -69,19 +90,22 @@ for (const job of resumable) {
 process.stdout.write(JSON.stringify(blocking));
 await mongoose.disconnect();
 '
-)" || fail "running-jobs probe failed; refusing to restart production"
+  )" || fail "running-jobs probe failed; refusing to restart production"
+else
+  BLOCKING_JOBS="[]"
+  log "no running app container; no live job to protect"
+fi
 [[ "$BLOCKING_JOBS" == "[]" ]] ||
   fail "non-resumable running job(s) detected; deployment stopped safely: $BLOCKING_JOBS"
 
 # Preserve rollback BEFORE building :latest. Building first retags
 # odysseus-app:latest and can leave the running container's old image
 # unaddressable; that exact ordering broke the 2026-09-19 retry path.
-RUNNING_APP_ID="$(docker compose -p "$PROJECT" -f "$COMPOSE_FILE" ps --status running -q app | head -n 1)"
 ROLLBACK_TAG=""
 OLD_BUILD_ID=""
 if [[ -n "$RUNNING_APP_ID" ]]; then
   OLD_BUILD_ID="$(
-    docker compose -p "$PROJECT" -f "$COMPOSE_FILE"     exec -T app printenv ODYSSEUS_BUILD_ID | tr -d '\r\n'
+    docker exec "$RUNNING_APP_ID" printenv ODYSSEUS_BUILD_ID | tr -d '\r\n'
   )"
   [[ -n "$OLD_BUILD_ID" ]] || OLD_BUILD_ID="unknown-$(date -u +%Y%m%d%H%M%S)"
   OLD_IMAGE_ID="$(docker inspect "$RUNNING_APP_ID" --format '{{.Image}}')"
@@ -119,10 +143,16 @@ log "starting $BUILD_ID"
 ODYSSEUS_BUILD_ID="$BUILD_ID" ODYSSEUS_BUILT_AT="$BUILT_AT"   docker compose -p "$PROJECT" -f "$COMPOSE_FILE" up -d app
 
 verify() {
-  local running_build response
-  running_build="$(
-    docker compose -p "$PROJECT" -f "$COMPOSE_FILE"       exec -T app printenv ODYSSEUS_BUILD_ID 2>/dev/null | tr -d '\r\n'
-  )" || return 1
+  local running_build running_id response
+  running_id="$(
+    docker ps \
+      --filter "label=com.docker.compose.project=$PROJECT" \
+      --filter "label=com.docker.compose.service=app" \
+      --filter "status=running" \
+      --format '{{.ID}}' | head -n 1
+  )"
+  [[ -n "$running_id" ]] || return 1
+  running_build="$(docker exec "$running_id" printenv ODYSSEUS_BUILD_ID 2>/dev/null | tr -d '\r\n')" || return 1
   [[ "$running_build" == "$BUILD_ID" ]] || return 1
 
   for _ in $(seq 1 30); do
