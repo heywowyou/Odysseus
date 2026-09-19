@@ -77,7 +77,7 @@ export const newScan = {
     typeFullAudit: 'Scan complet',
     typeQuickCheck: 'Contrôle rapide',
     typeFullAuditHint:
-      'Explore tout le site une seule fois. Ce scan sert ensuite à la prospection, aux analyses française et anglaise et aux rapports client, sans nouvelle exploration.',
+      'Explore tout le site une seule fois. Ce scan sert ensuite à la prospection, au rapport français et, si demandé, à sa version anglaise, sans nouvelle exploration.',
     typeQuickCheckHint: 'Contrôle informatif d’une page, sans analyse ni rapport client.',
     urlLabel: 'Adresse du site',
     urlPlaceholder: 'https://exemple.fr',
@@ -136,7 +136,7 @@ export const newScan = {
     typeFullAudit: 'Full scan',
     typeQuickCheck: 'Quick check',
     typeFullAuditHint:
-      'Crawls the whole site once. The scan then serves outreach, the French and English analyses, and client reports without crawling again.',
+      'Crawls the whole site once. The scan then serves outreach, the French report and, when requested, its English version without crawling again.',
     typeQuickCheckHint: 'A one-page informational check with no analysis or client report.',
     urlLabel: 'Site URL',
     urlPlaceholder: 'https://example.co.uk',
