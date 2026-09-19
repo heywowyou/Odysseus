@@ -142,6 +142,17 @@ export interface WritingPerformanceEvidence {
   suppressedLabRecommendations: WritingPerformanceMetric[];
 }
 
+/** Test/offline-tool neutral packet. Production report generation builds the
+ * real reconciled packet from the audit manifest. */
+export function emptyWritingPerformanceEvidence(): WritingPerformanceEvidence {
+  return {
+    fieldDataAvailable: false,
+    observations: [],
+    primaryConcern: null,
+    suppressedLabRecommendations: [],
+  };
+}
+
 export interface WritingSummaryEvidence {
   siteStats: WritingSiteStats;
   categoriesPresent: FindingCategory[];
