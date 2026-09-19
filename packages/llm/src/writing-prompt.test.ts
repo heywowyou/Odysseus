@@ -312,14 +312,16 @@ describe('the writing prompt states the WCAG version and business-claim rules th
     expect(prompt).toContain('cite version 2.2 exactly, never another version');
   });
 
-  it('names the French fault phrase the business-claim guard rejects', () => {
+  it('forbids unsupported commercial outcomes even when hedged, in French', () => {
     const prompt = buildWritingSystemPrompt('fr', false, null);
-    expect(prompt).toContain('la page la plus rentable');
+    expect(prompt).toContain('réservations, la conversion, le chiffre d’affaires');
+    expect(prompt).toContain('Une précaution grammaticale ne transforme pas une affirmation non mesurée en preuve');
   });
 
-  it('names the English fault phrase the business-claim guard rejects', () => {
+  it('forbids unsupported commercial outcomes even when hedged, in English', () => {
     const prompt = buildWritingSystemPrompt('en', false, null);
-    expect(prompt).toContain('the most profitable page');
+    expect(prompt).toContain('bookings, conversion, revenue, abandonment, demand, trust, or reputation');
+    expect(prompt).toContain('Hedging does not turn an unmeasured claim into evidence');
   });
 });
 
@@ -343,32 +345,27 @@ describe('issue #21: the writing prompt names the banned severity synonyms', () 
   });
 });
 
-// plan 019 step 6: outcome-oriented theme titles, not bare topic labels.
-describe('plan 019: the writing prompt requests outcome-oriented titles without inviting claims', () => {
-  it('asks the title to state the useful outcome or decision, in French', () => {
+// Plan 067: titles are compact noun phrases, not miniature recommendations.
+describe('Plan 067: the writing prompt requests noun-phrase theme titles', () => {
+  it('requires a short noun phrase and forbids a full sentence, in French', () => {
     const prompt = buildWritingSystemPrompt('fr', false, null);
-    expect(prompt).toContain("énonce le résultat utile ou la décision qu'il permet de prendre");
+    expect(prompt).toContain('un groupe nominal court');
+    expect(prompt).toContain('jamais une phrase complète');
+    expect(prompt).toContain('Contrastes et lisibilité');
   });
 
-  it('asks the title to state the useful outcome or decision, in English', () => {
+  it('requires a short noun phrase and forbids a full sentence, in English', () => {
     const prompt = buildWritingSystemPrompt('en', false, null);
-    expect(prompt).toContain(
-      'states the useful outcome or the decision it supports, not just the topic',
-    );
+    expect(prompt).toContain('a short noun phrase');
+    expect(prompt).toContain('never a full sentence');
+    expect(prompt).toContain('Contrast and readability');
   });
 
-  it('gives one outcome-oriented example per language', () => {
+  it('makes titles an explicit exception to the complete-sentence rule', () => {
     const fr = buildWritingSystemPrompt('fr', false, null);
-    expect(fr).toContain('Corriger les contrastes pour rendre les textes lisibles');
     const en = buildWritingSystemPrompt('en', false, null);
-    expect(en).toContain('Fix contrast so text becomes readable');
-  });
-
-  it('forbids adding claims, numbers, or business facts the input does not contain, in French', () => {
-    const prompt = buildWritingSystemPrompt('fr', false, null);
-    expect(prompt).toContain(
-      "n'ajoutez ni chiffre, ni fait commercial, ni bénéfice chiffré, ni aucune autre affirmation que les données d'entrée ne contiennent pas",
-    );
+    expect(fr).toContain("À l'exception de title");
+    expect(en).toContain('Except for title');
   });
 });
 
