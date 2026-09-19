@@ -36,6 +36,10 @@ export interface PageCountViolation {
   matched: string;
 }
 
+export function hasPageCountViolation(text: string, language: ReportLanguage): boolean {
+  return PAGE_COUNT_PATTERNS[language].test(text);
+}
+
 function checkField(
   field: string,
   text: string,
