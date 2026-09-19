@@ -121,4 +121,26 @@ describe('Plan 067 on-demand English generation', () => {
     expect(approveWritingCandidate).not.toHaveBeenCalled();
     expect(runReportStage).not.toHaveBeenCalled();
   });
+
+  it('leaves the selected writing untouched when English PDF rendering fails', async () => {
+    vi.mocked(runReportStage).mockRejectedValueOnce(new Error('English PDF failed'));
+
+    await expect(generateEnglishVersion({} as never, audit, undefined)).rejects.toThrow(
+      'English PDF failed',
+    );
+
+    expect(runAnalysisStage).toHaveBeenCalledTimes(1);
+    expect(runReportStage).toHaveBeenCalledTimes(1);
+    expect(attachEnglishAnalysisToSelection).not.toHaveBeenCalled();
+    expect(recordReadyWritingCandidate).not.toHaveBeenCalled();
+    expect(approveWritingCandidate).not.toHaveBeenCalled();
+  });
+
+  it('attaches English only after the English PDF has rendered successfully', async () => {
+    await generateEnglishVersion({} as never, audit, undefined);
+
+    expect(vi.mocked(runReportStage).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(attachEnglishAnalysisToSelection).mock.invocationCallOrder[0]!,
+    );
+  });
 });
