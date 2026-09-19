@@ -22,6 +22,7 @@ import type {
   ObligationAssessment,
   ReportLanguage,
   SiteSignalOverrides,
+  WritingSanitizationWarning,
 } from '@odysseus/core';
 import {
   assertFindingsProvenance,
@@ -116,6 +117,7 @@ export interface AnalysisStageResult {
    *  (Promise.allSettled) at their own boundary. Empty on the static
    *  fallback path (issue #162), which makes zero model calls. */
   advisoryPasses: readonly Promise<void>[];
+  sanitizationWarnings: readonly WritingSanitizationWarning[];
 }
 
 function timestampForFilename(date: Date): string {
@@ -357,6 +359,7 @@ export async function runAnalysisStage(
         // Nothing was generated, so there is nothing new to review: the
         // advisory passes already ran for this analysis when it was written.
         advisoryPasses: [],
+        sanitizationWarnings: [],
       };
     }
   }
@@ -364,6 +367,7 @@ export async function runAnalysisStage(
   const analysisId = randomUUID();
   let analysis: VerifiedStoredAnalysis;
   let unreferencedFindingCount = 0;
+  let sanitizationWarnings: readonly WritingSanitizationWarning[] = [];
   if (fallbackEligible) {
     // Static fallback analysis (issue #162): no structure pass, no writing
     // pass, no advisory pass. The bilingual sentences come from the report
@@ -430,6 +434,7 @@ export async function runAnalysisStage(
       doc.themes.map((t) => t.themeKey),
       usedFallbackContext,
     );
+    sanitizationWarnings = writingResult.sanitizationWarnings;
     const merged = mergeAnalysisPasses(doc, writingResult.output, forModel, options.language);
     unreferencedFindingCount = findUnreferencedStructureFindingIds(doc, forModel).length;
 
@@ -489,5 +494,6 @@ export async function runAnalysisStage(
     unreferencedFindingCount,
     usedFallbackContext,
     advisoryPasses: [],
+    sanitizationWarnings,
   };
 }
