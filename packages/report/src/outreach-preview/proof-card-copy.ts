@@ -1,5 +1,6 @@
 /**
- * Reviewed public-safe proof-card copy for the v2 outreach preview (plan 037):
+ * Reviewed public-safe proof-card copy for outreach previews (v2 historical,
+ * v3 current):
  * one bilingual sentence per scanner rule id, stating the observed problem in
  * words a non-technical hotel owner understands. Present tense, one sentence,
  * no fix, no legal conclusion, no statistics, no technical identifiers.

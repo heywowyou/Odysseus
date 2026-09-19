@@ -1,5 +1,5 @@
 /**
- * The operator-only PDF twin of the v2 scorecard preview (plan 037).
+ * The operator-only PDF twin of the full-scan outreach preview.
  *
  * Renders the SAME validated, linted HTML the public page serves through
  * Playwright's Chromium with a print stylesheet: one browser dependency,
@@ -21,10 +21,11 @@ import { REPORT_PDF_CHROMIUM_ARGS } from '../constants.js';
 import { assertOutreachPreviewHtml } from './preview-lint.js';
 
 export async function generateOutreachPreviewPdf(html: string): Promise<Buffer> {
-  // Prove the source passed the same v2 document + editorial lint before it
-  // prints: the PDF is a print of an approved public document, never an
-  // independent render.
-  assertOutreachPreviewHtml(html, { editorialV2: true });
+  // Prove the source passed the same public-document editorial lint before it
+  // prints. The current v3 and historical v2 contracts intentionally share the
+  // strict French editorial rules; the PDF remains a print of approved HTML,
+  // never an independent renderer.
+  assertOutreachPreviewHtml(html, { editorialV2: true, editorialCurrent: true });
   const { browser } = await launchBrowser({ extraArgs: REPORT_PDF_CHROMIUM_ARGS });
   try {
     const context = await browser.newContext();

@@ -31,15 +31,15 @@
  * than quietly quoting a different one, which is what "sourced from one
  * code-owned constant" actually has to mean to be worth stating.
  *
- * **v1 and v2 (plan 037).** The `OutreachPreviewInput` shape below is the v1
- * prescan-backed contract. It is retained so stored v1 publications keep a
- * typed shape for listing, revocation, and expiry, but no new v1 preview may
- * be created. New outreach builds an `OutreachPreviewSummary` instead: a
- * versioned v2 aggregate scorecard of one candidate-linked outreach full
- * scan, with coverage counts, aggregate finding totals, four severity totals,
- * and exactly three deterministic text proof cards. It has no image field at
- * all - the absence of a place to put one is the no-screenshots decision,
- * enforced the same way every other prohibition here is.
+ * **v1, v2 and v3.** The `OutreachPreviewInput` shape below is the historical
+ * v1 prescan contract and `OutreachPreviewSummary` is the historical v2
+ * full-scan scorecard. Plan 069 makes `OutreachPreviewSummaryV3` the current
+ * new-publication contract: measured aggregates remain deterministic, the
+ * first three cards follow the selected report priority order while using only
+ * reviewed public copy, and scoped client limitations are admitted explicitly.
+ * Historical v1/v2 shapes stay typed for compatibility. V3 still has no image,
+ * model-prose, selector, exact-URL, finding-ID, remediation or raw-evidence
+ * field: unsafe report data has nowhere to go.
  */
 
 import { z } from 'zod';
@@ -640,6 +640,12 @@ export const outreachPreviewSummaryV3Schema: z.ZodType<OutreachPreviewSummaryV3>
       context.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'severity totals must equal the distinct finding count',
+      });
+    }
+    if (input.distinctFindingCount < input.priorityCards.length) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'priority cards cannot exceed distinct findings',
       });
     }
     if (input.priorityCards.some((card, index) => card.rank !== index + 1)) {

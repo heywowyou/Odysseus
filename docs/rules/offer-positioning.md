@@ -75,16 +75,16 @@ reject any other figure. The formatter normalizes the French thousands
 separator to U+00A0, so the rendered bytes do not change with the host's ICU
 version. The Stripe link amount is still updated by hand (trade-off 13).
 
-**A price change revokes and reissues every live preview, added 2026-09-11,
-plan 037.** The v2 preview shows the amount, so a stale live link is a
-misquoted offer. The procedure, recorded here because the amount is an offer
-fact: change `ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT`, and in the same deployment
-revoke every live v2 preview (`revokePreviewsForDomain` per prospect, which
-deletes the public object before marking the record), then reissue from each
-candidate's audit page under the new amount. Existing first-touch drafts that
-quote the old amount are regenerated, not sent as-is. The public site's own
-price line moves in the same change (it is literal text pinned by
-`packages/core/src/offer/pricing.test.ts`, trade-off 43).
+**A price change revokes and reissues every live preview, amended
+2026-09-19 by Plan 069.** Preview HTML embeds the amount at publication time,
+so any live v1/v2/v3 object carrying the old figure becomes a misquoted offer.
+The procedure, recorded here because the amount is an offer fact: change
+`ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT`, and in the same deployment revoke every
+live preview for affected prospects, then reissue under the new amount.
+Existing first-touch drafts that quote the old amount are regenerated, not
+sent as-is. The public site's own price line moves in the same change (it is
+literal text pinned by `packages/core/src/offer/pricing.test.ts`, trade-off
+43).
 
 **Displayed HT everywhere from the first day.** Reasoning and the VAT
 threshold that makes this urgent are in
@@ -224,15 +224,17 @@ performance-measured counts separately rather than one undifferentiated
 "pages scanned" figure.
 
 The free outreach preview sent before purchase (`docs/rules/outreach-rules.md`
-section 6bis, revised 2026-09-11, plan 037) is a different, deliberately
-thinner document, not a lighter tier of this one. It is an aggregate scorecard
-of a candidate-linked full outreach scan: coverage counts, distinct-finding
-and affected-page totals, four severity totals, and three public-safe text
-proof cards. It never contains screenshots, selectors, finding IDs, exact
-page locations, remediation, or a conformity rate. Since trade-off 91 both
-come from the prospect's one Full scan, and the preview is published only
-once that scan's FR and EN reports are ready (trade-off 95), so the preview
-never describes evidence the paid report could not deliver.
+section 6bis; current v3 contract from Plan 069) is a different, deliberately
+thinner document, not a lighter tier of this one. It uses the same stored Full
+scan and the selected French report structure, but only as an ordering
+authority: coverage/count/severity facts are deterministic, and its three
+public cards follow the first three report priorities while using reviewed
+bilingual public copy rather than report prose. Plan-068 client limitations
+may appear in bounded form; operational warnings never do. It never contains
+screenshots, selectors, finding IDs, exact page locations, occurrences,
+remediation, model prose, model risk, or a conformity rate. Publication still
+waits for current FR and EN reports (trade-off 95), so the preview never
+describes evidence the paid report could not deliver.
 
 ---
 

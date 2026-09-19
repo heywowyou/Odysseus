@@ -5344,3 +5344,44 @@ audit-detail/report UI has no dependency on evidence approval. This does not
 weaken browser-isolation policy: the same environment condition remains a
 security diagnostic and the scan-container work in trade-offs 92/99/101 is
 still required on its own merits.
+
+### 104. The outreach preview follows the selected report priorities without exposing report prose (build decision, 2026-09-19, Plan 069)
+
+Plan 037's v2 scorecard was safe but semantically independent: it selected three
+findings on its own and computed its own grade/risk signal after the paid report
+had already moved to a grounded, ranked-priority structure. Plan 069 replaces
+new publication with v3 while keeping the public-safe boundary intact.
+
+- **One structure, two contracts.** V3 runs the report's exact
+  `buildRenderedPriorities()` over the selected French analysis and current
+  findings, then takes the first three priorities. The analysis decides order
+  only. Public card titles still come from the reviewed bilingual proof-card
+  catalog through each priority's deterministic representative finding.
+  Executive summary, theme titles, business-impact prose, actions, notes and
+  model risk remain unrepresentable in the public schema.
+- **Crawl completeness and evidence limitations stay separate.** Plan 050's
+  complete-declared-crawl qualification remains a publication gate. Plan 068's
+  `complete | limited | unavailable` diagnostics qualify claims inside an
+  otherwise usable audit: limited client summaries render publicly,
+  unavailable gets fixed bounded copy, and operational warnings never do.
+- **Touch 1 is bound to what was actually published.** A v3 row stores the
+  selected French analysis ID, current findings digest, aggregate counts,
+  severity totals and the three published priority-card categories. Draft
+  assembly reads that snapshot instead of recomputing from later findings. A
+  changed selected analysis or findings digest makes the row stale for a new
+  first touch; the old opaque link is not silently mutated and stays reachable
+  until ordinary revocation/expiry.
+- **No new model or crawl.** Preview generation consumes stored report
+  structure, findings, deterministic diagnostics and obligation assessment.
+  It adds zero provider calls and no rescan. Historical v1/v2 rows and objects
+  are neither migrated nor rewritten.
+- **The v2 grade/risk hero is retired only for v3.** New previews lead with
+  measured results and report-ordered priorities. Historical v2 HTML preserves
+  its original rendering so existing links remain truthful to what was
+  published.
+
+Rejected: copying model theme prose into cold outreach; duplicating the report
+priority algorithm in the interface package; treating any Plan-068 limitation
+as a failed crawl; recomputing a published v3 story when a first email is
+created; and rewriting historical public objects in place.
+

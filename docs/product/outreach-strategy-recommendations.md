@@ -130,8 +130,8 @@ adherence to a daily first-touch number.
 
 ## 3. Establish a clean baseline before optimizing the campaign
 
-The first useful campaign should keep the current first-touch email and v2
-preview stable long enough to establish a baseline.
+The first useful campaign should keep the current first-touch email and v3
+report-aligned preview stable long enough to establish a baseline.
 
 The most important initial commercial question is:
 
@@ -142,13 +142,13 @@ Track the chain:
 
 `rank / score -> delivered first touch -> reply -> positive reply -> substantive conversation -> sale`
 
-Do not change subject rules, body copy, proof-card ranking, scoring weights, and
-follow-up timing at the same time. A clean baseline is more valuable than a
+Do not change subject rules, body copy, priority-card selection/copy, targeting
+rules, and follow-up timing at the same time. A clean baseline is more valuable than a
 collection of small optimizations whose effects cannot be separated.
 
 Before the first real wave, reconcile any older rollout experiment that assumes
-an evidence shape retired by the current v2 outreach preview. The campaign of
-record should test the system that is actually shipped.
+the retired v2 scorecard/grade shape. The campaign of record should test the
+current v3 report-aligned preview that is actually shipped.
 
 ---
 
@@ -179,7 +179,7 @@ Also preserve where practical:
 
 - score version
 - rank or cohort position
-- proof-card categories
+- priority-card categories
 - campaign version
 - objection category
 - bounce and suppression outcome

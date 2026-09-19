@@ -13,10 +13,10 @@ questions:
 2. Does render-diff evidence (A) or accessibility evidence (B) get more replies?
 
 Plan 047 removed both inputs. There is no outreach score, cohort or wave, and
-touch 1 no longer picks between two evidence families. Since template v2
-(`docs/rules/outreach-rules.md` section 6), every first touch carries the same
-Full-scan scorecard preview. Its proof cards are chosen in code from the audit's
-findings (`packages/core/src/prospecting/outreach-preview-summary.ts`).
+touch 1 no longer picks between two evidence families. Since Plan 069, every
+new first touch carries the same v3 report-aligned Full-scan preview. Its three
+public cards follow the selected French report's first three rendered
+priorities, while their wording still comes from reviewed deterministic copy.
 
 The operational parts of plan 014 still hold and are reused here unchanged: the
 launch gates, the 10-site pilot, the bounded ramp, the stop conditions (hard
@@ -34,17 +34,12 @@ analysis. Only the questions and the data behind them change.
 | Thread state, touches sent and when, language, spacing | `outreach_threads` | 90 days (TTL) |
 | Operator-recorded outcome and lost reason | `outreach_outcomes` | 90 days (TTL) |
 | Text versions behind each draft | `outreach_drafts.evidenceVersion`, `outreachPromptVersion` | as drafts |
-| Preview record: source audit, content version, publication, revocation | `outreach_previews` | TTL |
-| What the preview showed: grade, counts, proof-card categories | only in the rendered object in the bucket | not queryable |
+| Preview record: source audit, content version, selected-analysis lineage, findings digest, publication, revocation | `outreach_previews` | TTL |
+| Touch-1 preview facts: finding/page counts, severity totals, priority-card categories | `outreach_previews.publishedFacts` (v3) | TTL |
+| Full rendered v3 document, including bounded data-quality limitations | private preview object | public link: 30 days |
 
-Two gaps follow from this table:
+One material retention gap remains:
 
-- **The evidence shown is not recorded.** The preview record has no grade,
-  finding counts or proof-card categories. The draft schema still carries the
-  comment for an "evidence family" field that no longer exists (in
-  `packages/store/src/schemas/outreach-draft.schema.ts`, above `previewId`).
-  Without these fields, no reply can be related to the evidence that
-  preceded it.
 - **Thread and outcome rows expire after 90 days.** An experiment whose
   response window ends later than that loses its own data unless it saves
   aggregates first.
@@ -57,17 +52,17 @@ certainty. The aim is a direction plus sample sizes, as plan 014 already
 required.
 
 **H1: the accessibility bridge.** Do first touches that carry the legal half of
-the template-v2 bridge get a different reply rate from those that do not?
-Today the bridge follows automatically from an accessibility proof card, so the
-comparison is observational and confounded with what the site's findings
-contain. It becomes a controlled test only if the operator approves assigning
-it by hash (decision D1).
+the fixed bridge get a different reply rate from those that do not? In v3 the
+bridge follows automatically from an accessibility priority-card category, so
+the comparison is observational and confounded with what the selected report
+priorities contain. It becomes a controlled test only if the operator approves
+assigning it by hash (decision D1).
 
-**H2: evidence weight.** Does reply rate differ across the preview's grade, or
-across bands of distinct findings and affected pages? This is descriptive. The
-grade is the severity-derived label the prospect already sees, and it is
-**never** used to select, order or exclude prospects. Using it that way would
-bring back the score that plan 047 removed.
+**H2: evidence weight.** Does reply rate differ across bands of distinct
+findings, affected pages, severity composition, or the categories occupying the
+three report-aligned priority-card slots? This is descriptive. V3 deliberately
+has no outreach grade, and none of these evidence facts is used to select,
+order or exclude prospects.
 
 **H3: where the contact came from.** Do hard bounces and reply rate differ by
 contact origin? This is the most actionable result for deliverability, and the
@@ -91,11 +86,11 @@ reported as they are, with no rate inferred from a handful of events.
 
 Kept deliberately small, and none of it changes what the prospect receives:
 
-1. **Record the evidence shown.** When a preview is recorded, store its grade,
-   its distinct-finding and affected-page counts, its proof-card categories and
-   whether the bridge carried the legal half. Store these on the preview row,
-   and remove the stale comment on the draft schema. No rule IDs, no URLs, no
-   recipient data.
+1. **Evidence snapshot — done by Plan 069.** V3 stores distinct-finding and
+   affected-page counts, severity totals, the three priority-card categories,
+   selected-analysis lineage and the findings digest on the preview row. The
+   legal half of the fixed bridge is derivable from whether those categories
+   include accessibility. No rule IDs, URLs or recipient evidence are added.
 2. **Tag the experiment.** Add a campaign version to the thread, stamped when
    the thread opens, and freeze it together with `evidenceVersion`,
    `outreachPromptVersion`, `previewContentVersion` and the spacing values.

@@ -5,8 +5,10 @@ import {
   containsProhibitedPreviewContent,
   outreachPreviewInputSchema,
   outreachPreviewSummarySchema,
+  outreachPreviewSummaryV3Schema,
   type OutreachPreviewInput,
   type OutreachPreviewSummary,
+  type OutreachPreviewSummaryV3,
 } from './outreach-preview.js';
 
 /** A one-pixel PNG, so the byte-level assertions have something real to run
@@ -404,3 +406,133 @@ describe('the v2 outreach preview summary contract', () => {
     ).toBe(false);
   });
 });
+
+describe('the v3 outreach preview summary contract', () => {
+  function priorityCard(
+    overrides: Partial<OutreachPreviewSummaryV3['priorityCards'][number]> = {},
+  ): OutreachPreviewSummaryV3['priorityCards'][number] {
+    return {
+      rank: 1,
+      title: {
+        fr: 'Certains boutons ne sont pas nommés clairement.',
+        en: 'Some buttons are not clearly named.',
+      },
+      category: 'accessibility',
+      severity: 'serious',
+      affectedPageCount: 1,
+      ...overrides,
+    };
+  }
+
+  function summaryV3(
+    overrides: Partial<OutreachPreviewSummaryV3> = {},
+  ): OutreachPreviewSummaryV3 {
+    return {
+      contentVersion: 'v3',
+      observedAt: new Date('2026-09-19T08:00:00.000Z'),
+      language: 'fr',
+      recipient: { businessName: 'Hôtel de la Plage', dataOrigins: ['public-website'] },
+      links: {
+        offer: 'https://odysseusaudit.com/offre',
+        privacy: 'https://odysseusaudit.com/confidentialite-prospection',
+        optOut: 'https://odysseusaudit.com/desinscription',
+      },
+      coverage: {
+        inventoriedPageCount: 12,
+        contentCheckedPageCount: 12,
+        performanceMeasuredPageCount: 5,
+      },
+      distinctFindingCount: 4,
+      affectedPageCount: 7,
+      severityTotals: { critical: 1, serious: 1, moderate: 1, minor: 1 },
+      priorityCards: [
+        priorityCard({ rank: 1, severity: 'critical' }),
+        priorityCard({ rank: 2 }),
+        priorityCard({ rank: 3, severity: 'moderate' }),
+      ],
+      dataQuality: { status: 'complete', limitations: [] },
+      facts: { state: 'omitted' },
+      ...overrides,
+    };
+  }
+
+  it('accepts a well-formed strict v3 summary', () => {
+    expect(outreachPreviewSummaryV3Schema.parse(summaryV3())).toBeTruthy();
+    expect(
+      outreachPreviewSummaryV3Schema.safeParse({
+        ...summaryV3(),
+        exactAffectedUrls: ['https://hotel.example/chambres'],
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects three priority cards when the document has fewer than three distinct findings', () => {
+    expect(
+      outreachPreviewSummaryV3Schema.safeParse(
+        summaryV3({
+          distinctFindingCount: 2,
+          severityTotals: { critical: 1, serious: 1, moderate: 0, minor: 0 },
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it('keeps scoped limitations coherent with the data-quality status', () => {
+    expect(
+      outreachPreviewSummaryV3Schema.safeParse(
+        summaryV3({ dataQuality: { status: 'limited', limitations: [] } }),
+      ).success,
+    ).toBe(false);
+
+    const limitation = {
+      code: 'performance-sample-limited',
+      summary: {
+        fr: 'Les mesures de vitesse couvrent un échantillon restreint.',
+        en: 'Speed measurements cover a limited sample.',
+      },
+    };
+    expect(
+      outreachPreviewSummaryV3Schema.safeParse(
+        summaryV3({ dataQuality: { status: 'limited', limitations: [limitation] } }),
+      ).success,
+    ).toBe(true);
+    expect(
+      outreachPreviewSummaryV3Schema.safeParse(
+        summaryV3({ dataQuality: { status: 'complete', limitations: [limitation] } }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it('runs the public-content guard over v3 priority and limitation copy', () => {
+    const hostileCard = summaryV3();
+    hostileCard.priorityCards = [
+      priorityCard({ rank: 1 }),
+      priorityCard({
+        rank: 2,
+        title: { fr: 'Vous devez agir.', en: 'You must act.' },
+      }),
+      priorityCard({ rank: 3 }),
+    ];
+    expect(outreachPreviewSummaryV3Schema.safeParse(hostileCard).success).toBe(false);
+
+    expect(
+      outreachPreviewSummaryV3Schema.safeParse(
+        summaryV3({
+          dataQuality: {
+            status: 'limited',
+            limitations: [
+              {
+                code: 'unsafe-limitation',
+                summary: {
+                  fr: 'Une amende est prévue.',
+                  en: 'A penalty applies.',
+                },
+              },
+            ],
+          },
+        }),
+      ).success,
+    ).toBe(false);
+  });
+});
+

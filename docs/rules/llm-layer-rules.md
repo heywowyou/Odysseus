@@ -17,6 +17,17 @@ it.
 > not part of report production. Historical sections below remain useful as
 > incident rationale only where they are explicitly marked retired.
 
+> **Current outreach-preview contract — Plan 069 (2026-09-19).**
+> Publishing or rendering a v3 outreach preview makes **zero provider calls**.
+> The selected French analysis is read only as stored report lineage and as the
+> ordering source for `buildRenderedPriorities()`; none of its executive
+> summary, theme titles, impact prose, actions, notes or model risk may cross
+> the public-preview contract. Public priority wording comes from the reviewed
+> deterministic proof-card catalog, scan limitations come from Plan 068's
+> deterministic bilingual summaries, and legal facts come from the stored
+> deterministic obligation assessment. Touch 1 is code-owned and repeats only
+> the bounded snapshot facts persisted with that exact publication.
+
 Governing rule, restated because everything below serves it:
 **deterministic scanners detect; the LLM explains, groups, prioritizes,
 and translates.** The model may never introduce a finding absent from its

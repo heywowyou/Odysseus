@@ -23,7 +23,7 @@ fix it by changing colours, sizes, spacing or inline styles.
 
 ## Direction contract (plan 039, recorded 2026-09-11)
 
-- **Thesis**: the report and the v2 outreach preview join the public
+- **Thesis**: the report and the current v3 outreach preview join the public
   site's identity, the evidence desk's dark register. Identity changes,
   structure does not: same sections, same composition contracts, same
   pagination meaning, now wearing the site's near-navy world, ink ladder,
@@ -171,10 +171,13 @@ out is a defect, not minimalism:
   spacer after the grid keeps the composition stable in the PDF.
 - **Outreach preview**: its cover calls the paid report's canonical cover
   renderer, with the preview's recipient and scan date bound into the same
-  slots. Its scorecard calls the same grade renderer and applies the metadata
-  sheet's 112px circular badge, concentric strokes, and disclaimer geometry.
-  The four severity totals retain the full report's dot, label, count, and
-  plain-language meaning anatomy. This is a source-level reuse contract, not a
+  slots. Current v3 deliberately drops the historical v2 preview-only
+  grade/risk hero so the public document cannot tell a second top-level risk
+  story beside the paid report. It opens instead on measured results and then
+  three visibly ranked priority cards selected through the report's exact
+  priority view model. The four severity totals retain the full report's dot,
+  label, count, and plain-language meaning anatomy. Historical v2 HTML keeps
+  its old scorecard unchanged. This is a source-level reuse contract, not a
   screenshot match.
 - **Outreach preview sections** (accepted Impeccable direction, 2026-09-16):
   the post-cover sections carry the report's current section system, not
@@ -184,7 +187,7 @@ out is a defect, not minimalism:
   navigate by). Raised surface tiles and cards appear only where a figure or
   an item needs holding: the three coverage counts, the totals pair led by
   the accent-tinted findings tile, the severity grid (four across on
-  desktop, two on phones), and the three proof cards (meta row first, then
+  desktop, two on phones), and the three ranked priority cards (meta row first, then
   the dossier mark and title). The legal block raises the regime criterion
   as a reference card, keeps the registry sentence as body text, and sets
   the counsel caveat as fine print. The offer closes with the reply button
@@ -192,7 +195,7 @@ out is a defect, not minimalism:
 - **Outreach preview scroll cue**: on screen only, a ringed chevron link
   between the decision question and the report-type line tells a reader
   landing on the full-height cover that the document continues, and jumps
-  to the grade. It drops three times after load and never moves under
+  to measured results. It drops three times after load and never moves under
   reduced motion; print hides it. The paid report's cover never renders it.
   At phone widths the report-type line drops its side hairlines and binds
   each separator dot to the preceding category so no line opens with one.

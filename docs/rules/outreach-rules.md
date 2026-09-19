@@ -19,21 +19,26 @@ email is fixed operator-approved wording
 "the prompt", the rule now binds those templates; the model-era
 mechanics (prompt, prose guards, touch word limits) are retired.
 
-**Amended 2026-09-14, template v2.** The prescan remains the cheap
-qualification and cohort-selection gate. A hotel is contacted only after its
-selected candidate has a coverage-complete outreach full scan and a published
-v2 preview. Touch 1 reuses only the public-safe aggregates from that same scan:
-distinct-finding count, unique affected-page count, the strongest non-zero
-severity totals, and the categories of the preview's own three proof cards.
-Those facts make the message genuinely prospect-specific rather than merely
-personalised-looking. The subject and opener use "analyse"; "audit complet" is
-reserved for the paid deliverable.
+**Amended 2026-09-19, preview v3 (Plan 069).** Qualification remains separate
+from the public preview. A prospect is contacted only after a Plan-050
+qualifying Full scan has complete declared crawl coverage, current FR and EN
+reports, and a published v3 preview. The preview's first three cards follow the
+selected French report's first three rendered priorities, but every public
+sentence remains reviewed deterministic copy. Touch 1 reuses only the bounded
+facts frozen on that exact publication row: distinct-finding count,
+unique-affected-page count, severity totals, and the three priority-card
+categories. It never recomputes them from later findings. Those facts make the
+message genuinely prospect-specific rather than merely personalised-looking.
+The subject and opener use "analyse"; "audit complet" is reserved for the paid
+deliverable. Historical v1/v2 links remain compatible until revocation or
+expiry; no new v1/v2 publication is created.
 
 Companions: `docs/rules/obligation-basis.md` for what may be claimed about the
 client, `docs/rules/operator-obligations.md` for what binds us,
 `docs/rules/prospect-qualification.md` for who may be contacted,
 `docs/rules/offer-positioning.md` for what is being sold,
-`docs/rules/llm-layer-rules.md` section 10 for when the model is called.
+`docs/rules/llm-layer-rules.md` for the report-model boundary; outreach
+itself adds no model call.
 
 ---
 
@@ -63,15 +68,16 @@ has a mental budget line for being found and for completed sales; it has
 none for accessibility. Argument B needs prior credibility and is easily
 dismissed as scare-selling when it arrives cold from a stranger.
 
-**Template-v2 exception, 2026-09-14.** Touch 1 may contain one fixed bridge
-after the prospect-specific scan facts: "Ces constats ont un impact direct
-sur l’expérience de vos clients et peuvent également relever du cadre légal
-applicable en matière d’accessibilité." The legal half is emitted only when
-the published preview's proof-card set contains an accessibility finding. It
-is not Argument B's facts block, does not say the regime applies to this
-business, and carries no criterion, registry datum, deadline, sanction or
-scope conclusion. If no accessibility proof card is present, the bridge ends
-after the customer-experience sentence.
+**Touch-1 bridge, revised for v3 on 2026-09-19.** Touch 1 may contain one fixed
+bridge after the prospect-specific scan facts: "Ces constats ont un impact
+direct sur l’expérience de vos clients et peuvent également relever du cadre
+légal applicable en matière d’accessibilité." The legal half is emitted only
+when the published v3 snapshot's priority-card categories contain
+accessibility. It is not Argument B's facts block, does not say the regime
+applies to this business, and carries no criterion, registry datum, deadline,
+sanction or scope conclusion. If no accessibility priority card is present,
+the bridge ends after the customer-experience sentence. Historical v2 drafts
+keep their existing compatibility behavior.
 
 **B before A in the paid report.** The buyer has paid and now wants to
 know where they stand. This inversion is deliberate; report templates
@@ -175,17 +181,16 @@ One new piece of information per touch. Each is deterministic in
 substance; since trade-off 83 the wording is too (approved templates, no
 model).
 
-**Revised 2026-09-14, template v2.** The first touch's evidence document is the
-full-scan scorecard preview (section 6bis), built from a candidate-linked
-full outreach scan rather than from the three-page prescan. The same immutable
-audit supplies Touch 1's aggregate counts and proof-card categories, so the
-email and linked preview cannot describe different slices of the site. The
-prescan remains a cost gate and qualification input; it is not the evidentiary
-source for the first email.
+**Revised 2026-09-19, preview v3.** The first touch's evidence document is the
+report-aligned full-scan preview (section 6bis). The same Full scan supplies
+the measured facts, while the currently selected French analysis supplies only
+the report priority order. The publication row freezes the bounded aggregates
+and priority-card categories that Touch 1 may repeat, so a later report
+regeneration cannot silently make the email describe a different story.
 
 | Touch | Content | Source |
 |---|---|---|
-| 1 | Prospect-specific full-scan aggregates, conditional impact/legal bridge, and the published scorecard preview | outreach full scan |
+| 1 | Prospect-specific full-scan aggregates, conditional impact/legal bridge, and the published report-aligned preview | Full scan + selected report lineage |
 | 2 | A short reminder focused on acting on the findings; names no new finding | approved template |
 | 3 | Criteria and this company's available registry data, followed by a commercial paragraph explicitly separated from the legal question | deterministic facts block + approved template |
 
@@ -200,68 +205,94 @@ applicable en matière d’accessibilité" when an accessibility proof card is
 present, but it never carries the legal criteria, registry facts or a scope
 conclusion. Touch 3 remains the first place where those facts are spelled out.
 
-## 6bis. The full-scan scorecard preview
+## 6bis. The report-aligned full-scan preview
 
-**Added 2026-09-11, plan 037; email reuse clarified 2026-09-14.** The preview
-sent at touch 1 is a versioned v2 document built from one candidate-linked
-**outreach full scan**: since trade-off 91 this is the prospect's one Full
-scan, the same audit that produces the FR and EN client reports. *Amended
-2026-09-17, issue #388 (trade-off 95):* the preview and the first email are
-built only once that audit has a current FR and EN report pair; until then
-the prospect's next action is regenerating the report from stored evidence,
-never a rescan. Cheap qualification, the prescan,
-immutable scoring, and cohort selection remain the cost gate; only selected
-cohort members receive one. It is started by the operator from a selected
-prospect, never automatically.
+**Current contract: v3, Plan 069 (2026-09-19). Historical v2 remains
+compatible.** The preview sent at touch 1 is still a separate, deliberately
+thin public document built from the prospect's one Full scan. New publication
+requires all of the following:
 
-Touch 1 may reuse the scorecard's public-safe aggregate facts from that exact
-scan: distinct-finding count, unique affected-page count, up to the two
-strongest non-zero severity totals, and the categories of the scorecard's own
-three proof cards. It does not expose occurrences, exact URLs, selectors,
-remediation or any other report-only detail.
+- a Plan-050 qualifying Full scan whose declared crawl coverage completed;
+- current FR and EN client reports for that audit;
+- the currently selected French analysis, matching the audit's current
+  findings provenance;
+- the Plan-068 scoped evidence diagnostics available for that stored audit
+  (the diagnostics themselves may report `complete`, `limited` or
+  `unavailable`).
 
-What the preview shows, and nothing more:
+The selected French analysis is an **ordering authority, not a prose source**.
+V3 runs the paid report's exact `buildRenderedPriorities()` logic and uses the
+first three rendered priorities. Each public card then resolves its title from
+the existing operator-reviewed bilingual proof-card catalog through that
+priority's deterministic representative finding. Theme titles, executive
+summary, business-impact prose, recommended actions, notes and model risk never
+enter the preview.
 
-- coverage facts: inventoried, content-checked, and performance-measured
-  page counts, reported separately
-- the count of distinct findings and the count of unique affected pages
-- distinct-finding totals for each of the four severities
-- exactly three text proof cards, each a public-safe title with its category,
-  severity, and affected-page count, selected deterministically in code from
-  an operator-approved bilingual copy catalog
-- the deterministic facts block when the sources permit it (same
-  `buildOutreachFactsBlock` path as touch 3)
-- the code-owned EUR 990 HT price, with the ask being to reply and request
-  the audit, not a checkout link
-- the article 14 disclosures: identity, data origins, purpose, opt-out, and
-  the 30-day link expiry
+Plan 050 crawl qualification and Plan 068 diagnostics answer different
+questions and must not be merged:
+
+- incomplete declared crawl -> no preview;
+- completed crawl + diagnostics `complete` -> normal v3 preview;
+- completed crawl + diagnostics `limited` -> preview plus the existing
+  bounded client-facing limitation summaries;
+- completed crawl + diagnostics `unavailable` -> preview plus a fixed
+  "detailed diagnostics unavailable" disclosure;
+- operational warnings are operator-only and never enter public HTML.
+
+Touch 1 may reuse only the exact public-safe facts frozen when v3 was published:
+distinct-finding count, unique affected-page count, severity totals, and the
+three priority-card categories. The private preview row also records the
+selected French `sourceAnalysisId` and current `sourceFindingsDigest`. If
+either lineage changes, the old public link remains reachable until it is
+revoked or expires, but it is **stale for a new first-touch draft** and must be
+reissued. Reissue uses stored evidence and reports; it does not imply a rescan.
+
+The bounded regulatory block is rebuilt from the selected French analysis's
+deterministic `obligationAssessment`. It may state the regime criterion,
+available public registry facts and the recommendation to confirm scope with
+counsel. It still never states that this business is bound, and never prints a
+client-specific deadline, sanction claim or model-written legal conclusion.
+
+What v3 shows, and nothing more:
+
+- inventoried, content-checked and performance-measured page counts, separately;
+- distinct-finding count and unique affected-page count;
+- non-zero severity totals;
+- exactly three ranked priority cards in the same order as the first three
+  paid-report priorities, using reviewed public-safe copy;
+- scan-data quality status and only bounded client limitations where relevant;
+- the deterministic regulatory facts block when the sources permit it;
+- the code-owned EUR 990 HT price, with the ask being to reply and request the
+  diagnostic, not a checkout link;
+- the article 14 disclosures: identity, actual data origins, purpose, opt-out,
+  and the 30-day link expiry.
 
 What it never contains: screenshots or any image, exact URLs, selectors,
-finding or rule IDs, occurrences, raw evidence, remediation, model prose, a
-0-to-100 score, statistics, or a legal conclusion about the business.
+finding or rule IDs, occurrences, raw evidence, remediation, model prose,
+model risk, the historical v2 grade/risk hero, population statistics, or a
+legal conclusion about the business.
 
 Lifecycle rules:
 
-- The audit detail page owns the document: the operator renders the exact
-  unpublished preview there, downloads the operator PDF, then publishes,
-  copies the one-time token link, and only then can create the first draft.
-  The prospect page starts the scan and links to the audit; it has no
-  preview controls.
-- The public page is an opaque-token, noindex, no-store HTML page that
-  expires after 30 days. It offers no PDF. Only the operator downloads a PDF,
-  from the private audit page.
+- New publications are v3. Stored v1/v2 objects are not rewritten; existing
+  links continue to load, expire and revoke under their historical contracts,
+  and v2 remains resolvable where an already-established draft compatibility
+  path needs it.
+- The authenticated audit/prospect workflow renders the same v3 HTML used for
+  publication and its operator-only PDF. The public site remains an opaque
+  object reader with no database access.
 - Nothing publishes automatically, and no first-touch draft exists before an
   explicit publication. Suppression blocks publication and revokes every live
   preview for the domain.
-- The preview and the paid report come from the same Full scan (trade-off
-  91). The preview is a thinner document of that scan, never the report held
-  back, and it is published only after the scan's FR and EN reports are
-  ready (trade-off 95). Replies and follow-ups on an existing thread are not
-  gated, and a preview published earlier is not revoked by this rule.
-- Changing the published price revokes and reissues every live v2 preview,
-  so no live link ever shows a stale amount.
-- A full-scan preview is built only after the audit's coverage gate passes;
-  a coverage failure means no preview, not a partial one.
+- The preview and paid report come from the same stored Full scan. Publication
+  waits for the current report pair; report/preview regeneration reuses stored
+  evidence and never asks for a rescan merely because prose or selection
+  changed.
+- A published price change revokes and reissues every live preview that embeds
+  the old amount, because the HTML object is immutable after publication.
+- The Plan-050 crawl-completeness gate remains: an incomplete crawl means no
+  preview, not a partial one. Scoped Plan-068 limitations do not turn a
+  completed crawl back into an incomplete one.
 
 **Preview links in hosting logs**, verified against Vercel's runtime logs
 documentation on 2026-09-16. The site code never logs a preview token, but

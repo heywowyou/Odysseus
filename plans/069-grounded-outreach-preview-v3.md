@@ -11,7 +11,7 @@
 - Priority: P1
 - Effort: L
 - Depends on: 067, 068
-- Execution status: TODO
+- Execution status: IN PROGRESS — implementation is on `main`; repository-wide validation and the stored-audit no-rescan acceptance remain externally blocked
 - Planning rebaseline: `105500fed7a8c38c39257872e9ab2064803495b3`
 - Target content version: `v3`
 
@@ -446,3 +446,43 @@ acceptance above is recorded.
 | zero provider calls | dependency/call-budget tests | existing 067/068 budgets + preview no-provider test |
 | FR/EN/a11y | report preview tests | parity, leak and axe suites |
 | no-rescan acceptance | existing stored Full scan | dated operator acceptance record |
+
+## Implementation record — 2026-09-19
+
+Implementation landed directly on `main` after the planning/corrective pass:
+
+- `e9aee741` — plan/rebaseline committed;
+- `15427a10` — strict v3 core contract and renderer;
+- `f0d6316c` — selected-report lineage, persisted snapshot facts and v3 publication;
+- `875d47d1` — audit/prospect/draft workflows switched to v3 with v2 compatibility;
+- `d921a472` — focused report-alignment, stale-lineage, diagnostics, FR/EN and renderer proofs;
+- final corrective closure pass: restores the card-count invariant in the v3
+  schema, makes the shared operator PDF validator explicitly accept both
+  historical v2 and current v3 editorial contracts, and updates the canonical
+  product/rules/design/experiment documentation.
+
+The implementation makes no scan or provider call. New publication is v3;
+historical v1/v2 storage/public objects remain untouched. The v3 first three
+cards are selected by the exact paid-report priority view model but use only
+reviewed deterministic public copy. Plan-068 client limitations are projected
+without operational warnings. Touch 1 reads the exact publication snapshot and
+refuses stale selected-analysis/findings lineage instead of recomputing it.
+
+### Verification state
+
+GitHub Actions run `35433792438` on implementation head `d921a472` failed
+**before any job step started**: the Security scan, test and custom-Semgrep jobs
+all ended with `runner_id: 0` / zero steps, and no job log existed to fetch.
+Vercel's commit status succeeded. This is the same pre-step Actions execution
+failure shape already recorded by Plans 067/068, not a test assertion from the
+Plan-069 code.
+
+Because no executable checkout/saved audit artifact is available through this
+session's repository tools, the Definition-of-done items that require actual
+command execution and the dated no-rescan stored-audit acceptance cannot be
+truthfully marked complete here. No live rescan was run. Under
+`plans/README.md`'s status definition this plan therefore remains **IN
+PROGRESS** even though the code/document implementation is complete on
+`main`; close/archive it only after the repository validation suite executes
+green and the stored-audit acceptance is recorded.
+
