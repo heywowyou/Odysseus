@@ -260,7 +260,7 @@ describe('the writing prompt requires full subject-verb-complement sentences wit
     const prompt = buildWritingSystemPrompt('fr', false, null);
     expect(prompt).toContain('un sujet explicite, un verbe et un complément');
     expect(prompt).toContain(
-      "Le formulaire de réservation ne signale pas ses erreurs de saisie, si bien qu'un client qui se trompe de date ne comprend pas pourquoi sa demande échoue",
+      "Le formulaire ne signale pas ses erreurs de saisie, si bien qu'un visiteur qui se trompe ne comprend pas pourquoi sa demande échoue",
     );
   });
 
@@ -268,7 +268,7 @@ describe('the writing prompt requires full subject-verb-complement sentences wit
     const prompt = buildWritingSystemPrompt('en', false, null);
     expect(prompt).toContain('an explicit subject, a verb, and a complement');
     expect(prompt).toContain(
-      'The reservation form does not flag its input errors, so a customer who enters the wrong date does not understand why the request failed',
+      'The form does not flag its input errors, so a visitor who enters an invalid value does not understand why the request failed',
     );
   });
 
@@ -314,7 +314,7 @@ describe('the writing prompt states the WCAG version and business-claim rules th
 
   it('forbids unsupported commercial outcomes even when hedged, in French', () => {
     const prompt = buildWritingSystemPrompt('fr', false, null);
-    expect(prompt).toContain('réservations, la conversion, le chiffre d’affaires');
+    expect(prompt).toContain('réservations, la conversion, le chiffre d'affaires');
     expect(prompt).toContain('Une précaution grammaticale ne transforme pas une affirmation non mesurée en preuve');
   });
 
