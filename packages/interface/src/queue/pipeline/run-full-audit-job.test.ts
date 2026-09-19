@@ -4,26 +4,24 @@ vi.mock('../../pipeline/audit-stage.js', () => ({ runAuditStage: vi.fn() }));
 vi.mock('../../pipeline/analysis-stage.js', () => ({ runAnalysisStage: vi.fn() }));
 vi.mock('../../pipeline/report-stage.js', () => ({ runAllReportsStage: vi.fn() }));
 vi.mock('@odysseus/store', () => ({
+  approveWritingCandidate: vi.fn(),
   completeJob: vi.fn(),
+  recordReadyWritingCandidate: vi.fn(),
   updateJobProgress: vi.fn(),
   ensureJobRunIdentity: vi.fn(),
   isJobClaimCurrent: vi.fn(),
 }));
-vi.mock('@odysseus/llm', async (importOriginal) => ({
-  ...(await importOriginal<Record<string, unknown>>()),
-  pauseBetweenLanguagePasses: vi.fn(),
-}));
-
 import { runAuditStage } from '../../pipeline/audit-stage.js';
 import { runAnalysisStage } from '../../pipeline/analysis-stage.js';
 import { runAllReportsStage } from '../../pipeline/report-stage.js';
 import {
+  approveWritingCandidate,
   completeJob,
   ensureJobRunIdentity,
+  recordReadyWritingCandidate,
   isJobClaimCurrent,
   updateJobProgress,
 } from '@odysseus/store';
-import { pauseBetweenLanguagePasses } from '@odysseus/llm';
 import { runFullAuditJob } from './run-full-audit-job.js';
 import { CancellationRegistry, JobCancelledError } from '../cancellation.js';
 import type { PipelineContext } from '../job-queue.js';
@@ -92,6 +90,7 @@ function fakeAnalysisResult(language: 'fr' | 'en') {
     // Issue #145: the runner settles this field after the report stage, so
     // the mocked stage result has to carry it (empty: nothing pending).
     advisoryPasses: [] as Promise<void>[],
+    sanitizationWarnings: [],
   };
 }
 
@@ -118,13 +117,9 @@ beforeEach(() => {
       generatedAt: new Date(),
       pageCount: 44,
     },
-    {
-      language: 'en',
-      reportPath: '/dir/reports/x.pdf',
-      generatedAt: new Date(),
-      pageCount: 44,
-    },
   ]);
+  vi.mocked(approveWritingCandidate).mockResolvedValue(undefined as never);
+  vi.mocked(recordReadyWritingCandidate).mockResolvedValue(undefined as never);
   vi.mocked(completeJob).mockResolvedValue(undefined);
   vi.mocked(updateJobProgress).mockResolvedValue(undefined);
   vi.mocked(ensureJobRunIdentity).mockResolvedValue({
@@ -134,7 +129,7 @@ beforeEach(() => {
 });
 
 describe('runFullAuditJob', () => {
-  it('runs scan -> analyze(fr) -> analyze(en) -> generate all reports -> complete, in order', async () => {
+  it('runs scan -> analyze(fr) -> render French -> complete, in order', async () => {
     const job = fakeJob();
     const calls: string[] = [];
     vi.mocked(runAuditStage).mockImplementation(async () => {
@@ -155,28 +150,11 @@ describe('runFullAuditJob', () => {
 
     await runFullAuditJob(job, ctx);
 
-    expect(calls).toEqual(['audit', 'analyze-fr', 'analyze-en', 'report-all', 'complete']);
+    expect(calls).toEqual(['audit', 'analyze-fr', 'report-all', 'complete']);
   });
 
-  // Issue #30: back to back, the English pass entered the quota window the
-  // French pass had just drained and 429ed through every retry.
-  it('pauses between the French and English passes', async () => {
-    const job = fakeJob();
-    const calls: string[] = [];
-    vi.mocked(runAnalysisStage).mockImplementation(async (_d, _m, _f, options) => {
-      calls.push(`analyze-${(options as { language: string }).language}`);
-      return fakeAnalysisResult((options as { language: 'fr' | 'en' }).language);
-    });
-    vi.mocked(pauseBetweenLanguagePasses).mockImplementation(async () => {
-      calls.push('pause');
-    });
 
-    await runFullAuditJob(job, ctx);
-
-    expect(calls).toEqual(['analyze-fr', 'pause', 'analyze-en']);
-  });
-
-  it('generates all four (language, tier) report combinations from the fr and en analyses', async () => {
+  it('renders only the canonical French analysis on the normal path', async () => {
     const job = fakeJob();
     await runFullAuditJob(job, ctx);
 
@@ -185,10 +163,9 @@ describe('runFullAuditJob', () => {
       expect.anything(),
       expect.anything(),
       expect.anything(),
-      expect.objectContaining({
+      {
         fr: expect.objectContaining({ language: 'fr' }),
-        en: expect.objectContaining({ language: 'en' }),
-      }),
+      },
       fakeConnection,
       // Issue #140: the runner computes the provenance once over the audit
       // findings and threads the same value down as the new trailing
@@ -293,23 +270,17 @@ describe('runFullAuditJob', () => {
     expect(completeJob).toHaveBeenCalledWith(fakeConnection, 'job-1', { auditId: 'audit-1' });
   });
 
-  it('passes the same obligationAssessment, computed once by runAuditStage, into both language analyses', async () => {
+  it('passes the obligationAssessment computed by runAuditStage into the French analysis', async () => {
     const job = fakeJob();
     await runFullAuditJob(job, ctx);
 
     const obligationAssessment = fakeAuditResult().obligationAssessment;
+    expect(runAnalysisStage).toHaveBeenCalledTimes(1);
     expect(runAnalysisStage).toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),
       expect.anything(),
       expect.objectContaining({ language: 'fr', obligationAssessment }),
-      fakeConnection,
-    );
-    expect(runAnalysisStage).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.objectContaining({ language: 'en', obligationAssessment }),
       fakeConnection,
     );
   });
@@ -354,7 +325,7 @@ describe('runFullAuditJob', () => {
       expect(release).toHaveBeenCalled();
     });
 
-    it('skips the English pass when the stop came during the French one', async () => {
+    it('skips rendering when the stop came during the French analysis', async () => {
       vi.mocked(runAnalysisStage).mockImplementationOnce(async () => {
         ctx.cancellation.request('job-1');
         return fakeAnalysisResult('fr');
@@ -365,17 +336,6 @@ describe('runFullAuditJob', () => {
       expect(runAllReportsStage).not.toHaveBeenCalled();
     });
 
-    it('skips rendering when the stop came during the English pass', async () => {
-      vi.mocked(runAnalysisStage)
-        .mockImplementationOnce(async () => fakeAnalysisResult('fr'))
-        .mockImplementationOnce(async () => {
-          ctx.cancellation.request('job-1');
-          return fakeAnalysisResult('en');
-        });
-
-      await expect(runFullAuditJob(fakeJob(), ctx)).rejects.toBeInstanceOf(JobCancelledError);
-      expect(runAnalysisStage).toHaveBeenCalledTimes(2);
-      expect(runAllReportsStage).not.toHaveBeenCalled();
-    });
+;
   });
 });
