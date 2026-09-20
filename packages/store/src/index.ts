@@ -115,6 +115,7 @@ export {
 } from './report-preparations.js';
 export type { SelectedAuditAnalysisPairResolution } from './report-preparations.js';
 export {
+  getLatestFinalizedReport,
   getLatestGeneratedReport,
   getLatestReport,
   getReportById,

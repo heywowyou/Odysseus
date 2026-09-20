@@ -27,6 +27,15 @@ export interface AuditDetailStrings {
   reportFreshness: Record<'fresh' | 'stale' | 'unverified', string>;
   /** Plan 050: advisory badge on a report rendered by an older template. */
   reportOlderTemplate: string;
+  /** Plan 072: the current report is the operator's corrected render.
+   *  `{count}` is how many prose fields they rewrote. */
+  reportFinalized: string;
+  /** The same, when the operator rewrote nothing and only re-rendered. */
+  reportFinalizedNoOverrides: string;
+  /** A finalization exists but a regeneration since has taken over. */
+  reportFinalizationSuperseded: string;
+  /** Link to the pipeline render a finalization corrected. */
+  viewGeneratedReport: string;
   /** Non-blocking warning on a report row whose measured page count is
    *  above the report package's threshold; {count} is replaced with the
    *  page count by the page. */
@@ -341,6 +350,10 @@ export const auditDetail = {
       'Ce rapport a été rédigé à partir des seuls constats du scan. L’analyse rédigée automatiquement n’a pas été lancée, l’audit n’ayant détecté aucun problème critique ou grave et moins de cinq problèmes de gravité modérée.',
     reportFreshness: { fresh: 'À jour', stale: 'À régénérer', unverified: 'Non vérifié' },
     reportOlderTemplate: 'Modèle de rapport antérieur',
+    reportFinalized: 'Finalisé · {count} corrections',
+    reportFinalizedNoOverrides: 'Finalisé · rendu à nouveau',
+    reportFinalizationSuperseded: 'Finalisation remplacée par une régénération',
+    viewGeneratedReport: 'Voir le rapport généré',
     reportPageCountWarning: 'Rapport long : {count} pages. Il reste complet et livrable.',
     lifecycleLabel: 'Étape',
     lifecycle: {
@@ -646,6 +659,10 @@ export const auditDetail = {
       'This report was written from the scan findings alone. The model-written analysis did not run, because the audit found no critical or serious issue and fewer than five moderate ones.',
     reportFreshness: { fresh: 'Fresh', stale: 'Out of date', unverified: 'Unverified' },
     reportOlderTemplate: 'Older report template',
+    reportFinalized: 'Finalized - {count} corrections',
+    reportFinalizedNoOverrides: 'Finalized - re-rendered',
+    reportFinalizationSuperseded: 'Finalization replaced by a regeneration',
+    viewGeneratedReport: 'View the generated report',
     reportPageCountWarning: 'Long report: {count} pages. It remains complete and deliverable.',
     lifecycleLabel: 'Stage',
     lifecycle: {

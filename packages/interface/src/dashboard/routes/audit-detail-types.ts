@@ -131,6 +131,20 @@ export interface ReportStatusResponse {
   /** Plan 050: rendered by an older report template. Advisory only; the
    *  report stays previewable and deliverable. */
   olderTemplate?: boolean;
+  /** Plan 072: how the current report came to exist. Absent means the
+   *  ordinary pipeline render, which is every report before the finalizer
+   *  and every one since that the operator has not corrected. */
+  finalized?: {
+    /** How many prose fields the operator rewrote. Zero is legitimate: a
+     *  re-render on newer code that changed no wording. */
+    overrideCount: number;
+    finalizedAt: string;
+  };
+  /** Plan 072: a finalization exists for this language, but a regeneration
+   *  since has taken over as the current report. Shown rather than hidden:
+   *  the client's delivered wording silently reverting to the model's is
+   *  the surprise the finalizer exists to prevent. */
+  finalizationSuperseded?: boolean;
 }
 
 export interface ApprovedReportRefResponse {

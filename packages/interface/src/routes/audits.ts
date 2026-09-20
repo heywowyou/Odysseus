@@ -27,6 +27,7 @@ import {
   getActiveReportBundle,
   getLatestReportBundle,
   getReportBundleByDigest,
+  getLatestFinalizedReport,
   getLatestGeneratedReport,
   getLatestReport,
   getLatestReportApproval,
@@ -38,6 +39,7 @@ import {
   listReportLanguages,
   persistReport,
   persistReportApproval,
+  reportOrigin,
   resolveSelectedAnalysisPairForAudit,
   saveLinkedAuditIdentity,
   setAuditGradeOverride,
@@ -559,8 +561,17 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     ]);
     const frPdfAvailable = frPdf !== undefined;
     const enPdfAvailable = enPdf !== undefined;
+    // Plan 072: whether a finalization exists per language, which is a
+    // separate question from which report is current - a regeneration can
+    // have overtaken one, and that is what the dashboard has to say out loud.
+    const [frFinalized, enFinalized] = await Promise.all([
+      getLatestFinalizedReport(connection, auditId, 'fr'),
+      getLatestFinalizedReport(connection, auditId, 'en'),
+    ]);
     const reports = (['fr', 'en'] as const).map((language) => {
       const report = language === 'fr' ? currentFrReport : currentEnReport;
+      const finalized = language === 'fr' ? frFinalized : enFinalized;
+      const current = report !== null && reportOrigin(report) === 'finalized';
       return {
         language,
         status: (report
@@ -571,6 +582,15 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         // must never be derived from an inferred value.
         ...(report?.pageCount !== undefined ? { pageCount: report.pageCount } : {}),
         ...(report !== null && !reportUsesCurrentTemplate(report) ? { olderTemplate: true } : {}),
+        ...(current && report?.finalization !== undefined
+          ? {
+              finalized: {
+                overrideCount: report.finalization.overrideCount,
+                finalizedAt: report.finalization.uploadedAt.toISOString(),
+              },
+            }
+          : {}),
+        ...(!current && finalized !== null ? { finalizationSuperseded: true } : {}),
         pdfAvailable: language === 'fr' ? frPdfAvailable : enPdfAvailable,
       };
     });

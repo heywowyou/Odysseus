@@ -276,6 +276,26 @@ export function ReportsCard(props: {
                   {report.olderTemplate === true ? (
                     <Badge tone="neutral">{strings.auditDetail.reportOlderTemplate}</Badge>
                   ) : null}
+                  {/* Plan 072: which of the two renders this row is. The
+                      operator asked for the corrected PDF to be told apart
+                      from the generated one at a glance, and for a
+                      regeneration that overtakes a finalization to say so
+                      rather than quietly reverting the client's wording. */}
+                  {report.finalized !== undefined ? (
+                    <Badge tone="accent">
+                      {report.finalized.overrideCount === 0
+                        ? strings.auditDetail.reportFinalizedNoOverrides
+                        : strings.auditDetail.reportFinalized.replace(
+                            '{count}',
+                            String(report.finalized.overrideCount),
+                          )}
+                    </Badge>
+                  ) : null}
+                  {report.finalizationSuperseded === true ? (
+                    <Badge tone="moderate">
+                      {strings.auditDetail.reportFinalizationSuperseded}
+                    </Badge>
+                  ) : null}
                   <a
                     className={buttonStyles('ghost', 'sm')}
                     href={`${reportBase}/${report.language}/preview`}
@@ -301,6 +321,19 @@ export function ReportsCard(props: {
                   >
                     {strings.auditDetail.downloadReport}
                   </a>
+                  {/* Reachable, not primary: the finalized PDF is the
+                      deliverable, and the render it corrected stays one
+                      click away for comparison. */}
+                  {report.finalized !== undefined || report.finalizationSuperseded === true ? (
+                    <a
+                      className={buttonStyles('ghost', 'sm')}
+                      href={`${reportBase}/${report.language}/generated`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {strings.auditDetail.viewGeneratedReport}
+                    </a>
+                  ) : null}
                 </>
               ) : (
                 <>

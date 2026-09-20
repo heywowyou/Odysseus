@@ -71,3 +71,19 @@ export async function getLatestGeneratedReport(
     .sort({ generatedAt: -1 })
     .lean<ReportDocument>();
 }
+
+/** Latest operator-finalized report for an audit and language, whether or
+ *  not a later regeneration has overtaken it. That "overtaken" case is the
+ *  one the dashboard has to show rather than hide: the client's delivered
+ *  wording silently reverting to the model's is exactly the surprise this
+ *  whole mechanism exists to prevent. */
+export async function getLatestFinalizedReport(
+  connection: Connection,
+  auditId: string,
+  language: ReportLanguage,
+): Promise<ReportDocument | null> {
+  return createReportModel(connection)
+    .findOne({ auditId, language, origin: 'finalized' })
+    .sort({ generatedAt: -1 })
+    .lean<ReportDocument>();
+}

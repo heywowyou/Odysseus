@@ -573,6 +573,87 @@ describe('reports card PDF availability (issue #91)', () => {
     ],
   });
 
+  /** Plan 072: the operator asked for the corrected PDF to be told apart
+   *  from the generated one at a glance. */
+  const auditWithFinalizedReport = (
+    finalized: Record<string, unknown> | undefined,
+    superseded = false,
+  ): Record<string, unknown> => ({
+    ...auditWithReports(true),
+    reports: [
+      {
+        language: 'fr',
+        status: 'fresh',
+        pdfAvailable: true,
+        ...(finalized !== undefined ? { finalized } : {}),
+        ...(superseded ? { finalizationSuperseded: true } : {}),
+      },
+      { language: 'en', status: 'unverified', pdfAvailable: false },
+    ],
+  });
+
+  it('marks a finalized report with the number of corrections it carries', async () => {
+    stubRoutes({
+      '/api/audits/audit-1/report-preparation': null,
+      '/api/audits/audit-1': auditWithFinalizedReport({
+        overrideCount: 6,
+        finalizedAt: '2026-09-20T18:12:00.000Z',
+      }),
+    });
+    const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
+    await settle(container, 'Finalisé');
+    expect(container.textContent).toContain('Finalisé · 6 corrections');
+    expect(
+      container.querySelector('a[href="/api/audits/audit-1/report/fr/generated"]'),
+    ).not.toBeNull();
+    root.unmount();
+  });
+
+  /** A re-render on newer code that rewrote no prose is a real finalization,
+   *  and reads as one rather than as "0 corrections". */
+  it('names a finalization that changed no wording as a re-render', async () => {
+    stubRoutes({
+      '/api/audits/audit-1/report-preparation': null,
+      '/api/audits/audit-1': auditWithFinalizedReport({
+        overrideCount: 0,
+        finalizedAt: '2026-09-20T18:12:00.000Z',
+      }),
+    });
+    const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
+    await settle(container, 'Finalisé');
+    expect(container.textContent).toContain('Finalisé · rendu à nouveau');
+    root.unmount();
+  });
+
+  /** The client's delivered wording reverting to the model's is exactly the
+   *  surprise the finalizer exists to prevent, so a regeneration that
+   *  overtook a finalization says so instead of quietly winning. */
+  it('warns when a regeneration has taken over from a finalization', async () => {
+    stubRoutes({
+      '/api/audits/audit-1/report-preparation': null,
+      '/api/audits/audit-1': auditWithFinalizedReport(undefined, true),
+    });
+    const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
+    await settle(container, 'Finalisation remplacée');
+    expect(container.textContent).toContain('Finalisation remplacée par une régénération');
+    expect(container.textContent).not.toContain('Finalisé ·');
+    root.unmount();
+  });
+
+  /** An ordinary pipeline report grows no badge and no extra link: the
+   *  distinction only exists where there is something to distinguish. */
+  it('leaves an ordinary generated report unmarked', async () => {
+    stubRoutes({
+      '/api/audits/audit-1/report-preparation': null,
+      '/api/audits/audit-1': auditWithReports(true),
+    });
+    const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
+    await settle(container, 'Prévisualiser');
+    expect(container.textContent).not.toContain('Finalisé');
+    expect(container.querySelector('a[href="/api/audits/audit-1/report/fr/generated"]')).toBeNull();
+    root.unmount();
+  });
+
   it('renders the unavailable state instead of live-looking anchors', async () => {
     stubRoutes({
       '/api/audits/audit-1/report-preparation': null,
