@@ -40,6 +40,11 @@ export {
 } from './finalize-bundle.js';
 export type { FinalizedBundle, RefusedBundle } from './finalize-bundle.js';
 export type { RenderBundle, RenderBundleLineage, ReportRenderInputs } from './render-bundle.js';
+export {
+  RENDER_BUNDLE_FILES,
+  readRenderBundleDir,
+  writeRenderBundleDir,
+} from './render-bundle-files.js';
 export { buildRenderedPriorities } from './template/rendered-priorities.js';
 export type { RenderedPriority, PriorityEvidence } from './template/rendered-priorities.js';
 

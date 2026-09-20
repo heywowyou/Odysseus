@@ -102,6 +102,27 @@ architectureRules.push(
     },
   },
   {
+    // Plan 072: the finalizer renders a client report on the operator's
+    // machine with whatever local code is checked out, typically newer than
+    // the build that rendered the hosted PDF. It must not be able to reach
+    // production state to do it: no persistence, no operator server, no
+    // driver. (It does load the OpenAI SDK transitively through
+    // @odysseus/llm's index, which builds a client only inside the call
+    // helpers it never reaches - a package-boundary rule forbids the deep
+    // import that would avoid even that.)
+    name: 'finalize-report-has-no-persistence-path',
+    severity: 'error',
+    comment:
+      'odysseus report:finalize must render from a bundle alone (Plan 072): no database, no operator server.',
+    from: {
+      path: '^packages/cli/src/commands/finalize-report[.]ts$',
+    },
+    to: {
+      path: '^packages/(?:store|interface)/|(^|/)node_modules/mongoose/',
+      reachable: true,
+    },
+  },
+  {
     // Plan 051: the re-audit findings delta is deterministic. Its core
     // computation, baseline lookup and report section must have no import
     // edge, direct or transitive, into @odysseus/llm or a model client. The

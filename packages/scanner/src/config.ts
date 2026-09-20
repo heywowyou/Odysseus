@@ -38,6 +38,11 @@ export function ensureEnvLoaded(): void {
 }
 
 export const DEFAULT_ARTIFACTS_DIR_NAME = 'artifacts';
+/** Plan 072: where the operator's finalization working sets live. Separate
+ *  from `artifacts/`, which holds what a scan produced: `reports/` holds what
+ *  the operator did to a report afterwards, and every file in it is client
+ *  data. Already in .gitignore alongside `*.pdf`. */
+export const DEFAULT_REPORTS_DIR_NAME = 'reports';
 /** Sentinel meaning "crawl until the frontier is exhausted". A real
  *  number rather than Infinity so it survives JSON round-tripping into the
  *  manifest and Mongoose's Number schema unchanged; callers that do
@@ -160,6 +165,19 @@ export function getArtifactsRoot(): string {
   const workspaceRoot = findWorkspaceRoot();
   if (configured) return path.resolve(workspaceRoot, configured);
   return path.join(workspaceRoot, DEFAULT_ARTIFACTS_DIR_NAME);
+}
+
+/**
+ * Single configured root for the finalization working sets, resolved the same
+ * way as `getArtifactsRoot` so `odysseus report:finalize` writes to the same
+ * place regardless of the cwd it was invoked from.
+ */
+export function getReportsRoot(): string {
+  ensureEnvLoaded();
+  const configured = process.env.ODYSSEUS_REPORTS_ROOT;
+  const workspaceRoot = findWorkspaceRoot();
+  if (configured) return path.resolve(workspaceRoot, configured);
+  return path.join(workspaceRoot, DEFAULT_REPORTS_DIR_NAME);
 }
 
 function getPositiveIntEnv(name: string, defaultValue: number): number {
