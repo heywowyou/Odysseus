@@ -128,12 +128,15 @@
      arithmetic as the rest of the ladder; not in the flat mockup. */
   --space-12: 33.6px;
 
-  /* Issue #315: the one reading measure for prose paragraphs. Each paragraph
-     used to cap itself in `ch`, which scales with its own font size, so a
-     15px lead, a 12px note and an 11px aside on the same page ran to three
-     different widths. An absolute length keeps them flush. Text inside a
-     card or callout is not capped: the box is its measure. */
-  --measure-prose: 128mm;
+  /* No `--measure-prose` any more (2026-09-20): prose runs the full width
+     of whatever contains it - the sheet's 174mm text column, or the card,
+     callout or grid cell it sits in. Issue #315's 128mm cap did keep a
+     15px lead, a 12px note and an 11px aside flush with each other, which
+     the per-paragraph `ch` caps before it did not, but it left every
+     prose block stopping 46mm short of the full-width cards beside it on
+     the same page, which read as text crammed against the left edge. The
+     container is the measure now, so paragraphs stay flush with each
+     other and with everything else on the sheet. */
 
   --radius-sm: 4px;
   --radius-md: 8px;

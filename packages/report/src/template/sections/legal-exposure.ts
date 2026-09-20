@@ -418,7 +418,7 @@ export function renderLegalExposure(
         ${actionNote}
       </div>
     </div>
-    <p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(paragraph)}</p>
+    <p style="font-size:13.5px;opacity:0.85">${escapeHtml(paragraph)}</p>
     ${renderTransactionalFlowScopeNote(strings, manifest, obligationAssessment)}
     ${renderTransactionalFlowInconclusiveNote(strings, manifest, obligationAssessment)}
     ${renderTransactionalFlowConflictNote(strings, obligationAssessment)}

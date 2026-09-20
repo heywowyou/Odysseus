@@ -169,7 +169,7 @@ function renderRuleBlock(
   const actionLine =
     remediation === undefined
       ? ''
-      : `<p class="remaining-action" style="font-size:13px;margin-top:4px;max-width:var(--measure-prose)">${escapeCopy(remediation, language)}</p>`;
+      : `<p class="remaining-action" style="font-size:13px;margin-top:4px">${escapeCopy(remediation, language)}</p>`;
 
   // Plan 041 Part A: same snippet computation as rendered-priorities.ts,
   // duplicated rather than shared because the two callers start from
@@ -241,7 +241,7 @@ export function renderRemainingWork(
     return sheet(
       `
         ${renderSheetHeader(ordinal, r.eyebrow, r.heading)}
-        <p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(r.nothingRemaining)}</p>
+        <p style="font-size:13.5px;opacity:0.85">${escapeHtml(r.nothingRemaining)}</p>
       `,
       '',
       'section-05b',
@@ -291,8 +291,8 @@ export function renderRemainingWork(
   return sheet(
     `
       ${renderSheetHeader(ordinal, r.eyebrow, r.heading)}
-      <p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose);margin-bottom:var(--space-3)">${escapeHtml(intro)}</p>
-      <p class="text-muted" style="font-size:11.5px;max-width:var(--measure-prose);margin-bottom:var(--space-6)">${escapeHtml(r.scopeNote)}</p>
+      <p style="font-size:13.5px;opacity:0.85;margin-bottom:var(--space-3)">${escapeHtml(intro)}</p>
+      <p class="text-muted" style="font-size:11.5px;margin-bottom:var(--space-6)">${escapeHtml(r.scopeNote)}</p>
       ${categoryBlocks}
     `,
     '',

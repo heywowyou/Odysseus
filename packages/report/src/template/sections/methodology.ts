@@ -506,7 +506,7 @@ export function renderMethodology(
     date: formatDate(auditDate(manifest), language),
   });
   const reportCoverage = buildCoverageDisclosure(strings, manifest, language);
-  const coverageNote = `<p style="font-size:12.5px;margin-top:var(--space-2);max-width:var(--measure-prose)">${escapeHtml(
+  const coverageNote = `<p style="font-size:12.5px;margin-top:var(--space-2)">${escapeHtml(
     [reportCoverage.summary, ...reportCoverage.details].join(' '),
   )}</p>`;
 
@@ -517,7 +517,7 @@ export function renderMethodology(
   const languageCoverageNote =
     coverage === undefined
       ? ''
-      : `<p style="font-size:12.5px;margin-top:var(--space-2);max-width:var(--measure-prose)">${escapeHtml(
+      : `<p style="font-size:12.5px;margin-top:var(--space-2)">${escapeHtml(
           fillTemplate(m.languageCoverageTemplate, { languages: coverage.scanned.join(', ') }),
         )}${
           coverage.discoveredOnly.length === 0
@@ -549,7 +549,7 @@ export function renderMethodology(
       )
     : undefined;
   const sitemapCoverageNote = sitemapCoverageText
-    ? `<p style="font-size:12.5px;margin-top:var(--space-2);max-width:var(--measure-prose)">${escapeHtml(sitemapCoverageText)}</p>`
+    ? `<p style="font-size:12.5px;margin-top:var(--space-2)">${escapeHtml(sitemapCoverageText)}</p>`
     : '';
 
   const sitemapSummary = manifest.crawl.sitemapCoverage;
@@ -607,7 +607,7 @@ export function renderMethodology(
   const qualityLimitationsNote =
     qualityLimitations.length === 0
       ? ''
-      : `<div data-quality-limitations="true" style="font-size:12.5px;margin-top:var(--space-2);max-width:var(--measure-prose)">
+      : `<div data-quality-limitations="true" style="font-size:12.5px;margin-top:var(--space-2)">
           <p><strong>${escapeHtml(language === 'fr' ? 'Limites de preuve à conserver à la lecture' : 'Evidence limitations to retain when reading')}</strong></p>
           <ul>${qualityLimitations.map((limitation) => `<li data-quality-limitation-id="${escapeHtml(limitation.limitationId)}">${escapeHtml(limitation.summary[language])}</li>`).join('')}</ul>
         </div>`;
@@ -619,23 +619,23 @@ export function renderMethodology(
   return sheet(
     `
     ${renderSheetHeader(ordinal, eyebrow, m.heading)}
-    <p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(toolingParagraph)}</p>
+    <p style="font-size:13.5px;opacity:0.85">${escapeHtml(toolingParagraph)}</p>
     ${coverageNote}
     ${qualityLimitationsNote}
     ${languageCoverageNote}
     ${sitemapCoverageNote}
-    ${sitemapIncompleteNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(sitemapIncompleteNote)}</p>` : ''}
-    ${crawlCapNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(crawlCapNote)}</p>` : ''}
-    ${socialExclusionNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(socialExclusionNote)}</p>` : ''}
-    ${lighthouseFailureNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(lighthouseFailureNote)}</p>` : ''}
-    ${mentionsLegalesCoverageNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(mentionsLegalesCoverageNote)}</p>` : ''}
-    ${privacySecurityNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(privacySecurityNote)}</p>` : ''}
+    ${sitemapIncompleteNote ? `<p style="font-size:13.5px;opacity:0.85">${escapeHtml(sitemapIncompleteNote)}</p>` : ''}
+    ${crawlCapNote ? `<p style="font-size:13.5px;opacity:0.85">${escapeHtml(crawlCapNote)}</p>` : ''}
+    ${socialExclusionNote ? `<p style="font-size:13.5px;opacity:0.85">${escapeHtml(socialExclusionNote)}</p>` : ''}
+    ${lighthouseFailureNote ? `<p style="font-size:13.5px;opacity:0.85">${escapeHtml(lighthouseFailureNote)}</p>` : ''}
+    ${mentionsLegalesCoverageNote ? `<p style="font-size:13.5px;opacity:0.85">${escapeHtml(mentionsLegalesCoverageNote)}</p>` : ''}
+    ${privacySecurityNote ? `<p style="font-size:13.5px;opacity:0.85">${escapeHtml(privacySecurityNote)}</p>` : ''}
     <div class="hr"></div>
-    <p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(m.automatedCoverageCaveat)}</p>
-    ${extendedPassNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(extendedPassNote)}</p>` : ''}
+    <p style="font-size:13.5px;opacity:0.85">${escapeHtml(m.automatedCoverageCaveat)}</p>
+    ${extendedPassNote ? `<p style="font-size:13.5px;opacity:0.85">${escapeHtml(extendedPassNote)}</p>` : ''}
     <div class="hr"></div>
-    <p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(m.legalCitationPointerSentence)}</p>
-    ${sirenNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(sirenNote)}</p>` : ''}
+    <p style="font-size:13.5px;opacity:0.85">${escapeHtml(m.legalCitationPointerSentence)}</p>
+    ${sirenNote ? `<p style="font-size:13.5px;opacity:0.85">${escapeHtml(sirenNote)}</p>` : ''}
   `,
     '',
     'section-11',

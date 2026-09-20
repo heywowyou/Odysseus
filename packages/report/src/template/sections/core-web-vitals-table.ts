@@ -205,7 +205,7 @@ function renderRealUserDataBlock(
   if (!cruxFieldData || !cruxFieldData.available) {
     return `
       ${header}
-      <p style="font-size:12px;opacity:0.6;max-width:var(--measure-prose)">${escapeHtml(c.realUserNoDataNote)}</p>
+      <p style="font-size:12px;opacity:0.6">${escapeHtml(c.realUserNoDataNote)}</p>
     `;
   }
 
@@ -247,7 +247,7 @@ function renderRealUserDataBlock(
   if (rows.length === 0) {
     return `
       ${header}
-      <p style="font-size:12px;opacity:0.6;max-width:var(--measure-prose)">${escapeHtml(c.realUserNoDataNote)}</p>
+      <p style="font-size:12px;opacity:0.6">${escapeHtml(c.realUserNoDataNote)}</p>
     `;
   }
 
@@ -266,8 +266,8 @@ function renderRealUserDataBlock(
 
   return `
     ${header}
-    <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-3);max-width:var(--measure-prose)">${escapeHtml(c.realUserIntro)}</p>
-    ${labDataWasMeasured ? `<p style="font-size:12px;opacity:0.7;margin-bottom:var(--space-3);max-width:var(--measure-prose)">${escapeHtml(c.realUserGapNote)}</p>` : ''}
+    <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-3)">${escapeHtml(c.realUserIntro)}</p>
+    ${labDataWasMeasured ? `<p style="font-size:12px;opacity:0.7;margin-bottom:var(--space-3)">${escapeHtml(c.realUserGapNote)}</p>` : ''}
     <table style="width:100%;border-collapse:collapse;font-size:14px">
       <thead>
         <tr>
@@ -371,7 +371,7 @@ export function renderCoreWebVitalsTable(
     return sheet(
       `
       ${renderSheetHeader(ordinal, c.eyebrow, c.heading, 'var(--space-2)')}
-      <p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(c.allUnmeasuredNote)}</p>
+      <p style="font-size:13.5px;opacity:0.85">${escapeHtml(c.allUnmeasuredNote)}</p>
       ${renderRealUserDataBlock(strings, language, manifest.cruxFieldData, false)}
     `,
       '',
@@ -383,7 +383,7 @@ export function renderCoreWebVitalsTable(
   const labLcpFlag =
     divergence === null
       ? ''
-      : `<p data-lab-lcp-divergence style="font-size:12px;margin-top:var(--space-3);max-width:var(--measure-prose);padding-left:var(--space-3);border-left:2px solid var(--color-accent-300)">${escapeHtml(
+      : `<p data-lab-lcp-divergence style="font-size:12px;margin-top:var(--space-3);padding-left:var(--space-3);border-left:2px solid var(--color-accent-300)">${escapeHtml(
           fillTemplate(c.labLcpDivergenceTemplate, {
             lab: formatMetricValue(divergence.labMedianMs, 'ms-to-s', language),
             field: formatMetricValue(divergence.fieldP75Ms, 'ms-to-s', language),

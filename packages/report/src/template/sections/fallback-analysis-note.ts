@@ -25,7 +25,7 @@ export function renderFallbackAnalysisNote(
     <div style="margin-bottom:var(--space-2)">
       <h6 style="color:var(--color-accent-300);margin:0">${escapeHtml(strings.fallbackAnalysis.noteHeading)}</h6>
     </div>
-    <p style="font-size:12.5px;opacity:0.9;margin:0;max-width:var(--measure-prose)">${escapeHtml(strings.fallbackAnalysis.noteBody)}</p>
+    <p style="font-size:12.5px;opacity:0.9;margin:0">${escapeHtml(strings.fallbackAnalysis.noteBody)}</p>
   `,
     '',
     FALLBACK_ANALYSIS_NOTE_ID,

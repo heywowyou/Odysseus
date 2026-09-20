@@ -128,7 +128,7 @@ export function renderNextSteps(
   ]
     .map(
       (text) =>
-        `<p style="font-size:12.5px;opacity:0.85;margin-top:0;margin-bottom:var(--space-3);max-width:var(--measure-prose)">${escapeHtml(text)}</p>`,
+        `<p style="font-size:12.5px;opacity:0.85;margin-top:0;margin-bottom:var(--space-3)">${escapeHtml(text)}</p>`,
     )
     .join('\n');
 
@@ -139,10 +139,10 @@ export function renderNextSteps(
     ${renderSheetHeader(ordinal, n.eyebrow, n.heading, 'var(--space-6)')}
     ${synthesisParagraphs}
     <div class="hr"></div>
-    <p style="font-size:12.5px;opacity:0.85;margin-top:var(--space-4);max-width:var(--measure-prose)"><strong>${escapeHtml(n.questionTitle)}</strong> ${escapeHtml(questionBody)}</p>
+    <p style="font-size:12.5px;opacity:0.85;margin-top:var(--space-4)"><strong>${escapeHtml(n.questionTitle)}</strong> ${escapeHtml(questionBody)}</p>
     <p style="font-size:11px;opacity:0.55;margin-top:var(--space-4)">${escapeHtml(authorship)}</p>
     <p style="font-size:11px;opacity:0.55;margin-top:4px">${escapeHtml(issuerBlock)}</p>
-    <p style="font-size:11px;opacity:0.55;margin-top:4px;max-width:var(--measure-prose)">${escapeHtml(n.liabilityStatement)}</p>
+    <p style="font-size:11px;opacity:0.55;margin-top:4px">${escapeHtml(n.liabilityStatement)}</p>
     <p data-provenance style="font-size:9px;opacity:0.55;margin-top:var(--space-3)">${escapeHtml(provenance)}</p>
   `,
     '',

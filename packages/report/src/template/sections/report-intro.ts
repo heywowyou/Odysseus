@@ -144,7 +144,7 @@ export function renderReportIntro(
       hookFamilyForCategory(topPriorityCategory) === preparation?.hook.family);
   const hookBlock =
     preparation && !preparation.hook.evidenceUnavailable && hookAgreesWithTopPriority
-      ? `<p style="font-size:14px;font-weight:500;margin:0 0 var(--space-4);max-width:var(--measure-prose)">${escapeCopy(preparation.hook.value, analysis.language)}</p>`
+      ? `<p style="font-size:14px;font-weight:500;margin:0 0 var(--space-4)">${escapeCopy(preparation.hook.value, analysis.language)}</p>`
       : '';
 
   // Role labels from the canonical audience map.
@@ -167,13 +167,13 @@ export function renderReportIntro(
     ${renderSheetHeader(ordinal, r.eyebrow, r.heading, 'var(--space-6)')}
     ${hookBlock}
     <h5>${escapeHtml(r.situationHeading)}</h5>
-    <p style="font-size:12.5px;opacity:0.9;margin:0 0 var(--space-4);max-width:var(--measure-prose)">${escapeHtml(r.situationBody)}</p>
+    <p style="font-size:12.5px;opacity:0.9;margin:0 0 var(--space-4)">${escapeHtml(r.situationBody)}</p>
     <h5>${escapeHtml(r.complicationHeading)}</h5>
-    <p style="font-size:12.5px;opacity:0.9;margin:0 0 var(--space-2);max-width:var(--measure-prose)">${escapeHtml(complication)}</p>
-    <p style="font-size:12.5px;opacity:0.9;margin:0 0 var(--space-6);max-width:var(--measure-prose)">${escapeHtml(legalReminder)}</p>
+    <p style="font-size:12.5px;opacity:0.9;margin:0 0 var(--space-2)">${escapeHtml(complication)}</p>
+    <p style="font-size:12.5px;opacity:0.9;margin:0 0 var(--space-6)">${escapeHtml(legalReminder)}</p>
     <h5>${escapeHtml(r.audienceHeading)}</h5>
     <table style="width:100%;border-collapse:collapse;margin-bottom:var(--space-6)"><tbody>${audienceRows}</tbody></table>
-    <p style="font-size:11.5px;opacity:0.6;margin:0;max-width:var(--measure-prose)">${escapeHtml(scopeNote)}</p>
+    <p style="font-size:11.5px;opacity:0.6;margin:0">${escapeHtml(scopeNote)}</p>
   `,
     '',
     'section-00',

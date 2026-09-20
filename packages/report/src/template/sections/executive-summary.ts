@@ -47,7 +47,7 @@ function renderTopPriorityLegalNote(
       })
     : e.topPriorityIsNotLegalNoPointer;
 
-  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:var(--measure-prose)">${escapeHtml(text)}</p>`;
+  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4">${escapeHtml(text)}</p>`;
 }
 
 function renderTopPriorityLegalNoteFromPriorities(
@@ -62,7 +62,7 @@ function renderTopPriorityLegalNoteFromPriorities(
         legalRank: firstLegal.displayRank,
       })
     : strings.executiveSummary.topPriorityIsNotLegalNoPointer;
-  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:var(--measure-prose)">${escapeHtml(text)}</p>`;
+  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4">${escapeHtml(text)}</p>`;
 }
 
 /** "Par où commencer" card: a numbered circle plus the theme's own title,
@@ -156,7 +156,7 @@ function renderThirdPartySplitNote(
   const percent = Math.round(
     (stats.thirdPartyAccessibilityOccurrences / stats.accessibilityOccurrences) * 100,
   );
-  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:var(--measure-prose)">${escapeHtml(
+  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4">${escapeHtml(
     fillTemplate(e.thirdPartySplitSentenceTemplate, { percent }),
   )}</p>`;
 }
@@ -181,7 +181,7 @@ function renderCategoryImbalanceNote(
   if (stats.accessibilityCount / stats.totalFindings < ACCESSIBILITY_DOMINANCE_THRESHOLD) return '';
 
   const e = strings.executiveSummary;
-  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:var(--measure-prose)">${escapeHtml(e.categoryImbalanceNote)}</p>`;
+  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4">${escapeHtml(e.categoryImbalanceNote)}</p>`;
 }
 
 /** The site-wide critical/serious count (computeStatistics) has no relation
@@ -215,7 +215,7 @@ function renderCoveredByPrioritiesNote(
     prioritiesSection: sectionTitle('section-04', strings),
     remainingSection: sectionTitle('section-05b', strings),
   });
-  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:var(--measure-prose)">${escapeHtml(text)}</p>`;
+  return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4">${escapeHtml(text)}</p>`;
 }
 
 /** Issue #57: the executive pages previously carried no trace of the
@@ -286,7 +286,7 @@ export function renderExecutiveSummary(
     ? renderPriorityOwnershipSentence(ownership, e.priorityOwnership, analysis.language)
     : undefined;
   const ownershipNote = ownershipSentence
-    ? `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:var(--measure-prose)">${escapeHtml(ownershipSentence)}</p>`
+    ? `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4">${escapeHtml(ownershipSentence)}</p>`
     : '';
   return sheet(
     `
@@ -296,9 +296,9 @@ export function renderExecutiveSummary(
          a band (--space-1/--space-3) and open to the sheet-level step
          (--space-8) between bands. Note muting uses the ink ladder
          (neutral-200/400), never opacity, to hold 4.5:1 on the ground. -->
-    <p style="font-size:15px;max-width:var(--measure-prose);line-height:1.55;color:var(--color-neutral-100)">${escapeProse(analysis.executiveSummary, analysis.language)}</p>
-    <p style="font-size:12.5px;color:var(--color-neutral-200);margin-top:var(--space-3);max-width:var(--measure-prose)">${escapeHtml(countsSentence)}</p>
-    <p style="font-size:11px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4;max-width:var(--measure-prose)">${escapeHtml(e.glossaryPointerSentence)}</p>
+    <p style="font-size:15px;line-height:1.55;color:var(--color-neutral-100)">${escapeProse(analysis.executiveSummary, analysis.language)}</p>
+    <p style="font-size:12.5px;color:var(--color-neutral-200);margin-top:var(--space-3)">${escapeHtml(countsSentence)}</p>
+    <p style="font-size:11px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4">${escapeHtml(e.glossaryPointerSentence)}</p>
     ${renderCoveredByPrioritiesNote(strings, analysis, findings, findingsById, priorities)}
     ${ownershipNote}
     ${renderThirdPartySplitNote(strings, stats)}

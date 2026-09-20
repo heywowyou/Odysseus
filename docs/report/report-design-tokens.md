@@ -232,7 +232,21 @@ unit, matching the mockup's own arithmetic:
 | `--space-8` | 22.4px | generous: block separations, grid row gaps |
 | `--space-12` | 33.6px | sheet-level: section-head cushion, appendix category blocks, cover rule gap (added by plan 023; not in the mockup) |
 
-`--measure-prose` (128mm) is the single reading measure for prose paragraphs (issue #315). Paragraphs never cap themselves in `ch`, which scales with each paragraph's own font size; text inside a card or callout is not capped, the box being its measure.
+Prose has **no width cap of its own** (2026-09-20). A paragraph runs the
+full width of whatever contains it: the sheet's 174mm text column, or
+the card, callout or grid cell it sits in. Issue #315's `--measure-prose`
+(128mm) is removed along with every `max-width:var(--measure-prose)` it
+was spelled into; the `ch` caps it had replaced are not coming back
+either, since they scaled with each paragraph's own font size and ran a
+15px lead, a 12px note and an 11px aside on one page to three different
+widths. The container is now the single measure, so paragraphs stay
+flush with each other and with the full-width cards and tables beside
+them instead of stopping 46mm short of them.
+
+The cover's `13ch` headline and `38ch` question, the metadata risk
+note's `50ch` and the scorecard disclaimer's `32ch` stay: those are
+centered display blocks whose caps are what shapes them, not running
+prose.
 
 Two conventions outside the token ladder stay as designed: the 4px/6px
 bare micro-literals inside cards and badges, and the mm-based page

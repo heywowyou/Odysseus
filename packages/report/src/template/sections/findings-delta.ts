@@ -118,7 +118,7 @@ function pageLimitText(strings: ReportStrings, language: ReportLanguage, value: 
 }
 
 function note(text: string): string {
-  return `<p style="font-size:12px;opacity:0.7;max-width:var(--measure-prose);margin-top:var(--space-3)">${escapeHtml(text)}</p>`;
+  return `<p style="font-size:12px;opacity:0.7;margin-top:var(--space-3)">${escapeHtml(text)}</p>`;
 }
 
 function renderDisclosures(
@@ -232,7 +232,7 @@ export function renderFindingsDelta(
   return sheet(
     `
     ${renderSheetHeader(ordinal, d.eyebrow, d.heading, 'var(--space-3)')}
-    <p style="font-size:13.5px;opacity:0.85;max-width:var(--measure-prose)">${escapeHtml(
+    <p style="font-size:13.5px;opacity:0.85">${escapeHtml(
       fillTemplate(d.introTemplate, {
         date: formatDate(new Date(delta.baseline.startedAt), language),
       }),
