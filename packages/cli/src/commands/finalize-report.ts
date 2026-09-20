@@ -43,7 +43,7 @@ function fail(message: string): never {
  *  printing a stack over a message the operator is meant to read. */
 class FinalizeRefused extends Error {}
 
-export async function finalizeReport(options: FinalizeOptions): Promise<void> {
+async function finalizeReport(options: FinalizeOptions): Promise<void> {
   const bundleDir = path.resolve(options.bundle);
   const bundle = await readRenderBundleDir(bundleDir);
 

@@ -18,7 +18,7 @@ import {
   type WritingTheme,
 } from './writing-schema.js';
 
-export type ParsedField =
+type ParsedField =
   | { kind: 'summary' }
   | { kind: 'notes' }
   | { kind: 'title' | 'businessImpact'; themeIndex: number; themeKey: string }
@@ -27,7 +27,7 @@ export type ParsedField =
 const THEME_FIELD_PATH =
   /^themes\[(\d+)\]\(([^)]+)\)\.(title|businessImpact|recommendedActions\[(\d+)\])$/u;
 
-export function parseFieldPath(field: string): ParsedField | null {
+function parseFieldPath(field: string): ParsedField | null {
   if (field === 'executiveSummary') return { kind: 'summary' };
   if (field === 'notes') return { kind: 'notes' };
   const match = THEME_FIELD_PATH.exec(field);

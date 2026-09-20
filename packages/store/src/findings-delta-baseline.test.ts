@@ -23,7 +23,13 @@ async function clear(): Promise<void> {
   ).map((audit) => audit['auditId']);
   await db.collection('audits').deleteMany({ auditId: { $in: auditIds } });
   await db.collection('findings').deleteMany({ auditId: { $in: auditIds } });
-  await db.collection('reportApprovals').deleteMany({ auditId: { $in: auditIds } });
+  // Approvals are cleared by id prefix, not by the ids still present in
+  // `audits`: one case below deletes an audit row mid-test, which would
+  // otherwise orphan its approval and fail the next run on the unique
+  // approvalId index.
+  await db.collection('reportApprovals').deleteMany({
+    $or: [{ auditId: { $in: auditIds } }, { auditId: { $regex: '^delta-' } }],
+  });
 }
 
 /** Raw driver inserts: the lookup reads a handful of fields, and a fully

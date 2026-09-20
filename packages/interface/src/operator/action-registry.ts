@@ -162,6 +162,19 @@ export const REGISTRY_ACTIONS = [
     protocol: 'reload-recheck',
     pendingPlan061: true,
   },
+  {
+    // Plan 072: not a dashboard button. The operator uploads a locally
+    // rendered, corrected PDF, which becomes the audit's current report
+    // for that language. It is a mutation with a guard like any other -
+    // the route reloads the selected analysis and findings and refuses
+    // when either moved since the bundle was fetched - so it carries a
+    // row rather than an exemption.
+    action: 'uploadFinalizedReport',
+    owner: 'report-quality',
+    routes: ['POST /api/audits/:auditId/report/:language/finalized'],
+    protocol: 'reload-recheck',
+    pendingPlan061: true,
+  },
 
   // --- report-preparation (Prepare-report workflow inputs and remedies) ---
   {

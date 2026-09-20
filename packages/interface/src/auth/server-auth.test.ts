@@ -51,6 +51,9 @@ vi.mock('@odysseus/store', async (importOriginal) => {
       reason: 'no-analyses',
     })),
     getLatestReport: vi.fn(async () => null),
+    // Plan 072: the detail handler also asks which report each language's
+    // current row is, so the finalized badge can be projected.
+    getLatestFinalizedReport: vi.fn(async () => null),
     getLatestReportApproval: vi.fn(async () => null),
     // Plan 060 snapshot reads (audit-readiness axes): nothing recorded.
     getLatestReportBundle: vi.fn(async () => null),
