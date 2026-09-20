@@ -396,6 +396,16 @@ describe('fix #1 (2026-08-25 report review): the covered-by-priorities bridging 
     expect(html).toContain('Autres constats');
   });
 
+  it('names the total the coverage figure is drawn from', () => {
+    // The sentence above it ends on the critical/serious subtotal, so a
+    // bare "en couvrent 1" left the reader two candidate denominators.
+    const analysis = buildAnalysis([theme]);
+    const findings = [buildFinding('f001'), buildFinding('f002')];
+    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
+
+    expect(html).toMatch(/en couvrent 1 sur 2\s*;/);
+  });
+
   it('renders nothing when every finding is covered by a rendered priority', () => {
     const analysis = buildAnalysis([theme]);
     const findings = [buildFinding('f001')];

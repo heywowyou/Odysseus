@@ -111,7 +111,7 @@ export function applyEnglishClientFacingCopy(strings: ReportStrings): ReportStri
         'The diagnostic found {total} distinct findings, including {actionable} that are critical ' +
         'or serious ({critical} critical and {serious} serious).',
       coveredByPrioritiesTemplate:
-        'The priorities in the "{prioritiesSection}" section cover {covered} of them; the ' +
+        'The priorities in the "{prioritiesSection}" section cover {covered} of the {total}; the ' +
         'remainder stay documented by severity in "{remainingSection}".',
     },
     themes: {

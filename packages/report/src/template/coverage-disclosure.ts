@@ -105,7 +105,10 @@ export function buildCoverageDisclosure(
         cov.completedPlural,
       ),
       contentPartial: phrase(coverage.content.partial, cov.partialSingular, cov.partialPlural),
-      contentFailed: n(coverage.content.failed),
+      // The parenthetical breaks down the content total, which counts
+      // completed plus partial pages only. Listing the failures inside it
+      // made the breakdown sum past the total it was breaking down.
+      contentFailed: phrase(coverage.content.failed, cov.pageSingular, cov.pagePlural),
       lighthouse: phrase(lighthouseMeasured, cov.measuredSingular, cov.measuredPlural),
       lighthousePartial: phrase(
         coverage.passes.lighthouse.partial,

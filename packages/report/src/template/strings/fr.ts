@@ -127,7 +127,7 @@ export const fr: ReportStrings = {
   },
   coverage: {
     summaryTemplate:
-      '{inventory} ; analyse du contenu sur {content} ({contentCompleted}, {contentPartial}, {contentFailed} en échec) ; Lighthouse : {lighthouse}, {lighthousePartial}, {lighthouseFailed} en échec, {lighthouseNotPlanned}.',
+      '{inventory} ; analyse du contenu sur {content} ({contentCompleted}, {contentPartial}) et {contentFailed} en échec ; Lighthouse : {lighthouse}, {lighthousePartial}, {lighthouseFailed} en échec, {lighthouseNotPlanned}.',
     plainSummaryTemplate: '{analysed} sur {found}',
     analysedPageSingular: 'page analysée',
     analysedPagePlural: 'pages analysées',
@@ -137,10 +137,10 @@ export const fr: ReportStrings = {
     inventoriedUrlPlural: 'URL inventoriées',
     pageSingular: 'page',
     pagePlural: 'pages',
-    completedSingular: 'terminé',
-    completedPlural: 'terminés',
-    partialSingular: 'partiel',
-    partialPlural: 'partiels',
+    completedSingular: 'terminée',
+    completedPlural: 'terminées',
+    partialSingular: 'partielle',
+    partialPlural: 'partielles',
     measuredSingular: 'mesurée',
     measuredPlural: 'mesurées',
     lighthousePartialSingular: 'partielle',
@@ -297,7 +297,7 @@ export const fr: ReportStrings = {
     summaryCountsTemplate:
       "L'audit a identifié {total} constats au total, dont {actionable} critiques ou sérieux ({critical} critiques et {serious} sérieux).",
     coveredByPrioritiesTemplate:
-      'Parmi eux, {covered} sont couverts par les priorités de la section « {prioritiesSection} » ; les autres sont listés par sévérité dans « {remainingSection} ».',
+      'Parmi ces {total} constats, {covered} sont couverts par les priorités de la section « {prioritiesSection} » ; les autres sont listés par sévérité dans « {remainingSection} ».',
   },
   legalExposure: {
     eyebrow: 'Exposition légale',

@@ -486,8 +486,11 @@ export interface ReportStrings {
      *  summaryCountsTemplate to the 6-card Priorities section, which does
      *  not cover every critical/serious finding (themes.ts's
      *  MAX_RENDERED_THEMES cap). Template: {covered}, {remainingSection}
-     *  (section-05b's own title, via sectionTitle). Rendered only when
-     *  there is a genuine remainder. */
+     *  (section-05b's own title, via sectionTitle). {total} is the same
+     *  distinct-findings total summaryCountsTemplate states, named here
+     *  because that sentence ends on the critical/serious subtotal, so a
+     *  bare "covers N of them" had two candidate denominators.
+     *  Rendered only when there is a genuine remainder. */
     coveredByPrioritiesTemplate: string;
   };
   /** Promotes methodology's own legal-citation paragraph (rendered via

@@ -112,7 +112,7 @@ export const en: ReportStrings = {
   },
   coverage: {
     summaryTemplate:
-      '{inventory}; content-sensitive results on {content} ({contentCompleted}, {contentPartial}, {contentFailed} failed); Lighthouse: {lighthouse}, {lighthousePartial}, {lighthouseFailed} failed, {lighthouseNotPlanned}.',
+      '{inventory}; content-sensitive results on {content} ({contentCompleted}, {contentPartial}) and {contentFailed} failed; Lighthouse: {lighthouse}, {lighthousePartial}, {lighthouseFailed} failed, {lighthouseNotPlanned}.',
     plainSummaryTemplate: '{analysed} out of {found}',
     analysedPageSingular: 'page analysed',
     analysedPagePlural: 'pages analysed',
@@ -268,7 +268,7 @@ export const en: ReportStrings = {
     summaryCountsTemplate:
       'The audit identified {total} findings in total, including {actionable} that are critical or serious ({critical} critical and {serious} serious).',
     coveredByPrioritiesTemplate:
-      '{covered} of these are covered by the priorities in the "{prioritiesSection}" section; the rest are listed by severity in "{remainingSection}".',
+      '{covered} of these {total} findings are covered by the priorities in the "{prioritiesSection}" section; the rest are listed by severity in "{remainingSection}".',
   },
   legalExposure: {
     eyebrow: 'Legal exposure',

@@ -64,7 +64,9 @@ describe('buildCoverageDisclosure', () => {
 
     expect(disclosure.summary).toContain('5 URLs inventoried');
     expect(disclosure.summary).toContain(
-      'content-sensitive results on 2 pages (1 completed, 1 partial, 1 failed)',
+      // The parenthetical breaks down the 2-page content total only; the
+      // failed page is not one of those 2 and sits outside it.
+      'content-sensitive results on 2 pages (1 completed, 1 partial) and 1 page failed',
     );
     expect(disclosure.summary).toContain(
       'Lighthouse: 1 measured, 0 partial, 1 failed, 1 not planned',
