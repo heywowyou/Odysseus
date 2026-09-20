@@ -19,4 +19,8 @@ if [ -z "${MDB_MCP_CONNECTION_STRING:-}" ]; then
   exit 1
 fi
 
-exec npx -y mongodb-mcp-server@latest --readOnly
+# Pinned, not @latest: npx re-resolves @latest on every start, and several
+# sessions/worktrees starting at once then race to install into the same
+# ~/.npm/_npx cache directory. That race left the cache half-renamed
+# (ENOTEMPTY) and the server died at startup. Bump deliberately.
+exec npx -y mongodb-mcp-server@3.0.3 --readOnly
