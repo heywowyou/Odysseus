@@ -402,3 +402,21 @@ describe('P1.2: the third-party occurrences footnote', () => {
     expect(html).not.toContain('composants tiers');
   });
 });
+
+describe('number tile values', () => {
+  // A real report wrapped a five-digit occurrence count inside its tile,
+  // printing "17 02" above "6". The value carries its own character count
+  // so the stylesheet can shrink it to the tile width instead of wrapping.
+  it('measures each tile value for the stylesheet', async () => {
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
+
+    const html = renderStatistics(getStrings('fr'), 3, 'fr', findings, manifest);
+
+    const tiles = [...html.matchAll(/--value-chars:(\d+)">([^<]+)</g)];
+    expect(tiles.length).toBeGreaterThan(0);
+    for (const [, chars, value] of tiles) {
+      expect(Number(chars)).toBe([...value!].length);
+    }
+  });
+});

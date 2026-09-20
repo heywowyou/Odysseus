@@ -228,7 +228,15 @@ function renderBody(
   const ord = (id: SectionId): number => n.get(id)!;
 
   const sections = [
-    renderCover(strings, manifest, analysis, resolvedFindings, manualFields, preparation),
+    renderCover(
+      strings,
+      manifest,
+      analysis,
+      resolvedFindings,
+      manualFields,
+      preparation,
+      renderMetadata?.documentDisclosure,
+    ),
     // Second physical page (plan 018 step 4): audit facts and the risk
     // scale on their own sheet, before the TOC. Unnumbered chrome, like
     // the cover - it takes no ordinal and stays out of the registry.

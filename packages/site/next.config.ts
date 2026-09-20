@@ -40,7 +40,7 @@ const nextConfig: NextConfig = {
       {
         // Every route except the token-gated preview document, which sets
         // its own headers explicitly in app/apercu/[token]/route.ts.
-        source: '/((?!apercu).*)',
+        source: '/((?!apercu|exemple-audit).*)',
         headers: [
           { key: 'Content-Security-Policy', value: marketingCsp },
           // Superseded by CSP's frame-ancestors for modern browsers, kept

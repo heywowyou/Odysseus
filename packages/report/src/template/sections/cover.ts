@@ -33,6 +33,9 @@ export interface DocumentCoverLayout {
    *  paid report never passes one; the outreach preview uses it for its
    *  scroll cue. */
   scrollCue?: string;
+  /** A short deterministic disclosure used only by the public reference
+   *  showcase. It is text, not caller-provided HTML. */
+  documentDisclosure?: string;
 }
 
 /** The cover's canonical inner structure. The paid report and the outreach
@@ -52,6 +55,7 @@ export function renderDocumentCoverLayout(content: DocumentCoverLayout): string 
         <div class="cover-signature" style="font-size:13px;opacity:0.5">${escapeHtml(content.signature)}</div>
       </div>
     </div>
+    ${content.documentDisclosure === undefined ? '' : `<div class="reference-disclosure" style="max-width:58ch;margin:var(--space-6) auto 0;text-align:center;font-size:10.5px;line-height:1.45;opacity:0.68">${escapeHtml(content.documentDisclosure)}</div>`}
     <div class="cover-spacer" style="flex:1"></div>
   `;
 }
@@ -110,6 +114,7 @@ export function renderCover(
   _findings: readonly Finding[] = [],
   manualFields?: AuditManualFields,
   preparation?: PreparationPreviewLanguage,
+  documentDisclosure?: string,
 ): string {
   // Manual-input-layer milestone, rule 5: every field absent must produce
   // a correctly rendering report - the headline identity falls through
@@ -135,6 +140,7 @@ export function renderCover(
       question: resolveDecisionQuestion(analysis.language, preparation),
       reportType,
       signature: `${formatDate(auditDate(manifest), analysis.language)} · Odysseus`,
+      ...(documentDisclosure === undefined ? {} : { documentDisclosure }),
     })}
   `,
     'sheet-cover',

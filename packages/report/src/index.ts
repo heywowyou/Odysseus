@@ -40,6 +40,7 @@ export {
 } from './finalize-bundle.js';
 export type { FinalizedBundle, RefusedBundle } from './finalize-bundle.js';
 export type { RenderBundle, RenderBundleLineage, ReportRenderInputs } from './render-bundle.js';
+import type { ReferenceAuditShowcase } from './reference-audit.js';
 export {
   RENDER_BUNDLE_FILES,
   readRenderBundleDir,
@@ -47,6 +48,24 @@ export {
 } from './render-bundle-files.js';
 export { buildRenderedPriorities } from './template/rendered-priorities.js';
 export type { RenderedPriority, PriorityEvidence } from './template/rendered-priorities.js';
+export {
+  assertReferenceAuditNoLeaks,
+  buildReferenceAuditShowcase,
+  findReferenceAuditLeaks,
+  referenceAuditManifestDigest,
+  renderInputsForReferenceAudit,
+  REFERENCE_AUDIT_ANONYMIZER_VERSION,
+  REFERENCE_AUDIT_CANONICAL_PATH,
+  REFERENCE_AUDIT_DISCLOSURE_FR,
+  REFERENCE_AUDIT_RELEASE_VERSION,
+  ReferenceAuditPublicationError,
+} from './reference-audit.js';
+export type {
+  ReferenceAuditLeakScanInput,
+  ReferenceAuditShowcase,
+  ReferenceAuditShowcaseBundle,
+  ReferenceAuditSource,
+} from './reference-audit.js';
 
 /** The outreach preview. A separate document kind from the paid report, not a
  *  tier of it: synchronous, HTML only, no Chromium, and built from its own
@@ -79,7 +98,7 @@ export type {
 } from './outreach-preview/types.js';
 
 import { launchBrowser } from '@odysseus/scanner';
-import { REPORT_PDF_CHROMIUM_ARGS } from './constants.js';
+import { REPORT_PDF_CHROMIUM_ARGS, REPORT_TEMPLATE_VERSION } from './constants.js';
 import type { GenerateReportInput } from './types.js';
 import { resolveRenderDiffEvidence } from './screenshots.js';
 import { renderHtml } from './template/render-html.js';
@@ -202,6 +221,46 @@ export async function generateReportPdf(
   } finally {
     if (ownsBrowser) await browser.close();
   }
+}
+
+/** Render the publication-safe showcase with the exact paid-report renderer.
+ * The adapter only supplies detached inputs and a disclosure; pagination,
+ * Paged.js, PDF integrity and all report lint gates remain in
+ * `generateReportPdf`. */
+export async function generateReferenceAuditPdf(
+  showcase: ReferenceAuditShowcase,
+  options: {
+    renderedAt?: Date;
+    rendererBuild?: string;
+    reportId?: string;
+    browser?: GenerateReportInput['browser'];
+  } = {},
+): Promise<RenderedPdfWithPageCount> {
+  const { bundle } = showcase;
+  const inputs = bundle.renderInputs;
+  return generateReportPdf({
+    renderMetadata: {
+      reportId: options.reportId ?? 'reference-audit',
+      renderedAt: options.renderedAt ?? new Date(),
+      rendererBuild: options.rendererBuild ?? 'reference-audit',
+      templateVersion: REPORT_TEMPLATE_VERSION,
+      documentDisclosure: bundle.disclosure,
+    },
+    // The report template is intentionally screenshot-free. Keeping this
+    // empty also makes the no-source-path contract explicit at this seam.
+    auditDir: '',
+    manifest: bundle.manifest,
+    findings: bundle.findings,
+    analysis: bundle.analysis,
+    ...(inputs.manualFields === undefined ? {} : { manualFields: inputs.manualFields }),
+    ...(inputs.preparation === undefined ? {} : { preparation: inputs.preparation }),
+    ...(inputs.gradeOverride === undefined ? {} : { gradeOverride: inputs.gradeOverride }),
+    ...(inputs.delta === undefined ? {} : { delta: inputs.delta }),
+    ...(inputs.qualityLimitations === undefined
+      ? {}
+      : { qualityLimitations: inputs.qualityLimitations }),
+    ...(options.browser === undefined ? {} : { browser: options.browser }),
+  });
 }
 
 export {

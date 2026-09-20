@@ -75,6 +75,9 @@ export interface ReportRenderMetadata {
   renderedAt: Date;
   rendererBuild: string;
   templateVersion: number;
+  /** Optional deterministic disclosure for a publication-safe showcase
+   *  document. Normal client reports leave this absent. */
+  documentDisclosure?: string;
 }
 
 /** Milestone 8 introduced a paid screening tier alongside the full audit,

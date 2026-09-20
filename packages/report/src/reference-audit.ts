@@ -1,0 +1,575 @@
+/**
+ * Publication-safe projection for the permanent reference audit.
+ *
+ * This module deliberately sits in `report`: the source is a stored report
+ * bundle, the output is still the normal paid-report input, and no Mongo or
+ * bucket client belongs here. The projection is detached from its source and
+ * the source objects are never mutated.
+ */
+
+import {
+  assessObligations,
+  buildFindingsProvenance,
+  canonicalDigest,
+  FINDINGS_SCHEMA_VERSION,
+  type AuditManifest,
+  type AuditManualFields,
+  type Finding,
+  type FindingElement,
+  type ObligationAssessment,
+  type OperatorProfile,
+  type SiteSignals,
+} from '@odysseus/core';
+import { REPORT_TEMPLATE_VERSION } from './constants.js';
+import type { RenderBundle, ReportRenderInputs } from './render-bundle.js';
+import type { StoredAnalysis } from './types.js';
+
+export const REFERENCE_AUDIT_ANONYMIZER_VERSION = 'reference-anonymizer-v1';
+export const REFERENCE_AUDIT_RELEASE_VERSION = 'reference-release-v1';
+export const REFERENCE_AUDIT_CANONICAL_PATH = '/exemple-audit';
+export const REFERENCE_AUDIT_DISCLOSURE_FR =
+  "Exemple de rapport. Les éléments permettant d'identifier l'établissement, son site et ses données administratives ont été remplacés. La structure, le niveau de détail et le type de constats correspondent au livrable.";
+
+const SHOWCASE_ORIGIN = 'https://www.hotel-exemple.fr';
+const SHOWCASE_NAME = 'Hôtel Exemple';
+const SHOWCASE_LEGAL_NAME = 'Hôtel Exemple — identité de démonstration';
+const SHOWCASE_SIREN = '000000000';
+const SHOWCASE_DATE = new Date('2026-01-15T00:00:00.000Z');
+
+export interface ReferenceAuditSource {
+  manifest: AuditManifest;
+  findings: readonly Finding[];
+  analysis: StoredAnalysis;
+  renderInputs?: ReportRenderInputs;
+}
+
+export interface ReferenceAuditShowcaseBundle {
+  manifest: AuditManifest;
+  findings: Finding[];
+  analysis: StoredAnalysis;
+  renderInputs: ReportRenderInputs;
+  releaseVersion: string;
+  anonymizerVersion: string;
+  disclosure: string;
+}
+
+export interface ReferenceAuditShowcase {
+  bundle: ReferenceAuditShowcaseBundle;
+  /** Kept in memory by the release gate; never written to the public object. */
+  sourceDenylist: readonly string[];
+}
+
+export class ReferenceAuditPublicationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ReferenceAuditPublicationError';
+  }
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+}
+
+function normalized(value: string): string {
+  return value.normalize('NFKC').toLocaleLowerCase('fr-FR').trim();
+}
+
+function collectStrings(value: unknown, output: string[] = []): string[] {
+  if (typeof value === 'string') {
+    output.push(value);
+  } else if (Array.isArray(value)) {
+    for (const item of value) collectStrings(item, output);
+  } else {
+    const record = asRecord(value);
+    if (record !== null) {
+      for (const [key, child] of Object.entries(record)) {
+        output.push(key);
+        collectStrings(child, output);
+      }
+    }
+  }
+  return output;
+}
+
+function collectLeafStrings(value: unknown, output: string[] = []): string[] {
+  if (typeof value === 'string') {
+    output.push(value);
+  } else if (Array.isArray(value)) {
+    for (const item of value) collectLeafStrings(item, output);
+  } else {
+    const record = asRecord(value);
+    if (record !== null) {
+      for (const child of Object.values(record)) collectLeafStrings(child, output);
+    }
+  }
+  return output;
+}
+
+function collectIdentityStrings(source: ReferenceAuditSource): string[] {
+  const values: string[] = [];
+  const add = (value: unknown) => {
+    if (typeof value === 'string' && value.trim() !== '') values.push(value);
+  };
+  const manifest = source.manifest;
+  add(manifest.siteUrl);
+  add(manifest.crawl.startUrl);
+  for (const page of manifest.pages) {
+    add(page.url);
+    add(page.discoveredFrom);
+    add(page.redirectTargetUrl);
+  }
+  const siteSignals = asRecord(manifest.siteSignals);
+  if (siteSignals !== null) {
+    for (const [key, value] of Object.entries(siteSignals)) {
+      if (/siren|siret|name|address|phone|email|url|domain|selector|snippet|identifier/iu.test(key)) {
+        for (const child of collectStrings(value)) add(child);
+      }
+    }
+  }
+  for (const finding of source.findings) {
+    for (const element of finding.elements) {
+      add(element.pageUrl);
+      add(element.selector);
+      add(element.snippet);
+      add(element.resourceUrl);
+    }
+    for (const value of [finding.title, finding.description]) add(value);
+    const raw = collectLeafStrings(finding.rawEvidence);
+    for (const value of raw) {
+      if (
+        /https?:\/\/|@|\b\d{9,14}\b|\+?\d[\d .()-]{7,}/u.test(value) ||
+        (value.length >= 24 && /\s/u.test(value))
+      ) {
+        add(value);
+      }
+    }
+  }
+  const analysisStrings = collectLeafStrings(source.analysis);
+  for (const value of analysisStrings) {
+    if (/https?:\/\/|@|\b\d{9,14}\b/u.test(value)) add(value);
+  }
+  return values;
+}
+
+function buildSourceDenylist(source: ReferenceAuditSource): string[] {
+  const common = new Set([
+    'https',
+    'http',
+    'www',
+    'com',
+    'fr',
+    'org',
+    'site',
+    'page',
+    'pages',
+    'audit',
+    'analyse',
+    'analysis',
+    'constat',
+    'finding',
+    'example',
+    'exemple',
+    'mentions-legales',
+    'themes',
+    'legacy',
+    'admin',
+  ]);
+  const candidates = new Set<string>();
+  for (const raw of collectIdentityStrings(source)) {
+    const value = normalized(raw);
+    if (value.length >= 4 && !common.has(value)) candidates.add(value);
+    if (value.includes('://')) {
+      try {
+        const url = new URL(value);
+        candidates.add(normalized(url.hostname));
+        for (const part of url.pathname.split('/')) {
+          if (part.length >= 5 && !common.has(part)) candidates.add(normalized(part));
+        }
+      } catch {
+        // The raw value remains useful as an exact denylist entry.
+      }
+    }
+  }
+  return [...candidates].filter((value) => value !== normalized(SHOWCASE_ORIGIN)).sort((a, b) => b.length - a.length);
+}
+
+function pathRole(pathname: string): string {
+  const path = pathname.toLocaleLowerCase('fr-FR');
+  if (path === '' || path === '/') return '/';
+  if (/reservation|réservation|booking|book/iu.test(path)) return '/reservation';
+  if (/chambre|room|suite/iu.test(path)) return '/chambres';
+  if (/contact/iu.test(path)) return '/contact';
+  if (/mention|legal|imprint/iu.test(path)) return '/mentions-legales';
+  if (/restaurant|table|dining/iu.test(path)) return '/restaurant';
+  if (/spa|bien-être|wellness/iu.test(path)) return '/bien-etre';
+  return '/page';
+}
+
+function createPageUrlMap(source: ReferenceAuditSource): Map<string, string> {
+  const sourceUrls = new Set<string>();
+  for (const page of source.manifest.pages) sourceUrls.add(page.url);
+  for (const finding of source.findings) {
+    for (const pageUrl of finding.pageUrls) sourceUrls.add(pageUrl);
+    for (const element of finding.elements) sourceUrls.add(element.pageUrl);
+  }
+  const entries = [...sourceUrls].sort();
+  const counts = new Map<string, number>();
+  const result = new Map<string, string>();
+  for (const raw of entries) {
+    let pathname = '/page';
+    try {
+      pathname = pathRole(new URL(raw).pathname);
+    } catch {
+      // An invalid historical URL still gets a synthetic page role.
+    }
+    const seen = (counts.get(pathname) ?? 0) + 1;
+    counts.set(pathname, seen);
+    const uniquePath = seen === 1 ? pathname : `${pathname}-${seen}`;
+    result.set(raw, `${SHOWCASE_ORIGIN}${uniquePath === '/' ? '/' : uniquePath}`);
+  }
+  return result;
+}
+
+function replaceSourceStrings(value: string, denylist: readonly string[]): string {
+  let result = value;
+  for (const token of denylist) {
+    if (token.length < 4) continue;
+    result = result.replace(new RegExp(escapeRegExp(token), 'giu'), 'Hôtel Exemple');
+  }
+  result = result.replace(/https?:\/\/[^\s<>'"]+/giu, `${SHOWCASE_ORIGIN}/page`);
+  result = result.replace(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/gu, 'contact@hotel-exemple.fr');
+  result = result.replace(/\b\d{9,14}\b/gu, SHOWCASE_SIREN);
+  result = result.replace(/\+?\d[\d .()/-]{7,}\d/gu, '+33 1 00 00 00 00');
+  return result;
+}
+
+function rewriteUrl(raw: string, pageUrls: ReadonlyMap<string, string>): string {
+  const direct = pageUrls.get(raw);
+  if (direct !== undefined) return direct;
+  try {
+    const url = new URL(raw);
+    const path = pathRole(url.pathname);
+    return `${SHOWCASE_ORIGIN}${path === '/' ? '/' : path}`;
+  } catch {
+    return `${SHOWCASE_ORIGIN}/page`;
+  }
+}
+
+function sanitizeUnknown(value: unknown, denylist: readonly string[], pageUrls: ReadonlyMap<string, string>): unknown {
+  if (typeof value === 'string') return replaceSourceStrings(value, denylist);
+  if (value instanceof Date) return new Date(value);
+  if (Array.isArray(value)) return value.map((item) => sanitizeUnknown(item, denylist, pageUrls));
+  const record = asRecord(value);
+  if (record === null) return value;
+  return Object.fromEntries(
+    Object.entries(record).map(([key, child]) => [
+      replaceSourceStrings(key, denylist),
+      sanitizeUnknown(child, denylist, pageUrls),
+    ]),
+  );
+}
+
+function syntheticObligationAssessment(): ObligationAssessment {
+  const retrievedAt = new Date(SHOWCASE_DATE);
+  const profile: OperatorProfile = {
+    siren: { value: SHOWCASE_SIREN, source: 'synthetic-showcase', retrievedAt },
+    denomination: { value: SHOWCASE_LEGAL_NAME, source: 'synthetic-showcase', retrievedAt },
+    naf: { value: '5510Z', source: 'synthetic-showcase', retrievedAt },
+    legalForm: { value: 'Entreprise de démonstration', source: 'synthetic-showcase', retrievedAt },
+    effectifBand: {
+      value: { code: '12', label: '10 à 19 salariés' },
+      source: 'synthetic-showcase',
+      retrievedAt,
+    },
+    turnover: { value: null, source: 'synthetic-showcase', retrievedAt },
+  };
+  const signals: SiteSignals = {
+    hasTransactionalFlow: true,
+    transactionalFlowEvidence: [
+      {
+        kind: 'booking-engine-domain-reference',
+        selector: '[data-showcase-booking]',
+        pageUrl: `${SHOWCASE_ORIGIN}/reservation`,
+        detail: 'Synthetic showcase evidence',
+      },
+    ],
+  };
+  const assessed = assessObligations(profile, signals);
+  return {
+    ...assessed,
+    sector: 'hospitality',
+    sirenSource: 'manual',
+    registrySnapshot: {
+      denomination: SHOWCASE_LEGAL_NAME,
+      effectifBandLabel: '10 à 19 salariés',
+      retrievedAt,
+      source: 'Faits synthétiques propres à l’exemple',
+    },
+  };
+}
+
+function syntheticManualFields(): AuditManualFields {
+  return {
+    siren: { value: SHOWCASE_SIREN, provenance: 'operator' },
+    sirenSourceUrl: { value: `${SHOWCASE_ORIGIN}/mentions-legales`, provenance: 'operator' },
+    raisonSociale: { value: SHOWCASE_LEGAL_NAME, provenance: 'operator' },
+    nomCommercial: { value: SHOWCASE_NAME, provenance: 'operator' },
+    sector: { value: 'hospitality', provenance: 'operator' },
+    declarationContactEmail: { value: 'contact@hotel-exemple.fr', provenance: 'operator' },
+    updatedAt: new Date(SHOWCASE_DATE),
+  };
+}
+
+function hasImageEvidence(value: unknown, key = ''): boolean {
+  if (/screenshot|image|photo|thumbnail/iu.test(key) && value !== undefined && value !== null) {
+    return true;
+  }
+  if (Array.isArray(value)) return value.some((item) => hasImageEvidence(item, key));
+  const record = asRecord(value);
+  return record !== null && Object.entries(record).some(([childKey, child]) => hasImageEvidence(child, childKey));
+}
+
+function mapFindingId(id: string, findingIds: ReadonlyMap<string, string>): string {
+  return findingIds.get(id) ?? `showcase-finding-${canonicalDigest(id).slice(-8)}`;
+}
+
+function projectFinding(
+  finding: Finding,
+  pageUrls: ReadonlyMap<string, string>,
+  findingIds: ReadonlyMap<string, string>,
+  denylist: readonly string[],
+): Finding {
+  const elements: FindingElement[] = finding.elements.map((element, index) => ({
+    pageUrl: rewriteUrl(element.pageUrl, pageUrls),
+    selector: `[data-showcase-${finding.category}="${index + 1}"]`,
+    snippet: `<div data-showcase-element="${finding.category}">Élément de démonstration</div>`,
+  }));
+  const projected: Finding = {
+    ...finding,
+    findingId: mapFindingId(finding.findingId, findingIds),
+    auditId: 'reference-audit',
+    pageUrls: finding.pageUrls.map((url) => rewriteUrl(url, pageUrls)),
+    elements,
+    title: replaceSourceStrings(finding.title, denylist),
+    description: replaceSourceStrings(finding.description, denylist),
+    rawEvidence: { showcaseProjection: true, category: finding.category, ruleId: finding.ruleId },
+    dedupeKey: `showcase|${finding.source}|${finding.ruleId}|${finding.category}`,
+    firstSeenAt: new Date(SHOWCASE_DATE),
+    lastSeenAt: new Date(SHOWCASE_DATE),
+  };
+  delete projected.helpUrl;
+  return projected;
+}
+
+function projectManifest(
+  manifest: AuditManifest,
+  pageUrls: ReadonlyMap<string, string>,
+  denylist: readonly string[],
+): AuditManifest {
+  const sanitized = sanitizeUnknown(manifest, denylist, pageUrls) as AuditManifest;
+  delete sanitized.prospectId;
+  delete sanitized.continuationGuardSummary;
+  return {
+    ...sanitized,
+    auditId: 'reference-audit',
+    scanIntent: 'full-audit',
+    siteUrl: `${SHOWCASE_ORIGIN}/`,
+    startedAt: SHOWCASE_DATE.toISOString(),
+    finishedAt: SHOWCASE_DATE.toISOString(),
+    crawl: { ...sanitized.crawl, startUrl: `${SHOWCASE_ORIGIN}/` },
+    pages: manifest.pages.map((page, index) => {
+      const pageCopy = { ...sanitized.pages[index]! };
+      delete pageCopy.pageDir;
+      return {
+        ...pageCopy,
+        url: rewriteUrl(page.url, pageUrls),
+        ...(page.discoveredFrom === undefined
+          ? {}
+          : { discoveredFrom: rewriteUrl(page.discoveredFrom, pageUrls) }),
+        ...(page.redirectTargetUrl === undefined
+          ? {}
+          : { redirectTargetUrl: rewriteUrl(page.redirectTargetUrl, pageUrls) }),
+        ...(page.crawlError === undefined
+          ? {}
+          : { crawlError: replaceSourceStrings(page.crawlError, denylist) }),
+        errors: Object.fromEntries(
+          Object.entries(page.errors).flatMap(([key, value]) =>
+            value === undefined ? [] : [[key, replaceSourceStrings(value, denylist)]],
+          ),
+        ) as AuditManifest['pages'][number]['errors'],
+      };
+    }),
+    siteSignals: {
+      hasTransactionalFlow: true,
+      transactionalFlowEvidence: [
+        {
+          kind: 'booking-engine-domain-reference',
+          selector: '[data-showcase-booking]',
+          pageUrl: `${SHOWCASE_ORIGIN}/reservation`,
+          detail: 'Synthetic showcase evidence',
+        },
+      ],
+      siren: SHOWCASE_SIREN,
+      mentionsLegalesPageUrl: `${SHOWCASE_ORIGIN}/mentions-legales`,
+    },
+  };
+}
+
+function projectAnalysis(
+  analysis: StoredAnalysis,
+  findingIds: ReadonlyMap<string, string>,
+  denylist: readonly string[],
+): StoredAnalysis {
+  const projected = sanitizeUnknown(analysis, denylist, new Map()) as StoredAnalysis;
+  delete projected.findingsProvenance;
+  delete projected.writingCritic;
+  return {
+    ...projected,
+    auditId: 'reference-audit',
+    analysisId: `reference-analysis-${analysis.language}`,
+    generatedAt: new Date(SHOWCASE_DATE),
+    siteContext: {
+      businessType: 'Hôtel indépendant',
+      primaryGoal: 'Présenter une expérience de réservation accessible',
+      languagesServed: ['fr'],
+      targetMarkets: ['France'],
+      sizeBracket: 'PME',
+      propertyType: 'Hôtel',
+      city: 'Ville Exemple',
+      sector: 'hospitality',
+    },
+    themes: analysis.themes.map((theme) => ({
+      ...theme,
+      findingIds: theme.findingIds.map((id) => mapFindingId(id, findingIds)),
+      title: replaceSourceStrings(theme.title, denylist),
+      businessImpact: replaceSourceStrings(theme.businessImpact, denylist),
+      legalRelevance:
+        theme.legalRelevance === undefined
+          ? undefined
+          : replaceSourceStrings(theme.legalRelevance, denylist),
+      recommendedActions: theme.recommendedActions.map((action) =>
+        replaceSourceStrings(action, denylist),
+      ),
+    })),
+    quickWins: analysis.quickWins.map((id) => mapFindingId(id, findingIds)),
+    executiveSummary: replaceSourceStrings(analysis.executiveSummary, denylist),
+    notes: replaceSourceStrings(analysis.notes, denylist),
+    obligationAssessment: syntheticObligationAssessment(),
+  };
+}
+
+export function buildReferenceAuditShowcase(source: ReferenceAuditSource): ReferenceAuditShowcase {
+  if (hasImageEvidence(source.findings) || hasImageEvidence(source.renderInputs)) {
+    throw new ReferenceAuditPublicationError(
+      'reference audit refused: source evidence contains an image or screenshot',
+    );
+  }
+  const denylist = buildSourceDenylist(source);
+  const pageUrls = createPageUrlMap(source);
+  const findingIds = new Map(
+    source.findings.map((finding, index) => [finding.findingId, `showcase-finding-${index + 1}`]),
+  );
+  const manifest = projectManifest(source.manifest, pageUrls, denylist);
+  const findings = source.findings.map((finding) =>
+    projectFinding(finding, pageUrls, findingIds, denylist),
+  );
+  const analysis = projectAnalysis(source.analysis, findingIds, denylist);
+  const renderInputs: ReportRenderInputs = {
+    manualFields: syntheticManualFields(),
+    obligationAssessment: syntheticObligationAssessment(),
+    ...(source.renderInputs?.preparation === undefined
+      ? {}
+      : {
+          preparation: sanitizeUnknown(
+            source.renderInputs.preparation,
+            denylist,
+            pageUrls,
+          ) as NonNullable<ReportRenderInputs['preparation']>,
+        }),
+  };
+  const findingsProvenance = buildFindingsProvenance(findings);
+  manifest.findingsProvenance = findingsProvenance;
+  analysis.findingsProvenance = findingsProvenance;
+  const bundle: ReferenceAuditShowcaseBundle = {
+    manifest,
+    findings,
+    analysis,
+    renderInputs,
+    releaseVersion: REFERENCE_AUDIT_RELEASE_VERSION,
+    anonymizerVersion: REFERENCE_AUDIT_ANONYMIZER_VERSION,
+    disclosure: REFERENCE_AUDIT_DISCLOSURE_FR,
+  };
+  assertReferenceAuditNoLeaks({ showcaseJson: bundle, denylist });
+  return { bundle, sourceDenylist: denylist };
+}
+
+export interface ReferenceAuditLeakScanInput {
+  showcaseJson?: unknown;
+  html?: string;
+  pdfText?: string;
+  pdfMetadata?: Record<string, string | undefined>;
+  embeddedObjectNames?: readonly string[];
+  denylist: readonly string[];
+}
+
+export function findReferenceAuditLeaks(input: ReferenceAuditLeakScanInput): string[] {
+  const values = [
+    input.showcaseJson === undefined ? '' : JSON.stringify(input.showcaseJson),
+    input.html ?? '',
+    input.pdfText ?? '',
+    ...Object.values(input.pdfMetadata ?? {}),
+    ...(input.embeddedObjectNames ?? []),
+  ];
+  const haystack = values.join('\n').normalize('NFKC').toLocaleLowerCase('fr-FR');
+  return [...new Set(input.denylist.filter((token) => token.length >= 4 && haystack.includes(token)))];
+}
+
+export function assertReferenceAuditNoLeaks(
+  input: ReferenceAuditLeakScanInput,
+): void {
+  const leaks = findReferenceAuditLeaks(input);
+  if (leaks.length > 0) {
+    throw new ReferenceAuditPublicationError(
+      `reference audit refused: source identity survived publication projection (${leaks.join(', ')})`,
+    );
+  }
+}
+
+export function referenceAuditManifestDigest(bundle: ReferenceAuditShowcaseBundle): string {
+  return canonicalDigest({
+    releaseVersion: bundle.releaseVersion,
+    anonymizerVersion: bundle.anonymizerVersion,
+    manifest: bundle.manifest,
+    findings: bundle.findings,
+    analysis: bundle.analysis,
+  });
+}
+
+export function renderInputsForReferenceAudit(bundle: ReferenceAuditShowcaseBundle): RenderBundle {
+  return {
+    lineage: {
+      auditId: bundle.manifest.auditId,
+      language: bundle.analysis.language,
+      analysisId: bundle.analysis.analysisId ?? `reference-analysis-${bundle.analysis.language}`,
+      analysisDigest: canonicalDigest(bundle.analysis),
+      findingsProvenance: {
+        findingsSchemaVersion: FINDINGS_SCHEMA_VERSION,
+        normalizationFingerprint: 'reference-audit-projection',
+        findingsDigest: canonicalDigest(bundle.findings),
+      },
+      rendererBuild: 'reference-audit',
+      reportTemplateVersion: REPORT_TEMPLATE_VERSION,
+      builtAt: SHOWCASE_DATE.toISOString(),
+    },
+    manifest: bundle.manifest,
+    findings: bundle.findings,
+    analysis: bundle.analysis,
+    ...bundle.renderInputs,
+  };
+}

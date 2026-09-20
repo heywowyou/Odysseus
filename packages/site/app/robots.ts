@@ -12,7 +12,7 @@ import type { MetadataRoute } from 'next';
 
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: [{ userAgent: '*', allow: '/', disallow: ['/apercu/'] }],
+    rules: [{ userAgent: '*', allow: '/', disallow: ['/apercu/', '/exemple-audit'] }],
     host: 'https://www.odysseusaudit.com',
     sitemap: 'https://www.odysseusaudit.com/sitemap.xml',
   };
