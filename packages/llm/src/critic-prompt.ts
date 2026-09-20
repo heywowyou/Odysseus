@@ -1,5 +1,6 @@
-import type { WritingCriticInput } from './critic-schema.js';
+import type { WritingCriticInput, WritingCriticIssue } from './critic-schema.js';
 import { listWritingProseFields } from './prose-fields.js';
+import type { WritingInput, WritingPassOutput } from './writing-schema.js';
 import { SCANNER_EVIDENCE_NOTICE } from './untrusted-evidence.js';
 
 /**
@@ -16,8 +17,8 @@ Report an issue only when it falls in one of these five categories:
 - contradicts-evidence: the prose states something that the theme's own findings or the performanceEvidence packet contradict (wrong element, wrong page type, wrong direction of a measurement, a problem the findings show is absent).
 - unsupported-inference: the prose draws a site-specific conclusion the cited findings do not establish (for example that a defect affects the booking engine when no finding concerns it, or names a cause no finding shows).
 - remedy-mismatch: a recommended action would not fix the cited findings, fixes something else, or departs from the theme's trustedRemediations guidance.
-- cross-theme-redundancy: this field makes, in substance, the same point as a field of another theme. Flag the lower-priority theme's field only.
-- unexplained-jargon: a technical term (an HTML attribute, an acronym such as LCP or CLS, a scanner rule identifier such as color-contrast) that a non-technical business owner cannot follow and that the sentence does not explain in plain words.
+- cross-theme-redundancy: this field makes, in substance, the same point as a field of another theme. Flag the lower-priority theme's field only. Two themes about the same element for different audiences or mechanisms (for example link names announced by assistive technology versus link text read by search engines) are not redundant.
+- unexplained-jargon: a technical term (an HTML attribute, an acronym such as LCP or CLS, a scanner rule identifier such as color-contrast) that a non-technical business owner cannot follow and that the sentence does not explain in plain words. A term the owner's web provider will search for as written (hreflang, aria-label, robots.txt, sitemap.xml, a viewport setting) belongs in the report: flag it only when no plain explanation accompanies it, and state in the problem that the fix is a short gloss beside the term, never its removal. Established French equivalents such as « adresse canonique » or « texte alternatif » are not jargon.
 
 Never report any of these, whatever the category:
 - stating the generic consequence of a real finding: that a barrier can frustrate or exclude visitors, that a slow or broken page may cost bookings, contacts, or trust. The writing instructions require that consequence; it is not an unsupported inference.
@@ -41,4 +42,37 @@ export function buildWritingCriticUserPrompt(input: WritingCriticInput): string 
   return `Here is the exact input the writing model received (writerInput) and every prose field it wrote (fields), each with the path to use when reporting an issue:
 
 ${JSON.stringify({ writerInput: input.writingInput, fields: listWritingProseFields(input.written) }, null, 2)}`;
+}
+
+/**
+ * Plan 070 B6: the targeted repair rewrites only the flagged fields. It sees
+ * the whole writer input and every current field, so a flagged summary is
+ * rewritten with the full report in view, and it answers with one
+ * replacement per flagged path, so no unflagged sentence can move.
+ */
+export function buildFieldRepairUserPrompt(
+  input: WritingInput,
+  written: WritingPassOutput,
+  issues: readonly WritingCriticIssue[],
+): string {
+  const flagged = [...new Set(issues.map((issue) => issue.field))];
+  const current = listWritingProseFields(written).map(({ field, text }) => ({ field, text }));
+  const problems = issues.map(({ field, category, findingIds, problem }) => ({
+    field,
+    category,
+    findingIds,
+    problem,
+  }));
+  return `This is a correction call, not a new report. Here is the exact input you wrote from (writerInput), every field you wrote (currentFields), and the problems an evidence review found in some of them (problems):
+
+${JSON.stringify({ writerInput: input, currentFields: current, problems }, null, 2)}
+
+Rewrite only these fields: ${flagged.join(', ')}.
+
+For this call your response is not the full report schema. It is one JSON object whose property names are exactly those field paths, each value the complete replacement text of that field. Every rule of the system instructions still applies to that text.
+
+- Fix every listed problem using only the evidence in writerInput. Keep every sentence of the field that has no listed problem as close to its current wording as possible, and keep every instruction the field already gives.
+- unexplained-jargon: keep the technical term exactly as written, because the web provider searches for it, and add a short plain explanation beside it in the same sentence. Never replace the term with a paraphrase.
+- cross-theme-redundancy: make the field state what is specific to its own theme's findings. For a recommendedActions entry that has nothing specific left, return an empty string to remove it.
+- executiveSummary and notes: keep every point the current text makes unless a problem names it.`;
 }

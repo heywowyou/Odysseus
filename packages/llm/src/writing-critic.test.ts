@@ -15,9 +15,11 @@ vi.mock('./constants.js', async (importOriginal) => ({
 vi.mock('./client.js', () => ({
   callOpenAiForWriting: vi.fn(),
   callOpenAiForCritic: vi.fn(),
+  callOpenAiForFieldRepair: vi.fn(),
 }));
 
-const { callOpenAiForCritic, callOpenAiForWriting } = await import('./client.js');
+const { callOpenAiForCritic, callOpenAiForFieldRepair, callOpenAiForWriting } =
+  await import('./client.js');
 const { analyzeWriting } = await import('./analyze-writing.js');
 const { critiqueAndRepairWriting } = await import('./writing-critic.js');
 
@@ -34,29 +36,22 @@ function issue(overrides: Partial<WritingCriticIssue> = {}): WritingCriticIssue 
   };
 }
 
-/** A repair response for only the t1 theme, as the schema built from the
- *  repair's theme subset would return it. */
-function repairedT1(overrides: Partial<WritingPassOutput['themes'][number]> = {}) {
-  return {
-    output: {
-      themes: [
-        {
-          themeKey: 't1',
-          title: 'Contrastes et lisibilité',
-          businessImpact:
-            'Les textes peu contrastés restent difficiles à lire sur les pages mesurées.',
-          recommendedActions: ['Augmentez le contraste des textes et soulignez les liens.'],
-          ...overrides,
-        },
-      ],
-      executiveSummary: 'Résumé réécrit qui ne doit pas être repris.',
-      notes: 'Notes réécrites qui ne doivent pas être reprises.',
-    },
-  };
+const REPAIRED_IMPACT =
+  'Les textes peu contrastés restent difficiles à lire sur les pages mesurées.';
+
+/** The pre-critic output with a second t1 action, so removal and
+ *  renumbering can be observed. */
+function twoActionOutput(): WritingPassOutput {
+  const output = criticWrittenOutput();
+  output.themes[0]!.recommendedActions = [
+    'Augmentez le contraste des textes et des liens concernés.',
+    'Soulignez les liens placés dans un paragraphe.',
+  ];
+  return output;
 }
 
-async function writeFirst() {
-  vi.mocked(callOpenAiForWriting).mockResolvedValueOnce({ output: criticWrittenOutput() });
+async function writeFirst(output: WritingPassOutput = criticWrittenOutput()) {
+  vi.mocked(callOpenAiForWriting).mockResolvedValueOnce({ output });
   return analyzeWriting(input, keys, false);
 }
 
@@ -67,6 +62,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.mocked(callOpenAiForWriting).mockReset();
   vi.mocked(callOpenAiForCritic).mockReset();
+  vi.mocked(callOpenAiForFieldRepair).mockReset();
 });
 
 describe('critiqueAndRepairWriting', () => {
@@ -79,6 +75,7 @@ describe('critiqueAndRepairWriting', () => {
     expect(result).toBe(written);
     expect(result.critic).toBeUndefined();
     expect(callOpenAiForCritic).not.toHaveBeenCalled();
+    expect(callOpenAiForFieldRepair).not.toHaveBeenCalled();
     expect(callOpenAiForWriting).toHaveBeenCalledTimes(1);
   });
 
@@ -99,6 +96,7 @@ describe('critiqueAndRepairWriting', () => {
     // Writer + critic: 3 fresh / 2 reused once the structure call is counted.
     expect(callOpenAiForWriting).toHaveBeenCalledTimes(1);
     expect(callOpenAiForCritic).toHaveBeenCalledTimes(1);
+    expect(callOpenAiForFieldRepair).not.toHaveBeenCalled();
   });
 
   it('treats a response whose every issue is dropped as no actionable issue', async () => {
@@ -115,22 +113,24 @@ describe('critiqueAndRepairWriting', () => {
       'out-of-theme-finding': 1,
       'unknown-field': 1,
     });
-    expect(callOpenAiForWriting).toHaveBeenCalledTimes(1);
+    expect(callOpenAiForFieldRepair).not.toHaveBeenCalled();
   });
 
-  it('applies a targeted repair: the flagged theme is replaced, every other field is identical', async () => {
-    const written = await writeFirst();
+  it('replaces only the flagged field; every other field, even in the same theme, is identical', async () => {
+    const written = await writeFirst(twoActionOutput());
     vi.mocked(callOpenAiForCritic).mockResolvedValueOnce({ output: { issues: [issue()] } });
-    vi.mocked(callOpenAiForWriting).mockResolvedValueOnce(repairedT1());
+    vi.mocked(callOpenAiForFieldRepair).mockResolvedValueOnce({
+      output: { 'themes[0](t1).businessImpact': REPAIRED_IMPACT },
+    });
 
     const result = await critiqueAndRepairWriting(input, keys, false, written);
 
-    expect(result.output.themes[0]!.businessImpact).toBe(
-      'Les textes peu contrastés restent difficiles à lire sur les pages mesurées.',
+    expect(result.output.themes[0]!.businessImpact).toBe(REPAIRED_IMPACT);
+    expect(result.output.themes[0]!.title).toBe(written.output.themes[0]!.title);
+    expect(result.output.themes[0]!.recommendedActions).toEqual(
+      written.output.themes[0]!.recommendedActions,
     );
-    // Byte identity for everything the critic did not flag.
     expect(result.output.themes[1]).toBe(written.output.themes[1]);
-    expect(JSON.stringify(result.output.themes[1])).toBe(JSON.stringify(written.output.themes[1]));
     expect(result.output.executiveSummary).toBe(written.output.executiveSummary);
     expect(result.output.notes).toBe(written.output.notes);
     expect(result.critic?.record).toEqual({
@@ -139,35 +139,116 @@ describe('critiqueAndRepairWriting', () => {
       issuesAccepted: 1,
       repairApplied: true,
     });
-    expect(result.critic?.sidecar.repairedFields).toEqual([
-      'themes[0](t1).title',
-      'themes[0](t1).businessImpact',
-      'themes[0](t1).recommendedActions[0]',
+    expect(result.critic?.sidecar.repairedFields).toEqual(['themes[0](t1).businessImpact']);
+    expect(result.critic?.sidecar.replacements).toEqual([
+      {
+        field: 'themes[0](t1).businessImpact',
+        before: written.output.themes[0]!.businessImpact,
+        after: REPAIRED_IMPACT,
+      },
     ]);
     expect(result.sanitizationWarnings).toEqual([]);
 
     // Writer + critic + repair: 4 fresh / 3 reused, never more.
-    expect(callOpenAiForWriting).toHaveBeenCalledTimes(2);
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(1);
     expect(callOpenAiForCritic).toHaveBeenCalledTimes(1);
-    const [repairInput, , feedback] = vi.mocked(callOpenAiForWriting).mock.calls[1]!;
-    expect(repairInput.themes.map((theme) => theme.themeKey)).toEqual(['t1']);
-    expect(feedback).toContain('themes[0](t1).businessImpact');
-    expect(feedback).toContain('booking engine');
+    expect(callOpenAiForFieldRepair).toHaveBeenCalledTimes(1);
+    // The repair sees every theme and the whole current report.
+    const [repairInput, , repairWritten, repairIssues] =
+      vi.mocked(callOpenAiForFieldRepair).mock.calls[0]!;
+    expect(repairInput.themes.map((theme) => theme.themeKey)).toEqual(['t1', 't2']);
+    expect(repairWritten).toBe(written.output);
+    expect(repairIssues).toEqual([issue()]);
   });
 
-  it('replaces the executive summary only when it was flagged', async () => {
+  it('rewrites a flagged summary alone, with every theme left untouched', async () => {
     const written = await writeFirst();
     vi.mocked(callOpenAiForCritic).mockResolvedValueOnce({
       output: { issues: [issue({ field: 'executiveSummary', category: 'contradicts-evidence' })] },
     });
-    vi.mocked(callOpenAiForWriting).mockResolvedValueOnce(repairedT1());
+    vi.mocked(callOpenAiForFieldRepair).mockResolvedValueOnce({
+      output: {
+        executiveSummary: 'Les constats portent sur la lisibilité des textes et des images.',
+      },
+    });
 
     const result = await critiqueAndRepairWriting(input, keys, false, written);
 
-    expect(result.output.executiveSummary).toBe('Résumé réécrit qui ne doit pas être repris.');
+    expect(result.output.executiveSummary).toBe(
+      'Les constats portent sur la lisibilité des textes et des images.',
+    );
     expect(result.output.notes).toBe(written.output.notes);
     expect(result.output.themes[0]).toBe(written.output.themes[0]);
     expect(result.output.themes[1]).toBe(written.output.themes[1]);
+  });
+
+  it('removes a redundant action returned empty and renumbers the rest', async () => {
+    const written = await writeFirst(twoActionOutput());
+    vi.mocked(callOpenAiForCritic).mockResolvedValueOnce({
+      output: {
+        issues: [
+          issue({
+            field: 'themes[0](t1).recommendedActions[0]',
+            category: 'cross-theme-redundancy',
+          }),
+        ],
+      },
+    });
+    vi.mocked(callOpenAiForFieldRepair).mockResolvedValueOnce({
+      output: { 'themes[0](t1).recommendedActions[0]': '' },
+    });
+
+    const result = await critiqueAndRepairWriting(input, keys, false, written);
+
+    expect(result.critic?.record.repairApplied).toBe(true);
+    expect(result.output.themes[0]!.recommendedActions).toEqual([
+      'Soulignez les liens placés dans un paragraphe.',
+    ]);
+    expect(result.critic?.sidecar.replacements).toEqual([
+      {
+        field: 'themes[0](t1).recommendedActions[0]',
+        before: 'Augmentez le contraste des textes et des liens concernés.',
+        after: null,
+      },
+    ]);
+  });
+
+  it('discards a repair that would leave a theme with no action', async () => {
+    const written = await writeFirst();
+    vi.mocked(callOpenAiForCritic).mockResolvedValueOnce({
+      output: {
+        issues: [
+          issue({
+            field: 'themes[0](t1).recommendedActions[0]',
+            category: 'cross-theme-redundancy',
+          }),
+        ],
+      },
+    });
+    vi.mocked(callOpenAiForFieldRepair).mockResolvedValueOnce({
+      output: { 'themes[0](t1).recommendedActions[0]': '' },
+    });
+
+    const result = await critiqueAndRepairWriting(input, keys, false, written);
+
+    expect(result.output).toBe(written.output);
+    expect(result.critic?.sidecar.status).toBe('repair-discarded');
+  });
+
+  it('discards an empty replacement for a field that cannot be removed', async () => {
+    const written = await writeFirst();
+    vi.mocked(callOpenAiForCritic).mockResolvedValueOnce({ output: { issues: [issue()] } });
+    vi.mocked(callOpenAiForFieldRepair).mockResolvedValueOnce({
+      output: { 'themes[0](t1).businessImpact': ' ' },
+    });
+
+    const result = await critiqueAndRepairWriting(input, keys, false, written);
+
+    expect(result.output).toBe(written.output);
+    expect(result.critic?.sidecar.status).toBe('repair-discarded');
+    expect(result.sanitizationWarnings).toEqual([
+      { code: 'critic-unresolved', field: 'themes[0](t1).businessImpact' },
+    ]);
   });
 
   it('fails open on a critic provider error', async () => {
@@ -188,7 +269,7 @@ describe('critiqueAndRepairWriting', () => {
       status: 'critic-skipped',
       reason: '503 upstream unavailable',
     });
-    expect(callOpenAiForWriting).toHaveBeenCalledTimes(1);
+    expect(callOpenAiForFieldRepair).not.toHaveBeenCalled();
   });
 
   it('fails open on an invalid critic response', async () => {
@@ -202,7 +283,7 @@ describe('critiqueAndRepairWriting', () => {
     expect(result.output).toBe(written.output);
     expect(result.critic?.sidecar.status).toBe('critic-skipped');
     expect(callOpenAiForCritic).toHaveBeenCalledTimes(1);
-    expect(callOpenAiForWriting).toHaveBeenCalledTimes(1);
+    expect(callOpenAiForFieldRepair).not.toHaveBeenCalled();
   });
 
   it('discards a repair that fails a blocking guard and warns with field paths only', async () => {
@@ -212,7 +293,7 @@ describe('critiqueAndRepairWriting', () => {
         issues: [
           issue(),
           issue({
-            field: 'themes[0](t1).recommendedActions[0]',
+            field: 'themes[0](t1).title',
             category: 'remedy-mismatch',
           }),
         ],
@@ -220,9 +301,12 @@ describe('critiqueAndRepairWriting', () => {
     });
     // A French theme title written in English fails the blocking
     // language-compliance guard.
-    vi.mocked(callOpenAiForWriting).mockResolvedValueOnce(
-      repairedT1({ title: 'Slow page loading across the whole site' }),
-    );
+    vi.mocked(callOpenAiForFieldRepair).mockResolvedValueOnce({
+      output: {
+        'themes[0](t1).businessImpact': REPAIRED_IMPACT,
+        'themes[0](t1).title': 'Slow page loading across the whole site',
+      },
+    });
 
     const result = await critiqueAndRepairWriting(input, keys, false, written);
 
@@ -231,21 +315,21 @@ describe('critiqueAndRepairWriting', () => {
     expect(result.critic?.sidecar.status).toBe('repair-discarded');
     expect(result.sanitizationWarnings).toEqual([
       { code: 'critic-unresolved', field: 'themes[0](t1).businessImpact' },
-      { code: 'critic-unresolved', field: 'themes[0](t1).recommendedActions[0]' },
+      { code: 'critic-unresolved', field: 'themes[0](t1).title' },
     ]);
     for (const warning of result.sanitizationWarnings) {
       expect(Object.keys(warning).sort()).toEqual(['code', 'field']);
     }
     expect(JSON.stringify(result.sanitizationWarnings)).not.toContain('booking engine');
     // No retry of a rejected repair, no second critic.
-    expect(callOpenAiForWriting).toHaveBeenCalledTimes(2);
+    expect(callOpenAiForFieldRepair).toHaveBeenCalledTimes(1);
     expect(callOpenAiForCritic).toHaveBeenCalledTimes(1);
   });
 
   it('fails open on a repair provider error', async () => {
     const written = await writeFirst();
     vi.mocked(callOpenAiForCritic).mockResolvedValueOnce({ output: { issues: [issue()] } });
-    vi.mocked(callOpenAiForWriting).mockRejectedValueOnce(new Error('429 Rate limit exceeded'));
+    vi.mocked(callOpenAiForFieldRepair).mockRejectedValueOnce(new Error('429 Rate limit exceeded'));
 
     const result = await critiqueAndRepairWriting(input, keys, false, written);
 
@@ -254,29 +338,20 @@ describe('critiqueAndRepairWriting', () => {
     expect(result.sanitizationWarnings).toEqual([
       { code: 'critic-unresolved', field: 'themes[0](t1).businessImpact' },
     ]);
-    expect(callOpenAiForWriting).toHaveBeenCalledTimes(2);
+    expect(callOpenAiForFieldRepair).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps the repair sanitation warnings on the full output theme order', async () => {
+  it('sanitizes a replacement and keeps its warning on the field path', async () => {
     const written = await writeFirst();
     vi.mocked(callOpenAiForCritic).mockResolvedValueOnce({
       output: {
         issues: [issue({ field: 'themes[1](t2).businessImpact', findingIds: ['f3'] })],
       },
     });
-    vi.mocked(callOpenAiForWriting).mockResolvedValueOnce({
+    vi.mocked(callOpenAiForFieldRepair).mockResolvedValueOnce({
       output: {
-        themes: [
-          {
-            themeKey: 't2',
-            title: 'Images sans description',
-            businessImpact:
-              'Les images sans description restent muettes pour un lecteur d’écran. Le thème t2 le confirme.',
-            recommendedActions: ['Ajoutez une description courte à chaque image porteuse de sens.'],
-          },
-        ],
-        executiveSummary: 'Ignoré.',
-        notes: 'Ignoré.',
+        'themes[1](t2).businessImpact':
+          'Les images sans description restent muettes pour un lecteur d’écran. Le thème t2 le confirme.',
       },
     });
 
@@ -286,6 +361,7 @@ describe('critiqueAndRepairWriting', () => {
     expect(result.output.themes[1]!.businessImpact).toBe(
       'Les images sans description restent muettes pour un lecteur d’écran.',
     );
+    expect(result.output.themes[0]).toBe(written.output.themes[0]);
     expect(result.sanitizationWarnings).toEqual([
       { code: 'internal-reference-removed', field: 'themes[1](t2).businessImpact' },
     ]);

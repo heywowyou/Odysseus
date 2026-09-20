@@ -149,6 +149,7 @@ beforeEach(async () => {
             },
           ],
           repairedFields: [],
+          replacements: [],
         },
       },
     }),

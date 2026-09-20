@@ -48,6 +48,15 @@ export const writingCriticResponseSchema = z
 
 export type WritingCriticResponse = z.infer<typeof writingCriticResponseSchema>;
 
+/** Plan 070 B6: the targeted repair's response, one replacement text per
+ *  flagged field path and nothing else. An empty string removes a
+ *  recommendedActions entry; the orchestration rejects it anywhere else. */
+export function buildFieldRepairResponseSchema(fields: readonly string[]) {
+  return z.object(Object.fromEntries(fields.map((field) => [field, z.string()]))).strict();
+}
+
+export type FieldRepairResponse = Record<string, string>;
+
 /** The critic sees exactly what the writer saw plus the sanitized prose the
  *  report would ship. No HTML, no findings outside the theme packets, no
  *  structure or ranking it could reopen. */

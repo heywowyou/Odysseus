@@ -1110,12 +1110,20 @@ positive), style or length, and everything a deterministic guard owns.
   outside that field's own theme packet (executive summary and notes may cite
   any theme). A repeated field and category is a duplicate; at most 12 are
   accepted.
-- **Targeted repair.** One writer call over only the flagged themes, with the
-  accepted issues as correction feedback. Only flagged themes, and the
-  executive summary or notes when flagged, are replaced; everything else is
-  the original object. The merged output runs `sanitizeWritingOutput` and the
-  full guard table: a blocking failure, or a style failure the original did
-  not already have, discards the whole repair.
+- **Targeted repair.** One call (`callOpenAiForFieldRepair`) with the
+  writer's system prompt, the whole writer input, every current field, and
+  the accepted issues. Its schema admits exactly the flagged field paths, one
+  replacement text each; an empty text removes a redundant recommended action
+  and is rejected for any other field or when it would leave a theme without
+  an action. Replacements are spliced in by field path, so every unflagged
+  field, including those of a flagged theme, keeps its text. A flagged
+  summary is rewritten with the whole report in view. For
+  `unexplained-jargon` the repair keeps the technical term and adds a short
+  gloss beside it, because the provider searches for the term as written.
+  The spliced output runs `sanitizeWritingOutput` and the full guard table: a
+  blocking failure, or a style failure the original did not already have,
+  discards the whole repair. The sidecar records each replaced field's
+  before and after text.
 - **Fail open.** A critic provider error, refusal, truncation or invalid
   response, a repair provider error, and a rejected repair all leave the
   pre-critic output standing. A critic defect can never fail a job or block a

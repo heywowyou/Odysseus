@@ -24,12 +24,22 @@ import {
 import { buildWritingOutputJsonSchema } from './writing-output-schema.js';
 import { buildWritingSystemPrompt, buildWritingUserPrompt } from './writing-prompt.js';
 import {
+  buildFieldRepairResponseSchema,
   writingCriticResponseSchema,
+  type FieldRepairResponse,
   type WritingCriticInput,
+  type WritingCriticIssue,
   type WritingCriticResponse,
 } from './critic-schema.js';
-import { WRITING_CRITIC_OUTPUT_JSON_SCHEMA } from './critic-output-schema.js';
-import { buildWritingCriticSystemPrompt, buildWritingCriticUserPrompt } from './critic-prompt.js';
+import {
+  buildFieldRepairOutputJsonSchema,
+  WRITING_CRITIC_OUTPUT_JSON_SCHEMA,
+} from './critic-output-schema.js';
+import {
+  buildFieldRepairUserPrompt,
+  buildWritingCriticSystemPrompt,
+  buildWritingCriticUserPrompt,
+} from './critic-prompt.js';
 import {
   correctionReviewOutputSchema,
   eligibleCorrectionFields,
@@ -347,6 +357,80 @@ export async function callOpenAiForCritic(
   }
 
   const output = writingCriticResponseSchema.parse(JSON.parse(content));
+  const usage = readUsage(response);
+  return { output, ...(usage ? { usage } : {}) };
+}
+
+export interface RawFieldRepairCallResult {
+  output: FieldRepairResponse;
+  usage?: WritingCallUsage;
+}
+
+/** Plan 070 B6: the targeted repair's single call. The writer's own system
+ *  prompt carries every writing rule; the user prompt narrows the task to the
+ *  flagged fields and the schema admits exactly those paths. Every failure
+ *  throws, and attemptRepair turns it into a discarded repair. */
+export async function callOpenAiForFieldRepair(
+  input: WritingInput,
+  usedFallbackContext: boolean,
+  written: WritingPassOutput,
+  issues: readonly WritingCriticIssue[],
+): Promise<RawFieldRepairCallResult> {
+  const client = createClient();
+  const fields = [...new Set(issues.map((issue) => issue.field))];
+
+  const response = await withProviderRetryAfterHint(() =>
+    client.chat.completions.create({
+      model: OPENAI_MODEL,
+      max_completion_tokens: MAX_OUTPUT_TOKENS,
+      temperature: WRITING_OPENAI_TEMPERATURE,
+      reasoning_effort: OPENAI_REASONING_EFFORT,
+      messages: [
+        {
+          role: 'system',
+          content: buildWritingSystemPrompt(
+            input.language,
+            usedFallbackContext,
+            input.performanceEvidence,
+            input.providerPhrase,
+            input.siteContext,
+          ),
+        },
+        { role: 'user', content: buildFieldRepairUserPrompt(input, written, issues) },
+      ],
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'writing_field_repair',
+          schema: buildFieldRepairOutputJsonSchema(fields),
+          strict: true,
+        },
+      },
+    }),
+  );
+
+  const choice = response.choices?.[0];
+  if (!choice) {
+    throw new Error('odysseus analyze (critic repair): OpenAI response contained no choices');
+  }
+  if (choice.finish_reason === 'length') {
+    throw new Error(
+      'odysseus analyze (critic repair): OpenAI response was truncated (finish_reason: length)',
+    );
+  }
+  if (choice.message.refusal) {
+    throw new Error(
+      `odysseus analyze (critic repair): OpenAI refused the request: ${choice.message.refusal}`,
+    );
+  }
+  const content = choice.message.content;
+  if (typeof content !== 'string') {
+    throw new Error(
+      'odysseus analyze (critic repair): OpenAI response content was not a plain string (unexpected shape)',
+    );
+  }
+
+  const output = buildFieldRepairResponseSchema(fields).parse(JSON.parse(content));
   const usage = readUsage(response);
   return { output, ...(usage ? { usage } : {}) };
 }

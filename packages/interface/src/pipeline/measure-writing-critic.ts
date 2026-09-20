@@ -182,13 +182,24 @@ async function measureAudit(auditDir: string, runStructure: boolean, outDir: str
     reason: sidecar?.reason,
     dropped: sidecar?.dropped,
     warnings: critiqued.sanitizationWarnings,
-    issues: (sidecar?.issues ?? []).map((issue) => ({
-      ...issue,
-      original: before.get(issue.field),
-      repaired:
-        sidecar?.repairedFields.includes(issue.field) === true ? after.get(issue.field) : undefined,
-      label: null as 'real' | 'false-positive' | null,
-    })),
+    issues: (sidecar?.issues ?? []).map((issue) => {
+      const replacement = sidecar?.replacements.find((entry) => entry.field === issue.field);
+      return {
+        ...issue,
+        original: before.get(issue.field),
+        // null: the repair removed this action. Absent: not repaired.
+        ...(replacement ? { repaired: replacement.after } : {}),
+        label: null as 'real' | 'false-positive' | null,
+      };
+    }),
+    // Every field of the report before and after, by path, so a reviewer
+    // can confirm nothing outside the flagged fields moved.
+    unflaggedFieldsChanged: [...before]
+      .filter(([field, text]) => {
+        if (sidecar?.repairedFields.includes(field) === true) return false;
+        return after.get(field) !== text;
+      })
+      .map(([field]) => field),
   };
 
   const name = `${path.basename(path.dirname(auditDir))}__${path.basename(auditDir)}.json`;

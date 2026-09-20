@@ -5404,7 +5404,8 @@ leaves jargon unexplained.
   never retries, anything else. The prompt excludes the generic consequence of
   a real finding, the false positive that made the old reviewer useless.
 - **Improves or steps aside.** One targeted repair rewrites only the flagged
-  themes; unflagged fields stay byte-identical. A critic or repair failure, or
+  fields and returns one replacement per field path; every unflagged field
+  keeps its text. A critic or repair failure, or
   a repair failing any guard, leaves the writer's output standing, and the
   unresolved field paths become operator warnings. A critic defect can never
   fail a job.

@@ -50,11 +50,11 @@ export { sanitizeWritingOutput } from './sanitize-writing-output.js';
 export type { SanitizedWritingOutput } from './sanitize-writing-output.js';
 export { runWritingCritic } from './analyze-critic.js';
 export {
-  buildCriticRepairFeedback,
   critiqueAndRepairWriting,
   runCriticAndRepair,
   type CritiquedWritingResult,
   type WritingCriticOutcomeStatus,
+  type WritingCriticReplacement,
   type WritingCriticRecord,
   type WritingCriticSidecar,
 } from './writing-critic.js';

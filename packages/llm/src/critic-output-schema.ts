@@ -32,3 +32,14 @@ export const WRITING_CRITIC_OUTPUT_JSON_SCHEMA = {
   required: ['issues'],
   additionalProperties: false,
 } as const;
+
+/** JSON Schema mirror of buildFieldRepairResponseSchema: every flagged field
+ *  path is a required string property, and no other property is allowed. */
+export function buildFieldRepairOutputJsonSchema(fields: readonly string[]) {
+  return {
+    type: 'object',
+    properties: Object.fromEntries(fields.map((field) => [field, { type: 'string' }])),
+    required: [...fields],
+    additionalProperties: false,
+  } as const;
+}
