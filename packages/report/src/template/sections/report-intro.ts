@@ -25,9 +25,11 @@ interface IntroFacts {
   findingCount: number;
   /** Findings whose severity is critical or serious. */
   criticalSeriousCount: number;
-  /** Distinct pages across every finding's pageUrls. Site-wide findings
-   *  without page URLs can only make the real footprint larger, which the
-   *  "at least" wording in the template accounts for. */
+  /** Distinct analysed pages across every finding's pageUrls. Site-wide
+   *  findings without page URLs can only make the real footprint larger,
+   *  which the "at least" wording in the template accounts for. A page
+   *  outside the analysed set (a redirect a hreflang link points at) is left
+   *  out: the Haaitza report said "au moins 206 pages" of 140 analysed. */
   affectedPageCount: number;
   /** Ranked priorities actually shown: the provided rendered-priorities
    *  view, or the same selection the action list below falls back to. */
@@ -39,13 +41,18 @@ function computeIntroFacts(
   findings: readonly Finding[],
   priorities: readonly RenderedPriority[] | undefined,
   findingsById: ReadonlyMap<string, Finding>,
+  analysedPageUrls: ReadonlySet<string> | undefined,
 ): IntroFacts {
   return {
     findingCount: findings.length,
     criticalSeriousCount: findings.filter(
       (finding) => finding.severity === 'critical' || finding.severity === 'serious',
     ).length,
-    affectedPageCount: new Set(findings.flatMap((finding) => finding.pageUrls)).size,
+    affectedPageCount: new Set(
+      findings
+        .flatMap((finding) => finding.pageUrls)
+        .filter((url) => analysedPageUrls === undefined || analysedPageUrls.has(url)),
+    ).size,
     priorityCount: priorities
       ? priorities.length
       : selectRenderedThemes(analysis.themes, findingsById).length,
@@ -83,10 +90,11 @@ export function renderReportIntro(
   findings: readonly Finding[],
   priorities?: readonly RenderedPriority[],
   preparation?: PreparationPreviewLanguage,
+  analysedPageUrls?: ReadonlySet<string>,
 ): string {
   const r = strings.reportIntro;
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
-  const facts = computeIntroFacts(analysis, findings, priorities, findingsById);
+  const facts = computeIntroFacts(analysis, findings, priorities, findingsById, analysedPageUrls);
 
   const countPhrase = (count: number, singular: string, plural: string): string =>
     `${formatNumber(count, analysis.language)} ${pluralize(analysis.language, count, singular, plural)}`;

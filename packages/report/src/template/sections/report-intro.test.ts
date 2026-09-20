@@ -139,6 +139,43 @@ describe('renderReportIntro', () => {
     expect(html).not.toContain(resolveGenericDecisionQuestion('fr'));
   });
 
+  it('counts only analysed pages, so the footprint never exceeds the analysed set', () => {
+    // A real report claimed "au moins 206 pages" of 140 analysed: a finding's
+    // pageUrls can name a redirect target a hreflang link points at, which the
+    // crawl never content-checked.
+    const findings = [
+      buildFinding({ findingId: 'f001', severity: 'serious', pageUrls: ['https://example.com/a'] }),
+      buildFinding({
+        findingId: 'f002',
+        severity: 'critical',
+        pageUrls: ['https://example.com/a', 'https://example.com/redirect-target'],
+      }),
+    ];
+    const analysis = buildAnalysis([['f001', 'f002']]);
+    const analysed = new Set(['https://example.com/a']);
+
+    const html = renderReportIntro(
+      getStrings('fr'),
+      1,
+      analysis as never,
+      findings,
+      undefined,
+      undefined,
+      analysed,
+    );
+
+    expect(html).toContain(
+      escapeHtml(
+        fillTemplate(clientFr.reportIntro.complicationBodyTemplate, {
+          findings: '2 constats distincts',
+          criticalSerious: '2',
+          pages: '1 page',
+          priorities: '1 priorité',
+        }),
+      ),
+    );
+  });
+
   it('renders the same structure in English for an English analysis', () => {
     const findings = [
       buildFinding({ findingId: 'f001', severity: 'serious', pageUrls: ['https://example.com/a'] }),

@@ -16,6 +16,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { partitionFindings } from '@odysseus/llm';
+import { contentCheckedPageUrls } from '@odysseus/core';
 import type {
   FindingsDelta,
   AuditManifest,
@@ -236,6 +237,7 @@ function renderBody(
       resolvedFindings,
       renderedPriorities,
       preparation,
+      contentCheckedPageUrls(manifest),
     ),
     // Plan 032 (issue #162): the audit fallback gate's static honest note,
     // unnumbered chrome between the intro and the executive summary. ''
