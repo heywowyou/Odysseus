@@ -56,6 +56,7 @@ import {
 import {
   classifyReportFreshness,
   reportUsesCurrentTemplate,
+  buildRenderBundle,
   computeAutomaticGrade,
   summarizeThirdPartyFindings,
   findUnconfirmedIdentityFields,
@@ -80,7 +81,7 @@ import { lookupOperatorProfile } from '../sirene/sirene-cache.js';
 import { pdfDigestOf } from '../pipeline/pdf-digest.js';
 import { findingsAreStale, makeReportReady } from '../pipeline/make-report-ready.js';
 import { readAuditArtifacts, runReportQualityForAudit } from '../pipeline/regenerate-reports.js';
-import { buildRenderBundle, resolveRenderInputs } from '../pipeline/build-render-bundle.js';
+import { resolveRenderInputs } from '../pipeline/build-render-bundle.js';
 import { approveAndPromoteReportQualityBundle } from '../pipeline/report-quality-promotion.js';
 import { readVerifiedImmutablePdf } from '../pipeline/report-quality-storage.js';
 import {

@@ -4,6 +4,10 @@
     "allow": [
       "Read(/.env)",
       "Bash(node scripts/fetch-client-report.mjs *)",
+      "Bash(node scripts/upload-finalized-report.mjs *)",
+      "Bash(pnpm report:finalize-render *)",
+      "Bash(deploy/odysseus-deploy.sh)",
+      "Bash(deploy/odysseus-deploy.sh *)",
       "Bash(pdfinfo *)",
       "Bash(pdftotext *)",
       "Bash(pdftoppm *)",

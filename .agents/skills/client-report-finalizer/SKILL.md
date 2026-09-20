@@ -1,6 +1,6 @@
 ---
 name: client-report-finalizer
-description: "Explicit pre-delivery finalization of an already-generated client report: inspect the exact PDF, correct safe source defects from stored evidence, regenerate without a new scan or product-LLM polish calls, and stop only after a clean full-document pass."
+description: "Explicit pre-delivery finalization of an already-generated client report: fetch the exact hosted render inputs, fix every client-facing defect (shared code, deterministic facts, report-specific prose through a bound override file), render the corrected PDF locally without a new scan, read it front to back until clean, then upload the finalized PDF to the dashboard."
 disable-model-invocation: true
 ---
 
@@ -9,466 +9,423 @@ disable-model-invocation: true
 Use this skill only when the operator explicitly asks to finalize an existing
 paid client report before delivery.
 
-Its job is not to discover another hotel's defects. It takes one already-scanned
-audit and one intended delivery set, makes the rendered PDF as clean as the
-current evidence allows, and leaves a clear release decision.
+It takes one already-scanned audit and one intended delivery set and **delivers
+the corrected PDF itself**. It is not a bug-hunting pass that hands defects back
+to the operator. It does not stop at "fixed in source, pending deploy", and it
+does not send the client a report that still has known defects.
 
 The target state is:
 
-> Same audit evidence, same findings, same deterministic facts, no known
-> client-facing defect in the final rendered PDF.
+> Same scan evidence, correct findings, correct deterministic facts, the
+> selected writing plus bound host corrections, no known client-facing defect
+> in the final rendered PDF, and the finalized PDF stored on the dashboard.
 
-This is production/editorial QA, not a manual accessibility-verification layer
-and not an RGAA audit. It does not change the offer's automated-diagnostic
-boundary.
+This is production and editorial QA. It is not a manual accessibility
+verification and not an RGAA audit, and it does not change the offer's
+boundary as an automated diagnostic.
 
 ## Invocation
 
-Examples:
-
 ~~~text
 $client-report-finalizer <audit-id>
-$client-report-finalizer <artifact-dir>
-$client-report-finalizer <pdf-path>
 ~~~
 
-Claude Code exposes the mirrored skill as /client-report-finalizer.
+Claude Code exposes the mirrored skill as /client-report-finalizer. Invoking it
+with an audit id authorizes, for that audit only, everything in the
+**Authorized actions** section below. It needs no further permission prompts.
 
-An audit id or artifact directory is preferred because it lets the final pass
-prove lineage. A PDF by itself is enough for visual/editorial review, but not
-for READY-FOR-CLIENT until its source audit and selected analysis can be
-resolved.
+Default to the French report. Review English only when the operator says it is
+part of this delivery. Do not generate English merely because older reports
+were bilingual.
 
-Default to the French report. Review English too only when the operator says it
-is part of this delivery or the current product workflow explicitly marks it as
-such. Do not generate English merely because historical reports were bilingual.
+## Authorized actions
 
-## What this skill is not
+Invoking the skill with an audit id authorizes the following. Each item is
+limited to that audit, except the deploy:
 
-Do not turn this into:
+1. **Read-only retrieval** of the hosted audit record, report-quality lineage,
+   current PDFs, and the render bundle (see Tooling).
+2. **Source fixes** to shared code, deterministic copy, layout rules, and
+   deterministic producers, each with a focused test. Commit only when the
+   operator asks; never push.
+3. **Local rendering** from the fetched render bundle with fixed local code and
+   the override file, with provider credentials removed from the environment.
+4. **Deploy** with `deploy/odysseus-deploy.sh` when the skill's own tooling or a
+   finding-regrouping fix must be live on the VPS. Deploy a clean tree only:
+   the committed state of `main`, with no unrelated uncommitted work. If the
+   tree holds uncommitted changes that are not the skill's own, stop and ask
+   before deploying.
+5. **One VPS regrouping pass** per run, only when a finding-grouping defect is
+   confirmed (see section 5). The VPS recomputes findings from its stored scan
+   artifacts and runs **exactly one** product writing pass.
+6. **Upload** of the final, clean PDF to the dashboard as the finalized report
+   for that audit and language, together with its override file and lineage.
 
-- a new crawl or live-site audit;
-- the recurring scan-report-audit rehearsal;
-- a manual WCAG/RGAA verification pass;
-- a fresh product-LLM rewrite loop;
-- a redesign session;
-- a way to suppress an inconvenient finding;
-- a client-send or publication action.
+It never authorizes:
 
-If a visual problem requires a genuine design choice rather than an objective
-production fix, route that thread to the explicit Impeccable/report-workbench
-workflow. Finalization fixes defects; it does not reinterpret the design
-system.
+- a new crawl, browser audit, or page refetch;
+- any further product-LLM call beyond the single regrouping pass;
+- sending, emailing, or outreach;
+- a write to any other audit;
+- destructive database or git actions.
 
 ## Hard invariants
 
-These hold for the entire run.
+1. **No new acquisition.** Work from stored scan artifacts only. If truth can
+   only be corrected by rescanning, return BLOCKED-NEW-SCAN-REQUIRED.
+2. **Product LLM budget: 0, or 1 when regrouping.** The host model running this
+   skill is the editor. Never call the product writer, critic, repair, or
+   translation path to polish prose. Render with `OPENAI_API_KEY`,
+   `ANTHROPIC_API_KEY`, `MISTRAL_API_KEY`, and `MONGODB_URI` removed from the
+   subprocess environment so that an accidental provider call fails closed.
+3. **Findings change only through their producer.** Never add, remove, merge,
+   downgrade, strengthen, or reword a finding by hand. If findings are wrong:
+   - fix the deterministic producer, with a regression test;
+   - recompute from stored artifacts, on the VPS (section 5).
+4. **Deterministic facts are never edited as prose.** This covers counts, page
+   populations, severities, occurrences, measurements, legal facts, obligation
+   status, limitations, provenance, ranking inputs, and the selected structure.
+   When one is wrong, fix the code that produces or renders it.
+5. **No unsupported legal or commercial claim.** Keep
+   docs/rules/obligation-basis.md and the writing rules' business-claim limits.
+   A correction may clarify a claim; it may never broaden it.
+6. **Model-written prose changes only through the override file.** Never edit
+   the analysis JSON, a database document, a report record, or a PDF by hand.
+   Every report-specific prose correction goes in the override file
+   (see Tooling). The file is bound to the analysis digest and passes the
+   normal writing guards.
+7. **No client-specific hacks in shared code.** Never put a hotel name,
+   hostname, audit id, literal client sentence, or one-off selector into shared
+   code. Report-specific wording belongs in the override file.
+8. **Do not churn acceptable prose.** Change a sentence only when it is:
+   - factually wrong or unclear;
+   - non-native French, or materially repetitive;
+   - inconsistent with the rest of the report;
+   - against the canonical style.
+9. **The PDF is the release artifact.** Source, tests, and JSON are evidence.
+   The locally rendered final PDF is what must be clean, and it is the file
+   that gets uploaded.
+10. **Never send to the client.** Uploading the finalized PDF to the dashboard
+    is storage. Delivering it to the client stays the operator's action.
 
-1. **No new acquisition.** Never crawl the site, run a browser audit, refetch
-   pages, or acquire new scan evidence. Work from the stored audit and existing
-   artifacts. If a correction genuinely requires a new scan, return
-   BLOCKED-NEW-SCAN-REQUIRED.
-2. **No product-LLM polish calls.** The host model doing this skill is the
-   reviewer/editor. Do not call the product OpenAI writer, critic, repair, or
-   translation path merely to improve the report. Before using any regeneration
-   command or dashboard endpoint, inspect its current call graph and prove it
-   is render-only for this target. When practical, render with the product API
-   credential absent from the subprocess environment so an accidental provider
-   call fails closed.
-3. **Findings are immutable at finalization.** Never add, remove, merge,
-   downgrade, strengthen, or rewrite a deterministic finding to make the
-   document read better. If a finding is actually wrong, fix its deterministic
-   producer and recompute only from already-stored acquisition artifacts when
-   supported. Otherwise block.
-4. **Deterministic facts stay deterministic.** Counts, page populations,
-   severities, occurrences, performance measurements, legal facts, obligation
-   status, limitations, provenance, ranking inputs, and selected structure are
-   never edited as prose.
-5. **No unsupported legal or commercial conclusion.** Preserve
-   docs/rules/obligation-basis.md and the business-claim restrictions in the
-   writing rules. Finalization may clarify wording; it may not broaden the
-   claim.
-6. **No hidden edits to selected analysis.** Do not hand-edit a persisted
-   analysis JSON, database document, report record, or generated PDF behind the
-   product's lineage model. Report-specific prose may be changed only through a
-   provenance-safe finalization/override seam that the current repo explicitly
-   supports and revalidates. If no such seam exists, return
-   NEEDS-WORKFLOW-SUPPORT rather than creating one ad hoc inside this run.
-7. **No client-specific generator hacks.** Never add a hotel name, hostname,
-   audit id, literal client sentence, or one-off selector to shared report code
-   to make this one PDF pass.
-8. **Do not churn acceptable prose.** A sentence is not a defect merely because
-   another sentence might be nicer. Change prose when it is factually wrong,
-   unclear, non-native, materially repetitive, inconsistent with the report, or
-   in conflict with the canonical style.
-9. **The PDF is the release artifact.** Source, HTML, tests, and JSON are
-   evidence; the final rendered PDF is what must be clean.
-10. **Never send or publish from this skill.** READY-FOR-CLIENT means the file
-    is ready for the operator's delivery action.
+## Tooling
 
-## Load the minimum authoritative context
+The skill relies on the tools below. If one is missing or out of date, the run
+builds it to this contract first, with tests. That work is part of the run, not
+a blocker. If a new tool needs a route on the VPS, deploy it (Authorized
+action 4) before continuing.
 
-Before editing, read the current host charter and
-docs/agents/documentation-map.md, then load:
-
-- docs/rules/report-writing-style.md;
-- docs/rules/llm-layer-rules.md;
-- docs/report/report-design-system.md;
-- docs/report/report-workbench.md;
-- docs/rules/obligation-basis.md when legal/identity content is present or
-  questioned;
-- docs/report/report-design-tokens.md only when touching report styling.
-
-Inspect the current code around the exact generation/rendering seam before
-changing it. Active plans can add acceptance criteria, but canonical docs and
-shipped code define current behavior.
-
-For a hosted-dashboard target, the secure authentication pattern in
-.agents/skills/scan-report-audit/SKILL.md may be read for cookie handling only.
-Do not execute that skill's hotel-pick or scan steps.
-
-Do **not** read the historical rehearsal ledger before the first blind PDF
-pass. The blind pass must see what this client sees, not hunt for yesterday's
-bug list. Reconcile known defect classes after it.
-
-## 1. Resolve and freeze the target
-
-Resolve as much of this identity as the repo exposes:
-
-- audit id and hostname;
-- intended delivery language(s);
-- selected analysis id/generation and structure lineage;
-- findings provenance/digest;
-- current report/template/data version;
-- current PDF path or authenticated preview endpoint.
-
-Audits run on the VPS. Local artifacts/ copies may be older than the hosted
-report, so for a hosted audit always fetch the current one first:
+### Fetch: `scripts/fetch-client-report.mjs`
 
 ~~~bash
 node scripts/fetch-client-report.mjs <audit-id> <scratchpad>/<audit-id> [fr en]
 ~~~
 
-It downloads the audit record, the report-quality lineage, and each fresh
-report PDF (French by default) through the dashboard's GET routes, then logs
-out. It never rescans or regenerates, and the project settings allow it without
-a prompt. An HTTP 409 on a PDF means the hosted report is not fresh for the
-current findings; record it rather than regenerating.
+It logs in with `ODYSSEUS_DASHBOARD_PASSWORD` from `.env`, which it only reads,
+and keeps the session cookie in memory. It then runs GET requests only and
+downloads:
 
-Capture the baseline PDF and its SHA-256 digest in scratch. Record pdfinfo page
-count and selected-analysis/finding lineage. Keep the working ledger outside
-committed source; use the gitignored session log only when the run is long
-enough to need crash recovery.
+- `audit.json` and `report-quality.json`;
+- `<lang>.pdf`, the current hosted PDF, which is the baseline;
+- `bundle-<lang>/`, the render bundle from
+  `GET /api/audits/:id/render-bundle/:lang`. It holds exactly the inputs the
+  report stage passes to `generateReportPdf`:
+  - `manifest.json`, `findings.json`, and the selected `analysis.json`;
+  - `manualFields`, `preparation`, `gradeOverride`, `delta`, and
+    `qualityLimitations`;
+  - `lineage.json`: the audit id, language, selected analysis id and digest,
+    findings provenance digest, and the VPS build id.
 
-If the target is a production audit, explicit invocation with that exact audit
-authorizes read-only retrieval and regeneration of **derived report artifacts
-for that audit only**, provided the path is proven not to rescan or call the
-product LLM. It does not authorize deployment, outreach publication, sending,
-unrelated database writes, or a new audit.
+It prints the SHA-256 of each file and logs out. The render bundle is the only
+source of the VPS's selected writing. Never render from an older local
+`artifacts/` analysis.
 
-If the current PDF cannot be tied back to stored evidence and selected
-analysis, continue with visual/editorial inspection but final status cannot be
-READY-FOR-CLIENT.
+### Render: local, render-only
+
+~~~bash
+pnpm report:finalize-render -- --bundle <dir> --overrides <file> --out <pdf>
+~~~
+
+It runs `generateReportPdf` from the bundle with the current local code. It
+never opens a Mongo connection or a provider client. It applies the override
+file, re-runs the writing guards on every overridden field, and runs the
+normal lint and integrity gates. It fails when:
+
+- the override file's analysis digest does not match `lineage.json`;
+- an override targets a non-prose field;
+- a guard fails.
+
+### Override file: `<scratchpad>/<audit-id>/overrides-<lang>.json`
+
+~~~json
+{
+  "auditId": "<uuid>",
+  "language": "fr",
+  "analysisDigest": "<sha256 from lineage.json>",
+  "findingsDigest": "<sha256 from lineage.json>",
+  "overrides": [
+    {
+      "path": "<JSON pointer to a prose field in analysis.json>",
+      "from": "<exact current text>",
+      "to": "<corrected text>",
+      "reason": "<one line: what defect this fixes>"
+    }
+  ]
+}
+~~~
+
+The rules for override entries:
+
+- An entry may target only model-written prose: synthesis, theme titles and
+  bodies, action text, and similar fields.
+- `from` must match the current text exactly. A mismatch means the analysis
+  changed, and the entry is refused.
+- An entry never targets finding ids, ranking, membership, counts, severities,
+  or any deterministic field.
+- An entry never introduces a claim, statistic, or finding that is absent from
+  the structured input.
+
+The override file is client data. It stays in the scratchpad, is uploaded with
+the PDF, and is never committed.
+
+### Upload: `scripts/upload-finalized-report.mjs`
+
+~~~bash
+node scripts/upload-finalized-report.mjs <audit-id> <lang> <final.pdf> <overrides.json> <lineage.json>
+~~~
+
+It calls `POST /api/audits/:id/report/:lang/finalized` with the PDF, the
+override file, and the lineage.
+
+On the server:
+- if the lineage no longer matches the audit's current selected analysis and
+  findings, the request is refused with HTTP 409;
+- otherwise the server stores the PDF as that language's finalized report,
+  recording the render build, the override digest, and the upload time;
+- the dashboard preview then serves the stored PDF.
+
+The upload never regenerates anything or calls a model.
+
+### Regroup on the VPS
+
+`POST /api/audits/:id/renormalize` recomputes findings from the audit's stored
+scan artifacts with the deployed normalization code, then runs **exactly one**
+writing pass and selects the result. Use it only as described in section 5.
+After it runs, fetch again: the bundle, digests, and any override `from` texts
+are now new.
+
+## Load the minimum authoritative context
+
+Before editing anything, read:
+
+- the host charter and docs/agents/documentation-map.md;
+- docs/rules/report-writing-style.md and docs/rules/llm-layer-rules.md;
+- docs/report/report-design-system.md and docs/report/report-workbench.md;
+- docs/rules/obligation-basis.md, when legal or identity content is present;
+- docs/report/report-design-tokens.md, only when touching styles.
+
+Do **not** read docs/report/audit-rehearsal-notes.md before the first blind
+pass.
+
+## 1. Resolve and freeze the target
+
+Run the fetch. Record the following in a scratch ledger that is never committed:
+
+- the baseline PDF's SHA-256 and its page count, from pdfinfo;
+- the bundle lineage;
+- the delivery language.
+
+An HTTP 409 on the PDF means the hosted report is stale. The render bundle
+still defines the target.
+
+Render the bundle once with the **current local code and no overrides**. This
+separates two kinds of defect:
+
+- defects that current code already fixes;
+- defects that still need work.
 
 ## 2. First blind pass: read the exact PDF front to back
 
-Read every physical page in order. Use the host's PDF reader and rasterized
-page images when available. The repo-native exact-PDF surface for an existing
-file is:
+Read every physical page of the baseline, in order. Rasterize each page and
+inspect the images, using `pdftoppm` or `pnpm run report:workbench -- --pdf
+<path>`. The appendix and glossary are where pagination defects hide, so do
+not stop early.
 
-~~~bash
-pnpm run report:workbench -- --pdf <path>
-~~~
+Read as a French SME director who is receiving the report for the first time.
 
-Do not stop at the first ten or twenty pages. The appendix and glossary are
-where pagination and continuation defects commonly hide.
+**Editorial.** Check that the French is native and formal, uses vouvoiement,
+and has no calques or unneeded anglicisms. Also check for:
+- theme titles that are not concise noun phrases;
+- unexplained jargon;
+- repetitive scaffolding;
+- positional cross-references ("ci-dessus");
+- duplicated labels or sections;
+- overstated claims;
+- contradictions between any two sections.
 
-Review the PDF as a French SME director receiving it for the first time.
-
-### Editorial pass
-
-For every client-facing sentence and heading, check:
-
-- native formal French, not translated-English structure;
-- no calques or unnecessary anglicisms;
-- correct vouvoiement and professional register;
-- concise noun-phrase theme titles where required;
-- no unexplained jargon;
-- no repetitive opening/closing scaffolds that make the report feel generated;
-- no awkward positional cross-references such as "ci-dessus";
-- no duplicated labels or sections saying the same thing;
-- no sentence that overstates what the evidence measured;
-- no internal contradiction between summary, priority, methodology, legal,
-  performance, appendix, glossary, and next-step copy.
-
-Use the canonical French writing document as the standard. Do not rewrite
-acceptable sentences merely to demonstrate editing.
-
-### Visual pass
-
-Inspect every page image for:
-
-- clipped or overflowing text;
+**Visual.** Look for:
+- clipping, overflow, or a number wrapping inside itself;
 - missing or duplicated fragments;
-- orphaned headings or headings stranded from their first item;
-- table headers missing on a continuation page;
-- broken cards, tables, badges, links, selectors, or page counters;
-- accidental blank interior pages;
-- a tiny continuation tail left alone by pagination;
-- malformed spacing, wrapping, punctuation, font substitution, or glyphs;
-- hierarchy or component treatment that contradicts the design system.
+- a stranded heading or a lone tail line;
+- a continuation page without its table header;
+- broken cards, badges, or links;
+- accidental blank pages;
+- glyph or spacing faults;
+- anything that contradicts the design system.
 
-Do not flag intentional sparse numbered pages merely for being sparse: the
-design system explicitly allows that executive-reading choice.
+Sparse numbered pages are intentional and are not defects.
 
-### Reader-trust pass
+**Reader trust.** Ask whether anything would make a careful client doubt the
+rest of the report: wrong identity, contradictory numbers, opaque provenance,
+broken pagination, implausible advice, or text that reads like machine
+translation.
 
-Ask whether anything visible would make a reasonable client question the care
-applied to the rest of the report: wrong identity, contradictory numbers,
-opaque provenance language, visibly broken pagination, implausible advice, or
-copy that sounds machine-translated.
-
-Record issues before editing.
+Record every issue before fixing anything.
 
 ## 3. Reconcile against deterministic evidence
 
-After the blind pass, verify every questioned fact against the stored source
-that owns it. At minimum reconcile:
+Trace every questioned fact to its owning source in the bundle:
 
-- client identity and audit date;
-- inventoried/content-checked/performance-measured page populations;
-- finding/severity/category totals;
-- priority coverage and occurrence counts;
-- performance values/status and field-versus-lab qualification;
-- evidence limitations;
-- legal/obligation facts and evidence status;
-- finding ids, affected pages, selectors, WCAG references, and appendix
-  summaries where the front matter points to them.
+- identity and audit date;
+- page populations: inventoried, content-checked, and performance-measured;
+- finding, severity, and category totals;
+- priority coverage and occurrences;
+- performance values;
+- limitations;
+- legal and obligation facts;
+- finding ids, pages, selectors, and WCAG references.
 
-A PDF number is not self-validating because another PDF section repeats it.
-Trace it to the deterministic source.
+A number is not verified just because another section repeats it.
 
-After this evidence pass, inspect recent relevant entries in
-docs/report/audit-rehearsal-notes.md and
-docs/report/report-feedback-deferred-items.md for known defect classes. Use them
-as a regression checklist against this exact PDF; do not mechanically reopen
-old issues.
+Next, use the relevant entries in docs/report/audit-rehearsal-notes.md and
+docs/report/report-feedback-deferred-items.md as a regression checklist.
 
-## 4. Classify every issue before fixing it
+## 4. Classify every issue
 
-Each issue gets two labels.
+- **Class:** one of `truth`, `prose`, or `visual`.
+- **Scope:**
+  - `systemic` if the same input shape could produce the defect for another
+    client;
+  - `report-specific` if the system is correct and only this content needs an
+    editorial choice.
 
-### Defect class
+A bug is not report-specific merely because one hotel exposed it.
 
-- **truth** — deterministic fact, finding, provenance, legal fact, or
-  measurement is wrong/inconsistent;
-- **prose** — client wording is non-native, unclear, repetitive, unsupported,
-  or internally contradictory;
-- **visual** — pagination, layout, typography, rendering, or component defect;
-- **workflow** — the correct change cannot be represented safely by the
-  current finalization/report pipeline.
+## 5. Fix at the smallest source of truth
 
-### Scope
+Fix **all** open issues in one planned round. Do not ship them one at a time.
 
-- **systemic** — caused by shared code, a shared prompt/guard, deterministic
-  copy, a layout rule, a data projection, or an input shape that another audit
-  can plausibly reproduce;
-- **report-specific** — the underlying system is correct and this exact valid
-  combination of content needs a local editorial choice.
+| Issue | Fix |
+| --- | --- |
+| Systemic truth: projection, count, or population | Fix the producer or renderer, with a focused test. It takes effect in the local render. |
+| Systemic truth: finding grouping (near-duplicates, wrong split or merge) | See **Regrouping** below. |
+| Systemic prose: deterministic copy, glossary, labels | Fix the string or template, with a test. |
+| Systemic prose: model tendency | Fix the prompt or guard for future audits **and** correct this report's text through the override file. |
+| Report-specific prose | Override file entry. |
+| Systemic visual | Fix the template, CSS, or PDF logic, with a test that captures the shape without client data. |
+| Report-specific visual | Find a principled shared rule. If none is defensible, change the wording through an override so the layout resolves. Never special-case the client in CSS. |
+| Wrong operator fact (SIREN, name, transactional flow) | Use the existing manual-field mechanism only when trusted evidence or the operator supports the value. Otherwise return BLOCKED-SOURCE-DECISION. |
 
-Ask: "Would the same input shape produce this defect for another client?" If
-yes, treat it as systemic. Do not call a bug report-specific merely because
-only one hotel exposed it.
+**Regrouping.** When findings are confirmed near-duplicates or wrongly split:
 
-## 5. Fix the smallest source of truth
+1. Fix the normalization rule locally, with a regression test.
+2. Commit it, then deploy (Authorized action 4).
+3. Trigger the VPS regrouping. This is the run's single writing pass.
+4. Fetch the bundle again and restart this skill at step 1 with the new
+   lineage. The override file is discarded and rebuilt against the new
+   writing.
 
-### Systemic truth defect
+A second regrouping in the same run is not allowed. Report it as
+BLOCKED-SOURCE-DECISION.
 
-Fix the deterministic producer/projection, add a focused regression test, and
-recompute from existing stored acquisition artifacts only. Never hide the
-problem in prose. If a correct recomputation requires reacquisition, block.
+Shared-code fixes stay local and in the working tree. They take effect in the
+local render immediately, so the final PDF includes them even though the VPS
+has not been deployed. Keep them separate from any unrelated work in the tree
+when staging.
 
-### Systemic prose defect
+## 6. Render and verify each round
 
-Fix the canonical writing rule, prompt/guard, deterministic copy, or sanitation
-rule that owns the defect. Keep docs/rules/report-writing-style.md and runtime
-prompt behavior in sync when that contract changes.
+1. Run the focused tests for each changed seam.
+2. Render the complete PDF from the bundle, the local code, and the override
+   file.
+3. Inspect each changed page and its neighbours. If pagination, shared styles,
+   fonts, or section order changed, inspect the whole PDF.
+4. Diff the `pdftotext` output against the previous render.
+5. Update the ledger, marking each issue as open, fixed, intentionally
+   unchanged, or blocked.
 
-Because this skill makes zero product-LLM polish calls, a prompt-only fix does
-not repair the current client's already-generated prose. If the repo has no
-provenance-safe host-authored finalization override for the affected field,
-record the upstream fix and return NEEDS-WORKFLOW-SUPPORT for the current report
-instead of hand-editing selected analysis.
+Do not try speculative variants of the same symptom. Move to the owning seam
+instead.
 
-### Report-specific prose defect
+## 7. Final clean pass
 
-Use only an existing provenance-safe finalization override seam. It must at
-minimum:
+Any change resets the release pass. Render the final PDF and read **every page
+again, from page 1 to the end**. Then reconcile the high-trust facts one last
+time and diff the text against the baseline. The loop ends only when this pass
+finds nothing new, or when a true blocker is recorded.
 
-- bind the override to selected analysis/findings lineage;
-- restrict editing to client prose;
-- preserve finding ids, ranking, and deterministic facts;
-- run the normal writing guards;
-- invalidate safely when lineage changes.
+"Perfect" means no known factual, editorial, consistency, or rendering defect
+under the current evidence and design contracts. It does not mean endless
+stylistic churn.
 
-If the repo does not provide that contract, do not persist a manual JSON patch.
-Return NEEDS-WORKFLOW-SUPPORT with the exact field/page and correction the
-missing seam needs to support.
+## 8. Upload
 
-### Systemic visual defect
-
-Fix semantic template/CSS/PDF logic, not generated workbench output. Capture
-the input shape in a fixture/test without committing client data. Run the
-narrow test first, then the pagination/overflow/accessibility gates appropriate
-to the change.
-
-### Report-specific visual edge case
-
-Prefer a principled shared layout rule safe for the same shape across reports.
-Never special-case the client. If no general rule is defensible and the product
-has no bounded per-report layout override, classify it as workflow support
-rather than overfitting shared CSS.
-
-### Verified operator facts
-
-Existing manual-field, grade, and report-preparation mechanisms may be used
-only when they already own the fact, the correct value is supported by stored
-trusted evidence or explicit operator input, and the invocation clearly
-targets that audit. Never guess a SIREN, legal entity, transactional status, or
-client name to make a report look plausible.
-
-## 6. Regenerate without changing the audit
-
-Regenerate from the same stored audit, findings provenance, selected structure,
-and selected analysis plus any supported finalization overrides.
-
-Do not blindly call regenerate-report, regenerate-writing, analyze, or another
-convenience command: current orchestration may decide to refresh writing and
-therefore spend product API calls. Inspect the current implementation first.
-
-Prefer a render-only path. A correct finalization render has:
-
-- zero new crawled pages;
-- zero new findings;
-- zero product-provider calls;
-- unchanged deterministic fact snapshot unless the run intentionally fixed its
-  deterministic producer from stored evidence;
-- unchanged selected analysis unless a supported finalization layer explicitly
-  sits above it.
-
-If the hosted dashboard cannot render the corrected document without invoking
-fresh writing, but local rendering from exact stored lineage can, produce the
-local candidate and report the dashboard limitation. If neither can do so
-safely, return NEEDS-WORKFLOW-SUPPORT.
-
-## 7. Verify each correction round
-
-After a correction round:
-
-1. run focused tests for every changed source seam;
-2. render the complete target document;
-3. inspect every changed page and its immediate neighbors;
-4. if pagination, shared styles, section order, fonts, or common components
-   changed, inspect the whole PDF immediately;
-5. compare pdftotext output when prose changed;
-6. compare deterministic fact snapshots when data-facing source changed;
-7. update the scratch issue ledger: open, fixed, intentionally unchanged, or
-   blocked.
-
-Do not keep applying speculative variants to the same symptom. If a local fix
-does not remove the defect cleanly, move to the owning upstream seam or mark the
-blocker.
-
-Use the narrowest verification that proves each source change and broaden by
-risk. Typical report checks include the relevant unit test, report
-typecheck/lint, Paged.js invariants, PDF overflow gate, accessibility render
-test, and pnpm run docs:check.
-
-Do not commit generated PDFs, raster pages, downloaded client artifacts,
-workbench output, or copied production evidence.
-
-Commit or push source fixes only when the operator's current request includes
-that action. Deployment is never implied by this skill.
-
-## 8. Final clean pass
-
-Any change resets the release pass.
-
-After the last change, regenerate one final PDF and read **every page again
-from page 1 to the end**. Do not satisfy the release gate by looking only at
-pages that changed.
-
-Then perform one last deterministic reconciliation of high-trust facts and a
-text diff against the baseline so unintended content movement is visible.
-
-The loop ends only when this full post-change pass finds no new client-facing
-defect, or when a true blocker is recorded.
-
-"Perfect" here means no known factual, editorial, consistency, or rendering
-defect under the current evidence and design contracts. It does not mean
-endless stylistic churn.
+Upload only after a clean final pass, and only on the READY-FOR-CLIENT path.
+Fetch the PDF preview again and confirm that its SHA-256 equals the local final
+PDF's.
 
 ## Release gate
 
-READY-FOR-CLIENT requires every item:
+READY-FOR-CLIENT requires all of these:
 
-- [ ] target audit and selected-analysis lineage resolved;
-- [ ] intended delivery language set resolved;
-- [ ] no new crawl/acquisition performed;
-- [ ] product LLM calls during finalization: 0;
-- [ ] findings and priority membership preserved;
-- [ ] deterministic counts, measurements, limitations, identity and legal
-      facts reconcile to their owning sources;
+- [ ] render-bundle lineage fetched from the VPS and used for the render;
+- [ ] delivery language set resolved;
+- [ ] no new crawl or acquisition;
+- [ ] product LLM calls: 0, or exactly 1 VPS regrouping pass;
+- [ ] findings changed only through their producer;
+- [ ] deterministic facts reconcile to their owning sources;
 - [ ] no unsupported business or legal claim;
-- [ ] French reads as native formal B2B French;
-- [ ] no material repetition, jargon, calque, awkward cross-reference, or
-      internal contradiction remains;
-- [ ] every physical page of the final post-change PDF was visually inspected;
-- [ ] no clipping, overflow, duplicated/missing fragment, broken continuation,
-      accidental blank page, or other known rendering defect remains;
-- [ ] the current report design system is preserved;
-- [ ] report-specific edits, if any, use an explicit provenance-safe seam;
-- [ ] focused verification for source changes passes;
-- [ ] no client evidence or generated PDF/workbench scratch is staged;
-- [ ] one complete clean pass occurred after the final change.
-
-If any item is false, do not print READY-FOR-CLIENT.
+- [ ] native formal French throughout, with no material repetition, jargon,
+      calque, awkward cross-reference, or contradiction;
+- [ ] every page of the final PDF inspected after the last change;
+- [ ] no rendering defect remains;
+- [ ] design system preserved;
+- [ ] all prose corrections live in the bound override file, and its guards
+      pass;
+- [ ] focused tests pass for every source change;
+- [ ] no client data, PDF, or override file staged in git;
+- [ ] finalized PDF uploaded, and the hosted SHA-256 matches the local one.
 
 ## Terminal statuses
 
 Use exactly one:
 
-- **READY-FOR-CLIENT** — release gate fully satisfied.
-- **NEEDS-WORKFLOW-SUPPORT** — the report has a known fix, but the current
-  product has no provenance-safe/API-free way to represent or render it.
-- **BLOCKED-NEW-SCAN-REQUIRED** — truth cannot be corrected from stored
+- **READY-FOR-CLIENT**: the gate is fully satisfied and the PDF is uploaded.
+- **BLOCKED-NEW-SCAN-REQUIRED**: the truth cannot be corrected from stored
   acquisition.
-- **BLOCKED-SOURCE-DECISION** — a factual/identity/legal ambiguity requires the
-  operator or an authoritative source.
-- **BLOCKED-RENDER** — the exact document cannot be rendered/read reliably in
-  the current host.
+- **BLOCKED-SOURCE-DECISION**: a factual, identity, or legal ambiguity, or a
+  second regrouping, needs the operator.
+- **BLOCKED-RENDER**: the document cannot be rendered or read reliably.
 
-A blocked status is not failure theater. State the smallest missing capability
-or decision and preserve every safe fix already made.
+If the skill's tooling is missing, build it (see Tooling). That is not a
+terminal status. Preserve every safe fix when blocked.
 
 ## Final response
-
-Keep the operator summary compact:
 
 ~~~text
 FINALIZATION: READY-FOR-CLIENT | <blocked status>
 Audit: <id / client>
 Delivery: fr | en | fr+en
 Baseline PDF: sha256:<...> (<N> pages)
-Final PDF: sha256:<...> (<N> pages)
+Final PDF: sha256:<...> (<N> pages) — <local path>
+Uploaded: yes, hosted sha256 matches | no (<reason>)
 Resolved: <count> factual / <count> prose / <count> visual
-Systemic source fixes: <paths or none>
-Report-specific overrides: <paths/ids or none>
-Product LLM calls: 0
+Systemic source fixes: <paths or none> (uncommitted | committed <sha>)
+Overrides: <count> entries, <path>
+Product LLM calls: 0 | 1 (VPS regrouping)
 New scans: 0
+Deploys: <count and build ids, or none>
 Final full-document pass: clean | <blocker>
-Source changes: committed/pushed only if explicitly requested
 ~~~
 
-List only unresolved blockers after that. Do not dump the scratch issue ledger
-unless the operator asks for it.
+After the summary, list only the unresolved blockers.

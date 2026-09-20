@@ -25,6 +25,11 @@ export {
   buildWritingPerformanceEvidence,
   buildTrustedRemediationsByTheme,
 } from './template/sections/writing-evidence.js';
+/** Plan 072: the render-bundle contract, shared by the interface (which
+ *  assembles a bundle from Mongo) and the CLI finalizer (which parses one
+ *  off disk with no database). See render-bundle.ts for why it lives here. */
+export { buildRenderBundle, parseRenderBundle } from './render-bundle.js';
+export type { RenderBundle, RenderBundleLineage, ReportRenderInputs } from './render-bundle.js';
 export { buildRenderedPriorities } from './template/rendered-priorities.js';
 export type { RenderedPriority, PriorityEvidence } from './template/rendered-priorities.js';
 

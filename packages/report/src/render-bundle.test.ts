@@ -6,8 +6,9 @@ import {
   type Finding,
   type FindingsProvenance,
 } from '@odysseus/core';
-import { REPORT_TEMPLATE_VERSION, type StoredAnalysis } from '@odysseus/report';
-import { buildRenderBundle, parseRenderBundle } from './build-render-bundle.js';
+import { REPORT_TEMPLATE_VERSION } from './constants.js';
+import { buildRenderBundle, parseRenderBundle } from './render-bundle.js';
+import type { StoredAnalysis } from './types.js';
 
 const provenance: FindingsProvenance = {
   findingsSchemaVersion: FINDINGS_SCHEMA_VERSION,
