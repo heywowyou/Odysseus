@@ -1141,3 +1141,37 @@ positive), style or length, and everything a deterministic guard owns.
   builder and writes a labelling register under `artifacts/`. The switch is
   turned on only when the plan's acceptance thresholds (precision at least
   70% by operator label, no regression, cost and latency ceilings) are met.
+
+## 16. Operator overrides are authored prose, and the guards still apply (Plan 072)
+
+`packages/llm/src/writing-overrides.ts` applies operator-written corrections to
+a stored writing pass before the report is re-rendered locally. The text comes
+from a person, not from a model, so none of this layer's provider rules are in
+play: no call is made, nothing is retried, no temperature or budget applies.
+What does still apply is everything downstream of generation.
+
+- **Same substrate as the critic repair.** Overrides splice by field path
+  through the helpers extracted into `writing-field-paths.ts`, the exact code
+  the critic's targeted repair uses. Two implementations of "replace this field
+  and reindex the warnings" would drift.
+- **Prose fields only.** A path must be one `listWritingProseFields` returns for
+  the output being corrected. Finding IDs, theme membership, ranking, counts and
+  severities are therefore unreachable, by construction rather than by rule - the
+  determinism guarantee in section 3 is unchanged by an override.
+- **Bound to the text it corrects.** Every entry carries the exact `from` text,
+  and the file carries the analysis and findings digests. Any mismatch refuses
+  the whole file. A correction written against prose that has since been
+  regenerated is meaningless, not merely stale.
+- **Sanitation is a refusal, not a rewrite.** If `sanitizeWritingOutput` would
+  rewrite or drop an overridden field, the render refuses and names the field.
+  Everywhere else in this layer sanitation silently repairs model output; here
+  a silent repair would put text the operator did not write into a document
+  delivered under their correction.
+- **Guards, with one asymmetry.** The full guard table runs on the spliced
+  output. A failure the generated prose did not already have refuses the render.
+  A failure it already had is reported as a warning and does not block: a stored
+  analysis can predate a guard, and refusing there would leave the operator
+  unable to correct the very sentence that trips it.
+- **The analysis is not rewritten.** Overrides produce a render input, never a
+  stored writing pass. The analysis keeps the model's own text; see trade-off 41
+  for why, and for how the delivered PDF is tied back to it.

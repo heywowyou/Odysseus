@@ -138,7 +138,10 @@ The canonical sources for this behavior are `docs/product/odysseus-project-brief
 | [069](069-grounded-outreach-preview-v3.md) | Align the outreach preview with grounded report priorities and scoped scan diagnostics | P1 | L | 067, 068 | IN PROGRESS (2026-09-19): v3 code, lineage-safe Touch 1, focused proofs and canonical docs landed; repository-wide validation + stored-audit no-rescan acceptance remain blocked by pre-step Actions/execution access |
 | [070](070-grounded-critic-and-targeted-repair.md) | Close measured guard gaps and add one fail-open grounded critic with targeted repair | P1 | M | 067 | IN PROGRESS (2026-09-19): critic and targeted repair built behind `WRITING_CRITIC_ENABLED` (off); calibration labels: precision 95%, cost and latency met, but 4 of 7 repaired reports regress; one tightening + re-run pending |
 | [071](071-permanent-reference-audit-and-dual-link-outreach.md) | Publish one permanent anonymized reference audit and add it beside the personalized preview in Touch 1 | P1 | L | 067, 069 | TODO |
+| [072](072-finalized-client-report.md) | Make the operator-finalized client report a stored, lineage-bound artifact that supersedes the pipeline render | P1 | L | 067, 070 | DONE (2026-09-20): render bundle, lineage-bound override file, local `report:finalize-render`, upload route with 409 lineage check, dashboard `Finalisé` / superseded badges and the `reports/` working tree; proved end to end on the fixture audit; see the plan's closure ledger |
 
+Plan 072 shipped 2026-09-20 and is the current finalization workflow; its
+rationale is recorded as trade-off 41 and llm-layer-rules section 16.
 Plan 071 is approved next product work as of 2026-09-19: one permanent publication-safe reference audit, a second Touch-1 body link beside the personalized preview, and privacy-minimal optional link-request attribution. Plans 067-070 retain their own recorded execution/acceptance status; Plan 071 must not weaken Plan 069 preview expiry, lineage or suppression rules. Every plan before 067 lives under `archive/`.
 Frozen plans keep their contract and execution handoff there and reopen only
 by operator decision.

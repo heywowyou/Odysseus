@@ -110,52 +110,80 @@ It never authorizes:
 
 ## Tooling
 
-The skill relies on the tools below. If one is missing or out of date, the run
-builds it to this contract first, with tests. That work is part of the run, not
-a blocker. If a new tool needs a route on the VPS, deploy it (Authorized
-action 4) before continuing.
+Every tool below exists and is tested. The run uses it as documented; it does
+not rebuild or re-specify it. A genuine gap found mid-run is fixed in source
+with a test, like any other defect.
 
 ### Fetch: `scripts/fetch-client-report.mjs`
 
 ~~~bash
-node scripts/fetch-client-report.mjs <audit-id> <scratchpad>/<audit-id> [fr en]
+node scripts/fetch-client-report.mjs <audit-id> <out-dir> [fr en]
 ~~~
 
 It logs in with `ODYSSEUS_DASHBOARD_PASSWORD` from `.env`, which it only reads,
-and keeps the session cookie in memory. It then runs GET requests only and
-downloads:
+and keeps the session cookie in memory. It then issues GET requests only and
+writes, at `0600`:
 
 - `audit.json` and `report-quality.json`;
-- `<lang>.pdf`, the current hosted PDF, which is the baseline;
+- `<lang>.pdf`, the current hosted PDF, which is the baseline being corrected;
 - `bundle-<lang>/`, the render bundle from
-  `GET /api/audits/:id/render-bundle/:lang`. It holds exactly the inputs the
-  report stage passes to `generateReportPdf`:
+  `GET /api/audits/:auditId/render-bundle/:language`, unpacked one file per
+  member exactly as the renderer reads it back:
   - `manifest.json`, `findings.json`, and the selected `analysis.json`;
-  - `manualFields`, `preparation`, `gradeOverride`, `delta`, and
-    `qualityLimitations`;
-  - `lineage.json`: the audit id, language, selected analysis id and digest,
-    findings provenance digest, and the VPS build id.
+  - `render-inputs.json`: `manualFields`, `preparation`, `gradeOverride`,
+    `delta`, `qualityLimitations`, `obligationAssessment` - everything the
+    report stage resolves at render time beyond the three above;
+  - `lineage.json`: audit id, language, selected analysis id and digest,
+    findings provenance, the VPS build id and template version.
 
-It prints the SHA-256 of each file and logs out. The render bundle is the only
-source of the VPS's selected writing. Never render from an older local
-`artifacts/` analysis.
+It prints each file's SHA-256, then the two digests an override file has to
+repeat, then logs out. Language defaults to `fr`.
+
+The bundle is the only source of the VPS's selected writing. Never render from
+a local `artifacts/` analysis: it is a different analysis that happens to share
+an audit id.
+
+### Where the working set lives: `reports/`
+
+`getReportsRoot()` (`ODYSSEUS_REPORTS_ROOT`, default `<workspace>/reports`) is
+the local tree for this work, gitignored and written `0600`. One directory per
+finalization holds the whole working set - hosted PDF, bundle, override file,
+final PDF and its sidecar - so a finalization interrupted halfway is resumable
+and readable months later. Fetch straight into it.
 
 ### Render: local, render-only
 
 ~~~bash
-pnpm report:finalize-render -- --bundle <dir> --overrides <file> --out <pdf>
+pnpm run report:finalize-render --bundle <dir> --overrides <file> --out <pdf>
 ~~~
 
-It runs `generateReportPdf` from the bundle with the current local code. It
-never opens a Mongo connection or a provider client. It applies the override
-file, re-runs the writing guards on every overridden field, and runs the
-normal lint and integrity gates. It fails when:
+No `--` before the flags: Commander reads it as the end of option parsing and
+the command then sees none of them. `--overrides` is optional; without it the
+command re-renders the bundle unchanged, which is how you confirm the local
+build reproduces the hosted PDF before correcting anything.
 
-- the override file's analysis digest does not match `lineage.json`;
-- an override targets a non-prose field;
-- a guard fails.
+It renders through `generateReportPdf` with the current local code. It opens no
+Mongo connection and constructs no provider client. Beside the PDF it writes
+`<pdf>.meta.json`, carrying the lineage, the local build and template version,
+the override count and the measured page count - the upload reads that file, so
+nothing downstream re-derives a page count from the finished bytes.
 
-### Override file: `<scratchpad>/<audit-id>/overrides-<lang>.json`
+It refuses to render when:
+
+- a lineage field in the override file does not match `lineage.json`;
+- two entries target the same path;
+- a path is not one `listWritingProseFields` returns for this analysis;
+- `from` does not match the current text exactly, or `to` equals `from`;
+- sanitation rewrites or drops an overridden field - the operator's text would
+  not be what shipped, so it is named rather than silently replaced;
+- an overridden field introduces a writing-guard failure the generated prose
+  did not already have.
+
+A guard the **generated** prose already failed is printed as a warning and does
+not block. A stored analysis can predate a guard, and refusing there would lock
+the operator out of correcting the very text that trips it.
+
+### Override file: `overrides-<lang>.json`
 
 ~~~json
 {
@@ -165,7 +193,7 @@ normal lint and integrity gates. It fails when:
   "findingsDigest": "<sha256 from lineage.json>",
   "overrides": [
     {
-      "path": "<JSON pointer to a prose field in analysis.json>",
+      "path": "themes[0](t1).businessImpact",
       "from": "<exact current text>",
       "to": "<corrected text>",
       "reason": "<one line: what defect this fixes>"
@@ -174,45 +202,62 @@ normal lint and integrity gates. It fails when:
 }
 ~~~
 
-The rules for override entries:
+`path` is a writing-pass prose-field path, the same form sanitation warnings
+use: `executiveSummary`, `notes`, `themes[i](key).title`,
+`themes[i](key).businessImpact`, `themes[i](key).recommendedActions[j]`. That
+registry is the allowlist, which is what makes finding ids, ranking, counts and
+severities unreachable by construction rather than by rule.
 
-- An entry may target only model-written prose: synthesis, theme titles and
-  bodies, action text, and similar fields.
 - `from` must match the current text exactly. A mismatch means the analysis
-  changed, and the entry is refused.
-- An entry never targets finding ids, ranking, membership, counts, severities,
-  or any deterministic field.
-- An entry never introduces a claim, statistic, or finding that is absent from
-  the structured input.
+  moved, and the whole file is refused.
+- An entry never introduces a claim, statistic or finding absent from the
+  structured input. The guards catch several classes of this; they are a net,
+  not the standard.
 
-The override file is client data. It stays in the scratchpad, is uploaded with
+The override file is client data. It stays under `reports/`, is uploaded with
 the PDF, and is never committed.
 
 ### Upload: `scripts/upload-finalized-report.mjs`
 
 ~~~bash
-node scripts/upload-finalized-report.mjs <audit-id> <lang> <final.pdf> <overrides.json> <lineage.json>
+node scripts/upload-finalized-report.mjs <final.pdf> [overrides.json]
 ~~~
 
-It calls `POST /api/audits/:id/report/:lang/finalized` with the PDF, the
-override file, and the lineage.
+It reads `<final.pdf>.meta.json` for the lineage, so no digest is ever
+hand-typed, and POSTs to
+`POST /api/audits/:auditId/report/:language/finalized` with the PDF base64 in a
+JSON body - the router requires an exact `application/json` content type on
+state-changing routes, and that CSRF guard stays intact.
 
 On the server:
-- if the lineage no longer matches the audit's current selected analysis and
-  findings, the request is refused with HTTP 409;
-- otherwise the server stores the PDF as that language's finalized report,
-  recording the render build, the override digest, and the upload time;
-- the dashboard preview then serves the stored PDF.
 
-The upload never regenerates anything or calls a model.
+- HTTP 400 if the body, the lineage or the override file is malformed;
+- HTTP 409 if the audit's selected analysis or its findings have moved since
+  the bundle was fetched, which is the check that stops a superseded report
+  reaching a client;
+- HTTP 201 otherwise: the PDF and its override file are written into the audit
+  directory, synced to the artifact store, and inserted as a `reports` row with
+  `origin: 'finalized'` recording the override digest, the override count, the
+  upload time and the pipeline report it supersedes.
+
+Preview and download then serve the finalized PDF, because the reports
+collection is insert-only and the current row is the newest one. The pipeline
+render stays reachable at
+`GET /api/audits/:auditId/report/:language/generated`, and the dashboard row
+shows `Finalisé · N corrections`. A later regeneration inserts a newer pipeline
+row that takes over - correct, since the overrides no longer apply to it - and
+the row then shows `Finalisation remplacée par une régénération`.
+
+The upload stores. It neither approves nor delivers: both stay the operator's
+actions in the dashboard.
 
 ### Regroup on the VPS
 
-`POST /api/audits/:id/renormalize` recomputes findings from the audit's stored
-scan artifacts with the deployed normalization code, then runs **exactly one**
-writing pass and selects the result. Use it only as described in section 5.
-After it runs, fetch again: the bundle, digests, and any override `from` texts
-are now new.
+`POST /api/audits/:auditId/regenerate-report` refreshes stale findings when
+needed, runs **exactly one** writing pass, and re-renders. It is the only
+remote action in this workflow that produces new model text, so use it only as
+described in section 5. After it runs, fetch again: the bundle, the digests and
+every override `from` text are now different.
 
 ## Load the minimum authoritative context
 
@@ -229,14 +274,16 @@ pass.
 
 ## 1. Resolve and freeze the target
 
-Run the fetch. Record the following in a scratch ledger that is never committed:
+Fetch into a fresh directory under `reports/`, and keep the ledger below there
+too. Nothing in that tree is ever committed.
 
 - the baseline PDF's SHA-256 and its page count, from pdfinfo;
 - the bundle lineage;
 - the delivery language.
 
-An HTTP 409 on the PDF means the hosted report is stale. The render bundle
-still defines the target.
+An HTTP 409 on the PDF means the hosted report is stale against its analysis.
+The render bundle still defines the target; the finalized render replaces the
+stale one.
 
 Render the bundle once with the **current local code and no overrides**. This
 separates two kinds of defect:
@@ -330,7 +377,8 @@ Fix **all** open issues in one planned round. Do not ship them one at a time.
 
 1. Fix the normalization rule locally, with a regression test.
 2. Commit it, then deploy (Authorized action 4).
-3. Trigger the VPS regrouping. This is the run's single writing pass.
+3. Trigger the VPS regrouping with `POST /api/audits/:auditId/regenerate-report`.
+   This is the run's single writing pass.
 4. Fetch the bundle again and restart this skill at step 1 with the new
    lineage. The override file is discarded and rebuilt against the new
    writing.
@@ -371,8 +419,18 @@ stylistic churn.
 ## 8. Upload
 
 Upload only after a clean final pass, and only on the READY-FOR-CLIENT path.
-Fetch the PDF preview again and confirm that its SHA-256 equals the local final
-PDF's.
+
+Then confirm the substitution actually took, from the client's side:
+
+1. `GET /api/audits/:auditId/report/:language/preview` and check its SHA-256
+   equals the local final PDF's. Preview is not approval-gated, so this is
+   readable immediately after the upload.
+2. Confirm the dashboard row shows `Finalisé · N corrections` with the count
+   you sent, and that the generated-report link still opens the pipeline
+   render.
+
+Uploading stores the report. Approving and delivering it stay the operator's
+actions.
 
 ## Release gate
 
@@ -394,7 +452,8 @@ READY-FOR-CLIENT requires all of these:
       pass;
 - [ ] focused tests pass for every source change;
 - [ ] no client data, PDF, or override file staged in git;
-- [ ] finalized PDF uploaded, and the hosted SHA-256 matches the local one.
+- [ ] finalized PDF uploaded, the hosted preview's SHA-256 matches the local
+      one, and the dashboard row reads `Finalisé`.
 
 ## Terminal statuses
 
