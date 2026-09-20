@@ -15,8 +15,6 @@ import {
   assertFindingsProvenance,
   assertSufficientCrawlCoverage,
   buildFindingsProvenance,
-  buildReportPreparationPreview,
-  computeFindingsDelta,
   type AuditManifest,
   type Finding,
   type FindingsProvenance,
@@ -31,20 +29,11 @@ import {
   type StoredAnalysis,
 } from '@odysseus/report';
 import { launchBrowser, readOdysseusBuildId } from '@odysseus/scanner';
-import {
-  findAuditEvidenceCoverage,
-  findDeltaBaseline,
-  getAuditGradeOverride,
-  getAuditManualFields,
-  getReportPreparation,
-  persistReport,
-  syncProspectIdentityIntoAudit,
-} from '@odysseus/store';
-import { runObligationStage } from './obligation-stage.js';
+import { persistReport } from '@odysseus/store';
 import { pdfDigestOf } from './pdf-digest.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { syncArtifactFilesToBucket } from '../artifacts/sync-audit-artifacts.js';
-import { readAuditEvidenceDiagnostics } from './audit-evidence-diagnostics.js';
+import { resolveRenderInputs } from './build-render-bundle.js';
 
 export interface ReportStageResult {
   reportId: string;
@@ -122,82 +111,20 @@ export async function runReportStage(
     rendererBuild,
     templateVersion: REPORT_TEMPLATE_VERSION,
   };
-  // Manual-input-layer milestone: manual fields are read fresh from the
-  // store here, at render time, rather than trusted from whatever was
-  // baked into `analysis` when it was generated - this is what lets the
-  // operator edit them after the fact with no rescan and no new analysis
-  // document (see AuditManualFields's own doc comment in @odysseus/core
-  // and CLAUDE.md's manual-input-layer milestone). The obligation
-  // assessment specifically is recomputed fresh too: it is not fed to the
-  // LLM (only spliced into the report's legal section), so recomputing it
-  // here costs nothing and picks up a manualFields.siren saved after the
-  // scan - resolveEffectiveSiren's existing extracted-vs-manual precedence
-  // is reused unchanged, "manual" now just means "freshest at render
-  // time" instead of "given at job creation."
-  // Issue #379: a regeneration resolves the linked prospect's operator
-  // identity first, so it never renders against a detected guess the
-  // operator already answered on the prospect (this is also what unsticks
-  // an audit that stopped on the identity gate before the fix).
-  await syncProspectIdentityIntoAudit(connection, manifest.auditId);
-  const manualFields = await getAuditManualFields(connection, manifest.auditId);
-  // Issue: operator-reviewed overall grade override, read fresh at render
-  // time exactly like manualFields above - the operator can review the
-  // grade after the fact with no rescan and no new analysis document.
-  const gradeOverride = await getAuditGradeOverride(connection, manifest.auditId);
-  const obligationAssessment = manualFields?.transactionalFlowOverride
-    ? await runObligationStage(
-        manifest,
-        connection,
-        manualFields?.siren?.value,
-        manualFields.transactionalFlowOverride
-          ? { hasTransactionalFlow: manualFields.transactionalFlowOverride }
-          : undefined,
-      )
-    : analysis.obligationAssessment;
-
-  // Plan 019: resolve the bounded preparation preview here, at the
-  // orchestration boundary, so render-html.ts never queries storage or
-  // derives preparation policy. Evidence-unavailable artifacts degrade the
-  // preview inside core instead of failing the render.
-  const preparationAggregate = await getReportPreparation(connection, manifest.auditId);
-  const preparationPreview = buildReportPreparationPreview({
-    preparation: preparationAggregate,
-    commercialName: manualFields?.nomCommercial?.value,
-    findings,
-  });
-
-  // Plan 051: a new audit of a site whose earlier audit was delivered is a
-  // re-audit, and its report compares the two runs finding by finding. The
-  // delta is computed here from stored data and passed in verbatim; the
-  // template never reads a second findings set itself.
-  // Plan 059 step 35: both sides carry their persisted coverage signature,
-  // so observability differences are separated from site changes.
-  const baseline = await findDeltaBaseline(connection, {
-    siteUrl: manifest.siteUrl,
-    startedAt: new Date(manifest.startedAt),
-  });
-  const currentCoverage = await findAuditEvidenceCoverage(connection, manifest.auditId);
-  const delta =
-    baseline === null
-      ? undefined
-      : computeFindingsDelta(baseline, {
-          auditId: manifest.auditId,
-          siteUrl: manifest.siteUrl,
-          startedAt: manifest.startedAt,
-          tool: manifest.tool,
-          config: manifest.config,
-          findingsProvenance: resolvedFindingsProvenance,
-          findings,
-          ...(currentCoverage !== undefined ? { coverage: currentCoverage } : {}),
-        });
-
+  // Plan 072: every render-time read lives in resolveRenderInputs, which the
+  // hosted render-bundle route calls too, so an operator re-rendering this
+  // report on their own machine assembles exactly what this stage would.
   const artifactStore = createConfiguredArtifactStore();
-  const diagnostics = await readAuditEvidenceDiagnostics({
+  const renderInputs = await resolveRenderInputs({
+    connection,
     auditDir,
-    hostname: new URL(manifest.siteUrl).hostname,
-    startedAt: new Date(manifest.startedAt),
-    store: artifactStore,
+    manifest,
+    findings,
+    analysis,
+    findingsProvenance: resolvedFindingsProvenance,
+    artifactStore,
   });
+  const { obligationAssessment, ...pdfInputs } = renderInputs;
 
   const { pdf, pageCount } = await generateReportPdf({
     auditDir,
@@ -208,13 +135,7 @@ export async function runReportStage(
       ...analysis,
       ...(obligationAssessment !== undefined ? { obligationAssessment } : {}),
     },
-    ...(manualFields !== undefined ? { manualFields } : {}),
-    preparation: preparationPreview[analysis.language],
-    ...(gradeOverride !== undefined ? { gradeOverride } : {}),
-    ...(delta !== undefined ? { delta } : {}),
-    ...(diagnostics.clientLimitations.length > 0
-      ? { qualityLimitations: diagnostics.clientLimitations }
-      : {}),
+    ...pdfInputs,
     ...(browser !== undefined ? { browser } : {}),
   });
 

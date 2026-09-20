@@ -16,6 +16,7 @@ import { Readable } from 'node:stream';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
+  buildFindingsProvenance,
   FINDINGS_SCHEMA_VERSION,
   NORMALIZATION_FINGERPRINT,
   type AuditManifest,
@@ -261,6 +262,40 @@ async function getDetailViaRoute(auditId: string): Promise<FakeRes> {
   return res;
 }
 
+/** Plan 072: the render-bundle route reads manifest.json and findings.json
+ *  off the audit directory, which the report-delivery chains above never
+ *  needed on disk. Seeds those too. */
+async function seedBundleChain(): Promise<{ auditId: string; manifest: AuditManifest }> {
+  const auditId = `route-integration-bundle-${randomUUID()}`;
+  const manifestDefaults = buildManifest();
+  const manifest = buildManifest({
+    auditId,
+    siteUrl: 'https://example.com/',
+    findingsProvenance: sharedProvenance,
+    crawl: { ...manifestDefaults.crawl, startUrl: 'https://example.com/' },
+  });
+  await persistAudit(connection!, manifest, []);
+  await persistAnalysis(connection!, buildAnalysisFields(auditId, 'fr'));
+
+  const hostname = new URL(manifest.siteUrl).hostname;
+  const auditDir = buildAuditDir(getArtifactsRoot(), hostname, new Date(manifest.startedAt));
+  await fs.mkdir(auditDir, { recursive: true });
+  await fs.writeFile(path.join(auditDir, 'manifest.json'), JSON.stringify(manifest));
+  await fs.writeFile(path.join(auditDir, 'findings.json'), JSON.stringify([]));
+
+  seededAuditIds.push(auditId);
+  return { auditId, manifest };
+}
+
+async function getBundleViaRoute(auditId: string, language: string): Promise<FakeRes> {
+  const router = new Router();
+  registerAuditRoutes(router, connection!);
+  const req = fakeReq(`/api/audits/${auditId}/render-bundle/${language}`);
+  const res = fakeRes();
+  await router.handle(req, res);
+  return res;
+}
+
 let artifactsRoot: string | undefined;
 let previousArtifactsRoot: string | undefined;
 
@@ -291,6 +326,49 @@ afterAll(async () => {
 });
 
 describe.skipIf(!mongoAvailable)('audit routes against real mongo', () => {
+  it('serves a render bundle bound to the selected analysis, carrying no screenshots', async () => {
+    const { auditId } = await seedBundleChain();
+
+    const res = await getBundleViaRoute(auditId, 'fr');
+
+    expect(res.statusCode).toBe(200);
+    const bundle = JSON.parse(res.body as string) as {
+      lineage: Record<string, unknown>;
+      manifest: { auditId: string };
+      findings: unknown[];
+      analysis: { analysisId: string };
+    };
+    expect(bundle.lineage).toMatchObject({
+      auditId,
+      language: 'fr',
+      analysisId: `analysis-fr-${auditId}`,
+      // Computed from the findings the bundle actually carries, not copied
+      // from the audit row: a bundle must describe its own contents, or an
+      // override bound to it could be spliced onto a different findings set.
+      findingsProvenance: buildFindingsProvenance([]),
+      reportTemplateVersion: REPORT_TEMPLATE_VERSION,
+    });
+    expect(bundle.lineage['analysisDigest']).toMatch(/^sha256:[0-9a-f]{64}$/);
+    expect(bundle.manifest.auditId).toBe(auditId);
+    expect(bundle.analysis.analysisId).toBe(`analysis-fr-${auditId}`);
+    // The whole point of shipping JSON: nothing here needs a file alongside it.
+    expect(JSON.stringify(bundle)).not.toContain('.png');
+  });
+
+  it('refuses a render bundle for a language with no selected analysis', async () => {
+    const { auditId } = await seedBundleChain();
+
+    const res = await getBundleViaRoute(auditId, 'en');
+
+    expect(res.statusCode).toBe(409);
+  });
+
+  it('rejects an unknown language and an unknown audit before reading anything', async () => {
+    const { auditId } = await seedBundleChain();
+
+    expect((await getBundleViaRoute(auditId, 'de')).statusCode).toBe(400);
+    expect((await getBundleViaRoute('no-such-audit', 'fr')).statusCode).toBe(404);
+  });
   it('declares, approves and delivers the canonical French report without requiring English', async () => {
     const chain = await seedFrenchOnlyChain();
 

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
 import {
+  buildFindingsProvenance,
   isGrade,
   isValidSiren,
   summarizeAuditCoverage,
@@ -49,6 +50,7 @@ import {
   buildAuditDir,
   getArtifactsRoot,
   hasAssessedEvidenceGraph,
+  readOdysseusBuildId,
 } from '@odysseus/scanner';
 import {
   classifyReportFreshness,
@@ -76,7 +78,8 @@ import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../
 import { lookupOperatorProfile } from '../sirene/sirene-cache.js';
 import { pdfDigestOf } from '../pipeline/pdf-digest.js';
 import { findingsAreStale, makeReportReady } from '../pipeline/make-report-ready.js';
-import { runReportQualityForAudit } from '../pipeline/regenerate-reports.js';
+import { readAuditArtifacts, runReportQualityForAudit } from '../pipeline/regenerate-reports.js';
+import { buildRenderBundle, resolveRenderInputs } from '../pipeline/build-render-bundle.js';
 import { approveAndPromoteReportQualityBundle } from '../pipeline/report-quality-promotion.js';
 import { readVerifiedImmutablePdf } from '../pipeline/report-quality-storage.js';
 import {
@@ -1183,6 +1186,80 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       return;
     }
     sendJson(res, 201, { approval });
+  });
+
+  /** Plan 072: the exact inputs this server would render the selected report
+   *  from, as transferable JSON, so the finalizer can re-render it locally
+   *  with current code and no rescan. Read-only, and deliberately not the
+   *  PDF: the point is to render again, not to fetch what was rendered
+   *  before. Carries no page screenshots because the template reads none. */
+  router.get('/api/audits/:auditId/render-bundle/:language', async ({ res, params }) => {
+    const auditId = params['auditId']!;
+    const language = params['language']!;
+    if (!isReportLanguage(language)) {
+      sendError(res, 400, 'language must be "fr" or "en"');
+      return;
+    }
+    const audit = await getAudit(connection, auditId);
+    if (!audit) {
+      sendError(res, 404, 'audit not found');
+      return;
+    }
+    const hostname = new URL(audit.siteUrl).hostname;
+    const auditDir = buildAuditDir(getArtifactsRoot(), hostname, audit.startedAt);
+    let manifest: AuditManifest;
+    let findings: Finding[];
+    try {
+      ({ manifest, findings } = await readAuditArtifacts(
+        auditDir,
+        hostname,
+        audit.startedAt,
+        artifactStore,
+      ));
+    } catch {
+      sendError(res, 404, 'audit artifacts not found on disk or in the bucket');
+      return;
+    }
+
+    // The same selection the report stage renders: the selected exact pair,
+    // never a ready-but-unapproved writing candidate.
+    const resolution = await resolveSelectedAnalysisPairForAudit(connection, auditId);
+    if (resolution.kind === 'none') {
+      sendError(res, 409, 'a selected analysis is required before a render bundle exists');
+      return;
+    }
+    const analysis = language === 'fr' ? resolution.fr : resolution.en;
+    if (!analysis) {
+      sendError(res, 409, `no selected ${language} analysis for this audit`);
+      return;
+    }
+
+    const findingsProvenance = buildFindingsProvenance(findings);
+    const renderInputs = await resolveRenderInputs({
+      connection,
+      auditDir,
+      manifest,
+      findings,
+      analysis,
+      findingsProvenance,
+      artifactStore,
+    });
+    try {
+      sendJson(
+        res,
+        200,
+        buildRenderBundle({
+          manifest,
+          findings,
+          analysis,
+          findingsProvenance,
+          renderInputs,
+          rendererBuild: readOdysseusBuildId(),
+        }),
+      );
+    } catch (error) {
+      sendError(res, 409, error instanceof Error ? error.message : 'render bundle refused');
+    }
   });
 
   router.get('/api/audits/:auditId/report/:language/preview', async ({ res, params }) => {
