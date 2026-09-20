@@ -53,12 +53,20 @@ export function isLegalPage(url: string): boolean {
   return LEGAL_PATH_PATTERN.test(url);
 }
 
+/** The legal-page diversion exists because indexing advice about a
+ *  deliberately noindex'd legal page is wrong, and its report copy says
+ *  exactly that. It therefore only covers search-visibility findings: an
+ *  accessibility, performance or privacy failure on a privacy-policy page
+ *  still has to be fixed, and diverting it would present it as an
+ *  intentional indexing choice. */
+const LEGAL_DIVERTED_CATEGORIES: ReadonlySet<Finding['category']> = new Set(['seo', 'geo']);
+
 /** A finding is diverted only when every page it appears on is the same
  *  kind of diverted page. A finding spanning both a wrapper page and an
  *  ordinary page still reaches the model: only the near-entirely
  *  third-party or near-entirely legal case is diverted. */
 export function classifyDiversion(
-  finding: Pick<Finding, 'pageUrls'> & Partial<Pick<Finding, 'ruleId'>>,
+  finding: Pick<Finding, 'pageUrls'> & Partial<Pick<Finding, 'ruleId' | 'category'>>,
   missingPercentByUrl: ReadonlyMap<string, number>,
 ): DiversionReason | null {
   if (
@@ -68,7 +76,12 @@ export function classifyDiversion(
     return 'regime-dependent';
   if (finding.pageUrls.length === 0) return null;
   if (finding.pageUrls.every((url) => isWrapperPage(url, missingPercentByUrl))) return 'wrapper';
-  if (finding.pageUrls.every((url) => isLegalPage(url))) return 'legal';
+  if (
+    finding.category !== undefined &&
+    LEGAL_DIVERTED_CATEGORIES.has(finding.category) &&
+    finding.pageUrls.every((url) => isLegalPage(url))
+  )
+    return 'legal';
   return null;
 }
 

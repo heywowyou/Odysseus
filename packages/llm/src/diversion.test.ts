@@ -63,13 +63,36 @@ describe('classifyDiversion', () => {
     ).toBe('wrapper');
   });
 
-  it('diverts a finding confined entirely to legal pages', () => {
+  it('diverts a search finding confined entirely to legal pages', () => {
     expect(
       classifyDiversion(
-        { pageUrls: ['https://multi-page.test/conditions-generales-d-utilisation/'] },
+        {
+          category: 'seo',
+          pageUrls: ['https://multi-page.test/conditions-generales-d-utilisation/'],
+        },
         index,
       ),
     ).toBe('legal');
+  });
+
+  it('keeps an accessibility failure on legal pages in front of the model', () => {
+    // The legal diversion's report copy calls the finding an intentional
+    // noindex choice; a link distinguished only by colour on a privacy
+    // policy is a real failure and must stay a ranked finding.
+    for (const category of ['accessibility', 'performance', 'privacy'] as const) {
+      expect(
+        classifyDiversion(
+          {
+            category,
+            pageUrls: [
+              'https://multi-page.test/politique-de-confidentialite/',
+              'https://multi-page.test/politique-cookies/',
+            ],
+          },
+          index,
+        ),
+      ).toBeNull();
+    }
   });
 
   it('does not divert a finding that also touches an ordinary page', () => {

@@ -4,7 +4,11 @@ import { selectReferenceStats } from '@odysseus/core';
 import { renderFindingsAppendix } from './findings-appendix.js';
 import { getStrings } from '../strings/i18n.js';
 import { VERBATIM_EVIDENCE_ATTRIBUTE } from '../render-lint.js';
-import { loadSmallSiteFindings, loadSmallSiteManifest } from '../../test-fixtures.js';
+import {
+  loadSmallSiteFindings,
+  loadSmallSiteFindingsWithLegalSearchFinding,
+  loadSmallSiteManifest,
+} from '../../test-fixtures.js';
 
 /** Issue #408: the URL text of an appendix cell is wrapped in a marked span
  *  so render-lint's prose rules skip it, while the renderer-composed label
@@ -96,25 +100,24 @@ describe('renderFindingsAppendix against the real small-site.test findings', () 
   });
 
   it('tags a rule group as diverted only when every one of its findings is confined to diverted pages', async () => {
-    const findings = await loadSmallSiteFindings();
+    const findings = await loadSmallSiteFindingsWithLegalSearchFinding();
     const manifest = await loadSmallSiteManifest();
     const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
 
-    // f009 (link-in-text-block) is confined entirely to /mentions-legales/,
-    // which matches the legal-page pattern - real diversion, not a
-    // contrived fixture. Its single-finding rule-group must be tagged.
-    const linkInTextBlockGroup = html.split('>link-in-text-block</span>')[1] ?? '';
+    // The retagged crawlable-anchors finding is confined entirely to
+    // /mentions-legales/, which matches the legal-page pattern. Its
+    // single-finding rule-group must be tagged.
+    const crawlableAnchorsGroup = html.split('>crawlable-anchors</span>')[1] ?? '';
     // Issue #325: the tag now closes the group header, after the counts.
-    const linkInTextBlockHead = linkInTextBlockGroup.split('<table')[0] ?? '';
-    expect(linkInTextBlockHead).toContain('class="obs-tag"');
-    expect(linkInTextBlockHead).toContain('Détail dans la section «\u00a0Observations\u00a0»');
-    expect(linkInTextBlockHead.indexOf('class="obs-tag"')).toBeGreaterThan(
-      linkInTextBlockHead.search(/\d+ constats?/),
+    const crawlableAnchorsHead = crawlableAnchorsGroup.split('<table')[0] ?? '';
+    expect(crawlableAnchorsHead).toContain('class="obs-tag"');
+    expect(crawlableAnchorsHead).toContain('Détail dans la section «\u00a0Observations\u00a0»');
+    expect(crawlableAnchorsHead.indexOf('class="obs-tag"')).toBeGreaterThan(
+      crawlableAnchorsHead.search(/\d+ constats?/),
     );
 
-    // color-contrast's group mixes f012 (legal-confined) with f010/f011/f015
-    // (ordinary pages), so the group as a whole must not be tagged - only
-    // a fully-diverted group is.
+    // color-contrast's group includes an accessibility failure confined to
+    // the legal page, which stays ranked, so the group must not be tagged.
     const colorContrastGroup = html.split('>color-contrast</span>')[1] ?? '';
     expect(colorContrastGroup.split('<table')[0]).not.toContain('class="obs-tag"');
   });

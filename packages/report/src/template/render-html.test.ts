@@ -14,6 +14,7 @@ import { resolveRenderDiffEvidence } from '../screenshots.js';
 import {
   loadSmallSiteAnalysis,
   loadSmallSiteFindings,
+  loadSmallSiteFindingsWithLegalSearchFinding,
   loadSmallSiteManifest,
 } from '../test-fixtures.js';
 
@@ -84,7 +85,7 @@ describe('renderHtml against the real small-site.test audit', () => {
 
   it('keeps diverted legal findings out of remaining work while preserving observations and annex traceability (issue #211)', async () => {
     const manifest = await loadSmallSiteManifest();
-    const findings = await loadSmallSiteFindings();
+    const findings = await loadSmallSiteFindingsWithLegalSearchFinding();
     const analysis = await loadSmallSiteAnalysis('fr');
     const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
     const { forModel: actionableFindings, diverted } = partitionFindings(findings, manifest);

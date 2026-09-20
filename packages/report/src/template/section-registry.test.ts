@@ -30,15 +30,16 @@ describe('section-registry order (plan 018 step 3)', () => {
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages });
     const domOrder = sectionIdsInDomOrder(html);
 
-    // The fixture's own gates: its findings give partitionFindings something
-    // to divert, so section-06 renders; it carries no obligationAssessment,
-    // so the article-47-only section-10 never renders; it carries no
+    // The fixture's own gates: its only legal-page findings are accessibility
+    // failures, which stay ranked, so partitionFindings diverts nothing and
+    // section-06 does not render; it carries no obligationAssessment, so the
+    // article-47-only section-10 never renders; it carries no
     // benchmarkPercentile (milestone 10 has not populated any manifest with
     // one yet), so section-15 never renders either; no delta is passed, so
-    // the re-audit's section-16 is absent too. The included registry order
-    // is therefore SECTION_IDS minus section-10, section-15 and section-16.
+    // the re-audit's section-16 is absent too.
     const expectedOrder: SectionId[] = SECTION_IDS.filter(
-      (id) => id !== 'section-10' && id !== 'section-15' && id !== 'section-16',
+      (id) =>
+        id !== 'section-06' && id !== 'section-10' && id !== 'section-15' && id !== 'section-16',
     );
     expect(domOrder).toEqual([...expectedOrder]);
   });

@@ -76,9 +76,11 @@ trusted to give good advice about at all: wrapper pages and noindex'd
 legal pages.** `packages/llm/src/diversion.ts`'s `partitionFindings` runs
 after the severity floor, on the severity-filtered set, and removes any
 finding whose `pageUrls` are confined entirely to pages the render diff
-shows as near-total third-party embeds (`missingPercent >= 95`) or whose
-URL matches a legal-page pattern (`cgu`, `mentions-legales`, `cookies`,
-`privacy`, and similar). This is not a severity concern, so it is a
+shows as near-total third-party embeds (`missingPercent >= 95`) or, for
+search-visibility (`seo`/`geo`) findings only, whose URL matches a
+legal-page pattern (`cgu`, `mentions-legales`, `cookies`, `privacy`, and
+similar). An accessibility, performance or privacy failure on a legal page
+is a real defect, not an indexing choice, and stays in the ranked set. This is not a severity concern, so it is a
 separate pass rather than a lower threshold: a `noindex` finding on a
 cookie-policy page can be `serious` and still be the wrong thing to show
 the model, because the correct response is "confirm this is intentional,"

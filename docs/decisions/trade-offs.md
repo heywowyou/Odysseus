@@ -165,8 +165,10 @@ default cap instead; that decision is the operator's.
    real second-client scan (haaitza.com) put SEO advice about indexing a
    third-party Facebook embed at rank 1 of the whole report.
    `packages/llm/src/diversion.ts`'s `partitionFindings` removes findings
-   confined entirely to wrapper pages (`missingPercent >= 95`) or to a
-   `noindex`-legal-page URL pattern before they ever reach
+   confined entirely to wrapper pages (`missingPercent >= 95`) or, for
+   `seo`/`geo` findings only, to a `noindex`-legal-page URL pattern (an
+   accessibility failure on a privacy policy is not an indexing choice and
+   stays ranked, 2026-09-19) before they ever reach
    `buildStructureInput`. Diverted findings are not dropped: they render
    in a fixed-copy "Observations" section in the report template, built
    from the same `partitionFindings` call against the same

@@ -4,11 +4,29 @@ import { partitionFindings } from '@odysseus/llm';
 import type { Finding } from '@odysseus/core';
 import { renderObservations } from './observations.js';
 import { getStrings } from '../strings/i18n.js';
-import { loadSmallSiteFindings, loadSmallSiteManifest } from '../../test-fixtures.js';
+import {
+  loadSmallSiteFindings,
+  loadSmallSiteFindingsWithLegalSearchFinding,
+  loadSmallSiteManifest,
+} from '../../test-fixtures.js';
 
 describe('renderObservations against the real small-site.test scan', () => {
-  it('renders the legal-page box for f009 (link-in-text-block, confined to /mentions-legales/), with no wrapper box', async () => {
+  it('keeps accessibility failures confined to /mentions-legales/ out of the legal-page box', async () => {
+    // The box says the page is usually excluded from indexing and needs no
+    // corrective action; a colour-only link on a legal page is a real
+    // accessibility failure and must stay a ranked finding instead.
     const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
+    const { diverted } = partitionFindings(findings, manifest);
+
+    expect(diverted.filter((d) => d.reason === 'legal')).toEqual([]);
+    expect(renderObservations(getStrings('fr'), 6, diverted)).not.toContain(
+      'Pages légales exclues de l’indexation',
+    );
+  });
+
+  it('renders the legal-page box for a search finding confined to /mentions-legales/, with no wrapper box', async () => {
+    const findings = await loadSmallSiteFindingsWithLegalSearchFinding();
     const manifest = await loadSmallSiteManifest();
     const { diverted } = partitionFindings(findings, manifest);
 
@@ -23,7 +41,7 @@ describe('renderObservations against the real small-site.test scan', () => {
       .map((d) => d.finding)
       .filter((f) => f.pageUrls.every((url) => url.includes('/mentions-legales/')))
       .map((f) => f.findingId);
-    expect(expectedIds.length).toBeGreaterThan(1);
+    expect(expectedIds.length).toBeGreaterThan(0);
     expect(html).toContain(expectedIds.join(', '));
     // small-site has no wrapper pages (render diff 0% everywhere).
     expect(html).not.toContain('Pages d&#39;intégration');

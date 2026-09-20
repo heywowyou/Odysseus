@@ -41,6 +41,30 @@ export async function loadSmallSiteFindings(): Promise<Finding[]> {
   return JSON.parse(raw) as Finding[];
 }
 
+/** small-site's only findings confined to its legal page are accessibility
+ *  failures, which stay ranked. Tests of the legal-page diversion itself
+ *  need a search finding there, so this retags the legal-page
+ *  link-in-text-block finding as a crawlable-anchors finding. It keeps its id,
+ *  so the fixture analysis, which never saw it, stays consistent. */
+export async function loadSmallSiteFindingsWithLegalSearchFinding(): Promise<Finding[]> {
+  const findings = await loadSmallSiteFindings();
+  const index = findings.findIndex(
+    (finding) =>
+      finding.ruleId === 'link-in-text-block' &&
+      finding.pageUrls.every((url) => url.includes('/mentions-legales/')),
+  );
+  const legalFinding = findings[index];
+  if (legalFinding === undefined) throw new Error('small-site has no legal-page finding');
+  findings[index] = {
+    ...legalFinding,
+    source: 'lighthouse',
+    ruleId: 'crawlable-anchors',
+    category: 'seo',
+    wcagCriteria: [],
+  };
+  return findings;
+}
+
 /** Every rule observed across the committed, de-identified reference audits.
  *  Coverage tests share this loader so none can quietly fall back to a local
  *  gitignored artifacts tree. */
