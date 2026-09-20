@@ -589,3 +589,63 @@ describe('pages whose content is not their own (issue #302)', () => {
     expect(findings[0]?.occurrences).toBe(2);
   });
 });
+
+describe('WordPress loop items', () => {
+  const RATIO_3 =
+    'Fix any of the following:\n  Element has insufficient color contrast of 3 (foreground color: #7799aa, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1';
+  const RATIO_174 =
+    'Fix any of the following:\n  Element has insufficient color contrast of 1.74 (foreground color: #c4c4c4, background color: #ffffff, font size: 20.3pt (27px), font weight: normal). Expected contrast ratio of 3:1';
+  const card = (postId: number, failureSummary: string) =>
+    buildAxeNode({
+      target: [`.post-${postId} > .card-meta > a[rel="category tag"]`],
+      html: '<a href="/category/news" rel="category tag">News</a>',
+      failureSummary,
+    });
+
+  function normalizeArchivePages(nodesByPage: ReturnType<typeof buildAxeNode>[][]) {
+    return normalizeAudit({
+      auditId: 'audit-1',
+      startedAt: STARTED_AT,
+      pages: nodesByPage.map((nodes, index) =>
+        buildNormalizePageInput({
+          url: `https://example.com/blog/page/${index + 1}`,
+          axe: buildAxeResultsInput([buildAxeViolation({ id: 'color-contrast', nodes })]),
+        }),
+      ),
+    });
+  }
+
+  it('merges the same card element across numbered posts when axe states the same failure', () => {
+    const findings = normalizeArchivePages([
+      [card(35073, RATIO_3), card(11254, RATIO_3)],
+      [card(20209, RATIO_3), card(35073, RATIO_3)],
+      [card(17306, RATIO_3)],
+    ]);
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.occurrences).toBe(5);
+    expect(findings[0]?.pageUrls).toHaveLength(3);
+    // The printed selectors stay the real ones; only the identity is shared.
+    expect(findings[0]?.elements.map((element) => element.selector)).toContain(
+      '.post-35073 > .card-meta > a[rel="category tag"]',
+    );
+  });
+
+  it('keeps a card whose measured colour pair differs as its own finding', () => {
+    const findings = normalizeArchivePages([
+      [card(35073, RATIO_3)],
+      [card(11254, RATIO_174)],
+      [card(20209, RATIO_3)],
+    ]);
+
+    expect(findings).toHaveLength(2);
+  });
+
+  it('leaves numbered ids that WordPress core does not print in loops distinct', () => {
+    const popup = (id: number) =>
+      buildAxeNode({ target: [`#popmake-${id} > .close`], failureSummary: RATIO_3 });
+    const findings = normalizeArchivePages([[popup(12288)], [popup(13138)]]);
+
+    expect(findings).toHaveLength(2);
+  });
+});

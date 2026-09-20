@@ -111,6 +111,21 @@ default cap instead; that decision is the operator's.
    `:nth-child()` would merge genuinely distinct elements, and a real
    scan confirmed that stable selectors dedupe correctly without it.
 
+   Amended 2026-09-19. WordPress core numbers each item it prints in a
+   loop (`post-<ID>`, `menu-item-<ID>`, `page-item-<ID>`, `cat-item-<ID>`),
+   and axe names an element through its numbered card. A hotel blog
+   archive therefore reported one category-link contrast failure 298
+   times, one per post, each stating the same colour pair. An axe
+   element now takes an identity in which those four core tokens read as
+   "an item of this loop", together with axe's own failure statement, so
+   a card measuring a different colour pair or ratio stays separate.
+   This is identity, not selector normalization: the printed selector is
+   unchanged, and generic numbered ids such as `#popmake-12288` stay
+   distinct. Rejected: stripping every numeric suffix (merges distinct
+   popups and Webflow nodes) and adding `color-contrast` to the shape
+   rules (its colour pairs differ per element, which the failure
+   statement now guards).
+
 4. **Non-HTML resources are never crawled as pages.** A real WordPress
    site linked four `wp-content/uploads/*.jpg` attachment URLs from its
    gallery, and each one cost a full render, an axe pass, and a Lighthouse

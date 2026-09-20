@@ -155,12 +155,45 @@ function containerIdentity(ruleId: string, selector: string): string | undefined
   return container.length > 0 ? container : undefined;
 }
 
-function templateIdentity(ruleId: string, selector: string, snippet: string): string | undefined {
+/** 2026-09-19. WordPress core numbers each item it prints in a loop: every
+ *  post card gets `post-<ID>` from post_class(), every navigation entry
+ *  `menu-item-<ID>`, every listed page `page-item-<ID>`, every listed
+ *  category `cat-item-<ID>`. axe then names each card's category link
+ *  through its own card, so one theme rule failing on a blog archive
+ *  produced 298 findings on a real audit, one per post, each stating the
+ *  same colour pair on the same element of the same card template.
+ *
+ *  The identity reads those four tokens as "an item of this loop". It is
+ *  not the selector normalization trade-offs 3 and 30 rejected: the printed
+ *  selector is untouched, only core's own numbered-loop tokens are read, and
+ *  a generic pattern such as `#popmake-12288` stays distinct. Two elements
+ *  merge only when axe's failure statement is also identical, so a card
+ *  whose link measures a different colour pair or ratio - the reason
+ *  `color-contrast` is kept out of the shape rules above - stays its own
+ *  finding. */
+const WORDPRESS_LOOP_ITEM_TOKEN = /([.#])(post|menu-item|page-item|cat-item)-\d+(?![\w-])/g;
+
+export function wordpressLoopIdentity(
+  selector: string,
+  failureSummary: string | undefined,
+): string | undefined {
+  WORDPRESS_LOOP_ITEM_TOKEN.lastIndex = 0;
+  if (!WORDPRESS_LOOP_ITEM_TOKEN.test(selector)) return undefined;
+  const template = selector.replace(WORDPRESS_LOOP_ITEM_TOKEN, '$1$2-*');
+  return `${template} | ${(failureSummary ?? '').trim()}`;
+}
+
+function templateIdentity(
+  ruleId: string,
+  selector: string,
+  snippet: string,
+  failureSummary: string | undefined,
+): string | undefined {
   if (SHAPE_IDENTIFIED_AXE_RULES.has(ruleId)) {
     const shape = shapeIdentity(snippet);
     if (shape !== undefined) return shape;
   }
-  return containerIdentity(ruleId, selector);
+  return containerIdentity(ruleId, selector) ?? wordpressLoopIdentity(selector, failureSummary);
 }
 
 /** 2026-08-25. The file an occurrence is about, where the captured element
@@ -227,7 +260,7 @@ export function extractAxeCandidates(axe: AxeResultsInput, pageUrl: string): Fin
           })(),
         },
         ...(() => {
-          const identity = templateIdentity(violation.id, selector, node.html);
+          const identity = templateIdentity(violation.id, selector, node.html, node.failureSummary);
           return identity === undefined ? {} : { dedupeIdentity: identity };
         })(),
         rawEvidenceForPage: {

@@ -219,6 +219,15 @@ distinct elements. A real 10-page scan confirmed that stable selectors
 (IDs, classes) dedupe correctly with no normalization at all: 27 contrast
 nodes collapsed to three footer selectors.
 
+**WordPress loop items are one identity (2026-09-19, trade-off 3).** An axe
+element whose selector carries a WordPress core loop token (`.post-<ID>`,
+`.menu-item-<ID>` or `#menu-item-<ID>`, `.page-item-<ID>`, `.cat-item-<ID>`)
+takes `dedupeIdentity` = the selector with those tokens read as `-*`, plus
+axe's `failureSummary`. The displayed selector is untouched. Elements merge
+only when the failure statement is identical, so a different colour pair or
+ratio stays its own finding. Shape and container identities, where a rule has
+one, win over this.
+
 ---
 
 ## 3. Finding shape
