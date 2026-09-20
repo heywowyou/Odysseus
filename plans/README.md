@@ -140,10 +140,12 @@ The canonical sources for this behavior are `docs/product/odysseus-project-brief
 | [071](071-permanent-reference-audit-and-dual-link-outreach.md) | Publish one permanent anonymized reference audit and add it beside the personalized preview in Touch 1 | P1 | L | 067, 069 | IN PROGRESS |
 | [072](072-finalized-client-report.md) | Make the operator-finalized client report a stored, lineage-bound artifact that supersedes the pipeline render | P1 | L | 067, 070 | DONE (2026-09-20): shipped end to end and proved on the fixture audit; see the plan's closure ledger |
 | [073](073-light-theme-full-report-export.md) | Add a light presentation variant to the full client report without forking content, finalization or approval | P2 | L | 039, 072 | TODO |
+| [074](074-random-independent-prospect.md) | Add one-click random independent prospect selection from the full matching directory | P2 | M | 047, 050 | TODO |
 
 Plan 072 shipped 2026-09-20 and is the current finalization workflow; its
 rationale is recorded as trade-off 41 and llm-layer-rules section 16.
 Plan 073 is approved report-presentation work as of 2026-09-21: the paid report keeps dark as its canonical default and gains an explicit light export variant bound to the same content, finalization and exact-artifact approval.
+Plan 074 is approved operator-workflow work as of 2026-09-21: Directory gains a one-click random independent prospect action that samples the full matching unlinked pool server-side, reuses the durable directory-to-prospect creation path, and opens the created prospect without scanning or outreach side effects.
 Plan 071 is approved next product work as of 2026-09-19: one permanent publication-safe reference audit, a second Touch-1 body link beside the personalized preview, and privacy-minimal optional link-request attribution. Plans 067-070 retain their own recorded execution/acceptance status; Plan 071 must not weaken Plan 069 preview expiry, lineage or suppression rules. Every plan before 067 lives under `archive/`.
 Frozen plans keep their contract and execution handoff there and reopen only
 by operator decision.
