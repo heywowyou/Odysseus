@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
+  approvalCoversReport,
   approvalMatchesReportPair,
   getLatestReportApproval,
   persistReportApproval,
@@ -38,5 +39,49 @@ describe.skipIf(!available)('report approvals', () => {
         en: fields.en,
       }),
     ).toBe(false);
+  });
+});
+
+/** Pure over a plain approval object, so it runs with or without Docker
+ *  Mongo: the single-language delivery rule is the part that regressed. */
+describe('approvalCoversReport', () => {
+  const approval = {
+    approvalId: 'approval-cover',
+    auditId,
+    fr: { reportId: 'fr-1', pdfDigest: 'sha256:fr' },
+    en: { reportId: 'en-1', pdfDigest: 'sha256:en' },
+    approvedAt: new Date('2026-08-29T12:00:00.000Z'),
+  };
+
+  it('covers the French report of a bilingual approval, which the pair check refused', () => {
+    expect(approvalCoversReport(approval, 'fr', approval.fr)).toBe(true);
+    // The regression: delivering French asked the pair question with no
+    // English report to compare, and a bilingual approval always said no.
+    expect(approvalMatchesReportPair(approval, { fr: approval.fr })).toBe(false);
+  });
+
+  it('keeps the French report deliverable after the English attachment is regenerated', () => {
+    expect(approvalCoversReport(approval, 'fr', approval.fr)).toBe(true);
+    expect(
+      approvalCoversReport(approval, 'en', { reportId: 'en-2', pdfDigest: 'sha256:en2' }),
+    ).toBe(false);
+  });
+
+  it('refuses a report the approval does not name, and any language of a missing approval', () => {
+    expect(approvalCoversReport(approval, 'fr', { reportId: 'fr-2', pdfDigest: 'sha256:fr' })).toBe(
+      false,
+    );
+    expect(
+      approvalCoversReport(approval, 'fr', { reportId: 'fr-1', pdfDigest: 'sha256:other' }),
+    ).toBe(false);
+    expect(approvalCoversReport(null, 'fr', approval.fr)).toBe(false);
+  });
+
+  it('refuses English when the approval carries no English attachment', () => {
+    const { en: _attached, ...frenchOnly } = approval;
+    expect(
+      approvalCoversReport(frenchOnly, 'en', { reportId: 'en-1', pdfDigest: 'sha256:en' }),
+    ).toBe(false);
+    expect(approvalCoversReport(frenchOnly, 'fr', approval.fr)).toBe(true);
   });
 });

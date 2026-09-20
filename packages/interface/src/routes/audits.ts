@@ -28,6 +28,7 @@ import {
   getLatestReportApproval,
   getSeverityRollup,
   getProspectHub,
+  approvalCoversReport,
   approvalMatchesReportPair,
   listOutreachPreviews,
   listReportLanguages,
@@ -1361,10 +1362,20 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       getLatestReport(connection, auditId, 'en'),
       getLatestReportApproval(connection, auditId),
     ]);
+    // The French report is the canonical deliverable, so it is deliverable
+    // whenever approval covers this exact French report - a regenerated
+    // English attachment does not un-approve it. English is an attachment to
+    // an approved French deliverable, so it additionally requires the French
+    // report still to be the approved one.
     const deliveryApproved =
       language === 'fr'
-        ? Boolean(fr && approvalMatchesReportPair(approval, { fr }))
-        : Boolean(en && approval?.en && fr && approvalMatchesReportPair(approval, { fr, en }));
+        ? Boolean(fr && approvalCoversReport(approval, 'fr', fr))
+        : Boolean(
+            en &&
+            approvalCoversReport(approval, 'en', en) &&
+            fr &&
+            approvalCoversReport(approval, 'fr', fr),
+          );
     if (!deliveryApproved) {
       sendError(
         res,

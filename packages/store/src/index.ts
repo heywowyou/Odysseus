@@ -19,6 +19,7 @@ export type {
   ReportApprovalDocumentFields,
 } from './schemas/report-approval.schema.js';
 export {
+  approvalCoversReport,
   approvalMatchesReportPair,
   getLatestReportApproval,
   persistReportApproval,
