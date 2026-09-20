@@ -6,6 +6,13 @@ import type { ProblemEnvelope } from './operator/contract.js';
  *  sending data would grow memory without limit. */
 const MAX_JSON_BODY_BYTES = 1_000_000;
 
+/** Plan 072: the finalized-report upload carries a whole PDF base64-encoded
+ *  in its JSON body, because the router requires an exact application/json
+ *  content type on state-changing routes as its CSRF guard and multipart
+ *  would break that. Real reports run to ~3 MB, ~4 MB encoded; this leaves
+ *  room for a long one without lifting the limit on every other route. */
+export const MAX_FINALIZED_REPORT_BODY_BYTES = 24_000_000;
+
 class PayloadTooLargeError extends Error {
   constructor() {
     super('request body exceeds the maximum allowed size');
@@ -16,12 +23,15 @@ class PayloadTooLargeError extends Error {
 /** Small enough (five endpoints, small JSON bodies) that a hand-rolled
  *  body collector is simpler and lighter than adding a body-parser
  *  dependency. */
-export async function readJsonBody(req: IncomingMessage): Promise<unknown> {
+export async function readJsonBody(
+  req: IncomingMessage,
+  maxBytes: number = MAX_JSON_BODY_BYTES,
+): Promise<unknown> {
   const chunks: Buffer[] = [];
   let totalBytes = 0;
   for await (const chunk of req) {
     totalBytes += (chunk as Buffer).length;
-    if (totalBytes > MAX_JSON_BODY_BYTES) {
+    if (totalBytes > maxBytes) {
       throw new PayloadTooLargeError();
     }
     chunks.push(chunk as Buffer);
@@ -44,9 +54,10 @@ export const jsonBodyNotRead: unique symbol = Symbol('jsonBodyNotRead');
 export async function readJsonBodyOrRespond(
   req: IncomingMessage,
   res: ServerResponse,
+  maxBytes?: number,
 ): Promise<unknown> {
   try {
-    return await readJsonBody(req);
+    return await readJsonBody(req, maxBytes);
   } catch (error) {
     if (error instanceof PayloadTooLargeError) {
       sendError(res, 413, 'request body is too large');

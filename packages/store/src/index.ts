@@ -114,7 +114,13 @@ export {
   WritingSelectionConflictError,
 } from './report-preparations.js';
 export type { SelectedAuditAnalysisPairResolution } from './report-preparations.js';
-export { getLatestReport, listReportLanguages } from './reports.js';
+export {
+  getLatestGeneratedReport,
+  getLatestReport,
+  getReportById,
+  listReportLanguages,
+  reportOrigin,
+} from './reports.js';
 export type {
   DirectoryFilter,
   NewProspectHubInput,

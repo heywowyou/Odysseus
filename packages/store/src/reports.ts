@@ -30,3 +30,44 @@ export async function listReportLanguages(
   const languages = await ReportModel.distinct('language', { auditId });
   return languages as ReportLanguage[];
 }
+
+/**
+ * Plan 072: how this PDF came to exist.
+ *
+ * `origin` is absent on every row written before the finalizer, and those
+ * are all pipeline renders, so absence is read here rather than defaulted in
+ * the schema - a row keeps saying which era it was written in, and nothing
+ * has to be migrated for a legacy row to answer this question correctly.
+ */
+export function reportOrigin(report: Pick<ReportDocument, 'origin'>): 'pipeline' | 'finalized' {
+  return report.origin === 'finalized' ? 'finalized' : 'pipeline';
+}
+
+/**
+ * The report a finalization corrected, or null when this audit has none in
+ * that language.
+ *
+ * The finalized row carries the id rather than this being inferred from
+ * timestamps: a regeneration between the operator's read and their upload
+ * would make a "latest pipeline row" guess point at a render nobody read.
+ */
+export async function getReportById(
+  connection: Connection,
+  reportId: string,
+): Promise<ReportDocument | null> {
+  return createReportModel(connection).findOne({ reportId }).lean<ReportDocument>();
+}
+
+/** Latest pipeline-generated report for an audit and language, ignoring any
+ *  finalization layered on top of it. Backs the dashboard's link to the
+ *  original generated PDF. */
+export async function getLatestGeneratedReport(
+  connection: Connection,
+  auditId: string,
+  language: ReportLanguage,
+): Promise<ReportDocument | null> {
+  return createReportModel(connection)
+    .findOne({ auditId, language, origin: { $ne: 'finalized' } })
+    .sort({ generatedAt: -1 })
+    .lean<ReportDocument>();
+}

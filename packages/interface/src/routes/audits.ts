@@ -1,8 +1,11 @@
 import { randomUUID } from 'node:crypto';
+import { promises as fs } from 'node:fs';
+import { hostname as osHostname } from 'node:os';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
 import {
   buildFindingsProvenance,
+  canonicalDigest,
   isGrade,
   isValidSiren,
   summarizeAuditCoverage,
@@ -24,6 +27,7 @@ import {
   getActiveReportBundle,
   getLatestReportBundle,
   getReportBundleByDigest,
+  getLatestGeneratedReport,
   getLatestReport,
   getLatestReportApproval,
   getSeverityRollup,
@@ -32,6 +36,7 @@ import {
   approvalMatchesReportPair,
   listOutreachPreviews,
   listReportLanguages,
+  persistReport,
   persistReportApproval,
   resolveSelectedAnalysisPairForAudit,
   saveLinkedAuditIdentity,
@@ -76,7 +81,13 @@ import {
   type PublishPreviewV3Refusal,
 } from '../outreach/publish-preview-v2.js';
 import type { Router } from '../router.js';
-import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
+import {
+  jsonBodyNotRead,
+  MAX_FINALIZED_REPORT_BODY_BYTES,
+  readJsonBodyOrRespond,
+  sendError,
+  sendJson,
+} from '../http-utils.js';
 import { lookupOperatorProfile } from '../sirene/sirene-cache.js';
 import { pdfDigestOf } from '../pipeline/pdf-digest.js';
 import { findingsAreStale, makeReportReady } from '../pipeline/make-report-ready.js';
@@ -91,7 +102,9 @@ import {
 import type { EvidenceFacts, ReportQualityFacts } from '../operator/audit-readiness.js';
 import { buildAuditSnapshot } from '../operator/audit-snapshot.js';
 import { projectLegacyJob } from '../operator/legacy-job-projection.js';
+import { parseFinalizedReportUpload } from './finalized-report-upload.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
+import { syncArtifactFilesToBucket } from '../artifacts/sync-audit-artifacts.js';
 import { resolveArtifactFile } from '../artifacts/resolve-artifact.js';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
 import {
@@ -1262,6 +1275,209 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     } catch (error) {
       sendError(res, 409, error instanceof Error ? error.message : 'render bundle refused');
     }
+  });
+
+  /**
+   * Plan 072: the operator's finalized PDF, rendered locally from the bundle
+   * above and uploaded back as the delivered artifact.
+   *
+   * JSON with the PDF base64-encoded rather than multipart, because the
+   * router requires an exact `application/json` content type on every
+   * state-changing route as its CSRF guard and that guard stays intact.
+   *
+   * It inserts an ordinary `reports` row. The collection is insert-only by
+   * design, `getLatestReport` sorts by generatedAt, so the finalized row
+   * becomes what preview and download serve with no route change - and a
+   * later regeneration inserts a newer pipeline row that takes over, which
+   * is correct, because the corrections no longer apply to the text it
+   * carries.
+   */
+  router.post('/api/audits/:auditId/report/:language/finalized', async ({ req, res, params }) => {
+    const auditId = params['auditId']!;
+    const language = params['language']!;
+    if (!isReportLanguage(language)) {
+      sendError(res, 400, 'language must be "fr" or "en"');
+      return;
+    }
+    const audit = await getAudit(connection, auditId);
+    if (!audit) {
+      sendError(res, 404, 'audit not found');
+      return;
+    }
+
+    const body = await readJsonBodyOrRespond(req, res, MAX_FINALIZED_REPORT_BODY_BYTES);
+    if (body === jsonBodyNotRead) return;
+    const upload = parseFinalizedReportUpload(body);
+    if (typeof upload === 'string') {
+      sendError(res, 400, upload);
+      return;
+    }
+    if (upload.lineage.language !== language) {
+      sendError(res, 400, `the upload is for ${upload.lineage.language}, not ${language}`);
+      return;
+    }
+    if (upload.lineage.auditId !== auditId) {
+      sendError(res, 400, `the upload is for audit ${upload.lineage.auditId}`);
+      return;
+    }
+
+    // The 409 that makes this safe: a finalization is corrections to one
+    // exact analysis and one exact findings set. If either has moved on
+    // since the bundle was fetched, the PDF describes something the audit no
+    // longer says, and refusing here is what stops it reaching a client.
+    const resolution = await resolveSelectedAnalysisPairForAudit(connection, auditId);
+    if (resolution.kind === 'none') {
+      sendError(
+        res,
+        409,
+        'a selected analysis is required before a finalized report can be stored',
+      );
+      return;
+    }
+    const analysis = language === 'fr' ? resolution.fr : resolution.en;
+    if (!analysis) {
+      sendError(res, 409, `no selected ${language} analysis for this audit`);
+      return;
+    }
+    if (canonicalDigest(analysis) !== upload.lineage.analysisDigest) {
+      sendError(
+        res,
+        409,
+        'the selected analysis has changed since this report was finalized; re-fetch the bundle, ' +
+          'reapply the corrections and render again',
+      );
+      return;
+    }
+
+    const uploadHostname = new URL(audit.siteUrl).hostname;
+    const auditDir = buildAuditDir(getArtifactsRoot(), uploadHostname, audit.startedAt);
+    let manifest: AuditManifest;
+    let findings: Finding[];
+    try {
+      ({ manifest, findings } = await readAuditArtifacts(
+        auditDir,
+        uploadHostname,
+        audit.startedAt,
+        artifactStore,
+      ));
+    } catch {
+      sendError(res, 404, 'audit artifacts not found on disk or in the bucket');
+      return;
+    }
+    const findingsProvenance = buildFindingsProvenance(findings);
+    if (findingsProvenance.findingsDigest !== upload.lineage.findingsDigest) {
+      sendError(
+        res,
+        409,
+        'the findings have changed since this report was finalized; re-fetch the bundle, ' +
+          'reapply the corrections and render again',
+      );
+      return;
+    }
+
+    const generated = await getLatestGeneratedReport(connection, auditId, language);
+    if (!generated?.reportId) {
+      sendError(
+        res,
+        409,
+        `no generated ${language} report to finalize; run the pipeline report first`,
+      );
+      return;
+    }
+
+    const reportId = randomUUID();
+    const generatedAt = new Date();
+    const reportsDir = path.join(auditDir, 'reports');
+    await fs.mkdir(reportsDir, { recursive: true });
+    const stamp = generatedAt.toISOString().replace(/[:.]/gu, '-');
+    const reportPath = path.join(reportsDir, `${stamp}-final-${language}.pdf`);
+    const overridesPath = `${reportPath}.overrides.json`;
+    await fs.writeFile(reportPath, upload.pdf);
+    // The override file is kept beside the PDF, not only digested into the
+    // row: the row proves which corrections were applied, this is what they
+    // said, and the pair is the whole provenance link back to the analysis
+    // whose prose the report no longer carries.
+    await fs.writeFile(overridesPath, `${JSON.stringify(upload.overrides, null, 2)}\n`);
+
+    await persistReport(connection, {
+      reportId,
+      auditId,
+      analysisId: upload.lineage.analysisId,
+      findingsProvenance,
+      // The renderer that produced these bytes, which is the operator's
+      // local build and its template version, not this server's.
+      rendererVersion: upload.reportTemplateVersion,
+      rendererBuild: upload.rendererBuild,
+      pdfDigest: pdfDigestOf(upload.pdf),
+      language,
+      reportTemplateVersion: upload.reportTemplateVersion,
+      analysisGeneratedAt: analysis.generatedAt,
+      fileRef: path.relative(auditDir, reportPath),
+      generatedAt,
+      renderedOnHost: osHostname(),
+      origin: 'finalized',
+      finalization: {
+        overridesDigest: upload.overridesDigest,
+        overrideCount: upload.overrides?.overrides.length ?? 0,
+        uploadedAt: generatedAt,
+        supersedesReportId: generated.reportId,
+      },
+      // Measured by the render that produced these bytes, reported by it the
+      // same way the pipeline reports its own count. The digest is the part
+      // the server computes itself.
+      ...(upload.pageCount !== undefined ? { pageCount: upload.pageCount } : {}),
+    });
+
+    await syncArtifactFilesToBucket(
+      artifactStore,
+      auditDir,
+      uploadHostname,
+      new Date(manifest.startedAt),
+      [reportPath, overridesPath],
+    );
+
+    sendJson(res, 201, {
+      reportId,
+      supersedesReportId: generated.reportId,
+      overrideCount: upload.overrides?.overrides.length ?? 0,
+      generatedAt: generatedAt.toISOString(),
+    });
+  });
+
+  /** The pipeline render a finalization superseded, kept reachable so the
+   *  operator can compare what was corrected against what was generated. */
+  router.get('/api/audits/:auditId/report/:language/generated', async ({ res, params }) => {
+    const auditId = params['auditId']!;
+    const language = params['language']!;
+    if (!isReportLanguage(language)) {
+      sendError(res, 400, 'language must be "fr" or "en"');
+      return;
+    }
+    const audit = await getAudit(connection, auditId);
+    if (!audit) {
+      sendError(res, 404, 'audit not found');
+      return;
+    }
+    const report = await getLatestGeneratedReport(connection, auditId, language);
+    if (!report) {
+      sendError(res, 404, `no generated ${language} report for this audit`);
+      return;
+    }
+    const generatedHostname = new URL(audit.siteUrl).hostname;
+    const pdf = await readVerifiedReport(
+      buildAuditDir(getArtifactsRoot(), generatedHostname, audit.startedAt),
+      report,
+      generatedHostname,
+      audit.startedAt,
+      artifactStore,
+    );
+    if (!pdf) {
+      sendError(res, 409, 'report PDF is missing or its digest does not match');
+      return;
+    }
+    res.statusCode = 200;
+    res.setHeader('content-type', 'application/pdf');
+    res.end(pdf);
   });
 
   router.get('/api/audits/:auditId/report/:language/preview', async ({ res, params }) => {

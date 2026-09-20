@@ -22,7 +22,7 @@ import {
   type AuditManifest,
   type FindingsProvenance,
 } from '@odysseus/core';
-import { REPORT_TEMPLATE_VERSION } from '@odysseus/report';
+import { REPORT_TEMPLATE_VERSION, type RenderBundle } from '@odysseus/report';
 import {
   createReportModel,
   deleteAuditCascade,
@@ -296,6 +296,65 @@ async function getBundleViaRoute(auditId: string, language: string): Promise<Fak
   return res;
 }
 
+function jsonReq(url: string, body: unknown): IncomingMessage {
+  // Buffer chunks, like a real IncomingMessage: readJsonBody concatenates
+  // Buffers, and a stream of strings fails there rather than in the route.
+  const req = Readable.from([Buffer.from(JSON.stringify(body))]) as unknown as IncomingMessage;
+  req.method = 'POST';
+  req.url = url;
+  // The router's CSRF guard requires this exact content type on every
+  // state-changing route, which is why the PDF travels base64 in JSON.
+  req.headers = { 'content-type': 'application/json' };
+  return req;
+}
+
+const FINALIZED_PDF = Buffer.from('%PDF-1.7\nfinalized\n%%EOF\n');
+
+/** The body the upload script posts, taken from a bundle this suite fetched
+ *  through the route so the lineage is the route's own, not a copy of it. */
+function finalizedBody(bundle: RenderBundle, overrides?: unknown) {
+  return {
+    lineage: {
+      auditId: bundle.lineage.auditId,
+      language: bundle.lineage.language,
+      analysisId: bundle.lineage.analysisId,
+      analysisDigest: bundle.lineage.analysisDigest,
+      findingsDigest: bundle.lineage.findingsProvenance.findingsDigest,
+    },
+    ...(overrides !== undefined ? { overrides } : {}),
+    pdfBase64: FINALIZED_PDF.toString('base64'),
+    rendererBuild: 'operator-local',
+    reportTemplateVersion: REPORT_TEMPLATE_VERSION,
+    pageCount: 41,
+  };
+}
+
+async function postFinalizedViaRoute(
+  auditId: string,
+  language: string,
+  body: unknown,
+): Promise<FakeRes> {
+  const router = new Router();
+  registerAuditRoutes(router, connection!);
+  const res = fakeRes();
+  await router.handle(jsonReq(`/api/audits/${auditId}/report/${language}/finalized`, body), res);
+  return res;
+}
+
+/** Seeds a bundle chain that also has a pipeline report row and its bytes,
+ *  which a finalization corrects. */
+async function seedFinalizableChain(): Promise<{ auditId: string; generatedReportId: string }> {
+  const { auditId, manifest } = await seedBundleChain();
+  const pdf = Buffer.from(`%PDF-generated-${auditId}`);
+  const pdfDigest = `sha256:${createHash('sha256').update(pdf).digest('hex')}`;
+  await persistReport(connection!, buildReportFields(auditId, 'fr', pdfDigest));
+  const hostname = new URL(manifest.siteUrl).hostname;
+  const auditDir = buildAuditDir(getArtifactsRoot(), hostname, new Date(manifest.startedAt));
+  await fs.mkdir(path.join(auditDir, 'reports'), { recursive: true });
+  await fs.writeFile(path.join(auditDir, 'reports', 'fr.pdf'), pdf);
+  return { auditId, generatedReportId: `report-fr-${auditId}` };
+}
+
 let artifactsRoot: string | undefined;
 let previousArtifactsRoot: string | undefined;
 
@@ -440,6 +499,119 @@ describe.skipIf(!mongoAvailable)('audit routes against real mongo', () => {
     // can never be served silently.
     expect(res.statusCode).toBe(409);
     expect(res.body).toContain('not been approved');
+  });
+
+  it('stores an uploaded finalized report and serves it in place of the pipeline render', async () => {
+    const { auditId, generatedReportId } = await seedFinalizableChain();
+    const bundle = JSON.parse(
+      (await getBundleViaRoute(auditId, 'fr')).body as string,
+    ) as RenderBundle;
+
+    const res = await postFinalizedViaRoute(auditId, 'fr', finalizedBody(bundle));
+
+    expect(res.statusCode).toBe(201);
+    const created = JSON.parse(res.body as string) as {
+      reportId: string;
+      supersedesReportId: string;
+      overrideCount: number;
+    };
+    expect(created.supersedesReportId).toBe(generatedReportId);
+    expect(created.overrideCount).toBe(0);
+
+    // getLatestReport sorts by generatedAt, so the finalized row is what
+    // preview and download now serve, with no route change.
+    const latest = await getLatestReport(connection!, auditId, 'fr');
+    expect(latest?.reportId).toBe(created.reportId);
+    expect(latest?.origin).toBe('finalized');
+    expect(latest?.finalization?.supersedesReportId).toBe(generatedReportId);
+    expect(latest?.pageCount).toBe(41);
+
+    // Uploading a finalization does not approve it. Delivery still goes
+    // through the operator's approval of whatever report is current, which
+    // is now this one - so the bytes a client receives are the finalized
+    // ones, and they are received only after the operator says so.
+    const download = await getViaRoute(auditId, 'fr');
+    expect(download.statusCode).toBe(409);
+  });
+
+  it('keeps the superseded pipeline render reachable behind its own link', async () => {
+    const { auditId } = await seedFinalizableChain();
+    const bundle = JSON.parse(
+      (await getBundleViaRoute(auditId, 'fr')).body as string,
+    ) as RenderBundle;
+    await postFinalizedViaRoute(auditId, 'fr', finalizedBody(bundle));
+
+    const router = new Router();
+    registerAuditRoutes(router, connection!);
+    const res = fakeRes();
+    await router.handle(fakeReq(`/api/audits/${auditId}/report/fr/generated`), res);
+
+    expect(res.statusCode).toBe(200);
+    expect((res.body as Buffer).toString()).toBe(`%PDF-generated-${auditId}`);
+  });
+
+  /** The 409 that makes the upload safe: corrections belong to one exact
+   *  analysis, and a PDF written against a superseded one describes
+   *  something the audit no longer says. */
+  it('refuses a finalized report whose analysis has been regenerated since', async () => {
+    const { auditId } = await seedFinalizableChain();
+    const bundle = JSON.parse(
+      (await getBundleViaRoute(auditId, 'fr')).body as string,
+    ) as RenderBundle;
+    const body = finalizedBody(bundle);
+    body.lineage.analysisDigest = `sha256:${'9'.repeat(64)}`;
+
+    const res = await postFinalizedViaRoute(auditId, 'fr', body);
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body as string).toMatch(/selected analysis has changed/u);
+  });
+
+  it('refuses a finalized report whose findings have changed since', async () => {
+    const { auditId } = await seedFinalizableChain();
+    const bundle = JSON.parse(
+      (await getBundleViaRoute(auditId, 'fr')).body as string,
+    ) as RenderBundle;
+    const body = finalizedBody(bundle);
+    body.lineage.findingsDigest = `sha256:${'8'.repeat(64)}`;
+
+    const res = await postFinalizedViaRoute(auditId, 'fr', body);
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body as string).toMatch(/findings have changed/u);
+  });
+
+  it('refuses a finalization of an audit that has no generated report to correct', async () => {
+    const { auditId } = await seedBundleChain();
+    const bundle = JSON.parse(
+      (await getBundleViaRoute(auditId, 'fr')).body as string,
+    ) as RenderBundle;
+
+    const res = await postFinalizedViaRoute(auditId, 'fr', finalizedBody(bundle));
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body as string).toMatch(/no generated fr report/u);
+  });
+
+  /** A later regeneration inserts a newer pipeline row, which takes over -
+   *  correct, because the corrections were written against text it no longer
+   *  carries. The dashboard shows that as a warning rather than silently. */
+  it('lets a later pipeline report supersede the finalization in turn', async () => {
+    const { auditId } = await seedFinalizableChain();
+    const bundle = JSON.parse(
+      (await getBundleViaRoute(auditId, 'fr')).body as string,
+    ) as RenderBundle;
+    await postFinalizedViaRoute(auditId, 'fr', finalizedBody(bundle));
+
+    await persistReport(connection!, {
+      ...buildReportFields(auditId, 'fr', `sha256:${'7'.repeat(64)}`),
+      reportId: `report-fr-regenerated-${auditId}`,
+      generatedAt: new Date(Date.now() + 60_000),
+    });
+
+    const latest = await getLatestReport(connection!, auditId, 'fr');
+    expect(latest?.reportId).toBe(`report-fr-regenerated-${auditId}`);
+    expect(latest?.origin).toBeUndefined();
   });
 
   it('audit detail carries an operator snapshot projected from store truth', async () => {

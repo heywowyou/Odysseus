@@ -45,6 +45,26 @@ export interface ReportDocumentFields {
    *  lives on the machine named here, not that it was lost. Optional:
    *  documents rendered before it was recorded simply lack it. */
   renderedOnHost?: string;
+  /** Plan 072: which of the two ways this PDF came to exist. A `finalized`
+   *  row is the operator's own render, corrected after reading the pipeline's
+   *  and uploaded back. Optional and absent on every row written before the
+   *  finalizer existed, which are all pipeline renders - so absent reads as
+   *  `pipeline`, never as unknown. */
+  origin?: 'pipeline' | 'finalized';
+  /** What the operator changed, present only on a `finalized` row. The
+   *  stored analysis keeps the prose the model wrote; this plus the override
+   *  file kept beside the PDF is the link between that text and the text the
+   *  client received. */
+  finalization?: {
+    /** SHA-256 of the override file exactly as uploaded. */
+    overridesDigest: string;
+    overrideCount: number;
+    uploadedAt: Date;
+    /** The pipeline report this one corrects. Recorded rather than inferred
+     *  from timestamps: which render the operator actually read is a fact,
+     *  and a regeneration in between would make a guess at it wrong. */
+    supersedesReportId: string;
+  };
   /** Measured Paged.js page count recorded at generation time (plan 018).
    *  Optional: documents generated before it was recorded simply lack it,
    *  and the length warning must never infer a value for them. */
@@ -58,7 +78,9 @@ type LegacyOptionalFields =
   | 'rendererVersion'
   | 'rendererBuild'
   | 'pdfDigest'
-  | 'pageCount';
+  | 'pageCount'
+  | 'origin'
+  | 'finalization';
 export type ReportDocument = Omit<ReportDocumentFields, LegacyOptionalFields> &
   Partial<Pick<ReportDocumentFields, LegacyOptionalFields>>;
 
@@ -85,6 +107,20 @@ const reportSchema = new Schema<ReportDocument>(
     fileRef: { type: String, required: true },
     generatedAt: { type: Date, required: true },
     renderedOnHost: { type: String },
+    // Absent on every legacy row, and read as 'pipeline' by
+    // reportOrigin() rather than defaulted here, so a row's stored shape
+    // keeps saying which era it came from.
+    origin: { type: String, enum: ['pipeline', 'finalized'] },
+    finalization: {
+      _id: false,
+      type: {
+        overridesDigest: { type: String, required: true },
+        overrideCount: { type: Number, required: true },
+        uploadedAt: { type: Date, required: true },
+        supersedesReportId: { type: String, required: true },
+      },
+      required: false,
+    },
     // Not required: legacy documents predate the measured page count and
     // strict mode strips the key on write when it is absent, so a lean
     // read simply returns undefined for them.
