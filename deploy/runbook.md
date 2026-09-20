@@ -153,6 +153,45 @@ Fill in exactly these, leave everything else as shipped:
   to `PutObject` on `opt-out-requests/*`. Without them the form answers with
   its error message and the mailto fallback still works.
 
+- Plan 071's permanent reference PDF uses a separate object namespace. The
+  private publisher reads `ODYSSEUS_REFERENCE_AUDIT_BUCKET_ENDPOINT`,
+  `_REGION`, `_NAME`, `_ACCESS_KEY_ID` and `_SECRET_ACCESS_KEY`; the public site
+  reads the equivalent `REFERENCE_AUDIT_BUCKET_*` variables. The bucket holds
+  `reference-audit/<sha256>.pdf` objects and `reference-audit/current.json`.
+  The site key is read-only for that namespace; it must not be reused for
+  receipt writes.
+- Optional reference-link attribution uses a separate receipt bucket. The
+  Vercel site receives `REFERENCE_AUDIT_RECEIPT_BUCKET_*` credentials limited
+  to `PutObject` on `reference-audit-receipts/*`. The private interface uses
+  `ODYSSEUS_REFERENCE_AUDIT_RECEIPT_BUCKET_*` credentials with only the
+  list/read/delete access needed to consume that prefix. It stores only
+  bounded receipts; no prospect, email, IP, User-Agent or Referer is sent by
+  the public route. Leave this block unset to use the canonical untracked
+  reference link; telemetry is optional and fail-open.
+
+### Permanent reference-audit release workflow
+
+A reference release is an explicit operator publication, never an automatic
+side effect of a report or template change:
+
+1. Select an already stored qualifying Full scan and the current French report
+   lineage; do not rescan a hotel for this artifact.
+2. Build the detached showcase, run the source-identity leak gate, and render
+   the candidate through the normal paid-report renderer and PDF checks.
+3. Complete the normal page-by-page client-report finalization review on that
+   exact candidate. A candidate with unresolved identity, factual, editorial
+   or rendering defects is not publishable.
+4. Upload the digest-addressed PDF, verify the readback digest, then replace
+   `reference-audit/current.json` last. Never overwrite an immutable PDF.
+5. Probe `https://www.odysseusaudit.com/exemple-audit` and confirm the PDF
+   headers, complete document and canonical URL before enabling new Touch-1
+   drafts. Keep the previous approved manifest for rollback.
+
+The private dashboard's reference status reports `current`, `stale` or
+`missing` by comparing the pointer's report/template/data/anonymizer versions
+with the running code. Staleness creates an operator work item; it does not
+automatically move the public pointer.
+
 > STOP. Do NOT copy `ODYSSEUS_MAILBOX_*` values (the Gmail OAuth block) to
 > the server. Outreach drafting stays local by plan; a mailbox credential on
 > a public server would widen who can create drafts for nothing. If those

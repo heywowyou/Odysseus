@@ -12,7 +12,10 @@
 - **Priority:** P1
 - **Effort:** L
 - **Depends on:** 067, 069
-- **Execution status:** TODO
+- **Execution status:** IN PROGRESS (2026-09-20) — implementation, focused
+  proofs and a locally rendered anonymized candidate are complete; production
+  bucket provisioning, current-pointer publication and the required
+  client-report-finalizer release review remain pending.
 - **Planning rebaseline:** b9fd6fd4a0d4adc8ffaa24ddbd3199c97f9dce6a
 - **Product decision:** approved 2026-09-19
 

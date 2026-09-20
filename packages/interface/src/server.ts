@@ -7,6 +7,7 @@ import { registerReportPreparationRoutes } from './routes/report-preparation.js'
 import { registerProspectHubRoutes } from './routes/prospect-hub.js';
 import { registerHealthRoutes } from './routes/health.js';
 import { registerMetaRoutes } from './routes/meta.js';
+import { registerReferenceAuditRoutes } from './routes/reference-audit.js';
 import { registerStaticFallback } from './routes/static.js';
 import { createAuthGuard, type AuthGuard } from './auth/auth-guard.js';
 import { applyBaseSecurityHeaders } from './security-headers.js';
@@ -21,6 +22,7 @@ import { runOutreachFullScanJob } from './queue/pipeline/run-outreach-full-scan-
 import { runProspectingJob } from './queue/pipeline/run-prospecting-job.js';
 import { startOptOutPoller } from './outreach/opt-out-poller.js';
 import { startMailboxSyncPoller } from './outreach/mailbox-sync.js';
+import { startReferenceAuditReceiptPoller } from './reference-audit/reference-audit-poller.js';
 import { runOutreachDraftBatchJob } from './queue/pipeline/run-outreach-draft-batch-job.js';
 import { runOutreachFollowupBatchJob } from './queue/pipeline/run-outreach-followup-batch-job.js';
 import {
@@ -53,6 +55,8 @@ export interface InterfaceAuthOptions {
   pollOptOutRequests?: boolean;
   /** Reconcile the outreach mailbox on a timer. Same `serve`-only rule. */
   syncMailbox?: boolean;
+  /** Consume optional first-party reference-link receipts. */
+  pollReferenceAuditReceipts?: boolean;
 }
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', '::1', 'localhost']);
@@ -118,6 +122,7 @@ export async function startInterfaceServer(
 
   registerHealthRoutes(router, { connection, isQueueReady: () => queue.isReady() });
   registerMetaRoutes(router);
+  registerReferenceAuditRoutes(router);
   registerScanRoutes(router, connection, queue);
   registerAuditRoutes(router, connection);
   registerReportPreparationRoutes(router, connection);
@@ -167,6 +172,10 @@ export async function startInterfaceServer(
     options.pollOptOutRequests === true ? startOptOutPoller(connection) : () => undefined;
   const stopMailboxSync =
     options.syncMailbox === true ? startMailboxSyncPoller(connection) : () => undefined;
+  const stopReferenceAuditReceipts =
+    options.pollReferenceAuditReceipts === true
+      ? startReferenceAuditReceiptPoller(connection)
+      : () => undefined;
 
   return {
     server,
@@ -175,6 +184,7 @@ export async function startInterfaceServer(
     async close(): Promise<void> {
       stopOptOutPoller();
       stopMailboxSync();
+      stopReferenceAuditReceipts();
       await queue.stop();
       await new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));

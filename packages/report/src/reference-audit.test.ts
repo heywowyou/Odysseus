@@ -6,11 +6,13 @@ import {
   findReferenceAuditLeaks,
   REFERENCE_AUDIT_DISCLOSURE_FR,
 } from './reference-audit.js';
+import { renderReferenceAuditHtml } from './index.js';
 import {
   loadSmallSiteAnalysis,
   loadSmallSiteFindings,
   loadSmallSiteManifest,
 } from './test-fixtures.js';
+import { normalizeFrenchTypography } from './template/french-typography.js';
 
 describe('reference audit showcase projection', () => {
   it('detaches source identity without mutating the stored inputs', async () => {
@@ -23,7 +25,7 @@ describe('reference audit showcase projection', () => {
       address: '12 rue du Client, 75001 Paris',
       phone: '+33 1 23 45 67 89',
       email: 'direction@client-hotel.fr',
-    } as typeof sourceManifest.siteSignals;
+    } as NonNullable<typeof sourceManifest.siteSignals>;
     sourceAnalysis.executiveSummary +=
       ' Client Hôtel du Rivage, 12 rue du Client, direction@client-hotel.fr, SIREN 123456789.';
     sourceFindings[0] = {
@@ -53,9 +55,7 @@ describe('reference audit showcase projection', () => {
     expect(publicJson).toContain('www.hotel-exemple.fr');
     expect(publicJson).toContain(REFERENCE_AUDIT_DISCLOSURE_FR);
     expect(showcase.bundle.manifest.siteSignals?.siren).toBe('000000000');
-    expect(showcase.bundle.findings[0]?.elements[0]?.selector).toMatch(
-      /data-showcase-/u,
-    );
+    expect(showcase.bundle.findings[0]?.elements[0]?.selector).toMatch(/data-showcase-/u);
     expect(sourceFindings[0]?.elements[0]?.selector).toBe('#client-hotel-booking-button');
     expect(JSON.stringify({ sourceManifest, sourceFindings, sourceAnalysis })).toBe(before);
   });
@@ -66,12 +66,14 @@ describe('reference audit showcase projection', () => {
     const analysis = await loadSmallSiteAnalysis('fr');
     findings[0] = {
       ...findings[0]!,
-      elements: [{
-        pageUrl: findings[0]!.pageUrls[0]!,
-        selector: 'img.logo',
-        snippet: '<img class="logo" src="/client-logo.png">',
-        screenshotRef: 'pages/root/screenshot.png',
-      }],
+      elements: [
+        {
+          pageUrl: findings[0]!.pageUrls[0]!,
+          selector: 'img.logo',
+          snippet: '<img class="logo" src="/client-logo.png">',
+          screenshotRef: 'pages/root/screenshot.png',
+        },
+      ],
     };
 
     expect(() => buildReferenceAuditShowcase({ manifest, findings, analysis })).toThrow(
@@ -109,5 +111,19 @@ describe('reference audit showcase projection', () => {
     expect(showcase.bundle.analysis.findingsProvenance).toEqual(
       buildFindingsProvenance(showcase.bundle.findings),
     );
+  });
+
+  it('uses the normal paid-report HTML renderer and carries the disclosure', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('fr');
+    const showcase = buildReferenceAuditShowcase({ manifest, findings, analysis });
+    const html = await renderReferenceAuditHtml(showcase, {
+      renderedAt: new Date('2026-09-20T10:00:00.000Z'),
+      rendererBuild: 'test',
+    });
+    expect(html).toContain('reference-disclosure');
+    expect(html).toContain(normalizeFrenchTypography(REFERENCE_AUDIT_DISCLOSURE_FR));
+    assertReferenceAuditNoLeaks({ html, denylist: showcase.sourceDenylist });
   });
 });

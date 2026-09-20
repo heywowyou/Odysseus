@@ -145,6 +145,11 @@ interface ProspectDraft {
   mailboxUrl?: string;
   language?: 'fr' | 'en';
   previewUrl?: string;
+  referenceAuditUrl?: string;
+  referenceAuditVersion?: string;
+  referenceAuditFirstRequestedAt?: string;
+  referenceAuditLastRequestedAt?: string;
+  referenceAuditRequestCount?: number;
   createdAt: string;
 }
 
@@ -1567,6 +1572,17 @@ export function ProspectHubDetailPage(): JSX.Element {
                           <ExternalLink className="size-3" aria-hidden="true" />
                         </a>
                       ) : null}
+                      {draft.referenceAuditUrl ? (
+                        <a
+                          className={buttonStyles('secondary', 'sm')}
+                          href={draft.referenceAuditUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {copy.openReferenceAudit}
+                          <ExternalLink className="size-3" aria-hidden="true" />
+                        </a>
+                      ) : null}
                       {draft.mailboxUrl && draft.status === 'created' ? (
                         <a
                           className={buttonStyles('secondary', 'sm')}
@@ -1590,6 +1606,15 @@ export function ProspectHubDetailPage(): JSX.Element {
                         </Button>
                       ) : null}
                     </div>
+                    {draft.referenceAuditRequestCount !== undefined &&
+                    draft.referenceAuditRequestCount > 0 ? (
+                      <p className="mt-2 text-xs text-ink-muted">
+                        {copy.referenceAuditRequestSignal.replace(
+                          '{count}',
+                          String(draft.referenceAuditRequestCount),
+                        )}
+                      </p>
+                    ) : null}
                   </li>
                 ))}
               </ul>

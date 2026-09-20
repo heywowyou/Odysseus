@@ -7,6 +7,7 @@ import {
 } from './assemble-outreach-draft.js';
 
 const PREVIEW_URL = 'https://www.odysseusaudit.com/apercu/abc123';
+const REFERENCE_URL = 'https://www.odysseusaudit.com/exemple-audit';
 const PRIVACY_URL = 'https://www.odysseusaudit.com/confidentialite-prospection';
 const OPT_OUT_URL = 'https://www.odysseusaudit.com/desinscription';
 
@@ -22,6 +23,7 @@ const TOUCH1_BASE: AssembleOutreachDraftOptions = {
     proofCardCategories: ['accessibility', 'seo', 'performance'],
   },
   previewUrl: PREVIEW_URL,
+  referenceAuditUrl: REFERENCE_URL,
   dataOrigins: ['public-hotel-catalogue', 'public-website'],
   privacyUrl: PRIVACY_URL,
   optOutUrl: OPT_OUT_URL,
@@ -88,6 +90,9 @@ describe('assembleOutreachDraft - touch 1', () => {
     );
     expect(result.body).toContain(
       'L’audit complet de votre site est disponible à l’achat. Il détaille les constats relevés, les pages concernées et les corrections à apporter.',
+    );
+    expect(result.body).toContain(
+      `Pour voir concrètement le document livré, vous pouvez consulter un exemple d’audit complet\u00a0:\n${REFERENCE_URL}`,
     );
     expect(result.body).toContain(
       'Souhaitez-vous que je vous transmette les modalités de l’audit complet\u00a0?',
@@ -171,6 +176,9 @@ describe('assembleOutreachDraft - touch 1', () => {
       'Our analysis identified 47 distinct findings across 23 pages of your website, including 8 critical and 14 serious.',
     );
     expect(result.body).toContain('The full audit of your website is available for purchase.');
+    expect(result.body).toContain(
+      `To see exactly what the delivered document looks like, you can view an example of a full audit:\n${REFERENCE_URL}`,
+    );
   });
 
   it('refuses when required first-touch inputs are missing', () => {
@@ -198,15 +206,21 @@ describe('assembleOutreachDraft - touch 1', () => {
       assembled: false,
       refusal: 'missing-opt-out-url',
     });
+    const { referenceAuditUrl: _reference, ...withoutReference } = TOUCH1_BASE;
+    expect(assembleOutreachDraft(withoutReference)).toEqual({
+      assembled: false,
+      refusal: 'reference-audit-unavailable',
+    });
   });
 
   it('renders the three first-touch URLs as anchors and the footer actions inline', () => {
     const result = assembleOutreachDraft(TOUCH1_BASE);
     assertAssembled(result);
     expect(result.htmlBody).toContain(`href="${PREVIEW_URL}"`);
+    expect(result.htmlBody).toContain(`href="${REFERENCE_URL}"`);
     expect(result.htmlBody).toContain(`href="${OPT_OUT_URL}"`);
     expect(result.htmlBody).toContain(`href="${PRIVACY_URL}"`);
-    expect(result.htmlBody.match(/<a /gu)).toHaveLength(3);
+    expect(result.htmlBody.match(/<a /gu)).toHaveLength(4);
     expect(result.htmlBody).toContain(
       `style="font-weight:600;text-decoration:underline">Consulter l&#39;aperçu de votre site</a>`,
     );

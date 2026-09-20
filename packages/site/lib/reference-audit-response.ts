@@ -2,11 +2,11 @@ import type { ReferenceAuditReader } from './reference-audit-object';
 
 export interface ReferenceAuditResponse {
   status: 200 | 503;
-  body: Uint8Array | string;
+  body: ArrayBuffer | string;
   headers: Record<string, string>;
 }
 
-export const REFERENCE_AUDIT_HEADERS: Readonly<Record<string, string>> = {
+const REFERENCE_AUDIT_HEADERS: Readonly<Record<string, string>> = {
   'content-type': 'application/pdf',
   'content-disposition': 'inline; filename="exemple-audit-odysseus.pdf"',
   'x-robots-tag': 'noindex, noarchive',
@@ -23,26 +23,28 @@ const UNAVAILABLE_HEADERS: Readonly<Record<string, string>> = {
   'cache-control': 'no-store',
 };
 
+export function unavailableReferenceAuditResponse(): ReferenceAuditResponse {
+  return {
+    status: 503,
+    body: 'The reference audit is temporarily unavailable.\n',
+    headers: { ...UNAVAILABLE_HEADERS },
+  };
+}
+
 export async function resolveReferenceAuditResponse(options: {
   reader: ReferenceAuditReader;
 }): Promise<ReferenceAuditResponse> {
   try {
     const current = await options.reader.readCurrent();
-    if (current === null) {
-      return {
-        status: 503,
-        body: 'The reference audit is temporarily unavailable.\n',
-        headers: { ...UNAVAILABLE_HEADERS },
-      };
-    }
-    return { status: 200, body: current.pdf, headers: { ...REFERENCE_AUDIT_HEADERS } };
+    if (current === null) return unavailableReferenceAuditResponse();
+    const body = current.pdf.buffer.slice(
+      current.pdf.byteOffset,
+      current.pdf.byteOffset + current.pdf.byteLength,
+    ) as ArrayBuffer;
+    return { status: 200, body, headers: { ...REFERENCE_AUDIT_HEADERS } };
   } catch {
     // Do not expose bucket/provider details or source lineage through a public
     // error body. The operator sees the deployment/readiness failure in logs.
-    return {
-      status: 503,
-      body: 'The reference audit is temporarily unavailable.\n',
-      headers: { ...UNAVAILABLE_HEADERS },
-    };
+    return unavailableReferenceAuditResponse();
   }
 }

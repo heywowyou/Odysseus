@@ -33,6 +33,16 @@ The subject and opener use "analyse"; "audit complet" is reserved for the paid
 deliverable. Historical v1/v2 links remain compatible until revocation or
 expiry; no new v1/v2 publication is created.
 
+**Amended 2026-09-20, Plan 071.** New Touch-1 drafts carry exactly two body
+links, in this order: the prospect-specific published preview, then the
+permanent reference audit at `/exemple-audit`. The second link answers what
+the paid deliverable looks like; it is not a second preview and is never
+prospect-specific. Touches 2 and 3 remain link-free. A new Touch-1 draft is
+refused when the approved reference manifest is unavailable. The reference
+PDF is a synthetic, explicitly disclosed showcase rendered through the paid
+report path; it must not expose the source audit, client identity, imagery or
+source URLs.
+
 Companions: `docs/rules/obligation-basis.md` for what may be claimed about the
 client, `docs/rules/operator-obligations.md` for what binds us,
 `docs/rules/prospect-qualification.md` for who may be contacted,
@@ -331,13 +341,14 @@ touch 3 no earlier than day +11. A thread with no reply 14 days after
 touch 3 is confirmed sent moves to `sequence-complete` and is
 suppressed; no fourth touch exists.
 
-**Touch shape**, since trade-off 83: the approved templates themselves. Touch
-1 carries exactly one body link (the published preview) plus the footer's
-opt-out and privacy links; touches 2 and 3 carry no link at all. The opt-out
-link is personal (`/desinscription?t=<token>`): it prefills the recipient's
-address on the public form, whose submission reaches the blacklist through the
-bucket drop box (trade-off 89). The model-era
-word and sentence limits (`outreach-limits.ts`) are retired with the model.
+**Touch shape**, since trade-off 83 and Plan 071: the approved templates
+themselves. Touch 1 carries exactly two body links - first the published
+prospect preview and then `/exemple-audit` - plus the footer's opt-out and
+privacy links; touches 2 and 3 carry no link at all. The opt-out link is
+personal (`/desinscription?t=<token>`): it prefills the recipient's address on
+the public form, whose submission reaches the blacklist through the bucket drop
+box (trade-off 89). The model-era word and sentence limits
+(`outreach-limits.ts`) are retired with the model.
 
 ---
 
@@ -391,6 +402,17 @@ plural voice, and translated to English from there. Who is writing comes
 from `OUTREACH_CONTACT` (`packages/core`), which the v2 preview
 interpolates too, so the email and the preview it links to name one
 person and one mailbox.
+
+**Reference-link request signal, Plan 071.** When optional first-party
+attribution is configured, Touch 1 may use an opaque high-entropy path under
+`/exemple-audit/r/` that redirects to the same canonical PDF. The public route
+writes only a token hash, request time and reference release version to a
+dedicated receipt prefix; it does not query Mongo and does not receive an IP,
+User-Agent, Referer, cookie, pixel or query tracking parameter. The private
+mapping expires after 90 days from draft creation, suppression stops future
+attribution, and storage failure never blocks the redirect or the draft. The
+dashboard calls the result a "link requested" signal, not proof of a human
+reading the report, because automated mail-security checks can request links.
 
 ---
 

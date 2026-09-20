@@ -284,6 +284,15 @@ Scanning thousands of third parties while breaching our own published
 policy would make the bot page a liability rather than a credibility
 signal.
 
+**Plan 071 reference-link attribution.** The optional private mapping from a
+Touch-1 reference-link token hash to its prospect, thread and draft follows
+the same 90-day boundary from draft creation. It stores no raw public token;
+the public receipt contains only the hash, request time and reference release
+version. Suppression disables future attribution immediately, and permanent
+prospect deletion removes the mapping before its TTL. The redirect remains
+usable after attribution expires and always lands on the canonical reference
+PDF.
+
 Aggregate benchmark figures derived from expired records may be
 retained, since they are no longer about an identifiable business. The
 individual findings behind them are not.

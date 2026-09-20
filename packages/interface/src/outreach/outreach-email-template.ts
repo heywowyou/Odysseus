@@ -41,6 +41,8 @@ interface EmailTemplate {
   ) => string;
   impactBridge: (categories: readonly OutreachCategory[]) => string;
   linkLead: string;
+  referenceLinkLead: string;
+  referenceLinkLabel: string;
   closing: string;
   question: string;
   reminderIntro: (of: string) => string;
@@ -92,6 +94,8 @@ const FR: EmailTemplate = {
       ? 'Ces constats ont un impact direct sur l’expérience de vos clients et peuvent également relever du cadre légal applicable en matière d’accessibilité.'
       : 'Ces constats ont un impact direct sur l’expérience de vos clients.',
   linkLead: `Vous trouverez un résumé de notre analyse ici${NBSP}:`,
+  referenceLinkLead: `Pour voir concrètement le document livré, vous pouvez consulter un exemple d’audit complet${NBSP}:`,
+  referenceLinkLabel: 'Voir un exemple d’audit complet',
   closing:
     'L’audit complet de votre site est disponible à l’achat. Il détaille les constats relevés, les pages concernées et les corrections à apporter.',
   question: `Souhaitez-vous que je vous transmette les modalités de l’audit complet${NBSP}?`,
@@ -142,6 +146,9 @@ const EN: EmailTemplate = {
       ? "These findings have a direct impact on your customers' experience and may also fall within the applicable legal framework for accessibility."
       : "These findings have a direct impact on your customers' experience.",
   linkLead: 'You will find a summary of our analysis here:',
+  referenceLinkLead:
+    'To see exactly what the delivered document looks like, you can view an example of a full audit:',
+  referenceLinkLabel: 'View an example of a full audit',
   closing:
     'The full audit of your website is available for purchase. It details the findings identified, the pages concerned and the corrections to apply.',
   question: 'Would you like me to send you the details for the full audit?',
@@ -162,6 +169,10 @@ const EN: EmailTemplate = {
 
 function templateFor(language: ReportLanguage): EmailTemplate {
   return language === 'fr' ? FR : EN;
+}
+
+export function referenceAuditLinkLabel(language: ReportLanguage): string {
+  return templateFor(language).referenceLinkLabel;
 }
 
 function hotelOf(template: EmailTemplate, hotelName: string | undefined): string {
@@ -222,6 +233,7 @@ export function composeTouchOneBody(options: {
   scanSummary: OutreachScanSummary;
   variants: OutreachVariantPick;
   previewLink: DraftLink;
+  referenceLink: DraftLink;
 }): DraftBodyBlock[] {
   const template = templateFor(options.language);
   const of = hotelOf(template, options.hotelName);
@@ -241,6 +253,7 @@ export function composeTouchOneBody(options: {
     { kind: 'paragraph', text: template.impactBridge(categories) },
     { kind: 'link', lead: template.linkLead, link: options.previewLink },
     { kind: 'paragraph', text: template.closing },
+    { kind: 'link', lead: template.referenceLinkLead, link: options.referenceLink },
     { kind: 'paragraph', text: template.question },
   ];
 }

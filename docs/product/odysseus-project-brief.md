@@ -93,6 +93,17 @@ PDF report only, no video walkthrough, rendered from `findings.json`.
 
 **Outreach preview** (added 2026-08-16; current contract revised 2026-09-19 by Plan 069): a free document published to a cold prospect before purchase, governed by `docs/rules/outreach-rules.md` section 6bis rather than by this section's paid-report template rules. New publications are v3 and reuse the prospect's one stored Full scan plus the currently selected French report structure. The report structure supplies priority order only: the first three public cards follow the report's first three rendered priorities while their wording comes from the operator-reviewed bilingual copy catalog. The preview also shows deterministic coverage/finding/severity facts, bounded Plan-068 client limitations, the deterministic legal-context facts block, the code-owned price, and the article 14 disclosures. It never carries screenshots, selectors, finding IDs, exact page locations, occurrences, remediation, model prose, model risk, a preview-specific grade, or a legal conclusion. The same stored Full scan feeds both preview and report; report/preview regeneration from stored evidence never requires a second crawl. Historical v1/v2 links remain compatible until ordinary revocation or expiry. See `docs/rules/outreach-rules.md` for the full lifecycle and disclosure rules.
 
+**Permanent reference example (Plan 071, 2026-09-20).** New Touch-1 drafts also
+link to `/exemple-audit`, a stable PDF showing the paid deliverable. It is a
+global marketing artifact, not a preview or a client report: its source bundle
+is detached, identity-bearing evidence is projected to synthetic Hôtel Exemple
+facts, screenshots are refused, and the PDF carries an explicit disclosure.
+Immutable digest-addressed PDF objects sit behind a replaceable current
+manifest, so replacing the example never changes an older email's URL. An
+optional opaque first-party redirect records only a bounded receipt and is
+fail-open; the personalized preview's expiry, lineage and suppression rules
+remain unchanged.
+
 ---
 
 ## 4. Target market
@@ -493,6 +504,15 @@ mailbox credentials never move. Routine releases added 2026-09-01 are manually
 triggered and verify successful CI for the exact commit, use immutable commit
 releases, and retain a one-step rollback. Decisions and rejected alternatives:
 `docs/decisions/trade-offs.md` entries 60 and 61.
+
+**Plan 071 public reference surface (2026-09-20).** The standalone
+`packages/site` application serves the approved permanent paid-report example
+at `https://www.odysseusaudit.com/exemple-audit`. It reads only the fixed
+digest-addressed reference namespace and current pointer; it does not import
+Mongo or the private interface. The response is an inline PDF with noindex,
+noarchive, no-referrer and bounded cache headers. The optional
+`/exemple-audit/r/<token>` path writes a minimal first-party receipt and always
+redirects to the canonical route, including when attribution storage fails.
 
 **Milestone 10: benchmark study and percentile.** Batch scan of a bounded
 e-commerce cohort, aggregate percentile over stored findings, surface the

@@ -66,8 +66,11 @@ function copyBytes(bytes: Uint8Array): Uint8Array {
   return new Uint8Array(bytes);
 }
 
-export function referenceAuditPdfKey(pdfSha256: string): `${typeof REFERENCE_AUDIT_PDF_PREFIX}${string}.pdf` {
-  if (!isSha256(pdfSha256)) throw new ReferenceAuditPublicationError('reference PDF digest is malformed');
+export function referenceAuditPdfKey(
+  pdfSha256: string,
+): `${typeof REFERENCE_AUDIT_PDF_PREFIX}${string}.pdf` {
+  if (!isSha256(pdfSha256))
+    throw new ReferenceAuditPublicationError('reference PDF digest is malformed');
   return `${REFERENCE_AUDIT_PDF_PREFIX}${pdfSha256}.pdf`;
 }
 
@@ -145,7 +148,9 @@ export async function readCurrentReferenceAudit(
   if (manifest === null) return null;
   const pdf = await store.readObject(manifest.objectKey);
   if (pdf === null || sha256(pdf) !== manifest.pdfSha256) {
-    throw new ReferenceAuditPublicationError('approved reference PDF failed integrity verification');
+    throw new ReferenceAuditPublicationError(
+      'approved reference PDF failed integrity verification',
+    );
   }
   return { manifest, pdf: copyBytes(pdf) };
 }
@@ -163,7 +168,11 @@ export async function publishReferenceAudit(
   const digest = sha256(input.pdf);
   const objectKey = referenceAuditPdfKey(digest);
   const previousManifest = await readCurrent(store);
-  await store.putObject({ key: objectKey, body: copyBytes(input.pdf), contentType: 'application/pdf' });
+  await store.putObject({
+    key: objectKey,
+    body: copyBytes(input.pdf),
+    contentType: 'application/pdf',
+  });
   const candidate: ReferenceAuditCurrentManifest = {
     schemaVersion: REFERENCE_AUDIT_MANIFEST_SCHEMA_VERSION,
     objectKey,

@@ -18,6 +18,16 @@ future revision re-runs the same gate; it does not happen inline:
 | Paged media layer | `packages/report/src/styles/paged.css` | edit only per this doc |
 | Reference template | `packages/report/src/template/report.reference.html` | structural source of truth |
 
+**Plan 071 reference showcase seam.** The permanent `/exemple-audit` PDF uses
+this exact paid-report view model, template, CSS and paged renderer. Its adapter
+may supply only a detached synthetic bundle and the short disclosure printed on
+the cover; it does not fork layout or findings semantics. The disclosure is:
+"Exemple de rapport. Les éléments permettant d'identifier l'établissement, son
+site et ses données administratives ont été remplacés. La structure, le niveau
+de détail et le type de constats correspondent au livrable." Source screenshots
+and other image evidence are refused before rendering. The public artifact is
+therefore a report-shaped showcase, not an unaltered client report.
+
 If output does not match the reference, the template binding is wrong. Do not
 fix it by changing colours, sizes, spacing or inline styles.
 

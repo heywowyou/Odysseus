@@ -394,6 +394,11 @@ export function registerProspectHubRoutes(
           recipient: draft.roleAddress,
           language: draft.language,
           previewUrl: draft.previewUrl,
+          referenceAuditUrl: draft.referenceAuditUrl,
+          referenceAuditVersion: draft.referenceAuditVersion,
+          referenceAuditFirstRequestedAt: draft.referenceAuditFirstRequestedAt,
+          referenceAuditLastRequestedAt: draft.referenceAuditLastRequestedAt,
+          referenceAuditRequestCount: draft.referenceAuditRequestCount,
           // Issue #277: Gmail opens a draft from its message id.
           mailboxUrl:
             draft.providerMessageId === undefined

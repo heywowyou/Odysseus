@@ -157,6 +157,19 @@ export default function ProspectingPrivacyPage() {
               d&apos;écran, ni adresse de page, ni élément technique localisé.
             </p>
 
+            <p>
+              Le message peut également contenir un lien permanent vers un exemple de rapport
+              complet, à l&apos;adresse <code>/exemple-audit</code>. Lorsque son mécanisme
+              facultatif d&apos;attribution est activé, une demande vers un lien opaque de cet
+              exemple peut être enregistrée pour mesurer si ce support est utile à la prospection.
+              Cette mesure utilise uniquement une empreinte du lien, la date et la version du
+              document&#160;: aucun cookie, pixel, script de suivi, paramètre de campagne, adresse
+              IP, User-Agent ou Referer n&apos;est conservé. Un système automatisé de sécurité des
+              messageries peut déclencher la demande et ce signal ne prouve donc pas une lecture
+              humaine. L&apos;attribution est conservée au maximum 90 jours, tandis que le lien mène
+              toujours à l&apos;exemple public.
+            </p>
+
             <h2 id="finalite-confid">Finalité et base légale</h2>
 
             <p>
@@ -172,7 +185,9 @@ export default function ProspectingPrivacyPage() {
             <p>
               Les données de prospection, captures d&apos;écran comprises, sont conservées pendant
               90 jours puis supprimées automatiquement. Un aperçu publié cesse d&apos;être
-              accessible au bout de 30 jours, soit avant cette échéance.
+              accessible au bout de 30 jours, soit avant cette échéance. L&apos;attribution
+              facultative des demandes vers l&apos;exemple suit la même période de 90 jours&#160;:
+              le PDF permanent lui-même n&apos;est pas une donnée de prospect.
             </p>
 
             <p>
@@ -194,6 +209,14 @@ export default function ProspectingPrivacyPage() {
               site&#160;; et MongoDB Atlas, qui héberge la base de données également en France (AWS
               Paris, eu-west-3). Les aperçus sont stockés dans un espace privé et ne sont
               accessibles qu&apos;au moyen du lien qui vous a été envoyé.
+            </p>
+
+            <p>
+              L&apos;exemple permanent de rapport est stocké dans un espace Scaleway distinct des
+              aperçus, avec un pointeur de version qui permet son remplacement sans modifier les
+              anciens messages. Lorsque l&apos;attribution facultative est activée, les reçus
+              techniques sont déposés dans un préfixe séparé, puis consommés par l&apos;interface
+              privée.
             </p>
 
             <h2 id="droits-confid">Vos droits</h2>
@@ -332,6 +355,17 @@ export default function ProspectingPrivacyPage() {
               page addresses or precisely located technical elements.
             </p>
 
+            <p>
+              The message may also contain a permanent link to an example of a full report at
+              <code>/exemple-audit</code>. When its optional attribution mechanism is enabled, a
+              request to an opaque example-link URL may be recorded to understand whether this
+              material is useful for outreach. It uses only a link hash, the request time and the
+              document version: no cookie, pixel, tracking script, campaign parameter, IP address,
+              User-Agent or Referer is stored. An automated email-security system may make the
+              request, so the signal is not proof that a person read the report. Attribution is kept
+              for at most 90 days, while the link itself continues to lead to the public example.
+            </p>
+
             <h2 id="finalite-confid-en">Purpose and legal basis</h2>
 
             <p>
@@ -347,7 +381,8 @@ export default function ProspectingPrivacyPage() {
             <p>
               Outreach data, including screenshots, is retained for 90 days and then deleted
               automatically. A published preview stops being accessible after 30 days, before that
-              retention period ends.
+              retention period ends. Optional reference-link attribution mappings follow the same
+              90-day period; the permanent example PDF itself is not prospect data.
             </p>
 
             <p>
@@ -367,6 +402,13 @@ export default function ProspectingPrivacyPage() {
               previews in France (Paris region); Vercel, which hosts this site; and MongoDB Atlas,
               which also hosts the database in France (AWS Paris, eu-west-3). Previews are stored in
               a private space and can be accessed only through the link sent to you.
+            </p>
+
+            <p>
+              The permanent example report is stored in a Scaleway space separate from previews,
+              with a version pointer so it can be replaced without changing older messages. When
+              optional attribution is enabled, technical receipts are written to a separate prefix
+              and then consumed by the private interface.
             </p>
 
             <h2 id="droits-confid-en">Your rights</h2>

@@ -4,7 +4,7 @@
 import { createHash } from 'node:crypto';
 import { AwsClient } from 'aws4fetch';
 
-export const REFERENCE_AUDIT_CURRENT_KEY = 'reference-audit/current.json';
+const REFERENCE_AUDIT_CURRENT_KEY = 'reference-audit/current.json';
 const REFERENCE_AUDIT_PREFIX = 'reference-audit/';
 const MANIFEST_SCHEMA_VERSION = 'reference-audit-v1';
 
@@ -26,7 +26,7 @@ export interface ReferenceAuditReader {
   readCurrent(): Promise<{ manifest: ReferenceAuditManifest; pdf: Uint8Array } | null>;
 }
 
-export class ReferenceAuditReadError extends Error {
+class ReferenceAuditReadError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'ReferenceAuditReadError';
@@ -44,7 +44,7 @@ function pdfKeyForDigest(pdfSha256: string): `reference-audit/${string}.pdf` {
   return `${REFERENCE_AUDIT_PREFIX}${pdfSha256}.pdf`;
 }
 
-export function parseReferenceAuditManifest(value: unknown): ReferenceAuditManifest {
+function parseReferenceAuditManifest(value: unknown): ReferenceAuditManifest {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     throw new ReferenceAuditReadError('reference current manifest is not an object');
   }
@@ -86,7 +86,7 @@ export function parseReferenceAuditManifest(value: unknown): ReferenceAuditManif
   };
 }
 
-export interface ReferenceAuditReaderConfig {
+interface ReferenceAuditReaderConfig {
   bucket: string;
   endpoint: string;
   region: string;
@@ -95,9 +95,7 @@ export interface ReferenceAuditReaderConfig {
   fetchImpl?: typeof globalThis.fetch;
 }
 
-export function createReferenceAuditReader(
-  config: ReferenceAuditReaderConfig,
-): ReferenceAuditReader {
+function createReferenceAuditReader(config: ReferenceAuditReaderConfig): ReferenceAuditReader {
   const client = new AwsClient({
     accessKeyId: config.accessKeyId,
     secretAccessKey: config.secretAccessKey,
@@ -113,7 +111,10 @@ export function createReferenceAuditReader(
   async function readObject(key: string): Promise<Uint8Array | null> {
     const response = await doFetch(await client.sign(objectUrl(key), { method: 'GET' }));
     if (response.status === 404 || response.status === 403) return null;
-    if (!response.ok) throw new ReferenceAuditReadError(`reference object read failed with status ${response.status}`);
+    if (!response.ok)
+      throw new ReferenceAuditReadError(
+        `reference object read failed with status ${response.status}`,
+      );
     return new Uint8Array(await response.arrayBuffer());
   }
 

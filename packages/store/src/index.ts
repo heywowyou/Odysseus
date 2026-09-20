@@ -361,6 +361,24 @@ export type {
 } from './outreach-drafts.js';
 
 export type {
+  ReferenceAuditLinkDocument,
+  ReferenceAuditLinkDocumentFields,
+} from './schemas/reference-audit-link.schema.js';
+export {
+  REFERENCE_AUDIT_ATTRIBUTION_DAYS,
+  attachReferenceAuditDraft,
+  createReferenceAuditLink,
+  deleteReferenceAuditLink,
+  listReferenceAuditLinks,
+  recordReferenceAuditRequest,
+  referenceAuditContactForProspect,
+} from './reference-audit-links.js';
+export type {
+  CreateReferenceAuditLinkInput,
+  RecordReferenceAuditRequestResult,
+} from './reference-audit-links.js';
+
+export type {
   OutreachOutcomeDocument,
   OutreachOutcomeDocumentFields,
 } from './schemas/outreach-outcome.schema.js';

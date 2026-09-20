@@ -1,8 +1,8 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { AwsClient } from 'aws4fetch';
 
-export const REFERENCE_AUDIT_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/u;
-export const REFERENCE_AUDIT_RECEIPT_PREFIX = 'reference-audit-receipts/';
+const REFERENCE_AUDIT_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/u;
+const REFERENCE_AUDIT_RECEIPT_PREFIX = 'reference-audit-receipts/';
 
 export interface ReferenceAuditReceipt {
   tokenHash: string;
@@ -23,11 +23,11 @@ export function hashReferenceAuditToken(token: string): string {
   return createHash('sha256').update(token, 'utf8').digest('hex');
 }
 
-export function referenceAuditReceiptKey(now = new Date()): string {
+function referenceAuditReceiptKey(now = new Date()): string {
   return `${REFERENCE_AUDIT_RECEIPT_PREFIX}${now.getTime()}-${randomUUID()}.json`;
 }
 
-export function validateReferenceAuditReceipt(value: unknown): ReferenceAuditReceipt {
+function validateReferenceAuditReceipt(value: unknown): ReferenceAuditReceipt {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error('reference audit receipt is not an object');
   }
@@ -50,7 +50,7 @@ export function validateReferenceAuditReceipt(value: unknown): ReferenceAuditRec
   };
 }
 
-export interface ReferenceAuditReceiptWriterConfig {
+interface ReferenceAuditReceiptWriterConfig {
   bucket: string;
   endpoint: string;
   region: string;
@@ -59,7 +59,7 @@ export interface ReferenceAuditReceiptWriterConfig {
   fetchImpl?: typeof globalThis.fetch;
 }
 
-export function createReferenceAuditReceiptWriter(
+function createReferenceAuditReceiptWriter(
   config: ReferenceAuditReceiptWriterConfig,
 ): ReferenceAuditReceiptWriter {
   const client = new AwsClient({
@@ -85,7 +85,8 @@ export function createReferenceAuditReceiptWriter(
           headers: { 'content-type': 'application/json' },
         }),
       );
-      if (!response.ok) throw new Error(`reference receipt write failed with status ${response.status}`);
+      if (!response.ok)
+        throw new Error(`reference receipt write failed with status ${response.status}`);
     },
   };
 }
@@ -99,7 +100,8 @@ function requiredEnvironment(name: string): string {
 export function writerFromEnvironment(): ReferenceAuditReceiptWriter {
   return createReferenceAuditReceiptWriter({
     bucket: requiredEnvironment('REFERENCE_AUDIT_RECEIPT_BUCKET_NAME'),
-    endpoint: process.env['REFERENCE_AUDIT_RECEIPT_BUCKET_ENDPOINT'] ?? 'https://s3.fr-par.scw.cloud',
+    endpoint:
+      process.env['REFERENCE_AUDIT_RECEIPT_BUCKET_ENDPOINT'] ?? 'https://s3.fr-par.scw.cloud',
     region: process.env['REFERENCE_AUDIT_RECEIPT_BUCKET_REGION'] ?? 'fr-par',
     accessKeyId: requiredEnvironment('REFERENCE_AUDIT_RECEIPT_BUCKET_ACCESS_KEY_ID'),
     secretAccessKey: requiredEnvironment('REFERENCE_AUDIT_RECEIPT_BUCKET_SECRET_KEY'),

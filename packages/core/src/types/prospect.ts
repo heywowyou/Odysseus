@@ -118,6 +118,9 @@ export const prospectEventTypeSchema = z.enum([
   'scan-attached',
   'scan-detached',
   'preview-published',
+  /** A first-party reference-audit redirect was requested. This means an
+   *  HTTP request only; it is never presented as proof a person read it. */
+  'reference-audit-requested',
   'draft-created',
   'outcome-recorded',
   'opted-out',

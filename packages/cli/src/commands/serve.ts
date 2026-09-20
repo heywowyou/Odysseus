@@ -29,6 +29,7 @@ export function registerServeCommand(program: Command): void {
         const handle = await startInterfaceServer(mongoConnection, {
           pollOptOutRequests: true,
           syncMailbox: true,
+          pollReferenceAuditReceipts: true,
         });
         console.log(`odysseus serve: listening at ${handle.url}`);
 

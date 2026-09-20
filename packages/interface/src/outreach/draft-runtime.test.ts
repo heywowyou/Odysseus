@@ -3,9 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@odysseus/store', () => ({
   advanceThreadTouch: vi.fn(),
   attachProviderThreadId: vi.fn(),
+  attachReferenceAuditDraft: vi.fn(),
   checkOutreachAction: vi.fn(),
   createAuditModel: vi.fn(),
   createJobModel: vi.fn(),
+  createReferenceAuditLink: vi.fn(),
+  deleteReferenceAuditLink: vi.fn(),
   effectiveAuditScanIntent: vi.fn(),
   findLiveOutreachDraft: vi.fn(),
   findOutreachPreviewByTokenHash: vi.fn(),
@@ -24,6 +27,8 @@ vi.mock('../config.js', () => ({
   getOutreachTouch2AfterDays: () => 4,
   getOutreachTouch3AfterDays: () => 7,
   getPreviewPublicBaseUrl: () => 'https://odysseus.example',
+  getReferenceAuditPublicBaseUrl: () => 'https://odysseus.example',
+  isReferenceAuditReceiptBucketConfigured: vi.fn(() => false),
 }));
 vi.mock('./configured-mailbox-draft-adapter.js', () => ({
   createConfiguredMailboxDraftAdapter: vi.fn(),
@@ -37,10 +42,16 @@ vi.mock('./publish-preview-v2.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./publish-preview-v2.js')>()),
   resolvePublishedPreviewForDraft: vi.fn(),
 }));
+vi.mock('../reference-audit/reference-audit-readiness.js', () => ({
+  resolveReferenceAuditForDraft: vi.fn(),
+}));
 
 import {
   advanceThreadTouch,
+  attachReferenceAuditDraft,
   checkOutreachAction,
+  createReferenceAuditLink,
+  deleteReferenceAuditLink,
   findLiveOutreachDraft,
   findOutreachThreadByProspect,
   getProspectHub,
@@ -60,6 +71,8 @@ import {
 } from './in-memory-mailbox-draft-adapter.js';
 import { createInMemoryOptOutBucket, type InMemoryOptOutBucket } from './opt-out-bucket.js';
 import { resolvePublishedPreviewForDraft } from './publish-preview-v2.js';
+import { resolveReferenceAuditForDraft } from '../reference-audit/reference-audit-readiness.js';
+import { isReferenceAuditReceiptBucketConfigured } from '../config.js';
 
 const connection = {} as never;
 const prospectId = 'prospect-1';
@@ -90,6 +103,9 @@ let steps: string[];
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(isReferenceAuditReceiptBucketConfigured).mockReturnValue(false);
+  vi.mocked(attachReferenceAuditDraft).mockResolvedValue(undefined);
+  vi.mocked(deleteReferenceAuditLink).mockResolvedValue(undefined);
   steps = [];
   mailbox = createInMemoryMailboxDraftAdapter();
   const createDraft = mailbox.createDraft.bind(mailbox);
@@ -119,6 +135,10 @@ beforeEach(() => {
     severityTotals: { critical: 0, serious: 1, moderate: 2, minor: 0 },
     proofCardCategories: ['accessibility'],
   } as never);
+  vi.mocked(resolveReferenceAuditForDraft).mockResolvedValue({
+    url: 'https://odysseus.example/exemple-audit',
+    referenceVersion: 'reference-release-v1',
+  });
   vi.mocked(findOutreachThreadByProspect).mockResolvedValue(null);
   vi.mocked(findLiveOutreachDraft).mockResolvedValue(null);
   vi.mocked(openOutreachThread).mockResolvedValue({
@@ -156,6 +176,41 @@ describe('createTouchOneDraft', () => {
     expect(transitionOutreachThread).toHaveBeenCalledWith(
       connection,
       expect.objectContaining({ threadId: 'thread-1', from: ['open'], to: 'e1-drafted' }),
+    );
+  });
+
+  it('keeps the canonical link when optional attribution configuration fails open', async () => {
+    vi.mocked(isReferenceAuditReceiptBucketConfigured).mockImplementation(() => {
+      throw new Error('receipt configuration unavailable');
+    });
+
+    const result = await touchOne();
+
+    expect(result).toMatchObject({
+      configured: true,
+      created: true,
+      referenceAuditUrl: 'https://odysseus.example/exemple-audit',
+    });
+    expect(createReferenceAuditLink).not.toHaveBeenCalled();
+  });
+
+  it('cleans an optional attribution mapping when draft assembly refuses', async () => {
+    vi.mocked(isReferenceAuditReceiptBucketConfigured).mockReturnValue(true);
+    vi.mocked(assembleOutreachDraft).mockReturnValue({
+      assembled: false,
+      refusal: 'missing-categories',
+    });
+
+    const result = await touchOne();
+
+    expect(result).toEqual({ configured: true, created: false, refusal: 'assembly-refused' });
+    expect(deleteReferenceAuditLink).toHaveBeenCalledWith(
+      connection,
+      expect.stringMatching(/^[0-9a-f]{64}$/u),
+    );
+    expect(recordFailedOutreachDraft).toHaveBeenCalledWith(
+      connection,
+      expect.not.objectContaining({ referenceAuditTokenHash: expect.any(String) }),
     );
   });
 

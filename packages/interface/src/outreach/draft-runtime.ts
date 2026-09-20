@@ -27,6 +27,9 @@ import {
   selectNewestQualifyingAudit,
   type AuditIntentSourceJob,
   type ProspectWorkAudit,
+  attachReferenceAuditDraft,
+  createReferenceAuditLink,
+  deleteReferenceAuditLink,
   transitionOutreachThread,
 } from '@odysseus/store';
 import type { OutreachActionRefusal } from '@odysseus/store';
@@ -36,6 +39,8 @@ import {
   getOutreachTouch2AfterDays,
   getOutreachTouch3AfterDays,
   getPreviewPublicBaseUrl,
+  getReferenceAuditPublicBaseUrl,
+  isReferenceAuditReceiptBucketConfigured,
 } from '../config.js';
 import { assembleOutreachDraft } from './assemble-outreach-draft.js';
 import { createConfiguredMailboxDraftAdapter } from './configured-mailbox-draft-adapter.js';
@@ -47,6 +52,12 @@ import { createOptOutLink, storeOptOutLink } from './opt-out-bucket.js';
 import { createInMemoryMailboxDraftAdapter } from './in-memory-mailbox-draft-adapter.js';
 import { formatHotelName } from './hotel-name.js';
 import { createMongoOutreachPreviewStoreV3 } from './mongo-outreach-preview-store-v2.js';
+import { resolveReferenceAuditForDraft } from '../reference-audit/reference-audit-readiness.js';
+import {
+  createReferenceAuditToken,
+  hashReferenceAuditToken,
+  referenceAuditTrackedUrl,
+} from '../reference-audit/reference-audit-link-token.js';
 import type { MailboxDraftAdapter } from './mailbox-draft-adapter.js';
 import {
   previewLinks,
@@ -57,7 +68,7 @@ import {
 const CURRENT_OUTREACH_PROMPT_VERSION = 'template-v2';
 const EVIDENCE_VERSION = `full-audit:${NORMALIZATION_FINGERPRINT}`;
 
-export type DraftRuntimeRefusal = 'no-mailbox-configured';
+export type DraftRuntimeRefusal = 'no-mailbox-configured' | 'reference-audit-unavailable';
 
 type DraftRefusal =
   | 'prospect-unknown'
@@ -69,6 +80,7 @@ type DraftRefusal =
   | 'preview-expired'
   | 'preview-wrong-audit'
   | 'preview-stale'
+  | 'reference-audit-unavailable'
   | 'domain-mismatch'
   | 'thread-closed'
   | 'draft-already-live'
@@ -96,6 +108,8 @@ export type CreateTouchOneDraftResult =
       providerDraftId?: string;
       previewId?: string;
       previewUrl?: string;
+      referenceAuditUrl?: string;
+      referenceAuditVersion?: string;
       subject?: string;
       body?: string;
       plan?: {
@@ -218,6 +232,11 @@ export async function createTouchOneDraft(
   const preview = await resolvePreview(connection, prospectId, options.previewToken ?? '');
   if ('refusal' in preview) return { configured: true, created: false, refusal: preview.refusal };
 
+  const referenceAudit = await resolveReferenceAuditForDraft();
+  if (referenceAudit === null) {
+    return { configured: true, created: false, refusal: 'reference-audit-unavailable' };
+  }
+
   const website = primaryWebsite(prospect.websites);
   if (website === undefined)
     return { configured: true, created: false, refusal: 'domain-mismatch' };
@@ -253,6 +272,45 @@ export async function createTouchOneDraft(
     return { configured: true, created: false, refusal: 'draft-already-live' };
   }
 
+  let referenceAuditUrl = referenceAudit.url;
+  let referenceAuditTokenHash: string | undefined;
+  let trackingAvailable: boolean;
+  try {
+    trackingAvailable = !dryRun && isReferenceAuditReceiptBucketConfigured();
+  } catch {
+    // The optional attribution configuration must never turn a valid
+    // canonical reference link into a draft refusal.
+    trackingAvailable = false;
+  }
+  if (trackingAvailable) {
+    try {
+      const token = createReferenceAuditToken();
+      referenceAuditTokenHash = hashReferenceAuditToken(token);
+      await createReferenceAuditLink(connection, {
+        tokenHash: referenceAuditTokenHash,
+        prospectId,
+        threadId: thread.thread.threadId,
+        registrableDomain: website.registrableDomain,
+        roleAddress: contact.address,
+        referenceVersion: referenceAudit.referenceVersion,
+        createdAt: now,
+      });
+      referenceAuditUrl = referenceAuditTrackedUrl(getReferenceAuditPublicBaseUrl(), token);
+    } catch {
+      // Attribution is optional; a missing private mapping or receipt bucket
+      // leaves the useful canonical reference link in place.
+      referenceAuditTokenHash = undefined;
+      referenceAuditUrl = referenceAudit.url;
+    }
+  }
+
+  const discardReferenceAuditTracking = async (): Promise<void> => {
+    if (referenceAuditTokenHash === undefined) return;
+    await deleteReferenceAuditLink(connection, referenceAuditTokenHash).catch(() => undefined);
+    referenceAuditTokenHash = undefined;
+    referenceAuditUrl = referenceAudit.url;
+  };
+
   const links = previewLinks(getPreviewPublicBaseUrl());
   // Personal to this recipient, so the opt-out page can prefill the address.
   const optOutLink = createOptOutLink(getPreviewPublicBaseUrl());
@@ -268,11 +326,14 @@ export async function createTouchOneDraft(
       proofCardCategories: preview.proofCardCategories,
     },
     previewUrl: preview.url,
+    referenceAuditUrl,
+    referenceAuditVersion: referenceAudit.referenceVersion,
     dataOrigins: ['public-hotel-catalogue', 'public-website'],
     privacyUrl: links.privacy,
     optOutUrl: optOutLink.url,
   });
   if (!assembled.assembled) {
+    await discardReferenceAuditTracking();
     await recordFailedOutreachDraft(connection, {
       prospectId,
       threadId: thread.thread.threadId,
@@ -281,6 +342,8 @@ export async function createTouchOneDraft(
       roleAddress: contact.address,
       previewId: preview.previewId,
       previewUrl: preview.url,
+      referenceAuditUrl,
+      referenceAuditVersion: referenceAudit.referenceVersion,
       evidenceVersion: EVIDENCE_VERSION,
       outreachPromptVersion: CURRENT_OUTREACH_PROMPT_VERSION,
       failureReason: 'assembly-refused',
@@ -305,6 +368,7 @@ export async function createTouchOneDraft(
 
   const finalGate = await checkOutreachAction(connection, { prospect, action: 'first-email' });
   if (!finalGate.allowed) {
+    await discardReferenceAuditTracking();
     await recordFailedOutreachDraft(connection, {
       prospectId,
       threadId: thread.thread.threadId,
@@ -313,6 +377,8 @@ export async function createTouchOneDraft(
       roleAddress: contact.address,
       previewId: preview.previewId,
       previewUrl: preview.url,
+      referenceAuditUrl,
+      referenceAuditVersion: referenceAudit.referenceVersion,
       evidenceVersion: EVIDENCE_VERSION,
       outreachPromptVersion: CURRENT_OUTREACH_PROMPT_VERSION,
       failureReason: 'suppressed-before-provider',
@@ -348,6 +414,9 @@ export async function createTouchOneDraft(
       htmlBody: assembled.htmlBody,
       previewId: preview.previewId,
       previewUrl: preview.url,
+      referenceAuditUrl,
+      referenceAuditVersion: referenceAudit.referenceVersion,
+      ...(referenceAuditTokenHash === undefined ? {} : { referenceAuditTokenHash }),
       evidenceVersion: EVIDENCE_VERSION,
       outreachPromptVersion: CURRENT_OUTREACH_PROMPT_VERSION,
       providerDraftId: providerDraft.providerDraftId,
@@ -357,7 +426,17 @@ export async function createTouchOneDraft(
     });
   } catch {
     await mailbox.deleteDraft(providerDraft.providerDraftId).catch(() => undefined);
+    await discardReferenceAuditTracking();
     return { configured: true, created: false, refusal: 'provider-draft-unrecorded' };
+  }
+
+  if (referenceAuditTokenHash !== undefined) {
+    // Attribution is explicitly best effort. The provider draft and its
+    // historical body remain usable even if the private mapping cannot be
+    // attached after the draft row is recorded.
+    await attachReferenceAuditDraft(connection, referenceAuditTokenHash, draft.draftId).catch(
+      () => undefined,
+    );
   }
 
   await attachProviderThreadId(connection, thread.thread.threadId, providerDraft.providerThreadId);
@@ -377,6 +456,8 @@ export async function createTouchOneDraft(
     providerDraftId: providerDraft.providerDraftId,
     previewId: preview.previewId,
     previewUrl: preview.url,
+    referenceAuditUrl,
+    referenceAuditVersion: referenceAudit.referenceVersion,
     subject: assembled.subject,
     body: assembled.body,
   };
@@ -419,6 +500,16 @@ export async function createFirstEmailForProspect(
   }
   const allowed = await checkOutreachAction(connection, { prospect, action: 'first-email' });
   if (!allowed.allowed) return { configured: true, created: false, refusal: allowed.refusal };
+
+  // Do this readiness check before publishing a new preview. A first-touch
+  // attempt must not leave a live preview behind when the permanent reference
+  // pointer is unavailable and the email would consequently be refused.
+  if (options.previewToken === undefined) {
+    const referenceAudit = await resolveReferenceAuditForDraft();
+    if (referenceAudit === null) {
+      return { configured: true, created: false, refusal: 'reference-audit-unavailable' };
+    }
+  }
 
   // Issue #280: a preview the operator just published is reused, not
   // superseded. createTouchOneDraft validates the token against the live

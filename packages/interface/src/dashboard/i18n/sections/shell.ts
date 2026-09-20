@@ -15,6 +15,8 @@ export interface ShellStrings {
   buildRevisionLabel: string;
   copyBuildRevision: string;
   buildRevisionCopied: string;
+  referenceAuditLabel: string;
+  referenceAuditStates: Record<'current' | 'stale' | 'missing', string>;
 }
 
 export const shell = {
@@ -30,6 +32,8 @@ export const shell = {
     buildRevisionLabel: 'Version',
     copyBuildRevision: 'Copier la version',
     buildRevisionCopied: 'Copié',
+    referenceAuditLabel: 'Exemple d’audit',
+    referenceAuditStates: { current: 'à jour', stale: 'à régénérer', missing: 'indisponible' },
   },
   en: {
     tagline: 'Operator dashboard',
@@ -43,5 +47,7 @@ export const shell = {
     buildRevisionLabel: 'Build',
     copyBuildRevision: 'Copy build revision',
     buildRevisionCopied: 'Copied',
+    referenceAuditLabel: 'Reference audit',
+    referenceAuditStates: { current: 'current', stale: 'needs refresh', missing: 'unavailable' },
   },
 } satisfies { fr: ShellStrings; en: ShellStrings };

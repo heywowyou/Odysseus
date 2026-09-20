@@ -88,6 +88,14 @@ export {
   // credentials stay private to createConfiguredPreviewPublisher: a caller that
   // could read them would be a caller that could build its own adapter.
   getPreviewPublicBaseUrl,
+  getReferenceAuditPublicBaseUrl,
+  getReferenceAuditBucketEndpoint,
+  getReferenceAuditBucketRegion,
+  getReferenceAuditBucketName,
+  getReferenceAuditBucketAccessKeyId,
+  getReferenceAuditBucketSecretAccessKey,
+  isReferenceAuditBucketConfigured,
+  isReferenceAuditReceiptBucketConfigured,
   // Whether a mailbox is configured, and which variables are missing if not.
   // The client secret and refresh token stay private to
   // createConfiguredMailboxDraftAdapter, on the same reasoning as the bucket
@@ -198,6 +206,48 @@ export type { InMemoryPreviewPublisher } from './outreach/in-memory-preview-publ
 export { createScalewayPreviewPublisher } from './outreach/scaleway-preview-publisher.js';
 export type { ScalewayPreviewPublisherOptions } from './outreach/scaleway-preview-publisher.js';
 export { createConfiguredPreviewPublisher } from './outreach/configured-preview-publisher.js';
+
+// Plan 071: immutable reference-audit publication and its operator-only
+// freshness seam. The public site has a deliberately separate reader copy.
+export {
+  REFERENCE_AUDIT_CURRENT_KEY,
+  REFERENCE_AUDIT_MANIFEST_SCHEMA_VERSION,
+  REFERENCE_AUDIT_PDF_PREFIX,
+  createInMemoryReferenceAuditObjectStore,
+  parseReferenceAuditManifest,
+  publishReferenceAudit,
+  readCurrentReferenceAudit,
+  referenceAuditPdfKey,
+  rollbackReferenceAudit,
+  ReferenceAuditPublicationError,
+} from './reference-audit/reference-audit-publication.js';
+export type {
+  InMemoryReferenceAuditObjectStore,
+  PublishReferenceAuditInput,
+  PublishReferenceAuditResult,
+  ReferenceAuditCurrentManifest,
+  ReferenceAuditObjectStore,
+} from './reference-audit/reference-audit-publication.js';
+export {
+  createReferenceAuditToken,
+  hashReferenceAuditToken,
+  isValidReferenceAuditToken,
+  referenceAuditTrackedUrl,
+  REFERENCE_AUDIT_TOKEN_PATTERN,
+} from './reference-audit/reference-audit-link-token.js';
+export {
+  classifyReferenceAuditFreshness,
+  inspectReferenceAuditFreshness,
+} from './reference-audit/reference-audit-freshness.js';
+export type {
+  ReferenceAuditFreshness,
+  ReferenceAuditFreshnessState,
+} from './reference-audit/reference-audit-freshness.js';
+export { buildAndPublishReferenceAuditRelease } from './reference-audit/reference-audit-release.js';
+export type {
+  BuildReferenceAuditReleaseInput,
+  BuildReferenceAuditReleaseResult,
+} from './reference-audit/reference-audit-release.js';
 
 // Milestone 9c plan 011: the mailbox port, its adapters, and draft creation.
 export {

@@ -11,8 +11,13 @@ import { cn } from '../lib/cn';
 import { useApi } from '../lib/use-api';
 import type { TodoPage } from '../lib/api-types';
 
+interface ReferenceAuditStatus {
+  state: 'current' | 'stale' | 'missing';
+  manifest?: { publishedAt: string };
+}
+
 export function AppShell() {
-  const { strings } = useI18n();
+  const { strings, language } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname } = useLocation();
 
@@ -21,6 +26,7 @@ export function AppShell() {
   // client-side array. No polling: the count refreshes when the shell
   // remounts. Hidden on error or zero, so the badge never invents work.
   const todo = useApi<TodoPage>('/api/prospect-hub/todo');
+  const referenceAudit = useApi<ReferenceAuditStatus>('/api/reference-audit/status');
   const inboxCount = todo.data?.attentionCount ?? 0;
   const refreshTodo = todo.refresh;
   const previousPathname = useRef(pathname);
@@ -111,6 +117,31 @@ export function AppShell() {
 
   const footer = (
     <div className="mt-auto border-t border-line p-4">
+      {referenceAudit.data ? (
+        <div className="mb-3 rounded-lg border border-line bg-raised px-3 py-2 text-xs">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-ink-muted">{strings.shell.referenceAuditLabel}</span>
+            <Badge
+              tone={
+                referenceAudit.data.state === 'current'
+                  ? 'accent'
+                  : referenceAudit.data.state === 'stale'
+                    ? 'serious'
+                    : 'neutral'
+              }
+            >
+              {strings.shell.referenceAuditStates[referenceAudit.data.state]}
+            </Badge>
+          </div>
+          {referenceAudit.data.manifest?.publishedAt ? (
+            <p className="mt-1 text-[11px] text-ink-muted">
+              {new Intl.DateTimeFormat(language === 'fr' ? 'fr-FR' : 'en-GB', {
+                dateStyle: 'medium',
+              }).format(new Date(referenceAudit.data.manifest.publishedAt))}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       <NavLink
         to="/ne-pas-contacter"
         className="mb-1 flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-raised hover:text-ink"

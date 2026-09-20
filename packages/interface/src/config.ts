@@ -334,6 +334,49 @@ export function isReferenceAuditBucketConfigured(): boolean {
   );
 }
 
+/** Optional private consumer credentials for the public site's write-only
+ *  receipt prefix. They are separate from the publication reader/writer so a
+ *  public deployment credential cannot list or replace the approved PDF. */
+function requiredReferenceReceiptEnv(name: string): string {
+  ensureEnvLoaded();
+  const value = process.env[name];
+  if (value === undefined || value === '') {
+    throw new Error(`${name} is not set; reference audit receipt polling needs it`);
+  }
+  return value;
+}
+
+export function getReferenceAuditReceiptBucketEndpoint(): string {
+  return requiredReferenceReceiptEnv('ODYSSEUS_REFERENCE_AUDIT_RECEIPT_BUCKET_ENDPOINT');
+}
+
+export function getReferenceAuditReceiptBucketRegion(): string {
+  return requiredReferenceReceiptEnv('ODYSSEUS_REFERENCE_AUDIT_RECEIPT_BUCKET_REGION');
+}
+
+export function getReferenceAuditReceiptBucketName(): string {
+  return requiredReferenceReceiptEnv('ODYSSEUS_REFERENCE_AUDIT_RECEIPT_BUCKET_NAME');
+}
+
+export function getReferenceAuditReceiptBucketAccessKeyId(): string {
+  return requiredReferenceReceiptEnv('ODYSSEUS_REFERENCE_AUDIT_RECEIPT_BUCKET_ACCESS_KEY_ID');
+}
+
+export function getReferenceAuditReceiptBucketSecretKey(): string {
+  return requiredReferenceReceiptEnv('ODYSSEUS_REFERENCE_AUDIT_RECEIPT_BUCKET_SECRET_KEY');
+}
+
+export function isReferenceAuditReceiptBucketConfigured(): boolean {
+  ensureEnvLoaded();
+  return (
+    Boolean(process.env['ODYSSEUS_REFERENCE_AUDIT_RECEIPT_BUCKET_ENDPOINT']) &&
+    Boolean(process.env['ODYSSEUS_REFERENCE_AUDIT_RECEIPT_BUCKET_REGION']) &&
+    Boolean(process.env['ODYSSEUS_REFERENCE_AUDIT_RECEIPT_BUCKET_NAME']) &&
+    Boolean(process.env['ODYSSEUS_REFERENCE_AUDIT_RECEIPT_BUCKET_ACCESS_KEY_ID']) &&
+    Boolean(process.env['ODYSSEUS_REFERENCE_AUDIT_RECEIPT_BUCKET_SECRET_KEY'])
+  );
+}
+
 export function getReferenceAuditPublicBaseUrl(): string {
   ensureEnvLoaded();
   return process.env['ODYSSEUS_REFERENCE_AUDIT_PUBLIC_BASE_URL'] ?? getPreviewPublicBaseUrl();

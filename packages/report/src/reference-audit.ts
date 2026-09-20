@@ -111,6 +111,21 @@ function collectLeafStrings(value: unknown, output: string[] = []): string[] {
   return output;
 }
 
+function collectIdentityMarkers(value: string): string[] {
+  const markers = [
+    ...(value.match(/https?:\/\/[^\s<>'"]+/giu) ?? []),
+    ...(value.match(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/gu) ?? []),
+    ...(value.match(/\b\d{9,14}\b/gu) ?? []),
+    ...(value.match(/\+?\d[\d .()/-]{7,}\d/gu) ?? []),
+  ];
+  return markers.filter(
+    (marker) =>
+      !/^\d{4}[-/]\d{1,2}[-/]\d{1,2}(?:[T ]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?$/u.test(
+        marker,
+      ),
+  );
+}
+
 function collectIdentityStrings(source: ReferenceAuditSource): string[] {
   const values: string[] = [];
   const add = (value: unknown) => {
@@ -127,32 +142,50 @@ function collectIdentityStrings(source: ReferenceAuditSource): string[] {
   const siteSignals = asRecord(manifest.siteSignals);
   if (siteSignals !== null) {
     for (const [key, value] of Object.entries(siteSignals)) {
-      if (/siren|siret|name|address|phone|email|url|domain|selector|snippet|identifier/iu.test(key)) {
+      if (
+        /siren|siret|name|address|phone|email|url|domain|selector|snippet|identifier/iu.test(key)
+      ) {
         for (const child of collectStrings(value)) add(child);
+      }
+    }
+  }
+  const manualFields = asRecord(source.renderInputs?.manualFields);
+  if (manualFields !== null) {
+    for (const [key, value] of Object.entries(manualFields)) {
+      if (/address|company|denomination|email|legal|name|phone|siren|siret|url/iu.test(key)) {
+        for (const child of collectLeafStrings(value)) add(child);
+      }
+    }
+  }
+  const siteContext = asRecord(source.analysis.siteContext);
+  if (siteContext !== null) {
+    for (const [key, value] of Object.entries(siteContext)) {
+      if (/business|city|company|domain|hotel|name|property|site|url/iu.test(key)) {
+        for (const child of collectLeafStrings(value)) add(child);
       }
     }
   }
   for (const finding of source.findings) {
     for (const element of finding.elements) {
       add(element.pageUrl);
-      add(element.selector);
-      add(element.snippet);
       add(element.resourceUrl);
     }
-    for (const value of [finding.title, finding.description]) add(value);
-    const raw = collectLeafStrings(finding.rawEvidence);
-    for (const value of raw) {
-      if (
-        /https?:\/\/|@|\b\d{9,14}\b|\+?\d[\d .()-]{7,}/u.test(value) ||
-        (value.length >= 24 && /\s/u.test(value))
-      ) {
-        add(value);
-      }
+    // Rule titles, descriptions, selectors and snippets are mostly shared
+    // vocabulary ("speed index", "anchor", "fonts", ...), not identity.
+    // Only retain them as denylist material when they carry an unambiguous
+    // identity marker. The projection replaces every element independently,
+    // so generic selector text must not turn the leak gate into a false
+    // positive against the normal report renderer.
+    for (const value of [finding.title, finding.description]) {
+      for (const marker of collectIdentityMarkers(value)) add(marker);
+    }
+    for (const value of collectLeafStrings(finding.rawEvidence)) {
+      for (const marker of collectIdentityMarkers(value)) add(marker);
     }
   }
   const analysisStrings = collectLeafStrings(source.analysis);
   for (const value of analysisStrings) {
-    if (/https?:\/\/|@|\b\d{9,14}\b/u.test(value)) add(value);
+    for (const marker of collectIdentityMarkers(value)) add(marker);
   }
   return values;
 }
@@ -181,22 +214,57 @@ function buildSourceDenylist(source: ReferenceAuditSource): string[] {
     'admin',
   ]);
   const candidates = new Set<string>();
+  let sourceHostname: string | undefined;
+  try {
+    sourceHostname = new URL(source.manifest.siteUrl).hostname.toLocaleLowerCase('fr-FR');
+  } catch {
+    // The source manifest is validated upstream; malformed historical URLs
+    // still remain useful as exact denylist entries below.
+  }
   for (const raw of collectIdentityStrings(source)) {
     const value = normalized(raw);
     if (value.length >= 4 && !common.has(value)) candidates.add(value);
     if (value.includes('://')) {
       try {
         const url = new URL(value);
-        candidates.add(normalized(url.hostname));
-        for (const part of url.pathname.split('/')) {
-          if (part.length >= 5 && !common.has(part)) candidates.add(normalized(part));
+        const hostname = url.hostname.toLocaleLowerCase('fr-FR');
+        candidates.add(normalized(hostname));
+        if (hostname === sourceHostname) {
+          for (const fragment of hostname.split(/[.-]/u)) {
+            if (fragment.length >= 6 && !common.has(fragment)) candidates.add(fragment);
+          }
         }
       } catch {
         // The raw value remains useful as an exact denylist entry.
       }
     }
   }
-  return [...candidates].filter((value) => value !== normalized(SHOWCASE_ORIGIN)).sort((a, b) => b.length - a.length);
+  const sourcePageUrls = new Set<string>([
+    ...source.manifest.pages.map((page) => page.url),
+    ...source.findings.flatMap((finding) => [
+      ...finding.pageUrls,
+      ...finding.elements.map((element) => element.pageUrl),
+    ]),
+  ]);
+  for (const raw of sourcePageUrls) {
+    try {
+      const url = new URL(raw);
+      const hostname = url.hostname.toLocaleLowerCase('fr-FR');
+      if (hostname !== sourceHostname) continue;
+      const pathname = normalized(url.pathname);
+      if (
+        pathname.length > 1 &&
+        !/^\/(?:contact|mentions-legales|reservation|restaurant|chambres?)\/?$/u.test(pathname)
+      ) {
+        candidates.add(pathname);
+      }
+    } catch {
+      // The exact source URL is already in the denylist when it is available.
+    }
+  }
+  return [...candidates]
+    .filter((value) => value !== normalized(SHOWCASE_ORIGIN))
+    .sort((a, b) => b.length - a.length);
 }
 
 function pathRole(pathname: string): string {
@@ -261,7 +329,11 @@ function rewriteUrl(raw: string, pageUrls: ReadonlyMap<string, string>): string 
   }
 }
 
-function sanitizeUnknown(value: unknown, denylist: readonly string[], pageUrls: ReadonlyMap<string, string>): unknown {
+function sanitizeUnknown(
+  value: unknown,
+  denylist: readonly string[],
+  pageUrls: ReadonlyMap<string, string>,
+): unknown {
   if (typeof value === 'string') return replaceSourceStrings(value, denylist);
   if (value instanceof Date) return new Date(value);
   if (Array.isArray(value)) return value.map((item) => sanitizeUnknown(item, denylist, pageUrls));
@@ -327,12 +399,22 @@ function syntheticManualFields(): AuditManualFields {
 }
 
 function hasImageEvidence(value: unknown, key = ''): boolean {
-  if (/screenshot|image|photo|thumbnail/iu.test(key) && value !== undefined && value !== null) {
+  if (
+    /screenshot|image|photo|thumbnail/iu.test(key) &&
+    value !== undefined &&
+    value !== null &&
+    value !== false &&
+    value !== '' &&
+    !(Array.isArray(value) && value.length === 0)
+  ) {
     return true;
   }
   if (Array.isArray(value)) return value.some((item) => hasImageEvidence(item, key));
   const record = asRecord(value);
-  return record !== null && Object.entries(record).some(([childKey, child]) => hasImageEvidence(child, childKey));
+  return (
+    record !== null &&
+    Object.entries(record).some(([childKey, child]) => hasImageEvidence(child, childKey))
+  );
 }
 
 function mapFindingId(id: string, findingIds: ReadonlyMap<string, string>): string {
@@ -375,6 +457,7 @@ function projectManifest(
   const sanitized = sanitizeUnknown(manifest, denylist, pageUrls) as AuditManifest;
   delete sanitized.prospectId;
   delete sanitized.continuationGuardSummary;
+  delete sanitized.renormalizedAt;
   return {
     ...sanitized,
     auditId: 'reference-audit',
@@ -429,10 +512,14 @@ function projectAnalysis(
   const projected = sanitizeUnknown(analysis, denylist, new Map()) as StoredAnalysis;
   delete projected.findingsProvenance;
   delete projected.writingCritic;
+  delete projected.structureGeneratedAt;
+  delete projected.generationMode;
   return {
     ...projected,
     auditId: 'reference-audit',
     analysisId: `reference-analysis-${analysis.language}`,
+    model: 'reference-showcase',
+    temperature: 0,
     generatedAt: new Date(SHOWCASE_DATE),
     siteContext: {
       businessType: 'Hôtel indépendant',
@@ -527,12 +614,12 @@ export function findReferenceAuditLeaks(input: ReferenceAuditLeakScanInput): str
     ...(input.embeddedObjectNames ?? []),
   ];
   const haystack = values.join('\n').normalize('NFKC').toLocaleLowerCase('fr-FR');
-  return [...new Set(input.denylist.filter((token) => token.length >= 4 && haystack.includes(token)))];
+  return [
+    ...new Set(input.denylist.filter((token) => token.length >= 4 && haystack.includes(token))),
+  ];
 }
 
-export function assertReferenceAuditNoLeaks(
-  input: ReferenceAuditLeakScanInput,
-): void {
+export function assertReferenceAuditNoLeaks(input: ReferenceAuditLeakScanInput): void {
   const leaks = findReferenceAuditLeaks(input);
   if (leaks.length > 0) {
     throw new ReferenceAuditPublicationError(

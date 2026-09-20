@@ -59,6 +59,15 @@ export interface OutreachDraftDocumentFields {
    *  to store here for them - absent, never an empty-string sentinel. */
   previewId?: string;
   previewUrl?: string;
+  /** Touch 1's second, permanent proof link and the release it resolved to. */
+  referenceAuditUrl?: string;
+  referenceAuditVersion?: string;
+  /** Present only when the optional first-party redirect was used. The raw
+   *  token is never stored. */
+  referenceAuditTokenHash?: string;
+  referenceAuditFirstRequestedAt?: Date;
+  referenceAuditLastRequestedAt?: Date;
+  referenceAuditRequestCount?: number;
   /** The contract versions behind this exact text, so a draft can be told
    *  apart from one produced before a prompt or evidence change without
    *  re-deriving anything. */
@@ -108,6 +117,12 @@ const outreachDraftSchema = new Schema<OutreachDraftDocument>(
     bodyHash: { type: String, required: true },
     previewId: { type: String },
     previewUrl: { type: String },
+    referenceAuditUrl: { type: String },
+    referenceAuditVersion: { type: String },
+    referenceAuditTokenHash: { type: String },
+    referenceAuditFirstRequestedAt: { type: Date },
+    referenceAuditLastRequestedAt: { type: Date },
+    referenceAuditRequestCount: { type: Number, min: 0 },
     evidenceVersion: { type: String, required: true },
     outreachPromptVersion: { type: String, required: true },
     providerDraftId: { type: String },

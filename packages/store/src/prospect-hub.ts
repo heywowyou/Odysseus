@@ -36,6 +36,7 @@ import { createOutreachDraftModel } from './schemas/outreach-draft.schema.js';
 import { createOutreachOutcomeModel } from './schemas/outreach-outcome.schema.js';
 import { createOutreachPreviewModel } from './schemas/outreach-preview.schema.js';
 import { createOutreachThreadModel } from './schemas/outreach-thread.schema.js';
+import { createReferenceAuditLinkModel } from './schemas/reference-audit-link.schema.js';
 import { transitionOutreachThread } from './outreach-threads.js';
 import { deleteAuditCascade, type AuditCascadeCounts } from './delete-audit.js';
 import { addSuppressionEntry } from './suppression.js';
@@ -1183,6 +1184,11 @@ export async function deleteProspectPermanently(
       $unset: { previewUrl: 1 },
     },
   );
+  // Attribution mappings are prospect-owned private data. They are not
+  // included in the operator-facing cascade count because the public
+  // reference remains independent, but they must disappear with the
+  // prospect rather than waiting for the 90-day TTL.
+  await createReferenceAuditLinkModel(connection).deleteMany({ prospectId }).exec();
   const [previews, drafts, threads, outcomes, events, jobs, directoryEntries] = await Promise.all([
     Preview.deleteMany({ prospectId }).exec(),
     createOutreachDraftModel(connection).deleteMany({ prospectId }).exec(),

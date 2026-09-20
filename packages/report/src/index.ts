@@ -263,6 +263,40 @@ export async function generateReferenceAuditPdf(
   });
 }
 
+/** The pre-PDF HTML used by the same showcase render input. Publication code
+ * uses this to run the identity leak gate before Chromium starts; callers must
+ * still use `generateReferenceAuditPdf` for the final PDF gates. */
+export async function renderReferenceAuditHtml(
+  showcase: ReferenceAuditShowcase,
+  options: { renderedAt?: Date; rendererBuild?: string; reportId?: string } = {},
+): Promise<string> {
+  const { bundle } = showcase;
+  const inputs = bundle.renderInputs;
+  const renderDiff = resolveRenderDiffEvidence(bundle.manifest, bundle.findings);
+  return renderHtml({
+    renderMetadata: {
+      reportId: options.reportId ?? 'reference-audit',
+      renderedAt: options.renderedAt ?? new Date(),
+      rendererBuild: options.rendererBuild ?? 'reference-audit',
+      templateVersion: REPORT_TEMPLATE_VERSION,
+      documentDisclosure: bundle.disclosure,
+    },
+    manifest: bundle.manifest,
+    findings: bundle.findings,
+    analysis: bundle.analysis,
+    renderDiffEvidencePages: renderDiff.pages,
+    renderDiffTotalEligible: renderDiff.totalEligible,
+    renderDiffWrapperOrLegalExcludedCount: renderDiff.wrapperOrLegalExcludedCount,
+    ...(inputs.manualFields === undefined ? {} : { manualFields: inputs.manualFields }),
+    ...(inputs.preparation === undefined ? {} : { preparation: inputs.preparation }),
+    ...(inputs.gradeOverride === undefined ? {} : { gradeOverride: inputs.gradeOverride }),
+    ...(inputs.delta === undefined ? {} : { delta: inputs.delta }),
+    ...(inputs.qualityLimitations === undefined
+      ? {}
+      : { qualityLimitations: inputs.qualityLimitations }),
+  });
+}
+
 export {
   REPORT_EMBEDDED_FONT_FAMILIES,
   describeReportPdfIntegrityDefects,

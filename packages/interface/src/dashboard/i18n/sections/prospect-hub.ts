@@ -297,6 +297,8 @@ export interface ProspectHubStrings {
     draftRecipient: string;
     draftBody: string;
     openPreview: string;
+    openReferenceAudit: string;
+    referenceAuditRequestSignal: string;
     openInMailbox: string;
     discardDraft: string;
     confirmDiscardDraft: string;
@@ -714,6 +716,9 @@ export const prospectHub = {
       draftRecipient: 'Destinataire',
       draftBody: 'Afficher le texte de l’email',
       openPreview: 'Ouvrir l’aperçu',
+      openReferenceAudit: 'Ouvrir l’exemple d’audit',
+      referenceAuditRequestSignal:
+        'Lien d’exemple demandé {count} fois. Ce signal peut provenir d’un système automatisé de sécurité email ; il ne prouve pas une lecture humaine.',
       openInMailbox: 'Ouvrir dans la boîte mail',
       discardDraft: 'Supprimer le brouillon',
       confirmDiscardDraft:
@@ -781,6 +786,7 @@ export const prospectHub = {
         'draft-already-live':
           'un brouillon est déjà en attente ; relisez-le et envoyez-le depuis la boîte mail',
         'no-preview-bucket-configured': 'stockage de l’aperçu non configuré',
+        'reference-audit-unavailable': 'exemple d’audit permanent indisponible',
         'no-mailbox-configured': 'boîte mail non configurée',
         'insufficient-safe-cards': 'preuves sûres insuffisantes',
         'no-usable-contact': 'aucun contact utilisable',
@@ -1223,6 +1229,9 @@ export const prospectHub = {
       draftRecipient: 'Recipient',
       draftBody: 'Show the email text',
       openPreview: 'Open the preview',
+      openReferenceAudit: 'Open the reference audit',
+      referenceAuditRequestSignal:
+        'Reference link requested {count} time(s). Automated email-security systems may trigger this signal; it is not proof of a human reading.',
       openInMailbox: 'Open in the mailbox',
       discardDraft: 'Discard the draft',
       confirmDiscardDraft: 'Discard this draft here and in the mailbox? You can draft a new one.',
@@ -1286,6 +1295,7 @@ export const prospectHub = {
         'thread-already-started': 'the first email was already sent; use the follow-up',
         'draft-already-live': 'a draft is already waiting; review it and send it from the mailbox',
         'no-preview-bucket-configured': 'preview storage is not configured',
+        'reference-audit-unavailable': 'the permanent reference audit is unavailable',
         'no-mailbox-configured': 'mailbox is not configured',
         'insufficient-safe-cards': 'not enough safe proof cards',
         'no-usable-contact': 'no usable contact',

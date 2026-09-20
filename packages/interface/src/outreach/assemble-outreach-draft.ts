@@ -19,6 +19,7 @@ import {
   composeTouchThreeFrame,
   composeTouchTwoBody,
   pickOutreachVariants,
+  referenceAuditLinkLabel,
   type OutreachScanSummary,
 } from './outreach-email-template.js';
 import {
@@ -36,6 +37,7 @@ export type OutreachDataOrigin =
 
 export type AssembleOutreachDraftRefusal =
   | 'missing-preview-url'
+  | 'reference-audit-unavailable'
   | 'missing-scan-summary'
   | 'missing-categories'
   | 'missing-previous-subject'
@@ -56,6 +58,8 @@ export interface AssembleOutreachDraftOptions {
   /** Safe aggregate facts from the already-published full-scan preview. */
   scanSummary?: OutreachScanSummary;
   previewUrl?: string;
+  referenceAuditUrl?: string;
+  referenceAuditVersion?: string;
   previousSubject?: string;
   dataOrigins?: OutreachDataOrigin[];
   privacyUrl?: string;
@@ -93,6 +97,9 @@ export function assembleOutreachDraft(
     return refuse('missing-previous-subject');
   }
   if (touch === 1 && options.previewUrl === undefined) return refuse('missing-preview-url');
+  if (touch === 1 && options.referenceAuditUrl === undefined) {
+    return refuse('reference-audit-unavailable');
+  }
   if (touch === 1 && options.scanSummary === undefined) return refuse('missing-scan-summary');
   if (touch === 1 && options.scanSummary?.proofCardCategories.length === 0) {
     return refuse('missing-categories');
@@ -140,6 +147,10 @@ export function assembleOutreachDraft(
       scanSummary: options.scanSummary as OutreachScanSummary,
       variants,
       previewLink: { label: copy.previewLinkLabel, url: options.previewUrl as string },
+      referenceLink: {
+        label: referenceAuditLinkLabel(language),
+        url: options.referenceAuditUrl as string,
+      },
     });
   } else if (touch === 2) {
     bodyBlocks = composeTouchTwoBody({ language, hotelName: options.hotelName, variants });
@@ -180,9 +191,12 @@ export function assembleOutreachDraft(
     if (body.split(factsText as string).length !== 2) return refuse('facts-block-splice-failed');
   }
 
-  const allowedUrls = [options.previewUrl, options.privacyUrl, options.optOutUrl].filter(
-    (url): url is string => url !== undefined,
-  );
+  const allowedUrls = [
+    options.previewUrl,
+    options.referenceAuditUrl,
+    options.privacyUrl,
+    options.optOutUrl,
+  ].filter((url): url is string => url !== undefined);
   assertOutreachDraftBody(body, allowedUrls);
   assertOutreachDraftHtml(rendered.html, allowedUrls);
 

@@ -57,6 +57,12 @@ export interface RecordOutreachDraftInput {
   /** Touch 1 only - see the schema's own note. */
   previewId?: string;
   previewUrl?: string;
+  referenceAuditUrl?: string;
+  referenceAuditVersion?: string;
+  referenceAuditTokenHash?: string;
+  referenceAuditFirstRequestedAt?: Date;
+  referenceAuditLastRequestedAt?: Date;
+  referenceAuditRequestCount?: number;
   evidenceVersion: string;
   outreachPromptVersion: string;
   providerDraftId: string;
@@ -102,6 +108,24 @@ export async function recordOutreachDraft(
     bodyHash: hash(input.body),
     ...(input.previewId !== undefined ? { previewId: input.previewId } : {}),
     ...(input.previewUrl !== undefined ? { previewUrl: input.previewUrl } : {}),
+    ...(input.referenceAuditUrl !== undefined
+      ? { referenceAuditUrl: input.referenceAuditUrl }
+      : {}),
+    ...(input.referenceAuditVersion !== undefined
+      ? { referenceAuditVersion: input.referenceAuditVersion }
+      : {}),
+    ...(input.referenceAuditTokenHash !== undefined
+      ? { referenceAuditTokenHash: input.referenceAuditTokenHash }
+      : {}),
+    ...(input.referenceAuditFirstRequestedAt !== undefined
+      ? { referenceAuditFirstRequestedAt: input.referenceAuditFirstRequestedAt }
+      : {}),
+    ...(input.referenceAuditLastRequestedAt !== undefined
+      ? { referenceAuditLastRequestedAt: input.referenceAuditLastRequestedAt }
+      : {}),
+    ...(input.referenceAuditRequestCount !== undefined
+      ? { referenceAuditRequestCount: input.referenceAuditRequestCount }
+      : {}),
     evidenceVersion: input.evidenceVersion,
     outreachPromptVersion: input.outreachPromptVersion,
     providerDraftId: input.providerDraftId,
@@ -179,6 +203,9 @@ export interface RecordFailedOutreachDraftInput {
   /** Touch 1 only - see the schema's own note. */
   previewId?: string;
   previewUrl?: string;
+  referenceAuditUrl?: string;
+  referenceAuditVersion?: string;
+  referenceAuditTokenHash?: string;
   evidenceVersion: string;
   outreachPromptVersion: string;
   failureReason: string;
@@ -213,6 +240,15 @@ export async function recordFailedOutreachDraft(
     bodyHash: hash(''),
     ...(input.previewId !== undefined ? { previewId: input.previewId } : {}),
     ...(input.previewUrl !== undefined ? { previewUrl: input.previewUrl } : {}),
+    ...(input.referenceAuditUrl !== undefined
+      ? { referenceAuditUrl: input.referenceAuditUrl }
+      : {}),
+    ...(input.referenceAuditVersion !== undefined
+      ? { referenceAuditVersion: input.referenceAuditVersion }
+      : {}),
+    ...(input.referenceAuditTokenHash !== undefined
+      ? { referenceAuditTokenHash: input.referenceAuditTokenHash }
+      : {}),
     evidenceVersion: input.evidenceVersion,
     outreachPromptVersion: input.outreachPromptVersion,
     status: 'failed',

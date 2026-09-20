@@ -5491,3 +5491,34 @@ review burden); a multi-round critic-repair loop or a second critic
     the PDF travels base64); making the finalized report its own document kind
     (it is a report of the same audit, and approval must keep working on
     whatever row is current).
+
+### 106. The paid report gets one permanent synthetic reference example, and Touch 1 names it beside the personalized preview (build decision, 2026-09-20, Plan 071)
+
+The personalized preview and the paid report answer different questions. The
+preview proves that the message came from this prospect's Full scan; the
+reference example shows what the EUR 990 HT deliverable looks like. Touch 1
+therefore has exactly two body links in that order. The later touches remain
+link-free, and the preview's 30-day expiry, lineage and suppression contracts
+are untouched.
+
+The reference artifact is not a public copy of one client's PDF. A detached
+projection rebuilds the identity and legal facts as synthetic Hôtel Exemple
+data, maps pages to synthetic roles, generalizes selectors/snippets, refuses
+source images, prints a deterministic disclosure and runs the normal paid
+renderer. Immutable digest-addressed PDFs plus a tiny current pointer make
+replacement and rollback safe for already-written emails. New Touch-1 drafts
+fail closed when there is no approved pointer.
+
+Optional first-party attribution is deliberately weaker than an "open" metric:
+an opaque redirect writes only a token hash, request time and reference
+version to a dedicated receipt prefix. The private mapping expires after 90
+days and suppression stops future attribution. No cookie, pixel, query
+parameter, IP, User-Agent, Referer or public Mongo read is introduced. A
+receipt failure still redirects to the canonical PDF, because a useful sales
+artifact outranks telemetry. The dashboard calls the result a link-request
+signal and warns that mail-security automation may cause it.
+
+Rejected: extending expiring preview storage; publishing a raw client report;
+tracking with query parameters, cookies, pixels or third-party analytics;
+letting telemetry failure block the reference link; and automatically
+republishing the example whenever the report template changes.
