@@ -28,10 +28,9 @@ const avenirNext = localFont({
  * (PRODUCT.md, Evidence on Hand) and none may be fabricated. The twitter
  * card is `summary`, the variant that renders correctly without an image.
  */
-// Issue #213 item 5: trimmed from 198 to 157 characters so search
-// engines are much less likely to truncate it mid-sentence, while keeping
-// the approved "signaux techniques liés aux assistants IA" and "tarif
-// fixe" wording (see lib/marketing-copy.test.ts).
+// Issue #213 item 5: kept concise enough for search snippets while retaining
+// the approved "signaux techniques liés aux assistants IA", "préconisations"
+// and "tarif fixe" wording (see lib/marketing-copy.test.ts).
 const description =
   'Diagnostic technique avec préconisations : accessibilité, référencement, rendu JavaScript, performance, signaux techniques liés aux assistants IA, tarif fixe 990 € HT.';
 

@@ -9,11 +9,10 @@ export const PAGE_META: Record<
   '/': {
     fr: {
       title: 'Odysseus, diagnostic technique avec préconisations',
-      // Issue #213 item 5: trimmed from 198 to 157 characters so search
-      // engines are much less likely to truncate it mid-sentence, while
-      // keeping the approved "signaux techniques liés aux assistants IA"
-      // and "tarif fixe" wording (see lib/marketing-copy.test.ts). Must
-      // match app/layout.tsx's FR description exactly.
+      // Issue #213 item 5: kept concise enough for search snippets while
+      // retaining the approved "signaux techniques liés aux assistants IA",
+      // "préconisations" and "tarif fixe" wording. Must match
+      // app/layout.tsx's FR description exactly.
       description:
         'Diagnostic technique avec préconisations : accessibilité, référencement, rendu JavaScript, performance, signaux techniques liés aux assistants IA, tarif fixe 990 € HT.',
     },
