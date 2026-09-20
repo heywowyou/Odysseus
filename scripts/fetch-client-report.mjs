@@ -3,11 +3,17 @@
 //   node scripts/fetch-client-report.mjs <auditId> <outDir> [fr|en ...]
 //
 // Logs into the operator dashboard with ODYSSEUS_DASHBOARD_PASSWORD from the
-// repository .env, downloads the audit record, the report-quality lineage and
-// the fresh report PDF for each requested language (French by default), then
-// logs out. It only issues GET requests besides the session login/logout, so
-// it never rescans, regenerates, approves or publishes anything. The session
-// cookie stays in memory and no secret is printed.
+// repository .env, downloads the audit record, the report-quality lineage, the
+// fresh report PDF and the render bundle for each requested language (French
+// by default), then logs out. It only issues GET requests besides the session
+// login/logout, so it never rescans, regenerates, approves or publishes
+// anything. The session cookie stays in memory and no secret is printed.
+//
+// Plan 072: the render bundle is the full working set a finalization needs -
+// the manifest, findings, analysis and render inputs the hosted PDF was built
+// from, unpacked one file per member so the operator can read and later diff
+// them. `odysseus report:finalize` renders from that directory; the hosted PDF
+// beside it is the baseline being corrected.
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -82,6 +88,42 @@ try {
     writeFileSync(file, body, { mode: 0o600 });
     const digest = createHash('sha256').update(body).digest('hex');
     console.log(`${language}.pdf: sha256:${digest} ${file}`);
+
+    const bundle = await get(`/api/audits/${auditId}/render-bundle/${language}`);
+    if (bundle.status !== 200) {
+      console.error(
+        `bundle-${language}: HTTP ${bundle.status} ${bundle.body.toString('utf8').slice(0, 200)}`,
+      );
+      failed = true;
+      continue;
+    }
+    // Unpacked into one file per member, the same split
+    // readRenderBundleDir expects. Keeping a combined copy beside them would
+    // be a second source of truth for the same thing.
+    const { lineage, manifest, findings, analysis, ...renderInputs } = JSON.parse(
+      bundle.body.toString('utf8'),
+    );
+    const bundleDir = join(outDir, `bundle-${language}`);
+    mkdirSync(bundleDir, { recursive: true, mode: 0o700 });
+    for (const [name, value] of [
+      ['lineage.json', lineage],
+      ['manifest.json', manifest],
+      ['findings.json', findings],
+      ['analysis.json', analysis],
+      ['render-inputs.json', renderInputs],
+    ]) {
+      const bundleFile = join(bundleDir, name);
+      const serialized = Buffer.from(`${JSON.stringify(value, null, 2)}\n`);
+      writeFileSync(bundleFile, serialized, { mode: 0o600 });
+      console.log(
+        `bundle-${language}/${name}: sha256:${createHash('sha256').update(serialized).digest('hex')}`,
+      );
+    }
+    // The digests the override file has to repeat, printed so the operator
+    // does not have to open the lineage to write one.
+    console.log(
+      `bundle-${language}: analysisDigest ${lineage.analysisDigest} findingsDigest ${lineage.findingsProvenance.findingsDigest}`,
+    );
   }
 } finally {
   await fetch(`${DASHBOARD_URL}/api/session/logout`, { method: 'POST', headers: { cookie } });

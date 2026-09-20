@@ -97,6 +97,29 @@ export async function finalizeReport(options: FinalizeOptions): Promise<void> {
   await fs.writeFile(out, pdf, { mode: 0o600 });
   await fs.chmod(out, 0o600);
 
+  // What the upload needs to describe this exact file. Written here rather
+  // than re-derived by the upload script, because the page count is measured
+  // from the Paged.js DOM during the render and nothing can recover it from
+  // the bytes afterwards without guessing at PDF internals.
+  const metaPath = `${out}.meta.json`;
+  await fs.writeFile(
+    metaPath,
+    `${JSON.stringify(
+      {
+        lineage,
+        pageCount,
+        rendererBuild: readOdysseusBuildId(),
+        reportTemplateVersion: REPORT_TEMPLATE_VERSION,
+        overrideCount,
+        renderedAt: new Date().toISOString(),
+      },
+      null,
+      2,
+    )}\n`,
+    { mode: 0o600 },
+  );
+  await fs.chmod(metaPath, 0o600);
+
   const warning = reportPageCountWarning(pageCount);
   console.log(
     `${lineage.language.toUpperCase()} ${lineage.auditId}: ${overrideCount} correction(s), ` +
