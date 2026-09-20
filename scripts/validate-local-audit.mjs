@@ -1,12 +1,12 @@
 // Validate the local-fixture audit manifest + findings against the
 // fixture's ground truth. Usage (from the repository root):
-//   node /tmp/validate-fixture-audit.mjs <auditDir> <expectations.json>
+//   node scripts/validate-local-audit.mjs <auditDir> <expectations.json>
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 const [auditDir, expectationsPath] = process.argv.slice(2);
 if (!auditDir || !expectationsPath) {
-  console.error('usage: validate-fixture-audit.mjs <auditDir> <expectations.json>');
+  console.error('usage: node scripts/validate-local-audit.mjs <auditDir> <expectations.json>');
   process.exit(2);
 }
 

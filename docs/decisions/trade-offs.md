@@ -3975,7 +3975,7 @@ plan 026's own binding decision and trade-off 64.
 
 Job `dfcc1deb-8218-42d1-a322-2fb968f4df9a` was enqueued as
 `prospect prescan run --limit 120` against the exact 120-domain list the
-operator approved (`docs/session/plan-034-v4-prescan-selection.txt`). It was
+operator approved (`docs/archive/plan-034/plan-034-v4-prescan-selection.txt`). It was
 reported complete with `"120 hotels prescanned, ... 2 evidence-incomplete, 1
 failed"`. Read-only inspection of the `prescans` collection in Atlas `test`
 before any further plan 034 work found that untrue: the job's `prescanVersion:

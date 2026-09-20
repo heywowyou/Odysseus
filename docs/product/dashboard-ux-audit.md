@@ -1,6 +1,6 @@
 # Operator dashboard UX audit ledger
 
-Migrated from `docs/product/dashboard-ux-audit-2026-09-12.md` (run 1's
+Migrated from run 1's
 dated report) into the register format on 2026-09-13, during plan 045's
 Stage 3 verification. Ids assigned in the source document's order;
 mapped to the GitHub issues run 1 filed (`#180`-`#190`). Run 1 predates
