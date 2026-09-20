@@ -30,9 +30,11 @@ import {
   collectPagedjsOverflowModels,
   describeTrailingHeadings,
   detectTrailingHeadings,
+  detectEmptyThemeCardFragments,
   detectSplitRemainingRules,
   detectWidowedSheetTails,
   forceBreakBeforeRemainingRules,
+  forceBreakBeforeThemeCards,
   markSnugBlocksInHtml,
   renderPdfWithPageCountFromHtml,
 } from '../pdf.js';
@@ -623,6 +625,40 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
     );
     try {
       expect(await detectSplitRemainingRules(moved.page)).toEqual([]);
+    } finally {
+      await moved.page.context().close();
+    }
+  }, 600_000);
+
+  it('a priority card left as an empty shell at a page foot is moved onto the next page', async () => {
+    // A real French report painted an empty rounded card under the second
+    // priority: the card's header is atomic and moved on, while the card's
+    // own box still opened on the page being left. Sliding the priorities
+    // down the page finds an offset that reproduces it.
+    expect(stressHtml).toMatch(/<div class="card elev-sm theme-card"/u);
+    let found: { html: string; empty: string[] } | undefined;
+    for (let offsetMm = 0; offsetMm <= 240 && !found; offsetMm += 3) {
+      const html = stressHtml.replace(
+        '<div class="card elev-sm theme-card"',
+        `<div style="height:${offsetMm}mm"></div><div class="card elev-sm theme-card"`,
+      );
+      const pressured = await paginate(browser, html, pagedjsSource);
+      try {
+        const empty = await detectEmptyThemeCardFragments(pressured.page);
+        if (empty.length > 0) found = { html, empty };
+      } finally {
+        await pressured.page.context().close();
+      }
+    }
+    expect(found).toBeDefined();
+
+    const moved = await paginate(
+      browser,
+      forceBreakBeforeThemeCards(found!.html, found!.empty),
+      pagedjsSource,
+    );
+    try {
+      expect(await detectEmptyThemeCardFragments(moved.page)).toEqual([]);
     } finally {
       await moved.page.context().close();
     }

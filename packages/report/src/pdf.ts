@@ -1000,6 +1000,43 @@ export function forceBreakBeforeRemainingRules(html: string, ruleIds: readonly s
   return `${html.slice(0, headClose)}<style>${rules}</style>${html.slice(headClose)}`;
 }
 
+/** Rounds of the empty-priority-card repair. Each round moves the cards it
+ *  finds onto a fresh page and lays the document out again, and a card is
+ *  moved at most once, so the loop always ends. */
+const MAX_EMPTY_THEME_CARD_ROUNDS = 3;
+
+/** Priority cards are deliberately fragmentable, but their header is
+ *  atomic and glued to its first row. When only a few millimetres are left
+ *  at a page foot, the header moves on while the card's own box still
+ *  opens on the page being left, painting an empty rounded shell under the
+ *  previous card. A real French report shipped one. Returns the id of each
+ *  card whose fragment on the page carries no text at all. */
+export async function detectEmptyThemeCardFragments(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const ids = new Set<string>();
+    for (const fragment of Array.from(document.querySelectorAll('.theme-card'))) {
+      if ((fragment.textContent ?? '').trim() !== '') continue;
+      const id = fragment.getAttribute('id');
+      if (id) ids.add(id);
+    }
+    return [...ids];
+  });
+}
+
+/** Starts each named priority card on a fresh page, so the shell cannot be
+ *  left behind on the page the card's content has already moved off. */
+export function forceBreakBeforeThemeCards(html: string, cardIds: readonly string[]): string {
+  const pending = cardIds.filter(
+    (cardId) =>
+      /^[a-z0-9-]+$/i.test(cardId) && !html.includes(`.theme-card#${cardId} { break-before`),
+  );
+  if (pending.length === 0) return html;
+  const rules = pending.map((cardId) => `.theme-card#${cardId} { break-before: page; }`).join(' ');
+  const headClose = html.indexOf('</head>');
+  if (headClose === -1) return html;
+  return `${html.slice(0, headClose)}<style>${rules}</style>${html.slice(headClose)}`;
+}
+
 /** Issue #170. One annex rule group heading's placement on the paginated
  *  page: `followedByRow` is true when the heading's own detail table sits
  *  directly after it on the SAME page fragment with at least one finding
@@ -1377,6 +1414,15 @@ export async function renderPdfWithPageCountFromHtml(
       const split = await detectSplitRemainingRules(page);
       if (split.length === 0) break;
       const moved = forceBreakBeforeRemainingRules(currentHtml, split);
+      if (moved === currentHtml) break;
+      currentHtml = moved;
+      await runPagedjsPreview(currentHtml);
+    }
+
+    for (let round = 0; round < MAX_EMPTY_THEME_CARD_ROUNDS; round++) {
+      const empty = await detectEmptyThemeCardFragments(page);
+      if (empty.length === 0) break;
+      const moved = forceBreakBeforeThemeCards(currentHtml, empty);
       if (moved === currentHtml) break;
       currentHtml = moved;
       await runPagedjsPreview(currentHtml);

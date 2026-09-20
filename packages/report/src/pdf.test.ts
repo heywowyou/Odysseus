@@ -10,6 +10,7 @@ import {
   findStrandedAppendixRuleIds,
   forceBreakBeforeAppendixRuleGroups,
   forceBreakBeforeRemainingRules,
+  forceBreakBeforeThemeCards,
   insertRepeatedTheadsIntoHtml,
   markFlowingBlocksInHtml,
   markSnugBlocksInHtml,
@@ -629,6 +630,21 @@ describe('forceBreakBeforeRemainingRules', () => {
 
   it('skips ids a CSS attribute selector cannot carry', () => {
     expect(forceBreakBeforeRemainingRules(doc, ['a"] body {'])).toBe(doc);
+  });
+});
+
+describe('forceBreakBeforeThemeCards', () => {
+  const doc =
+    '<html><head></head><body><div class="card theme-card" id="theme-3">card</div></body></html>';
+
+  it('starts each named priority card on a fresh page, once', () => {
+    const patched = forceBreakBeforeThemeCards(doc, ['theme-3']);
+    expect(patched).toContain('<style>.theme-card#theme-3 { break-before: page; }</style></head>');
+    expect(forceBreakBeforeThemeCards(patched, ['theme-3'])).toBe(patched);
+  });
+
+  it('skips ids a CSS id selector cannot carry', () => {
+    expect(forceBreakBeforeThemeCards(doc, ['a { } body {'])).toBe(doc);
   });
 });
 
