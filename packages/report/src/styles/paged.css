@@ -502,6 +502,16 @@ h5 {
   break-inside: avoid;
 }
 
+/* One remaining-work entry (title, counts, one action sentence, an optional
+   fix snippet, capped finding references) moves to the next page whole. A
+   real report left an entry's title alone at a page foot and another's
+   finding-reference line alone at the top of the next page. Safe under
+   trade-off 17: every part is bounded by construction, so the block stays
+   far shorter than a page. */
+.remaining-rule {
+  break-inside: avoid;
+}
+
 /* A fix snippet (label, code block, fill-in note) moves to the next page
    whole. Paged.js split a four-line pre-wrap <pre> between two pages on a
    real report: the first fragment kept the text node's trailing newline,
