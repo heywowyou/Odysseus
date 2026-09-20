@@ -29,6 +29,16 @@ export {
  *  assembles a bundle from Mongo) and the CLI finalizer (which parses one
  *  off disk with no database). See render-bundle.ts for why it lives here. */
 export { buildRenderBundle, parseRenderBundle } from './render-bundle.js';
+/** Plan 072: applying an operator's override file to a bundle. Rebuilds the
+ *  writing input the prose was generated from, so the correction is judged
+ *  against the same evidence the writer was. */
+export {
+  applyOverridesToBundle,
+  findWritingInputRebuildIssue,
+  projectWritingOutput,
+  rebuildWritingInput,
+} from './finalize-bundle.js';
+export type { FinalizedBundle, RefusedBundle } from './finalize-bundle.js';
 export type { RenderBundle, RenderBundleLineage, ReportRenderInputs } from './render-bundle.js';
 export { buildRenderedPriorities } from './template/rendered-priorities.js';
 export type { RenderedPriority, PriorityEvidence } from './template/rendered-priorities.js';
