@@ -72,6 +72,22 @@ export {
   type WritingCriticIssue,
 } from './critic-schema.js';
 export { listWritingProseFields, type WritingProseField } from './prose-fields.js';
+/** Plan 072: the operator's post-generation corrections to a report's prose,
+ *  bound to one analysis by digest and held to the same sanitation and
+ *  guard table as the model's own output. */
+export {
+  applyWritingOverrides,
+  findOverrideLineageMismatch,
+  parseWritingOverrideFile,
+  writingOverrideFileSchema,
+} from './writing-overrides.js';
+export type {
+  AppliedWritingOverrides,
+  WritingOverride,
+  WritingOverrideFile,
+  WritingOverrideLineage,
+  WritingOverrideResult,
+} from './writing-overrides.js';
 export { analyzeCorrectionReview } from './analyze-correction-review.js';
 export type { CorrectionReviewOutcome } from './analyze-correction-review.js';
 export {
