@@ -1322,3 +1322,84 @@ describe('issue #303: every annex rule group carries its own layout identity', (
     expect(new Set(ids).size).toBe(3);
   });
 });
+
+describe('a finding whose pages all fall outside the analysed scope', () => {
+  // A real report's broken-link row printed "0" in the PAGES column and
+  // then listed the page it was found on, the http:// home page that
+  // redirects to https:// and is therefore not itself an analysed page.
+  it('counts the pages the row lists rather than claiming none', async () => {
+    const [sample] = await loadSmallSiteFindings();
+    const finding = {
+      ...sample!,
+      findingId: 'f900',
+      ruleId: 'broken-internal-link',
+      category: 'seo',
+      severity: 'serious',
+      occurrences: 2,
+      pageUrls: ['http://example.com/'],
+      elements: [{ pageUrl: 'http://example.com/', selector: 'a[href]', snippet: '' }],
+    } as typeof sample & object;
+    const manifest = {
+      ...(await loadSmallSiteManifest()),
+      pages: [{ url: 'https://example.com/', depth: 0, status: 'visited', errors: {} }],
+    } as Awaited<ReturnType<typeof loadSmallSiteManifest>>;
+
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [finding], manifest, 'general');
+
+    const row = html.split('annexref-f900')[1] ?? '';
+    expect(row).toContain('>1</div>');
+    expect(row).not.toContain('>0</div>');
+  });
+
+  it('keeps the URL list when the row figure is short of the analysed total', async () => {
+    // A real report's row read "518" above a list collapsed to "Toutes les
+    // pages analysées (520)": the collapse compared raw URLs while the
+    // figure beside it counted in-scope ones.
+    const [sample] = await loadSmallSiteFindings();
+    const finding = {
+      ...sample!,
+      findingId: 'f902',
+      ruleId: 'largest-contentful-paint',
+      category: 'performance',
+      severity: 'critical',
+      occurrences: 2,
+      pageUrls: ['https://example.com/', 'http://example.com/'],
+      elements: [],
+    } as typeof sample & object;
+    const manifest = {
+      ...(await loadSmallSiteManifest()),
+      pages: [
+        { url: 'https://example.com/', depth: 0, status: 'visited', errors: {} },
+        { url: 'https://example.com/b', depth: 1, status: 'visited', errors: {} },
+      ],
+    } as Awaited<ReturnType<typeof loadSmallSiteManifest>>;
+
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [finding], manifest, 'general');
+
+    expect(html).not.toContain('Toutes les pages analysées');
+    expect(html).toContain('http://example.com/');
+  });
+
+  it('leaves the page segment out of the rule summary rather than printing "0 page"', async () => {
+    const [sample] = await loadSmallSiteFindings();
+    const finding = {
+      ...sample!,
+      findingId: 'f901',
+      ruleId: 'broken-internal-link',
+      category: 'seo',
+      severity: 'serious',
+      occurrences: 1,
+      pageUrls: ['http://example.com/'],
+      elements: [{ pageUrl: 'http://example.com/', selector: 'a[href]', snippet: '' }],
+    } as typeof sample & object;
+    const manifest = {
+      ...(await loadSmallSiteManifest()),
+      pages: [{ url: 'https://example.com/', depth: 0, status: 'visited', errors: {} }],
+    } as Awaited<ReturnType<typeof loadSmallSiteManifest>>;
+
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [finding], manifest, 'general');
+
+    expect(html).toContain('1 occurrence');
+    expect(html).not.toContain('0 page');
+  });
+});

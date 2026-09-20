@@ -151,7 +151,15 @@ function renderRuleBlock(
   const counts = [
     `${formatNumber(block.findingIds.length, language)} ${pluralize(language, block.findingIds.length, r.findingSingular, r.findingPlural)}`,
     `${formatNumber(block.occurrences, language)} ${pluralize(language, block.occurrences, r.occurrenceSingular, r.occurrencePlural)}`,
-    `${formatNumber(block.pages, language)} ${pluralize(language, block.pages, r.pageSingular, r.pagePlural)}`,
+    // A rule that holds for the site as a whole records no page URL, and a
+    // rule can cite only pages outside the analysed scope. Printing
+    // "0 page" next to a real occurrence count read as a bug; the segment
+    // is simply left out, and the occurrence count carries the size.
+    ...(block.pages > 0
+      ? [
+          `${formatNumber(block.pages, language)} ${pluralize(language, block.pages, r.pageSingular, r.pagePlural)}`,
+        ]
+      : []),
   ].join(' · ');
 
   const remediation =

@@ -310,3 +310,35 @@ describe('issue #291: remaining-work page counts stay inside the analysed scope'
     expect(html).toContain('2 constats · 5 occurrences · 2 pages');
   });
 });
+
+describe('a rule with no page inside the analysed scope', () => {
+  const scopePageUrls = new Set(['https://example.com/a']);
+
+  // A real report printed "1 constat · 1 occurrence · 0 page" for a rule
+  // that holds for the site as a whole, which reads as a missing number
+  // rather than as "no single page carries it".
+  it('states its findings and occurrences without a page segment', () => {
+    const findings = [
+      buildScenarioFinding({
+        findingId: 'f001',
+        ruleId: 'structured-data-organization-missing',
+        occurrences: 1,
+        pageUrls: [],
+      }),
+    ];
+    const analysis = { themes: [], language: 'fr' } as unknown as StoredAnalysis;
+
+    const html = renderRemainingWork(
+      getStrings('fr'),
+      6,
+      'fr',
+      analysis,
+      findings,
+      undefined,
+      scopePageUrls,
+    );
+
+    expect(html).toContain('1 constat · 1 occurrence');
+    expect(html).not.toContain('0 page');
+  });
+});

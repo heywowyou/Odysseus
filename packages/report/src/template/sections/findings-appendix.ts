@@ -10,7 +10,7 @@ import type {
   ReportLanguage,
   StatSector,
 } from '@odysseus/core';
-import { selectReferenceStats } from '@odysseus/core';
+import { contentCheckedPageUrls, selectReferenceStats } from '@odysseus/core';
 import { buildMissingPercentIndex, classifyDiversion } from '@odysseus/llm';
 import type { ReportStrings } from '../strings/i18n.js';
 import {
@@ -47,7 +47,17 @@ function renderRuleSum(strings: ReportStrings, language: ReportLanguage, group: 
     // would need its own explanation. Issue #291: the union itself is now
     // confined to the visited scope at the groupAppendix call sites, so
     // the figure can never exceed the analysed-page total.
-    `${formatNumber(group.pages, language)} ${pluralize(language, group.pages, a.pageSingular, a.pagePlural)}`,
+    // A group whose every cited page sits outside the analysed scope - a
+    // finding attributed to a redirect interstitial, say - confines to
+    // zero here (issue #291 keeps that confinement), and the line read
+    // "1 constat · 1 occurrence · 0 page" directly above a row listing
+    // that page. The segment is dropped instead of printing a zero the
+    // rows contradict.
+    ...(group.pages > 0
+      ? [
+          `${formatNumber(group.pages, language)} ${pluralize(language, group.pages, a.pageSingular, a.pagePlural)}`,
+        ]
+      : []),
   ];
   if (group.wcagCriteria.length > 0) {
     parts.push(`${a.wcagLabel} ${group.wcagCriteria.join(', ')}`);
@@ -148,6 +158,12 @@ function renderPageUrlList(
   language: ReportLanguage,
   finding: Finding,
   totalPagesScanned: number,
+  /** The row's own page figure, already confined to the analysed scope.
+   *  The "all analysed pages" collapse below compares against it rather
+   *  than the raw URL count, so the collapsed line and the figure printed
+   *  beside it can never disagree - a real report's row read 518 above a
+   *  list claiming "Toutes les pages analysées (520)". */
+  inScopePageCount: number,
   /** The earlier finding in this rule group whose page-URL set is
    *  byte-identical to this one's, if any - set by renderRuleGroup after
    *  it has seen every finding in the group in id order. Undefined for
@@ -172,9 +188,18 @@ function renderPageUrlList(
         ? `${group.pageUrl} (${group.languages.join(', ')})`
         : group.pageUrl,
     );
-    // The "all pages" collapse still compares raw page counts: the claim
-    // is about the crawl's own scope, which is counted in real pages.
-    if (totalPagesScanned > 0 && finding.pageUrls.length === totalPagesScanned) {
+    // The collapse claims the finding covers the whole analysed scope, so
+    // it now also requires the in-scope figure the row prints to say the
+    // same: a real report's row read 518 above a list claiming "Toutes
+    // les pages analysées (520)", because two of the finding's URLs sit
+    // outside that scope. Issue #291's case - a finding citing extra
+    // pages the crawl never analysed - keeps its full URL list for the
+    // same reason.
+    if (
+      totalPagesScanned > 0 &&
+      inScopePageCount === totalPagesScanned &&
+      finding.pageUrls.length === totalPagesScanned
+    ) {
       urlsText = fillTemplate(a.allPagesAnalyzedTemplate, {
         count: formatNumber(totalPagesScanned, language),
       });
@@ -403,7 +428,12 @@ function renderSubTableRow(
   // finding row claiming 24 pages against a 140-page analysed scope that
   // included discovered-but-not-scanned pages and post-merge language
   // variants).
-  const inScopePageCount = finding.pageUrls.filter((url) => scopePageUrls.has(url)).length;
+  // A finding can cite only pages outside that scope - a http:// home page
+  // that redirects, an error page - and the row then printed "0" directly
+  // above the URL list naming those pages. It falls back to the pages it
+  // lists, which keeps the figure and the list describing the same thing.
+  const inScopePageCount =
+    finding.pageUrls.filter((url) => scopePageUrls.has(url)).length || finding.pageUrls.length;
   return `
     <tr id="annexref-${escapeHtml(finding.findingId)}" style="break-inside:avoid">
       <td colspan="4" style="padding:6px var(--space-2);border-bottom:1px solid var(--color-divider)">
@@ -412,7 +442,7 @@ function renderSubTableRow(
           <div>${formatNumber(inScopePageCount, language)}</div>
           <div>${formatNumber(finding.occurrences, language)}</div>
           <div ${VERBATIM_EVIDENCE_ATTRIBUTE} style="${selectorCellStyle(selector)}">${escapeHtml(selector)}</div>
-        </div>${renderResourceUrlList(strings, language, finding)}${renderPageUrlList(strings, language, finding, totalPagesScanned, samePagesAsFindingId, clusterLookup)}
+        </div>${renderResourceUrlList(strings, language, finding)}${renderPageUrlList(strings, language, finding, totalPagesScanned, inScopePageCount, samePagesAsFindingId, clusterLookup)}
       </td>
     </tr>
   `;
@@ -899,9 +929,13 @@ export function renderFindingsAppendix(
   // pages against a 140-page analysed scope in a real report. Same
   // population buildRenderedPriorities, checklist.ts and themes.ts count
   // against.
-  const scopePageUrls = new Set(
-    manifest.pages.filter((page) => page.status === 'visited').map((page) => page.url),
-  );
+  // Issue #80's content-checked population, not the raw visited set: the
+  // metadata sheet, the statistics tile and the methodology paragraph all
+  // call the analysed perimeter by the content-checked figure, so a page
+  // figure built on the visited set could exceed the perimeter the report
+  // states it analysed - a real French report opened on "au moins 522
+  // pages du périmètre analysé" three pages after "520 pages analysées".
+  const scopePageUrls = contentCheckedPageUrls(manifest);
 
   // item 29: the list of crawled URLs was never printed anywhere - the
   // client had no way to verify the scope they paid for beyond a bare
