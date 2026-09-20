@@ -1188,6 +1188,53 @@ describe('P1.2: the first-party/third-party ownership split note', () => {
     expect(html).toContain('et 1 page relevant de Gravity Forms');
   });
 
+  it('counts the card total over the content-checked pages, not every visited one', () => {
+    // A real French report's cards read "522 pages sur 522" while its
+    // metadata sheet and statistics tile both said "520 pages analysées":
+    // the denominator counted visited pages, the perimeter figure counted
+    // content-checked ones.
+    const coverage = (outcome: 'completed' | 'failed') => ({
+      plannerVersion: 'v1',
+      role: 'content',
+      confidence: 'high',
+      reasonCodes: [],
+      passes: {
+        rendered: { outcome },
+        axe: { outcome },
+        extended: { outcome },
+        lighthouse: { outcome: 'completed' },
+      },
+    });
+    const manifestWithCoverage = {
+      pages: [
+        { url: 'https://example.com/', status: 'visited', analysisCoverage: coverage('completed') },
+        {
+          url: 'https://example.com/contact',
+          status: 'visited',
+          analysisCoverage: coverage('failed'),
+        },
+      ],
+    } as never;
+    const findings = [
+      buildFinding({
+        findingId: 'f001',
+        pageUrls: ['https://example.com/', 'https://example.com/contact'],
+        elements: [{ pageUrl: 'https://example.com/', selector: 'header form', snippet: '' }],
+      }),
+    ];
+
+    const html = renderThemes(
+      getStrings('fr'),
+      4,
+      buildAnalysis(['f001']) as never,
+      findings as never,
+      manifestWithCoverage,
+    );
+
+    expect(html).toContain('1 page sur 1');
+    expect(html).not.toContain('sur 2');
+  });
+
   it('fix #2 (2026-08-25 report review): names ZenChef when every finding in the theme is inside its iframe', () => {
     const findings = [
       buildFinding({

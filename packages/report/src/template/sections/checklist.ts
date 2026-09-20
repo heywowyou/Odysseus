@@ -1,4 +1,5 @@
 import type { AuditManifest, AuditManualFields, Finding, ReportLanguage } from '@odysseus/core';
+import { contentCheckedPageUrls } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import {
@@ -61,16 +62,20 @@ export function renderChecklist(
 ): string {
   const c = strings.checklist;
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
-  const totalPagesScanned = manifest.pages.filter((page) => page.status === 'visited').length;
+  const totalPagesScanned = contentCheckedPageUrls(manifest).size;
   // Issue #41: the PAGES cell renders "N/M" against the visited-page total,
   // so the numerator must count the same population. A finding can cite a
   // URL outside the visited scope (an origin-level finding recorded against
   // a discovered-but-not-scanned page), and counting it raw produced a real
   // report's "29/28" - a ratio a reader uses to decide whether to trust the
   // rest of the numbers.
-  const scopePageUrls = new Set(
-    manifest.pages.filter((page) => page.status === 'visited').map((page) => page.url),
-  );
+  // Issue #80's content-checked population, not the raw visited set: the
+  // metadata sheet, the statistics tile and the methodology paragraph all
+  // call the analysed perimeter by the content-checked figure, so a page
+  // figure built on the visited set could exceed the perimeter the report
+  // states it analysed - a real French report opened on "au moins 522
+  // pages du périmètre analysé" three pages after "520 pages analysées".
+  const scopePageUrls = contentCheckedPageUrls(manifest);
   const sortedThemes = priorities
     ? priorities.map((priority) => priority.theme)
     : selectRenderedThemes(analysis.themes, findingsById);

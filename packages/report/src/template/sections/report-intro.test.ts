@@ -444,3 +444,50 @@ describe('plan 019: renderReportIntro consumes the preparation preview', () => {
     expect(html).toContain(strings.reportIntro.roleManagementLabel);
   });
 });
+
+describe('the affected-page count against the analysed scope', () => {
+  // A real report opened on "315 constats ... sur au moins 526 pages du
+  // périmètre analysé" while its own scope figures said 522 pages were
+  // analysed: four findings cited redirect interstitials and error pages,
+  // which no other page figure counts.
+  it('counts only pages inside the analysed scope', () => {
+    const findings = [
+      buildFinding({ findingId: 'f001', severity: 'serious', pageUrls: ['https://example.com/a'] }),
+      buildFinding({
+        findingId: 'f002',
+        severity: 'critical',
+        pageUrls: ['https://example.com/a', 'https://example.com/redirect'],
+      }),
+    ];
+    const analysis = buildAnalysis([['f001', 'f002']]);
+    const scope = new Set(['https://example.com/a']);
+
+    const html = renderReportIntro(
+      getStrings('fr'),
+      1,
+      analysis as never,
+      findings,
+      undefined,
+      undefined,
+      scope,
+    );
+
+    expect(html).toContain('1 page');
+    expect(html).not.toContain('2 pages');
+  });
+
+  it('counts every cited page when no scope is passed', () => {
+    const findings = [
+      buildFinding({
+        findingId: 'f001',
+        severity: 'serious',
+        pageUrls: ['https://example.com/a', 'https://example.com/redirect'],
+      }),
+    ];
+    const analysis = buildAnalysis([['f001']]);
+
+    const html = renderReportIntro(getStrings('fr'), 1, analysis as never, findings);
+
+    expect(html).toContain('2 pages');
+  });
+});

@@ -27,9 +27,13 @@ interface IntroFacts {
   criticalSeriousCount: number;
   /** Distinct analysed pages across every finding's pageUrls. Site-wide
    *  findings without page URLs can only make the real footprint larger,
-   *  which the "at least" wording in the template accounts for. A page
-   *  outside the analysed set (a redirect a hreflang link points at) is left
-   *  out: the Haaitza report said "au moins 206 pages" of 140 analysed. */
+   *  which the "at least" wording in the template accounts for. A finding
+   *  can also cite a page outside the analysed scope (a redirect a hreflang
+   *  link points at, an error page), and counting those made this sentence
+   *  claim more affected pages than the report says it analysed - the
+   *  Haaitza report said "au moins 206 pages" of 140 analysed. The count is
+   *  confined to the same population every other page figure uses (issue
+   *  #41 for the priority cards, issue #291 for the rest). */
   affectedPageCount: number;
   /** Ranked priorities actually shown: the provided rendered-priorities
    *  view, or the same selection the action list below falls back to. */
@@ -41,7 +45,7 @@ function computeIntroFacts(
   findings: readonly Finding[],
   priorities: readonly RenderedPriority[] | undefined,
   findingsById: ReadonlyMap<string, Finding>,
-  analysedPageUrls: ReadonlySet<string> | undefined,
+  scopePageUrls: ReadonlySet<string> | undefined,
 ): IntroFacts {
   return {
     findingCount: findings.length,
@@ -51,7 +55,7 @@ function computeIntroFacts(
     affectedPageCount: new Set(
       findings
         .flatMap((finding) => finding.pageUrls)
-        .filter((url) => analysedPageUrls === undefined || analysedPageUrls.has(url)),
+        .filter((url) => scopePageUrls?.has(url) ?? true),
     ).size,
     priorityCount: priorities
       ? priorities.length
@@ -90,11 +94,11 @@ export function renderReportIntro(
   findings: readonly Finding[],
   priorities?: readonly RenderedPriority[],
   preparation?: PreparationPreviewLanguage,
-  analysedPageUrls?: ReadonlySet<string>,
+  scopePageUrls?: ReadonlySet<string>,
 ): string {
   const r = strings.reportIntro;
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
-  const facts = computeIntroFacts(analysis, findings, priorities, findingsById, analysedPageUrls);
+  const facts = computeIntroFacts(analysis, findings, priorities, findingsById, scopePageUrls);
 
   const countPhrase = (count: number, singular: string, plural: string): string =>
     `${formatNumber(count, analysis.language)} ${pluralize(analysis.language, count, singular, plural)}`;
