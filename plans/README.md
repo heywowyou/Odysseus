@@ -139,9 +139,11 @@ The canonical sources for this behavior are `docs/product/odysseus-project-brief
 | [070](070-grounded-critic-and-targeted-repair.md) | Close measured guard gaps and add one fail-open grounded critic with targeted repair | P1 | M | 067 | IN PROGRESS (2026-09-19): critic and targeted repair built behind `WRITING_CRITIC_ENABLED` (off); calibration labels: precision 95%, cost and latency met, but 4 of 7 repaired reports regress; one tightening + re-run pending |
 | [071](071-permanent-reference-audit-and-dual-link-outreach.md) | Publish one permanent anonymized reference audit and add it beside the personalized preview in Touch 1 | P1 | L | 067, 069 | IN PROGRESS |
 | [072](072-finalized-client-report.md) | Make the operator-finalized client report a stored, lineage-bound artifact that supersedes the pipeline render | P1 | L | 067, 070 | DONE (2026-09-20): shipped end to end and proved on the fixture audit; see the plan's closure ledger |
+| [073](073-light-theme-full-report-export.md) | Add a light presentation variant to the full client report without forking content, finalization or approval | P2 | L | 039, 072 | TODO |
 
 Plan 072 shipped 2026-09-20 and is the current finalization workflow; its
 rationale is recorded as trade-off 41 and llm-layer-rules section 16.
+Plan 073 is approved report-presentation work as of 2026-09-21: the paid report keeps dark as its canonical default and gains an explicit light export variant bound to the same content, finalization and exact-artifact approval.
 Plan 071 is approved next product work as of 2026-09-19: one permanent publication-safe reference audit, a second Touch-1 body link beside the personalized preview, and privacy-minimal optional link-request attribution. Plans 067-070 retain their own recorded execution/acceptance status; Plan 071 must not weaken Plan 069 preview expiry, lineage or suppression rules. Every plan before 067 lives under `archive/`.
 Frozen plans keep their contract and execution handoff there and reopen only
 by operator decision.
