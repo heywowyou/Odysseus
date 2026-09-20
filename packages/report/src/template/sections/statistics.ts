@@ -55,9 +55,12 @@ function renderNumberTile(value: string, label: string, primary = false): string
   const className = primary
     ? 'stat-tile statistics-number-tile statistics-number-tile-primary'
     : 'stat-tile statistics-number-tile';
+  // The value never wraps: a narrow tile used to split a five-digit French
+  // count after its first digits ("17 02" over "6"). Its character count
+  // lets the stylesheet shrink a long value to the tile's width instead.
   return `
     <div class="${className}">
-      <div class="statistics-number-value">${value}</div>
+      <div class="statistics-number-value" style="--value-chars:${[...value].length}">${value}</div>
       <div class="statistics-number-label">${escapeHtml(label)}</div>
     </div>
   `;

@@ -251,6 +251,7 @@ h4 {
   margin-bottom: var(--space-3);
 }
 .statistics-number-tile {
+  container-type: inline-size;
   display: flex;
   grid-column: span 1;
   min-width: 0;
@@ -269,12 +270,14 @@ h4 {
 }
 .statistics-number-value {
   font-family: var(--font-heading);
-  font-size: 28px;
+  /* Heading digits run about 0.6em wide; the tile is the size container. */
+  font-size: min(28px, calc(100cqi / (var(--value-chars, 1) * 0.6)));
   font-weight: 500;
+  white-space: nowrap;
 }
 .statistics-number-tile-primary .statistics-number-value {
   color: var(--color-accent-200);
-  font-size: 40.25px;
+  font-size: min(40.25px, calc(100cqi / (var(--value-chars, 1) * 0.6)));
 }
 .statistics-number-label {
   margin-top: 4px;
