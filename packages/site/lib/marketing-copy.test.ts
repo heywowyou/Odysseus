@@ -186,6 +186,12 @@ describe('canonical public vocabulary', () => {
     expect(frenchPublicCopy).toContain('Le diagnostic');
   });
 
+  it('positions the paid service as a diagnostic with recommendations', () => {
+    expect(homeProse).toContain('diagnostic avec préconisations');
+    expect(offerProse).toContain('préconisations');
+    expect(frenchPublicCopy).toContain('avec préconisations');
+  });
+
   it('uses the bounded AI-assistant category name throughout the public site', () => {
     expect(homeProse).toContain('Signaux techniques liés aux assistants IA');
     expect(offerProse).toContain('Signaux techniques liés aux assistants IA');
@@ -203,8 +209,8 @@ describe('canonical public vocabulary', () => {
 
 describe('home page', () => {
   it('leads with the correction handoff', () => {
-    expect(homeProse).toContain('Un diagnostic pour passer du constat à la solution');
-    expect(homeProse).toContain('A diagnostic that takes you from findings to fixes');
+    expect(homeProse).toContain('Un diagnostic avec préconisations pour passer du constat à la solution');
+    expect(homeProse).toContain('A diagnostic with recommendations, from findings to fixes');
   });
 
   it('states the RGAA limitation concisely and links to the full wording', () => {

@@ -76,8 +76,8 @@ export default function Home() {
       <section className="shell hero pb-0">
         <PageHeading
           className="display measure-display"
-          fr="Un diagnostic pour passer du constat à la solution"
-          en="A diagnostic that takes you from findings to fixes"
+          fr="Un diagnostic avec préconisations pour passer du constat à la solution"
+          en="A diagnostic with recommendations, from findings to fixes"
         />
       </section>
       <LanguageSection lang="fr">
@@ -97,9 +97,10 @@ function HomeFr() {
         <div className="split mt-10 hero-split">
           <div className="split-main">
             <p className="lede measure">
-              Odysseus analyse l&apos;ensemble de votre site avec des outils de mesure automatisés
-              et vous remet un rapport directement exploitable&#160;: chaque problème est localisé,
-              documenté et classé par priorité, avec la correction recommandée.
+              Odysseus analyse l&apos;ensemble de votre site&#160;: accessibilité, référencement et rendu
+              JavaScript, performance, en-têtes de sécurité et signaux techniques liés aux assistants IA.
+              Vous recevez un rapport directement exploitable&#160;: chaque problème détecté est localisé,
+              documenté, classé par priorité et accompagné de la correction recommandée.
             </p>
 
             <Reveal className="mt-8">
@@ -343,9 +344,10 @@ function HomeEn() {
         <div className="split mt-10 hero-split">
           <div className="split-main">
             <p className="lede measure">
-              Odysseus analyses your entire website with automated measurement tools and delivers a
-              report you can act on immediately&#160;: every issue is located, documented and
-              prioritised, with a recommended fix.
+              Odysseus analyses your entire website: accessibility, search and JavaScript rendering,
+              performance, security headers and technical signals for AI assistants. You receive a
+              report you can act on immediately: every detected issue is located, documented,
+              prioritised and accompanied by a recommended fix.
             </p>
 
             <Reveal className="mt-8">

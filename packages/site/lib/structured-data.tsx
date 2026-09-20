@@ -14,7 +14,7 @@
 const SITE_URL = 'https://www.odysseusaudit.com';
 const SITE_NAME = 'Odysseus';
 const SITE_DESCRIPTION =
-  'Diagnostic technique de site web : accessibilité, référencement, rendu JavaScript, performance et signaux pour assistants IA.';
+  'Diagnostic technique de site web avec préconisations : accessibilité, référencement, rendu JavaScript, performance et signaux pour assistants IA.';
 const CONTACT_EMAIL = 'contact@odysseusaudit.fr';
 
 export function organizationJsonLd(): Record<string, unknown> {

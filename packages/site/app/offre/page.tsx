@@ -5,10 +5,10 @@ import { Reveal } from '../../lib/reveal';
 import { Steps, type Step } from '../../lib/steps';
 
 const description =
-  'Les contrôles réalisés, le contenu du rapport, le délai et le tarif fixe de 990 € HT du diagnostic technique Odysseus.';
+  'Les contrôles réalisés, les préconisations, le contenu du rapport, le délai et le tarif fixe de 990 € HT du diagnostic Odysseus.';
 
 export const metadata: Metadata = {
-  title: 'Le diagnostic technique Odysseus',
+  title: 'Le diagnostic Odysseus avec préconisations',
   description,
   alternates: { canonical: '/offre' },
   openGraph: {
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     siteName: 'Odysseus',
     locale: 'fr_FR',
     url: '/offre',
-    title: 'Le diagnostic technique Odysseus',
+    title: 'Le diagnostic Odysseus avec préconisations',
     description,
   },
 };
@@ -57,8 +57,8 @@ export default function OfferPage() {
       <section className="shell hero pb-0">
         <PageHeading
           className="title measure"
-          fr="Le diagnostic technique Odysseus"
-          en="The Odysseus technical diagnostic"
+          fr="Le diagnostic Odysseus avec préconisations"
+          en="The Odysseus diagnostic with recommendations"
         />
       </section>
       <LanguageSection lang="fr">

@@ -15,7 +15,7 @@ const BASE_URL = 'https://www.odysseusaudit.com';
 
 const CONTENT = `# Odysseus
 
-> Diagnostic technique de site web pour petites et moyennes entreprises françaises : accessibilité, référencement, rendu JavaScript, performance et signaux techniques liés aux assistants IA. Tarif fixe 990 € HT.
+> Diagnostic technique de site web avec préconisations pour petites et moyennes entreprises françaises : accessibilité, référencement, rendu JavaScript, performance et signaux techniques liés aux assistants IA. Tarif fixe 990 € HT.
 
 Odysseus analyse un site avec des outils de mesure automatisés (crawl, comparaison HTML initial / rendu JavaScript, axe-core, Lighthouse) et produit un rapport priorisé. Ce n'est pas un audit RGAA et le rapport ne se prononce pas sur les obligations juridiques du client.
 

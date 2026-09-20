@@ -33,12 +33,12 @@ const avenirNext = localFont({
 // the approved "signaux techniques liés aux assistants IA" and "tarif
 // fixe" wording (see lib/marketing-copy.test.ts).
 const description =
-  'Diagnostic technique de site : accessibilité, référencement, rendu JavaScript, performance, signaux techniques liés aux assistants IA, tarif fixe 990 € HT.';
+  'Diagnostic technique avec préconisations : accessibilité, référencement, rendu JavaScript, performance, signaux techniques liés aux assistants IA, tarif fixe 990 € HT.';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.odysseusaudit.com'),
   title: {
-    default: 'Odysseus, diagnostic technique de site web',
+    default: 'Odysseus, diagnostic technique avec préconisations',
     template: '%s | Odysseus',
   },
   description,
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     siteName: 'Odysseus',
     locale: 'fr_FR',
     url: '/',
-    title: 'Odysseus, diagnostic technique de site web',
+    title: 'Odysseus, diagnostic technique avec préconisations',
     description,
   },
   twitter: { card: 'summary' },

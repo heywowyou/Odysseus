@@ -15,7 +15,7 @@ const LABELS = {
     optOut: 'Ne plus être contacté',
     accessibility: "Démarche d'accessibilité",
     tagline:
-      'Diagnostic technique de sites web\u00a0: accessibilité, référencement naturel, rendu JavaScript, performance et signaux techniques liés aux assistants IA.',
+      'Diagnostic technique de sites web avec préconisations\u00a0: accessibilité, référencement naturel, rendu JavaScript, performance et signaux techniques liés aux assistants IA.',
   },
   en: {
     skip: 'Skip to content',
@@ -28,7 +28,7 @@ const LABELS = {
     optOut: 'Opt out',
     accessibility: 'Accessibility approach',
     tagline:
-      'Technical website diagnostic: accessibility, search, JavaScript rendering, performance and technical signals for AI assistants.',
+      'Technical website diagnostic with recommendations: accessibility, search, JavaScript rendering, performance and technical signals for AI assistants.',
   },
 } as const;
 

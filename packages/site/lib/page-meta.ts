@@ -8,31 +8,31 @@ export const PAGE_META: Record<
 > = {
   '/': {
     fr: {
-      title: 'Odysseus, diagnostic technique de site web',
+      title: 'Odysseus, diagnostic technique avec préconisations',
       // Issue #213 item 5: trimmed from 198 to 157 characters so search
       // engines are much less likely to truncate it mid-sentence, while
       // keeping the approved "signaux techniques liés aux assistants IA"
       // and "tarif fixe" wording (see lib/marketing-copy.test.ts). Must
       // match app/layout.tsx's FR description exactly.
       description:
-        'Diagnostic technique de site : accessibilité, référencement, rendu JavaScript, performance, signaux techniques liés aux assistants IA, tarif fixe 990 € HT.',
+        'Diagnostic technique avec préconisations : accessibilité, référencement, rendu JavaScript, performance, signaux techniques liés aux assistants IA, tarif fixe 990 € HT.',
     },
     en: {
-      title: 'Odysseus, technical website diagnostic',
+      title: 'Odysseus, technical diagnostic with recommendations',
       description:
-        'Technical website diagnostic: accessibility, search, JavaScript rendering, performance and AI-assistant signals. Prioritised report, EUR 990 excl. VAT.',
+        'Technical diagnostic with recommendations: accessibility, search, JavaScript rendering, performance and AI-assistant signals. Prioritised report, EUR 990 excl. VAT.',
     },
   },
   '/offre': {
     fr: {
-      title: 'Le diagnostic technique Odysseus | Odysseus',
+      title: 'Le diagnostic Odysseus avec préconisations | Odysseus',
       description:
-        'Les contrôles réalisés, le contenu du rapport, le délai et le tarif fixe de 990 € HT du diagnostic technique Odysseus.',
+        'Les contrôles réalisés, les préconisations, le contenu du rapport, le délai et le tarif fixe de 990 € HT du diagnostic Odysseus.',
     },
     en: {
-      title: 'The Odysseus technical diagnostic | Odysseus',
+      title: 'The Odysseus diagnostic with recommendations | Odysseus',
       description:
-        'The checks performed, report contents, delivery process and fixed EUR 990 excl. VAT price of the Odysseus technical diagnostic.',
+        'The checks performed, recommendations, report contents, delivery process and fixed EUR 990 excl. VAT price of the Odysseus diagnostic.',
     },
   },
   '/bot': {
