@@ -105,7 +105,7 @@ async function paginate(
   return { page, pageCount, consoleErrors };
 }
 
-async function buildStressHtml(): Promise<string> {
+async function buildStressHtml(theme: 'dark' | 'light' = 'dark'): Promise<string> {
   const { manifest, findings, analysis } = buildStressFixture();
   const { pages: renderDiffEvidencePages, totalEligible } = resolveRenderDiffEvidence(
     manifest,
@@ -115,6 +115,7 @@ async function buildStressHtml(): Promise<string> {
     manifest,
     findings,
     analysis,
+    theme,
     renderDiffEvidencePages,
     renderDiffTotalEligible: totalEligible,
   });
@@ -337,9 +338,13 @@ afterAll(async () => {
 describe('Paged.js invariants against the stress fixture (docs/report/report-design-system.md section 4)', () => {
   let doc: PaginatedDocument;
   let stressHtml: string;
+  let lightStressHtml: string;
 
   beforeAll(async () => {
-    stressHtml = await buildStressHtml();
+    [stressHtml, lightStressHtml] = await Promise.all([
+      buildStressHtml('dark'),
+      buildStressHtml('light'),
+    ]);
     doc = await paginate(browser, stressHtml, pagedjsSource);
   }, 60_000);
 
@@ -744,59 +749,70 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
     }
   }, 60_000);
 
-  it('a priority card split across pages reads as one open-ended card with a labelled continuation', async () => {
+  it('a priority card split across pages keeps inner spacing in both themes', async () => {
     const splitRowLabels = new Set<string>();
-    for (const offsetMm of [0, 40, 80, 120, 160]) {
-      const pressured = await paginate(
-        browser,
-        addFirstThemeOffset(addTallActionRowPressure(stressHtml, 30), offsetMm),
-        pagedjsSource,
-      );
-      try {
-        const result = await pressured.page.evaluate(() => {
-          const pseudo = (el: Element) =>
-            getComputedStyle(el, '::before').content.replace(/^"|"$/gu, '');
-          return {
-            openBottoms: Array.from(document.querySelectorAll('.theme-card[data-split-to]')).map(
-              (card) => {
-                const style = getComputedStyle(card);
-                return `${style.borderBottomLeftRadius} ${style.clipPath}`;
-              },
-            ),
-            continuations: Array.from(
-              document.querySelectorAll('.theme-card[data-split-from]'),
-            ).map((card) => {
-              const style = getComputedStyle(card);
-              return {
-                openTop: style.borderTopLeftRadius === '0px' && style.clipPath !== 'none',
-                label: pseudo(card),
-                expected: card.getAttribute('data-continued-label'),
-              };
-            }),
-            rowLabels: Array.from(
-              document.querySelectorAll(
-                '.theme-row[data-split-from], .theme-row-tail[data-split-from]',
+    for (const themeHtml of [stressHtml, lightStressHtml]) {
+      for (const offsetMm of [0, 40, 80, 120, 160]) {
+        const pressured = await paginate(
+          browser,
+          addFirstThemeOffset(addTallActionRowPressure(themeHtml, 30), offsetMm),
+          pagedjsSource,
+        );
+        try {
+          // The delivered artifact is produced by page.pdf(), which applies
+          // print media. Inspect the continuation after that media switch so
+          // a theme-specific print rule cannot hide a spacing regression.
+          await pressured.page.emulateMedia({ media: 'print' });
+          const result = await pressured.page.evaluate(() => {
+            const pseudo = (el: Element) =>
+              getComputedStyle(el, '::before').content.replace(/^"|"$/gu, '');
+            return {
+              openBottoms: Array.from(document.querySelectorAll('.theme-card[data-split-to]')).map(
+                (card) => {
+                  const style = getComputedStyle(card);
+                  return `${style.borderBottomLeftRadius} ${style.clipPath}`;
+                },
               ),
-            ).map((row) => pseudo(row)),
-          };
-        });
-        // No bottom corners, and a clip whose bottom inset reaches below the
-        // box so the surface runs on past the last line instead of stopping
-        // on it (Chromium serializes the inset in its shortest form).
-        for (const openBottom of result.openBottoms) {
-          expect(openBottom).toMatch(/^0px inset\(\S+ -1px -[\d.]+px\)$/u);
+              continuations: Array.from(
+                document.querySelectorAll('.theme-card[data-split-from]'),
+              ).map((card) => {
+                const style = getComputedStyle(card);
+                return {
+                  openTop: style.borderTopLeftRadius === '0px' && style.clipPath !== 'none',
+                  paddingTop: Number.parseFloat(style.paddingTop),
+                  expectedPaddingTop: Number.parseFloat(
+                    getComputedStyle(document.documentElement).getPropertyValue('--space-6').trim(),
+                  ),
+                  label: pseudo(card),
+                  expected: card.getAttribute('data-continued-label'),
+                };
+              }),
+              rowLabels: Array.from(
+                document.querySelectorAll(
+                  '.theme-row[data-split-from], .theme-row-tail[data-split-from]',
+                ),
+              ).map((row) => pseudo(row)),
+            };
+          });
+          // No bottom corners, and a clip whose bottom inset reaches below the
+          // box so the surface runs on past the last line instead of stopping
+          // on it (Chromium serializes the inset in its shortest form).
+          for (const openBottom of result.openBottoms) {
+            expect(openBottom).toMatch(/^0px inset\(\S+ -1px -[\d.]+px\)$/u);
+          }
+          for (const continuation of result.continuations) {
+            expect(continuation.openTop).toBe(true);
+            expect(continuation.paddingTop).toBeCloseTo(continuation.expectedPaddingTop, 1);
+            expect(continuation.label).toBe(continuation.expected);
+            expect(continuation.label).toMatch(/^Priorité \d+ \(suite\)$/u);
+          }
+          for (const label of result.rowLabels) {
+            expect(label).not.toBe('');
+            splitRowLabels.add(label);
+          }
+        } finally {
+          await pressured.page.context().close();
         }
-        for (const continuation of result.continuations) {
-          expect(continuation.openTop).toBe(true);
-          expect(continuation.label).toBe(continuation.expected);
-          expect(continuation.label).toMatch(/^Priorité \d+ \(suite\)$/u);
-        }
-        for (const label of result.rowLabels) {
-          expect(label).not.toBe('');
-          splitRowLabels.add(label);
-        }
-      } finally {
-        await pressured.page.context().close();
       }
     }
     // The sweep must actually exercise a row broken mid-list, or the rail

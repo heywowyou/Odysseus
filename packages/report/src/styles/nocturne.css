@@ -1272,7 +1272,11 @@ textarea.input {
   clip-path: inset(-1px -1px calc(-1 * var(--space-6)) -1px);
 }
 .theme-card[data-split-from] {
-  padding-top: var(--space-6);
+  /* Paged.js starts a continuation fragment at the page-content edge and
+     resets the fragment's inner top spacing. Restore the same cushion before
+     the continued label and text as the card's bottom. !important is required
+     because Paged.js's split reset is more specific than the report rule. */
+  padding-top: var(--space-6) !important;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
   clip-path: inset(0 -1px -1px -1px);

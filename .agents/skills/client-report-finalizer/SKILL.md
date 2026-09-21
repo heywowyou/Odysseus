@@ -404,6 +404,11 @@ when staging.
    file.
 3. Inspect each changed page and its neighbours. If pagination, shared styles,
    fonts, or section order changed, inspect the whole PDF.
+   When the renderer produces a light sibling, repeat the changed-page and
+   neighbour inspection against that light PDF as well. A matching page count
+   or digest metadata is not a substitute for checking its visual continuation
+   geometry: theme-specific print rules and stale light artifacts can hide
+   padding or spacing regressions.
 4. Diff the `pdftotext` output against the previous render.
 5. Update the ledger, marking each issue as open, fixed, intentionally
    unchanged, or blocked.
@@ -453,6 +458,8 @@ READY-FOR-CLIENT requires all of these:
 - [ ] native formal French throughout, with no material repetition, jargon,
       calque, awkward cross-reference, or contradiction;
 - [ ] every page of the final PDF inspected after the last change;
+- [ ] every produced light sibling inspected on the changed pages and
+      neighbours after the last change;
 - [ ] no rendering defect remains;
 - [ ] design system preserved;
 - [ ] all prose corrections live in the bound override file, and its guards
