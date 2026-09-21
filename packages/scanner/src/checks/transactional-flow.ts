@@ -37,6 +37,7 @@ import { checkFetchTarget, type LookupAddresses } from '../address-guard.js';
 import { getCrawlerUserAgent } from '../config.js';
 import { isSocialPlatformHost } from '../social-hosts.js';
 import type { PageWorkGuard } from '../page-work-guard.js';
+import { settleRoute } from '../browser-network-safety.js';
 
 const CHECKOUT_FORM_SELECTOR =
   'form[action*="checkout"], form[action*="panier"], form[action*="cart"], [class*="add-to-cart"], [id*="add-to-cart"]';
@@ -558,8 +559,8 @@ async function inspectDestinationPage(
     // Redirects and subresources go through the same check as the link, so
     // a public booking link cannot bounce the browser to an internal host.
     await context.route('**/*', async (route) => {
-      if (await hostIsAllowed(route.request().url())) await route.continue();
-      else await route.abort('blockedbyclient');
+      if (await hostIsAllowed(route.request().url())) await settleRoute(() => route.continue());
+      else await settleRoute(() => route.abort('blockedbyclient'));
     });
     const destinationPage = await context.newPage();
     await destinationPage.goto(linkUrl, { waitUntil: 'load' });

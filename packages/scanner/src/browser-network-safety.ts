@@ -8,6 +8,24 @@ import {
 export type NetworkSafetyBlockHandler = (disposition: NetworkSafetyDisposition) => void;
 
 /**
+ * Settles a route whose request may already be gone. The handler awaits a
+ * DNS check before deciding, and in that window the page can navigate away,
+ * close, or cancel the request, after which Playwright rejects the call with
+ * "Route is already handled!" or a closed-target error. Playwright does not
+ * catch a route handler's rejection, so left unhandled it took the whole
+ * `odysseus serve` process down, and every audit running in it. Nothing
+ * goes out on the network in that case either way: a request nobody can
+ * continue any more was not continued by us.
+ */
+export async function settleRoute(action: () => Promise<void>): Promise<void> {
+  try {
+    await action();
+  } catch {
+    // The request ended before we could answer it; see the doc comment.
+  }
+}
+
+/**
  * Applies the Plan 059 public-network policy at Chromium's request boundary.
  *
  * Playwright invokes this route for navigation requests, redirects and
@@ -32,22 +50,22 @@ export async function installBrowserNetworkSafety(
         detail: 'browser request url does not parse',
         retryable: false,
       });
-      await route.abort('blockedbyclient');
+      await settleRoute(() => route.abort('blockedbyclient'));
       return;
     }
 
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      await route.continue();
+      await settleRoute(() => route.continue());
       return;
     }
 
     const verdict = await checkNetworkTarget(url, policy);
     if (verdict.kind === 'refused') {
       onBlocked?.(verdict.disposition);
-      await route.abort('blockedbyclient');
+      await settleRoute(() => route.abort('blockedbyclient'));
       return;
     }
 
-    await route.continue();
+    await settleRoute(() => route.continue());
   });
 }
