@@ -7,17 +7,15 @@
  * defect. Runs inside scan-page.ts's existing onRenderedPage hook, no
  * extra page load.
  *
- * Deliberately does not extract facts for whether title/description/
- * canonical are *missing* - Lighthouse's own document-title,
- * meta-description, and canonical audits (seo category, not excluded)
- * already cover the missing case today. Duplicating it here would
- * recreate the exact axe/Lighthouse-accessibility duplicate-finding
- * mistake CLAUDE.md already documents once, just for SEO instead of
- * accessibility. See docs/rules/manual-accessibility-checklist.md
- * for the full Lighthouse-overlap audit this was checked against.
+ * Since trade-off 110 it also reads the facts behind checks that used to
+ * come only from Lighthouse's SEO audits (missing description, link text,
+ * uncrawlable links, noindex from any source), because Lighthouse now runs
+ * on a sample of pages and these are page-content facts every page has.
  */
 
 import type { Page } from 'playwright';
+import type { AnchorFactInput } from '@odysseus/core';
+import { extractFailingAnchors } from './link-facts.js';
 
 export interface JsonLdBlock {
   raw: string;
@@ -69,6 +67,15 @@ export interface HeadMetadataExtraction {
    *  has DOM access, not response headers) - a known, documented
    *  simplification. */
   robotsMeta: string | null;
+  /** Lowercased content of <meta name="googlebot">, or null. */
+  googlebotMeta: string | null;
+  /** The document response's X-Robots-Tag header, or null. Read from the
+   *  raw pass's response and handed in by the caller; absent when the
+   *  caller had no response to read. */
+  xRobotsTag?: string | null;
+  /** Links failing link-text or crawlable-anchors. Absent when reading the
+   *  links failed, so the Lighthouse audits stay in charge of that page. */
+  anchors?: AnchorFactInput[];
 }
 
 /** Pure: JSON.parse each raw block, capturing a parse error rather than
@@ -96,6 +103,7 @@ export function parseJsonLdBlocks(
 export async function extractHeadMetadata(
   page: Page,
   pageUrl: string,
+  options: { xRobotsTag?: string | null } = {},
 ): Promise<HeadMetadataExtraction> {
   const raw = await page.evaluate(() => {
     // The selector expression below is duplicated at each of its two use
@@ -154,12 +162,19 @@ export async function extractHeadMetadata(
       }))
       .filter((link) => link.lang.length > 0 && link.href.length > 0);
 
+    // Every tag, not the first: a page can carry an empty robots tag from
+    // one plugin and a noindex one from another, and search engines honour
+    // the union.
     const robotsMeta =
-      document
-        .querySelector('meta[name="robots"]')
-        ?.getAttribute('content')
-        ?.trim()
-        .toLowerCase() || null;
+      Array.from(document.querySelectorAll('meta[name="robots" i]'))
+        .map((el) => el.getAttribute('content')?.trim().toLowerCase() ?? '')
+        .filter((content) => content.length > 0)
+        .join(', ') || null;
+    const googlebotMeta =
+      Array.from(document.querySelectorAll('meta[name="googlebot" i]'))
+        .map((el) => el.getAttribute('content')?.trim().toLowerCase() ?? '')
+        .filter((content) => content.length > 0)
+        .join(', ') || null;
 
     const htmlLang = document.documentElement.getAttribute('lang')?.trim().toLowerCase() || null;
 
@@ -172,9 +187,15 @@ export async function extractHeadMetadata(
       headings,
       hreflangLinks,
       robotsMeta,
+      googlebotMeta,
       htmlLang,
     };
   });
+
+  // Best effort: without the links the page keeps Lighthouse's link audits
+  // (when it has a Lighthouse run), which is better than failing the whole
+  // head-metadata check over them.
+  const anchors = await extractFailingAnchors(page, pageUrl).catch(() => undefined);
 
   return {
     pageUrl,
@@ -186,6 +207,9 @@ export async function extractHeadMetadata(
     headings: raw.headings,
     hreflangLinks: raw.hreflangLinks,
     robotsMeta: raw.robotsMeta,
+    googlebotMeta: raw.googlebotMeta,
     htmlLang: raw.htmlLang,
+    ...(options.xRobotsTag !== undefined ? { xRobotsTag: options.xRobotsTag } : {}),
+    ...(anchors !== undefined ? { anchors } : {}),
   };
 }

@@ -88,6 +88,11 @@ export interface RenderDiffOptions {
   /** Plan 059: receives the served markup the raw pass read, for the page's
    *  structural temporal anchor. */
   onRawDocument?: (html: string) => void;
+  /** Trade-off 110: receives the raw pass's X-Robots-Tag response header
+   *  (null when the response had none), for the head-metadata noindex
+   *  check. The rendered pass's own response is not reused because it is
+   *  not kept past its readiness observation. */
+  onRawRobotsHeader?: (value: string | null) => void;
 }
 
 /**
@@ -149,6 +154,9 @@ export async function renderDiff(
     rawTextLength = extractTextFromHtml(rawHtml).length;
     rawDocument = analyzeRawDocument(rawHtml);
     options.onRawDocument?.(rawHtml);
+    if (options.onRawRobotsHeader !== undefined) {
+      options.onRawRobotsHeader(await rawResponse.headerValue('x-robots-tag'));
+    }
 
     if (options.beforeRenderedNavigation !== undefined) {
       await options.beforeRenderedNavigation();

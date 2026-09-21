@@ -122,6 +122,12 @@ export const LIGHTHOUSE_EXCLUDED_CATEGORIES = ['accessibility', 'best-practices'
  * Only add an ID here once overlap with a specific other rule, or
  * deprecation, is confirmed against real scanner output, not on
  * suspicion.
+ *
+ * meta-description, link-text, crawlable-anchors and is-crawlable are not
+ * here although head-metadata now reports them on every page (trade-off
+ * 110): they are dropped per page, only where the replacing fact was
+ * extracted, so stored scans without those facts keep their findings. See
+ * lighthouseAuditsCoveredByHeadMetadata.
  */
 export const LIGHTHOUSE_EXCLUDED_AUDITS = [
   'image-alt',

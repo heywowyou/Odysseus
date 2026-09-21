@@ -435,6 +435,7 @@ export async function runRenderedAnalysis(
   let transactionalFlowAmbiguities: TransactionalFlowAmbiguity[] | undefined;
   let headMetadataResult: HeadMetadataExtraction | undefined;
   let headMetadataError: string | undefined;
+  let rawXRobotsTag: string | null | undefined;
   let roleContactResult: PublishedRoleContact | undefined;
   let canonicalTargetResult: CanonicalTargetCheckResult | undefined;
   let mixedContentResult: MixedContentExtraction | undefined;
@@ -485,6 +486,9 @@ export async function runRenderedAnalysis(
       },
       onRawDocument: (html) => {
         result.structuralAnchor = extractStructuralAnchor(html, url, new Date());
+      },
+      onRawRobotsHeader: (value) => {
+        rawXRobotsTag = value;
       },
       onRenderedPageCreated: async (page) => {
         // Must be attached before navigation - see
@@ -589,7 +593,9 @@ export async function runRenderedAnalysis(
         }
 
         try {
-          headMetadataResult = await extractHeadMetadata(page, url);
+          headMetadataResult = await extractHeadMetadata(page, url, {
+            ...(rawXRobotsTag !== undefined ? { xRobotsTag: rawXRobotsTag } : {}),
+          });
           checkOutcomes['head-metadata'] = 'completed';
         } catch (error) {
           headMetadataError = toErrorMessage(error);

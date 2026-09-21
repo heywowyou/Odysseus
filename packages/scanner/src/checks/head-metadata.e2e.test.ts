@@ -174,4 +174,52 @@ describe('extractHeadMetadata against real pages', () => {
 
     expect(result.htmlLang).toBeNull();
   });
+
+  it('reads every robots and googlebot tag, not only the first', async () => {
+    const html = `<head>
+      <meta name="robots" content="" />
+      <meta name="Robots" content="noindex" />
+      <meta name="googlebot" content="none" />
+    </head><body></body>`;
+
+    const result = await extractFromHtml(html);
+
+    expect(result.robotsMeta).toBe('noindex');
+    expect(result.googlebotMeta).toBe('none');
+  });
+
+  /** Trade-off 110: the links behind link-text and crawlable-anchors, read
+   *  on every page. Only failing links are kept, and an href-less link
+   *  counts as uncrawlable only when script listens on it, which only the
+   *  DevTools protocol can tell. */
+  it('keeps only the links that fail link-text or crawlable-anchors', async () => {
+    const html = `<html lang="en"><head><title>Links</title></head><body>
+      <a id="good" href="/suite">Junior suite with sea view</a>
+      <a id="generic" href="/spa">Read more</a>
+      <a id="void" href="javascript:void(0)">Book</a>
+      <a class="scripted">Open menu</a>
+      <a class="placeholder">Not a link yet</a>
+      <a id="jump" href="#top">here</a>
+      <script>document.querySelector('.scripted').addEventListener('click', () => {});</script>
+    </body></html>`;
+
+    const result = await extractFromHtml(html);
+    const bySnippet = (result.anchors ?? []).map((anchor) => anchor.snippet);
+
+    expect(bySnippet).toEqual([
+      '<a id="generic" href="/spa">',
+      '<a id="void" href="javascript:void(0)">',
+      '<a class="scripted">',
+    ]);
+    const scripted = result.anchors?.find((anchor) => anchor.snippet === '<a class="scripted">');
+    expect(scripted?.hasEventListener).toBe(true);
+    expect(scripted?.selector).toBe('body:nth-child(2) > a:nth-child(4)');
+    expect(result.anchors?.[0]?.textLang).toBe('en');
+  });
+
+  it('records no links rather than failing when a page has none', async () => {
+    const result = await extractFromHtml('<head><title>Empty</title></head><body></body>');
+
+    expect(result.anchors).toEqual([]);
+  });
 });

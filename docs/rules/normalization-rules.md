@@ -130,6 +130,14 @@ Lighthouse once. A repeated high-confidence listing family is content-checked
 on every member but does not run Lighthouse unless another mandatory-selection
 rule also selects a given member.
 
+Because Lighthouse is sampled, no page-content defect may depend on it. The
+missing meta description, non-descriptive link text, uncrawlable link and
+noindex checks run on every content-checked page inside head-metadata, and
+Lighthouse's `meta-description`, `link-text`, `crawlable-anchors` and
+`is-crawlable` findings are dropped on any page where the replacing fact was
+extracted (trade-off 110). Lighthouse keeps only what needs its throttled
+navigation: lab metrics and the performance audits.
+
 **Page-status vocabulary**, matching CLAUDE.md rule 5's coverage glossary:
 
 - **inventoried URL**: successfully navigated, or explicitly recorded with a

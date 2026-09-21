@@ -94,6 +94,11 @@ export * from './normalize/normalize-video-captions.js';
 export * from './normalize/normalize-placeholder-labels.js';
 export * from './normalize/normalize-alt-text.js';
 export { languagePrefixOf } from './normalize/normalize-hreflang.js';
+export {
+  hasNonDescriptiveLinkText,
+  isUncrawlableAnchor,
+  type AnchorFactInput,
+} from './normalize/normalize-links.js';
 
 // Report preparation, plan 019: bounded personalization vocabularies,
 // evidence-bound journeys, warning digest, and analysis-pair selection

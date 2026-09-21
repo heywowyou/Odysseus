@@ -48,6 +48,7 @@ import { extractRenderDiffCandidates, unusableRawFetches } from './normalize-ren
 import { extractCustomCandidates, type MentionsLegalesCheckInput } from './normalize-custom.js';
 import {
   extractHeadMetadataCandidates,
+  lighthouseAuditsCoveredByHeadMetadata,
   type HeadMetadataCheckInput,
 } from './normalize-head-metadata.js';
 import { extractSitemapCandidates, type SitemapCheckInput } from './normalize-sitemap.js';
@@ -271,13 +272,16 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
     if (contentExcludedUrls.has(page.url)) continue;
     if (page.axe) candidates.push(...extractAxeCandidates(page.axe, page.url));
     if (page.lighthouse) {
+      // Trade-off 110: audits the head-metadata check already answered on
+      // this page are reported from there, on every page, not from here.
+      const coveredAudits = lighthouseAuditsCoveredByHeadMetadata(page.headMetadata);
       candidates.push(
         ...extractLighthouseCandidates(
           page.lighthouse,
           page.url,
           supersededAudits,
           goodFieldMetricKeys,
-        ),
+        ).filter((candidate) => !coveredAudits.has(candidate.ruleId)),
       );
     }
     if (page.renderDiff) {

@@ -1,4 +1,6 @@
 import { existsSync, promises as fs } from 'node:fs';
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, afterEach, beforeAll, describe, expect, inject, it } from 'vitest';
@@ -39,5 +41,28 @@ describe('renderDiff against fixtures/spa-demo', () => {
     expect(path.isAbsolute(result.renderedScreenshotRef!)).toBe(true);
     expect(existsSync(result.rawScreenshotRef!)).toBe(true);
     expect(existsSync(result.renderedScreenshotRef!)).toBe(true);
+  }, 45_000);
+
+  /** Trade-off 110: the head-metadata noindex check reads X-Robots-Tag
+   *  from the raw pass's response. */
+  it('hands the raw response X-Robots-Tag header to its hook', async () => {
+    scratchScreenshotDir = await fs.mkdtemp(path.join(os.tmpdir(), 'odysseus-render-diff-'));
+    const server = createServer((_req, res) => {
+      res
+        .writeHead(200, { 'content-type': 'text/html', 'x-robots-tag': 'noindex, nofollow' })
+        .end('<p>Hidden page</p>');
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address() as AddressInfo;
+    const seen: Array<string | null> = [];
+    try {
+      await renderDiff(browser, `http://127.0.0.1:${port}/`, {
+        screenshotDir: scratchScreenshotDir,
+        onRawRobotsHeader: (value) => seen.push(value),
+      });
+    } finally {
+      server.close();
+    }
+    expect(seen).toEqual(['noindex, nofollow']);
   }, 45_000);
 });

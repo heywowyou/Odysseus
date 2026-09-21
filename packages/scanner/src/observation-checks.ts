@@ -42,6 +42,8 @@ const CUSTOM_RULE_CHECKS: Readonly<Record<string, string>> = {
   'multiple-h1': 'head-metadata',
   'no-h1': 'head-metadata',
   'opengraph-missing': 'head-metadata',
+  'link-text': 'head-metadata',
+  'crawlable-anchors': 'head-metadata',
   'structured-data-entity-missing': 'head-metadata',
   'entity-data-incomplete': 'head-metadata',
   'faq-content-without-schema': 'head-metadata',

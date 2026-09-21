@@ -119,6 +119,13 @@ export const CUSTOM_CHECK_SEVERITY: Record<string, Severity> = {
   // Social
   'opengraph-missing': 'minor',
 
+  // Links (trade-off 110). Moved from Lighthouse's link-text and
+  // crawlable-anchors audits, which carry weight 1 in its SEO category and so
+  // were capped at moderate by severityFromLighthouse. Kept at moderate so
+  // the move changes where the defect is found, not how loud it is.
+  'link-text': 'moderate',
+  'crawlable-anchors': 'moderate',
+
   // Assets
   'image-oversized': 'moderate',
   'image-legacy-format': 'minor',

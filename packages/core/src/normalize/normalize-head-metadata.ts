@@ -8,17 +8,21 @@
  * performance categories (not excluded, unlike accessibility/best-
  * practices) do not already cover them - confirmed against a real
  * haaitza.com Lighthouse result during the build session, recorded in
- * docs/rules/manual-accessibility-checklist.md. Missing title,
- * missing description, and missing canonical are deliberately NOT
- * checked here: Lighthouse's document-title, meta-description, and
- * canonical audits already flag those, and duplicating them would
- * recreate the exact axe/Lighthouse-accessibility duplicate-finding
- * mistake CLAUDE.md documents once already, just for SEO instead of
- * accessibility.
+ * docs/rules/manual-accessibility-checklist.md. Missing title is
+ * deliberately NOT checked here: axe's document-title rule already flags
+ * it on every page (constants.ts, LIGHTHOUSE_EXCLUDED_AUDITS).
+ *
+ * Missing description, non-descriptive link text, uncrawlable links and a
+ * noindex directive used to be left to Lighthouse's own SEO audits. Since
+ * Lighthouse only runs on a sample of pages (trade-off 109), those are
+ * checked here on every page instead, and
+ * lighthouseAuditsCoveredByHeadMetadata tells normalize.ts which
+ * Lighthouse audits to drop on a page this check covered (trade-off 110).
  */
 
 import { LEGAL_PATH_PATTERN } from '../urls.js';
 import type { FindingCandidate } from './candidate.js';
+import { extractLinkCandidates, type AnchorFactInput } from './normalize-links.js';
 import { severityFromCustom } from './severity.js';
 
 export interface JsonLdBlockInput {
@@ -49,6 +53,16 @@ export interface HeadMetadataCheckInput {
   headings: HeadingInput[];
   hreflangLinks: HreflangLinkInput[];
   robotsMeta: string | null;
+  /** Lowercased content of <meta name="googlebot">, or null. Absent on
+   *  scans made before trade-off 110, like the two fields below. */
+  googlebotMeta?: string | null;
+  /** The document response's X-Robots-Tag header, or null when it sent
+   *  none. Absent (undefined) means it was never read, not that it was
+   *  empty. */
+  xRobotsTag?: string | null;
+  /** Links that fail link-text or crawlable-anchors, or undefined when the
+   *  link extraction did not run on this page. */
+  anchors?: AnchorFactInput[];
 }
 
 export const META_TITLE_LENGTH_RULE_ID = 'meta-title-length';
@@ -62,6 +76,62 @@ export const MULTIPLE_H1_RULE_ID = 'multiple-h1';
 export const NO_H1_RULE_ID = 'no-h1';
 export const OPENGRAPH_MISSING_RULE_ID = 'opengraph-missing';
 export const NOINDEX_ON_PUBLIC_PAGE_RULE_ID = 'noindex-on-public-page';
+export const META_DESCRIPTION_MISSING_RULE_ID = 'meta-description-missing';
+
+/** Directives that are themselves `name: value`, so their colon never
+ *  names a user agent in an X-Robots-Tag header. */
+const COLON_DIRECTIVES = new Set([
+  'unavailable_after',
+  'max-snippet',
+  'max-image-preview',
+  'max-video-preview',
+]);
+
+/** Whether an X-Robots-Tag value keeps the page out of Google's index.
+ *  A value may be scoped to one crawler (`otherbot: noindex`), and a scope
+ *  lasts until the next one; only unscoped and googlebot directives count,
+ *  which is how Lighthouse's is-crawlable audit reads it. */
+function headerBlocksIndexing(header: string): boolean {
+  let agent: string | null = null;
+  for (const part of header.toLowerCase().split(',')) {
+    let directive = part.trim();
+    const scoped = /^([a-z0-9_-]+)\s*:\s*(.*)$/.exec(directive);
+    if (scoped && !COLON_DIRECTIVES.has(scoped[1]!)) {
+      agent = scoped[1]!;
+      directive = scoped[2]!.trim();
+    }
+    if (agent !== null && agent !== 'googlebot') continue;
+    if (directive === 'noindex' || directive === 'none') return true;
+  }
+  return false;
+}
+
+function metaBlocksIndexing(content: string | null | undefined): boolean {
+  return (content ?? '')
+    .split(',')
+    .map((directive) => directive.trim())
+    .some((directive) => directive === 'noindex' || directive === 'none');
+}
+
+/**
+ * Lighthouse audits this page's head-metadata extraction already answers,
+ * so normalize.ts drops Lighthouse's finding for them on this page rather
+ * than reporting the same defect twice. Each audit is only claimed when the
+ * field that replaces it was actually extracted: a scan stored before
+ * trade-off 110 keeps its Lighthouse findings.
+ */
+export function lighthouseAuditsCoveredByHeadMetadata(
+  input: HeadMetadataCheckInput | undefined,
+): ReadonlySet<string> {
+  if (input === undefined) return new Set();
+  const covered = new Set(['meta-description']);
+  if (input.xRobotsTag !== undefined) covered.add('is-crawlable');
+  if (input.anchors !== undefined) {
+    covered.add('link-text');
+    covered.add('crawlable-anchors');
+  }
+  return covered;
+}
 
 /** Common SERP-display guidance (Google truncates around 50-60 chars for
  *  titles, ~155-160 for descriptions); a title/description far outside
@@ -134,7 +204,20 @@ export function extractHeadMetadataCandidates(input: HeadMetadataCheckInput): Fi
     }
   }
 
-  if (input.metaDescription !== null) {
+  if (input.metaDescription === null) {
+    candidates.push(
+      pageCandidate(
+        META_DESCRIPTION_MISSING_RULE_ID,
+        'seo',
+        [],
+        'The page has no meta description',
+        'This page has no meta description, or an empty one. Search engines then write their own snippet from page content, which is often less relevant to the search.',
+        pageUrl,
+        null,
+        {},
+      ),
+    );
+  } else {
     const length = input.metaDescription.length;
     if (length < DESCRIPTION_MIN_LENGTH || length > DESCRIPTION_MAX_LENGTH) {
       candidates.push(
@@ -294,30 +377,45 @@ export function extractHeadMetadataCandidates(input: HeadMetadataCheckInput): Fi
     );
   }
 
-  // Lighthouse's own is-crawlable audit (seo category, not excluded)
-  // already flags a noindex directive on any page it scans - including
-  // pages where that is intentional (the mentions-legales/legal-page
-  // pattern), which is exactly the kind of false alarm CLAUDE.md's
-  // diversion rule exists to prevent for other findings. This check
-  // reuses the same shared LEGAL_PATH_PATTERN mentions-legales.ts and
-  // packages/llm's diversion logic already agree on, rather than
-  // inventing a second, potentially-drifting definition of "this looks
-  // like a legal page" - so a page is only flagged here when its own
-  // noindex is genuinely unexpected, not merely present.
-  if (input.robotsMeta?.includes('noindex') && !LEGAL_PATH_PATTERN.test(pageUrl)) {
+  // A noindex directive on a legal page (mentions légales, CGU/CGV,
+  // cookies, privacy) is usually deliberate, and Lighthouse's is-crawlable
+  // audit flagged those as defects too. This check reuses the shared
+  // LEGAL_PATH_PATTERN mentions-legales.ts and packages/llm's diversion
+  // logic already agree on, rather than inventing a second, potentially
+  // drifting definition of "this looks like a legal page", so a page is
+  // only flagged when its own noindex is genuinely unexpected.
+  const noindexSources = [
+    ...(metaBlocksIndexing(input.robotsMeta)
+      ? [`<meta name="robots" content="${input.robotsMeta}">`]
+      : []),
+    ...(metaBlocksIndexing(input.googlebotMeta)
+      ? [`<meta name="googlebot" content="${input.googlebotMeta}">`]
+      : []),
+    ...(input.xRobotsTag && headerBlocksIndexing(input.xRobotsTag)
+      ? [`X-Robots-Tag: ${input.xRobotsTag}`]
+      : []),
+  ];
+  if (noindexSources.length > 0 && !LEGAL_PATH_PATTERN.test(pageUrl)) {
     candidates.push(
       pageCandidate(
         NOINDEX_ON_PUBLIC_PAGE_RULE_ID,
         'seo',
         [],
         'A public page is excluded from search results',
-        `This page's <meta name="robots"> tag includes "noindex" ("${input.robotsMeta}"), and its URL does not match the pattern this tool treats as an intentionally-excluded legal page (mentions légales, CGU/CGV, cookies, privacy policy). If this exclusion was not deliberate, the page cannot appear in search results at all.`,
+        `This page asks search engines not to index it (${noindexSources.join('; ')}), and its URL does not match the pattern this tool treats as an intentionally-excluded legal page (mentions légales, CGU/CGV, cookies, privacy policy). If this exclusion was not deliberate, the page cannot appear in search results at all.`,
         pageUrl,
         null,
-        { robotsMeta: input.robotsMeta },
+        {
+          robotsMeta: input.robotsMeta,
+          ...(input.googlebotMeta !== undefined ? { googlebotMeta: input.googlebotMeta } : {}),
+          ...(input.xRobotsTag !== undefined ? { xRobotsTag: input.xRobotsTag } : {}),
+        },
       ),
     );
   }
+
+  if (input.anchors !== undefined)
+    candidates.push(...extractLinkCandidates(input.anchors, pageUrl));
 
   return candidates;
 }

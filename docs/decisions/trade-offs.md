@@ -5666,3 +5666,54 @@ signals (the replay showed signal-free pages are the majority on several
 sites); and lowering the per-page run count instead of the page count
 (section 12's three-run rule for the homepage and real transactional pages is
 worth its cost once it applies to those pages only).
+
+### 110. Page-content SEO checks move out of sampled Lighthouse (2026-09-22)
+
+Planner v2 (entry 109) made Lighthouse a sample: two representatives per
+repeated template family. That is sound for lab metrics, which a template
+determines, but four Lighthouse SEO audits are page-content checks that the
+sample silently narrowed. Measured over 180 pages in 24 multi-member
+families from the probe scans: `link-text` failed on 44 pages and the
+representatives showed 3, `meta-description` 28 and 13, `crawlable-anchors`
+21 and 7. A missing description on an unsampled blog post is as real as one
+on a sampled one.
+
+Decision: head-metadata, which already runs on every content-checked page,
+now also reports:
+
+- `meta-description-missing` (the rule id reserved since milestone 8, with
+  its existing copy and its existing `serious` tier, where Lighthouse's
+  weight-1 audit had capped the same defect at moderate);
+- `link-text` and `crawlable-anchors`, keeping Lighthouse's rule ids so the
+  French and English copy, remediation and proof-card wording carry over.
+  `normalize-links.ts` reproduces Lighthouse 13's predicates, including its
+  per-language generic-text lists and its event-listener test for an `<a>`
+  without an href (read through the DevTools protocol, like Lighthouse). Kept
+  at moderate, Lighthouse's effective severity;
+- `noindex-on-public-page` now also reads `<meta name="googlebot">`, every
+  robots meta tag (not only the first), the `none` directive and the
+  document's `X-Robots-Tag` header (with crawler scoping), so it covers what
+  `is-crawlable` covered apart from the legal pages it deliberately exempts.
+
+`normalize.ts` drops Lighthouse's copy of each audit on a page only when the
+replacing fact was extracted there (`lighthouseAuditsCoveredByHeadMetadata`),
+so audits stored before this change keep their Lighthouse link and
+indexability findings when re-normalized, and a page whose link extraction
+failed falls back to Lighthouse where it ran.
+
+Parity was checked live against 40 pages of already-audited hotels where
+Lighthouse had failed these audits (and clean controls): identical counts on
+every page for meta description and uncrawlable links (18 pages of
+script-driven href-less links included), and for link text on every page
+whose content had not changed since the audit.
+
+Deliberately not widened: Lighthouse's generic-text list has no French entry,
+so "En savoir plus" is never flagged, on French pages or here. Adding a French
+list would put a new finding on most French hotel sites and is a product
+choice to make on purpose, not a side effect of moving the check.
+
+Rejected: forcing Lighthouse on every page again (entry 109's cost); adding
+the audit ids to `LIGHTHOUSE_EXCLUDED_AUDITS` unconditionally (would erase the
+findings of every stored audit on re-normalization, since those scans lack the
+new facts).
+

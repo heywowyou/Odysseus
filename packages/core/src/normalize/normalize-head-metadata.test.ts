@@ -12,6 +12,8 @@ import {
   NO_H1_RULE_ID,
   OPENGRAPH_MISSING_RULE_ID,
   NOINDEX_ON_PUBLIC_PAGE_RULE_ID,
+  META_DESCRIPTION_MISSING_RULE_ID,
+  lighthouseAuditsCoveredByHeadMetadata,
   type HeadMetadataCheckInput,
 } from './normalize-head-metadata.js';
 
@@ -51,20 +53,11 @@ describe('extractHeadMetadataCandidates - clean page regression', () => {
     expect(extractHeadMetadataCandidates(baseInput())).toEqual([]);
   });
 
-  // Narrowed 2026-08-24. This case used to include canonicalUrls: [] and
-  // assert nothing was emitted, on the stated reasoning that Lighthouse
-  // covers a missing canonical too. Checked against Lighthouse 12.8.2's own
-  // source rather than assumed: core/audits/seo/canonical.js returns
-  // `notApplicable: true` when canonicalURLs.length === 0, so it reports an
-  // invalid canonical and stays silent on an absent one. Title and
-  // description genuinely are covered - `document-title` and
-  // `meta-description` both appear in real audit output - so those two stay
-  // asserted here and deliberately have no emitter of ours.
-  it('emits nothing for missing title/description (Lighthouse already covers those)', () => {
-    const candidates = extractHeadMetadataCandidates(
-      baseInput({ title: null, metaDescription: null }),
-    );
-    expect(candidates).toEqual([]);
+  // A missing title stays axe's (document-title). A missing description
+  // was left to Lighthouse until it started running on a sample of pages
+  // (trade-off 110), so it is reported here now.
+  it('emits nothing for a missing title, which axe reports', () => {
+    expect(extractHeadMetadataCandidates(baseInput({ title: null }))).toEqual([]);
   });
 });
 
@@ -277,6 +270,73 @@ describe('noindex-on-public-page', () => {
       baseInput({ pageUrl: 'https://example.com/mentions-legales', robotsMeta: 'noindex' }),
     );
     expect(candidates).toEqual([]);
+  });
+
+  it('fires on noindex from a googlebot meta tag', () => {
+    const candidates = extractHeadMetadataCandidates(baseInput({ googlebotMeta: 'noindex' }));
+    expect(ruleIds(candidates)).toEqual([NOINDEX_ON_PUBLIC_PAGE_RULE_ID]);
+  });
+
+  it('treats the none directive as noindex', () => {
+    const candidates = extractHeadMetadataCandidates(baseInput({ robotsMeta: 'none' }));
+    expect(ruleIds(candidates)).toEqual([NOINDEX_ON_PUBLIC_PAGE_RULE_ID]);
+  });
+
+  it('does not mistake a directive that merely contains noindex', () => {
+    expect(extractHeadMetadataCandidates(baseInput({ robotsMeta: 'noindexfoo' }))).toEqual([]);
+  });
+
+  it('fires on noindex from the X-Robots-Tag header and names the header', () => {
+    const candidates = extractHeadMetadataCandidates(
+      baseInput({ xRobotsTag: 'noindex, nofollow' }),
+    );
+    expect(ruleIds(candidates)).toEqual([NOINDEX_ON_PUBLIC_PAGE_RULE_ID]);
+    expect(candidates[0]?.description).toContain('X-Robots-Tag: noindex, nofollow');
+  });
+
+  it('honours a header scoped to googlebot and ignores one scoped to another crawler', () => {
+    expect(
+      ruleIds(extractHeadMetadataCandidates(baseInput({ xRobotsTag: 'googlebot: noindex' }))),
+    ).toEqual([NOINDEX_ON_PUBLIC_PAGE_RULE_ID]);
+    expect(
+      extractHeadMetadataCandidates(baseInput({ xRobotsTag: 'otherbot: noindex, nofollow' })),
+    ).toEqual([]);
+  });
+
+  it('does not read a colon directive as a crawler scope', () => {
+    expect(
+      extractHeadMetadataCandidates(baseInput({ xRobotsTag: 'max-snippet: 50, index' })),
+    ).toEqual([]);
+  });
+});
+
+describe('meta-description-missing', () => {
+  it('fires when the page has no meta description', () => {
+    const candidates = extractHeadMetadataCandidates(baseInput({ metaDescription: null }));
+    expect(ruleIds(candidates)).toEqual([META_DESCRIPTION_MISSING_RULE_ID]);
+    expect(candidates[0]?.category).toBe('seo');
+  });
+});
+
+describe('lighthouseAuditsCoveredByHeadMetadata', () => {
+  it('claims nothing for a page without head metadata', () => {
+    expect([...lighthouseAuditsCoveredByHeadMetadata(undefined)]).toEqual([]);
+  });
+
+  it('claims only the description audit for a scan stored before the link and header facts', () => {
+    expect([...lighthouseAuditsCoveredByHeadMetadata(baseInput())]).toEqual(['meta-description']);
+  });
+
+  it('claims the link and indexability audits once their facts were extracted', () => {
+    const covered = lighthouseAuditsCoveredByHeadMetadata(
+      baseInput({ xRobotsTag: null, anchors: [] }),
+    );
+    expect([...covered].sort()).toEqual([
+      'crawlable-anchors',
+      'is-crawlable',
+      'link-text',
+      'meta-description',
+    ]);
   });
 });
 

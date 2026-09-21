@@ -4,6 +4,8 @@ import {
   buildAxeNode,
   buildAxeResultsInput,
   buildAxeViolation,
+  buildLighthouseAudit,
+  buildLighthouseResultInput,
   buildNormalizePageInput,
   buildRenderDiffResult,
 } from './fixtures.js';
@@ -647,5 +649,118 @@ describe('WordPress loop items', () => {
     const findings = normalizeArchivePages([[popup(12288)], [popup(13138)]]);
 
     expect(findings).toHaveLength(2);
+  });
+});
+
+/**
+ * Trade-off 110. Lighthouse runs on a sample of pages, so the SEO audits it
+ * alone answered are now checked on every page by head-metadata, and
+ * Lighthouse's copy is dropped only on a page where that check produced the
+ * replacing fact. Tested through normalizeAudit because the drop happens in
+ * its page loop, not in either extractor.
+ */
+describe('normalizeAudit Lighthouse SEO audits covered by head metadata', () => {
+  const lighthouse = buildLighthouseResultInput({
+    categories: {
+      seo: {
+        score: 0.5,
+        auditRefs: [
+          { id: 'meta-description', weight: 1 },
+          { id: 'link-text', weight: 1 },
+          { id: 'is-crawlable', weight: 4 },
+        ],
+      },
+    },
+    audits: {
+      'meta-description': buildLighthouseAudit({ score: 0, title: 'No meta description' }),
+      'link-text': buildLighthouseAudit({ score: 0, title: 'Links do not have descriptive text' }),
+      'is-crawlable': buildLighthouseAudit({ score: 0, title: 'Page is blocked from indexing' }),
+    },
+  });
+  const head = (url: string) => ({
+    pageUrl: url,
+    title: 'A perfectly reasonable page title for SEO',
+    metaDescription: null,
+    canonicalUrls: [url],
+    openGraphTags: { 'og:title': 't' },
+    jsonLdBlocks: [{ raw: '{}', parsed: {}, selector: '#ld' }],
+    headings: [{ level: 1, text: 'Titre', selector: 'h1' }],
+    hreflangLinks: [],
+    robotsMeta: null,
+  });
+
+  function sources(findings: ReturnType<typeof normalizeAudit>) {
+    return findings
+      .filter((f) =>
+        ['meta-description', 'meta-description-missing', 'link-text', 'is-crawlable'].includes(
+          f.ruleId,
+        ),
+      )
+      .map((f) => `${f.source}:${f.ruleId}`)
+      .sort();
+  }
+
+  it('keeps every Lighthouse SEO finding on a page with no head metadata', () => {
+    const url = 'https://example.com/';
+    const findings = normalizeAudit({
+      auditId: 'audit-1',
+      startedAt: STARTED_AT,
+      pages: [buildNormalizePageInput({ url, lighthouse })],
+    });
+    expect(sources(findings)).toEqual([
+      'lighthouse:is-crawlable',
+      'lighthouse:link-text',
+      'lighthouse:meta-description',
+    ]);
+  });
+
+  it('keeps the link and indexability audits for a scan stored before those facts existed', () => {
+    const url = 'https://example.com/';
+    const findings = normalizeAudit({
+      auditId: 'audit-1',
+      startedAt: STARTED_AT,
+      pages: [buildNormalizePageInput({ url, lighthouse, headMetadata: head(url) })],
+    });
+    expect(sources(findings)).toEqual([
+      'custom:meta-description-missing',
+      'lighthouse:is-crawlable',
+      'lighthouse:link-text',
+    ]);
+  });
+
+  it('reports only the per-page findings once every replacing fact was extracted', () => {
+    const url = 'https://example.com/';
+    const findings = normalizeAudit({
+      auditId: 'audit-1',
+      startedAt: STARTED_AT,
+      pages: [
+        buildNormalizePageInput({
+          url,
+          lighthouse,
+          headMetadata: {
+            ...head(url),
+            xRobotsTag: null,
+            anchors: [
+              {
+                selector: '#more',
+                snippet: '<a id="more" href="/suite">',
+                rawHref: '/suite',
+                href: 'https://example.com/suite',
+                text: 'Read more',
+                rel: '',
+                role: '',
+                name: '',
+                id: 'more',
+                textLang: null,
+                pointsToSamePage: false,
+                hasHrefAssociatedAttribute: false,
+                hasEventListener: false,
+              },
+            ],
+          },
+        }),
+      ],
+    });
+    expect(sources(findings)).toEqual(['custom:link-text', 'custom:meta-description-missing']);
   });
 });

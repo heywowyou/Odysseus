@@ -41,6 +41,11 @@ describe('scanPage against fixtures/spa-demo', () => {
     expect(result.renderDiff?.httpStatus).toBe(200);
     expect(result.renderDiff?.missingPercent).toBeGreaterThan(90);
 
+    // Trade-off 110: the header and link facts reach the head-metadata
+    // result, so normalization can drop Lighthouse's copies of those audits.
+    expect(result.headMetadata?.xRobotsTag).toBeNull();
+    expect(result.headMetadata?.anchors).toBeInstanceOf(Array);
+
     // The fixture's email input has no <label>, but its placeholder
     // attribute is still a valid accessible-name source per the HTML-AAM
     // spec, so axe-core's `label` rule does not fire here even though
