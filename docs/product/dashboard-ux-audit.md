@@ -22,6 +22,35 @@ reconciliation properly). History is never deleted.
 | 6 | 2026-09-15 | `13b65ea` | 14 | 16 | 0 | 0 | local stateful, authorized real site, real mailbox draft + preview bucket, FR+EN; journeys 1-5 and 7 partial, 6 blocked | no |
 | 7 | 2026-09-17 | `11e5cf71` | 16 | 1 regressed + 26 not re-verified | 2 | 1 (UX-020) | production observation with operator-authorized writes, FR+EN; journeys 2, 3 (to scan launch/progress), 7 partial; 4, 5, 6 not reached (session lost) | no |
 | 8 | 2026-09-21 | `8d3e1fee` | 0 | 1 regressed + 26 not re-verified | 0 | 0 | targeted production regression: La Co(o)rniche report rewrite and authenticated Gmail mailbox sync; no live draft creation | no |
+| 9 | 2026-09-21 | `a74c87ab` | 3 | 43 | 2 | 0 | read-only production rehearsal after deploy; FR/EN routes, mobile shell, recovery states, audit loading, tools, and to-do API shape; no state-changing prospecting actions | no |
+
+## Run 9 notes (production, read-only post-deploy rehearsal)
+
+- Mode and boundary: deployed build `a74c87ab` on
+  `https://app.odysseusaudit.com`; readiness returned
+  `{"status":"ready","database":"ok","queue":"ok"}`. The browser pass
+  stayed read-only: no scan launch, preview publish/revoke, draft creation,
+  outcome, archive, delete, or other prospect mutation was performed.
+- Coverage: authenticated FR/EN surface routes, prospect and audit detail,
+  directory, suppressions, tools, scan entry, legacy redirects, unknown
+  resource states, 375px mobile navigation, language switching, and the live
+  to-do response. Covered stable pages had no persistent console or layout
+  errors; mobile pages had no horizontal overflow.
+- Verified fixes: mailbox reconciliation is now reachable through the
+  dashboard's explicit sync control and was already confirmed HTTP 200 in the
+  preceding deployed regression pass (UX-016); an unknown scan now renders a
+  named recovery link to Audits (UX-043).
+- New findings: the server returns a bare 404 for an unknown top-level
+  dashboard path (UX-046); the prospecting inbox has no campaign-level
+  mailbox/work-state overview or sync-freshness indicator (UX-047); and an
+  audit detail can show only an unlabeled busy shell while its first request
+  takes several seconds (UX-048).
+- Blindspot: the live to-do payload contained 11 rows, all `first-email` /
+  `create-first-email`. The source model supports replies, follow-ups, draft
+  review, outcomes, and report repair, but the current production data did not
+  exercise those paths. A real Gmail draft remains intentionally unverified:
+  no named safe mailbox/test recipient was provided, and Odysseus does not
+  send mail itself. Full journey parity is not claimed.
 
 ## Run 8 notes (production, targeted authorized regression)
 
@@ -418,14 +447,6 @@ plan 045 section 1.9) is pending the operator's deploy.
 - Suggested UX fix: scope preview/email hub actions to the hotel's outreach audit specifically, or surface the dependency and translate `not-an-outreach-audit` on the Aperçu tab itself.
 - Issue: #266.
 
-### UX-016 (P1) Mailbox reconciliation never runs, so sent emails, follow-ups and replies never reach the dashboard
-
-- Status: OPEN. First seen: run 6. Last seen: run 6.
-- Where: local dashboard, prospect journey, FR+EN as noted.
-- Evidence: `reconcileMailbox` (`packages/interface/src/outreach/reconcile-mailbox.ts:197`) and `createMongoMailboxReconciliationStore` are only exported from `packages/interface/src/index.ts`; no route, queue job, CLI command or timer calls them at `13b65ea`. Repro (local, run 6): create a first-email draft from a prospect page; the thread stays `e1-drafted` indefinitely. Sending it from Gmail can never move the thread to `e1-sent`, so the follow-up and reply rows in À traiter and the whole outcome follow-through journey are unreachable from the dashboard.
-- Suggested UX fix: After the operator sends a draft from the mailbox, the dashboard learns it (scheduled or explicit "sync mailbox" action) and exposes follow-up and reply work.
-- Issue: #272.
-
 ### UX-017 (P1) Opt-out leaves the Gmail draft, the public preview and the review task live
 
 - Status: OPEN. First seen: run 6. Last seen: run 6.
@@ -619,14 +640,6 @@ plan 045 section 1.9) is pending the operator's deploy.
 - Suggested UX fix: Return to the requested same-origin path; associate the error.
 - Issue: #401.
 
-### UX-043 (P3) Unknown scan page is a dead end
-
-- Status: OPEN. First seen: run 7. Last seen: run 7.
-- Where: production `/scans/<unknown>`, EN.
-- Evidence: "Scan not found." with no link (`scan-progress.tsx:150`).
-- Suggested UX fix: Link to Audits.
-- Issue: #402.
-
 ### UX-044 (P3) New scan rejects a bare domain instead of normalizing it
 
 - Status: OPEN. First seen: run 7. Last seen: run 7.
@@ -642,6 +655,49 @@ plan 045 section 1.9) is pending the operator's deploy.
 - Evidence: Link text is `strings.nav.prospects` (`audits.tsx:~258`) though summaries carry `prospectName`.
 - Suggested UX fix: Link text is the prospect name.
 - Issue: #404.
+
+### UX-046 (P3) Unknown top-level dashboard paths return a bare server 404
+
+- Status: OPEN. First seen: run 9. Last seen: run 9.
+- Where: direct navigation to an unknown dashboard path, FR/EN.
+- Evidence: production `/route-that-does-not-exist` returns only the plain
+  server body `Not found`: no dashboard shell, heading, language, or recovery
+  link. `packages/interface/src/routes/static.ts` deliberately refuses the
+  SPA fallback outside `APP_ROUTE_PREFIXES`, so the client router's catch-all
+  recovery route never runs.
+- Suggested UX fix: return a branded dashboard not-found state with a link to
+  À traiter, or serve the shell for unknown authenticated paths and let the
+  client catch-all handle them.
+- Issue: none filed (run 9 audit only).
+
+### UX-047 (P2) Prospecting inbox has no campaign-level mailbox/work-state overview
+
+- Status: OPEN. First seen: run 9. Last seen: run 9.
+- Where: `/a-traiter`, the operator's prospecting inbox.
+- Evidence: the live page exposes a row list and a manual mailbox-sync button,
+  but no last-sync timestamp, mailbox/account status, draft/sent/awaiting-reply
+  counters, failure count, or filters by outreach state. The live response had
+  11 rows, all `first-email` / `create-first-email`; the underlying work model
+  can derive replies, follow-ups, draft review, outcomes, and report repair,
+  yet the operator has no campaign-level view for those states.
+- Suggested UX fix: add a compact campaign control plane with sync freshness,
+  provider status, counts by actionable state, and filters linking to the
+  corresponding prospect rows.
+- Issue: none filed (run 9 audit only).
+
+### UX-048 (P3) Audit detail shows no visible progress while its initial data request is slow
+
+- Status: OPEN. First seen: run 9. Last seen: run 9.
+- Where: `/audits/:auditId`, FR/EN.
+- Evidence: 750ms after navigation to a live audit, the page had a `main` with
+  `aria-busy="true"` but no visible heading, status text, or error; the same
+  page settled into the audit content only after several seconds. The route
+  has an accessible loading label, but it is not visible to the operator while
+  waiting.
+- Suggested UX fix: render an explicit visible loading state with the audit
+  context and a slow-request/retry affordance, while retaining the accessible
+  busy semantics.
+- Issue: none filed (run 9 audit only).
 
 ## Fixed register
 
@@ -665,6 +721,21 @@ plan 045 section 1.9) is pending the operator's deploy.
 
 - Proof: production quick-check audit page shows eyebrow "Contrôle rapide", the hotel name as heading, and "Contrôle rapide : il sert à trier les prospects et ne couvre pas assez le site pour un rapport client"; the prospect hub says a quick check is not enough for outreach.
 - Issue: #282.
+
+### UX-016 (was P1) Mailbox reconciliation never ran - fixed, verified run 8
+
+- Proof: the deployed dashboard now exposes `Synchroniser la boîte mail` /
+  `Sync mailbox` on À traiter; the final production regression pass returned
+  HTTP 200 with a configured mailbox and zero new sent/reply/review rows.
+  Provider failures are surfaced as a safe failure response rather than an
+  unhandled 500. The real draft-creation write remains separately unverified.
+- Issue: #272.
+
+### UX-043 (was P3) Unknown scan page was a dead end - fixed, verified run 9
+
+- Proof: production `/scans/<unknown>` now renders the localized not-found
+  state with a recovery link to `/audits` in the deployed build.
+- Issue: #402.
 
 ## Deliberate register
 
