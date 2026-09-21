@@ -192,10 +192,26 @@ side effect of a report or template change:
    headers, complete document and canonical URL before enabling new Touch-1
    drafts. Keep the previous approved manifest for rollback.
 
+Steps 2 and 4 are two CLI commands, run locally with the reference bucket
+credentials in `.env`:
+
+```bash
+# Step 2: builds the candidate folder and never publishes
+pnpm exec tsx packages/cli/src/index.ts reference-audit build <artifacts-dir>
+# Step 4: run only after the page-by-page review in step 3
+pnpm exec tsx packages/cli/src/index.ts reference-audit publish <candidate-dir> --reviewed
+```
+
+`build` writes `reference-audit.pdf`, the rendered HTML and a private
+`release.json` (which names the source audit) under
+`<artifacts-dir>/reference-audit-candidates/<timestamp>/`. `publish` refuses a
+PDF whose digest changed after the build, and a candidate built with a report
+template, data version or anonymizer older than the running code.
+
 The private dashboard's reference status reports `current`, `stale` or
 `missing` by comparing the pointer's report/template/data/anonymizer versions
 with the running code. Staleness creates an operator work item; it does not
-automatically move the public pointer.
+automatically move the public pointer. Clear it with the two commands above.
 
 > STOP. Do NOT copy `ODYSSEUS_MAILBOX_*` values (the Gmail OAuth block) to
 > the server. Outreach drafting stays local by plan; a mailbox credential on

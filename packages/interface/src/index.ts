@@ -243,11 +243,20 @@ export type {
   ReferenceAuditFreshness,
   ReferenceAuditFreshnessState,
 } from './reference-audit/reference-audit-freshness.js';
-export { buildAndPublishReferenceAuditRelease } from './reference-audit/reference-audit-release.js';
+export {
+  buildAndPublishReferenceAuditRelease,
+  buildReferenceAuditCandidate,
+  loadReferenceAuditSource,
+  publishReferenceAuditCandidate,
+} from './reference-audit/reference-audit-release.js';
 export type {
+  BuildReferenceAuditCandidateInput,
+  BuildReferenceAuditCandidateResult,
   BuildReferenceAuditReleaseInput,
   BuildReferenceAuditReleaseResult,
+  ReferenceAuditCandidateRelease,
 } from './reference-audit/reference-audit-release.js';
+export { createConfiguredReferenceAuditStore } from './reference-audit/configured-reference-audit-store.js';
 
 // Milestone 9c plan 011: the mailbox port, its adapters, and draft creation.
 export {
