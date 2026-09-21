@@ -145,10 +145,11 @@ export function assembleOutreachDraft(
       hotelName: options.hotelName,
       scanSummary: options.scanSummary as OutreachScanSummary,
       variants,
-      previewLink: { label: copy.previewLinkLabel, url: options.previewUrl as string },
+      // Both links are shown in full rather than behind a label: a
+      // cold-email recipient can read exactly where each one goes before
+      // clicking it.
+      previewLink: { label: options.previewUrl as string, url: options.previewUrl as string },
       referenceLink: {
-        // Shown in full rather than behind a label: a cold-email recipient
-        // can read exactly where the link goes before clicking it.
         label: options.referenceAuditUrl as string,
         url: options.referenceAuditUrl as string,
       },

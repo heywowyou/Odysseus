@@ -19,7 +19,6 @@ export interface OutreachDraftCopy {
   salutation: string;
   signOff: string;
   signature: string[];
-  previewLinkLabel: string;
   linkSeparator: string;
   purpose: string;
   originIntro: string;
@@ -44,7 +43,6 @@ const FR: OutreachDraftCopy = {
     'Audits techniques de sites web : SEO, GEO, performance, accessibilité et sécurité',
     `${WEBSITE} · ${OUTREACH_CONTACT.address}`,
   ],
-  previewLinkLabel: "Consulter l'aperçu de votre site",
   linkSeparator: '\u00a0: ',
   purpose:
     'Pourquoi vous recevez ce message\u00a0: nous proposons aux hôtels des audits de leur site internet. ' +
@@ -78,7 +76,6 @@ const EN: OutreachDraftCopy = {
     'Technical website audits: SEO, GEO, performance, accessibility and security',
     `${WEBSITE} · ${OUTREACH_CONTACT.address}`,
   ],
-  previewLinkLabel: 'View the preview of your website',
   linkSeparator: ': ',
   purpose:
     'Why you are receiving this message: we offer hotels website audits. If you do not reply, ' +

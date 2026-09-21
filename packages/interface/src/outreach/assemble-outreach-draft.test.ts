@@ -222,10 +222,10 @@ describe('assembleOutreachDraft - touch 1', () => {
     expect(result.htmlBody).toContain(`href="${PRIVACY_URL}"`);
     expect(result.htmlBody.match(/<a /gu)).toHaveLength(4);
     expect(result.htmlBody).toContain(
-      `style="font-weight:600;text-decoration:underline">Consulter l&#39;aperçu de votre site</a>`,
+      `style="font-weight:600;text-decoration:underline">${PREVIEW_URL}</a>`,
     );
-    // The example link is printed in full so a cold-email reader sees where
-    // it goes before clicking.
+    // Both links are printed in full so a cold-email reader sees where they
+    // go before clicking.
     expect(result.htmlBody).toContain(`>${REFERENCE_URL}</a>`);
     expect(result.htmlBody).toContain('Ne plus être contacté</a> · <a');
     expect(result.htmlBody).toContain(
