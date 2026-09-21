@@ -417,8 +417,10 @@ function hasImageEvidence(value: unknown, key = ''): boolean {
   );
 }
 
+/** An id outside the projected set still gets a synthetic, source-free label.
+ *  The four-hex-digit form cannot collide with the three-digit sequence above. */
 function mapFindingId(id: string, findingIds: ReadonlyMap<string, string>): string {
-  return findingIds.get(id) ?? `showcase-finding-${canonicalDigest(id).slice(-8)}`;
+  return findingIds.get(id) ?? `f${canonicalDigest(id).slice(-4)}`;
 }
 
 function projectFinding(
@@ -559,8 +561,14 @@ export function buildReferenceAuditShowcase(source: ReferenceAuditSource): Refer
   }
   const denylist = buildSourceDenylist(source);
   const pageUrls = createPageUrlMap(source);
+  // Synthetic ids keep the production `f001` shape. A longer label would both
+  // overflow the appendix's identifier column and make the example read
+  // differently from the deliverable it represents.
   const findingIds = new Map(
-    source.findings.map((finding, index) => [finding.findingId, `showcase-finding-${index + 1}`]),
+    source.findings.map((finding, index) => [
+      finding.findingId,
+      `f${String(index + 1).padStart(3, '0')}`,
+    ]),
   );
   const manifest = projectManifest(source.manifest, pageUrls, denylist);
   const findings = source.findings.map((finding) =>

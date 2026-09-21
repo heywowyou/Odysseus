@@ -113,6 +113,17 @@ describe('reference audit showcase projection', () => {
     );
   });
 
+  it('mints synthetic finding ids in the production shape so the appendix column fits', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('fr');
+    const showcase = buildReferenceAuditShowcase({ manifest, findings, analysis });
+    const ids = showcase.bundle.findings.map((finding) => finding.findingId);
+    expect(ids).toEqual(ids.map((_, index) => `f${String(index + 1).padStart(3, '0')}`));
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const id of ids) expect(id.length).toBeLessThanOrEqual(5);
+  });
+
   it('uses the normal paid-report HTML renderer and carries the disclosure', async () => {
     const manifest = await loadSmallSiteManifest();
     const findings = await loadSmallSiteFindings();
