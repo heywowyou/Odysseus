@@ -11,7 +11,10 @@ export interface PerformanceEvidenceViolation {
   text: string;
 }
 
-const METRIC_PATTERNS: Record<ReportLanguage, Record<WritingPerformanceMetric, RegExp>> = {
+export const SUPPRESSED_METRIC_PATTERNS: Record<
+  ReportLanguage,
+  Record<WritingPerformanceMetric, RegExp>
+> = {
   fr: {
     lcp: /\b(?:LCP|Largest Contentful Paint)\b|contenu\s+principal/iu,
     cls: /\b(?:CLS|Cumulative Layout Shift)\b|stabilit[ée]\s+visuelle|d[ée]calages?\s+visuels?/iu,
@@ -26,12 +29,46 @@ const METRIC_PATTERNS: Record<ReportLanguage, Record<WritingPerformanceMetric, R
   },
 };
 
+/**
+ * Plain-language phrasings of a suppressed metric that only matter in a
+ * recommended action. A theme may still describe the laboratory observation
+ * and explain why it is not the priority — the 2026-09-21 calibration shows
+ * that context in real reports — but it may not tell the client to act on a
+ * signal the reconciliation contract has ruled non-representative. Measured
+ * over the 125 stored analyses: 13 French and 6 English recommended actions
+ * match, every one of them a genuine "fix the suppressed signal" instruction,
+ * and the 5 titles and business impacts these words also appear in are
+ * deliberately left alone.
+ */
+export const SUPPRESSED_ACTION_PATTERNS: Record<
+  ReportLanguage,
+  Partial<Record<WritingPerformanceMetric, RegExp>>
+> = {
+  fr: {
+    tbt: /t[âa]ches?\s+(?:\S+\s+){0,3}longues?|temps\s+de\s+blocage|scripts?\s+(?:JavaScript\s+)?qui\s+bloque/iu,
+  },
+  en: {
+    tbt: /long\s+(?:\S+\s+){0,3}tasks?|blocking\s+time|(?:JavaScript|scripts?)\s+that\s+blocks?/iu,
+  },
+};
+
 function suppressedMention(
   text: string,
   language: ReportLanguage,
   suppressed: readonly WritingPerformanceMetric[],
 ): WritingPerformanceMetric | undefined {
-  return suppressed.find((metric) => METRIC_PATTERNS[language][metric].test(text));
+  return suppressed.find((metric) => SUPPRESSED_METRIC_PATTERNS[language][metric].test(text));
+}
+
+function suppressedActionMention(
+  text: string,
+  language: ReportLanguage,
+  suppressed: readonly WritingPerformanceMetric[],
+): WritingPerformanceMetric | undefined {
+  return (
+    suppressedMention(text, language, suppressed) ??
+    suppressed.find((metric) => SUPPRESSED_ACTION_PATTERNS[language][metric]?.test(text) === true)
+  );
 }
 
 /**
@@ -76,7 +113,9 @@ export function findPerformanceEvidenceViolations(
       })),
     ];
     for (const field of fields) {
-      const metric = suppressedMention(field.text, input.language, suppressed);
+      const metric = field.field.includes('.recommendedActions[')
+        ? suppressedActionMention(field.text, input.language, suppressed)
+        : suppressedMention(field.text, input.language, suppressed);
       if (metric !== undefined) violations.push({ ...field, metric });
     }
   }

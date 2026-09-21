@@ -2,6 +2,10 @@ import type { ReportLanguage, WritingSanitizationWarning } from '@odysseus/core'
 import { findBusinessClaimViolationsInFields } from './business-claim-guard.js';
 import { findLegalConsequenceViolationsInFields } from './legal-consequence-guard.js';
 import { hasPageCountViolation } from './page-count-guard.js';
+import {
+  SUPPRESSED_ACTION_PATTERNS,
+  SUPPRESSED_METRIC_PATTERNS,
+} from './performance-evidence-guard.js';
 import { hasFindingCountViolation } from './finding-count-guard.js';
 import { hasExecutiveSummaryDigitViolation } from './executive-summary-digit-guard.js';
 import { hasInternalThemeKeyReference } from './internal-reference-guard.js';
@@ -11,21 +15,6 @@ import {
   type WritingPassOutput,
   type WritingPerformanceMetric,
 } from './writing-schema.js';
-
-const METRIC_PATTERNS: Record<ReportLanguage, Record<WritingPerformanceMetric, RegExp>> = {
-  fr: {
-    lcp: /\b(?:LCP|Largest Contentful Paint)\b|contenu\s+principal/iu,
-    cls: /\b(?:CLS|Cumulative Layout Shift)\b|stabilit[ée]\s+visuelle|d[ée]calages?\s+visuels?/iu,
-    inp: /\b(?:INP|Interaction to Next Paint)\b|r[ée]activit[ée]\s+aux\s+interactions?/iu,
-    tbt: /\b(?:TBT|Total Blocking Time)\b|scripts?\s+bloquants?/iu,
-  },
-  en: {
-    lcp: /\b(?:LCP|Largest Contentful Paint)\b|main\s+content\s+load/iu,
-    cls: /\b(?:CLS|Cumulative Layout Shift)\b|visual\s+stability|layout\s+shift/iu,
-    inp: /\b(?:INP|Interaction to Next Paint)\b|interaction\s+responsiveness/iu,
-    tbt: /\b(?:TBT|Total Blocking Time)\b|blocking\s+scripts?/iu,
-  },
-};
 
 function sentences(text: string): string[] {
   return text
@@ -47,8 +36,13 @@ function hasSuppressedMetric(
   text: string,
   language: ReportLanguage,
   suppressed: readonly WritingPerformanceMetric[],
+  inRecommendedAction: boolean,
 ): boolean {
-  return suppressed.some((metric) => METRIC_PATTERNS[language][metric].test(text));
+  return suppressed.some(
+    (metric) =>
+      SUPPRESSED_METRIC_PATTERNS[language][metric].test(text) ||
+      (inRecommendedAction && SUPPRESSED_ACTION_PATTERNS[language][metric]?.test(text) === true),
+  );
 }
 
 function sanitizePerformanceSentences(
@@ -57,10 +51,11 @@ function sanitizePerformanceSentences(
   language: ReportLanguage,
   suppressed: readonly WritingPerformanceMetric[],
   warnings: WritingSanitizationWarning[],
+  inRecommendedAction = false,
 ): string {
   const kept: string[] = [];
   for (const sentence of sentences(text)) {
-    if (hasSuppressedMetric(sentence, language, suppressed)) {
+    if (hasSuppressedMetric(sentence, language, suppressed, inRecommendedAction)) {
       warning(warnings, 'performance-contradiction-removed', field);
       continue;
     }
@@ -196,6 +191,7 @@ export function sanitizeWritingOutput(
           input.language,
           input.performanceEvidence.suppressedLabRecommendations,
           warnings,
+          true,
         );
       }
       if (sanitized) recommendedActions.push(sanitized);

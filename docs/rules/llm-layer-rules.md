@@ -1002,7 +1002,12 @@ The replacement is deterministic and local:
   registry;
 - the executive summary receives a deterministic evidence packet;
 - performance prose receives reconciled field/lab evidence, with contradictory
-  lab signals explicitly suppressed from recommendations;
+  lab signals explicitly suppressed from recommendations. A theme may still
+  describe the laboratory observation and say why it is not the priority; a
+  recommended action may not tell the client to fix it, in the metric's name
+  or in plain language (`SUPPRESSED_ACTION_PATTERNS` in
+  `performance-evidence-guard.ts`, measured over the stored analyses by plan
+  070);
 - unsupported business/legal/performance sentences or actions are removed
   locally, unrelated valid content is preserved, and metadata-only warnings
   are surfaced to the operator;
@@ -1100,7 +1105,9 @@ positive), style or length, and everything a deterministic guard owns.
 
 - **Kill switch.** `WRITING_CRITIC_ENABLED` in `packages/llm/src/constants.ts`.
   Off, `critiqueAndRepairWriting` returns the writer result object itself and
-  makes no call. No environment variable, no per-job option.
+  makes no call. No environment variable, no per-job option. It is `false`,
+  and Plan 070's closure record says why: the second calibration met every
+  threshold except no-regression, on one report of seven.
 - **Call budget per language.** Off: 2 fresh / 1 reused structure. Critic with
   no actionable issue: 3 / 2. Critic with issues: 4 / 3. The critic and the
   repair each get exactly one attempt; nothing is retried.

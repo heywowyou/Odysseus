@@ -5429,12 +5429,17 @@ leaves jargon unexplained.
   the budget per language is 3 fresh calls (2 with a reused structure) with no
   issue and 4 (3) with issues.
 
-Calibration on seven saved hotel audits: the critic plus repair added
-$0.04-0.06 and 3-4.5 minutes per French report (ceilings $0.15 and 15
-minutes), and every repair passed all guards. 42 of the 57 accepted issues
-were unexplained jargon, mostly in recommended actions, where a rewrite can
-drop the technical term the client's provider needs. The switch stays off
-until the operator's labels show at least 70% precision and no regression.
+Calibrated twice on seven saved hotel audits. Cost and latency stayed well
+inside the ceilings both times ($0.02-0.06 and under 4 minutes added per
+French report). The second run, after the prompt and field-path repair
+tightening, reached 100% precision on 27 accepted issues and caught four
+factual errors the deterministic guards do not own. One report still
+regressed: a repair recommended fixing a laboratory signal the reconciliation
+contract suppresses. **The switch therefore stays `false`.** The critic ships
+built, tested and disabled; the deterministic gap that repair exposed was
+closed instead (`SUPPRESSED_ACTION_PATTERNS`), and Plan 072's finalization
+workflow remains the editorial safety net. Re-enabling needs a fresh
+calibration with no regressed report.
 
 Rejected: restoring the whole-report reviewer (measured false positives and
 review burden); a multi-round critic-repair loop or a second critic

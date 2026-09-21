@@ -11,7 +11,13 @@
 - **Priority:** P1
 - **Effort:** M
 - **Depends on:** 067
-- **Execution status:** IN PROGRESS (2026-09-21): slices A and B are built and tested with the switch off; the post-`3df2fad7` calibration re-run has deliberately not been performed during this closure pass, so `WRITING_CRITIC_ENABLED` remains `false`
+- **Execution status:** DONE (2026-09-21): slices A and B shipped; the
+  post-`3df2fad7` calibration re-run was performed and labeled; one report
+  still regressed, so `WRITING_CRITIC_ENABLED` stays `false` and slice A ships
+  alone, exactly as the acceptance thresholds require
+- **Closure evidence:** B7 and B8 below; `plan067-writing-contract.test.ts`
+  suppressed-action case; registers under
+  `artifacts/writing-critic-calibration/2026-09-20T23-53-*`
 - **Planning rebaseline:** `a95f4d65`
 - **Estimated build time (Claude Opus 5, high effort):** about one working day of
   wall-clock time. Slice A: 1-2 hours. Slice B code: 3-5 hours. Calibration:
@@ -447,14 +453,106 @@ The allowed tightening, before one re-run:
 If the re-run still regresses any report, the switch stays off and slice A
 ships alone, as the acceptance thresholds require.
 
-### Closure decision — 2026-09-21
+### B7 Post-tightening re-run (2026-09-20/21)
 
 The field-path repair, full-context repair input, technical-term glossing and
-unflagged-text preservation tightening landed in `3df2fad7`. The operator
-directed this release-closure pass to stop before another provider calibration
-run. The critic therefore remains disabled and this plan makes no claim about
-the post-tightening no-regression result. Plan 072's finalization workflow
-remains the delivery safety net for any report that needs correction.
+unflagged-text preservation tightening landed in `3df2fad7`. The same seven
+saved French audits were re-run through
+`packages/interface/src/pipeline/measure-writing-critic.ts`. Registers:
+`artifacts/writing-critic-calibration/2026-09-20T23-53-*` (gitignored).
+
+| Audit | Themes | Raised | Accepted | Repair | Critic + repair cost | Report cost | Report verdict |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| grandhoteldesalpes.com | 19 | 5 | 4 | applied | $0.037 | $0.071 | better |
+| www.grandhotelbellevue.com | 16 | 3 | 3 | applied | $0.032 | $0.065 | better |
+| www.villasfoch.fr | 15 | 4 | 4 | applied | $0.033 | $0.073 | **worse** |
+| haaitza.com | 18 | 9 | 8 | applied | $0.042 | $0.073 | better |
+| www.grand-hotel-opera.com | 19 | 1 | 1 | discarded | $0.023 | $0.060 | equal |
+| capdantibes-beachhotel.com | 14 | 3 | 3 | applied | $0.033 | $0.067 | better |
+| grandhotelchicago.paris | 12 | 4 | 4 | applied | $0.036 | $0.063 | better |
+
+- **Tightening held.** `unflaggedFieldsChanged` is empty on all seven: the
+  repair now returns only the flagged fields and they are merged by field
+  path, so the B6 regression causes 2 and 3 (summary rewritten from a subset,
+  whole-theme rewrites losing unflagged actions) did not recur.
+- **Cost: met.** Critic plus repair adds at most $0.042 (ceiling $0.15); the
+  highest total report cost is $0.073 (ceiling $0.35).
+- **Latency: met.** Critic plus repair adds at most 3.4 minutes (ceiling 15).
+- **Validation:** 29 raised, 27 accepted, 2 dropped (1 `invalid-shape`,
+  1 `out-of-theme-finding`).
+- **Categories:** `unexplained-jargon` 19, `contradicts-evidence` 5,
+  `remedy-mismatch` 2, `cross-theme-redundancy` 1,
+  `unsupported-inference` 0. By field: 20 recommended actions, 7 business
+  impacts, no summary, notes or title.
+- **Fail-open observed in the wild:** grand-hotel-opera's single repair failed
+  a blocking check and was discarded whole; the pre-critic text stands and the
+  defect surfaced as one `critic-unresolved` warning on the field. The
+  register records the discard but not its reason, which is logged only —
+  worth capturing in the register the next time this script is touched.
+
+### B8 Labels (2026-09-21)
+
+The operator delegated labeling to Claude Opus 5 (high effort), judging
+against `docs/rules/report-writing-style.md`. Each register issue carries
+`label`, `repairVerdict` and `labelNote`; each register carries
+`reportVerdict`.
+
+- **Precision: met.** 27 of 27 accepted issues are real (100%, ceiling 70%).
+  The jargon flags now keep the provider-searchable term and add a gloss, the
+  behavior B6's tightening asked for. Four `contradicts-evidence` flags were
+  checked against the stored evidence and all four were right: lab CLS 0 at
+  bellevue and grandhotelchicago, lab LCP 2408 ms (good) at capdantibes, and
+  a reversed hreflang return-link direction at haaitza that `f016` and `f028`
+  settle.
+- **Usefulness: met.** Besides those four factual corrections, the critic
+  caught a remedy restricted to image-wrapped links where the findings cover
+  every link without discernible text, and a generic 320-pixel action
+  duplicating another theme's.
+- **No regressions: failed, on one report.** Per field: 20 better, 5 equal,
+  1 worse, 1 not applicable (repair discarded). Per report: five better, one
+  equal, one worse.
+
+The single regression is villasfoch `t9.recommendedActions[0]`. The flag was
+right — the original "action" was a ranking statement, not a remedy — but the
+repair told the client to split long JavaScript tasks, and TBT is a
+*suppressed* lab recommendation for that audit (field INP 195 ms good, lab
+TBT 878 ms poor). The report would then have recommended fixing a signal it
+declares non-representative elsewhere.
+
+### A2 Guard gap the re-run exposed, and closed (2026-09-21)
+
+The suppression check only recognized `TBT`, `Total Blocking Time` and
+`scripts bloquants`. Plain-language phrasings of the same signal passed
+through both `sanitizeWritingOutput` and `findPerformanceEvidenceViolations`.
+This is not a critic defect: grand-hotel-opera's *writer* produced the same
+violation and no guard caught it either.
+
+`SUPPRESSED_ACTION_PATTERNS` now adds the plain-language phrasings, applied to
+recommended actions only, and both seams read the one exported table instead
+of the two copies that had drifted apart. Measured log-only over the 125
+stored analyses: 13 French and 6 English recommended actions match, every one
+a genuine "fix the suppressed signal" instruction, so zero false positives.
+The same words appear in 5 titles and business impacts, which are deliberately
+left alone: a theme may describe the laboratory observation and say why it is
+not the priority. Sanitation removes the offending action at claim level (067
+decision 13), so no whole-writing retry is spent, and the guard stays as the
+backstop.
+
+### Closure decision — 2026-09-21
+
+The thresholds require *every* calibration report to be equal or better, and
+one is worse. This was the one allowed re-run after the one allowed
+tightening, so the plan's own rule applies: **the switch stays `false` and
+slice A ships alone.**
+
+That is also the right call on the evidence. The critic's judgment is good —
+100% precision, four real factual corrections — but a repair that lands in a
+client report without the operator reading it can still introduce a contract
+violation the deterministic guards did not own. A2 closed the one such gap
+this run found. Plan 072's finalization workflow remains the delivery safety
+net for any report that needs correction, and the critic can be reconsidered
+with a fresh calibration if that workflow shows a class of defect it would
+catch.
 
 ## Requirement-to-proof ledger
 
@@ -469,7 +567,8 @@ remains the delivery safety net for any report that needs correction.
 | targeted repair | `writing-critic.test.ts` byte-identity and summary-only cases |
 | operator warnings | `writing-critic.test.ts` field-path-only case; `analysis-stage.plan070.test.ts` sidecar and persistence; `audit-report-panel-model.test.ts` |
 | stored compatibility | `writing-critic-compat.test.ts` legacy analysis renders identically |
-| precision / regressions / cost / latency | B5/B6 above: precision, usefulness, cost and latency met; no-regression failed on 4 of 7 reports |
+| measured guard gaps only (second pass) | A2 above; `plan067-writing-contract.test.ts` suppressed-action case; 19 of 125 stored analyses flagged, zero false positives |
+| precision / regressions / cost / latency | B7/B8 above: precision 100%, usefulness, cost and latency met; no-regression failed on 1 of 7 reports, so the switch stays off |
 | documented decision | trade-off 105; `llm-layer-rules.md` section 15 |
 
 ## Executable closure contract

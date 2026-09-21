@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { findBusinessClaimViolations } from './business-claim-guard.js';
+import { findPerformanceEvidenceViolations } from './performance-evidence-guard.js';
 import { sanitizeWritingOutput } from './sanitize-writing-output.js';
 import { findThemeTitleViolations } from './theme-title-guard.js';
 import {
@@ -259,5 +260,46 @@ describe('Plan 067 writing contract', () => {
       code: 'performance-contradiction-removed',
       field: 'themes[0](t1).recommendedActions[0]',
     });
+  });
+  it('removes a plain-language recommendation to fix a suppressed lab signal, and keeps the same wording in an impact sentence', () => {
+    const tbtSuppressed: WritingInput = {
+      ...baseInput,
+      themes: [{ ...baseInput.themes[0]!, category: 'performance' }],
+      performanceEvidence: {
+        fieldDataAvailable: true,
+        observations: [
+          { metric: 'inp', source: 'field', value: 195, rating: 'good' },
+          { metric: 'tbt', source: 'lab', value: 878, rating: 'poor' },
+        ],
+        discordances: [
+          {
+            field: { metric: 'inp', source: 'field', value: 195, rating: 'good' },
+            lab: { metric: 'tbt', source: 'lab', value: 878, rating: 'poor' },
+            labNonRepresentativeForRecommendations: true,
+          },
+        ],
+        primaryConcern: null,
+        suppressedLabRecommendations: ['tbt'],
+      },
+    };
+    const impact =
+      "D'après les mesures de laboratoire, les tâches JavaScript longues se prolongent.";
+    const unsafe = output();
+    unsafe.themes[0]!.businessImpact = impact;
+    unsafe.themes[0]!.recommendedActions = [
+      'Les tâches JavaScript longues doivent être découpées.',
+      'Stabilisez les éléments qui se déplacent pendant le chargement.',
+    ];
+
+    const sanitized = sanitizeWritingOutput(tbtSuppressed, unsafe);
+
+    expect(sanitized.output.themes[0]!.recommendedActions).toEqual([
+      'Stabilisez les éléments qui se déplacent pendant le chargement.',
+    ]);
+    expect(sanitized.output.themes[0]!.businessImpact).toBe(impact);
+    expect(findPerformanceEvidenceViolations(tbtSuppressed, sanitized.output)).toEqual([]);
+    expect(
+      findPerformanceEvidenceViolations(tbtSuppressed, unsafe).map((violation) => violation.field),
+    ).toEqual(['themes[0](t1).recommendedActions[0]']);
   });
 });
