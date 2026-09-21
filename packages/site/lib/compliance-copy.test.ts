@@ -172,11 +172,14 @@ describe('offer page', () => {
     expect(offer).toContain('does not depend on the size of the site');
   });
 
+  // The next-steps list may say, in passing, that a contacted prospect's
+  // preview came from the complete analysis (2026-09-21, operator choice);
+  // the page still never describes what the preview contains.
   it('does not explain the outreach preview on the commercial offer page', () => {
     expect(offer).not.toContain('Si vous avez reçu un aperçu');
     expect(offer).not.toContain('If you received a preview');
-    expect(offer).not.toContain('aperçu');
-    expect(offer).not.toContain('preview');
+    expect(offer.match(/aperçu/gu) ?? []).toHaveLength(1);
+    expect(offer.match(/preview/gu) ?? []).toHaveLength(1);
     expect(offer).not.toContain('trois pages');
     expect(offer).not.toContain('three pages');
   });

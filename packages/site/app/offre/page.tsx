@@ -21,33 +21,37 @@ export const metadata: Metadata = {
   },
 };
 
+// The analysis step covers both audiences: a prospect we contacted already
+// has a complete analysis (what they received came from it), while a visitor who
+// found the site gets one after writing to us. Nothing is billed before the
+// written confirmation is accepted.
 const NEXT_STEPS_FR: readonly Step[] = [
   {
-    title: 'Premier échange',
-    text: 'Nous vous répondons personnellement pour vérifier que le diagnostic correspond bien à votre besoin.',
-  },
-  {
-    title: 'Quelques questions',
-    text: 'Un court questionnaire nous permet de comprendre votre site, votre activité et les éventuelles contraintes à prendre en compte.',
+    title: 'Analyse de votre site',
+    text: "Si nous vous avons contacté, l'analyse complète de votre site est déjà réalisée\u00a0: l'aperçu que vous avez reçu en est issu. Sinon, nous la lançons après votre premier message.",
   },
   {
     title: 'Validation',
-    text: 'Vous recevez une proposition écrite qui confirme le périmètre, le tarif et le délai. Rien ne démarre avant votre accord.',
+    text: 'Vous recevez une confirmation écrite du périmètre, du tarif et du délai. Rien ne vous est facturé avant votre accord.',
+  },
+  {
+    title: 'Remise du rapport',
+    text: 'Le rapport complet vous est remis au format PDF, en français ou en anglais, avec les priorités et les préconisations.',
   },
 ];
 
 const NEXT_STEPS_EN: readonly Step[] = [
   {
-    title: 'Initial conversation',
-    text: 'We reply personally to make sure the diagnostic is a good fit for what you need.',
-  },
-  {
-    title: 'A few questions',
-    text: 'A short written questionnaire helps us understand your site, your business and any constraints we should take into account.',
+    title: 'Analysis of your site',
+    text: 'If we contacted you, the complete analysis of your site has already been done: the preview you received comes from it. Otherwise, we run it after your first message.',
   },
   {
     title: 'Approval',
-    text: 'You receive a written proposal confirming the scope, price and delivery time. Nothing starts until you approve it.',
+    text: 'You receive written confirmation of the scope, price and delivery time. Nothing is billed until you approve it.',
+  },
+  {
+    title: 'Report delivery',
+    text: 'The complete report is delivered as a PDF, in French or English, with priorities and recommendations.',
   },
 ];
 
@@ -257,7 +261,7 @@ export default function OfferPage() {
           <section aria-labelledby="suite-offre" className="offer-section">
             <div className="measure">
               <h2 id="suite-offre" className="heading">
-                Trois étapes avant le diagnostic
+                Trois étapes jusqu&apos;à votre rapport
               </h2>
             </div>
 
@@ -452,7 +456,7 @@ export default function OfferPage() {
           <section aria-labelledby="next-offre-en" className="offer-section">
             <div className="measure">
               <h2 id="next-offre-en" className="heading">
-                Three steps before the diagnostic
+                Three steps to your report
               </h2>
             </div>
 
