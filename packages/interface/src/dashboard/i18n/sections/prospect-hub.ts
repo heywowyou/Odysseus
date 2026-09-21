@@ -98,6 +98,8 @@ export interface ProspectHubStrings {
     title: string;
     description: string;
     backToProspects: string;
+    randomIndependent: string;
+    randomIndependentNoMatch: string;
     searchPlaceholder: string;
     searchAria: string;
     sectorAria: string;
@@ -449,6 +451,9 @@ export const prospectHub = {
       description:
         'Le catalogue Atout France. Ajoutez les établissements qui deviennent vos prospects.',
       backToProspects: 'Prospects',
+      randomIndependent: 'Prospect indépendant aléatoire',
+      randomIndependentNoMatch:
+        'Aucun établissement indépendant ne correspond aux filtres actuels.',
       searchPlaceholder: 'Rechercher dans l’annuaire',
       searchAria: 'Rechercher dans l’annuaire',
       sectorAria: 'Filtrer par secteur',
@@ -963,6 +968,8 @@ export const prospectHub = {
       title: 'Directory',
       description: 'The Atout France catalogue. Add establishments that become your prospects.',
       backToProspects: 'Prospects',
+      randomIndependent: 'Random independent prospect',
+      randomIndependentNoMatch: 'No independent establishment matches the current filters.',
       searchPlaceholder: 'Search the directory',
       searchAria: 'Search the directory',
       sectorAria: 'Filter by sector',

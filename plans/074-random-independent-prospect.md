@@ -1,6 +1,6 @@
 # Plan 074 — Random independent prospect from the directory
 
-- **Execution status:** TODO
+- **Execution status:** IMPLEMENTED (2026-09-21) — awaiting the operator acceptance rehearsal on the dashboard
 - **Priority:** P2
 - **Effort:** M
 - **Depends on:** Plan 047's durable prospect hub and Plan 050's durable directory/prospect linking.
@@ -385,6 +385,35 @@ Acceptance rehearsal:
 | docs | dashboard IA | random sourcing mode documented |
 
 No binding row closes by code review alone.
+
+## Closure evidence (2026-09-21)
+
+| Requirement | Implementation | Proof |
+| --- | --- | --- |
+| whole-pool randomness | `createRandomIndependentProspectFromDirectory()` in `packages/store/src/prospect-hub.ts`: `$match` + `$sample` over the matching unlinked pool | `directory-random-prospect.test.ts`: "draws from the whole matching pool, not the first page" (sole eligible row sorts after 60 others, drawn with `pageSize: 1`) |
+| canonical independence | sampler forces `groupStatus: 'independent'` through `queryForDirectory()` | "never selects a group-member, vendor-hosted or unknown entry"; "forces independence even when the filter asks for another group status" |
+| no already-used prospect | sampler adds `prospectId: { $exists: false }` | "excludes entries already linked to active or archived prospects" |
+| filter parity | `queryForDirectory()` is the only facet-to-query mapping; `listDirectory()` and the sampler both call it | "respects the current directory facets" (stars, department, rooms, name search); existing `listDirectory` tests in `prospect-hub-integrity.test.ts` and `prospect-archive.test.ts` unchanged and green |
+| no page bias | sampler strips `page`/`pageSize`; route strips them before the store; `buildRandomIndependentPath()` omits them | route test "forces independence, drops pagination, and returns the created prospect"; dashboard test "forces independence, keeps the facets, and drops pagination" |
+| durable creation | sampled id goes through `addDirectoryEntriesToProspects()`; no other constructor | "creates the only eligible entry through the normal directory add" (status `new`, `directoryRef`, `atout-france` field origins, `prospect-created` event, directory link) |
+| concurrency safety | directory claim in `addDirectoryEntriesToProspects()` plus a resample bounded at 5 draws | "never creates two prospects from one entry under concurrent draws" (6 parallel draws, 1 prospect); "resamples when a concurrent add wins the sampled entry" |
+| typed empty pool | `POST /api/directory/random-independent` answers 409 `{ code: 'no-eligible-independent-directory-entry' }`; 400 for malformed facets | route tests "answers a typed 409 when no eligible entry matches" and "rejects malformed facets without drawing"; store test "returns null when nothing matches" |
+| truthful UI | `DirectoryPage` sets the visible group filter to independent on click, disables the button while drawing, shows a persistent `role="status"` message bound to the current filters | `directory-random-independent.test.ts`: "sends the current facets, blocks a second click while drawing, and opens the created prospect"; "keeps the operator on the Directory with an accessible no-match status" (FR and EN) |
+| direct workflow | `navigate('/prospects/:prospectId')` on 201 | same test asserts the location becomes `/prospects/p-random-1` |
+| accessibility | native button with visible text; status region | "is a keyboard-reachable button with visible text in both languages"; axe clean with the no-match status shown (FR and EN); `accessibility.test.ts` Directory FR/EN green |
+| no hidden ranking | the sampler's only inputs are the directory facets plus the two eligibility clauses; the route calls no scan, draft or mail code | route test "launches no scan and no outreach work"; store test asserts no random-selection field on the created record |
+| docs | `docs/product/dashboard-ia.md` "Prospects and Directory" documents both sourcing modes | `pnpm run docs:check` |
+
+The route is registered under the existing `addFromDirectory` row of the
+consequential-action registry (`packages/interface/src/operator/action-registry.ts`).
+
+Repository validation: `pnpm run check` passed; `vitest run packages/store/src
+packages/interface/src` passed 1674 tests (3 skipped) against the Mongo test
+service.
+
+Still open: the operator acceptance rehearsal above. The repository `.env`
+points at the shared `odysseus-dev` Atlas cluster, so drawing real prospects
+there is left to the operator.
 
 ## Out of scope
 

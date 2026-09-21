@@ -83,6 +83,20 @@ or silently mutating their data sets. A row linked to a prospect offers
 `Restore prospect` when that prospect is archived; a linked row is never added
 a second time, and a directory source refresh never touches the link.
 
+Directory has two sourcing modes. The operator either browses and filters,
+then adds the selected entries, or clicks `Prospect indépendant aléatoire` /
+`Random independent prospect` (Plan 074). That shortcut samples one entry on
+the server from the whole pool matching the current filters, never the visible
+page. Eligible entries have the stored `groupStatus=independent` facet and no
+link to any prospect, active or archived. The click sets the visible group
+filter to independent so it states the pool that was sampled, creates the
+prospect through the ordinary directory add, and opens it. When nothing is
+eligible, the operator stays on Directory with the persistent status `Aucun
+établissement indépendant ne correspond aux filtres actuels.` / `No
+independent establishment matches the current filters.` The draw scans nothing,
+drafts nothing, ranks nothing, and records no random-selection history: the
+created prospect is indistinguishable from one added by hand.
+
 ## Archive and permanent deletion
 
 `Archiver le prospect` / `Archive prospect` is the ordinary way to take a

@@ -282,7 +282,9 @@ export const REGISTRY_ACTIONS = [
   {
     action: 'addFromDirectory',
     owner: 'prospect-store',
-    routes: ['POST /api/directory/add'],
+    // Plan 074: the random independent draw is the same operation with the
+    // entry chosen on the server.
+    routes: ['POST /api/directory/add', 'POST /api/directory/random-independent'],
     protocol: 'reload-recheck',
     pendingPlan061: true,
   },

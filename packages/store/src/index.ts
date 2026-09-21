@@ -149,6 +149,7 @@ export {
   listProspectScopeJobIds,
   countProspectDeletionImpact,
   createProspectHub,
+  createRandomIndependentProspectFromDirectory,
   deleteProspectPermanently,
   directoryEntryToProspectInput,
   fillMissingProspectIdentity,

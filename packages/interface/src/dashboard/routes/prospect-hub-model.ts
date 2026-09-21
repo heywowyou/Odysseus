@@ -128,3 +128,13 @@ export function buildHubProspectsPath(state: ProspectFilterState): string {
 export function buildDirectoryPath(state: ProspectFilterState): string {
   return `/api/directory?${buildProspectApiQuery(state, 'directory').toString()}`;
 }
+
+/** Plan 074: the random independent draw samples the whole matching
+ *  directory pool on the server, so it sends the current facets with
+ *  independence forced and no pagination. */
+export function buildRandomIndependentPath(state: ProspectFilterState): string {
+  const query = buildProspectApiQuery({ ...state, groupStatus: 'independent' }, 'directory');
+  query.delete('page');
+  query.delete('pageSize');
+  return `/api/directory/random-independent?${query.toString()}`;
+}

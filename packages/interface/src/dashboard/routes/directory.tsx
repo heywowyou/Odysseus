@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import type { JSX } from 'react';
-import { ArrowLeft } from 'lucide-react';
-import { Link, useSearchParams } from 'react-router';
+import { ArrowLeft, Shuffle } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { PageHeader, PAGE_WIDTH } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import { Button, buttonStyles } from '../components/ui/button';
@@ -15,12 +15,13 @@ import {
   TableHeaderCell,
   TableRow,
 } from '../components/ui/table';
-import { sendJson } from '../lib/api';
+import { ApiError, postEmpty, sendJson } from '../lib/api';
 import { formatCommune } from '../lib/format';
 import { useApi } from '../lib/use-api';
 import { useI18n } from '../i18n/provider';
 import {
   buildDirectoryPath,
+  buildRandomIndependentPath,
   type DirectoryResponse,
   type DirectoryRow,
 } from './prospect-hub-model';
@@ -59,6 +60,36 @@ export function DirectoryPage(): JSX.Element {
     );
   const [adding, setAdding] = useState(false);
   const [restoring, setRestoring] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [drawing, setDrawing] = useState(false);
+  // The outcome of the last draw, kept only while the filters that produced
+  // it are still the current ones, so a stale message never outlives them.
+  const [drawOutcome, setDrawOutcome] = useState<{ path: string; message: string } | null>(null);
+  const randomPath = buildRandomIndependentPath(filterState);
+  const drawMessage = drawOutcome?.path === randomPath ? drawOutcome.message : null;
+  // Plan 074: the server draws from the whole matching pool, never this page,
+  // and the visible group filter is set to independent so it states the pool.
+  const drawRandomIndependent = async (): Promise<void> => {
+    if (drawing) return;
+    setDrawing(true);
+    setDrawOutcome(null);
+    if (filterState.groupStatus !== 'independent') updateFilter('groupStatus', 'independent');
+    try {
+      const prospect = await postEmpty<{ prospectId: string }>(randomPath);
+      void navigate(`/prospects/${encodeURIComponent(prospect.prospectId)}`);
+    } catch (error) {
+      setDrawOutcome({
+        path: randomPath,
+        message:
+          error instanceof ApiError && error.status === 409
+            ? copy.randomIndependentNoMatch
+            : error instanceof Error
+              ? error.message
+              : String(error),
+      });
+      setDrawing(false);
+    }
+  };
   const add = async (): Promise<void> => {
     if (selected.length === 0 || adding) return;
     setAdding(true);
@@ -88,12 +119,21 @@ export function DirectoryPage(): JSX.Element {
         title={copy.title}
         description={copy.description}
         actions={
-          <Link to="/prospects" className={buttonStyles('secondary')}>
-            <ArrowLeft className="size-4" aria-hidden="true" />
-            {copy.backToProspects}
-          </Link>
+          <>
+            <Link to="/prospects" className={buttonStyles('secondary')}>
+              <ArrowLeft className="size-4" aria-hidden="true" />
+              {copy.backToProspects}
+            </Link>
+            <Button isLoading={drawing} onClick={() => void drawRandomIndependent()}>
+              {drawing ? null : <Shuffle className="size-4" aria-hidden="true" />}
+              {copy.randomIndependent}
+            </Button>
+          </>
         }
       />
+      <p role="status" className={drawMessage ? 'mb-4 text-sm text-ink' : 'sr-only'}>
+        {drawMessage}
+      </p>
       <ProspectFilterBar
         source="directory"
         state={filterState}

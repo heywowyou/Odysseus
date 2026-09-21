@@ -15,6 +15,7 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   attachAuditToProspect: vi.fn(),
   checkOutreachAction: vi.fn(),
   createProspectHub: vi.fn(),
+  createRandomIndependentProspectFromDirectory: vi.fn(),
   archiveProspect: vi.fn(),
   countActiveProspectDeletionJobs: vi.fn(),
   countProspectDeletionImpact: vi.fn(),
@@ -77,6 +78,7 @@ vi.mock('../outreach/configured-preview-publisher.js', () => ({
 
 import {
   checkOutreachAction,
+  createRandomIndependentProspectFromDirectory,
   archiveProspect,
   countActiveProspectDeletionJobs,
   countProspectDeletionImpact,
@@ -317,6 +319,75 @@ describe('prospect hub routes', () => {
     const invalidBoolean = await handle('/api/prospects?hasScan=maybe');
     expect(invalidBoolean.statusCode).toBe(400);
     expect(listProspects).toHaveBeenCalledTimes(0);
+  });
+
+  describe('random independent prospect', () => {
+    it('forces independence, drops pagination, and returns the created prospect', async () => {
+      vi.mocked(createRandomIndependentProspectFromDirectory).mockResolvedValue({
+        prospectId: 'p-random',
+      } as never);
+
+      const created = await handle(
+        '/api/directory/random-independent?stars=4&department=33&groupStatus=group-member&q=phare&roomsMax=40&page=7&pageSize=1',
+        'POST',
+        {},
+      );
+
+      expect(created.statusCode).toBe(201);
+      expect(created.body).toEqual({ prospectId: 'p-random' });
+      expect(createRandomIndependentProspectFromDirectory).toHaveBeenCalledWith(fakeConnection, {
+        q: 'phare',
+        sector: undefined,
+        stars: 4,
+        groupStatus: 'independent',
+        websiteKind: undefined,
+        department: '33',
+        commune: undefined,
+        roomsMin: undefined,
+        roomsMax: 40,
+        hasScan: undefined,
+        inactive: undefined,
+        postcode: undefined,
+      });
+      const [, filter] = vi.mocked(createRandomIndependentProspectFromDirectory).mock.calls[0]!;
+      expect(filter).not.toHaveProperty('page');
+      expect(filter).not.toHaveProperty('pageSize');
+    });
+
+    it('answers a typed 409 when no eligible entry matches', async () => {
+      vi.mocked(createRandomIndependentProspectFromDirectory).mockResolvedValue(null);
+
+      const empty = await handle('/api/directory/random-independent?department=33', 'POST', {});
+
+      expect(empty.statusCode).toBe(409);
+      expect(empty.body).toMatchObject({ code: 'no-eligible-independent-directory-entry' });
+    });
+
+    it('rejects malformed facets without drawing', async () => {
+      const invalid = await handle('/api/directory/random-independent?stars=four', 'POST', {});
+      const badKind = await handle(
+        '/api/directory/random-independent?websiteKind=castle',
+        'POST',
+        {},
+      );
+
+      expect(invalid.statusCode).toBe(400);
+      expect(badKind.statusCode).toBe(400);
+      expect(createRandomIndependentProspectFromDirectory).not.toHaveBeenCalled();
+    });
+
+    it('launches no scan and no outreach work', async () => {
+      vi.mocked(createRandomIndependentProspectFromDirectory).mockResolvedValue({
+        prospectId: 'p-random',
+      } as never);
+
+      await handle('/api/directory/random-independent', 'POST', {});
+
+      expect(createFirstEmailForProspect).not.toHaveBeenCalled();
+      expect(createFollowUpForProspect).not.toHaveBeenCalled();
+      expect(syncMailbox).not.toHaveBeenCalled();
+      expect(setProspectStatus).not.toHaveBeenCalled();
+    });
   });
 
   it('routes explicit status, outcome, and deletion actions', async () => {

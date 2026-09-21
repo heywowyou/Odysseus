@@ -6,6 +6,7 @@ import {
   attachAuditToProspect,
   checkOutreachAction,
   createProspectHub,
+  createRandomIndependentProspectFromDirectory,
   findProspectsByDomain,
   findOutreachThreadByProspect,
   getProspectHub,
@@ -80,6 +81,7 @@ const STATUSES: readonly ProspectStatus[] = [
 ];
 const WEBSITE_KINDS: readonly ProspectWebsiteKind[] = ['own', 'vendor-hosted', 'chain', 'unknown'];
 const GROUP_STATUSES = ['independent', 'group-member', 'vendor-hosted', 'unknown'] as const;
+const RANDOM_INDEPENDENT_NO_MATCH = 'no-eligible-independent-directory-entry';
 
 function optionalText(query: URLSearchParams, key: string): string | undefined {
   const value = query.get(key)?.trim();
@@ -266,6 +268,31 @@ export function registerProspectHubRoutes(
       return;
     }
     sendJson(res, 201, { prospects: await addDirectoryEntriesToProspects(connection, ids) });
+  });
+
+  // Plan 074: one click draws a random unlinked independent entry from the
+  // whole pool matching the directory filters and creates its prospect. It
+  // never scans, drafts, or sends; the prospect is an ordinary directory add.
+  router.post('/api/directory/random-independent', async ({ req, res, query }) => {
+    await readJsonBodyOrRespond(req, res);
+    if (res.headersSent) return;
+    let filter: DirectoryFilter;
+    try {
+      const { page: _page, pageSize: _pageSize, ...facets } = filters(query).directory;
+      filter = { ...facets, groupStatus: 'independent' };
+    } catch (error) {
+      sendError(res, 400, error instanceof Error ? error.message : 'invalid directory filters');
+      return;
+    }
+    const prospect = await createRandomIndependentProspectFromDirectory(connection, filter);
+    if (prospect === null) {
+      sendJson(res, 409, {
+        error: 'No unlinked independent directory entry matches the filters',
+        code: RANDOM_INDEPENDENT_NO_MATCH,
+      });
+      return;
+    }
+    sendJson(res, 201, prospect);
   });
 
   router.post('/api/audits/:auditId/prospect', async ({ req, res, params }) => {

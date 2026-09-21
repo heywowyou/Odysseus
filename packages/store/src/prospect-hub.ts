@@ -800,11 +800,10 @@ export type DirectoryListRow = DirectoryEntryDocument & {
   prospectState?: DirectoryProspectState;
 };
 
-export async function listDirectory(
-  connection: Connection,
-  filter: DirectoryFilter = {},
-): Promise<Page<DirectoryListRow>> {
-  const [page, pageSize] = pageBounds(filter.page, filter.pageSize);
+/** The one mapping from directory facets to a Mongo query, shared by the
+ *  paged directory list and the random independent draw. Pagination is not
+ *  a facet and is ignored here. */
+function queryForDirectory(filter: DirectoryFilter): Record<string, unknown> {
   const query: Record<string, unknown> = {};
   if (filter.sector) query['sector'] = filter.sector;
   if (filter.stars !== undefined) query['stars'] = filter.stars;
@@ -820,6 +819,15 @@ export async function listDirectory(
     };
   }
   if (filter.q) query['name'] = new RegExp(escapeRegex(filter.q), 'i');
+  return query;
+}
+
+export async function listDirectory(
+  connection: Connection,
+  filter: DirectoryFilter = {},
+): Promise<Page<DirectoryListRow>> {
+  const [page, pageSize] = pageBounds(filter.page, filter.pageSize);
+  const query = queryForDirectory(filter);
   const Model = createDirectoryEntryModel(connection);
   const [entries, total] = await Promise.all([
     Model.find(query)
@@ -952,6 +960,46 @@ export async function addDirectoryEntriesToProspects(
     }
   }
   return created;
+}
+
+/** How many times a random draw resamples after a concurrent add claimed
+ *  the sampled entry first. A lost claim is rare; the bound keeps a busy or
+ *  shrinking pool from looping. */
+const RANDOM_DRAW_ATTEMPTS = 5;
+
+/**
+ * Plan 074: draws one unlinked independent directory entry uniformly from the
+ * whole pool matching the directory facets, and creates its prospect through
+ * addDirectoryEntriesToProspects, the only directory-to-prospect path.
+ * Independence is the stored groupStatus facet, forced whatever the filter
+ * says; pagination is ignored. Returns null when nothing eligible remains.
+ */
+export async function createRandomIndependentProspectFromDirectory(
+  connection: Connection,
+  filter: DirectoryFilter = {},
+  actor = 'operator',
+): Promise<ProspectHubDocument | null> {
+  const { page: _page, pageSize: _pageSize, ...facets } = filter;
+  const query = {
+    ...queryForDirectory({ ...facets, groupStatus: 'independent' }),
+    prospectId: { $exists: false },
+  };
+  const Directory = createDirectoryEntryModel(connection);
+  for (let attempt = 0; attempt < RANDOM_DRAW_ATTEMPTS; attempt += 1) {
+    const [sampled] = await Directory.aggregate<{ directoryId: string }>([
+      { $match: query },
+      { $sample: { size: 1 } },
+      { $project: { _id: 0, directoryId: 1 } },
+    ]);
+    if (sampled === undefined) return null;
+    const [created] = await addDirectoryEntriesToProspects(
+      connection,
+      [sampled.directoryId],
+      actor,
+    );
+    if (created !== undefined) return created;
+  }
+  return null;
 }
 
 /** How old a claim on a directory entry must be before a link to a missing
