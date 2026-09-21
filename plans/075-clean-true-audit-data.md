@@ -53,7 +53,7 @@ Why it matters to the client: the grade counts findings (`report/src/template/gr
 | Lighthouse insight/legacy twins | An insight with no items of its own is not allowed to supersede (`auditHasActionableDetail`), so both sides emit. This gives `cls-culprits-insight` with `layout-shifts` and `unsized-images`, and `document-latency-insight` with `redirects` and `server-response-time`: 33 duplicate pairs over 12 audits. `bootup-time` and `mainthread-work-breakdown` co-occur on every audit. |
 
 Checked and **not** noise:
-- third-party-owned elements (about 10 findings, mostly site-authored social links);
+- third-party-owned elements outside frames (about 10 findings, mostly site-authored social links). Content inside third-party frames is a separate defect, see Part E;
 - `tracker-request-before-consent` and `cookie-non-essential-before-consent` evidence;
 - `accessibility-statement-missing`;
 - dedupe-key collisions, occurrence-count consistency, and findings with no page.
@@ -67,7 +67,7 @@ Checked and **not** noise:
 
 ## Slices
 
-Execution order: 0, then A1–A7, then B, then C, then D.
+Execution order: 0, then A1–A8, then B, then C, then E, then D. The operator questions in Part E are asked before their slices start.
 
 ### 0. Measurement harness (first; every other slice is proved against it)
 
@@ -184,6 +184,70 @@ This is identity, not selector normalization (trade-offs 3 and 30). Each change 
   - Measure `bootup-time` against `mainthread-work-breakdown`, and fold one into the other only if the fix and the files are the same.
 - Tests for Part C: unit tests per extractor, plus `finding-collapse.test.ts` invariants and `rule-coverage.test.ts`.
 
+### Part E: second pass (2026-09-22)
+
+A second read-only pass covered the areas the first one left open: Lighthouse run validity, challenges that return 200, third-party frames, SEO checks on noindex pages, field versus lab data, the outreach preview, and reports already built on the contaminated audits.
+
+#### Evidence E
+
+| Defect | Measured |
+|---|---|
+| Challenge bodies that return 200 | The o2switch anti-bot challenge (`<img id="img" src="https://o2swit.ch/assets/tiger.svg">`) was audited by axe on 4 haaitza pages and in 3 lacoorniche findings (14, 15 and 15 pages), and gave a **critical `image-alt`** finding. The stored title is the real page title and the h1 is empty, so the challenge replaced the body after the head was read. A render-status check (A1) does not catch it. |
+| Challenges inside a vendor frame | lacoorniche's table-booking iframe served a DataDome captcha (`static.captcha-delivery.com`) to the crawler. The result is 3 **critical `image-alt`** findings on 14, 12 and 25 pages, split by the iframe's translated `title`. A widget that blocked the crawler is not a defect of the site. |
+| Third-party frame content drives the grade | 31 findings sit inside a frame (`>>>` selectors): 18 critical and 13 serious over 5 audits (YouTube player, uMap, a Vapor widget, the captcha above). The annex attributes them as third-party (`third-party-attribution.ts`), but `computeStatistics` still counts them in the critical and serious totals, so one YouTube embed forces a D (`grade.ts`). The same video is also split in two by iframe attributes (`iframe[width="560"]`, `iframe[frameborder="0"]`). |
+| SEO content checks on noindex pages | SEO-category page entries on pages that declare noindex: pointfrance 362 of 2,038, lacoorniche 158 of 706, haaitza 53 of 291, plus garlande, grand-hotel-opera, chateauroyal and chicago. The rules involved are `meta-description-*`, `canonical-missing`, `crawlable-anchors`, `jsonld-missing`, `opengraph-missing`, `meta-title-length`, `link-text` and `faq-content-without-schema`. A page kept out of search on purpose has no search snippet to improve. The heading rules are accessibility (WCAG 1.3.1) and stay. |
+| One metric reported twice, field and lab | capdantibes and villasfoch: `crux-cls-poor` (serious) and lab `cumulative-layout-shift` (critical). chicago: `crux-lcp-poor` (serious) and lab `largest-contentful-paint` (critical). Real-user data and a throttled lab run give two findings, with two different severities, for one metric. |
+| Lab runs of doubtful validity | Lighthouse warns "stored data (IndexedDB) may affect loading performance" on 199 of 201 lacoorniche runs and 175 of 176 grand-hotel-opera runs. Lighthouse runs over the shared Chromium's debug port (`lighthouse.ts`, `browser.ts`) after our own Playwright visits to the same origin. Runs with `NO_FCP` and `PROTOCOL_TIMEOUT` exist. LCP medians of 27 s (lacoorniche) and 21 s (villasfoch), with a p90 of 55 s, have no plausibility check against CrUX. |
+| Outreach proof cards can show a false positive | `keyboard-trap` has proof-card copy (`proof-card-copy.ts:591`), so B1's false trap on atlantichotel (332 pages, critical) is a candidate headline card in a cold email. A proof screenshot can also come from a rate-limit or challenge page (A1). |
+| Reports already built on contaminated data | grand-hotel-opera: FR and EN PDFs from 2026-09-17 and a FR PDF from 2026-09-19, over 127 rate-limit pages. lacoorniche: PDFs from 2026-09-17 and 2026-09-19, plus a finalized FR PDF (and its light variant) from 2026-09-21, over 10 challenge pages. |
+| Minor Lighthouse diagnostics as findings | 20 to 29 performance findings per audit. Most are minor diagnostics that explain a metric rather than being defects of their own: `bootup-time`, `mainthread-work-breakdown`, `unused-javascript`, `unused-css-rules`, `image-delivery-insight`, `forced-reflow-insight`, `network-dependency-tree-insight`, `lcp-discovery-insight`, `legacy-javascript-insight`, `total-byte-weight`. They are counted in totals and the minor-severity chart. |
+| Low-value archive pages | WordPress date, author, category and type archives: pointfrance 141 pages; chateauroyal about 110 of its 112 `no-h1` pages ("avril 2024", "16 avril 2024", "Types de logement Archive"). The findings on them are template-identical to each other. |
+
+Checked and not noise in this pass: `label` on atlantichotel's `#AVP_arrivalDate` (a real unlabelled field, unlike the trap), `meta-viewport` (one finding per audit), `nested-interactive`, `select-name`, `frame-title` on site-authored iframes, and the pointfrance axe failures (the A5 watchdog, not a separate defect). `/data/artifacts/prescans` (525 runs) predates plan 047. The code that wrote those runs is gone and nothing reads them, so they are not in scope.
+
+#### Operator questions (asked before the slice that needs them)
+
+- **Q1, third-party frame content in the grade (E2).** Recommended: findings inside a third-party frame stay in the annex, attributed to the vendor. The grade, cover totals, severity chart and preview totals count first-party findings only, with the line « dont N relèvent de contenus tiers intégrés ». The conformance wording does not call them out of scope: EN 301 549 judges the page as served, embeds included. The alternative is to keep counting them and only label them.
+- **Q2, minor Lighthouse diagnostics.** Recommended: the five metrics (LCP, CLS, TBT, FCP, Speed Index) stay findings, and each diagnostic becomes evidence under the metric it explains, as ranked causes. That removes about 15 findings per audit without losing any evidence. The alternative is to keep them as findings and exclude minor ones from the counts.
+- **Q3, archive pages.** Decide after E3, because many archives are noindex. Recommended: keep crawling and disclosing them (no page cap; trade-off 64 requires structural evidence), and group template-identical archive findings into one finding. Stop there, and do not sample.
+
+#### Slices
+
+- **E1. Challenges detected by content, at check time and in frames.**
+  - A1's markers become a vendor table confirmed against real data: the o2switch challenge (`o2swit.ch/assets/tiger.svg`), DataDome (`captcha-delivery.com`), and the lacoorniche WAF « Test de sécurité ». This follows the confirmed-not-guessed rule of `third-party-attribution.ts`.
+  - The document is tested when axe and head metadata run, not only at render. A challenge body turns the page into A1's blocked page.
+  - A challenge inside a frame drops that frame's findings and records the widget as undetermined. It also counts as an A8 pushback event.
+  - Stored audits: normalization drops findings whose element snippet matches a marker.
+  - Tests: marker unit tests, a normalize test on a stored-shape page, and an e2e fixture whose iframe serves a challenge.
+- **E2. Third-party frame content (after Q1).**
+  - Apply Q1's decision in `statistics.ts`, `grade.ts` and the preview totals.
+  - The identity of an in-frame finding becomes the frame's `src` origin plus the inner element shape, not the iframe's own attributes, so one embed counts once (C).
+  - Tests: statistics and grade unit tests, and a collapse test.
+- **E3. Noindex pages skip SEO content rules.**
+  - A page that declares noindex (meta robots or `X-Robots-Tag`) keeps every accessibility, privacy and legal check. It gets no SEO-category content finding.
+  - Coverage discloses « N pages marquées noindex, exclues de l'analyse SEO ».
+  - This applies in normalization, so stored audits benefit.
+  - Tests: normalize-head-metadata and normalize-links unit tests, and a coverage test.
+- **E4. One finding per metric when field data exists.**
+  - When CrUX gives a verdict for a metric, the CrUX finding owns the metric and the lab result becomes its evidence. The lab result alone decides only when field data is absent.
+  - Measure on the 12 audits first, then record the rule in trade-off 111.
+  - Tests: normalize-lighthouse and CrUX unit tests.
+- **E5. Only valid lab runs are measured.**
+  - First diagnose the IndexedDB warning with one short probe of an already-audited site. With storage reset on, Lighthouse clears the origin before loading, so the warning probably reports residue from our own Playwright visits rather than a warm run. If that holds, record the warning as benign. If not, run Lighthouse in a clean browser context.
+  - A run with `NO_FCP`, `PROTOCOL_TIMEOUT` or any `runtimeError` is discarded and retried once. It never enters a median.
+  - The harness flags a lab median above 20 s, or above three times the CrUX p75 when field data exists. The report's metric copy says lab versus field.
+  - Tests: normalize-lighthouse unit tests, and a scanner unit test for the retry.
+- **E6. The outreach preview never shows a false or blocked proof.**
+  - Preview evidence selection skips the page classes A1 and E1 mark as blocked. It also skips any rule listed in a small "under correction" set until that rule's fix is merged: `keyboard-trap` until B1 lands, then the set is emptied.
+  - Tests: preview selection unit tests.
+- **E7. Reports built on invalidated audits cannot go out.**
+  - Check that the `NORMALIZATION_FINGERPRINT` bump (D) makes the existing provenance fail-closed path refuse the grand-hotel-opera and lacoorniche PDFs, the finalized 2026-09-21 one included. If it does not, add that refusal.
+  - The dashboard shows those reports as « À régénérer après nouvelle analyse ». Nothing is deleted.
+  - Tests: a provenance test with a stale-fingerprint report.
+- **E8. B6 and B7 made decidable.**
+  - B6: a merged `text-missing-from-raw-html` finding takes its severity from the median missing share of its pages, using the existing per-page bands in `severity.ts`. The worst page is listed in its evidence. Recorded in trade-off 3.
+  - B7: if `obligation-basis.md` has no entry for New Caledonia and the other overseas collectivities, `lcen-mentions-legales-missing` on those domains becomes a manual check (« vérifier le régime applicable ») and the finding is not emitted. The decision is recorded in the basis document. No legal fact is guessed.
+
 ### D. Docs, fixtures, rollout
 
 - **Trade-offs.**
@@ -191,7 +255,7 @@ This is identity, not selector normalization (trade-offs 3 and 30). Each change 
   - Amend 30: `broken-internal-link`.
   - Amend 64 and the rule 5 amendment: the nesting guard.
   - Amend 110: `is-crawlable` always dropped.
-  - Add 111: the non-content page population (A1–A3), served spelling (A4), and per-check budgets (A5).
+  - Add 111: the non-content page population (A1–A3, E1), served spelling (A4), per-check budgets (A5), noindex pages and SEO rules (E3), field ahead of lab and lab-run validity (E4, E5), and the answers to Q1 to Q3.
 - **Rules docs.** Update normalization-rules §1, §2, §5 and §5a. Add undetermined outcomes to the manual accessibility checklist.
 - **Fingerprint and fixtures.** Bump `NORMALIZATION_FINGERPRINT` and re-stamp the committed test audits. `pnpm fixtures:refresh` runs where the source artifacts exist; otherwise the known fixture-freshness failure is recorded, as today.
 - **Stored audits.** Nothing is regenerated automatically: `regenerate-report` re-runs the paid AI passes. Before a report goes out, re-normalize (Parts B and C, and the stored-data parts of A) or rescan (the scan-time parts of A).
@@ -207,6 +271,12 @@ This is identity, not selector normalization (trade-offs 3 and 30). Each change 
 - Each false positive in section B is fixed, or recorded as an undetermined or manual check, with a test.
 - Each split in section C collapses to one finding per real defect, with occurrences preserved and the concentration guard green.
 - The dashboard warns during a scan when a site rate-limits or challenges the crawler, and offers a prefilled slower relaunch.
+- Challenges that return 200, including those inside vendor frames, yield no findings (E1).
+- Q1 to Q3 are answered and applied: third-party frame content, minor Lighthouse diagnostics, archive pages.
+- Noindex pages carry no SEO content findings, and the coverage discloses them (E3).
+- A metric is reported once, with field data ahead of lab when both exist, and no invalid lab run enters a median (E4, E5).
+- The outreach preview cannot pick a proof from a blocked page or from a rule under correction (E6).
+- Reports built before this plan on the contaminated audits cannot be sent (E7).
 - The requirement-to-proof ledger below is complete before the plan moves to DONE.
 
 ## Executable closure contract
@@ -228,6 +298,15 @@ The closure artifact is the requirement-to-proof ledger below. Every row names i
 | keyboard-trap, noindex, video, NAP, hreflang, render-diff false positives | Named normalizers and checks | Code | Unit and e2e per rule | Operator spot-checks one report |
 | LCEN outside metropolitan France | `obligation-basis.md` owner | Recorded decision | Unit test for the chosen behaviour | Operator decision if the basis is unclear |
 | One defect counts once | `normalize-axe.ts`, `normalize-head-metadata.ts`, `normalize-reflow.ts`, `normalize-links.ts`, `normalize-lighthouse.ts`, `normalize-crawl.ts`, `normalize-hreflang.ts` | Code, deferred item closed | Unit tests, collapse invariants, concentration guard | Harness per-rule table |
+| Challenges returning 200, in page or frame, excluded | scanner acquisition, `normalize-axe.ts`, `normalize.ts` | Code, vendor marker table | Marker unit tests, normalize test, challenge-iframe e2e | Harness: 0 findings with a challenge marker snippet |
+| Third-party frame content handled per Q1 | `statistics.ts`, `grade.ts`, preview totals, `normalize-axe.ts` identity | Code, operator decision | Statistics, grade and collapse unit tests | Operator answers Q1 |
+| Minor Lighthouse diagnostics handled per Q2 | `normalize-lighthouse.ts`, report performance section | Code, operator decision | Normalize and report unit tests | Operator answers Q2 |
+| Archive pages handled per Q3 | `normalize.ts`, coverage disclosure | Code, trade-off 64 note | Collapse unit test | Operator answers Q3 |
+| No SEO content finding on noindex pages | `normalize-head-metadata.ts`, `normalize-links.ts`, coverage | Code, copy | Unit and coverage tests; harness shows 0 SEO entries on noindex pages | none |
+| One finding per metric; valid lab runs only | `normalize-lighthouse.ts`, CrUX normalizer, `lighthouse.ts` | Code, trade-off 111 | Unit tests; harness plausibility table | IndexedDB probe result recorded here |
+| Preview never shows a false or blocked proof | preview evidence selection | Code | Selection unit tests | none |
+| Contaminated reports refused | provenance fail-closed path, dashboard report list | Code or confirmed existing behaviour | Stale-fingerprint provenance test | Operator sees « À régénérer » on grand-hotel-opera and lacoorniche |
+| B6 and B7 decided | `normalize-renderdiff.ts`, `obligation-basis.md` | Code, trade-off 3, basis entry | Unit tests | Operator reads the B7 basis entry |
 | Provenance consistent | `normalization-fingerprint.ts` | Fingerprint bump | `pnpm run check`, findings-provenance test | none |
 
 ## Verification
@@ -246,3 +325,5 @@ Once this plan is deployed, rescan all 12 stored full audits instead of only re-
 4. Then the rest, spaced out.
 
 Reports are regenerated only when needed, because regeneration runs the paid AI passes.
+
+Until then, the stored grand-hotel-opera and lacoorniche PDFs, including the finalized lacoorniche PDF from 2026-09-21, are not sent to anyone (E7).
