@@ -11,7 +11,7 @@
 - Priority: P1
 - Effort: L
 - Depends on: 067, 068
-- Execution status: IN PROGRESS — implementation is on `main`; repository-wide validation and the stored-audit no-rescan acceptance remain externally blocked
+- Execution status: DONE (2026-09-21) — implementation, repository validation, the stored Villas Foch no-rescan v3/Touch-1 acceptance, the live opaque-link publication check and the stale-lineage reissue check are all recorded
 - Planning rebaseline: `105500fed7a8c38c39257872e9ab2064803495b3`
 - Target content version: `v3`
 
@@ -470,19 +470,44 @@ refuses stale selected-analysis/findings lineage instead of recomputing it.
 
 ### Verification state
 
-GitHub Actions run `35433792438` on implementation head `d921a472` failed
-**before any job step started**: the Security scan, test and custom-Semgrep jobs
-all ended with `runner_id: 0` / zero steps, and no job log existed to fetch.
-Vercel's commit status succeeded. This is the same pre-step Actions execution
-failure shape already recorded by Plans 067/068, not a test assertion from the
-Plan-069 code.
+Repository proof is green on the current checkout: `pnpm run check`,
+`pnpm run test` (5,360 passed, 3 skipped), `pnpm run build`, and the serial
+report E2E project (18 files, 65 tests). The historical GitHub Actions failure
+was a pre-step runner failure, not a Plan-069 assertion failure.
 
-Because no executable checkout/saved audit artifact is available through this
-session's repository tools, the Definition-of-done items that require actual
-command execution and the dated no-rescan stored-audit acceptance cannot be
-truthfully marked complete here. No live rescan was run. Under
-`plans/README.md`'s status definition this plan therefore remains **IN
-PROGRESS** even though the code/document implementation is complete on
-`main`; close/archive it only after the repository validation suite executes
-green and the stored-audit acceptance is recorded.
+**Dated stored-audit acceptance — 2026-09-21.** The stored audit at
+`artifacts/www.villasfoch.fr/2026-09-16T02-37-05Z` was reused without a scan.
+The current normalization produced 65 findings across 24 affected pages; the
+French report was regenerated from that lineage and rendered as a 39-page PDF,
+with all 65 finding IDs confirmed in extracted text and the complete PDF read
+page by page. The private v3 preview rehearsal rendered a five-page PDF with
+the same 65 findings, 24 affected pages, and severity totals of 14 critical,
+12 serious, 15 moderate, and 24 minor. Its bounded diagnostics disclosure was
+`Diagnostic détaillé indisponible` because no local diagnostic artifact existed.
 
+The in-memory v3 publication/resolution rehearsal recorded and returned the
+same bounded facts to Touch 1: 65 findings, 24 affected pages, the four
+severity totals above, and the first three priority-card categories. The local
+French Touch-1 draft included both the personalized preview target and the
+permanent reference-audit target. No scan or provider call was made.
+
+**Live publication and stale-lineage acceptance — 2026-09-21.** With the
+operator's explicit authorization for that external write, acceptance steps 6
+and 8 were completed against the real preview bucket and the live site, using
+the same stored audit and no rescan or provider call.
+
+A v3 preview built from the stored French analysis
+`355f22e5-e11c-45b7-990d-12e79cf0ffa2` was published and fetched through its
+opaque public link. The served HTML was byte-identical to the stored object
+(143,105 bytes) and carried `X-Robots-Tag: noindex, nofollow, noarchive` with
+no remote asset or script. Touch 1 resolved the exact publication snapshot: 65
+findings, 24 affected pages, severity totals 14/12/15/24 and three
+accessibility priority cards.
+
+Selecting a different stored French analysis with the same findings digest
+(`6308850e-5ba5-446e-9069-311c48976ede`) left the published link reachable but
+made Touch 1 refuse it as `preview-stale` rather than recompute it. Reissuing
+the preview against that analysis produced a live snapshot whose card
+categories were accessibility, accessibility, performance, and Touch 1
+accepted it. Both test objects were deleted afterwards and their links return
+404. No preview record was written to the production database.

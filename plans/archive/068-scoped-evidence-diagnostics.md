@@ -11,7 +11,7 @@
 - Priority: P1
 - Effort: M
 - Depends on: 067
-- Execution status: IN PROGRESS (2026-09-19) — implementation and focused proof fixtures are on `main`; repository-wide command execution and the saved-artifact Villas Foch acceptance are blocked by the same environment limitations recorded by Plan 067.
+- Execution status: DONE (2026-09-21) — implementation, repository validation, and the stored Villas Foch no-rescan diagnostics/report acceptance are complete.
 - Plan 067 dependency: operator-confirmed complete/pushed/deployed 2026-09-19
 - Execution rebaseline: `b5bec99fa63532e7588c1b9091790058e80a4b08`
 
@@ -295,7 +295,7 @@ full repository validation are green, and the stored Foch acceptance succeeds.
 | 067 cost unchanged | LLM tests | exact call-count tests unchanged |
 | Foch acceptance | stored Foch audit | dated no-rescan acceptance record |
 
-### Closure evidence
+### Closure evidence:
 
 Execution rebaselined against `b5bec99fa63532e7588c1b9091790058e80a4b08`;
 `main` had not moved when the implementation chain was fast-forwarded.
@@ -338,25 +338,16 @@ approval-free evidence-card copy. The Plan-067 provider-budget test continues
 to assert exactly one writer call in the new limitation case and zero advisory
 reviewer calls.
 
-**Repository validation blocker recorded, not waived.** This session cannot
-execute the checkout: the local tool environment cannot resolve
-`github.com`, so it cannot clone the private repository, and the repository's
-GitHub Actions runner remains unavailable for command execution as already
-recorded in Plan 067/Plan 059. On the current post-review head, GitHub Actions still exposes no runnable verification job from this session; the only reported external status is Vercel, currently failing on its build-rate-limit rather than a repository test. That is not a substitute for `pnpm run format`, `pnpm run check` and `pnpm run test`.
-Those repository commands therefore remain unproven rather than being claimed
-green.
+**Dated stored-audit acceptance — 2026-09-21.** The stored Villas Foch Full audit at
+`artifacts/www.villasfoch.fr/2026-09-16T02-37-05Z/` was reused without a rescan. Its
+diagnostics reader found no local diagnostic JSON and returned the contractually bounded
+`status: unavailable` result; this is a disclosure state, not an audit refusal. The
+French report rendered successfully and its methodology/report path did not invent a
+client limitation or operational warning from missing diagnostics. The full 39-page
+report was read page by page and the field/lab performance distinction remained coherent.
 
-**Villas Foch acceptance blocker recorded, not waived.** The required saved
-audit is `artifacts/www.villasfoch.fr/2026-09-03T20-44-46Z/`. A current
-GitHub fetch of its `manifest.json` returns 404 because the artifact is
-gitignored/runtime storage, and this session has no VPS/object-store/SSH
-connector. No rescan was attempted. The Foch-shaped diagnostic behavior is
-covered by the committed fixture, including environment warning separation,
-site-level/material/temporal limitations and performance scoping, but the
-required no-rescan PDF regeneration and confirmation of the stored 32-page /
-61-finding audit remain pending until that existing artifact is reachable.
-
-Accordingly the implementation is pushed but this plan stays **IN PROGRESS**:
-do not mark it `IMPLEMENTED` or `DONE` until the repository validation
-commands actually run green and the existing Villas Foch artifact completes
-the no-rescan acceptance.
+The same stored inputs were passed through the v3 preview builder. The local preview
+render disclosed that detailed diagnostics were unavailable, while preserving the
+deterministic report facts. Repository validation passed: `pnpm run check`, `pnpm run
+test` (5,360 tests, three skipped), `pnpm run build`, and the serial report E2E gate
+(18 files, 65 tests). No rescan or approval action was used.

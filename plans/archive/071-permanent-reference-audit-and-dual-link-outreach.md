@@ -12,10 +12,10 @@
 - **Priority:** P1
 - **Effort:** L
 - **Depends on:** 067, 069
-- **Execution status:** IN PROGRESS (2026-09-20) — implementation, focused
-  proofs and a locally rendered anonymized candidate are complete; production
-  bucket provisioning, current-pointer publication and the required
-  client-report-finalizer release review remain pending.
+- **Execution status:** DONE (2026-09-21) — the approved anonymized reference
+  audit is published and served by `/exemple-audit`, pointer replacement and
+  rollback are proven on the live route, and Touch 1 carries both links.
+  Optional click attribution stays disabled by choice.
 - **Planning rebaseline:** b9fd6fd4a0d4adc8ffaa24ddbd3199c97f9dce6a
 - **Product decision:** approved 2026-09-19
 
@@ -670,6 +670,63 @@ Ship in this order so outreach never contains a dead sales link:
 
 The canonical untracked reference link is a valid fallback at every point after
 step 4.
+
+### Release record — 2026-09-21
+
+**Storage decision.** The reference namespace no longer requires its own
+bucket. With no `ODYSSEUS_REFERENCE_AUDIT_BUCKET_*` set, the private publisher
+falls back to the preview bucket and the public site falls back from
+`REFERENCE_AUDIT_BUCKET_*` to its read-only `PREVIEW_BUCKET_*` values, so the
+permanent example ships without new infrastructure or deployment variables.
+This is safe because nothing sweeps that bucket wholesale: preview cleanup
+deletes only the object it published and the opt-out poller reads only
+`opt-out-requests/`. A dedicated bucket remains supported and preferable when
+the public read credential must not reach preview objects at all.
+
+**Source selection (decision 7).** Of the eleven stored Full scans, seven are
+refused by the showcase gate because their evidence carries a screenshot. Among
+the four eligible, `capdantibes-beachhotel.com/2026-09-17T01-56-18Z` was chosen
+for spread: 93 findings across accessibility (50), performance (26), SEO (8),
+privacy/security (7) and GEO (2), with usable CrUX field data and current
+French lineage `e9481321-d8ac-4df2-8b71-3818ac0f61f1`. No rescan was run.
+
+**Release-review defect found and fixed.** The first candidate rendered the
+appendix identifier column with the projected ids overlapping the page count on
+every appendix row. The cause was the synthetic id shape: `showcase-finding-NN`
+overflows a column sized for production's `f001`. The anonymizer now mints ids
+in the production shape, which fixes the overlap, shortens the action-plan
+table and makes the example read like the deliverable. Proof:
+`reference-audit.test.ts` id-shape case.
+
+**Approved artifact.** 43-page A4 PDF, SHA-256
+`ea4ce1ff0778127eb8381dc62f4202ce3a000cbdb65f1aac9289429c31a9f5ba`, renderer
+build `8a8866f4`, template 3, data version `d44b69ff1af50f04`, 272-token source
+denylist with zero leaks across showcase JSON, HTML, PDF text and metadata. The
+exact published document was read page by page: no identity, factual,
+editorial, pagination, typography or overflow defect remains.
+
+**Acceptance.** Steps 1-8, 10 and 11 pass against the live route:
+
+- the canonical URL serves the approved PDF, byte-identical to the stored
+  object, with `application/pdf`, `inline; filename="exemple-audit-odysseus.pdf"`,
+  `X-Robots-Tag: noindex, noarchive`, `nosniff`, `no-referrer` and a 60-second
+  cache;
+- desktop and mobile user agents both receive the same complete 43-page A4
+  document;
+- synthetic French and English Touch-1 drafts each carry exactly two body
+  links, the personalized preview and `/exemple-audit`, with the footer
+  privacy and opt-out links intact and no UTM/ref/fbclid/gclid syntax;
+- publishing version N+1 moved the canonical URL to it within 50 seconds
+  without changing the URL, rollback to N restored it within 60 seconds, and
+  the immutable N+1 object remains stored. The N+1 object is an acceptance
+  artifact, not a release;
+- the operator freshness inspector reports `current` for the published
+  manifest.
+
+Step 9 (tracked redirect receipts) stays unexercised because click attribution
+is intentionally disabled: no receipt bucket is configured and Touch 1 uses the
+canonical untracked link. Its behavior is covered by the slice-D tests, and
+enabling it remains rollout step 8.
 
 ## Out of scope
 

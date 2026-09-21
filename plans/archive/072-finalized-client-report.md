@@ -22,19 +22,19 @@ everywhere it is shown, and kept with its full working set in a local `reports/`
 Three findings from exploration shrink this a lot:
 
 - **`POST /api/audits/:auditId/regenerate-report` already is the skill's `renormalize`.**
-  [make-report-ready.ts](../packages/interface/src/pipeline/make-report-ready.ts) refreshes
+  [make-report-ready.ts](../../packages/interface/src/pipeline/make-report-ready.ts) refreshes
   stale findings, re-runs one writing pass and re-renders. No new route.
-- **`listWritingProseFields`** ([prose-fields.ts](../packages/llm/src/prose-fields.ts), landed
+- **`listWritingProseFields`** ([prose-fields.ts](../../packages/llm/src/prose-fields.ts), landed
   today with Plan 070) is the exhaustive prose-field registry the override allowlist needs,
   so deterministic fields are unreachable by construction.
 - **Applying an override is the same operation as the critic's targeted repair** — splice
   replacement texts by field path, re-sanitize, re-run the guard table. The difference is
-  only where the text comes from. [writing-critic.ts](../packages/llm/src/writing-critic.ts)
+only where the text comes from. [writing-critic.ts](../../packages/llm/src/writing-critic.ts)
   already has that splice.
 
-And the render itself is cheap to relocate: [generateReportPdf](../packages/report/src/index.ts#L114)
+And the render itself is cheap to relocate: [generateReportPdf](../../packages/report/src/index.ts#L114)
 reads nothing off disk. `auditDir` is a dead field and
-[screenshots.ts](../packages/report/src/screenshots.ts#L1-L16) deliberately stopped embedding
+[screenshots.ts](../../packages/report/src/screenshots.ts#L1-L16) deliberately stopped embedding
 page images. A JSON bundle is sufficient — **slice 0 proves this before anything is built on it.**
 
 ## Decisions taken
@@ -65,7 +65,7 @@ all assume bundle-render fidelity.
 ### Slice 1 — `buildRenderBundle` + read-only route
 
 Extract the assembly block in
-[report-stage.ts](../packages/interface/src/pipeline/report-stage.ts#L140-L200) — manualFields,
+[report-stage.ts](../../packages/interface/src/pipeline/report-stage.ts#L140-L200) — manualFields,
 gradeOverride, obligationAssessment, preparation preview, delta, evidence diagnostics — into
 `packages/interface/src/pipeline/build-render-bundle.ts`. Both `runReportStage` and the new
 route call it, so the two can never drift.
@@ -74,7 +74,7 @@ Add `lineage`: auditId, language, analysisId, `findingsProvenance`, `rendererBui
 (`readOdysseusBuildId()`), `REPORT_TEMPLATE_VERSION`, and a bundle digest.
 
 `GET /api/audits/:auditId/render-bundle/:language` in
-[routes/audits.ts](../packages/interface/src/routes/audits.ts), beside the existing
+[routes/audits.ts](../../packages/interface/src/routes/audits.ts), beside the existing
 `report/:language/preview` handler and reusing its 400/404/409 shape.
 
 Tests: the route's bundle renders byte-comparable to what the report stage renders; language
@@ -91,7 +91,7 @@ Rules, each its own test:
   ranking, counts and severities unreachable);
 - `from` not matching the current text exactly → refuse as stale;
 - after splicing: `sanitizeWritingOutput`, then `buildWritingGuards`/`runWritingGuards`
-  ([writing-guards.ts](../packages/llm/src/writing-guards.ts)). A blocking failure, or a style
+  ([writing-guards.ts](../../packages/llm/src/writing-guards.ts)). A blocking failure, or a style
   failure the original did not already have, refuses the render — the same rule the critic
   repair uses.
 
@@ -101,7 +101,7 @@ one implementation rather than two that drift.
 ### Slice 3 — `odysseus report:finalize` CLI
 
 `packages/cli/src/commands/finalize-report.ts`, registered in
-[cli/src/index.ts](../packages/cli/src/index.ts); root script `report:finalize-render`.
+[cli/src/index.ts](../../packages/cli/src/index.ts); root script `report:finalize-render`.
 
 ```
 pnpm report:finalize-render -- --bundle <dir> --overrides <file> --out <pdf>
@@ -113,7 +113,7 @@ No Mongo connection and no provider client — asserted by a test, and `pnpm run
 
 ### Slice 4 — local `reports/` tree
 
-`getReportsRoot()` in [scanner/src/config.ts](../packages/scanner/src/config.ts) mirroring
+`getReportsRoot()` in [scanner/src/config.ts](../../packages/scanner/src/config.ts) mirroring
 `getArtifactsRoot()` (env `ODYSSEUS_REPORTS_ROOT`, default `<workspace>/reports`).
 
 ```
@@ -126,22 +126,22 @@ reports/<hostname>/<audit-started-at>/
 ```
 
 Client data: files written `0600`, matching
-[fetch-client-report.mjs](../scripts/fetch-client-report.mjs). `reports/` and `*.pdf` are already
+[fetch-client-report.mjs](../../scripts/fetch-client-report.mjs). `reports/` and `*.pdf` are already
 in `.gitignore` — verify, do not re-add.
 
 ### Slice 5 — upload, storage, supersession
 
 `POST /api/audits/:auditId/report/:language/finalized`, **JSON body with the PDF base64-encoded**,
-not multipart: [router.ts](../packages/interface/src/router.ts#L35-L40) requires an exact
+not multipart: [router.ts](../../packages/interface/src/router.ts#L35-L40) requires an exact
 `application/json` content type on state-changing routes as its CSRF guard, and that guard stays intact.
 
 - 409 when the posted lineage no longer matches the audit's current selected analysis and
   `findingsProvenance`.
 - Writes `reports/<ts>-final-<lang>.pdf` into the audit dir, syncs to the artifact store via
   the existing `syncAuditDirToBucket` path.
-- Inserts a `reports` row through [persistReport](../packages/store/src/persist-report.ts) — the
+- Inserts a `reports` row through [persistReport](../../packages/store/src/persist-report.ts) — the
   collection is insert-only by design, so this needs no migration — with two new fields on
-  [report.schema.ts](../packages/store/src/schemas/report.schema.ts):
+  [report.schema.ts](../../packages/store/src/schemas/report.schema.ts):
   `origin: 'pipeline' | 'finalized'` (optional, absent on every legacy row and read as
   `'pipeline'`) and `finalization: { overridesDigest, overrideCount, uploadedAt, renderedBuild }`.
 
@@ -157,9 +157,9 @@ Store tests need `pnpm test:store:up` (Docker Mongo is currently down; that is w
 ### Slice 6 — dashboard distinction
 
 `origin` and `finalization` onto `ReportStatusResponse` in
-[audit-detail-types.ts](../packages/interface/src/dashboard/routes/audit-detail-types.ts#L120),
+[audit-detail-types.ts](../../packages/interface/src/dashboard/routes/audit-detail-types.ts#L120),
 populated in `audit-detail-model.ts`, rendered as badges in
-[audit-reports-section.tsx](../packages/interface/src/dashboard/routes/audit-reports-section.tsx#L256-L300)
+[audit-reports-section.tsx](../../packages/interface/src/dashboard/routes/audit-reports-section.tsx#L256-L300)
 beside the existing freshness / older-template / page-count badges.
 
 ```
@@ -171,7 +171,7 @@ Rapport  FR  [À jour] [Finalisation remplacée par une régénération]
              Aperçu   Télécharger   Voir le PDF finalisé
 ```
 
-Strings in [i18n/sections/audit-detail.ts](../packages/interface/src/dashboard/i18n/sections/audit-detail.ts)
+Strings in [i18n/sections/audit-detail.ts](../../packages/interface/src/dashboard/i18n/sections/audit-detail.ts)
 written natively in French, following the existing advisory-badge vocabulary (`À jour`,
 `Modèle de rapport antérieur`). Tests in the existing `audit-detail-render.test.ts` /
 `audit-report-panel-model.test.ts` style.

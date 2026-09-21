@@ -11,7 +11,7 @@
 - **Priority:** P1
 - **Effort:** M
 - **Depends on:** 067
-- **Execution status:** IN PROGRESS (2026-09-19): slices A and B built and tested with the switch off; calibration run on 7 saved audits meets precision (95%), cost and latency but fails no-regression (4 of 7 reports worse), so `WRITING_CRITIC_ENABLED` stays `false` pending the one allowed tightening and re-run (see B6)
+- **Execution status:** IN PROGRESS (2026-09-21): slices A and B are built and tested with the switch off; the post-`3df2fad7` calibration re-run has deliberately not been performed during this closure pass, so `WRITING_CRITIC_ENABLED` remains `false`
 - **Planning rebaseline:** `a95f4d65`
 - **Estimated build time (Claude Opus 5, high effort):** about one working day of
   wall-clock time. Slice A: 1-2 hours. Slice B code: 3-5 hours. Calibration:
@@ -446,6 +446,15 @@ The allowed tightening, before one re-run:
 
 If the re-run still regresses any report, the switch stays off and slice A
 ships alone, as the acceptance thresholds require.
+
+### Closure decision — 2026-09-21
+
+The field-path repair, full-context repair input, technical-term glossing and
+unflagged-text preservation tightening landed in `3df2fad7`. The operator
+directed this release-closure pass to stop before another provider calibration
+run. The critic therefore remains disabled and this plan makes no claim about
+the post-tightening no-regression result. Plan 072's finalization workflow
+remains the delivery safety net for any report that needs correction.
 
 ## Requirement-to-proof ledger
 

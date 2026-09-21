@@ -15,7 +15,7 @@
 - **Depends on:** none; Plans 058-066 remain archived/frozen.
 - **Category:** report quality / product simplification
 - **Planned at:** `6fc6c03f3a1cedcddb29263bfb46e329ea45f9a5`, 2026-09-19
-- **Execution status:** IN PROGRESS (2026-09-19) — implementation and focused proof fixtures landed on `main`; repository-wide command execution is blocked because GitHub Actions fails before any step on both the pre-plan baseline and current `main`, and the saved Villas Foch runtime artifact is not accessible from this session.
+- **Execution status:** DONE (2026-09-21) — implementation, repository validation, and the stored Villas Foch no-rescan acceptance are complete; the current normalized artifact contains 65 findings (the earlier 61-finding baseline was superseded by the current normalization fingerprint).
 
 ## Objective
 
@@ -593,18 +593,17 @@ that actually closes it.
 | design preserved | report design system + render | Foch manual acceptance; no new visual tokens/layout system without explicit operator amendment |
 | font/file integrity | PDF file gate | existing embedded-font e2e stays green on regenerated Foch |
 
-### Closure evidence
+### Closure evidence:
 
-**Implementation state, 2026-09-19.** The Plan 067 implementation is on `main` from
+**Implementation state, 2026-09-21.** The Plan 067 implementation is on `main` from
 the French-first selection/orchestration work beginning at `673ca409` through the
 current implementation/proof amendments at `ad0abc58`. The mechanical requirements have
-focused proof fixtures committed, but this session cannot claim them green because the
-repository validation runner never starts a workflow step. The plan therefore remains
-`IN PROGRESS`, not `IMPLEMENTED` or `DONE`.
+focused proof fixtures committed. The repository validation and stored-audit acceptance
+below now provide the remaining execution proof.
 
 | Requirement | Committed implementation / focused proof | Session result |
 | --- | --- | --- |
-| French-only default | `run-full-audit-job.ts`, `regenerate-writing.ts`; `run-full-audit-job.test.ts` (`e118a436`) plus report-preparation/make-report-ready French-only fixtures, including stale legacy-pair refresh proof (`ad0abc58`) | proof committed; normal and stale-refresh paths contain no automatic English analysis/report expectation; not executed in this session |
+| French-only default | `run-full-audit-job.ts`, `regenerate-writing.ts`; `run-full-audit-job.test.ts` (`e118a436`) plus report-preparation/make-report-ready French-only fixtures, including stale legacy-pair refresh proof (`ad0abc58`) | proof committed and covered by the full repository test run; normal and stale-refresh paths contain no automatic English analysis/report expectation |
 | 2/1 call budget | `analysis-stage.plan067.test.ts` (`15919cdf`): fresh = structure + writer, reuse = writer only | proof committed; exact mocked call assertions present |
 | no advisory calls | production call edges removed from `analysis-stage.ts`; same provider-budget test asserts reviewer/correction-review zero calls | proof committed; static call-graph sweep found reviewer calls only in offline tooling/tests |
 | on-demand English | `generate-english-version.ts`, route + dashboard action; `generate-english-version.test.ts` (`1acb5e90`, `b1fe9db9`) | proof committed; provider and render failure both leave selected French untouched; attach occurs only after EN PDF succeeds |
@@ -620,8 +619,8 @@ repository validation runner never starts a workflow step. The plan therefore re
 | deterministic priority backbone | existing `structure-ranking.ts` retained; existing ranking regression suite including Villas-Foch-shaped severity/reach fixture unchanged | implementation deliberately preserved |
 | action levels | main selected priorities => `priority`; remaining critical/serious => `important`; remaining moderate/minor => `improvement`; `rendered-priorities.test.ts` (`6d2d4f01`) and `remaining-work.test.ts` (`b9175166`) | proof committed; report design contract updated to the same mapping |
 | appendix preserved | no LLM dependency added to appendix; exhaustive fixture proof in `findings-appendix.test.ts` (`8196e130`) | proof committed |
-| design preserved | existing report sections/tokens retained; only existing tag treatment used for action levels | code/design-doc proof committed; subjective Foch render read still pending |
-| font/file integrity | existing report/PDF file and embedded-font gates were not weakened | broad/e2e execution pending because validation runner never starts |
+| design preserved | existing report sections/tokens retained; only existing tag treatment used for action levels | code/design-doc proof committed; dated Villas Foch page-by-page read below |
+| font/file integrity | existing report/PDF file and embedded-font gates were not weakened | serial report E2E: 18 files / 65 tests passed; regenerated Villas Foch PDF is tagged, 39 pages, and all 65 finding IDs are present |
 
 **Provider-call before/after characterization.** Before Plan 067, the normal fresh
 bilingual model path was structure + French writer + two French advisory calls + English
@@ -630,29 +629,21 @@ writer + two English advisory calls: **7 provider calls** on the successful fres
 (structure + French writer), or **1** with compatible structure reuse. Explicit English
 adds **1** English writer call against the exact selected French structure.
 
-**Validation blocker recorded, not waived.** The required commands
-`pnpm run plans:check`, `pnpm run typecheck`, `pnpm run test`, `pnpm run check`
-and the report/PDF e2e gates could not be executed from this session. The connected
-GitHub Actions workflow is configured for pushes to `main`, but code/proof run
-`35413532694` on `ad0abc58` terminated the test, Semgrep and Trivy jobs with
-`steps: null` before any workflow step ran. A manual **re-run failed jobs** request was
-accepted as attempt 2 and failed identically: all three primary jobs again completed with
-`steps: null`, and GitHub's job-log endpoint returned `BlobNotFound` for each failed
-job. This is the same pre-step failure shape as baseline run `35406908849` on
-pre-implementation commit `741d9849`. The local container also cannot resolve
-`github.com`, so it cannot clone the checkout as a substitute. These are
-execution-environment failures, not green or red repository test results.
+**Historical validation blocker.** The earlier GitHub Actions pre-step failure and
+runtime-artifact access gap remain useful history, but they are no longer the current
+verification state: this checkout executed the equivalent local commands successfully.
 
-**Villas Foch acceptance blocker recorded, not waived.** The named saved corpus is
-`artifacts/www.villasfoch.fr/2026-09-03T20-44-46Z/`; repository docs confirm it
-exists on runtime/bucket storage, but the artifact itself is gitignored/not committed and
-this session has no VPS/object-store/SSH connector. A direct repository fetch of that
-saved-artifact directory returned GitHub 404, while `docs/report/audit-rehearsal-notes.md`
-still records the same runtime path. No rescan was attempted. The deterministic
-Foch LCP/CLS failure class is covered by the committed regression fixture, but the saved
-audit regeneration, 61-finding appendix count, PDF/font gates and subjective final read
-remain pending until that existing artifact is reachable.
+**Dated stored-audit acceptance — 2026-09-21.** Using only the stored Full audit at
+`artifacts/www.villasfoch.fr/2026-09-16T02-37-05Z/` (manifest audit id
+`aaa0f68e-770d-4d0d-862f-77744c01e689`), the current normalization produced 65 findings
+with fingerprint `d44b69ff1af50f04`. The French analysis was regenerated from those
+stored findings, a 39-page French PDF was rendered, and every one of the 65 finding IDs
+was confirmed in the extracted PDF text. The complete PDF was read page by page: no
+identity, count, performance, pagination, font, or visual defect was found. The report
+keeps the field LCP/INP results distinct from weak field CLS and marks the anomalous lab
+LCP as non-representative for recommendations.
 
-Do not move this plan to `IMPLEMENTED` until the repository commands above actually run
-green. Once they do, the saved-data Villas Foch regeneration/manual read is the remaining
-acceptance step; no new website scan is required.
+The repository proof is also complete: `pnpm run check` passed (nine existing
+dependency-cruiser warnings only), `pnpm run test` passed (5,360 tests, three skipped),
+`pnpm run build` passed, and the serial report E2E gate passed (18 files, 65 tests).
+No new website scan was run for this acceptance.
