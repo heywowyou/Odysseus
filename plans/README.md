@@ -140,7 +140,7 @@ The canonical sources for this behavior are `docs/product/odysseus-project-brief
 | [071](archive/071-permanent-reference-audit-and-dual-link-outreach.md) | Publish one permanent anonymized reference audit and add it beside the personalized preview in Touch 1 | P1 | L | 067, 069 | DONE (2026-09-21): `/exemple-audit` serves the approved 43-page example; pointer replacement, rollback and dual-link Touch 1 proven live |
 | [072](archive/072-finalized-client-report.md) | Make the operator-finalized client report a stored, lineage-bound artifact that supersedes the pipeline render | P1 | L | 067, 070 | DONE (2026-09-20): shipped end to end and proved on the fixture audit; see the plan's closure ledger |
 | [073](073-light-theme-full-report-export.md) | Add a light presentation variant to the full client report without forking content, finalization or approval | P2 | L | 039, 072 | TODO |
-| [074](074-random-independent-prospect.md) | Add one-click random independent prospect selection from the full matching directory | P2 | M | 047, 050 | IMPLEMENTED (2026-09-21): repository proof complete; awaiting the operator dashboard rehearsal |
+| [074](archive/074-random-independent-prospect.md) | Add one-click random independent prospect selection from the full matching directory | P2 | M | 047, 050 | DONE (2026-09-21): repository proof and the production dashboard rehearsal recorded |
 
 Plan 072 shipped 2026-09-20 and is the current finalization workflow; its
 rationale is recorded as trade-off 41 and llm-layer-rules section 16.

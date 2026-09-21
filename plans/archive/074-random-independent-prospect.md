@@ -1,6 +1,6 @@
 # Plan 074 — Random independent prospect from the directory
 
-- **Execution status:** IMPLEMENTED (2026-09-21) — awaiting the operator acceptance rehearsal on the dashboard
+- **Execution status:** DONE (2026-09-21) — repository proof and the production dashboard rehearsal recorded below
 - **Priority:** P2
 - **Effort:** M
 - **Depends on:** Plan 047's durable prospect hub and Plan 050's durable directory/prospect linking.
@@ -411,18 +411,23 @@ Repository validation: `pnpm run check` passed; `vitest run packages/store/src
 packages/interface/src` passed 1674 tests (3 skipped) against the Mongo test
 service.
 
-Still open: the operator acceptance rehearsal above. The repository `.env`
-points at the shared `odysseus-dev` Atlas cluster, so drawing real prospects
-there is left to the operator.
+## Acceptance rehearsal (2026-09-21, production build `97e6e394`)
 
-## Out of scope
+Run on `https://app.odysseusaudit.com` by a browser script, logged in as the
+operator. No scan, draft, preview or email was produced.
 
-- Randomly selecting an already-created prospect from `/prospects`.
-- Selecting group members, vendor-hosted properties, or unknown group status.
-- Automatically restoring archived prospects.
-- Automatically scanning the selected prospect.
-- Automatically generating or sending outreach.
-- Prospect scoring, ranking, lead quality, sale probability, or “best next prospect”.
-- Remembering or excluding previously viewed-but-never-added directory entries.
-- Changing directory import/refresh logic or hotel group detection.
-- A generic randomizer for every future prospect sector; Plan 074 uses the directory's existing canonical facets and can be generalized later if another sourced directory needs it.
+1. Directory with no filters (9,480 independent entries listed): the click
+   opened `/prospects/ee3e9745-2565-4a15-bdf1-2a802437040d`, GARLANDE HÔTEL
+   AVIGNON CENTRE, status `new`, `hotel.groupStatus=independent`,
+   `directoryRef` atout-france, no audits, no drafts.
+2. Its directory row now lists `prospectId` with state `active`.
+3. Directory `stars=4&department=33` (35 independent entries): the click
+   opened `/prospects/e579448d-e81d-49e2-849c-2235bcc4706e`, HÔTEL LA
+   BAIGNOIRE, 4 stars, department 33, independent, status `new`.
+4. Directory filtered to the first prospect's exact name and department (a
+   pool of one, already linked): the page stayed on `/annuaire`, the group
+   filter became `groupStatus=independent`, and the status read `Aucun
+   établissement indépendant ne correspond aux filtres actuels.`
+
+The two rehearsal prospects are ordinary directory prospects; archive them if
+they are not wanted.
