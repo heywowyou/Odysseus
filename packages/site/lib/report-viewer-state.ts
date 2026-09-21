@@ -5,7 +5,7 @@
  */
 
 /** ISO A4 portrait, width over height. */
-export const A4_ASPECT = 210 / 297;
+const A4_ASPECT = 210 / 297;
 
 /** Below this width a fitted page gets too small to read comfortably, so
  * the page may overflow the window height instead of shrinking further. */

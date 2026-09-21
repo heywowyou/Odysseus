@@ -32,6 +32,13 @@
   // FOLLOW_UP_PROMPT_VERSION to disambiguate. Deliberate duplication, not
   // accidental.
   "ignoreExports": [
+    // Consumed by packages/site/app/exemple-audit.pdf/route.ts, which fallow
+    // never discovers: it skips a folder whose name ends in ".pdf" (a Next
+    // route segment here), so the importer is missing from its graph.
+    {
+      "file": "packages/site/lib/reference-audit-response.ts",
+      "exports": ["unavailableReferenceAuditResponse"]
+    },
     {
       "file": "packages/scanner/src/page-audit-profile.ts",
       "exports": ["SITE_WIDE_CHROME_SELECTOR"]
