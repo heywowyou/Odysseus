@@ -76,7 +76,7 @@ async function loadOutline(doc: PDFDocumentProxy): Promise<OutlineEntry[]> {
   const outline = await doc.getOutline();
   if (!outline) return [];
   const entries: OutlineEntry[] = [];
-  const visit = async (items: typeof outline, depth: number): Promise<void> => {
+  const visit = async (items: typeof outline, depth: number, maxDepth: number): Promise<void> => {
     for (const item of items) {
       try {
         const dest = typeof item.dest === 'string' ? await doc.getDestination(item.dest) : item.dest;
@@ -89,17 +89,18 @@ async function loadOutline(doc: PDFDocumentProxy): Promise<OutlineEntry[]> {
       } catch {
         // An unresolvable bookmark is skipped; paging still works.
       }
-      if (depth < 1 && item.items.length > 0) await visit(item.items, depth + 1);
+      if (depth < maxDepth && item.items.length > 0) await visit(item.items, depth + 1, maxDepth);
     }
   };
   // Chromium's heading-derived outline nests everything under the cover's
-  // single title; that root is the first page, its children the sections.
+  // single title; that root is the first page, its direct children are the
+  // report's sections. Deeper levels are sub-headings, too fine for a picker.
   const [root] = outline;
   if (outline.length === 1 && root && root.items.length > 0) {
     entries.push({ title: root.title, page: 1, depth: 0 });
-    await visit(root.items, 0);
+    await visit(root.items, 0, 0);
   } else {
-    await visit(outline, 0);
+    await visit(outline, 0, 1);
   }
   return sectionEntries(entries);
 }
@@ -136,7 +137,9 @@ export function ReportViewer({ src }: { src: string }) {
           type: 'module',
         });
         pdfjs.GlobalWorkerOptions.workerPort = worker;
-        loadingTask = pdfjs.getDocument({ url: src });
+        // Errors only: under the CSP (no wasm-unsafe-eval) pdf.js warns that
+        // it falls back from WebAssembly to JavaScript, which is expected.
+        loadingTask = pdfjs.getDocument({ url: src, verbosity: pdfjs.VerbosityLevel.ERRORS });
         const loaded = await loadingTask.promise;
         if (cancelled) return;
         const first = await loaded.getPage(1);

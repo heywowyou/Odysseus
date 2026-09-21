@@ -95,14 +95,15 @@ export interface OutlineEntry {
 }
 
 /** Section picker entries in document order: one per distinct page, the
- * first heading on a page winning, so the picker never offers two entries
- * that land on the same sheet. */
+ * first named heading on a page winning, so the picker never offers two
+ * entries that land on the same sheet. */
 export function sectionEntries(entries: readonly OutlineEntry[]): OutlineEntry[] {
   const seen = new Set<number>();
   const result: OutlineEntry[] = [];
   for (const entry of entries) {
     const title = entry.title.replace(/\s+/gu, ' ').trim();
-    if (title === '' || seen.has(entry.page)) continue;
+    // A bare section number ("03") is a heading eyebrow, not a name.
+    if (!/\p{L}/u.test(title) || seen.has(entry.page)) continue;
     seen.add(entry.page);
     result.push({ ...entry, title });
   }

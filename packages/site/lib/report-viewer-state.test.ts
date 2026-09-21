@@ -80,6 +80,7 @@ describe('example report section picker', () => {
         { title: '  Priorités\n  ', page: 5, depth: 0 },
         { title: 'Sous-partie', page: 5, depth: 1 },
         { title: '', page: 7, depth: 0 },
+        { title: '03', page: 8, depth: 0 },
         { title: 'Couverture', page: 1, depth: 0 },
       ]),
     ).toEqual([
