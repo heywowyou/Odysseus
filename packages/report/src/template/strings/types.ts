@@ -527,6 +527,14 @@ export interface ReportStrings {
       out_of_scope: string;
       undetermined: string;
     };
+    /** Public reference variants: the legal inputs in the detached showcase
+     *  are fictional and must never read as a registry-backed client fact. */
+    syntheticStatusShortDescriptions: {
+      in_scope: string;
+      likely_in_scope: string;
+      out_of_scope: string;
+      undetermined: string;
+    };
     /** item 18: heading over the deterministic EAA-route enforcement
      *  facts (fine figure + neutral case-law state), rendered only when
      *  the resolved regime is EAA (methodology.ts's pickPrimaryBasis). */
@@ -591,6 +599,8 @@ export interface ReportStrings {
      *  (Sirene's field unreliable for this entity, or the lookup never
      *  resolved one). */
     registrySnapshotEffectifsUnavailable: string;
+    syntheticRegistrySnapshotTemplate: string;
+    syntheticRegistrySnapshotNote: string;
     /** P2.1 (2026-08-21 La Corniche feedback pass): rendered under
      *  registrySnapshotTemplate whenever a real snapshot exists - a
      *  registry denomination can carry formatting artifacts (an
@@ -605,6 +615,7 @@ export interface ReportStrings {
     lcenSourceTemplate: string;
     lcenScanLimitNote: string;
     registrySnapshotVerbatimNote: string;
+    syntheticDisclaimerNote: string;
     /** item 0.1: shown when a manual hasTransactionalFlow override
      *  disagrees with the detector (ObligationAssessment.
      *  siteSignalResolutions.hasTransactionalFlow.detectedValue set).
@@ -908,6 +919,13 @@ export interface ReportStrings {
      *  lab median carries a " *" pointing here. `{lab}` and `{field}` are
      *  formatted durations. */
     labLcpDivergenceTemplate: string;
+    /** Public reference variants: source field measurements remain useful,
+     *  but must not read as measurements belonging to the synthetic example
+     *  hostname. */
+    referenceRealUserHeading: string;
+    referenceRealUserNoDataNote: string;
+    referenceRealUserGapNote: string;
+    referenceLabLcpDivergenceTemplate: string;
     inpLabel: string;
   };
   /** Milestone 10. A deterministic splice comparing this site's own
@@ -1102,6 +1120,9 @@ export interface ReportStrings {
      *  field data (manifest.cruxFieldData.available). Scanner-computable
      *  facts only; must never promise a conversion or revenue change. */
     synthesisComparisonWithFieldData: string;
+    /** Same comparison for the public reference: field measurements belong to
+     *  the anonymized source audit, not the synthetic showcase identity. */
+    synthesisComparisonWithReferenceFieldData: string;
     /** Same comparison when no CrUX field data exists for the origin: must
      *  never name field data that does not exist. */
     synthesisComparisonWithoutFieldData: string;
@@ -1346,12 +1367,20 @@ export interface ReportStrings {
      *  CLAUDE.md rule 6: state the criterion, never assert a law applies
      *  to this business when the determination itself could not run. */
     legalCitationUndeterminedParagraph: string;
+    /** Public reference variants: the criteria remain the same, but the
+     *  observed inputs are synthetic showcase data rather than client data. */
+    legalCitationSyntheticInScopeTemplate: string;
+    legalCitationSyntheticLikelyInScopeTemplate: string;
+    legalCitationSyntheticOutOfScopeParagraph: string;
+    legalCitationSyntheticUndeterminedParagraph: string;
     /** Template: {label}, the effectif band's human-readable text. */
     legalCitationEffectifFactTemplate: string;
+    legalCitationSyntheticEffectifFactTemplate: string;
     /** Template: {amount}, {threshold}, formatted currency amounts. */
     legalCitationTurnoverFactTemplate: string;
     /** Template: {effectifCode}, {turnover}. */
     legalCitationSmeFactTemplate: string;
+    legalCitationSyntheticSmeFactTemplate: string;
     /** item 41: names the specific detected flow type (e.g. "réservation
      *  en ligne") instead of listing "réservation, panier ou paiement"
      *  with "ou", which read as the tool being unsure which one it
@@ -1396,6 +1425,7 @@ export interface ReportStrings {
      *  published an RCS or TVA number without a SIREN, so the check did
      *  not fire, yet a manual SIREN was still supplied. */
     legalCitationManualSirenNoFindingSentence: string;
+    syntheticSirenProvenanceNote: string;
     /** Both numbers stated, no editorializing about which is "correct" -
      *  a mismatch can mean the site is operated by a different legal
      *  entity than the one being audited. Template: {manualSiren},

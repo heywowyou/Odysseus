@@ -40,6 +40,10 @@ export interface AuditDetailStrings {
    *  above the report package's threshold; {count} is replaced with the
    *  page count by the page. */
   reportPageCountWarning: string;
+  reportThemeLegend: string;
+  reportThemeDark: string;
+  reportThemeLight: string;
+  reportLightUnavailable: string;
   lifecycleLabel: string;
   lifecycle: Record<'scanned' | 'analysed' | 'rendered' | 'approved', string>;
   previewReport: string;
@@ -355,6 +359,10 @@ export const auditDetail = {
     reportFinalizationSuperseded: 'Finalisation remplacée par une régénération',
     viewGeneratedReport: 'Voir le rapport généré',
     reportPageCountWarning: 'Rapport long : {count} pages. Il reste complet et livrable.',
+    reportThemeLegend: 'Thème du PDF',
+    reportThemeDark: 'Sombre',
+    reportThemeLight: 'Clair',
+    reportLightUnavailable: 'La version claire n’est pas disponible pour ce rapport.',
     lifecycleLabel: 'Étape',
     lifecycle: {
       scanned: 'Exploré',
@@ -664,6 +672,10 @@ export const auditDetail = {
     reportFinalizationSuperseded: 'Finalization replaced by a regeneration',
     viewGeneratedReport: 'View the generated report',
     reportPageCountWarning: 'Long report: {count} pages. It remains complete and deliverable.',
+    reportThemeLegend: 'PDF theme',
+    reportThemeDark: 'Dark',
+    reportThemeLight: 'Light',
+    reportLightUnavailable: 'The light version is not available for this report.',
     lifecycleLabel: 'Stage',
     lifecycle: {
       scanned: 'Scanned',

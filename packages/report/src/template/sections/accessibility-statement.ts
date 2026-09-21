@@ -17,8 +17,8 @@ function headCell(label: string, extra = ''): string {
   return `<div style="padding:var(--space-2);font-size:11px;letter-spacing:0.02em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider);${extra}">${escapeHtml(label)}</div>`;
 }
 
-function cell(html: string, extra = ''): string {
-  return `<div style="padding:var(--space-2);border-bottom:1px solid var(--color-divider);${extra}">${html}</div>`;
+function cell(html: string, extra = '', attributes = ''): string {
+  return `<div ${attributes}style="padding:var(--space-2);border-bottom:1px solid var(--color-divider);${extra}">${html}</div>`;
 }
 
 function fieldRow(label: string, value: string): string {
@@ -99,7 +99,7 @@ export function renderAccessibilityStatement(
       (row) => `
         <div class="row-atomic">
           ${cell(`${escapeHtml(row.criterion)} - ${escapeHtml(getCriterionName(row.criterion, language) ?? '')}`)}
-          ${cell(escapeHtml(a.nonConformantLabel), `color:${SEVERITY.critical.color}`)}
+          ${cell(escapeHtml(a.nonConformantLabel), `color:${SEVERITY.critical.color}`, 'data-report-severity="critical"')}
         </div>
       `,
     )

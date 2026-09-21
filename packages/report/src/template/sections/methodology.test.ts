@@ -8,6 +8,29 @@ import {
 import { getStrings } from '../strings/i18n.js';
 import { loadSmallSiteManifest } from '../../test-fixtures.js';
 import { escapeCopy } from '../html-utils.js';
+import { SYNTHETIC_REGISTRY_SOURCE } from '../../constants.js';
+
+function syntheticShowcaseAssessment(): ObligationAssessment {
+  return {
+    status: 'in_scope',
+    basis: [
+      {
+        regimeId: 'eaa-loi-2023-171',
+        facts: [
+          { kind: 'effectif-band', code: '12', label: '10 à 19 salariés' },
+          { kind: 'transactional-flow', evidence: [] },
+        ],
+      },
+    ],
+    sirenSource: 'manual',
+    registrySnapshot: {
+      denomination: 'Hôtel Exemple — identité de démonstration',
+      effectifBandLabel: '10 à 19 salariés',
+      retrievedAt: new Date('2026-01-15T00:00:00.000Z'),
+      source: SYNTHETIC_REGISTRY_SOURCE,
+    },
+  };
+}
 
 describe('renderMethodology against the real small-site.test manifest', () => {
   it('states the crawl size (B16) and tool versions in one merged section, no separate limitations section', async () => {
@@ -214,6 +237,17 @@ describe('renderMethodology legal citation pointer', () => {
 // renderLegalCitationParagraph directly, the same function
 // legal-exposure.ts's own render site uses.
 describe('renderLegalCitationParagraph', () => {
+  it('labels the public showcase legal inputs as synthetic', () => {
+    const html = renderLegalCitationParagraph(
+      getStrings('fr'),
+      syntheticShowcaseAssessment(),
+      'fr',
+    );
+    expect(html).toContain('Données de démonstration utilisées pour cet exemple');
+    expect(html).toContain('tranche d’effectif utilisée pour cet exemple est fictive');
+    expect(html).not.toContain('répertoire Sirene');
+  });
+
   it('renders criteria and the missing observed input when obligationAssessment is absent', () => {
     const html = renderLegalCitationParagraph(getStrings('fr'), undefined, 'fr');
     expect(html).toContain('Critères publiés pour');
@@ -531,6 +565,20 @@ describe('renderMethodology siren provenance note (manual-SIREN milestone)', () 
   it('renders no note when no assessment is present at all', async () => {
     const manifest = await loadSmallSiteManifest();
     const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', undefined, [lcenFinding]);
+    expect(html).not.toContain('fourni manuellement');
+  });
+
+  it('renders the synthetic provenance note for the public showcase', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const html = renderMethodology(
+      getStrings('fr'),
+      11,
+      manifest,
+      'fr',
+      syntheticShowcaseAssessment(),
+      [],
+    );
+    expect(html).toContain('sont fictifs et propres à cet exemple');
     expect(html).not.toContain('fourni manuellement');
   });
 

@@ -116,7 +116,9 @@ describe('2026-08-22: the checklist Impact column is colour-coded via a data-lev
 
     const firstTheme = analysis.themes.slice(0, 6).find((t) => t.impact) ?? analysis.themes[0]!;
     expect(html).toMatch(
-      new RegExp(`data-level="${firstTheme.impact}" style="color:#[0-9a-f]{6}"`),
+      new RegExp(
+        `data-level="${firstTheme.impact}" data-report-level="${firstTheme.impact}" style="color:#[0-9a-f]{6}"`,
+      ),
     );
   });
 });

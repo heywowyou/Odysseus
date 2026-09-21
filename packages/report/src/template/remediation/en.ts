@@ -220,15 +220,15 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'fill-in-blank', template: '<a href="<destination address>">link text</a>' },
   },
   'crux-cls-poor': {
-    text: 'Stabilize the layout while the page loads, by sizing images and reserving space for banners. These measurements come from your real visitors.',
+    text: 'Stabilize the layout while the page loads, by sizing images and reserving space for banners. These measurements come from field data, not a simulation.',
     snippet: { kind: 'not-applicable' },
   },
   'crux-inp-poor': {
-    text: 'Reduce the work the browser does when someone clicks or types. These measurements come from your real visitors, not from a simulation.',
+    text: 'Reduce the work the browser does when someone clicks or types. These measurements come from field data, not a simulation.',
     snippet: { kind: 'not-applicable' },
   },
   'crux-lcp-poor': {
-    text: 'Speed up how quickly the largest visible element renders, usually the main image. These measurements come from your real visitors.',
+    text: 'Speed up how quickly the largest visible element renders, usually the main image. These measurements come from field data.',
     snippet: { kind: 'not-applicable' },
   },
   'css-orientation-lock': {

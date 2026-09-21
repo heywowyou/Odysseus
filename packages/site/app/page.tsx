@@ -97,10 +97,11 @@ function HomeFr() {
         <div className="split mt-10 hero-split">
           <div className="split-main">
             <p className="lede measure">
-              Odysseus analyse l&apos;ensemble de votre site&#160;: accessibilité, référencement et rendu
-              JavaScript, performance, en-têtes de sécurité et signaux techniques liés aux assistants IA.
-              Vous recevez un rapport directement exploitable&#160;: chaque problème détecté est localisé,
-              documenté, classé par priorité et accompagné de la correction recommandée.
+              Odysseus analyse l&apos;ensemble de votre site&#160;: accessibilité, référencement et
+              rendu JavaScript, performance, en-têtes de sécurité et signaux techniques liés aux
+              assistants IA. Vous recevez un rapport directement exploitable&#160;: chaque problème
+              détecté est localisé, documenté, classé par priorité et accompagné de la correction
+              recommandée.
             </p>
 
             <Reveal className="mt-8">

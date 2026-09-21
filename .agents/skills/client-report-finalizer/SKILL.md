@@ -162,11 +162,15 @@ the command then sees none of them. `--overrides` is optional; without it the
 command re-renders the bundle unchanged, which is how you confirm the local
 build reproduces the hosted PDF before correcting anything.
 
-It renders through `generateReportPdf` with the current local code. It opens no
-Mongo connection and constructs no provider client. Beside the PDF it writes
-`<pdf>.meta.json`, carrying the lineage, the local build and template version,
-the override count and the measured page count - the upload reads that file, so
-nothing downstream re-derives a page count from the finished bytes.
+It applies the override file once, then renders the canonical dark PDF and an
+optional `-clair.pdf` light sibling through the paired report renderer. Both
+come from the same finalized in-memory bundle; a light-only render failure
+leaves the dark output valid and marks light unavailable. It opens no Mongo
+connection and constructs no provider client. Beside the dark PDF it writes
+`<pdf>.meta.json`, carrying the lineage, local build and template version,
+override count, both measured page counts/digests/paths when light exists, and
+any typed light-render warning. The upload reads that file, so nothing
+downstream re-derives a page count from finished bytes.
 
 It refuses to render when:
 
@@ -223,8 +227,9 @@ the PDF, and is never committed.
 node scripts/upload-finalized-report.mjs <final.pdf> [overrides.json]
 ~~~
 
-It reads `<final.pdf>.meta.json` for the lineage, so no digest is ever
-hand-typed, and POSTs to
+It reads `<final.pdf>.meta.json` for the lineage and, when present, the
+`-clair.pdf` sibling, so no digest is ever hand-typed. It POSTs the pair in
+one request to
 `POST /api/audits/:auditId/report/:language/finalized` with the PDF base64 in a
 JSON body - the router requires an exact `application/json` content type on
 state-changing routes, and that CSRF guard stays intact.
@@ -235,10 +240,11 @@ On the server:
 - HTTP 409 if the audit's selected analysis or its findings have moved since
   the bundle was fetched, which is the check that stops a superseded report
   reaching a client;
-- HTTP 201 otherwise: the PDF and its override file are written into the audit
-  directory, synced to the artifact store, and inserted as a `reports` row with
-  `origin: 'finalized'` recording the override digest, the override count, the
-  upload time and the pipeline report it supersedes.
+- HTTP 201 otherwise: both PDFs and the override file are written into the
+  audit directory, synced to the artifact store, and inserted as one `reports`
+  row with `origin: 'finalized'`, the dark canonical digest, the optional light
+  variant digest, the override digest/count, upload time and the pipeline
+  report it supersedes.
 
 Preview and download then serve the finalized PDF, because the reports
 collection is insert-only and the current row is the newest one. The pipeline
@@ -422,8 +428,9 @@ Upload only after a clean final pass, and only on the READY-FOR-CLIENT path.
 
 Then confirm the substitution actually took, from the client's side:
 
-1. `GET /api/audits/:auditId/report/:language/preview` and check its SHA-256
-   equals the local final PDF's. Preview is not approval-gated, so this is
+1. `GET /api/audits/:auditId/report/:language/preview?theme=dark` and check
+   its SHA-256 equals the local dark final PDF's. If the light sibling exists,
+   repeat with `?theme=light`. Preview is not approval-gated, so this is
    readable immediately after the upload.
 2. Confirm the dashboard row shows `Finalisé · N corrections` with the count
    you sent, and that the generated-report link still opens the pipeline

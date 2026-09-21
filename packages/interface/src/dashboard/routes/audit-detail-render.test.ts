@@ -661,7 +661,9 @@ describe('reports card PDF availability (issue #91)', () => {
     });
     const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
     await settle(container, 'PDF non disponible ici');
-    expect(container.querySelector('a[href="/api/audits/audit-1/report/fr/preview"]')).toBeNull();
+    expect(
+      container.querySelector('a[href="/api/audits/audit-1/report/fr/preview?theme=dark"]'),
+    ).toBeNull();
     // The row keeps an actionable path: the production step's single
     // regenerate button above the list.
     expect(container.textContent).toContain('Régénérer les PDF');
@@ -677,7 +679,40 @@ describe('reports card PDF availability (issue #91)', () => {
     await settle(container, 'Prévisualiser');
     expect(container.textContent).not.toContain('PDF non disponible ici');
     expect(
-      container.querySelector('a[href="/api/audits/audit-1/report/fr/preview"]'),
+      container.querySelector('a[href="/api/audits/audit-1/report/fr/preview?theme=dark"]'),
+    ).not.toBeNull();
+    root.unmount();
+  });
+
+  it('switches both report actions to an available light sibling explicitly', async () => {
+    const base = auditWithReports(true) as { reports: Record<string, unknown>[] };
+    const detail = {
+      ...base,
+      reports: base.reports.map((report) =>
+        report['language'] === 'fr' ? { ...report, lightAvailable: true } : report,
+      ),
+    };
+    stubRoutes({
+      '/api/audits/audit-1/report-preparation': null,
+      '/api/audits/audit-1': detail,
+    });
+    const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
+    await settle(container, 'Prévisualiser');
+    const light = container.querySelector<HTMLInputElement>('input[value="light"]');
+    expect(light).not.toBeNull();
+    expect(light?.disabled).toBe(false);
+    await act(async () => {
+      light?.click();
+    });
+    expect(
+      container.querySelector<HTMLAnchorElement>(
+        'a[href="/api/audits/audit-1/report/fr/preview?theme=light"]',
+      ),
+    ).not.toBeNull();
+    expect(
+      container.querySelector<HTMLAnchorElement>(
+        'a[href="/api/audits/audit-1/report/fr?theme=light"]',
+      ),
     ).not.toBeNull();
     root.unmount();
   });
@@ -709,7 +744,7 @@ describe('reports card PDF availability (issue #91)', () => {
     const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
     await settle(container, 'Prévisualiser');
     const previewAnchor = container.querySelector<HTMLAnchorElement>(
-      'a[href="/api/audits/audit-1/report/fr/preview"]',
+      'a[href="/api/audits/audit-1/report/fr/preview?theme=dark"]',
     );
     expect(previewAnchor).not.toBeNull();
     await act(async () => {
@@ -771,7 +806,7 @@ describe('report approval is explicit (plan 060 §2.4)', () => {
     const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
     await settle(container, 'Télécharger le PDF');
     const downloadAnchor = container.querySelector<HTMLAnchorElement>(
-      'a[href="/api/audits/audit-1/report/fr"]',
+      'a[href="/api/audits/audit-1/report/fr?theme=dark"]',
     );
     expect(downloadAnchor).not.toBeNull();
     await act(async () => {

@@ -146,6 +146,7 @@ describe('derived work over stored evidence', () => {
         proofCardCategories: ['accessibility'],
       },
       previewUrl: 'https://www.odysseusaudit.com/apercu/abc123',
+      referenceAuditUrl: 'https://www.odysseusaudit.com/exemple-audit',
       dataOrigins: ['public-hotel-catalogue', 'public-website'],
       privacyUrl: 'https://www.odysseusaudit.com/confidentialite-prospection',
       optOutUrl: 'https://www.odysseusaudit.com/desinscription',

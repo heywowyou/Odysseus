@@ -40,7 +40,7 @@ fix it by changing colours, sizes, spacing or inline styles.
   sky accent, typeface, and dossier card motif. Plan 023's composition
   refinement (two-act front matter, per-section heading rhythm, the
   `--space-12` sheet-level step) is preserved unchanged.
-- **Own-world**: dark near-navy from the site's dark scheme: ground
+- **Own-world**: the canonical register remains dark near-navy from the site's dark scheme: ground
   `#0e141c`, raised surfaces `#16202c`, ink `#e9eef5` / `#b6c1ce` /
   `#909cab`, hairline dividers at 13 percent ink, sky accent `#38bdf8`
   (the site's own dark-mode accent, Tailwind sky-400), Avenir Next
@@ -51,6 +51,9 @@ fix it by changing colours, sizes, spacing or inline styles.
   finding cards' row dashes and the preview proof-card mark: decoration,
   never text, never severity (DESIGN.md, "The Dossier Rule Set"). The one
   deliberate exception stays: section 05's print inversion to `#f7f7f5`.
+  Plan 073 adds an explicit stored light register derived from the public
+  site's light palette; `data-report-theme="light"` selects it, never a
+  system/browser appearance query, and it does not alter the dark register.
 - **Story**: the same reading path as under plan 023, opening on a
   sky-navy glow instead of violet, finding cards reading as the site's
   dossier cards, the printable checklist still handing over as the one
@@ -61,11 +64,40 @@ fix it by changing colours, sizes, spacing or inline styles.
   rule, report type, date, Odysseus signature) are unchanged in
   structure. No new world elements.
 - **Form**: A4 paged PDF via Paged.js; one numbered section start per
-  page; dark everywhere except the documented print-inverted checklist;
-  footers and counters unchanged; the outreach preview renders fixed dark
-  matching the PDF (no `prefers-color-scheme` switch; its PDF export
-  prints through the same `#f7f7f5` block); no section-order or structure
-  change.
+  page; dark is the canonical export and the documented print-inverted
+  checklist remains its only dark-to-light print exception. The optional
+  light export keeps the same geometry, section order, footer and counter
+  rules. The outreach preview renders fixed dark (no
+  `prefers-color-scheme` switch); no section-order or structure change.
+
+## Explicit light export register (plan 073)
+
+The paid report has one content lineage and two presentation artifacts. The
+canonical `dark` artifact keeps the existing stored `fileRef`, `pdfDigest` and
+`pageCount`; an optional `variants.light` sibling carries its own file
+reference, digest and measured page count on the same report row. A missing
+light sibling is an honest unavailable state, never a request to serve dark
+bytes under a light label.
+
+The renderer resolves the theme explicitly (`dark` by default) and writes it
+to the document root as `data-report-theme`. Both variants use one resolved
+render input set, one browser process, and the same finalized override-applied
+bundle when the Plan-072 finalizer is involved. Text, findings, wording,
+section IDs/order, evidence choices and geometry are content contracts; theme
+work may change colour values only. Approval binds the optional light digest
+when one exists, so light delivery is exact-artifact delivery too.
+
+The light register is the report-local transcription of the public site's
+light design language: paper `#e8edf3`, raised paper `#fff`, sunk paper
+`#dbe3ec`, ink `#101b2a`, soft ink `#3f4c5e`, muted ink `#5c6878`, line
+`rgb(16 27 42 / 0.14)`, accent `#0369a1` and strong accent `#075985`. Small
+text on the sunk screen surround uses the report's derived `#4a596c` neutral
+companion so the explicit light register remains above the contrast floor. It
+is self-contained in `nocturne.css`; the report never imports the site's CSS or
+uses a browser/system appearance query. The printable Plan d'action remains
+the same semantic insert in both registers: dark output keeps its deliberate
+print inversion, while light output is already light and does not invert a
+second time.
 
 Recorded at the plan 039 direction pick, from the read-only evidence pack
 of 2026-09-11 (`.impeccable/critique/2026-09-11T14-30-00Z__packages-report/`).

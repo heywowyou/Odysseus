@@ -5527,3 +5527,26 @@ Rejected: extending expiring preview storage; publishing a raw client report;
 tracking with query parameters, cookies, pixels or third-party analytics;
 letting telemetry failure block the reference link; and automatically
 republishing the example whenever the report template changes.
+
+### 107. The full report's light appearance is a sibling artifact, not a second content render (build decision, 2026-09-21, Plan 073)
+
+The paid report keeps dark as its canonical default, while the dashboard may
+offer an explicit light PDF for the same audit, selected analyses, findings,
+wording, section order and finalized override bundle. The light file is stored
+as `variants.light` on the same insert-only report row, with its own file
+reference, digest and optional page count. Approval records that light digest
+when it exists, so a light download cannot pass on a dark-only approval or be
+served from dark bytes under a light label. Legacy rows and approvals remain
+valid dark-only history.
+
+The renderer uses one resolved input set and one Chromium process for both
+variants; a light-only failure leaves the established dark artifact valid and
+marks light unavailable. The public site's light palette is transcribed into
+the report package's self-contained token layer, and the root theme attribute
+is explicit rather than system-driven. The frozen Plan-058 immutable bundle
+authority remains dark-only until that separate contract is reopened.
+
+Rejected: recolouring a stored PDF at delivery time (the result would not have
+an exact approved digest); issuing a second report row/report ID for light;
+letting `prefers-color-scheme` choose a permanent artifact; and silently
+falling back to dark when light is missing.

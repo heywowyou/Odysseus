@@ -27,6 +27,7 @@ import { pickPrimaryBasis, renderLegalCitationParagraph } from './methodology.js
 import { SEVERITY } from '../design-tokens.js';
 import { detectVendor } from '../third-party-attribution.js';
 import { effectifCodeFromAssessment, translateEffectifLabel } from '../effectif-label.js';
+import { SYNTHETIC_REGISTRY_SOURCE } from '../../constants.js';
 
 /** P0.3 (2026-08-21 La Corniche feedback pass): how many example pages to
  *  name when the transactional-flow component was found on-site. A short
@@ -68,8 +69,9 @@ function renderSirenNote(
   // information and still renders.
   if (lcenBlockRendered && !snapshot && !siren) return '';
 
+  const synthetic = snapshot?.source === SYNTHETIC_REGISTRY_SOURCE;
   const text = snapshot
-    ? fillTemplate(l.registrySnapshotTemplate, {
+    ? fillTemplate(synthetic ? l.syntheticRegistrySnapshotTemplate : l.registrySnapshotTemplate, {
         denomination: snapshot.denomination,
         siren: siren ?? '-',
         effectifs:
@@ -98,10 +100,10 @@ function renderSirenNote(
   // Sirene rather than derived from the domain, since it can carry
   // formatting artifacts (an unbalanced parenthesis, seen on a real
   // report) that read as a scraping error at first glance.
-  const verbatimNote = snapshot
-    ? `<p style="font-size:11px;opacity:0.5;margin-top:2px">${escapeHtml(l.registrySnapshotVerbatimNote)}</p>`
+  const provenanceNote = snapshot
+    ? `<p style="font-size:11px;opacity:0.5;margin-top:2px">${escapeHtml(synthetic ? l.syntheticRegistrySnapshotNote : l.registrySnapshotVerbatimNote)}</p>`
     : '';
-  return `<p style="font-size:12.5px;opacity:0.65;margin-top:var(--space-2)">${escapeHtml(text)}</p>${verbatimNote}`;
+  return `<p style="font-size:12.5px;opacity:0.65;margin-top:var(--space-2)">${escapeHtml(text)}</p>${provenanceNote}`;
 }
 
 /** Issue #42: when the obligation engine resolved the transactional-flow
@@ -169,7 +171,7 @@ function renderTransactionalFlowConflictNote(
     ? l.transactionalFlowConflictManualPresent
     : l.transactionalFlowConflictManualAbsent;
   const text = fillTemplate(l.transactionalFlowConflictTemplate, { detectedValue, manualValue });
-  return `<p style="font-size:12.5px;opacity:0.85;margin-top:var(--space-2);color:${SEVERITY.serious.color}">${escapeHtml(text)}</p>`;
+  return `<p data-report-severity="serious" style="font-size:12.5px;opacity:0.85;margin-top:var(--space-2);color:${SEVERITY.serious.color}">${escapeHtml(text)}</p>`;
 }
 
 /** item 28: the transactional/booking flow is the entire legal hook for
@@ -401,6 +403,7 @@ export function renderLegalExposure(
 
   const lcenBlock = renderLcenBlock(strings, language, findings);
   const generalEaaReference = renderGeneralEaaReference(strings, language, obligationAssessment);
+  const synthetic = obligationAssessment?.registrySnapshot?.source === SYNTHETIC_REGISTRY_SOURCE;
 
   return sheet(
     `
@@ -414,7 +417,7 @@ export function renderLegalExposure(
       <div class="card elev-sm">
         <div class="card-kicker">${escapeHtml(l.obligationStatusLabel)}</div>
         <div class="card-title">${escapeHtml(l.statusLabels[status])}</div>
-        <div class="card-body">${escapeCopy(l.statusShortDescriptions[status], language)}</div>
+        <div class="card-body">${escapeCopy((synthetic ? l.syntheticStatusShortDescriptions : l.statusShortDescriptions)[status], language)}</div>
         ${actionNote}
       </div>
     </div>
@@ -425,7 +428,7 @@ export function renderLegalExposure(
     ${lcenBlock}
     ${renderSirenNote(strings, language, manifest, manualFields, obligationAssessment, lcenBlock !== '')}
     ${generalEaaReference}
-    <p style="font-size:11px;opacity:0.5;margin-top:var(--space-4)">${escapeHtml(l.disclaimerNote)}</p>
+    <p style="font-size:11px;opacity:0.5;margin-top:var(--space-4)">${escapeHtml(synthetic ? l.syntheticDisclaimerNote : l.disclaimerNote)}</p>
   `,
     '',
     'section-02',

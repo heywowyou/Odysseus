@@ -67,6 +67,7 @@ function renderNumberTile(value: string, label: string, primary = false): string
 }
 
 function renderSeverityTile(
+  severity: keyof typeof SEVERITY,
   label: string,
   count: string,
   meaning: string,
@@ -74,10 +75,10 @@ function renderSeverityTile(
   bg: string,
 ): string {
   return `
-    <div class="stat-tile" style="padding:var(--space-3);border-radius:var(--radius-md);background:${bg}">
+    <div class="stat-tile report-severity-tile" data-report-severity="${severity}" style="padding:var(--space-3);border-radius:var(--radius-md);background:${bg}">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-        <span style="width:8px;height:8px;border-radius:50%;background:${color}"></span>
-        <span style="font-size:12px;font-weight:500;color:${color}">${escapeHtml(label)}</span>
+        <span class="report-severity-swatch" data-report-severity="${severity}" style="width:8px;height:8px;border-radius:50%;background:${color}"></span>
+        <span class="report-severity-label" data-report-severity="${severity}" style="font-size:12px;font-weight:500;color:${color}">${escapeHtml(label)}</span>
       </div>
       <div style="font-size:24px;font-family:var(--font-heading)">${count}</div>
       <div style="font-size:11px;opacity:0.65;margin-top:4px">${escapeHtml(meaning)}</div>
@@ -85,10 +86,15 @@ function renderSeverityTile(
   `;
 }
 
-function renderCategoryTile(label: string, count: string, color: string): string {
+function renderCategoryTile(
+  category: keyof typeof CATEGORY,
+  label: string,
+  count: string,
+  color: string,
+): string {
   return `
-    <div class="stat-tile" style="padding:var(--space-3);border-radius:var(--radius-md);background:var(--color-surface)">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.02em;color:${color}">${escapeHtml(label)}</div>
+    <div class="stat-tile report-category-tile" data-report-category="${category}" style="padding:var(--space-3);border-radius:var(--radius-md);background:var(--color-surface)">
+      <div data-report-category="${category}" style="font-size:11px;text-transform:uppercase;letter-spacing:0.02em;color:${color}">${escapeHtml(label)}</div>
       <div style="font-size:22px;font-family:var(--font-heading);margin-top:6px">${count}</div>
     </div>
   `;
@@ -150,6 +156,7 @@ export function renderStatistics(
   const severityTiles = nonZeroSeverities
     .map((severity) =>
       renderSeverityTile(
+        severity,
         severityLabels[severity],
         n(severityCounts[severity]),
         severityMeanings[severity],
@@ -174,6 +181,7 @@ export function renderStatistics(
   const categoryTiles = nonZeroCategories
     .map((category) =>
       renderCategoryTile(
+        category,
         categoryLabels[category],
         n(stats.categoryCounts[category]),
         CATEGORY[category].color,

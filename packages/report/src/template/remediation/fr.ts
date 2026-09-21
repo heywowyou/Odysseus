@@ -259,15 +259,15 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     },
   },
   'crux-cls-poor': {
-    text: "Stabilisez la mise en page pendant le chargement, en donnant des dimensions aux images et en réservant la place des bannières. Ces données proviennent d'usages réels et non d'une simulation.",
+    text: "Stabilisez la mise en page pendant le chargement, en donnant des dimensions aux images et en réservant la place des bannières. Ces mesures proviennent de données de terrain et non d'une simulation.",
     snippet: { kind: 'not-applicable' },
   },
   'crux-inp-poor': {
-    text: "Réduisez le travail que le navigateur effectue au moment des clics et des saisies. Ces données proviennent d'usages réels et non d'une simulation.",
+    text: "Réduisez le travail que le navigateur effectue au moment des clics et des saisies. Ces mesures proviennent de données de terrain et non d'une simulation.",
     snippet: { kind: 'not-applicable' },
   },
   'crux-lcp-poor': {
-    text: "Accélérez l'affichage du plus grand élément visible de la page, en général l'image principale. Ces données proviennent d'usages réels.",
+    text: "Accélérez l'affichage du plus grand élément visible de la page, en général l'image principale. Ces mesures proviennent de données de terrain.",
     snippet: { kind: 'not-applicable' },
   },
   'css-orientation-lock': {

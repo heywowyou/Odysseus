@@ -17,7 +17,7 @@
 // everything before it is read-only.
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { parseEnv } from 'node:util';
 
 const DASHBOARD_URL = 'https://app.odysseusaudit.com';
@@ -42,6 +42,21 @@ if (pdf.subarray(0, 5).toString('latin1') !== '%PDF-') {
   console.error(`${pdfArg} is not a PDF`);
   process.exit(1);
 }
+let lightVariant;
+if (meta.variants?.light) {
+  const lightPath = resolve(dirname(`${pdfPath}.meta.json`), meta.variants.light.path);
+  const lightPdf = readFileSync(lightPath);
+  if (lightPdf.subarray(0, 5).toString('latin1') !== '%PDF-') {
+    console.error(`${lightPath} is not a PDF`);
+    process.exit(1);
+  }
+  lightVariant = {
+    pdfBase64: lightPdf.toString('base64'),
+    ...(typeof meta.variants.light.pageCount === 'number'
+      ? { pageCount: meta.variants.light.pageCount }
+      : {}),
+  };
+}
 const overrides =
   overridesArg === undefined ? null : JSON.parse(readFileSync(resolve(overridesArg), 'utf8'));
 
@@ -61,6 +76,7 @@ const body = {
   rendererBuild: meta.rendererBuild,
   reportTemplateVersion: meta.reportTemplateVersion,
   ...(typeof meta.pageCount === 'number' ? { pageCount: meta.pageCount } : {}),
+  ...(lightVariant === undefined ? {} : { variants: { light: lightVariant } }),
 };
 
 const login = await fetch(`${DASHBOARD_URL}/api/session/login`, {
@@ -99,7 +115,14 @@ try {
       `finalized ${lineage.language.toUpperCase()} report stored: ${created.reportId}\n` +
         `  corrections: ${created.overrideCount}\n` +
         `  supersedes:  ${created.supersedesReportId}\n` +
-        `  pdf sha256:  ${createHash('sha256').update(pdf).digest('hex')}`,
+        `  pdf sha256:  ${createHash('sha256').update(pdf).digest('hex')}` +
+        (lightVariant === undefined
+          ? ''
+          : `\n  light sha256: ${createHash('sha256')
+              .update(
+                readFileSync(resolve(dirname(`${pdfPath}.meta.json`), meta.variants.light.path)),
+              )
+              .digest('hex')}`),
     );
     console.log('The dashboard now shows this row as finalized. Approve it there before delivery.');
   }

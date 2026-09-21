@@ -14,6 +14,7 @@ function draft(origin: OutreachDataOrigin, language: 'fr' | 'en') {
       proofCardCategories: ['accessibility', 'seo', 'performance'],
     },
     previewUrl: 'https://www.odysseusaudit.com/apercu/token',
+    referenceAuditUrl: 'https://www.odysseusaudit.com/exemple-audit',
     dataOrigins: ['public-hotel-catalogue', 'public-website', origin],
     privacyUrl: 'https://www.odysseusaudit.com/confidentialite-prospection',
     optOutUrl: 'https://www.odysseusaudit.com/desinscription',

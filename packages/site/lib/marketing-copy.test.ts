@@ -209,7 +209,9 @@ describe('canonical public vocabulary', () => {
 
 describe('home page', () => {
   it('leads with the correction handoff', () => {
-    expect(homeProse).toContain('Un diagnostic avec préconisations pour passer du constat à la solution');
+    expect(homeProse).toContain(
+      'Un diagnostic avec préconisations pour passer du constat à la solution',
+    );
     expect(homeProse).toContain('A diagnostic with recommendations, from findings to fixes');
   });
 

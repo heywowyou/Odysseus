@@ -11,5 +11,5 @@ import { SEVERITY } from './design-tokens.js';
 export function renderSeverityBadge(strings: ReportStrings, severity: Severity): string {
   const label = strings.findingsAppendix.severityLabels[severity];
   const { color, bg } = SEVERITY[severity];
-  return `<span class="tag" style="background:${bg};color:${color}">${escapeHtml(label)}</span>`;
+  return `<span class="tag" data-report-severity="${severity}" style="background:${bg};color:${color}">${escapeHtml(label)}</span>`;
 }

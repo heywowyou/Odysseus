@@ -10,6 +10,7 @@
 
 import { useState } from 'react';
 import type { JSX } from 'react';
+import type { ReportTheme } from '@odysseus/core';
 import { Link } from 'react-router';
 import { toast } from 'sonner';
 import { Badge } from '../components/ui/badge';
@@ -194,6 +195,10 @@ export function ReportsCard(props: {
   const { detail, onApproved } = props;
   const { language, strings } = useI18n();
   const [isLoadingReport, setIsLoadingReport] = useState(false);
+  const [reportThemes, setReportThemes] = useState<Record<ReportLanguage, ReportTheme>>({
+    fr: 'dark',
+    en: 'dark',
+  });
   const hasReports = detail.reportLanguages.length > 0 && detail.reports.length > 0;
   const reportBase = `/api/audits/${encodeURIComponent(detail.auditId)}/report`;
   const isApproved = detail.lifecycle === 'approved';
@@ -210,6 +215,7 @@ export function ReportsCard(props: {
 
   const openReport = async (
     language: ReportLanguage,
+    theme: ReportTheme,
     mode: 'preview' | 'download',
   ): Promise<void> => {
     setIsLoadingReport(true);
@@ -217,9 +223,11 @@ export function ReportsCard(props: {
       // Plan 060 §2.4: downloading a language is never an approval. The
       // stored pair is approved only through the explicit control below.
       await openReportPdf(
-        mode === 'preview' ? `${reportBase}/${language}/preview` : `${reportBase}/${language}`,
+        mode === 'preview'
+          ? `${reportBase}/${language}/preview?theme=${theme}`
+          : `${reportBase}/${language}?theme=${theme}`,
         mode,
-        `odysseus-rapport-${language}.pdf`,
+        `odysseus-rapport-${language}${theme === 'light' ? (language === 'fr' ? '-clair' : '-light') : ''}.pdf`,
       );
     } catch (error) {
       toast.error(strings.auditDetail.reportUnavailableError, {
@@ -296,27 +304,67 @@ export function ReportsCard(props: {
                       {strings.auditDetail.reportFinalizationSuperseded}
                     </Badge>
                   ) : null}
+                  <fieldset className="flex items-center gap-2 text-xs text-ink-soft">
+                    <legend className="sr-only">{strings.auditDetail.reportThemeLegend}</legend>
+                    <span aria-hidden="true">{strings.auditDetail.reportThemeLegend}:</span>
+                    <label className="inline-flex items-center gap-1">
+                      <input
+                        type="radio"
+                        name={`report-theme-${report.language}`}
+                        value="dark"
+                        checked={reportThemes[report.language] === 'dark'}
+                        onChange={() =>
+                          setReportThemes((current) => ({
+                            ...current,
+                            [report.language]: 'dark',
+                          }))
+                        }
+                      />
+                      {strings.auditDetail.reportThemeDark}
+                    </label>
+                    <label className="inline-flex items-center gap-1">
+                      <input
+                        type="radio"
+                        name={`report-theme-${report.language}`}
+                        value="light"
+                        disabled={report.lightAvailable !== true}
+                        checked={reportThemes[report.language] === 'light'}
+                        onChange={() =>
+                          setReportThemes((current) => ({
+                            ...current,
+                            [report.language]: 'light',
+                          }))
+                        }
+                      />
+                      {strings.auditDetail.reportThemeLight}
+                    </label>
+                  </fieldset>
+                  {report.lightAvailable !== true ? (
+                    <p className="w-full text-xs text-ink-muted">
+                      {strings.auditDetail.reportLightUnavailable}
+                    </p>
+                  ) : null}
                   <a
                     className={buttonStyles('ghost', 'sm')}
-                    href={`${reportBase}/${report.language}/preview`}
+                    href={`${reportBase}/${report.language}/preview?theme=${reportThemes[report.language]}`}
                     target="_blank"
                     rel="noreferrer"
                     aria-disabled={isLoadingReport}
                     onClick={(event) => {
                       event.preventDefault();
-                      void openReport(report.language, 'preview');
+                      void openReport(report.language, reportThemes[report.language], 'preview');
                     }}
                   >
                     {strings.auditDetail.previewReport}
                   </a>
                   <a
                     className={buttonStyles('ghost', 'sm')}
-                    href={`${reportBase}/${report.language}`}
+                    href={`${reportBase}/${report.language}?theme=${reportThemes[report.language]}`}
                     download
                     aria-disabled={isLoadingReport}
                     onClick={(event) => {
                       event.preventDefault();
-                      void openReport(report.language, 'download');
+                      void openReport(report.language, reportThemes[report.language], 'download');
                     }}
                   >
                     {strings.auditDetail.downloadReport}

@@ -15,12 +15,13 @@
  */
 
 import { promises as fs } from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import type { Command } from 'commander';
 import { parseWritingOverrideFile } from '@odysseus/llm';
 import {
   applyOverridesToBundle,
-  generateReportPdf,
+  generateReportPdfVariants,
   readRenderBundleDir,
   REPORT_TEMPLATE_VERSION,
   reportPageCountWarning,
@@ -37,6 +38,14 @@ function fail(message: string): never {
   console.error(message);
   process.exitCode = 1;
   throw new FinalizeRefused();
+}
+
+function lightOutputPath(outputPath: string): string {
+  return outputPath.replace(/\.pdf$/u, '-clair.pdf');
+}
+
+function pdfDigest(pdf: Buffer): string {
+  return `sha256:${createHash('sha256').update(pdf).digest('hex')}`;
 }
 
 /** Thrown after the reason is printed, so Commander's action rejects without
@@ -71,7 +80,9 @@ async function finalizeReport(options: FinalizeOptions): Promise<void> {
   }
 
   const { lineage, manifest, findings, analysis, obligationAssessment, ...renderInputs } = rendered;
-  const { pdf, pageCount } = await generateReportPdf({
+  const renderedAt = new Date();
+  const rendererBuild = readOdysseusBuildId();
+  const renderedVariants = await generateReportPdfVariants({
     // Kept only because the render input contract still names it; the
     // template reads nothing off disk, which is what makes this command
     // possible at all. Pointed at the bundle so a future reader of a stack
@@ -85,17 +96,23 @@ async function finalizeReport(options: FinalizeOptions): Promise<void> {
     },
     renderMetadata: {
       reportId: `${lineage.analysisId}-final`,
-      renderedAt: new Date(),
-      rendererBuild: readOdysseusBuildId(),
+      renderedAt,
+      rendererBuild,
       templateVersion: REPORT_TEMPLATE_VERSION,
     },
     ...renderInputs,
   });
+  const { pdf, pageCount } = renderedVariants.dark;
 
   const out = path.resolve(options.out);
   await fs.mkdir(path.dirname(out), { recursive: true, mode: 0o700 });
   await fs.writeFile(out, pdf, { mode: 0o600 });
   await fs.chmod(out, 0o600);
+  const lightOut = lightOutputPath(out);
+  if (renderedVariants.light !== undefined) {
+    await fs.writeFile(lightOut, renderedVariants.light.pdf, { mode: 0o600 });
+    await fs.chmod(lightOut, 0o600);
+  }
 
   // What the upload needs to describe this exact file. Written here rather
   // than re-derived by the upload script, because the page count is measured
@@ -108,10 +125,30 @@ async function finalizeReport(options: FinalizeOptions): Promise<void> {
       {
         lineage,
         pageCount,
-        rendererBuild: readOdysseusBuildId(),
+        pdfDigest: pdfDigest(pdf),
+        rendererBuild,
         reportTemplateVersion: REPORT_TEMPLATE_VERSION,
         overrideCount,
-        renderedAt: new Date().toISOString(),
+        renderedAt: renderedAt.toISOString(),
+        ...(renderedVariants.light === undefined
+          ? {}
+          : {
+              variants: {
+                light: {
+                  path: path.basename(lightOut),
+                  pdfDigest: pdfDigest(renderedVariants.light.pdf),
+                  pageCount: renderedVariants.light.pageCount,
+                },
+              },
+            }),
+        ...(renderedVariants.lightError === undefined
+          ? {}
+          : {
+              lightVariantWarning: {
+                code: 'light-render-failed',
+                message: renderedVariants.lightError.message,
+              },
+            }),
       },
       null,
       2,
@@ -125,6 +162,12 @@ async function finalizeReport(options: FinalizeOptions): Promise<void> {
     `${lineage.language.toUpperCase()} ${lineage.auditId}: ${overrideCount} correction(s), ` +
       `${pageCount} pages -> ${out}`,
   );
+  if (renderedVariants.light !== undefined) {
+    console.log(`light variant: ${renderedVariants.light.pageCount} pages -> ${lightOut}`);
+  }
+  if (renderedVariants.lightError !== undefined) {
+    console.warn(`warning: light variant was not written: ${renderedVariants.lightError.message}`);
+  }
   if (warning !== undefined) {
     console.warn(
       `warning: ${warning.pageCount} pages exceeds the ${warning.threshold}-page review threshold`,

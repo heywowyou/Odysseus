@@ -198,14 +198,16 @@ function renderRealUserDataBlock(
    *  nothing to explain when there is no lab number on the page at all
    *  (the all-unmeasured branch). */
   labDataWasMeasured: boolean,
+  referenceDataDisclosure?: string,
 ): string {
   const c = strings.coreWebVitals;
-  const header = `<h3 style="font-size:14px;margin-top:var(--space-6);margin-bottom:var(--space-2)">${escapeHtml(c.realUserHeading)}</h3>`;
+  const isReference = referenceDataDisclosure !== undefined;
+  const header = `<h3 style="font-size:14px;margin-top:var(--space-6);margin-bottom:var(--space-2)">${escapeHtml(isReference ? c.referenceRealUserHeading : c.realUserHeading)}</h3>`;
 
   if (!cruxFieldData || !cruxFieldData.available) {
     return `
       ${header}
-      <p style="font-size:12px;opacity:0.6">${escapeHtml(c.realUserNoDataNote)}</p>
+      <p style="font-size:12px;opacity:0.6">${escapeHtml(isReference ? c.referenceRealUserNoDataNote : c.realUserNoDataNote)}</p>
     `;
   }
 
@@ -247,7 +249,7 @@ function renderRealUserDataBlock(
   if (rows.length === 0) {
     return `
       ${header}
-      <p style="font-size:12px;opacity:0.6">${escapeHtml(c.realUserNoDataNote)}</p>
+      <p style="font-size:12px;opacity:0.6">${escapeHtml(isReference ? c.referenceRealUserNoDataNote : c.realUserNoDataNote)}</p>
     `;
   }
 
@@ -266,8 +268,8 @@ function renderRealUserDataBlock(
 
   return `
     ${header}
-    <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-3)">${escapeHtml(c.realUserIntro)}</p>
-    ${labDataWasMeasured ? `<p style="font-size:12px;opacity:0.7;margin-bottom:var(--space-3)">${escapeHtml(c.realUserGapNote)}</p>` : ''}
+    <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-3)">${escapeHtml(isReference ? referenceDataDisclosure : c.realUserIntro)}</p>
+    ${labDataWasMeasured ? `<p style="font-size:12px;opacity:0.7;margin-bottom:var(--space-3)">${escapeHtml(isReference ? c.referenceRealUserGapNote : c.realUserGapNote)}</p>` : ''}
     <table style="width:100%;border-collapse:collapse;font-size:14px">
       <thead>
         <tr>
@@ -303,7 +305,8 @@ function ratingTag(strings: ReportStrings, rating: CoreWebVitalRating): string {
   const label = escapeHtml(ratingLabel(strings, rating));
   if (rating === 'good') return `<span class="tag qw">${label}</span>`;
   const tone = rating === 'mid' ? SEVERITY.moderate : SEVERITY.critical;
-  return `<span class="tag" style="background:${tone.bg};color:${tone.color}">${label}</span>`;
+  const severity = rating === 'mid' ? 'moderate' : 'critical';
+  return `<span class="tag" data-report-severity="${severity}" style="background:${tone.bg};color:${tone.color}">${label}</span>`;
 }
 
 /** Issue #323: this header is set in capitals, which turned the French
@@ -339,6 +342,7 @@ export function renderCoreWebVitalsTable(
   ordinal: number,
   language: ReportLanguage,
   manifest: AuditManifest,
+  referenceDataDisclosure?: string,
 ): string {
   const vitalsList = measuredPages(manifest).map((page) => page.coreWebVitals);
   // 2026-08-22, La Corniche report review: this used to count every
@@ -372,7 +376,13 @@ export function renderCoreWebVitalsTable(
       `
       ${renderSheetHeader(ordinal, c.eyebrow, c.heading, 'var(--space-2)')}
       <p style="font-size:13.5px;opacity:0.85">${escapeHtml(c.allUnmeasuredNote)}</p>
-      ${renderRealUserDataBlock(strings, language, manifest.cruxFieldData, false)}
+      ${renderRealUserDataBlock(
+        strings,
+        language,
+        manifest.cruxFieldData,
+        false,
+        referenceDataDisclosure,
+      )}
     `,
       '',
       'section-09',
@@ -384,10 +394,15 @@ export function renderCoreWebVitalsTable(
     divergence === null
       ? ''
       : `<p data-lab-lcp-divergence style="font-size:12px;margin-top:var(--space-3);padding-left:var(--space-3);border-left:2px solid var(--color-accent-300)">${escapeHtml(
-          fillTemplate(c.labLcpDivergenceTemplate, {
-            lab: formatMetricValue(divergence.labMedianMs, 'ms-to-s', language),
-            field: formatMetricValue(divergence.fieldP75Ms, 'ms-to-s', language),
-          }),
+          fillTemplate(
+            referenceDataDisclosure === undefined
+              ? c.labLcpDivergenceTemplate
+              : c.referenceLabLcpDivergenceTemplate,
+            {
+              lab: formatMetricValue(divergence.labMedianMs, 'ms-to-s', language),
+              field: formatMetricValue(divergence.fieldP75Ms, 'ms-to-s', language),
+            },
+          ),
         )}</p>`;
 
   const rows = CORE_WEB_VITAL_THRESHOLDS.map((metric) => {
@@ -416,7 +431,7 @@ export function renderCoreWebVitalsTable(
         : cell(escapeHtml(c.worstPageSameAsMedian), 'opacity:0.55;font-size:12px');
     return `
       <tr>
-        ${cell(escapeHtml(metricLabels[metric.key]), rating === 'poor' && !isFlaggedLcp ? `border-left:3px solid ${SEVERITY.critical.color}` : '')}
+        ${cell(escapeHtml(metricLabels[metric.key]), rating === 'poor' && !isFlaggedLcp ? 'border-left:3px solid var(--report-severity-critical)' : '')}
         ${cell(formatMetricValue(value, unit, language) + (isFlaggedLcp ? ' *' : ''))}
         ${worstCell}
         ${cell(`${'≤'} ${formatMetricValue(metric.good, unit, language)}`)}
@@ -437,7 +452,13 @@ export function renderCoreWebVitalsTable(
   return sheet(
     `
     ${renderSheetHeader(ordinal, c.eyebrow, c.heading, 'var(--space-2)')}
-    ${renderRealUserDataBlock(strings, language, manifest.cruxFieldData, true)}
+    ${renderRealUserDataBlock(
+      strings,
+      language,
+      manifest.cruxFieldData,
+      true,
+      referenceDataDisclosure,
+    )}
     <h3 style="font-size:14px;margin-top:var(--space-6);margin-bottom:var(--space-2)">${escapeHtml(c.labHeading)}</h3>
     <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(fillTemplate(c.labIntroTemplate, { pages: `${formatNumber(pagesScanned, language)} ${pluralize(language, pagesScanned, c.pageSingular, c.pagePlural)}` }))}</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px">

@@ -34,6 +34,8 @@ export interface FinalizedReportUpload {
    *  client. */
   overridesDigest: string;
   pdf: Buffer;
+  lightPdf: Buffer | undefined;
+  lightPageCount: number | undefined;
   rendererBuild: string;
   reportTemplateVersion: number;
   pageCount: number | undefined;
@@ -43,6 +45,14 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : undefined;
+}
+
+function decodePdf(value: unknown, fieldName: string): Buffer | string {
+  if (typeof value !== 'string' || value === '') return `${fieldName} is required`;
+  const pdf = Buffer.from(value, 'base64');
+  return pdf.length > 0 && pdf.subarray(0, 5).toString('latin1') === '%PDF-'
+    ? pdf
+    : `${fieldName} does not decode to a PDF`;
 }
 
 /** The upload, or the message to answer 400 with. */
@@ -83,13 +93,32 @@ export function parseFinalizedReportUpload(body: unknown): FinalizedReportUpload
     overrides = parsed.data;
   }
 
-  const pdfBase64 = root['pdfBase64'];
-  if (typeof pdfBase64 !== 'string' || pdfBase64 === '') return 'pdfBase64 is required';
-  const pdf = Buffer.from(pdfBase64, 'base64');
-  // Buffer.from silently drops anything that is not base64, so a truncated
-  // or mistyped payload has to be caught by what it decodes to.
-  if (pdf.length === 0 || pdf.subarray(0, 5).toString('latin1') !== '%PDF-') {
-    return 'pdfBase64 does not decode to a PDF';
+  const decodedPdf = decodePdf(root['pdfBase64'], 'pdfBase64');
+  if (typeof decodedPdf === 'string') return decodedPdf;
+  const pdf = decodedPdf;
+
+  let lightPdf: Buffer | undefined;
+  let lightPageCount: number | undefined;
+  if (root['variants'] !== undefined) {
+    const variants = asRecord(root['variants']);
+    if (!variants) return 'variants must be a JSON object';
+    if (variants['light'] !== undefined) {
+      const light = asRecord(variants['light']);
+      if (!light) return 'variants.light must be a JSON object';
+      const decodedLightPdf = decodePdf(light['pdfBase64'], 'variants.light.pdfBase64');
+      if (typeof decodedLightPdf === 'string') return decodedLightPdf;
+      lightPdf = decodedLightPdf;
+      const lightPageCountRaw = light['pageCount'];
+      if (
+        lightPageCountRaw !== undefined &&
+        (typeof lightPageCountRaw !== 'number' ||
+          !Number.isInteger(lightPageCountRaw) ||
+          lightPageCountRaw <= 0)
+      ) {
+        return 'variants.light.pageCount must be a positive integer when given';
+      }
+      lightPageCount = lightPageCountRaw as number | undefined;
+    }
   }
 
   const rendererBuild = root['rendererBuild'];
@@ -105,6 +134,13 @@ export function parseFinalizedReportUpload(body: unknown): FinalizedReportUpload
   ) {
     return 'pageCount must be a positive integer when given';
   }
+  if (
+    pageCountRaw !== undefined &&
+    lightPageCount !== undefined &&
+    lightPageCount !== pageCountRaw
+  ) {
+    return 'variants.light.pageCount must match pageCount';
+  }
 
   return {
     lineage,
@@ -113,8 +149,10 @@ export function parseFinalizedReportUpload(body: unknown): FinalizedReportUpload
       .update(overrides === undefined ? '' : JSON.stringify(overrides))
       .digest('hex')}`,
     pdf,
+    lightPdf,
     rendererBuild,
     reportTemplateVersion,
     pageCount: pageCountRaw as number | undefined,
+    lightPageCount,
   };
 }

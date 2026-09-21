@@ -196,7 +196,7 @@ function renderRuleBlock(
   // regardless of its real severity - reusing the same badge colours
   // the annex and stats tiles already use, not a new palette.
   const severityColor = SEVERITY[block.severity];
-  const severityBadge = `<span style="display:inline-block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.02em;padding:1px 6px;border-radius:4px;margin-left:6px;color:${severityColor.color};background:${severityColor.bg}">${escapeHtml(strings.findingsAppendix.severityLabels[block.severity])}</span>`;
+  const severityBadge = `<span class="report-severity-badge" data-report-severity="${block.severity}" style="display:inline-block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.02em;padding:1px 6px;border-radius:4px;margin-left:6px;color:${severityColor.color};background:${severityColor.bg}">${escapeHtml(strings.findingsAppendix.severityLabels[block.severity])}</span>`;
   const actionLevel = actionLevelForRemainingSeverity(block.severity);
   const actionLevelBadge = `<span class="tag" style="margin-left:6px">${escapeHtml(strings.themes.actionLevelLabels[actionLevel])}</span>`;
 
@@ -274,7 +274,7 @@ export function renderRemainingWork(
       return `
         <div class="remaining-category" style="margin-bottom:var(--space-8)">
           <div class="remaining-category-head">
-            <h5 style="color:${CATEGORY[category].color}">${escapeHtml(strings.findingsAppendix.categoryLabels[category])}</h5>
+            <h5 data-report-category="${category}" style="color:${CATEGORY[category].color}">${escapeHtml(strings.findingsAppendix.categoryLabels[category])}</h5>
             ${firstBlock ? renderRuleBlock(strings, language, firstBlock, analysis) : ''}
           </div>
           ${restBlocks.map((block) => renderRuleBlock(strings, language, block, analysis)).join('')}

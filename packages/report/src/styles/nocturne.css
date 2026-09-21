@@ -102,6 +102,45 @@
   --color-section-glow: #14293e;
   --color-section-ghost: #2a4666;
 
+  /* Semantic report signals. These preserve the canonical dark register and
+     let the explicit light register re-derive readable ink/fill pairs. */
+  --report-severity-critical: #d97b82;
+  --report-severity-critical-bg: #262028;
+  --report-severity-serious: #dba36c;
+  --report-severity-serious-bg: #272526;
+  --report-severity-moderate: #d6c96e;
+  --report-severity-moderate-bg: #262a26;
+  --report-severity-minor: #b2b6ca;
+  --report-severity-minor-bg: #222731;
+  --report-grade-a: #4cc98a;
+  --report-grade-a-bg: #152a29;
+  --report-grade-b: var(--color-accent-300);
+  --report-grade-b-bg: #1b2b37;
+  --report-category-accessibility: var(--color-accent-300);
+  --report-category-accessibility-bg: #1b2b37;
+  --report-category-performance: #7fa8d9;
+  --report-category-performance-bg: #1c2633;
+  --report-category-seo: #6cbfae;
+  --report-category-seo-bg: #19292e;
+  --report-category-rendering: var(--color-neutral-400);
+  --report-category-rendering-bg: var(--color-neutral-900);
+  --report-category-geo: var(--color-accent-2-300);
+  --report-category-geo-bg: var(--color-accent-2-900);
+  --report-category-privacy: #e5c07b;
+  --report-category-privacy-bg: #282927;
+  --report-positive: #7cd9a0;
+  --report-positive-bg: #1b2c2c;
+  --color-code-block: rgba(0, 0, 0, 0.04);
+  --color-page-header: color-mix(in srgb, #e9e9ed 40%, transparent);
+  --color-page-footer: #75798c;
+  --color-screen-bg: #0e0f18;
+  --shadow-page: 0 6px 18px rgba(0, 0, 0, 0.55);
+  --printable-bg: #f7f7f5;
+  --printable-ink: #161826;
+  --printable-critical: #a52a37;
+  --printable-serious: #8a5a1e;
+  --printable-moderate: #6e6a1f;
+
   /* Dossier marks (site tokens, plan 039): the finding cards' row dashes.
      Decoration only, never text, never a severity; the row label carries
      the meaning (DESIGN.md, "The Dossier Rule Set"). */
@@ -148,6 +187,264 @@
   --card-ring: #2b3642;
   --shadow-md: 0 0 0 1px #434e5a, 0 6px 18px rgba(0, 0, 0, 0.55);
   --shadow-lg: 0 0 0 1px #76828f, 0 16px 40px rgba(0, 0, 0, 0.65);
+}
+
+/* Explicit light report register. This selector is the only theme switch in
+   the paid renderer; no system or browser appearance can affect a stored PDF. */
+:root[data-report-theme='light'] {
+  --color-bg: #e8edf3;
+  --color-surface: #ffffff;
+  --color-text: #101b2a;
+  --color-accent: #0369a1;
+  --color-accent-2: #5c4f94;
+  --color-divider: rgb(16 27 42 / 0.14);
+
+  --color-neutral-100: #101b2a;
+  --color-neutral-200: #26364a;
+  --color-neutral-300: #3f4c5e;
+  /* The site's muted ink is #5c6878 on paper. The report's surrounding
+     sunk screen ground is darker, so this companion neutral is deepened a
+     step to keep small metadata and preview labels above 4.5:1 there. */
+  --color-neutral-400: #4a596c;
+  --color-neutral-500: #6d7a8b;
+  --color-neutral-600: #8290a0;
+  --color-neutral-700: #9aa7b6;
+  --color-neutral-800: #dbe3ec;
+  --color-neutral-900: #101b2a;
+
+  --color-accent-100: #eff8ff;
+  --color-accent-200: #dbeef8;
+  --color-accent-300: #075985;
+  --color-accent-400: #0369a1;
+  --color-accent-500: #0284c7;
+  --color-accent-600: #0369a1;
+  --color-accent-700: #075985;
+  --color-accent-800: #0c4a6e;
+  --color-accent-900: #082f49;
+
+  --color-accent-2-100: #f5f4ff;
+  --color-accent-2-200: #e7e5fe;
+  --color-accent-2-300: #5c4f94;
+  --color-accent-2-400: #6d60a7;
+  --color-accent-2-500: #7568ad;
+  --color-accent-2-600: #665a9a;
+  --color-accent-2-700: #574c87;
+  --color-accent-2-800: #423e5d;
+  --color-accent-2-900: #ebe9fb;
+
+  --color-section: #dbe3ec;
+  --color-section-glow: #ffffff;
+  --color-section-ghost: #aac7dc;
+
+  --report-severity-critical: #a52a37;
+  --report-severity-critical-bg: #f9e2e5;
+  --report-severity-serious: #8a5a1e;
+  --report-severity-serious-bg: #f5ead8;
+  --report-severity-moderate: #6e6a1f;
+  --report-severity-moderate-bg: #f3f0d5;
+  --report-severity-minor: #4f5b76;
+  --report-severity-minor-bg: #e8edf3;
+  --report-grade-a: #087443;
+  --report-grade-a-bg: #dff4e9;
+  --report-grade-b: #075985;
+  --report-grade-b-bg: #dbeef8;
+  --report-category-accessibility: #075985;
+  --report-category-accessibility-bg: #dbeef8;
+  --report-category-performance: #24527a;
+  --report-category-performance-bg: #dfeaf4;
+  --report-category-seo: #116052;
+  --report-category-seo-bg: #dff3ee;
+  --report-category-rendering: #3f4c5e;
+  --report-category-rendering-bg: #dbe3ec;
+  --report-category-geo: #5c4f94;
+  --report-category-geo-bg: #ebe9fb;
+  --report-category-privacy: #7a5a00;
+  --report-category-privacy-bg: #f6efd5;
+  --report-positive: #087443;
+  --report-positive-bg: #dff4e9;
+  --color-code-block: rgb(16 27 42 / 0.06);
+  --color-page-header: rgb(16 27 42 / 0.64);
+  --color-page-footer: #5c6878;
+  --color-screen-bg: #dbe3ec;
+  --shadow-sm: 0 0 0 1px rgb(16 27 42 / 0.14);
+  /* The ring above flattened over --color-bg: layered translucent rings
+     would darken where they overlap. */
+  --card-ring: #cad0d7;
+  --shadow-md: 0 1px 2px rgb(16 27 42 / 0.06), 0 10px 28px rgb(16 27 42 / 0.1);
+  --shadow-lg: 0 1px 2px rgb(16 27 42 / 0.06), 0 16px 40px rgb(16 27 42 / 0.12);
+}
+
+/* A few report values are deliberately emitted as inline styles because the
+   same template helpers also power the fixed dark outreach preview. These
+   semantic hooks let the stored light report replace only presentation
+   colour; text, ordering, and evidence markup remain byte-for-byte shared. */
+:root[data-report-theme='light'] [data-report-severity='critical'] {
+  color: var(--report-severity-critical) !important;
+}
+/* The dark register uses opacity as hierarchy. On a light ground that same
+   compositing makes the smallest report notes fail contrast, especially on
+   the sunk screen surround. The light register uses explicit ink tiers
+   instead of translucent dark text so the hierarchy stays readable. */
+:root[data-report-theme='light'] [style*='opacity:'] {
+  opacity: 1 !important;
+}
+:root[data-report-theme='light'] .card-body,
+:root[data-report-theme='light'] .dialog-body {
+  opacity: 1 !important;
+}
+:root[data-report-theme='light'] [style*='color:color-mix'] {
+  color: var(--color-neutral-400) !important;
+}
+:root[data-report-theme='light'] figcaption,
+:root[data-report-theme='light'] .text-muted,
+:root[data-report-theme='light'] .field > label,
+:root[data-report-theme='light'] .table th,
+:root[data-report-theme='light'] .card-meta {
+  color: var(--color-neutral-400) !important;
+}
+:root[data-report-theme='light'] .metadata-risk-level:not(.metadata-risk-level-current) {
+  color: var(--color-neutral-400) !important;
+}
+:root[data-report-theme='light'] .statistics-number-tile-primary .statistics-number-value {
+  color: var(--color-accent-800) !important;
+}
+:root[data-report-theme='light'] [data-report-severity='serious'] {
+  color: var(--report-severity-serious) !important;
+}
+:root[data-report-theme='light'] [data-report-severity='moderate'] {
+  color: var(--report-severity-moderate) !important;
+}
+:root[data-report-theme='light'] [data-report-severity='minor'] {
+  color: var(--report-severity-minor) !important;
+}
+:root[data-report-theme='light'] .tag[data-report-severity='critical'],
+:root[data-report-theme='light'] .report-severity-badge[data-report-severity='critical'],
+:root[data-report-theme='light'] .report-severity-tile[data-report-severity='critical'] {
+  background: var(--report-severity-critical-bg) !important;
+}
+:root[data-report-theme='light'] .tag[data-report-severity='serious'],
+:root[data-report-theme='light'] .report-severity-badge[data-report-severity='serious'],
+:root[data-report-theme='light'] .report-severity-tile[data-report-severity='serious'] {
+  background: var(--report-severity-serious-bg) !important;
+}
+:root[data-report-theme='light'] .tag[data-report-severity='moderate'],
+:root[data-report-theme='light'] .report-severity-badge[data-report-severity='moderate'],
+:root[data-report-theme='light'] .report-severity-tile[data-report-severity='moderate'] {
+  background: var(--report-severity-moderate-bg) !important;
+}
+:root[data-report-theme='light'] .tag[data-report-severity='minor'],
+:root[data-report-theme='light'] .report-severity-badge[data-report-severity='minor'],
+:root[data-report-theme='light'] .report-severity-tile[data-report-severity='minor'] {
+  background: var(--report-severity-minor-bg) !important;
+}
+:root[data-report-theme='light'] .report-severity-swatch[data-report-severity='critical'] {
+  background: var(--report-severity-critical) !important;
+}
+:root[data-report-theme='light'] .report-severity-swatch[data-report-severity='serious'] {
+  background: var(--report-severity-serious) !important;
+}
+:root[data-report-theme='light'] .report-severity-swatch[data-report-severity='moderate'] {
+  background: var(--report-severity-moderate) !important;
+}
+:root[data-report-theme='light'] .report-severity-swatch[data-report-severity='minor'] {
+  background: var(--report-severity-minor) !important;
+}
+
+:root[data-report-theme='light'] [data-report-category='accessibility'] {
+  color: var(--report-category-accessibility) !important;
+}
+:root[data-report-theme='light'] [data-report-category='performance'] {
+  color: var(--report-category-performance) !important;
+}
+:root[data-report-theme='light'] [data-report-category='seo'] {
+  color: var(--report-category-seo) !important;
+}
+:root[data-report-theme='light'] [data-report-category='rendering'] {
+  color: var(--report-category-rendering) !important;
+}
+:root[data-report-theme='light'] [data-report-category='geo'] {
+  color: var(--report-category-geo) !important;
+}
+:root[data-report-theme='light'] [data-report-category='privacy'] {
+  color: var(--report-category-privacy) !important;
+}
+:root[data-report-theme='light'] .report-category-badge[data-report-category='accessibility'] {
+  background: var(--report-category-accessibility-bg) !important;
+}
+:root[data-report-theme='light'] .report-category-badge[data-report-category='performance'] {
+  background: var(--report-category-performance-bg) !important;
+}
+:root[data-report-theme='light'] .report-category-badge[data-report-category='seo'] {
+  background: var(--report-category-seo-bg) !important;
+}
+:root[data-report-theme='light'] .report-category-badge[data-report-category='rendering'] {
+  background: var(--report-category-rendering-bg) !important;
+}
+:root[data-report-theme='light'] .report-category-badge[data-report-category='geo'] {
+  background: var(--report-category-geo-bg) !important;
+}
+:root[data-report-theme='light'] .report-category-badge[data-report-category='privacy'] {
+  background: var(--report-category-privacy-bg) !important;
+}
+:root[data-report-theme='light'] .report-category-swatch[data-report-category='accessibility'] {
+  background: var(--report-category-accessibility) !important;
+}
+:root[data-report-theme='light'] .report-category-swatch[data-report-category='performance'] {
+  background: var(--report-category-performance) !important;
+}
+:root[data-report-theme='light'] .report-category-swatch[data-report-category='seo'] {
+  background: var(--report-category-seo) !important;
+}
+:root[data-report-theme='light'] .report-category-swatch[data-report-category='rendering'] {
+  background: var(--report-category-rendering) !important;
+}
+:root[data-report-theme='light'] .report-category-swatch[data-report-category='geo'] {
+  background: var(--report-category-geo) !important;
+}
+:root[data-report-theme='light'] .report-category-swatch[data-report-category='privacy'] {
+  background: var(--report-category-privacy) !important;
+}
+
+:root[data-report-theme='light'] .scorecard-grade-badge[data-grade='A'] {
+  color: var(--report-grade-a) !important;
+  background: var(--report-grade-a-bg) !important;
+}
+:root[data-report-theme='light'] .scorecard-grade-badge[data-grade='B'] {
+  color: var(--report-grade-b) !important;
+  background: var(--report-grade-b-bg) !important;
+}
+:root[data-report-theme='light'] .scorecard-grade-badge[data-grade='C'] {
+  color: var(--report-severity-moderate) !important;
+  background: var(--report-severity-moderate-bg) !important;
+}
+:root[data-report-theme='light'] .scorecard-grade-badge[data-grade='D'] {
+  color: var(--report-severity-critical) !important;
+  background: var(--report-severity-critical-bg) !important;
+}
+
+:root[data-report-theme='light'] .theme-fact-value[data-report-level='low'],
+:root[data-report-theme='light'] [data-level='low'][data-report-level] {
+  color: var(--report-severity-moderate) !important;
+}
+:root[data-report-theme='light'] .theme-fact-value[data-report-level='medium'],
+:root[data-report-theme='light'] [data-level='medium'][data-report-level] {
+  color: var(--report-severity-serious) !important;
+}
+:root[data-report-theme='light'] .theme-fact-value[data-report-level='high'],
+:root[data-report-theme='light'] [data-level='high'][data-report-level] {
+  color: var(--report-severity-critical) !important;
+}
+:root[data-report-theme='light'] .metadata-risk-level-current[data-report-level='low'] {
+  color: var(--report-severity-moderate) !important;
+  background: var(--report-severity-moderate-bg) !important;
+}
+:root[data-report-theme='light'] .metadata-risk-level-current[data-report-level='medium'] {
+  color: var(--report-severity-serious) !important;
+  background: var(--report-severity-serious-bg) !important;
+}
+:root[data-report-theme='light'] .metadata-risk-level-current[data-report-level='high'] {
+  color: var(--report-severity-critical) !important;
+  background: var(--report-severity-critical-bg) !important;
 }
 
 body {
@@ -798,8 +1095,8 @@ textarea.input {
    the theme template's inline styles so every colour lives with the
    tokens. */
 .tag.qw {
-  background: #1b2c2c;
-  color: #7cd9a0;
+  background: var(--report-positive-bg);
+  color: var(--report-positive);
 }
 
 /* Dossier motif rows (plan 039, operator pick): a finding card's evidence
@@ -948,6 +1245,68 @@ textarea.input {
 .theme-card[data-split-from] > .theme-row:first-child,
 .theme-row[data-split-from] {
   border-top-color: transparent;
+}
+/* A card broken across pages reads as one open-ended card, not two closed
+   ones: Paged.js repeats the full box decoration on each fragment, so the
+   fragment that continues loses its bottom corners and outline, and the
+   continuation loses its top ones. The continuation names its card and
+   repeats the row label in the rail it would otherwise leave empty.
+   Paged.js's own stylesheet sets content: none on every
+   [data-split-from]::before (so a split list item does not repeat its
+   marker) and padding-bottom: unset on every [data-split-to], each with a
+   selector far more specific than any report rule, hence the !important
+   on the two labels.
+   The bottom padding cannot come back the same way: Paged.js placed the
+   text without it, and a padded box that no longer fits spills into the
+   off-page overflow column the issue #118 gate refuses. The continuing
+   fragment instead paints its surface and side rings one padding-height
+   further down with box-shadows, which draw without taking layout space,
+   and clip-path cuts the ring's bottom edge so the card stays open. */
+.theme-card[data-split-to] {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  box-shadow:
+    0 var(--space-6) 0 0 var(--color-surface),
+    0 var(--space-6) 0 1px var(--card-ring),
+    0 0 0 1px var(--card-ring);
+  clip-path: inset(-1px -1px calc(-1 * var(--space-6)) -1px);
+}
+.theme-card[data-split-from] {
+  padding-top: var(--space-6);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  clip-path: inset(0 -1px -1px -1px);
+}
+/* A card spanning three pages: its middle fragment is open at both ends. */
+.theme-card[data-split-from][data-split-to] {
+  clip-path: inset(0 -1px calc(-1 * var(--space-6)) -1px);
+}
+.theme-card[data-split-from]::before {
+  content: attr(data-continued-label) !important;
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-neutral-400);
+  margin-bottom: var(--space-4);
+}
+.theme-row-tail {
+  position: relative;
+}
+.theme-row[data-split-from]::before,
+.theme-row-tail[data-split-from]::before {
+  content: attr(data-row-label) !important;
+  position: absolute;
+  /* Paged.js drops a continued row's top padding, so the text starts
+     within a few pixels of the fragment's top edge. */
+  top: var(--space-2);
+  left: 0;
+  width: var(--theme-rail);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--color-neutral-300);
 }
 .theme-subhead {
   margin: var(--space-4) 0 var(--space-2);
@@ -1158,68 +1517,6 @@ textarea.input {
 .theme-row-context {
   padding-left: 0;
   padding-bottom: 0;
-}
-/* A card broken across pages reads as one open-ended card, not two closed
-   ones: Paged.js repeats the full box decoration on each fragment, so the
-   fragment that continues loses its bottom corners and outline, and the
-   continuation loses its top ones. The continuation names its card and
-   repeats the row label in the rail it would otherwise leave empty.
-   Paged.js's own stylesheet sets content: none on every
-   [data-split-from]::before (so a split list item does not repeat its
-   marker) and padding-bottom: unset on every [data-split-to], each with a
-   selector far more specific than any report rule, hence the !important
-   on the two labels.
-   The bottom padding cannot come back the same way: Paged.js placed the
-   text without it, and a padded box that no longer fits spills into the
-   off-page overflow column the issue #118 gate refuses. The continuing
-   fragment instead paints its surface and side rings one padding-height
-   further down with box-shadows, which draw without taking layout space,
-   and clip-path cuts the ring's bottom edge so the card stays open. */
-.theme-card[data-split-to] {
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-  box-shadow:
-    0 var(--space-6) 0 0 var(--color-surface),
-    0 var(--space-6) 0 1px var(--card-ring),
-    0 0 0 1px var(--card-ring);
-  clip-path: inset(-1px -1px calc(-1 * var(--space-6)) -1px);
-}
-.theme-card[data-split-from] {
-  padding-top: var(--space-6);
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-  clip-path: inset(0 -1px -1px -1px);
-}
-/* A card spanning three pages: its middle fragment is open at both ends. */
-.theme-card[data-split-from][data-split-to] {
-  clip-path: inset(0 -1px calc(-1 * var(--space-6)) -1px);
-}
-.theme-card[data-split-from]::before {
-  content: attr(data-continued-label) !important;
-  display: block;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: var(--color-neutral-400);
-  margin-bottom: var(--space-4);
-}
-.theme-row-tail {
-  position: relative;
-}
-.theme-row[data-split-from]::before,
-.theme-row-tail[data-split-from]::before {
-  content: attr(data-row-label) !important;
-  position: absolute;
-  /* Paged.js drops a continued row's top padding, so the text starts
-     within a few pixels of the fragment's top edge. */
-  top: var(--space-2);
-  left: 0;
-  width: var(--theme-rail);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.35;
-  color: var(--color-neutral-300);
 }
 .theme-subhead {
   break-after: avoid;

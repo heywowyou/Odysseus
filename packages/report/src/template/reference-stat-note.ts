@@ -57,7 +57,7 @@ export function renderReferenceStatNote(
 ): string {
   const badge =
     stat.confidence === 'emerging' && emergingBadgeText
-      ? ` <span class="tag" style="background:${SEVERITY.serious.bg};color:${SEVERITY.serious.color}">${escapeHtml(emergingBadgeText)}</span>`
+      ? ` <span class="tag" data-report-severity="serious" style="background:${SEVERITY.serious.bg};color:${SEVERITY.serious.color}">${escapeHtml(emergingBadgeText)}</span>`
       : '';
   const gapLine = measuredGapNote
     ? `<p class="text-muted" style="font-size:12px;margin:0">${escapeCopy(measuredGapNote, language)}</p>`

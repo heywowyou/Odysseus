@@ -30,7 +30,7 @@ export function renderFixSnippet(
   return `
     <div class="fix-snippet" style="margin-top:4px">
       <div style="font-size:10px;opacity:0.6;text-transform:uppercase;letter-spacing:0.02em">${escapeHtml(strings.fixSnippetLabel)}</div>
-      <pre style="margin:2px 0 0;padding:6px 8px;font-size:11.5px;background:rgba(0,0,0,0.04);border-radius:4px;white-space:pre-wrap;word-break:break-word"><code ${VERBATIM_EVIDENCE_ATTRIBUTE}>${escapeHtml(snippet.rendered)}</code></pre>
+      <pre style="margin:2px 0 0;padding:6px 8px;font-size:11.5px;background:var(--color-code-block);border-radius:4px;white-space:pre-wrap;word-break:break-word"><code ${VERBATIM_EVIDENCE_ATTRIBUTE}>${escapeHtml(snippet.rendered)}</code></pre>
       ${note}
     </div>
   `;

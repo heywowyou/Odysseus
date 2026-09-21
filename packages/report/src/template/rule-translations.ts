@@ -147,17 +147,17 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
     'crux-lcp-poor': {
       label: 'Chargement du contenu principal jugé insuffisant par les visiteurs réels',
       gloss:
-        'Les données de terrain Chrome placent le LCP de ce site au-dessus du seuil « insuffisant » publié par Google.',
+        'Les données de terrain Chrome placent le LCP du site audité au-dessus du seuil « insuffisant » publié par Google.',
     },
     'crux-cls-poor': {
       label: 'Stabilité visuelle insuffisante selon les données de terrain',
       gloss:
-        'Les données de terrain Chrome placent le CLS de ce site au-dessus du seuil « insuffisant » publié par Google.',
+        'Les données de terrain Chrome placent le CLS du site audité au-dessus du seuil « insuffisant » publié par Google.',
     },
     'crux-inp-poor': {
       label: 'Réactivité insuffisante selon les données de terrain',
       gloss:
-        "Les données de terrain Chrome placent l'INP de ce site au-dessus du seuil « insuffisant » publié par Google.",
+        "Les données de terrain Chrome placent l'INP du site audité au-dessus du seuil « insuffisant » publié par Google.",
     },
     'link-text': {
       label: "Le texte des liens n'est pas descriptif",

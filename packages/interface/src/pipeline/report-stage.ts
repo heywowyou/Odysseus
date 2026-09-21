@@ -21,7 +21,7 @@ import {
   type ReportLanguage,
 } from '@odysseus/core';
 import {
-  generateReportPdf,
+  generateReportPdfVariants,
   reportPageCountWarning,
   REPORT_PDF_CHROMIUM_ARGS,
   REPORT_TEMPLATE_VERSION,
@@ -44,6 +44,13 @@ export interface ReportStageResult {
   /** Measured Paged.js page count of the generated PDF (plan 018); read
    *  off the post-pagination DOM, never parsed back out of the PDF. */
   pageCount: number;
+  lightReportPath?: string;
+  lightPdfDigest?: string;
+  lightPageCount?: number;
+  lightVariantWarning?: {
+    code: 'light-render-failed';
+    message: string;
+  };
   /** Present only when pageCount exceeds REPORT_PAGE_COUNT_WARNING_
    *  THRESHOLD. The report above it is still persisted and deliverable;
    *  this only carries the length to the CLI and the dashboard, it is not
@@ -60,6 +67,10 @@ function timestampForFilename(date: Date): string {
 
 function filenameToken(value: string): string {
   return value.replace(/[^a-zA-Z0-9._-]/g, '_');
+}
+
+function lightReportPath(reportPath: string): string {
+  return reportPath.replace(/\.pdf$/u, '-clair.pdf');
 }
 
 export async function runReportStage(
@@ -126,7 +137,7 @@ export async function runReportStage(
   });
   const { obligationAssessment, ...pdfInputs } = renderInputs;
 
-  const { pdf, pageCount } = await generateReportPdf({
+  const renderedVariants = await generateReportPdfVariants({
     auditDir,
     manifest,
     findings,
@@ -138,6 +149,7 @@ export async function runReportStage(
     ...pdfInputs,
     ...(browser !== undefined ? { browser } : {}),
   });
+  const { pdf, pageCount } = renderedVariants.dark;
 
   const pdfDigest = pdfDigestOf(pdf);
   const reportsDir = path.join(auditDir, 'reports');
@@ -147,6 +159,20 @@ export async function runReportStage(
     `${timestampForFilename(generatedAt)}-t${renderMetadata.templateVersion}-${filenameToken(rendererBuild)}-${reportId}-${analysis.language}.pdf`,
   );
   await fs.writeFile(reportPath, pdf);
+
+  const lightPath = lightReportPath(reportPath);
+  const lightPdfDigest =
+    renderedVariants.light === undefined ? undefined : pdfDigestOf(renderedVariants.light.pdf);
+  if (renderedVariants.light !== undefined) {
+    await fs.writeFile(lightPath, renderedVariants.light.pdf);
+  }
+  const lightVariantWarning =
+    renderedVariants.lightError === undefined
+      ? undefined
+      : {
+          code: 'light-render-failed' as const,
+          message: renderedVariants.lightError.message,
+        };
 
   const provenancePath = `${reportPath}.provenance.json`;
   const reportProvenance = {
@@ -163,6 +189,18 @@ export async function runReportStage(
     // points at the machine named here. Recorded on the sidecar and the
     // row alike, via the spread below.
     renderedOnHost: hostname(),
+    ...(renderedVariants.light === undefined
+      ? {}
+      : {
+          variants: {
+            light: {
+              fileRef: path.relative(auditDir, lightPath),
+              pdfDigest: lightPdfDigest!,
+              pageCount: renderedVariants.light.pageCount,
+            },
+          },
+        }),
+    ...(lightVariantWarning === undefined ? {} : { lightVariantWarning }),
   };
   await fs.writeFile(
     provenancePath,
@@ -176,6 +214,17 @@ export async function runReportStage(
     analysisGeneratedAt: analysis.generatedAt,
     fileRef: path.relative(auditDir, reportPath),
     generatedAt,
+    ...(renderedVariants.light === undefined
+      ? {}
+      : {
+          variants: {
+            light: {
+              fileRef: path.relative(auditDir, lightPath),
+              pdfDigest: lightPdfDigest!,
+              pageCount: renderedVariants.light.pageCount,
+            },
+          },
+        }),
   });
 
   // Issue #63: after the local write and the DB row both succeeded, same
@@ -185,7 +234,7 @@ export async function runReportStage(
     auditDir,
     new URL(manifest.siteUrl).hostname,
     new Date(manifest.startedAt),
-    [reportPath, provenancePath],
+    [reportPath, provenancePath, ...(renderedVariants.light === undefined ? [] : [lightPath])],
   );
 
   const pageCountWarning = reportPageCountWarning(pageCount);
@@ -196,6 +245,12 @@ export async function runReportStage(
     pdfDigest,
     generatedAt,
     pageCount,
+    ...(renderedVariants.light === undefined ? {} : { lightReportPath: lightPath }),
+    ...(lightPdfDigest === undefined ? {} : { lightPdfDigest }),
+    ...(renderedVariants.light === undefined
+      ? {}
+      : { lightPageCount: renderedVariants.light.pageCount }),
+    ...(lightVariantWarning === undefined ? {} : { lightVariantWarning }),
     ...(pageCountWarning !== undefined ? { pageCountWarning } : {}),
   };
 }
@@ -203,6 +258,10 @@ export async function runReportStage(
 export interface AllReportsStageResult {
   language: ReportLanguage;
   reportPath: string;
+  lightReportPath?: string;
+  lightPdfDigest?: string;
+  lightPageCount?: number;
+  lightVariantWarning?: ReportStageResult['lightVariantWarning'];
   generatedAt: Date;
   /** Same measured page count and warning semantics as ReportStageResult. */
   pageCount: number;
@@ -251,7 +310,16 @@ export async function runAllReportsStage(
     const languages: ReportLanguage[] = analyses.en === undefined ? ['fr'] : ['fr', 'en'];
     for (const language of languages) {
       const analysis = language === 'fr' ? analyses.fr : analyses.en!;
-      const { reportPath, generatedAt, pageCount, pageCountWarning } = await runReportStage(
+      const {
+        reportPath,
+        lightReportPath,
+        lightPdfDigest,
+        lightPageCount,
+        lightVariantWarning,
+        generatedAt,
+        pageCount,
+        pageCountWarning,
+      } = await runReportStage(
         auditDir,
         manifest,
         findings,
@@ -263,6 +331,10 @@ export async function runAllReportsStage(
       results.push({
         language,
         reportPath,
+        ...(lightReportPath === undefined ? {} : { lightReportPath }),
+        ...(lightPdfDigest === undefined ? {} : { lightPdfDigest }),
+        ...(lightPageCount === undefined ? {} : { lightPageCount }),
+        ...(lightVariantWarning === undefined ? {} : { lightVariantWarning }),
         generatedAt,
         pageCount,
         ...(pageCountWarning !== undefined ? { pageCountWarning } : {}),

@@ -106,3 +106,4 @@ export * from './report-preparation/selection.js';
 export * from './report-preparation/preview.js';
 
 export * from './types/report-quality.js';
+export * from './types/report.js';

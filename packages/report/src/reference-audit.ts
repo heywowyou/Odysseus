@@ -20,7 +20,7 @@ import {
   type OperatorProfile,
   type SiteSignals,
 } from '@odysseus/core';
-import { REPORT_TEMPLATE_VERSION } from './constants.js';
+import { REPORT_TEMPLATE_VERSION, SYNTHETIC_REGISTRY_SOURCE } from './constants.js';
 import type { RenderBundle, ReportRenderInputs } from './render-bundle.js';
 import type { StoredAnalysis } from './types.js';
 
@@ -28,7 +28,9 @@ export const REFERENCE_AUDIT_ANONYMIZER_VERSION = 'reference-anonymizer-v1';
 export const REFERENCE_AUDIT_RELEASE_VERSION = 'reference-release-v1';
 export const REFERENCE_AUDIT_CANONICAL_PATH = '/exemple-audit';
 export const REFERENCE_AUDIT_DISCLOSURE_FR =
-  "Exemple de rapport. Les éléments permettant d'identifier l'établissement, son site et ses données administratives ont été remplacés. La structure, le niveau de détail et le type de constats correspondent au livrable.";
+  "Exemple de rapport. L'identité de l'établissement, son site et ses données administratives ont été remplacés. Les constats et mesures proviennent d'un audit anonymisé et servent uniquement à illustrer le livrable ; ils ne décrivent pas l'établissement fictif présenté ici.";
+export const REFERENCE_AUDIT_DATA_DISCLOSURE_FR =
+  'Données de terrain conservées dans l’audit anonymisé : elles illustrent le livrable et ne décrivent pas Hôtel Exemple.';
 
 const SHOWCASE_ORIGIN = 'https://www.hotel-exemple.fr';
 const SHOWCASE_NAME = 'Hôtel Exemple';
@@ -212,6 +214,17 @@ function buildSourceDenylist(source: ReferenceAuditSource): string[] {
     'themes',
     'legacy',
     'admin',
+    // Render-input provenance is metadata, not source identity. These values
+    // can legitimately survive in the detached synthetic bundle (for example
+    // the replacement manual fields are operator-provided), so they must not
+    // become denylist tokens merely because they sit under an identity-shaped
+    // key in the source bundle.
+    'operator',
+    'manual',
+    'detected',
+    'fallback',
+    'extracted',
+    'synthetic-showcase',
   ]);
   const candidates = new Set<string>();
   let sourceHostname: string | undefined;
@@ -317,6 +330,38 @@ function replaceSourceStrings(value: string, denylist: readonly string[]): strin
   return result;
 }
 
+/** Source analysis may discuss real visitors or field measurements. Those
+ *  facts are retained for the showcase's instructional value, but the
+ *  synthetic hostname must never appear to own them. Keep this rewrite
+ *  narrow: it changes provenance wording, not counts, findings, or claims. */
+function replaceReferenceMeasurementClaims(value: string): string {
+  return value
+    .replace(
+      /stabilité visuelle mesuré(?:e|es)? auprès de visiteurs réels/giu,
+      'stabilité visuelle mesurée dans les données de terrain conservées dans l’audit anonymisé',
+    )
+    .replace(
+      /observé(?:e|es)?s? auprès de ces visiteurs/giu,
+      'observées dans ces données de terrain',
+    )
+    .replace(
+      /mesures issues de visiteurs réels/giu,
+      'mesures de terrain conservées dans l’audit anonymisé',
+    )
+    .replace(/visiteurs réels/giu, 'données de terrain conservées dans l’audit anonymisé')
+    .replace(/usages réels/giu, 'données de terrain conservées dans l’audit anonymisé')
+    .replace(
+      /données réelles du Chrome UX Report/giu,
+      'données de terrain de l’audit anonymisé (Chrome UX Report)',
+    )
+    .replace(/real visitors/giu, 'field data retained in the anonymized audit')
+    .replace(/real-world Chrome UX Report data/giu, 'field data from the anonymized audit');
+}
+
+function projectCopy(value: string, denylist: readonly string[]): string {
+  return replaceReferenceMeasurementClaims(replaceSourceStrings(value, denylist));
+}
+
 function rewriteUrl(raw: string, pageUrls: ReadonlyMap<string, string>): string {
   const direct = pageUrls.get(raw);
   if (direct !== undefined) return direct;
@@ -381,7 +426,7 @@ function syntheticObligationAssessment(): ObligationAssessment {
       denomination: SHOWCASE_LEGAL_NAME,
       effectifBandLabel: '10 à 19 salariés',
       retrievedAt,
-      source: 'Faits synthétiques propres à l’exemple',
+      source: SYNTHETIC_REGISTRY_SOURCE,
     },
   };
 }
@@ -440,8 +485,8 @@ function projectFinding(
     auditId: 'reference-audit',
     pageUrls: finding.pageUrls.map((url) => rewriteUrl(url, pageUrls)),
     elements,
-    title: replaceSourceStrings(finding.title, denylist),
-    description: replaceSourceStrings(finding.description, denylist),
+    title: projectCopy(finding.title, denylist),
+    description: projectCopy(finding.description, denylist),
     rawEvidence: { showcaseProjection: true, category: finding.category, ruleId: finding.ruleId },
     dedupeKey: `showcase|${finding.source}|${finding.ruleId}|${finding.category}`,
     firstSeenAt: new Date(SHOWCASE_DATE),
@@ -536,19 +581,17 @@ function projectAnalysis(
     themes: analysis.themes.map((theme) => ({
       ...theme,
       findingIds: theme.findingIds.map((id) => mapFindingId(id, findingIds)),
-      title: replaceSourceStrings(theme.title, denylist),
-      businessImpact: replaceSourceStrings(theme.businessImpact, denylist),
+      title: projectCopy(theme.title, denylist),
+      businessImpact: projectCopy(theme.businessImpact, denylist),
       legalRelevance:
         theme.legalRelevance === undefined
           ? undefined
-          : replaceSourceStrings(theme.legalRelevance, denylist),
-      recommendedActions: theme.recommendedActions.map((action) =>
-        replaceSourceStrings(action, denylist),
-      ),
+          : projectCopy(theme.legalRelevance, denylist),
+      recommendedActions: theme.recommendedActions.map((action) => projectCopy(action, denylist)),
     })),
     quickWins: analysis.quickWins.map((id) => mapFindingId(id, findingIds)),
-    executiveSummary: replaceSourceStrings(analysis.executiveSummary, denylist),
-    notes: replaceSourceStrings(analysis.notes, denylist),
+    executiveSummary: projectCopy(analysis.executiveSummary, denylist),
+    notes: projectCopy(analysis.notes, denylist),
     obligationAssessment: syntheticObligationAssessment(),
   };
 }

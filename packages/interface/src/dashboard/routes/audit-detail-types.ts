@@ -128,6 +128,8 @@ export interface ReportStatusResponse {
    *  digest check, the exact read the preview and download endpoints
    *  run). False also when no report document exists for the language. */
   pdfAvailable: boolean;
+  /** A digest-verified light sibling exists for this current report. */
+  lightAvailable?: boolean;
   /** Plan 050: rendered by an older report template. Advisory only; the
    *  report stays previewable and deliverable. */
   olderTemplate?: boolean;
@@ -150,6 +152,7 @@ export interface ReportStatusResponse {
 export interface ApprovedReportRefResponse {
   reportId: string;
   pdfDigest: string;
+  variantDigests?: { light?: string };
 }
 
 export interface ReportApprovalResponse {

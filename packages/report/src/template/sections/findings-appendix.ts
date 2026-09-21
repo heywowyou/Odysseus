@@ -840,7 +840,7 @@ function renderCategorySection(
   // from the rule-group heading that note is about.
   return `
     <div class="appendix-category" data-appendix-category="${escapeHtml(category)}" style="margin-bottom:var(--space-12)">
-      <h4 class="appendix-category-head" data-appendix-category="${escapeHtml(category)}" style="color:${CATEGORY[category].color}">${escapeHtml(strings.findingsAppendix.categoryLabels[category])}</h4>
+      <h4 class="appendix-category-head" data-appendix-category="${escapeHtml(category)}" data-report-category="${escapeHtml(category)}" style="color:${CATEGORY[category].color}">${escapeHtml(strings.findingsAppendix.categoryLabels[category])}</h4>
       ${groupBlocks}
       ${citationBlock}
     </div>
@@ -1009,7 +1009,7 @@ export function renderFindingsAppendix(
           ${presentCategories
             .map(
               (category) =>
-                `<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:${CATEGORY[category].color}"></span>${escapeHtml(strings.findingsAppendix.categoryLabels[category])}</span>`,
+                `<span style="display:inline-flex;align-items:center;gap:5px"><span class="report-category-swatch" data-report-category="${category}" style="width:8px;height:8px;border-radius:50%;background:${CATEGORY[category].color}"></span><span data-report-category="${category}">${escapeHtml(strings.findingsAppendix.categoryLabels[category])}</span></span>`,
             )
             .join('')}
         </div>

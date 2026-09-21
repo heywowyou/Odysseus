@@ -3,6 +3,10 @@ import { Schema, type Connection, type Model } from 'mongoose';
 export interface ApprovedReportRef {
   reportId: string;
   pdfDigest: string;
+  /** Optional light sibling digest. Legacy approvals remain dark-only. */
+  variantDigests?: {
+    light?: string;
+  };
 }
 
 export interface ReportApprovalDocumentFields {
@@ -21,6 +25,12 @@ const reportRefSchema = new Schema<ApprovedReportRef>(
   {
     reportId: { type: String, required: true },
     pdfDigest: { type: String, required: true },
+    variantDigests: {
+      _id: false,
+      type: {
+        light: { type: String },
+      },
+    },
   },
   { _id: false },
 );

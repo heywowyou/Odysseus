@@ -38,9 +38,12 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        // Every route except the token-gated preview document, which sets
-        // its own headers explicitly in app/apercu/[token]/route.ts.
-        source: '/((?!apercu|exemple-audit).*)',
+        // Every route except the token-gated preview document and the two
+        // reference-audit responses (the raw PDF and the attribution
+        // redirect), which set their own headers explicitly. The
+        // /exemple-audit reader page itself is a marketing page and takes
+        // this policy: pdf.js runs as a same-origin worker without eval.
+        source: '/((?!apercu|exemple-audit\\.pdf|exemple-audit/r/).*)',
         headers: [
           { key: 'Content-Security-Policy', value: marketingCsp },
           // Superseded by CSP's frame-ancestors for modern browsers, kept

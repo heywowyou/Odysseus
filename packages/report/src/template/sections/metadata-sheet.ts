@@ -69,7 +69,7 @@ function renderRiskBadge(
     const className = isCurrent
       ? 'metadata-risk-level metadata-risk-level-current'
       : 'metadata-risk-level';
-    return `<span class="${className}" style="padding:4px 10px;border-radius:calc(var(--radius-md)*0.75);font-size:${isCurrent ? '14px' : '11px'};font-weight:${isCurrent ? '500' : '400'};background:${isCurrent ? levelColor.bg : 'transparent'};color:${isCurrent ? levelColor.color : 'color-mix(in srgb, var(--color-text) 55%, transparent)'}">${escapeHtml(strings.metadata.riskLevels[level])}</span>`;
+    return `<span class="${className}" data-report-level="${level}" style="padding:4px 10px;border-radius:calc(var(--radius-md)*0.75);font-size:${isCurrent ? '14px' : '11px'};font-weight:${isCurrent ? '500' : '400'};background:${isCurrent ? levelColor.bg : 'transparent'};color:${isCurrent ? levelColor.color : 'color-mix(in srgb, var(--color-text) 55%, transparent)'}">${escapeHtml(strings.metadata.riskLevels[level])}</span>`;
   }).join('');
 
   const stats = computeStatistics(findings, manifest);

@@ -32,6 +32,7 @@ import {
 import { frenchCopy } from '../french-typography.js';
 import { translateEffectifLabel } from '../effectif-label.js';
 import { buildCoverageDisclosure } from '../coverage-disclosure.js';
+import { SYNTHETIC_REGISTRY_SOURCE } from '../../constants.js';
 
 /** Sirene's own effectif-band labels (see packages/interface's
  *  sirene-client.ts) are French-only, since they come from an INSEE
@@ -50,23 +51,32 @@ function renderFact(
   fact: ObligationBasisFact,
   strings: ReportStrings,
   language: ReportLanguage,
+  synthetic = false,
 ): string | null {
   const m = strings.methodology;
   switch (fact.kind) {
     case 'effectif-band':
-      return fillTemplate(m.legalCitationEffectifFactTemplate, {
-        label: translateEffectifLabel(fact.code, fact.label, language),
-      });
+      return fillTemplate(
+        synthetic
+          ? m.legalCitationSyntheticEffectifFactTemplate
+          : m.legalCitationEffectifFactTemplate,
+        {
+          label: translateEffectifLabel(fact.code, fact.label, language),
+        },
+      );
     case 'turnover':
       return fillTemplate(m.legalCitationTurnoverFactTemplate, {
         amount: formatEur(fact.amountEur, language),
         threshold: formatEur(fact.thresholdEur, language),
       });
     case 'sme-exemption':
-      return fillTemplate(m.legalCitationSmeFactTemplate, {
-        effectifCode: fact.effectifCode,
-        turnover: formatEur(fact.turnoverEur, language),
-      });
+      return fillTemplate(
+        synthetic ? m.legalCitationSyntheticSmeFactTemplate : m.legalCitationSmeFactTemplate,
+        {
+          effectifCode: fact.effectifCode,
+          turnover: formatEur(fact.turnoverEur, language),
+        },
+      );
     // item 41: names the specific flow type(s) actually detected instead
     // of listing all three possibilities with "ou", which read as the
     // tool being unsure which one it found. 'booking-engine-script' and
@@ -135,9 +145,10 @@ function renderFacts(
   basis: ObligationBasis,
   strings: ReportStrings,
   language: ReportLanguage,
+  synthetic = false,
 ): string {
   return basis.facts
-    .map((fact) => renderFact(fact, strings, language))
+    .map((fact) => renderFact(fact, strings, language, synthetic))
     .filter((text): text is string => text !== null)
     .join(' ');
 }
@@ -225,13 +236,21 @@ export function renderLegalCitationParagraph(
     return m.legalCitationUndeterminedParagraph;
   }
 
-  const facts = renderFacts(basis, strings, language);
-  const template = {
-    in_scope: m.legalCitationInScopeTemplate,
-    likely_in_scope: m.legalCitationLikelyInScopeTemplate,
-    out_of_scope: m.legalCitationOutOfScopeParagraph,
-    undetermined: m.legalCitationUndeterminedParagraph,
-  }[assessment.status];
+  const synthetic = assessment.registrySnapshot?.source === SYNTHETIC_REGISTRY_SOURCE;
+  const facts = renderFacts(basis, strings, language, synthetic);
+  const template = synthetic
+    ? {
+        in_scope: m.legalCitationSyntheticInScopeTemplate,
+        likely_in_scope: m.legalCitationSyntheticLikelyInScopeTemplate,
+        out_of_scope: m.legalCitationSyntheticOutOfScopeParagraph,
+        undetermined: m.legalCitationSyntheticUndeterminedParagraph,
+      }[assessment.status]
+    : {
+        in_scope: m.legalCitationInScopeTemplate,
+        likely_in_scope: m.legalCitationLikelyInScopeTemplate,
+        out_of_scope: m.legalCitationOutOfScopeParagraph,
+        undetermined: m.legalCitationUndeterminedParagraph,
+      }[assessment.status];
   // item 3.15: "sous le contrôle de {authority}" produced "sous le
   // contrôle de Direction générale..." (missing "la"). `authority` is also
   // read as a nominative label ("Autorité compétente : ..."), so it cannot
@@ -286,6 +305,10 @@ function renderSirenProvenanceNote(
     return fillTemplate(m.sirenSourceResolvedTemplate, { url: resolvedSirenSourceUrl });
   }
   if (!assessment) return '';
+
+  if (assessment.registrySnapshot?.source === SYNTHETIC_REGISTRY_SOURCE) {
+    return m.syntheticSirenProvenanceNote;
+  }
 
   if (assessment.sirenMismatch) {
     return fillTemplate(m.legalCitationSirenMismatchTemplate, {

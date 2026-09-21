@@ -119,7 +119,7 @@ export function renderChecklist(
           ${cell(String(displayRank))}
           ${cell(escapeProse(theme.title, language))}
           ${cell(escapeHtml(effortLevels[theme.effort]))}
-          ${cell(`<span data-level="${theme.impact}" style="color:${LEVEL_COLOR[theme.impact].color}">${escapeHtml(levels[theme.impact])}</span>`)}
+          ${cell(`<span data-level="${theme.impact}" data-report-level="${theme.impact}" style="color:${LEVEL_COLOR[theme.impact].color}">${escapeHtml(levels[theme.impact])}</span>`)}
           ${cell(`${formatNumber(uniquePages, language)}/${formatNumber(totalPagesScanned, language)}`)}
           ${cell(`<span class="mono" style="font-size:11px">${escapeHtml(formatCappedFindingIdRefs(theme.findingIds, language, strings.findingsAppendix))}</span>`)}
           ${cell(wcagCriteria.length > 0 ? escapeHtml(formatCappedList(wcagCriteria, CHECKLIST_WCAG_CAP, language, strings.findingsAppendix)) : '-')}

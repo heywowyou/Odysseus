@@ -2,9 +2,11 @@ export { REPORT_TEMPLATE_VERSION } from './constants.js';
 export type {
   GenerateReportInput,
   ReportRenderMetadata,
+  ReportTheme,
   StoredAnalysis,
   VerifiedStoredAnalysis,
 } from './types.js';
+export { DEFAULT_REPORT_THEME } from './types.js';
 export { classifyReportFreshness, reportUsesCurrentTemplate } from './freshness.js';
 export type { ReportFreshness, ReportFreshnessMetadata } from './freshness.js';
 /** Plan 032 (issue #162): re-exported so the interface analysis stage's
@@ -40,7 +42,10 @@ export {
 } from './finalize-bundle.js';
 export type { FinalizedBundle, RefusedBundle } from './finalize-bundle.js';
 export type { RenderBundle, RenderBundleLineage, ReportRenderInputs } from './render-bundle.js';
-import type { ReferenceAuditShowcase } from './reference-audit.js';
+import {
+  REFERENCE_AUDIT_DATA_DISCLOSURE_FR,
+  type ReferenceAuditShowcase,
+} from './reference-audit.js';
 export {
   RENDER_BUNDLE_FILES,
   readRenderBundleDir,
@@ -57,6 +62,7 @@ export {
   REFERENCE_AUDIT_ANONYMIZER_VERSION,
   REFERENCE_AUDIT_CANONICAL_PATH,
   REFERENCE_AUDIT_DISCLOSURE_FR,
+  REFERENCE_AUDIT_DATA_DISCLOSURE_FR,
   REFERENCE_AUDIT_RELEASE_VERSION,
   ReferenceAuditPublicationError,
 } from './reference-audit.js';
@@ -99,7 +105,7 @@ export type {
 
 import { launchBrowser } from '@odysseus/scanner';
 import { REPORT_PDF_CHROMIUM_ARGS, REPORT_TEMPLATE_VERSION } from './constants.js';
-import type { GenerateReportInput } from './types.js';
+import { DEFAULT_REPORT_THEME, type GenerateReportInput, type ReportTheme } from './types.js';
 import { resolveRenderDiffEvidence } from './screenshots.js';
 import { renderHtml } from './template/render-html.js';
 import { findRenderLintViolations } from './template/render-lint.js';
@@ -185,6 +191,7 @@ export async function generateReportPdf(
     } = resolveRenderDiffEvidence(input.manifest, input.findings);
 
     const html = await renderHtml({
+      theme: input.theme ?? DEFAULT_REPORT_THEME,
       manifest: input.manifest,
       findings: input.findings,
       analysis: input.analysis,
@@ -223,6 +230,55 @@ export async function generateReportPdf(
   }
 }
 
+export interface GeneratedReportVariants {
+  /** The canonical artifact. A light failure never changes these bytes. */
+  dark: RenderedPdfWithPageCount;
+  /** The sibling artifact, when its independent render succeeded. */
+  light?: RenderedPdfWithPageCount;
+  /** A light-only failure is observable to the caller so it can persist the
+   * dark artifact and make the light choice unavailable without substituting
+   * dark bytes under a light label. */
+  lightError?: Error;
+}
+
+/** Render both presentation variants from one resolved input set and one
+ * Chromium instance. The dark render is authoritative: a dark failure
+ * rejects, while a light-only failure is returned for the persistence layer
+ * to surface as an unavailable optional variant. */
+export async function generateReportPdfVariants(
+  input: GenerateReportInput,
+): Promise<GeneratedReportVariants> {
+  const ownsBrowser = input.browser === undefined;
+  const browser =
+    input.browser ?? (await launchBrowser({ extraArgs: REPORT_PDF_CHROMIUM_ARGS })).browser;
+  try {
+    const baseInput = { ...input, browser };
+    const dark = await generateReportPdf({ ...baseInput, theme: 'dark' satisfies ReportTheme });
+    try {
+      const light = await generateReportPdf({
+        ...baseInput,
+        theme: 'light' satisfies ReportTheme,
+      });
+      if (light.pageCount !== dark.pageCount) {
+        return {
+          dark,
+          lightError: new Error(
+            `light report pagination changed from ${dark.pageCount} pages to ${light.pageCount} pages`,
+          ),
+        };
+      }
+      return { dark, light };
+    } catch (error) {
+      return {
+        dark,
+        lightError: error instanceof Error ? error : new Error(String(error)),
+      };
+    }
+  } finally {
+    if (ownsBrowser) await browser.close();
+  }
+}
+
 /** Render the publication-safe showcase with the exact paid-report renderer.
  * The adapter only supplies detached inputs and a disclosure; pagination,
  * Paged.js, PDF integrity and all report lint gates remain in
@@ -245,6 +301,8 @@ export async function generateReferenceAuditPdf(
       rendererBuild: options.rendererBuild ?? 'reference-audit',
       templateVersion: REPORT_TEMPLATE_VERSION,
       documentDisclosure: bundle.disclosure,
+      referenceDataDisclosure: REFERENCE_AUDIT_DATA_DISCLOSURE_FR,
+      footerLabel: 'Exemple public',
     },
     // The report template is intentionally screenshot-free. Keeping this
     // empty also makes the no-source-path contract explicit at this seam.
@@ -280,6 +338,8 @@ export async function renderReferenceAuditHtml(
       rendererBuild: options.rendererBuild ?? 'reference-audit',
       templateVersion: REPORT_TEMPLATE_VERSION,
       documentDisclosure: bundle.disclosure,
+      referenceDataDisclosure: REFERENCE_AUDIT_DATA_DISCLOSURE_FR,
+      footerLabel: 'Exemple public',
     },
     manifest: bundle.manifest,
     findings: bundle.findings,

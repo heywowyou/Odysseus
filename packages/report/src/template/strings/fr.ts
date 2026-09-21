@@ -232,8 +232,8 @@ export const fr: ReportStrings = {
     // new one ("WCAG 2.2 AA · Performance · SEO ·" / "GEO"). A non-
     // breaking space after "·" (not before) keeps each "· Term" pair
     // together, so wrapping can only happen between complete terms.
-    wcagReferentialValue: 'WCAG 2.2 AA · Performance · SEO · GEO · Vie privée · Sécurité',
-    wcagReferentialValueNoPerformance: 'WCAG 2.2 AA · SEO · GEO · Vie privée · Sécurité',
+    wcagReferentialValue: 'WCAG 2.2 AA · Performance · SEO · GEO · Confidentialité et sécurité',
+    wcagReferentialValueNoPerformance: 'WCAG 2.2 AA · SEO · GEO · Confidentialité et sécurité',
     legalNameLabel: 'Dénomination sociale',
     riskSmallLabel: 'Niveau de criticité des constats',
     riskLevels: { low: 'Faible', medium: 'Moyen', high: 'Élevé' },
@@ -323,6 +323,16 @@ export const fr: ReportStrings = {
       undetermined:
         "L'identifiant d'entreprise ou les données Sirene nécessaires n'étaient pas disponibles pour comparer les faits observés aux seuils cités.",
     },
+    syntheticStatusShortDescriptions: {
+      in_scope:
+        'Le statut illustré repose sur des données synthétiques créées pour cet exemple ; elles ne décrivent pas un établissement réel.',
+      likely_in_scope:
+        'Le statut illustré repose sur des données synthétiques créées pour cet exemple ; elles ne décrivent pas un établissement réel.',
+      out_of_scope:
+        'Le statut illustré repose sur des données synthétiques créées pour cet exemple ; elles ne décrivent pas un établissement réel.',
+      undetermined:
+        'Le statut illustré repose sur des données synthétiques créées pour cet exemple ; elles ne décrivent pas un établissement réel.',
+    },
     exposureHeading: 'Exposition en cas de manquement',
     generalEaaReferenceHeading: 'Référence légale générale',
     sirenLabel: 'SIREN',
@@ -335,6 +345,10 @@ export const fr: ReportStrings = {
     registrySnapshotTemplate:
       'Données du répertoire Sirene : {denomination}, SIREN {siren}, {effectifs}, consultées le {date}.',
     registrySnapshotEffectifsUnavailable: 'effectif non disponible',
+    syntheticRegistrySnapshotTemplate:
+      "Données synthétiques de cet exemple : {denomination}, identifiant SIREN fictif {siren}, tranche d'effectif fictive {effectifs}, date d'exemple {date}.",
+    syntheticRegistrySnapshotNote:
+      "Ces informations sont fictives : elles ne proviennent pas du répertoire Sirene ni d'une entreprise réelle.",
     // P2.1 (2026-08-21 La Corniche feedback pass): a real registry
     // denomination rendered with an unbalanced parenthesis ("(O! DE LA
     // DUNE"), read at first glance as a parsing error - checked directly
@@ -351,6 +365,8 @@ export const fr: ReportStrings = {
       "L'exploration automatisée ne visite qu'un nombre limité de pages et peut ne pas atteindre une page où ces informations figurent. Cette obligation ne dépend pas du résultat de l'analyse d'accessibilité ci-dessus. Faites confirmer votre situation par un conseil juridique.",
     registrySnapshotVerbatimNote:
       "Cette dénomination est reproduite telle qu'elle figure au répertoire Sirene, associée au SIREN ci-dessus, pas déduite du nom de domaine.",
+    syntheticDisclaimerNote:
+      "Cette section illustre le rendu des critères réglementaires avec des données synthétiques ; elle ne décrit pas la situation juridique ou administrative d'un établissement réel. Une confirmation par un conseil juridique reste nécessaire avant toute décision.",
     // item 0.1: when a manual hasTransactionalFlow override disagrees
     // with what the scanner detected, the report must say so plainly
     // rather than silently trusting the override - a confirmed fact from
@@ -571,6 +587,13 @@ export const fr: ReportStrings = {
       'Un écart important entre ces valeurs réelles et les mesures de laboratoire présentées plus bas est normal : la mesure de laboratoire simule volontairement des conditions difficiles (limitation CPU et réseau, un seul passage), tandis que les données réelles reflètent des visiteurs sur des appareils et connexions variés. Les deux mesures répondent à des questions différentes, elles ne se contredisent pas.',
     labLcpDivergenceTemplate:
       "* La médiane de laboratoire du LCP ({lab}) dépasse de plus de quatre fois la valeur mesurée chez vos visiteurs réels ({field}, jugée bonne). Un tel écart va au-delà de ce qu'expliquent les conditions simulées : il provient le plus souvent de la mesure elle-même (image principale ou carrousel chargé tardivement, attente d'un service tiers). Cette médiane ne décrit donc pas l'expérience de vos visiteurs . Pour l'interprétation de ce cas, privilégiez la donnée de terrain.",
+    referenceRealUserHeading: 'Données de terrain de l’audit anonymisé (Chrome UX Report)',
+    referenceRealUserNoDataNote:
+      "Aucune donnée Chrome UX Report publique n'a été retenue dans l'audit anonymisé. Cela signifie simplement qu'aucune comparaison avec des utilisateurs réels n'est disponible pour cet exemple.",
+    referenceRealUserGapNote:
+      "L'écart entre ces valeurs issues des données de terrain conservées dans l’audit anonymisé et les mesures de laboratoire présentées plus bas est normal : la mesure de laboratoire simule volontairement des conditions difficiles (limitation CPU et réseau, un seul passage), tandis que les données de terrain reflètent les conditions observées dans l’audit source. Les deux mesures répondent à des questions différentes.",
+    referenceLabLcpDivergenceTemplate:
+      "* La médiane de laboratoire du LCP ({lab}) dépasse de plus de quatre fois la valeur mesurée dans les données de terrain de l’audit anonymisé ({field}, jugée bonne). Ces mesures appartiennent à l'audit anonymisé et ne décrivent pas l'expérience d'Hôtel Exemple.",
     inpLabel: 'INP, réactivité',
   },
   benchmarkPercentile: {
@@ -872,7 +895,7 @@ export const fr: ReportStrings = {
         id: 'sirene',
         term: 'Sirene',
         definition:
-          "Répertoire officiel des entreprises et établissements en France (INSEE), utilisé ici pour vérifier la taille de l'entreprise et confirmer à quelle entité un constat se rapporte.",
+          "Répertoire officiel des entreprises et établissements en France (INSEE), qui peut être utilisé pour vérifier la taille d'une entreprise et confirmer à quelle entité un constat se rapporte.",
       },
       {
         id: 'complexity',
@@ -920,6 +943,8 @@ export const fr: ReportStrings = {
       'Après la correction des priorités, un ré-audit du même périmètre est recommandé, normalement dans un délai de trois à six mois, une fois les correctifs en ligne.',
     synthesisComparisonWithFieldData:
       "La comparaison porte uniquement sur ce que l'analyse automatisée recalcule : les constats par gravité, les critères WCAG 2.2 AA en échec et les données réelles du Chrome UX Report.",
+    synthesisComparisonWithReferenceFieldData:
+      "La comparaison porte uniquement sur ce que l'analyse automatisée recalcule : les constats par gravité, les critères WCAG 2.2 AA en échec et les données de terrain conservées dans l'audit anonymisé.",
     synthesisComparisonWithoutFieldData:
       "La comparaison porte uniquement sur ce que l'analyse automatisée recalcule : les constats par gravité et les critères WCAG 2.2 AA en échec.",
     synthesisConversionNote:
@@ -1071,11 +1096,23 @@ export const fr: ReportStrings = {
       "Critères publiés pour l'{regimeName} ({legalCitation}), dont le contrôle relève {authority}. Faits vérifiés pour cet audit : {facts}",
     legalCitationUndeterminedParagraph:
       "Critères publiés pour l'{regimeName} ({legalCitation}), dont le contrôle relève {authority}. Données disponibles pour cet audit : {facts}",
+    legalCitationSyntheticInScopeTemplate:
+      "Critères publiés pour l'{regimeName} ({legalCitation}), dont le contrôle relève {authority}. Données de démonstration utilisées pour cet exemple : {facts}",
+    legalCitationSyntheticLikelyInScopeTemplate:
+      "Critères publiés pour l'{regimeName} ({legalCitation}), dont le contrôle relève {authority}. Données de démonstration utilisées pour cet exemple : {facts}",
+    legalCitationSyntheticOutOfScopeParagraph:
+      "Critères publiés pour l'{regimeName} ({legalCitation}), dont le contrôle relève {authority}. Données de démonstration utilisées pour cet exemple : {facts}",
+    legalCitationSyntheticUndeterminedParagraph:
+      "Critères publiés pour l'{regimeName} ({legalCitation}), dont le contrôle relève {authority}. Données de démonstration disponibles pour cet exemple : {facts}",
     legalCitationEffectifFactTemplate: "L'entreprise compte {label} d'après le répertoire Sirene.",
+    legalCitationSyntheticEffectifFactTemplate:
+      "La tranche d'effectif utilisée pour cet exemple est fictive : {label}.",
     legalCitationTurnoverFactTemplate:
       "Le chiffre d'affaires annuel enregistré est de {amount} ; le seuil publié est de {threshold}.",
     legalCitationSmeFactTemplate:
       "Le répertoire indique la tranche d'effectif {effectifCode} et un chiffre d'affaires de {turnover}.",
+    legalCitationSyntheticSmeFactTemplate:
+      "Les données synthétiques de cet exemple utilisent la tranche d'effectif {effectifCode} et un chiffre d'affaires fictif de {turnover}.",
     legalCitationTransactionalFlowFactTemplate:
       'Le site propose un parcours de {flowType} {location}.',
     legalCitationTransactionalFlowLocationOnSite: 'directement en ligne',
@@ -1105,6 +1142,8 @@ export const fr: ReportStrings = {
       'Le numéro SIREN utilisé pour cette détermination a été fourni manuellement, ce site ne le publie pas lui-même (voir constat {findingId}).',
     legalCitationManualSirenNoFindingSentence:
       'Le numéro SIREN utilisé pour cette détermination a été fourni manuellement, ce site ne publie pas ce numéro lui-même.',
+    syntheticSirenProvenanceNote:
+      "Le numéro et les données d'effectif utilisés ici sont fictifs et propres à cet exemple ; ils ne proviennent pas d'une consultation du répertoire Sirene.",
     legalCitationSirenMismatchTemplate:
       'Le numéro SIREN fourni manuellement ({manualSiren}) diffère de celui publié sur le site ({extractedSiren}). Cette détermination retient le numéro fourni manuellement.',
     legalCitationPointerSentence:

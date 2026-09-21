@@ -84,4 +84,50 @@ describe('approvalCoversReport', () => {
     ).toBe(false);
     expect(approvalCoversReport(frenchOnly, 'fr', approval.fr)).toBe(true);
   });
+
+  it('requires an exact approved light digest for light delivery', () => {
+    const report = {
+      reportId: 'fr-1',
+      pdfDigest: 'sha256:fr',
+      variants: { light: { pdfDigest: 'sha256:fr-light' } },
+    };
+    expect(approvalCoversReport(approval, 'fr', report, 'light')).toBe(false);
+    const approved = {
+      ...approval,
+      fr: { ...approval.fr, variantDigests: { light: 'sha256:fr-light' } },
+    };
+    expect(approvalCoversReport(approved, 'fr', report, 'light')).toBe(true);
+    expect(
+      approvalCoversReport(
+        approved,
+        'fr',
+        { ...report, variants: { light: { pdfDigest: 'sha256:other' } } },
+        'light',
+      ),
+    ).toBe(false);
+  });
+
+  it('checks a French-only light approval in pair matching', () => {
+    const { en: _attached, ...frenchOnly } = approval;
+    const approved = {
+      ...frenchOnly,
+      fr: { ...frenchOnly.fr, variantDigests: { light: 'sha256:light-1' } },
+    };
+    const report = {
+      reportId: 'fr-1',
+      pdfDigest: 'sha256:fr',
+      variants: { light: { pdfDigest: 'sha256:light-2' } },
+    };
+
+    expect(approvalMatchesReportPair(approved, { fr: report })).toBe(false);
+  });
+
+  it('keeps a legacy dark-only approval valid for the dark pair after light is added', () => {
+    expect(
+      approvalMatchesReportPair(approval, {
+        fr: { ...approval.fr, variants: { light: { pdfDigest: 'sha256:fr-light' } } },
+        en: { ...approval.en!, variants: { light: { pdfDigest: 'sha256:en-light' } } },
+      }),
+    ).toBe(true);
+  });
 });

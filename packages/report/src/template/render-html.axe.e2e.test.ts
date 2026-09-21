@@ -36,39 +36,25 @@ describe('the rendered report HTML passes its own axe-core audit', () => {
     await browser?.close();
   });
 
-  it('has zero WCAG 2.2 AA violations on the real small-site.test French report', async () => {
+  it('has zero WCAG 2.2 AA violations on both themes of the real small-site.test French report', async () => {
     const [manifest, findings, analysis] = await Promise.all([
       loadSmallSiteManifest(),
       loadSmallSiteFindings(),
       loadSmallSiteAnalysis('fr'),
     ]);
     const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
-    const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages });
-
-    // AxeBuilder requires a page created from a full BrowserContext
-    // (its script-injection mechanism rejects a bare browser.newPage()
-    // page with "Please use browser.newContext()").
-    const context = await browser.newContext();
-    try {
-      const page = await context.newPage();
-      await page.setContent(html, { waitUntil: 'load' });
-      const results = await new AxeBuilder({ page }).withTags(WCAG22AA_TAGS).analyze();
-
-      if (results.violations.length > 0) {
-        const summary = results.violations
-          .map((v) => `${v.id} (${v.impact}): ${v.nodes.length} node(s) - ${v.help}`)
-          .join('\n');
-        throw new Error(`Report HTML failed its own axe-core audit:\n${summary}`);
-      }
-      expect(results.violations).toEqual([]);
-    } finally {
-      await context.close();
+    for (const theme of ['dark', 'light'] as const) {
+      const html = await renderHtml({
+        manifest,
+        findings,
+        analysis,
+        renderDiffEvidencePages,
+        theme,
+      });
+      await expectReportAxe(browser, html, theme);
     }
-    // Measured at ~28s on an idle machine, so a 30s budget left a 7 percent
-    // margin and this test failed as a timeout, not a violation, whenever
-    // anything else was using the CPU (a concurrent scan, a full suite run).
-    // Matched to the 60s the second case in this file already uses.
-  }, 60_000);
+    // Measured at ~28s on an idle machine, so the pair gets a 120s budget.
+  }, 120_000);
 
   /**
    * The small-site fixture predates milestone 8.6 and contains no
@@ -77,7 +63,7 @@ describe('the rendered report HTML passes its own axe-core audit', () => {
    * one internally consistent theme and its findings in the committed fixture
    * so the palette is exercised without relying on an operator's local scan.
    */
-  it('has zero WCAG 2.2 AA violations on a de-identified report containing a privacy theme', async () => {
+  it('has zero WCAG 2.2 AA violations on both themes of a de-identified report containing a privacy theme', async () => {
     const [manifest, findings, analysis] = await Promise.all([
       loadSmallSiteManifest(),
       loadSmallSiteFindings(),
@@ -88,37 +74,49 @@ describe('the rendered report HTML passes its own axe-core audit', () => {
       analysis,
     );
     const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, privacyFindings);
-    const html = await renderHtml({
-      manifest,
-      findings: privacyFindings,
-      analysis: privacyAnalysis,
-      renderDiffEvidencePages,
-    });
 
-    expect(html).toContain('style="background:#282927;color:#e5c07b"');
-
-    const context = await browser.newContext();
-    try {
-      const page = await context.newPage();
-      await page.setContent(html, { waitUntil: 'load' });
-      const results = await new AxeBuilder({ page }).withTags(WCAG22AA_TAGS).analyze();
-
-      if (results.violations.length > 0) {
-        const summary = results.violations
-          .map(
-            (v) =>
-              `${v.id} (${v.impact}): ${v.nodes.length} node(s) - ${v.help}\n` +
-              v.nodes.map((n) => `    ${n.failureSummary}\n    ${n.html}`).join('\n'),
-          )
-          .join('\n');
-        throw new Error(`Report HTML failed its own axe-core audit:\n${summary}`);
-      }
-      expect(results.violations).toEqual([]);
-    } finally {
-      await context.close();
+    for (const theme of ['dark', 'light'] as const) {
+      const html = await renderHtml({
+        manifest,
+        findings: privacyFindings,
+        analysis: privacyAnalysis,
+        renderDiffEvidencePages,
+        theme,
+      });
+      expect(html).toContain('style="background:#282927;color:#e5c07b"');
+      await expectReportAxe(browser, html, `privacy ${theme}`);
     }
-  }, 60_000);
+  }, 120_000);
 });
+
+async function expectReportAxe(browser: Browser, html: string, label: string): Promise<void> {
+  // AxeBuilder requires a page created from a full BrowserContext (its
+  // script-injection mechanism rejects a bare browser.newPage() page with
+  // "Please use browser.newContext()".
+  const context = await browser.newContext();
+  try {
+    const page = await context.newPage();
+    await page.setContent(html, { waitUntil: 'load' });
+    const results = await new AxeBuilder({ page }).withTags(WCAG22AA_TAGS).analyze();
+
+    if (results.violations.length > 0) {
+      const summary = results.violations
+        .map(
+          (v) =>
+            `${v.id} (${v.impact}): ${v.nodes.length} node(s) - ${v.help}\n` +
+            v.nodes
+              .slice(0, 12)
+              .map((node) => `    ${node.failureSummary}\n    ${node.html}`)
+              .join('\n'),
+        )
+        .join('\n');
+      throw new Error(`Report HTML failed its own axe-core audit (${label}):\n${summary}`);
+    }
+    expect(results.violations, label).toEqual([]);
+  } finally {
+    await context.close();
+  }
+}
 
 function withPrivacyTheme(
   findings: Finding[],

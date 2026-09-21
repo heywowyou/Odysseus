@@ -2092,3 +2092,210 @@
     }
   }
 }
+
+/* ---- Example report viewer (/exemple-audit) --------------------------------
+   One A4 sheet at a time: the controls bar stays above the sheet, the sheet
+   is sized in lib/report-viewer-state.ts to fit the window when that stays
+   readable. The sheet is a printed document on the paper ground, so it takes
+   the card shadow rather than a border. */
+@layer components {
+  /* Desktop: the introduction holds the left column and the sheet the
+     right, so the report starts above the fold. Below 64rem they stack. */
+  .example-layout {
+    display: grid;
+    gap: 2.5rem;
+  }
+
+  @media (min-width: 64rem) {
+    .example-layout {
+      grid-template-columns: minmax(0, 19rem) minmax(0, 1fr);
+      align-items: start;
+      gap: 3rem;
+    }
+
+    .example-intro {
+      position: sticky;
+      top: 6.5rem;
+    }
+  }
+
+  .report-viewer {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    /* Clears the sticky site header when a page turn scrolls it back. */
+    scroll-margin-top: 6rem;
+  }
+
+  .report-viewer-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem 1rem;
+  }
+
+  .report-viewer-step {
+    display: inline-flex;
+    min-height: 44px;
+    min-width: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    padding: 0.5rem 1rem;
+    color: var(--ink);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .report-viewer-step:hover:not(:disabled) {
+    border-color: var(--ink);
+    background-color: var(--line);
+  }
+
+  .report-viewer-step:disabled {
+    color: var(--ink-muted);
+    border-color: var(--line);
+    cursor: default;
+  }
+
+  /* On a phone the arrows carry the buttons; the names stay for screen
+     readers through the visually hidden label. */
+  @media (max-width: 30rem) {
+    .report-viewer-step-label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+  }
+
+  .report-viewer-count {
+    min-width: 7.5rem;
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: 0.9375rem;
+  }
+
+  .report-viewer-sections {
+    display: flex;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  @media (max-width: 47.99rem) {
+    .report-viewer-sections {
+      flex-basis: 100%;
+    }
+  }
+
+  .report-viewer-sections select {
+    min-height: 44px;
+    width: 100%;
+    max-width: 18rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    background-color: var(--paper-raised);
+    padding: 0.5rem 0.75rem;
+    color: var(--ink);
+    font-size: 0.9375rem;
+  }
+
+  .report-viewer-frame {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .report-viewer-sheet {
+    position: relative;
+    max-width: 100%;
+    overflow: hidden;
+    background-color: var(--paper-sunk);
+    box-shadow: var(--shadow-card);
+    touch-action: pan-y pinch-zoom;
+  }
+
+  .report-viewer-sheet[data-state='loading'] {
+    width: min(100%, 38rem);
+  }
+
+  .report-viewer-canvas,
+  .report-viewer-canvas canvas {
+    display: block;
+  }
+
+  .report-viewer-fallback {
+    max-width: var(--measure);
+    padding: 2rem 0;
+    text-align: center;
+  }
+
+  /* pdf.js text layer, reduced to what a read-only single page needs
+     (pdfjs-dist/web/pdf_viewer.css, .textLayer). The spans are transparent
+     and sit exactly over the drawn glyphs, so selection, find-in-page and
+     screen readers get real text. */
+  .report-viewer .textLayer {
+    position: absolute;
+    inset: 0;
+    overflow: clip;
+    line-height: 1;
+    text-align: initial;
+    letter-spacing: normal;
+    word-spacing: normal;
+    text-size-adjust: none;
+    forced-color-adjust: none;
+    transform-origin: 0 0;
+    z-index: 0;
+    --min-font-size: 1;
+    --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+    --min-font-size-inv: calc(1 / var(--min-font-size));
+  }
+
+  .report-viewer .textLayer :is(span, br) {
+    position: absolute;
+    color: transparent;
+    white-space: pre;
+    cursor: text;
+    transform-origin: 0% 0%;
+  }
+
+  .report-viewer .textLayer > :not(.markedContent),
+  .report-viewer .textLayer .markedContent span:not(.markedContent) {
+    z-index: 1;
+    --font-height: 0;
+    font-size: calc(var(--text-scale-factor) * var(--font-height));
+    --scale-x: 1;
+    --rotate: 0deg;
+    transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+  }
+
+  .report-viewer .textLayer .markedContent {
+    display: contents;
+  }
+
+  .report-viewer .textLayer ::selection {
+    background: color-mix(in srgb, AccentColor, transparent 50%);
+    color: transparent;
+  }
+
+  .report-viewer .textLayer br::selection {
+    background: transparent;
+  }
+
+  .report-viewer .textLayer .endOfContent {
+    display: block;
+    position: absolute;
+    inset: 100% 0 0;
+    z-index: 0;
+    cursor: default;
+    user-select: none;
+  }
+}

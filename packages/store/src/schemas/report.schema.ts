@@ -8,6 +8,18 @@
 import { Schema, type Connection, type Model } from 'mongoose';
 import type { FindingsProvenance, ReportLanguage } from '@odysseus/core';
 
+export interface ReportVariantDocument {
+  /** Path relative to the audit directory, next to the canonical PDF. */
+  fileRef: string;
+  pdfDigest: string;
+  pageCount?: number;
+}
+
+export interface ReportVariantsDocument {
+  /** Optional by design: older rows and light-render failures are dark-only. */
+  light?: ReportVariantDocument;
+}
+
 /** Milestone 8 addendum introduced a paid screening tier alongside the
  *  full audit, and a stored report recorded which of the two it was.
  *  Dropped 2026-08-16 (docs/rules/offer-positioning.md): the commercial model
@@ -69,6 +81,10 @@ export interface ReportDocumentFields {
    *  Optional: documents generated before it was recorded simply lack it,
    *  and the length warning must never infer a value for them. */
   pageCount?: number;
+  /** Presentation siblings of the canonical dark PDF. The dark artifact
+   * remains the row's canonical identity and is never replaced by a light
+   * fallback. */
+  variants?: ReportVariantsDocument;
 }
 
 type LegacyOptionalFields =
@@ -125,6 +141,19 @@ const reportSchema = new Schema<ReportDocument>(
     // strict mode strips the key on write when it is absent, so a lean
     // read simply returns undefined for them.
     pageCount: { type: Number },
+    variants: {
+      _id: false,
+      type: {
+        light: {
+          _id: false,
+          type: {
+            fileRef: { type: String, required: true },
+            pdfDigest: { type: String, required: true },
+            pageCount: { type: Number },
+          },
+        },
+      },
+    },
   },
   { collection: 'reports' },
 );

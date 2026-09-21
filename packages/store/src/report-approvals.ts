@@ -1,4 +1,5 @@
 import type { ClientSession, Connection } from 'mongoose';
+import type { ReportTheme } from '@odysseus/core';
 import {
   createReportApprovalModel,
   type ReportApprovalDocument,
@@ -44,22 +45,33 @@ export async function getLatestReportApproval(
 export function approvalCoversReport(
   approval: ReportApprovalDocument | null,
   language: 'fr' | 'en',
-  report: { reportId?: string; pdfDigest?: string },
+  report: {
+    reportId?: string;
+    pdfDigest?: string;
+    variants?: { light?: { pdfDigest: string } };
+  },
+  theme: ReportTheme = 'dark',
 ): boolean {
   if (!approval || !report.reportId) return false;
   const approved = language === 'fr' ? approval.fr : approval.en;
-  return (
+  const darkMatches =
     approved !== undefined &&
     approved.reportId === report.reportId &&
-    approved.pdfDigest === report.pdfDigest
+    approved.pdfDigest === report.pdfDigest;
+  if (!darkMatches) return false;
+  if (theme === 'dark') return true;
+  return (
+    approved?.variantDigests?.light !== undefined &&
+    report.variants?.light?.pdfDigest !== undefined &&
+    approved.variantDigests.light === report.variants.light.pdfDigest
   );
 }
 
 export function approvalMatchesReportPair(
   approval: ReportApprovalDocument | null,
   reports: {
-    fr: { reportId?: string; pdfDigest?: string };
-    en?: { reportId?: string; pdfDigest?: string };
+    fr: { reportId?: string; pdfDigest?: string; variants?: { light?: { pdfDigest: string } } };
+    en?: { reportId?: string; pdfDigest?: string; variants?: { light?: { pdfDigest: string } } };
   },
 ): boolean {
   if (
@@ -70,10 +82,26 @@ export function approvalMatchesReportPair(
   ) {
     return false;
   }
+  const approvedFrenchLight = approval.fr.variantDigests?.light;
+  if (
+    approvedFrenchLight !== undefined &&
+    approvedFrenchLight !== reports.fr.variants?.light?.pdfDigest
+  )
+    return false;
+
   if (approval.en === undefined) return true;
-  return Boolean(
+  const englishMatches = Boolean(
     reports.en?.reportId &&
     approval.en.reportId === reports.en.reportId &&
     approval.en.pdfDigest === reports.en.pdfDigest,
   );
+  if (!englishMatches) return false;
+
+  const approvedEnglishLight = approval.en.variantDigests?.light;
+  if (
+    approvedEnglishLight !== undefined &&
+    approvedEnglishLight !== reports.en?.variants?.light?.pdfDigest
+  )
+    return false;
+  return true;
 }

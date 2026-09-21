@@ -1,7 +1,7 @@
 /**
  * sitemap.xml, added for issue #198.
  *
- * Lists the site's five real routes only. `/apercu/[token]` previews are
+ * Lists the site's public pages only. `/apercu/[token]` previews are
  * disallowed in robots.ts and must not appear here either: they are private,
  * hash-token-gated documents, not public pages.
  */
@@ -15,6 +15,7 @@ const ROUTES = [
   '/confidentialite-prospection',
   '/desinscription',
   '/accessibilite',
+  '/exemple-audit',
 ] as const;
 
 export default function sitemap(): MetadataRoute.Sitemap {

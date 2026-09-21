@@ -11,8 +11,19 @@ export type {
 } from './schemas/sirene-cache.schema.js';
 export { upsertSireneCache, getCachedSireneProfile } from './persist-sirene-cache.js';
 export { createReportModel } from './schemas/report.schema.js';
-export type { ReportDocument, ReportDocumentFields } from './schemas/report.schema.js';
+export type {
+  ReportDocument,
+  ReportDocumentFields,
+  ReportVariantDocument,
+  ReportVariantsDocument,
+} from './schemas/report.schema.js';
 export { persistReport } from './persist-report.js';
+export {
+  reportLightVariant,
+  reportVariantDigest,
+  resolveReportVariant,
+} from './report-variants.js';
+export type { ReportVariantResolution } from './report-variants.js';
 export type {
   ApprovedReportRef,
   ReportApprovalDocument,

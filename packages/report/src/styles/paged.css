@@ -34,7 +34,7 @@
     font-size: 10px;
     letter-spacing: 0.02em;
     text-transform: uppercase;
-    color: color-mix(in srgb, #e9e9ed 40%, transparent);
+    color: var(--color-page-header);
     margin: 0 18mm 0 0;
   }
 
@@ -49,7 +49,7 @@
     font-family: 'Avenir Next', 'Odysseus Mono', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
     font-size: 9px;
     letter-spacing: 0.02em;
-    color: #75798c;
+    color: var(--color-page-footer);
     margin: 0;
   }
 }
@@ -579,11 +579,11 @@ img[src=''] {
    without affecting print. */
 @media screen {
   body {
-    background: #0e0f18;
+    background: var(--color-screen-bg);
   }
   .pagedjs_page {
     margin: 0 auto 28px;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+    box-shadow: var(--shadow-page);
   }
 }
 
@@ -634,7 +634,7 @@ img[src=''] {
 @media print {
   .pagedjs_page:has(#section-05),
   .pagedjs_page:has(#section-05) .pagedjs_sheet {
-    background: #f7f7f5 !important;
+    background: var(--printable-bg) !important;
   }
   #section-05,
   #section-05 h2,
@@ -642,7 +642,7 @@ img[src=''] {
   #section-05 h6,
   #section-05 p,
   #section-05 div {
-    color: #161826 !important;
+    color: var(--printable-ink) !important;
     /* item D-flaky: the intro/identifier paragraphs carry an inline
        opacity (0.55/0.7) for visual hierarchy against this page's normal
        dark background - reused here unchanged, it renders as a lighter
@@ -657,7 +657,7 @@ img[src=''] {
   }
   .pagedjs_page:has(#section-05) .pagedjs_margin-top-right,
   .pagedjs_page:has(#section-05) .pagedjs_margin-bottom-center {
-    color: #161826 !important;
+    color: var(--printable-ink) !important;
   }
   /* 2026-08-22, La Corniche report review: the checklist's Impact column
      (checklist.ts) colours its value with a `<span data-level="...">`,
@@ -675,15 +675,15 @@ img[src=''] {
      looks like a deliberate insert: a tag names it and the intro says why its
      ground is light. */
   #section-05 .checklist-insert-tag {
-    border-color: #161826 !important;
+    border-color: var(--printable-ink) !important;
   }
   #section-05 [data-level='high'] {
-    color: #a52a37 !important;
+    color: var(--printable-critical) !important;
   }
   #section-05 [data-level='medium'] {
-    color: #8a5a1e !important;
+    color: var(--printable-serious) !important;
   }
   #section-05 [data-level='low'] {
-    color: #6e6a1f !important;
+    color: var(--printable-moderate) !important;
   }
 }

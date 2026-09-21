@@ -187,6 +187,11 @@ export default function OfferPage() {
                 Le rapport vous est remis au format PDF, en français ou en anglais selon votre
                 préférence. Son contenu suit trois règles simples.
               </p>
+              <p className="soft mt-3">
+                <a className="evidence-link" href="/exemple-audit">
+                  Consulter un exemple de rapport complet
+                </a>
+              </p>
             </div>
 
             <Reveal className="method-grid mt-8">
@@ -379,6 +384,11 @@ export default function OfferPage() {
               <p className="soft mt-4">
                 The report is delivered as a PDF in French or English, according to your preference.
                 Its content follows three simple rules.
+              </p>
+              <p className="soft mt-3">
+                <a className="evidence-link" href="/exemple-audit">
+                  Read a complete example report
+                </a>
               </p>
             </div>
 

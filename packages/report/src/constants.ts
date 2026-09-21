@@ -4,7 +4,12 @@
  * as FINDINGS_SCHEMA_VERSION: a template change between two monitoring
  * reports must never read as the client's site having changed.
  */
-export const REPORT_TEMPLATE_VERSION = 3;
+export const REPORT_TEMPLATE_VERSION = 4;
+
+/** Provenance marker used by the detached public reference projection. It is
+ * deliberately stable because report copy branches on the marker, while the
+ * public document must never be mistaken for a live registry lookup. */
+export const SYNTHETIC_REGISTRY_SOURCE = 'synthetic-showcase';
 
 /** A report-level display filter on top of, never a reimplementation of,
  *  the canonical scan-time selectPageDirsToKeep pruning decision (which

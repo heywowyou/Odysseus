@@ -84,4 +84,17 @@ export const PAGE_META: Record<
         'What we have checked on this site, what has not been checked yet, and how to report a problem.',
     },
   },
+  '/exemple-audit': {
+    fr: {
+      title: 'Exemple de rapport de diagnostic | Odysseus',
+      // Must match app/exemple-audit/page.tsx's FR description exactly.
+      description:
+        "Un rapport de diagnostic Odysseus complet, à lire page par page : constats, preuves, priorités et préconisations, à partir d'un audit réel anonymisé.",
+    },
+    en: {
+      title: 'Example diagnostic report | Odysseus',
+      description:
+        'A complete Odysseus diagnostic report to read page by page: findings, evidence, priorities and recommendations, from an anonymised real audit.',
+    },
+  },
 };

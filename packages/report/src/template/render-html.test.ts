@@ -28,7 +28,7 @@ describe('renderHtml against the real small-site.test audit', () => {
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages });
 
     expect(html).toMatch(/^<!doctype html>/);
-    expect(html).toContain('<html lang="fr">');
+    expect(html).toContain('<html lang="fr" data-report-theme="dark">');
     expect(html).toContain('<style>');
     // nocturne.css is the locked design-system stylesheet
     // (docs/report/report-design-system.md).
@@ -40,6 +40,33 @@ describe('renderHtml against the real small-site.test audit', () => {
     // Neither embedded face has U+202F; Chromium would print it from a host
     // font and the PDF file check would refuse the report.
     expect(html).not.toContain('\u202f');
+  });
+
+  it('uses an explicit light theme register without changing report content inputs', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('fr');
+    const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
+
+    const dark = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages });
+    const light = await renderHtml({
+      manifest,
+      findings,
+      analysis,
+      renderDiffEvidencePages,
+      theme: 'light',
+    });
+
+    expect(dark).toContain('<html lang="fr" data-report-theme="dark">');
+    expect(light).toContain('<html lang="fr" data-report-theme="light">');
+    expect(light).toContain('--color-bg: #e8edf3');
+    expect(light).toContain('--color-text: #101b2a');
+    expect(light).toContain('--color-accent: #0369a1');
+    expect(light).not.toContain('prefers-color-scheme');
+    expect(light).toContain(escapeHtml(analysis.executiveSummary.slice(0, 20)));
+    expect(light.match(/id="section-\d{2}[a-z]*"/gu)).toEqual(
+      dark.match(/id="section-\d{2}[a-z]*"/gu),
+    );
   });
 
   // item 3.3: a theme card's "Constats : f002, f003" link must resolve to
@@ -175,7 +202,7 @@ describe('renderHtml against the real small-site.test audit', () => {
 
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages: [] });
 
-    expect(html).toContain('<html lang="en">');
+    expect(html).toContain('<html lang="en" data-report-theme="dark">');
     expect(html).toContain('The essentials for a decision');
     expect(html).not.toContain('Résumé');
   });

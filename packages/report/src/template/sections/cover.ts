@@ -115,6 +115,7 @@ export function renderCover(
   manualFields?: AuditManualFields,
   preparation?: PreparationPreviewLanguage,
   documentDisclosure?: string,
+  footerLabel?: string,
 ): string {
   // Manual-input-layer milestone, rule 5: every field absent must produce
   // a correctly rendering report - the headline identity falls through
@@ -130,10 +131,11 @@ export function renderCover(
   const reportType = hasMeasuredCoreWebVitals(manifest)
     ? strings.cover.reportType
     : strings.cover.reportTypeNoPerformance;
+  const resolvedFooterLabel = footerLabel ?? strings.footer.confidentialityLabel;
 
   return sheet(
     `
-    <div class="footer-source">${escapeHtml(strings.footer.confidentialityLabel.toUpperCase())} &middot; ${escapeHtml(manifest.siteUrl)}</div>
+    <div class="footer-source">${escapeHtml(resolvedFooterLabel.toUpperCase())} &middot; ${escapeHtml(manifest.siteUrl)}</div>
     ${renderDocumentCoverLayout({
       kicker: strings.cover.kicker,
       headline,

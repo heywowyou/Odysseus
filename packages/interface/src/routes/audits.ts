@@ -14,6 +14,7 @@ import {
   type Finding,
   type FindingsProvenance,
   type ReportLanguage,
+  type ReportTheme,
   type StatSector,
 } from '@odysseus/core';
 import {
@@ -40,6 +41,7 @@ import {
   persistReport,
   persistReportApproval,
   reportOrigin,
+  resolveReportVariant,
   resolveSelectedAnalysisPairForAudit,
   saveLinkedAuditIdentity,
   setAuditGradeOverride,
@@ -118,7 +120,35 @@ function isReportLanguage(value: string): value is ReportLanguage {
   return value === 'fr' || value === 'en';
 }
 
+export function parseReportThemeQuery(query: URLSearchParams): ReportTheme | undefined {
+  for (const key of query.keys()) {
+    if (key !== 'theme') return undefined;
+  }
+  const values = query.getAll('theme');
+  if (values.length === 0) return 'dark';
+  return values.length === 1 && (values[0] === 'dark' || values[0] === 'light')
+    ? values[0]
+    : undefined;
+}
+
 type CurrentReportPair = { fr: ReportDocument; en?: ReportDocument };
+
+function approvalRefForReport(report: ReportDocument): {
+  reportId: string;
+  pdfDigest: string;
+  variantDigests?: { light: string };
+} {
+  if (!report.reportId || !report.pdfDigest) {
+    throw new Error('cannot approve a report without a report ID and digest');
+  }
+  return {
+    reportId: report.reportId,
+    pdfDigest: report.pdfDigest,
+    ...(report.variants?.light === undefined
+      ? {}
+      : { variantDigests: { light: report.variants.light.pdfDigest } }),
+  };
+}
 
 function provenanceMatches(
   actual: FindingsProvenance | undefined,
@@ -139,20 +169,22 @@ async function readVerifiedReport(
   hostname: string,
   startedAt: Date,
   store: ArtifactStore | undefined,
+  theme: ReportTheme = 'dark',
 ): Promise<Buffer | undefined> {
-  if (!report.pdfDigest) return undefined;
+  const variant = resolveReportVariant(report, theme);
+  if (variant.kind === 'unavailable') return undefined;
   let pdf: Buffer;
   try {
     pdf = await resolveArtifactFile(
-      path.join(auditDir, report.fileRef),
-      buildArtifactBucketKey(hostname, startedAt, report.fileRef),
+      path.join(auditDir, variant.fileRef),
+      buildArtifactBucketKey(hostname, startedAt, variant.fileRef),
       store,
     );
   } catch {
     return undefined;
   }
   const digest = pdfDigestOf(pdf);
-  return digest === report.pdfDigest ? pdf : undefined;
+  return digest === variant.pdfDigest ? pdf : undefined;
 }
 
 /** Pure over already-fetched reports and resolution, so a caller that has
@@ -551,16 +583,38 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     // buffers are shared; a bucket hit is cached locally by
     // resolveArtifactFile, so one dashboard visit repairs availability for
     // the next.
-    const [frPdf, enPdf] = await Promise.all([
+    const [frPdf, enPdf, frLightPdf, enLightPdf] = await Promise.all([
       currentFrReport === null
         ? Promise.resolve(undefined)
         : readVerifiedReport(auditDir, currentFrReport, hostname, audit.startedAt, artifactStore),
       currentEnReport === null
         ? Promise.resolve(undefined)
         : readVerifiedReport(auditDir, currentEnReport, hostname, audit.startedAt, artifactStore),
+      activeQualityBundle !== null || currentFrReport === null
+        ? Promise.resolve(undefined)
+        : readVerifiedReport(
+            auditDir,
+            currentFrReport,
+            hostname,
+            audit.startedAt,
+            artifactStore,
+            'light',
+          ),
+      activeQualityBundle !== null || currentEnReport === null
+        ? Promise.resolve(undefined)
+        : readVerifiedReport(
+            auditDir,
+            currentEnReport,
+            hostname,
+            audit.startedAt,
+            artifactStore,
+            'light',
+          ),
     ]);
     const frPdfAvailable = frPdf !== undefined;
     const enPdfAvailable = enPdf !== undefined;
+    const frLightPdfAvailable = frLightPdf !== undefined;
+    const enLightPdfAvailable = enLightPdf !== undefined;
     // Plan 072: whether a finalization exists per language, which is a
     // separate question from which report is current - a regeneration can
     // have overtaken one, and that is what the dashboard has to say out loud.
@@ -592,6 +646,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
           : {}),
         ...(!current && finalized !== null ? { finalizationSuperseded: true } : {}),
         pdfAvailable: language === 'fr' ? frPdfAvailable : enPdfAvailable,
+        lightAvailable: language === 'fr' ? frLightPdfAvailable : enLightPdfAvailable,
       };
     });
     const verifiedPair = await verifyFreshPair(
@@ -1181,15 +1236,8 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     const approval = {
       approvalId: randomUUID(),
       auditId,
-      fr: { reportId: pair.reports.fr.reportId!, pdfDigest: pair.reports.fr.pdfDigest! },
-      ...(pair.reports.en !== undefined
-        ? {
-            en: {
-              reportId: pair.reports.en.reportId!,
-              pdfDigest: pair.reports.en.pdfDigest!,
-            },
-          }
-        : {}),
+      fr: approvalRefForReport(pair.reports.fr),
+      ...(pair.reports.en !== undefined ? { en: approvalRefForReport(pair.reports.en) } : {}),
       approvedAt: new Date(),
     };
     try {
@@ -1206,7 +1254,13 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         if (
           !current ||
           current.reports.fr.reportId !== pair.reports.fr.reportId ||
-          current.reports.en?.reportId !== pair.reports.en?.reportId
+          current.reports.fr.pdfDigest !== pair.reports.fr.pdfDigest ||
+          current.reports.fr.variants?.light?.pdfDigest !==
+            pair.reports.fr.variants?.light?.pdfDigest ||
+          current.reports.en?.reportId !== pair.reports.en?.reportId ||
+          current.reports.en?.pdfDigest !== pair.reports.en?.pdfDigest ||
+          current.reports.en?.variants?.light?.pdfDigest !==
+            pair.reports.en?.variants?.light?.pdfDigest
         ) {
           throw new Error('selected report version changed during approval');
         }
@@ -1411,8 +1465,10 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     await fs.mkdir(reportsDir, { recursive: true });
     const stamp = generatedAt.toISOString().replace(/[:.]/gu, '-');
     const reportPath = path.join(reportsDir, `${stamp}-final-${language}.pdf`);
+    const lightReportPath = reportPath.replace(/\.pdf$/u, '-clair.pdf');
     const overridesPath = `${reportPath}.overrides.json`;
     await fs.writeFile(reportPath, upload.pdf);
+    if (upload.lightPdf !== undefined) await fs.writeFile(lightReportPath, upload.lightPdf);
     // The override file is kept beside the PDF, not only digested into the
     // row: the row proves which corrections were applied, this is what they
     // said, and the pair is the whole provenance link back to the analysis
@@ -1446,6 +1502,19 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       // same way the pipeline reports its own count. The digest is the part
       // the server computes itself.
       ...(upload.pageCount !== undefined ? { pageCount: upload.pageCount } : {}),
+      ...(upload.lightPdf === undefined
+        ? {}
+        : {
+            variants: {
+              light: {
+                fileRef: path.relative(auditDir, lightReportPath),
+                pdfDigest: pdfDigestOf(upload.lightPdf),
+                ...(upload.lightPageCount !== undefined
+                  ? { pageCount: upload.lightPageCount }
+                  : {}),
+              },
+            },
+          }),
     });
 
     await syncArtifactFilesToBucket(
@@ -1453,13 +1522,14 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       auditDir,
       uploadHostname,
       new Date(manifest.startedAt),
-      [reportPath, overridesPath],
+      [reportPath, overridesPath, ...(upload.lightPdf === undefined ? [] : [lightReportPath])],
     );
 
     sendJson(res, 201, {
       reportId,
       supersedesReportId: generated.reportId,
       overrideCount: upload.overrides?.overrides.length ?? 0,
+      lightAvailable: upload.lightPdf !== undefined,
       generatedAt: generatedAt.toISOString(),
     });
   });
@@ -1500,11 +1570,16 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     res.end(pdf);
   });
 
-  router.get('/api/audits/:auditId/report/:language/preview', async ({ res, params }) => {
+  router.get('/api/audits/:auditId/report/:language/preview', async ({ res, params, query }) => {
     const auditId = params['auditId']!;
     const language = params['language']!;
     if (!isReportLanguage(language)) {
       sendError(res, 400, 'language must be "fr" or "en"');
+      return;
+    }
+    const theme = parseReportThemeQuery(query);
+    if (theme === undefined) {
+      sendError(res, 400, 'theme must be "dark" or "light"');
       return;
     }
     const audit = await getAudit(connection, auditId);
@@ -1512,9 +1587,45 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       sendError(res, 404, 'audit not found');
       return;
     }
+    const activeBundle = await getActiveReportBundle(connection, auditId);
+    if (activeBundle) {
+      if (theme === 'light') {
+        sendError(res, 409, 'light report variant is unavailable for an active immutable report');
+        return;
+      }
+      if (!artifactStore) {
+        sendError(res, 503, 'artifact store is not configured for the active immutable report');
+        return;
+      }
+      try {
+        const candidate = activeBundle[language];
+        const pdf = await readVerifiedImmutablePdf(
+          artifactStore,
+          candidate.objectKey,
+          candidate.pdfDigest,
+        );
+        res.statusCode = 200;
+        res.setHeader('content-type', 'application/pdf');
+        res.setHeader('etag', `"${candidate.pdfDigest}"`);
+        res.end(pdf);
+      } catch (error) {
+        sendError(
+          res,
+          409,
+          error instanceof Error
+            ? error.message
+            : 'active report bytes failed integrity verification',
+        );
+      }
+      return;
+    }
     const report = await getLatestReport(connection, auditId, language);
     if (!report || classifyReportFreshness(report, audit.findingsProvenance) !== 'fresh') {
       sendError(res, 409, `a fresh ${language} report is required for preview`);
+      return;
+    }
+    if (resolveReportVariant(report, theme).kind === 'unavailable') {
+      sendError(res, 409, `${theme} report variant is unavailable for preview`);
       return;
     }
     const previewHostname = new URL(audit.siteUrl).hostname;
@@ -1525,6 +1636,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       previewHostname,
       audit.startedAt,
       artifactStore,
+      theme,
     );
     if (!pdf) {
       sendError(res, 409, 'report PDF is missing or its digest does not match');
@@ -1535,11 +1647,16 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     res.end(pdf);
   });
 
-  router.get('/api/audits/:auditId/report/:language', async ({ res, params }) => {
+  router.get('/api/audits/:auditId/report/:language', async ({ res, params, query }) => {
     const auditId = params['auditId']!;
     const language = params['language']!;
     if (!isReportLanguage(language)) {
       sendError(res, 400, 'language must be "fr" or "en"');
+      return;
+    }
+    const theme = parseReportThemeQuery(query);
+    if (theme === undefined) {
+      sendError(res, 400, 'theme must be "dark" or "light"');
       return;
     }
 
@@ -1551,6 +1668,10 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
 
     const activeBundle = await getActiveReportBundle(connection, auditId);
     if (activeBundle) {
+      if (theme === 'light') {
+        sendError(res, 409, 'light report variant is unavailable for an active immutable report');
+        return;
+      }
       if (!artifactStore) {
         sendError(res, 503, 'artifact store is not configured for the active immutable report');
         return;
@@ -1593,6 +1714,11 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       );
       return;
     }
+    const variant = resolveReportVariant(report, theme);
+    if (variant.kind === 'unavailable') {
+      sendError(res, 409, `${theme} report variant is unavailable; no fallback is permitted`);
+      return;
+    }
 
     const [fr, en, approval] = await Promise.all([
       getLatestReport(connection, auditId, 'fr'),
@@ -1606,12 +1732,12 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     // report still to be the approved one.
     const deliveryApproved =
       language === 'fr'
-        ? Boolean(fr && approvalCoversReport(approval, 'fr', fr))
+        ? Boolean(fr && approvalCoversReport(approval, 'fr', fr, theme))
         : Boolean(
             en &&
-            approvalCoversReport(approval, 'en', en) &&
+            approvalCoversReport(approval, 'en', en, theme) &&
             fr &&
-            approvalCoversReport(approval, 'fr', fr),
+            approvalCoversReport(approval, 'fr', fr, 'dark'),
           );
     if (!deliveryApproved) {
       sendError(
@@ -1626,27 +1752,22 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
 
     const hostname = new URL(audit.siteUrl).hostname;
     const auditDir = buildAuditDir(getArtifactsRoot(), hostname, audit.startedAt);
-    const filePath = path.join(auditDir, report.fileRef);
-
-    let pdf: Buffer;
-    try {
-      pdf = await resolveArtifactFile(
-        filePath,
-        buildArtifactBucketKey(hostname, audit.startedAt, report.fileRef),
-        artifactStore,
-      );
-    } catch {
-      sendError(res, 404, 'report file not found on disk or in the bucket');
-      return;
-    }
-    const actualDigest = pdfDigestOf(pdf);
-    if (actualDigest !== report.pdfDigest) {
-      sendError(res, 409, 'report PDF digest does not match its provenance record');
+    const pdf = await readVerifiedReport(
+      auditDir,
+      report,
+      hostname,
+      audit.startedAt,
+      artifactStore,
+      theme,
+    );
+    if (!pdf) {
+      sendError(res, 404, `${theme} report file not found or its digest does not match`);
       return;
     }
 
     res.statusCode = 200;
     res.setHeader('content-type', 'application/pdf');
+    res.setHeader('etag', `"${variant.pdfDigest}"`);
     res.end(pdf);
   });
 

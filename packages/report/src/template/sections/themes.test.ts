@@ -1558,7 +1558,7 @@ describe('2026-08-22: Impact commercial and Conformité are colour-coded, Effort
 
     // #d97b82 is SEVERITY.critical.color / LEVEL_COLOR.high.color.
     expect(html).toContain(
-      '<span class="theme-fact-label">Impact</span><span class="theme-fact-value" style="color:#d97b82">Élevé</span>',
+      '<span class="theme-fact-label">Impact</span><span class="theme-fact-value" data-report-level="high" style="color:#d97b82">Élevé</span>',
     );
   });
 
@@ -1582,7 +1582,7 @@ describe('2026-08-22: Impact commercial and Conformité are colour-coded, Effort
     const html = renderThemes(getStrings('fr'), 4, analysis as never, findings, manifest);
 
     expect(html).toContain(
-      '<span class="theme-fact-label">Conformité</span><span class="theme-fact-value" style="color:#d97b82">Non conforme</span>',
+      '<span class="theme-fact-label">Conformité</span><span class="theme-fact-value" data-report-severity="critical" style="color:#d97b82">Non conforme</span>',
     );
   });
 
@@ -1681,7 +1681,7 @@ describe('issue #47: each metadata fact keeps its label and value together, and 
     // The one card here is non-conformant, so its conformity status is a
     // real value and stays among the facts, equally unbreakable.
     expect(html).toContain(
-      '<span class="theme-fact"><span class="theme-fact-label">Conformité</span><span class="theme-fact-value" style="color:#d97b82">Non conforme</span></span>',
+      '<span class="theme-fact"><span class="theme-fact-label">Conformité</span><span class="theme-fact-value" data-report-severity="critical" style="color:#d97b82">Non conforme</span></span>',
     );
   });
 

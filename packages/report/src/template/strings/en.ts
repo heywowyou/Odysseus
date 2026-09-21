@@ -211,8 +211,8 @@ export const en: ReportStrings = {
     // dangling alone at the end of a line with the next term starting a new
     // one. A no-break space after the separator (not before) keeps each
     // pair together, so wrapping can only happen between complete terms.
-    wcagReferentialValue: 'WCAG 2.2 AA · Performance · SEO · GEO · Privacy · Security',
-    wcagReferentialValueNoPerformance: 'WCAG 2.2 AA · SEO · GEO · Privacy · Security',
+    wcagReferentialValue: 'WCAG 2.2 AA · Performance · SEO · GEO · Privacy and security',
+    wcagReferentialValueNoPerformance: 'WCAG 2.2 AA · SEO · GEO · Privacy and security',
     legalNameLabel: 'Legal name',
     riskSmallLabel: 'Technical findings severity',
     riskLevels: { low: 'Low', medium: 'Medium', high: 'High' },
@@ -294,6 +294,16 @@ export const en: ReportStrings = {
       undetermined:
         'The business identifier or Sirene data needed to compare observed facts with the cited thresholds was unavailable.',
     },
+    syntheticStatusShortDescriptions: {
+      in_scope:
+        'The illustrated status uses synthetic data created for this example; it does not describe a real establishment.',
+      likely_in_scope:
+        'The illustrated status uses synthetic data created for this example; it does not describe a real establishment.',
+      out_of_scope:
+        'The illustrated status uses synthetic data created for this example; it does not describe a real establishment.',
+      undetermined:
+        'The illustrated status uses synthetic data created for this example; it does not describe a real establishment.',
+    },
     exposureHeading: 'Exposure if non-compliant',
     generalEaaReferenceHeading: 'General legal reference',
     sirenLabel: 'SIREN',
@@ -302,6 +312,10 @@ export const en: ReportStrings = {
     registrySnapshotTemplate:
       'Sirene registry data: {denomination}, SIREN {siren}, {effectifs}, retrieved on {date}.',
     registrySnapshotEffectifsUnavailable: 'headcount band unavailable',
+    syntheticRegistrySnapshotTemplate:
+      'Synthetic data for this example: {denomination}, fictional SIREN identifier {siren}, fictional headcount band {effectifs}, example date {date}.',
+    syntheticRegistrySnapshotNote:
+      'These details are fictional: they do not come from the Sirene registry or a real company.',
     lcenKicker: 'Another applicable obligation',
     lcenObserved:
       'The scan found no SIREN, RCS or VAT number published on the pages of this site it visited.',
@@ -310,6 +324,8 @@ export const en: ReportStrings = {
       'A scan visits a limited number of pages and can miss one where this information appears. This obligation does not depend on the outcome of the accessibility analysis above. Have your situation confirmed by a legal adviser.',
     registrySnapshotVerbatimNote:
       'This denomination is reproduced exactly as it appears in the Sirene registry, associated with the SIREN above, not derived from the domain name.',
+    syntheticDisclaimerNote:
+      'This section illustrates the rendering of regulatory criteria with synthetic data; it does not describe the legal or administrative situation of a real establishment. A review by qualified legal counsel remains necessary before any decision.',
     transactionalFlowConflictTemplate:
       'Conflicting signal: automated detection {detectedValue}; a manual confirmation states {manualValue}. Verify before relying on this status.',
     transactionalFlowConflictDetectedAbsent: 'did not confirm a transactional flow',
@@ -473,6 +489,13 @@ export const en: ReportStrings = {
       'A large gap between these real-user values and the lab measurements further down is expected: the lab measurement deliberately simulates harsh conditions (CPU and network throttling, a single run), while real-user data reflects visitors on a variety of devices and connections. The two measure different questions, they do not contradict each other.',
     labLcpDivergenceTemplate:
       "* The lab LCP median ({lab}) is more than four times the value measured for your real visitors ({field}, rated good). A gap this large goes beyond what the simulated conditions explain: it most often comes from the measurement itself (a late-loading hero image or carousel, a wait on a third-party service). This median therefore does not describe your visitors' experience; rely on the real-user value when deciding.",
+    referenceRealUserHeading: 'Field data from the anonymized audit (Chrome UX Report)',
+    referenceRealUserNoDataNote:
+      'No public Chrome UX Report data was retained in the anonymized audit. This simply means that no real-user comparison is available for this example.',
+    referenceRealUserGapNote:
+      'The gap between these values from field data retained in the anonymized audit and the lab measurements further down is expected: the lab measurement deliberately simulates harsh conditions (CPU and network throttling, a single run), while the field data reflects conditions observed in the source audit. The two measurements answer different questions.',
+    referenceLabLcpDivergenceTemplate:
+      '* The lab LCP median ({lab}) is more than four times the value measured in field data retained in the anonymized audit ({field}, rated good). These measurements belong to the anonymized audit and do not describe Hôtel Exemple.',
     inpLabel: 'INP, responsiveness',
   },
   benchmarkPercentile: {
@@ -767,7 +790,7 @@ export const en: ReportStrings = {
         id: 'sirene',
         term: 'Sirene',
         definition:
-          "France's official business registry (INSEE), used here to verify company size and confirm which entity a finding concerns.",
+          "France's official business registry (INSEE), which can be used to verify company size and confirm which entity a finding concerns.",
       },
       {
         id: 'complexity',
@@ -809,6 +832,8 @@ export const en: ReportStrings = {
       'Once the priorities are fixed, a re-audit of the same scope is recommended, normally within three to six months, after the fixes are live.',
     synthesisComparisonWithFieldData:
       'The comparison covers only what the scan recomputes: findings by severity, failed WCAG 2.2 AA criteria, and Chrome UX Report real-user data.',
+    synthesisComparisonWithReferenceFieldData:
+      'The comparison covers only what the scan recomputes: findings by severity, failed WCAG 2.2 AA criteria, and field data retained from the anonymized audit.',
     synthesisComparisonWithoutFieldData:
       'The comparison covers only what the scan recomputes: findings by severity and failed WCAG 2.2 AA criteria.',
     synthesisConversionNote:
@@ -942,11 +967,23 @@ export const en: ReportStrings = {
       'Published criteria for the {regimeName} ({legalCitation}), overseen by {authority}. Facts verified for this audit: {facts}',
     legalCitationUndeterminedParagraph:
       'Published criteria for the {regimeName} ({legalCitation}), overseen by {authority}. Data available for this audit: {facts}',
+    legalCitationSyntheticInScopeTemplate:
+      'Published criteria for the {regimeName} ({legalCitation}), overseen by {authority}. Demonstration data used for this example: {facts}',
+    legalCitationSyntheticLikelyInScopeTemplate:
+      'Published criteria for the {regimeName} ({legalCitation}), overseen by {authority}. Demonstration data used for this example: {facts}',
+    legalCitationSyntheticOutOfScopeParagraph:
+      'Published criteria for the {regimeName} ({legalCitation}), overseen by {authority}. Demonstration data used for this example: {facts}',
+    legalCitationSyntheticUndeterminedParagraph:
+      'Published criteria for the {regimeName} ({legalCitation}), overseen by {authority}. Demonstration data available for this example: {facts}',
     legalCitationEffectifFactTemplate: 'The company has {label} according to the Sirene registry.',
+    legalCitationSyntheticEffectifFactTemplate:
+      'The headcount band used for this example is fictional: {label}.',
     legalCitationTurnoverFactTemplate:
       'Recorded annual turnover is {amount}; the published threshold is {threshold}.',
     legalCitationSmeFactTemplate:
       'The registry reports headcount band {effectifCode} and turnover of {turnover}.',
+    legalCitationSyntheticSmeFactTemplate:
+      'The synthetic data for this example uses headcount band {effectifCode} and fictional turnover of {turnover}.',
     legalCitationTransactionalFlowFactTemplate: 'The site offers a {flowType} {location}.',
     legalCitationTransactionalFlowLocationOnSite: 'directly online',
     legalCitationTransactionalFlowLocationDelegated: 'online, delegated to a third-party provider',
@@ -975,6 +1012,8 @@ export const en: ReportStrings = {
       'The SIREN number used for this determination was provided manually; this site does not publish it itself (see finding {findingId}).',
     legalCitationManualSirenNoFindingSentence:
       'The SIREN number used for this determination was provided manually; this site does not publish this number itself.',
+    syntheticSirenProvenanceNote:
+      'The identifier and headcount data used here are fictional and specific to this example; they do not come from a Sirene registry lookup.',
     legalCitationSirenMismatchTemplate:
       'The manually supplied SIREN ({manualSiren}) differs from the one published on the site ({extractedSiren}). This determination uses the manually supplied number.',
     legalCitationPointerSentence:

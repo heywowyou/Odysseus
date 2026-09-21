@@ -114,7 +114,9 @@ export function renderNextSteps(
   // manifest actually carries it, same predicate section 09 renders its
   // real-user block with (core-web-vitals-table.ts).
   const comparison = manifest.cruxFieldData?.available
-    ? n.synthesisComparisonWithFieldData
+    ? renderMetadata?.referenceDataDisclosure
+      ? n.synthesisComparisonWithReferenceFieldData
+      : n.synthesisComparisonWithFieldData
     : n.synthesisComparisonWithoutFieldData;
 
   const synthesisParagraphs = [

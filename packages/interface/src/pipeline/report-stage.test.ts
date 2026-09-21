@@ -3,15 +3,16 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-/** Only generateReportPdf is faked; the page-count warning helper is the
- *  real pure function, so the stage's threshold behavior is exercised
- *  against the report package's own implementation. */
+/** The paired renderer is adapted to the existing single-dark-render fake by
+ *  default. Dedicated cases below opt into a light sibling, while the
+ *  page-count warning helper remains the real pure function. */
 vi.mock('@odysseus/report', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@odysseus/report')>();
   return {
     ...actual,
     generateReportPdf: vi.fn(),
-    REPORT_TEMPLATE_VERSION: 3,
+    generateReportPdfVariants: vi.fn(),
+    REPORT_TEMPLATE_VERSION: 4,
   };
 });
 vi.mock('@odysseus/store', () => ({
@@ -50,7 +51,7 @@ vi.mock('@odysseus/core', async (importOriginal) => {
   return { ...actual, buildFindingsProvenance: vi.fn(actual.buildFindingsProvenance) };
 });
 
-import { generateReportPdf } from '@odysseus/report';
+import { generateReportPdf, generateReportPdfVariants } from '@odysseus/report';
 import { launchBrowser } from '@odysseus/scanner';
 import {
   findDeltaBaseline,
@@ -152,6 +153,9 @@ beforeEach(async () => {
     pdf: Buffer.from('%PDF-fake'),
     pageCount: 44,
   });
+  vi.mocked(generateReportPdfVariants).mockImplementation(async (input) => ({
+    dark: await generateReportPdf({ ...input, theme: 'dark' }),
+  }));
   vi.mocked(persistReport).mockResolvedValue(undefined);
   vi.mocked(readAuditEvidenceDiagnostics).mockResolvedValue({
     status: 'complete',
@@ -180,7 +184,7 @@ describe('runReportStage', () => {
         renderMetadata: expect.objectContaining({
           reportId: result.reportId,
           rendererBuild: 'render-build',
-          templateVersion: 3,
+          templateVersion: 4,
           renderedAt: result.generatedAt,
         }),
       }),
@@ -201,9 +205,9 @@ describe('runReportStage', () => {
         reportId: result.reportId,
         analysisId: analysis.analysisId,
         findingsProvenance: manifest.findingsProvenance,
-        rendererVersion: 3,
+        rendererVersion: 4,
         rendererBuild: 'render-build',
-        reportTemplateVersion: 3,
+        reportTemplateVersion: 4,
         pdfDigest: result.pdfDigest,
         pageCount: 44,
       }),
@@ -214,18 +218,85 @@ describe('runReportStage', () => {
       reportId: result.reportId,
       analysisId: analysis.analysisId,
       findingsProvenance: manifest.findingsProvenance,
-      rendererVersion: 3,
+      rendererVersion: 4,
       rendererBuild: 'render-build',
       pdfDigest: result.pdfDigest,
       pageCount: 44,
       language: 'fr',
-      reportTemplateVersion: 3,
+      reportTemplateVersion: 4,
       analysisGeneratedAt: analysis.generatedAt,
       fileRef: path.relative(auditDir, result.reportPath),
       generatedAt: result.generatedAt,
       // Issue #62: names the machine whose artifacts root holds the file.
       renderedOnHost: os.hostname(),
     });
+  });
+
+  it('writes and persists a digest-bound light sibling from the same stage render', async () => {
+    vi.mocked(generateReportPdfVariants).mockImplementation(async (input) => ({
+      dark: await generateReportPdf({ ...input, theme: 'dark' }),
+      light: {
+        ...(await generateReportPdf({ ...input, theme: 'light' })),
+        pageCount: 44,
+      },
+    }));
+
+    const result = await runReportStage(
+      auditDir,
+      fakeManifest(),
+      [],
+      fakeAnalysis(),
+      fakeConnection,
+    );
+
+    expect(result.lightReportPath).toBeDefined();
+    expect(result.lightReportPath).toMatch(/-clair\.pdf$/u);
+    expect(await fs.readFile(result.lightReportPath!)).toEqual(Buffer.from('%PDF-fake'));
+    const sidecar = JSON.parse(await fs.readFile(result.provenancePath, 'utf-8'));
+    expect(sidecar.variants.light.fileRef).toBe(path.relative(auditDir, result.lightReportPath!));
+    expect(sidecar.variants.light.pageCount).toBe(44);
+    expect(persistReport).toHaveBeenCalledWith(
+      fakeConnection,
+      expect.objectContaining({
+        variants: {
+          light: {
+            fileRef: path.relative(auditDir, result.lightReportPath!),
+            pdfDigest: result.lightPdfDigest,
+            pageCount: 44,
+          },
+        },
+      }),
+    );
+  });
+
+  it('keeps dark delivery when the optional light render fails and records a typed warning', async () => {
+    vi.mocked(generateReportPdfVariants).mockImplementation(async (input) => ({
+      dark: await generateReportPdf({ ...input, theme: 'dark' }),
+      lightError: new Error('light pagination refused'),
+    }));
+
+    const result = await runReportStage(
+      auditDir,
+      fakeManifest(),
+      [],
+      fakeAnalysis(),
+      fakeConnection,
+    );
+
+    expect(result.lightReportPath).toBeUndefined();
+    expect(result.lightVariantWarning).toEqual({
+      code: 'light-render-failed',
+      message: 'light pagination refused',
+    });
+    const sidecar = JSON.parse(await fs.readFile(result.provenancePath, 'utf-8'));
+    expect(sidecar.lightVariantWarning).toEqual({
+      code: 'light-render-failed',
+      message: 'light pagination refused',
+    });
+    expect(persistReport).toHaveBeenCalledWith(
+      fakeConnection,
+      expect.not.objectContaining({ variants: expect.anything() }),
+    );
   });
 
   it('passes client limitations to the deterministic methodology without an evidence approval gate', async () => {

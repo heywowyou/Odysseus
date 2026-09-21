@@ -20,6 +20,14 @@ in `nocturne.css`), not invented. The mockup remains the structural
 source (section skeletons, class names, composition); the colour, type,
 and card values come from the site.
 
+Plan 073 adds a second explicit report register without changing this dark
+baseline. `data-report-theme="dark"` is the default and canonical value;
+`data-report-theme="light"` selects the report-local light tokens. The two
+registers are presentation siblings of one report, not two content renders:
+the same resolved bundle, section IDs/order and text are used, and the light
+digest is stored only as `ReportDocument.variants.light`. No
+`prefers-color-scheme` query is permitted in the paid report.
+
 Applied to `packages/report/src/styles/nocturne.css` (tokens and the
 generic component layer) and `packages/report/src/styles/paged.css` (the
 paged-media layer) on the A4 print pipeline (mm-based page geometry,
@@ -143,6 +151,38 @@ trade-off entry rather than silently harmonized. The checklist's print
 block pairs are unchanged (their ground `#f7f7f5` did not move).
 `render-html.axe.e2e.test.ts` and `render-html-v2.axe.e2e.test.ts` remain
 the gates: do not move any pair without re-running them.
+
+### Light register
+
+The light values below are the public site's light scheme, transcribed into
+the self-contained report token layer. The semantic badge/tile pairs are
+report-local light derivations chosen to remain readable on the light paper;
+they are not the pale dark-mode text values reused on white.
+
+| Token family | Light value | Pair/background | Contrast ratio |
+| --- | --- | --- | ---: |
+| paper / raised / sunk | `#e8edf3` / `#fff` / `#dbe3ec` | — | — |
+| ink / soft / site muted / report muted | `#101b2a` / `#3f4c5e` / `#5c6878` / `#4a596c` | paper / sunk screen | 14.72 / 7.41 / 4.81 / 5.52 |
+| accent / strong accent | `#0369a1` / `#075985` | on `#e8edf3` | 5.04 / 6.42 |
+| critical | `#a52a37` | `#f9e2e5` | 5.71 |
+| serious | `#8a5a1e` | `#f5ead8` | 4.95 |
+| moderate | `#6e6a1f` | `#f3f0d5` | 4.87 |
+| minor | `#4f5b76` | `#e8edf3` | 5.77 |
+| accessibility | `#075985` | `#dbeef8` | 6.34 |
+| performance | `#24527a` | `#dfeaf4` | 6.72 |
+| SEO | `#116052` | `#dff3ee` | 6.45 |
+| rendering | `#3f4c5e` | `#dbe3ec` | 6.74 |
+| GEO | `#5c4f94` | `#ebe9fb` | 5.86 |
+| privacy | `#7a5a00` | `#f6efd5` | 5.54 |
+| positive / grade A | `#087443` | `#dff4e9` | 5.09 |
+
+Ratios use WCAG relative luminance and are measured for normal text. The
+site's `#5c6878` muted ink is the paper reference; the report's `#4a596c`
+neutral-400 companion is used for small text against the darker sunk screen
+surround, where the source muted value would measure 4.37:1. The same root
+also switches the page chrome, code/evidence block, card shadow and screen
+paper to the site light family. Dossier marks keep their independent semantic
+colours and are checked as non-text indicators in the rendered axe suite.
 
 ## Typography
 

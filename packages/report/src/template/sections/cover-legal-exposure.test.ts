@@ -14,6 +14,7 @@ import {
 import { renderMetadataSheet } from './metadata-sheet.js';
 import { renderLegalExposure } from './legal-exposure.js';
 import { escapeCopy } from '../html-utils.js';
+import { SYNTHETIC_REGISTRY_SOURCE } from '../../constants.js';
 import { fr } from '../strings/fr.js';
 import { en } from '../strings/en.js';
 import {
@@ -362,6 +363,44 @@ describe('RF-03: every assessment state is presented as observed inputs', () => 
       }
     },
   );
+});
+
+describe('public showcase legal copy', () => {
+  it('does not present synthetic registry data as a Sirene lookup', () => {
+    const assessment: ObligationAssessment = {
+      status: 'in_scope',
+      basis: [
+        {
+          regimeId: EAA_REGIME_ID,
+          facts: [
+            { kind: 'effectif-band', code: '12', label: '10 à 19 salariés' },
+            { kind: 'transactional-flow', evidence: [] },
+          ],
+        },
+      ],
+      sirenSource: 'manual',
+      registrySnapshot: {
+        denomination: 'Hôtel Exemple — identité de démonstration',
+        effectifBandLabel: '10 à 19 salariés',
+        retrievedAt: new Date('2026-01-15T00:00:00.000Z'),
+        source: SYNTHETIC_REGISTRY_SOURCE,
+      },
+    };
+    const html = renderLegalExposure(
+      fr,
+      2,
+      'fr',
+      assessment,
+      new Date('2026-08-17'),
+      fakeManifest(),
+      [],
+    );
+    expect(html).toContain('Données synthétiques de cet exemple');
+    expect(html).toContain('identifiant SIREN fictif');
+    expect(html).not.toContain('Données du répertoire Sirene');
+    expect(html).not.toContain('reproduite telle');
+    expect(html).toContain('données synthétiques');
+  });
 });
 
 // item 24: section 02 relied on the Sirene registry for the headcount

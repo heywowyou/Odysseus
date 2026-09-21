@@ -461,7 +461,7 @@ function renderTheme(
       ).size;
 
   const category = CATEGORY[theme.category];
-  const categoryTag = `<span class="tag" style="background:${category.bg};color:${category.color}">${escapeHtml(strings.findingsAppendix.categoryLabels[theme.category])}</span>`;
+  const categoryTag = `<span class="tag report-category-badge" data-report-category="${theme.category}" style="background:${category.bg};color:${category.color}">${escapeHtml(strings.findingsAppendix.categoryLabels[theme.category])}</span>`;
   const quickWinBadge =
     showQuickWinBadge && isQuickWinTheme(theme)
       ? `<span class="tag qw" style="display:inline-flex;align-items:center;gap:4px">${QUICK_WIN_ICON}${escapeHtml(t.quickWinBadgeLabel)}</span>`
@@ -572,10 +572,16 @@ function renderTheme(
       t.impactLabel,
       escapeHtml(t.effortImpactLevels[theme.impact]),
       LEVEL_COLOR[theme.impact].color,
+      `data-report-level="${theme.impact}"`,
     ),
     renderFact(t.affectedPagesLabel, escapeHtml(pagesText)),
     isNonConformant
-      ? renderFact(t.conformityLabel, escapeHtml(conformityValue), SEVERITY.critical.color)
+      ? renderFact(
+          t.conformityLabel,
+          escapeHtml(conformityValue),
+          SEVERITY.critical.color,
+          'data-report-severity="critical"',
+        )
       : '',
   ].join('');
 
@@ -661,9 +667,10 @@ export function renderOwnershipSentence(
   });
 }
 
-function renderFact(label: string, valueHtml: string, color?: string): string {
+function renderFact(label: string, valueHtml: string, color?: string, attributes = ''): string {
   const style = color ? ` style="color:${color}"` : '';
-  return `<span class="theme-fact"><span class="theme-fact-label">${escapeHtml(label)}</span><span class="theme-fact-value"${style}>${valueHtml}</span></span>`;
+  const attributeText = attributes ? ` ${attributes}` : '';
+  return `<span class="theme-fact"><span class="theme-fact-label">${escapeHtml(label)}</span><span class="theme-fact-value"${attributeText}${style}>${valueHtml}</span></span>`;
 }
 
 function renderRow(

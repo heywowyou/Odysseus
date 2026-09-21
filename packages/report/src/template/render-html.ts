@@ -26,7 +26,12 @@ import type {
   PreparationPreviewLanguage,
 } from '@odysseus/core';
 import { contentCheckedPageUrls } from '@odysseus/core';
-import type { ReportRenderMetadata, StoredAnalysis } from '../types.js';
+import {
+  DEFAULT_REPORT_THEME,
+  type ReportRenderMetadata,
+  type ReportTheme,
+  type StoredAnalysis,
+} from '../types.js';
 import type { RenderDiffEvidencePage } from '../screenshots.js';
 import { getStrings } from './strings/i18n.js';
 import { resolveLcenFinding } from './lcen-resolution.js';
@@ -107,6 +112,8 @@ export async function readStylesInlined(): Promise<string> {
 }
 
 export interface RenderHtmlInput {
+  /** Explicit report presentation. Omitted is the canonical dark theme. */
+  theme?: ReportTheme;
   renderMetadata?: ReportRenderMetadata;
   manifest: AuditManifest;
   findings: Finding[];
@@ -236,6 +243,7 @@ function renderBody(
       manualFields,
       preparation,
       renderMetadata?.documentDisclosure,
+      renderMetadata?.footerLabel,
     ),
     // Second physical page (plan 018 step 4): audit facts and the risk
     // scale on their own sheet, before the TOC. Unnumbered chrome, like
@@ -326,7 +334,13 @@ function renderBody(
       renderDiffTotalEligible,
       renderDiffWrapperOrLegalExcludedCount,
     ),
-    renderCoreWebVitalsTable(strings, ord('section-09'), analysis.language, manifest),
+    renderCoreWebVitalsTable(
+      strings,
+      ord('section-09'),
+      analysis.language,
+      manifest,
+      renderMetadata?.referenceDataDisclosure,
+    ),
     includedSectionIds.has('section-15')
       ? renderBenchmarkPercentile(strings, ord('section-15'), analysis.language, manifest)
       : '',
@@ -394,6 +408,7 @@ function renderBody(
 
 export async function renderHtml(input: RenderHtmlInput): Promise<string> {
   const {
+    theme = DEFAULT_REPORT_THEME,
     manifest,
     findings,
     renderDiffEvidencePages,
@@ -428,7 +443,7 @@ export async function renderHtml(input: RenderHtmlInput): Promise<string> {
   );
 
   const html = `<!doctype html>
-<html lang="${analysis.language}">
+<html lang="${analysis.language}" data-report-theme="${theme}">
   <head>
     <meta charset="utf-8" />
     <title>${escapeHtml(strings.cover.reportTitle)} - ${escapeHtml(manifest.siteUrl)}</title>

@@ -26,6 +26,7 @@ const overrides: WritingOverrideFile = {
 };
 
 const pdfBase64 = Buffer.from('%PDF-1.7\nfake\n%%EOF\n').toString('base64');
+const lightPdfBase64 = Buffer.from('%PDF-1.7\nlight\n%%EOF\n').toString('base64');
 
 function body(overridesOf: Partial<Record<string, unknown>> = {}) {
   return {
@@ -48,6 +49,7 @@ describe('parseFinalizedReportUpload', () => {
     expect(result.lineage).toEqual(lineage);
     expect(result.overrides).toEqual(overrides);
     expect(result.pdf.subarray(0, 5).toString()).toBe('%PDF-');
+    expect(result.lightPdf).toBeUndefined();
     expect(result.pageCount).toBe(42);
   });
 
@@ -73,6 +75,39 @@ describe('parseFinalizedReportUpload', () => {
     expect(typeof result).not.toBe('string');
     if (typeof result === 'string') return;
     expect(result.overrides).toBeUndefined();
+  });
+
+  it('accepts an optional light sibling and keeps its measured page count separate', () => {
+    const result = parseFinalizedReportUpload(
+      body({ variants: { light: { pdfBase64: lightPdfBase64, pageCount: 42 } } }),
+    );
+
+    expect(typeof result).not.toBe('string');
+    if (typeof result === 'string') return;
+    expect(result.lightPdf?.subarray(0, 5).toString()).toBe('%PDF-');
+    expect(result.lightPageCount).toBe(42);
+  });
+
+  it('refuses a malformed light sibling instead of accepting a dark-only upload under its label', () => {
+    expect(
+      parseFinalizedReportUpload(body({ variants: { light: { pdfBase64: 'bm90IGEgcGRm' } } })),
+    ).toMatch(/variants\.light\.pdfBase64 does not decode to a PDF/u);
+    expect(
+      parseFinalizedReportUpload(
+        body({ variants: { light: { pdfBase64: lightPdfBase64, pageCount: 0 } } }),
+      ),
+    ).toMatch(/variants\.light\.pageCount must be/u);
+  });
+
+  it('refuses a light sibling whose measured page count differs from dark', () => {
+    expect(
+      parseFinalizedReportUpload(
+        body({
+          pageCount: 42,
+          variants: { light: { pdfBase64: lightPdfBase64, pageCount: 43 } },
+        }),
+      ),
+    ).toBe('variants.light.pageCount must match pageCount');
   });
 
   it('refuses an override file bound to a different analysis than the declared lineage', () => {

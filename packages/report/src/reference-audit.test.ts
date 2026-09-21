@@ -135,6 +135,30 @@ describe('reference audit showcase projection', () => {
     });
     expect(html).toContain('reference-disclosure');
     expect(html).toContain(normalizeFrenchTypography(REFERENCE_AUDIT_DISCLOSURE_FR));
+    expect(html).toContain('EXEMPLE PUBLIC');
+    expect(html).not.toContain('RAPPORT CONFIDENTIEL');
     assertReferenceAuditNoLeaks({ html, denylist: showcase.sourceDenylist });
+  });
+
+  it('does not treat render-input provenance labels as source identity', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('fr');
+    const showcase = buildReferenceAuditShowcase({
+      manifest,
+      findings,
+      analysis,
+      renderInputs: {
+        manualFields: {
+          nomCommercial: { value: 'Client Hôtel', provenance: 'operator' },
+          raisonSociale: { value: 'Client Hôtel SAS', provenance: 'operator' },
+          siren: { value: '123456789', provenance: 'operator' },
+          updatedAt: new Date('2026-09-21T00:00:00.000Z'),
+        },
+      },
+    });
+
+    expect(showcase.sourceDenylist).not.toContain('operator');
+    expect(showcase.bundle.renderInputs.manualFields?.nomCommercial?.provenance).toBe('operator');
   });
 });

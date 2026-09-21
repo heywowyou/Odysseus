@@ -1,6 +1,6 @@
 # Plan 073 — Light-theme full report export
 
-- **Execution status:** TODO
+- **Execution status:** DONE (2026-09-21)
 - **Priority:** P2
 - **Effort:** L
 - **Depends on:** Plan 039's report design system and Plan 072's finalized-report workflow.
@@ -381,6 +381,33 @@ Report-specific proof must include real Paged.js/Playwright renders for both the
 | docs/provenance | design-system, tokens, trade-offs, Plan-072 tooling docs | docs checks + entries match implementation |
 
 No binding row may close by code review alone.
+
+## Closure ledger — completed 2026-09-21
+
+Closure evidence: 2026-09-21, the paired renderer, persistence, approval,
+delivery, dashboard, documentation, and real report-render gates below were
+executed in the working tree; repository checks pass, with only the noted
+Mongo/network-bound suites unavailable in this workspace.
+
+| Requirement | Proof completed |
+| --- | --- |
+| explicit deterministic theme | `ReportTheme`, default-dark render input, root `data-report-theme`, strict query parser, and no paid-renderer `prefers-color-scheme` branch; covered by `render-html.test.ts` and `report-theme.test.ts` |
+| dark invariance | Existing dark render tests plus the real dark/light parity render; omitted theme and explicit dark both remain canonical dark paths |
+| light design language | Self-contained light register, semantic severity/category/grade/positive pairs, screen-safe muted companion, and the documented site-derived palette in `nocturne.css` and the report token docs |
+| theme-independent content | `theme-parity.e2e.test.ts`: normalized text and ordered section IDs are identical |
+| pagination invariance | `theme-parity.e2e.test.ts`: real Paged.js/Chromium dark/light page counts are equal; the paired renderer also refuses a light page-count mismatch |
+| contrast/accessibility | `render-html.axe.e2e.test.ts`: both themes pass WCAG 2.2 AA on the normal and privacy-palette fixtures |
+| printable insert | `print-inversion.e2e.test.ts`: real print-media Paged.js output verifies the checklist insert in both themes |
+| one report lineage | One `ReportDocument` row carries optional `variants.light`; resolver and legacy/missing-light tests live in `report-variants.test.ts` |
+| finalization parity | Finalizer renders paired siblings from one override-applied bundle and writes one sidecar/upload payload; finalized upload parsing and paired-page-count guards are covered by `finalized-report-upload.test.ts` |
+| exact approval | `report-approvals.test.ts` proves exact light digest approval, changed/missing light refusal, and legacy dark-only approval behavior |
+| no silent fallback | Resolver and preview/download code return 409 for unavailable light; no route maps light to canonical dark bytes |
+| dashboard interaction | Native per-language radio controls default to dark, disable missing light, and switch both explicit preview/download URLs; covered by `audit-detail-render.test.ts` |
+| dormant immutable compatibility | Active Plan-058 bundle delivery remains dark-only and refuses light before ordinary-row resolution |
+| no extra model/scan | Normal and finalized pipelines call the paired renderer over already-resolved inputs; no scanner/provider imports or calls were added to the theme path |
+| docs/provenance | Design-system, token, trade-off, and Plan-072 finalizer-tooling docs updated; `pnpm run check` passes |
+
+Focused unit proof: 9 feature files, 151 tests passed, 1 Mongo-gated integration skip (the local Mongo service was unavailable), with an additional 5-file rerun at 54 passed and the new upload guard covered. Real report e2e proof passed for parity, both-theme axe, and both-theme printable insertion. The repository-wide unit/e2e commands also contain unrelated network/security and long-running suites that cannot complete in the restricted workspace; those were not used as feature acceptance evidence.
 
 ## Out of scope
 
