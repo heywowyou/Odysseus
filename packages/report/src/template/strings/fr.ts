@@ -499,6 +499,7 @@ export const fr: ReportStrings = {
     observationNoPageTemplate:
       'Constat représentatif : « {defect} ». Ce chantier concerne {pages} {pageWord} et {occurrences} {occurrenceWord}.',
     whatYouCanDoLabel: 'Ce que vous pouvez faire',
+    continuedCardTemplate: 'Priorité {rank} (suite)',
     complexityLabel: 'Complexité',
   },
   renderDiffEvidence: {

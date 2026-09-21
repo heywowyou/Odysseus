@@ -605,7 +605,7 @@ function renderTheme(
       </div>`;
 
   return `
-    <div class="card elev-sm theme-card" style="margin-bottom:var(--space-8)" id="theme-${displayRank}" data-model-priority-rank="${theme.priorityRank}">
+    <div class="card elev-sm theme-card" style="margin-bottom:var(--space-8)" id="theme-${displayRank}" data-continued-label="${escapeHtml(fillTemplate(t.continuedCardTemplate, { rank: String(displayRank) }))}" data-model-priority-rank="${theme.priorityRank}">
       <div class="theme-card-header">
         <span class="theme-rank">${displayRank}</span>
         <div class="theme-tags">
@@ -674,7 +674,7 @@ function renderRow(
   modifierClass = '',
 ): string {
   return `
-      <div class="theme-row theme-row-${kind}${modifierClass ? ` ${modifierClass}` : ''}">
+      <div class="theme-row theme-row-${kind}${modifierClass ? ` ${modifierClass}` : ''}" data-row-label="${escapeHtml(label)}">
         <div class="theme-row-lead"><div class="theme-row-label">${escapeHtml(label)}</div>${leadHtml}</div>
         ${restHtml}
       </div>`;
@@ -735,7 +735,7 @@ function renderActionRow(
       renderContinuedThemeList(firstList!.items.slice(1)) +
       laterLists.map(renderThemeListGroup).join('');
     return `${renderRow('action', label, renderThemeListLead(firstList!), restHtml, 'theme-row-has-tail')}
-      <div class="theme-row-tail">${notesHtml}</div>`;
+      <div class="theme-row-tail" data-row-label="${escapeHtml(label)}">${notesHtml}</div>`;
   }
   const itemCount = lists.reduce((count, group) => count + group.items.length, 0);
   if (itemCount === 1) return renderRow('action', label, renderThemeListLead(first), notesHtml);
@@ -753,7 +753,7 @@ function renderActionRow(
     renderContinuedThemeList(bodyFirst.items.slice(1)) +
     bodyLater.map(renderThemeListGroup).join('');
   return `${renderRow('action', label, renderThemeListLead(bodyFirst), restHtml, 'theme-row-has-tail')}
-      <div class="theme-row-tail">${tailHtml}${notesHtml}</div>`;
+      <div class="theme-row-tail" data-row-label="${escapeHtml(label)}">${tailHtml}${notesHtml}</div>`;
 }
 
 function renderContextItem(label: string, valueHtml: string): string {

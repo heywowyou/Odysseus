@@ -170,7 +170,7 @@ function addTallActionRowPressure(html: string, extraItems: number): string {
     (_, i) => `<li data-action-row-pressure>Action ${i + 1}</li>`,
   ).join('');
   return html.replace(
-    /(\s*<\/div>\s*<div class="theme-row-tail">)/u,
+    /(\s*<\/div>\s*<div class="theme-row-tail")/u,
     `<ul class="theme-list theme-list-continued">${items}</ul>$1`,
   );
 }
@@ -743,6 +743,66 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
       await pressured.page.context().close();
     }
   }, 60_000);
+
+  it('a priority card split across pages reads as one open-ended card with a labelled continuation', async () => {
+    const splitRowLabels = new Set<string>();
+    for (const offsetMm of [0, 40, 80, 120, 160]) {
+      const pressured = await paginate(
+        browser,
+        addFirstThemeOffset(addTallActionRowPressure(stressHtml, 30), offsetMm),
+        pagedjsSource,
+      );
+      try {
+        const result = await pressured.page.evaluate(() => {
+          const pseudo = (el: Element) =>
+            getComputedStyle(el, '::before').content.replace(/^"|"$/gu, '');
+          return {
+            openBottoms: Array.from(document.querySelectorAll('.theme-card[data-split-to]')).map(
+              (card) => {
+                const style = getComputedStyle(card);
+                return `${style.borderBottomLeftRadius} ${style.clipPath}`;
+              },
+            ),
+            continuations: Array.from(
+              document.querySelectorAll('.theme-card[data-split-from]'),
+            ).map((card) => {
+              const style = getComputedStyle(card);
+              return {
+                openTop: style.borderTopLeftRadius === '0px' && style.clipPath !== 'none',
+                label: pseudo(card),
+                expected: card.getAttribute('data-continued-label'),
+              };
+            }),
+            rowLabels: Array.from(
+              document.querySelectorAll(
+                '.theme-row[data-split-from], .theme-row-tail[data-split-from]',
+              ),
+            ).map((row) => pseudo(row)),
+          };
+        });
+        // No bottom corners, and a clip whose bottom inset reaches below the
+        // box so the surface runs on past the last line instead of stopping
+        // on it (Chromium serializes the inset in its shortest form).
+        for (const openBottom of result.openBottoms) {
+          expect(openBottom).toMatch(/^0px inset\(\S+ -1px -[\d.]+px\)$/u);
+        }
+        for (const continuation of result.continuations) {
+          expect(continuation.openTop).toBe(true);
+          expect(continuation.label).toBe(continuation.expected);
+          expect(continuation.label).toMatch(/^Priorité \d+ \(suite\)$/u);
+        }
+        for (const label of result.rowLabels) {
+          expect(label).not.toBe('');
+          splitRowLabels.add(label);
+        }
+      } finally {
+        await pressured.page.context().close();
+      }
+    }
+    // The sweep must actually exercise a row broken mid-list, or the rail
+    // label assertion above is vacuous.
+    expect(splitRowLabels.size).toBeGreaterThan(0);
+  }, 300_000);
 
   it('invariant 7b: an oversized priority fragments without losing, duplicating, or orphaning content', async () => {
     const oversized = await paginate(browser, makeFirstThemeOversized(stressHtml), pagedjsSource);

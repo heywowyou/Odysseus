@@ -143,6 +143,9 @@
   --radius-lg: 12px; /* site raised-card corner (site-card-lg); was 14px */
 
   --shadow-sm: 0 0 0 1px #2b3642;
+  /* --shadow-sm's ring as a plain colour, for a card fragment that layers
+     several rings (see .theme-card[data-split-to]). */
+  --card-ring: #2b3642;
   --shadow-md: 0 0 0 1px #434e5a, 0 6px 18px rgba(0, 0, 0, 0.55);
   --shadow-lg: 0 0 0 1px #76828f, 0 16px 40px rgba(0, 0, 0, 0.65);
 }
@@ -1155,6 +1158,68 @@ textarea.input {
 .theme-row-context {
   padding-left: 0;
   padding-bottom: 0;
+}
+/* A card broken across pages reads as one open-ended card, not two closed
+   ones: Paged.js repeats the full box decoration on each fragment, so the
+   fragment that continues loses its bottom corners and outline, and the
+   continuation loses its top ones. The continuation names its card and
+   repeats the row label in the rail it would otherwise leave empty.
+   Paged.js's own stylesheet sets content: none on every
+   [data-split-from]::before (so a split list item does not repeat its
+   marker) and padding-bottom: unset on every [data-split-to], each with a
+   selector far more specific than any report rule, hence the !important
+   on the two labels.
+   The bottom padding cannot come back the same way: Paged.js placed the
+   text without it, and a padded box that no longer fits spills into the
+   off-page overflow column the issue #118 gate refuses. The continuing
+   fragment instead paints its surface and side rings one padding-height
+   further down with box-shadows, which draw without taking layout space,
+   and clip-path cuts the ring's bottom edge so the card stays open. */
+.theme-card[data-split-to] {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  box-shadow:
+    0 var(--space-6) 0 0 var(--color-surface),
+    0 var(--space-6) 0 1px var(--card-ring),
+    0 0 0 1px var(--card-ring);
+  clip-path: inset(-1px -1px calc(-1 * var(--space-6)) -1px);
+}
+.theme-card[data-split-from] {
+  padding-top: var(--space-6);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  clip-path: inset(0 -1px -1px -1px);
+}
+/* A card spanning three pages: its middle fragment is open at both ends. */
+.theme-card[data-split-from][data-split-to] {
+  clip-path: inset(0 -1px calc(-1 * var(--space-6)) -1px);
+}
+.theme-card[data-split-from]::before {
+  content: attr(data-continued-label) !important;
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-neutral-400);
+  margin-bottom: var(--space-4);
+}
+.theme-row-tail {
+  position: relative;
+}
+.theme-row[data-split-from]::before,
+.theme-row-tail[data-split-from]::before {
+  content: attr(data-row-label) !important;
+  position: absolute;
+  /* Paged.js drops a continued row's top padding, so the text starts
+     within a few pixels of the fragment's top edge. */
+  top: var(--space-2);
+  left: 0;
+  width: var(--theme-rail);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--color-neutral-300);
 }
 .theme-subhead {
   break-after: avoid;

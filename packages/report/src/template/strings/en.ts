@@ -414,6 +414,7 @@ export const en: ReportStrings = {
     observationNoPageTemplate:
       'Representative finding: "{defect}". This priority covers {pages} {pageWord} and {occurrences} {occurrenceWord}.',
     whatYouCanDoLabel: 'What you can do',
+    continuedCardTemplate: 'Priority {rank} (continued)',
     complexityLabel: 'Complexity',
   },
   renderDiffEvidence: {

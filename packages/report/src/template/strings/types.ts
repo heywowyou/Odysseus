@@ -778,6 +778,10 @@ export interface ReportStrings {
     /** Plan 018 step 6, card block 4: label over the existing recommended
      *  and reviewed remediation lists and the ownership notes. */
     whatYouCanDoLabel: string;
+    /** Printed at the top of a priority card's continuation when the card
+     *  breaks across pages, so the second fragment names the card it
+     *  belongs to. Template: {rank}. */
+    continuedCardTemplate: string;
     /** Plan 018 step 6, card block 6: footer metadata label over
      * theme.effort. The plan renames this footer item "Complexity" and
      * confines the word to this one detailed card (plan 018 step 5
