@@ -91,6 +91,24 @@ export interface OutlineEntry {
   depth: number;
 }
 
+/**
+ * A PDF bookmark title as the site shows it. The public site never prints an
+ * em or en dash, so a spaced dash becomes a French colon (no-break space
+ * before it). An all-caps multi-word heading (a typographic eyebrow in the
+ * report) is set in sentence case, so the picker reads as one list.
+ */
+export function displayTitle(raw: string): string {
+  let title = raw
+    .replace(/\s+/gu, ' ')
+    .trim()
+    .replace(/\s*[\u2013\u2014]\s*/gu, '\u00a0: ');
+  if (title.includes(' ') && /\p{Lu}/u.test(title) && title === title.toLocaleUpperCase('fr')) {
+    const lower = title.toLocaleLowerCase('fr');
+    title = lower.charAt(0).toLocaleUpperCase('fr') + lower.slice(1);
+  }
+  return title;
+}
+
 /** Section picker entries in document order: one per distinct page, the
  * first named heading on a page winning, so the picker never offers two
  * entries that land on the same sheet. */
@@ -98,7 +116,7 @@ export function sectionEntries(entries: readonly OutlineEntry[]): OutlineEntry[]
   const seen = new Set<number>();
   const result: OutlineEntry[] = [];
   for (const entry of entries) {
-    const title = entry.title.replace(/\s+/gu, ' ').trim();
+    const title = displayTitle(entry.title);
     // A bare section number ("03") is a heading eyebrow, not a name.
     if (!/\p{L}/u.test(title) || seen.has(entry.page)) continue;
     seen.add(entry.page);

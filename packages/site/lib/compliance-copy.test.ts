@@ -23,7 +23,13 @@ const optOut = prose(page('desinscription'));
 const bot = prose(page('bot'));
 const offer = prose(page('offre'));
 
-const rawSources = ['confidentialite-prospection', 'desinscription', 'bot', 'offre'];
+const rawSources = [
+  'confidentialite-prospection',
+  'desinscription',
+  'bot',
+  'offre',
+  'exemple-audit',
+];
 
 function isBilingual(source: string): boolean {
   return /\blang="en"/u.test(source);
@@ -196,5 +202,10 @@ describe('every compliance page', () => {
 
   it.each(rawSources)('%s uses no em or en dash', (route) => {
     expect(page(route)).not.toMatch(/[\u2013\u2014]/u);
+  });
+
+  it('the example report viewer prints no em or en dash of its own', () => {
+    const viewer = readFileSync(path.join(appDir, '..', 'lib', 'report-viewer.tsx'), 'utf8');
+    expect(viewer).not.toMatch(/[\u2013\u2014]/u);
   });
 });

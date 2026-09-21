@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applyStep,
   clampPage,
+  displayTitle,
   fittedPageWidth,
   MIN_READABLE_PAGE_WIDTH,
   pageHash,
@@ -98,5 +99,25 @@ describe('example report section picker', () => {
     expect(sectionForPage(entries, 2)?.title).toBe('Couverture');
     expect(sectionForPage(entries, 9)?.title).toBe('Synthèse');
     expect(sectionForPage([], 4)).toBeNull();
+  });
+});
+
+describe('example report section titles', () => {
+  it('sets all-caps headings in sentence case', () => {
+    expect(displayTitle('INFORMATIONS SUR LE DIAGNOSTIC')).toBe('Informations sur le diagnostic');
+  });
+
+  it('keeps mixed-case titles and single-word acronyms as they are', () => {
+    expect(displayTitle('Conformité aux WCAG 2.2, niveau AA')).toBe(
+      'Conformité aux WCAG 2.2, niveau AA',
+    );
+    expect(displayTitle('SEO')).toBe('SEO');
+  });
+
+  it('never shows an em or en dash', () => {
+    expect(displayTitle('Annexe technique — constats détaillés')).toBe(
+      'Annexe technique\u00a0: constats détaillés',
+    );
+    expect(displayTitle('Annexe technique – constats')).not.toMatch(/[\u2013\u2014]/u);
   });
 });

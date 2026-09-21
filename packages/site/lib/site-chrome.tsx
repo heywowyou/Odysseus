@@ -9,6 +9,7 @@ const LABELS = {
     mainNav: 'Navigation principale',
     offer: 'Le diagnostic',
     bot: 'OdysseusBot',
+    example: 'Exemple de rapport',
     infoNav: 'Informations',
     info: 'Informations',
     privacy: 'Prospection et données personnelles',
@@ -22,6 +23,7 @@ const LABELS = {
     mainNav: 'Main navigation',
     offer: 'The diagnostic',
     bot: 'OdysseusBot',
+    example: 'Example report',
     infoNav: 'Information',
     info: 'Information',
     privacy: 'Outreach and personal data',
@@ -70,6 +72,9 @@ function SiteFooter() {
         </div>
         <nav aria-label={t.infoNav} className="flex flex-col items-start gap-1 md:items-end">
           <p className="label mb-1">{t.info}</p>
+          <a className="navlink" href="/exemple-audit">
+            {t.example}
+          </a>
           <a className="navlink" href="/bot">
             {t.bot}
           </a>
