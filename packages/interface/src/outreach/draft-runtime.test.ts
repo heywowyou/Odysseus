@@ -103,6 +103,7 @@ let steps: string[];
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(recordFailedOutreachDraft).mockResolvedValue({} as never);
   vi.mocked(isReferenceAuditLinkTrackingEnabled).mockReturnValue(false);
   vi.mocked(attachReferenceAuditDraft).mockResolvedValue(undefined);
   vi.mocked(deleteReferenceAuditLink).mockResolvedValue(undefined);
@@ -306,6 +307,24 @@ describe('createTouchOneDraft', () => {
     expect(mailbox.recorded()).toHaveLength(0);
     expect(transitionOutreachThread).not.toHaveBeenCalled();
   });
+
+  it('records and cleans up when the provider rejects the first-touch draft', async () => {
+    mailbox.createDraft = vi.fn().mockRejectedValue(new Error('Gmail unavailable'));
+
+    expect(await touchOne()).toMatchObject({
+      created: false,
+      refusal: 'provider-draft-unrecorded',
+    });
+    expect(bucket.keys()).toHaveLength(0);
+    expect(recordFailedOutreachDraft).toHaveBeenCalledWith(
+      connection,
+      expect.objectContaining({
+        failureReason: 'provider-draft-unrecorded',
+        previewId: 'preview-1',
+      }),
+    );
+    expect(transitionOutreachThread).not.toHaveBeenCalled();
+  });
 });
 
 describe('createFollowUpForProspect', () => {
@@ -378,5 +397,22 @@ describe('createFollowUpForProspect', () => {
     expect(result).toMatchObject({ created: false, plan: { wouldDraft: true, touch: 2 } });
     expect(createConfiguredMailboxDraftAdapter).not.toHaveBeenCalled();
     expect(steps).toEqual(['gate']);
+  });
+
+  it('records when the provider rejects a follow-up draft', async () => {
+    mailbox.createDraft = vi.fn().mockRejectedValue(new Error('Gmail unavailable'));
+
+    expect(await createFollowUpForProspect(connection, prospectId)).toMatchObject({
+      created: false,
+      refusal: 'provider-draft-unrecorded',
+    });
+    expect(recordFailedOutreachDraft).toHaveBeenCalledWith(
+      connection,
+      expect.objectContaining({
+        touch: 2,
+        failureReason: 'provider-draft-unrecorded',
+      }),
+    );
+    expect(transitionOutreachThread).not.toHaveBeenCalled();
   });
 });

@@ -50,10 +50,11 @@ import {
   createConfiguredOptOutBucket,
   createConfiguredPreviewPublisher,
 } from './configured-preview-publisher.js';
-import { createOptOutLink, storeOptOutLink } from './opt-out-bucket.js';
+import { createOptOutLink, deriveOptOutLinkKey, storeOptOutLink } from './opt-out-bucket.js';
 import { createInMemoryMailboxDraftAdapter } from './in-memory-mailbox-draft-adapter.js';
 import { formatHotelName } from './hotel-name.js';
 import { createMongoOutreachPreviewStoreV3 } from './mongo-outreach-preview-store-v2.js';
+import { hashPreviewToken } from './preview-token.js';
 import { resolveReferenceAuditForDraft } from '../reference-audit/reference-audit-readiness.js';
 import {
   createReferenceAuditToken,
@@ -391,17 +392,54 @@ export async function createTouchOneDraft(
 
   // Written before the draft exists, so no email can carry a link whose
   // prefill object is missing.
-  await storeOptOutLink(createConfiguredOptOutBucket(), optOutLink.token, contact.address, now);
+  const optOutBucket = createConfiguredOptOutBucket();
+  await storeOptOutLink(optOutBucket, optOutLink.token, contact.address, now);
 
-  const providerDraft = await mailbox.createDraft({
-    to: contact.address,
-    subject: assembled.subject,
-    body: assembled.body,
-    htmlBody: assembled.htmlBody,
-    ...(thread.thread.providerThreadId === undefined
-      ? {}
-      : { providerThreadId: thread.thread.providerThreadId }),
-  });
+  let providerDraft;
+  try {
+    providerDraft = await mailbox.createDraft({
+      to: contact.address,
+      subject: assembled.subject,
+      body: assembled.body,
+      htmlBody: assembled.htmlBody,
+      ...(thread.thread.providerThreadId === undefined
+        ? {}
+        : { providerThreadId: thread.thread.providerThreadId }),
+    });
+  } catch {
+    // A provider timeout can be ambiguous: the request may have reached Gmail
+    // even though no identifiers came back. Do not claim success or permit an
+    // automatic retry. Remove only our opt-out object and attribution mapping;
+    // the failed row tells the operator to check the mailbox before retrying.
+    await optOutBucket
+      .delete(deriveOptOutLinkKey(hashPreviewToken(optOutLink.token)))
+      .catch(() => undefined);
+    await discardReferenceAuditTracking();
+    await recordFailedOutreachDraft(connection, {
+      prospectId,
+      threadId: thread.thread.threadId,
+      touch: 1,
+      language: options.language,
+      roleAddress: contact.address,
+      previewId: preview.previewId,
+      previewUrl: preview.url,
+      referenceAuditUrl,
+      referenceAuditVersion: referenceAudit.referenceVersion,
+      evidenceVersion: EVIDENCE_VERSION,
+      outreachPromptVersion: CURRENT_OUTREACH_PROMPT_VERSION,
+      failureReason: 'provider-draft-unrecorded',
+      createdAt: now,
+    }).catch(() => undefined);
+    return {
+      configured: true,
+      created: false,
+      refusal: 'provider-draft-unrecorded',
+      previewId: preview.previewId,
+      previewUrl: preview.url,
+      referenceAuditUrl,
+      referenceAuditVersion: referenceAudit.referenceVersion,
+    };
+  }
 
   let draft;
   try {
@@ -692,13 +730,31 @@ export async function createFollowUpForProspect(
   const finalGate = await checkOutreachAction(connection, { prospect, action: 'follow-up' });
   if (!finalGate.allowed)
     return { configured: true, created: false, refusal: 'suppressed-before-provider' };
-  const providerDraft = await mailbox.createDraft({
-    to: prospect.emails[0].address,
-    subject: assembled.subject,
-    body: assembled.body,
-    htmlBody: assembled.htmlBody,
-    ...(thread.providerThreadId === undefined ? {} : { providerThreadId: thread.providerThreadId }),
-  });
+  let providerDraft;
+  try {
+    providerDraft = await mailbox.createDraft({
+      to: prospect.emails[0].address,
+      subject: assembled.subject,
+      body: assembled.body,
+      htmlBody: assembled.htmlBody,
+      ...(thread.providerThreadId === undefined
+        ? {}
+        : { providerThreadId: thread.providerThreadId }),
+    });
+  } catch {
+    await recordFailedOutreachDraft(connection, {
+      prospectId,
+      threadId: thread.threadId,
+      touch,
+      language: thread.language,
+      roleAddress: prospect.emails[0].address,
+      evidenceVersion: EVIDENCE_VERSION,
+      outreachPromptVersion: CURRENT_OUTREACH_PROMPT_VERSION,
+      failureReason: 'provider-draft-unrecorded',
+      createdAt: now,
+    }).catch(() => undefined);
+    return { configured: true, created: false, refusal: 'provider-draft-unrecorded' };
+  }
   let draft;
   try {
     draft = await recordOutreachDraft(connection, {
