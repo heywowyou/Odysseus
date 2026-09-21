@@ -171,8 +171,10 @@ Fill in exactly these, leave everything else as shipped:
   `ODYSSEUS_REFERENCE_AUDIT_RECEIPT_BUCKET_*` credentials with only the
   list/read/delete access needed to consume that prefix. It stores only
   bounded receipts; no prospect, email, IP, User-Agent or Referer is sent by
-  the public route. Leave this block unset to use the canonical untracked
-  reference link; telemetry is optional and fail-open.
+  the public route. Tracked links are used only when
+  `ODYSSEUS_REFERENCE_AUDIT_LINK_TRACKING=on` is also set; otherwise Touch 1
+  prints the canonical untracked reference link in full. Telemetry is optional
+  and fail-open.
 
 ### Permanent reference-audit release workflow
 

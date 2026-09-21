@@ -7,6 +7,7 @@ import {
   getReferenceAuditBucketName,
   getReferenceAuditBucketSecretAccessKey,
   isReferenceAuditBucketConfigured,
+  isReferenceAuditLinkTrackingEnabled,
 } from './config.js';
 
 describe('getMailboxSenderAddress', () => {
@@ -102,5 +103,33 @@ describe('reference audit bucket configuration', () => {
     vi.stubEnv('ODYSSEUS_PREVIEW_BUCKET_SECRET_KEY', '');
 
     expect(isReferenceAuditBucketConfigured()).toBe(false);
+  });
+});
+
+describe('reference audit link tracking', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  function stubReceiptBucket(): void {
+    vi.stubEnv('ODYSSEUS_REFERENCE_AUDIT_RECEIPT_BUCKET_ENDPOINT', 'https://s3.example');
+    vi.stubEnv('ODYSSEUS_REFERENCE_AUDIT_RECEIPT_BUCKET_REGION', 'fr-par');
+    vi.stubEnv('ODYSSEUS_REFERENCE_AUDIT_RECEIPT_BUCKET_NAME', 'receipts');
+    vi.stubEnv('ODYSSEUS_REFERENCE_AUDIT_RECEIPT_BUCKET_ACCESS_KEY_ID', 'key');
+    vi.stubEnv('ODYSSEUS_REFERENCE_AUDIT_RECEIPT_BUCKET_SECRET_KEY', 'secret');
+  }
+
+  it('stays off with a configured receipt bucket unless explicitly switched on', () => {
+    stubReceiptBucket();
+    vi.stubEnv('ODYSSEUS_REFERENCE_AUDIT_LINK_TRACKING', '');
+    expect(isReferenceAuditLinkTrackingEnabled()).toBe(false);
+  });
+
+  it('turns on only with the switch and the receipt bucket together', () => {
+    vi.stubEnv('ODYSSEUS_REFERENCE_AUDIT_LINK_TRACKING', 'on');
+    vi.stubEnv('ODYSSEUS_REFERENCE_AUDIT_RECEIPT_BUCKET_NAME', '');
+    expect(isReferenceAuditLinkTrackingEnabled()).toBe(false);
+    stubReceiptBucket();
+    expect(isReferenceAuditLinkTrackingEnabled()).toBe(true);
   });
 });

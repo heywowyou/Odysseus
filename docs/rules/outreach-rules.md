@@ -415,6 +415,13 @@ attribution, and storage failure never blocks the redirect or the draft. The
 dashboard calls the result a "link requested" signal, not proof of a human
 reading the report, because automated mail-security checks can request links.
 
+**Plain link by default, 2026-09-21.** Touch 1 prints the canonical
+`/exemple-audit` address in full as the link text, not behind a label, so a
+cold-email recipient can read where the link goes before clicking. Attribution
+is off unless `ODYSSEUS_REFERENCE_AUDIT_LINK_TRACKING=on` is set together with
+the receipt bucket: a per-recipient redirect path looks like tracking to spam
+filters and to the reader, and it is not needed at the current volume.
+
 ---
 
 ## 8. Channel mechanics

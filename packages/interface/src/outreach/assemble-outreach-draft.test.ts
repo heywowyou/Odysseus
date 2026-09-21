@@ -224,6 +224,9 @@ describe('assembleOutreachDraft - touch 1', () => {
     expect(result.htmlBody).toContain(
       `style="font-weight:600;text-decoration:underline">Consulter l&#39;aperçu de votre site</a>`,
     );
+    // The example link is printed in full so a cold-email reader sees where
+    // it goes before clicking.
+    expect(result.htmlBody).toContain(`>${REFERENCE_URL}</a>`);
     expect(result.htmlBody).toContain('Ne plus être contacté</a> · <a');
     expect(result.htmlBody).toContain(
       'style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#202124"',

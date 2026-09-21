@@ -387,6 +387,19 @@ export function isReferenceAuditReceiptBucketConfigured(): boolean {
   );
 }
 
+/** Touch 1 links to the plain public `/exemple-audit` page by default. The
+ *  opaque `/exemple-audit/r/<token>` attribution link is opt-in
+ *  (`ODYSSEUS_REFERENCE_AUDIT_LINK_TRACKING=on`, plus the receipt bucket):
+ *  since 2026-09-21 the operator prefers a readable, untracked address in a
+ *  cold email, both for the recipient's trust and for deliverability. */
+export function isReferenceAuditLinkTrackingEnabled(): boolean {
+  ensureEnvLoaded();
+  return (
+    process.env['ODYSSEUS_REFERENCE_AUDIT_LINK_TRACKING'] === 'on' &&
+    isReferenceAuditReceiptBucketConfigured()
+  );
+}
+
 export function getReferenceAuditPublicBaseUrl(): string {
   ensureEnvLoaded();
   return process.env['ODYSSEUS_REFERENCE_AUDIT_PUBLIC_BASE_URL'] ?? getPreviewPublicBaseUrl();

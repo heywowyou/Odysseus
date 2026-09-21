@@ -19,7 +19,6 @@ import {
   composeTouchThreeFrame,
   composeTouchTwoBody,
   pickOutreachVariants,
-  referenceAuditLinkLabel,
   type OutreachScanSummary,
 } from './outreach-email-template.js';
 import {
@@ -148,7 +147,9 @@ export function assembleOutreachDraft(
       variants,
       previewLink: { label: copy.previewLinkLabel, url: options.previewUrl as string },
       referenceLink: {
-        label: referenceAuditLinkLabel(language),
+        // Shown in full rather than behind a label: a cold-email recipient
+        // can read exactly where the link goes before clicking it.
+        label: options.referenceAuditUrl as string,
         url: options.referenceAuditUrl as string,
       },
     });

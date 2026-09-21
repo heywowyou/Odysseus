@@ -28,7 +28,7 @@ vi.mock('../config.js', () => ({
   getOutreachTouch3AfterDays: () => 7,
   getPreviewPublicBaseUrl: () => 'https://odysseus.example',
   getReferenceAuditPublicBaseUrl: () => 'https://odysseus.example',
-  isReferenceAuditReceiptBucketConfigured: vi.fn(() => false),
+  isReferenceAuditLinkTrackingEnabled: vi.fn(() => false),
 }));
 vi.mock('./configured-mailbox-draft-adapter.js', () => ({
   createConfiguredMailboxDraftAdapter: vi.fn(),
@@ -72,7 +72,7 @@ import {
 import { createInMemoryOptOutBucket, type InMemoryOptOutBucket } from './opt-out-bucket.js';
 import { resolvePublishedPreviewForDraft } from './publish-preview-v2.js';
 import { resolveReferenceAuditForDraft } from '../reference-audit/reference-audit-readiness.js';
-import { isReferenceAuditReceiptBucketConfigured } from '../config.js';
+import { isReferenceAuditLinkTrackingEnabled } from '../config.js';
 
 const connection = {} as never;
 const prospectId = 'prospect-1';
@@ -103,7 +103,7 @@ let steps: string[];
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(isReferenceAuditReceiptBucketConfigured).mockReturnValue(false);
+  vi.mocked(isReferenceAuditLinkTrackingEnabled).mockReturnValue(false);
   vi.mocked(attachReferenceAuditDraft).mockResolvedValue(undefined);
   vi.mocked(deleteReferenceAuditLink).mockResolvedValue(undefined);
   steps = [];
@@ -180,7 +180,7 @@ describe('createTouchOneDraft', () => {
   });
 
   it('keeps the canonical link when optional attribution configuration fails open', async () => {
-    vi.mocked(isReferenceAuditReceiptBucketConfigured).mockImplementation(() => {
+    vi.mocked(isReferenceAuditLinkTrackingEnabled).mockImplementation(() => {
       throw new Error('receipt configuration unavailable');
     });
 
@@ -195,7 +195,7 @@ describe('createTouchOneDraft', () => {
   });
 
   it('cleans an optional attribution mapping when draft assembly refuses', async () => {
-    vi.mocked(isReferenceAuditReceiptBucketConfigured).mockReturnValue(true);
+    vi.mocked(isReferenceAuditLinkTrackingEnabled).mockReturnValue(true);
     vi.mocked(assembleOutreachDraft).mockReturnValue({
       assembled: false,
       refusal: 'missing-categories',

@@ -40,7 +40,7 @@ import {
   getOutreachTouch3AfterDays,
   getPreviewPublicBaseUrl,
   getReferenceAuditPublicBaseUrl,
-  isReferenceAuditReceiptBucketConfigured,
+  isReferenceAuditLinkTrackingEnabled,
 } from '../config.js';
 import { assembleOutreachDraft } from './assemble-outreach-draft.js';
 import { createConfiguredMailboxDraftAdapter } from './configured-mailbox-draft-adapter.js';
@@ -276,7 +276,7 @@ export async function createTouchOneDraft(
   let referenceAuditTokenHash: string | undefined;
   let trackingAvailable: boolean;
   try {
-    trackingAvailable = !dryRun && isReferenceAuditReceiptBucketConfigured();
+    trackingAvailable = !dryRun && isReferenceAuditLinkTrackingEnabled();
   } catch {
     // The optional attribution configuration must never turn a valid
     // canonical reference link into a draft refusal.
