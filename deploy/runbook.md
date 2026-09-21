@@ -153,12 +153,17 @@ Fill in exactly these, leave everything else as shipped:
   to `PutObject` on `opt-out-requests/*`. Without them the form answers with
   its error message and the mailto fallback still works.
 
-- Plan 071's permanent reference PDF uses a separate object namespace. The
-  private publisher reads `ODYSSEUS_REFERENCE_AUDIT_BUCKET_ENDPOINT`,
-  `_REGION`, `_NAME`, `_ACCESS_KEY_ID` and `_SECRET_ACCESS_KEY`; the public site
-  reads the equivalent `REFERENCE_AUDIT_BUCKET_*` variables. The bucket holds
-  `reference-audit/<sha256>.pdf` objects and `reference-audit/current.json`.
-  The site key is read-only for that namespace; it must not be reused for
+- Plan 071's permanent reference PDF uses its own object namespace,
+  `reference-audit/<sha256>.pdf` plus `reference-audit/current.json`, but not
+  necessarily its own bucket. With no `ODYSSEUS_REFERENCE_AUDIT_BUCKET_*`
+  values set, the private publisher falls back to the preview bucket, and the
+  public site falls back from `REFERENCE_AUDIT_BUCKET_*` to its read-only
+  `PREVIEW_BUCKET_*` values, so a permanent example needs no new bucket and no
+  new deployment variables. Preview expiry deletes only the object it
+  published and the opt-out poller only reads `opt-out-requests/`, so nothing
+  sweeps the reference namespace. Configure a separate bucket and key when the
+  public read credential must not reach preview objects at all. Either way the
+  site key stays read-only for the namespace and must not be reused for
   receipt writes.
 - Optional reference-link attribution uses a separate receipt bucket. The
   Vercel site receives `REFERENCE_AUDIT_RECEIPT_BUCKET_*` credentials limited

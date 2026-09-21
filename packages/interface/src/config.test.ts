@@ -1,6 +1,13 @@
 import { OUTREACH_CONTACT } from '@odysseus/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getDeployMetadata, getMailboxSenderAddress } from './config.js';
+import {
+  getDeployMetadata,
+  getMailboxSenderAddress,
+  getReferenceAuditBucketAccessKeyId,
+  getReferenceAuditBucketName,
+  getReferenceAuditBucketSecretAccessKey,
+  isReferenceAuditBucketConfigured,
+} from './config.js';
 
 describe('getMailboxSenderAddress', () => {
   afterEach(() => {
@@ -53,5 +60,47 @@ describe('getDeployMetadata', () => {
 
   it('never exposes fields beyond the allowlisted revision, builtAt, and environment', () => {
     expect(Object.keys(getDeployMetadata()).sort()).toEqual(['builtAt', 'environment', 'revision']);
+  });
+});
+
+describe('reference audit bucket configuration', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('prefers dedicated reference credentials when they are set', () => {
+    vi.stubEnv('ODYSSEUS_REFERENCE_AUDIT_BUCKET_NAME', 'reference-bucket');
+    vi.stubEnv('ODYSSEUS_REFERENCE_AUDIT_BUCKET_ACCESS_KEY_ID', 'reference-key');
+    vi.stubEnv('ODYSSEUS_REFERENCE_AUDIT_BUCKET_SECRET_ACCESS_KEY', 'reference-secret');
+    vi.stubEnv('ODYSSEUS_PREVIEW_BUCKET_NAME', 'preview-bucket');
+    vi.stubEnv('ODYSSEUS_PREVIEW_BUCKET_ACCESS_KEY_ID', 'preview-key');
+    vi.stubEnv('ODYSSEUS_PREVIEW_BUCKET_SECRET_KEY', 'preview-secret');
+
+    expect(getReferenceAuditBucketName()).toBe('reference-bucket');
+    expect(getReferenceAuditBucketAccessKeyId()).toBe('reference-key');
+    expect(getReferenceAuditBucketSecretAccessKey()).toBe('reference-secret');
+    expect(isReferenceAuditBucketConfigured()).toBe(true);
+  });
+
+  it('publishes into the preview bucket when no dedicated bucket exists', () => {
+    vi.stubEnv('ODYSSEUS_PREVIEW_BUCKET_NAME', 'preview-bucket');
+    vi.stubEnv('ODYSSEUS_PREVIEW_BUCKET_ACCESS_KEY_ID', 'preview-key');
+    vi.stubEnv('ODYSSEUS_PREVIEW_BUCKET_SECRET_KEY', 'preview-secret');
+
+    expect(getReferenceAuditBucketName()).toBe('preview-bucket');
+    expect(getReferenceAuditBucketAccessKeyId()).toBe('preview-key');
+    expect(getReferenceAuditBucketSecretAccessKey()).toBe('preview-secret');
+    expect(isReferenceAuditBucketConfigured()).toBe(true);
+  });
+
+  it('stays unconfigured when neither bucket is set', () => {
+    vi.stubEnv('ODYSSEUS_REFERENCE_AUDIT_BUCKET_NAME', '');
+    vi.stubEnv('ODYSSEUS_REFERENCE_AUDIT_BUCKET_ACCESS_KEY_ID', '');
+    vi.stubEnv('ODYSSEUS_REFERENCE_AUDIT_BUCKET_SECRET_ACCESS_KEY', '');
+    vi.stubEnv('ODYSSEUS_PREVIEW_BUCKET_NAME', '');
+    vi.stubEnv('ODYSSEUS_PREVIEW_BUCKET_ACCESS_KEY_ID', '');
+    vi.stubEnv('ODYSSEUS_PREVIEW_BUCKET_SECRET_KEY', '');
+
+    expect(isReferenceAuditBucketConfigured()).toBe(false);
   });
 });

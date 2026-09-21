@@ -291,47 +291,57 @@ export function getPreviewBucketSecretKey(): string {
   return requiredPreviewEnv('ODYSSEUS_PREVIEW_BUCKET_SECRET_KEY');
 }
 
-/** Plan 071: the permanent reference report has its own object namespace and
- *  credentials. Keeping it separate from expiring previews makes accidental
- *  preview cleanup unable to remove the customer-facing example. */
-function requiredReferenceAuditEnv(name: string): string {
+/** Plan 071: the permanent reference report keeps its own object namespace,
+ *  `reference-audit/`, and may keep its own credentials. When no dedicated
+ *  bucket is configured it falls back to the preview bucket, which is safe
+ *  because nothing sweeps that bucket wholesale: preview cleanup deletes the
+ *  one object it published, and the opt-out poller is scoped to
+ *  `opt-out-requests/`. A dedicated bucket remains preferable when the public
+ *  site's read credential should not reach preview objects at all. */
+function referenceAuditEnv(name: string, fallback: () => string): string {
   ensureEnvLoaded();
   const value = process.env[name];
-  if (value === undefined || value === '') {
-    throw new Error(`${name} is not set; reference audit publication needs it`);
-  }
+  if (value === undefined || value === '') return fallback();
   return value;
 }
 
 export function getReferenceAuditBucketEndpoint(): string {
-  return requiredReferenceAuditEnv('ODYSSEUS_REFERENCE_AUDIT_BUCKET_ENDPOINT');
+  return referenceAuditEnv('ODYSSEUS_REFERENCE_AUDIT_BUCKET_ENDPOINT', getPreviewBucketEndpoint);
 }
 
 export function getReferenceAuditBucketRegion(): string {
-  return requiredReferenceAuditEnv('ODYSSEUS_REFERENCE_AUDIT_BUCKET_REGION');
+  return referenceAuditEnv('ODYSSEUS_REFERENCE_AUDIT_BUCKET_REGION', getPreviewBucketRegion);
 }
 
 export function getReferenceAuditBucketName(): string {
-  return requiredReferenceAuditEnv('ODYSSEUS_REFERENCE_AUDIT_BUCKET_NAME');
+  return referenceAuditEnv('ODYSSEUS_REFERENCE_AUDIT_BUCKET_NAME', getPreviewBucketName);
 }
 
 export function getReferenceAuditBucketAccessKeyId(): string {
-  return requiredReferenceAuditEnv('ODYSSEUS_REFERENCE_AUDIT_BUCKET_ACCESS_KEY_ID');
+  return referenceAuditEnv(
+    'ODYSSEUS_REFERENCE_AUDIT_BUCKET_ACCESS_KEY_ID',
+    getPreviewBucketAccessKeyId,
+  );
 }
 
 export function getReferenceAuditBucketSecretAccessKey(): string {
-  return requiredReferenceAuditEnv('ODYSSEUS_REFERENCE_AUDIT_BUCKET_SECRET_ACCESS_KEY');
+  return referenceAuditEnv(
+    'ODYSSEUS_REFERENCE_AUDIT_BUCKET_SECRET_ACCESS_KEY',
+    getPreviewBucketSecretKey,
+  );
 }
 
 export function isReferenceAuditBucketConfigured(): boolean {
   ensureEnvLoaded();
-  return (
-    Boolean(process.env['ODYSSEUS_REFERENCE_AUDIT_BUCKET_ENDPOINT']) &&
-    Boolean(process.env['ODYSSEUS_REFERENCE_AUDIT_BUCKET_REGION']) &&
+  const dedicated =
     Boolean(process.env['ODYSSEUS_REFERENCE_AUDIT_BUCKET_NAME']) &&
     Boolean(process.env['ODYSSEUS_REFERENCE_AUDIT_BUCKET_ACCESS_KEY_ID']) &&
-    Boolean(process.env['ODYSSEUS_REFERENCE_AUDIT_BUCKET_SECRET_ACCESS_KEY'])
-  );
+    Boolean(process.env['ODYSSEUS_REFERENCE_AUDIT_BUCKET_SECRET_ACCESS_KEY']);
+  const sharedWithPreviews =
+    Boolean(process.env['ODYSSEUS_PREVIEW_BUCKET_NAME']) &&
+    Boolean(process.env['ODYSSEUS_PREVIEW_BUCKET_ACCESS_KEY_ID']) &&
+    Boolean(process.env['ODYSSEUS_PREVIEW_BUCKET_SECRET_KEY']);
+  return dedicated || sharedWithPreviews;
 }
 
 /** Optional private consumer credentials for the public site's write-only

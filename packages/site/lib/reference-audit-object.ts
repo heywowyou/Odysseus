@@ -146,12 +146,39 @@ function requiredEnvironment(name: string): string {
   return value;
 }
 
+/** A dedicated reference bucket is read first. Without one the route reads the
+ *  `reference-audit/` namespace of the preview bucket with the same read-only
+ *  credential the preview route already uses, so a permanent example needs no
+ *  second bucket. Both credentials stay read-only here: publication and
+ *  pointer replacement remain the private side's job. */
+function referenceEnvironment(name: string, previewName: string): string {
+  const value = process.env[name];
+  if (value !== undefined && value !== '') return value;
+  return requiredEnvironment(previewName);
+}
+
+export function referenceAuditConfigFromEnvironment(): ReferenceAuditReaderConfig {
+  return {
+    bucket: referenceEnvironment('REFERENCE_AUDIT_BUCKET_NAME', 'PREVIEW_BUCKET_NAME'),
+    endpoint:
+      process.env['REFERENCE_AUDIT_BUCKET_ENDPOINT'] ??
+      process.env['PREVIEW_BUCKET_ENDPOINT'] ??
+      'https://s3.fr-par.scw.cloud',
+    region:
+      process.env['REFERENCE_AUDIT_BUCKET_REGION'] ??
+      process.env['PREVIEW_BUCKET_REGION'] ??
+      'fr-par',
+    accessKeyId: referenceEnvironment(
+      'REFERENCE_AUDIT_BUCKET_ACCESS_KEY_ID',
+      'PREVIEW_BUCKET_ACCESS_KEY_ID',
+    ),
+    secretAccessKey: referenceEnvironment(
+      'REFERENCE_AUDIT_BUCKET_SECRET_KEY',
+      'PREVIEW_BUCKET_SECRET_KEY',
+    ),
+  };
+}
+
 export function readerFromEnvironment(): ReferenceAuditReader {
-  return createReferenceAuditReader({
-    bucket: requiredEnvironment('REFERENCE_AUDIT_BUCKET_NAME'),
-    endpoint: process.env['REFERENCE_AUDIT_BUCKET_ENDPOINT'] ?? 'https://s3.fr-par.scw.cloud',
-    region: process.env['REFERENCE_AUDIT_BUCKET_REGION'] ?? 'fr-par',
-    accessKeyId: requiredEnvironment('REFERENCE_AUDIT_BUCKET_ACCESS_KEY_ID'),
-    secretAccessKey: requiredEnvironment('REFERENCE_AUDIT_BUCKET_SECRET_KEY'),
-  });
+  return createReferenceAuditReader(referenceAuditConfigFromEnvironment());
 }
