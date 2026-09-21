@@ -25,6 +25,24 @@ export interface ATraiterStrings {
   syncMailboxDone: string;
   syncMailboxNotConfigured: string;
   syncMailboxFailed: string;
+  overview: {
+    heading: string;
+    auditedProspects: string;
+    activeProspects: string;
+    actionableProspects: string;
+    actionableItems: string;
+    attentionItems: string;
+    mailbox: string;
+    mailboxConfigured: string;
+    mailboxNotConfigured: string;
+    mailboxLastSync: string;
+    mailboxNeverSynced: string;
+    kindFilterLabel: string;
+    allKinds: string;
+    filteredEmpty: string;
+    reconciliation: string;
+    kindLabels: Record<TodoRowKind, string>;
+  };
   /** Kept for compatibility with the existing translation shape while
    *  batch entry points remain retired from the prospect-only inbox. */
   batch: {
@@ -71,6 +89,33 @@ export const aTraiter = {
       'Boîte mail synchronisée : {sent} envoi(s) confirmé(s), {replies} réponse(s) ou retour(s), {review} à vérifier.',
     syncMailboxNotConfigured: 'Aucune boîte mail n’est configurée sur cette machine.',
     syncMailboxFailed: 'La boîte mail n’a pas pu être synchronisée. Réessayez.',
+    overview: {
+      heading: 'Vue de campagne',
+      auditedProspects: 'Prospects audités',
+      activeProspects: 'Prospects actifs',
+      actionableProspects: 'Prospects avec une action',
+      actionableItems: 'Actions ouvertes',
+      attentionItems: 'Décisions urgentes',
+      mailbox: 'Boîte mail',
+      mailboxConfigured: 'Configurée · synchronisation manuelle',
+      mailboxNotConfigured: 'Non configurée',
+      mailboxLastSync: 'Dernière conversation synchronisée',
+      mailboxNeverSynced: 'Aucune conversation synchronisée',
+      kindFilterLabel: 'Afficher',
+      allKinds: 'Toutes les actions',
+      filteredEmpty: 'Aucune action dans cette catégorie.',
+      reconciliation:
+        '{audited} prospects audités · {actions} actions ouvertes. Un audit n’ouvre pas forcément une action, et un prospect peut en ouvrir plusieurs.',
+      kindLabels: {
+        draft: 'Brouillons',
+        reply: 'Réponses',
+        'follow-up': 'Relances',
+        'first-email': 'Premiers emails',
+        'audit-input': 'Audits à compléter',
+        'audit-report': 'Rapports à corriger',
+        'report-quality-review': 'Revues qualité',
+      },
+    },
     batch: {
       draftBatchLabel: 'Rédiger les premiers emails pour les hôtels sélectionnés',
       draftBatchButton: 'Rédiger les premiers emails',
@@ -113,6 +158,33 @@ export const aTraiter = {
       'Mailbox synced: {sent} confirmed send(s), {replies} reply(ies) or bounce(s), {review} to check.',
     syncMailboxNotConfigured: 'No mailbox is configured on this machine.',
     syncMailboxFailed: 'The mailbox could not be synced. Try again.',
+    overview: {
+      heading: 'Campaign overview',
+      auditedProspects: 'Audited prospects',
+      activeProspects: 'Active prospects',
+      actionableProspects: 'Prospects with an action',
+      actionableItems: 'Open actions',
+      attentionItems: 'Urgent decisions',
+      mailbox: 'Mailbox',
+      mailboxConfigured: 'Configured · manual sync',
+      mailboxNotConfigured: 'Not configured',
+      mailboxLastSync: 'Last conversation sync',
+      mailboxNeverSynced: 'No conversation synced yet',
+      kindFilterLabel: 'Show',
+      allKinds: 'All actions',
+      filteredEmpty: 'No action in this category.',
+      reconciliation:
+        '{audited} audited prospects · {actions} open actions. An audit does not always create an action, and one prospect can create several.',
+      kindLabels: {
+        draft: 'Drafts',
+        reply: 'Replies',
+        'follow-up': 'Follow-ups',
+        'first-email': 'First emails',
+        'audit-input': 'Audits to complete',
+        'audit-report': 'Reports to fix',
+        'report-quality-review': 'Quality reviews',
+      },
+    },
     batch: {
       draftBatchLabel: 'Draft first emails for the selected hotels',
       draftBatchButton: 'Draft first emails',

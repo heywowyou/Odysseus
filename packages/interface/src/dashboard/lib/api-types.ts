@@ -7,6 +7,7 @@ import type {
   scanQueueSchema,
   scanSummarySchema,
   scanUrlResultSchema,
+  reportQualitySchema,
   severityRollupSchema,
 } from './api-schemas.js';
 
@@ -29,6 +30,7 @@ export type ScanSummary = z.infer<typeof scanSummarySchema>;
 /** GET /api/scans/queue (plan 061 §6.2). */
 export type ScanQueue = z.infer<typeof scanQueueSchema>;
 export type QueuedScan = ScanQueue['jobs'][number];
+export type ReportQualityResponse = z.infer<typeof reportQualitySchema>;
 
 /** Response of POST /api/scans. */
 export interface ScanCreated {
@@ -101,6 +103,18 @@ export interface TodoPage {
   /** Plan 060 §8: the server-provided attention count the shell badge
    *  renders. */
   attentionCount: number;
+  /** Portfolio/work reconciliation shown above the inbox. These counts are
+   *  intentionally distinct: audited prospects are not required to have an
+   *  open action, and one prospect can open several actions. */
+  summary: {
+    activeProspects: number;
+    auditedProspects: number;
+    actionableItems: number;
+    actionableProspects: number;
+    kindCounts: Record<TodoRowKind, number>;
+    mailboxConfigured: boolean;
+    lastSyncAt: string | null;
+  };
 }
 
 /** One per-URL row of a prospecting job (store's UrlResult). status stays

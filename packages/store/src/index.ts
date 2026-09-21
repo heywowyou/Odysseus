@@ -79,6 +79,7 @@ export type {
   JobCancellationRequestResult,
   JobProgressPatch,
   JobSummaryFields,
+  ListJobsOptions,
   NewJobInput,
 } from './jobs.js';
 export { backfillQueueOrder, readScanQueue, reorderScanQueue } from './job-queue-order.js';
@@ -332,6 +333,7 @@ export {
   recordOutreachThreadTouchSent,
   markOutreachThreadSynced,
   closeOutreachThreadsForDomain,
+  getLatestOutreachSyncAt,
   listOutreachThreads,
   listThreadsDueForFollowUp,
   completeOutreachSequence,
@@ -405,6 +407,7 @@ export {
   loadProspectWork,
   selectNewestQualifyingAudit,
 } from './prospect-work.js';
+export { PROSPECT_TODO_KINDS } from './prospect-work.js';
 export {
   findAuditsWithUnreadyReports,
   findingsProvenanceMatches,
@@ -461,6 +464,7 @@ export {
   assertReportQualityLease,
   renewReportQualityLease,
   releaseReportQualityLease,
+  getLatestReportQualityRun,
   startReportQualityRun,
   transitionReportQualityRun,
   recordQualityApprovedBundle,
@@ -473,4 +477,4 @@ export {
   ReportQualityLeaseConflictError,
   StaleReportQualityRunError,
 } from './report-quality.js';
-export type { ReportQualityLease } from './report-quality.js';
+export type { LatestReportQualityRun, ReportQualityLease } from './report-quality.js';

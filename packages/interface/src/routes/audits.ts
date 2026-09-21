@@ -27,6 +27,7 @@ import {
   getFindingsForAudit,
   getActiveReportBundle,
   getLatestReportBundle,
+  getLatestReportQualityRun as getLatestReportQualityRunSummary,
   getReportBundleByDigest,
   getLatestFinalizedReport,
   getLatestGeneratedReport,
@@ -389,6 +390,34 @@ async function getLatestReportQualityRun(
     .findOne({ auditId })
     .sort({ createdAt: -1 })
     .lean<ReportQualityRunDocument | null>();
+}
+
+/** The report-quality review endpoint is an operator surface, not a storage
+ *  dump. In particular, private candidate object keys must never cross the
+ *  dashboard boundary; the PDF link below resolves them server-side only
+ *  after the operator has the exact bundle digest. */
+function reportQualityBundleForDashboard(
+  bundle: ReportBundleDocument | ActiveReportBundleDocument | null,
+): Record<string, unknown> | null {
+  if (bundle === null) return null;
+  return {
+    bundleId: bundle.bundleId,
+    qualityRunId: bundle.qualityRunId,
+    auditId: bundle.auditId,
+    epoch: bundle.epoch,
+    bundleDigest: bundle.bundleDigest,
+    state: 'state' in bundle ? bundle.state : 'active',
+    ...('createdAt' in bundle ? { createdAt: bundle.createdAt } : {}),
+    ...('activatedAt' in bundle ? { activatedAt: bundle.activatedAt } : {}),
+    fr: {
+      pdfDigest: bundle.fr.pdfDigest,
+      ...('pageCount' in bundle.fr ? { pageCount: bundle.fr.pageCount } : {}),
+    },
+    en: {
+      pdfDigest: bundle.en.pdfDigest,
+      ...('pageCount' in bundle.en ? { pageCount: bundle.en.pageCount } : {}),
+    },
+  };
 }
 
 /** Plan 068 evidence availability for the operator snapshot. The normal
@@ -1129,11 +1158,16 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       sendError(res, 404, 'audit not found');
       return;
     }
-    const [candidate, active] = await Promise.all([
+    const [run, candidate, active] = await Promise.all([
+      getLatestReportQualityRunSummary(connection, auditId),
       getLatestReportBundle(connection, auditId),
       getActiveReportBundle(connection, auditId),
     ]);
-    sendJson(res, 200, { candidate, active });
+    sendJson(res, 200, {
+      run,
+      candidate: reportQualityBundleForDashboard(candidate),
+      active: reportQualityBundleForDashboard(active),
+    });
   });
   router.get(
     '/api/audits/:auditId/report-quality/:bundleDigest/:language',

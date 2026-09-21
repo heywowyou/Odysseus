@@ -14,6 +14,7 @@ import {
   createReportQualityRunModel,
   type ActiveReportBundleDocument,
   type ReportBundleDocument,
+  type ReportQualityRunDocument,
   type StoredLanguageCandidate,
 } from './schemas/report-quality.schema.js';
 
@@ -204,6 +205,42 @@ export interface NewestReportQualityRun {
   state: ReportBundleState;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/** Narrow operator read of the newest run. It includes the adjudicated
+ *  review issues and stable reason code, but never lease hashes or model-call
+ *  credentials/provenance that the dashboard cannot act on. */
+export type LatestReportQualityRun = Pick<
+  ReportQualityRunDocument,
+  | 'qualityRunId'
+  | 'auditId'
+  | 'epoch'
+  | 'state'
+  | 'issues'
+  | 'errorCode'
+  | 'createdAt'
+  | 'updatedAt'
+>;
+
+export async function getLatestReportQualityRun(
+  connection: Connection,
+  auditId: string,
+): Promise<LatestReportQualityRun | null> {
+  return createReportQualityRunModel(connection)
+    .findOne({ auditId })
+    .sort({ createdAt: -1 })
+    .select({
+      _id: 0,
+      qualityRunId: 1,
+      auditId: 1,
+      epoch: 1,
+      state: 1,
+      issues: 1,
+      errorCode: 1,
+      createdAt: 1,
+      updatedAt: 1,
+    })
+    .lean<LatestReportQualityRun | null>();
 }
 
 /**

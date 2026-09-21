@@ -1211,6 +1211,57 @@ describe('scanSite hydration sweep and discovery waves (plan 059 step 11)', () =
     expect(home?.readiness?.hydrationProgress).toBe('bounded-expansion');
   });
 
+  it('recovers a visited page missing from an older inventory checkpoint', async () => {
+    const recoveredUrl = 'https://example.com/recovered-from-checkpoint';
+    vi.mocked(crawlSite).mockResolvedValue(
+      initialCrawl({
+        pages: [
+          {
+            url: startUrl,
+            depth: 0,
+            status: 'visited',
+            discoveryMethod: 'link',
+            auditProfile: {
+              url: startUrl,
+              profileVersion: 'v1',
+              roleSignals: [{ kind: 'homepage-url', detail: startUrl }],
+            },
+          },
+          {
+            url: recoveredUrl,
+            depth: 1,
+            status: 'visited',
+            discoveryMethod: 'link',
+            auditProfile: {
+              url: recoveredUrl,
+              profileVersion: 'v1',
+              roleSignals: [{ kind: 'homepage-url', detail: recoveredUrl }],
+            },
+          },
+        ],
+        visitedCount: 2,
+      }),
+    );
+    vi.mocked(runRenderedAnalysis).mockImplementation(
+      async (_browser, url) =>
+        ({
+          url,
+          checkOutcomes: everyPageCheck(),
+          hydrationSweep: hydrationSweep([]),
+        }) as never,
+    );
+
+    const result = await scan();
+
+    const candidate = result.inventoryLedger?.candidates.find(
+      (entry) => entry.url === recoveredUrl,
+    );
+    expect(candidate?.discoveries).toEqual([
+      expect.objectContaining({ source: 'visited-page-recovery' }),
+    ]);
+    expect(candidate?.disposition?.disposition).toBe('scanned');
+  });
+
   it('inventories a depth-bound hydrated link instead of scanning it', async () => {
     vi.mocked(crawlSite).mockResolvedValue(initialCrawl({ maxDepth: 0 }));
     vi.mocked(runRenderedAnalysis).mockImplementation(

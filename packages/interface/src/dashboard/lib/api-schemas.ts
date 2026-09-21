@@ -231,6 +231,77 @@ const auditEvidenceQualitySchema = z.object({
   ),
 });
 
+/** GET /api/audits/:auditId/report-quality. The endpoint deliberately
+ *  projects private artifact keys away; this is the small review contract
+ *  the dashboard needs for decisions and candidate PDF links. */
+const reportQualityRunStateSchema = z.enum([
+  'running',
+  'content-clean',
+  'fr-candidate-clean',
+  'en-candidate-clean',
+  'parity-clean',
+  'bundle-final-review',
+  'quality-approved',
+  'awaiting-operator-approval',
+  'operator-approved',
+  'promoted',
+  'needs-operator-review',
+  'failed',
+]);
+
+const reportQualityIssueSchema = z.object({
+  issueId: z.string(),
+  severity: z.enum(['blocking', 'major', 'minor']),
+  target: z.string(),
+  reason: z.string(),
+  repairRoute: z.string(),
+  status: z.enum(['proposed', 'accepted', 'rejected', 'unsure']),
+});
+
+const reportQualityCandidateSchema = z.object({
+  bundleId: z.string(),
+  qualityRunId: z.string(),
+  auditId: z.string(),
+  epoch: z.number().int(),
+  bundleDigest: z.string(),
+  state: z.enum([
+    'quality-approved',
+    'awaiting-operator-approval',
+    'operator-approved',
+    'promoted',
+  ]),
+  fr: z.object({ pdfDigest: z.string(), pageCount: z.number().int().optional() }),
+  en: z.object({ pdfDigest: z.string(), pageCount: z.number().int().optional() }),
+});
+
+const reportQualityActiveSchema = z.object({
+  bundleId: z.string(),
+  qualityRunId: z.string(),
+  auditId: z.string(),
+  epoch: z.number().int(),
+  bundleDigest: z.string(),
+  state: z.literal('active'),
+  fr: z.object({ pdfDigest: z.string() }),
+  en: z.object({ pdfDigest: z.string() }),
+});
+
+export const reportQualitySchema = z.object({
+  run: z
+    .object({
+      qualityRunId: z.string(),
+      auditId: z.string(),
+      epoch: z.number().int(),
+      state: reportQualityRunStateSchema,
+      issues: z.array(reportQualityIssueSchema),
+      errorCode: z.string().optional(),
+      createdAt: z.string(),
+      updatedAt: z.string(),
+    })
+    .nullable(),
+  candidate: reportQualityCandidateSchema.nullable(),
+  active: reportQualityActiveSchema.nullable(),
+});
+
 /** GET /api/audits/:auditId. Strictly validates the identity/lifecycle
  *  fields the page's control flow depends on (which audit, its stage in
  *  scanned/analysed/rendered/approved, severity totals shown in the

@@ -496,6 +496,30 @@ describe('prospect work model', () => {
     expect(work.qualifyingAudit).toMatchObject({ auditId: 'audit-old' });
   });
 
+  it('withdraws stale work rows from terminal prospects, including opted-out prospects', () => {
+    const work = deriveProspectWork(
+      { ...prospect, status: 'opted-out' },
+      {
+        ...emptySources,
+        audits: [audit()],
+        drafts: [
+          {
+            draftId: 'draft-1',
+            prospectId: prospect.prospectId,
+            threadId: 'thread-1',
+            touch: 1,
+            status: 'created',
+            createdAt: new Date('2026-09-14T00:00:00.000Z'),
+          },
+        ],
+      },
+      new Date('2026-09-15T00:00:00.000Z'),
+    );
+
+    expect(work.items).toEqual([]);
+    expect(work.recommendation).toBeUndefined();
+  });
+
   it('qualifies a historical complete prospecting audit and a complete Full scan alike', () => {
     for (const scanIntent of ['prospecting-audit', 'full-audit'] as const) {
       expect(selectNewestQualifyingAudit([audit({ scanIntent })])).toMatchObject({
@@ -583,7 +607,7 @@ describe('prospect work model', () => {
       },
     );
 
-    expect(work.items).toHaveLength(1);
+    expect(work.items).toHaveLength(0);
     expect(work.recommendation).toBeUndefined();
   });
 

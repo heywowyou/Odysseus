@@ -223,6 +223,35 @@ export interface AuditDetailStrings {
     /** {code} is the raw stable warning code. */
     unknownOperationalWarning: string;
   };
+  /** Operator path for report-quality runs that need a decision or an exact
+   *  candidate bundle approval. */
+  reportQuality: {
+    heading: string;
+    description: string;
+    statuses: Record<
+      | 'needs-operator-review'
+      | 'awaiting-operator-approval'
+      | 'operator-approved'
+      | 'promoted'
+      | 'failed',
+      string
+    >;
+    issuesHeading: string;
+    noIssues: string;
+    targetLabel: string;
+    reasonLabel: string;
+    repairLabel: string;
+    candidateHeading: string;
+    candidateDigestLabel: string;
+    frenchPdf: string;
+    englishPdf: string;
+    rerunButton: string;
+    approveButton: string;
+    approvedNotice: string;
+    rerunSuccess: string;
+    approveSuccess: string;
+    actionError: string;
+  };
   /** Issue: operator-reviewed overall grade override. Shown as its own
    *  section of the report panel: the automatic grade the report would
    *  render, and, when the operator has overridden it, the override's
@@ -619,6 +648,34 @@ export const auditDetail = {
       },
       unknownOperationalWarning: 'Diagnostic d’exploitation indisponible ({code}).',
     },
+    reportQuality: {
+      heading: 'Relecture qualité du rapport',
+      description:
+        'Les contrôles du rapport et les décisions encore nécessaires sont regroupés ici.',
+      statuses: {
+        'needs-operator-review': 'Décision requise',
+        'awaiting-operator-approval': 'Rapport en attente d’approbation',
+        'operator-approved': 'Rapport approuvé',
+        promoted: 'Rapport actif',
+        failed: 'Contrôle qualité échoué',
+      },
+      issuesHeading: 'Points à examiner',
+      noIssues: 'Aucun point détaillé n’a été enregistré pour cette relecture.',
+      targetLabel: 'Cible',
+      reasonLabel: 'Motif',
+      repairLabel: 'Piste de correction',
+      candidateHeading: 'Lot candidat',
+      candidateDigestLabel: 'Empreinte du lot',
+      frenchPdf: 'Ouvrir le PDF français',
+      englishPdf: 'Ouvrir le PDF anglais',
+      rerunButton: 'Relancer le contrôle qualité',
+      approveButton: 'Approuver ce lot exact',
+      approvedNotice:
+        'Ce lot a été approuvé ; le rapport actif sera mis à jour après la promotion.',
+      rerunSuccess: 'Le contrôle qualité a été relancé.',
+      approveSuccess: 'Le lot exact a été approuvé et promu.',
+      actionError: 'Impossible de terminer cette action.',
+    },
     gradeOverride: {
       heading: 'Note globale',
       description:
@@ -923,6 +980,32 @@ export const auditDetail = {
           'The browser execution environment does not match the expected isolation profile. This is an operational diagnostic and does not invalidate normalized findings.',
       },
       unknownOperationalWarning: 'Operational diagnostic unavailable ({code}).',
+    },
+    reportQuality: {
+      heading: 'Report quality review',
+      description: 'The report checks and any decisions still needed are gathered here.',
+      statuses: {
+        'needs-operator-review': 'Decision required',
+        'awaiting-operator-approval': 'Awaiting approval',
+        'operator-approved': 'Report approved',
+        promoted: 'Active report',
+        failed: 'Quality check failed',
+      },
+      issuesHeading: 'Points to review',
+      noIssues: 'No detailed point was recorded for this review.',
+      targetLabel: 'Target',
+      reasonLabel: 'Reason',
+      repairLabel: 'Repair route',
+      candidateHeading: 'Candidate bundle',
+      candidateDigestLabel: 'Bundle digest',
+      frenchPdf: 'Open French PDF',
+      englishPdf: 'Open English PDF',
+      rerunButton: 'Run quality check again',
+      approveButton: 'Approve this exact bundle',
+      approvedNotice: 'This bundle is approved; the active report will update after promotion.',
+      rerunSuccess: 'The quality check was started again.',
+      approveSuccess: 'The exact bundle was approved and promoted.',
+      actionError: 'This action could not be completed.',
     },
     gradeOverride: {
       heading: 'Overall grade',

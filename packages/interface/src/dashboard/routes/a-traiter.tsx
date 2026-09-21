@@ -8,6 +8,7 @@ import type { BadgeTone } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { EmptyState } from '../components/ui/empty-state';
+import { Select } from '../components/ui/select';
 import { Skeleton } from '../components/ui/skeleton';
 import {
   Table,
@@ -60,6 +61,7 @@ export function ATraiterPage(): JSX.Element {
 
   const [syncing, setSyncing] = useState(false);
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
+  const [kindFilter, setKindFilter] = useState<TodoRowKind | 'all'>('all');
   const syncMailbox = async (): Promise<void> => {
     setSyncing(true);
     setSyncNotice(null);
@@ -88,6 +90,11 @@ export function ATraiterPage(): JSX.Element {
     }
   };
 
+  const visibleRows =
+    data === undefined || kindFilter === 'all'
+      ? (data?.rows ?? [])
+      : data.rows.filter((row) => row.kind === kindFilter);
+
   let body: JSX.Element;
   if (error !== undefined && data === undefined) {
     body = (
@@ -110,8 +117,15 @@ export function ATraiterPage(): JSX.Element {
         </div>
       </Card>
     );
-  } else if (data.rows.length === 0) {
-    body = <EmptyState icon={CheckCircle2} title={strings.aTraiter.empty} />;
+  } else if (visibleRows.length === 0) {
+    body = (
+      <EmptyState
+        icon={CheckCircle2}
+        title={
+          kindFilter === 'all' ? strings.aTraiter.empty : strings.aTraiter.overview.filteredEmpty
+        }
+      />
+    );
   } else {
     body = (
       <div className="overflow-hidden rounded-xl border border-line bg-panel">
@@ -126,7 +140,7 @@ export function ATraiterPage(): JSX.Element {
             </TableRow>
           </TableHead>
           <TableBody>
-            {data.rows.map((row: TodoRow) => {
+            {visibleRows.map((row: TodoRow) => {
               const kindLabel = isAttentionRow(row)
                 ? strings.attention.kinds[row.kind]
                 : strings.aTraiter.kinds[row.kind];
@@ -186,6 +200,75 @@ export function ATraiterPage(): JSX.Element {
           {syncNotice}
         </p>
       ) : null}
+      {data !== undefined ? (
+        <Card title={strings.aTraiter.overview.heading} className="mb-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <OverviewMetric
+              label={strings.aTraiter.overview.auditedProspects}
+              value={data.summary.auditedProspects}
+            />
+            <OverviewMetric
+              label={strings.aTraiter.overview.activeProspects}
+              value={data.summary.activeProspects}
+            />
+            <OverviewMetric
+              label={strings.aTraiter.overview.actionableProspects}
+              value={data.summary.actionableProspects}
+            />
+            <OverviewMetric
+              label={strings.aTraiter.overview.actionableItems}
+              value={data.summary.actionableItems}
+            />
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-ink-muted">
+            <span>
+              {strings.aTraiter.overview.reconciliation
+                .replace('{audited}', String(data.summary.auditedProspects))
+                .replace('{actions}', String(data.summary.actionableItems))}
+            </span>
+            <Badge tone={data.attentionCount > 0 ? 'serious' : 'neutral'}>
+              {strings.aTraiter.overview.attentionItems}: {data.attentionCount}
+            </Badge>
+            <Badge tone={data.summary.mailboxConfigured ? 'accent' : 'neutral'}>
+              {strings.aTraiter.overview.mailbox}:{' '}
+              {data.summary.mailboxConfigured
+                ? strings.aTraiter.overview.mailboxConfigured
+                : strings.aTraiter.overview.mailboxNotConfigured}
+            </Badge>
+            <span>
+              {strings.aTraiter.overview.mailboxLastSync}:{' '}
+              {data.summary.lastSyncAt === null
+                ? strings.aTraiter.overview.mailboxNeverSynced
+                : formatDateTime(data.summary.lastSyncAt, language)}
+            </span>
+          </div>
+          <label className="mt-3 flex max-w-xs items-center gap-2 text-xs text-ink-muted">
+            {strings.aTraiter.overview.kindFilterLabel}
+            <Select
+              value={kindFilter}
+              onChange={(event) => setKindFilter(event.target.value as TodoRowKind | 'all')}
+            >
+              <option value="all">{strings.aTraiter.overview.allKinds}</option>
+              {(Object.keys(data.summary.kindCounts) as TodoRowKind[])
+                .filter((kind) => data.summary.kindCounts[kind] > 0)
+                .map((kind) => (
+                  <option key={kind} value={kind}>
+                    {strings.aTraiter.overview.kindLabels[kind]} ({data.summary.kindCounts[kind]})
+                  </option>
+                ))}
+            </Select>
+          </label>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {(Object.keys(data.summary.kindCounts) as TodoRowKind[])
+              .filter((kind) => data.summary.kindCounts[kind] > 0)
+              .map((kind) => (
+                <Badge key={kind} tone={KIND_TONE[kind]}>
+                  {strings.aTraiter.overview.kindLabels[kind]}: {data.summary.kindCounts[kind]}
+                </Badge>
+              ))}
+          </div>
+        </Card>
+      ) : null}
       <p
         className="mb-4 rounded-xl border border-line-strong bg-panel px-5 py-4 text-sm font-medium text-ink"
         role="note"
@@ -200,5 +283,14 @@ export function ATraiterPage(): JSX.Element {
       ) : null}
       {body}
     </article>
+  );
+}
+
+function OverviewMetric(props: { label: string; value: number }): JSX.Element {
+  return (
+    <div className="rounded-lg border border-line bg-raised px-3 py-2">
+      <p className="numeric text-xl font-semibold text-ink">{props.value}</p>
+      <p className="text-xs text-ink-muted">{props.label}</p>
+    </div>
   );
 }

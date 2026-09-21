@@ -186,7 +186,28 @@ function installFixture(fixture: WorkflowFixture): void {
                   },
                 ]
               : [];
-        return jsonResponse({ rows });
+        return jsonResponse({
+          rows,
+          attentionCount: rows.filter((row) => 'attentionId' in row).length,
+          summary: {
+            activeProspects: 1,
+            auditedProspects: fixture.stage === 'audit' ? 1 : 0,
+            actionableItems: rows.length,
+            actionableProspects: rows.length > 0 ? 1 : 0,
+            kindCounts: {
+              draft: rows.filter((row) => row.kind === 'draft').length,
+              reply: rows.filter((row) => row.kind === 'reply').length,
+              'follow-up': rows.filter((row) => row.kind === 'follow-up').length,
+              'first-email': rows.filter((row) => row.kind === 'first-email').length,
+              'audit-input': rows.filter((row) => row.kind === 'audit-input').length,
+              'audit-report': rows.filter((row) => row.kind === 'audit-report').length,
+              'report-quality-review': rows.filter((row) => row.kind === 'report-quality-review')
+                .length,
+            },
+            mailboxConfigured: false,
+            lastSyncAt: null,
+          },
+        });
       }
 
       if (path === '/api/directory' && method === 'GET') {

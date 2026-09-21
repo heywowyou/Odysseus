@@ -2352,9 +2352,20 @@ export async function scanSite(
     if (inventoryLedger === undefined) return undefined;
     const scannedUrls = [...pagesToScan.map((page) => page.url), ...extraScannedUrlGroups.flat()];
     for (const url of scannedUrls) {
-      const candidate = inventoryLedger.candidate(url);
+      let candidate = inventoryLedger.candidate(url);
       if (candidate === undefined) {
-        throw new Error(`scanSite: visited page ${url} is missing from the inventory ledger`);
+        // A resumed frontier can contain a visited page written by an older
+        // checkpoint before its inventory row was persisted. The page was
+        // genuinely visited, so failing the whole audit loses valid work;
+        // recover it with explicit provenance instead of pretending it was a
+        // normal link discovery. The resulting ledger remains reconciled and
+        // makes the repair visible to downstream evidence consumers.
+        candidate = inventoryLedger.recordDiscovery({
+          url,
+          source: 'visited-page-recovery',
+          discoveredAt: new Date(),
+          observedUrl: url,
+        });
       }
       if (candidate.disposition === undefined) {
         inventoryLedger.recordDisposition({

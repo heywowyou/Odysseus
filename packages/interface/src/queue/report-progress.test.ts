@@ -118,6 +118,30 @@ describe('createScanProgressReporter staged full-audit progress', () => {
     });
   });
 
+  it('reconciles pages discovered after crawl telemetry into the durable inventory count', async () => {
+    const report = createScanProgressReporter({} as never, 'job-1', 'full-audit');
+    report({ type: 'crawl-start', maxPages: 500, effectiveDelayMs: 1000, robotsTxtFound: true });
+    report({ type: 'crawl-page', visited: 185, maxPages: 500, queued: 31 });
+    report({
+      type: 'crawl-exclusions',
+      excluded: { discoveryOnly: 0, externalRedirect: 0, nonHtml: 0, httpError: 0, error: 0 },
+    });
+    report({ type: 'content-scan-start', totalPages: 216, alreadyCompleted: 0, concurrency: 2 });
+
+    await vi.waitFor(() => expect(updateJobProgress).toHaveBeenCalledTimes(4));
+    const contentStart = vi.mocked(updateJobProgress).mock.calls[3]?.[2];
+    expect(contentStart).toMatchObject({
+      phase: 'content-scan',
+      progress: {
+        crawl: {
+          visited: 216,
+          target: 500,
+        },
+        contentScan: { completed: 0, target: 216 },
+      },
+    });
+  });
+
   it('leaves the queued phase at setup, before the paced robots and sitemap fetches finish', async () => {
     // Issue #121: a slow-profile job used to sit on phase queued for the
     // whole robots.txt plus sitemap window because the first event only

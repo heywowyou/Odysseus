@@ -11,11 +11,13 @@ import {
   findProspectsByDomain,
   findOutreachThreadByProspect,
   getProspectHub,
+  getLatestOutreachSyncAt,
   isSuppressed,
   listOutreachDrafts,
   listDirectory,
   loadProspectWork,
   listProspectTodo,
+  PROSPECT_TODO_KINDS,
   listProspectAudits,
   listProspectScopeJobIds,
   listProspectEvents,
@@ -56,7 +58,7 @@ import {
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { purgeProspectAuditStorage } from '../artifacts/purge-prospect-audit-storage.js';
 import { readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
-import { getPreviewPublicBaseUrl } from '../config.js';
+import { getPreviewPublicBaseUrl, isMailboxConfigured } from '../config.js';
 import { createConfiguredMailboxDraftAdapter } from '../outreach/configured-mailbox-draft-adapter.js';
 import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
 import { createMongoOutreachPreviewStoreV3 } from '../outreach/mongo-outreach-preview-store-v2.js';
@@ -185,9 +187,34 @@ export function registerProspectHubRoutes(
 
   router.get('/api/prospect-hub/todo', async ({ res }) => {
     // Plan 060 §8: the sidebar badge is the server-provided attention count,
-    // not the length of a client-side array.
-    const rows = await listProspectTodo(connection);
-    sendJson(res, 200, { rows, attentionCount: rows.length });
+    // not the length of a client-side array. The summary deliberately keeps
+    // audited prospects separate from actionable rows: one prospect may have
+    // no current action, while another may open more than one row.
+    const [rows, activeProspects, auditedProspects, lastSyncedAt] = await Promise.all([
+      listProspectTodo(connection),
+      listProspects(connection, { page: 1, pageSize: 1 }),
+      listProspects(connection, { status: 'audited', page: 1, pageSize: 1 }),
+      getLatestOutreachSyncAt(connection),
+    ]);
+    const kindCounts = Object.fromEntries(PROSPECT_TODO_KINDS.map((kind) => [kind, 0])) as Record<
+      (typeof PROSPECT_TODO_KINDS)[number],
+      number
+    >;
+    for (const row of rows) kindCounts[row.kind] += 1;
+    const attentionCount = rows.filter((row) => row.attentionId !== undefined).length;
+    sendJson(res, 200, {
+      rows,
+      attentionCount,
+      summary: {
+        activeProspects: activeProspects.total,
+        auditedProspects: auditedProspects.total,
+        actionableItems: rows.length,
+        actionableProspects: new Set(rows.map((row) => row.prospectId)).size,
+        kindCounts,
+        mailboxConfigured: isMailboxConfigured(),
+        lastSyncAt: lastSyncedAt?.toISOString() ?? null,
+      },
+    });
   });
 
   // Check one entered address against suppression. Hashing happens inside
@@ -726,8 +753,31 @@ export function registerProspectHubRoutes(
       params['prospectId']!,
       status as ProspectStatus,
     );
-    if (prospect === null) sendError(res, 404, 'prospect not found');
-    else sendJson(res, 200, prospect);
+    if (prospect === null) {
+      sendError(res, 404, 'prospect not found');
+      return;
+    }
+    if (status !== 'opted-out') {
+      sendJson(res, 200, prospect);
+      return;
+    }
+    // The status selector is also allowed to record an opt-out. Keep its
+    // side effects identical to the explicit outcome path: provider drafts,
+    // live previews and the thread must leave circulation together.
+    try {
+      const withdrawn = await withdrawOutreachForProspect(
+        connection,
+        prospect.prospectId,
+        'opted-out',
+        {
+          publisher: createConfiguredPreviewPublisher,
+          mailbox: createConfiguredMailboxDraftAdapter(),
+        },
+      );
+      sendJson(res, 200, { ...prospect, withdrawn });
+    } catch {
+      sendError(res, 503, 'the opt-out was saved but live previews could not be removed');
+    }
   });
 
   router.post('/api/prospects/:prospectId/outcome', async ({ req, res, params }) => {

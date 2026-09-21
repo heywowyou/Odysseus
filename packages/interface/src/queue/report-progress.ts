@@ -40,6 +40,17 @@ export function createScanProgressReporter(
   let lastCrawlPageAtMs: number | undefined;
   const crawlDurationEstimator = createDurationEstimator();
 
+  // The staged scanner may admit pages discovered by rendered/state surfaces
+  // after crawl-page events have stopped. Keep the last crawl snapshot here
+  // so content-scan-start can advance the durable inventoried count without
+  // dropping the effective delay or ETA fields from the nested crawl object.
+  let crawlVisited = 0;
+  let crawlTarget: number | undefined;
+  let crawlEffectiveDelayMs: number | undefined;
+  let crawlEtaMs: number | undefined;
+  let crawlEtaCalculatedAt: Date | undefined;
+  let crawlExcluded = 0;
+
   let contentScanConcurrency = 1;
   const contentScanDurationEstimator = createDurationEstimator();
   const lighthouseDurationEstimator = createDurationEstimator();
@@ -58,6 +69,11 @@ export function createScanProgressReporter(
         effectiveDelayMs: event.delayMs,
         observedPageCostMs: undefined,
       });
+      crawlTarget = event.maxPages;
+      crawlEffectiveDelayMs = event.delayMs;
+      crawlEtaMs = etaMs;
+      crawlEtaCalculatedAt = etaMs === undefined ? undefined : new Date();
+      crawlVisited = 0;
       await reportJobPhase(connection, jobId, jobType, {
         phase: 'crawl',
         progress: {
@@ -65,7 +81,7 @@ export function createScanProgressReporter(
             visited: 0,
             target: event.maxPages,
             effectiveDelayMs: event.delayMs,
-            ...(etaMs !== undefined ? { etaMs, etaCalculatedAt: new Date() } : {}),
+            ...(etaMs !== undefined ? { etaMs, etaCalculatedAt: crawlEtaCalculatedAt! } : {}),
           },
         },
       });
@@ -86,6 +102,11 @@ export function createScanProgressReporter(
         effectiveDelayMs,
         observedPageCostMs: undefined,
       });
+      crawlTarget = event.maxPages;
+      crawlEffectiveDelayMs = effectiveDelayMs;
+      crawlEtaMs = etaMs;
+      crawlEtaCalculatedAt = etaMs === undefined ? undefined : new Date();
+      crawlVisited = 0;
       await reportJobPhase(connection, jobId, jobType, {
         phase: 'crawl',
         progress: {
@@ -94,7 +115,7 @@ export function createScanProgressReporter(
             target: event.maxPages,
             effectiveDelayMs,
             // Absent when the crawl is uncapped: no known target, no honest ETA.
-            ...(etaMs !== undefined ? { etaMs, etaCalculatedAt: new Date() } : {}),
+            ...(etaMs !== undefined ? { etaMs, etaCalculatedAt: crawlEtaCalculatedAt! } : {}),
           },
         },
       });
@@ -114,6 +135,10 @@ export function createScanProgressReporter(
         effectiveDelayMs,
         observedPageCostMs: crawlDurationEstimator.estimateMs(),
       });
+      crawlVisited = event.visited;
+      crawlTarget = event.maxPages;
+      crawlEtaMs = etaMs;
+      crawlEtaCalculatedAt = etaMs === undefined ? undefined : new Date();
       await reportJobPhase(connection, jobId, jobType, {
         phase: 'crawl',
         progress: {
@@ -121,7 +146,7 @@ export function createScanProgressReporter(
             visited: event.visited,
             target: event.maxPages,
             effectiveDelayMs,
-            ...(etaMs !== undefined ? { etaMs, etaCalculatedAt: new Date() } : {}),
+            ...(etaMs !== undefined ? { etaMs, etaCalculatedAt: crawlEtaCalculatedAt! } : {}),
           },
         },
       });
@@ -141,6 +166,12 @@ export function createScanProgressReporter(
     }
 
     if (event.type === 'crawl-exclusions') {
+      crawlExcluded =
+        event.excluded.discoveryOnly +
+        event.excluded.externalRedirect +
+        event.excluded.nonHtml +
+        event.excluded.httpError +
+        event.excluded.error;
       await reportJobPhase(connection, jobId, jobType, {
         progress: { crawlExclusions: event.excluded },
       });
@@ -158,9 +189,39 @@ export function createScanProgressReporter(
         concurrency: contentScanConcurrency,
         smoothedPageDurationMs: contentScanDurationEstimator.estimateMs(),
       });
+      // State-surface discovery can add real inventoried pages after the
+      // crawl's last page event. The content target is the checked subset;
+      // adding known exclusions gives the complete inventory denominator.
+      // Without this update the dashboard can truthfully show 216 checked
+      // pages beside a stale 185 inventoried count and make a healthy
+      // discovery expansion look like a ledger failure.
+      const inventoriedAfterSurfaceDiscovery = event.totalPages + crawlExcluded;
+      const inventoryTarget =
+        crawlTarget === undefined
+          ? inventoriedAfterSurfaceDiscovery
+          : Math.max(crawlTarget, inventoriedAfterSurfaceDiscovery);
+      const inventoryVisited = Math.max(crawlVisited, inventoriedAfterSurfaceDiscovery);
+      const crawlInventoryPatch =
+        crawlTarget === undefined
+          ? undefined
+          : {
+              visited: inventoryVisited,
+              target: inventoryTarget,
+              ...(crawlEffectiveDelayMs === undefined
+                ? {}
+                : { effectiveDelayMs: crawlEffectiveDelayMs }),
+              ...(crawlEtaMs === undefined || crawlEtaCalculatedAt === undefined
+                ? {}
+                : { etaMs: crawlEtaMs, etaCalculatedAt: crawlEtaCalculatedAt! }),
+            };
+      if (crawlInventoryPatch !== undefined) {
+        crawlVisited = crawlInventoryPatch.visited;
+        crawlTarget = crawlInventoryPatch.target;
+      }
       await reportJobPhase(connection, jobId, jobType, {
         phase: 'content-scan',
         progress: {
+          ...(crawlInventoryPatch === undefined ? {} : { crawl: crawlInventoryPatch }),
           contentScan: {
             completed: event.alreadyCompleted,
             target: event.totalPages,

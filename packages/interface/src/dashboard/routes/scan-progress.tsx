@@ -23,6 +23,7 @@ import { usePolling } from '../lib/use-polling';
 import { hostnameOf } from './audit-detail-model';
 import { IdentityConfirmField } from './identity-confirm-field';
 import type { IdentityField } from './identity-confirm-field';
+import { scanFailureReason } from './scan-failure-model';
 import {
   agedEtaMs,
   contentScanProgress,
@@ -577,9 +578,20 @@ function ReportIssueCard({ job }: { job: ScanJobDetail }): JSX.Element {
 
 function FailedCard({ job }: { job: ScanJobDetail }): JSX.Element {
   const { strings } = useI18n();
+  const reason = scanFailureReason(job.error);
   return (
     <Card title={strings.progress.failedHeading} className="border-danger/40">
-      {job.error !== undefined ? <p className="text-sm text-ink-soft">{job.error}</p> : null}
+      <p className="text-sm text-ink-soft">{strings.progress.failureReasons[reason]}</p>
+      {job.error !== undefined ? (
+        <details className="mt-3 rounded-lg border border-line bg-raised px-3 py-2">
+          <summary className="cursor-pointer text-xs font-medium text-ink-muted">
+            {strings.progress.failureTechnicalDetails}
+          </summary>
+          <pre className="mt-2 overflow-x-auto whitespace-pre-wrap font-mono text-xs text-ink-soft">
+            {job.error}
+          </pre>
+        </details>
+      ) : null}
       {/* Issue #187: the coverage gate's failure text names the crawl delay
           and scan concurrency fields as the remedy but had no link to
           them; the server declares the gate case (`coverageGateBlocked`)
@@ -602,6 +614,10 @@ function FailedCard({ job }: { job: ScanJobDetail }): JSX.Element {
             {strings.progress.goToAuditLink}
           </Link>
         </div>
+      ) : !job.coverageGateBlocked ? (
+        <Link to="/scans/new" className={buttonStyles('primary', 'sm')}>
+          {strings.progress.newScanLink}
+        </Link>
       ) : null}
     </Card>
   );

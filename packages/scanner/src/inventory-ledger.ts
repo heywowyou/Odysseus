@@ -66,7 +66,18 @@ export const INVENTORY_LEDGER_VERSION = 'inventory-ledger-v1';
  * distinction cannot explain why a second wave was needed.
  */
 export type InventoryDiscoverySource =
-  'start' | 'link' | 'rendered-link' | 'hydrated-link' | 'hreflang' | 'seed' | 'sitemap';
+  | 'start'
+  | 'link'
+  | 'rendered-link'
+  | 'hydrated-link'
+  | 'hreflang'
+  | 'seed'
+  | 'sitemap'
+  /** Recovery provenance for a visited page restored from a stale or older
+   *  checkpoint whose inventory omitted the page. This is intentionally not
+   *  called `link`: the ledger must disclose that the original discovery route
+   *  was unavailable rather than inventing one. */
+  | 'visited-page-recovery';
 
 /**
  * The one terminal fate of a candidate. Every member names its cause, because

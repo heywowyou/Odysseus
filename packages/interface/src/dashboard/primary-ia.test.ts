@@ -26,7 +26,27 @@ function stubTodo(): void {
     vi.fn(async () => ({
       ok: true,
       status: 200,
-      json: async () => ({ rows: [], attentionCount: 0 }),
+      json: async () => ({
+        rows: [],
+        attentionCount: 0,
+        summary: {
+          activeProspects: 0,
+          auditedProspects: 0,
+          actionableItems: 0,
+          actionableProspects: 0,
+          kindCounts: {
+            draft: 0,
+            reply: 0,
+            'follow-up': 0,
+            'first-email': 0,
+            'audit-input': 0,
+            'audit-report': 0,
+            'report-quality-review': 0,
+          },
+          mailboxConfigured: false,
+          lastSyncAt: null,
+        },
+      }),
     })),
   );
 }

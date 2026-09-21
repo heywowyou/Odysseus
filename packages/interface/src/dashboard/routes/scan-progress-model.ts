@@ -102,20 +102,33 @@ export function coverageSegments(
         exclusions.nonHtml +
         exclusions.httpError +
         exclusions.error;
+  // A staged full audit can discover additional pages after crawl-page
+  // telemetry has stopped. The checked subset plus navigated exclusions is
+  // then the stronger inventoried count. Use it when the older crawl counter
+  // lags, so the legend never presents an impossible checked > inventoried
+  // relationship. Performance is nested inside content, so cap that band at
+  // the checked count when reading a partially written/legacy job snapshot.
+  const inventoried = Math.max(visited, checked + excluded);
+  const safeMeasured = Math.min(measured, checked);
   const segments: CoverageSegment[] = [
-    { kind: 'measured', label: labels.measured, value: measured, displayValue: measured },
+    {
+      kind: 'measured',
+      label: labels.measured,
+      value: safeMeasured,
+      displayValue: safeMeasured,
+    },
     {
       kind: 'checked',
       label: labels.checked,
-      value: Math.max(0, checked - measured),
+      value: Math.max(0, checked - safeMeasured),
       displayValue: checked,
     },
     { kind: 'excluded', label: labels.excluded, value: excluded, displayValue: excluded },
     {
       kind: 'reached',
       label: labels.reached,
-      value: Math.max(0, visited - checked - excluded),
-      displayValue: visited,
+      value: Math.max(0, inventoried - checked - excluded),
+      displayValue: inventoried,
     },
     { kind: 'omitted', label: labels.omitted, value: omitted, displayValue: omitted },
   ];

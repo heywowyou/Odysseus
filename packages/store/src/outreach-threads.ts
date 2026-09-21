@@ -319,6 +319,18 @@ export async function listOutreachThreads(
   return cursor.lean();
 }
 
+/** Returns the most recent provider reconciliation timestamp without exposing
+ *  a thread or any mailbox identity. The inbox uses this as freshness
+ *  context; absence means no successful sync has stamped a thread yet. */
+export async function getLatestOutreachSyncAt(connection: Connection): Promise<Date | null> {
+  const row = await createOutreachThreadModel(connection)
+    .findOne({ lastSyncedAt: { $exists: true } })
+    .sort({ lastSyncedAt: -1 })
+    .select({ _id: 0, lastSyncedAt: 1 })
+    .lean<{ lastSyncedAt?: Date } | null>();
+  return row?.lastSyncedAt ?? null;
+}
+
 export interface ListThreadsDueForFollowUpOptions {
   now: Date;
   limit?: number;

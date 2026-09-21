@@ -24,6 +24,7 @@ import {
   canonicalJobTypeForScanIntent,
   displayJobIntent,
   type JobDocument,
+  type JobType,
   type JobOptionsSnapshot,
   registrableDomainForScan,
 } from '@odysseus/store';
@@ -177,6 +178,17 @@ async function autoAttachProspect(
 }
 
 type LaunchableScanType = 'quick-check' | 'full-audit';
+
+/** Job kinds that represent a scan and therefore belong in the dashboard's
+ *  scan history. Outreach draft/follow-up batch jobs share the durable queue
+ *  but have no scan detail page and must never be projected as one. */
+const DASHBOARD_SCAN_JOB_TYPES: readonly JobType[] = [
+  'full-audit',
+  'quick-check',
+  'prospecting-audit',
+  'prospecting',
+  'outreach-full-scan',
+];
 
 type ScanLaunchOutcome =
   | { started: true; job: JobDocument }
@@ -508,12 +520,14 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       await listJobs(
         connection,
         Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : undefined,
+        { types: DASHBOARD_SCAN_JOB_TYPES },
       )
     ).filter(
       (job) =>
-        job.type !== 'prospecting' ||
-        job.scanType === 'quick-check' ||
-        job.scanType === 'prospecting-audit',
+        DASHBOARD_SCAN_JOB_TYPES.includes(job.type) &&
+        (job.type !== 'prospecting' ||
+          job.scanType === 'quick-check' ||
+          job.scanType === 'prospecting-audit'),
     );
 
     const auditIds = jobs.map((job) => job.auditId).filter((id): id is string => id !== undefined);

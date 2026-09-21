@@ -56,12 +56,11 @@ async function isFile(candidate: string): Promise<boolean> {
  *  hashed assets). Client-side routes have no file on disk, so anything
  *  under one of APP_ROUTE_PREFIXES (app-routes.ts, kept in sync with
  *  dashboard/App.tsx's top-level routes) serves the SPA entry and lets the
- *  client router render the route; the prefix list is deliberate so anything
- *  else (bookmarks to the removed pre-rebuild pages, stray paths) keeps plain
- *  404 semantics. /api/* never reaches this resolver, the router matches
- *  those routes first. Any path that resolves outside publicDir is refused
- *  outright (traversal), so a request URL's own '..' segments can never
- *  escape publicDir. */
+ *  client router render the route. Extensionless paths also fall back so a
+ *  direct bookmark to a newly added client route can reach the SPA router;
+ *  file-looking paths and /api/* keep plain 404 semantics. Any path that
+ *  resolves outside publicDir is refused outright (traversal), so a request
+ *  URL's own '..' segments can never escape publicDir. */
 export async function resolveStaticPath(
   publicDir: string,
   requestedPath: string,
@@ -72,7 +71,10 @@ export async function resolveStaticPath(
   if (primary === null) return { kind: 'forbidden' };
   if (await isFile(primary)) return { kind: 'file', filePath: primary };
 
-  if (APP_ROUTE_PATTERN.test(normalized)) {
+  const isApiPath = normalized === '/api' || normalized.startsWith('/api/');
+  const lastSegment = path.posix.basename(normalized);
+  const isFileLookingPath = path.extname(lastSegment) !== '';
+  if (!isApiPath && (APP_ROUTE_PATTERN.test(normalized) || !isFileLookingPath)) {
     const entryPath = resolveWithin(publicDir, '/index.html');
     if (entryPath !== null && (await isFile(entryPath))) {
       return { kind: 'spa-fallback', filePath: entryPath };

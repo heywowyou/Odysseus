@@ -16,6 +16,7 @@ import {
   scanProgress,
   urlResultState,
 } from './scan-progress-model';
+import { scanFailureReason } from './scan-failure-model';
 
 /** Fixture shaped like the GET /api/scans/:jobId document (store Job).
  *  Optional fields are spread in rather than set to undefined so the
@@ -116,6 +117,36 @@ describe('coverageSegments', () => {
     expect(byKind['checked']).toMatchObject({ value: 0, displayValue: 28 });
     expect(byKind['reached']).toMatchObject({ value: 4, displayValue: 32 });
     expect(byKind['omitted']).toMatchObject({ value: 0, displayValue: 0 });
+  });
+
+  it('uses the checked inventory when crawl telemetry has not counted surface pages yet', () => {
+    const segments = coverageSegments(
+      job({
+        progress: {
+          crawl: { visited: 185, target: 216 },
+          contentScan: { completed: 216, target: 216 },
+          lighthouse: { completed: 216, target: 216 },
+        },
+      }),
+      en.common.coverage,
+    );
+    const byKind = Object.fromEntries(segments.map((segment) => [segment.kind, segment]));
+    expect(byKind['measured']).toMatchObject({ displayValue: 216 });
+    expect(byKind['checked']).toMatchObject({ displayValue: 216 });
+    expect(byKind['reached']).toMatchObject({ displayValue: 216 });
+    expect(byKind['reached']?.value).toBe(0);
+  });
+});
+
+describe('scanFailureReason', () => {
+  it('classifies network and inventory failures without exposing their prose', () => {
+    expect(scanFailureReason('crawlSite: network safety blocked robots target')).toBe(
+      'site-unreachable',
+    );
+    expect(
+      scanFailureReason('scanSite: visited page /profile is missing from the inventory ledger'),
+    ).toBe('inventory');
+    expect(scanFailureReason('unexpected worker failure')).toBe('generic');
   });
 });
 

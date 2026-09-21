@@ -843,6 +843,75 @@ describe('report approval is explicit (plan 060 §2.4)', () => {
   });
 });
 
+describe('report quality review path (plan 058 operator workflow)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('opens the candidate PDFs and approves the exact bundle from the audit page', async () => {
+    const bundleDigest = `sha256:${'a'.repeat(64)}`;
+    const pdfDigest = `sha256:${'b'.repeat(64)}`;
+    const qualityResponse = {
+      run: {
+        qualityRunId: 'quality-run-1',
+        auditId: 'audit-1',
+        epoch: 3,
+        state: 'quality-approved',
+        issues: [],
+        createdAt: '2026-09-20T10:00:00.000Z',
+        updatedAt: '2026-09-20T10:01:00.000Z',
+      },
+      candidate: {
+        bundleId: 'bundle-1',
+        qualityRunId: 'quality-run-1',
+        auditId: 'audit-1',
+        epoch: 3,
+        bundleDigest,
+        state: 'awaiting-operator-approval',
+        fr: { pdfDigest, pageCount: 8 },
+        en: { pdfDigest, pageCount: 8 },
+      },
+      active: null,
+    };
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : '';
+      if (url.endsWith('/report-quality')) return jsonResponse(qualityResponse);
+      if (url.includes('/report-quality/approve')) return jsonResponse({ promoted: true });
+      if (url.includes('report-preparation')) return notFoundResponse();
+      return jsonResponse({ ...emptyAudit, scanIntent: 'full-audit' });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
+    await settle(container, 'Approuver ce lot exact');
+    expect(
+      container.querySelector(`a[href*="${encodeURIComponent(bundleDigest)}"]`),
+    ).not.toBeNull();
+
+    const approveButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Approuver ce lot exact',
+    );
+    expect(approveButton).toBeDefined();
+    await act(async () => {
+      approveButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+
+    const approveCall = fetchMock.mock.calls.find(([input]) =>
+      (typeof input === 'string' ? input : String(input)).includes('/report-quality/approve'),
+    );
+    expect(approveCall).toBeDefined();
+    expect(JSON.parse(String(approveCall?.[1]?.body))).toEqual({
+      qualityRunId: 'quality-run-1',
+      epoch: 3,
+      bundleDigest,
+    });
+    root.unmount();
+  });
+});
+
 describe('preview note on the audit page (plan 040 slice 5)', () => {
   afterEach(() => {
     vi.unstubAllGlobals();

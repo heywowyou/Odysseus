@@ -25,6 +25,7 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   restoreProspect: vi.fn(),
   findProspectsByDomain: vi.fn(),
   findOutreachThreadByProspect: vi.fn(),
+  getLatestOutreachSyncAt: vi.fn(),
   getProspectHub: vi.fn(),
   isSuppressed: vi.fn(),
   listOutreachDrafts: vi.fn(),
@@ -46,6 +47,15 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   setProspectStatus: vi.fn(),
   updateProspect: vi.fn(),
   withdrawProspectOutreach: vi.fn(),
+  PROSPECT_TODO_KINDS: [
+    'draft',
+    'reply',
+    'follow-up',
+    'first-email',
+    'audit-input',
+    'audit-report',
+    'report-quality-review',
+  ],
 }));
 const { syncMailbox } = vi.hoisted(() => ({ syncMailbox: vi.fn() }));
 vi.mock('../outreach/mailbox-sync.js', () => ({ syncMailbox }));
@@ -87,6 +97,7 @@ import {
   deleteFinishedScanJobsForAudit,
   restoreProspect,
   findOutreachThreadByProspect,
+  getLatestOutreachSyncAt,
   getProspectHub,
   isSuppressed,
   listOutreachDrafts,
@@ -185,6 +196,7 @@ beforeEach(() => {
   vi.mocked(deleteProspectPermanently).mockResolvedValue({ deleted: true } as never);
   vi.mocked(countActiveProspectDeletionJobs).mockResolvedValue(0);
   vi.mocked(getProspectHub).mockResolvedValue({ prospectId: 'p-1' } as never);
+  vi.mocked(getLatestOutreachSyncAt).mockResolvedValue(null);
   vi.mocked(listOutreachPreviews).mockResolvedValue([]);
   vi.mocked(withdrawProspectOutreach).mockResolvedValue({
     drafts: 0,
@@ -285,8 +297,29 @@ describe('prospect hub routes', () => {
     const response = await handle('/api/prospect-hub/todo');
 
     expect(response.statusCode).toBe(200);
-    // Plan 060 §8: the badge count is computed server-side, next to the rows.
-    expect(response.body).toEqual({ rows, attentionCount: 1 });
+    // Plan 060 §8: only attention rows feed the shell badge; the summary
+    // keeps audited prospects and actionable work on separate axes.
+    expect(response.body).toEqual({
+      rows,
+      attentionCount: 0,
+      summary: {
+        activeProspects: 0,
+        auditedProspects: 0,
+        actionableItems: 1,
+        actionableProspects: 1,
+        kindCounts: {
+          draft: 0,
+          reply: 0,
+          'follow-up': 0,
+          'first-email': 1,
+          'audit-input': 0,
+          'audit-report': 0,
+          'report-quality-review': 0,
+        },
+        mailboxConfigured: expect.any(Boolean),
+        lastSyncAt: null,
+      },
+    });
     expect(listProspectTodo).toHaveBeenCalledWith(fakeConnection);
   });
 
@@ -623,6 +656,31 @@ describe('prospect hub routes', () => {
     expect(deletePreview).toHaveBeenCalledWith('k/preview.html');
     expect(withdrawProspectOutreach).toHaveBeenCalledWith(fakeConnection, 'p-1', 'opted-out');
     expect(deleteMailboxDraft).toHaveBeenCalledWith('gmail-draft-9');
+  });
+
+  it('withdraws outreach when the status selector records an opt-out', async () => {
+    vi.mocked(setProspectStatus).mockResolvedValue({
+      prospectId: 'p-1',
+      status: 'opted-out',
+    } as never);
+    vi.mocked(withdrawProspectOutreach).mockResolvedValue({
+      drafts: 1,
+      previews: 0,
+      threadClosed: true,
+      providerDraftIds: [],
+      previewObjectKeys: [],
+    });
+
+    const response = await handle('/api/prospects/p-1/status', 'PATCH', {
+      status: 'opted-out',
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toMatchObject({
+      status: 'opted-out',
+      withdrawn: { drafts: 1, previews: 0, threadClosed: true },
+    });
+    expect(withdrawProspectOutreach).toHaveBeenCalledWith(fakeConnection, 'p-1', 'opted-out');
   });
 
   it('withdraws the mailbox draft when a prospect is deleted', async () => {

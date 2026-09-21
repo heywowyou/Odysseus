@@ -99,8 +99,19 @@ describe('resolveStaticPath', () => {
     expect(resolution).toEqual({ kind: 'not-found' });
   });
 
-  it('keeps 404 semantics outside the app routes', async () => {
+  it('serves the shell for an extensionless unknown dashboard path', async () => {
+    const entry = path.join(publicDir, 'index.html');
+    const resolution = await resolveStaticPath(publicDir, '/does-not-exist');
+    expect(resolution).toEqual({ kind: 'spa-fallback', filePath: entry });
+  });
+
+  it('keeps 404 semantics for file-looking paths outside the app routes', async () => {
     const resolution = await resolveStaticPath(publicDir, '/missing.html');
+    expect(resolution).toEqual({ kind: 'not-found' });
+  });
+
+  it('never serves the dashboard shell for an unknown API endpoint', async () => {
+    const resolution = await resolveStaticPath(publicDir, '/api/missing');
     expect(resolution).toEqual({ kind: 'not-found' });
   });
 

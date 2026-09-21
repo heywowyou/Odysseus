@@ -44,6 +44,16 @@ export type ProspectTodoKind =
   | 'audit-report'
   | 'report-quality-review';
 
+export const PROSPECT_TODO_KINDS = [
+  'draft',
+  'reply',
+  'follow-up',
+  'first-email',
+  'audit-input',
+  'audit-report',
+  'report-quality-review',
+] as const satisfies readonly ProspectTodoKind[];
+
 /** Plan 060 §8: severity of a human-attention row. Kept as a literal union
  *  here because the store cannot import the interface package's operator
  *  contract, which owns the same closed vocabulary. */
@@ -477,15 +487,17 @@ export function deriveProspectWork(
   }
 
   items.sort((left, right) => asTime(right.since) - asTime(left.since));
-  // Plan 050: an archived prospect is out of active work. Its audit state
-  // stays visible on the detail page, but it opens no work and recommends
-  // nothing until the operator restores it.
-  if (prospect.archivedAt !== undefined) items.length = 0;
+  // Plan 050: an archived prospect is out of active work. Terminal outcomes
+  // are the same boundary for outreach: an opt-out, win or loss must not keep
+  // a stale draft, reply or report task alive after the status transition.
+  if (prospect.archivedAt !== undefined || TERMINAL_PROSPECT_STATUSES.has(prospect.status)) {
+    items.length = 0;
+  }
   // Attention rows name an audit-quality decision, not the prospect's next
   // commercial action, so they never become the recommendation.
   const recommendedItem = items.find((item) => item.attentionId === undefined);
   const nextRecommendation =
-    prospect.archivedAt !== undefined
+    prospect.archivedAt !== undefined || TERMINAL_PROSPECT_STATUSES.has(prospect.status)
       ? undefined
       : recommendation(
           prospect,

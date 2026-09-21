@@ -863,6 +863,25 @@ describe('GET /api/scans declares the display outcome code (plan 060 §5.3)', ()
   });
 });
 
+describe('GET /api/scans keeps internal outreach batches out of scan history', () => {
+  it('filters the durable query before projecting rows', async () => {
+    vi.mocked(listJobs).mockResolvedValue([
+      summaryRow({ jobId: 'internal', type: 'outreach-draft-batch' }),
+      summaryRow({ jobId: 'scan', type: 'full-audit' }),
+    ] as never);
+
+    const response = await get('/api/scans');
+
+    expect(response.statusCode).toBe(200);
+    expect((response.body as { jobId: string }[]).map((row) => row.jobId)).toEqual(['scan']);
+    const queryOptions = vi.mocked(listJobs).mock.calls[0]?.[2] as { types?: string[] };
+    expect(queryOptions.types).toEqual(
+      expect.arrayContaining(['full-audit', 'quick-check', 'prospecting']),
+    );
+    expect(queryOptions.types).not.toContain('outreach-draft-batch');
+  });
+});
+
 describe('GET /api/scans/:jobId declares the display outcome codes (plan 060 §5.3)', () => {
   const detailJob = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
     jobId: 'job-1',

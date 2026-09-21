@@ -36,6 +36,7 @@ import {
 import { FailureCard } from './audit-reports-section';
 import { FindingsCard, PublisherIdentificationAlert } from './audit-findings-section';
 import { EvidenceQualityCard } from './evidence-quality-section';
+import { ReportQualityReviewCard } from './report-quality-review';
 import type { AuditDetailResponse, Severity, SeverityRollup } from './audit-detail-types';
 
 interface AuditDetailState {
@@ -284,6 +285,9 @@ export function AuditDetailPage(): JSX.Element {
             the graph exists. Absent for quick checks, prospecting scans and
             pre-059 audits, which keep rendering exactly as before. */}
         <EvidenceQualityCard detail={data} />
+        {scanIntent === 'full-audit' ? (
+          <ReportQualityReviewCard auditId={data.auditId} onBusy={setIsBusy} refresh={refresh} />
+        ) : null}
         {/* Plan 042 slice 3: the panel stays always visible here, even
             though the hub shows it only once the hotel is sold. A
             standalone audit (started from /scans/new, or a paying client

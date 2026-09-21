@@ -1,4 +1,5 @@
 import type { ProgressPhase } from '../../lib/phase-order';
+import type { ScanFailureReason } from '../../routes/scan-failure-model';
 
 export interface ProgressStrings {
   title: string;
@@ -52,6 +53,10 @@ export interface ProgressStrings {
    *  concurrency fields on /scans/new that its own message names as the
    *  remedy. */
   coverageGateFieldsLink: string;
+  /** Localized primary explanations for ordinary scan failures. */
+  failureReasons: Record<ScanFailureReason, string>;
+  failureTechnicalDetails: string;
+  newScanLink: string;
   /** A completed prospect-linked scan returns the operator to its record. */
   goToProspectLink: string;
 }
@@ -107,6 +112,16 @@ export const progress = {
     failedRescanHint:
       'Le site a déjà été exploré et analysé. Ouvrez l’audit pour corriger la cause puis régénérer le rapport : inutile de relancer un scan.',
     coverageGateFieldsLink: 'Régler le délai et la concurrence du scan sur un nouvel audit',
+    failureReasons: {
+      'site-unreachable':
+        'Le site n’a pas pu être atteint dans les conditions de sécurité du scan. Vérifiez l’adresse, le DNS et les règles robots.txt, puis relancez un scan.',
+      inventory:
+        'Le scan a rencontré une incohérence pendant le rapprochement des pages visitées. Les résultats de ce run ne sont pas validés ; relancez un scan après correction.',
+      generic:
+        'Le scan n’a pas pu aller au bout. Relancez un scan ou ouvrez les détails techniques pour transmettre l’erreur au support.',
+    },
+    failureTechnicalDetails: 'Détails techniques',
+    newScanLink: 'Lancer un nouveau scan',
     reportFailedHeading: 'Rapport non généré',
     reportFailedStages: {
       writing: 'La rédaction du rapport a échoué.',
@@ -164,6 +179,16 @@ export const progress = {
     failedRescanHint:
       'The site has already been crawled and analysed. Open the audit to fix the cause and regenerate the report; a new scan is not needed.',
     coverageGateFieldsLink: 'Adjust the crawl delay and scan concurrency on a new audit',
+    failureReasons: {
+      'site-unreachable':
+        'The site could not be reached under the scan’s safety conditions. Check the URL, DNS and robots.txt rules, then start a new scan.',
+      inventory:
+        'The scan found an inconsistency while reconciling visited pages. This run is not validated; start a new scan after correcting the cause.',
+      generic:
+        'The scan could not finish. Start a new scan, or open the technical details when passing the error to support.',
+    },
+    failureTechnicalDetails: 'Technical details',
+    newScanLink: 'Start a new scan',
     reportFailedHeading: 'Report not generated',
     reportFailedStages: {
       writing: 'Writing the report failed.',

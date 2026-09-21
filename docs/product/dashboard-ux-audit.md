@@ -23,6 +23,90 @@ reconciliation properly). History is never deleted.
 | 7 | 2026-09-17 | `11e5cf71` | 16 | 1 regressed + 26 not re-verified | 2 | 1 (UX-020) | production observation with operator-authorized writes, FR+EN; journeys 2, 3 (to scan launch/progress), 7 partial; 4, 5, 6 not reached (session lost) | no |
 | 8 | 2026-09-21 | `8d3e1fee` | 0 | 1 regressed + 26 not re-verified | 0 | 0 | targeted production regression: La Co(o)rniche report rewrite and authenticated Gmail mailbox sync; no live draft creation | no |
 | 9 | 2026-09-21 | `a74c87ab` | 3 | 43 | 2 | 0 | read-only production rehearsal after deploy; FR/EN routes, mobile shell, recovery states, audit loading, tools, and to-do API shape; no state-changing prospecting actions | no |
+| 10 | 2026-09-21 | `7a9b0f41` | 1 | 43 | 1 | 0 | local stateful browser rehearsal against `odysseus-local`; FR/EN critical paths, reserved-domain failure jobs, lifecycle cleanup, mobile/back/recovery, and route/action inventory; no real-site scan or email | no |
+
+## Run 10 notes (local stateful operator rehearsal)
+
+- Mode and boundary: local `pnpm run serve` plus the Vite dashboard, with the
+  server explicitly pointed at the non-production `odysseus-local` database.
+  The scan fixture was a repository-local fictional site, but the scanner's
+  loopback policy correctly refused it outside the test runner, so no real
+  third-party site was scanned. A uniquely tagged local prospect was created
+  through the UI, status-corrected, archived, restored, and permanently
+  deleted through the UI. Two reserved `.invalid` failure jobs were created to
+  exercise full-scan and quick-check terminal states, then deleted through
+  their uniquely identified audit rows. No email was sent, no real draft was
+  created, and no pre-existing client record was changed.
+- Coverage: French and English navigation, status correction and reload,
+  full-scan and quick-check failure/recovery surfaces, failed-job list/filter
+  state, mailbox sync (HTTP 200), existing draft review read-only, archive /
+  restore / permanent-delete dialogs, keyboard confirmation, back navigation,
+  deleted-scan recovery, 375px work queue/prospect/audit surfaces, and the
+  unknown direct server path. The supplied real-site failure was not rerun;
+  its sanitized coverage counters were reconciled against the current source.
+- Journey results: prospect status correction persisted after reload; archive,
+  restore, and deletion completed with honest confirmation; mailbox sync
+  returned zero new sends/replies and one review row. Both reserved-domain
+  jobs failed honestly in roughly seconds with zero crawl work, but the
+  terminal failure card showed only raw English scanner prose and no retry,
+  new-scan, or remedy link. The internal processing rows still crash the scan
+  detail schema, and an opted-out pre-existing prospect still contributes a
+  draft row to To-do.
+- Fixed and verified: UX-021 draft review now has body, recipient, language,
+  preview/mailbox links, discard/revoke controls, and hash navigation; the
+  local fixture lifecycle and keyboard dialogs also completed successfully.
+- New finding: UX-049, a report-quality-review attention row can be emitted by
+  the store and rendered by To-do, but the dashboard has no review/approve
+  surface for the corresponding report-quality endpoints. GitHub search found
+  no duplicate; issue creation was rejected by the connector's external-write
+  policy, so the ledger records no issue.
+- Re-verified still open: UX-008 (generic scan failures), UX-013 (non-scan
+  jobs in Audits), UX-017 (opt-out work remains live), UX-034 (coverage
+  counters), UX-046 (bare direct 404), and UX-047 (no campaign-level inbox
+  overview). UX-048 and the remaining older findings were not re-run.
+- To-do/count blindspot: the dashboard badge counts derived actionable rows,
+  not prospects whose portfolio status is `Audité`. A status can be audited
+  while having no row (for example, no usable qualifying scan/contact), and
+  one prospect can also contribute multiple rows. The local database is not
+  the user's reported 12-record dataset, so this run cannot identify which
+  production record accounts for the difference. The existing opt-out row
+  proves the current count is also polluted by terminal work, which is UX-017.
+- Coverage gaps: no safe successful full audit, paid report/PDF pair,
+  report-quality review, preview publication, test-mailbox draft creation,
+  follow-up, reply, or outcome journey was available without mutating
+  pre-existing data or using a real external site/mailbox. No parity claim.
+
+## Fix pass after run 10 (working tree, pending live re-check)
+
+The implementation pass addresses the six reproduced regressions and the new
+quality-review blocker without rerunning the supplied real site or changing
+the live database. Statuses below remain historically OPEN until a deployed
+FR/EN browser rehearsal confirms them.
+
+- UX-008: ordinary scan failures now have localized reason copy, a collapsed
+  technical detail, and a new-scan or audit action.
+- UX-013: scan history filters job types in the database query and again at
+  the route boundary, so outreach batch jobs cannot consume scan history or
+  reach the scan-detail Zod contract.
+- UX-017: terminal prospects no longer expose stale work rows, and both the
+  outcome and direct status opt-out paths withdraw provider drafts, previews,
+  and threads.
+- UX-034: staged progress persists late-discovered inventory, the coverage
+  model reconciles checked pages against inventoried pages, and a missing
+  checkpoint row is recovered with explicit ledger provenance.
+- UX-046: extensionless direct paths now reach the branded SPA catch-all while
+  file-looking and unknown API paths retain 404 behavior.
+- UX-047: À traiter now exposes audited/active/actionable counts, per-kind
+  counts, mailbox configuration and last-sync freshness, plus an action-kind
+  filter; this makes an 11-actions/12-audits difference explicit rather than
+  silently treating the two populations as equal.
+- UX-049: audit detail now validates the report-quality read contract and
+  provides candidate FR/EN PDF links, issue details, rerun, and exact-bundle
+  approve/promote actions without exposing private object keys.
+
+Focused verification passed for the affected store, scanner, queue, API,
+static-route, dashboard, and audit-detail suites; the full live re-check and
+deployment remain outside this local fix pass.
 
 ## Run 9 notes (production, read-only post-deploy rehearsal)
 
@@ -393,11 +477,11 @@ plan 045 section 1.9) is pending the operator's deploy.
 
 ### UX-008 (P3) Scan-failure message is untranslated English prose with no direct link to its remedy
 
-- Status: OPEN. First seen: run 1. Last seen: run 1.
+- Status: OPEN. First seen: run 1. Last seen: run 10.
 - Where: `/scans/:jobId`, "Le scan a échoué" coverage-gate failure card.
-- Evidence: full English prose naming the delay/concurrency fields on `/scans/new` by name, with no direct link to them (contrast with the audit page's deliberately labeled raw-message card, which is fine as is).
+- Evidence: the run-10 FR and EN full-scan and quick-check failure cards rendered the raw English scanner string `crawlSite: network safety blocked robots target (unresolvable-host)` with no retry, new-scan, or remedy link. The operator-supplied real-site failure likewise exposed an internal English inventory-ledger exception beside an otherwise localized progress page. The existing coverage-gate branch only links when `coverageGateBlocked` is set (`packages/interface/src/dashboard/routes/scan-progress.tsx:578-605`), so ordinary safety/network failures remain an untranslated dead end.
 - Suggested UX fix: link directly to the fields it names, or translate/label it the same deliberate way the audit-page card is.
-- Issue: #187 (closed on GitHub; not yet re-verified live in this register).
+- Issue: #187 (closed on GitHub; the broader ordinary-failure case remains reproduced in run 10).
 
 ### UX-009 (P3) Prospects list renders blank cells instead of "-" for not-yet-reached state
 
@@ -425,9 +509,9 @@ plan 045 section 1.9) is pending the operator's deploy.
 
 ### UX-013 (P1) Audits list mislabels non-scan jobs as an audit and the scan-detail page crashes on them
 
-- Status: OPEN. First seen: run 3. Last seen: run 3.
+- Status: OPEN. First seen: run 3. Last seen: run 10.
 - Where: `/audits`, `/scans/:jobId`, FR (reproduced locally on `odysseus-local`).
-- Evidence: an `outreach-draft-batch` job (from the À traiter "Rédiger les premiers emails" batch button) appears in the Audits list mislabeled "Audit léger" via the default branch of `packages/interface/src/dashboard/routes/audits.tsx:71-80`, because `GET /api/scans` (`packages/interface/src/routes/scans.ts:174`) returns every job type unfiltered. Clicking through to `/scans/:jobId` crashes: `jobTypeSchema` (`packages/interface/src/dashboard/lib/api-schemas.ts:25-29`) only allows `full-audit`/`prospecting`/`hotel-prescan`/`outreach-full-scan`, so the response fails Zod parsing and the page shows the raw English validation error with a "Réessayer" button that can never succeed.
+- Evidence: the current local Audits list still showed two `Unknown site` / `Internal processing` rows as completed. Opening one still failed Zod validation because `outreach-draft-batch` is not in `jobTypeSchema`, leaving a raw English enum error and a retry button that cannot succeed. The route still returns every job type and the list still falls through to the generic label.
 - Suggested UX fix: exclude non-scan job types from the Audits list, or give them their own correctly-labeled, working detail view.
 - Issue: #264.
 
@@ -449,9 +533,9 @@ plan 045 section 1.9) is pending the operator's deploy.
 
 ### UX-017 (P1) Opt-out leaves the Gmail draft, the public preview and the review task live
 
-- Status: OPEN. First seen: run 6. Last seen: run 6.
+- Status: OPEN. First seen: run 6. Last seen: run 10.
 - Where: local dashboard, prospect journey, FR+EN as noted.
-- Evidence: Repro (local, run 6): prospect with a created first-email draft and a live preview -> record outcome "Ne plus contacter". Prospect becomes `opted-out`, suppression row is written and the prospect page blocks all outreach, but: `outreach_drafts.status` stays `created` (provider draft still in the mailbox), `outreach_previews` stays `live`, the thread stays `e1-drafted`, and `/a-traiter` still lists "Relire le brouillon" for the prospect while the prospect page says "Prospect traité". Deleting the prospect (`packages/interface/src/routes/prospect-hub.ts:537`) also removes the local draft rows without calling `deleteDraft` on the mailbox adapter, orphaning the provider draft.
+- Evidence: without mutating the pre-existing record, run 10 fetched the local prospect as `opted-out` while `/api/prospect-hub/todo` returned one `draft` row for it; the English To-do page still offered "Review the draft", and the prospect detail still exposed the draft/preview state. The derivation adds created drafts before the terminal-status recommendation guard (`packages/store/src/prospect-work.ts:189,261-318`), while To-do excludes only archived prospects (`packages/store/src/prospect-hub.ts:137-140,403-415`). The earlier run-6 proof also showed the provider draft and live preview remain.
 - Suggested UX fix: An opt-out (and a deletion) withdraws every pending draft in the mailbox, revokes live previews, closes the thread, and removes the work item; the operator sees what was withdrawn.
 - Issue: #273.
 
@@ -474,9 +558,9 @@ plan 045 section 1.9) is pending the operator's deploy.
 
 ### UX-021 (P2) Draft review shows only the subject: no body, recipient, language, preview link or mailbox link
 
-- Status: OPEN. First seen: run 6. Last seen: run 6.
+- Status: FIXED. First seen: run 6. Last seen: run 10.
 - Where: local dashboard, prospect journey, FR+EN as noted.
-- Evidence: Repro (local, run 6): À traiter "Relire le brouillon" -> prospect `#emails`. The card shows "Draft 1", subject and creation time only. There is no body, recipient, language, preview URL, link to the provider draft, discard or recreate action. The deep link also does not scroll to the card (data renders after hash navigation).
+- Evidence: run 10 reopened the existing draft read-only in EN. The `#emails` card contained a rendered `pre` body (1426 characters; content not copied), recipient metadata, a two-option outreach-language control, preview and mailbox links, discard/revoke controls, and the deep link placed the card at the viewport top (`rootTop: 0`).
 - Suggested UX fix: Reviewing a draft in the dashboard shows what will be sent and where, with a link to open it in the mailbox and a safe discard/recreate path.
 - Issue: #277.
 
@@ -570,9 +654,9 @@ plan 045 section 1.9) is pending the operator's deploy.
 
 ### UX-034 (P2) Scan coverage counts do not reconcile: inventoried URLs vanish before the content check
 
-- Status: OPEN. First seen: run 7. Last seen: run 7.
+- Status: OPEN. First seen: run 7. Last seen: run 10.
 - Where: production `/scans/:id`, EN.
-- Evidence: Inventoried 378, Left out 0, content target 341; `scan-progress-model.ts` "Left out" only counts the continuation guard. Terminal numbers not captured.
+- Evidence: the operator-supplied real-site failure showed `Performance measured 216`, `Content checked 216`, `Inventoried 185`, and `Left out 0`, while the job also reported a visited-page URL missing from the inventory ledger. This violates the dashboard model's own nesting invariant: `coverageSegments` derives reached pages as `max(0, visited - checked - excluded)` and never validates `checked <= visited` (`packages/interface/src/dashboard/routes/scan-progress-model.ts:86-125`).
 - Suggested UX fix: Every inventoried URL is in a visible bucket and counts reconcile.
 - Issue: #393.
 
@@ -658,9 +742,9 @@ plan 045 section 1.9) is pending the operator's deploy.
 
 ### UX-046 (P3) Unknown top-level dashboard paths return a bare server 404
 
-- Status: OPEN. First seen: run 9. Last seen: run 9.
+- Status: OPEN. First seen: run 9. Last seen: run 10.
 - Where: direct navigation to an unknown dashboard path, FR/EN.
-- Evidence: production `/route-that-does-not-exist` returns only the plain
+- Evidence: the local interface server's direct `/does-not-exist` request still returns only the plain
   server body `Not found`: no dashboard shell, heading, language, or recovery
   link. `packages/interface/src/routes/static.ts` deliberately refuses the
   SPA fallback outside `APP_ROUTE_PREFIXES`, so the client router's catch-all
@@ -668,18 +752,18 @@ plan 045 section 1.9) is pending the operator's deploy.
 - Suggested UX fix: return a branded dashboard not-found state with a link to
   À traiter, or serve the shell for unknown authenticated paths and let the
   client catch-all handle them.
-- Issue: none filed (run 9 audit only).
+- Issue: none filed (run 10 audit only).
 
 ### UX-047 (P2) Prospecting inbox has no campaign-level mailbox/work-state overview
 
-- Status: OPEN. First seen: run 9. Last seen: run 9.
+- Status: OPEN. First seen: run 9. Last seen: run 10.
 - Where: `/a-traiter`, the operator's prospecting inbox.
-- Evidence: the live page exposes a row list and a manual mailbox-sync button,
-  but no last-sync timestamp, mailbox/account status, draft/sent/awaiting-reply
-  counters, failure count, or filters by outreach state. The live response had
-  11 rows, all `first-email` / `create-first-email`; the underlying work model
-  can derive replies, follow-ups, draft review, outcomes, and report repair,
-  yet the operator has no campaign-level view for those states.
+- Evidence: the run-10 EN page still exposes only a row table and `Sync mailbox`;
+  its successful `POST /api/outreach/mailbox-sync` response is reduced to one
+  transient sentence and no freshness timestamp, account status, draft/sent/
+  awaiting-reply counters, failure count, or state filters. The underlying work
+  model can derive replies, follow-ups, draft review, outcomes, and report
+  repair, yet the operator has no campaign-level view for those states.
 - Suggested UX fix: add a compact campaign control plane with sync freshness,
   provider status, counts by actionable state, and filters linking to the
   corresponding prospect rows.
@@ -698,6 +782,31 @@ plan 045 section 1.9) is pending the operator's deploy.
   context and a slow-request/retry affordance, while retaining the accessible
   busy semantics.
 - Issue: none filed (run 9 audit only).
+
+### UX-049 (P1) Report-quality review tasks have no completable dashboard path
+
+- Status: OPEN. First seen: run 10. Last seen: run 10.
+- Where: `/a-traiter` report-quality attention row → `/audits/:auditId`,
+  FR/EN by code contract; not reachable from the current local data because
+  no safe quality-review fixture was available.
+- Evidence: `packages/store/src/prospect-work.ts:457-476` emits a
+  `report-quality-review` To-do row when a Plan-058 run is
+  `needs-operator-review`; `packages/interface/src/dashboard/routes/a-traiter.tsx:129-155`
+  renders the row and navigates to the audit. The server exposes the matching
+  candidate/read/approve workflow at `packages/interface/src/routes/audits.ts:1107-1212`,
+  but the dashboard has no caller for those endpoints and no candidate-bundle,
+  exact-version review, approve/promote, or recovery controls. The audit route
+  currently builds its operator snapshot with `attention: []` and no
+  capabilities (`packages/interface/src/routes/audits.ts:731-752`); the
+  browser action inventory confirmed the audit detail exposes no report-quality
+  review action. A test-quality review item therefore lands in the inbox as a
+  human gate that the operator cannot complete from the product.
+- Suggested UX fix: open a localized review surface that shows the exact
+  candidate and both language artifacts, provides safe review/approve or
+  recovery actions, and clears the row only after the corresponding server
+  state transition is confirmed.
+- Issue: none (GitHub search found no duplicate; connector rejected the
+  external issue creation during run 10).
 
 ## Fixed register
 

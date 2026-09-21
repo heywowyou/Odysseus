@@ -451,7 +451,18 @@ export type JobSummaryFields = Pick<
   scanType?: JobOptionsSnapshot['scanType'];
 };
 
-export async function listJobs(connection: Connection, limit = 200): Promise<JobSummaryFields[]> {
+export interface ListJobsOptions {
+  /** Restrict the query before applying the limit. The dashboard uses this
+   *  so internal outreach batch rows cannot consume the history page's
+   *  200-row window and then leak into a scan route. */
+  types?: readonly JobType[];
+}
+
+export async function listJobs(
+  connection: Connection,
+  limit = 200,
+  options: ListJobsOptions = {},
+): Promise<JobSummaryFields[]> {
   const JobModel = createJobModel(connection);
   // A dotted-path projection ('options.prospectId': 1) returns a nested
   // { options: { prospectId } }, not a flattened top-level
@@ -459,7 +470,9 @@ export async function listJobs(connection: Connection, limit = 200): Promise<Job
   // claims. Project the whole options subdocument and flatten it here so
   // the field this type actually promises is the field callers get.
   const docs = await JobModel.find(
-    {},
+    options.types === undefined || options.types.length === 0
+      ? {}
+      : { type: { $in: [...options.types] } },
     {
       jobId: 1,
       type: 1,
