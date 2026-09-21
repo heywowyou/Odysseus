@@ -155,7 +155,7 @@ const auditPassCoverageSchema = new Schema(
 
 const pageAnalysisCoverageSchema = new Schema(
   {
-    plannerVersion: { type: String, required: true, enum: ['v1'] },
+    plannerVersion: { type: String, required: true, enum: ['v1', 'v2'] },
     role: {
       type: String,
       required: true,

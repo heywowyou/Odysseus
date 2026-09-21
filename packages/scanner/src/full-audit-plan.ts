@@ -25,7 +25,10 @@ import type { PageAuditProfile, PageRoleSignalKind } from './page-audit-profile.
 
 export type { AuditPageRole, AuditPass } from '@odysseus/core';
 
-export const FULL_AUDIT_PLANNER_VERSION = 'v1';
+/** v2: site-wide signals are discounted before role classification, and an
+ *  unknown/fallback page in a repeated family is covered by that family's
+ *  representatives instead of being measured unconditionally. */
+export const FULL_AUDIT_PLANNER_VERSION = 'v2';
 
 export interface RenderedCostProfile {
   url: string;
@@ -90,6 +93,78 @@ interface RoleClassification {
 export function isConfirmedListing(profile: PageAuditProfile): boolean {
   const kinds = new Set(profile.roleSignals.map((s) => s.kind));
   return LISTING_SIGNAL_KINDS.filter((k) => kinds.has(k)).length >= MIN_LISTING_SIGNAL_KINDS;
+}
+
+/** Signal kinds that can come from markup repeated on every page (a booking
+ *  widget in a div-built header, a navigation menu) rather than from the
+ *  page itself. The extractor already skips semantic header/nav/footer for
+ *  links (issue #88), but forms get no such exclusion, and a site built from
+ *  plain divs defeats it for links too. */
+const SITE_WIDE_CANDIDATE_KINDS: readonly PageRoleSignalKind[] = [
+  'transactional-form',
+  'external-transactional-link',
+  'repeated-teaser-links',
+];
+
+/** Below this many pages a share says little about what is site-wide, and a
+ *  small site's Lighthouse cost is small anyway. */
+const SITE_WIDE_MIN_PAGES = 10;
+
+/** A candidate kind present on at least this share of a site's pages is
+ *  treated as layout rather than page evidence. */
+const SITE_WIDE_MIN_SHARE = 0.25;
+
+/** The leading integer every candidate kind's detail starts with ("2
+ *  form(s)", "3 link(s)", "27"). Undefined means the detail cannot be read,
+ *  and such a signal is never discounted. */
+function signalCount(detail: string): number | undefined {
+  const match = /^\d+/u.exec(detail);
+  return match === null ? undefined : Number(match[0]);
+}
+
+/**
+ * For each candidate kind common enough to be site layout, the count a
+ * typical page carries: the most frequent count, ties going to the smaller
+ * one so fewer pages lose the signal. A page whose count stays at or below
+ * it gets nothing from that kind; a page with more (a second, page-specific
+ * booking form, a teaser group larger than the menu) keeps the signal,
+ * because the surplus is about the page.
+ */
+function siteWideSignalBaselines(
+  profiles: readonly PageAuditProfile[],
+): ReadonlyMap<PageRoleSignalKind, number> {
+  const baselines = new Map<PageRoleSignalKind, number>();
+  if (profiles.length < SITE_WIDE_MIN_PAGES) return baselines;
+  for (const kind of SITE_WIDE_CANDIDATE_KINDS) {
+    const frequency = new Map<number, number>();
+    let pagesWithKind = 0;
+    for (const profile of profiles) {
+      const signal = profile.roleSignals.find((s) => s.kind === kind);
+      if (signal === undefined) continue;
+      pagesWithKind += 1;
+      const count = signalCount(signal.detail);
+      if (count !== undefined) frequency.set(count, (frequency.get(count) ?? 0) + 1);
+    }
+    if (pagesWithKind / profiles.length < SITE_WIDE_MIN_SHARE || frequency.size === 0) continue;
+    const [typical] = [...frequency].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0]!;
+    baselines.set(kind, typical);
+  }
+  return baselines;
+}
+
+function discountSiteWideSignals(
+  profile: PageAuditProfile,
+  baselines: ReadonlyMap<PageRoleSignalKind, number>,
+): { profile: PageAuditProfile; discounted: PageRoleSignalKind[] } {
+  const discounted: PageRoleSignalKind[] = [];
+  const roleSignals = profile.roleSignals.filter((signal) => {
+    const typical = baselines.get(signal.kind);
+    const count = signalCount(signal.detail);
+    if (typical === undefined || count === undefined || count > typical) return true;
+    discounted.push(signal.kind);
+    return false;
+  });
+  return { profile: { ...profile, roleSignals }, discounted };
 }
 
 function classifyRole(profile: PageAuditProfile): RoleClassification {
@@ -164,7 +239,9 @@ function classifyRole(profile: PageAuditProfile): RoleClassification {
 
 /** Stage 1: every eligible HTML page receives rendered, axe, and extended. */
 export function buildContentAuditPlan(profiles: readonly PageAuditProfile[]): FullAuditPlan {
-  const decisions: PageAuditDecision[] = profiles.map((profile) => {
+  const baselines = siteWideSignalBaselines(profiles);
+  const decisions: PageAuditDecision[] = profiles.map((original) => {
+    const { profile, discounted } = discountSiteWideSignals(original, baselines);
     const classification = classifyRole(profile);
     const kinds = new Set(profile.roleSignals.map((s) => s.kind));
     const carryForwardMarkers = [
@@ -180,7 +257,11 @@ export function buildContentAuditPlan(profiles: readonly PageAuditProfile[]): Fu
         : {}),
       ...(profile.language !== undefined ? { language: profile.language } : {}),
       plannedPasses: ['rendered', 'axe', 'extended'],
-      reasonCodes: [...classification.reasonCodes, ...carryForwardMarkers],
+      reasonCodes: [
+        ...classification.reasonCodes,
+        ...discounted.map((kind) => `site-wide-signal-discounted:${kind}`),
+        ...carryForwardMarkers,
+      ],
     };
   });
 
@@ -218,9 +299,13 @@ function isMandatoryRegardlessOfFamily(
   if (decision.reasonCodes.includes(OPERATOR_SEED_MARKER)) {
     return { mandatory: true, reasonCode: 'operator-seed' };
   }
-  if (decision.confidence === 'fallback' || decision.role === 'unknown') {
-    return { mandatory: true, reasonCode: 'unknown-or-fallback-role' };
-  }
+  // An unknown or fallback role is deliberately not mandatory any more (v2).
+  // It never reduces coverage on its own: a page alone in its family is
+  // still measured as `unique-template-family`, an unknown page can never
+  // make its family a skipped listing family, and a repeated family still
+  // gets its stable and cost-outlier representatives. Measuring every
+  // unknown page made the family sample a no-op on real sites, where most
+  // pages carry no decisive role signal.
   return { mandatory: false };
 }
 

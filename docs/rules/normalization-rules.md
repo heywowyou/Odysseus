@@ -117,9 +117,15 @@ for v1 and requires a separately measured plan.
 **Only Lighthouse is family-stratified.** A deterministic two-stage planner
 (`buildContentAuditPlan`, then `finalizeLighthousePlan` once rendered-cost
 facts exist) always selects the homepage, every transactional page, every
-operator seed, every unknown/fallback page, and every unique-family page for
-Lighthouse, plus a stable representative and a measured cost outlier per
-repeated non-listing family and language. A family with one member runs
+operator seed, and every unique-family page for Lighthouse, plus a stable
+representative and a measured cost outlier per repeated non-listing family and
+language. An unknown/fallback page inside a repeated family is covered by that
+family's representatives (planner v2, trade-off 109). Before classification, a
+transactional-form, transactional-link or repeated-teaser signal present on at
+least a quarter of a site's pages (sites of ten pages or more) is discounted as
+layout on every page that carries no more of it than the site typically does.
+Template families are hashed over the page skeleton (`templateSkeleton`), not
+the raw structural token stream. A family with one member runs
 Lighthouse once. A repeated high-confidence listing family is content-checked
 on every member but does not run Lighthouse unless another mandatory-selection
 rule also selects a given member.

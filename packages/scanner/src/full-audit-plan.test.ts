@@ -288,7 +288,7 @@ describe('finalizeLighthousePlan', () => {
     expect(selected.sort()).toEqual([urls[0], urls[2]].sort()); // stable-first (a) + outlier (c)
   });
 
-  it('always selects the homepage, transactional, seeded, unique, and unknown/fallback pages', () => {
+  it('always selects the homepage, transactional, seeded, and unique-family pages, including unknown ones', () => {
     const profiles = buildMotivatingFixture();
     const contentPlan = buildContentAuditPlan(profiles);
     const costs = new Map(profiles.map((p) => [p.url, makeCost(p.url)]));
@@ -338,6 +338,111 @@ describe('finalizeLighthousePlan', () => {
       expect(decision).not.toHaveProperty('findings');
       expect(decision).not.toHaveProperty('affectedPages');
     }
+  });
+});
+
+describe('site-wide signals', () => {
+  const ROOM_FAMILY = hashTemplateFamily(['HEADER.site', 'MAIN.room', 'FOOTER.site'])!;
+  const OFFER_FAMILY = hashTemplateFamily(['HEADER.site', 'MAIN.offer', 'FOOTER.site'])!;
+  const widget: PageRoleSignal = { kind: 'transactional-form', detail: '1 form(s)' };
+  const menu: PageRoleSignal = { kind: 'repeated-teaser-links', detail: '12' };
+
+  /** A hotel site whose header booking widget and menu sit in plain divs,
+   *  so every page carries the same form and teaser signals. */
+  function hotelSite(pageCount: number): PageAuditProfile[] {
+    return Array.from({ length: pageCount }, (_, i) =>
+      profile(`https://example.com/p/${String(i).padStart(3, '0')}`, [widget, menu], {
+        templateFamilyId: i % 2 === 0 ? ROOM_FAMILY : OFFER_FAMILY,
+      }),
+    );
+  }
+
+  it('does not let a booking widget on every page make every page transactional', () => {
+    const plan = buildContentAuditPlan(hotelSite(20));
+    for (const decision of plan.decisions) {
+      expect(decision.role).not.toBe('transactional');
+      expect(decision.reasonCodes).toContain('site-wide-signal-discounted:transactional-form');
+      expect(decision.reasonCodes).toContain('site-wide-signal-discounted:repeated-teaser-links');
+    }
+  });
+
+  it('keeps the signal on a page that carries more of it than the site does', () => {
+    const booking = profile(
+      'https://example.com/reserver',
+      [{ kind: 'transactional-form', detail: '2 form(s)' }, menu],
+      { templateFamilyId: ROOM_FAMILY },
+    );
+    const plan = buildContentAuditPlan([...hotelSite(20), booking]);
+    const decision = findByUrl(plan.decisions, 'https://example.com/reserver');
+    expect(decision.role).toBe('transactional');
+    expect(decision.reasonCodes).toContain('transactional-form-detected');
+  });
+
+  it('measures the real booking page plus two representatives per family, not every page', () => {
+    const booking = profile(
+      'https://example.com/reserver',
+      [{ kind: 'transactional-form', detail: '2 form(s)' }],
+      { templateFamilyId: ROOM_FAMILY },
+    );
+    const profiles = [...hotelSite(40), booking];
+    const costs = new Map(profiles.map((p) => [p.url, makeCost(p.url)]));
+    const finalPlan = finalizeLighthousePlan(buildContentAuditPlan(profiles), costs);
+    const selected = finalPlan.decisions.filter(ranLighthouse).map((d) => d.url);
+    expect(selected).toContain('https://example.com/reserver');
+    expect(selected.length).toBeLessThanOrEqual(5);
+  });
+
+  it('leaves a signal alone on a site too small to tell layout from content', () => {
+    const plan = buildContentAuditPlan(hotelSite(9));
+    for (const decision of plan.decisions) expect(decision.role).toBe('transactional');
+  });
+
+  it('leaves a signal alone when it is on less than a quarter of the pages', () => {
+    const pages = hotelSite(20).map((p, i) => (i < 4 ? p : { ...p, roleSignals: [contentSignal] }));
+    const plan = buildContentAuditPlan(pages);
+    expect(plan.decisions.filter((d) => d.role === 'transactional')).toHaveLength(4);
+  });
+
+  it('never discounts a signal whose count cannot be read', () => {
+    const pages = hotelSite(20).map((p) => ({
+      ...p,
+      roleSignals: [{ kind: 'transactional-form' as const, detail: 'some forms' }],
+    }));
+    const plan = buildContentAuditPlan(pages);
+    for (const decision of plan.decisions) expect(decision.role).toBe('transactional');
+  });
+});
+
+describe('unknown pages in a repeated family', () => {
+  it('are covered by the family representatives instead of all being measured', () => {
+    const family = hashTemplateFamily(['HEADER.site', 'MAIN.page', 'FOOTER.site'])!;
+    const profiles = Array.from({ length: 30 }, (_, i) =>
+      profile(`https://example.com/page-${String(i).padStart(2, '0')}`, [], {
+        templateFamilyId: family,
+      }),
+    );
+    const costs = new Map(profiles.map((p) => [p.url, makeCost(p.url)]));
+    costs.set(
+      'https://example.com/page-17',
+      makeCost('https://example.com/page-17', { resourceCount: 400 }),
+    );
+    const finalPlan = finalizeLighthousePlan(buildContentAuditPlan(profiles), costs);
+    const selected = finalPlan.decisions.filter(ranLighthouse);
+    expect(selected.map((d) => d.url).sort()).toEqual([
+      'https://example.com/page-00',
+      'https://example.com/page-17',
+    ]);
+    for (const decision of finalPlan.decisions) expect(decision.role).toBe('unknown');
+  });
+
+  it('never make their family a skipped listing family', () => {
+    const profiles = Array.from({ length: 6 }, (_, i) =>
+      profile(`https://example.com/tag/${i}`, i === 0 ? [listingSignals[0]!] : listingSignals, {
+        templateFamilyId: LISTING_FAMILY,
+      }),
+    );
+    const finalPlan = finalizeLighthousePlan(buildContentAuditPlan(profiles), new Map());
+    expect(finalPlan.decisions.some(ranLighthouse)).toBe(true);
   });
 });
 

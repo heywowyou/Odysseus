@@ -3150,7 +3150,8 @@ render diff, axe, and extended checks on every eligible page; role, family,
 seed, and confidence facts are recorded on the decision but cannot remove any
 of those three passes. `finalizeLighthousePlan` runs after rendered results
 exist and adds the homepage, every transactional page, every operator seed,
-every unknown/fallback page, every unique-family page, and two representatives
+every unknown/fallback page (no longer when it sits in a repeated family,
+see entry 109), every unique-family page, and two representatives
 per repeated non-listing family and language: the stable first URL and the
 measured cost outlier, using the descending tuple `(resourceCount,
 imageCount, domNodeCount, knownTransferBytes, unknownTransferSizeCount)` then
@@ -5598,3 +5599,70 @@ artifact with fonts, styles and sandboxing on the public site); and indexing
 the raw PDF instead of a page (no introduction, no disclosure outside the
 document, no internal links).
 
+### 109. Lighthouse selection discounts site-wide signals, hashes the page skeleton, and samples unknown pages with their family (planner v2, 2026-09-21)
+
+Entry 64's family stratification was a no-op on real sites. Replaying the
+planner over ten stored hotel audits selected every page, or nearly every
+page, on nine of them, and gave every page three runs on three
+(atlantichotel.fr 341 pages and 1023 baseline runs, hotelchateauroyal.nc 189
+and 567, hotelcasarose.fr 242 and 726). A live 1042-page audit was heading
+for a Lighthouse stage of about a day. Three independent causes, each fixed
+where it arises:
+
+1. **Site-wide signals made every page transactional or unknown.** A booking
+   widget in a div-built header gives every page a `transactional-form`
+   signal (issue #88's semantic-chrome exclusion covers links only, and only
+   inside `<header>`/`<nav>`/`<footer>`), and a menu gives every page a
+   `repeated-teaser-links` signal, which alone classifies as `unknown`.
+   `buildContentAuditPlan` now treats those three kinds as layout when they
+   appear on at least 25% of a site of ten or more pages, and discounts them
+   on each page carrying no more of them than the most common count. A page
+   with more (a second, page-specific booking form) keeps the signal, so the
+   real booking page still gets its three runs. Discounting is recorded as a
+   `site-wide-signal-discounted:<kind>` reason code.
+2. **Template families were near-unique.** The hash covered every heading,
+   every `[role]` element (Instagram feed items, cookie banners) and every
+   class, including per-post ids (`post-919`) and post state
+   (`has-post-thumbnail`). Reloading 320 known pages from five audited
+   sites found that on three of them 41% to 83% of pages no longer
+   reproduced their own stored hash days later. The hash is now taken over
+   `templateSkeleton`: structural tags and landmark roles only, no headings,
+   no classes with a digit, no `<article>` classes, consecutive duplicates
+   collapsed. Profile version v2.
+3. **Unknown pages were mandatory.** With most real pages carrying no
+   decisive role signal, measuring every unknown page defeated sampling. An
+   unknown or fallback page in a repeated family is now covered by that
+   family's stable and cost-outlier representatives. This does not weaken
+   entry 64's guard: an unknown page alone in its family is still measured
+   as `unique-template-family`, and an unknown member still prevents its
+   family from being treated as an exempt listing family.
+
+**Measured effect**, old planner on stored profiles against the new planner
+on freshly extracted profiles for the same pages: atlantichotel.fr 100 random
+pages, 300 to 38 baseline runs; four 30-page stratified samples, 90 to 32-40
+(hotel sites) and 32 to 20; ritzparis.com 100 random pages, 104 to 68. The
+Ritz is a block-built Tailwind site whose pages really are composed
+differently, and further merging was rejected rather than tuned for it.
+
+**Quality check and its limit.** Pages grouped together still performed
+alike: the within-family Lighthouse score spread (from stored runs) stayed
+close to the raw hash's on four of five sites. The exception is instructive:
+atlantichotel.fr's largest French family spans 0.30 to 0.56, and its two
+representatives scored 0.52 and 0.53 against a median of 0.49. The slow end
+of that family is `index.php`/`index.html`, homepage copies whose own
+three-run measurement (0.34) still reaches the report, but the representatives
+read slightly better than the typical member. The cost-outlier tuple did not
+pick the slowest page there. Representatives remain disclosed as a sample and
+never propagate a value to unmeasured members (plan 059 decision 7).
+
+The planner version is v2 on analysis coverage and in the crawl checkpoint's
+tool identity, so an interrupted v1 audit restarts its crawl rather than
+resuming into a v2 plan; the store accepts v1 and v2.
+
+Rejected: a URL-path grouping (entry 64's reason still holds); stripping
+Tailwind utility classes to merge block-built pages (no evidence the merged
+pages perform alike); keeping unknown pages mandatory and only fixing the
+signals (the replay showed signal-free pages are the majority on several
+sites); and lowering the per-page run count instead of the page count
+(section 12's three-run rule for the homepage and real transactional pages is
+worth its cost once it applies to those pages only).

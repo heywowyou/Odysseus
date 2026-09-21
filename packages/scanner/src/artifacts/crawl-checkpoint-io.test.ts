@@ -141,7 +141,7 @@ describe('crawl checkpoint io', () => {
 
     expect(identity.format).toBe('full-audit-crawl-checkpoint-v1');
     expect(identity.scannerVersion).toMatch(/^\d+\.\d+\.\d+/);
-    expect(identity.plannerVersion).toBe('v1');
+    expect(identity.plannerVersion).toBe('v2');
   });
 
   describe('isReusableCheckpoint', () => {

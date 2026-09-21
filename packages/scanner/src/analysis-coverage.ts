@@ -1,6 +1,6 @@
 import type { AuditPass, AuditPassCoverage, PageAnalysisCoverage } from '@odysseus/core';
 import { CHECK_SCOPE_REGISTRY, type CheckExecutionOutcome } from './check-scope-coverage.js';
-import type { PageAuditDecision } from './full-audit-plan.js';
+import { FULL_AUDIT_PLANNER_VERSION, type PageAuditDecision } from './full-audit-plan.js';
 
 type CheckOutcomes = Readonly<Partial<Record<string, CheckExecutionOutcome>>>;
 
@@ -56,7 +56,7 @@ export function derivePageAnalysisCoverage(
   }
 
   return {
-    plannerVersion: 'v1',
+    plannerVersion: FULL_AUDIT_PLANNER_VERSION,
     role: input.decision.role,
     confidence: input.decision.confidence,
     ...(input.decision.templateFamilyId !== undefined

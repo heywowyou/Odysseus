@@ -20,7 +20,11 @@
 import { createHash } from 'node:crypto';
 import type { Page as BrowserPage } from 'playwright';
 
-const PAGE_AUDIT_PROFILE_VERSION = 'v1';
+/** v2: the template-family hash is taken over the page skeleton
+ *  (`templateSkeleton`), not the raw token stream. v1 and v2 hashes are not
+ *  comparable; the planner version bump that shipped with this keeps a v1
+ *  checkpoint from being resumed into a v2 plan. */
+const PAGE_AUDIT_PROFILE_VERSION = 'v2';
 
 /** A signal is independent structural evidence found on the page. The
  *  planner counts distinct *kinds* present, never raw occurrence counts,
@@ -47,7 +51,8 @@ export interface PageRoleSignal {
 
 export interface PageAuditProfile {
   url: string;
-  profileVersion: typeof PAGE_AUDIT_PROFILE_VERSION;
+  /** Stored checkpoints can still carry v1 profiles. */
+  profileVersion: 'v1' | typeof PAGE_AUDIT_PROFILE_VERSION;
   language?: string;
   roleSignals: readonly PageRoleSignal[];
   /** Absent means a unique family, never a shared default bucket: the
@@ -194,13 +199,84 @@ function isCanonicalElsewhere(canonicalHref: string, pageUrl: string): boolean {
   }
 }
 
-/** Deterministic structural hash. Two pages with the same normalized token
- *  stream are the same template family; an empty stream (no structural
- *  evidence) returns `undefined` so the caller treats the page as its own
- *  unique family rather than grouping it with every other sparse page. */
+const SKELETON_TAGS = new Set([
+  'HEADER',
+  'NAV',
+  'MAIN',
+  'ARTICLE',
+  'SECTION',
+  'ASIDE',
+  'FOOTER',
+  'FORM',
+  'TABLE',
+]);
+const LANDMARK_ROLES = new Set([
+  'banner',
+  'navigation',
+  'main',
+  'contentinfo',
+  'complementary',
+  'search',
+  'form',
+]);
+const TOKEN_PATTERN = /^([A-Za-z0-9-]+)(?:\[role=([^\]]+)\])?\.(.*)$/u;
+
+/**
+ * The part of a page's structural token stream that belongs to its template
+ * rather than to its content or to the moment it was loaded.
+ *
+ * The raw stream put almost every page of a real hotel site in a family of
+ * its own, which turned the two-representatives-per-family Lighthouse
+ * sample into "measure every page". Reloading 320 known pages from five
+ * audited sites showed why, and each rule below removes one cause:
+ *
+ * - Headings, and elements that are neither a structural tag nor a landmark
+ *   role, vary with content: a room page with four blocks of text and one
+ *   with five, or the items of an embedded Instagram feed, which also change
+ *   between two loads of the same page (on three of the five sites, 41% to 83%
+ *   of pages no longer reproduced their stored hash a few days later).
+ * - Class names with a digit are per-page or per-build identifiers
+ *   (`post-919`, `page-id-12`, `elementor-element-3fa2`).
+ * - Classes on `<article>` describe the post, not the template
+ *   (`has-post-thumbnail` against `no-img` on two posts of the same type).
+ * - Consecutive identical elements are one repeated block, however many
+ *   times the content repeats it.
+ *
+ * The check was that pages grouped together still perform alike: the
+ * Lighthouse score spread inside a family stayed where it was under the raw
+ * stream while the number of families fell substantially.
+ */
+export function templateSkeleton(structuralTokens: readonly string[]): string[] {
+  const skeleton: string[] = [];
+  for (const token of structuralTokens) {
+    const match = TOKEN_PATTERN.exec(token);
+    if (match === null) continue;
+    const tag = match[1]!.toUpperCase();
+    const role = match[2];
+    const landmark = role !== undefined && LANDMARK_ROLES.has(role);
+    if (!SKELETON_TAGS.has(tag) && !landmark) continue;
+    const classes =
+      tag === 'ARTICLE'
+        ? ''
+        : match[3]!
+            .split('.')
+            .filter((c) => c !== '' && !/\d/u.test(c))
+            .sort()
+            .join('.');
+    const normalized = `${tag}${landmark ? `[role=${role}]` : ''}.${classes}`;
+    if (skeleton.at(-1) !== normalized) skeleton.push(normalized);
+  }
+  return skeleton;
+}
+
+/** Deterministic structural hash over the page skeleton. Two pages with the
+ *  same skeleton are the same template family; a page with no skeleton (no
+ *  structural evidence) returns `undefined` so the caller treats it as its
+ *  own unique family rather than grouping it with every other sparse page. */
 export function hashTemplateFamily(structuralTokens: readonly string[]): string | undefined {
-  if (structuralTokens.length === 0) return undefined;
-  const digest = createHash('sha256').update(structuralTokens.join('')).digest('hex');
+  const skeleton = templateSkeleton(structuralTokens);
+  if (skeleton.length === 0) return undefined;
+  const digest = createHash('sha256').update(skeleton.join('\n')).digest('hex');
   return `${PAGE_AUDIT_PROFILE_VERSION}:${digest.slice(0, 16)}`;
 }
 

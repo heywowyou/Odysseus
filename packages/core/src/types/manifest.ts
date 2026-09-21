@@ -52,7 +52,8 @@ export interface AuditPassCoverage {
 }
 
 export interface PageAnalysisCoverage {
-  plannerVersion: 'v1';
+  /** v1 audits stay readable; v2 is what the current planner writes. */
+  plannerVersion: 'v1' | 'v2';
   role: AuditPageRole;
   confidence: 'high' | 'fallback';
   templateFamilyId?: string;

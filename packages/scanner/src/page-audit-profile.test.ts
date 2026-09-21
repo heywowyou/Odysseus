@@ -9,6 +9,7 @@ import {
   buildPageAuditProfile,
   classifyPageRoleSignals,
   hashTemplateFamily,
+  templateSkeleton,
   type RawPageAuditFacts,
 } from './page-audit-profile.js';
 
@@ -101,7 +102,63 @@ describe('hashTemplateFamily', () => {
   });
 
   it('is versioned', () => {
-    expect(hashTemplateFamily(['HEADER.a'])).toMatch(/^v1:/);
+    expect(hashTemplateFamily(['HEADER.a'])).toMatch(/^v2:/);
+  });
+});
+
+describe('templateSkeleton', () => {
+  // Shapes taken from two gallery posts of one WordPress template on a real
+  // audited hotel site, which the raw token stream split into two families.
+  const galleryPost = (postId: number, articleState: string, feedItems: string[]) => [
+    'DIV[role=dialog].cmplz-cookiebanner.cmplz-show',
+    'DIV[role=banner].',
+    'HEADER.',
+    'NAV[role=navigation].',
+    'H1.title',
+    'MAIN.sections_group',
+    `ARTICLE.${articleState}.hentry.post-${postId}.type-rl_gallery`,
+    'SECTION.mcb-section.section.the_content',
+    'H2.entry-title',
+    'SECTION.mcb-section.section.section-post-related',
+    'FOOTER[role=contentinfo].mfn-footer',
+    'DIV[role=list].',
+    ...feedItems,
+  ];
+
+  it('groups two posts of one template despite post ids, post state, headings and feed items', () => {
+    const a = galleryPost(919, 'no-img', ['DIV[role=listitem].sbi_type_image']);
+    const b = galleryPost(918, 'has-post-thumbnail', [
+      'DIV[role=listitem].sbi_type_video',
+      'svg[role=presentation].fa-play',
+    ]);
+    expect(hashTemplateFamily(a)).toBe(hashTemplateFamily(b));
+  });
+
+  it('keeps landmarks and structural tags with their non-numeric classes', () => {
+    expect(
+      templateSkeleton([
+        'DIV[role=banner].light.right',
+        'NAV.menu-v2.menu-main',
+        'DIV[role=button].close',
+        'SPAN.icon',
+        'ASIDE.widget.widget_media_image',
+      ]),
+    ).toEqual(['DIV[role=banner].light.right', 'NAV.menu-main', 'ASIDE.widget.widget_media_image']);
+  });
+
+  it('collapses consecutive identical elements into one block', () => {
+    const blocks = (n: number) => ['MAIN.', ...Array<string>(n).fill('SECTION.room'), 'FOOTER.'];
+    expect(hashTemplateFamily(blocks(4))).toBe(hashTemplateFamily(blocks(5)));
+  });
+
+  it('still separates templates whose skeletons differ', () => {
+    expect(hashTemplateFamily(['MAIN.', 'SECTION.room', 'FOOTER.'])).not.toBe(
+      hashTemplateFamily(['MAIN.', 'SECTION.room', 'ASIDE.booking', 'FOOTER.']),
+    );
+  });
+
+  it('treats a page with only non-structural elements as having no family', () => {
+    expect(hashTemplateFamily(['H1.title', 'DIV[role=listitem].card'])).toBeUndefined();
   });
 });
 
@@ -114,7 +171,7 @@ describe('buildPageAuditProfile', () => {
 
   it('carries the profile version and language', () => {
     const profile = buildPageAuditProfile(facts({ htmlLang: 'fr' }), baseContext);
-    expect(profile.profileVersion).toBe('v1');
+    expect(profile.profileVersion).toBe('v2');
     expect(profile.language).toBe('fr');
     expect(profile.url).toBe('https://example.com/post-1');
   });
