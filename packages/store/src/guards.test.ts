@@ -124,6 +124,13 @@ describe('central prospect guards', () => {
     vi.mocked(findLiveOutreachDraft).mockResolvedValueOnce({ draftId: 'd' } as never);
     await expect(check()).resolves.toEqual({ allowed: false, refusal: 'draft-already-live' });
 
+    // A discarded touch-two draft leaves the thread drafted; touch two is due again.
+    vi.mocked(findOutreachThreadByProspect).mockResolvedValueOnce({
+      threadId: 'thread-1',
+      state: 'e2-drafted',
+    } as never);
+    await expect(check()).resolves.toEqual({ allowed: true });
+
     vi.mocked(findOutreachThreadByProspect).mockResolvedValueOnce({
       threadId: 'thread-1',
       state: 'opted-out',

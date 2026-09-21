@@ -3,6 +3,7 @@ import {
   ACTIVE_OUTREACH_THREAD_STATES,
   TERMINAL_OUTREACH_THREAD_STATES,
   canTransitionOutreachThread,
+  effectiveOutreachThreadState,
   isTerminalOutreachThreadState,
   type OutreachThreadState,
 } from './outreach-thread-state.js';
@@ -119,5 +120,24 @@ describe('isTerminalOutreachThreadState', () => {
     const union = [...ACTIVE_OUTREACH_THREAD_STATES, ...TERMINAL_OUTREACH_THREAD_STATES];
     expect(union.length).toBe(ALL_STATES.length);
     expect(new Set(union)).toEqual(new Set(ALL_STATES));
+  });
+});
+
+describe('effectiveOutreachThreadState', () => {
+  it('reads a drafted state whose draft was discarded as the state before the draft', () => {
+    expect(effectiveOutreachThreadState('e1-drafted', [])).toBe('open');
+    expect(effectiveOutreachThreadState('e2-drafted', [])).toBe('e1-sent');
+    expect(effectiveOutreachThreadState('e3-drafted', [1, 2])).toBe('e2-sent');
+  });
+
+  it('keeps a drafted state while its touch has a live draft', () => {
+    expect(effectiveOutreachThreadState('e1-drafted', [1])).toBe('e1-drafted');
+    expect(effectiveOutreachThreadState('e2-drafted', [2])).toBe('e2-drafted');
+  });
+
+  it('never changes a state that names no drafted touch', () => {
+    for (const state of ALL_STATES.filter((candidate) => !candidate.endsWith('-drafted'))) {
+      expect(effectiveOutreachThreadState(state, [])).toBe(state);
+    }
   });
 });

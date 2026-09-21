@@ -2,6 +2,8 @@
 
 import {
   buildOutreachFactsBlock,
+  draftedOutreachTouch,
+  effectiveOutreachThreadState,
   isTerminalOutreachThreadState,
   NORMALIZATION_FINGERPRINT,
   primaryWebsite,
@@ -625,7 +627,16 @@ export async function createFollowUpForProspect(
   if (prospect === null) return { configured: true, created: false, refusal: 'prospect-unknown' };
   const thread = await findOutreachThreadByProspect(connection, prospectId);
   if (thread === null) return { configured: true, created: false, refusal: 'thread-unknown' };
-  const touch = thread.state === 'e1-sent' ? 2 : thread.state === 'e2-sent' ? 3 : undefined;
+  // A discarded follow-up draft leaves the thread at eN-drafted; it is due again.
+  const drafted = draftedOutreachTouch(thread.state);
+  const threadState = effectiveOutreachThreadState(
+    thread.state,
+    drafted !== undefined &&
+      (await findLiveOutreachDraft(connection, thread.threadId, drafted)) !== null
+      ? [drafted]
+      : [],
+  );
+  const touch = threadState === 'e1-sent' ? 2 : threadState === 'e2-sent' ? 3 : undefined;
   if (touch === undefined)
     return { configured: true, created: false, refusal: 'thread-not-eligible' };
   const allowed = await checkOutreachAction(connection, { prospect, action: 'follow-up' });

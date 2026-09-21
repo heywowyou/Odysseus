@@ -66,8 +66,8 @@ const currentProvenance = {
   findingsDigest: 'digest-current',
 };
 
-/** A current FR+EN report pair: the issue #388 prerequisite of initial
- *  outreach. */
+/** A current FR+EN report pair; since Plan 067 the French report alone is
+ *  the issue #388 prerequisite of initial outreach. */
 function readyReports(
   auditId = 'audit-old',
   findingsProvenance: Record<string, unknown> = currentProvenance,
@@ -665,6 +665,76 @@ describe('prospect work model', () => {
 
     const firstEmail = deriveProspectWork(prospect, { ...emptySources, audits: [audit()] });
     expect(firstEmail.items[0]?.href).toBe(`/prospects/${prospect.prospectId}#emails`);
+  });
+
+  it('offers the first email again once the only Touch 1 draft was discarded', () => {
+    // Hôtel Point France: the draft was skipped, the thread stayed e1-drafted,
+    // and the prospect vanished from To do although the guard allows a redraft.
+    const discarded = {
+      threadId: 'thread-discarded',
+      prospectId: prospect.prospectId,
+      state: 'e1-drafted' as const,
+      currentTouch: 1,
+      touches: [],
+      spacing: { touch2AfterDays: 4, touch3AfterDays: 11, replyWindowDays: 14 },
+      updatedAt: new Date('2026-09-17T22:07:22.780Z'),
+    };
+    const frenchOnly = readyReports().filter((report) => report.language === 'fr');
+    const work = deriveProspectWork(prospect, {
+      ...emptySources,
+      audits: [audit()],
+      reports: frenchOnly,
+      threads: [discarded],
+    });
+    expect(work.items.map((item) => item.kind)).toEqual(['first-email']);
+    expect(work.recommendation?.action).toBe('create-first-email');
+
+    const stillDrafted = deriveProspectWork(prospect, {
+      ...emptySources,
+      audits: [audit()],
+      reports: frenchOnly,
+      threads: [discarded],
+      drafts: [
+        {
+          draftId: 'draft-live',
+          prospectId: prospect.prospectId,
+          threadId: discarded.threadId,
+          touch: 1,
+          status: 'created',
+          createdAt: new Date('2026-09-18T00:00:00.000Z'),
+        },
+      ],
+    });
+    expect(stillDrafted.items.map((item) => item.kind)).toEqual(['draft']);
+  });
+
+  it('offers the follow-up again once its draft was discarded', () => {
+    const work = deriveProspectWork(
+      prospect,
+      {
+        ...emptySources,
+        threads: [
+          {
+            threadId: 'thread-follow-up-discarded',
+            prospectId: prospect.prospectId,
+            state: 'e2-drafted',
+            currentTouch: 2,
+            touches: [
+              {
+                touch: 1,
+                providerMessageId: 'message-1',
+                sentAt: new Date('2026-09-01T00:00:00.000Z'),
+                detectedAt: new Date('2026-09-01T00:00:00.000Z'),
+              },
+            ],
+            spacing: { touch2AfterDays: 4, touch3AfterDays: 11, replyWindowDays: 14 },
+            updatedAt: new Date('2026-09-06T00:00:00.000Z'),
+          },
+        ],
+      },
+      new Date('2026-09-15T00:00:00.000Z'),
+    );
+    expect(work.items.map((item) => item.kind)).toEqual(['follow-up']);
   });
 
   it('clears reply work once the thread points to a recorded outcome', () => {

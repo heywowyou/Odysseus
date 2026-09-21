@@ -4977,6 +4977,23 @@ Rejected: gating on the latest job status (a failure the operator later fixed
 by regeneration, or reports built outside the queue, would read wrong), and a
 rescan as the remedy.
 
+**Amended 2026-09-21: French only.** Plan 067 made French the canonical report
+and English an optional later attachment, but this gate kept asking for a
+current FR and EN pair, so every French-only audit read as a report issue on
+the Audits list, refused the first email with `report-not-ready`, and left To
+do without either row. Readiness now asks only for a current French report;
+English never blocks. An operator-finalized French report (plan 072) counts,
+being the newest French row, and a later regeneration supersedes it the same
+way. Finalization itself stays a pre-delivery step for a paid report, not an
+outreach prerequisite.
+
+Same day, a discarded draft: discarding a touch's draft leaves the thread at
+`eN-drafted`, where the guard already allowed a redraft of the first email but
+To do, the follow-up guard and runtime, and the hub badge read the stored
+state. `effectiveOutreachThreadState` (core) reads a drafted state with no
+live draft for its touch as the state before the draft, on every surface. The
+stored state is not rewritten, so the mailbox sync keeps watching the thread.
+
 ### 96. Full audit price lowered from EUR 1,600 HT to EUR 990 HT (operator decision, 2026-09-17, issue #405)
 
 The single published offer is unchanged: one full audit, one detailed

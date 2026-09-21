@@ -1,5 +1,6 @@
 import type { Connection } from 'mongoose';
 import {
+  effectiveOutreachThreadState,
   normalizeAddressForHash,
   normalizeDomainForHash,
   type Prospect,
@@ -316,6 +317,15 @@ export function deriveProspectWork(
     .filter((draft) => draft.prospectId === prospect.prospectId && draft.status === 'created')
     .sort((left, right) => asTime(right.createdAt) - asTime(left.createdAt));
   const thread = sources.threads.find((candidate) => candidate.prospectId === prospect.prospectId);
+  // A drafted touch whose draft was discarded is due again, exactly as the
+  // outreach guard and the draft runtime read it.
+  const threadState =
+    thread === undefined
+      ? undefined
+      : effectiveOutreachThreadState(
+          thread.state,
+          prospectDrafts.map((draft) => draft.touch),
+        );
   const needsInputJobs = sources.needsInputJobs.filter(
     (job) => job.options?.prospectId === prospect.prospectId,
   );
@@ -382,10 +392,10 @@ export function deriveProspectWork(
   }
   if (
     thread !== undefined &&
-    (thread.state === 'e1-sent' || thread.state === 'e2-sent') &&
+    (threadState === 'e1-sent' || threadState === 'e2-sent') &&
     thread.needsReview === undefined
   ) {
-    const touch = thread.state === 'e1-sent' ? 1 : 2;
+    const touch = threadState === 'e1-sent' ? 1 : 2;
     const sent = thread.touches.find((candidate) => candidate.touch === touch);
     const afterDays = touch === 1 ? thread.spacing.touch2AfterDays : thread.spacing.touch3AfterDays;
     if (sent !== undefined && asTime(sent.sentAt) + afterDays * DAY_MS <= now.getTime()) {
@@ -404,7 +414,7 @@ export function deriveProspectWork(
   // replies and follow-ups on an existing thread are unaffected. A
   // needs-input stop already has its audit-input row; any other not-ready
   // reason takes the first email's place with a report row, which becomes
-  // the first email once regeneration produces a current FR+EN pair.
+  // the first email once regeneration produces a current French report.
   const reportReadiness =
     qualification.audit === undefined
       ? undefined
@@ -415,7 +425,7 @@ export function deriveProspectWork(
   if (
     qualification.audit !== undefined &&
     reportReadiness !== undefined &&
-    thread === undefined &&
+    (threadState === undefined || threadState === 'open') &&
     prospectDrafts.length === 0 &&
     prospect.emails.length > 0 &&
     !websiteSuppressed &&

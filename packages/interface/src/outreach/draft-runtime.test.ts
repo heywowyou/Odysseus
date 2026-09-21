@@ -358,6 +358,13 @@ describe('createFollowUpForProspect', () => {
     },
   );
 
+  it('drafts touch two again when the earlier touch-two draft was discarded', async () => {
+    vi.mocked(findOutreachThreadByProspect).mockResolvedValue(thread('e2-drafted') as never);
+    const result = await createFollowUpForProspect(connection, prospectId);
+    expect(result).toMatchObject({ configured: true, created: true });
+    expect(advanceThreadTouch).toHaveBeenCalledWith(connection, 'thread-1', 2);
+  });
+
   it('refuses when the follow-up draft is already live', async () => {
     vi.mocked(findLiveOutreachDraft).mockResolvedValue({ draftId: 'live' } as never);
     expect(await createFollowUpForProspect(connection, prospectId)).toMatchObject({

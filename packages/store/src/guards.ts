@@ -20,7 +20,11 @@ import {
 } from './prospect-audit-qualification.js';
 import type { CurrentScanIntent } from './scan-intents.js';
 import { isSuppressed } from './suppression.js';
-import { TERMINAL_OUTREACH_THREAD_STATES } from '@odysseus/core';
+import {
+  TERMINAL_OUTREACH_THREAD_STATES,
+  draftedOutreachTouch,
+  effectiveOutreachThreadState,
+} from '@odysseus/core';
 import { findLiveOutreachDraft } from './outreach-drafts.js';
 import { findOutreachThreadByProspect } from './outreach-threads.js';
 import { createOutreachPreviewModel } from './schemas/outreach-preview.schema.js';
@@ -138,7 +142,16 @@ export async function checkOutreachAction(
   if (input.action === 'follow-up') {
     if (thread === null) return { allowed: false, refusal: 'thread-unknown' };
     if (!hasContact) return { allowed: false, refusal: 'no-contact' };
-    const touch = thread.state === 'e1-sent' ? 2 : thread.state === 'e2-sent' ? 3 : undefined;
+    // A discarded follow-up draft leaves the thread drafted; it is due again.
+    const drafted = draftedOutreachTouch(thread.state);
+    const state = effectiveOutreachThreadState(
+      thread.state,
+      drafted !== undefined &&
+        (await findLiveOutreachDraft(connection, thread.threadId, drafted)) !== null
+        ? [drafted]
+        : [],
+    );
+    const touch = state === 'e1-sent' ? 2 : state === 'e2-sent' ? 3 : undefined;
     if (touch === undefined) return { allowed: false, refusal: 'thread-not-eligible' };
     if ((await findLiveOutreachDraft(connection, thread.threadId, touch)) !== null) {
       return { allowed: false, refusal: 'draft-already-live' };
@@ -200,7 +213,7 @@ export async function checkOutreachAction(
     }
   }
   // Issue #388: the preview and the first email both stand on the audit's
-  // client reports, so initial outreach waits for a current FR+EN pair.
+  // client report, so initial outreach waits for a current French report.
   // The same resolver decides the To do rows, so the API cannot bypass them.
   const readiness = await loadOutreachReportReadiness(connection, {
     auditId: qualification.audit.auditId,

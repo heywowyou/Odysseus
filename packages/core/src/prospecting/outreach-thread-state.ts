@@ -88,3 +88,37 @@ export function canTransitionOutreachThread(
 export function isTerminalOutreachThreadState(state: OutreachThreadState): boolean {
   return TERMINAL_OUTREACH_THREAD_STATES.includes(state);
 }
+
+/** The state a drafted thread came from: discarding its draft (issue #277)
+ *  leaves the stored state at `eN-drafted`, and redrafting is legal. */
+const STATE_BEFORE_DRAFT: Partial<Record<OutreachThreadState, OutreachThreadState>> = {
+  'e1-drafted': 'open',
+  'e2-drafted': 'e1-sent',
+  'e3-drafted': 'e2-sent',
+};
+
+/** The touch an `eN-drafted` state names, or undefined for any other state. */
+export function draftedOutreachTouch(state: OutreachThreadState): 1 | 2 | 3 | undefined {
+  return state === 'e1-drafted'
+    ? 1
+    : state === 'e2-drafted'
+      ? 2
+      : state === 'e3-drafted'
+        ? 3
+        : undefined;
+}
+
+/**
+ * The state that decides the next action. A thread whose drafted touch no
+ * longer has a live draft (the operator discarded it) acts as the state before
+ * that draft, so the touch can be drafted again; every other state is itself.
+ * The stored state is not rewritten: the mailbox sync still watches it.
+ */
+export function effectiveOutreachThreadState(
+  state: OutreachThreadState,
+  liveDraftTouches: readonly number[],
+): OutreachThreadState {
+  const touch = draftedOutreachTouch(state);
+  if (touch === undefined || liveDraftTouches.includes(touch)) return state;
+  return STATE_BEFORE_DRAFT[state] ?? state;
+}

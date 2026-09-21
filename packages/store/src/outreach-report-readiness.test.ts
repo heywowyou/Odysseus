@@ -37,6 +37,17 @@ describe('resolveOutreachReportReadiness (issue #388)', () => {
     });
   });
 
+  it('is ready with a current French report alone, English being an optional attachment', () => {
+    expect(resolveOutreachReportReadiness(audit, [report('fr')], [])).toEqual({ state: 'ready' });
+    expect(
+      resolveOutreachReportReadiness(
+        audit,
+        [report('fr'), report('en', { findingsProvenance: staleProvenance })],
+        [],
+      ),
+    ).toEqual({ state: 'ready' });
+  });
+
   it('names a report-stage failure when the job failed after the audit was saved', () => {
     // Cap d'Antibes: the PDF gate refused the French render.
     const failed = {
@@ -58,8 +69,8 @@ describe('resolveOutreachReportReadiness (issue #388)', () => {
     ).toEqual({ state: 'not-ready', reason: 'stale' });
   });
 
-  it('is missing when one language was never produced, including historical audits', () => {
-    expect(resolveOutreachReportReadiness(audit, [report('fr')], [])).toEqual({
+  it('is missing without a French report, including historical audits', () => {
+    expect(resolveOutreachReportReadiness(audit, [report('en')], [])).toEqual({
       state: 'not-ready',
       reason: 'missing',
     });
@@ -139,6 +150,7 @@ describe.skipIf(!available)('findAuditsWithUnreadyReports (issue #389)', () => {
       .insertMany([
         audit,
         { ...audit, auditId: 'audit-ready' },
+        { ...audit, auditId: 'audit-french-only' },
         { auditId: 'audit-legacy', startedAt: audit.startedAt },
       ]);
     await connection!
@@ -146,6 +158,7 @@ describe.skipIf(!available)('findAuditsWithUnreadyReports (issue #389)', () => {
       .insertMany([
         report('fr', { auditId: 'audit-ready' }),
         report('en', { auditId: 'audit-ready' }),
+        report('fr', { auditId: 'audit-french-only' }),
         report('fr', { findingsProvenance: staleProvenance }),
       ]);
   });
@@ -154,6 +167,7 @@ describe.skipIf(!available)('findAuditsWithUnreadyReports (issue #389)', () => {
     const unready = await findAuditsWithUnreadyReports(connection!, [
       audit.auditId,
       'audit-ready',
+      'audit-french-only',
       'audit-legacy',
     ]);
     expect([...unready]).toEqual([audit.auditId]);

@@ -1,8 +1,11 @@
-/** Issue #388: initial outreach needs the qualifying audit's client reports.
+/** Issue #388: initial outreach needs the qualifying audit's client report.
  *
  * One Full Scan is the evidence for everything downstream (plan 050, trade-off
- * 91): audit, FR/EN analysis, FR/EN report, then the outreach preview and the
- * first email. Qualification only asks whether the website evidence is
+ * 91): audit, French analysis, French report, then the outreach preview and
+ * the first email. Since Plan 067 French is the canonical report and English
+ * an optional later attachment, so only the French report decides readiness;
+ * an operator-finalized French report counts, being that language's newest
+ * row. Qualification only asks whether the website evidence is
  * complete; this asks whether the reports built from it are ready. Readiness
  * reads the reports that exist, not job statuses, so a needs-input stop, a
  * writing or PDF failure, a renormalization that left the reports stale, and
@@ -63,14 +66,13 @@ function asTime(value: Date | string): number {
   return new Date(value).getTime();
 }
 
-function newestReport(
+function newestFrenchReport(
   reports: readonly ReadinessReport[],
   auditId: string,
-  language: 'fr' | 'en',
 ): ReadinessReport | undefined {
   let newest: ReadinessReport | undefined;
   for (const report of reports) {
-    if (report.auditId !== auditId || report.language !== language) continue;
+    if (report.auditId !== auditId || report.language !== 'fr') continue;
     if (newest === undefined || asTime(report.generatedAt) > asTime(newest.generatedAt)) {
       newest = report;
     }
@@ -82,8 +84,8 @@ function newestReport(
  * `jobs` are the prospect's job rows (any status). A needs-input job still
  * blocks when it stopped on this audit or is a newer run the operator has not
  * resolved (issue #378); one older than the audit belongs to a superseded run.
- * Otherwise the newest FR and newest EN report must both exist and carry the
- * audit's current findings provenance.
+ * Otherwise the newest French report must exist and carry the audit's current
+ * findings provenance. English, present or not, current or not, never blocks.
  */
 export function resolveOutreachReportReadiness(
   audit: ReadinessAudit,
@@ -97,27 +99,19 @@ export function resolveOutreachReportReadiness(
   );
   if (blockedOnInput) return { state: 'not-ready', reason: 'needs-input' };
 
-  const fr = newestReport(reports, audit.auditId, 'fr');
-  const en = newestReport(reports, audit.auditId, 'en');
+  const fr = newestFrenchReport(reports, audit.auditId);
   if (
     fr !== undefined &&
-    en !== undefined &&
-    findingsProvenanceMatches(fr.findingsProvenance, audit.findingsProvenance) &&
-    findingsProvenanceMatches(en.findingsProvenance, audit.findingsProvenance)
+    findingsProvenanceMatches(fr.findingsProvenance, audit.findingsProvenance)
   ) {
     return { state: 'ready' };
   }
   if (jobs.some((job) => job.status === 'failed' && job.auditId === audit.auditId)) {
     return { state: 'not-ready', reason: 'failed' };
   }
-  // Stale: a report exists but was built from findings the audit no longer
-  // carries. Missing: no report at all, or only a current one for one language.
-  const stale = [fr, en].some(
-    (candidate) =>
-      candidate !== undefined &&
-      !findingsProvenanceMatches(candidate.findingsProvenance, audit.findingsProvenance),
-  );
-  return { state: 'not-ready', reason: stale ? 'stale' : 'missing' };
+  // Stale: a French report exists but was built from findings the audit no
+  // longer carries. Missing: no French report at all.
+  return { state: 'not-ready', reason: fr === undefined ? 'missing' : 'stale' };
 }
 
 /** Bounded report projection shared by every loader of readiness. */

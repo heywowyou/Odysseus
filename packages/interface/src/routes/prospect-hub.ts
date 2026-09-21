@@ -1,5 +1,6 @@
 import type { Connection } from 'mongoose';
 import { randomUUID } from 'node:crypto';
+import { effectiveOutreachThreadState } from '@odysseus/core';
 import {
   addDirectoryEntriesToProspects,
   appendProspectEvent,
@@ -407,7 +408,11 @@ export function registerProspectHubRoutes(
             ? null
             : {
                 threadId: thread.threadId,
-                state: thread.state,
+                // A discarded draft no longer reads as drafted.
+                state: effectiveOutreachThreadState(
+                  thread.state,
+                  drafts.filter((draft) => draft.status === 'created').map((draft) => draft.touch),
+                ),
                 currentTouch: thread.currentTouch,
                 updatedAt: thread.updatedAt,
                 needsReview: thread.needsReview,
