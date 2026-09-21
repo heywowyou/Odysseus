@@ -188,9 +188,11 @@ side effect of a report or template change:
    or rendering defects is not publishable.
 4. Upload the digest-addressed PDF, verify the readback digest, then replace
    `reference-audit/current.json` last. Never overwrite an immutable PDF.
-5. Probe `https://www.odysseusaudit.com/exemple-audit` and confirm the PDF
-   headers, complete document and canonical URL before enabling new Touch-1
-   drafts. Keep the previous approved manifest for rollback.
+5. Probe `https://www.odysseusaudit.com/exemple-audit.pdf` and confirm the PDF
+   headers and complete document, then open
+   `https://www.odysseusaudit.com/exemple-audit` and page through the reader
+   before enabling new Touch-1 drafts. Keep the previous approved manifest for
+   rollback.
 
 Steps 2 and 4 are two CLI commands, run locally with the reference bucket
 credentials in `.env`:

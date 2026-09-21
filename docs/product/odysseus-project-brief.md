@@ -509,10 +509,12 @@ releases, and retain a one-step rollback. Decisions and rejected alternatives:
 `packages/site` application serves the approved permanent paid-report example
 at `https://www.odysseusaudit.com/exemple-audit`. It reads only the fixed
 digest-addressed reference namespace and current pointer; it does not import
-Mongo or the private interface. The response is an inline PDF with noindex,
-noarchive, no-referrer and bounded cache headers. The optional
+Mongo or the private interface. Since 2026-09-21 (trade-off 108) the canonical
+route is an indexable page that reads the report one A4 page at a time with
+pdf.js; the approved PDF itself is served at `/exemple-audit.pdf` inline with
+noindex, noarchive, no-referrer and bounded cache headers. The optional
 `/exemple-audit/r/<token>` path writes a minimal first-party receipt and always
-redirects to the canonical route, including when attribution storage fails.
+redirects to the canonical page, including when attribution storage fails.
 
 **Milestone 10: benchmark study and percentile.** Batch scan of a bounded
 e-commerce cohort, aggregate percentile over stored findings, surface the

@@ -79,7 +79,8 @@ async function loadOutline(doc: PDFDocumentProxy): Promise<OutlineEntry[]> {
   const visit = async (items: typeof outline, depth: number, maxDepth: number): Promise<void> => {
     for (const item of items) {
       try {
-        const dest = typeof item.dest === 'string' ? await doc.getDestination(item.dest) : item.dest;
+        const dest =
+          typeof item.dest === 'string' ? await doc.getDestination(item.dest) : item.dest;
         const target = dest?.[0];
         if (target && typeof target === 'object') {
           entries.push({ title: item.title, page: (await doc.getPageIndex(target)) + 1, depth });
@@ -276,7 +277,8 @@ export function ReportViewer({ src }: { src: string }) {
   };
 
   const onPointerDown = (event: React.PointerEvent) => {
-    swipeStart.current = event.pointerType === 'touch' ? { x: event.clientX, y: event.clientY } : null;
+    swipeStart.current =
+      event.pointerType === 'touch' ? { x: event.clientX, y: event.clientY } : null;
   };
   const onPointerUp = (event: React.PointerEvent) => {
     const start = swipeStart.current;
@@ -290,12 +292,7 @@ export function ReportViewer({ src }: { src: string }) {
   const ready = state === 'ready';
 
   return (
-    <section
-      ref={rootRef}
-      className="report-viewer"
-      aria-label={copy.region}
-      onKeyDown={onKeyDown}
-    >
+    <section ref={rootRef} className="report-viewer" aria-label={copy.region} onKeyDown={onKeyDown}>
       <div ref={barRef} className="report-viewer-bar">
         <button
           type="button"

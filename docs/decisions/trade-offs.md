@@ -5550,3 +5550,34 @@ Rejected: recolouring a stored PDF at delivery time (the result would not have
 an exact approved digest); issuing a second report row/report ID for light;
 letting `prefers-color-scheme` choose a permanent artifact; and silently
 falling back to dark when light is missing.
+
+### 108. The reference example is an indexable page-by-page reader over the same approved PDF (build decision, 2026-09-21)
+
+Plan 071 served the approved PDF itself at `/exemple-audit`, noindex, and left
+indexing for a later SEO reason. That reason is now explicit: a visitor who
+finds the site through search should be able to read a real deliverable, and a
+report of several dozen pages in the browser's own PDF viewer is one long
+scroll. `/exemple-audit` is
+therefore a static, indexable marketing page with a bilingual introduction and
+a one-A4-page-at-a-time reader (previous/next, keyboard, touch swipe, a
+section picker built from the PDF outline, `#page-N` deep links). The approved
+PDF moved to `/exemple-audit.pdf` and keeps its noindex/noarchive headers, so
+the page and not the file is the search result. The opaque outreach redirects
+under `/exemple-audit/r/` are unchanged apart from now landing on the page,
+and stay disallowed in robots.txt.
+
+The reader draws each page with pdf.js on a canvas and lays the PDF's real
+text over it. The PDF stays the only published artifact, so the anonymizer,
+leak gate, digest-addressed storage and rollback of trade-off 106 are
+untouched, and the page restates no finding. pdf.js runs as a same-origin
+module worker under the unchanged marketing CSP: pdf.js 6 has no eval path,
+and its WebAssembly fast paths fall back to JavaScript because the CSP does
+not grant `wasm-unsafe-eval`.
+
+Rejected: publishing one raster image per page (images of text fail WCAG
+1.4.5 on the site of an accessibility-audit service, and a second artifact set
+would need its own leak gate); publishing the paginated report HTML (a second
+artifact with fonts, styles and sandboxing on the public site); and indexing
+the raw PDF instead of a page (no introduction, no disclosure outside the
+document, no internal links).
+

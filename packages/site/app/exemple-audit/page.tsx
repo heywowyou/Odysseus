@@ -48,8 +48,8 @@ export default function ExampleReportPage() {
             <div className="statement mt-6">
               <p className="label">À propos de cet exemple</p>
               <p className="small mt-2">
-                L&apos;identité de l&apos;établissement, son site et ses données administratives
-                ont été remplacés. Les constats et mesures proviennent d&apos;un audit anonymisé et
+                L&apos;identité de l&apos;établissement, son site et ses données administratives ont
+                été remplacés. Les constats et mesures proviennent d&apos;un audit anonymisé et
                 servent uniquement à illustrer le livrable&#160;; ils ne décrivent pas
                 l&apos;établissement fictif présenté ici.
               </p>
@@ -77,9 +77,9 @@ export default function ExampleReportPage() {
             <div className="statement mt-6">
               <p className="label">About this example</p>
               <p className="small mt-2">
-                The business&apos;s identity, website and administrative details have been
-                replaced. The findings and measurements come from an anonymised audit and only
-                illustrate the deliverable; they do not describe the fictional business shown here.
+                The business&apos;s identity, website and administrative details have been replaced.
+                The findings and measurements come from an anonymised audit and only illustrate the
+                deliverable; they do not describe the fictional business shown here.
               </p>
             </div>
             <ul className="small mt-6 space-y-2">

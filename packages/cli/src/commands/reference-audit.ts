@@ -151,7 +151,8 @@ export function registerReferenceAuditCommand(program: Command): void {
           console.log(`  Previous version kept for rollback: ${result.previousManifest.pdfSha256}`);
         }
         console.log(
-          '  Probe https://www.odysseusaudit.com/exemple-audit before sending new Touch-1 drafts.',
+          '  Probe https://www.odysseusaudit.com/exemple-audit.pdf and page through ' +
+            'https://www.odysseusaudit.com/exemple-audit before sending new Touch-1 drafts.',
         );
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

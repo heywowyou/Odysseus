@@ -405,7 +405,8 @@ person and one mailbox.
 
 **Reference-link request signal, Plan 071.** When optional first-party
 attribution is configured, Touch 1 may use an opaque high-entropy path under
-`/exemple-audit/r/` that redirects to the same canonical PDF. The public route
+`/exemple-audit/r/` that redirects to the same canonical `/exemple-audit`
+page, which reads the approved PDF page by page (trade-off 108). The public route
 writes only a token hash, request time and reference release version to a
 dedicated receipt prefix; it does not query Mongo and does not receive an IP,
 User-Agent, Referer, cookie, pixel or query tracking parameter. The private

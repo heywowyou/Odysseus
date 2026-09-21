@@ -78,10 +78,7 @@ export function stepForSwipe(dx: number, dy: number): PageStep | null {
  * page takes the readable minimum (and the window scrolls a little). Never
  * wider than the frame it sits in.
  */
-export function fittedPageWidth(options: {
-  frameWidth: number;
-  availableHeight: number;
-}): number {
+export function fittedPageWidth(options: { frameWidth: number; availableHeight: number }): number {
   const { frameWidth, availableHeight } = options;
   const heightBound = Math.floor(Math.max(availableHeight, 0) * A4_ASPECT);
   const width = Math.max(heightBound, MIN_READABLE_PAGE_WIDTH);
@@ -111,7 +108,10 @@ export function sectionEntries(entries: readonly OutlineEntry[]): OutlineEntry[]
 }
 
 /** The section a page belongs to: the last entry starting at or before it. */
-export function sectionForPage(entries: readonly OutlineEntry[], page: number): OutlineEntry | null {
+export function sectionForPage(
+  entries: readonly OutlineEntry[],
+  page: number,
+): OutlineEntry | null {
   let current: OutlineEntry | null = null;
   for (const entry of entries) {
     if (entry.page <= page) current = entry;
