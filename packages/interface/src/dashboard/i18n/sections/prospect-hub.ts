@@ -305,6 +305,8 @@ export interface ProspectHubStrings {
     discardDraft: string;
     confirmDiscardDraft: string;
     draftDiscarded: string;
+    draftDiscardedWithPreview: string;
+    draftDiscardedPreviewLive: string;
     noDraft: string;
     auditState: string;
     /** `{date}` and `{age}`, the latter one of the scanAge* phrases. */
@@ -727,8 +729,12 @@ export const prospectHub = {
       openInMailbox: 'Ouvrir dans la boîte mail',
       discardDraft: 'Supprimer le brouillon',
       confirmDiscardDraft:
-        'Supprimer ce brouillon ici et dans la boîte mail ? Vous pourrez en rédiger un nouveau.',
+        'Supprimer ce brouillon ici et dans la boîte mail ? Son aperçu éventuel est retiré aussi.',
       draftDiscarded: 'Brouillon supprimé. Vous pouvez en rédiger un nouveau.',
+      draftDiscardedWithPreview:
+        'Brouillon supprimé et aperçu retiré. Le prospect revient à l’état audité.',
+      draftDiscardedPreviewLive:
+        'Brouillon supprimé, mais l’aperçu n’a pas pu être retiré. Retirez-le ci-dessous.',
       noDraft: 'Aucun brouillon en attente.',
       auditState: 'État de l’audit : {state}',
       scanDate: 'Scanné le {date}, {age}',
@@ -1241,8 +1247,13 @@ export const prospectHub = {
         'Reference link requested {count} time(s). Automated email-security systems may trigger this signal; it is not proof of a human reading.',
       openInMailbox: 'Open in the mailbox',
       discardDraft: 'Discard the draft',
-      confirmDiscardDraft: 'Discard this draft here and in the mailbox? You can draft a new one.',
+      confirmDiscardDraft:
+        'Discard this draft here and in the mailbox? Its preview, if any, is taken offline too.',
       draftDiscarded: 'Draft discarded. You can draft a new one.',
+      draftDiscardedWithPreview:
+        'Draft discarded and preview taken offline. The prospect is back to its audited state.',
+      draftDiscardedPreviewLive:
+        'Draft discarded, but the preview could not be taken offline. Revoke it below.',
       noDraft: 'No pending draft.',
       auditState: 'Audit state: {state}',
       scanDate: 'Scanned {date}, {age}',

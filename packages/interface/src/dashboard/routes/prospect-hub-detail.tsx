@@ -139,6 +139,7 @@ interface ProspectDraft {
   draftId: string;
   touch: number;
   status: string;
+  reviewOutcome?: 'approved' | 'skipped';
   subject: string;
   body?: string;
   recipient?: string;
@@ -326,7 +327,9 @@ export function ProspectHubDetailPage(): JSX.Element {
   // copied, and revoked next to the publish action for as long as it is live.
   const livePreview = previews.find((preview) => preview.status === 'live');
   const livePreviewUrl = livePreview?.url ?? null;
-  const drafts = prospect.drafts ?? [];
+  // A discarded draft is gone for the operator: listing it would keep the
+  // prospect looking drafted after a return to its audited state.
+  const drafts = (prospect.drafts ?? []).filter((draft) => draft.reviewOutcome !== 'skipped');
   const work = prospect.work;
   const recommendation = work?.recommendation;
   const activeScan = work?.activeScan;
@@ -703,12 +706,18 @@ export function ProspectHubDetailPage(): JSX.Element {
     setOutreachBusy(`discard-${draftId}`);
     setOutreachNotice(null);
     try {
-      await sendJson(
+      const result = await sendJson<{ previewRevoked?: boolean; previewStillLive?: boolean }>(
         `/api/prospects/${prospect.prospectId}/drafts/${encodeURIComponent(draftId)}/discard`,
         'POST',
         {},
       );
-      setOutreachNotice(copy.draftDiscarded);
+      setOutreachNotice(
+        result.previewStillLive === true
+          ? copy.draftDiscardedPreviewLive
+          : result.previewRevoked === true
+            ? copy.draftDiscardedWithPreview
+            : copy.draftDiscarded,
+      );
     } catch {
       setOutreachNotice(copy.actionFailed);
     } finally {

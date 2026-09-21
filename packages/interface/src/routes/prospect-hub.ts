@@ -423,6 +423,7 @@ export function registerProspectHubRoutes(
           status: draft.status,
           subject: draft.subject,
           body: draft.body,
+          reviewOutcome: draft.reviewOutcome,
           recipient: draft.roleAddress,
           language: draft.language,
           previewUrl: draft.previewUrl,
@@ -489,7 +490,31 @@ export function registerProspectHubRoutes(
     if (mailbox !== null && draft.providerDraftId !== undefined) {
       await mailbox.deleteDraft(draft.providerDraftId).catch(() => undefined);
     }
-    sendJson(res, 200, { discarded: true });
+    // The preview exists only to be linked from this draft, so discarding the
+    // draft takes it offline too and leaves the prospect at its audited state.
+    // Object first, record second; a bucket failure leaves the preview live
+    // and its revoke button in place rather than failing the discard.
+    let previewRevoked = false;
+    if (draft.previewId !== undefined) {
+      const preview = (
+        await listOutreachPreviews(connection, { prospectId: draft.prospectId, status: 'live' })
+      ).find((item) => item.previewId === draft.previewId);
+      if (preview !== undefined) {
+        try {
+          await createConfiguredPreviewPublisher().delete(preview.objectKey);
+          await revokeOutreachPreview(
+            connection,
+            preview.previewId,
+            'draft discarded by the operator',
+          );
+          previewRevoked = true;
+        } catch {
+          sendJson(res, 200, { discarded: true, previewRevoked: false, previewStillLive: true });
+          return;
+        }
+      }
+    }
+    sendJson(res, 200, { discarded: true, previewRevoked });
   });
 
   router.post('/api/prospects/:prospectId/outreach/follow-up', async ({ res, params }) => {

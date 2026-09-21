@@ -835,6 +835,43 @@ describe('draft review', () => {
     const missing = await handle('/api/prospects/p-1/drafts/nope/discard', 'POST', {});
     expect(missing.statusCode).toBe(404);
   });
+
+  it('takes the discarded first email preview offline, object first', async () => {
+    vi.mocked(listOutreachDrafts).mockResolvedValue([
+      { draftId: 'd-1', prospectId: 'p-1', previewId: 'pv-1', status: 'created' },
+    ] as never);
+    vi.mocked(listOutreachPreviews).mockResolvedValue([
+      { previewId: 'pv-1', objectKey: 'k.html', status: 'live' },
+    ] as never);
+
+    const response = await handle('/api/prospects/p-1/drafts/d-1/discard', 'POST', {});
+    expect(response.body).toEqual({ discarded: true, previewRevoked: true });
+    expect(deletePreview).toHaveBeenCalledWith('k.html');
+    expect(revokeOutreachPreview).toHaveBeenCalledWith(
+      fakeConnection,
+      'pv-1',
+      'draft discarded by the operator',
+    );
+  });
+
+  it('still discards when the preview object cannot be removed', async () => {
+    vi.mocked(listOutreachDrafts).mockResolvedValue([
+      { draftId: 'd-1', prospectId: 'p-1', previewId: 'pv-1', status: 'created' },
+    ] as never);
+    vi.mocked(listOutreachPreviews).mockResolvedValue([
+      { previewId: 'pv-1', objectKey: 'k.html', status: 'live' },
+    ] as never);
+    deletePreview.mockRejectedValueOnce(new Error('bucket down'));
+
+    const response = await handle('/api/prospects/p-1/drafts/d-1/discard', 'POST', {});
+    expect(response.body).toEqual({
+      discarded: true,
+      previewRevoked: false,
+      previewStillLive: true,
+    });
+    expect(recordOutreachDraftReview).toHaveBeenCalledWith(fakeConnection, 'd-1', 'skipped');
+    expect(revokeOutreachPreview).not.toHaveBeenCalled();
+  });
 });
 
 describe('one preview per outreach attempt', () => {
