@@ -52,7 +52,7 @@ export function findingsAreStale(
  *  routes map to 409: regeneration and candidate previews cannot run
  *  without the evidence, while the read-only preparation view degrades
  *  gracefully instead (it catches and passes evidence-unavailable). */
-export async function readAuditEvidence(audit: AuditDocument): Promise<AuditEvidence> {
+async function readAuditEvidence(audit: AuditDocument): Promise<AuditEvidence> {
   const auditDir = buildAuditDir(
     getArtifactsRoot(),
     new URL(audit.siteUrl).hostname,
