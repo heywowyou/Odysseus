@@ -21,6 +21,30 @@ reconciliation properly). History is never deleted.
 | 5 | 2026-09-15 | `Plan 048 closeout` | 0 | 15 | 0 | 0 | isolated local stateful browser fixture + real prospecting queue scan, FR detail state pass | yes (FR stateful; EN surface run 4) |
 | 6 | 2026-09-15 | `13b65ea` | 14 | 16 | 0 | 0 | local stateful, authorized real site, real mailbox draft + preview bucket, FR+EN; journeys 1-5 and 7 partial, 6 blocked | no |
 | 7 | 2026-09-17 | `11e5cf71` | 16 | 1 regressed + 26 not re-verified | 2 | 1 (UX-020) | production observation with operator-authorized writes, FR+EN; journeys 2, 3 (to scan launch/progress), 7 partial; 4, 5, 6 not reached (session lost) | no |
+| 8 | 2026-09-21 | `8d3e1fee` | 0 | 1 regressed + 26 not re-verified | 0 | 0 | targeted production regression: La Co(o)rniche report rewrite and authenticated Gmail mailbox sync; no live draft creation | no |
+
+## Run 8 notes (production, targeted authorized regression)
+
+- Mode and boundary: deployed dashboard `https://app.odysseusaudit.com`, first
+  build `d15e990` and final build `bef037b`; the operator authorized the VPS
+  exercise. No email was sent, and no real Gmail draft was created during this
+  run because a named safe mailbox/test recipient was not provided.
+- Report regeneration: the exact La Co(o)rniche `Réécrire le rapport` action
+  first reproduced the stale legacy-manifest failure. After the evidence
+  refresh fix, the replay exposed a second stale selected-structure failure;
+  the follow-up fix regenerated the structure and completed successfully.
+  The final French report was fresh with a PDF; no scan was launched.
+- Gmail mailbox sync: the deployed endpoint initially failed with Gmail 403
+  because a metadata-scoped token was implicitly requesting a full thread.
+  The adapter now requests `format=metadata`; the final live check returned
+  HTTP 200, `configured: true`, `threads: 2`, `sent: 0`, `replies: 0`, and
+  `review: 0`. Provider failures now return a safe 502 instead of a raw 500.
+- Draft path: the Gmail transport contract and draft-runtime failure paths are
+  covered locally. A provider rejection/timeout now records a failed attempt,
+  cleans the opt-out object, and refuses safely rather than leaving a false
+  success or an unhandled exception. The remaining production coverage gap is
+  one real draft creation with an explicitly named safe mailbox/test recipient;
+  the adapter has no send capability.
 
 ## Run 7 notes (production, operator-authorized writes)
 
