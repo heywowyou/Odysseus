@@ -208,7 +208,7 @@ export function registerReportPreparationRoutes(router: Router, connection: Conn
       const audit = await readAudit(connection, auditId, res);
       if (!audit) return;
       try {
-        const result = await generateEnglishVersion(connection, audit);
+        const result = await generateEnglishVersion(connection, audit, artifactStore);
         sendJson(res, 201, result);
       } catch (error) {
         if (

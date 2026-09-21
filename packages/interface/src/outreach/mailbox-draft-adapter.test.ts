@@ -267,6 +267,18 @@ describe('no send capability', () => {
   });
 });
 
+describe('Gmail transport', () => {
+  it('requests metadata rather than the full thread representation', async () => {
+    const { adapter, requests } = stubGmail();
+    const created = await adapter.createDraft(VALID_DRAFT);
+    await adapter.getThreadMetadata(created.providerThreadId);
+
+    const threadRequest = requests.find((request) => request.url.includes('/threads/'));
+    expect(threadRequest).toBeDefined();
+    expect(new URL(threadRequest?.url ?? '').searchParams.get('format')).toBe('metadata');
+  });
+});
+
 describe('gmail adapter transport', () => {
   it('refreshes the token once and reuses it across calls', async () => {
     const { adapter, requests } = stubGmail();

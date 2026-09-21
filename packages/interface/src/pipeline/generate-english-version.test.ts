@@ -9,7 +9,10 @@ vi.mock('@odysseus/store', () => ({
   resolveSelectedAnalysisPairForAudit: vi.fn(),
 }));
 vi.mock('./analysis-stage.js', () => ({ runAnalysisStage: vi.fn() }));
-vi.mock('./audit-evidence.js', () => ({ readAuditEvidence: vi.fn() }));
+vi.mock('./audit-evidence.js', () => ({
+  findingsAreStale: vi.fn(() => false),
+  refreshStaleAuditEvidence: vi.fn(),
+}));
 vi.mock('./report-stage.js', () => ({ runReportStage: vi.fn() }));
 
 import {
@@ -20,7 +23,7 @@ import {
   resolveSelectedAnalysisPairForAudit,
 } from '@odysseus/store';
 import { runAnalysisStage } from './analysis-stage.js';
-import { readAuditEvidence } from './audit-evidence.js';
+import { findingsAreStale, refreshStaleAuditEvidence } from './audit-evidence.js';
 import { runReportStage } from './report-stage.js';
 import { generateEnglishVersion } from './generate-english-version.js';
 
@@ -54,10 +57,11 @@ beforeEach(() => {
     },
     updatedAt: '2026-09-01T00:00:00.000Z',
   });
-  vi.mocked(readAuditEvidence).mockResolvedValue({
+  vi.mocked(refreshStaleAuditEvidence).mockResolvedValue({
     auditDir: '/tmp/audit-067-en',
     manifest: { auditId: 'audit-067-en', siteUrl: 'https://example.com/' } as never,
     findings: [],
+    findingsWereRefreshed: false,
   });
   vi.mocked(runAnalysisStage).mockResolvedValue({
     analysis: {
@@ -132,6 +136,18 @@ describe('Plan 067 on-demand English generation', () => {
     expect(attachEnglishAnalysisToSelection).not.toHaveBeenCalled();
     expect(recordReadyWritingCandidate).not.toHaveBeenCalled();
     expect(approveWritingCandidate).not.toHaveBeenCalled();
+  });
+
+  it('refuses to attach English to a French analysis made from stale findings', async () => {
+    vi.mocked(findingsAreStale).mockReturnValueOnce(true);
+
+    await expect(generateEnglishVersion({} as never, audit)).rejects.toThrow(
+      'selected French report is out of date',
+    );
+
+    expect(runAnalysisStage).not.toHaveBeenCalled();
+    expect(attachEnglishAnalysisToSelection).not.toHaveBeenCalled();
+    expect(runReportStage).not.toHaveBeenCalled();
   });
 
   it('attaches English only after the English PDF has rendered successfully', async () => {

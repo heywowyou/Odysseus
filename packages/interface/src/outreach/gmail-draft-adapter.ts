@@ -47,16 +47,19 @@ const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 /**
  * Every request this adapter can make, as data.
  *
- * `thread` reads metadata only. Google rejects an explicit `format` parameter
- * when the caller holds `gmail.metadata`, so the default is used rather than
- * asking for `format=metadata` and getting a 403 that reads like an auth
- * failure.
+ * `thread` reads metadata only. The Gmail API defaults a thread read to the
+ * full message representation, which is forbidden for a token carrying the
+ * narrower `gmail.metadata` scope. Keep the requested representation explicit
+ * so a mailbox sync never asks the provider for message bodies.
  */
 export const GMAIL_ENDPOINTS = Object.freeze({
   createDraft: { method: 'POST', path: '/gmail/v1/users/me/drafts' },
   getDraft: { method: 'GET', path: '/gmail/v1/users/me/drafts/{id}' },
   deleteDraft: { method: 'DELETE', path: '/gmail/v1/users/me/drafts/{id}' },
-  getThread: { method: 'GET', path: '/gmail/v1/users/me/threads/{id}' },
+  getThread: {
+    method: 'GET',
+    path: '/gmail/v1/users/me/threads/{id}?format=metadata',
+  },
 } as const);
 
 export const GMAIL_REQUIRED_SCOPES = Object.freeze([

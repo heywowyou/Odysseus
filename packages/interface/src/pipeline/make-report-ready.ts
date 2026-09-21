@@ -19,7 +19,7 @@
  */
 
 import type { Connection } from 'mongoose';
-import { buildFindingsProvenance, type FindingsProvenance, type Finding } from '@odysseus/core';
+import { buildFindingsProvenance, type Finding } from '@odysseus/core';
 import {
   getAuditManualFields,
   getAuditRuntimeFields,
@@ -36,6 +36,7 @@ import type { ArtifactStore } from '../artifacts/artifact-store.js';
 import { syncAuditDirToBucket } from '../artifacts/sync-audit-artifacts.js';
 import { backfillAuditRow } from './backfill-audit-row.js';
 import { renormalizeAudit } from './renormalize-audit.js';
+import { findingsAreStale } from './audit-evidence.js';
 import { runAnalysisStage } from './analysis-stage.js';
 import { RegenerationConflictError } from './regeneration-conflict-error.js';
 import { releaseReportProduction, tryAcquireReportProduction } from './report-production-lock.js';
@@ -75,17 +76,7 @@ export type MakeReportReadyOutcome =
  *  route - never pays for a manifest.json read just to answer this
  *  question. The one caller inside this file that only has a manifest
  *  passes `manifest.findingsProvenance`. */
-export function findingsAreStale(
-  stamped: FindingsProvenance | undefined,
-  findings: Finding[],
-): boolean {
-  const current = buildFindingsProvenance(findings);
-  return (
-    stamped === undefined ||
-    stamped.findingsSchemaVersion !== current.findingsSchemaVersion ||
-    stamped.normalizationFingerprint !== current.normalizationFingerprint
-  );
-}
+export { findingsAreStale } from './audit-evidence.js';
 
 /** True when the pair the report would render was written from findings
  *  normalized differently than the current ones. An earlier run can leave

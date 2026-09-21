@@ -210,8 +210,15 @@ export function registerProspectHubRoutes(
   // Issue #272: the operator can pull sent emails and replies in now rather
   // than wait for the scheduled sync.
   router.post('/api/outreach/mailbox-sync', async ({ res }) => {
-    const result = await syncMailbox(connection);
-    sendJson(res, result.configured ? 200 : 503, result);
+    try {
+      const result = await syncMailbox(connection);
+      sendJson(res, result.configured ? 200 : 503, result);
+    } catch {
+      // A provider/authentication failure is distinct from an unconfigured
+      // mailbox. Keep the raw Gmail response out of the dashboard and avoid
+      // making the UI report a configured-but-broken mailbox as “not set up”.
+      sendError(res, 502, 'mailbox could not be synchronized');
+    }
   });
 
   router.get('/api/prospects', async ({ res, query }) => {

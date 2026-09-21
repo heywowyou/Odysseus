@@ -40,7 +40,7 @@ import { WritingPassExhaustedError } from '@odysseus/llm';
 import { ReportIdentityUnconfirmedError } from '@odysseus/report';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
 import { runAnalysisStage } from './analysis-stage.js';
-import { readAuditEvidence } from './audit-evidence.js';
+import { findingsAreStale, refreshStaleAuditEvidence } from './audit-evidence.js';
 import { RegenerationConflictError } from './regeneration-conflict-error.js';
 import { releaseReportProduction, tryAcquireReportProduction } from './report-production-lock.js';
 import {
@@ -129,11 +129,27 @@ export async function regenerateWriting(
   let auditDir: string;
   let manifest: AuditManifest;
   let findings: Finding[];
+  let findingsWereRefreshed: boolean;
+  let regenerateStructure: boolean;
   let replacedApprovedSelection: boolean;
   try {
-    ({ auditDir, manifest, findings } = await readAuditEvidence(audit));
+    ({ auditDir, manifest, findings, findingsWereRefreshed } = await refreshStaleAuditEvidence(
+      connection,
+      audit,
+      artifactStore,
+    ));
     const preparation = await getReportPreparation(connection, auditId);
     replacedApprovedSelection = preparation.writingSelection?.selected !== undefined;
+    // A prior failed run may already have refreshed manifest.json while
+    // leaving the selected French analysis and its structure document stamped
+    // with the old normalization fingerprint. In that state the manifest is
+    // fresh, so the evidence refresh alone cannot tell the analysis stage to
+    // replace the incompatible structure. Treat the selected pair's stamp as
+    // part of this pre-flight decision too; otherwise retrying the same
+    // operator action just advances from "stale findings" to "stale structure
+    // document" and fails again.
+    const selectedProvenance = preparation.writingSelection?.selected?.findingsProvenance;
+    regenerateStructure = findingsWereRefreshed || findingsAreStale(selectedProvenance, findings);
   } catch (error) {
     // Release is idempotent, so releasing an already free lock changes
     // nothing.
@@ -157,6 +173,7 @@ export async function regenerateWriting(
       {
         language: 'fr',
         findingsProvenance,
+        regenerateStructure,
         regenerateWriting: options.regenerateWriting ?? false,
         ...(audit.manualFields?.siren !== undefined
           ? { manualSiren: audit.manualFields.siren.value }

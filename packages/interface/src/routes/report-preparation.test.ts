@@ -50,6 +50,10 @@ vi.mock('@odysseus/report', () => {
 vi.mock('../pipeline/analysis-stage.js', () => ({
   runAnalysisStage: vi.fn(),
 }));
+vi.mock('../pipeline/audit-evidence.js', () => ({
+  findingsAreStale: vi.fn(() => false),
+  refreshStaleAuditEvidence: vi.fn(),
+}));
 
 vi.mock('../pipeline/regenerate-reports.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../pipeline/regenerate-reports.js')>()),
@@ -71,11 +75,13 @@ import {
   WritingSelectionConflictError,
 } from '@odysseus/store';
 import { runAnalysisStage } from '../pipeline/analysis-stage.js';
+import { refreshStaleAuditEvidence } from '../pipeline/audit-evidence.js';
 import {
   isWritingRegenerationInFlight,
   lastWritingRunOutcome,
 } from '../pipeline/regenerate-writing.js';
 import { regenerateReportsForAudit } from '../pipeline/regenerate-reports.js';
+import { RegenerationConflictError } from '../pipeline/regeneration-conflict-error.js';
 import {
   releaseReportProduction,
   tryAcquireReportProduction,
@@ -112,6 +118,12 @@ let storedPreparation: ReportPreparation;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(refreshStaleAuditEvidence).mockResolvedValue({
+    auditDir: AUDIT_DIR,
+    manifest: { auditId: 'audit-1', siteUrl: 'https://example.com/' } as never,
+    findings: [],
+    findingsWereRefreshed: false,
+  });
   storedPreparation = emptyReportPreparation();
   vi.mocked(getReportPreparation).mockImplementation(async () =>
     JSON.parse(JSON.stringify(storedPreparation)),
@@ -340,6 +352,9 @@ describe('POST regenerate-writing and the reuse of a succeeded language', () => 
 
 describe('POST /api/audits/:auditId/report-preparation/regenerate-writing', () => {
   it('returns 409 when the artifacts are missing, without requiring any body', async () => {
+    vi.mocked(refreshStaleAuditEvidence).mockRejectedValueOnce(
+      new RegenerationConflictError('odysseus: audit artifacts not found on disk'),
+    );
     const router = new Router();
     registerReportPreparationRoutes(router, fakeConnection);
     const res = fakeRes();

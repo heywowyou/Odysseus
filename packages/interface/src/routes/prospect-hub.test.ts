@@ -796,6 +796,15 @@ describe('POST /api/outreach/mailbox-sync', () => {
     const missing = await handle('/api/outreach/mailbox-sync', 'POST', {});
     expect(missing.statusCode).toBe(503);
   });
+
+  it('returns a provider failure without leaking the raw mailbox error', async () => {
+    syncMailbox.mockRejectedValueOnce(new Error('Gmail thread read failed with status 403'));
+
+    const failed = await handle('/api/outreach/mailbox-sync', 'POST', {});
+
+    expect(failed.statusCode).toBe(502);
+    expect(failed.body).toEqual({ error: 'mailbox could not be synchronized' });
+  });
 });
 
 describe('outreach language', () => {

@@ -17,7 +17,7 @@ import {
   type AuditDocument,
 } from '@odysseus/store';
 import { runAnalysisStage } from './analysis-stage.js';
-import { readAuditEvidence } from './audit-evidence.js';
+import { findingsAreStale, refreshStaleAuditEvidence } from './audit-evidence.js';
 import { RegenerationConflictError } from './regeneration-conflict-error.js';
 import { releaseReportProduction, tryAcquireReportProduction } from './report-production-lock.js';
 import {
@@ -26,6 +26,8 @@ import {
   markReportProductionStage,
 } from './report-production-state.js';
 import { runReportStage, type ReportStageResult } from './report-stage.js';
+import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
+import type { ArtifactStore } from '../artifacts/artifact-store.js';
 
 export class EnglishGenerationUnavailableError extends Error {
   constructor(message: string) {
@@ -43,6 +45,7 @@ export interface GenerateEnglishVersionResult {
 export async function generateEnglishVersion(
   connection: Connection,
   audit: AuditDocument,
+  artifactStore: ArtifactStore | undefined = createConfiguredArtifactStore(),
 ): Promise<GenerateEnglishVersionResult> {
   const auditId = audit.auditId;
   if (!tryAcquireReportProduction(auditId, 'writing')) {
@@ -88,8 +91,17 @@ export async function generateEnglishVersion(
       );
     }
 
-    const { auditDir, manifest, findings } = await readAuditEvidence(audit);
+    const { auditDir, manifest, findings } = await refreshStaleAuditEvidence(
+      connection,
+      audit,
+      artifactStore,
+    );
     const findingsProvenance = buildFindingsProvenance(findings);
+    if (findingsAreStale(selectedFrench.findingsProvenance, findings)) {
+      throw new EnglishGenerationUnavailableError(
+        'odysseus: the selected French report is out of date; regenerate French before generating English',
+      );
+    }
 
     const enStage = await runAnalysisStage(
       auditDir,
