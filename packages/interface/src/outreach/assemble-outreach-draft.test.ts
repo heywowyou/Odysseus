@@ -63,7 +63,7 @@ function assertKeepsFrenchSignature(body: string): void {
   expect(body).toContain(
     'Cordialement,\n\n' +
       'Jules Fontaine\n' +
-      'Fondateur — Odysseus\n' +
+      'Fondateur, Odysseus\n' +
       'Audits techniques de sites web : SEO, GEO, performance, accessibilité et sécurité\n' +
       'odysseusaudit.com · contact@odysseusaudit.fr',
   );
@@ -102,7 +102,7 @@ describe('assembleOutreachDraft - touch 1', () => {
     expect(result.body).toContain('deux relances au maximum');
     expect(result.body).toContain('Sources utilisées\u00a0:');
     expect(result.body).toContain(
-      'Responsable du traitement\u00a0: Jules Fontaine — Odysseus · contact@odysseusaudit.fr.',
+      'Responsable du traitement\u00a0: Jules Fontaine, Odysseus · contact@odysseusaudit.fr.',
     );
     expect(result.body).toContain(PRIVACY_URL);
     expect(result.body).toContain(OPT_OUT_URL);
@@ -238,9 +238,17 @@ describe('assembleOutreachDraft - touch 1', () => {
       `style="color:#6b6b6b;text-decoration:underline">Ne plus être contacté</a> · <a href="${PRIVACY_URL}" style="color:#6b6b6b;text-decoration:underline"`,
     );
     expect(result.htmlBody).toContain(
-      '<span style="font-weight:600">Jules Fontaine</span><br><span style="color:#5f6368">Fondateur — Odysseus<br>Audits techniques de sites web : SEO, GEO, performance, accessibilité et sécurité<br>odysseusaudit.com · contact@odysseusaudit.fr</span>',
+      '<span style="font-weight:600">Jules Fontaine</span><br><span style="color:#5f6368">Fondateur, Odysseus<br>Audits techniques de sites web : SEO, GEO, performance, accessibilité et sécurité<br>odysseusaudit.com · contact@odysseusaudit.fr</span>',
     );
     expect(result.htmlBody).not.toMatch(/<img|<script|<link|<button|src=|url\(/iu);
+  });
+});
+
+describe('assembleOutreachDraft - dashes', () => {
+  it.each(['fr', 'en'] as const)('prints no em or en dash in a %s first touch', (language) => {
+    const result = assembleOutreachDraft({ ...TOUCH1_BASE, language });
+    assertAssembled(result);
+    expect(`${result.subject}${result.body}${result.htmlBody}`).not.toMatch(/[\u2013\u2014]/u);
   });
 });
 

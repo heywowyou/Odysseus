@@ -40,7 +40,7 @@ const FR: OutreachDraftCopy = {
   signOff: 'Cordialement,',
   signature: [
     OUTREACH_CONTACT.name,
-    `Fondateur — ${OUTREACH_CONTACT.organisation}`,
+    `Fondateur, ${OUTREACH_CONTACT.organisation}`,
     'Audits techniques de sites web : SEO, GEO, performance, accessibilité et sécurité',
     `${WEBSITE} · ${OUTREACH_CONTACT.address}`,
   ],
@@ -58,7 +58,7 @@ const FR: OutreachDraftCopy = {
     'provided-directly': 'les coordonnées que vous nous avez communiquées',
   },
   senderIdentity:
-    `Responsable du traitement\u00a0: ${OUTREACH_CONTACT.name} — ` +
+    `Responsable du traitement\u00a0: ${OUTREACH_CONTACT.name}, ` +
     `${OUTREACH_CONTACT.organisation} · ${OUTREACH_CONTACT.address}.`,
   replyInvite: 'Vous pouvez répondre directement à ce message.',
   optOutLabel: 'Ne plus être contacté',
@@ -74,7 +74,7 @@ const EN: OutreachDraftCopy = {
   signOff: 'Kind regards,',
   signature: [
     OUTREACH_CONTACT.name,
-    `Founder — ${OUTREACH_CONTACT.organisation}`,
+    `Founder, ${OUTREACH_CONTACT.organisation}`,
     'Technical website audits: SEO, GEO, performance, accessibility and security',
     `${WEBSITE} · ${OUTREACH_CONTACT.address}`,
   ],
@@ -92,7 +92,7 @@ const EN: OutreachDraftCopy = {
     'provided-directly': 'the contact details you provided to us',
   },
   senderIdentity:
-    `Data controller: ${OUTREACH_CONTACT.name} — ${OUTREACH_CONTACT.organisation} · ` +
+    `Data controller: ${OUTREACH_CONTACT.name}, ${OUTREACH_CONTACT.organisation} · ` +
     `${OUTREACH_CONTACT.address}.`,
   replyInvite: 'You can reply directly to this message.',
   optOutLabel: 'Stop being contacted',
