@@ -21,11 +21,21 @@ import type { FindingCandidate } from './candidate.js';
  *  array is preserved in rawEvidenceForPage for exactness. */
 export type AxeTargetInput = Array<string | string[]>;
 
+/** One of axe's check outcomes (`any`, `all`, or `none`). The identity data
+ * for rules such as color-contrast lives here, not on the violation node
+ * itself: a real axe 4.12 result stores it under `node.any[].data`. */
+export interface AxeCheckInput {
+  data?: unknown;
+}
+
 export interface AxeNodeInput {
   html: string;
   target: AxeTargetInput;
   failureSummary?: string;
   impact?: string | null;
+  any?: AxeCheckInput[];
+  all?: AxeCheckInput[];
+  none?: AxeCheckInput[];
   /** axe's check-specific measurement payload (for example, contrast
    * colours). Kept as unknown because axe uses several shapes. */
   data?: unknown;
@@ -263,15 +273,16 @@ function frameIdentity(selector: string, pageUrl: string, snippet: string): stri
   return `frame:${source}|${innerShape}`;
 }
 
-/** axe puts the measured colour values in node.data. Those values are the
+/** axe puts the measured colour values in a check outcome's data. Those values are the
  * defect identity: a selector only identifies where one instance happened
  * to render. Missing data deliberately falls through to today's identity. */
 function checkDataIdentity(
   ruleId: string,
   nodeData: unknown,
+  checkData: unknown,
   violationData: unknown,
 ): string | undefined {
-  const data = nodeData ?? violationData;
+  const data = nodeData ?? checkData ?? violationData;
   if (ruleId === 'color-contrast') {
     const fg = stringField(data, 'fgColor');
     const bg = stringField(data, 'bgColor');
@@ -287,6 +298,14 @@ function checkDataIdentity(
     if (nodeColor !== undefined && parentColor !== undefined && ratio !== undefined) {
       return `link-in-text-block:${nodeColor}|${parentColor}|${ratio}`;
     }
+  }
+  return undefined;
+}
+
+function axeCheckData(node: AxeNodeInput): unknown {
+  for (const checks of [node.any, node.all, node.none]) {
+    const data = checks?.find((check) => check.data !== undefined)?.data;
+    if (data !== undefined) return data;
   }
   return undefined;
 }
@@ -366,7 +385,7 @@ export function extractAxeCandidates(
         },
         ...(() => {
           const identity =
-            checkDataIdentity(violation.id, node.data, violation.data) ??
+            checkDataIdentity(violation.id, node.data, axeCheckData(node), violation.data) ??
             templateIdentity(violation.id, selector, node.html, node.failureSummary);
           const frame = frameIdentity(selector, pageUrl, node.html);
           const scoped = frame === undefined ? identity : `${frame}|${identity ?? violation.id}`;

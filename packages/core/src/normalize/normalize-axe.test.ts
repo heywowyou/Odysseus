@@ -57,6 +57,60 @@ describe('extractAxeCandidates', () => {
     expect(candidates[0]?.rawEvidenceForPage['impact']).toBe('serious');
   });
 
+  it("uses axe's check outcome data for contrast and link identities", () => {
+    const contrast = extractAxeCandidates(
+      buildAxeResultsInput([
+        buildAxeViolation({
+          id: 'color-contrast',
+          nodes: [
+            buildAxeNode({
+              target: ['#first'],
+              any: [
+                { data: { fgColor: '#777777', bgColor: '#ffffff', expectedContrastRatio: 4.5 } },
+              ],
+            }),
+            buildAxeNode({
+              target: ['#second'],
+              any: [
+                { data: { fgColor: '#777777', bgColor: '#ffffff', expectedContrastRatio: 4.5 } },
+              ],
+            }),
+          ],
+        }),
+      ]),
+      'https://example.com/',
+    );
+    expect(contrast[0]?.dedupeIdentity).toBe(contrast[1]?.dedupeIdentity);
+
+    const link = extractAxeCandidates(
+      buildAxeResultsInput([
+        buildAxeViolation({
+          id: 'link-in-text-block',
+          nodes: [
+            buildAxeNode({
+              target: ['#first'],
+              any: [
+                {
+                  data: { nodeColor: '#777777', parentColor: '#ffffff', requiredContrastRatio: 3 },
+                },
+              ],
+            }),
+            buildAxeNode({
+              target: ['#second'],
+              any: [
+                {
+                  data: { nodeColor: '#777777', parentColor: '#ffffff', requiredContrastRatio: 3 },
+                },
+              ],
+            }),
+          ],
+        }),
+      ]),
+      'https://example.com/',
+    );
+    expect(link[0]?.dedupeIdentity).toBe(link[1]?.dedupeIdentity);
+  });
+
   it('truncates long snippets to MAX_SNIPPET_LENGTH', () => {
     const longHtml = '<div>' + 'x'.repeat(1000) + '</div>';
     const axe = buildAxeResultsInput([

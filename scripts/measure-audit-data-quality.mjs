@@ -209,18 +209,33 @@ function qualityStats(findings, manifest, scans) {
     (total, finding) => total + (Number.isFinite(finding.occurrences) ? finding.occurrences : 0),
     0,
   );
-  const topRule = Object.entries(countByRule(findings))[0];
+  const perRule = countByRule(findings);
+  const topRule = Object.entries(perRule).sort(
+    ([, left], [, right]) => right.findings - left.findings || right.occurrences - left.occurrences,
+  )[0];
+  const topOccurrenceRule = Object.entries(perRule)[0];
   return {
     findings: findings.length,
     occurrences,
     topRule: topRule
       ? {
           ruleId: topRule[0],
+          findings: topRule[1].findings,
           occurrences: topRule[1].occurrences,
-          share: occurrences ? topRule[1].occurrences / occurrences : 0,
+          share: findings.length ? topRule[1].findings / findings.length : 0,
+          occurrenceShare: occurrences ? topRule[1].occurrences / occurrences : 0,
         }
       : null,
-    perRule: countByRule(findings),
+    topOccurrenceRule: topOccurrenceRule
+      ? {
+          ruleId: topOccurrenceRule[0],
+          findings: topOccurrenceRule[1].findings,
+          occurrences: topOccurrenceRule[1].occurrences,
+          share: findings.length ? topOccurrenceRule[1].findings / findings.length : 0,
+          occurrenceShare: occurrences ? topOccurrenceRule[1].occurrences / occurrences : 0,
+        }
+      : null,
+    perRule,
     findingsOnNonVisitedPages: nonVisited.length,
     nonVisitedPageUrls: [...findingPageUrls(nonVisited)].length,
     challengeOrErrorPages: challengePages.length,
