@@ -140,10 +140,11 @@ export const CHECK_SCOPE_REGISTRY: readonly CheckScopeEntry[] = [
   {
     id: 'canonical-target',
     resultField: 'canonicalTarget',
+    errorField: 'canonicalTargetError',
     scope: 'resource',
     pass: 'rendered',
     applicability: 'A page whose head metadata declares exactly one canonical URL.',
-    completionSignal: 'best-effort-no-error-field',
+    completionSignal: 'explicit-error-field',
   },
   {
     id: 'mixed-content',

@@ -267,6 +267,21 @@ export interface RetryRequest {
  * failure is terminal (404, robots, network safety, not-applicable,
  * rate-limit) or whose ladder is exhausted is left as a recorded gap.
  */
+/**
+ * Checks whose retry would re-run a whole page to repeat a request the page
+ * did not make.
+ *
+ * `canonical-target` fetches a URL the page *declares*, with plain fetch and
+ * no browser involved, so neither recovery profile can change its answer: a
+ * fresh context is irrelevant to a bare fetch, and a fresh process only buys
+ * a longer budget for someone else's host. A site whose canonical host
+ * refused the crawler therefore paid two extra full page analyses per page,
+ * roughly tripling the run, to learn the same thing three times. The failure
+ * stays a recorded gap on the page, which is what the check's own
+ * undetermined result already models.
+ */
+const PAGE_RECOVERY_EXEMPT_CHECKS: readonly CheckId[] = ['canonical-target'];
+
 export function retryRequestsFor(records: readonly AcquisitionAttemptRecord[]): RetryRequest[] {
   const byCheck = new Map<string, AcquisitionAttemptRecord[]>();
   for (const record of records) {
@@ -277,6 +292,7 @@ export function retryRequestsFor(records: readonly AcquisitionAttemptRecord[]): 
   }
   const requests: RetryRequest[] = [];
   for (const [checkId, attempts] of byCheck) {
+    if (PAGE_RECOVERY_EXEMPT_CHECKS.includes(checkId as CheckId)) continue;
     if (attempts.some((attempt) => attempt.outcome === 'succeeded')) continue;
     const latest = [...attempts].sort((left, right) =>
       left.finishedAt.localeCompare(right.finishedAt),

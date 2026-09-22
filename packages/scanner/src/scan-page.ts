@@ -213,6 +213,7 @@ export interface PageScanResult {
   };
   llmsTxtCheck?: LlmsTxtCheckResult;
   canonicalTarget?: CanonicalTargetCheckResult;
+  canonicalTargetError?: string;
   mixedContent?: MixedContentExtraction;
   mixedContentError?: string;
   keyboardNavigation?: KeyboardNavigationExtraction;
@@ -512,6 +513,7 @@ export async function runRenderedAnalysis(
   let rawXRobotsTag: string | null | undefined;
   let roleContactResult: PublishedRoleContact | undefined;
   let canonicalTargetResult: CanonicalTargetCheckResult | undefined;
+  let canonicalTargetError: string | undefined;
   let mixedContentResult: MixedContentExtraction | undefined;
   let mixedContentError: string | undefined;
   let keyboardNavigationResult: KeyboardNavigationExtraction | undefined;
@@ -746,8 +748,14 @@ export async function runRenderedAnalysis(
                 perCheckBudgetMs,
               )) ?? undefined;
             checkOutcomes['canonical-target'] = 'completed';
-          } catch {
+          } catch (error) {
             canonicalTargetResult = undefined;
+            // The check itself turns a fetch failure into undetermined
+            // evidence, so reaching here means the budget expired or the
+            // address guard refused. Recording nothing left the attempt
+            // classified as a bare tool-error, which is both undiagnosable
+            // and the most expensive rung of the recovery ladder.
+            canonicalTargetError = toErrorMessage(error);
             checkOutcomes['canonical-target'] = 'failed';
           }
         } else {
@@ -1036,6 +1044,7 @@ export async function runRenderedAnalysis(
   if (roleContactResult !== undefined) result.roleContact = roleContactResult;
   if (headMetadataError !== undefined) result.headMetadataError = headMetadataError;
   if (canonicalTargetResult !== undefined) result.canonicalTarget = canonicalTargetResult;
+  if (canonicalTargetError !== undefined) result.canonicalTargetError = canonicalTargetError;
   if (mixedContentResult !== undefined) result.mixedContent = mixedContentResult;
   if (mixedContentError !== undefined) result.mixedContentError = mixedContentError;
   if (keyboardNavigationResult !== undefined) result.keyboardNavigation = keyboardNavigationResult;

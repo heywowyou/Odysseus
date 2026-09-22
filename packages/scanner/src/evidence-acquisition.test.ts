@@ -103,6 +103,24 @@ describe('pageAttemptRecords and retryRequestsFor', () => {
     expect(retryRequestsFor(records)).toEqual([{ checkId: 'axe', nextProfile: 'isolated-retry' }]);
   });
 
+  it('keeps a failed canonical fetch as a recorded gap instead of re-running the whole page', () => {
+    // The canonical target is fetched with plain fetch against a URL the
+    // page declares, so neither a fresh browser context nor a fresh process
+    // changes the answer. Re-analysing the page twice over it cost hours on
+    // a site whose canonical host refused the crawler.
+    const records = pageAttemptRecords(
+      { url, canonicalTargetError: 'check-timeout: canonical-target exceeded 9000ms' },
+      { 'render-diff': 'completed', 'canonical-target': 'failed' },
+      context('normal', 0),
+      ['render-diff', 'canonical-target'],
+    );
+    expect(records.find((record) => record.checkId === 'canonical-target')).toMatchObject({
+      outcome: 'failed',
+      failureClass: 'scanner-timeout',
+    });
+    expect(retryRequestsFor(records)).toEqual([]);
+  });
+
   it('stops after the ladder runs out', () => {
     const first = pageAttemptRecords(
       { url, axeError: 'boom' },
