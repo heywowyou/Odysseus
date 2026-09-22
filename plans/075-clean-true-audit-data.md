@@ -29,6 +29,7 @@ Why it matters to the client: the grade counts findings (`report/src/template/gr
 | Server redirects fully scanned, then discarded | `redirect-interstitial` pages: grandhoteldesalpes 88 of 190, lacoorniche 81, haaitza 66, pointfrance 49. Each one got a full render, axe and **Lighthouse** run (grandhoteldesalpes: 186 Lighthouse runs for 98 content pages) before being excluded. The crawl records a redirected fetch under the requested URL (`crawl.ts:1067`). |
 | Off-site redirect stubs scanned | `/fr/book.html`, `/en/book` and `/en/book?` (grandhotelchicago, grandhotelbellevue) redirect late to the booking engine (`be.synxis.com`). They stayed `visited`, Lighthouse measured the booking engine (30 of 30 files in chicago's `unsized-images` finding come from synxis and CMS hosts), and their 100% "missing text" made a 24-page `text-missing-from-raw-html` finding **critical** while its other pages sit at 21–31%. |
 | One check hanging loses the whole page | A 420 s page watchdog abandoned **every** content check on hoteldegarlande `/` and `/en/home` (homepage: no axe, no head metadata, three attempts ~21 min, while its screenshots and Lighthouse succeeded), 26 of 98 content pages on grandhoteldesalpes, 5 on atlantichotel, and 2 on pointfrance. |
+| **The homepage is never scanned** | grandhoteldesalpes and villasfoch: `/`, `/fr`, `/en` (and `/it`, `/es`) are all `discovered-not-scanned`, with zero check attempts. `/` redirects in the browser to a language root, and `crawl.ts:1034` tests the landed path with `isLanguageHomepagePath`, so the root is treated as a duplicate language home. The language homes are discovery-only as well unless they declare hreflang, which neither site does. The page a client cares most about has no accessibility, head-metadata or Lighthouse data. Site-level findings then anchor on `/en/rl_gallery` and on a bar page (issue #101's fallback). |
 | Crawl loops and URL-spelling duplicates | atlantichotel: 227 of 341 pages are `/fr/fr/…` and `/en/en/en/…` loops from relative links, with 19 `broken-internal-link` findings on loop URLs. chateauroyal: 5 pages crawled twice, as `%E3…` and `%e3…` percent-encoding. bellevue: `/fr/book?` (an empty query) crawled apart from `/fr/book`. |
 
 ### B. False positives (confirmed on stored data, some by a live probe of an already-audited site)
@@ -67,7 +68,7 @@ Checked and **not** noise:
 
 ## Slices
 
-Execution order: 0, then A1–A8, then B, then C, then E, then D. The operator questions in Part E are asked before their slices start.
+Execution order: 0, then A1, A9, A2–A8, then B, then C, then E, then D. The operator questions in Part E are asked before their slices start.
 
 ### 0. Measurement harness (first; every other slice is proved against it)
 
@@ -132,6 +133,12 @@ It runs read-only in the VPS container over `/data/artifacts`. The baseline for 
     - an interface route test (events appear on the job read model);
     - a dashboard component test (warning copy and prefilled relaunch);
     - the 429 fixture e2e from A1 asserts the event is recorded.
+- **A9. The homepage is always scanned** (first slice of Part A after A1).
+  - The page the start URL lands on is the homepage and is always scanned, whatever its path. Only language homes *other than* the landed one can be discovery-only, and only when a scanned page already covers the same template.
+  - The decision uses the requested URL and the landed URL together, not the landed path alone.
+  - A dashboard diagnostic (plan 068) blocks report generation when the homepage has no content check that succeeded, which also covers A5's hoteldegarlande case.
+  - Tests: a crawl e2e where `/` redirects to `/fr/` with no hreflang, asserting `/fr/` is scanned. A normalize test asserts site-level findings anchor on the homepage.
+  - Stored audits: needs a rescan. grandhoteldesalpes and villasfoch are added to the rescan list.
 - **A7. Stored-audit consequences.**
   - A1 (the stored-status part), A2 and A4 (redirect suppression) apply through re-normalization.
   - A1 (retry), A3, A5 and A6 need a new scan.
@@ -203,6 +210,13 @@ A second read-only pass covered the areas the first one left open: Lighthouse ru
 | Minor Lighthouse diagnostics as findings | 20 to 29 performance findings per audit. Most are minor diagnostics that explain a metric rather than being defects of their own: `bootup-time`, `mainthread-work-breakdown`, `unused-javascript`, `unused-css-rules`, `image-delivery-insight`, `forced-reflow-insight`, `network-dependency-tree-insight`, `lcp-discovery-insight`, `legacy-javascript-insight`, `total-byte-weight`. They are counted in totals and the minor-severity chart. |
 | Low-value archive pages | WordPress date, author, category and type archives: pointfrance 141 pages; chateauroyal about 110 of its 112 `no-h1` pages ("avril 2024", "16 avril 2024", "Types de logement Archive"). The findings on them are template-identical to each other. |
 
+| Challenge pages also feed the lab metrics | lacoorniche `/es/room/ferret` (a « Test de sécurité » page) carries critical LCP, TBT, FCP and Speed Index entries. A Lighthouse run of a challenge page enters the metric findings. |
+| WordPress plugin objects scanned as content | grandhoteldesalpes: 37 of 98 visited pages are Responsive Lightbox gallery objects (`/en/rl_gallery/hotel-slider`, `blog1`, `breakfast-slider-2`), reached only through the sitemap, with 1,097 finding page entries. They were scanned while the homepage was not (A9). |
+| `structured-data-invalid` (moderate), false | pointfrance: 337 pages; haaitza: 16. Yoast writes one `@graph` in which `Article.publisher` is `{"@id": "…/#organization"}`, a reference to the Organization node on the same page. `structured-data-extract.ts` does not resolve `@id` references, so publisher `@type`, `name` and `logo` read as missing. The required-field table (`structured-data.ts:44`) also comes from the retired preset: Google's current Article documentation lists no required property (author, dates, headline and image are recommended), and publisher logo was an AMP-era requirement. |
+| Lighthouse `robots-txt` on a WAF answer | lacoorniche: 20 pages, "Request for robots.txt returned HTTP status: 503". Our own crawler read `robots.txt` for the same audit. A pushback answer is reported as an invalid robots file. |
+| Absence claims over incomplete coverage | `accessibility-statement-missing` on grand-hotel-opera searched 176 pages, of which 127 were 429 pages, including `/en/privacy-policy` and `/es/aviso-legal`. lacoorniche's `/it` and `/pt-pt` privacy pages were challenge pages. `sitemap-orphan-page` on grand-hotel-opera lists 53 sitemap URLs as unlinked, from a link graph that lacks the 127 blocked pages. On lacoorniche, 20 of its 36 "orphans" are redirecting sitemap entries and 3 leave the site: a different defect (the sitemap lists redirects), reported under the wrong name. |
+| Alt-text heuristic on lazy-load placeholders | lacoorniche: 13 of 37 listed images in `empty-alt-non-decorative` are `data:` placeholders (1×1 GIF, inline SVG), and some appear in the other heuristic groups too. The real image behind a placeholder is what should be judged. Minor severity, but it appears in the annex. |
+
 Checked and not noise in this pass: `label` on atlantichotel's `#AVP_arrivalDate` (a real unlabelled field, unlike the trap), `meta-viewport` (one finding per audit), `nested-interactive`, `select-name`, `frame-title` on site-authored iframes, and the pointfrance axe failures (the A5 watchdog, not a separate defect). `/data/artifacts/prescans` (525 runs) predates plan 047. The code that wrote those runs is gone and nothing reads them, so they are not in scope.
 
 #### Operator questions (asked before the slice that needs them)
@@ -248,6 +262,23 @@ Checked and not noise in this pass: `label` on atlantichotel's `#AVP_arrivalDate
   - B6: a merged `text-missing-from-raw-html` finding takes its severity from the median missing share of its pages, using the existing per-page bands in `severity.ts`. The worst page is listed in its evidence. Recorded in trade-off 3.
   - B7: if `obligation-basis.md` has no entry for New Caledonia and the other overseas collectivities, `lcen-mentions-legales-missing` on those domains becomes a manual check (« vérifier le régime applicable ») and the finding is not emitted. The decision is recorded in the basis document. No legal fact is guessed.
 
+- **E9. Plugin objects are not content.**
+  - A sitemap-only page with no inbound link from any scanned page, whose WordPress body class names a plugin post type confirmed non-public against real data (`rl_gallery` first), is inventoried and disclosed but not analysed. The evidence is structural (body class, discovery method, no inbound link), per trade-off 64, not URL shape.
+  - The confirmed list lives next to `NON_PUBLIC_WP_POST_TYPES` in `links.ts` and follows the same rule: add a type only when confirmed against a real site.
+  - Tests: a crawl unit test on the classification and a normalize test.
+- **E10. `structured-data-invalid` judges what Google judges.**
+  - Resolve `@id` references inside the same page's `@graph` (and across blocks on the page) before testing fields.
+  - Re-derive the required-field table from Google's current structured-data documentation. Fields that are only recommended become a separate minor rule, or are dropped. A plain `publisher` reference to a same-page Organization is valid.
+  - Stored audits: the stored `failedTests` came from the old logic. Normalization re-tests stored `jsonLdBlocks` when present, so re-normalization fixes them.
+  - Tests: structured-data unit tests with a Yoast `@graph` fixture.
+- **E11. Lighthouse `robots-txt` defers to our own fetch.** A `robots-txt` failure whose text shows a 429 or 5xx status is dropped when the crawler read `robots.txt` successfully. It counts as a pushback event (A8). Tests: a normalize-lighthouse unit test.
+- **E12. Absence is only claimed over complete coverage.**
+  - Every rule that states something is missing site-wide (`accessibility-statement-missing`, `lcen-mentions-legales-missing`, `consent-mechanism-absent`, `hreflang-missing`, `structured-data-entity-missing`, `sitemap-orphan-page`, `llms-txt-missing`) records how many candidate pages were blocked or failed.
+  - When a candidate page (a legal, privacy or accessibility page by link text or path, or any page for the orphan graph) was blocked, the rule becomes undetermined and goes to the manual checklist. It never emits a confident finding.
+  - `sitemap-orphan-page` drops sitemap entries that redirect or leave the site. Those feed a separate `sitemap-lists-redirects` finding (minor, French-first copy, rule coverage).
+  - Tests: one normalize test per rule with a blocked candidate page.
+- **E13. The alt-text heuristic judges the loaded image.** A `data:` placeholder is replaced by the element's `currentSrc` once the image has loaded, or recorded as undetermined. It is never listed as a defect. Tests: an alt-text e2e with a lazy-loaded image.
+
 ### D. Docs, fixtures, rollout
 
 - **Trade-offs.**
@@ -272,6 +303,8 @@ Checked and not noise in this pass: `label` on atlantichotel's `#AVP_arrivalDate
 - Each split in section C collapses to one finding per real defect, with occurrences preserved and the concentration guard green.
 - The dashboard warns during a scan when a site rate-limits or challenges the crawler, and offers a prefilled slower relaunch.
 - Challenges that return 200, including those inside vendor frames, yield no findings (E1).
+- The homepage is scanned on every audit, and a homepage without a successful content check blocks the report (A9).
+- Plugin objects, the `@id` false positive, robots pushback and lazy-load placeholders no longer produce findings, and absence rules never claim absence over blocked pages (E9 to E13).
 - Q1 to Q3 are answered and applied: third-party frame content, minor Lighthouse diagnostics, archive pages.
 - Noindex pages carry no SEO content findings, and the coverage discloses them (E3).
 - A metric is reported once, with field data ahead of lab when both exist, and no invalid lab run enters a median (E4, E5).
@@ -307,6 +340,10 @@ The closure artifact is the requirement-to-proof ledger below. Every row names i
 | Preview never shows a false or blocked proof | preview evidence selection | Code | Selection unit tests | none |
 | Contaminated reports refused | provenance fail-closed path, dashboard report list | Code or confirmed existing behaviour | Stale-fingerprint provenance test | Operator sees « À régénérer » on grand-hotel-opera and lacoorniche |
 | B6 and B7 decided | `normalize-renderdiff.ts`, `obligation-basis.md` | Code, trade-off 3, basis entry | Unit tests | Operator reads the B7 basis entry |
+| Homepage always scanned | `crawl.ts` language-home rule, dashboard diagnostics | Code | Redirect-to-language-root crawl e2e; anchor normalize test | grandhoteldesalpes and villasfoch rescans show homepage findings |
+| Plugin objects not analysed | `links.ts`, `crawl.ts`, `normalize.ts` | Code, confirmed type list | Classification and normalize tests | none |
+| Structured data judged like Google | `structured-data-extract.ts`, `structured-data.ts`, normalization re-test | Code | Yoast `@graph` unit test | Harness: pointfrance `structured-data-invalid` drops to real defects only |
+| robots-txt pushback, absence over blocked pages, lazy placeholders | `normalize-lighthouse.ts`, site-level normalizers, `alt-text.ts` | Code, copy for `sitemap-lists-redirects` | Unit and e2e tests per rule | none |
 | Provenance consistent | `normalization-fingerprint.ts` | Fingerprint bump | `pnpm run check`, findings-provenance test | none |
 
 ## Verification
@@ -320,7 +357,7 @@ The closure artifact is the requirement-to-proof ledger below. Every row names i
 
 Once this plan is deployed, rescan all 12 stored full audits instead of only re-normalizing them. That puts every audit on the same code and gives clean Lighthouse measurements.
 1. One small site first, as an end-to-end check.
-2. Then grand-hotel-opera, atlantichotel, hoteldegarlande and grandhoteldesalpes.
+2. Then grand-hotel-opera, atlantichotel, hoteldegarlande, grandhoteldesalpes and villasfoch (the last two never had their homepage scanned).
 3. Then lacoorniche on its own, slowed down (A8).
 4. Then the rest, spaced out.
 
