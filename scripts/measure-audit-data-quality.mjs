@@ -61,9 +61,13 @@ async function findManifestFiles(dir) {
 async function readPageScans(auditDir, manifest) {
   const scans = [];
   let missingPageScanCount = 0;
+  let missingVisitedPageScanCount = 0;
   for (const page of manifest.pages ?? []) {
     if (typeof page.pageDir !== 'string') {
       missingPageScanCount += 1;
+      if (page.status === undefined || page.status === 'visited') {
+        missingVisitedPageScanCount += 1;
+      }
       continue;
     }
     try {
@@ -71,9 +75,12 @@ async function readPageScans(auditDir, manifest) {
     } catch (error) {
       if (error?.code !== 'ENOENT') throw error;
       missingPageScanCount += 1;
+      if (page.status === undefined || page.status === 'visited') {
+        missingVisitedPageScanCount += 1;
+      }
     }
   }
-  return { scans, missingPageScanCount };
+  return { scans, missingPageScanCount, missingVisitedPageScanCount };
 }
 
 function countByRule(findings) {
@@ -291,13 +298,17 @@ async function main() {
     const auditDir = path.dirname(manifestFile);
     const manifest = await readJson(manifestFile);
     const storedFindings = await readJson(path.join(auditDir, 'findings.json')).catch(() => []);
-    const { scans: pages, missingPageScanCount } = await readPageScans(auditDir, manifest);
+    const {
+      scans: pages,
+      missingPageScanCount,
+      missingVisitedPageScanCount,
+    } = await readPageScans(auditDir, manifest);
     const before = qualityStats(storedFindings, manifest, pages);
     let after = null;
     let normalizeError;
     let afterUnavailableReason;
-    if (missingPageScanCount > 0) {
-      afterUnavailableReason = `${missingPageScanCount} page scan artifact(s) missing; after-pass skipped`;
+    if (missingVisitedPageScanCount > 0) {
+      afterUnavailableReason = `${missingVisitedPageScanCount} visited page scan artifact(s) missing; after-pass skipped`;
     } else if (normalizeAudit !== undefined) {
       try {
         after = qualityStats(normalizeAudit(normalizeInput(manifest, pages)), manifest, pages);
@@ -309,6 +320,8 @@ async function main() {
     }
     audits.push({
       audit: path.relative(artifactsRoot, auditDir),
+      missingPageScanCount,
+      missingVisitedPageScanCount,
       before,
       after,
       invariants: {
