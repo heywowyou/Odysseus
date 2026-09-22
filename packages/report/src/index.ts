@@ -57,6 +57,7 @@ export {
   detectFindingVendor,
   detectVendor,
   isConfinedToThirdParty,
+  isConfinedToThirdPartyFrame,
   isThirdPartyFinding,
   summarizeThirdPartyFindings,
 } from './template/third-party-attribution.js';

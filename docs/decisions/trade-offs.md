@@ -5741,7 +5741,10 @@ as a gap and silenced absence rules on nearly every real audit, so consumers
 re-derive the ledger from the inventory instead of trusting a persisted copy.
 Noindex
 pages are disclosed and excluded from SEO content claims. Third-party frame
-content is annex evidence, not primary grade/totals/proof. Field Core Web
+content is annex evidence, not primary grade/totals/proof. Only content inside
+an embedded frame qualifies: a vendor widget rendered into the page's own DOM
+(a form plugin, a consent banner, a booking SDK) is what the site serves and
+configures, so it keeps counting and is only labelled with its vendor. Field Core Web
 Vitals own a metric when present; lab values are accepted only from a valid,
 same-identity Lighthouse run and are retained as diagnostic evidence when
 field data exists.

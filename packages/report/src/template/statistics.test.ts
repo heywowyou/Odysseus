@@ -39,29 +39,31 @@ describe('computeStatistics', () => {
     // thing under test - this block exists to catch computeStatistics
     // drifting, not to describe the fixture.
     //
-    // Q1 (Plan 075): findings wholly confined to embedded third-party frames
-    // remain in the annex but are excluded from the primary totals and grade.
-    // This fixture contains six such findings with 143 occurrences.
+    // Q1 (Plan 075): only findings wholly inside embedded frames leave the
+    // primary totals and grade. This fixture has none. Its six vendor
+    // findings (Gravity Forms, SmartPreview, the Diadao widget, Complianz)
+    // are rendered in the page's own DOM, so they keep counting, including
+    // the critical unnamed Gravity Forms submit button.
     expect(rest).toEqual({
       pagesScanned: 20,
-      totalFindings: 56,
-      accessibilityOccurrences: 302,
+      totalFindings: 62,
+      accessibilityOccurrences: 431,
       // item 1.8: this real fixture predates alt-text-quality-heuristic
       // findings, so this is 0 here, not a claim that no site ever
       // triggers the heuristic - see the dedicated describe block below
       // for the exclusion behaviour itself.
       accessibilityHeuristicOccurrences: 0,
-      thirdPartyAccessibilityOccurrences: 0,
-      confinedThirdPartyFindingCount: 6,
-      confinedThirdPartyOccurrenceCount: 143,
+      thirdPartyAccessibilityOccurrences: 129,
+      confinedThirdPartyFindingCount: 0,
+      confinedThirdPartyOccurrenceCount: 0,
       pagesWithCritical: 20,
-      critical: 7,
-      serious: 10,
+      critical: 8,
+      serious: 14,
       moderate: 15,
-      minor: 24,
+      minor: 25,
       wcagCriteriaFailingCount: 7,
       pagesWithWcagFailure: 20,
-      accessibilityCount: 12,
+      accessibilityCount: 17,
       seoRenderingCount: 16,
       // item 39: the real multi-page manifest predates renderDiffMissingPercent
       // being recorded per page, so this is false here, not a claim that

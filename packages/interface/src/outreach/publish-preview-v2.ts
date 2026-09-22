@@ -26,7 +26,7 @@ import {
   generateOutreachPreviewHtmlV3,
   MissingReviewedRemediationError,
   OUTREACH_PROOF_CARD_COPY,
-  isConfinedToThirdParty,
+  isConfinedToThirdPartyFrame,
 } from '@odysseus/report';
 import type { AuditEvidenceDiagnostics } from '../pipeline/audit-evidence-diagnostics.js';
 import { createPreviewToken, deriveObjectKey, hashPreviewToken } from './preview-token.js';
@@ -142,7 +142,7 @@ function aggregateFacts(
     moderate: 0,
     minor: 0,
   };
-  const primaryFindings = findings.filter((finding) => !isConfinedToThirdParty(finding));
+  const primaryFindings = findings.filter((finding) => !isConfinedToThirdPartyFrame(finding));
   for (const finding of primaryFindings) {
     severityTotals[finding.severity] += 1;
     for (const pageUrl of finding.pageUrls) affectedPages.add(pageUrl);
@@ -171,7 +171,7 @@ function safePreviewFindings(row: OutreachPublicationRowV3): Finding[] {
   );
   return row.findings.filter(
     (finding) =>
-      !isConfinedToThirdParty(finding) &&
+      !isConfinedToThirdPartyFrame(finding) &&
       !UNDER_CORRECTION_RULE_IDS.has(finding.ruleId) &&
       !finding.pageUrls.some((pageUrl) => blockedUrls.has(pageUrl)),
   );

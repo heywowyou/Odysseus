@@ -8,7 +8,7 @@ import {
 import { buildConformanceRollup, pagesWithWcagFailures } from './conformance-rollup.js';
 import type { CATEGORY_ORDER } from './design-tokens.js';
 import { EVIDENCE_INCLUSION_THRESHOLD_PERCENT } from '../constants.js';
-import { isConfinedToThirdParty, isThirdPartyFinding } from './third-party-attribution.js';
+import { isConfinedToThirdPartyFrame, isThirdPartyFinding } from './third-party-attribution.js';
 
 /** Deterministic counts for the statistics page (docs/archive/report-v2-refactor.md
  *  B10): nowhere in v1 did the document state pages scanned, finding
@@ -43,9 +43,9 @@ export interface ReportStatistics {
    *  heuristic-exclusion convention as accessibilityOccurrences: a
    *  heuristic finding's occurrences never enter this count either. */
   thirdPartyAccessibilityOccurrences: number;
-  /** Findings whose captured evidence is entirely inside a third-party frame
-   *  or vendor component. These remain in the annex but do not affect the
-   *  report's primary grade/counts. */
+  /** Findings whose captured evidence is entirely inside an embedded frame
+   *  (Q1). They remain in the annex but do not affect the report's primary
+   *  grade or counts. In-page vendor widgets are not included here. */
   confinedThirdPartyFindingCount: number;
   confinedThirdPartyOccurrenceCount: number;
   pagesWithCritical: number;
@@ -121,7 +121,7 @@ export function computeStatistics(
   };
 
   for (const finding of findings) {
-    if (isConfinedToThirdParty(finding)) {
+    if (isConfinedToThirdPartyFrame(finding)) {
       confinedThirdPartyFindingCount += 1;
       confinedThirdPartyOccurrenceCount += finding.occurrences;
       continue;

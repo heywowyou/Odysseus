@@ -4,6 +4,7 @@ import {
   detectVendor,
   detectFindingVendor,
   isConfinedToThirdParty,
+  isConfinedToThirdPartyFrame,
   isThirdPartyFinding,
   summarizeThirdPartyFindings,
 } from './third-party-attribution.js';
@@ -91,5 +92,26 @@ describe('an agency theme is the site, not a third party (issue #299)', () => {
     // patch; a theme is what they are paid to maintain.
     expect(detectVendor('/wp-content/themes/gravity-theme/assets/hero.jpg')).toBeUndefined();
     expect(detectVendor('/wp-content/plugins/gravity-theme/style.css')).toBe('Gravity Forms');
+  });
+});
+
+describe('grade exclusion is limited to embedded frames (plan 075, Q1)', () => {
+  it('excludes a finding whose every element sits inside a frame', () => {
+    expect(isConfinedToThirdPartyFrame(findingWith('iframe[width="560"] >>> .ytp-button'))).toBe(
+      true,
+    );
+  });
+
+  it('keeps an in-page vendor widget the site configured, such as a form plugin or consent banner', () => {
+    expect(isConfinedToThirdPartyFrame(findingWith('.gform_wrapper input'))).toBe(false);
+    expect(isConfinedToThirdPartyFrame(findingWith('#cmplz-cookiebanner a'))).toBe(false);
+    expect(isConfinedToThirdParty(findingWith('.gform_wrapper input'))).toBe(true);
+  });
+
+  it('keeps a finding that also has first-party evidence, and an empty one', () => {
+    expect(isConfinedToThirdPartyFrame(findingWith('iframe >>> .ytp-button', 'nav > a'))).toBe(
+      false,
+    );
+    expect(isConfinedToThirdPartyFrame(findingWith())).toBe(false);
   });
 });

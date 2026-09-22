@@ -104,6 +104,18 @@ export function isConfinedToThirdParty(finding: Pick<Finding, 'elements'>): bool
   );
 }
 
+/** Q1 (plan 075): whether every captured element of the finding sits inside
+ *  an embedded frame. Only this population leaves the grade, the totals,
+ *  the priorities and the preview. A vendor widget rendered into the page's
+ *  own DOM (a form plugin, a consent banner, a booking SDK) is still what
+ *  the site serves and chose to configure, so it keeps counting; it is only
+ *  labelled with its vendor in the annex. */
+export function isConfinedToThirdPartyFrame(finding: Pick<Finding, 'elements'>): boolean {
+  return (
+    finding.elements.length > 0 && finding.elements.every((el) => crossesFrameBoundary(el.selector))
+  );
+}
+
 /** The vendor name for a third-party finding, when one of the known
  *  prefixes matched; undefined for a frame-crossing selector matching no
  *  named vendor (still third-party, just not attributable to a specific

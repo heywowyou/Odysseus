@@ -60,7 +60,7 @@ export const en: ReportStrings = {
       // numbered section rather than the sub-heading alone.
       '{percent}% of accessibility occurrences come from third-party components (forms, popups, booking widget). The "To address with your third-party providers" section of the technical appendix lists them, along with those in the other categories.',
     thirdPartyFrameNoteTemplate:
-      'Of these, {count} occurrence(s) belong entirely to embedded third-party content and are kept in the technical appendix rather than the primary grade.',
+      'In addition, {count} occurrence(s) belong entirely to embedded third-party content (video players, maps, widgets); they are listed in the technical appendix and are counted neither in these totals nor in the primary grade.',
     priorityOwnership: {
       leadTemplate: 'Priorities: {clauses}.',
       firstPartySingularTemplate: '{count} to fix directly',

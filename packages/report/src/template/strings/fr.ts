@@ -72,7 +72,7 @@ export const fr: ReportStrings = {
       // the difference between a reference and a dead end.
       "{percent} % des occurrences d'accessibilité proviennent de composants tiers (formulaires, fenêtres modales, widget de réservation). La section « À traiter avec vos prestataires tiers » de l'annexe technique les recense, ainsi que celles des autres catégories.",
     thirdPartyFrameNoteTemplate:
-      'Dont {count} occurrence(s) relèvent entièrement de contenus tiers intégrés ; elles restent dans l’annexe technique et n’entrent pas dans la note principale.',
+      'En outre, {count} occurrence(s) relèvent entièrement de contenus tiers intégrés (lecteurs vidéo, cartes, widgets) ; elles figurent dans l’annexe technique et ne sont comptées ni dans ces totaux ni dans la note principale.',
     priorityOwnership: {
       leadTemplate: 'Priorités : {clauses}.',
       firstPartySingularTemplate: '{count} constat à corriger directement',
