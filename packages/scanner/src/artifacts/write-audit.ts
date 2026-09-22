@@ -26,7 +26,7 @@ import * as fs from 'node:fs';
 import path from 'node:path';
 import type { Browser } from 'playwright';
 import {
-  extractCoreWebVitals,
+  attributableCoreWebVitals,
   extractLighthouseExcludedCategoryScores,
   isBlockedRender,
   isChallengeTitle,
@@ -601,18 +601,27 @@ export async function writeAuditArtifacts(
       redirectTargetUrl === undefined &&
       (isBlockedRender(scanJson.renderDiff) || isChallengeTitle(scanJson.headMetadata?.title));
 
+    const pageStatus =
+      redirectTargetUrl !== undefined
+        ? 'redirect-interstitial'
+        : blockedPage
+          ? 'blocked'
+          : softErrorPage
+            ? 'soft-error-page'
+            : 'visited';
+    // Lab metrics describe this page only when it is content and the run
+    // settled on it; anything else would feed the report's medians with a
+    // challenge page, an error template or a booking engine.
+    const coreWebVitals =
+      pageStatus === 'visited'
+        ? attributableCoreWebVitals(scanJson.lighthouse, scanJson.url)
+        : undefined;
+
     manifestPages.push({
       url: scanJson.url,
       pageDir: path.join('pages', pageDir),
       depth: crawledPage.depth,
-      status:
-        redirectTargetUrl !== undefined
-          ? 'redirect-interstitial'
-          : blockedPage
-            ? 'blocked'
-            : softErrorPage
-              ? 'soft-error-page'
-              : 'visited',
+      status: pageStatus,
       discoveryMethod: crawledPage.discoveryMethod,
       // Issue #290: the page's own declared language (<html lang>), so the
       // report can attribute a root-path page - no /fr/-style prefix - to
@@ -649,9 +658,7 @@ export async function writeAuditArtifacts(
             ),
           }
         : {}),
-      ...(scanJson.lighthouse !== undefined
-        ? { coreWebVitals: extractCoreWebVitals(scanJson.lighthouse) }
-        : {}),
+      ...(coreWebVitals !== undefined ? { coreWebVitals } : {}),
       errors: {
         ...(scanJson.renderDiffError !== undefined ? { renderDiff: scanJson.renderDiffError } : {}),
         ...(scanJson.axeError !== undefined ? { axe: scanJson.axeError } : {}),

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  attributableCoreWebVitals,
   extractCoreWebVitals,
   extractLighthouseCandidates,
   extractLighthouseExcludedCategoryScores,
@@ -447,5 +448,34 @@ describe('extractCoreWebVitals', () => {
   it('never produces an inp field: navigation-mode Lighthouse has no INP audit to read', () => {
     const cwv = extractCoreWebVitals(buildLighthouseResultInput());
     expect(cwv).not.toHaveProperty('inp');
+  });
+});
+
+describe('attributableCoreWebVitals', () => {
+  it('returns the metrics of a run that settled on the page itself, slash variant included', () => {
+    const lhr = {
+      ...buildLighthouseResultInput(),
+      finalDisplayedUrl: 'https://example.com/rooms/',
+    };
+    expect(attributableCoreWebVitals(lhr, 'https://example.com/rooms')).toEqual(
+      extractCoreWebVitals(lhr),
+    );
+  });
+
+  it('refuses a run that settled on another URL, such as a booking engine', () => {
+    const lhr = {
+      ...buildLighthouseResultInput(),
+      finalDisplayedUrl: 'https://be.synxis.com/?hotel=1',
+    };
+    expect(attributableCoreWebVitals(lhr, 'https://example.com/fr/book')).toBeUndefined();
+  });
+
+  it('refuses a run that ended in a runtime error', () => {
+    const lhr = { ...buildLighthouseResultInput(), runtimeError: { code: 'NO_FCP' } };
+    expect(attributableCoreWebVitals(lhr, 'https://example.com/')).toBeUndefined();
+  });
+
+  it('returns nothing when there is no run', () => {
+    expect(attributableCoreWebVitals(undefined, 'https://example.com/')).toBeUndefined();
   });
 });

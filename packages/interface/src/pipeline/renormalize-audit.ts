@@ -15,7 +15,10 @@ import path from 'node:path';
 import {
   buildTranslationClusters,
   buildFindingsProvenance,
+  attributableCoreWebVitals,
   deriveCoverageLimitations,
+  isBlockedRender,
+  isChallengeTitle,
   normalizeAudit,
   type AuditManifest,
   type NormalizePageInput,
@@ -214,8 +217,28 @@ export async function renormalizeAudit(
 
   await fs.writeFile(path.join(resolvedDir, 'findings.json'), JSON.stringify(findings, null, 2));
 
+  // Lab metrics are frozen into the manifest when a scan is written. Stored
+  // audits predate the rule that a challenge page, an error template or a
+  // run that settled on another URL measures nothing about the page, so
+  // they are recomputed here from each page's own stored Lighthouse run.
+  const scanPageByUrl = new Map(pages.map((page) => [page.url, page]));
+  const manifestPages = manifest.pages.map((entry) => {
+    const scanPage = scanPageByUrl.get(entry.url);
+    if (scanPage === undefined) return entry;
+    const { coreWebVitals: _stored, ...rest } = entry;
+    const isContent =
+      entry.status === 'visited' &&
+      !isBlockedRender(scanPage.renderDiff) &&
+      !isChallengeTitle(scanPage.headMetadata?.title);
+    const coreWebVitals = isContent
+      ? attributableCoreWebVitals(scanPage.lighthouse, entry.url)
+      : undefined;
+    return coreWebVitals === undefined ? rest : { ...rest, coreWebVitals };
+  });
+
   const renormalizedManifest: AuditManifest = {
     ...manifest,
+    pages: manifestPages,
     translationClusters,
     coverageLimitations,
     renormalizedAt: new Date().toISOString(),

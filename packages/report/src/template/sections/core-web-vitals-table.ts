@@ -57,9 +57,12 @@ export function formatMetricValue(value: number, unit: Unit, language: ReportLan
  *  interstitial is measured at the page it lands on, which is already in the
  *  table under its own URL: counting it again stated "agrégées sur 176
  *  pages" beside "Lighthouse : 173 mesurées" in the Grand Hôtel de l'Opéra
- *  report, and weighted every redirect target twice in the medians. */
+ *  report, and weighted every redirect target twice in the medians.
+ *  The same holds for every other non-content status: a challenge page,
+ *  an error template or an off-site stub measured something that is not
+ *  this site's page, so only content pages count. */
 export function measuredPages(manifest: Pick<AuditManifest, 'pages'>): AuditManifest['pages'] {
-  return manifest.pages.filter((page) => page.status !== 'redirect-interstitial');
+  return manifest.pages.filter((page) => page.status === 'visited');
 }
 
 /** Plain median (not mean): a single very slow page must not be able to

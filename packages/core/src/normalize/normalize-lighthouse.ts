@@ -374,6 +374,27 @@ export function lighthouseFinalUrl(lhr: LighthouseResultInput): string | undefin
   return lhr.finalDisplayedUrl ?? lhr.finalUrl;
 }
 
+/** Whether a stored Lighthouse run measured this page: it completed without
+ * a runtime error and settled on the page's own identity. A run that ended
+ * on a booking engine, a language root or any other URL measured something
+ * else and is never attributed to this page, as a finding or as a number. */
+export function isAttributableLighthouseRun(lhr: LighthouseResultInput, pageUrl: string): boolean {
+  if (lhr.runtimeError !== undefined) return false;
+  const finalUrl = lighthouseFinalUrl(lhr);
+  return finalUrl === undefined || normalizeUrlIdentity(finalUrl) === normalizeUrlIdentity(pageUrl);
+}
+
+/** The page's lab metrics, or undefined when the run cannot be attributed
+ * to it. Callers that already know the page is not content (blocked,
+ * redirect, soft error) must not call this at all. */
+export function attributableCoreWebVitals(
+  lhr: LighthouseResultInput | undefined,
+  pageUrl: string,
+): CoreWebVitals | undefined {
+  if (lhr === undefined || !isAttributableLighthouseRun(lhr, pageUrl)) return undefined;
+  return extractCoreWebVitals(lhr);
+}
+
 function onlySameIdentityRedirect(
   auditId: string,
   audit: LighthouseAuditInput,
@@ -498,12 +519,7 @@ export function extractLighthouseCandidates(
   const candidates: FindingCandidate[] = [];
   const superseded = supersededAudits ?? computeSupersededAudits([lhr]);
 
-  if (lhr.runtimeError !== undefined) return candidates;
-
-  const finalUrl = lighthouseFinalUrl(lhr);
-  if (finalUrl !== undefined && normalizeUrlIdentity(finalUrl) !== normalizeUrlIdentity(pageUrl)) {
-    return [];
-  }
+  if (!isAttributableLighthouseRun(lhr, pageUrl)) return candidates;
 
   for (const { id: categoryId, category } of SCANNED_CATEGORIES) {
     const lhCategory = lhr.categories[categoryId];

@@ -143,6 +143,39 @@ describe('renderCoreWebVitalsTable', () => {
     expect(html).not.toContain('9 s');
   });
 
+  it('leaves challenge pages, error templates and off-site stubs out of the medians', () => {
+    const page = (url: string, status: string, lcpMs: number) => ({
+      url,
+      pageDir: `pages/${url.length}`,
+      depth: 1,
+      status,
+      errors: {},
+      coreWebVitals: {
+        lcp: buildMeasurement(lcpMs, ''),
+        cls: buildMeasurement(0, '0'),
+        tbt: buildMeasurement(0, '0 ms'),
+        fcp: buildMeasurement(0, '0 s'),
+        speedIndex: buildMeasurement(0, '0 s'),
+      },
+    });
+    const manifest = {
+      siteUrl: 'https://example.com/',
+      pages: [
+        page('https://example.com/', 'visited', 2000),
+        page('https://example.com/chambres', 'visited', 3000),
+        page('https://example.com/es/room', 'blocked', 27000),
+        page('https://example.com/erreur-404', 'soft-error-page', 21000),
+        page('https://example.com/book', 'skipped-external-redirect', 19000),
+      ],
+    } as unknown as AuditManifest;
+
+    const html = renderCoreWebVitalsTable(getStrings('fr'), 9, 'fr', manifest);
+
+    expect(html).toContain('agrégées sur 2 pages.');
+    expect(html).toContain('2,5 s');
+    expect(html).not.toMatch(/(19|21|27) s/);
+  });
+
   // Issue #28: a single measured page used to print "aggregated across 1 pages".
   it('agrees the intro sentence for a single measured page, in both languages', () => {
     const manifest = {
