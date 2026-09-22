@@ -74,6 +74,7 @@ describe('buildCoverageDisclosure', () => {
     expect(disclosure.details).toEqual([
       'Pages without content analysis: 1 blocked by robots.txt, 1 crawl error.',
       '12 additional continuation URLs were omitted by the repetition guard.',
+      '3 site-wide absence checks need manual verification because some candidate pages were blocked or failed.',
     ]);
   });
 
@@ -145,6 +146,10 @@ describe('buildCoverageDisclosure', () => {
     const disclosure = buildCoverageDisclosure(getStrings('en'), manifest, 'en');
 
     expect(disclosure.summary).toContain('Pass-by-pass coverage is unavailable');
-    expect(disclosure.details).toEqual([]);
+    // The robots-blocked and crawl-error pages still leave the site-graph
+    // absence checks undetermined; that follows from the inventory alone.
+    expect(disclosure.details).toEqual([
+      '3 site-wide absence checks need manual verification because some candidate pages were blocked or failed.',
+    ]);
   });
 });
