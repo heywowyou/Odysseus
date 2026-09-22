@@ -173,9 +173,16 @@ export async function renormalizeAudit(
               },
         );
 
+  // Re-derived rather than read back: a persisted copy may come from an
+  // older, broader derivation that silenced absence rules on redirects.
+  const coverageLimitations = deriveCoverageLimitations(manifest.pages, {
+    ...(manifest.crawl.homepageUrl !== undefined
+      ? { homepageUrl: manifest.crawl.homepageUrl }
+      : {}),
+  });
   const findings = normalizeAudit({
     translationClusters,
-    coverageLimitations: manifest.coverageLimitations ?? deriveCoverageLimitations(manifest.pages),
+    coverageLimitations,
     auditId: manifest.auditId,
     startedAt: new Date(manifest.startedAt),
     pages: pagesForNormalization,
@@ -210,7 +217,7 @@ export async function renormalizeAudit(
   const renormalizedManifest: AuditManifest = {
     ...manifest,
     translationClusters,
-    coverageLimitations: manifest.coverageLimitations ?? deriveCoverageLimitations(manifest.pages),
+    coverageLimitations,
     renormalizedAt: new Date().toISOString(),
     findingsProvenance: buildFindingsProvenance(findings),
   };

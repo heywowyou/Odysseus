@@ -14,6 +14,7 @@ import type { SiteSignals } from './compliance.js';
 import type { TranslationCluster } from '../normalize/translation-clusters.js';
 import type { FindingsProvenance } from '../normalize/findings-provenance.js';
 import type { SiteBenchmarkPercentile } from '../benchmark/percentile.js';
+import { LEGAL_PATH_PATTERN } from '../urls.js';
 
 export type ManifestKind = 'audit' | 'render-diff';
 
@@ -48,32 +49,87 @@ export interface CoverageLimitation {
   candidateUrls?: string[];
 }
 
-/** Derives the conservative, persisted limitation ledger from the crawl
- * inventory. Core does not decide whether a page was blocked: the scanner
- * already recorded that status. It only makes the absence-rule consequence
- * explicit and deterministic for fresh scans and offline normalization. */
-export function deriveCoverageLimitations(
-  pages: readonly Pick<ManifestPageEntry, 'url' | 'status'>[],
-): CoverageLimitation[] {
-  const blockedStatuses = new Set<ManifestPageStatus>(['blocked', 'skipped-robots']);
-  const failedStatuses = new Set<ManifestPageStatus>([
-    'error',
-    'http-error-status',
-    'redirect-interstitial',
-    'soft-error-page',
-    'skipped-external-redirect',
-  ]);
-  const blocked = pages.filter((page) => blockedStatuses.has(page.status));
-  const failed = pages.filter((page) => failedStatuses.has(page.status));
-  if (blocked.length === 0 && failed.length === 0) return [];
+/** Which inventoried pages could have carried the item an absence rule says
+ * is missing. A page-scoped rule (a statement, a legal notice, a consent
+ * banner) only loses its certainty when a page of that kind, or the homepage
+ * that links to it, was not seen. A site-graph rule loses it when any page of
+ * the graph was not seen. `llms-txt-missing` is a single file fetch and never
+ * depends on page coverage. */
+const ACCESSIBILITY_CANDIDATE_PATTERN =
+  /(accessibilit|handicap|rgaa|declaration-d?-?accessibilite)/i;
 
-  const candidateUrls = [...new Set([...blocked, ...failed].map((page) => page.url))].slice(0, 20);
-  return COVERAGE_LIMITATION_RULE_IDS.map((ruleId) => ({
-    ruleId,
-    blockedCandidateCount: blocked.length,
-    failedCandidateCount: failed.length,
-    ...(candidateUrls.length > 0 ? { candidateUrls } : {}),
-  }));
+type CandidateScope = 'page-pattern' | 'site-graph' | 'none';
+
+const CANDIDATE_SCOPE_BY_RULE: Readonly<
+  Record<CoverageLimitationRuleId, { scope: CandidateScope; pattern?: RegExp }>
+> = {
+  'accessibility-statement-missing': {
+    scope: 'page-pattern',
+    pattern: ACCESSIBILITY_CANDIDATE_PATTERN,
+  },
+  'lcen-mentions-legales-missing': { scope: 'page-pattern', pattern: LEGAL_PATH_PATTERN },
+  'consent-mechanism-absent': { scope: 'page-pattern', pattern: LEGAL_PATH_PATTERN },
+  'hreflang-missing': { scope: 'site-graph' },
+  'structured-data-entity-missing': { scope: 'site-graph' },
+  'sitemap-orphan-page': { scope: 'site-graph' },
+  'llms-txt-missing': { scope: 'none' },
+};
+
+/** A page the crawl could not read. A redirect (its target is followed), a
+ * real 404, a soft-error template, an off-site redirect, and a deliberately
+ * discovery-only page are facts about the site, not gaps in what was seen.
+ * A transient server answer (429 or 5xx) is a gap. */
+function coverageGapKind(
+  page: Pick<ManifestPageEntry, 'status' | 'httpStatus'>,
+): 'blocked' | 'failed' | undefined {
+  if (page.status === 'blocked' || page.status === 'skipped-robots') return 'blocked';
+  if (page.status === 'error') return 'failed';
+  if (
+    page.status === 'http-error-status' &&
+    page.httpStatus !== undefined &&
+    (page.httpStatus === 429 || page.httpStatus >= 500)
+  ) {
+    return 'failed';
+  }
+  return undefined;
+}
+
+/** Derives the conservative limitation ledger from the crawl inventory.
+ * Core does not decide whether a page was blocked: the scanner already
+ * recorded that status. It only makes the absence-rule consequence explicit
+ * and deterministic. Pure over the page list, so consumers re-derive it
+ * rather than trust a copy persisted by an older derivation. */
+export function deriveCoverageLimitations(
+  pages: readonly (Pick<ManifestPageEntry, 'url' | 'status' | 'httpStatus'> & { depth?: number })[],
+  options: { homepageUrl?: string } = {},
+): CoverageLimitation[] {
+  const gaps = pages.flatMap((page) => {
+    const kind = coverageGapKind(page);
+    return kind === undefined ? [] : [{ page, kind }];
+  });
+  if (gaps.length === 0) return [];
+
+  const isHomepage = (page: { url: string; depth?: number }): boolean =>
+    page.depth === 0 || (options.homepageUrl !== undefined && page.url === options.homepageUrl);
+
+  const limitations: CoverageLimitation[] = [];
+  for (const ruleId of COVERAGE_LIMITATION_RULE_IDS) {
+    const { scope, pattern } = CANDIDATE_SCOPE_BY_RULE[ruleId];
+    if (scope === 'none') continue;
+    const candidates = gaps.filter(
+      ({ page }) =>
+        scope === 'site-graph' || isHomepage(page) || (pattern?.test(page.url) ?? false),
+    );
+    if (candidates.length === 0) continue;
+    const candidateUrls = [...new Set(candidates.map(({ page }) => page.url))].slice(0, 20);
+    limitations.push({
+      ruleId,
+      blockedCandidateCount: candidates.filter(({ kind }) => kind === 'blocked').length,
+      failedCandidateCount: candidates.filter(({ kind }) => kind === 'failed').length,
+      candidateUrls,
+    });
+  }
+  return limitations;
 }
 
 export type PageDiscoveryMethod = 'link' | 'seed' | 'sitemap-only';

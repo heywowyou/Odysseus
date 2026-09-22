@@ -1,3 +1,4 @@
+import { deriveCoverageLimitations } from './types/manifest.js';
 import type {
   AuditManifest,
   AuditPass,
@@ -89,15 +90,21 @@ function withoutContentReason(page: ManifestPageEntry): PageWithoutContentAnalys
 export function summarizeAuditCoverage(
   manifest: Pick<AuditManifest, 'pages' | 'continuationGuardSummary'> & {
     coverageLimitations?: CoverageLimitation[];
+    crawl?: { homepageUrl?: string };
   },
 ): AuditCoverageSummary {
   const continuationOmittedUrlCount = manifest.continuationGuardSummary?.totalOmittedUrlCount ?? 0;
+  // Re-derived from the inventory rather than read back: a persisted copy
+  // may come from an older derivation that counted redirects as gaps.
+  const coverageLimitations = deriveCoverageLimitations(manifest.pages, {
+    ...(manifest.crawl?.homepageUrl !== undefined
+      ? { homepageUrl: manifest.crawl.homepageUrl }
+      : {}),
+  });
   const base = {
     inventoriedUrlCount: manifest.pages.length,
     continuationOmittedUrlCount,
-    ...(manifest.coverageLimitations !== undefined && manifest.coverageLimitations.length > 0
-      ? { coverageLimitations: manifest.coverageLimitations }
-      : {}),
+    ...(coverageLimitations.length > 0 ? { coverageLimitations } : {}),
   };
   const coveredPages = manifest.pages.filter(
     (page): page is ManifestPageEntry & { analysisCoverage: PageAnalysisCoverage } =>

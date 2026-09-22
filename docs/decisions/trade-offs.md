@@ -5729,7 +5729,17 @@ missing or failed homepage content pass blocks report generation.
 
 The same conservative population is used by all site-wide absence checks. A
 blocked or failed candidate records blocked/failed counts and produces a
-manual/undetermined coverage limitation, never a confident absence. Noindex
+manual/undetermined coverage limitation, never a confident absence. A gap is a
+page the crawl could not read: `blocked`, `skipped-robots`, `error`, or an
+HTTP 429/5xx answer. A redirect (its target is followed), a real 404, a
+soft-error template and an off-site stub are facts about the site, not gaps.
+A page-scoped rule (accessibility statement, legal notice, consent) is limited
+only by a gap on a page of its kind or on the homepage; a site-graph rule
+(hreflang, entity data, sitemap orphans) by any gap; `llms-txt-missing`, a
+single file fetch, never. The first derivation counted every redirect and 404
+as a gap and silenced absence rules on nearly every real audit, so consumers
+re-derive the ledger from the inventory instead of trusting a persisted copy.
+Noindex
 pages are disclosed and excluded from SEO content claims. Third-party frame
 content is annex evidence, not primary grade/totals/proof. Field Core Web
 Vitals own a metric when present; lab values are accepted only from a valid,

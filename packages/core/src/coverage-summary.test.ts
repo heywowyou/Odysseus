@@ -65,7 +65,7 @@ describe('summarizeAuditCoverage', () => {
     expect(
       deriveCoverageLimitations([
         { url: 'https://example.com/blocked', status: 'blocked' },
-        { url: 'https://example.com/failed', status: 'http-error-status' },
+        { url: 'https://example.com/failed', status: 'http-error-status', httpStatus: 503 },
         { url: 'https://example.com/ok', status: 'visited' },
       ]),
     ).toEqual(
@@ -78,6 +78,87 @@ describe('summarizeAuditCoverage', () => {
         }),
       ]),
     );
+  });
+
+  it('does not treat redirects, real 404s, soft errors or off-site stubs as coverage gaps', () => {
+    expect(
+      deriveCoverageLimitations([
+        { url: 'https://example.com/', status: 'visited', depth: 0 },
+        { url: 'https://example.com/room/deluxe', status: 'redirect-interstitial', depth: 1 },
+        { url: 'https://example.com/mentions-legales', status: 'redirect-interstitial', depth: 1 },
+        { url: 'https://example.com/old', status: 'http-error-status', httpStatus: 404, depth: 1 },
+        { url: 'https://example.com/erreur', status: 'soft-error-page', depth: 1 },
+        { url: 'https://example.com/book', status: 'skipped-external-redirect', depth: 1 },
+        { url: 'https://example.com/en', status: 'discovered-not-scanned', depth: 1 },
+      ]),
+    ).toEqual([]);
+  });
+
+  it('limits a page-scoped absence rule only when a page of its kind was not seen', () => {
+    const limitations = deriveCoverageLimitations([
+      { url: 'https://example.com/', status: 'visited', depth: 0 },
+      { url: 'https://example.com/politique-de-confidentialite', status: 'blocked', depth: 1 },
+      { url: 'https://example.com/chambres', status: 'blocked', depth: 1 },
+    ]);
+    const ruleIds = limitations.map((limitation) => limitation.ruleId);
+    expect(ruleIds).toEqual(
+      expect.arrayContaining([
+        'lcen-mentions-legales-missing',
+        'consent-mechanism-absent',
+        'hreflang-missing',
+        'structured-data-entity-missing',
+        'sitemap-orphan-page',
+      ]),
+    );
+    expect(ruleIds).not.toContain('accessibility-statement-missing');
+    expect(ruleIds).not.toContain('llms-txt-missing');
+    expect(
+      limitations.find((limitation) => limitation.ruleId === 'lcen-mentions-legales-missing'),
+    ).toEqual(
+      expect.objectContaining({
+        blockedCandidateCount: 1,
+        candidateUrls: ['https://example.com/politique-de-confidentialite'],
+      }),
+    );
+  });
+
+  it('limits every page-scoped absence rule when the homepage was not seen', () => {
+    const ruleIds = deriveCoverageLimitations(
+      [{ url: 'https://example.com/fr', status: 'blocked', depth: 1 }],
+      { homepageUrl: 'https://example.com/fr' },
+    ).map((limitation) => limitation.ruleId);
+    expect(ruleIds).toEqual(
+      expect.arrayContaining([
+        'accessibility-statement-missing',
+        'lcen-mentions-legales-missing',
+        'consent-mechanism-absent',
+      ]),
+    );
+    expect(ruleIds).not.toContain('llms-txt-missing');
+  });
+
+  it('re-derives limitations instead of trusting a persisted copy', () => {
+    const summary = summarizeAuditCoverage(
+      manifest({
+        pages: [
+          {
+            url: 'https://example.com/room',
+            depth: 1,
+            status: 'redirect-interstitial',
+            errors: {},
+          },
+        ],
+        coverageLimitations: [
+          {
+            ruleId: 'accessibility-statement-missing',
+            blockedCandidateCount: 0,
+            failedCandidateCount: 1,
+            candidateUrls: ['https://example.com/room'],
+          },
+        ],
+      }),
+    );
+    expect(summary.coverageLimitations).toBeUndefined();
   });
 
   it('reports current pass outcomes, inventory-only reasons, families, and guarded omissions', () => {
@@ -131,9 +212,19 @@ describe('summarizeAuditCoverage', () => {
       }),
     );
 
+    const robotsGap = {
+      blockedCandidateCount: 1,
+      failedCandidateCount: 0,
+      candidateUrls: ['https://example.com/blocked'],
+    };
     expect(summary).toEqual({
       kind: 'current',
       inventoriedUrlCount: 3,
+      coverageLimitations: [
+        { ruleId: 'hreflang-missing', ...robotsGap },
+        { ruleId: 'structured-data-entity-missing', ...robotsGap },
+        { ruleId: 'sitemap-orphan-page', ...robotsGap },
+      ],
       content: { completed: 1, partial: 1, failed: 0 },
       passes: {
         rendered: { completed: 2, partial: 0, failed: 0, notPlanned: 0 },

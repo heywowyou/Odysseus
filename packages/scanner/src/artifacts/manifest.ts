@@ -110,7 +110,9 @@ export function buildManifest(input: BuildManifestInput): AuditManifest {
     },
     ...(input.pushbackEvents !== undefined ? { pushbackEvents: input.pushbackEvents } : {}),
     ...(() => {
-      const limitations = deriveCoverageLimitations(input.pages);
+      const limitations = deriveCoverageLimitations(input.pages, {
+        ...(input.crawl.homepageUrl !== undefined ? { homepageUrl: input.crawl.homepageUrl } : {}),
+      });
       return limitations.length > 0 ? { coverageLimitations: limitations } : {};
     })(),
     pages: input.pages,

@@ -40,6 +40,7 @@ import {
 import {
   normalizeAudit,
   buildFindingsProvenance,
+  deriveCoverageLimitations,
   type AuditConfigSnapshot,
   type AuditManifest,
   type Finding,
@@ -400,9 +401,13 @@ export async function runAuditStage(
       ...(artifacts.manifest.translationClusters !== undefined
         ? { translationClusters: artifacts.manifest.translationClusters }
         : {}),
-      ...(artifacts.manifest.coverageLimitations !== undefined
-        ? { coverageLimitations: artifacts.manifest.coverageLimitations }
-        : {}),
+      // Re-derived rather than read back: a persisted copy may come from an
+      // older, broader derivation that silenced absence rules on redirects.
+      coverageLimitations: deriveCoverageLimitations(artifacts.manifest.pages, {
+        ...(artifacts.manifest.crawl.homepageUrl !== undefined
+          ? { homepageUrl: artifacts.manifest.crawl.homepageUrl }
+          : {}),
+      }),
       auditId: artifacts.auditId,
       startedAt,
       pages: pagesForNormalization,
