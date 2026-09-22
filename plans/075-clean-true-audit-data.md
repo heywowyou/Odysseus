@@ -80,7 +80,7 @@ Add `scripts/measure-audit-data-quality.mjs`. It runs today's `normalizeAudit` i
 - cross-source duplicate pairs;
 - split candidates (same rule and same failure statement over several findings).
 
-It runs read-only in the VPS container over `/data/artifacts`. The baseline for the 12 audits is recorded in this plan. Client data never enters the repo.
+It runs read-only in the VPS container over `/data/artifacts`. After this plan it stays as a standing gate: the dashboard runs its per-audit checks (blocked pages, homepage scanned, findings on non-content pages, top-rule share, lab-versus-field gap) before a report can be generated, so data this bad can no longer reach a report unseen. The baseline for the 12 audits is recorded in this plan. Client data never enters the repo.
 
 ### Part A: only the site's own content is analysed
 
