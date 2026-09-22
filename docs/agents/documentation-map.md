@@ -122,6 +122,8 @@ document explicitly promotes their content.
 - `docs/agents/issue-tracker.md`: issue workflow when issues are being used.
 - `docs/agents/triage-labels.md`: issue-label vocabulary.
 - `docs/agents/model-prompting.md`: host-specific deltas.
+- `docs/agents/audit-data-defect-hunt.md`: explicit-only brief for a
+  repeated read-only search of stored audit data, with a convergence stop rule.
 - `.agents/skills/client-report-finalizer/SKILL.md`: explicit pre-delivery
   finalization of an existing paid report against its exact PDF and stored lineage.
 - `.agents/skills/*`: optional specialist workflows. Workflow-changing modes
