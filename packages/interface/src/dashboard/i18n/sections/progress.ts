@@ -67,6 +67,11 @@ export interface ProgressStrings {
   /** Shown only once the automatic slowdown ran out. */
   pushbackRelaunchWarning: string;
   slowRelaunchLink: string;
+  /** The relaunch stops the running scan first: the site's slot stays taken
+   *  until it has actually stopped. {delay}: the suggested seconds. */
+  confirmSlowRelaunchTitle: string;
+  confirmSlowRelaunchBody: string;
+  slowRelaunchPendingNote: string;
 }
 
 export const progress = {
@@ -115,6 +120,11 @@ export const progress = {
     pushbackRelaunchWarning:
       'Le site bloque encore nos requêtes malgré ce ralentissement. Pour ne pas perdre de pages, arrêtez le scan et relancez-le plus lentement.',
     slowRelaunchLink: 'Relancer plus lentement',
+    confirmSlowRelaunchTitle: 'Arrêter ce scan et le relancer plus lentement ?',
+    confirmSlowRelaunchBody:
+      'Le scan en cours sera arrêté à la fin de la page en cours. Le nouveau scan repart de zéro avec {delay} s entre deux requêtes ; le formulaire de relance s’ouvre dès que l’arrêt est effectif.',
+    slowRelaunchPendingNote:
+      'Arrêt du scan en cours. Le formulaire de relance s’ouvrira dès qu’il sera arrêté, ce qui peut prendre quelques minutes à ce rythme.',
     urlResultsHeading: 'Résultat par site',
     notFound: 'Scan introuvable.',
     notFoundAction: 'Voir les audits',
@@ -189,6 +199,11 @@ export const progress = {
     pushbackRelaunchWarning:
       'The site is still blocking our requests despite this slowdown. To avoid losing pages, stop the scan and relaunch it more slowly.',
     slowRelaunchLink: 'Relaunch more slowly',
+    confirmSlowRelaunchTitle: 'Stop this scan and relaunch it more slowly?',
+    confirmSlowRelaunchBody:
+      'The running scan stops at the end of the current page. The new scan starts over with {delay} s between requests; the relaunch form opens as soon as the stop has taken effect.',
+    slowRelaunchPendingNote:
+      'Stopping the current scan. The relaunch form opens as soon as it has stopped, which can take a few minutes at this pace.',
     urlResultsHeading: 'Per-site results',
     notFound: 'Scan not found.',
     notFoundAction: 'View audits',

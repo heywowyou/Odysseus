@@ -3,7 +3,7 @@
 import { createElement } from 'react';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '../i18n/provider';
 import { ScanProgressPage } from './scan-progress';
@@ -59,6 +59,12 @@ const pushbackJob = {
   },
 };
 
+/** Stands in for the new-scan form: shows the query it was opened with. */
+function RelaunchFormProbe(): ReturnType<typeof createElement> {
+  const location = useLocation();
+  return createElement('p', null, `relaunch-form${location.search}`);
+}
+
 async function renderPage(): Promise<{ container: HTMLElement; root: Root }> {
   const container = document.createElement('div');
   document.body.appendChild(container);
@@ -74,6 +80,10 @@ async function renderPage(): Promise<{ container: HTMLElement; root: Root }> {
           createElement(
             Routes,
             null,
+            createElement(Route, {
+              path: 'scans/new',
+              element: createElement(RelaunchFormProbe),
+            }),
             createElement(Route, {
               path: 'scans/:jobId',
               element: createElement(ScanProgressPage),
@@ -121,8 +131,8 @@ const cappedPushbackJob = {
   },
 };
 
-function relaunchLink(container: HTMLElement): HTMLAnchorElement | undefined {
-  return [...container.querySelectorAll('a')].find(
+function relaunchButton(container: HTMLElement): HTMLButtonElement | undefined {
+  return [...container.querySelectorAll('button')].find(
     (link) => link.textContent?.trim() === 'Relancer plus lentement',
   );
 }
@@ -141,24 +151,42 @@ describe('scan progress pushback notice', () => {
     const { container, root } = await renderPage();
 
     await waitForText(container, 'Réactions du site à nos requêtes : 2.');
-    expect(relaunchLink(container)).toBeUndefined();
+    expect(relaunchButton(container)).toBeUndefined();
 
     root.unmount();
   });
 
-  it('offers a slower relaunch from the real pace once the slowdown ran out', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => jsonResponse(cappedPushbackJob)),
-    );
+  it('stops the scan, then opens the slower relaunch once it has stopped', async () => {
+    let cancelled = false;
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).endsWith('/cancel') && init?.method === 'POST') {
+        cancelled = true;
+        return jsonResponse({ ok: true });
+      }
+      return jsonResponse(
+        cancelled ? { ...cappedPushbackJob, status: 'cancelled' } : cappedPushbackJob,
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
     const { container, root } = await renderPage();
 
     await waitForText(container, 'ralenti automatiquement à 60 s');
     await waitForText(container, 'Le site bloque encore nos requêtes');
-    const relaunch = relaunchLink(container);
-    expect(relaunch).not.toBeUndefined();
-    expect(relaunch?.getAttribute('href')).toContain('delaySeconds=120');
-    expect(relaunch?.getAttribute('href')).toContain('scanConcurrency=1');
+    await act(async () => {
+      relaunchButton(container)?.click();
+    });
+    await waitForText(document.body, 'avec 120 s entre deux requêtes');
+    const confirm = [...document.querySelectorAll('button')].filter(
+      (button) => button.textContent?.trim() === 'Relancer plus lentement',
+    );
+    await act(async () => {
+      confirm[confirm.length - 1]?.click();
+    });
+
+    await waitForText(container, 'relaunch-form?');
+    expect(cancelled).toBe(true);
+    expect(container.textContent).toContain('delaySeconds=120');
+    expect(container.textContent).toContain('scanConcurrency=1');
 
     root.unmount();
   });

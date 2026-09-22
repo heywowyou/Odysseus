@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { JSX, ReactNode } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge, badgeStyles, type BadgeTone } from '../components/ui/badge';
@@ -19,7 +19,7 @@ import { scanJobDetailSchema } from '../lib/api-schemas';
 import type { ScanJobDetail, ScanUrlResult } from '../lib/api-types';
 import { isStateChanged, problemCopy } from '../lib/operator-copy';
 import { cn } from '../lib/cn';
-import { delaySeconds, summarizePushback } from '../lib/pushback';
+import { delaySeconds, summarizePushback, type PushbackSummary } from '../lib/pushback';
 import { usePolling } from '../lib/use-polling';
 import { hostnameOf } from './audit-detail-model';
 import { IdentityConfirmField } from './identity-confirm-field';
@@ -79,13 +79,34 @@ function slowRelaunchHref(job: ScanJobDetail, delayMs: number): string | undefin
   return `/scans/new?${params.toString()}`;
 }
 
-function PushbackNotice({ job }: { job: ScanJobDetail }): JSX.Element | null {
-  const { strings } = useI18n();
-  const summary = summarizePushback(
+/** The slower relaunch the pushback notice offers, or undefined while the
+ *  scanner's own slowdown is still enough. */
+function slowRelaunch(job: ScanJobDetail): { href: string; delayMs: number } | undefined {
+  const summary = pushbackSummaryOf(job);
+  if (summary === undefined || !summary.relaunchAdvised) return undefined;
+  const href = slowRelaunchHref(job, summary.suggestedDelayMs);
+  return href === undefined ? undefined : { href, delayMs: summary.suggestedDelayMs };
+}
+
+function pushbackSummaryOf(job: ScanJobDetail): PushbackSummary | undefined {
+  return summarizePushback(
     job.progress.pushbackEvents ?? [],
     job.options.delayMs ?? job.progress.crawl?.effectiveDelayMs ?? 0,
     job.progress.crawlExclusions?.blocked ?? 0,
   );
+}
+
+function PushbackNotice({
+  job,
+  relaunchPending,
+  onRelaunch,
+}: {
+  job: ScanJobDetail;
+  relaunchPending: boolean;
+  onRelaunch: () => void;
+}): JSX.Element | null {
+  const { strings } = useI18n();
+  const summary = pushbackSummaryOf(job);
   if (summary === undefined) return null;
   const note = (
     <p className="text-sm text-ink-soft">
@@ -95,17 +116,21 @@ function PushbackNotice({ job }: { job: ScanJobDetail }): JSX.Element | null {
       })}
     </p>
   );
-  if (!summary.relaunchAdvised) return <Card>{note}</Card>;
-  const href = slowRelaunchHref(job, summary.suggestedDelayMs);
+  if (slowRelaunch(job) === undefined) return <Card>{note}</Card>;
   return (
     <Card className="border-sev-moderate/50 bg-sev-moderate/5">
       {note}
       <p className="mt-2 text-sm text-ink-soft">{strings.progress.pushbackRelaunchWarning}</p>
-      {href !== undefined ? (
-        <Link to={href} className={cn(buttonStyles('secondary', 'sm'), 'mt-3 inline-flex')}>
+      {relaunchPending ? (
+        <p className="mt-3 flex items-center gap-2 text-sm text-ink-soft">
+          <Spinner />
+          {strings.progress.slowRelaunchPendingNote}
+        </p>
+      ) : (
+        <Button variant="secondary" size="sm" className="mt-3" onClick={onRelaunch}>
           {strings.progress.slowRelaunchLink}
-        </Link>
-      ) : null}
+        </Button>
+      )}
     </Card>
   );
 }
@@ -170,8 +195,8 @@ export function ScanProgressPage(): JSX.Element {
   const stopCapability = job?.capabilities.cancel;
   const stoppable = stopCapability?.state === 'available';
 
-  const stopJob = async (): Promise<void> => {
-    if (jobId === undefined || stopCapability === undefined) return;
+  const stopJob = async (): Promise<boolean> => {
+    if (jobId === undefined || stopCapability === undefined) return false;
     try {
       await sendJson(`/api/scans/${encodeURIComponent(jobId)}/cancel`, 'POST', {
         stateToken: stopCapability.stateToken,
@@ -180,11 +205,35 @@ export function ScanProgressPage(): JSX.Element {
       // the worker confirms the terminal cancelled state. A queued job may
       // already be terminal on this refresh.
       refresh();
+      return true;
     } catch (error) {
       toast.error(problemCopy(error, strings.workState) ?? strings.audits.actionFailed);
       if (isStateChanged(error)) refresh();
+      return false;
     }
   };
+
+  // A slower relaunch has to stop this scan first: the site's launch slot
+  // stays taken until the worker has actually stopped, so the new scan would
+  // be refused as busy. The form opens once the job is terminal.
+  const navigate = useNavigate();
+  const [confirmRelaunchOpen, setConfirmRelaunchOpen] = useState(false);
+  const [pendingRelaunchHref, setPendingRelaunchHref] = useState<string | undefined>();
+  const relaunch = job === undefined ? undefined : slowRelaunch(job);
+  const requestRelaunch = (): void => {
+    if (relaunch === undefined) return;
+    if (stoppable) setConfirmRelaunchOpen(true);
+    else void navigate(relaunch.href);
+  };
+  const stopAndRelaunch = async (): Promise<void> => {
+    if (relaunch === undefined) return;
+    if (await stopJob()) setPendingRelaunchHref(relaunch.href);
+  };
+  useEffect(() => {
+    if (pendingRelaunchHref !== undefined && job !== undefined && isTerminal(job.status)) {
+      void navigate(pendingRelaunchHref);
+    }
+  }, [pendingRelaunchHref, job, navigate]);
 
   let body: ReactNode;
   if (data === null) {
@@ -220,7 +269,14 @@ export function ScanProgressPage(): JSX.Element {
         </Card>
       );
   } else {
-    body = <JobView job={job} refresh={refresh} />;
+    body = (
+      <JobView
+        job={job}
+        refresh={refresh}
+        relaunchPending={pendingRelaunchHref !== undefined}
+        onRelaunch={requestRelaunch}
+      />
+    );
   }
 
   return (
@@ -286,7 +342,20 @@ export function ScanProgressPage(): JSX.Element {
         description={strings.progress.confirmStopBody}
         confirmLabel={strings.progress.stopButton}
         cancelLabel={strings.common.cancel}
-        onConfirm={stopJob}
+        onConfirm={async () => {
+          await stopJob();
+        }}
+      />
+      <ConfirmDialog
+        open={confirmRelaunchOpen}
+        onOpenChange={setConfirmRelaunchOpen}
+        title={strings.progress.confirmSlowRelaunchTitle}
+        description={fillProgressCopy(strings.progress.confirmSlowRelaunchBody, {
+          delay: delaySeconds(relaunch?.delayMs ?? 0),
+        })}
+        confirmLabel={strings.progress.slowRelaunchLink}
+        cancelLabel={strings.common.cancel}
+        onConfirm={stopAndRelaunch}
       />
     </article>
   );
@@ -358,13 +427,23 @@ function PhaseRow(props: {
 /** Live view of one job document. The phase line mirrors the old page's
  *  phase status text for full audits; for prospecting the spinner card
  *  carries the phase copy instead, so the label never shows twice. */
-function JobView({ job, refresh }: { job: ScanJobDetail; refresh: () => void }): JSX.Element {
+function JobView({
+  job,
+  refresh,
+  relaunchPending,
+  onRelaunch,
+}: {
+  job: ScanJobDetail;
+  refresh: () => void;
+  relaunchPending: boolean;
+  onRelaunch: () => void;
+}): JSX.Element {
   const terminal = isTerminal(job.status);
   const prospecting =
     job.type === 'prospecting' || job.type === 'quick-check' || job.type === 'prospecting-audit';
   return (
     <div className="flex flex-col gap-4">
-      <PushbackNotice job={job} />
+      <PushbackNotice job={job} relaunchPending={relaunchPending} onRelaunch={onRelaunch} />
       {prospecting ? (
         <ProspectingView job={job} terminal={terminal} />
       ) : (
