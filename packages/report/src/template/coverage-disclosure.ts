@@ -16,6 +16,7 @@ const WITHOUT_CONTENT_REASON_ORDER: readonly PageWithoutContentAnalysisReason[] 
   'http-error-status',
   'redirect-interstitial',
   'soft-error-page',
+  'blocked',
   'coverage-missing',
 ];
 
@@ -59,7 +60,14 @@ export function buildCoverageDisclosure(
     return {
       summary: fillTemplate(strings.coverage.legacyUnknownTemplate, { inventory }),
       plainSummary: inventory,
-      details: [],
+      details:
+        coverage.coverageLimitations !== undefined && coverage.coverageLimitations.length > 0
+          ? [
+              fillTemplate(cov.coverageLimitationTemplate, {
+                count: n(coverage.coverageLimitations.length),
+              }),
+            ]
+          : [],
     };
   }
 
@@ -83,6 +91,16 @@ export function buildCoverageDisclosure(
     details.push(
       fillTemplate(strings.coverage.guardedOmissionsTemplate, {
         count: n(coverage.continuationOmittedUrlCount),
+      }),
+    );
+  }
+  if (coverage.noindexPageCount > 0) {
+    details.push(fillTemplate(cov.noindexTemplate, { count: n(coverage.noindexPageCount) }));
+  }
+  if (coverage.coverageLimitations !== undefined && coverage.coverageLimitations.length > 0) {
+    details.push(
+      fillTemplate(cov.coverageLimitationTemplate, {
+        count: n(coverage.coverageLimitations.length),
       }),
     );
   }

@@ -28,6 +28,7 @@ export interface KeyboardNavigationExtraction {
    *  page has nothing to tab through. */
   tabbableCount: number;
   tabbableSelectors: string[];
+  tabbableKinds: Array<'ordinary' | 'native-substop' | 'embedded' | 'shadow-host'>;
   /** DOM-order index of each element actually focused, in the order Tab
    *  visited them (nulls where a Tab press landed outside the tagged
    *  tabbable set, e.g. the browser chrome or an iframe boundary - not
@@ -58,9 +59,8 @@ export async function walkKeyboardNavigation(
     // predicate has no name for esbuild to preserve, so nothing gets
     // spliced in. Confirmed via a real fixture run: this check silently
     // produced zero findings under `tsx` until inlined.
-    const candidates = Array.from(
-      document.querySelectorAll('a[href], button, input, select, textarea, [tabindex]'),
-    ).filter((el) => {
+    const selector = 'a[href], button, input, select, textarea, iframe, object, embed, [tabindex]';
+    const candidates = Array.from(document.querySelectorAll(selector)).filter((el) => {
       if (el.getAttribute('tabindex') === '-1') return false;
       if (el.hasAttribute('disabled')) return false;
       if (el.getAttribute('aria-hidden') === 'true') return false;
@@ -72,35 +72,66 @@ export async function walkKeyboardNavigation(
 
     candidates.forEach((el, i) => el.setAttribute(attr, String(i)));
 
-    return candidates.map((el, i) => ({
-      id: i,
-      selector: el.id ? `#${el.id}` : `${el.tagName.toLowerCase()}:nth-of-type(${i + 1})`,
-    }));
+    return candidates.map((el, i) => {
+      const parts: string[] = [];
+      let current: Element | null = el;
+      while (current && current !== document.documentElement) {
+        if (current.id) {
+          parts.unshift(`#${CSS.escape(current.id)}`);
+          break;
+        }
+        const parent: Element | null = current.parentElement;
+        if (!parent) break;
+        parts.unshift(
+          `${current.tagName.toLowerCase()}:nth-child(${Array.from(parent.children).indexOf(current) + 1})`,
+        );
+        current = parent;
+      }
+      const tag = el.tagName.toLowerCase();
+      const type = el.getAttribute('type')?.toLowerCase();
+      const kind: 'ordinary' | 'native-substop' | 'embedded' | 'shadow-host' = [
+        'date',
+        'time',
+        'datetime-local',
+        'month',
+        'week',
+      ].includes(type ?? '')
+        ? 'native-substop'
+        : ['iframe', 'object', 'embed'].includes(tag)
+          ? 'embedded'
+          : (el as HTMLElement).shadowRoot !== null
+            ? 'shadow-host'
+            : 'ordinary';
+      return { id: i, selector: parts.join(' > '), kind };
+    });
   }, TAB_ATTR);
 
   const focusSequence: Array<number | null> = [];
 
   if (tabbables.length > 0) {
     const maxPresses = Math.min(tabbables.length + 5, MAX_TAB_PRESSES);
-    for (let i = 0; i < maxPresses; i++) {
-      await page.keyboard.press('Tab');
-      const focusedId = await page.evaluate((attr) => {
-        const el = document.activeElement;
-        const value = el?.getAttribute?.(attr);
-        return value !== null && value !== undefined ? Number(value) : null;
+    try {
+      for (let i = 0; i < maxPresses; i++) {
+        await page.keyboard.press('Tab');
+        const focusedId = await page.evaluate((attr) => {
+          const el = document.activeElement;
+          const value = el?.getAttribute?.(attr);
+          return value !== null && value !== undefined ? Number(value) : null;
+        }, TAB_ATTR);
+        focusSequence.push(focusedId);
+      }
+    } finally {
+      await page.evaluate((attr) => {
+        document.querySelectorAll(`[${attr}]`).forEach((el) => el.removeAttribute(attr));
       }, TAB_ATTR);
-      focusSequence.push(focusedId);
     }
-
-    await page.evaluate((attr) => {
-      document.querySelectorAll(`[${attr}]`).forEach((el) => el.removeAttribute(attr));
-    }, TAB_ATTR);
   }
 
   return {
     pageUrl,
     tabbableCount: tabbables.length,
     tabbableSelectors: tabbables.map((t) => t.selector),
+    tabbableKinds: tabbables.map((t) => t.kind),
     focusSequence,
   };
 }

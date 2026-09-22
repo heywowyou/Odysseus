@@ -108,6 +108,7 @@ describe('createScanProgressReporter staged full-audit progress', () => {
       externalRedirect: 12,
       nonHtml: 20,
       httpError: 4,
+      blocked: 0,
       error: 1,
     };
     report({ type: 'crawl-exclusions', excluded });
@@ -118,13 +119,82 @@ describe('createScanProgressReporter staged full-audit progress', () => {
     });
   });
 
+  it('persists host pushback events for the live operator warning', async () => {
+    const report = createScanProgressReporter({} as never, 'job-1', 'full-audit');
+    report({
+      type: 'pushback',
+      event: {
+        pageUrl: 'https://example.com/products',
+        kind: 'rate-limit',
+        fetcher: 'crawl',
+        status: 429,
+        retryAfterMs: 5000,
+        occurredAt: '2023-11-14T22:13:20.000Z',
+      },
+    });
+    report({
+      type: 'pushback',
+      event: {
+        pageUrl: 'https://example.com/products',
+        kind: 'bot-challenge',
+        fetcher: 'render',
+        occurredAt: '2023-11-14T22:13:21.000Z',
+      },
+    });
+
+    await vi.waitFor(() => expect(updateJobProgress).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(updateJobProgress).mock.calls.map((call) => call[2])).toEqual([
+      {
+        progress: {
+          pushbackEvents: [
+            {
+              pageUrl: 'https://example.com/products',
+              kind: 'rate-limit',
+              fetcher: 'crawl',
+              status: 429,
+              retryAfterMs: 5000,
+              occurredAt: '2023-11-14T22:13:20.000Z',
+            },
+          ],
+        },
+      },
+      {
+        progress: {
+          pushbackEvents: [
+            {
+              pageUrl: 'https://example.com/products',
+              kind: 'rate-limit',
+              fetcher: 'crawl',
+              status: 429,
+              retryAfterMs: 5000,
+              occurredAt: '2023-11-14T22:13:20.000Z',
+            },
+            {
+              pageUrl: 'https://example.com/products',
+              kind: 'bot-challenge',
+              fetcher: 'render',
+              occurredAt: '2023-11-14T22:13:21.000Z',
+            },
+          ],
+        },
+      },
+    ]);
+  });
+
   it('reconciles pages discovered after crawl telemetry into the durable inventory count', async () => {
     const report = createScanProgressReporter({} as never, 'job-1', 'full-audit');
     report({ type: 'crawl-start', maxPages: 500, effectiveDelayMs: 1000, robotsTxtFound: true });
     report({ type: 'crawl-page', visited: 185, maxPages: 500, queued: 31 });
     report({
       type: 'crawl-exclusions',
-      excluded: { discoveryOnly: 0, externalRedirect: 0, nonHtml: 0, httpError: 0, error: 0 },
+      excluded: {
+        discoveryOnly: 0,
+        externalRedirect: 0,
+        nonHtml: 0,
+        httpError: 0,
+        blocked: 0,
+        error: 0,
+      },
     });
     report({ type: 'content-scan-start', totalPages: 216, alreadyCompleted: 0, concurrency: 2 });
 

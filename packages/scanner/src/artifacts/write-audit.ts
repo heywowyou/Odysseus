@@ -28,6 +28,8 @@ import type { Browser } from 'playwright';
 import {
   extractCoreWebVitals,
   extractLighthouseExcludedCategoryScores,
+  isBlockedRender,
+  isChallengeTitle,
   type AuditConfigSnapshot,
   type AuditManifest,
   type AuditManifestSiteSignals,
@@ -57,6 +59,14 @@ export interface WriteAuditArtifactsInput {
     pages: PageScanResult[];
     cruxFieldData?: CruxFieldDataResult;
     analysisCoverageByUrl?: ReadonlyMap<string, PageAnalysisCoverage>;
+    pushbackEvents?: readonly {
+      pageUrl: string;
+      kind: 'rate-limit' | 'bot-challenge' | 'origin-transient';
+      fetcher: 'crawl' | 'render' | 'lighthouse' | 'canonical';
+      occurredAt: string;
+      status?: number;
+      retryAfterMs?: number;
+    }[];
   };
   browser: Browser;
   startedAt: Date;
@@ -84,6 +94,17 @@ function buildPrivacySecurityCoverage(
     securityHeaders: homepage?.securityHeaders !== undefined ? 'completed' : 'unavailable',
     cookieConsent: homepage?.cookieConsent !== undefined ? 'completed' : 'unavailable',
   };
+}
+
+function hasNoindexDirective(page: PageScanResult): boolean {
+  const metadata = page.headMetadata;
+  if (metadata === undefined) return false;
+  return [metadata.robotsMeta, metadata.googlebotMeta, metadata.xRobotsTag].some(
+    (value) =>
+      value !== undefined &&
+      value !== null &&
+      /(?:^|[,;\s])(?:noindex|none)(?:$|[,;\s])/i.test(value),
+  );
 }
 
 /** Accumulates the two site-level obligation-engine signals across every
@@ -359,7 +380,7 @@ function findPageWithSignal(
       ? undefined
       : siteResult.pages.find((page) => page.url === url && hasSignal(page));
 
-  const homepage = byUrl(siteResult.crawl.startUrl);
+  const homepage = byUrl(siteResult.crawl.homepageUrl ?? siteResult.crawl.startUrl);
   if (homepage) return homepage;
 
   const counterpart = byUrl(toggleWwwPrefix(siteResult.crawl.startUrl));
@@ -510,6 +531,10 @@ export async function writeAuditArtifacts(
       ...(crawledPage.discoveredFrom !== undefined
         ? { discoveredFrom: crawledPage.discoveredFrom }
         : {}),
+      ...(crawledPage.redirectTargetUrl !== undefined
+        ? { redirectTargetUrl: crawledPage.redirectTargetUrl }
+        : {}),
+      ...(crawledPage.pluginObject !== undefined ? { pluginObject: crawledPage.pluginObject } : {}),
       errors: {},
     });
   }
@@ -572,6 +597,9 @@ export async function writeAuditArtifacts(
         title: scanJson.headMetadata?.title,
         headings: scanJson.headMetadata?.headings,
       });
+    const blockedPage =
+      redirectTargetUrl === undefined &&
+      (isBlockedRender(scanJson.renderDiff) || isChallengeTitle(scanJson.headMetadata?.title));
 
     manifestPages.push({
       url: scanJson.url,
@@ -580,9 +608,11 @@ export async function writeAuditArtifacts(
       status:
         redirectTargetUrl !== undefined
           ? 'redirect-interstitial'
-          : softErrorPage
-            ? 'soft-error-page'
-            : 'visited',
+          : blockedPage
+            ? 'blocked'
+            : softErrorPage
+              ? 'soft-error-page'
+              : 'visited',
       discoveryMethod: crawledPage.discoveryMethod,
       // Issue #290: the page's own declared language (<html lang>), so the
       // report can attribute a root-path page - no /fr/-style prefix - to
@@ -590,13 +620,19 @@ export async function writeAuditArtifacts(
       ...(scanJson.headMetadata?.htmlLang !== undefined && scanJson.headMetadata.htmlLang !== null
         ? { language: scanJson.headMetadata.htmlLang }
         : {}),
-      ...(crawledPage.httpStatus !== undefined ? { httpStatus: crawledPage.httpStatus } : {}),
+      ...(hasNoindexDirective(scanJson) ? { noindex: true } : {}),
+      ...(scanJson.renderDiff?.httpStatus !== undefined
+        ? { httpStatus: scanJson.renderDiff.httpStatus }
+        : crawledPage.httpStatus !== undefined
+          ? { httpStatus: crawledPage.httpStatus }
+          : {}),
       ...(crawledPage.discoveredFrom !== undefined
         ? { discoveredFrom: crawledPage.discoveredFrom }
         : {}),
       ...(redirectTargetUrl !== undefined ? { redirectTargetUrl } : {}),
       ...(redirectTargetUrl === undefined &&
       !softErrorPage &&
+      !blockedPage &&
       input.siteResult.analysisCoverageByUrl?.get(scanJson.url) !== undefined
         ? { analysisCoverage: input.siteResult.analysisCoverageByUrl.get(scanJson.url)! }
         : {}),
@@ -646,9 +682,12 @@ export async function writeAuditArtifacts(
     config: input.config,
     crawl: input.siteResult.crawl,
     pages: manifestPages,
+    ...(input.siteResult.pushbackEvents !== undefined
+      ? { pushbackEvents: [...input.siteResult.pushbackEvents] }
+      : {}),
     siteSignals: buildSiteSignals(resolvedSiteResult),
     privacySecurityCoverage: buildPrivacySecurityCoverage(
-      input.siteResult.crawl.startUrl,
+      input.siteResult.crawl.homepageUrl ?? input.siteResult.crawl.startUrl,
       resolvedPages,
     ),
     // B2 (2026-08-24): recorded on the manifest rather than recomputed by
@@ -657,7 +696,11 @@ export async function writeAuditArtifacts(
     translationClusters: buildTranslationClusters(
       resolvedPages.map((page) => ({
         pageUrl: page.url,
+        ...(page.headMetadata?.htmlLang !== undefined
+          ? { language: page.headMetadata.htmlLang }
+          : {}),
         hreflangLinks: page.headMetadata?.hreflangLinks ?? [],
+        languageSwitcherLinks: page.headMetadata?.languageSwitcherLinks ?? [],
       })),
     ),
     ...(input.siteResult.cruxFieldData !== undefined

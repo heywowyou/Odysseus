@@ -403,6 +403,16 @@ limited number of pages and can miss one; and that the client should
 confirm with a lawyer. Never that the client is in breach, never a
 deadline, never an amount.
 
+**Overseas-domain boundary (manual).** This entry does not currently carry a
+verified territorial analysis for New Caledonia or the other French overseas
+collectivities and territories. A `.nc`, `.pf`, `.wf`, `.tf`, `.re`, `.yt`,
+`.pm`, `.gp`, `.mq`, `.gf`, `.bl` or `.mf` site is therefore not silently
+treated as a metropolitan LCEN case. The automated absence rule emits no
+finding for those domains; the manual checklist says **« vérifier le régime
+applicable »** and the operator records the jurisdiction decision before any
+client-facing conclusion. This is a coverage boundary, not a claim that the
+obligation does or does not apply there.
+
 ---
 
 ## 9. Remaining verification

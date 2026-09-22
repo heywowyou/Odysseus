@@ -26,6 +26,7 @@ import {
   generateOutreachPreviewHtmlV3,
   MissingReviewedRemediationError,
   OUTREACH_PROOF_CARD_COPY,
+  isConfinedToThirdParty,
 } from '@odysseus/report';
 import type { AuditEvidenceDiagnostics } from '../pipeline/audit-evidence-diagnostics.js';
 import { createPreviewToken, deriveObjectKey, hashPreviewToken } from './preview-token.js';
@@ -141,15 +142,39 @@ function aggregateFacts(
     moderate: 0,
     minor: 0,
   };
-  for (const finding of findings) {
+  const primaryFindings = findings.filter((finding) => !isConfinedToThirdParty(finding));
+  for (const finding of primaryFindings) {
     severityTotals[finding.severity] += 1;
     for (const pageUrl of finding.pageUrls) affectedPages.add(pageUrl);
   }
   return {
-    distinctFindingCount: findings.length,
+    distinctFindingCount: primaryFindings.length,
     affectedPageCount: affectedPages.size,
     severityTotals,
   };
+}
+
+const UNDER_CORRECTION_RULE_IDS = new Set<string>();
+const BLOCKED_PROOF_STATUSES = new Set<string>([
+  'blocked',
+  'redirect-interstitial',
+  'soft-error-page',
+  'http-error-status',
+  'skipped-external-redirect',
+]);
+
+function safePreviewFindings(row: OutreachPublicationRowV3): Finding[] {
+  const blockedUrls = new Set(
+    row.audit.pages
+      .filter((page) => BLOCKED_PROOF_STATUSES.has(page.status))
+      .map((page) => page.url),
+  );
+  return row.findings.filter(
+    (finding) =>
+      !isConfinedToThirdParty(finding) &&
+      !UNDER_CORRECTION_RULE_IDS.has(finding.ruleId) &&
+      !finding.pageUrls.some((pageUrl) => blockedUrls.has(pageUrl)),
+  );
 }
 
 export function buildOutreachPreviewSummaryV3(options: {
@@ -177,11 +202,13 @@ export function buildOutreachPreviewSummaryV3(options: {
   const sourceFindingsDigest = row.audit.findingsProvenance?.findingsDigest;
   if (sourceFindingsDigest === undefined) return { refused: 'report-not-ready' };
 
+  const safeFindings = safePreviewFindings(row);
+
   let priorities: ReturnType<typeof buildRenderedPriorities>;
   try {
     priorities = buildRenderedPriorities(
       row.analysis.themes,
-      row.findings,
+      safeFindings,
       row.audit as unknown as AuditManifest,
       'fr',
     );
@@ -220,7 +247,7 @@ export function buildOutreachPreviewSummaryV3(options: {
     NonNullable<(typeof priorityCards)[number]>,
   ];
 
-  const aggregate = aggregateFacts(row.findings);
+  const aggregate = aggregateFacts(safeFindings);
   const facts = buildOutreachFactsBlock({
     assessment: row.analysis.obligationAssessment,
     language,

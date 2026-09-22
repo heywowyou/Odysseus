@@ -367,6 +367,32 @@ export async function runAuditStage(
       options.siteSignalOverrides,
     );
 
+    const sitemapRedirectedUrls = artifacts.manifest.pages
+      .filter(
+        (page) =>
+          page.status === 'redirect-interstitial' || page.status === 'skipped-external-redirect',
+      )
+      .map((page) => page.url);
+    const pagesForNormalization =
+      sitemapRedirectedUrls.length === 0
+        ? artifacts.pages
+        : artifacts.pages.map((page) =>
+            page.sitemapCheck === undefined
+              ? page
+              : {
+                  ...page,
+                  sitemapCheck: {
+                    ...page.sitemapCheck,
+                    redirectedUrls: [
+                      ...new Set([
+                        ...(page.sitemapCheck.redirectedUrls ?? []),
+                        ...sitemapRedirectedUrls,
+                      ]),
+                    ],
+                  },
+                },
+          );
+
     const findings = normalizeAudit({
       // B2 (2026-08-24): collapses language-variant duplicates. Absent
       // on manifests predating the field, which simply yields no
@@ -374,11 +400,18 @@ export async function runAuditStage(
       ...(artifacts.manifest.translationClusters !== undefined
         ? { translationClusters: artifacts.manifest.translationClusters }
         : {}),
+      ...(artifacts.manifest.coverageLimitations !== undefined
+        ? { coverageLimitations: artifacts.manifest.coverageLimitations }
+        : {}),
       auditId: artifacts.auditId,
       startedAt,
-      pages: artifacts.pages,
+      pages: pagesForNormalization,
       crawl: {
         startUrl: artifacts.manifest.crawl.startUrl,
+        ...(artifacts.manifest.crawl.homepageUrl !== undefined
+          ? { homepageUrl: artifacts.manifest.crawl.homepageUrl }
+          : {}),
+        robotsTxtFound: artifacts.manifest.crawl.robotsTxtFound,
         pages: artifacts.manifest.pages.map((page) => ({
           url: page.url,
           status: page.status,
@@ -391,6 +424,12 @@ export async function runAuditStage(
           : {}),
         ...(artifacts.manifest.crawl.aiCrawlerBlocks !== undefined
           ? { aiCrawlerBlocks: artifacts.manifest.crawl.aiCrawlerBlocks }
+          : {}),
+        ...(artifacts.manifest.crawl.sitemapUrls !== undefined
+          ? { sitemapUrls: artifacts.manifest.crawl.sitemapUrls }
+          : {}),
+        ...(artifacts.manifest.relativeLinkNestingSummary !== undefined
+          ? { relativeLinkNestingSummary: artifacts.manifest.relativeLinkNestingSummary }
           : {}),
       },
       ...(artifacts.manifest.cruxFieldData !== undefined

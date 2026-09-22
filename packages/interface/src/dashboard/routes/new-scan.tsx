@@ -59,6 +59,8 @@ export function NewScanPage() {
     type: initialScanTypeFromQuery(searchParams.get('type')),
     url: prefillUrlFromQuery(searchParams.get('url')),
     prospectId: searchParams.get('prospectId')?.trim() ?? '',
+    delaySeconds: searchParams.get('delaySeconds') ?? '',
+    scanConcurrency: searchParams.get('scanConcurrency') ?? '',
   }));
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);

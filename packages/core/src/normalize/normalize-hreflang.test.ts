@@ -52,7 +52,7 @@ describe('hreflang-no-return-link', () => {
     expect(extractHreflangCandidates(pages)).toEqual([]);
   });
 
-  it('gives two different missing return links distinct selectors so they do not dedupe into one finding', () => {
+  it('groups missing return links from one source page into one finding', () => {
     const deUrl = 'https://example.com/de/';
     const pages: HreflangPageInput[] = [
       {
@@ -66,8 +66,9 @@ describe('hreflang-no-return-link', () => {
       { url: deUrl, hreflangLinks: [] },
     ];
     const candidates = extractHreflangCandidates(pages);
-    expect(candidates).toHaveLength(2);
-    expect(candidates[0]?.element?.selector).not.toBe(candidates[1]?.element?.selector);
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]?.element?.snippet).toContain('hreflang="en"');
+    expect(candidates[0]?.element?.snippet).toContain('hreflang="de"');
   });
 
   it('only flags the direction missing a return link, not the page that already reciprocates', () => {

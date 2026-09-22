@@ -34,22 +34,29 @@ import {
   type Finding,
   type FindingElement,
 } from '../types/findings.js';
-import { maxSeverity } from './severity.js';
+import { maxSeverity, severityFromRenderDiff } from './severity.js';
 import { computeDedupeKey } from './dedupe.js';
 import { assignFindingIds } from './finding-id.js';
 import { compareCriteria } from './wcag-tags.js';
 import { extractAxeCandidates, type AxeResultsInput } from './normalize-axe.js';
 import {
   computeSupersededAudits,
+  computeNonActionableSuccessorsToDrop,
   extractLighthouseCandidates,
   type LighthouseResultInput,
 } from './normalize-lighthouse.js';
-import { extractRenderDiffCandidates, unusableRawFetches } from './normalize-renderdiff.js';
+import {
+  extractRenderDiffCandidates,
+  isBlockedRender,
+  isChallengeTitle,
+  unusableRawFetches,
+} from './normalize-renderdiff.js';
 import { extractCustomCandidates, type MentionsLegalesCheckInput } from './normalize-custom.js';
 import {
   extractHeadMetadataCandidates,
   lighthouseAuditsCoveredByHeadMetadata,
   type HeadMetadataCheckInput,
+  headMetadataHasNoindex,
 } from './normalize-head-metadata.js';
 import { extractSitemapCandidates, type SitemapCheckInput } from './normalize-sitemap.js';
 import {
@@ -100,11 +107,14 @@ import {
 } from './normalize-structured-data.js';
 import {
   extractCruxCandidates,
+  availableFieldMetrics,
   goodFieldMetrics,
   type CruxFieldDataCheckInput,
 } from './normalize-crux.js';
 import type { FindingCandidate } from './candidate.js';
 import type { RenderDiffResult } from '../types/findings.js';
+import { normalizeUrlIdentity } from './url-identity.js';
+import { COVERAGE_LIMITATION_RULE_IDS, type CoverageLimitationRuleId } from '../types/manifest.js';
 
 export interface NormalizePageInput {
   url: string;
@@ -158,6 +168,13 @@ export interface NormalizePageInput {
   /** Milestone 8.6. Runs on every page (JSON-LD/microdata/RDFa are a
    *  per-page concern, same as headMetadata). */
   structuredData?: StructuredDataCheckInput;
+  /** Frame-level acquisition facts. Challenge frames are not page content
+   *  and their axe nodes are discarded during normalization. */
+  frames?: readonly {
+    frameOrigin: string;
+    frameSelector?: string;
+    challengeMarkers?: readonly string[];
+  }[];
 }
 
 export interface NormalizeAuditInput {
@@ -184,6 +201,15 @@ export interface NormalizeAuditInput {
    *  detected: purely which pages count as the same place when
    *  collapsing duplicate findings. */
   translationClusters?: readonly TranslationCluster[];
+  /** E12: absence claims are suppressed when the persisted crawl says a
+   *  candidate page was blocked or failed. The limitation itself remains in
+   *  the manifest/report coverage disclosure. */
+  coverageLimitations?: readonly {
+    ruleId: CoverageLimitationRuleId;
+    blockedCandidateCount: number;
+    failedCandidateCount: number;
+    candidateUrls?: readonly string[];
+  }[];
 }
 
 /**
@@ -210,10 +236,57 @@ export interface NormalizeAuditInput {
  * at all, in which case no site-level candidate is emitted rather than a
  * mis-anchored one.
  */
-function resolveSiteLevelAnchorUrl(input: NormalizeAuditInput): string | undefined {
-  const startUrl = input.crawl?.startUrl;
-  if (startUrl !== undefined && input.pages.some((page) => page.url === startUrl)) {
-    return startUrl;
+function excludedContentUrls(input: NormalizeAuditInput): ReadonlySet<string> {
+  const excluded = new Set<string>();
+  const add = (url: string): void => {
+    excluded.add(normalizeUrlIdentity(url) ?? url);
+  };
+  for (const page of input.crawl?.pages ?? []) {
+    if (page.status !== 'visited' || (page.httpStatus !== undefined && page.httpStatus >= 400)) {
+      add(page.url);
+    }
+  }
+  for (const page of input.pages) {
+    if (
+      (page.renderDiff !== undefined && isBlockedRender(page.renderDiff)) ||
+      isChallengeTitle(page.headMetadata?.title)
+    ) {
+      add(page.url);
+    }
+  }
+  return excluded;
+}
+
+function isExcludedUrl(excludedUrls: ReadonlySet<string>, url: string): boolean {
+  return excludedUrls.has(normalizeUrlIdentity(url) ?? url);
+}
+
+function hasIncompleteCoverage(
+  limitations: NormalizeAuditInput['coverageLimitations'],
+  ruleId: string,
+): boolean {
+  const limitation = limitations?.find((item) => item.ruleId === ruleId);
+  return (
+    limitation !== undefined &&
+    limitation.blockedCandidateCount + limitation.failedCandidateCount > 0
+  );
+}
+
+function resolveSiteLevelAnchorUrl(
+  input: NormalizeAuditInput,
+  excludedUrls: ReadonlySet<string> = excludedContentUrls(input),
+): string | undefined {
+  const preferredUrls = [input.crawl?.homepageUrl, input.crawl?.startUrl].filter(
+    (url): url is string => url !== undefined,
+  );
+  for (const preferredUrl of preferredUrls) {
+    const preferredIdentity = normalizeUrlIdentity(preferredUrl) ?? preferredUrl;
+    const matchingPage = input.pages.find(
+      (page) =>
+        !isExcludedUrl(excludedUrls, page.url) &&
+        (normalizeUrlIdentity(page.url) ?? page.url) === preferredIdentity,
+    );
+    if (matchingPage !== undefined) return matchingPage.url;
   }
   const depthByUrl = new Map(
     (input.crawl?.pages ?? [])
@@ -221,15 +294,22 @@ function resolveSiteLevelAnchorUrl(input: NormalizeAuditInput): string | undefin
       .map((page) => [page.url, page.depth]),
   );
   return [...input.pages]
+    .filter((page) => !isExcludedUrl(excludedUrls, page.url))
     .map((page) => ({ url: page.url, depth: depthByUrl.get(page.url) ?? Number.MAX_SAFE_INTEGER }))
     .sort((a, b) => a.depth - b.depth || a.url.localeCompare(b.url))[0]?.url;
 }
 
 function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
   const candidates: FindingCandidate[] = [];
+  const contentExcludedUrls = excludedContentUrls(input);
   // D13: resolved over every page before any page is normalized, so a
   // successor emitting on one page suppresses its legacy audits everywhere.
   const supersededAudits = computeSupersededAudits(
+    input.pages
+      .map((page) => page.lighthouse)
+      .filter((lhr): lhr is LighthouseResultInput => lhr !== undefined),
+  );
+  const droppedNonActionableSuccessors = computeNonActionableSuccessorsToDrop(
     input.pages
       .map((page) => page.lighthouse)
       .filter((lhr): lhr is LighthouseResultInput => lhr !== undefined),
@@ -251,26 +331,23 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
   // Issue #300: resolved once for the whole audit, since CrUX is a
   // site-level record.
   const goodFieldMetricKeys = goodFieldMetrics(input.cruxFieldData);
-
-  // Issue #302: two statuses mean "this page was scanned, but what was
-  // scanned is not this URL's own content": an error template served under
-  // its own URL, and a client-side redirect stub (issue #85). Both are
-  // already excluded from the analysed-page list, by never receiving
-  // analysisCoverage. Findings were not excluded with them, so a real
-  // audit carried four copies of one 404 template's defects and counted
-  // them against the site. Reported once here, at the only place that
-  // sees every page's candidates.
-  const contentExcludedUrls = new Set(
-    (input.crawl?.pages ?? [])
-      .filter(
-        (page) => page.status === 'soft-error-page' || page.status === 'redirect-interstitial',
-      )
-      .map((page) => page.url),
-  );
+  const fieldMetricKeys = availableFieldMetrics(input.cruxFieldData);
 
   for (const page of input.pages) {
-    if (contentExcludedUrls.has(page.url)) continue;
-    if (page.axe) candidates.push(...extractAxeCandidates(page.axe, page.url));
+    if (isExcludedUrl(contentExcludedUrls, page.url)) continue;
+    const pageCandidateStart = candidates.length;
+    if (page.axe) {
+      candidates.push(
+        ...extractAxeCandidates(page.axe, page.url, {
+          challengeFrameSelectors: (page.frames ?? [])
+            .filter((frame) => (frame.challengeMarkers?.length ?? 0) > 0)
+            .flatMap((frame) => (frame.frameSelector ? [frame.frameSelector] : [])),
+          challengeFrameOrigins: (page.frames ?? [])
+            .filter((frame) => (frame.challengeMarkers?.length ?? 0) > 0)
+            .map((frame) => frame.frameOrigin),
+        }),
+      );
+    }
     if (page.lighthouse) {
       // Trade-off 110: audits the head-metadata check already answered on
       // this page are reported from there, on every page, not from here.
@@ -281,6 +358,9 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
           page.url,
           supersededAudits,
           goodFieldMetricKeys,
+          droppedNonActionableSuccessors,
+          fieldMetricKeys,
+          input.crawl?.robotsTxtFound === true,
         ).filter((candidate) => !coveredAudits.has(candidate.ruleId)),
       );
     }
@@ -290,7 +370,16 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
       );
     }
     if (page.mentionsLegales) candidates.push(...extractCustomCandidates(page.mentionsLegales));
-    if (page.headMetadata) candidates.push(...extractHeadMetadataCandidates(page.headMetadata));
+    if (page.headMetadata) {
+      candidates.push(
+        ...extractHeadMetadataCandidates({
+          ...page.headMetadata,
+          ...(input.crawl !== undefined
+            ? { publicEvidence: publicEvidenceForPage(page.url, input, contentExcludedUrls) }
+            : {}),
+        }),
+      );
+    }
     if (page.canonicalTarget)
       candidates.push(...extractCanonicalTargetCandidates(page.canonicalTarget));
     if (page.sitemapCheck) candidates.push(...extractSitemapCandidates(page.sitemapCheck));
@@ -317,12 +406,26 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
     if (page.htmlValidity) candidates.push(...normalizeHtmlValidity(page.htmlValidity, page.url));
     if (page.structuredData)
       candidates.push(...extractStructuredDataCandidates(page.structuredData));
+
+    // A deliberate noindex page still receives accessibility, privacy and
+    // legal checks, but search-snippet/content SEO advice has no public
+    // audience. Keep the dedicated noindex-public rule itself, because it is
+    // the exception that tells the operator the directive is unexpected.
+    if (page.headMetadata !== undefined && headMetadataHasNoindex(page.headMetadata)) {
+      const pageCandidates = candidates.splice(pageCandidateStart);
+      candidates.push(
+        ...pageCandidates.filter(
+          (candidate) =>
+            candidate.category !== 'seo' || candidate.ruleId === 'noindex-on-public-page',
+        ),
+      );
+    }
   }
 
-  if (input.crawl) candidates.push(...extractCrawlCandidates(input.crawl));
+  if (input.crawl) candidates.push(...extractCrawlCandidates(input.crawl, contentExcludedUrls));
 
   if (input.cruxFieldData) {
-    const homepageUrl = resolveSiteLevelAnchorUrl(input);
+    const homepageUrl = resolveSiteLevelAnchorUrl(input, contentExcludedUrls);
     if (homepageUrl) candidates.push(...extractCruxCandidates(input.cruxFieldData, homepageUrl));
   }
 
@@ -336,13 +439,26 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
   // crawled target that genuinely fails to link back from one it cannot
   // see; it previously treated both as "outside crawl scope".
   const hreflangPages = input.pages
-    .filter((page) => page.headMetadata)
+    .filter((page) => page.headMetadata && !isExcludedUrl(contentExcludedUrls, page.url))
     .map((page) => ({ url: page.url, hreflangLinks: page.headMetadata!.hreflangLinks }));
   if (hreflangPages.length > 0) {
-    candidates.push(...extractHreflangCandidates(hreflangPages, resolveSiteLevelAnchorUrl(input)));
+    candidates.push(
+      ...extractHreflangCandidates(
+        hreflangPages,
+        resolveSiteLevelAnchorUrl(input, contentExcludedUrls),
+        contentExcludedUrls,
+        new Set(
+          (input.crawl?.pages ?? [])
+            .filter((page) => isExcludedUrl(contentExcludedUrls, page.url))
+            .map((page) => page.url),
+        ),
+      ),
+    );
   }
 
-  const pagesWithHeadMetadata = input.pages.filter((page) => page.headMetadata);
+  const pagesWithHeadMetadata = input.pages.filter(
+    (page) => page.headMetadata && !isExcludedUrl(contentExcludedUrls, page.url),
+  );
   if (pagesWithHeadMetadata.length > 0) {
     // Milestone 8.5a. Reads the same jsonLdBlocks/headings facts
     // normalize-head-metadata.ts already reads, for a different,
@@ -362,11 +478,64 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
         hasFaqSchema: jsonLdTypes.some((type) => /^(faqpage|qapage)$/i.test(type)),
       };
     });
-    const homepageUrl = resolveSiteLevelAnchorUrl(input);
+    const homepageUrl = resolveSiteLevelAnchorUrl(input, contentExcludedUrls);
     if (homepageUrl) candidates.push(...extractGeoCandidates(geoPages, homepageUrl));
   }
 
-  return candidates;
+  // E12: a site-wide absence candidate is a manual/undetermined result when
+  // the crawl could not inspect one of the pages that could carry the item.
+  // Do this as the final gate so every extractor shares the same population
+  // rule, including future absence emitters added to the allowlist. The
+  // persisted limitation ledger is still rendered in coverage details.
+  const absenceRuleIds = new Set<string>(COVERAGE_LIMITATION_RULE_IDS);
+  return candidates.filter(
+    (candidate) =>
+      !absenceRuleIds.has(candidate.ruleId) ||
+      !hasIncompleteCoverage(input.coverageLimitations, candidate.ruleId),
+  );
+}
+
+function publicEvidenceForPage(
+  pageUrl: string,
+  input: NormalizeAuditInput,
+  excludedUrls: ReadonlySet<string>,
+): NonNullable<HeadMetadataCheckInput['publicEvidence']> {
+  const identity = normalizeUrlIdentity(pageUrl) ?? pageUrl;
+  const crawl = input.crawl;
+  const pages = input.pages.filter(
+    (page) => page.headMetadata !== undefined && !isExcludedUrl(excludedUrls, page.url),
+  );
+  const isTarget = (candidate: string): boolean =>
+    (normalizeUrlIdentity(candidate, pageUrl) ?? candidate) === identity;
+  let isHreflangTarget = false;
+  let isCanonicalTarget = false;
+  for (const page of pages) {
+    if (page.headMetadata!.hreflangLinks.some((link) => isTarget(link.href))) {
+      isHreflangTarget = true;
+    }
+    if (page.headMetadata!.canonicalUrls.some((canonical) => isTarget(canonical))) {
+      isCanonicalTarget = true;
+    }
+  }
+
+  let isHomepage = false;
+  let isLanguageHome = false;
+  try {
+    const url = new URL(pageUrl);
+    const homepageUrl = crawl?.homepageUrl ?? crawl?.startUrl;
+    isHomepage = homepageUrl !== undefined && isTarget(homepageUrl);
+    isLanguageHome = /^\/[a-z]{2}(?:-[a-z]{2})?\/?$/i.test(url.pathname);
+  } catch {
+    // An invalid page URL cannot provide public evidence.
+  }
+
+  return {
+    ...(crawl?.sitemapUrls?.some((url) => isTarget(url)) ? { inSitemap: true } : {}),
+    ...(isHomepage ? { isHomepage: true } : {}),
+    ...(isLanguageHome ? { isLanguageHome: true } : {}),
+    ...(isHreflangTarget ? { isHreflangTarget: true } : {}),
+    ...(isCanonicalTarget ? { isCanonicalTarget: true } : {}),
+  };
 }
 
 function mergeGroup(
@@ -378,7 +547,24 @@ function mergeGroup(
   const first = group[0];
   if (!first) throw new Error('normalize: mergeGroup called with an empty group');
 
-  const severity = group.map((c) => c.severity).reduce((acc, s) => maxSeverity(acc, s));
+  let severity = group.map((c) => c.severity).reduce((acc, s) => maxSeverity(acc, s));
+  if (first.ruleId === 'text-missing-from-raw-html') {
+    const percentages = group
+      .map((candidate) => candidate.rawEvidenceForPage['missingPercent'])
+      .filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
+      .sort((a, b) => a - b);
+    if (percentages.length > 0) {
+      const middle = Math.floor(percentages.length / 2);
+      const median =
+        percentages.length % 2 === 0
+          ? (percentages[middle - 1]! + percentages[middle]!) / 2
+          : percentages[middle]!;
+      // A page outlier must not make the merged site-level finding critical.
+      // The median is stable under one noisy page and keeps the severity tied
+      // to the population represented by the occurrence count.
+      severity = severityFromRenderDiff(median);
+    }
+  }
 
   const pageUrls = [...new Set(group.map((c) => c.pageUrl))].sort();
 

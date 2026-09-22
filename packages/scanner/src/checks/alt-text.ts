@@ -23,6 +23,9 @@ export interface ImageFact {
   isMarkedDecorative: boolean;
   width: number;
   height: number;
+  /** True when the element still exposes a data/blob placeholder rather than
+   *  a loaded resource, so core records no confident heuristic finding. */
+  undetermined?: boolean;
 }
 
 export interface AltTextExtraction {
@@ -71,6 +74,7 @@ export async function extractAltTextFacts(page: Page, pageUrl: string): Promise<
         role === 'presentation' || role === 'none' || el.getAttribute('aria-hidden') === 'true';
 
       const rawSrc = el.getAttribute('src') ?? '';
+      const currentSrc = el.currentSrc || '';
       // A data: URI is not a filename a developer can recognise, and a
       // very long src would make the annex's selector column unreadable.
       const srcIsUsable =
@@ -85,10 +89,13 @@ export async function extractAltTextFacts(page: Page, pageUrl: string): Promise<
       return {
         selector,
         alt: el.hasAttribute('alt') ? el.getAttribute('alt') : null,
-        src: el.currentSrc || el.getAttribute('src') || '',
+        src: currentSrc || rawSrc,
         isMarkedDecorative,
         width: rect.width,
         height: rect.height,
+        ...(currentSrc.startsWith('data:') || (!currentSrc && rawSrc.startsWith('data:'))
+          ? { undetermined: true }
+          : {}),
       };
     });
   }, SRC_SELECTOR_MAX_LENGTH);

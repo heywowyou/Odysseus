@@ -23,6 +23,7 @@
 import { LEGAL_PATH_PATTERN } from '../urls.js';
 import type { FindingCandidate } from './candidate.js';
 import { extractLinkCandidates, type AnchorFactInput } from './normalize-links.js';
+import { shapeIdentity } from './normalize-axe.js';
 import { severityFromCustom } from './severity.js';
 
 export interface JsonLdBlockInput {
@@ -36,10 +37,17 @@ export interface HeadingInput {
   level: number;
   text: string;
   selector: string;
+  /** Opening tag when the scanner captured it; absent on older artifacts. */
+  html?: string;
 }
 
 export interface HreflangLinkInput {
   lang: string;
+  href: string;
+}
+
+export interface LanguageSwitcherLinkInput {
+  lang?: string;
   href: string;
 }
 
@@ -52,6 +60,7 @@ export interface HeadMetadataCheckInput {
   jsonLdBlocks: JsonLdBlockInput[];
   headings: HeadingInput[];
   hreflangLinks: HreflangLinkInput[];
+  languageSwitcherLinks?: LanguageSwitcherLinkInput[];
   robotsMeta: string | null;
   /** Lowercased content of <meta name="googlebot">, or null. Absent on
    *  scans made before trade-off 110, like the two fields below. */
@@ -63,6 +72,17 @@ export interface HeadMetadataCheckInput {
   /** Links that fail link-text or crawlable-anchors, or undefined when the
    *  link extraction did not run on this page. */
   anchors?: AnchorFactInput[];
+  /** Evidence that the page is intended to be discoverable. An explicitly
+   *  empty object means the scanner checked the public signals and found none;
+   *  absence preserves compatibility with pre-evidence stored artifacts. */
+  publicEvidence?: {
+    inSitemap?: boolean;
+    isHomepage?: boolean;
+    isLanguageHome?: boolean;
+    isHreflangTarget?: boolean;
+    isCanonicalTarget?: boolean;
+    linkedFromPrimaryNavigation?: boolean;
+  };
 }
 
 export const META_TITLE_LENGTH_RULE_ID = 'meta-title-length';
@@ -113,6 +133,20 @@ function metaBlocksIndexing(content: string | null | undefined): boolean {
     .some((directive) => directive === 'noindex' || directive === 'none');
 }
 
+/** Whether the page asks search engines not to index it, from either the
+ * meta directive or the response header. Kept public so the orchestrator can
+ * suppress only page-local SEO content checks while retaining accessibility,
+ * legal and privacy checks. */
+export function headMetadataHasNoindex(input: HeadMetadataCheckInput): boolean {
+  return (
+    metaBlocksIndexing(input.robotsMeta) ||
+    metaBlocksIndexing(input.googlebotMeta) ||
+    (input.xRobotsTag !== undefined &&
+      input.xRobotsTag !== null &&
+      headerBlocksIndexing(input.xRobotsTag))
+  );
+}
+
 /**
  * Lighthouse audits this page's head-metadata extraction already answers,
  * so normalize.ts drops Lighthouse's finding for them on this page rather
@@ -125,7 +159,10 @@ export function lighthouseAuditsCoveredByHeadMetadata(
 ): ReadonlySet<string> {
   if (input === undefined) return new Set();
   const covered = new Set(['meta-description']);
-  if (input.xRobotsTag !== undefined) covered.add('is-crawlable');
+  // Head metadata owns this fact whenever it ran. Older artifacts may not
+  // have x-robots data, but the page-level extraction still saw robots/meta
+  // directives and is the only non-sampled source for the report.
+  covered.add('is-crawlable');
   if (input.anchors !== undefined) {
     covered.add('link-text');
     covered.add('crawlable-anchors');
@@ -154,6 +191,7 @@ function pageCandidate(
   pageUrl: string,
   element: FindingCandidate['element'],
   rawEvidenceForPage: Record<string, unknown>,
+  dedupeIdentity?: string,
 ): FindingCandidate {
   return {
     source: 'custom',
@@ -165,6 +203,7 @@ function pageCandidate(
     description,
     pageUrl,
     element,
+    ...(dedupeIdentity !== undefined ? { dedupeIdentity } : {}),
     rawEvidenceForPage,
   };
 }
@@ -309,6 +348,7 @@ export function extractHeadMetadataCandidates(input: HeadMetadataCheckInput): Fi
         pageUrl,
         { pageUrl, selector: block.selector, snippet: block.raw.slice(0, 500) },
         { parseError: block.parseError },
+        `jsonld-parse-error:${block.parseError}`,
       ),
     );
   }
@@ -326,6 +366,7 @@ export function extractHeadMetadataCandidates(input: HeadMetadataCheckInput): Fi
           pageUrl,
           { pageUrl, selector: heading.selector, snippet: heading.text.slice(0, 500) },
           { level: heading.level, previousLevel, text: heading.text },
+          `heading-skip:${previousLevel}-${heading.level}|${shapeIdentity(heading.html ?? '') ?? 'unknown'}`,
         ),
       );
     }
@@ -395,7 +436,10 @@ export function extractHeadMetadataCandidates(input: HeadMetadataCheckInput): Fi
       ? [`X-Robots-Tag: ${input.xRobotsTag}`]
       : []),
   ];
-  if (noindexSources.length > 0 && !LEGAL_PATH_PATTERN.test(pageUrl)) {
+  const publicEvidence = input.publicEvidence;
+  const hasPublicEvidence =
+    publicEvidence === undefined || Object.values(publicEvidence).some((value) => value === true);
+  if (noindexSources.length > 0 && !LEGAL_PATH_PATTERN.test(pageUrl) && hasPublicEvidence) {
     candidates.push(
       pageCandidate(
         NOINDEX_ON_PUBLIC_PAGE_RULE_ID,
@@ -409,6 +453,7 @@ export function extractHeadMetadataCandidates(input: HeadMetadataCheckInput): Fi
           robotsMeta: input.robotsMeta,
           ...(input.googlebotMeta !== undefined ? { googlebotMeta: input.googlebotMeta } : {}),
           ...(input.xRobotsTag !== undefined ? { xRobotsTag: input.xRobotsTag } : {}),
+          ...(publicEvidence !== undefined ? { publicEvidence } : {}),
         },
       ),
     );

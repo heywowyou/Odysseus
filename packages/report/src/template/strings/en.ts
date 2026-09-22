@@ -59,6 +59,8 @@ export const en: ReportStrings = {
       // B6: see the French entry for why this names the containing
       // numbered section rather than the sub-heading alone.
       '{percent}% of accessibility occurrences come from third-party components (forms, popups, booking widget). The "To address with your third-party providers" section of the technical appendix lists them, along with those in the other categories.',
+    thirdPartyFrameNoteTemplate:
+      'Of these, {count} occurrence(s) belong entirely to embedded third-party content and are kept in the technical appendix rather than the primary grade.',
     priorityOwnership: {
       leadTemplate: 'Priorities: {clauses}.',
       firstPartySingularTemplate: '{count} to fix directly',
@@ -137,6 +139,9 @@ export const en: ReportStrings = {
     withoutContentTemplate: 'Pages without content analysis: {reasons}.',
     guardedOmissionsTemplate:
       '{count} additional continuation URLs were omitted by the repetition guard.',
+    noindexTemplate: '{count} pages marked noindex, excluded from SEO analysis.',
+    coverageLimitationTemplate:
+      '{count} site-wide absence checks need manual verification because some candidate pages were blocked or failed.',
     reasonLabels: {
       'discovered-not-scanned': {
         singular: 'discovered but not scanned',
@@ -149,6 +154,7 @@ export const en: ReportStrings = {
       'http-error-status': { singular: 'HTTP error', plural: 'HTTP errors' },
       'redirect-interstitial': { singular: 'redirect page', plural: 'redirect pages' },
       'soft-error-page': { singular: 'error page', plural: 'error pages' },
+      blocked: { singular: 'blocked page', plural: 'blocked pages' },
       'coverage-missing': {
         singular: 'coverage record unavailable',
         plural: 'coverage records unavailable',

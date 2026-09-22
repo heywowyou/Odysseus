@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { normalizeUrlIdentity } from '@odysseus/core';
 
 /**
  * Extensions for resources that are never an HTML page worth crawling.
@@ -111,7 +112,42 @@ const NON_PUBLIC_WP_POST_TYPES = new Set([
   'user_request',
   'acf-field',
   'acf-field-group',
+  'rl_gallery',
 ]);
+
+// E9: confirmed against grandhoteldesalpes' sitemap. Keep this separate from
+// the query-string admission list above because these objects arrive as
+// ordinary sitemap paths and need structural, not URL-shape, evidence.
+const NON_PUBLIC_PLUGIN_POST_TYPES = new Set(['rl_gallery']);
+
+export interface NonPublicPluginObjectInput {
+  discoveryMethod: 'link' | 'seed' | 'sitemap-only';
+  discoveredFrom?: string;
+  bodyClassTokens: readonly string[];
+}
+
+export interface NonPublicPluginObjectEvidence {
+  postType: string;
+  bodyClass: string;
+}
+
+/** E9's structural admission rule: sitemap-only, no inbound page link, and
+ * a body class for a plugin post type confirmed to be non-public. */
+export function classifyNonPublicPluginObject(
+  input: NonPublicPluginObjectInput,
+): NonPublicPluginObjectEvidence | undefined {
+  if (input.discoveryMethod !== 'sitemap-only' || input.discoveredFrom !== undefined) {
+    return undefined;
+  }
+  for (const bodyClass of input.bodyClassTokens) {
+    for (const postType of NON_PUBLIC_PLUGIN_POST_TYPES) {
+      if (new RegExp(`(?:^|[-_])${postType}(?:$|[-_])`, 'iu').test(bodyClass)) {
+        return { postType, bodyClass };
+      }
+    }
+  }
+  return undefined;
+}
 
 function isNonPublicWordPressObject(url: URL): boolean {
   const postType = url.searchParams.get('post_type');
@@ -177,7 +213,7 @@ export function normalizePageUrl(
     return undefined;
   if (isNonPublicWordPressObject(resolved)) return undefined;
   resolved.hash = '';
-  const normalized = resolved.toString();
+  const normalized = normalizeUrlIdentity(resolved.toString()) ?? resolved.toString();
   const exclusionRegexes = (options.exclusionPatterns ?? []).map(globToRegExp);
   if (exclusionRegexes.some((pattern) => pattern.test(normalized))) return undefined;
   return normalized;
@@ -196,17 +232,68 @@ export function normalizePageUrl(
  *  deliberately preserved: "https://site.example/" has no shorter
  *  spelling to collapse to. */
 export function normalizePageIdentityUrl(url: string): string | undefined {
+  return normalizeUrlIdentity(url);
+}
+
+export interface RelativeLinkNestingEvidence {
+  sourceUrl: string;
+  href: string;
+  resolvedUrl: string;
+  repeatedSegment: string;
+}
+
+/**
+ * Detects the common relative-link loop where a page in `/fr/...` emits
+ * `fr/...`, resolving to `/fr/fr/...`. Only raw relative hrefs are eligible;
+ * absolute and root-relative links are real navigation choices and are left
+ * alone.
+ */
+export function relativeLinkNestingEvidence(
+  href: string,
+  pageUrl: string,
+): RelativeLinkNestingEvidence | undefined {
+  const trimmed = href.trim();
+  if (
+    trimmed.length === 0 ||
+    trimmed.startsWith('/') ||
+    trimmed.startsWith('#') ||
+    /^[a-z][a-z0-9+.-]*:/i.test(trimmed) ||
+    trimmed.startsWith('//')
+  ) {
+    return undefined;
+  }
+
+  let page: URL;
   let resolved: URL;
   try {
-    resolved = new URL(url);
+    page = new URL(pageUrl);
+    resolved = new URL(trimmed, page);
   } catch {
     return undefined;
   }
-  resolved.hash = '';
-  if (resolved.pathname.length > 1 && resolved.pathname.endsWith('/')) {
-    resolved.pathname = resolved.pathname.slice(0, -1);
+  if (resolved.origin !== page.origin) return undefined;
+
+  const currentSegments = page.pathname.split('/').filter(Boolean);
+  const resolvedSegments = resolved.pathname.split('/').filter(Boolean);
+  const rawFirstSegment = trimmed.split(/[/?#]/, 1)[0]?.toLowerCase();
+  if (rawFirstSegment === undefined || rawFirstSegment.length === 0) return undefined;
+
+  for (let index = 0; index < currentSegments.length; index += 1) {
+    const segment = currentSegments[index]?.toLowerCase();
+    if (segment !== rawFirstSegment) continue;
+    if (
+      resolvedSegments[index]?.toLowerCase() === segment &&
+      resolvedSegments[index + 1]?.toLowerCase() === segment
+    ) {
+      return {
+        sourceUrl: normalizeUrlIdentity(pageUrl) ?? pageUrl,
+        href,
+        resolvedUrl: normalizeUrlIdentity(resolved.toString()) ?? resolved.toString(),
+        repeatedSegment: segment,
+      };
+    }
   }
-  return resolved.toString();
+  return undefined;
 }
 
 /**

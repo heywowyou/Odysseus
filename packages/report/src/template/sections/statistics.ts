@@ -232,6 +232,14 @@ export function renderStatistics(
           }),
         )}</p>`
       : '';
+  const thirdPartyFrameNote =
+    stats.confinedThirdPartyOccurrenceCount > 0
+      ? `<p class="statistics-note">${escapeHtml(
+          fillTemplate(s.thirdPartyFrameNoteTemplate, {
+            count: n(stats.confinedThirdPartyOccurrenceCount),
+          }),
+        )}</p>`
+      : '';
   const ownership = priorities ? summarizePriorityOwnership(priorities, manifest) : undefined;
   const ownershipSentence = ownership
     ? renderPriorityOwnershipSentence(ownership, s.priorityOwnership, language)
@@ -250,8 +258,9 @@ export function renderStatistics(
     heuristicOccurrencesNote ||
     criticalDriverNote ||
     thirdPartyOccurrencesNote ||
+    thirdPartyFrameNote ||
     priorityOwnershipNote
-      ? `<div class="statistics-notes">${criticalDriverNote}${heuristicOccurrencesNote}${thirdPartyOccurrencesNote}${priorityOwnershipNote}</div>`
+      ? `<div class="statistics-notes">${criticalDriverNote}${heuristicOccurrencesNote}${thirdPartyOccurrencesNote}${thirdPartyFrameNote}${priorityOwnershipNote}</div>`
       : '<div class="statistics-notes"></div>';
 
   return sheet(

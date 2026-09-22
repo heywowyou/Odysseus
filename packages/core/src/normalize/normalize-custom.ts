@@ -15,6 +15,34 @@ import type { FindingCandidate } from './candidate.js';
 
 export const LCEN_MENTIONS_LEGALES_RULE_ID = 'lcen-mentions-legales-missing';
 
+/** The obligation-basis document deliberately leaves the territorial
+ * application of the metropolitan LCEN detector unresolved for French
+ * overseas domains. Keep that boundary deterministic and conservative: the
+ * absence is a manual jurisdiction check, never an automated finding. */
+const FRENCH_OVERSEAS_DOMAIN_SUFFIXES = [
+  '.gp',
+  '.gf',
+  '.mq',
+  '.re',
+  '.yt',
+  '.pm',
+  '.bl',
+  '.mf',
+  '.pf',
+  '.nc',
+  '.tf',
+  '.wf',
+] as const;
+
+export function isOverseasFrenchDomain(pageUrl: string): boolean {
+  try {
+    const hostname = new URL(pageUrl).hostname.toLowerCase();
+    return FRENCH_OVERSEAS_DOMAIN_SUFFIXES.some((suffix) => hostname.endsWith(suffix));
+  } catch {
+    return false;
+  }
+}
+
 /** Plan 036: the resolved mentions-legales page plus every visited,
  *  non-error-status URL `findMentionsLegalesUrl` searched to produce it (or
  *  to find nothing) - the research note's "retain the pages, links and
@@ -107,6 +135,7 @@ function buildArticleOneOneFieldPresence(
 }
 
 export function extractCustomCandidates(input: MentionsLegalesCheckInput): FindingCandidate[] {
+  if (isOverseasFrenchDomain(input.pageUrl)) return [];
   if (input.siren !== undefined || input.rcs !== undefined || input.tva !== undefined) return [];
 
   return [

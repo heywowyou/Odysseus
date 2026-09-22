@@ -29,6 +29,10 @@ export interface ImageCheckInput {
   isMarkedDecorative: boolean;
   width: number;
   height: number;
+  /** The scanner could not establish the final image resource (for example
+   *  a lazy placeholder is still a data URI). Heuristics must not call that
+   *  an alt-text defect. */
+  undetermined?: boolean;
 }
 
 export interface AltTextCheckInput {
@@ -117,6 +121,7 @@ export function extractAltTextCandidates(input: AltTextCheckInput): FindingCandi
   const altGroups = new Map<string, ImageCheckInput[]>();
 
   for (const image of input.images) {
+    if (image.undetermined === true) continue;
     if (image.alt === null) continue; // missing entirely - axe's territory, not this heuristic's
 
     const trimmedAlt = image.alt.trim();

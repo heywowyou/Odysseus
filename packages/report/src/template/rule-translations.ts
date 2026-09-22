@@ -454,6 +454,11 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
       gloss:
         "Une page passe par plusieurs redirections avant d'atteindre sa destination finale, ce qui la ralentit.",
     },
+    'relative-link-nesting': {
+      label: 'Un lien relatif ajoute un niveau de chemin inattendu',
+      gloss:
+        'Un lien relatif est résolu depuis le chemin courant et peut créer une URL imbriquée comme /fr/fr/page au lieu de la page attendue.',
+    },
     'render-blocking-insight': {
       label: 'Des ressources bloquent le premier affichage',
       gloss:
@@ -482,6 +487,11 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
       label: 'Le sitemap liste des pages non atteignables depuis le site lui-même',
       gloss:
         "Une page du plan de site n'est reliée par aucun lien interne, ce qui complique sa découverte.",
+    },
+    'sitemap-lists-redirects': {
+      label: 'Le sitemap liste des URL redirigées ou externes',
+      gloss:
+        'Le plan de site doit contenir les URL finales du site, pas des adresses qui redirigent ou qui appartiennent à un autre domaine.',
     },
     'speed-index': {
       label: "L'affichage visible de la page se complète lentement (Speed Index)",
@@ -1026,6 +1036,11 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
       label: 'Annotation hreflang invalide',
       gloss:
         "Un code de langue ou de région déclaré dans une annotation hreflang n'est pas reconnu, ce qui rend l'annotation inexploitable.",
+    },
+    'hreflang-target-invalid': {
+      label: 'Une annotation hreflang pointe vers une page invalide',
+      gloss:
+        "L'adresse déclarée pour une version linguistique ne répond pas comme une page publique valide, donc les moteurs ne peuvent pas l'utiliser comme alternative.",
     },
     'canonical-conflicting': {
       label: 'Plusieurs balises canoniques contradictoires',

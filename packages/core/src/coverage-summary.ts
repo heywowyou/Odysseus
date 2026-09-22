@@ -2,6 +2,7 @@ import type {
   AuditManifest,
   AuditPass,
   AuditPassOutcome,
+  CoverageLimitation,
   ManifestPageEntry,
   ManifestPageStatus,
   PageAnalysisCoverage,
@@ -26,6 +27,7 @@ export type PageWithoutContentAnalysisReason =
 interface AuditCoverageSummaryBase {
   inventoriedUrlCount: number;
   continuationOmittedUrlCount: number;
+  coverageLimitations?: CoverageLimitation[];
 }
 
 export interface LegacyAuditCoverageSummary extends AuditCoverageSummaryBase {
@@ -38,6 +40,11 @@ export interface CurrentAuditCoverageSummary extends AuditCoverageSummaryBase {
   passes: Record<AuditPass, AuditPassOutcomeCounts>;
   pagesWithoutContentAnalysis: Partial<Record<PageWithoutContentAnalysisReason, number>>;
   templateFamilyCount: number;
+  /** Pages whose own metadata asked search engines not to index them. */
+  noindexPageCount: number;
+  /** Site-wide absence rules that require manual verification because the
+   * crawl could not inspect every candidate page. */
+  coverageLimitations?: CoverageLimitation[];
 }
 
 export type AuditCoverageSummary = LegacyAuditCoverageSummary | CurrentAuditCoverageSummary;
@@ -80,12 +87,17 @@ function withoutContentReason(page: ManifestPageEntry): PageWithoutContentAnalys
  * fields.
  */
 export function summarizeAuditCoverage(
-  manifest: Pick<AuditManifest, 'pages' | 'continuationGuardSummary'>,
+  manifest: Pick<AuditManifest, 'pages' | 'continuationGuardSummary'> & {
+    coverageLimitations?: CoverageLimitation[];
+  },
 ): AuditCoverageSummary {
   const continuationOmittedUrlCount = manifest.continuationGuardSummary?.totalOmittedUrlCount ?? 0;
   const base = {
     inventoriedUrlCount: manifest.pages.length,
     continuationOmittedUrlCount,
+    ...(manifest.coverageLimitations !== undefined && manifest.coverageLimitations.length > 0
+      ? { coverageLimitations: manifest.coverageLimitations }
+      : {}),
   };
   const coveredPages = manifest.pages.filter(
     (page): page is ManifestPageEntry & { analysisCoverage: PageAnalysisCoverage } =>
@@ -105,6 +117,7 @@ export function summarizeAuditCoverage(
   };
   const pagesWithoutContentAnalysis: Partial<Record<PageWithoutContentAnalysisReason, number>> = {};
   const templateFamilies = new Set<string>();
+  const noindexPageCount = manifest.pages.filter((page) => page.noindex === true).length;
 
   for (const page of coveredPages) {
     content[contentOutcome(page.analysisCoverage)] += 1;
@@ -127,6 +140,7 @@ export function summarizeAuditCoverage(
     passes,
     pagesWithoutContentAnalysis,
     templateFamilyCount: templateFamilies.size,
+    noindexPageCount,
   };
 }
 

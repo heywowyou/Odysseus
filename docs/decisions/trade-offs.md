@@ -5717,3 +5717,34 @@ the audit ids to `LIGHTHOUSE_EXCLUDED_AUDITS` unconditionally (would erase the
 findings of every stored audit on re-normalization, since those scans lack the
 new facts).
 
+### 111. Clean audit data is a prerequisite for client-facing certainty (2026-09-22)
+
+Plan 075 closes the population boundary exposed by the WAF/challenge and
+redirect reviews. A URL that did not yield the requested page is inventoried
+with its acquisition status, retried when the status is transient, and
+excluded from content findings. This includes 200 challenge documents,
+challenge frames, redirect interstitials, soft-error templates, off-site
+redirects and failed checks. The homepage is a first-class diagnostic: a
+missing or failed homepage content pass blocks report generation.
+
+The same conservative population is used by all site-wide absence checks. A
+blocked or failed candidate records blocked/failed counts and produces a
+manual/undetermined coverage limitation, never a confident absence. Noindex
+pages are disclosed and excluded from SEO content claims. Third-party frame
+content is annex evidence, not primary grade/totals/proof. Field Core Web
+Vitals own a metric when present; lab values are accepted only from a valid,
+same-identity Lighthouse run and are retained as diagnostic evidence when
+field data exists.
+
+The identity contract is shared across crawl, served navigation, Lighthouse,
+sitemap, links and translation clusters: fragments, trailing slashes on
+non-root paths, uppercase percent escapes and empty queries do not create a
+second page. The server's preferred spelling is not a redirect defect. A
+sitemap's redirected/off-site entries have their own minor rule and do not
+pollute stale/orphan comparisons. Relative self-links do not create nesting
+findings; genuine nesting loops are bounded and disclosed.
+
+Amendments to trade-offs 3, 30, 64, 110 and the rule-5 page-cap amendment
+are implemented in the owning normalizers and the normalization rules. The
+LCEN detector records a manual jurisdiction boundary for French overseas
+domains rather than silently extending an unverified metropolitan basis.

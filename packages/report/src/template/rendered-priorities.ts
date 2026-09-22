@@ -11,7 +11,7 @@ import {
 import { buildMissingPercentIndex, classifyDiversion } from '@odysseus/llm';
 import { interpolateSnippet, remediationFor, snippetFor } from './remediation/index.js';
 import { resolveFindingDisplayLabel } from './rule-translations.js';
-import { isThirdPartyFinding } from './third-party-attribution.js';
+import { isConfinedToThirdParty, isThirdPartyFinding } from './third-party-attribution.js';
 import { MissingReviewedRemediationError } from '../errors.js';
 
 export const MAX_RENDERED_THEMES = 6;
@@ -372,7 +372,11 @@ export function buildRenderedPriorities(
   manifest: AuditManifest,
   language: ReportLanguage,
 ): RenderedPriority[] {
-  const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
+  // Q1: findings wholly inside a third-party frame remain in the annex, but
+  // cannot become one of the report's primary client priorities. Mixed
+  // findings stay eligible because they also carry first-party evidence.
+  const primaryFindings = findings.filter((finding) => !isConfinedToThirdParty(finding));
+  const findingsById = new Map(primaryFindings.map((finding) => [finding.findingId, finding]));
   const legacyLcenIds = themes.flatMap((theme) =>
     theme.findingIds.filter((id) => findingsById.get(id)?.ruleId === LCEN_MENTIONS_LEGALES_RULE_ID),
   );
@@ -411,7 +415,7 @@ export function buildRenderedPriorities(
   // findings of rules the theme already named, so the remediation rule set
   // cannot grow past what was reviewed.
   const findingsByRuleKey = new Map<string, Finding[]>();
-  for (const finding of findings) {
+  for (const finding of primaryFindings) {
     const key = `${finding.source}::${finding.ruleId}`;
     const group = findingsByRuleKey.get(key);
     if (group) group.push(finding);

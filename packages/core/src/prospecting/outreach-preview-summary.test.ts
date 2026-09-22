@@ -51,6 +51,7 @@ function currentCoverage(): CurrentAuditCoverageSummary {
   return {
     kind: 'current',
     inventoriedUrlCount: 12,
+    noindexPageCount: 0,
     continuationOmittedUrlCount: 0,
     content: { completed: 12, partial: 0, failed: 0 },
     passes: {

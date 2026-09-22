@@ -150,6 +150,9 @@ export interface ReportStrings {
      *  only in the annex's "À traiter avec vos prestataires tiers"
      *  section. Template: {percent}. */
     thirdPartyOccurrencesNoteTemplate: string;
+    /** Template: {count}. Third-party frame-only occurrences stay in the
+     *  technical annex and never enter the primary grade/counts. */
+    thirdPartyFrameNoteTemplate: string;
     priorityOwnership: PriorityOwnershipStrings;
     pagesWithCriticalTileLabel: string;
     criticalTileLabel: string;
@@ -265,6 +268,12 @@ export interface ReportStrings {
     withoutContentTemplate: string;
     /** Template: {count}. */
     guardedOmissionsTemplate: string;
+    /** Template: {count}. */
+    noindexTemplate: string;
+    /** Template: {count}. Site-wide absence claims that need manual review
+     * because blocked or failed candidate pages made the population
+     * incomplete. */
+    coverageLimitationTemplate: string;
     reasonLabels: Record<
       | 'discovered-not-scanned'
       | 'skipped-robots'
@@ -274,6 +283,7 @@ export interface ReportStrings {
       | 'http-error-status'
       | 'redirect-interstitial'
       | 'soft-error-page'
+      | 'blocked'
       | 'coverage-missing',
       { singular: string; plural: string }
     >;

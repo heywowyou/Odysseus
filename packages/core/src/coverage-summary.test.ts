@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { FINDINGS_SCHEMA_VERSION } from './types/findings.js';
-import type { AuditManifest, PageAnalysisCoverage } from './types/manifest.js';
+import {
+  deriveCoverageLimitations,
+  type AuditManifest,
+  type PageAnalysisCoverage,
+} from './types/manifest.js';
 import { summarizeAuditCoverage } from './coverage-summary.js';
 
 function coverage(overrides: Partial<PageAnalysisCoverage> = {}): PageAnalysisCoverage {
@@ -57,6 +61,25 @@ function manifest(overrides: Partial<AuditManifest> = {}): AuditManifest {
 }
 
 describe('summarizeAuditCoverage', () => {
+  it('persists blocked and failed candidate counts for site-wide absence rules', () => {
+    expect(
+      deriveCoverageLimitations([
+        { url: 'https://example.com/blocked', status: 'blocked' },
+        { url: 'https://example.com/failed', status: 'http-error-status' },
+        { url: 'https://example.com/ok', status: 'visited' },
+      ]),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          ruleId: 'hreflang-missing',
+          blockedCandidateCount: 1,
+          failedCandidateCount: 1,
+          candidateUrls: ['https://example.com/blocked', 'https://example.com/failed'],
+        }),
+      ]),
+    );
+  });
+
   it('reports current pass outcomes, inventory-only reasons, families, and guarded omissions', () => {
     const summary = summarizeAuditCoverage(
       manifest({
@@ -120,6 +143,7 @@ describe('summarizeAuditCoverage', () => {
       },
       pagesWithoutContentAnalysis: { 'skipped-robots': 1 },
       templateFamilyCount: 1,
+      noindexPageCount: 0,
       continuationOmittedUrlCount: 4,
     });
   });

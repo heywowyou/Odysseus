@@ -71,6 +71,8 @@ export const fr: ReportStrings = {
       // pages further on. Naming the numbered section that contains it is
       // the difference between a reference and a dead end.
       "{percent} % des occurrences d'accessibilité proviennent de composants tiers (formulaires, fenêtres modales, widget de réservation). La section « À traiter avec vos prestataires tiers » de l'annexe technique les recense, ainsi que celles des autres catégories.",
+    thirdPartyFrameNoteTemplate:
+      'Dont {count} occurrence(s) relèvent entièrement de contenus tiers intégrés ; elles restent dans l’annexe technique et n’entrent pas dans la note principale.',
     priorityOwnership: {
       leadTemplate: 'Priorités : {clauses}.',
       firstPartySingularTemplate: '{count} constat à corriger directement',
@@ -152,6 +154,9 @@ export const fr: ReportStrings = {
     withoutContentTemplate: 'Pages sans analyse du contenu : {reasons}.',
     guardedOmissionsTemplate:
       '{count} URL de continuation supplémentaires ont été omises par le garde-fou de répétition.',
+    noindexTemplate: '{count} pages marquées noindex, exclues de l’analyse SEO.',
+    coverageLimitationTemplate:
+      '{count} contrôles d’absence à l’échelle du site doivent être vérifiés manuellement, car certaines pages candidates ont été bloquées ou ont échoué.',
     reasonLabels: {
       'discovered-not-scanned': {
         singular: 'découverte mais non analysée',
@@ -170,6 +175,7 @@ export const fr: ReportStrings = {
         plural: 'pages de redirection',
       },
       'soft-error-page': { singular: 'page d’erreur', plural: 'pages d’erreur' },
+      blocked: { singular: 'page bloquée', plural: 'pages bloquées' },
       'coverage-missing': {
         singular: 'donnée de couverture indisponible',
         plural: 'données de couverture indisponibles',

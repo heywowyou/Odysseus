@@ -44,6 +44,15 @@ export interface SeverityRollup {
   minor: number;
 }
 
+export interface AuditPushbackEventResponse {
+  pageUrl: string;
+  kind: 'rate-limit' | 'bot-challenge' | 'origin-transient';
+  fetcher: 'crawl' | 'render' | 'lighthouse' | 'canonical';
+  occurredAt: string;
+  status?: number;
+  retryAfterMs?: number;
+}
+
 /** One stored occurrence (packages/core FindingElement), dates aside. */
 export interface FindingElementResponse {
   pageUrl: string;
@@ -217,6 +226,8 @@ export interface AuditEvidenceQualityResponse {
   status: EvidenceDiagnosticStatusResponse;
   clientLimitations: EvidenceLimitationResponse[];
   operationalWarnings: { code: string; referenceCount: number }[];
+  reportBlocked?: boolean;
+  blockingReasons?: string[];
 }
 
 /** The whole GET /api/audits/:auditId body. */
@@ -230,6 +241,7 @@ export interface AuditDetailResponse {
   startedAt: string;
   finishedAt: string;
   pagesVisited: number;
+  pushbackEvents?: AuditPushbackEventResponse[];
   severityRollup: SeverityRollup;
   /** Issue #392: the part of severityRollup confined to third-party markup. */
   thirdPartySeverityRollup?: SeverityRollup;

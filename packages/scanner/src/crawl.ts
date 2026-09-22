@@ -5,6 +5,7 @@ import type {
   SitemapCoverageSummary,
   SitemapMode,
 } from '@odysseus/core';
+import { isChallengeTitle } from '@odysseus/core';
 import {
   getCrawlDelayMs,
   getCrawlerUserAgent,
@@ -25,6 +26,8 @@ import {
   normalizeInternalLinks,
   normalizePageIdentityUrl,
   normalizePageUrl,
+  relativeLinkNestingEvidence,
+  classifyNonPublicPluginObject,
 } from './links.js';
 import {
   AI_CRAWLER_USER_AGENTS,
@@ -36,6 +39,7 @@ import {
   type RobotsRules,
 } from './robots.js';
 import { findMentionsLegalesUrl } from './checks/mentions-legales.js';
+import { analyzeRawDocument } from './raw-document-signals.js';
 import { isSocialPlatformHost } from './social-hosts.js';
 import { checkSitemap, type SitemapCheckResult } from './checks/sitemap.js';
 import {
@@ -139,6 +143,7 @@ export interface CrawlOptions {
  *  (scan-site.ts persists it via crawl-frontier-io.ts). */
 export interface CrawlFrontierSnapshot {
   startUrlIdentity: string;
+  homepageUrlIdentity?: string;
   /** Raw robots.txt text, persisted so the post-loop computations
    *  (robotsDisallowMatches, aiCrawlerBlocks) and the sitemap directive
    *  passthrough are identical on resume without re-fetching. */
@@ -160,6 +165,11 @@ export interface CrawlFrontierSnapshot {
   sitemap: SitemapCheckResult | undefined;
   eligibleSitemapUrls: string[];
   filteredSitemapPageCount: number;
+  relativeLinkNestingSummary?: {
+    omittedUrlCount: number;
+    omittedExampleUrls: string[];
+    repeatedSegments: string[];
+  };
 }
 
 /** The frontier file's envelope (crawl-state.json): the same identity and
@@ -209,16 +219,9 @@ export type CrawledPageStatus =
    *  is not a page of the site, so it is never scanned and never counts as
    *  one. Keep in sync with packages/core's ManifestPageStatus. */
   | 'http-error-status'
+  | 'redirect-interstitial'
+  | 'blocked'
   | 'error';
-
-/** packages/core's ManifestPageStatus also carries 'redirect-interstitial'
- *  (issue #85), deliberately absent here: the crawl phase itself never
- *  assigns it, since detecting a client-side redirect stub needs
- *  render-diff's settled rendered URL, which does not exist until after
- *  this page has already been scanned. write-audit.ts downgrades a
- *  'visited' CrawledPage to that status when it builds the manifest
- *  entry, not the other way around. Do not add it here expecting a
- *  crawl.ts branch to assign it - there isn't one. */
 
 export interface CrawledPage {
   url: string;
@@ -228,16 +231,26 @@ export interface CrawledPage {
   error?: string;
   discoveredFrom?: string;
   discoveryMethod: PageDiscoveryMethod;
+  /** Identity-equivalent spelling returned by the server. Scan navigation
+   * uses it to avoid reintroducing a slash redirect the crawl already saw. */
+  servedUrl?: string;
+  /** Same-site server redirect target recorded before content analysis. */
+  redirectTargetUrl?: string;
   /** Plan 021 Step 3: only present for `status === 'visited'`, extracted
    *  from this same post-`load` navigation, no extra page fetch. Absent
    *  for every other status, including `discovered-not-scanned`, since
    *  nothing downstream schedules checks against a page that is never
    *  scanned. */
   auditProfile?: PageAuditProfile;
+  /** E9: structural proof that a sitemap-only non-public plugin object was
+   *  inventoried but deliberately not content-analysed. */
+  pluginObject?: { postType: string; bodyClass: string };
 }
 
 export interface CrawlResult {
   startUrl: string;
+  /** Identity of the page the requested start URL actually landed on. */
+  homepageUrl?: string;
   pages: CrawledPage[];
   visitedCount: number;
   maxPages: number;
@@ -299,6 +312,14 @@ export interface CrawlResult {
   continuationGuardSummary?: ContinuationGuardSummary;
   sitemap?: SitemapCheckResult;
   sitemapCoverage?: SitemapCoverageSummary;
+  /** Eligible sitemap identities retained for offline evidence decisions. */
+  sitemapUrls?: string[];
+  /** Relative-link nesting omissions, disclosed as a site-level crawl fact. */
+  relativeLinkNestingSummary?: {
+    omittedUrlCount: number;
+    omittedExampleUrls: string[];
+    repeatedSegments: string[];
+  };
 }
 
 export interface QueueItem {
@@ -306,6 +327,8 @@ export interface QueueItem {
   depth: number;
   discoveredFrom?: string;
   discoveryMethod: PageDiscoveryMethod;
+  /** Carries the requested start URL's landed target through a redirect. */
+  isHomepage?: boolean;
 }
 
 /**
@@ -333,6 +356,12 @@ export interface CrawlFrontierLoopState {
   enqueued: Set<string>;
   queue: QueueItem[];
   guard: ContinuationGuard;
+  relativeLinkNestingSummary?: {
+    omittedUrlCount: number;
+    omittedExampleUrls: string[];
+    repeatedSegments: string[];
+  };
+  homepageUrlIdentity?: string;
 }
 
 /** Pure rebuild of the crawl loop's bookkeeping from a frontier snapshot,
@@ -367,7 +396,42 @@ export function restoreCrawlFrontierLoopState(
     enqueued,
     queue,
     guard,
+    ...(state.relativeLinkNestingSummary !== undefined
+      ? { relativeLinkNestingSummary: { ...state.relativeLinkNestingSummary } }
+      : {}),
+    ...(state.homepageUrlIdentity !== undefined
+      ? { homepageUrlIdentity: state.homepageUrlIdentity }
+      : {}),
   };
+}
+
+const TRANSIENT_PUSHBACK_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504, 507, 508, 509]);
+
+function isTransientPushbackStatus(status: number | undefined): boolean {
+  return status !== undefined && TRANSIENT_PUSHBACK_STATUSES.has(status);
+}
+
+function retryAfterMs(headers: Record<string, string>): number | undefined {
+  const value = headers['retry-after'];
+  if (value === undefined) return undefined;
+  const seconds = Number(value.trim());
+  if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? Math.max(0, timestamp - Date.now()) : undefined;
+}
+
+function sameSiteServerRedirect(requestedUrl: string, landedUrl: string): boolean {
+  try {
+    const requested = new URL(requestedUrl);
+    const landed = new URL(landedUrl);
+    return (
+      requested.protocol === landed.protocol &&
+      requested.port === landed.port &&
+      isSameSiteHostname(requested.hostname, landed.hostname)
+    );
+  } catch {
+    return false;
+  }
 }
 
 /** browserPage.url() is "about:blank" before any navigation commits and
@@ -587,13 +651,19 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   const linkDiscoveredFrom = restored?.linkDiscoveredFrom ?? new Map<string, string>();
   const enqueued = restored?.enqueued ?? new Set<string>([startUrlIdentity]);
   const queue: QueueItem[] = restored?.queue ?? [
-    { url: startUrlIdentity, depth: 0, discoveryMethod: 'link' },
+    { url: startUrlIdentity, depth: 0, discoveryMethod: 'link', isHomepage: true },
   ];
+  let homepageUrlIdentity = restored?.homepageUrlIdentity ?? startUrlIdentity;
   // Plan 021 Step 6: one guard per crawlSite call, never shared across
   // crawls - a family key is only meaningful within the site it was
   // discovered on. A resumed crawl restores the interrupted run's guard
   // state instead, so it cannot re-admit URLs a family had exhausted.
   const continuationGuard = restored?.guard ?? new ContinuationGuard();
+  const relativeLinkNesting = restored?.relativeLinkNestingSummary ?? {
+    omittedUrlCount: 0,
+    omittedExampleUrls: [] as string[],
+    repeatedSegments: [] as string[],
+  };
 
   const inventorySourceFor = (
     url: string,
@@ -690,9 +760,13 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
                 ? 'external'
                 : page.status === 'http-error-status'
                   ? 'http-error-status'
-                  : page.status === 'error'
-                    ? 'error'
-                    : undefined;
+                  : page.status === 'redirect-interstitial'
+                    ? 'redirect'
+                    : page.status === 'blocked'
+                      ? 'blocked'
+                      : page.status === 'error'
+                        ? 'error'
+                        : undefined;
       if (disposition !== undefined) {
         disposeInventory(page.url, disposition, {
           ...(page.httpStatus !== undefined ? { httpStatus: page.httpStatus } : {}),
@@ -758,9 +832,13 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
               ? 'external'
               : page.status === 'http-error-status'
                 ? 'http-error-status'
-                : page.status === 'error'
-                  ? 'error'
-                  : undefined;
+                : page.status === 'redirect-interstitial'
+                  ? 'redirect'
+                  : page.status === 'blocked'
+                    ? 'blocked'
+                    : page.status === 'error'
+                      ? 'error'
+                      : undefined;
     if (disposition !== undefined) {
       disposeInventory(page.url, disposition, {
         ...(page.httpStatus !== undefined ? { httpStatus: page.httpStatus } : {}),
@@ -797,6 +875,10 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     sitemap,
     eligibleSitemapUrls: [...eligibleSitemapUrls],
     filteredSitemapPageCount,
+    ...(relativeLinkNesting.omittedUrlCount > 0
+      ? { relativeLinkNestingSummary: { ...relativeLinkNesting } }
+      : {}),
+    homepageUrlIdentity,
   });
 
   // Called only at whole-iteration boundaries, where queue, visited, and
@@ -903,10 +985,62 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
           // measures the gap between the requests a site actually receives and
           // not between bookkeeping steps. Opening a Playwright page is local
           // work and sends nothing, so it is free to happen inside the gap.
-          const response = await paceNavigation(() =>
-            browserPage.goto(item.url, { waitUntil: 'load' }),
-          );
-          const httpStatus = response?.status();
+          const navigate = () =>
+            paceNavigation(() => browserPage.goto(item.url, { waitUntil: 'load' }));
+          let response = await navigate();
+          let httpStatus = response?.status();
+          const notePushback = (): void => {
+            if (response === null || response === undefined) return;
+            const retryAfter = retryAfterMs(response.headers());
+            if (!isTransientPushbackStatus(httpStatus) && retryAfter === undefined) return;
+            options.scheduler?.noteRateLimited({
+              pageUrl: item.url,
+              fetcher: 'crawl',
+              kind: httpStatus === 429 ? 'rate-limit' : 'origin-transient',
+              ...(httpStatus !== undefined ? { status: httpStatus } : {}),
+              ...(retryAfter !== undefined ? { retryAfterMs: retryAfter } : {}),
+            });
+          };
+          notePushback();
+          const detectChallenge = async (): Promise<readonly string[]> => {
+            const html =
+              typeof browserPage.content === 'function'
+                ? await browserPage.content().catch(() => '')
+                : '';
+            const markers = analyzeRawDocument(html).interstitialMarkers;
+            const title =
+              typeof browserPage.title === 'function'
+                ? await browserPage.title().catch(() => '')
+                : '';
+            if (isChallengeTitle(title)) return [...markers, 'challenge-title'];
+            return markers;
+          };
+          let challengeMarkers = await detectChallenge();
+          if (challengeMarkers.length > 0) {
+            options.scheduler?.noteRateLimited({
+              pageUrl: item.url,
+              fetcher: 'crawl',
+              kind: 'bot-challenge',
+              ...(httpStatus !== undefined ? { status: httpStatus } : {}),
+            });
+          }
+          // A single later retry is enough to distinguish a transient host
+          // pushback from a stable site error. It is deliberately paced by
+          // the same scheduler and never increases concurrency.
+          if (isTransientPushbackStatus(httpStatus) || challengeMarkers.length > 0) {
+            response = await navigate();
+            httpStatus = response?.status();
+            notePushback();
+            challengeMarkers = await detectChallenge();
+            if (challengeMarkers.length > 0) {
+              options.scheduler?.noteRateLimited({
+                pageUrl: item.url,
+                fetcher: 'crawl',
+                kind: 'bot-challenge',
+                ...(httpStatus !== undefined ? { status: httpStatus } : {}),
+              });
+            }
+          }
           const contentType = response?.headers()['content-type'];
 
           // A stub URL like /facebook or /instagram that server-side or
@@ -921,6 +1055,13 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
           const finalHost = safeHostname(browserPage.url());
           const requestedHost = new URL(item.url).hostname;
           const isOffSite = finalHost !== null && !isSameSiteHostname(requestedHost, finalHost);
+          const landedUrl = browserPage.url();
+          const landedIdentity = normalizePageIdentityUrl(landedUrl);
+          const isSameSiteRedirect =
+            !isOffSite &&
+            sameSiteServerRedirect(item.url, landedUrl) &&
+            landedIdentity !== undefined &&
+            landedIdentity !== item.url;
 
           if (isOffSite || (finalHost !== null && isSocialPlatformHost(finalHost))) {
             recordPage({
@@ -929,8 +1070,53 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
               status: 'skipped-external-redirect',
               discoveryMethod,
               ...(httpStatus !== undefined ? { httpStatus } : {}),
+              ...(finalHost !== null ? { redirectTargetUrl: landedUrl } : {}),
               ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
             });
+          } else if (
+            isSameSiteRedirect &&
+            (finalHost === null || isAllowedByRobots(robotsRules, robotsTarget(browserPage.url())))
+          ) {
+            // Server redirects are inventory facts, not content pages. Keep
+            // the requested spelling visible, then enqueue the actual target
+            // once so only its content is analysed.
+            recordPage({
+              url: item.url,
+              depth: item.depth,
+              status: 'redirect-interstitial',
+              discoveryMethod,
+              ...(httpStatus !== undefined ? { httpStatus } : {}),
+              redirectTargetUrl: landedIdentity,
+              ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+            });
+            if (inventoryLedger !== undefined && landedIdentity !== undefined) {
+              inventoryLedger.recordDiscovery({
+                url: landedIdentity,
+                source: 'redirect',
+                discoveredAt: new Date(),
+                referrer: item.url,
+                depth: item.depth,
+              });
+            }
+            if (
+              landedIdentity !== undefined &&
+              !enqueued.has(landedIdentity) &&
+              !pagesByUrl.has(landedIdentity)
+            ) {
+              enqueued.add(landedIdentity);
+              queue.push({
+                url: landedIdentity,
+                depth: item.depth,
+                discoveredFrom: item.url,
+                discoveryMethod: 'link',
+                ...(item.isHomepage === true ? { isHomepage: true } : {}),
+              });
+            }
+            if (item.isHomepage === true && landedIdentity !== undefined) {
+              homepageUrlIdentity = landedIdentity;
+              const queuedTarget = queue.find((queued) => queued.url === landedIdentity);
+              if (queuedTarget !== undefined) queuedTarget.isHomepage = true;
+            }
           } else if (
             finalHost !== null &&
             !isAllowedByRobots(robotsRules, robotsTarget(browserPage.url()))
@@ -955,6 +1141,16 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
               ...(httpStatus !== undefined ? { httpStatus } : {}),
               ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
             });
+          } else if (challengeMarkers.length > 0) {
+            recordPage({
+              url: item.url,
+              depth: item.depth,
+              status: 'blocked',
+              discoveryMethod,
+              ...(httpStatus !== undefined ? { httpStatus } : {}),
+              error: `bot challenge: ${challengeMarkers.join(', ')}`,
+              ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+            });
           } else if (httpStatus !== undefined && (httpStatus < 200 || httpStatus >= 300)) {
             // Issue #39: a non-2xx response means the URL has no page behind
             // it. It still cost a navigation (the politeness delay above was
@@ -967,7 +1163,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
             recordPage({
               url: item.url,
               depth: item.depth,
-              status: 'http-error-status',
+              status: isTransientPushbackStatus(httpStatus) ? 'blocked' : 'http-error-status',
               discoveryMethod,
               ...(httpStatus !== undefined ? { httpStatus } : {}),
               ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
@@ -991,7 +1187,13 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
             // Read off the DOM of the page already loaded here, not a second
             // fetch, and never inferred from URL shape: trade-off 24 rejected
             // prefix-guessing for clustering and the same reasoning binds here.
-            let discoverOnly = isLanguageHomepagePath(new URL(browserPage.url()).pathname);
+            const isHomepageNavigation = item.isHomepage === true || item.url === startUrlIdentity;
+            const landedPageIdentity = normalizePageIdentityUrl(browserPage.url());
+            if (isHomepageNavigation && landedPageIdentity !== undefined) {
+              homepageUrlIdentity = landedPageIdentity;
+            }
+            let discoverOnly =
+              !isHomepageNavigation && isLanguageHomepagePath(new URL(browserPage.url()).pathname);
             if (discoverOnly) {
               const declaresHreflang = await browserPage
                 .$$eval('link[rel="alternate"][hreflang]', (links) => links.length > 0)
@@ -1007,15 +1209,17 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
             // which never reduces coverage, rather than leaving the page
             // with no profile at all.
             let auditProfile: PageAuditProfile | undefined;
-            if (!discoverOnly) {
+            let rawFacts: RawPageAuditFacts | undefined;
+            const mayBePluginObject =
+              discoveryMethod === 'sitemap-only' && discoveredFrom === undefined;
+            if (!discoverOnly || mayBePluginObject) {
               const profileContext = {
                 url: item.url,
-                isHomepage: item.url === startUrlIdentity,
+                isHomepage: isHomepageNavigation,
                 isOperatorSeed: item.discoveryMethod === 'seed',
               };
               try {
-                const facts = await extractRawPageAuditFacts(browserPage);
-                auditProfile = buildPageAuditProfile(facts, profileContext);
+                rawFacts = await extractRawPageAuditFacts(browserPage);
               } catch {
                 const emptyFacts: RawPageAuditFacts = {
                   metaRobotsNoindex: false,
@@ -1029,9 +1233,20 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
                   repeatedTeaserLinkGroupSize: 0,
                   structuralTokens: [],
                 };
-                auditProfile = buildPageAuditProfile(emptyFacts, profileContext);
+                rawFacts = emptyFacts;
               }
+              if (!discoverOnly) auditProfile = buildPageAuditProfile(rawFacts, profileContext);
             }
+
+            const pluginObject =
+              rawFacts === undefined
+                ? undefined
+                : classifyNonPublicPluginObject({
+                    discoveryMethod,
+                    ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+                    bodyClassTokens: rawFacts.bodyClassTokens,
+                  });
+            if (pluginObject !== undefined) discoverOnly = true;
 
             recordPage({
               url: item.url,
@@ -1041,6 +1256,8 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
               ...(httpStatus !== undefined ? { httpStatus } : {}),
               ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
               ...(auditProfile !== undefined ? { auditProfile } : {}),
+              ...(pluginObject !== undefined ? { pluginObject } : {}),
+              ...(landedUrl !== item.url ? { servedUrl: landedUrl } : {}),
             });
 
             if (
@@ -1117,6 +1334,19 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
                     anchor.isNumberedPaginationControl,
                 });
               }
+              const relativeNestingByUrl = new Map<
+                string,
+                ReturnType<typeof relativeLinkNestingEvidence>
+              >();
+              for (const anchor of anchors) {
+                if (anchor.href === null) continue;
+                const evidence = relativeLinkNestingEvidence(anchor.href, landedUrl);
+                if (evidence === undefined) continue;
+                const normalized = normalizePageUrl(anchor.href, landedUrl, {
+                  exclusionPatterns: options.exclusions ?? [],
+                });
+                if (normalized !== undefined) relativeNestingByUrl.set(normalized, evidence);
+              }
               const links = normalizeInternalLinks(hrefs, landedUrl, options.exclusions ?? []);
               const repeatedQueryKeysOnSourcePage = computeRepeatedQueryKeys(links);
               for (const link of links) {
@@ -1131,6 +1361,26 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
                 if (item.depth >= maxDepth && existingPage === undefined && !enqueued.has(link)) {
                   disposeInventory(link, 'depth-bound', {
                     detail: `discovered from depth ${item.depth}; maxDepth is ${maxDepth}`,
+                  });
+                  continue;
+                }
+                const nestingEvidence = relativeNestingByUrl.get(link);
+                if (
+                  nestingEvidence !== undefined &&
+                  existingPage === undefined &&
+                  !enqueued.has(link)
+                ) {
+                  relativeLinkNesting.omittedUrlCount += 1;
+                  if (relativeLinkNesting.omittedExampleUrls.length < 20) {
+                    relativeLinkNesting.omittedExampleUrls.push(nestingEvidence.resolvedUrl);
+                  }
+                  if (
+                    !relativeLinkNesting.repeatedSegments.includes(nestingEvidence.repeatedSegment)
+                  ) {
+                    relativeLinkNesting.repeatedSegments.push(nestingEvidence.repeatedSegment);
+                  }
+                  disposeInventory(link, 'relative-link-nesting', {
+                    detail: `relative href ${nestingEvidence.href} repeated directory segment ${nestingEvidence.repeatedSegment}`,
                   });
                   continue;
                 }
@@ -1359,6 +1609,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
 
   return {
     startUrl: startUrlIdentity,
+    ...(homepageUrlIdentity !== startUrlIdentity ? { homepageUrl: homepageUrlIdentity } : {}),
     pages,
     visitedCount: visited.size,
     maxPages,
@@ -1377,5 +1628,9 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     ...(continuationGuardSummary.totalOmittedUrlCount > 0 ? { continuationGuardSummary } : {}),
     ...(sitemap !== undefined ? { sitemap } : {}),
     ...(sitemapCoverage !== undefined ? { sitemapCoverage } : {}),
+    ...(eligibleSitemapUrls.size > 0 ? { sitemapUrls: [...eligibleSitemapUrls] } : {}),
+    ...(relativeLinkNesting.omittedUrlCount > 0
+      ? { relativeLinkNestingSummary: { ...relativeLinkNesting } }
+      : {}),
   };
 }

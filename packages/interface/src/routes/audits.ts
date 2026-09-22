@@ -788,6 +788,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       startedAt: audit.startedAt,
       finishedAt: audit.finishedAt,
       pagesVisited: audit.crawl.visitedCount,
+      pushbackEvents: audit.pushbackEvents,
       coverageSummary: summarizeAuditCoverage(audit),
       severityRollup,
       thirdPartySeverityRollup: thirdParty.severityRollup,

@@ -42,6 +42,9 @@ export {
 export {
   HostRequestScheduler,
   type HostRequestSchedulerOptions,
+  type HostPushbackEvent,
+  type HostPushbackFetcher,
+  type HostPushbackKind,
 } from './host-request-scheduler.js';
 export * from './inventory-ledger.js';
 export * from './check-attempt-ledger.js';

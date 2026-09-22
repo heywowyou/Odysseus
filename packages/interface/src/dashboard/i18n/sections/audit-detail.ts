@@ -218,6 +218,7 @@ export interface AuditDetailStrings {
     unavailableLimitations: string;
     /** {count} is the number of evidence references behind the item. */
     referenceCount: string;
+    reportBlocked: string;
     operationalHeading: string;
     operationalWarnings: Record<string, string>;
     /** {code} is the raw stable warning code. */
@@ -640,6 +641,8 @@ export const auditDetail = {
         'Le diagnostic détaillé n’est pas disponible : aucune conclusion de complétude n’est tirée de son absence.',
       referenceCount: '{count} références',
       operationalHeading: 'Diagnostics d’exploitation',
+      reportBlocked:
+        'La production du rapport est bloquée jusqu’à récupération des preuves manquantes.',
       operationalWarnings: {
         'network-safety-preflight-failed':
           'Le contrôle préalable de sécurité réseau du scanner a signalé un problème d’environnement. Cela ne modifie pas les constats déjà observés.',
@@ -973,6 +976,8 @@ export const auditDetail = {
         'Detailed diagnostics are unavailable: their absence is not treated as evidence of completeness.',
       referenceCount: '{count} references',
       operationalHeading: 'Operational diagnostics',
+      reportBlocked:
+        'Report generation is blocked until the missing acquisition evidence is recovered.',
       operationalWarnings: {
         'network-safety-preflight-failed':
           'The scanner network-safety preflight reported an environment issue. This does not change findings already observed.',

@@ -30,6 +30,81 @@ export const SHARED_RAW_DOCUMENT_MIN_PAGES = 3;
  *  site", which is not a measurement at all. */
 export const MINIMAL_RAW_MARKUP_LENGTH = 512;
 
+/** Titles used by common bot challenges and access walls. The list is kept
+ * intentionally small and explicit: a normal page titled "Security" must not
+ * disappear merely because one word happens to overlap. */
+export const CHALLENGE_TITLE_PATTERNS: readonly RegExp[] = [
+  /security\s+check/i,
+  /security\s+verification/i,
+  /verifying\s+(you are|your browser)/i,
+  /checking\s+your\s+browser/i,
+  /just a moment/i,
+  /attention required/i,
+  /test de sécurité/i,
+  /vérification anti[- ]robot/i,
+];
+
+/** Confirmed challenge-body markers from the stored audit review. Keep this
+ *  table explicit: these strings replace the site's document and therefore
+ *  are acquisition evidence, not page content. */
+export const CHALLENGE_MARKER_PATTERNS: readonly RegExp[] = [
+  /o2swit\.ch\/assets\/tiger\.svg/i,
+  /(?:static\.)?captcha-delivery\.com/i,
+  /datadome/i,
+  /test\s+de\s+s[ée]curit[ée]/i,
+  /security\s+(?:check|verification)/i,
+];
+
+export function isChallengeMarker(value: string | null | undefined): boolean {
+  return (
+    (value !== undefined &&
+      value !== null &&
+      /bot-challenge|challenge-title|access-denied|o2switch-challenge|datadome-challenge|waf-security-check/i.test(
+        value,
+      )) ||
+    (value !== undefined && value !== null && CHALLENGE_MARKER_PATTERNS.some((p) => p.test(value)))
+  );
+}
+
+export function isChallengeTitle(title: string | null | undefined): boolean {
+  return (
+    title !== undefined && title !== null && CHALLENGE_TITLE_PATTERNS.some((p) => p.test(title))
+  );
+}
+
+/** A render that did not obtain the site's own document is acquisition
+ * failure, never content evidence. Stored artifacts use the same predicate
+ * as live scans so re-normalization repairs old reports. */
+export function isBlockedRender(result: RenderDiffResult | undefined): boolean {
+  if (result === undefined) return false;
+  const status = result.renderedHttpStatus ?? result.httpStatus;
+  if (status >= 400) return true;
+  if (isChallengeTitle(result.renderedTitle)) return true;
+  if (
+    (result.renderedInterstitialMarkers ?? []).some(
+      (marker) =>
+        /bot-challenge|access-denied|o2switch-challenge|datadome-challenge|waf-security-check/i.test(
+          marker,
+        ) || isChallengeMarker(marker),
+    )
+  ) {
+    return true;
+  }
+  if (
+    (result.rawDocument?.interstitialMarkers ?? []).some(
+      (marker) =>
+        /bot-challenge|access-denied/i.test(marker) ||
+        isChallengeMarker(marker) ||
+        (marker === 'meta-refresh' &&
+          (result.rawDocument?.markupLength ?? Number.MAX_SAFE_INTEGER) <=
+            MINIMAL_RAW_MARKUP_LENGTH),
+    )
+  ) {
+    return true;
+  }
+  return false;
+}
+
 /** Why one page's raw fetch cannot be compared against its rendered pass.
  *  Absent from the map returned below when the fetch is usable. */
 export type UnusableRawFetch =
@@ -105,6 +180,7 @@ export function extractRenderDiffCandidates(
   unusableRawFetch?: UnusableRawFetch,
 ): FindingCandidate[] {
   if (unusableRawFetch !== undefined) return [];
+  if (isBlockedRender(result)) return [];
   if (result.missingPercent < RENDER_DIFF_EMISSION_THRESHOLD_PERCENT) return [];
 
   return [

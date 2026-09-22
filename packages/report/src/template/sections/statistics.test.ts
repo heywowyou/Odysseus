@@ -382,6 +382,7 @@ describe('P1.2: the third-party occurrences footnote', () => {
       ...f,
       elements: [
         { pageUrl: 'https://example.com/', selector: '.gform_wrapper button', snippet: '' },
+        { pageUrl: 'https://example.com/', selector: 'main button', snippet: '' },
       ],
     };
   }

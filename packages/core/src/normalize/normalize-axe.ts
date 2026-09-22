@@ -11,6 +11,7 @@
 import { MAX_SNIPPET_LENGTH } from '../types/findings.js';
 import { severityFromAxe } from './severity.js';
 import { wcagCriteriaFromAxeTags } from './wcag-tags.js';
+import { isChallengeMarker } from './normalize-renderdiff.js';
 import type { FindingCandidate } from './candidate.js';
 
 /** axe's real target type allows shadow-DOM-piercing nested arrays
@@ -25,6 +26,9 @@ export interface AxeNodeInput {
   target: AxeTargetInput;
   failureSummary?: string;
   impact?: string | null;
+  /** axe's check-specific measurement payload (for example, contrast
+   * colours). Kept as unknown because axe uses several shapes. */
+  data?: unknown;
 }
 
 export interface AxeViolationInput {
@@ -35,10 +39,16 @@ export interface AxeViolationInput {
   description: string;
   helpUrl?: string;
   nodes: AxeNodeInput[];
+  data?: unknown;
 }
 
 export interface AxeResultsInput {
   violations: AxeViolationInput[];
+}
+
+export interface AxeExtractionOptions {
+  challengeFrameSelectors?: readonly string[];
+  challengeFrameOrigins?: readonly string[];
 }
 
 function flattenAxeTarget(target: AxeTargetInput): string {
@@ -97,6 +107,7 @@ const SHAPE_IDENTIFIED_AXE_RULES: ReadonlySet<string> = new Set([
   'link-name',
   'scrollable-region-focusable',
   'target-size',
+  'aria-prohibited-attr',
 ]);
 
 /** Attributes that carry no signal about which component an element belongs
@@ -191,9 +202,93 @@ function templateIdentity(
 ): string | undefined {
   if (SHAPE_IDENTIFIED_AXE_RULES.has(ruleId)) {
     const shape = shapeIdentity(snippet);
-    if (shape !== undefined) return shape;
+    if (shape !== undefined) {
+      if (ruleId === 'link-name' || ruleId === 'aria-prohibited-attr') {
+        return `${shape} | ${(failureSummary ?? '').trim()}`;
+      }
+      return shape;
+    }
   }
   return containerIdentity(ruleId, selector) ?? wordpressLoopIdentity(selector, failureSummary);
+}
+
+function stringField(value: unknown, key: string): string | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const field = (value as Record<string, unknown>)[key];
+  return typeof field === 'string' || typeof field === 'number' ? String(field) : undefined;
+}
+
+function isChallengeEvidence(...values: unknown[]): boolean {
+  return values.some((value) => {
+    if (typeof value === 'string') return isChallengeMarker(value);
+    if (value === undefined || value === null) return false;
+    try {
+      return isChallengeMarker(JSON.stringify(value));
+    } catch {
+      return false;
+    }
+  });
+}
+
+function isChallengeFrameSelector(
+  selector: string,
+  options: AxeExtractionOptions | undefined,
+): boolean {
+  if (!selector.includes('>>>')) return false;
+  const framePart = selector.split('>>>', 1)[0]?.trim() ?? '';
+  return (
+    (options?.challengeFrameSelectors ?? []).some(
+      (frameSelector) => framePart === frameSelector || framePart.includes(frameSelector),
+    ) ||
+    (options?.challengeFrameOrigins ?? []).some(
+      (origin) => origin !== '' && selector.includes(origin),
+    )
+  );
+}
+
+function frameIdentity(selector: string, pageUrl: string, snippet: string): string | undefined {
+  const boundary = selector.indexOf('>>>');
+  if (boundary === -1) return undefined;
+  const framePart = selector.slice(0, boundary).trim();
+  const srcMatch = /\bsrc\s*=\s*["']([^"']+)["']/i.exec(framePart);
+  let source = framePart;
+  if (srcMatch?.[1] !== undefined) {
+    try {
+      source = new URL(srcMatch[1], pageUrl).origin;
+    } catch {
+      source = srcMatch[1];
+    }
+  }
+  const innerShape = shapeIdentity(snippet) ?? selector.slice(boundary + 3).trim();
+  return `frame:${source}|${innerShape}`;
+}
+
+/** axe puts the measured colour values in node.data. Those values are the
+ * defect identity: a selector only identifies where one instance happened
+ * to render. Missing data deliberately falls through to today's identity. */
+function checkDataIdentity(
+  ruleId: string,
+  nodeData: unknown,
+  violationData: unknown,
+): string | undefined {
+  const data = nodeData ?? violationData;
+  if (ruleId === 'color-contrast') {
+    const fg = stringField(data, 'fgColor');
+    const bg = stringField(data, 'bgColor');
+    const ratio = stringField(data, 'expectedContrastRatio');
+    if (fg !== undefined && bg !== undefined && ratio !== undefined) {
+      return `color-contrast:${fg}|${bg}|${ratio}`;
+    }
+  }
+  if (ruleId === 'link-in-text-block') {
+    const nodeColor = stringField(data, 'nodeColor');
+    const parentColor = stringField(data, 'parentColor');
+    const ratio = stringField(data, 'requiredContrastRatio');
+    if (nodeColor !== undefined && parentColor !== undefined && ratio !== undefined) {
+      return `link-in-text-block:${nodeColor}|${parentColor}|${ratio}`;
+    }
+  }
+  return undefined;
 }
 
 /** 2026-08-25. The file an occurrence is about, where the captured element
@@ -232,7 +327,11 @@ export function resourceUrlFromSnippet(html: string, pageUrl: string): string | 
   }
 }
 
-export function extractAxeCandidates(axe: AxeResultsInput, pageUrl: string): FindingCandidate[] {
+export function extractAxeCandidates(
+  axe: AxeResultsInput,
+  pageUrl: string,
+  options?: AxeExtractionOptions,
+): FindingCandidate[] {
   const candidates: FindingCandidate[] = [];
 
   for (const violation of axe.violations) {
@@ -240,6 +339,12 @@ export function extractAxeCandidates(axe: AxeResultsInput, pageUrl: string): Fin
 
     for (const node of violation.nodes) {
       const selector = flattenAxeTarget(node.target);
+      if (
+        isChallengeEvidence(selector, node.html, node.failureSummary, node.data, violation.data) ||
+        isChallengeFrameSelector(selector, options)
+      ) {
+        continue;
+      }
       candidates.push({
         source: 'axe',
         ruleId: violation.id,
@@ -260,13 +365,18 @@ export function extractAxeCandidates(axe: AxeResultsInput, pageUrl: string): Fin
           })(),
         },
         ...(() => {
-          const identity = templateIdentity(violation.id, selector, node.html, node.failureSummary);
-          return identity === undefined ? {} : { dedupeIdentity: identity };
+          const identity =
+            checkDataIdentity(violation.id, node.data, violation.data) ??
+            templateIdentity(violation.id, selector, node.html, node.failureSummary);
+          const frame = frameIdentity(selector, pageUrl, node.html);
+          const scoped = frame === undefined ? identity : `${frame}|${identity ?? violation.id}`;
+          return scoped === undefined ? {} : { dedupeIdentity: scoped };
         })(),
         rawEvidenceForPage: {
           impact: node.impact ?? violation.impact ?? null,
           target: node.target,
           failureSummary: node.failureSummary ?? null,
+          ...(node.data !== undefined ? { data: node.data } : {}),
           tags: violation.tags,
         },
       });

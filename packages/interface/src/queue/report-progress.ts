@@ -6,7 +6,7 @@
  */
 
 import type { Connection } from 'mongoose';
-import type { PageWorkGuard, ScanProgressEvent } from '@odysseus/scanner';
+import type { HostPushbackEvent, PageWorkGuard, ScanProgressEvent } from '@odysseus/scanner';
 import type { JobType } from '@odysseus/store';
 import { JobCancelledError, type CancellationRegistry } from './cancellation.js';
 import { computeCrawlEtaMs, computeStageEtaMs, createDurationEstimator } from './eta.js';
@@ -50,6 +50,7 @@ export function createScanProgressReporter(
   let crawlEtaMs: number | undefined;
   let crawlEtaCalculatedAt: Date | undefined;
   let crawlExcluded = 0;
+  const pushbackEvents: HostPushbackEvent[] = [];
 
   let contentScanConcurrency = 1;
   const contentScanDurationEstimator = createDurationEstimator();
@@ -171,9 +172,20 @@ export function createScanProgressReporter(
         event.excluded.externalRedirect +
         event.excluded.nonHtml +
         event.excluded.httpError +
+        event.excluded.blocked +
         event.excluded.error;
       await reportJobPhase(connection, jobId, jobType, {
         progress: { crawlExclusions: event.excluded },
+      });
+      return;
+    }
+
+    if (event.type === 'pushback') {
+      pushbackEvents.push(event.event);
+      await reportJobPhase(connection, jobId, jobType, {
+        progress: {
+          pushbackEvents: pushbackEvents.map((pushback) => ({ ...pushback })),
+        },
       });
       return;
     }

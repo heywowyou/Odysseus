@@ -29,7 +29,7 @@ describe('evaluateStructuredData', () => {
     expect(result.failedTests).toEqual([]);
   });
 
-  it('flags missing required fields for an incomplete Article schema', async () => {
+  it('does not treat recommended Article fields as required', async () => {
     const result = await evaluateStructuredData(
       htmlWithJsonLd({
         '@context': 'https://schema.org',
@@ -39,12 +39,7 @@ describe('evaluateStructuredData', () => {
     );
 
     expect(result.schemasFound).toContain('Article');
-    expect(result.failedTests.length).toBeGreaterThan(0);
-    expect(result.failedTests.every((test) => test.schema === 'Article')).toBe(true);
-    expect(result.failedTests.map((test) => test.test)).toContain('Article[0].author');
-    expect(result.failedTests.map((test) => test.test)).toContain('Article[0].publisher."@type"');
-    // The one field that is present must not be reported missing.
-    expect(result.failedTests.map((test) => test.test)).not.toContain('Article[0].headline');
+    expect(result.failedTests).toEqual([]);
   });
 
   it('reports no failures for a complete Article schema', async () => {
@@ -54,14 +49,19 @@ describe('evaluateStructuredData', () => {
     expect(result.failedTests).toEqual([]);
   });
 
-  it('treats a declared but empty field as missing', async () => {
+  it('treats declared but empty required fields as missing', async () => {
     const result = await evaluateStructuredData(
-      htmlWithJsonLd({ ...COMPLETE_ARTICLE, headline: '   ', image: [] }),
+      htmlWithJsonLd({
+        '@context': 'https://schema.org',
+        '@type': 'ClaimReview',
+        reviewRating: {},
+        claimReviewed: '   ',
+      }),
     );
 
     const failed = result.failedTests.map((test) => test.test);
-    expect(failed).toContain('Article[0].headline');
-    expect(failed).toContain('Article[0].image');
+    expect(failed).toContain('ClaimReview[0].reviewRating');
+    expect(failed).toContain('ClaimReview[0].claimReviewed');
   });
 
   // A type Google recognizes but asks nothing mandatory of must be reported as
@@ -84,9 +84,7 @@ describe('evaluateStructuredData', () => {
       ]),
     );
 
-    const failed = result.failedTests.map((test) => test.test);
-    expect(failed.some((test) => test.startsWith('Article[0]'))).toBe(false);
-    expect(failed).toContain('Article[1].author');
+    expect(result.failedTests).toEqual([]);
   });
 
   // The one real-site occurrence of this rule in the repository's own saved
@@ -103,9 +101,7 @@ describe('evaluateStructuredData', () => {
     const result = await evaluateStructuredData(html);
 
     expect(result.schemasFound).toEqual(['BlogPosting']);
-    const failed = result.failedTests.filter((test) => test.type === 'microdata');
-    expect(failed.map((test) => test.test)).toContain('BlogPosting[0].author');
-    expect(failed.map((test) => test.test)).not.toContain('BlogPosting[0].headline');
+    expect(result.failedTests).toEqual([]);
   });
 
   it('lists a schema once per markup form it is declared in', async () => {
@@ -127,6 +123,30 @@ describe('evaluateStructuredData', () => {
       '<!doctype html><html><head><script type="application/ld+json">{ not json </script></head><body></body></html>';
 
     expect(await evaluateStructuredData(html)).toEqual({ schemasFound: [], failedTests: [] });
+  });
+
+  it('resolves same-page @id references across a Yoast graph', async () => {
+    const result = await evaluateStructuredData(
+      htmlWithJsonLd({
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@id': 'https://example.com/article#article',
+            '@type': 'Article',
+            publisher: { '@id': 'https://example.com/#organization' },
+          },
+          {
+            '@id': 'https://example.com/#organization',
+            '@type': 'Organization',
+            name: 'Example',
+            address: '1 Main Street',
+            telephone: '+33123456789',
+          },
+        ],
+      }),
+    );
+
+    expect(result.failedTests).toEqual([]);
   });
 });
 

@@ -49,6 +49,12 @@ describe('alt-text-quality-heuristic - clean regression', () => {
       extractAltTextCandidates(withImages([image({ alt: '', width: 16, height: 16 })])),
     ).toEqual([]);
   });
+
+  it('does not judge an image whose final resource is still a placeholder', () => {
+    expect(
+      extractAltTextCandidates(withImages([image({ alt: 'IMG_1234.jpg', undetermined: true })])),
+    ).toEqual([]);
+  });
 });
 
 describe('filename-pattern alt text', () => {

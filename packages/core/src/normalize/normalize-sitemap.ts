@@ -14,6 +14,7 @@ import { severityFromCustom } from './severity.js';
 export const SITEMAP_MISSING_RULE_ID = 'sitemap-missing';
 export const SITEMAP_STALE_RULE_ID = 'sitemap-stale';
 export const SITEMAP_ORPHAN_PAGE_RULE_ID = 'sitemap-orphan-page';
+export const SITEMAP_LISTS_REDIRECTS_RULE_ID = 'sitemap-lists-redirects';
 
 export interface SitemapEntryInput {
   url: string;
@@ -38,6 +39,10 @@ export interface SitemapCheckInput {
   fetchedSitemapUrls?: string[];
   fetchErrors?: { url: string; error: string }[];
   fetchError?: string;
+  /** Sitemap URLs that the crawl resolved as redirects. They remain in the
+   *  sitemap population for a separate, minor hygiene finding rather than
+   *  contaminating stale/orphan absence comparisons. */
+  redirectedUrls?: string[];
   /** Every page the crawl actually visited, so staleness can be judged
    *  by how well the sitemap's own URL list matches what is really
    *  there - not by an arbitrary "how old is too old" date threshold. */
@@ -91,6 +96,16 @@ function missingCandidate(
   ];
 }
 
+function isOffSiteUrl(href: string, pageUrl: string): boolean {
+  try {
+    return (
+      new URL(href, pageUrl).hostname.toLowerCase() !== new URL(pageUrl).hostname.toLowerCase()
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function extractSitemapCandidates(input: SitemapCheckInput): FindingCandidate[] {
   const { pageUrl } = input;
 
@@ -106,9 +121,7 @@ export function extractSitemapCandidates(input: SitemapCheckInput): FindingCandi
   // which are document URLs rather than pages. Keep ignoring those old
   // roots; new artifacts carry recursively flattened pageEntries and can
   // be judged normally.
-  if ((input.isSitemapIndex && input.pageEntries === undefined) || input.crawledUrls.length === 0) {
-    return [];
-  }
+  if (input.isSitemapIndex && input.pageEntries === undefined) return [];
 
   const pageEntries = input.pageEntries ?? input.entries;
 
@@ -134,7 +147,44 @@ export function extractSitemapCandidates(input: SitemapCheckInput): FindingCandi
 
   const candidates: FindingCandidate[] = [];
 
-  const sitemapUrlSet = new Set(pageEntries.map((entry) => normalizeUrl(entry.url, pageUrl)));
+  const redirectedSet = new Set(
+    (input.redirectedUrls ?? []).map((url) => normalizeUrl(url, pageUrl)),
+  );
+  const redirectedUrls = pageEntries
+    .map((entry) => normalizeUrl(entry.url, pageUrl))
+    .filter((url) => redirectedSet.has(url));
+  const externalUrls = pageEntries
+    .map((entry) => normalizeUrl(entry.url, pageUrl))
+    .filter((url) => isOffSiteUrl(url, pageUrl));
+  const excludedFromComparisons = new Set([...redirectedUrls, ...externalUrls]);
+  const eligiblePageEntries = pageEntries.filter(
+    (entry) => !excludedFromComparisons.has(normalizeUrl(entry.url, pageUrl)),
+  );
+
+  if (redirectedUrls.length > 0 || externalUrls.length > 0) {
+    candidates.push({
+      source: 'custom',
+      ruleId: SITEMAP_LISTS_REDIRECTS_RULE_ID,
+      category: 'seo',
+      severity: severityFromCustom(SITEMAP_LISTS_REDIRECTS_RULE_ID),
+      wcagCriteria: [],
+      title: 'The sitemap lists redirected or off-site URLs',
+      description: `The sitemap contains ${redirectedUrls.length} redirected URL(s) and ${externalUrls.length} off-site URL(s). Keep its entries on the site's final, canonical pages so search engines receive a reliable map of the site.`,
+      pageUrl,
+      element: null,
+      rawEvidenceForPage: { redirectedUrls, externalUrls },
+    });
+  }
+
+  // A sitemap made entirely of redirected/off-site URLs still has a useful
+  // distinct finding, but there is no eligible population against which to
+  // make a stale or orphan claim.
+  if (eligiblePageEntries.length === 0) return candidates;
+  if (input.crawledUrls.length === 0) return candidates;
+
+  const sitemapUrlSet = new Set(
+    eligiblePageEntries.map((entry) => normalizeUrl(entry.url, pageUrl)),
+  );
   const matchedCount = input.crawledUrls.filter((url) =>
     sitemapUrlSet.has(normalizeUrl(url, pageUrl)),
   ).length;
@@ -148,11 +198,11 @@ export function extractSitemapCandidates(input: SitemapCheckInput): FindingCandi
       severity: severityFromCustom(SITEMAP_STALE_RULE_ID),
       wcagCriteria: [],
       title: 'Sitemap does not reflect the current site',
-      description: `Only ${matchedCount} of ${input.crawledUrls.length} pages this audit actually found appear in the sitemap (${pageEntries.length} URLs listed). A sitemap that has drifted from the real site can mislead search engines about which pages exist.`,
+      description: `Only ${matchedCount} of ${input.crawledUrls.length} pages this audit actually found appear in the sitemap (${eligiblePageEntries.length} eligible URLs listed). A sitemap that has drifted from the real site can mislead search engines about which pages exist.`,
       pageUrl,
       element: null,
       rawEvidenceForPage: {
-        sitemapEntryCount: pageEntries.length,
+        sitemapEntryCount: eligiblePageEntries.length,
         crawledPageCount: input.crawledUrls.length,
         matchedCount,
       },
@@ -163,7 +213,7 @@ export function extractSitemapCandidates(input: SitemapCheckInput): FindingCandi
   // both a good match for the crawled pages and still list URLs the
   // crawl never found through any internal link at all.
   const discoveredSet = new Set(input.discoveredUrls.map((url) => normalizeUrl(url, pageUrl)));
-  const orphanUrls = pageEntries
+  const orphanUrls = eligiblePageEntries
     .map((entry) => entry.url)
     .filter((url) => !discoveredSet.has(normalizeUrl(url, pageUrl)));
 

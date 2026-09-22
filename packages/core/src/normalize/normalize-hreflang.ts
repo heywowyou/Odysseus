@@ -21,8 +21,10 @@
 
 import type { FindingCandidate } from './candidate.js';
 import { severityFromCustom } from './severity.js';
+import { normalizeUrlIdentity } from './url-identity.js';
 
 export const HREFLANG_NO_RETURN_LINK_RULE_ID = 'hreflang-no-return-link';
+const HREFLANG_TARGET_INVALID_RULE_ID = 'hreflang-target-invalid';
 const HREFLANG_MISSING_RULE_ID = 'hreflang-missing';
 
 /** A first path segment that is a language code, optionally with a region
@@ -46,23 +48,36 @@ export interface HreflangPageInput {
 }
 
 function normalizeUrl(href: string, base: string): string {
-  try {
-    const url = new URL(href, base);
-    url.hash = '';
-    return url.href.replace(/\/$/, '');
-  } catch {
-    return href;
-  }
+  return normalizeUrlIdentity(href, base) ?? href;
+}
+
+function isExcluded(excludedUrls: ReadonlySet<string>, url: string): boolean {
+  return excludedUrls.has(normalizeUrl(url, url));
 }
 
 export function extractHreflangCandidates(
   pages: readonly HreflangPageInput[],
   siteLevelPageUrl?: string,
+  excludedUrls: ReadonlySet<string> = new Set(),
+  invalidTargetUrls: ReadonlySet<string> = new Set(),
 ): FindingCandidate[] {
   const candidates: FindingCandidate[] = [];
-  const pagesByUrl = new Map(pages.map((page) => [normalizeUrl(page.url, page.url), page]));
+  const pagesByUrl = new Map(
+    pages
+      .filter((page) => !isExcluded(excludedUrls, page.url))
+      .map((page) => [normalizeUrl(page.url, page.url), page]),
+  );
+  const missingBySource = new Map<
+    string,
+    { page: HreflangPageInput; links: Array<{ lang: string; href: string; targetUrl: string }> }
+  >();
+  const invalidByTarget = new Map<
+    string,
+    { page: HreflangPageInput; links: Array<{ lang: string; href: string; targetUrl: string }> }
+  >();
 
   for (const page of pages) {
+    if (isExcluded(excludedUrls, page.url)) continue;
     const sourceUrl = normalizeUrl(page.url, page.url);
 
     for (const link of page.hreflangLinks) {
@@ -70,35 +85,65 @@ export function extractHreflangCandidates(
       if (targetUrl === sourceUrl) continue; // a self-referencing hreflang tag needs no return link
 
       const targetPage = pagesByUrl.get(targetUrl);
-      if (!targetPage) continue; // outside crawl scope - not verifiable without an uninvited fetch
+      if (!targetPage) {
+        if (invalidTargetUrls.has(targetUrl)) {
+          const existing = invalidByTarget.get(targetUrl) ?? { page, links: [] };
+          existing.links.push({ lang: link.lang, href: link.href, targetUrl });
+          invalidByTarget.set(targetUrl, existing);
+        }
+        continue; // outside crawl scope - not verifiable without an uninvited fetch
+      }
 
       const targetLinksBack = targetPage.hreflangLinks.some(
         (targetLink) => normalizeUrl(targetLink.href, targetPage.url) === sourceUrl,
       );
       if (targetLinksBack) continue;
 
-      candidates.push({
-        source: 'custom',
-        ruleId: HREFLANG_NO_RETURN_LINK_RULE_ID,
-        category: 'seo',
-        severity: severityFromCustom(HREFLANG_NO_RETURN_LINK_RULE_ID),
-        wcagCriteria: [],
-        title: 'hreflang link has no return link',
-        description: `This page declares hreflang="${link.lang}" pointing to ${link.href}, but that page does not declare a matching hreflang link back to this one. Search engines can ignore hreflang annotations that are not reciprocated.`,
-        pageUrl: page.url,
-        // Distinguishes each (source, target-language) pair the same
-        // way broken-internal-link's derived selector does, so two
-        // different missing return links on one page do not collapse
-        // into a single finding under the dedupe key's empty-selector
-        // default.
-        element: {
-          pageUrl: page.url,
-          selector: `link[rel="alternate"][hreflang="${link.lang}"]`,
-          snippet: `hreflang="${link.lang}" href="${link.href}"`,
-        },
-        rawEvidenceForPage: { lang: link.lang, targetUrl: link.href },
-      });
+      const existing = missingBySource.get(sourceUrl) ?? { page, links: [] };
+      existing.links.push({ lang: link.lang, href: link.href, targetUrl });
+      missingBySource.set(sourceUrl, existing);
     }
+  }
+
+  for (const { page, links } of missingBySource.values()) {
+    candidates.push({
+      source: 'custom',
+      ruleId: HREFLANG_NO_RETURN_LINK_RULE_ID,
+      category: 'seo',
+      severity: severityFromCustom(HREFLANG_NO_RETURN_LINK_RULE_ID),
+      wcagCriteria: [],
+      title: 'hreflang links have no return link',
+      description:
+        'This page declares hreflang links whose target pages do not declare a matching link back. Search engines can ignore hreflang annotations that are not reciprocated.',
+      pageUrl: page.url,
+      dedupeIdentity: `source-page:${normalizeUrl(page.url, page.url)}`,
+      element: {
+        pageUrl: page.url,
+        selector: 'head link[rel="alternate"][hreflang]',
+        snippet: links.map((link) => `hreflang="${link.lang}" href="${link.href}"`).join('; '),
+      },
+      rawEvidenceForPage: { missingReturnLinks: links },
+    });
+  }
+
+  for (const [targetUrl, { page, links }] of invalidByTarget) {
+    candidates.push({
+      source: 'custom',
+      ruleId: HREFLANG_TARGET_INVALID_RULE_ID,
+      category: 'seo',
+      severity: severityFromCustom(HREFLANG_TARGET_INVALID_RULE_ID),
+      wcagCriteria: [],
+      title: 'hreflang target is an error or redirect page',
+      description: `This page declares hreflang links to ${targetUrl}, but the target was an error or redirect page rather than content that can serve that language version.`,
+      pageUrl: page.url,
+      dedupeIdentity: `target:${targetUrl}`,
+      element: {
+        pageUrl: page.url,
+        selector: 'head link[rel="alternate"][hreflang]',
+        snippet: links.map((link) => `hreflang="${link.lang}" href="${link.href}"`).join('; '),
+      },
+      rawEvidenceForPage: { targetUrl, declarations: links },
+    });
   }
 
   const missing = detectMissingHreflang(pages, siteLevelPageUrl);

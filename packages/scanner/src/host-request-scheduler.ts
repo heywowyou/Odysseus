@@ -36,6 +36,22 @@ export interface HostRequestSchedulerOptions {
   maxDelayMs?: number;
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;
+  /** Receives every observed host pushback signal. The scheduler remains
+   *  responsible for slowing the run; callers use this hook to persist an
+   *  operator-visible event without coupling the pacing primitive to jobs. */
+  onPushback?: (event: HostPushbackEvent) => void;
+}
+
+export type HostPushbackKind = 'rate-limit' | 'bot-challenge' | 'origin-transient';
+export type HostPushbackFetcher = 'crawl' | 'render' | 'lighthouse' | 'canonical';
+
+export interface HostPushbackEvent {
+  pageUrl: string;
+  kind: HostPushbackKind;
+  fetcher: HostPushbackFetcher;
+  occurredAt: string;
+  status?: number;
+  retryAfterMs?: number;
 }
 
 const DEFAULT_BACKOFF_FACTOR = 2;
@@ -47,6 +63,7 @@ export class HostRequestScheduler {
   readonly #backoffFactor: number;
   readonly #now: () => number;
   readonly #sleep: (ms: number) => Promise<void>;
+  readonly #onPushback: ((event: HostPushbackEvent) => void) | undefined;
 
   #delayMs: number;
   #concurrency: number;
@@ -64,6 +81,7 @@ export class HostRequestScheduler {
     this.#now = options.now ?? (() => Date.now());
     this.#sleep =
       options.sleep ?? ((ms) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+    this.#onPushback = options.onPushback;
   }
 
   get effectiveDelayMs(): number {
@@ -88,12 +106,18 @@ export class HostRequestScheduler {
    * Records that the host pushed back - a 429, a 503 with Retry-After, an
    * anti-bot interstitial. Backs off and sheds a lane. Never the reverse.
    */
-  noteRateLimited(): void {
+  noteRateLimited(event?: Omit<HostPushbackEvent, 'occurredAt'>): void {
+    if (event?.retryAfterMs !== undefined) {
+      this.raiseDelayTo(event.retryAfterMs);
+    }
     this.#delayMs = Math.min(
       this.#maxDelayMs,
       Math.max(this.#floorDelayMs, Math.ceil(this.#delayMs * this.#backoffFactor)),
     );
     this.#concurrency = Math.max(1, Math.floor(this.#concurrency / 2));
+    if (event !== undefined) {
+      this.#onPushback?.({ ...event, occurredAt: new Date(this.#now()).toISOString() });
+    }
   }
 
   /**

@@ -84,6 +84,16 @@ checks whether the resulting error is exposed to assistive technology
 via `aria-invalid`, `aria-describedby` pointing at real text, or a
 `role="alert"`/`aria-live` region. Rule ID `form-error-not-associated`.
 
+## Undetermined is not a pass
+
+When the browser cannot establish the final resource or content (for example
+an image is still a `data:`/placeholder URL, a frame is a bot challenge, or a
+check times out), record the check as **undetermined** and leave it out of
+the confirmed finding population. Do not convert missing evidence into a
+clean result and do not ask report prose to imply that the page passed. The
+operator checklist should name the blocked/failed candidate and resolve it
+manually or rescan it before making an absence claim.
+
 ## To verify
 
 - Reading order versus visual order

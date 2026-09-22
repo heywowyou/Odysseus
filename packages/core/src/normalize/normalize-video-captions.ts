@@ -25,10 +25,11 @@ export const VIDEO_MISSING_CAPTIONS_RULE_ID = 'video-missing-captions';
 export interface VideoCheckInputEntry {
   selector: string;
   hasCaptionTrack: boolean;
+  audio?: 'present' | 'absent' | 'undetermined';
   /** See video-captions.ts's VideoCheckResult.hasAudio: defaults to
    *  true when undetermined, so an inaccessible video source never
    *  silently exempts a real captions gap. */
-  hasAudio: boolean;
+  hasAudio?: boolean;
 }
 
 export interface VideoCaptionsCheckInput {
@@ -43,7 +44,10 @@ export function extractVideoCaptionsCandidates(input: VideoCaptionsCheckInput): 
     if (video.hasCaptionTrack) continue;
     // A video with no meaningful audio track is not missing captions
     // for the purposes of 1.2.2, it is silent - see the file header.
-    if (!video.hasAudio) continue;
+    const audio =
+      video.audio ??
+      (video.hasAudio === undefined ? 'undetermined' : video.hasAudio ? 'present' : 'absent');
+    if (audio !== 'present') continue;
     candidates.push({
       source: 'custom',
       ruleId: VIDEO_MISSING_CAPTIONS_RULE_ID,

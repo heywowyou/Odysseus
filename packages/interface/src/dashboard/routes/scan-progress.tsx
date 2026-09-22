@@ -66,6 +66,43 @@ function fillProgressCopy(template: string, values: Record<string, number>): str
   );
 }
 
+function slowRelaunchHref(job: ScanJobDetail): string | undefined {
+  if (job.siteUrl === undefined) return undefined;
+  const currentDelayMs = job.options.delayMs ?? job.progress.crawl?.effectiveDelayMs ?? 0;
+  const retryAfterMs = Math.max(
+    0,
+    ...(job.progress.pushbackEvents ?? []).map((event) => event.retryAfterMs ?? 0),
+  );
+  const delayMs = Math.max(currentDelayMs * 4, retryAfterMs, 5_000);
+  const params = new URLSearchParams({
+    url: job.siteUrl,
+    type: job.type === 'quick-check' ? 'quick-check' : 'full-audit',
+    delaySeconds: String(delayMs / 1_000),
+    scanConcurrency: '1',
+  });
+  if (job.prospectId !== undefined) params.set('prospectId', job.prospectId);
+  return `/scans/new?${params.toString()}`;
+}
+
+function PushbackWarning({ job }: { job: ScanJobDetail }): JSX.Element | null {
+  const { strings } = useI18n();
+  const count = job.progress.pushbackEvents?.length ?? 0;
+  if (count === 0) return null;
+  const href = slowRelaunchHref(job);
+  return (
+    <Card className="border-sev-moderate/50 bg-sev-moderate/5">
+      <p className="text-sm text-ink-soft">
+        {strings.progress.pushbackWarning.replace('{count}', String(count))}
+      </p>
+      {href !== undefined ? (
+        <Link to={href} className={cn(buttonStyles('secondary', 'sm'), 'mt-3 inline-flex')}>
+          {strings.progress.slowRelaunchLink}
+        </Link>
+      ) : null}
+    </Card>
+  );
+}
+
 /** Old page badge colors: success green for a done URL, red for a failed
  *  one, accent violet while still in flight. */
 const URL_STATE_TONES: Record<UrlResultState, BadgeTone> = {
@@ -320,6 +357,7 @@ function JobView({ job, refresh }: { job: ScanJobDetail; refresh: () => void }):
     job.type === 'prospecting' || job.type === 'quick-check' || job.type === 'prospecting-audit';
   return (
     <div className="flex flex-col gap-4">
+      <PushbackWarning job={job} />
       {prospecting ? (
         <ProspectingView job={job} terminal={terminal} />
       ) : (

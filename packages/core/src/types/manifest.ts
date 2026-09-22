@@ -24,6 +24,58 @@ export type ScanIntent = 'quick-check' | 'prospecting-audit' | 'full-audit';
 
 export type SitemapMode = 'none' | 'inspect' | 'supplement';
 
+/** Site-wide absence claims are only safe when the pages that could carry
+ * the missing item were actually available. These are the rule IDs that can
+ * therefore be downgraded to an explicit manual check when acquisition left
+ * a candidate page blocked or failed. */
+export const COVERAGE_LIMITATION_RULE_IDS = [
+  'accessibility-statement-missing',
+  'lcen-mentions-legales-missing',
+  'consent-mechanism-absent',
+  'hreflang-missing',
+  'structured-data-entity-missing',
+  'sitemap-orphan-page',
+  'llms-txt-missing',
+] as const;
+
+export type CoverageLimitationRuleId = (typeof COVERAGE_LIMITATION_RULE_IDS)[number];
+
+export interface CoverageLimitation {
+  ruleId: CoverageLimitationRuleId;
+  blockedCandidateCount: number;
+  failedCandidateCount: number;
+  /** At most the first 20 URLs, for an operator's manual follow-up. */
+  candidateUrls?: string[];
+}
+
+/** Derives the conservative, persisted limitation ledger from the crawl
+ * inventory. Core does not decide whether a page was blocked: the scanner
+ * already recorded that status. It only makes the absence-rule consequence
+ * explicit and deterministic for fresh scans and offline normalization. */
+export function deriveCoverageLimitations(
+  pages: readonly Pick<ManifestPageEntry, 'url' | 'status'>[],
+): CoverageLimitation[] {
+  const blockedStatuses = new Set<ManifestPageStatus>(['blocked', 'skipped-robots']);
+  const failedStatuses = new Set<ManifestPageStatus>([
+    'error',
+    'http-error-status',
+    'redirect-interstitial',
+    'soft-error-page',
+    'skipped-external-redirect',
+  ]);
+  const blocked = pages.filter((page) => blockedStatuses.has(page.status));
+  const failed = pages.filter((page) => failedStatuses.has(page.status));
+  if (blocked.length === 0 && failed.length === 0) return [];
+
+  const candidateUrls = [...new Set([...blocked, ...failed].map((page) => page.url))].slice(0, 20);
+  return COVERAGE_LIMITATION_RULE_IDS.map((ruleId) => ({
+    ruleId,
+    blockedCandidateCount: blocked.length,
+    failedCandidateCount: failed.length,
+    ...(candidateUrls.length > 0 ? { candidateUrls } : {}),
+  }));
+}
+
 export type PageDiscoveryMethod = 'link' | 'seed' | 'sitemap-only';
 
 export interface SitemapCoverageSummary {
@@ -140,6 +192,9 @@ export type ManifestPageStatus =
    *  recorded these as 'visited'; keep the broken-internal-link rule
    *  reading both shapes. */
   | 'http-error-status'
+  /** The host pushed back or served a bot challenge. The URL remains
+   * inventoried, but it is not site content and yields no content findings. */
+  | 'blocked'
   /** A 200 response whose page is a client-side redirect interstitial
    *  (issue #85): the browser navigated away from the requested URL by
    *  the time render-diff's settle wait completed, so the rendered
@@ -232,6 +287,15 @@ export interface CruxFieldDataResult {
   fetchError?: string;
 }
 
+export interface AuditPushbackEvent {
+  pageUrl: string;
+  kind: 'rate-limit' | 'bot-challenge' | 'origin-transient';
+  fetcher: 'crawl' | 'render' | 'lighthouse' | 'canonical';
+  occurredAt: string;
+  status?: number;
+  retryAfterMs?: number;
+}
+
 export interface ManifestPageEntry {
   url: string;
   /** The page's own declared content language (lowercased <html lang>),
@@ -241,6 +305,13 @@ export interface ManifestPageEntry {
    *  the site root - no /fr/-style path prefix - to the language the site
    *  itself declares, instead of treating it as having no language. */
   language?: string;
+  /** The page declared noindex through page metadata or an X-Robots-Tag.
+   *  Kept as coverage evidence so SEO-scope disclosure does not have to
+   *  infer it from findings. Optional for historical manifests. */
+  noindex?: boolean;
+  /** Structural E9 evidence for a sitemap-only non-public plugin object.
+   *  It remains inventoried and disclosed, but is not content-analysed. */
+  pluginObject?: { postType: string; bodyClass: string };
   /** Path relative to the audit directory, e.g. "pages/contact-d4e5f6".
    *  Absent for pages the crawler never scanned at all (status
    *  'skipped-robots' or crawl-phase 'error'), since nothing was written
@@ -356,6 +427,9 @@ export interface AuditManifest {
   config: AuditConfigSnapshot;
   crawl: {
     startUrl: string;
+    /** Identity of the page the requested start URL landed on, when it was
+     *  different from the requested identity. */
+    homepageUrl?: string;
     visitedCount: number;
     maxPages: number;
     maxDepth: number;
@@ -373,11 +447,26 @@ export interface AuditManifest {
     /** Milestone 9b.5. Absent when sitemap inspection was disabled or on
      *  historical manifests captured before sitemap coverage was tracked. */
     sitemapCoverage?: SitemapCoverageSummary;
+    /** Eligible sitemap identities retained for offline public-evidence tests. */
+    sitemapUrls?: string[];
   };
+  /** Host pushback observed during acquisition, kept for operator coverage
+   *  feedback and absent on historical manifests. */
+  pushbackEvents?: AuditPushbackEvent[];
+  /** E12: site-wide absence checks that cannot make a complete claim because
+   *  one or more candidate URLs were blocked or failed acquisition. */
+  coverageLimitations?: CoverageLimitation[];
   pages: ManifestPageEntry[];
   /** Plan 021. Bounded crawl-frontier omissions, stored separately from
    *  inventoried pages so an omitted URL is never presented as visited. */
   continuationGuardSummary?: ContinuationGuardSummary;
+  /** Relative-link nesting omissions, disclosed separately from the
+   * continuation-family guard because they indicate a URL construction bug. */
+  relativeLinkNestingSummary?: {
+    omittedUrlCount: number;
+    omittedExampleUrls: string[];
+    repeatedSegments: string[];
+  };
   siteSignals?: AuditManifestSiteSignals;
   /** Additive scanner provenance for the privacy/security report scope.
    * Absent on historical audits and therefore rendered as unavailable. */

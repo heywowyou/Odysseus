@@ -33,10 +33,16 @@ export interface HeadingFact {
   level: number;
   text: string;
   selector: string;
+  html: string;
 }
 
 export interface HreflangLink {
   lang: string;
+  href: string;
+}
+
+export interface LanguageSwitcherLink {
+  lang?: string;
   href: string;
 }
 
@@ -56,6 +62,9 @@ export interface HeadMetadataExtraction {
    *  question this module cannot answer on its own - see
    *  normalize-hreflang.ts, which is given every page's set at once. */
   hreflangLinks: HreflangLink[];
+  /** Structural language-menu links used as a translation-cluster fallback
+   *  when the page has no hreflang declarations. */
+  languageSwitcherLinks?: LanguageSwitcherLink[];
   /** The page's own declared content language: the lowercased value of
    *  the <html lang> attribute, or null when absent/empty. Persisted into
    *  scan.json and then the manifest's per-page `language` field so the
@@ -147,13 +156,28 @@ export async function extractHeadMetadata(
     }));
 
     const headingElements = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6'));
-    const headings = headingElements.map((el) => ({
-      level: Number(el.tagName.slice(1)),
-      text: (el.textContent ?? '').trim(),
-      selector: el.id
-        ? `#${el.id}`
-        : `${el.tagName.toLowerCase()}:nth-of-type(${headingElements.indexOf(el) + 1})`,
-    }));
+    const headings = headingElements.map((el) => {
+      const parts: string[] = [];
+      let current: Element | null = el;
+      while (current && current !== document.documentElement) {
+        if (current.id) {
+          parts.unshift(`#${CSS.escape(current.id)}`);
+          break;
+        }
+        const parent: Element | null = current.parentElement;
+        if (!parent) break;
+        const position = Array.from(parent.children).indexOf(current) + 1;
+        parts.unshift(`${current.tagName.toLowerCase()}:nth-child(${position})`);
+        current = parent;
+      }
+      const outer = el.outerHTML;
+      return {
+        level: Number(el.tagName.slice(1)),
+        text: (el.textContent ?? '').trim(),
+        selector: parts.join(' > '),
+        html: outer.slice(0, outer.indexOf('>') + 1) || outer,
+      };
+    });
 
     const hreflangLinks = Array.from(document.querySelectorAll('link[rel="alternate"][hreflang]'))
       .map((el) => ({
@@ -161,6 +185,67 @@ export async function extractHeadMetadata(
         href: el.getAttribute('href') ?? '',
       }))
       .filter((link) => link.lang.length > 0 && link.href.length > 0);
+
+    const languageSwitcherLinks = Array.from(document.querySelectorAll('a[href]'))
+      .map((anchor) => {
+        const href = anchor.getAttribute('href')?.trim() ?? '';
+        if (href.length === 0) return undefined;
+        const explicitLang =
+          anchor.getAttribute('hreflang')?.trim().toLowerCase() ||
+          anchor.getAttribute('lang')?.trim().toLowerCase() ||
+          undefined;
+        let samePathLanguageVariant = false;
+        let targetLanguage: string | undefined;
+        let resolvedHref = href;
+        try {
+          const current = new URL(location.href);
+          const target = new URL(href, location.href);
+          resolvedHref = target.href;
+          if (target.origin === current.origin) {
+            const currentMatch = /^\/([a-z]{2}(?:-[a-z]{2})?)(\/.*)?\/?$/iu.exec(current.pathname);
+            const targetMatch = /^\/([a-z]{2}(?:-[a-z]{2})?)(\/.*)?\/?$/iu.exec(target.pathname);
+            const currentSuffix = currentMatch?.[2] ?? '/';
+            const targetSuffix = targetMatch?.[2] ?? '/';
+            if (
+              currentMatch !== null &&
+              targetMatch !== null &&
+              currentMatch[1]?.toLowerCase() !== targetMatch[1]?.toLowerCase() &&
+              currentSuffix === targetSuffix
+            ) {
+              samePathLanguageVariant = true;
+              targetLanguage = targetMatch[1]?.toLowerCase();
+            }
+          }
+        } catch {
+          // A malformed href is not language-switcher evidence.
+        }
+        const languageContainer =
+          anchor.closest(
+            '[class*="lang" i], [id*="lang" i], [aria-label*="lang" i], [data-language], [data-lang]',
+          ) !== null;
+        if (!languageContainer && explicitLang === undefined && !samePathLanguageVariant) {
+          return undefined;
+        }
+        if (languageContainer && explicitLang === undefined && targetLanguage === undefined) {
+          try {
+            const targetPath = new URL(resolvedHref, location.href).pathname;
+            const targetMatch = /^\/([a-z]{2}(?:-[a-z]{2})?)(?:\/|$)/iu.exec(targetPath);
+            targetLanguage = targetMatch?.[1]?.toLowerCase();
+          } catch {
+            // Keep the structural link as evidence even when its path does
+            // not expose a language prefix we can infer.
+          }
+        }
+        return {
+          href: resolvedHref,
+          ...(explicitLang !== undefined
+            ? { lang: explicitLang }
+            : targetLanguage !== undefined
+              ? { lang: targetLanguage }
+              : {}),
+        };
+      })
+      .filter((link): link is LanguageSwitcherLink => link !== undefined);
 
     // Every tag, not the first: a page can carry an empty robots tag from
     // one plugin and a noindex one from another, and search engines honour
@@ -186,6 +271,7 @@ export async function extractHeadMetadata(
       jsonLdRawBlocks,
       headings,
       hreflangLinks,
+      ...(languageSwitcherLinks.length > 0 ? { languageSwitcherLinks } : {}),
       robotsMeta,
       googlebotMeta,
       htmlLang,
@@ -206,6 +292,9 @@ export async function extractHeadMetadata(
     jsonLdBlocks: parseJsonLdBlocks(raw.jsonLdRawBlocks),
     headings: raw.headings,
     hreflangLinks: raw.hreflangLinks,
+    ...(raw.languageSwitcherLinks !== undefined
+      ? { languageSwitcherLinks: raw.languageSwitcherLinks }
+      : {}),
     robotsMeta: raw.robotsMeta,
     googlebotMeta: raw.googlebotMeta,
     htmlLang: raw.htmlLang,

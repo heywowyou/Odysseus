@@ -44,6 +44,7 @@ const scanJobProgressSchema = z.object({
     .object({
       visited: z.number(),
       target: z.number(),
+      effectiveDelayMs: z.number().optional(),
       etaMs: z.number().optional(),
       // Issue #223: the instant etaMs was computed (serialized as an ISO
       // string over JSON), so the dashboard can age a countdown down
@@ -84,8 +85,21 @@ const scanJobProgressSchema = z.object({
       externalRedirect: z.number(),
       nonHtml: z.number(),
       httpError: z.number(),
+      blocked: z.number(),
       error: z.number(),
     })
+    .optional(),
+  pushbackEvents: z
+    .array(
+      z.object({
+        pageUrl: z.string(),
+        kind: z.enum(['rate-limit', 'bot-challenge', 'origin-transient']),
+        fetcher: z.enum(['crawl', 'render', 'lighthouse', 'canonical']),
+        occurredAt: z.string(),
+        status: z.number().optional(),
+        retryAfterMs: z.number().optional(),
+      }),
+    )
     .optional(),
   message: z.string().optional(),
 });
@@ -154,6 +168,12 @@ export const scanJobDetailSchema = z.object({
   auditIds: z.array(z.string()).optional(),
   urlResults: z.array(scanUrlResultSchema).optional(),
   progress: scanJobProgressSchema,
+  options: z
+    .object({
+      delayMs: z.number().optional(),
+      scanConcurrency: z.number().optional(),
+    })
+    .passthrough(),
   error: z.string().optional(),
   failedPhase: z.string().optional(),
   needsInputFields: z.array(scanJobNeedsInputFieldSchema).optional(),
@@ -229,6 +249,8 @@ const auditEvidenceQualitySchema = z.object({
   operationalWarnings: z.array(
     z.object({ code: z.string(), referenceCount: z.number().int().nonnegative() }),
   ),
+  reportBlocked: z.boolean().optional(),
+  blockingReasons: z.array(z.string()).optional(),
 });
 
 /** GET /api/audits/:auditId/report-quality. The endpoint deliberately

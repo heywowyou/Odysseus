@@ -15,7 +15,7 @@ import {
   getPageTimeoutMs,
   getScanConcurrency,
 } from './config.js';
-import { HostRequestScheduler } from './host-request-scheduler.js';
+import { HostRequestScheduler, type HostPushbackEvent } from './host-request-scheduler.js';
 import {
   checkNetworkTarget,
   type NetworkSafetyDisposition,
@@ -144,6 +144,7 @@ export interface CrawlExclusionCounts {
   externalRedirect: number;
   nonHtml: number;
   httpError: number;
+  blocked: number;
   error: number;
 }
 
@@ -156,6 +157,7 @@ export function countCrawlExclusions(
     externalRedirect: 0,
     nonHtml: 0,
     httpError: 0,
+    blocked: 0,
     error: 0,
   };
   for (const page of pages) {
@@ -163,6 +165,7 @@ export function countCrawlExclusions(
     else if (page.status === 'skipped-external-redirect') counts.externalRedirect += 1;
     else if (page.status === 'skipped-non-html') counts.nonHtml += 1;
     else if (page.status === 'http-error-status') counts.httpError += 1;
+    else if (page.status === 'blocked') counts.blocked += 1;
     else if (page.status === 'error') counts.error += 1;
   }
   return counts;
@@ -201,6 +204,10 @@ export type ScanProgressEvent =
    *  content-checked, by reason, so inventoried and checked counts
    *  reconcile. Robots-skipped URLs are never navigated and are not here. */
   | { type: 'crawl-exclusions'; excluded: CrawlExclusionCounts }
+  /** Host pushback is durable operator telemetry, emitted at the same
+   *  boundary as the scheduler signal so the job card can warn while the
+   *  run is still active. */
+  | { type: 'pushback'; event: HostPushbackEvent }
   /** One page whose failed checks finished their retries. Recovery runs
    *  pages one at a time and can take many minutes, so each page reports. */
   | { type: 'content-recovery-page'; completed: number; totalPages: number; url: string }
@@ -376,6 +383,9 @@ export interface SiteScanResult {
    *  when a CrUX key is configured; the legacy `cruxFieldData` payload cannot
    *  tell the last two apart. */
   cruxAcquisitionStatus?: CruxAcquisitionStatus;
+  /** Host responses that slowed or blocked acquisition, for the job and
+   *  audit operator views. */
+  pushbackEvents?: readonly HostPushbackEvent[];
 }
 
 /**
@@ -492,6 +502,7 @@ async function runScanLane(
   screenshotDir: string,
   timeoutMs: number | undefined,
   userAgent: string | undefined,
+  servedUrlByIdentity: ReadonlyMap<string, string>,
   mentionsLegalesUrl: string | undefined,
   mentionsLegalesSearchedUrls: string[] | undefined,
   mentionsLegalesHomepageFallback: boolean,
@@ -516,6 +527,7 @@ async function runScanLane(
     // contexts on timeout without touching other lanes' still-legitimate
     // work.
     const pageGuard = createPageWorkGuard(runGuard);
+    const navigationUrl = servedUrlByIdentity.get(url);
 
     const { pageResult, durationMs } = await scheduler.schedule(async () => {
       // Issue #223: timed inside the scheduled turn, so the wait for that turn
@@ -532,6 +544,7 @@ async function runScanLane(
           guard: pageGuard,
           ...(timeoutMs !== undefined ? { timeoutMs } : {}),
           ...(userAgent !== undefined ? { userAgent } : {}),
+          ...(navigationUrl !== undefined ? { navigationUrl } : {}),
           ...(mentionsLegalesUrl !== undefined ? { mentionsLegalesUrl } : {}),
           ...(mentionsLegalesSearchedUrls !== undefined ? { mentionsLegalesSearchedUrls } : {}),
           ...(mentionsLegalesHomepageFallback ? { mentionsLegalesHomepageFallback } : {}),
@@ -567,6 +580,7 @@ interface StagedScanContext {
   resumeActive: boolean;
   timeoutMs: number | undefined;
   userAgent: string | undefined;
+  servedUrlByIdentity: ReadonlyMap<string, string>;
   mentionsLegalesUrl: string | undefined;
   redirectHostCache: RedirectHostCache;
   homepageUrl: string | undefined;
@@ -669,6 +683,7 @@ async function analyzePageInTurn(
   // Issue #200: same per-page-guard-mirrored-into-run-wide-guard shape
   // as runScanLane above.
   const pageGuard = createPageWorkGuard(context.runGuard);
+  const navigationUrl = context.servedUrlByIdentity.get(url);
 
   return scheduler.schedule(async () => {
     // Issue #223: same "actual page work only" timing window as
@@ -687,6 +702,7 @@ async function analyzePageInTurn(
         guard: pageGuard,
         ...(timeoutMs !== undefined ? { timeoutMs } : {}),
         ...(context.userAgent !== undefined ? { userAgent: context.userAgent } : {}),
+        ...(navigationUrl !== undefined ? { navigationUrl } : {}),
         ...(context.mentionsLegalesUrl !== undefined
           ? { mentionsLegalesUrl: context.mentionsLegalesUrl }
           : {}),
@@ -1144,8 +1160,12 @@ async function acquireLighthouseRun(
         : undefined;
     const startedAt = new Date();
     let result: LighthouseAnalysisResult;
+    const navigationUrl = context.servedUrlByIdentity.get(url);
     try {
-      result = await runLighthouseAnalysis(url, recovery?.debugPort ?? debugPort, { scheduler });
+      result = await runLighthouseAnalysis(url, recovery?.debugPort ?? debugPort, {
+        scheduler,
+        ...(navigationUrl !== undefined ? { navigationUrl } : {}),
+      });
     } finally {
       await recovery?.browser.close();
     }
@@ -2184,9 +2204,14 @@ export async function scanSite(
   // Concurrency comes from the configured bound rather than the clamped one
   // further down, since that clamp only exists to avoid creating idle lanes for
   // a site with fewer pages than lanes.
+  const pushbackEvents: HostPushbackEvent[] = [];
   const scheduler = new HostRequestScheduler({
     floorDelayMs: options.delayMs ?? getCrawlDelayMs(),
     maxConcurrency: options.concurrency ?? getScanConcurrency(),
+    onPushback: (event) => {
+      pushbackEvents.push(event);
+      options.onProgress?.({ type: 'pushback', event });
+    },
   });
   const networkSafetyDispositions: NetworkSafetyDisposition[] = [];
   const onNetworkSafetyBlocked =
@@ -2336,6 +2361,11 @@ export async function scanSite(
   scheduler.raiseDelayTo(crawl.effectiveDelayMs);
 
   const pagesToScan = crawl.pages.filter((page) => page.status === 'visited');
+  const servedUrlByIdentity = new Map(
+    crawl.pages
+      .filter((page) => page.status === 'visited' && page.servedUrl !== undefined)
+      .map((page) => [page.url, page.servedUrl!] as const),
+  );
   options.onProgress?.({ type: 'crawl-exclusions', excluded: countCrawlExclusions(crawl.pages) });
 
   const inventoryLedger =
@@ -2430,9 +2460,10 @@ export async function scanSite(
   // mentionsLegalesPageUrl (write-audit.ts still reads crawl's own value,
   // undefined here), only for choosing which already-visited page's
   // onRenderedPage hook runs the text extraction.
-  const mentionsLegalesUrlForScan =
-    crawl.mentionsLegalesPageUrl ??
-    (pagesToScan.some((page) => page.url === crawl.startUrl) ? crawl.startUrl : undefined);
+  const homepageIdentity = crawl.homepageUrl ?? crawl.startUrl;
+  const homepagePage = pagesToScan.find((page) => page.url === homepageIdentity);
+  const homepageUrlForScan = homepagePage?.url;
+  const mentionsLegalesUrlForScan = crawl.mentionsLegalesPageUrl ?? homepageUrlForScan;
   // Plan 036: true only when the fallback above actually fired (no URL
   // matched the heuristic), so the evidence never implies a real match.
   const mentionsLegalesHomepageFallback =
@@ -2446,7 +2477,7 @@ export async function scanSite(
   // Skipped entirely (both fields left undefined) when the homepage
   // itself was never visited (e.g. disallowed by its own robots.txt),
   // since there is no page to attribute the finding to.
-  const homepageWasVisited = pagesToScan.some((page) => page.url === crawl.startUrl);
+  const homepageWasVisited = homepageUrlForScan !== undefined;
   const sitemapCheck =
     homepageWasVisited && crawl.sitemap !== undefined
       ? {
@@ -2457,7 +2488,6 @@ export async function scanSite(
           discoveredUrls: crawl.linkDiscoveredUrls,
         }
       : undefined;
-  const homepageUrlForScan = homepageWasVisited ? crawl.startUrl : undefined;
 
   // llms.txt is a site-level fetch, same shape as sitemap.xml above -
   // fetched once here regardless of whether the homepage itself was
@@ -2562,7 +2592,7 @@ export async function scanSite(
   const cookieConsentCheck = homepageWasVisited
     ? await recordSite('cookie-consent', async (profile) => {
         const value = await scheduler.schedule(() =>
-          checkCookieConsent(options.browser, crawl.startUrl, {
+          checkCookieConsent(options.browser, homepageUrlForScan!, {
             timeoutMs: boundFor(profile),
             guard: runGuard,
             ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
@@ -2656,6 +2686,7 @@ export async function scanSite(
       resumeActive: resumedFromCheckpoint,
       timeoutMs: options.timeoutMs,
       userAgent: options.userAgent,
+      servedUrlByIdentity,
       mentionsLegalesUrl: mentionsLegalesUrlForScan,
       redirectHostCache,
       homepageUrl: homepageUrlForScan,
@@ -2716,6 +2747,7 @@ export async function scanSite(
       ...(cruxAcquisitionStatus !== undefined ? { cruxAcquisitionStatus } : {}),
       ...(networkSafetyDispositions.length > 0 ? { networkSafetyDispositions } : {}),
       ...(finalInventory !== undefined ? { inventoryLedger: finalInventory } : {}),
+      ...(pushbackEvents.length > 0 ? { pushbackEvents: [...pushbackEvents] } : {}),
     };
   }
 
@@ -2759,6 +2791,7 @@ export async function scanSite(
           options.screenshotDir,
           options.timeoutMs,
           options.userAgent,
+          servedUrlByIdentity,
           mentionsLegalesUrlForScan,
           crawl.mentionsLegalesSearchedUrls,
           mentionsLegalesHomepageFallback,
@@ -2786,5 +2819,6 @@ export async function scanSite(
     ...(cruxFieldData !== undefined ? { cruxFieldData } : {}),
     ...(networkSafetyDispositions.length > 0 ? { networkSafetyDispositions } : {}),
     ...(finalInventory !== undefined ? { inventoryLedger: finalInventory } : {}),
+    ...(pushbackEvents.length > 0 ? { pushbackEvents: [...pushbackEvents] } : {}),
   };
 }

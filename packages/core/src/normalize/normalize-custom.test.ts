@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { extractCustomCandidates, LCEN_MENTIONS_LEGALES_RULE_ID } from './normalize-custom.js';
+import {
+  extractCustomCandidates,
+  isOverseasFrenchDomain,
+  LCEN_MENTIONS_LEGALES_RULE_ID,
+} from './normalize-custom.js';
 
 describe('extractCustomCandidates (LCEN mentions-legales)', () => {
   it('emits nothing when a SIREN was found', () => {
@@ -9,6 +13,14 @@ describe('extractCustomCandidates (LCEN mentions-legales)', () => {
         siren: '732829320',
       }),
     ).toEqual([]);
+  });
+
+  it('leaves LCEN absence on overseas domains for a manual jurisdiction check', () => {
+    expect(isOverseasFrenchDomain('https://www.example.nc/mentions-legales')).toBe(true);
+    expect(extractCustomCandidates({ pageUrl: 'https://www.example.nc/mentions-legales' })).toEqual(
+      [],
+    );
+    expect(isOverseasFrenchDomain('https://example.fr/mentions-legales')).toBe(false);
   });
 
   it('emits nothing when only an RCS or TVA number was found', () => {

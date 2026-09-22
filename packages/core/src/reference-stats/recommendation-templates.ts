@@ -170,6 +170,15 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
       },
     },
   ],
+  'sitemap-lists-redirects': [
+    {
+      id: 'sitemap-lists-redirects-use-final-urls',
+      text: {
+        fr: 'Remplacez les URL redirigées ou externes du sitemap par les URL finales et canoniques appartenant au site.',
+        en: 'Replace redirected or off-site sitemap URLs with the final canonical URLs belonging to the site.',
+      },
+    },
+  ],
   'jsonld-missing': [
     {
       id: 'jsonld-missing-add-structured-data',

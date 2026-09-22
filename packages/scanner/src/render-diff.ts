@@ -1,7 +1,13 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { Browser, Page } from 'playwright';
-import type { RawDocumentSignals, RenderDiffResult } from '@odysseus/core';
+import {
+  isChallengeMarker,
+  isChallengeTitle,
+  MINIMAL_RAW_MARKUP_LENGTH,
+  type RawDocumentSignals,
+  type RenderDiffResult,
+} from '@odysseus/core';
 import { DEFAULT_TIMEOUT_MS } from './browser.js';
 import { getCrawlerUserAgent, getRenderSettleTimeoutMs } from './config.js';
 import { computeMissingPercent, extractTextFromHtml } from './extract-text.js';
@@ -14,6 +20,7 @@ import {
   type NetworkSafetyBlockHandler,
 } from './browser-network-safety.js';
 import type { NetworkTargetPolicy } from './network-target-policy.js';
+import type { HostRequestScheduler } from './host-request-scheduler.js';
 import {
   observeRenderedReadiness,
   watchSignificantResourceFailures,
@@ -32,6 +39,9 @@ export interface RenderDiffOutcome extends RenderDiffResult {
 }
 
 export interface RenderDiffOptions {
+  /** The spelling to request when page identity is slash-free but the crawl
+   * observed a same-identity server redirect. */
+  navigationUrl?: string;
   timeoutMs?: number;
   /** The `pages/` parent directory for this run (see artifacts/paths.ts
    *  for the layout). Screenshots land at
@@ -47,6 +57,9 @@ export interface RenderDiffOptions {
   /** Plan 059: shared host scheduler slot before the rendered navigation.
    *  When provided this replaces preRenderedDelayMs; callers must never apply both. */
   beforeRenderedNavigation?: () => Promise<void>;
+  /** The shared scheduler is notified when the host answers with a
+   *  rate-limit/transient response or a known challenge document. */
+  scheduler?: HostRequestScheduler;
   /** Invoked once against the fully rendered page, before its context
    *  closes, so callers (the scanner orchestration) can run additional
    *  analysis (axe-core) against the exact same navigation instead of
@@ -114,6 +127,33 @@ export async function renderDiff(
   const userAgent = options.userAgent ?? getCrawlerUserAgent();
   const { screenshotDir } = options;
 
+  const retryAfterMs = (headers: Record<string, string>): number | undefined => {
+    const value = headers['retry-after'];
+    if (value === undefined) return undefined;
+    const seconds = Number(value.trim());
+    if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000;
+    const timestamp = Date.parse(value);
+    return Number.isFinite(timestamp) ? Math.max(0, timestamp - Date.now()) : undefined;
+  };
+  const noteResponsePushback = (status: number | undefined, headers: Record<string, string>) => {
+    const retryAfter = retryAfterMs(headers);
+    if (
+      status !== undefined &&
+      (status === 429 ||
+        status === 503 ||
+        (status >= 500 && status <= 599) ||
+        retryAfter !== undefined)
+    ) {
+      options.scheduler?.noteRateLimited({
+        pageUrl: url,
+        fetcher: 'render',
+        kind: status === 429 ? 'rate-limit' : 'origin-transient',
+        ...(status !== undefined ? { status } : {}),
+        ...(retryAfter !== undefined ? { retryAfterMs: retryAfter } : {}),
+      });
+    }
+  };
+
   const runDir = path.join(screenshotDir, buildPageDir(url));
   await fs.mkdir(runDir, { recursive: true });
   const rawScreenshotRef = path.join(runDir, 'raw.png');
@@ -140,19 +180,35 @@ export async function renderDiff(
   let rawDocument: RawDocumentSignals;
   let httpStatus: number;
   let renderedTextLength: number;
+  let renderedHttpStatus: number | undefined;
+  let renderedTitle: string | undefined;
+  let renderedInterstitialMarkers: readonly string[] | undefined;
   const consoleErrors: string[] = [];
   try {
     rawContext.setDefaultTimeout(timeoutMs);
     rawContext.setDefaultNavigationTimeout(timeoutMs);
     const rawPage = await rawContext.newPage();
-    const rawResponse = await rawPage.goto(url, { waitUntil: 'load' });
+    const rawResponse = await rawPage.goto(options.navigationUrl ?? url, { waitUntil: 'load' });
     if (!rawResponse) {
       throw new Error(`render-diff: no HTTP response received for ${url}`);
     }
     httpStatus = rawResponse.status();
+    noteResponsePushback(httpStatus, rawResponse.headers());
     const rawHtml = await rawPage.content();
     rawTextLength = extractTextFromHtml(rawHtml).length;
     rawDocument = analyzeRawDocument(rawHtml);
+    if (
+      rawDocument.interstitialMarkers.some((marker) => isChallengeMarker(marker)) ||
+      (rawDocument.interstitialMarkers.includes('meta-refresh') &&
+        rawDocument.markupLength <= MINIMAL_RAW_MARKUP_LENGTH)
+    ) {
+      options.scheduler?.noteRateLimited({
+        pageUrl: url,
+        fetcher: 'render',
+        kind: 'bot-challenge',
+        ...(httpStatus !== undefined ? { status: httpStatus } : {}),
+      });
+    }
     options.onRawDocument?.(rawHtml);
     if (options.onRawRobotsHeader !== undefined) {
       options.onRawRobotsHeader(await rawResponse.headerValue('x-robots-tag'));
@@ -197,7 +253,11 @@ export async function renderDiff(
       // single navigation. Measured on www.lagnonu.fr (2026-08-24): idle
       // never arrived in 120s, while the rendered text was already complete
       // and byte-identical in length at 4.3s under 'load'.
-      const renderedResponse = await renderedPage.goto(url, { waitUntil: 'load' });
+      const renderedResponse = await renderedPage.goto(options.navigationUrl ?? url, {
+        waitUntil: 'load',
+      });
+      renderedHttpStatus = renderedResponse?.status();
+      noteResponsePushback(renderedHttpStatus, renderedResponse?.headers() ?? {});
       let networkQuiet = true;
       try {
         await renderedPage.waitForLoadState('networkidle', { timeout: settleTimeoutMs });
@@ -226,6 +286,17 @@ export async function renderDiff(
       }
       const renderedText = await renderedPage.evaluate(() => document.body.innerText);
       renderedTextLength = renderedText.trim().length;
+      renderedTitle = await renderedPage.title().catch(() => undefined);
+      const renderedHtml = await renderedPage.content().catch(() => '');
+      renderedInterstitialMarkers = analyzeRawDocument(renderedHtml).interstitialMarkers;
+      if (renderedInterstitialMarkers.length > 0 || isChallengeTitle(renderedTitle)) {
+        options.scheduler?.noteRateLimited({
+          pageUrl: url,
+          fetcher: 'render',
+          kind: 'bot-challenge',
+          ...(renderedHttpStatus !== undefined ? { status: renderedHttpStatus } : {}),
+        });
+      }
 
       // Both screenshots or neither: a raw/rendered pair only means anything
       // read side by side, and the pruner deletes them as a pair too.
@@ -244,7 +315,15 @@ export async function renderDiff(
         });
       }
 
-      await options.onRenderedPage?.(renderedPage);
+      const acquisitionFailure =
+        httpStatus >= 400 ||
+        (renderedHttpStatus ?? 0) >= 400 ||
+        rawDocument.interstitialMarkers.length > 0 ||
+        renderedInterstitialMarkers.length > 0 ||
+        /security\s+(check|verification)|verifying\s+(you are|your browser)|checking\s+your\s+browser|just a moment|attention required|test de sécurité|vérification anti[- ]robot/i.test(
+          renderedTitle ?? '',
+        );
+      if (!acquisitionFailure) await options.onRenderedPage?.(renderedPage);
     } finally {
       options.guard?.untrack(renderedContext);
       await renderedContext.close();
@@ -263,6 +342,9 @@ export async function renderDiff(
     renderedScreenshotRef,
     consoleErrors,
     httpStatus,
+    ...(renderedHttpStatus !== undefined ? { renderedHttpStatus } : {}),
+    ...(renderedTitle !== undefined ? { renderedTitle } : {}),
+    ...(renderedInterstitialMarkers !== undefined ? { renderedInterstitialMarkers } : {}),
     rawDocument,
     renderedLandedUrl,
   };

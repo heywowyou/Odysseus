@@ -154,6 +154,17 @@ describe('extractHeadMetadata against real pages', () => {
     expect(result.robotsMeta).toBe('noindex, follow');
   });
 
+  it('extracts owned language-switcher links with structural evidence', async () => {
+    const result = await extractFromHtml(`<html lang="fr"><head></head><body>
+      <nav aria-label="Language"><a href="/fr/a">Français</a><a href="/en/a">English</a></nav>
+    </body></html>`);
+
+    expect(result.languageSwitcherLinks).toEqual([
+      { href: new URL('/fr/a', result.pageUrl).toString(), lang: 'fr' },
+      { href: new URL('/en/a', result.pageUrl).toString(), lang: 'en' },
+    ]);
+  });
+
   /** Issue #290: the declared <html lang> rides along with the head
    *  metadata so the manifest can attribute a root-path page to the
    *  language the site itself declares. */

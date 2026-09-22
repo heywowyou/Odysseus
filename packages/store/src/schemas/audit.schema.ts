@@ -97,8 +97,51 @@ const crawlStatsSchema = new Schema(
         filteredPageCount: { type: Number, required: true },
         capOmittedPageCount: { type: Number, required: true },
         failedSitemapCount: { type: Number, required: true },
+        sitemapUrls: { type: [String] },
       },
     },
+  },
+  { _id: false },
+);
+
+const pushbackEventSchema = new Schema(
+  {
+    pageUrl: { type: String, required: true },
+    kind: {
+      type: String,
+      enum: ['rate-limit', 'bot-challenge', 'origin-transient'],
+      required: true,
+    },
+    fetcher: {
+      type: String,
+      enum: ['crawl', 'render', 'lighthouse', 'canonical'],
+      required: true,
+    },
+    occurredAt: { type: String, required: true },
+    status: { type: Number },
+    retryAfterMs: { type: Number },
+  },
+  { _id: false },
+);
+
+const coverageLimitationSchema = new Schema(
+  {
+    ruleId: {
+      type: String,
+      required: true,
+      enum: [
+        'accessibility-statement-missing',
+        'lcen-mentions-legales-missing',
+        'consent-mechanism-absent',
+        'hreflang-missing',
+        'structured-data-entity-missing',
+        'sitemap-orphan-page',
+        'llms-txt-missing',
+      ],
+    },
+    blockedCandidateCount: { type: Number, required: true },
+    failedCandidateCount: { type: Number, required: true },
+    candidateUrls: { type: [String] },
   },
   { _id: false },
 );
@@ -196,6 +239,7 @@ const manifestPageEntrySchema = new Schema(
         // Issue #39: navigated to a non-2xx response; inventoried with its
         // httpStatus, never scanned.
         'http-error-status',
+        'blocked',
         // Issue #85: a 200 whose content belongs to the URL the browser
         // redirected to. Absent until issue #302 added its neighbour
         // below, which meant saving an audit containing one was rejected.
@@ -206,6 +250,15 @@ const manifestPageEntrySchema = new Schema(
       ],
     },
     httpStatus: { type: Number },
+    language: { type: String },
+    noindex: { type: Boolean },
+    pluginObject: {
+      _id: false,
+      type: {
+        postType: { type: String, required: true },
+        bodyClass: { type: String, required: true },
+      },
+    },
     renderDiffMissingPercent: { type: Number },
     // Issue #301: the raw fetch's own signals, so a stored audit can be
     // re-reported without re-reading the scan artifacts.
@@ -576,8 +629,18 @@ export const auditSchema = new Schema<AuditDocument>(
     tool: { type: toolVersionsSchema, required: true },
     config: { type: configSnapshotSchema, required: true },
     crawl: { type: crawlStatsSchema, required: true },
+    pushbackEvents: { type: [pushbackEventSchema] },
+    coverageLimitations: { type: [coverageLimitationSchema] },
     pages: { type: [manifestPageEntrySchema], default: [] },
     continuationGuardSummary: { type: continuationGuardSummarySchema },
+    relativeLinkNestingSummary: {
+      _id: false,
+      type: {
+        omittedUrlCount: { type: Number, required: true },
+        omittedExampleUrls: { type: [String], required: true },
+        repeatedSegments: { type: [String], required: true },
+      },
+    },
     siteSignals: { type: siteSignalsSchema },
     cruxFieldData: { type: cruxFieldDataSchema },
     translationClusters: { type: [translationClusterSchema], default: undefined },

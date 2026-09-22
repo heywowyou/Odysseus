@@ -36,6 +36,7 @@ export interface KeyboardNavigationCheckInput {
   pageUrl: string;
   tabbableCount: number;
   tabbableSelectors: string[];
+  tabbableKinds?: Array<'ordinary' | 'native-substop' | 'embedded' | 'shadow-host'>;
   focusSequence: Array<number | null>;
 }
 
@@ -50,6 +51,8 @@ export function extractKeyboardNavigationCandidates(
     const next = input.focusSequence[i + 1];
     if (current === null || current === undefined) continue;
     if (current === next) {
+      const kind = input.tabbableKinds?.[current] ?? 'ordinary';
+      if (kind !== 'ordinary') continue;
       const selector = input.tabbableSelectors[current] ?? `[tabbable-index="${current}"]`;
       candidates.push({
         source: 'custom',

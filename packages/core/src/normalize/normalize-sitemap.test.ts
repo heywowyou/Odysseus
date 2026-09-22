@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   extractSitemapCandidates,
+  SITEMAP_LISTS_REDIRECTS_RULE_ID,
   SITEMAP_MISSING_RULE_ID,
   SITEMAP_STALE_RULE_ID,
   SITEMAP_ORPHAN_PAGE_RULE_ID,
@@ -218,5 +219,29 @@ describe('sitemap-orphan-page', () => {
     expect(candidates.map((c) => c.ruleId).sort()).toEqual(
       [SITEMAP_ORPHAN_PAGE_RULE_ID, SITEMAP_STALE_RULE_ID].sort(),
     );
+  });
+});
+
+describe('sitemap-lists-redirects', () => {
+  it('reports redirected and off-site entries separately and excludes them from absence comparisons', () => {
+    const candidates = extractSitemapCandidates(
+      baseInput({
+        entries: [
+          { url: 'https://example.com/' },
+          { url: 'https://example.com/old-home' },
+          { url: 'https://other.example/landing' },
+        ],
+        crawledUrls: ['https://example.com/', 'https://example.com/current'],
+        redirectedUrls: ['https://example.com/old-home'],
+      }),
+    );
+
+    expect(candidates.map((candidate) => candidate.ruleId)).toEqual([
+      SITEMAP_LISTS_REDIRECTS_RULE_ID,
+    ]);
+    expect(candidates[0]?.rawEvidenceForPage).toEqual({
+      redirectedUrls: ['https://example.com/old-home'],
+      externalUrls: ['https://other.example/landing'],
+    });
   });
 });

@@ -473,7 +473,7 @@ describe('crawlSite non-2xx responses (issue #39)', () => {
     });
 
     const dead = result.pages.find((page) => page.url === 'https://example.com/dead');
-    expect(dead?.status).toBe('http-error-status');
+    expect(dead?.status).toBe('blocked');
     expect(dead?.httpStatus).toBe(500);
     expect(
       result.pages.find((page) => page.url === 'https://example.com/only-via-dead'),

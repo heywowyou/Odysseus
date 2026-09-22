@@ -127,6 +127,48 @@ describe('pressure only ever increases', () => {
     expect(scheduler.concurrency).toBe(1);
   });
 
+  it('reports each pushback with its source and timestamp', () => {
+    const events: unknown[] = [];
+    const scheduler = new HostRequestScheduler({
+      floorDelayMs: 1000,
+      maxConcurrency: 4,
+      now: () => 1_700_000_000_000,
+      onPushback: (event) => events.push(event),
+    });
+
+    scheduler.noteRateLimited({
+      pageUrl: 'https://example.com/products',
+      kind: 'rate-limit',
+      fetcher: 'crawl',
+      status: 429,
+      retryAfterMs: 5000,
+    });
+    scheduler.noteRateLimited({
+      pageUrl: 'https://example.com/products',
+      kind: 'bot-challenge',
+      fetcher: 'render',
+      status: 200,
+    });
+
+    expect(events).toEqual([
+      {
+        pageUrl: 'https://example.com/products',
+        kind: 'rate-limit',
+        fetcher: 'crawl',
+        status: 429,
+        retryAfterMs: 5000,
+        occurredAt: '2023-11-14T22:13:20.000Z',
+      },
+      {
+        pageUrl: 'https://example.com/products',
+        kind: 'bot-challenge',
+        fetcher: 'render',
+        status: 200,
+        occurredAt: '2023-11-14T22:13:20.000Z',
+      },
+    ]);
+  });
+
   it('keeps at least one lane, so backing off never deadlocks the run', () => {
     const scheduler = new HostRequestScheduler({ floorDelayMs: 100, maxConcurrency: 2 });
     for (let index = 0; index < 8; index += 1) scheduler.noteRateLimited();

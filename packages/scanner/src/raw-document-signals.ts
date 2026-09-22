@@ -27,6 +27,12 @@ const INTERSTITIAL_PATTERNS: ReadonlyArray<{ name: string; pattern: RegExp }> = 
   // their own markers rather than the visible sentence, which is
   // localised.
   { name: 'bot-challenge', pattern: /cf[-_]chl|cf-browser-verification|challenge-platform/i },
+  { name: 'o2switch-challenge', pattern: /o2swit\.ch\/assets\/tiger\.svg/i },
+  { name: 'datadome-challenge', pattern: /(?:static\.)?captcha-delivery\.com|datadome/i },
+  {
+    name: 'waf-security-check',
+    pattern: /test\s+de\s+s[ée]curit[ée]|security\s+(?:check|verification)/i,
+  },
   { name: 'bot-challenge-title', pattern: /<title>\s*(just a moment|attention required)/i },
   // A document whose only job is to send the browser somewhere else. The
   // text it carries belongs to no page.

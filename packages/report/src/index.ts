@@ -54,6 +54,13 @@ export {
 export { buildRenderedPriorities } from './template/rendered-priorities.js';
 export type { RenderedPriority, PriorityEvidence } from './template/rendered-priorities.js';
 export {
+  detectFindingVendor,
+  detectVendor,
+  isConfinedToThirdParty,
+  isThirdPartyFinding,
+  summarizeThirdPartyFindings,
+} from './template/third-party-attribution.js';
+export {
   assertReferenceAuditNoLeaks,
   buildReferenceAuditShowcase,
   findReferenceAuditLeaks,
@@ -154,7 +161,6 @@ export type { RuleTranslation } from './template/rule-translations.js';
  *  the report itself would render, instead of duplicating the "which grade
  *  wins" decision in @odysseus/interface. */
 export { computeAutomaticGrade, resolveEffectiveGrade } from './template/grade.js';
-export { summarizeThirdPartyFindings } from './template/third-party-attribution.js';
 
 export async function generateReportPdf(
   input: GenerateReportInput,

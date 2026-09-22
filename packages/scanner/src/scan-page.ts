@@ -5,9 +5,10 @@ import type {
   TransactionalFlowEvidence,
   TransactionalFlowRedirectCheck,
 } from '@odysseus/core';
+import { isBlockedRender } from '@odysseus/core';
 import { type AxeResults, runAxe } from './axe.js';
 import { runLighthouseIsolated } from './lighthouse-isolated.js';
-import { renderDiff, type RenderDiffOutcome } from './render-diff.js';
+import { renderDiff, type RenderDiffOptions, type RenderDiffOutcome } from './render-diff.js';
 import {
   extractMentionsLegales,
   type MentionsLegalesExtraction,
@@ -88,12 +89,20 @@ import type { ScanSurface, SurfaceLimitationRecord } from './evidence-surfaces.j
 import type { PageAuditProfile } from './page-audit-profile.js';
 
 export interface ScanPageOptions {
+  /** Served spelling learned during crawl, when it is identity-equivalent to
+   *  `url` but the server insists on a slash or other presentation detail. */
+  navigationUrl?: string;
   /** Politeness delay applied between the raw/rendered/Lighthouse passes. */
   delayMs?: number;
   /** Plan 059: run-wide host scheduler. The outer lane owns the first
    *  navigation; inner rendered/Lighthouse navigations use scheduler.pace(). */
   scheduler?: HostRequestScheduler;
   timeoutMs?: number;
+  /** Independent budget for each rendered-page check. It is deliberately
+   * below the page watchdog so one hanging check can fail alone while the
+   * remaining checks still produce evidence. Tests may set this to a small
+   * value; production derives a conservative fraction from timeoutMs. */
+  checkTimeoutMs?: number;
   userAgent?: string;
   /** Milestone 9b: skips the Lighthouse pass (and the pre-Lighthouse
    *  politeness delay, since there is then nothing to space out from
@@ -318,6 +327,7 @@ export interface LighthouseAnalysisOptions {
   delayMs?: number;
   /** Plan 059: waits for a request slot without acquiring another lane. */
   scheduler?: HostRequestScheduler;
+  navigationUrl?: string;
 }
 
 export interface LighthouseAnalysisResult {
@@ -329,8 +339,71 @@ function toErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function lighthouseRuntimeError(result: LighthouseResult): string | undefined {
+  const value = (result as LighthouseResult & { runtimeError?: unknown }).runtimeError;
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    const error = value as { code?: unknown; message?: unknown };
+    const code = typeof error.code === 'string' ? error.code : undefined;
+    const message = typeof error.message === 'string' ? error.message : undefined;
+    return [code, message].filter((part): part is string => part !== undefined).join(': ');
+  }
+  return String(value);
+}
+
+function isRetryableLighthouseError(message: string): boolean {
+  return /NO_FCP|PROTOCOL_TIMEOUT/iu.test(message);
+}
+
+function robotsTxtPushbackStatus(result: LighthouseResult): number | undefined {
+  const audit = result.audits?.['robots-txt'];
+  if (audit === undefined) return undefined;
+  const evidence = JSON.stringify({
+    description: audit.description,
+    displayValue: audit.displayValue,
+    details: audit.details,
+  });
+  const match = /\b(429|5\d{2})\b/u.exec(evidence);
+  return match === null ? undefined : Number(match[1]);
+}
+
 async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function checkBudgetMs(options: Pick<ScanPageOptions, 'checkTimeoutMs' | 'timeoutMs'>): number {
+  if (options.checkTimeoutMs !== undefined) return Math.max(1, options.checkTimeoutMs);
+  const pageTimeoutMs = options.timeoutMs ?? getPageTimeoutMs();
+  // The full-audit page watchdog is intentionally much larger than a browser
+  // navigation timeout. Keep each check materially below both values while
+  // allowing ordinary DOM checks enough room on a slow but valid page.
+  return Math.max(1_000, Math.min(Math.floor(pageTimeoutMs / 4), 60_000));
+}
+
+/** Runs one check without letting a stalled promise hold the whole rendered
+ * page hostage. The late promise is observed after a timeout so a rejected
+ * browser operation cannot become an unhandled rejection while the next
+ * check is already running. */
+async function withCheckBudget<T>(
+  checkId: string,
+  action: () => Promise<T>,
+  budgetMs: number,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const work = Promise.resolve().then(action);
+  work.catch(() => undefined);
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`check-timeout: ${checkId} exceeded ${budgetMs}ms`)),
+      budgetMs,
+    );
+  });
+  try {
+    return await Promise.race([work, timeout]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
 }
 
 /**
@@ -392,6 +465,7 @@ export async function runRenderedAnalysis(
 ): Promise<RenderedAnalysisResult> {
   const checkOutcomes: Partial<Record<CheckId, CheckExecutionOutcome>> = {};
   const result: Omit<RenderedAnalysisResult, 'checkOutcomes'> = { url };
+  const perCheckBudgetMs = checkBudgetMs(options);
 
   if (options.sitemapCheck !== undefined && url === options.homepageUrl) {
     result.sitemapCheck = { ...options.sitemapCheck, pageUrl: url };
@@ -466,7 +540,8 @@ export async function runRenderedAnalysis(
         }>)
       | undefined;
 
-    result.renderDiff = await renderDiff(browser, url, {
+    const renderOptions: RenderDiffOptions = {
+      ...(options.navigationUrl !== undefined ? { navigationUrl: options.navigationUrl } : {}),
       screenshotDir: options.screenshotDir,
       isHomepage: url === options.homepageUrl,
       ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
@@ -476,6 +551,7 @@ export async function runRenderedAnalysis(
         : options.delayMs !== undefined
           ? { preRenderedDelayMs: options.delayMs }
           : {}),
+      ...(options.scheduler !== undefined ? { scheduler: options.scheduler } : {}),
       ...(options.guard !== undefined ? { guard: options.guard } : {}),
       ...(options.networkPolicy !== undefined ? { networkPolicy: options.networkPolicy } : {}),
       ...(options.onNetworkSafetyBlocked !== undefined
@@ -497,14 +573,26 @@ export async function runRenderedAnalysis(
       },
       onRenderedPage: async (page) => {
         try {
-          axeResult = await runAxe(page);
+          axeResult = await withCheckBudget('axe', () => runAxe(page), perCheckBudgetMs);
           checkOutcomes.axe = 'completed';
         } catch (error) {
           axeError = toErrorMessage(error);
           checkOutcomes.axe = 'failed';
         }
         try {
-          result.frames = await observeFrames(page, url);
+          result.frames = await withCheckBudget(
+            'frames',
+            () => observeFrames(page, url),
+            perCheckBudgetMs,
+          );
+          for (const frame of result.frames) {
+            if (frame.challengeMarkers === undefined) continue;
+            options.scheduler?.noteRateLimited({
+              pageUrl: url,
+              fetcher: 'render',
+              kind: 'bot-challenge',
+            });
+          }
         } catch {
           // No frame record is itself recorded: the evidence graph treats a
           // page without one as frame coverage unknown, never as frame-free.
@@ -513,7 +601,11 @@ export async function runRenderedAnalysis(
 
         if (options.mentionsLegalesUrl !== undefined && url === options.mentionsLegalesUrl) {
           try {
-            const bodyText = await page.evaluate(() => document.body.innerText);
+            const bodyText = await withCheckBudget(
+              'mentions-legales',
+              () => page.evaluate(() => document.body.innerText),
+              perCheckBudgetMs,
+            );
             mentionsLegalesResult = extractMentionsLegales(url, bodyText);
             mentionsLegalesResult.checkedPages = {
               resolvedUrl: options.mentionsLegalesUrl,
@@ -530,7 +622,11 @@ export async function runRenderedAnalysis(
         }
 
         try {
-          transactionalFlowEvidence = await detectTransactionalFlow(page, url);
+          transactionalFlowEvidence = await withCheckBudget(
+            'transactional-flow-evidence',
+            () => detectTransactionalFlow(page, url),
+            perCheckBudgetMs,
+          );
           checkOutcomes['transactional-flow-evidence'] = 'completed';
         } catch {
           // Transactional-flow detection is best-effort evidence, not a
@@ -542,18 +638,23 @@ export async function runRenderedAnalysis(
         }
 
         try {
-          transactionalFlowRedirectChecks = await findDelegatedBookingRedirectChecks(page, url, {
-            browser,
-            ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
-            ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
-            ...(options.redirectHostCache !== undefined
-              ? { hostCache: options.redirectHostCache }
-              : {}),
-            ...(options.bookingEngineUrl !== undefined
-              ? { bookingEngineUrl: options.bookingEngineUrl }
-              : {}),
-            ...(options.guard !== undefined ? { guard: options.guard } : {}),
-          });
+          transactionalFlowRedirectChecks = await withCheckBudget(
+            'transactional-flow-redirect-checks',
+            () =>
+              findDelegatedBookingRedirectChecks(page, url, {
+                browser,
+                ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
+                ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
+                ...(options.redirectHostCache !== undefined
+                  ? { hostCache: options.redirectHostCache }
+                  : {}),
+                ...(options.bookingEngineUrl !== undefined
+                  ? { bookingEngineUrl: options.bookingEngineUrl }
+                  : {}),
+                ...(options.guard !== undefined ? { guard: options.guard } : {}),
+              }),
+            perCheckBudgetMs,
+          );
           checkOutcomes['transactional-flow-redirect-checks'] = 'completed';
           // Only a confirmed single-property redirect promotes to
           // transactional-flow evidence (drives hasTransactionalFlow);
@@ -581,7 +682,11 @@ export async function runRenderedAnalysis(
         }
 
         try {
-          transactionalFlowAmbiguities = await detectUnresolvedBookingControls(page, url);
+          transactionalFlowAmbiguities = await withCheckBudget(
+            'transactional-flow-ambiguities',
+            () => detectUnresolvedBookingControls(page, url),
+            perCheckBudgetMs,
+          );
           checkOutcomes['transactional-flow-ambiguities'] = 'completed';
         } catch {
           // Same best-effort posture as the two transactional-flow passes
@@ -593,9 +698,14 @@ export async function runRenderedAnalysis(
         }
 
         try {
-          headMetadataResult = await extractHeadMetadata(page, url, {
-            ...(rawXRobotsTag !== undefined ? { xRobotsTag: rawXRobotsTag } : {}),
-          });
+          headMetadataResult = await withCheckBudget(
+            'head-metadata',
+            () =>
+              extractHeadMetadata(page, url, {
+                ...(rawXRobotsTag !== undefined ? { xRobotsTag: rawXRobotsTag } : {}),
+              }),
+            perCheckBudgetMs,
+          );
           checkOutcomes['head-metadata'] = 'completed';
         } catch (error) {
           headMetadataError = toErrorMessage(error);
@@ -604,7 +714,11 @@ export async function runRenderedAnalysis(
 
         // Best effort: a missed address only leaves the operator to find it
         // by hand, so a failure here is not a check outcome.
-        roleContactResult = await findPublishedRoleContact(page, url).catch(() => undefined);
+        roleContactResult = await withCheckBudget(
+          'role-contact',
+          () => findPublishedRoleContact(page, url),
+          perCheckBudgetMs,
+        ).catch(() => undefined);
 
         // Only meaningful once headMetadataResult exists and names
         // exactly one canonical URL - zero means nothing to check, more
@@ -617,12 +731,19 @@ export async function runRenderedAnalysis(
         // here in practice - kept in a try purely as defensive coding
         // for an unexpected throw (e.g. a malformed pageUrl).
         if (headMetadataResult?.canonicalUrls.length === 1) {
+          const canonicalUrl = headMetadataResult.canonicalUrls[0]!;
           try {
             canonicalTargetResult =
-              (await checkCanonicalTarget(
-                url,
-                headMetadataResult.canonicalUrls[0]!,
-                options.timeoutMs ?? getPageTimeoutMs(),
+              (await withCheckBudget(
+                'canonical-target',
+                () =>
+                  checkCanonicalTarget(
+                    url,
+                    canonicalUrl,
+                    options.timeoutMs ?? getPageTimeoutMs(),
+                    options.scheduler !== undefined ? { scheduler: options.scheduler } : {},
+                  ),
+                perCheckBudgetMs,
               )) ?? undefined;
             checkOutcomes['canonical-target'] = 'completed';
           } catch {
@@ -634,7 +755,11 @@ export async function runRenderedAnalysis(
         }
 
         try {
-          mixedContentResult = await extractMixedContentResources(page, url);
+          mixedContentResult = await withCheckBudget(
+            'mixed-content',
+            () => extractMixedContentResources(page, url),
+            perCheckBudgetMs,
+          );
           checkOutcomes['mixed-content'] = 'completed';
         } catch (error) {
           mixedContentError = toErrorMessage(error);
@@ -642,7 +767,11 @@ export async function runRenderedAnalysis(
         }
 
         try {
-          videoCaptionsResult = await checkVideoCaptions(page, url);
+          videoCaptionsResult = await withCheckBudget(
+            'video-captions',
+            () => checkVideoCaptions(page, url),
+            perCheckBudgetMs,
+          );
           checkOutcomes['video-captions'] = 'completed';
         } catch (error) {
           videoCaptionsError = toErrorMessage(error);
@@ -650,7 +779,11 @@ export async function runRenderedAnalysis(
         }
 
         try {
-          placeholderLabelsResult = await checkPlaceholderLabels(page, url);
+          placeholderLabelsResult = await withCheckBudget(
+            'placeholder-labels',
+            () => checkPlaceholderLabels(page, url),
+            perCheckBudgetMs,
+          );
           checkOutcomes['placeholder-labels'] = 'completed';
         } catch (error) {
           placeholderLabelsError = toErrorMessage(error);
@@ -658,7 +791,11 @@ export async function runRenderedAnalysis(
         }
 
         try {
-          altTextResult = await extractAltTextFacts(page, url);
+          altTextResult = await withCheckBudget(
+            'alt-text',
+            () => extractAltTextFacts(page, url),
+            perCheckBudgetMs,
+          );
           checkOutcomes['alt-text'] = 'completed';
         } catch (error) {
           altTextError = toErrorMessage(error);
@@ -666,7 +803,11 @@ export async function runRenderedAnalysis(
         }
 
         try {
-          structuredDataResult = await checkStructuredData(page, url);
+          structuredDataResult = await withCheckBudget(
+            'structured-data',
+            () => checkStructuredData(page, url),
+            perCheckBudgetMs,
+          );
           checkOutcomes['structured-data'] = 'completed';
         } catch (error) {
           structuredDataError = toErrorMessage(error);
@@ -677,7 +818,11 @@ export async function runRenderedAnalysis(
         // the other read-only checks rather than late with the ones that
         // send input events.
         try {
-          htmlValidityResult = await checkHtmlValidity(page, url);
+          htmlValidityResult = await withCheckBudget(
+            'html-validity',
+            () => checkHtmlValidity(page, url),
+            perCheckBudgetMs,
+          );
           checkOutcomes['html-validity'] = 'completed';
         } catch {
           htmlValidityResult = undefined;
@@ -689,8 +834,16 @@ export async function runRenderedAnalysis(
         // (it feeds the Lighthouse tie-break, not a client-facing
         // finding), so no checkOutcomes entry either.
         try {
-          const domCostFacts = await extractRenderedDomCostFacts(page);
-          const resourceTotals = (await readResourceTotals?.()) ?? {
+          const domCostFacts = await withCheckBudget(
+            'rendered-cost-profile',
+            () => extractRenderedDomCostFacts(page),
+            perCheckBudgetMs,
+          );
+          const resourceTotals = (await withCheckBudget(
+            'rendered-resource-profile',
+            () => readResourceTotals?.() ?? Promise.resolve(undefined),
+            perCheckBudgetMs,
+          )) ?? {
             resourceCount: 0,
             knownTransferBytes: 0,
             unknownTransferSizeCount: 0,
@@ -705,11 +858,12 @@ export async function runRenderedAnalysis(
         // transactional-flow detection: a failure here is the absence of a
         // comparison, not a page error worth surfacing to the client.
         if (headMetadataResult !== undefined) {
+          const jsonLdBlocks = headMetadataResult.jsonLdBlocks;
           try {
-            napConsistencyResult = await checkNapConsistency(
-              page,
-              url,
-              headMetadataResult.jsonLdBlocks,
+            napConsistencyResult = await withCheckBudget(
+              'nap-consistency',
+              () => checkNapConsistency(page, url, jsonLdBlocks),
+              perCheckBudgetMs,
             );
             checkOutcomes['nap-consistency'] = 'completed';
           } catch {
@@ -726,7 +880,11 @@ export async function runRenderedAnalysis(
         // reason about DOM state a Tab walk might have changed (focus
         // styles, a dropdown opened on :focus, etc.).
         try {
-          keyboardNavigationResult = await walkKeyboardNavigation(page, url);
+          keyboardNavigationResult = await withCheckBudget(
+            'keyboard-navigation',
+            () => walkKeyboardNavigation(page, url),
+            perCheckBudgetMs,
+          );
           checkOutcomes['keyboard-navigation'] = 'completed';
         } catch (error) {
           keyboardNavigationError = toErrorMessage(error);
@@ -739,7 +897,11 @@ export async function runRenderedAnalysis(
         // never a real click or submit()). Kept last so nothing else
         // this hook does can be affected by it.
         try {
-          formErrorHandlingResult = await checkFormErrorHandling(page, url);
+          formErrorHandlingResult = await withCheckBudget(
+            'form-error-handling',
+            () => checkFormErrorHandling(page, url),
+            perCheckBudgetMs,
+          );
           checkOutcomes['form-error-handling'] = 'completed';
         } catch (error) {
           formErrorHandlingError = toErrorMessage(error);
@@ -753,7 +915,11 @@ export async function runRenderedAnalysis(
         // restores the original viewport in its own finally block, but
         // ordering it last means nothing depends on that having worked.
         try {
-          reflowResult = await checkReflow(page, url);
+          reflowResult = await withCheckBudget(
+            'reflow',
+            () => checkReflow(page, url),
+            perCheckBudgetMs,
+          );
           checkOutcomes.reflow = 'completed';
         } catch {
           reflowResult = undefined;
@@ -827,8 +993,27 @@ export async function runRenderedAnalysis(
           }
         }
       },
-    });
-    checkOutcomes['render-diff'] = 'completed';
+    };
+    result.renderDiff = await renderDiff(browser, url, renderOptions);
+    // A challenge or transient response is acquisition failure, but a single
+    // later attempt can recover a short-lived WAF/rate-limit wall. The
+    // scheduler has already applied backoff when the first response was
+    // observed; a second blocked result remains excluded from analysis.
+    if (isBlockedRender(result.renderDiff)) {
+      result.renderDiff = await renderDiff(browser, url, renderOptions);
+    }
+    if (isBlockedRender(result.renderDiff)) {
+      const status = result.renderDiff.renderedHttpStatus ?? result.renderDiff.httpStatus;
+      result.renderDiffError =
+        status !== undefined
+          ? `HTTP ${status}: acquisition response was blocked or transient`
+          : 'bot challenge: acquisition document was not site content';
+      checkOutcomes['render-diff'] = 'failed';
+      checkOutcomes.axe = 'not-applicable';
+      checkOutcomes['head-metadata'] = 'not-applicable';
+    } else {
+      checkOutcomes['render-diff'] = 'completed';
+    }
   } catch (error) {
     result.renderDiffError = toErrorMessage(error);
     checkOutcomes['render-diff'] = 'failed';
@@ -895,11 +1080,37 @@ export async function runLighthouseAnalysis(
         ? () => sleep(options.delayMs!)
         : undefined;
 
-  try {
-    return { lighthouse: await runLighthouseSerialized(url, debugPort, beforeRun) };
-  } catch (error) {
-    return { lighthouseError: toErrorMessage(error) };
+  let lastError = 'Lighthouse did not return a usable result';
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const lighthouse = await runLighthouseSerialized(
+        options.navigationUrl ?? url,
+        debugPort,
+        beforeRun,
+      );
+      const runtimeError = lighthouseRuntimeError(lighthouse);
+      if (runtimeError !== undefined) {
+        lastError = `Lighthouse runtime error: ${runtimeError}`;
+        if (attempt === 0) continue;
+        return { lighthouseError: lastError };
+      }
+      const robotsStatus = robotsTxtPushbackStatus(lighthouse);
+      if (robotsStatus !== undefined) {
+        options.scheduler?.noteRateLimited({
+          pageUrl: url,
+          fetcher: 'lighthouse',
+          kind: robotsStatus === 429 ? 'rate-limit' : 'origin-transient',
+          status: robotsStatus,
+        });
+      }
+      return { lighthouse };
+    } catch (error) {
+      lastError = toErrorMessage(error);
+      if (attempt === 0 && isRetryableLighthouseError(lastError)) continue;
+      return { lighthouseError: lastError };
+    }
   }
+  return { lighthouseError: lastError };
 }
 
 /**
@@ -926,6 +1137,7 @@ export async function scanPage(
 
   if (!options.skipLighthouse) {
     const lighthouseResult = await runLighthouseAnalysis(url, debugPort, {
+      ...(options.navigationUrl !== undefined ? { navigationUrl: options.navigationUrl } : {}),
       ...(options.scheduler !== undefined ? { scheduler: options.scheduler } : {}),
       ...(options.scheduler === undefined && options.delayMs !== undefined
         ? { delayMs: options.delayMs }

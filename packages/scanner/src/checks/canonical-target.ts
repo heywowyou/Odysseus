@@ -26,6 +26,7 @@
 
 import { checkFetchTarget, type LookupAddresses } from '../address-guard.js';
 import { getCrawlerUserAgent } from '../config.js';
+import type { HostRequestScheduler } from '../host-request-scheduler.js';
 
 export interface CanonicalTargetCheckResult {
   pageUrl: string;
@@ -33,6 +34,9 @@ export interface CanonicalTargetCheckResult {
   httpStatus?: number;
   fetchError?: string;
   noindex: boolean;
+  /** A transient/rate-limit response is not evidence that the canonical is
+   * unreachable. It stays visible to coverage/manual review instead. */
+  undetermined?: boolean;
 }
 
 const META_TAG_PATTERN = /<meta[^>]*>/gi;
@@ -60,6 +64,9 @@ const MAX_CANONICAL_REDIRECTS = 20;
 export interface CanonicalTargetCheckOptions {
   /** Test seam for the address guard's DNS lookup. */
   lookupAddresses?: LookupAddresses;
+  /** Shared run scheduler, notified when the canonical fetch receives host
+   *  pushback so this extra request cannot bypass the audit's pacing policy. */
+  scheduler?: HostRequestScheduler;
 }
 
 /** A hop on the scanned page's own host was chosen by the operator along
@@ -103,11 +110,32 @@ export async function checkCanonicalTarget(
       // A target that resolves to a non-public address is not a fact about
       // the client's site worth reporting, and must not be requested.
       if (!(await hopIsAllowed(hop, pageHostname, options))) return null;
+      await options.scheduler?.pace();
       response = await fetch(hop, {
         redirect: 'manual',
         signal,
         headers: { 'user-agent': getCrawlerUserAgent() },
       });
+      const retryAfterValue = response.headers.get('retry-after');
+      const retryAfterSeconds = retryAfterValue === null ? Number.NaN : Number(retryAfterValue);
+      const retryAfterMs =
+        Number.isFinite(retryAfterSeconds) && retryAfterSeconds >= 0
+          ? retryAfterSeconds * 1000
+          : undefined;
+      if (
+        response.status === 429 ||
+        response.status === 503 ||
+        (response.status >= 500 && response.status <= 599) ||
+        retryAfterMs !== undefined
+      ) {
+        options.scheduler?.noteRateLimited({
+          pageUrl,
+          fetcher: 'canonical',
+          kind: response.status === 429 ? 'rate-limit' : 'origin-transient',
+          status: response.status,
+          ...(retryAfterMs !== undefined ? { retryAfterMs } : {}),
+        });
+      }
       const location = response.headers.get('location');
       if (response.status < 300 || response.status >= 400 || location === null) break;
       if (redirects >= MAX_CANONICAL_REDIRECTS) {
@@ -122,6 +150,15 @@ export async function checkCanonicalTarget(
       hop = new URL(location, hop);
     }
     if (!response.ok) {
+      if (response.status === 429 || response.status === 408 || response.status >= 500) {
+        return {
+          pageUrl,
+          canonicalUrl: resolved,
+          httpStatus: response.status,
+          noindex: false,
+          undetermined: true,
+        };
+      }
       return { pageUrl, canonicalUrl: resolved, httpStatus: response.status, noindex: false };
     }
     const html = await response.text();

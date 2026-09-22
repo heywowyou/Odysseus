@@ -73,6 +73,7 @@ export type InventoryDiscoverySource =
   | 'hreflang'
   | 'seed'
   | 'sitemap'
+  | 'redirect'
   /** Recovery provenance for a visited page restored from a stale or older
    *  checkpoint whose inventory omitted the page. This is intentionally not
    *  called `link`: the ledger must disclose that the original discovery route
@@ -97,6 +98,9 @@ export type InventoryDisposition =
   | 'non-html'
   | 'external'
   | 'http-error-status'
+  | 'blocked'
+  | 'redirect'
+  | 'relative-link-nesting'
   | 'error'
   | 'page-cap'
   | 'depth-bound'
@@ -117,6 +121,9 @@ const DISPOSITION_OUTCOMES: Readonly<Record<InventoryDisposition, InventoryOutco
   'non-html': 'omitted',
   external: 'omitted',
   'http-error-status': 'site-error',
+  blocked: 'site-error',
+  redirect: 'omitted',
+  'relative-link-nesting': 'omitted',
   error: 'scan-failed',
   'page-cap': 'omitted',
   'depth-bound': 'omitted',

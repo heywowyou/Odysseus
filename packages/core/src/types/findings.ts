@@ -190,6 +190,13 @@ export interface RenderDiffResult {
   /** Console errors captured during render. Often explains the failure. */
   consoleErrors: string[];
   httpStatus: number;
+  /** Status observed by the rendered browser navigation. Optional because
+   * historical scan artifacts only recorded the raw-fetch status. */
+  renderedHttpStatus?: number;
+  /** Settled rendered document title and challenge markers. These are
+   * scanner-derived acquisition facts, not page content to send to an LLM. */
+  renderedTitle?: string;
+  renderedInterstitialMarkers?: readonly string[];
   /** Issue #301. Optional: artifacts captured before this field existed
    *  still parse, and simply get no raw-fetch reliability check. */
   rawDocument?: RawDocumentSignals;

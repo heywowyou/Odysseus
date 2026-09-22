@@ -287,10 +287,11 @@ describe('what a failure justifies next', () => {
     }
   });
 
-  it('escalates a rate limit or bot wall instead of pressing the site harder', () => {
+  it('allows one isolated retry for a rate limit or bot wall before escalating', () => {
     expect(nextExecutionProfile('anti-bot-rate-limit', 'normal')).toMatchObject({
-      retryable: false,
-      reasonCode: 'escalate-rate-limit',
+      retryable: true,
+      nextProfile: 'isolated-retry',
+      reasonCode: 'fresh-context',
     });
   });
 

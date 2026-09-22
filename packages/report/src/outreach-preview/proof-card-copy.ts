@@ -556,6 +556,10 @@ export const OUTREACH_PROOF_CARD_COPY: Readonly<Record<string, OutreachProofCard
     fr: 'Une annotation de langue du site porte un code non reconnu.',
     en: "One of the site's language annotations carries an unrecognized code.",
   },
+  'hreflang-target-invalid': {
+    fr: 'Une annotation de langue du site pointe vers une page invalide.',
+    en: 'A language annotation points to an invalid page.',
+  },
   'hreflang-missing': {
     fr: 'Les versions linguistiques du site ne déclarent pas le lien entre elles.',
     en: "The site's language versions declare no link between one another.",
@@ -688,9 +692,17 @@ export const OUTREACH_PROOF_CARD_COPY: Readonly<Record<string, OutreachProofCard
     fr: "Une page listée par le site n'est reliée à aucune navigation interne.",
     en: 'A page listed by the site is connected to no internal navigation.',
   },
+  'sitemap-lists-redirects': {
+    fr: 'Le sitemap contient des adresses qui redirigent ou appartiennent à un autre site.',
+    en: 'The sitemap contains addresses that redirect or belong to another site.',
+  },
   'sitemap-stale': {
     fr: 'La liste des pages déclarée par le site ne correspond plus au site publié.',
     en: "The site's declared page list no longer matches the published site.",
+  },
+  'relative-link-nesting': {
+    fr: 'Un lien relatif construit une adresse imbriquée inattendue.',
+    en: 'A relative link builds an unexpected nested address.',
   },
   'structured-data-entity-missing': {
     fr: "Aucune donnée structurée ne décrit clairement l'établissement.",

@@ -28,6 +28,8 @@ import {
 import { CORE_WEB_VITAL_THRESHOLDS, rateCoreWebVital } from './cwv-thresholds.js';
 import type { CruxMetricKey } from './normalize-crux.js';
 import type { FindingCandidate } from './candidate.js';
+import { normalizeUrlIdentity } from './url-identity.js';
+import { shapeIdentity } from './normalize-axe.js';
 
 export interface LighthouseAuditRefInput {
   id: string;
@@ -69,6 +71,14 @@ export interface LighthouseAuditInput {
 export interface LighthouseResultInput {
   categories: Record<string, LighthouseCategoryInput>;
   audits: Record<string, LighthouseAuditInput>;
+  /** Lighthouse's settled browser URL. `finalUrl` is accepted for older
+   * fixtures and scanner adapters; new runs persist finalDisplayedUrl. */
+  finalDisplayedUrl?: string;
+  finalUrl?: string;
+  /** Lighthouse can return a structurally present LHR with no trustworthy
+   *  measurements when its gather phase failed (NO_FCP, protocol timeout,
+   *  etc.). Such a result is retained only for diagnostics, never graded. */
+  runtimeError?: { code?: string; message?: string } | string;
 }
 
 const SCANNED_CATEGORIES: Array<{ id: string; category: FindingCategory }> = [
@@ -246,19 +256,10 @@ function capSeverityByCoreWebVitalRating(
  *  field LCP reports on real connections. */
 const FIELD_METRIC_BY_AUDIT_ID: ReadonlyMap<string, CruxMetricKey> = new Map([
   ['largest-contentful-paint', 'lcp'],
-  ['largest-contentful-paint-element', 'lcp'],
-  ['lcp-breakdown-insight', 'lcp'],
-  ['lcp-discovery-insight', 'lcp'],
-  ['lcp-lazy-loaded', 'lcp'],
   ['first-contentful-paint', 'lcp'],
   ['speed-index', 'lcp'],
   ['cumulative-layout-shift', 'cls'],
-  ['layout-shifts', 'cls'],
-  ['cls-culprits-insight', 'cls'],
-  ['interaction-to-next-paint', 'inp'],
-  ['inp-breakdown-insight', 'inp'],
   ['total-blocking-time', 'inp'],
-  ['max-potential-fid', 'inp'],
 ] as const);
 
 /** Issue #300: a lab metric cannot outrank the real measurement of the
@@ -281,6 +282,19 @@ function capSeverityByGoodFieldData(
   const metric = FIELD_METRIC_BY_AUDIT_ID.get(auditId);
   if (metric === undefined || !goodFieldMetrics.has(metric)) return severity;
   return capAt(severity, 'moderate');
+}
+
+function fieldMetricForAudit(auditId: string): CruxMetricKey | undefined {
+  return FIELD_METRIC_BY_AUDIT_ID.get(auditId);
+}
+
+function robotsTxtAuditReportsHttpFailure(audit: LighthouseAuditInput): boolean {
+  const evidence = JSON.stringify({
+    description: audit.description,
+    displayValue: audit.displayValue,
+    details: audit.details,
+  });
+  return /\b(?:429|5\d{2})\b/u.test(evidence);
 }
 
 function extractCoreWebVitalMeasurement(
@@ -356,6 +370,65 @@ function auditHasActionableDetail(audit: LighthouseAuditInput): boolean {
   });
 }
 
+export function lighthouseFinalUrl(lhr: LighthouseResultInput): string | undefined {
+  return lhr.finalDisplayedUrl ?? lhr.finalUrl;
+}
+
+function onlySameIdentityRedirect(
+  auditId: string,
+  audit: LighthouseAuditInput,
+  pageUrl: string,
+): boolean {
+  if (auditId !== 'redirects') return false;
+  const items = audit.details?.items;
+  if (!Array.isArray(items) || items.length === 0) return false;
+  const pageIdentity = normalizeUrlIdentity(pageUrl);
+  if (pageIdentity === undefined) return false;
+  const urls: string[] = [];
+  for (const item of items as Array<Record<string, unknown>>) {
+    for (const key of ['url', 'from', 'to', 'source', 'destination']) {
+      const value = item[key];
+      if (typeof value === 'string' && value.length > 0) urls.push(value);
+    }
+  }
+  return urls.length > 0 && urls.every((url) => normalizeUrlIdentity(url) === pageIdentity);
+}
+
+function layoutShiftIdentity(auditId: string, node: LighthouseNodeValue): string | undefined {
+  if (auditId !== 'layout-shifts') return undefined;
+  const shape = shapeIdentity(node.snippet ?? '');
+  return shape === undefined ? undefined : `layout-shifts:${shape}`;
+}
+
+/** Reverse of the normal successor suppression: an insight that has no
+ * actionable item cannot replace a legacy audit that still carries the
+ * affected files or nodes. */
+export function computeNonActionableSuccessorsToDrop(
+  reports: readonly LighthouseResultInput[],
+): ReadonlySet<string> {
+  const dropped = new Set<string>();
+  for (const lhr of reports) {
+    for (const [successorId, successor] of Object.entries(lhr.audits)) {
+      if (!successor.replacesAudits?.length) continue;
+      if (!auditEmitsFinding(successor, successorId) || auditHasActionableDetail(successor))
+        continue;
+      if (
+        successor.replacesAudits.some((legacyId) => {
+          const legacy = lhr.audits[legacyId];
+          return (
+            legacy !== undefined &&
+            auditEmitsFinding(legacy, legacyId) &&
+            auditHasActionableDetail(legacy)
+          );
+        })
+      ) {
+        dropped.add(successorId);
+      }
+    }
+  }
+  return dropped;
+}
+
 /** D13 (2026-08-25, Lagnonu review): Lighthouse ships its newer "insight"
  *  audits *alongside* the legacy audits they supersede, and each insight
  *  names them in `replacesAudits`. Emitting both put the same defect in the
@@ -414,9 +487,23 @@ export function extractLighthouseCandidates(
    *  normalize-crux.ts's goodFieldMetrics. Empty by default, which is the
    *  correct behaviour for a site with no CrUX record. */
   goodFieldMetrics: ReadonlySet<CruxMetricKey> = new Set(),
+  droppedNonActionableSuccessors: ReadonlySet<string> = new Set(),
+  /** All CrUX metrics with a verdict, not only metrics in the good range. */
+  fieldMetricKeys: ReadonlySet<CruxMetricKey> = goodFieldMetrics,
+  /** True when the crawler's own robots.txt request completed. Lighthouse
+   * sometimes reports a WAF's 429/5xx answer as a broken robots file; that
+   * is pushback, not evidence about the site's robots policy. */
+  robotsTxtFetchedSuccessfully = false,
 ): FindingCandidate[] {
   const candidates: FindingCandidate[] = [];
   const superseded = supersededAudits ?? computeSupersededAudits([lhr]);
+
+  if (lhr.runtimeError !== undefined) return candidates;
+
+  const finalUrl = lighthouseFinalUrl(lhr);
+  if (finalUrl !== undefined && normalizeUrlIdentity(finalUrl) !== normalizeUrlIdentity(pageUrl)) {
+    return [];
+  }
 
   for (const { id: categoryId, category } of SCANNED_CATEGORIES) {
     const lhCategory = lhr.categories[categoryId];
@@ -425,7 +512,26 @@ export function extractLighthouseCandidates(
     for (const auditRef of lhCategory.auditRefs) {
       const audit = lhr.audits[auditRef.id];
       if (!audit) continue;
+      if (droppedNonActionableSuccessors.has(auditRef.id)) continue;
       if (!auditEmitsFinding(audit, auditRef.id)) continue;
+      if (onlySameIdentityRedirect(auditRef.id, audit, pageUrl)) continue;
+      if (
+        auditRef.id === 'robots-txt' &&
+        robotsTxtFetchedSuccessfully &&
+        robotsTxtAuditReportsHttpFailure(audit)
+      ) {
+        continue;
+      }
+
+      // CrUX owns a metric whenever it supplied a p75 verdict. Keep the lab
+      // measurement in the manifest's Core Web Vitals evidence, but do not
+      // turn the same metric into a second finding. Diagnostics and resource
+      // audits remain independent because they describe causes, not the
+      // field metric itself.
+      if (fieldMetricForAudit(auditRef.id) !== undefined) {
+        const metric = fieldMetricForAudit(auditRef.id);
+        if (metric !== undefined && fieldMetricKeys.has(metric)) continue;
+      }
 
       // D13: this audit's successor is already reporting the same defect, so
       // it must not become a second finding. Its file list is still carried
@@ -520,7 +626,12 @@ export function extractLighthouseCandidates(
             // Empty identity, so every item of this audit lands in one group
             // for the whole site (ruleId is already part of the key). The
             // file URLs travel as evidence below, not as separate findings.
-            ...(isResourceAudit ? { dedupeIdentity: '' } : {}),
+            ...(isResourceAudit
+              ? { dedupeIdentity: '' }
+              : (() => {
+                  const identity = layoutShiftIdentity(auditRef.id, node);
+                  return identity === undefined ? {} : { dedupeIdentity: identity };
+                })()),
             rawEvidenceForPage: {
               score: audit.score,
               scoreDisplayMode: audit.scoreDisplayMode,

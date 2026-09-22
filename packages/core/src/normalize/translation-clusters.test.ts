@@ -144,6 +144,36 @@ describe('buildTranslationClusters', () => {
     ]);
     expect(clusters).toHaveLength(1);
     expect(clusters[0]!.members).toHaveLength(2);
+    expect(clusters[0]!.derivation).toBe('hreflang');
+  });
+
+  it('builds and marks a cluster from an owned language switcher without hreflang', () => {
+    const clusters = buildTranslationClusters([
+      {
+        pageUrl: 'https://x.com/fr/a',
+        language: 'fr',
+        hreflangLinks: [],
+        languageSwitcherLinks: [
+          { lang: 'fr', href: '/fr/a' },
+          { lang: 'en', href: '/en/a' },
+        ],
+      },
+      {
+        pageUrl: 'https://x.com/en/a',
+        language: 'en',
+        hreflangLinks: [],
+        languageSwitcherLinks: [
+          { lang: 'fr', href: '/fr/a' },
+          { lang: 'en', href: '/en/a' },
+        ],
+      },
+    ]);
+
+    expect(clusters).toHaveLength(1);
+    expect(clusters[0]!.derivation).toBe('language-switcher');
+    expect(new Set(clusters[0]!.members.map((member) => member.lang))).toEqual(
+      new Set(['fr', 'en']),
+    );
   });
 
   it('is stable across input ordering', () => {

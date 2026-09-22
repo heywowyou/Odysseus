@@ -1,6 +1,15 @@
 import { execFileSync } from 'node:child_process';
-import { FINDINGS_SCHEMA_VERSION, UNKNOWN_BUILD_ID, normalizeBuildId } from '@odysseus/core';
-import type { PrivacySecurityCoverage, TranslationCluster } from '@odysseus/core';
+import {
+  deriveCoverageLimitations,
+  FINDINGS_SCHEMA_VERSION,
+  UNKNOWN_BUILD_ID,
+  normalizeBuildId,
+} from '@odysseus/core';
+import type {
+  AuditPushbackEvent,
+  PrivacySecurityCoverage,
+  TranslationCluster,
+} from '@odysseus/core';
 import type {
   AuditConfigSnapshot,
   AuditManifest,
@@ -65,6 +74,7 @@ export interface BuildManifestInput {
   cruxFieldData?: CruxFieldDataResult;
   privacySecurityCoverage?: PrivacySecurityCoverage;
   translationClusters?: TranslationCluster[];
+  pushbackEvents?: AuditPushbackEvent[];
 }
 
 export function buildManifest(input: BuildManifestInput): AuditManifest {
@@ -85,6 +95,7 @@ export function buildManifest(input: BuildManifestInput): AuditManifest {
     config: input.config,
     crawl: {
       startUrl: input.crawl.startUrl,
+      ...(input.crawl.homepageUrl !== undefined ? { homepageUrl: input.crawl.homepageUrl } : {}),
       visitedCount: input.crawl.visitedCount,
       maxPages: input.crawl.maxPages,
       maxDepth: input.crawl.maxDepth,
@@ -95,10 +106,19 @@ export function buildManifest(input: BuildManifestInput): AuditManifest {
       ...(input.crawl.sitemapCoverage !== undefined
         ? { sitemapCoverage: input.crawl.sitemapCoverage }
         : {}),
+      ...(input.crawl.sitemapUrls !== undefined ? { sitemapUrls: input.crawl.sitemapUrls } : {}),
     },
+    ...(input.pushbackEvents !== undefined ? { pushbackEvents: input.pushbackEvents } : {}),
+    ...(() => {
+      const limitations = deriveCoverageLimitations(input.pages);
+      return limitations.length > 0 ? { coverageLimitations: limitations } : {};
+    })(),
     pages: input.pages,
     ...(input.crawl.continuationGuardSummary !== undefined
       ? { continuationGuardSummary: input.crawl.continuationGuardSummary }
+      : {}),
+    ...(input.crawl.relativeLinkNestingSummary !== undefined
+      ? { relativeLinkNestingSummary: input.crawl.relativeLinkNestingSummary }
       : {}),
     ...(input.siteSignals !== undefined ? { siteSignals: input.siteSignals } : {}),
     ...(input.cruxFieldData !== undefined ? { cruxFieldData: input.cruxFieldData } : {}),

@@ -21,11 +21,13 @@
 
 import type { FindingCandidate } from './candidate.js';
 import { severityFromCustom } from './severity.js';
+import { normalizeUrlIdentity } from './url-identity.js';
 
 export const ROBOTS_BLOCKS_INDEXING_RULE_ID = 'robots-blocks-indexing';
 export const BROKEN_INTERNAL_LINK_RULE_ID = 'broken-internal-link';
 export const ROBOTS_DISALLOW_BROAD_RULE_ID = 'robots-disallow-broad';
 export const AI_CRAWLER_BLOCKED_RULE_ID = 'ai-crawler-blocked';
+const RELATIVE_LINK_NESTING_RULE_ID = 'relative-link-nesting';
 
 /** At or above this many discovered URLs blocked by one Disallow
  *  pattern, the pattern is broad enough to flag - conservative on
@@ -47,6 +49,7 @@ export type CrawlPageStatus =
    *  ManifestPageStatus by hand; historical manifests recorded the same
    *  outcome as 'visited', which isBrokenTarget still reads. */
   | 'http-error-status'
+  | 'blocked'
   /** A resolved 200 whose content belongs to another URL (issue #85), not
    *  a broken target - isBrokenTarget must not flag it. Kept in sync with
    *  ManifestPageStatus by hand. */
@@ -76,6 +79,11 @@ export interface CrawlPageInput {
 
 export interface NormalizeCrawlInput {
   startUrl: string;
+  homepageUrl?: string;
+  /** Whether the crawler's own robots.txt fetch completed. Lighthouse's
+   *  robots-txt audit must defer to this successful acquisition when its
+   *  text reports a WAF 429/5xx answer. */
+  robotsTxtFound?: boolean;
   pages: CrawlPageInput[];
   /** Milestone 8.5a. For every robots.txt Disallow pattern that was the
    *  actual winning (blocking) rule for at least one discovered URL, how
@@ -91,21 +99,44 @@ export interface NormalizeCrawlInput {
    *  site root are included. Optional so a manifest from before this
    *  milestone still parses, with no ai-crawler-blocked findings. */
   aiCrawlerBlocks?: { agent: string; disallowPattern: string }[];
+  /** Eligible sitemap URLs, retained so re-normalization can establish
+   * public evidence for a noindex page without refetching the sitemap. */
+  sitemapUrls?: string[];
+  /** URLs deliberately omitted before enqueue because a relative link
+   * repeated the directory segment it was already inside. */
+  relativeLinkNestingSummary?: {
+    omittedUrlCount: number;
+    omittedExampleUrls: string[];
+    repeatedSegments: string[];
+  };
 }
 
 function isBrokenTarget(page: CrawlPageInput): boolean {
   if (page.status === 'error') return true;
   if (page.status === 'http-error-status') return true;
+  if (page.status === 'blocked') return false;
   // Historical manifests recorded a 404 target as 'visited' (issue #39
   // predates the dedicated status), so the old shape must keep firing or
   // re-normalizing an old audit would silently drop its broken links.
   return page.status === 'visited' && page.httpStatus !== undefined && page.httpStatus >= 400;
 }
 
-export function extractCrawlCandidates(input: NormalizeCrawlInput): FindingCandidate[] {
+function excluded(excludedUrls: ReadonlySet<string>, url: string): boolean {
+  return excludedUrls.has(normalizeUrlIdentity(url) ?? url);
+}
+
+export function extractCrawlCandidates(
+  input: NormalizeCrawlInput,
+  excludedContentUrls: ReadonlySet<string> = new Set(),
+): FindingCandidate[] {
   const candidates: FindingCandidate[] = [];
 
-  const homepage = input.pages.find((page) => page.url === input.startUrl);
+  const homepageIdentity = normalizeUrlIdentity(input.homepageUrl ?? input.startUrl);
+  const homepage = input.pages.find((page) =>
+    homepageIdentity === undefined
+      ? page.url === input.startUrl
+      : (normalizeUrlIdentity(page.url) ?? page.url) === homepageIdentity,
+  );
   if (homepage?.status === 'skipped-robots') {
     candidates.push({
       source: 'custom',
@@ -163,8 +194,33 @@ export function extractCrawlCandidates(input: NormalizeCrawlInput): FindingCandi
     });
   }
 
+  const nesting = input.relativeLinkNestingSummary;
+  if (nesting !== undefined && nesting.omittedUrlCount > 0) {
+    candidates.push({
+      source: 'custom',
+      ruleId: RELATIVE_LINK_NESTING_RULE_ID,
+      category: 'seo',
+      severity: severityFromCustom(RELATIVE_LINK_NESTING_RULE_ID),
+      wcagCriteria: [],
+      title: 'Relative links create self-nesting URL loops',
+      description: `Some relative links repeat a directory segment already present in the current path, creating URLs such as /fr/fr/page instead of the intended page. The crawler omitted ${nesting.omittedUrlCount} loop URL${nesting.omittedUrlCount === 1 ? '' : 's'} before enqueueing it.`,
+      pageUrl: input.startUrl,
+      element: null,
+      rawEvidenceForPage: {
+        omittedUrlCount: nesting.omittedUrlCount,
+        omittedExampleUrls: nesting.omittedExampleUrls,
+        repeatedSegments: nesting.repeatedSegments,
+      },
+    });
+  }
+
   for (const page of input.pages) {
-    if (!page.discoveredFrom || !isBrokenTarget(page)) continue;
+    if (
+      !page.discoveredFrom ||
+      excluded(excludedContentUrls, page.discoveredFrom) ||
+      !isBrokenTarget(page)
+    )
+      continue;
     candidates.push({
       source: 'custom',
       ruleId: BROKEN_INTERNAL_LINK_RULE_ID,

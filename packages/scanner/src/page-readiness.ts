@@ -11,7 +11,9 @@
  * of its evidence.
  */
 import type { Frame, Page, Response } from 'playwright';
+import { isChallengeTitle } from '@odysseus/core';
 import type { HydrationProgress, SurfaceReadinessOutcome } from './evidence-surfaces.js';
+import { analyzeRawDocument } from './raw-document-signals.js';
 
 /** Resource types whose failure can change what a check sees. An image or a
  *  beacon failing does not; a stylesheet or a script can. */
@@ -45,12 +47,21 @@ export interface RenderedReadinessObservation {
 export interface FrameObservation {
   frameUrl: string;
   frameOrigin: string;
+  /** Selector for the iframe element that owns this frame, when one can be
+   *  derived without retaining markup. Used to exclude challenge-frame axe
+   *  nodes and to keep frame findings tied to the embed identity. */
+  frameSelector?: string;
   sameOrigin: boolean;
   materiality: 'material' | 'non-material' | 'unknown';
   /** Whether axe-core was present in the frame after the axe pass. axe
    *  descends into child frames but skips one it cannot reach without
    *  saying so, so presence is checked per frame instead of assumed. */
   axeTraversed: boolean;
+  /** Known bot-wall markers found in the frame document. The frame body is
+   *  never persisted; only the vendor marker names are kept so normalization
+   *  can discard findings from a challenge widget and the scheduler can
+   *  explain the pushback. */
+  challengeMarkers?: string[];
 }
 
 const MAX_RECORDED_FAILURES = 25;
@@ -164,6 +175,31 @@ async function frameMateriality(frame: Frame): Promise<FrameObservation['materia
   }
 }
 
+async function frameElementSelector(frame: Frame): Promise<string | undefined> {
+  try {
+    const element = await frame.frameElement();
+    return await element.evaluate((node) => {
+      const element = node as Element;
+      if (element.id) return `#${CSS.escape(element.id)}`;
+      const src = element.getAttribute('src');
+      if (src) return `${element.tagName.toLowerCase()}[src="${src.replaceAll('"', '\\"')}"]`;
+      const parts: string[] = [];
+      let current: Element | null = element;
+      while (current && current !== document.documentElement) {
+        const parent: Element | null = current.parentElement;
+        if (!parent) break;
+        parts.unshift(
+          `${current.tagName.toLowerCase()}:nth-child(${Array.from(parent.children).indexOf(current) + 1})`,
+        );
+        current = parent;
+      }
+      return parts.join(' > ');
+    });
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Every child frame of the page with its origin, size-based materiality and
  * whether the axe pass reached it. Called after axe has run, on the same page.
@@ -184,12 +220,26 @@ export async function observeFrames(page: Page, pageUrl: string): Promise<FrameO
     const axeTraversed = await frame
       .evaluate(() => typeof (window as unknown as { axe?: unknown }).axe === 'object')
       .catch(() => false);
+    const challengeMarkers = await frame
+      .evaluate(() => ({
+        title: document.title,
+        html: document.documentElement?.outerHTML ?? '',
+      }))
+      .then(({ title, html }) => {
+        const markers = [...analyzeRawDocument(html).interstitialMarkers];
+        if (isChallengeTitle(title)) markers.push('challenge-title');
+        return [...new Set(markers)].sort();
+      })
+      .catch(() => [] as string[]);
+    const frameSelector = await frameElementSelector(frame);
     observations.push({
       frameUrl,
       frameOrigin,
+      ...(frameSelector !== undefined ? { frameSelector } : {}),
       sameOrigin: frameOrigin === pageOrigin,
       materiality: await frameMateriality(frame),
       axeTraversed,
+      ...(challengeMarkers.length > 0 ? { challengeMarkers } : {}),
     });
   }
   return observations.sort((a, b) => a.frameUrl.localeCompare(b.frameUrl));

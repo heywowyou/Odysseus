@@ -148,6 +148,9 @@ export function classifyCheckFailure(message: string | undefined): {
   if (/^dependency:/u.test(text)) {
     return { failureClass: 'dependency-error', diagnosticCode: 'dependency-error' };
   }
+  if (/bot challenge|security check|anti.?bot/iu.test(text)) {
+    return { failureClass: 'anti-bot-rate-limit', diagnosticCode: 'bot-challenge' };
+  }
   if (/watchdog/iu.test(text)) {
     return { failureClass: 'scanner-timeout', diagnosticCode: 'page-watchdog' };
   }

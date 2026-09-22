@@ -15,6 +15,7 @@ import path from 'node:path';
 import {
   buildTranslationClusters,
   buildFindingsProvenance,
+  deriveCoverageLimitations,
   normalizeAudit,
   type AuditManifest,
   type NormalizePageInput,
@@ -133,22 +134,54 @@ export async function renormalizeAudit(
   // broken that promise. Recomputed clusters are written back to the
   // manifest below, because the report layer reads them from there
   // rather than from findings.json.
-  const translationClusters: TranslationCluster[] =
-    manifest.translationClusters ??
-    buildTranslationClusters(
-      pages.map((page) => ({
+  const manifestPageByUrl = new Map(manifest.pages.map((entry) => [entry.url, entry]));
+  const translationClusters: TranslationCluster[] = buildTranslationClusters(
+    pages.map((page) => {
+      const manifestPage = manifestPageByUrl.get(page.url);
+      return {
         pageUrl: page.url,
+        ...(manifestPage?.language !== undefined ? { language: manifestPage.language } : {}),
         hreflangLinks: page.headMetadata?.hreflangLinks ?? [],
-      })),
-    );
+        languageSwitcherLinks: page.headMetadata?.languageSwitcherLinks ?? [],
+      };
+    }),
+  );
+
+  const sitemapRedirectedUrls = manifest.pages
+    .filter(
+      (page) =>
+        page.status === 'redirect-interstitial' || page.status === 'skipped-external-redirect',
+    )
+    .map((page) => page.url);
+  const pagesForNormalization =
+    sitemapRedirectedUrls.length === 0
+      ? pages
+      : pages.map((page) =>
+          page.sitemapCheck === undefined
+            ? page
+            : {
+                ...page,
+                sitemapCheck: {
+                  ...page.sitemapCheck,
+                  redirectedUrls: [
+                    ...new Set([
+                      ...(page.sitemapCheck.redirectedUrls ?? []),
+                      ...sitemapRedirectedUrls,
+                    ]),
+                  ],
+                },
+              },
+        );
 
   const findings = normalizeAudit({
     translationClusters,
+    coverageLimitations: manifest.coverageLimitations ?? deriveCoverageLimitations(manifest.pages),
     auditId: manifest.auditId,
     startedAt: new Date(manifest.startedAt),
-    pages,
+    pages: pagesForNormalization,
     crawl: {
       startUrl: manifest.crawl.startUrl,
+      robotsTxtFound: manifest.crawl.robotsTxtFound,
       pages: manifest.pages.map((page) => ({
         url: page.url,
         status: page.status,
@@ -162,6 +195,12 @@ export async function renormalizeAudit(
       ...(manifest.crawl.aiCrawlerBlocks !== undefined
         ? { aiCrawlerBlocks: manifest.crawl.aiCrawlerBlocks }
         : {}),
+      ...(manifest.crawl.sitemapUrls !== undefined
+        ? { sitemapUrls: manifest.crawl.sitemapUrls }
+        : {}),
+      ...(manifest.relativeLinkNestingSummary !== undefined
+        ? { relativeLinkNestingSummary: manifest.relativeLinkNestingSummary }
+        : {}),
     },
     ...(manifest.cruxFieldData !== undefined ? { cruxFieldData: manifest.cruxFieldData } : {}),
   });
@@ -171,6 +210,7 @@ export async function renormalizeAudit(
   const renormalizedManifest: AuditManifest = {
     ...manifest,
     translationClusters,
+    coverageLimitations: manifest.coverageLimitations ?? deriveCoverageLimitations(manifest.pages),
     renormalizedAt: new Date().toISOString(),
     findingsProvenance: buildFindingsProvenance(findings),
   };

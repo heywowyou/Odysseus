@@ -52,6 +52,11 @@ const PHONE_PATTERN = /(?:\+33|0033|0)\s?[1-9](?:[\s. -]?\d{2}){4}/g;
  *  form, so the same number written either way compares equal. */
 export function normalizePhone(raw: string): string {
   const digits = raw.replace(/\D/gu, '');
+  // French international notation often keeps the domestic trunk zero in
+  // parentheses: +33 (0)5... / 0033 (0)5.... It is the same national
+  // number as 05..., not an extra digit.
+  if (digits.startsWith('330') && digits.length === 12) return `0${digits.slice(3)}`;
+  if (digits.startsWith('00330') && digits.length === 13) return `0${digits.slice(5)}`;
   if (digits.startsWith('0033')) return `0${digits.slice(4)}`;
   if (digits.startsWith('33') && digits.length === 11) return `0${digits.slice(2)}`;
   return digits;

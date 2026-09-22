@@ -23,6 +23,7 @@
 
 import type { FindingCandidate } from './candidate.js';
 import { severityFromCustom } from './severity.js';
+import { shapeIdentity } from './normalize-axe.js';
 
 export const REFLOW_HORIZONTAL_SCROLL_RULE_ID = 'reflow-horizontal-scroll';
 
@@ -32,6 +33,20 @@ export interface ReflowCheckInput {
   documentScrollWidthPx: number;
   viewportWidthPx: number;
   overflowElements: { selector: string; widthPx: number; snippet: string }[];
+}
+
+function reflowShapeIdentity(snippet: string): string | undefined {
+  // Generated ids/classes encode an instance number rather than a component
+  // template. Remove those values before asking the shared shape parser for
+  // the authored opening-tag shape.
+  const sanitized = snippet
+    .replace(/\s+id\s*=\s*("[^"]*\d[^"]*"|'[^']*\d[^']*'|[^\s>]+)/gi, '')
+    .replace(/\s+class\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, (match) => {
+      const value = match.replace(/^\s+class\s*=\s*["']?|["']?$/gi, '');
+      const classes = value.split(/\s+/).filter((name) => name.length > 0 && !/\d/.test(name));
+      return classes.length > 0 ? ` class="${classes.join(' ')}"` : '';
+    });
+  return shapeIdentity(sanitized);
 }
 
 export function normalizeReflow(input: ReflowCheckInput, pageUrl: string): FindingCandidate[] {
@@ -59,6 +74,12 @@ export function normalizeReflow(input: ReflowCheckInput, pageUrl: string): Findi
       // Page-scoped when the layout as a whole is at fault, rather than
       // naming an arbitrary element for the sake of having a selector.
       element: widest ? { pageUrl, selector: widest.selector, snippet: widest.snippet } : null,
+      ...(widest !== undefined
+        ? (() => {
+            const identity = reflowShapeIdentity(widest.snippet);
+            return identity === undefined ? {} : { dedupeIdentity: `reflow:${identity}` };
+          })()
+        : {}),
       rawEvidenceForPage: {
         documentScrollWidthPx: input.documentScrollWidthPx,
         viewportWidthPx: input.viewportWidthPx,

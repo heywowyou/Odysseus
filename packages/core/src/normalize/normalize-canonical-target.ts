@@ -18,13 +18,15 @@ export interface CanonicalTargetCheckInput {
   httpStatus?: number;
   fetchError?: string;
   noindex: boolean;
+  undetermined?: boolean;
 }
 
 export function extractCanonicalTargetCandidates(
   input: CanonicalTargetCheckInput,
 ): FindingCandidate[] {
   const isUnreachable =
-    input.fetchError !== undefined || (input.httpStatus !== undefined && input.httpStatus >= 400);
+    !input.undetermined &&
+    (input.fetchError !== undefined || (input.httpStatus !== undefined && input.httpStatus >= 400));
 
   if (isUnreachable) {
     return [

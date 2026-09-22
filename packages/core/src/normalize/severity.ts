@@ -110,6 +110,7 @@ export const CUSTOM_CHECK_SEVERITY: Record<string, Severity> = {
   'hreflang-missing': 'moderate',
   'hreflang-invalid': 'serious',
   'hreflang-no-return-link': 'serious',
+  'hreflang-target-invalid': 'serious',
 
   // Document structure. Overlaps accessibility, deduped downstream.
   'heading-hierarchy-skip': 'moderate',
@@ -167,7 +168,9 @@ export const CUSTOM_CHECK_SEVERITY: Record<string, Severity> = {
   'canonical-target-unreachable': 'serious',
   'canonical-target-noindex': 'moderate',
   'sitemap-orphan-page': 'minor',
+  'sitemap-lists-redirects': 'minor',
   'robots-disallow-broad': 'moderate',
+  'relative-link-nesting': 'moderate',
 
   // Milestone 8.5a: GEO (generative-engine-optimization) checks - do
   // real, extractable content exist for an AI answer engine to cite.

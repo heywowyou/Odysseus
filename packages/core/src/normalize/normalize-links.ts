@@ -23,6 +23,7 @@
  */
 
 import type { FindingCandidate } from './candidate.js';
+import { shapeIdentity } from './normalize-axe.js';
 import { MAX_ELEMENTS_PER_FINDING } from '../types/findings.js';
 import { MAX_LIGHTHOUSE_DETAILS_ITEMS } from './constants.js';
 import { severityFromCustom } from './severity.js';
@@ -189,6 +190,19 @@ export function isUncrawlableAnchor(anchor: AnchorFactInput, pageUrl: string): b
   return false;
 }
 
+function crawlabilityFailureReason(anchor: AnchorFactInput, pageUrl: string): string {
+  const rawHref = (anchor.rawHref ?? '').replace(/\s/g, '');
+  if (rawHref.startsWith('file:')) return 'file-url';
+  if (anchor.href === '') return anchor.rawHref === null ? 'missing-href' : 'empty-href';
+  if (JAVASCRIPT_VOID_PATTERN.test(rawHref)) return 'javascript-url';
+  try {
+    new URL(rawHref, pageUrl);
+    return 'uncrawlable-anchor';
+  } catch {
+    return 'invalid-url';
+  }
+}
+
 export function extractLinkCandidates(
   anchors: readonly AnchorFactInput[],
   pageUrl: string,
@@ -224,6 +238,8 @@ export function extractLinkCandidates(
     .filter((anchor) => isUncrawlableAnchor(anchor, pageUrl))
     .slice(0, MAX_ELEMENTS_PER_FINDING);
   for (const anchor of uncrawlable) {
+    const reason = crawlabilityFailureReason(anchor, pageUrl);
+    const shape = shapeIdentity(anchor.snippet);
     candidates.push({
       source: 'custom',
       ruleId: CRAWLABLE_ANCHORS_RULE_ID,
@@ -234,8 +250,13 @@ export function extractLinkCandidates(
       description:
         'This link has no destination a search engine can follow (a missing or empty href, a javascript: URL, or an invalid address), so the page it leads to cannot be discovered through it.',
       pageUrl,
+      ...(shape !== undefined ? { dedupeIdentity: `crawlable-anchors:${reason}|${shape}` } : {}),
       element: { pageUrl, selector: anchor.selector, snippet: anchor.snippet },
-      rawEvidenceForPage: { rawHref: anchor.rawHref, hasEventListener: anchor.hasEventListener },
+      rawEvidenceForPage: {
+        rawHref: anchor.rawHref,
+        hasEventListener: anchor.hasEventListener,
+        reason,
+      },
     });
   }
 

@@ -353,6 +353,10 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
     text: 'Correct the language or region code in this hreflang annotation: as written it is not recognized, so the annotation is ignored.',
     snippet: { kind: 'not-applicable' },
   },
+  'hreflang-target-invalid': {
+    text: 'Correct the declared language-version address so it responds as a valid public page on the site.',
+    snippet: { kind: 'not-applicable' },
+  },
   'hreflang-missing': {
     text: 'Declare hreflang annotations between the language versions of each page, in both directions.',
     snippet: {
@@ -663,6 +667,10 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
     text: 'Point links straight at the final address, removing the intermediate redirects.',
     snippet: { kind: 'not-applicable' },
   },
+  'relative-link-nesting': {
+    text: 'Correct the relative link so it points to the intended path without adding an unintended language or directory level.',
+    snippet: { kind: 'not-applicable' },
+  },
   'reflow-horizontal-scroll': {
     text: 'Make the layout adapt down to a width of 320 pixels with no horizontal scrolling.',
     snippet: { kind: 'not-applicable' },
@@ -749,6 +757,10 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
   },
   'sitemap-stale': {
     text: 'Regenerate the sitemap so it matches the pages currently published.',
+    snippet: { kind: 'not-applicable' },
+  },
+  'sitemap-lists-redirects': {
+    text: 'Replace redirected or off-site sitemap entries with the final canonical URLs that belong to this site.',
     snippet: { kind: 'not-applicable' },
   },
   'speed-index': {

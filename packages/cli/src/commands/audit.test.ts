@@ -7,6 +7,7 @@ describe('formatAuditCoverageSummary', () => {
     const summary: AuditCoverageSummary = {
       kind: 'current',
       inventoriedUrlCount: 8,
+      noindexPageCount: 0,
       continuationOmittedUrlCount: 4,
       content: { completed: 5, partial: 1, failed: 1 },
       passes: {

@@ -58,10 +58,17 @@
  * simplification.
  */
 
+import { languagePrefixOf } from './normalize-hreflang.js';
+
 /** A page's declared language alternates, as read from its own head. */
 export interface TranslationClusterInput {
   pageUrl: string;
   hreflangLinks: readonly { lang: string; href: string }[];
+  /** Page's own language declaration, used to label a switcher-derived
+   *  pair when hreflang is absent. */
+  language?: string | null;
+  /** Structural language-menu links, used only when hreflang is absent. */
+  languageSwitcherLinks?: readonly { lang?: string; href: string }[];
 }
 
 export interface TranslationClusterMember {
@@ -76,6 +83,9 @@ export interface TranslationCluster {
   /** The member every count and every collapsed finding is attributed to. */
   canonicalPageUrl: string;
   members: TranslationClusterMember[];
+  /** Why this multi-page cluster exists. Omitted for a singleton that has
+   *  no supported relationship to another scanned page. */
+  derivation?: 'hreflang' | 'language-switcher';
 }
 
 /** Trailing slash, fragment and host case are presentation differences,
@@ -138,6 +148,7 @@ export function buildTranslationClusters(
     memberKeys: string[];
     langByKey: Map<string, string>;
     xDefaultKeys: Set<string>;
+    derivation: 'hreflang' | 'language-switcher';
   }
 
   const proposals: Proposal[] = [];
@@ -149,13 +160,25 @@ export function buildTranslationClusters(
     let declaresSelf = false;
     let inconsistent = false;
 
-    for (const link of page.hreflangLinks) {
-      const targetKey = canonicalizeUrlForMatching(link.href);
+    const switcherLinks = page.languageSwitcherLinks ?? [];
+    const usesSwitcherFallback = page.hreflangLinks.length === 0 && switcherLinks.length > 0;
+    const links = usesSwitcherFallback ? switcherLinks : page.hreflangLinks;
+    const declaredLanguage = page.language?.trim().toLowerCase();
+    const sourceLanguage = declaredLanguage || languagePrefixOf(page.pageUrl)?.toLowerCase();
+
+    for (const link of links) {
+      let resolvedHref = link.href;
+      try {
+        resolvedHref = new URL(link.href, page.pageUrl).toString();
+      } catch {
+        // Keep the raw value so malformed links remain safely unscanned.
+      }
+      const targetKey = canonicalizeUrlForMatching(resolvedHref);
       if (!scanned.has(targetKey)) continue;
       if (targetKey === selfKey) declaresSelf = true;
       memberKeys.add(targetKey);
 
-      const lang = link.lang.trim().toLowerCase();
+      const lang = (link.lang ?? '').trim().toLowerCase();
       if (!lang) continue;
       if (lang === X_DEFAULT) {
         xDefaultKeys.add(targetKey);
@@ -167,15 +190,28 @@ export function buildTranslationClusters(
       langByKey.set(targetKey, lang);
     }
 
+    if (usesSwitcherFallback) {
+      memberKeys.add(selfKey);
+      if (sourceLanguage !== undefined && sourceLanguage !== '') {
+        langByKey.set(selfKey, sourceLanguage);
+      }
+    }
+
     // Gate 1: a set that does not name the page stating it is a
     // statement about a different page, not about this one.
-    if (inconsistent || !declaresSelf || memberKeys.size < 2) continue;
-    proposals.push({ memberKeys: [...memberKeys].sort(), langByKey, xDefaultKeys });
+    if (inconsistent || (!usesSwitcherFallback && !declaresSelf) || memberKeys.size < 2) continue;
+    proposals.push({
+      memberKeys: [...memberKeys].sort(),
+      langByKey,
+      xDefaultKeys,
+      derivation: usesSwitcherFallback ? 'language-switcher' : 'hreflang',
+    });
   }
 
   const sets = new DisjointSet();
   const langByUrl = new Map<string, string>();
   const xDefaultTargets = new Set<string>();
+  const languageSwitcherMembers = new Set<string>();
   for (const key of scanned.keys()) sets.find(key);
 
   for (const proposal of proposals) {
@@ -183,6 +219,9 @@ export function buildTranslationClusters(
     for (const key of rest) sets.union(first!, key);
     for (const [key, lang] of proposal.langByKey) langByUrl.set(key, lang);
     for (const key of proposal.xDefaultKeys) xDefaultTargets.add(key);
+    if (proposal.derivation === 'language-switcher') {
+      for (const key of proposal.memberKeys) languageSwitcherMembers.add(key);
+    }
   }
 
   const membersByRoot = new Map<string, string[]>();
@@ -223,6 +262,13 @@ export function buildTranslationClusters(
           const lang = langByUrl.get(key);
           return { pageUrl: scanned.get(key)!, ...(lang !== undefined ? { lang } : {}) };
         }),
+        ...(group.length > 1
+          ? {
+              derivation: group.some((key) => languageSwitcherMembers.has(key))
+                ? ('language-switcher' as const)
+                : ('hreflang' as const),
+            }
+          : {}),
       });
     }
   }

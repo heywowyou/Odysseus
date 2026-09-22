@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   globToRegExp,
+  classifyNonPublicPluginObject,
   isLanguageHomepagePath,
   normalizeInternalLinks,
   normalizePageIdentityUrl,
@@ -235,6 +236,33 @@ describe('B3: non-public WordPress objects', () => {
     expect(normalizeInternalLinks(['/?post_type=chambre&p=12'], 'https://haaitza.com/')).toEqual([
       'https://haaitza.com/?post_type=chambre&p=12',
     ]);
+  });
+});
+
+describe('E9: non-public plugin objects', () => {
+  it('classifies a sitemap-only rl_gallery object with structural evidence', () => {
+    expect(
+      classifyNonPublicPluginObject({
+        discoveryMethod: 'sitemap-only',
+        bodyClassTokens: ['single-rl_gallery', 'type-rl_gallery'],
+      }),
+    ).toEqual({ postType: 'rl_gallery', bodyClass: 'single-rl_gallery' });
+  });
+
+  it('does not classify a linked or differently shaped public page', () => {
+    expect(
+      classifyNonPublicPluginObject({
+        discoveryMethod: 'link',
+        discoveredFrom: 'https://example.com/',
+        bodyClassTokens: ['single-rl_gallery'],
+      }),
+    ).toBeUndefined();
+    expect(
+      classifyNonPublicPluginObject({
+        discoveryMethod: 'sitemap-only',
+        bodyClassTokens: ['single-gallery'],
+      }),
+    ).toBeUndefined();
   });
 });
 

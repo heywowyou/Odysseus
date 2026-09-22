@@ -476,3 +476,31 @@ could still violate it. The report's executive-summary page count is the
 union of findings' own pageUrls, so the anchor rule is what keeps that
 count inside the analyzed scope; the count itself is deliberately not
 independently filtered.
+
+## Plan 075 amendments to sections 1, 2, 5 and 5a
+
+The content population is now explicit across every extractor. A URL that
+returned a transient status, a bot/challenge document (including a 200), a
+redirect interstitial, a soft-error template, an off-site redirect or a
+failed acquisition is inventory evidence, not page content. The same
+exclusion is applied to site-wide absence checks. If a blocked or failed
+candidate could carry the item being tested, the manifest records blocked and
+failed counts and the report says manual/undetermined; it never emits a
+confident absence. Challenge frames follow the same rule. Noindex pages are
+disclosed and excluded from SEO content findings.
+
+Plan 075 also makes URL identity one shared contract: fragments, non-root
+trailing slashes, uppercase percent escapes and an empty query do not create
+a second page. The server's preferred served spelling is retained for
+acquisition evidence, but slash-only handling does not become a `redirects`
+finding. Relative links that resolve to the same identity do not create a
+self-nesting finding; genuine relative nesting is bounded and reported once.
+Sitemap entries that redirect or point off-site use the separate minor
+`sitemap-lists-redirects` rule and are removed from stale/orphan comparisons.
+
+The fine/coarse dedupe passes still preserve occurrences and provenance. They
+may merge only identical rule statements and fixes. Third-party frame content
+is retained as annex evidence but excluded from primary totals, grade and
+outreach proof. Field metrics own a Core Web Vital when available; a lab
+metric is accepted only from a valid same-identity Lighthouse run and is
+diagnostic when field data exists.

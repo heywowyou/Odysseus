@@ -932,6 +932,28 @@ describe('GET /api/scans/:jobId declares the display outcome codes (plan 060 §5
     });
   });
 
+  it('keeps host pushback events in the job read model', async () => {
+    const pushbackEvents = [
+      {
+        pageUrl: 'https://example.com/products',
+        kind: 'rate-limit',
+        fetcher: 'crawl',
+        status: 429,
+        retryAfterMs: 5000,
+        occurredAt: '2023-11-14T22:13:20.000Z',
+      },
+    ];
+    vi.mocked(getJob).mockResolvedValue(
+      detailJob({
+        status: 'running',
+        phase: 'crawl',
+        progress: { pushbackEvents },
+      }) as never,
+    );
+    const response = await get('/api/scans/job-1');
+    expect(response.body).toMatchObject({ progress: { pushbackEvents } });
+  });
+
   it('reads a failed row with typed input fields as needing input, like the list', async () => {
     vi.mocked(getJob).mockResolvedValue(
       detailJob({

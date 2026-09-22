@@ -19,6 +19,7 @@ describe('countCrawlExclusions', () => {
       externalRedirect: 1,
       nonHtml: 2,
       httpError: 1,
+      blocked: 0,
       error: 1,
     });
   });

@@ -101,6 +101,7 @@ export function coverageSegments(
         exclusions.externalRedirect +
         exclusions.nonHtml +
         exclusions.httpError +
+        exclusions.blocked +
         exclusions.error;
   // A staged full audit can discover additional pages after crawl-page
   // telemetry has stopped. The checked subset plus navigated exclusions is

@@ -323,8 +323,11 @@ describe('lighthouseAuditsCoveredByHeadMetadata', () => {
     expect([...lighthouseAuditsCoveredByHeadMetadata(undefined)]).toEqual([]);
   });
 
-  it('claims only the description audit for a scan stored before the link and header facts', () => {
-    expect([...lighthouseAuditsCoveredByHeadMetadata(baseInput())]).toEqual(['meta-description']);
+  it('claims the description and indexability audits whenever head metadata exists', () => {
+    expect([...lighthouseAuditsCoveredByHeadMetadata(baseInput())].sort()).toEqual([
+      'is-crawlable',
+      'meta-description',
+    ]);
   });
 
   it('claims the link and indexability audits once their facts were extracted', () => {

@@ -5,14 +5,12 @@
  * onRenderedPage hook against page.content(), no extra page load, no network.
  *
  * **Why the required-field table is here rather than in a library.** This
- * used to call `structured-data-testing-tool`'s Google preset. That preset
- * turns out to be small once read: of everything it declares, only the
- * Article family, BlogPosting and ClaimReview carry required fields at all.
- * WebPage and Organization mark every field optional, and the "simple
- * article" types (TechArticle, Report, SocialMediaPosting and the rest) test
- * only that the type is present, so none of them can ever produce a failure.
- * The table below is that reduction, written out. Reading it is now possible;
- * it used to mean reading fourteen files inside a dependency.
+ * used to call `structured-data-testing-tool`'s Google preset. The current
+ * Article documentation describes its fields as recommended, not required;
+ * treating those recommendations as failures created a false positive for
+ * ordinary Yoast graphs. ClaimReview keeps only the fields Google actually
+ * requires for that rich result. Types with recommendations only are still
+ * inventoried, but do not produce a conformance failure here.
  *
  * The dependency was replaced rather than pinned because its extraction half
  * (`web-auto-extractor` on `cheerio@0.22.0` and the lodash micro-package long
@@ -32,40 +30,12 @@
 import type { Page } from 'playwright';
 import { extractSchemaItems, type SchemaItem } from './structured-data-extract.js';
 
-/** Google expects these on an Article-shaped item. Read off
- *  structured-data-testing-tool's own Google preset before it was removed;
- *  fields it marked `warning` (dateModified, mainEntityOfPage) are not
- *  required and are deliberately absent. */
-const ARTICLE_REQUIRED_FIELDS: readonly string[][] = [
-  ['author'],
-  ['datePublished'],
-  ['headline'],
-  ['image'],
-  ['publisher', '@type'],
-  ['publisher', 'name'],
-  ['publisher', 'logo'],
-  ['publisher', 'logo', 'url'],
-];
-
-const CLAIM_REVIEW_REQUIRED_FIELDS: readonly string[][] = [
-  ['url'],
-  ['reviewRating'],
-  ['claimReviewed'],
-];
+const CLAIM_REVIEW_REQUIRED_FIELDS: readonly string[][] = [['reviewRating'], ['claimReviewed']];
 
 /** Only the types with required fields appear here. A type Google recognizes
  *  but asks nothing mandatory of (WebPage, Organization, TechArticle and the
  *  rest) is still reported in schemasFound and simply cannot fail. */
 const REQUIRED_FIELDS_BY_SCHEMA: Record<string, readonly string[][]> = {
-  Article: ARTICLE_REQUIRED_FIELDS,
-  NewsArticle: ARTICLE_REQUIRED_FIELDS,
-  AnalysisNewsArticle: ARTICLE_REQUIRED_FIELDS,
-  AskPublicNewsArticle: ARTICLE_REQUIRED_FIELDS,
-  BackgroundNewsArticle: ARTICLE_REQUIRED_FIELDS,
-  OpinionNewsArticle: ARTICLE_REQUIRED_FIELDS,
-  ReportageNewsArticle: ARTICLE_REQUIRED_FIELDS,
-  ReviewNewsArticle: ARTICLE_REQUIRED_FIELDS,
-  BlogPosting: ARTICLE_REQUIRED_FIELDS,
   ClaimReview: CLAIM_REVIEW_REQUIRED_FIELDS,
 };
 
@@ -115,7 +85,7 @@ function hasValueAt(properties: Record<string, unknown>, path: readonly string[]
   if (current === undefined || current === null) return false;
   if (typeof current === 'string') return current.trim() !== '';
   if (Array.isArray(current)) return current.length > 0;
-  return true;
+  return Object.keys(current as Record<string, unknown>).length > 0;
 }
 
 /** Pure: judges an already-fetched HTML string. Exported separately from
@@ -125,12 +95,51 @@ function hasValueAt(properties: Record<string, unknown>, path: readonly string[]
 export async function evaluateStructuredData(html: string): Promise<StructuredDataEvaluation> {
   const items = await extractSchemaItems(html);
 
+  // Yoast and similar generators put the publisher/author in a separate
+  // node in the same page's @graph, then refer to it from the Article by
+  // `{"@id":"..."}`. Resolve those local references before judging a
+  // property. A reference never leaves this page: unresolved IDs remain
+  // unresolved and therefore cannot manufacture a field that was not in the
+  // captured markup.
+  const jsonLdById = new Map<string, Record<string, unknown>>();
+  for (const item of items) {
+    if (item.markup !== 'jsonld') continue;
+    const id = item.properties['@id'];
+    if (typeof id === 'string' && id.trim() !== '') jsonLdById.set(id, item.properties);
+  }
+  const resolving = new Set<string>();
+  const resolveReferences = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(resolveReferences);
+    if (typeof value !== 'object' || value === null) return value;
+    const record = value as Record<string, unknown>;
+    const reference = record['@id'];
+    if (
+      typeof reference === 'string' &&
+      Object.keys(record).every((key) => key === '@id') &&
+      jsonLdById.has(reference) &&
+      !resolving.has(reference)
+    ) {
+      resolving.add(reference);
+      const resolved = resolveReferences(jsonLdById.get(reference));
+      resolving.delete(reference);
+      return resolved;
+    }
+    return Object.fromEntries(
+      Object.entries(record).map(([key, entry]) => [key, resolveReferences(entry)]),
+    );
+  };
+  const resolvedItems = items.map((item) =>
+    item.markup === 'jsonld'
+      ? { ...item, properties: resolveReferences(item.properties) as Record<string, unknown> }
+      : item,
+  );
+
   // One entry per (markup form, schema) pair, matching what earlier audits
   // recorded: a type declared in both JSON-LD and microdata is listed twice,
   // because that is two declarations a consumer has to reconcile.
   const schemasFound: string[] = [];
   const seenDeclarations = new Set<string>();
-  for (const item of items) {
+  for (const item of resolvedItems) {
     const key = `${item.markup}:${item.schema}`;
     if (seenDeclarations.has(key)) continue;
     seenDeclarations.add(key);
@@ -141,9 +150,9 @@ export async function evaluateStructuredData(html: string): Promise<StructuredDa
   const indexByDeclaration = new Map<string, number>();
 
   const ordered: SchemaItem[] = [
-    ...items.filter((item) => item.markup === 'jsonld'),
-    ...items.filter((item) => item.markup === 'microdata'),
-    ...items.filter((item) => item.markup === 'rdfa'),
+    ...resolvedItems.filter((item) => item.markup === 'jsonld'),
+    ...resolvedItems.filter((item) => item.markup === 'microdata'),
+    ...resolvedItems.filter((item) => item.markup === 'rdfa'),
   ];
 
   for (const item of ordered) {

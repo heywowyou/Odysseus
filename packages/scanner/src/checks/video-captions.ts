@@ -32,6 +32,7 @@ import type { Page } from 'playwright';
 export interface VideoCheckResult {
   selector: string;
   hasCaptionTrack: boolean;
+  audio: 'present' | 'absent' | 'undetermined';
   /** Detected in-browser via a brief muted play plus Chromium's
    *  webkitAudioDecodedByteCount. Defaults to true (assume audio
    *  present) when the video's readiness state never advances far
@@ -40,6 +41,8 @@ export interface VideoCheckResult {
    *  gap from 1.2.2 just because playback could not be attempted. Only
    *  a video that positively finishes a decode window with zero
    *  decoded audio bytes is reported as silent. */
+  /** Compatibility projection for older consumers. Normalization uses the
+   * tri-state `audio` value and never treats undetermined as present. */
   hasAudio: boolean;
 }
 
@@ -72,7 +75,9 @@ export async function checkVideoCaptions(
       });
     }
 
-    async function detectHasAudio(el: HTMLVideoElement): Promise<boolean> {
+    async function detectAudio(
+      el: HTMLVideoElement,
+    ): Promise<'present' | 'absent' | 'undetermined'> {
       const wasMuted = el.muted;
       const wasPaused = el.paused;
       const startTime = el.currentTime;
@@ -81,16 +86,17 @@ export async function checkVideoCaptions(
         // HAVE_CURRENT_DATA (2): the readiness level at which decoded
         // media data, audio included, actually exists to inspect.
         const reachedData = await waitFor(() => el.readyState >= 2, 800);
-        if (!reachedData) return true;
-        await el.play().catch(() => {
-          // A play() rejection (autoplay policy, decode error) leaves
-          // hasAudio at its conservative default below.
-        });
+        if (!reachedData) return 'undetermined';
+        const played = await el
+          .play()
+          .then(() => true)
+          .catch(() => false);
+        if (!played) return 'undetermined';
         await new Promise((resolve) => setTimeout(resolve, 150));
         const byteCount = (el as HTMLVideoElement & { webkitAudioDecodedByteCount?: number })
           .webkitAudioDecodedByteCount;
-        if (typeof byteCount !== 'number') return true;
-        return byteCount > 0;
+        if (typeof byteCount !== 'number') return 'undetermined';
+        return byteCount > 0 ? 'present' : 'absent';
       } finally {
         el.pause();
         el.currentTime = startTime;
@@ -107,8 +113,8 @@ export async function checkVideoCaptions(
           return kind === 'captions' || kind === 'subtitles';
         });
         const selector = el.id ? `#${el.id}` : `video:nth-of-type(${i + 1})`;
-        const hasAudio = await detectHasAudio(el);
-        return { selector, hasCaptionTrack, hasAudio };
+        const audio = await detectAudio(el);
+        return { selector, hasCaptionTrack, audio, hasAudio: audio === 'present' };
       }),
     );
   });

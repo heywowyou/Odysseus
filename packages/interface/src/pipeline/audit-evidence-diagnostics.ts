@@ -14,6 +14,11 @@ export interface AuditEvidenceDiagnostics {
   status: AuditEvidenceDiagnosticStatus;
   clientLimitations: EvidenceLimitation[];
   operationalWarnings: { code: string; referenceCount: number }[];
+  /** A blocked report is a stronger operational state than a normal
+   *  limitation: the homepage or a content population never produced usable
+   *  evidence, so no client-facing report may be rendered from it. */
+  reportBlocked?: boolean;
+  blockingReasons?: string[];
 }
 
 type ReasonClass = 'client' | 'operational' | 'unavailable';
@@ -229,6 +234,77 @@ function mergeLimitation(
   ].sort();
 }
 
+function normalizedIdentity(url: string): string {
+  try {
+    const parsed = new URL(url);
+    parsed.hash = '';
+    if (parsed.pathname.length > 1 && parsed.pathname.endsWith('/')) {
+      parsed.pathname = parsed.pathname.slice(0, -1);
+    }
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
+function applyManifestCoverageBlock(
+  diagnostics: AuditEvidenceDiagnostics,
+  rawManifest: unknown,
+): AuditEvidenceDiagnostics {
+  if (!isRecord(rawManifest) || !Array.isArray(rawManifest['pages'])) return diagnostics;
+  const crawl = isRecord(rawManifest['crawl']) ? rawManifest['crawl'] : undefined;
+  const startUrl = typeof crawl?.['startUrl'] === 'string' ? crawl['startUrl'] : undefined;
+  const homepageUrl = typeof crawl?.['homepageUrl'] === 'string' ? crawl['homepageUrl'] : startUrl;
+  const pages = rawManifest['pages'].filter(isRecord);
+  const blockedPages = pages.filter((page) => page['status'] === 'blocked');
+  const homepage =
+    homepageUrl === undefined
+      ? undefined
+      : pages.find(
+          (page) =>
+            typeof page['url'] === 'string' &&
+            normalizedIdentity(page['url']) === normalizedIdentity(homepageUrl),
+        );
+  const coverage = isRecord(homepage?.['analysisCoverage'])
+    ? homepage['analysisCoverage']
+    : undefined;
+  const passes = isRecord(coverage?.['passes']) ? coverage['passes'] : undefined;
+  const homepageSucceeded =
+    homepage?.['status'] === 'visited' &&
+    passes !== undefined &&
+    (['rendered', 'axe', 'extended'] as const).every((pass) => {
+      const outcome = isRecord(passes[pass]) ? passes[pass]['outcome'] : undefined;
+      return outcome === 'completed' || outcome === 'partial';
+    });
+  const reasons: string[] = [];
+  if (blockedPages.length > 0) reasons.push(`${blockedPages.length} blocked content page(s)`);
+  if (!homepageSucceeded) reasons.push('homepage content checks did not succeed');
+  if (reasons.length === 0) return { ...diagnostics, reportBlocked: false, blockingReasons: [] };
+
+  const limitation: EvidenceLimitation = {
+    limitationId: 'limitation:operator-resolution-required',
+    code: 'operator-resolution-required',
+    summary: {
+      fr: 'Le rapport est bloqué : la page d’accueil ou certaines pages de contenu n’ont pas fourni une preuve exploitable après la récupération anti-robot.',
+      en: 'Report generation is blocked: the homepage or some content pages did not provide usable evidence after bot-protection recovery.',
+    },
+    reportDestination: REPORT_DESTINATION,
+    evidenceRefs: [
+      ...(homepageUrl !== undefined ? [homepageUrl] : []),
+      ...blockedPages.flatMap((page) => (typeof page['url'] === 'string' ? [page['url']] : [])),
+    ],
+  };
+  const merged = new Map(diagnostics.clientLimitations.map((item) => [item.limitationId, item]));
+  mergeLimitation(merged, limitation);
+  return {
+    ...diagnostics,
+    status: diagnostics.status === 'unavailable' ? 'unavailable' : 'limited',
+    clientLimitations: [...merged.values()],
+    reportBlocked: true,
+    blockingReasons: reasons,
+  };
+}
+
 export function summarizeAuditEvidenceDiagnostics(input: {
   quality: unknown;
   auditRoot: unknown;
@@ -310,7 +386,11 @@ export async function readAuditEvidenceDiagnostics(input: {
       return { status: 'unavailable', clientLimitations: [], operationalWarnings: [] };
     }
     const auditRoot = await readRoot(AUDIT_EVIDENCE_SNAPSHOT_PATH);
-    return summarizeAuditEvidenceDiagnostics({ quality, auditRoot });
+    const manifest = await readRoot('manifest.json');
+    return applyManifestCoverageBlock(
+      summarizeAuditEvidenceDiagnostics({ quality, auditRoot }),
+      manifest,
+    );
   })();
 
   diagnosticCache.set(cacheKey, pending);

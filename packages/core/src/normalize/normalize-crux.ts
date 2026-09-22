@@ -133,3 +133,18 @@ export function goodFieldMetrics(
   if (input.inp !== undefined && input.inp.p75 <= CRUX_GOOD_THRESHOLDS.inp) good.add('inp');
   return good;
 }
+
+/** Metrics for which CrUX supplied an actual p75 verdict, whether that
+ * verdict is good or poor. Lighthouse must defer to this set: a poor field
+ * result is already represented by the CrUX finding, while a lab proxy is
+ * only supporting evidence for the same metric. */
+export function availableFieldMetrics(
+  input: CruxFieldDataCheckInput | undefined,
+): ReadonlySet<CruxMetricKey> {
+  const available = new Set<CruxMetricKey>();
+  if (!input?.available) return available;
+  if (input.lcp !== undefined) available.add('lcp');
+  if (input.cls !== undefined) available.add('cls');
+  if (input.inp !== undefined) available.add('inp');
+  return available;
+}

@@ -224,4 +224,30 @@ describe('runLighthouseAnalysis', () => {
     expect(result.lighthouseError).toBe('lighthouse failed');
     expect(result.lighthouse).toBeUndefined();
   });
+
+  it('retries a structurally returned NO_FCP runtime error once', async () => {
+    vi.mocked(runLighthouseIsolated)
+      .mockResolvedValueOnce({ runtimeError: { code: 'NO_FCP' } } as never)
+      .mockResolvedValueOnce({ finalDisplayedUrl: 'https://example.com/' } as never);
+
+    const result = await runLighthouseAnalysis('https://example.com/', 9222, {});
+
+    expect(runLighthouseIsolated).toHaveBeenCalledTimes(2);
+    expect(result.lighthouse).toMatchObject({ finalDisplayedUrl: 'https://example.com/' });
+    expect(result.lighthouseError).toBeUndefined();
+  });
+
+  it('retries a thrown protocol timeout once and fails closed after a second runtime error', async () => {
+    vi.mocked(runLighthouseIsolated)
+      .mockRejectedValueOnce(new Error('PROTOCOL_TIMEOUT while gathering'))
+      .mockResolvedValueOnce({
+        runtimeError: { code: 'NO_FCP', message: 'no first paint' },
+      } as never);
+
+    const result = await runLighthouseAnalysis('https://example.com/', 9222, {});
+
+    expect(runLighthouseIsolated).toHaveBeenCalledTimes(2);
+    expect(result.lighthouse).toBeUndefined();
+    expect(result.lighthouseError).toContain('NO_FCP');
+  });
 });

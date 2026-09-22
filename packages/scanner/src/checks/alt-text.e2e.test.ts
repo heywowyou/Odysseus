@@ -87,6 +87,14 @@ describe('extractAltTextFacts against real pages', () => {
     const result = await checkHtml('<body><p>No images here.</p></body>');
     expect(result.images).toEqual([]);
   });
+
+  it('marks a data/blob placeholder as undetermined instead of judging its alt text', async () => {
+    const result = await checkHtml(
+      '<body><img id="lazy" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt="IMG_1234.jpg"></body>',
+    );
+    expect(result.images[0]?.src).toMatch(/^data:/u);
+    expect(result.images[0]?.undetermined).toBe(true);
+  });
 });
 
 /**

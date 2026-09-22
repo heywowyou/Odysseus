@@ -392,6 +392,10 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     text: "Corrigez le code de langue ou de région de cette annotation hreflang : tel qu'il est écrit, il n'est pas reconnu et l'annotation est ignorée.",
     snippet: { kind: 'not-applicable' },
   },
+  'hreflang-target-invalid': {
+    text: "Corrigez l'adresse de la version linguistique déclarée, afin qu'elle réponde comme une page publique valide du site.",
+    snippet: { kind: 'not-applicable' },
+  },
   'hreflang-missing': {
     text: 'Déclarez les annotations hreflang entre les versions linguistiques de chaque page, dans les deux sens.',
     snippet: {
@@ -708,6 +712,10 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     text: "Faites pointer les liens directement vers l'adresse finale, pour supprimer les redirections intermédiaires.",
     snippet: { kind: 'not-applicable' },
   },
+  'relative-link-nesting': {
+    text: "Corrigez le lien relatif pour qu'il pointe vers le chemin attendu, sans ajouter un niveau de langue ou de répertoire par inadvertance.",
+    snippet: { kind: 'not-applicable' },
+  },
   'reflow-horizontal-scroll': {
     text: "Rendez la mise en page adaptable jusqu'à une largeur de 320 pixels, sans défilement horizontal.",
     snippet: { kind: 'not-applicable' },
@@ -797,6 +805,10 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
   },
   'sitemap-stale': {
     text: "Regénérez le plan de site pour qu'il corresponde aux pages actuellement publiées.",
+    snippet: { kind: 'not-applicable' },
+  },
+  'sitemap-lists-redirects': {
+    text: 'Remplacez les entrées redirigées ou externes du plan de site par les URL finales et canoniques appartenant à ce site.',
     snippet: { kind: 'not-applicable' },
   },
   'speed-index': {

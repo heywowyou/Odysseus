@@ -14,6 +14,7 @@ import { Link, useParams } from 'react-router';
 import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
 import { EmptyState } from '../components/ui/empty-state';
 import { Skeleton } from '../components/ui/skeleton';
 import { useI18n } from '../i18n/provider';
@@ -261,6 +262,16 @@ export function AuditDetailPage(): JSX.Element {
         }
       />
       <div className="flex flex-col gap-6">
+        {(data.pushbackEvents?.length ?? 0) > 0 ? (
+          <Card className="border-sev-moderate/50 bg-sev-moderate/5">
+            <p className="text-sm text-ink-soft">
+              {strings.progress.pushbackWarning.replace(
+                '{count}',
+                String(data.pushbackEvents?.length ?? 0),
+              )}
+            </p>
+          </Card>
+        ) : null}
         {isReportStageFailure({ failure: data.failure, lifecycle: data.lifecycle }) &&
         data.failure !== undefined ? (
           <FailureCard failure={data.failure} lifecycle={data.lifecycle} />

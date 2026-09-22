@@ -573,8 +573,9 @@ export function resolveSelectionForKey(
  * record that claims more effort than it made. The three policy refusals are
  * here for a different reason: the only way to change their outcome is to
  * change identity or profile, which the charter forbids. `not-applicable` has
- * nothing to retry, and `anti-bot-rate-limit` is section 10's explicit
- * stop/escalate case.
+ * nothing to retry. A rate limit gets one slower isolated retry before it is
+ * escalated, so a short-lived challenge can recover without pressing the
+ * host repeatedly.
  */
 export const NEVER_RETRIED_FAILURE_CLASSES: readonly AttemptFailureClass[] = [
   'site-http-state',
@@ -582,7 +583,6 @@ export const NEVER_RETRIED_FAILURE_CLASSES: readonly AttemptFailureClass[] = [
   'network-safety-block',
   'not-applicable',
   'operator-excluded',
-  'anti-bot-rate-limit',
 ];
 
 export function isRetryableFailureClass(failureClass: AttemptFailureClass): boolean {
@@ -609,7 +609,7 @@ const RECOVERY_LADDER: Record<AttemptFailureClass, readonly AttemptExecutionProf
   'network-safety-block': [],
   'not-applicable': [],
   'operator-excluded': [],
-  'anti-bot-rate-limit': [],
+  'anti-bot-rate-limit': ['isolated-retry'],
   // A fresh context fixes nothing about an overloaded origin, so both rungs
   // here are really just "ask again, later". The delay comes from the host
   // scheduler's backoff rather than from this ladder, which is why two rungs
@@ -649,7 +649,6 @@ const NON_RETRY_REASON: Partial<Record<AttemptFailureClass, RecoveryDecision['re
   'network-safety-block': 'policy-refusal',
   'operator-excluded': 'policy-refusal',
   'not-applicable': 'nothing-to-retry',
-  'anti-bot-rate-limit': 'escalate-rate-limit',
 };
 
 /**

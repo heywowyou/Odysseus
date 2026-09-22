@@ -21,6 +21,11 @@ export function EvidenceQualityCard(props: { detail: AuditDetailResponse }): JSX
   return (
     <Card title={copy.heading} description={copy.description}>
       <div className="flex flex-col gap-4 text-[13px]">
+        {evidence.reportBlocked === true ? (
+          <p className="rounded-md border border-severity-critical/30 bg-severity-critical/5 p-3 font-medium text-severity-critical">
+            {copy.reportBlocked}
+          </p>
+        ) : null}
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-ink-muted">{copy.statusLabel}</span>
           <Badge tone={evidenceStatusTone(evidence.status)}>{copy.statuses[evidence.status]}</Badge>

@@ -126,6 +126,11 @@ export async function resolveRenderInputs(args: {
     startedAt: new Date(manifest.startedAt),
     store: args.artifactStore,
   });
+  if (diagnostics.reportBlocked === true) {
+    throw new Error(
+      `Report generation blocked: ${(diagnostics.blockingReasons ?? ['insufficient acquisition evidence']).join(', ')}`,
+    );
+  }
 
   return {
     ...(manualFields !== undefined ? { manualFields } : {}),

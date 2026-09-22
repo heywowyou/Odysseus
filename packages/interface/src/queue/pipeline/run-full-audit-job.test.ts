@@ -63,6 +63,7 @@ function fakeAuditResult() {
     coverageSummary: {
       kind: 'current' as const,
       inventoriedUrlCount: 2,
+      noindexPageCount: 0,
       continuationOmittedUrlCount: 0,
       content: { completed: 2, partial: 0, failed: 0 },
       passes: {

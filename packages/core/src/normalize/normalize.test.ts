@@ -539,6 +539,21 @@ describe('site-level findings anchor to a content-checked page (issue #101)', ()
     expect(entity[0]?.pageUrls).toEqual(['https://villasfoch.test/fr/chambres']);
   });
 
+  it('suppresses site-wide absence findings when candidate coverage is blocked', () => {
+    const findings = normalizeAudit({
+      ...input,
+      coverageLimitations: [
+        {
+          ruleId: 'hreflang-missing',
+          blockedCandidateCount: 1,
+          failedCandidateCount: 0,
+          candidateUrls: ['https://villasfoch.test/private'],
+        },
+      ],
+    });
+    expect(findings.filter((finding) => finding.ruleId === 'hreflang-missing')).toHaveLength(0);
+  });
+
   it('emits no site-level finding at all when nothing was content-checked', () => {
     const findings = normalizeAudit({ ...input, pages: [] });
     const ruleIds = findings.map((f) => f.ruleId);
@@ -714,18 +729,14 @@ describe('normalizeAudit Lighthouse SEO audits covered by head metadata', () => 
     ]);
   });
 
-  it('keeps the link and indexability audits for a scan stored before those facts existed', () => {
+  it('uses the extracted head metadata instead of sampled indexability data', () => {
     const url = 'https://example.com/';
     const findings = normalizeAudit({
       auditId: 'audit-1',
       startedAt: STARTED_AT,
       pages: [buildNormalizePageInput({ url, lighthouse, headMetadata: head(url) })],
     });
-    expect(sources(findings)).toEqual([
-      'custom:meta-description-missing',
-      'lighthouse:is-crawlable',
-      'lighthouse:link-text',
-    ]);
+    expect(sources(findings)).toEqual(['custom:meta-description-missing', 'lighthouse:link-text']);
   });
 
   it('reports only the per-page findings once every replacing fact was extracted', () => {

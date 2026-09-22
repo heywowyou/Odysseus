@@ -186,7 +186,7 @@ describe('extractLighthouseCandidates', () => {
   describe('issue #300: good field data caps the lab audits that measure the same thing', () => {
     const goodLcp = new Set<CruxMetricKey>(['lcp']);
 
-    it('caps a critical lab LCP finding to "moderate" when real visitors experience LCP as good', () => {
+    it('drops the duplicate lab LCP finding when real visitors provide the metric', () => {
       // The Haaitza case: every one of 140 crawled pages carried a
       // critical Lighthouse performance finding while CrUX reported LCP at
       // 2.4s and CLS at 0.04, which emptied the critical-pages KPI of any
@@ -205,10 +205,10 @@ describe('extractLighthouseCandidates', () => {
         undefined,
         goodLcp,
       );
-      expect(candidates[0]?.severity).toBe('moderate');
+      expect(candidates).toEqual([]);
     });
 
-    it('caps the diagnostic audits that belong to a good field metric, not only the metric audit', () => {
+    it('drops diagnostic audits that belong to a good field metric, not only the metric audit', () => {
       const lhr = buildLighthouseResultInput({
         categories: {
           performance: { score: 0.2, auditRefs: [{ id: 'speed-index', weight: 25 }] },
@@ -221,7 +221,7 @@ describe('extractLighthouseCandidates', () => {
         undefined,
         goodLcp,
       );
-      expect(candidates[0]?.severity).toBe('moderate');
+      expect(candidates).toEqual([]);
     });
 
     it('leaves a lab metric alone when the field data for that metric is not good', () => {

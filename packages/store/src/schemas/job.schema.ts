@@ -126,7 +126,17 @@ export interface JobProgressCrawlExclusions {
   externalRedirect: number;
   nonHtml: number;
   httpError: number;
+  blocked: number;
   error: number;
+}
+
+export interface JobProgressPushbackEvent {
+  pageUrl: string;
+  kind: 'rate-limit' | 'bot-challenge' | 'origin-transient';
+  fetcher: 'crawl' | 'render' | 'lighthouse' | 'canonical';
+  occurredAt: string;
+  status?: number;
+  retryAfterMs?: number;
 }
 
 export interface JobProgress {
@@ -136,6 +146,7 @@ export interface JobProgress {
   lighthouse?: JobProgressAnalysisStage;
   continuationGuard?: JobProgressContinuationGuard;
   crawlExclusions?: JobProgressCrawlExclusions;
+  pushbackEvents?: JobProgressPushbackEvent[];
   message?: string;
 }
 
@@ -315,7 +326,28 @@ const jobProgressCrawlExclusionsSchema = new Schema(
     externalRedirect: { type: Number, required: true },
     nonHtml: { type: Number, required: true },
     httpError: { type: Number, required: true },
+    blocked: { type: Number, required: true },
     error: { type: Number, required: true },
+  },
+  { _id: false },
+);
+
+const jobProgressPushbackEventSchema = new Schema(
+  {
+    pageUrl: { type: String, required: true },
+    kind: {
+      type: String,
+      enum: ['rate-limit', 'bot-challenge', 'origin-transient'],
+      required: true,
+    },
+    fetcher: {
+      type: String,
+      enum: ['crawl', 'render', 'lighthouse', 'canonical'],
+      required: true,
+    },
+    occurredAt: { type: String, required: true },
+    status: { type: Number },
+    retryAfterMs: { type: Number },
   },
   { _id: false },
 );
@@ -328,6 +360,7 @@ const jobProgressSchema = new Schema(
     lighthouse: { type: jobProgressAnalysisStageSchema },
     continuationGuard: { type: jobProgressContinuationGuardSchema },
     crawlExclusions: { type: jobProgressCrawlExclusionsSchema },
+    pushbackEvents: { type: [jobProgressPushbackEventSchema] },
     message: { type: String },
   },
   { _id: false },

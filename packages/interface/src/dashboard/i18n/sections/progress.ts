@@ -59,6 +59,8 @@ export interface ProgressStrings {
   newScanLink: string;
   /** A completed prospect-linked scan returns the operator to its record. */
   goToProspectLink: string;
+  pushbackWarning: string;
+  slowRelaunchLink: string;
 }
 
 export const progress = {
@@ -100,6 +102,9 @@ export const progress = {
       'Le scan est terminé. Confirmez les champs ci-dessous sur la page de l’audit, puis régénérez le rapport.',
     goToAuditLink: 'Aller à la page de l’audit',
     goToProspectLink: 'Aller au prospect',
+    pushbackWarning:
+      'Le site limite nos requêtes : {count} pages ont reçu une réponse temporaire ou une page de vérification anti-robot.',
+    slowRelaunchLink: 'Relancer plus lentement',
     urlResultsHeading: 'Résultat par site',
     notFound: 'Scan introuvable.',
     notFoundAction: 'Voir les audits',
@@ -167,6 +172,9 @@ export const progress = {
       'The scan finished. Confirm the fields below on the audit page, then regenerate the report.',
     goToAuditLink: 'Go to the audit page',
     goToProspectLink: 'Go to the prospect',
+    pushbackWarning:
+      'The site is limiting our requests: {count} pages returned a transient response or an anti-bot verification page.',
+    slowRelaunchLink: 'Relaunch more slowly',
     urlResultsHeading: 'Per-site results',
     notFound: 'Scan not found.',
     notFoundAction: 'View audits',

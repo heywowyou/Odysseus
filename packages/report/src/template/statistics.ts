@@ -8,7 +8,7 @@ import {
 import { buildConformanceRollup, pagesWithWcagFailures } from './conformance-rollup.js';
 import type { CATEGORY_ORDER } from './design-tokens.js';
 import { EVIDENCE_INCLUSION_THRESHOLD_PERCENT } from '../constants.js';
-import { isThirdPartyFinding } from './third-party-attribution.js';
+import { isConfinedToThirdParty, isThirdPartyFinding } from './third-party-attribution.js';
 
 /** Deterministic counts for the statistics page (docs/archive/report-v2-refactor.md
  *  B10): nowhere in v1 did the document state pages scanned, finding
@@ -43,6 +43,11 @@ export interface ReportStatistics {
    *  heuristic-exclusion convention as accessibilityOccurrences: a
    *  heuristic finding's occurrences never enter this count either. */
   thirdPartyAccessibilityOccurrences: number;
+  /** Findings whose captured evidence is entirely inside a third-party frame
+   *  or vendor component. These remain in the annex but do not affect the
+   *  report's primary grade/counts. */
+  confinedThirdPartyFindingCount: number;
+  confinedThirdPartyOccurrenceCount: number;
   pagesWithCritical: number;
   critical: number;
   serious: number;
@@ -97,6 +102,8 @@ export function computeStatistics(
   let accessibilityOccurrences = 0;
   let accessibilityHeuristicOccurrences = 0;
   let thirdPartyAccessibilityOccurrences = 0;
+  let confinedThirdPartyFindingCount = 0;
+  let confinedThirdPartyOccurrenceCount = 0;
   let critical = 0;
   let serious = 0;
   let moderate = 0;
@@ -114,6 +121,11 @@ export function computeStatistics(
   };
 
   for (const finding of findings) {
+    if (isConfinedToThirdParty(finding)) {
+      confinedThirdPartyFindingCount += 1;
+      confinedThirdPartyOccurrenceCount += finding.occurrences;
+      continue;
+    }
     if (finding.category === 'accessibility') {
       if (HEURISTIC_RULE_IDS.has(finding.ruleId)) {
         accessibilityHeuristicOccurrences += finding.occurrences;
@@ -150,10 +162,12 @@ export function computeStatistics(
 
   return {
     pagesScanned,
-    totalFindings: findings.length,
+    totalFindings: findings.length - confinedThirdPartyFindingCount,
     accessibilityOccurrences,
     accessibilityHeuristicOccurrences,
     thirdPartyAccessibilityOccurrences,
+    confinedThirdPartyFindingCount,
+    confinedThirdPartyOccurrenceCount,
     pagesWithCritical: pagesWithCriticalSet.size,
     critical,
     serious,

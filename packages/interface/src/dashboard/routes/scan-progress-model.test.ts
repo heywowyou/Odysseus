@@ -48,6 +48,7 @@ function job(
     coverageGateBlocked: fields.coverageGateBlocked ?? false,
     phase: fields.phase ?? 'queued',
     progress: fields.progress ?? {},
+    options: {},
     work: {
       workId: 'job-1',
       owner: 'legacy-job',
@@ -82,6 +83,7 @@ describe('coverageSegments', () => {
             externalRedirect: 9,
             nonHtml: 20,
             httpError: 7,
+            blocked: 0,
             error: 1,
           },
         },
