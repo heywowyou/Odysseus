@@ -152,7 +152,8 @@ export interface ReportStrings {
     thirdPartyOccurrencesNoteTemplate: string;
     /** Template: {count}. Third-party frame-only occurrences stay in the
      *  technical annex and never enter the primary grade/counts. */
-    thirdPartyFrameNoteTemplate: string;
+    thirdPartyFrameNoteSingularTemplate: string;
+    thirdPartyFrameNotePluralTemplate: string;
     priorityOwnership: PriorityOwnershipStrings;
     pagesWithCriticalTileLabel: string;
     criticalTileLabel: string;

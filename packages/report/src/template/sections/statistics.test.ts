@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AuditManifest, Finding, FindingCategory } from '@odysseus/core';
 import { renderStatistics } from './statistics.js';
+import { findRenderLintViolations } from '../render-lint.js';
 import { getStrings } from '../strings/i18n.js';
 import { loadSmallSiteFindings, loadSmallSiteManifest } from '../../test-fixtures.js';
 
@@ -420,4 +421,41 @@ describe('number tile values', () => {
       expect(Number(chars)).toBe([...value!].length);
     }
   });
+});
+
+describe('renderStatistics embedded-frame note', () => {
+  function frameFinding(occurrences: number): Finding {
+    return {
+      ...buildCategoryFinding('accessibility', 0),
+      occurrences,
+      elements: [
+        {
+          pageUrl: 'https://example.com/',
+          selector: 'iframe[src="https://www.youtube.com/embed/x"] >>> button',
+          snippet: '',
+        },
+      ],
+    };
+  }
+
+  it.each([
+    ['fr', 1, '1 occurrence relève'],
+    ['fr', 24, '24 occurrences relèvent'],
+    ['en', 1, '1 occurrence belongs'],
+    ['en', 24, '24 occurrences belong'],
+  ] as const)(
+    'writes the %s note for %i occurrences without a pluralisation placeholder',
+    (language, occurrences, expected) => {
+      const html = renderStatistics(
+        getStrings(language),
+        3,
+        language,
+        [frameFinding(occurrences)],
+        buildMinimalManifest(),
+      );
+
+      expect(html).toContain(expected);
+      expect(findRenderLintViolations(html)).toEqual([]);
+    },
+  );
 });

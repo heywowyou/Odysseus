@@ -235,9 +235,17 @@ export function renderStatistics(
   const thirdPartyFrameNote =
     stats.confinedThirdPartyOccurrenceCount > 0
       ? `<p class="statistics-note">${escapeHtml(
-          fillTemplate(s.thirdPartyFrameNoteTemplate, {
-            count: n(stats.confinedThirdPartyOccurrenceCount),
-          }),
+          fillTemplate(
+            pluralize(
+              language,
+              stats.confinedThirdPartyOccurrenceCount,
+              s.thirdPartyFrameNoteSingularTemplate,
+              s.thirdPartyFrameNotePluralTemplate,
+            ),
+            {
+              count: n(stats.confinedThirdPartyOccurrenceCount),
+            },
+          ),
         )}</p>`
       : '';
   const ownership = priorities ? summarizePriorityOwnership(priorities, manifest) : undefined;
