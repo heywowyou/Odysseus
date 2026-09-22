@@ -52,6 +52,9 @@ export function buildScanJson(
     ...(scanResult.canonicalTarget !== undefined
       ? { canonicalTarget: scanResult.canonicalTarget }
       : {}),
+    ...(scanResult.canonicalTargetError !== undefined
+      ? { canonicalTargetError: scanResult.canonicalTargetError }
+      : {}),
     ...(scanResult.sitemapCheck !== undefined ? { sitemapCheck: scanResult.sitemapCheck } : {}),
     ...(scanResult.llmsTxtCheck !== undefined ? { llmsTxtCheck: scanResult.llmsTxtCheck } : {}),
     ...(scanResult.mixedContent !== undefined ? { mixedContent: scanResult.mixedContent } : {}),

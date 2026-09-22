@@ -2,7 +2,11 @@ import * as fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { CheckExecutionOutcome, CheckId } from '../check-scope-coverage.js';
+import {
+  CHECK_SCOPE_REGISTRY,
+  type CheckExecutionOutcome,
+  type CheckId,
+} from '../check-scope-coverage.js';
 import type { RenderedCostProfile } from '../full-audit-plan.js';
 import type { PageScanResult } from '../scan-page.js';
 import { buildPageDir } from './paths.js';
@@ -112,5 +116,26 @@ describe('writePageScanJson and readPageScanJson', () => {
     const { pagesDir } = await makeTempPagesDir();
 
     expect(readPageScanJson(pagesDir, 'https://example.com/')).toBeUndefined();
+  });
+});
+
+describe('buildScanJson error fields', () => {
+  it('keeps every registered check error field, so a persisted failure still says why', () => {
+    // The attempt ledger classifies a failed check from this text; a field
+    // dropped here leaves a stored page whose failure cannot be explained or
+    // reclassified later.
+    const errorFields = CHECK_SCOPE_REGISTRY.flatMap((entry) =>
+      entry.errorField === undefined ? [] : [entry.errorField],
+    );
+    const scanResult = Object.fromEntries([
+      ['url', 'https://example.com/'],
+      ...errorFields.map((field) => [field, `${field} message`]),
+    ]) as unknown as PageScanResult;
+
+    const scanJson = buildScanJson(scanResult, undefined) as unknown as Record<string, unknown>;
+
+    for (const field of errorFields) {
+      expect(scanJson[field], field).toBe(`${field} message`);
+    }
   });
 });
