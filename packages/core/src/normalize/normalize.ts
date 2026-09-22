@@ -345,6 +345,13 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
           challengeFrameOrigins: (page.frames ?? [])
             .filter((frame) => (frame.challengeMarkers?.length ?? 0) > 0)
             .map((frame) => frame.frameOrigin),
+          frameOriginsBySelector: new Map(
+            (page.frames ?? []).flatMap((frame) =>
+              frame.frameSelector !== undefined && frame.frameOrigin !== ''
+                ? [[frame.frameSelector, frame.frameOrigin] as const]
+                : [],
+            ),
+          ),
         }),
       );
     }
@@ -510,6 +517,9 @@ function publicEvidenceForPage(
   let isHreflangTarget = false;
   let isCanonicalTarget = false;
   for (const page of pages) {
+    // A page's own self-canonical or self-referencing hreflang says nothing
+    // about whether anyone else points to it; only other pages count.
+    if ((normalizeUrlIdentity(page.url) ?? page.url) === identity) continue;
     if (page.headMetadata!.hreflangLinks.some((link) => isTarget(link.href))) {
       isHreflangTarget = true;
     }

@@ -775,3 +775,45 @@ describe('normalizeAudit Lighthouse SEO audits covered by head metadata', () => 
     expect(sources(findings)).toEqual(['custom:link-text', 'custom:meta-description-missing']);
   });
 });
+
+describe('noindex public evidence (plan 075, B2)', () => {
+  const head = (url: string, robotsMeta: string | null, hreflangTargets: string[] = []) => ({
+    pageUrl: url,
+    title: 'Avril 2024, archives du blog de l’hôtel',
+    metaDescription: null,
+    canonicalUrls: [url],
+    openGraphTags: {},
+    jsonLdBlocks: [],
+    headings: [],
+    hreflangLinks: [url, ...hreflangTargets].map((href) => ({ lang: 'fr', href })),
+    robotsMeta,
+  });
+  const archive = 'https://example.com/2024/04';
+  const run = (homeHreflang: string[]) =>
+    normalizeAudit({
+      auditId: 'a',
+      startedAt: STARTED_AT,
+      pages: [
+        buildNormalizePageInput({ url: archive, headMetadata: head(archive, 'noindex, follow') }),
+        buildNormalizePageInput({
+          url: 'https://example.com/',
+          headMetadata: head('https://example.com/', null, homeHreflang),
+        }),
+      ],
+      crawl: {
+        startUrl: 'https://example.com/',
+        pages: [
+          { url: 'https://example.com/', status: 'visited', depth: 0 },
+          { url: archive, status: 'visited', depth: 1 },
+        ],
+      },
+    } as unknown as NormalizeAuditInput).filter((f) => f.ruleId === 'noindex-on-public-page');
+
+  it('does not treat a page’s own canonical or hreflang as evidence it is meant to be found', () => {
+    expect(run([])).toHaveLength(0);
+  });
+
+  it('still reports a noindex page another page points to', () => {
+    expect(run([archive])).toHaveLength(1);
+  });
+});
