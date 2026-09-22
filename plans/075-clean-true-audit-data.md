@@ -68,7 +68,7 @@ Checked and **not** noise:
 
 ## Slices
 
-Execution order: 0, then A1, A9, A2–A8, then B, then C, then E, then D. The operator questions in Part E are asked before their slices start.
+Execution order: 0, then A1, A9, A2–A8, then B, then C, then E, then D. Part E's operator questions were decided on 2026-09-22.
 
 ### 0. Measurement harness (first; every other slice is proved against it)
 
@@ -220,11 +220,17 @@ A second read-only pass covered the areas the first one left open: Lighthouse ru
 
 Checked and not noise in this pass: `label` on atlantichotel's `#AVP_arrivalDate` (a real unlabelled field, unlike the trap), `meta-viewport` (one finding per audit), `nested-interactive`, `select-name`, `frame-title` on site-authored iframes, and the pointfrance axe failures (the A5 watchdog, not a separate defect). `/data/artifacts/prescans` (525 runs) predates plan 047. The code that wrote those runs is gone and nothing reads them, so they are not in scope.
 
-#### Operator questions (asked before the slice that needs them)
+#### Operator decisions (2026-09-22: the recommended option on all three)
 
-- **Q1, third-party frame content in the grade (E2).** Recommended: findings inside a third-party frame stay in the annex, attributed to the vendor. The grade, cover totals, severity chart and preview totals count first-party findings only, with the line « dont N relèvent de contenus tiers intégrés ». The conformance wording does not call them out of scope: EN 301 549 judges the page as served, embeds included. The alternative is to keep counting them and only label them.
-- **Q2, minor Lighthouse diagnostics.** Recommended: the five metrics (LCP, CLS, TBT, FCP, Speed Index) stay findings, and each diagnostic becomes evidence under the metric it explains, as ranked causes. That removes about 15 findings per audit without losing any evidence. The alternative is to keep them as findings and exclude minor ones from the counts.
-- **Q3, archive pages.** Decide after E3, because many archives are noindex. Recommended: keep crawling and disclosing them (no page cap; trade-off 64 requires structural evidence), and group template-identical archive findings into one finding. Stop there, and do not sample.
+- **Q1, content inside third-party frames: excluded from the grade, kept in the report.** Findings inside a third-party frame stay in the annex, labelled with the vendor, each with its real fix (change the embed setting, ask the vendor, or replace the widget). The grade, cover totals, severity chart and preview totals count first-party findings only. The cover carries the line « dont N relèvent de contenus tiers intégrés (fournisseur) ». The conformance wording never calls these findings out of scope: EN 301 549 judges the page as served, embeds included.
+- **Q2, minor Lighthouse diagnostics: folded into evidence.** The five metrics (LCP, CLS, TBT, FCP, Speed Index) stay findings. Each diagnostic becomes a ranked cause, with its files, under the metric it explains. A diagnostic that stands on its own even when the metrics pass (for example `unsized-images`, which causes layout shift) stays a finding. The folding table is explicit, lives in `normalize-lighthouse.ts`, and is measured with slice 0.
+- **Q3, archive pages: still scanned, grouped, and counted apart.** Archives stay crawled and disclosed (no page cap; trade-off 64). E3 runs first, which removes the SEO findings on noindex archives. For the rest, archives are identified structurally (WordPress body classes `date`, `author`, `category`, `tag`, `post-type-archive`, or `CollectionPage` markup). A defect common to every archive of one kind becomes one finding (« présent sur les 141 pages d'archives mensuelles »). Coverage shows archive pages as their own line. No sampling.
+
+#### Production state checked (read-only, 2026-09-22, operator approved)
+
+- All 10 outreach previews (villasfoch, haaitza, grandhoteldesalpes, pointfrance) are revoked. Both outreach drafts were deleted before sending, and neither thread records a sent touch. Nothing built on this data reached a prospect.
+- **The pointfrance FR report (audit `cc1d2bd3`) was approved on 2026-09-21.** It carries B2's 111 false critical noindex pages, E10's 337 false structured-data pages and the A5 watchdog losses. E7 treats it like the grand-hotel-opera and lacoorniche reports: the approval is shown as invalidated and the report cannot be sent until a rescan and a new approval.
+- The two outreach threads stay in `e1-drafted` although their drafts were deleted. That is a small state inconsistency to check in the outreach code, not a data-quality defect.
 
 #### Slices
 
@@ -234,8 +240,8 @@ Checked and not noise in this pass: `label` on atlantichotel's `#AVP_arrivalDate
   - A challenge inside a frame drops that frame's findings and records the widget as undetermined. It also counts as an A8 pushback event.
   - Stored audits: normalization drops findings whose element snippet matches a marker.
   - Tests: marker unit tests, a normalize test on a stored-shape page, and an e2e fixture whose iframe serves a challenge.
-- **E2. Third-party frame content (after Q1).**
-  - Apply Q1's decision in `statistics.ts`, `grade.ts` and the preview totals.
+- **E2. Third-party frame content (Q1 decided).**
+  - Apply Q1 in `statistics.ts`, `grade.ts`, the cover line and the preview totals.
   - The identity of an in-frame finding becomes the frame's `src` origin plus the inner element shape, not the iframe's own attributes, so one embed counts once (C).
   - Tests: statistics and grade unit tests, and a collapse test.
 - **E3. Noindex pages skip SEO content rules.**
@@ -256,7 +262,7 @@ Checked and not noise in this pass: `label` on atlantichotel's `#AVP_arrivalDate
   - Preview evidence selection skips the page classes A1 and E1 mark as blocked. It also skips any rule listed in a small "under correction" set until that rule's fix is merged: `keyboard-trap` until B1 lands, then the set is emptied.
   - Tests: preview selection unit tests.
 - **E7. Reports built on invalidated audits cannot go out.**
-  - Check that the `NORMALIZATION_FINGERPRINT` bump (D) makes the existing provenance fail-closed path refuse the grand-hotel-opera and lacoorniche PDFs, the finalized 2026-09-21 one included. If it does not, add that refusal.
+  - Check that the `NORMALIZATION_FINGERPRINT` bump (D) makes the existing provenance fail-closed path refuse the grand-hotel-opera and lacoorniche PDFs (the finalized 2026-09-21 one included) and the approved pointfrance report. If it does not, add that refusal. An approval (`reportApprovals`) whose report is refused is shown as invalidated, not silently kept.
   - The dashboard shows those reports as « À régénérer après nouvelle analyse ». Nothing is deleted.
   - Tests: a provenance test with a stale-fingerprint report.
 - **E8. B6 and B7 made decidable.**
@@ -307,7 +313,7 @@ Checked and not noise in this pass: `label` on atlantichotel's `#AVP_arrivalDate
 - Challenges that return 200, including those inside vendor frames, yield no findings (E1).
 - The homepage is scanned on every audit, and a homepage without a successful content check blocks the report (A9).
 - Plugin objects, the `@id` false positive, robots pushback and lazy-load placeholders no longer produce findings, and absence rules never claim absence over blocked pages (E9 to E13).
-- Q1 to Q3 are answered and applied: third-party frame content, minor Lighthouse diagnostics, archive pages.
+- The Q1 to Q3 decisions are applied: third-party frame content, minor Lighthouse diagnostics, archive pages.
 - Noindex pages carry no SEO content findings, and the coverage discloses them (E3).
 - A metric is reported once, with field data ahead of lab when both exist, and no invalid lab run enters a median (E4, E5).
 - The outreach preview cannot pick a proof from a blocked page or from a rule under correction (E6).
@@ -334,9 +340,9 @@ The closure artifact is the requirement-to-proof ledger below. Every row names i
 | LCEN outside metropolitan France | `obligation-basis.md` owner | Recorded decision | Unit test for the chosen behaviour | Operator decision if the basis is unclear |
 | One defect counts once | `normalize-axe.ts`, `normalize-head-metadata.ts`, `normalize-reflow.ts`, `normalize-links.ts`, `normalize-lighthouse.ts`, `normalize-crawl.ts`, `normalize-hreflang.ts` | Code, deferred item closed | Unit tests, collapse invariants, concentration guard | Harness per-rule table |
 | Challenges returning 200, in page or frame, excluded | scanner acquisition, `normalize-axe.ts`, `normalize.ts` | Code, vendor marker table | Marker unit tests, normalize test, challenge-iframe e2e | Harness: 0 findings with a challenge marker snippet |
-| Third-party frame content handled per Q1 | `statistics.ts`, `grade.ts`, preview totals, `normalize-axe.ts` identity | Code, operator decision | Statistics, grade and collapse unit tests | Operator answers Q1 |
-| Minor Lighthouse diagnostics handled per Q2 | `normalize-lighthouse.ts`, report performance section | Code, operator decision | Normalize and report unit tests | Operator answers Q2 |
-| Archive pages handled per Q3 | `normalize.ts`, coverage disclosure | Code, trade-off 64 note | Collapse unit test | Operator answers Q3 |
+| Third-party frame content handled per Q1 | `statistics.ts`, `grade.ts`, preview totals, `normalize-axe.ts` identity | Code, operator decision | Statistics, grade and collapse unit tests | Operator reads one report with an embed |
+| Minor Lighthouse diagnostics handled per Q2 | `normalize-lighthouse.ts`, report performance section | Code, operator decision | Normalize and report unit tests | Operator reads one performance section |
+| Archive pages handled per Q3 | `normalize.ts`, coverage disclosure | Code, trade-off 64 note | Collapse unit test | Operator reads pointfrance coverage |
 | No SEO content finding on noindex pages | `normalize-head-metadata.ts`, `normalize-links.ts`, coverage | Code, copy | Unit and coverage tests; harness shows 0 SEO entries on noindex pages | none |
 | One finding per metric; valid lab runs only | `normalize-lighthouse.ts`, CrUX normalizer, `lighthouse.ts` | Code, trade-off 111 | Unit tests; harness plausibility table | IndexedDB probe result recorded here |
 | Preview never shows a false or blocked proof | preview evidence selection | Code | Selection unit tests | none |
@@ -366,4 +372,4 @@ Once this plan is deployed, rescan all 12 stored full audits instead of only re-
 
 Reports are regenerated only when needed, because regeneration runs the paid AI passes.
 
-Until then, the stored grand-hotel-opera and lacoorniche PDFs, including the finalized lacoorniche PDF from 2026-09-21, are not sent to anyone (E7).
+Until then, the stored grand-hotel-opera and lacoorniche PDFs (including the finalized lacoorniche PDF from 2026-09-21) and the approved pointfrance report are not sent to anyone (E7).
