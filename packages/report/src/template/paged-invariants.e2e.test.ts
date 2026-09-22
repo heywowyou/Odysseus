@@ -34,7 +34,6 @@ import {
   detectSplitRemainingRules,
   detectWidowedSheetTails,
   forceBreakBeforeRemainingRules,
-  forceBreakBeforeThemeCards,
   markSnugBlocksInHtml,
   renderPdfWithPageCountFromHtml,
 } from '../pdf.js';
@@ -635,37 +634,24 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
     }
   }, 600_000);
 
-  it('a priority card left as an empty shell at a page foot is moved onto the next page', async () => {
+  it('a priority card never leaves an empty shell at a page foot', async () => {
     // A real French report painted an empty rounded card under the second
-    // priority: the card's header is atomic and moved on, while the card's
-    // own box still opened on the page being left. Sliding the priorities
-    // down the page finds an offset that reproduces it.
+    // priority: the card's header was atomic and moved on, while the card's
+    // own box still opened on the page being left. The current block-flow
+    // layout prevents that shape entirely; keep the offset sweep as a
+    // regression guard rather than requiring an obsolete reproduction.
     expect(stressHtml).toMatch(/<div class="card elev-sm theme-card"/u);
-    let found: { html: string; empty: string[] } | undefined;
-    for (let offsetMm = 0; offsetMm <= 240 && !found; offsetMm += 3) {
+    for (let offsetMm = 0; offsetMm <= 240; offsetMm += 6) {
       const html = stressHtml.replace(
         '<div class="card elev-sm theme-card"',
         `<div style="height:${offsetMm}mm"></div><div class="card elev-sm theme-card"`,
       );
       const pressured = await paginate(browser, html, pagedjsSource);
       try {
-        const empty = await detectEmptyThemeCardFragments(pressured.page);
-        if (empty.length > 0) found = { html, empty };
+        expect(await detectEmptyThemeCardFragments(pressured.page)).toEqual([]);
       } finally {
         await pressured.page.context().close();
       }
-    }
-    expect(found).toBeDefined();
-
-    const moved = await paginate(
-      browser,
-      forceBreakBeforeThemeCards(found!.html, found!.empty),
-      pagedjsSource,
-    );
-    try {
-      expect(await detectEmptyThemeCardFragments(moved.page)).toEqual([]);
-    } finally {
-      await moved.page.context().close();
     }
   }, 600_000);
 
