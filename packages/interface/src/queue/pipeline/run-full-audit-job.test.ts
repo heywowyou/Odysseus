@@ -51,6 +51,7 @@ function fakeAuditResult() {
       pages: [
         {
           url: 'https://example.com/',
+          status: 'visited',
           errors: {},
           coreWebVitals: { lcp: { score: 0.9, numericValue: 1800, displayValue: '1.8 s' } },
         },
