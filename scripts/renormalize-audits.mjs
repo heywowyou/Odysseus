@@ -9,12 +9,19 @@
  * usage (inside odysseus-app-1): node renormalize-audits.mjs <auditId-prefix> [...]
  */
 
-import { renormalizeAudit } from '/app/packages/interface/dist/pipeline/renormalize-audit.js';
-import { backfillAuditRow } from '/app/packages/interface/dist/pipeline/backfill-audit-row.js';
-import { syncAuditDirToBucket } from '/app/packages/interface/dist/artifacts/sync-audit-artifacts.js';
-import { createConfiguredArtifactStore } from '/app/packages/interface/dist/artifacts/configured-artifact-store.js';
-import { connectToMongo, disconnectFromMongo } from '/app/packages/store/dist/index.js';
-import { buildAuditDir, getArtifactsRoot } from '/app/packages/scanner/dist/index.js';
+// The container's built packages, loaded dynamically: these paths exist only
+// inside the production image, so static imports would not resolve here.
+const app = '/app/packages';
+const { renormalizeAudit } = await import(`${app}/interface/dist/pipeline/renormalize-audit.js`);
+const { backfillAuditRow } = await import(`${app}/interface/dist/pipeline/backfill-audit-row.js`);
+const { syncAuditDirToBucket } = await import(
+  `${app}/interface/dist/artifacts/sync-audit-artifacts.js`
+);
+const { createConfiguredArtifactStore } = await import(
+  `${app}/interface/dist/artifacts/configured-artifact-store.js`
+);
+const { connectToMongo, disconnectFromMongo } = await import(`${app}/store/dist/index.js`);
+const { buildAuditDir, getArtifactsRoot } = await import(`${app}/scanner/dist/index.js`);
 
 const prefixes = process.argv.slice(2);
 if (prefixes.length === 0) {
