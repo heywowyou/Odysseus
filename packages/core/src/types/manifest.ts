@@ -350,6 +350,10 @@ export interface AuditPushbackEvent {
   occurredAt: string;
   status?: number;
   retryAfterMs?: number;
+  /** Delay between request starts after this event; absent on older runs. */
+  delayMs?: number;
+  /** The delay was already at the backoff cap when this event arrived. */
+  atMaxDelay?: boolean;
 }
 
 export interface ManifestPageEntry {

@@ -52,7 +52,17 @@ export interface HostPushbackEvent {
   occurredAt: string;
   status?: number;
   retryAfterMs?: number;
+  /** The delay between request starts once this event was absorbed. Set by
+   *  the scheduler; absent on events recorded before it was tracked. */
+  delayMs?: number;
+  /** The delay was already at the backoff cap, so this pushback could not
+   *  slow the run any further: the site keeps pushing back at the slowest
+   *  pace this run can reach. */
+  atMaxDelay?: boolean;
 }
+
+/** What a caller reports; the scheduler adds the time and its own pacing. */
+export type HostPushbackSignal = Omit<HostPushbackEvent, 'occurredAt' | 'delayMs' | 'atMaxDelay'>;
 
 const DEFAULT_BACKOFF_FACTOR = 2;
 const DEFAULT_MAX_DELAY_MS = 60_000;
@@ -106,7 +116,8 @@ export class HostRequestScheduler {
    * Records that the host pushed back - a 429, a 503 with Retry-After, an
    * anti-bot interstitial. Backs off and sheds a lane. Never the reverse.
    */
-  noteRateLimited(event?: Omit<HostPushbackEvent, 'occurredAt'>): void {
+  noteRateLimited(event?: HostPushbackSignal): void {
+    const atMaxDelay = this.#delayMs >= this.#maxDelayMs;
     if (event?.retryAfterMs !== undefined) {
       this.raiseDelayTo(event.retryAfterMs);
     }
@@ -116,7 +127,12 @@ export class HostRequestScheduler {
     );
     this.#concurrency = Math.max(1, Math.floor(this.#concurrency / 2));
     if (event !== undefined) {
-      this.#onPushback?.({ ...event, occurredAt: new Date(this.#now()).toISOString() });
+      this.#onPushback?.({
+        ...event,
+        occurredAt: new Date(this.#now()).toISOString(),
+        delayMs: this.#delayMs,
+        atMaxDelay,
+      });
     }
   }
 

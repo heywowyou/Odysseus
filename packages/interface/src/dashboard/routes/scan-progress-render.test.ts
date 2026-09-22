@@ -96,25 +96,68 @@ async function waitForText(container: HTMLElement, text: string): Promise<void> 
   throw new Error(`Expected dashboard text was not rendered: ${text}`);
 }
 
-describe('scan progress pushback warning', () => {
+const cappedPushbackJob = {
+  ...pushbackJob,
+  progress: {
+    ...pushbackJob.progress,
+    pushbackEvents: [
+      {
+        pageUrl: 'https://example.com/products',
+        kind: 'bot-challenge',
+        fetcher: 'crawl',
+        occurredAt: '2026-09-22T10:00:01.000Z',
+        delayMs: 60_000,
+        atMaxDelay: false,
+      },
+      {
+        pageUrl: 'https://example.com/rooms',
+        kind: 'bot-challenge',
+        fetcher: 'crawl',
+        occurredAt: '2026-09-22T10:05:00.000Z',
+        delayMs: 60_000,
+        atMaxDelay: true,
+      },
+    ],
+  },
+};
+
+function relaunchLink(container: HTMLElement): HTMLAnchorElement | undefined {
+  return [...container.querySelectorAll('a')].find(
+    (link) => link.textContent?.trim() === 'Relancer plus lentement',
+  );
+}
+
+describe('scan progress pushback notice', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     document.body.innerHTML = '';
   });
 
-  it('shows the warning and prefills a slower relaunch', async () => {
+  it('says the scan slowed itself down, without asking for a relaunch', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => jsonResponse(pushbackJob)),
     );
     const { container, root } = await renderPage();
 
-    await waitForText(container, 'Le site limite nos requêtes : 2 pages');
-    const relaunch = [...container.querySelectorAll('a')].find(
-      (link) => link.textContent?.trim() === 'Relancer plus lentement',
+    await waitForText(container, 'Réactions du site à nos requêtes : 2.');
+    expect(relaunchLink(container)).toBeUndefined();
+
+    root.unmount();
+  });
+
+  it('offers a slower relaunch from the real pace once the slowdown ran out', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse(cappedPushbackJob)),
     );
+    const { container, root } = await renderPage();
+
+    await waitForText(container, 'ralenti automatiquement à 60 s');
+    await waitForText(container, 'Le site bloque encore nos requêtes');
+    const relaunch = relaunchLink(container);
     expect(relaunch).not.toBeUndefined();
-    expect(relaunch?.getAttribute('href')).toContain('delaySeconds=8');
+    expect(relaunch?.getAttribute('href')).toContain('delaySeconds=120');
     expect(relaunch?.getAttribute('href')).toContain('scanConcurrency=1');
 
     root.unmount();

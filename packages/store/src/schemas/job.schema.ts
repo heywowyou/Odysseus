@@ -137,6 +137,8 @@ export interface JobProgressPushbackEvent {
   occurredAt: string;
   status?: number;
   retryAfterMs?: number;
+  delayMs?: number;
+  atMaxDelay?: boolean;
 }
 
 export interface JobProgress {
@@ -348,6 +350,8 @@ const jobProgressPushbackEventSchema = new Schema(
     occurredAt: { type: String, required: true },
     status: { type: Number },
     retryAfterMs: { type: Number },
+    delayMs: { type: Number },
+    atMaxDelay: { type: Boolean },
   },
   { _id: false },
 );

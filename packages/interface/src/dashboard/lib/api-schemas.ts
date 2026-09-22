@@ -98,6 +98,8 @@ const scanJobProgressSchema = z.object({
         occurredAt: z.string(),
         status: z.number().optional(),
         retryAfterMs: z.number().optional(),
+        delayMs: z.number().optional(),
+        atMaxDelay: z.boolean().optional(),
       }),
     )
     .optional(),

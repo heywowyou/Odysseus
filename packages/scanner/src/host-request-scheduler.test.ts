@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HostRequestScheduler } from './host-request-scheduler.js';
+import { HostRequestScheduler, type HostPushbackEvent } from './host-request-scheduler.js';
 
 /** A clock whose `sleep` advances it, so pacing is asserted on values rather
  *  than on how long the test actually took. */
@@ -198,6 +198,8 @@ describe('pressure only ever increases', () => {
         status: 429,
         retryAfterMs: 5000,
         occurredAt: '2023-11-14T22:13:20.000Z',
+        delayMs: 10_000,
+        atMaxDelay: false,
       },
       {
         pageUrl: 'https://example.com/products',
@@ -205,7 +207,31 @@ describe('pressure only ever increases', () => {
         fetcher: 'render',
         status: 200,
         occurredAt: '2023-11-14T22:13:20.000Z',
+        delayMs: 20_000,
+        atMaxDelay: false,
       },
+    ]);
+  });
+
+  it('says when a pushback arrives with the delay already at its cap', () => {
+    const events: HostPushbackEvent[] = [];
+    const scheduler = new HostRequestScheduler({
+      floorDelayMs: 30_000,
+      maxConcurrency: 1,
+      onPushback: (event) => events.push(event),
+    });
+    const signal = {
+      pageUrl: 'https://example.com/',
+      kind: 'bot-challenge',
+      fetcher: 'crawl',
+    } as const;
+
+    scheduler.noteRateLimited(signal);
+    scheduler.noteRateLimited(signal);
+
+    expect(events.map(({ delayMs, atMaxDelay }) => ({ delayMs, atMaxDelay }))).toEqual([
+      { delayMs: 60_000, atMaxDelay: false },
+      { delayMs: 60_000, atMaxDelay: true },
     ]);
   });
 

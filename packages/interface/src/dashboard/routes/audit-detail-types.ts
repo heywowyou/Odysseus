@@ -51,6 +51,8 @@ export interface AuditPushbackEventResponse {
   occurredAt: string;
   status?: number;
   retryAfterMs?: number;
+  delayMs?: number;
+  atMaxDelay?: boolean;
 }
 
 /** One stored occurrence (packages/core FindingElement), dates aside. */
@@ -242,6 +244,8 @@ export interface AuditDetailResponse {
   finishedAt: string;
   pagesVisited: number;
   pushbackEvents?: AuditPushbackEventResponse[];
+  /** The run's starting delay between requests, before any backoff. */
+  crawlDelayMs?: number;
   severityRollup: SeverityRollup;
   /** Issue #392: the part of severityRollup confined to third-party markup. */
   thirdPartySeverityRollup?: SeverityRollup;

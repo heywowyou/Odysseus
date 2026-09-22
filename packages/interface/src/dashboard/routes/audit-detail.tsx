@@ -23,6 +23,7 @@ import { cn } from '../lib/cn';
 import { ApiError, fetchJsonValidated } from '../lib/api';
 import { auditDetailSchema } from '../lib/api-schemas';
 import { formatDateTime } from '../lib/format';
+import { delaySeconds, summarizePushback } from '../lib/pushback';
 import { usePolling } from '../lib/use-polling';
 import { AuditGradeOverridePanel } from './audit-grade-override-panel';
 import { AuditProspectLinkPanel } from './audit-hotel-link-panel';
@@ -203,6 +204,7 @@ export function AuditDetailPage(): JSX.Element {
   }
 
   const publisherIdentificationFinding = findPublisherIdentificationFinding(data.findings);
+  const pushbackSummary = summarizePushback(data.pushbackEvents ?? [], data.crawlDelayMs ?? 0);
   const prospect = data.prospect ?? null;
   const scanIntent = data.scanIntent ?? 'full-audit';
 
@@ -262,13 +264,12 @@ export function AuditDetailPage(): JSX.Element {
         }
       />
       <div className="flex flex-col gap-6">
-        {(data.pushbackEvents?.length ?? 0) > 0 ? (
-          <Card className="border-sev-moderate/50 bg-sev-moderate/5">
+        {pushbackSummary !== undefined ? (
+          <Card>
             <p className="text-sm text-ink-soft">
-              {strings.progress.pushbackWarning.replace(
-                '{count}',
-                String(data.pushbackEvents?.length ?? 0),
-              )}
+              {strings.progress.pushbackSummaryNote
+                .replace('{count}', String(pushbackSummary.eventCount))
+                .replace('{delay}', String(delaySeconds(pushbackSummary.currentDelayMs)))}
             </p>
           </Card>
         ) : null}

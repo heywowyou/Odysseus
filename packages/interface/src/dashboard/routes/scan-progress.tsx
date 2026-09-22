@@ -19,6 +19,7 @@ import { scanJobDetailSchema } from '../lib/api-schemas';
 import type { ScanJobDetail, ScanUrlResult } from '../lib/api-types';
 import { isStateChanged, problemCopy } from '../lib/operator-copy';
 import { cn } from '../lib/cn';
+import { delaySeconds, summarizePushback } from '../lib/pushback';
 import { usePolling } from '../lib/use-polling';
 import { hostnameOf } from './audit-detail-model';
 import { IdentityConfirmField } from './identity-confirm-field';
@@ -66,34 +67,40 @@ function fillProgressCopy(template: string, values: Record<string, number>): str
   );
 }
 
-function slowRelaunchHref(job: ScanJobDetail): string | undefined {
+function slowRelaunchHref(job: ScanJobDetail, delayMs: number): string | undefined {
   if (job.siteUrl === undefined) return undefined;
-  const currentDelayMs = job.options.delayMs ?? job.progress.crawl?.effectiveDelayMs ?? 0;
-  const retryAfterMs = Math.max(
-    0,
-    ...(job.progress.pushbackEvents ?? []).map((event) => event.retryAfterMs ?? 0),
-  );
-  const delayMs = Math.max(currentDelayMs * 4, retryAfterMs, 5_000);
   const params = new URLSearchParams({
     url: job.siteUrl,
     type: job.type === 'quick-check' ? 'quick-check' : 'full-audit',
-    delaySeconds: String(delayMs / 1_000),
+    delaySeconds: String(delaySeconds(delayMs)),
     scanConcurrency: '1',
   });
   if (job.prospectId !== undefined) params.set('prospectId', job.prospectId);
   return `/scans/new?${params.toString()}`;
 }
 
-function PushbackWarning({ job }: { job: ScanJobDetail }): JSX.Element | null {
+function PushbackNotice({ job }: { job: ScanJobDetail }): JSX.Element | null {
   const { strings } = useI18n();
-  const count = job.progress.pushbackEvents?.length ?? 0;
-  if (count === 0) return null;
-  const href = slowRelaunchHref(job);
+  const summary = summarizePushback(
+    job.progress.pushbackEvents ?? [],
+    job.options.delayMs ?? job.progress.crawl?.effectiveDelayMs ?? 0,
+    job.progress.crawlExclusions?.blocked ?? 0,
+  );
+  if (summary === undefined) return null;
+  const note = (
+    <p className="text-sm text-ink-soft">
+      {fillProgressCopy(strings.progress.pushbackSlowedNote, {
+        count: summary.eventCount,
+        delay: delaySeconds(summary.currentDelayMs),
+      })}
+    </p>
+  );
+  if (!summary.relaunchAdvised) return <Card>{note}</Card>;
+  const href = slowRelaunchHref(job, summary.suggestedDelayMs);
   return (
     <Card className="border-sev-moderate/50 bg-sev-moderate/5">
-      <p className="text-sm text-ink-soft">
-        {strings.progress.pushbackWarning.replace('{count}', String(count))}
-      </p>
+      {note}
+      <p className="mt-2 text-sm text-ink-soft">{strings.progress.pushbackRelaunchWarning}</p>
       {href !== undefined ? (
         <Link to={href} className={cn(buttonStyles('secondary', 'sm'), 'mt-3 inline-flex')}>
           {strings.progress.slowRelaunchLink}
@@ -357,7 +364,7 @@ function JobView({ job, refresh }: { job: ScanJobDetail; refresh: () => void }):
     job.type === 'prospecting' || job.type === 'quick-check' || job.type === 'prospecting-audit';
   return (
     <div className="flex flex-col gap-4">
-      <PushbackWarning job={job} />
+      <PushbackNotice job={job} />
       {prospecting ? (
         <ProspectingView job={job} terminal={terminal} />
       ) : (

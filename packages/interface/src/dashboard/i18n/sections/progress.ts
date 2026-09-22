@@ -59,7 +59,13 @@ export interface ProgressStrings {
   newScanLink: string;
   /** A completed prospect-linked scan returns the operator to its record. */
   goToProspectLink: string;
-  pushbackWarning: string;
+  /** During the scan. {count}: pushback events, {delay}: seconds between
+   *  requests the scanner slowed itself to. Information, not an alarm. */
+  pushbackSlowedNote: string;
+  /** After the scan, on the audit page. Same placeholders. */
+  pushbackSummaryNote: string;
+  /** Shown only once the automatic slowdown ran out. */
+  pushbackRelaunchWarning: string;
   slowRelaunchLink: string;
 }
 
@@ -102,8 +108,12 @@ export const progress = {
       'Le scan est terminé. Confirmez les champs ci-dessous sur la page de l’audit, puis régénérez le rapport.',
     goToAuditLink: 'Aller à la page de l’audit',
     goToProspectLink: 'Aller au prospect',
-    pushbackWarning:
-      'Le site limite nos requêtes : {count} pages ont reçu une réponse temporaire ou une page de vérification anti-robot.',
+    pushbackSlowedNote:
+      'Réactions du site à nos requêtes : {count}. Le scan a ralenti automatiquement à {delay} s entre deux requêtes.',
+    pushbackSummaryNote:
+      'Réactions du site à nos requêtes pendant le scan : {count}. Délai final : {delay} s entre deux requêtes.',
+    pushbackRelaunchWarning:
+      'Le site bloque encore nos requêtes malgré ce ralentissement. Pour ne pas perdre de pages, arrêtez le scan et relancez-le plus lentement.',
     slowRelaunchLink: 'Relancer plus lentement',
     urlResultsHeading: 'Résultat par site',
     notFound: 'Scan introuvable.',
@@ -172,8 +182,12 @@ export const progress = {
       'The scan finished. Confirm the fields below on the audit page, then regenerate the report.',
     goToAuditLink: 'Go to the audit page',
     goToProspectLink: 'Go to the prospect',
-    pushbackWarning:
-      'The site is limiting our requests: {count} pages returned a transient response or an anti-bot verification page.',
+    pushbackSlowedNote:
+      'Site pushback on our requests: {count}. The scan slowed down on its own to {delay} s between requests.',
+    pushbackSummaryNote:
+      'Site pushback on our requests during the scan: {count}. Final delay: {delay} s between requests.',
+    pushbackRelaunchWarning:
+      'The site is still blocking our requests despite this slowdown. To avoid losing pages, stop the scan and relaunch it more slowly.',
     slowRelaunchLink: 'Relaunch more slowly',
     urlResultsHeading: 'Per-site results',
     notFound: 'Scan not found.',
