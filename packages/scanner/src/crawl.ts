@@ -989,8 +989,21 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
             paceNavigation(() => browserPage.goto(item.url, { waitUntil: 'load' }));
           let response = await navigate();
           let httpStatus = response?.status();
+          // A stub URL that redirects out to another site (a social link)
+          // answers with that site's status and body. Its 429 or challenge
+          // says nothing about the audited host, so it must neither slow
+          // this host's scheduler nor buy a retry.
+          const landedOffSite = (): boolean => {
+            const landedHost = safeHostname(browserPage.url());
+            return (
+              landedHost !== null &&
+              (!isSameSiteHostname(new URL(item.url).hostname, landedHost) ||
+                isSocialPlatformHost(landedHost))
+            );
+          };
           const notePushback = (): void => {
             if (response === null || response === undefined) return;
+            if (landedOffSite()) return;
             const retryAfter = retryAfterMs(response.headers());
             if (!isTransientPushbackStatus(httpStatus) && retryAfter === undefined) return;
             options.scheduler?.noteRateLimited({
@@ -1003,6 +1016,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
           };
           notePushback();
           const detectChallenge = async (): Promise<readonly string[]> => {
+            if (landedOffSite()) return [];
             const html =
               typeof browserPage.content === 'function'
                 ? await browserPage.content().catch(() => '')
@@ -1027,7 +1041,10 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
           // A single later retry is enough to distinguish a transient host
           // pushback from a stable site error. It is deliberately paced by
           // the same scheduler and never increases concurrency.
-          if (isTransientPushbackStatus(httpStatus) || challengeMarkers.length > 0) {
+          if (
+            (isTransientPushbackStatus(httpStatus) && !landedOffSite()) ||
+            challengeMarkers.length > 0
+          ) {
             response = await navigate();
             httpStatus = response?.status();
             notePushback();
