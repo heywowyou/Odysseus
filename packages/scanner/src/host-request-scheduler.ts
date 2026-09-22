@@ -128,9 +128,24 @@ export class HostRequestScheduler {
    * observe the same free slot and fire together.
    */
   async schedule<T>(run: () => Promise<T>): Promise<T> {
+    return this.holdLane(async () => {
+      await this.pace();
+      return run();
+    });
+  }
+
+  /**
+   * Holds a lane for a unit of work that paces its own request with `pace()`.
+   *
+   * A surface pass builds a fresh context before it navigates, and the one
+   * navigation it makes is paced right before it leaves. Wrapping that in
+   * `schedule` charged the pass twice, once for the turn and once for the
+   * request, which at a 40-second host delay added 40 seconds to every page
+   * for a request that was never sent.
+   */
+  async holdLane<T>(run: () => Promise<T>): Promise<T> {
     await this.#acquireLane();
     try {
-      await this.pace();
       return await run();
     } finally {
       this.#releaseLane();

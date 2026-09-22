@@ -55,6 +55,7 @@ import type { RenderedReadinessObservation } from './page-readiness.js';
 import { InventoryLedger } from './inventory-ledger.js';
 import { buildRobotsPolicySnapshot, type RobotsPolicySnapshot } from './robots-policy-snapshot.js';
 import { PUBLIC_SITE_NETWORK_POLICY } from './network-target-policy.js';
+import { HostRequestScheduler } from './host-request-scheduler.js';
 import type { HydrationSweepRecord } from './hydration-sweep.js';
 
 let writtenTempDirs: string[] = [];
@@ -1613,6 +1614,50 @@ describe('scanSite consent and local-state surfaces (plan 059 step 13)', () => {
       surfaceId: surface.surfaceId,
     });
     expect(candidate?.disposition?.disposition).toBe('scanned');
+  });
+
+  it('spends one request slot per surface navigation, not one for the turn and another for the request', async () => {
+    // At a 40-second host delay every extra slot costs 40 seconds a page, so
+    // the consent and mobile passes must each pace their single navigation
+    // exactly once against the run's scheduler.
+    const pace = vi.spyOn(HostRequestScheduler.prototype, 'pace');
+    let pacesAfterBaseline = -1;
+    let pacesAfterSurfaces = -1;
+    vi.mocked(runRenderedAnalysis).mockImplementation(async (_browser, url) => {
+      if (pacesAfterBaseline < 0) pacesAfterBaseline = pace.mock.calls.length;
+      return {
+        url,
+        checkOutcomes: { 'render-diff': 'completed', axe: 'completed' },
+        consentBaseline: {
+          state: 'consent-controls-detected',
+          controlCount: 2,
+          containerRef: '#cmp',
+        },
+      };
+    });
+    vi.mocked(runConsentSurfaceAnalysis).mockImplementation(async (_browser, _url, options) => {
+      await options.beforeNavigation?.();
+      return {
+        baseline: { state: 'consent-controls-detected', controlCount: 2, containerRef: '#cmp' },
+        dismissed: true,
+        links: [],
+      } as never;
+    });
+    const mobileRecord = vi.mocked(runMobileSurfaceAnalysis).getMockImplementation()!;
+    vi.mocked(runMobileSurfaceAnalysis).mockImplementation(async (browser, url, options) => {
+      await options.beforeNavigation?.();
+      if (pacesAfterSurfaces < 0) pacesAfterSurfaces = pace.mock.calls.length;
+      return mobileRecord(browser, url, options);
+    });
+    vi.mocked(runLocalStateExploration).mockResolvedValue({ transitions: [], links: [] });
+
+    try {
+      await scan();
+    } finally {
+      pace.mockRestore();
+    }
+
+    expect(pacesAfterSurfaces - pacesAfterBaseline).toBe(2);
   });
 
   it('discloses an ambiguous consent overlay instead of guessing, and never runs a surface', async () => {

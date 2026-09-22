@@ -782,9 +782,10 @@ function diagnosticTimeoutMs(context: StagedScanContext): number {
  * the shared scheduler after the page's immutable baseline capture is
  * complete (section 9: baseline first, fresh storage per surface — the
  * mobile pass never runs in the baseline's context and never ahead of it).
- * The navigation inside is paced with `pace()` against the same scheduler,
- * so the mobile surface is one more consumer of the run's single request
- * rate, never a hidden second lane.
+ * The lane is held with `holdLane` and the one navigation inside is paced
+ * with `pace()` against the same scheduler, so the mobile surface is one
+ * more consumer of the run's single request rate, never a hidden second
+ * lane, and its single request costs a single slot.
  *
  * A pass that cannot prove the crawler identity on the wire, or that fails,
  * leaves a surface limitation on the page instead of a half-recorded
@@ -798,7 +799,7 @@ async function attachMobileSurface(
   context: StagedScanContext,
 ): Promise<RenderedAnalysisResult> {
   const surfaceRecord = await scheduler
-    .schedule(() =>
+    .holdLane(() =>
       runMobileSurfaceAnalysis(browser, url, {
         evidenceEpoch: context.evidenceEpoch,
         ...(context.userAgent !== undefined ? { userAgent: context.userAgent } : {}),
@@ -879,7 +880,7 @@ async function attachConsentSurface(
   context: StagedScanContext,
 ): Promise<RenderedAnalysisResult> {
   const outcome = await scheduler
-    .schedule(() =>
+    .holdLane(() =>
       runConsentSurfaceAnalysis(browser, url, {
         evidenceEpoch: context.evidenceEpoch,
         ...(context.userAgent !== undefined ? { userAgent: context.userAgent } : {}),

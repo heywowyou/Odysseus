@@ -52,6 +52,46 @@ describe('request spacing', () => {
     expect(startedAt).toEqual([0, 333, 666]);
   });
 
+  it('charges a lane-held pass one slot for its one paced request', async () => {
+    const clock = fakeClock();
+    const scheduler = new HostRequestScheduler({
+      floorDelayMs: 40_000,
+      maxConcurrency: 1,
+      ...clock,
+    });
+
+    const startedAt: number[] = [];
+    await scheduler.schedule(async () => {
+      startedAt.push(clock.now());
+    });
+    await scheduler.holdLane(async () => {
+      await scheduler.pace();
+      startedAt.push(clock.now());
+    });
+    await scheduler.schedule(async () => {
+      startedAt.push(clock.now());
+    });
+
+    expect(startedAt).toEqual([0, 40_000, 80_000]);
+  });
+
+  it('keeps a lane-held pass inside the concurrency limit', async () => {
+    const scheduler = new HostRequestScheduler({ floorDelayMs: 0, maxConcurrency: 1 });
+    let active = 0;
+    let peak = 0;
+    const pass = () =>
+      scheduler.holdLane(async () => {
+        active += 1;
+        peak = Math.max(peak, active);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        active -= 1;
+      });
+
+    await Promise.all([pass(), pass(), pass()]);
+
+    expect(peak).toBe(1);
+  });
+
   it('spaces starts globally rather than per lane, so extra lanes add no pressure', async () => {
     const clock = fakeClock();
     const scheduler = new HostRequestScheduler({
