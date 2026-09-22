@@ -124,3 +124,32 @@ describe('extractAxeCandidates', () => {
     expect(extractAxeCandidates(buildAxeResultsInput([]), 'https://example.com/')).toEqual([]);
   });
 });
+
+describe('embedded frame identity (plan 075, E2)', () => {
+  const inFrame = (selector: string) =>
+    buildAxeResultsInput([
+      buildAxeViolation({
+        id: 'image-alt',
+        nodes: [
+          buildAxeNode({ target: [selector, 'img.ytp-thumb'], html: '<img class="ytp-thumb">' }),
+        ],
+      }),
+    ]);
+
+  it('counts one embed once however axe names its iframe element', () => {
+    const [a] = extractAxeCandidates(inFrame('iframe[width="560"]'), 'https://example.com/a');
+    const [b] = extractAxeCandidates(inFrame('iframe[frameborder="0"]'), 'https://example.com/b');
+    expect(a?.dedupeIdentity).toBeDefined();
+    expect(a?.dedupeIdentity).toBe(b?.dedupeIdentity);
+  });
+
+  it('keeps embeds from different origins apart when the scanner recorded them', () => {
+    const [youtube] = extractAxeCandidates(inFrame('#player'), 'https://example.com/', {
+      frameOriginsBySelector: new Map([['#player', 'https://www.youtube.com']]),
+    });
+    const [vimeo] = extractAxeCandidates(inFrame('#player'), 'https://example.com/', {
+      frameOriginsBySelector: new Map([['#player', 'https://player.vimeo.com']]),
+    });
+    expect(youtube?.dedupeIdentity).not.toBe(vimeo?.dedupeIdentity);
+  });
+});

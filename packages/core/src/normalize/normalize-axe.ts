@@ -59,6 +59,8 @@ export interface AxeResultsInput {
 export interface AxeExtractionOptions {
   challengeFrameSelectors?: readonly string[];
   challengeFrameOrigins?: readonly string[];
+  /** The scanner's frame record: each frame element's selector and origin. */
+  frameOriginsBySelector?: ReadonlyMap<string, string>;
 }
 
 function flattenAxeTarget(target: AxeTargetInput): string {
@@ -256,12 +258,23 @@ function isChallengeFrameSelector(
   );
 }
 
-function frameIdentity(selector: string, pageUrl: string, snippet: string): string | undefined {
+/** One embed counts once however axe happened to name its iframe element
+ * (`iframe[width="560"]` on one page, `iframe[frameborder="0"]` on the next).
+ * The frame's origin is the identity when it is known, from a `src` in the
+ * selector or from the scanner's own frame record; otherwise the iframe's
+ * attributes are left out, and the inner element's shape carries the
+ * identity alone. */
+function frameIdentity(
+  selector: string,
+  pageUrl: string,
+  snippet: string,
+  frameOriginsBySelector: ReadonlyMap<string, string> | undefined,
+): string | undefined {
   const boundary = selector.indexOf('>>>');
   if (boundary === -1) return undefined;
   const framePart = selector.slice(0, boundary).trim();
   const srcMatch = /\bsrc\s*=\s*["']([^"']+)["']/i.exec(framePart);
-  let source = framePart;
+  let source = frameOriginsBySelector?.get(framePart) ?? '*';
   if (srcMatch?.[1] !== undefined) {
     try {
       source = new URL(srcMatch[1], pageUrl).origin;
@@ -387,7 +400,12 @@ export function extractAxeCandidates(
           const identity =
             checkDataIdentity(violation.id, node.data, axeCheckData(node), violation.data) ??
             templateIdentity(violation.id, selector, node.html, node.failureSummary);
-          const frame = frameIdentity(selector, pageUrl, node.html);
+          const frame = frameIdentity(
+            selector,
+            pageUrl,
+            node.html,
+            options?.frameOriginsBySelector,
+          );
           const scoped = frame === undefined ? identity : `${frame}|${identity ?? violation.id}`;
           return scoped === undefined ? {} : { dedupeIdentity: scoped };
         })(),
