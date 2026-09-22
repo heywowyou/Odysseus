@@ -244,6 +244,29 @@ In Atlas, under Network Access, add the VPS IPv4 address with comment
 > inspection, local development, ad hoc shell) needs it. Removing it locks a
 > working machine out of production data.
 
+### There is one database, and it is named `test`
+
+Confirmed 2026-09-22. The production app's `MONGODB_URI` and the workstation's
+`MDB_MCP_CONNECTION_STRING` resolve to the same Atlas cluster and the same
+default database, whose name is `test`. The cluster also carries an
+`odysseus-local` database, which is *not* where production data lives. So
+`test` holds every real audit, job, finding, report and prospect.
+
+Two consequences:
+
+- The MCP connector is a read-only window onto production, not a sandbox.
+  Anything it returns is live client data, and any write path pointed at the
+  same string would hit production. Local development that wants a throwaway
+  database must set its own `MONGODB_URI`.
+- A database called `test` invites exactly the accident its name suggests:
+  a cleanup script, an unfamiliar session or a stray `drop` aimed at a
+  scratch database would destroy production. Renaming it to something like
+  `odysseus-prod` would remove that trap. It is not urgent, and it is not
+  free: the rename means a dump/restore into the new name, updating
+  `MONGODB_URI` on the VPS and `MDB_MCP_CONNECTION_STRING` on the
+  workstation, and a redeploy, with the app stopped throughout. Do it during
+  a deliberate maintenance window, not alongside other work.
+
 ## 7. Start and verify
 
 > The `docker compose -f deploy/compose.yaml` commands in this section are
