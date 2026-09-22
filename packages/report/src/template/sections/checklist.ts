@@ -23,13 +23,13 @@ function headCell(label: string): string {
   // white-space:nowrap (issue #48): a header label is a single word in both
   // languages, so wrapping can never help it fit - it can only overflow its
   // column into the neighbour's, which is the "COMPLEXITÉIMPACT" collision.
-  // Keeping the label on one line makes the column-width choice below the
-  // single place that decides whether it fits.
-  return `<div style="padding:var(--space-2);font-size:11px;letter-spacing:0.02em;text-transform:uppercase;white-space:nowrap;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">${escapeHtml(label)}</div>`;
+  // Keeping the label on one line makes the colgroup below the single place
+  // that decides whether it fits.
+  return `<th scope="col" style="padding:var(--space-2);font-size:11px;letter-spacing:0.02em;text-transform:uppercase;white-space:nowrap;text-align:left;font-weight:400;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">${escapeHtml(label)}</th>`;
 }
 
 function cell(html: string): string {
-  return `<div style="padding:var(--space-2);border-bottom:1px solid var(--color-divider)">${html}</div>`;
+  return `<td style="padding:var(--space-2);vertical-align:top;border-bottom:1px solid var(--color-divider)">${html}</td>`;
 }
 
 /** A7 (2026-08-24): the cap and both formatters moved to html-utils.ts's
@@ -47,9 +47,10 @@ const CHECKLIST_WCAG_CAP = 6;
 /** Pure re-presentation of analysis.themes as a dense, printable grid -
  *  same rank/effort/impact/pages data themes.ts already renders as full
  *  cards, no new computation, so it can never drift out of sync with the
- *  "Ranked priorities" section above it. CSS grid + `.row-atomic` per
- *  report.reference.html, not a real <table> - keeps each row atomic
- *  across a page break (paged.css). */
+ *  "Ranked priorities" section above. Real table rows keep each row atomic
+ *  across a page break (paged.css). The earlier display:contents grid made
+ *  Paged.js restart a fragmented row at column one; a long finding-id cell
+ *  then collapsed into one-character-wide columns on continuation pages. */
 export function renderChecklist(
   strings: ReportStrings,
   ordinal: number,
@@ -115,7 +116,7 @@ export function renderChecklist(
       const wcagCriteria = priorityConformanceCriteria(themeFindings);
 
       return `
-        <div class="row-atomic">
+        <tr>
           ${cell(String(displayRank))}
           ${cell(escapeProse(theme.title, language))}
           ${cell(escapeHtml(effortLevels[theme.effort]))}
@@ -123,7 +124,7 @@ export function renderChecklist(
           ${cell(`${formatNumber(uniquePages, language)}/${formatNumber(totalPagesScanned, language)}`)}
           ${cell(`<span class="mono" style="font-size:11px">${escapeHtml(formatCappedFindingIdRefs(theme.findingIds, language, strings.findingsAppendix))}</span>`)}
           ${cell(wcagCriteria.length > 0 ? escapeHtml(formatCappedList(wcagCriteria, CHECKLIST_WCAG_CAP, language, strings.findingsAppendix)) : '-')}
-        </div>
+        </tr>
       `;
     })
     .join('');
@@ -132,29 +133,39 @@ export function renderChecklist(
   // than the uppercase label at 11px with 0.02em tracking, so the header
   // overflowed into the IMPACT column and read as one merged
   // "COMPLEXITÉIMPACT" token on the page designed to be handed to a
-  // contractor alone. The complexity column is now sized to its content
-  // (max-content: the widest of the header and the Faible/Moyen/Élevé
-  // cells), which cannot collide in either language and cannot regress
-  // if a label is ever reworded - reducing the letter-spacing was not an
-  // option, since 0.02em uppercase tracking is a design token
-  // (docs/report/report-design-tokens.md). The other columns keep their
-  // fixed widths; their labels fit with headroom in both languages,
-  // asserted in checklist-overflow.test.ts.
+  // contractor alone. The table now gives each fixed column explicit widths
+  // with headroom for both languages; the priority title is the flexible
+  // column, so the tracks stay stable when the table continues on a later page.
   return sheet(
     `
     ${renderSheetHeader(ordinal, c.eyebrow, c.heading, 'var(--space-2)', `<span class="checklist-insert-tag">${escapeHtml(c.insertTag)}</span>`)}
     <p style="font-size:12px;opacity:0.7;margin-bottom:4px">${escapeHtml(identifier)}</p>
     <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(c.intro)}</p>
-    <div style="display:grid;grid-template-columns:30px 1fr max-content 70px 60px 110px 80px;font-size:12.5px">
-      ${headCell(c.rankColumnLabel)}
-      ${headCell(c.priorityColumnLabel)}
-      ${headCell(c.complexityColumnLabel)}
-      ${headCell(c.impactColumnLabel)}
-      ${headCell(c.pagesColumnLabel)}
-      ${headCell(c.findingsColumnLabel)}
-      ${headCell(c.wcagColumnLabel)}
-      ${rows}
-    </div>
+    <table class="checklist-table" style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:12.5px">
+      <colgroup>
+        <col style="width:35px" />
+        <col />
+        <col style="width:105px" />
+        <col style="width:75px" />
+        <col style="width:65px" />
+        <col style="width:110px" />
+        <col style="width:80px" />
+      </colgroup>
+      <thead>
+        <tr>
+          ${headCell(c.rankColumnLabel)}
+          ${headCell(c.priorityColumnLabel)}
+          ${headCell(c.complexityColumnLabel)}
+          ${headCell(c.impactColumnLabel)}
+          ${headCell(c.pagesColumnLabel)}
+          ${headCell(c.findingsColumnLabel)}
+          ${headCell(c.wcagColumnLabel)}
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
   `,
     'sheet-standalone',
     'section-05',

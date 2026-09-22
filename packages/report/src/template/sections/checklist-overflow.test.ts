@@ -71,13 +71,9 @@ const manifest = {
   })),
 } as unknown as AuditManifest;
 
-/** Text content of every `${cell(...)}` div in the rendered grid. */
+/** Text content of every cell(...) table cell in the rendered checklist. */
 function cellTexts(html: string): string[] {
-  return [
-    ...html.matchAll(
-      /<div style="padding:var\(--space-2\);border-bottom[^"]*">([\s\S]*?)<\/div>\s*(?=<div|<\/div>)/gu,
-    ),
-  ].map((m) =>
+  return [...html.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gu)].map((m) =>
     m[1]!
       .replace(/<[^>]+>/gu, '')
       .replace(/\s+/gu, ' ')
@@ -141,15 +137,16 @@ describe('issue #48: every checklist column header fits its column in both langu
       c.wcagColumnLabel,
     ];
     const html = renderChecklist(strings, 6, language, analysis, findings, manifest);
-    const template = /grid-template-columns:([^;"]+)/u.exec(html)?.[1] ?? '';
-    const columns = template.trim().split(/\s+/u);
+    const colgroup = /<colgroup>([\s\S]*?)<\/colgroup>/u.exec(html)?.[1] ?? '';
+    const columns = [...colgroup.matchAll(/<col(?:\s+style="width:([^"]+)")?\s*\/?\s*>/gu)].map(
+      (match) => match[1] ?? 'auto',
+    );
     expect(columns).toHaveLength(labels.length);
 
     columns.forEach((column, index) => {
       const label = labels[index]!;
-      // max-content sizes to its content; a fr track's automatic minimum is
-      // the label's own min-content width, so neither can under-fit.
-      if (column === 'max-content' || /^\d+fr$/u.test(column)) return;
+      // The priority title uses the table's remaining automatic column.
+      if (column === 'auto' || column === 'max-content' || /^\d+fr$/u.test(column)) return;
       const fixed = /^(\d+(?:\.\d+)?)px$/u.exec(column);
       expect(
         fixed,

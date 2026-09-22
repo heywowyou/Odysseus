@@ -62,9 +62,8 @@ describe('issue #310: one conformance computation per priority', () => {
     expect(analysis.themes[0]!.legalRelevance).toContain('1.3.1');
 
     const checklist = renderChecklist(getStrings('fr'), 5, 'fr', analysis, allFindings, manifest);
-    const row = checklist
-      .split('<div class="row-atomic">')
-      .find((chunk) => chunk.includes('Priorité mixte issue 310'));
+    const row = checklist.split('<tr>').find((chunk) => chunk.includes('Priorité mixte issue 310'));
+    expect(row).toBeDefined();
     expect(row).toContain('1.3.1');
   });
 

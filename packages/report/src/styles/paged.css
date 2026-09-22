@@ -641,6 +641,8 @@ img[src=''] {
   #section-05 h5,
   #section-05 h6,
   #section-05 p,
+  #section-05 th,
+  #section-05 td,
   #section-05 div {
     color: var(--printable-ink) !important;
     /* item D-flaky: the intro/identifier paragraphs carry an inline
@@ -654,6 +656,10 @@ img[src=''] {
        test. `!important` overrides the inline opacity the same way it
        already overrides inline color above. */
     opacity: 1 !important;
+  }
+  #section-05 th,
+  #section-05 td {
+    border-color: var(--printable-ink) !important;
   }
   .pagedjs_page:has(#section-05) .pagedjs_margin-top-right,
   .pagedjs_page:has(#section-05) .pagedjs_margin-bottom-center {
