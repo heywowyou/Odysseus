@@ -164,7 +164,7 @@
   "generatedAt": "2026-08-19T00:58:54.087Z",
   "findingsProvenance": {
     "findingsSchemaVersion": 1,
-    "normalizationFingerprint": "9ca21f7c23f368c7",
+    "normalizationFingerprint": "20bd3b7640b319e9",
     "findingsDigest": "sha256:cec2d36bacb3e7fab91a71ced41648f3d96c35a90395490d8b075959d939dec2"
   },
   "analysisId": "c1e15828-75be-42ef-8e81-a692ff7657e1"

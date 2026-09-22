@@ -42,38 +42,44 @@ describe('checkVideoCaptions against real pages', () => {
   }
 
   // These fixtures point at a nonexistent movie.mp4, so the video never
-  // reaches HAVE_CURRENT_DATA and hasAudio detection cannot run to
-  // completion - it falls back to its conservative default (true, assume
-  // audio present) rather than false, per video-captions.ts's file header.
-  // This is deliberately what the tests below exercise: an inaccessible
-  // video source must never silently exempt a real captions gap.
+  // reaches HAVE_CURRENT_DATA and audio detection stays explicitly
+  // undetermined. An undetermined probe never silently exempts a real
+  // captions gap, but it is disclosed for the manual checklist.
 
-  it('flags a video with no track element at all, defaulting hasAudio to true when undetermined', async () => {
+  it('keeps an inaccessible video audio state undetermined', async () => {
     const result = await checkHtml(
       `<body><video id="promo" src="movie.mp4" controls></video></body>`,
     );
-    expect(result.videos).toEqual([{ selector: '#promo', hasCaptionTrack: false, hasAudio: true }]);
+    expect(result.videos).toEqual([
+      { selector: '#promo', hasCaptionTrack: false, hasAudio: false, audio: 'undetermined' },
+    ]);
   });
 
   it('recognizes a captions track', async () => {
     const result = await checkHtml(
       `<body><video id="promo" src="movie.mp4" controls><track kind="captions" src="cap.vtt" srclang="en" /></video></body>`,
     );
-    expect(result.videos).toEqual([{ selector: '#promo', hasCaptionTrack: true, hasAudio: true }]);
+    expect(result.videos).toEqual([
+      { selector: '#promo', hasCaptionTrack: true, hasAudio: false, audio: 'undetermined' },
+    ]);
   });
 
   it('recognizes a subtitles track as equivalent to captions', async () => {
     const result = await checkHtml(
       `<body><video id="promo" src="movie.mp4" controls><track kind="subtitles" src="sub.vtt" srclang="en" /></video></body>`,
     );
-    expect(result.videos).toEqual([{ selector: '#promo', hasCaptionTrack: true, hasAudio: true }]);
+    expect(result.videos).toEqual([
+      { selector: '#promo', hasCaptionTrack: true, hasAudio: false, audio: 'undetermined' },
+    ]);
   });
 
   it('does not count a chapters or descriptions track as captions', async () => {
     const result = await checkHtml(
       `<body><video id="promo" src="movie.mp4" controls><track kind="chapters" src="ch.vtt" /></video></body>`,
     );
-    expect(result.videos).toEqual([{ selector: '#promo', hasCaptionTrack: false, hasAudio: true }]);
+    expect(result.videos).toEqual([
+      { selector: '#promo', hasCaptionTrack: false, hasAudio: false, audio: 'undetermined' },
+    ]);
   });
 
   it('returns an empty list for a page with no video elements', async () => {
@@ -150,12 +156,14 @@ describe('checkVideoCaptions against real pages', () => {
   it('detects hasAudio: false for a genuinely silent video, and does not treat it as missing captions', async () => {
     const result = await checkGeneratedVideo(false);
     expect(result.videos).toEqual([
-      { selector: '#promo', hasCaptionTrack: false, hasAudio: false },
+      { selector: '#promo', hasCaptionTrack: false, hasAudio: false, audio: 'absent' },
     ]);
   });
 
   it('detects hasAudio: true for a video with a real audio track', async () => {
     const result = await checkGeneratedVideo(true);
-    expect(result.videos).toEqual([{ selector: '#promo', hasCaptionTrack: false, hasAudio: true }]);
+    expect(result.videos).toEqual([
+      { selector: '#promo', hasCaptionTrack: false, hasAudio: true, audio: 'present' },
+    ]);
   });
 });

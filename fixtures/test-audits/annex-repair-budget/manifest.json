@@ -1793,7 +1793,7 @@
   ],
   "findingsProvenance": {
     "findingsSchemaVersion": 1,
-    "normalizationFingerprint": "9ca21f7c23f368c7",
+    "normalizationFingerprint": "20bd3b7640b319e9",
     "findingsDigest": "sha256:706215c79ac1a8ac6f2b7c17a5ceca8a661b2df2650d206bea2051f476333b44"
   },
   "prospectId": "1b2dccc2-6cb6-433f-92fb-33e0b0284b0e",

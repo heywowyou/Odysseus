@@ -116,7 +116,7 @@ describe('crawlSite against fixtures/spa-demo', () => {
     expect(visitedPages.length).toBeGreaterThan(0);
     for (const page of visitedPages) {
       expect(page.auditProfile).toBeDefined();
-      expect(page.auditProfile?.profileVersion).toBe('v1');
+      expect(page.auditProfile?.profileVersion).toBe('v2');
       expect(page.auditProfile?.url).toBe(page.url);
     }
 
