@@ -161,9 +161,9 @@ export function runningScans(summaries: readonly ScanSummary[]): ScanSummary[] {
 }
 
 /** Rows per page of the audit list; older audits sit on later pages. */
-export const AUDITS_PAGE_SIZE = 20;
+const AUDITS_PAGE_SIZE = 20;
 
-export function pageCount(total: number, pageSize: number = AUDITS_PAGE_SIZE): number {
+function pageCount(total: number, pageSize: number = AUDITS_PAGE_SIZE): number {
   return Math.max(1, Math.ceil(total / pageSize));
 }
 
