@@ -1,9 +1,28 @@
 import { describe, expect, it, vi } from 'vitest';
-import {
-  loadSmallSiteAnalysis,
-  loadSmallSiteFindings,
-  loadSmallSiteManifest,
-} from '../../../report/src/test-fixtures.js';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const SMALL_SITE = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../../../fixtures/test-audits/small-site',
+);
+
+async function readFixture(name: string): Promise<never> {
+  return JSON.parse(await fs.readFile(path.join(SMALL_SITE, name), 'utf-8')) as never;
+}
+
+async function frenchAnalysis(): Promise<never> {
+  const dir = path.join(SMALL_SITE, 'analyses');
+  const name = (await fs.readdir(dir))
+    .filter((entry) => entry.endsWith('-fr.json'))
+    .sort()
+    .at(-1)!;
+  const parsed = JSON.parse(await fs.readFile(path.join(dir, name), 'utf-8')) as {
+    generatedAt: string;
+  };
+  return { ...parsed, generatedAt: new Date(parsed.generatedAt) } as never;
+}
 
 vi.mock('@odysseus/report', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@odysseus/report')>();
@@ -18,9 +37,9 @@ const { buildReferenceAuditCandidate } = await import('./reference-audit-release
 
 async function source() {
   return {
-    manifest: await loadSmallSiteManifest(),
-    findings: await loadSmallSiteFindings(),
-    analysis: await loadSmallSiteAnalysis('fr'),
+    manifest: await readFixture('manifest.json'),
+    findings: await readFixture('findings.json'),
+    analysis: await frenchAnalysis(),
     renderedAt: new Date('2026-09-23T10:00:00.000Z'),
     rendererBuild: 'test',
   };
