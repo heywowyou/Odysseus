@@ -141,6 +141,31 @@ const ROOT_ELEMENT =
   /^\s*<([a-zA-Z][\w-]*)((?:\s+[^\s=>]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?)*)/;
 const ATTRIBUTE = /([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')|([^\s=]+)/g;
 
+/** Classes that animation and video-player libraries switch on and off as
+ *  the page scrolls or resizes. axe copies whichever set was live at audit
+ *  time into its selector, so the same footer logo was one finding as
+ *  `.responsive-image` and another as `.fadeIn.responsive-image.slower`, and
+ *  one YouTube player split by `ytp-small-mode` against
+ *  `ytp-large-width-mode`. Measured on stored audits; add a class only when
+ *  a real site shows it toggling. */
+const RUNTIME_STATE_CLASS =
+  /^(?:animated|animatedParent|animateOnce|go|slow|slower|slowest|fast|faster|in-view|aos-animate)$|^fade(?:In|Out)\w*$|^animate__\w+$|^ytp-[\w-]*-mode$/;
+
+function isRuntimeStateClass(className: string): boolean {
+  return RUNTIME_STATE_CLASS.test(className);
+}
+
+/** The selector with runtime state classes removed, used as the identity
+ *  only; the printed selector is untouched. */
+export function withoutRuntimeStateClasses(selector: string): string {
+  return selector
+    .replace(/\.(-?[_a-zA-Z][\w-]*)/g, (match, className: string) =>
+      isRuntimeStateClass(className) ? '' : match,
+    )
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function shapeIdentity(snippet: string): string | undefined {
   const root = ROOT_ELEMENT.exec(snippet);
   if (root === null) return undefined;
@@ -152,7 +177,10 @@ export function shapeIdentity(snippet: string): string | undefined {
     const name = (attr[1] ?? attr[4] ?? '').toLowerCase();
     if (name === '') continue;
     if (name === 'class')
-      classList = (attr[2] ?? attr[3] ?? '').split(/\s+/).filter(Boolean).join(' ');
+      classList = (attr[2] ?? attr[3] ?? '')
+        .split(/\s+/)
+        .filter((className) => className !== '' && !isRuntimeStateClass(className))
+        .join(' ');
     if (name === 'style') continue;
     names.add(name);
   }
@@ -406,7 +434,11 @@ export function extractAxeCandidates(
             node.html,
             options?.frameOriginsBySelector,
           );
-          const scoped = frame === undefined ? identity : `${frame}|${identity ?? violation.id}`;
+          const stateFree = withoutRuntimeStateClasses(selector);
+          const selectorIdentity =
+            identity ?? (stateFree !== selector && stateFree !== '' ? stateFree : undefined);
+          const scoped =
+            frame === undefined ? selectorIdentity : `${frame}|${identity ?? violation.id}`;
           return scoped === undefined ? {} : { dedupeIdentity: scoped };
         })(),
         rawEvidenceForPage: {

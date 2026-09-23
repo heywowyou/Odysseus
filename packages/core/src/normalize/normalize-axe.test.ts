@@ -153,3 +153,43 @@ describe('embedded frame identity (plan 075, E2)', () => {
     expect(youtube?.dedupeIdentity).not.toBe(vimeo?.dedupeIdentity);
   });
 });
+
+describe('runtime state classes in identity (plan 075, F6)', () => {
+  const node = (target: string[], html: string) =>
+    buildAxeResultsInput([
+      buildAxeViolation({ id: 'image-alt', nodes: [buildAxeNode({ target, html })] }),
+    ]);
+
+  it('merges one footer image whose animation classes differed between pages', () => {
+    const [a] = extractAxeCandidates(
+      node(['.social-icon.fadeIn[target="_blank"]:nth-child(1) > img'], '<img src="/i.png">'),
+      'https://example.com/a',
+    );
+    const [b] = extractAxeCandidates(
+      node(['.social-icon.slower[target="_blank"]:nth-child(1) > img'], '<img src="/i.png">'),
+      'https://example.com/b',
+    );
+    expect(a?.dedupeIdentity).toBeDefined();
+    expect(a?.dedupeIdentity).toBe(b?.dedupeIdentity);
+    expect(a?.element?.selector).toContain('.fadeIn');
+  });
+
+  it('merges one embedded player whose size-mode class differed between pages', () => {
+    const player = (mode: string) =>
+      node(
+        ['iframe[frameborder="0"]', '#movie_player'],
+        `<div class="html5-video-player ${mode}" id="movie_player">`,
+      );
+    const [small] = extractAxeCandidates(player('ytp-small-mode'), 'https://example.com/a');
+    const [large] = extractAxeCandidates(player('ytp-large-width-mode'), 'https://example.com/b');
+    expect(small?.dedupeIdentity).toBe(large?.dedupeIdentity);
+  });
+
+  it('leaves a selector with no state class on the default identity', () => {
+    const [plain] = extractAxeCandidates(
+      node(['#header-logo > img'], '<img src="/logo.png">'),
+      'https://example.com/',
+    );
+    expect(plain?.dedupeIdentity).toBeUndefined();
+  });
+});
