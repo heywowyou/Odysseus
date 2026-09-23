@@ -362,6 +362,28 @@ The closure artifact is the requirement-to-proof ledger below. Every row names i
 - End to end: rerun slice 0 on the 12 VPS audits and compare. Occurrences must be unchanged except for the listed false-positive removals, and there must be zero findings on non-content pages, zero off-identity Lighthouse runs, and no rule above 30%.
 - Re-normalize one stored audit locally, render the PDF against a stubbed analysis, and read the statistics and annex as a client would.
 
+### Recorded local verification (2026-09-22)
+
+- `pnpm run check` passed on the current tree. Documentation, plan quality,
+  formatting, ESLint, typecheck, architecture, and dead-code checks passed;
+  dependency-cruiser retained nine known warnings and reported zero errors.
+- Standalone `pnpm run test:all` passed: 526 test files passed and 28 were
+  skipped; 5,462 tests passed and 245 were skipped. The expected 33 store
+  integration files were skipped because local MongoDB at
+  `mongodb://localhost:27018/odysseus_test` was unavailable.
+- The local PDF acceptance artifact is
+  `/tmp/plan075-report-workbench-fixed/report.pdf`: 39 pages, tagged A4,
+  1,156,855 bytes. Pages 16 and 17 were inspected after the checklist table
+  repair; `pdftotext -layout` contained no undefined, `NaN`, `Error`,
+  replacement-character, `TODO`, or `TBD` tokens.
+- Local dashboard A8 browser acceptance showed the French pushback warning and
+  a `Relancer plus lentement` link prefilled with `delaySeconds=8` and
+  `scanConcurrency=1`. This is local UI acceptance; it is not claimed as a
+  production La Corniche rehearsal.
+- Production harness closure remains open until every required target has a
+  terminal artifact or an explicit evidence-backed refusal/coverage
+  disposition. The execution ledger below is authoritative for that state.
+
 ## Rescan after deploy (operator decision, 2026-09-22)
 
 Once this plan is deployed, rescan all 12 stored full audits instead of only re-normalizing them. That puts every audit on the same code and gives clean Lighthouse measurements.
@@ -373,3 +395,48 @@ Once this plan is deployed, rescan all 12 stored full audits instead of only re-
 Reports are regenerated only when needed, because regeneration runs the paid AI passes.
 
 Until then, the stored grand-hotel-opera and lacoorniche PDFs (including the finalized lacoorniche PDF from 2026-09-21) and the approved pointfrance report are not sent to anyone (E7).
+
+## Production rescan execution ledger
+
+This ledger is updated during the operator-authorized post-deploy rescans. A
+diagnostic pilot with `--max-pages` is explicitly not a full-audit result and
+is never used as closure evidence. Production audits are serialized on the
+single VPS; local tests and report inspection may run in parallel.
+
+| Site | Artifact / state | Coverage and quality result | Closure state |
+|---|---|---|---|
+| Cap d’Antibes | `/data/artifacts/capdantibes-beachhotel.com/2026-09-22T06-29-34Z` | 21 inventoried / 21 content-complete; 48 findings / 1,326 occurrences; 0 non-visited findings; 0 challenge/error pages; 0 off-identity Lighthouse; 2 valid / 0 invalid lab runs; concentration guard green; occurrences preserved | Evidence complete |
+| Grand Hôtel Opéra | `/data/artifacts/www.grand-hotel-opera.com/2026-09-22T06-02-16Z` | 1 inventoried challenge-only page; 0 findings; 1 challenge/error page; no analyzed hotel content; correctly refused rather than counted as a clean defect scan | Evidence complete as refusal, not a passing analyzed audit |
+| Atlantic Hotel | `/data/artifacts/www.atlantichotel.fr/2026-09-22T06-48-32Z` | 124 inventoried / 114 visited; 80 findings / 4,943 occurrences; 10 redirects/errors disclosed; 0 non-visited findings; 0 off-identity Lighthouse; 13 valid / 0 invalid lab runs; concentration guard green; CLI remains blocked by environment-unapproved and two partial pages | Evidence complete with coverage blocker |
+| Hôtel de Garlande | `/data/artifacts/www.hoteldegarlande.com/2026-09-22T08-15-54Z` | 61 inventoried / 48 content-complete; 58 findings / 2,299 occurrences; 13 redirects/errors disclosed; 0 non-visited findings; 0 off-identity Lighthouse; 34 valid / 0 invalid lab runs; concentration guard green; CLI remains blocked by environment-unapproved and unresolved-material-gap | Evidence complete with coverage blocker |
+| Grand Hôtel des Alpes | First `/data/artifacts/grandhoteldesalpes.com/2026-09-22T09-07-46Z`; retry `/data/artifacts/grandhoteldesalpes.com/2026-09-22T09-33-12Z` | Both attempts reached 150 visited pages with 40 sitemap-only pages left and were rejected by the coverage gate; the retry used an explicit 250-page diagnostic cap and is not closure evidence | Rejected; no further identical retry |
+| Villas Foch | `/data/artifacts/www.villasfoch.fr/2026-09-22T10-24-41Z` | 32 inventoried / 25 content-complete; 56 findings / 1,689 occurrences; 7 non-content pages disclosed; 0 non-visited findings; 0 challenge/error pages; 0 off-identity Lighthouse; 16 valid / 0 invalid lab runs; concentration guard green; CLI blocked by environment-unapproved, temporal-drift, unresolved-material-gap | Evidence complete with coverage blocker |
+| La Corniche | Full attempts at `2026-09-22T10-58-50Z` and `2026-09-22T11-39-50Z`; pilots at `2026-09-22T11-42-41Z` and `2026-09-22T11-50-07Z` | The uncapped attempts and 2/10-page and 2-page 40-second pilots produced only scope evidence before the diagnostic watchdog. One pilot ended during Docker container replacement; the replacement was verified healthy and `OOMKilled=false`. No challenge conclusion is claimed and no pilot is closure evidence | Operator-approved coverage blocker pending a materially different run |
+| Haaitza | Full audit session 34523 active; pilot `/data/artifacts/haaitza.com/2026-09-22T11-59-07Z` | The 2-page 40-second pilot acquired the root with HTTP 200, no rendered challenge markers, axe and head metadata. The full uncapped pass uses 40,000 ms delay and concurrency 1; final artifact and harness result pending | In progress |
+| Grand Hotel Chicago | Partial `/data/artifacts/grandhotelchicago.paris/2026-09-22T13-40-51Z` | Accidental runner child was interrupted before `manifest.json`; directory contains only `audit-scope.json` and 0 `scan.json` files. Pre-075 baseline remains diagnostic only | Interrupted; rerun required, no closure evidence |
+| Grand Hôtel Bellevue | Partial `/data/artifacts/www.grandhotelbellevue.com/2026-09-22T13-40-59Z` | Accidental runner child was interrupted before `manifest.json`; directory contains only `audit-scope.json` and 0 `scan.json` files. Pre-075 baseline remains diagnostic only | Interrupted; rerun required, no closure evidence |
+| Château Royal | Partial `/data/artifacts/www.hotelchateauroyal.nc/2026-09-22T13-41-08Z` | Accidental runner child was interrupted before `manifest.json`; directory contains only `audit-scope.json` and 0 `scan.json` files. Pre-075 baseline remains diagnostic only | Interrupted; rerun required, no closure evidence |
+| Point France | Partial `/data/artifacts/www.hotelpointfrance.com/2026-09-22T13-41-28Z` | Accidental runner child was interrupted before `manifest.json`; directory contains only `audit-scope.json` and 0 `scan.json` files. Pre-075 baseline remains diagnostic only | Interrupted; rerun required, no closure evidence |
+
+### Consolidated harness comparison (working closure table)
+
+This is the live before/after matrix for the twelve stored audits. The
+pre-075 column is the representative stored scan; a pending or rejected
+post-075 entry is intentionally not treated as a passing audit. The matrix is
+complete only when every target has either a verified post-075 artifact or an
+explicit, evidence-backed refusal/coverage disposition recorded above.
+
+| Site | Pre-075 stored findings / occurrences | Post-075 artifact or state | Post-075 findings / occurrences | Integrity and coverage state |
+|---|---:|---|---:|---|
+| Cap d’Antibes | 93 / 1,763 | `/data/artifacts/capdantibes-beachhotel.com/2026-09-22T06-29-34Z` | 48 / 1,326 | Guard green; 0 non-visited, 0 challenge/error, 0 off-identity lab; occurrences preserved |
+| Grand Hôtel Opéra | 78 / 4,549 | `/data/artifacts/www.grand-hotel-opera.com/2026-09-22T06-02-16Z` | 0 / 0 | Challenge-only refusal; no analyzed hotel content, so not a passing analyzed audit |
+| Atlantic Hotel | 197 / 21,441 | `/data/artifacts/www.atlantichotel.fr/2026-09-22T06-48-32Z` | 80 / 4,943 | Guard green; 10 redirects/errors disclosed; 0 non-visited, 0 off-identity lab |
+| Hôtel de Garlande | 77 / 2,562 | `/data/artifacts/www.hoteldegarlande.com/2026-09-22T08-15-54Z` | 58 / 2,299 | Guard green; 13 redirects/errors disclosed; 0 non-visited, 0 off-identity lab |
+| Grand Hôtel des Alpes | 76 / 6,787 | Two post-075 attempts rejected by coverage gate | — | No closure artifact; both attempts stopped with 40 sitemap-only pages remaining |
+| Villas Foch | 61 / 2,083 | `/data/artifacts/www.villasfoch.fr/2026-09-22T10-24-41Z` | 56 / 1,689 | Guard green; 7 non-content pages disclosed; 0 non-visited, 0 off-identity lab |
+| La Corniche | 110 / 7,638 | Full runs and pilots did not reach a closure artifact | — | Coverage/challenge disposition unresolved; no pilot used as closure evidence |
+| Haaitza | 73 / 4,496 | Full uncapped audit session 34523 active | — | 40,000 ms delay, concurrency 1; final artifact and harness result pending |
+| Grand Hotel Chicago | 74 / 1,427 | Full post-075 rescan pending | — | Pre-075 baseline only |
+| Grand Hôtel Bellevue | 88 / 2,034 | Full post-075 rescan pending | — | Pre-075 baseline only |
+| Château Royal | 157 / 15,862 | Full post-075 rescan pending | — | Pre-075 baseline only |
+| Point France | 315 / 35,281 | Full post-075 rescan pending | — | Pre-075 baseline only |
