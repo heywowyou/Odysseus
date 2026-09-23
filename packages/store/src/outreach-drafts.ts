@@ -267,7 +267,11 @@ export async function findLiveOutreachDraft(
   touch: number,
 ): Promise<OutreachDraftDocument | null> {
   const DraftModel = createOutreachDraftModel(connection);
-  return DraftModel.findOne({ threadId, touch, status: 'created' }).lean();
+  return DraftModel.findOne({
+    threadId,
+    touch,
+    status: { $in: ['created', 'mailbox-delete-pending'] },
+  }).lean();
 }
 
 export async function findOutreachDraftById(
@@ -290,8 +294,26 @@ export async function markOutreachDraftDeleted(
 ): Promise<MarkOutreachDraftDeletedResult> {
   const DraftModel = createOutreachDraftModel(connection);
   const result = await DraftModel.updateOne(
-    { draftId, status: 'created' },
+    { draftId, status: { $in: ['created', 'mailbox-delete-pending'] } },
     { $set: { status: 'deleted', deletedAt: new Date() } },
+  );
+  return { changed: result.modifiedCount === 1 };
+}
+
+export async function markOutreachDraftDeletionPending(
+  connection: Connection,
+  draftId: string,
+  reviewOutcome?: OutreachDraftReviewOutcome,
+): Promise<{ changed: boolean }> {
+  const now = new Date();
+  const result = await createOutreachDraftModel(connection).updateOne(
+    { draftId, status: 'created' },
+    {
+      $set: {
+        status: 'mailbox-delete-pending',
+        ...(reviewOutcome !== undefined ? { reviewOutcome, reviewedAt: now } : {}),
+      },
+    },
   );
   return { changed: result.modifiedCount === 1 };
 }
@@ -335,7 +357,7 @@ export async function recordOutreachDraftReview(
 }
 
 export interface ListOutreachDraftsOptions {
-  status?: 'created' | 'deleted' | 'failed';
+  status?: 'created' | 'mailbox-delete-pending' | 'deleted' | 'failed';
   threadId?: string;
   prospectId?: string;
   limit?: number;

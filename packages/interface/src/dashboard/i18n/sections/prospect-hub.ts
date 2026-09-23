@@ -307,6 +307,8 @@ export interface ProspectHubStrings {
     draftDiscarded: string;
     draftDiscardedWithPreview: string;
     draftDiscardedPreviewLive: string;
+    draftMailboxDeletePending: string;
+    mailboxDeletionWarning: string;
     noDraft: string;
     auditState: string;
     /** `{date}` and `{age}`, the latter one of the scanAge* phrases. */
@@ -735,6 +737,10 @@ export const prospectHub = {
         'Brouillon supprimé et aperçu retiré. Le prospect revient à l’état audité.',
       draftDiscardedPreviewLive:
         'Brouillon supprimé, mais l’aperçu n’a pas pu être retiré. Retirez-le ci-dessous.',
+      draftMailboxDeletePending:
+        'La suppression dans la boîte mail est en attente. Une nouvelle tentative sera faite automatiquement ; ne l’envoyez pas.',
+      mailboxDeletionWarning:
+        '{count} brouillon(s) n’ont pas pu être supprimés de la boîte mail. Une nouvelle tentative sera faite automatiquement ; ne les envoyez pas.',
       noDraft: 'Aucun brouillon en attente.',
       auditState: 'État de l’audit : {state}',
       scanDate: 'Scanné le {date}, {age}',
@@ -1255,6 +1261,10 @@ export const prospectHub = {
         'Draft discarded and preview taken offline. The prospect is back to its audited state.',
       draftDiscardedPreviewLive:
         'Draft discarded, but the preview could not be taken offline. Revoke it below.',
+      draftMailboxDeletePending:
+        'Mailbox deletion is pending. The system will retry automatically; do not send this draft.',
+      mailboxDeletionWarning:
+        '{count} draft(s) could not be deleted from the mailbox. The system will retry automatically; do not send them.',
       noDraft: 'No pending draft.',
       auditState: 'Audit state: {state}',
       scanDate: 'Scanned {date}, {age}',

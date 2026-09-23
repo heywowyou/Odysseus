@@ -323,8 +323,13 @@ export function deriveProspectWork(
   now = new Date(),
 ): ProspectWorkResult {
   const prospectAudits = sources.audits.filter((audit) => audit.prospectId === prospect.prospectId);
-  const prospectDrafts = sources.drafts
-    .filter((draft) => draft.prospectId === prospect.prospectId && draft.status === 'created')
+  const liveDrafts = sources.drafts.filter(
+    (draft) =>
+      draft.prospectId === prospect.prospectId &&
+      (draft.status === 'created' || draft.status === 'mailbox-delete-pending'),
+  );
+  const prospectDrafts = liveDrafts
+    .filter((draft) => draft.status === 'created')
     .sort((left, right) => asTime(right.createdAt) - asTime(left.createdAt));
   const thread = sources.threads.find((candidate) => candidate.prospectId === prospect.prospectId);
   // A drafted touch whose draft was discarded is due again, exactly as the
@@ -334,7 +339,7 @@ export function deriveProspectWork(
       ? undefined
       : effectiveOutreachThreadState(
           thread.state,
-          prospectDrafts.map((draft) => draft.touch),
+          liveDrafts.map((draft) => draft.touch),
         );
   const needsInputJobs = sources.needsInputJobs.filter(
     (job) => job.options?.prospectId === prospect.prospectId,
@@ -436,7 +441,7 @@ export function deriveProspectWork(
     qualification.audit !== undefined &&
     reportReadiness !== undefined &&
     (threadState === undefined || threadState === 'open') &&
-    prospectDrafts.length === 0 &&
+    liveDrafts.length === 0 &&
     prospect.emails.length > 0 &&
     !websiteSuppressed &&
     !emailSuppressed
@@ -579,7 +584,10 @@ export async function loadProspectWork(
       .sort({ startedAt: -1, auditId: -1 })
       .lean<ProspectWorkAudit[]>(),
     createOutreachDraftModel(connection)
-      .find({ prospectId: { $in: prospectIds }, status: 'created' })
+      .find({
+        prospectId: { $in: prospectIds },
+        status: { $in: ['created', 'mailbox-delete-pending'] },
+      })
       .select({
         _id: 0,
         draftId: 1,

@@ -31,13 +31,17 @@ import { isFreeMailDomain, emailDomain, primaryWebsite } from '@odysseus/core';
 import type { Connection } from 'mongoose';
 import { logger } from '../logger.js';
 import { createConfiguredMailboxDraftAdapter } from './configured-mailbox-draft-adapter.js';
-import { withdrawOutreachForProspect } from './withdraw-prospect-outreach.js';
+import {
+  retryPendingMailboxDraftDeletions,
+  withdrawOutreachForProspect,
+} from './withdraw-prospect-outreach.js';
 import {
   deriveOptOutLinkKey,
   OPT_OUT_REQUEST_PREFIX,
   type OptOutBucket,
 } from './opt-out-bucket.js';
 import type { PreviewPublisher } from './preview-publisher.js';
+import type { MailboxDraftAdapter } from './mailbox-draft-adapter.js';
 import { hashPreviewToken, isValidPreviewToken } from './preview-token.js';
 
 const EMAIL_PATTERN = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/u;
@@ -52,12 +56,14 @@ export interface ProcessOptOutRequestsOptions {
   connection: Connection;
   bucket: OptOutBucket;
   publisher: PreviewPublisher;
+  mailbox?: MailboxDraftAdapter | null;
 }
 
 export interface ProcessOptOutRequestsResult {
   applied: number;
   discarded: number;
   failed: number;
+  mailboxDraftsNotRemoved?: number;
 }
 
 /** The address our emailed link was issued to, when the request carries a
@@ -75,7 +81,8 @@ async function applyOptOut(
   publisher: PreviewPublisher,
   rawAddress: string,
   linkedAddress: string | undefined,
-): Promise<void> {
+  mailbox: MailboxDraftAdapter | null,
+): Promise<number> {
   const address = rawAddress.trim().toLowerCase();
   const domain = emailDomain(address);
   const domainWide =
@@ -91,6 +98,7 @@ async function applyOptOut(
     reason: OPT_OUT_REASON,
   });
 
+  let mailboxDraftsNotRemoved = 0;
   for (const prospect of await findProspectsByEmail(connection, address)) {
     try {
       await recordProspectOutcome(connection, prospect.prospectId, 'opt-out', ACTOR, {
@@ -101,10 +109,13 @@ async function applyOptOut(
       // already stops any further contact.
       if (!(error instanceof AutomaticStatusTransitionError)) throw error;
     }
-    await withdrawOutreachForProspect(connection, prospect.prospectId, 'opted-out', {
-      publisher: () => publisher,
-      mailbox: createConfiguredMailboxDraftAdapter(),
-    });
+    const withdrawn = await withdrawOutreachForProspect(
+      connection,
+      prospect.prospectId,
+      'opted-out',
+      { publisher: () => publisher, mailbox },
+    );
+    mailboxDraftsNotRemoved += withdrawn.mailboxDraftsNotRemoved;
     const website = primaryWebsite(prospect.websites);
     if (website === undefined) continue;
     for (const preview of await listLivePreviewsForDomain(connection, website.registrableDomain)) {
@@ -114,6 +125,7 @@ async function applyOptOut(
     }
     await closeOutreachThreadsForDomain(connection, website.registrableDomain, OPT_OUT_REASON);
   }
+  return mailboxDraftsNotRemoved;
 }
 
 export async function processOptOutRequests(
@@ -121,6 +133,9 @@ export async function processOptOutRequests(
 ): Promise<ProcessOptOutRequestsResult> {
   const { connection, bucket, publisher } = options;
   const result: ProcessOptOutRequestsResult = { applied: 0, discarded: 0, failed: 0 };
+  const mailbox =
+    'mailbox' in options ? (options.mailbox ?? null) : createConfiguredMailboxDraftAdapter();
+  let mailboxDraftsNotRemoved = await retryPendingMailboxDraftDeletions(connection, mailbox);
 
   for (const key of await bucket.list(OPT_OUT_REQUEST_PREFIX)) {
     try {
@@ -132,11 +147,12 @@ export async function processOptOutRequests(
         continue;
       }
       const token = request['token'];
-      await applyOptOut(
+      mailboxDraftsNotRemoved += await applyOptOut(
         connection,
         publisher,
         request['address'],
         await linkedAddressFor(bucket, token),
+        mailbox,
       );
       if (typeof token === 'string' && isValidPreviewToken(token)) {
         await bucket.delete(deriveOptOutLinkKey(hashPreviewToken(token)));
@@ -149,5 +165,8 @@ export async function processOptOutRequests(
       result.failed += 1;
     }
   }
-  return result;
+  return {
+    ...result,
+    ...(mailboxDraftsNotRemoved > 0 ? { mailboxDraftsNotRemoved } : {}),
+  };
 }

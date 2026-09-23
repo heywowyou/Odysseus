@@ -466,12 +466,13 @@ describe.skipIf(!mongoAvailable)('withdrawing a prospect outreach', () => {
       previews: 1,
       threadClosed: true,
       providerDraftIds: ['g-1'],
+      providerDrafts: [{ draftId: 'd-pending', providerDraftId: 'g-1' }],
       previewObjectKeys: ['hotel/preview.html'],
     });
     const draft = await createOutreachDraftModel(connection!).collection.findOne({
       draftId: 'd-pending',
     });
-    expect(draft?.['status']).toBe('deleted');
+    expect(draft?.['status']).toBe('mailbox-delete-pending');
     const preview = await createOutreachPreviewModel(connection!).collection.findOne({
       previewId: 'pv-1',
     });

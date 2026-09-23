@@ -28,7 +28,7 @@ import { Schema, type Connection, type Model } from 'mongoose';
 
 /** `failed` records an attempt that never reached the provider, so a run that
  *  refused for a good reason leaves evidence instead of nothing. */
-export type OutreachDraftStatus = 'created' | 'deleted' | 'failed';
+export type OutreachDraftStatus = 'created' | 'mailbox-delete-pending' | 'deleted' | 'failed';
 
 /** Issue #96: how the operator resolved a review, recorded when the row
  *  leaves the review flow. Both values keep the same `deleted` status
@@ -128,7 +128,11 @@ const outreachDraftSchema = new Schema<OutreachDraftDocument>(
     providerDraftId: { type: String },
     providerMessageId: { type: String },
     providerThreadId: { type: String },
-    status: { type: String, required: true, enum: ['created', 'deleted', 'failed'] },
+    status: {
+      type: String,
+      required: true,
+      enum: ['created', 'mailbox-delete-pending', 'deleted', 'failed'],
+    },
     failureReason: { type: String },
     reviewOutcome: { type: String, enum: ['approved', 'skipped'] },
     reviewedAt: { type: Date },
@@ -142,7 +146,10 @@ const outreachDraftSchema = new Schema<OutreachDraftDocument>(
 outreachDraftSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 outreachDraftSchema.index(
   { threadId: 1, touch: 1 },
-  { unique: true, partialFilterExpression: { status: 'created' } },
+  {
+    unique: true,
+    partialFilterExpression: { status: { $in: ['created', 'mailbox-delete-pending'] } },
+  },
 );
 outreachDraftSchema.index({ prospectId: 1, createdAt: -1 });
 outreachDraftSchema.index({ status: 1, createdAt: -1 });

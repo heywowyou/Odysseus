@@ -384,7 +384,15 @@ export function ProspectHubDetailPage(): JSX.Element {
   const removeContact = async (removal: ContactRemoval): Promise<void> => {
     const request = contactRemovalRequest(prospect.prospectId, removal);
     try {
-      await sendJson(request.path, 'DELETE', request.body);
+      const result = await sendJson<{ mailboxDraftsNotRemoved?: number }>(
+        request.path,
+        'DELETE',
+        request.body,
+      );
+      const pending = result.mailboxDraftsNotRemoved ?? 0;
+      if (pending > 0) {
+        setOutreachNotice(copy.mailboxDeletionWarning.replace('{count}', String(pending)));
+      }
       refreshAll();
     } catch {
       setOutreachNotice(copy.actionFailed);
@@ -687,11 +695,13 @@ export function ProspectHubDetailPage(): JSX.Element {
     setOutreachBusy('outcome');
     setOutreachNotice(null);
     try {
-      const result = await sendJson<{ withdrawn?: { drafts: number; previews: number } }>(
-        `/api/prospects/${prospect.prospectId}/outcome`,
-        'POST',
-        { outcome },
-      );
+      const result = await sendJson<{
+        withdrawn?: {
+          drafts: number;
+          previews: number;
+          mailboxDraftsNotRemoved?: number;
+        };
+      }>(`/api/prospects/${prospect.prospectId}/outcome`, 'POST', { outcome });
       setOutreachNotice(outcomeNotice(copy, outcome, result));
     } catch (error) {
       setOutreachNotice(outcomeFailureNotice(copy, error));
@@ -706,17 +716,26 @@ export function ProspectHubDetailPage(): JSX.Element {
     setOutreachBusy(`discard-${draftId}`);
     setOutreachNotice(null);
     try {
-      const result = await sendJson<{ previewRevoked?: boolean; previewStillLive?: boolean }>(
+      const result = await sendJson<{
+        previewRevoked?: boolean;
+        previewStillLive?: boolean;
+        mailboxDraftsNotRemoved?: number;
+      }>(
         `/api/prospects/${prospect.prospectId}/drafts/${encodeURIComponent(draftId)}/discard`,
         'POST',
         {},
       );
-      setOutreachNotice(
+      const baseNotice =
         result.previewStillLive === true
           ? copy.draftDiscardedPreviewLive
           : result.previewRevoked === true
             ? copy.draftDiscardedWithPreview
-            : copy.draftDiscarded,
+            : copy.draftDiscarded;
+      const pending = result.mailboxDraftsNotRemoved ?? 0;
+      setOutreachNotice(
+        pending > 0
+          ? `${baseNotice} ${copy.mailboxDeletionWarning.replace('{count}', String(pending))}`
+          : baseNotice,
       );
     } catch {
       setOutreachNotice(copy.actionFailed);
@@ -771,7 +790,13 @@ export function ProspectHubDetailPage(): JSX.Element {
     setOutreachBusy('status');
     setOutreachNotice(null);
     try {
-      await sendJson(`/api/prospects/${prospect.prospectId}/status`, 'PATCH', { status });
+      const result = await sendJson<{
+        withdrawn?: { mailboxDraftsNotRemoved?: number };
+      }>(`/api/prospects/${prospect.prospectId}/status`, 'PATCH', { status });
+      const pending = result.withdrawn?.mailboxDraftsNotRemoved ?? 0;
+      if (pending > 0) {
+        setOutreachNotice(copy.mailboxDeletionWarning.replace('{count}', String(pending)));
+      }
       refreshAll();
     } catch {
       setOutreachNotice(copy.actionFailed);
@@ -1509,7 +1534,13 @@ export function ProspectHubDetailPage(): JSX.Element {
             <span className="text-xs text-ink-muted">{copy.outreachLanguage}</span>
             <Select
               value={outreachLanguage}
-              disabled={saving || drafts.some((draft) => draft.status === 'created')}
+              disabled={
+                saving ||
+                drafts.some(
+                  (draft) =>
+                    draft.status === 'created' || draft.status === 'mailbox-delete-pending',
+                )
+              }
               onChange={(event) => void changeOutreachLanguage(event.target.value)}
             >
               <option value="fr">{copy.languageLabels.fr}</option>
@@ -1559,7 +1590,15 @@ export function ProspectHubDetailPage(): JSX.Element {
                         </dd>
                       </div>
                     </dl>
-                    {draft.body ? (
+                    {draft.status === 'mailbox-delete-pending' ? (
+                      <p
+                        role="status"
+                        className="mt-2 rounded bg-raised px-2 py-1 text-xs text-ink-soft"
+                      >
+                        {copy.draftMailboxDeletePending}
+                      </p>
+                    ) : null}
+                    {draft.body && draft.status !== 'mailbox-delete-pending' ? (
                       <details className="mt-2">
                         <summary className="cursor-pointer text-xs font-medium">
                           {copy.draftBody}

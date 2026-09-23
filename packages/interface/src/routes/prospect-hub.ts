@@ -28,7 +28,7 @@ import {
   countProspectDeletionImpact,
   deleteProspectPermanently,
   restoreProspect,
-  recordOutreachDraftReview,
+  markOutreachDraftDeletionPending,
   revokeOutreachPreview,
   recordProspectOutcome,
   removeProspectEmail,
@@ -70,7 +70,11 @@ import { createConfiguredPreviewPublisher } from '../outreach/configured-preview
 import { createMongoOutreachPreviewStoreV3 } from '../outreach/mongo-outreach-preview-store-v2.js';
 import { publishPreviewV3 } from '../outreach/publish-preview-v2.js';
 import { syncMailbox } from '../outreach/mailbox-sync.js';
-import { withdrawOutreachForProspect } from '../outreach/withdraw-prospect-outreach.js';
+import {
+  deletePendingMailboxDraftRows,
+  mailboxDraftDeletionWarningFields,
+  withdrawOutreachForProspect,
+} from '../outreach/withdraw-prospect-outreach.js';
 import {
   createFirstEmailForProspect,
   createFollowUpForProspect,
@@ -463,7 +467,12 @@ export function registerProspectHubRoutes(
                 // A discarded draft no longer reads as drafted.
                 state: effectiveOutreachThreadState(
                   thread.state,
-                  drafts.filter((draft) => draft.status === 'created').map((draft) => draft.touch),
+                  drafts
+                    .filter(
+                      (draft) =>
+                        draft.status === 'created' || draft.status === 'mailbox-delete-pending',
+                    )
+                    .map((draft) => draft.touch),
                 ),
                 currentTouch: thread.currentTouch,
                 updatedAt: thread.updatedAt,
@@ -537,11 +546,13 @@ export function registerProspectHubRoutes(
       sendError(res, 404, 'pending draft not found');
       return;
     }
-    await recordOutreachDraftReview(connection, draft.draftId, 'skipped');
-    const mailbox = createConfiguredMailboxDraftAdapter();
-    if (mailbox !== null && draft.providerDraftId !== undefined) {
-      await mailbox.deleteDraft(draft.providerDraftId).catch(() => undefined);
-    }
+    await markOutreachDraftDeletionPending(connection, draft.draftId, 'skipped');
+    const mailboxDraftsNotRemoved = await deletePendingMailboxDraftRows(
+      connection,
+      [draft],
+      createConfiguredMailboxDraftAdapter(),
+    );
+    const mailboxWarning = mailboxDraftDeletionWarningFields(mailboxDraftsNotRemoved);
     // The preview exists only to be linked from this draft, so discarding the
     // draft takes it offline too and leaves the prospect at its audited state.
     // Object first, record second; a bucket failure leaves the preview live
@@ -561,12 +572,17 @@ export function registerProspectHubRoutes(
           );
           previewRevoked = true;
         } catch {
-          sendJson(res, 200, { discarded: true, previewRevoked: false, previewStillLive: true });
+          sendJson(res, 200, {
+            discarded: true,
+            previewRevoked: false,
+            previewStillLive: true,
+            ...mailboxWarning,
+          });
           return;
         }
       }
     }
-    sendJson(res, 200, { discarded: true, previewRevoked });
+    sendJson(res, 200, { discarded: true, previewRevoked, ...mailboxWarning });
   });
 
   router.post('/api/prospects/:prospectId/outreach/follow-up', async ({ res, params }) => {
@@ -736,18 +752,19 @@ export function registerProspectHubRoutes(
     const result = await removeProspectEmail(connection, params['prospectId']!, input.value, {
       suppress: input.body['suppress'] === true,
     });
-    if (result.ok && result.withdrawnProviderDraftIds.length > 0) {
-      // Best effort: the stored draft is already withdrawn from review.
-      const mailbox = createConfiguredMailboxDraftAdapter();
-      if (mailbox !== null) {
-        await Promise.all(
-          result.withdrawnProviderDraftIds.map((id) =>
-            mailbox.deleteDraft(id).catch(() => undefined),
-          ),
-        );
-      }
+    if (!result.ok) {
+      sendContactResult(res, result);
+      return;
     }
-    sendContactResult(res, result);
+    const mailboxDraftsNotRemoved = await deletePendingMailboxDraftRows(
+      connection,
+      result.withdrawnDrafts,
+      createConfiguredMailboxDraftAdapter(),
+    );
+    sendJson(res, 200, {
+      ...result.prospect,
+      ...mailboxDraftDeletionWarningFields(mailboxDraftsNotRemoved),
+    });
   });
 
   router.post('/api/prospects/:prospectId/emails/primary', async ({ req, res, params }) => {
@@ -949,11 +966,25 @@ export function registerProspectHubRoutes(
     const audits = await listProspectAudits(connection, prospectId);
 
     try {
-      // Issue #273: the mailbox draft is withdrawn too, not orphaned.
-      await withdrawOutreachForProspect(connection, prospectId, 'prospect-deleted', {
-        publisher: createConfiguredPreviewPublisher,
-        mailbox: createConfiguredMailboxDraftAdapter(),
-      });
+      // Issue #273: the mailbox draft is withdrawn too, not orphaned. A
+      // provider failure keeps the prospect row available for retry.
+      const withdrawn = await withdrawOutreachForProspect(
+        connection,
+        prospectId,
+        'prospect-deleted',
+        {
+          publisher: createConfiguredPreviewPublisher,
+          mailbox: createConfiguredMailboxDraftAdapter(),
+        },
+      );
+      if (withdrawn.mailboxDraftsNotRemoved > 0) {
+        sendError(
+          res,
+          503,
+          `${withdrawn.mailboxDraftsNotRemoved} mailbox draft(s) remain; retry deletion after cleanup`,
+        );
+        return;
+      }
     } catch {
       sendError(res, 503, 'prospect previews or mailbox drafts could not be withdrawn');
       return;

@@ -1271,6 +1271,7 @@ export interface WithdrawnProspectOutreach {
   threadClosed: boolean;
   /** Mailbox drafts the caller still has to delete at the provider. */
   providerDraftIds: string[];
+  providerDrafts: Array<{ draftId: string; providerDraftId?: string }>;
   /** Public preview objects the caller still has to delete from the bucket. */
   previewObjectKeys: string[];
 }
@@ -1289,13 +1290,25 @@ export async function withdrawProspectOutreach(
 ): Promise<WithdrawnProspectOutreach> {
   const now = new Date();
   const Drafts = createOutreachDraftModel(connection);
-  const pendingDrafts = await Drafts.find({ prospectId, status: 'created' })
-    .select({ draftId: 1, providerDraftId: 1, _id: 0 })
-    .lean<{ draftId: string; providerDraftId?: string }[]>();
-  if (pendingDrafts.length > 0) {
+  const pendingDrafts = await Drafts.find({
+    prospectId,
+    status: { $in: ['created', 'mailbox-delete-pending'] },
+  })
+    .select({ draftId: 1, providerDraftId: 1, status: 1, _id: 0 })
+    .lean<
+      { draftId: string; providerDraftId?: string; status: 'created' | 'mailbox-delete-pending' }[]
+    >();
+  const newlyPendingDraftIds = pendingDrafts
+    .filter((draft) => draft.status === 'created')
+    .map((draft) => draft.draftId);
+  const providerDrafts = pendingDrafts.map(({ draftId, providerDraftId }) => ({
+    draftId,
+    ...(providerDraftId === undefined ? {} : { providerDraftId }),
+  }));
+  if (newlyPendingDraftIds.length > 0) {
     await Drafts.updateMany(
-      { draftId: { $in: pendingDrafts.map((draft) => draft.draftId) }, status: 'created' },
-      { $set: { status: 'deleted', deletedAt: now } },
+      { draftId: { $in: newlyPendingDraftIds }, status: 'created' },
+      { $set: { status: 'mailbox-delete-pending' } },
     );
   }
 
@@ -1330,12 +1343,13 @@ export async function withdrawProspectOutreach(
   }
 
   return {
-    drafts: pendingDrafts.length,
+    drafts: newlyPendingDraftIds.length,
     previews: livePreviews.length,
     threadClosed,
-    providerDraftIds: pendingDrafts.flatMap((draft) =>
+    providerDraftIds: providerDrafts.flatMap((draft) =>
       draft.providerDraftId === undefined ? [] : [draft.providerDraftId],
     ),
+    providerDrafts,
     previewObjectKeys: livePreviews.map((preview) => preview.objectKey),
   };
 }

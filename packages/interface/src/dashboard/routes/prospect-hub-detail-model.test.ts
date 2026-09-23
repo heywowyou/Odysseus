@@ -122,6 +122,10 @@ describe('notices', () => {
     });
     expect(withdrawn).toContain('2');
     expect(withdrawn).not.toContain('{drafts}');
+    const pending = outcomeNotice(englishCopy, 'opted-out', {
+      withdrawn: { drafts: 1, previews: 0, mailboxDraftsNotRemoved: 2 },
+    });
+    expect(pending).toContain(englishCopy.mailboxDeletionWarning.replace('{count}', '2'));
     const [outcome, label] = Object.entries(englishCopy.outcomeLabels)[0]!;
     expect(outcomeNotice(englishCopy, outcome, {})).toBe(
       englishCopy.outcomeSaved.replace('{outcome}', label),

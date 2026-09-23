@@ -127,12 +127,18 @@ export function scanRefusalNotice(
 export function outcomeNotice(
   copy: DetailCopy,
   outcome: string,
-  result: { withdrawn?: { drafts: number; previews: number } },
+  result: {
+    withdrawn?: { drafts: number; previews: number; mailboxDraftsNotRemoved?: number };
+  },
 ): string {
   if (result.withdrawn !== undefined) {
-    return copy.optOutWithdrawn
+    const summary = copy.optOutWithdrawn
       .replace('{drafts}', String(result.withdrawn.drafts))
       .replace('{previews}', String(result.withdrawn.previews));
+    const pending = result.withdrawn.mailboxDraftsNotRemoved ?? 0;
+    return pending > 0
+      ? `${summary} ${copy.mailboxDeletionWarning.replace('{count}', String(pending))}`
+      : summary;
   }
   return copy.outcomeSaved.replace('{outcome}', copy.outcomeLabels[outcome] ?? outcome);
 }

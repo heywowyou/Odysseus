@@ -39,6 +39,8 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   listProspects: vi.fn(),
   loadProspectWork: vi.fn(),
   recordOutreachDraftReview: vi.fn(),
+  markOutreachDraftDeletionPending: vi.fn(),
+  markOutreachDraftDeleted: vi.fn(),
   revokeOutreachPreview: vi.fn(),
   recordProspectOutcome: vi.fn(),
   removeProspectEmail: vi.fn(),
@@ -113,6 +115,8 @@ import {
   loadProspectWork,
   listProspects,
   recordOutreachDraftReview,
+  markOutreachDraftDeletionPending,
+  markOutreachDraftDeleted,
   revokeOutreachPreview,
   recordProspectOutcome,
   removeProspectEmail,
@@ -207,11 +211,14 @@ beforeEach(() => {
     previews: 0,
     threadClosed: false,
     providerDraftIds: [],
+    providerDrafts: [],
     previewObjectKeys: [],
   });
   vi.mocked(checkOutreachAction).mockResolvedValue({ allowed: true } as never);
   vi.mocked(findOutreachThreadByProspect).mockResolvedValue(null);
   vi.mocked(listOutreachDrafts).mockResolvedValue([]);
+  vi.mocked(markOutreachDraftDeletionPending).mockResolvedValue({ changed: true });
+  vi.mocked(markOutreachDraftDeleted).mockResolvedValue({ changed: true });
   vi.mocked(listOutreachPreviews).mockResolvedValue([] as never);
   vi.mocked(listProspectAudits).mockResolvedValue([]);
   vi.mocked(listProspectScopeJobIds).mockResolvedValue([]);
@@ -611,6 +618,7 @@ describe('prospect hub routes', () => {
       ok: true,
       prospect,
       withdrawnProviderDraftIds: ['gmail-draft-1'],
+      withdrawnDrafts: [{ draftId: 'd-email', providerDraftId: 'gmail-draft-1' }],
     } as never);
     deleteMailboxDraft.mockResolvedValue(undefined);
 
@@ -661,16 +669,23 @@ describe('prospect hub routes', () => {
       previews: 1,
       threadClosed: true,
       providerDraftIds: ['gmail-draft-9'],
+      providerDrafts: [{ draftId: 'd-opt-out', providerDraftId: 'gmail-draft-9' }],
       previewObjectKeys: ['k/preview.html'],
     });
-    deleteMailboxDraft.mockResolvedValue(undefined);
+    deleteMailboxDraft.mockRejectedValueOnce(new Error('mailbox unavailable'));
 
     const response = await handle('/api/prospects/p-1/outcome', 'POST', { outcome: 'opt-out' });
 
     expect(response.statusCode).toBe(200);
     expect(response.body).toMatchObject({
       status: 'opted-out',
-      withdrawn: { drafts: 1, previews: 1, threadClosed: true },
+      withdrawn: {
+        drafts: 1,
+        previews: 1,
+        threadClosed: true,
+        mailboxDraftsNotRemoved: 1,
+        warnings: ['mailbox-draft-deletion-pending'],
+      },
     });
     expect(deletePreview).toHaveBeenCalledWith('k/preview.html');
     expect(withdrawProspectOutreach).toHaveBeenCalledWith(fakeConnection, 'p-1', 'opted-out');
@@ -687,6 +702,7 @@ describe('prospect hub routes', () => {
       previews: 0,
       threadClosed: true,
       providerDraftIds: [],
+      providerDrafts: [],
       previewObjectKeys: [],
     });
 
@@ -711,6 +727,7 @@ describe('prospect hub routes', () => {
       previews: 0,
       threadClosed: true,
       providerDraftIds: ['gmail-draft-2'],
+      providerDrafts: [{ draftId: 'd-delete', providerDraftId: 'gmail-draft-2' }],
       previewObjectKeys: [],
     });
     deleteMailboxDraft.mockResolvedValue(undefined);
@@ -917,23 +934,52 @@ describe('draft review', () => {
 
     const response = await handle('/api/prospects/p-1/drafts/d-1/discard', 'POST', {});
     expect(response.statusCode).toBe(200);
-    expect(recordOutreachDraftReview).toHaveBeenCalledWith(fakeConnection, 'd-1', 'skipped');
+    expect(markOutreachDraftDeletionPending).toHaveBeenCalledWith(fakeConnection, 'd-1', 'skipped');
     expect(deleteMailboxDraft).toHaveBeenCalledWith('g-1');
 
     const missing = await handle('/api/prospects/p-1/drafts/nope/discard', 'POST', {});
     expect(missing.statusCode).toBe(404);
   });
 
+  it('reports a mailbox deletion failure while keeping the draft retryable', async () => {
+    vi.mocked(listOutreachDrafts).mockResolvedValue([
+      { draftId: 'd-1', providerDraftId: 'g-1', status: 'created' },
+    ] as never);
+    deleteMailboxDraft.mockRejectedValueOnce(new Error('mailbox unavailable'));
+
+    const response = await handle('/api/prospects/p-1/drafts/d-1/discard', 'POST', {});
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toMatchObject({
+      discarded: true,
+      mailboxDraftsNotRemoved: 1,
+      warnings: ['mailbox-draft-deletion-pending'],
+    });
+    expect(markOutreachDraftDeletionPending).toHaveBeenCalledWith(fakeConnection, 'd-1', 'skipped');
+    expect(markOutreachDraftDeleted).not.toHaveBeenCalled();
+  });
+
   it('takes the discarded first email preview offline, object first', async () => {
     vi.mocked(listOutreachDrafts).mockResolvedValue([
-      { draftId: 'd-1', prospectId: 'p-1', previewId: 'pv-1', status: 'created' },
+      {
+        draftId: 'd-1',
+        prospectId: 'p-1',
+        previewId: 'pv-1',
+        providerDraftId: 'g-1',
+        status: 'created',
+      },
     ] as never);
     vi.mocked(listOutreachPreviews).mockResolvedValue([
       { previewId: 'pv-1', objectKey: 'k.html', status: 'live' },
     ] as never);
+    deleteMailboxDraft.mockResolvedValue(undefined);
 
     const response = await handle('/api/prospects/p-1/drafts/d-1/discard', 'POST', {});
-    expect(response.body).toEqual({ discarded: true, previewRevoked: true });
+    expect(response.body).toEqual({
+      discarded: true,
+      previewRevoked: true,
+      mailboxDraftsNotRemoved: 0,
+    });
     expect(deletePreview).toHaveBeenCalledWith('k.html');
     expect(revokeOutreachPreview).toHaveBeenCalledWith(
       fakeConnection,
@@ -944,11 +990,18 @@ describe('draft review', () => {
 
   it('still discards when the preview object cannot be removed', async () => {
     vi.mocked(listOutreachDrafts).mockResolvedValue([
-      { draftId: 'd-1', prospectId: 'p-1', previewId: 'pv-1', status: 'created' },
+      {
+        draftId: 'd-1',
+        prospectId: 'p-1',
+        previewId: 'pv-1',
+        providerDraftId: 'g-1',
+        status: 'created',
+      },
     ] as never);
     vi.mocked(listOutreachPreviews).mockResolvedValue([
       { previewId: 'pv-1', objectKey: 'k.html', status: 'live' },
     ] as never);
+    deleteMailboxDraft.mockResolvedValue(undefined);
     deletePreview.mockRejectedValueOnce(new Error('bucket down'));
 
     const response = await handle('/api/prospects/p-1/drafts/d-1/discard', 'POST', {});
@@ -956,8 +1009,9 @@ describe('draft review', () => {
       discarded: true,
       previewRevoked: false,
       previewStillLive: true,
+      mailboxDraftsNotRemoved: 0,
     });
-    expect(recordOutreachDraftReview).toHaveBeenCalledWith(fakeConnection, 'd-1', 'skipped');
+    expect(markOutreachDraftDeletionPending).toHaveBeenCalledWith(fakeConnection, 'd-1', 'skipped');
     expect(revokeOutreachPreview).not.toHaveBeenCalled();
   });
 });

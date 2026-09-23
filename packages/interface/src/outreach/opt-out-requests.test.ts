@@ -3,7 +3,9 @@ import {
   createProspectHub,
   getProspectHub,
   isSuppressed,
+  listOutreachDrafts,
   listOutreachPreviews,
+  recordOutreachDraft,
   recordOutreachPreview,
 } from '@odysseus/store';
 import { probeMongoAvailability, scopedMongoTestUri } from '@odysseus/store/test-support.js';
@@ -15,6 +17,7 @@ import {
   storeOptOutLink,
 } from './opt-out-bucket.js';
 import { isPlausibleOptOutAddress, processOptOutRequests } from './opt-out-requests.js';
+import type { MailboxDraftAdapter } from './mailbox-draft-adapter.js';
 import { createInMemoryPreviewPublisher } from './in-memory-preview-publisher.js';
 import { hashPreviewToken } from './preview-token.js';
 
@@ -104,6 +107,74 @@ describe.skipIf(!mongoAvailable)('processing opt-out requests', () => {
     expect(previews.map((preview) => preview.status)).toEqual(['revoked']);
     // A revoked record keeps no working link.
     expect(previews[0]?.previewUrl).toBeUndefined();
+  });
+
+  it('retries a failed mailbox draft deletion on the next opt-out poll', async () => {
+    const prospect = await createProspectHub(connection!, {
+      sector: 'hotel',
+      name: 'Mailbox Retry',
+      emails: [{ address: 'contact@mailbox-retry.fr', origin: 'atout-france' }],
+    });
+    const draft = await recordOutreachDraft(connection!, {
+      prospectId: prospect.prospectId,
+      threadId: 't-mailbox-retry',
+      touch: 1,
+      language: 'fr',
+      roleAddress: 'contact@mailbox-retry.fr',
+      subject: 'Objet',
+      body: 'Corps',
+      htmlBody: '<p>Corps</p>',
+      evidenceVersion: 'v1',
+      outreachPromptVersion: 'v1',
+      providerDraftId: 'g-mailbox-retry',
+      providerMessageId: 'm-mailbox-retry',
+      providerThreadId: 't-provider-mailbox-retry',
+      createdAt: new Date(),
+    });
+    const bucket = createInMemoryOptOutBucket();
+    await bucket.putJson(optOutRequestKey(), {
+      address: 'contact@mailbox-retry.fr',
+      receivedAt: new Date().toISOString(),
+    });
+    let deletionAttempts = 0;
+    const mailbox = {
+      deleteDraft: async () => {
+        deletionAttempts += 1;
+        if (deletionAttempts === 1) throw new Error('mailbox unavailable');
+      },
+    } as unknown as MailboxDraftAdapter;
+    const publisher = createInMemoryPreviewPublisher();
+
+    const firstPass = await processOptOutRequests({
+      connection: connection!,
+      bucket,
+      publisher,
+      mailbox,
+    });
+
+    expect(firstPass).toEqual({
+      applied: 1,
+      discarded: 0,
+      failed: 0,
+      mailboxDraftsNotRemoved: 1,
+    });
+    expect(
+      await listOutreachDrafts(connection!, { status: 'mailbox-delete-pending' }),
+    ).toMatchObject([{ draftId: draft.draftId, status: 'mailbox-delete-pending' }]);
+
+    const secondPass = await processOptOutRequests({
+      connection: connection!,
+      bucket,
+      publisher,
+      mailbox,
+    });
+
+    expect(secondPass).toEqual({ applied: 0, discarded: 0, failed: 0 });
+    expect(deletionAttempts).toBe(2);
+    expect(await listOutreachDrafts(connection!, { status: 'mailbox-delete-pending' })).toEqual([]);
+    expect(
+      await listOutreachDrafts(connection!, { prospectId: prospect.prospectId }),
+    ).toMatchObject([{ draftId: draft.draftId, status: 'deleted' }]);
   });
 
   it('blacklists an address that matches no prospect', async () => {

@@ -366,6 +366,7 @@ export {
   findLiveOutreachDraft,
   findOutreachDraftById,
   markOutreachDraftDeleted,
+  markOutreachDraftDeletionPending,
   listOutreachDrafts,
 } from './outreach-drafts.js';
 export type {

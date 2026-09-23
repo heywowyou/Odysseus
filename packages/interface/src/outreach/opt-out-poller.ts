@@ -33,7 +33,10 @@ export function startOptOutPoller(connection: Connection): () => void {
     running = true;
     try {
       const result = await processOptOutRequests({ connection, bucket, publisher });
-      if (result.applied + result.discarded + result.failed > 0) {
+      if (
+        result.applied + result.discarded + result.failed + (result.mailboxDraftsNotRemoved ?? 0) >
+        0
+      ) {
         logger.info(result, 'processed opt-out requests');
       }
     } catch (error) {

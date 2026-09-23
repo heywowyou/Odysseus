@@ -1,6 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
-import { findLiveOutreachDraft, recordOutreachDraft } from './outreach-drafts.js';
+import {
+  findLiveOutreachDraft,
+  markOutreachDraftDeleted,
+  markOutreachDraftDeletionPending,
+  recordOutreachDraft,
+} from './outreach-drafts.js';
 import { createProspectHub } from './prospect-hub.js';
 import { createOutreachDraftModel } from './schemas/outreach-draft.schema.js';
 import { createProspectEventModel } from './schemas/prospect-event.schema.js';
@@ -17,6 +22,42 @@ afterAll(async () => {
 });
 
 describe.skipIf(!available)('recordOutreachDraft', () => {
+  it('keeps pending provider deletion live to guards until the provider confirms removal', async () => {
+    const prospect = await createProspectHub(connection!, {
+      sector: 'hotel',
+      name: 'Pending Delete',
+    });
+    const draft = await recordOutreachDraft(connection!, {
+      prospectId: prospect.prospectId,
+      threadId: randomUUID(),
+      touch: 1,
+      language: 'fr',
+      roleAddress: 'contact@pending-delete.fr',
+      subject: 'Objet',
+      body: 'Corps',
+      htmlBody: '<p>Corps</p>',
+      evidenceVersion: 'v1',
+      outreachPromptVersion: 'v1',
+      providerDraftId: 'g-pending',
+      providerMessageId: 'm-pending',
+      providerThreadId: 't-pending',
+      createdAt: new Date(),
+    });
+
+    await expect(
+      markOutreachDraftDeletionPending(connection!, draft.draftId, 'skipped'),
+    ).resolves.toEqual({
+      changed: true,
+    });
+    expect((await findLiveOutreachDraft(connection!, draft.threadId, 1))?.status).toBe(
+      'mailbox-delete-pending',
+    );
+    await expect(markOutreachDraftDeleted(connection!, draft.draftId)).resolves.toEqual({
+      changed: true,
+    });
+    expect(await findLiveOutreachDraft(connection!, draft.threadId, 1)).toBeNull();
+  });
+
   it('retires the inserted draft when its event write fails, so a retry can record one', async () => {
     const prospect = await createProspectHub(connection!, { sector: 'hotel', name: 'Draft Event' });
     const threadId = randomUUID();

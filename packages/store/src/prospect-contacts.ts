@@ -157,7 +157,12 @@ export async function removeProspectEmail(
   prospectId: string,
   address: string,
   options: RemoveProspectEmailOptions = {},
-): Promise<ProspectContactResult<{ withdrawnProviderDraftIds: string[] }>> {
+): Promise<
+  ProspectContactResult<{
+    withdrawnProviderDraftIds: string[];
+    withdrawnDrafts: Array<{ draftId: string; providerDraftId?: string }>;
+  }>
+> {
   const current = await load(connection, prospectId);
   if (current === null) return { ok: false, refusal: 'prospect-not-found' };
   const removed = current.emails.find((email) => sameAddress(email.address, address));
@@ -173,7 +178,7 @@ export async function removeProspectEmail(
   if (withdrawn.length > 0) {
     await Drafts.updateMany(
       { draftId: { $in: withdrawn.map((draft) => draft.draftId) }, status: 'created' },
-      { $set: { status: 'deleted', deletedAt: new Date() } },
+      { $set: { status: 'mailbox-delete-pending' } },
     );
   }
 
@@ -209,6 +214,7 @@ export async function removeProspectEmail(
     withdrawnProviderDraftIds: withdrawn.flatMap((draft) =>
       draft.providerDraftId !== undefined ? [draft.providerDraftId] : [],
     ),
+    withdrawnDrafts: withdrawn,
   };
 }
 

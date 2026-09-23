@@ -134,10 +134,13 @@ describe.skipIf(!mongoAvailable)('prospect contact corrections', () => {
     if (!result.ok) return;
     expect(result.prospect.emails.map((e) => e.address)).toEqual(['contact@hotel-right.example']);
     expect(result.withdrawnProviderDraftIds).toEqual(['provider-draft-1']);
+    expect(result.withdrawnDrafts).toEqual([
+      expect.objectContaining({ draftId: draft.draftId, providerDraftId: 'provider-draft-1' }),
+    ]);
     const stored = await createOutreachDraftModel(connection!)
       .findOne({ draftId: draft.draftId })
       .lean();
-    expect(stored?.status).toBe('deleted');
+    expect(stored?.status).toBe('mailbox-delete-pending');
     expect(await isSuppressed(connection!, 'other.example', 'wrong@other.example')).toBe(true);
 
     const events = await listProspectEvents(connection!, created.prospectId);
