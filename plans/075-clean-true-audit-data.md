@@ -342,11 +342,11 @@ Checked and clean in the fifth sweep: no rendered-title and head-title disagreem
 
 #### Operator question
 
-- **Q4. Unlinked sitemap pages.** Recommended: keep analysing them, but when unlinked sitemap-only pages are a large share of the analysed population (a threshold measured on the stored audits), report them as one site-level finding (« le plan du site publie N pages qu'aucune page ne relie », with examples) and keep the findings that exist only on them in their own annex group, outside the grade and cover totals, as Q1 does for frames. Alternatives: (b) keep today's behaviour, where they count like linked pages; (c) inventory them without analysis. (c) loses real content on chicago, bellevue and hoteldegarlande.
+- **Q4. Unlinked sitemap pages (decided 2026-09-23: the recommended option).** Recommended: keep analysing them, but when unlinked sitemap-only pages are a large share of the analysed population (a threshold measured on the stored audits), report them as one site-level finding (« le plan du site publie N pages qu'aucune page ne relie », with examples) and keep the findings that exist only on them in their own annex group, outside the grade and cover totals, as Q1 does for frames. Alternatives: (b) keep today's behaviour, where they count like linked pages; (c) inventory them without analysis. (c) loses real content on chicago, bellevue and hoteldegarlande.
 
 #### Slices
 
-- **F8. Unlinked sitemap pages (after Q4).** Implement the chosen option in `normalize.ts` and the statistics, and keep `sitemap-orphan-page` emitting once F1 has removed the timeouts that made it manual. Tests: a normalize test with a majority of unlinked sitemap pages; statistics and coverage tests.
+- **F8. Unlinked sitemap pages (Q4 decided).** Implement the recommended option in `normalize.ts` and the statistics, and keep `sitemap-orphan-page` emitting once F1 has removed the timeouts that made it manual. Tests: a normalize test with a majority of unlinked sitemap pages; statistics and coverage tests.
 - **F9. The stability verdict governs the lab findings.**
   - Calibrate `PROVISIONAL_STABILITY_TOLERANCES` on the 197 stored measurement sets, and record the tolerances and their source in trade-off 111.
   - A metric listed in `contradictoryMetrics` gives no metric finding and no element diagnostic (`layout-shifts`, `cls-culprits-insight`) for that page. It stays in the evidence as « mesure instable ».
