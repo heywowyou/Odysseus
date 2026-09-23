@@ -71,6 +71,7 @@ rsync -az --delete \
   --exclude /artifacts \
   --exclude /data \
   --exclude .env \
+  --exclude /deploy/.deploy.local.env \
   -e "ssh ${SSH_OPTS[*]}" \
   "$REPO_ROOT/" "$ODYSSEUS_DEPLOY_HOST:$ODYSSEUS_DEPLOY_REMOTE_PATH/"
 
