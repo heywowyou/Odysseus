@@ -53,6 +53,14 @@ to a later time. Do not start them in this work session, and do not mark this
 plan DONE or archive it until both full runs complete and their acceptance
 data is recorded.
 
+Shared-server lock (`e62a768d`, 2026-09-23). The haaitza and lacoorniche
+acceptance runs overlapped against one address (`109.234.166.97`); both met
+503s within minutes of the second start. Pacing stays per audit, but full
+audits (and outreach full scans) now also lock every resolved address of
+their host, so a second audit on the same server waits. Unrelated
+CDN-fronted sites can wait for each other; that costs time only. Deploy with
+plan 075's G7 to G9.
+
 ## Slices
 
 Each slice gets its own commit(s), a typecheck and its own tests (see memory: focused tests per slice). Full `pnpm run check` and `pnpm run test:all` run once before push.

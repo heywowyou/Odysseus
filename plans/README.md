@@ -167,6 +167,12 @@ sections; `README.md` says `serve` needs no build. Considered and rejected:
 merging the address guards (already delegate); `operator-views` findings (the
 directory is untracked and empty).
 
+Audit of 2026-09-23 (commit `71eb871b`): 17 verified findings filed as issues
+#414-#430 for later planning, not yet planned. Considered and rejected:
+locale-dependent digest key order (`localeCompare` gave the same order under
+C, POSIX, en_US and fr_FR on Node 22); merging the dashboard and report
+severity labels (trade-off 59).
+
 ## Work lifecycle
 
 Each kind of work has exactly one home:
