@@ -111,8 +111,8 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
     {
       id: 'meta-title-length-fit-display-width',
       text: {
-        fr: "Ajustez la longueur du titre pour qu'il s'affiche entièrement dans les résultats de recherche, généralement entre 50 et 60 caractères.",
-        en: 'Adjust the title length so it displays in full in search results, typically 50 to 60 characters.',
+        fr: "Ajustez la longueur du titre pour qu'il s'affiche entièrement dans les résultats de recherche, entre 30 et 65 caractères.",
+        en: 'Adjust the title length so it displays in full in search results, 30 to 65 characters.',
       },
     },
   ],
