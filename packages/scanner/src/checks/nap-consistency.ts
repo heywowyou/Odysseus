@@ -183,10 +183,10 @@ export function readContactRegionText(): string {
     '[itemprop="postalCode"]',
   ];
   const parts = new Set<string>();
-  for (const element of document.querySelectorAll<HTMLElement>(selectors.join(','))) {
+  for (const element of Array.from(document.querySelectorAll<HTMLElement>(selectors.join(',')))) {
     parts.add(element.innerText);
   }
-  for (const link of document.querySelectorAll<HTMLAnchorElement>('a[href^="tel:"]')) {
+  for (const link of Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href^="tel:"]'))) {
     parts.add(decodeURIComponent(link.getAttribute('href')!.slice(4)));
   }
   return [...parts].join('\n');
