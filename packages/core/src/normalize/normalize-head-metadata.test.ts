@@ -78,6 +78,13 @@ describe('meta-title-length', () => {
   it('does not fire within the recommended range', () => {
     expect(extractHeadMetadataCandidates(baseInput({ title: 'A'.repeat(45) }))).toEqual([]);
   });
+
+  it('accepts 65 characters and fires from 66', () => {
+    expect(extractHeadMetadataCandidates(baseInput({ title: 'A'.repeat(65) }))).toEqual([]);
+    const candidates = extractHeadMetadataCandidates(baseInput({ title: 'A'.repeat(66) }));
+    expect(ruleIds(candidates)).toEqual([META_TITLE_LENGTH_RULE_ID]);
+    expect(candidates[0]?.description).toContain('shorter than 30 or longer than 65');
+  });
 });
 
 describe('meta-description-length', () => {

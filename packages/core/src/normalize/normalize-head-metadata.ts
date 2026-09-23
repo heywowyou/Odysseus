@@ -176,7 +176,9 @@ export function lighthouseAuditsCoveredByHeadMetadata(
  *  cutoff, so the bounds are round numbers rather than a precisely
  *  tuned threshold. */
 const TITLE_MIN_LENGTH = 30;
-const TITLE_MAX_LENGTH = 60;
+// 65, not 60: on eight real audits 64 of 123 flagged titles were 61 to 65
+// characters, which Google usually shows in full (it truncates by pixel width).
+const TITLE_MAX_LENGTH = 65;
 const DESCRIPTION_MIN_LENGTH = 70;
 const DESCRIPTION_MAX_LENGTH = 160;
 
@@ -234,7 +236,7 @@ export function extractHeadMetadataCandidates(input: HeadMetadataCheckInput): Fi
           'seo',
           [],
           'Page title length is outside the recommended range',
-          `The <title> is ${length} characters. Titles much shorter than ${TITLE_MIN_LENGTH} or longer than ${TITLE_MAX_LENGTH} characters are commonly truncated or under-descriptive in search results.`,
+          `The <title> is ${length} characters. Titles shorter than ${TITLE_MIN_LENGTH} or longer than ${TITLE_MAX_LENGTH} characters are commonly truncated or under-descriptive in search results.`,
           pageUrl,
           null,
           { title: input.title, length },
@@ -265,7 +267,7 @@ export function extractHeadMetadataCandidates(input: HeadMetadataCheckInput): Fi
           'seo',
           [],
           'Meta description length is outside the recommended range',
-          `The meta description is ${length} characters. Descriptions much shorter than ${DESCRIPTION_MIN_LENGTH} or longer than ${DESCRIPTION_MAX_LENGTH} characters are commonly truncated or under-descriptive in search results.`,
+          `The meta description is ${length} characters. Descriptions shorter than ${DESCRIPTION_MIN_LENGTH} or longer than ${DESCRIPTION_MAX_LENGTH} characters are commonly truncated or under-descriptive in search results.`,
           pageUrl,
           null,
           { metaDescription: input.metaDescription, length },

@@ -570,8 +570,8 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'not-applicable' },
   },
   'meta-title-length': {
-    text: 'Adjust the page title length so it is not cut off in search results, around 30 to 60 characters.',
-    snippet: { kind: 'fill-in-blank', template: '<title><title of 30 to 60 characters></title>' },
+    text: 'Adjust the page title length so it is not cut off in search results, around 30 to 65 characters.',
+    snippet: { kind: 'fill-in-blank', template: '<title><title of 30 to 65 characters></title>' },
   },
   'meta-title-missing': {
     text: 'Give this page a title: it is the label shown in the browser tab and at the head of the search result.',
