@@ -516,8 +516,14 @@ function publicEvidenceForPage(
 ): NonNullable<HeadMetadataCheckInput['publicEvidence']> {
   const identity = normalizeUrlIdentity(pageUrl) ?? pageUrl;
   const crawl = input.crawl;
+  // Only a page that is itself meant to be found can vouch for another:
+  // WordPress writes hreflang between the FR and EN twins of a noindex date
+  // archive, and each twin used to count as public evidence for the other.
   const pages = input.pages.filter(
-    (page) => page.headMetadata !== undefined && !isExcludedUrl(excludedUrls, page.url),
+    (page) =>
+      page.headMetadata !== undefined &&
+      !isExcludedUrl(excludedUrls, page.url) &&
+      !headMetadataHasNoindex(page.headMetadata),
   );
   const isTarget = (candidate: string): boolean =>
     (normalizeUrlIdentity(candidate, pageUrl) ?? candidate) === identity;

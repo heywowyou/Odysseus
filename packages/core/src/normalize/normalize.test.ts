@@ -898,4 +898,30 @@ describe('noindex public evidence (plan 075, B2)', () => {
   it('still reports a noindex page another page points to', () => {
     expect(run([archive])).toHaveLength(1);
   });
+
+  it('does not let two noindex archive twins vouch for each other through hreflang', () => {
+    const enArchive = 'https://example.com/en/2024/04';
+    const findings = normalizeAudit({
+      auditId: 'a',
+      startedAt: STARTED_AT,
+      pages: [
+        buildNormalizePageInput({
+          url: archive,
+          headMetadata: head(archive, 'follow, noindex', [enArchive]),
+        }),
+        buildNormalizePageInput({
+          url: enArchive,
+          headMetadata: head(enArchive, 'follow, noindex', [archive]),
+        }),
+      ],
+      crawl: {
+        startUrl: 'https://example.com/',
+        pages: [
+          { url: archive, status: 'visited', depth: 1 },
+          { url: enArchive, status: 'visited', depth: 1 },
+        ],
+      },
+    } as unknown as NormalizeAuditInput).filter((f) => f.ruleId === 'noindex-on-public-page');
+    expect(findings).toHaveLength(0);
+  });
 });
