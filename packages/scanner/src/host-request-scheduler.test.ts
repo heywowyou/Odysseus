@@ -110,6 +110,42 @@ describe('request spacing', () => {
     const gaps = startedAt.slice(1).map((value, index) => value - startedAt[index]!);
     expect(gaps.every((gap) => gap >= 500)).toBe(true);
   });
+
+  it('reserves distinct start times for concurrent callers', async () => {
+    let time = 0;
+    const sleepers: Array<{ at: number; resolve: () => void }> = [];
+    const scheduler = new HostRequestScheduler({
+      floorDelayMs: 500,
+      maxConcurrency: 3,
+      now: () => time,
+      sleep: (ms) =>
+        new Promise<void>((resolve) => {
+          sleepers.push({ at: time + ms, resolve });
+        }),
+    });
+    const startedAt: number[] = [];
+    const calls = Array.from({ length: 3 }, () =>
+      scheduler.pace().then(() => startedAt.push(time)),
+    );
+    const flush = async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    };
+
+    await flush();
+    expect(startedAt).toEqual([0]);
+    expect(sleepers.map(({ at }) => at)).toEqual([500, 1000]);
+
+    time = 500;
+    sleepers.find(({ at }) => at === time)!.resolve();
+    await flush();
+    expect(startedAt).toEqual([0, 500]);
+
+    time = 1000;
+    sleepers.find(({ at }) => at === time)!.resolve();
+    await Promise.all(calls);
+    expect(startedAt).toEqual([0, 500, 1000]);
+  });
 });
 
 describe('concurrency', () => {

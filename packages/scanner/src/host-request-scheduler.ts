@@ -94,6 +94,7 @@ export class HostRequestScheduler {
   #delayMs: number;
   #concurrency: number;
   #active = 0;
+  #pendingPaceStarts = 0;
   #waiting: (() => void)[] = [];
   /** Earliest wall-clock time the next request may start. */
   #nextStartAt = 0;
@@ -259,20 +260,35 @@ export class HostRequestScheduler {
    * Anything that touches the audited host over the network calls one of them.
    */
   async pace(): Promise<void> {
-    const eligibleAt = Math.max(this.#nextStartAt, this.#retryAfterUntil);
-    const waitMs = eligibleAt - this.#now();
-    if (waitMs > 0) await this.#sleep(waitMs);
+    const now = this.#now();
+    const eligibleAt = Math.max(this.#nextStartAt, this.#retryAfterUntil, now);
+    const waitMs = eligibleAt - now;
 
-    const startedAt = this.#now();
+    // Reserve this slot before yielding. Concurrent lanes therefore receive
+    // successive times instead of all waking for the same #nextStartAt.
+    this.#nextStartAt = eligibleAt + this.#delayMs;
+    this.#pendingPaceStarts += 1;
+    let startedAt: number;
+    try {
+      if (waitMs > 0) await this.#sleep(waitMs);
+      startedAt = this.#now();
+    } finally {
+      this.#pendingPaceStarts -= 1;
+    }
+
     this.#requestStartCount += 1;
-    this.#nextStartAt = startedAt + this.#delayMs;
-
     if (this.#delayMs > this.#floorDelayMs && startedAt >= this.#retryAfterUntil) {
       this.#cleanStartsSincePushback += 1;
       if (this.#cleanStartsSincePushback >= CLEAN_STARTS_TO_RECOVER) {
         this.#delayMs = Math.max(this.#floorDelayMs, Math.ceil(this.#delayMs / 2));
         this.#cleanStartsSincePushback = 0;
-        this.#nextStartAt = startedAt + this.#delayMs;
+        // Existing waiters already own slots spaced at the previous delay.
+        // Keep those slots intact; with no waiters, the recovered delay takes
+        // effect immediately for the next request.
+        this.#nextStartAt =
+          this.#pendingPaceStarts === 0
+            ? startedAt + this.#delayMs
+            : Math.max(this.#nextStartAt, startedAt + this.#delayMs);
         this.#onPacingRecovered?.({
           delayMs: this.#delayMs,
           occurredAt: new Date(startedAt).toISOString(),
