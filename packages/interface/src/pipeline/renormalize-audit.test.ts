@@ -79,6 +79,10 @@ describe('renormalizeAudit lab metrics', () => {
 
     expect(byUrl.get(home)?.coreWebVitals?.lcp?.numericValue).toBe(2_000);
     expect(byUrl.get(book)?.coreWebVitals).toBeUndefined();
+    // A doorway to a booking engine is a redirect, not an analysed page.
+    expect(byUrl.get(book)?.status).toBe('redirect-interstitial');
+    expect(byUrl.get(book)?.redirectTargetUrl).toBe('https://be.synxis.com/?hotel=1');
+    expect(byUrl.get(home)?.status).toBe('visited');
     expect(byUrl.get(challenge)?.coreWebVitals).toBeUndefined();
   });
 });

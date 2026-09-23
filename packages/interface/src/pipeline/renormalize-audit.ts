@@ -19,6 +19,8 @@ import {
   unstableLabMetricsOf,
   deriveCoverageLimitations,
   isBlockedRender,
+  lighthouseFinalUrl,
+  lighthouseLandedOffSite,
   normalizeAudit,
   type AuditManifest,
   type NormalizePageInput,
@@ -145,7 +147,24 @@ export async function renormalizeAudit(
   // broken that promise. Recomputed clusters are written back to the
   // manifest below, because the report layer reads them from there
   // rather than from findings.json.
-  const manifestPageByUrl = new Map(manifest.pages.map((entry) => [entry.url, entry]));
+  // A stored page whose Lighthouse run ended on another site was a doorway
+  // to a booking engine that our render did not follow; newer scans record
+  // it as a redirect, and a refresh applies the same reading to older ones.
+  const scanForUrl = new Map(pages.map((page) => [page.url, page]));
+  const classifiedPages = manifest.pages.map((entry) => {
+    const lighthouse = scanForUrl.get(entry.url)?.lighthouse;
+    if (entry.status !== 'visited' || lighthouse === undefined) return entry;
+    if (!lighthouseLandedOffSite(lighthouse, entry.url)) return entry;
+    const { analysisCoverage: _coverage, ...rest } = entry;
+    const target = lighthouseFinalUrl(lighthouse);
+    return {
+      ...rest,
+      status: 'redirect-interstitial' as const,
+      ...(target !== undefined ? { redirectTargetUrl: target } : {}),
+    };
+  });
+
+  const manifestPageByUrl = new Map(classifiedPages.map((entry) => [entry.url, entry]));
   const translationClusters: TranslationCluster[] = buildTranslationClusters(
     pages.map((page) => {
       const manifestPage = manifestPageByUrl.get(page.url);
@@ -158,7 +177,7 @@ export async function renormalizeAudit(
     }),
   );
 
-  const sitemapRedirectedUrls = manifest.pages
+  const sitemapRedirectedUrls = classifiedPages
     .filter(
       (page) =>
         page.status === 'redirect-interstitial' || page.status === 'skipped-external-redirect',
@@ -186,7 +205,7 @@ export async function renormalizeAudit(
 
   // Re-derived rather than read back: a persisted copy may come from an
   // older, broader derivation that silenced absence rules on redirects.
-  const coverageLimitations = deriveCoverageLimitations(manifest.pages, {
+  const coverageLimitations = deriveCoverageLimitations(classifiedPages, {
     ...(manifest.crawl.homepageUrl !== undefined
       ? { homepageUrl: manifest.crawl.homepageUrl }
       : {}),
@@ -201,7 +220,7 @@ export async function renormalizeAudit(
     crawl: {
       startUrl: manifest.crawl.startUrl,
       robotsTxtFound: manifest.crawl.robotsTxtFound,
-      pages: manifest.pages.map((page) => ({
+      pages: classifiedPages.map((page) => ({
         url: page.url,
         status: page.status,
         ...(page.depth !== undefined ? { depth: page.depth } : {}),
@@ -231,7 +250,7 @@ export async function renormalizeAudit(
   // run that settled on another URL measures nothing about the page, so
   // they are recomputed here from each page's own stored Lighthouse run.
   const scanPageByUrl = new Map(pages.map((page) => [page.url, page]));
-  const manifestPages = manifest.pages.map((entry) => {
+  const manifestPages = classifiedPages.map((entry) => {
     const scanPage = scanPageByUrl.get(entry.url);
     if (scanPage === undefined) return entry;
     const { coreWebVitals: _stored, unstableLabMetrics: _storedUnstable, ...rest } = entry;

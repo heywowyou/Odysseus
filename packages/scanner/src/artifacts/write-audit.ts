@@ -30,6 +30,8 @@ import {
   unstableLabMetricsOf,
   extractLighthouseExcludedCategoryScores,
   isBlockedRender,
+  lighthouseFinalUrl,
+  lighthouseLandedOffSite,
   type AuditConfigSnapshot,
   type AuditManifest,
   type AuditManifestSiteSignals,
@@ -44,6 +46,16 @@ import {
 import { getArtifactsRoot } from '../config.js';
 import type { CrawlResult } from '../crawl.js';
 import { isRedirectInterstitial } from '../redirect-interstitial.js';
+
+/** A booking stub can hand the visitor to its engine only after our render
+ *  settled (a late script redirect or an auto-submitted form). Lighthouse's
+ *  own navigation does follow it, so a run that ended on another site shows
+ *  the URL is a doorway to that site rather than a page of this one. */
+function offSiteLighthouseLanding(scanJson: PageScanResult): string | undefined {
+  if (scanJson.lighthouse === undefined) return undefined;
+  if (!lighthouseLandedOffSite(scanJson.lighthouse, scanJson.url)) return undefined;
+  return lighthouseFinalUrl(scanJson.lighthouse);
+}
 import { isSoftErrorPage } from '../soft-error-page.js';
 import type { PageScanResult } from '../scan-page.js';
 import type { NormalizePageInput } from '@odysseus/core';
@@ -585,7 +597,7 @@ export async function writeAuditArtifacts(
       scanJson.renderDiff !== undefined &&
       isRedirectInterstitial(scanJson.url, scanJson.renderDiff.renderedLandedUrl)
         ? scanJson.renderDiff.renderedLandedUrl
-        : undefined;
+        : offSiteLighthouseLanding(scanJson);
 
     // Issue #302: same after-the-scan timing as the redirect check above,
     // for the same reason - the page's own title and h1 are the evidence,
