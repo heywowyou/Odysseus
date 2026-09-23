@@ -902,47 +902,7 @@ export async function addDirectoryEntriesToProspects(
     try {
       const prospect = await createProspectHub(
         connection,
-        {
-          sector: entry.sector,
-          name: entry.name,
-          websites:
-            entry.websiteUrl && entry.registrableDomain
-              ? [
-                  {
-                    url: entry.websiteUrl,
-                    registrableDomain: entry.registrableDomain,
-                    kind: entry.websiteKind,
-                    primary: true,
-                  },
-                ]
-              : [],
-          address: entry.address,
-          postcode: entry.postcode,
-          commune: entry.commune,
-          department: entry.department,
-          phone: entry.phone,
-          hotel: {
-            stars: entry.stars,
-            rooms: entry.rooms,
-            capacity: entry.capacity,
-            groupStatus: entry.groupStatus,
-            groupDomain: entry.groupDomain,
-          },
-          fieldOrigins: {
-            name: 'atout-france',
-            address: 'atout-france',
-            postcode: 'atout-france',
-            commune: 'atout-france',
-            department: 'atout-france',
-            phone: 'atout-france',
-            hotel: 'atout-france',
-            websites: 'atout-france',
-          },
-          directoryRef: {
-            source: entry.sourceRefs[0]?.source ?? 'atout-france',
-            sourceId: entry.sourceRefs[0]?.sourceId ?? entry.directoryId,
-          },
-        },
+        directoryEntryToProspectInput(entry),
         actor,
         prospectId,
       );

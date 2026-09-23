@@ -7,7 +7,6 @@ import { audits } from './sections/audits';
 import { newScan } from './sections/new-scan';
 import { scanQueue } from './sections/scan-queue';
 import { workState } from './sections/work-state';
-import { qualityReadiness } from './sections/quality-readiness';
 import { attention } from './sections/attention';
 import { progress } from './sections/progress';
 import { auditDetail } from './sections/audit-detail';
@@ -15,17 +14,12 @@ import { prepareReport } from './sections/prepare-report';
 import { operator } from './sections/operator';
 import { prospectHub } from './sections/prospect-hub';
 import { prospects } from './sections/prospects';
-import { prospectDetail } from './sections/prospect-detail';
 import { hub } from './sections/hub';
-import { prescan } from './sections/prescan';
-import { score } from './sections/score';
 import { evidence } from './sections/evidence';
 import { preview } from './sections/preview';
-import { outreachThread } from './sections/outreach-thread';
 import { aTraiter } from './sections/a-traiter';
 import { drafts } from './sections/drafts';
 import { suppressions } from './sections/suppressions';
-import { outcomes } from './sections/outcomes';
 import { login } from './sections/login';
 import { labels } from './sections/labels';
 import { hints } from './sections/hints';
@@ -40,7 +34,6 @@ export const en: DashboardStrings = {
   newScan: newScan.en,
   scanQueue: scanQueue.en,
   workState: workState.en,
-  qualityReadiness: qualityReadiness.en,
   attention: attention.en,
   progress: progress.en,
   auditDetail: auditDetail.en,
@@ -48,17 +41,12 @@ export const en: DashboardStrings = {
   operator: operator.en,
   prospectHub: prospectHub.en,
   prospects: prospects.en,
-  prospectDetail: prospectDetail.en,
   hub: hub.en,
-  prescan: prescan.en,
-  score: score.en,
   evidence: evidence.en,
   preview: preview.en,
-  outreachThread: outreachThread.en,
   aTraiter: aTraiter.en,
   drafts: drafts.en,
   suppressions: suppressions.en,
-  outcomes: outcomes.en,
   login: login.en,
   labels: labels.en,
   hints: hints.en,

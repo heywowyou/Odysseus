@@ -1,12 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import type { Connection } from 'mongoose';
-import { primaryWebsite, emailDomain } from '@odysseus/core';
 import {
   createReferenceAuditLinkModel,
   type ReferenceAuditLinkDocument,
 } from './schemas/reference-audit-link.schema.js';
 import { createOutreachDraftModel } from './schemas/outreach-draft.schema.js';
-import { appendProspectEvent, getProspectHub } from './prospect-hub.js';
+import { appendProspectEvent } from './prospect-hub.js';
 import { isSuppressed } from './suppression.js';
 
 export const REFERENCE_AUDIT_ATTRIBUTION_DAYS = 90;
@@ -159,31 +158,4 @@ export async function recordReferenceAuditRequest(
     });
   }
   return { accepted: true, first, requestCount };
-}
-
-export async function listReferenceAuditLinks(
-  connection: Connection,
-  prospectId: string,
-): Promise<ReferenceAuditLinkDocument[]> {
-  return createReferenceAuditLinkModel(connection)
-    .find({ prospectId })
-    .sort({ createdAt: -1 })
-    .lean();
-}
-
-/** Kept as a small validation helper for callers that only have a prospect
- *  record and want to build the private mapping without duplicating domain
- *  selection rules. */
-export async function referenceAuditContactForProspect(
-  connection: Connection,
-  prospectId: string,
-): Promise<{ registrableDomain: string; roleAddress: string } | null> {
-  const prospect = await getProspectHub(connection, prospectId);
-  if (prospect === null || prospect.emails[0] === undefined) return null;
-  const website = primaryWebsite(prospect.websites);
-  const domain = website?.registrableDomain;
-  const address = prospect.emails[0].address;
-  const addressDomain = emailDomain(address);
-  if (domain === undefined || addressDomain === null) return null;
-  return { registrableDomain: domain, roleAddress: address };
 }

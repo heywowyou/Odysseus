@@ -247,21 +247,6 @@ export async function markOutreachThreadSynced(
   );
 }
 
-/** Written by an operator action only (see `packages/store/src/outreach-outcomes.ts`),
- *  never by a sync. */
-export async function setOutreachThreadOutcome(
-  connection: Connection,
-  threadId: string,
-  outcomeId: string,
-): Promise<boolean> {
-  const ThreadModel = createOutreachThreadModel(connection);
-  const result = await ThreadModel.updateOne(
-    { threadId },
-    { $set: { currentOutcome: outcomeId, updatedAt: new Date() } },
-  );
-  return result.matchedCount === 1;
-}
-
 export interface CloseOutreachThreadsResult {
   closed: number;
 }

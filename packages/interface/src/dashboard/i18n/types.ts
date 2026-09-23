@@ -13,7 +13,6 @@ import type { AuditsStrings } from './sections/audits';
 import type { NewScanStrings } from './sections/new-scan';
 import type { ScanQueueStrings } from './sections/scan-queue';
 import type { WorkStateStrings } from './sections/work-state';
-import type { QualityReadinessStrings } from './sections/quality-readiness';
 import type { AttentionStrings } from './sections/attention';
 import type { ProgressStrings } from './sections/progress';
 import type { AuditDetailStrings } from './sections/audit-detail';
@@ -21,17 +20,12 @@ import type { PrepareReportStrings } from './sections/prepare-report';
 import type { OperatorStrings } from './sections/operator';
 import type { ProspectHubStrings } from './sections/prospect-hub';
 import type { ProspectsStrings } from './sections/prospects';
-import type { ProspectDetailStrings } from './sections/prospect-detail';
 import type { HubStrings } from './sections/hub';
-import type { PrescanStrings } from './sections/prescan';
-import type { ScoreStrings } from './sections/score';
 import type { EvidenceStrings } from './sections/evidence';
 import type { PreviewStrings } from './sections/preview';
-import type { OutreachThreadStrings } from './sections/outreach-thread';
 import type { ATraiterStrings } from './sections/a-traiter';
 import type { DraftsStrings } from './sections/drafts';
 import type { SuppressionsStrings } from './sections/suppressions';
-import type { OutcomesStrings } from './sections/outcomes';
 import type { LoginStrings } from './sections/login';
 import type { LabelsStrings } from './sections/labels';
 import type { HintsStrings } from './sections/hints';
@@ -52,9 +46,6 @@ export interface DashboardStrings {
   /** Plan 061: copy for the server's closed work-state, problem and
    *  capability vocabularies. */
   workState: WorkStateStrings;
-  /** Plan 060: copy for the server's projected evidence and report
-   *  readiness axes. */
-  qualityReadiness: QualityReadinessStrings;
   /** Plan 060: copy for the server's human-attention items. */
   attention: AttentionStrings;
   progress: ProgressStrings;
@@ -72,25 +63,14 @@ export interface DashboardStrings {
    *  routes lives here before its English counterpart is added. */
   prospectHub: ProspectHubStrings;
   prospects: ProspectsStrings;
-  prospectDetail: ProspectDetailStrings;
-  /** Plan 040 slice 4: the hotel hub. The pipeline strip, the one primary
-   *  action, and the few strings its six sections need beyond the stage
-   *  groups they reuse (prescan, score, evidence, preview, outreachThread,
-   *  drafts, outcomes, labels). */
+  /** Plan 040 slice 4: copy for the hotel hub and its current sections. */
   hub: HubStrings;
-  /** Stage groups the hub sections render directly. The retired
-   *  single-purpose pages are gone, so only the keys those sections still
-   *  read remain. */
-  prescan: PrescanStrings;
-  score: ScoreStrings;
+  /** Shared copy the hub sections still render directly. */
   evidence: EvidenceStrings;
   /** The hub Aperçu section's status, dates, and confirmations. Publish,
    *  reissue, and the once-only link copy live in
    *  auditDetail.outreachPreview (both sections share them). */
   preview: PreviewStrings;
-  /** The hub Emails section's generate actions and toasts; the thread
-   *  state badge reads labels.thread. */
-  outreachThread: OutreachThreadStrings;
   /** The a-traiter page, the dashboard's landing page and the operator's
    *  prospect-only inbox. */
   aTraiter: ATraiterStrings;
@@ -99,7 +79,6 @@ export interface DashboardStrings {
    *  review dialog the hub's Emails section renders. */
   drafts: DraftsStrings;
   suppressions: SuppressionsStrings;
-  outcomes: OutcomesStrings;
   /** Pre-authentication page: one shared password, no username. */
   login: LoginStrings;
   /** FR and EN labels for the closed store vocabularies the operator

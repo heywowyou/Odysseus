@@ -3,8 +3,6 @@ import {
   ATTENTION_KINDS,
   ATTENTION_SEVERITIES,
   CAPABILITY_BLOCK_REASONS,
-  OPERATOR_EVIDENCE_READINESS,
-  OPERATOR_REPORT_READINESS,
   OPERATOR_WORK_STATES,
   PROBLEM_CODES,
 } from '../../operator/contract';
@@ -23,23 +21,6 @@ describe('operator vocabulary copy', () => {
       expect(Object.keys(strings.workState.blockReasons).sort()).toEqual(
         [...CAPABILITY_BLOCK_REASONS].sort(),
       );
-    }
-  });
-
-  it('has FR and EN copy for every projected readiness state', () => {
-    for (const strings of [fr, en]) {
-      expect(Object.keys(strings.qualityReadiness.evidence).sort()).toEqual(
-        [...OPERATOR_EVIDENCE_READINESS].sort(),
-      );
-      expect(Object.keys(strings.qualityReadiness.report).sort()).toEqual(
-        [...OPERATOR_REPORT_READINESS].sort(),
-      );
-      for (const axis of [strings.qualityReadiness.evidence, strings.qualityReadiness.report]) {
-        for (const copy of Object.values(axis)) {
-          expect(copy.label.length).toBeGreaterThan(0);
-          expect(copy.description.length).toBeGreaterThan(0);
-        }
-      }
     }
   });
 

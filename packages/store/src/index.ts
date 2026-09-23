@@ -385,9 +385,7 @@ export {
   attachReferenceAuditDraft,
   createReferenceAuditLink,
   deleteReferenceAuditLink,
-  listReferenceAuditLinks,
   recordReferenceAuditRequest,
-  referenceAuditContactForProspect,
 } from './reference-audit-links.js';
 export type {
   CreateReferenceAuditLinkInput,
@@ -398,12 +396,6 @@ export type {
   OutreachOutcomeDocument,
   OutreachOutcomeDocumentFields,
 } from './schemas/outreach-outcome.schema.js';
-export { recordOutreachOutcome, listOutreachOutcomes } from './outreach-outcomes.js';
-export type {
-  RecordOutreachOutcomeInput,
-  RecordOutreachOutcomeResult,
-  ListOutreachOutcomesOptions,
-} from './outreach-outcomes.js';
 export {
   deriveProspectWork,
   loadProspectWork,
