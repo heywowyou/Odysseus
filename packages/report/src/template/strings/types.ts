@@ -574,6 +574,8 @@ export interface ReportStrings {
      *  SIREN) without asserting what the answer would be - CLAUDE.md rule
      *  6, "we report, we do not conclude". */
     undeterminedActionNote: string;
+    overseasStatusLabel: string;
+    overseasStatusDescription: string;
     /** item 28: the transactional/booking flow is the entire legal hook
      *  for the EAA obligation, but nothing stated whether the actual
      *  flow was in-scope for the crawl - a delegated off-domain booking
@@ -1424,6 +1426,7 @@ export interface ReportStrings {
     legalCitationTransactionalFlowFormOnlyFact: string;
     legalCitationNoTransactionalFlowFact: string;
     legalCitationSirenMissingFact: string;
+    legalCitationOverseasJurisdictionFact: string;
     /** Template: {reason}. */
     legalCitationSireneLookupFailedTemplate: string;
     /** Plain-language labels for the specific flow type(s) actually

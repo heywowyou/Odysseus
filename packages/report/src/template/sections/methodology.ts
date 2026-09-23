@@ -136,6 +136,8 @@ function renderFact(
       return m.legalCitationNoTransactionalFlowFact;
     case 'siren-missing':
       return m.legalCitationSirenMissingFact;
+    case 'overseas-jurisdiction-unverified':
+      return m.legalCitationOverseasJurisdictionFact;
     case 'sirene-lookup-failed':
       return fillTemplate(m.legalCitationSireneLookupFailedTemplate, { reason: fact.reason });
   }

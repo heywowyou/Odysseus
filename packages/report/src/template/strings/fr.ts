@@ -399,6 +399,9 @@ export const fr: ReportStrings = {
       "Un parcours de réservation en ligne existe donc peut-être : faites confirmer ce point avant d'en tirer une conclusion sur l'applicabilité de l'obligation.",
     disclaimerNote:
       'Cette section reproduit des critères réglementaires et des données publiques de votre entreprise, sans interprétation juridique supplémentaire. Une confirmation par un conseil juridique reste nécessaire avant toute décision.',
+    overseasStatusLabel: 'Régime applicable à vérifier',
+    overseasStatusDescription:
+      "Le site relève d'un nom de domaine d'outre-mer. Ce rapport ne dispose pas d'une analyse vérifiée du régime d'accessibilité numérique applicable à ce territoire : il ne cite donc ni obligation, ni échéance, ni sanction. Les constats techniques restent valables ; leur portée juridique est à établir avec votre conseil.",
     undeterminedActionNote:
       "Ce statut se précisera si le numéro SIREN de l'entreprise est publié sur le site ou communiqué à l'équipe Odysseus.",
     // P0.3 (2026-08-21 La Corniche feedback pass): this used to list every
@@ -1146,6 +1149,8 @@ export const fr: ReportStrings = {
     legalCitationNoTransactionalFlowFact:
       "Aucun parcours de réservation, panier ou paiement en ligne n'a été trouvé sur les pages visitées.",
     legalCitationSirenMissingFact: "Aucun identifiant SIREN n'a été trouvé sur les pages visitées.",
+    legalCitationOverseasJurisdictionFact:
+      "Le site relève d'un nom de domaine d'outre-mer ; le régime d'accessibilité applicable à ce territoire n'a pas été vérifié.",
     legalCitationSireneLookupFailedTemplate:
       "La consultation du répertoire Sirene n'a pas fourni de fiche exploitable ({reason}).",
     transactionalFlowTypeLabels: {

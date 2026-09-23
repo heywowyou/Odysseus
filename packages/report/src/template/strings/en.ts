@@ -353,6 +353,9 @@ export const en: ReportStrings = {
       'An online booking flow may therefore exist: have it confirmed before relying on this status.',
     disclaimerNote:
       'Generated from the existing obligation assessment; no additional legal interpretation has been added. A review by qualified legal counsel remains necessary.',
+    overseasStatusLabel: 'Applicable regime to be verified',
+    overseasStatusDescription:
+      'The site uses a French overseas domain. This report has no verified analysis of the digital accessibility regime that applies to that territory, so it cites no obligation, deadline or penalty. The technical findings stand; their legal reach is for your counsel to establish.',
     undeterminedActionNote:
       "This status would become determinable if the company's SIREN number were published on the site or provided to the Odysseus team.",
     transactionalFlowOnSiteTemplate:
@@ -1016,6 +1019,8 @@ export const en: ReportStrings = {
     legalCitationNoTransactionalFlowFact:
       'No booking, cart, or checkout flow was found on the visited pages.',
     legalCitationSirenMissingFact: 'No SIREN identifier was found on the visited pages.',
+    legalCitationOverseasJurisdictionFact:
+      'The site uses a French overseas domain; the accessibility regime that applies to that territory has not been verified.',
     legalCitationSireneLookupFailedTemplate:
       'The Sirene registry lookup did not return a usable record ({reason}).',
     transactionalFlowTypeLabels: {

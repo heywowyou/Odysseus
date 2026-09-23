@@ -177,6 +177,11 @@ export type ObligationBasisFact =
    *  (status 'Parcours à confirmer'), never as observed. */
   | { kind: 'transactional-flow-form-only' }
   | { kind: 'siren-missing' }
+  /** The site is on a French overseas domain (.nc, .pf, ...). No verified
+   *  analysis says whether the French and EU accessibility regimes reach it
+   *  (obligation-basis.md, overseas-domain boundary), so the status is
+   *  undetermined and the report names no regime, deadline or fine. */
+  | { kind: 'overseas-jurisdiction-unverified' }
   | {
       kind: 'sirene-lookup-failed';
       reason: 'not-found' | 'api-unreachable' | 'etablissement-fermee';

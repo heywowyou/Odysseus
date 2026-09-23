@@ -16,6 +16,8 @@ import type { Connection } from 'mongoose';
 import {
   assessObligations,
   detectSector,
+  EAA_REGIME_ID,
+  isOverseasFrenchDomain,
   isValidSiren,
   type AuditManifest,
   type AuditManifestSiteSignals,
@@ -196,6 +198,24 @@ function resolveSiteSignals(
 }
 
 export async function runObligationStage(
+  manifest: AuditManifest,
+  connection: Connection,
+  manualSiren?: string,
+  siteSignalOverrides?: SiteSignalOverrides,
+): Promise<ObligationAssessment> {
+  const assessment = await assessForSite(manifest, connection, manualSiren, siteSignalOverrides);
+  if (!isOverseasFrenchDomain(manifest.siteUrl)) return assessment;
+  // The registry facts (SIREN, sector, snapshot) stay; the regime verdict
+  // does not, because nothing verified says which regime applies there.
+  const { status: _status, basis: _basis, ...provenance } = assessment;
+  return {
+    ...provenance,
+    status: 'undetermined',
+    basis: [{ regimeId: EAA_REGIME_ID, facts: [{ kind: 'overseas-jurisdiction-unverified' }] }],
+  };
+}
+
+async function assessForSite(
   manifest: AuditManifest,
   connection: Connection,
   manualSiren?: string,

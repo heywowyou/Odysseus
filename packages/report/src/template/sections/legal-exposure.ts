@@ -385,6 +385,25 @@ export function renderLegalExposure(
   manualFields?: AuditManualFields,
 ): string {
   const l = strings.legalExposure;
+  if (
+    obligationAssessment?.basis.some((basis) =>
+      basis.facts.some((fact) => fact.kind === 'overseas-jurisdiction-unverified'),
+    ) === true
+  ) {
+    return sheet(
+      `
+    ${renderSheetHeader(ordinal, l.eyebrow, l.heading)}
+    <div class="card elev-sm" data-overseas-regime>
+      <div class="card-kicker">${escapeHtml(l.obligationStatusLabel)}</div>
+      <div class="card-title">${escapeHtml(l.overseasStatusLabel)}</div>
+      <div class="card-body">${escapeCopy(l.overseasStatusDescription, language)}</div>
+    </div>
+    <p style="font-size:11px;opacity:0.5;margin-top:var(--space-4)">${escapeHtml(l.disclaimerNote)}</p>
+  `,
+      '',
+      'section-02',
+    );
+  }
   const status = obligationAssessment?.status ?? 'undetermined';
   const eaaDeadlineNote = fillTemplate(l.eaaDeadlineNoteTemplate, {
     duration: formatElapsedDuration(EAA_APPLICATION_DATE, generatedAt, language),
