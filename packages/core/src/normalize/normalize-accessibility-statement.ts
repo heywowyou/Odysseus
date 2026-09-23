@@ -18,6 +18,7 @@
  * made less visibly.
  */
 
+import { isOverseasFrenchDomain } from './normalize-custom.js';
 import type { FindingCandidate } from './candidate.js';
 import { severityFromCustom } from './severity.js';
 
@@ -33,6 +34,11 @@ export function normalizeAccessibilityStatement(
   homepageUrl: string,
 ): FindingCandidate[] {
   if (input.statementUrl !== null) return [];
+  // Same overseas-domain boundary as the LCEN rule (obligation-basis.md):
+  // no verified analysis says whether a French or EU accessibility regime
+  // reaches New Caledonia and the other overseas territories, so the
+  // absence is a manual « vérifier le régime applicable », not a finding.
+  if (isOverseasFrenchDomain(homepageUrl)) return [];
 
   return [
     {

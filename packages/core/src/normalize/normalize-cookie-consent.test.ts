@@ -191,3 +191,17 @@ describe('C5: third-party data transfer inventory', () => {
     }
   });
 });
+
+describe('consent-mechanism-absent on a French overseas domain', () => {
+  it('reports the observed trackers but leaves the missing mechanism to a manual regime check', () => {
+    const withTracker = input({
+      trackerRequests: [{ host: 'www.google-analytics.com', vendor: 'Google Analytics' }],
+    });
+    const overseas = normalizeCookieConsent(withTracker, 'https://www.hotel.nc/').map(
+      (c) => c.ruleId,
+    );
+    expect(overseas).not.toContain('consent-mechanism-absent');
+    expect(overseas.length).toBeGreaterThan(0);
+    expect(ruleIds(withTracker)).toContain('consent-mechanism-absent');
+  });
+});

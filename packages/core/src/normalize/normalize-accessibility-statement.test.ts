@@ -55,3 +55,13 @@ describe('normalizeAccessibilityStatement', () => {
     }
   });
 });
+
+describe('accessibility-statement-missing on a French overseas domain', () => {
+  it('leaves the absence to a manual regime check', async () => {
+    const { normalizeAccessibilityStatement } =
+      await import('./normalize-accessibility-statement.js');
+    const input = { statementUrl: null, pagesSearched: 164 };
+    expect(normalizeAccessibilityStatement(input, 'https://www.hotel.nc/')).toEqual([]);
+    expect(normalizeAccessibilityStatement(input, 'https://www.hotel.fr/')).toHaveLength(1);
+  });
+});

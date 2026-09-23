@@ -35,6 +35,7 @@
  * report's own copy and to the client's counsel.
  */
 
+import { isOverseasFrenchDomain } from './normalize-custom.js';
 import type { FindingCandidate } from './candidate.js';
 import { severityFromCustom } from './severity.js';
 
@@ -117,7 +118,14 @@ export function normalizeCookieConsent(
 
   const hasNonEssentialActivity =
     input.nonEssentialCookies.length > 0 || input.trackerRequests.length > 0;
-  if (hasNonEssentialActivity && input.consentPlatforms.length === 0) {
+  // The missing mechanism is a claim about a consent regime, so it keeps the
+  // overseas-domain boundary the LCEN rule has (obligation-basis.md). The
+  // cookies and requests above are observed facts and are reported anywhere.
+  if (
+    hasNonEssentialActivity &&
+    input.consentPlatforms.length === 0 &&
+    !isOverseasFrenchDomain(homepageUrl)
+  ) {
     candidates.push(
       candidate(
         CONSENT_MECHANISM_ABSENT_RULE_ID,
