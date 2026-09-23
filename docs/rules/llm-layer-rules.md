@@ -19,8 +19,8 @@ it.
 >
 > **Plan 070 (2026-09-19)** adds one fail-open grounded critic and at most one
 > targeted repair after each writing call, behind the `WRITING_CRITIC_ENABLED`
-> constant (section 15). With the constant off, which is the shipped state
-> until calibration passes, the call graph above is unchanged.
+> constant (section 15). It is on since 2026-09-23 (operator decision,
+> trade-off 102); with the constant off, the call graph above is unchanged.
 
 > **Current outreach-preview contract — Plan 069 (2026-09-19).**
 > Publishing or rendering a v3 outreach preview makes **zero provider calls**.
@@ -1106,9 +1106,12 @@ positive), style or length, and everything a deterministic guard owns.
 
 - **Kill switch.** `WRITING_CRITIC_ENABLED` in `packages/llm/src/constants.ts`.
   Off, `critiqueAndRepairWriting` returns the writer result object itself and
-  makes no call. No environment variable, no per-job option. It is `false`,
-  and Plan 070's closure record says why: the second calibration met every
-  threshold except no-regression, on one report of seven.
+  makes no call. No environment variable, no per-job option. It shipped
+  `false` because the second calibration met every threshold except
+  no-regression, on one report of seven. The operator turned it on on
+  2026-09-23 with the move to GPT-6 Luna, accepting that open regression
+  risk; the operator's read of each report is the check, and a regression
+  seen there turns it back off.
 - **Call budget per language.** Off: 2 fresh / 1 reused structure. Critic with
   no actionable issue: 3 / 2. Critic with issues: 4 / 3. The critic and the
   repair each get exactly one attempt; nothing is retried.

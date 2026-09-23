@@ -84,9 +84,11 @@ export const WRITING_CRITIC_MAX_OUTPUT_TOKENS = 64000;
 /** Plan 070 decision 2: the one kill switch for the grounded critic and its
  *  targeted repair. Off, the writing path makes exactly Plan 067's calls and
  *  produces exactly its output. There is deliberately no environment
- *  variable or per-job option. It stays off until the plan's calibration
- *  record meets every acceptance threshold. */
-export const WRITING_CRITIC_ENABLED: boolean = false;
+ *  variable or per-job option. Turned on 2026-09-23 by operator decision,
+ *  with the switch to GPT-6 Luna (trade-off 102), ahead of the plan's full
+ *  calibration record: on the saved Chicago audit it raised 2 accepted issues
+ *  for about $0.01. Its hits on real reports are the calibration from here. */
+export const WRITING_CRITIC_ENABLED: boolean = true;
 
 /** Advisory correction proposals are kept separate from the support-verdict
  * reviewer so their budget can be measured and tuned without retuning either

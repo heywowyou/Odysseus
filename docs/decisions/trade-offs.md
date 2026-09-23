@@ -5373,6 +5373,12 @@ $0.020 and 5 minutes, with no retry or guard failure. The critic raised 6
 accepted issues on the 5.6 draft and 2 on the 6 draft. The operator's reading
 of the two drafts is still owed before the first paid report on the new model.
 
+Operator decision, 2026-09-23: GPT-6 Luna at `xhigh` is the report model, and
+the Plan 070 grounded critic with its one targeted repair runs on every
+report (`WRITING_CRITIC_ENABLED`). Plan 058's multi-role pipeline stays
+frozen: at GPT-6 Luna prices cost no longer blocks it, but it is not reopened
+before a first sale.
+
 
 
 ### 103. Evidence-quality defects narrow report claims instead of globally approving or rejecting the audit (build decision, 2026-09-19, Plan 068)
