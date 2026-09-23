@@ -33,13 +33,16 @@ export async function deleteAuditCascade(
   connection: Connection,
   auditId: string,
 ): Promise<AuditCascadeCounts> {
-  const [audits, findings, analyses, reports, reportApprovals] = await Promise.all([
-    createAuditModel(connection).deleteOne({ auditId }).exec(),
-    createFindingModel(connection).deleteMany({ auditId }).exec(),
-    createAnalysisModel(connection).deleteMany({ auditId }).exec(),
-    createReportModel(connection).deleteMany({ auditId }).exec(),
-    createReportApprovalModel(connection).deleteMany({ auditId }).exec(),
-  ]);
+  // Keep the audit row as the retry anchor until every dependent collection
+  // has been cleared. If a child delete fails midway, the caller can still
+  // discover this audit and safely repeat the cascade.
+  const findings = await createFindingModel(connection).deleteMany({ auditId }).exec();
+  const analyses = await createAnalysisModel(connection).deleteMany({ auditId }).exec();
+  const reports = await createReportModel(connection).deleteMany({ auditId }).exec();
+  const reportApprovals = await createReportApprovalModel(connection)
+    .deleteMany({ auditId })
+    .exec();
+  const audits = await createAuditModel(connection).deleteOne({ auditId }).exec();
   return {
     audits: audits.deletedCount,
     findings: findings.deletedCount,

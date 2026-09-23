@@ -1,9 +1,11 @@
-import { afterAll, describe, expect, it } from 'vitest';
+import { randomUUID } from 'node:crypto';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 import {
   deleteAuditCascade,
   deleteFinishedScanJobsForAudit,
   listArchivedProspectsWithAudits,
 } from './delete-audit.js';
+import { createReportModel } from './schemas/report.schema.js';
 import { probeMongoAvailability } from './test-support.js';
 
 const { available: mongoAvailable, connection } = await probeMongoAvailability();
@@ -91,6 +93,63 @@ describe.skipIf(!mongoAvailable)('deleteAuditCascade', () => {
         collection.deleteMany({ auditId: survivorId }),
       ),
     );
+  });
+
+  it('keeps the audit row as a retry anchor when a child collection delete fails', async () => {
+    const db = connection!.db!;
+    const auditId = `cascade-retry-${randomUUID()}`;
+    const collections = {
+      audits: db.collection('audits'),
+      findings: db.collection('findings'),
+      analyses: db.collection('analyses'),
+      reports: db.collection('reports'),
+      reportApprovals: db.collection('reportApprovals'),
+    };
+    await insertRaw(collections.audits, {
+      auditId,
+      kind: 'audit',
+      siteUrl: 'https://cascade-retry.example/',
+      startedAt: new Date(),
+      finishedAt: new Date(),
+    });
+    await insertRaw(collections.findings, { auditId, findingId: 'f-retry' });
+    await insertRaw(collections.analyses, { auditId, analysisId: 'a-retry', language: 'fr' });
+    await insertRaw(collections.reports, { auditId, reportId: 'r-retry', language: 'fr' });
+    await insertRaw(collections.reportApprovals, { auditId, approvalId: 'ap-retry' });
+
+    const reportModel = createReportModel(connection!);
+    const failedDelete = vi.spyOn(reportModel, 'deleteMany').mockImplementationOnce(
+      () =>
+        ({
+          exec: async () => {
+            throw new Error('simulated child-delete failure');
+          },
+        }) as never,
+    );
+    try {
+      await expect(deleteAuditCascade(connection!, auditId)).rejects.toThrow(
+        'simulated child-delete failure',
+      );
+    } finally {
+      failedDelete.mockRestore();
+    }
+
+    expect(await countForAudit(collections.audits, auditId)).toBe(1);
+    expect(await countForAudit(collections.findings, auditId)).toBe(0);
+    expect(await countForAudit(collections.analyses, auditId)).toBe(0);
+    expect(await countForAudit(collections.reports, auditId)).toBe(1);
+    expect(await countForAudit(collections.reportApprovals, auditId)).toBe(1);
+
+    await expect(deleteAuditCascade(connection!, auditId)).resolves.toEqual({
+      audits: 1,
+      findings: 0,
+      analyses: 0,
+      reports: 1,
+      reportApprovals: 1,
+    });
+    for (const [name, collection] of Object.entries(collections)) {
+      expect(await countForAudit(collection, auditId), name).toBe(0);
+    }
   });
 
   it('returns zero counts for an unknown auditId instead of throwing', async () => {
