@@ -15,6 +15,7 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   attachAuditToProspect: vi.fn(),
   checkOutreachAction: vi.fn(),
   createProspectHub: vi.fn(),
+  applyAutomaticProspectStatus: vi.fn(),
   createRandomIndependentProspectFromDirectory: vi.fn(),
   archiveProspect: vi.fn(),
   countActiveProspectDeletionJobs: vi.fn(),
@@ -88,6 +89,8 @@ vi.mock('../outreach/configured-preview-publisher.js', () => ({
 
 import {
   checkOutreachAction,
+  createProspectHub,
+  applyAutomaticProspectStatus,
   createRandomIndependentProspectFromDirectory,
   archiveProspect,
   countActiveProspectDeletionJobs,
@@ -192,6 +195,7 @@ beforeEach(() => {
   vi.mocked(listProspects).mockResolvedValue(emptyPage as never);
   vi.mocked(listDirectory).mockResolvedValue(emptyPage as never);
   vi.mocked(setProspectStatus).mockResolvedValue({ status: 'audited' } as never);
+  vi.mocked(applyAutomaticProspectStatus).mockResolvedValue({ status: 'opted-out' } as never);
   vi.mocked(recordProspectOutcome).mockResolvedValue({ status: 'replied' } as never);
   vi.mocked(deleteProspectPermanently).mockResolvedValue({ deleted: true } as never);
   vi.mocked(countActiveProspectDeletionJobs).mockResolvedValue(0);
@@ -226,6 +230,21 @@ beforeEach(() => {
 });
 
 describe('prospect hub routes', () => {
+  it('rejects client-supplied lifecycle, provenance, and directory ownership fields', async () => {
+    const response = await handle('/api/prospects', 'POST', {
+      sector: 'hotel',
+      name: 'Forged prospect',
+      websites: [],
+      emails: [],
+      status: 'opted-out',
+      fieldOrigins: { name: 'sirene' },
+      directoryRef: { source: 'atout-france', sourceId: 'directory-1' },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(createProspectHub).not.toHaveBeenCalled();
+  });
+
   it('forwards the complete prospect filter set', async () => {
     const response = await handle(
       '/api/prospects?q=Paris&status=audited&sector=hotel&stars=4&groupStatus=group-member&websiteKind=vendor-hosted&department=75&commune=Paris&roomsMin=10&roomsMax=50&hasScan=true&inactive=false&page=2&pageSize=20',
@@ -659,7 +678,7 @@ describe('prospect hub routes', () => {
   });
 
   it('withdraws outreach when the status selector records an opt-out', async () => {
-    vi.mocked(setProspectStatus).mockResolvedValue({
+    vi.mocked(applyAutomaticProspectStatus).mockResolvedValue({
       prospectId: 'p-1',
       status: 'opted-out',
     } as never);
@@ -680,6 +699,12 @@ describe('prospect hub routes', () => {
       status: 'opted-out',
       withdrawn: { drafts: 1, previews: 0, threadClosed: true },
     });
+    expect(applyAutomaticProspectStatus).toHaveBeenCalledWith(
+      fakeConnection,
+      'p-1',
+      'opted-out',
+    );
+    expect(setProspectStatus).not.toHaveBeenCalled();
     expect(withdrawProspectOutreach).toHaveBeenCalledWith(fakeConnection, 'p-1', 'opted-out');
   });
 

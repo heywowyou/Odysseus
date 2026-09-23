@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../pipeline/audit-stage.js', () => ({ runAuditStage: vi.fn() }));
+vi.mock('@odysseus/scanner', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@odysseus/scanner')>()),
+  serverLockKeys: vi.fn(async (url: string) => [new URL(url).origin, 'address:192.0.2.1']),
+}));
 vi.mock('../../pipeline/analysis-stage.js', () => ({ runAnalysisStage: vi.fn() }));
 vi.mock('../../pipeline/report-stage.js', () => ({ runAllReportsStage: vi.fn() }));
 vi.mock('@odysseus/store', () => ({
@@ -104,7 +108,7 @@ beforeEach(() => {
   release = vi.fn();
   ctx = {
     connection: fakeConnection,
-    originLock: { acquire: vi.fn().mockResolvedValue(release) } as never,
+    originLock: { acquireAll: vi.fn().mockResolvedValue(release) } as never,
     cancellation: new CancellationRegistry(),
   };
 
@@ -175,11 +179,14 @@ describe('runFullAuditJob', () => {
     );
   });
 
-  it('acquires and releases the origin lock for the job siteUrl', async () => {
+  it('acquires and releases the origin and server locks for the job siteUrl', async () => {
     const job = fakeJob({ siteUrl: 'https://a.example/page' });
     await runFullAuditJob(job, ctx);
 
-    expect(ctx.originLock.acquire).toHaveBeenCalledWith('https://a.example');
+    expect(ctx.originLock.acquireAll).toHaveBeenCalledWith([
+      'https://a.example',
+      'address:192.0.2.1',
+    ]);
     expect(release).toHaveBeenCalledTimes(1);
   });
 

@@ -16,6 +16,7 @@ vi.mock('@odysseus/store', () => ({
 vi.mock('@odysseus/scanner', () => ({
   deleteCrawlCheckpoint: vi.fn(),
   deleteCrawlStateFile: vi.fn(),
+  serverLockKeys: vi.fn(async (url: string) => [new URL(url).origin, 'address:192.0.2.1']),
 }));
 
 import {
@@ -57,7 +58,7 @@ beforeEach(() => {
   release = vi.fn();
   ctx = {
     connection,
-    originLock: { acquire: vi.fn().mockResolvedValue(release) } as never,
+    originLock: { acquireAll: vi.fn().mockResolvedValue(release) } as never,
     cancellation: new CancellationRegistry(),
   };
 });
@@ -180,10 +181,13 @@ describe('runOutreachFullScanJob', () => {
   const job = () =>
     fakeJob('outreach-full-scan', { prospectId: 'p-1' }, 'https://example.fr/chambres');
 
-  it('scans under the origin lock, links the prospect and completes', async () => {
+  it('scans under the origin and server locks, links the prospect and completes', async () => {
     await runOutreachFullScanJob(job(), ctx);
 
-    expect(ctx.originLock.acquire).toHaveBeenCalledWith('https://example.fr');
+    expect(ctx.originLock.acquireAll).toHaveBeenCalledWith([
+      'https://example.fr',
+      'address:192.0.2.1',
+    ]);
     expect(runAuditStage).toHaveBeenCalledWith(
       'https://example.fr/chambres',
       expect.objectContaining({ prospectId: 'p-1', scanIntent: 'prospecting-audit' }),
@@ -225,6 +229,6 @@ describe('runOutreachFullScanJob', () => {
     await expect(
       runOutreachFullScanJob(fakeJob('outreach-full-scan', { prospectId: 'p-1' }), ctx),
     ).rejects.toThrow('missing its scope');
-    expect(ctx.originLock.acquire).not.toHaveBeenCalled();
+    expect(ctx.originLock.acquireAll).not.toHaveBeenCalled();
   });
 });

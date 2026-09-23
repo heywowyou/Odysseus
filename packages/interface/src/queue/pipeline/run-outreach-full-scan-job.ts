@@ -9,7 +9,7 @@ import {
   updateJobProgress,
   type JobDocument,
 } from '@odysseus/store';
-import { deleteCrawlCheckpoint, deleteCrawlStateFile } from '@odysseus/scanner';
+import { deleteCrawlCheckpoint, deleteCrawlStateFile, serverLockKeys } from '@odysseus/scanner';
 import { runAuditStage } from '../../pipeline/audit-stage.js';
 import { acquisitionClaimFor } from './job-crawl-options.js';
 import { finalizeProspectScan } from '../../pipeline/finalize-prospect-scan.js';
@@ -27,7 +27,9 @@ export async function runOutreachFullScanJob(
   if (url === undefined || prospectId === undefined) {
     throw new Error(`odysseus interface: outreach-full-scan job ${job.jobId} is missing its scope`);
   }
-  const release = await originLock.acquire(new URL(url).origin);
+  // A full audit holds its server, not only its origin: two sites on one
+  // shared host must not be audited at the same time.
+  const release = await originLock.acquireAll(await serverLockKeys(url));
   try {
     const runIdentity = await ensureJobRunIdentity(connection, job.jobId);
     const auditResult = await runAuditStage(

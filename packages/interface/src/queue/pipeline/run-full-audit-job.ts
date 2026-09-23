@@ -17,7 +17,12 @@ import {
   type JobDocument,
 } from '@odysseus/store';
 import { buildFindingsProvenance, type SiteSignalOverrides } from '@odysseus/core';
-import { deleteCrawlCheckpoint, deleteCrawlStateFile, type PageWorkGuard } from '@odysseus/scanner';
+import {
+  deleteCrawlCheckpoint,
+  deleteCrawlStateFile,
+  serverLockKeys,
+  type PageWorkGuard,
+} from '@odysseus/scanner';
 import { hasMeasuredCoreWebVitals } from '@odysseus/report';
 import { runAnalysisStage } from '../../pipeline/analysis-stage.js';
 import { runAuditStage } from '../../pipeline/audit-stage.js';
@@ -36,8 +41,9 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
     throw new Error(`odysseus interface: full-audit job ${job.jobId} has no siteUrl`);
   }
 
-  const origin = new URL(url).origin;
-  const release = await originLock.acquire(origin);
+  // A full audit holds its server, not only its origin: two sites on one
+  // shared host must not be audited at the same time.
+  const release = await originLock.acquireAll(await serverLockKeys(url));
 
   // A stop is otherwise only seen during crawl and page work. Checked at
   // each stage boundary, so a stopped job does not spend two analysis

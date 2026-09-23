@@ -82,7 +82,7 @@ export type {
 export { restoreCrawlFrontierLoopState } from './crawl.js';
 export type { CrawlFrontierLoopState } from './crawl.js';
 export type { ContinuationGuardSnapshot } from './continuation-guard.js';
-export { OriginLock } from './origin-lock.js';
+export { OriginLock, serverLockKeys, type AddressResolver } from './origin-lock.js';
 export { runAxe, WCAG22AA_TAGS } from './axe.js';
 export type { AxeResults } from './axe.js';
 export { runLighthouse } from './lighthouse.js';
