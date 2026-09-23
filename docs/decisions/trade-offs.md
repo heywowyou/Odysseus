@@ -5761,3 +5761,16 @@ Amendments to trade-offs 3, 30, 64, 110 and the rule-5 page-cap amendment
 are implemented in the owning normalizers and the normalization rules. The
 LCEN detector records a manual jurisdiction boundary for French overseas
 domains rather than silently extending an unverified metropolitan basis.
+
+Lab stability tolerances are calibrated, not guessed (2026-09-23). Each
+metric's tolerance is the 75th percentile of the relative run-to-run spread
+measured on 271 measurement sets from ten audits scanned on the production
+host on 2026-09-22, among the sets whose spread exceeded the negligible range:
+score 0.24, LCP 0.19, CLS 1, TBT 0.57, FCP 0.23, Speed Index 0.19. The
+negligible ranges and the ×3 contradiction multiple are unchanged. On that
+corpus about 2% of metric sets read as contradictory, for example an LCP whose
+runs ranged from 2 to 14 seconds. CLS keeps a relative tolerance of 1 because
+its median is often near zero; a single run shifting a little more than two
+agreeing ones is noise, not contradiction. The constants and this source live
+in `performance-measurement-set.ts`; re-measure when the host, the Lighthouse
+version or the runs per page change.

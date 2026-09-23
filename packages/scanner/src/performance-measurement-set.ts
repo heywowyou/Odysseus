@@ -306,6 +306,32 @@ export const PROVISIONAL_STABILITY_TOLERANCES: StabilityTolerances = {
 };
 
 /**
+ * Measured on 2026-09-23 from the 271 measurement sets of ten stored audits
+ * (nine hotel sites, all scanned from the production host on 2026-09-22):
+ * each tolerance is the 75th percentile of the relative run-to-run spread
+ * among the sets whose spread was above the negligible range. A metric
+ * therefore reads as unstable when its runs disagree more than three quarters
+ * of this host's ordinary disagreement, and as contradictory past three times
+ * that. The negligible ranges are unchanged: they are perception bounds, not
+ * host measurements.
+ *
+ * CLS is the exception the data forced. Its median is often 0 or close to it,
+ * so any real shift in one run makes the relative spread 1 or more; its
+ * measured 75th percentile is exactly 1, which is what is used.
+ *
+ * Recorded with its source in trade-off 111. Re-measure when the host, the
+ * Lighthouse version or the run count per page changes.
+ */
+export const CALIBRATED_STABILITY_TOLERANCES: StabilityTolerances = {
+  performanceScore: { maxRelativeRange: 0.24, negligibleAbsoluteRange: 0.03 },
+  lcp: { maxRelativeRange: 0.19, negligibleAbsoluteRange: 150 },
+  cls: { maxRelativeRange: 1, negligibleAbsoluteRange: 0.02 },
+  tbt: { maxRelativeRange: 0.57, negligibleAbsoluteRange: 50 },
+  fcp: { maxRelativeRange: 0.23, negligibleAbsoluteRange: 100 },
+  speedIndex: { maxRelativeRange: 0.19, negligibleAbsoluteRange: 150 },
+};
+
+/**
  * PROVISIONAL. The multiple of a metric's tolerance past which its runs are
  * treated as materially contradictory rather than merely noisy - section 12's
  * "unexpectedly contradictory" and section 13's `unstable-result`. Guessed

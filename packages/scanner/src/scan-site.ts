@@ -89,7 +89,7 @@ import {
 } from './full-audit-plan.js';
 import {
   buildPerformanceMeasurementSet,
-  PROVISIONAL_STABILITY_TOLERANCES,
+  CALIBRATED_STABILITY_TOLERANCES,
   repeatTriggersFromAssessment,
   runsOwedForPage,
   type LighthouseRunInput,
@@ -1243,7 +1243,8 @@ async function acquirePerformanceMeasurement(
       selectionReasons: decision.reasonCodes,
       runs,
       repeatTriggers: [...triggers],
-      tolerances: PROVISIONAL_STABILITY_TOLERANCES,
+      tolerances: CALIBRATED_STABILITY_TOLERANCES,
+      toleranceProvenance: 'calibrated',
     });
 
   for (let runIndex = 1; runIndex <= MAX_LIGHTHOUSE_RUNS_PER_PAGE; runIndex += 1) {

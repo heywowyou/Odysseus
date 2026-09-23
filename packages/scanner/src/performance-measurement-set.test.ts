@@ -3,6 +3,7 @@ import {
   assessStability,
   buildOriginFieldDataRecord,
   buildPerformanceMeasurementSet,
+  CALIBRATED_STABILITY_TOLERANCES,
   describePerformanceEvidence,
   fieldDataStateFromCruxResult,
   measurementForUrl,
@@ -554,5 +555,39 @@ describe('the digest', () => {
     });
 
     expect(relabelled.digest).not.toBe(original.digest);
+  });
+});
+
+describe('calibrated stability tolerances', () => {
+  const calibrated = (runs: LighthouseRunInput[]) =>
+    setOf({ runs, tolerances: CALIBRATED_STABILITY_TOLERANCES, toleranceProvenance: 'calibrated' });
+
+  it('calls runs stable when they disagree no more than this host ordinarily does', () => {
+    const set = calibrated([
+      measuredRun('run-1', { performanceScore: 0.6, lcp: 3000, cls: 0.05, tbt: 300, fcp: 1500 }),
+      measuredRun('run-2', { performanceScore: 0.55, lcp: 3400, cls: 0.06, tbt: 400, fcp: 1700 }),
+      measuredRun('run-3', { performanceScore: 0.58, lcp: 3200, cls: 0.05, tbt: 350, fcp: 1600 }),
+    ]);
+    expect(set.confidence.confidence).toBe('stable');
+    expect(set.confidence.contradictoryMetrics).toEqual([]);
+  });
+
+  it('marks as contradictory a largest paint that ranged from 2 to 14 seconds', () => {
+    const set = calibrated([
+      measuredRun('run-1', { lcp: 1975 }),
+      measuredRun('run-2', { lcp: 8414 }),
+      measuredRun('run-3', { lcp: 14415 }),
+    ]);
+    expect(set.confidence.contradictoryMetrics).toEqual(['lcp']);
+  });
+
+  it('does not call a layout shift contradictory when one run of three shifted a little more', () => {
+    const set = calibrated([
+      measuredRun('run-1', { cls: 0.035 }),
+      measuredRun('run-2', { cls: 0.035 }),
+      measuredRun('run-3', { cls: 0.09 }),
+    ]);
+    expect(set.confidence.contradictoryMetrics).toEqual([]);
+    expect(acceptedValue(set, 'cls')).toBe(0.035);
   });
 });
