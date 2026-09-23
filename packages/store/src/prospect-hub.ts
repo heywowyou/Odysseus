@@ -746,10 +746,12 @@ export async function applyAutomaticProspectStatus(
   if (current === null) return null;
   const decision = decideAutomaticStatus(current.status, status);
   if (!decision.allowed) throw new AutomaticStatusTransitionError(current.status, status);
-  if (!decision.changed) return current;
   if (status === 'opted-out' && options.suppression !== 'already-applied') {
+    // Re-applying an existing opt-out repairs suppression if an earlier
+    // status write predated the durable suppression side effect.
     await suppressProspect(connection, current);
   }
+  if (!decision.changed) return current;
   return setProspectStatus(connection, prospectId, status, actor);
 }
 

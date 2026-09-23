@@ -92,22 +92,20 @@ const WEBSITE_KINDS: readonly ProspectWebsiteKind[] = ['own', 'vendor-hosted', '
 const GROUP_STATUSES = ['independent', 'group-member', 'vendor-hosted', 'unknown'] as const;
 const RANDOM_INDEPENDENT_NO_MATCH = 'no-eligible-independent-directory-entry';
 
-const prospectCreateInputSchema = prospectSchema
-  .pick({ sector: true, name: true })
-  .extend({
-    websites: prospectSchema.shape.websites.optional(),
-    address: prospectSchema.shape.address.optional(),
-    postcode: prospectSchema.shape.postcode.optional(),
-    commune: prospectSchema.shape.commune.optional(),
-    department: prospectSchema.shape.department.optional(),
-    phone: prospectSchema.shape.phone.optional(),
-    emails: prospectSchema.shape.emails.optional(),
-    siren: prospectSchema.shape.siren.optional(),
-    siret: prospectSchema.shape.siret.optional(),
-    tradingName: prospectSchema.shape.tradingName.optional(),
-    legalName: prospectSchema.shape.legalName.optional(),
-    notes: prospectSchema.shape.notes.optional(),
-  });
+const prospectCreateInputSchema = prospectSchema.pick({ sector: true, name: true }).extend({
+  websites: prospectSchema.shape.websites.optional(),
+  address: prospectSchema.shape.address.optional(),
+  postcode: prospectSchema.shape.postcode.optional(),
+  commune: prospectSchema.shape.commune.optional(),
+  department: prospectSchema.shape.department.optional(),
+  phone: prospectSchema.shape.phone.optional(),
+  emails: prospectSchema.shape.emails.optional(),
+  siren: prospectSchema.shape.siren.optional(),
+  siret: prospectSchema.shape.siret.optional(),
+  tradingName: prospectSchema.shape.tradingName.optional(),
+  legalName: prospectSchema.shape.legalName.optional(),
+  notes: prospectSchema.shape.notes.optional(),
+});
 
 function optionalText(query: URLSearchParams, key: string): string | undefined {
   const value = query.get(key)?.trim();
@@ -771,11 +769,7 @@ export function registerProspectHubRoutes(
     const requestedStatus = status as ProspectStatus;
     const prospect =
       requestedStatus === 'opted-out'
-        ? await applyAutomaticProspectStatus(
-            connection,
-            params['prospectId']!,
-            requestedStatus,
-          )
+        ? await applyAutomaticProspectStatus(connection, params['prospectId']!, requestedStatus)
         : await setProspectStatus(connection, params['prospectId']!, requestedStatus);
     if (prospect === null) {
       sendError(res, 404, 'prospect not found');

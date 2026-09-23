@@ -699,11 +699,7 @@ describe('prospect hub routes', () => {
       status: 'opted-out',
       withdrawn: { drafts: 1, previews: 0, threadClosed: true },
     });
-    expect(applyAutomaticProspectStatus).toHaveBeenCalledWith(
-      fakeConnection,
-      'p-1',
-      'opted-out',
-    );
+    expect(applyAutomaticProspectStatus).toHaveBeenCalledWith(fakeConnection, 'p-1', 'opted-out');
     expect(setProspectStatus).not.toHaveBeenCalled();
     expect(withdrawProspectOutreach).toHaveBeenCalledWith(fakeConnection, 'p-1', 'opted-out');
   });

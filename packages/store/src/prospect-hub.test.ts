@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import { departmentFromPostcodeForTest } from './prospect-hub.js';
+import { applyAutomaticProspectStatus, departmentFromPostcodeForTest } from './prospect-hub.js';
 import { randomUUID } from 'node:crypto';
 import {
   attachAuditToProspect,
@@ -399,6 +399,36 @@ describe.skipIf(!mongoAvailable)('prospect hub persistence', () => {
     await expect(
       updateProspect(connection!, created.prospectId, { stakeholders: [{ name: '  ' }] }),
     ).rejects.toThrow();
+  });
+});
+
+describe.skipIf(!mongoAvailable)('prospect status opt-out suppression (issue #414)', () => {
+  it('suppresses a business domain and contact addresses without suppressing free-mail domains', async () => {
+    const prospect = await createProspectHub(connection!, {
+      sector: 'hotel',
+      name: 'Opt-out status fixture',
+      websites: [
+        {
+          url: 'https://hotel-opt-out-example.com/',
+          registrableDomain: 'hotel-opt-out-example.com',
+          kind: 'own',
+          primary: true,
+        },
+      ],
+      emails: [
+        { address: 'owner@hotel-opt-out-example.com', origin: 'operator' },
+        { address: 'owner@gmail.com', origin: 'operator' },
+      ],
+    });
+
+    await applyAutomaticProspectStatus(connection!, prospect.prospectId, 'opted-out');
+
+    await expect(isSuppressed(connection!, 'hotel-opt-out-example.com')).resolves.toBe(true);
+    await expect(
+      isSuppressed(connection!, 'hotel-opt-out-example.com', 'owner@hotel-opt-out-example.com'),
+    ).resolves.toBe(true);
+    await expect(isSuppressed(connection!, 'gmail.com')).resolves.toBe(false);
+    await expect(isSuppressed(connection!, 'gmail.com', 'owner@gmail.com')).resolves.toBe(true);
   });
 });
 
