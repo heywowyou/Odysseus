@@ -61,6 +61,7 @@ import {
 import { extractSitemapCandidates, type SitemapCheckInput } from './normalize-sitemap.js';
 import {
   extractCrawlCandidates,
+  isInvalidHreflangTarget,
   type CrawlPageInput,
   type NormalizeCrawlInput,
 } from './normalize-crawl.js';
@@ -456,7 +457,7 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
         contentExcludedUrls,
         new Set(
           (input.crawl?.pages ?? [])
-            .filter((page) => isExcludedUrl(contentExcludedUrls, page.url))
+            .filter((page) => isInvalidHreflangTarget(page))
             .map((page) => page.url),
         ),
       ),

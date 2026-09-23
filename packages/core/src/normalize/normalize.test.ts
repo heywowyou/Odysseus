@@ -411,6 +411,41 @@ describe('normalizeAudit hreflang wiring', () => {
     expect(missing[0]?.pageUrls).toEqual(['https://example.com/']);
   });
 
+  it('reports a hreflang target only when the server answered with an error or a redirect', () => {
+    const findings = normalizeAudit({
+      auditId: 'audit-1',
+      startedAt: STARTED_AT,
+      pages: [
+        pageWithHreflang('https://example.com/fr/diner', [
+          { lang: 'en', href: 'https://example.com/en/dining' },
+          { lang: 'es', href: 'https://example.com/es/cena' },
+        ]),
+      ],
+      crawl: {
+        startUrl: 'https://example.com/',
+        pages: [
+          { url: 'https://example.com/fr/diner', status: 'visited', depth: 1 },
+          // A navigation timeout: no answer, so no evidence either way.
+          { url: 'https://example.com/en/dining', status: 'error', depth: 2 },
+          {
+            url: 'https://example.com/es/cena',
+            status: 'http-error-status',
+            httpStatus: 404,
+            depth: 2,
+          },
+        ],
+      },
+    });
+    const invalid = findings.filter((f) => f.ruleId === 'hreflang-target-invalid');
+    expect(invalid).toHaveLength(1);
+    expect(invalid[0]?.description).toContain('https://example.com/es/cena');
+    expect(
+      findings.some(
+        (f) => f.description.includes('/en/dining') && f.ruleId !== 'hreflang-no-return-link',
+      ),
+    ).toBe(false);
+  });
+
   it('stays silent on a monolingual site with no hreflang', () => {
     const findings = normalizeAudit({
       auditId: 'audit-1',

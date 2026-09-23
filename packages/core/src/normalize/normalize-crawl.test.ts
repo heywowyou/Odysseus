@@ -75,7 +75,7 @@ describe('broken-internal-link', () => {
     expect(broken[0]?.element?.selector).toBe('a[href="https://example.com/gone"]');
   });
 
-  it('fires for a target the crawler could not reach at all (status error)', () => {
+  it('stays silent for a target the crawler got no answer from (status error)', () => {
     const candidates = extractCrawlCandidates(
       baseInput({
         pages: [
@@ -85,8 +85,7 @@ describe('broken-internal-link', () => {
       }),
     );
     const broken = candidates.filter((c) => c.ruleId === BROKEN_INTERNAL_LINK_RULE_ID);
-    expect(broken).toHaveLength(1);
-    expect(broken[0]?.description).toMatch(/could not be reached/i);
+    expect(broken).toHaveLength(0);
   });
 
   // Issue #39: the crawler now records a non-2xx target with its own

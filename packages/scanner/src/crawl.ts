@@ -411,6 +411,12 @@ function isTransientPushbackStatus(status: number | undefined): boolean {
   return status !== undefined && TRANSIENT_PUSHBACK_STATUSES.has(status);
 }
 
+/** Playwright's navigation timeout, recognised by its error name so a
+ *  wording change in the message does not silently disable the retry. */
+export function isNavigationTimeout(error: unknown): boolean {
+  return error instanceof Error && error.name === 'TimeoutError';
+}
+
 function retryAfterMs(headers: Record<string, string>): number | undefined {
   const value = headers['retry-after'];
   if (value === undefined) return undefined;
@@ -439,7 +445,10 @@ function sameSiteServerRedirect(requestedUrl: string, landedUrl: string): boolea
  *  here throw out of the crawl loop. */
 function safeHostname(url: string): string | null {
   try {
-    return new URL(url).hostname;
+    // A navigation that never committed leaves the tab on about:blank,
+    // whose hostname is ''. That is "no answer", not "landed elsewhere":
+    // treating it as a host recorded silent pages as external redirects.
+    return new URL(url).hostname || null;
   } catch {
     return null;
   }
@@ -987,7 +996,23 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
           // work and sends nothing, so it is free to happen inside the gap.
           const navigate = () =>
             paceNavigation(() => browserPage.goto(item.url, { waitUntil: 'load' }));
-          let response = await navigate();
+          // A page whose `load` event never fires inside the timeout (a
+          // hanging third-party resource, most often) still served its
+          // document. One paced retry that waits only for the document
+          // separates that from a page that really does not answer; before
+          // it, a real 200 page was recorded as 'error' and reported as a
+          // broken link and an invalid hreflang target.
+          const navigateAfterLoadTimeout = async (): ReturnType<typeof navigate> => {
+            try {
+              return await navigate();
+            } catch (error) {
+              if (!isNavigationTimeout(error)) throw error;
+              return paceNavigation(() =>
+                browserPage.goto(item.url, { waitUntil: 'domcontentloaded' }),
+              );
+            }
+          };
+          let response = await navigateAfterLoadTimeout();
           let httpStatus = response?.status();
           // A stub URL that redirects out to another site (a social link)
           // answers with that site's status and body. Its 429 or challenge

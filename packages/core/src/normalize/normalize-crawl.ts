@@ -112,13 +112,30 @@ export interface NormalizeCrawlInput {
 }
 
 function isBrokenTarget(page: CrawlPageInput): boolean {
-  if (page.status === 'error') return true;
+  // 'error' means the crawler got no HTTP answer at all (a navigation
+  // timeout, most often): that says nothing about the target. A real
+  // 200 page that missed our load deadline was reported as a broken link
+  // before, so only a status the server actually sent can prove it.
   if (page.status === 'http-error-status') return true;
   if (page.status === 'blocked') return false;
   // Historical manifests recorded a 404 target as 'visited' (issue #39
   // predates the dedicated status), so the old shape must keep firing or
   // re-normalizing an old audit would silently drop its broken links.
   return page.status === 'visited' && page.httpStatus !== undefined && page.httpStatus >= 400;
+}
+
+/** A hreflang target that the server itself showed to be unusable as a
+ *  language version: an HTTP error, an error page, or a redirect. A target
+ *  the crawler never got an answer from, skipped, or left unscanned is not
+ *  evidence of anything and must not produce hreflang-target-invalid. */
+export function isInvalidHreflangTarget(page: CrawlPageInput): boolean {
+  return (
+    page.status === 'http-error-status' ||
+    page.status === 'redirect-interstitial' ||
+    page.status === 'soft-error-page' ||
+    page.status === 'skipped-external-redirect' ||
+    (page.status === 'visited' && page.httpStatus !== undefined && page.httpStatus >= 400)
+  );
 }
 
 function excluded(excludedUrls: ReadonlySet<string>, url: string): boolean {
@@ -228,10 +245,7 @@ export function extractCrawlCandidates(
       severity: severityFromCustom(BROKEN_INTERNAL_LINK_RULE_ID),
       wcagCriteria: [],
       title: 'Internal link points to a broken page',
-      description:
-        page.status === 'error'
-          ? `This page links to ${page.url}, which could not be reached during the crawl.`
-          : `This page links to ${page.url}, which returned HTTP ${page.httpStatus}.`,
+      description: `This page links to ${page.url}, which returned HTTP ${page.httpStatus}.`,
       pageUrl: page.discoveredFrom,
       // Not a DOM-queried selector (the crawler only captures hrefs, not
       // element positions) but a real, derived one, not a sentinel: an
