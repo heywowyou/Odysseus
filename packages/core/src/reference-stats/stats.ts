@@ -160,6 +160,7 @@ const SERP_APPEARANCE_RULES: readonly string[] = [
   'meta-title-length',
   'meta-title-missing',
   'noindex-on-public-page',
+  'title-not-translated',
 ];
 
 /** Issue #298: rich-result eligibility. A click-through case study about

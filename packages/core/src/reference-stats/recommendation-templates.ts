@@ -116,6 +116,15 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
       },
     },
   ],
+  'title-not-translated': [
+    {
+      id: 'title-not-translated-translate-title',
+      text: {
+        fr: 'Traduisez le titre de cette page dans sa langue, plutôt que de reprendre celui de sa version principale.',
+        en: "Translate this page's title into its own language rather than reusing the title of its primary version.",
+      },
+    },
+  ],
   'meta-description-missing': [
     {
       id: 'meta-description-missing-add-summary',

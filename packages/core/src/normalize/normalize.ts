@@ -67,6 +67,7 @@ import {
   type NormalizeCrawlInput,
 } from './normalize-crawl.js';
 import { extractHreflangCandidates } from './normalize-hreflang.js';
+import { extractUntranslatedTitleCandidates } from './normalize-untranslated-title.js';
 import {
   extractMixedContentCandidates,
   type MixedContentCheckInput,
@@ -471,6 +472,28 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
             .map((page) => page.url),
         ),
       ),
+    );
+  }
+
+  // A noindex page never appears in search results, so its title is not a
+  // search headline in any language.
+  if (input.translationClusters !== undefined) {
+    const siteLevelPageUrl = resolveSiteLevelAnchorUrl(input, contentExcludedUrls);
+    candidates.push(
+      ...extractUntranslatedTitleCandidates({
+        clusters: input.translationClusters,
+        titleByPageUrl: new Map(
+          input.pages
+            .filter(
+              (page) =>
+                page.headMetadata !== undefined &&
+                !isExcludedUrl(contentExcludedUrls, page.url) &&
+                !headMetadataHasNoindex(page.headMetadata),
+            )
+            .map((page) => [page.url, page.headMetadata!.title]),
+        ),
+        ...(siteLevelPageUrl !== undefined ? { siteLevelPageUrl } : {}),
+      }),
     );
   }
 

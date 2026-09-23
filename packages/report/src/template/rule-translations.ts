@@ -396,6 +396,11 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
       gloss:
         "Trop court ou trop long pour s'afficher correctement dans les résultats de recherche.",
     },
+    'title-not-translated': {
+      label: 'Titre de page non traduit',
+      gloss:
+        "Les pages d'une autre langue reprennent mot pour mot le titre de leur version principale ; les résultats de recherche leur donnent alors un titre dans une langue qui n'est pas celle du visiteur.",
+    },
     'meta-viewport': {
       label: 'Le zoom et le redimensionnement ne doivent pas être désactivés',
       gloss: "La page empêche l'utilisateur de zoomer, ce qui gêne les personnes malvoyantes.",

@@ -616,6 +616,10 @@ export const OUTREACH_PROOF_CARD_COPY: Readonly<Record<string, OutreachProofCard
     fr: "Le titre d'une page est trop court ou trop long pour les résultats de recherche.",
     en: "A page's title is too short or too long for search results.",
   },
+  'title-not-translated': {
+    fr: "Des pages traduites gardent, dans les résultats de recherche, le titre non traduit de leur version d'origine.",
+    en: 'Translated pages keep the untranslated title of their original version in search results.',
+  },
   'meta-title-missing': {
     fr: "Une page n'a pas le titre qui s'affiche dans l'onglet du navigateur et dans les résultats de recherche.",
     en: 'A page lacks the title shown in the browser tab and in search results.',

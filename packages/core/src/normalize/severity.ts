@@ -111,6 +111,7 @@ export const CUSTOM_CHECK_SEVERITY: Record<string, Severity> = {
   'hreflang-invalid': 'serious',
   'hreflang-no-return-link': 'serious',
   'hreflang-target-invalid': 'serious',
+  'title-not-translated': 'minor',
 
   // Document structure. Overlaps accessibility, deduped downstream.
   'heading-hierarchy-skip': 'moderate',
