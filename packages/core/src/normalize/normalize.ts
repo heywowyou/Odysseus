@@ -43,7 +43,9 @@ import {
   computeSupersededAudits,
   computeNonActionableSuccessorsToDrop,
   extractLighthouseCandidates,
+  LAB_METRIC_AUDIT_IDS,
   lighthouseLandedOffSite,
+  type LabMetricWithAudits,
   type LighthouseResultInput,
 } from './normalize-lighthouse.js';
 import {
@@ -125,6 +127,9 @@ export interface NormalizePageInput {
   axeError?: string;
   lighthouse?: LighthouseResultInput;
   lighthouseError?: string;
+  /** The page's lab measurement set, as the scanner recorded it. Only the
+   *  metrics whose runs contradicted each other are read here. */
+  performanceMeasurement?: { confidence: { contradictoryMetrics: readonly string[] } };
   renderDiff?: RenderDiffResult;
   renderDiffError?: string;
   /** Only set on the one page the crawl identified as the mentions-
@@ -370,7 +375,15 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
     if (page.lighthouse) {
       // Trade-off 110: audits the head-metadata check already answered on
       // this page are reported from there, on every page, not from here.
-      const coveredAudits = lighthouseAuditsCoveredByHeadMetadata(page.headMetadata);
+      const coveredAudits = new Set(lighthouseAuditsCoveredByHeadMetadata(page.headMetadata));
+      // A metric whose runs contradicted each other has no value to report:
+      // neither the metric nor the diagnostics explaining it become findings.
+      // The measurement set keeps every run as evidence.
+      for (const metric of page.performanceMeasurement?.confidence.contradictoryMetrics ?? []) {
+        for (const auditId of LAB_METRIC_AUDIT_IDS[metric as LabMetricWithAudits] ?? []) {
+          coveredAudits.add(auditId);
+        }
+      }
       candidates.push(
         ...extractLighthouseCandidates(
           page.lighthouse,

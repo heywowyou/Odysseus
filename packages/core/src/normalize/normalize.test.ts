@@ -383,6 +383,31 @@ describe('normalizeAudit booking stubs that hand off to another site', () => {
   });
 });
 
+describe('normalizeAudit lab metrics whose runs contradict each other', () => {
+  function findingsFor(contradictoryMetrics: string[]) {
+    return normalizeAudit({
+      auditId: 'audit-1',
+      startedAt: STARTED_AT,
+      pages: [
+        buildNormalizePageInput({
+          url: 'https://www.example.com/',
+          lighthouse: buildLighthouseResultInput({}),
+          performanceMeasurement: { confidence: { contradictoryMetrics } },
+        }),
+      ],
+    });
+  }
+
+  it('reports no finding for a metric whose runs contradicted each other', () => {
+    expect(findingsFor([]).some((f) => f.ruleId === 'largest-contentful-paint')).toBe(true);
+    expect(findingsFor(['lcp']).some((f) => f.ruleId === 'largest-contentful-paint')).toBe(false);
+  });
+
+  it('keeps the metric when only another metric contradicted', () => {
+    expect(findingsFor(['cls']).some((f) => f.ruleId === 'largest-contentful-paint')).toBe(true);
+  });
+});
+
 describe('normalizeAudit hreflang wiring', () => {
   function pageWithHreflang(url: string, hreflangLinks: Array<{ lang: string; href: string }>) {
     return buildNormalizePageInput({
