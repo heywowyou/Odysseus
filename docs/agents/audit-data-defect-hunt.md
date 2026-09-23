@@ -117,6 +117,9 @@ audit that has findings. Hold each finding to the evidence bar:
    state.
 10. **Fresh angle.** Name one angle this document does not yet list, cover it,
     and add it to this list in the same commit if it found anything.
+11. **Terminal state against artifacts.** For each audit, compare the job's
+    terminal status and failed phase with the reports and analyses actually
+    stored, and read why any report step failed.
 
 ## Recording
 
