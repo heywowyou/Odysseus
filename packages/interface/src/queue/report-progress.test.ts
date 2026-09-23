@@ -74,6 +74,80 @@ describe('createScanProgressReporter staged full-audit progress', () => {
     ]);
   });
 
+  it('keeps the Lighthouse phase while resumed per-page bookkeeping reports every page scanned', async () => {
+    // A resumed run seeds `scanned` from the reused pages, so the staged
+    // scanner's scan-page events already read 140/140 while Lighthouse is
+    // still measuring. Only analysis-complete may move the job to normalize.
+    const report = createScanProgressReporter({} as never, 'job-1', 'full-audit');
+
+    report({ type: 'content-scan-start', totalPages: 140, alreadyCompleted: 140, concurrency: 2 });
+    report({ type: 'select-performance' });
+    report({ type: 'lighthouse-start', totalPages: 120, alreadyCompleted: 53 });
+    report({
+      type: 'scan-page',
+      scanned: 140,
+      totalPages: 140,
+      url: 'https://example.com/a',
+      durationMs: 0,
+    });
+    report({
+      type: 'scan-page',
+      scanned: 140,
+      totalPages: 140,
+      url: 'https://example.com/b',
+      durationMs: 9000,
+    });
+    report({
+      type: 'lighthouse-page',
+      completed: 54,
+      totalPages: 120,
+      url: 'https://example.com/b',
+      durationMs: 9000,
+    });
+
+    await vi.waitFor(() => expect(updateJobProgress).toHaveBeenCalledTimes(6));
+    const phases = vi.mocked(updateJobProgress).mock.calls.map((call) => call[2].phase);
+    expect(phases).toEqual([
+      'content-scan',
+      'select-performance',
+      'lighthouse',
+      undefined,
+      undefined,
+      'lighthouse',
+    ]);
+
+    report({ type: 'analysis-complete' });
+    await vi.waitFor(() => expect(updateJobProgress).toHaveBeenCalledTimes(7));
+    expect(vi.mocked(updateJobProgress).mock.calls[6]?.[2]).toEqual({ phase: 'normalize' });
+  });
+
+  it('still moves the legacy scan path to normalize once its last page is scanned', async () => {
+    const report = createScanProgressReporter({} as never, 'job-1', 'full-audit');
+
+    report({ type: 'scan-start', totalPages: 2 });
+    report({
+      type: 'scan-page',
+      scanned: 1,
+      totalPages: 2,
+      url: 'https://example.com/',
+      durationMs: 1000,
+    });
+    report({
+      type: 'scan-page',
+      scanned: 2,
+      totalPages: 2,
+      url: 'https://example.com/a',
+      durationMs: 1000,
+    });
+
+    await vi.waitFor(() => expect(updateJobProgress).toHaveBeenCalledTimes(3));
+    expect(vi.mocked(updateJobProgress).mock.calls.map((call) => call[2].phase)).toEqual([
+      'scan',
+      'scan',
+      'normalize',
+    ]);
+  });
+
   it('seeds resumed progress from alreadyCompleted without an ETA sample yet', async () => {
     // Issue #223: a resumed run's alreadyCompleted count must show up in
     // the persisted completed/target immediately, but with no ETA until a

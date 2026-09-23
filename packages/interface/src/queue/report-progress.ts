@@ -43,6 +43,13 @@ export function createScanProgressReporter(
 ): (event: ScanProgressEvent) => void {
   let effectiveDelayMs = 0;
   let currentDelayMs = 0;
+  // The staged pipeline reports its own phases (content-scan,
+  // select-performance, lighthouse, then normalize on analysis-complete).
+  // Its scan-page events are per-page bookkeeping that also fire while
+  // Lighthouse runs - on a resume `scanned` already equals the total -
+  // so they must never move the phase, or the dashboard would claim
+  // normalize while Lighthouse is still measuring pages.
+  let stagedPipeline = false;
   // Issue #223: crawl-page fires once per dequeued page in a single
   // serial stream, so the wall time between two consecutive events is
   // exactly one page's real cost (politeness delay + navigation +
@@ -277,6 +284,7 @@ export function createScanProgressReporter(
     }
 
     if (event.type === 'content-scan-start') {
+      stagedPipeline = true;
       contentScanConcurrency = event.concurrency;
       if (event.currentDelayMs !== undefined) currentDelayMs = event.currentDelayMs;
       activePacingStage = {
@@ -400,12 +408,14 @@ export function createScanProgressReporter(
     }
 
     if (event.type === 'select-performance') {
+      stagedPipeline = true;
       activePacingStage = undefined;
       await reportJobPhase(connection, jobId, jobType, { phase: 'select-performance' });
       return;
     }
 
     if (event.type === 'lighthouse-start') {
+      stagedPipeline = true;
       if (event.currentDelayMs !== undefined) currentDelayMs = event.currentDelayMs;
       activePacingStage = {
         bucket: 'lighthouse',
@@ -502,10 +512,12 @@ export function createScanProgressReporter(
       return;
     }
 
-    // scan-page: reports 'normalize' once the last page has been
-    // scanned, since normalize+persist run inside the same audit-stage
-    // call with no separately observable hook of their own - a fast,
-    // pure in-memory step that doesn't warrant one. Issue #223: the
+    // scan-page: on the legacy (non-staged) path, reports 'normalize'
+    // once the last page has been scanned, since normalize+persist run
+    // inside the same audit-stage call with no separately observable hook
+    // of their own - a fast, pure in-memory step that doesn't warrant
+    // one. The staged path leaves the phase alone (see stagedPipeline).
+    // Issue #223: the
     // legacy (non-staged) scan phase also runs concurrent lanes, but its
     // progress event carries no lane count, so this stage's ETA stays
     // concurrency 1 (same conservative, never-underestimate choice
@@ -519,7 +531,9 @@ export function createScanProgressReporter(
       smoothedPageDurationMs: scanDurationEstimator.estimateMs(),
     });
     await reportJobPhase(connection, jobId, jobType, {
-      phase: event.scanned >= event.totalPages ? 'normalize' : 'scan',
+      ...(stagedPipeline
+        ? {}
+        : { phase: event.scanned >= event.totalPages ? 'normalize' : 'scan' }),
       progress: {
         scan: {
           scanned: event.scanned,
