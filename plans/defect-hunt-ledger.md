@@ -116,6 +116,14 @@ Minor, not counted:
 - The chicago lab CLS doubt from sweep 4 is explained: the runs are
   bimodal (0.00 against 0.8), which F9 now covers.
 
+## Where the hunt stands
+
+Paused after sweep 5 by operator decision (2026-09-23). The stop rule is not
+met. Plan 075 Part F's execution order fixes the client-visible defects,
+rescans hotelchateauroyal and grandhotelchicago, and then sweep 6 runs on
+the fresh data. Sweeps 4 and 5 count toward the stop rule history, but sweep
+6 starts the clean-sweep count over, because the data will have changed.
+
 ## Open doubts carried forward
 
 - Why hotelchateauroyal's `/en/` pages miss the 30 s `load` event while the

@@ -355,6 +355,20 @@ Checked and clean in the fifth sweep: no rendered-title and head-title disagreem
 - **F10. Inactive components are exempt from contrast.** A `color-contrast` node whose element is disabled, `aria-disabled`, or a date-picker cell marked unavailable or past (a confirmed vendor-class table, starting with MotoPress `mphb-not-available-date` and `mphb-past-date`) is dropped with a recorded count. Identity never uses per-date generated classes. Tests: normalize-axe unit tests on the stored cell shape.
 - **F11. One count everywhere.** The intro, the priority-coverage sentence, the preview totals and any other « N constats » or « X sur Y » read from `computeStatistics` (first-party findings after Q1). Tests: a render test on an audit with frame findings, asserting that every count sentence agrees with the stats tile.
 
+- **F10 reading confirmed by the operator (2026-09-23):** unavailable calendar dates are inactive components under WCAG 1.4.3 and are exempt.
+- **F12. Untranslated page titles (operator request, 2026-09-23).** villasfoch: all 16 EN and ES pages keep their French titles (« Chambres & suites Bordeaux - Villas Foch » on `/en/rooms-and-suites` and `/es/habitaciones-y-suites`), and no rule detects it. Add a minor SEO rule for a page whose declared language (`htmlLang`, or its translation-cluster language) differs from its title's language, when a translation of the same page has a different title. The evidence is the page pair, not a language guess on one short string. It needs severity, French-first copy and rule coverage. Tests: a normalize unit test on the villasfoch pair shape.
+- **F13. Title length up to 65 characters (operator decision, 2026-09-23).** 64 of the 123 flagged titles on the eight audits are 61 to 65 characters. Raise `TITLE_MAX_LENGTH` (`normalize-head-metadata.ts:179`) to 65, and replace the English copy « much shorter than 30 or longer than 60 » with the actual bounds. Check the French rule translation and remediation text (`rule-translations.ts`, `remediation/fr.ts`) for the same numbers. Tests: normalize-head-metadata unit tests at 65 and 66 characters.
+
+#### Execution order for Part F (operator decision, 2026-09-23)
+
+The hunt pauses here. Fix, rescan, then sweep again:
+
+1. Client-visible falsehoods first: F1, F2, F3, F5, F11, then F4 and F6.
+2. Rescan hotelchateauroyal and grandhotelchicago (an external operation, run on the operator's request), then run defect-hunt sweep 6 on the fresh data.
+3. Then F9, F10, F8, F7, F12 and F13.
+
+Each slice gets its focused tests and its own commit on main, not pushed. Bump `NORMALIZATION_FINGERPRINT` once for the normalization slices of a batch, before the rescan.
+
 ### D. Docs, fixtures, rollout
 
 - **Trade-offs.**
@@ -387,7 +401,7 @@ Checked and clean in the fifth sweep: no rendered-title and head-title disagreem
 - The outreach preview cannot pick a proof from a blocked page or from a rule under correction (E6).
 - Reports built before this plan on the contaminated audits cannot be sent (E7).
 - A navigation timeout never yields a broken-link or hreflang-target finding, a late off-site redirect is never analysed, and noindex, NAP, robots-txt, state-class identity and capped-absence false results are gone (F1 to F7).
-- Unlinked sitemap pages are handled per Q4, no lab finding rests on runs the scanner calls contradictory, inactive calendar cells are not contrast defects, and every count in a report agrees with the stats tile (F8 to F11).
+- Unlinked sitemap pages are handled per Q4, no lab finding rests on runs the scanner calls contradictory, inactive calendar cells are not contrast defects, every count in a report agrees with the stats tile, untranslated titles are reported, and titles up to 65 characters pass (F8 to F13).
 - The requirement-to-proof ledger below is complete before the plan moves to DONE.
 
 ## Executable closure contract
@@ -434,6 +448,8 @@ The closure artifact is the requirement-to-proof ledger below. Every row names i
 | Stability verdict governs lab findings | `normalize-lighthouse.ts`, scanner tolerances | Code, calibrated tolerances in trade-off 111 | Contradictory-set unit test | Harness: no lab finding on a contradictory metric |
 | Inactive components exempt from contrast | `normalize-axe.ts` | Code, vendor-class table | Stored-cell unit test | none |
 | One count everywhere | `report-intro.ts`, `executive-summary.ts`, preview totals | Code | Count-agreement render test | Operator reads one report with frame findings |
+| Untranslated titles detected | `normalize-head-metadata.ts`, new minor rule | Code, copy, rule coverage | Page-pair unit test | none |
+| Title length bound 65 | `normalize-head-metadata.ts`, rule copy | Code, copy | 65/66 boundary tests | none |
 | Provenance consistent | `normalization-fingerprint.ts` | Fingerprint bump | `pnpm run check`, findings-provenance test | none |
 
 ## Verification
