@@ -1518,6 +1518,9 @@ async function runStagedFullAuditScan(
   /** Plan 059 step 11: pages admitted by the bounded discovery fixed point
    *  and scanned by this run, so the inventory can disposition them. */
   discoveryAdmittedUrls: readonly string[];
+  /** The same pages as crawl entries, so the manifest lists and the
+   *  normalizer reads what the run scanned. */
+  discoveryAdmittedPages: CrawledPage[];
 }> {
   // Plan 059 step 11: the content plan is built after the discovery waves,
   // because a wave page is a real page of the site and joins planning (and
@@ -2147,6 +2150,14 @@ async function runStagedFullAuditScan(
     fullAuditPlan: finalizedPlan,
     analysisCoverageByUrl,
     discoveryAdmittedUrls: admittedWaveUrls,
+    discoveryAdmittedPages: admittedWaveUrls.map((url) => ({
+      url,
+      // A resumed run no longer knows the wave depth; below the crawl is
+      // the only thing a surface link can be.
+      depth: depthByUrl.get(url) ?? 1,
+      status: 'visited',
+      discoveryMethod: 'link',
+    })),
   };
 }
 
@@ -2838,8 +2849,13 @@ export async function scanSite(
       maxDepth: crawl.maxDepth,
       assertSafeUrl: assertSafeDirectTarget,
     };
-    const { pages, fullAuditPlan, analysisCoverageByUrl, discoveryAdmittedUrls } =
-      await runStagedFullAuditScan(
+    const {
+      pages,
+      fullAuditPlan,
+      analysisCoverageByUrl,
+      discoveryAdmittedUrls,
+      discoveryAdmittedPages,
+    } = await runStagedFullAuditScan(
         pagesToScan,
         options.browser,
         options.debugPort,
@@ -2860,8 +2876,13 @@ export async function scanSite(
         onNetworkSafetyBlocked,
       );
     }
+    // A wave page is scanned like a crawled one, so it is listed like one:
+    // the manifest is written from the crawl's page list, and a page left
+    // off it would be scanned, stored, and then never analysed.
+    const crawledUrls = new Set(crawl.pages.map((page) => page.url));
+    const waveOnly = discoveryAdmittedPages.filter((page) => !crawledUrls.has(page.url));
     return {
-      crawl,
+      crawl: waveOnly.length === 0 ? crawl : { ...crawl, pages: [...crawl.pages, ...waveOnly] },
       pages,
       fullAuditPlan,
       analysisCoverageByUrl,

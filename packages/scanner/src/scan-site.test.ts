@@ -1515,6 +1515,14 @@ describe('scanSite hydration sweep and discovery waves (plan 059 step 11)', () =
     expect(dispositionOf('https://example.com/cascade-2')).toBe('scanned');
     expect(dispositionOf('https://example.com/cascade-3')).toBe('scanned');
     expect(dispositionOf('https://example.com/cascade-4')).toBe('continuation-guard');
+    // Every scanned wave page is listed with the crawl's pages, which is
+    // what the manifest is written from; the bounded one is not.
+    const listed = result.crawl.pages.filter((page) => page.url.includes('cascade-'));
+    expect(listed.map((page) => [page.url, page.depth, page.status])).toEqual([
+      ['https://example.com/cascade-1', 1, 'visited'],
+      ['https://example.com/cascade-2', 2, 'visited'],
+      ['https://example.com/cascade-3', 3, 'visited'],
+    ]);
     expect(
       vi
         .mocked(runRenderedAnalysis)
