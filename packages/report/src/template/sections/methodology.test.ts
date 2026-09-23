@@ -598,6 +598,24 @@ describe('renderMethodology siren provenance note (manual-SIREN milestone)', () 
     expect(html).not.toContain('voir constat');
   });
 
+  /** hotelchateauroyal.nc: the regulatory section says the overseas regime
+   *  is to be verified and cites nothing, yet the methodology spoke of « le
+   *  numéro SIREN utilisé pour cette détermination ». */
+  it('renders no SIREN note for an overseas domain, which gets no determination', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const overseas: ObligationAssessment = {
+      status: 'undetermined',
+      basis: [
+        { regimeId: 'eaa-loi-2023-171', facts: [{ kind: 'overseas-jurisdiction-unverified' }] },
+      ],
+      sirenSource: 'manual',
+      sirenMismatch: { manualSiren: '992520403', extractedSiren: '123456789' },
+    };
+    const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', overseas, [lcenFinding]);
+    expect(html).not.toContain('fourni manuellement');
+    expect(html).not.toContain('détermination');
+  });
+
   it('renders the mismatch note with both numbers when sirenMismatch is present', async () => {
     const manifest = await loadSmallSiteManifest();
     const assessment: ObligationAssessment = {

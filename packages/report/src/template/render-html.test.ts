@@ -378,3 +378,41 @@ describe('plan 020 general EAA reference placement, as amended 2026-09-04 (issue
     expect(html).not.toContain(escapeCopy(eaaSanctionFigureSentence('fr'), 'fr'));
   });
 });
+
+/** hotelchateauroyal.nc: « Les 79 constats restants » under 43 priorities,
+ *  in a report whose headline counted 109 findings. The 13 extra were
+ *  findings inside third-party frames and findings only on unlinked sitemap
+ *  pages, which Q1 and Q4 keep out of the headline counts. */
+describe('the remaining-findings section counts the headline population', () => {
+  function remainingSection(html: string): string {
+    const start = html.indexOf('id="section-05b"');
+    const end = html.indexOf('id="section-', start + 1);
+    return html.slice(start, end);
+  }
+
+  it('leaves a finding confined to a third-party frame to the annex', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('fr');
+    const template = findings.find((finding) => finding.category === 'accessibility');
+    if (template === undefined) throw new Error('fixture has no accessibility finding');
+    const pageUrl = template.pageUrls[0] ?? manifest.pages[0]?.url ?? '';
+    const framed = {
+      ...template,
+      findingId: 'f999',
+      dedupeKey: 'framed-only',
+      ruleId: 'frame-title',
+      elements: [{ pageUrl, selector: 'iframe[width="100%"] >>> iframe', snippet: '' }],
+    };
+
+    const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
+    const render = (all: typeof findings): Promise<string> =>
+      renderHtml({ manifest, findings: all, analysis, renderDiffEvidencePages });
+
+    const without = remainingSection(await render(findings));
+    const withFramed = await render([...findings, framed]);
+
+    expect(remainingSection(withFramed)).toBe(without);
+    expect(withFramed).toContain('id="annexref-f999"');
+  });
+});

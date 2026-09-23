@@ -23,7 +23,11 @@ import {
   sheet,
   auditDate,
 } from '../html-utils.js';
-import { pickPrimaryBasis, renderLegalCitationParagraph } from './methodology.js';
+import {
+  isOverseasRegimeUnverified,
+  pickPrimaryBasis,
+  renderLegalCitationParagraph,
+} from './methodology.js';
 import { SEVERITY } from '../design-tokens.js';
 import { detectVendor } from '../third-party-attribution.js';
 import { effectifCodeFromAssessment, translateEffectifLabel } from '../effectif-label.js';
@@ -385,11 +389,7 @@ export function renderLegalExposure(
   manualFields?: AuditManualFields,
 ): string {
   const l = strings.legalExposure;
-  if (
-    obligationAssessment?.basis.some((basis) =>
-      basis.facts.some((fact) => fact.kind === 'overseas-jurisdiction-unverified'),
-    ) === true
-  ) {
+  if (isOverseasRegimeUnverified(obligationAssessment)) {
     return sheet(
       `
     ${renderSheetHeader(ordinal, l.eyebrow, l.heading)}

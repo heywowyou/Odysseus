@@ -40,6 +40,12 @@ const TEXT_GATED_TERMS: Readonly<Record<string, RegExp>> = {
   'open-graph': /\bOpen Graph\b/,
   'json-ld': /\bJSON-LD\b/,
   'axe-core': /\baxe-core\b/,
+  // Plan 075: an overseas-domain report cites no regime, authority or
+  // registry, and defining them there ("l'autorité citée dans ce rapport")
+  // stated something the report does not say.
+  eaa: /\bEAA\b/,
+  dgccrf: /\bDGCCRF\b/,
+  sirene: /\bSirene\b/,
 };
 
 /** Visible text of rendered report HTML: tags dropped, the handful of
@@ -79,7 +85,10 @@ function isGlossaryTermRelevant(id: string, ctx: GlossaryContext): boolean {
     case 'geo':
       return ctx.findings.some((f) => f.category === 'geo');
     case 'parcours-transactionnel':
-      return ctx.transactionalFlowEvaluated;
+      return (
+        ctx.transactionalFlowEvaluated &&
+        /parcours transactionnel|transactional flow/i.test(ctx.reportText)
+      );
     // item 3.5 (v2 pass): 8 terms confirmed missing that a report can
     // actually use. Two of the eight ('signaux-a-verifier',
     // 'recherche-emergente') only ever appear alongside a specific kind

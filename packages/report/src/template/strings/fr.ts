@@ -1022,6 +1022,10 @@ export const fr: ReportStrings = {
     // section adds the site-specific observation.
     thirdPartyCountedInTotalsNote:
       "Ces constats restent comptabilisés dans les totaux de sévérité en tête de rapport : les totaux reprennent tous les constats relevés par l'audit, classés selon la gravité générale de leur règle. Un constat peut donc figurer dans ces totaux alors même que cette section précise que l'implémentation observée sur votre site est déjà correcte : le total décrit la règle générale, l'observation décrit votre cas.",
+    thirdPartyFramesExcludedNote:
+      'Ces constats se trouvent dans des contenus tiers intégrés au moyen d’un cadre (iframe)\u00a0: ils ne sont comptés ni dans les totaux en tête de rapport ni dans la note principale.',
+    thirdPartyMixedTotalsNote:
+      "Les constats situés dans un contenu tiers intégré au moyen d'un cadre (iframe) ne sont comptés ni dans les totaux en tête de rapport ni dans la note principale. Les autres restent comptabilisés dans les totaux de sévérité, classés selon la gravité générale de leur règle, même lorsque cette section précise que l'implémentation observée sur votre site est déjà correcte\u00a0: le total décrit la règle générale, l'observation décrit votre cas.",
     unknownVendorLabel: 'Composant tiers, éditeur non identifié',
     severityLabels: {
       critical: 'Critique',

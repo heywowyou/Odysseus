@@ -168,7 +168,7 @@ describe('item 33: the glossary is scoped to the terms a given report actually u
       obligationAssessment: undefined,
       transactionalFlowEvaluated: true,
       hasMeasuredCoreWebVitals: true,
-      reportText: '',
+      reportText: 'aucun parcours transactionnel trouvé',
     });
     const notEvaluated = renderGlossary(getStrings('fr'), 13, {
       findings: [],
@@ -197,7 +197,6 @@ describe('item 3.5: the 8 previously-missing glossary terms', () => {
       'Sans objet',
       'Pages concernées',
       'Rendu',
-      'Sirene',
       'Complexité',
       'Impact commercial',
     ]) {
@@ -292,6 +291,31 @@ describe('terms gated on the rendered report text (issue #330)', () => {
     const unused = renderGlossary(getStrings('fr'), 13, { ...baseCtx, reportText: '' });
     expect(unused).not.toContain('>hreflang<');
     expect(unused).not.toContain('Balise canonique');
+  });
+
+  /** hotelchateauroyal.nc: an overseas-domain report cites no regime,
+   *  authority or registry, yet its glossary defined the EAA, "la DGCCRF,
+   *  l'autorité de contrôle du marché citée dans ce rapport", Sirene and the
+   *  transactional flow examined "pour déterminer si l'EAA s'applique". */
+  it('defines the legal vocabulary only when the report uses it', () => {
+    const overseas = renderGlossary(getStrings('fr'), 13, {
+      ...baseCtx,
+      transactionalFlowEvaluated: true,
+      reportText: 'Régime applicable à vérifier. Le numéro SIREN a été fourni manuellement.',
+    });
+    for (const term of ['>EAA<', '>DGCCRF<', '>Sirene<', 'Parcours transactionnel']) {
+      expect(overseas).not.toContain(term);
+    }
+
+    const metropolitan = renderGlossary(getStrings('fr'), 13, {
+      ...baseCtx,
+      transactionalFlowEvaluated: true,
+      reportText:
+        "L'EAA s'applique probablement ; autorité : DGCCRF. Données du répertoire Sirene, « parcours transactionnel » vérifié.",
+    });
+    for (const term of ['>EAA<', '>DGCCRF<', '>Sirene<', 'Parcours transactionnel']) {
+      expect(metropolitan).toContain(term);
+    }
   });
 
   it('defines RGAA when the report cites it, even outside the article 47 route', () => {

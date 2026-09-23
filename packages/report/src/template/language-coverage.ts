@@ -30,8 +30,14 @@ export function computeLanguageCoverage(manifest: AuditManifest): LanguageCovera
   const discovered = new Set<string>();
 
   for (const page of manifest.pages) {
-    const language = languagePrefixOf(page.url) ?? page.language;
-    if (language === undefined) continue;
+    const declared = languagePrefixOf(page.url) ?? page.language;
+    if (declared === undefined) continue;
+    // Compared by primary subtag: a site whose French pages declare
+    // <html lang="fr-FR"> at the root and whose bare /fr URL only redirects
+    // there published French once, and it was analysed. Comparing "fr-fr"
+    // with "fr" reported French as never analysed.
+    const language = declared.toLowerCase().split(/[-_]/)[0];
+    if (language === undefined || language === '') continue;
     if (page.status === 'visited') scanned.add(language);
     else discovered.add(language);
   }

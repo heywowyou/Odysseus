@@ -36,6 +36,7 @@ import type { RenderDiffEvidencePage } from '../screenshots.js';
 import { getStrings } from './strings/i18n.js';
 import { resolveLcenFinding } from './lcen-resolution.js';
 import { withPriorityConformance } from './priority-conformance.js';
+import { primaryFindingFilter } from './unlinked-sitemap-pages.js';
 import { SECTION_IDS, computeSectionNumbers, type SectionId } from './section-registry.js';
 import { renderCover } from './sections/cover.js';
 import { renderMetadataSheet } from './sections/metadata-sheet.js';
@@ -312,8 +313,10 @@ function renderBody(
       // the same partition Observations consumes so one finding cannot be
       // presented both as corrective work and as contextual guidance that
       // needs no correction by default (issue #211). The annex below still
-      // receives resolvedFindings in full for traceability.
-      actionableFindings,
+      // receives resolvedFindings in full for traceability. Frame-confined
+      // and unlinked-sitemap-only findings stay out, as they do from the
+      // headline counts (Q1, Q4): they are listed in the annex only.
+      actionableFindings.filter(primaryFindingFilter(manifest)),
       renderedPriorities,
       scopePageUrls,
     ),

@@ -291,6 +291,18 @@ export function renderLegalCitationParagraph(
  *    is "correct" - a mismatch can mean the site is operated by a
  *    different legal entity than the one being audited.
  */
+/** Plan 075: an overseas domain gets no obligation determination - the
+ *  regulatory section says the applicable regime is to be verified. */
+export function isOverseasRegimeUnverified(
+  assessment: Pick<ObligationAssessment, 'basis'> | undefined,
+): boolean {
+  return (
+    assessment?.basis.some((basis) =>
+      basis.facts.some((fact) => fact.kind === 'overseas-jurisdiction-unverified'),
+    ) === true
+  );
+}
+
 function renderSirenProvenanceNote(
   strings: ReportStrings,
   assessment: ObligationAssessment | undefined,
@@ -307,6 +319,9 @@ function renderSirenProvenanceNote(
     return fillTemplate(m.sirenSourceResolvedTemplate, { url: resolvedSirenSourceUrl });
   }
   if (!assessment) return '';
+  // Both sentences below explain the SIREN behind "this determination";
+  // an overseas domain has none, so they would point at nothing.
+  if (isOverseasRegimeUnverified(assessment)) return '';
 
   if (assessment.registrySnapshot?.source === SYNTHETIC_REGISTRY_SOURCE) {
     return m.syntheticSirenProvenanceNote;

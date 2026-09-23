@@ -1227,6 +1227,15 @@ export interface ReportStrings {
      *  implementation needs no action - both true, but unexplained
      *  before this note existed. */
     thirdPartyCountedInTotalsNote: string;
+    /** Plan 075: every finding in the section sits inside an embedded
+     *  third-party frame, and Q1 keeps those out of the headline totals and
+     *  the grade. The counted-in-totals note would contradict the statistics
+     *  page's own frame note, so this one is shown instead. */
+    thirdPartyFramesExcludedNote: string;
+    /** Plan 075: the section mixes frame-confined findings (outside the
+     *  totals) with in-page vendor findings (counted), so the note states
+     *  both. */
+    thirdPartyMixedTotalsNote: string;
     /** Shown for a frame-crossing selector (Playwright's `>>>`
      *  combinator) matching none of the known vendor prefixes - still
      *  third-party code, just not attributable to a named product. */

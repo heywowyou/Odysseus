@@ -902,6 +902,10 @@ export const en: ReportStrings = {
       // the totals classify by the rule's general severity, this section
       // adds the site-specific observation.
       'These findings still count toward the severity totals at the top of the report: the totals include every finding the audit raised, classified by the general severity of its rule. A finding can therefore appear in the totals even when this section notes that the implementation observed on your site is already correct: the total describes the general rule, the observation describes your case.',
+    thirdPartyFramesExcludedNote:
+      'These findings sit in third-party content embedded through a frame (iframe): they are counted neither in the totals at the top of the report nor in the main grade.',
+    thirdPartyMixedTotalsNote:
+      'Findings inside third-party content embedded through a frame (iframe) are counted neither in the totals at the top of the report nor in the main grade. The others still count toward the severity totals, classified by the general severity of their rule, even when this section notes that the implementation observed on your site is already correct: the total describes the general rule, the observation describes your case.',
     unknownVendorLabel: 'Third-party component, provider not identified',
     severityLabels: {
       critical: 'Critical',

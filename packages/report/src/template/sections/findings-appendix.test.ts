@@ -797,6 +797,47 @@ describe('item 1.4: third-party embed findings render in their own attributed bl
     expect(html).toContain('Composant tiers, éditeur non identifié');
   });
 
+  /** hotelchateauroyal.nc: every third-party finding sat inside an embedded
+   *  frame, which Q1 keeps out of the totals (the statistics page said so),
+   *  while this section said they « restent comptabilisés dans les totaux ». */
+  it('states which third-party findings the headline totals count', () => {
+    const manifest = buildManifest();
+    const framed = buildFinding({
+      findingId: 'f006',
+      ruleId: 'image-alt',
+      category: 'accessibility',
+      severity: 'critical',
+      elements: [{ pageUrl: 'https://example.com/', selector: 'iframe >>> img', snippet: '' }],
+    });
+    const inPage = buildFinding({
+      findingId: 'f001',
+      ruleId: 'nested-interactive',
+      category: 'accessibility',
+      severity: 'serious',
+      elements: [
+        {
+          pageUrl: 'https://example.com/',
+          selector: '#popmake-1398 > .pum-content.popmake-content > iframe',
+          snippet: '',
+        },
+      ],
+    });
+    const render = (findings: Finding[]): string =>
+      renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
+
+    const framedOnly = render([framed]);
+    expect(framedOnly).toContain('ne sont comptés ni dans les totaux');
+    expect(framedOnly).not.toContain('restent comptabilisés');
+
+    const inPageOnly = render([inPage]);
+    expect(inPageOnly).toContain('restent comptabilisés');
+    expect(inPageOnly).not.toContain('ne sont comptés ni dans les totaux');
+
+    const mixed = render([framed, inPage]);
+    expect(mixed).toContain('ne sont comptés ni dans les totaux');
+    expect(mixed).toContain('Les autres restent comptabilisés');
+  });
+
   it('does not put an ordinary first-party finding in the third-party block', async () => {
     const manifest = buildManifest();
     const ordinaryFinding = buildFinding({

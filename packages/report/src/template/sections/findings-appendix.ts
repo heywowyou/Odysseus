@@ -30,7 +30,11 @@ import { CATEGORY, CATEGORY_ORDER } from '../design-tokens.js';
 import { renderReferenceStatNote } from '../reference-stat-note.js';
 import { groupAppendix, type RuleGroup } from '../appendix-grouping.js';
 import { resolveFindingDisplayLabel, RULE_TRANSLATIONS_FR } from '../rule-translations.js';
-import { detectFindingVendor, isThirdPartyFinding } from '../third-party-attribution.js';
+import {
+  detectFindingVendor,
+  isConfinedToThirdPartyFrame,
+  isThirdPartyFinding,
+} from '../third-party-attribution.js';
 
 function renderRuleSum(strings: ReportStrings, language: ReportLanguage, group: RuleGroup): string {
   const a = strings.findingsAppendix;
@@ -752,12 +756,22 @@ function renderThirdPartySection(
     })
     .join('');
 
+  // Q1 keeps frame-confined findings out of the headline totals, so the
+  // totals note must say which of this section's findings are counted.
+  const confinedCount = thirdPartyFindings.filter(isConfinedToThirdPartyFrame).length;
+  const totalsNote =
+    confinedCount === 0
+      ? strings.findingsAppendix.thirdPartyCountedInTotalsNote
+      : confinedCount === thirdPartyFindings.length
+        ? strings.findingsAppendix.thirdPartyFramesExcludedNote
+        : strings.findingsAppendix.thirdPartyMixedTotalsNote;
+
   // Issue #303: same hooks as a category block below, for the same repair.
   return `
     <div class="appendix-category" data-appendix-category="third-party" style="margin-bottom:var(--space-12)">
       <h4 class="appendix-category-head" data-appendix-category="third-party">${escapeHtml(strings.findingsAppendix.thirdPartyHeading)}</h4>
       <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-2)">${escapeHtml(strings.findingsAppendix.thirdPartyIntro)}</p>
-      <p style="font-size:11px;opacity:0.5;margin-bottom:var(--space-4)">${escapeHtml(strings.findingsAppendix.thirdPartyCountedInTotalsNote)}</p>
+      <p style="font-size:11px;opacity:0.5;margin-bottom:var(--space-4)">${escapeHtml(totalsNote)}</p>
       ${groupBlocks}
     </div>
   `;
