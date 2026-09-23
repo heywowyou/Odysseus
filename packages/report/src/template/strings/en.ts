@@ -33,6 +33,8 @@ export const en: ReportStrings = {
     findingPlural: 'distinct findings',
     prioritySingular: 'ranked priority',
     priorityPlural: 'ranked priorities',
+    consequenceRegulatoryOverseas:
+      'The accessibility regime that applies to your territory remains to be verified; the "{legalSection}" section addresses this point.',
     consequenceRegulatory:
       'Legal obligations may apply to your establishment: the "{legalSection}" section sets out the published criteria and the recorded facts, to be confirmed with your legal adviser.',
     notALegalOpinionNote:

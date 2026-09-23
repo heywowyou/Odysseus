@@ -104,6 +104,9 @@ export interface ReportStrings {
      *  {legalSection}, resolved through sectionTitle('section-02') and
      *  never a hardcoded number. */
     consequenceRegulatory: string;
+    /** Overseas-domain variant: names no obligation, only where the regime
+     *  question is addressed. */
+    consequenceRegulatoryOverseas: string;
     /** The deterministic limitation statement offer-positioning.md
      *  requires, kept verbatim inside the sentence. Template:
      *  {legalSection}, {methodologySection}, both resolved through

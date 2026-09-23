@@ -1,4 +1,4 @@
-import { hookFamilyForCategory } from '@odysseus/core';
+import { hookFamilyForCategory, isOverseasFrenchDomain } from '@odysseus/core';
 import type { Finding, PreparationPreviewLanguage, AuditManifest } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
@@ -129,9 +129,14 @@ export function renderReportIntro(
   // renderSheetHeader: no hand-typed "section 2" that a reorder could
   // break (plan 018 moved section-02 behind the action synthesis).
   const legalSectionTitle = sectionTitle('section-02', strings);
-  const legalReminder = fillTemplate(r.consequenceRegulatory, {
-    legalSection: legalSectionTitle,
-  });
+  const legalReminder = fillTemplate(
+    manifest !== undefined && isOverseasFrenchDomain(manifest.siteUrl)
+      ? r.consequenceRegulatoryOverseas
+      : r.consequenceRegulatory,
+    {
+      legalSection: legalSectionTitle,
+    },
+  );
   const scopeNote = fillTemplate(r.notALegalOpinionNote, {
     legalSection: legalSectionTitle,
     methodologySection: sectionTitle('section-11', strings),

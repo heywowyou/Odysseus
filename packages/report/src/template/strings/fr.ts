@@ -34,6 +34,8 @@ export const fr: ReportStrings = {
     findingPlural: 'constats distincts',
     prioritySingular: 'priorité classée',
     priorityPlural: 'priorités classées',
+    consequenceRegulatoryOverseas:
+      'Le régime d’accessibilité applicable à votre territoire reste à vérifier ; la section « {legalSection} » précise ce point.',
     consequenceRegulatory:
       "Des obligations légales peuvent s'appliquer à votre établissement : la section « {legalSection} » décrit les critères publiés et les faits enregistrés, à faire confirmer par votre conseil juridique.",
     notALegalOpinionNote:

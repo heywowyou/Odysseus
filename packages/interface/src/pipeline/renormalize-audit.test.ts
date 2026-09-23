@@ -82,3 +82,23 @@ describe('renormalizeAudit lab metrics', () => {
     expect(byUrl.get(challenge)?.coreWebVitals).toBeUndefined();
   });
 });
+
+describe('renormalizeAudit page population', () => {
+  it('reads only the pages the manifest lists, not every leftover scan folder', async () => {
+    const fixture = JSON.parse(await fs.readFile(FIXTURE_MANIFEST, 'utf8')) as AuditManifest;
+    const home = fixture.pages[0]!.url;
+    const leftover = new URL('/2023/07/03', home).toString();
+    const manifest: AuditManifest = { ...fixture, pages: [fixture.pages[0]!] };
+    await fs.writeFile(path.join(auditDir, 'manifest.json'), JSON.stringify(manifest));
+    await writePage('home', { url: home, lighthouse: lighthouse(home, 2_000) });
+    await writePage('leftover', { url: leftover, lighthouse: lighthouse(leftover, 30_000) });
+
+    const result = await renormalizeAudit(auditDir, undefined);
+
+    expect(result.pageCount).toBe(1);
+    const findings = JSON.parse(
+      await fs.readFile(path.join(auditDir, 'findings.json'), 'utf8'),
+    ) as { pageUrls: string[] }[];
+    expect(findings.flatMap((finding) => finding.pageUrls)).not.toContain(leftover);
+  });
+});

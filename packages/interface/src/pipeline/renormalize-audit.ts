@@ -126,7 +126,15 @@ export async function renormalizeAudit(
   const manifestBytes = await readArtifact(manifestPath, 'manifest.json', identity, artifactStore);
   const manifest = JSON.parse(manifestBytes.toString('utf-8')) as AuditManifest;
 
-  const pages = await readPageInputs(resolvedDir, identity, artifactStore);
+  // Only the pages the manifest lists. A scan folder can outlive its page's
+  // place in the audit: a real resumed scan kept 68 folders (date archives,
+  // paginated categories) for pages the crawl later left out, and reading
+  // the whole directory brought them back on every report regeneration,
+  // turning 106 findings into 136.
+  const listedUrls = new Set(manifest.pages.map((entry) => entry.url));
+  const pages = (await readPageInputs(resolvedDir, identity, artifactStore)).filter((page) =>
+    listedUrls.has(page.url),
+  );
 
   // B2 (2026-08-24): collapses language-variant duplicates. Manifests
   // written before the field existed carry no clusters, so they are
