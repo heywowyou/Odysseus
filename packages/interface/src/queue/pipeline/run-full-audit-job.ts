@@ -35,7 +35,7 @@ import { createScanProgressReporter } from '../report-progress.js';
 import { reportJobPhase } from './report-job-phase.js';
 
 export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): Promise<void> {
-  const { connection, originLock } = ctx;
+  const { connection } = ctx;
   const url = job.siteUrl;
   if (!url) {
     throw new Error(`odysseus interface: full-audit job ${job.jobId} has no siteUrl`);
@@ -43,7 +43,7 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
 
   // A full audit holds its server, not only its origin: two sites on one
   // shared host must not be audited at the same time.
-  const release = await originLock.acquireAll(await serverLockKeys(url));
+  const release = await ctx.acquireServer(await serverLockKeys(url));
 
   // A stop is otherwise only seen during crawl and page work. Checked at
   // each stage boundary, so a stopped job does not spend two analysis

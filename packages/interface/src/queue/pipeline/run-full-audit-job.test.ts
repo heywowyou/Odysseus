@@ -108,7 +108,8 @@ beforeEach(() => {
   release = vi.fn();
   ctx = {
     connection: fakeConnection,
-    originLock: { acquireAll: vi.fn().mockResolvedValue(release) } as never,
+    originLock: {} as never,
+    acquireServer: vi.fn().mockResolvedValue(release),
     cancellation: new CancellationRegistry(),
   };
 
@@ -183,10 +184,7 @@ describe('runFullAuditJob', () => {
     const job = fakeJob({ siteUrl: 'https://a.example/page' });
     await runFullAuditJob(job, ctx);
 
-    expect(ctx.originLock.acquireAll).toHaveBeenCalledWith([
-      'https://a.example',
-      'address:192.0.2.1',
-    ]);
+    expect(ctx.acquireServer).toHaveBeenCalledWith(['https://a.example', 'address:192.0.2.1']);
     expect(release).toHaveBeenCalledTimes(1);
   });
 

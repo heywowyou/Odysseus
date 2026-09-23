@@ -515,7 +515,9 @@ export function AuditsPage(): JSX.Element {
                         detail={
                           row.status === 'cancel-requested'
                             ? strings.workState.states['cancel-requested']
-                            : currentPhaseLabel(row.phase, strings.progress.phaseLabels)
+                            : row.waitingForServer === true
+                              ? strings.progress.serverWaitLabel
+                              : currentPhaseLabel(row.phase, strings.progress.phaseLabels)
                         }
                         {...(cancel.state === 'available'
                           ? {

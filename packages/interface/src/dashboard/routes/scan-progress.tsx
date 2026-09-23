@@ -31,6 +31,7 @@ import {
   coverageSegments,
   crawlProgress,
   currentPhaseLabel,
+  isWaitingForServer,
   formatEta,
   hasCoverage,
   hasStagedAnalysisProgress,
@@ -327,9 +328,14 @@ export function ScanProgressPage(): JSX.Element {
                     ? strings.common.statusLabels['cancel-requested']
                     : terminalCardKind(job) === 'report-issue'
                       ? strings.common.statusLabels['report-issue']
-                      : currentPhaseLabel(job.phase, strings.progress.phaseLabels)}
+                      : isWaitingForServer(job)
+                        ? strings.progress.serverWaitLabel
+                        : currentPhaseLabel(job.phase, strings.progress.phaseLabels)}
                 </span>
               </div>
+              {isWaitingForServer(job) ? (
+                <p className="text-sm text-ink-soft">{strings.progress.serverWaitHint}</p>
+              ) : null}
               {hasCoverage(job) ? (
                 <CoverageBar
                   segments={coverageSegments(job, strings.common.coverage)}
@@ -485,17 +491,19 @@ function FullAuditView({
   // ETA lines follow the old page: each bar shows its estimate only while
   // its own phase is the current one, and only the scan estimate carries
   // the rough suffix.
-  const crawlEta = job.phase === 'crawl' ? job.progress.crawl?.etaMs : undefined;
+  // A job waiting for its server makes no progress; an estimate would be stale.
+  const etaPhase = isWaitingForServer(job) ? undefined : job.phase;
+  const crawlEta = etaPhase === 'crawl' ? job.progress.crawl?.etaMs : undefined;
   const crawlEtaCalculatedAt =
-    job.phase === 'crawl' ? job.progress.crawl?.etaCalculatedAt : undefined;
-  const scanEta = job.phase === 'scan' ? job.progress.scan?.etaMs : undefined;
-  const scanEtaCalculatedAt = job.phase === 'scan' ? job.progress.scan?.etaCalculatedAt : undefined;
-  const contentEta = job.phase === 'content-scan' ? job.progress.contentScan?.etaMs : undefined;
+    etaPhase === 'crawl' ? job.progress.crawl?.etaCalculatedAt : undefined;
+  const scanEta = etaPhase === 'scan' ? job.progress.scan?.etaMs : undefined;
+  const scanEtaCalculatedAt = etaPhase === 'scan' ? job.progress.scan?.etaCalculatedAt : undefined;
+  const contentEta = etaPhase === 'content-scan' ? job.progress.contentScan?.etaMs : undefined;
   const contentEtaCalculatedAt =
-    job.phase === 'content-scan' ? job.progress.contentScan?.etaCalculatedAt : undefined;
-  const lighthouseEta = job.phase === 'lighthouse' ? job.progress.lighthouse?.etaMs : undefined;
+    etaPhase === 'content-scan' ? job.progress.contentScan?.etaCalculatedAt : undefined;
+  const lighthouseEta = etaPhase === 'lighthouse' ? job.progress.lighthouse?.etaMs : undefined;
   const lighthouseEtaCalculatedAt =
-    job.phase === 'lighthouse' ? job.progress.lighthouse?.etaCalculatedAt : undefined;
+    etaPhase === 'lighthouse' ? job.progress.lighthouse?.etaCalculatedAt : undefined;
   const staged = hasStagedAnalysisProgress(job);
   const previousContentProgressDuringCrawl =
     job.phase === 'crawl' ? job.progress.contentScan : undefined;

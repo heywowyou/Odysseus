@@ -235,6 +235,8 @@ export async function updateJobProgress(
     $set['progress.pushbackEvents'] = patch.progress.pushbackEvents;
   if (patch.progress?.pacingRecoveryEvents !== undefined)
     $set['progress.pacingRecoveryEvents'] = patch.progress.pacingRecoveryEvents;
+  if (patch.progress?.serverWait !== undefined)
+    $set['progress.serverWait'] = patch.progress.serverWait;
   if (patch.progress?.message !== undefined) $set['progress.message'] = patch.progress.message;
   if (patch.urlResults !== undefined) $set['urlResults'] = patch.urlResults;
   if (patch.outreachBatchResults !== undefined)
@@ -453,6 +455,8 @@ export type JobSummaryFields = Pick<
    *  written with the fields before needs-input existed. */
   awaitsInput?: boolean;
   scanType?: JobOptionsSnapshot['scanType'];
+  /** A running full audit waiting for its site's server, holding no slot. */
+  waitingForServer?: boolean;
 };
 
 export interface ListJobsOptions {
@@ -493,6 +497,7 @@ export async function listJobs(
       needsInputFields: 1,
       'options.prospectId': 1,
       'options.scanType': 1,
+      'progress.serverWait': 1,
     },
   )
     // Same _id tiebreak as the claim, reversed: jobs of one batch share a
@@ -506,10 +511,14 @@ export async function listJobs(
           scanType?: JobOptionsSnapshot['scanType'];
         };
         needsInputFields?: JobDocument['needsInputFields'];
+        progress?: Pick<JobDocument['progress'], 'serverWait'>;
       })[]
     >();
-  return docs.map(({ options, needsInputFields, ...rest }) => ({
+  return docs.map(({ options, needsInputFields, progress, ...rest }) => ({
     ...rest,
+    ...(rest.status === 'running' && progress?.serverWait?.waiting === true
+      ? { waitingForServer: true }
+      : {}),
     ...((needsInputFields?.length ?? 0) > 0 ? { awaitsInput: true } : {}),
     ...(options?.prospectId !== undefined ? { prospectId: options.prospectId } : {}),
     ...(options?.scanType !== undefined ? { scanType: options.scanType } : {}),

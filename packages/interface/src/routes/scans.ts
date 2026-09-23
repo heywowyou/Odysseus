@@ -600,6 +600,7 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
         needsReview: job.needsReview,
         failedPhase: job.failedPhase,
         awaitsInput: job.awaitsInput,
+        waitingForServer: job.waitingForServer,
         reportNotReady: reportNotReady ? true : undefined,
         // Plan 060 §5.3: the display classification travels with the row as
         // a closed code, so the browser never re-derives it from raw fields.

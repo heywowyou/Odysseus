@@ -9,6 +9,12 @@
  * Per-origin coordination is a single shared OriginLock instance (see
  * @odysseus/scanner) held across every job this queue runs, so two jobs
  * against the same origin never overlap regardless of concurrency.
+ *
+ * A full audit also holds its site's server addresses (serverLockKeys), and
+ * takes them through acquireServer: a job whose server is busy gives its
+ * queue slot back while it waits, so a job for another server can run, and
+ * it takes the next free slot before any new job is claimed once the server
+ * is free. The slot count is the number of scans actually working.
  */
 
 import type { Connection } from 'mongoose';
@@ -23,6 +29,7 @@ import {
   reconcileFailedAuditJobs,
   resetOrphanedRunningJobs,
   settleCancelRequestedJobsOnStartup,
+  updateJobProgress,
   type JobDocument,
   type JobType,
 } from '@odysseus/store';
@@ -38,9 +45,25 @@ export interface PipelineContext {
   originLock: OriginLock;
   /** Shared stop-request registry; runners check it at page boundaries. */
   cancellation: CancellationRegistry;
+  /** Takes every key in `keys` on originLock for this job. When one is held
+   *  by another job, this job gives its queue slot back while it waits and
+   *  takes a slot again before returning, so it never occupies a slot while
+   *  idle. Throws JobCancelledError when the job is stopped while waiting.
+   *  Returns the release for the keys. */
+  acquireServer: (keys: readonly string[]) => Promise<() => void>;
 }
 
+/** How often a job waiting for its server checks for a stop request. */
+const SERVER_WAIT_CANCEL_POLL_MS = 2_000;
+
 export type PipelineFn = (job: JobDocument, ctx: PipelineContext) => Promise<void>;
+
+interface ServerWaiter {
+  jobId: string;
+  keys: ReadonlySet<string>;
+  /** Set when an ending job handed its slot to this waiter. */
+  slotTransferred: boolean;
+}
 
 export interface JobQueueOptions {
   connection: Connection;
@@ -57,12 +80,16 @@ export interface JobQueueOptions {
    *  exhaustively checked - if JobType grows and this literal is missing
    *  a key, tsc rejects it. */
   runners: Record<JobType, PipelineFn>;
+  /** How often a job waiting for its server checks for a stop request.
+   *  Milliseconds; tests shorten it. */
+  serverWaitCancelPollMs?: number;
 }
 
 export class JobQueue {
   private readonly connection: Connection;
   private readonly concurrency: number;
   private readonly pollIntervalMs: number;
+  private readonly serverWaitCancelPollMs: number;
   private readonly originLock = new OriginLock();
   private readonly cancellation = new CancellationRegistry();
   /** Jobs whose runner is executing in this process right now. A stopped
@@ -71,7 +98,22 @@ export class JobQueue {
   private readonly inFlight = new Set<string>();
   private readonly runners: Record<JobType, PipelineFn>;
 
+  /** Queue slots in use: jobs working, slots handed to a job about to work,
+   *  and the claim loop's reservation while it asks Mongo for the next job.
+   *  Never counts a job waiting for its server (see acquireServer). */
   private activeCount = 0;
+  /** Jobs whose server is free again, waiting for a slot. Served before the
+   *  loop claims new work. Non-empty only while every slot is in use. */
+  private readonly slotWaiters: Array<() => void> = [];
+  /** Jobs that gave their slot back to wait for their server, in the order
+   *  they started waiting, which is also the lock's own order. A job that
+   *  ends while holding keys they need hands its slot to the first of them,
+   *  so the slot follows the server instead of going to a new claim. */
+  private readonly serverWaiters: ServerWaiter[] = [];
+  /** Whether each in-flight job currently holds a slot. */
+  private readonly slotHeld = new Map<string, boolean>();
+  /** Server keys each in-flight job took through acquireServer. */
+  private readonly heldKeys = new Map<string, readonly string[]>();
   private running = false;
   private loopPromise?: Promise<void>;
   private wake: (() => void) | undefined;
@@ -81,6 +123,7 @@ export class JobQueue {
     this.connection = options.connection;
     this.concurrency = options.concurrency ?? DEFAULT_QUEUE_CONCURRENCY;
     this.pollIntervalMs = options.pollIntervalMs ?? 500;
+    this.serverWaitCancelPollMs = options.serverWaitCancelPollMs ?? SERVER_WAIT_CANCEL_POLL_MS;
     this.runners = options.runners;
     this.workerRevision = readOdysseusBuildId();
   }
@@ -178,13 +221,147 @@ export class JobQueue {
     this.wake = undefined;
   }
 
+  /** Gives a slot back. A job ending with server keys hands it to the
+   *  first job waiting for one of those keys; otherwise it goes to the job
+   *  that has waited longest for a slot, or back to the claim loop. */
+  private releaseSlot(keys?: readonly string[]): void {
+    if (keys !== undefined && keys.length > 0) {
+      const heir = this.serverWaiters.find(
+        (waiter) => !waiter.slotTransferred && keys.some((key) => waiter.keys.has(key)),
+      );
+      if (heir !== undefined) {
+        heir.slotTransferred = true;
+        return;
+      }
+    }
+    const next = this.slotWaiters.shift();
+    if (next !== undefined) {
+      next();
+      return;
+    }
+    this.activeCount--;
+    this.wake?.();
+  }
+
+  /** Resolves once this caller holds a slot. `abandon` withdraws a caller
+   *  still waiting, and returns false when the slot was already handed over,
+   *  in which case the caller owns it and must release it. */
+  private takeSlot(): { taken: Promise<void>; abandon: () => boolean } {
+    if (this.activeCount < this.concurrency) {
+      this.activeCount++;
+      return { taken: Promise.resolve(), abandon: () => false };
+    }
+    let resolveTaken!: () => void;
+    const taken = new Promise<void>((resolve) => {
+      resolveTaken = resolve;
+    });
+    this.slotWaiters.push(resolveTaken);
+    return {
+      taken,
+      abandon: () => {
+        const index = this.slotWaiters.indexOf(resolveTaken);
+        if (index === -1) return false;
+        this.slotWaiters.splice(index, 1);
+        return true;
+      },
+    };
+  }
+
+  /** Resolves with `promise`, or throws JobCancelledError once the job is
+   *  stopped. Stop requests are in-process flags, so they are polled. */
+  private async unlessCancelled<T>(jobId: string, promise: Promise<T>): Promise<T> {
+    if (this.cancellation.isRequested(jobId)) throw new JobCancelledError(jobId);
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const cancelled = new Promise<never>((_, reject) => {
+      timer = setInterval(() => {
+        if (this.cancellation.isRequested(jobId)) reject(new JobCancelledError(jobId));
+      }, this.serverWaitCancelPollMs);
+    });
+    try {
+      return await Promise.race([promise, cancelled]);
+    } finally {
+      clearInterval(timer);
+    }
+  }
+
+  private async reportServerWait(job: JobDocument, waiting: boolean): Promise<void> {
+    try {
+      await updateJobProgress(this.connection, job.jobId, {
+        progress: {
+          serverWait: waiting ? { waiting, since: new Date().toISOString() } : { waiting },
+        },
+      });
+    } catch (error) {
+      // Display only: a failed write must not stop or strand the job.
+      logger.warn({ err: error, jobId: job.jobId }, 'could not record the server wait');
+    }
+  }
+
+  private async acquireServer(job: JobDocument, keys: readonly string[]): Promise<() => void> {
+    const acquiring = this.originLock.acquireAll(keys);
+    // Free keys resolve within microtasks; anything still pending after
+    // the next macrotask is waiting on another job.
+    const immediate = await Promise.race([
+      acquiring,
+      new Promise<undefined>((resolve) => setImmediate(() => resolve(undefined))),
+    ]);
+    if (immediate !== undefined) {
+      this.heldKeys.set(job.jobId, keys);
+      if (job.progress?.serverWait?.waiting === true) await this.reportServerWait(job, false);
+      return immediate;
+    }
+
+    const waiter: ServerWaiter = { jobId: job.jobId, keys: new Set(keys), slotTransferred: false };
+    this.serverWaiters.push(waiter);
+    const stopWaiting = (): void => {
+      const index = this.serverWaiters.indexOf(waiter);
+      if (index !== -1) this.serverWaiters.splice(index, 1);
+    };
+    if (this.slotHeld.get(job.jobId) === true) {
+      this.slotHeld.set(job.jobId, false);
+      this.releaseSlot();
+    }
+    await this.reportServerWait(job, true);
+
+    let release: () => void;
+    try {
+      release = await this.unlessCancelled(job.jobId, acquiring);
+    } catch (error) {
+      stopWaiting();
+      // The keys are granted later all the same; hand them straight back.
+      void acquiring.then((granted) => granted());
+      if (waiter.slotTransferred) this.releaseSlot();
+      throw error;
+    }
+    stopWaiting();
+
+    if (!waiter.slotTransferred) {
+      const slot = this.takeSlot();
+      try {
+        await this.unlessCancelled(job.jobId, slot.taken);
+      } catch (error) {
+        release();
+        if (!slot.abandon()) this.releaseSlot(keys);
+        throw error;
+      }
+    }
+    this.slotHeld.set(job.jobId, true);
+    this.heldKeys.set(job.jobId, keys);
+    await this.reportServerWait(job, false);
+    return release;
+  }
+
   private async runLoop(): Promise<void> {
     while (this.running) {
       while (this.activeCount < this.concurrency) {
+        // Reserved before the claim, so a slot handed to a waiting job while
+        // Mongo answers cannot push the working count past the limit.
+        this.activeCount++;
         let job: JobDocument | null;
         try {
           job = await claimNextQueuedJob(this.connection, { workerRevision: this.workerRevision });
         } catch (error) {
+          this.releaseSlot();
           // A transient claim failure (e.g. a Mongo hiccup) must not escape
           // runLoop: an unhandled rejection here would either crash the
           // process or, if swallowed elsewhere, leave this loop exited
@@ -197,8 +374,11 @@ export class JobQueue {
           );
           break;
         }
-        if (!job) break;
-        this.activeCount++;
+        if (!job) {
+          this.releaseSlot();
+          break;
+        }
+        this.slotHeld.set(job.jobId, true);
         void this.runJob(job)
           .catch((error: unknown) => {
             // runJob contains pipeline failures, so a rejection here means
@@ -212,8 +392,11 @@ export class JobQueue {
             );
           })
           .finally(() => {
-            this.activeCount--;
-            this.wake?.();
+            if (this.slotHeld.get(job.jobId) === true) {
+              this.releaseSlot(this.heldKeys.get(job.jobId));
+            }
+            this.slotHeld.delete(job.jobId);
+            this.heldKeys.delete(job.jobId);
           });
       }
       await this.sleep(this.pollIntervalMs);
@@ -229,6 +412,7 @@ export class JobQueue {
         connection: this.connection,
         originLock: this.originLock,
         cancellation: this.cancellation,
+        acquireServer: (keys) => this.acquireServer(job, keys),
       });
     } catch (error) {
       if (error instanceof JobCancelledError) {

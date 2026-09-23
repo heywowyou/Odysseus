@@ -58,7 +58,8 @@ beforeEach(() => {
   release = vi.fn();
   ctx = {
     connection,
-    originLock: { acquireAll: vi.fn().mockResolvedValue(release) } as never,
+    originLock: {} as never,
+    acquireServer: vi.fn().mockResolvedValue(release),
     cancellation: new CancellationRegistry(),
   };
 });
@@ -184,10 +185,7 @@ describe('runOutreachFullScanJob', () => {
   it('scans under the origin and server locks, links the prospect and completes', async () => {
     await runOutreachFullScanJob(job(), ctx);
 
-    expect(ctx.originLock.acquireAll).toHaveBeenCalledWith([
-      'https://example.fr',
-      'address:192.0.2.1',
-    ]);
+    expect(ctx.acquireServer).toHaveBeenCalledWith(['https://example.fr', 'address:192.0.2.1']);
     expect(runAuditStage).toHaveBeenCalledWith(
       'https://example.fr/chambres',
       expect.objectContaining({ prospectId: 'p-1', scanIntent: 'prospecting-audit' }),
@@ -229,6 +227,6 @@ describe('runOutreachFullScanJob', () => {
     await expect(
       runOutreachFullScanJob(fakeJob('outreach-full-scan', { prospectId: 'p-1' }), ctx),
     ).rejects.toThrow('missing its scope');
-    expect(ctx.originLock.acquireAll).not.toHaveBeenCalled();
+    expect(ctx.acquireServer).not.toHaveBeenCalled();
   });
 });

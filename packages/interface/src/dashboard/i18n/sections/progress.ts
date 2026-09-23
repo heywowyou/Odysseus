@@ -22,6 +22,10 @@ export interface ProgressStrings {
    *  from the checked-in order fixture (lib/phase-order.ts), so a phase
    *  added there fails to compile until both languages cover it. */
   phaseLabels: Record<ProgressPhase, string>;
+  /** A full audit waiting for its site's server, which another audit is
+   *  using; it holds no queue slot and resumes on its own. */
+  serverWaitLabel: string;
+  serverWaitHint: string;
   completeHeading: string;
   failedHeading: string;
   /** Issue #73: a job stopped deliberately on the D8 identity-
@@ -95,6 +99,9 @@ export const progress = {
     etaLabel: 'Temps restant estimé',
     etaRoughSuffix: '(estimation approximative)',
     etaFinishingLabel: 'Presque terminé',
+    serverWaitLabel: 'En attente du serveur',
+    serverWaitHint:
+      'Un autre audit utilise le même serveur. Celui-ci reprendra automatiquement, sans occuper de place dans la file.',
     phaseLabels: {
       queued: 'En attente',
       crawl: 'Exploration du site',
@@ -178,6 +185,9 @@ export const progress = {
     etaLabel: 'Estimated time remaining',
     etaRoughSuffix: '(rough estimate)',
     etaFinishingLabel: 'Almost done',
+    serverWaitLabel: 'Waiting for the server',
+    serverWaitHint:
+      'Another audit is using the same server. This one resumes on its own and does not take a queue slot meanwhile.',
     phaseLabels: {
       queued: 'Queued',
       crawl: 'Reading the site’s pages',

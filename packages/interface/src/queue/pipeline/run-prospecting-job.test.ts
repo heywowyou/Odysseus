@@ -41,6 +41,7 @@ beforeEach(() => {
   ctx = {
     connection: fakeConnection,
     cancellation,
+    acquireServer: vi.fn(),
     originLock: {
       acquire: vi.fn().mockImplementation(async () => {
         const release = vi.fn();

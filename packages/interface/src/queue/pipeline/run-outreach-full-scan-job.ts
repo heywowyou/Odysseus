@@ -21,7 +21,7 @@ export async function runOutreachFullScanJob(
   job: JobDocument,
   ctx: PipelineContext,
 ): Promise<void> {
-  const { connection, originLock } = ctx;
+  const { connection } = ctx;
   const url = job.siteUrl;
   const prospectId = job.options.prospectId;
   if (url === undefined || prospectId === undefined) {
@@ -29,7 +29,7 @@ export async function runOutreachFullScanJob(
   }
   // A full audit holds its server, not only its origin: two sites on one
   // shared host must not be audited at the same time.
-  const release = await originLock.acquireAll(await serverLockKeys(url));
+  const release = await ctx.acquireServer(await serverLockKeys(url));
   try {
     const runIdentity = await ensureJobRunIdentity(connection, job.jobId);
     const auditResult = await runAuditStage(

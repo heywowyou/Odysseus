@@ -148,6 +148,13 @@ export interface JobProgressPacingRecoveryEvent {
   occurredAt: string;
 }
 
+/** A full audit whose site's server is busy with another audit: it gave
+ *  its queue slot back and is waiting (JobQueue.acquireServer). */
+export interface JobProgressServerWait {
+  waiting: boolean;
+  since?: string;
+}
+
 export interface JobProgress {
   crawl?: JobProgressCrawl;
   scan?: JobProgressScan;
@@ -157,6 +164,7 @@ export interface JobProgress {
   crawlExclusions?: JobProgressCrawlExclusions;
   pushbackEvents?: JobProgressPushbackEvent[];
   pacingRecoveryEvents?: JobProgressPacingRecoveryEvent[];
+  serverWait?: JobProgressServerWait;
   message?: string;
 }
 
@@ -384,6 +392,12 @@ const jobProgressSchema = new Schema(
     crawlExclusions: { type: jobProgressCrawlExclusionsSchema },
     pushbackEvents: { type: [jobProgressPushbackEventSchema] },
     pacingRecoveryEvents: { type: [jobProgressPacingRecoveryEventSchema] },
+    serverWait: {
+      type: new Schema(
+        { waiting: { type: Boolean, required: true }, since: { type: String } },
+        { _id: false },
+      ),
+    },
     message: { type: String },
   },
   { _id: false },

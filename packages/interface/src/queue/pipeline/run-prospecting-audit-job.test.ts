@@ -49,6 +49,7 @@ beforeEach(() => {
     connection: fakeConnection,
     originLock: { acquire: vi.fn().mockResolvedValue(vi.fn()) } as never,
     cancellation: new CancellationRegistry(),
+    acquireServer: vi.fn(),
   };
   vi.mocked(ensureJobRunIdentity).mockResolvedValue({
     startedAt: new Date('2026-09-15T10:00:00.000Z'),

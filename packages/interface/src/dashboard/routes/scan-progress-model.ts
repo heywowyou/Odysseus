@@ -21,6 +21,12 @@ export function isKnownPhase(phase: string): phase is ProgressPhase {
 
 /** Current phase as operator copy; an unknown phase falls back to its raw
  *  value so the status line never goes blank. */
+/** A running full audit that gave its queue slot back because another
+ *  audit is using its site's server. */
+export function isWaitingForServer(job: Pick<ScanJobDetail, 'status' | 'progress'>): boolean {
+  return job.status === 'running' && job.progress.serverWait?.waiting === true;
+}
+
 export function currentPhaseLabel(phase: string, labels: ProgressPhaseLabels): string {
   return isKnownPhase(phase) ? labels[phase] : phase;
 }

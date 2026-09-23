@@ -110,6 +110,7 @@ const scanJobProgressSchema = z.object({
   pacingRecoveryEvents: z
     .array(z.object({ delayMs: z.number(), occurredAt: z.string() }))
     .optional(),
+  serverWait: z.object({ waiting: z.boolean(), since: z.string().optional() }).optional(),
   message: z.string().optional(),
 });
 
@@ -211,6 +212,8 @@ export const scanSummarySchema = z.object({
   needsReview: z.boolean().optional(),
   /** Issue #386: the phase a failed job was running when it failed. */
   failedPhase: z.string().optional(),
+  /** A running full audit waiting for its site's server; it holds no slot. */
+  waitingForServer: z.boolean().optional(),
   /** Issue #382: typed operator-input fields exist on the job. */
   awaitsInput: z.boolean().optional(),
   /** Issue #389: the scan completed but its audit's client reports are not
