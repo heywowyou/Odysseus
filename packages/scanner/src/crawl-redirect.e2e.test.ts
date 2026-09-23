@@ -68,3 +68,58 @@ describe('crawlSite following a cross-origin redirect', () => {
     expect(page2?.status).toBe('visited');
   }, 30_000);
 });
+
+describe('sitemap coverage through a same-site redirect', () => {
+  const PORT = 5190;
+  const origin = `http://localhost:${PORT}`;
+  let server: Server;
+  let ownBrowser: Browser;
+
+  beforeAll(async () => {
+    server = http.createServer((req, res) => {
+      if (req.url === '/robots.txt') {
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.end(`User-agent: *\nAllow: /\nSitemap: ${origin}/sitemap.xml`);
+        return;
+      }
+      if (req.url === '/sitemap.xml') {
+        res.writeHead(200, { 'Content-Type': 'application/xml' });
+        res.end(
+          `<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` +
+            `<url><loc>${origin}/</loc></url><url><loc>${origin}/old-room</loc></url></urlset>`,
+        );
+        return;
+      }
+      if (req.url === '/old-room') {
+        res.writeHead(301, { Location: `${origin}/room` });
+        res.end();
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(`<html lang="fr"><body><h1>${req.url}</h1></body></html>`);
+    });
+    await listen(server, PORT);
+    ({ browser: ownBrowser } = await launchBrowser());
+  }, 30_000);
+
+  afterAll(async () => {
+    await ownBrowser?.close();
+    await close(server);
+  });
+
+  it('counts a sitemap URL as reached when its redirect target was scanned', async () => {
+    const result = await crawlSite(`${origin}/`, {
+      browser: ownBrowser,
+      maxPages: 10,
+      maxDepth: 3,
+      delayMs: 0,
+      sitemapMode: 'supplement',
+    });
+
+    expect(result.pages.find((page) => page.url === `${origin}/old-room`)?.status).toBe(
+      'redirect-interstitial',
+    );
+    expect(result.pages.find((page) => page.url === `${origin}/room`)?.status).toBe('visited');
+    expect(result.sitemapCoverage).toMatchObject({ eligiblePageCount: 2, scannedPageCount: 2 });
+  }, 45_000);
+});

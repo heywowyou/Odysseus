@@ -1642,9 +1642,19 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
       : {
           declaredPageCount: sitemap.pageEntries.length,
           eligiblePageCount: eligibleSitemapUrls.size,
-          scannedPageCount: [...eligibleSitemapUrls].filter(
-            (url) => pagesByUrl.get(url)?.status === 'visited',
-          ).length,
+          // A sitemap URL that redirects within the site is reached through
+          // its target: the crawl records the redirect and scans the page it
+          // lands on, so counting only the spelling the sitemap used would
+          // report every redirecting entry as missed.
+          scannedPageCount: [...eligibleSitemapUrls].filter((url) => {
+            const page = pagesByUrl.get(url);
+            if (page?.status === 'visited') return true;
+            return (
+              page?.status === 'redirect-interstitial' &&
+              page.redirectTargetUrl !== undefined &&
+              pagesByUrl.get(page.redirectTargetUrl)?.status === 'visited'
+            );
+          }).length,
           filteredPageCount: filteredSitemapPageCount,
           capOmittedPageCount:
             sitemapMode === 'supplement'
