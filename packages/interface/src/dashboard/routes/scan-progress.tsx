@@ -397,19 +397,19 @@ function PhaseRow(props: {
   const displayedEtaMs = etaMs === undefined ? undefined : agedEtaMs(etaMs, etaCalculatedAt, nowMs);
   return (
     <div className="py-4 first:pt-0 last:pb-0">
-      <div className="mb-2 flex items-baseline justify-between gap-4">
-        <div className="flex items-center gap-1.5">
+      <div className="mb-2 flex min-w-0 flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+        <div className="flex min-w-0 items-center gap-1.5">
           {running ? <StatusDot status="running" /> : null}
           {/* A phase is a readout line, not a document section: the three
               rows sit inside one untitled card, so a heading here would skip
               a level under the page title. */}
-          <p className={cn('text-sm font-medium', running ? 'text-ink' : 'text-ink-soft')}>
+          <p className={cn('min-w-0 text-sm font-medium', running ? 'text-ink' : 'text-ink-soft')}>
             {label}
           </p>
           <InfoTip label={label} hint={hint} />
         </div>
         {displayedEtaMs !== undefined ? (
-          <p className="numeric shrink-0 text-xs text-ink-muted">
+          <p className="numeric min-w-0 max-w-full text-xs text-ink-muted sm:text-right">
             {/* Issue #223: once the aged countdown hits 0 while the phase
                 is still running, a fresh progress event just hasn't landed
                 yet - say so instead of showing a stuck "0 s". */}
@@ -497,8 +497,10 @@ function FullAuditView({
   const lighthouseEtaCalculatedAt =
     job.phase === 'lighthouse' ? job.progress.lighthouse?.etaCalculatedAt : undefined;
   const staged = hasStagedAnalysisProgress(job);
-  const content = job.progress.contentScan;
-  const lighthouse = job.progress.lighthouse;
+  const previousContentProgressDuringCrawl =
+    job.phase === 'crawl' ? job.progress.contentScan : undefined;
+  const content = job.phase === 'crawl' ? undefined : job.progress.contentScan;
+  const lighthouse = job.phase === 'crawl' ? undefined : job.progress.lighthouse;
   // Issue #400: each progress sentence sits under the phase it describes;
   // performance selection and measurement belong to the performance row,
   // everything else about checked pages to the content row.
@@ -515,12 +517,14 @@ function FullAuditView({
           })
         : undefined;
   const contentNote =
-    performanceNote === undefined && content !== undefined
-      ? fillProgressCopy(strings.progress.contentProgressMessage, {
-          completed: content.completed,
-          target: content.target,
-        })
-      : undefined;
+    previousContentProgressDuringCrawl !== undefined
+      ? strings.progress.contentProgressRecoveryMessage
+      : performanceNote === undefined && content !== undefined
+        ? fillProgressCopy(strings.progress.contentProgressMessage, {
+            completed: content.completed,
+            target: content.target,
+          })
+        : undefined;
 
   return (
     <Card>

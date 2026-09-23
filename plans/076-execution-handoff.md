@@ -26,12 +26,15 @@ before the local 076 implementation, so deploy the 076 commit chain through
 one at a time, record ETA errors at 25/50/75%, and update both this plan and
 plan 075's execution ledger. Do not archive 076 before both runs pass.
 
-The full local test run reported 5,552 passing and 245 skipped tests. Its four
-076-related failures were corrected and passed focused tests; its two
-suite-load timeouts passed when rerun alone. `pnpm run check` passes after the
-corrections. The full suite was not rerun. `pnpm fixtures:refresh` could not
-refresh the listed real audits because all 15 artifact directories are absent
-locally.
+The latest `pnpm run test:all` completed with 5,559 passing, 245 skipped,
+and two failed provenance checks: the source-derived normalization fingerprint
+and committed test-audit stamps. The fingerprint and stamped manifest/analysis
+metadata now use `238fa28918941c19`; the two focused provenance files pass (7
+tests). The full suite was not rerun after this metadata repair. The committed
+test audits have no raw-document evidence for the new wall classifier, but the
+original artifacts for the 15 listed real audits are absent locally, so
+`pnpm fixtures:refresh` could not be run here. `pnpm run check` passed before
+the fingerprint metadata repair.
 
 The earlier Plan 075 Haaitza queue handoff remains relevant to any future
 deploy: inspect the current-session log and make sure the active Haaitza job has

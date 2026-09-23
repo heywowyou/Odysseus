@@ -88,8 +88,13 @@ export function coverageSegments(
   labels: DashboardStrings['common']['coverage'],
 ): CoverageSegment[] {
   const visited = job.progress.crawl?.visited ?? 0;
-  const checked = job.progress.contentScan?.completed ?? job.progress.scan?.scanned ?? 0;
-  const measured = job.progress.lighthouse?.completed ?? 0;
+  // A recovered job can move back to crawl while keeping counters from its
+  // previous attempt. Those later-stage counts do not describe this crawl.
+  const laterStageProgressIsCurrent = job.phase !== 'crawl';
+  const checked = laterStageProgressIsCurrent
+    ? (job.progress.contentScan?.completed ?? job.progress.scan?.scanned ?? 0)
+    : 0;
+  const measured = laterStageProgressIsCurrent ? (job.progress.lighthouse?.completed ?? 0) : 0;
   const omitted = job.progress.continuationGuard?.omittedUrlCount ?? 0;
   // Issue #393: navigated URLs that were never going to be content-checked
   // get their own band, so inventoried = checked target + excluded.
@@ -194,10 +199,12 @@ function stagedProgress(
 }
 
 export function contentScanProgress(job: ScanJobDetail): number {
+  if (job.phase === 'crawl') return 0;
   return stagedProgress(job.progress.contentScan, AFTER_CONTENT_PHASES.has(job.phase));
 }
 
 export function lighthouseProgress(job: ScanJobDetail): number {
+  if (job.phase === 'crawl') return 0;
   return stagedProgress(job.progress.lighthouse, AFTER_LIGHTHOUSE_PHASES.has(job.phase));
 }
 

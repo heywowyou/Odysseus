@@ -1,7 +1,6 @@
 import type {
   AuditManifest,
   CoreWebVitalMetricKey,
-  CoreWebVitals,
   CoreWebVitalRating,
   CruxFieldDataResult,
   ReportLanguage,

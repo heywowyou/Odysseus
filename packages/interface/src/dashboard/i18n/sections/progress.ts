@@ -9,6 +9,7 @@ export interface ProgressStrings {
   contentScanPhaseLabel: string;
   lighthousePhaseLabel: string;
   contentProgressMessage: string;
+  contentProgressRecoveryMessage: string;
   performanceSelectionMessage: string;
   lighthouseProgressMessage: string;
   etaLabel: string;
@@ -85,6 +86,8 @@ export const progress = {
     contentScanPhaseLabel: 'Vérifications du contenu et de l’accessibilité',
     lighthousePhaseLabel: 'Mesure des performances',
     contentProgressMessage: 'Pages de contenu vérifiées : {completed}/{target}.',
+    contentProgressRecoveryMessage:
+      'Les anciens compteurs de contenu ne s’appliquent pas à cette exploration. Les nouvelles vérifications seront comptées ensuite.',
     performanceSelectionMessage:
       '{target} pages prévues pour les vérifications du contenu. Sélection des pages de performance en cours.',
     lighthouseProgressMessage:
@@ -166,6 +169,8 @@ export const progress = {
     contentScanPhaseLabel: 'Content and accessibility checks',
     lighthousePhaseLabel: 'Performance measurement',
     contentProgressMessage: 'Content pages checked: {completed}/{target}.',
+    contentProgressRecoveryMessage:
+      'Earlier content counts do not apply to this crawl. New checks will be counted afterward.',
     performanceSelectionMessage:
       '{target} pages scheduled for content checks. Performance selection in progress.',
     lighthouseProgressMessage:
