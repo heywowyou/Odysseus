@@ -197,6 +197,17 @@ describe('POST /api/scans runtime contract', () => {
       expect(checkScanLaunch).not.toHaveBeenCalled();
     },
   );
+
+  it('refuses the legacy prospecting type before creating unguarded jobs', async () => {
+    const response = await post({ type: 'prospecting', urls: ['https://example.fr/'] });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.body).toEqual({
+      error: '"prospecting" is retired; use /api/scans/batch with type "quick-check"',
+    });
+    expect(createJob).not.toHaveBeenCalled();
+    expect(checkScanLaunch).not.toHaveBeenCalled();
+  });
 });
 
 function cancelToken(job: { jobId: string; type: string; status: string }): string {

@@ -89,14 +89,8 @@ function createJobProducers(): Producer[] {
 }
 
 describe('scan-producer inventory', () => {
-  it('has exactly two job producers, both in the scans route', () => {
+  it('has one job producer, the guarded single and batch launch path', () => {
     expect(createJobProducers()).toEqual([
-      // Internal bounded prospecting batch. It has no dashboard control, and
-      // its audits are never outreach-grade: classifyLegacyAuditScanIntent
-      // returns undefined for a generic prospecting job
-      // (store/src/prospect-audit-qualification.test.ts).
-      { file: 'interface/src/routes/scans.ts', type: "'prospecting'" },
-      // launchScan, the single and batch launch path behind the dashboard.
       {
         file: 'interface/src/routes/scans.ts',
         type: 'canonicalJobTypeForScanIntent(type)',

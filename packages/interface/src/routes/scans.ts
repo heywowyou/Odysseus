@@ -397,6 +397,10 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       );
       return;
     }
+    if (parsed['type'] === 'prospecting') {
+      sendError(res, 400, '"prospecting" is retired; use /api/scans/batch with type "quick-check"');
+      return;
+    }
 
     if (parsed['type'] === 'quick-check' || parsed['type'] === 'full-audit') {
       const type: LaunchableScanType = parsed['type'];
@@ -429,20 +433,7 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       return;
     }
 
-    if (parsed['type'] === 'prospecting') {
-      const urls = parsed['urls'];
-      if (!Array.isArray(urls) || urls.length === 0 || !urls.every(isHttpUrlWithoutCredentials)) {
-        sendError(res, 400, 'urls must be a non-empty array of valid URLs');
-        return;
-      }
-      const job = await createJob(connection, { type: 'prospecting', urls, options: {} });
-      logJobCreated(req, job.jobId, job.type);
-      queue.notify();
-      sendJson(res, 201, { jobId: job.jobId });
-      return;
-    }
-
-    sendError(res, 400, 'type must be "quick-check", "full-audit", or "prospecting"');
+    sendError(res, 400, 'type must be "quick-check" or "full-audit"');
   });
 
   /** Queues several sites in one submission (issue #375). A batch is only a
