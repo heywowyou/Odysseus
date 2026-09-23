@@ -20,6 +20,7 @@ import {
   publishReferenceAuditCandidate,
   type ReferenceAuditCandidateRelease,
 } from '@odysseus/interface';
+import { parseWritingOverrideFile } from '@odysseus/llm';
 import { connectToMongo, disconnectFromMongo } from '@odysseus/store';
 
 const PDF_FILE = 'reference-audit.pdf';
@@ -75,13 +76,24 @@ export function registerReferenceAuditCommand(program: Command): void {
       '--out <dir>',
       'Candidate folder; defaults to <artifacts-dir>/reference-audit-candidates/<timestamp>',
     )
-    .action(async (artifactsDir: string, opts: { out?: string }) => {
+    .option(
+      '--overrides <file>',
+      'Prose corrections bound to the example (see override-target.json from a previous build)',
+    )
+    .action(async (artifactsDir: string, opts: { out?: string; overrides?: string }) => {
       const auditDir = path.resolve(artifactsDir);
       let connection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
       try {
         connection = await connectToMongo();
         const source = await loadReferenceAuditSource(connection, auditDir);
-        const built = await buildReferenceAuditCandidate(source);
+        const overrides =
+          opts.overrides === undefined
+            ? undefined
+            : parseWritingOverrideFile(JSON.parse(await fs.readFile(opts.overrides, 'utf-8')));
+        const built = await buildReferenceAuditCandidate({
+          ...source,
+          ...(overrides === undefined ? {} : { overrides }),
+        });
         const outDir = opts.out
           ? path.resolve(opts.out)
           : path.join(
@@ -96,13 +108,20 @@ export function registerReferenceAuditCommand(program: Command): void {
         };
         await fs.writeFile(path.join(outDir, PDF_FILE), built.pdf);
         await fs.writeFile(path.join(outDir, HTML_FILE), built.html, 'utf-8');
+        // Anonymized like the PDF: what an override file for the example
+        // must repeat, and the exact text of every correctable field.
+        await fs.writeFile(
+          path.join(outDir, 'override-target.json'),
+          `${JSON.stringify(built.overrideTarget, null, 2)}\n`,
+          'utf-8',
+        );
         await fs.writeFile(
           path.join(outDir, RELEASE_FILE),
           `${JSON.stringify(releaseFile, null, 2)}\n`,
           'utf-8',
         );
         console.log(
-          `Reference candidate built: ${built.release.pageCount} pages, ` +
+          `Reference candidate built: ${built.release.pageCount} pages, ${built.overrideCount} override(s), ` +
             `template ${built.release.reportTemplateVersion}, no source identifier leaked.`,
         );
         console.log(`  PDF: ${path.join(outDir, PDF_FILE)}`);

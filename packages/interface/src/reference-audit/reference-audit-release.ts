@@ -11,13 +11,17 @@ import {
 import {
   assertReferenceAuditNoLeaks,
   buildReferenceAuditShowcase,
+  applyOverridesToBundle,
   generateReferenceAuditPdf,
+  projectWritingOutput,
+  renderInputsForReferenceAudit,
   renderReferenceAuditHtml,
   REFERENCE_AUDIT_ANONYMIZER_VERSION,
   REFERENCE_AUDIT_RELEASE_VERSION,
   REPORT_TEMPLATE_VERSION,
   type ReferenceAuditSource,
 } from '@odysseus/report';
+import { listWritingProseFields, type WritingOverrideFile } from '@odysseus/llm';
 import { readOdysseusBuildId } from '@odysseus/scanner';
 import { resolveSelectedAnalysisPairForAudit } from '@odysseus/store';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
@@ -46,10 +50,26 @@ export interface ReferenceAuditCandidateRelease {
 export interface BuildReferenceAuditCandidateInput extends ReferenceAuditSource {
   renderedAt?: Date;
   rendererBuild?: string;
+  /** Prose corrections to the example's own writing, bound to the example's
+   *  lineage (never the source audit's), applied through the same guarded
+   *  path as a client report finalization. */
+  overrides?: WritingOverrideFile;
+}
+
+/** What an override file for the example must repeat, and the prose fields
+ *  it may correct, all taken from the anonymized example itself. */
+export interface ReferenceAuditOverrideTarget {
+  auditId: string;
+  language: string;
+  analysisDigest: string;
+  findingsDigest: string;
+  proseFields: { field: string; text: string }[];
 }
 
 export interface BuildReferenceAuditCandidateResult {
   release: ReferenceAuditCandidateRelease;
+  overrideTarget: ReferenceAuditOverrideTarget;
+  overrideCount: number;
   html: string;
   pdf: Uint8Array;
   showcase: ReturnType<typeof buildReferenceAuditShowcase>;
@@ -87,6 +107,21 @@ export async function buildReferenceAuditCandidate(
     analysis: input.analysis,
     ...(input.renderInputs === undefined ? {} : { renderInputs: input.renderInputs }),
   });
+  const renderBundle = renderInputsForReferenceAudit(showcase.bundle);
+  const overrideTarget: ReferenceAuditOverrideTarget = {
+    auditId: renderBundle.lineage.auditId,
+    language: renderBundle.lineage.language,
+    analysisDigest: renderBundle.lineage.analysisDigest,
+    findingsDigest: renderBundle.lineage.findingsProvenance.findingsDigest,
+    proseFields: listWritingProseFields(projectWritingOutput(showcase.bundle.analysis)),
+  };
+  if (input.overrides !== undefined) {
+    const applied = applyOverridesToBundle(renderBundle, input.overrides);
+    if (applied.status === 'refused') {
+      throw new Error(`reference audit overrides refused: ${applied.reason}`);
+    }
+    showcase.bundle.analysis = applied.bundle.analysis;
+  }
   const rendererBuild = input.rendererBuild ?? readOdysseusBuildId();
   const renderOptions = { renderedAt, rendererBuild, reportId: 'reference-audit' };
   const html = await renderReferenceAuditHtml(showcase, renderOptions);
@@ -104,6 +139,8 @@ export async function buildReferenceAuditCandidate(
     denylist: showcase.sourceDenylist,
   });
   return {
+    overrideTarget,
+    overrideCount: input.overrides?.overrides.length ?? 0,
     release: {
       pdfSha256: sha256(rendered.pdf),
       pageCount: rendered.pageCount,
