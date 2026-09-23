@@ -336,6 +336,53 @@ describe('B2: language-variant collapsing', () => {
  * produced no finding. These assertions go through `normalizeAudit` for
  * that reason; do not rewrite them against `extractHreflangCandidates`.
  */
+describe('normalizeAudit booking stubs that hand off to another site', () => {
+  it('reports nothing on a page whose Lighthouse run ended on the booking engine', () => {
+    const axe = buildAxeResultsInput([
+      buildAxeViolation({ id: 'meta-viewport', nodes: [buildAxeNode({ target: ['meta'] })] }),
+    ]);
+    const findings = normalizeAudit({
+      auditId: 'audit-1',
+      startedAt: STARTED_AT,
+      pages: [
+        buildNormalizePageInput({ url: 'https://www.example.com/', axe: buildAxeResultsInput([]) }),
+        buildNormalizePageInput({
+          url: 'https://www.example.com/fr/book.html',
+          axe,
+          lighthouse: {
+            ...buildLighthouseResultInput({}),
+            finalDisplayedUrl: 'https://be.synxis.com/?hotel=1&locale=fr-FR',
+          },
+        }),
+      ],
+    });
+    expect(findings.some((finding) => finding.pageUrls.some((url) => url.includes('/book')))).toBe(
+      false,
+    );
+  });
+
+  it('keeps a page whose run only moved between www and the bare host', () => {
+    const axe = buildAxeResultsInput([
+      buildAxeViolation({ id: 'meta-viewport', nodes: [buildAxeNode({ target: ['meta'] })] }),
+    ]);
+    const findings = normalizeAudit({
+      auditId: 'audit-1',
+      startedAt: STARTED_AT,
+      pages: [
+        buildNormalizePageInput({
+          url: 'https://www.example.com/chambres',
+          axe,
+          lighthouse: {
+            ...buildLighthouseResultInput({}),
+            finalDisplayedUrl: 'https://example.com/chambres',
+          },
+        }),
+      ],
+    });
+    expect(findings.some((finding) => finding.ruleId === 'meta-viewport')).toBe(true);
+  });
+});
+
 describe('normalizeAudit hreflang wiring', () => {
   function pageWithHreflang(url: string, hreflangLinks: Array<{ lang: string; href: string }>) {
     return buildNormalizePageInput({

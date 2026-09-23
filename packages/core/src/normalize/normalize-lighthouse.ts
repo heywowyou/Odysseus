@@ -384,6 +384,27 @@ export function isAttributableLighthouseRun(lhr: LighthouseResultInput, pageUrl:
   return finalUrl === undefined || normalizeUrlIdentity(finalUrl) === normalizeUrlIdentity(pageUrl);
 }
 
+function hostWithoutWww(url: string): string | undefined {
+  try {
+    return new URL(url).hostname.toLowerCase().replace(/^www\./, '') || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Whether a stored Lighthouse run ended on another site than the page's
+ * own: a booking stub that hands the visitor to its engine (an
+ * auto-submitted form or a late script redirect), which our own render did
+ * not follow. Such a URL is a doorway to a third party, not content of the
+ * audited site, so no check may report on it. */
+export function lighthouseLandedOffSite(lhr: LighthouseResultInput, pageUrl: string): boolean {
+  const finalUrl = lighthouseFinalUrl(lhr);
+  if (finalUrl === undefined) return false;
+  const finalHost = hostWithoutWww(finalUrl);
+  const pageHost = hostWithoutWww(pageUrl);
+  return finalHost !== undefined && pageHost !== undefined && finalHost !== pageHost;
+}
+
 /** The page's lab metrics, or undefined when the run cannot be attributed
  * to it. Callers that already know the page is not content (blocked,
  * redirect, soft error) must not call this at all. */

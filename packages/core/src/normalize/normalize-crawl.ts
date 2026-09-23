@@ -125,15 +125,17 @@ function isBrokenTarget(page: CrawlPageInput): boolean {
 }
 
 /** A hreflang target that the server itself showed to be unusable as a
- *  language version: an HTTP error, an error page, or a redirect. A target
- *  the crawler never got an answer from, skipped, or left unscanned is not
- *  evidence of anything and must not produce hreflang-target-invalid. */
+ *  language version: an HTTP error, an error page, or a same-site redirect.
+ *  A target the crawler never got an answer from, skipped, or left
+ *  unscanned is not evidence of anything and must not produce
+ *  hreflang-target-invalid. 'skipped-external-redirect' is left out on
+ *  purpose: it records no target, and a navigation that never committed
+ *  used to land in it, so a real 200 page could carry it. */
 export function isInvalidHreflangTarget(page: CrawlPageInput): boolean {
   return (
     page.status === 'http-error-status' ||
     page.status === 'redirect-interstitial' ||
     page.status === 'soft-error-page' ||
-    page.status === 'skipped-external-redirect' ||
     (page.status === 'visited' && page.httpStatus !== undefined && page.httpStatus >= 400)
   );
 }

@@ -43,6 +43,7 @@ import {
   computeSupersededAudits,
   computeNonActionableSuccessorsToDrop,
   extractLighthouseCandidates,
+  lighthouseLandedOffSite,
   type LighthouseResultInput,
 } from './normalize-lighthouse.js';
 import {
@@ -252,6 +253,11 @@ function excludedContentUrls(input: NormalizeAuditInput): ReadonlySet<string> {
       (page.renderDiff !== undefined && isBlockedRender(page.renderDiff)) ||
       isChallengeTitle(page.headMetadata?.title)
     ) {
+      add(page.url);
+    }
+  }
+  for (const page of input.pages) {
+    if (page.lighthouse !== undefined && lighthouseLandedOffSite(page.lighthouse, page.url)) {
       add(page.url);
     }
   }
