@@ -2069,7 +2069,10 @@ async function runStagedFullAuditScan(
       context.writePagesAsScanned,
     );
     if (kept !== undefined) pages.push(kept);
-    scanned += 1;
+    // Resumed pages seed `scanned` from completedByUrl.size, even when a
+    // selected page still needs Lighthouse. Persist its updated result
+    // without counting the same page a second time.
+    if (!completedByUrl.has(url)) scanned += 1;
     onProgress?.({ type: 'scan-page', scanned, totalPages, url, durationMs });
   };
 

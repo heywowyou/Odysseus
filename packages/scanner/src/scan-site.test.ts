@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import type { AuditConfigSnapshot } from '@odysseus/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('./crawl.js', () => ({ crawlSite: vi.fn() }));
@@ -48,6 +49,7 @@ import { checkSecurityHeaders } from './checks/security-headers.js';
 import { checkCookieConsent } from './checks/cookie-consent.js';
 import { scanSite, withPageWatchdog, type ScanProgressEvent } from './scan-site.js';
 import { readPageScanJson } from './artifacts/page-scan-io.js';
+import { buildPageDir } from './artifacts/paths.js';
 import { createPageWorkGuard } from './page-work-guard.js';
 import { mobileSurface } from './evidence-surfaces.js';
 import type { RenderedAnalysisResult } from './scan-page.js';
@@ -561,6 +563,95 @@ describe('scanSite with fullAuditPlanning', () => {
       },
     ]);
     expect(events.at(-1)).toEqual({ type: 'analysis-complete' });
+  });
+
+  it('keeps resumed scan-page progress within the total when a reused page still needs Lighthouse', async () => {
+    const { auditDir, pagesDir } = await makeTempAuditDir('scan-site-lighthouse-resume-');
+    const startedAt = new Date('2026-09-23T00:00:00.000Z');
+    const checkpointConfig: AuditConfigSnapshot = {
+      maxPages: 10,
+      maxDepth: 2,
+      crawlDelayMs: 0,
+      pageTimeoutMs: 30_000,
+      lighthouseTimeoutMs: 60_000,
+      userAgent: 'OdysseusAuditBot/test',
+      scanConcurrency: 3,
+      sitemapMode: 'supplement',
+    };
+    const checkpointContext = { startedAt, config: checkpointConfig };
+    vi.mocked(runRenderedAnalysis).mockImplementation(async (_browser, url) => ({
+      url,
+      renderedCostProfile: {
+        url,
+        domNodeCount: 20,
+        imageCount: 1,
+        resourceCount: 3,
+        knownTransferBytes: 1_000,
+        unknownTransferSizeCount: 0,
+      },
+      checkOutcomes: { 'render-diff': 'completed', axe: 'completed' },
+    }));
+
+    const firstRun = await scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: pagesDir,
+      auditDir,
+      writePagesAsScanned: true,
+      concurrency: 3,
+      fullAuditPlanning: true,
+      scopeDigest,
+      checkpointContext,
+    });
+    const lighthouseSelectedUrl = firstRun.fullAuditPlan?.decisions.find((decision) =>
+      decision.plannedPasses.includes('lighthouse'),
+    )?.url;
+    expect(lighthouseSelectedUrl).toBeDefined();
+
+    const scanJsonPath = path.join(pagesDir, buildPageDir(lighthouseSelectedUrl!), 'scan.json');
+    const savedScan = JSON.parse(await fs.readFile(scanJsonPath, 'utf8')) as Record<
+      string,
+      unknown
+    >;
+    delete savedScan['lighthouse'];
+    delete savedScan['lighthouseError'];
+    await fs.writeFile(scanJsonPath, JSON.stringify(savedScan, null, 2));
+
+    const crawlCallsBeforeResume = vi.mocked(crawlSite).mock.calls.length;
+    vi.mocked(runRenderedAnalysis).mockClear();
+    vi.mocked(runLighthouseAnalysis).mockClear();
+    const events: ScanProgressEvent[] = [];
+    const resumeDecisions: { mode: string; reusedPages?: number }[] = [];
+    await scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: pagesDir,
+      auditDir,
+      writePagesAsScanned: true,
+      concurrency: 3,
+      fullAuditPlanning: true,
+      scopeDigest,
+      checkpointContext,
+      onProgress: (event) => events.push(event),
+      onResumeDecision: (decision) => resumeDecisions.push(decision),
+    });
+
+    expect(resumeDecisions).toEqual([{ mode: 'resumed', reusedPages: 3 }]);
+    expect(vi.mocked(crawlSite).mock.calls).toHaveLength(crawlCallsBeforeResume);
+    expect(runRenderedAnalysis).not.toHaveBeenCalled();
+    expect(vi.mocked(runLighthouseAnalysis).mock.calls.map(([url]) => url)).toContain(
+      lighthouseSelectedUrl,
+    );
+    const scanPageEvents = events.filter((event) => event.type === 'scan-page');
+    expect(
+      scanPageEvents.some(
+        (event) => event.type === 'scan-page' && event.url === lighthouseSelectedUrl,
+      ),
+    ).toBe(true);
+    expect(scanPageEvents.length).toBeGreaterThan(0);
+    for (const event of scanPageEvents) {
+      if (event.type === 'scan-page') expect(event.scanned).toBeLessThanOrEqual(event.totalPages);
+    }
   });
 
   it('never calls Lighthouse when skipLighthouse is set, even for planner-selected pages', async () => {
