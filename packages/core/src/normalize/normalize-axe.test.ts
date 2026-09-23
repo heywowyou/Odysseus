@@ -239,3 +239,11 @@ describe('contrast on inactive components (plan 075, F10)', () => {
     expect(contrast('<p>Texte gris</p>')).toHaveLength(1);
   });
 });
+
+describe('shapeIdentity on a snippet cut inside its opening tag', () => {
+  it('ignores the cut attribute fragment', async () => {
+    const { shapeIdentity } = await import('./normalize-axe.js');
+    const full = '<a class="book-btn" href="#" fspanel-ctx-type="booking" fspanel-ctx-code="4301">';
+    expect(shapeIdentity(full.slice(0, 62))).toBe(shapeIdentity(full.slice(0, 66)));
+  });
+});

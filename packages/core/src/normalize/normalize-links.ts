@@ -147,6 +147,19 @@ const NON_DESCRIPTIVE_LINK_TEXTS: Readonly<Record<string, ReadonlySet<string>>> 
   ]),
 };
 
+/** A link's identity for the crawlability rule: its tag and classes when it
+ *  has any, else its full markup shape. Link snippets are capped at 200
+ *  characters, so the attribute list of a long opening tag depends on where
+ *  the cap fell; on a real site the same booking button carried a different
+ *  SEO aria-label on each page and its attribute list changed with it. The
+ *  class names what kind of link it is, which is what the fix addresses. */
+function anchorShape(snippet: string): string | undefined {
+  const shape = shapeIdentity(snippet);
+  if (shape === undefined) return undefined;
+  const classed = /^([\w-]+\.[^[]+)\[/.exec(shape);
+  return classed === null ? shape : classed[1];
+}
+
 export function hasNonDescriptiveLinkText(anchor: AnchorFactInput): boolean {
   if (!anchor.href || anchor.rel.includes('nofollow')) return false;
   const href = anchor.href.toLowerCase();
@@ -239,7 +252,7 @@ export function extractLinkCandidates(
     .slice(0, MAX_ELEMENTS_PER_FINDING);
   for (const anchor of uncrawlable) {
     const reason = crawlabilityFailureReason(anchor, pageUrl);
-    const shape = shapeIdentity(anchor.snippet);
+    const shape = anchorShape(anchor.snippet);
     candidates.push({
       source: 'custom',
       ruleId: CRAWLABLE_ANCHORS_RULE_ID,

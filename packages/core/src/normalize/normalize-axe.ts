@@ -171,11 +171,22 @@ export function shapeIdentity(snippet: string): string | undefined {
   if (root === null) return undefined;
   const tag = root[1]!.toLowerCase();
 
+  // Snippets are cut at a fixed length. When the cut falls inside the
+  // opening tag, its last attribute is a fragment whose length depends on
+  // everything before it: a real site gave the same booking button a
+  // different SEO aria-label on each page, so the cut landed at
+  // `fspanel-ctx-c`, `fspanel-ctx-co`, `fspanel-ctx-cod`, and one button
+  // became thirteen findings. A fragment says nothing about the element.
+  const rest = snippet.slice(root[0].length).trimStart();
+  const truncated = !rest.startsWith('>') && !rest.startsWith('/');
+  const attributes = [...(root[2] ?? '').matchAll(ATTRIBUTE)];
+  if (truncated) attributes.pop();
+
   const names = new Set<string>();
   let classList = '';
-  for (const attr of (root[2] ?? '').matchAll(ATTRIBUTE)) {
+  for (const attr of attributes) {
     const name = (attr[1] ?? attr[4] ?? '').toLowerCase();
-    if (name === '') continue;
+    if (name === '' || /["']/.test(name)) continue;
     if (name === 'class')
       classList = (attr[2] ?? attr[3] ?? '')
         .split(/\s+/)

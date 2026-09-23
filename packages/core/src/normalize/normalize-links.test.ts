@@ -143,3 +143,37 @@ describe('extractLinkCandidates', () => {
     expect(extractLinkCandidates([anchor()], PAGE_URL)).toEqual([]);
   });
 });
+
+describe('crawlable-anchors identity on capped snippets', () => {
+  // The shape of a real hotel booking button: a different SEO aria-label on
+  // each page moves the 200-character cap through the next attribute's name.
+  function bookingButton(label: string): AnchorFactInput {
+    const tag = `<a aria-label="${label}" id="" class="book-btn " target="" href="javascript:void(0);" onclick="event.preventDefault();" fspanel-toggle="4301" fspanel-ctx-type="booking" fspanel-ctx-code="4301">`;
+    return anchor({ rawHref: 'javascript:void(0);', snippet: tag.slice(0, 200) });
+  }
+
+  it('gives one link kind one identity whatever its label', () => {
+    const identities = new Set(
+      [
+        'hotel rue des dames',
+        'hotel near gare saint lazare paris',
+        'hotels near gare st lazare',
+      ].map((label) => extractLinkCandidates([bookingButton(label)], PAGE_URL)[0]?.dedupeIdentity),
+    );
+    expect(identities.size).toBe(1);
+  });
+
+  it('keeps two kinds of link apart', () => {
+    const booking = extractLinkCandidates([bookingButton('hotel')], PAGE_URL)[0];
+    const consent = extractLinkCandidates(
+      [
+        anchor({
+          rawHref: 'javascript:void(0);',
+          snippet: '<a class="cm-btn" href="javascript:void(0);">',
+        }),
+      ],
+      PAGE_URL,
+    )[0];
+    expect(booking?.dedupeIdentity).not.toBe(consent?.dedupeIdentity);
+  });
+});
