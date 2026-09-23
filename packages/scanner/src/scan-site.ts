@@ -2856,16 +2856,16 @@ export async function scanSite(
       discoveryAdmittedUrls,
       discoveryAdmittedPages,
     } = await runStagedFullAuditScan(
-        pagesToScan,
-        options.browser,
-        options.debugPort,
-        crawl.effectiveDelayMs,
-        concurrency,
-        scheduler,
-        options.skipLighthouse ?? false,
-        context,
-        options.onProgress,
-      );
+      pagesToScan,
+      options.browser,
+      options.debugPort,
+      crawl.effectiveDelayMs,
+      concurrency,
+      scheduler,
+      options.skipLighthouse ?? false,
+      context,
+      options.onProgress,
+    );
     const finalInventory = finalizeInventoryLedger(discoveryAdmittedUrls);
     if (captureTemporalAnchors) {
       await closeTemporalWindow(
