@@ -38,6 +38,10 @@ import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import { Router } from '../router.js';
 import { registerAuditRoutes } from './audits.js';
 import { operatorSnapshotSchema } from '../operator/contract.js';
+import {
+  releaseReportProduction,
+  tryAcquireReportProduction,
+} from '../pipeline/report-production-lock.js';
 import { probeMongoAvailability, scopedMongoTestUri } from '@odysseus/store/test-support.js';
 
 const { available: mongoAvailable, connection } = await probeMongoAvailability(
@@ -565,6 +569,36 @@ describe.skipIf(!mongoAvailable)('audit routes against real mongo', () => {
 
     expect(res.statusCode).toBe(409);
     expect(res.body as string).toMatch(/selected analysis has changed/u);
+  });
+
+  it('refuses a finalized report bound to a different analysis ID', async () => {
+    const { auditId } = await seedFinalizableChain();
+    const bundle = JSON.parse(
+      (await getBundleViaRoute(auditId, 'fr')).body as string,
+    ) as RenderBundle;
+    const body = finalizedBody(bundle);
+    body.lineage.analysisId = 'analysis-from-another-bundle';
+
+    const res = await postFinalizedViaRoute(auditId, 'fr', body);
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body as string).toMatch(/selected analysis no longer matches/u);
+  });
+
+  it('refuses a finalized report while report production already holds the audit lock', async () => {
+    const { auditId } = await seedFinalizableChain();
+    const bundle = JSON.parse(
+      (await getBundleViaRoute(auditId, 'fr')).body as string,
+    ) as RenderBundle;
+    expect(tryAcquireReportProduction(auditId, 'writing')).toBe(true);
+
+    try {
+      const res = await postFinalizedViaRoute(auditId, 'fr', finalizedBody(bundle));
+      expect(res.statusCode).toBe(409);
+      expect(res.body as string).toMatch(/already being produced/u);
+    } finally {
+      releaseReportProduction(auditId, 'writing');
+    }
   });
 
   it('refuses a finalized report whose findings have changed since', async () => {
