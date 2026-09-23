@@ -301,6 +301,25 @@ describe('scanProgress', () => {
 });
 
 describe('staged analysis progress', () => {
+  it('ignores prior-attempt content and Lighthouse counts during a recovered crawl', () => {
+    const recovered = job({
+      phase: 'crawl',
+      progress: {
+        crawl: { visited: 0, target: 164 },
+        contentScan: { completed: 83, target: 162, etaMs: 60_000 },
+        lighthouse: { completed: 15, target: 162, etaMs: 120_000 },
+      },
+    });
+
+    expect(contentScanProgress(recovered)).toBe(0);
+    expect(lighthouseProgress(recovered)).toBe(0);
+    const byKind = Object.fromEntries(
+      coverageSegments(recovered, en.common.coverage).map((segment) => [segment.kind, segment]),
+    );
+    expect(byKind['checked']).toMatchObject({ displayValue: 0 });
+    expect(byKind['measured']).toMatchObject({ displayValue: 0 });
+  });
+
   it('tracks content and Lighthouse independently and handles a zero-page audit', () => {
     expect(
       contentScanProgress(

@@ -25,6 +25,7 @@ reconciliation properly). History is never deleted.
 | 9 | 2026-09-21 | `a74c87ab` | 3 | 43 | 2 | 0 | read-only production rehearsal after deploy; FR/EN routes, mobile shell, recovery states, audit loading, tools, and to-do API shape; no state-changing prospecting actions | no |
 | 10 | 2026-09-21 | `7a9b0f41` | 1 | 43 | 1 | 0 | local stateful browser rehearsal against `odysseus-local`; FR/EN critical paths, reserved-domain failure jobs, lifecycle cleanup, mobile/back/recovery, and route/action inventory; no real-site scan or email | no |
 | 11 | 2026-09-23 | `d06e8bfd` | 2 | 45 | 0 | 0 | targeted read-only production: `/audits` and one active `/scans/:id`, FR/EN, desktop/390px, and reload | no |
+| 12 | 2026-09-23 | `5da97bd2` | 0 | 43 | 2 | 0 | targeted read-only post-deploy scan-progress recheck: FR desktop/mobile and EN mobile, active job, no writes | yes (progress layout) |
 
 ## Run 11 notes (production, targeted scan-progress observation)
 
@@ -35,21 +36,44 @@ reconciliation properly). History is never deleted.
 - Still open: UX-041 was not reproduced during the content-check phase; a Lighthouse/performance phase was not observed. Other historical findings were outside this targeted pass.
 - GitHub handoff: no issues were filed; this request was to identify the production display problems, and external issue creation was not authorized. No scan, record, or client artifact was retained or changed.
 
-## Fix pass after run 11 (working tree, pending production re-check)
+## Run 12 notes (production, post-deploy scan-progress recheck)
 
-UX-050 and UX-051 have local fixes. Both remain OPEN until a deployed
-French/English browser check confirms the recovery message, progress values,
-and narrow-screen layout.
+- Mode and boundary: commit `5da97bd2` was pushed and deployed through
+  `deploy/odysseus-deploy.sh`; the script verified the running build ID.
+  `/health/ready` returned HTTP 200 with database and queue both `ok`. This
+  was a targeted read-only check; no scan was started or cancelled and no
+  production record was changed.
+- Active scan: job `517f3ce0-bf45-472e-a6bd-7f04b0dc6fd1` was already running.
+  Before deployment it showed 77/232 scan pages and 15/170 Lighthouse pages.
+  After deployment it advanced to 26/170 Lighthouse, then 29/170 in the
+  normalize phase. It remained running through the app restart.
+- UX-050: the active page showed the current 232/232 content count after
+  deployment. That scan had advanced past crawl, so the new recovery message
+  was not observed live. A focused render regression now simulates retained
+  83/162 content and 15/162 Lighthouse counts during a new crawl; it verifies
+  the French recovery explanation and that stale counts are hidden. The model
+  regression verifies both stage bars reset to zero. Both affected test files
+  passed (34 tests total).
+- UX-051: production FR at 1280px and 390px, and EN at 390px, all had
+  document width equal to the viewport. The ETA and progress details remained
+  visible on mobile.
+- This was a targeted progress-page recheck, not a full dashboard journey.
+  No other findings were added or reverified.
 
-- UX-050: downstream checked/measured counts are suppressed during a new crawl
-  across the stage bars and coverage summary. A localized note explains that
-  earlier content counts do not apply to the current crawl.
+## Fix pass after run 11 (deployed; verified in run 12)
+
+UX-050 and UX-051 are fixed in build `5da97bd2`.
+
+- UX-050: crawl phase suppresses prior-attempt checked/measured counters in
+  stage bars and coverage summary, and shows a localized recovery explanation.
+  The local render/model regression covers a crawl carrying stale stage counts.
 - UX-051: the phase label and ETA stack on compact screens; the ETA can shrink
   and wrap on wider layouts.
-- Verification: Prettier left all three source files unchanged, and the
-  dashboard TypeScript project passed. The package-wide typecheck stopped in
-  `renormalize-audit.ts` on missing `@odysseus/core` exports before it
-  reached the dashboard project. No tests were run.
+- Verification: `pnpm run check` passed before commit, and the pre-push hook
+  passed it again. Focused dashboard progress tests passed (34 tests), and the
+  provenance tests passed (7 tests) after the normalization fingerprint repair.
+  The full-suite run before that repair had 5,559 passing, 245 skipped, and two
+  provenance failures; the full suite was not rerun after those focused fixes.
 
 ## Run 10 notes (local stateful operator rehearsal)
 
@@ -836,17 +860,23 @@ plan 045 section 1.9) is pending the operator's deploy.
 
 ### UX-050 (P2) Recovery shows prior-attempt progress during a new crawl
 
-- Status: OPEN. First seen: run 11. Last seen: run 11.
+- Status: FIXED. First seen: run 11. Last seen: run 12.
 - Where: production `/scans/:id`, active job after deployment recovery, FR.
-- Evidence: while the current phase was a new crawl, the progress card still showed the previous content-check count `83/162`. When the new content-check phase began, it changed to `0/164` and then advanced to `38/164`; the API matched each displayed snapshot and refresh retained the current state. The scan was working, but the page gave no explanation that recovery had restarted the pass. The progress card is rendered by `packages/interface/src/dashboard/routes/scan-progress.tsx`.
+- Evidence: run 11 showed the previous content-check count during a new crawl.
+  Build `5da97bd2` now suppresses prior content and Lighthouse counts during
+  crawl and explains that the new pass will count afterward. The deployed
+  production job had passed crawl by run 12, so the message was not observed
+  live; focused render and model regressions cover that state.
 - Suggested UX fix: hide or identify progress from an incompatible prior checkpoint and explain when recovery has to restart a phase, so a reset does not look like lost or contradictory work.
 - Issue: none (production finding recorded; no external issue filed).
 
 ### UX-051 (P3) Scan ETA forces horizontal overflow on a narrow screen
 
-- Status: OPEN. First seen: run 11. Last seen: run 11.
+- Status: FIXED. First seen: run 11. Last seen: run 12.
 - Where: production `/scans/:id`, active scan, FR and EN, 390px viewport.
-- Evidence: the page's document width was 490px at a 390px viewport; the ETA paragraph extended past the right edge (the deployed scan progress layout uses `shrink-0` at `packages/interface/src/dashboard/routes/scan-progress.tsx:412`).
+- Evidence: after build `5da97bd2`, production FR at desktop and mobile widths
+  and EN at 390px had no horizontal overflow; the ETA and progress details
+  remained visible on mobile.
 - Suggested UX fix: let the ETA fit or wrap within the viewport without hiding the phase label or progress details.
 - Issue: none (production finding recorded; no external issue filed).
 
@@ -887,6 +917,21 @@ plan 045 section 1.9) is pending the operator's deploy.
 - Proof: production `/scans/<unknown>` now renders the localized not-found
   state with a recovery link to `/audits` in the deployed build.
 - Issue: #402.
+
+### UX-050 (P2) Recovered crawl showed counts from the previous attempt - fixed in build 5da97bd2
+
+- Proof: focused scan-progress render/model regressions verify stale 83/162 and
+  15/162 counters are hidden during a new crawl and the localized recovery
+  explanation appears. The live production scan had advanced beyond crawl
+  before the post-deploy check, so that exact state was not observed live.
+- Issue: none.
+
+### UX-051 (P3) Scan ETA overflowed on a narrow screen - fixed in build 5da97bd2
+
+- Proof: production FR desktop/mobile and EN mobile checks at 390px showed
+  document width equal to viewport width; ETA and progress details remained
+  visible.
+- Issue: none.
 
 ## Deliberate register
 

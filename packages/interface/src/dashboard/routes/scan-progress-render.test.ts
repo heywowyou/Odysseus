@@ -137,6 +137,38 @@ function relaunchButton(container: HTMLElement): HTMLButtonElement | undefined {
   );
 }
 
+describe('scan progress recovery display', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+  });
+
+  it('explains that retained counts do not apply while a recovered crawl restarts', async () => {
+    const recoveredJob = {
+      ...pushbackJob,
+      progress: {
+        ...pushbackJob.progress,
+        contentScan: { completed: 83, target: 162, etaMs: 60_000 },
+        lighthouse: { completed: 15, target: 162, etaMs: 120_000 },
+      },
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse(recoveredJob)),
+    );
+    const { container, root } = await renderPage();
+
+    await waitForText(
+      container,
+      'Les anciens compteurs de contenu ne s’appliquent pas à cette exploration.',
+    );
+    expect(container.textContent).not.toContain('83/162');
+    expect(container.textContent).not.toContain('15/162');
+
+    root.unmount();
+  });
+});
+
 describe('scan progress pushback notice', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
