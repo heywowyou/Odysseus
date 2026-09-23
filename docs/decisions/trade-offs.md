@@ -5813,3 +5813,33 @@ its median is often near zero; a single run shifting a little more than two
 agreeing ones is noise, not contradiction. The constants and this source live
 in `performance-measurement-set.ts`; re-measure when the host, the Lighthouse
 version or the runs per page change.
+
+### 112. Odysseus audits businesses in France and the EU only (operator decision, 2026-09-23)
+
+The Hôtel Château Royal audit (Nouméa, `hotelchateauroyal.nc`) showed every
+French-law assumption failing at once. New Caledonia registers companies by
+RIDET, not SIREN, so the operator had to enter a SIREN by hand. No verified
+accessibility regime covers the territory, so the report could cite no
+obligation. The glossary and methodology then described a determination the
+report never made. Supporting such territories properly would mean a legal
+basis per territory. The operator chose the simpler rule: do not audit them.
+
+Scope is the EU's territory: metropolitan France, the five overseas
+departments and regions, and Saint-Martin (EU outermost regions), which keep
+SIREN and French law. Out of scope are the French overseas countries and
+territories outside the EU: Saint-Pierre-et-Miquelon, Saint-Barthélemy,
+Wallis-et-Futuna, French Polynesia, New Caledonia and the French Southern and
+Antarctic Lands. `eu-territory.ts` in core identifies them by postcode
+(975, 97133, 984, 986, 987, 988) or by country-code domain (`.pm`, `.bl`,
+`.tf`, `.wf`, `.pf`, `.nc`). The Atout France directory import leaves them
+out, and a scan launch refuses them with `outside-eu`, whether the site is
+linked to a prospect or not.
+
+This is the one facet that blocks rather than informs (Plan 047 kept facets
+advisory). It blocks because the report cannot be made truthful for these
+sites, not because they are poor prospects. Foreign non-EU sites are not in
+the source directory; a manually entered one is not detected beyond these
+domains.
+
+The overseas-domain report handling (Plan 075 G2) stays as a defensive
+fallback for audits that predate this rule.

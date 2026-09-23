@@ -11,6 +11,13 @@
 > rules until the Plan 047 cascade deletes them with the prospect. Origin
 > recording and role-address-only discovery remain mandatory.
 
+> **Territory amendment (2026-09-23, trade-off 112).** Odysseus audits
+> businesses in France and the EU only. Hotels in French territories outside
+> the EU (Saint-Pierre-et-Miquelon, Saint-Barthélemy, Wallis-et-Futuna, French
+> Polynesia, New Caledonia, TAAF) are left out of the directory import and
+> refused at scan launch. The overseas departments and Saint-Martin stay in
+> scope.
+
 How a candidate domain becomes a qualified prospect. Governs milestone
 9a. Written 2026-08-15.
 

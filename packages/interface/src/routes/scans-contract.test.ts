@@ -605,6 +605,45 @@ describe('POST /api/scans prospect availability', () => {
   });
 });
 
+/** Operator decision 2026-09-23: France and the EU only. A Nouméa hotel's
+ *  audit met a RIDET instead of a SIREN and no verified legal regime. */
+describe('POST /api/scans territory', () => {
+  it('refuses a site on a non-EU French territory domain', async () => {
+    const response = await post({ type: 'full-audit', url: 'https://www.hotel.nc/' });
+    expect(response.body).toEqual({ started: false, refusal: 'outside-eu' });
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
+  it('refuses a prospect whose postcode is outside the EU, whatever its domain', async () => {
+    vi.mocked(getProspectHub).mockResolvedValue({
+      prospectId: 'p-noumea',
+      postcode: '98800',
+    } as never);
+    const response = await post(
+      { type: 'quick-check', items: [{ prospectId: 'p-noumea', url: 'https://hotel.com/' }] },
+      '/api/scans/batch',
+    );
+    expect(response.body).toMatchObject({
+      rejected: 1,
+      results: [{ index: 0, outcome: 'rejected', reason: 'outside-eu' }],
+    });
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
+  it('still launches a scan in an overseas department', async () => {
+    vi.mocked(getProspectHub).mockResolvedValue({
+      prospectId: 'p-reunion',
+      postcode: '97400',
+    } as never);
+    const response = await post({
+      type: 'full-audit',
+      url: 'https://hotel.re/',
+      prospectId: 'p-reunion',
+    });
+    expect(response.statusCode).toBe(201);
+  });
+});
+
 describe('POST /api/scans launch race', () => {
   it('refuses as host-busy when a concurrent launch took the prospect slot first', async () => {
     vi.mocked(createJob).mockRejectedValueOnce(new ActiveJobSlotTakenError('job-other'));

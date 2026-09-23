@@ -96,6 +96,8 @@ export function QueueScansDialog(props: {
         return copy.outcomeRejectedSuppressed;
       case 'prospect-unavailable':
         return copy.outcomeRejectedProspectUnavailable;
+      case 'outside-eu':
+        return copy.outcomeRejectedOutsideEu;
       case 'invalid-url':
         return copy.outcomeRejectedInvalidUrl;
     }

@@ -2,6 +2,7 @@ import type { Connection } from 'mongoose';
 import {
   isCrawlCoverageGateMessage,
   isHttpUrlWithoutCredentials,
+  isOutsideEuTerritory,
   isValidSiren,
 } from '@odysseus/core';
 import {
@@ -195,7 +196,7 @@ type ScanLaunchOutcome =
   | { started: true; job: JobDocument }
   | {
       started: false;
-      refusal: 'invalid-url' | 'suppressed' | 'host-busy' | 'prospect-unavailable';
+      refusal: 'invalid-url' | 'suppressed' | 'host-busy' | 'prospect-unavailable' | 'outside-eu';
       /** With 'host-busy', when known: the job holding the slot. */
       conflictingJobId?: string;
     };
@@ -222,6 +223,12 @@ async function launchScan(
     if (prospect === null || prospect.archivedAt !== undefined) {
       return { started: false, refusal: 'prospect-unavailable' };
     }
+    if (isOutsideEuTerritory({ postcode: prospect.postcode, url })) {
+      return { started: false, refusal: 'outside-eu' };
+    }
+  } else if (isOutsideEuTerritory({ url })) {
+    // Odysseus audits France and the EU only (core's eu-territory.ts).
+    return { started: false, refusal: 'outside-eu' };
   }
   const check = await checkScanLaunch(connection, {
     url,
@@ -279,7 +286,7 @@ type BatchItemResult =
       url: string;
       prospectId?: string;
       outcome: 'rejected';
-      reason: 'invalid-url' | 'suppressed' | 'prospect-unavailable';
+      reason: 'invalid-url' | 'suppressed' | 'prospect-unavailable' | 'outside-eu';
     };
 
 /** The non-default options a waiting scan carries, as closed flags for the

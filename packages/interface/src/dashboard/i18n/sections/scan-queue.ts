@@ -31,6 +31,7 @@ export interface ScanQueueStrings {
   outcomeRejectedInvalidUrl: string;
   outcomeRejectedSuppressed: string;
   outcomeRejectedProspectUnavailable: string;
+  outcomeRejectedOutsideEu: string;
   openQueueAction: string;
   closeAction: string;
   /** Audits page queue section. */
@@ -76,6 +77,8 @@ export const scanQueue = {
     outcomeRejectedSuppressed: 'Refusé : ce site figure sur la liste à ne pas contacter.',
     outcomeRejectedProspectUnavailable:
       'Refusé : ce prospect est archivé ou introuvable ; restaurez-le avant de lancer un scan.',
+    outcomeRejectedOutsideEu:
+      'Refusé : Odysseus n’audite que les sites situés en France et dans l’Union européenne.',
     openQueueAction: 'Voir la file',
     closeAction: 'Fermer',
     sectionTitle: 'File de scans',
@@ -118,6 +121,7 @@ export const scanQueue = {
     outcomeRejectedSuppressed: 'Rejected: this site is on the do-not-contact list.',
     outcomeRejectedProspectUnavailable:
       'Rejected: this prospect is archived or missing; restore it before scanning.',
+    outcomeRejectedOutsideEu: 'Rejected: Odysseus only audits sites located in France and the EU.',
     openQueueAction: 'Open the queue',
     closeAction: 'Close',
     sectionTitle: 'Scan queue',
