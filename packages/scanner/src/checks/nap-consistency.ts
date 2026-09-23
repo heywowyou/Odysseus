@@ -154,8 +154,42 @@ export async function checkNapConsistency(
   pageUrl: string,
   jsonLdBlocks: readonly JsonLdBlock[],
 ): Promise<NapConsistencyCheckResult> {
-  const visibleText = await page.evaluate(() => document.body.innerText);
+  const visibleText = await page.evaluate(readContactRegionText);
   return buildNapConsistency(pageUrl, jsonLdBlocks, visibleText);
+}
+
+/**
+ * The text of the page's own contact regions: header, footer, `address`,
+ * schema.org contact properties, and the numbers behind `tel:` links. The
+ * whole body is read only on a contact page. A news article that quotes a
+ * tourist office's number is not the business stating its own, and
+ * comparing against it reported a mismatch that did not exist.
+ *
+ * Runs in the page, so it must stay self-contained.
+ */
+export function readContactRegionText(): string {
+  const path = window.location.pathname.toLowerCase();
+  if (/contact|acces|access|coordonn|nous-trouver|find-us/.test(path)) {
+    return document.body.innerText;
+  }
+  const selectors = [
+    'header',
+    'footer',
+    '[role="banner"]',
+    '[role="contentinfo"]',
+    'address',
+    '[itemprop="telephone"]',
+    '[itemprop="address"]',
+    '[itemprop="postalCode"]',
+  ];
+  const parts = new Set<string>();
+  for (const element of document.querySelectorAll<HTMLElement>(selectors.join(','))) {
+    parts.add(element.innerText);
+  }
+  for (const link of document.querySelectorAll<HTMLAnchorElement>('a[href^="tel:"]')) {
+    parts.add(decodeURIComponent(link.getAttribute('href')!.slice(4)));
+  }
+  return [...parts].join('\n');
 }
 
 function unique(values: readonly string[]): string[] {
