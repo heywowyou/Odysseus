@@ -11,6 +11,7 @@ Brief: `docs/agents/audit-data-defect-hunt.md`
 | 3 | 2026-09-22 | 12 | Population (homepages, plugin objects), per-rule (small rules), absence, translations, production state | 8 | A9; E9 to E14; decisions; production state |
 | 4 | 2026-09-23 | 8 post-075 rescans (7 full, 1 capped pilot) | All 10 (fresh angle: terminal job state against its artifacts) | 7 | Part F (F1 to F7); rescan execution ledger |
 | 5 | 2026-09-23 | Same 8 | All 11 (fresh angle: run-to-run determinism) | 4 | Part F (F8 to F11, Q4) |
+| 6 | 2026-09-23 | hotelchateauroyal and grandhotelchicago rescans, their FR reports, the reference audit, the lacoorniche failure | Population, acquisition, counting, legal, stored products (partial: not all 11 angles) | 7 | Part G (G1 to G7) |
 
 These first three sweeps predate the brief and did not each cover every
 angle, so they do not count toward the stop rule. The next run starts at
@@ -118,11 +119,14 @@ Minor, not counted:
 
 ## Where the hunt stands
 
-Paused after sweep 5 by operator decision (2026-09-23). The stop rule is not
-met. Plan 075 Part F's execution order fixes the client-visible defects,
-rescans hotelchateauroyal and grandhotelchicago, and then sweep 6 runs on
-the fresh data. Sweeps 4 and 5 count toward the stop rule history, but sweep
-6 starts the clean-sweep count over, because the data will have changed.
+Sweep 6 ran on the hotelchateauroyal and grandhotelchicago rescans
+(2026-09-23). F1's target held (no timeout-driven link or hreflang
+findings), but the sweep found 7 new defects, recorded as plan 075 Part G.
+All are fixed; G7 is committed and waits for a deploy. Sweep 6 did not cover
+every angle, so it does not count as a clean sweep and the stop rule is not
+met. The next full sweep should run on the lacoorniche (`83d9bd44`) and
+haaitza (`a80110ab`) results and on hotelchateauroyal `15-20-37Z`, after G7 is
+deployed.
 
 ## Open doubts carried forward
 
@@ -132,8 +136,9 @@ the fresh data. Sweeps 4 and 5 count toward the stop rule history, but sweep
 - What makes chicago's lab runs bimodal (whole-`body` shifts in some runs
   only); the finding side is covered by F9. Settled only by a Lighthouse
   probe of the homepage.
-- Not yet covered by a post-075 full audit: grandhoteldesalpes, lacoorniche,
-  haaitza (pilots only), pointfrance, and grand-hotel-opera (refusal only).
+- Not yet covered by a post-075 full audit: grandhoteldesalpes, pointfrance,
+  and grand-hotel-opera (refusal only). lacoorniche and haaitza full audits
+  are running (2026-09-23).
 - French copy was read in the stored PDFs for the rules touched by this
   sweep only; a full per-rule review against the writing style and
   obligation basis is still open (angle 8).
