@@ -103,6 +103,32 @@ function buildPriority(
 // diagnostic's purpose without asserting anything about the client's
 // bookings, traffic, or legal obligations.
 describe('renderReportIntro', () => {
+  it('counts only first-party findings, like the statistics tiles, when a frame finding exists', () => {
+    const findings = [
+      buildFinding({ findingId: 'f001', severity: 'serious', pageUrls: ['https://example.com/a'] }),
+      buildFinding({
+        findingId: 'f002',
+        severity: 'critical',
+        pageUrls: ['https://example.com/b'],
+        elements: [
+          {
+            pageUrl: 'https://example.com/b',
+            selector: 'iframe[src="https://www.youtube.com/embed/x"] >>> button',
+            snippet: '',
+          },
+        ],
+      }),
+    ];
+    const html = renderReportIntro(
+      getStrings('fr'),
+      1,
+      buildAnalysis([['f001', 'f002']]) as never,
+      findings,
+    );
+    expect(html).toContain('1 constat distinct, dont 1 de gravité');
+    expect(html).not.toContain('2 constats distincts');
+  });
+
   it('renders the situation, complication, and question blocks in French, with the deterministic facts', () => {
     const findings = [
       buildFinding({ findingId: 'f001', severity: 'serious', pageUrls: ['https://example.com/a'] }),

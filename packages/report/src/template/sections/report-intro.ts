@@ -13,6 +13,7 @@ import {
 } from '../html-utils.js';
 import { sectionTitle, type SectionId } from '../section-registry.js';
 import { selectRenderedThemes } from './themes.js';
+import { isConfinedToThirdPartyFrame } from '../third-party-attribution.js';
 import type { RenderedPriority } from '../rendered-priorities.js';
 
 /** The deterministic complication facts (plan 018 step 5), all computed
@@ -47,13 +48,17 @@ function computeIntroFacts(
   findingsById: ReadonlyMap<string, Finding>,
   scopePageUrls: ReadonlySet<string> | undefined,
 ): IntroFacts {
+  // The same first-party population as computeStatistics (plan 075, Q1):
+  // content wholly inside a third-party frame stays in the annex but never
+  // in a headline count, so this sentence cannot disagree with the tiles.
+  const counted = findings.filter((finding) => !isConfinedToThirdPartyFrame(finding));
   return {
-    findingCount: findings.length,
-    criticalSeriousCount: findings.filter(
+    findingCount: counted.length,
+    criticalSeriousCount: counted.filter(
       (finding) => finding.severity === 'critical' || finding.severity === 'serious',
     ).length,
     affectedPageCount: new Set(
-      findings
+      counted
         .flatMap((finding) => finding.pageUrls)
         .filter((url) => scopePageUrls?.has(url) ?? true),
     ).size,

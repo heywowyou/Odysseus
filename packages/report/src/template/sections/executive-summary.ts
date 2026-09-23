@@ -12,6 +12,7 @@ import {
   sheet,
 } from '../html-utils.js';
 import { computeStatistics } from '../statistics.js';
+import { isConfinedToThirdPartyFrame } from '../third-party-attribution.js';
 import { sectionTitle } from '../section-registry.js';
 import { pickPrimaryBasis } from './methodology.js';
 import { selectRenderedThemes } from './themes.js';
@@ -199,17 +200,26 @@ function renderCoveredByPrioritiesNote(
   findingsById: ReadonlyMap<string, Finding>,
   priorities?: readonly RenderedPriority[],
 ): string {
-  const covered = new Set(
-    priorities
-      ? priorities.flatMap((priority) => priority.findings.map((finding) => finding.findingId))
-      : selectRenderedThemes(analysis.themes, findingsById).flatMap((theme) => theme.findingIds),
-  ).size;
-  if (covered === 0 || covered >= findings.length) return '';
+  // Both sides of the "X of Y" sentence use the first-party population the stats tile
+  // counts (plan 075, Q1); frame-only findings are neither covered nor total.
+  const counted = new Set(
+    findings
+      .filter((finding) => !isConfinedToThirdPartyFrame(finding))
+      .map((finding) => finding.findingId),
+  );
+  const covered = [
+    ...new Set(
+      priorities
+        ? priorities.flatMap((priority) => priority.findings.map((finding) => finding.findingId))
+        : selectRenderedThemes(analysis.themes, findingsById).flatMap((theme) => theme.findingIds),
+    ),
+  ].filter((findingId) => counted.has(findingId)).length;
+  if (covered === 0 || covered >= counted.size) return '';
 
   const e = strings.executiveSummary;
   const text = fillTemplate(e.coveredByPrioritiesTemplate, {
     covered: formatNumber(covered, analysis.language),
-    total: formatNumber(findings.length, analysis.language),
+    total: formatNumber(counted.size, analysis.language),
     // Issue #307: this sheet precedes the priorities by several pages, so
     // the sentence names their section instead of saying "below".
     prioritiesSection: sectionTitle('section-04', strings),
