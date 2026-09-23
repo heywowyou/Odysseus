@@ -474,7 +474,7 @@ export const en: ReportStrings = {
     heading: 'Performance measurements',
     labHeading: 'Lab measurements (Lighthouse)',
     labIntroTemplate:
-      'Median values aggregated across {pages}. Simulated mobile with network throttling, single run, lab data (Lighthouse) rather than field data.',
+      'Median values aggregated across {pages}. Simulated mobile with network throttling; for a page measured more than once, the value kept is the median run. Lab data (Lighthouse) rather than field data.',
     pageSingular: 'page',
     pagePlural: 'pages',
     metricColumnLabel: 'Metric',
@@ -506,14 +506,14 @@ export const en: ReportStrings = {
     realUserNoDataNote:
       "No public Chrome UX Report data exists for this site, most often because it does not yet receive enough Chrome traffic to meet Google's reporting threshold. This is not a pass or a fail, it simply means no real-user comparison is available for this audit.",
     realUserGapNote:
-      'A large gap between these real-user values and the lab measurements further down is expected: the lab measurement deliberately simulates harsh conditions (CPU and network throttling, a single run), while real-user data reflects visitors on a variety of devices and connections. The two measure different questions, they do not contradict each other.',
+      'A large gap between these real-user values and the lab measurements further down is expected: the lab measurement deliberately simulates harsh conditions (CPU and network throttling), while real-user data reflects visitors on a variety of devices and connections. The two measure different questions, they do not contradict each other.',
     labLcpDivergenceTemplate:
       "* The lab LCP median ({lab}) is more than four times the value measured for your real visitors ({field}, rated good). A gap this large goes beyond what the simulated conditions explain: it most often comes from the measurement itself (a late-loading hero image or carousel, a wait on a third-party service). This median therefore does not describe your visitors' experience; rely on the real-user value when deciding.",
     referenceRealUserHeading: 'Field data from the anonymized audit (Chrome UX Report)',
     referenceRealUserNoDataNote:
       'No public Chrome UX Report data was retained in the anonymized audit. This simply means that no real-user comparison is available for this example.',
     referenceRealUserGapNote:
-      'The gap between these values from field data retained in the anonymized audit and the lab measurements further down is expected: the lab measurement deliberately simulates harsh conditions (CPU and network throttling, a single run), while the field data reflects conditions observed in the source audit. The two measurements answer different questions.',
+      'The gap between these values from field data retained in the anonymized audit and the lab measurements further down is expected: the lab measurement deliberately simulates harsh conditions (CPU and network throttling), while the field data reflects conditions observed in the source audit. The two measurements answer different questions.',
     referenceLabLcpDivergenceTemplate:
       '* The lab LCP median ({lab}) is more than four times the value measured in field data retained in the anonymized audit ({field}, rated good). These measurements belong to the anonymized audit and do not describe Hôtel Exemple.',
     inpLabel: 'INP, responsiveness',

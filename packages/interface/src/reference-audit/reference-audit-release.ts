@@ -77,13 +77,16 @@ export async function buildReferenceAuditCandidate(
   if (input.analysis.language !== 'fr') {
     throw new Error('reference audit publication requires the French analysis');
   }
+  const renderedAt = input.renderedAt ?? new Date();
   const showcase = buildReferenceAuditShowcase({
+    // The example is dated the day it is rendered, so its audit date, render
+    // date and legal "in force since" sentence all agree.
+    showcaseDate: new Date(`${renderedAt.toISOString().slice(0, 10)}T00:00:00.000Z`),
     manifest: input.manifest,
     findings: input.findings,
     analysis: input.analysis,
     ...(input.renderInputs === undefined ? {} : { renderInputs: input.renderInputs }),
   });
-  const renderedAt = input.renderedAt ?? new Date();
   const rendererBuild = input.rendererBuild ?? readOdysseusBuildId();
   const renderOptions = { renderedAt, rendererBuild, reportId: 'reference-audit' };
   const html = await renderReferenceAuditHtml(showcase, renderOptions);

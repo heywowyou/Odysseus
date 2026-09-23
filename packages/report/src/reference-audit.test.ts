@@ -92,6 +92,32 @@ describe('reference audit showcase projection', () => {
     ).toThrow(/image or screenshot/u);
   });
 
+  it('keeps frame boundaries, language segments and the requested date in the example', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('fr');
+    const page = findings[0]!.pageUrls[0]!;
+    findings[0] = {
+      ...findings[0]!,
+      elements: [{ pageUrl: page, selector: 'iframe#booking >>> button.pay', snippet: '<button>' }],
+    };
+    manifest.pages = [
+      ...manifest.pages,
+      { ...manifest.pages[0]!, url: 'https://client-hotel.fr/en/page/gallery-photos.html' },
+    ];
+    const showcaseDate = new Date('2026-09-23T00:00:00.000Z');
+
+    const { bundle } = buildReferenceAuditShowcase({ manifest, findings, analysis, showcaseDate });
+
+    expect(bundle.findings[0]!.elements[0]!.selector).toMatch(
+      /^iframe\[data-showcase-frame\] >>> /u,
+    );
+    expect(bundle.manifest.pages.map((entry) => entry.url)).toContain(
+      'https://www.hotel-exemple.fr/en/galerie',
+    );
+    expect(bundle.manifest.finishedAt).toBe(showcaseDate.toISOString());
+  });
+
   it('fails a release when a source identity appears in any publication surface', () => {
     const denylist = ['client-hotel.fr', '123456789', 'direction@client-hotel.fr'];
     expect(

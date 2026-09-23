@@ -66,7 +66,7 @@ export const HOOK_FAMILY_COPY: Record<HookFamily, BilingualCopy> = {
     en: "Protecting your visitors' data carries the most weight among this report's findings.",
   },
   mixed: {
-    fr: 'Ce rapport mélange plusieurs sujets urgents : accessibilité, performance, visibilité et protection des données.',
-    en: 'This report mixes several urgent subjects: accessibility, performance, visibility, and data protection.',
+    fr: 'Plusieurs domaines appellent des corrections : accessibilité, performance, visibilité et protection des données.',
+    en: 'Several areas call for corrections: accessibility, performance, visibility, and data protection.',
   },
 };

@@ -572,7 +572,7 @@ export const fr: ReportStrings = {
     heading: 'Mesures de performance',
     labHeading: 'Mesures de laboratoire (Lighthouse)',
     labIntroTemplate:
-      'Valeurs médianes agrégées sur {pages}. Simulation mobile avec limitation réseau, une seule mesure par page, données de laboratoire (Lighthouse) et non de terrain.',
+      'Valeurs médianes agrégées sur {pages}. Simulation mobile avec limitation réseau ; pour une page mesurée plusieurs fois, la valeur retenue est celle du passage médian. Données de laboratoire (Lighthouse), et non de terrain.',
     pageSingular: 'page',
     pagePlural: 'pages',
     metricColumnLabel: 'Métrique',
@@ -604,14 +604,14 @@ export const fr: ReportStrings = {
     realUserNoDataNote:
       "Aucune donnée Chrome UX Report publique n'existe pour ce site, le plus souvent parce qu'il ne reçoit pas encore assez de trafic Chrome pour atteindre le seuil de publication de Google. Ce n'est ni un succès ni un échec. Cela signifie simplement qu'aucune comparaison avec des utilisateurs réels n'est disponible pour cet audit.",
     realUserGapNote:
-      'Un écart important entre ces valeurs réelles et les mesures de laboratoire présentées plus bas est normal : la mesure de laboratoire simule volontairement des conditions difficiles (limitation CPU et réseau, un seul passage), tandis que les données réelles reflètent des visiteurs sur des appareils et connexions variés. Les deux mesures répondent à des questions différentes, elles ne se contredisent pas.',
+      'Un écart important entre ces valeurs réelles et les mesures de laboratoire présentées plus bas est normal : la mesure de laboratoire simule volontairement des conditions difficiles (limitation CPU et réseau), tandis que les données réelles reflètent des visiteurs sur des appareils et connexions variés. Les deux mesures répondent à des questions différentes, elles ne se contredisent pas.',
     labLcpDivergenceTemplate:
       "* La médiane de laboratoire du LCP ({lab}) dépasse de plus de quatre fois la valeur mesurée chez vos visiteurs réels ({field}, jugée bonne). Un tel écart va au-delà de ce qu'expliquent les conditions simulées : il provient le plus souvent de la mesure elle-même (image principale ou carrousel chargé tardivement, attente d'un service tiers). Cette médiane ne décrit donc pas l'expérience de vos visiteurs . Pour l'interprétation de ce cas, privilégiez la donnée de terrain.",
     referenceRealUserHeading: 'Données de terrain de l’audit anonymisé (Chrome UX Report)',
     referenceRealUserNoDataNote:
       "Aucune donnée Chrome UX Report publique n'a été retenue dans l'audit anonymisé. Cela signifie simplement qu'aucune comparaison avec des utilisateurs réels n'est disponible pour cet exemple.",
     referenceRealUserGapNote:
-      "L'écart entre ces valeurs issues des données de terrain conservées dans l’audit anonymisé et les mesures de laboratoire présentées plus bas est normal : la mesure de laboratoire simule volontairement des conditions difficiles (limitation CPU et réseau, un seul passage), tandis que les données de terrain reflètent les conditions observées dans l’audit source. Les deux mesures répondent à des questions différentes.",
+      "L'écart entre ces valeurs issues des données de terrain conservées dans l’audit anonymisé et les mesures de laboratoire présentées plus bas est normal : la mesure de laboratoire simule volontairement des conditions difficiles (limitation CPU et réseau), tandis que les données de terrain reflètent les conditions observées dans l’audit source. Les deux mesures répondent à des questions différentes.",
     referenceLabLcpDivergenceTemplate:
       "* La médiane de laboratoire du LCP ({lab}) dépasse de plus de quatre fois la valeur mesurée dans les données de terrain de l’audit anonymisé ({field}, jugée bonne). Ces mesures appartiennent à l'audit anonymisé et ne décrivent pas l'expérience d'Hôtel Exemple.",
     inpLabel: 'INP, réactivité',
@@ -962,7 +962,7 @@ export const fr: ReportStrings = {
     synthesisReauditRecommendation:
       'Après la correction des priorités, un ré-audit du même périmètre est recommandé, normalement dans un délai de trois à six mois, une fois les correctifs en ligne.',
     synthesisComparisonWithFieldData:
-      "La comparaison porte uniquement sur ce que l'analyse automatisée recalcule : les constats par gravité, les critères WCAG 2.2 AA en échec et les données réelles du Chrome UX Report.",
+      "La comparaison porte uniquement sur ce que l'analyse automatisée recalcule : les constats par gravité, les critères WCAG 2.2 AA en échec et, lorsqu’elles sont disponibles, les données de terrain du Chrome UX Report.",
     synthesisComparisonWithReferenceFieldData:
       "La comparaison porte uniquement sur ce que l'analyse automatisée recalcule : les constats par gravité, les critères WCAG 2.2 AA en échec et les données de terrain conservées dans l'audit anonymisé.",
     synthesisComparisonWithoutFieldData:

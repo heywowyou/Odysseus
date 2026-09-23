@@ -215,7 +215,11 @@ export function renderStatistics(
   const criticalDriverNote =
     driverTitles.length > 0
       ? `<p class="statistics-note">${escapeHtml(
-          fillTemplate(s.criticalDriverNoteTemplate, { rules: driverTitles.join(', ') }),
+          fillTemplate(s.criticalDriverNoteTemplate, {
+            rules: driverTitles
+              .map((title) => (language === 'fr' ? `« ${title} »` : `“${title}”`))
+              .join(', '),
+          }),
         )}</p>`
       : '';
 

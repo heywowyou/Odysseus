@@ -424,7 +424,9 @@ export function renderCoreWebVitalsTable(
             metrics: CORE_WEB_VITAL_THRESHOLDS.filter((metric) =>
               unstablePagesByMetric.has(metric.key),
             )
-              .map((metric) => metricLabels[metric.key])
+              // The labels carry their own comma ("LCP, contenu principal");
+              // a list of them needs the short name alone.
+              .map((metric) => metricLabels[metric.key].split(',')[0]!)
               .join(', '),
           }),
         )}</p>`;

@@ -36,13 +36,19 @@ const SHOWCASE_ORIGIN = 'https://www.hotel-exemple.fr';
 const SHOWCASE_NAME = 'Hôtel Exemple';
 const SHOWCASE_LEGAL_NAME = 'Hôtel Exemple — identité de démonstration';
 const SHOWCASE_SIREN = '000000000';
-const SHOWCASE_DATE = new Date('2026-01-15T00:00:00.000Z');
+/** The date the example carries when the caller names none. A release passes
+ *  its own render day, so the audit date, the render date and every
+ *  "since"-style sentence agree with each other and with the day it went
+ *  public, without revealing when the source site was scanned. */
+const DEFAULT_SHOWCASE_DATE = new Date('2026-01-15T00:00:00.000Z');
 
 export interface ReferenceAuditSource {
   manifest: AuditManifest;
   findings: readonly Finding[];
   analysis: StoredAnalysis;
   renderInputs?: ReportRenderInputs;
+  /** The date the example is presented as; defaults to a fixed day. */
+  showcaseDate?: Date;
 }
 
 export interface ReferenceAuditShowcaseBundle {
@@ -280,7 +286,17 @@ function buildSourceDenylist(source: ReferenceAuditSource): string[] {
     .sort((a, b) => b.length - a.length);
 }
 
+/** A language segment says nothing about the source business, and keeping
+ *  it lets the example's page list agree with the languages it reports. */
 function pathRole(pathname: string): string {
+  const language = /^\/([a-z]{2})(?:\/|$)/u.exec(pathname.toLocaleLowerCase('fr-FR'))?.[1];
+  const rest = language === undefined ? pathname : pathname.slice(language.length + 1);
+  const role = contentRole(rest);
+  if (language === undefined) return role;
+  return role === '/' ? `/${language}` : `/${language}${role}`;
+}
+
+function contentRole(pathname: string): string {
   const path = pathname.toLocaleLowerCase('fr-FR');
   if (path === '' || path === '/') return '/';
   if (/reservation|réservation|booking|book/iu.test(path)) return '/reservation';
@@ -289,6 +305,15 @@ function pathRole(pathname: string): string {
   if (/mention|legal|imprint/iu.test(path)) return '/mentions-legales';
   if (/restaurant|table|dining/iu.test(path)) return '/restaurant';
   if (/spa|bien-être|wellness/iu.test(path)) return '/bien-etre';
+  if (/galer|photo|gallery/iu.test(path)) return '/galerie';
+  if (/offre|offer|promo|package/iu.test(path)) return '/offres';
+  if (/faq|question/iu.test(path)) return '/questions-frequentes';
+  if (/actualit|news|blog|article/iu.test(path)) return '/actualites';
+  if (/ecolog|engagement|commitment|durable|sustainab/iu.test(path)) return '/engagements';
+  if (/acces|access|plan|location|quartier|neighbo|around|alentour/iu.test(path)) return '/acces';
+  if (/service|concierg|menu|directory/iu.test(path)) return '/services';
+  if (/avis|review|temoign|testimon/iu.test(path)) return '/avis';
+  if (/histo|story|about|propos/iu.test(path)) return '/histoire';
   return '/page';
 }
 
@@ -392,8 +417,8 @@ function sanitizeUnknown(
   );
 }
 
-function syntheticObligationAssessment(): ObligationAssessment {
-  const retrievedAt = new Date(SHOWCASE_DATE);
+function syntheticObligationAssessment(showcaseDate: Date): ObligationAssessment {
+  const retrievedAt = new Date(showcaseDate);
   const profile: OperatorProfile = {
     siren: { value: SHOWCASE_SIREN, source: 'synthetic-showcase', retrievedAt },
     denomination: { value: SHOWCASE_LEGAL_NAME, source: 'synthetic-showcase', retrievedAt },
@@ -431,7 +456,7 @@ function syntheticObligationAssessment(): ObligationAssessment {
   };
 }
 
-function syntheticManualFields(): AuditManualFields {
+function syntheticManualFields(showcaseDate: Date): AuditManualFields {
   return {
     siren: { value: SHOWCASE_SIREN, provenance: 'operator' },
     sirenSourceUrl: { value: `${SHOWCASE_ORIGIN}/mentions-legales`, provenance: 'operator' },
@@ -439,7 +464,7 @@ function syntheticManualFields(): AuditManualFields {
     nomCommercial: { value: SHOWCASE_NAME, provenance: 'operator' },
     sector: { value: 'hospitality', provenance: 'operator' },
     declarationContactEmail: { value: 'contact@hotel-exemple.fr', provenance: 'operator' },
-    updatedAt: new Date(SHOWCASE_DATE),
+    updatedAt: new Date(showcaseDate),
   };
 }
 
@@ -473,10 +498,14 @@ function projectFinding(
   pageUrls: ReadonlyMap<string, string>,
   findingIds: ReadonlyMap<string, string>,
   denylist: readonly string[],
+  showcaseDate: Date,
 ): Finding {
   const elements: FindingElement[] = finding.elements.map((element, index) => ({
     pageUrl: rewriteUrl(element.pageUrl, pageUrls),
-    selector: `[data-showcase-${finding.category}="${index + 1}"]`,
+    // A frame-crossing selector keeps its boundary, so content from an
+    // embedded third-party frame stays attributed to it in the example as
+    // it is in the source report.
+    selector: `${element.selector.includes('>>>') ? 'iframe[data-showcase-frame] >>> ' : ''}[data-showcase-${finding.category}="${index + 1}"]`,
     snippet: `<div data-showcase-element="${finding.category}">Élément de démonstration</div>`,
   }));
   const projected: Finding = {
@@ -489,8 +518,8 @@ function projectFinding(
     description: projectCopy(finding.description, denylist),
     rawEvidence: { showcaseProjection: true, category: finding.category, ruleId: finding.ruleId },
     dedupeKey: `showcase|${finding.source}|${finding.ruleId}|${finding.category}`,
-    firstSeenAt: new Date(SHOWCASE_DATE),
-    lastSeenAt: new Date(SHOWCASE_DATE),
+    firstSeenAt: new Date(showcaseDate),
+    lastSeenAt: new Date(showcaseDate),
   };
   delete projected.helpUrl;
   return projected;
@@ -500,6 +529,7 @@ function projectManifest(
   manifest: AuditManifest,
   pageUrls: ReadonlyMap<string, string>,
   denylist: readonly string[],
+  showcaseDate: Date,
 ): AuditManifest {
   const sanitized = sanitizeUnknown(manifest, denylist, pageUrls) as AuditManifest;
   delete sanitized.prospectId;
@@ -510,8 +540,8 @@ function projectManifest(
     auditId: 'reference-audit',
     scanIntent: 'full-audit',
     siteUrl: `${SHOWCASE_ORIGIN}/`,
-    startedAt: SHOWCASE_DATE.toISOString(),
-    finishedAt: SHOWCASE_DATE.toISOString(),
+    startedAt: showcaseDate.toISOString(),
+    finishedAt: showcaseDate.toISOString(),
     crawl: { ...sanitized.crawl, startUrl: `${SHOWCASE_ORIGIN}/` },
     pages: manifest.pages.map((page, index) => {
       const pageCopy = { ...sanitized.pages[index]! };
@@ -555,6 +585,7 @@ function projectAnalysis(
   analysis: StoredAnalysis,
   findingIds: ReadonlyMap<string, string>,
   denylist: readonly string[],
+  showcaseDate: Date,
 ): StoredAnalysis {
   const projected = sanitizeUnknown(analysis, denylist, new Map()) as StoredAnalysis;
   delete projected.findingsProvenance;
@@ -567,7 +598,7 @@ function projectAnalysis(
     analysisId: `reference-analysis-${analysis.language}`,
     model: 'reference-showcase',
     temperature: 0,
-    generatedAt: new Date(SHOWCASE_DATE),
+    generatedAt: new Date(showcaseDate),
     siteContext: {
       businessType: 'Hôtel indépendant',
       primaryGoal: 'Présenter une expérience de réservation accessible',
@@ -592,7 +623,7 @@ function projectAnalysis(
     quickWins: analysis.quickWins.map((id) => mapFindingId(id, findingIds)),
     executiveSummary: projectCopy(analysis.executiveSummary, denylist),
     notes: projectCopy(analysis.notes, denylist),
-    obligationAssessment: syntheticObligationAssessment(),
+    obligationAssessment: syntheticObligationAssessment(showcaseDate),
   };
 }
 
@@ -608,14 +639,15 @@ export function buildReferenceAuditShowcase(source: ReferenceAuditSource): Refer
       `f${String(index + 1).padStart(3, '0')}`,
     ]),
   );
-  const manifest = projectManifest(source.manifest, pageUrls, denylist);
+  const showcaseDate = source.showcaseDate ?? DEFAULT_SHOWCASE_DATE;
+  const manifest = projectManifest(source.manifest, pageUrls, denylist, showcaseDate);
   const findings = source.findings.map((finding) =>
-    projectFinding(finding, pageUrls, findingIds, denylist),
+    projectFinding(finding, pageUrls, findingIds, denylist, showcaseDate),
   );
-  const analysis = projectAnalysis(source.analysis, findingIds, denylist);
+  const analysis = projectAnalysis(source.analysis, findingIds, denylist, showcaseDate);
   const renderInputs: ReportRenderInputs = {
-    manualFields: syntheticManualFields(),
-    obligationAssessment: syntheticObligationAssessment(),
+    manualFields: syntheticManualFields(showcaseDate),
+    obligationAssessment: syntheticObligationAssessment(showcaseDate),
     ...(source.renderInputs?.preparation === undefined
       ? {}
       : {
@@ -707,7 +739,7 @@ export function renderInputsForReferenceAudit(bundle: ReferenceAuditShowcaseBund
       },
       rendererBuild: 'reference-audit',
       reportTemplateVersion: REPORT_TEMPLATE_VERSION,
-      builtAt: SHOWCASE_DATE.toISOString(),
+      builtAt: bundle.manifest.finishedAt ?? DEFAULT_SHOWCASE_DATE.toISOString(),
     },
     manifest: bundle.manifest,
     findings: bundle.findings,

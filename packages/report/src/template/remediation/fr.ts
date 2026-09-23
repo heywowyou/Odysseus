@@ -906,7 +906,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'not-applicable' },
   },
   'tracker-request-before-consent': {
-    text: "Bloquez le chargement de ces trackers tant que le visiteur n'a pas donné son consentement. Une requête vers ces domaines transmet déjà son adresse IP et la page consultée, même sans dépôt de cookie.",
+    text: "Bloquez le chargement de ces traceurs tant que le visiteur n'a pas donné son consentement. Une requête vers ces domaines transmet déjà son adresse IP et la page consultée, même sans dépôt de cookie.",
     snippet: { kind: 'not-applicable' },
   },
   'unminified-css': {
