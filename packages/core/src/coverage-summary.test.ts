@@ -80,6 +80,17 @@ describe('summarizeAuditCoverage', () => {
     );
   });
 
+  it('makes every page-searching absence rule manual when a page cap left pages out', () => {
+    const limitations = deriveCoverageLimitations(
+      [{ url: 'https://example.com/', status: 'visited', depth: 0 }],
+      { capOmittedPageCount: 121 },
+    );
+    expect(limitations.map((limitation) => limitation.ruleId)).toEqual(
+      expect.arrayContaining(['lcen-mentions-legales-missing', 'accessibility-statement-missing']),
+    );
+    expect(limitations.every((limitation) => limitation.capOmittedPageCount === 121)).toBe(true);
+  });
+
   it('does not treat redirects, real 404s, soft errors or off-site stubs as coverage gaps', () => {
     expect(
       deriveCoverageLimitations([

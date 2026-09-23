@@ -45,6 +45,9 @@ export interface CoverageLimitation {
   ruleId: CoverageLimitationRuleId;
   blockedCandidateCount: number;
   failedCandidateCount: number;
+  /** Pages the crawl left out because of a page cap. Any of them could have
+   *  carried the missing item, so a capped crawl cannot claim absence. */
+  capOmittedPageCount?: number;
   /** At most the first 20 URLs, for an operator's manual follow-up. */
   candidateUrls?: string[];
 }
@@ -101,12 +104,25 @@ function coverageGapKind(
  * rather than trust a copy persisted by an older derivation. */
 export function deriveCoverageLimitations(
   pages: readonly (Pick<ManifestPageEntry, 'url' | 'status' | 'httpStatus'> & { depth?: number })[],
-  options: { homepageUrl?: string } = {},
+  options: { homepageUrl?: string; capOmittedPageCount?: number } = {},
 ): CoverageLimitation[] {
   const gaps = pages.flatMap((page) => {
     const kind = coverageGapKind(page);
     return kind === undefined ? [] : [{ page, kind }];
   });
+  const capOmitted = options.capOmittedPageCount ?? 0;
+  if (capOmitted > 0) {
+    // Any page left out by a cap could have carried the item, so every
+    // absence rule that searches pages becomes a manual check.
+    return COVERAGE_LIMITATION_RULE_IDS.filter(
+      (ruleId) => CANDIDATE_SCOPE_BY_RULE[ruleId].scope !== 'none',
+    ).map((ruleId) => ({
+      ruleId,
+      blockedCandidateCount: gaps.filter(({ kind }) => kind === 'blocked').length,
+      failedCandidateCount: gaps.filter(({ kind }) => kind === 'failed').length,
+      capOmittedPageCount: capOmitted,
+    }));
+  }
   if (gaps.length === 0) return [];
 
   const isHomepage = (page: { url: string; depth?: number }): boolean =>

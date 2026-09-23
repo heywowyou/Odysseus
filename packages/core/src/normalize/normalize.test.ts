@@ -636,6 +636,21 @@ describe('site-level findings anchor to a content-checked page (issue #101)', ()
     expect(findings.filter((finding) => finding.ruleId === 'hreflang-missing')).toHaveLength(0);
   });
 
+  it('suppresses site-wide absence findings when a page cap left pages unread', () => {
+    const findings = normalizeAudit({
+      ...input,
+      coverageLimitations: [
+        {
+          ruleId: 'hreflang-missing',
+          blockedCandidateCount: 0,
+          failedCandidateCount: 0,
+          capOmittedPageCount: 121,
+        },
+      ],
+    });
+    expect(findings.filter((finding) => finding.ruleId === 'hreflang-missing')).toHaveLength(0);
+  });
+
   it('emits no site-level finding at all when nothing was content-checked', () => {
     const findings = normalizeAudit({ ...input, pages: [] });
     const ruleIds = findings.map((f) => f.ruleId);

@@ -90,7 +90,7 @@ function withoutContentReason(page: ManifestPageEntry): PageWithoutContentAnalys
 export function summarizeAuditCoverage(
   manifest: Pick<AuditManifest, 'pages' | 'continuationGuardSummary'> & {
     coverageLimitations?: CoverageLimitation[];
-    crawl?: { homepageUrl?: string };
+    crawl?: { homepageUrl?: string; sitemapCoverage?: { capOmittedPageCount: number } };
   },
 ): AuditCoverageSummary {
   const continuationOmittedUrlCount = manifest.continuationGuardSummary?.totalOmittedUrlCount ?? 0;
@@ -100,6 +100,7 @@ export function summarizeAuditCoverage(
     ...(manifest.crawl?.homepageUrl !== undefined
       ? { homepageUrl: manifest.crawl.homepageUrl }
       : {}),
+    capOmittedPageCount: manifest.crawl?.sitemapCoverage?.capOmittedPageCount ?? 0,
   });
   const base = {
     inventoriedUrlCount: manifest.pages.length,

@@ -143,7 +143,7 @@ export const en: ReportStrings = {
       '{count} additional continuation URLs were omitted by the repetition guard.',
     noindexTemplate: '{count} pages marked noindex, excluded from SEO analysis.',
     coverageLimitationTemplate:
-      '{count} site-wide absence checks need manual verification because some candidate pages were blocked or failed.',
+      '{count} site-wide absence checks need manual verification because some candidate pages could not be analysed (blocked, failed, or beyond the page cap set for this audit).',
     reasonLabels: {
       'discovered-not-scanned': {
         singular: 'discovered but not scanned',

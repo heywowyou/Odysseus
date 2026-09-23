@@ -74,7 +74,7 @@ describe('buildCoverageDisclosure', () => {
     expect(disclosure.details).toEqual([
       'Pages without content analysis: 1 blocked by robots.txt, 1 crawl error.',
       '12 additional continuation URLs were omitted by the repetition guard.',
-      '3 site-wide absence checks need manual verification because some candidate pages were blocked or failed.',
+      '3 site-wide absence checks need manual verification because some candidate pages could not be analysed (blocked, failed, or beyond the page cap set for this audit).',
     ]);
   });
 
@@ -149,7 +149,7 @@ describe('buildCoverageDisclosure', () => {
     // The robots-blocked and crawl-error pages still leave the site-graph
     // absence checks undetermined; that follows from the inventory alone.
     expect(disclosure.details).toEqual([
-      '3 site-wide absence checks need manual verification because some candidate pages were blocked or failed.',
+      '3 site-wide absence checks need manual verification because some candidate pages could not be analysed (blocked, failed, or beyond the page cap set for this audit).',
     ]);
   });
 });

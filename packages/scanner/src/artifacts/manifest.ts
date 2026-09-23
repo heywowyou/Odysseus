@@ -112,6 +112,7 @@ export function buildManifest(input: BuildManifestInput): AuditManifest {
     ...(() => {
       const limitations = deriveCoverageLimitations(input.pages, {
         ...(input.crawl.homepageUrl !== undefined ? { homepageUrl: input.crawl.homepageUrl } : {}),
+        capOmittedPageCount: input.crawl.sitemapCoverage?.capOmittedPageCount ?? 0,
       });
       return limitations.length > 0 ? { coverageLimitations: limitations } : {};
     })(),

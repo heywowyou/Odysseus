@@ -182,6 +182,7 @@ export async function renormalizeAudit(
     ...(manifest.crawl.homepageUrl !== undefined
       ? { homepageUrl: manifest.crawl.homepageUrl }
       : {}),
+    capOmittedPageCount: manifest.crawl.sitemapCoverage?.capOmittedPageCount ?? 0,
   });
   const findings = normalizeAudit({
     translationClusters,

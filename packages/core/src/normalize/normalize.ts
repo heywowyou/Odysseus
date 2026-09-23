@@ -210,6 +210,7 @@ export interface NormalizeAuditInput {
     ruleId: CoverageLimitationRuleId;
     blockedCandidateCount: number;
     failedCandidateCount: number;
+    capOmittedPageCount?: number;
     candidateUrls?: readonly string[];
   }[];
 }
@@ -275,7 +276,10 @@ function hasIncompleteCoverage(
   const limitation = limitations?.find((item) => item.ruleId === ruleId);
   return (
     limitation !== undefined &&
-    limitation.blockedCandidateCount + limitation.failedCandidateCount > 0
+    limitation.blockedCandidateCount +
+      limitation.failedCandidateCount +
+      (limitation.capOmittedPageCount ?? 0) >
+      0
   );
 }
 

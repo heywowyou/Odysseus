@@ -143,6 +143,7 @@ const coverageLimitationSchema = new Schema(
     },
     blockedCandidateCount: { type: Number, required: true },
     failedCandidateCount: { type: Number, required: true },
+    capOmittedPageCount: { type: Number },
     candidateUrls: { type: [String] },
   },
   { _id: false },

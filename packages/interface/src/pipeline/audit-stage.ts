@@ -407,6 +407,7 @@ export async function runAuditStage(
         ...(artifacts.manifest.crawl.homepageUrl !== undefined
           ? { homepageUrl: artifacts.manifest.crawl.homepageUrl }
           : {}),
+        capOmittedPageCount: artifacts.manifest.crawl.sitemapCoverage?.capOmittedPageCount ?? 0,
       }),
       auditId: artifacts.auditId,
       startedAt,

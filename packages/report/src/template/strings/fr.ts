@@ -158,7 +158,7 @@ export const fr: ReportStrings = {
       '{count} URL de continuation supplémentaires ont été omises par le garde-fou de répétition.',
     noindexTemplate: '{count} pages marquées noindex, exclues de l’analyse SEO.',
     coverageLimitationTemplate:
-      '{count} contrôles d’absence à l’échelle du site doivent être vérifiés manuellement, car certaines pages candidates ont été bloquées ou ont échoué.',
+      '{count} contrôles d’absence à l’échelle du site doivent être vérifiés manuellement, car certaines pages candidates n’ont pas pu être analysées (page bloquée, en échec, ou au-delà du plafond de pages fixé pour cette analyse).',
     reasonLabels: {
       'discovered-not-scanned': {
         singular: 'découverte mais non analysée',
