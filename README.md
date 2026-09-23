@@ -109,11 +109,14 @@ pnpm run check         # docs, formatting, lint, typecheck, architecture and dea
 ## Running the dashboard
 
 ```bash
-pnpm run serve         # tsx, no build step
-pnpm run serve:full    # builds packages/cli's dependency graph first, then serves
+pnpm --filter @odysseus/interface run build # rebuild dashboard assets
+pnpm run serve
+pnpm run serve:full                          # builds CLI dependencies, including the interface, then serves
 ```
 
-Starts the job queue and the private single-user dashboard described in
+`serve` serves the existing dashboard build in `packages/interface/dist/public`; it
+does not rebuild those assets. Starts the job queue and the private single-user
+dashboard described in
 `CLAUDE.md`'s package list (`packages/interface`).
 
 ## Learn more

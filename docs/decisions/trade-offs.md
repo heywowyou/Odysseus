@@ -2918,10 +2918,10 @@ refuses to start. The session routes are registered either way, so a
 dev-mode login attempt answers 400 `auth-not-configured` instead of a 404,
 and the guard itself is simply not installed. Login failures are rate
 limited per client IP with an exponential lockout capped at 15 minutes; the
-client IP is the first `X-Forwarded-For` entry when present, which is safe
-because the app port is never published and only Caddy's 80 and 443 are
-exposed. The origin check is unchanged and is what the proxy deployment was
-verified against: Caddy passes Host through, the app compares Origin to
+client IP is the last `X-Forwarded-For` entry when present, as appended by
+Caddy (`clientIpFor` in `packages/interface/src/auth/session-routes.ts`); the
+app port is not published and only Caddy's 80 and 443 are exposed. The origin
+check is unchanged and is what the proxy deployment was verified against: Caddy passes Host through, the app compares Origin to
 Host, and the public site's host fails the match, which is the desired
 same-site cross-origin protection.
 

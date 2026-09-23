@@ -26,7 +26,7 @@ Success means (brief section 12): three paid full audits within the first eight 
 
 ## Positioning
 
-The offer is positioned as a diagnostic, not an audit RGAA: the automated first step a business runs before commissioning a full audit RGAA, not a substitute for one. This limit is named first, on the offer page, in the proposal, and in the report, because stating the limit first removes the comparison instead of losing it. The full audit does not produce an official taux de conformité and cannot serve as the basis for a déclaration d'accessibilité. It is priced as the earlier product: EUR 1,600 HT flat, published.
+The offer is positioned as a diagnostic, not an audit RGAA: the automated first step a business runs before commissioning a full audit RGAA, not a substitute for one. This limit is named first, on the offer page, in the proposal, and in the report, because stating the limit first removes the comparison instead of losing it. The full audit does not produce an official taux de conformité and cannot serve as the basis for a déclaration d'accessibilité. It is priced as the earlier product: EUR 990 HT flat, published (trade-off 96).
 
 The mechanism a neighboring product could not truthfully copy: deterministic scanner findings with render-diff evidence (what the crawler sees versus what a person sees), where every finding names a page and a selector so the client's own developer can verify it in seconds. Reports survive fact-checking. What the diagnostic does that an audit RGAA does not: whole-site inventory with content-sensitive analysis on every successfully crawled page rather than a template sample, render-diff evidence, search and LLM visibility findings alongside accessibility ones, and commercial framing for a non-technical reader.
 
@@ -89,7 +89,7 @@ Resolved since the 2026-09-02 draft (operator-confirmed 2026-09-11 via impeccabl
 - No testimonials, case studies, customer logos, certifications, or press exist yet. The first public case study site is not chosen, and the published benchmark study (milestone 10) does not exist yet. Future design work must not fabricate any of these.
 - Real scan evidence exists on disk under `artifacts/` for audited sites (including haaitza.com, lacoorniche.com, www.airelles.com, almamia.fr, sas-fernande.fr). This is verification material, not client testimonials, and is not publishable as social proof.
 - Citable statistics: `docs/research/business-impact-statistics.md` marks which sources are safe to cite; only those rows are encoded, with verbatim bilingual citation sentences, in `packages/core/src/reference-stats/stats.ts`. Nothing outside those rows may be cited.
-- Published price: EUR 1,600 HT, rendered on the offer page from `ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT` in `packages/core/src/offer/pricing.ts`.
+- Published price: EUR 990 HT, rendered on the offer page from `ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT` in `packages/core/src/offer/pricing.ts` (trade-off 96).
 
 ## Product Principles
 
