@@ -161,7 +161,7 @@ describe('callOpenAiForStructure', () => {
     expect(result.output).toEqual(validStructureOutput);
     expect(completeMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: 'gpt-5.6-luna',
+        model: 'gpt-6-luna',
         temperature: 1,
         reasoning_effort: 'xhigh',
         max_completion_tokens: 64000,
@@ -248,7 +248,7 @@ describe('callOpenAiForWriting', () => {
     await callOpenAiForWriting(writingInput, false);
     expect(completeMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: 'gpt-5.6-luna',
+        model: 'gpt-6-luna',
         temperature: WRITING_OPENAI_TEMPERATURE,
         reasoning_effort: 'xhigh',
       }),

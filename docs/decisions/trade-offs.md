@@ -5359,6 +5359,13 @@ at the promotional $4/$20 price, $5/$30 after it ends); keeping Mini (cheaper
 by $0.06 per report but visibly generic). Prices are those published for
 2026-09; a repricing or model repoint re-runs this saved-audit comparison.
 
+Amended 2026-09-23 (operator decision): the model is repointed to
+`gpt-6-luna`, released 2026-09-22 at $0.10/$0.50 per million tokens, half
+Luna 5.6's input price and under half its output price. Reasoning stays at
+`xhigh` and temperature at 1 so the model is the only variable. The
+saved-audit comparison above is owed before the first paid report on the new
+model; record its tokens, cost, duration and the operator's reading here.
+
 
 
 ### 103. Evidence-quality defects narrow report claims instead of globally approving or rejecting the audit (build decision, 2026-09-19, Plan 068)

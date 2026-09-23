@@ -14,16 +14,20 @@ export const MAX_RETRIES = 2;
 /** Model for every pass of the report writing path. GPT-5.6 Luna replaced
  *  gpt-5.4-mini on 2026-09-18 (operator decision): at $0.20/$1.20 per
  *  million tokens it is cheaper than the Mini it replaces even with
- *  reasoning on, which the Mini never had. Persisted analyses record the
- *  requested model, so a model change is visible in provenance. */
-export const OPENAI_MODEL = 'gpt-5.6-luna';
+ *  reasoning on, which the Mini never had. GPT-6 Luna replaced it on
+ *  2026-09-23 (operator decision): same tier, newer, and cheaper again at
+ *  $0.10/$0.50. Persisted analyses record the requested model, so a model
+ *  change is visible in provenance. */
+export const OPENAI_MODEL = 'gpt-6-luna';
 
-/** Reasoning effort for every production pass. 'xhigh' is the highest
- *  value the API accepts for GPT-5.6 (it rejects 'max'), chosen because
- *  the whole report still costs well under a dollar at Luna's price. */
+/** Reasoning effort for every production pass. 'xhigh' was the highest
+ *  value the API accepted for GPT-5.6 (it rejected 'max'). GPT-6 Luna also
+ *  accepts 'max'; 'xhigh' is kept so the model switch is the only change
+ *  between the reports before and after it. The whole report still costs
+ *  well under a dollar at Luna's price. */
 export const OPENAI_REASONING_EFFORT = 'xhigh' as const;
 
-/** With reasoning on, GPT-5.6 accepts only the default temperature (1)
+/** With reasoning on, GPT-5.6 accepted only the default temperature (1)
  *  and rejects 0.2 with a 400, so 1 is the value actually sent and
  *  persisted. The original rationale for 0.2 follows.
  *
@@ -67,12 +71,12 @@ export const WRITING_OPENAI_TEMPERATURE = 1.0;
  *  non-reasoning provider, and client.ts explicitly checks for a truncated
  *  (finish_reason: 'length') response as a defensive measure against this
  *  budget ever being exceeded again. Raised to 64000 with reasoning on:
- *  GPT-5.6 counts hidden reasoning tokens against this same budget. */
+ *  Reasoning models count hidden reasoning tokens against this same budget. */
 export const MAX_OUTPUT_TOKENS = 64000;
 
 /** Separate budget for the Plan 070 grounded critic (analyze-critic.ts): it
  *  emits at most MAX_WRITING_CRITIC_ISSUES short issues, never prose, but
- *  GPT-5.6 counts hidden reasoning tokens against this same budget. Kept as
+ *  Reasoning models count hidden reasoning tokens against this same budget. Kept as
  *  its own constant so tuning the critic never silently retunes a
  *  production pass. */
 export const WRITING_CRITIC_MAX_OUTPUT_TOKENS = 64000;

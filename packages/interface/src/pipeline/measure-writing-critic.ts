@@ -42,9 +42,9 @@ import {
 } from '@odysseus/llm';
 import { buildStageWritingInput } from './analysis-stage.js';
 
-/** GPT-5.6 Luna list price, USD per million tokens. */
-const INPUT_USD_PER_MILLION = 0.2;
-const OUTPUT_USD_PER_MILLION = 1.2;
+/** GPT-6 Luna list price, USD per million tokens. */
+const INPUT_USD_PER_MILLION = 0.1;
+const OUTPUT_USD_PER_MILLION = 0.5;
 
 interface PassMeasure {
   pass: string;
