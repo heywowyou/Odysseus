@@ -109,6 +109,28 @@ export function computeCrawlEtaMs(input: CrawlEtaInput): number | undefined {
   return remaining * perPageCostMs;
 }
 
+export interface PacedStageEtaInput {
+  remaining: number;
+  slotsPerPage: number;
+  currentDelayMs: number;
+  workEstimateMs: number | undefined;
+  concurrency: number;
+}
+
+/** A stage ETA is bounded below by both host pacing and observed page work. */
+export function computePacedStageEtaMs(input: PacedStageEtaInput): number {
+  const remaining = Math.max(0, input.remaining);
+  if (remaining === 0) return 0;
+  const concurrency = Math.max(1, Math.trunc(input.concurrency));
+  const pacedFloor =
+    remaining * Math.max(0, input.slotsPerPage) * Math.max(0, input.currentDelayMs);
+  const workFloor =
+    input.workEstimateMs === undefined
+      ? 0
+      : (remaining * Math.max(0, input.workEstimateMs)) / concurrency;
+  return Math.max(pacedFloor, workFloor);
+}
+
 export interface StageEtaInput {
   completed: number;
   target: number;

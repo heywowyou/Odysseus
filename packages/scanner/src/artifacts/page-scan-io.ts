@@ -125,6 +125,12 @@ export function buildScanJson(
       : {}),
     ...(scanResult.mobileSurface !== undefined ? { mobileSurface: scanResult.mobileSurface } : {}),
     ...(scanResult.surfaces !== undefined ? { surfaces: scanResult.surfaces } : {}),
+    ...(scanResult.surfaceSkipped !== undefined
+      ? { surfaceSkipped: scanResult.surfaceSkipped }
+      : {}),
+    ...(scanResult.plannedOutOfScopeSurfaceIds !== undefined
+      ? { plannedOutOfScopeSurfaceIds: scanResult.plannedOutOfScopeSurfaceIds }
+      : {}),
     ...(scanResult.surfaceLinks !== undefined ? { surfaceLinks: scanResult.surfaceLinks } : {}),
     ...(scanResult.surfaceLimitations !== undefined
       ? { surfaceLimitations: scanResult.surfaceLimitations }

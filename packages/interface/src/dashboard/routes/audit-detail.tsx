@@ -204,7 +204,12 @@ export function AuditDetailPage(): JSX.Element {
   }
 
   const publisherIdentificationFinding = findPublisherIdentificationFinding(data.findings);
-  const pushbackSummary = summarizePushback(data.pushbackEvents ?? [], data.crawlDelayMs ?? 0);
+  const pushbackSummary = summarizePushback(
+    data.pushbackEvents ?? [],
+    data.crawlDelayMs ?? 0,
+    0,
+    data.pacingRecoveryEvents ?? [],
+  );
   const prospect = data.prospect ?? null;
   const scanIntent = data.scanIntent ?? 'full-audit';
 

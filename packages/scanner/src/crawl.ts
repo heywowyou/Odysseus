@@ -5,7 +5,12 @@ import type {
   SitemapCoverageSummary,
   SitemapMode,
 } from '@odysseus/core';
-import { isChallengeTitle } from '@odysseus/core';
+import {
+  auditedHostAliases,
+  classifyDocumentWall,
+  classifyHostResponse,
+  isChallengeTitle,
+} from '@odysseus/core';
 import {
   getCrawlDelayMs,
   getCrawlerUserAgent,
@@ -40,6 +45,7 @@ import {
 } from './robots.js';
 import { findMentionsLegalesUrl } from './checks/mentions-legales.js';
 import { analyzeRawDocument } from './raw-document-signals.js';
+import { extractTextFromHtml } from './extract-text.js';
 import { isSocialPlatformHost } from './social-hosts.js';
 import { checkSitemap, type SitemapCheckResult } from './checks/sitemap.js';
 import {
@@ -405,15 +411,9 @@ export function restoreCrawlFrontierLoopState(
   };
 }
 
-const TRANSIENT_PUSHBACK_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504, 507, 508, 509]);
-
-function isTransientPushbackStatus(status: number | undefined): boolean {
-  return status !== undefined && TRANSIENT_PUSHBACK_STATUSES.has(status);
-}
-
 /** Playwright's navigation timeout, recognised by its error name so a
  *  wording change in the message does not silently disable the retry. */
-export function isNavigationTimeout(error: unknown): boolean {
+function isNavigationTimeout(error: unknown): boolean {
   return error instanceof Error && error.name === 'TimeoutError';
 }
 
@@ -1018,30 +1018,10 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
           // answers with that site's status and body. Its 429 or challenge
           // says nothing about the audited host, so it must neither slow
           // this host's scheduler nor buy a retry.
-          const landedOffSite = (): boolean => {
-            const landedHost = safeHostname(browserPage.url());
-            return (
-              landedHost !== null &&
-              (!isSameSiteHostname(new URL(item.url).hostname, landedHost) ||
-                isSocialPlatformHost(landedHost))
-            );
-          };
-          const notePushback = (): void => {
-            if (response === null || response === undefined) return;
-            if (landedOffSite()) return;
-            const retryAfter = retryAfterMs(response.headers());
-            if (!isTransientPushbackStatus(httpStatus) && retryAfter === undefined) return;
-            options.scheduler?.noteRateLimited({
-              pageUrl: item.url,
-              fetcher: 'crawl',
-              kind: httpStatus === 429 ? 'rate-limit' : 'origin-transient',
-              ...(httpStatus !== undefined ? { status: httpStatus } : {}),
-              ...(retryAfter !== undefined ? { retryAfterMs: retryAfter } : {}),
-            });
-          };
-          notePushback();
-          const detectChallenge = async (): Promise<readonly string[]> => {
-            if (landedOffSite()) return [];
+          const requestedHost = new URL(item.url).hostname;
+          const hostAliases = auditedHostAliases(requestedHost);
+          let consecutiveOriginServerErrors = 0;
+          const observeResponse = async () => {
             const html =
               typeof browserPage.content === 'function'
                 ? await browserPage.content().catch(() => '')
@@ -1051,37 +1031,73 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
               typeof browserPage.title === 'function'
                 ? await browserPage.title().catch(() => '')
                 : '';
-            if (isChallengeTitle(title)) return [...markers, 'challenge-title'];
-            return markers;
+            const status = httpStatus;
+            const retryAfter =
+              response === null || response === undefined
+                ? undefined
+                : retryAfterMs(response.headers());
+            const landedHost = safeHostname(browserPage.url()) ?? requestedHost;
+            const responseInput = {
+              requestedHost,
+              landedHost,
+              auditedHostAliases: hostAliases,
+              ...(status !== undefined ? { status } : {}),
+              ...(retryAfter !== undefined ? { retryAfterMs: retryAfter } : {}),
+            };
+            const documentInput = {
+              ...(status !== undefined ? { status } : {}),
+              title,
+              markupLength: html.length,
+              visibleTextLength: extractTextFromHtml(html).length,
+              markers,
+            };
+            let responseClassification;
+            let documentClassification;
+            if (options.scheduler !== undefined) {
+              const observedResponse = options.scheduler.observeHostDocument({
+                response: responseInput,
+                document: documentInput,
+                signal: { pageUrl: item.url, fetcher: 'crawl' },
+              });
+              responseClassification = observedResponse.response;
+              documentClassification = observedResponse.document;
+            } else {
+              const hostCheck = classifyHostResponse({
+                ...responseInput,
+                consecutiveOriginServerErrors: 0,
+              });
+              if (hostCheck.auditedHost) {
+                consecutiveOriginServerErrors =
+                  (status ?? 0) >= 500 ? consecutiveOriginServerErrors + 1 : 0;
+              }
+              responseClassification = classifyHostResponse({
+                ...responseInput,
+                consecutiveOriginServerErrors,
+              });
+              documentClassification = classifyDocumentWall(documentInput);
+            }
+            const auditedDocumentWall =
+              responseClassification.auditedHost &&
+              documentClassification.classification === 'wall';
+            return {
+              responseClassification,
+              documentClassification,
+              auditedDocumentWall,
+              markers:
+                auditedDocumentWall && isChallengeTitle(title)
+                  ? [...markers, 'challenge-title']
+                  : markers,
+            };
           };
-          let challengeMarkers = await detectChallenge();
-          if (challengeMarkers.length > 0) {
-            options.scheduler?.noteRateLimited({
-              pageUrl: item.url,
-              fetcher: 'crawl',
-              kind: 'bot-challenge',
-              ...(httpStatus !== undefined ? { status: httpStatus } : {}),
-            });
-          }
-          // A single later retry is enough to distinguish a transient host
-          // pushback from a stable site error. It is deliberately paced by
-          // the same scheduler and never increases concurrency.
-          if (
-            (isTransientPushbackStatus(httpStatus) && !landedOffSite()) ||
-            challengeMarkers.length > 0
-          ) {
+          let observed = await observeResponse();
+          let challengeMarkers = observed.markers;
+          // One paced retry distinguishes a transient audited-host refusal
+          // from a stable page error. Off-site responses never earn a retry.
+          if (observed.responseClassification.disposition === 'pushback') {
             response = await navigate();
             httpStatus = response?.status();
-            notePushback();
-            challengeMarkers = await detectChallenge();
-            if (challengeMarkers.length > 0) {
-              options.scheduler?.noteRateLimited({
-                pageUrl: item.url,
-                fetcher: 'crawl',
-                kind: 'bot-challenge',
-                ...(httpStatus !== undefined ? { status: httpStatus } : {}),
-              });
-            }
+            observed = await observeResponse();
+            challengeMarkers = observed.markers;
           }
           const contentType = response?.headers()['content-type'];
 
@@ -1095,7 +1111,6 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
           // as a broken internal link even though the redirect itself
           // worked exactly as the site intended.
           const finalHost = safeHostname(browserPage.url());
-          const requestedHost = new URL(item.url).hostname;
           const isOffSite = finalHost !== null && !isSameSiteHostname(requestedHost, finalHost);
           const landedUrl = browserPage.url();
           const landedIdentity = normalizePageIdentityUrl(landedUrl);
@@ -1183,14 +1198,14 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
               ...(httpStatus !== undefined ? { httpStatus } : {}),
               ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
             });
-          } else if (challengeMarkers.length > 0) {
+          } else if (observed.auditedDocumentWall) {
             recordPage({
               url: item.url,
               depth: item.depth,
               status: 'blocked',
               discoveryMethod,
               ...(httpStatus !== undefined ? { httpStatus } : {}),
-              error: `bot challenge: ${challengeMarkers.join(', ')}`,
+              error: `document wall: ${challengeMarkers.join(', ') || observed.documentClassification.reason}`,
               ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
             });
           } else if (httpStatus !== undefined && (httpStatus < 200 || httpStatus >= 300)) {
@@ -1205,7 +1220,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
             recordPage({
               url: item.url,
               depth: item.depth,
-              status: isTransientPushbackStatus(httpStatus) ? 'blocked' : 'http-error-status',
+              status: 'http-error-status',
               discoveryMethod,
               ...(httpStatus !== undefined ? { httpStatus } : {}),
               ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),

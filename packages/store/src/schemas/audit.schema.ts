@@ -11,6 +11,7 @@
 import { Schema, type Connection, type Model } from 'mongoose';
 import type {
   AuditManifest,
+  AuditPacingRecoveryEvent,
   AuditManualFields,
   FindingsDeltaCoverage,
   GradeOverride,
@@ -24,6 +25,8 @@ export interface AuditDocumentFields extends Omit<
 > {
   startedAt: Date;
   finishedAt: Date;
+  /** Explicitly mirrors the new optional manifest timeline for Mongoose. */
+  pacingRecoveryEvents?: AuditPacingRecoveryEvent[];
   renormalizedAt?: Date;
   /** Manual-input-layer milestone: operator-supplied pre-report
    *  enrichment, DB-only (not part of manifest.json - see
@@ -126,6 +129,14 @@ const pushbackEventSchema = new Schema(
   { _id: false },
 );
 
+const pacingRecoveryEventSchema = new Schema(
+  {
+    delayMs: { type: Number, required: true },
+    occurredAt: { type: String, required: true },
+  },
+  { _id: false },
+);
+
 const coverageLimitationSchema = new Schema(
   {
     ruleId: {
@@ -201,7 +212,7 @@ const auditPassCoverageSchema = new Schema(
 
 const pageAnalysisCoverageSchema = new Schema(
   {
-    plannerVersion: { type: String, required: true, enum: ['v1', 'v2'] },
+    plannerVersion: { type: String, required: true, enum: ['v1', 'v2', 'v3'] },
     role: {
       type: String,
       required: true,
@@ -210,6 +221,23 @@ const pageAnalysisCoverageSchema = new Schema(
     confidence: { type: String, required: true, enum: ['high', 'fallback'] },
     templateFamilyId: { type: String },
     reasonCodes: { type: [String], required: true },
+    surfaceSample: {
+      _id: false,
+      type: {
+        selected: { type: Boolean, required: true },
+        reason: {
+          type: String,
+          required: true,
+          enum: [
+            'homepage',
+            'mandatory',
+            'family-representative',
+            'unique-family',
+            'family-sampled',
+          ],
+        },
+      },
+    },
     passes: {
       _id: false,
       type: {
@@ -633,6 +661,7 @@ export const auditSchema = new Schema<AuditDocument>(
     config: { type: configSnapshotSchema, required: true },
     crawl: { type: crawlStatsSchema, required: true },
     pushbackEvents: { type: [pushbackEventSchema] },
+    pacingRecoveryEvents: { type: [pacingRecoveryEventSchema] },
     coverageLimitations: { type: [coverageLimitationSchema] },
     pages: { type: [manifestPageEntrySchema], default: [] },
     continuationGuardSummary: { type: continuationGuardSummarySchema },

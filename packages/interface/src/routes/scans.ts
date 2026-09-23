@@ -14,6 +14,7 @@ import {
   checkScanLaunch,
   findProspectsByDomain,
   getAudit,
+  getLatestFullAuditEstimateSource,
   getProspectHub,
   getProspectNames,
   findAuditsWithUnreadyReports,
@@ -28,7 +29,7 @@ import {
   type JobOptionsSnapshot,
   registrableDomainForScan,
 } from '@odysseus/store';
-import { getArtifactsRoot } from '@odysseus/scanner';
+import { getArtifactsRoot, getCrawlDelayMs } from '@odysseus/scanner';
 import type { Router } from '../router.js';
 import {
   AuditArtifactDeletionError,
@@ -345,6 +346,36 @@ function recheckCapability(
  *  is called after every successful create so a submitted scan starts
  *  promptly rather than waiting out the queue's poll interval. */
 export function registerScanRoutes(router: Router, connection: Connection, queue: JobQueue): void {
+  router.get('/api/scans/estimate', async ({ res, query }) => {
+    const rawUrl = query.get('url');
+    if (!isHttpUrlWithoutCredentials(rawUrl) || registrableDomainForScan(rawUrl) === null) {
+      sendError(res, 400, 'url must be an absolute http(s) URL without embedded credentials');
+      return;
+    }
+    const source = await getLatestFullAuditEstimateSource(connection, new URL(rawUrl).hostname);
+    if (source === undefined) {
+      sendJson(res, 200, { available: false });
+      return;
+    }
+    const requestedDelayMs = Number(query.get('delayMs'));
+    const delayMs =
+      Number.isFinite(requestedDelayMs) && requestedDelayMs > 0
+        ? Math.max(requestedDelayMs, getCrawlDelayMs())
+        : getCrawlDelayMs();
+    // Older full audits predate persisted surface-selection coverage. Keep
+    // the estimate available with a rough two-in-five sample assumption.
+    const sampledSurfaceShare =
+      source.sampledSurfacePageCount > 0 ? source.sampledSurfacePageCount / source.pageCount : 0.4;
+    const lighthouseShare =
+      source.lighthousePageCount > 0 ? source.lighthousePageCount / source.pageCount : 0.4;
+    const plannedSlotsPerPage = 3 + 2 * sampledSurfaceShare + lighthouseShare;
+    sendJson(res, 200, {
+      available: true,
+      pageCount: source.pageCount,
+      estimatedMs: Math.round(source.pageCount * plannedSlotsPerPage * delayMs),
+    });
+  });
+
   router.post('/api/scans', async ({ req, res }) => {
     const body = await readJsonBodyOrRespond(req, res);
     if (body === jsonBodyNotRead) return;

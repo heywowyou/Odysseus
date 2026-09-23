@@ -10,6 +10,7 @@ export interface NewScanStrings {
   urlPlaceholder: string;
   /** Issue #403: `{url}` is the completed address of a bare domain. */
   urlNormalizedHint: string;
+  estimateHint: string;
   prospectLabel: string;
   noProspectOption: string;
   prospectMatchHint: string;
@@ -82,6 +83,7 @@ export const newScan = {
     urlLabel: 'Adresse du site',
     urlPlaceholder: 'https://exemple.fr',
     urlNormalizedHint: 'Adresse analysée : {url}',
+    estimateHint: 'Durée estimée d’après le dernier scan complet : environ {hours} h.',
     prospectLabel: 'Rattacher à un prospect (facultatif)',
     noProspectOption: 'Ne pas rattacher',
     prospectMatchHint: 'Le domaine est proposé automatiquement quand un prospect correspond.',
@@ -141,6 +143,7 @@ export const newScan = {
     urlLabel: 'Site URL',
     urlPlaceholder: 'https://example.co.uk',
     urlNormalizedHint: 'Address to scan: {url}',
+    estimateHint: 'Estimated from the latest full scan: about {hours} h.',
     prospectLabel: 'Attach to a prospect (optional)',
     noProspectOption: 'Do not attach',
     prospectMatchHint: 'A matching prospect is suggested automatically for this domain.',

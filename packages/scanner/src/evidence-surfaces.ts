@@ -15,6 +15,9 @@ export type SurfaceInteractionState =
 
 export type SurfaceReadinessOutcome = 'ready' | 'timeout' | 'unstable' | 'blocked';
 
+/** A deterministic plan omission, never a failed surface capability. */
+export type SurfaceSkipReason = 'family-sampled';
+
 /** How far the bounded hydration sweep got on this surface (section 9).
  *  `not-run` is the honest value for a sweep that was never asked for. */
 export type HydrationProgress = 'not-run' | 'stable' | 'bounded-expansion' | 'failed';

@@ -11,7 +11,7 @@
 import { MAX_SNIPPET_LENGTH } from '../types/findings.js';
 import { severityFromAxe } from './severity.js';
 import { wcagCriteriaFromAxeTags } from './wcag-tags.js';
-import { isChallengeMarker } from './normalize-renderdiff.js';
+import { classifyDocumentWall, extractHostSignalMarkers } from '../acquisition/host-signal.js';
 import type { FindingCandidate } from './candidate.js';
 
 /** axe's real target type allows shadow-DOM-piercing nested arrays
@@ -258,18 +258,25 @@ function stringField(value: unknown, key: string): string | undefined {
   return typeof field === 'string' || typeof field === 'number' ? String(field) : undefined;
 }
 
-function isChallengeEvidence(...values: unknown[]): boolean {
-  return values.some((value) => {
-    if (typeof value === 'string') return isChallengeMarker(value);
-    if (value === undefined || value === null) return false;
-    try {
-      return isChallengeMarker(JSON.stringify(value));
-    } catch {
-      return false;
-    }
-  });
-}
+function isVendorCaptchaElement(html: string): boolean {
+  const markers = extractHostSignalMarkers(html);
+  const hasVendorCaptcha =
+    markers.includes('datadome-challenge') || markers.includes('o2switch-challenge');
+  if (!hasVendorCaptcha) return false;
 
+  const visibleTextLength = html
+    .replace(/<[^>]*>/gu, ' ')
+    .replace(/&(?:#\d+|#x[\da-f]+|[a-z]+);/giu, 'x')
+    .replace(/\s+/gu, ' ')
+    .trim().length;
+  return (
+    classifyDocumentWall({
+      markupLength: html.length,
+      visibleTextLength,
+      markers,
+    }).classification === 'wall'
+  );
+}
 function isChallengeFrameSelector(
   selector: string,
   options: AxeExtractionOptions | undefined,
@@ -416,7 +423,7 @@ export function extractAxeCandidates(
     for (const node of violation.nodes) {
       const selector = flattenAxeTarget(node.target);
       if (
-        isChallengeEvidence(selector, node.html, node.failureSummary, node.data, violation.data) ||
+        isVendorCaptchaElement(node.html) ||
         isChallengeFrameSelector(selector, options) ||
         (violation.id === 'color-contrast' && isInactiveComponent(node.html))
       ) {

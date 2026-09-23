@@ -435,6 +435,16 @@ describe('compareDeltaObservationAcrossRuns', () => {
     expect(comparability).toEqual({ kind: 'newly-observable', reason: 'check-absent-in-baseline' });
   });
 
+  it('marks a deterministically sampled-out surface as out of scope by plan', () => {
+    expect(
+      compareDeltaObservationAcrossRuns(
+        coverage({ surfaces: ['baseline-desktop', MOBILE] }),
+        coverage({ plannedOutOfScopeSurfaces: [MOBILE] }),
+        { checkId: 'axe', surfaceId: MOBILE },
+      ),
+    ).toEqual({ kind: 'not-comparable', reason: 'surface-planned-out-of-scope' });
+  });
+
   it('answers the surface question alone when one side has no check detail', () => {
     const legacy = buildLegacyFindingsDeltaCoverage();
     expect(

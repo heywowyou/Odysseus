@@ -51,7 +51,6 @@ import {
 import {
   extractRenderDiffCandidates,
   isBlockedRender,
-  isChallengeTitle,
   unusableRawFetches,
 } from './normalize-renderdiff.js';
 import { extractCustomCandidates, type MentionsLegalesCheckInput } from './normalize-custom.js';
@@ -256,10 +255,7 @@ function excludedContentUrls(input: NormalizeAuditInput): ReadonlySet<string> {
     }
   }
   for (const page of input.pages) {
-    if (
-      (page.renderDiff !== undefined && isBlockedRender(page.renderDiff)) ||
-      isChallengeTitle(page.headMetadata?.title)
-    ) {
+    if (isBlockedRender(page.renderDiff, page.headMetadata?.title)) {
       add(page.url);
     }
   }
@@ -342,6 +338,9 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
         pageUrl: page.url,
         httpStatus: page.renderDiff?.httpStatus,
         rawDocument: page.renderDiff?.rawDocument,
+        ...(page.renderDiff?.rawTextLength !== undefined
+          ? { rawTextLength: page.renderDiff.rawTextLength }
+          : {}),
       })),
   );
 

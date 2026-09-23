@@ -124,6 +124,8 @@ export interface EvidencePageObservation {
    *  predated the surface contract or the surface could not run, which the
    *  page's own surfaceLimitations disclose. */
   surfaces?: readonly ScanSurface[];
+  /** Optional surfaces deliberately omitted by the persisted family sample. */
+  plannedOutOfScopeSurfaceIds?: readonly string[];
   /** Plan 059 step 11: the page's bounded hydration sweep, when one ran. */
   hydration?: HydrationSweepRecord;
   /** Plan 059 step 26: the page's persisted scheduling-side audit profile,
@@ -1370,6 +1372,9 @@ export function assembleAuditEvidenceGraph(input: AuditEvidenceGraphInput): Audi
     checks: checkObservability,
     surfaces: [
       ...new Set(['baseline-desktop', ...checkObservability.flatMap((check) => check.surfaces)]),
+    ].sort((left, right) => left.localeCompare(right)),
+    plannedOutOfScopeSurfaces: [
+      ...new Set(input.pages.flatMap((page) => page.plannedOutOfScopeSurfaceIds ?? [])),
     ].sort((left, right) => left.localeCompare(right)),
     observations: deltaObservations,
   };

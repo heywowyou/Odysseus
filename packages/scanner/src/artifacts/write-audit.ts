@@ -29,10 +29,10 @@ import {
   attributableCoreWebVitals,
   extractLighthouseExcludedCategoryScores,
   isBlockedRender,
-  isChallengeTitle,
   type AuditConfigSnapshot,
   type AuditManifest,
   type AuditManifestSiteSignals,
+  type AuditPacingRecoveryEvent,
   type CruxFieldDataResult,
   type ManifestKind,
   type ManifestPageEntry,
@@ -67,6 +67,7 @@ export interface WriteAuditArtifactsInput {
       status?: number;
       retryAfterMs?: number;
     }[];
+    pacingRecoveryEvents?: readonly AuditPacingRecoveryEvent[];
   };
   browser: Browser;
   startedAt: Date;
@@ -599,7 +600,7 @@ export async function writeAuditArtifacts(
       });
     const blockedPage =
       redirectTargetUrl === undefined &&
-      (isBlockedRender(scanJson.renderDiff) || isChallengeTitle(scanJson.headMetadata?.title));
+      isBlockedRender(scanJson.renderDiff, scanJson.headMetadata?.title);
 
     const pageStatus =
       redirectTargetUrl !== undefined
@@ -691,6 +692,9 @@ export async function writeAuditArtifacts(
     pages: manifestPages,
     ...(input.siteResult.pushbackEvents !== undefined
       ? { pushbackEvents: [...input.siteResult.pushbackEvents] }
+      : {}),
+    ...(input.siteResult.pacingRecoveryEvents !== undefined
+      ? { pacingRecoveryEvents: [...input.siteResult.pacingRecoveryEvents] }
       : {}),
     siteSignals: buildSiteSignals(resolvedSiteResult),
     privacySecurityCoverage: buildPrivacySecurityCoverage(

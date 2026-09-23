@@ -46,6 +46,29 @@ describe('assembleAuditEvidenceGraph', () => {
     expect(graph.readinessRecords).toHaveLength(2);
   });
 
+  it('keeps planned-out-of-scope mobile and consent surfaces from creating a material gap', () => {
+    const input = cleanInput();
+    const sampledInput = {
+      ...input,
+      pages: input.pages.map((page) =>
+        page.url === ROOMS
+          ? {
+              ...page,
+              plannedOutOfScopeSurfaceIds: ['surface:mobile-planned', 'surface:consent-planned'],
+            }
+          : page,
+      ),
+    };
+    const graph = assembleAuditEvidenceGraph(sampledInput);
+    expect(graph.quality.issues.map((issue) => issue.code)).not.toContain(
+      'unresolved-material-gap',
+    );
+    expect(graph.deltaCoverage.plannedOutOfScopeSurfaces).toEqual([
+      'surface:consent-planned',
+      'surface:mobile-planned',
+    ]);
+  });
+
   it('computes identical roots for identical inputs', () => {
     const first = assembleAuditEvidenceGraph(cleanInput());
     const second = assembleAuditEvidenceGraph(cleanInput());

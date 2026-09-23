@@ -45,6 +45,59 @@ export async function getAudit(
   return AuditModel.findOne({ auditId }).lean<AuditDocument>();
 }
 
+export interface FullAuditEstimateSource {
+  pageCount: number;
+  sampledSurfacePageCount: number;
+  lighthousePageCount: number;
+}
+
+/** Small pre-launch projection from the latest full audit for an exact host.
+ *  Mongo computes counts from manifest metadata, so the route never loads a
+ *  page's findings or raw scan artifact to show a rough duration. */
+export async function getLatestFullAuditEstimateSource(
+  connection: Connection,
+  hostname: string,
+): Promise<FullAuditEstimateSource | undefined> {
+  const escapedHost = hostname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const sitePattern = new RegExp(`^https?://${escapedHost}(?::\\d+)?(?:/|$)`, 'i');
+  const rows = await createAuditModel(connection).aggregate<FullAuditEstimateSource>([
+    { $match: { kind: 'audit', scanIntent: { $ne: 'quick-check' }, siteUrl: sitePattern } },
+    { $sort: { startedAt: -1 } },
+    { $limit: 1 },
+    {
+      $project: {
+        _id: 0,
+        pageCount: { $size: { $ifNull: ['$pages', []] } },
+        sampledSurfacePageCount: {
+          $size: {
+            $filter: {
+              input: { $ifNull: ['$pages', []] },
+              as: 'page',
+              cond: { $eq: ['$$page.analysisCoverage.surfaceSample.selected', true] },
+            },
+          },
+        },
+        lighthousePageCount: {
+          $size: {
+            $filter: {
+              input: { $ifNull: ['$pages', []] },
+              as: 'page',
+              cond: {
+                $in: [
+                  '$$page.analysisCoverage.passes.lighthouse.outcome',
+                  ['completed', 'partial', 'failed'],
+                ],
+              },
+            },
+          },
+        },
+      },
+    },
+  ]);
+  const source = rows[0];
+  return source === undefined || source.pageCount <= 0 ? undefined : source;
+}
+
 /** Issue #384: the storage identity of every stored audit (the hostname
  *  and startedAt its artifact directory and bucket prefix derive from), so
  *  orphan reconciliation can prove a bucket prefix still has an owner. */

@@ -17,7 +17,7 @@ import { isConfinedToThirdPartyFrame } from './third-party-attribution.js';
  * annex and are named in a statistics note; `sitemap-orphan-page` reports the
  * backlog itself as one site-level finding.
  */
-export const UNLINKED_SITEMAP_SHARE_THRESHOLD = 0.5;
+const UNLINKED_SITEMAP_SHARE_THRESHOLD = 0.5;
 
 export function unlinkedSitemapPageUrls(manifest: AuditManifest): ReadonlySet<string> {
   const visited = manifest.pages.filter((page) => page.status === 'visited');

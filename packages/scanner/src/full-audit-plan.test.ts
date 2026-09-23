@@ -100,6 +100,56 @@ describe('buildContentAuditPlan', () => {
     }
   });
 
+  it('samples the first two pages in stable inventory order, not URL order', () => {
+    const inventory = [
+      profile('https://example.com/z-first', [contentSignal], {
+        templateFamilyId: ARTICLE_FAMILY_FR,
+        language: 'fr',
+      }),
+      profile('https://example.com/a-second', [contentSignal], {
+        templateFamilyId: ARTICLE_FAMILY_FR,
+        language: 'fr',
+      }),
+      profile('https://example.com/m-third', [contentSignal], {
+        templateFamilyId: ARTICLE_FAMILY_FR,
+        language: 'fr',
+      }),
+    ];
+    const plan = buildContentAuditPlan(inventory);
+    expect(plan.surfaceSampling).toEqual([
+      { url: inventory[0]!.url, selected: true, reason: 'family-representative' },
+      { url: inventory[1]!.url, selected: true, reason: 'family-representative' },
+      { url: inventory[2]!.url, selected: false, reason: 'family-sampled' },
+    ]);
+    expect(finalizeLighthousePlan(plan, new Map()).surfaceSampling).toEqual(plan.surfaceSampling);
+  });
+
+  it('includes the homepage and mandatory pages beyond a family’s first two', () => {
+    const inventory = [
+      ...buildArticleFamily(2, 'fr', ARTICLE_FAMILY_FR),
+      profile(
+        'https://example.com/operator-seed',
+        [contentSignal, { kind: 'operator-seed', detail: 'seed' }],
+        { templateFamilyId: ARTICLE_FAMILY_FR, language: 'fr' },
+      ),
+      profile('https://example.com/home', [{ kind: 'homepage-url', detail: 'home' }], {
+        templateFamilyId: ARTICLE_FAMILY_FR,
+        language: 'fr',
+      }),
+    ];
+    const samples = buildContentAuditPlan(inventory).surfaceSampling;
+    expect(samples[2]).toEqual({
+      url: inventory[2]!.url,
+      selected: true,
+      reason: 'mandatory',
+    });
+    expect(samples[3]).toEqual({
+      url: inventory[3]!.url,
+      selected: true,
+      reason: 'homepage',
+    });
+  });
+
   it('produces exactly one decision per input profile, never fabricating or dropping one', () => {
     const profiles = buildMotivatingFixture();
     const plan = buildContentAuditPlan(profiles);

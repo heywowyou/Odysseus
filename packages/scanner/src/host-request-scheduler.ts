@@ -16,12 +16,20 @@
  * Phase B; a crawl at concurrency 3 will get slower when that happens, and that
  * is the intended direction, since plan 059 states cost is not the objective.
  *
- * Pressure moves one way. `raiseDelayTo` and `noteRateLimited` can slow the
- * scheduler down; nothing speeds it back up, and concurrency only ever falls.
- * Section 22 lists retrying a rate limit with more concurrency among the
- * rejected alternatives, and the simplest way to honour that is to make the
- * increase unrepresentable rather than merely discouraged.
+ * A pushback raises the delay and sheds lanes. Once Retry-After has passed,
+ * twenty clean request starts halve the delay toward its configured floor.
+ * Concurrency only ever falls: section 22 rejects adding lanes as a response
+ * to rate limits, and global spacing already controls request pressure.
  */
+
+import {
+  classifyDocumentWall,
+  classifyHostResponse,
+  type ClassifyDocumentWallInput,
+  type ClassifyHostResponseInput,
+  type DocumentWallClassification,
+  type HostResponseClassification,
+} from '@odysseus/core';
 
 export interface HostRequestSchedulerOptions {
   /** The configured and robots-derived floor. The scheduler never waits less
@@ -40,10 +48,16 @@ export interface HostRequestSchedulerOptions {
    *  responsible for slowing the run; callers use this hook to persist an
    *  operator-visible event without coupling the pacing primitive to jobs. */
   onPushback?: (event: HostPushbackEvent) => void;
+  onPacingRecovered?: (event: HostPacingRecoveredEvent) => void;
 }
 
 export type HostPushbackKind = 'rate-limit' | 'bot-challenge' | 'origin-transient';
 export type HostPushbackFetcher = 'crawl' | 'render' | 'lighthouse' | 'canonical';
+
+export interface HostPacingRecoveredEvent {
+  delayMs: number;
+  occurredAt: string;
+}
 
 export interface HostPushbackEvent {
   pageUrl: string;
@@ -65,6 +79,7 @@ export interface HostPushbackEvent {
 export type HostPushbackSignal = Omit<HostPushbackEvent, 'occurredAt' | 'delayMs' | 'atMaxDelay'>;
 
 const DEFAULT_BACKOFF_FACTOR = 2;
+const CLEAN_STARTS_TO_RECOVER = 20;
 const DEFAULT_MAX_DELAY_MS = 60_000;
 
 export class HostRequestScheduler {
@@ -74,6 +89,7 @@ export class HostRequestScheduler {
   readonly #now: () => number;
   readonly #sleep: (ms: number) => Promise<void>;
   readonly #onPushback: ((event: HostPushbackEvent) => void) | undefined;
+  readonly #onPacingRecovered: ((event: HostPacingRecoveredEvent) => void) | undefined;
 
   #delayMs: number;
   #concurrency: number;
@@ -81,6 +97,10 @@ export class HostRequestScheduler {
   #waiting: (() => void)[] = [];
   /** Earliest wall-clock time the next request may start. */
   #nextStartAt = 0;
+  #cleanStartsSincePushback = 0;
+  #retryAfterUntil = 0;
+  #requestStartCount = 0;
+  #consecutiveOriginServerErrors = 0;
 
   constructor(options: HostRequestSchedulerOptions) {
     this.#floorDelayMs = Math.max(0, options.floorDelayMs);
@@ -92,6 +112,7 @@ export class HostRequestScheduler {
     this.#sleep =
       options.sleep ?? ((ms) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
     this.#onPushback = options.onPushback;
+    this.#onPacingRecovered = options.onPacingRecovered;
   }
 
   get effectiveDelayMs(): number {
@@ -100,6 +121,10 @@ export class HostRequestScheduler {
 
   get concurrency(): number {
     return this.#concurrency;
+  }
+
+  get requestStartCount(): number {
+    return this.#requestStartCount;
   }
 
   /**
@@ -113,10 +138,14 @@ export class HostRequestScheduler {
   }
 
   /**
-   * Records that the host pushed back - a 429, a 503 with Retry-After, an
-   * anti-bot interstitial. Backs off and sheds a lane. Never the reverse.
+   * Records one already-classified pushback. Backs off and sheds a lane;
+   * recovery is handled separately after sustained clean request starts.
    */
   noteRateLimited(event?: HostPushbackSignal): void {
+    this.#cleanStartsSincePushback = 0;
+    if (event?.retryAfterMs !== undefined) {
+      this.#retryAfterUntil = Math.max(this.#retryAfterUntil, this.#now() + event.retryAfterMs);
+    }
     const atMaxDelay = this.#delayMs >= this.#maxDelayMs;
     if (event?.retryAfterMs !== undefined) {
       this.raiseDelayTo(event.retryAfterMs);
@@ -134,6 +163,51 @@ export class HostRequestScheduler {
         atMaxDelay,
       });
     }
+  }
+
+  /** Classifies one audited-host document response and its document shape,
+   * records at most one pushback event for that response, and maintains the
+   * three-response origin-error streak. */
+  observeHostDocument(input: {
+    response: ClassifyHostResponseInput;
+    document: ClassifyDocumentWallInput;
+    signal: Omit<HostPushbackSignal, 'kind' | 'status' | 'retryAfterMs'>;
+  }): { response: HostResponseClassification; document: DocumentWallClassification } {
+    const responseWithoutStreak = classifyHostResponse({
+      ...input.response,
+      consecutiveOriginServerErrors: 0,
+    });
+    if (responseWithoutStreak.auditedHost) {
+      if ((input.response.status ?? 0) >= 500) {
+        this.#consecutiveOriginServerErrors += 1;
+      } else {
+        this.#consecutiveOriginServerErrors = 0;
+      }
+    }
+    const response = classifyHostResponse({
+      ...input.response,
+      consecutiveOriginServerErrors: this.#consecutiveOriginServerErrors,
+    });
+    const document = classifyDocumentWall(input.document);
+    if (response.disposition === 'pushback') {
+      const kind = response.reason === 'rate-limit' ? 'rate-limit' : 'origin-transient';
+      this.noteRateLimited({
+        ...input.signal,
+        kind,
+        ...(input.response.status !== undefined ? { status: input.response.status } : {}),
+        ...(input.response.retryAfterMs !== undefined
+          ? { retryAfterMs: input.response.retryAfterMs }
+          : {}),
+      });
+      this.#consecutiveOriginServerErrors = 0;
+    } else if (response.auditedHost && document.classification === 'wall') {
+      this.noteRateLimited({
+        ...input.signal,
+        kind: 'bot-challenge',
+        ...(input.response.status !== undefined ? { status: input.response.status } : {}),
+      });
+    }
+    return { response, document };
   }
 
   /**
@@ -185,9 +259,26 @@ export class HostRequestScheduler {
    * Anything that touches the audited host over the network calls one of them.
    */
   async pace(): Promise<void> {
-    const waitMs = this.#nextStartAt - this.#now();
+    const eligibleAt = Math.max(this.#nextStartAt, this.#retryAfterUntil);
+    const waitMs = eligibleAt - this.#now();
     if (waitMs > 0) await this.#sleep(waitMs);
-    this.#nextStartAt = Math.max(this.#now(), this.#nextStartAt) + this.#delayMs;
+
+    const startedAt = this.#now();
+    this.#requestStartCount += 1;
+    this.#nextStartAt = startedAt + this.#delayMs;
+
+    if (this.#delayMs > this.#floorDelayMs && startedAt >= this.#retryAfterUntil) {
+      this.#cleanStartsSincePushback += 1;
+      if (this.#cleanStartsSincePushback >= CLEAN_STARTS_TO_RECOVER) {
+        this.#delayMs = Math.max(this.#floorDelayMs, Math.ceil(this.#delayMs / 2));
+        this.#cleanStartsSincePushback = 0;
+        this.#nextStartAt = startedAt + this.#delayMs;
+        this.#onPacingRecovered?.({
+          delayMs: this.#delayMs,
+          occurredAt: new Date(startedAt).toISOString(),
+        });
+      }
+    }
   }
 
   async #acquireLane(): Promise<void> {

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "runLabels": {
+    "f32dac133c54af7e": "opera-429",
+    "22576f9db125326d": "lacoorniche-title",
+    "83d76d53c1827df3": "haaitza-o2switch"
+  },
+  "defaultContent": {
+    "status": 200,
+    "minimumRenderedTextLength": 500
+  }
+}

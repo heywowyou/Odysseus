@@ -28,6 +28,7 @@ const manifestKeys = {
   config: true,
   crawl: true,
   pushbackEvents: true,
+  pacingRecoveryEvents: true,
   coverageLimitations: true,
   pages: true,
   continuationGuardSummary: true,

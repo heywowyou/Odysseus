@@ -1,6 +1,10 @@
 import type { AuditPass, AuditPassCoverage, PageAnalysisCoverage } from '@odysseus/core';
 import { CHECK_SCOPE_REGISTRY, type CheckExecutionOutcome } from './check-scope-coverage.js';
-import { FULL_AUDIT_PLANNER_VERSION, type PageAuditDecision } from './full-audit-plan.js';
+import {
+  FULL_AUDIT_PLANNER_VERSION,
+  type PageAuditDecision,
+  type SurfaceSampleDecision,
+} from './full-audit-plan.js';
 
 type CheckOutcomes = Readonly<Partial<Record<string, CheckExecutionOutcome>>>;
 
@@ -37,6 +41,7 @@ export interface DerivePageAnalysisCoverageInput {
   decision: PageAuditDecision;
   checkOutcomes: CheckOutcomes;
   lighthouseSelected: boolean;
+  surfaceSample: SurfaceSampleDecision;
   lighthouseOutcome?: Exclude<CheckExecutionOutcome, 'not-applicable'>;
 }
 
@@ -63,6 +68,7 @@ export function derivePageAnalysisCoverage(
       ? { templateFamilyId: input.decision.templateFamilyId }
       : {}),
     reasonCodes: [...input.decision.reasonCodes],
+    surfaceSample: { selected: input.surfaceSample.selected, reason: input.surfaceSample.reason },
     passes: {
       rendered: deriveCompositePass('rendered', input.checkOutcomes),
       axe: deriveCompositePass('axe', input.checkOutcomes),

@@ -100,6 +100,9 @@ export function readPersistedEvidenceInputs(
         ? { performanceMeasurement: scan.performanceMeasurement }
         : {}),
       ...(scan.surfaces !== undefined ? { surfaces: scan.surfaces } : {}),
+      ...(scan.plannedOutOfScopeSurfaceIds !== undefined
+        ? { plannedOutOfScopeSurfaceIds: scan.plannedOutOfScopeSurfaceIds }
+        : {}),
       ...(scan.hydrationSweep !== undefined ? { hydration: scan.hydrationSweep } : {}),
       // Plan 059 step 26: the page's persisted scheduling-side signals,
       // which the report-facing semantic classifier reads.

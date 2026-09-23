@@ -44,6 +44,37 @@ describe('summarizePushback', () => {
     expect(summary?.relaunchAdvised).toBe(true);
   });
 
+  it('uses the latest recovery in the timeline so the pace can come back down', () => {
+    const summary = summarizePushback(
+      [{ pageUrl: page, delayMs: 40_000, occurredAt: '2026-09-23T08:00:00.000Z' }],
+      10_000,
+      0,
+      [{ delayMs: 20_000, occurredAt: '2026-09-23T08:01:00.000Z' }],
+    );
+
+    expect(summary).toMatchObject({
+      eventCount: 1,
+      recoveryCount: 1,
+      latestWasRecovery: true,
+      currentDelayMs: 20_000,
+    });
+  });
+
+  it('uses a later pushback after a recovery as the current pace', () => {
+    const summary = summarizePushback(
+      [
+        { pageUrl: page, delayMs: 40_000, occurredAt: '2026-09-23T08:00:00.000Z' },
+        { pageUrl: `${page}b`, delayMs: 40_000, occurredAt: '2026-09-23T08:02:00.000Z' },
+      ],
+      10_000,
+      0,
+      [{ delayMs: 20_000, occurredAt: '2026-09-23T08:01:00.000Z' }],
+    );
+
+    expect(summary?.currentDelayMs).toBe(40_000);
+    expect(summary?.latestWasRecovery).toBe(false);
+  });
+
   it('falls back to the starting delay for events recorded before the pace was tracked', () => {
     const summary = summarizePushback([{ pageUrl: page, retryAfterMs: 7_000 }], 2_000);
 

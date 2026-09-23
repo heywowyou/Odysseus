@@ -15,7 +15,11 @@ import {
   getPageTimeoutMs,
   getScanConcurrency,
 } from './config.js';
-import { HostRequestScheduler, type HostPushbackEvent } from './host-request-scheduler.js';
+import {
+  HostRequestScheduler,
+  type HostPacingRecoveredEvent,
+  type HostPushbackEvent,
+} from './host-request-scheduler.js';
 import {
   checkNetworkTarget,
   type NetworkSafetyDisposition,
@@ -53,6 +57,8 @@ import {
 } from './check-attempt-ledger.js';
 import {
   baselineDesktopSurface,
+  consentSurface,
+  mobileSurface,
   MOBILE_SURFACE_IDENTITY_REFUSED,
   MOBILE_SURFACE_UNAVAILABLE,
   SurfaceIdentityError,
@@ -193,6 +199,9 @@ export type ScanProgressEvent =
        *  per-page duration into a per-wave one instead of assuming a
        *  serial stream. */
       concurrency: number;
+      requestStartCount?: number;
+      currentDelayMs?: number;
+      plannedSlotsPerPage?: number;
     }
   | {
       type: 'content-scan-page';
@@ -200,6 +209,8 @@ export type ScanProgressEvent =
       totalPages: number;
       url: string;
       durationMs: number;
+      requestStartCount?: number;
+      currentDelayMs?: number;
     }
   /** Issue #393: crawled URLs that were navigated but will not be
    *  content-checked, by reason, so inventoried and checked counts
@@ -209,6 +220,7 @@ export type ScanProgressEvent =
    *  boundary as the scheduler signal so the job card can warn while the
    *  run is still active. */
   | { type: 'pushback'; event: HostPushbackEvent }
+  | { type: 'pacing-recovered'; event: HostPacingRecoveredEvent }
   /** One page whose failed checks finished their retries. Recovery runs
    *  pages one at a time and can take many minutes, so each page reports. */
   | { type: 'content-recovery-page'; completed: number; totalPages: number; url: string }
@@ -219,6 +231,9 @@ export type ScanProgressEvent =
       /** Same resume accounting as content-scan-start's alreadyCompleted,
        *  for pages whose scan.json already recorded a Lighthouse outcome. */
       alreadyCompleted: number;
+      requestStartCount?: number;
+      currentDelayMs?: number;
+      plannedSlotsPerPage?: number;
     }
   | {
       type: 'lighthouse-page';
@@ -226,6 +241,8 @@ export type ScanProgressEvent =
       totalPages: number;
       url: string;
       durationMs: number;
+      requestStartCount?: number;
+      currentDelayMs?: number;
     }
   | { type: 'analysis-complete' };
 
@@ -387,6 +404,8 @@ export interface SiteScanResult {
   /** Host responses that slowed or blocked acquisition, for the job and
    *  audit operator views. */
   pushbackEvents?: readonly HostPushbackEvent[];
+  /** Scheduler delay reductions after sustained clean request starts. */
+  pacingRecoveryEvents?: readonly HostPacingRecoveredEvent[];
 }
 
 /**
@@ -1581,6 +1600,32 @@ async function runStagedFullAuditScan(
       );
     }
   }
+  // Freeze mobile/consent surface selection before the first content lane.
+  // The profiles follow crawl inventory order; two representatives are
+  // chosen per family from that sequence, while wave pages are singleton
+  // families and join later as selected pages.
+  const initialContentPlan = buildContentAuditPlan(pagesToScan.map(toPlanProfile));
+  const initialSurfaceSampling = new Map(
+    initialContentPlan.surfaceSampling.map((sample) => [sample.url, sample]),
+  );
+  const initiallySelectedSurfaceShare =
+    initialContentPlan.surfaceSampling.length === 0
+      ? 0
+      : initialContentPlan.surfaceSampling.filter((sample) => sample.selected).length /
+        initialContentPlan.surfaceSampling.length;
+  const initialLighthousePlan = finalizeLighthousePlan(initialContentPlan, new Map());
+  const initialLighthouseShare =
+    initialLighthousePlan.decisions.length === 0
+      ? 0
+      : initialLighthousePlan.decisions.filter((decision) =>
+          decision.plannedPasses.includes('lighthouse'),
+        ).length / initialLighthousePlan.decisions.length;
+  const plannedSlotsPerPage =
+    3 +
+    initiallySelectedSurfaceShare *
+      (Number(context.mobileSurfaces) + Number(context.stateSurfaces)) +
+    initialLighthouseShare;
+
   // Starts at the reused count so content-scan-page progress stays
   // truthful against the full inventory size.
   let contentCompleted = completedByUrl.size;
@@ -1589,6 +1634,9 @@ async function runStagedFullAuditScan(
     totalPages: pagesToScan.length + (resumedWaveUrls?.length ?? 0),
     alreadyCompleted: completedByUrl.size,
     concurrency,
+    requestStartCount: scheduler.requestStartCount,
+    currentDelayMs: scheduler.effectiveDelayMs,
+    plannedSlotsPerPage,
   });
 
   // Plan 059 section 10: pages with a check that failed recoverably, and
@@ -1653,10 +1701,44 @@ async function runStagedFullAuditScan(
         ],
       };
     }
+    const sample = initialSurfaceSampling.get(url);
+    const selectedForSurfaces = sample?.selected ?? true;
+    if (!selectedForSurfaces && (context.mobileSurfaces || context.stateSurfaces)) {
+      const plannedOutOfScopeSurfaceIds: string[] = [];
+      if (context.mobileSurfaces) {
+        plannedOutOfScopeSurfaceIds.push(
+          mobileSurface({
+            evidenceEpoch: context.evidenceEpoch,
+            pageIdentity: url,
+            userAgent: getCrawlerUserAgent(),
+            crawlerUserAgent: getCrawlerUserAgent(),
+            readinessOutcome: 'ready',
+          }).surfaceId,
+        );
+      }
+      if (context.stateSurfaces && result.consentBaseline?.state === 'consent-controls-detected') {
+        plannedOutOfScopeSurfaceIds.push(
+          consentSurface({
+            evidenceEpoch: context.evidenceEpoch,
+            pageIdentity: url,
+            userAgent: context.userAgent ?? getCrawlerUserAgent(),
+          }).surfaceId,
+        );
+      }
+      result = {
+        ...result,
+        surfaceSkipped: 'family-sampled',
+        ...(plannedOutOfScopeSurfaceIds.length > 0 ? { plannedOutOfScopeSurfaceIds } : {}),
+      };
+    }
     // Plan 059 step 13: the consent-rejected surface runs where the
     // delivered baseline carried consent controls, in a storage-fresh
-    // context of its own (section 9).
-    if (context.stateSurfaces && result.consentBaseline?.state === 'consent-controls-detected') {
+    // context of its own (section 9), and only inside the plan's sample.
+    if (
+      selectedForSurfaces &&
+      context.stateSurfaces &&
+      result.consentBaseline?.state === 'consent-controls-detected'
+    ) {
       result = await attachConsentSurface(url, result, browser, scheduler, context);
     }
     // Plan 059 step 13: the local-state surface is registered when the
@@ -1689,7 +1771,7 @@ async function runStagedFullAuditScan(
     // Plan 059 step 10: the mobile surface runs only after this
     // page's immutable baseline capture is complete, and in a
     // context of its own (section 9).
-    if (context.mobileSurfaces) {
+    if (context.mobileSurfaces && selectedForSurfaces) {
       result = await attachMobileSurface(url, result, browser, scheduler, context);
     }
     if (result.surfaceLinks !== undefined && result.surfaceLinks.length > 0) {
@@ -1741,6 +1823,8 @@ async function runStagedFullAuditScan(
       totalPages,
       url,
       durationMs,
+      requestStartCount: scheduler.requestStartCount,
+      currentDelayMs: scheduler.effectiveDelayMs,
     });
   };
 
@@ -1839,7 +1923,15 @@ async function runStagedFullAuditScan(
     }),
   );
   const contentPlan = buildContentAuditPlan([...pagesToScan.map(toPlanProfile), ...waveProfiles]);
-  const finalizedPlan = finalizeLighthousePlan(contentPlan, renderedCosts);
+  const plannedPlan = finalizeLighthousePlan(contentPlan, renderedCosts);
+  const initialUrls = new Set(initialContentPlan.surfaceSampling.map((sample) => sample.url));
+  const finalizedPlan: FullAuditPlan = {
+    ...plannedPlan,
+    surfaceSampling: [
+      ...initialContentPlan.surfaceSampling,
+      ...plannedPlan.surfaceSampling.filter((sample) => !initialUrls.has(sample.url)),
+    ],
+  };
   if (resumedWaveUrls === undefined && markerDir !== undefined) {
     writeContentStageMarker(markerDir, buildContentStageMarker(stageBinding, admittedWaveUrls));
   }
@@ -1884,6 +1976,9 @@ async function runStagedFullAuditScan(
     type: 'lighthouse-start',
     totalPages: selectedUrls.size,
     alreadyCompleted: lighthouseAlreadyCompleted,
+    requestStartCount: scheduler.requestStartCount,
+    currentDelayMs: scheduler.effectiveDelayMs,
+    plannedSlotsPerPage: 1,
   });
 
   const pages: PageScanResult[] = [];
@@ -1914,6 +2009,11 @@ async function runStagedFullAuditScan(
         decision,
         checkOutcomes: rendered.checkOutcomes,
         lighthouseSelected: selectedUrls.has(url),
+        surfaceSample: finalizedPlan.surfaceSampling.find((sample) => sample.url === url) ?? {
+          url,
+          selected: true,
+          reason: 'unique-family',
+        },
         ...(lighthouseResult !== undefined
           ? {
               lighthouseOutcome: lighthouseResult.lighthouse !== undefined ? 'completed' : 'failed',
@@ -2035,6 +2135,8 @@ async function runStagedFullAuditScan(
       totalPages: selectedUrls.size,
       url,
       durationMs,
+      requestStartCount: scheduler.requestStartCount,
+      currentDelayMs: scheduler.effectiveDelayMs,
     });
   }
 
@@ -2220,12 +2322,17 @@ export async function scanSite(
   // further down, since that clamp only exists to avoid creating idle lanes for
   // a site with fewer pages than lanes.
   const pushbackEvents: HostPushbackEvent[] = [];
+  const pacingRecoveryEvents: HostPacingRecoveredEvent[] = [];
   const scheduler = new HostRequestScheduler({
     floorDelayMs: options.delayMs ?? getCrawlDelayMs(),
     maxConcurrency: options.concurrency ?? getScanConcurrency(),
     onPushback: (event) => {
       pushbackEvents.push(event);
       options.onProgress?.({ type: 'pushback', event });
+    },
+    onPacingRecovered: (event) => {
+      pacingRecoveryEvents.push(event);
+      options.onProgress?.({ type: 'pacing-recovered', event });
     },
   });
   const networkSafetyDispositions: NetworkSafetyDisposition[] = [];
@@ -2763,6 +2870,9 @@ export async function scanSite(
       ...(networkSafetyDispositions.length > 0 ? { networkSafetyDispositions } : {}),
       ...(finalInventory !== undefined ? { inventoryLedger: finalInventory } : {}),
       ...(pushbackEvents.length > 0 ? { pushbackEvents: [...pushbackEvents] } : {}),
+      ...(pacingRecoveryEvents.length > 0
+        ? { pacingRecoveryEvents: [...pacingRecoveryEvents] }
+        : {}),
     };
   }
 
@@ -2835,5 +2945,6 @@ export async function scanSite(
     ...(networkSafetyDispositions.length > 0 ? { networkSafetyDispositions } : {}),
     ...(finalInventory !== undefined ? { inventoryLedger: finalInventory } : {}),
     ...(pushbackEvents.length > 0 ? { pushbackEvents: [...pushbackEvents] } : {}),
+    ...(pacingRecoveryEvents.length > 0 ? { pacingRecoveryEvents: [...pacingRecoveryEvents] } : {}),
   };
 }

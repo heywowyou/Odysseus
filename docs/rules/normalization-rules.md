@@ -84,6 +84,17 @@ treated as an interstitial for the same reason. Pages predating
 the same function over the manifest, since it draws its bars from
 `renderDiffMissingPercent` rather than from findings.
 
+**A barrier is shared evidence, not a vendor-name match (plan 076).** The
+pure `classifyDocumentWall` rule in `packages/core/src/acquisition/host-signal.ts`
+is used by scanner acquisition and normalization. A challenge title identifies
+a wall directly. Otherwise a vendor challenge marker must coincide with a
+barrier-shaped document: status 403, 429 or 503; fewer than 500 visible
+characters; or at most 512 markup characters. A minimal meta-refresh document
+is also a wall. A bare DataDome script name, a challenge script on a substantive
+page, or the words “security check” on their own are not enough. HTTP 429 is a
+rate-limit document even when an older artifact did not retain vendor markers.
+Third-party frame markers remain evidence but never slow the audited host.
+
 Otherwise it emits only at or above a named threshold, default 20
 percent, matching the `moderate` floor in `severityFromRenderDiff`.
 Without the threshold, every page of a healthy server-rendered site

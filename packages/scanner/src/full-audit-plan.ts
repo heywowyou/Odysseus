@@ -28,7 +28,7 @@ export type { AuditPageRole, AuditPass } from '@odysseus/core';
 /** v2: site-wide signals are discounted before role classification, and an
  *  unknown/fallback page in a repeated family is covered by that family's
  *  representatives instead of being measured unconditionally. */
-export const FULL_AUDIT_PLANNER_VERSION = 'v2';
+export const FULL_AUDIT_PLANNER_VERSION = 'v3';
 
 export interface RenderedCostProfile {
   url: string;
@@ -57,9 +57,22 @@ export interface PageAuditDecision {
 const HOMEPAGE_MARKER = 'homepage-url-present';
 const OPERATOR_SEED_MARKER = 'operator-seed-present';
 
+export type SurfaceSampleReason =
+  'homepage' | 'mandatory' | 'family-representative' | 'unique-family' | 'family-sampled';
+
+export interface SurfaceSampleDecision {
+  url: string;
+  selected: boolean;
+  reason: SurfaceSampleReason;
+}
+
 export interface FullAuditPlan {
   plannerVersion: typeof FULL_AUDIT_PLANNER_VERSION;
   decisions: readonly PageAuditDecision[];
+  /** Ordered like the input inventory. It is separate from URL-sorted
+   *  Lighthouse decisions because family representatives follow inventory
+   *  order, not lexical URL order. */
+  surfaceSampling: readonly SurfaceSampleDecision[];
 }
 
 /** Exported so the report-facing semantic classifier
@@ -265,9 +278,44 @@ export function buildContentAuditPlan(profiles: readonly PageAuditProfile[]): Fu
     };
   });
 
+  const decisionsByUrl = new Map(decisions.map((decision) => [decision.url, decision]));
+  const familyMembers = new Map<string, PageAuditDecision[]>();
+  for (const profile of profiles) {
+    const decision = decisionsByUrl.get(profile.url);
+    if (decision === undefined) continue;
+    const key = familyKey(decision);
+    const members = familyMembers.get(key) ?? [];
+    members.push(decision);
+    familyMembers.set(key, members);
+  }
+  const selectedByUrl = new Map<string, SurfaceSampleDecision>();
+  for (const profile of profiles) {
+    const decision = decisionsByUrl.get(profile.url);
+    if (decision === undefined) continue;
+    const members = familyMembers.get(familyKey(decision)) ?? [];
+    const familyIndex = members.findIndex((member) => member.url === decision.url);
+    const mandatory = isMandatoryRegardlessOfFamily(decision);
+    const homepage = decision.reasonCodes.includes(HOMEPAGE_MARKER);
+    const selected = homepage || mandatory.mandatory || familyIndex < 2;
+    const reason: SurfaceSampleReason = homepage
+      ? 'homepage'
+      : mandatory.mandatory
+        ? 'mandatory'
+        : members.length === 1
+          ? 'unique-family'
+          : familyIndex < 2
+            ? 'family-representative'
+            : 'family-sampled';
+    selectedByUrl.set(profile.url, { url: profile.url, selected, reason });
+  }
+
   return {
     plannerVersion: FULL_AUDIT_PLANNER_VERSION,
     decisions: sortByUrl(decisions),
+    surfaceSampling: profiles.flatMap((profile) => {
+      const sample = selectedByUrl.get(profile.url);
+      return sample === undefined ? [] : [sample];
+    }),
   };
 }
 
@@ -409,5 +457,6 @@ export function finalizeLighthousePlan(
   return {
     plannerVersion: contentPlan.plannerVersion,
     decisions: sortByUrl(decisions),
+    surfaceSampling: contentPlan.surfaceSampling,
   };
 }

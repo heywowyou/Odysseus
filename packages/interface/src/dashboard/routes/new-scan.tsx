@@ -29,6 +29,12 @@ import {
 import type { AdvancedScanField, NewScanFormValues, NewScanType } from './new-scan-model';
 import type { ProspectHubListResponse } from './prospect-hub-model';
 
+interface ScanEstimate {
+  available: boolean;
+  pageCount?: number;
+  estimatedMs?: number;
+}
+
 interface ProspectMatch {
   prospectId: string;
   name: string;
@@ -65,6 +71,7 @@ export function NewScanPage() {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [prospectMatches, setProspectMatches] = useState<ProspectMatch[]>([]);
+  const [scanEstimate, setScanEstimate] = useState<ScanEstimate | undefined>();
   const [prospectSearch, setProspectSearch] = useState('');
   const [prospectSearchMatches, setProspectSearchMatches] = useState<ProspectMatch[]>([]);
   const [createProspectOpen, setCreateProspectOpen] = useState(false);
@@ -99,6 +106,38 @@ export function NewScanPage() {
   const urlError =
     trimmedUrl === '' || isValidAbsoluteHttpUrl(trimmedUrl) ? null : copy.urlInvalidError;
   const showTransactionalFlowReason = form.transactionalFlow !== '';
+  const estimateHours =
+    scanEstimate?.available === true && scanEstimate.estimatedMs !== undefined
+      ? new Intl.NumberFormat(
+          typeof document !== 'undefined' &&
+            document.documentElement.lang.toLowerCase().startsWith('fr')
+            ? 'fr-FR'
+            : 'en-GB',
+          { maximumFractionDigits: 1 },
+        ).format(scanEstimate.estimatedMs / 3_600_000)
+      : undefined;
+
+  useEffect(() => {
+    setScanEstimate(undefined);
+    if (!isFullAudit || !isValidAbsoluteHttpUrl(trimmedUrl)) return;
+    let cancelled = false;
+    const delayMs = Number(form.delaySeconds) * 1000;
+    const params = new URLSearchParams({ url: trimmedUrl });
+    if (Number.isFinite(delayMs) && delayMs > 0) params.set('delayMs', String(delayMs));
+    const timer = window.setTimeout(() => {
+      void fetchJson<ScanEstimate>(`/api/scans/estimate?${params.toString()}`)
+        .then((estimate) => {
+          if (!cancelled) setScanEstimate(estimate.available ? estimate : undefined);
+        })
+        .catch(() => {
+          if (!cancelled) setScanEstimate(undefined);
+        });
+    }, 250);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [form.delaySeconds, isFullAudit, trimmedUrl]);
 
   useEffect(() => {
     if (!isValidAbsoluteHttpUrl(trimmedUrl)) {
@@ -261,6 +300,11 @@ export function NewScanPage() {
                   placeholder={copy.urlPlaceholder}
                 />
               </Field>
+              {estimateHours !== undefined ? (
+                <p className="-mt-3 text-sm text-ink-muted" role="status">
+                  {copy.estimateHint.replace('{hours}', estimateHours)}
+                </p>
+              ) : null}
               <Field
                 label={copy.sirenLabel}
                 htmlFor="new-scan-siren"

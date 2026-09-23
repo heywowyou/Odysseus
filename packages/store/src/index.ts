@@ -95,6 +95,7 @@ export { getSeverityRollup, getSeverityRollups } from './severity-rollup.js';
 export type { SeverityRollup } from './severity-rollup.js';
 export {
   getAudit,
+  getLatestFullAuditEstimateSource,
   attachAuditToProspect,
   getAuditRuntimeFields,
   getFindingsForAudit,
@@ -110,7 +111,7 @@ export {
   clearAuditGradeOverride,
   listAuditStorageIdentities,
 } from './audits.js';
-export type { AuditRuntimeFields } from './audits.js';
+export type { AuditRuntimeFields, FullAuditEstimateSource } from './audits.js';
 
 // Plan 019: report preparation and exact-ID writing selection. All writes
 // go through these service functions; handlers never issue raw updates.

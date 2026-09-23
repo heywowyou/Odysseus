@@ -2,9 +2,9 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { Browser, Page } from 'playwright';
 import {
-  isChallengeMarker,
-  isChallengeTitle,
-  MINIMAL_RAW_MARKUP_LENGTH,
+  auditedHostAliases,
+  classifyDocumentWall,
+  classifyHostResponse,
   type RawDocumentSignals,
   type RenderDiffResult,
 } from '@odysseus/core';
@@ -135,23 +135,50 @@ export async function renderDiff(
     const timestamp = Date.parse(value);
     return Number.isFinite(timestamp) ? Math.max(0, timestamp - Date.now()) : undefined;
   };
-  const noteResponsePushback = (status: number | undefined, headers: Record<string, string>) => {
-    const retryAfter = retryAfterMs(headers);
-    if (
-      status !== undefined &&
-      (status === 429 ||
-        status === 503 ||
-        (status >= 500 && status <= 599) ||
-        retryAfter !== undefined)
-    ) {
-      options.scheduler?.noteRateLimited({
-        pageUrl: url,
-        fetcher: 'render',
-        kind: status === 429 ? 'rate-limit' : 'origin-transient',
-        ...(status !== undefined ? { status } : {}),
-        ...(retryAfter !== undefined ? { retryAfterMs: retryAfter } : {}),
-      });
-    }
+  const auditedAliases = auditedHostAliases(new URL(url).hostname);
+  const observeDocumentResponse = (input: {
+    status?: number;
+    headers: Record<string, string>;
+    landedUrl: string;
+    title?: string;
+    html: string;
+    visibleTextLength: number;
+    markers: readonly string[];
+  }) => {
+    const retryAfter = retryAfterMs(input.headers);
+    const response = {
+      requestedHost: new URL(url).hostname,
+      landedHost: (() => {
+        try {
+          return new URL(input.landedUrl).hostname;
+        } catch {
+          return '';
+        }
+      })(),
+      auditedHostAliases: auditedAliases,
+      ...(input.status !== undefined ? { status: input.status } : {}),
+      ...(retryAfter !== undefined ? { retryAfterMs: retryAfter } : {}),
+    };
+    const document = {
+      ...(input.status !== undefined ? { status: input.status } : {}),
+      ...(input.title !== undefined ? { title: input.title } : {}),
+      markupLength: input.html.length,
+      visibleTextLength: input.visibleTextLength,
+      markers: input.markers,
+    };
+    const observed = options.scheduler?.observeHostDocument({
+      response,
+      document,
+      signal: { pageUrl: url, fetcher: 'render' },
+    }) ?? {
+      response: classifyHostResponse({ ...response, consecutiveOriginServerErrors: 0 }),
+      document: classifyDocumentWall(document),
+    };
+    return {
+      ...observed,
+      auditedDocumentWall:
+        observed.response.auditedHost && observed.document.classification === 'wall',
+    };
   };
 
   const runDir = path.join(screenshotDir, buildPageDir(url));
@@ -193,22 +220,19 @@ export async function renderDiff(
       throw new Error(`render-diff: no HTTP response received for ${url}`);
     }
     httpStatus = rawResponse.status();
-    noteResponsePushback(httpStatus, rawResponse.headers());
     const rawHtml = await rawPage.content();
     rawTextLength = extractTextFromHtml(rawHtml).length;
     rawDocument = analyzeRawDocument(rawHtml);
-    if (
-      rawDocument.interstitialMarkers.some((marker) => isChallengeMarker(marker)) ||
-      (rawDocument.interstitialMarkers.includes('meta-refresh') &&
-        rawDocument.markupLength <= MINIMAL_RAW_MARKUP_LENGTH)
-    ) {
-      options.scheduler?.noteRateLimited({
-        pageUrl: url,
-        fetcher: 'render',
-        kind: 'bot-challenge',
-        ...(httpStatus !== undefined ? { status: httpStatus } : {}),
-      });
-    }
+    const rawTitle = await rawPage.title().catch(() => undefined);
+    const rawObservation = observeDocumentResponse({
+      status: httpStatus,
+      headers: rawResponse.headers(),
+      landedUrl: rawPage.url(),
+      ...(rawTitle !== undefined ? { title: rawTitle } : {}),
+      html: rawHtml,
+      visibleTextLength: rawTextLength,
+      markers: rawDocument.interstitialMarkers,
+    });
     options.onRawDocument?.(rawHtml);
     if (options.onRawRobotsHeader !== undefined) {
       options.onRawRobotsHeader(await rawResponse.headerValue('x-robots-tag'));
@@ -257,7 +281,6 @@ export async function renderDiff(
         waitUntil: 'load',
       });
       renderedHttpStatus = renderedResponse?.status();
-      noteResponsePushback(renderedHttpStatus, renderedResponse?.headers() ?? {});
       let networkQuiet = true;
       try {
         await renderedPage.waitForLoadState('networkidle', { timeout: settleTimeoutMs });
@@ -289,14 +312,15 @@ export async function renderDiff(
       renderedTitle = await renderedPage.title().catch(() => undefined);
       const renderedHtml = await renderedPage.content().catch(() => '');
       renderedInterstitialMarkers = analyzeRawDocument(renderedHtml).interstitialMarkers;
-      if (renderedInterstitialMarkers.length > 0 || isChallengeTitle(renderedTitle)) {
-        options.scheduler?.noteRateLimited({
-          pageUrl: url,
-          fetcher: 'render',
-          kind: 'bot-challenge',
-          ...(renderedHttpStatus !== undefined ? { status: renderedHttpStatus } : {}),
-        });
-      }
+      const renderedObservation = observeDocumentResponse({
+        ...(renderedHttpStatus !== undefined ? { status: renderedHttpStatus } : {}),
+        headers: renderedResponse?.headers() ?? {},
+        landedUrl: renderedPage.url(),
+        ...(renderedTitle !== undefined ? { title: renderedTitle } : {}),
+        html: renderedHtml,
+        visibleTextLength: renderedTextLength,
+        markers: renderedInterstitialMarkers,
+      });
 
       // Both screenshots or neither: a raw/rendered pair only means anything
       // read side by side, and the pruner deletes them as a pair too.
@@ -318,11 +342,8 @@ export async function renderDiff(
       const acquisitionFailure =
         httpStatus >= 400 ||
         (renderedHttpStatus ?? 0) >= 400 ||
-        rawDocument.interstitialMarkers.length > 0 ||
-        renderedInterstitialMarkers.length > 0 ||
-        /security\s+(check|verification)|verifying\s+(you are|your browser)|checking\s+your\s+browser|just a moment|attention required|test de sécurité|vérification anti[- ]robot/i.test(
-          renderedTitle ?? '',
-        );
+        rawObservation.auditedDocumentWall ||
+        renderedObservation.auditedDocumentWall;
       if (!acquisitionFailure) await options.onRenderedPage?.(renderedPage);
     } finally {
       options.guard?.untrack(renderedContext);

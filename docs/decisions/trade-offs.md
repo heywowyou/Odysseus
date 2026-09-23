@@ -5185,6 +5185,25 @@ profile name invented to make the deployment pass.
 attestation is that a person evaluated the profile. Any string a deployment
 could supply would let the deployment attest to itself.
 
+**Amended by plan 076: request delay recovers after clean starts.** The
+2026-09-22 Haaitza run exposed that a false pushback permanently ratcheted the
+delay to 60 seconds, even after the host resumed answering normally. After 20
+consecutive request starts without a pushback and outside any `Retry-After`
+window, the shared scheduler halves the delay, stopping at the configured
+floor. From 60 seconds to a 10-second floor that is 60 → 30 → 15 → 10 seconds.
+A fresh pushback resets the clean-start counter. The delay recovers; concurrency
+still only decreases, because the shared global start spacing already controls
+request pressure while more lanes only overlap local work. Recovery events are
+persisted beside pushback events so the operator sees the actual pace.
+
+**Plan 076 samples diagnostic surfaces by template family.** Mobile and
+consent-rejected surfaces provide diagnostics and link discovery, not client
+findings. The homepage, every mandatory planner page, and the first two pages
+per template family in stable inventory order receive those surfaces. The
+surface plan is persisted with the audit plan; a sampled-out page records the
+explicit `family-sampled` reason and does not create a material coverage gap.
+Axe remains on every baseline page because it produces report findings.
+
 ### 100. A stored theme may be `geo`; the model-facing theme schema stays narrow (build decision, 2026-09-18, Plan 058 repair)
 
 Plan 058's commit widened `themeSchema.category` in

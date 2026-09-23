@@ -5,7 +5,12 @@ import type {
   TransactionalFlowEvidence,
   TransactionalFlowRedirectCheck,
 } from '@odysseus/core';
-import { isBlockedRender } from '@odysseus/core';
+import {
+  auditedHostAliases,
+  classifyDocumentWall,
+  classifyHostResponse,
+  isBlockedRender,
+} from '@odysseus/core';
 import { type AxeResults, runAxe } from './axe.js';
 import { runLighthouseIsolated } from './lighthouse-isolated.js';
 import { renderDiff, type RenderDiffOptions, type RenderDiffOutcome } from './render-diff.js';
@@ -85,7 +90,11 @@ import {
   type LocalStateExplorationRecord,
 } from './state-surface.js';
 import type { ConsentBaselineObservation } from './consent-state.js';
-import type { ScanSurface, SurfaceLimitationRecord } from './evidence-surfaces.js';
+import type {
+  ScanSurface,
+  SurfaceLimitationRecord,
+  SurfaceSkipReason,
+} from './evidence-surfaces.js';
 import type { PageAuditProfile } from './page-audit-profile.js';
 
 export interface ScanPageOptions {
@@ -276,6 +285,10 @@ export interface PageScanResult {
    *  now; the consent/local-state surfaces join in step 13). Persisted so
    *  the evidence graph digests the exact surface set that ran. */
   surfaces?: ScanSurface[];
+  /** A deterministic plan reason for omitted optional mobile/consent passes. */
+  surfaceSkipped?: SurfaceSkipReason;
+  /** Expected surface IDs omitted by plan, retained for delta comparability. */
+  plannedOutOfScopeSurfaceIds?: string[];
   /** Plan 059 steps 10-13: anchors exposed only on a state surface, with
    *  the discovery source and surface the fixed-point rule needs. */
   surfaceLinks?: SurfaceLinkDiscovery[];
@@ -587,14 +600,6 @@ export async function runRenderedAnalysis(
             () => observeFrames(page, url),
             perCheckBudgetMs,
           );
-          for (const frame of result.frames) {
-            if (frame.challengeMarkers === undefined) continue;
-            options.scheduler?.noteRateLimited({
-              pageUrl: url,
-              fetcher: 'render',
-              kind: 'bot-challenge',
-            });
-          }
         } catch {
           // No frame record is itself recorded: the evidence graph treats a
           // page without one as frame coverage unknown, never as frame-free.
@@ -1105,12 +1110,31 @@ export async function runLighthouseAnalysis(
       }
       const robotsStatus = robotsTxtPushbackStatus(lighthouse);
       if (robotsStatus !== undefined) {
-        options.scheduler?.noteRateLimited({
-          pageUrl: url,
-          fetcher: 'lighthouse',
-          kind: robotsStatus === 429 ? 'rate-limit' : 'origin-transient',
+        const requestedHost = new URL(url).hostname;
+        const landedUrl = lighthouse.finalUrl || options.navigationUrl || url;
+        const landedHost = (() => {
+          try {
+            return new URL(landedUrl).hostname;
+          } catch {
+            return '';
+          }
+        })();
+        const response = {
+          requestedHost,
+          landedHost,
+          auditedHostAliases: auditedHostAliases(requestedHost),
           status: robotsStatus,
-        });
+        };
+        if (options.scheduler !== undefined) {
+          options.scheduler.observeHostDocument({
+            response,
+            document: { status: robotsStatus },
+            signal: { pageUrl: url, fetcher: 'lighthouse' },
+          });
+        } else {
+          classifyHostResponse({ ...response, consecutiveOriginServerErrors: 0 });
+          classifyDocumentWall({ status: robotsStatus });
+        }
       }
       return { lighthouse };
     } catch (error) {

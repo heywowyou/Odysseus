@@ -34,7 +34,8 @@
     "report:workbench:options": "tsx scripts/report-workbench-options.ts",
     "fixtures:rules": "node scripts/build-observed-rule-inventory.mjs",
     "fixtures:refresh": "node scripts/refresh-fixtures.mjs",
-    "measure:audit-data-quality": "node scripts/measure-audit-data-quality.mjs"
+    "measure:audit-data-quality": "node scripts/measure-audit-data-quality.mjs",
+    "fixtures:pushback-corpus": "tsx scripts/build-pushback-corpus.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

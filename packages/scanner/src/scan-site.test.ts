@@ -313,6 +313,8 @@ describe('scanSite characterization', () => {
 describe('scanSite with fullAuditPlanning', () => {
   const pageA = `${startUrl}a`;
   const pageB = `${startUrl}b`;
+  const pageC = `${startUrl}c`;
+  const scopeDigest = `sha256:${'e'.repeat(64)}`;
 
   const withProfile = (
     url: string,
@@ -373,6 +375,91 @@ describe('scanSite with fullAuditPlanning', () => {
     }));
   });
 
+  it('skips mobile and consent surfaces on family-sampled pages and records the plan omission', async () => {
+    vi.mocked(crawlSite).mockResolvedValue({
+      startUrl,
+      pages: [
+        withProfile(startUrl, [{ kind: 'homepage-url', detail: startUrl }]),
+        withProfile(pageA, [{ kind: 'content-json-ld-type', detail: 'Article' }], 'family-1'),
+        withProfile(pageB, [{ kind: 'content-json-ld-type', detail: 'Article' }], 'family-1'),
+        withProfile(pageC, [{ kind: 'content-json-ld-type', detail: 'Article' }], 'family-1'),
+      ],
+      effectiveDelayMs: 0,
+      visitedCount: 4,
+      maxPages: 10,
+      maxDepth: 2,
+      robotsTxtFound: true,
+      robotsDisallowMatches: [],
+      aiCrawlerBlocks: [],
+      linkDiscoveredUrls: [pageA, pageB, pageC],
+    } as never);
+    vi.mocked(runRenderedAnalysis).mockImplementation(
+      async (_browser, url) =>
+        ({
+          url,
+          checkOutcomes: { 'render-diff': 'completed', axe: 'completed' },
+          ...(url === pageC
+            ? { consentBaseline: { state: 'consent-controls-detected', controlCount: 2 } }
+            : {}),
+        }) as never,
+    );
+    vi.mocked(runMobileSurfaceAnalysis).mockImplementation(
+      async (_browser, url) =>
+        ({
+          surface: mobileSurface({
+            evidenceEpoch: 1,
+            pageIdentity: url,
+            userAgent: 'OdysseusBot/1.0 (+https://odysseusaudit.com/bot)',
+            crawlerUserAgent: 'OdysseusBot/1.0 (+https://odysseusaudit.com/bot)',
+            readinessOutcome: 'ready',
+          }),
+          readiness: {
+            navigationMilestone: 'load',
+            httpStatus: 200,
+            domReady: true,
+            fontsReady: true,
+            networkQuiet: true,
+            mutationQuiescent: true,
+            significantResourceFailures: [],
+            outcome: 'ready',
+          },
+          axeViolations: [],
+          uaVerified: true,
+          links: [],
+        }) as never,
+    );
+
+    const result = await scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: '/tmp/pages',
+      concurrency: 1,
+      fullAuditPlanning: true,
+      skipLighthouse: true,
+      scopeDigest,
+    });
+
+    const sampledOut = result.pages.find((page) => page.url === pageC)!;
+    expect(vi.mocked(runMobileSurfaceAnalysis).mock.calls.map(([, url]) => url)).not.toContain(
+      pageC,
+    );
+    expect(vi.mocked(runConsentSurfaceAnalysis).mock.calls.map(([, url]) => url)).not.toContain(
+      pageC,
+    );
+    expect(sampledOut.mobileSurface).toBeUndefined();
+    expect(sampledOut.surfaceSkipped).toBe('family-sampled');
+    expect(sampledOut.plannedOutOfScopeSurfaceIds).toHaveLength(2);
+    expect(result.fullAuditPlan?.surfaceSampling.find((sample) => sample.url === pageC)).toEqual({
+      url: pageC,
+      selected: false,
+      reason: 'family-sampled',
+    });
+    expect(result.analysisCoverageByUrl?.get(pageC)?.surfaceSample).toEqual({
+      selected: false,
+      reason: 'family-sampled',
+    });
+  });
+
   it('runs rendered analysis for every visited page and Lighthouse only for the planner-selected ones', async () => {
     const events: ScanProgressEvent[] = [];
     const result = await scanSite(startUrl, {
@@ -429,7 +516,7 @@ describe('scanSite with fullAuditPlanning', () => {
       extended: { outcome: 'partial', failedCheckIds: ['keyboard-navigation'] },
       lighthouse: { outcome: 'not-planned' },
     });
-    expect(events.filter((event) => event.type.startsWith('content-scan'))).toEqual([
+    expect(events.filter((event) => event.type.startsWith('content-scan'))).toMatchObject([
       { type: 'content-scan-start', totalPages: 3, alreadyCompleted: 0, concurrency: 3 },
       {
         type: 'content-scan-page',
@@ -456,7 +543,7 @@ describe('scanSite with fullAuditPlanning', () => {
     expect(events.filter((event) => event.type === 'select-performance')).toEqual([
       { type: 'select-performance' },
     ]);
-    expect(events.filter((event) => event.type.startsWith('lighthouse'))).toEqual([
+    expect(events.filter((event) => event.type.startsWith('lighthouse'))).toMatchObject([
       { type: 'lighthouse-start', totalPages: 2, alreadyCompleted: 0 },
       {
         type: 'lighthouse-page',

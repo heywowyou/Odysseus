@@ -1,6 +1,11 @@
 import { UNLIMITED_MAX_PAGES } from '@odysseus/scanner';
 import { describe, expect, it } from 'vitest';
-import { computeCrawlEtaMs, computeStageEtaMs, createDurationEstimator } from './eta.js';
+import {
+  computeCrawlEtaMs,
+  computePacedStageEtaMs,
+  computeStageEtaMs,
+  createDurationEstimator,
+} from './eta.js';
 
 describe('createDurationEstimator', () => {
   it('has no estimate before the first sample', () => {
@@ -163,6 +168,53 @@ describe('computeCrawlEtaMs', () => {
         observedPageCostMs: undefined,
       }),
     ).toBe(0);
+  });
+});
+
+describe('computePacedStageEtaMs', () => {
+  it('uses the pacing floor when it dominates observed page work', () => {
+    expect(
+      computePacedStageEtaMs({
+        remaining: 12,
+        slotsPerPage: 5,
+        currentDelayMs: 60_000,
+        workEstimateMs: 120_000,
+        concurrency: 3,
+      }),
+    ).toBe(3_600_000);
+  });
+
+  it('uses the work floor when it dominates pacing', () => {
+    expect(
+      computePacedStageEtaMs({
+        remaining: 6,
+        slotsPerPage: 2,
+        currentDelayMs: 1000,
+        workEstimateMs: 90_000,
+        concurrency: 3,
+      }),
+    ).toBe(180_000);
+  });
+
+  it('returns zero for completed stages and never divides by zero concurrency', () => {
+    expect(
+      computePacedStageEtaMs({
+        remaining: 0,
+        slotsPerPage: 10,
+        currentDelayMs: 60_000,
+        workEstimateMs: 1000,
+        concurrency: 0,
+      }),
+    ).toBe(0);
+    expect(
+      computePacedStageEtaMs({
+        remaining: 2,
+        slotsPerPage: 0,
+        currentDelayMs: 0,
+        workEstimateMs: 1000,
+        concurrency: 0,
+      }),
+    ).toBe(2000);
   });
 });
 

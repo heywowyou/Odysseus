@@ -62,6 +62,8 @@ export interface ProgressStrings {
   /** During the scan. {count}: pushback events, {delay}: seconds between
    *  requests the scanner slowed itself to. Information, not an alarm. */
   pushbackSlowedNote: string;
+  /** The live scan's pace has reduced after sustained clean requests. */
+  pushbackRecoveredNote: string;
   /** After the scan, on the audit page. Same placeholders. */
   pushbackSummaryNote: string;
   /** Shown only once the automatic slowdown ran out. */
@@ -115,6 +117,8 @@ export const progress = {
     goToProspectLink: 'Aller au prospect',
     pushbackSlowedNote:
       'Réactions du site à nos requêtes : {count}. Le scan a ralenti automatiquement à {delay} s entre deux requêtes.',
+    pushbackRecoveredNote:
+      'Après {count} périodes sans nouveau blocage, le délai est revenu à {delay} s entre deux requêtes.',
     pushbackSummaryNote:
       'Réactions du site à nos requêtes pendant le scan : {count}. Délai final : {delay} s entre deux requêtes.',
     pushbackRelaunchWarning:
@@ -194,6 +198,8 @@ export const progress = {
     goToProspectLink: 'Go to the prospect',
     pushbackSlowedNote:
       'Site pushback on our requests: {count}. The scan slowed down on its own to {delay} s between requests.',
+    pushbackRecoveredNote:
+      'After {count} periods without new pushback, the delay recovered to {delay} s between requests.',
     pushbackSummaryNote:
       'Site pushback on our requests during the scan: {count}. Final delay: {delay} s between requests.',
     pushbackRelaunchWarning:

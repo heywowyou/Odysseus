@@ -11,6 +11,7 @@
  */
 
 import type { RawDocumentSignals, RenderDiffResult } from '../types/findings.js';
+import { classifyDocumentWall, MINIMAL_RAW_MARKUP_LENGTH } from '../acquisition/host-signal.js';
 import { severityFromRenderDiff } from './severity.js';
 import { RENDER_DIFF_EMISSION_THRESHOLD_PERCENT } from './constants.js';
 import type { FindingCandidate } from './candidate.js';
@@ -22,87 +23,45 @@ export const RENDERDIFF_RULE_ID = 'text-missing-from-raw-html';
  *  same raw document, one document is standing in for the whole site. */
 export const SHARED_RAW_DOCUMENT_MIN_PAGES = 3;
 
-/** Issue #301: markup at or below this length has no <head> worth the
- *  name - no title, no stylesheet, no meta description. A deployed page
- *  does not look like this even when it renders everything client-side,
- *  so this is the line between "the site serves a JavaScript shell", which
- *  is a true render-diff finding, and "this fetch did not receive the
- *  site", which is not a measurement at all. */
-export const MINIMAL_RAW_MARKUP_LENGTH = 512;
-
-/** Titles used by common bot challenges and access walls. The list is kept
- * intentionally small and explicit: a normal page titled "Security" must not
- * disappear merely because one word happens to overlap. */
-export const CHALLENGE_TITLE_PATTERNS: readonly RegExp[] = [
-  /security\s+check/i,
-  /security\s+verification/i,
-  /verifying\s+(you are|your browser)/i,
-  /checking\s+your\s+browser/i,
-  /just a moment/i,
-  /attention required/i,
-  /test de sécurité/i,
-  /vérification anti[- ]robot/i,
-];
-
-/** Confirmed challenge-body markers from the stored audit review. Keep this
- *  table explicit: these strings replace the site's document and therefore
- *  are acquisition evidence, not page content. */
-export const CHALLENGE_MARKER_PATTERNS: readonly RegExp[] = [
-  /o2swit\.ch\/assets\/tiger\.svg/i,
-  /(?:static\.)?captcha-delivery\.com/i,
-  /datadome/i,
-  /test\s+de\s+s[ée]curit[ée]/i,
-  /security\s+(?:check|verification)/i,
-];
-
-export function isChallengeMarker(value: string | null | undefined): boolean {
-  return (
-    (value !== undefined &&
-      value !== null &&
-      /bot-challenge|challenge-title|access-denied|o2switch-challenge|datadome-challenge|waf-security-check/i.test(
-        value,
-      )) ||
-    (value !== undefined && value !== null && CHALLENGE_MARKER_PATTERNS.some((p) => p.test(value)))
-  );
-}
-
-export function isChallengeTitle(title: string | null | undefined): boolean {
-  return (
-    title !== undefined && title !== null && CHALLENGE_TITLE_PATTERNS.some((p) => p.test(title))
-  );
-}
-
 /** A render that did not obtain the site's own document is acquisition
- * failure, never content evidence. Stored artifacts use the same predicate
+ * failure, never content evidence. Stored artifacts use the same classifier
  * as live scans so re-normalization repairs old reports. */
-export function isBlockedRender(result: RenderDiffResult | undefined): boolean {
-  if (result === undefined) return false;
-  const status = result.renderedHttpStatus ?? result.httpStatus;
-  if (status >= 400) return true;
-  if (isChallengeTitle(result.renderedTitle)) return true;
-  if (
-    (result.renderedInterstitialMarkers ?? []).some(
-      (marker) =>
-        /bot-challenge|access-denied|o2switch-challenge|datadome-challenge|waf-security-check/i.test(
-          marker,
-        ) || isChallengeMarker(marker),
-    )
-  ) {
-    return true;
-  }
-  if (
-    (result.rawDocument?.interstitialMarkers ?? []).some(
-      (marker) =>
-        /bot-challenge|access-denied/i.test(marker) ||
-        isChallengeMarker(marker) ||
-        (marker === 'meta-refresh' &&
-          (result.rawDocument?.markupLength ?? Number.MAX_SAFE_INTEGER) <=
-            MINIMAL_RAW_MARKUP_LENGTH),
-    )
-  ) {
-    return true;
-  }
-  return false;
+export function isBlockedRender(
+  result: RenderDiffResult | undefined,
+  fallbackTitle?: string | null,
+): boolean {
+  const fallback = classifyDocumentWall(
+    fallbackTitle === undefined ? {} : { title: fallbackTitle },
+  );
+  if (result === undefined) return fallback.classification === 'wall';
+
+  const renderedTitle = result.renderedTitle ?? fallbackTitle;
+  const rendered = classifyDocumentWall({
+    status: result.renderedHttpStatus ?? result.httpStatus,
+    visibleTextLength: result.renderedTextLength,
+    ...(renderedTitle !== undefined ? { title: renderedTitle } : {}),
+    ...(result.renderedInterstitialMarkers !== undefined
+      ? { markers: result.renderedInterstitialMarkers }
+      : {}),
+  });
+  const raw = classifyDocumentWall({
+    status: result.httpStatus,
+    visibleTextLength: result.rawTextLength,
+    ...(result.rawDocument !== undefined
+      ? {
+          markupLength: result.rawDocument.markupLength,
+          markers: result.rawDocument.interstitialMarkers,
+        }
+      : {}),
+  });
+  // HTTP errors remain acquisition failures for normalization. The shared
+  // wall classifier determines which successful documents are barriers.
+  return (
+    (result.renderedHttpStatus ?? result.httpStatus) >= 400 ||
+    result.httpStatus >= 400 ||
+    rendered.classification === 'wall' ||
+    raw.classification === 'wall'
+  );
 }
 
 /** Why one page's raw fetch cannot be compared against its rendered pass.
@@ -116,6 +75,7 @@ export interface RawFetchInput {
   pageUrl: string;
   httpStatus: number | undefined;
   rawDocument: RawDocumentSignals | undefined;
+  rawTextLength?: number;
 }
 
 /**
@@ -152,7 +112,13 @@ export function unusableRawFetches(
   const unusable = new Map<string, UnusableRawFetch>();
   for (const page of pages) {
     if (page.rawDocument === undefined) continue;
-    if (page.rawDocument.interstitialMarkers.length > 0) {
+    const wall = classifyDocumentWall({
+      ...(page.httpStatus !== undefined ? { status: page.httpStatus } : {}),
+      markupLength: page.rawDocument.markupLength,
+      ...(page.rawTextLength !== undefined ? { visibleTextLength: page.rawTextLength } : {}),
+      markers: page.rawDocument.interstitialMarkers,
+    });
+    if (wall.classification === 'wall' && page.rawDocument.interstitialMarkers.length > 0) {
       unusable.set(page.pageUrl, {
         kind: 'interstitial',
         markers: page.rawDocument.interstitialMarkers,
@@ -161,6 +127,13 @@ export function unusableRawFetches(
     }
     if (page.httpStatus !== undefined && (page.httpStatus < 200 || page.httpStatus >= 300)) {
       unusable.set(page.pageUrl, { kind: 'http-error', httpStatus: page.httpStatus });
+      continue;
+    }
+    if (wall.classification === 'wall') {
+      unusable.set(page.pageUrl, {
+        kind: 'interstitial',
+        markers: page.rawDocument.interstitialMarkers,
+      });
       continue;
     }
     const sharing = pagesBySignature.get(page.rawDocument.textSignature);

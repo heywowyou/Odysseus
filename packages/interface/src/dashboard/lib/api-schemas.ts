@@ -66,6 +66,8 @@ const scanJobProgressSchema = z.object({
       target: z.number(),
       etaMs: z.number().optional(),
       etaCalculatedAt: z.string().optional(),
+      requestStartCount: z.number().optional(),
+      currentDelayMs: z.number().optional(),
     })
     .optional(),
   lighthouse: z
@@ -74,6 +76,8 @@ const scanJobProgressSchema = z.object({
       target: z.number(),
       etaMs: z.number().optional(),
       etaCalculatedAt: z.string().optional(),
+      requestStartCount: z.number().optional(),
+      currentDelayMs: z.number().optional(),
     })
     .optional(),
   continuationGuard: z
@@ -102,6 +106,9 @@ const scanJobProgressSchema = z.object({
         atMaxDelay: z.boolean().optional(),
       }),
     )
+    .optional(),
+  pacingRecoveryEvents: z
+    .array(z.object({ delayMs: z.number(), occurredAt: z.string() }))
     .optional(),
   message: z.string().optional(),
 });

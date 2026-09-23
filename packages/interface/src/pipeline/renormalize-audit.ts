@@ -18,7 +18,6 @@ import {
   attributableCoreWebVitals,
   deriveCoverageLimitations,
   isBlockedRender,
-  isChallengeTitle,
   normalizeAudit,
   type AuditManifest,
   type NormalizePageInput,
@@ -229,8 +228,7 @@ export async function renormalizeAudit(
     const { coreWebVitals: _stored, ...rest } = entry;
     const isContent =
       entry.status === 'visited' &&
-      !isBlockedRender(scanPage.renderDiff) &&
-      !isChallengeTitle(scanPage.headMetadata?.title);
+      !isBlockedRender(scanPage.renderDiff, scanPage.headMetadata?.title);
     const coreWebVitals = isContent
       ? attributableCoreWebVitals(scanPage.lighthouse, entry.url)
       : undefined;

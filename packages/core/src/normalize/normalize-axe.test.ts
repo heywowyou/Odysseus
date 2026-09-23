@@ -3,6 +3,22 @@ import { extractAxeCandidates } from './normalize-axe.js';
 import { buildAxeNode, buildAxeResultsInput, buildAxeViolation } from './fixtures.js';
 
 describe('extractAxeCandidates', () => {
+  it('keeps ordinary security-check wording as a finding', () => {
+    const axe = buildAxeResultsInput([
+      buildAxeViolation({
+        nodes: [
+          buildAxeNode({
+            target: ['.security-note'],
+            html: '<div>Security check options</div>',
+            failureSummary: 'Fix the text that says security check.',
+          }),
+        ],
+      }),
+    ]);
+
+    expect(extractAxeCandidates(axe, 'https://example.com/')).toHaveLength(1);
+  });
+
   it('emits one candidate per (violation, node) pair', () => {
     const axe = buildAxeResultsInput([
       buildAxeViolation({

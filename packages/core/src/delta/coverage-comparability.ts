@@ -82,6 +82,9 @@ export interface FindingsDeltaCoverage {
   checks?: readonly DeltaCheckObservability[];
   /** The surfaces this run could observe, including ones no check used. */
   surfaces: readonly string[];
+  /** Surface IDs omitted by the deterministic family sample. A finding
+   *  from one of these surfaces is not comparable to this run, not a pass. */
+  plannedOutOfScopeSurfaces?: readonly string[];
   /** Where each finding (by `dedupeKey`) was observed. Absent for a
    *  legacy run, whose findings carry no recorded coordinates. */
   observations?: Readonly<Record<string, DeltaObservationCoordinates>>;
@@ -119,7 +122,8 @@ export type NotComparableCoverageReason =
   | 'check-version-changed'
   | 'semantic-classifier-changed'
   | 'frame-capability-changed'
-  | 'surface-absent-in-current';
+  | 'surface-absent-in-current'
+  | 'surface-planned-out-of-scope';
 
 /** Section 16's answers for one observation, before the delta may call it
  *  new, resolved or persistent. `comparable` means "use the shipped
@@ -182,7 +186,12 @@ export function compareDeltaObservationAcrossRuns(
     return { kind: 'newly-observable', reason: 'surface-absent-in-baseline' };
   }
   if (!current.surfaces.includes(observation.surfaceId)) {
-    return { kind: 'not-comparable', reason: 'surface-absent-in-current' };
+    return {
+      kind: 'not-comparable',
+      reason: current.plannedOutOfScopeSurfaces?.includes(observation.surfaceId)
+        ? 'surface-planned-out-of-scope'
+        : 'surface-absent-in-current',
+    };
   }
   return { kind: 'comparable' };
 }

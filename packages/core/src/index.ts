@@ -84,7 +84,16 @@ export * from './normalize/candidate.js';
 export * from './normalize/normalize-axe.js';
 export * from './normalize/normalize-crux.js';
 export * from './normalize/normalize-lighthouse.js';
-export * from './normalize/normalize-renderdiff.js';
+export * from './acquisition/host-signal.js';
+export {
+  RENDERDIFF_RULE_ID,
+  SHARED_RAW_DOCUMENT_MIN_PAGES,
+  isBlockedRender,
+  unusableRawFetches,
+  extractRenderDiffCandidates,
+  type UnusableRawFetch,
+  type RawFetchInput,
+} from './normalize/normalize-renderdiff.js';
 export * from './normalize/normalize-custom.js';
 export * from './normalize/normalize.js';
 export * from './normalize/url-identity.js';

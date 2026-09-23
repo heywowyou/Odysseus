@@ -181,6 +181,54 @@ describe('createScanProgressReporter staged full-audit progress', () => {
     ]);
   });
 
+  it('raises and lowers the paced ETA as pushback and recovery events arrive', async () => {
+    const report = createScanProgressReporter({} as never, 'job-1', 'full-audit');
+    report({
+      type: 'content-scan-start',
+      totalPages: 10,
+      alreadyCompleted: 0,
+      concurrency: 2,
+      requestStartCount: 5,
+      currentDelayMs: 10_000,
+      plannedSlotsPerPage: 3,
+    });
+    report({
+      type: 'pushback',
+      event: {
+        pageUrl: 'https://example.com/a',
+        kind: 'rate-limit',
+        fetcher: 'crawl',
+        occurredAt: '2026-09-23T08:00:00.000Z',
+        status: 429,
+        delayMs: 60_000,
+      },
+    });
+    report({
+      type: 'pacing-recovered',
+      event: { delayMs: 30_000, occurredAt: '2026-09-23T08:10:00.000Z' },
+    });
+
+    await vi.waitFor(() => expect(updateJobProgress).toHaveBeenCalledTimes(3));
+    const updates = vi.mocked(updateJobProgress).mock.calls.map((call) => call[2]);
+    expect(updates[0]).toMatchObject({
+      progress: {
+        contentScan: { etaMs: 300_000, requestStartCount: 5, currentDelayMs: 10_000 },
+      },
+    });
+    expect(updates[1]).toMatchObject({
+      progress: {
+        contentScan: { etaMs: 1_800_000, currentDelayMs: 60_000 },
+        pushbackEvents: [{ delayMs: 60_000 }],
+      },
+    });
+    expect(updates[2]).toMatchObject({
+      progress: {
+        contentScan: { etaMs: 900_000, currentDelayMs: 30_000 },
+        pacingRecoveryEvents: [{ delayMs: 30_000, occurredAt: '2026-09-23T08:10:00.000Z' }],
+      },
+    });
+  });
+
   it('reconciles pages discovered after crawl telemetry into the durable inventory count', async () => {
     const report = createScanProgressReporter({} as never, 'job-1', 'full-audit');
     report({ type: 'crawl-start', maxPages: 500, effectiveDelayMs: 1000, robotsTxtFound: true });

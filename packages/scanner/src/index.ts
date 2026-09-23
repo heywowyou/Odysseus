@@ -43,6 +43,7 @@ export {
   HostRequestScheduler,
   type HostRequestSchedulerOptions,
   type HostPushbackEvent,
+  type HostPacingRecoveredEvent,
   type HostPushbackFetcher,
   type HostPushbackKind,
 } from './host-request-scheduler.js';

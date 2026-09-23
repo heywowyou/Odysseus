@@ -12,11 +12,19 @@ export interface PushbackEventLike {
   retryAfterMs?: number | undefined;
   delayMs?: number | undefined;
   atMaxDelay?: boolean | undefined;
+  occurredAt?: string | undefined;
+}
+
+export interface PacingRecoveryEventLike {
+  delayMs: number;
+  occurredAt?: string | undefined;
 }
 
 export interface PushbackSummary {
   eventCount: number;
   pageCount: number;
+  recoveryCount: number;
+  latestWasRecovery: boolean;
   /** The pace the scan runs at now; the latest event's delay when the scanner
    *  recorded one, otherwise the starting delay. */
   currentDelayMs: number;
@@ -32,16 +40,40 @@ export function summarizePushback(
   events: readonly PushbackEventLike[],
   startingDelayMs: number,
   blockedPageCount = 0,
+  pacingRecoveryEvents: readonly PacingRecoveryEventLike[] = [],
 ): PushbackSummary | undefined {
   if (events.length === 0) return undefined;
-  const recordedDelays = events.flatMap((event) =>
-    event.delayMs === undefined ? [] : [event.delayMs],
-  );
-  const currentDelayMs = Math.max(startingDelayMs, ...recordedDelays);
+  const timeline = [
+    ...events.map((event, index) => ({
+      kind: 'pushback' as const,
+      occurredAt: event.occurredAt,
+      delayMs: event.delayMs,
+      sequence: index,
+    })),
+    ...pacingRecoveryEvents.map((event, index) => ({
+      kind: 'recovery' as const,
+      occurredAt: event.occurredAt,
+      delayMs: event.delayMs,
+      sequence: events.length + index,
+    })),
+  ].sort((left, right) => {
+    const leftAt = left.occurredAt === undefined ? Number.NaN : Date.parse(left.occurredAt);
+    const rightAt = right.occurredAt === undefined ? Number.NaN : Date.parse(right.occurredAt);
+    return Number.isFinite(leftAt) && Number.isFinite(rightAt)
+      ? leftAt - rightAt || left.sequence - right.sequence
+      : left.sequence - right.sequence;
+  });
+  let currentDelayMs = startingDelayMs;
+  for (const event of timeline) {
+    if (event.delayMs !== undefined) currentDelayMs = event.delayMs;
+  }
+  const latestWasRecovery = timeline.at(-1)?.kind === 'recovery';
   const longestRetryAfterMs = Math.max(0, ...events.map((event) => event.retryAfterMs ?? 0));
   return {
     eventCount: events.length,
     pageCount: new Set(events.map((event) => event.pageUrl)).size,
+    recoveryCount: pacingRecoveryEvents.length,
+    latestWasRecovery,
     currentDelayMs,
     relaunchAdvised: events.some((event) => event.atMaxDelay === true) || blockedPageCount > 0,
     suggestedDelayMs: Math.max(currentDelayMs * 2, longestRetryAfterMs, MIN_SUGGESTED_DELAY_MS),

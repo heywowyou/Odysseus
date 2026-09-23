@@ -77,6 +77,7 @@ describe('unusableRawFetches (issue #301)', () => {
           textSignature: 'sig-a',
           interstitialMarkers: ['bot-challenge'],
         },
+        rawTextLength: 100,
       }),
       page({ pageUrl: 'b' }),
     ];

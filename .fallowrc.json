@@ -1,6 +1,7 @@
 {
   "entry": [
     "scripts/*.mjs",
+    "scripts/build-pushback-corpus.ts",
     "packages/interface/src/dashboard/index.html",
     "packages/interface/src/dashboard/main.tsx",
     "packages/llm/src/lint-stored-analyses.ts",
@@ -15,6 +16,7 @@
   "ignorePatterns": [
     "fixtures/hotel-demo/**",
     "fixtures/prospecting/**",
+    "fixtures/pushback-corpus/**",
     "fixtures/test-audits/**",
     "docs/report/design/**"
   ],

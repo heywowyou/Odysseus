@@ -233,6 +233,8 @@ export async function updateJobProgress(
     $set['progress.crawlExclusions'] = patch.progress.crawlExclusions;
   if (patch.progress?.pushbackEvents !== undefined)
     $set['progress.pushbackEvents'] = patch.progress.pushbackEvents;
+  if (patch.progress?.pacingRecoveryEvents !== undefined)
+    $set['progress.pacingRecoveryEvents'] = patch.progress.pacingRecoveryEvents;
   if (patch.progress?.message !== undefined) $set['progress.message'] = patch.progress.message;
   if (patch.urlResults !== undefined) $set['urlResults'] = patch.urlResults;
   if (patch.outreachBatchResults !== undefined)

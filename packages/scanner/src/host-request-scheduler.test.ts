@@ -278,3 +278,76 @@ describe('pressure only ever increases', () => {
     expect(peak).toBe(2);
   });
 });
+
+describe('pressure recovers after clean request starts', () => {
+  it('halves a capped delay to the floor after each twenty clean starts', async () => {
+    const clock = fakeClock();
+    const recovered: number[] = [];
+    const scheduler = new HostRequestScheduler({
+      floorDelayMs: 10_000,
+      maxDelayMs: 60_000,
+      maxConcurrency: 8,
+      ...clock,
+      onPacingRecovered: (event) => recovered.push(event.delayMs),
+    });
+    scheduler.noteRateLimited();
+    scheduler.noteRateLimited();
+    scheduler.noteRateLimited();
+    expect(scheduler.effectiveDelayMs).toBe(60_000);
+
+    for (let index = 0; index < 60; index += 1) await scheduler.pace();
+
+    expect(recovered).toEqual([30_000, 15_000, 10_000]);
+    expect(scheduler.effectiveDelayMs).toBe(10_000);
+    expect(scheduler.requestStartCount).toBe(60);
+    expect(scheduler.concurrency).toBe(1);
+  });
+
+  it('honours Retry-After before counting clean starts toward recovery', async () => {
+    const clock = fakeClock();
+    const recovered: number[] = [];
+    const scheduler = new HostRequestScheduler({
+      floorDelayMs: 100,
+      maxDelayMs: 800,
+      maxConcurrency: 4,
+      ...clock,
+      onPacingRecovered: (event) => recovered.push(event.delayMs),
+    });
+    scheduler.noteRateLimited({
+      pageUrl: 'https://example.com/',
+      kind: 'rate-limit',
+      fetcher: 'crawl',
+      retryAfterMs: 1000,
+    });
+
+    for (let index = 0; index < 19; index += 1) await scheduler.pace();
+    expect(clock.now()).toBeGreaterThanOrEqual(1000);
+    expect(recovered).toEqual([]);
+
+    await scheduler.pace();
+    expect(recovered).toEqual([400]);
+  });
+
+  it('resets the clean-start counter on a new pushback', async () => {
+    const clock = fakeClock();
+    const recovered: number[] = [];
+    const scheduler = new HostRequestScheduler({
+      floorDelayMs: 10,
+      maxDelayMs: 60,
+      maxConcurrency: 4,
+      ...clock,
+      onPacingRecovered: (event) => recovered.push(event.delayMs),
+    });
+    scheduler.noteRateLimited();
+    scheduler.noteRateLimited();
+    scheduler.noteRateLimited();
+    for (let index = 0; index < 19; index += 1) await scheduler.pace();
+    scheduler.noteRateLimited();
+    for (let index = 0; index < 19; index += 1) await scheduler.pace();
+    expect(recovered).toEqual([]);
+
+    await scheduler.pace();
+    expect(recovered).toEqual([30]);
+    expect(scheduler.effectiveDelayMs).toBe(30);
+  });
+});

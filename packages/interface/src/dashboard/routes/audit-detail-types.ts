@@ -244,6 +244,7 @@ export interface AuditDetailResponse {
   finishedAt: string;
   pagesVisited: number;
   pushbackEvents?: AuditPushbackEventResponse[];
+  pacingRecoveryEvents?: { delayMs: number; occurredAt: string }[];
   /** The run's starting delay between requests, before any backoff. */
   crawlDelayMs?: number;
   severityRollup: SeverityRollup;

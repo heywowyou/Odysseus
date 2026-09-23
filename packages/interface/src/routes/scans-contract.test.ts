@@ -11,6 +11,7 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   requestJobCancellation: vi.fn(),
   getProspectHub: vi.fn(),
   getAudit: vi.fn(),
+  getLatestFullAuditEstimateSource: vi.fn(),
   deleteAuditCascade: vi.fn(),
   deleteJob: vi.fn(),
   readScanQueue: vi.fn(),
@@ -42,6 +43,7 @@ import {
   findAuditsWithUnreadyReports,
   findProspectsByDomain,
   getAudit,
+  getLatestFullAuditEstimateSource,
   getJob,
   getProspectHub,
   listJobs,
@@ -772,6 +774,29 @@ function summaryRow(
     ...(overrides.awaitsInput !== undefined ? { awaitsInput: overrides.awaitsInput } : {}),
   };
 }
+
+describe('GET /api/scans/estimate', () => {
+  it('returns no estimate when the site has no prior full audit', async () => {
+    vi.mocked(getLatestFullAuditEstimateSource).mockResolvedValue(undefined);
+    const response = await get('/api/scans/estimate?url=https%3A%2F%2Fexample.com%2F');
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toEqual({ available: false });
+  });
+
+  it('uses the prior full-audit inventory and surface/Lighthouse sampling rates', async () => {
+    vi.mocked(getLatestFullAuditEstimateSource).mockResolvedValue({
+      pageCount: 100,
+      sampledSurfacePageCount: 40,
+      lighthousePageCount: 50,
+    });
+    const response = await get(
+      '/api/scans/estimate?url=https%3A%2F%2Fexample.com%2F&delayMs=10000',
+    );
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toMatchObject({ available: true, pageCount: 100 });
+    expect((response.body as { estimatedMs: number }).estimatedMs).toBe(4300000);
+  });
+});
 
 describe('GET /api/scans declares the display outcome code (plan 060 §5.3)', () => {
   it.each([

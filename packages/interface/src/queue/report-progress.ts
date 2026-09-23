@@ -6,10 +6,20 @@
  */
 
 import type { Connection } from 'mongoose';
-import type { HostPushbackEvent, PageWorkGuard, ScanProgressEvent } from '@odysseus/scanner';
-import type { JobType } from '@odysseus/store';
+import type {
+  HostPacingRecoveredEvent,
+  HostPushbackEvent,
+  PageWorkGuard,
+  ScanProgressEvent,
+} from '@odysseus/scanner';
+import type { JobProgressPatch, JobType } from '@odysseus/store';
 import { JobCancelledError, type CancellationRegistry } from './cancellation.js';
-import { computeCrawlEtaMs, computeStageEtaMs, createDurationEstimator } from './eta.js';
+import {
+  computeCrawlEtaMs,
+  computePacedStageEtaMs,
+  computeStageEtaMs,
+  createDurationEstimator,
+} from './eta.js';
 import { reportJobPhase } from './pipeline/report-job-phase.js';
 
 export function createScanProgressReporter(
@@ -32,6 +42,7 @@ export function createScanProgressReporter(
   guardHolder?: { current?: PageWorkGuard },
 ): (event: ScanProgressEvent) => void {
   let effectiveDelayMs = 0;
+  let currentDelayMs = 0;
   // Issue #223: crawl-page fires once per dequeued page in a single
   // serial stream, so the wall time between two consecutive events is
   // exactly one page's real cost (politeness delay + navigation +
@@ -51,11 +62,76 @@ export function createScanProgressReporter(
   let crawlEtaCalculatedAt: Date | undefined;
   let crawlExcluded = 0;
   const pushbackEvents: HostPushbackEvent[] = [];
+  const pacingRecoveryEvents: HostPacingRecoveredEvent[] = [];
+  let activePacingStage:
+    | {
+        bucket: 'contentScan' | 'lighthouse';
+        completed: number;
+        target: number;
+        concurrency: number;
+        initialCompleted: number;
+        startRequestCount?: number;
+        requestStartCount?: number;
+        plannedSlotsPerPage: number;
+        paced: boolean;
+      }
+    | undefined;
 
   let contentScanConcurrency = 1;
   const contentScanDurationEstimator = createDurationEstimator();
   const lighthouseDurationEstimator = createDurationEstimator();
   const scanDurationEstimator = createDurationEstimator();
+
+  function estimateActiveStageEta(
+    estimator: ReturnType<typeof createDurationEstimator>,
+    counts?: { completed: number; target: number },
+  ): number | undefined {
+    if (activePacingStage === undefined) return undefined;
+    const completed = counts?.completed ?? activePacingStage.completed;
+    const target = counts?.target ?? activePacingStage.target;
+    const remaining = Math.max(0, target - completed);
+    const workEstimateMs = estimator.estimateMs();
+    if (!activePacingStage.paced && workEstimateMs === undefined) return undefined;
+    if (!activePacingStage.paced) {
+      return computeStageEtaMs({
+        completed,
+        target,
+        concurrency: activePacingStage.concurrency,
+        smoothedPageDurationMs: workEstimateMs,
+      });
+    }
+    return computePacedStageEtaMs({
+      remaining,
+      slotsPerPage: activePacingStage.plannedSlotsPerPage,
+      currentDelayMs,
+      workEstimateMs,
+      concurrency: activePacingStage.concurrency,
+    });
+  }
+
+  async function reportHostPacingProgress(progress: {
+    pushbackEvents?: HostPushbackEvent[];
+    pacingRecoveryEvents?: HostPacingRecoveredEvent[];
+  }): Promise<void> {
+    const patch: NonNullable<JobProgressPatch['progress']> = { ...progress };
+    const etaMs = estimateActiveStageEta(
+      activePacingStage?.bucket === 'lighthouse'
+        ? lighthouseDurationEstimator
+        : contentScanDurationEstimator,
+    );
+    if (activePacingStage !== undefined && activePacingStage.paced) {
+      patch[activePacingStage.bucket] = {
+        completed: activePacingStage.completed,
+        target: activePacingStage.target,
+        currentDelayMs,
+        ...(activePacingStage.requestStartCount !== undefined
+          ? { requestStartCount: activePacingStage.requestStartCount }
+          : {}),
+        ...(etaMs !== undefined ? { etaMs, etaCalculatedAt: new Date() } : {}),
+      };
+    }
+    await reportJobPhase(connection, jobId, jobType, { progress: patch });
+  }
 
   async function handle(event: ScanProgressEvent): Promise<void> {
     if (event.type === 'crawl-setup') {
@@ -71,6 +147,7 @@ export function createScanProgressReporter(
         observedPageCostMs: undefined,
       });
       crawlTarget = event.maxPages;
+      currentDelayMs = event.delayMs;
       crawlEffectiveDelayMs = event.delayMs;
       crawlEtaMs = etaMs;
       crawlEtaCalculatedAt = etaMs === undefined ? undefined : new Date();
@@ -91,6 +168,7 @@ export function createScanProgressReporter(
 
     if (event.type === 'crawl-start') {
       effectiveDelayMs = event.effectiveDelayMs;
+      currentDelayMs = event.effectiveDelayMs;
       // Issue #223: the clock for observed per-page cadence starts here,
       // once the real (robots-adjusted) delay is known, not at
       // crawl-setup - the robots.txt/sitemap fetch that precedes this
@@ -182,25 +260,44 @@ export function createScanProgressReporter(
 
     if (event.type === 'pushback') {
       pushbackEvents.push(event.event);
-      await reportJobPhase(connection, jobId, jobType, {
-        progress: {
-          pushbackEvents: pushbackEvents.map((pushback) => ({ ...pushback })),
-        },
+      if (event.event.delayMs !== undefined) currentDelayMs = event.event.delayMs;
+      await reportHostPacingProgress({
+        pushbackEvents: pushbackEvents.map((pushback) => ({ ...pushback })),
+      });
+      return;
+    }
+
+    if (event.type === 'pacing-recovered') {
+      pacingRecoveryEvents.push(event.event);
+      currentDelayMs = event.event.delayMs;
+      await reportHostPacingProgress({
+        pacingRecoveryEvents: pacingRecoveryEvents.map((recovery) => ({ ...recovery })),
       });
       return;
     }
 
     if (event.type === 'content-scan-start') {
       contentScanConcurrency = event.concurrency;
-      // Issue #223: seeded from the reused count, but no timing sample is
-      // recorded for it - a resumed page took no wall time in this
-      // process, so it never distorts the fresh estimator below.
-      const etaMs = computeStageEtaMs({
+      if (event.currentDelayMs !== undefined) currentDelayMs = event.currentDelayMs;
+      activePacingStage = {
+        bucket: 'contentScan',
         completed: event.alreadyCompleted,
         target: event.totalPages,
         concurrency: contentScanConcurrency,
-        smoothedPageDurationMs: contentScanDurationEstimator.estimateMs(),
-      });
+        initialCompleted: event.alreadyCompleted,
+        ...(event.requestStartCount !== undefined
+          ? {
+              startRequestCount: event.requestStartCount,
+              requestStartCount: event.requestStartCount,
+            }
+          : {}),
+        plannedSlotsPerPage: event.plannedSlotsPerPage ?? 3,
+        paced:
+          event.requestStartCount !== undefined ||
+          event.currentDelayMs !== undefined ||
+          event.plannedSlotsPerPage !== undefined,
+      };
+      const etaMs = estimateActiveStageEta(contentScanDurationEstimator);
       // State-surface discovery can add real inventoried pages after the
       // crawl's last page event. The content target is the checked subset;
       // adding known exclusions gives the complete inventory denominator.
@@ -238,6 +335,10 @@ export function createScanProgressReporter(
             completed: event.alreadyCompleted,
             target: event.totalPages,
             ...(etaMs !== undefined ? { etaMs, etaCalculatedAt: new Date() } : {}),
+            ...(event.requestStartCount !== undefined
+              ? { requestStartCount: event.requestStartCount }
+              : {}),
+            ...(event.currentDelayMs !== undefined ? { currentDelayMs: event.currentDelayMs } : {}),
           },
         },
       });
@@ -246,11 +347,33 @@ export function createScanProgressReporter(
 
     if (event.type === 'content-scan-page') {
       contentScanDurationEstimator.record(event.durationMs);
-      const etaMs = computeStageEtaMs({
+      if (event.currentDelayMs !== undefined) currentDelayMs = event.currentDelayMs;
+      if (activePacingStage !== undefined) {
+        activePacingStage.completed = event.completed;
+        activePacingStage.target = event.totalPages;
+        if (event.requestStartCount !== undefined) {
+          activePacingStage.requestStartCount = event.requestStartCount;
+        }
+        if (event.currentDelayMs !== undefined) currentDelayMs = event.currentDelayMs;
+        const newCompleted = Math.max(1, event.completed - activePacingStage.initialCompleted);
+        if (
+          activePacingStage.startRequestCount !== undefined &&
+          activePacingStage.requestStartCount !== undefined
+        ) {
+          const observedSlots =
+            (activePacingStage.requestStartCount - activePacingStage.startRequestCount) /
+            newCompleted;
+          if (Number.isFinite(observedSlots) && observedSlots > 0) {
+            activePacingStage.plannedSlotsPerPage = Math.max(
+              activePacingStage.plannedSlotsPerPage,
+              observedSlots,
+            );
+          }
+        }
+      }
+      const etaMs = estimateActiveStageEta(contentScanDurationEstimator, {
         completed: event.completed,
         target: event.totalPages,
-        concurrency: contentScanConcurrency,
-        smoothedPageDurationMs: contentScanDurationEstimator.estimateMs(),
       });
       await reportJobPhase(connection, jobId, jobType, {
         phase: 'content-scan',
@@ -259,6 +382,10 @@ export function createScanProgressReporter(
             completed: event.completed,
             target: event.totalPages,
             ...(etaMs !== undefined ? { etaMs, etaCalculatedAt: new Date() } : {}),
+            ...(event.requestStartCount !== undefined
+              ? { requestStartCount: event.requestStartCount }
+              : {}),
+            ...(event.currentDelayMs !== undefined ? { currentDelayMs: event.currentDelayMs } : {}),
           },
         },
       });
@@ -273,21 +400,32 @@ export function createScanProgressReporter(
     }
 
     if (event.type === 'select-performance') {
+      activePacingStage = undefined;
       await reportJobPhase(connection, jobId, jobType, { phase: 'select-performance' });
       return;
     }
 
     if (event.type === 'lighthouse-start') {
-      // Issue #223: Lighthouse passes are serialized process-wide, so
-      // concurrency is always 1 here regardless of the content stage's
-      // lane count - never divide this stage's ETA as if it ran in
-      // parallel.
-      const etaMs = computeStageEtaMs({
+      if (event.currentDelayMs !== undefined) currentDelayMs = event.currentDelayMs;
+      activePacingStage = {
+        bucket: 'lighthouse',
         completed: event.alreadyCompleted,
         target: event.totalPages,
         concurrency: 1,
-        smoothedPageDurationMs: lighthouseDurationEstimator.estimateMs(),
-      });
+        initialCompleted: event.alreadyCompleted,
+        ...(event.requestStartCount !== undefined
+          ? {
+              startRequestCount: event.requestStartCount,
+              requestStartCount: event.requestStartCount,
+            }
+          : {}),
+        plannedSlotsPerPage: event.plannedSlotsPerPage ?? 1,
+        paced:
+          event.requestStartCount !== undefined ||
+          event.currentDelayMs !== undefined ||
+          event.plannedSlotsPerPage !== undefined,
+      };
+      const etaMs = estimateActiveStageEta(lighthouseDurationEstimator);
       await reportJobPhase(connection, jobId, jobType, {
         phase: 'lighthouse',
         progress: {
@@ -295,6 +433,10 @@ export function createScanProgressReporter(
             completed: event.alreadyCompleted,
             target: event.totalPages,
             ...(etaMs !== undefined ? { etaMs, etaCalculatedAt: new Date() } : {}),
+            ...(event.requestStartCount !== undefined
+              ? { requestStartCount: event.requestStartCount }
+              : {}),
+            ...(event.currentDelayMs !== undefined ? { currentDelayMs: event.currentDelayMs } : {}),
           },
         },
       });
@@ -303,11 +445,32 @@ export function createScanProgressReporter(
 
     if (event.type === 'lighthouse-page') {
       lighthouseDurationEstimator.record(event.durationMs);
-      const etaMs = computeStageEtaMs({
+      if (activePacingStage !== undefined) {
+        activePacingStage.completed = event.completed;
+        activePacingStage.target = event.totalPages;
+        if (event.requestStartCount !== undefined) {
+          activePacingStage.requestStartCount = event.requestStartCount;
+        }
+        if (event.currentDelayMs !== undefined) currentDelayMs = event.currentDelayMs;
+        const newCompleted = Math.max(1, event.completed - activePacingStage.initialCompleted);
+        if (
+          activePacingStage.startRequestCount !== undefined &&
+          activePacingStage.requestStartCount !== undefined
+        ) {
+          const observedSlots =
+            (activePacingStage.requestStartCount - activePacingStage.startRequestCount) /
+            newCompleted;
+          if (Number.isFinite(observedSlots) && observedSlots > 0) {
+            activePacingStage.plannedSlotsPerPage = Math.max(
+              activePacingStage.plannedSlotsPerPage,
+              observedSlots,
+            );
+          }
+        }
+      }
+      const etaMs = estimateActiveStageEta(lighthouseDurationEstimator, {
         completed: event.completed,
         target: event.totalPages,
-        concurrency: 1,
-        smoothedPageDurationMs: lighthouseDurationEstimator.estimateMs(),
       });
       await reportJobPhase(connection, jobId, jobType, {
         phase: 'lighthouse',
@@ -316,6 +479,10 @@ export function createScanProgressReporter(
             completed: event.completed,
             target: event.totalPages,
             ...(etaMs !== undefined ? { etaMs, etaCalculatedAt: new Date() } : {}),
+            ...(event.requestStartCount !== undefined
+              ? { requestStartCount: event.requestStartCount }
+              : {}),
+            ...(event.currentDelayMs !== undefined ? { currentDelayMs: event.currentDelayMs } : {}),
           },
         },
       });

@@ -24,6 +24,7 @@
  * precedent in sitemap.ts and mentions-legales.ts.
  */
 
+import { auditedHostAliases, classifyHostResponse } from '@odysseus/core';
 import { checkFetchTarget, type LookupAddresses } from '../address-guard.js';
 import { getCrawlerUserAgent } from '../config.js';
 import type { HostRequestScheduler } from '../host-request-scheduler.js';
@@ -118,23 +119,29 @@ export async function checkCanonicalTarget(
       });
       const retryAfterValue = response.headers.get('retry-after');
       const retryAfterSeconds = retryAfterValue === null ? Number.NaN : Number(retryAfterValue);
+      const parsedRetryAfterAt =
+        retryAfterValue === null ? Number.NaN : Date.parse(retryAfterValue);
       const retryAfterMs =
         Number.isFinite(retryAfterSeconds) && retryAfterSeconds >= 0
           ? retryAfterSeconds * 1000
-          : undefined;
-      if (
-        response.status === 429 ||
-        response.status === 503 ||
-        (response.status >= 500 && response.status <= 599) ||
-        retryAfterMs !== undefined
-      ) {
-        options.scheduler?.noteRateLimited({
-          pageUrl,
-          fetcher: 'canonical',
-          kind: response.status === 429 ? 'rate-limit' : 'origin-transient',
-          status: response.status,
-          ...(retryAfterMs !== undefined ? { retryAfterMs } : {}),
+          : Number.isFinite(parsedRetryAfterAt)
+            ? Math.max(0, parsedRetryAfterAt - Date.now())
+            : undefined;
+      const hostResponse = {
+        requestedHost: hop.hostname,
+        landedHost: hop.hostname,
+        auditedHostAliases: auditedHostAliases(pageHostname),
+        status: response.status,
+        ...(retryAfterMs !== undefined ? { retryAfterMs } : {}),
+      };
+      if (options.scheduler !== undefined) {
+        options.scheduler.observeHostDocument({
+          response: hostResponse,
+          document: { status: response.status },
+          signal: { pageUrl, fetcher: 'canonical' },
         });
+      } else {
+        classifyHostResponse({ ...hostResponse, consecutiveOriginServerErrors: 0 });
       }
       const location = response.headers.get('location');
       if (response.status < 300 || response.status >= 400 || location === null) break;

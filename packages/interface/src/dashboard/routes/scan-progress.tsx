@@ -93,6 +93,7 @@ function pushbackSummaryOf(job: ScanJobDetail): PushbackSummary | undefined {
     job.progress.pushbackEvents ?? [],
     job.options.delayMs ?? job.progress.crawl?.effectiveDelayMs ?? 0,
     job.progress.crawlExclusions?.blocked ?? 0,
+    job.progress.pacingRecoveryEvents ?? [],
   );
 }
 
@@ -110,10 +111,15 @@ function PushbackNotice({
   if (summary === undefined) return null;
   const note = (
     <p className="text-sm text-ink-soft">
-      {fillProgressCopy(strings.progress.pushbackSlowedNote, {
-        count: summary.eventCount,
-        delay: delaySeconds(summary.currentDelayMs),
-      })}
+      {fillProgressCopy(
+        summary.latestWasRecovery
+          ? strings.progress.pushbackRecoveredNote
+          : strings.progress.pushbackSlowedNote,
+        {
+          count: summary.latestWasRecovery ? summary.recoveryCount : summary.eventCount,
+          delay: delaySeconds(summary.currentDelayMs),
+        },
+      )}
     </p>
   );
   if (slowRelaunch(job) === undefined) return <Card>{note}</Card>;

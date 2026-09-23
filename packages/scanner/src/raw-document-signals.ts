@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { RawDocumentSignals } from '@odysseus/core';
+import { extractHostSignalMarkers, type RawDocumentSignals } from '@odysseus/core';
 import { extractTextFromHtml } from './extract-text.js';
 
 /**
@@ -22,23 +22,6 @@ import { extractTextFromHtml } from './extract-text.js';
  * the render diff exists to report, and suppressing it would throw away
  * the true positives along with the false ones.
  */
-const INTERSTITIAL_PATTERNS: ReadonlyArray<{ name: string; pattern: RegExp }> = [
-  // Cloudflare and similar "verifying you are human" gates. Matched on
-  // their own markers rather than the visible sentence, which is
-  // localised.
-  { name: 'bot-challenge', pattern: /cf[-_]chl|cf-browser-verification|challenge-platform/i },
-  { name: 'o2switch-challenge', pattern: /o2swit\.ch\/assets\/tiger\.svg/i },
-  { name: 'datadome-challenge', pattern: /(?:static\.)?captcha-delivery\.com|datadome/i },
-  {
-    name: 'waf-security-check',
-    pattern: /test\s+de\s+s[ée]curit[ée]|security\s+(?:check|verification)/i,
-  },
-  { name: 'bot-challenge-title', pattern: /<title>\s*(just a moment|attention required)/i },
-  // A document whose only job is to send the browser somewhere else. The
-  // text it carries belongs to no page.
-  { name: 'meta-refresh', pattern: /<meta[^>]+http-equiv=["']?refresh["']?[^>]*>/i },
-  { name: 'access-denied', pattern: /<title>\s*(403 forbidden|access denied)/i },
-];
 
 export function analyzeRawDocument(html: string): RawDocumentSignals {
   const text = extractTextFromHtml(html);
@@ -48,8 +31,6 @@ export function analyzeRawDocument(html: string): RawDocumentSignals {
     // fingerprint is: this is an equality check between documents in one
     // audit, not a cryptographic commitment.
     textSignature: createHash('sha256').update(text).digest('hex').slice(0, 16),
-    interstitialMarkers: INTERSTITIAL_PATTERNS.filter(({ pattern }) => pattern.test(html)).map(
-      ({ name }) => name,
-    ),
+    interstitialMarkers: extractHostSignalMarkers(html),
   };
 }

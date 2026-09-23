@@ -175,13 +175,23 @@ export interface AuditPassCoverage {
   failedCheckIds?: string[];
 }
 
+export type SurfaceSampleReason =
+  'homepage' | 'mandatory' | 'family-representative' | 'unique-family' | 'family-sampled';
+
+export interface PageSurfaceSampleCoverage {
+  selected: boolean;
+  reason: SurfaceSampleReason;
+}
+
 export interface PageAnalysisCoverage {
-  /** v1 audits stay readable; v2 is what the current planner writes. */
-  plannerVersion: 'v1' | 'v2';
+  /** v1/v2 audits stay readable; v3 includes family surface sampling. */
+  plannerVersion: 'v1' | 'v2' | 'v3';
   role: AuditPageRole;
   confidence: 'high' | 'fallback';
   templateFamilyId?: string;
   reasonCodes: string[];
+  /** Absent on older audits that predate mobile/consent family sampling. */
+  surfaceSample?: PageSurfaceSampleCoverage;
   passes: Record<AuditPass, AuditPassCoverage>;
 }
 
@@ -372,6 +382,12 @@ export interface AuditPushbackEvent {
   atMaxDelay?: boolean;
 }
 
+/** A lower request-start delay reached after sustained clean requests. */
+export interface AuditPacingRecoveryEvent {
+  delayMs: number;
+  occurredAt: string;
+}
+
 export interface ManifestPageEntry {
   url: string;
   /** The page's own declared content language (lowercased <html lang>),
@@ -529,6 +545,8 @@ export interface AuditManifest {
   /** Host pushback observed during acquisition, kept for operator coverage
    *  feedback and absent on historical manifests. */
   pushbackEvents?: AuditPushbackEvent[];
+  /** Scheduler delay reductions after sustained clean request starts. */
+  pacingRecoveryEvents?: AuditPacingRecoveryEvent[];
   /** E12: site-wide absence checks that cannot make a complete claim because
    *  one or more candidate URLs were blocked or failed acquisition. */
   coverageLimitations?: CoverageLimitation[];

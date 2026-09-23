@@ -167,7 +167,7 @@ export async function checkNapConsistency(
  *
  * Runs in the page, so it must stay self-contained.
  */
-export function readContactRegionText(): string {
+function readContactRegionText(): string {
   const path = window.location.pathname.toLowerCase();
   if (/contact|acces|access|coordonn|nous-trouver|find-us/.test(path)) {
     return document.body.innerText;

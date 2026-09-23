@@ -1,6 +1,6 @@
 # Plan 076: Keep full-audit pacing tied to the audited host's real pushback
 
-Status: TODO (2026-09-23). Priority P1. Effort L. Depends on: none. Deploy the three pacing commits already on `main` (2b8b71d8, 7c9c42fa, 207b7c66) before or with slice 1. Revisits trade-off 99 ("pressure moves one way"). Coordinates with plan 075, which shares the challenge markers.
+Status: IN PROGRESS (2026-09-23). Priority P1. Effort L. Depends on: none. Before live acceptance, deploy the three pacing commits already on `main` (2b8b71d8, 7c9c42fa, 207b7c66) together with this implementation. Revisits trade-off 99 ("pressure moves one way"). Coordinates with plan 075, which shares the challenge markers.
 
 ## Context
 
@@ -36,6 +36,14 @@ Today any false signal is **permanent**, and every detector can raise one. The p
 - A single real pushback event raises pacing for a bounded window. **Worst-case extra time from one false event is ≤ 10 min.**
 - At every point after discovery, the dashboard ETA is within ±35% of the actual remaining time on the two acceptance runs.
 
+## Local implementation checkpoint (2026-09-23)
+
+Slices 1–4 are implemented and locally verified. The operator explicitly
+deferred the production deploy and the two uncapped acceptance scans from this
+work session. Do not mark this plan DONE or archive it until the full Haaitza
+and La Corniche runs below complete and their acceptance data is recorded. No
+VPS deploy or live scan has been performed for this checkpoint.
+
 ## Slices
 
 Each slice gets its own commit(s), a typecheck and its own tests (see memory: focused tests per slice). Full `pnpm run check` and `pnpm run test:all` run once before push.
@@ -46,12 +54,15 @@ This slice is sequenced first because every other fix depends on getting the "is
 
 1. **Corpus builder script** `scripts/build-pushback-corpus.ts`. It reads local `artifacts/*/*/pages/*/scan.json` (and `manifest.json` page status) and emits a de-identified corpus. The corpus holds one row per page with: `httpStatus`, `renderedHttpStatus`, `renderedTitle` (hashed unless it matches a challenge title), `rawTextLength`, `renderedTextLength`, `rawDocument.markupLength`, stored marker names, vendor-host presence flags (`captcha-delivery`, `datadome`, `o2swit.ch`, `challenge-platform`) derived from Lighthouse network requests and axe node HTML, frame origins with challenge markers, and the landed-host-is-audited flag. No URLs, text or HTML are kept. Output: `fixtures/pushback-corpus/corpus.json`, rebuilt only through this script (repo rule: real-scan fixtures are de-identified and script-built).
 2. **Labels**: `fixtures/pushback-corpus/labels.json` with site-level expectations taken from the evidence:
-   - grand-hotel-opera: the 127 `429` render pages are walls.
+   - grand-hotel-opera: the 128 stored `429` pages are walls.
    - lacoorniche 2026-09-17: the 10 "Test de sécurité" pages are walls; every other 200 page with substantive text is content, **including the DataDome-script pages**.
    - haaitza 2026-09-15: the o2switch Tiger pages are walls; the rest are content.
    - All other stored audits: 200 pages with rendered text ≥ 500 chars are content.
 
    The builder prints any page the labels don't cover, so the operator can confirm edge cases before they're frozen.
+
+**Corpus checkpoint (2026-09-23, local stored artifacts):** the builder emitted 2,356 de-identified page rows from 25 audits; 2,256 rows are labeled and 100 remain uncovered. For the three named runs, Opera has 128 walls / 25 content / 23 unlabeled pages; La Corniche has 10 walls / 173 content / 18 unlabeled pages; Haaitza has 4 walls / 194 content / 8 unlabeled pages. The stored Opera run contains 128 HTTP 429 pages, not the plan's earlier 127, and those pages have no stored vendor marker; the classifier therefore treats HTTP 429 itself as a rate-limit document wall. One Haaitza page with an o2switch marker has 2,679 visible characters and no stored raw-markup length, so the marker does not make that substantive page a wall. This is the only label adjustment: the four sparse o2switch barrier pages are walls, and that substantive page remains content. Uncovered rows remain unlabeled. A privacy test checks that the fixture contains no URLs or markup and that ordinary titles are stored only as hashes.
+
 3. **One pure classifier in core**: `packages/core/src/acquisition/host-signal.ts`, exported from `@odysseus/core`.
    - `classifyDocumentWall({ status, title, markupLength, visibleTextLength, markers })` returns `'content' | 'wall'` plus a reason. A page is a wall only if the document **is** the barrier:
      - it has a challenge title (`isChallengeTitle`); or
@@ -134,8 +145,24 @@ In `packages/scanner/src/host-request-scheduler.ts`:
 
 | Site | Artifact | Wall time | Content pages | Pushback / recovery events | Max delay | ETA error (25/50/75%) |
 |---|---|---|---|---|---|---|
-| Haaitza | pending | | | | | |
-| La Corniche | pending | | | | | |
+| Haaitza | pending (not run here) | | | | | |
+| La Corniche | pending (not run here) | | | | | |
+
+## Definition of done
+
+Plan 076 is done only when the local implementation is verified, every row in
+the requirement-to-proof closure ledger below has evidence, and both uncapped
+live acceptance runs meet their thresholds. The live acceptance rows are
+intentionally still open in this checkpoint.
+
+## Executable closure contract
+
+The requirement-to-proof closure artifact is the ledger in this plan. Before
+closing, each row must name its implementation artifact and verification; R6
+must cite the Haaitza and La Corniche artifacts, measured duration/page counts,
+pushback and recovery timeline, and ETA error at 25/50/75%. Add a `Closure
+evidence:` record and update the matching Plan 075 execution-ledger rows before
+archiving this plan.
 
 ## Risks
 

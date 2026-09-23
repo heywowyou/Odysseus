@@ -113,6 +113,8 @@ export interface JobProgressAnalysisStage {
   target: number;
   etaMs?: number;
   etaCalculatedAt?: Date;
+  requestStartCount?: number;
+  currentDelayMs?: number;
 }
 
 export interface JobProgressContinuationGuard {
@@ -141,6 +143,11 @@ export interface JobProgressPushbackEvent {
   atMaxDelay?: boolean;
 }
 
+export interface JobProgressPacingRecoveryEvent {
+  delayMs: number;
+  occurredAt: string;
+}
+
 export interface JobProgress {
   crawl?: JobProgressCrawl;
   scan?: JobProgressScan;
@@ -149,6 +156,7 @@ export interface JobProgress {
   continuationGuard?: JobProgressContinuationGuard;
   crawlExclusions?: JobProgressCrawlExclusions;
   pushbackEvents?: JobProgressPushbackEvent[];
+  pacingRecoveryEvents?: JobProgressPacingRecoveryEvent[];
   message?: string;
 }
 
@@ -310,6 +318,8 @@ const jobProgressAnalysisStageSchema = new Schema(
     target: { type: Number, required: true },
     etaMs: { type: Number },
     etaCalculatedAt: { type: Date },
+    requestStartCount: { type: Number },
+    currentDelayMs: { type: Number },
   },
   { _id: false },
 );
@@ -356,6 +366,14 @@ const jobProgressPushbackEventSchema = new Schema(
   { _id: false },
 );
 
+const jobProgressPacingRecoveryEventSchema = new Schema(
+  {
+    delayMs: { type: Number, required: true },
+    occurredAt: { type: String, required: true },
+  },
+  { _id: false },
+);
+
 const jobProgressSchema = new Schema(
   {
     crawl: { type: jobProgressCrawlSchema },
@@ -365,6 +383,7 @@ const jobProgressSchema = new Schema(
     continuationGuard: { type: jobProgressContinuationGuardSchema },
     crawlExclusions: { type: jobProgressCrawlExclusionsSchema },
     pushbackEvents: { type: [jobProgressPushbackEventSchema] },
+    pacingRecoveryEvents: { type: [jobProgressPacingRecoveryEventSchema] },
     message: { type: String },
   },
   { _id: false },

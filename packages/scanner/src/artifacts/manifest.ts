@@ -6,6 +6,7 @@ import {
   normalizeBuildId,
 } from '@odysseus/core';
 import type {
+  AuditPacingRecoveryEvent,
   AuditPushbackEvent,
   PrivacySecurityCoverage,
   TranslationCluster,
@@ -75,6 +76,7 @@ export interface BuildManifestInput {
   privacySecurityCoverage?: PrivacySecurityCoverage;
   translationClusters?: TranslationCluster[];
   pushbackEvents?: AuditPushbackEvent[];
+  pacingRecoveryEvents?: AuditPacingRecoveryEvent[];
 }
 
 export function buildManifest(input: BuildManifestInput): AuditManifest {
@@ -109,6 +111,9 @@ export function buildManifest(input: BuildManifestInput): AuditManifest {
       ...(input.crawl.sitemapUrls !== undefined ? { sitemapUrls: input.crawl.sitemapUrls } : {}),
     },
     ...(input.pushbackEvents !== undefined ? { pushbackEvents: input.pushbackEvents } : {}),
+    ...(input.pacingRecoveryEvents !== undefined
+      ? { pacingRecoveryEvents: input.pacingRecoveryEvents }
+      : {}),
     ...(() => {
       const limitations = deriveCoverageLimitations(input.pages, {
         ...(input.crawl.homepageUrl !== undefined ? { homepageUrl: input.crawl.homepageUrl } : {}),
