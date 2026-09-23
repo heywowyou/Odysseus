@@ -23,6 +23,35 @@ describe('extractLighthouseCandidates', () => {
     expect(candidates[0]?.source).toBe('lighthouse');
   });
 
+  describe('robots-txt when our own crawler read robots.txt', () => {
+    const run = (explanation: string) =>
+      extractLighthouseCandidates(
+        buildLighthouseResultInput({
+          categories: { seo: { score: 0.5, auditRefs: [{ id: 'robots-txt', weight: 1 }] } },
+          audits: {
+            'robots-txt': {
+              ...buildLighthouseAudit({ score: 0, scoreDisplayMode: 'binary' }),
+              explanation,
+            },
+          },
+        }),
+        'https://example.com/',
+        undefined,
+        new Set(),
+        new Set(),
+        new Set(),
+        true,
+      );
+
+    it('drops a fetch that timed out, which says nothing about the file', () => {
+      expect(run('Fetch of robots.txt failed: Timed out fetching resource')).toEqual([]);
+    });
+
+    it('keeps a file Lighthouse actually read and found invalid', () => {
+      expect(run('Lighthouse was unable to parse 2 lines')).toHaveLength(1);
+    });
+  });
+
   it('skips audits scoring at or above the emission threshold', () => {
     const lhr = buildLighthouseResultInput({
       categories: { performance: { score: 0.95, auditRefs: [{ id: 'lcp', weight: 25 }] } },

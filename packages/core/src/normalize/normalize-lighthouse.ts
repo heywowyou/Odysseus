@@ -52,6 +52,9 @@ export interface LighthouseAuditInput {
   numericValue?: number;
   /** Human-readable rendering of numericValue (e.g. "3.2 s"). */
   displayValue?: string;
+  /** Lighthouse's own reason for a failed audit (e.g. "Fetch of
+   *  robots.txt failed: Timed out fetching resource"). */
+  explanation?: string;
   /** items is typed loosely (not Array<Record<string, unknown>>) because
    *  Lighthouse's real Details union includes variants (e.g. Checklist)
    *  whose "items" is a Record keyed by id, not an array. Narrowing this
@@ -288,10 +291,17 @@ function fieldMetricForAudit(auditId: string): CruxMetricKey | undefined {
   return FIELD_METRIC_BY_AUDIT_ID.get(auditId);
 }
 
-function robotsTxtAuditReportsHttpFailure(audit: LighthouseAuditInput): boolean {
+/** Lighthouse failed to fetch robots.txt at all (a timeout, a network
+ *  error, or a 429/5xx pushback answer), as opposed to reading a file and
+ *  finding its syntax wrong. Only the second says anything about the site. */
+function robotsTxtAuditReportsFetchFailure(audit: LighthouseAuditInput): boolean {
+  if (audit.explanation !== undefined && /fetch of robots\.txt failed/iu.test(audit.explanation)) {
+    return true;
+  }
   const evidence = JSON.stringify({
     description: audit.description,
     displayValue: audit.displayValue,
+    explanation: audit.explanation,
     details: audit.details,
   });
   return /\b(?:429|5\d{2})\b/u.test(evidence);
@@ -533,8 +543,8 @@ export function extractLighthouseCandidates(
   /** All CrUX metrics with a verdict, not only metrics in the good range. */
   fieldMetricKeys: ReadonlySet<CruxMetricKey> = goodFieldMetrics,
   /** True when the crawler's own robots.txt request completed. Lighthouse
-   * sometimes reports a WAF's 429/5xx answer as a broken robots file; that
-   * is pushback, not evidence about the site's robots policy. */
+   * reports a failed fetch (a WAF's 429/5xx answer, or a timeout) as a
+   * broken robots file; that says nothing about the site's robots policy. */
   robotsTxtFetchedSuccessfully = false,
 ): FindingCandidate[] {
   const candidates: FindingCandidate[] = [];
@@ -555,7 +565,7 @@ export function extractLighthouseCandidates(
       if (
         auditRef.id === 'robots-txt' &&
         robotsTxtFetchedSuccessfully &&
-        robotsTxtAuditReportsHttpFailure(audit)
+        robotsTxtAuditReportsFetchFailure(audit)
       ) {
         continue;
       }
