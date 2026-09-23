@@ -61,6 +61,17 @@ their host, so a second audit on the same server waits. Unrelated
 CDN-fronted sites can wait for each other; that costs time only. Deploy with
 plan 075's G7 to G9.
 
+Waiting audits hold no slot (`f44eea3e`, 2026-09-24). With the lock above,
+La Corniche waited for Haaitza while holding one of the two queue slots, so
+audits for other servers could not start, and the dashboard showed it
+running with a stale estimate. A full audit whose server is busy now gives
+its slot back, a job ending on that server hands its slot to the waiter
+before any new claim, a stop request is honoured while waiting, and the
+dashboard shows « En attente du serveur ». The claim loop reserves its slot
+before the Mongo claim, which also removes an older race that could run one
+job more than the slot count. Covered by scenario tests, a slow-claim test
+and a seeded load test; each fix was checked to fail its test when removed.
+
 ## Slices
 
 Each slice gets its own commit(s), a typecheck and its own tests (see memory: focused tests per slice). Full `pnpm run check` and `pnpm run test:all` run once before push.
