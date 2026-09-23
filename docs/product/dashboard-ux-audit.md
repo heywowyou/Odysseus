@@ -46,7 +46,9 @@ reconciliation properly). History is never deleted.
 - Active scan: job `517f3ce0-bf45-472e-a6bd-7f04b0dc6fd1` was already running.
   Before deployment it showed 77/232 scan pages and 15/170 Lighthouse pages.
   After deployment it advanced to 26/170 Lighthouse, then 29/170 in the
-  normalize phase. It remained running through the app restart.
+  normalize phase. A later read at 09:42 UTC showed it still running in
+  Lighthouse at 42/170; its linked prospect is Château Royal, not a Plan 076
+  acceptance target. It continued through the app restart.
 - UX-050: the active page showed the current 232/232 content count after
   deployment. That scan had advanced past crawl, so the new recovery message
   was not observed live. A focused render regression now simulates retained
@@ -72,8 +74,9 @@ UX-050 and UX-051 are fixed in build `5da97bd2`.
 - Verification: `pnpm run check` passed before commit, and the pre-push hook
   passed it again. Focused dashboard progress tests passed (34 tests), and the
   provenance tests passed (7 tests) after the normalization fingerprint repair.
-  The full-suite run before that repair had 5,559 passing, 245 skipped, and two
-  provenance failures; the full suite was not rerun after those focused fixes.
+  The final `pnpm run test:all` passed: 5,563 tests passed and 245 skipped;
+  all 535 executed test files passed, with 28 skipped. The 33 store integration
+  files were skipped because local Docker MongoDB was unavailable.
 
 ## Run 10 notes (local stateful operator rehearsal)
 

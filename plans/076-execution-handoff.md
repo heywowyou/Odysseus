@@ -27,7 +27,9 @@ runs complete and satisfy the recorded thresholds.
 - The existing job `517f3ce0-bf45-472e-a6bd-7f04b0dc6fd1` was active during
   deployment. It continued from 77/232 scan pages and 15/170 Lighthouse pages
   before rollout to 26/170 Lighthouse afterward, then 29/170 during normalize.
-  No scan was started or cancelled.
+  A later read at 09:42 UTC showed it still running in Lighthouse at 42/170;
+  its linked prospect is Château Royal, not a Plan 076 acceptance target. No
+  scan was started or cancelled.
 - The targeted dashboard check confirmed the deployed progress page in FR at
   desktop and 390px widths and EN at 390px, with no overflow. The live job had
   passed crawl, so the recovery message itself was covered by the focused
@@ -39,16 +41,17 @@ The operator deferred the uncapped live Haaitza and La Corniche audits to a
 later session. Do not start either in this work session, and do not archive or
 mark Plan 076 DONE until both runs meet their recorded thresholds.
 
-The latest `pnpm run test:all` completed with 5,559 passing, 245 skipped,
-and two failed provenance checks: the source-derived normalization fingerprint
-and committed test-audit stamps. The fingerprint and stamped manifest/analysis
-metadata now use `238fa28918941c19`; the two focused provenance files pass (7
-tests). The focused dashboard model/render suites also pass (34 tests). The
-full suite was not rerun after these targeted repairs. The committed test
-fixtures have no raw-document evidence for the new wall classifier, but the
-original artifacts for the 15 listed real audits are absent locally, so
-`pnpm fixtures:refresh` could not be run here. `pnpm run check` passed, and
-the pre-push hook passed it again.
+The post-repair `pnpm run test:all` passed: 5,563 tests passed and 245
+skipped; all 535 executed test files passed, with 28 skipped. The 33
+store-integration files were skipped because local Docker MongoDB at
+`mongodb://localhost:27018/odysseus_test` was unavailable. The source-derived
+fingerprint and committed test-audit provenance now use `238fa28918941c19`; the
+focused provenance tests passed (7 tests), and the focused dashboard model/
+render suites passed (34 tests). The committed test fixtures have no
+raw-document evidence for the new wall classifier, and the original artifacts
+for the 15 listed real audits are absent locally, so `pnpm fixtures:refresh`
+could not be run here. `pnpm run check` passed after the source/test updates,
+and the pre-push hook passed it again.
 
 ## Definition of done
 
