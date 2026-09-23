@@ -1,5 +1,5 @@
 import { hookFamilyForCategory } from '@odysseus/core';
-import type { Finding, PreparationPreviewLanguage } from '@odysseus/core';
+import type { Finding, PreparationPreviewLanguage, AuditManifest } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import {
@@ -13,7 +13,7 @@ import {
 } from '../html-utils.js';
 import { sectionTitle, type SectionId } from '../section-registry.js';
 import { selectRenderedThemes } from './themes.js';
-import { isConfinedToThirdPartyFrame } from '../third-party-attribution.js';
+import { primaryFindingFilter } from '../unlinked-sitemap-pages.js';
 import type { RenderedPriority } from '../rendered-priorities.js';
 
 /** The deterministic complication facts (plan 018 step 5), all computed
@@ -47,11 +47,12 @@ function computeIntroFacts(
   priorities: readonly RenderedPriority[] | undefined,
   findingsById: ReadonlyMap<string, Finding>,
   scopePageUrls: ReadonlySet<string> | undefined,
+  manifest: AuditManifest | undefined,
 ): IntroFacts {
   // The same first-party population as computeStatistics (plan 075, Q1):
   // content wholly inside a third-party frame stays in the annex but never
   // in a headline count, so this sentence cannot disagree with the tiles.
-  const counted = findings.filter((finding) => !isConfinedToThirdPartyFrame(finding));
+  const counted = findings.filter(primaryFindingFilter(manifest));
   return {
     findingCount: counted.length,
     criticalSeriousCount: counted.filter(
@@ -100,10 +101,18 @@ export function renderReportIntro(
   priorities?: readonly RenderedPriority[],
   preparation?: PreparationPreviewLanguage,
   scopePageUrls?: ReadonlySet<string>,
+  manifest?: AuditManifest,
 ): string {
   const r = strings.reportIntro;
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
-  const facts = computeIntroFacts(analysis, findings, priorities, findingsById, scopePageUrls);
+  const facts = computeIntroFacts(
+    analysis,
+    findings,
+    priorities,
+    findingsById,
+    scopePageUrls,
+    manifest,
+  );
 
   const countPhrase = (count: number, singular: string, plural: string): string =>
     `${formatNumber(count, analysis.language)} ${pluralize(analysis.language, count, singular, plural)}`;

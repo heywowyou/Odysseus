@@ -12,7 +12,7 @@ import {
   sheet,
 } from '../html-utils.js';
 import { computeStatistics } from '../statistics.js';
-import { isConfinedToThirdPartyFrame } from '../third-party-attribution.js';
+import { primaryFindingFilter } from '../unlinked-sitemap-pages.js';
 import { sectionTitle } from '../section-registry.js';
 import { pickPrimaryBasis } from './methodology.js';
 import { selectRenderedThemes } from './themes.js';
@@ -198,14 +198,13 @@ function renderCoveredByPrioritiesNote(
   analysis: StoredAnalysis,
   findings: readonly Finding[],
   findingsById: ReadonlyMap<string, Finding>,
+  manifest: AuditManifest,
   priorities?: readonly RenderedPriority[],
 ): string {
   // Both sides of the "X of Y" sentence use the first-party population the stats tile
   // counts (plan 075, Q1); frame-only findings are neither covered nor total.
   const counted = new Set(
-    findings
-      .filter((finding) => !isConfinedToThirdPartyFrame(finding))
-      .map((finding) => finding.findingId),
+    findings.filter(primaryFindingFilter(manifest)).map((finding) => finding.findingId),
   );
   const covered = [
     ...new Set(
@@ -309,7 +308,7 @@ export function renderExecutiveSummary(
     <p style="font-size:15px;line-height:1.55;color:var(--color-neutral-100)">${escapeProse(analysis.executiveSummary, analysis.language)}</p>
     <p style="font-size:12.5px;color:var(--color-neutral-200);margin-top:var(--space-3)">${escapeHtml(countsSentence)}</p>
     <p style="font-size:11px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4">${escapeHtml(e.glossaryPointerSentence)}</p>
-    ${renderCoveredByPrioritiesNote(strings, analysis, findings, findingsById, priorities)}
+    ${renderCoveredByPrioritiesNote(strings, analysis, findings, findingsById, manifest, priorities)}
     ${ownershipNote}
     ${renderThirdPartySplitNote(strings, stats)}
     ${renderCategoryImbalanceNote(strings, stats)}

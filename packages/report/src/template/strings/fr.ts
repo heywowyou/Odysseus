@@ -75,6 +75,10 @@ export const fr: ReportStrings = {
       'En outre, {count} occurrence relève entièrement de contenus tiers intégrés (lecteurs vidéo, cartes, widgets) ; elle figure dans l’annexe technique et n’est comptée ni dans ces totaux ni dans la note principale.',
     thirdPartyFrameNotePluralTemplate:
       'En outre, {count} occurrences relèvent entièrement de contenus tiers intégrés (lecteurs vidéo, cartes, widgets) ; elles figurent dans l’annexe technique et ne sont comptées ni dans ces totaux ni dans la note principale.',
+    unlinkedSitemapNoteSingularTemplate:
+      'Le plan du site publie {pages} pages qu’aucune page du site ne relie. {count} constat ne concerne que ces pages : il figure dans l’annexe technique et n’est compté ni dans ces totaux ni dans la note principale.',
+    unlinkedSitemapNotePluralTemplate:
+      'Le plan du site publie {pages} pages qu’aucune page du site ne relie. {count} constats ne concernent que ces pages : ils figurent dans l’annexe technique et ne sont comptés ni dans ces totaux ni dans la note principale.',
     priorityOwnership: {
       leadTemplate: 'Priorités : {clauses}.',
       firstPartySingularTemplate: '{count} constat à corriger directement',

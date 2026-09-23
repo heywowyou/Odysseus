@@ -63,6 +63,10 @@ export const en: ReportStrings = {
       'In addition, {count} occurrence belongs entirely to embedded third-party content (video players, maps, widgets); it is listed in the technical appendix and is counted neither in these totals nor in the primary grade.',
     thirdPartyFrameNotePluralTemplate:
       'In addition, {count} occurrences belong entirely to embedded third-party content (video players, maps, widgets); they are listed in the technical appendix and are counted neither in these totals nor in the primary grade.',
+    unlinkedSitemapNoteSingularTemplate:
+      'The sitemap publishes {pages} pages that no page of the site links to. {count} finding concerns only those pages: it is listed in the technical appendix and is counted neither in these totals nor in the primary grade.',
+    unlinkedSitemapNotePluralTemplate:
+      'The sitemap publishes {pages} pages that no page of the site links to. {count} findings concern only those pages: they are listed in the technical appendix and are counted neither in these totals nor in the primary grade.',
     priorityOwnership: {
       leadTemplate: 'Priorities: {clauses}.',
       firstPartySingularTemplate: '{count} to fix directly',

@@ -11,7 +11,8 @@ import {
 import { buildMissingPercentIndex, classifyDiversion } from '@odysseus/llm';
 import { interpolateSnippet, remediationFor, snippetFor } from './remediation/index.js';
 import { resolveFindingDisplayLabel } from './rule-translations.js';
-import { isConfinedToThirdPartyFrame, isThirdPartyFinding } from './third-party-attribution.js';
+import { isThirdPartyFinding } from './third-party-attribution.js';
+import { primaryFindingFilter } from './unlinked-sitemap-pages.js';
 import { MissingReviewedRemediationError } from '../errors.js';
 
 export const MAX_RENDERED_THEMES = 6;
@@ -375,7 +376,7 @@ export function buildRenderedPriorities(
   // Q1: findings wholly inside a third-party frame remain in the annex, but
   // cannot become one of the report's primary client priorities. Mixed
   // findings stay eligible because they also carry first-party evidence.
-  const primaryFindings = findings.filter((finding) => !isConfinedToThirdPartyFrame(finding));
+  const primaryFindings = findings.filter(primaryFindingFilter(manifest));
   const findingsById = new Map(primaryFindings.map((finding) => [finding.findingId, finding]));
   const legacyLcenIds = themes.flatMap((theme) =>
     theme.findingIds.filter((id) => findingsById.get(id)?.ruleId === LCEN_MENTIONS_LEGALES_RULE_ID),

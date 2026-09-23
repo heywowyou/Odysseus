@@ -258,6 +258,7 @@ function renderBody(
       renderedPriorities,
       preparation,
       scopePageUrls,
+      manifest,
     ),
     // Plan 032 (issue #162): the audit fallback gate's static honest note,
     // unnumbered chrome between the intro and the executive summary. ''

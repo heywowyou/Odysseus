@@ -9,6 +9,10 @@ import { buildConformanceRollup, pagesWithWcagFailures } from './conformance-rol
 import type { CATEGORY_ORDER } from './design-tokens.js';
 import { EVIDENCE_INCLUSION_THRESHOLD_PERCENT } from '../constants.js';
 import { isConfinedToThirdPartyFrame, isThirdPartyFinding } from './third-party-attribution.js';
+import {
+  isConfinedToUnlinkedSitemapPages,
+  unlinkedSitemapPageUrls,
+} from './unlinked-sitemap-pages.js';
 
 /** Deterministic counts for the statistics page (docs/archive/report-v2-refactor.md
  *  B10): nowhere in v1 did the document state pages scanned, finding
@@ -48,6 +52,10 @@ export interface ReportStatistics {
    *  grade or counts. In-page vendor widgets are not included here. */
   confinedThirdPartyFindingCount: number;
   confinedThirdPartyOccurrenceCount: number;
+  /** Plan 075, Q4: findings only on pages the sitemap alone reaches, when
+   *  those pages are most of the analysed population. */
+  unlinkedSitemapFindingCount: number;
+  unlinkedSitemapPageCount: number;
   pagesWithCritical: number;
   critical: number;
   serious: number;
@@ -104,6 +112,8 @@ export function computeStatistics(
   let thirdPartyAccessibilityOccurrences = 0;
   let confinedThirdPartyFindingCount = 0;
   let confinedThirdPartyOccurrenceCount = 0;
+  let unlinkedSitemapFindingCount = 0;
+  const unlinkedUrls = unlinkedSitemapPageUrls(manifest);
   let critical = 0;
   let serious = 0;
   let moderate = 0;
@@ -124,6 +134,10 @@ export function computeStatistics(
     if (isConfinedToThirdPartyFrame(finding)) {
       confinedThirdPartyFindingCount += 1;
       confinedThirdPartyOccurrenceCount += finding.occurrences;
+      continue;
+    }
+    if (isConfinedToUnlinkedSitemapPages(finding, unlinkedUrls)) {
+      unlinkedSitemapFindingCount += 1;
       continue;
     }
     if (finding.category === 'accessibility') {
@@ -162,12 +176,14 @@ export function computeStatistics(
 
   return {
     pagesScanned,
-    totalFindings: findings.length - confinedThirdPartyFindingCount,
+    totalFindings: findings.length - confinedThirdPartyFindingCount - unlinkedSitemapFindingCount,
     accessibilityOccurrences,
     accessibilityHeuristicOccurrences,
     thirdPartyAccessibilityOccurrences,
     confinedThirdPartyFindingCount,
     confinedThirdPartyOccurrenceCount,
+    unlinkedSitemapFindingCount,
+    unlinkedSitemapPageCount: unlinkedUrls.size,
     pagesWithCritical: pagesWithCriticalSet.size,
     critical,
     serious,

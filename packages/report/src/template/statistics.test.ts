@@ -56,6 +56,8 @@ describe('computeStatistics', () => {
       thirdPartyAccessibilityOccurrences: 129,
       confinedThirdPartyFindingCount: 0,
       confinedThirdPartyOccurrenceCount: 0,
+      unlinkedSitemapFindingCount: 0,
+      unlinkedSitemapPageCount: 0,
       pagesWithCritical: 20,
       critical: 8,
       serious: 14,
@@ -222,5 +224,46 @@ describe('item 39: hasBelowThresholdRenderGap', () => {
     const stats = computeStatistics([renderingFinding], buildManifest([62, 13]));
     expect(stats.categoryCounts.rendering).toBe(1);
     expect(stats.hasBelowThresholdRenderGap).toBe(false);
+  });
+});
+
+describe('computeStatistics with a sitemap-only majority (plan 075, Q4)', () => {
+  it('keeps findings found only on unlinked sitemap pages out of the totals', () => {
+    const findings = loadMultiPageFindings();
+    const manifest = loadMultiPageManifest();
+    const visited = manifest.pages.filter((page) => page.status === 'visited');
+    const linked = new Set(visited.slice(0, Math.floor(visited.length / 3)).map((p) => p.url));
+    const withBacklog: AuditManifest = {
+      ...manifest,
+      pages: manifest.pages.map((page) =>
+        page.status === 'visited' && !linked.has(page.url)
+          ? { ...page, discoveryMethod: 'sitemap-only' }
+          : page,
+      ),
+    };
+    const onlyUnlinked = findings.filter(
+      (finding) => finding.pageUrls.length > 0 && finding.pageUrls.every((url) => !linked.has(url)),
+    );
+    expect(onlyUnlinked.length).toBeGreaterThan(0);
+
+    const before = computeStatistics(findings, manifest);
+    const after = computeStatistics(findings, withBacklog);
+
+    expect(after.unlinkedSitemapFindingCount).toBe(onlyUnlinked.length);
+    expect(after.unlinkedSitemapPageCount).toBe(visited.length - linked.size);
+    expect(after.totalFindings).toBe(before.totalFindings - onlyUnlinked.length);
+  });
+
+  it('counts sitemap-only pages like any other when they are a minority', () => {
+    const findings = loadMultiPageFindings();
+    const manifest = loadMultiPageManifest();
+    const firstVisited = manifest.pages.find((page) => page.status === 'visited')!.url;
+    const oneOrphan: AuditManifest = {
+      ...manifest,
+      pages: manifest.pages.map((page) =>
+        page.url === firstVisited ? { ...page, discoveryMethod: 'sitemap-only' } : page,
+      ),
+    };
+    expect(computeStatistics(findings, oneOrphan)).toEqual(computeStatistics(findings, manifest));
   });
 });

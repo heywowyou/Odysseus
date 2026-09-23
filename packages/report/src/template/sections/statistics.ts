@@ -232,6 +232,23 @@ export function renderStatistics(
           }),
         )}</p>`
       : '';
+  const unlinkedSitemapNote =
+    stats.unlinkedSitemapFindingCount > 0
+      ? `<p class="statistics-note">${escapeHtml(
+          fillTemplate(
+            pluralize(
+              language,
+              stats.unlinkedSitemapFindingCount,
+              s.unlinkedSitemapNoteSingularTemplate,
+              s.unlinkedSitemapNotePluralTemplate,
+            ),
+            {
+              count: n(stats.unlinkedSitemapFindingCount),
+              pages: n(stats.unlinkedSitemapPageCount),
+            },
+          ),
+        )}</p>`
+      : '';
   const thirdPartyFrameNote =
     stats.confinedThirdPartyOccurrenceCount > 0
       ? `<p class="statistics-note">${escapeHtml(
@@ -267,8 +284,9 @@ export function renderStatistics(
     criticalDriverNote ||
     thirdPartyOccurrencesNote ||
     thirdPartyFrameNote ||
+    unlinkedSitemapNote ||
     priorityOwnershipNote
-      ? `<div class="statistics-notes">${criticalDriverNote}${heuristicOccurrencesNote}${thirdPartyOccurrencesNote}${thirdPartyFrameNote}${priorityOwnershipNote}</div>`
+      ? `<div class="statistics-notes">${criticalDriverNote}${heuristicOccurrencesNote}${thirdPartyOccurrencesNote}${thirdPartyFrameNote}${unlinkedSitemapNote}${priorityOwnershipNote}</div>`
       : '<div class="statistics-notes"></div>';
 
   return sheet(

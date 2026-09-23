@@ -154,6 +154,8 @@ export interface ReportStrings {
      *  technical annex and never enter the primary grade/counts. */
     thirdPartyFrameNoteSingularTemplate: string;
     thirdPartyFrameNotePluralTemplate: string;
+    unlinkedSitemapNoteSingularTemplate: string;
+    unlinkedSitemapNotePluralTemplate: string;
     priorityOwnership: PriorityOwnershipStrings;
     pagesWithCriticalTileLabel: string;
     criticalTileLabel: string;
