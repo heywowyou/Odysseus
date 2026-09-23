@@ -26,7 +26,11 @@ import {
   type NormalizePageInput,
   type TranslationCluster,
 } from '@odysseus/core';
-import { buildArtifactBucketKey, parseAuditTimestampDir } from '@odysseus/scanner';
+import {
+  buildArtifactBucketKey,
+  parseAuditTimestampDir,
+  writeJsonAtomicSync,
+} from '@odysseus/scanner';
 import { resolveArtifactFile } from '../artifacts/resolve-artifact.js';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
 
@@ -243,7 +247,7 @@ export async function renormalizeAudit(
     ...(manifest.cruxFieldData !== undefined ? { cruxFieldData: manifest.cruxFieldData } : {}),
   });
 
-  await fs.writeFile(path.join(resolvedDir, 'findings.json'), JSON.stringify(findings, null, 2));
+  writeJsonAtomicSync(path.join(resolvedDir, 'findings.json'), findings);
 
   // Lab metrics are frozen into the manifest when a scan is written. Stored
   // audits predate the rule that a challenge page, an error template or a

@@ -226,3 +226,4 @@ export type {
 } from './artifacts/write-audit.js';
 export { writeFindingsFile } from './artifacts/write-findings.js';
 export { writeManifestFile } from './artifacts/write-manifest.js';
+export { writeJsonAtomicSync, type AtomicJsonFileOps } from './artifacts/write-json-atomic-sync.js';

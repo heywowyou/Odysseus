@@ -46,6 +46,7 @@ import {
 import { getArtifactsRoot } from '../config.js';
 import type { CrawlResult } from '../crawl.js';
 import { isRedirectInterstitial } from '../redirect-interstitial.js';
+import { writeJsonAtomicSync } from './write-json-atomic-sync.js';
 
 /** A booking stub can hand the visitor to its engine only after our render
  *  settled (a late script redirect or an auto-submitted form). Lighthouse's
@@ -737,7 +738,7 @@ export async function writeAuditArtifacts(
       : {}),
   });
 
-  fs.writeFileSync(path.join(auditDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
+  writeJsonAtomicSync(path.join(auditDir, 'manifest.json'), manifest);
 
   return { auditId, auditDir, manifest, pages: normalizePages };
 }
