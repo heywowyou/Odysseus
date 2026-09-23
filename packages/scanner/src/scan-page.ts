@@ -107,10 +107,12 @@ export interface ScanPageOptions {
    *  navigation; inner rendered/Lighthouse navigations use scheduler.pace(). */
   scheduler?: HostRequestScheduler;
   timeoutMs?: number;
+  /** Aborted by scan-site when the containing page exceeds its deadline. */
+  signal?: AbortSignal;
   /** Independent budget for each rendered-page check. It is deliberately
-   * below the page watchdog so one hanging check can fail alone while the
-   * remaining checks still produce evidence. Tests may set this to a small
-   * value; production derives a conservative fraction from timeoutMs. */
+   * below the page watchdog; when a check times out, its signal is aborted
+   * and later checks refuse to touch the same page. Tests may set this to a
+   * small value; production derives a conservative fraction from timeoutMs. */
   checkTimeoutMs?: number;
   userAgent?: string;
   /** Milestone 9b: skips the Lighthouse pass (and the pre-Lighthouse
@@ -399,19 +401,30 @@ function checkBudgetMs(options: Pick<ScanPageOptions, 'checkTimeoutMs' | 'timeou
  * page hostage. The late promise is observed after a timeout so a rejected
  * browser operation cannot become an unhandled rejection while the next
  * check is already running. */
-async function withCheckBudget<T>(
+function abortReason(signal: AbortSignal): Error {
+  return signal.reason instanceof Error ? signal.reason : new Error('page analysis aborted');
+}
+
+async function runWithCheckBudget<T>(
   checkId: string,
-  action: () => Promise<T>,
+  action: (signal: AbortSignal) => Promise<T>,
   budgetMs: number,
+  signal: AbortSignal,
+  onTimeout: (error: Error) => void,
 ): Promise<T> {
+  if (signal.aborted) throw abortReason(signal);
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const work = Promise.resolve().then(action);
+  const work = Promise.resolve().then(() => {
+    if (signal.aborted) throw abortReason(signal);
+    return action(signal);
+  });
   work.catch(() => undefined);
   const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(
-      () => reject(new Error(`check-timeout: ${checkId} exceeded ${budgetMs}ms`)),
-      budgetMs,
-    );
+    timer = setTimeout(() => {
+      const error = new Error(`check-timeout: ${checkId} exceeded ${budgetMs}ms`);
+      onTimeout(error);
+      reject(error);
+    }, budgetMs);
   });
   try {
     return await Promise.race([work, timeout]);
@@ -480,6 +493,21 @@ export async function runRenderedAnalysis(
   const checkOutcomes: Partial<Record<CheckId, CheckExecutionOutcome>> = {};
   const result: Omit<RenderedAnalysisResult, 'checkOutcomes'> = { url };
   const perCheckBudgetMs = checkBudgetMs(options);
+  const analysisAbortController = new AbortController();
+  const relayExternalAbort = (): void => {
+    analysisAbortController.abort(options.signal?.reason ?? new Error('page analysis aborted'));
+  };
+  if (options.signal?.aborted) relayExternalAbort();
+  else options.signal?.addEventListener('abort', relayExternalAbort, { once: true });
+  const withCheckBudget = <T>(
+    checkId: string,
+    action: (signal: AbortSignal) => Promise<T>,
+    budgetMs = perCheckBudgetMs,
+  ): Promise<T> =>
+    runWithCheckBudget(checkId, action, budgetMs, analysisAbortController.signal, (error) => {
+      analysisAbortController.abort(error);
+      void options.guard?.closeAll().catch(() => undefined);
+    });
 
   if (options.sitemapCheck !== undefined && url === options.homepageUrl) {
     result.sitemapCheck = { ...options.sitemapCheck, pageUrl: url };
@@ -895,7 +923,7 @@ export async function runRenderedAnalysis(
         try {
           keyboardNavigationResult = await withCheckBudget(
             'keyboard-navigation',
-            () => walkKeyboardNavigation(page, url),
+            (signal) => walkKeyboardNavigation(page, url, signal),
             perCheckBudgetMs,
           );
           checkOutcomes['keyboard-navigation'] = 'completed';
@@ -912,7 +940,7 @@ export async function runRenderedAnalysis(
         try {
           formErrorHandlingResult = await withCheckBudget(
             'form-error-handling',
-            () => checkFormErrorHandling(page, url),
+            (signal) => checkFormErrorHandling(page, url, signal),
             perCheckBudgetMs,
           );
           checkOutcomes['form-error-handling'] = 'completed';
@@ -930,7 +958,7 @@ export async function runRenderedAnalysis(
         try {
           reflowResult = await withCheckBudget(
             'reflow',
-            () => checkReflow(page, url),
+            (signal) => checkReflow(page, url, signal),
             perCheckBudgetMs,
           );
           checkOutcomes.reflow = 'completed';
@@ -938,6 +966,8 @@ export async function runRenderedAnalysis(
           reflowResult = undefined;
           checkOutcomes.reflow = 'failed';
         }
+
+        if (analysisAbortController.signal.aborted) return;
 
         // Plan 059 step 13: the delivered consent/overlay state is read
         // off the page exactly as delivered, before anything (the sweep,

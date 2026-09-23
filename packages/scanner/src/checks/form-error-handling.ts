@@ -99,7 +99,9 @@ const REQUEST_BLOCK_MAX_SETTLE_MS = 1_000;
 export async function checkFormErrorHandling(
   page: Page,
   pageUrl: string,
+  signal?: AbortSignal,
 ): Promise<FormErrorHandlingExtraction> {
+  if (signal?.aborted) throw new Error('form-error-handling aborted');
   let lastBlockedAt = 0;
   let triggeredAnyForm = false;
   await page.route('**/*', (route) => {
@@ -109,6 +111,7 @@ export async function checkFormErrorHandling(
     void route.abort().catch(() => {});
   });
   try {
+    if (signal?.aborted) throw new Error('form-error-handling aborted');
     const forms = await page.evaluate(() => {
       const ATTR = 'data-odysseus-field-id';
 
@@ -235,6 +238,7 @@ export async function checkFormErrorHandling(
       }
     });
 
+    if (signal?.aborted) throw new Error('form-error-handling aborted');
     triggeredAnyForm = forms.length > 0;
     return { pageUrl, forms };
   } finally {
@@ -254,11 +258,12 @@ export async function checkFormErrorHandling(
     const settleDeadline = settleStart + REQUEST_BLOCK_MAX_SETTLE_MS;
     while (
       triggeredAnyForm &&
+      !signal?.aborted &&
       Date.now() < settleDeadline &&
       Date.now() - Math.max(lastBlockedAt, settleStart) < REQUEST_BLOCK_QUIET_MS
     ) {
       await new Promise((resolve) => setTimeout(resolve, 25));
     }
-    await page.unroute('**/*');
+    await page.unroute('**/*').catch(() => undefined);
   }
 }

@@ -68,13 +68,19 @@ export interface ReflowCheckResult {
   checkError?: string;
 }
 
-export async function checkReflow(page: Page, pageUrl: string): Promise<ReflowCheckResult> {
+export async function checkReflow(
+  page: Page,
+  pageUrl: string,
+  signal?: AbortSignal,
+): Promise<ReflowCheckResult> {
+  if (signal?.aborted) throw new Error('reflow aborted');
   const originalViewport = page.viewportSize();
   try {
     await page.setViewportSize({ width: REFLOW_VIEWPORT_WIDTH, height: REFLOW_VIEWPORT_HEIGHT });
     // Give the layout a chance to settle: a responsive site's media
     // queries and any resize listeners run asynchronously.
     await page.waitForTimeout(150);
+    if (signal?.aborted) throw new Error('reflow aborted');
 
     const measurement = await page.evaluate(
       ({ tolerance, maxElements }) => {

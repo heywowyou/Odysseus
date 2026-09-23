@@ -1,12 +1,35 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { BrowserContext } from 'playwright';
-import { createPageWorkGuard } from './page-work-guard.js';
+import {
+  createPageWorkGuard,
+  PageWorkDeadlineError,
+  withPageWorkDeadline,
+} from './page-work-guard.js';
 
 function fakeContext(closeImpl: () => Promise<void> = () => Promise.resolve()): BrowserContext {
   return { close: vi.fn(closeImpl) } as unknown as BrowserContext;
 }
 
 describe('createPageWorkGuard', () => {
+  it('closes a stalled mobile surface context when its deadline expires', async () => {
+    let rejectEvaluate!: (error: Error) => void;
+    const context = fakeContext(() => {
+      rejectEvaluate(new Error('target closed'));
+      return Promise.resolve();
+    });
+    const guard = createPageWorkGuard();
+    guard.track(context);
+    const evaluate = new Promise<never>((_resolve, reject) => {
+      rejectEvaluate = reject;
+    });
+
+    await expect(
+      withPageWorkDeadline('mobile surface evaluate', evaluate, 5, guard),
+    ).rejects.toBeInstanceOf(PageWorkDeadlineError);
+
+    expect(context.close).toHaveBeenCalledOnce();
+  });
+
   it('closes every tracked context and clears its own set', async () => {
     const guard = createPageWorkGuard();
     const a = fakeContext();
@@ -23,6 +46,16 @@ describe('createPageWorkGuard', () => {
     await guard.closeAll();
     expect(a.close).toHaveBeenCalledTimes(1);
     expect(b.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes contexts tracked after closeAll has completed', async () => {
+    const guard = createPageWorkGuard();
+    await guard.closeAll();
+
+    const late = fakeContext();
+    guard.track(late);
+
+    expect(late.close).toHaveBeenCalledTimes(1);
   });
 
   it('does not close an untracked context', async () => {

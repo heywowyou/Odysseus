@@ -189,6 +189,57 @@ function relNextChain(pageCount: number): (url: string) => FakeAnchorSpec[] {
   };
 }
 
+describe('crawl page deadlines', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it('closes the crawl context when loaded-page content extraction stalls', async () => {
+    vi.useFakeTimers();
+    installFetchStub({ 'https://example.com/robots.txt': ROBOTS_BODY });
+    let resolveContentStarted!: () => void;
+    const contentStarted = new Promise<void>((resolve) => {
+      resolveContentStarted = resolve;
+    });
+    const page = {
+      goto: async (_url: string) => ({
+        status: () => 200,
+        headers: () => ({ 'content-type': 'text/html' }),
+      }),
+      url: () => 'https://example.com/',
+      content: vi.fn(() => {
+        resolveContentStarted();
+        return new Promise<string>(() => {});
+      }),
+      title: async () => 'Example',
+      $$eval: async (_selector: string, fn: (elements: unknown[]) => unknown) => fn([]),
+      evaluate: async () => ({}),
+      close: vi.fn(async () => {}),
+    };
+    const context = {
+      setDefaultTimeout: vi.fn(),
+      setDefaultNavigationTimeout: vi.fn(),
+      newPage: vi.fn(async () => page),
+      close: vi.fn(async () => {}),
+    };
+    const browser = { newContext: vi.fn(async () => context) } as unknown as Browser;
+    const pending = crawlSite('https://example.com/', {
+      browser,
+      maxPages: 1,
+      maxDepth: 0,
+      timeoutMs: 10,
+      sitemapMode: 'none',
+    });
+    const rejected = expect(pending).rejects.toThrow(/watchdog: crawl page/);
+
+    await contentStarted;
+    await vi.advanceTimersByTimeAsync(10);
+    await rejected;
+    expect(context.close).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('crawlSite continuation-family guard wiring', () => {
   afterEach(() => {
     vi.unstubAllGlobals();

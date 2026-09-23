@@ -136,7 +136,12 @@ import {
   readCrawlFrontierState,
   writeCrawlFrontierState,
 } from './artifacts/crawl-frontier-io.js';
-import { createPageWorkGuard, type PageWorkGuard } from './page-work-guard.js';
+import {
+  createPageWorkGuard,
+  PageWorkDeadlineError,
+  type PageWorkGuard,
+  withPageWorkDeadline,
+} from './page-work-guard.js';
 import { RobotsPolicyRuntime } from './robots-policy-runtime.js';
 import { writeRobotsPolicyChain } from './artifacts/robots-policy-io.js';
 import {
@@ -457,45 +462,35 @@ const FULL_SCAN_PAGE_WATCHDOG_MS = 600_000;
  * derivePageAnalysisCoverage derives failed for every content pass with
  * no completed checks, and the error string carries the reason.
  *
- * Issue #200: on timeout, also force-closes every context `guard` has
- * tracked for this page before resolving. Earlier, the deadline branch
- * only abandoned `work`'s promise - the Playwright BrowserContext(s) it
- * had open stayed alive (and so did their renderer processes) for as
- * long as whatever `work` was stuck on never settled, which is how a
- * real audit accumulated 100+ live renderer processes into an OOM.
- * `work` itself is left to settle on its own time (closing its context
- * makes any pending Playwright call reject quickly in practice) with its
- * eventual rejection swallowed, so it can never surface as an unhandled
- * rejection after this function has already returned via the deadline.
+ * Issue #200: on timeout, abort the work and force-close every context
+ * `guard` has tracked for this page. Earlier, the deadline branch only
+ * abandoned `work`'s promise - Playwright contexts and their renderers
+ * stayed alive until the abandoned operation settled, which let one audit
+ * accumulate 100+ renderers into an OOM. The abandoned promise is observed
+ * so any rejection caused by context closure cannot become unhandled.
  */
 export async function withPageWatchdog<T extends RenderedAnalysisResult | PageScanResult>(
   url: string,
   work: Promise<T>,
   watchdogMs: number,
   guard?: PageWorkGuard,
+  onDeadline?: (error: PageWorkDeadlineError) => void,
 ): Promise<T | RenderedAnalysisResult> {
-  work.catch(() => {
-    // See doc comment: once abandoned via the deadline branch below, a
-    // later rejection here (typically caused by our own forced close)
-    // must never surface as an unhandled rejection.
-  });
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const deadline = new Promise<RenderedAnalysisResult>((resolve) => {
-    timer = setTimeout(() => {
-      const closed = guard?.closeAll() ?? Promise.resolve();
-      void closed.finally(() => {
-        resolve({
-          url,
-          renderDiffError: `watchdog: page analysis did not complete within ${watchdogMs}ms; abandoned so the audit could continue`,
-          checkOutcomes: {},
-        });
-      });
-    }, watchdogMs);
-  });
   try {
-    return await Promise.race([work, deadline]);
-  } finally {
-    clearTimeout(timer);
+    return await withPageWorkDeadline(
+      `page analysis for ${url}`,
+      work,
+      watchdogMs,
+      guard,
+      onDeadline,
+    );
+  } catch (error) {
+    if (!(error instanceof PageWorkDeadlineError)) throw error;
+    return {
+      url,
+      renderDiffError: `watchdog: page analysis did not complete within ${watchdogMs}ms; abandoned so the audit could continue`,
+      checkOutcomes: {},
+    };
   }
 }
 
@@ -554,6 +549,7 @@ async function runScanLane(
       // is excluded exactly the way the lane's own pre-page sleep used to be,
       // and the ETA's per-page estimator still sees the real cost of a page.
       const workStartedAtMs = Date.now();
+      const pageAbortController = new AbortController();
       const result = await withPageWatchdog(
         url,
         scanPage(browser, debugPort, url, {
@@ -562,6 +558,7 @@ async function runScanLane(
           screenshotDir,
           redirectHostCache,
           guard: pageGuard,
+          signal: pageAbortController.signal,
           ...(timeoutMs !== undefined ? { timeoutMs } : {}),
           ...(userAgent !== undefined ? { userAgent } : {}),
           ...(navigationUrl !== undefined ? { navigationUrl } : {}),
@@ -581,6 +578,7 @@ async function runScanLane(
         }),
         FULL_SCAN_PAGE_WATCHDOG_MS,
         pageGuard,
+        () => pageAbortController.abort(new Error('page analysis watchdog elapsed')),
       );
       return { pageResult: result, durationMs: Date.now() - workStartedAtMs };
     });
@@ -709,6 +707,7 @@ async function analyzePageInTurn(
     // Issue #223: same "actual page work only" timing window as
     // runScanLane above, measured once the turn has been granted.
     const workStartedAtMs = Date.now();
+    const pageAbortController = new AbortController();
     const analysis = await withPageWatchdog(
       url,
       runRenderedAnalysis(browser, url, {
@@ -720,6 +719,7 @@ async function analyzePageInTurn(
         exclusionPatterns: context.exclusionPatterns,
         redirectHostCache: context.redirectHostCache,
         guard: pageGuard,
+        signal: pageAbortController.signal,
         ...(timeoutMs !== undefined ? { timeoutMs } : {}),
         ...(context.userAgent !== undefined ? { userAgent: context.userAgent } : {}),
         ...(navigationUrl !== undefined ? { navigationUrl } : {}),
@@ -748,6 +748,7 @@ async function analyzePageInTurn(
       }),
       RENDERED_ANALYSIS_WATCHDOG_MS,
       pageGuard,
+      () => pageAbortController.abort(new Error('rendered analysis watchdog elapsed')),
     );
     return { result: analysis as RenderedAnalysisResult, durationMs: Date.now() - workStartedAtMs };
   });
@@ -818,20 +819,26 @@ async function attachMobileSurface(
   scheduler: HostRequestScheduler,
   context: StagedScanContext,
 ): Promise<RenderedAnalysisResult> {
+  const surfaceGuard = createPageWorkGuard(context.runGuard);
   const surfaceRecord = await scheduler
     .holdLane(() =>
-      runMobileSurfaceAnalysis(browser, url, {
-        evidenceEpoch: context.evidenceEpoch,
-        ...(context.userAgent !== undefined ? { userAgent: context.userAgent } : {}),
-        ...(context.timeoutMs !== undefined ? { timeoutMs: context.timeoutMs } : {}),
-        beforeNavigation: () => scheduler.pace(),
-        ...(context.runGuard !== undefined ? { guard: context.runGuard } : {}),
-        ...(context.networkPolicy !== undefined ? { networkPolicy: context.networkPolicy } : {}),
-        ...(context.onNetworkSafetyBlocked !== undefined
-          ? { onNetworkSafetyBlocked: context.onNetworkSafetyBlocked }
-          : {}),
-        exclusionPatterns: context.exclusionPatterns,
-      }),
+      withPageWorkDeadline(
+        `mobile surface for ${url}`,
+        runMobileSurfaceAnalysis(browser, url, {
+          evidenceEpoch: context.evidenceEpoch,
+          ...(context.userAgent !== undefined ? { userAgent: context.userAgent } : {}),
+          ...(context.timeoutMs !== undefined ? { timeoutMs: context.timeoutMs } : {}),
+          beforeNavigation: () => scheduler.pace(),
+          guard: surfaceGuard,
+          ...(context.networkPolicy !== undefined ? { networkPolicy: context.networkPolicy } : {}),
+          ...(context.onNetworkSafetyBlocked !== undefined
+            ? { onNetworkSafetyBlocked: context.onNetworkSafetyBlocked }
+            : {}),
+          exclusionPatterns: context.exclusionPatterns,
+        }),
+        FULL_SCAN_PAGE_WATCHDOG_MS,
+        surfaceGuard,
+      ),
     )
     .then((record: MobileSurfaceRecord) => ({
       result: {
@@ -899,20 +906,26 @@ async function attachConsentSurface(
   scheduler: HostRequestScheduler,
   context: StagedScanContext,
 ): Promise<RenderedAnalysisResult> {
+  const surfaceGuard = createPageWorkGuard(context.runGuard);
   const outcome = await scheduler
     .holdLane(() =>
-      runConsentSurfaceAnalysis(browser, url, {
-        evidenceEpoch: context.evidenceEpoch,
-        ...(context.userAgent !== undefined ? { userAgent: context.userAgent } : {}),
-        ...(context.timeoutMs !== undefined ? { timeoutMs: context.timeoutMs } : {}),
-        beforeNavigation: () => scheduler.pace(),
-        ...(context.runGuard !== undefined ? { guard: context.runGuard } : {}),
-        ...(context.networkPolicy !== undefined ? { networkPolicy: context.networkPolicy } : {}),
-        ...(context.onNetworkSafetyBlocked !== undefined
-          ? { onNetworkSafetyBlocked: context.onNetworkSafetyBlocked }
-          : {}),
-        exclusionPatterns: context.exclusionPatterns,
-      }),
+      withPageWorkDeadline(
+        `consent surface for ${url}`,
+        runConsentSurfaceAnalysis(browser, url, {
+          evidenceEpoch: context.evidenceEpoch,
+          ...(context.userAgent !== undefined ? { userAgent: context.userAgent } : {}),
+          ...(context.timeoutMs !== undefined ? { timeoutMs: context.timeoutMs } : {}),
+          beforeNavigation: () => scheduler.pace(),
+          guard: surfaceGuard,
+          ...(context.networkPolicy !== undefined ? { networkPolicy: context.networkPolicy } : {}),
+          ...(context.onNetworkSafetyBlocked !== undefined
+            ? { onNetworkSafetyBlocked: context.onNetworkSafetyBlocked }
+            : {}),
+          exclusionPatterns: context.exclusionPatterns,
+        }),
+        FULL_SCAN_PAGE_WATCHDOG_MS,
+        surfaceGuard,
+      ),
     )
     .catch((error: unknown): ConsentSurfaceOutcome => ({
       baseline: result.consentBaseline ?? { state: 'undetermined', controlCount: 0 },
@@ -2374,6 +2387,7 @@ export async function scanSite(
   const crawlOptions = (frontier: CrawlOptions['frontier']): CrawlOptions => ({
     scheduler,
     browser: options.browser,
+    guard: runGuard,
     evidenceEpoch: 1,
     ...(options.scopeDigest !== undefined ? { scopeDigest: options.scopeDigest } : {}),
     ...(captureTemporalAnchors ? { captureStartAnchors: true } : {}),

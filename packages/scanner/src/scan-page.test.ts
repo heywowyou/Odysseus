@@ -48,6 +48,8 @@ import { runAxe } from './axe.js';
 import { runLighthouseIsolated } from './lighthouse-isolated.js';
 import { renderDiff } from './render-diff.js';
 import { extractMentionsLegales } from './checks/mentions-legales.js';
+import { walkKeyboardNavigation } from './checks/keyboard-navigation.js';
+import { checkFormErrorHandling } from './checks/form-error-handling.js';
 import { scanPage, runRenderedAnalysis, runLighthouseAnalysis } from './scan-page.js';
 
 const page = { evaluate: vi.fn(async () => 'SIREN 732829320') };
@@ -186,6 +188,32 @@ describe('runRenderedAnalysis', () => {
     expect(result.checkOutcomes['render-diff']).toBe('failed');
     expect(result.checkOutcomes.axe).toBe('not-applicable');
     expect(result.renderDiffError).toBe('navigation failed');
+  });
+
+  it('does not start the next mutating check while an abandoned check still runs', async () => {
+    vi.useFakeTimers();
+    let resolveStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      resolveStarted = resolve;
+    });
+    vi.mocked(walkKeyboardNavigation).mockImplementationOnce(() => {
+      resolveStarted();
+      return new Promise(() => {});
+    });
+
+    try {
+      const pending = runRenderedAnalysis({} as never, 'https://example.com/', {
+        screenshotDir: '/tmp/pages',
+        checkTimeoutMs: 10,
+      });
+      await started;
+      await vi.advanceTimersByTimeAsync(10);
+      await pending;
+
+      expect(checkFormErrorHandling).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('marks a per-check failure as failed in checkOutcomes without losing the others', async () => {

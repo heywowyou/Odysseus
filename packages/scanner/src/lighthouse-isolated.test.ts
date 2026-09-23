@@ -1,4 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { EventEmitter } from 'node:events';
+import { fork } from 'node:child_process';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('node:child_process', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:child_process')>();
+  return { ...actual, fork: vi.fn(actual.fork) };
+});
 import { resolveWorkerPath, runLighthouseIsolated } from './lighthouse-isolated.js';
 
 /**
@@ -35,6 +42,36 @@ describe('resolveWorkerPath', () => {
  * the test process, and does so within the timeout budget.
  */
 describe('runLighthouseIsolated', () => {
+  it('closes new page targets when the Lighthouse worker is killed', async () => {
+    const child = new EventEmitter() as EventEmitter & {
+      stderr: EventEmitter;
+      send: ReturnType<typeof vi.fn>;
+      kill: ReturnType<typeof vi.fn>;
+    };
+    child.stderr = new EventEmitter();
+    child.send = vi.fn();
+    child.kill = vi.fn();
+    vi.mocked(fork).mockImplementationOnce(() => child as never);
+
+    const existing = [{ id: 'baseline-target', type: 'page' }];
+    const afterFailure = [...existing, { id: 'stray-target', type: 'page' }];
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(existing)))
+      .mockResolvedValueOnce(new Response(JSON.stringify(afterFailure)))
+      .mockResolvedValueOnce(new Response('Target is closing'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const pending = runLighthouseIsolated('https://example.com/', 9222, { timeoutMs: 1 });
+    await vi.waitFor(() => expect(fork).toHaveBeenCalledOnce());
+    child.emit('exit', null, 'SIGKILL');
+    await expect(pending).rejects.toThrow(/exited before returning a result/);
+
+    expect(fetchMock.mock.calls.map(([targetUrl]) => targetUrl)).toContain(
+      'http://127.0.0.1:9222/json/close/stray-target',
+    );
+  });
+
   it('propagates a worker-side failure as a rejection instead of crashing', async () => {
     await expect(
       runLighthouseIsolated('http://127.0.0.1:1', 0, { timeoutMs: 5_000 }),

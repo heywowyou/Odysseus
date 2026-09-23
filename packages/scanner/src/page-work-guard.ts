@@ -14,8 +14,18 @@ export interface PageWorkGuard {
   track(context: BrowserContext): void;
   untrack(context: BrowserContext): void;
   /** Force-closes every currently tracked context. Safe to call on a
-   *  context that is already closing or closed. */
+   *  context that is already closing or closed. After this runs, new
+   *  contexts are closed as soon as they are tracked. */
   closeAll(): Promise<void>;
+}
+
+async function closeIgnoringFailure(context: BrowserContext): Promise<void> {
+  try {
+    await context.close();
+  } catch {
+    // Already closing/closed, or the browser itself is gone -
+    // either way there is nothing left to reclaim.
+  }
 }
 
 /**
@@ -25,8 +35,19 @@ export interface PageWorkGuard {
  */
 export function createPageWorkGuard(parent?: PageWorkGuard): PageWorkGuard {
   const contexts = new Set<BrowserContext>();
+  let closed = false;
+  let closePromise: Promise<void> | undefined;
+
   return {
     track(context) {
+      if (closed) {
+        // The operation outlived its deadline and opened this context
+        // afterwards. It must never escape the guard just because the
+        // watchdog already took its snapshot.
+        void closeIgnoringFailure(context);
+        return;
+      }
+      if (contexts.has(context)) return;
       contexts.add(context);
       parent?.track(context);
     },
@@ -34,19 +55,57 @@ export function createPageWorkGuard(parent?: PageWorkGuard): PageWorkGuard {
       contexts.delete(context);
       parent?.untrack(context);
     },
-    async closeAll() {
+    closeAll() {
+      if (closePromise !== undefined) return closePromise;
+      closed = true;
       const toClose = [...contexts];
       contexts.clear();
-      await Promise.all(
-        toClose.map(async (context) => {
-          try {
-            await context.close();
-          } catch {
-            // Already closing/closed, or the browser itself is gone -
-            // either way there is nothing left to reclaim.
-          }
-        }),
-      );
+      for (const context of toClose) parent?.untrack(context);
+      closePromise = Promise.all(toClose.map(closeIgnoringFailure)).then(() => undefined);
+      return closePromise;
     },
   };
+}
+
+export class PageWorkDeadlineError extends Error {
+  constructor(operation: string, timeoutMs: number) {
+    super(`watchdog: ${operation} did not complete within ${timeoutMs}ms; abandoned`);
+    this.name = 'PageWorkDeadlineError';
+  }
+}
+
+/** Races one bounded page operation and reclaims its contexts when it expires. */
+export async function withPageWorkDeadline<T>(
+  operation: string,
+  work: Promise<T>,
+  timeoutMs: number,
+  guard?: PageWorkGuard,
+  onDeadline?: (error: PageWorkDeadlineError) => void,
+): Promise<T> {
+  work.catch(() => undefined);
+  const deadlineMs = Math.max(1, timeoutMs);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      const error = new PageWorkDeadlineError(operation, deadlineMs);
+      // Settle the deadline before cancellation closes contexts: closing a
+      // target can reject the abandoned Playwright operation in the same turn.
+      reject(error);
+      try {
+        onDeadline?.(error);
+      } catch {
+        // User cancellation callbacks must not prevent context cleanup.
+      }
+      try {
+        void guard?.closeAll().catch(() => undefined);
+      } catch {
+        // The deadline must still clean up what it can if a custom guard fails.
+      }
+    }, deadlineMs);
+  });
+  try {
+    return await Promise.race([work, deadline]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
 }

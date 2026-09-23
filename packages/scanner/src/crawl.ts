@@ -49,6 +49,11 @@ import { extractTextFromHtml } from './extract-text.js';
 import { isSocialPlatformHost } from './social-hosts.js';
 import { checkSitemap, type SitemapCheckResult } from './checks/sitemap.js';
 import {
+  createPageWorkGuard,
+  withPageWorkDeadline,
+  type PageWorkGuard,
+} from './page-work-guard.js';
+import {
   buildPageAuditProfile,
   extractRawPageAuditFacts,
   type PageAuditProfile,
@@ -96,6 +101,8 @@ export interface CrawlOptions {
   maxDepth?: number;
   delayMs?: number;
   timeoutMs?: number;
+  /** Parent guard used to reclaim the crawl context on run cancellation. */
+  guard?: PageWorkGuard;
   userAgent?: string;
   onProgress?: (event: CrawlProgressEvent) => void;
   /** Manual-input-layer milestone: extra absolute URLs force-enqueued at
@@ -816,6 +823,8 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   }
 
   const context = await options.browser.newContext({ userAgent });
+  const crawlGuard = createPageWorkGuard(options.guard);
+  crawlGuard.track(context);
   if (options.networkPolicy !== undefined) {
     await installBrowserNetworkSafety(
       context,
@@ -987,586 +996,606 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
           queued: queue.length,
         });
 
-        const browserPage = await context.newPage();
-        try {
-          // The politeness wait now sits around the navigation itself rather
-          // than ahead of the whole iteration, so that a shared scheduler
-          // measures the gap between the requests a site actually receives and
-          // not between bookkeeping steps. Opening a Playwright page is local
-          // work and sends nothing, so it is free to happen inside the gap.
-          const navigate = () =>
-            paceNavigation(() => browserPage.goto(item.url, { waitUntil: 'load' }));
-          // A page whose `load` event never fires inside the timeout (a
-          // hanging third-party resource, most often) still served its
-          // document. One paced retry that waits only for the document
-          // separates that from a page that really does not answer; before
-          // it, a real 200 page was recorded as 'error' and reported as a
-          // broken link and an invalid hreflang target.
-          const navigateAfterLoadTimeout = async (): ReturnType<typeof navigate> => {
-            try {
-              return await navigate();
-            } catch (error) {
-              if (!isNavigationTimeout(error)) throw error;
-              return paceNavigation(() =>
-                browserPage.goto(item.url, { waitUntil: 'domcontentloaded' }),
-              );
-            }
-          };
-          let response = await navigateAfterLoadTimeout();
-          let httpStatus = response?.status();
-          // A stub URL that redirects out to another site (a social link)
-          // answers with that site's status and body. Its 429 or challenge
-          // says nothing about the audited host, so it must neither slow
-          // this host's scheduler nor buy a retry.
-          const requestedHost = new URL(item.url).hostname;
-          const hostAliases = auditedHostAliases(requestedHost);
-          let consecutiveOriginServerErrors = 0;
-          const observeResponse = async () => {
-            const html =
-              typeof browserPage.content === 'function'
-                ? await browserPage.content().catch(() => '')
-                : '';
-            const markers = analyzeRawDocument(html).interstitialMarkers;
-            const title =
-              typeof browserPage.title === 'function'
-                ? await browserPage.title().catch(() => '')
-                : '';
-            const status = httpStatus;
-            const retryAfter =
-              response === null || response === undefined
-                ? undefined
-                : retryAfterMs(response.headers());
-            const landedHost = safeHostname(browserPage.url()) ?? requestedHost;
-            const responseInput = {
-              requestedHost,
-              landedHost,
-              auditedHostAliases: hostAliases,
-              ...(status !== undefined ? { status } : {}),
-              ...(retryAfter !== undefined ? { retryAfterMs: retryAfter } : {}),
-            };
-            const documentInput = {
-              ...(status !== undefined ? { status } : {}),
-              title,
-              markupLength: html.length,
-              visibleTextLength: extractTextFromHtml(html).length,
-              markers,
-            };
-            let responseClassification;
-            let documentClassification;
-            if (options.scheduler !== undefined) {
-              const observedResponse = options.scheduler.observeHostDocument({
-                response: responseInput,
-                document: documentInput,
-                signal: { pageUrl: item.url, fetcher: 'crawl' },
-              });
-              responseClassification = observedResponse.response;
-              documentClassification = observedResponse.document;
-            } else {
-              const hostCheck = classifyHostResponse({
-                ...responseInput,
-                consecutiveOriginServerErrors: 0,
-              });
-              if (hostCheck.auditedHost) {
-                consecutiveOriginServerErrors =
-                  (status ?? 0) >= 500 ? consecutiveOriginServerErrors + 1 : 0;
-              }
-              responseClassification = classifyHostResponse({
-                ...responseInput,
-                consecutiveOriginServerErrors,
-              });
-              documentClassification = classifyDocumentWall(documentInput);
-            }
-            const auditedDocumentWall =
-              responseClassification.auditedHost &&
-              documentClassification.classification === 'wall';
-            return {
-              responseClassification,
-              documentClassification,
-              auditedDocumentWall,
-              markers:
-                auditedDocumentWall && isChallengeTitle(title)
-                  ? [...markers, 'challenge-title']
-                  : markers,
-            };
-          };
-          let observed = await observeResponse();
-          let challengeMarkers = observed.markers;
-          // One paced retry distinguishes a transient audited-host refusal
-          // from a stable page error. Off-site responses never earn a retry.
-          if (observed.responseClassification.disposition === 'pushback') {
-            response = await navigate();
-            httpStatus = response?.status();
-            observed = await observeResponse();
-            challengeMarkers = observed.markers;
-          }
-          const contentType = response?.headers()['content-type'];
-
-          // A stub URL like /facebook or /instagram that server-side or
-          // client-side redirects out to a social platform is not a page of
-          // the audited site - it must never reach a detector (broken-link,
-          // render-diff, axe, Lighthouse), which is exactly what happened
-          // before this check existed: navigating a real browser context
-          // into facebook.com under headless conditions is slow and often
-          // errors out, and the resulting 'error' status then got reported
-          // as a broken internal link even though the redirect itself
-          // worked exactly as the site intended.
-          const finalHost = safeHostname(browserPage.url());
-          const isOffSite = finalHost !== null && !isSameSiteHostname(requestedHost, finalHost);
-          const landedUrl = browserPage.url();
-          const landedIdentity = normalizePageIdentityUrl(landedUrl);
-          const isSameSiteRedirect =
-            !isOffSite &&
-            sameSiteServerRedirect(item.url, landedUrl) &&
-            landedIdentity !== undefined &&
-            landedIdentity !== item.url;
-
-          if (isOffSite || (finalHost !== null && isSocialPlatformHost(finalHost))) {
-            recordPage({
-              url: item.url,
-              depth: item.depth,
-              status: 'skipped-external-redirect',
-              discoveryMethod,
-              ...(httpStatus !== undefined ? { httpStatus } : {}),
-              ...(finalHost !== null ? { redirectTargetUrl: landedUrl } : {}),
-              ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
-            });
-          } else if (
-            isSameSiteRedirect &&
-            (finalHost === null || isAllowedByRobots(robotsRules, robotsTarget(browserPage.url())))
-          ) {
-            // Server redirects are inventory facts, not content pages. Keep
-            // the requested spelling visible, then enqueue the actual target
-            // once so only its content is analysed.
-            recordPage({
-              url: item.url,
-              depth: item.depth,
-              status: 'redirect-interstitial',
-              discoveryMethod,
-              ...(httpStatus !== undefined ? { httpStatus } : {}),
-              redirectTargetUrl: landedIdentity,
-              ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
-            });
-            if (inventoryLedger !== undefined && landedIdentity !== undefined) {
-              inventoryLedger.recordDiscovery({
-                url: landedIdentity,
-                source: 'redirect',
-                discoveredAt: new Date(),
-                referrer: item.url,
-                depth: item.depth,
-              });
-            }
-            if (
-              landedIdentity !== undefined &&
-              !enqueued.has(landedIdentity) &&
-              !pagesByUrl.has(landedIdentity)
-            ) {
-              enqueued.add(landedIdentity);
-              queue.push({
-                url: landedIdentity,
-                depth: item.depth,
-                discoveredFrom: item.url,
-                discoveryMethod: 'link',
-                ...(item.isHomepage === true ? { isHomepage: true } : {}),
-              });
-            }
-            if (item.isHomepage === true && landedIdentity !== undefined) {
-              homepageUrlIdentity = landedIdentity;
-              const queuedTarget = queue.find((queued) => queued.url === landedIdentity);
-              if (queuedTarget !== undefined) queuedTarget.isHomepage = true;
-            }
-          } else if (
-            finalHost !== null &&
-            !isAllowedByRobots(robotsRules, robotsTarget(browserPage.url()))
-          ) {
-            // A redirect can land on a path robots.txt disallows even though
-            // the requested URL was allowed; the landed page is then treated
-            // exactly like a disallowed link and never analysed.
-            recordPage({
-              url: item.url,
-              depth: item.depth,
-              status: 'skipped-robots',
-              discoveryMethod,
-              ...(httpStatus !== undefined ? { httpStatus } : {}),
-              ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
-            });
-          } else if (isNonHtmlContentType(contentType)) {
-            recordPage({
-              url: item.url,
-              depth: item.depth,
-              status: 'skipped-non-html',
-              discoveryMethod,
-              ...(httpStatus !== undefined ? { httpStatus } : {}),
-              ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
-            });
-          } else if (observed.auditedDocumentWall) {
-            recordPage({
-              url: item.url,
-              depth: item.depth,
-              status: 'blocked',
-              discoveryMethod,
-              ...(httpStatus !== undefined ? { httpStatus } : {}),
-              error: `document wall: ${challengeMarkers.join(', ') || observed.documentClassification.reason}`,
-              ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
-            });
-          } else if (httpStatus !== undefined && (httpStatus < 200 || httpStatus >= 300)) {
-            // Issue #39: a non-2xx response means the URL has no page behind
-            // it. It still cost a navigation (the politeness delay above was
-            // already paid and the budget slot is spent), so it stays in the
-            // inventory with its failure reason, but it must never be
-            // scanned, never emit findings as if it were content, never have
-            // its links followed, and never count as a page the client is
-            // presented. The four /back-office/* 404s that reached the
-            // Villas Foch report were exactly this failure.
-            recordPage({
-              url: item.url,
-              depth: item.depth,
-              status: 'http-error-status',
-              discoveryMethod,
-              ...(httpStatus !== undefined ? { httpStatus } : {}),
-              ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
-            });
-          } else {
-            // A bare language homepage duplicates the homepage it translates,
-            // yet is often the only route into that language's subtree
-            // (lagnonu.fr, where /en and /es are the sole links in). So it is
-            // always crawled for its links, and scanned only when the page
-            // itself declares hreflang.
-            //
-            // That condition is exactly what trade-off 24's translation
-            // clustering needs: a page declaring hreflang, including a self
-            // reference, clusters with the variants it names, so its findings
-            // collapse into the homepage's rather than multiplying them. With
-            // no hreflang nothing can collapse them, and each language
-            // homepage would restate every homepage defect once per language
-            // (lacoorniche.com, five languages) - the defect this rule was
-            // originally added for.
-            //
-            // Read off the DOM of the page already loaded here, not a second
-            // fetch, and never inferred from URL shape: trade-off 24 rejected
-            // prefix-guessing for clustering and the same reasoning binds here.
-            const isHomepageNavigation = item.isHomepage === true || item.url === startUrlIdentity;
-            const landedPageIdentity = normalizePageIdentityUrl(browserPage.url());
-            if (isHomepageNavigation && landedPageIdentity !== undefined) {
-              homepageUrlIdentity = landedPageIdentity;
-            }
-            let discoverOnly =
-              !isHomepageNavigation && isLanguageHomepagePath(new URL(browserPage.url()).pathname);
-            if (discoverOnly) {
-              const declaresHreflang = await browserPage
-                .$$eval('link[rel="alternate"][hreflang]', (links) => links.length > 0)
-                .catch(() => false);
-              if (declaresHreflang) discoverOnly = false;
-            }
-
-            // Plan 021 Step 3: extracted from this same loaded page, no
-            // extra navigation, and only for a page that will actually be
-            // scanned. A DOM-evaluation failure here must never fail the
-            // crawl (extractRawPageAuditFacts's own doc comment): falling
-            // back to an all-empty fact set classifies as unknown/fallback,
-            // which never reduces coverage, rather than leaving the page
-            // with no profile at all.
-            let auditProfile: PageAuditProfile | undefined;
-            let rawFacts: RawPageAuditFacts | undefined;
-            const mayBePluginObject =
-              discoveryMethod === 'sitemap-only' && discoveredFrom === undefined;
-            if (!discoverOnly || mayBePluginObject) {
-              const profileContext = {
-                url: item.url,
-                isHomepage: isHomepageNavigation,
-                isOperatorSeed: item.discoveryMethod === 'seed',
-              };
+        const pageWork = async (): Promise<void> => {
+          const browserPage = await context.newPage();
+          try {
+            // The politeness wait now sits around the navigation itself rather
+            // than ahead of the whole iteration, so that a shared scheduler
+            // measures the gap between the requests a site actually receives and
+            // not between bookkeeping steps. Opening a Playwright page is local
+            // work and sends nothing, so it is free to happen inside the gap.
+            const navigate = () =>
+              paceNavigation(() => browserPage.goto(item.url, { waitUntil: 'load' }));
+            // A page whose `load` event never fires inside the timeout (a
+            // hanging third-party resource, most often) still served its
+            // document. One paced retry that waits only for the document
+            // separates that from a page that really does not answer; before
+            // it, a real 200 page was recorded as 'error' and reported as a
+            // broken link and an invalid hreflang target.
+            const navigateAfterLoadTimeout = async (): ReturnType<typeof navigate> => {
               try {
-                rawFacts = await extractRawPageAuditFacts(browserPage);
-              } catch {
-                const emptyFacts: RawPageAuditFacts = {
-                  metaRobotsNoindex: false,
-                  jsonLdTypes: [],
-                  paginationRelNext: false,
-                  paginationRelPrev: false,
-                  numberedPaginationControlCount: 0,
-                  bodyClassTokens: [],
-                  transactionalFormSignalCount: 0,
-                  externalTransactionalLinkCount: 0,
-                  repeatedTeaserLinkGroupSize: 0,
-                  structuralTokens: [],
-                };
-                rawFacts = emptyFacts;
+                return await navigate();
+              } catch (error) {
+                if (!isNavigationTimeout(error)) throw error;
+                return paceNavigation(() =>
+                  browserPage.goto(item.url, { waitUntil: 'domcontentloaded' }),
+                );
               }
-              if (!discoverOnly) auditProfile = buildPageAuditProfile(rawFacts, profileContext);
+            };
+            let response = await navigateAfterLoadTimeout();
+            let httpStatus = response?.status();
+            // A stub URL that redirects out to another site (a social link)
+            // answers with that site's status and body. Its 429 or challenge
+            // says nothing about the audited host, so it must neither slow
+            // this host's scheduler nor buy a retry.
+            const requestedHost = new URL(item.url).hostname;
+            const hostAliases = auditedHostAliases(requestedHost);
+            let consecutiveOriginServerErrors = 0;
+            const observeResponse = async () => {
+              const html =
+                typeof browserPage.content === 'function'
+                  ? await browserPage.content().catch(() => '')
+                  : '';
+              const markers = analyzeRawDocument(html).interstitialMarkers;
+              const title =
+                typeof browserPage.title === 'function'
+                  ? await browserPage.title().catch(() => '')
+                  : '';
+              const status = httpStatus;
+              const retryAfter =
+                response === null || response === undefined
+                  ? undefined
+                  : retryAfterMs(response.headers());
+              const landedHost = safeHostname(browserPage.url()) ?? requestedHost;
+              const responseInput = {
+                requestedHost,
+                landedHost,
+                auditedHostAliases: hostAliases,
+                ...(status !== undefined ? { status } : {}),
+                ...(retryAfter !== undefined ? { retryAfterMs: retryAfter } : {}),
+              };
+              const documentInput = {
+                ...(status !== undefined ? { status } : {}),
+                title,
+                markupLength: html.length,
+                visibleTextLength: extractTextFromHtml(html).length,
+                markers,
+              };
+              let responseClassification;
+              let documentClassification;
+              if (options.scheduler !== undefined) {
+                const observedResponse = options.scheduler.observeHostDocument({
+                  response: responseInput,
+                  document: documentInput,
+                  signal: { pageUrl: item.url, fetcher: 'crawl' },
+                });
+                responseClassification = observedResponse.response;
+                documentClassification = observedResponse.document;
+              } else {
+                const hostCheck = classifyHostResponse({
+                  ...responseInput,
+                  consecutiveOriginServerErrors: 0,
+                });
+                if (hostCheck.auditedHost) {
+                  consecutiveOriginServerErrors =
+                    (status ?? 0) >= 500 ? consecutiveOriginServerErrors + 1 : 0;
+                }
+                responseClassification = classifyHostResponse({
+                  ...responseInput,
+                  consecutiveOriginServerErrors,
+                });
+                documentClassification = classifyDocumentWall(documentInput);
+              }
+              const auditedDocumentWall =
+                responseClassification.auditedHost &&
+                documentClassification.classification === 'wall';
+              return {
+                responseClassification,
+                documentClassification,
+                auditedDocumentWall,
+                markers:
+                  auditedDocumentWall && isChallengeTitle(title)
+                    ? [...markers, 'challenge-title']
+                    : markers,
+              };
+            };
+            let observed = await observeResponse();
+            let challengeMarkers = observed.markers;
+            // One paced retry distinguishes a transient audited-host refusal
+            // from a stable page error. Off-site responses never earn a retry.
+            if (observed.responseClassification.disposition === 'pushback') {
+              response = await navigate();
+              httpStatus = response?.status();
+              observed = await observeResponse();
+              challengeMarkers = observed.markers;
             }
+            const contentType = response?.headers()['content-type'];
 
-            const pluginObject =
-              rawFacts === undefined
-                ? undefined
-                : classifyNonPublicPluginObject({
-                    discoveryMethod,
-                    ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
-                    bodyClassTokens: rawFacts.bodyClassTokens,
-                  });
-            if (pluginObject !== undefined) discoverOnly = true;
+            // A stub URL like /facebook or /instagram that server-side or
+            // client-side redirects out to a social platform is not a page of
+            // the audited site - it must never reach a detector (broken-link,
+            // render-diff, axe, Lighthouse), which is exactly what happened
+            // before this check existed: navigating a real browser context
+            // into facebook.com under headless conditions is slow and often
+            // errors out, and the resulting 'error' status then got reported
+            // as a broken internal link even though the redirect itself
+            // worked exactly as the site intended.
+            const finalHost = safeHostname(browserPage.url());
+            const isOffSite = finalHost !== null && !isSameSiteHostname(requestedHost, finalHost);
+            const landedUrl = browserPage.url();
+            const landedIdentity = normalizePageIdentityUrl(landedUrl);
+            const isSameSiteRedirect =
+              !isOffSite &&
+              sameSiteServerRedirect(item.url, landedUrl) &&
+              landedIdentity !== undefined &&
+              landedIdentity !== item.url;
 
-            recordPage({
-              url: item.url,
-              depth: item.depth,
-              status: discoverOnly ? 'discovered-not-scanned' : 'visited',
-              discoveryMethod,
-              ...(httpStatus !== undefined ? { httpStatus } : {}),
-              ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
-              ...(auditProfile !== undefined ? { auditProfile } : {}),
-              ...(pluginObject !== undefined ? { pluginObject } : {}),
-              ...(landedUrl !== item.url ? { servedUrl: landedUrl } : {}),
-            });
-
-            if (
-              discoveryMethod !== 'sitemap-only' &&
-              (item.depth < maxDepth || inventoryLedger !== undefined)
+            if (isOffSite || (finalHost !== null && isSocialPlatformHost(finalHost))) {
+              recordPage({
+                url: item.url,
+                depth: item.depth,
+                status: 'skipped-external-redirect',
+                discoveryMethod,
+                ...(httpStatus !== undefined ? { httpStatus } : {}),
+                ...(finalHost !== null ? { redirectTargetUrl: landedUrl } : {}),
+                ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+              });
+            } else if (
+              isSameSiteRedirect &&
+              (finalHost === null ||
+                isAllowedByRobots(robotsRules, robotsTarget(browserPage.url())))
             ) {
-              // Per-anchor structural evidence (plan 021 Step 6), read at
-              // discovery time before URL normalization discards rel and
-              // context: the anchor's own rel token and whether it sits in
-              // a numbered pagination control. The pagination selector and
-              // numeric-text filter here must stay byte-identical to
-              // page-audit-profile.ts's page-level count, so the guard's
-              // evidence and the profile's fact can never diverge.
-              const anchors = await browserPage.$$eval('a[href]', (anchorEls) =>
-                anchorEls.map((a) => ({
-                  href: a.getAttribute('href'),
-                  relNext: (a.getAttribute('rel') ?? '').split(/\s+/).includes('next'),
-                  isNumberedPaginationControl:
-                    a.matches('nav[class*="pag" i] a, [class*="pagination" i] a') &&
-                    /^\d+$/.test((a.textContent ?? '').trim()),
-                })),
-              );
-              const hrefs = anchors.map((anchor) => anchor.href);
-              // Resolved against browserPage.url() (where the navigation actually
-              // landed), not item.url (what was requested). A same-origin request
-              // can still land on a different origin after a server redirect - a
-              // www-to-apex 301 is the common case - and every link on the landed
-              // page is naturally absolute against that landed origin. Using
-              // item.url as the base made those links look cross-origin and got
-              // them all dropped, which silently reduced a real site's crawl to
-              // just the one redirect-landing page (confirmed against
-              // lacoorniche.com: www.lacoorniche.com 301s to lacoorniche.com,
-              // visitedCount was 1 before this fix).
-              const landedUrl = browserPage.url();
-              // Same normalization normalizeInternalLinks applies below, keyed per
-              // canonical link so the guard can be consulted per candidate; two
-              // anchors normalizing to one URL OR-merge, since either alone is
-              // sufficient evidence.
-              const anchorEvidenceByUrl = new Map<
-                string,
-                { relNext: boolean; isNumberedPaginationControl: boolean }
-              >();
-              for (const anchor of anchors) {
-                if (anchor.href === null) continue;
-                const normalizedWithoutExclusion = normalizePageUrl(anchor.href, landedUrl);
-                const normalized = normalizePageUrl(anchor.href, landedUrl, {
-                  exclusionPatterns: options.exclusions ?? [],
-                });
-                if (normalized === undefined) {
-                  if (
-                    inventoryLedger !== undefined &&
-                    normalizedWithoutExclusion !== undefined &&
-                    exclusionRegexes.some((pattern) => pattern.test(normalizedWithoutExclusion))
-                  ) {
-                    inventoryLedger.recordDiscovery({
-                      url: normalizedWithoutExclusion,
-                      source: 'link',
-                      discoveredAt: new Date(),
-                      referrer: item.url,
-                      depth: item.depth + 1,
-                      observedUrl: anchor.href,
-                    });
-                    disposeInventory(normalizedWithoutExclusion, 'operator-excluded', {
-                      detail: 'matched an operator-supplied crawl exclusion',
-                    });
-                  }
-                  continue;
-                }
-                const existing = anchorEvidenceByUrl.get(normalized);
-                anchorEvidenceByUrl.set(normalized, {
-                  relNext: (existing?.relNext ?? false) || anchor.relNext,
-                  isNumberedPaginationControl:
-                    (existing?.isNumberedPaginationControl ?? false) ||
-                    anchor.isNumberedPaginationControl,
+              // Server redirects are inventory facts, not content pages. Keep
+              // the requested spelling visible, then enqueue the actual target
+              // once so only its content is analysed.
+              recordPage({
+                url: item.url,
+                depth: item.depth,
+                status: 'redirect-interstitial',
+                discoveryMethod,
+                ...(httpStatus !== undefined ? { httpStatus } : {}),
+                redirectTargetUrl: landedIdentity,
+                ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+              });
+              if (inventoryLedger !== undefined && landedIdentity !== undefined) {
+                inventoryLedger.recordDiscovery({
+                  url: landedIdentity,
+                  source: 'redirect',
+                  discoveredAt: new Date(),
+                  referrer: item.url,
+                  depth: item.depth,
                 });
               }
-              const relativeNestingByUrl = new Map<
-                string,
-                ReturnType<typeof relativeLinkNestingEvidence>
-              >();
-              for (const anchor of anchors) {
-                if (anchor.href === null) continue;
-                const evidence = relativeLinkNestingEvidence(anchor.href, landedUrl);
-                if (evidence === undefined) continue;
-                const normalized = normalizePageUrl(anchor.href, landedUrl, {
-                  exclusionPatterns: options.exclusions ?? [],
+              if (
+                landedIdentity !== undefined &&
+                !enqueued.has(landedIdentity) &&
+                !pagesByUrl.has(landedIdentity)
+              ) {
+                enqueued.add(landedIdentity);
+                queue.push({
+                  url: landedIdentity,
+                  depth: item.depth,
+                  discoveredFrom: item.url,
+                  discoveryMethod: 'link',
+                  ...(item.isHomepage === true ? { isHomepage: true } : {}),
                 });
-                if (normalized !== undefined) relativeNestingByUrl.set(normalized, evidence);
               }
-              const links = normalizeInternalLinks(hrefs, landedUrl, options.exclusions ?? []);
-              const repeatedQueryKeysOnSourcePage = computeRepeatedQueryKeys(links);
-              for (const link of links) {
-                linkDiscoveredUrls.add(link);
-                if (!linkDiscoveredFrom.has(link)) linkDiscoveredFrom.set(link, item.url);
-                ensureInventoryDiscovery(link, 'link', item.depth + 1, item.url);
-                const existingPage = pagesByUrl.get(link);
-                if (existingPage !== undefined) {
-                  existingPage.discoveryMethod = 'link';
-                  existingPage.discoveredFrom ??= item.url;
+              if (item.isHomepage === true && landedIdentity !== undefined) {
+                homepageUrlIdentity = landedIdentity;
+                const queuedTarget = queue.find((queued) => queued.url === landedIdentity);
+                if (queuedTarget !== undefined) queuedTarget.isHomepage = true;
+              }
+            } else if (
+              finalHost !== null &&
+              !isAllowedByRobots(robotsRules, robotsTarget(browserPage.url()))
+            ) {
+              // A redirect can land on a path robots.txt disallows even though
+              // the requested URL was allowed; the landed page is then treated
+              // exactly like a disallowed link and never analysed.
+              recordPage({
+                url: item.url,
+                depth: item.depth,
+                status: 'skipped-robots',
+                discoveryMethod,
+                ...(httpStatus !== undefined ? { httpStatus } : {}),
+                ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+              });
+            } else if (isNonHtmlContentType(contentType)) {
+              recordPage({
+                url: item.url,
+                depth: item.depth,
+                status: 'skipped-non-html',
+                discoveryMethod,
+                ...(httpStatus !== undefined ? { httpStatus } : {}),
+                ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+              });
+            } else if (observed.auditedDocumentWall) {
+              recordPage({
+                url: item.url,
+                depth: item.depth,
+                status: 'blocked',
+                discoveryMethod,
+                ...(httpStatus !== undefined ? { httpStatus } : {}),
+                error: `document wall: ${challengeMarkers.join(', ') || observed.documentClassification.reason}`,
+                ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+              });
+            } else if (httpStatus !== undefined && (httpStatus < 200 || httpStatus >= 300)) {
+              // Issue #39: a non-2xx response means the URL has no page behind
+              // it. It still cost a navigation (the politeness delay above was
+              // already paid and the budget slot is spent), so it stays in the
+              // inventory with its failure reason, but it must never be
+              // scanned, never emit findings as if it were content, never have
+              // its links followed, and never count as a page the client is
+              // presented. The four /back-office/* 404s that reached the
+              // Villas Foch report were exactly this failure.
+              recordPage({
+                url: item.url,
+                depth: item.depth,
+                status: 'http-error-status',
+                discoveryMethod,
+                ...(httpStatus !== undefined ? { httpStatus } : {}),
+                ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+              });
+            } else {
+              // A bare language homepage duplicates the homepage it translates,
+              // yet is often the only route into that language's subtree
+              // (lagnonu.fr, where /en and /es are the sole links in). So it is
+              // always crawled for its links, and scanned only when the page
+              // itself declares hreflang.
+              //
+              // That condition is exactly what trade-off 24's translation
+              // clustering needs: a page declaring hreflang, including a self
+              // reference, clusters with the variants it names, so its findings
+              // collapse into the homepage's rather than multiplying them. With
+              // no hreflang nothing can collapse them, and each language
+              // homepage would restate every homepage defect once per language
+              // (lacoorniche.com, five languages) - the defect this rule was
+              // originally added for.
+              //
+              // Read off the DOM of the page already loaded here, not a second
+              // fetch, and never inferred from URL shape: trade-off 24 rejected
+              // prefix-guessing for clustering and the same reasoning binds here.
+              const isHomepageNavigation =
+                item.isHomepage === true || item.url === startUrlIdentity;
+              const landedPageIdentity = normalizePageIdentityUrl(browserPage.url());
+              if (isHomepageNavigation && landedPageIdentity !== undefined) {
+                homepageUrlIdentity = landedPageIdentity;
+              }
+              let discoverOnly =
+                !isHomepageNavigation &&
+                isLanguageHomepagePath(new URL(browserPage.url()).pathname);
+              if (discoverOnly) {
+                const declaresHreflang = await browserPage
+                  .$$eval('link[rel="alternate"][hreflang]', (links) => links.length > 0)
+                  .catch(() => false);
+                if (declaresHreflang) discoverOnly = false;
+              }
+
+              // Plan 021 Step 3: extracted from this same loaded page, no
+              // extra navigation, and only for a page that will actually be
+              // scanned. A DOM-evaluation failure here must never fail the
+              // crawl (extractRawPageAuditFacts's own doc comment): falling
+              // back to an all-empty fact set classifies as unknown/fallback,
+              // which never reduces coverage, rather than leaving the page
+              // with no profile at all.
+              let auditProfile: PageAuditProfile | undefined;
+              let rawFacts: RawPageAuditFacts | undefined;
+              const mayBePluginObject =
+                discoveryMethod === 'sitemap-only' && discoveredFrom === undefined;
+              if (!discoverOnly || mayBePluginObject) {
+                const profileContext = {
+                  url: item.url,
+                  isHomepage: isHomepageNavigation,
+                  isOperatorSeed: item.discoveryMethod === 'seed',
+                };
+                try {
+                  rawFacts = await extractRawPageAuditFacts(browserPage);
+                } catch {
+                  const emptyFacts: RawPageAuditFacts = {
+                    metaRobotsNoindex: false,
+                    jsonLdTypes: [],
+                    paginationRelNext: false,
+                    paginationRelPrev: false,
+                    numberedPaginationControlCount: 0,
+                    bodyClassTokens: [],
+                    transactionalFormSignalCount: 0,
+                    externalTransactionalLinkCount: 0,
+                    repeatedTeaserLinkGroupSize: 0,
+                    structuralTokens: [],
+                  };
+                  rawFacts = emptyFacts;
                 }
-                if (item.depth >= maxDepth && existingPage === undefined && !enqueued.has(link)) {
-                  disposeInventory(link, 'depth-bound', {
-                    detail: `discovered from depth ${item.depth}; maxDepth is ${maxDepth}`,
+                if (!discoverOnly) auditProfile = buildPageAuditProfile(rawFacts, profileContext);
+              }
+
+              const pluginObject =
+                rawFacts === undefined
+                  ? undefined
+                  : classifyNonPublicPluginObject({
+                      discoveryMethod,
+                      ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+                      bodyClassTokens: rawFacts.bodyClassTokens,
+                    });
+              if (pluginObject !== undefined) discoverOnly = true;
+
+              recordPage({
+                url: item.url,
+                depth: item.depth,
+                status: discoverOnly ? 'discovered-not-scanned' : 'visited',
+                discoveryMethod,
+                ...(httpStatus !== undefined ? { httpStatus } : {}),
+                ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+                ...(auditProfile !== undefined ? { auditProfile } : {}),
+                ...(pluginObject !== undefined ? { pluginObject } : {}),
+                ...(landedUrl !== item.url ? { servedUrl: landedUrl } : {}),
+              });
+
+              if (
+                discoveryMethod !== 'sitemap-only' &&
+                (item.depth < maxDepth || inventoryLedger !== undefined)
+              ) {
+                // Per-anchor structural evidence (plan 021 Step 6), read at
+                // discovery time before URL normalization discards rel and
+                // context: the anchor's own rel token and whether it sits in
+                // a numbered pagination control. The pagination selector and
+                // numeric-text filter here must stay byte-identical to
+                // page-audit-profile.ts's page-level count, so the guard's
+                // evidence and the profile's fact can never diverge.
+                const anchors = await browserPage.$$eval('a[href]', (anchorEls) =>
+                  anchorEls.map((a) => ({
+                    href: a.getAttribute('href'),
+                    relNext: (a.getAttribute('rel') ?? '').split(/\s+/).includes('next'),
+                    isNumberedPaginationControl:
+                      a.matches('nav[class*="pag" i] a, [class*="pagination" i] a') &&
+                      /^\d+$/.test((a.textContent ?? '').trim()),
+                  })),
+                );
+                const hrefs = anchors.map((anchor) => anchor.href);
+                // Resolved against browserPage.url() (where the navigation actually
+                // landed), not item.url (what was requested). A same-origin request
+                // can still land on a different origin after a server redirect - a
+                // www-to-apex 301 is the common case - and every link on the landed
+                // page is naturally absolute against that landed origin. Using
+                // item.url as the base made those links look cross-origin and got
+                // them all dropped, which silently reduced a real site's crawl to
+                // just the one redirect-landing page (confirmed against
+                // lacoorniche.com: www.lacoorniche.com 301s to lacoorniche.com,
+                // visitedCount was 1 before this fix).
+                const landedUrl = browserPage.url();
+                // Same normalization normalizeInternalLinks applies below, keyed per
+                // canonical link so the guard can be consulted per candidate; two
+                // anchors normalizing to one URL OR-merge, since either alone is
+                // sufficient evidence.
+                const anchorEvidenceByUrl = new Map<
+                  string,
+                  { relNext: boolean; isNumberedPaginationControl: boolean }
+                >();
+                for (const anchor of anchors) {
+                  if (anchor.href === null) continue;
+                  const normalizedWithoutExclusion = normalizePageUrl(anchor.href, landedUrl);
+                  const normalized = normalizePageUrl(anchor.href, landedUrl, {
+                    exclusionPatterns: options.exclusions ?? [],
                   });
-                  continue;
-                }
-                const nestingEvidence = relativeNestingByUrl.get(link);
-                if (
-                  nestingEvidence !== undefined &&
-                  existingPage === undefined &&
-                  !enqueued.has(link)
-                ) {
-                  relativeLinkNesting.omittedUrlCount += 1;
-                  if (relativeLinkNesting.omittedExampleUrls.length < 20) {
-                    relativeLinkNesting.omittedExampleUrls.push(nestingEvidence.resolvedUrl);
-                  }
-                  if (
-                    !relativeLinkNesting.repeatedSegments.includes(nestingEvidence.repeatedSegment)
-                  ) {
-                    relativeLinkNesting.repeatedSegments.push(nestingEvidence.repeatedSegment);
-                  }
-                  disposeInventory(link, 'relative-link-nesting', {
-                    detail: `relative href ${nestingEvidence.href} repeated directory segment ${nestingEvidence.repeatedSegment}`,
-                  });
-                  continue;
-                }
-                // Only a continuation-classified link is governed: the guard
-                // never sees an ordinary link, and returning false here omits
-                // exactly this enqueue while keeping the discovery bookkeeping
-                // above - the same posture as a frontier truncated by maxPages.
-                const anchorEvidence = anchorEvidenceByUrl.get(link);
-                if (anchorEvidence !== undefined) {
-                  const classification = classifyContinuationLink({
-                    targetUrl: link,
-                    sourcePageUrl: item.url,
-                    relNext: anchorEvidence.relNext,
-                    isNumberedPaginationControl: anchorEvidence.isNumberedPaginationControl,
-                    sourceIsConfirmedListing:
-                      auditProfile !== undefined && isConfirmedListing(auditProfile),
-                    repeatedQueryKeysOnSourcePage,
-                  });
-                  if (
-                    classification.isContinuation &&
-                    !continuationGuard.admit(classification, link)
-                  ) {
-                    if (existingPage === undefined && !enqueued.has(link)) {
-                      disposeInventory(link, 'continuation-guard', {
-                        detail: `continuation family ${classification.familyKey} reached its bound`,
+                  if (normalized === undefined) {
+                    if (
+                      inventoryLedger !== undefined &&
+                      normalizedWithoutExclusion !== undefined &&
+                      exclusionRegexes.some((pattern) => pattern.test(normalizedWithoutExclusion))
+                    ) {
+                      inventoryLedger.recordDiscovery({
+                        url: normalizedWithoutExclusion,
+                        source: 'link',
+                        discoveredAt: new Date(),
+                        referrer: item.url,
+                        depth: item.depth + 1,
+                        observedUrl: anchor.href,
+                      });
+                      disposeInventory(normalizedWithoutExclusion, 'operator-excluded', {
+                        detail: 'matched an operator-supplied crawl exclusion',
                       });
                     }
                     continue;
                   }
-                }
-                if (enqueued.has(link)) continue;
-                enqueued.add(link);
-                queue.push({
-                  url: link,
-                  depth: item.depth + 1,
-                  discoveredFrom: item.url,
-                  discoveryMethod: 'link',
-                });
-              }
-
-              // Plan 059 section 6: deterministic hreflang discovery from
-              // the document head. A <link rel="alternate" hreflang> that
-              // names an in-scope page is an explicit declaration of that
-              // page even when no visible anchor links it, so it enters
-              // the frontier with its own discovery provenance. Normalized
-              // by the same admission policy as anchors (origin, non-HTML
-              // extensions, operator exclusions); the continuation guard
-              // does not apply, because a page's declared alternates are a
-              // finite set the site itself controls.
-              const hreflangTargets = await browserPage
-                .$$eval('link[rel="alternate"][hreflang]', (links) =>
-                  links.map((link) => link.getAttribute('href')),
-                )
-                .catch(() => [] as (string | null)[]);
-              const hreflangLinks = normalizeInternalLinks(
-                hreflangTargets,
-                landedUrl,
-                options.exclusions ?? [],
-              );
-              for (const link of hreflangLinks) {
-                if (inventoryLedger !== undefined) {
-                  inventoryLedger.recordDiscovery({
-                    url: link,
-                    source: 'hreflang',
-                    discoveredAt: new Date(),
-                    referrer: item.url,
-                    depth: item.depth + 1,
+                  const existing = anchorEvidenceByUrl.get(normalized);
+                  anchorEvidenceByUrl.set(normalized, {
+                    relNext: (existing?.relNext ?? false) || anchor.relNext,
+                    isNumberedPaginationControl:
+                      (existing?.isNumberedPaginationControl ?? false) ||
+                      anchor.isNumberedPaginationControl,
                   });
                 }
-                if (enqueued.has(link) || pagesByUrl.has(link)) continue;
-                if (item.depth >= maxDepth) {
-                  if (inventoryLedger !== undefined) {
-                    const candidate = inventoryLedger.candidate(link);
-                    if (candidate !== undefined && candidate.disposition === undefined) {
-                      inventoryLedger.recordDisposition({
-                        url: link,
-                        disposition: 'depth-bound',
-                        decidedAt: new Date(),
-                        detail: `hreflang discovery from depth ${item.depth}; maxDepth is ${maxDepth}`,
-                      });
+                const relativeNestingByUrl = new Map<
+                  string,
+                  ReturnType<typeof relativeLinkNestingEvidence>
+                >();
+                for (const anchor of anchors) {
+                  if (anchor.href === null) continue;
+                  const evidence = relativeLinkNestingEvidence(anchor.href, landedUrl);
+                  if (evidence === undefined) continue;
+                  const normalized = normalizePageUrl(anchor.href, landedUrl, {
+                    exclusionPatterns: options.exclusions ?? [],
+                  });
+                  if (normalized !== undefined) relativeNestingByUrl.set(normalized, evidence);
+                }
+                const links = normalizeInternalLinks(hrefs, landedUrl, options.exclusions ?? []);
+                const repeatedQueryKeysOnSourcePage = computeRepeatedQueryKeys(links);
+                for (const link of links) {
+                  linkDiscoveredUrls.add(link);
+                  if (!linkDiscoveredFrom.has(link)) linkDiscoveredFrom.set(link, item.url);
+                  ensureInventoryDiscovery(link, 'link', item.depth + 1, item.url);
+                  const existingPage = pagesByUrl.get(link);
+                  if (existingPage !== undefined) {
+                    existingPage.discoveryMethod = 'link';
+                    existingPage.discoveredFrom ??= item.url;
+                  }
+                  if (item.depth >= maxDepth && existingPage === undefined && !enqueued.has(link)) {
+                    disposeInventory(link, 'depth-bound', {
+                      detail: `discovered from depth ${item.depth}; maxDepth is ${maxDepth}`,
+                    });
+                    continue;
+                  }
+                  const nestingEvidence = relativeNestingByUrl.get(link);
+                  if (
+                    nestingEvidence !== undefined &&
+                    existingPage === undefined &&
+                    !enqueued.has(link)
+                  ) {
+                    relativeLinkNesting.omittedUrlCount += 1;
+                    if (relativeLinkNesting.omittedExampleUrls.length < 20) {
+                      relativeLinkNesting.omittedExampleUrls.push(nestingEvidence.resolvedUrl);
+                    }
+                    if (
+                      !relativeLinkNesting.repeatedSegments.includes(
+                        nestingEvidence.repeatedSegment,
+                      )
+                    ) {
+                      relativeLinkNesting.repeatedSegments.push(nestingEvidence.repeatedSegment);
+                    }
+                    disposeInventory(link, 'relative-link-nesting', {
+                      detail: `relative href ${nestingEvidence.href} repeated directory segment ${nestingEvidence.repeatedSegment}`,
+                    });
+                    continue;
+                  }
+                  // Only a continuation-classified link is governed: the guard
+                  // never sees an ordinary link, and returning false here omits
+                  // exactly this enqueue while keeping the discovery bookkeeping
+                  // above - the same posture as a frontier truncated by maxPages.
+                  const anchorEvidence = anchorEvidenceByUrl.get(link);
+                  if (anchorEvidence !== undefined) {
+                    const classification = classifyContinuationLink({
+                      targetUrl: link,
+                      sourcePageUrl: item.url,
+                      relNext: anchorEvidence.relNext,
+                      isNumberedPaginationControl: anchorEvidence.isNumberedPaginationControl,
+                      sourceIsConfirmedListing:
+                        auditProfile !== undefined && isConfirmedListing(auditProfile),
+                      repeatedQueryKeysOnSourcePage,
+                    });
+                    if (
+                      classification.isContinuation &&
+                      !continuationGuard.admit(classification, link)
+                    ) {
+                      if (existingPage === undefined && !enqueued.has(link)) {
+                        disposeInventory(link, 'continuation-guard', {
+                          detail: `continuation family ${classification.familyKey} reached its bound`,
+                        });
+                      }
+                      continue;
                     }
                   }
-                  continue;
+                  if (enqueued.has(link)) continue;
+                  enqueued.add(link);
+                  queue.push({
+                    url: link,
+                    depth: item.depth + 1,
+                    discoveredFrom: item.url,
+                    discoveryMethod: 'link',
+                  });
                 }
-                enqueued.add(link);
-                queue.push({
-                  url: link,
-                  depth: item.depth + 1,
-                  discoveredFrom: item.url,
-                  discoveryMethod: 'link',
-                });
+
+                // Plan 059 section 6: deterministic hreflang discovery from
+                // the document head. A <link rel="alternate" hreflang> that
+                // names an in-scope page is an explicit declaration of that
+                // page even when no visible anchor links it, so it enters
+                // the frontier with its own discovery provenance. Normalized
+                // by the same admission policy as anchors (origin, non-HTML
+                // extensions, operator exclusions); the continuation guard
+                // does not apply, because a page's declared alternates are a
+                // finite set the site itself controls.
+                const hreflangTargets = await browserPage
+                  .$$eval('link[rel="alternate"][hreflang]', (links) =>
+                    links.map((link) => link.getAttribute('href')),
+                  )
+                  .catch(() => [] as (string | null)[]);
+                const hreflangLinks = normalizeInternalLinks(
+                  hreflangTargets,
+                  landedUrl,
+                  options.exclusions ?? [],
+                );
+                for (const link of hreflangLinks) {
+                  if (inventoryLedger !== undefined) {
+                    inventoryLedger.recordDiscovery({
+                      url: link,
+                      source: 'hreflang',
+                      discoveredAt: new Date(),
+                      referrer: item.url,
+                      depth: item.depth + 1,
+                    });
+                  }
+                  if (enqueued.has(link) || pagesByUrl.has(link)) continue;
+                  if (item.depth >= maxDepth) {
+                    if (inventoryLedger !== undefined) {
+                      const candidate = inventoryLedger.candidate(link);
+                      if (candidate !== undefined && candidate.disposition === undefined) {
+                        inventoryLedger.recordDisposition({
+                          url: link,
+                          disposition: 'depth-bound',
+                          decidedAt: new Date(),
+                          detail: `hreflang discovery from depth ${item.depth}; maxDepth is ${maxDepth}`,
+                        });
+                      }
+                    }
+                    continue;
+                  }
+                  enqueued.add(link);
+                  queue.push({
+                    url: link,
+                    depth: item.depth + 1,
+                    discoveredFrom: item.url,
+                    discoveryMethod: 'link',
+                  });
+                }
               }
             }
+          } catch (error) {
+            // Playwright commits browserPage.url() to the in-progress
+            // navigation target even when goto() itself rejects (e.g. a
+            // timeout waiting for facebook.com to fire 'load' under headless
+            // conditions) - the redirect already happened at the network
+            // level before the failure, so this is still a social redirect,
+            // not a broken link on the audited site.
+            const finalHost = safeHostname(browserPage.url());
+            const requestedHost = new URL(item.url).hostname;
+            const isOffSite = finalHost !== null && !isSameSiteHostname(requestedHost, finalHost);
+            if (isOffSite || (finalHost !== null && isSocialPlatformHost(finalHost))) {
+              recordPage({
+                url: item.url,
+                depth: item.depth,
+                status: 'skipped-external-redirect',
+                discoveryMethod,
+                ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+              });
+            } else {
+              const message = error instanceof Error ? error.message : String(error);
+              recordPage({
+                url: item.url,
+                depth: item.depth,
+                status: 'error',
+                error: message,
+                discoveryMethod,
+                ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+              });
+            }
+          } finally {
+            await browserPage.close().catch(() => undefined);
           }
-        } catch (error) {
-          // Playwright commits browserPage.url() to the in-progress
-          // navigation target even when goto() itself rejects (e.g. a
-          // timeout waiting for facebook.com to fire 'load' under headless
-          // conditions) - the redirect already happened at the network
-          // level before the failure, so this is still a social redirect,
-          // not a broken link on the audited site.
-          const finalHost = safeHostname(browserPage.url());
-          const requestedHost = new URL(item.url).hostname;
-          const isOffSite = finalHost !== null && !isSameSiteHostname(requestedHost, finalHost);
-          if (isOffSite || (finalHost !== null && isSocialPlatformHost(finalHost))) {
-            recordPage({
-              url: item.url,
-              depth: item.depth,
-              status: 'skipped-external-redirect',
-              discoveryMethod,
-              ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
-            });
-          } else {
-            const message = error instanceof Error ? error.message : String(error);
-            recordPage({
-              url: item.url,
-              depth: item.depth,
-              status: 'error',
-              error: message,
-              discoveryMethod,
-              ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
-            });
-          }
-        } finally {
-          await browserPage.close();
-        }
-        // Whole-iteration boundary: the page is fully recorded and its
-        // links enqueued, so the structures are consistent for a snapshot.
-        maybeSnapshotFrontier();
+          // Whole-iteration boundary: the page is fully recorded and its
+          // links enqueued, so the structures are consistent for a snapshot.
+          maybeSnapshotFrontier();
+        };
+        // The iteration may contain a load-timeout navigation followed by
+        // one document-only retry. Budget both navigation windows, their
+        // scheduler waits, and bounded document extraction under one outer
+        // deadline so the watchdog does not preempt that recovery path.
+        const pacingBudgetMs =
+          2 * Math.max(effectiveDelayMs, options.scheduler?.effectiveDelayMs ?? 0);
+        const crawlPageWatchdogMs = timeoutMs * 4 + pacingBudgetMs;
+        await withPageWorkDeadline(
+          `crawl page ${item.url}`,
+          pageWork(),
+          crawlPageWatchdogMs,
+          crawlGuard,
+        );
       }
 
       if (supplementalPhaseStarted || sitemapMode !== 'supplement') break;
@@ -1583,7 +1612,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
       }
     }
   } finally {
-    await context.close();
+    await crawlGuard.closeAll();
   }
 
   if (inventoryLedger !== undefined && queue.length > 0) {

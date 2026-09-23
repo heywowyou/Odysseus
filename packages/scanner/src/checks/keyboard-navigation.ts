@@ -45,7 +45,9 @@ const MAX_TAB_PRESSES = 60;
 export async function walkKeyboardNavigation(
   page: Page,
   pageUrl: string,
+  signal?: AbortSignal,
 ): Promise<KeyboardNavigationExtraction> {
+  if (signal?.aborted) throw new Error('keyboard-navigation aborted');
   const tabbables = await page.evaluate((attr) => {
     // isVisible is inlined here rather than pulled out as a named helper:
     // this whole callback is serialized via Function.prototype.toString()
@@ -112,12 +114,15 @@ export async function walkKeyboardNavigation(
     const maxPresses = Math.min(tabbables.length + 5, MAX_TAB_PRESSES);
     try {
       for (let i = 0; i < maxPresses; i++) {
+        if (signal?.aborted) throw new Error('keyboard-navigation aborted');
         await page.keyboard.press('Tab');
+        if (signal?.aborted) throw new Error('keyboard-navigation aborted');
         const focusedId = await page.evaluate((attr) => {
           const el = document.activeElement;
           const value = el?.getAttribute?.(attr);
           return value !== null && value !== undefined ? Number(value) : null;
         }, TAB_ATTR);
+        if (signal?.aborted) throw new Error('keyboard-navigation aborted');
         focusSequence.push(focusedId);
       }
     } finally {

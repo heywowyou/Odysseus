@@ -1,4 +1,4 @@
-import { fork } from 'node:child_process';
+import { fork, type ChildProcess } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import type { Result } from 'lighthouse';
 import { getLighthouseTimeoutMs } from './config.js';
@@ -51,6 +51,73 @@ export interface RunLighthouseIsolatedOptions {
   timeoutMs?: number;
 }
 
+const CDP_HTTP_TIMEOUT_MS = 2_000;
+const WORKER_STOP_GRACE_MS = 1_000;
+
+interface CdpPageTarget {
+  id: string;
+  type: string;
+}
+
+async function pageTargetIds(debugPort: number): Promise<Set<string>> {
+  const response = await fetch(`http://127.0.0.1:${debugPort}/json/list`, {
+    signal: AbortSignal.timeout(CDP_HTTP_TIMEOUT_MS),
+  });
+  if (!response.ok) {
+    throw new Error(`Lighthouse target snapshot failed with HTTP ${response.status}`);
+  }
+  const targets = (await response.json()) as CdpPageTarget[];
+  return new Set(
+    targets
+      .filter((target) => target.type === 'page' && typeof target.id === 'string')
+      .map(({ id }) => id),
+  );
+}
+
+async function closeNewPageTargets(debugPort: number, before: ReadonlySet<string>): Promise<void> {
+  try {
+    const after = await pageTargetIds(debugPort);
+    const newTargets = [...after].filter((id) => !before.has(id));
+    await Promise.allSettled(
+      newTargets.map((id) =>
+        fetch(`http://127.0.0.1:${debugPort}/json/close/${encodeURIComponent(id)}`, {
+          signal: AbortSignal.timeout(CDP_HTTP_TIMEOUT_MS),
+        }),
+      ),
+    );
+  } catch {
+    // Preserve the Lighthouse failure. Target cleanup is best-effort when
+    // Chromium itself has already stopped answering its debug endpoint.
+  }
+}
+
+function waitForChildExit(child: ChildProcess): Promise<boolean> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      child.removeListener('exit', onExit);
+      resolve(false);
+    }, WORKER_STOP_GRACE_MS);
+    const onExit = (): void => {
+      clearTimeout(timer);
+      resolve(true);
+    };
+    child.once('exit', onExit);
+  });
+}
+
+async function stopWorker(child: ChildProcess): Promise<void> {
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  const exited = waitForChildExit(child);
+  if (!child.kill('SIGTERM')) {
+    await exited;
+    return;
+  }
+  if (await exited) return;
+  const killed = waitForChildExit(child);
+  child.kill('SIGKILL');
+  await killed;
+}
+
 /**
  * Runs Lighthouse in a forked child process instead of in-process.
  *
@@ -81,6 +148,10 @@ export async function runLighthouseIsolated(
   options: RunLighthouseIsolatedOptions = {},
 ): Promise<Result> {
   const timeoutMs = options.timeoutMs ?? getLighthouseTimeoutMs();
+  // Lighthouse controls a tab through the shared Chromium port. Capture the
+  // baseline before forking so a failed worker can close only page targets it
+  // created and leave the site's ordinary crawl pages alone.
+  const existingTargetIds = await pageTargetIds(debugPort);
 
   return new Promise((resolve, reject) => {
     const child = fork(WORKER_PATH, [], {
@@ -100,46 +171,59 @@ export async function runLighthouseIsolated(
     });
 
     let settled = false;
-    const finish = (fn: () => void): void => {
+    const clearWorkerListeners = (): void => {
+      child.removeAllListeners();
+      child.stderr?.removeAllListeners();
+    };
+    const finishSuccess = (result: Result): void => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      child.removeAllListeners();
+      clearWorkerListeners();
       child.kill();
-      fn();
+      resolve(result);
+    };
+    const finishFailure = (error: Error, alreadyExited = false): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      clearWorkerListeners();
+      const stderrSuffix = stderrOutput.trim() ? ` - stderr: ${stderrOutput.trim()}` : '';
+      const reportedError = stderrSuffix ? new Error(`${error.message}${stderrSuffix}`) : error;
+      void (async () => {
+        if (!alreadyExited) await stopWorker(child);
+        await closeNewPageTargets(debugPort, existingTargetIds);
+        reject(reportedError);
+      })();
     };
 
     const timer = setTimeout(() => {
-      finish(() =>
-        reject(
-          new Error(
-            `runLighthouseIsolated: worker for ${url} did not respond within ${timeoutMs + WORKER_GRACE_MS}ms`,
-          ),
+      finishFailure(
+        new Error(
+          `runLighthouseIsolated: worker for ${url} did not respond within ${timeoutMs + WORKER_GRACE_MS}ms`,
         ),
       );
     }, timeoutMs + WORKER_GRACE_MS);
 
     child.on('message', (message: { ok: true; result: Result } | { ok: false; error: string }) => {
       if (message.ok) {
-        finish(() => resolve(message.result));
+        finishSuccess(message.result);
       } else {
-        finish(() => reject(new Error(`runLighthouseIsolated: ${message.error}`)));
+        finishFailure(new Error(`runLighthouseIsolated: ${message.error}`));
       }
     });
 
     child.on('error', (error) => {
-      finish(() => reject(error));
+      finishFailure(error);
     });
 
     child.on('exit', (code, signal) => {
-      finish(() => {
-        const stderrSuffix = stderrOutput.trim() ? ` - stderr: ${stderrOutput.trim()}` : '';
-        reject(
-          new Error(
-            `runLighthouseIsolated: worker for ${url} exited before returning a result (code ${code}, signal ${signal})${stderrSuffix}`,
-          ),
-        );
-      });
+      finishFailure(
+        new Error(
+          `runLighthouseIsolated: worker for ${url} exited before returning a result (code ${code}, signal ${signal})`,
+        ),
+        true,
+      );
     });
 
     child.send({ url, debugPort, timeoutMs });
