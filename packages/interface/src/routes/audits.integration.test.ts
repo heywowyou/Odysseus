@@ -300,11 +300,15 @@ async function getBundleViaRoute(auditId: string, language: string): Promise<Fak
   return res;
 }
 
-function jsonReq(url: string, body: unknown): IncomingMessage {
+function jsonReq(
+  url: string,
+  body: unknown,
+  method: 'POST' | 'PUT' | 'DELETE' = 'POST',
+): IncomingMessage {
   // Buffer chunks, like a real IncomingMessage: readJsonBody concatenates
   // Buffers, and a stream of strings fails there rather than in the route.
   const req = Readable.from([Buffer.from(JSON.stringify(body))]) as unknown as IncomingMessage;
-  req.method = 'POST';
+  req.method = method;
   req.url = url;
   // The router's CSRF guard requires this exact content type on every
   // state-changing route, which is why the PDF travels base64 in JSON.
@@ -416,6 +420,41 @@ describe.skipIf(!mongoAvailable)('audit routes against real mongo', () => {
     expect(bundle.analysis.analysisId).toBe(`analysis-fr-${auditId}`);
     // The whole point of shipping JSON: nothing here needs a file alongside it.
     expect(JSON.stringify(bundle)).not.toContain('.png');
+  });
+
+  it('sets and clears a reviewed overall grade override through the audit routes', async () => {
+    const { auditId } = await seedBundleChain();
+    const router = new Router();
+    registerAuditRoutes(router, connection!);
+
+    const putResponse = fakeRes();
+    await router.handle(
+      jsonReq(
+        `/api/audits/${auditId}/grade-override`,
+        {
+          grade: 'B',
+          reason: 'The remaining findings have bounded impact.',
+        },
+        'PUT',
+      ),
+      putResponse,
+    );
+    expect(putResponse.statusCode).toBe(200);
+    expect(JSON.parse(putResponse.body as string)).toMatchObject({
+      gradeOverride: {
+        grade: 'B',
+        reason: 'The remaining findings have bounded impact.',
+        reviewedBy: 'operator',
+      },
+    });
+
+    const deleteResponse = fakeRes();
+    await router.handle(
+      jsonReq(`/api/audits/${auditId}/grade-override`, {}, 'DELETE'),
+      deleteResponse,
+    );
+    expect(deleteResponse.statusCode).toBe(200);
+    expect(JSON.parse(deleteResponse.body as string)).toEqual({ cleared: true });
   });
 
   it('refuses a render bundle for a language with no selected analysis', async () => {
