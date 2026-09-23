@@ -597,11 +597,6 @@ function projectAnalysis(
 }
 
 export function buildReferenceAuditShowcase(source: ReferenceAuditSource): ReferenceAuditShowcase {
-  if (hasImageEvidence(source.findings) || hasImageEvidence(source.renderInputs)) {
-    throw new ReferenceAuditPublicationError(
-      'reference audit refused: source evidence contains an image or screenshot',
-    );
-  }
   const denylist = buildSourceDenylist(source);
   const pageUrls = createPageUrlMap(source);
   // Synthetic ids keep the production `f001` shape. A longer label would both
@@ -643,6 +638,15 @@ export function buildReferenceAuditShowcase(source: ReferenceAuditSource): Refer
     anonymizerVersion: REFERENCE_AUDIT_ANONYMIZER_VERSION,
     disclosure: REFERENCE_AUDIT_DISCLOSURE_FR,
   };
+  // Checked on what is published, not on the source: the projection replaces
+  // every finding's elements and raw evidence, so a screenshot reference in
+  // the source never reaches the showcase, while one that survives the
+  // projection (through a passed-through render input) still refuses it.
+  if (hasImageEvidence(bundle)) {
+    throw new ReferenceAuditPublicationError(
+      'reference audit refused: showcase evidence contains an image or screenshot',
+    );
+  }
   assertReferenceAuditNoLeaks({ showcaseJson: bundle, denylist });
   return { bundle, sourceDenylist: denylist };
 }

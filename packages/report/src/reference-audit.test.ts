@@ -60,7 +60,7 @@ describe('reference audit showcase projection', () => {
     expect(JSON.stringify({ sourceManifest, sourceFindings, sourceAnalysis })).toBe(before);
   });
 
-  it('refuses source imagery before any report rendering', async () => {
+  it('drops source screenshot references and refuses imagery that survives the projection', async () => {
     const manifest = await loadSmallSiteManifest();
     const findings = await loadSmallSiteFindings();
     const analysis = await loadSmallSiteAnalysis('fr');
@@ -74,11 +74,22 @@ describe('reference audit showcase projection', () => {
           screenshotRef: 'pages/root/screenshot.png',
         },
       ],
+      rawEvidence: {
+        perPage: { 'https://example.com/photos': { renderedScreenshotRef: 'x.png' } },
+      },
     };
 
-    expect(() => buildReferenceAuditShowcase({ manifest, findings, analysis })).toThrow(
-      /image or screenshot/u,
-    );
+    const { bundle } = buildReferenceAuditShowcase({ manifest, findings, analysis });
+    expect(JSON.stringify(bundle)).not.toMatch(/screenshot|\.png/iu);
+
+    expect(() =>
+      buildReferenceAuditShowcase({
+        manifest,
+        findings,
+        analysis,
+        renderInputs: { preparation: { screenshotRef: 'pages/root/screenshot.png' } } as never,
+      }),
+    ).toThrow(/image or screenshot/u);
   });
 
   it('fails a release when a source identity appears in any publication surface', () => {
