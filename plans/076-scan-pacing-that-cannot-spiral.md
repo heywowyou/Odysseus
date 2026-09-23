@@ -38,11 +38,20 @@ Today any false signal is **permanent**, and every detector can raise one. The p
 
 ## Local implementation checkpoint (2026-09-23)
 
-Slices 1–4 are implemented and locally verified. The operator explicitly
-deferred the production deploy and the two uncapped acceptance scans from this
-work session. Do not mark this plan DONE or archive it until the full Haaitza
-and La Corniche runs below complete and their acceptance data is recorded. No
-VPS deploy or live scan has been performed for this checkpoint.
+Slices 1–4 are implemented and locally verified. The follow-up also persists
+raw visible-text length so report evidence uses the same barrier decision as
+normalization. `pnpm run check` passes. The full suite reported 5,552 passing
+and 245 skipped tests; four implementation failures were fixed and passed in
+focused runs, and the two suite-load timeouts passed in isolation. The full
+suite was not rerun after those fixes. `pnpm fixtures:refresh` could not run
+because none of its 15 listed real-audit directories are present locally; the
+saved La Corniche normalization checkpoint is recorded in the handoff.
+
+The latest read-only VPS check reported build `093fca00`, which predates the
+076 implementation. The operator deferred the two uncapped acceptance audits
+to a later time. Do not start them in this work session, and do not mark this
+plan DONE or archive it until both full runs complete and their acceptance
+data is recorded.
 
 ## Slices
 

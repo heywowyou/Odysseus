@@ -18,12 +18,20 @@ runs complete and satisfy the recorded thresholds.
 
 ## Deferred acceptance
 
-The operator explicitly deferred production deployment and the uncapped live
-Haaitza and La Corniche audits from this work session. No deploy or live site
-scan has been performed. Before closing 076, deploy through
-`deploy/odysseus-deploy.sh`, run the full uncapped audits one at a time, record
-ETA errors at 25/50/75%, and update both this plan and plan 075's execution
-ledger. Do not archive 076 before those runs complete.
+The operator deferred the uncapped live Haaitza and La Corniche audits to a
+later time; do not start either in this work session. The operator has allowed
+a redeploy. The latest read-only VPS check reported build `093fca00`, which is
+before the local 076 implementation, so deploy the 076 commit chain through
+`deploy/odysseus-deploy.sh` before the acceptance runs. Then run the full audits
+one at a time, record ETA errors at 25/50/75%, and update both this plan and
+plan 075's execution ledger. Do not archive 076 before both runs pass.
+
+The full local test run reported 5,552 passing and 245 skipped tests. Its four
+076-related failures were corrected and passed focused tests; its two
+suite-load timeouts passed when rerun alone. `pnpm run check` passes after the
+corrections. The full suite was not rerun. `pnpm fixtures:refresh` could not
+refresh the listed real audits because all 15 artifact directories are absent
+locally.
 
 The earlier Plan 075 Haaitza queue handoff remains relevant to any future
 deploy: inspect the current-session log and make sure the active Haaitza job has
