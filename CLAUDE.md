@@ -179,8 +179,12 @@ Claude Code, Codex, ZCode, and future repository coding agents may inspect the
 repository-root `.env` when it is relevant to the current task. That access is
 strictly read-only: never edit, replace, or delete the file; reproduce its
 values in chat, logs, documentation, commits, or artifacts; or pass its
-contents to the product LLM or another external service. This permission does
-not extend to production environment files or other secret stores.
+contents to the product LLM or another external service. One use is allowed:
+authenticating to the operator's own production dashboard and API with the
+operator credentials the file holds, to carry out an operation the operator
+asked for (a requested scan, a read-only check). The credential is sent only
+to that service and never shown. This permission does not extend to
+production environment files or other secret stores.
 
 Use the capabilities actually available in the host; a repo file mentioning a
 tool is not proof that the current session has it.

@@ -59,8 +59,12 @@ and explain the consequence in plain language.
 - Never expose secrets or personal data unnecessarily.
 - Every repository coding agent may inspect the root `.env` when relevant, but
   only read it: never modify it, reproduce its values in output or artifacts,
-  or pass its contents to the product LLM or an external service. This does not
-  authorize access to production environment files or other secret stores.
+  or pass its contents to the product LLM or an external service. One use is
+  allowed: authenticating to the operator's own production dashboard and API
+  with the operator credentials it holds, to carry out an operation the
+  operator asked for (a requested scan, a read-only check). The credential is
+  sent only to that service and never shown. This does not authorize access
+  to production environment files or other secret stores.
 - Never sign or credit a model in commits, PRs, issues, comments, or documents.
 
 ## Verification
