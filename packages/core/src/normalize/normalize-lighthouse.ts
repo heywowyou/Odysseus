@@ -25,7 +25,11 @@ import {
   LIGHTHOUSE_EXCLUDED_AUDITS,
   MAX_LIGHTHOUSE_DETAILS_ITEMS,
 } from './constants.js';
-import { CORE_WEB_VITAL_THRESHOLDS, rateCoreWebVital } from './cwv-thresholds.js';
+import {
+  CORE_WEB_VITAL_THRESHOLDS,
+  rateCoreWebVital,
+  type CoreWebVitalMetricKey,
+} from './cwv-thresholds.js';
 import type { CruxMetricKey } from './normalize-crux.js';
 import type { FindingCandidate } from './candidate.js';
 import { normalizeUrlIdentity } from './url-identity.js';
@@ -798,4 +802,23 @@ export function extractLighthouseCandidates(
   }
 
   return candidates;
+}
+
+const CORE_WEB_VITAL_KEYS: readonly CoreWebVitalMetricKey[] = [
+  'lcp',
+  'cls',
+  'tbt',
+  'fcp',
+  'speedIndex',
+];
+
+/** The Core Web Vitals a page's lab measurement set called contradictory,
+ *  or undefined when there are none. The performance score is not a table
+ *  metric and is left out. */
+export function unstableLabMetricsOf(
+  measurement: { confidence: { contradictoryMetrics: readonly string[] } } | undefined,
+): CoreWebVitalMetricKey[] | undefined {
+  const contradictory = new Set(measurement?.confidence.contradictoryMetrics ?? []);
+  const unstable = CORE_WEB_VITAL_KEYS.filter((key) => contradictory.has(key));
+  return unstable.length === 0 ? undefined : unstable;
 }

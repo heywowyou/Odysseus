@@ -603,3 +603,58 @@ describe('truncatePagePath (issue #320)', () => {
     expect(out).toContain('…');
   });
 });
+
+describe('renderCoreWebVitalsTable with unstable lab measurements', () => {
+  function page(path: string, lcp: number, unstableLabMetrics?: string[]) {
+    return {
+      url: `https://example.com${path}`,
+      pageDir: `pages${path}`,
+      depth: 1,
+      status: 'visited',
+      errors: {},
+      coreWebVitals: {
+        lcp: buildMeasurement(lcp, `${lcp} ms`),
+        cls: buildMeasurement(0, '0'),
+        tbt: buildMeasurement(100, '100 ms'),
+        fcp: buildMeasurement(900, '0.9 s'),
+        speedIndex: buildMeasurement(2000, '2.0 s'),
+      },
+      ...(unstableLabMetrics === undefined ? {} : { unstableLabMetrics }),
+    };
+  }
+
+  it('leaves a contradictory value out of the median and the slowest page, and says so', () => {
+    const manifest = {
+      siteUrl: 'https://example.com/',
+      pages: [page('/a', 2000), page('/b', 2200), page('/c', 14000, ['lcp'])],
+    } as unknown as AuditManifest;
+
+    expect(worstForMetric(manifest.pages, 'lcp')?.pageUrl).toBe('https://example.com/b');
+    const fr = renderCoreWebVitalsTable(getStrings('fr'), 9, 'fr', manifest);
+    expect(fr).toContain('data-lab-unstable');
+    expect(fr).toContain('Mesure instable');
+    expect(fr).not.toContain('/c');
+  });
+
+  it('shows the metric as unstable rather than unmeasured when every value contradicted', () => {
+    const manifest = {
+      siteUrl: 'https://example.com/',
+      pages: [page('/a', 2000, ['lcp'])],
+    } as unknown as AuditManifest;
+
+    const en = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
+    expect(en).toContain('Unstable measurement');
+    expect(en).not.toContain('Not measured');
+  });
+
+  it('adds no note when every measurement was stable', () => {
+    const manifest = {
+      siteUrl: 'https://example.com/',
+      pages: [page('/a', 2000), page('/b', 2200)],
+    } as unknown as AuditManifest;
+
+    expect(renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest)).not.toContain(
+      'data-lab-unstable',
+    );
+  });
+});

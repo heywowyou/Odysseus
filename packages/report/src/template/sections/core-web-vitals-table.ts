@@ -75,20 +75,21 @@ function median(values: readonly number[]): number | null {
   return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!;
 }
 
-function metricValues(
-  vitalsList: readonly (CoreWebVitals | undefined)[],
+/** A page's value for one metric, unless its repeated lab runs contradicted
+ *  each other on that metric: such a value is kept as evidence but says
+ *  nothing reliable about the page, so it never feeds an aggregate. */
+function stableValue(
+  page: AuditManifest['pages'][number],
   key: CoreWebVitalMetricKey,
-): number[] {
-  return vitalsList
-    .map((v) => v?.[key]?.numericValue)
-    .filter((v): v is number => v !== null && v !== undefined);
+): number | undefined {
+  if (page.unstableLabMetrics?.includes(key) === true) return undefined;
+  return page.coreWebVitals?.[key]?.numericValue ?? undefined;
 }
 
-function medianForMetric(
-  vitalsList: readonly (CoreWebVitals | undefined)[],
-  key: CoreWebVitalMetricKey,
-): number | null {
-  return median(metricValues(vitalsList, key));
+function medianForMetric(pages: AuditManifest['pages'], key: CoreWebVitalMetricKey): number | null {
+  return median(
+    pages.map((page) => stableValue(page, key)).filter((v): v is number => v !== undefined),
+  );
 }
 
 /** item 1.7/B2: a finding's severity is the worst instance across all
@@ -107,7 +108,7 @@ export function worstForMetric(
   key: CoreWebVitalMetricKey,
 ): { value: number; pageUrl: string } | null {
   const measured = pages
-    .map((page) => ({ value: page.coreWebVitals?.[key]?.numericValue, pageUrl: page.url }))
+    .map((page) => ({ value: stableValue(page, key), pageUrl: page.url }))
     .filter((item): item is { value: number; pageUrl: string } => item.value != null)
     .sort((a, b) => b.value - a.value || a.pageUrl.localeCompare(b.pageUrl));
   return measured[0] ?? null;
@@ -164,10 +165,7 @@ export function divergentLabLcp(
   ) {
     return null;
   }
-  const labMedianMs = medianForMetric(
-    measuredPages(manifest).map((page) => page.coreWebVitals),
-    'lcp',
-  );
+  const labMedianMs = medianForMetric(measuredPages(manifest), 'lcp');
   if (labMedianMs === null) return null;
   return labMedianMs >= field.lcp.p75 * LAB_FIELD_LCP_DIVERGENCE_FACTOR
     ? { labMedianMs, fieldP75Ms: field.lcp.p75 }
@@ -408,14 +406,39 @@ export function renderCoreWebVitalsTable(
           ),
         )}</p>`;
 
+  const unstablePagesByMetric = new Map<CoreWebVitalMetricKey, number>();
+  for (const page of measuredPages(manifest)) {
+    if (page.coreWebVitals === undefined) continue;
+    for (const key of page.unstableLabMetrics ?? []) {
+      unstablePagesByMetric.set(key, (unstablePagesByMetric.get(key) ?? 0) + 1);
+    }
+  }
+  const unstablePageCount = measuredPages(manifest).filter(
+    (page) => page.coreWebVitals !== undefined && (page.unstableLabMetrics?.length ?? 0) > 0,
+  ).length;
+  const unstableNote =
+    unstablePageCount === 0
+      ? ''
+      : `<p data-lab-unstable style="font-size:12px;margin-top:var(--space-3);opacity:0.75">${escapeHtml(
+          fillTemplate(c.unstableNoteTemplate, {
+            pages: `${formatNumber(unstablePageCount, language)} ${pluralize(language, unstablePageCount, c.pageSingular, c.pagePlural)}`,
+            metrics: CORE_WEB_VITAL_THRESHOLDS.filter((metric) =>
+              unstablePagesByMetric.has(metric.key),
+            )
+              .map((metric) => metricLabels[metric.key])
+              .join(', '),
+          }),
+        )}</p>`;
+
   const rows = CORE_WEB_VITAL_THRESHOLDS.map((metric) => {
     const unit = METRIC_UNITS[metric.key];
-    const value = medianForMetric(vitalsList, metric.key);
+    const value = medianForMetric(measuredPages(manifest), metric.key);
     if (value === null) {
+      const onlyUnstable = unstablePagesByMetric.get(metric.key) !== undefined;
       return `
         <tr>
           ${cell(escapeHtml(metricLabels[metric.key]))}
-          ${cell(escapeHtml(c.notMeasured))}
+          ${cell(escapeHtml(onlyUnstable ? c.unstableMeasurement : c.notMeasured))}
           ${cell('-')}
           ${cell(formatMetricValue(metric.good, unit, language))}
           ${cell('-')}
@@ -479,6 +502,7 @@ export function renderCoreWebVitalsTable(
       </tbody>
     </table>
     ${labLcpFlag}
+    ${unstableNote}
     <p style="font-size:11px;opacity:0.5;margin-top:var(--space-3)">${escapeHtml(c.worstPageFootnote)}</p>
   `,
     '',

@@ -585,6 +585,9 @@ export const fr: ReportStrings = {
     speedIndexLabel: 'Speed Index',
     clsLabel: 'CLS, stabilité visuelle',
     notMeasured: 'Non mesuré',
+    unstableMeasurement: 'Mesure instable',
+    unstableNoteTemplate:
+      'Mesure instable\u00a0: sur {pages}, les passages successifs se contredisaient pour {metrics}. Ces valeurs ne sont retenues ni dans la médiane ni pour la page la plus lente.',
     ratingGoodLabel: 'bon',
     ratingNeedsImprovementLabel: 'à améliorer',
     ratingPoorLabel: 'insuffisant',

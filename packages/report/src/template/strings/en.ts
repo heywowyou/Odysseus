@@ -487,6 +487,9 @@ export const en: ReportStrings = {
     speedIndexLabel: 'Speed Index',
     clsLabel: 'CLS, visual stability',
     notMeasured: 'Not measured',
+    unstableMeasurement: 'Unstable measurement',
+    unstableNoteTemplate:
+      'Unstable measurement: on {pages}, successive runs contradicted each other for {metrics}. Those values are used neither in the median nor for the slowest page.',
     ratingGoodLabel: 'good',
     ratingNeedsImprovementLabel: 'needs improvement',
     ratingPoorLabel: 'poor',

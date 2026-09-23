@@ -297,6 +297,7 @@ const manifestPageEntrySchema = new Schema(
     renderDiffRawDocument: { type: rawDocumentSignalsSchema },
     lighthouseExcludedCategoryScores: { type: lighthouseExcludedCategoryScoresSchema },
     coreWebVitals: { type: coreWebVitalsSchema },
+    unstableLabMetrics: { type: [String], default: undefined },
     crawlError: { type: String },
     discoveredFrom: { type: String },
     analysisCoverage: { type: pageAnalysisCoverageSchema },

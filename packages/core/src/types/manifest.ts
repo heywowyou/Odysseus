@@ -14,6 +14,7 @@ import type { SiteSignals } from './compliance.js';
 import type { TranslationCluster } from '../normalize/translation-clusters.js';
 import type { FindingsProvenance } from '../normalize/findings-provenance.js';
 import type { SiteBenchmarkPercentile } from '../benchmark/percentile.js';
+import type { CoreWebVitalMetricKey } from '../normalize/cwv-thresholds.js';
 import { LEGAL_PATH_PATTERN } from '../urls.js';
 
 export type ManifestKind = 'audit' | 'render-diff';
@@ -433,6 +434,11 @@ export interface ManifestPageEntry {
    *  failed entirely; report generation must render an explicit "not
    *  measured" state rather than assume this field exists. */
   coreWebVitals?: CoreWebVitals;
+  /** Metrics whose repeated lab runs contradicted each other on this page.
+   *  Their value in `coreWebVitals` is kept as evidence but reported as an
+   *  unstable measurement, never aggregated. Absent when none did, and on
+   *  audits scanned before measurement sets. */
+  unstableLabMetrics?: CoreWebVitalMetricKey[];
   /** Populated for status 'error': the crawl-phase failure (e.g. a
    *  navigation timeout) that meant this page was never scanned at all.
    *  Distinct from `errors` below, which covers per-scanner failures on a

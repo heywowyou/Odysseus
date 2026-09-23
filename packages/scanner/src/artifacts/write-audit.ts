@@ -27,6 +27,7 @@ import path from 'node:path';
 import type { Browser } from 'playwright';
 import {
   attributableCoreWebVitals,
+  unstableLabMetricsOf,
   extractLighthouseExcludedCategoryScores,
   isBlockedRender,
   type AuditConfigSnapshot,
@@ -617,6 +618,10 @@ export async function writeAuditArtifacts(
       pageStatus === 'visited'
         ? attributableCoreWebVitals(scanJson.lighthouse, scanJson.url)
         : undefined;
+    const unstableLabMetrics =
+      coreWebVitals === undefined
+        ? undefined
+        : unstableLabMetricsOf(scanJson.performanceMeasurement);
 
     manifestPages.push({
       url: scanJson.url,
@@ -660,6 +665,7 @@ export async function writeAuditArtifacts(
           }
         : {}),
       ...(coreWebVitals !== undefined ? { coreWebVitals } : {}),
+      ...(unstableLabMetrics !== undefined ? { unstableLabMetrics } : {}),
       errors: {
         ...(scanJson.renderDiffError !== undefined ? { renderDiff: scanJson.renderDiffError } : {}),
         ...(scanJson.axeError !== undefined ? { axe: scanJson.axeError } : {}),

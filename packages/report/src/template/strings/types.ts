@@ -892,6 +892,8 @@ export interface ReportStrings {
     speedIndexLabel: string;
     clsLabel: string;
     notMeasured: string;
+    unstableMeasurement: string;
+    unstableNoteTemplate: string;
     ratingGoodLabel: string;
     ratingNeedsImprovementLabel: string;
     ratingPoorLabel: string;

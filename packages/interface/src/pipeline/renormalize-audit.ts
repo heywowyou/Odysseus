@@ -16,6 +16,7 @@ import {
   buildTranslationClusters,
   buildFindingsProvenance,
   attributableCoreWebVitals,
+  unstableLabMetricsOf,
   deriveCoverageLimitations,
   isBlockedRender,
   normalizeAudit,
@@ -225,14 +226,20 @@ export async function renormalizeAudit(
   const manifestPages = manifest.pages.map((entry) => {
     const scanPage = scanPageByUrl.get(entry.url);
     if (scanPage === undefined) return entry;
-    const { coreWebVitals: _stored, ...rest } = entry;
+    const { coreWebVitals: _stored, unstableLabMetrics: _storedUnstable, ...rest } = entry;
     const isContent =
       entry.status === 'visited' &&
       !isBlockedRender(scanPage.renderDiff, scanPage.headMetadata?.title);
     const coreWebVitals = isContent
       ? attributableCoreWebVitals(scanPage.lighthouse, entry.url)
       : undefined;
-    return coreWebVitals === undefined ? rest : { ...rest, coreWebVitals };
+    if (coreWebVitals === undefined) return rest;
+    const unstableLabMetrics = unstableLabMetricsOf(scanPage.performanceMeasurement);
+    return {
+      ...rest,
+      coreWebVitals,
+      ...(unstableLabMetrics !== undefined ? { unstableLabMetrics } : {}),
+    };
   });
 
   const renormalizedManifest: AuditManifest = {
