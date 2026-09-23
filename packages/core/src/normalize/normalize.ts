@@ -600,6 +600,38 @@ function publicEvidenceForPage(
   };
 }
 
+/** The stored examples, taken in turn from each element identity the group
+ *  holds. A group merged over a shared scope (aggregateSharedScopeOccurrences)
+ *  lists its fine groups one after another, so taking the first examples in
+ *  order showed only the first element: a real link-name finding of 1,881
+ *  occurrences, four links on every page, printed the menu trigger (209 of
+ *  them) twenty times and never the badge links behind 1,254. A group with one
+ *  identity keeps its first examples in order, as before. */
+function sampleElements(group: readonly FindingCandidate[]): FindingElement[] {
+  const byIdentity = new Map<string, FindingElement[]>();
+  for (const candidate of group) {
+    if (candidate.element === null) continue;
+    const identity = candidate.dedupeIdentity ?? candidate.element.selector;
+    const bucket = byIdentity.get(identity);
+    if (bucket) bucket.push(candidate.element);
+    else byIdentity.set(identity, [candidate.element]);
+  }
+  const buckets = [...byIdentity.values()];
+  const sample: FindingElement[] = [];
+  for (let round = 0; sample.length < MAX_ELEMENTS_PER_FINDING; round += 1) {
+    let added = false;
+    for (const bucket of buckets) {
+      const element = bucket[round];
+      if (element === undefined) continue;
+      sample.push(element);
+      added = true;
+      if (sample.length === MAX_ELEMENTS_PER_FINDING) break;
+    }
+    if (!added) break;
+  }
+  return sample;
+}
+
 function mergeGroup(
   auditId: string,
   dedupeKey: string,
@@ -632,10 +664,7 @@ function mergeGroup(
 
   const wcagCriteria = [...new Set(group.flatMap((c) => c.wcagCriteria))].sort(compareCriteria);
 
-  const elements: FindingElement[] = group
-    .filter((c): c is FindingCandidate & { element: FindingElement } => c.element !== null)
-    .slice(0, MAX_ELEMENTS_PER_FINDING)
-    .map((c) => c.element);
+  const elements = sampleElements(group);
 
   // Last write wins if two candidates in the same group land on the same
   // page (e.g. two Lighthouse detail items sharing a selector). Documented

@@ -265,6 +265,23 @@ describe('findings covering the same scope for one rule are one problem (issue #
     });
   });
 
+  /** hotelchateauroyal.nc: four unnamed links on all 209 pages merged into
+   *  one link-name finding of 1,881 occurrences, but its 20 examples were all
+   *  the first link, the menu trigger (209 occurrences). The TripAdvisor and
+   *  Kayak badges behind 1,254 of them were never shown. */
+  it('shows every merged element among the examples, not only the first', () => {
+    const pages = Array.from({ length: 25 }, (_, index) =>
+      imagePage(`https://example.com/page-${index}`, gallery),
+    );
+    const [finding] = normalize(pages).filter((f) => f.ruleId === 'image-alt');
+
+    expect(finding?.occurrences).toBe(75);
+    expect(finding?.elements).toHaveLength(20);
+    expect(new Set(finding?.elements.map((element) => element.selector))).toEqual(
+      new Set(gallery.map((image) => image.selector)),
+    );
+  });
+
   it('keeps a different scope apart, so a one-page defect is not folded into a site-wide one', () => {
     const findings = normalize([
       imagePage('https://example.com/', [
