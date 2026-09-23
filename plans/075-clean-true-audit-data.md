@@ -329,6 +329,32 @@ Checked and clean in this sweep: the homepage is scanned on all seven full audit
   - Tests: normalize-axe unit tests with the villasfoch and YouTube shapes.
 - **F7. A capped crawl cannot claim absence.** When the crawl omitted pages because of a page cap (`capOmittedPageCount > 0`, or an operator `maxPages`), every rule in E12's absence list is undetermined and goes to the manual checklist. Tests: a normalize test with a capped crawl.
 
+#### Evidence F, fifth sweep (same eight audits, 2026-09-23)
+
+| Defect | Measured |
+|---|---|
+| Unlinked sitemap pages dominate an audit | hotelchateauroyal: 106 of 143 analysed pages are `sitemap-only` with no inbound link. They are 35 theme demo rooms (`/accommodation/tokyo-junior-suite`, `amsterdam-luxury-suite-room`, `bali-beach-retreat`), 30 `accommodation-facility` archives, 14 `services`, 8 `hf_template_cat` and 7 `accommodation-category` archives, all `index, follow`. 15 findings exist only on these pages (9 serious), and they carry 3,791 of 11,723 occurrences. The report names demo rooms 66 times. The one finding that would say so, `sitemap-orphan-page`, was made manual by E12 because F1's timeouts left the link graph incomplete. On chicago, bellevue and hoteldegarlande the sitemap-only pages are real content (welcome booklet, news, services), so a blanket exclusion would be wrong. E9's type list does not fit either: the real suites live under the same `accommodation` type. |
+| The scanner's stability verdict is ignored | Every one of the 197 measured pages carries a `performanceMeasurement.confidence`. 49 are `materially-contradictory-runs` (contradictory `cls` on 10 pages, `tbt` 17, `speedIndex` 15, `lcp` 4) and 106 more exceed the spread tolerance. The tolerances are marked `tolerances-uncalibrated` on all 197. Nothing in `core` reads the verdict, so every Lighthouse finding on these audits rests on a run the scanner itself called noisy. Examples: chicago `/` CLS runs 0.03, 0.81 and 0.81; `/en/page/faq-questions…` 0.03 and 0.79 (the stored run is 0.03); `/en/page/gallery…` 0.00 and 0.81 (stored 0.00). The 4 chicago `layout-shifts` findings (whole-`body` shifts) come from these runs, against a CrUX CLS p75 of 0.02. |
+| Contrast on inactive calendar dates | hotelchateauroyal: the largest `color-contrast` finding (serious, 3,040 occurrences on 75 pages, 26% of the audit's occurrences) is entirely MotoPress Hotel Booking date cells marked unavailable (`mphb-not-available-date mphb-out-of-season-date`, title « Indisponible »), #777777 on white at 4.47:1. WCAG 1.4.3 sets no contrast requirement for text in an inactive user interface component. The identity also rests on a per-date class (`.dp1824984000000`). |
+| Report totals mix two counts | On every report whose audit has embedded-frame findings, page 4 says « L'analyse a relevé 81 constats distincts, dont 38 de gravité critique ou sérieuse » (atlantichotel), and page 5 says « Le diagnostic a relevé 76 constats distincts, dont 33 critiques ou sérieux », then « en couvrent 26 sur 81 ». Same on bellevue (67/34 against 65/32), hotelchateauroyal (120/60 against 116/56) and chicago (61/16 against 60/15). `computeIntroFacts` (`report-intro.ts`) and `renderCoveredByPrioritiesNote` (`executive-summary.ts:195`) count `findings.length`; the counts sentence and the stats tile use `computeStatistics`, which applies Q1. |
+
+Checked and clean in the fifth sweep: no rendered-title and head-title disagreement on any page. `jsonld-missing` and `canonical-missing` were confirmed by live probes of the villasfoch and capdantibes homepages (no `ld+json`, no canonical). The contrast samples are real apart from the calendar cells (Klaro consent buttons and site accent colours included). Findings pass the consistency invariants (no duplicate keys, element pages inside `pageUrls`, `perPage` matching `pageUrls`). Two back-to-back haaitza runs of the same 5 pages gave identical findings, apart from one minor Lighthouse diagnostic. Production state is unchanged (11 reports, no approval, preview or draft).
+
+#### Operator question
+
+- **Q4. Unlinked sitemap pages.** Recommended: keep analysing them, but when unlinked sitemap-only pages are a large share of the analysed population (a threshold measured on the stored audits), report them as one site-level finding (« le plan du site publie N pages qu'aucune page ne relie », with examples) and keep the findings that exist only on them in their own annex group, outside the grade and cover totals, as Q1 does for frames. Alternatives: (b) keep today's behaviour, where they count like linked pages; (c) inventory them without analysis. (c) loses real content on chicago, bellevue and hoteldegarlande.
+
+#### Slices
+
+- **F8. Unlinked sitemap pages (after Q4).** Implement the chosen option in `normalize.ts` and the statistics, and keep `sitemap-orphan-page` emitting once F1 has removed the timeouts that made it manual. Tests: a normalize test with a majority of unlinked sitemap pages; statistics and coverage tests.
+- **F9. The stability verdict governs the lab findings.**
+  - Calibrate `PROVISIONAL_STABILITY_TOLERANCES` on the 197 stored measurement sets, and record the tolerances and their source in trade-off 111.
+  - A metric listed in `contradictoryMetrics` gives no metric finding and no element diagnostic (`layout-shifts`, `cls-culprits-insight`) for that page. It stays in the evidence as « mesure instable ».
+  - The representative run is chosen per metric, never as one whole run whose other metrics disagree with the set.
+  - Tests: normalize-lighthouse unit tests with a contradictory CLS set; a scanner unit test on calibrated tolerances.
+- **F10. Inactive components are exempt from contrast.** A `color-contrast` node whose element is disabled, `aria-disabled`, or a date-picker cell marked unavailable or past (a confirmed vendor-class table, starting with MotoPress `mphb-not-available-date` and `mphb-past-date`) is dropped with a recorded count. Identity never uses per-date generated classes. Tests: normalize-axe unit tests on the stored cell shape.
+- **F11. One count everywhere.** The intro, the priority-coverage sentence, the preview totals and any other « N constats » or « X sur Y » read from `computeStatistics` (first-party findings after Q1). Tests: a render test on an audit with frame findings, asserting that every count sentence agrees with the stats tile.
+
 ### D. Docs, fixtures, rollout
 
 - **Trade-offs.**
@@ -361,6 +387,7 @@ Checked and clean in this sweep: the homepage is scanned on all seven full audit
 - The outreach preview cannot pick a proof from a blocked page or from a rule under correction (E6).
 - Reports built before this plan on the contaminated audits cannot be sent (E7).
 - A navigation timeout never yields a broken-link or hreflang-target finding, a late off-site redirect is never analysed, and noindex, NAP, robots-txt, state-class identity and capped-absence false results are gone (F1 to F7).
+- Unlinked sitemap pages are handled per Q4, no lab finding rests on runs the scanner calls contradictory, inactive calendar cells are not contrast defects, and every count in a report agrees with the stats tile (F8 to F11).
 - The requirement-to-proof ledger below is complete before the plan moves to DONE.
 
 ## Executable closure contract
@@ -403,6 +430,10 @@ The closure artifact is the requirement-to-proof ledger below. Every row names i
 | robots-txt fetch failures dropped | `normalize-lighthouse.ts` | Code, copy | Timeout-explanation unit test | none |
 | Identity ignores runtime state classes | `normalize-axe.ts` identity | Code, explicit class list | Unit tests on villasfoch and YouTube shapes; slice 0 occurrences preserved | Harness per-rule table on villasfoch |
 | Capped crawls claim no absence | `normalize.ts` absence gate | Code | Capped-crawl normalize test | none |
+| Unlinked sitemap pages handled per Q4 | `normalize.ts`, statistics, coverage | Code, operator decision | Majority-unlinked normalize test; statistics test | Operator reads hotelchateauroyal coverage |
+| Stability verdict governs lab findings | `normalize-lighthouse.ts`, scanner tolerances | Code, calibrated tolerances in trade-off 111 | Contradictory-set unit test | Harness: no lab finding on a contradictory metric |
+| Inactive components exempt from contrast | `normalize-axe.ts` | Code, vendor-class table | Stored-cell unit test | none |
+| One count everywhere | `report-intro.ts`, `executive-summary.ts`, preview totals | Code | Count-agreement render test | Operator reads one report with frame findings |
 | Provenance consistent | `normalization-fingerprint.ts` | Fingerprint bump | `pnpm run check`, findings-provenance test | none |
 
 ## Verification

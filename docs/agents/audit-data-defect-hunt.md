@@ -120,6 +120,9 @@ audit that has findings. Hold each finding to the evidence bar:
 11. **Terminal state against artifacts.** For each audit, compare the job's
     terminal status and failed phase with the reports and analyses actually
     stored, and read why any report step failed.
+12. **Run-to-run determinism.** When an audit has two runs of the same
+    pages, compare their findings; a difference that is not measurement
+    noise is a defect.
 
 ## Recording
 
