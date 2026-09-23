@@ -20,10 +20,10 @@ export const MAX_RETRIES = 2;
  *  change is visible in provenance. */
 export const OPENAI_MODEL = 'gpt-6-luna';
 
-/** Reasoning effort for every production pass. 'xhigh' was the highest
- *  value the API accepted for GPT-5.6 (it rejected 'max'). GPT-6 Luna also
- *  accepts 'max'; 'xhigh' is kept so the model switch is the only change
- *  between the reports before and after it. The whole report still costs
+/** Reasoning effort for every production pass: 'xhigh', the highest value
+ *  Chat Completions accepts for GPT-5.6 and GPT-6 Luna alike. The GPT-6
+ *  model page lists 'max', but a real call on 2026-09-23 was refused with
+ *  "does not support 'max' with this model". The whole report still costs
  *  well under a dollar at Luna's price. */
 export const OPENAI_REASONING_EFFORT = 'xhigh' as const;
 

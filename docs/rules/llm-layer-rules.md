@@ -310,7 +310,8 @@ measured to reproduce the prompt's own worked examples in the model's
 output almost verbatim. Production structure/writing calls and the standalone historical tools
 share `OPENAI_MODEL` (GPT-6 Luna since 2026-09-23, GPT-5.6 Luna before it;
 trade-off 102). Every call sets `reasoning_effort` to
-`OPENAI_REASONING_EFFORT` (`'xhigh'`; GPT-6 Luna also accepts `'max'`). With reasoning on, the provider accepts only
+`OPENAI_REASONING_EFFORT` (`'xhigh'`, the highest value Chat Completions
+accepts; `'max'` is refused for GPT-6 Luna despite its model page). With reasoning on, the provider accepts only
 the default temperature, so `OPENAI_TEMPERATURE` is 1 and the 0.2 rationale
 above no longer holds; repeatable priorities now rest on the reused structure
 pass and the guards. Hidden reasoning tokens share the completion budget, so

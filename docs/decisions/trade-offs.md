@@ -5362,9 +5362,16 @@ by $0.06 per report but visibly generic). Prices are those published for
 Amended 2026-09-23 (operator decision): the model is repointed to
 `gpt-6-luna`, released 2026-09-22 at $0.10/$0.50 per million tokens, half
 Luna 5.6's input price and under half its output price. Reasoning stays at
-`xhigh` and temperature at 1 so the model is the only variable. The
-saved-audit comparison above is owed before the first paid report on the new
-model; record its tokens, cost, duration and the operator's reading here.
+`xhigh` and temperature at 1 so the model is the only variable. `max`, listed
+on the model page, is refused by Chat Completions for this model.
+
+Measured the same day on the saved Grand Hotel Chicago audit of 2026-09-22,
+same code, prompts and input, structure plus French writing plus the Plan 070
+critic and repair: GPT-5.6 Luna took 38.5k output tokens for structure and
+writing, $0.082 for all four passes and 10 minutes; GPT-6 Luna took 19.9k,
+$0.020 and 5 minutes, with no retry or guard failure. The critic raised 6
+accepted issues on the 5.6 draft and 2 on the 6 draft. The operator's reading
+of the two drafts is still owed before the first paid report on the new model.
 
 
 
