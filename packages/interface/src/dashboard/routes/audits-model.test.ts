@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  groupByDay,
+  pageOf,
   computeKpis,
   filterSummaries,
   hostnameOf,
@@ -303,5 +305,29 @@ describe('runningScans', () => {
       makeSummary({ jobId: 'raw-running', status: 'running', outcomeCode: 'failed' }),
     ]);
     expect(running.map((row) => row.jobId)).toEqual(['coded-running']);
+  });
+});
+
+describe('audit list paging and day groups', () => {
+  const at = (createdAt: string) => ({ createdAt });
+
+  it('splits a list into pages of twenty and clamps the page into range', () => {
+    const items = Array.from({ length: 45 }, (_, index) => index);
+    expect(pageOf(items, 1).items).toEqual(items.slice(0, 20));
+    expect(pageOf(items, 3)).toEqual({ items: items.slice(40), page: 3, pageCount: 3 });
+    expect(pageOf(items, 9).page).toBe(3);
+    expect(pageOf([], 1)).toEqual({ items: [], page: 1, pageCount: 1 });
+  });
+
+  it('groups consecutive audits of the same local day in list order', () => {
+    const groups = groupByDay([
+      at('2026-09-23T15:00:00'),
+      at('2026-09-23T08:00:00'),
+      at('2026-09-22T20:00:00'),
+    ]);
+    expect(groups.map((group) => [group.day, group.items.length])).toEqual([
+      ['2026-09-23', 2],
+      ['2026-09-22', 1],
+    ]);
   });
 });

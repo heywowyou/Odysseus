@@ -159,3 +159,50 @@ export function runningScans(summaries: readonly ScanSummary[]): ScanSummary[] {
     (summary) => summary.outcomeCode === 'running' || summary.outcomeCode === 'cancel-requested',
   );
 }
+
+/** Rows per page of the audit list; older audits sit on later pages. */
+export const AUDITS_PAGE_SIZE = 20;
+
+export function pageCount(total: number, pageSize: number = AUDITS_PAGE_SIZE): number {
+  return Math.max(1, Math.ceil(total / pageSize));
+}
+
+/** One page of an already sorted list, with the page clamped into range so
+ *  a filter that shrinks the list never leaves the operator on an empty
+ *  page. */
+export function pageOf<T>(
+  items: readonly T[],
+  page: number,
+  pageSize: number = AUDITS_PAGE_SIZE,
+): { items: T[]; page: number; pageCount: number } {
+  const count = pageCount(items.length, pageSize);
+  const current = Math.min(Math.max(1, page), count);
+  const start = (current - 1) * pageSize;
+  return { items: items.slice(start, start + pageSize), page: current, pageCount: count };
+}
+
+export interface DayGroup<T> {
+  /** Local calendar day, `YYYY-MM-DD`. */
+  day: string;
+  items: T[];
+}
+
+function localDay(value: string): string {
+  const date = new Date(value);
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+/** Consecutive rows of the same local day, in the list's own order, so the
+ *  grouping follows whichever sort the operator chose. */
+export function groupByDay<T extends { createdAt: string }>(items: readonly T[]): DayGroup<T>[] {
+  const groups: DayGroup<T>[] = [];
+  for (const item of items) {
+    const day = localDay(item.createdAt);
+    const last = groups.at(-1);
+    if (last !== undefined && last.day === day) last.items.push(item);
+    else groups.push({ day, items: [item] });
+  }
+  return groups;
+}

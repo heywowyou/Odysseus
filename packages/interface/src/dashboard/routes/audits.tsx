@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { JSX } from 'react';
-import { ArrowDown, ArrowUp, ChevronRight, Radar, Square, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Radar, Square, Trash2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { PAGE_WIDTH, PageHeader } from '../components/page-header';
@@ -32,13 +32,15 @@ import type { QueuedScan, ScanQueue, ScanSummary } from '../lib/api-types';
 import type { DisplayJobStatus } from '../lib/job-outcome';
 import { blockedReasonCopy, isStateChanged, problemCopy } from '../lib/operator-copy';
 import { moveInOrder } from '../lib/queue-order';
-import { formatDateTime, formatRelativeTime } from '../lib/format';
+import { formatDate, formatDateTime, formatRelativeTime } from '../lib/format';
 import { usePolling } from '../lib/use-polling';
 import { currentPhaseLabel } from './scan-progress-model';
 import {
   computeKpis,
   filterSummaries,
+  groupByDay,
   listStatus,
+  pageOf,
   rowTarget,
   runningScans,
   searchMatches,
@@ -111,6 +113,9 @@ export function AuditsPage(): JSX.Element {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('');
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
   const [pendingAction, setPendingAction] = useState<PendingScanAction | null>(null);
+  const [page, setPage] = useState(1);
+  // A new search, filter or order starts from the newest page again.
+  useEffect(() => setPage(1), [search, statusFilter, sortOrder]);
 
   const visible = useMemo(
     () =>
@@ -122,6 +127,7 @@ export function AuditsPage(): JSX.Element {
       ),
     [data, statusFilter, search, sortOrder, strings.audits],
   );
+  const paged = pageOf(visible, page);
   const kpis = useMemo(() => computeKpis(data ?? []), [data]);
   // A count is only trustworthy once data exists: while the first load is in
   // flight the tiles show a skeleton, and a failed load shows an explicit
@@ -285,108 +291,155 @@ export function AuditsPage(): JSX.Element {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {visible.map((summary) => {
-                  const target = rowTarget(summary);
-                  const site = siteLabel(summary, strings.audits);
-                  const badges: SeverityBadge[] = severityBadges(summary.severityRollup);
-                  const type = typeBadge(summary, strings);
-                  return (
-                    <TableRow key={summary.jobId} onClick={() => navigate(target)}>
-                      <TableCell className="whitespace-nowrap">
-                        <div className="numeric text-ink">
-                          {formatDateTime(summary.createdAt, language)}
-                        </div>
-                        <div className="numeric text-xs text-ink-muted">
-                          {formatRelativeTime(summary.createdAt, strings.common.relativeTime)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {/* The visible link is the keyboard-accessible path to
+                {groupByDay(paged.items).flatMap((group) => [
+                  <TableRow key={`day-${group.day}`} className="bg-raised/60">
+                    <TableCell colSpan={6} className="py-2">
+                      <span className="text-sm font-medium text-ink">
+                        {formatDate(`${group.day}T12:00:00`, language)}
+                      </span>
+                      <span className="ml-2 text-xs text-ink-muted">
+                        {strings.audits.dayGroupCount.replace(
+                          '{count}',
+                          String(group.items.length),
+                        )}
+                      </span>
+                    </TableCell>
+                  </TableRow>,
+                  ...group.items.map((summary) => {
+                    const target = rowTarget(summary);
+                    const site = siteLabel(summary, strings.audits);
+                    const badges: SeverityBadge[] = severityBadges(summary.severityRollup);
+                    const type = typeBadge(summary, strings);
+                    return (
+                      <TableRow key={summary.jobId} onClick={() => navigate(target)}>
+                        <TableCell className="whitespace-nowrap">
+                          <div className="numeric text-ink">
+                            {formatDateTime(summary.createdAt, language)}
+                          </div>
+                          <div className="numeric text-xs text-ink-muted">
+                            {formatRelativeTime(summary.createdAt, strings.common.relativeTime)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {/* The visible link is the keyboard-accessible path to
                             the row target; the row click is the mouse shortcut. */}
-                        <Link
-                          to={target}
-                          className="ident font-medium text-ink hover:text-accent-bright"
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          {site === '' ? strings.common.unknownSite : site}
-                        </Link>
-                        {/* Plan 042 slice 4 (approved IA destiny table): the
-                            hotel a prospect-linked audit belongs to, named and
-                            linked to its hub; the row still opens the audit. */}
-                        {summary.prospectId !== undefined ? (
                           <Link
-                            to={`/prospects/${encodeURIComponent(summary.prospectId)}`}
-                            className="mt-0.5 block text-xs text-ink-soft hover:text-accent-bright"
+                            to={target}
+                            className="ident font-medium text-ink hover:text-accent-bright"
                             onClick={(event) => event.stopPropagation()}
                           >
-                            {summary.prospectName ?? strings.nav.prospects}
+                            {site === '' ? strings.common.unknownSite : site}
                           </Link>
-                        ) : null}
-                      </TableCell>
-                      <TableCell>
-                        <Badge tone={type.tone} className="whitespace-nowrap">
-                          {type.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        <span className="inline-flex items-center gap-2">
-                          {/* The displayed status, not the raw one: a failed
+                          {/* Plan 042 slice 4 (approved IA destiny table): the
+                            hotel a prospect-linked audit belongs to, named and
+                            linked to its hub; the row still opens the audit. */}
+                          {summary.prospectId !== undefined ? (
+                            <Link
+                              to={`/prospects/${encodeURIComponent(summary.prospectId)}`}
+                              className="mt-0.5 block text-xs text-ink-soft hover:text-accent-bright"
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              {summary.prospectName ?? strings.nav.prospects}
+                            </Link>
+                          ) : null}
+                        </TableCell>
+                        <TableCell>
+                          <Badge tone={type.tone} className="whitespace-nowrap">
+                            {type.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <span className="inline-flex items-center gap-2">
+                            {/* The displayed status, not the raw one: a failed
                               job whose audit was saved reads as a report issue
                               (issue #386). */}
-                          <StatusDot status={listStatus(summary)} />
-                          {strings.common.statusLabels[listStatus(summary)]}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <SeverityCounts badges={badges} />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {/* Row mutations stop the row click so pointing at
+                            <StatusDot status={listStatus(summary)} />
+                            {strings.common.statusLabels[listStatus(summary)]}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <SeverityCounts badges={badges} />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {/* Row mutations stop the row click so pointing at
                             stop or delete never navigates by accident; the
                             chevron stays the row's own navigation affordance. */}
-                        <div className="flex items-center justify-end gap-1">
-                          {summary.capabilities.cancel.state === 'available' ? (
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              className="gap-1.5 px-2"
-                              aria-label={strings.audits.stopAction}
-                              title={strings.audits.stopAction}
-                              onClick={(event) => {
-                                event.stopPropagation();
+                          <div className="flex items-center justify-end gap-1">
+                            {summary.capabilities.cancel.state === 'available' ? (
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                className="gap-1.5 px-2"
+                                aria-label={strings.audits.stopAction}
+                                title={strings.audits.stopAction}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setPendingAction({
+                                    kind: summary.status === 'queued' ? 'remove' : 'stop',
+                                    jobId: summary.jobId,
+                                    site,
+                                    stateToken: summary.capabilities.cancel.stateToken,
+                                  });
+                                }}
+                              >
+                                <Square className="size-3 fill-current" aria-hidden="true" />
+                                <span className="text-xs">{strings.audits.stopAction}</span>
+                              </Button>
+                            ) : null}
+                            <DeleteControl
+                              summary={summary}
+                              onDelete={(stateToken) =>
                                 setPendingAction({
-                                  kind: summary.status === 'queued' ? 'remove' : 'stop',
+                                  kind: 'delete',
                                   jobId: summary.jobId,
                                   site,
-                                  stateToken: summary.capabilities.cancel.stateToken,
-                                });
-                              }}
-                            >
-                              <Square className="size-3 fill-current" aria-hidden="true" />
-                              <span className="text-xs">{strings.audits.stopAction}</span>
-                            </Button>
-                          ) : null}
-                          <DeleteControl
-                            summary={summary}
-                            onDelete={(stateToken) =>
-                              setPendingAction({
-                                kind: 'delete',
-                                jobId: summary.jobId,
-                                site,
-                                stateToken,
-                              })
-                            }
-                          />
-                          <ChevronRight className="size-4 text-ink-muted" aria-hidden="true" />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                                  stateToken,
+                                })
+                              }
+                            />
+                            <ChevronRight className="size-4 text-ink-muted" aria-hidden="true" />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }),
+                ])}
               </TableBody>
             </Table>
           </div>
         )}
+        {paged.pageCount > 1 ? (
+          <nav
+            className="mt-3 flex items-center justify-end gap-2"
+            aria-label={strings.audits.pagePosition
+              .replace('{page}', String(paged.page))
+              .replace('{total}', String(paged.pageCount))}
+          >
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={paged.page <= 1}
+              onClick={() => setPage(paged.page - 1)}
+              aria-label={strings.audits.previousPage}
+            >
+              <ChevronLeft className="size-4" aria-hidden="true" />
+            </Button>
+            <span className="numeric text-sm text-ink-muted">
+              {strings.audits.pagePosition
+                .replace('{page}', String(paged.page))
+                .replace('{total}', String(paged.pageCount))}
+            </span>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={paged.page >= paged.pageCount}
+              onClick={() => setPage(paged.page + 1)}
+              aria-label={strings.audits.nextPage}
+            >
+              <ChevronRight className="size-4" aria-hidden="true" />
+            </Button>
+          </nav>
+        ) : null}
         {lastUpdatedAt !== undefined ? (
           <p className="mt-3 text-right text-xs text-ink-muted">
             {strings.audits.updatedAt.replace(

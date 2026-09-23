@@ -28,6 +28,10 @@ export interface AuditsStrings {
   updatedAt: string;
   /** Shown when audits exist but no row survives search and filters. */
   emptyFilter: string;
+  dayGroupCount: string;
+  pagePosition: string;
+  previousPage: string;
+  nextPage: string;
   /** Accessible name of the sort select; the options carry the visible
    *  copy. */
   sortLabel: string;
@@ -76,6 +80,10 @@ export const audits = {
     kpiFailed: 'Échecs',
     updatedAt: 'Actualisé à {time}',
     emptyFilter: 'Aucun audit ne correspond à ces filtres.',
+    dayGroupCount: '{count} audit(s)',
+    pagePosition: 'Page {page} sur {total}',
+    previousPage: 'Page précédente',
+    nextPage: 'Page suivante',
     sortLabel: 'Trier',
     stopAction: 'Arrêter',
     deleteAction: 'Supprimer',
@@ -116,6 +124,10 @@ export const audits = {
     kpiFailed: 'Failed',
     updatedAt: 'Updated at {time}',
     emptyFilter: 'No audits match these filters.',
+    dayGroupCount: '{count} audit(s)',
+    pagePosition: 'Page {page} of {total}',
+    previousPage: 'Previous page',
+    nextPage: 'Next page',
     sortLabel: 'Sort',
     stopAction: 'Stop',
     deleteAction: 'Delete',
