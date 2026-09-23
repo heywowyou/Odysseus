@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AuditManifest, Finding } from '@odysseus/core';
 import { OPENAI_MODEL, OPENAI_TEMPERATURE, MAX_RETRIES } from './constants.js';
+import { buildStructureInput } from './build-input.js';
 import type { StructureInput, StructurePassOutput } from './structure-schema.js';
 import {
   configureLlmTelemetrySink,
@@ -135,6 +136,18 @@ function buildInventedOutput(): StructurePassOutput {
   return output;
 }
 
+function buildDuplicateWithinThemeOutput(): StructurePassOutput {
+  const output = buildCleanOutput();
+  output.themes[0]!.findingIds = ['x1', 'x1'];
+  return output;
+}
+
+function buildDuplicateAcrossThemesOutput(): StructurePassOutput {
+  const output = buildCleanOutput();
+  output.themes.push({ ...output.themes[0]!, priorityRank: 2, findingIds: ['x1'] });
+  return output;
+}
+
 describe('analyzeStructure', () => {
   const sink = new RecordingLlmTelemetrySink();
 
@@ -201,6 +214,38 @@ describe('analyzeStructure', () => {
     const result = await analyzeStructure(input, filteredFindings, false, manifest);
 
     expect(result.themes[0]!.findingIds).toEqual(['f1', 'f2']);
+    expect(callOpenAiForStructure).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    ['within one theme', buildDuplicateWithinThemeOutput],
+    ['across themes', buildDuplicateAcrossThemesOutput],
+  ])('rejects a repeated finding ID %s and retries', async (_label, duplicateOutput) => {
+    vi.mocked(callOpenAiForStructure)
+      .mockReset()
+      .mockResolvedValueOnce({ output: duplicateOutput() })
+      .mockResolvedValueOnce({ output: buildCleanOutput() });
+
+    const result = await analyzeStructure(input, filteredFindings, false, manifest);
+
+    expect(result.themes[0]!.findingIds).toEqual(['f1', 'f2']);
+    expect(callOpenAiForStructure).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects aliases that resolve to the same finding before ranking', async () => {
+    const duplicateFindings = [buildFinding('same'), buildFinding('same')];
+    const duplicateInput = buildStructureInput(duplicateFindings, input.siteContext);
+    const validAfterRetry = buildCleanOutput();
+    validAfterRetry.themes[0]!.findingIds = ['x1'];
+    validAfterRetry.quickWins = ['x1'];
+    vi.mocked(callOpenAiForStructure)
+      .mockReset()
+      .mockResolvedValueOnce({ output: buildCleanOutput() })
+      .mockResolvedValueOnce({ output: validAfterRetry });
+
+    const result = await analyzeStructure(duplicateInput, duplicateFindings, false, manifest);
+
+    expect(result.themes[0]!.findingIds).toEqual(['same']);
     expect(callOpenAiForStructure).toHaveBeenCalledTimes(2);
   });
 

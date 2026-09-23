@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { FINDINGS_SCHEMA_VERSION, effortSchema, impactSchema } from '@odysseus/core';
 import type { LlmInput } from '@odysseus/core';
+import { findDuplicateStructureFindingIds } from './structure-guards.js';
 
 /** Everything the structure pass sees: findings and site context, no
  *  language. Grouping and prioritizing findings is language-independent;
@@ -82,5 +83,12 @@ export function assignThemeKeys(output: StructurePassOutput): StructureThemeWith
  *  the same "never trust a file just because this tool wrote it" posture
  *  as llmOutputSchema.parse() elsewhere in this package. */
 export function parseStructureDocument(raw: unknown): StructureDocument {
-  return structureDocumentSchema.parse(raw);
+  const parsed = structureDocumentSchema.parse(raw);
+  const duplicateIds = findDuplicateStructureFindingIds(parsed);
+  if (duplicateIds.length > 0) {
+    throw new Error(
+      `structure document contains repeated finding ID(s): ${duplicateIds.join(', ')}`,
+    );
+  }
+  return parsed;
 }

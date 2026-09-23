@@ -3,6 +3,7 @@ import { callOpenAiForStructure } from './client.js';
 import { OPENAI_MODEL, OPENAI_TEMPERATURE, MAX_RETRIES } from './constants.js';
 import { applyStructureRankingRules } from './structure-ranking.js';
 import {
+  findDuplicateStructureFindingIds,
   findInventedStructureFindingIds,
   findUnreferencedStructureFindingIds,
 } from './structure-guards.js';
@@ -70,7 +71,7 @@ export async function analyzeStructure(
       console.error(
         `odysseus analyze (structure pass): attempt ${attempt}/${MAX_RETRIES + 1} failed - ${lastFailureReason}`,
       );
-      await paceRateLimitedRetry(attempt, lastFailureReason);
+      await paceRateLimitedRetry(attempt, error);
       continue;
     }
 
@@ -87,6 +88,14 @@ export async function analyzeStructure(
     // Real IDs from here down: everything downstream of this point, including
     // the warning below and structure.json on disk, must never see an alias.
     const output = resolveStructureOutputIds(result.output, aliasMap);
+    const duplicateIds = findDuplicateStructureFindingIds(output);
+    if (duplicateIds.length > 0) {
+      lastFailureReason = `response repeated finding ID(s): ${duplicateIds.join(', ')}`;
+      console.error(
+        `odysseus analyze (structure pass): attempt ${attempt}/${MAX_RETRIES + 1} rejected - repeated finding IDs: ${duplicateIds.join(', ')}`,
+      );
+      continue;
+    }
 
     const unreferenced = findUnreferencedStructureFindingIds(output, filteredFindings);
     if (unreferenced.length > 0) {

@@ -137,7 +137,13 @@ async function attemptRepair(
   // theme matters), but only the replaced fields take its result. A
   // sanitizer that drops a whole replaced action would shift indices, so
   // that repair is discarded rather than guessed at.
-  const sanitized = sanitizeWritingOutput(input, spliced.output);
+  let sanitized: ReturnType<typeof sanitizeWritingOutput>;
+  try {
+    sanitized = sanitizeWritingOutput(input, spliced.output);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return discard(`repair sanitation failed: ${reason}`, ['response-invalid']);
+  }
   const replacedPaths = new Set(spliced.newPathByField.values());
   const sanitizedTexts = new Map<string, string>();
   for (const path of replacedPaths) {

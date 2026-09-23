@@ -121,7 +121,7 @@ export async function analyzeWriting(
       // failure or provider refusal is retried like any other rejected attempt.
       const reason = error instanceof Error ? error.message : String(error);
       recordRejection(attempt, ['response-invalid'], reason, false);
-      await paceRateLimitedRetry(attempt, reason);
+      await paceRateLimitedRetry(attempt, error);
       continue;
     }
 

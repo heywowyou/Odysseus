@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { Finding } from '@odysseus/core';
 import {
+  findDuplicateStructureFindingIds,
   findInventedStructureFindingIds,
   findUnreferencedStructureFindingIds,
 } from './structure-guards.js';
-import type { StructurePassOutput } from './structure-schema.js';
+import { parseStructureDocument, type StructurePassOutput } from './structure-schema.js';
 
 function buildFinding(findingId: string): Finding {
   return {
@@ -116,5 +117,80 @@ describe('findUnreferencedStructureFindingIds', () => {
       overallRisk: 'medium',
     };
     expect(findUnreferencedStructureFindingIds(output, findings)).toEqual(['f2']);
+  });
+});
+
+describe('findDuplicateStructureFindingIds', () => {
+  it('finds repeats within one theme and across themes', () => {
+    expect(
+      findDuplicateStructureFindingIds({
+        themes: [
+          {
+            findingIds: ['f1', 'f1'],
+            category: 'accessibility',
+            effort: 'low',
+            impact: 'high',
+            priorityRank: 1,
+          },
+          {
+            findingIds: ['f1', 'f2'],
+            category: 'seo',
+            effort: 'low',
+            impact: 'high',
+            priorityRank: 2,
+          },
+        ],
+        quickWins: [],
+      }),
+    ).toEqual(['f1']);
+  });
+
+  it('finds duplicates inside quickWins but permits a theme and quickWin to share an ID', () => {
+    const output: StructurePassOutput = {
+      themes: [
+        {
+          findingIds: ['f1'],
+          category: 'accessibility',
+          effort: 'low',
+          impact: 'high',
+          priorityRank: 1,
+        },
+      ],
+      quickWins: ['f1', 'f1'],
+      overallRisk: 'medium',
+    };
+    expect(findDuplicateStructureFindingIds(output)).toEqual(['f1']);
+    expect(findDuplicateStructureFindingIds({ ...output, quickWins: ['f1'] })).toEqual([]);
+  });
+
+  it('rejects a stored structure document that repeats a finding across themes', () => {
+    expect(() =>
+      parseStructureDocument({
+        auditId: 'audit-1',
+        themes: [
+          {
+            themeKey: 't1',
+            findingIds: ['f1'],
+            category: 'accessibility',
+            effort: 'low',
+            impact: 'high',
+            priorityRank: 1,
+          },
+          {
+            themeKey: 't2',
+            findingIds: ['f1'],
+            category: 'seo',
+            effort: 'low',
+            impact: 'high',
+            priorityRank: 2,
+          },
+        ],
+        quickWins: [],
+        overallRisk: 'medium',
+        model: 'test-model',
+        temperature: 1,
+        generatedAt: '2026-09-23T00:00:00.000Z',
+      }),
+    ).toThrow('structure document contains repeated finding ID(s): f1');
   });
 });

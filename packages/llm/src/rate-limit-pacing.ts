@@ -19,10 +19,25 @@ import { setTimeout as sleep } from 'node:timers/promises';
  */
 
 const RATE_LIMIT_BASE_DELAY_MS = 60_000;
+/** Keeps a provider Retry-After from holding report production indefinitely. */
+export const MAX_PROVIDER_RETRY_DELAY_MS = 5 * 60_000;
 const LANGUAGE_PASS_PAUSE_MS = 20_000;
 
-export function isRateLimitFailure(message: string): boolean {
-  return /429|rate.?limit/i.test(message);
+export function isRateLimitFailure(error: unknown): boolean {
+  const seen = new Set<object>();
+  let current = error;
+  while (typeof current === 'object' && current !== null && !seen.has(current)) {
+    seen.add(current);
+    const candidate = current as { status?: unknown; cause?: unknown };
+    if (candidate.status === 429) return true;
+    current = candidate.cause;
+  }
+  return false;
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return typeof error === 'string' ? error : '';
 }
 
 /**
@@ -70,10 +85,9 @@ export function extractProviderRetryAfterMs(error: unknown): number | undefined 
 const RETRY_AFTER_HINT_LABEL = 'provider retry-after';
 const RETRY_AFTER_HINT_PATTERN = /provider retry-after: (\d+(?:\.\d+)?)(ms|s)\)/;
 
-/** Appends the machine-readable marker the pacing helper parses. The
- *  analyze retry loops only see a failure's message text, so the header's
- *  ask has to travel inside that text; the format is ours, not the SDK's,
- *  for the version-drift reason above. */
+/** Appends a stable machine-readable Retry-After hint before the SDK error
+ *  is wrapped. Pacing checks the HTTP status on the error/cause chain and
+ *  reads this marker from the wrapper's message. */
 export function appendProviderRetryAfterHint(message: string, retryAfterMs: number): string {
   const duration =
     retryAfterMs > 0 && retryAfterMs % 1000 === 0
@@ -90,19 +104,22 @@ export function parseProviderRetryAfterHint(failure: string): number | undefined
   return match[2] === 'ms' ? value : value * 1000;
 }
 
-/** Sleep before the next attempt when the failure was a provider rate
- *  limit, scaling with the attempt number, and never shorter than any
- *  Retry-After the provider itself asked for. Non-rate-limit failures
- *  return immediately, keeping guard rejections as fast as before. The
- *  sleep is injectable for tests. */
+/** Sleep before the next attempt only for an HTTP 429, scaling with the
+ *  attempt number and honoring Retry-After up to the fixed ceiling.
+ *  Non-rate-limit failures return immediately, keeping guard rejections as
+ *  fast as before. The sleep is injectable for tests. */
 export async function paceRateLimitedRetry(
   attempt: number,
-  failure: string,
+  failure: unknown,
   sleepFn: (ms: number) => Promise<void> = sleep,
 ): Promise<void> {
   if (!isRateLimitFailure(failure)) return;
-  const retryAfterMs = parseProviderRetryAfterHint(failure) ?? 0;
-  const delayMs = Math.max(RATE_LIMIT_BASE_DELAY_MS * attempt, retryAfterMs);
+  const retryAfterMs =
+    parseProviderRetryAfterHint(errorMessage(failure)) ?? extractProviderRetryAfterMs(failure) ?? 0;
+  const delayMs = Math.min(
+    MAX_PROVIDER_RETRY_DELAY_MS,
+    Math.max(RATE_LIMIT_BASE_DELAY_MS * attempt, retryAfterMs),
+  );
   console.warn(
     `odysseus analyze: provider rate limit hit; waiting ${Math.round(delayMs / 1000)}s before retry ${attempt}`,
   );

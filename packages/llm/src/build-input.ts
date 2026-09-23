@@ -48,6 +48,8 @@ export function filterFindingsForLlm(findings: readonly Finding[]): Finding[] {
  *  finding.pageUrls from findings.json directly, never this LLM-facing
  *  copy. */
 export const MAX_PAGE_URLS_FOR_LLM = 3;
+/** URLs are site-controlled scanner evidence just like titles and descriptions. */
+export const MAX_PAGE_URL_CHARS_FOR_LLM = 200;
 
 function toLlmFindingShape(finding: Finding): StructureInput['findings'][number] {
   return {
@@ -59,7 +61,9 @@ function toLlmFindingShape(finding: Finding): StructureInput['findings'][number]
     wcagCriteria: finding.wcagCriteria,
     title: boundScannerText(finding.title, MAX_FINDING_TITLE_CHARS_FOR_LLM),
     description: boundScannerText(finding.description, MAX_FINDING_DESCRIPTION_CHARS_FOR_LLM),
-    pageUrls: finding.pageUrls.slice(0, MAX_PAGE_URLS_FOR_LLM),
+    pageUrls: finding.pageUrls
+      .slice(0, MAX_PAGE_URLS_FOR_LLM)
+      .map((url) => boundScannerText(url, MAX_PAGE_URL_CHARS_FOR_LLM)),
     occurrences: finding.occurrences,
   };
 }

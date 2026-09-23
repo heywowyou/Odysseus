@@ -251,6 +251,26 @@ describe('critiqueAndRepairWriting', () => {
     ]);
   });
 
+  it('fails open when a repair violates the writing schema', async () => {
+    const written = await writeFirst();
+    vi.mocked(callOpenAiForCritic).mockResolvedValueOnce({ output: { issues: [issue()] } });
+    vi.mocked(callOpenAiForFieldRepair).mockResolvedValueOnce({
+      output: {
+        'themes[0](t1).businessImpact':
+          'Première phrase. Deuxième phrase. Troisième phrase. Quatrième phrase. Cinquième phrase.',
+      },
+    });
+
+    const result = await critiqueAndRepairWriting(input, keys, false, written);
+
+    expect(result.output).toBe(written.output);
+    expect(result.critic?.record.repairApplied).toBe(false);
+    expect(result.critic?.sidecar.status).toBe('repair-discarded');
+    expect(result.sanitizationWarnings).toEqual([
+      { code: 'critic-unresolved', field: 'themes[0](t1).businessImpact' },
+    ]);
+  });
+
   it('fails open on a critic provider error', async () => {
     const written = await writeFirst();
     vi.mocked(callOpenAiForCritic).mockRejectedValueOnce(new Error('503 upstream unavailable'));

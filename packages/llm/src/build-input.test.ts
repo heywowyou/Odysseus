@@ -10,6 +10,7 @@ import {
   computeSiteStats,
   filterFindingsForLlm,
   MAX_PAGE_URLS_FOR_LLM,
+  MAX_PAGE_URL_CHARS_FOR_LLM,
 } from './build-input.js';
 import type { StructureThemeWithKey } from './structure-schema.js';
 import { emptyWritingPerformanceEvidence } from './writing-schema.js';
@@ -130,6 +131,18 @@ describe('buildStructureInput', () => {
     expect(input.findings[0]!.pageUrls).toEqual(manyUrls.slice(0, MAX_PAGE_URLS_FOR_LLM));
     // occurrences (the model's actual "how widespread" signal) is untouched.
     expect(input.findings[0]!.occurrences).toBe(findingWithManyUrls.occurrences);
+  });
+
+  it('bounds each site-controlled page URL before sending it to the model', () => {
+    const finding = loadSmallSiteFindings()[0]!;
+    const longUrl = `https://client.example/${'x'.repeat(500)}`;
+    const input = buildStructureInput(
+      [{ ...finding, pageUrls: [longUrl] }],
+      buildFallbackSiteContext(),
+    );
+
+    expect(input.findings[0]!.pageUrls[0]).toHaveLength(MAX_PAGE_URL_CHARS_FOR_LLM);
+    expect(input.findings[0]!.pageUrls[0]?.endsWith(' […]')).toBe(true);
   });
 });
 

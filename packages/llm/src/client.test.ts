@@ -21,6 +21,7 @@ const {
   callOpenAiForCritic,
   callOpenAiForCorrectionReview,
 } = await import('./client.js');
+const { default: OpenAIClient } = await import('openai');
 
 const structureInput = {
   siteContext: {
@@ -159,6 +160,9 @@ describe('callOpenAiForStructure', () => {
     completeMock.mockResolvedValue(choice({ content: JSON.stringify(validStructureOutput) }));
     const result = await callOpenAiForStructure(structureInput, false);
     expect(result.output).toEqual(validStructureOutput);
+    expect(OpenAIClient).toHaveBeenCalledWith(
+      expect.objectContaining({ timeout: 5 * 60_000, maxRetries: 0 }),
+    );
     expect(completeMock).toHaveBeenCalledWith(
       expect.objectContaining({
         model: 'gpt-6-luna',

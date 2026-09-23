@@ -53,15 +53,21 @@ import {
 } from './correction-review-prompt.js';
 import { appendProviderRetryAfterHint, extractProviderRetryAfterMs } from './rate-limit-pacing.js';
 
+const OPENAI_REQUEST_TIMEOUT_MS = 5 * 60_000;
+const OPENAI_CLIENT_MAX_RETRIES = 0;
+
 function createClient(): OpenAI {
-  return new OpenAI({ apiKey: getOpenAiApiKey(), baseURL: getOpenAiBaseUrl() });
+  return new OpenAI({
+    apiKey: getOpenAiApiKey(),
+    baseURL: getOpenAiBaseUrl(),
+    timeout: OPENAI_REQUEST_TIMEOUT_MS,
+    maxRetries: OPENAI_CLIENT_MAX_RETRIES,
+  });
 }
 
-/** Re-throw a provider 429 with the wait it asked for appended to the
- *  message (issue #30): the analyze retry loops pace off the failure text
- *  and never see the error object, where the Retry-After header alone
- *  lives. Any other error, including a 429 with no readable Retry-After,
- *  passes through untouched. */
+/** Preserve Retry-After as a stable hint when wrapping an SDK 429. The
+ *  application retry loop recognizes the HTTP status on the error cause and
+ *  reads the hint from this message; other errors pass through untouched. */
 async function withProviderRetryAfterHint<T>(call: () => Promise<T>): Promise<T> {
   try {
     return await call();

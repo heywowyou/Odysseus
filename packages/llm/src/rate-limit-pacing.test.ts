@@ -3,23 +3,25 @@ import {
   appendProviderRetryAfterHint,
   extractProviderRetryAfterMs,
   isRateLimitFailure,
+  MAX_PROVIDER_RETRY_DELAY_MS,
   paceRateLimitedRetry,
   parseProviderRetryAfterHint,
   pauseBetweenLanguagePasses,
 } from './rate-limit-pacing.js';
 
 describe('isRateLimitFailure', () => {
-  it('recognizes provider rate-limit failures in any phrasing', () => {
-    expect(isRateLimitFailure('API error occurred: Status 429')).toBe(true);
-    expect(isRateLimitFailure('Body: {"message":"Rate limit exceeded","code":"1300"}')).toBe(true);
-    expect(isRateLimitFailure('rate_limited')).toBe(true);
+  it('recognizes a provider 429 from the error status, including a wrapped cause', () => {
+    const providerError = Object.assign(new Error('temporary provider failure'), { status: 429 });
+    expect(isRateLimitFailure(providerError)).toBe(true);
+    expect(isRateLimitFailure(new Error('wrapped', { cause: providerError }))).toBe(true);
   });
 
-  it('ignores every other failure', () => {
-    expect(isRateLimitFailure('severity vocabulary violations in field(s): executiveSummary')).toBe(
+  it('does not infer a rate limit from free-form error text', () => {
+    expect(isRateLimitFailure(new Error('response position 1429 is invalid'))).toBe(false);
+    expect(isRateLimitFailure(new Error('rate limit exceeded'))).toBe(false);
+    expect(isRateLimitFailure(Object.assign(new Error('server error'), { status: 500 }))).toBe(
       false,
     );
-    expect(isRateLimitFailure('Status 500')).toBe(false);
   });
 });
 
@@ -105,8 +107,12 @@ describe('paceRateLimitedRetry', () => {
     const fakeSleep = async (ms: number): Promise<void> => {
       sleeps.push(ms);
     };
-    await paceRateLimitedRetry(1, 'Status 429', fakeSleep);
-    await paceRateLimitedRetry(2, 'Rate limit exceeded', fakeSleep);
+    await paceRateLimitedRetry(1, Object.assign(new Error('429'), { status: 429 }), fakeSleep);
+    await paceRateLimitedRetry(
+      2,
+      Object.assign(new Error('throttled'), { status: 429 }),
+      fakeSleep,
+    );
     expect(sleeps).toEqual([60_000, 120_000]);
   });
 
@@ -114,7 +120,9 @@ describe('paceRateLimitedRetry', () => {
     const sleeps: number[] = [];
     await paceRateLimitedRetry(
       1,
-      appendProviderRetryAfterHint('Status 429', 90_000),
+      Object.assign(new Error(appendProviderRetryAfterHint('provider error', 90_000)), {
+        status: 429,
+      }),
       async (ms) => {
         sleeps.push(ms);
       },
@@ -122,11 +130,28 @@ describe('paceRateLimitedRetry', () => {
     expect(sleeps).toEqual([90_000]);
   });
 
+  it('clamps an excessive Retry-After to the fixed ceiling', async () => {
+    const sleeps: number[] = [];
+    await paceRateLimitedRetry(
+      1,
+      Object.assign(new Error(appendProviderRetryAfterHint('provider error', 900_000)), {
+        status: 429,
+      }),
+      async (ms) => {
+        sleeps.push(ms);
+      },
+    );
+    expect(MAX_PROVIDER_RETRY_DELAY_MS).toBe(300_000);
+    expect(sleeps).toEqual([MAX_PROVIDER_RETRY_DELAY_MS]);
+  });
+
   it('keeps the attempt floor when the provider asks for less', async () => {
     const sleeps: number[] = [];
     await paceRateLimitedRetry(
       2,
-      appendProviderRetryAfterHint('Status 429', 30_000),
+      Object.assign(new Error(appendProviderRetryAfterHint('provider error', 30_000)), {
+        status: 429,
+      }),
       async (ms) => {
         sleeps.push(ms);
       },
@@ -136,7 +161,7 @@ describe('paceRateLimitedRetry', () => {
 
   it('returns immediately for non-rate-limit failures', async () => {
     const sleeps: number[] = [];
-    await paceRateLimitedRetry(1, 'language compliance violations', async (ms) => {
+    await paceRateLimitedRetry(1, new Error('language compliance violations'), async (ms) => {
       sleeps.push(ms);
     });
     expect(sleeps).toEqual([]);

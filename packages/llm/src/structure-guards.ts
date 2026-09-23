@@ -17,6 +17,29 @@ export interface HasFindingId {
   readonly findingId: string;
 }
 
+/** Repeated IDs inflate deterministic theme ranking. IDs may appear once
+ *  across all themes and once in quickWins; quickWins overlap with themes by
+ *  design, but duplicates inside either collection are rejected. Call after
+ *  alias resolution so separate aliases for one finding also collide. */
+export function findDuplicateStructureFindingIds(
+  output: Pick<StructurePassOutput, 'themes' | 'quickWins'>,
+): string[] {
+  const duplicates = new Set<string>();
+  const themeIds = new Set<string>();
+  for (const theme of output.themes) {
+    for (const id of theme.findingIds) {
+      if (themeIds.has(id)) duplicates.add(id);
+      else themeIds.add(id);
+    }
+  }
+  const quickWinIds = new Set<string>();
+  for (const id of output.quickWins) {
+    if (quickWinIds.has(id)) duplicates.add(id);
+    else quickWinIds.add(id);
+  }
+  return [...duplicates];
+}
+
 /** Hard guard against invented findings, run against the structure
  *  pass's output - the only pass that decides findingIds. A non-empty
  *  result is a hard rejection: logged, retried, then fail-loud. */
