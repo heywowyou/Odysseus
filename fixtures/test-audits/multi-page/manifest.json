@@ -795,7 +795,7 @@
   "renormalizedAt": "2026-08-28T23:16:45.174Z",
   "findingsProvenance": {
     "findingsSchemaVersion": 1,
-    "normalizationFingerprint": "a46baa758ef55bc3",
+    "normalizationFingerprint": "a4c4cd9a3293cd69",
     "findingsDigest": "sha256:89272af65c331a67473cd477450ac42eb6b57c5c78f81aac9476a05050f0b6d8"
   }
 }

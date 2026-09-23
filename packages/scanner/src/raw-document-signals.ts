@@ -27,6 +27,7 @@ export function analyzeRawDocument(html: string): RawDocumentSignals {
   const text = extractTextFromHtml(html);
   return {
     markupLength: html.length,
+    visibleTextLength: text.length,
     // Truncated to 16 hex characters for the same reason the normalization
     // fingerprint is: this is an equality check between documents in one
     // audit, not a cryptographic commitment.

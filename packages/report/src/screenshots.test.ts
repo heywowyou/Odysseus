@@ -92,6 +92,7 @@ describe('resolveRenderDiffEvidence against the real small-site.test capture', (
               ...page,
               renderDiffRawDocument: {
                 markupLength: 8000,
+                visibleTextLength: 100,
                 textSignature: 'sig',
                 interstitialMarkers: ['bot-challenge'],
               },

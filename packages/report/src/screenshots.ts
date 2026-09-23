@@ -142,6 +142,9 @@ export function resolveRenderDiffEvidence(
       pageUrl: page.url,
       httpStatus: page.httpStatus,
       rawDocument: page.renderDiffRawDocument,
+      ...(page.renderDiffRawDocument?.visibleTextLength !== undefined
+        ? { rawTextLength: page.renderDiffRawDocument.visibleTextLength }
+        : {}),
     })),
   );
 

@@ -172,6 +172,7 @@ const lighthouseExcludedCategoryScoresSchema = new Schema(
 const rawDocumentSignalsSchema = new Schema(
   {
     markupLength: { type: Number, required: true },
+    visibleTextLength: { type: Number },
     textSignature: { type: String, required: true },
     interstitialMarkers: { type: [String], default: [] },
   },

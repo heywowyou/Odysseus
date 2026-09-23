@@ -158,7 +158,7 @@ export const MAX_SNIPPET_LENGTH = 500;
  * downstream can tell that case apart from a site that genuinely serves
  * almost no markup, and the report asserts missing content either way.
  *
- * Deliberately three small derived values rather than the raw document:
+ * Deliberately small derived values rather than the raw document:
  * storing the served HTML of every page would multiply artifact size and
  * put un-minimised client markup into stored analyses, which trade-off 2's
  * data-minimisation posture rules out.
@@ -168,6 +168,8 @@ export interface RawDocumentSignals {
    *  with rawTextLength: markup that is large while its text is tiny is an
    *  ordinary JavaScript-rendered shell, and both being tiny is not. */
   markupLength: number;
+  /** Visible text character count, allowing downstream consumers to distinguish a sparse barrier from a JavaScript shell. Optional on older stored audits. */
+  visibleTextLength?: number;
   /** Stable hash of the raw visible text. Equal signatures across pages
    *  mean one document was served for several URLs. */
   textSignature: string;

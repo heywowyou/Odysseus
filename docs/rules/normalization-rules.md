@@ -72,17 +72,20 @@ site once per language.
 **Render diff:** emits nothing at all for a page whose no-JavaScript
 fetch did not receive the page (issue #301). `unusableRawFetches` in
 `normalize-renderdiff.ts` judges that from `RenderDiffResult.rawDocument`,
-which scanner's `raw-document-signals.ts` fills: an interstitial's own
-markers, a non-2xx raw status, or one near-empty document (markup at or
-below 512 characters) answering for three or more distinct URLs. The third
-condition is deliberately narrow, because a site that renders everything
-client-side legitimately serves one shell for every route and that is the
-render diff's most valuable true positive; only a document too small to be
-a shell the site built counts. A "please enable JavaScript" notice is never
-treated as an interstitial for the same reason. Pages predating
-`rawDocument` are never judged unusable. The report's section 08 applies
-the same function over the manifest, since it draws its bars from
-`renderDiffMissingPercent` rather than from findings.
+which scanner's `raw-document-signals.ts` fills with markup length, visible
+text length, a text signature, and matched marker names. A marker is a wall
+only when the shared classifier also sees a challenge response status, sparse
+visible text, or minimal markup; any non-2xx raw status is unusable. A second
+rule excludes one near-empty document (markup at or below 512 characters)
+answering for three or more distinct URLs. The shared-document condition is
+deliberately narrow, because a site that renders everything client-side
+legitimately serves one shell for every route and that is the render diff's
+most valuable true positive; only a document too small to be a shell the site
+built counts. A "please enable JavaScript" notice is never treated as an
+interstitial for the same reason. Historical records without `rawDocument`
+remain readable and receive no marker-based judgment. The report's section 08
+uses the same visible-text signal from the manifest, so it excludes the same
+barrier pages that normalization does.
 
 **A barrier is shared evidence, not a vendor-name match (plan 076).** The
 pure `classifyDocumentWall` rule in `packages/core/src/acquisition/host-signal.ts`

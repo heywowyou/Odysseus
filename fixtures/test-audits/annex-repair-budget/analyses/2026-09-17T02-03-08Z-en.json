@@ -162,7 +162,7 @@
   "auditId": "8f1bdb1a-0c59-4d5c-882c-aa35d4036a37",
   "findingsProvenance": {
     "findingsSchemaVersion": 1,
-    "normalizationFingerprint": "a46baa758ef55bc3",
+    "normalizationFingerprint": "a4c4cd9a3293cd69",
     "findingsDigest": "sha256:706215c79ac1a8ac6f2b7c17a5ceca8a661b2df2650d206bea2051f476333b44"
   },
   "language": "en",
