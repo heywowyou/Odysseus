@@ -1,7 +1,46 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import type { FindingsProvenance, ReportLanguage } from '@odysseus/core';
+import {
+  llmOutputSchema,
+  themeSchema,
+  type FindingsProvenance,
+  type ReportLanguage,
+} from '@odysseus/core';
+import { z } from 'zod';
 import type { StoredAnalysis, VerifiedStoredAnalysis } from '@odysseus/report';
+
+const storedThemeSchema = themeSchema.extend({
+  // Stored categories come from deterministic finding grouping and therefore
+  // include geo, even though the model-facing llmOutputSchema excludes it.
+  category: z.enum(['accessibility', 'seo', 'geo', 'performance', 'rendering', 'privacy']),
+});
+
+const reusableAnalysisSchema = llmOutputSchema
+  .extend({
+    themes: z.array(storedThemeSchema).min(1).max(20),
+    analysisId: z.string().min(1),
+    auditId: z.string().min(1),
+    findingsProvenance: z.object({
+      findingsSchemaVersion: z.number().int().positive(),
+      normalizationFingerprint: z.string().min(1),
+      findingsDigest: z.string().min(1),
+    }),
+    language: z.enum(['fr', 'en']),
+    model: z.string().min(1),
+    temperature: z.number().finite(),
+    generatedAt: z.string().datetime(),
+    structureGeneratedAt: z.string().datetime(),
+    generationMode: z.literal('static-fallback').optional(),
+    writingCritic: z
+      .object({
+        ran: z.boolean(),
+        issuesRaised: z.number().int().nonnegative(),
+        issuesAccepted: z.number().int().nonnegative(),
+        repairApplied: z.boolean(),
+      })
+      .optional(),
+  })
+  .passthrough();
 
 /**
  * Whether two provenances describe the same findings.
@@ -104,15 +143,21 @@ export async function findReusableAnalysis(
   const candidates = entries.filter((name) => name.endsWith(`-${language}.json`)).sort();
   for (const name of candidates.reverse()) {
     const candidatePath = path.join(analysesDir, name);
-    let stored: StoredAnalysis & { generatedAt: string };
+    let stored: Omit<StoredAnalysis, 'generatedAt'> & { generatedAt: string };
     try {
-      stored = JSON.parse(await fs.readFile(candidatePath, 'utf-8'));
+      const raw: unknown = JSON.parse(await fs.readFile(candidatePath, 'utf-8'));
+      const parsed = reusableAnalysisSchema.safeParse(raw);
+      if (!parsed.success) continue;
+      stored = parsed.data as unknown as Omit<StoredAnalysis, 'generatedAt'> & {
+        generatedAt: string;
+      };
     } catch {
       // A half-written or hand-edited file is not evidence of anything; the
       // next candidate, or a fresh generation, is the safe answer.
       continue;
     }
-    if (!isReusableAnalysis(stored, criteria)) continue;
+    const storedInMemory = { ...stored, generatedAt: new Date(stored.generatedAt) };
+    if (!isReusableAnalysis(storedInMemory, criteria)) continue;
     return {
       analysis: {
         ...stored,

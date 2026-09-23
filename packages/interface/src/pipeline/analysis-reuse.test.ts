@@ -34,7 +34,18 @@ function storedAnalysis(overrides: Partial<StoredAnalysis> = {}): Partial<Stored
     structureGeneratedAt: '2026-09-17T10:00:00.000Z',
     executiveSummary: 'Résumé.',
     overallRisk: 'medium',
-    themes: [],
+    themes: [
+      {
+        title: 'Contraste',
+        category: 'accessibility',
+        businessImpact: 'Some visitors cannot read the text.',
+        effort: 'low',
+        impact: 'medium',
+        priorityRank: 1,
+        findingIds: ['f1'],
+        recommendedActions: ['Increase text contrast.'],
+      },
+    ],
     quickWins: [],
     notes: '',
     ...overrides,
@@ -138,6 +149,12 @@ describe('findReusableAnalysis', () => {
     expect((await findReusableAnalysis(dir, 'fr', criteria))?.analysis.analysisId).toBe(
       'compatible',
     );
+  });
+
+  it('ignores JSON that does not satisfy the stored LLM output schema', async () => {
+    await write('2026-09-17T11-30-00Z-fr.json', storedAnalysis({ executiveSummary: '' }));
+
+    expect(await findReusableAnalysis(dir, 'fr', criteria)).toBeUndefined();
   });
 
   it('ignores a file that is not readable JSON rather than failing the run', async () => {

@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -7,6 +7,7 @@ import { buildFindingsProvenance, type AuditManifest, type Finding } from '@odys
 vi.mock('@odysseus/store', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   persistAnalysis: vi.fn(),
+  getAnalysisById: vi.fn(),
 }));
 vi.mock('./obligation-stage.js', () => ({
   runObligationStage: vi.fn(async () => ({ status: 'undetermined', basis: [] })),
@@ -28,7 +29,7 @@ import {
   analyzeStructure,
   analyzeWriting,
 } from '@odysseus/llm';
-import { persistAnalysis } from '@odysseus/store';
+import { getAnalysisById, persistAnalysis } from '@odysseus/store';
 import { readAuditEvidenceDiagnostics } from './audit-evidence-diagnostics.js';
 import { runAnalysisStage } from './analysis-stage.js';
 
@@ -124,6 +125,7 @@ beforeEach(async () => {
   vi.mocked(analyzeStructure).mockResolvedValue(structureResult() as never);
   vi.mocked(analyzeWriting).mockResolvedValue(writingResult() as never);
   vi.mocked(persistAnalysis).mockResolvedValue(undefined as never);
+  vi.mocked(getAnalysisById).mockResolvedValue(null as never);
   vi.mocked(readAuditEvidenceDiagnostics).mockResolvedValue({
     status: 'complete',
     clientLimitations: [],
@@ -150,6 +152,50 @@ describe('Plan 067 analysis-stage provider budget', () => {
     expect(analyzeWriting).toHaveBeenCalledTimes(1);
     expect(runWritingCritic).not.toHaveBeenCalled();
     expect(analyzeCorrectionReview).not.toHaveBeenCalled();
+  });
+
+  it('does not leave an analysis file when database persistence fails, so the next run writes again', async () => {
+    vi.mocked(persistAnalysis)
+      .mockRejectedValueOnce(new Error('database unavailable'))
+      .mockResolvedValueOnce(undefined as never);
+
+    await expect(
+      runAnalysisStage(auditDir, manifest(), [finding], { language: 'fr' }, {} as never),
+    ).rejects.toThrow('database unavailable');
+
+    const analysesDir = path.join(auditDir, 'analyses');
+    const afterFailure = await readdir(analysesDir);
+    expect(afterFailure.some((name) => name.endsWith('-fr.json'))).toBe(false);
+
+    const retry = await runAnalysisStage(
+      auditDir,
+      manifest(),
+      [finding],
+      { language: 'fr' },
+      {} as never,
+    );
+
+    expect(retry.writingReused).toBe(false);
+    expect(analyzeWriting).toHaveBeenCalledTimes(2);
+    expect(persistAnalysis).toHaveBeenCalledTimes(2);
+    expect((await readdir(analysesDir)).some((name) => name.endsWith('-fr.json'))).toBe(true);
+  });
+
+  it('regenerates a file whose analysisId has no database record', async () => {
+    await runAnalysisStage(auditDir, manifest(), [finding], { language: 'fr' }, {} as never);
+    vi.mocked(getAnalysisById).mockResolvedValue(null as never);
+
+    const result = await runAnalysisStage(
+      auditDir,
+      manifest(),
+      [finding],
+      { language: 'fr' },
+      {} as never,
+    );
+
+    expect(result.writingReused).toBe(false);
+    expect(analyzeWriting).toHaveBeenCalledTimes(2);
+    expect(persistAnalysis).toHaveBeenCalledTimes(2);
   });
 
   it('threads deterministic limitations into the same single writer call', async () => {

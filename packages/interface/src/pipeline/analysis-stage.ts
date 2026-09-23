@@ -48,7 +48,7 @@ import {
   type WritingCriticSidecar,
   type WritingInput,
 } from '@odysseus/llm';
-import { persistAnalysis } from '@odysseus/store';
+import { getAnalysisById, persistAnalysis } from '@odysseus/store';
 import {
   buildTrustedRemediationsByTheme,
   buildWritingPerformanceEvidence,
@@ -421,23 +421,33 @@ export async function runAnalysisStage(
       structureGeneratedAt: structureDoc.generatedAt,
     });
     if (reusable) {
-      console.log(
-        `odysseus analyze (writing pass, language=${options.language}): reusing ${path.basename(reusable.analysisPath)}, generated against the same structure document and the same findings`,
+      const persisted = await getAnalysisById(
+        connection,
+        manifest.auditId,
+        reusable.analysis.analysisId,
       );
-      return {
-        analysis: reusable.analysis,
-        analysisPath: reusable.analysisPath,
-        structurePath,
-        structureReused,
-        writingReused: true,
-        unreferencedFindingCount: findUnreferencedStructureFindingIds(structureDoc, forModel)
-          .length,
-        usedFallbackContext,
-        // Nothing was generated, so there is nothing new to review: the
-        // Reused analyses require no provider-side follow-up.
-        advisoryPasses: [],
-        sanitizationWarnings: [],
-      };
+      if (persisted !== null) {
+        console.log(
+          `odysseus analyze (writing pass, language=${options.language}): reusing ${path.basename(reusable.analysisPath)}, generated against the same structure document and the same findings`,
+        );
+        return {
+          analysis: reusable.analysis,
+          analysisPath: reusable.analysisPath,
+          structurePath,
+          structureReused,
+          writingReused: true,
+          unreferencedFindingCount: findUnreferencedStructureFindingIds(structureDoc, forModel)
+            .length,
+          usedFallbackContext,
+          // Nothing was generated, so there is nothing new to review: the
+          // Reused analyses require no provider-side follow-up.
+          advisoryPasses: [],
+          sanitizationWarnings: [],
+        };
+      }
+      console.warn(
+        `odysseus analyze (writing pass, language=${options.language}): ignoring ${path.basename(reusable.analysisPath)} because its analysisId is not persisted`,
+      );
     }
   }
 
@@ -527,25 +537,8 @@ export async function runAnalysisStage(
     };
   }
 
-  await fs.mkdir(analysesDir, { recursive: true });
-  const analysisPath = path.join(
-    analysesDir,
-    `${timestampForFilename(analysis.generatedAt)}-${options.language}.json`,
-  );
-  await fs.writeFile(analysisPath, JSON.stringify(analysis, null, 2));
-  if (criticSidecar !== undefined) {
-    // Operator-only (Plan 070 decision 8): the critic's problem text stays in
-    // this sidecar and is never merged into the analysis the report renders.
-    await fs.writeFile(
-      criticSidecarPath(analysisPath),
-      JSON.stringify(
-        { analysisId: analysis.analysisId, auditId: analysis.auditId, ...criticSidecar },
-        null,
-        2,
-      ),
-    );
-  }
-
+  // Persist first: an on-disk candidate must never point at an analysis that
+  // approval cannot find in Mongo.
   await persistAnalysis(connection, {
     analysisId: analysis.analysisId,
     auditId: analysis.auditId,
@@ -569,6 +562,25 @@ export async function runAnalysisStage(
       : {}),
     ...(analysis.writingCritic !== undefined ? { writingCritic: analysis.writingCritic } : {}),
   });
+
+  await fs.mkdir(analysesDir, { recursive: true });
+  const analysisPath = path.join(
+    analysesDir,
+    `${timestampForFilename(analysis.generatedAt)}-${options.language}.json`,
+  );
+  await fs.writeFile(analysisPath, JSON.stringify(analysis, null, 2));
+  if (criticSidecar !== undefined) {
+    // Operator-only (Plan 070 decision 8): the critic's problem text stays in
+    // this sidecar and is never merged into the analysis the report renders.
+    await fs.writeFile(
+      criticSidecarPath(analysisPath),
+      JSON.stringify(
+        { analysisId: analysis.analysisId, auditId: analysis.auditId, ...criticSidecar },
+        null,
+        2,
+      ),
+    );
+  }
 
   return {
     analysis,
