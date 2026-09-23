@@ -193,3 +193,33 @@ describe('runtime state classes in identity (plan 075, F6)', () => {
     expect(plain?.dedupeIdentity).toBeUndefined();
   });
 });
+
+describe('contrast on inactive components (plan 075, F10)', () => {
+  const contrast = (html: string) =>
+    extractAxeCandidates(
+      buildAxeResultsInput([
+        buildAxeViolation({
+          id: 'color-contrast',
+          nodes: [buildAxeNode({ target: ['.x'], html })],
+        }),
+      ]),
+      'https://example.com/',
+    );
+
+  it('drops an unavailable date in a booking calendar', () => {
+    expect(
+      contrast(
+        '<span class="dp1820577600000 mphb-date-cell mphb-not-available-date" title="Indisponible">10</span>',
+      ),
+    ).toHaveLength(0);
+  });
+
+  it('drops an aria-disabled control', () => {
+    expect(contrast('<a aria-disabled="true" href="#">Suivant</a>')).toHaveLength(0);
+  });
+
+  it('keeps an available date and ordinary text', () => {
+    expect(contrast('<span class="mphb-date-cell mphb-available-date">11</span>')).toHaveLength(1);
+    expect(contrast('<p>Texte gris</p>')).toHaveLength(1);
+  });
+});

@@ -387,6 +387,22 @@ export function resourceUrlFromSnippet(html: string, pageUrl: string): string | 
   }
 }
 
+/** WCAG 1.4.3 sets no contrast requirement for text in an inactive user
+ *  interface component. axe only knows `disabled`; a booking calendar greys
+ *  out unavailable dates with its own classes, and one such calendar made a
+ *  serious finding of 3,040 occurrences on a real audit. Vendor classes are
+ *  added only when confirmed on a real site. */
+const INACTIVE_DATE_CELL_CLASS = /\b(?:mphb-not-available-date|mphb-past-date)\b/;
+
+function isInactiveComponent(html: string): boolean {
+  const root = ROOT_ELEMENT.exec(html)?.[0] ?? '';
+  return (
+    /\sdisabled(?:[\s=>]|$)/i.test(root) ||
+    /\saria-disabled\s*=\s*["']true["']/i.test(root) ||
+    INACTIVE_DATE_CELL_CLASS.test(root)
+  );
+}
+
 export function extractAxeCandidates(
   axe: AxeResultsInput,
   pageUrl: string,
@@ -401,7 +417,8 @@ export function extractAxeCandidates(
       const selector = flattenAxeTarget(node.target);
       if (
         isChallengeEvidence(selector, node.html, node.failureSummary, node.data, violation.data) ||
-        isChallengeFrameSelector(selector, options)
+        isChallengeFrameSelector(selector, options) ||
+        (violation.id === 'color-contrast' && isInactiveComponent(node.html))
       ) {
         continue;
       }
