@@ -14,6 +14,7 @@
 import {
   CORE_WEB_VITAL_THRESHOLDS,
   extractCoreWebVitals,
+  LAB_METRIC_AUDIT_IDS,
   rateCoreWebVital,
   type LighthouseResultInput,
 } from '@odysseus/core';
@@ -103,4 +104,40 @@ export function representativeRunId(set: PerformanceMeasurementSet): string | un
     if (match !== undefined) return match.runId;
   }
   return measured[0]?.runId;
+}
+
+/**
+ * The report the page keeps, assembled metric by metric. The representative
+ * run supplies the score and everything not tied to one metric; each metric's
+ * audits come from the run whose value for that metric is the set's
+ * representative value. Taking one whole run instead quoted, on a real hotel
+ * page, a layout shift of 0.142 that one run of three produced while the
+ * other two agreed on 0.035.
+ */
+export function composeRepresentativeReport<Report extends { audits?: Record<string, unknown> }>(
+  set: PerformanceMeasurementSet,
+  reports: ReadonlyMap<string, Report>,
+): Report | undefined {
+  const baseRunId = representativeRunId(set);
+  const base = baseRunId === undefined ? undefined : reports.get(baseRunId);
+  if (base === undefined || base.audits === undefined) return base;
+
+  const audits: Record<string, unknown> = { ...base.audits };
+  for (const [metric, auditIds] of Object.entries(LAB_METRIC_AUDIT_IDS)) {
+    const accepted = set.accepted.metrics.find((entry) => entry.metric === metric);
+    if (accepted === undefined) continue;
+    const source = set.runs.find(
+      (run) =>
+        run.outcome.kind === 'measured' &&
+        run.outcome.metrics[metric as keyof LabMetricSample] === accepted.value,
+    );
+    if (source === undefined || source.runId === baseRunId) continue;
+    const sourceAudits = reports.get(source.runId)?.audits;
+    if (sourceAudits === undefined) continue;
+    for (const auditId of auditIds) {
+      if (auditId in sourceAudits) audits[auditId] = sourceAudits[auditId];
+      else delete audits[auditId];
+    }
+  }
+  return { ...base, audits };
 }

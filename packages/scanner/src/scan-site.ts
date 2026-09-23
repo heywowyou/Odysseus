@@ -99,6 +99,7 @@ import {
 import {
   gradingRepeatTriggers,
   labMetricsFromLighthouse,
+  composeRepresentativeReport,
   representativeRunId,
 } from './performance-acquisition.js';
 import {
@@ -1288,7 +1289,19 @@ async function acquirePerformanceMeasurement(
 
   const measurementSet = buildSet();
   const representative = representativeRunId(measurementSet);
-  const result = representative === undefined ? lastResult : reports.get(representative)!;
+  const lighthouseByRun = new Map(
+    [...reports].flatMap(([runId, report]) =>
+      report.lighthouse === undefined ? [] : [[runId, report.lighthouse] as const],
+    ),
+  );
+  const composed = composeRepresentativeReport(measurementSet, lighthouseByRun);
+  const result =
+    representative === undefined
+      ? lastResult
+      : {
+          ...reports.get(representative)!,
+          ...(composed === undefined ? {} : { lighthouse: composed }),
+        };
   return { result, records, measurementSet };
 }
 

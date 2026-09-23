@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  composeRepresentativeReport,
   gradingRepeatTriggers,
   labMetricsFromLighthouse,
   representativeRunId,
@@ -98,5 +99,46 @@ describe('representativeRunId', () => {
       tolerances: PROVISIONAL_STABILITY_TOLERANCES,
     });
     expect(representativeRunId(failed)).toBeUndefined();
+  });
+});
+
+describe('composeRepresentativeReport', () => {
+  function run(score: number, cls: number) {
+    return {
+      categories: { performance: { score } },
+      audits: {
+        'cumulative-layout-shift': { score: 1, numericValue: cls, displayValue: String(cls) },
+        'layout-shifts': { score: 1, details: { items: [{ run: `${score}` }] } },
+      },
+    };
+  }
+
+  it('takes each metric from the run holding its median, not from the score run', () => {
+    const reports = new Map([
+      ['lab-run-1', run(0.6, 0.142)],
+      ['lab-run-2', run(0.7, 0.035)],
+      ['lab-run-3', run(0.5, 0.035)],
+    ]);
+    const set = buildPerformanceMeasurementSet({
+      url: 'https://hotel-exemple.fr/',
+      profile: 'mobile',
+      pageClass: 'homepage',
+      selectionReasons: [],
+      runs: [...reports].map(([runId, lhr]) => ({
+        runId,
+        observedAt: new Date(0),
+        environmentFingerprintRef: 'audit-environment',
+        outcome: { kind: 'measured', metrics: labMetricsFromLighthouse(lhr) },
+      })),
+      tolerances: PROVISIONAL_STABILITY_TOLERANCES,
+    });
+
+    const composed = composeRepresentativeReport(set, reports);
+
+    expect(composed?.categories.performance.score).toBe(0.6);
+    expect(composed?.audits['cumulative-layout-shift'].numericValue).toBe(0.035);
+    expect(composed?.audits['layout-shifts']).toBe(
+      reports.get('lab-run-2')!.audits['layout-shifts'],
+    );
   });
 });

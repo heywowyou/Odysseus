@@ -71,6 +71,25 @@ export interface LighthouseAuditInput {
   replacesAudits?: string[];
 }
 
+/** The Lighthouse audits that measure or explain one lab metric. A page's
+ *  lab runs can disagree metric by metric, so each group travels with the
+ *  run that produced its metric's representative value, and a metric whose
+ *  runs contradict each other loses the whole group. */
+export const LAB_METRIC_AUDIT_IDS = {
+  lcp: [
+    'largest-contentful-paint',
+    'largest-contentful-paint-element',
+    'lcp-breakdown-insight',
+    'lcp-discovery-insight',
+  ],
+  cls: ['cumulative-layout-shift', 'layout-shifts', 'cls-culprits-insight'],
+  tbt: ['total-blocking-time'],
+  fcp: ['first-contentful-paint'],
+  speedIndex: ['speed-index'],
+} as const satisfies Record<string, readonly string[]>;
+
+export type LabMetricWithAudits = keyof typeof LAB_METRIC_AUDIT_IDS;
+
 export interface LighthouseResultInput {
   categories: Record<string, LighthouseCategoryInput>;
   audits: Record<string, LighthouseAuditInput>;
