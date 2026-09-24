@@ -34,7 +34,8 @@ export function findMissingDraftDisclosures(options: {
    *  text on its own is not a disclosure. */
   privacyUrl?: string;
   optOutUrl?: string;
-  factsHeading?: string;
+  /** The facts block paragraphs exactly as spliced into the touch-3 body. */
+  factsText?: string;
 }): DraftDisclosure[] {
   const missing: DraftDisclosure[] = [];
 
@@ -55,7 +56,7 @@ export function findMissingDraftDisclosures(options: {
 
   if (options.touch === 3) {
     if (!options.body.includes(options.copy.deletionOffer)) missing.push('deletion-offer');
-    if (options.factsHeading === undefined || !options.body.includes(options.factsHeading)) {
+    if (options.factsText === undefined || !options.body.includes(options.factsText)) {
       missing.push('facts-block');
     }
   }

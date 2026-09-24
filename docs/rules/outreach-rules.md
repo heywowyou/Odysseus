@@ -80,8 +80,8 @@ dismissed as scare-selling when it arrives cold from a stranger.
 
 **Touch-1 bridge, revised for v3 on 2026-09-19.** Touch 1 may contain one fixed
 bridge after the prospect-specific scan facts: "Ces constats ont un impact
-direct sur l’expérience de vos clients et peuvent également relever du cadre
-légal applicable en matière d’accessibilité." The legal half is emitted only
+direct sur l'expérience de vos clients et peuvent également relever du cadre
+légal applicable en matière d'accessibilité." The legal half is emitted only
 when the published v3 snapshot's priority-card categories contain
 accessibility. It is not Argument B's facts block, does not say the regime
 applies to this business, and carries no criterion, registry datum, deadline,
@@ -211,9 +211,15 @@ approved wording and names no new finding.
 The deterministic facts block appears on touch 3 only. Assembly refuses it on
 touches 1 and 2. Touch 1's fixed conditional bridge is deliberately narrower:
 it may say the observed findings "peuvent également relever du cadre légal
-applicable en matière d’accessibilité" when an accessibility priority card is
+applicable en matière d'accessibilité" when an accessibility priority card is
 present, but it never carries the legal criteria, registry facts or a scope
 conclusion. Touch 3 remains the first place where those facts are spelled out.
+
+**Touch 3 email form, 2026-09-24.** The email splices the facts block's
+paragraphs without its heading, since the intro sentence already announces the
+regulatory framework, and leaves out the "no registry data found" sentence
+when there is no registry snapshot (`omitAbsentRegistry`). The public preview
+keeps both. Every outreach email uses straight apostrophes only.
 
 ## 6bis. The report-aligned full-scan preview
 

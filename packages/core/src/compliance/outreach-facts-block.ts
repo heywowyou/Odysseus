@@ -60,7 +60,8 @@ interface Copy {
   registry: (denomination: string, band: string) => string;
   registryBandUnavailable: (denomination: string) => string;
   /** Used when no lookup ever produced anything. Says so plainly rather than
-   *  leaving the reader to infer it from an absent paragraph. */
+   *  leaving the reader to infer it from an absent paragraph, unless the
+   *  caller asks for it to be left out (see `omitAbsentRegistry`). */
   registryAbsent: string;
   /** Present in every variant, in every language. The document must not be
    *  able to render its criteria without also saying who decides. */
@@ -73,9 +74,9 @@ const COPY: Record<ReportLanguage, Copy> = {
     criterion: (name, threshold, citation) => `${name}. ${threshold} Référence : ${citation}.`,
     registry: (denomination, band) =>
       `Les données publiques du registre pour ${denomination} indiquent un effectif de ${band}. ` +
-      `Cette information est reprise telle qu’elle figure dans le registre public.`,
+      `Cette information est reprise telle qu'elle figure dans le registre public.`,
     registryBandUnavailable: (denomination) =>
-      `Le registre public identifie ${denomination}, mais ne publie pas de tranche d’effectif ` +
+      `Le registre public identifie ${denomination}, mais ne publie pas de tranche d'effectif ` +
       `exploitable pour cette analyse.`,
     registryAbsent:
       "Nous n'avons pas trouvé de donnée de registre publique suffisante pour rapprocher votre " +
@@ -121,6 +122,10 @@ export function buildOutreachFactsBlock(options: {
   assessment: ObligationAssessment | undefined;
   language: ReportLanguage;
   capabilities: OutreachSourceCapabilities;
+  /** The last outreach email leaves the registry sentence out when there is
+   *  no registry data: in a short email, "we found nothing" only weakens the
+   *  criterion it follows. The public preview keeps saying so. */
+  omitAbsentRegistry?: boolean;
 }): OutreachFactsBlock {
   if (!options.capabilities.argumentB) return { state: 'omitted' };
 
@@ -132,19 +137,21 @@ export function buildOutreachFactsBlock(options: {
   if (!regime) return { state: 'omitted' };
 
   const snapshot = options.assessment?.registrySnapshot;
-  const registryParagraph =
+  const registryParagraphs =
     snapshot === undefined
-      ? copy.registryAbsent
+      ? options.omitAbsentRegistry === true
+        ? []
+        : [copy.registryAbsent]
       : snapshot.effectifBandLabel === null
-        ? copy.registryBandUnavailable(snapshot.denomination)
-        : copy.registry(snapshot.denomination, snapshot.effectifBandLabel);
+        ? [copy.registryBandUnavailable(snapshot.denomination)]
+        : [copy.registry(snapshot.denomination, snapshot.effectifBandLabel)];
 
   return {
     state: 'rendered',
     heading: copy.heading,
     paragraphs: [
       copy.criterion(regime.name, regime.thresholdDescription, regime.legalCitation),
-      registryParagraph,
+      ...registryParagraphs,
       copy.counsel,
     ],
   };

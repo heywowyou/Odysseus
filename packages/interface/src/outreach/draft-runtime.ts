@@ -694,6 +694,7 @@ export async function createFollowUpForProspect(
           assessment: undefined,
           language: thread.language,
           capabilities: { argumentB: true },
+          omitAbsentRegistry: true,
         })
       : undefined;
   const assembled = assembleOutreachDraft({

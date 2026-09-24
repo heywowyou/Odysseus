@@ -111,7 +111,6 @@ export function assembleOutreachDraft(
   if (touch === 3 && options.expectedFacts === undefined) return refuse('missing-facts-inputs');
 
   let factsText: string | undefined;
-  let factsHeading: string | undefined;
   let factsParagraphs: string[] | undefined;
 
   if (touch === 3) {
@@ -119,13 +118,15 @@ export function assembleOutreachDraft(
       assessment: options.assessment,
       language,
       capabilities: { argumentB: true },
+      omitAbsentRegistry: true,
     });
     if (JSON.stringify(rebuilt) !== JSON.stringify(options.expectedFacts)) {
       return refuse('facts-block-mismatch');
     }
     if (rebuilt.state !== 'rendered') return refuse('facts-block-omitted');
-    factsHeading = rebuilt.heading;
-    factsParagraphs = [rebuilt.heading, ...rebuilt.paragraphs];
+    // The heading belongs to the preview page; in the email the intro
+    // sentence already announces the regulatory framework.
+    factsParagraphs = rebuilt.paragraphs;
     factsText = factsParagraphs.join('\n\n');
   }
 
@@ -208,7 +209,7 @@ export function assembleOutreachDraft(
     copy,
     ...(options.privacyUrl !== undefined ? { privacyUrl: options.privacyUrl } : {}),
     ...(options.optOutUrl !== undefined ? { optOutUrl: options.optOutUrl } : {}),
-    ...(factsHeading !== undefined ? { factsHeading } : {}),
+    ...(factsText !== undefined ? { factsText } : {}),
   });
   if (missing.length > 0) return refuse('missing-disclosure');
 

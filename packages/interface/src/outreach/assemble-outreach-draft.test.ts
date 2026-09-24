@@ -34,7 +34,7 @@ const TOUCH2_BASE: AssembleOutreachDraftOptions = {
   language: 'fr',
   hotelName: 'Hôtel des Tilleuls',
   variantSeed: 'candidate-1',
-  previousSubject: 'Analyse du site de l’Hôtel des Tilleuls',
+  previousSubject: "Analyse du site de l'Hôtel des Tilleuls",
 };
 
 function assertAssembled(
@@ -48,6 +48,7 @@ function touch3ExpectedFacts(): OutreachFactsBlock {
     assessment: undefined,
     language: 'fr',
     capabilities: { argumentB: true },
+    omitAbsentRegistry: true,
   });
 }
 
@@ -83,19 +84,19 @@ describe('assembleOutreachDraft - touch 1', () => {
       "Notre analyse a relevé 47 constats distincts sur 23 pages de votre site, dont 8 critiques et 14 sérieux. Les principaux problèmes concernent notamment l'accessibilité, le référencement dans les moteurs de recherche et les performances du site.",
     );
     expect(result.body).toContain(
-      'Ces constats ont un impact direct sur l’expérience de vos clients et peuvent également relever du cadre légal applicable en matière d’accessibilité.',
+      "Ces constats ont un impact direct sur l'expérience de vos clients et peuvent également relever du cadre légal applicable en matière d'accessibilité.",
     );
     expect(result.body).toContain(
       `Vous trouverez un résumé de notre analyse ici\u00a0:\n${PREVIEW_URL}`,
     );
     expect(result.body).toContain(
-      'L’audit complet de votre site est disponible à l’achat. Il détaille les constats relevés, les pages concernées et les corrections à apporter.',
+      "L'audit complet de votre site est disponible à l'achat. Il détaille les constats relevés, les pages concernées et les corrections à apporter.",
     );
     expect(result.body).toContain(
-      `Pour voir concrètement le document livré, vous pouvez consulter un exemple d’audit complet\u00a0:\n${REFERENCE_URL}`,
+      `Pour voir concrètement le document livré, vous pouvez consulter un exemple d'audit complet\u00a0:\n${REFERENCE_URL}`,
     );
     expect(result.body).toContain(
-      'Souhaitez-vous que je vous transmette les modalités de l’audit complet\u00a0?',
+      "Souhaitez-vous que je vous transmette les modalités de l'audit complet\u00a0?",
     );
     assertKeepsFrenchSignature(result.body);
     expect(result.body).toContain('Pourquoi vous recevez ce message\u00a0:');
@@ -126,7 +127,7 @@ describe('assembleOutreachDraft - touch 1', () => {
       'Les principaux problèmes concernent notamment les performances du site et le référencement dans les moteurs de recherche.',
     );
     expect(result.body).toContain(
-      'Ces constats ont un impact direct sur l’expérience de vos clients.',
+      "Ces constats ont un impact direct sur l'expérience de vos clients.",
     );
     expect(result.body).not.toContain('0 critique');
     expect(result.body).not.toContain('cadre légal applicable');
@@ -257,13 +258,13 @@ describe('assembleOutreachDraft - touch 2', () => {
     const result = assembleOutreachDraft(TOUCH2_BASE);
     assertAssembled(result);
 
-    expect(result.subject).toBe('Re: Analyse du site de l’Hôtel des Tilleuls');
+    expect(result.subject).toBe("Re: Analyse du site de l'Hôtel des Tilleuls");
     expect(result.body).toContain(
-      "Je me permets de revenir vers vous au sujet de mon précédent message concernant l’analyse du site de l'Hôtel des Tilleuls.",
+      "Je me permets de revenir vers vous au sujet de mon précédent message concernant l'analyse du site de l'Hôtel des Tilleuls.",
     );
-    expect(result.body).toContain('Avez-vous eu l’occasion de consulter l’aperçu\u00a0?');
+    expect(result.body).toContain("Avez-vous eu l'occasion de consulter l'aperçu\u00a0?");
     expect(result.body).toContain(
-      'Si vous souhaitez agir sur ces constats, l’audit complet de votre site est disponible à l’achat. Il indique, pour chacun, les pages concernées et les corrections à apporter.',
+      "Si vous souhaitez agir sur ces constats, l'audit complet de votre site est disponible à l'achat. Il indique, pour chacun, les pages concernées et les corrections à apporter.",
     );
     expect(result.body).toContain('Souhaitez-vous que je vous transmette les modalités\u00a0?');
     expect(result.body).toContain(
@@ -278,10 +279,10 @@ describe('assembleOutreachDraft - touch 2', () => {
   it('does not double-prefix an existing Re:', () => {
     const result = assembleOutreachDraft({
       ...TOUCH2_BASE,
-      previousSubject: 'Re: Analyse du site de l’Hôtel des Tilleuls',
+      previousSubject: "Re: Analyse du site de l'Hôtel des Tilleuls",
     });
     assertAssembled(result);
-    expect(result.subject).toBe('Re: Analyse du site de l’Hôtel des Tilleuls');
+    expect(result.subject).toBe("Re: Analyse du site de l'Hôtel des Tilleuls");
   });
 
   it('refuses when the previous subject is missing', () => {
@@ -300,19 +301,20 @@ describe('assembleOutreachDraft - touch 3', () => {
     assertAssembled(result);
 
     expect(result.body).toContain(
-      "Je me permets de vous écrire une dernière fois au sujet de l’analyse du site de l'Hôtel des Tilleuls.",
+      "Je me permets de vous écrire une dernière fois au sujet de l'analyse du site de l'Hôtel des Tilleuls.",
     );
     expect(result.body).toContain(
-      'Avant de clore ce sujet, un dernier point mérite votre attention : le cadre réglementaire de l’accessibilité numérique peut être pertinent au regard des constats relevés lors de notre analyse.',
+      "Avant de clore ce sujet, un dernier point mérite votre attention : le cadre réglementaire de l'accessibilité numérique peut être pertinent au regard des constats relevés lors de notre analyse.",
     );
     if (expectedFacts.state !== 'rendered') throw new Error('expected a rendered facts block');
-    expect(result.body).toContain(expectedFacts.heading);
+    expect(result.body).not.toContain('Cadre réglementaire à vérifier');
+    expect(result.body).not.toContain('donnée de registre publique');
     for (const paragraph of expectedFacts.paragraphs) expect(result.body).toContain(paragraph);
     expect(result.body).toContain(
-      'Indépendamment de cette question juridique, l’aperçu de notre analyse reste disponible dans mon premier message.',
+      "Indépendamment de cette question juridique, l'aperçu de notre analyse reste disponible dans mon premier message.",
     );
     expect(result.body).toContain(
-      'Il vous suffit de répondre à ce message si vous souhaitez l’obtenir.',
+      "Il vous suffit de répondre à ce message si vous souhaitez l'obtenir.",
     );
     expect(result.body).toContain(
       'Sans retour de votre part, je ne vous relancerai pas davantage.',
@@ -324,9 +326,8 @@ describe('assembleOutreachDraft - touch 3', () => {
     assertKeepsFrenchSignature(result.body);
     expect(result.body).not.toMatch(/https?:\/\//u);
     expect(result.htmlBody).not.toContain('<a ');
-    expect(result.htmlBody).toContain('<div>Cadre réglementaire à vérifier</div>');
     expect(result.htmlBody).not.toMatch(/<img|<script|<link|<button|src=|url\(/iu);
-    expect(result.body.indexOf(expectedFacts.heading)).toBeLessThan(
+    expect(result.body.indexOf(expectedFacts.paragraphs[0] ?? '')).toBeLessThan(
       result.body.indexOf('Cordialement,'),
     );
   });
@@ -341,5 +342,19 @@ describe('assembleOutreachDraft - touch 3', () => {
       assembled: false,
       refusal: 'facts-block-mismatch',
     });
+  });
+});
+
+describe('assembleOutreachDraft - typography', () => {
+  it('uses only straight apostrophes in every French touch', () => {
+    const touches = [
+      assembleOutreachDraft(TOUCH1_BASE),
+      assembleOutreachDraft(TOUCH2_BASE),
+      assembleOutreachDraft({ ...TOUCH2_BASE, touch: 3, expectedFacts: touch3ExpectedFacts() }),
+    ];
+    for (const result of touches) {
+      assertAssembled(result);
+      expect(`${result.subject}\n${result.body}`).not.toContain('\u2019');
+    }
   });
 });

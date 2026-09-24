@@ -52,6 +52,29 @@ describe('buildOutreachFactsBlock', () => {
     `);
   });
 
+  it('leaves the no-registry sentence out when the caller asks for it', () => {
+    const block = buildOutreachFactsBlock({
+      assessment: undefined,
+      language: 'fr',
+      capabilities: CAPABLE,
+      omitAbsentRegistry: true,
+    });
+    expect(block.state === 'rendered' ? block.paragraphs : []).toEqual([
+      expect.stringMatching(/^Obligation d'accessibilité numérique/u),
+      "L'applicabilité de ces critères dépend de la situation de l'entreprise. Faites confirmer votre situation par votre conseil juridique.",
+    ]);
+  });
+
+  it('keeps registry data that exists even when absent data would be omitted', () => {
+    const block = buildOutreachFactsBlock({
+      assessment: assessment({ registrySnapshot: snapshot('10 à 19 salariés') }),
+      language: 'fr',
+      capabilities: CAPABLE,
+      omitAbsentRegistry: true,
+    });
+    expect(block.state === 'rendered' ? block.paragraphs : []).toHaveLength(3);
+  });
+
   it('quotes the published headcount band without drawing a conclusion from it', () => {
     const block = buildOutreachFactsBlock({
       assessment: assessment({ registrySnapshot: snapshot('10 à 19 salariés') }),
@@ -63,7 +86,7 @@ describe('buildOutreachFactsBlock', () => {
         "heading": "Cadre réglementaire à vérifier",
         "paragraphs": [
           "Obligation d'accessibilité numérique issue de l'European Accessibility Act. S'applique aux entreprises de 10 salariés ou plus, ainsi qu'à celles dont le chiffre d'affaires annuel et le total de bilan annuel dépassent tous deux 2 000 000 €, lorsque le site propose un parcours transactionnel B2C de premier niveau (réservation, panier, paiement). Référence : loi n° 2023-171 du 9 mars 2023, articles 16 à 19.",
-          "Les données publiques du registre pour HOTEL EXEMPLE SAS indiquent un effectif de 10 à 19 salariés. Cette information est reprise telle qu’elle figure dans le registre public.",
+          "Les données publiques du registre pour HOTEL EXEMPLE SAS indiquent un effectif de 10 à 19 salariés. Cette information est reprise telle qu'elle figure dans le registre public.",
           "L'applicabilité de ces critères dépend de la situation de l'entreprise. Faites confirmer votre situation par votre conseil juridique.",
         ],
         "state": "rendered",

@@ -86,14 +86,13 @@ describe('findMissingDraftDisclosures - touch 2', () => {
 });
 
 describe('findMissingDraftDisclosures - touch 3', () => {
-  const factsHeading = 'Le cadre applicable, et ce que nous pouvons en dire';
+  const factsText = 'Le critère applicable.\n\nFaites confirmer votre situation.';
 
   function touch3Body(): string {
     return [
       copy.salutation,
       'Un dernier mot.',
-      factsHeading,
-      'paragraphe.',
+      factsText,
       copy.senderIdentity,
       copy.replyInvite,
       copy.optOutByReply,
@@ -102,19 +101,19 @@ describe('findMissingDraftDisclosures - touch 3', () => {
   }
 
   it('finds nothing missing in a complete body', () => {
-    expect(
-      findMissingDraftDisclosures({ body: touch3Body(), touch: 3, copy, factsHeading }),
-    ).toEqual([]);
+    expect(findMissingDraftDisclosures({ body: touch3Body(), touch: 3, copy, factsText })).toEqual(
+      [],
+    );
   });
 
   it('flags a missing deletion offer', () => {
     const body = touch3Body().replace(copy.deletionOffer, '');
-    expect(findMissingDraftDisclosures({ body, touch: 3, copy, factsHeading })).toContain(
+    expect(findMissingDraftDisclosures({ body, touch: 3, copy, factsText })).toContain(
       'deletion-offer',
     );
   });
 
-  it('flags a missing facts block heading', () => {
+  it('flags a missing facts block', () => {
     const missing = findMissingDraftDisclosures({ body: touch3Body(), touch: 3, copy });
     expect(missing).toContain('facts-block');
   });
