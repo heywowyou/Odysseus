@@ -14,6 +14,7 @@ Earlier indexes are kept as history, not as binding decisions:
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 | --- | --- | --- | --- | --- | --- |
+| [075](075-clean-true-audit-data.md) | Make the audit data clean and true before it reaches a report | P1 | XL | none | IN PROGRESS: reopened 2026-09-24 by defect-hunt sweep 7, Part H (H1 to H7) and Q5 open. |
 | [077](077-keep-latest-versions-only.md) | Keep the latest version, delete superseded ones after a grace period | P2 | L | none | TODO: approved 2026-09-24, not started. |
 
 Verified findings waiting to be planned are GitHub issues.

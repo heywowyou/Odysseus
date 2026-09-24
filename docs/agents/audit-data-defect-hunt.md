@@ -39,6 +39,9 @@ tree at the same time.
 
 ## Access and boundaries
 
+The audits to hunt live on the VPS. The workstation's `artifacts/` directory
+holds stale calibration copies and misses every recent scan; never sweep it.
+
 Allowed without asking:
 
 - Read-only reads of stored audits on the VPS (`/data/artifacts`, through the
@@ -123,6 +126,10 @@ audit that has findings. Hold each finding to the evidence bar:
 12. **Run-to-run determinism.** When an audit has two runs of the same
     pages, compare their findings; a difference that is not measurement
     noise is a defect.
+13. **Replay against closed slices.** Re-normalize every stored audit with
+    the current core build and check each closed slice's named target on
+    it. A closed slice whose target site still fails on replay was never
+    shipped, or never proved.
 
 ## Recording
 

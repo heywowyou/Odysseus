@@ -1,6 +1,6 @@
 # Plan 075: Make the audit data clean and true before it reaches a report
 
-Status: DONE (2026-09-24), see the closure record at the end. Priority P1. Effort XL. Depends on: none (builds on trade-offs 3, 24, 30, 64, 109, 110 and issue #301/#302 work).
+Status: IN PROGRESS. Reopened 2026-09-24 as a completion defect: sweep 7 found that the image identity of F6 and the list-shaped rules of C5 never shipped, plus five new defects (Part H). The earlier closure record stays below as history. Priority P1. Effort XL. Depends on: none (builds on trade-offs 3, 24, 30, 64, 109, 110 and issue #301/#302 work).
 
 ## Context
 
@@ -406,6 +406,69 @@ Still open from the Château Royal read: the model-written summary sentence « L
 
 Deterministic report copy fixed alongside (`9a1cff30`): the lab note no longer claims one run per page, « trackers » became « traceurs », critical rule names are quoted, the unstable-metric list uses short names, and the mixed-theme intro no longer reads « mélange plusieurs sujets urgents ».
 
+### Part H: seventh sweep, on the 2026-09-24 audits (reopens the plan)
+
+Sweep 7 read the latest full audit of all 13 sites on the VPS, copied read-only to a scratchpad (JSON only): the seven audited since sweep 6 (whistlerparis `2026-09-24T17-14-48Z`, bellevigne-hotels `17-14-25Z`, grandhoteldesalpes `04-39-39Z`, hotelpointfrance `05-49-39Z`, grand-hotel-opera `09-19-29Z`, lacoorniche `09-19-06Z`, haaitza `2026-09-23T16-38-57Z`) and the six earlier ones. Every audit was also re-normalized in memory with the current core build (`5abe9b7a`): the finding counts are identical to the stored ones on 12 of 13 audits (haaitza 55 → 56), so every defect below is live in today's code, not only in old data.
+
+The operator flagged the trigger: Whistler's report lists 59 critical « images must have alternate text » findings out of 118.
+
+Two slices of this plan were closed without being implemented. F6's first bullet (image identity is the image file) never shipped: `5f41c5e2` implemented only the runtime class list. C5 never shipped for `broken-internal-link` (still one finding per target, `normalize-crawl.ts:245`) and was implemented for `hreflang-no-return-link` as one finding per source page (`normalize-hreflang.ts:119`), not per source page set. The « One defect counts once » closure row was proved on a per-rule table that did not include villasfoch after F6 or any site where these shapes occur.
+
+#### Evidence H
+
+| Defect | Measured |
+|---|---|
+| Image findings split per page (F6 image identity never shipped) | whistlerparis: 59 critical `image-alt` findings for **7 distinct images**, counted by hashing the full `src` in the scanner's alt-text inventory. They are email-signature badges pasted into the page footer as `data:` URIs (`data-olk-copy-source="MailCompose"`), 4 per language. axe names each through its wrapping link, `a[aria-label="hotel gare du nord"] > img`, and the site rotates that keyword per page, so every page makes a new selector. `resourceUrlFromSnippet` skips `data:` URIs, so no file identity exists either. villasfoch, re-normalized today: still 14 critical `image-alt` (226 distinct images without alt, grouped by selector over different page sets); the plan's own F6 target (« villasfoch cover counts 15 critical, 14 of them split ») is not met. |
+| Shape identity reads axe's truncated markup | whistlerparis: 10 serious `aria-prohibited-attr` findings for one CMS component (`div.grid_cell_wrapper` carrying an `aria-label`), 11 identities. axe truncates the class list (`grid_cell_wrapper wi...`) and the attribute list (`data-background-slid...`, `...`), and the CMS adds optional per-cell settings (`hover-effect`, `data-row-level`, `data-tablet-*`), so the attribute-name set differs from cell to cell. The same element `#grid_cell-69905-104957` appears in 3 of the 10 findings. A simulation that drops `data-*` names and truncated tokens gives 4 identities; applied to `target-size` the same simulation split capdantibes 18 → 24, so the change must be per rule and measured. |
+| Runtime ids and class order split one component | bellevigne-hotels: all 6 of its critical findings are one Webflow slider, `aria-required-children` on `#swiper-wrapper-<random hex>`, an id Swiper generates on every page load (trade-off 30 already documents it). grand-hotel-opera: one slider « previous » button (`<button data-action="prev">`) is 3 critical `button-name` findings, because axe wrote the same element as `.heroscreen > .isSlide.fullGallery > …`, `.heroscreen > .fullGallery.isSlide > …` (class order only) and `button[data-action="prev"]`. bellevigne-hotels: the header logo link is 3 `link-name` findings, split by Webflow's current-page state (`w--current`, `aria-current`). |
+| List-shaped rules still split (C5 never shipped) | bellevigne-hotels: 22 serious `hreflang-no-return-link`, one per page. Every page of this French-only site carries the same template tag `<link rel="alternate" hreflang="fr" href="https://www.bellevigne-hotels.com">` pointing at the homepage: one template defect. hotelpointfrance: 11 serious `broken-internal-link`, one per target (WordPress draft links such as `?page_id=2062` and `?p=11806`), where C5 decided one site-wide finding. |
+| JSON-LD `@graph` ignored by the GEO rules | `readJsonLdTypes` (`normalize-geo.ts:71`) reads only a top-level `@type`, while Yoast and Rank Math wrap every node in `@graph`. `structured-data-entity-missing` (« No page on this site declares an Organization, LocalBusiness, or WebSite ») is **false on 4 of 13 audits**: grandhotelchicago, grandhoteldesalpes (39 of 39 pages declare `Organization` and `WebSite`), hotelpointfrance (521 pages) and whistlerparis (76 pages, `Hotel`). `faq-content-without-schema` is false on whistlerparis: the cited page declares `["Hotel","FAQPage"]` in its `@graph`, like 75 other pages. `entity-data-incomplete` never sees a `@graph` entity. The scanner's `structured-data-extract.ts:186` already walks `@graph`; core does not share that reading. |
+| A language redirect hides the French site | grandhoteldesalpes: 43 `/fr/` and 40 `/it/` URLs answer 200 with their own content (distinct raw text signatures), then a script redirects the browser to the English translation (`/fr/mentions-legales` → `/en/legal-notices/`), so they are all `redirect-interstitial`; `/fr` and `/it` are `discovered-not-scanned`. Only 39 English pages were analysed for a French hotel. A live probe of `/fr/mentions-legales/` (one request, crawler user agent, 2026-09-24) found `<html lang="fr-FR">` and WPML's `browser-redirect` script with `wpml_browser_redirect_params`: WPML sends a visitor whose browser language differs from the page to their language's translation. The crawl opens its browser context with a user agent only (`crawl.ts:834`), so Chromium keeps its default English locale (recorded as `chromium-default`, `evidence-graph-stage.ts:89`). A French visitor stays on the French page. |
+| The structured-data check crashes on stray attributes | The check re-parses the page with html-validate's `Parser` (`structured-data-extract.ts:20`), which throws `failed to tokenize "\"=\"\" type=...", expected attribute` on a stray quoted attribute that browsers tolerate. `structured-data` failed with `tool-error` on grandhoteldesalpes 39 of 39 visited pages, grand-hotel-opera 106 of 173, atlantichotel 2 and hotelpointfrance 2. On those pages `structured-data-invalid` cannot fire. No false finding results (the GEO rules read head metadata, not this check), but a whole site's validation is silently lost. |
+
+Checked and clean or already known in this sweep: 0 findings on non-visited pages on all 13 audits (whistlerparis's 18 redirect pages carry none); Klaro consent buttons in `crawlable-anchors` and `color-contrast` are the site's configuration; frame findings (lacoorniche uMap, atlantichotel YouTube) stay outside the grade (Q1); the lab metric criticals on haaitza, hoteldegarlande and hotelpointfrance are E5 and Q2; lacoorniche's 11 `crawlable-anchors` findings are 11 distinct components; `jsonld-missing` on grand-hotel-opera is true (0 JSON-LD blocks on 173 pages); bellevigne's `/?r=0` homepage spelling is A6.
+
+#### Question
+
+- **Q5. What one `image-alt` finding stands for.** Villas Foch shows that even a correct per-image identity leaves many findings (226 images without alt). Recommended: (a) one site-wide finding per rule and per frame origin, like trade-off 30's resource audits: « N images n'ont pas d'alternative textuelle », the image files (or, for embedded `data:` images, their element) listed as evidence in the annex, occurrences preserved. Alternatives: (b) one finding per distinct image, merged by shared page scope as today (whistlerparis 59 → about 1 to 7, villasfoch stays in double figures); (c) one finding per page template region. (a) matches the operator's rule that a duplicate finding is a bug, and « write alt text for these images » is one instruction the client's agency carries out once.
+
+#### Slices
+
+- **H1. Image identity is the image (completes F6), then Q5.**
+  - The identity of `image-alt`, `role-img-alt` and the alt-text heuristic is the resolved file URL. For a `data:` URI it is the root element's own markup as axe captured it (tag, id, MIME prefix, inline size); on whistlerparis that gives exactly the 7 identities the content hashes give.
+  - Then apply the Q5 answer. With (a), the fine key is the rule (and frame origin), and `rawEvidence.resourceUrls` carries the files.
+  - Stored audits: re-normalize, no rescan.
+  - Tests: normalize-axe unit tests with the rotating `aria-label` shape and a `data:` image; a normalize test asserting 7 images on 3 page sets become the Q5 shape with occurrences preserved.
+- **H2. Shape identity survives truncation and optional data attributes.**
+  - In `shapeIdentity`, ignore axe's `...` tokens, truncated class and attribute names, and `data-*` attribute names, for the rules where that is measured to merge one component and split nothing.
+  - Gate per rule on all 13 audits: `aria-prohibited-attr` on whistlerparis falls from 10 findings to at most 3, and no rule gains findings on any audit (the simulation split `target-size`, which stays on today's shape unless the measure says otherwise).
+  - Tests: normalize-axe unit tests with two grid cells that differ only in optional `data-*` settings.
+- **H3. Runtime ids and class order.**
+  - Identities (never the printed selector) sort each compound selector's classes, read `swiper-wrapper-<hex>` as a runtime token like the WordPress loop tokens, and add Webflow's `w--current` and the `aria-current` attribute to the runtime state set.
+  - Add `button-name` to the shape rules with the failure summary, as `link-name` is, after measuring it on all 13 audits.
+  - Targets: bellevigne-hotels `aria-required-children` 6 → 1 and its logo `link-name` 3 → 1; grand-hotel-opera slider `button-name` 3 → 1.
+  - Tests: normalize-axe unit tests with the stored Swiper, class-order and `w--current` shapes.
+- **H4. List-shaped rules (completes C5).**
+  - `broken-internal-link` becomes one site-wide finding with the broken targets and their source pages as `resourceUrls` evidence, as C5 decided (amend trade-off 30).
+  - `hreflang-no-return-link` is identified by the failing target and language (`targetUrl|lang`), so one template tag repeated on every page is one finding listing its pages.
+  - Targets: bellevigne-hotels 22 → 1, hotelpointfrance 11 → 1, occurrences preserved.
+  - Tests: normalize-crawl and normalize-hreflang unit tests with the stored shapes.
+- **H5. JSON-LD is read through `@graph`.**
+  - Core walks `@graph` and top-level arrays the same way `structured-data-extract.ts` does, for `readJsonLdTypes`, the entity-field check and the FAQ check. One shared pure reader, in core.
+  - Stored audits: re-normalize. `structured-data-entity-missing` disappears on the 4 audits, whistlerparis's `faq-content-without-schema` disappears, and `entity-data-incomplete` may appear where a `@graph` entity lacks fields.
+  - Tests: normalize-geo unit tests with a Yoast `@graph` holding `Organization`, `WebSite` and `FAQPage`.
+- **H6. Each page is visited in its own language.**
+  - The browser context for a page takes the language its raw document declares (`<html lang>`, already fetched for the render diff) as `locale` and `Accept-Language`, falling back to `fr-FR`. A client-side redirect whose target is the translation of the source (same cluster, or the source's hreflang or switcher alternate) is then recorded as a language redirect, not as a `redirect-interstitial`, if it still happens.
+  - Record the chosen locale in the audit environment fingerprint instead of `chromium-default`.
+  - Stored audit: grandhoteldesalpes needs a rescan to get its French pages; only worth running before that hotel is contacted.
+  - Tests: scanner e2e with a fixture page that redirects on `navigator.language`, asserting the French page is analysed.
+- **H7. The structured-data check tolerates markup browsers accept.**
+  - Parse from the browser's serialized DOM with stray attributes dropped, or catch the tokenizer error per block and fall back to the JSON-LD and microdata read from the live DOM, so one bad attribute never loses the page.
+  - Stored audits: the lost pages come back only on a rescan; not a reason to rescan on its own.
+  - Tests: a structured-data unit test with `<i class="x" "="">` next to a valid JSON-LD block.
+
+Minor, not a slice: whistlerparis writes external partner links without a scheme (`href="www.goodplanet.org/fr"`, and one `/fr/pagehttps://…`), so they resolve under `/fr/page/` and land on the homepage. No rule reports it; the pages are correctly excluded as redirects.
+
 ### D. Docs, fixtures, rollout
 
 - **Trade-offs.**
@@ -440,6 +503,7 @@ Deterministic report copy fixed alongside (`9a1cff30`): the lab note no longer c
 - A navigation timeout never yields a broken-link or hreflang-target finding, a late off-site redirect is never analysed, and noindex, NAP, robots-txt, state-class identity and capped-absence false results are gone (F1 to F7).
 - Unlinked sitemap pages are handled per Q4, no lab finding rests on runs the scanner calls contradictory, inactive calendar cells are not contrast defects, every count in a report agrees with the stats tile, untranslated titles are reported, and titles up to 65 characters pass (F8 to F13).
 - Truncated snippets, overseas domains, report refreshes, discovery-wave pages, redirecting sitemap URLs and booking doorways are handled as in Part G, and the reference audit mirrors its source report (G1 to G7).
+- Part H: whistlerparis, villasfoch, bellevigne-hotels, grand-hotel-opera and hotelpointfrance re-normalize to the H1 to H4 targets with occurrences preserved; no GEO rule claims a JSON-LD absence that `@graph` contradicts; a WPML-style language redirect no longer hides a site's French pages; and one malformed attribute no longer loses a page's structured-data check (H1 to H7, Q5 answered).
 - The requirement-to-proof ledger below is complete before the plan moves to DONE.
 
 ## Executable closure contract
@@ -495,6 +559,13 @@ The closure artifact is the requirement-to-proof ledger below. Every row names i
 | Sitemap coverage counts redirects reached through their target | `crawl.ts` sitemap coverage | Code | Same-site-redirect crawl e2e | lacoorniche `83d9bd44` passes the coverage gate |
 | Off-site Lighthouse landing leaves the population | `write-audit.ts`, `renormalize-audit.ts` | Code, fingerprint | Booking-doorway renormalize test | chicago refresh shows 34 analysed pages, 13 measured |
 | Reference audit mirrors its source | `reference-audit.ts`, reference build CLI | Code, published release | Projection and override tests | Published `db0f228ddf92`, read page by page |
+| Image identity is the image; Q5 applied | `normalize-axe.ts`, `normalize.ts` merge, `normalize-alt-text.ts` | Code, operator decision, trade-off 30 amendment | Rotating-label and `data:` image unit tests; normalize test with occurrences preserved | Harness per-rule table: whistlerparis and villasfoch `image-alt` at the Q5 shape |
+| Shape identity survives truncation and optional data attributes | `normalize-axe.ts` `shapeIdentity` | Code, per-rule measurement recorded here | Grid-cell unit test; harness shows no rule gaining findings on 13 audits | none |
+| Runtime ids and class order ignored by identity | `normalize-axe.ts` | Code, runtime token list | Swiper, class-order and `w--current` unit tests | Harness: bellevigne `aria-required-children` 1, opera slider `button-name` 1 |
+| List-shaped rules are one finding (C5) | `normalize-crawl.ts`, `normalize-hreflang.ts` | Code, trade-off 30 amendment | Site-wide broken-link and per-target hreflang unit tests | Harness: bellevigne `hreflang-no-return-link` 1, pointfrance `broken-internal-link` 1 |
+| JSON-LD read through `@graph` | `normalize-geo.ts`, shared core reader | Code | Yoast `@graph` normalize-geo unit tests | Harness: 0 `structured-data-entity-missing` on the 4 audits |
+| Each page visited in its own language | `crawl.ts` browser context, audit environment fingerprint | Code | `navigator.language` redirect fixture e2e | grandhoteldesalpes French pages analysed on its next scan |
+| Structured-data check survives stray attributes | `structured-data-extract.ts` | Code | Stray-attribute unit test | none |
 | Provenance consistent | `normalization-fingerprint.ts` | Fingerprint bump | `pnpm run check`, findings-provenance test | none |
 
 ## Verification
