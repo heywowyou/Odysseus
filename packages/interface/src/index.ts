@@ -62,6 +62,12 @@ export {
 } from './artifacts/purge-prospect-audit-storage.js';
 export { resolveArtifactFile } from './artifacts/resolve-artifact.js';
 export {
+  RETENTION_RUN_CAP,
+  runRetention,
+  type RetentionRunResult,
+} from './retention/apply-retention.js';
+export { RETENTION_GRACE_DAYS } from './retention/retention-policy.js';
+export {
   compactStoredScans,
   type CompactStoredScansResult,
 } from './artifacts/compact-stored-scans.js';

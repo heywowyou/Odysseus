@@ -18,6 +18,7 @@ vi.mock('@odysseus/store', () => {
   return {
     getAudit: vi.fn(),
     reconcileFailedAuditJobs: vi.fn(async () => 0),
+    getAuditSlimmedAt: vi.fn(async () => undefined),
     getReportPreparation: vi.fn(),
     patchReportPreparationInputs: vi.fn(),
     approveWritingCandidate: vi.fn(),

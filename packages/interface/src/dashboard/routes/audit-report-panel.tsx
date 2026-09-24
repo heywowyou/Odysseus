@@ -15,6 +15,7 @@ import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { useI18n } from '../i18n/provider';
 import { postEmpty } from '../lib/api';
+import { problemCopy } from '../lib/operator-copy';
 import { useApi } from '../lib/use-api';
 import {
   auditReportPanelRows,
@@ -157,7 +158,9 @@ export function AuditReportPanel(props: {
     } catch (rewriteError) {
       onBusy(false);
       toast.error(strings.auditDetail.actionError, {
-        description: rewriteError instanceof Error ? rewriteError.message : undefined,
+        description:
+          problemCopy(rewriteError, strings.workState) ??
+          (rewriteError instanceof Error ? rewriteError.message : undefined),
       });
     } finally {
       setIsRewriting(false);
@@ -177,7 +180,9 @@ export function AuditReportPanel(props: {
       refreshPreparation();
     } catch (englishError) {
       toast.error(strings.auditDetail.actionError, {
-        description: englishError instanceof Error ? englishError.message : undefined,
+        description:
+          problemCopy(englishError, strings.workState) ??
+          (englishError instanceof Error ? englishError.message : undefined),
       });
       refreshPreparation();
     } finally {
@@ -203,9 +208,10 @@ export function AuditReportPanel(props: {
       refresh();
       refreshPreparation();
     } catch (produceError) {
-      const message = produceError instanceof Error ? produceError.message : '';
+      const refusal = problemCopy(produceError, strings.workState);
+      const message = refusal ?? (produceError instanceof Error ? produceError.message : '');
       setProduceFailure(message);
-      toast.error(describeProduceFailure(message, language).heading);
+      toast.error(refusal ?? describeProduceFailure(message, language).heading);
       refreshPreparation();
     } finally {
       setIsRegenerating(false);

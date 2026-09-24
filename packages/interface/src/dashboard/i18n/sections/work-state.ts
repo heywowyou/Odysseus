@@ -63,6 +63,8 @@ export const workState = {
         'Un rapport est en cours de production pour cet audit ; réessayez dans un instant.',
       'not-queued': 'Ce scan n’est plus en file.',
       'queue-too-long': 'La file est trop longue pour être réordonnée ici.',
+      'raw-evidence-removed':
+        'Les données brutes de ce scan ancien ont été supprimées ; lancez un nouveau scan.',
     },
     consequences: {
       'removes-from-queue': 'Retire ce scan de la file d’attente.',
@@ -110,6 +112,7 @@ export const workState = {
         'A report is being produced for this audit; try again shortly.',
       'not-queued': 'This scan is no longer queued.',
       'queue-too-long': 'The queue is too long to reorder here.',
+      'raw-evidence-removed': 'The raw data of this older scan was deleted; run a new scan.',
     },
     consequences: {
       'removes-from-queue': 'Removes this scan from the queue.',

@@ -250,6 +250,7 @@ describe.skipIf(!available)('retention store', () => {
         auditsHeld: 0,
       },
       bytesReclaimed: { local: 10, remote: 5 },
+      remoteObjectsDeleted: 3,
       failures: [],
     };
     await persistRetentionRun(connection!, {

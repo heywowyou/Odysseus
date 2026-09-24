@@ -120,6 +120,7 @@ import {
   readAuditEvidenceDiagnostics,
   type AuditEvidenceDiagnostics,
 } from '../pipeline/audit-evidence-diagnostics.js';
+import { refuseSlimmedAudit } from '../retention/slimmed-audit-guard.js';
 
 function isReportLanguage(value: string): value is ReportLanguage {
   return value === 'fr' || value === 'en';
@@ -1044,6 +1045,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       sendError(res, 404, 'audit not found');
       return;
     }
+    if (await refuseSlimmedAudit(connection, auditId, res)) return;
 
     const body = await readJsonBodyOrRespond(req, res);
     if (body === jsonBodyNotRead) return;
@@ -1101,6 +1103,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
   // picked up automatically by runReportStage's own fresh-recompute step.
   router.post('/api/audits/:auditId/regenerate-report', async ({ res, params }) => {
     const auditId = params['auditId']!;
+    if (await refuseSlimmedAudit(connection, auditId, res)) return;
     try {
       const outcome = await makeReportReady(connection, auditId, artifactStore);
       if (outcome.kind === 'refused') {
@@ -1146,6 +1149,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       sendError(res, 404, 'audit not found');
       return;
     }
+    if (await refuseSlimmedAudit(connection, auditId, res)) return;
     try {
       sendJson(res, 201, {
         reportQuality: await runReportQualityForAudit(connection, audit, artifactStore),

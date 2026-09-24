@@ -32,7 +32,11 @@ export interface RetentionRunDocument {
   startedAt: Date;
   finishedAt: Date;
   counts: RetentionRunCounts;
+  /** Remote bytes are the sizes of the local files whose bucket mirror was
+   *  removed; the bucket port reports no object sizes. */
   bytesReclaimed: { local: number; remote: number };
+  /** Includes objects that only lived in the bucket (quality candidates). */
+  remoteObjectsDeleted: number;
   /** Set when the run refused as a whole (the per-run cap) and changed
    *  nothing. */
   refusal?: { reason: 'cap-exceeded'; auditsToDelete: number; auditsToSlim: number };
@@ -69,6 +73,7 @@ const retentionRunSchema = new Schema<RetentionRunDocument>(
       },
       required: true,
     },
+    remoteObjectsDeleted: { type: Number, required: true },
     refusal: {
       _id: false,
       type: {

@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@odysseus/store', () => ({
   getAuditRuntimeFields: vi.fn(),
+  getAuditSlimmedAt: vi.fn(async () => undefined),
   saveLinkedAuditIdentity: vi.fn(),
   setAuditManualFields: vi.fn(),
 }));

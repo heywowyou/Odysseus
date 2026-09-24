@@ -150,6 +150,9 @@ export const CAPABILITY_BLOCK_REASONS = [
   'report-production-in-flight',
   'not-queued',
   'queue-too-long',
+  /** Plan 077: retention slimmed this superseded audit; its raw scan
+   *  evidence is gone, so nothing can be recomputed from it. */
+  'raw-evidence-removed',
 ] as const;
 const capabilityBlockReasonSchema = z.enum(CAPABILITY_BLOCK_REASONS);
 export type CapabilityBlockReason = z.infer<typeof capabilityBlockReasonSchema>;

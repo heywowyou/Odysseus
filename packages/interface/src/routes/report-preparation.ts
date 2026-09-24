@@ -43,6 +43,7 @@ import {
   reportProductionState,
   type ReportProductionState,
 } from '../pipeline/report-production-state.js';
+import { refuseSlimmedAudit } from '../retention/slimmed-audit-guard.js';
 
 function lastWritingRunField(auditId: string): { lastWritingRun?: WritingRunOutcome } {
   const outcome = lastWritingRunOutcome(auditId);
@@ -143,6 +144,7 @@ export function registerReportPreparationRoutes(router: Router, connection: Conn
       const auditId = params['auditId']!;
       const audit = await readAudit(connection, auditId, res);
       if (!audit) return;
+      if (await refuseSlimmedAudit(connection, auditId, res)) return;
 
       // Issue #281: a writing run takes minutes, longer than a dashboard
       // request may stay open. In async mode it runs as tracked background
@@ -207,6 +209,7 @@ export function registerReportPreparationRoutes(router: Router, connection: Conn
       const auditId = params['auditId']!;
       const audit = await readAudit(connection, auditId, res);
       if (!audit) return;
+      if (await refuseSlimmedAudit(connection, auditId, res)) return;
       try {
         const result = await generateEnglishVersion(connection, audit, artifactStore);
         sendJson(res, 201, result);
