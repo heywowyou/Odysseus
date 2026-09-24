@@ -55,7 +55,7 @@ import { createOptOutLink, deriveOptOutLinkKey, storeOptOutLink } from './opt-ou
 import { createInMemoryMailboxDraftAdapter } from './in-memory-mailbox-draft-adapter.js';
 import { formatHotelName } from './hotel-name.js';
 import { createMongoOutreachPreviewStoreV3 } from './mongo-outreach-preview-store-v2.js';
-import { hashPreviewToken } from './preview-token.js';
+import { deriveObjectKey, hashPreviewToken } from './preview-token.js';
 import { resolveReferenceAuditForDraft } from '../reference-audit/reference-audit-readiness.js';
 import {
   createReferenceAuditToken,
@@ -602,11 +602,26 @@ export async function createFirstEmailForProspect(
     };
   }
 
+  const previewToken = published.url.split('/').at(-1) ?? '';
   const draft = await createTouchOneDraft(connection, prospectId, {
     language: options.language,
-    previewToken: published.url.split('/').at(-1) ?? '',
+    previewToken,
     dryRun: false,
   });
+  if (!draft.configured || !draft.created) {
+    // The preview was published only to be linked from this draft. Without
+    // one it takes the prospect out of its clean audited state, so it goes
+    // offline again, object first and record second, as a discard does.
+    try {
+      await publisher.delete(deriveObjectKey(hashPreviewToken(previewToken)));
+      await previewStore.revokePreview(published.previewId, 'first-email draft not created');
+    } catch (error) {
+      logger.error(
+        { err: error, previewId: published.previewId },
+        'could not take the preview of a failed first email offline',
+      );
+    }
+  }
   if (!draft.configured) {
     return {
       configured: true,

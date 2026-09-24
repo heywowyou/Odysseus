@@ -42,6 +42,10 @@ vi.mock('./assemble-outreach-draft.js', () => ({ assembleOutreachDraft: vi.fn() 
 vi.mock('./publish-preview-v2.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./publish-preview-v2.js')>()),
   resolvePublishedPreviewForDraft: vi.fn(),
+  publishPreviewV3: vi.fn(),
+}));
+vi.mock('./mongo-outreach-preview-store-v2.js', () => ({
+  createMongoOutreachPreviewStoreV3: vi.fn(),
 }));
 vi.mock('../reference-audit/reference-audit-readiness.js', () => ({
   resolveReferenceAuditForDraft: vi.fn(),
@@ -65,14 +69,23 @@ import {
 } from '@odysseus/store';
 import { assembleOutreachDraft } from './assemble-outreach-draft.js';
 import { createConfiguredMailboxDraftAdapter } from './configured-mailbox-draft-adapter.js';
-import { createConfiguredOptOutBucket } from './configured-preview-publisher.js';
-import { createFollowUpForProspect, createTouchOneDraft } from './draft-runtime.js';
+import {
+  createConfiguredOptOutBucket,
+  createConfiguredPreviewPublisher,
+} from './configured-preview-publisher.js';
+import {
+  createFirstEmailForProspect,
+  createFollowUpForProspect,
+  createTouchOneDraft,
+} from './draft-runtime.js';
+import { createMongoOutreachPreviewStoreV3 } from './mongo-outreach-preview-store-v2.js';
+import { createPreviewToken, deriveObjectKey, hashPreviewToken } from './preview-token.js';
 import {
   createInMemoryMailboxDraftAdapter,
   type InMemoryMailboxDraftAdapter,
 } from './in-memory-mailbox-draft-adapter.js';
 import { createInMemoryOptOutBucket, type InMemoryOptOutBucket } from './opt-out-bucket.js';
-import { resolvePublishedPreviewForDraft } from './publish-preview-v2.js';
+import { publishPreviewV3, resolvePublishedPreviewForDraft } from './publish-preview-v2.js';
 import { resolveReferenceAuditForDraft } from '../reference-audit/reference-audit-readiness.js';
 import { isReferenceAuditLinkTrackingEnabled } from '../config.js';
 
@@ -166,6 +179,31 @@ const touchOne = (options: Record<string, unknown> = {}) =>
     previewToken: 'token',
     ...options,
   });
+
+describe('createFirstEmailForProspect', () => {
+  it('takes the new preview offline when the draft is not created', async () => {
+    const publisher = { put: vi.fn(), delete: vi.fn(async () => undefined), get: vi.fn() };
+    const previewStore = { revokePreview: vi.fn(async () => ({ changed: true })) };
+    vi.mocked(createConfiguredPreviewPublisher).mockReturnValue(publisher as never);
+    vi.mocked(createMongoOutreachPreviewStoreV3).mockReturnValue(previewStore as never);
+    const token = createPreviewToken();
+    vi.mocked(publishPreviewV3).mockResolvedValue({
+      published: true,
+      previewId: 'preview-new',
+      url: `https://odysseus.example/apercu/${token}`,
+    });
+    mailbox.failNextCreate(new Error('Gmail draft creation failed with status 404'));
+
+    const result = await createFirstEmailForProspect(connection, prospectId, { language: 'fr' });
+
+    expect(result).toMatchObject({ created: false, refusal: 'provider-draft-unrecorded' });
+    expect(publisher.delete).toHaveBeenCalledWith(deriveObjectKey(hashPreviewToken(token)));
+    expect(previewStore.revokePreview).toHaveBeenCalledWith(
+      'preview-new',
+      'first-email draft not created',
+    );
+  });
+});
 
 describe('createTouchOneDraft', () => {
   it('stores the opt-out link after the final gate and before the provider draft', async () => {
