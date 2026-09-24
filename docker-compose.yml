@@ -3,7 +3,7 @@ services:
   # by the CLI itself (that reads MONGODB_URI, not this). Offset port so
   # it never collides with a developer's own local Mongo on 27017.
   mongo-test:
-    image: mongo:7.0.43
+    image: mongo:7.0.43@sha256:9854f7139445d766a9523571d6f047530c45547460ffcf8259eb2bf4264632ca
     ports:
       - '27018:27017'
     volumes:
