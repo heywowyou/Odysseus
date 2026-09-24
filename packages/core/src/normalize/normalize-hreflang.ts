@@ -116,7 +116,14 @@ export function extractHreflangCandidates(
       description:
         'This page declares hreflang links whose target pages do not declare a matching link back. Search engines can ignore hreflang annotations that are not reciprocated.',
       pageUrl: page.url,
-      dedupeIdentity: `source-page:${normalizeUrl(page.url, page.url)}`,
+      // Plan 075 C5: the identity is the set of return links that are
+      // missing, not the page that declares them. Bellevigne's template
+      // wrote the same `hreflang="fr"` tag pointing at the homepage on all
+      // 22 pages: one defect, formerly 22 serious findings.
+      dedupeIdentity: `missing-return:${links
+        .map((link) => `${link.lang}>${link.targetUrl}`)
+        .sort()
+        .join(' ')}`,
       element: {
         pageUrl: page.url,
         selector: 'head link[rel="alternate"][hreflang]',

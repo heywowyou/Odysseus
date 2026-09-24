@@ -110,7 +110,37 @@ describe('broken-internal-link', () => {
     expect(broken[0]?.element?.selector).toBe(
       'a[href="https://example.com/back-office/www.staffcom.fr"]',
     );
-    expect(broken[0]?.description).toContain('HTTP 404');
+    expect(broken[0]?.rawEvidenceForPage).toMatchObject({ targetHttpStatus: 404 });
+  });
+
+  it('gives every broken link one site-wide identity, whatever its target', () => {
+    const candidates = extractCrawlCandidates(
+      baseInput({
+        pages: [
+          { url: START_URL, status: 'visited', httpStatus: 200 },
+          { url: 'https://example.com/about', status: 'visited', httpStatus: 200 },
+          {
+            url: 'https://example.com/?page_id=2062',
+            status: 'http-error-status',
+            httpStatus: 404,
+            discoveredFrom: START_URL,
+          },
+          {
+            url: 'https://example.com/?p=11806',
+            status: 'http-error-status',
+            httpStatus: 404,
+            discoveredFrom: 'https://example.com/about',
+          },
+        ],
+      }),
+    );
+    const broken = candidates.filter((c) => c.ruleId === BROKEN_INTERNAL_LINK_RULE_ID);
+    expect(broken).toHaveLength(2);
+    expect(new Set(broken.map((c) => c.dedupeIdentity))).toEqual(new Set(['site-wide']));
+    expect(broken.map((c) => c.element?.selector)).toEqual([
+      'a[href="https://example.com/?page_id=2062"]',
+      'a[href="https://example.com/?p=11806"]',
+    ]);
   });
 
   it('does not fire for a successfully visited target', () => {

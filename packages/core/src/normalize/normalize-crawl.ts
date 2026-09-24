@@ -19,7 +19,7 @@
  * the link, not the target.
  */
 
-import type { FindingCandidate } from './candidate.js';
+import { SITE_WIDE_IDENTITY, type FindingCandidate } from './candidate.js';
 import { severityFromCustom } from './severity.js';
 import { normalizeUrlIdentity } from './url-identity.js';
 
@@ -247,17 +247,16 @@ export function extractCrawlCandidates(
       severity: severityFromCustom(BROKEN_INTERNAL_LINK_RULE_ID),
       wcagCriteria: [],
       title: 'Internal link points to a broken page',
-      description: `This page links to ${page.url}, which returned HTTP ${page.httpStatus}.`,
+      description:
+        'Some internal links point to pages that return an HTTP error. Each broken link is listed with the page it was found on.',
       pageUrl: page.discoveredFrom,
+      // Plan 075 C5 (trade-off 30): one site-wide finding. « Fix the links
+      // to these missing pages » is one instruction; one finding per target
+      // gave Point France 11 serious findings for its WordPress draft links.
+      dedupeIdentity: SITE_WIDE_IDENTITY,
       // Not a DOM-queried selector (the crawler only captures hrefs, not
-      // element positions) but a real, derived one, not a sentinel: an
-      // attribute selector built from the actual href discovered during
-      // the crawl. This also keeps the dedupe key (source|ruleId|
-      // selector) distinct per (source, target) pair - without it, every
-      // broken-internal-link candidate would share one empty selector
-      // and merge into a single finding regardless of which page links
-      // to which broken target, exactly the cross-selector conflation
-      // CLAUDE.md's dedupe/aggregation trade-off warns about.
+      // element positions) but a real, derived one built from the actual
+      // href, so each example in the merged finding names its target.
       element: {
         pageUrl: page.discoveredFrom,
         selector: `a[href="${page.url}"]`,

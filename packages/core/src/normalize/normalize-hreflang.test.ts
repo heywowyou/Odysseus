@@ -52,6 +52,35 @@ describe('hreflang-no-return-link', () => {
     expect(extractHreflangCandidates(pages)).toEqual([]);
   });
 
+  it('gives one template tag repeated on every page one identity', () => {
+    // Bellevigne: every page declared hreflang="fr" pointing at the homepage.
+    const home = 'https://example.com/';
+    const pages: HreflangPageInput[] = [
+      { url: home, hreflangLinks: [{ lang: 'fr', href: home }] },
+      { url: 'https://example.com/chambres', hreflangLinks: [{ lang: 'fr', href: home }] },
+      { url: 'https://example.com/spa', hreflangLinks: [{ lang: 'fr', href: home }] },
+    ];
+    const candidates = extractHreflangCandidates(pages);
+    expect(candidates).toHaveLength(2);
+    expect(candidates[0]?.dedupeIdentity).toBeDefined();
+    expect(candidates[0]?.dedupeIdentity).toBe(candidates[1]?.dedupeIdentity);
+  });
+
+  it('keeps pages missing different return links apart', () => {
+    const pages: HreflangPageInput[] = [
+      { url: FR_URL, hreflangLinks: [{ lang: 'en', href: EN_URL }] },
+      { url: EN_URL, hreflangLinks: [] },
+      {
+        url: 'https://example.com/fr/spa',
+        hreflangLinks: [{ lang: 'en', href: 'https://example.com/en/spa' }],
+      },
+      { url: 'https://example.com/en/spa', hreflangLinks: [] },
+    ];
+    const candidates = extractHreflangCandidates(pages);
+    expect(candidates).toHaveLength(2);
+    expect(candidates[0]?.dedupeIdentity).not.toBe(candidates[1]?.dedupeIdentity);
+  });
+
   it('groups missing return links from one source page into one finding', () => {
     const deUrl = 'https://example.com/de/';
     const pages: HreflangPageInput[] = [
