@@ -120,10 +120,22 @@ export function findMissingEntityFields(parsed: unknown): string[] | null {
   if (!types.some((type) => BUSINESS_ENTITY_TYPE_PATTERN.test(type))) return null;
   if (parsed === null || typeof parsed !== 'object') return REQUIRED_ENTITY_FIELDS;
   const record = parsed as Record<string, unknown>;
-  return REQUIRED_ENTITY_FIELDS.filter((field) => {
-    const value = record[field];
-    return typeof value !== 'string' || value.trim().length === 0;
-  });
+  return REQUIRED_ENTITY_FIELDS.filter((field) => !hasFieldValue(record[field]));
+}
+
+/** A field is present when it holds text, or a nested node or list that
+ *  does. schema.org's usual `address` is a PostalAddress object, and reading
+ *  only strings reported the address missing on every page of a hotel
+ *  (Whistler Paris) whose graph declared it in full. */
+function hasFieldValue(value: unknown): boolean {
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (Array.isArray(value)) return value.some(hasFieldValue);
+  if (value !== null && typeof value === 'object') {
+    return Object.entries(value).some(
+      ([key, entry]) => !key.startsWith('@') && hasFieldValue(entry),
+    );
+  }
+  return false;
 }
 
 /**

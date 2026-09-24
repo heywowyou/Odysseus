@@ -108,6 +108,32 @@ describe('findMissingEntityFields', () => {
     ]);
   });
 
+  it('accepts a PostalAddress object as the address, the usual schema.org form', () => {
+    expect(
+      findMissingEntityFields({
+        '@type': 'Hotel',
+        name: 'Hôtel Whistler',
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: '11 rue Saint-Vincent-de-Paul',
+          addressLocality: 'Paris',
+        },
+        telephone: '+33 1 00 00 00 00',
+      }),
+    ).toEqual([]);
+  });
+
+  it('treats an address object with no text as missing', () => {
+    expect(
+      findMissingEntityFields({
+        '@type': 'Hotel',
+        name: 'Example',
+        address: { '@type': 'PostalAddress', streetAddress: ' ' },
+        telephone: '01',
+      }),
+    ).toEqual(['address']);
+  });
+
   it('treats an empty-string field as missing, not merely present', () => {
     expect(
       findMissingEntityFields({
