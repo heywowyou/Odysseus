@@ -1,4 +1,4 @@
-import type { StructureInput } from './structure-schema.js';
+import { MAX_STRUCTURE_THEMES, type StructureInput } from './structure-schema.js';
 import { SCANNER_EVIDENCE_NOTICE } from './untrusted-evidence.js';
 
 /** System prompt for the structure pass: grouping and prioritization
@@ -25,6 +25,8 @@ Deterministic scanners (axe-core, Lighthouse, and a raw-versus-rendered diff) al
 Before writing any ID into your response, confirm its exact text appears in the input's "findings" array; if it does not appear there verbatim, it does not exist for this audit, regardless of how plausible it looks.
 
 Group the findings into a soft target of 5 to 8 themes a business owner can act on. This is guidance, not a hard quota: use fewer when the audit contains only a few coherent remediation jobs, and use more when distinct fixes would otherwise be incorrectly merged. Do not create a theme with zero findings, do not pad or merge unrelated work merely to hit the target, and do not leave any finding you consider important ungrouped.
+
+Never return more than ${MAX_STRUCTURE_THEMES} themes. That ceiling is a hard limit, unlike the target above. When the audit contains more distinct remediation jobs than that, keep the ${MAX_STRUCTURE_THEMES} most important jobs as themes and leave the findings of the lowest-priority remaining jobs ungrouped rather than exceeding it or merging jobs that need different fixes.
 
 A theme is one remediation job: everything in it should be fixed by the same kind of work, so that a single sentence could tell the client what to do about the whole theme. Two findings belong together when fixing one is the same task as fixing the other, not merely because they share a category or a severity. A finding that needs a different fix belongs in a different theme, even when that leaves a theme with very few findings, and even when it means one finding gets a theme of its own. Never pad a theme with unrelated rules to reach a size: a heading-structure problem does not belong in a theme about language annotations, an automatic page reload does not belong in a theme about link and image text, and a layout-stability metric does not belong in a theme about loading time. Findings you cannot place in a coherent theme are better left ungrouped than filed under one they contradict.
 

@@ -10,6 +10,8 @@
  * validated with Zod" rule.
  */
 
+import { MAX_STRUCTURE_THEMES } from './structure-schema.js';
+
 export const STRUCTURE_OUTPUT_JSON_SCHEMA = {
   type: 'object',
   properties: {
@@ -30,6 +32,7 @@ export const STRUCTURE_OUTPUT_JSON_SCHEMA = {
         required: ['findingIds', 'category', 'effort', 'impact', 'priorityRank'],
         additionalProperties: false,
       },
+      maxItems: MAX_STRUCTURE_THEMES,
     },
     quickWins: { type: 'array', items: { type: 'string' } },
     overallRisk: { type: 'string', enum: ['low', 'medium', 'high'] },

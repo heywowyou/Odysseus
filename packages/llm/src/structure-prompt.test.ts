@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildStructureSystemPrompt } from './structure-prompt.js';
+import { MAX_STRUCTURE_THEMES } from './structure-schema.js';
 
 /**
  * Issue #297: a real Haaitza report filed an automatic page reload under a
@@ -37,6 +38,21 @@ describe('structure prompt theme coherence (issue #297)', () => {
     for (const usedFallbackContext of [true, false]) {
       expect(buildStructureSystemPrompt(usedFallbackContext)).toContain(
         'A theme is one remediation job',
+      );
+    }
+  });
+});
+
+/** A 596-page site's structure pass returned more than 20 themes on all
+ *  three attempts because neither the prompt nor the API schema stated the
+ *  ceiling the Zod authority enforces. */
+describe('structure theme ceiling', () => {
+  it('states the ceiling as a hard limit and says what to do beyond it', () => {
+    for (const usedFallbackContext of [true, false]) {
+      const prompt = buildStructureSystemPrompt(usedFallbackContext);
+      expect(prompt).toContain(`Never return more than ${MAX_STRUCTURE_THEMES} themes`);
+      expect(prompt).toContain(
+        'leave the findings of the lowest-priority remaining jobs ungrouped',
       );
     }
   });

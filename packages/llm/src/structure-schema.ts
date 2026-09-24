@@ -8,6 +8,11 @@ import { findDuplicateStructureFindingIds } from './structure-guards.js';
  *  see docs/rules/llm-layer-rules.md section 9. */
 export type StructureInput = Pick<LlmInput, 'siteContext' | 'findings'>;
 
+/** The locked llmOutputSchema's theme ceiling. The prompt states it and the
+ *  API schema enforces it, because a large site otherwise yields more
+ *  distinct remediation jobs than the Zod authority accepts on every retry. */
+export const MAX_STRUCTURE_THEMES = 20;
+
 /** New, non-locked schema (unlike the locked themeSchema in
  *  packages/core/src/types/llm-output.ts). .strict() so an unexpected
  *  field is a hard Zod rejection - feeding the retry loop - rather than
@@ -26,7 +31,7 @@ export const structureThemeSchema = z
 
 export const structurePassOutputSchema = z
   .object({
-    themes: z.array(structureThemeSchema).min(1).max(20),
+    themes: z.array(structureThemeSchema).min(1).max(MAX_STRUCTURE_THEMES),
     quickWins: z.array(z.string()),
     overallRisk: z.enum(['low', 'medium', 'high']),
   })
@@ -56,7 +61,7 @@ const findingsProvenanceSchema = z
 const structureDocumentSchema = z
   .object({
     auditId: z.string().min(1),
-    themes: z.array(structureThemeWithKeySchema).min(1).max(20),
+    themes: z.array(structureThemeWithKeySchema).min(1).max(MAX_STRUCTURE_THEMES),
     quickWins: z.array(z.string()),
     overallRisk: z.enum(['low', 'medium', 'high']),
     model: z.string().min(1),

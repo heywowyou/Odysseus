@@ -132,6 +132,10 @@ theme tiny, and a finding that fits nowhere coherent is better left
 ungrouped than filed under a theme it contradicts. Plan 067 adds a soft
 target of 5-8 coherent themes: fewer or more are explicitly allowed when
 coherence requires it, and the defensive schema maximum remains unchanged.
+That maximum (20 themes) is stated to the model as a hard limit and enforced
+by the API schema's `maxItems` too: a 596-page site otherwise produced more
+than 20 distinct jobs on every retry and failed the structure pass. Beyond the
+ceiling, the lowest-priority jobs are left ungrouped rather than merged.
 This is prompt guidance, not a guard - the model still decides which findings
 belong together, and no deterministic rule-to-remediation taxonomy exists to
 check it against. The report's own defence is separate: the priority card
