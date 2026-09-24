@@ -112,6 +112,14 @@ services:
     # tini as PID 1: reaps Chromium children (node does not) and forwards
     # signals, so the queue's SIGTERM shutdown actually runs.
     init: true
+    # While the scan service above stays gated off, every audit's Chromium
+    # (SCAN_CONCURRENCY render/axe lanes, Lighthouse, and a diagnostic
+    # recovery browser) runs inside this container. Uncapped, one long audit
+    # held several renderers at 40-60% CPU each until Hostinger throttled the
+    # whole VPS (2026-09-24). This cap makes the audit slower instead of the
+    # host limited. The default leaves headroom on a 4 vCPU box; override
+    # ODYSSEUS_APP_CPUS in the compose directory's .env for another plan.
+    cpus: ${ODYSSEUS_APP_CPUS:-2}
     # The local smoke's test-Mongo host mapping and plain-HTTP Caddyfile are
     # in compose.smoke.yaml (deploy/runbook.md section 10), never here.
 

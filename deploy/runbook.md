@@ -551,6 +551,14 @@ Two standing rules:
   out itself; do not click the panel's own Deployer button after a rollout,
   because it re-runs `pull` + `up` from the panel's own context.
 
+The app container is CPU-capped (`cpus`, default 2) because audits run their
+Chromium inside it. Without the cap, a long audit once pushed the VPS past
+Hostinger's CPU limit and the panel throttled the whole box (2026-09-24). To
+change the cap for a different plan, set `ODYSSEUS_APP_CPUS` in
+`$ODYSSEUS_DEPLOY_COMPOSE_DIR/.env` (compose reads it for interpolation)
+and redeploy. Check it took effect with
+`docker inspect --format '{{.HostConfig.NanoCpus}}' odysseus-app-1`.
+
 ## 7C. Chromium sandbox (accepted risk)
 
 Production Chromium runs with `--no-sandbox`, in the same container and user
