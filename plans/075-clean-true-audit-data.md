@@ -1,6 +1,6 @@
 # Plan 075: Make the audit data clean and true before it reaches a report
 
-Status: IMPLEMENTED (2026-09-24). Reopened the same day as a completion defect: sweep 7 found that the image identity of F6 and the list-shaped rules of C5 never shipped, plus five new defects (Part H). Part H is committed and not deployed; closure needs the deploy, a refresh of the affected audits on the VPS and the next hunt sweep. The earlier closure record stays below as history. Priority P1. Effort XL. Depends on: none (builds on trade-offs 3, 24, 30, 64, 109, 110 and issue #301/#302 work).
+Status: IMPLEMENTED (2026-09-24). Reopened the same day as a completion defect: sweep 7 found that the image identity of F6 and the list-shaped rules of C5 never shipped, plus five new defects (Part H). Part H is deployed (`ec24648c`, 2026-09-24) and the 13 stored audits on the VPS are refreshed; closure needs the next hunt sweep. The earlier closure record stays below as history. Priority P1. Effort XL. Depends on: none (builds on trade-offs 3, 24, 30, 64, 109, 110 and issue #301/#302 work).
 
 ## Context
 
@@ -492,7 +492,7 @@ grandhoteldesalpes gains one `link-name` finding (6 → 7, same occurrences): tw
 
 Proof: core unit tests (1,016), scanner unit tests, the scanner e2e suite (the language-redirect fixture fails without the fix) and `pnpm run check` pass. Nine unit tests in `store` and `interface` fail on the clean tree as well, from `fb387775` (the audit-delete cascade reports more collections than its tests expect); they are not part of this plan.
 
-Still to do after deploy: refresh the 13 audits on the VPS so stored findings pick up H1 to H5; rescan grandhoteldesalpes only if it is to be contacted (H6); run hunt sweep 8.
+Deployed in `ec24648c` (2026-09-24). The same evening all 13 audits were refreshed one by one through the dashboard's regenerate-report: each returned 200 with refreshed findings and a new FR report, and every stored `findings.json` equals the replay above (whistlerparis 50 findings with 1 critical; capdantibes-beachhotel and lacoorniche re-stamped with the same counts). Still to do: rescan grandhoteldesalpes only if it is to be contacted (H6); run hunt sweep 8.
 
 Minor, not a slice: whistlerparis writes external partner links without a scheme (`href="www.goodplanet.org/fr"`, and one `/fr/pagehttps://…`), so they resolve under `/fr/page/` and land on the homepage. No rule reports it; the pages are correctly excluded as redirects.
 

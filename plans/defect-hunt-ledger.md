@@ -186,10 +186,11 @@ Sweep 7 (2026-09-24) found 7 new material defects and reopened plan 075
 with Part H, so the stop rule is not met. None of them needs a rescan of the
 stored audits except H6 (grandhoteldesalpes's French pages) and H7 (lost
 structured-data validation, not worth a rescan on its own): H1 to H5 are
-normalization and reach stored audits on refresh. The next sweep should run
-after Part H is deployed, on a refresh of whistlerparis, villasfoch,
-bellevigne-hotels, grand-hotel-opera and hotelpointfrance, and on whatever
-new audits exist then.
+normalization and reach stored audits on refresh. Part H was deployed and
+all 13 stored audits were refreshed on 2026-09-24; their stored findings
+match the replay. The next sweep should start from those refreshed audits
+(whistlerparis, villasfoch, bellevigne-hotels, grand-hotel-opera and
+hotelpointfrance first) and whatever new audits exist then.
 
 ## Open doubts carried forward
 
