@@ -482,4 +482,8 @@ export {
 export type { LatestReportQualityRun, ReportQualityLease } from './report-quality.js';
 
 export { findMissingUniqueIndexes, verifyUniqueIndexes } from './unique-index-check.js';
+export {
+  migrateOutreachDraftThreadTouchIndex,
+  type OutreachDraftIndexMigration,
+} from './outreach-draft-index-migration.js';
 export type { RequiredUniqueIndex } from './unique-index-check.js';

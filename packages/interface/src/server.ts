@@ -1,6 +1,6 @@
 import { createServer, type Server } from 'node:http';
 import type { Connection } from 'mongoose';
-import { verifyUniqueIndexes } from '@odysseus/store';
+import { migrateOutreachDraftThreadTouchIndex, verifyUniqueIndexes } from '@odysseus/store';
 import { Router } from './router.js';
 import { registerScanRoutes } from './routes/scans.js';
 import { registerAuditRoutes } from './routes/audits.js';
@@ -95,6 +95,13 @@ export async function startInterfaceServer(
         'prospect, audit and draft to the open internet. Generate a hash with ' +
         'scripts/hash-dashboard-password.mjs, or keep ODYSSEUS_INTERFACE_HOST on loopback.',
     );
+  }
+
+  // Before any route or job compiles the draft model: its automatic index
+  // build fails over the legacy index and Mongoose keeps that failure.
+  const draftIndexMigration = await migrateOutreachDraftThreadTouchIndex(connection);
+  if (draftIndexMigration === 'migrated') {
+    logger.info('replaced the legacy outreach draft thread/touch unique index');
   }
 
   // Issue #253: a no-op (NullTelemetrySink) unless SENTRY_DSN is set, so

@@ -97,7 +97,7 @@ function requiredWhenCreated(this: { status?: OutreachDraftStatus }): boolean {
   return this.status === 'created';
 }
 
-const outreachDraftSchema = new Schema<OutreachDraftDocument>(
+export const outreachDraftSchema = new Schema<OutreachDraftDocument>(
   {
     draftId: { type: String, required: true, unique: true },
     prospectId: { type: String, required: true },
