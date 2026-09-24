@@ -126,6 +126,11 @@ export interface AuditDetailStrings {
   failureAwaitingFieldsLabel: string;
   failureHintIdentity: string;
   failureHintReportStage: string;
+  /** Plan 075's evidence block: some pages stayed blocked after the retry.
+   *  The verdict belongs to the scan, so the hint sends the operator to the
+   *  scan page's slower relaunch instead of promising a regeneration. */
+  failureHintBlockedPages: string;
+  failureRelaunchFromScan: string;
   /** A failed audit whose lifecycle is still `scanned`: no canonical
    *  French analysis exists, so the failure card points at the Prepare
    *  report card instead of offering a regenerate that always 409s. */
@@ -461,6 +466,9 @@ export const auditDetail = {
       'Le scan est terminé : confirmez ou corrigez les champs ci-dessus dans la carte « Informations sur l’hôtel », puis régénérez le rapport. Inutile de relancer un scan.',
     failureHintReportStage:
       'Le site a déjà été exploré et analysé : corrigez la cause puis régénérez le rapport depuis cette page. Inutile de relancer un scan.',
+    failureHintBlockedPages:
+      'Le site a refusé ou n’a pas servi certaines pages, même après une nouvelle tentative. Ce résultat appartient au scan : régénérer le rapport échouera de la même façon. Relancez le scan plus lentement depuis sa page de détail.',
+    failureRelaunchFromScan: 'Relancer plus lentement depuis le scan',
     failureHintAnalysisStage:
       'Le scan est terminé, mais aucune analyse française n’a encore été enregistrée : il n’y a donc aucun rapport à régénérer. Lancez la rédaction à l’étape « Rédiger » ci-dessous, puis approuvez le candidat.',
     failureJobLink: 'Voir le détail du scan',
@@ -804,6 +812,9 @@ export const auditDetail = {
       'The scan itself finished: confirm or correct the fields above in the “Hotel details” card, then regenerate the report. A new scan is not needed.',
     failureHintReportStage:
       'The site has already been crawled and analysed: fix the cause and regenerate the report from this page. A new scan is not needed.',
+    failureHintBlockedPages:
+      'The site refused or did not serve some pages, even after a retry. This result belongs to the scan: regenerating the report will fail the same way. Relaunch the scan more slowly from its details page.',
+    failureRelaunchFromScan: 'Relaunch more slowly from the scan',
     failureHintAnalysisStage:
       'The scan finished, but no French analysis was stored yet, so there is no report to regenerate. Run the writing in the “Write” step below, then approve the candidate.',
     failureJobLink: 'View scan details',

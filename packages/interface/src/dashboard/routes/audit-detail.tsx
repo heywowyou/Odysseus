@@ -280,7 +280,11 @@ export function AuditDetailPage(): JSX.Element {
         ) : null}
         {isReportStageFailure({ failure: data.failure, lifecycle: data.lifecycle }) &&
         data.failure !== undefined ? (
-          <FailureCard failure={data.failure} lifecycle={data.lifecycle} />
+          <FailureCard
+            failure={data.failure}
+            lifecycle={data.lifecycle}
+            reportBlocked={data.evidence?.reportBlocked === true}
+          />
         ) : null}
         {/* Constats first (approved IA): the findings are what the audit
             is; the client report is built from them below. */}

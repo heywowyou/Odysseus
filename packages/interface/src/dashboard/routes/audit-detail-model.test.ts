@@ -293,6 +293,12 @@ describe('failureReasonKind and isReportStageFailure (issue 90)', () => {
     expect(failureReasonKind(plainFailure)).toBe('report-stage');
   });
 
+  it('names the evidence block separately, since only a new scan clears it', () => {
+    expect(failureReasonKind(plainFailure, true)).toBe('acquisition-blocked');
+    expect(failureReasonKind(plainFailure, false)).toBe('report-stage');
+    expect(failureReasonKind(identityFailure, true)).toBe('identity-confirmation');
+  });
+
   it('treats an empty typed-field list as the generic case', () => {
     expect(failureReasonKind({ ...identityFailure, needsInputFields: [] })).toBe('report-stage');
   });

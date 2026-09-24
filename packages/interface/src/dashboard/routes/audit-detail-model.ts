@@ -128,17 +128,24 @@ export function countPages(finding: FindingResponse): number {
 // Issue #90: report-stage failure
 // ---------------------------------------------------------------------------
 
-/** The two remediation cases a stored failure can name. The typed one is
- *  the D8 identity gate: the job carries exactly which detected fields it
- *  is waiting to have confirmed. Everything else (a render crash, a lint
+/** The remediation cases a stored failure can name. The typed one is the
+ *  D8 identity gate: the job carries exactly which detected fields it is
+ *  waiting to have confirmed. `acquisition-blocked` is plan 075's evidence
+ *  block (the homepage or a content page stayed blocked after the retry):
+ *  the verdict is stored with the scan, so regenerating repeats it and only
+ *  a slower new scan helps. Everything else (a render crash, a lint
  *  refusal) is still a report-stage failure whose crawl is done, but the
  *  only prescription available is the generic one. */
-export type FailureReasonKind = 'identity-confirmation' | 'report-stage';
+export type FailureReasonKind = 'identity-confirmation' | 'acquisition-blocked' | 'report-stage';
 
-export function failureReasonKind(failure: AuditFailureResponse): FailureReasonKind {
-  return failure.needsInputFields !== undefined && failure.needsInputFields.length > 0
-    ? 'identity-confirmation'
-    : 'report-stage';
+export function failureReasonKind(
+  failure: AuditFailureResponse,
+  reportBlocked = false,
+): FailureReasonKind {
+  if (failure.needsInputFields !== undefined && failure.needsInputFields.length > 0) {
+    return 'identity-confirmation';
+  }
+  return reportBlocked ? 'acquisition-blocked' : 'report-stage';
 }
 
 /** Whether the audit detail page should render the failure card: only

@@ -61,10 +61,14 @@ function scrollToAnchor(anchor: string): void {
 export function FailureCard(props: {
   failure: AuditFailureResponse;
   lifecycle: AuditLifecycle;
+  reportBlocked?: boolean;
 }): JSX.Element {
   const { failure, lifecycle } = props;
   const { strings } = useI18n();
-  const isIdentity = failureReasonKind(failure) === 'identity-confirmation';
+  const kind = failureReasonKind(failure, props.reportBlocked === true);
+  const isIdentity = kind === 'identity-confirmation';
+  const isBlocked = kind === 'acquisition-blocked';
+  const scanHref = `/scans/${encodeURIComponent(failure.jobId)}`;
   const hasPairToRegenerate = lifecycle !== 'scanned';
   const awaitingFields = failure.needsInputFields ?? [];
   return (
@@ -92,9 +96,11 @@ export function FailureCard(props: {
       <p className="text-sm text-ink-soft">
         {isIdentity
           ? strings.auditDetail.failureHintIdentity
-          : hasPairToRegenerate
-            ? strings.auditDetail.failureHintReportStage
-            : strings.auditDetail.failureHintAnalysisStage}
+          : isBlocked
+            ? strings.auditDetail.failureHintBlockedPages
+            : hasPairToRegenerate
+              ? strings.auditDetail.failureHintReportStage
+              : strings.auditDetail.failureHintAnalysisStage}
       </p>
       {failure.error !== '' ? (
         <div className="mt-3">
@@ -115,6 +121,10 @@ export function FailureCard(props: {
           >
             {strings.auditDetail.failureScrollToFields}
           </Button>
+        ) : isBlocked ? (
+          <Link to={scanHref} className={buttonStyles('secondary', 'sm')}>
+            {strings.auditDetail.failureRelaunchFromScan}
+          </Link>
         ) : hasPairToRegenerate ? (
           <Button
             variant="secondary"
@@ -132,12 +142,11 @@ export function FailureCard(props: {
             {strings.auditDetail.failureScrollToRedact}
           </Button>
         )}
-        <Link
-          to={`/scans/${encodeURIComponent(failure.jobId)}`}
-          className={buttonStyles('ghost', 'sm')}
-        >
-          {strings.auditDetail.failureJobLink}
-        </Link>
+        {isBlocked ? null : (
+          <Link to={scanHref} className={buttonStyles('ghost', 'sm')}>
+            {strings.auditDetail.failureJobLink}
+          </Link>
+        )}
       </div>
     </Card>
   );
