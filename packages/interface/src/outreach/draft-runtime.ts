@@ -44,6 +44,7 @@ import {
   getReferenceAuditPublicBaseUrl,
   isReferenceAuditLinkTrackingEnabled,
 } from '../config.js';
+import { logger } from '../logger.js';
 import { assembleOutreachDraft } from './assemble-outreach-draft.js';
 import { createConfiguredMailboxDraftAdapter } from './configured-mailbox-draft-adapter.js';
 import {
@@ -406,7 +407,8 @@ export async function createTouchOneDraft(
         ? {}
         : { providerThreadId: thread.thread.providerThreadId }),
     });
-  } catch {
+  } catch (error) {
+    logger.error({ err: error, prospectId, touch: 1 }, 'mailbox draft creation failed');
     // A provider timeout can be ambiguous: the request may have reached Gmail
     // even though no identifiers came back. Do not claim success or permit an
     // automatic retry. Remove only our opt-out object and attribution mapping;
@@ -464,7 +466,8 @@ export async function createTouchOneDraft(
       providerThreadId: providerDraft.providerThreadId,
       createdAt: now,
     });
-  } catch {
+  } catch (error) {
+    logger.error({ err: error, prospectId, touch: 1 }, 'mailbox draft could not be recorded');
     await mailbox.deleteDraft(providerDraft.providerDraftId).catch(() => undefined);
     await discardReferenceAuditTracking();
     return { configured: true, created: false, refusal: 'provider-draft-unrecorded' };
@@ -735,7 +738,8 @@ export async function createFollowUpForProspect(
         ? {}
         : { providerThreadId: thread.providerThreadId }),
     });
-  } catch {
+  } catch (error) {
+    logger.error({ err: error, prospectId, touch }, 'mailbox draft creation failed');
     await recordFailedOutreachDraft(connection, {
       prospectId,
       threadId: thread.threadId,
@@ -767,7 +771,8 @@ export async function createFollowUpForProspect(
       providerThreadId: providerDraft.providerThreadId,
       createdAt: now,
     });
-  } catch {
+  } catch (error) {
+    logger.error({ err: error, prospectId, touch }, 'mailbox draft could not be recorded');
     await mailbox.deleteDraft(providerDraft.providerDraftId).catch(() => undefined);
     return { configured: true, created: false, refusal: 'provider-draft-unrecorded' };
   }
