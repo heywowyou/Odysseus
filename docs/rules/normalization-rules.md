@@ -548,3 +548,8 @@ state classes (animation, player size, Webflow's `w--current`), the
 the order of classes within one compound selector. `button-name` joins the
 shape-identified rules with its failure statement, like `link-name`. The
 printed selector is never rewritten.
+
+axe's shortened tokens (`wi...`, `data-background-slid...`, a bare `...`) never
+enter a shape identity. `aria-prohibited-attr`, whose failure statement names
+the offending attribute, is identified by tag and complete class names only,
+so optional per-element settings of one CMS component do not split it.

@@ -341,3 +341,42 @@ describe('runtime ids, state attributes and class order in identity (plan 075, H
     expect([...identities][0]).toBeDefined();
   });
 });
+
+describe('aria-prohibited-attr identity survives truncation and optional settings (plan 075, H2)', () => {
+  const cell = (html: string) =>
+    extractAxeCandidates(
+      buildAxeResultsInput([
+        buildAxeViolation({
+          id: 'aria-prohibited-attr',
+          nodes: [
+            buildAxeNode({
+              target: ['#grid_cell-1'],
+              html,
+              failureSummary:
+                'Fix all of the following:\n  aria-label attribute cannot be used on a div with no valid role attribute.',
+            }),
+          ],
+        }),
+      ]),
+      'https://example.com/',
+    )[0]?.dedupeIdentity;
+
+  it('gives two cells of one CMS grid the same identity despite different optional settings', () => {
+    // Whistler Paris: axe cut the class list and attribute list at different
+    // points, and some cells carried extra per-cell settings.
+    const slider = cell(
+      '<div id="grid_cell-69067-1038..." class="grid_cell_wrapper wi..." grid-cell="69067-103847" data-background-slid...="1" ...>',
+    );
+    const image = cell(
+      '<div id="grid_cell-290659-415..." class="grid_cell_wrapper wi..." hover-effect="zoom" aria-label="Basilique" data-valign="bottom" ...>',
+    );
+    expect(slider).toBeDefined();
+    expect(slider).toBe(image);
+  });
+
+  it('keeps a different component apart', () => {
+    expect(cell('<div class="grid_cell_wrapper wi..." aria-label="x">')).not.toBe(
+      cell('<div class="gallery-item-media" aria-label="x">'),
+    );
+  });
+});

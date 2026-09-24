@@ -232,7 +232,17 @@ export function withoutRuntimeStateClasses(selector: string): string {
     .trim();
 }
 
-export function shapeIdentity(snippet: string): string | undefined {
+/** axe shortens long attribute values, class lists and attribute lists
+ *  with `...`. A shortened token is a fragment of whatever preceded the
+ *  cut, not part of the element's markup. */
+function isTruncatedToken(token: string): boolean {
+  return token.endsWith('...');
+}
+
+export function shapeIdentity(
+  snippet: string,
+  options?: { classesOnly?: boolean },
+): string | undefined {
   const root = ROOT_ELEMENT.exec(snippet);
   if (root === null) return undefined;
   const tag = root[1]!.toLowerCase();
@@ -252,16 +262,26 @@ export function shapeIdentity(snippet: string): string | undefined {
   let classList = '';
   for (const attr of attributes) {
     const name = (attr[1] ?? attr[4] ?? '').toLowerCase();
-    if (name === '' || /["']/.test(name)) continue;
+    if (name === '' || /["']/.test(name) || isTruncatedToken(name)) continue;
     if (name === 'class')
       classList = (attr[2] ?? attr[3] ?? '')
         .split(/\s+/)
-        .filter((className) => className !== '' && !isRuntimeStateClass(className))
+        .filter(
+          (className) =>
+            className !== '' && !isRuntimeStateClass(className) && !isTruncatedToken(className),
+        )
         .sort()
         .join(' ');
     if (name === 'style' || RUNTIME_STATE_ATTRS.has(name)) continue;
     names.add(name);
   }
+
+  // Plan 075 H2: for a rule whose failure statement already names the
+  // offending attribute, the component is its tag and classes. A CMS grid
+  // cell on Whistler Paris carried optional per-cell settings
+  // (`hover-effect`, `data-row-level`, `data-tablet-*`) and a varying cut
+  // point, so one `aria-label` on one component was ten findings.
+  if (options?.classesOnly === true) return classList === '' ? undefined : `${tag}.${classList}`;
 
   const distinctive = classList !== '' || [...names].some((name) => !UNIVERSAL_ATTRS.has(name));
   if (!distinctive) return undefined;
@@ -319,7 +339,7 @@ function templateIdentity(
   failureSummary: string | undefined,
 ): string | undefined {
   if (SHAPE_IDENTIFIED_AXE_RULES.has(ruleId)) {
-    const shape = shapeIdentity(snippet);
+    const shape = shapeIdentity(snippet, { classesOnly: ruleId === 'aria-prohibited-attr' });
     if (shape !== undefined) {
       if (ruleId === 'link-name' || ruleId === 'button-name' || ruleId === 'aria-prohibited-attr') {
         return `${shape} | ${(failureSummary ?? '').trim()}`;
