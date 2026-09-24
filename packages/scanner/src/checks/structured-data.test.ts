@@ -240,6 +240,15 @@ describe('markup browsers accept but the tokenizer does not', () => {
     expect(items.map((item) => item.schema)).toEqual(['Hotel']);
   });
 
+  // Grand Hôtel des Alpes's French pages: an unclosed href quote swallows
+  // the next <link>, whose words the browser serializes as attributes named
+  // `preload"` and `icon"`, the quote at the end of the name.
+  it('still reads the JSON-LD when the stray quote ends an attribute name', async () => {
+    const html = `<html><head><link rel="preload" href="/fa.css?ver=4.7.0/&gt;\n&lt;link rel=" preload"="" type="font/woff2" icon"="" sizes="32x32"><script type="application/ld+json">{"@context":"https://schema.org","@type":"Hotel","name":"Grand Hôtel"}</script></head><body></body></html>`;
+    const items = await extractSchemaItems(html);
+    expect(items.map((item) => item.schema)).toEqual(['Hotel']);
+  });
+
   it('leaves quoted text inside an attribute value alone', () => {
     const html = '<p title="a &quot;=&quot;&quot; b">x "="" y</p>';
     expect(withoutStrayQuotedAttributes(html)).toBe(html);
