@@ -75,7 +75,11 @@ export function registerArtifactsCommand(program: Command): void {
         for (const orphan of report.orphans) {
           try {
             await deleteAuditArtifacts(
-              { siteUrl: `https://${orphan.hostname}/`, startedAt: orphan.startedAt },
+              {
+                siteUrl: `https://${orphan.hostname}/`,
+                startedAt: orphan.startedAt,
+                auditId: null,
+              },
               { artifactsRoot: getArtifactsRoot(), store },
             );
             console.log(`DELETED       ${orphan.prefix}`);

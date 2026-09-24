@@ -1,6 +1,7 @@
 import type { Sha256Digest } from '@odysseus/core';
 import { bytesDigest, canonicalJson, reportQualityDigest } from '@odysseus/report';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
+import { reportQualityCandidatesPrefix } from '../artifacts/delete-audit-artifacts.js';
 function hex(d: Sha256Digest) {
   return d.slice('sha256:'.length);
 }
@@ -28,7 +29,7 @@ export async function putPrivateCandidatePdf(
   input: { auditId: string; qualityRunId: string; language: 'fr' | 'en'; pdf: Buffer },
 ) {
   const digest = bytesDigest(input.pdf),
-    key = `report-quality/candidates/${encodeURIComponent(input.auditId)}/${input.qualityRunId}/${input.language}-${hex(digest)}.pdf`;
+    key = `${reportQualityCandidatesPrefix(input.auditId)}${input.qualityRunId}/${input.language}-${hex(digest)}.pdf`;
   await putVerified(store, key, input.pdf);
   return { digest, key };
 }

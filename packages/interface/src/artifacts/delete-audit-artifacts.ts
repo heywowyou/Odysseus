@@ -17,6 +17,15 @@ import type { ArtifactStore } from './artifact-store.js';
 export interface AuditArtifactLocation {
   siteUrl: string;
   startedAt: Date;
+  /** Names the audit's private report-quality candidates, which live under
+   *  their own bucket prefix. `null` only for a bucket prefix that no stored
+   *  audit owns (an orphan), which never had a quality run. */
+  auditId: string | null;
+}
+
+/** Where `putPrivateCandidatePdf` stores one audit's quality-run candidates. */
+export function reportQualityCandidatesPrefix(auditId: string): string {
+  return `report-quality/candidates/${encodeURIComponent(auditId)}/`;
 }
 
 export interface AuditArtifactDeletion {
@@ -55,19 +64,30 @@ export async function deleteAuditArtifacts(
   }
 
   if (options.store === undefined) return { remoteObjectsDeleted: null };
-  const prefix = buildAuditArtifactBucketPrefix(hostname, audit.startedAt);
+  const prefixes = [
+    buildAuditArtifactBucketPrefix(hostname, audit.startedAt),
+    ...(audit.auditId !== null ? [reportQualityCandidatesPrefix(audit.auditId)] : []),
+  ];
   try {
-    const keys = await options.store.list(prefix);
-    for (const key of keys) {
-      // Defence in depth: never delete a key the listing should not have
-      // returned for this prefix.
-      if (!key.startsWith(prefix)) continue;
-      await options.store.delete(key);
+    let remoteObjectsDeleted = 0;
+    for (const prefix of prefixes) {
+      remoteObjectsDeleted += await deletePrefix(options.store, prefix);
     }
-    const remaining = (await options.store.list(prefix)).length;
-    if (remaining > 0) throw new Error(`${remaining} objects remain after deletion`);
-    return { remoteObjectsDeleted: keys.filter((key) => key.startsWith(prefix)).length };
+    return { remoteObjectsDeleted };
   } catch (error) {
     throw new AuditArtifactDeletionError('remote', { cause: error });
   }
+}
+
+/** Deletes every object under `prefix` and returns how many there were. */
+export async function deletePrefix(store: ArtifactStore, prefix: string): Promise<number> {
+  const keys = (await store.list(prefix)).filter(
+    // Defence in depth: never delete a key the listing should not have
+    // returned for this prefix.
+    (key) => key.startsWith(prefix),
+  );
+  for (const key of keys) await store.delete(key);
+  const remaining = (await store.list(prefix)).length;
+  if (remaining > 0) throw new Error(`${remaining} objects remain after deletion`);
+  return keys.length;
 }
