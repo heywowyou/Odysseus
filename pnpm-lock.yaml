@@ -331,7 +331,7 @@ importers:
         version: 6.2.0
       openai:
         specifier: ^7.9.0
-        version: 7.9.0(undici@8.10.2)(ws@8.21.1)(zod@3.25.76)
+        version: 7.20.0(undici@8.10.2)(ws@8.21.1)(zod@3.25.76)
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -3354,8 +3354,8 @@ packages:
     resolution: {integrity: sha512-7x81NCL719oNbsq/3mh+hVrAWmFuEYUqrq/Iw3kUzH8ReypT9QQ0BLoJS7/G9k6N81XjW4qHWtjWwe/9eLy1EQ==}
     engines: {node: '>=12'}
 
-  openai@7.9.0:
-    resolution: {integrity: sha512-Qfx4qKmPllnilbuP6NgEj5KPUxLShYxrlRPWh3ZRQgNgs5B1V52PrfAdEQbW9MTGq7MquDYFMm+K/KXxiY736w==}
+  openai@7.20.0:
+    resolution: {integrity: sha512-5x5ru4cKEvEqHqYZbdIbT57OE7KqmP9YYxZiUKuKng016grOHXqom1vmu34MTPPW30q+lcP9RhxAbaRse+Xlcw==}
     engines: {node: '>=22.0.0'}
     peerDependencies:
       '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
@@ -6672,7 +6672,7 @@ snapshots:
       is-docker: 2.2.1
       is-wsl: 2.2.0
 
-  openai@7.9.0(undici@8.10.2)(ws@8.21.1)(zod@3.25.76):
+  openai@7.20.0(undici@8.10.2)(ws@8.21.1)(zod@3.25.76):
     optionalDependencies:
       undici: 8.10.2
       ws: 8.21.1
