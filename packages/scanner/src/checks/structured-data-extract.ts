@@ -240,9 +240,22 @@ async function emptyResolvedConfig(): Promise<ResolvedConfig> {
   return cachedConfig;
 }
 
+/** An attribute whose name starts with a quote, as `page.content()`
+ *  serializes a stray quote in the source (`<i class="x"">` becomes
+ *  `<i class="x" "="">`). Browsers accept it and so does the page; the
+ *  html-validate tokenizer throws on it, and one such icon lost the
+ *  structured-data check on every page of Grand Hôtel des Alpes and on 106
+ *  of 173 pages of Grand Hôtel Opéra. The attribute carries no data. */
+const STRAY_QUOTED_ATTRIBUTE = /\s["'][^\s=>]*=""/g;
+const OPENING_TAG = /<[a-zA-Z][^<>]*>/g;
+
+export function withoutStrayQuotedAttributes(html: string): string {
+  return html.replace(OPENING_TAG, (tag) => tag.replace(STRAY_QUOTED_ATTRIBUTE, ''));
+}
+
 export async function extractSchemaItems(html: string): Promise<SchemaItem[]> {
   const parser = new Parser(await emptyResolvedConfig());
-  const dom = parser.parseHtml(html);
+  const dom = parser.parseHtml(withoutStrayQuotedAttributes(html));
 
   return [
     ...extractJsonLd(dom),

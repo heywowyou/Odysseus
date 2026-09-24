@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { evaluateStructuredData } from './structured-data.js';
-import { extractSchemaItems } from './structured-data-extract.js';
+import { extractSchemaItems, withoutStrayQuotedAttributes } from './structured-data-extract.js';
 
 function htmlWithJsonLd(jsonLd: Record<string, unknown> | Record<string, unknown>[]): string {
   return `<!doctype html><html><head><script type="application/ld+json">${JSON.stringify(jsonLd)}</script></head><body></body></html>`;
@@ -227,5 +227,21 @@ describe('extractSchemaItems', () => {
       const html = `<!doctype html><html><body><div itemscope itemtype="${declared}"></div></body></html>`;
       expect((await extractSchemaItems(html)).map((item) => item.schema)).toEqual(['Article']);
     }
+  });
+});
+
+describe('markup browsers accept but the tokenizer does not', () => {
+  // Grand Hôtel des Alpes and Grand Hôtel Opéra: a stray quote in an icon's
+  // markup, serialized by the browser as an attribute named `"`, threw in the
+  // tokenizer and lost the whole page's structured data.
+  it('still reads the JSON-LD of a page with a stray quoted attribute', async () => {
+    const html = `<html><head><script type="application/ld+json">{"@context":"https://schema.org","@type":"Hotel","name":"Grand Hôtel"}</script></head><body><i class="icon" "="" title="t"></i><a href="/x" ",="" rel="n">x</a></body></html>`;
+    const items = await extractSchemaItems(html);
+    expect(items.map((item) => item.schema)).toEqual(['Hotel']);
+  });
+
+  it('leaves quoted text inside an attribute value alone', () => {
+    const html = '<p title="a &quot;=&quot;&quot; b">x "="" y</p>';
+    expect(withoutStrayQuotedAttributes(html)).toBe(html);
   });
 });
