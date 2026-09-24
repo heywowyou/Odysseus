@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "aws4fetch": "^1.0.20",
-    "next": "16.3.3",
+    "next": "16.3.5",
     "pdfjs-dist": "6.3.289",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
@@ -18,8 +18,8 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.5",
     "tailwindcss": "^4",
     "typescript": "^5"
   },
