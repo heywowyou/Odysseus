@@ -62,6 +62,10 @@ export {
 } from './artifacts/purge-prospect-audit-storage.js';
 export { resolveArtifactFile } from './artifacts/resolve-artifact.js';
 export {
+  compactStoredScans,
+  type CompactStoredScansResult,
+} from './artifacts/compact-stored-scans.js';
+export {
   syncAuditDirToBucket,
   syncArtifactFilesToBucket,
 } from './artifacts/sync-audit-artifacts.js';

@@ -11,7 +11,12 @@ import {
 import type { RenderedCostProfile } from '../full-audit-plan.js';
 import type { PageScanResult } from '../scan-page.js';
 import { buildPageDir } from './paths.js';
-import { buildScanJson, readPageScanJson, writePageScanJson } from './page-scan-io.js';
+import {
+  buildScanJson,
+  compactScanJson,
+  readPageScanJson,
+  writePageScanJson,
+} from './page-scan-io.js';
 
 const checkOutcomes: Partial<Record<CheckId, CheckExecutionOutcome>> = {
   'render-diff': 'completed',
@@ -145,6 +150,55 @@ describe('buildScanJson', () => {
     expect(scanJson.lighthouse).toEqual(scanResult.lighthouse);
     expect(scanJson.checkOutcomes).toEqual(checkOutcomes);
     expect(scanJson).not.toHaveProperty('renderedCostProfile');
+  });
+});
+
+describe('compactScanJson', () => {
+  const legacyScan = {
+    url: 'https://example.com/',
+    roleContact: { email: 'contact@example.com' },
+    axe: {
+      testEngine: { name: 'axe-core', version: '4.10.0' },
+      testEnvironment: { userAgent: 'x' },
+      violations: [],
+      incomplete: [],
+      passes: [{ id: 'pass', nodes: [] }],
+      inapplicable: [{ id: 'unused', nodes: [] }],
+    },
+    lighthouse: {
+      finalUrl: 'https://example.com/',
+      fullPageScreenshot: { screenshot: { data: 'x'.repeat(1_000) }, nodes: {} },
+      audits: {
+        'largest-contentful-paint': { score: 0.3 },
+        'final-screenshot': { details: { data: 'x'.repeat(1_000) } },
+      },
+    },
+  } as unknown as PageScanResult;
+
+  it('drops the full-page Lighthouse screenshot', () => {
+    expect(compactScanJson(legacyScan).lighthouse).not.toHaveProperty('fullPageScreenshot');
+  });
+
+  it('upgrades a legacy scan to the current version and keeps fields the trim does not own', () => {
+    const compacted = compactScanJson(legacyScan);
+
+    expect(compacted.scanJsonVersion).toBe(2);
+    expect(compacted.roleContact).toEqual(legacyScan.roleContact);
+    expect(compacted.lighthouse?.finalUrl).toBe('https://example.com/');
+    expect(compacted.lighthouse?.audits).toEqual({
+      'largest-contentful-paint': { score: 0.3 },
+    });
+    expect(compacted.axe).toEqual({
+      testEngine: { name: 'axe-core', version: '4.10.0' },
+      violations: [],
+      incomplete: [],
+    });
+  });
+
+  it('changes nothing the second time', () => {
+    const once = compactScanJson(legacyScan);
+
+    expect(JSON.stringify(compactScanJson(once))).toBe(JSON.stringify(once));
   });
 });
 

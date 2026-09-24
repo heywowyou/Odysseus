@@ -11,10 +11,16 @@
  * part-way by a failed purge. Dry run by default; `--apply` runs the same
  * `purgeProspectAuditStorage` the archive action uses, skipping any prospect
  * with a queued or running job. No network request reaches a prospect site.
+ *
+ * `odysseus artifacts compact-scans` (plan 077): stored scan.json files
+ * rewritten into the compact shape new scans already get. Dry run by
+ * default; `--apply` rewrites each file atomically and re-uploads it when a
+ * bucket is configured on this machine. Needs no database.
  */
 
 import type { Command } from 'commander';
 import {
+  compactStoredScans,
   createConfiguredArtifactStore,
   DEFAULT_ORPHAN_MIN_AGE_MS,
   deleteAuditArtifacts,
@@ -85,6 +91,34 @@ export function registerArtifactsCommand(program: Command): void {
     });
 
   artifacts
+    .command('compact-scans')
+    .description('Trim stored scan.json files to the compact shape (dry run unless --apply)')
+    .option('--apply', 'rewrite the files and their bucket copies', false)
+    .action(async (options: { apply: boolean }) => {
+      const result = await compactStoredScans({
+        artifactsRoot: getArtifactsRoot(),
+        store: createConfiguredArtifactStore(),
+        apply: options.apply,
+      });
+      for (const failure of result.failures) {
+        console.log(`FAILED    ${failure.file} (${failure.step}): ${failure.message}`);
+      }
+      const saved = result.bytesBefore - result.bytesAfter;
+      console.log(
+        `${result.filesScanned} scan.json file(s), ${result.filesCompacted} ` +
+          `${options.apply ? 'compacted' : 'to compact'}, ${result.filesUnreadable} unreadable left alone.`,
+      );
+      console.log(
+        `${formatMegabytes(result.bytesBefore)} -> ${formatMegabytes(result.bytesAfter)} ` +
+          `(${formatMegabytes(saved)} ${options.apply ? 'reclaimed' : 'to reclaim'}).`,
+      );
+      if (!options.apply && result.filesCompacted > 0) {
+        console.log('Dry run: re-run with --apply to rewrite them.');
+      }
+      if (result.failures.length > 0) process.exitCode = 1;
+    });
+
+  artifacts
     .command('archived-prospects')
     .description(
       'List archived prospects that still own audits (dry run unless --apply purges them)',
@@ -128,4 +162,8 @@ export function registerArtifactsCommand(program: Command): void {
         await disconnectFromMongo(connection);
       }
     });
+}
+
+function formatMegabytes(bytes: number): string {
+  return `${(bytes / 1_000_000).toFixed(1)} MB`;
 }

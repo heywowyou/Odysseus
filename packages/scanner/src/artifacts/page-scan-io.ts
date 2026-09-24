@@ -27,37 +27,55 @@ function trimmedAxeResult(
   } as NonNullable<PageScanResult['axe']>;
 }
 
+// No reader uses Lighthouse's screenshots: the render-diff captures its own
+// PNGs, and together these images were about a third of a stored scan.json.
 function trimmedLighthouseResult(
   lighthouse: NonNullable<PageScanResult['lighthouse']>,
 ): NonNullable<PageScanResult['lighthouse']> {
+  const { fullPageScreenshot: _fullPageScreenshot, ...kept } = lighthouse;
   const audits =
-    lighthouse.audits === null || lighthouse.audits === undefined
+    kept.audits === null || kept.audits === undefined
       ? undefined
       : Object.fromEntries(
-          Object.entries(lighthouse.audits).filter(([id]) => !SCREENSHOT_AUDIT_IDS.has(id)),
+          Object.entries(kept.audits).filter(([id]) => !SCREENSHOT_AUDIT_IDS.has(id)),
         );
   return {
-    ...lighthouse,
+    ...kept,
     ...(audits !== undefined ? { audits } : {}),
   } as NonNullable<PageScanResult['lighthouse']>;
+}
+
+/**
+ * The trim rules for a stored scan.json, kept in one place: buildScanJson
+ * applies them to a fresh scan and `odysseus artifacts compact-scans` to a
+ * file already on disk. Every other field is kept as it is. The result is
+ * always the current version, and applying it twice changes nothing.
+ */
+export function compactScanJson(scan: PageScanResult): PageScanResult {
+  return {
+    ...scan,
+    scanJsonVersion: SCAN_JSON_VERSION,
+    ...(scan.axe !== undefined ? { axe: trimmedAxeResult(scan.axe) } : {}),
+    ...(scan.lighthouse !== undefined
+      ? { lighthouse: trimmedLighthouseResult(scan.lighthouse) }
+      : {}),
+  };
 }
 
 export function buildScanJson(
   scanResult: PageScanResult,
   relativizedRenderDiff: PageScanResult['renderDiff'],
 ): PageScanResult {
-  return {
+  return compactScanJson({
     url: scanResult.url,
     scanJsonVersion: SCAN_JSON_VERSION,
     ...(relativizedRenderDiff !== undefined ? { renderDiff: relativizedRenderDiff } : {}),
     ...(scanResult.renderDiffError !== undefined
       ? { renderDiffError: scanResult.renderDiffError }
       : {}),
-    ...(scanResult.axe !== undefined ? { axe: trimmedAxeResult(scanResult.axe) } : {}),
+    ...(scanResult.axe !== undefined ? { axe: scanResult.axe } : {}),
     ...(scanResult.axeError !== undefined ? { axeError: scanResult.axeError } : {}),
-    ...(scanResult.lighthouse !== undefined
-      ? { lighthouse: trimmedLighthouseResult(scanResult.lighthouse) }
-      : {}),
+    ...(scanResult.lighthouse !== undefined ? { lighthouse: scanResult.lighthouse } : {}),
     ...(scanResult.lighthouseError !== undefined
       ? { lighthouseError: scanResult.lighthouseError }
       : {}),
@@ -176,7 +194,7 @@ export function buildScanJson(
       ? { consentSurface: scanResult.consentSurface }
       : {}),
     ...(scanResult.localStates !== undefined ? { localStates: scanResult.localStates } : {}),
-  };
+  });
 }
 
 export interface WrittenPageScanJson {

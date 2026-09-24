@@ -224,6 +224,7 @@ export type {
   WriteAuditArtifactsInput,
   WriteAuditArtifactsResult,
 } from './artifacts/write-audit.js';
+export { compactScanJson } from './artifacts/page-scan-io.js';
 export { writeFindingsFile } from './artifacts/write-findings.js';
 export { writeManifestFile } from './artifacts/write-manifest.js';
 export { writeJsonAtomicSync, type AtomicJsonFileOps } from './artifacts/write-json-atomic-sync.js';

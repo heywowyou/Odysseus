@@ -1,6 +1,6 @@
 # Plan 077: Keep the latest version, delete superseded ones after a grace period
 
-Status: TODO. Priority P2. Effort L. Depends on: none. Revisits trade-off 5 ("analyses are inserted, never upserted") by adding a retention step after the insert. The insert itself stays.
+Status: IN PROGRESS. Priority P2. Effort L. Depends on: none. Revisits trade-off 5 ("analyses are inserted, never upserted") by adding a retention step after the insert. The insert itself stays.
 
 ## Context
 
@@ -189,6 +189,55 @@ Report-quality (bucket objects under `report-quality/candidates/<auditId>/<quali
 | Disk alarm 75/90 | storage endpoint + dashboard | constants | Component test for 3 states |
 | Backup retention | `restic-maintain.sh`, `backup-artifacts.sh` | flags | `deploy/restic-scripts.test.sh` updated |
 | Production result | operator | runbook + ledger | Step 11 record (counts, bytes, live backup timer) |
+
+## Execution record
+
+### Step 1: compaction is lossless (2026-09-25)
+
+A throwaway script (not committed) copied each local audit's `manifest.json`
+and `pages/*/scan.json` into the scratchpad, ran `renormalizeAudit` on the
+copy, compacted every copied `scan.json` with `compactScanJson`, and ran
+`renormalizeAudit` again. For every audit it compared the `findingsDigest`,
+the whole `findings.json` bytes, and the renormalized manifest minus
+`renormalizedAt`.
+
+- 165 audit directories; 30 hold `scan.json` files. 25 have a manifest and
+  normalize; the other 5 are interrupted scans with pages but no manifest,
+  so there is nothing to normalize.
+- **25 of 25 normalizable audits: digest equal, `findings.json`
+  byte-identical, manifest identical.** No audit differs.
+- Bytes over those 25 audits: 2,996.6 MB → 1,303.9 MB (**−56.5%**).
+- `odysseus artifacts compact-scans` dry run over every local file
+  (3,322 files, including the 5 unnormalizable audits): 3,721.8 MB →
+  1,443.8 MB (**−61.2%**).
+
+| Audit | Digest | `scan.json` MB before | after |
+|---|---|---|---|
+| `capdantibes-beachhotel.com/2026-09-17T01-56-18Z` | equal | 21.7 | 10.1 |
+| `grandhotelchicago.paris/2026-09-17T14-28-58Z` | equal | 38.2 | 12.7 |
+| `grandhoteldesalpes.com/2026-09-16T19-05-47Z` | equal | 328.3 | 101.9 |
+| `haaitza.com/2026-09-15T22-16-13Z` | equal | 230.7 | 97.8 |
+| `lacoorniche.com/2026-09-17T04-35-08Z` | equal | 389.5 | 165.7 |
+| `lvh.me/2026-09-15T14-24-32Z` | equal | 0.0 | 0.0 |
+| `www.atlantichotel.fr/2026-09-17T12-01-22Z` | equal | 0.5 | 0.1 |
+| `www.atlantichotel.fr/2026-09-17T12-04-37Z` | equal | 347.2 | 130.2 |
+| `www.briketenia.com/2026-09-04T19-06-02Z` | equal | 33.8 | 15.8 |
+| `www.briketenia.com/2026-09-07T17-24-30Z` | equal | 29.7 | 10.4 |
+| `www.briketenia.com/2026-09-07T20-33-25Z` | equal | 28.3 | 10.9 |
+| `www.briketenia.com/2026-09-07T20-35-09Z` | equal | 28.3 | 10.7 |
+| `www.briketenia.com/2026-09-07T21-02-27Z` | equal | 30.1 | 10.6 |
+| `www.briketenia.com/2026-09-08T01-03-04Z` | equal | 28.9 | 10.2 |
+| `www.grand-hotel-opera.com/2026-09-17T15-09-53Z` | equal | 143.3 | 49.7 |
+| `www.grandhotelbellevue.com/2026-09-17T13-15-02Z` | equal | 77.9 | 21.9 |
+| `www.hotel-palais-gallien-bordeaux.com/2026-09-15T18-45-10Z` | equal | 0.6 | 0.1 |
+| `www.hotel-palais-gallien-bordeaux.com/2026-09-15T18-46-14Z` | equal | 35.0 | 14.2 |
+| `www.hotelchateauroyal.nc/2026-09-16T20-53-57Z` | equal | 251.1 | 115.9 |
+| `www.hotelpointfrance.com/2026-09-17T16-18-50Z` | equal | 643.6 | 330.9 |
+| `www.lesmanoirstourgeville.com/2026-09-09T14-39-13Z` | equal | 143.1 | 56.3 |
+| `www.villasfoch.fr/2026-09-03T20-44-46Z` | equal | 48.6 | 38.5 |
+| `www.villasfoch.fr/2026-09-07T20-35-31Z` | equal | 34.4 | 25.0 |
+| `www.villasfoch.fr/2026-09-07T20-49-46Z` | equal | 42.4 | 32.7 |
+| `www.villasfoch.fr/2026-09-16T02-37-05Z` | equal | 41.5 | 31.7 |
 
 ## Definition of done
 
