@@ -201,7 +201,7 @@ services:
     shm_size: 256m
 
   caddy:
-    image: caddy:2
+    image: caddy:2@sha256:0c994536bddb66445885237f1a5dcc1916bccea922661c76b4e9fc24061f9b52
     ports:
       - '80:80'
       - '443:443'
