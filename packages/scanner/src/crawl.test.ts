@@ -93,6 +93,7 @@ function makeFakeBrowser(
   const context = {
     setDefaultTimeout: () => {},
     setDefaultNavigationTimeout: () => {},
+    clearCookies: async () => {},
     newPage: async () => {
       let currentUrl = 'about:blank';
       return {
@@ -147,6 +148,7 @@ function makeStatusFakeBrowser(
   const context = {
     setDefaultTimeout: () => {},
     setDefaultNavigationTimeout: () => {},
+    clearCookies: async () => {},
     newPage: async () => {
       let currentUrl = 'about:blank';
       return {
@@ -218,6 +220,7 @@ describe('crawl page deadlines', () => {
     const context = {
       setDefaultTimeout: vi.fn(),
       setDefaultNavigationTimeout: vi.fn(),
+      clearCookies: async () => {},
       newPage: vi.fn(async () => page),
       close: vi.fn(async () => {}),
     };
@@ -587,6 +590,7 @@ describe('crawlSite trailing-slash page identity (issue #102)', () => {
     const context = {
       setDefaultTimeout: () => {},
       setDefaultNavigationTimeout: () => {},
+      clearCookies: async () => {},
       newPage: async () => {
         let currentUrl = 'about:blank';
         return {
@@ -849,6 +853,7 @@ describe('crawlSite frontier snapshots and resume', () => {
     const context = {
       setDefaultTimeout: () => {},
       setDefaultNavigationTimeout: () => {},
+      clearCookies: async () => {},
       newPage: async () => {
         let currentUrl = 'about:blank';
         return {
@@ -1007,6 +1012,7 @@ describe('crawlSite hreflang head discovery (plan 059 section 6)', () => {
     const context = {
       setDefaultTimeout: () => {},
       setDefaultNavigationTimeout: () => {},
+      clearCookies: async () => {},
       newPage: async () => {
         let currentUrl = 'about:blank';
         return {

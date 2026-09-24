@@ -5958,3 +5958,26 @@ declared language. It audits every language version, but every browser
 context (crawl, render diff, consent, mobile, states, booking flow) and the
 Lighthouse tab would need the page's language before loading it. Revisit if a
 client needs a non-French version of such a site audited.
+
+### 116. The crawl requests every URL without the cookies earlier pages set (build decision, 2026-09-24)
+
+The crawl opened every page in one browser context, so a cookie set by one
+page travelled to the next. On www.alexanderpark.fr (Next.js locale routing)
+an `/es/` page sets `NEXT_LOCALE=es`, and every later request for a French
+URL was then redirected to its Spanish copy. None of the 22 French pages in
+the sitemap was crawled, and the coverage gate blamed the site for rejecting
+the crawl. WordPress language plugins keep the visitor's language in a cookie
+the same way.
+
+The crawl now clears the context's cookies before each page, so every URL is
+requested as a first visit, like a search engine crawler. It complements
+trade-off 115: that fixes the language the browser asks for, this stops a
+page from overriding it. The page-scan phase needs no change: its rendered,
+raw, mobile and consent passes each open their own context, and Lighthouse
+resets the origin's storage before each run.
+
+Rejected alternative: a fresh context per crawled page. It would also clear
+local storage, but it drops the HTTP cache too, so the host would serve every
+image, script and stylesheet again for each page. Request volume is what
+banned the crawler in trade-off 114. Language state kept only in local
+storage is not covered; revisit if a real site shows it.

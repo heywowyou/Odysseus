@@ -1016,6 +1016,13 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
         });
 
         const pageWork = async (): Promise<void> => {
+          // Every URL is requested as a first visit, the way a search engine
+          // crawls. A cookie one page sets must not steer the next: a Next.js
+          // site sets NEXT_LOCALE=es on its /es/ pages and then redirects every
+          // French URL to its Spanish copy, so the French site was never
+          // crawled. Only cookies go; the shared HTTP cache stays so the host
+          // does not serve every image and script again for each page.
+          await context.clearCookies();
           const browserPage = await context.newPage();
           try {
             // The politeness wait now sits around the navigation itself rather

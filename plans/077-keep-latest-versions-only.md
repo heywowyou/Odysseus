@@ -155,7 +155,7 @@ Report-quality (bucket objects under `report-quality/candidates/<auditId>/<quali
 9. **Ops and docs**:
    - `restic-maintain.sh` retention → `--keep-daily 14 --keep-weekly 6`; `backup-artifacts.sh` default `RETENTION_DAYS` → 14.
    - Runbook: 200 GB disk figure (operator, 2026-09-24), a new "Retention" section (commands, opt-in, cap, how to read a run), and the backup retention numbers.
-   - New trade-off 115; amend trade-off 5's last sentence to point at it.
+   - A new trade-off (the next free number when this step runs); amend trade-off 5's last sentence to point at it.
    - Update the `persist-analysis.ts`/`persist-report.ts` header comments ("worth keeping" → "kept until retention supersedes it").
    - Retention subsection in `docs/rules/normalization-rules.md` (it owns artifacts), linking the trade-off.
    - Commit.
