@@ -1,8 +1,8 @@
 # Plan 076 execution handoff
 
-Status: local implementation complete; live acceptance pending. Keep plan 076
-active and in `plans/`; do not archive it or mark it DONE until both acceptance
-runs complete and satisfy the recorded thresholds.
+Status: closed with plan 076 on 2026-09-24. Both acceptance runs completed;
+the result and the operator's closure decision are recorded in the plan's
+acceptance record.
 
 ## Completed locally
 
@@ -61,5 +61,5 @@ complete and both uncapped live acceptance runs meet their thresholds.
 ## Executable closure contract
 
 The requirement-to-proof closure artifact is the ledger in
-`076-scan-pacing-that-cannot-spiral.md`. R6 remains open until the live run
-artifacts and ETA checkpoints are recorded there and in Plan 075.
+`076-scan-pacing-that-cannot-spiral.md`. R6 and the ETA checkpoints are
+recorded there and in Plan 075's execution ledger.

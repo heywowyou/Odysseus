@@ -141,8 +141,8 @@ The canonical sources for this behavior are `docs/product/odysseus-project-brief
 | [072](archive/072-finalized-client-report.md) | Make the operator-finalized client report a stored, lineage-bound artifact that supersedes the pipeline render | P1 | L | 067, 070 | DONE (2026-09-20): shipped end to end and proved on the fixture audit; see the plan's closure ledger |
 | [073](archive/073-light-theme-full-report-export.md) | Add a light presentation variant to the full client report without forking content, finalization or approval | P2 | L | 039, 072 | DONE (2026-09-21): paired dark/light rendering, exact variant approval, delivery routes, dashboard control, and real parity/axe/print proof |
 | [074](archive/074-random-independent-prospect.md) | Add one-click random independent prospect selection from the full matching directory | P2 | M | 047, 050 | DONE (2026-09-21): repository proof and the production dashboard rehearsal recorded |
-| [075](075-clean-true-audit-data.md) | Make the audit data clean and true before it reaches a report | P1 | XL | none | IN PROGRESS (2026-09-22) |
-| [076](076-scan-pacing-that-cannot-spiral.md) | Keep full-audit pacing tied to the audited host's real pushback | P1 | L | none; shares challenge markers with 075 | IN PROGRESS (2026-09-23): implementation committed; 076 redeploy and live acceptance pending |
+| [075](archive/075-clean-true-audit-data.md) | Make the audit data clean and true before it reaches a report | P1 | XL | none | DONE (2026-09-24): all eleven in-scope audits have post-075 artifacts; harness invariants recorded in the closure record |
+| [076](archive/076-scan-pacing-that-cannot-spiral.md) | Keep full-audit pacing tied to the audited host's real pushback | P1 | L | none; shares challenge markers with 075 | DONE (2026-09-24): Haaitza and La Corniche acceptance runs recorded; time and ETA targets not demonstrated, closed by operator decision |
 
 Plan 072 shipped 2026-09-20 and is the current finalization workflow; its
 rationale is recorded as trade-off 41 and llm-layer-rules section 16.

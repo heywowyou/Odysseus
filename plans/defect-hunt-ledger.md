@@ -1,6 +1,6 @@
 # Defect hunt ledger
 
-Active plan: `plans/075-clean-true-audit-data.md`
+Plan: `plans/archive/075-clean-true-audit-data.md` (DONE 2026-09-24)
 
 Brief: `docs/agents/audit-data-defect-hunt.md`
 

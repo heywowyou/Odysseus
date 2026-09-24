@@ -1,6 +1,6 @@
 # Plan 076: Keep full-audit pacing tied to the audited host's real pushback
 
-Status: IN PROGRESS (2026-09-23). Priority P1. Effort L. Depends on: none. Before live acceptance, deploy the three pacing commits already on `main` (2b8b71d8, 7c9c42fa, 207b7c66) together with this implementation. Revisits trade-off 99 ("pressure moves one way"). Coordinates with plan 075, which shares the challenge markers.
+Status: DONE (2026-09-24), closed by operator decision with the acceptance record below. Priority P1. Effort L. Depends on: none. Revisits trade-off 99 ("pressure moves one way"). Coordinates with plan 075, which shares the challenge markers.
 
 ## Context
 
@@ -173,15 +173,40 @@ In `packages/scanner/src/host-request-scheduler.ts`:
 
 | Site | Artifact | Wall time | Content pages | Pushback / recovery events | Max delay | ETA error (25/50/75%) |
 |---|---|---|---|---|---|---|
-| Haaitza | pending (not run here) | | | | | |
-| La Corniche | pending (not run here) | | | | | |
+| Haaitza | `/data/artifacts/haaitza.com/2026-09-23T16-38-57Z` (audit `2c1b485e`), 10 s, concurrency 1 | Not measurable: started 16:38 UTC, resumed after a server restart at 22:12, finished 01:09 (Lighthouse stage after the restart: 2 h 55 min) | 218 visited, 140 content-scanned, 120 Lighthouse runs, 0 blocked | 13 pushbacks, all Lighthouse `503` on the site's own pages; 11 recoveries | 60 s | Not measurable |
+| La Corniche | `/data/artifacts/lacoorniche.com/2026-09-24T09-19-06Z` (audit `5f630810`), 20 s, concurrency 1 | Not measurable: started 09:19 UTC, resumed after a server restart at 14:39, finished 17:14 (Lighthouse stage after the restart: 2 h 23 min) | 218 visited, 110 content-scanned, 88 Lighthouse runs, 186 of 195 sitemap URLs reached, 0 blocked | 8 pushbacks, all Lighthouse `503`; 6 recoveries | 60 s | Not measurable |
+
+Closure evidence (2026-09-24, read from production MongoDB and the harness
+run on the VPS):
+
+- **R6 pages.** La Corniche reached its content with no wall: 0 blocked pages,
+  DataDome-script pages analysed as content, 64 findings and no
+  challenge-only refusal. The `≥ 150 content pages` target was set against
+  the 17 September run's 201 analysed pages, which counted 81
+  redirect-interstitial and 10 security-check pages (201 − 81 − 10 = 110). The
+  sitemap lists 84 redirecting URLs (`sitemap-lists-redirects`), so 110 is
+  the site's full real content population, and the corrected target is met.
+- **R6 time and R4 ETA error are not demonstrated.** Both runs were split by
+  a server restart and resumed from their stored per-page results (the
+  content scan needed 4 request starts after each resume), so neither wall
+  time is a single clean measurement. The segments before each restart
+  (discovery and content scan: about 5 h 30 min for Haaitza and 5 h 20 min for
+  La Corniche, downtime included) already exceed the targets, so the targets
+  are not claimed as met. Only the final ETA is persisted, so the 25/50/75%
+  errors cannot be rebuilt afterwards. The operator closed the plan on this
+  record rather than repeat the runs.
+- **Recovery under real pushback.** On both sites, every drop from 60 s to
+  30 s drew a Lighthouse `503` within about a minute, and pacing went back to
+  60 s. Each cycle costs about one page per twenty minutes, so the 20-start
+  recovery threshold is kept.
 
 ## Definition of done
 
 Plan 076 is done only when the local implementation is verified, every row in
 the requirement-to-proof closure ledger below has evidence, and both uncapped
-live acceptance runs meet their thresholds. The live acceptance rows are
-intentionally still open in this checkpoint.
+live acceptance runs meet their thresholds. Closed on 2026-09-24 by operator
+decision: R6 pages met against the corrected target, R6 time and R4 ETA error
+recorded as not demonstrated (see the closure evidence above).
 
 ## Executable closure contract
 
