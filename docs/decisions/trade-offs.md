@@ -5891,3 +5891,35 @@ minutes), and a scheduled GitHub Actions workflow running Renovate (the same
 Actions allowance, plus a stored token). Revisit if CI moves off GitHub
 Actions or its allowance stops being a constraint.
 
+
+### 114. A crawl stops when the host stops answering, and says a slower crawl will not help (build decision, 2026-09-24)
+
+A full audit of a hotel site failed the coverage gate twice with the same
+shape, once at the default 333ms pacing and once at a 5s per-job delay. In
+both runs the first ~30 URLs answered, then every later navigation ended in
+`net::ERR_EMPTY_RESPONSE`: the server closed the connection without an HTTP
+response. The host scheduler never slowed, because it only reacts to a
+response it can classify, and the gate then advised slowing the crawl. The
+site answered normally again from the same server a few minutes later, so
+the host was banning the crawler's IP address on request volume, not rate.
+
+The crawl now counts an unbroken run of navigations that end in a connection
+refusal (`connectionRefusalCode` in `@odysseus/core`: empty response, reset,
+closed, refused, connection timed out). At `HOST_REFUSAL_STOP_THRESHOLD` (5)
+it stops requesting pages, disposes the rest of its queue as not requested,
+and reports `hostStoppedAnswering` on the crawl result. A full audit then
+fails with `HostStoppedAnsweringError` ahead of the coverage gate. Its message
+says a slower crawl will not help and names an allowlist as the way forward;
+it deliberately does not match the gate's prefix, so the dashboard does not
+link to the crawl delay fields.
+
+Any HTTP response, and any other navigation error, resets the count. A
+navigation timeout and a DNS failure are not refusals. A host that drops the
+odd connection keeps being crawled. Prospecting runs receive the same field
+but are not failed by it.
+
+Rejected alternatives: a slower default crawl delay (it made no difference
+here and slows every audit), and treating refusals as scheduler pushback (a
+ban does not lift because the crawl slows, so backing off only spends the
+queue more slowly). The scan phase after the crawl is not covered: a host
+that bans mid-scan still surfaces as failed page scans.

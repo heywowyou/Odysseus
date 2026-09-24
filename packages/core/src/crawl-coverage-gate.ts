@@ -127,3 +127,43 @@ export function assertSufficientCrawlCoverage(input: CrawlCoverageGateInput): vo
     throw new CrawlCoverageInsufficientError(assessment);
   }
 }
+
+/** An unbroken run of navigations this long, each ending in a connection
+ * refusal (see connectionRefusalCode), ends the crawl. Short enough to stop
+ * sending requests to a host that has banned the crawler, long enough that a
+ * couple of dropped connections on a flaky host do not end an audit. */
+export const HOST_REFUSAL_STOP_THRESHOLD = 5;
+
+/** The crawl's record of a host that stopped answering it. */
+export interface HostStoppedAnswering {
+  /** Navigations that received an HTTP response before the refusals began. */
+  answeredNavigationCount: number;
+  /** The unbroken run of refused navigations that ended the crawl. */
+  refusedNavigationCount: number;
+  /** The Chromium network error of the last refusal, e.g. ERR_EMPTY_RESPONSE. */
+  errorCode: string;
+}
+
+function pluralize(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? '' : 's'}`;
+}
+
+/** Deliberate stop, like CrawlCoverageInsufficientError, for a host that
+ * blocks the crawler's IP address. Its message says a slower crawl will not
+ * help, which is what separates it from the coverage gate's advice. */
+export class HostStoppedAnsweringError extends Error {
+  readonly stop: HostStoppedAnswering;
+
+  constructor(stop: HostStoppedAnswering) {
+    const refused = pluralize(stop.refusedNavigationCount, 'request');
+    const what =
+      stop.answeredNavigationCount === 0
+        ? `the site answered none of the crawl's requests: the first ${refused} were closed without a response (${stop.errorCode})`
+        : `after answering ${pluralize(stop.answeredNavigationCount, 'page')}, the site closed the next ${refused} without a response (${stop.errorCode})`;
+    super(
+      `The site stopped answering the crawl: ${what}. This is how a server that blocks an IP address behaves, so a slower crawl will not help. The crawl stopped early rather than keep sending requests. Ask the site owner to allowlist the crawler, then run a new audit.`,
+    );
+    this.name = 'HostStoppedAnsweringError';
+    this.stop = stop;
+  }
+}

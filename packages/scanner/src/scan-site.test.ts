@@ -270,6 +270,47 @@ describe('scanSite characterization', () => {
     expect(checkLlmsTxt).not.toHaveBeenCalled();
   });
 
+  it('stops a full audit with the ban explanation, not the slow-down advice, when the host stopped answering', async () => {
+    vi.mocked(crawlSite).mockResolvedValue({
+      startUrl,
+      pages: [
+        ...Array.from({ length: 3 }, (_, index) => visited(`${startUrl}ok-${index}`)),
+        ...Array.from({ length: 5 }, (_, index) => ({
+          url: `${startUrl}dropped-${index}`,
+          status: 'error',
+          error: `page.goto: net::ERR_EMPTY_RESPONSE at ${startUrl}dropped-${index}`,
+          discoveryMethod: 'link',
+        })),
+      ],
+      effectiveDelayMs: 100,
+      visitedCount: 8,
+      maxPages: 100,
+      maxDepth: 2,
+      robotsTxtFound: true,
+      robotsDisallowMatches: [],
+      aiCrawlerBlocks: [],
+      linkDiscoveredUrls: [],
+      hostStoppedAnswering: {
+        answeredNavigationCount: 3,
+        refusedNavigationCount: 5,
+        errorCode: 'ERR_EMPTY_RESPONSE',
+      },
+    } as never);
+
+    await expect(
+      scanSite(startUrl, {
+        browser: {} as never,
+        debugPort: 9222,
+        screenshotDir: '/tmp/pages',
+        fullAuditPlanning: true,
+      }),
+    ).rejects.toThrow(/stopped answering the crawl.*a slower crawl will not help/i);
+
+    expect(scanPage).not.toHaveBeenCalled();
+    expect(runRenderedAnalysis).not.toHaveBeenCalled();
+    expect(checkLlmsTxt).not.toHaveBeenCalled();
+  });
+
   it('issue #64: writes each page scan.json to disk as it completes and keeps result.pages empty when writePagesAsScanned is set', async () => {
     const { auditDir, pagesDir } = await makeTempAuditDir('scan-site-legacy-');
     vi.mocked(scanPage).mockImplementation(async (_browser, _port, url) => ({

@@ -1,6 +1,7 @@
 import type { Browser } from 'playwright';
 import type {
   AuditConfigSnapshot,
+  HostStoppedAnswering,
   PageDiscoveryMethod,
   SitemapCoverageSummary,
   SitemapMode,
@@ -9,6 +10,8 @@ import {
   auditedHostAliases,
   classifyDocumentWall,
   classifyHostResponse,
+  connectionRefusalCode,
+  HOST_REFUSAL_STOP_THRESHOLD,
   isChallengeTitle,
 } from '@odysseus/core';
 import {
@@ -335,6 +338,10 @@ export interface CrawlResult {
     omittedExampleUrls: string[];
     repeatedSegments: string[];
   };
+  /** Present only when the host stopped answering and the crawl ended early
+   *  on HOST_REFUSAL_STOP_THRESHOLD refused navigations in a row. The URLs
+   *  still queued were never requested. */
+  hostStoppedAnswering?: HostStoppedAnswering;
 }
 
 export interface QueueItem {
@@ -915,6 +922,15 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
 
   const scheduler = options.scheduler;
 
+  // A host that bans the crawler's IP address mid-crawl closes every later
+  // connection without a response, and it does so however slowly the crawl
+  // goes. Counting the unbroken run of such refusals lets the crawl stop
+  // sending requests instead of spending the rest of its queue on them.
+  let answeredNavigationCount = 0;
+  let consecutiveRefusals = 0;
+  let lastRefusalCode: string | undefined;
+  let hostStoppedAnswering: HostStoppedAnswering | undefined;
+
   try {
     // A resumed crawl starts false on purpose: the first resumed fetch
     // must pay the politeness delay, since a fast restart would otherwise
@@ -973,7 +989,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     }
 
     while (true) {
-      while (queue.length > 0 && visited.size < maxPages) {
+      while (hostStoppedAnswering === undefined && queue.length > 0 && visited.size < maxPages) {
         const item = queue.shift()!;
         const discoveryMethod = linkDiscoveredUrls.has(item.url) ? 'link' : item.discoveryMethod;
         const discoveredFrom = item.discoveredFrom ?? linkDiscoveredFrom.get(item.url);
@@ -1025,6 +1041,8 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
               }
             };
             let response = await navigateAfterLoadTimeout();
+            answeredNavigationCount += 1;
+            consecutiveRefusals = 0;
             let httpStatus = response?.status();
             // A stub URL that redirects out to another site (a social link)
             // answers with that site's status and body. Its 429 or challenge
@@ -1569,6 +1587,13 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
               });
             } else {
               const message = error instanceof Error ? error.message : String(error);
+              const refusalCode = connectionRefusalCode(message);
+              if (refusalCode !== undefined) {
+                consecutiveRefusals += 1;
+                lastRefusalCode = refusalCode;
+              } else {
+                consecutiveRefusals = 0;
+              }
               recordPage({
                 url: item.url,
                 depth: item.depth,
@@ -1598,6 +1623,13 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
           crawlPageWatchdogMs,
           crawlGuard,
         );
+        if (consecutiveRefusals >= HOST_REFUSAL_STOP_THRESHOLD && lastRefusalCode !== undefined) {
+          hostStoppedAnswering = {
+            answeredNavigationCount,
+            refusedNavigationCount: consecutiveRefusals,
+            errorCode: lastRefusalCode,
+          };
+        }
       }
 
       if (supplementalPhaseStarted || sitemapMode !== 'supplement') break;
@@ -1623,6 +1655,10 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
       if (inventoryLedger.candidate(item.url)?.disposition !== undefined) continue;
       if (!isAllowedByRobots(robotsRules, robotsTarget(item.url))) {
         disposeInventory(item.url, 'robots');
+      } else if (hostStoppedAnswering !== undefined) {
+        disposeInventory(item.url, 'blocked', {
+          detail: `not requested: the host stopped answering (${hostStoppedAnswering.errorCode})`,
+        });
       } else {
         disposeInventory(item.url, 'page-cap', {
           detail: `crawl stopped after reaching maxPages=${maxPages}`,
@@ -1733,5 +1769,6 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     ...(relativeLinkNesting.omittedUrlCount > 0
       ? { relativeLinkNestingSummary: { ...relativeLinkNesting } }
       : {}),
+    ...(hostStoppedAnswering !== undefined ? { hostStoppedAnswering } : {}),
   };
 }

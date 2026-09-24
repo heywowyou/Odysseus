@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { Browser } from 'playwright';
 import {
   assertSufficientCrawlCoverage,
+  HostStoppedAnsweringError,
   type AuditConfigSnapshot,
   type CruxFieldDataResult,
   type PageAnalysisCoverage,
@@ -2491,6 +2492,11 @@ export async function scanSite(
   // explicit allowlist. Prospecting does not produce a paid report, so its
   // bounded inspection path is deliberately outside this gate.
   if (options.fullAuditPlanning) {
+    // Checked ahead of the coverage gate because the gate's advice (slow the
+    // crawl) is wrong for a host that banned the crawler outright.
+    if (crawl.hostStoppedAnswering !== undefined) {
+      throw new HostStoppedAnsweringError(crawl.hostStoppedAnswering);
+    }
     assertSufficientCrawlCoverage({
       pages: crawl.pages,
       ...(crawl.sitemapCoverage !== undefined ? { sitemapCoverage: crawl.sitemapCoverage } : {}),

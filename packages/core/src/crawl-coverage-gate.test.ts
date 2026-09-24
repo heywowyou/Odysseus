@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   assertSufficientCrawlCoverage,
   assessCrawlCoverage,
+  HostStoppedAnsweringError,
+  isCrawlCoverageGateMessage,
   MAX_CRAWL_FAILURE_SHARE,
 } from './crawl-coverage-gate.js';
 
@@ -86,5 +88,34 @@ describe('crawl coverage gate', () => {
     };
 
     expect(assessCrawlCoverage(input).reasonCodes).toEqual([]);
+  });
+});
+
+describe('host stopped answering stop', () => {
+  it('says a slower crawl will not help, unlike the coverage gate', () => {
+    const error = new HostStoppedAnsweringError({
+      answeredNavigationCount: 32,
+      refusedNavigationCount: 5,
+      errorCode: 'ERR_EMPTY_RESPONSE',
+    });
+
+    expect(error.message).toContain(
+      'after answering 32 pages, the site closed the next 5 requests without a response (ERR_EMPTY_RESPONSE)',
+    );
+    expect(error.message).toContain('a slower crawl will not help');
+    expect(error.message).toContain('allowlist the crawler');
+    expect(isCrawlCoverageGateMessage(error.message)).toBe(false);
+  });
+
+  it('describes a host that refused the crawl from its first request', () => {
+    const error = new HostStoppedAnsweringError({
+      answeredNavigationCount: 0,
+      refusedNavigationCount: 5,
+      errorCode: 'ERR_CONNECTION_REFUSED',
+    });
+
+    expect(error.message).toContain(
+      "the site answered none of the crawl's requests: the first 5 requests were closed without a response (ERR_CONNECTION_REFUSED)",
+    );
   });
 });

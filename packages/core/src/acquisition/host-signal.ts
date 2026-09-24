@@ -212,3 +212,23 @@ export function classifyHostResponse(input: ClassifyHostResponseInput): HostResp
   }
   return { disposition: 'none', reason: 'no-pushback-status', auditedHost: true };
 }
+
+/** Chromium network errors meaning the audited server accepted or refused
+ * the connection but never returned an HTTP response. One of them is an
+ * ordinary glitch; an unbroken run of them is how a host that has banned the
+ * crawler's IP address answers. A navigation timeout and a DNS failure are
+ * deliberately absent: a slow page and a missing domain are not refusals. */
+export const CONNECTION_REFUSAL_NET_ERRORS: readonly string[] = [
+  'ERR_EMPTY_RESPONSE',
+  'ERR_CONNECTION_RESET',
+  'ERR_CONNECTION_CLOSED',
+  'ERR_CONNECTION_REFUSED',
+  'ERR_CONNECTION_TIMED_OUT',
+];
+
+/** The refusal code a navigation error message carries, if any. */
+export function connectionRefusalCode(message: string | undefined): string | undefined {
+  if (message === undefined) return undefined;
+  const code = /net::(ERR_[A-Z_]+)/u.exec(message)?.[1];
+  return code !== undefined && CONNECTION_REFUSAL_NET_ERRORS.includes(code) ? code : undefined;
+}

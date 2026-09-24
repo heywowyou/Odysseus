@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { classifyDocumentWall, classifyHostResponse } from './host-signal.js';
+import {
+  classifyDocumentWall,
+  classifyHostResponse,
+  connectionRefusalCode,
+} from './host-signal.js';
 
 const HOST = {
   requestedHost: 'example.com',
@@ -96,5 +100,27 @@ describe('classifyHostResponse', () => {
         status: 429,
       }),
     ).toEqual({ disposition: 'none', reason: 'not-audited-host', auditedHost: false });
+  });
+});
+
+describe('connectionRefusalCode', () => {
+  it('names the refusal a navigation error carries', () => {
+    expect(
+      connectionRefusalCode('page.goto: net::ERR_EMPTY_RESPONSE at https://example.com/rooms'),
+    ).toBe('ERR_EMPTY_RESPONSE');
+    expect(
+      connectionRefusalCode('page.goto: net::ERR_CONNECTION_RESET at https://example.com/'),
+    ).toBe('ERR_CONNECTION_RESET');
+  });
+
+  it('does not treat a slow page, a missing domain or a plain message as a refusal', () => {
+    expect(connectionRefusalCode('page.goto: Timeout 30000ms exceeded.')).toBeUndefined();
+    expect(
+      connectionRefusalCode('page.goto: net::ERR_NAME_NOT_RESOLVED at https://example.com/'),
+    ).toBeUndefined();
+    expect(
+      connectionRefusalCode('Target page, context or browser has been closed'),
+    ).toBeUndefined();
+    expect(connectionRefusalCode(undefined)).toBeUndefined();
   });
 });
